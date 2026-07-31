@@ -350,7 +350,7 @@ for (const scheme of ["light", "dark"] as const) {
       await page
         .locator("li")
         .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-        .getByRole("link")
+        .getByRole("link", { name: "Two-Tank Reef — Molasses & French", exact: true })
         .click();
       await page.getByTitle("Satellite map of Molasses Reef").waitFor();
       await capture(page, "site-briefing", scheme);
@@ -405,7 +405,7 @@ for (const scheme of ["light", "dark"] as const) {
       await staffPage
         .locator("li")
         .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-        .getByRole("link")
+        .getByRole("link", { name: "Two-Tank Reef — Molasses & French", exact: true })
         .click();
       await staffPage.waitForURL(/\/shop\/blue-mantis\/trips\//);
       await staffPage
@@ -434,7 +434,7 @@ for (const scheme of ["light", "dark"] as const) {
       await page
         .locator("li")
         .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-        .getByRole("link")
+        .getByRole("link", { name: "Two-Tank Reef — Molasses & French", exact: true })
         .click();
       await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
       await page.getByLabel("Name", { exact: true }).fill("Visual Regression Diver");
@@ -816,7 +816,7 @@ for (const scheme of ["light", "dark"] as const) {
           await page
             .locator("li")
             .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-            .getByRole("link")
+            .getByRole("link", { name: "Two-Tank Reef — Molasses & French", exact: true })
             .click();
           await page.waitForURL(/\/shop\/blue-mantis\/trips\//);
           await page
@@ -898,7 +898,7 @@ test.describe("print", () => {
     await page
       .locator("li")
       .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-      .getByRole("link")
+      .getByRole("link", { name: "Two-Tank Reef — Molasses & French", exact: true })
       .click();
     await page.waitForURL(/\/shop\/blue-mantis\/trips\//);
     const tripPath = new URL(page.url()).pathname;

@@ -8,7 +8,7 @@ test("a device that just booked prefills the next booking form, with a one-tap w
   await page
     .locator("li")
     .filter({ hasText: "Discover Scuba — Pool & Reef" })
-    .getByRole("link")
+    .getByRole("link", { name: "Discover Scuba — Pool & Reef", exact: true })
     .click();
   await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
   await page.getByLabel("Name").fill("Marco Reyes");
@@ -22,7 +22,7 @@ test("a device that just booked prefills the next booking form, with a one-tap w
   await page
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-    .getByRole("link")
+    .getByRole("link", { name: "Two-Tank Reef — Molasses & French", exact: true })
     .click();
   await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
   await expect(page.getByLabel("Name")).toHaveValue("Marco Reyes");
@@ -41,7 +41,7 @@ test("the embed widget never prefills or remembers a booker", async ({ page }) =
   await page
     .locator("li")
     .filter({ hasText: "Discover Scuba — Pool & Reef" })
-    .getByRole("link")
+    .getByRole("link", { name: "Discover Scuba — Pool & Reef", exact: true })
     .click();
   await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
   await page.getByLabel("Name").fill("Sal Moretti");

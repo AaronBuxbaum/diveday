@@ -27,7 +27,7 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
   await page
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-    .getByRole("link")
+    .getByRole("link", { name: "Two-Tank Reef — Molasses & French", exact: true })
     .click();
   await page.waitForURL(/\/shop\/blue-mantis\/trips\//);
   // The roster and its waiver control live on the Guests tab.
@@ -176,7 +176,7 @@ test("the medical questionnaire refuses to complete with an unanswered question,
   await page
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-    .getByRole("link")
+    .getByRole("link", { name: "Two-Tank Reef — Molasses & French", exact: true })
     .click();
   await page.waitForURL(/\/shop\/blue-mantis\/trips\//);
   await page
@@ -222,7 +222,7 @@ test("a non-English visitor sees a notice that the waiver text itself stays in E
   await page
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-    .getByRole("link")
+    .getByRole("link", { name: "Two-Tank Reef — Molasses & French", exact: true })
     .click();
   await page.waitForURL(/\/shop\/blue-mantis\/trips\//);
   await page
@@ -263,7 +263,7 @@ test("saving a draft also refuses an unanswered question, even past client valid
   await page
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-    .getByRole("link")
+    .getByRole("link", { name: "Two-Tank Reef — Molasses & French", exact: true })
     .click();
   await page.waitForURL(/\/shop\/blue-mantis\/trips\//);
   await page

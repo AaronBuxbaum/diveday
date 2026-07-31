@@ -45,7 +45,7 @@ test("the public schedule lists seeded trips with capacity states, a calendar, a
   await page
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-    .getByRole("link")
+    .getByRole("link", { name: "Two-Tank Reef — Molasses & French", exact: true })
     .click();
   await expect(page.getByRole("heading", { name: "Your two-tank plan" })).toBeVisible();
   await expect(page.getByRole("paragraph").filter({ hasText: /^Dive 1$/ })).toBeVisible();

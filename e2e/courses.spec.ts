@@ -41,7 +41,7 @@ test("a regular fun-dive trip does not show the taster-session gift nudge", asyn
   await page
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-    .getByRole("link")
+    .getByRole("link", { name: "Two-Tank Reef — Molasses & French", exact: true })
     .click();
   await expect(page).toHaveURL(/\/schedule\/[0-9a-f-]{36}/);
   await expect(page.getByText("Giving this dive as a gift?")).not.toBeVisible();

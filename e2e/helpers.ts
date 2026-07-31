@@ -51,7 +51,11 @@ export async function openTripFromBoard(page: Page, title: string) {
     .getByRole("listitem")
     .filter({ hasText: title })
     .first()
-    .getByRole("link", { name: title })
+    // Exact match: an unpriced trip's card also carries a "Set a price for
+    // {title}, {date} {time}" link (task 150) whose accessible name contains
+    // the trip title as a substring — a non-exact name match would resolve
+    // to both links and hit Playwright's strict-mode violation.
+    .getByRole("link", { name: title, exact: true })
     .click();
   await expect(page).toHaveURL(/\/trips\//);
 }

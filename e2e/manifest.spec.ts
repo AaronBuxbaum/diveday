@@ -31,7 +31,7 @@ test("live manifest retains blocked divers and records an explicit not-boarded r
   await page
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-    .getByRole("link")
+    .getByRole("link", { name: "Two-Tank Reef — Molasses & French", exact: true })
     .click();
   await page
     .getByRole("navigation", { name: "Trip" })
@@ -98,7 +98,7 @@ test("captain saves the full checkpoint manifest, reloads it offline, and reconc
   await page
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-    .getByRole("link")
+    .getByRole("link", { name: "Two-Tank Reef — Molasses & French", exact: true })
     .click();
   await page
     .getByRole("navigation", { name: "Trip" })
@@ -142,7 +142,7 @@ test("a captain who lost the saved copy to storage eviction still lands on a pag
   await page
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-    .getByRole("link")
+    .getByRole("link", { name: "Two-Tank Reef — Molasses & French", exact: true })
     .click();
   await page
     .getByRole("navigation", { name: "Trip" })
@@ -206,7 +206,7 @@ test("the offline fallback never reaches beyond the manifest route", async ({ pa
   await page
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-    .getByRole("link")
+    .getByRole("link", { name: "Two-Tank Reef — Molasses & French", exact: true })
     .click();
   await page
     .getByRole("navigation", { name: "Trip" })
@@ -242,7 +242,7 @@ test("the live manifest response never enters Cache Storage", async ({ page }) =
   await page
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-    .getByRole("link")
+    .getByRole("link", { name: "Two-Tank Reef — Molasses & French", exact: true })
     .click();
   await page
     .getByRole("navigation", { name: "Trip" })
@@ -274,7 +274,7 @@ test("an out-of-range checkpoint in the offline URL falls back to departure, not
   await page
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-    .getByRole("link")
+    .getByRole("link", { name: "Two-Tank Reef — Molasses & French", exact: true })
     .click();
   await page
     .getByRole("navigation", { name: "Trip" })
@@ -347,7 +347,7 @@ test("displays missing diver face-grid on manifest page", async ({ page }) => {
   await page
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-    .getByRole("link")
+    .getByRole("link", { name: "Two-Tank Reef — Molasses & French", exact: true })
     .click();
   await page
     .getByRole("navigation", { name: "Trip" })

@@ -104,7 +104,7 @@ test("the seeded reef briefing shows a satellite map, a gentle route, landmarks,
   await page
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-    .getByRole("link")
+    .getByRole("link", { name: "Two-Tank Reef — Molasses & French", exact: true })
     .click();
 
   await expect(page.getByTitle("Satellite map of Molasses Reef")).toBeVisible();
