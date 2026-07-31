@@ -20,6 +20,8 @@ export async function MarketingNav() {
   const links = [
     { href: "/product", label: t("nav.product") },
     { href: "/pricing", label: t("nav.pricing") },
+    { href: "/switching", label: t("nav.switch") },
+    { href: "/about", label: t("nav.about") },
   ];
 
   return (

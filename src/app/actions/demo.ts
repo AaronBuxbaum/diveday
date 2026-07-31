@@ -3,6 +3,7 @@
 import { and, eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { AuthError } from "next-auth";
+import type { DbExecutor } from "@/db/client";
 import { getDb } from "@/db/client";
 import { people, personRoles } from "@/db/schema";
 import { createDemoShop, resetDemoSchedule } from "@/db/seed";
@@ -10,21 +11,64 @@ import { getShopById, getShopBySlug } from "@/db/shops";
 import { trackEvent } from "@/lib/analytics";
 import { auth, signIn, signOut } from "@/lib/auth";
 import { DEMO_BYPASS_PASSWORD } from "@/lib/credentials";
+import type { DemoRoleId } from "@/lib/demo-roles";
 import { eventSource } from "@/lib/funnel";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
 import { requireStaffSession } from "@/lib/session";
 
+const ENTERABLE_DEMO_ROLES = new Set<DemoRoleId>([
+  "owner",
+  "instructor",
+  "divemaster",
+  "captain",
+  "diver",
+]);
+
+/**
+ * The landing page's role picker submits a `role` field alongside the usual
+ * `source` tag; the primary "Try the staff app" button sends neither, which
+ * defaults here to the owner view it has always opened on.
+ */
+function requestedDemoRole(formData?: FormData): DemoRoleId {
+  const raw = formData?.get("role");
+  return typeof raw === "string" && ENTERABLE_DEMO_ROLES.has(raw as DemoRoleId)
+    ? (raw as DemoRoleId)
+    : "owner";
+}
+
+/**
+ * Who holds a role in a shop, looked up by role rather than a hardcoded seed
+ * email — works on any seeded demo tenant (the canonical fixture or a minted
+ * one). Shared by the landing page's pre-entry role picker and the in-app
+ * role switcher (`switchDemoRoleAction` below).
+ */
+async function findDemoRoleEmail(
+  db: DbExecutor,
+  shopId: string,
+  role: "owner" | "instructor" | "divemaster" | "captain",
+): Promise<string | null> {
+  const matches = await db
+    .select({ email: people.email })
+    .from(people)
+    .innerJoin(personRoles, eq(people.id, personRoles.personId))
+    .where(and(eq(people.shopId, shopId), eq(personRoles.role, role)))
+    .limit(1);
+  return matches[0]?.email ?? null;
+}
+
 /**
  * One-click into the demo: mint a fresh, disposable demo shop with a generated
- * identity, then sign the visitor in as its owner and land on the staff
- * dashboard. Each visitor gets their own throwaway shop rather than sharing the
- * canonical fixture (ADR 20260724-per-visitor-demo-shops); a 7-day reaper clears
- * them. Forms may carry a hidden `source` field naming the page the click came
- * from.
+ * identity, then sign the visitor in and land on the view their role picked
+ * (`role`, one of `DemoRoleId` — owner when the form sends none, the primary
+ * CTA's long-standing behavior). Each visitor gets their own throwaway shop
+ * rather than sharing the canonical fixture (ADR 20260724-per-visitor-demo-shops);
+ * a 7-day reaper clears them. Forms may carry a hidden `source` field naming
+ * the page the click came from.
  */
 export async function enterDemoAction(formData?: FormData) {
-  await trackEvent({ name: "demo_entered", source: eventSource(formData?.get("source")) });
+  const role = requestedDemoRole(formData);
+  await trackEvent({ name: "demo_entered", source: eventSource(formData?.get("source")), role });
 
   // Each demo mints a whole seeded shop, so throttle per IP — the reaper bounds
   // total growth, this bounds the burst one visitor can drive.
@@ -51,9 +95,24 @@ export async function enterDemoAction(formData?: FormData) {
   if (!minted) redirect("/sign-in?error=1");
   const { slug, ownerEmail } = minted;
 
+  // The diver pick previews the customer view — the public schedule needs no
+  // sign-in at all, so it skips straight there instead of minting a session.
+  if (role === "diver") {
+    redirect(`/shop/${slug}/schedule`);
+  }
+
+  let targetEmail = ownerEmail;
+  if (role !== "owner") {
+    const shop = await getShopBySlug(db, slug);
+    // Every minted demo seeds exactly one instructor, divemaster, and captain
+    // (src/db/seed.ts), so this always resolves in practice; the owner
+    // fallback just means a picker click can never dead-end even if that changes.
+    targetEmail = (shop ? await findDemoRoleEmail(db, shop.id, role) : null) ?? ownerEmail;
+  }
+
   try {
     await signIn("credentials", {
-      email: ownerEmail,
+      email: targetEmail,
       password: DEMO_BYPASS_PASSWORD,
       redirectTo: `/shop/${slug}`,
     });
@@ -98,9 +157,6 @@ export async function switchDemoRoleAction(role: string, shopSlug: string) {
       throw error; // NEXT_REDIRECT will propagate
     }
   } else {
-    // Find the email for this role in the shop
-    let targetEmail: string | null = null;
-
     // Look the target person up by their role *within this shop* rather than by
     // hardcoded seed emails, so role-switching works on any seeded demo tenant
     // (not just Blue Mantis). owner/manager both resolve to the shop's owner.
@@ -109,13 +165,7 @@ export async function switchDemoRoleAction(role: string, shopSlug: string) {
       | "instructor"
       | "divemaster"
       | "captain";
-    const matches = await db
-      .select({ email: people.email })
-      .from(people)
-      .innerJoin(personRoles, eq(people.id, personRoles.personId))
-      .where(and(eq(people.shopId, shop.id), eq(personRoles.role, lookupRole)))
-      .limit(1);
-    targetEmail = matches[0]?.email ?? null;
+    const targetEmail = await findDemoRoleEmail(db, shop.id, lookupRole);
 
     if (!targetEmail) {
       // No seeded person holds this role in this shop — no-op back to the shop

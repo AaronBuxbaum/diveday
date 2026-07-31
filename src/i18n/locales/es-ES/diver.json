@@ -1007,6 +1007,8 @@
       "heroTitle": "Lleva todo el día de buceo, desde la reserva hasta el recuento final.",
       "heroDescription": "DiveDay reúne reservas, preparación y el listado del barco en un solo lugar — para que tu equipo dedique menos tiempo al papeleo y más a cuidar de los buceadores.",
       "exploreNote": "Explora una tienda real en funcionamiento. Cambia entre las vistas de propietario, instructor, divemaster, capitán y buceador.",
+      "enterAsLabel": "O entra como:",
+      "enterAsAria": "Probar la demo como {role}",
       "phoneFrameLabel": "Un capitán marcando buceadores embarcados en la pantalla móvil de pase de lista de DiveDay.",
       "dockEyebrow": "En el muelle",
       "dockDetail": "Botones de pase de lista lo bastante grandes para dedos mojados — con o sin señal.",

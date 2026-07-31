@@ -55,7 +55,7 @@ describe("trackEvent", () => {
     // Best-effort telemetry must not be able to add latency either.
     vi.stubEnv("DIVEDAY_DISABLE_EXTERNAL_HTTP", "1");
     await expect(
-      trackEvent({ name: "demo_entered", source: "home-hero" }),
+      trackEvent({ name: "demo_entered", source: "home-hero", role: "owner" }),
     ).resolves.toBeUndefined();
     expect(vercelTrack).not.toHaveBeenCalled();
     vi.unstubAllEnvs();
@@ -66,17 +66,17 @@ describe("trackEvent", () => {
     // a tracker still exercise the mapping (mirrors marine-forecast.ts).
     vi.stubEnv("DIVEDAY_DISABLE_EXTERNAL_HTTP", "1");
     const tracker = vi.fn();
-    await trackEvent({ name: "demo_entered", source: "home-hero" }, tracker);
-    expect(tracker).toHaveBeenCalledWith("demo_entered", { source: "home-hero" });
+    await trackEvent({ name: "demo_entered", source: "home-hero", role: "owner" }, tracker);
+    expect(tracker).toHaveBeenCalledWith("demo_entered", { source: "home-hero", role: "owner" });
     vi.unstubAllEnvs();
   });
 
   it("carries the funnel source on both halves of the marketing funnel", async () => {
     const tracker = vi.fn();
-    await trackEvent({ name: "demo_entered", source: "pricing" }, tracker);
+    await trackEvent({ name: "demo_entered", source: "pricing", role: "captain" }, tracker);
     await trackEvent({ name: "trial_started", source: "pricing" }, tracker);
     expect(tracker.mock.calls).toEqual([
-      ["demo_entered", { source: "pricing" }],
+      ["demo_entered", { source: "pricing", role: "captain" }],
       ["trial_started", { source: "pricing" }],
     ]);
   });
