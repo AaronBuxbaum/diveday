@@ -1683,6 +1683,7 @@
       "eyebrow": "Settings",
       "title": "Import contacts",
       "description": "Bring your divers, cards, rental sizes, and prior waiver acceptance in from a CSV — from your old system or from DiveDay's own export. We're honest about what comes across: imported cards land verified and flagged imported, with a one-tap confirm on each diver's record, and a row claiming a waiver was already accepted is trusted and marked imported.",
+      "comingFrom": "Coming from <eve>EVE</eve>, <diveshop360>DiveShop360</diveshop360>, or <spreadsheet>a spreadsheet</spreadsheet>? See the matching guide, then come back here to bring it in.",
       "comesAcross": {
         "heading": "What comes across",
         "description": "A card already in your system was checked there, so DiveDay trusts it: imported cards land verified and flagged imported, ready from the first trip, with a one-tap confirm for staff, and their refresher-due dates come across too. A specialty card waits on that confirm before it clears the dive it authorizes. Individual medical answers are never reconstructed."

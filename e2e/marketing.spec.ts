@@ -150,6 +150,8 @@ test("migration guides walk a shop from an incumbent export into the importer", 
     page.getByRole("heading", { name: "What comes across — and what doesn't" }),
   ).toBeVisible();
   await expect(page.getByRole("heading", { name: "Bring the file into DiveDay" })).toBeVisible();
+  // Same guard as the spreadsheet guide: no shop session, no deep-link CTA.
+  await expect(page.getByRole("link", { name: "Open Import in your shop" })).toBeHidden();
 
   // The scope table is the importer's honesty table — a claimed waiver
   // acceptance is trusted, medical clearance included, and marked imported.
@@ -244,6 +246,10 @@ test("the spreadsheet guide brings a no-system shop across for free", async ({ p
     page.getByRole("heading", { name: "What comes across — and what doesn't" }),
   ).toBeVisible();
   await expect(page.getByRole("heading", { name: "Bring the file into DiveDay" })).toBeVisible();
+  // The direct-to-import CTA only makes sense for a signed-in owner already
+  // sitting on their own shop's session (see import.spec.ts) — an anonymous
+  // visitor has no shop to deep-link into.
+  await expect(page.getByRole("link", { name: "Open Import in your shop" })).toBeHidden();
 
   // The starter template downloads a real CSV (not a dead link).
   const templateHref = await page

@@ -1683,6 +1683,7 @@
       "eyebrow": "Ajustes",
       "title": "Importar contactos",
       "description": "Trae tus buceadores, tarjetas, tallas de alquiler y aceptación previa de waiver desde un CSV — de tu antiguo sistema o de la propia exportación de DiveDay. Somos claros sobre qué se importa: las tarjetas importadas llegan verificadas y marcadas como importadas, con una confirmación de un toque en el registro de cada buceador, y una fila que declara un waiver ya aceptado se confía y se marca como importada.",
+      "comingFrom": "¿Vienes de <eve>EVE</eve>, <diveshop360>DiveShop360</diveshop360>, o de <spreadsheet>una hoja de cálculo</spreadsheet>? Consulta la guía correspondiente y vuelve aquí para importar.",
       "comesAcross": {
         "heading": "Qué se importa",
         "description": "Una tarjeta ya presente en tu sistema fue verificada allí, así que DiveDay confía en ella: las tarjetas importadas llegan verificadas y marcadas como importadas, listas desde la primera salida, con una confirmación de un toque para el personal, y sus fechas de renovación también se importan. Una tarjeta de especialidad espera esa confirmación antes de habilitar la inmersión que autoriza. Las respuestas médicas individuales nunca se reconstruyen."
