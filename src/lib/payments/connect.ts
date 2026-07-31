@@ -13,6 +13,8 @@ export type ConnectAccountStatus = {
   chargesEnabled: boolean;
   payoutsEnabled: boolean;
   detailsSubmitted: boolean;
+  /** The account's own settlement currency (e.g. "usd", "eur"); "usd" when Stripe omits it. */
+  defaultCurrency: string;
 };
 
 export type ConnectOAuthResult =
@@ -60,6 +62,10 @@ const accountResponseSchema = z.object({
   charges_enabled: z.boolean(),
   payouts_enabled: z.boolean(),
   details_submitted: z.boolean(),
+  // Optional so a fixture or a future Stripe response missing the field
+  // still parses — mapped to a "usd" fallback below rather than failing the
+  // whole status lookup over one non-critical field.
+  default_currency: z.string().optional(),
 });
 
 type ConnectConfig = z.infer<typeof connectConfigSchema>;
@@ -123,6 +129,7 @@ export function stripeConnectProvider(
             chargesEnabled: body.data.charges_enabled,
             payoutsEnabled: body.data.payouts_enabled,
             detailsSubmitted: body.data.details_submitted,
+            defaultCurrency: body.data.default_currency ?? "usd",
           },
         };
       } catch {

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getDb } from "@/db/client";
-import { addRecapPhoto, canAddRecapPhoto } from "@/db/recap";
+import { addRecapPhoto, canAddRecapPhoto, MAX_RECAP_PHOTOS_PER_BOOKING } from "@/db/recap";
 import { submitTripReview } from "@/db/reviews";
 import { MAX_TIP_CENTS, MIN_TIP_CENTS, startTipCheckout } from "@/db/tips";
 import { publicAppUrl } from "@/lib/notifications";
@@ -14,13 +14,16 @@ import { parseReviewRating } from "@/lib/reviews";
 import { deleteStoredImage, storeRecapImage } from "@/lib/storage";
 
 /**
- * A diver attaches a photo to their own recap. The only credential is the
- * signed recap token already in the URL — it resolves to the booking the photo
- * scopes to, and shop/trip are derived from that booking, never trusted from the
- * form. The endpoint is public, so the booking/cancelled/cap gate runs *before*
- * bytes are stored (no orphaned blob on a rejected upload), and only a lost race
- * against the cap can leave a stored object — which is then cleaned up
- * best-effort. An unconfigured provider or a rejected file surfaces as a notice.
+ * A diver attaches one or more photos to their own recap in a single submit
+ * (task 55 — one page reload for a whole pick, not one per photo). The only
+ * credential is the signed recap token already in the URL — it resolves to
+ * the booking the photos scope to, and shop/trip are derived from that
+ * booking, never trusted from the form. The endpoint is public, so the
+ * booking/cancelled/cap gate runs *before* bytes are stored (no orphaned blob
+ * on a rejected upload), and only a lost race against the cap can leave a
+ * stored object — which is then cleaned up best-effort. Every file shares the
+ * one caption field the form offers; an unconfigured provider or a rejected
+ * file surfaces as a notice.
  */
 export async function uploadRecapPhotoAction(token: string, formData: FormData) {
   const back = `/recap/${token}`;
@@ -39,36 +42,77 @@ export async function uploadRecapPhotoAction(token: string, formData: FormData) 
   ) {
     redirect(`${back}?photo=error`);
   }
-  const file = formData.get("photo");
-  if (!(file instanceof File) || file.size === 0) redirect(`${back}?photo=none`);
+  // Bounded to the cap regardless of how many files a crafted request
+  // claims — every insert below still re-checks the cap atomically, this
+  // just keeps an abusive submit from driving MAX+N storage round trips.
+  const files = formData
+    .getAll("photo")
+    .filter((entry): entry is File => entry instanceof File && entry.size > 0)
+    .slice(0, MAX_RECAP_PHOTOS_PER_BOOKING);
+  if (files.length === 0) redirect(`${back}?photo=none`);
   const caption = String(formData.get("caption") ?? "");
   const db = await getDb();
 
-  // Gate before the expensive side effect: refuse a cancelled or capped booking
-  // without ever writing to blob storage.
+  // Gate before the expensive side effect: refuse a cancelled/no-show or
+  // already-capped booking without ever writing to blob storage. A cancelled
+  // booking gets its own notice — "that photo didn't upload, try a smaller
+  // file" is a lie when the real reason is there's nothing to add a photo to
+  // (task 56).
   const eligibility = await canAddRecapPhoto(db, bookingId);
   if (!eligibility.ok) {
-    redirect(`${back}?photo=${eligibility.reason === "limit" ? "limit" : "error"}`);
+    redirect(
+      `${back}?photo=${eligibility.reason === "limit" ? "limit" : eligibility.reason === "cancelled" ? "cancelled" : "error"}`,
+    );
   }
 
-  const stored = await storeRecapImage({
-    filename: file.name,
-    contentType: file.type,
-    bytes: await file.arrayBuffer(),
-  });
-  if (stored.status !== "stored") {
-    redirect(`${back}?photo=${stored.status === "not_configured" ? "unconfigured" : "error"}`);
+  let added = 0;
+  let hitLimit = false;
+  let hitCancelled = false;
+  let unconfigured = false;
+
+  for (const file of files) {
+    const stored = await storeRecapImage({
+      filename: file.name,
+      contentType: file.type,
+      bytes: await file.arrayBuffer(),
+    });
+    if (stored.status !== "stored") {
+      if (stored.status === "not_configured") {
+        // A shop-wide config gap — the next file in the batch won't fare
+        // any differently, so stop trying.
+        unconfigured = true;
+        break;
+      }
+      continue; // this one file failed (wrong type/too big); keep trying the rest
+    }
+
+    const result = await addRecapPhoto(db, { bookingId, imageUrl: stored.url, caption });
+    if (!result.ok) {
+      // Only reachable if a concurrent upload filled the cap (or the booking
+      // was cancelled) mid-batch — the object we just stored is now
+      // orphaned, so clean it up.
+      await deleteStoredImage(stored.url);
+      if (result.reason === "limit") {
+        hitLimit = true;
+        break; // no room for the rest of the batch either
+      }
+      if (result.reason === "cancelled") {
+        hitCancelled = true;
+        break;
+      }
+      continue;
+    }
+    added += 1;
   }
 
-  const result = await addRecapPhoto(db, { bookingId, imageUrl: stored.url, caption });
-  if (!result.ok) {
-    // Only reachable if a concurrent upload filled the cap after the pre-check —
-    // the object we just stored is now orphaned, so clean it up.
-    await deleteStoredImage(stored.url);
-    redirect(`${back}?photo=${result.reason === "limit" ? "limit" : "error"}`);
+  if (added > 0) {
+    revalidatePath(back);
+    redirect(`${back}?photo=added`);
   }
-  revalidatePath(back);
-  redirect(`${back}?photo=added`);
+  if (unconfigured) redirect(`${back}?photo=unconfigured`);
+  if (hitCancelled) redirect(`${back}?photo=cancelled`);
+  if (hitLimit) redirect(`${back}?photo=limit`);
+  redirect(`${back}?photo=error`);
 }
 
 /**
@@ -153,6 +197,13 @@ export async function submitReviewAction(token: string, formData: FormData) {
     // from reaching it as a type error at all.
     comment: String(formData.get("comment") ?? ""),
   }).catch(() => null);
+  // A no-show/cancelled booking gets its own truthful notice — "pick a
+  // rating and try again" is a lie when the real problem is there was no
+  // dive to rate, and repeating the same rating forever would never fix it
+  // (task 56).
+  if (outcome?.ok === false && outcome.reason === "did_not_dive") {
+    redirect(`${back}?review=did_not_dive`);
+  }
   if (!outcome?.ok) redirect(`${back}?review=error`);
 
   revalidatePath(back);

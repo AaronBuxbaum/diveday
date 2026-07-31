@@ -284,6 +284,29 @@ describe("POST /api/webhooks/stripe — event dispatch", () => {
     });
   });
 
+  it("account.updated passes the account's own currency through, not a hardcoded usd (task 60)", async () => {
+    const response = await post({
+      id: "evt_2",
+      type: "account.updated",
+      data: {
+        object: {
+          id: "acct_123",
+          charges_enabled: true,
+          payouts_enabled: false,
+          details_submitted: true,
+          default_currency: "eur",
+        },
+      },
+    });
+    expect(response.status).toBe(200);
+    expect(setShopStripeAccountStatus).toHaveBeenCalledWith(FAKE_DB, "acct_123", {
+      chargesEnabled: true,
+      payoutsEnabled: false,
+      detailsSubmitted: true,
+      defaultCurrency: "eur",
+    });
+  });
+
   it("account.application.deauthorized disconnects the shop's account by the event's top-level account field", async () => {
     const response = await post({
       id: "evt_1",

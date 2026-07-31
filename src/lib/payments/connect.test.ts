@@ -61,7 +61,7 @@ describe("stripe connect provider", () => {
     expect(await threw.exchangeCode("code", "https://x/cb")).toEqual({ status: "failed" });
   });
 
-  it("retrieves connected account status", async () => {
+  it("retrieves connected account status, defaulting currency to usd when Stripe omits it", async () => {
     const fetchImpl = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
@@ -74,9 +74,37 @@ describe("stripe connect provider", () => {
     const result = await provider.retrieveAccountStatus("acct_123");
     expect(result).toEqual({
       status: "ok",
-      account: { chargesEnabled: true, payoutsEnabled: false, detailsSubmitted: true },
+      account: {
+        chargesEnabled: true,
+        payoutsEnabled: false,
+        detailsSubmitted: true,
+        defaultCurrency: "usd",
+      },
     });
     expect(fetchImpl.mock.calls[0][0]).toBe("https://api.stripe.com/v1/accounts/acct_123");
+  });
+
+  it("passes through a non-usd default currency (task 60)", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        charges_enabled: true,
+        payouts_enabled: true,
+        details_submitted: true,
+        default_currency: "eur",
+      }),
+    });
+    const provider = providerWith(configuredEnv, fetchImpl);
+    const result = await provider.retrieveAccountStatus("acct_eu");
+    expect(result).toEqual({
+      status: "ok",
+      account: {
+        chargesEnabled: true,
+        payoutsEnabled: true,
+        detailsSubmitted: true,
+        defaultCurrency: "eur",
+      },
+    });
   });
 
   it("deauthorizes a connected account", async () => {

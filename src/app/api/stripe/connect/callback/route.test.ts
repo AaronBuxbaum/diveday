@@ -90,7 +90,12 @@ describe("stripe connect callback authorization", () => {
       exchangeCode: vi.fn().mockResolvedValue({ status: "connected", stripeAccountId: "acct_1" }),
       retrieveAccountStatus: vi.fn().mockResolvedValue({
         status: "ok",
-        account: { chargesEnabled: true, payoutsEnabled: true, detailsSubmitted: true },
+        account: {
+          chargesEnabled: true,
+          payoutsEnabled: true,
+          detailsSubmitted: true,
+          defaultCurrency: "eur",
+        },
       }),
       deauthorize: vi.fn(),
     } as never);
@@ -104,6 +109,7 @@ describe("stripe connect callback authorization", () => {
       chargesEnabled: true,
       payoutsEnabled: true,
       detailsSubmitted: true,
+      defaultCurrency: "eur", // task 60 — read from Stripe, not assumed usd
     });
   });
 
