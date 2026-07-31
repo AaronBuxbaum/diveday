@@ -2443,6 +2443,11 @@
           "saved": "Saved on this phone — it'll send when you're back in service.",
           "genericError": "That change couldn't be saved on this device — try it again."
         }
+      },
+      "shellVersion": {
+        "staleBanner": "This saved copy is from an older version of DiveDay. Refresh with signal to update it before boarding divers.",
+        "updateBanner": "A newer version of DiveDay is ready.",
+        "refreshButton": "Refresh now"
       }
     },
     "ambientContrast": {
