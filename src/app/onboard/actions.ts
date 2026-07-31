@@ -26,12 +26,20 @@ export async function onboardAction(formData: FormData) {
   // and preserved across every bounce back to it so a retry doesn't lose the
   // attribution the funnel event reads.
   const source = eventSource(formData.get("source"));
+  // Non-secret fields only — never the password — echoed back so a bounce to
+  // `?error=` doesn't wipe a form a shop owner just spent a minute filling in.
+  const PRESERVED_FIELDS = ["shopName", "shopSlug", "timezone", "ownerName", "ownerEmail"] as const;
   // Annotated so TypeScript treats the call as never-returning (control-flow
   // analysis only honours that on an explicitly typed const).
-  const backToForm: (message: string) => never = (message) =>
-    redirect(
-      `/onboard?error=${encodeURIComponent(message)}${source === "unknown" ? "" : `&from=${source}`}`,
-    );
+  const backToForm: (message: string) => never = (message) => {
+    const params = new URLSearchParams({ error: message });
+    if (source !== "unknown") params.set("from", source);
+    for (const field of PRESERVED_FIELDS) {
+      const value = formData.get(field);
+      if (typeof value === "string" && value) params.set(field, value);
+    }
+    redirect(`/onboard?${params.toString()}`);
+  };
 
   const ip = await clientIp();
   if (!checkRateLimit(rateLimitKey("onboard", ip), RATE_LIMITS.onboard).allowed) {

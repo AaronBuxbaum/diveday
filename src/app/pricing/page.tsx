@@ -11,6 +11,7 @@ import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { trialHref } from "@/lib/funnel";
 import { earlyAccessPrice, fullShopExport } from "@/lib/marketing";
+import { MIGRATION_GUIDES } from "@/lib/migration-guides";
 import { FOUNDER_EMAIL } from "@/lib/platform-mail";
 
 export const metadata: Metadata = {
@@ -27,7 +28,13 @@ export const metadata: Metadata = {
 };
 
 export default async function PricingPage() {
-  const t = diverTranslator(await requestLocale());
+  const locale = await requestLocale();
+  const t = diverTranslator(locale);
+  // Generated from the migration-guides registry, never hand-listed, so a new
+  // guide can't be silently omitted from this answer.
+  const competitors = new Intl.ListFormat(locale, { type: "conjunction" }).format(
+    MIGRATION_GUIDES.map((guide) => guide.competitor),
+  );
 
   const faq = [
     {
@@ -55,7 +62,7 @@ export default async function PricingPage() {
     },
     {
       question: t("marketing.pricing.faq.switching.question"),
-      answer: t("marketing.pricing.faq.switching.answer"),
+      answer: t("marketing.pricing.faq.switching.answer", { competitors }),
     },
     {
       question: t("marketing.pricing.faq.agency.question"),

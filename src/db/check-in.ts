@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, ilike, inArray, lte, or } from "drizzle-orm";
+import { and, asc, count, eq, gte, ilike, inArray, lte, ne, or } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import type { ReadinessResult } from "@/lib/readiness";
 import type { AppDb, DbExecutor } from "./client";
@@ -84,6 +84,48 @@ export async function listCheckInQueue(
       blockers: [{ code: "readiness_unavailable" }],
     },
   }));
+}
+
+export type WalkInTripOption = {
+  tripId: string;
+  title: string;
+  startsAt: Date;
+  endsAt: Date;
+  capacity: number;
+  booked: number;
+};
+
+/**
+ * Trips a counter walk-in can be added to — the same day-of window
+ * `listCheckInQueue` reads (`CHECK_IN_LOOKBACK_MS`/`CHECK_IN_HORIZON_MS`), so
+ * "today's departures" means the same thing on both halves of this surface.
+ */
+export async function listWalkInTrips(
+  db: AppDb,
+  shopId: string,
+  now: Date = nowDate(),
+): Promise<WalkInTripOption[]> {
+  return db
+    .select({
+      tripId: trips.id,
+      title: trips.title,
+      startsAt: trips.startsAt,
+      endsAt: trips.endsAt,
+      capacity: trips.capacity,
+      booked: count(bookings.id),
+    })
+    .from(trips)
+    .leftJoin(bookings, and(eq(bookings.tripId, trips.id), ne(bookings.status, "cancelled")))
+    .where(
+      and(
+        eq(trips.shopId, shopId),
+        eq(trips.status, "scheduled"),
+        gte(trips.startsAt, new Date(now.getTime() - CHECK_IN_LOOKBACK_MS)),
+        lte(trips.startsAt, new Date(now.getTime() + CHECK_IN_HORIZON_MS)),
+      ),
+    )
+    .groupBy(trips.id)
+    .orderBy(asc(trips.startsAt));
 }
 
 export type CheckInOutcome =

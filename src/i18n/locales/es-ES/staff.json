@@ -1883,7 +1883,38 @@
       "notBookable": "Esa reserva ya no está disponible para el check-in.",
       "notFound": "No se encontró esa reserva.",
       "staffNotFound": "No se pudo confirmar tu acceso de personal.",
-      "invalid": "Elige un buceador de la cola antes de registrarlo."
+      "invalid": "Elige un buceador de la cola antes de registrarlo.",
+      "walkinAdded": "Añadido y a bordo.",
+      "walkinFull": "Ese barco está completo — prueba la lista de espera desde su página de salida.",
+      "walkinAlready": "Ese buceador ya está en este barco.",
+      "walkinUnavailable": "Ese barco no admite walk-ins ahora mismo — revisa su página de salida para saber por qué.",
+      "walkinInvalid": "Elige un barco y escribe un nombre antes de añadir un walk-in."
+    },
+    "walkIn": {
+      "eyebrow": "Modo mostrador",
+      "title": "Walk-in",
+      "description": "Elige el barco de hoy y luego busca al buceador o añádelo de cero — sin necesidad de correo en el mostrador.",
+      "backToQueue": "Volver al check-in",
+      "tripLabel": "¿Qué barco?",
+      "tripEmpty": "No sale ningún barco en el próximo día y medio — consulta el calendario en su lugar.",
+      "tripSummary": "{title} · {date} · {time} · {booked}/{capacity} reservados",
+      "changeTrip": "¿No es este? Elige otro barco.",
+      "findHeading": "Buscar un buceador que ya conste",
+      "findLabel": "Busca por nombre, correo o teléfono",
+      "findPlaceholder": "Empieza a escribir un nombre…",
+      "search": "Buscar",
+      "searching": "Buscando…",
+      "noMatches": "Sin coincidencias para «{query}» — añádelo de cero abajo.",
+      "noEmailOnFile": "Sin correo registrado",
+      "addToBoat": "Añadir al barco",
+      "addPersonAriaLabel": "Añadir a {name} a este barco",
+      "adding": "Añadiendo…",
+      "handEntryHeading": "Buceador nuevo",
+      "handEntryDescription": "El correo es opcional — la tripulación puede recogerlo más tarde. Con el nombre basta para subirlo al barco ahora.",
+      "nameLabel": "Nombre completo",
+      "emailLabel": "Correo",
+      "phoneLabel": "Teléfono",
+      "optionalHint": "Opcional"
     }
   },
   "waiversStaff": {
@@ -1928,9 +1959,37 @@
     "noDeparturesHeading": "Hoy no sale ningún barco",
     "nextDeparture": "La próxima es <link>{title}</link> el {date} a las {time}.",
     "noDeparturesEmpty": "Todavía no hay nada programado. Programa una salida y aparecerá aquí la mañana que zarpe.",
-    "scheduleTrip": "Programar una salida"
+    "scheduleTrip": "Programar una salida",
+    "firstRun": {
+      "heading": "Prepara tu tienda",
+      "subtitle": "Cinco pasos y los buceadores podrán empezar a reservar.",
+      "contactTitle": "Añade tus datos de contacto",
+      "contactBody": "Teléfono y correo para que los buceadores — y DiveDay — puedan contactarte.",
+      "contactAction": "Añadir datos de contacto",
+      "contactDone": "Datos de contacto guardados.",
+      "siteTitle": "Añade tu primer punto de buceo",
+      "siteBody": "El lugar al que asignarás tus salidas.",
+      "siteAction": "Añadir un punto de buceo",
+      "siteDone": "{count, plural, one {# punto de buceo añadido.} other {# puntos de buceo añadidos.}}",
+      "tripTitle": "Programa tu primera salida",
+      "tripBody": "Pon una salida en el calendario — los buceadores no pueden reservar hasta que exista una.",
+      "tripAction": "Programar una salida",
+      "scheduleTitle": "Comparte tu calendario público",
+      "scheduleBody": "La página desde la que reservan de verdad los buceadores — pégala en tu web o redes sociales.",
+      "scheduleCopy": "Copiar enlace",
+      "scheduleCopied": "Copiado",
+      "stripeTitle": "Conecta Stripe (opcional)",
+      "stripeBody": "Cobra en línea. Sáltate esto y cobra en el mostrador en su lugar.",
+      "stripeAction": "Conectar Stripe",
+      "stripeDone": "Stripe conectado.",
+      "doneBadge": "Hecho"
+    }
   },
   "shared": {
+    "capacity": {
+      "full": "Completo",
+      "spotsLeft": "{count, plural, one {queda # plaza} other {quedan # plazas}}"
+    },
     "depth": {
       "meters": "m",
       "feet": "ft"
@@ -1977,7 +2036,8 @@
       "goToDivers": "Buceadores",
       "goToSettings": "Ajustes",
       "goToWaivers": "Exenciones",
-      "goToBoarding": "Embarque — el barco de hoy"
+      "goToBoarding": "Embarque — el barco de hoy",
+      "goToWalkIn": "Walk-in"
     },
     "keyboardShortcuts": {
       "buttonAriaLabel": "Atajos de teclado",
@@ -2077,6 +2137,8 @@
         "assignCrewMemberAria": "Asignar tripulante a {title}",
         "assignedCrewHeading": "Tripulación asignada (arrastra al personal aquí para asignarlo)",
         "assignCrewOption": "Asignar tripulante…",
+        "assignCrewLabel": "Asignar tripulante",
+        "assignFailed": "No se ha guardado — comprueba tu conexión o inténtalo de nuevo.",
         "unassignAria": "Quitar a {name}",
         "noCrewAssigned": "Sin tripulación asignada. Arrastra al personal desde arriba hasta aquí.",
         "countReady": "Listos",
@@ -2089,7 +2151,7 @@
         "clearToBoard": "Todos los de esta salida están listos para embarcar.",
         "sailingToday": "Sale hoy",
         "sailingTodaySubtitle": "Registra a los buceadores en el mostrador o haz el pase de lista desde el manifiesto — la disponibilidad se vuelve a comprobar en el momento de embarcar a cada persona.",
-        "dragStaffLabel": "Arrastra al personal para asignarlo:"
+        "dragStaffLabel": "O arrastra para asignar (escritorio):"
       },
       "todayQueue": {
         "emptyHeading": "No hay nada pendiente para ti",

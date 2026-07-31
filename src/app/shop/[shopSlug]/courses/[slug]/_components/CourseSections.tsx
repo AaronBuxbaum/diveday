@@ -443,6 +443,11 @@ export function CourseSessions({
             const startDay = toDateInputValue(utcToWallTime(session.startsAt, timezone));
             const endDay = toDateInputValue(utcToWallTime(session.endsAt, timezone));
             const multiDay = startDay !== endDay;
+            const capacityLabelValue = capacityLabel(session);
+            const capacityText =
+              capacityLabelValue.kind === "full"
+                ? t("fallback.full")
+                : t("fallback.spotsLeft", { count: capacityLabelValue.remaining });
             return (
               <li
                 key={session.id}
@@ -459,7 +464,7 @@ export function CourseSessions({
                           time: formatTime(session.startsAt, locale, timezone),
                         })
                       : formatTimeRangeTz(session.startsAt, session.endsAt, locale, timezone)}{" "}
-                    · {capacityLabel(session)}
+                    · {capacityText}
                   </p>
                 </div>
                 <Link

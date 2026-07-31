@@ -98,6 +98,7 @@ export function ShopNav({
               goToSettings: t("shared.commandPalette.goToSettings"),
               goToWaivers: t("shared.commandPalette.goToWaivers"),
               goToBoarding: t("shared.commandPalette.goToBoarding"),
+              goToWalkIn: t("shared.commandPalette.goToWalkIn"),
             }}
           />
           <KeyboardShortcuts shopSlug={shopSlug} copy={keyboardShortcutsCopy} />

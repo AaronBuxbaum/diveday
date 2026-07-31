@@ -120,6 +120,11 @@ export default async function ManageTripPage({
         )
       : null;
   const overRatio = entryLevelRatioCap !== null && trip.booked > entryLevelRatioCap;
+  const capacityLabelValue = capacityLabel(trip);
+  const capacityText =
+    capacityLabelValue.kind === "full"
+      ? t("shared.capacity.full")
+      : t("shared.capacity.spotsLeft", { count: capacityLabelValue.remaining });
 
   return (
     <>
@@ -137,7 +142,7 @@ export default async function ManageTripPage({
                 // (design/principles.md #3) — "success" stands out where
                 // "neutral" would recede.
                 <Badge tone={isFull(trip) ? "success" : "primary"} tabularNums>
-                  {capacityLabel(trip)}
+                  {capacityText}
                 </Badge>
               )}
               <span className="text-muted">

@@ -73,6 +73,13 @@ function readMedicalAnswers(
  */
 const labelTextBase = "text-(length:--text-base) leading-6";
 
+/**
+ * No default answer: `yes` is `undefined` until a draft or a previous
+ * selection actually set one, and neither radio starts checked in that case
+ * — the diver must make a conscious choice on every question, including the
+ * medical ones, rather than silently inherit a "No" the page picked for them.
+ * "Yes" renders before "No" to match the paper RSTC form's own order.
+ */
 function RadioQuestion({
   name,
   question,
@@ -87,12 +94,12 @@ function RadioQuestion({
       <legend className="px-1 text-base font-medium">{question}</legend>
       <div className="mt-3 flex gap-3">
         <label className="flex min-h-11 items-center gap-2 rounded-lg border border-border px-4 text-base hover:bg-surface-sunken">
-          <input type="radio" name={name} value="no" defaultChecked={yes !== true} required />
-          No
-        </label>
-        <label className="flex min-h-11 items-center gap-2 rounded-lg border border-border px-4 text-base hover:bg-surface-sunken">
           <input type="radio" name={name} value="yes" defaultChecked={yes === true} required />
           Yes
+        </label>
+        <label className="flex min-h-11 items-center gap-2 rounded-lg border border-border px-4 text-base hover:bg-surface-sunken">
+          <input type="radio" name={name} value="no" defaultChecked={yes === false} required />
+          No
         </label>
       </div>
     </fieldset>

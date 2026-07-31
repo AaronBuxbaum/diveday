@@ -141,11 +141,35 @@ export default async function TripsPage({
   const st = staffTranslator(locale);
   const money = new Intl.NumberFormat(locale, { style: "currency", currency: "USD" });
   const now = nowDate();
+
+  // Shop-local month boundaries, in UTC, for a given calendar month.
+  const monthBoundsUtc = (ref: MonthRef) => {
+    const monthStart = wallTimeToUtc(
+      { year: ref.year, month: ref.month, day: 1, hour: 0, minute: 0 },
+      tz,
+    );
+    const nextRef = addMonths(ref, 1);
+    const monthEnd = wallTimeToUtc(
+      { year: nextRef.year, month: nextRef.month, day: 1, hour: 0, minute: 0 },
+      tz,
+    );
+    return { monthStart, monthEnd };
+  };
+
+  // When the diver has explicitly paged the calendar to a month, bound the
+  // trip list below it to that same month so the two surfaces can't disagree
+  // — the previous behavior kept the list on "next N trips from now"
+  // regardless of which month the calendar had paged to. The default view
+  // (no explicit `?month=`) stays that unbounded list; staff never navigate
+  // by month, so their builder list is never bounded by it either.
+  const explicitMonth = !staffView ? parseMonthKey(month) : null;
+  const listMonthBounds = explicitMonth ? monthBoundsUtc(explicitMonth) : null;
+
   const [range, stats, { trips: upcoming, nextCursor }, reviewAggregate, reviews] =
     await Promise.all([
       upcomingScheduleRange(db, shop.id, now),
       staffView ? upcomingScheduleStats(db, shop.id, now) : null,
-      pagedUpcomingTripsWithCounts(db, shop.id, { cursor: after, now }),
+      pagedUpcomingTripsWithCounts(db, shop.id, { cursor: after, now, ...listMonthBounds }),
       getShopReviewAggregate(db, shop.id),
       listPublishedShopReviews(db, shop.id),
     ]);
@@ -163,7 +187,7 @@ export default async function TripsPage({
   const todayIso = toDateInputValue(todayWall);
   const firstTripMonth = range.first ? monthOf(range.first) : null;
   const lastTripMonth = range.last ? monthOf(range.last) : null;
-  const currentMonth: MonthRef = parseMonthKey(month) ??
+  const currentMonth: MonthRef = explicitMonth ??
     firstTripMonth ?? { year: todayWall.year, month: todayWall.month };
   const prev = addMonths(currentMonth, -1);
   const next = addMonths(currentMonth, 1);
@@ -280,15 +304,7 @@ export default async function TripsPage({
 
   const tripsByDay = new Map<string, CalendarTrip[]>();
   if (!staffView && hasUpcoming) {
-    const monthStart = wallTimeToUtc(
-      { year: currentMonth.year, month: currentMonth.month, day: 1, hour: 0, minute: 0 },
-      tz,
-    );
-    const nextRef = addMonths(currentMonth, 1);
-    const monthEnd = wallTimeToUtc(
-      { year: nextRef.year, month: nextRef.month, day: 1, hour: 0, minute: 0 },
-      tz,
-    );
+    const { monthStart, monthEnd } = listMonthBounds ?? monthBoundsUtc(currentMonth);
     const monthTrips = await upcomingTripsForCalendar(db, shop.id, monthStart, monthEnd, now);
     for (const trip of monthTrips) {
       const iso = toDateInputValue(utcToWallTime(trip.startsAt, tz));
@@ -443,10 +459,17 @@ export default async function TripsPage({
             <p className="mt-1 text-sm text-muted">{t("schedule.noTripsPublic")}</p>
           )}
         </EmptyState>
-      ) : staffView ? null : (
+      ) : staffView ? null : upcoming.length === 0 ? (
+        <p className="text-sm text-muted">{t("schedule.noTripsMonth")}</p>
+      ) : (
         <ul className="flex flex-col gap-3">
           {upcoming.map((trip) => {
             const full = isFull(trip);
+            const capacityLabelValue = capacityLabel(trip);
+            const capacityText =
+              capacityLabelValue.kind === "full"
+                ? t("fallback.full")
+                : t("fallback.spotsLeft", { count: capacityLabelValue.remaining });
             return (
               <li key={trip.id}>
                 <Link
@@ -497,7 +520,7 @@ export default async function TripsPage({
                   </div>
                   <div className="shrink-0">
                     <Badge tone={full ? "neutral" : "primary"} tabularNums>
-                      {capacityLabel(trip)}
+                      {capacityText}
                     </Badge>
                   </div>
                 </Link>

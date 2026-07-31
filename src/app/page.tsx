@@ -18,6 +18,7 @@ import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { trialHref } from "@/lib/funnel";
 import { earlyAccessPriceAmount, fullShopExport } from "@/lib/marketing";
+import { MIGRATION_GUIDES } from "@/lib/migration-guides";
 
 export const metadata: Metadata = {
   title: "Dive shop software for the whole dive day — DiveDay",
@@ -48,7 +49,13 @@ const softwareApplicationJsonLd = {
 };
 
 export default async function Home() {
-  const t = diverTranslator(await requestLocale());
+  const locale = await requestLocale();
+  const t = diverTranslator(locale);
+  // Generated from the migration-guides registry, never hand-listed, so a new
+  // guide can't be silently omitted from the pitch that sends shops to it.
+  const competitors = new Intl.ListFormat(locale, { type: "disjunction" }).format(
+    MIGRATION_GUIDES.map((guide) => guide.competitor),
+  );
   const dailyMoments = [
     {
       role: t("marketing.home.moments.diver.role"),
@@ -199,7 +206,7 @@ export default async function Home() {
                 href="/switching"
                 className={buttonClass({ variant: "link", className: "mt-2 text-left" })}
               >
-                {t("marketing.home.switchingLink")}
+                {t("marketing.home.switchingLink", { competitors })}
               </Link>
             </div>
             <div className="rounded-2xl border border-border bg-surface p-6 sm:p-8">

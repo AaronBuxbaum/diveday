@@ -23,12 +23,12 @@ describe("isFull", () => {
 });
 
 describe("capacityLabel", () => {
-  it("pluralizes correctly", () => {
-    expect(capacityLabel({ capacity: 12, booked: 9 })).toBe("3 spots left");
-    expect(capacityLabel({ capacity: 12, booked: 11 })).toBe("1 spot left");
+  it("returns a code with the remaining count, not a sentence", () => {
+    expect(capacityLabel({ capacity: 12, booked: 9 })).toEqual({ kind: "left", remaining: 3 });
+    expect(capacityLabel({ capacity: 12, booked: 11 })).toEqual({ kind: "left", remaining: 1 });
   });
 
-  it("says Full at capacity", () => {
-    expect(capacityLabel({ capacity: 10, booked: 10 })).toBe("Full");
+  it("returns the full code at capacity", () => {
+    expect(capacityLabel({ capacity: 10, booked: 10 })).toEqual({ kind: "full" });
   });
 });

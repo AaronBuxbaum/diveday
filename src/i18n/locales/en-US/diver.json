@@ -21,6 +21,7 @@
     "noTrips": "No trips on the books yet",
     "noTripsStaff": "The board is clear. Schedule your first departure and divers can start booking.",
     "noTripsPublic": "Check back soon — or call the shop and we’ll find you a boat.",
+    "noTripsMonth": "No trips this month — try another month on the calendar above.",
     "showLater": "Show later departures",
     "backToNext": "← Back to the next departure",
     "courseSession": "Course session",
@@ -276,6 +277,8 @@
     "tipCancelled": "No worries — the tip wasn’t charged.",
     "tipRange": "Enter a tip amount between $1 and $500.",
     "tipFailed": "That didn’t go through — try again in a moment.",
+    "tipThanksNotice": "Thanks for tipping your crew! 🤿",
+    "tipConfirming": "Just confirming your payment with Stripe — this usually takes a few seconds. Refresh if it doesn’t update.",
     "photoLimit": "That’s the most photos one recap holds ({max}).",
     "loggedAt": "You logged {count, plural, one {a dive} other {# dives}} at {where}.",
     "loggedToday": "You logged {count, plural, one {a dive} other {# dives}} today.",
@@ -617,15 +620,29 @@
       "shopLinkPlaceholder": "e.g. green-lagoon",
       "shopLinkTitle": "Lowercase letters, numbers, and hyphens — this becomes your shop's web address",
       "timezoneLabel": "Timezone",
+      "timezoneGroup": {
+        "americas": "Americas",
+        "caribbean": "Caribbean & Mexico",
+        "europeRedSea": "Europe & Red Sea",
+        "asiaPacific": "Asia-Pacific"
+      },
       "timezone": {
         "eastern": "Eastern Time (New York)",
         "central": "Central Time (Chicago)",
         "mountain": "Mountain Time (Denver)",
         "pacific": "Pacific Time (Los Angeles)",
+        "hawaii": "Hawaii (Honolulu)",
+        "cancun": "Cancún / Cozumel",
+        "puertoRico": "Puerto Rico / Eastern Caribbean",
+        "nassau": "Nassau, Bahamas",
         "london": "London",
+        "cairo": "Cairo / Red Sea",
         "singapore": "Singapore",
+        "bangkok": "Bangkok",
+        "manila": "Manila",
         "sydney": "Sydney",
-        "auckland": "Auckland"
+        "auckland": "Auckland",
+        "palau": "Palau"
       },
       "youSectionTitle": "You",
       "fullNameLabel": "Full name",
@@ -842,7 +859,8 @@
     "nightDive": "Night Dive",
     "tomorrowTime": "Tomorrow · 7:30 AM",
     "fridayTime": "Friday · 7:30 PM",
-    "spotsLeft": "{count, plural, one {# spot left} other {# spots left}}"
+    "spotsLeft": "{count, plural, one {# spot left} other {# spots left}}",
+    "full": "Full"
   },
   "demo": {
     "shopLabel": "Demo shop",
@@ -919,7 +937,7 @@
       "exportDescription1": "DiveDay is new, and you shouldn't have to take a new vendor on faith. So the exit is built in. {claim} {terms}",
       "exportDescription2": "Arriving instead of leaving? Bring the spreadsheet you already keep — the importer maps your columns and shows exactly what comes across, and what honestly doesn't, before a single row is saved. Or hand us the sheet and we'll bring your divers in with you, free.",
       "spreadsheetLink": "Running the day on a spreadsheet? See how it comes across →",
-      "switchingLink": "Switching from EVE, DiveShop360, DiveAdmin, or Smartwaiver? Read the guides →",
+      "switchingLink": "Switching from {competitors}? Read the guides →",
       "inExportEyebrow": "In the export",
       "exportItem1": "One ZIP of documented CSV files, downloaded from Settings by you",
       "exportItem2": "Divers, bookings, waiver records, and payment history",
@@ -1108,7 +1126,7 @@
         },
         "switching": {
           "question": "What does switching to DiveDay actually involve?",
-          "answer": "Export a spreadsheet of customers from your current system, and DiveDay's importer brings in your divers, their certification cards, their rental sizes, and any waivers your old system already had signed — showing you exactly what will happen before anything is saved. When it recognizes an email it updates the existing diver instead of duplicating them. Imported cards arrive as claims for your staff to verify; a waiver your old system already had signed comes over marked as imported, so nobody has to sign it again. Step-by-step guides cover EVE, DiveShop360, DiveAdmin, and Smartwaiver."
+          "answer": "Export a spreadsheet of customers from your current system, and DiveDay's importer brings in your divers, their certification cards, their rental sizes, and any waivers your old system already had signed — showing you exactly what will happen before anything is saved. When it recognizes an email it updates the existing diver instead of duplicating them. Imported cards land verified and flagged imported, ready for a one-tap confirm; a waiver your old system already had signed comes over marked as imported, so nobody has to sign it again. Step-by-step guides cover {competitors}."
         },
         "agency": {
           "question": "Does DiveDay connect to PADI or SSI?",
@@ -1130,6 +1148,11 @@
       "stillQuestion": "Still have a question a FAQ can't answer? Founding shops get a founder-direct line — use it, always welcome.",
       "emailCta": "Email {email}"
     }
+  },
+  "notFound": {
+    "heading": "We couldn’t find that page",
+    "body": "The link may be old, or the page may have moved. Check the address, or head back to the homepage.",
+    "backHome": "Back to the homepage"
   },
   "notifications": {
     "brief": {

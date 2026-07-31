@@ -18,6 +18,8 @@ export type DepartureBoardCopy = {
   assignCrewOption: string;
   unassignAria: string;
   noCrewAssigned: string;
+  assignCrewLabel: string;
+  assignFailed: string;
   countReady: string;
   countBlocked: string;
   countBoarded: string;
@@ -91,6 +93,7 @@ function DepartureCard({
 }) {
   const { blocked, ready, boarded, booked, capacity } = departure;
   const [localCrew, setLocalCrew] = useState(departure.crew || []);
+  const [assignError, setAssignError] = useState(false);
 
   useEffect(() => {
     setLocalCrew(departure.crew || []);
@@ -103,6 +106,7 @@ function DepartureCard({
 
     const updated = [...localCrew, staff];
     setLocalCrew(updated);
+    setAssignError(false);
 
     try {
       const res = await updateCrewAction(departure.tripId, {
@@ -111,15 +115,18 @@ function DepartureCard({
       });
       if (!res.ok) {
         setLocalCrew(departure.crew || []);
+        setAssignError(true);
       }
     } catch {
       setLocalCrew(departure.crew || []);
+      setAssignError(true);
     }
   };
 
   const handleUnassign = async (staffId: string) => {
     const updated = localCrew.filter((c) => c.id !== staffId);
     setLocalCrew(updated);
+    setAssignError(false);
 
     try {
       const res = await updateCrewAction(departure.tripId, {
@@ -128,9 +135,11 @@ function DepartureCard({
       });
       if (!res.ok) {
         setLocalCrew(departure.crew || []);
+        setAssignError(true);
       }
     } catch {
       setLocalCrew(departure.crew || []);
+      setAssignError(true);
     }
   };
 
@@ -187,15 +196,17 @@ function DepartureCard({
         }}
         className="mt-4 rounded-xl border border-dashed border-border bg-surface p-3 transition-colors hover:border-primary/40"
       >
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-2">
           <p className="text-xs font-bold tracking-wide text-muted uppercase">
             {copy.assignedCrewHeading}
           </p>
           {availableStaff.length > 0 ? (
-            <label className="flex items-center gap-2 text-sm">
-              <span className="sr-only">
-                {fill(copy.assignCrewMemberAria, { title: departure.title })}
-              </span>
+            // The dropdown is the primary control — it works on a phone, which
+            // drag-and-drop above never will. Its label is visible, not
+            // sr-only, so it reads as the default way to crew a boat rather
+            // than a buried fallback for the drag interaction.
+            <label className="flex flex-col gap-1 text-sm font-medium sm:flex-row sm:items-center sm:gap-2">
+              {copy.assignCrewLabel}
               <select
                 aria-label={fill(copy.assignCrewMemberAria, { title: departure.title })}
                 defaultValue=""
@@ -204,7 +215,7 @@ function DepartureCard({
                   event.currentTarget.value = "";
                   void handleAssign(staffId);
                 }}
-                className="min-h-11 rounded-lg border border-border bg-surface px-3 text-sm text-foreground"
+                className="min-h-11 w-full rounded-lg border border-border bg-surface px-3 text-sm text-foreground sm:w-auto"
               >
                 <option value="">{copy.assignCrewOption}</option>
                 {availableStaff
@@ -225,13 +236,13 @@ function DepartureCard({
             {localCrew.map((c) => (
               <span
                 key={c.id}
-                className="inline-flex items-center gap-1 rounded-full border border-border-strong bg-surface px-2.5 py-0.5 text-xs font-medium"
+                className="inline-flex items-center gap-1 rounded-full border border-border-strong bg-surface py-0.5 pl-2.5 text-xs font-medium"
               >
                 {c.fullName}
                 <button
                   type="button"
                   onClick={() => handleUnassign(c.id)}
-                  className="ml-1 text-muted hover:text-danger font-bold text-xs"
+                  className="ml-1 flex min-h-11 min-w-11 items-center justify-center text-muted hover:text-danger font-bold text-xs"
                   aria-label={fill(copy.unassignAria, { name: c.fullName })}
                 >
                   ×
@@ -240,6 +251,11 @@ function DepartureCard({
             ))}
           </div>
         )}
+        {assignError ? (
+          <p role="alert" className="mt-2 text-xs font-semibold text-danger">
+            {copy.assignFailed}
+          </p>
+        ) : null}
       </section>
 
       <div className="mt-4 grid grid-cols-3 gap-2">
@@ -332,7 +348,7 @@ export function DepartureBoard({
                 type="button"
                 draggable
                 onDragStart={(e) => e.dataTransfer.setData("text/plain", staff.id)}
-                className="cursor-grab rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-medium text-primary transition-all active:cursor-grabbing hover:bg-primary/10"
+                className="min-h-11 cursor-grab rounded-full border border-primary/20 bg-primary/5 px-3 text-xs font-medium text-primary transition-all active:cursor-grabbing hover:bg-primary/10"
               >
                 {staff.fullName} 👤
               </button>
