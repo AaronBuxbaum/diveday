@@ -76,7 +76,8 @@ Next's own guidance recommends for this shape of app. Fix the suite instead of r
   too, or reset-based isolation silently stops being complete.
 - True parallel e2e execution (`fullyParallel`, `workers > 1`) still isn't safe — all specs share one
   dev-server process and one database. Revisit if e2e wall-clock becomes a problem again; the fix
-  would be per-worker servers/databases, not a small change.
+  would be per-worker servers/databases, not a small change. (Superseded the next day by
+  `20260720-e2e-parallel-prod-fleet.md`, which is that fix.)
 - New client-side fetch boundaries (another `/api/*` route with a browser caller) should get an MSW
   test alongside their Playwright coverage, following `offline-manifest-store.test.ts`'s pattern,
   rather than growing the Playwright suite for logic that doesn't need a real browser.
