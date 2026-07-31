@@ -7,7 +7,7 @@
  */
 
 /** Where the send happened, so the right route is revalidated after it lands. */
-export type WaiverSendSurface = "today" | "blockers" | "check_in";
+export type WaiverSendSurface = "today" | "blockers" | "check_in" | "roster";
 
 /** A private fallback link staff must hand over when email did not go out. */
 export type WaiverFallbackLink = {

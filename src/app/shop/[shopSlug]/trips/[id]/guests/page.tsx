@@ -42,7 +42,6 @@ import {
   deleteInternalNoteAction,
   deleteRecapPhotoAction,
   inviteWaitlistAction,
-  issueWaiverAction,
   markPaymentAction,
   markWaiverInPersonAction,
   removeBookingAction,
@@ -68,14 +67,13 @@ export default async function TripGuestsPage({
   searchParams: Promise<{
     notice?: string;
     bid?: string;
-    waiver?: string;
     diverq?: string;
     count?: string;
   }>;
 }) {
   const session = await requireStaffSession();
   const { shopSlug, id: tripId } = await params;
-  const { notice, bid, waiver, diverq, count } = await searchParams;
+  const { notice, bid, diverq, count } = await searchParams;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   // Staff read dates in the language their own device asks for, same
@@ -164,7 +162,7 @@ export default async function TripGuestsPage({
 
   return (
     <>
-      <FlashParams params={["notice", "bid", "waiver"]} />
+      <FlashParams params={["notice", "bid"]} />
       <ShopPageHeader
         eyebrow={t("trips.guests.eyebrow")}
         title={trip.title}
@@ -202,16 +200,6 @@ export default async function TripGuestsPage({
         undoBookingId={undoBookingId}
         undoAction={undoRemoveBookingAction.bind(null, shopSlug, tripId)}
       />
-
-      {notice === "waiver-link" && waiver ? (
-        <section className="rise-in mt-6 rounded-lg border border-accent/40 bg-accent/10 p-5">
-          <h2 className="font-semibold">{t("trips.guests.privateWaiverLinkReady")}</h2>
-          <p className="mt-1 text-sm text-muted">{t("trips.guests.waiverLinkDescription")}</p>
-          <Link href={`/waivers/${waiver}`} className={buttonClass({ className: "mt-3" })}>
-            {t("trips.guests.openWaiverLink")}
-          </Link>
-        </section>
-      ) : null}
 
       <WaitlistSection
         waitlist={waitlist}
@@ -261,6 +249,7 @@ export default async function TripGuestsPage({
         locale={locale}
         shopSlug={shopSlug}
         shopTimezone={shop.timezone}
+        tripId={tripId}
         booked={trip.booked}
         capacity={trip.capacity}
         roster={roster}
@@ -270,7 +259,6 @@ export default async function TripGuestsPage({
         nitroxByBooking={nitroxByBooking}
         requiresPayment={Boolean(requirement?.requiresPayment)}
         cancellationDeadline={cancellationDeadline(trip)}
-        issueWaiverAction={issueWaiverAction.bind(null, shopSlug, tripId)}
         bulkSendWaiversAction={bulkSendWaiversAction.bind(null, shopSlug, tripId)}
         markWaiverInPersonAction={markWaiverInPersonAction.bind(null, shopSlug, tripId)}
         markPaymentAction={markPaymentAction.bind(null, shopSlug, tripId)}

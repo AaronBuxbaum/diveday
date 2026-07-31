@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { SubmitButton } from "@/components/SubmitButton";
+import { WaiverSendControl } from "@/components/today/WaiverSendControl";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass } from "@/components/ui/form";
@@ -84,6 +85,7 @@ export function RosterSection({
   shopSlug,
   shopTimezone,
   locale,
+  tripId,
   booked,
   capacity,
   roster,
@@ -93,7 +95,6 @@ export function RosterSection({
   nitroxByBooking,
   requiresPayment,
   cancellationDeadline,
-  issueWaiverAction,
   bulkSendWaiversAction,
   markWaiverInPersonAction,
   markPaymentAction,
@@ -108,6 +109,7 @@ export function RosterSection({
   shopSlug: string;
   shopTimezone: string;
   locale: string;
+  tripId: string;
   booked: number;
   capacity: number;
   roster: RosterEntry[];
@@ -118,7 +120,6 @@ export function RosterSection({
   requiresPayment: boolean;
   /** When free cancellation closes, so staff see a refund cue on paid seats; null = no stated window. */
   cancellationDeadline: Date | null;
-  issueWaiverAction: (formData: FormData) => void;
   bulkSendWaiversAction: (formData: FormData) => void;
   markWaiverInPersonAction: (formData: FormData) => void;
   markPaymentAction: (formData: FormData) => void;
@@ -365,32 +366,26 @@ export function RosterSection({
                     </p>
                     <div className="mt-2">
                       {waiverControl.action ? (
-                        <form action={issueWaiverAction}>
-                          <input type="hidden" name="bookingId" value={booking.id} />
-                          <SubmitButton
-                            pendingLabel={
-                              waiverControl.action === "send"
-                                ? t("trips.roster.sending")
-                                : t("trips.roster.resending")
-                            }
-                            confirmMessage={
-                              waiverControl.confirm
-                                ? t("trips.roster.confirmResendWaiver", { name: person.fullName })
-                                : undefined
-                            }
-                            className={`inline-flex min-h-11 items-center gap-2 rounded-full px-4 text-sm font-medium transition-colors duration-200 ${waiverControl.tone}`}
-                          >
-                            {waiverControl.label}
-                            {waiverControl.hint ? (
-                              <>
-                                <span aria-hidden="true" className="opacity-40">
-                                  ·
-                                </span>
-                                <span className="font-normal opacity-70">{waiverControl.hint}</span>
-                              </>
-                            ) : null}
-                          </SubmitButton>
-                        </form>
+                        <WaiverSendControl
+                          shopSlug={shopSlug}
+                          surface="roster"
+                          tripId={tripId}
+                          bookingIds={[booking.id]}
+                          label={waiverControl.label}
+                          hint={waiverControl.hint}
+                          pendingLabel={
+                            waiverControl.action === "send"
+                              ? t("trips.roster.sending")
+                              : t("trips.roster.resending")
+                          }
+                          confirmMessage={
+                            waiverControl.confirm
+                              ? t("trips.roster.confirmResendWaiver", { name: person.fullName })
+                              : undefined
+                          }
+                          className={`inline-flex min-h-11 items-center gap-2 rounded-full px-4 text-sm font-medium transition-colors duration-200 ${waiverControl.tone}`}
+                          wrapperClassName=""
+                        />
                       ) : (
                         <span
                           className={`inline-flex min-h-11 items-center rounded-full px-4 text-sm font-medium ${waiverControl.tone}`}

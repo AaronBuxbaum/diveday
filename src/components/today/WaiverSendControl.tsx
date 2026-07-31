@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { useFormStatus } from "react-dom";
 import {
   IDLE_WAIVER_SEND_STATE,
   type WaiverFallbackLink,
@@ -9,21 +8,8 @@ import {
   type WaiverSendSurface,
 } from "@/app/actions/waiver-send-types";
 import { sendWaiversAction } from "@/app/actions/waivers";
+import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-
-function SendButton({ label, pendingLabel }: { label: string; pendingLabel: string }) {
-  const { pending } = useFormStatus();
-  return (
-    <button
-      type="submit"
-      disabled={pending}
-      aria-busy={pending}
-      className={buttonClass({ variant: "secondary", className: "w-full shrink-0 sm:w-auto" })}
-    >
-      {pending ? pendingLabel : label}
-    </button>
-  );
-}
 
 function CopyLink({ link }: { link: WaiverFallbackLink }) {
   const [copied, setCopied] = useState(false);
@@ -157,28 +143,60 @@ function ResultNotice({ state }: { state: WaiverSendState }) {
 export function WaiverSendControl({
   shopSlug,
   surface,
+  tripId,
   bookingIds,
   label,
+  hint,
   pendingLabel = "Sending…",
+  confirmMessage,
+  className,
+  wrapperClassName,
 }: {
   shopSlug: string;
   surface: WaiverSendSurface;
+  /** Required when surface is "roster" — which trip's guests page to revalidate. */
+  tripId?: string;
   bookingIds: string[];
   label: string;
+  /** Short trailing detail (e.g. "tap to resend") — the roster's richer status pill uses this. */
+  hint?: string;
   pendingLabel?: string;
+  /** A native confirm() prompt before a resend — the roster's already-sent case wants this. */
+  confirmMessage?: string;
+  /** Overrides the default secondary-button look — the roster's per-status tone pill. */
+  className?: string;
+  /** Overrides the outer `sm:text-right` alignment — the roster's two-column grid wants it left. */
+  wrapperClassName?: string;
 }) {
   const [state, formAction] = useActionState(
-    sendWaiversAction.bind(null, shopSlug, surface),
+    sendWaiversAction.bind(null, shopSlug, surface, tripId),
     IDLE_WAIVER_SEND_STATE,
   );
 
   return (
-    <div className="sm:text-right">
+    <div className={wrapperClassName ?? "sm:text-right"}>
       <form action={formAction} className="flex sm:inline-flex">
         {bookingIds.map((id) => (
           <input key={id} type="hidden" name="bookingId" value={id} />
         ))}
-        <SendButton label={label} pendingLabel={pendingLabel} />
+        <SubmitButton
+          pendingLabel={pendingLabel}
+          confirmMessage={confirmMessage}
+          className={
+            className ??
+            buttonClass({ variant: "secondary", className: "w-full shrink-0 sm:w-auto" })
+          }
+        >
+          {label}
+          {hint ? (
+            <>
+              <span aria-hidden="true" className="opacity-40">
+                ·
+              </span>
+              <span className="font-normal opacity-70">{hint}</span>
+            </>
+          ) : null}
+        </SubmitButton>
       </form>
       <ResultNotice state={state} />
     </div>

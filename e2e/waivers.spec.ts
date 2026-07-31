@@ -25,12 +25,13 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
     .filter({ has: page.getByRole("heading", { name: /^Divers/ }) });
   // The whole waiver is a single button; for an unsent diver it reads "Send
   // waiver". Exact, so it targets the per-diver control and not the roster's
-  // "Send waivers to selected" bulk button.
+  // "Send waivers to selected" bulk button. e2e has no email provider
+  // configured, so the shared WaiverSendControl always falls to its private
+  // link affordance here rather than "Waiver sent to …".
   await diverSection.getByRole("button", { name: "Send waiver", exact: true }).first().click();
-  await expect(page.getByRole("heading", { name: "Private waiver link ready" })).toBeVisible();
-  const waiverHref = await page
-    .getByRole("link", { name: "Open waiver link" })
-    .getAttribute("href");
+  const resultNotice = diverSection.getByRole("status");
+  await expect(resultNotice).toContainText("no email provider configured");
+  const waiverHref = await resultNotice.getByRole("link").getAttribute("href");
   expect(waiverHref).toMatch(/^\/waivers\//);
 
   await page.goto(waiverHref ?? "/");
@@ -105,9 +106,7 @@ test("the medical questionnaire refuses to complete with an unanswered question,
     .locator("section")
     .filter({ has: page.getByRole("heading", { name: /^Divers/ }) });
   await diverSection.getByRole("button", { name: "Send waiver", exact: true }).first().click();
-  const waiverHref = await page
-    .getByRole("link", { name: "Open waiver link" })
-    .getAttribute("href");
+  const waiverHref = await diverSection.getByRole("status").getByRole("link").getAttribute("href");
 
   await page.goto(waiverHref ?? "/");
   await page.getByLabel("Type your full name").fill("Adversarial Diver");
@@ -153,9 +152,7 @@ test("saving a draft also refuses an unanswered question, even past client valid
     .locator("section")
     .filter({ has: page.getByRole("heading", { name: /^Divers/ }) });
   await diverSection.getByRole("button", { name: "Send waiver", exact: true }).first().click();
-  const waiverHref = await page
-    .getByRole("link", { name: "Open waiver link" })
-    .getAttribute("href");
+  const waiverHref = await diverSection.getByRole("status").getByRole("link").getAttribute("href");
 
   await page.goto(waiverHref ?? "/");
   await page.getByLabel("Type your full name").fill("Adversarial Draft Diver");
