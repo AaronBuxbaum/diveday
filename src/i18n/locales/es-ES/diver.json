@@ -22,6 +22,16 @@
     "noTripsStaff": "El tablón está vacío. Programa la primera salida y los buceadores podrán reservar.",
     "noTripsPublic": "Vuelve pronto — o llámanos y te buscamos un barco.",
     "noTripsMonth": "No hay salidas este mes — prueba otro mes en el calendario de arriba.",
+    "filters": {
+      "tripType": "Tipo de salida",
+      "allTrips": "Todas las salidas",
+      "funDive": "Inmersión recreativa",
+      "course": "Curso",
+      "hasSpace": "Con plazas",
+      "apply": "Aplicar",
+      "applying": "Aplicando…",
+      "noMatches": "Ninguna salida coincide con estos filtros — prueba a quitar uno."
+    },
     "showLater": "Ver salidas posteriores",
     "backToNext": "← Volver a la próxima salida",
     "courseSession": "Sesión de curso",

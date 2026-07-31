@@ -649,6 +649,38 @@ describe("paged schedule queries", () => {
     expect(onePage.trips.map((t) => t.id)).toEqual(all.map((t) => t.id));
   });
 
+  it("filters to fun dives or course sessions on request", async () => {
+    const { db, shop } = await seededShopContext();
+    const all = await upcomingTripsWithCounts(db, shop.id);
+    expect(all.some((t) => t.course !== null)).toBe(true);
+    expect(all.some((t) => t.course === null)).toBe(true);
+
+    const funDives = await pagedUpcomingTripsWithCounts(db, shop.id, { tripType: "fun_dive" });
+    expect(funDives.trips.length).toBeGreaterThan(0);
+    expect(funDives.trips.every((t) => t.course === null)).toBe(true);
+
+    const courseSessions = await pagedUpcomingTripsWithCounts(db, shop.id, { tripType: "course" });
+    expect(courseSessions.trips.length).toBeGreaterThan(0);
+    expect(courseSessions.trips.every((t) => t.course !== null)).toBe(true);
+
+    expect(funDives.trips.length + courseSessions.trips.length).toBe(all.length);
+  });
+
+  it("filters to trips with an open seat on request", async () => {
+    const { db, shop } = await seededShopContext();
+    const all = await upcomingTripsWithCounts(db, shop.id);
+    expect(all.some((t) => t.booked >= t.capacity)).toBe(true); // the seed has a full trip
+    expect(all.some((t) => t.booked < t.capacity)).toBe(true);
+
+    const withSpace = await pagedUpcomingTripsWithCounts(db, shop.id, {
+      hasSpace: true,
+      limit: 200,
+    });
+    expect(withSpace.trips.length).toBeGreaterThan(0);
+    expect(withSpace.trips.length).toBeLessThan(all.length);
+    expect(withSpace.trips.every((t) => t.booked < t.capacity)).toBe(true);
+  });
+
   it("computes board-wide stats that match the full list", async () => {
     const { db, shop } = await seededShopContext();
     const all = await upcomingTripsWithCounts(db, shop.id);

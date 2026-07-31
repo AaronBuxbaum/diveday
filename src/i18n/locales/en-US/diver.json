@@ -22,6 +22,16 @@
     "noTripsStaff": "The board is clear. Schedule your first departure and divers can start booking.",
     "noTripsPublic": "Check back soon — or call the shop and we’ll find you a boat.",
     "noTripsMonth": "No trips this month — try another month on the calendar above.",
+    "filters": {
+      "tripType": "Trip type",
+      "allTrips": "All trips",
+      "funDive": "Fun dive",
+      "course": "Course",
+      "hasSpace": "Has space",
+      "apply": "Apply",
+      "applying": "Applying…",
+      "noMatches": "No trips match these filters — try clearing one."
+    },
     "showLater": "Show later departures",
     "backToNext": "← Back to the next departure",
     "courseSession": "Course session",

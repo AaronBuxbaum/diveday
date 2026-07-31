@@ -7,6 +7,7 @@ import {
   gt,
   gte,
   inArray,
+  isNotNull,
   isNull,
   lt,
   lte,
@@ -1387,7 +1388,17 @@ export const SCHEDULE_PAGE_SIZE = 50;
 export async function pagedUpcomingTripsWithCounts(
   db: AppDb,
   shopId: string,
-  options: { cursor?: string; limit?: number; now?: Date; monthStart?: Date; monthEnd?: Date } = {},
+  options: {
+    cursor?: string;
+    limit?: number;
+    now?: Date;
+    monthStart?: Date;
+    monthEnd?: Date;
+    /** Only trips with at least one open seat (booked < capacity). */
+    hasSpace?: boolean;
+    /** "fun_dive" for no linked course, "course" for a course session. */
+    tripType?: "fun_dive" | "course";
+  } = {},
 ): Promise<{ trips: TripWithBookedCount[]; nextCursor: string | null }> {
   const now = options.now ?? nowDate();
   const limit = options.limit ?? SCHEDULE_PAGE_SIZE;
@@ -1412,6 +1423,8 @@ export async function pagedUpcomingTripsWithCounts(
         eq(trips.status, "scheduled"),
         gte(trips.startsAt, lowerBound),
         options.monthEnd ? lt(trips.startsAt, options.monthEnd) : undefined,
+        options.tripType === "fun_dive" ? isNull(trips.courseId) : undefined,
+        options.tripType === "course" ? isNotNull(trips.courseId) : undefined,
         afterDate && after && !Number.isNaN(afterDate.getTime())
           ? or(
               gt(trips.startsAt, afterDate),
@@ -1421,6 +1434,7 @@ export async function pagedUpcomingTripsWithCounts(
       ),
     )
     .groupBy(trips.id, courses.id, diveSites.id)
+    .having(options.hasSpace ? sql`count(${bookings.id}) < ${trips.capacity}` : undefined)
     .orderBy(asc(trips.startsAt), asc(trips.id))
     .limit(limit + 1);
 
