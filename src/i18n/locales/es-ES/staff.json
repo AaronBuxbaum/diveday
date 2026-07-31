@@ -1354,6 +1354,7 @@
       "signedImported": "Firmado el {date} · importado de un centro anterior",
       "followUpBeforeBoarding": "Seguimiento antes de embarcar",
       "medicalFollowUpDescription": "Un buceador respondió que sí a una pregunta médica. Confirma el visto bueno médico antes de embarcar.",
+      "viewSignedRecord": "Ver registro firmado",
       "rentalFitColumnHeading": "Equipo de alquiler",
       "nitroxApproved": "Nitrox solicitado — tarjeta verificada, facturado por inmersión. La mezcla sigue analizándose y firmándose en la estación de carga.",
       "nitroxUnverified": "Nitrox solicitado, pero sin tarjeta verificada. Planeado con aire.",
@@ -2061,15 +2062,28 @@
       "sample": "Este es un texto de muestra para empezar — edítalo para tu centro y haz que tu propio asesor legal lo revise."
     },
     "versionInfo": "Versión {version} · guardado el {date}",
-    "integrityHeading": "Integridad de los registros firmados",
-    "integrityDescription": "Los waivers firmados son a prueba de manipulaciones — si un registro fue alterado, lo marcamos. Los registros antiguos importados o heredados aparecen como no sellados más abajo.",
-    "noSignedRecords": "Todavía no hay registros firmados.",
-    "noSignatureDate": "Sin fecha de firma",
-    "integrityValid": "Integridad verificada",
-    "integrityInvalid": "Integridad no coincide",
-    "integrityUnsealed": "Registro heredado sin sellar",
-    "showMoreRecords": "Mostrar más registros",
-    "backToTop": "← Volver al principio de la lista"
+    "tabs": {
+      "ariaLabel": "Secciones del descargo",
+      "template": "Plantilla",
+      "signatures": "Firmas"
+    },
+    "signatures": {
+      "eyebrow": "Ajustes",
+      "title": "Firmas",
+      "description": "Todos los descargos firmados que tiene este centro — quién firmó, en qué salida, y cualquier seguimiento médico. Los waivers firmados son a prueba de manipulaciones — si un registro fue alterado, lo marcamos.",
+      "signedRecordHeading": "Registro firmado",
+      "heading": "Registros firmados",
+      "noSignedRecords": "Todavía no hay registros firmados.",
+      "noSignatureDate": "Sin fecha de firma",
+      "noTrip": "Registro importado",
+      "integrityValid": "Integridad verificada",
+      "integrityInvalid": "Integridad no coincide",
+      "integrityUnsealed": "Registro heredado sin sellar",
+      "medicalFlag": "Seguimiento médico marcado",
+      "viewFlaggedAnswers": "Ver respuestas marcadas",
+      "showMoreRecords": "Mostrar más registros",
+      "backToTop": "← Volver al principio de la lista"
+    }
   },
   "shopHome": {
     "createdNotice": {

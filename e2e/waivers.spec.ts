@@ -142,6 +142,31 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
   await page.goto(staffTripUrl);
   await expect(diverSection.getByText("Medical review", { exact: true })).toBeVisible();
   await expect(diverSection.getByText("Follow up before boarding")).toBeVisible();
+
+  // The roster's follow-up notice links straight to the signed-record
+  // evidence (task 155) — closing the loop between signature chasing here and
+  // the Signatures tab, rather than leaving them as unconnected surfaces. It
+  // carries the record's id as `?record=` (resolved through
+  // `getSignedWaiverRecordForShop`, pinned above the paginated list) rather
+  // than a bare URL anchor into the list, so it still resolves on a shop with
+  // enough signed history that the record falls off the list's first page.
+  await diverSection.getByRole("link", { name: "View signed record" }).click();
+  await page.waitForURL(/\/waivers\/signatures\?record=/);
+  await expect(
+    page.getByRole("heading", { level: 2, name: "Signed record", exact: true }),
+  ).toBeVisible();
+  const recordRow = page.locator(`li[id^="waiver-record-"]`).first();
+  await expect(recordRow.getByText("Priya Sharma")).toBeVisible();
+  await expect(recordRow.getByText("Medical follow-up flagged")).toBeVisible();
+  // The list itself never shows the flagged prompt text — it sits behind the
+  // per-record disclosure, mirroring the roster's own gating.
+  await expect(
+    page.getByText("Do you have, or have you had, a heart, lung, or breathing condition"),
+  ).not.toBeVisible();
+  await recordRow.getByText("View flagged answers").click();
+  await expect(
+    recordRow.getByText("Do you have, or have you had, a heart, lung, or breathing condition"),
+  ).toBeVisible();
 });
 
 test("the medical questionnaire refuses to complete with an unanswered question, even past client validation", async ({

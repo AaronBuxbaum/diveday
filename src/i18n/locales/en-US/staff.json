@@ -1354,6 +1354,7 @@
       "signedImported": "Signed {date} · imported from a prior shop",
       "followUpBeforeBoarding": "Follow up before boarding",
       "medicalFollowUpDescription": "A diver answered yes to a medical question. Confirm physician clearance before boarding.",
+      "viewSignedRecord": "View signed record",
       "rentalFitColumnHeading": "Rental fit",
       "nitroxApproved": "Nitrox requested — verified card, billed per dive. The mix is still analyzed and signed for at the fill station.",
       "nitroxUnverified": "Nitrox requested, but no verified card. Planned as air.",
@@ -2061,15 +2062,28 @@
       "sample": "This is sample wording to start from — edit it to fit your shop, and have your own counsel review it."
     },
     "versionInfo": "Version {version} · saved {date}",
-    "integrityHeading": "Signed record integrity",
-    "integrityDescription": "Signed waivers are tamper-evident — if a record has been altered, we flag it. Older imported or legacy records are marked unsealed below.",
-    "noSignedRecords": "No signed records yet.",
-    "noSignatureDate": "No signature date",
-    "integrityValid": "Integrity verified",
-    "integrityInvalid": "Integrity mismatch",
-    "integrityUnsealed": "Unsealed legacy record",
-    "showMoreRecords": "Show more records",
-    "backToTop": "← Back to the top of the list"
+    "tabs": {
+      "ariaLabel": "Waiver sections",
+      "template": "Template",
+      "signatures": "Signatures"
+    },
+    "signatures": {
+      "eyebrow": "Settings",
+      "title": "Signatures",
+      "description": "Every signed release on file for this shop — who signed, which trip, and any medical follow-up. Signed waivers are tamper-evident — if a record has been altered, we flag it.",
+      "signedRecordHeading": "Signed record",
+      "heading": "Signed records",
+      "noSignedRecords": "No signed records yet.",
+      "noSignatureDate": "No signature date",
+      "noTrip": "Imported record",
+      "integrityValid": "Integrity verified",
+      "integrityInvalid": "Integrity mismatch",
+      "integrityUnsealed": "Unsealed legacy record",
+      "medicalFlag": "Medical follow-up flagged",
+      "viewFlaggedAnswers": "View flagged answers",
+      "showMoreRecords": "Show more records",
+      "backToTop": "← Back to the top of the list"
+    }
   },
   "shopHome": {
     "createdNotice": {
