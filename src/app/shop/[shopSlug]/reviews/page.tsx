@@ -64,7 +64,9 @@ export default async function ReviewsPage({
         description={t("reviews.description")}
         actions={
           <Link
-            href={`/shop/${shopSlug}/schedule`}
+            href={`/shop/${shopSlug}/schedule?preview=1`}
+            target="_blank"
+            rel="noreferrer"
             className={buttonClass({ variant: "secondary", className: "text-foreground" })}
           >
             {t("reviews.viewPublicPage")}
@@ -133,6 +135,14 @@ export default async function ReviewsPage({
                     diverName: review.diverName,
                     tripTitle: review.tripTitle,
                     date: formatShortDate(review.divedAt, locale, timezone),
+                    diver: (chunks) => (
+                      <Link
+                        href={`/shop/${shopSlug}/divers/${review.personId}`}
+                        className="font-medium text-primary hover:underline"
+                      >
+                        {chunks}
+                      </Link>
+                    ),
                     trip: (chunks) => (
                       <Link
                         href={`/shop/${shopSlug}/trips/${review.tripId}`}

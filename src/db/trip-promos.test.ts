@@ -2,6 +2,7 @@
 import { describe, expect, it } from "vitest";
 import type { CreateTripPromotionResult, PromotionProvider } from "@/lib/payments/promotions";
 import { seededShopContext } from "@/test/db";
+import { cancelBooking } from "./bookings";
 import { joinLastMinuteList } from "./last-minute-list";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import {
@@ -10,7 +11,8 @@ import {
   sendLastMinuteDealBlast,
   tripIdsNeverSentLastMinuteDeal,
 } from "./trip-promos";
-import { upcomingTripsWithCounts } from "./trips";
+import { getTripRoster, upcomingTripsWithCounts } from "./trips";
+import { joinTripWaitlist } from "./waitlist";
 
 function fakePromotions(overrides: Partial<PromotionProvider> = {}): PromotionProvider {
   let counter = 0;
@@ -147,6 +149,43 @@ describe("sendLastMinuteDealBlast (in-memory PGlite)", () => {
       stripePromotionCodeId: "promo_1",
       recipientCount: 0,
     });
+  });
+
+  it("still finds every matching recipient once a wait-listed diver's trip has an open seat", async () => {
+    // The trip was full when this diver joined its wait list, holding "a
+    // place in line" — a cancellation just freed the seat the deal is about
+    // to advertise to everyone else who's merely around that week too.
+    const { db, shop, fullTrip } = await context();
+    await connectStripe(db, shop.id);
+    const waitlisted = await joinTripWaitlist(db, {
+      shopId: shop.id,
+      tripId: fullTrip.id,
+      fullName: "Wren Ostrowski",
+      email: "wren@example.com",
+    });
+    if (!waitlisted.ok) throw new Error("expected waitlist join to succeed on a full trip");
+
+    const [toCancel] = await getTripRoster(db, shop.id, fullTrip.id);
+    if (!toCancel) throw new Error("expected an existing booking to free a seat");
+    await cancelBooking(db, shop.id, toCancel.booking.id);
+
+    await joinLastMinuteList(db, { shopId: shop.id, ...visitor });
+    await joinLastMinuteList(db, {
+      shopId: shop.id,
+      fullName: "Wren Ostrowski",
+      email: "wren@example.com",
+    });
+
+    const outcome = await sendLastMinuteDealBlast(
+      db,
+      { shopId: shop.id, shopSlug: "blue-mantis", tripId: fullTrip.id, discountPercent: 25 },
+      fakePromotions(),
+    );
+    // Both the wait-listed diver and the unrelated last-minute-list entry
+    // still get the code — the reordering (unit-tested directly against
+    // orderLastMinuteRecipients in src/lib/last-minute-list.test.ts) changes
+    // who hears about it first, never who's included.
+    expect(outcome).toMatchObject({ ok: true, recipientCount: 0 });
   });
 
   it("caps max_redemptions at the trip's open-seat count", async () => {

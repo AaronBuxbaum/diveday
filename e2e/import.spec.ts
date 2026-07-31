@@ -293,6 +293,29 @@ test.describe("contact import — explicit bounds (CR-016)", () => {
   });
 });
 
+test.describe("import ↔ switching guides", () => {
+  signedInAsOwner();
+
+  test("the import page links out to a matching switching guide, and a guide's CTA deep-links back to this shop's import page", async ({
+    page,
+  }) => {
+    await page.goto("/shop/blue-mantis/settings/import");
+    await expect(page.getByRole("link", { name: "EVE" })).toHaveAttribute("href", "/switching/eve");
+    await expect(page.getByRole("link", { name: "DiveShop360" })).toHaveAttribute(
+      "href",
+      "/switching/diveshop360",
+    );
+    await expect(page.getByRole("link", { name: "a spreadsheet" })).toHaveAttribute(
+      "href",
+      "/switching/spreadsheet",
+    );
+
+    await page.goto("/switching/eve");
+    await page.getByRole("link", { name: "Open Import in your shop" }).click();
+    await expect(page).toHaveURL(/\/shop\/blue-mantis\/settings\/import$/);
+  });
+});
+
 test("import is refused for staff below owner/manager", async ({ page }) => {
   // A captain is staff everywhere else, but the importer writes the whole
   // roster, so the surface doesn't exist for them — bounced to Today rather

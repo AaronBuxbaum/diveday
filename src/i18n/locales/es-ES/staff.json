@@ -47,8 +47,7 @@
     "notice": {
       "denied": "No tienes acceso a ese ámbito de calendario."
     },
-    "coverage": "Incluye salidas desde hace {past} días hasta dentro de {future} días.",
-    "settingsLink": "Gestionar suscripciones"
+    "coverage": "Incluye salidas desde hace {past} días hasta dentro de {future} días."
   },
   "staffing": {
     "eyebrow": "Operaciones",
@@ -115,6 +114,9 @@
     "day": "Día {number}"
   },
   "divers": {
+    "upcoming": {
+      "heading": "Próximas salidas"
+    },
     "shared": {
       "agencies": {
         "padi": "PADI",
@@ -639,6 +641,7 @@
     },
     "edit": {
       "description": "Los cambios actualizan la ficha vinculada a este sitio.",
+      "upcomingHeading": "Próximas inmersiones aquí",
       "copyAndTailor": "Copiar y adaptar",
       "copying": "Copiando…",
       "archiveSite": "Archivar sitio",
@@ -894,7 +897,7 @@
     "emptyHeading": "Todavía no hay reseñas",
     "emptyDetail": "A los buceadores se les pide una en su página de resumen después de una salida. Las primeras aparecerán aquí.",
     "ratingOnly": "Solo valoración — sin palabras que revisar.",
-    "reviewMeta": "{diverName} · <trip>{tripTitle}</trip> · {date}",
+    "reviewMeta": "<diver>{diverName}</diver> · <trip>{tripTitle}</trip> · {date}",
     "hide": "Ocultar",
     "publish": "Publicar",
     "saving": "Guardando…",
@@ -1049,10 +1052,14 @@
     },
     "detail": {
       "eyebrow": "Salidas",
+      "viewBookingPage": "Ver página de reserva",
+      "copyBookingLink": "Copiar enlace",
+      "linkCopied": "¡Copiado!",
       "cancelledBadge": "Cancelada",
       "meetingDaysSummary": "{count} días de encuentro · mismos instructores cada día",
       "dayLabel": "Día {number}: {date} · {timeRange}",
-      "courseSession": "Sesión de curso · {title}",
+      "courseSession": "Sesión de curso · <course>{title}</course>",
+      "diveSiteLabel": "Punto de inmersión:",
       "seriesPart": "Parte de una serie repetida · {summary}. Los cambios aquí solo se aplican a esta fecha; quedan {count} en el calendario.",
       "viewOnlyNotice": "Estás viendo esta salida. Su configuración — los detalles, los requisitos de admisión y el calendario recurrente — la editan propietarios, gerentes e instructores. Registrar las condiciones, ajustar quién está en la tripulación y cancelar la salida de hoy por el clima siguen abiertos para ti, igual que el listado, el check-in, el manifiesto y el pase de lista.",
       "overRatioWarning": "Hay {booked} buceadores reservados, pero la tripulación actual solo cubre {cap} según la ratio de nivel inicial publicada por PADI (8 por instructor, +2 por asistente certificado). Asigna otro instructor o un asistente certificado antes de que zarpe esta sesión — las reservas existentes no se ven afectadas de cualquier manera.",
@@ -1579,6 +1586,11 @@
         "description": "Fragmentos para copiar y pegar que ponen tu calendario de reservas en directo en tu propia web.",
         "cta": "Obtener código del widget"
       },
+      "calendar": {
+        "heading": "Suscripciones al calendario",
+        "description": "Pon tus salidas en la app de calendario que ya usas — de solo lectura, así que DiveDay nunca la modifica.",
+        "cta": "Gestionar suscripciones"
+      },
       "data": {
         "heading": "Datos",
         "description": "Trae contactos desde un CSV, o llévate todo en un ZIP de CSV — ninguna de las dos toca los ajustes de arriba.",
@@ -1677,6 +1689,7 @@
       "eyebrow": "Ajustes",
       "title": "Importar contactos",
       "description": "Trae tus buceadores, tarjetas, tallas de alquiler y aceptación previa de waiver desde un CSV — de tu antiguo sistema o de la propia exportación de DiveDay. Consulta abajo exactamente qué se importa.",
+      "comingFrom": "¿Vienes de <eve>EVE</eve>, <diveshop360>DiveShop360</diveshop360>, o de <spreadsheet>una hoja de cálculo</spreadsheet>? Consulta la guía correspondiente y vuelve aquí para importar.",
       "comesAcross": {
         "heading": "Qué se importa",
         "description": "Los detalles, fila por fila:"
@@ -2031,9 +2044,19 @@
       "emptyNoMatches": "Sin resultados. Prueba un nombre, correo o título de salida.",
       "groupDivers": "Buceadores",
       "groupTrips": "Salidas",
+      "groupDiveSites": "Sitios de buceo",
+      "groupCourses": "Cursos",
+      "groupOrders": "Pedidos",
       "groupGoTo": "Ir a",
       "goToToday": "Hoy",
       "goToBlockers": "No listos",
+      "goToCheckIn": "Registro",
+      "goToStaffing": "Personal",
+      "goToDiveSites": "Sitios de buceo",
+      "goToCourses": "Cursos",
+      "goToReviews": "Reseñas",
+      "goToReports": "Informes",
+      "goToPromos": "Códigos promocionales",
       "goToSchedule": "Calendario",
       "goToDivers": "Buceadores",
       "goToSettings": "Ajustes",

@@ -30,6 +30,47 @@ test("the command palette finds a diver by name and ⌘K jumps to a page shortcu
   await expect(page).toHaveURL(/\/blockers$/);
 });
 
+test("the command palette also finds dive sites, courses, and every gated nav destination", async ({
+  page,
+}) => {
+  await page.goto("/shop/blue-mantis");
+  await page.getByRole("button", { name: "Search" }).click();
+  const box = page.getByRole("combobox", { name: /Search divers/ });
+
+  await box.fill("Spiegel Grove");
+  const siteOption = page.getByRole("option", { name: "Spiegel Grove", exact: true });
+  await expect(siteOption).toBeVisible();
+  await siteOption.click();
+  await expect(page).toHaveURL(/\/dive-sites\/[a-f0-9-]+$/);
+
+  await page.keyboard.press("ControlOrMeta+k");
+  const reopened = page.getByRole("combobox", { name: /Search divers/ });
+  await reopened.fill("Open Water Diver");
+  const courseOption = page.getByRole("option", { name: "Open Water Diver", exact: true });
+  await expect(courseOption).toBeVisible();
+  await courseOption.click();
+  await expect(page).toHaveURL(/\/courses\/[^/]+\/edit$/);
+
+  // The owner role sees every gated destination, including the reports/promos
+  // pair that's hidden from non-owner/manager staff.
+  await page.keyboard.press("ControlOrMeta+k");
+  const shortcuts = page.getByRole("combobox", { name: /Search divers/ });
+  for (const [query, urlPattern] of [
+    ["Check-in", /\/check-in$/],
+    ["Staffing", /\/staffing$/],
+    ["Dive sites", /\/dive-sites$/],
+    ["Courses", /\/courses$/],
+    ["Reviews", /\/reviews$/],
+    ["Reports", /\/reports$/],
+    ["Promo codes", /\/promos$/],
+  ] as const) {
+    await shortcuts.fill(query);
+    await page.getByRole("option", { name: query, exact: true }).click();
+    await expect(page).toHaveURL(urlPattern);
+    await page.keyboard.press("ControlOrMeta+k");
+  }
+});
+
 test("the divers list filters live as you type, no submit", async ({ page }) => {
   await page.goto("/shop/blue-mantis/divers");
   const search = page.getByRole("searchbox", { name: "Search divers" });

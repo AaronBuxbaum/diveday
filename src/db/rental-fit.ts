@@ -200,6 +200,7 @@ export async function listTripPrepDivers(
   const certified = await verifiedNitroxPersonIds(db, shopId);
   return rows.map((row) => ({
     bookingId: row.booking.id,
+    personId: row.person.id,
     fullName: row.person.fullName,
     fit: row.fit,
     wantsNitrox: row.booking.wantsNitrox,

@@ -212,6 +212,26 @@ export default async function ImportContactsPage({
         description={t("settings.import.description")}
       />
 
+      <p className="-mt-2 mb-6 text-sm text-muted">
+        {t.rich("settings.import.comingFrom", {
+          eve: (chunks) => (
+            <a href="/switching/eve" target="_blank" rel="noreferrer" className="underline">
+              {chunks}
+            </a>
+          ),
+          diveshop360: (chunks) => (
+            <a href="/switching/diveshop360" target="_blank" rel="noreferrer" className="underline">
+              {chunks}
+            </a>
+          ),
+          spreadsheet: (chunks) => (
+            <a href="/switching/spreadsheet" target="_blank" rel="noreferrer" className="underline">
+              {chunks}
+            </a>
+          ),
+        })}
+      </p>
+
       <section className="rounded-2xl border border-border bg-surface p-6">
         <h2 className="text-lg font-semibold">{t("settings.import.comesAcross.heading")}</h2>
         <p className="mt-1 max-w-2xl text-sm text-muted">

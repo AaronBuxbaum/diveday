@@ -60,3 +60,16 @@ export function eventSource(value: unknown): FunnelSource | "unknown" {
 export function trialHref(source: FunnelSource): string {
   return `/onboard?from=${source}`;
 }
+
+/**
+ * The "see a diver's booking page" link's destination — the third door out of
+ * a marketing CTA, alongside the demo and the trial. Tagged the same way
+ * `trialHref` tags its own; the query string needs no companion custom event
+ * because the Vercel `<Analytics />` page view it produces already carries it.
+ * Takes the shop slug rather than assuming the demo shop, so a server
+ * component supplies `DEMO_SHOP_SLUG` and this file — reachable from a client
+ * component — never imports `src/db`.
+ */
+export function scheduleAttributionHref(shopSlug: string, source: FunnelSource): string {
+  return `/shop/${shopSlug}/schedule?from=${source}`;
+}

@@ -12,6 +12,7 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-
 
 export type CheckInQueueRow = {
   bookingId: string;
+  personId: string;
   personName: string;
   email: string | null;
   tripId: string;
@@ -45,6 +46,7 @@ export async function listCheckInQueue(
   const rows = await db
     .select({
       bookingId: bookings.id,
+      personId: people.id,
       personName: people.fullName,
       email: people.email,
       tripId: trips.id,

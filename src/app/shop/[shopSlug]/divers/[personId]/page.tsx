@@ -20,6 +20,7 @@ import { RentalFit } from "./_components/RentalFit";
 import { ShopHistory } from "./_components/ShopHistory";
 import { SpecialtyCards } from "./_components/SpecialtyCards";
 import { StatsSummary } from "./_components/StatsSummary";
+import { UpcomingTripsSection } from "./_components/UpcomingTripsSection";
 import { restoreCardAction } from "./actions";
 
 export const metadata: Metadata = { title: "Diver — DiveDay" };
@@ -115,6 +116,7 @@ export default async function DiverDetailPage({
         personId={personId}
         canRefund={canRefund}
       />
+      <UpcomingTripsSection diver={diver} shop={shop} shopSlug={shopSlug} locale={locale} />
       <ShopHistory locale={locale} diver={diver} shop={shop} shopSlug={shopSlug} />
       {canDelete ? (
         <RemoveDiver diver={diver} shopSlug={shopSlug} personId={personId} locale={locale} />

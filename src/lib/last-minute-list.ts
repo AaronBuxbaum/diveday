@@ -28,6 +28,29 @@ export function lastMinuteEntryMatchesTripDate(
   return true;
 }
 
+/**
+ * Puts a trip's own wait-listers first in a last-minute-deal recipient list,
+ * in their wait-list order, ahead of everyone else who is merely around that
+ * week. They hold "a place in line" for this exact trip that the deal can
+ * otherwise sell out from under them — see backlog item 147 (reconcile the
+ * wait list and the last-minute list). Anyone not on the wait list keeps
+ * their original relative order (a stable sort).
+ */
+export function orderLastMinuteRecipients<T extends { person: { id: string } }>(
+  matches: readonly T[],
+  waitlistedPersonIds: readonly string[],
+): T[] {
+  const position = new Map(waitlistedPersonIds.map((id, index) => [id, index]));
+  return [...matches].sort((a, b) => {
+    const aPos = position.get(a.person.id);
+    const bPos = position.get(b.person.id);
+    if (aPos !== undefined && bPos !== undefined) return aPos - bPos;
+    if (aPos !== undefined) return -1;
+    if (bPos !== undefined) return 1;
+    return 0;
+  });
+}
+
 /** Discount bounds mirrored from the `trip_last_minute_promos_discount_range` check constraint. */
 export const LAST_MINUTE_DISCOUNT_MIN = 5;
 export const LAST_MINUTE_DISCOUNT_MAX = 90;

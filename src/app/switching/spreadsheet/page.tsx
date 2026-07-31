@@ -6,6 +6,7 @@ import { MarketingFooter } from "@/components/MarketingFooter";
 import { MarketingNav } from "@/components/MarketingNav";
 import { SubmitButton } from "@/components/SubmitButton";
 import { SwitchingConcierge } from "@/components/SwitchingConcierge";
+import { SwitchingImportCta } from "@/components/SwitchingImportCta";
 import { buttonClass } from "@/components/ui/button";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
@@ -287,6 +288,8 @@ export default async function SpreadsheetSwitchPage() {
                 </div>
               </li>
             </ol>
+
+            <SwitchingImportCta label={t("switching.spreadsheet.openImportCta")} />
           </div>
         </section>
 

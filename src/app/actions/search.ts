@@ -14,6 +14,6 @@ export async function searchShopAction(query: string): Promise<SearchResults> {
   const session = await requireStaffSession();
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
-  if (!shop) return { divers: [], trips: [] };
+  if (!shop) return { divers: [], trips: [], diveSites: [], courses: [], orders: [] };
   return searchShop(db, session.user.shopId, query, shop.timezone);
 }

@@ -22,6 +22,20 @@ test("staff opens a diver from their avatar and can reach them from the header",
   await expect(header.locator('a[href^="tel:"]')).toBeVisible();
 });
 
+test("a diver's record shows their still-scheduled trips, linked straight to the manifest", async ({
+  page,
+}) => {
+  await page.goto("/shop/blue-mantis/divers");
+  await page.getByRole("searchbox", { name: "Search divers" }).fill("Priya Sharma");
+  await page.getByRole("row").filter({ hasText: "Priya Sharma" }).getByText("PS").click();
+
+  const upcoming = page.getByRole("region", { name: "Upcoming trips" });
+  await expect(upcoming).toBeVisible();
+  const firstRow = upcoming.getByRole("link").first();
+  await firstRow.click();
+  await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+\/manifest$/);
+});
+
 test.describe("on a phone", () => {
   test.use({ viewport: { width: 390, height: 844 } });
 

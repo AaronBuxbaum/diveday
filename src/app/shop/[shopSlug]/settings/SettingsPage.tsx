@@ -739,14 +739,14 @@ export default async function PaymentsSettingsPage({
       </section>
 
       <section className="mt-6 rounded-lg border border-border bg-surface p-6">
-        <h2 className="font-medium">{t("calendar.title")}</h2>
-        <p className="mt-1 text-sm text-muted">{t("calendar.description")}</p>
+        <h2 className="font-medium">{t("settings.main.calendar.heading")}</h2>
+        <p className="mt-1 text-sm text-muted">{t("settings.main.calendar.description")}</p>
         <div className="mt-4">
           <Link
             href={`/shop/${shopSlug}/settings/calendar`}
             className={buttonClass({ variant: "secondary", className: "text-foreground" })}
           >
-            {t("calendar.settingsLink")}
+            {t("settings.main.calendar.cta")}
           </Link>
         </div>
       </section>

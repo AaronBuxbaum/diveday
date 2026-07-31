@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
@@ -27,6 +28,7 @@ import { requireStaffSession } from "@/lib/session";
 import { capacityLabel, isFull } from "@/lib/trips";
 import { utcToWallTime } from "@/lib/zoned";
 import { ConditionsSection } from "./_components/ConditionsSection";
+import { CopyLinkButton } from "./_components/CopyLinkButton";
 import { CrewSection } from "./_components/CrewSection";
 import { DetailsSection } from "./_components/DetailsSection";
 import { RecapNoteSection } from "./_components/RecapNoteSection";
@@ -132,6 +134,23 @@ export default async function ManageTripPage({
       <ShopPageHeader
         eyebrow={t("trips.detail.eyebrow")}
         title={trip.title}
+        actions={
+          <>
+            <Link
+              href={`/shop/${shopSlug}/schedule/${tripId}`}
+              target="_blank"
+              rel="noreferrer"
+              className={buttonClass({ variant: "secondary", size: "sm" })}
+            >
+              {t("trips.detail.viewBookingPage")}
+            </Link>
+            <CopyLinkButton
+              path={`/shop/${shopSlug}/schedule/${tripId}`}
+              label={t("trips.detail.copyBookingLink")}
+              copiedLabel={t("trips.detail.linkCopied")}
+            />
+          </>
+        }
         meta={
           <div className="flex flex-col gap-2">
             <div className="flex flex-wrap items-center gap-3">
@@ -166,7 +185,28 @@ export default async function ManageTripPage({
             ) : null}
             {trip.course ? (
               <p className="text-sm font-medium text-primary">
-                {t("trips.detail.courseSession", { title: trip.course.title })}
+                {t.rich("trips.detail.courseSession", {
+                  title: trip.course.title,
+                  course: (chunks) => (
+                    <Link
+                      href={`/shop/${shopSlug}/courses/${trip.course?.slug}/edit`}
+                      className="hover:underline"
+                    >
+                      {chunks}
+                    </Link>
+                  ),
+                })}
+              </p>
+            ) : null}
+            {trip.diveSite ? (
+              <p className="text-sm text-muted">
+                {t("trips.detail.diveSiteLabel")}{" "}
+                <Link
+                  href={`/shop/${shopSlug}/dive-sites/${trip.diveSite.id}`}
+                  className="font-medium text-primary hover:underline"
+                >
+                  {trip.diveSite.name}
+                </Link>
               </p>
             ) : null}
             {series ? (
