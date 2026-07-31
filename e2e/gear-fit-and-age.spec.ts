@@ -1,6 +1,6 @@
 import { DEMO_SHOP_SLUG, DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { daysFromNow, e2eNow, signInAs } from "./helpers";
+import { daysFromNow, e2eNow, signInAs, signOut } from "./helpers";
 
 const SHOP = DEMO_SHOP_SLUG;
 
@@ -224,8 +224,7 @@ test.describe("minimum age (H-08, fail open)", () => {
     // Staff must step aside for the public flow: /schedule/[id] redirects a
     // signed-in staff member of this shop straight to the trip's own staff
     // page, so "Book this date" would never reach the public booking form.
-    await page.getByRole("button", { name: "Sign out" }).click();
-    await expect(page).toHaveURL(/\/$/);
+    await signOut(page);
 
     // The PUBLIC form — actor: "public" in bookSpot — never refuses on age.
     // No date is on file yet, so this books exactly like any other walk-in

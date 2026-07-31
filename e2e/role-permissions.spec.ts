@@ -73,7 +73,7 @@ test.describe("H-14 role permissions", () => {
     await expect(page.getByRole("button", { name: "Publish crew prediction" })).toBeVisible();
     // Crew editing is unconditional (no config-gated form around it), so its
     // presence for a captain is the heading itself, not a submit button.
-    await expect(page.getByRole("heading", { name: "Crew" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Crew", exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "Cancel trip" })).toBeVisible();
   });
 

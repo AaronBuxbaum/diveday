@@ -1,5 +1,5 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { daysFromNow, e2eNow } from "./helpers";
+import { daysFromNow, e2eNow, signOut } from "./helpers";
 
 /**
  * Diver self-service cancel/reschedule from their own readiness page
@@ -28,8 +28,7 @@ test.describe("staff-prepared trips", () => {
     await page.getByRole("button", { name: "Put it on the board" }).click();
     await expect(page.getByRole("status")).toBeVisible();
 
-    await page.getByRole("button", { name: "Sign out" }).click();
-    await expect(page).toHaveURL(/\/$/);
+    await signOut(page);
 
     // A visitor books it.
     await page.goto("/shop/blue-mantis/schedule", { waitUntil: "domcontentloaded" });
@@ -89,8 +88,7 @@ test.describe("staff-prepared trips", () => {
     await page.getByLabel("Capacity").fill("6");
     await page.getByRole("button", { name: "Put it on the board" }).click();
     await expect(page.getByRole("status")).toBeVisible();
-    await page.getByRole("button", { name: "Sign out" }).click();
-    await expect(page).toHaveURL(/\/$/);
+    await signOut(page);
 
     await page.goto("/shop/blue-mantis/schedule", { waitUntil: "domcontentloaded" });
     await page.locator("li").filter({ hasText: title }).getByRole("link").click();

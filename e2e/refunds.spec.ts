@@ -1,5 +1,5 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { daysFromNow, e2eNow, signInAsOwner } from "./helpers";
+import { daysFromNow, e2eNow, signInAsOwner, signOut } from "./helpers";
 
 /**
  * Refunds are staff-run (docs H-07): cancelling a paid booking never moves
@@ -45,8 +45,7 @@ test.describe("refunds", () => {
     // their emails unique on its own.
     emailTag: string,
   ) {
-    await page.getByRole("button", { name: "Sign out" }).click();
-    await expect(page).toHaveURL(/\/$/);
+    await signOut(page);
 
     await page.goto("/shop/blue-mantis/schedule", { waitUntil: "domcontentloaded" });
     await page.locator("li").filter({ hasText: title }).getByRole("link").click();

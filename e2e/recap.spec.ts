@@ -1,7 +1,7 @@
 import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed";
 import { signRecapToken } from "../src/lib/recap-links";
 import { expect, test } from "./fixtures";
-import { signInAsOwner } from "./helpers";
+import { signInAsOwner, signOut } from "./helpers";
 
 // The recap page (`/recap/[token]`) is a public, signed-token diver surface, the
 // same shape as the readiness page: it must fail closed on a bad or forged
@@ -42,7 +42,7 @@ test("the external review ask only appears once, right after a strong on-page ra
   await page.getByLabel("Review link").fill("https://g.page/r/blue-mantis/review");
   await page.getByRole("button", { name: "Save review link" }).click();
   await expect(page.getByText("Review link saved.")).toBeVisible();
-  await page.getByRole("button", { name: "Sign out" }).click();
+  await signOut(page);
 
   // A review link is configured, but nothing was just submitted — no second
   // ask stacked underneath the on-page form.

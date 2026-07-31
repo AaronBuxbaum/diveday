@@ -287,8 +287,16 @@ test("the spreadsheet guide brings a no-system shop across for free", async ({ p
   // Nitrox needs its card-number column, or a "yes" flag lands nothing.
   expect(templateBody).toContain("certification_number");
   expect(templateBody).toContain("nitrox_certification_number");
-  // Header-only: no example people to accidentally import into a real roster.
-  expect(templateBody).not.toContain("@");
+  // The columns the spreadsheet guide documents but the template used to
+  // omit (task 102).
+  expect(templateBody).toContain("dive_insurance");
+  expect(templateBody).toContain("specialty");
+  expect(templateBody).toContain("refresher_due");
+  // A few realistic, clearly-fake example rows (task 102) — headers alone
+  // left a shop owner guessing at the shape of a filled-in row.
+  const templateRows = templateBody.trim().split("\n");
+  expect(templateRows.length).toBeGreaterThan(1);
+  expect(templateBody).toContain("@example.com");
 
   // The scope table is the importer's honesty table — same safety spine.
   await expect(page.getByText("Signed waivers & medical clearance", { exact: true })).toBeVisible();

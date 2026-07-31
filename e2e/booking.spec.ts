@@ -1,5 +1,5 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { daysFromNow, e2eNow, signInAsOwner } from "./helpers";
+import { daysFromNow, e2eNow, signInAsOwner, signOut } from "./helpers";
 
 test.describe("staff", () => {
   signedInAsOwner();
@@ -17,8 +17,7 @@ test.describe("staff", () => {
     await page.getByLabel(/Price per diver/).fill("120");
     await page.getByRole("button", { name: "Put it on the board" }).click();
     await expect(page.getByRole("status")).toBeVisible(); // created banner (param is one-shot)
-    await page.getByRole("button", { name: "Sign out" }).click();
-    await expect(page).toHaveURL(/\/$/);
+    await signOut(page);
 
     // A visitor books it from the public schedule — no account.
     await page.goto("/shop/blue-mantis/schedule", { waitUntil: "domcontentloaded" });
@@ -114,8 +113,7 @@ test.describe("staff", () => {
     await expect(page.getByRole("status")).toContainText(
       "Crew prediction published — divers will see it now.",
     );
-    await page.getByRole("button", { name: "Sign out" }).click();
-    await expect(page).toHaveURL(/\/$/);
+    await signOut(page);
 
     await page.goto(`/shop/blue-mantis/schedule/${tripId}`);
     await expect(
@@ -234,10 +232,9 @@ test("a shared-inbox booking under a different name is held for staff identity c
   await page.getByLabel("Returns").fill("21:00");
   await page.getByRole("button", { name: "Put it on the board" }).click();
   await expect(page.getByRole("status")).toBeVisible();
-  await page.getByRole("button", { name: "Sign out" }).click();
-  // Wait for the sign-out redirect to land before booking as the public — a
+  // Waits for the sign-out redirect to land before booking as the public — a
   // signed-in staffer opening a trip gets the manage view, not the booking form.
-  await expect(page).toHaveURL(/\/$/);
+  await signOut(page);
 
   // Nora books the seeded reef trip under her email.
   await page.goto("/shop/blue-mantis/schedule");

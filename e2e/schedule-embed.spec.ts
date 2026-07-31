@@ -1,5 +1,5 @@
 import { expect, test } from "./fixtures";
-import { daysFromNow, e2eNow, signInAsOwner } from "./helpers";
+import { daysFromNow, e2eNow, signInAsOwner, signOut } from "./helpers";
 
 /**
  * The embed widget (docs ADR 20260726-schedule-embed): a shop pastes the
@@ -54,8 +54,7 @@ test("booking through the embed keeps embed mode through the confirmation", asyn
   await page.getByLabel("Capacity").fill("6");
   await page.getByRole("button", { name: "Put it on the board" }).click();
   await expect(page.getByRole("status")).toBeVisible();
-  await page.getByRole("button", { name: "Sign out" }).click();
-  await expect(page).toHaveURL(/\/$/);
+  await signOut(page);
 
   await page.goto("/shop/blue-mantis/schedule?embed=1", { waitUntil: "domcontentloaded" });
   await page.locator("li, a").filter({ hasText: title }).first().click();
