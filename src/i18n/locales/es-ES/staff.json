@@ -115,6 +115,9 @@
     "day": "Día {number}"
   },
   "divers": {
+    "upcoming": {
+      "heading": "Próximas salidas"
+    },
     "shared": {
       "agencies": {
         "padi": "PADI",
