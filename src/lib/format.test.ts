@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   formatDateTimeTz,
+  formatRelativeDay,
   formatShortDate,
   formatTime,
   formatTimeRange,
@@ -57,6 +58,42 @@ describe("formatTimeRangeTz", () => {
     expect(formatTimeRangeTz(morning, midday, "en-US", "UTC")).toBe("7:30 AM – 11:00 AM UTC");
     expect(formatTimeRangeTz(morning, midday, "en-US", "America/New_York")).toBe(
       "3:30 AM – 7:00 AM EDT",
+    );
+  });
+});
+
+describe("formatRelativeDay", () => {
+  const noon = (day: string) => new Date(`${day}T12:00:00Z`);
+
+  it("reads today/tomorrow/in N days off the calendar day, not the raw hour difference", () => {
+    expect(formatRelativeDay(noon("2026-07-17"), noon("2026-07-17"), "en-US", "UTC")).toBe(
+      "today",
+    );
+    expect(formatRelativeDay(noon("2026-07-18"), noon("2026-07-17"), "en-US", "UTC")).toBe(
+      "tomorrow",
+    );
+    expect(formatRelativeDay(noon("2026-07-19"), noon("2026-07-17"), "en-US", "UTC")).toBe(
+      "in 2 days",
+    );
+    expect(formatRelativeDay(noon("2026-07-16"), noon("2026-07-17"), "en-US", "UTC")).toBe(
+      "yesterday",
+    );
+  });
+
+  it("diffs by calendar day in the given timezone, so a trip just after local midnight isn't misread as two days out", () => {
+    // 11pm Honolulu on the 17th is already 9am UTC on the 18th — the same
+    // calendar day locally as `now`, so this must still read "today" there
+    // even though the raw UTC dates differ.
+    const lateNightHonolulu = new Date("2026-07-18T09:00:00Z");
+    const sameEveningHonolulu = new Date("2026-07-18T05:00:00Z");
+    expect(
+      formatRelativeDay(lateNightHonolulu, sameEveningHonolulu, "en-US", "Pacific/Honolulu"),
+    ).toBe("today");
+  });
+
+  it("localizes through Intl.RelativeTimeFormat rather than hard-coded English", () => {
+    expect(formatRelativeDay(noon("2026-07-19"), noon("2026-07-17"), "es-ES", "UTC")).toBe(
+      "pasado mañana",
     );
   });
 });

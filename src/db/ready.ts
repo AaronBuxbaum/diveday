@@ -11,7 +11,12 @@ import { type BookingReadinessDetail, getBookingReadinessDetail } from "./readin
 import { type DiverRentalFit, getRentalFit, toDiverRentalFit } from "./rental-fit";
 import { bookings, people, shops } from "./schema";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
-import { getTripWithBooked, pagedUpcomingTripsWithCounts } from "./trips";
+import {
+  getTripDiveSitesPeek,
+  getTripWithBooked,
+  pagedUpcomingTripsWithCounts,
+  type TripSitePeek,
+} from "./trips";
 
 /** One alternative trip a diver could reschedule this booking into. */
 export type RescheduleCandidate = {
@@ -51,8 +56,12 @@ export type ReadyPageData = {
     contactPhone: string | null;
     rentalItems: string[];
     rentalPricing: RentalPricing;
+    /** Minutes before departure the shop wants divers at the dock — the same figure the night-before email's arrival line uses. */
+    dockCallMinutes: number;
   };
   trip: { id: string; plannedDives: number };
+  /** The trip's dive sites, diver-facing preview shape — the same "what you'll explore" peek the waiver success page shows. */
+  sites: TripSitePeek[];
   person: {
     id: string;
     email: string | null;
@@ -114,6 +123,7 @@ export async function getReadyPageData(
       contactPhone: shops.contactPhone,
       rentalItems: shops.rentalItems,
       rentalPricing: shops.rentalPricing,
+      dockCallMinutes: shops.dockCallMinutes,
       personEmail: people.email,
       emergencyContactName: people.emergencyContactName,
       emergencyContactPhone: people.emergencyContactPhone,
@@ -128,11 +138,12 @@ export async function getReadyPageData(
   const trip = await getTripWithBooked(db, row.shopId, row.tripId);
   if (!trip) return null;
 
-  const [rentalFit, payment, stripeAccount, nitroxVerified] = await Promise.all([
+  const [rentalFit, payment, stripeAccount, nitroxVerified, sites] = await Promise.all([
     getRentalFit(db, row.shopId, row.personId),
     getBookingPayment(db, row.shopId, bookingId),
     getShopStripeAccount(db, row.shopId),
     verifiedNitroxPersonIds(db, row.shopId),
+    getTripDiveSitesPeek(db, row.tripId),
   ]);
   const settled =
     payment?.status === "paid" ||
@@ -208,8 +219,10 @@ export async function getReadyPageData(
       contactPhone: row.contactPhone,
       rentalItems: row.rentalItems,
       rentalPricing: row.rentalPricing,
+      dockCallMinutes: row.dockCallMinutes,
     },
     trip: { id: row.tripId, plannedDives: trip.plannedDives },
+    sites,
     person: {
       id: row.personId,
       email: row.personEmail,

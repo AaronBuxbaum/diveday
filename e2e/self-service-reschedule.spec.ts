@@ -65,8 +65,11 @@ test.describe("staff-prepared trips", () => {
     if (!match) throw new Error(`unexpected option label format: ${selectedLabel}`);
     const [, expectedTitle, expectedWhen] = match;
 
-    page.once("dialog", (dialog) => dialog.accept());
+    // The trigger arms an inline confirm panel (task 50 — replaces
+    // window.confirm, which can't show a translated message) rather than
+    // submitting straight away; the real submit is the second click.
     await page.getByRole("button", { name: "Move my booking" }).click();
+    await page.getByRole("button", { name: "Yes, move my booking" }).click();
 
     await expect(page).toHaveURL(/\/ready\//);
     await expect(page.getByRole("status").filter({ hasText: "You’re moved!" })).toBeVisible();
@@ -101,8 +104,9 @@ test.describe("staff-prepared trips", () => {
     const readyUrl = page.url();
 
     await expect(page.getByRole("button", { name: "Cancel my spot" })).toBeVisible();
-    page.once("dialog", (dialog) => dialog.accept());
+    // Same two-step inline confirm as the reschedule flow above.
     await page.getByRole("button", { name: "Cancel my spot" }).click();
+    await page.getByRole("button", { name: "Yes, cancel my spot" }).click();
 
     await expect(page.getByRole("heading", { name: "This booking was cancelled" })).toBeVisible();
 

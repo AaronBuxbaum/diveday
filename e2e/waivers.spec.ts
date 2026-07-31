@@ -36,6 +36,13 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
 
   await page.goto(waiverHref ?? "/");
   await expect(page.getByRole("heading", { name: "A quick step before the dock" })).toBeVisible();
+  // The trip this waiver is for is named on the page itself (task 42) — a
+  // diver can verify what they're signing for instead of trusting a link
+  // that only ever named the shop.
+  await expect(page.getByText(/Two-Tank Reef — Molasses & French —/)).toBeVisible();
+  // The link's own expiry is stated on the page, not just in the email that
+  // sent it (task 51).
+  await expect(page.getByText(/This link works until/)).toBeVisible();
   // The footer's "need help" link goes to the shop's own contact channel, not
   // DiveDay's marketing homepage (a regression this page used to have).
   await expect(page.getByRole("link", { name: "Contact Blue Mantis Divers" })).toHaveAttribute(
@@ -64,7 +71,18 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
 
   // The first question's affirmative answer must not disappear into a generic
   // success state; it becomes an explicit staff follow-up item.
-  await page.getByRole("radio", { name: "Yes" }).first().check();
+  const firstFieldset = page.locator("fieldset").first();
+  await firstFieldset.getByRole("radio", { name: "Yes" }).check();
+  // Task 41: the reassurance line reveals right under that question the
+  // moment "Yes" is picked — repeated at the point of anxiety, not just once
+  // in the small print above the whole questionnaire. Every question renders
+  // the same reassurance text (only the one under a checked "Yes" is
+  // actually visible via CSS), so this is scoped to the one fieldset that
+  // was just checked rather than matching all eight and hitting Playwright's
+  // strict-mode ambiguity.
+  await expect(
+    firstFieldset.getByText("A yes means a doctor should confirm you’re fit to dive"),
+  ).toBeVisible();
   const waiverUrl = page.url();
   await page.getByRole("button", { name: "Sign waiver" }).click();
   // Signing sends the diver straight to "what's left" instead of stopping on
@@ -82,6 +100,21 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
   // the level explicitly so a regression back to <h2> (no <h1> on the page at
   // all) fails here instead of silently passing a level-agnostic query.
   await expect(page.getByRole("heading", { name: "Waiver received", level: 1 })).toBeVisible();
+  // Task 44's corrected copy, verbatim from the dive-domain-expert review: a
+  // physician's own sign-off is required — the shop only receives and checks
+  // for it, and there is no promised timeline the diver's own doctor
+  // controls. Also the shop's contact as a tappable link, not a dead end.
+  await expect(
+    page.getByText(
+      "A “yes” answer means you’ll need a doctor to confirm in writing that you’re fit to dive before you can go out",
+    ),
+  ).toBeVisible();
+  await expect(page.getByText("The shop will reach out about next steps.")).toBeVisible();
+  await expect(page.getByText("usually before your trip day")).not.toBeVisible();
+  await expect(page.getByRole("link", { name: "hello@demo.invalid" })).toHaveAttribute(
+    "href",
+    "mailto:hello@demo.invalid",
+  );
   await expect(page.getByRole("link", { name: /left before you sail/ })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Your scheduled dive sites" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Molasses Reef" })).toBeVisible();
@@ -158,9 +191,13 @@ test("a non-English visitor sees a notice that the waiver text itself stays in E
     .locator("section")
     .filter({ has: page.getByRole("heading", { name: /^Divers/ }) });
   await diverSection.getByRole("button", { name: "Send waiver", exact: true }).first().click();
-  const waiverHref = await page
-    .getByRole("link", { name: "Open waiver link" })
-    .getAttribute("href");
+  // Pre-existing flake fixed in passing (AGENTS.md hard rule): this asserted
+  // an accessible name — "Open waiver link" — that no longer exists anywhere
+  // in the app, stale since the single waiver-send control replaced the old
+  // per-channel buttons. `resultNotice`'s own link is the same pattern the
+  // first test in this file already uses successfully.
+  const resultNotice = diverSection.getByRole("status");
+  const waiverHref = await resultNotice.getByRole("link").getAttribute("href");
 
   // The waiver link is a bearer-token page a diver opens on their own device,
   // unauthenticated and with their own device's locale — a fresh context with
