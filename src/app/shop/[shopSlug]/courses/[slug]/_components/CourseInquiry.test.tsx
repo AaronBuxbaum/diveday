@@ -151,6 +151,12 @@ describe("CourseInquiry — server-recorded submission", () => {
     // Still the composer, not the confirmation — a rejected attempt never
     // silently reads as a sent one.
     expect(screen.queryByText("Inquiry sent")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Send inquiry" })).toBeInTheDocument();
+    // The error text lands as soon as `setState` applies, but the
+    // transition's own `isPending` flip to false can commit one tick later
+    // (React 19 async-transition semantics) — wait for the button to relabel
+    // rather than asserting on the same tick the error appears.
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Send inquiry" })).toBeInTheDocument(),
+    );
   });
 });
