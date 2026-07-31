@@ -458,29 +458,45 @@ export default async function WaiverPage({
 
         <section className="rounded-lg border border-border bg-surface p-5">
           <h2 className="text-lg font-semibold">{t("waiver.emergencyContact")}</h2>
-          <p className="mt-1 text-sm text-muted">{t("waiver.emergencyContactDescription")}</p>
-          <FieldGrid columns={2} className="mt-4">
-            <Field label={t("waiver.contactName")}>
-              <input
-                name="emergencyContactName"
-                autoComplete="name"
-                maxLength={120}
-                defaultValue={emergencyContact?.name ?? ""}
-                className={controlClass}
-              />
-            </Field>
-            <Field label={t("waiver.contactPhone")}>
-              <input
-                name="emergencyContactPhone"
-                type="tel"
-                inputMode="tel"
-                autoComplete="tel"
-                maxLength={40}
-                defaultValue={emergencyContact?.phone ?? ""}
-                className={controlClass}
-              />
-            </Field>
-          </FieldGrid>
+          {emergencyContact?.name && emergencyContact?.phone ? (
+            // Already on file — most often captured on /ready a moment earlier,
+            // since both surfaces write through the same
+            // `saveBookingEmergencyContact`. Shown read-only rather than a
+            // second differently-labeled capture form (UX persona Lens 17, task
+            // 143); a wrong entry is corrected by staff from here on (task 144).
+            <p className="mt-1 text-sm text-muted">
+              {t("waiver.emergencyOnFile", {
+                name: emergencyContact.name,
+                phone: emergencyContact.phone,
+              })}
+            </p>
+          ) : (
+            <>
+              <p className="mt-1 text-sm text-muted">{t("waiver.emergencyContactDescription")}</p>
+              <FieldGrid columns={2} className="mt-4">
+                <Field label={t("waiver.contactName")}>
+                  <input
+                    name="emergencyContactName"
+                    autoComplete="name"
+                    maxLength={120}
+                    defaultValue={emergencyContact?.name ?? ""}
+                    className={controlClass}
+                  />
+                </Field>
+                <Field label={t("waiver.contactPhone")}>
+                  <input
+                    name="emergencyContactPhone"
+                    type="tel"
+                    inputMode="tel"
+                    autoComplete="tel"
+                    maxLength={40}
+                    defaultValue={emergencyContact?.phone ?? ""}
+                    className={controlClass}
+                  />
+                </Field>
+              </FieldGrid>
+            </>
+          )}
         </section>
 
         <section className="rounded-lg border border-border bg-surface p-5">

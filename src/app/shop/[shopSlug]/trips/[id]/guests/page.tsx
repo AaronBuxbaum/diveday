@@ -45,6 +45,7 @@ import {
   markPaymentAction,
   markWaiverInPersonAction,
   removeBookingAction,
+  saveRosterEmergencyContactAction,
   sendLastMinuteDealAction,
   undoRemoveBookingAction,
 } from "../actions";
@@ -270,6 +271,8 @@ export default async function TripGuestsPage({
         notesByBooking={notesByBooking}
         addNoteAction={addInternalNoteAction.bind(null, shopSlug, tripId)}
         deleteNoteAction={deleteInternalNoteAction.bind(null, shopSlug, tripId)}
+        saveEmergencyContactAction={saveRosterEmergencyContactAction.bind(null, shopSlug, tripId)}
+        depthUnit={shop.depthUnit}
         tripDate={tripDateIso}
       />
 

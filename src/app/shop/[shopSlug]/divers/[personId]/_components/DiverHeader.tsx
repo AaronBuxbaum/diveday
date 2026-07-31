@@ -130,6 +130,30 @@ export function DiverHeader({
                     className={controlClass}
                   />
                 </Field>
+                {/* Task 144 — Today used to tell staff to "ask at the counter"
+                    and link to a roster with nowhere to type it in. This and
+                    the roster's per-diver card (RosterSection.tsx) are the two
+                    staff entry points; both write through the same
+                    `updateDiver`/`saveBookingEmergencyContact` columns the
+                    diver's own /ready and /waivers capture use, and it prints
+                    on the manifest. */}
+                <Field label={t("divers.header.emergencyContactNameLabel")}>
+                  <input
+                    name="emergencyContactName"
+                    autoComplete="name"
+                    defaultValue={diver.person.emergencyContactName ?? ""}
+                    className={controlClass}
+                  />
+                </Field>
+                <Field label={t("divers.header.emergencyContactPhoneLabel")}>
+                  <input
+                    name="emergencyContactPhone"
+                    type="tel"
+                    autoComplete="tel"
+                    defaultValue={diver.person.emergencyContactPhone ?? ""}
+                    className={controlClass}
+                  />
+                </Field>
                 <FieldActions>
                   <SubmitButton pendingLabel={t("divers.header.saving")} className={buttonClass()}>
                     {t("divers.header.saveDetails")}

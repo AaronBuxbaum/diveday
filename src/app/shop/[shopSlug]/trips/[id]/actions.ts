@@ -38,10 +38,11 @@ import {
 } from "@/db/trips";
 import { inviteWaitlistDiver, joinTripWaitlist } from "@/db/waitlist";
 import { issueWaiverOnJoin, issueWaiversForBookings } from "@/db/waiver-issue";
-import { recordInPersonWaiver } from "@/db/waivers";
+import { recordInPersonWaiver, saveBookingEmergencyContact } from "@/db/waivers";
 import { toDiverLocale } from "@/i18n/settings";
 import { trackEvent } from "@/lib/analytics";
 import { nowDate } from "@/lib/clock";
+import { emergencyContactSchema } from "@/lib/contact";
 import { isValidLastMinuteDiscountPercent } from "@/lib/last-minute-list";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { notify, publicAppUrl } from "@/lib/notifications";
@@ -732,6 +733,45 @@ export async function markWaiverInPersonAction(
       ? "waiver-medical-attestation"
       : "waiver-error";
   revalidateAndRedirect(back, `${back}?notice=${notice}&bid=${bookingId}`);
+}
+
+/**
+ * Staff record (or correct) a diver's emergency contact straight from the
+ * roster — the fallback for a diver who never filled it in themselves, and
+ * the field Today's "ask at the counter" nudge used to have nowhere to land
+ * (UX persona Lens 17, task 144). Writes through the same
+ * `saveBookingEmergencyContact` the diver-facing /ready and /waivers capture
+ * uses, so there is exactly one write path regardless of who fills it in.
+ * Prints on the manifest — safety-adjacent, hence the shop-scoped booking
+ * lookup inside `saveBookingEmergencyContact` rather than trusting the
+ * `bookingId` field alone, and a blank submission is reported distinctly from
+ * a genuine failure rather than silently landing on the same "invalid" notice.
+ */
+export async function saveRosterEmergencyContactAction(
+  shopSlug: string,
+  tripId: string,
+  formData: FormData,
+) {
+  const back = guestsPath(shopSlug, tripId);
+  const s = await requireStaffSession();
+  const bookingId = String(formData.get("bookingId") ?? "");
+  const parsed = emergencyContactSchema.safeParse(Object.fromEntries(formData));
+  if (!bookingId || !parsed.success) redirect(`${back}?notice=invalid`);
+  const name = (parsed.data.emergencyContactName ?? "").trim();
+  const phone = (parsed.data.emergencyContactPhone ?? "").trim();
+  await saveBookingEmergencyContact(await getDb(), {
+    shopId: s.user.shopId,
+    bookingId,
+    name,
+    phone,
+  });
+  // A contact is only usable with a reachable number, so only a name+phone
+  // pair earns the "saved" confirmation — matches `saveEmergencyContactFromReady`.
+  const complete = Boolean(name && phone);
+  revalidateAndRedirect(
+    back,
+    `${back}?notice=${complete ? "contact-saved" : "contact-incomplete"}&bid=${bookingId}`,
+  );
 }
 
 const bulkBookingIdsSchema = z.array(z.uuid()).min(1).max(100);

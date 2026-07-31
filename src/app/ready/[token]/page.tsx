@@ -418,42 +418,51 @@ export default async function DiverReadinessPage({
                   ? t("ready.emergencyOnFile", { name: person.emergencyContactName ?? "" })
                   : t("ready.emergencyContactBody")
               }
+              // Already on file (most often captured on the waiver a moment
+              // earlier — both write through the same `saveBookingEmergencyContact`)
+              // reads as a plain "done" row, no form: two differently-labeled
+              // capture forms for the same fact was the duplication this closes
+              // (UX persona Lens 17, task 143). Correcting a wrong entry is staff
+              // work from here on — the roster and diver-record edit form
+              // (task 144) — not a second diver-facing input.
               action={
-                <form
-                  action={saveEmergencyContactFromReady.bind(null, token)}
-                  className="flex flex-col gap-3"
-                >
-                  <FieldGrid columns={2}>
-                    <Field label={t("ready.contactName")}>
-                      <input
-                        name="emergencyContactName"
-                        autoComplete="name"
-                        maxLength={120}
-                        defaultValue={person.emergencyContactName ?? ""}
-                        className={controlClass}
-                      />
-                    </Field>
-                    <Field label={t("ready.contactPhone")}>
-                      <input
-                        name="emergencyContactPhone"
-                        type="tel"
-                        inputMode="tel"
-                        autoComplete="tel"
-                        maxLength={40}
-                        defaultValue={person.emergencyContactPhone ?? ""}
-                        className={controlClass}
-                      />
-                    </Field>
-                  </FieldGrid>
-                  <div>
-                    <SubmitButton
-                      pendingLabel={t("common.saving")}
-                      className={buttonClass({ variant: "secondary", size: "sm" })}
-                    >
-                      {hasEmergencyContact ? t("ready.updateContact") : t("ready.saveContact")}
-                    </SubmitButton>
-                  </div>
-                </form>
+                hasEmergencyContact ? null : (
+                  <form
+                    action={saveEmergencyContactFromReady.bind(null, token)}
+                    className="flex flex-col gap-3"
+                  >
+                    <FieldGrid columns={2}>
+                      <Field label={t("ready.contactName")}>
+                        <input
+                          name="emergencyContactName"
+                          autoComplete="name"
+                          maxLength={120}
+                          defaultValue={person.emergencyContactName ?? ""}
+                          className={controlClass}
+                        />
+                      </Field>
+                      <Field label={t("ready.contactPhone")}>
+                        <input
+                          name="emergencyContactPhone"
+                          type="tel"
+                          inputMode="tel"
+                          autoComplete="tel"
+                          maxLength={40}
+                          defaultValue={person.emergencyContactPhone ?? ""}
+                          className={controlClass}
+                        />
+                      </Field>
+                    </FieldGrid>
+                    <div>
+                      <SubmitButton
+                        pendingLabel={t("common.saving")}
+                        className={buttonClass({ variant: "secondary", size: "sm" })}
+                      >
+                        {t("ready.saveContact")}
+                      </SubmitButton>
+                    </div>
+                  </form>
+                )
               }
               t={t}
             />

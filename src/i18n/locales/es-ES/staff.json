@@ -264,6 +264,8 @@
       "diveInsuranceFieldLabel": "Seguro de buceo",
       "diveInsuranceHint": "(DAN u otro, opcional)",
       "diveInsurancePlaceholder": "DAN n.º 12345",
+      "emergencyContactNameLabel": "Nombre del contacto de emergencia",
+      "emergencyContactPhoneLabel": "Teléfono del contacto de emergencia",
       "saving": "Guardando…",
       "saveDetails": "Guardar datos"
     },
@@ -1043,6 +1045,8 @@
       "diverAdded": "Buceador añadido a la salida.",
       "diverWaitlisted": "Buceador añadido a la lista de espera.",
       "identityConfirmed": "Identidad confirmada — este buceador puede autorizarse a embarcar.",
+      "contactSaved": "Contacto de emergencia guardado.",
+      "contactIncomplete": "Un contacto necesita nombre y teléfono antes de que la tripulación pueda localizar a alguien de verdad.",
       "diverInvalid": "Introduce un nombre y un correo válido para añadir un buceador.",
       "diverFull": "Esa salida está llena — añádelo a la lista de espera en su lugar.",
       "diverWaitlistAvailable": "Hay plazas en esta salida — añádelo a la salida en lugar de a la lista de espera.",
@@ -1337,7 +1341,16 @@
       "delete": "Eliminar",
       "addNoteLabel": "Añadir una nota que solo vea el personal",
       "adding": "Añadiendo…",
-      "addPrivateNote": "Añadir nota privada"
+      "addPrivateNote": "Añadir nota privada",
+      "emergencyContactHeading": "Contacto de emergencia",
+      "emergencyContactOnFile": "{name} · {phone}",
+      "emergencyContactMissing": "Sin registrar — pregunta en el mostrador y añádelo abajo; se imprime en el manifiesto.",
+      "emergencyContactAdd": "Añadir contacto de emergencia",
+      "emergencyContactEdit": "Editar contacto de emergencia",
+      "emergencyContactNameLabel": "Nombre del contacto",
+      "emergencyContactPhoneLabel": "Teléfono del contacto",
+      "savingContact": "Guardando…",
+      "saveEmergencyContact": "Guardar contacto"
     },
     "celebrations": {
       "heading": "Celebraciones",
@@ -1990,7 +2003,7 @@
   },
   "waiversStaff": {
     "eyebrow": "Ajustes",
-    "title": "Descargo",
+    "title": "Plantilla de exención",
     "description": "Todos los buceadores firman este mismo descargo. Edítalo para que se ajuste a tu centro.",
     "banner": {
       "savedNew": "Guardado como nueva versión.",
@@ -2190,7 +2203,7 @@
       "goToSchedule": "Calendario",
       "goToDivers": "Buceadores",
       "goToSettings": "Ajustes",
-      "goToWaivers": "Exenciones",
+      "goToWaivers": "Plantilla de exención",
       "goToBoarding": "Embarque — el barco de hoy",
       "goToWalkIn": "Walk-in",
       "goToOfflineRollCall": "Abrir pase de lista sin conexión"
@@ -2261,7 +2274,7 @@
       "diveSites": "Sitios de buceo",
       "courses": "Cursos",
       "reviews": "Reseñas",
-      "waivers": "Exenciones",
+      "waivers": "Plantilla de exención",
       "reports": "Informes",
       "promoCodes": "Códigos promocionales",
       "settings": "Ajustes",

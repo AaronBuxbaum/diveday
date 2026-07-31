@@ -59,6 +59,12 @@ const personSchema = z.object({
   email: z.union([z.literal(""), z.email().max(320)]),
   phone: z.string().trim().max(40),
   diveInsurance: z.string().trim().max(120),
+  // Same bounds as `emergencyContactSchema` (src/lib/contact.ts), the shared
+  // shape the diver-facing /ready and /waivers capture already validates
+  // against — kept in sync by hand since this form also allows clearing a
+  // wrong entry to "", which that schema's `.optional()` fields don't need to.
+  emergencyContactName: z.string().trim().max(120),
+  emergencyContactPhone: z.string().trim().max(40),
   // Optional on the form and blank-able: H-08's minimum-age gate fails open, so
   // a shop that never fills this in keeps booking exactly as it does today. The
   // plausibility bound is the one place it fails *closed*: a future or

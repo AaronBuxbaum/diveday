@@ -477,7 +477,7 @@
       "paymentDone": "Pagado — gracias.",
       "certificationMultipleNeeded": "Esta inmersión necesita más de una certificación registrada — comparte cada tarjeta que se requiera (una foto o un mensaje rápido sirve), y tu tienda confirmará que estás listo."
     },
-    "emergencyOnFile": "Registrado — {name}. Actualízalo abajo si ha cambiado.",
+    "emergencyOnFile": "Registrado — {name}.",
     "changePlans": "¿Necesitas cambiar tus planes?",
     "reschedulePitch": "Elige otra salida y te movemos — tu plaza actual solo se libera cuando la nueva queda confirmada, así que nunca te quedas sin ninguna.",
     "pickATrip": "Elige una salida",
@@ -515,6 +515,7 @@
     "emergencyContact": "Contacto de emergencia",
     "contactName": "Nombre del contacto",
     "contactPhone": "Teléfono del contacto",
+    "emergencyOnFile": "Ya registrado: {name} · {phone}.",
     "signature": "Tu firma",
     "typeFullName": "Escribe tu nombre completo",
     "incomplete": "Responde a todas las preguntas, escribe tu nombre completo y confirma tu conformidad.",

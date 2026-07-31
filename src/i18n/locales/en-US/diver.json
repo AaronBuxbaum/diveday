@@ -477,7 +477,7 @@
       "paymentDone": "Paid up — thank you.",
       "certificationMultipleNeeded": "This dive needs more than one certification on file — share every card it calls for (a photo or a quick message works), and your shop will confirm you’re set."
     },
-    "emergencyOnFile": "On file — {name}. Update it below if it’s changed.",
+    "emergencyOnFile": "On file — {name}.",
     "changePlans": "Need to change your plans?",
     "reschedulePitch": "Pick a different trip and we’ll move you — your current spot only releases once the new one’s confirmed, so you’re never left without one.",
     "pickATrip": "Pick a trip",
@@ -515,6 +515,7 @@
     "emergencyContact": "Emergency contact",
     "contactName": "Contact name",
     "contactPhone": "Contact phone",
+    "emergencyOnFile": "Already on file: {name} · {phone}.",
     "signature": "Your signature",
     "typeFullName": "Type your full name",
     "incomplete": "Please answer every question, type your full name, and confirm your agreement.",

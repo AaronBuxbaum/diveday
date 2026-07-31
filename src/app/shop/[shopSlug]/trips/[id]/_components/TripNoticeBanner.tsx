@@ -12,7 +12,7 @@ import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
  */
 const NOTICE_KEYS: Record<
   string,
-  { tone: "success" | "danger"; key: StaffMessageKey; countKey?: StaffMessageKey }
+  { tone: "success" | "danger" | "warning"; key: StaffMessageKey; countKey?: StaffMessageKey }
 > = {
   saved: { tone: "success", key: "trips.notices.saved" },
   cancelled: { tone: "danger", key: "trips.notices.cancelled" },
@@ -45,6 +45,8 @@ const NOTICE_KEYS: Record<
   "diver-added": { tone: "success", key: "trips.notices.diverAdded" },
   "diver-waitlisted": { tone: "success", key: "trips.notices.diverWaitlisted" },
   "identity-confirmed": { tone: "success", key: "trips.notices.identityConfirmed" },
+  "contact-saved": { tone: "success", key: "trips.notices.contactSaved" },
+  "contact-incomplete": { tone: "warning", key: "trips.notices.contactIncomplete" },
   "diver-invalid": { tone: "danger", key: "trips.notices.diverInvalid" },
   "diver-full": { tone: "danger", key: "trips.notices.diverFull" },
   "diver-waitlist-available": { tone: "danger", key: "trips.notices.diverWaitlistAvailable" },
