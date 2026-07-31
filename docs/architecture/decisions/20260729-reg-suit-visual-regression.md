@@ -67,3 +67,14 @@ Use `reg-suit` with the `reg-publish-s3-plugin` and `reg-keygen-git-hash-plugin`
   published S3 snapshot as the baseline and only reports a diff when the pixels actually changed. If that previous
   snapshot was never published, the S3 fetch just comes back empty and the run degrades to the old all-new behavior
   for that one push, rather than a hard failure.
+- **The `reg` commit status is suppressed on direct pushes to main, kept on PRs.** `reg-notify-github-plugin`'s
+  `setCommitStatus` ties the `reg` GitHub status directly to whether `reg-suit run` found *any* pixel diff against
+  the immediate parent commit — it has no notion of "a human already approved this in the PR". On a PR that's the
+  point: an unreviewed diff should block merge, per the visual-triage skill. But a push straight to `main` is
+  already-merged history, and the same diff reappears there for the same reason (the comparison is always against
+  the immediate parent, never against "was this signed off on"), with no PR left for the status to gate — so every
+  commit that legitimately changed a pixel left main showing a permanently red, unactionable `reg` status. The
+  `visual` job now patches `regconfig.json` to set `setCommitStatus: false` before running `reg-suit run`, but only
+  `if: github.event_name == 'push'`; pull requests are untouched and still get the enforced status. The
+  "reg-suit visual regression" Actions job itself is a separate signal either way — it only fails on a real pipeline
+  error (build, install, upload), never on a pixel diff, on both events.

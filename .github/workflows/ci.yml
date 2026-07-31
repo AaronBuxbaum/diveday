@@ -228,6 +228,24 @@ jobs:
           # every launch here is headless.
           key: ${{ runner.os }}-playwright-shell-${{ hashFiles('pnpm-lock.yaml') }}
       - run: pnpm exec playwright install --only-shell chromium
+      # reg-notify-github-plugin's `setCommitStatus` ties the `reg` GitHub status
+      # directly to whether reg-suit found *any* pixel diff against the immediate
+      # parent commit — it has no notion of "a human already approved this in the
+      # PR". On a PR that's the point: an unreviewed diff should block merge. But
+      # a direct push to main is already-merged history, and the same diff shows
+      # up again there for the same reason (comparison is always against the
+      # immediate parent) with no PR left to react to it — so every legitimate
+      # pixel change would leave main showing a permanently red, unactionable
+      # status. Patch the status off for pushes only; pull requests still get it.
+      - name: Suppress the reg-suit commit status on direct pushes to main (PRs keep it)
+        if: github.event_name == 'push'
+        run: |
+          node -e "
+            const fs = require('fs');
+            const cfg = JSON.parse(fs.readFileSync('regconfig.json', 'utf8'));
+            cfg.plugins['reg-notify-github-plugin'].setCommitStatus = false;
+            fs.writeFileSync('regconfig.json', JSON.stringify(cfg, null, 2));
+          "
       # `pnpm visual` (the local/dev script) rebuilds via e2e:build before testing —
       # this job already downloaded that exact build above, so `visual:run` (the
       # shared tail both scripts call) skips straight to the Playwright run
