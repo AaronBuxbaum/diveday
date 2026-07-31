@@ -61,7 +61,7 @@ export interface CourseInquiryCopy {
  * Submitting records the inquiry server-side (a new `course_inquiries` row,
  * via `submitInquiry`) and best-effort notifies the shop's own inbox, so a
  * diver on a phone with no mail client configured no longer loses the lead
- * entirely (docs/product/assessments/ux-personas-20260730.md task 7). The
+ * entirely (docs/product/archive/ux-personas-20260730-findings.md task 7). The
  * `mailto:` composer stays beside it as a fallback that needs no server
  * round trip at all — the message still leaves from the diver's own address
  * (src/lib/course-inquiry.ts explains why) for anyone who prefers that, or

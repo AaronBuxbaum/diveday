@@ -91,7 +91,7 @@ describe("offline manifest policy", () => {
     expect(canRecordOfflineStatus(saved, "missing", "not_boarded", "departure")).toBe(false);
   });
 
-  // Dive-domain-expert review (docs/product/assessments/ux-personas-20260730.md,
+  // Dive-domain-expert review (docs/product/archive/ux-personas-20260730-findings.md,
   // persona 10 Sal, task 72, invariant 2): the UI shows a live "Board" button
   // after any numbered dive regardless of readiness (`ready || !isDeparture`
   // in OfflineManifestView) because post-departure roll call is a pure head

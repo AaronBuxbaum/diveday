@@ -30,8 +30,8 @@ export type CourseInquiryFormState = { error?: string; success?: boolean };
  * Records the public course page's "get in touch" composer server-side and
  * best-effort notifies the shop's own contact inbox — the diver's `mailto:`
  * composer (course-inquiry.ts) stays available beside this as a fallback that
- * needs no server round trip at all (docs/product/assessments/
- * ux-personas-20260730.md task 7).
+ * needs no server round trip at all (docs/product/archive/
+ * ux-personas-20260730-findings.md task 7).
  *
  * `shopSlug`/`courseSlug` are bound server-side from the page's own URL
  * params, never taken from the submitted form — the same discipline

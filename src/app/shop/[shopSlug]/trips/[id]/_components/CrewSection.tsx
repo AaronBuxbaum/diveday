@@ -39,7 +39,7 @@ function fill(template: string, values: Record<string, string | number>): string
  * (`updateCrewAction`, the same `changeTripCrew` mutation Today's
  * `DepartureBoard` uses) rather than replacing the whole assigned set, so two
  * staff editing this trip and Today at once can no longer silently clobber
- * each other's change (docs/product/assessments/ux-personas-20260730.md, Lens
+ * each other's change (docs/product/archive/ux-personas-20260730-findings.md, Lens
  * 17 task 139).
  */
 export function CrewSection({

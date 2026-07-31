@@ -5,7 +5,7 @@ import { courseInquiries } from "./schema";
 
 /**
  * The lead recorded from the public course page's "get in touch" composer
- * (docs/product/assessments/ux-personas-20260730.md task 7). `courseId` and
+ * (docs/product/archive/ux-personas-20260730-findings.md task 7). `courseId` and
  * `shopId` are always derived server-side from the URL's shop/course slugs —
  * never accepted from the caller — the same discipline `submitTripReview`
  * uses for `bookingId`.

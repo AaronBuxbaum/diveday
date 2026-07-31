@@ -406,7 +406,7 @@ describe("appendOfflineRollCall", () => {
     expect(reloaded?.events).toHaveLength(1);
   });
 
-  // Dive-domain-expert review (docs/product/assessments/ux-personas-20260730.md,
+  // Dive-domain-expert review (docs/product/archive/ux-personas-20260730-findings.md,
   // persona 10 Sal, task 72, invariant 2): readiness gates boarding at
   // departure only. OfflineManifestView renders a live "Board" button after
   // any numbered dive regardless of the saved readiness snapshot

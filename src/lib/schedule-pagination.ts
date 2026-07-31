@@ -1,6 +1,6 @@
 /**
  * Bidirectional keyset paging for the public schedule list (task 17,
- * docs/product/assessments/ux-personas-20260730.md). `pagedUpcomingTripsWithCounts`
+ * docs/product/archive/ux-personas-20260730-findings.md). `pagedUpcomingTripsWithCounts`
  * (src/db/trips.ts) only ever pages forward from a cursor — there is no
  * "before" query. Rather than add one, the page itself remembers every
  * cursor it has already shown in a small stack carried in the URL's `back`

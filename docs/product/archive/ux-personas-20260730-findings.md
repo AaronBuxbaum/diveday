@@ -1,4 +1,16 @@
-# UX persona walkthroughs — 2026-07-30
+# UX persona walkthroughs — 2026-07-30 (archived findings)
+
+**Archived 2026-07-31.** This is the closed-out findings-and-tasks record of the 2026-07-30
+review: 165 prompt-ready tasks across fifteen personas plus two cross-cutting lenses, kept here
+for rationale — why each fix was made, which review passes it went through, what was deliberately
+deferred and why. Not open work; do not plan from it. For current state, use:
+
+- [product/personas.md](../personas.md) — the standing persona reference this review produced,
+  rewritten as evergreen guidance (not a dated bug list) for evaluating future UX work.
+- [product/story-backlog.md](../story-backlog.md) — every ticket from this review that is still
+  open, partially done, or blocked on a pending review pass, cross-referenced back to its persona.
+
+---
 
 A breadth-first exploration of DiveDay's frontend through the eyes of fifteen personas, with
 **prompt-ready tasks** for handing to a smaller implementation model. Findings come from reading

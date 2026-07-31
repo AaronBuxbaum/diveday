@@ -97,7 +97,7 @@ type DiverFixture = OfflineManifestPayload["manifests"][number]["divers"][number
  * A payload with a real roster (unlike `payload()` above, whose `divers: []`
  * suits the list-mode tests but can't exercise roll-call rendering) across
  * "departure" and "after_dive_1" — for the dive-domain-expert invariants on
- * task 72 (docs/product/assessments/ux-personas-20260730.md, persona 10 Sal).
+ * task 72 (docs/product/archive/ux-personas-20260730-findings.md, persona 10 Sal).
  */
 function richPayload(
   tripId: string,
@@ -440,7 +440,7 @@ describe("OfflineManifestView — single-trip mode (?trip=)", () => {
 });
 
 // Task 72 — dive-domain-expert review invariants (persona 10 Sal,
-// docs/product/assessments/ux-personas-20260730.md), exercised at the UI
+// docs/product/archive/ux-personas-20260730-findings.md), exercised at the UI
 // level. The pure-function guarantees these depend on are covered directly
 // in src/lib/offline-manifests.test.ts and src/lib/offline-manifest-store.test.ts;
 // these confirm the ported UI honors them rather than adding its own gate.

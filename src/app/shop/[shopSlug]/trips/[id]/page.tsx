@@ -114,7 +114,7 @@ export default async function ManageTripPage({
   // any staff member do this — it's day-of operating work). `courseCrewGap`
   // (src/lib/course-ratios.ts) is the one computation of "does this course
   // session have enough crew", also consumed by the staffing coverage list
-  // and the Today queue (docs/product/assessments/ux-personas-20260730.md,
+  // and the Today queue (docs/product/archive/ux-personas-20260730-findings.md,
   // Lens 17 task 151) — over_ratio is the visible nudge to fix an entry-level
   // (PADI, ungated) session before sailing, never a retroactive block on the
   // bookings already taken.

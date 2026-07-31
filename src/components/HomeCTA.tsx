@@ -75,7 +75,7 @@ function RoleOptionButton({
 export function HomeCTA({ enterDemoAction, scheduleHref, roleOptions, copy }: HomeCTAProps) {
   // What the hovered/focused role button is for, surfaced under the picker —
   // the same "Try:" prompt the in-app role switcher shows once you're already
-  // inside the demo (docs/product/assessments/ux-personas-20260730.md #103).
+  // inside the demo (docs/product/archive/ux-personas-20260730-findings.md #103).
   const [preview, setPreview] = useState<string | null>(null);
 
   return (

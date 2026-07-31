@@ -67,7 +67,7 @@ export type CourseCrewGap =
 /**
  * The one computation of "does this course session have enough crew",
  * consumed by the trip page, the staffing coverage list, and the Today queue
- * (docs/product/assessments/ux-personas-20260730.md, Lens 17 task 151) so the
+ * (docs/product/archive/ux-personas-20260730-findings.md, Lens 17 task 151) so the
  * three surfaces can no longer disagree about the same trip.
  */
 export function courseCrewGap(input: {

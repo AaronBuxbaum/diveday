@@ -119,7 +119,7 @@ export default async function ShopLayout({
   return (
     <>
       {/* Every /shop page fronts ShopNav's 10-15 header tab stops (persona 14,
-          ux-personas-20260730.md) — this jumps a keyboard user past it and the
+          ux-personas-20260730-findings.md) — this jumps a keyboard user past it and the
           demo banner straight to the page's own content. Rendered even on the
           public schedule/course pages where ShopNav is absent for staff, so
           the pattern is unconditional like the manifest's own skip link. */}

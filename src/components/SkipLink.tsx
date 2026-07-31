@@ -4,7 +4,7 @@
  * (a header, a nav bar) straight to the page's real content. Originated in
  * the offline manifest (the one page that had a real skip link); generalized
  * here so every page gets one instead of just two (docs/product/assessments
- * ux-personas-20260730.md, persona 14 — a staff page fronts 10-15 header tab
+ * ux-personas-20260730-findings.md, persona 14 — a staff page fronts 10-15 header tab
  * stops before this).
  */
 export function SkipLink({ href, label }: { href: string; label: string }) {

@@ -3,7 +3,7 @@ import type { DiverTranslator } from "@/i18n/messages";
 
 /**
  * The public shop's own identity, shown to anonymous visitors on every
- * `/shop/[shopSlug]` page (task 9, docs/product/assessments/ux-personas-20260730.md).
+ * `/shop/[shopSlug]` page (task 9, docs/product/archive/ux-personas-20260730-findings.md).
  * Before this, the schedule's `<h1>` read "Schedule" with no shop name, logo,
  * or contact anywhere — nothing told a diver comparing two shops in another
  * tab which one they were looking at. Staff get `ShopNav` instead
