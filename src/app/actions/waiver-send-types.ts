@@ -1,3 +1,5 @@
+import type { StaffTranslator } from "@/i18n/staff-messages";
+
 /**
  * Shapes for the one-tap waiver send, kept out of the `"use server"` action
  * file on purpose: a `"use server"` module may only export async functions, so
@@ -37,3 +39,52 @@ export const IDLE_WAIVER_SEND_STATE: WaiverSendState = {
   alreadyDone: [],
   errors: [],
 };
+
+/** Copy for `WaiverSendControl` (a Client Component) — resolved server-side
+ * from `staff.json` and passed down as plain data, the same pattern as
+ * `ResendConfirmationCopy` and `WaitlistInviteCopy`. */
+export type WaiverSendCopy = {
+  /** Default pending label for the send button; a caller may override per-tap. */
+  sending: string;
+  copied: string;
+  copyLink: string;
+  reasonNoEmailOne: string;
+  reasonNoEmailOther: string;
+  reasonFailedOne: string;
+  reasonFailedOther: string;
+  reasonTestRecipientOne: string;
+  reasonTestRecipientOther: string;
+  reasonUnconfigured: string;
+  sharePrivateLinkOne: string;
+  sharePrivateLinkOther: string;
+  /** "Waiver sent to {names}." */
+  sent: string;
+  /** "{names} already has a signed waiver — nothing reissued." */
+  alreadyDoneOne: string;
+  /** "{names} already have a signed waiver — nothing reissued." */
+  alreadyDoneOther: string;
+  /** "Couldn't send to {names} — open the roster to check the booking." */
+  errors: string;
+};
+
+/** Built once per page and threaded to every `WaiverSendControl` on it. */
+export function waiverSendCopy(t: StaffTranslator): WaiverSendCopy {
+  return {
+    sending: t("shared.waiverSend.sending"),
+    copied: t("shared.waiverSend.copied"),
+    copyLink: t("shared.waiverSend.copyLink"),
+    reasonNoEmailOne: t("shared.waiverSend.reasonNoEmailOne"),
+    reasonNoEmailOther: t("shared.waiverSend.reasonNoEmailOther"),
+    reasonFailedOne: t("shared.waiverSend.reasonFailedOne"),
+    reasonFailedOther: t("shared.waiverSend.reasonFailedOther"),
+    reasonTestRecipientOne: t("shared.waiverSend.reasonTestRecipientOne"),
+    reasonTestRecipientOther: t("shared.waiverSend.reasonTestRecipientOther"),
+    reasonUnconfigured: t("shared.waiverSend.reasonUnconfigured"),
+    sharePrivateLinkOne: t("shared.waiverSend.sharePrivateLinkOne"),
+    sharePrivateLinkOther: t("shared.waiverSend.sharePrivateLinkOther"),
+    sent: t("shared.waiverSend.sent"),
+    alreadyDoneOne: t("shared.waiverSend.alreadyDoneOne"),
+    alreadyDoneOther: t("shared.waiverSend.alreadyDoneOther"),
+    errors: t("shared.waiverSend.errors"),
+  };
+}

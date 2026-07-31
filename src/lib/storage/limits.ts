@@ -26,6 +26,9 @@ export const PDF_CONTENT_TYPE = "application/pdf";
 
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
+/** `MAX_IMAGE_BYTES` in whole megabytes, for the "too big" copy callers render. */
+export const MAX_IMAGE_MB = Math.round(MAX_IMAGE_BYTES / (1024 * 1024));
+
 /**
  * A single course-editor submission proxies its files through one Server
  * Action request, whose body Next.js caps globally

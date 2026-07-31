@@ -35,6 +35,7 @@ import {
   monthKey,
   monthLabel,
   parseMonthKey,
+  weekStartsOn,
 } from "@/lib/calendar";
 import { nowDate } from "@/lib/clock";
 import { formatShortDate, formatTime, formatTimeRange } from "@/lib/format";
@@ -444,7 +445,7 @@ export default async function TripsPage({
         <ScheduleCalendar
           shopSlug={shopSlug}
           label={monthLabel(currentMonth)}
-          weeks={buildCalendarWeeks(currentMonth)}
+          weeks={buildCalendarWeeks(currentMonth, weekStartsOn(locale))}
           todayIso={todayIso}
           tripsByDay={tripsByDay}
           locale={locale}

@@ -15,7 +15,7 @@ import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatFaqs } from "@/lib/courses";
 import { requireStaffSession } from "@/lib/session";
-import { MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION } from "@/lib/storage/limits";
+import { MAX_IMAGE_MB, MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION } from "@/lib/storage/limits";
 import { DayByDayEditor } from "./_components/DayByDayEditor";
 import { saveCourseContentAction, setCourseVisibilityAction } from "./actions";
 
@@ -195,7 +195,13 @@ export default async function EditCoursePage({
                   </label>
                 </div>
               ) : null}
-              <ImageFileInput name="heroImageFile" />
+              <ImageFileInput
+                name="heroImageFile"
+                copy={{
+                  wrongTypeSuffix: t("shared.imageInput.wrongTypeSuffix"),
+                  tooBigSuffix: t("shared.imageInput.tooBigSuffix", { maxMb: MAX_IMAGE_MB }),
+                }}
+              />
             </Field>
             <Field
               label={t("courses.edit.galleryPhotosLabel")}
@@ -236,6 +242,13 @@ export default async function EditCoursePage({
                 name="galleryImageFiles"
                 multiple
                 maxFiles={MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION}
+                copy={{
+                  tooMany: t("shared.imageInput.tooMany", {
+                    count: MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION,
+                  }),
+                  wrongTypeSuffix: t("shared.imageInput.wrongTypeSuffix"),
+                  tooBigSuffix: t("shared.imageInput.tooBigSuffix", { maxMb: MAX_IMAGE_MB }),
+                }}
               />
             </Field>
           </FieldGrid>

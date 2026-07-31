@@ -23,9 +23,11 @@ import {
 } from "@/db/waivers";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
+import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
 import { trackEvent } from "@/lib/analytics";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { emergencyContactSchema } from "@/lib/contact";
+import { telHref } from "@/lib/course-inquiry";
 import type { MedicalQuestionnaire } from "@/lib/medical";
 import { questionnaireForJurisdiction } from "@/lib/medical";
 import { revalidateAndRedirect } from "@/lib/navigation";
@@ -148,7 +150,8 @@ export default async function WaiverPage({
     );
   }
   const shopName = shop.name;
-  const t = diverTranslator(await requestLocale(shop.defaultLocale));
+  const locale = await requestLocale(shop.defaultLocale);
+  const t = diverTranslator(locale);
   if (state.state === "completed") {
     const needsReview = state.record.status === "medical_review";
     const bookingId = requireTokenBookingId(state.record);
@@ -385,9 +388,18 @@ export default async function WaiverPage({
         </p>
       ) : null}
 
+      {locale !== DEFAULT_DIVER_LOCALE ? (
+        <p className="mt-6 rounded-lg border border-warning/40 bg-warning/10 px-4 py-3 text-sm text-warning">
+          {t("waiver.englishOnlyNotice")}
+        </p>
+      ) : null}
+
       <section className="mt-8 rounded-lg border border-border bg-surface p-5">
         <p className="text-sm font-medium text-muted">
-          {record.templateTitle} · version {record.templateVersion}
+          {t("waiver.templateVersion", {
+            title: record.templateTitle,
+            version: record.templateVersion,
+          })}
         </p>
         <div className="mt-3 whitespace-pre-wrap text-base leading-7">{record.templateBody}</div>
       </section>
@@ -484,11 +496,23 @@ export default async function WaiverPage({
         </div>
       </form>
       <p className="mt-8 text-center text-sm text-muted">
-        {t("waiver.needHelp")}{" "}
-        <Link href="/" className="font-medium text-primary hover:underline">
-          {t("waiver.returnToShop")}
-        </Link>{" "}
-        {t("waiver.returnToShopSuffix")}
+        {shop.contactEmail || shop.contactPhone
+          ? t.rich("waiver.needHelpContact", {
+              shop: shopName,
+              link: (chunks) => (
+                <a
+                  href={
+                    shop.contactEmail
+                      ? `mailto:${shop.contactEmail}`
+                      : telHref(shop.contactPhone ?? "")
+                  }
+                  className="font-medium text-primary hover:underline"
+                >
+                  {chunks}
+                </a>
+              ),
+            })
+          : t("waiver.needHelpPlain", { shop: shopName })}
       </p>
     </main>
   );

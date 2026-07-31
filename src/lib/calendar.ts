@@ -61,13 +61,28 @@ export function monthLabel(ref: MonthRef, locale = "en-US"): string {
 }
 
 /**
- * The six-week (42-day) grid for a month, Sunday-first, including the spill-in
- * days from the neighbouring months so every week is full. Uses UTC date
- * arithmetic purely for calendar counting — never for wall-clock conversion.
+ * The locale's first day of the week, as 0 (Sunday) … 6 (Saturday) — matching
+ * `CalendarDay.weekday`. TypeScript's ambient types declare
+ * `Intl.Locale.prototype.getWeekInfo()` unconditionally, but it isn't in
+ * every runtime's ICU build yet; where it's actually missing, every locale
+ * renders Sunday-first rather than hand-maintaining a per-locale table only
+ * one engineer would ever check.
  */
-export function buildCalendarWeeks(ref: MonthRef): CalendarDay[][] {
+export function weekStartsOn(locale: string): number {
+  const loc = new Intl.Locale(locale);
+  if (typeof loc.getWeekInfo !== "function") return 0;
+  return loc.getWeekInfo().firstDay % 7;
+}
+
+/**
+ * The six-week (42-day) grid for a month, including the spill-in days from
+ * the neighbouring months so every week is full. `firstDay` is 0 (Sunday) …
+ * 6 (Saturday) — see `weekStartsOn`. Uses UTC date arithmetic purely for
+ * calendar counting — never for wall-clock conversion.
+ */
+export function buildCalendarWeeks(ref: MonthRef, firstDay = 0): CalendarDay[][] {
   const firstOfMonth = Date.UTC(ref.year, ref.month - 1, 1);
-  const startWeekday = new Date(firstOfMonth).getUTCDay();
+  const startWeekday = (new Date(firstOfMonth).getUTCDay() - firstDay + 7) % 7;
   const gridStart = firstOfMonth - startWeekday * 86_400_000;
 
   const weeks: CalendarDay[][] = [];

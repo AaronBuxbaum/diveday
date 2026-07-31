@@ -5,11 +5,16 @@ import { useFormStatus } from "react-dom";
 import {
   IDLE_WAIVER_SEND_STATE,
   type WaiverFallbackLink,
+  type WaiverSendCopy,
   type WaiverSendState,
   type WaiverSendSurface,
 } from "@/app/actions/waiver-send-types";
 import { sendWaiversAction } from "@/app/actions/waivers";
 import { buttonClass } from "@/components/ui/button";
+
+function fill(template: string, values: Record<string, string>): string {
+  return template.replace(/\{(\w+)\}/g, (match, key) => (key in values ? values[key] : match));
+}
 
 function SendButton({ label, pendingLabel }: { label: string; pendingLabel: string }) {
   const { pending } = useFormStatus();
@@ -25,7 +30,7 @@ function SendButton({ label, pendingLabel }: { label: string; pendingLabel: stri
   );
 }
 
-function CopyLink({ link }: { link: WaiverFallbackLink }) {
+function CopyLink({ link, copy: copyText }: { link: WaiverFallbackLink; copy: WaiverSendCopy }) {
   const [copied, setCopied] = useState(false);
   const url =
     typeof window === "undefined"
@@ -56,32 +61,35 @@ function CopyLink({ link }: { link: WaiverFallbackLink }) {
         onClick={copy}
         className={buttonClass({ variant: "ghost", size: "sm", className: "text-foreground" })}
       >
-        <span aria-live="polite">{copied ? "Copied" : "Copy link"}</span>
+        <span aria-live="polite">{copied ? copyText.copied : copyText.copyLink}</span>
       </button>
     </div>
   );
 }
 
 /** Why staff must hand the link over themselves, phrased for one diver or several. */
-function reasonCopy(reason: WaiverFallbackLink["reason"], count: number): string {
+function reasonCopy(
+  copy: WaiverSendCopy,
+  reason: WaiverFallbackLink["reason"],
+  count: number,
+): string {
   const plural = count > 1;
+  const values = { count: String(count) };
   if (reason === "no_email") {
-    return plural ? `${count} have no email on file` : "No email on file";
+    return plural ? fill(copy.reasonNoEmailOther, values) : copy.reasonNoEmailOne;
   }
   if (reason === "failed") {
-    return plural ? `Email could not be delivered to ${count}` : "Email could not be delivered";
+    return plural ? fill(copy.reasonFailedOther, values) : copy.reasonFailedOne;
   }
   if (reason === "test_recipient") {
-    return plural
-      ? `${count} test email addresses can’t receive mail`
-      : "This test email address can’t receive mail";
+    return plural ? fill(copy.reasonTestRecipientOther, values) : copy.reasonTestRecipientOne;
   }
-  return "This shop has no email provider configured yet";
+  return copy.reasonUnconfigured;
 }
 
 /** One paragraph per delivery reason, so "no address on file" never reads as
  * "the shop's email is broken" or the reverse. */
-function LinkGroups({ links }: { links: WaiverFallbackLink[] }) {
+function LinkGroups({ links, copy }: { links: WaiverFallbackLink[]; copy: WaiverSendCopy }) {
   const groups: Record<WaiverFallbackLink["reason"], WaiverFallbackLink[]> = {
     no_email: links.filter((link) => link.reason === "no_email"),
     unconfigured: links.filter((link) => link.reason === "unconfigured"),
@@ -96,12 +104,12 @@ function LinkGroups({ links }: { links: WaiverFallbackLink[] }) {
         return (
           <div key={reason} className="mt-2">
             <p className="text-muted">
-              {reasonCopy(reason, group.length)} — share{" "}
-              {group.length === 1 ? "this private link" : "these private links"}:
+              {reasonCopy(copy, reason, group.length)} — share{" "}
+              {group.length === 1 ? copy.sharePrivateLinkOne : copy.sharePrivateLinkOther}:
             </p>
             <div className="mt-2 flex flex-col gap-1.5">
               {group.map((link) => (
-                <CopyLink key={link.token} link={link} />
+                <CopyLink key={link.token} link={link} copy={copy} />
               ))}
             </div>
           </div>
@@ -111,7 +119,7 @@ function LinkGroups({ links }: { links: WaiverFallbackLink[] }) {
   );
 }
 
-function ResultNotice({ state }: { state: WaiverSendState }) {
+function ResultNotice({ state, copy }: { state: WaiverSendState; copy: WaiverSendCopy }) {
   if (state.status !== "done") return null;
   const nothing =
     state.sent.length === 0 &&
@@ -128,20 +136,19 @@ function ResultNotice({ state }: { state: WaiverSendState }) {
       {state.sent.length > 0 ? (
         <p className="font-medium text-success">
           <span aria-hidden="true">✓ </span>
-          Waiver sent to {state.sent.join(", ")}.
+          {fill(copy.sent, { names: state.sent.join(", ") })}
         </p>
       ) : null}
       {state.alreadyDone.length > 0 ? (
         <p className="mt-1 text-muted">
-          {state.alreadyDone.join(", ")} already {state.alreadyDone.length === 1 ? "has" : "have"} a
-          signed waiver — nothing reissued.
+          {fill(state.alreadyDone.length === 1 ? copy.alreadyDoneOne : copy.alreadyDoneOther, {
+            names: state.alreadyDone.join(", "),
+          })}
         </p>
       ) : null}
-      {state.links.length > 0 ? <LinkGroups links={state.links} /> : null}
+      {state.links.length > 0 ? <LinkGroups links={state.links} copy={copy} /> : null}
       {state.errors.length > 0 ? (
-        <p className="mt-1 text-danger">
-          Couldn’t send to {state.errors.join(", ")} — open the roster to check the booking.
-        </p>
+        <p className="mt-1 text-danger">{fill(copy.errors, { names: state.errors.join(", ") })}</p>
       ) : null}
     </div>
   );
@@ -159,13 +166,15 @@ export function WaiverSendControl({
   surface,
   bookingIds,
   label,
-  pendingLabel = "Sending…",
+  pendingLabel,
+  copy,
 }: {
   shopSlug: string;
   surface: WaiverSendSurface;
   bookingIds: string[];
   label: string;
   pendingLabel?: string;
+  copy: WaiverSendCopy;
 }) {
   const [state, formAction] = useActionState(
     sendWaiversAction.bind(null, shopSlug, surface),
@@ -178,9 +187,9 @@ export function WaiverSendControl({
         {bookingIds.map((id) => (
           <input key={id} type="hidden" name="bookingId" value={id} />
         ))}
-        <SendButton label={label} pendingLabel={pendingLabel} />
+        <SendButton label={label} pendingLabel={pendingLabel ?? copy.sending} />
       </form>
-      <ResultNotice state={state} />
+      <ResultNotice state={state} copy={copy} />
     </div>
   );
 }

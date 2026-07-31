@@ -35,6 +35,12 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
 
   await page.goto(waiverHref ?? "/");
   await expect(page.getByRole("heading", { name: "A quick step before the dock" })).toBeVisible();
+  // The footer's "need help" link goes to the shop's own contact channel, not
+  // DiveDay's marketing homepage (a regression this page used to have).
+  await expect(page.getByRole("link", { name: "Contact Blue Mantis Divers" })).toHaveAttribute(
+    "href",
+    "mailto:hello@demo.invalid",
+  );
   await page.getByLabel("Type your full name").fill("Priya Sharma");
   await page.getByLabel("I have read this waiver, understand it, and agree to it.").check();
 
@@ -132,6 +138,49 @@ test("the medical questionnaire refuses to complete with an unanswered question,
   // renders, and no default answer was silently accepted for the diver.
   await expect(page.getByText("Please answer every question")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Waiver received", level: 1 })).not.toBeVisible();
+});
+
+test("a non-English visitor sees a notice that the waiver text itself stays in English", async ({
+  page,
+}) => {
+  await page.goto("/shop/blue-mantis/schedule");
+  await page
+    .locator("li")
+    .filter({ hasText: "Two-Tank Reef — Molasses & French" })
+    .getByRole("link")
+    .click();
+  await page.waitForURL(/\/shop\/blue-mantis\/trips\//);
+  await page
+    .getByRole("navigation", { name: "Trip" })
+    .getByRole("link", { name: "Guests" })
+    .click();
+  await page.waitForURL(/\/guests/);
+  const diverSection = page
+    .locator("section")
+    .filter({ has: page.getByRole("heading", { name: /^Divers/ }) });
+  await diverSection.getByRole("button", { name: "Send waiver", exact: true }).first().click();
+  const waiverHref = await page
+    .getByRole("link", { name: "Open waiver link" })
+    .getAttribute("href");
+
+  // The waiver link is a bearer-token page a diver opens on their own device,
+  // unauthenticated and with their own device's locale — a fresh context with
+  // an explicit `locale` sends the real Accept-Language header a browser would
+  // (unlike page.setExtraHTTPHeaders, which Chromium doesn't let override its
+  // own negotiated Accept-Language for navigation requests). The demo shop's
+  // own default is English, so this proves the notice follows the visitor,
+  // not the shop.
+  const visitorContext = await page.context().browser()?.newContext({ locale: "es-ES" });
+  if (!visitorContext) throw new Error("expected a browser to create a second context from");
+  const visitorPage = await visitorContext.newPage();
+  await visitorPage.goto(`${new URL(page.url()).origin}${waiverHref}`);
+  await expect(
+    visitorPage.getByText(
+      "esta exención y el cuestionario médico solo están disponibles en inglés",
+      { exact: false },
+    ),
+  ).toBeVisible();
+  await visitorContext.close();
 });
 
 test("saving a draft also refuses an unanswered question, even past client validation", async ({

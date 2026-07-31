@@ -185,12 +185,25 @@
       "courseUnavailable": "This course still needs an assigned instructor before it can take bookings.",
       "courseRatioFull": "This session is at its instructor-to-student ratio limit — call the shop, they may be able to add another instructor or certified assistant.",
       "fit": "We couldn't save that rental fit. Please check the details and try again.",
-      "pay": "We couldn't open the payment page just now. Your spot is safe — try again in a moment, or pay at the shop."
+      "pay": "We couldn't open the payment page just now. Your spot is safe — try again in a moment, or pay at the shop.",
+      "checkFields": "Check the highlighted fields and try again."
+    },
+    "fieldErrors": {
+      "nameRequired": "Enter a name.",
+      "nameTooLong": "That name is too long.",
+      "emailInvalid": "Enter a valid email address.",
+      "phoneTooLong": "That phone number is too long.",
+      "noteTooLong": "Keep this note under 300 characters."
     }
   },
   "lastMinute": {
     "heading": "Want a deal on a last-minute spot?",
     "body": "Tell us when you’re around and we’ll email you if a boat needs to fill seats at a discount.",
+    "errors": {
+      "invalid": "Enter a name and a valid email.",
+      "dateRange": "The end date has to be on or after the start date.",
+      "shopUnavailable": "This shop isn't available right now."
+    },
     "alreadyHaveATrip": "Already have one specific trip in mind? Join its wait list from that trip's own page instead — you'll hear about a discount on it first.",
     "availableFrom": "Around from",
     "availableUntil": "Around until",
@@ -260,7 +273,8 @@
   },
   "recap": {
     "eyebrow": "That’s a wrap",
-    "heading": "Nice diving",
+    "greeting": "Nice diving, {name}.",
+    "namelessFallback": "diver",
     "externalReviewHeading": "Enjoyed your dive?",
     "externalReviewBody": "A public review helps other divers find {shop} — and means the world to the crew that took you out today.",
     "externalReviewCta": "Leave a public review",
@@ -296,6 +310,8 @@
     "photoAlt": "A photo from {trip}",
     "photoLimitReached": "You’ve added the most photos one recap holds. Nice haul!",
     "addAPhoto": "Add a photo",
+    "photoWrongTypeSuffix": ": use a JPG, PNG, WebP, or HEIC photo.",
+    "photoTooBigSuffix": ": that's over {maxMb} MB — try a smaller photo.",
     "addToMyRecap": "Add to my recap",
     "buddyBody": "Diving’s better with someone you know. Grab a spot on the next departure and bring them along.",
     "seeWhatsNext": "See what’s next",
@@ -311,6 +327,7 @@
   },
   "ready": {
     "title": "Your trip readiness",
+    "namelessFallback": "there",
     "withTheShop": "With the shop",
     "allSetHeading": "You’re all set",
     "allSetBody": "Your shop is finishing the last checks — there’s nothing you need to do right now.",
@@ -393,8 +410,10 @@
     "cancelPreviewNoPolicy": "This shop doesn’t automate cancellation refunds, so nothing is refunded right away.",
     "cancelConfirm": "Cancel your spot on {trip}? This can’t be undone.",
     "cancelSpot": "Cancel my spot",
-    "questionsPrefix": "Questions? Reach out to {shop}",
-    "questionsSuffix": "They can see exactly what’s on this page.",
+    "contactLineBoth": "Questions? Reach out to {shop} — <phone>{phoneNumber}</phone> · <email>{emailAddress}</email>. They can see exactly what’s on this page.",
+    "contactLinePhoneOnly": "Questions? Reach out to {shop} — <phone>{phoneNumber}</phone>. They can see exactly what’s on this page.",
+    "contactLineEmailOnly": "Questions? Reach out to {shop} — <email>{emailAddress}</email>. They can see exactly what’s on this page.",
+    "contactLineNone": "Questions? Reach out to {shop}. They can see exactly what’s on this page.",
     "gearAndSetup": "Gear and setup"
   },
   "waiver": {
@@ -404,6 +423,7 @@
     "expiredHeading": "This waiver link has expired",
     "expiredBody": "Ask your dive shop for a fresh link — no information was submitted.",
     "scheduledSites": "Your scheduled dive sites",
+    "templateVersion": "{title} · version {version}",
     "emergencyContact": "Emergency contact",
     "contactName": "Contact name",
     "contactPhone": "Contact phone",
@@ -424,9 +444,9 @@
     "signatureNote": "Your typed name, agreement, and completion time are saved with this exact version of the waiver.",
     "saveForLater": "Save and finish later",
     "signButton": "Sign waiver",
-    "needHelp": "Need help?",
-    "returnToShop": "Return to the shop",
-    "returnToShopSuffix": "and contact your dive shop."
+    "needHelpContact": "Need help? <link>Contact {shop}</link>.",
+    "needHelpPlain": "Need help? Contact {shop} directly.",
+    "englishOnlyNotice": "This waiver and medical form are only available in English right now. If you're not comfortable reading English legal or medical text, please bring someone who can help you read it carefully, or ask the shop before your trip — don't sign anything you don't understand."
   },
   "capability": {
     "waiverReceived": "Waiver received",

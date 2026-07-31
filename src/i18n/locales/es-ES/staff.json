@@ -1368,6 +1368,9 @@
       "body": "Este dispositivo mantiene automáticamente una copia sin conexión del manifiesto actualizada mientras tengas señal. El pase de lista sigue funcionando sin conexión, y cada cambio se verifica contra el manifiesto en vivo en cuanto vuelves a tener señal.",
       "connectivityOfflineWithCopy": "Sin señal · copia en el dispositivo",
       "connectivityOffline": "Sin señal",
+      "connectivityOnline": "En línea",
+      "connectivityOnlineTitle": "Este dispositivo está en línea.",
+      "connectivityOfflineTitle": "Este dispositivo no tiene conexión en este momento.",
       "freshnessCurrent": "Copia actualizada",
       "freshnessAging": "Copia envejeciendo",
       "freshnessStale": "Copia desactualizada",
@@ -2001,6 +2004,35 @@
     }
   },
   "shared": {
+    "imageInput": {
+      "tooMany": "{count, plural, one {Elige hasta # foto por vez.} other {Elige hasta # fotos por vez.}}",
+      "wrongTypeSuffix": ": usa una foto JPG, PNG, WebP o HEIC.",
+      "tooBigSuffix": ": supera los {maxMb} MB — prueba con una foto más pequeña."
+    },
+    "waiverSend": {
+      "sending": "Enviando…",
+      "copied": "Copiado",
+      "copyLink": "Copiar enlace",
+      "reasonNoEmailOne": "Sin correo registrado",
+      "reasonNoEmailOther": "{count} no tienen correo registrado",
+      "reasonFailedOne": "No se pudo entregar el correo",
+      "reasonFailedOther": "No se pudo entregar el correo a {count}",
+      "reasonTestRecipientOne": "Esta dirección de prueba no puede recibir correo",
+      "reasonTestRecipientOther": "{count} direcciones de prueba no pueden recibir correo",
+      "reasonUnconfigured": "Esta tienda aún no tiene un proveedor de correo configurado",
+      "sharePrivateLinkOne": "este enlace privado",
+      "sharePrivateLinkOther": "estos enlaces privados",
+      "sent": "Exención enviada a {names}.",
+      "alreadyDoneOne": "{names} ya tiene una exención firmada — no se reenvió nada.",
+      "alreadyDoneOther": "{names} ya tienen una exención firmada — no se reenvió nada.",
+      "errors": "No se pudo enviar a {names} — revisa la reserva en el listado."
+    },
+    "connectivity": {
+      "online": "En línea",
+      "onlineTitle": "Este dispositivo está en línea.",
+      "offlineTitle": "Este dispositivo no tiene conexión en este momento.",
+      "offlineWithCopy": "Sin señal · copia en el dispositivo"
+    },
     "capacity": {
       "full": "Completo",
       "spotsLeft": "{count, plural, one {queda # plaza} other {quedan # plazas}}"
