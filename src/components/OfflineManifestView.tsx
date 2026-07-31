@@ -4,6 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AmbientContrastSlider, AmbientGlareDetector } from "@/components/AmbientGlareDetector";
 import { ConnectivityStatus } from "@/components/ConnectivityStatus";
+import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { controlClass } from "@/components/ui/form";
 import { rollCallCheckpointText } from "@/i18n/manifest-labels";
 import { matchLocale } from "@/i18n/negotiate";
@@ -250,17 +251,19 @@ export function OfflineManifestView() {
     const savedTrips = list ?? [];
     return (
       <main className="boat-mode mx-auto w-full max-w-3xl flex-1 px-6 py-16">
-        <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-          {t("shared.offlineManifest.list.eyebrow")}
-        </p>
-        <h1 className="mt-3 text-3xl font-semibold">
-          {savedTrips.length > 0
-            ? t("shared.offlineManifest.list.headingWithTrips")
-            : t("shared.offlineManifest.list.headingEmpty")}
-        </h1>
-        <p className="mt-3 text-muted" role="status" aria-live="polite">
-          {message}
-        </p>
+        <ShopPageHeader
+          eyebrow={t("shared.offlineManifest.list.eyebrow")}
+          title={
+            savedTrips.length > 0
+              ? t("shared.offlineManifest.list.headingWithTrips")
+              : t("shared.offlineManifest.list.headingEmpty")
+          }
+          meta={
+            <p className="text-muted" role="status" aria-live="polite">
+              {message}
+            </p>
+          }
+        />
         {savedTrips.length > 0 ? (
           <ul className="mt-6 divide-y divide-border rounded-xl border border-border bg-surface">
             {savedTrips.map((saved) => {
@@ -327,16 +330,18 @@ export function OfflineManifestView() {
   if (!envelope) {
     return (
       <main className="boat-mode mx-auto w-full max-w-3xl flex-1 px-6 py-16">
-        <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-          {t("shared.offlineManifest.single.eyebrow")}
-        </p>
-        <h1 className="mt-3 text-3xl font-semibold">
-          {t("shared.offlineManifest.single.emptyHeading")}
-        </h1>
-        <p className="mt-3 text-muted" role="status">
-          {message}
-        </p>
-        <p className="mt-2 text-muted">{t("shared.offlineManifest.single.emptyHint")}</p>
+        <ShopPageHeader
+          eyebrow={t("shared.offlineManifest.single.eyebrow")}
+          title={t("shared.offlineManifest.single.emptyHeading")}
+          meta={
+            <>
+              <p className="text-muted" role="status">
+                {message}
+              </p>
+              <p className="mt-2 text-muted">{t("shared.offlineManifest.single.emptyHint")}</p>
+            </>
+          }
+        />
       </main>
     );
   }
@@ -405,56 +410,53 @@ export function OfflineManifestView() {
       >
         {t("shared.offlineManifest.single.skipLink")}
       </a>
-      <header className="border-b border-border pb-6">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-              {t("shared.offlineManifest.single.eyebrow")}
-            </p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight">{manifest.trip.title}</h1>
-            <p className="mt-1 text-base text-muted">
-              {t("shared.offlineManifest.single.savedAt", {
-                when: dateTime.format(new Date(envelope.snapshot.savedAt)),
-              })}
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            <div className="print:hidden">
-              <AmbientContrastSlider
+      <div className="border-b border-border pb-6">
+        <ShopPageHeader
+          align="start"
+          eyebrow={t("shared.offlineManifest.single.eyebrow")}
+          title={manifest.trip.title}
+          description={t("shared.offlineManifest.single.savedAt", {
+            when: dateTime.format(new Date(envelope.snapshot.savedAt)),
+          })}
+          actions={
+            <>
+              <div className="print:hidden">
+                <AmbientContrastSlider
+                  copy={{
+                    contrastAutoFallback: t("shared.ambientContrast.contrastAutoFallback"),
+                    contrastIconTitle: t("shared.ambientContrast.contrastIconTitle"),
+                    contrastLabel: t("shared.ambientContrast.contrastLabel"),
+                    labelAuto: t("shared.ambientContrast.labelAuto"),
+                    labelStandard: t("shared.ambientContrast.labelStandard"),
+                    labelFullAaa: t("shared.ambientContrast.labelFullAaa"),
+                    modeAuto: t("shared.ambientContrast.modeAuto"),
+                    modeStandard: t("shared.ambientContrast.modeStandard"),
+                    modeFullAaa: t("shared.ambientContrast.modeFullAaa"),
+                  }}
+                />
+              </div>
+              <ConnectivityStatus
+                offlineLabel={t("shared.connectivity.offlineWithCopy")}
                 copy={{
-                  contrastAutoFallback: t("shared.ambientContrast.contrastAutoFallback"),
-                  contrastIconTitle: t("shared.ambientContrast.contrastIconTitle"),
-                  contrastLabel: t("shared.ambientContrast.contrastLabel"),
-                  labelAuto: t("shared.ambientContrast.labelAuto"),
-                  labelStandard: t("shared.ambientContrast.labelStandard"),
-                  labelFullAaa: t("shared.ambientContrast.labelFullAaa"),
-                  modeAuto: t("shared.ambientContrast.modeAuto"),
-                  modeStandard: t("shared.ambientContrast.modeStandard"),
-                  modeFullAaa: t("shared.ambientContrast.modeFullAaa"),
+                  online: t("shared.connectivity.online"),
+                  onlineTitle: t("shared.connectivity.onlineTitle"),
+                  offlineTitle: t("shared.connectivity.offlineTitle"),
                 }}
               />
-            </div>
-            <ConnectivityStatus
-              offlineLabel={t("shared.connectivity.offlineWithCopy")}
-              copy={{
-                online: t("shared.connectivity.online"),
-                onlineTitle: t("shared.connectivity.onlineTitle"),
-                offlineTitle: t("shared.connectivity.offlineTitle"),
-              }}
-            />
-            <span
-              className={
-                freshness === "current"
-                  ? "rounded-full border border-success/30 bg-success/10 px-3 py-2 text-sm font-bold text-success"
-                  : freshness === "aging"
-                    ? "rounded-full border border-warning/40 bg-warning/10 px-3 py-2 text-sm font-bold text-warning"
-                    : "rounded-full border border-danger/30 bg-danger/10 px-3 py-2 text-sm font-bold text-danger"
-              }
-            >
-              {t(`shared.offlineManifest.freshnessPill.${freshness}`)}
-            </span>
-          </div>
-        </div>
+              <span
+                className={
+                  freshness === "current"
+                    ? "rounded-full border border-success/30 bg-success/10 px-3 py-2 text-sm font-bold text-success"
+                    : freshness === "aging"
+                      ? "rounded-full border border-warning/40 bg-warning/10 px-3 py-2 text-sm font-bold text-warning"
+                      : "rounded-full border border-danger/30 bg-danger/10 px-3 py-2 text-sm font-bold text-danger"
+                }
+              >
+                {t(`shared.offlineManifest.freshnessPill.${freshness}`)}
+              </span>
+            </>
+          }
+        />
         {expired ? (
           <p className="mt-4 rounded-lg border border-danger/40 bg-danger/10 p-3 text-base leading-6 font-semibold text-danger">
             {t("shared.offlineManifest.single.expiredBanner")}
@@ -472,7 +474,7 @@ export function OfflineManifestView() {
         <p className="mt-1 text-sm text-muted">
           {t("shared.offlineManifest.single.pendingRejectedCounts", { pending, rejected })}
         </p>
-      </header>
+      </div>
 
       <nav
         className="mt-6 flex gap-2 overflow-x-auto pb-2"

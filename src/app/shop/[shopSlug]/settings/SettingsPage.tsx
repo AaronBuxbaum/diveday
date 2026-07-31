@@ -7,7 +7,7 @@ import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
+import { controlClass, Field, FieldActions, FieldGrid, PriceField } from "@/components/ui/form";
 import { canPersonManagePaymentSettings } from "@/db/authz";
 import { getDb } from "@/db/client";
 import {
@@ -310,38 +310,6 @@ async function refreshAction() {
   revalidateAndRedirect(
     `/shop/${session.user.shopSlug}/settings`,
     `/shop/${session.user.shopSlug}/settings?notice=refreshed`,
-  );
-}
-
-/** A dollar price box, prefilled from stored minor units. An empty box means unpriced. */
-function PriceField({
-  name,
-  label,
-  hint,
-  cents,
-}: {
-  name: string;
-  label: string;
-  hint?: string;
-  cents: number | null;
-}) {
-  return (
-    <Field label={label} hint={hint}>
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-muted">$</span>
-        <input
-          name={name}
-          type="number"
-          inputMode="decimal"
-          min={0}
-          max={100000}
-          step="0.01"
-          defaultValue={cents === null ? "" : String(cents / 100)}
-          placeholder="—"
-          className={controlClass}
-        />
-      </div>
-    </Field>
   );
 }
 

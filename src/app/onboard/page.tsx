@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { MarketingNav } from "@/components/MarketingNav";
+import { ShopNotice } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
@@ -118,9 +119,9 @@ export default async function OnboardPage({
           <p className="mt-1.5 text-sm text-muted">{t("account.onboard.description")}</p>
 
           {error ? (
-            <p role="alert" className="mt-4 rounded-lg bg-danger/10 px-3 py-2 text-sm text-danger">
+            <ShopNotice tone="danger" role="alert" className="mt-4">
               {onboardErrorMessage(t, error)}
-            </p>
+            </ShopNotice>
           ) : null}
 
           <form action={onboardAction} className="mt-6 flex flex-col gap-5">

@@ -52,7 +52,10 @@ export default async function EmbedSettingsPage() {
   // browser navigates to directly, never a frame, so it should land on the
   // full page — including for a shop that takes online payment, where a
   // hosted Stripe Checkout may refuse to render inside someone else's iframe.
-  const buttonSnippet = `<a href="${scheduleUrl}" target="_blank" rel="noopener" style="display:inline-block;padding:12px 24px;background:#0f766e;color:#fff;font:600 15px/1 system-ui,sans-serif;text-decoration:none;border-radius:10px">${escapeHtml(bookButtonText)}</a>`;
+  // #0e7490 is the light-mode `--primary` token value (src/app/globals.css) —
+  // the snippet renders on the shop's own site, outside DiveDay's CSS, so it
+  // has to inline the real color rather than reference the custom property.
+  const buttonSnippet = `<a href="${scheduleUrl}" target="_blank" rel="noopener" style="display:inline-block;padding:12px 24px;background:#0e7490;color:#fff;font:600 15px/1 system-ui,sans-serif;text-decoration:none;border-radius:10px">${escapeHtml(bookButtonText)}</a>`;
 
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useActionState } from "react";
 import { BookingPartyFields } from "@/components/BookingPartyFields";
+import { ShopNotice } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
@@ -14,9 +15,9 @@ import type { Trip } from "./types";
 function ErrorNotice({ message }: { message?: string }) {
   if (!message) return null;
   return (
-    <p role="alert" className="mt-4 rounded-lg bg-danger/10 px-3 py-2 text-sm text-danger">
+    <ShopNotice tone="danger" role="alert" className="mt-4">
       {message}
-    </p>
+    </ShopNotice>
   );
 }
 

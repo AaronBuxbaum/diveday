@@ -106,3 +106,40 @@ export function FieldActions({
     <div className={`col-span-full flex flex-wrap items-center gap-3 ${className}`}>{children}</div>
   );
 }
+
+/**
+ * A dollar price box, prefilled from stored minor units. An empty box means
+ * unpriced — the one price-entry pattern every form uses, so a shop never
+ * sees `type="number"` inputs in one place and free-text decimals in
+ * another.
+ */
+export function PriceField({
+  name,
+  label,
+  hint,
+  cents,
+}: {
+  name: string;
+  label: string;
+  hint?: string;
+  cents: number | null;
+}) {
+  return (
+    <Field label={label} hint={hint}>
+      <div className="flex items-center gap-2">
+        <span className="text-sm text-muted">$</span>
+        <input
+          name={name}
+          type="number"
+          inputMode="decimal"
+          min={0}
+          max={100000}
+          step="0.01"
+          defaultValue={cents === null ? "" : String(cents / 100)}
+          placeholder="—"
+          className={controlClass}
+        />
+      </div>
+    </Field>
+  );
+}

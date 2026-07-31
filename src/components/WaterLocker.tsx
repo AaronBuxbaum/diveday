@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { fill } from "@/i18n/fill";
 
 export type WaterLockerCopy = {
   rainAlt: string;
@@ -11,13 +12,6 @@ export type WaterLockerCopy = {
   unlockingProgress: string;
   holdToUnlock: string;
 };
-
-/** Fills `{name}` placeholders in a plain ICU-style template — never a translator crossing the client boundary. */
-function fill(template: string, values: Record<string, string | number>): string {
-  return template.replace(/\{(\w+)\}/g, (match, key) =>
-    key in values ? String(values[key]) : match,
-  );
-}
 
 export function WaterLocker({ copy }: { copy: WaterLockerCopy }) {
   const [isLocked, setIsLocked] = useState(false);
