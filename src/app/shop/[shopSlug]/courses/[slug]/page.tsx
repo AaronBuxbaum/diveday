@@ -42,6 +42,13 @@ export async function generateMetadata({
   const shop = await getShopBySlug(db, shopSlug);
   const course = shop ? await getCourseBySlug(db, shop.id, slug) : null;
   if (!course) return { title: "Course — DiveDay" };
+  // A hidden course 404s in the page body for anyone but this shop's own
+  // staff (`staffView` below) — metadata must refuse it the same way, since
+  // Next resolves `generateMetadata` independently of that later `notFound()`
+  // and would otherwise leak the title/summary into the anonymous <head>.
+  const session = await auth();
+  const staffView = Boolean(shop && session?.user?.shopId === shop.id && isStaff(session.user.roles));
+  if (!course.isActive && !staffView) return { title: "Course — DiveDay" };
   const canonical = shop ? `/shop/${shop.slug}/courses/${course.slug}` : undefined;
   const title = `${course.title} — ${shop?.name ?? "DiveDay"}`;
   // `description` is the internal staff-picker blurb (schema comment on

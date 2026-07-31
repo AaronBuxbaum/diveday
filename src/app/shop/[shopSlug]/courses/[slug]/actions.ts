@@ -67,7 +67,10 @@ export async function submitCourseInquiryAction(
   const shop = await getShopBySlug(db, shopSlug);
   if (!shop) return { error: t("inquiry.errors.unavailable") };
   const course = await getCourseBySlug(db, shop.id, courseSlug);
-  if (!course) return { error: t("inquiry.errors.unavailable") };
+  // A hidden course isn't offered anymore, from a diver's point of view —
+  // the inquiry form itself only renders on the visible page, so reaching
+  // here for one means the slug was guessed or the shop hid it mid-submit.
+  if (!course || !course.isActive) return { error: t("inquiry.errors.unavailable") };
 
   const { name, email, phone, timing, divers, experience, message } = parsed.data;
   const record = await recordCourseInquiry(db, {

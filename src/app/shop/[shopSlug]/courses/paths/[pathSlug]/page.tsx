@@ -31,6 +31,13 @@ export async function generateMetadata({
   const shop = await getShopBySlug(db, shopSlug);
   const path = shop ? await getCoursePathBySlug(db, shop.id, pathSlug) : null;
   if (!shop || !path) return { title: "Certification path — DiveDay" };
+  // A hidden path 404s in the page body for anyone but this shop's own staff
+  // — metadata must refuse it the same way, since Next resolves
+  // `generateMetadata` independently of that later `notFound()` and would
+  // otherwise leak the title/summary into the anonymous <head>.
+  const session = await auth();
+  const staffView = session?.user?.shopId === shop.id && isStaff(session.user.roles);
+  if (!path.isActive && !staffView) return { title: "Certification path — DiveDay" };
   const canonical = `/shop/${shop.slug}/courses/paths/${path.slug}`;
   const title = `${path.title} — ${shop.name}`;
   const description = path.summary ?? undefined;
