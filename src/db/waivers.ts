@@ -1,6 +1,7 @@
 import { and, asc, desc, eq, inArray, isNull, lt, ne, or } from "drizzle-orm";
 import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
+import { flaggedMedicalPrompts } from "@/lib/medical";
 import { inPersonAttestationProvider, localTypedConsentProvider } from "@/lib/signatures";
 import { computeWaiverIntegrityHash, verifyWaiverIntegrity } from "@/lib/waiver-integrity";
 import {
@@ -67,12 +68,50 @@ function requireSignedAt(record: { signedAt: Date | null }): Date {
   return record.signedAt;
 }
 
+/** The join shape both `listWaiverIntegrityAudit` and `getSignedWaiverRecordForShop` select. */
+type WaiverAuditJoinRow = {
+  record: typeof waiverRecords.$inferSelect;
+  personName: string;
+  tripId: string | null;
+  tripTitle: string | null;
+  tripStartsAt: Date | null;
+};
+
 /**
- * Signed evidence audit, intentionally excluding bearer tokens and medical
- * answers — one keyset page at a time (ordered by signature, then id for a
- * stable tiebreak), same idiom as `pagedUpcomingTripsWithCounts` and
- * `listDiverSummaries` so a shop with years of signed waivers costs one page,
- * not the whole table.
+ * Shared row shaping for the Signatures tab: never the bearer token, never
+ * the raw medical questionnaire — a medical hold surfaces only as
+ * `flaggedPrompts`, the "answered yes" prompts a reviewer must check, the
+ * same summary `flaggedMedicalPrompts` already gives the trip roster
+ * (`RosterSection.tsx`).
+ */
+function toSignedWaiverEntry(row: WaiverAuditJoinRow) {
+  return {
+    id: row.record.id,
+    personId: row.record.personId,
+    personName: row.personName,
+    tripId: row.tripId,
+    tripTitle: row.tripTitle,
+    tripStartsAt: row.tripStartsAt,
+    status: row.record.status,
+    signedAt: row.record.signedAt,
+    integrity: verifyWaiverIntegrity(row.record),
+    flaggedPrompts:
+      row.record.status === "medical_review" && row.record.medicalAnswers
+        ? flaggedMedicalPrompts(row.record.medicalAnswers)
+        : [],
+  };
+}
+
+/**
+ * Signed evidence audit — the Signatures tab's data (`/shop/[shopSlug]/waivers/signatures`)
+ * and its integrity check. Every row is shop-scoped by `shopId` (never trust a
+ * route param for this — see the query's `where`), joins the trip the record
+ * was issued against (null only for an imported record, which carries no
+ * booking), and intentionally excludes bearer tokens and the raw medical
+ * questionnaire (see `toSignedWaiverEntry`). One keyset page at a time
+ * (ordered by signature, then id for a stable tiebreak), same idiom as
+ * `pagedUpcomingTripsWithCounts` and `listDiverSummaries` so a shop with years
+ * of signed waivers costs one page, not the whole table.
  */
 export async function listWaiverIntegrityAudit(
   db: DbExecutor,
@@ -87,9 +126,14 @@ export async function listWaiverIntegrityAudit(
     .select({
       record: waiverRecords,
       personName: people.fullName,
+      tripId: trips.id,
+      tripTitle: trips.title,
+      tripStartsAt: trips.startsAt,
     })
     .from(waiverRecords)
     .innerJoin(people, eq(people.id, waiverRecords.personId))
+    .leftJoin(bookings, eq(bookings.id, waiverRecords.bookingId))
+    .leftJoin(trips, eq(trips.id, bookings.tripId))
     .where(
       and(
         eq(waiverRecords.shopId, shopId),
@@ -108,18 +152,49 @@ export async function listWaiverIntegrityAudit(
   const pageRows = rows.slice(0, limit);
   const last = pageRows.at(-1);
   return {
-    entries: pageRows.map((row) => ({
-      id: row.record.id,
-      personName: row.personName,
-      status: row.record.status,
-      signedAt: row.record.signedAt,
-      integrity: verifyWaiverIntegrity(row.record),
-    })),
+    entries: pageRows.map(toSignedWaiverEntry),
     nextCursor:
       rows.length > limit && last
         ? encodeCursor(requireSignedAt(last.record).toISOString(), last.record.id)
         : null,
   };
+}
+
+/**
+ * One signed record, by id, for the Signatures tab's "jump to a record"
+ * entry point — the trip roster's "View signed record" link
+ * (`RosterSection.tsx`), which a shop with a lot of signed history can
+ * easily point past `listWaiverIntegrityAudit`'s current page. Shop-scoped
+ * exactly like the audit: `shopId` gates the row, never a route param, so a
+ * copied or guessed record id from another shop resolves to nothing rather
+ * than that shop's medical-adjacent record.
+ */
+export async function getSignedWaiverRecordForShop(
+  db: DbExecutor,
+  shopId: string,
+  recordId: string,
+) {
+  const [row] = await db
+    .select({
+      record: waiverRecords,
+      personName: people.fullName,
+      tripId: trips.id,
+      tripTitle: trips.title,
+      tripStartsAt: trips.startsAt,
+    })
+    .from(waiverRecords)
+    .innerJoin(people, eq(people.id, waiverRecords.personId))
+    .leftJoin(bookings, eq(bookings.id, waiverRecords.bookingId))
+    .leftJoin(trips, eq(trips.id, bookings.tripId))
+    .where(
+      and(
+        eq(waiverRecords.id, recordId),
+        eq(waiverRecords.shopId, shopId),
+        inArray(waiverRecords.status, ["completed", "medical_review"]),
+      ),
+    )
+    .limit(1);
+  return row ? toSignedWaiverEntry(row) : null;
 }
 
 /**

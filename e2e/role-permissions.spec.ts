@@ -44,6 +44,13 @@ test.describe("H-14 role permissions", () => {
     await expect(page).toHaveURL(`/shop/${SHOP}`);
     await expect(page.locator('textarea[name="body"]')).toHaveCount(0);
 
+    // Its Signatures tab (task 155) — read access to signed medical/waiver
+    // records — takes the exact same gate, never a looser one just because
+    // it's a sub-route.
+    await page.goto(`/shop/${SHOP}/waivers/signatures`);
+    await expect(page).toHaveURL(`/shop/${SHOP}`);
+    await expect(page.getByRole("heading", { level: 1, name: "Signatures" })).toHaveCount(0);
+
     // Payment settings — Stripe + rental catalog/prices — are hidden.
     await page.goto(`/shop/${SHOP}/settings`);
     await expect(page.getByText("payment settings, limited to owners and managers")).toBeVisible();
@@ -75,10 +82,15 @@ test.describe("H-14 role permissions", () => {
     await page.goto(`/shop/${SHOP}/trips/new`);
     await expect(page.getByRole("button", { name: "Put it on the board" })).toBeVisible();
 
-    // Money and the legal waiver are still owner/manager only.
+    // Money and the legal waiver are still owner/manager only — including
+    // its Signatures tab.
     await page.goto(`/shop/${SHOP}/waivers`);
     await expect(page).toHaveURL(`/shop/${SHOP}`);
     await expect(page.locator('textarea[name="body"]')).toHaveCount(0);
+
+    await page.goto(`/shop/${SHOP}/waivers/signatures`);
+    await expect(page).toHaveURL(`/shop/${SHOP}`);
+    await expect(page.getByRole("heading", { level: 1, name: "Signatures" })).toHaveCount(0);
 
     await page.goto(`/shop/${SHOP}/settings`);
     await expect(page.getByText("payment settings, limited to owners and managers")).toBeVisible();
@@ -89,6 +101,9 @@ test.describe("H-14 role permissions", () => {
 
     await page.goto(`/shop/${SHOP}/waivers`);
     await expect(page.locator('textarea[name="body"]')).toBeVisible();
+
+    await page.goto(`/shop/${SHOP}/waivers/signatures`);
+    await expect(page.getByRole("heading", { level: 1, name: "Signatures" })).toBeVisible();
 
     await page.goto(`/shop/${SHOP}/settings`);
     await expect(page.getByRole("button", { name: "Save rental catalog" })).toBeVisible();

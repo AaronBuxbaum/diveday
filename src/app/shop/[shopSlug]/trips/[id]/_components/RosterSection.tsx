@@ -473,6 +473,14 @@ export function RosterSection({
                         ) : (
                           <p className="mt-1">{t("trips.roster.medicalFollowUpDescription")}</p>
                         )}
+                        {currentWaiver ? (
+                          <Link
+                            href={`/shop/${shopSlug}/waivers/signatures?record=${currentWaiver.id}`}
+                            className="mt-2 inline-block text-xs font-semibold underline"
+                          >
+                            {t("trips.roster.viewSignedRecord")}
+                          </Link>
+                        ) : null}
                       </div>
                     ) : null}
                   </div>
