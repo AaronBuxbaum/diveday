@@ -158,9 +158,7 @@ test("a non-English visitor sees a notice that the waiver text itself stays in E
     .locator("section")
     .filter({ has: page.getByRole("heading", { name: /^Divers/ }) });
   await diverSection.getByRole("button", { name: "Send waiver", exact: true }).first().click();
-  const waiverHref = await page
-    .getByRole("link", { name: "Open waiver link" })
-    .getAttribute("href");
+  const waiverHref = await diverSection.getByRole("status").getByRole("link").getAttribute("href");
 
   // The waiver link is a bearer-token page a diver opens on their own device,
   // unauthenticated and with their own device's locale — a fresh context with
