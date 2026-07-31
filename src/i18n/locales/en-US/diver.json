@@ -493,7 +493,6 @@
     "diverEmailLabel": "Diver {number} email",
     "phoneLabel": "Phone",
     "phoneHint": "(if the crew needs to reach you)",
-    "didYouMeanName": "Did you mean <strong>{name}</strong> ({email})?",
     "didYouMeanEmail": "Did you mean {email}?"
   },
   "site": {

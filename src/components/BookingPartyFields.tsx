@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
-import { editDistance, suggestEmailTypo } from "@/lib/email-typo";
+import { suggestEmailTypo } from "@/lib/email-typo";
 
 const diverSlots = ["one", "two", "three", "four", "five", "six"] as const;
 
@@ -23,31 +23,6 @@ function FieldError({ id, message }: { id: string; message?: string }) {
   );
 }
 
-function suggestNameTypo(
-  name: string,
-  known: { fullName: string; email: string }[],
-): { fullName: string; email: string } | null {
-  const trimmed = name.trim().toLowerCase();
-  if (trimmed.length < 4) return null;
-
-  let bestMatch: { fullName: string; email: string } | null = null;
-  let bestDistance = Infinity;
-
-  for (const diver of known) {
-    const diverNameLower = diver.fullName.toLowerCase();
-    if (diverNameLower === trimmed) return null;
-
-    const distance = editDistance(trimmed, diverNameLower);
-    const maxAllowed = trimmed.length > 8 ? 2 : 1;
-    if (distance <= maxAllowed && distance < bestDistance) {
-      bestDistance = distance;
-      bestMatch = diver;
-    }
-  }
-
-  return bestMatch;
-}
-
 /**
  * The party editor for booking and waitlist forms. Controlled so a failed
  * server parse re-renders with everything the diver typed still in place
@@ -62,13 +37,11 @@ export function BookingPartyFields({
   maxPartySize,
   leadPhone = false,
   fieldErrors,
-  knownDivers = [],
 }: {
   maxPartySize: number;
   /** Show an optional phone field for the lead booker (diver 1). */
   leadPhone?: boolean;
   fieldErrors?: BookingFieldErrors;
-  knownDivers?: { fullName: string; email: string }[];
 }) {
   const t = useTranslations();
   const [size, setSize] = useState(1);
@@ -78,7 +51,6 @@ export function BookingPartyFields({
   );
   const [phone, setPhone] = useState("");
   const [blurred, setBlurred] = useState<Record<number, boolean>>({});
-  const [nameBlurred, setNameBlurred] = useState<Record<number, boolean>>({});
   const limit = Math.max(1, Math.min(6, maxPartySize));
   useEffect(() => setHydrated(true), []);
 
@@ -110,9 +82,6 @@ export function BookingPartyFields({
         const nameError = fieldErrors?.[`fullName-${index}`];
         const emailError = fieldErrors?.[`email-${index}`];
         const suggestion = blurred[index] ? suggestEmailTypo(member.email) : null;
-        const nameSuggestion = nameBlurred[index]
-          ? suggestNameTypo(member.fullName, knownDivers)
-          : null;
         return (
           // Keyed by a stable slot name, so raising the party size only mounts
           // the newly-added fieldsets — `rise-in`'s entrance plays for those,
@@ -130,30 +99,7 @@ export function BookingPartyFields({
                     : t("party.diverNameLabel", { number: index + 1 })
                 }
                 className="text-base"
-                description={
-                  <>
-                    <FieldError id={`fullName-${index}-error`} message={nameError} />
-                    {nameSuggestion ? (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          updateMember(index, {
-                            fullName: nameSuggestion.fullName,
-                            email: nameSuggestion.email,
-                          });
-                          setNameBlurred((curr) => ({ ...curr, [index]: false }));
-                        }}
-                        className="mt-1 block text-left text-xs font-semibold text-primary hover:underline animate-fade-in"
-                      >
-                        {t.rich("party.didYouMeanName", {
-                          strong: (chunks) => <strong>{chunks}</strong>,
-                          name: nameSuggestion.fullName,
-                          email: nameSuggestion.email,
-                        })}
-                      </button>
-                    ) : null}
-                  </>
-                }
+                description={<FieldError id={`fullName-${index}-error`} message={nameError} />}
               >
                 <input
                   name={`fullName-${index}`}
@@ -163,11 +109,7 @@ export function BookingPartyFields({
                   aria-invalid={nameError ? "true" : undefined}
                   aria-describedby={nameError ? `fullName-${index}-error` : undefined}
                   value={member.fullName}
-                  onChange={(event) => {
-                    updateMember(index, { fullName: event.target.value });
-                    setNameBlurred((curr) => ({ ...curr, [index]: false }));
-                  }}
-                  onBlur={() => setNameBlurred((curr) => ({ ...curr, [index]: true }))}
+                  onChange={(event) => updateMember(index, { fullName: event.target.value })}
                   className={controlClass}
                 />
               </Field>

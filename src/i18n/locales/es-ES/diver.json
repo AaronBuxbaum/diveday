@@ -493,7 +493,6 @@
     "diverEmailLabel": "Correo del buceador {number}",
     "phoneLabel": "Teléfono",
     "phoneHint": "(por si la tripulación necesita contactarte)",
-    "didYouMeanName": "¿Quisiste decir <strong>{name}</strong> ({email})?",
     "didYouMeanEmail": "¿Quisiste decir {email}?"
   },
   "site": {
