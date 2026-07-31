@@ -748,6 +748,32 @@
         "notAuthorized": "Refunds are limited to owners and managers — ask one of them to issue this refund.",
         "demoDisabled": "This is a demo order — it isn't backed by a live Stripe invoice, so it can't be changed."
       }
+    },
+    "index": {
+      "eyebrow": "Front desk",
+      "title": "Orders",
+      "description": "Every invoice the shop has sent, across every diver and trip.",
+      "newOrder": "New order",
+      "filters": {
+        "statusLabel": "Status",
+        "statusAll": "All statuses",
+        "diverLabel": "Diver",
+        "diverPlaceholder": "Search by name",
+        "fromLabel": "From",
+        "toLabel": "To",
+        "apply": "Apply filters",
+        "clear": "Clear filters"
+      },
+      "filteredByDiver": "Showing orders for {name}.",
+      "emptyAll": "No orders yet — they show up here as soon as the front desk sends one.",
+      "emptyFiltered": "No orders match these filters.",
+      "table": {
+        "diver": "Diver",
+        "trip": "Trip",
+        "status": "Status",
+        "date": "Date",
+        "amount": "Amount"
+      }
     }
   },
   "promos": {
@@ -888,7 +914,8 @@
       "seatFillDetail": "{booked} of {offered} seats · {count, plural, one {# boat} other {# boats}} full",
       "waiversLabel": "Waivers signed",
       "waiversOutstanding": "{count} still to collect",
-      "waiversAllIn": "Everyone's paperwork is in"
+      "waiversAllIn": "Everyone's paperwork is in",
+      "revenueViewOrders": "View orders"
     },
     "noTripsFuture": "Nothing on the books for this month yet — bookings will show up here as they come in.",
     "noTripsPast": "No trips sailed this month. Pick another month to see how it went.",
@@ -1350,7 +1377,8 @@
       "emergencyContactNameLabel": "Contact name",
       "emergencyContactPhoneLabel": "Contact phone",
       "savingContact": "Saving…",
-      "saveEmergencyContact": "Save contact"
+      "saveEmergencyContact": "Save contact",
+      "viewOrders": "View orders"
     },
     "celebrations": {
       "heading": "Celebrations",
@@ -1491,7 +1519,9 @@
       "demandHeading": "This departure could support more capacity",
       "scheduleAnotherDeparture": "Schedule another departure",
       "activityHeading": "Activity",
-      "noActivity": "No staff activity recorded yet."
+      "noActivity": "No staff activity recorded yet.",
+      "promoteHeading": "Promote this trip",
+      "promoteSentCount": "{count, plural, one {# deal sent} other {# deals sent}}"
     },
     "new": {
       "errorInvalid": "That didn't save — check the date, times, and capacity, then try again.",
@@ -1662,10 +1692,20 @@
         "exportCta": "Data export"
       },
       "founder": {
-        "heading": "Talk to the founder",
         "description": "A bad morning at the counter, a feature you're missing, a bug — write in any time. It reaches Aaron directly, not a ticket queue, and reaching out is always welcome.",
         "emailCta": "Email {email}"
-      }
+      },
+      "groups": {
+        "yourShop": "Your shop",
+        "money": "Money",
+        "dataIntegrations": "Data & integrations"
+      },
+      "orders": {
+        "heading": "Orders",
+        "description": "Every invoice and payment the shop has sent — filter by status, date, or diver.",
+        "cta": "View orders"
+      },
+      "backToSettings": "Back to settings"
     },
     "team": {
       "eyebrow": "Settings",
@@ -2206,7 +2246,8 @@
       "goToWaivers": "Waiver template",
       "goToBoarding": "Boarding — today's boat",
       "goToWalkIn": "Walk-in",
-      "goToOfflineRollCall": "Open offline roll call"
+      "goToOfflineRollCall": "Open offline roll call",
+      "goToOrders": "Orders"
     },
     "keyboardShortcuts": {
       "buttonAriaLabel": "Keyboard shortcuts",
@@ -2385,7 +2426,9 @@
         "emailDelivery": "Email",
         "waitlistSeat": "Wait list",
         "lastMinuteFill": "Fill seats",
-        "emergencyContact": "Contact"
+        "emergencyContact": "Contact",
+        "stuckPaymentOperation": "Stripe",
+        "failedPhotoDeletion": "Cleanup"
       },
       "blockerAction": {
         "setRequirements": "Set requirements",
@@ -2459,7 +2502,8 @@
         "openGuests": "Open guests",
         "inviteFromWaitlist": "Invite from wait list",
         "resendWaiverLink": "Resend waiver link",
-        "resendConfirmation": "Resend confirmation"
+        "resendConfirmation": "Resend confirmation",
+        "openReports": "Review in Reports"
       },
       "summary": {
         "blocked": "{departures, plural, =0 {No boats out today} =1 {1 departure today} other {# departures today}}. {blockedToday, plural, =1 {1 diver still can’t board.} other {# divers still can’t board.}}",
@@ -2478,6 +2522,22 @@
         "autumn": "Enjoy the surface interval — grab a warm towel{hasShop, select, true { at {shopName}} other {}}, check the breeze, and we'll see you on the next boat.",
         "winter": "Enjoy the surface interval — warm up with a dry coat{hasShop, select, true { at {shopName}} other {}}, and we'll see you on the next boat.",
         "spring": "Enjoy the surface interval — catch some sun{hasShop, select, true { at {shopName}} other {}}, check your gear, and we'll see you on the next boat."
+      },
+      "opsAlert": {
+        "operationKind": {
+          "checkoutSession": "Checkout",
+          "invoice": "Invoice",
+          "refund": "Refund"
+        },
+        "mediaKind": {
+          "coursePhoto": "Course photo",
+          "recapPhoto": "Recap photo"
+        },
+        "stuckDetail": {
+          "withId": "{kind} stuck since {when} — Stripe: {id}. Check it against the Stripe dashboard.",
+          "withoutId": "{kind} stuck since {when}. Check it against the Stripe dashboard."
+        },
+        "mediaDeletionDetail": "{kind} removed from the app but not yet deleted from storage — queued {when}."
       }
     },
     "tripDiveFields": {

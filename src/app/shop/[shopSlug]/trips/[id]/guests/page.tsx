@@ -10,7 +10,6 @@ import { listBookableDivers } from "@/db/divers";
 import { listLastMinuteList } from "@/db/last-minute-list";
 import { listBookingNotes, listTripActivity } from "@/db/operations";
 import { getTripRequirements, listTripReadiness } from "@/db/readiness";
-import { listRecapPhotosForTrip } from "@/db/recap";
 import { listTripPrepDivers } from "@/db/rental-fit";
 import { getShopById } from "@/db/shops";
 import { listTripLastMinutePromos } from "@/db/trip-promos";
@@ -28,7 +27,6 @@ import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import { AddDiverSection } from "../_components/AddDiverSection";
 import { CelebrationsSection } from "../_components/CelebrationsSection";
 import { LastMinuteDealSection } from "../_components/LastMinuteDealSection";
-import { RecapPhotoGallery } from "../_components/RecapPhotoGallery";
 import { isRosterFilter, RosterSection } from "../_components/RosterSection";
 import { TripNoticeBanner } from "../_components/TripNoticeBanner";
 import { WaitlistSection } from "../_components/WaitlistSection";
@@ -40,7 +38,6 @@ import {
   bulkSendWaiversAction,
   confirmDiverIdentityAction,
   deleteInternalNoteAction,
-  deleteRecapPhotoAction,
   inviteWaitlistAction,
   markPaymentAction,
   markWaiverInPersonAction,
@@ -99,7 +96,6 @@ export default async function TripGuestsPage({
     readinessRows,
     prepDivers,
     waitlist,
-    recapPhotos,
     lastMinuteList,
     lastMinutePromos,
     bookingNotes,
@@ -110,7 +106,6 @@ export default async function TripGuestsPage({
     listTripReadiness(db, shop.id, tripId),
     listTripPrepDivers(db, shop.id, tripId),
     getTripWaitlist(db, shop.id, tripId),
-    listRecapPhotosForTrip(db, shop.id, tripId),
     listLastMinuteList(db, shop.id),
     listTripLastMinutePromos(db, shop.id, tripId),
     listBookingNotes(db, shop.id, tripId),
@@ -294,21 +289,45 @@ export default async function TripGuestsPage({
         )}
       </section>
 
-      <LastMinuteDealSection
-        locale={locale}
-        eligibleCount={lastMinuteEligibleCount}
-        openSeats={spotsRemaining({ capacity: trip.capacity, booked: trip.booked })}
-        cancelled={cancelled}
-        promos={lastMinutePromos}
-        timezone={shop.timezone}
-        sendAction={sendLastMinuteDealAction.bind(null, shopSlug, tripId)}
-      />
-
-      <RecapPhotoGallery
-        photos={recapPhotos}
-        removeAction={deleteRecapPhotoAction.bind(null, shopSlug, tripId)}
-        locale={locale}
-      />
+      {/* The marketing blast collapses behind its own disclosure (task 156,
+          UX persona lens 17) — Guests is "who is attending," not a promo
+          console. Collapsed by default; the trip's own recipient count still
+          shows on the closed summary, and Today's "fill seats" row still
+          lands here and auto-opens it (its href is this section's own
+          #last-minute-deal anchor, a native <details> behaviour). */}
+      <details className="group mt-10 scroll-mt-6 rounded-lg border border-border bg-surface">
+        <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 p-4 text-sm font-medium [&::-webkit-details-marker]:hidden">
+          <span>{t("trips.guests.promoteHeading")}</span>
+          <span className="flex items-center gap-2 text-muted">
+            {lastMinutePromos.length > 0
+              ? t("trips.guests.promoteSentCount", { count: lastMinutePromos.length })
+              : null}
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="size-4 transition-transform group-open:rotate-180"
+            >
+              <path d="m6 9 6 6 6-6" />
+            </svg>
+          </span>
+        </summary>
+        <div className="border-t border-border px-4">
+          <LastMinuteDealSection
+            locale={locale}
+            eligibleCount={lastMinuteEligibleCount}
+            openSeats={spotsRemaining({ capacity: trip.capacity, booked: trip.booked })}
+            cancelled={cancelled}
+            promos={lastMinutePromos}
+            timezone={shop.timezone}
+            sendAction={sendLastMinuteDealAction.bind(null, shopSlug, tripId)}
+          />
+        </div>
+      </details>
     </>
   );
 }

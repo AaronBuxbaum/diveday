@@ -33,6 +33,8 @@ export const ACTION_KIND_KEYS: Record<TodayActionKind, StaffMessageKey> = {
   waitlist_seat: "shared.today.actionKind.waitlistSeat",
   last_minute_fill: "shared.today.actionKind.lastMinuteFill",
   emergency_contact: "shared.today.actionKind.emergencyContact",
+  stuck_payment_operation: "shared.today.actionKind.stuckPaymentOperation",
+  failed_photo_deletion: "shared.today.actionKind.failedPhotoDeletion",
 };
 
 /** A blocked row's one-tap fix, singular ("Send waiver"). */
@@ -189,6 +191,67 @@ export function emailDeliveryDetailText(
       : "shared.today.detail.emailFailed.confirmation",
     { attempts },
   );
+}
+
+/** A stuck operation's kind word ("Invoice", "Refund", "Checkout"), matching Reports' own wording. */
+const STUCK_OPERATION_KIND_KEYS: Record<string, StaffMessageKey> = {
+  checkout_session: "shared.today.opsAlert.operationKind.checkoutSession",
+  invoice: "shared.today.opsAlert.operationKind.invoice",
+  refund: "shared.today.opsAlert.operationKind.refund",
+};
+
+/** A stuck photo-deletion's media kind, matching Reports' own wording. */
+const MEDIA_DELETION_KIND_KEYS: Record<string, StaffMessageKey> = {
+  course_photo: "shared.today.opsAlert.mediaKind.coursePhoto",
+  recap_photo: "shared.today.opsAlert.mediaKind.recapPhoto",
+};
+
+/** A stuck operation's kind word, standalone — `src/db/today.ts` uses this for the row's `subject`. */
+export function stuckOperationKindText(t: StaffTranslator, operationKind: string): string {
+  return STUCK_OPERATION_KIND_KEYS[operationKind]
+    ? t(STUCK_OPERATION_KIND_KEYS[operationKind])
+    : operationKind;
+}
+
+/** A failed deletion's media kind word, standalone — `src/db/today.ts` uses this for the row's `subject`. */
+export function mediaDeletionKindText(t: StaffTranslator, mediaKind: string): string {
+  return MEDIA_DELETION_KIND_KEYS[mediaKind] ? t(MEDIA_DELETION_KIND_KEYS[mediaKind]) : mediaKind;
+}
+
+/**
+ * A stuck Stripe operation's detail line (task 157) — the same "check it
+ * against the Stripe dashboard" chore Reports' payment-ops panel already
+ * explains, now also surfaced on Today as an `urgency: "now"` row. Two whole
+ * ICU messages, not one stitched from a fragment (task 34's rule), because the
+ * Stripe-id clause only exists on one branch.
+ */
+export function stuckPaymentOperationDetailText(
+  t: StaffTranslator,
+  operationKind: string,
+  when: string,
+  stripeObjectId: string | null,
+): string {
+  const kind = stuckOperationKindText(t, operationKind);
+  return stripeObjectId
+    ? t("shared.today.opsAlert.stuckDetail.withId", { kind, when, id: stripeObjectId })
+    : t("shared.today.opsAlert.stuckDetail.withoutId", { kind, when });
+}
+
+/** A failed/stuck photo-deletion's detail line (task 157), mirroring Reports' media-deletions panel. */
+export function failedPhotoDeletionDetailText(
+  t: StaffTranslator,
+  mediaKind: string,
+  when: string,
+): string {
+  return t("shared.today.opsAlert.mediaDeletionDetail", {
+    kind: mediaDeletionKindText(t, mediaKind),
+    when,
+  });
+}
+
+/** The ops-alert rows' action label when there's no trip to point at instead. */
+export function openReportsActionText(t: StaffTranslator): string {
+  return t("shared.today.actionLabel.openReports");
 }
 
 export function openPrepListActionText(t: StaffTranslator): string {

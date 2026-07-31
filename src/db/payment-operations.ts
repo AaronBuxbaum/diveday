@@ -110,7 +110,13 @@ export function idempotencyKeyFor(intentId: string, step?: string): string {
   return step ? `${intentId}:${step}` : intentId;
 }
 
-const STALE_AFTER_MS = 5 * 60 * 1000;
+/**
+ * Exported so `src/db/today.ts` can build the same "stuck" cutoff from its own
+ * `now` parameter (task 157) — Today's queue must not read the live clock
+ * directly (see `src/lib/clock.ts`), so it can't call `listStuckPaymentOperations`
+ * with its default argument the way Reports does.
+ */
+export const STALE_AFTER_MS = 5 * 60 * 1000;
 
 /**
  * Atomically claim a set of bookings for one in-flight checkout attempt, so a

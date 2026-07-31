@@ -10,6 +10,7 @@ import { canPersonConfigureTrips } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { listDiveSites } from "@/db/dive-sites";
 import { getTripRequirements, getTripSiteRequirement } from "@/db/readiness";
+import { listRecapPhotosForTrip } from "@/db/recap";
 import { getShopById } from "@/db/shops";
 import { crewShiftCoverage } from "@/db/staffing";
 import {
@@ -33,6 +34,7 @@ import { CopyLinkButton } from "./_components/CopyLinkButton";
 import { CrewSection } from "./_components/CrewSection";
 import { DetailsSection } from "./_components/DetailsSection";
 import { RecapNoteSection } from "./_components/RecapNoteSection";
+import { RecapPhotoGallery } from "./_components/RecapPhotoGallery";
 import { RequirementsSection } from "./_components/RequirementsSection";
 import { recurrenceSummaryText, SeriesSection } from "./_components/SeriesSection";
 import { TripNoticeBanner } from "./_components/TripNoticeBanner";
@@ -41,6 +43,7 @@ import {
   cancelSeriesAction,
   cancelTripAction,
   clearConditionsAction,
+  deleteRecapPhotoAction,
   extendSeriesAction,
   reinstateTripAction,
   saveConditionsAction,
@@ -90,6 +93,7 @@ export default async function ManageTripPage({
     series,
     scheduleDays,
     canConfigure,
+    recapPhotos,
   ] = await Promise.all([
     listStaff(db, shop.id),
     getTripCrewIds(db, shop.id, tripId),
@@ -100,6 +104,7 @@ export default async function ManageTripPage({
     getTripSeriesSummary(db, shop.id, tripId),
     listTripScheduleDays(db, shop.id, tripId),
     canPersonConfigureTrips(db, shop.id, session.user.personId),
+    listRecapPhotosForTrip(db, shop.id, tripId),
   ]);
   const startWall = utcToWallTime(trip.startsAt, shop.timezone);
   const endWall = utcToWallTime(trip.endsAt, shop.timezone);
@@ -265,6 +270,15 @@ export default async function ManageTripPage({
       <RecapNoteSection
         action={saveRecapShoutoutAction.bind(null, shopSlug, tripId)}
         shoutout={trip.recapShoutout}
+        locale={locale}
+      />
+
+      {/* Diver-shared recap photos sit beside the crew's own shout-out — both
+          are the post-trip recap's content, and moderating one moved off the
+          Guests tab to slim it (task 156, UX persona lens 17). */}
+      <RecapPhotoGallery
+        photos={recapPhotos}
+        removeAction={deleteRecapPhotoAction.bind(null, shopSlug, tripId)}
         locale={locale}
       />
 

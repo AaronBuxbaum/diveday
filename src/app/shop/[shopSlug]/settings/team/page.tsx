@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
@@ -241,6 +242,14 @@ export default async function TeamSettingsPage({
         eyebrow={t("settings.team.eyebrow")}
         title={t("settings.team.title")}
         description={t("settings.team.description")}
+        actions={
+          <Link
+            href={`/shop/${shopSlug}/settings`}
+            className={buttonClass({ variant: "secondary", className: "text-foreground" })}
+          >
+            {t("settings.main.backToSettings")}
+          </Link>
+        }
       />
 
       {banner ? <StaffNoticeBanner tone={banner.tone}>{banner.text}</StaffNoticeBanner> : null}

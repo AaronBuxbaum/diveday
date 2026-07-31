@@ -748,6 +748,32 @@
         "notAuthorized": "Los reembolsos están limitados a propietarios y gerentes — pide a uno de ellos que lo tramite.",
         "demoDisabled": "Este es un pedido de demostración — no está respaldado por una factura real de Stripe, así que no se puede modificar."
       }
+    },
+    "index": {
+      "eyebrow": "Recepción",
+      "title": "Pedidos",
+      "description": "Todas las facturas que ha enviado la tienda, de todos los buceadores y salidas.",
+      "newOrder": "Nuevo pedido",
+      "filters": {
+        "statusLabel": "Estado",
+        "statusAll": "Todos los estados",
+        "diverLabel": "Buceador",
+        "diverPlaceholder": "Buscar por nombre",
+        "fromLabel": "Desde",
+        "toLabel": "Hasta",
+        "apply": "Aplicar filtros",
+        "clear": "Borrar filtros"
+      },
+      "filteredByDiver": "Mostrando los pedidos de {name}.",
+      "emptyAll": "Todavía no hay pedidos — aparecerán aquí en cuanto recepción envíe uno.",
+      "emptyFiltered": "Ningún pedido coincide con estos filtros.",
+      "table": {
+        "diver": "Buceador",
+        "trip": "Salida",
+        "status": "Estado",
+        "date": "Fecha",
+        "amount": "Importe"
+      }
     }
   },
   "promos": {
@@ -888,7 +914,8 @@
       "seatFillDetail": "{booked} de {offered} plazas · {count, plural, one {# barco completo} other {# barcos completos}}",
       "waiversLabel": "Hojas de exención firmadas",
       "waiversOutstanding": "quedan {count} por recoger",
-      "waiversAllIn": "Toda la documentación está en regla"
+      "waiversAllIn": "Toda la documentación está en regla",
+      "revenueViewOrders": "Ver pedidos"
     },
     "noTripsFuture": "Todavía no hay nada reservado para este mes — las reservas aparecerán aquí a medida que lleguen.",
     "noTripsPast": "Ninguna salida zarpó este mes. Elige otro mes para ver cómo fue.",
@@ -1350,7 +1377,8 @@
       "emergencyContactNameLabel": "Nombre del contacto",
       "emergencyContactPhoneLabel": "Teléfono del contacto",
       "savingContact": "Guardando…",
-      "saveEmergencyContact": "Guardar contacto"
+      "saveEmergencyContact": "Guardar contacto",
+      "viewOrders": "Ver pedidos"
     },
     "celebrations": {
       "heading": "Celebraciones",
@@ -1491,7 +1519,9 @@
       "demandHeading": "Esta salida podría admitir más capacidad",
       "scheduleAnotherDeparture": "Programar otra salida",
       "activityHeading": "Actividad",
-      "noActivity": "Todavía no hay actividad del personal registrada."
+      "noActivity": "Todavía no hay actividad del personal registrada.",
+      "promoteHeading": "Promocionar esta salida",
+      "promoteSentCount": "{count, plural, one {# oferta enviada} other {# ofertas enviadas}}"
     },
     "new": {
       "errorInvalid": "Eso no se guardó — revisa la fecha, los horarios y la capacidad, y vuelve a intentarlo.",
@@ -1662,10 +1692,20 @@
         "exportCta": "Exportar datos"
       },
       "founder": {
-        "heading": "Habla con el fundador",
         "description": "Una mala mañana en el mostrador, una función que echas en falta, un fallo — escribe cuando quieras. Llega directo a Aaron, no a una cola de tickets, y siempre es bienvenido.",
         "emailCta": "Escribir a {email}"
-      }
+      },
+      "groups": {
+        "yourShop": "Tu tienda",
+        "money": "Dinero",
+        "dataIntegrations": "Datos e integraciones"
+      },
+      "orders": {
+        "heading": "Pedidos",
+        "description": "Todas las facturas y pagos que ha enviado la tienda: filtra por estado, fecha o buceador.",
+        "cta": "Ver pedidos"
+      },
+      "backToSettings": "Volver a configuración"
     },
     "team": {
       "eyebrow": "Ajustes",
@@ -2206,7 +2246,8 @@
       "goToWaivers": "Plantilla de exención",
       "goToBoarding": "Embarque — el barco de hoy",
       "goToWalkIn": "Walk-in",
-      "goToOfflineRollCall": "Abrir pase de lista sin conexión"
+      "goToOfflineRollCall": "Abrir pase de lista sin conexión",
+      "goToOrders": "Pedidos"
     },
     "keyboardShortcuts": {
       "buttonAriaLabel": "Atajos de teclado",
@@ -2385,7 +2426,9 @@
         "emailDelivery": "Correo",
         "waitlistSeat": "Lista de espera",
         "lastMinuteFill": "Llenar plazas",
-        "emergencyContact": "Contacto"
+        "emergencyContact": "Contacto",
+        "stuckPaymentOperation": "Stripe",
+        "failedPhotoDeletion": "Limpieza"
       },
       "blockerAction": {
         "setRequirements": "Configurar requisitos",
@@ -2459,7 +2502,8 @@
         "openGuests": "Abrir invitados",
         "inviteFromWaitlist": "Invitar de la lista de espera",
         "resendWaiverLink": "Reenviar enlace de exención",
-        "resendConfirmation": "Reenviar confirmación"
+        "resendConfirmation": "Reenviar confirmación",
+        "openReports": "Revisar en Informes"
       },
       "summary": {
         "blocked": "{departures, plural, =0 {Hoy no sale ningún barco} =1 {1 salida hoy} other {# salidas hoy}}. {blockedToday, plural, =1 {1 buceador todavía no puede embarcar.} other {# buceadores todavía no pueden embarcar.}}",
@@ -2478,6 +2522,22 @@
         "autumn": "Aprovecha el intervalo de superficie — coge una toalla calentita{hasShop, select, true { en {shopName}} other {}}, revisa la brisa y nos vemos en el próximo barco.",
         "winter": "Aprovecha el intervalo de superficie — abrígate con un chubasquero seco{hasShop, select, true { en {shopName}} other {}} y nos vemos en el próximo barco.",
         "spring": "Aprovecha el intervalo de superficie — disfruta del sol{hasShop, select, true { en {shopName}} other {}}, revisa tu equipo y nos vemos en el próximo barco."
+      },
+      "opsAlert": {
+        "operationKind": {
+          "checkoutSession": "Pago",
+          "invoice": "Factura",
+          "refund": "Reembolso"
+        },
+        "mediaKind": {
+          "coursePhoto": "Foto del curso",
+          "recapPhoto": "Foto del resumen"
+        },
+        "stuckDetail": {
+          "withId": "{kind} atascado desde {when} — Stripe: {id}. Revísalo en el panel de Stripe.",
+          "withoutId": "{kind} atascado desde {when}. Revísalo en el panel de Stripe."
+        },
+        "mediaDeletionDetail": "{kind} eliminada de la aplicación pero todavía no borrada del almacenamiento — en cola desde {when}."
       }
     },
     "tripDiveFields": {

@@ -11,7 +11,14 @@ import { canPersonViewShopReports, getMonthlyReport } from "@/db/reporting";
 import { getShopById } from "@/db/shops";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
-import { addMonths, type MonthRef, monthKey, monthLabel, parseMonthKey } from "@/lib/calendar";
+import {
+  addMonths,
+  isoDate,
+  type MonthRef,
+  monthKey,
+  monthLabel,
+  parseMonthKey,
+} from "@/lib/calendar";
 import { nowDate } from "@/lib/clock";
 import { formatShortDate } from "@/lib/format";
 import { formatPercent, formatReportMoney, summarizeMonth, tripFillRate } from "@/lib/reporting";
@@ -40,12 +47,17 @@ function Metric({
   value,
   detail,
   celebrate = false,
+  linkHref,
+  linkLabel,
 }: {
   label: string;
   value: string;
   detail: string;
   /** Mark a finished state (e.g. every waiver in) with a success check + words. */
   celebrate?: boolean;
+  /** The revenue card's "View orders" jump (task 158) — omitted on every other metric. */
+  linkHref?: string;
+  linkLabel?: string;
 }) {
   return (
     <div className="rounded-2xl border border-border bg-surface p-5 shadow-sm">
@@ -70,6 +82,14 @@ function Metric({
         ) : null}
         {detail}
       </p>
+      {linkHref && linkLabel ? (
+        <Link
+          href={linkHref}
+          className="mt-2 inline-block text-sm font-medium text-primary hover:underline"
+        >
+          {linkLabel}
+        </Link>
+      ) : null}
     </div>
   );
 }
@@ -147,6 +167,11 @@ export default async function ReportsPage({
     { year: next.year, month: next.month, day: 1, hour: 0, minute: 0 },
     tz,
   );
+  // The revenue card's "View orders" link (task 158) — the same month range as
+  // the report itself, expressed as the `<input type="date">` values the
+  // Orders index's own filter form reads.
+  const lastDayOfMonth = new Date(Date.UTC(current.year, current.month, 0)).getUTCDate();
+  const revenueOrdersHref = `/shop/${shopSlug}/orders?from=${isoDate(current.year, current.month, 1)}&to=${isoDate(current.year, current.month, lastDayOfMonth)}`;
 
   const stuckPaymentOperations = await listStuckPaymentOperations(db, shop.id);
   const pendingMediaDeletions = await listPendingMediaDeletions(db, shop.id);
@@ -308,6 +333,8 @@ export default async function ReportsPage({
               label={t("reports.metrics.revenueLabel")}
               value={formatReportMoney(report.revenueCents)}
               detail={t("reports.metrics.revenueDetail")}
+              linkHref={revenueOrdersHref}
+              linkLabel={t("reports.metrics.revenueViewOrders")}
             />
             <Metric
               label={t("reports.metrics.bookingsLabel")}

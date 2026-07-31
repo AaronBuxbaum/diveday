@@ -121,6 +121,7 @@ export function ShopNav({
               goToBoarding: t("shared.commandPalette.goToBoarding"),
               goToWalkIn: t("shared.commandPalette.goToWalkIn"),
               goToOfflineRollCall: t("shared.commandPalette.goToOfflineRollCall"),
+              goToOrders: t("shared.commandPalette.goToOrders"),
             }}
           />
           <KeyboardShortcuts shopSlug={shopSlug} copy={keyboardShortcutsCopy} />

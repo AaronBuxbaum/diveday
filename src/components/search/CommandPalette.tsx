@@ -41,6 +41,7 @@ export type CommandPaletteCopy = {
   goToBoarding: string;
   goToWalkIn: string;
   goToOfflineRollCall: string;
+  goToOrders: string;
 };
 
 /**
@@ -148,6 +149,7 @@ export function CommandPalette({
       { label: copy.goToDiveSites, suffix: "/dive-sites" },
       { label: copy.goToCourses, suffix: "/courses" },
       { label: copy.goToReviews, suffix: "/reviews" },
+      { label: copy.goToOrders, suffix: "/orders" },
       { label: copy.goToSettings, suffix: "/settings" },
     ];
     const goTo = [

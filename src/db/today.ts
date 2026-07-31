@@ -3,27 +3,34 @@ import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import {
   emailDeliveryDetailText,
   emailResendActionText,
+  failedPhotoDeletionDetailText,
   instructorMissingDetailText,
   inviteFromWaitlistActionText,
   lastMinuteFillDetailText,
+  mediaDeletionKindText,
   missingContactDetailText,
   missingFitDetailText,
   openGuestsActionText,
   openPrepListActionText,
+  openReportsActionText,
   openTripActionText,
   overRatioDetailText,
+  stuckOperationKindText,
+  stuckPaymentOperationDetailText,
   ungatedNitroxDetailText,
   waitlistSeatDetailText,
 } from "@/i18n/today-labels";
 import { nowDate } from "@/lib/clock";
 import { courseCrewGap } from "@/lib/course-ratios";
-import { formatTime } from "@/lib/format";
+import { formatShortDate, formatTime } from "@/lib/format";
 import { collapseDiverActions, TODAY_HORIZON_MS, type TodayAction, urgencyFor } from "@/lib/today";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import type { AppDb } from "./client";
+import { listPendingMediaDeletions, STALE_PENDING_AFTER_MS } from "./media-deletions";
 import { authorizesNitroxFill } from "./nitrox";
 import { listNotificationDeliveryIssues } from "./notifications";
 import { openOrdersForBookings } from "./orders";
+import { listStuckPaymentOperations, STALE_AFTER_MS } from "./payment-operations";
 import { listTripsReadiness } from "./readiness";
 import {
   bookings,
@@ -414,6 +421,15 @@ export async function getTodayWork(
   t: StaffTranslator = staffTranslator("en-US"),
   /** Formats every departure time (`at()`); defaults alongside `t` for the same reason. */
   locale = "en-US",
+  /**
+   * Stuck Stripe operations and failed photo-deletion retries (task 157) are
+   * owner/manager chores — the same accountable gate Reports' monthly view
+   * already uses (ADR 20260723-owner-reporting) — so they only join the queue
+   * when a caller that has already checked `canViewShopReports` passes true.
+   * Defaults false so every pre-existing caller (tests included) keeps
+   * getting the diver-blocker-only queue.
+   */
+  includeOpsAlerts = false,
 ): Promise<TodayWork> {
   const horizon = new Date(now.getTime() + TODAY_HORIZON_MS);
   // The board only ever shows the soonest MAX_TRIPS departures, so bound the
@@ -717,6 +733,60 @@ export async function getTodayWork(
             hostedInvoiceUrl: order.hostedInvoiceUrl,
           }
         : undefined;
+    }
+  }
+
+  // Platform-health chores (task 157, UX persona lens 17): stuck Stripe
+  // operations and photo deletions that never finished used to surface only
+  // on the owner-only monthly Reports page — urgent work buried behind a
+  // report nobody opens daily. Forced `urgency: "now"` (not derived from a
+  // departure — there isn't one) so they land in today's queue the same day
+  // they go stale; `dueAt: null` still sorts them after every dated row
+  // within that band, matching the "undated work never jumps the line"
+  // invariant every other action kind already follows. Reports keeps its own
+  // panel — this is "also surface on Today", not "move".
+  if (includeOpsAlerts) {
+    const [stuckOperations, pendingDeletions] = await Promise.all([
+      listStuckPaymentOperations(db, shopId, new Date(now.getTime() - STALE_AFTER_MS)),
+      listPendingMediaDeletions(db, shopId, new Date(now.getTime() - STALE_PENDING_AFTER_MS)),
+    ]);
+
+    for (const op of stuckOperations) {
+      const when = formatShortDate(op.intent.startedAt, locale, timeZone);
+      actions.push({
+        id: `stuck-payment-op:${op.intent.id}`,
+        kind: "stuck_payment_operation",
+        urgency: "now",
+        subject: op.personName ?? op.tripTitle ?? stuckOperationKindText(t, op.intent.kind),
+        context: op.personName && op.tripTitle ? op.tripTitle : null,
+        detail: stuckPaymentOperationDetailText(t, op.intent.kind, when, op.intent.stripeObjectId),
+        // Points at the trip roster when there's one to point at; otherwise
+        // Reports is the only surface with the reconciliation detail
+        // (Stripe id, exact timestamp) to act from.
+        actionLabel: op.tripId ? openTripActionText(t) : openReportsActionText(t),
+        href: op.tripId
+          ? `/shop/${shopSlug}/trips/${op.tripId}/guests`
+          : `/shop/${shopSlug}/reports`,
+        dueAt: null,
+      });
+    }
+
+    for (const attempt of pendingDeletions) {
+      actions.push({
+        id: `media-deletion:${attempt.id}`,
+        kind: "failed_photo_deletion",
+        urgency: "now",
+        subject: mediaDeletionKindText(t, attempt.kind),
+        context: null,
+        detail: failedPhotoDeletionDetailText(
+          t,
+          attempt.kind,
+          formatShortDate(attempt.createdAt, locale, timeZone),
+        ),
+        actionLabel: openReportsActionText(t),
+        href: `/shop/${shopSlug}/reports`,
+        dueAt: null,
+      });
     }
   }
 

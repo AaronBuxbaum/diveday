@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, gte, ilike, inArray, lt } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { type InvoicingProvider, invoicingProviderFromEnvironment } from "@/lib/payments/invoicing";
 import type { AppDb, DbExecutor } from "./client";
@@ -281,6 +281,42 @@ export async function listOrders(db: DbExecutor, shopId: string) {
     .from(orders)
     .innerJoin(people, eq(people.id, orders.personId))
     .where(eq(orders.shopId, shopId))
+    .orderBy(desc(orders.createdAt));
+}
+
+export type ShopOrderFilter = {
+  status?: OrderStatus;
+  /** Exact match — the roster/diver-record "view orders" links pass this. */
+  personId?: string;
+  /** Substring match against the diver's name — the index page's own filter box. */
+  personQuery?: string;
+  /** Inclusive lower bound on `created_at`. */
+  from?: Date;
+  /** Exclusive upper bound on `created_at`, so a whole day/month reads as `[from, to)`. */
+  to?: Date;
+};
+
+/**
+ * The shop-wide order index (task 158, UX persona lens 17): every invoice the
+ * shop has ever sent, filterable by status, diver, and date range — the one
+ * thing "reachable only through an individual diver's payments section"
+ * (Reports revenue rows, the roster's payment cells, and the command palette
+ * all link here) never had before.
+ */
+export async function listShopOrders(db: DbExecutor, shopId: string, filter: ShopOrderFilter = {}) {
+  const conditions = [eq(orders.shopId, shopId)];
+  if (filter.status) conditions.push(eq(orders.status, filter.status));
+  if (filter.personId) conditions.push(eq(orders.personId, filter.personId));
+  if (filter.personQuery) conditions.push(ilike(people.fullName, `%${filter.personQuery}%`));
+  if (filter.from) conditions.push(gte(orders.createdAt, filter.from));
+  if (filter.to) conditions.push(lt(orders.createdAt, filter.to));
+  return db
+    .select({ order: orders, person: people, trip: trips })
+    .from(orders)
+    .innerJoin(people, eq(people.id, orders.personId))
+    .leftJoin(bookings, eq(bookings.id, orders.bookingId))
+    .leftJoin(trips, eq(trips.id, bookings.tripId))
+    .where(and(...conditions))
     .orderBy(desc(orders.createdAt));
 }
 
