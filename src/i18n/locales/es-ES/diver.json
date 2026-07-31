@@ -147,6 +147,8 @@
     "waitlistHeading": "Apúntate a la lista de espera",
     "waitlistBody": "Si se libera una plaza, el centro ya tendrá tus datos.",
     "waitlistJoining": "Apuntándote…",
+    "wantAnyTripAlertsInstead": "¿No te convence esta? ¿Prefieres alertas de ofertas para cualquier salida?",
+    "joinLastMinuteDealAlerts": "Apúntate a la lista de última hora",
     "waitlistConfirmedHeading": "Estás en la lista de espera, {name}.",
     "waitlistConfirmedBody": "Todavía no hay plaza reservada. El centro ve tu puesto en la lista y te avisará si se libera una.",
     "sailedHeading": "Esta salida ya ha zarpado",
@@ -189,6 +191,7 @@
   "lastMinute": {
     "heading": "¿Quieres una oferta de última hora?",
     "body": "Dinos cuándo estarás por aquí y te escribimos si un barco necesita llenar plazas con descuento.",
+    "alreadyHaveATrip": "¿Ya tienes una salida concreta en mente? Apúntate a su lista de espera desde la página de esa salida — así te avisaremos primero si hay descuento en ella.",
     "availableFrom": "Disponible desde",
     "availableUntil": "Disponible hasta",
     "submit": "Avísame",

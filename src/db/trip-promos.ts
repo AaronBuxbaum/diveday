@@ -5,6 +5,7 @@ import {
   generateLastMinutePromoCode,
   isValidLastMinuteDiscountPercent,
   lastMinuteEntryMatchesTripDate,
+  orderLastMinuteRecipients,
 } from "@/lib/last-minute-list";
 import { publicAppUrl } from "@/lib/notifications";
 import {
@@ -19,7 +20,7 @@ import { notificationProviderForDb, sendNotificationBatch } from "./notification
 import { type TripLastMinutePromo, tripLastMinutePromos } from "./schema";
 import { getShopById } from "./shops";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
-import { getTripWithBooked } from "./trips";
+import { getTripWaitlist, getTripWithBooked } from "./trips";
 
 export type SendLastMinuteDealInput = {
   shopId: string;
@@ -80,6 +81,15 @@ export async function sendLastMinuteDealBlast(
   );
   if (matches.length === 0) return { ok: false, reason: "no_recipients" };
 
+  // A diver already waiting on this exact trip holds a place in line the deal
+  // can otherwise sell out from under them — they hear about it first, in
+  // their waitlist order, ahead of anyone just generically around that week.
+  const waitlist = await getTripWaitlist(db, input.shopId, input.tripId);
+  const orderedMatches = orderLastMinuteRecipients(
+    matches,
+    waitlist.map(({ person }) => person.id),
+  );
+
   const code = generateLastMinutePromoCode(input.discountPercent);
   const [pendingRow] = await db
     .insert(tripLastMinutePromos)
@@ -119,7 +129,7 @@ export async function sendLastMinuteDealBlast(
   if (bookingUrl) {
     const deliveries = await sendNotificationBatch(
       db,
-      matches.flatMap(({ person }) =>
+      orderedMatches.flatMap(({ person }) =>
         person.email
           ? [
               {

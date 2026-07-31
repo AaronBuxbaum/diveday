@@ -24,7 +24,10 @@ export function LastMinuteListForm({ shopSlug }: { shopSlug: string }) {
 
   if (state.success) {
     return (
-      <section className="rise-in mt-10 rounded-2xl border border-border bg-surface p-6">
+      <section
+        id="last-minute-list"
+        className="rise-in mt-10 rounded-2xl border border-border bg-surface p-6"
+      >
         <h2 className="font-semibold">{t("lastMinute.joinedHeading")}</h2>
         <p className="mt-1 text-sm text-muted">{t("lastMinute.joinedBody")}</p>
       </section>
@@ -32,9 +35,13 @@ export function LastMinuteListForm({ shopSlug }: { shopSlug: string }) {
   }
 
   return (
-    <section className="mt-10 rounded-2xl border border-border bg-surface p-6">
+    <section
+      id="last-minute-list"
+      className="mt-10 rounded-2xl border border-border bg-surface p-6"
+    >
       <h2 className="font-semibold">{t("lastMinute.heading")}</h2>
       <p className="mt-1 text-sm text-muted">{t("lastMinute.body")}</p>
+      <p className="mt-2 text-sm text-muted">{t("lastMinute.alreadyHaveATrip")}</p>
       {state.error ? (
         <p role="alert" className="mt-3 text-sm text-danger">
           {state.error}

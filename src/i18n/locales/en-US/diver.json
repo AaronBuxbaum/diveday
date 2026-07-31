@@ -147,6 +147,8 @@
     "waitlistHeading": "Join the wait list",
     "waitlistBody": "If a spot opens, the shop will have your details ready.",
     "waitlistJoining": "Joining…",
+    "wantAnyTripAlertsInstead": "Not set on this one? Want any-trip deal alerts instead?",
+    "joinLastMinuteDealAlerts": "Join the last-minute list",
     "waitlistConfirmedHeading": "You’re on the wait list, {name}.",
     "waitlistConfirmedBody": "A spot is not held yet. The shop can see your place in line and will contact you if one opens up.",
     "sailedHeading": "This one’s already sailed",
@@ -189,6 +191,7 @@
   "lastMinute": {
     "heading": "Want a deal on a last-minute spot?",
     "body": "Tell us when you’re around and we’ll email you if a boat needs to fill seats at a discount.",
+    "alreadyHaveATrip": "Already have one specific trip in mind? Join its wait list from that trip's own page instead — you'll hear about a discount on it first.",
     "availableFrom": "Around from",
     "availableUntil": "Around until",
     "submit": "Notify me",

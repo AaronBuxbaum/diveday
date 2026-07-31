@@ -3,7 +3,12 @@ import {
   generateLastMinutePromoCode,
   isValidLastMinuteDiscountPercent,
   lastMinuteEntryMatchesTripDate,
+  orderLastMinuteRecipients,
 } from "./last-minute-list";
+
+function match(personId: string) {
+  return { person: { id: personId } };
+}
 
 describe("lastMinuteEntryMatchesTripDate", () => {
   it("matches an entry with no dates given against any trip date", () => {
@@ -57,6 +62,40 @@ describe("isValidLastMinuteDiscountPercent", () => {
     expect(isValidLastMinuteDiscountPercent(91)).toBe(false);
     expect(isValidLastMinuteDiscountPercent(50.5)).toBe(false);
     expect(isValidLastMinuteDiscountPercent(0)).toBe(false);
+  });
+});
+
+describe("orderLastMinuteRecipients", () => {
+  it("puts a wait-listed recipient ahead of everyone else", () => {
+    const matches = [match("a"), match("b"), match("c")];
+    expect(orderLastMinuteRecipients(matches, ["c"])).toEqual([match("c"), match("a"), match("b")]);
+  });
+
+  it("orders multiple wait-listed recipients by their own wait-list position", () => {
+    const matches = [match("a"), match("b"), match("c")];
+    // "b" joined the wait list before "a" did, even though "a" appears first
+    // in the last-minute-list's own (unrelated) order.
+    expect(orderLastMinuteRecipients(matches, ["b", "a"])).toEqual([
+      match("b"),
+      match("a"),
+      match("c"),
+    ]);
+  });
+
+  it("leaves the order untouched when nobody on it is wait-listed", () => {
+    const matches = [match("a"), match("b"), match("c")];
+    expect(orderLastMinuteRecipients(matches, [])).toEqual(matches);
+    expect(orderLastMinuteRecipients(matches, ["z"])).toEqual(matches);
+  });
+
+  it("keeps everyone else's relative order stable behind the wait-listed group", () => {
+    const matches = [match("a"), match("b"), match("c"), match("d")];
+    expect(orderLastMinuteRecipients(matches, ["c"])).toEqual([
+      match("c"),
+      match("a"),
+      match("b"),
+      match("d"),
+    ]);
   });
 });
 

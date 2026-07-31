@@ -174,6 +174,18 @@ test("a full boat lets a diver join the wait list without taking a seat", async 
     .click();
   await expect(page.getByRole("heading", { name: "This boat’s full" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Join the wait list" })).toBeVisible();
+  // The two diver forms cross-reference each other (backlog item 147) — a
+  // diver holding a place on this one trip's wait list can also see the
+  // shop-wide last-minute list exists, and following it lands on that form.
+  const anyTripLink = page.getByRole("link", { name: "Join the last-minute list" });
+  await expect(anyTripLink).toHaveAttribute("href", "/shop/blue-mantis/schedule#last-minute-list");
+  await anyTripLink.click();
+  await expect(
+    page.getByRole("heading", { name: "Want a deal on a last-minute spot?" }),
+  ).toBeVisible();
+  await expect(page.getByText(/Already have one specific trip in mind/)).toBeVisible();
+  await page.goBack();
+
   // The waitlist form is controlled, so wait for hydration before typing.
   await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
   await page.getByLabel("Name").fill("Nora Quinn");

@@ -123,6 +123,15 @@ export function TripFullSection({
           </SubmitButton>
         </div>
       </form>
+      <p className="mt-4 text-sm text-muted">
+        {t("wantAnyTripAlertsInstead")}{" "}
+        <Link
+          href={`/shop/${shopSlug}/schedule${tripRef.embed ? "?embed=1" : ""}#last-minute-list`}
+          className="font-medium text-primary hover:underline"
+        >
+          {t("joinLastMinuteDealAlerts")}
+        </Link>
+      </p>
     </section>
   );
 }
