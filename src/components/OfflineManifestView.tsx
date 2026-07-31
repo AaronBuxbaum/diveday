@@ -4,6 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AmbientContrastSlider, AmbientGlareDetector } from "@/components/AmbientGlareDetector";
 import { ConnectivityStatus } from "@/components/ConnectivityStatus";
+import { OfflineShellVersionBanner } from "@/components/OfflineShellVersionBanner";
 import { controlClass } from "@/components/ui/form";
 import { rollCallCheckpointText } from "@/i18n/manifest-labels";
 import { matchLocale } from "@/i18n/negotiate";
@@ -68,6 +69,14 @@ export function OfflineManifestView() {
   // device's language doesn't change mid-session, so recreating the
   // translator on every render bought nothing except spurious effect reruns.
   const { t, locale } = useMemo(() => offlineManifestTranslator(), []);
+  const shellVersionCopy = useMemo(
+    () => ({
+      staleBanner: t("shared.offlineManifest.shellVersion.staleBanner"),
+      updateBanner: t("shared.offlineManifest.shellVersion.updateBanner"),
+      refreshButton: t("shared.offlineManifest.shellVersion.refreshButton"),
+    }),
+    [t],
+  );
   const searchParams = useSearchParams();
   const [envelope, setEnvelope] = useState<OfflineManifestEnvelope | null>(null);
   const [list, setList] = useState<OfflineManifestEnvelope[] | null>(null);
@@ -250,6 +259,7 @@ export function OfflineManifestView() {
     const savedTrips = list ?? [];
     return (
       <main className="boat-mode mx-auto w-full max-w-3xl flex-1 px-6 py-16">
+        <OfflineShellVersionBanner copy={shellVersionCopy} />
         <p className="text-sm font-semibold tracking-widest text-primary uppercase">
           {t("shared.offlineManifest.list.eyebrow")}
         </p>
@@ -399,6 +409,7 @@ export function OfflineManifestView() {
   return (
     <main className="boat-mode mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6">
       <AmbientGlareDetector />
+      <OfflineShellVersionBanner copy={shellVersionCopy} />
       <a
         href="#offline-roll-call"
         className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-lg focus:bg-primary focus:px-4 focus:py-3 focus:text-primary-foreground"

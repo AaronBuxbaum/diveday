@@ -25,6 +25,9 @@ vi.mock("@/lib/offline-manifest-store", () => ({
   listOfflineManifests: vi.fn(),
   loadOfflineManifest: vi.fn(),
   syncOfflineManifest: vi.fn(),
+  // The version-mismatch banner (task 124) resolves this on mount; no active
+  // worker in jsdom, so "nothing to warn about" is the correct default here.
+  getActiveOfflineShellVersion: vi.fn().mockResolvedValue(null),
 }));
 
 function payload(tripId: string, title: string, totalDivers = 2): OfflineManifestPayload {

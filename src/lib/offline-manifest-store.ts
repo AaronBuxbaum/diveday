@@ -448,3 +448,33 @@ export function primeOfflineManifestShell(): Promise<void> {
   }
   return primeInFlight;
 }
+
+const SHELL_VERSION_ACK_TIMEOUT_MS = 3_000;
+
+/**
+ * Asks the currently active service worker (if any) which shell version it
+ * last installed — see `OFFLINE_MANIFEST_SHELL_VERSION` in
+ * `offline-manifests.ts` for why this comparison exists. Resolves `null`
+ * (not an error) when service workers aren't supported, no worker is active
+ * yet, or it doesn't answer in time: those are all "nothing to warn about"
+ * for the caller, not evidence of a stale shell.
+ */
+export async function getActiveOfflineShellVersion(): Promise<string | null> {
+  if (!("serviceWorker" in navigator)) return null;
+  const registration = await navigator.serviceWorker.getRegistration("/");
+  const active = registration?.active;
+  if (!active) return null;
+  return new Promise<string | null>((resolve) => {
+    const channel = new MessageChannel();
+    const timeout = setTimeout(() => {
+      channel.port1.close();
+      resolve(null);
+    }, SHELL_VERSION_ACK_TIMEOUT_MS);
+    channel.port1.onmessage = (event) => {
+      clearTimeout(timeout);
+      channel.port1.close();
+      resolve(typeof event.data?.version === "string" ? event.data.version : null);
+    };
+    active.postMessage({ type: "GET_SHELL_VERSION" }, [channel.port2]);
+  });
+}

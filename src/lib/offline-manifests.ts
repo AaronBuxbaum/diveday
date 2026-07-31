@@ -18,6 +18,22 @@ import type { ReadinessBlocker, ReadinessBlockerCode } from "./readiness";
  * discarded rather than lingering to their natural 14-day expiry.
  */
 export const OFFLINE_MANIFEST_RECORD_VERSION = 4 as const;
+
+/**
+ * The offline shell's own cache generation — distinct from
+ * `OFFLINE_MANIFEST_RECORD_VERSION` above, which versions the encrypted
+ * snapshot payload. This one versions the *app shell itself* (the cached
+ * HTML/JS `public/manifest-sw.js` serves while offline) and must be bumped
+ * there in lockstep — `CACHE_NAME`'s `-v<n>` suffix — whenever a deploy
+ * changes that shell. `manifest-sw.js` is a static file outside the Next.js
+ * build, so it can't import this constant directly; the two are compared at
+ * runtime instead (`getActiveOfflineShellVersion` in
+ * `offline-manifest-store.ts`) to warn a crew member holding a copy of the
+ * shell from an older deploy (task 124 / persona 15, Leo) rather than
+ * silently serving it with no signal anything's stale.
+ */
+export const OFFLINE_MANIFEST_SHELL_VERSION = "v1";
+
 export const OFFLINE_MANIFEST_CURRENT_MS = 15 * 60 * 1000;
 export const OFFLINE_MANIFEST_AGING_MS = 4 * 60 * 60 * 1000;
 export const OFFLINE_MANIFEST_MAX_RETENTION_MS = 14 * 24 * 60 * 60 * 1000;
