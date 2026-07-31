@@ -6,7 +6,7 @@ import { ImageFileInput } from "@/components/ImageFileInput";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { controlClass, Field, FieldGrid, PriceField } from "@/components/ui/form";
 import { getDb } from "@/db/client";
 import { getCourseBySlug } from "@/db/courses";
 import { getShopById } from "@/db/shops";
@@ -22,9 +22,6 @@ import { UnsavedChangesGuard } from "./_components/UnsavedChangesGuard";
 import { saveCourseContentAction, setCourseVisibilityAction } from "./actions";
 
 export const metadata: Metadata = { title: "Edit course page — DiveDay" };
-
-const dollarsInput = (cents: number | null) => (cents === null ? "" : (cents / 100).toFixed(2));
-const priceInputClass = `${controlClass} text-right tabular-nums`;
 
 /** Course media comes from the shop's own uploads; render it as it was stored. */
 function Thumb({ src, className }: { src: string; className: string }) {
@@ -162,29 +159,19 @@ export default async function EditCoursePage({
             </legend>
             <p className="mt-1 text-sm text-muted">{t("courses.edit.pricingDescription")}</p>
             <FieldGrid columns={2} className="mt-4 gap-y-5">
-              <Field label={t("courses.edit.instructionFeeLabel")}>
-                <input
-                  id="price"
-                  name="price"
-                  inputMode="decimal"
-                  defaultValue={dollarsInput(course.priceCents)}
-                  placeholder="—"
-                  className={priceInputClass}
-                />
-              </Field>
-              <Field
+              <PriceField
+                id="price"
+                name="price"
+                label={t("courses.edit.instructionFeeLabel")}
+                cents={course.priceCents}
+              />
+              <PriceField
+                id="eLearningPrice"
+                name="eLearningPrice"
                 label={t("courses.edit.eLearningFeeLabel")}
                 hint={t("courses.edit.eLearningFeeHint")}
-              >
-                <input
-                  id="eLearningPrice"
-                  name="eLearningPrice"
-                  inputMode="decimal"
-                  defaultValue={dollarsInput(course.eLearningPriceCents)}
-                  placeholder="—"
-                  className={priceInputClass}
-                />
-              </Field>
+                cents={course.eLearningPriceCents}
+              />
             </FieldGrid>
           </fieldset>
 

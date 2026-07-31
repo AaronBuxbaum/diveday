@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { AuthError } from "next-auth";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { MarketingNav } from "@/components/MarketingNav";
+import { ShopNotice } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
@@ -55,9 +56,9 @@ export default async function SignInPage({
           <h1 className="text-2xl font-semibold tracking-tight">{t("account.signIn.title")}</h1>
           <p className="mt-1 text-sm text-muted">{t("account.signIn.description")}</p>
           {error ? (
-            <p role="alert" className="mt-4 rounded-lg bg-danger/10 px-3 py-2 text-sm text-danger">
+            <ShopNotice tone="danger" role="alert" className="mt-4">
               {t("account.signIn.error")}
-            </p>
+            </ShopNotice>
           ) : null}
           <form action={authenticate} className="mt-5 flex flex-col gap-4">
             <FieldGrid columns={1} className="gap-y-4">

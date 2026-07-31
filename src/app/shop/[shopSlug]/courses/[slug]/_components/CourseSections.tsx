@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import type { Course } from "@/db/schema";
 import type { DiverMessageKey, DiverTranslator } from "@/i18n/messages";
@@ -73,7 +74,7 @@ export function CourseHero({
     maximumFractionDigits: 0,
   });
   return (
-    <header className="overflow-hidden rounded-3xl border border-border bg-surface shadow-sm">
+    <div className="overflow-hidden rounded-3xl border border-border bg-surface shadow-sm">
       {course.heroImageUrl ? (
         <CourseImage
           src={course.heroImageUrl}
@@ -85,8 +86,8 @@ export function CourseHero({
         />
       ) : null}
       <div className="p-6 sm:p-8">
-        <p className="text-xs font-semibold tracking-[0.18em] text-primary uppercase">
-          {t("course.agencyCourse", {
+        <ShopPageHeader
+          eyebrow={t("course.agencyCourse", {
             // First mention on the page expands the acronym (task 5) — "PADI"
             // means nothing to a diver who has never heard of a certification
             // agency; an unrecognized/shop-typed-"other" agency falls back to
@@ -95,12 +96,10 @@ export function CourseHero({
               ? t(AGENCY_FULL_NAME_KEYS[course.agency])
               : course.agency.toUpperCase(),
           })}
-        </p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">{course.title}</h1>
-        {course.summary ? (
-          <p className="mt-3 max-w-2xl text-lg leading-relaxed text-muted">{course.summary}</p>
-        ) : null}
-        <div className="mt-6 flex flex-wrap items-center gap-4">
+          title={course.title}
+          description={course.summary ?? undefined}
+        />
+        <div className="flex flex-wrap items-center gap-4">
           {totalCents === null ? null : (
             <p className="text-2xl font-semibold tabular-nums">
               {usd.format(totalCents / 100)}
@@ -118,7 +117,7 @@ export function CourseHero({
           ) : null}
         </div>
       </div>
-    </header>
+    </div>
   );
 }
 

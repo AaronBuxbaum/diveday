@@ -1,3 +1,4 @@
+import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { diverTranslator } from "@/i18n/messages";
 import { courseCharges, perDiverBookingPriceCents } from "@/lib/courses";
 import { cancellationDeadline, checkoutCharge } from "@/lib/deposits";
@@ -25,64 +26,70 @@ export function TripHeader({ shop, trip, locale }: { shop: Shop; trip: Trip; loc
     breakdown.find((line) => line.kind === "e_learning_fee")?.amountCents ?? null;
   const cancellationContact = shop.contactEmail || shop.contactPhone;
   return (
-    <header className="mt-4">
-      <p className="text-sm font-medium tracking-widest text-primary uppercase">{shop.name}</p>
-      <h1 className="mt-2 text-3xl font-semibold tracking-tight text-balance">{trip.title}</h1>
-      <p className="mt-2 text-lg text-muted">
-        {formatShortDate(trip.startsAt, locale, shop.timezone)} ·{" "}
-        {formatTimeRange(trip.startsAt, trip.endsAt, locale, shop.timezone)}
-      </p>
-      {trip.course ? (
-        <p className="mt-2 text-sm font-medium text-primary">
-          {t("trip.courseSession")} · {trip.course.title}
-        </p>
-      ) : null}
-      {/* Minimum age was previously shown only on the course page, never here
-          where a parent is actually about to book (task 23) — the trip page
-          is a self-declared display only; enforcement stays out of scope
-          pending a human-decision entry (see the booking form's attestation
-          checkbox and docs/product/human-decisions.md H-08/H-22). */}
-      {trip.course?.minimumAge ? (
-        <p className="mt-1 text-sm text-muted">
-          {t("trip.minimumAge", { age: trip.course.minimumAge })}
-        </p>
-      ) : null}
-      {trip.description ? <p className="mt-3 text-muted">{trip.description}</p> : null}
-      {perDiverPriceCents !== null ? (
-        <p className="mt-3 text-lg font-semibold tabular-nums">
-          {formatMoneyCents(perDiverPriceCents, "usd", locale)}{" "}
-          <span className="text-sm font-normal text-muted">{t("common.perDiver")}</span>
-        </p>
-      ) : null}
-      {courseFeeCents !== null && eLearningFeeCents !== null ? (
-        <p className="mt-1 text-sm text-muted tabular-nums">
-          {t("trip.courseFeeBreakdown", {
-            course: formatMoneyCents(courseFeeCents, "usd", locale),
-            eLearning: formatMoneyCents(eLearningFeeCents, "usd", locale),
-          })}
-        </p>
-      ) : null}
-      {charge?.isDeposit ? (
-        <p className="mt-1 text-sm text-muted tabular-nums">
-          {t("trip.depositLine", {
-            deposit: formatMoneyCents(charge.amountCents, "usd", locale),
-            balance: formatMoneyCents(charge.balanceDueCents, "usd", locale),
-          })}
-        </p>
-      ) : null}
-      {deadline ? (
-        <p className="mt-1 text-sm text-muted">
-          {t("trip.freeCancellationUntil", {
-            when: formatDateTimeTz(deadline, locale, shop.timezone),
-          })}
-        </p>
-      ) : cancellationContact ? (
-        <p className="mt-1 text-sm text-muted">
-          {t("trip.cancellationAskShop", { contact: cancellationContact })}
-        </p>
-      ) : (
-        <p className="mt-1 text-sm text-muted">{t("trip.cancellationAskShopNoContact")}</p>
-      )}
-    </header>
+    <div className="mt-4">
+      <ShopPageHeader
+        eyebrow={shop.name}
+        title={trip.title}
+        meta={
+          <>
+            <p className="text-lg text-muted">
+              {formatShortDate(trip.startsAt, locale, shop.timezone)} ·{" "}
+              {formatTimeRange(trip.startsAt, trip.endsAt, locale, shop.timezone)}
+            </p>
+            {trip.course ? (
+              <p className="mt-2 text-sm font-medium text-primary">
+                {t("trip.courseSession")} · {trip.course.title}
+              </p>
+            ) : null}
+            {/* Minimum age was previously shown only on the course page, never here
+                where a parent is actually about to book (task 23) — the trip page
+                is a self-declared display only; enforcement stays out of scope
+                pending a human-decision entry (see the booking form's attestation
+                checkbox and docs/product/human-decisions.md H-08/H-22). */}
+            {trip.course?.minimumAge ? (
+              <p className="mt-1 text-sm text-muted">
+                {t("trip.minimumAge", { age: trip.course.minimumAge })}
+              </p>
+            ) : null}
+            {trip.description ? <p className="mt-3 text-muted">{trip.description}</p> : null}
+            {perDiverPriceCents !== null ? (
+              <p className="mt-3 text-lg font-semibold tabular-nums">
+                {formatMoneyCents(perDiverPriceCents, "usd", locale)}{" "}
+                <span className="text-sm font-normal text-muted">{t("common.perDiver")}</span>
+              </p>
+            ) : null}
+            {courseFeeCents !== null && eLearningFeeCents !== null ? (
+              <p className="mt-1 text-sm text-muted tabular-nums">
+                {t("trip.courseFeeBreakdown", {
+                  course: formatMoneyCents(courseFeeCents, "usd", locale),
+                  eLearning: formatMoneyCents(eLearningFeeCents, "usd", locale),
+                })}
+              </p>
+            ) : null}
+            {charge?.isDeposit ? (
+              <p className="mt-1 text-sm text-muted tabular-nums">
+                {t("trip.depositLine", {
+                  deposit: formatMoneyCents(charge.amountCents, "usd", locale),
+                  balance: formatMoneyCents(charge.balanceDueCents, "usd", locale),
+                })}
+              </p>
+            ) : null}
+            {deadline ? (
+              <p className="mt-1 text-sm text-muted">
+                {t("trip.freeCancellationUntil", {
+                  when: formatDateTimeTz(deadline, locale, shop.timezone),
+                })}
+              </p>
+            ) : cancellationContact ? (
+              <p className="mt-1 text-sm text-muted">
+                {t("trip.cancellationAskShop", { contact: cancellationContact })}
+              </p>
+            ) : (
+              <p className="mt-1 text-sm text-muted">{t("trip.cancellationAskShopNoContact")}</p>
+            )}
+          </>
+        }
+      />
+    </div>
   );
 }

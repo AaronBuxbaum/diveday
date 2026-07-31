@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ConnectivityStatus } from "@/components/ConnectivityStatus";
 import { buttonClass } from "@/components/ui/button";
+import { fill, pluralForm } from "@/i18n/fill";
 import { formatDateTimeTz } from "@/lib/format";
 import {
   loadOfflineManifest,
@@ -55,10 +56,6 @@ export interface OfflineManifestManagerCopy {
   refreshingLabel: string;
   refreshNowLabel: string;
   openOfflineRollCall: string;
-}
-
-function fill(template: string, values: Record<string, string>): string {
-  return template.replace(/\{(\w+)\}/g, (match, key) => (key in values ? values[key] : match));
 }
 
 export function OfflineManifestManager({
@@ -124,13 +121,21 @@ export function OfflineManifestManager({
         if (pendingBefore > 0 || rejected > rejectedBefore) {
           setMessage(
             rejected > 0
-              ? fill(rejected === 1 ? copy.reconcileRejectedOne : copy.reconcileRejectedOther, {
-                  count: String(rejected),
-                })
+              ? fill(
+                  pluralForm(rejected, {
+                    one: copy.reconcileRejectedOne,
+                    other: copy.reconcileRejectedOther,
+                  }),
+                  { count: rejected },
+                )
               : pending > 0
-                ? fill(pending === 1 ? copy.reconcilePendingOne : copy.reconcilePendingOther, {
-                    count: String(pending),
-                  })
+                ? fill(
+                    pluralForm(pending, {
+                      one: copy.reconcilePendingOne,
+                      other: copy.reconcilePendingOther,
+                    }),
+                    { count: pending },
+                  )
                 : copy.reconcileCaughtUp,
           );
           router.refresh();

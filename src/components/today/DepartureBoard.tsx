@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { buttonClass } from "@/components/ui/button";
 import type { DepartureSummary } from "@/db/today";
+import { fill, pluralForm } from "@/i18n/fill";
 import { formatTime, formatTimeRange } from "@/lib/format";
 
 export type DepartureBoardCopy = {
@@ -32,13 +33,6 @@ export type DepartureBoardCopy = {
   sailingTodaySubtitle: string;
   dragStaffLabel: string;
 };
-
-/** Fills `{name}` placeholders in a plain ICU-style template — never a translator crossing the client boundary. */
-function fill(template: string, values: Record<string, string | number>): string {
-  return template.replace(/\{(\w+)\}/g, (match, key) =>
-    key in values ? String(values[key]) : match,
-  );
-}
 
 /**
  * A count that has to be read at a glance in sunlight: big, tabular, and
@@ -274,9 +268,14 @@ function DepartureCard({
       {blocked > 0 ? (
         <p className="mt-3 text-sm font-semibold text-danger">
           <span aria-hidden="true">⚠ </span>
-          {fill(blocked === 1 ? copy.blockedWarningOne : copy.blockedWarningOther, {
-            count: blocked,
-          })}
+          {fill(
+            pluralForm(
+              blocked,
+              { one: copy.blockedWarningOne, other: copy.blockedWarningOther },
+              locale,
+            ),
+            { count: blocked },
+          )}
         </p>
       ) : booked === 0 ? (
         <p className="mt-3 text-sm text-muted">{copy.noneBooked}</p>

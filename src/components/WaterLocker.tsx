@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { useFocusTrap } from "@/components/useFocusTrap";
+import { fill } from "@/i18n/fill";
 
 export type WaterLockerCopy = {
   rainAlt: string;
@@ -16,13 +17,6 @@ export type WaterLockerCopy = {
 export type WaterLockerToggleCopy = {
   disableToggleLabel: string;
 };
-
-/** Fills `{name}` placeholders in a plain ICU-style template — never a translator crossing the client boundary. */
-function fill(template: string, values: Record<string, string | number>): string {
-  return template.replace(/\{(\w+)\}/g, (match, key) =>
-    key in values ? String(values[key]) : match,
-  );
-}
 
 /**
  * Persisted per-device, same pattern as `AmbientGlareDetector`'s contrast
