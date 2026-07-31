@@ -952,6 +952,8 @@
       "heroTitle": "Run the whole dive day, from booking to head count.",
       "heroDescription": "DiveDay puts bookings, readiness, trip prep, and the boat manifest in one place — so your crew spends less time chasing paperwork and more time taking care of divers.",
       "exploreNote": "Explore a real working shop. Switch between owner, instructor, divemaster, captain, and diver views.",
+      "enterAsLabel": "Or enter as:",
+      "enterAsAria": "Try the demo as {role}",
       "phoneFrameLabel": "A captain marking divers boarded on DiveDay's mobile roll-call screen.",
       "dockEyebrow": "At the dock",
       "dockDetail": "Roll-call buttons big enough for wet thumbs — with or without signal.",
