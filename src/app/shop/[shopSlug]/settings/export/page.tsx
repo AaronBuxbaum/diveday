@@ -22,8 +22,11 @@ export default async function DataExportPage() {
   const db = await getDb();
 
   // Checked against the database, not the JWT — see the download route.
+  // Bounced to Today with an explanatory notice rather than teleporting
+  // silently (task 82, UX persona 11 "Kai") — Today already renders
+  // `shopHome.notice.*` codes.
   if (!(await canPersonExportShopData(db, session.user.shopId, session.user.personId))) {
-    redirect(`/shop/${session.user.shopSlug}`);
+    redirect(`/shop/${session.user.shopSlug}?notice=export_not_authorized`);
   }
 
   const families = await loadShopExportCounts(db, session.user.shopId);

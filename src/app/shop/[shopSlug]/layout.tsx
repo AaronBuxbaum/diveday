@@ -4,8 +4,10 @@ import { DemoBanner } from "@/components/DemoBanner";
 import { OfflineManifestAutoSave } from "@/components/OfflineManifestAutoSave";
 import { PreserveFormScroll } from "@/components/PreserveFormScroll";
 import { ShopNav } from "@/components/ShopNav";
+import { countBlockedDivers } from "@/db/blockers";
 import { getDb } from "@/db/client";
 import { DEMO_SHOP_SLUG } from "@/db/dev-credentials";
+import { countReviewsAwaitingModeration } from "@/db/reviews";
 import { people, personRoles } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
 import { todayNextDepartureTripId } from "@/db/today";
@@ -19,6 +21,7 @@ import {
   canViewShopReports,
   isStaff,
 } from "@/lib/authz";
+import { nowDate } from "@/lib/clock";
 import { DEMO_BYPASS_PASSWORD } from "@/lib/credentials";
 
 type DemoRoleId = "owner" | "instructor" | "divemaster" | "captain" | "diver";
@@ -137,6 +140,19 @@ export default async function ShopLayout({
 
   const demoT = showBanner ? diverTranslator(await requestLocale(shop?.defaultLocale)) : undefined;
 
+  const showNav = !isEmbed && Boolean(session?.user) && Boolean(shop);
+  // Small "pending work" counts for the Reviews/Blockers nav badges (task 83,
+  // UX persona 11 "Kai"/12 "Maren") — both queries the shop's own pages
+  // already run on every visit, gated the same way the nav itself is so a
+  // signed-out or embedded render never pays for them.
+  const [navReviewsCount, navBlockersCount] =
+    showNav && session?.user && shop
+      ? await Promise.all([
+          countReviewsAwaitingModeration(db, shop.id),
+          countBlockedDivers(db, shop.id, nowDate()),
+        ])
+      : [0, 0];
+
   return (
     <>
       {showBanner && demoT ? (
@@ -175,7 +191,7 @@ export default async function ShopLayout({
           demoPassword={DEMO_BYPASS_PASSWORD}
         />
       ) : null}
-      {!isEmbed && session?.user && shop ? (
+      {showNav && session?.user && shop ? (
         <ShopNav
           shopSlug={shopSlug}
           shopName={shop.name}
@@ -185,6 +201,7 @@ export default async function ShopLayout({
             reports: canViewShopReports(session.user.roles),
             team: canManageStaffAccounts(session.user.roles),
           }}
+          navCounts={{ reviews: navReviewsCount, blockers: navBlockersCount }}
           locale={locale}
         />
       ) : null}

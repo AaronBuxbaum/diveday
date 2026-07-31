@@ -1976,6 +1976,48 @@
     "nextDeparture": "Next up is <link>{title}</link> on {date} at {time}.",
     "noDeparturesEmpty": "Nothing is on the books yet. Schedule a trip and it will show up here the morning it sails.",
     "scheduleTrip": "Schedule a trip",
+    "notice": {
+      "waiversNotAuthorized": "Editing the waiver is limited to owners and managers.",
+      "exportNotAuthorized": "Data export is limited to owners and managers."
+    },
+    "orientation": {
+      "heading": "New here? A few pointers for your role.",
+      "subtitle": "This only shows once — dismiss it any time.",
+      "tryLabel": "Try:",
+      "dismiss": "Got it",
+      "roles": {
+        "owner": {
+          "title": "You're steering the whole shop",
+          "desc": "Today is your work queue — bookings, blockers, and today's departures in one place.",
+          "tryThis": "Open Schedule to see this week's departures."
+        },
+        "manager": {
+          "title": "Keeping the shop running day to day",
+          "desc": "Today surfaces what needs attention first; the rest of the shop's admin lives under More in the nav.",
+          "tryThis": "Check Reviews for feedback waiting on you."
+        },
+        "instructor": {
+          "title": "Teaching and certifying divers",
+          "desc": "Divers holds every diver's certification cards and specialty history.",
+          "tryThis": "Open Divers to check a certification card before class."
+        },
+        "divemaster": {
+          "title": "Getting divers ready to board",
+          "desc": "Blockers lists everyone who can't board yet, with the one tap that fixes each one.",
+          "tryThis": "Open Blockers to see who still needs prep."
+        },
+        "captain": {
+          "title": "Running the boat",
+          "desc": "The manifest is your boarding pass and roll call, built for wet hands and spotty signal.",
+          "tryThis": "Open today's manifest to see who's on the boat."
+        },
+        "crew": {
+          "title": "Checking divers in as they arrive",
+          "desc": "Check-in shows who's arrived, who's still missing paperwork, and what to do about it.",
+          "tryThis": "Open Check-in to check divers in as they arrive."
+        }
+      }
+    },
     "firstRun": {
       "heading": "Get your shop ready",
       "subtitle": "Five steps and divers can start booking.",
@@ -2144,7 +2186,9 @@
     },
     "shopNav": {
       "home": "DiveDay home",
-      "signOut": "Sign out"
+      "signOut": "Sign out",
+      "signOutConfirm": "Sign out? Confirm",
+      "signOutPending": "Signing out…"
     },
     "shopNavLinks": {
       "primaryNavAriaLabel": "Primary",

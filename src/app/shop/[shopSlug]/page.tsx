@@ -6,6 +6,7 @@ import { FlashParams } from "@/components/FlashParams";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { DepartureBoard } from "@/components/today/DepartureBoard";
 import { FirstRunChecklist } from "@/components/today/FirstRunChecklist";
+import { RoleOrientationCard } from "@/components/today/RoleOrientationCard";
 import { TodayQueue } from "@/components/today/TodayQueue";
 import { YourSessions } from "@/components/today/YourSessions";
 import { buttonClass } from "@/components/ui/button";
@@ -14,16 +15,33 @@ import { listDiveSites } from "@/db/dive-sites";
 import { getShopById } from "@/db/shops";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { getTodayWork } from "@/db/today";
+import { dismissOrientation, isOrientationDismissed } from "@/db/user-accounts";
+import {
+  orientationRoleFor,
+  orientationTourHref,
+  orientationTourText,
+} from "@/i18n/orientation-labels";
 import { requestLocale } from "@/i18n/request";
-import { staffTranslator } from "@/i18n/staff-messages";
+import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { GREETING_KEYS, summarizeDayText } from "@/i18n/today-labels";
 import { trackEvent } from "@/lib/analytics";
 import { nowDate } from "@/lib/clock";
 import { formatShortDate, formatTime } from "@/lib/format";
+import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl } from "@/lib/notifications";
 import { requireStaffSession } from "@/lib/session";
 import { getTimeOfDayGreeting, leadWithCrewed, roleLensFor, summarizeDay } from "@/lib/today";
 import { inviteWaitlistAction, updateTripCrewAction } from "./trips/[id]/actions";
+
+// A notice query param maps to a message key, never to a sentence — the words
+// come from the staff bundle at render time (docs ADR 20260730-staff-copy-localization).
+// These are the explanatory landings for authorization refusals elsewhere in
+// the app that redirect a non-owner/manager back to Today (task 82, UX
+// persona 11 "Kai") rather than teleporting silently.
+const AUTH_NOTICES: Record<string, StaffMessageKey> = {
+  waivers_not_authorized: "shopHome.notice.waiversNotAuthorized",
+  export_not_authorized: "shopHome.notice.exportNotAuthorized",
+};
 
 export const metadata: Metadata = {
   title: "Today — DiveDay",
@@ -40,16 +58,22 @@ export default async function ShopPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{ created?: string; series?: string; reset?: string; email?: string }>;
+  searchParams: Promise<{
+    created?: string;
+    series?: string;
+    reset?: string;
+    email?: string;
+    notice?: string;
+  }>;
 }) {
   const session = await requireStaffSession();
   const { shopSlug } = await params;
-  const { created, series, reset, email } = await searchParams;
+  const { created, series, reset, email, notice } = await searchParams;
   const seriesCount = series ? Number.parseInt(series, 10) : 0;
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
-      <FlashParams params={["created", "series", "reset", "email"]} />
+      <FlashParams params={["created", "series", "reset", "email", "notice"]} />
       {/* The queue join is the one real wait on this page; a content-shaped
           fallback keeps a cold nav from reading as a blank hang (principle 1). */}
       <Suspense fallback={<TodaySkeleton />}>
@@ -60,6 +84,7 @@ export default async function ShopPage({
           seriesCount={seriesCount}
           reset={reset}
           email={email}
+          notice={notice}
         />
       </Suspense>
     </main>
@@ -73,6 +98,7 @@ async function TodayBody({
   seriesCount,
   reset,
   email,
+  notice,
 }: {
   session: Awaited<ReturnType<typeof requireStaffSession>>;
   shopSlug: string;
@@ -80,6 +106,7 @@ async function TodayBody({
   seriesCount: number;
   reset?: string;
   email?: string;
+  notice?: string;
 }) {
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
@@ -104,6 +131,18 @@ async function TodayBody({
     locale,
   );
   const { actions, nextDeparture, crewedTripIds, crewedSessions, availableStaff } = work;
+  // Real shops only — the demo shop already teaches its own tour via the
+  // role switcher banner, and a dismissal there would be meaningless (every
+  // demo visit signs in as a fresh, credential-shared session).
+  const orientationRole = shop.isDemo ? null : orientationRoleFor(session.user.roles);
+  const showOrientation =
+    orientationRole !== null && !(await isOrientationDismissed(db, session.user.personId));
+  async function dismissOrientationAction() {
+    "use server";
+    const staff = await requireStaffSession();
+    await dismissOrientation(await getDb(), staff.user.personId);
+    revalidateAndRedirect(`/shop/${staff.user.shopSlug}`);
+  }
   // The first-run checklist only matters for a real shop with nothing on the
   // books yet — for any other visit these two extra queries never run.
   const showFirstRunChecklist = !shop.isDemo && !nextDeparture;
@@ -169,6 +208,31 @@ async function TodayBody({
             {email === "sent" ? t("shopHome.emailResent") : t("shopHome.emailFailed")}
           </ShopNotice>
         </div>
+      ) : null}
+      {notice && AUTH_NOTICES[notice] ? (
+        <div className="mb-6">
+          <ShopNotice tone="warning" role="status">
+            {t(AUTH_NOTICES[notice])}
+          </ShopNotice>
+        </div>
+      ) : null}
+
+      {showOrientation && orientationRole ? (
+        <RoleOrientationCard
+          tourHref={orientationTourHref(
+            shopSlug,
+            orientationRole,
+            nextDeparture ? `/shop/${shopSlug}/trips/${nextDeparture.tripId}/manifest` : undefined,
+          )}
+          dismissAction={dismissOrientationAction}
+          copy={{
+            heading: t("shopHome.orientation.heading"),
+            subtitle: t("shopHome.orientation.subtitle"),
+            tryLabel: t("shopHome.orientation.tryLabel"),
+            dismiss: t("shopHome.orientation.dismiss"),
+            ...orientationTourText(t, orientationRole),
+          }}
+        />
       ) : null}
 
       {lens === "sessions" ? (

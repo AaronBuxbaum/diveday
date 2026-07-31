@@ -104,3 +104,33 @@ export async function activateStaffAccount(
     .set({ hashedPassword, status: "active", emailVerifiedAt: now })
     .where(eq(userAccounts.id, userAccountId));
 }
+
+/**
+ * Whether this person's account already dismissed the first-visit role
+ * orientation card on Today (task 79, UX persona 11 "Kai"). `personId` is
+ * unique in `user_accounts`, so this resolves straight from the session's
+ * person id without a separate account-id lookup. An account with no row at
+ * all (should not happen for a signed-in staff session, but the query stays
+ * defensive) counts as not dismissed — the card fails open to visible rather
+ * than silently never showing.
+ */
+export async function isOrientationDismissed(db: DbExecutor, personId: string): Promise<boolean> {
+  const [account] = await db
+    .select({ orientationDismissedAt: userAccounts.orientationDismissedAt })
+    .from(userAccounts)
+    .where(eq(userAccounts.personId, personId))
+    .limit(1);
+  return account?.orientationDismissedAt != null;
+}
+
+/** Records the dismissal so the orientation card never shows this account again. */
+export async function dismissOrientation(
+  db: DbExecutor,
+  personId: string,
+  now: Date = nowDate(),
+): Promise<void> {
+  await db
+    .update(userAccounts)
+    .set({ orientationDismissedAt: now })
+    .where(eq(userAccounts.personId, personId));
+}
