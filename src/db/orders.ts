@@ -1,4 +1,4 @@
-import { and, asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { type InvoicingProvider, invoicingProviderFromEnvironment } from "@/lib/payments/invoicing";
 import type { AppDb, DbExecutor } from "./client";
@@ -226,6 +226,55 @@ export async function getBookingContext(db: DbExecutor, shopId: string, bookingI
   return row ?? null;
 }
 
+/**
+ * The most recent open, Stripe-invoiced order for a booking — what the Today
+ * queue's payment row acts on in place. Null when the booking was never
+ * invoiced through Stripe (paid at the counter, or invoicing wasn't
+ * connected when the trip was booked), so the caller falls back to plain
+ * roster navigation instead of rendering a control with nothing to do.
+ */
+export async function getOpenOrderForBooking(
+  db: DbExecutor,
+  shopId: string,
+  bookingId: string,
+): Promise<Order | null> {
+  const [order] = await db
+    .select()
+    .from(orders)
+    .where(
+      and(eq(orders.shopId, shopId), eq(orders.bookingId, bookingId), eq(orders.status, "open")),
+    )
+    .orderBy(desc(orders.createdAt))
+    .limit(1);
+  return order ?? null;
+}
+
+/** Batched form of `getOpenOrderForBooking`, for enriching a page of Today rows in one query. */
+export async function openOrdersForBookings(
+  db: DbExecutor,
+  shopId: string,
+  bookingIds: string[],
+): Promise<Map<string, Order>> {
+  const byBooking = new Map<string, Order>();
+  if (bookingIds.length === 0) return byBooking;
+  const rows = await db
+    .select()
+    .from(orders)
+    .where(
+      and(
+        eq(orders.shopId, shopId),
+        eq(orders.status, "open"),
+        inArray(orders.bookingId, bookingIds),
+      ),
+    )
+    .orderBy(desc(orders.createdAt));
+  // Newest first, so the first row seen per booking is the one still open.
+  for (const row of rows) {
+    if (row.bookingId && !byBooking.has(row.bookingId)) byBooking.set(row.bookingId, row);
+  }
+  return byBooking;
+}
+
 export async function listOrders(db: DbExecutor, shopId: string) {
   return db
     .select({ order: orders, person: people })
@@ -413,6 +462,36 @@ export async function refundOrder(
     status: "succeeded",
   });
   return updated;
+}
+
+export type ResendInvoiceOutcome =
+  | { status: "sent" }
+  | { status: "not_found" | "not_open" | "not_configured" | "failed" };
+
+/**
+ * Re-sends an already-created invoice's email — the Today queue's one-tap
+ * "resend invoice" row. Never creates a new invoice: a booking with no order
+ * yet (never invoiced) or one whose order already closed (paid, voided,
+ * refunded) has nothing to resend, and the caller falls back to navigation
+ * for those (`getOpenOrderForBooking`/`openOrdersForBookings` gate this
+ * before the control is even rendered), but this still re-checks status
+ * itself so a stale page can't resend a closed invoice.
+ */
+export async function resendOrderInvoice(
+  db: AppDb,
+  shopId: string,
+  orderId: string,
+  invoicing: InvoicingProvider = invoicingProviderFromEnvironment(),
+): Promise<ResendInvoiceOutcome> {
+  const [order] = await db
+    .select()
+    .from(orders)
+    .where(and(eq(orders.id, orderId), eq(orders.shopId, shopId)))
+    .limit(1);
+  if (!order) return { status: "not_found" };
+  if (order.status !== "open") return { status: "not_open" };
+  const result = await invoicing.resendInvoice(order.stripeAccountId, order.stripeInvoiceId);
+  return result.status === "sent" ? { status: "sent" } : { status: result.status };
 }
 
 /** Manual fallback for shops without the webhook configured yet: pull current status straight from Stripe. */

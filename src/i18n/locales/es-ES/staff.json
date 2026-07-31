@@ -2212,7 +2212,9 @@
         "emptyHeading": "No hay nada pendiente para ti",
         "emptyBody": "Todos los buceadores reservados en la próxima semana tienen en orden su exención, sus tarjetas y su pago.",
         "needsYouHeading": "Necesita tu atención",
-        "needsYouSubtitle": "Ordenado por la salida que cada uno retiene. Resolver una fila te lleva directo a la solución."
+        "needsYouSubtitle": "Ordenado por la salida que cada uno retiene. Resolver una fila te lleva directo a la solución.",
+        "boatsClear": "Las salidas de hoy están todas despejadas 🤙",
+        "itemsCount": "{count, plural, one {# tarea} other {# tareas}}"
       },
       "resendConfirmation": {
         "resending": "Reenviando…",
@@ -2222,6 +2224,20 @@
           "noEmail": "No hay correo registrado — añade uno desde el listado y vuelve a intentarlo.",
           "notConfigured": "El correo todavía no está configurado para este centro.",
           "failed": "Sigue sin poder entregarse — abre la salida para revisar la reserva."
+        }
+      },
+      "paymentAction": {
+        "copyLink": "Copiar enlace de pago",
+        "linkCopied": "Enlace copiado.",
+        "copyFailed": "No se pudo copiar — cópialo desde la factura.",
+        "resendInvoice": "Reenviar factura",
+        "resending": "Reenviando…",
+        "invoiceResent": "Factura reenviada.",
+        "errors": {
+          "notFound": "No se encontró esa factura — abre la salida para revisarla.",
+          "notOpen": "Esta factura ya no está abierta — abre la salida para comprobar su estado.",
+          "notConfigured": "Los pagos todavía no están conectados para este centro.",
+          "failed": "Sigue sin poder reenviarse — abre la salida para revisar la factura."
         }
       },
       "yourSessions": {

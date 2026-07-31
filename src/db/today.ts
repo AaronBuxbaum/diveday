@@ -21,6 +21,7 @@ import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import type { AppDb } from "./client";
 import { authorizesNitroxFill } from "./nitrox";
 import { listNotificationDeliveryIssues } from "./notifications";
+import { openOrdersForBookings } from "./orders";
 import { listTripsReadiness } from "./readiness";
 import {
   bookings,
@@ -33,6 +34,7 @@ import {
   trips,
   tripWaitlistEntries,
 } from "./schema";
+import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 import { tripIdsNeverSentLastMinuteDeal } from "./trip-promos";
 import { listStaff, pagedUpcomingTripsWithCounts } from "./trips";
 
@@ -645,6 +647,32 @@ export async function getTodayWork(
       href: roster,
       dueAt: issue.trip.startsAt,
     });
+  }
+
+  // A payment row only gets the inline "copy link"/"resend invoice" control
+  // once we know the booking was actually invoiced through Stripe: a diver
+  // who owes at the counter has no invoice to act on, and a shop with no
+  // connected Stripe account has nothing to resend either. Both cases keep
+  // the row's `href` fallback to the roster instead of a dead button.
+  const paymentBookingIds = actions
+    .map((action) => action.payment?.bookingId)
+    .filter((id): id is string => Boolean(id));
+  if (paymentBookingIds.length > 0) {
+    const account = await getShopStripeAccount(db, shopId);
+    const openOrders = canAcceptPayments(account)
+      ? await openOrdersForBookings(db, shopId, paymentBookingIds)
+      : new Map<string, { id: string; hostedInvoiceUrl: string | null }>();
+    for (const action of actions) {
+      if (!action.payment) continue;
+      const order = openOrders.get(action.payment.bookingId);
+      action.payment = order
+        ? {
+            bookingId: action.payment.bookingId,
+            orderId: order.id,
+            hostedInvoiceUrl: order.hostedInvoiceUrl,
+          }
+        : undefined;
+    }
   }
 
   const departures: DepartureSummary[] = todayTrips.map((trip) => {

@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { eq } from "drizzle-orm";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { courseTotalCents } from "@/lib/courses";
 import type {
   CreateInvoiceRequest,
@@ -8,6 +8,7 @@ import type {
   InvoiceLookupResult,
   InvoicingProvider,
   RefundInvoiceResult,
+  ResendInvoiceResult,
   VoidInvoiceResult,
 } from "@/lib/payments/invoicing";
 import { seededShopContext } from "@/test/db";
@@ -16,12 +17,15 @@ import { updateCourse } from "./courses";
 import {
   createOrder,
   getBookingContext,
+  getOpenOrderForBooking,
   getOrder,
   listOrders,
   markOrderPaidByInvoiceId,
   markOrderVoidedByInvoiceId,
+  openOrdersForBookings,
   refreshOrderStatus,
   refundOrder,
+  resendOrderInvoice,
   voidOrder,
 } from "./orders";
 import { getBookingPayment, setBookingPayment } from "./payments";
@@ -65,6 +69,9 @@ function fakeInvoicing(overrides: Partial<InvoicingProvider> = {}): InvoicingPro
           totalCents: 22_000,
         },
       };
+    },
+    async resendInvoice(): Promise<ResendInvoiceResult> {
+      return { status: "sent" };
     },
     ...overrides,
   };
@@ -531,5 +538,134 @@ describe("orders", () => {
 
     // An ordinary charter has no course, so the form falls back to the trip fee.
     expect((await getBookingContext(db, shop.id, entry.booking.id))?.course).toBeNull();
+  });
+});
+
+/** Connects Stripe and creates an open, invoiced order for the fixture booking — the Today payment row's happy path. */
+async function invoicedOrderContext() {
+  const { db, shop, entry } = await orderContext();
+  await upsertShopStripeAccount(db, shop.id, "acct_today");
+  await setShopStripeAccountStatus(db, "acct_today", {
+    chargesEnabled: true,
+    payoutsEnabled: true,
+    detailsSubmitted: true,
+  });
+  const result = await createOrder(
+    db,
+    {
+      shopId: shop.id,
+      personId: entry.person.id,
+      createdByPersonId: entry.person.id,
+      bookingId: entry.booking.id,
+      lineItems,
+    },
+    fakeInvoicing(),
+  );
+  if (!result.ok) throw new Error(`expected order creation to succeed: ${result.reason}`);
+  return { db, shop, entry, order: result.order };
+}
+
+describe("getOpenOrderForBooking / openOrdersForBookings", () => {
+  it("finds nothing for a booking that was never invoiced", async () => {
+    const { db, shop, entry } = await orderContext();
+    expect(await getOpenOrderForBooking(db, shop.id, entry.booking.id)).toBeNull();
+    expect(await openOrdersForBookings(db, shop.id, [entry.booking.id])).toEqual(new Map());
+  });
+
+  it("returns an empty map for an empty booking list without querying", async () => {
+    const { db, shop } = await orderContext();
+    expect(await openOrdersForBookings(db, shop.id, [])).toEqual(new Map());
+  });
+
+  it("finds the open order for an invoiced booking", async () => {
+    const { db, shop, entry, order } = await invoicedOrderContext();
+    const found = await getOpenOrderForBooking(db, shop.id, entry.booking.id);
+    expect(found?.id).toBe(order.id);
+    expect(found?.hostedInvoiceUrl).toBe(order.hostedInvoiceUrl);
+
+    const batch = await openOrdersForBookings(db, shop.id, [entry.booking.id]);
+    expect(batch.get(entry.booking.id)?.id).toBe(order.id);
+  });
+
+  it("stops surfacing a booking's order once it is paid — no longer 'open'", async () => {
+    const { db, shop, entry, order } = await invoicedOrderContext();
+    await markOrderPaidByInvoiceId(db, order.stripeInvoiceId, order.totalCents);
+    expect(await getOpenOrderForBooking(db, shop.id, entry.booking.id)).toBeNull();
+    expect(await openOrdersForBookings(db, shop.id, [entry.booking.id])).toEqual(new Map());
+  });
+
+  it("never leaks an order across shops", async () => {
+    const { db, entry } = await invoicedOrderContext();
+    const otherShopId = "00000000-0000-4000-8000-000000000000";
+    expect(await getOpenOrderForBooking(db, otherShopId, entry.booking.id)).toBeNull();
+  });
+});
+
+describe("resendOrderInvoice", () => {
+  it("resends the email for an existing open invoice", async () => {
+    const { db, shop, order } = await invoicedOrderContext();
+    const resend = vi.fn().mockResolvedValue({ status: "sent" } satisfies ResendInvoiceResult);
+    const outcome = await resendOrderInvoice(
+      db,
+      shop.id,
+      order.id,
+      fakeInvoicing({ resendInvoice: resend }),
+    );
+    expect(outcome).toEqual({ status: "sent" });
+    expect(resend).toHaveBeenCalledWith(order.stripeAccountId, order.stripeInvoiceId);
+  });
+
+  it("reports not_found for an unknown or cross-shop order id", async () => {
+    const { db, order } = await invoicedOrderContext();
+    const otherShopId = "00000000-0000-4000-8000-000000000000";
+    expect(await resendOrderInvoice(db, otherShopId, order.id, fakeInvoicing())).toEqual({
+      status: "not_found",
+    });
+    expect(
+      await resendOrderInvoice(
+        db,
+        (await orderContext()).shop.id,
+        "00000000-0000-4000-8000-000000000001",
+        fakeInvoicing(),
+      ),
+    ).toEqual({ status: "not_found" });
+  });
+
+  it("refuses to resend an invoice that already closed (paid, voided, or refunded)", async () => {
+    const { db, shop, order } = await invoicedOrderContext();
+    await markOrderPaidByInvoiceId(db, order.stripeInvoiceId, order.totalCents);
+    expect(await resendOrderInvoice(db, shop.id, order.id, fakeInvoicing())).toEqual({
+      status: "not_open",
+    });
+  });
+
+  it("surfaces a Stripe failure instead of pretending the resend happened", async () => {
+    const { db, shop, order } = await invoicedOrderContext();
+    const outcome = await resendOrderInvoice(
+      db,
+      shop.id,
+      order.id,
+      fakeInvoicing({
+        async resendInvoice(): Promise<ResendInvoiceResult> {
+          return { status: "failed" };
+        },
+      }),
+    );
+    expect(outcome).toEqual({ status: "failed" });
+  });
+
+  it("reports not_configured when the shop's Stripe connection has since gone away", async () => {
+    const { db, shop, order } = await invoicedOrderContext();
+    const outcome = await resendOrderInvoice(
+      db,
+      shop.id,
+      order.id,
+      fakeInvoicing({
+        async resendInvoice(): Promise<ResendInvoiceResult> {
+          return { status: "not_configured" };
+        },
+      }),
+    );
+    expect(outcome).toEqual({ status: "not_configured" });
   });
 });
