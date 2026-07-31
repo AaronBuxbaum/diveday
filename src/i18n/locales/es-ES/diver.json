@@ -147,6 +147,8 @@
     "waitlistHeading": "Apúntate a la lista de espera",
     "waitlistBody": "Si se libera una plaza, el centro ya tendrá tus datos.",
     "waitlistJoining": "Apuntándote…",
+    "wantAnyTripAlertsInstead": "¿No te convence esta? ¿Prefieres alertas de ofertas para cualquier salida?",
+    "joinLastMinuteDealAlerts": "Apúntate a la lista de última hora",
     "waitlistConfirmedHeading": "Estás en la lista de espera, {name}.",
     "waitlistConfirmedBody": "Todavía no hay plaza reservada. El centro ve tu puesto en la lista y te avisará si se libera una.",
     "sailedHeading": "Esta salida ya ha zarpado",
@@ -189,6 +191,7 @@
   "lastMinute": {
     "heading": "¿Quieres una oferta de última hora?",
     "body": "Dinos cuándo estarás por aquí y te escribimos si un barco necesita llenar plazas con descuento.",
+    "alreadyHaveATrip": "¿Ya tienes una salida concreta en mente? Apúntate a su lista de espera desde la página de esa salida — así te avisaremos primero si hay descuento en ella.",
     "availableFrom": "Disponible desde",
     "availableUntil": "Disponible hasta",
     "submit": "Avísame",
@@ -720,6 +723,7 @@
       "checkPreviewBody": "DiveDay mapea tus columnas automáticamente y previsualiza el archivo antes de guardar nada — cómo aterrizó cada columna, qué tarjetas llegarán verificadas y marcadas como importadas, y qué deja atrás. Las filas con un correo coincidente actualizan al buceador existente en vez de duplicarlo; las filas pasan la importación cuando confirmas.",
       "importReadyTitle": "Importar — tu plantilla está lista",
       "importReadyBody": "El plantel, las tallas de alquiler y las tarjetas quedan listos de inmediato: las tarjetas llegan verificadas y marcadas como importadas, así que los buceadores están listos para el viaje desde la primera reserva. Cada tarjeta importada lleva una confirmación de un toque en el registro del buceador para que el personal le eche un vistazo cuando tenga un momento — nadie espera para embarcar por eso. Lo único que sí espera es una inmersión que requiere una tarjeta de especialidad: esa puerta se abre cuando un miembro del personal confirma la tarjeta, que es un toque en el registro del buceador.",
+      "openImportCta": "Abrir Importar en tu tienda",
       "forExportPrefix": "Para una exportación de {competitor}:",
       "runTheDay": "Lleva el día de buceo que {competitor} no puede.",
       "readyToMove": "¿Listo para dejar {competitor}?",
@@ -815,6 +819,7 @@
       "checkPreviewBody": "DiveDay mapea tus columnas automáticamente y previsualiza el archivo antes de guardar nada — cómo aterrizó cada columna, qué tarjetas llegarán verificadas y marcadas como importadas, y qué deja atrás, incluida cualquier fila que no pueda trasladar (una sin nombre, o un correo repetido). Las filas pasan la importación cuando confirmas.",
       "importReadyTitle": "Importar — tu plantel está listo",
       "importReadyBody": "El plantel, las tallas de alquiler y las tarjetas quedan listos de inmediato: las tarjetas llegan verificadas y marcadas como importadas, así que los buceadores están listos para el viaje desde la primera reserva. Cada tarjeta importada lleva una confirmación de un toque en el registro del buceador para que el personal le eche un vistazo cuando tenga un momento — nadie espera para embarcar por eso. Lo único que sí espera es una inmersión que requiere una tarjeta de especialidad: esa puerta se abre cuando un miembro del personal confirma la tarjeta, que es un toque en el registro del buceador.",
+      "openImportCta": "Abrir Importar en tu tienda",
       "closingTitle": "Míralo antes de cambiar nada.",
       "closingDescription": "Recorre la demo en vivo como propietario, capitán o buceador — sin registro, nada que importar, solo la tienda funcionando. Empieza una prueba cuando encaje.",
       "gettingDemoReady": "Preparando la demo…",
@@ -832,9 +837,9 @@
     "mainNavigation": "Navegación principal",
     "tagline": "Una forma más tranquila de llevar un día de buceo.",
     "sayHello": "Escríbenos — siempre es bienvenido",
-    "seeLiveSchedule": "Ver un horario en vivo →",
+    "seeLiveSchedule": "Ver la página de reservas de un buceador →",
     "gettingReady": "Preparando tu tienda…",
-    "tryDemo": "Probar la demo en vivo"
+    "tryDemo": "Probar la app del personal"
   },
   "fallback": {
     "offlineCopy": "Copia sin conexión · al día",

@@ -12,6 +12,7 @@ import {
   deleteDiveSite,
   getDiveSite,
   listDiveSites,
+  listUpcomingTripsForSite,
   updateDiveSite,
 } from "@/db/dive-sites";
 import { getShopById } from "@/db/shops";
@@ -25,6 +26,7 @@ import {
   maxEnteredDepth,
 } from "@/lib/depth-units";
 import { splitMediaUrls } from "@/lib/dive-sites";
+import { formatShortDate } from "@/lib/format";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { ingestDiveSiteMedia } from "@/lib/storage/ingest-dive-site-media";
@@ -82,8 +84,10 @@ export default async function EditDiveSitePage({
     getShopById(db, session.user.shopId),
   ]);
   if (!site) notFound();
-  const t = staffTranslator(await requestLocale(shop?.defaultLocale));
+  const locale = await requestLocale(shop?.defaultLocale);
+  const t = staffTranslator(locale);
   const depthUnit = shop?.depthUnit ?? "meters";
+  const upcomingTrips = await listUpcomingTripsForSite(db, session.user.shopId, id);
 
   async function saveAction(formData: FormData) {
     "use server";
@@ -239,6 +243,28 @@ export default async function EditDiveSitePage({
               ? t("diveSites.form.errorImagesUnconfigured")
               : t("diveSites.edit.errorInvalid")}
         </p>
+      ) : null}
+      {upcomingTrips.length > 0 ? (
+        <section aria-labelledby="upcoming-dives-heading" className="mt-8">
+          <h2 id="upcoming-dives-heading" className="text-lg font-semibold">
+            {t("diveSites.edit.upcomingHeading")}
+          </h2>
+          <ul className="mt-3 divide-y divide-border rounded-lg border border-border bg-surface">
+            {upcomingTrips.map((trip) => (
+              <li key={trip.tripId}>
+                <Link
+                  href={`/shop/${shopSlug}/trips/${trip.tripId}`}
+                  className="flex items-center justify-between gap-3 px-4 py-3 text-sm hover:bg-surface-sunken"
+                >
+                  <span className="font-medium">{trip.title}</span>
+                  <span className="text-muted">
+                    {formatShortDate(trip.startsAt, locale, shop?.timezone ?? "UTC")}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
       ) : null}
       <form action={saveAction} className="mt-8 flex flex-col gap-5">
         <FieldGrid columns={1}>

@@ -9,7 +9,7 @@ import type { SearchResults } from "@/db/search";
 type PaletteItem = { key: string; label: string; detail?: string; href: string };
 type PaletteGroup = { heading: string; items: PaletteItem[] };
 
-const EMPTY: SearchResults = { divers: [], trips: [] };
+const EMPTY: SearchResults = { divers: [], trips: [], diveSites: [], courses: [], orders: [] };
 
 export type CommandPaletteCopy = {
   search: string;
@@ -19,9 +19,19 @@ export type CommandPaletteCopy = {
   emptyNoMatches: string;
   groupDivers: string;
   groupTrips: string;
+  groupDiveSites: string;
+  groupCourses: string;
+  groupOrders: string;
   groupGoTo: string;
   goToToday: string;
   goToBlockers: string;
+  goToCheckIn: string;
+  goToStaffing: string;
+  goToDiveSites: string;
+  goToCourses: string;
+  goToReviews: string;
+  goToReports: string;
+  goToPromos: string;
   goToSchedule: string;
   goToDivers: string;
   goToSettings: string;
@@ -41,11 +51,14 @@ export function CommandPalette({
   shopSlug,
   boatBoardingHref,
   canManageWaivers,
+  canManageReports,
   copy,
 }: {
   shopSlug: string;
   boatBoardingHref?: string;
   canManageWaivers: boolean;
+  /** Owner/manager surfaces (H-14) — Reports and Promo codes, same gate as the nav. */
+  canManageReports: boolean;
   copy: CommandPaletteCopy;
 }) {
   const router = useRouter();
@@ -110,13 +123,25 @@ export function CommandPalette({
       { label: copy.goToToday, suffix: "" },
       { label: copy.goToWalkIn, suffix: "/check-in/walk-in" },
       { label: copy.goToBlockers, suffix: "/blockers" },
+      { label: copy.goToCheckIn, suffix: "/check-in" },
       { label: copy.goToSchedule, suffix: "/schedule" },
       { label: copy.goToDivers, suffix: "/divers" },
+      { label: copy.goToStaffing, suffix: "/staffing" },
+      { label: copy.goToDiveSites, suffix: "/dive-sites" },
+      { label: copy.goToCourses, suffix: "/courses" },
+      { label: copy.goToReviews, suffix: "/reviews" },
       { label: copy.goToSettings, suffix: "/settings" },
     ];
-    const goTo = canManageWaivers
-      ? [...baseGoTo, { label: copy.goToWaivers, suffix: "/waivers" }]
-      : baseGoTo;
+    const goTo = [
+      ...baseGoTo,
+      ...(canManageWaivers ? [{ label: copy.goToWaivers, suffix: "/waivers" }] : []),
+      ...(canManageReports
+        ? [
+            { label: copy.goToReports, suffix: "/reports" },
+            { label: copy.goToPromos, suffix: "/promos" },
+          ]
+        : []),
+    ];
     for (const entry of goTo) {
       if (q === "" || entry.label.toLowerCase().includes(q)) {
         goto.push({
@@ -149,9 +174,40 @@ export function CommandPalette({
         })),
       });
     }
+    if (results.diveSites.length > 0) {
+      out.push({
+        heading: copy.groupDiveSites,
+        items: results.diveSites.map((site) => ({
+          key: `dive-site:${site.id}`,
+          label: site.name,
+          href: `${root}/dive-sites/${site.id}`,
+        })),
+      });
+    }
+    if (results.courses.length > 0) {
+      out.push({
+        heading: copy.groupCourses,
+        items: results.courses.map((course) => ({
+          key: `course:${course.id}`,
+          label: course.title,
+          href: `${root}/courses/${course.slug}/edit`,
+        })),
+      });
+    }
+    if (results.orders.length > 0) {
+      out.push({
+        heading: copy.groupOrders,
+        items: results.orders.map((order) => ({
+          key: `order:${order.id}`,
+          label: order.personName,
+          detail: order.detail,
+          href: `${root}/orders/${order.id}`,
+        })),
+      });
+    }
     if (goto.length > 0) out.push({ heading: copy.groupGoTo, items: goto });
     return out;
-  }, [results, query, boatBoardingHref, root, canManageWaivers, copy]);
+  }, [results, query, boatBoardingHref, root, canManageWaivers, canManageReports, copy]);
 
   const flat = useMemo(() => groups.flatMap((group) => group.items), [groups]);
 

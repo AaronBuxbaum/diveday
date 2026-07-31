@@ -343,7 +343,18 @@ export default async function WaiverPage({
       );
     }
     await trackEvent({ name: "waiver_signed" });
-    revalidateAndRedirect(`/waivers/${token}`, `/waivers/${token}`);
+    // A diver who just signed goes straight to "what's left" instead of a
+    // signed-waiver page whose only forward path is the same link — the
+    // completed-state render below still shows that page for anyone who
+    // revisits this token afterward.
+    const db = await getDb();
+    const readyCapability = await issueBookingCapability(db, {
+      shopId: record.shopId,
+      bookingId: recordBookingId,
+      purpose: "readiness",
+    });
+    const readyPath = readyCapability ? readinessLinkPath(readyCapability.token) : null;
+    revalidateAndRedirect(`/waivers/${token}`, readyPath ?? `/waivers/${token}`);
   }
 
   return (

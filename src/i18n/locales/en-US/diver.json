@@ -147,6 +147,8 @@
     "waitlistHeading": "Join the wait list",
     "waitlistBody": "If a spot opens, the shop will have your details ready.",
     "waitlistJoining": "Joining…",
+    "wantAnyTripAlertsInstead": "Not set on this one? Want any-trip deal alerts instead?",
+    "joinLastMinuteDealAlerts": "Join the last-minute list",
     "waitlistConfirmedHeading": "You’re on the wait list, {name}.",
     "waitlistConfirmedBody": "A spot is not held yet. The shop can see your place in line and will contact you if one opens up.",
     "sailedHeading": "This one’s already sailed",
@@ -189,6 +191,7 @@
   "lastMinute": {
     "heading": "Want a deal on a last-minute spot?",
     "body": "Tell us when you’re around and we’ll email you if a boat needs to fill seats at a discount.",
+    "alreadyHaveATrip": "Already have one specific trip in mind? Join its wait list from that trip's own page instead — you'll hear about a discount on it first.",
     "availableFrom": "Around from",
     "availableUntil": "Around until",
     "submit": "Notify me",
@@ -720,6 +723,7 @@
       "checkPreviewBody": "DiveDay maps your columns automatically and previews the file before anything is saved — how each column landed, which cards will come in verified and flagged imported, and anything it's leaving behind. Rows with an email match an existing diver so a re-import updates them instead of duplicating; the rows that pass import when you confirm.",
       "importReadyTitle": "Import — your roster is ready",
       "importReadyBody": "Roster, rental sizes, and cards are ready immediately: cards land verified and flagged imported, so divers are trip-ready from the first booking. Each imported card carries a one-tap confirm on the diver's record for staff to give it a look when they get a moment — no boarding waits on it. The one thing that does wait is a dive that requires a specialty card: that gate opens when a staffer confirms the card, which is one tap on the diver's record.",
+      "openImportCta": "Open Import in your shop",
       "forExportPrefix": "For a {competitor} export:",
       "runTheDay": "Run the dive day {competitor} can't.",
       "readyToMove": "Ready to make the move off {competitor}?",
@@ -815,6 +819,7 @@
       "checkPreviewBody": "DiveDay maps your columns automatically and previews the file before anything is saved — how each column landed, which cards will come in verified and flagged imported, and anything it's leaving behind, including any row it can't bring across (one with no name, or a repeated email). The rows that pass import when you confirm.",
       "importReadyTitle": "Import — your roster is ready",
       "importReadyBody": "Roster, rental sizes, and cards are ready immediately: cards land verified and flagged imported, so divers are trip-ready from the first booking. Each imported card carries a one-tap confirm on the diver's record for staff to give it a look when they get a moment — no boarding waits on it. The one thing that does wait is a dive that requires a specialty card: that gate opens when a staffer confirms the card, which is one tap on the diver's record.",
+      "openImportCta": "Open Import in your shop",
       "closingTitle": "See it before you switch a thing.",
       "closingDescription": "Walk the live demo as the owner, the captain, or a diver — no sign-up, nothing to import, just the working shop. Start a trial when it clicks.",
       "gettingDemoReady": "Getting the demo ready…",
@@ -832,9 +837,9 @@
     "mainNavigation": "Main navigation",
     "tagline": "A calmer way to run a dive day.",
     "sayHello": "Say hello — always welcome",
-    "seeLiveSchedule": "See a live schedule →",
+    "seeLiveSchedule": "See a diver's booking page →",
     "gettingReady": "Getting your shop ready…",
-    "tryDemo": "Try the live demo"
+    "tryDemo": "Try the staff app"
   },
   "fallback": {
     "offlineCopy": "Offline copy · up to date",

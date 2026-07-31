@@ -32,7 +32,12 @@ function DiverRow({
   return (
     <li className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-start sm:justify-between sm:gap-5 sm:px-5">
       <div className="min-w-0">
-        <p className="font-semibold">{diver.fullName}</p>
+        <Link
+          href={`/shop/${shopSlug}/divers/${diver.personId}`}
+          className="font-semibold hover:text-primary hover:underline"
+        >
+          {diver.fullName}
+        </Link>
         <ul className="mt-1.5 flex flex-col gap-1 text-base text-muted">
           {diver.blockers.map((blocker) => (
             <li key={blocker.code} className="flex gap-2">

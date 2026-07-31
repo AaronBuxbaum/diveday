@@ -47,8 +47,7 @@
     "notice": {
       "denied": "You do not have access to that calendar scope."
     },
-    "coverage": "Covers departures from {past} days ago through {future} days ahead.",
-    "settingsLink": "Manage subscriptions"
+    "coverage": "Covers departures from {past} days ago through {future} days ahead."
   },
   "staffing": {
     "eyebrow": "Operations",
@@ -115,6 +114,9 @@
     "day": "Day {number}"
   },
   "divers": {
+    "upcoming": {
+      "heading": "Upcoming trips"
+    },
     "shared": {
       "agencies": {
         "padi": "PADI",
@@ -639,6 +641,7 @@
     },
     "edit": {
       "description": "Changes update the briefing linked to this site.",
+      "upcomingHeading": "Upcoming dives here",
       "copyAndTailor": "Copy and tailor",
       "copying": "Copying…",
       "archiveSite": "Archive site",
@@ -894,7 +897,7 @@
     "emptyHeading": "No reviews yet",
     "emptyDetail": "Divers are asked for one on their recap page after a trip sails. The first ones will land here.",
     "ratingOnly": "Rating only — no words to review.",
-    "reviewMeta": "{diverName} · <trip>{tripTitle}</trip> · {date}",
+    "reviewMeta": "<diver>{diverName}</diver> · <trip>{tripTitle}</trip> · {date}",
     "hide": "Hide",
     "publish": "Publish",
     "saving": "Saving…",
@@ -1049,10 +1052,14 @@
     },
     "detail": {
       "eyebrow": "Trips",
+      "viewBookingPage": "View booking page",
+      "copyBookingLink": "Copy link",
+      "linkCopied": "Copied!",
       "cancelledBadge": "Cancelled",
       "meetingDaysSummary": "{count} meeting days · same instructors each day",
       "dayLabel": "Day {number}: {date} · {timeRange}",
-      "courseSession": "Course session · {title}",
+      "courseSession": "Course session · <course>{title}</course>",
+      "diveSiteLabel": "Dive site:",
       "seriesPart": "Part of a repeating series · {summary}. Changes here apply to this date only; {count} still on the schedule.",
       "viewOnlyNotice": "You're viewing this trip. Its setup — the details, admission requirements, and recurring schedule — is edited by owners, managers, and instructors. Recording conditions, adjusting who's on crew, and cancelling today's trip for weather stay open to you, as do the roster, check-in, manifest, and roll call.",
       "overRatioWarning": "{booked} divers are booked, but the current crew only covers {cap} under PADI's published entry-level ratio (8 per instructor, +2 per certified assistant). Assign another instructor or a certified assistant before this session sails — existing bookings are unaffected either way.",
@@ -1577,6 +1584,11 @@
         "description": "Copy-paste snippets that put your live booking calendar on your own website.",
         "cta": "Get embed code"
       },
+      "calendar": {
+        "heading": "Calendar subscriptions",
+        "description": "Put your departures on the calendar app you already use — read-only, so DiveDay never touches it.",
+        "cta": "Manage subscriptions"
+      },
       "data": {
         "heading": "Data",
         "description": "Bring contacts in from a CSV, or take everything back out as a ZIP of CSVs — neither one touches the settings above.",
@@ -1675,6 +1687,7 @@
       "eyebrow": "Settings",
       "title": "Import contacts",
       "description": "Bring your divers, cards, rental sizes, and prior waiver acceptance in from a CSV — from your old system or from DiveDay's own export. We're honest about what comes across: imported cards land verified and flagged imported, with a one-tap confirm on each diver's record, and a row claiming a waiver was already accepted is trusted and marked imported.",
+      "comingFrom": "Coming from <eve>EVE</eve>, <diveshop360>DiveShop360</diveshop360>, or <spreadsheet>a spreadsheet</spreadsheet>? See the matching guide, then come back here to bring it in.",
       "comesAcross": {
         "heading": "What comes across",
         "description": "A card already in your system was checked there, so DiveDay trusts it: imported cards land verified and flagged imported, ready from the first trip, with a one-tap confirm for staff, and their refresher-due dates come across too. A specialty card waits on that confirm before it clears the dive it authorizes. Individual medical answers are never reconstructed."
@@ -2029,9 +2042,19 @@
       "emptyNoMatches": "No matches. Try a name, email, or trip title.",
       "groupDivers": "Divers",
       "groupTrips": "Trips",
+      "groupDiveSites": "Dive sites",
+      "groupCourses": "Courses",
+      "groupOrders": "Orders",
       "groupGoTo": "Go to",
       "goToToday": "Today",
       "goToBlockers": "Blockers",
+      "goToCheckIn": "Check-in",
+      "goToStaffing": "Staffing",
+      "goToDiveSites": "Dive sites",
+      "goToCourses": "Courses",
+      "goToReviews": "Reviews",
+      "goToReports": "Reports",
+      "goToPromos": "Promo codes",
       "goToSchedule": "Schedule",
       "goToDivers": "Divers",
       "goToSettings": "Settings",

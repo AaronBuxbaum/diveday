@@ -13,7 +13,7 @@ import type { RollCallCheckpoint } from "./manifests";
  */
 
 /** Where a staff action happened, so recovery can be sliced by surface. */
-export type EventSurface = "today" | "blockers" | "roster";
+export type EventSurface = "today" | "blockers" | "roster" | "check_in";
 
 /**
  * The typed event vocabulary. Adding an event here — rather than a free-form

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { eventSource, guideSource, trialHref } from "./funnel";
+import { eventSource, guideSource, scheduleAttributionHref, trialHref } from "./funnel";
 import { MIGRATION_GUIDE_SLUGS } from "./migration-guides";
 
 describe("eventSource", () => {
@@ -45,5 +45,18 @@ describe("trialHref", () => {
 
   it("round-trips: every href it builds survives eventSource", () => {
     expect(eventSource(trialHref("nav").split("=")[1])).toBe("nav");
+  });
+});
+
+describe("scheduleAttributionHref", () => {
+  it("tags the schedule preview link with the shop and the page that sent the visitor", () => {
+    expect(scheduleAttributionHref("blue-mantis", "home-hero")).toBe(
+      "/shop/blue-mantis/schedule?from=home-hero",
+    );
+  });
+
+  it("round-trips: every href it builds survives eventSource", () => {
+    const href = scheduleAttributionHref("blue-mantis", "home-hero");
+    expect(eventSource(href.split("=")[1])).toBe("home-hero");
   });
 });

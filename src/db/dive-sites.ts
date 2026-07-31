@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNull } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, isNull, ne } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import type { CertificationLevel } from "@/lib/readiness";
 import type { AppDb } from "./client";
@@ -9,6 +9,8 @@ import {
   diveSites,
   globalDiveSites,
   globalDiveSiteVersions,
+  tripDives,
+  trips,
 } from "./schema";
 
 export type DiveSiteInput = {
@@ -238,6 +240,39 @@ export async function listGlobalDiveSiteTemplates(db: AppDb) {
       ),
     )
     .orderBy(asc(globalDiveSites.slug));
+  return rows;
+}
+
+export type UpcomingSiteTrip = {
+  tripId: string;
+  title: string;
+  startsAt: Date;
+};
+
+/**
+ * Upcoming departures that dive this site — the reverse lookup from a site to
+ * the trips that use it, joined through `trip_dives` (a trip can visit more
+ * than one site across its dives, so this is not the same as `trips.diveSiteId`).
+ */
+export async function listUpcomingTripsForSite(
+  db: AppDb,
+  shopId: string,
+  diveSiteId: string,
+  now: Date = nowDate(),
+): Promise<UpcomingSiteTrip[]> {
+  const rows = await db
+    .selectDistinct({ tripId: trips.id, title: trips.title, startsAt: trips.startsAt })
+    .from(tripDives)
+    .innerJoin(trips, eq(trips.id, tripDives.tripId))
+    .where(
+      and(
+        eq(tripDives.diveSiteId, diveSiteId),
+        eq(trips.shopId, shopId),
+        ne(trips.status, "cancelled"),
+        gte(trips.startsAt, now),
+      ),
+    )
+    .orderBy(asc(trips.startsAt));
   return rows;
 }
 

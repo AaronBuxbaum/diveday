@@ -14,9 +14,10 @@ import {
 } from "@/components/MarketingSections";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { DEMO_SHOP_SLUG } from "@/db/dev-credentials";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
-import { trialHref } from "@/lib/funnel";
+import { scheduleAttributionHref, trialHref } from "@/lib/funnel";
 import { earlyAccessPriceAmount, fullShopExport } from "@/lib/marketing";
 import { MIGRATION_GUIDES } from "@/lib/migration-guides";
 
@@ -99,6 +100,7 @@ export default async function Home() {
               <div className="mt-8">
                 <HomeCTA
                   enterDemoAction={enterDemoAction}
+                  scheduleHref={scheduleAttributionHref(DEMO_SHOP_SLUG, "home-hero")}
                   copy={{
                     gettingReady: t("nav.gettingReady"),
                     tryDemo: t("nav.tryDemo"),

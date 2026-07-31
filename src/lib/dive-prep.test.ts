@@ -20,6 +20,7 @@ function diver(
   overrides: Partial<PrepDiver> & Pick<PrepDiver, "bookingId" | "fullName">,
 ): PrepDiver {
   return {
+    personId: overrides.bookingId,
     fit: fullFit,
     wantsNitrox: false,
     hasVerifiedNitroxCard: false,
@@ -108,7 +109,7 @@ describe("buildDivePrepChecklist tanks", () => {
     });
     expect(checklist.tanks).toEqual({ total: 2, air: 2, nitrox: 0 });
     expect(checklist.nitroxBlockers).toEqual([
-      { bookingId: "b1", fullName: "Priya Sharma", reason: "no_verified_card" },
+      { bookingId: "b1", personId: "b1", fullName: "Priya Sharma", reason: "no_verified_card" },
     ]);
   });
 
@@ -215,7 +216,7 @@ describe("buildDivePrepChecklist rental lines", () => {
       ],
       plannedDives: 2,
     });
-    expect(checklist.diversWithoutFit).toEqual(["Priya Sharma"]);
+    expect(checklist.diversWithoutFit).toEqual([{ fullName: "Priya Sharma", personId: "b1" }]);
     expect(checklist.tanks.total).toBe(4);
     expect(lineFor(checklist, "bcd", "M")?.divers).toEqual(["Ana Ruiz"]);
   });
@@ -262,6 +263,7 @@ describe("needs-staff-fit fallback (H-06)", () => {
     // this there is nothing to bring a range around.
     expect(checklist.diversNeedingStaffFit).toEqual([
       {
+        personId: "b2",
         fullName: "Ben",
         note: "No L BCD",
         statedSizes: [
@@ -353,6 +355,7 @@ describe("needs-staff-fit fallback (H-06)", () => {
     });
     expect(checklist.diversNeedingStaffFit).toEqual([
       {
+        personId: "b1",
         fullName: "Ada",
         note: null,
         statedSizes: [
