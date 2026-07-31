@@ -4,20 +4,29 @@ import { signInAs } from "./helpers";
 
 signedInAsOwner();
 
-test("staff outside owner/manager can't reach the waiver editor", async ({ page }) => {
-  // Editing the waiver (and the medical jurisdiction it presents) is
-  // owner/manager work; a captain — signed in fresh, overriding the
-  // file-wide owner session — is bounced to Today with an explanation
-  // rather than teleported there silently (task 82, UX persona 11 "Kai").
-  await signInAs(page, DEV_STAFF_LOGINS.captain);
-  await page.goto("/shop/blue-mantis/waivers");
-  // Not a URL assertion: FlashParams strips `?notice=waivers_not_authorized`
-  // via history.replaceState shortly after mount — the rendered banner is
-  // the stable signal.
-  await expect(page).toHaveURL(/\/shop\/blue-mantis(\?.*)?$/);
-  await expect(
-    page.getByText("Editing the waiver is limited to owners and managers."),
-  ).toBeVisible();
+test.describe("signed out", () => {
+  // The file-wide owner session (signedInAsOwner() above) would otherwise
+  // bounce /sign-in straight to the shop before the captain can sign in
+  // (auth.config.ts's authorized() callback redirects an already-staff
+  // session away from /sign-in) — same pattern as course-paths.spec.ts and
+  // schedule-builder.spec.ts's captain tests.
+  test.use({ storageState: { cookies: [], origins: [] } });
+
+  test("staff outside owner/manager can't reach the waiver editor", async ({ page }) => {
+    // Editing the waiver (and the medical jurisdiction it presents) is
+    // owner/manager work; a captain — signed in fresh, overriding the
+    // file-wide owner session — is bounced to Today with an explanation
+    // rather than teleported there silently (task 82, UX persona 11 "Kai").
+    await signInAs(page, DEV_STAFF_LOGINS.captain);
+    await page.goto("/shop/blue-mantis/waivers");
+    // Not a URL assertion: FlashParams strips `?notice=waivers_not_authorized`
+    // via history.replaceState shortly after mount — the rendered banner is
+    // the stable signal.
+    await expect(page).toHaveURL(/\/shop\/blue-mantis(\?.*)?$/);
+    await expect(
+      page.getByText("Editing the waiver is limited to owners and managers."),
+    ).toBeVisible();
+  });
 });
 
 test("one waiver button sends a resumable link and a medical yes surfaces follow-up", async ({
