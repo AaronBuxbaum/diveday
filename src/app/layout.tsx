@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Noto_Sans_Symbols_2 } from "next/font/google";
 import "./globals.css";
+import { SkipLink } from "@/components/SkipLink";
+import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { publicAppUrl } from "@/lib/notifications";
 import { Observability } from "./observability-client";
@@ -58,13 +60,24 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const locale = await requestLocale();
+  const t = diverTranslator(locale);
   return (
     <html
       lang={locale}
       className={`${geistSans.variable} ${geistMono.variable} ${notoSymbols.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        {children}
+        <SkipLink href="#main-content" label={t("nav.skipToContent")} />
+        {/*
+         * Every page under `src/app` already renders its own top-level
+         * `flex flex-1 flex-col` wrapper (or a `<main>` with the same
+         * classes) as the direct child of `<body>` — this div reproduces
+         * that same flex box one level up so the skip link has a stable,
+         * focusable target without changing how any page's content sizes.
+         */}
+        <div id="main-content" tabIndex={-1} className="flex flex-1 flex-col outline-none">
+          {children}
+        </div>
         <Observability />
       </body>
     </html>

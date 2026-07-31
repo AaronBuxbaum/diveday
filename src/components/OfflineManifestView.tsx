@@ -7,6 +7,7 @@ import { ConnectivityStatus } from "@/components/ConnectivityStatus";
 import { MilestoneHaptics } from "@/components/MilestoneHaptics";
 import { MissingDiversGrid } from "@/components/MissingDiversGrid";
 import { OfflineShellVersionBanner } from "@/components/OfflineShellVersionBanner";
+import { SkipLink } from "@/components/SkipLink";
 import { SubSurfaceRipple } from "@/components/SubSurfaceRipple";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass } from "@/components/ui/form";
@@ -436,6 +437,7 @@ export function OfflineManifestView() {
   return (
     <main className="boat-mode mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6">
       <AmbientGlareDetector />
+<<<<<<< HEAD
       <OfflineShellVersionBanner copy={shellVersionCopy} />
       <a
         href="#offline-roll-call"
@@ -443,6 +445,9 @@ export function OfflineManifestView() {
       >
         {t("shared.offlineManifest.single.skipLink")}
       </a>
+=======
+      <SkipLink href="#offline-roll-call" label={t("shared.offlineManifest.single.skipLink")} />
+>>>>>>> worktree-agent-ac3d1cc373ddf724a
       <header className="border-b border-border pb-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
@@ -573,7 +578,8 @@ export function OfflineManifestView() {
         ) : null}
         <ul
           id="offline-roll-call"
-          className="mt-4 divide-y divide-border rounded-xl border border-border bg-surface"
+          tabIndex={-1}
+          className="mt-4 divide-y divide-border rounded-xl border border-border bg-surface outline-none"
         >
           {manifest.divers.map((diver, index) => {
             const state = latestOfflineRollCall(

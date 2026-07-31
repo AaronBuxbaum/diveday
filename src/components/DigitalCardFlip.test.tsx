@@ -66,11 +66,15 @@ describe("DigitalCardFlip", () => {
     expect(screen.getByText("Certified by staff")).toBeInTheDocument();
   });
 
-  it("toggles the flip status when the button is clicked", () => {
+  it("toggles the flip status when the flip control is clicked", () => {
     render(<DigitalCardFlip {...props} />);
 
+    // The flip control is its own small labeled button — not a wrapper around
+    // the whole card, so the card's own text (agency, level, name, status)
+    // stays in the accessibility tree instead of being replaced by the
+    // button's aria-label.
     const button = screen.getByRole("button", { name: /digital certification card/i });
-    const cardInner = button.firstElementChild;
+    const cardInner = screen.getByTestId("digital-card-inner");
     expect(cardInner).toHaveStyle({ transform: "rotateY(0deg)" });
 
     // Click to flip
@@ -80,6 +84,18 @@ describe("DigitalCardFlip", () => {
     // Click again to unflip
     fireEvent.click(button);
     expect(cardInner).toHaveStyle({ transform: "rotateY(0deg)" });
+  });
+
+  it("keeps the card's own text readable to assistive tech instead of folding it into the flip button's name", () => {
+    render(<DigitalCardFlip {...props} />);
+
+    const button = screen.getByRole("button", { name: /digital certification card/i });
+    // The card's front-face text must not be inside the labeled button — an
+    // `aria-label` on an ancestor would otherwise replace all of it.
+    expect(button).not.toHaveTextContent("PADI");
+    expect(button).not.toHaveTextContent("Maya Álvarez");
+    expect(screen.getByText("PADI")).toBeInTheDocument();
+    expect(screen.getByText("Maya Álvarez")).toBeInTheDocument();
   });
 
   it("does not claim verification for pending or expired cards", () => {

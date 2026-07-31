@@ -2,7 +2,12 @@ import Link from "next/link";
 import { buttonClass } from "@/components/ui/button";
 import type { Course } from "@/db/schema";
 import type { DiverTranslator } from "@/i18n/messages";
-import { type CourseFaq, type CourseScheduleDay, formatScheduleDayTime } from "@/lib/courses";
+import {
+  type CourseFaq,
+  type CourseScheduleDay,
+  formatScheduleDayTime,
+  resolveImageAlt,
+} from "@/lib/courses";
 import { formatShortDate, formatTime, formatTimeRangeTz } from "@/lib/format";
 import { capacityLabel, isFull } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
@@ -57,7 +62,10 @@ export function CourseHero({
       {course.heroImageUrl ? (
         <CourseImage
           src={course.heroImageUrl}
-          alt=""
+          alt={resolveImageAlt(
+            course.heroImageAlt,
+            t("course.photoAltFallback", { course: course.title, n: 1 }),
+          )}
           className="h-56 w-full object-cover sm:h-80"
         />
       ) : null}
@@ -357,10 +365,13 @@ export function CourseIncludes({
 
 export function CourseGallery({
   imageUrls,
+  imageAlts,
   title,
   t,
 }: {
   imageUrls: string[];
+  /** Parallel to `imageUrls`; a blank entry falls back to a generated caption. */
+  imageAlts: string[];
   title: string;
   t: DiverTranslator;
 }) {
@@ -369,11 +380,15 @@ export function CourseGallery({
     <section className="mt-12">
       <h2 className="sr-only">{t("course.galleryHeading", { course: title })}</h2>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        {imageUrls.map((url) => (
+        {imageUrls.map((url, index) => (
           <CourseImage
             key={url}
             src={url}
-            alt=""
+            // The hero photo claims "photo 1"; gallery photos continue from 2.
+            alt={resolveImageAlt(
+              imageAlts[index],
+              t("course.photoAltFallback", { course: title, n: index + 2 }),
+            )}
             className="h-40 w-full rounded-2xl border border-border object-cover sm:h-48"
           />
         ))}

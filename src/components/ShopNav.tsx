@@ -94,6 +94,7 @@ export function ShopNav({
             canManageReports={navGates.reports}
             copy={{
               search: t("shared.commandPalette.search"),
+              dialogAriaLabel: t("shared.commandPalette.dialogAriaLabel"),
               comboboxAriaLabel: t("shared.commandPalette.comboboxAriaLabel"),
               placeholder: t("shared.commandPalette.placeholder"),
               emptyShort: t("shared.commandPalette.emptyShort"),

@@ -444,6 +444,9 @@
       "galleryPhotosLabel": "Fotos de galería",
       "galleryPhotosHint": "(hasta ocho en total, {max} nuevas por guardado)",
       "removeLabel": "Eliminar",
+      "photoCaptionLabel": "Descripción",
+      "photoCaptionHint": "(opcional — la leen los lectores de pantalla)",
+      "photoCaptionPlaceholder": "¿Qué muestra la foto {n}?",
       "glanceLegend": "De un vistazo",
       "glanceDescription": "Las etiquetas en la parte superior de la página — cómo transcurre el curso. Quién puede inscribirse es el siguiente bloque.",
       "durationLabel": "Duración",
@@ -2073,6 +2076,7 @@
     }
   },
   "shared": {
+    "skipToContent": "Saltar al contenido principal",
     "imageInput": {
       "tooMany": "{count, plural, one {Elige hasta # foto por vez.} other {Elige hasta # fotos por vez.}}",
       "wrongTypeSuffix": ": usa una foto JPG, PNG, WebP o HEIC.",
@@ -2139,6 +2143,7 @@
     },
     "commandPalette": {
       "search": "Buscar",
+      "dialogAriaLabel": "Búsqueda rápida",
       "comboboxAriaLabel": "Buscar buceadores, salidas y páginas",
       "placeholder": "Busca buceadores, salidas, o ve directo a una página…",
       "emptyShort": "Escribe para buscar personas y salidas, o ve directo a una página.",

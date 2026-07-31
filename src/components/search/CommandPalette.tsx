@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { searchShopAction } from "@/app/actions/search";
+import { useFocusTrap } from "@/components/useFocusTrap";
 import type { SearchResults } from "@/db/search";
 
 type PaletteItem = { key: string; label: string; detail?: string; href: string };
@@ -13,6 +14,7 @@ const EMPTY: SearchResults = { divers: [], trips: [], diveSites: [], courses: []
 
 export type CommandPaletteCopy = {
   search: string;
+  dialogAriaLabel: string;
   comboboxAriaLabel: string;
   placeholder: string;
   emptyShort: string;
@@ -69,7 +71,10 @@ export function CommandPalette({
   const [results, setResults] = useState<SearchResults>(EMPTY);
   const [active, setActive] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
   const root = `/shop/${shopSlug}`;
+
+  useFocusTrap(open, dialogRef);
 
   // ⌘K / Ctrl-K from anywhere opens the palette.
   useEffect(() => {
@@ -224,6 +229,15 @@ export function CommandPalette({
 
   const flat = useMemo(() => groups.flatMap((group) => group.items), [groups]);
 
+  // "3 divers, 2 trips" — composed from each group's own (already-translated)
+  // heading and count rather than a new pluralized template, so this needs no
+  // copy beyond what the palette already has.
+  const resultsAnnouncement = useMemo(() => {
+    if (query.trim().length < 2) return copy.emptyShort;
+    if (flat.length === 0) return copy.emptyNoMatches;
+    return groups.map((group) => `${group.heading} (${group.items.length})`).join(", ");
+  }, [query, flat.length, groups, copy.emptyShort, copy.emptyNoMatches]);
+
   // Keep the active row in range as results change.
   useEffect(() => {
     setActive((current) => (flat.length === 0 ? 0 : Math.min(current, flat.length - 1)));
@@ -299,7 +313,20 @@ export function CommandPalette({
                 if (event.target === event.currentTarget) setOpen(false);
               }}
             >
-              <div className="w-full max-w-xl overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl">
+              <div
+                ref={dialogRef}
+                role="dialog"
+                aria-modal="true"
+                aria-label={copy.dialogAriaLabel}
+                tabIndex={-1}
+                className="w-full max-w-xl overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl outline-none"
+              >
+                {/* Counts, not the full result list — a screen reader user
+                    typing a query hears how many matches landed in each
+                    category without every result being read out loud. */}
+                <div aria-live="polite" className="sr-only">
+                  {resultsAnnouncement}
+                </div>
                 <input
                   ref={inputRef}
                   type="text"

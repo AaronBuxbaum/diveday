@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useFocusTrap } from "@/components/useFocusTrap";
 
 /**
  * Keyboard shortcuts beyond ⌘K, made discoverable. A "g then key" sequence jumps
@@ -50,7 +51,10 @@ export function KeyboardShortcuts({
   const [helpOpen, setHelpOpen] = useState(false);
   // Timestamp of a pending "g", so the next key completes the sequence.
   const pendingG = useRef<number | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
   const navShortcuts = copy.navShortcuts;
+
+  useFocusTrap(helpOpen, dialogRef);
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
@@ -119,10 +123,12 @@ export function KeyboardShortcuts({
               }}
             >
               <div
+                ref={dialogRef}
                 role="dialog"
                 aria-modal="true"
                 aria-label={copy.dialogAriaLabel}
-                className="w-full max-w-md overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl"
+                tabIndex={-1}
+                className="w-full max-w-md overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl outline-none"
               >
                 <div className="flex items-center justify-between border-b border-border px-5 py-4">
                   <h2 className="text-base font-semibold">{copy.heading}</h2>

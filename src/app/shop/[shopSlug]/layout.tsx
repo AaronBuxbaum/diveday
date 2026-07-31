@@ -4,6 +4,7 @@ import { DemoBanner } from "@/components/DemoBanner";
 import { OfflineManifestAutoSave } from "@/components/OfflineManifestAutoSave";
 import { PreserveFormScroll } from "@/components/PreserveFormScroll";
 import { ShopNav } from "@/components/ShopNav";
+import { SkipLink } from "@/components/SkipLink";
 import { countBlockedDivers } from "@/db/blockers";
 import { getDb } from "@/db/client";
 import { DEMO_SHOP_SLUG } from "@/db/dev-credentials";
@@ -13,6 +14,7 @@ import { getShopBySlug } from "@/db/shops";
 import { todayNextDepartureTripId } from "@/db/today";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { auth } from "@/lib/auth";
 import { EMBED_REQUEST_HEADER } from "@/lib/auth.config";
 import {
@@ -98,6 +100,7 @@ export default async function ShopLayout({
   }
 
   const demoT = showBanner ? diverTranslator(await requestLocale(shop?.defaultLocale)) : undefined;
+  const staffT = staffTranslator(locale);
 
   const showNav = !isEmbed && Boolean(session?.user) && Boolean(shop);
   // Small "pending work" counts for the Reviews/Blockers nav badges (task 83,
@@ -114,6 +117,12 @@ export default async function ShopLayout({
 
   return (
     <>
+      {/* Every /shop page fronts ShopNav's 10-15 header tab stops (persona 14,
+          ux-personas-20260730.md) — this jumps a keyboard user past it and the
+          demo banner straight to the page's own content. Rendered even on the
+          public schedule/course pages where ShopNav is absent for staff, so
+          the pattern is unconditional like the manifest's own skip link. */}
+      <SkipLink href="#shop-main-content" label={staffT("shared.skipToContent")} />
       {showBanner && demoT ? (
         <DemoBanner
           currentRole={currentRole}
@@ -181,7 +190,9 @@ export default async function ShopLayout({
         <OfflineManifestAutoSave />
       ) : null}
       <PreserveFormScroll />
-      <div className="flex-1">{children}</div>
+      <div id="shop-main-content" tabIndex={-1} className="flex-1 outline-none">
+        {children}
+      </div>
     </>
   );
 }
