@@ -24,6 +24,20 @@ export async function signOut(page: Page) {
 }
 
 /**
+ * Check the minimum-age attestation box, present and `required` on a course
+ * session's booking form whenever the course has a `minimumAge` (task 23) —
+ * absent for a plain fun-dive trip. A no-op when the box isn't there, so
+ * every course-session booking site can call this unconditionally right
+ * before its submit click.
+ */
+export async function acceptAgeAttestation(page: Page) {
+  const checkbox = page.getByRole("checkbox", { name: /confirm every diver on this booking/ });
+  if (await checkbox.isVisible().catch(() => false)) {
+    await checkbox.check();
+  }
+}
+
+/**
  * "Now" as the server sees it. The e2e fleet freezes its clock at
  * E2E_FROZEN_CLOCK (playwright.config.ts → src/lib/clock.ts), so any date a
  * test computes for a form input, or any year it asserts against a

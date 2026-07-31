@@ -21,7 +21,16 @@ test.describe("staff", () => {
 
     // A visitor books it from the public schedule — no account.
     await page.goto("/shop/blue-mantis/schedule", { waitUntil: "domcontentloaded" });
-    await page.locator("li").filter({ hasText: title }).getByRole("link").click();
+    // Scoped to the trip list itself: a day with more than one departure
+    // also renders a same-titled <li> in the month calendar
+    // (src/components/ScheduleCalendar.tsx), and an unscoped locator can
+    // resolve to both.
+    await page
+      .getByRole("list", { name: "Upcoming trips" })
+      .locator("li")
+      .filter({ hasText: title })
+      .getByRole("link")
+      .click();
     await expect(page.getByRole("heading", { name: title })).toBeVisible();
     await expect(page.getByText("6 spots left")).toBeVisible();
     await expect(page.getByText("$120.00")).toBeVisible();
@@ -157,7 +166,12 @@ test.describe("staff", () => {
 
     // Cancel: gone from public schedule; reinstate: back.
     await page.getByRole("button", { name: "Cancel trip" }).click();
-    await expect(page.getByText("Cancelled", { exact: true })).toBeVisible();
+    // The danger-tone Badge prepends a decorative aria-hidden glyph
+    // (Badge.tsx toneGlyph), so the element's own text is "✕ Cancelled" —
+    // matching the bare word would also hit the "Trip cancelled — it's off
+    // the public schedule." alert on the same page (getByText is
+    // case-insensitive substring by default).
+    await expect(page.getByText("✕ Cancelled")).toBeVisible();
     await page.goto("/shop/blue-mantis/schedule");
     await expect(page.locator("li").filter({ hasText: renamed })).toHaveCount(0);
 

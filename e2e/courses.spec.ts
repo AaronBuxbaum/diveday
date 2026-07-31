@@ -1,5 +1,5 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { daysFromNow, e2eNow } from "./helpers";
+import { acceptAgeAttestation, daysFromNow, e2eNow } from "./helpers";
 
 test("an uncertified visitor can enroll in an instructor-staffed Discover Scuba session and save rental preferences", async ({
   page,
@@ -25,6 +25,7 @@ test("an uncertified visitor can enroll in an instructor-staffed Discover Scuba 
   await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
   await page.getByLabel("Name").fill("Nora Quinn");
   await page.getByLabel("Email").fill("nora@example.com");
+  await acceptAgeAttestation(page);
   await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
   await expect(page.getByRole("heading", { name: /You’re on the boat, Nora/ })).toBeVisible();
 
@@ -259,6 +260,7 @@ test.describe("staff", () => {
     const diver = `Ravi ${e2eNow().getTime()}`;
     await page.getByLabel("Name").fill(diver);
     await page.getByLabel("Email").fill(`ravi-${e2eNow().getTime()}@example.com`);
+    await acceptAgeAttestation(page);
     await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
     await expect(page.getByRole("heading", { name: /You’re on the boat, Ravi/ })).toBeVisible();
   });
@@ -310,6 +312,7 @@ test.describe("staff", () => {
         await nameField.fill(`Ratio Diver ${label}`);
         await emailField.fill(`ratio-${stamp}-${label}@example.com`);
       }
+      await acceptAgeAttestation(page);
       await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
       await expect(page.getByRole("heading", { name: /You’re on the boat/ })).toBeVisible();
     };
@@ -325,6 +328,7 @@ test.describe("staff", () => {
     await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
     await page.getByLabel("Name", { exact: true }).fill(`Ratio Diver ${stamp}-9`);
     await page.getByLabel("Email", { exact: true }).fill(`ratio-${stamp}-9@example.com`);
+    await acceptAgeAttestation(page);
     await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
     await expect(
       page.getByText("This session is at its instructor-to-student ratio limit"),

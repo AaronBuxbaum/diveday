@@ -121,15 +121,21 @@ export function Field({
   const controlId = htmlFor ?? (isControl ? (children.props.id ?? autoId) : undefined);
   const isRequired = isControl && children.props.required === true;
 
+  // The asterisk is aria-hidden and stays *outside* the `<label>` itself
+  // (not just inside an aria-hidden span within it): a `<label>`'s own text
+  // content is what test tooling matches a field by name against, and that
+  // matching doesn't uniformly respect aria-hidden the way real accessible-
+  // name computation does — nesting it inside would make an exact-text
+  // match against "Name" miss a required field labelled "Name *".
+  const requiredMarker = isRequired ? (
+    <span aria-hidden="true" className="text-danger">
+      {" "}
+      *
+    </span>
+  ) : null;
   const captionContent = (
     <>
       {label}
-      {isRequired ? (
-        <span aria-hidden="true" className="text-danger">
-          {" "}
-          *
-        </span>
-      ) : null}
       {hint ? <span className="font-normal text-muted"> {hint}</span> : null}
     </>
   );
@@ -164,9 +170,10 @@ export function Field({
 
   return (
     <div className={`row-span-2 grid grid-rows-subgrid gap-y-1 text-sm font-medium ${className}`}>
-      <label htmlFor={controlId} className="self-end">
-        {captionContent}
-      </label>
+      <span className="self-end">
+        <label htmlFor={controlId}>{captionContent}</label>
+        {requiredMarker}
+      </span>
       <span className="grid gap-1">
         {control}
         {descriptionSpan}

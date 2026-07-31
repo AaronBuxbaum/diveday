@@ -17,7 +17,10 @@ test("counter check-in searches by diver, confirms live readiness, and keeps blo
 
   const card = page.locator("article").filter({ hasText: "Priya Sharma" });
   await expect(card).toHaveCount(1);
-  await expect(card.getByText("Needs attention", { exact: true })).toBeVisible();
+  // The warning-tone Badge prepends a decorative aria-hidden glyph
+  // (Badge.tsx toneGlyph), so the element's own text is "▲ Needs
+  // attention", not "Needs attention" alone.
+  await expect(card.getByText("▲ Needs attention")).toBeVisible();
   await expect(card.getByText("Waiver has not been sent.")).toBeVisible();
   await expect(card.getByRole("button", { name: "Check in Priya Sharma" })).toHaveCount(0);
 

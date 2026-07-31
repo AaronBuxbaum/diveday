@@ -63,6 +63,10 @@ test("a diver's record shows their still-scheduled trips, linked straight to the
 test("staff record and correct a diver's emergency contact from the roster and the diver record, and it prints on the manifest", async ({
   page,
 }) => {
+  // Three real navigations (create, schedule, guests) plus a two-round
+  // contact save and a diver-record round trip — past the suite's 15s
+  // default, which is sized for a single flow, not this many.
+  test.setTimeout(30_000);
   const stamp = e2eNow().getTime();
   const title = `Contact Capture Run ${stamp}`;
   const diverName = `Contact Diver ${stamp}`;

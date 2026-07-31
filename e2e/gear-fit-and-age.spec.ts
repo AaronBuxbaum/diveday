@@ -1,6 +1,6 @@
 import { DEMO_SHOP_SLUG, DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { daysFromNow, e2eNow, signInAs, signOut } from "./helpers";
+import { acceptAgeAttestation, daysFromNow, e2eNow, signInAs, signOut } from "./helpers";
 
 const SHOP = DEMO_SHOP_SLUG;
 
@@ -237,6 +237,7 @@ test.describe("minimum age (H-08, fail open)", () => {
     await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
     await page.getByLabel("Name").fill(diverName);
     await page.getByLabel("Email").fill(`late-bloomer-${stamp}@example.com`);
+    await acceptAgeAttestation(page);
     await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
     // The confirmation heading greets by first name only ("...boat, Late! 🤿").
     await expect(

@@ -40,7 +40,11 @@ test("staff adds a walk-in diver, then wait-lists one once the trip is full", as
 
   await expect(page.getByRole("status")).toContainText("Diver added to the trip.");
   await expect(page.getByRole("link", { name: "Walk-in Wanda" })).toBeVisible();
-  await expect(page.getByText("Full", { exact: true })).toBeVisible();
+  // The success-tone Badge prepends a decorative aria-hidden glyph
+  // (Badge.tsx toneGlyph), so the element's own text is "✓ Full", not
+  // "Full" alone — and a bare substring match risks colliding with an
+  // unrelated "full" elsewhere on the page.
+  await expect(page.getByText("✓ Full")).toBeVisible();
 
   await page.getByText("Private staff notes (0)").click();
   await page.getByLabel("Add a note only staff can see").fill("Needs a small wetsuit staged.");
