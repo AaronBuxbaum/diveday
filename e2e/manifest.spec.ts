@@ -84,7 +84,14 @@ test("live manifest retains blocked divers and records an explicit not-boarded r
     .poll(async () => Math.abs((await page.evaluate(() => window.scrollY)) - rollCallScroll))
     .toBeLessThan(100);
   await expect(page).not.toHaveURL(/#roll-call-/);
-  await expect(page.getByText("Not boarded", { exact: true }).first()).toBeVisible();
+  // The mobile-only summary tiles (collapsed behind "More stats", sm:hidden)
+  // and the desktop-only ones (hidden below sm) both carry this label — at
+  // the default desktop test viewport the mobile copy is DOM-first but
+  // never visible, so an unfiltered .first() picks it and the assertion
+  // below would report "hidden" forever. Filter to the one actually shown.
+  await expect(
+    page.getByText("Not boarded", { exact: true }).and(page.locator(":visible")).first(),
+  ).toBeVisible();
   await expect(page.getByText("Guest asked to sit out before departure.")).toBeVisible();
   await page.getByRole("button", { name: "Mark not boarded" }).first().click();
   await expect(page.getByRole("button", { name: "Not boarded ✓" })).toHaveCount(2);

@@ -76,7 +76,7 @@ test.describe("staff", () => {
 
     // The whole point: being a minor is a fact the crew is told, never a gate.
     // The row that carries the badge must not have gained a blocker for it.
-    const minorRow = page.locator("li", { has: page.getByText("Minor", { exact: true }) }).last();
+    const minorRow = page.locator("li", { has: page.getByText("▲ Minor") }).last();
     await expect(minorRow).not.toContainText(/under 18|too young|not permitted/i);
   });
 

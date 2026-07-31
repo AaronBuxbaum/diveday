@@ -29,10 +29,16 @@ test("diver opts in, Today nudges staff, and the trip page reflects the send att
 
   await signInAsOwner(page);
   await page.goto("/shop/blue-mantis");
-  await expect(page.getByText("3 seats open with no last-minute deal sent yet.")).toBeVisible();
+  const nudge = page
+    .locator("li")
+    .filter({ hasText: "3 seats open with no last-minute deal sent yet." });
+  await expect(nudge).toBeVisible();
 
-  await page.getByRole("link", { name: "Open guests" }).first().click();
-  await expect(page).toHaveURL(/\/trips\/[0-9a-f-]+\/guests$/);
+  // "Open trip" (not the departure card's generic "Open guests") links to
+  // this trip's own #last-minute-deal anchor, which is what auto-opens the
+  // "Promote this trip" disclosure the deal panel lives behind (task 156).
+  await nudge.getByRole("link", { name: "Open trip" }).click();
+  await expect(page).toHaveURL(/\/trips\/[0-9a-f-]+\/guests#last-minute-deal$/);
   await expect(page.getByRole("heading", { name: "Last-minute deal" })).toBeVisible();
   const sendButton = page.getByRole("button", { name: /Send to \d+ diver/ });
   await expect(sendButton).toBeVisible();
@@ -47,9 +53,11 @@ test("diver opts in, Today nudges staff, and the trip page reflects the send att
   ).toBeVisible();
 
   // The attempt is durable evidence even though it failed — a staffer sees
-  // it, not silence.
+  // it, not silence. Not exact: the badge's text is "Failed at Stripe"
+  // (trips.lastMinute.status.failed), and its danger tone prepends a
+  // decorative aria-hidden glyph on top of that (Badge.tsx toneGlyph).
   await expect(page.getByText(/25% off/)).toBeVisible();
-  await expect(page.getByText("failed", { exact: true })).toBeVisible();
+  await expect(page.getByText(/failed/i)).toBeVisible();
 });
 
 test("a failed send attempt does not silence the Today nudge — nothing actually went out", async ({
@@ -66,8 +74,14 @@ test("a failed send attempt does not silence the Today nudge — nothing actuall
 
   await signInAsOwner(page);
   await page.goto("/shop/blue-mantis");
-  await expect(page.getByText("3 seats open with no last-minute deal sent yet.")).toBeVisible();
-  await page.getByRole("link", { name: "Open guests" }).first().click();
+  const nudge = page
+    .locator("li")
+    .filter({ hasText: "3 seats open with no last-minute deal sent yet." });
+  await expect(nudge).toBeVisible();
+  // "Open trip" (not the departure card's generic "Open guests") links to
+  // this trip's own #last-minute-deal anchor, which is what auto-opens the
+  // "Promote this trip" disclosure the deal panel lives behind (task 156).
+  await nudge.getByRole("link", { name: "Open trip" }).click();
   // Stripe is seeded connected but has no real key, so this send fails at the
   // Stripe step — durable proof an *attempt* happened, but no code actually
   // went out, so the nudge (which dedupes on a genuinely `sent` row) must

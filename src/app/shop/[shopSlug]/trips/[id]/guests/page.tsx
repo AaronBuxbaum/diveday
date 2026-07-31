@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { Badge } from "@/components/ui/badge";
@@ -294,8 +295,14 @@ export default async function TripGuestsPage({
           console. Collapsed by default; the trip's own recipient count still
           shows on the closed summary, and Today's "fill seats" row still
           lands here and auto-opens it (its href is this section's own
-          #last-minute-deal anchor, a native <details> behaviour). */}
-      <details className="group mt-10 scroll-mt-6 rounded-lg border border-border bg-surface">
+          #last-minute-deal anchor). A hard navigation opens a closed
+          ancestor <details> for a same-page anchor on its own, but a
+          Next.js <Link> transition doesn't run that native "reveal"
+          algorithm — AutoOpenDetails covers both. */}
+      <AutoOpenDetails
+        openOnHash="last-minute-deal"
+        className="group mt-10 scroll-mt-6 rounded-lg border border-border bg-surface"
+      >
         <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 p-4 text-sm font-medium [&::-webkit-details-marker]:hidden">
           <span>{t("trips.guests.promoteHeading")}</span>
           <span className="flex items-center gap-2 text-muted">
@@ -327,7 +334,7 @@ export default async function TripGuestsPage({
             sendAction={sendLastMinuteDealAction.bind(null, shopSlug, tripId)}
           />
         </div>
-      </details>
+      </AutoOpenDetails>
     </>
   );
 }
