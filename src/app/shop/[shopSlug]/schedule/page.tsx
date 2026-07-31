@@ -110,15 +110,27 @@ export default async function TripsPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{ month?: string; after?: string; embed?: string; builder?: string }>;
+  searchParams: Promise<{
+    month?: string;
+    after?: string;
+    embed?: string;
+    builder?: string;
+    preview?: string;
+  }>;
 }) {
   await connection(); // schedule is live data — render per request, not at build
   const { shopSlug } = await params;
-  const { month, after, embed, builder } = await searchParams;
+  const { month, after, embed, builder, preview } = await searchParams;
   // Embed mode is the compact, chrome-light surface a shop pastes into its own
   // website (docs ADR 20260726-schedule-embed) — never for staff, who always
   // arrive signed in and never via a third-party iframe.
   const isEmbed = embed === "1";
+  // A signed-in staff member deliberately asking to see what a diver sees —
+  // e.g. the "View public page" link on /reviews — gets the full diver-facing
+  // page, reviews included, rather than the staff board embed mode also
+  // suppresses reviews on (see below). Never reachable by accident: it takes
+  // the exact query param, not a default.
+  const isPreview = preview === "1";
   const db = await getDb();
   const shop = await getShopBySlug(db, shopSlug);
   if (!shop) {
@@ -128,7 +140,8 @@ export default async function TripsPage({
   // Embed mode always renders the diver-facing surface, even for a signed-in
   // staff member previewing the page — an iframe on the shop's own website
   // must never expose the staff board.
-  const staffView = !isEmbed && session?.user?.shopId === shop.id && isStaff(session.user.roles);
+  const staffView =
+    !isEmbed && !isPreview && session?.user?.shopId === shop.id && isStaff(session.user.roles);
 
   // The board is served in pages: the list is one keyset page, the stat tiles
   // and calendar come from bounded queries — nothing loads every trip at once,

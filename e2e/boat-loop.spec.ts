@@ -36,3 +36,28 @@ test("the trip sub-nav reaches all four surfaces", async ({ page }) => {
   await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+$/);
   await expect(page.getByRole("navigation", { name: "Trip" })).toBeVisible();
 });
+
+test("staff can view or copy a trip's public booking page from its overview", async ({
+  page,
+  context,
+}) => {
+  await context.grantPermissions(["clipboard-write", "clipboard-read"]);
+  await page.goto("/shop/blue-mantis");
+  await page.getByRole("link", { name: "Boarding" }).first().click();
+  await page
+    .getByRole("navigation", { name: "Trip" })
+    .getByRole("link", { name: "Overview" })
+    .click();
+
+  const [publicPage] = await Promise.all([
+    context.waitForEvent("page"),
+    page.getByRole("link", { name: "View booking page" }).click(),
+  ]);
+  await expect(publicPage).toHaveURL(/\/shop\/blue-mantis\/schedule\/[a-f0-9-]+$/);
+  await publicPage.close();
+
+  await page.getByRole("button", { name: "Copy link" }).click();
+  await expect(page.getByRole("button", { name: "Copied!" })).toBeVisible();
+  const clipboardText = await page.evaluate(() => navigator.clipboard.readText());
+  expect(clipboardText).toMatch(/\/shop\/blue-mantis\/schedule\/[a-f0-9-]+$/);
+});

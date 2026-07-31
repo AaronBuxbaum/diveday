@@ -64,7 +64,9 @@ export default async function ReviewsPage({
         description={t("reviews.description")}
         actions={
           <Link
-            href={`/shop/${shopSlug}/schedule`}
+            href={`/shop/${shopSlug}/schedule?preview=1`}
+            target="_blank"
+            rel="noreferrer"
             className={buttonClass({ variant: "secondary", className: "text-foreground" })}
           >
             {t("reviews.viewPublicPage")}

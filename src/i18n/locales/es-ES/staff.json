@@ -1050,6 +1050,9 @@
     },
     "detail": {
       "eyebrow": "Salidas",
+      "viewBookingPage": "Ver página de reserva",
+      "copyBookingLink": "Copiar enlace",
+      "linkCopied": "¡Copiado!",
       "cancelledBadge": "Cancelada",
       "meetingDaysSummary": "{count} días de encuentro · mismos instructores cada día",
       "dayLabel": "Día {number}: {date} · {timeRange}",

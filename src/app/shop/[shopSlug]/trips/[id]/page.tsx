@@ -28,6 +28,7 @@ import { requireStaffSession } from "@/lib/session";
 import { capacityLabel, isFull } from "@/lib/trips";
 import { utcToWallTime } from "@/lib/zoned";
 import { ConditionsSection } from "./_components/ConditionsSection";
+import { CopyLinkButton } from "./_components/CopyLinkButton";
 import { CrewSection } from "./_components/CrewSection";
 import { DetailsSection } from "./_components/DetailsSection";
 import { RecapNoteSection } from "./_components/RecapNoteSection";
@@ -133,6 +134,23 @@ export default async function ManageTripPage({
       <ShopPageHeader
         eyebrow={t("trips.detail.eyebrow")}
         title={trip.title}
+        actions={
+          <>
+            <Link
+              href={`/shop/${shopSlug}/schedule/${tripId}`}
+              target="_blank"
+              rel="noreferrer"
+              className={buttonClass({ variant: "secondary", size: "sm" })}
+            >
+              {t("trips.detail.viewBookingPage")}
+            </Link>
+            <CopyLinkButton
+              path={`/shop/${shopSlug}/schedule/${tripId}`}
+              label={t("trips.detail.copyBookingLink")}
+              copiedLabel={t("trips.detail.linkCopied")}
+            />
+          </>
+        }
         meta={
           <div className="flex flex-col gap-2">
             <div className="flex flex-wrap items-center gap-3">

@@ -1050,6 +1050,9 @@
     },
     "detail": {
       "eyebrow": "Trips",
+      "viewBookingPage": "View booking page",
+      "copyBookingLink": "Copy link",
+      "linkCopied": "Copied!",
       "cancelledBadge": "Cancelled",
       "meetingDaysSummary": "{count} meeting days · same instructors each day",
       "dayLabel": "Day {number}: {date} · {timeRange}",
