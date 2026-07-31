@@ -142,7 +142,14 @@ test.describe("staff", () => {
     // Edit the title from the manage page (opened from the schedule). Staff are
     // routed to the editable trip view, never the public booking form.
     await page.goto("/shop/blue-mantis/schedule");
-    await page.locator("li").filter({ hasText: title }).getByRole("link").click();
+    await page
+      .locator("li")
+      .filter({ hasText: title })
+      // Exact match: an unpriced trip's card also carries a "Set a price
+      // for {title}, ..." link whose accessible name contains the trip
+      // title as a substring.
+      .getByRole("link", { name: title, exact: true })
+      .click();
     await expect(page.getByRole("button", { name: "Book my spot" })).toHaveCount(0);
     await page.getByLabel("Title").fill(renamed);
     await page.getByRole("button", { name: "Save changes" }).click();

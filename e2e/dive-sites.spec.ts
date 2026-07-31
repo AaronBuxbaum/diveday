@@ -60,7 +60,16 @@ test.describe("staff", () => {
     // out, then sign back in to finish the staff-side edits below.
     await page.context().clearCookies();
     await page.goto("/shop/blue-mantis/schedule");
-    await page.locator("li").filter({ hasText: tripTitle }).getByRole("link").click();
+    // Scoped to the trip list itself: a day with more than one departure
+    // also renders a same-titled <li> in the month calendar
+    // (src/components/ScheduleCalendar.tsx), and an unscoped locator can
+    // resolve to both.
+    await page
+      .getByRole("list", { name: "Upcoming trips" })
+      .locator("li")
+      .filter({ hasText: tripTitle })
+      .getByRole("link")
+      .click();
     await expect(page.getByRole("heading", { name: siteName })).toBeVisible();
     // Marine life folds behind the per-dive "look for" tap (P2 content fold).
     await page.getByText("What to look for down there").first().click();
