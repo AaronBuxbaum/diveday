@@ -95,14 +95,17 @@ describe("counter check-in", () => {
     ).resolves.toEqual({ ok: false, reason: "staff_not_found" });
   });
 
-  it("refuses to check in a booking that is not ready", async () => {
+  it("refuses to check in a booking that is not ready, carrying the trip id for the guest-row link", async () => {
     const { db, shop, staff, booking } = await context();
     const outcome = await checkInBooking(db, {
       shopId: shop.id,
       bookingId: booking.id,
       recordedByPersonId: staff.id,
     });
-    expect(outcome).toMatchObject({ ok: false, reason: "not_ready" });
+    // The staff `not_ready` notice links straight to the diver's guest row
+    // (checkIn.notice.notReady, task 70) — that link needs the trip id, not
+    // just the refusal reason.
+    expect(outcome).toMatchObject({ ok: false, reason: "not_ready", tripId: booking.tripId });
   });
 
   it("queries readiness for multiple trips at once using listTripsReadiness", async () => {
