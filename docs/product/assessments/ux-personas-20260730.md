@@ -87,6 +87,39 @@ loses the lead entirely.
    `paths/[pathSlug]/page.tsx` are staff-gated; the data is guidance, not a gate (see the route
    map note in AGENTS.md). Allowlist them like task 2 (same security-review requirement), and add
    a "Not sure where to start?" link from the public course index. Verify signed-out rendering.
+
+    **Security-reviewer note (tasks 2–3).** The shop must resolve from the URL slug
+    (`getShopBySlug`), never the session, following the `staffView = session?.user?.shopId ===
+    shop.id && isStaff(...)` pattern already in `schedule/page.tsx` and `courses/[slug]/page.tsx`
+    — and 404 on a missing shop rather than returning null. The public branch must fetch
+    `listActiveCourses`, never the staff `listCourses`, so hidden/draft courses are never fetched
+    for an anonymous request, not merely hidden in the render; apply the same `isActive`
+    discipline to `courses/paths/page.tsx` (currently unfiltered `listCoursePaths`) and
+    `paths/[pathSlug]/page.tsx` (`getCoursePathBySlug` doesn't filter `isActive` at all, and
+    today's page body is entirely the staff editor — a new diver-facing render is needed, not a
+    condition on the existing one). Filter path steps referencing hidden courses the same way
+    `courses/[slug]/page.tsx`'s `CoursePathTrail` already does (`.filter(step =>
+    step.course.isActive)`), or a hidden course's title leaks through a path listing. Fix, in the
+    same change, that `generateMetadata` on the already-public course page falls back to the
+    internal `description` field (meant for staff pickers, per the schema comment) when
+    `summary` is empty — a pre-existing leak into public `<meta>` tags. Gate all edit/
+    visibility-toggle controls behind `staffView` by not rendering them, not by disabling them
+    (the mutations already re-check `requireStaffSession` server-side — defense in depth, not the
+    primary control). Critically, do **not** copy `PUBLIC_SCHEDULE`'s open-ended `(\/.*)?` regex
+    tail — `/courses` shares its segment tree with the staff editor (`/courses/[slug]/edit`), so
+    any new allowlist entry must stay narrow and `$`-anchored like `COURSE_PAGE`, or it silently
+    exposes the editor to anonymous GETs at the proxy layer. Don't add these routes to
+    `isEmbeddableShopRoute` — that exception is scoped to the booking widget by its own ADR.
+    Before merge: verify unauthenticated requests to the new routes *and* to
+    `/courses/[slug]/edit`/`/courses/new` (still gated); seed an inactive course and a
+    hidden-course path step and confirm neither's title/slug/description appears in the anonymous
+    response body; cross-tenant check that shop A's public `/courses` never returns shop B rows
+    and that a shop-B staff session viewing shop A's page gets `staffView === false`; POST
+    directly to `visibilityAction`/`setPathVisibilityAction`/`createPathAction`/`savePathAction`/
+    `deletePathAction` with no session and with a wrong-shop session; extend
+    `src/lib/auth.config.test.ts` with explicit `false` cases for the editor/new routes alongside
+    the new `true` cases; and run `pnpm check:copy`/`check:domain-strings` plus `pnpm visual` for
+    the new public surfaces.
 4. **[S] Stop lying about prerequisite refusals.** In
    `src/app/shop/[shopSlug]/schedule/[id]/actions.ts`, `course_prerequisite` maps to the
    `booking.errors.unavailable` message ("This trip isn't taking bookings anymore."). Keep the
@@ -104,6 +137,19 @@ loses the lead entirely.
    outing), "BCD," "Regulator," "nitrox" on public surfaces (`schedule/page.tsx`,
    `RentalFitForm.tsx`, `DiveBriefingsSection.tsx`). Coordinate wording with the
    `dive-domain-expert` agent; all strings via message bundles.
+
+    **Dive-domain-expert review.** Safe plain-language definitions — *two-tank trip*: "A boat
+    trip with two separate dives, back to back, with a rest break (a surface interval) in
+    between — not two tanks worn at once" (keep the clarifying clause; newcomers sometimes read
+    "two-tank" as double cylinders). *BCD*: "The inflatable vest you wear that holds your tank
+    and lets you control whether you float or sink." *Regulator*: "The mouthpiece and hose that
+    let you breathe normal air from your tank underwater." *Nitrox*: do **not** land on "just
+    extra oxygen" — that undersells both the required certification (an uncertified nitrox
+    request gets flagged, not silently filled) and the fact that nitrox extends
+    no-decompression time at moderate depths but *restricts* maximum depth versus air
+    (oxygen-toxicity risk), so it isn't unconditionally "more" or "safer." Use: "A breathing gas
+    with extra oxygen that lets specially trained divers spend a bit more time underwater on
+    some dives — you don't need to know more than that as a beginner."
 7. **[M] Capture the inquiry lead server-side.** `CourseInquiry.tsx` builds a `mailto:` and never
    collects the diver's address. Add optional email/phone fields and a server action that records
    the inquiry (a small `course_inquiries` table — see the `schema-change` skill) and notifies the
@@ -212,6 +258,29 @@ and discover it at the dock.
     render the course's `minimumAge` on the trip page for course sessions. Needs
     `dive-domain-expert` review per AGENTS.md (cert/admission gating). Begin with a failing
     regression test for the public-actor gap.
+
+    **Dive-domain-expert review.** This needs reframing before implementation, not just building
+    as written — `course_min_age` is deliberately unenforced for public actors today
+    (`docs/product/human-decisions.md` H-08 option B, cross-referenced by H-22
+    `20260725-checklist-age-disclosure`): a hard public-facing age refusal can be used to probe
+    whether a specific address/email belongs to a minor, which is exactly what H-22 closed off.
+    An **attestation checkbox** ("I confirm every diver on this booking meets the minimum age of
+    {n}") is the safer mechanism — a self-declared checkbox can't be used to fingerprint an
+    already-known person the way a birthdate-driven refusal can — but on its own it's not
+    enforcement: if it doesn't write to `people.date_of_birth`, the existing `under_minimum_age`
+    readiness blocker still never fires and dock-day discovery isn't actually fixed. If the
+    implementation *does* start persisting a submitted birth year, that interacts with
+    `findOrCreatePerson`'s email-match reuse (H-13) and can reopen the H-22 probing vector —
+    route that path through `security-reviewer`, not only `dive-domain-expert`. Adding any hard
+    block for public actors is a policy reversal of H-08 and needs its own human-decision entry,
+    not just an engineering change. Agency nuances to encode correctly: PADI Discover Scuba's
+    floor is age 10, Bubblemaker (pool-only) runs younger (~8–9), and Junior Open Water Diver
+    spans ages 10–14 with restrictions that lift automatically at 15 without a new course —
+    verify each course template's `minimumAge` against its specific agency/course, not a
+    shop-wide guess. Attestation copy must address "every diver in this party," not "you," since
+    a parent is often attesting about a child; anchor the age check to the trip/course date
+    (already correct via `calendarDateInTimezone`); and define an anchor date for multi-session
+    courses where a birthday could fall between sessions.
 24. **[S] Add a big-group escape hatch.** When `maxPartySize` caps the select, render a translated
     line "Bringing more than {n}? Contact the shop — {contact link}" under the party-size field.
 25. **[S] Attribute party booking failures to the right member.** `createBookingParty` returns one
@@ -312,6 +381,18 @@ built in English in the domain layer (`src/db/checkouts.ts`, `src/lib/courses.ts
     locales: "This legal and medical text is provided in English — ask the shop if anything is
     unclear." Keeps trust without touching the frozen wording. Coordinate with
     `dive-domain-expert`.
+
+    **Dive-domain-expert review.** The proposed wording is a liability problem, not just a
+    nicety gap — "ask the shop if anything is unclear" implies the shop is offering translation
+    or explanation of a legal release and a medical questionnaire whose answers gate whether
+    someone dives, and most shops aren't staffed or trained to give that kind of ad hoc
+    translation, especially where a mistranslated "no" is exactly the failure mode this system
+    exists to prevent. Corrected copy should not promise shop-side translation and should push
+    the diver toward getting the content actually understood before signing: "This waiver and
+    medical form are only available in English right now. If you're not comfortable reading
+    English legal or medical text, please bring someone who can help you read it carefully, or
+    ask the shop before your trip — don't sign anything you don't understand." It must never
+    read as "the shop will explain this for you."
 39. **[S] Use `Intl.ListFormat` on the recap page.** `sitesSentence` hardcodes `" and "` while
     the recap *email* already uses `Intl.ListFormat` — the email and the page it links to
     disagree in Spanish. Align the page (`recap/[token]/page.tsx`).
@@ -364,6 +445,17 @@ no site photos — the night-before *email* is richer than the page it links to.
     prefill from saved answers). Render "Yes" before "No" to match the paper RSTC convention.
     Safety-critical surface: adversarial tests (submit with an unanswered question) +
     `dive-domain-expert` review.
+
+    **Dive-domain-expert review.** Confirmed on both counts. `RadioQuestion` currently sets
+    `defaultChecked={yes !== true}` on "No" for all eight questions, so a diver can submit
+    having made zero conscious choices — a real liability hole, not just a UX one; real shops
+    treat this the same as the paper form, where a blank or ambiguous answer isn't accepted. The
+    paper RSTC/PADI-style form does list Yes before No per line, so reordering is correct, not
+    just assumed. One addition: every question here is referral-flagged (`src/lib/medical.ts`),
+    so when "Yes" is selected there's currently no path to add detail about a managed condition —
+    any "tell us more" field added for that must stay purely informational for the shop's
+    follow-up and must never read as a self-clearance override; the physician-review requirement
+    stays fixed regardless of what the diver writes there.
 41. **[S] Repeat the reassurance at the point of anxiety.** When a "Yes" is selected, reveal an
     inline translated note under that question: "A yes means a doctor should confirm you're fit
     to dive — it doesn't cancel your trip." (Progressive enhancement; fine to also always render
@@ -379,6 +471,18 @@ no site photos — the night-before *email* is richer than the page it links to.
     links (the ready page already shows how), a "what happens next" line ("The shop reviews
     this — usually before your trip day"), and the same `EarnedMoment` treatment for the parts
     that *are* done. Copy through `dive-domain-expert`.
+
+    **Dive-domain-expert review.** The proposed "what happens next" line is inaccurate and needs
+    correcting before it ships. A "yes" on a referral-flagged question requires a **physician's
+    written clearance**, not the shop's own review — the shop's role is to receive and check for
+    that sign-off, not to grant medical clearance itself. "Usually before your trip day"
+    overpromises: physician appointments can take days to arrange, and a diver filling this out
+    the night before (Rob's own scenario) may not get sign-off in time. Corrected copy: "A 'yes'
+    answer means you'll need a doctor to confirm in writing that you're fit to dive before you
+    can go out — that's true at every shop, not just this one. The shop will reach out about
+    next steps. If your trip is coming up soon, contact them now, since getting a doctor's
+    sign-off can take a few days." The UI must never imply DiveDay or the shop can itself provide
+    medical clearance, and must not suggest the diver is "probably fine" pending review.
 45. **[M] Add shop contact to all dead-token cards.** The waiver `expired`/`unavailable`
     branches return before `getShopById` runs, rendering zero interactive elements. Load the
     shop first and render name + contact links on every terminal card (waiver, and check
@@ -562,6 +666,29 @@ note on the next tap (never cleared). The offline manager's "Saved …" timestam
     `manifest/page.tsx` into `OfflineManifestView.tsx`. Safety-critical surface: keep the
     fail-closed boarding rules untouched; boring code; failure-path tests; `dive-domain-expert`
     review.
+
+    **Dive-domain-expert review — the fail-closed boarding rules to leave untouched.**
+    (1) Readiness gates boarding only at the "Before departure" checkpoint — the Board button
+    only renders when `ready || !isDeparture`; after any numbered dive, roll call is a pure
+    headcount regardless of saved readiness. Don't let the ported celebration/haptics code add a
+    readiness check to post-dive checkpoints or hide "Board" for unready divers anywhere but
+    departure. (2) `canRecordOfflineStatus` (`src/lib/offline-manifests.ts`) is the real
+    enforcement, independent of the UI — it refuses a `"boarded"` event unless the saved
+    readiness snapshot says `"ready"`; `"not_boarded"` is always allowed, and it does **not**
+    vary by checkpoint the way the UI's `isDeparture` logic does. Add an explicit failure-path
+    test confirming that marking a diver boarded after dive 1 with a not-ready snapshot (e.g. an
+    uncleared medical) still succeeds as a pure headcount the way the UI implies — if it doesn't,
+    that's a latent bug this port could surface for the first time, and it needs to be caught by
+    a test, not discovered on a boat. (3) An expired saved copy (`isOfflineManifestExpired`)
+    stays readable but refuses any new roll-call write — the ported UI must respect that flag the
+    same way the current code does (no board/not-board buttons, a distinct "expired" message);
+    never let a haptic or celebration fire an action the store layer is about to reject.
+    (4) "Not boarded" carries forward as a presumption at later checkpoints, never resets to
+    awaiting — any new "everyone's aboard!" celebration must gate on the true boarded count and
+    must not fire for a manifest with carried-forward not-boarded divers just because "awaiting"
+    reads zero. (5) Reconciliation on sync is the final authority, not the offline UI — keep
+    surfacing pending/rejected sync counts as today; a satisfying "all boarded" animation must
+    never imply server-confirmed state while sync is still pending.
 73. **[S] Clear the offline note after recording.** `record()` in `OfflineManifestView.tsx`
     never clears `noteByBooking`, so a note rides along on re-taps. Clear it on success.
 74. **[S] Boat-size the checkpoint controls.** Checkpoint tabs on both live and offline
