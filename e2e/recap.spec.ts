@@ -1,3 +1,4 @@
+import sharp from "sharp";
 import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed";
 import { signRecapToken } from "../src/lib/recap-links";
 import { expect, test } from "./fixtures";
@@ -111,14 +112,23 @@ test("a booking cancelled after the recap page loaded gets an honest notice, not
   if (!staffContext) throw new Error("could not open a second browser context");
   const staffPage = await staffContext.newPage();
   await signInAsOwner(staffPage);
-  await staffPage.goto("/shop/blue-mantis/schedule");
+  // The seed schedules several other trips under this same title (task 56's
+  // fixture isn't the only "Two-Tank Reef — Molasses & French" departure),
+  // so finding it by title on the schedule board is ambiguous. Priya
+  // Sharma's own diver record links straight to her one still-scheduled
+  // trip — unambiguous by construction.
+  await staffPage.goto("/shop/blue-mantis/divers");
+  await staffPage.getByRole("searchbox", { name: "Search divers" }).fill("Priya Sharma");
   await staffPage
-    .getByRole("link", { name: /Two-Tank Reef — Molasses/ })
-    .first()
+    .getByRole("row", { name: /Priya Sharma/ })
+    .getByText("Priya Sharma")
     .click();
-  const tripId = staffPage.url().match(/schedule\/([^/?]+)/)?.[1];
+  await staffPage.getByRole("region", { name: "Upcoming trips" }).getByRole("link").first().click();
+  await staffPage.waitForURL(/\/trips\//);
+  const tripId = staffPage.url().match(/\/trips\/([^/?]+)/)?.[1];
   if (!tripId) throw new Error("could not resolve the reef trip id from the URL");
-  await staffPage.goto(`/shop/blue-mantis/trips/${tripId}`);
+  // The roster lives on the Guests tab now, not the trip overview.
+  await staffPage.goto(`/shop/blue-mantis/trips/${tripId}/guests`);
   const diverRow = staffPage.locator("li").filter({ hasText: "Priya Sharma" });
   staffPage.once("dialog", (dialog) => void dialog.accept());
   await diverRow.getByRole("button", { name: "Remove booking" }).click();
@@ -144,9 +154,17 @@ test("a whole pick of photos submits in one request, not one page reload per pho
   const photoInput = page.locator('input[name="photo"]');
   await expect(photoInput).toHaveAttribute("multiple", "");
 
+  // Real, decodable JPEGs — the server validates content, not just the
+  // declared mime type (certifications.spec.ts's CR-012), so a fake/zero
+  // buffer never reaches the "no blob storage configured" branch this test
+  // means to exercise; it dies earlier on a format rejection instead.
+  const jpeg = async (rgb: { r: number; g: number; b: number }) =>
+    sharp({ create: { width: 20, height: 15, channels: 3, background: rgb } })
+      .jpeg()
+      .toBuffer();
   await photoInput.setInputFiles([
-    { name: "one.jpg", mimeType: "image/jpeg", buffer: Buffer.alloc(1024) },
-    { name: "two.jpg", mimeType: "image/jpeg", buffer: Buffer.alloc(1024) },
+    { name: "one.jpg", mimeType: "image/jpeg", buffer: await jpeg({ r: 20, g: 90, b: 160 }) },
+    { name: "two.jpg", mimeType: "image/jpeg", buffer: await jpeg({ r: 160, g: 90, b: 20 }) },
   ]);
   await page.getByRole("button", { name: "Add to my recap" }).click();
   // The e2e fleet has no blob storage configured (see certifications.spec.ts's
