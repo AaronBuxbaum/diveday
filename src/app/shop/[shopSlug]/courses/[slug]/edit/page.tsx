@@ -277,6 +277,16 @@ export default async function EditCoursePage({
             })}
           </p>
           <FieldGrid columns={1} className="mt-4 gap-y-5">
+            <label className="flex min-h-11 items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                name="isIntroCourse"
+                value="true"
+                defaultChecked={course.isIntroCourse}
+                className="size-4"
+              />
+              {t("courses.edit.introCourseLabel")}
+            </label>
             <Field label={t("courses.edit.prerequisiteLabel")}>
               <textarea
                 name="prerequisiteNote"

@@ -146,6 +146,8 @@ export type CourseContent = {
   excludes: string[];
   scheduleDays: CourseScheduleDay[];
   faqs: CourseFaq[];
+  /** A no-certification-required taster session (Discover Scuba, Try Scuba, …). */
+  isIntroCourse: boolean;
 };
 
 /**

@@ -544,6 +544,7 @@ const emptyContent = {
   excludes: [],
   scheduleDays: [],
   faqs: [],
+  isIntroCourse: false,
 };
 
 describe("course content and public pages (in-memory PGlite)", () => {

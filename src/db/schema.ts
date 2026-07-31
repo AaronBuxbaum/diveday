@@ -314,6 +314,14 @@ export const courses = pgTable(
      * a course is either offered, or it is hidden.
      */
     isActive: boolean("is_active").notNull().default(true),
+    /**
+     * A no-certification-required taster session (Discover Scuba Diving, Try
+     * Scuba, …), set by staff on the course editor rather than sniffed from
+     * the title at render time — the booking page's "great gift" nudge reads
+     * this instead of pattern-matching English words that would silently
+     * miss a differently-worded or translated course title.
+     */
+    isIntroCourse: boolean("is_intro_course").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
