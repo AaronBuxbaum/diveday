@@ -1,13 +1,6 @@
 #!/usr/bin/env node
-import * as path from "node:path";
 import * as cdk from "aws-cdk-lib";
-import * as dotenv from "dotenv";
 import { InfraStack } from "../lib/infra-stack";
-
-// Load .env.local first (local overrides), then fall back to .env
-dotenv.config({ path: path.resolve(__dirname, "../../.env.local") });
-dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-
 const app = new cdk.App();
 
 // If AWS_ACCOUNT_ID is specified in .env.local, use it to pin the environment.

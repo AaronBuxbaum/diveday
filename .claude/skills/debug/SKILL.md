@@ -46,6 +46,32 @@ thread instead of pushing a second, competing fix.
 | Redirect loops / auth bounces | Two layers run: `src/proxy.ts` (edge, redirects to `/sign-in` or `/`) and `requireStaffSession()` (server). Identify which bounced before changing either |
 | Sign-in silently fails in dev | `verifyCredentials` returns null for four distinct reasons (no account, disabled, bad password, no staff role) by design — check the seeded account state, don't add error leakage |
 
+## Long-running background processes (dev server, e2e)
+
+`pnpm dev`/`next dev` and any ad hoc server you background for manual verification never exit on
+their own — unlike `pnpm e2e`/`pnpm visual`, which build, run, and terminate. That makes them the
+main source of two related failures, both worse in a cloud/remote session where the sandbox can be
+reused across separate agent runs (a leaked process from a finished session outlives the
+conversation that started it):
+
+- **Stale-server corruption** (already known): a leaked `next dev` holding a deleted/reset
+  `.pglite` — see the table above.
+- **Stuck waiting on a phantom readiness signal**: if you start a background server and wait
+  (Monitor or a log-tail) for a fresh "Ready"/boot line, but something is already bound to that
+  port from an earlier, now-orphaned session, your wait never sees the marker it's looking for —
+  the real listener already printed that line in a session that's gone. This looks identical to a
+  hang, and is the same shape of bug as an orphaned Monitor: the thing you're actually waiting on
+  no longer has anyone driving it.
+
+Before backgrounding a dev server (or trusting Playwright's `reuseExistingServer: !process.env.CI`
+to reuse one), check what's actually listening: `curl -s localhost:3000 >/dev/null && echo alive`.
+If something answers and you didn't just start it, don't assume it's healthy or that it's about to
+emit a fresh readiness line — kill it and start clean, exactly as the stale-server row above says.
+And if you background a server yourself for verification, stop it before you finish the turn —
+don't leave it running "in case it's needed again." Prefer `pnpm e2e`/`pnpm visual` for
+verification when they cover the surface (see the `verify` skill): they build, run, and exit on
+their own, so there's nothing left over to leak into the next session.
+
 ## Honesty
 
 Report failures verbatim. If you couldn't verify something (denied permission, CI didn't run),
