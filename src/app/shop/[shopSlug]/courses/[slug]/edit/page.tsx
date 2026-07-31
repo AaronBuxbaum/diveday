@@ -17,6 +17,8 @@ import { formatFaqs } from "@/lib/courses";
 import { requireStaffSession } from "@/lib/session";
 import { MAX_IMAGE_MB, MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION } from "@/lib/storage/limits";
 import { DayByDayEditor } from "./_components/DayByDayEditor";
+import { FieldErrorFocus } from "./_components/FieldErrorFocus";
+import { UnsavedChangesGuard } from "./_components/UnsavedChangesGuard";
 import { saveCourseContentAction, setCourseVisibilityAction } from "./actions";
 
 export const metadata: Metadata = { title: "Edit course page — DiveDay" };
@@ -35,11 +37,11 @@ export default async function EditCoursePage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string; slug: string }>;
-  searchParams: Promise<{ notice?: string; error?: string }>;
+  searchParams: Promise<{ notice?: string; error?: string; field?: string }>;
 }) {
   const session = await requireStaffSession();
   const { shopSlug, slug } = await params;
-  const { notice, error } = await searchParams;
+  const { notice, error, field } = await searchParams;
   const db = await getDb();
   const [course, shop] = await Promise.all([
     getCourseBySlug(db, session.user.shopId, slug),
@@ -119,294 +121,318 @@ export default async function EditCoursePage({
           {errors[error]}
         </ShopNotice>
       ) : null}
+      <FieldErrorFocus field={error ? field : undefined} />
 
-      <form action={saveAction} className="mt-8 flex flex-col gap-6">
-        <fieldset className="rounded-2xl border border-border p-4 sm:p-5">
-          <legend className="px-1 text-sm font-semibold">{t("courses.edit.pitchLegend")}</legend>
-          <FieldGrid columns={1} className="mt-3 gap-y-5">
-            <Field
-              label={t("courses.edit.subheadLabel")}
-              description={t("courses.edit.subheadDescription")}
-            >
-              <input
-                name="summary"
-                maxLength={200}
-                defaultValue={course.summary ?? ""}
-                className={controlClass}
-              />
-            </Field>
-            <Field
-              label={t("courses.edit.overviewLabel")}
-              description={t("courses.edit.overviewDescription")}
-            >
-              <textarea
-                name="overview"
-                rows={8}
-                maxLength={6000}
-                defaultValue={course.overview ?? ""}
-                className={controlClass}
-              />
-            </Field>
-          </FieldGrid>
-        </fieldset>
+      <UnsavedChangesGuard>
+        <form action={saveAction} className="mt-8 flex flex-col gap-6">
+          <fieldset className="rounded-2xl border border-border p-4 sm:p-5">
+            <legend className="px-1 text-sm font-semibold">{t("courses.edit.pitchLegend")}</legend>
+            <FieldGrid columns={1} className="mt-3 gap-y-5">
+              <Field
+                label={t("courses.edit.subheadLabel")}
+                description={t("courses.edit.subheadDescription")}
+              >
+                <input
+                  id="summary"
+                  name="summary"
+                  maxLength={200}
+                  defaultValue={course.summary ?? ""}
+                  className={controlClass}
+                />
+              </Field>
+              <Field
+                label={t("courses.edit.overviewLabel")}
+                description={t("courses.edit.overviewDescription")}
+              >
+                <textarea
+                  id="overview"
+                  name="overview"
+                  rows={8}
+                  maxLength={6000}
+                  defaultValue={course.overview ?? ""}
+                  className={controlClass}
+                />
+              </Field>
+            </FieldGrid>
+          </fieldset>
 
-        <fieldset className="rounded-2xl border border-border p-4 sm:p-5">
-          <legend className="px-1 text-sm font-semibold">{t("courses.edit.pricingLegend")}</legend>
-          <p className="mt-1 text-sm text-muted">{t("courses.edit.pricingDescription")}</p>
-          <FieldGrid columns={2} className="mt-4 gap-y-5">
-            <Field label={t("courses.edit.instructionFeeLabel")}>
-              <input
-                name="price"
-                inputMode="decimal"
-                defaultValue={dollarsInput(course.priceCents)}
-                placeholder="—"
-                className={priceInputClass}
-              />
-            </Field>
-            <Field
-              label={t("courses.edit.eLearningFeeLabel")}
-              hint={t("courses.edit.eLearningFeeHint")}
-            >
-              <input
-                name="eLearningPrice"
-                inputMode="decimal"
-                defaultValue={dollarsInput(course.eLearningPriceCents)}
-                placeholder="—"
-                className={priceInputClass}
-              />
-            </Field>
-          </FieldGrid>
-        </fieldset>
+          <fieldset className="rounded-2xl border border-border p-4 sm:p-5">
+            <legend className="px-1 text-sm font-semibold">
+              {t("courses.edit.pricingLegend")}
+            </legend>
+            <p className="mt-1 text-sm text-muted">{t("courses.edit.pricingDescription")}</p>
+            <FieldGrid columns={2} className="mt-4 gap-y-5">
+              <Field label={t("courses.edit.instructionFeeLabel")}>
+                <input
+                  id="price"
+                  name="price"
+                  inputMode="decimal"
+                  defaultValue={dollarsInput(course.priceCents)}
+                  placeholder="—"
+                  className={priceInputClass}
+                />
+              </Field>
+              <Field
+                label={t("courses.edit.eLearningFeeLabel")}
+                hint={t("courses.edit.eLearningFeeHint")}
+              >
+                <input
+                  id="eLearningPrice"
+                  name="eLearningPrice"
+                  inputMode="decimal"
+                  defaultValue={dollarsInput(course.eLearningPriceCents)}
+                  placeholder="—"
+                  className={priceInputClass}
+                />
+              </Field>
+            </FieldGrid>
+          </fieldset>
 
-        <fieldset className="rounded-2xl border border-border p-4 sm:p-5">
-          <legend className="px-1 text-sm font-semibold">{t("courses.edit.photosLegend")}</legend>
-          <p className="mt-1 text-sm text-muted">{t("courses.edit.photosDescription")}</p>
-          <FieldGrid columns={1} className="mt-4 gap-y-5">
-            <Field label={t("courses.edit.heroPhotoLabel")} hint={t("courses.edit.heroPhotoHint")}>
-              {course.heroImageUrl ? (
-                <div className="mb-2 flex items-center gap-3">
-                  <Thumb
-                    src={course.heroImageUrl}
-                    className="h-16 w-24 rounded-lg border border-border object-cover"
-                  />
-                  <label className="flex min-h-11 items-center gap-2 text-sm">
-                    <input type="checkbox" name="removeHero" value="true" className="size-4" />
-                    {t("courses.edit.removeCurrentPhoto")}
-                  </label>
-                </div>
-              ) : null}
-              <ImageFileInput
-                name="heroImageFile"
-                copy={{
-                  wrongTypeSuffix: t("shared.imageInput.wrongTypeSuffix"),
-                  tooBigSuffix: t("shared.imageInput.tooBigSuffix", { maxMb: MAX_IMAGE_MB }),
-                }}
-              />
-            </Field>
-            <Field
-              label={t("courses.edit.galleryPhotosLabel")}
-              hint={t("courses.edit.galleryPhotosHint", {
-                max: MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION,
-              })}
-            >
-              {course.imageUrls.length > 0 ? (
-                <div className="mb-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                  {course.imageUrls.map((url) => (
-                    // The whole cell is one label wrapping its own checkbox, so a
-                    // tap on the photo toggles *that* photo — not the first one.
-                    <label key={url} className="relative block cursor-pointer">
-                      <input
-                        type="checkbox"
-                        name="removeGalleryUrls"
-                        value={url}
-                        className="peer sr-only"
-                      />
-                      <Thumb
-                        src={url}
-                        className="h-24 w-full rounded-lg border-2 border-border object-cover transition peer-checked:border-danger peer-checked:opacity-50"
-                      />
-                      <span
-                        aria-hidden="true"
-                        className="absolute top-1.5 right-1.5 grid size-6 place-items-center rounded-full border border-border-strong bg-surface/90 text-sm text-transparent shadow-sm transition peer-checked:border-danger peer-checked:bg-danger/15 peer-checked:text-danger"
-                      >
-                        ✓
-                      </span>
-                      <span className="mt-1 block text-xs font-medium text-muted transition peer-checked:text-danger">
-                        {t("courses.edit.removeLabel")}
-                      </span>
+          <fieldset className="rounded-2xl border border-border p-4 sm:p-5">
+            <legend className="px-1 text-sm font-semibold">{t("courses.edit.photosLegend")}</legend>
+            <p className="mt-1 text-sm text-muted">{t("courses.edit.photosDescription")}</p>
+            <FieldGrid columns={1} className="mt-4 gap-y-5">
+              <Field
+                label={t("courses.edit.heroPhotoLabel")}
+                hint={t("courses.edit.heroPhotoHint")}
+              >
+                {course.heroImageUrl ? (
+                  <div className="mb-2 flex items-center gap-3">
+                    <Thumb
+                      src={course.heroImageUrl}
+                      className="h-16 w-24 rounded-lg border border-border object-cover"
+                    />
+                    <label className="flex min-h-11 items-center gap-2 text-sm">
+                      <input type="checkbox" name="removeHero" value="true" className="size-4" />
+                      {t("courses.edit.removeCurrentPhoto")}
                     </label>
-                  ))}
-                </div>
-              ) : null}
-              <ImageFileInput
-                name="galleryImageFiles"
-                multiple
-                maxFiles={MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION}
+                  </div>
+                ) : null}
+                <ImageFileInput
+                  name="heroImageFile"
+                  copy={{
+                    wrongTypeSuffix: t("shared.imageInput.wrongTypeSuffix"),
+                    tooBigSuffix: t("shared.imageInput.tooBigSuffix", { maxMb: MAX_IMAGE_MB }),
+                  }}
+                />
+              </Field>
+              <Field
+                label={t("courses.edit.galleryPhotosLabel")}
+                hint={t("courses.edit.galleryPhotosHint", {
+                  max: MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION,
+                })}
+              >
+                {course.imageUrls.length > 0 ? (
+                  <div className="mb-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                    {course.imageUrls.map((url) => (
+                      // The whole cell is one label wrapping its own checkbox, so a
+                      // tap on the photo toggles *that* photo — not the first one.
+                      <label key={url} className="relative block cursor-pointer">
+                        <input
+                          type="checkbox"
+                          name="removeGalleryUrls"
+                          value={url}
+                          className="peer sr-only"
+                        />
+                        <Thumb
+                          src={url}
+                          className="h-24 w-full rounded-lg border-2 border-border object-cover transition peer-checked:border-danger peer-checked:opacity-50"
+                        />
+                        <span
+                          aria-hidden="true"
+                          className="absolute top-1.5 right-1.5 grid size-6 place-items-center rounded-full border border-border-strong bg-surface/90 text-sm text-transparent shadow-sm transition peer-checked:border-danger peer-checked:bg-danger/15 peer-checked:text-danger"
+                        >
+                          ✓
+                        </span>
+                        <span className="mt-1 block text-xs font-medium text-muted transition peer-checked:text-danger">
+                          {t("courses.edit.removeLabel")}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                ) : null}
+                <ImageFileInput
+                  name="galleryImageFiles"
+                  multiple
+                  maxFiles={MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION}
+                  copy={{
+                    tooMany: t("shared.imageInput.tooMany", {
+                      count: MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION,
+                    }),
+                    wrongTypeSuffix: t("shared.imageInput.wrongTypeSuffix"),
+                    tooBigSuffix: t("shared.imageInput.tooBigSuffix", { maxMb: MAX_IMAGE_MB }),
+                  }}
+                />
+              </Field>
+            </FieldGrid>
+          </fieldset>
+
+          <fieldset className="rounded-2xl border border-border p-4 sm:p-5">
+            <legend className="px-1 text-sm font-semibold">{t("courses.edit.glanceLegend")}</legend>
+            <p className="mt-1 text-sm text-muted">{t("courses.edit.glanceDescription")}</p>
+            <FieldGrid columns={2} className="mt-4 gap-y-5">
+              <Field label={t("courses.edit.durationLabel")}>
+                <input
+                  id="durationText"
+                  name="durationText"
+                  maxLength={120}
+                  defaultValue={course.durationText ?? ""}
+                  placeholder={t("courses.edit.durationPlaceholder")}
+                  className={controlClass}
+                />
+              </Field>
+              <Field label={t("courses.edit.groupSizeLabel")}>
+                <input
+                  id="groupSizeText"
+                  name="groupSizeText"
+                  maxLength={120}
+                  defaultValue={course.groupSizeText ?? ""}
+                  placeholder={t("courses.edit.groupSizePlaceholder")}
+                  className={controlClass}
+                />
+              </Field>
+            </FieldGrid>
+          </fieldset>
+
+          <fieldset className="rounded-2xl border border-border p-4 sm:p-5">
+            <legend className="px-1 text-sm font-semibold">{t("courses.edit.enrollLegend")}</legend>
+            <p className="mt-1 text-sm text-muted">
+              {t.rich("courses.edit.enrollDescription", {
+                levelAge,
+                strong: (chunks: ReactNode) => (
+                  <strong className="font-medium text-foreground">{chunks}</strong>
+                ),
+              })}
+            </p>
+            <FieldGrid columns={1} className="mt-4 gap-y-5">
+              <label className="flex min-h-11 items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  name="isIntroCourse"
+                  value="true"
+                  defaultChecked={course.isIntroCourse}
+                  className="size-4"
+                />
+                {t("courses.edit.introCourseLabel")}
+              </label>
+              <Field label={t("courses.edit.prerequisiteLabel")}>
+                <textarea
+                  id="prerequisiteNote"
+                  name="prerequisiteNote"
+                  rows={4}
+                  maxLength={400}
+                  defaultValue={course.prerequisiteNote ?? ""}
+                  placeholder={t("courses.edit.prerequisitePlaceholder")}
+                  className={controlClass}
+                />
+              </Field>
+            </FieldGrid>
+          </fieldset>
+
+          <fieldset className="rounded-2xl border border-border p-4 sm:p-5">
+            <legend className="px-1 text-sm font-semibold">
+              {t("courses.edit.feeCoversLegend")}
+            </legend>
+            <FieldGrid columns={2} className="mt-3 gap-y-5">
+              <Field
+                label={t("courses.edit.includedLabel")}
+                description={t("courses.edit.oneItemPerLine")}
+              >
+                <textarea
+                  id="includes"
+                  name="includes"
+                  rows={6}
+                  maxLength={2000}
+                  defaultValue={course.includes.join("\n")}
+                  placeholder={t("courses.edit.includedPlaceholder")}
+                  className={controlClass}
+                />
+              </Field>
+              <Field
+                label={t("courses.edit.notIncludedLabel")}
+                description={t("courses.edit.oneItemPerLine")}
+              >
+                <textarea
+                  id="excludes"
+                  name="excludes"
+                  rows={6}
+                  maxLength={2000}
+                  defaultValue={course.excludes.join("\n")}
+                  placeholder={t("courses.edit.notIncludedPlaceholder")}
+                  className={controlClass}
+                />
+              </Field>
+            </FieldGrid>
+          </fieldset>
+
+          <fieldset id="scheduleDaysJson" className="rounded-2xl border border-border p-4 sm:p-5">
+            <legend className="px-1 text-sm font-semibold">
+              {t("courses.edit.dayByDayLegend")}
+            </legend>
+            <p className="mt-1 text-sm text-muted">{t("courses.edit.dayByDayDescription")}</p>
+            <div className="mt-4">
+              <DayByDayEditor
+                initialDays={course.scheduleDays}
                 copy={{
-                  tooMany: t("shared.imageInput.tooMany", {
-                    count: MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION,
-                  }),
-                  wrongTypeSuffix: t("shared.imageInput.wrongTypeSuffix"),
-                  tooBigSuffix: t("shared.imageInput.tooBigSuffix", { maxMb: MAX_IMAGE_MB }),
+                  dayLabel: t("courses.dayByDay.dayLabel"),
+                  removeDay: t("courses.dayByDay.removeDay"),
+                  dayTitleLabel: t("courses.dayByDay.dayTitleLabel"),
+                  dayTitlePlaceholder: t("courses.dayByDay.dayTitlePlaceholder"),
+                  startTimeLabel: t("courses.dayByDay.startTimeLabel"),
+                  endTimeLabel: t("courses.dayByDay.endTimeLabel"),
+                  timeNoteLabel: t("courses.dayByDay.timeNoteLabel"),
+                  timeNoteDescription: t("courses.dayByDay.timeNoteDescription"),
+                  timeNoteTitle: t("courses.dayByDay.timeNoteTitle"),
+                  timeNotePlaceholder: t("courses.dayByDay.timeNotePlaceholder"),
+                  whatHappens: t("courses.dayByDay.whatHappens"),
+                  itemLabel: t("courses.dayByDay.itemLabel"),
+                  removeItemLabel: t("courses.dayByDay.removeItemLabel"),
+                  itemPlaceholder: t("courses.dayByDay.itemPlaceholder"),
+                  remove: t("courses.dayByDay.remove"),
+                  itemsMax: t("courses.dayByDay.itemsMax"),
+                  addItem: t("courses.dayByDay.addItem"),
+                  daysMax: t("courses.dayByDay.daysMax"),
+                  addDay: t("courses.dayByDay.addDay"),
                 }}
               />
-            </Field>
-          </FieldGrid>
-        </fieldset>
+            </div>
+          </fieldset>
 
-        <fieldset className="rounded-2xl border border-border p-4 sm:p-5">
-          <legend className="px-1 text-sm font-semibold">{t("courses.edit.glanceLegend")}</legend>
-          <p className="mt-1 text-sm text-muted">{t("courses.edit.glanceDescription")}</p>
-          <FieldGrid columns={2} className="mt-4 gap-y-5">
-            <Field label={t("courses.edit.durationLabel")}>
-              <input
-                name="durationText"
-                maxLength={120}
-                defaultValue={course.durationText ?? ""}
-                placeholder={t("courses.edit.durationPlaceholder")}
-                className={controlClass}
-              />
-            </Field>
-            <Field label={t("courses.edit.groupSizeLabel")}>
-              <input
-                name="groupSizeText"
-                maxLength={120}
-                defaultValue={course.groupSizeText ?? ""}
-                placeholder={t("courses.edit.groupSizePlaceholder")}
-                className={controlClass}
-              />
-            </Field>
-          </FieldGrid>
-        </fieldset>
+          <fieldset className="rounded-2xl border border-border p-4 sm:p-5">
+            <legend className="px-1 text-sm font-semibold">{t("courses.edit.faqLegend")}</legend>
+            <p className="mt-1 text-sm text-muted">{t("courses.edit.faqDescription")}</p>
+            <FieldGrid columns={1} className="mt-4">
+              <Field label={t("courses.edit.faqLabel")}>
+                <textarea
+                  id="faqs"
+                  name="faqs"
+                  rows={10}
+                  maxLength={12000}
+                  defaultValue={formatFaqs(course.faqs)}
+                  placeholder={t("courses.edit.faqPlaceholder")}
+                  className={controlClass}
+                />
+              </Field>
+            </FieldGrid>
+          </fieldset>
 
-        <fieldset className="rounded-2xl border border-border p-4 sm:p-5">
-          <legend className="px-1 text-sm font-semibold">{t("courses.edit.enrollLegend")}</legend>
-          <p className="mt-1 text-sm text-muted">
-            {t.rich("courses.edit.enrollDescription", {
-              levelAge,
-              strong: (chunks: ReactNode) => (
-                <strong className="font-medium text-foreground">{chunks}</strong>
-              ),
-            })}
-          </p>
-          <FieldGrid columns={1} className="mt-4 gap-y-5">
-            <label className="flex min-h-11 items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                name="isIntroCourse"
-                value="true"
-                defaultChecked={course.isIntroCourse}
-                className="size-4"
-              />
-              {t("courses.edit.introCourseLabel")}
-            </label>
-            <Field label={t("courses.edit.prerequisiteLabel")}>
-              <textarea
-                name="prerequisiteNote"
-                rows={4}
-                maxLength={400}
-                defaultValue={course.prerequisiteNote ?? ""}
-                placeholder={t("courses.edit.prerequisitePlaceholder")}
-                className={controlClass}
-              />
-            </Field>
-          </FieldGrid>
-        </fieldset>
-
-        <fieldset className="rounded-2xl border border-border p-4 sm:p-5">
-          <legend className="px-1 text-sm font-semibold">
-            {t("courses.edit.feeCoversLegend")}
-          </legend>
-          <FieldGrid columns={2} className="mt-3 gap-y-5">
-            <Field
-              label={t("courses.edit.includedLabel")}
-              description={t("courses.edit.oneItemPerLine")}
+          <div className="flex flex-wrap items-center gap-3">
+            <SubmitButton pendingLabel={t("courses.edit.saving")} className={buttonClass()}>
+              {t("courses.edit.savePage")}
+            </SubmitButton>
+            {/* New tab, on purpose: a same-tab Preview would navigate away and
+              silently discard whatever in this form isn't saved yet. */}
+            <Link
+              href={`/shop/${shopSlug}/courses/${slug}`}
+              target="_blank"
+              rel="noreferrer"
+              className={buttonClass({ variant: "secondary", className: "text-foreground" })}
             >
-              <textarea
-                name="includes"
-                rows={6}
-                maxLength={2000}
-                defaultValue={course.includes.join("\n")}
-                placeholder={t("courses.edit.includedPlaceholder")}
-                className={controlClass}
-              />
-            </Field>
-            <Field
-              label={t("courses.edit.notIncludedLabel")}
-              description={t("courses.edit.oneItemPerLine")}
-            >
-              <textarea
-                name="excludes"
-                rows={6}
-                maxLength={2000}
-                defaultValue={course.excludes.join("\n")}
-                placeholder={t("courses.edit.notIncludedPlaceholder")}
-                className={controlClass}
-              />
-            </Field>
-          </FieldGrid>
-        </fieldset>
-
-        <fieldset className="rounded-2xl border border-border p-4 sm:p-5">
-          <legend className="px-1 text-sm font-semibold">{t("courses.edit.dayByDayLegend")}</legend>
-          <p className="mt-1 text-sm text-muted">{t("courses.edit.dayByDayDescription")}</p>
-          <div className="mt-4">
-            <DayByDayEditor
-              initialDays={course.scheduleDays}
-              copy={{
-                dayLabel: t("courses.dayByDay.dayLabel"),
-                removeDay: t("courses.dayByDay.removeDay"),
-                dayTitleLabel: t("courses.dayByDay.dayTitleLabel"),
-                dayTitlePlaceholder: t("courses.dayByDay.dayTitlePlaceholder"),
-                startTimeLabel: t("courses.dayByDay.startTimeLabel"),
-                endTimeLabel: t("courses.dayByDay.endTimeLabel"),
-                timeNoteLabel: t("courses.dayByDay.timeNoteLabel"),
-                timeNoteDescription: t("courses.dayByDay.timeNoteDescription"),
-                timeNoteTitle: t("courses.dayByDay.timeNoteTitle"),
-                timeNotePlaceholder: t("courses.dayByDay.timeNotePlaceholder"),
-                whatHappens: t("courses.dayByDay.whatHappens"),
-                itemLabel: t("courses.dayByDay.itemLabel"),
-                removeItemLabel: t("courses.dayByDay.removeItemLabel"),
-                itemPlaceholder: t("courses.dayByDay.itemPlaceholder"),
-                remove: t("courses.dayByDay.remove"),
-                itemsMax: t("courses.dayByDay.itemsMax"),
-                addItem: t("courses.dayByDay.addItem"),
-                daysMax: t("courses.dayByDay.daysMax"),
-                addDay: t("courses.dayByDay.addDay"),
-              }}
-            />
+              {t("courses.edit.preview")}
+            </Link>
           </div>
-        </fieldset>
-
-        <fieldset className="rounded-2xl border border-border p-4 sm:p-5">
-          <legend className="px-1 text-sm font-semibold">{t("courses.edit.faqLegend")}</legend>
-          <p className="mt-1 text-sm text-muted">{t("courses.edit.faqDescription")}</p>
-          <FieldGrid columns={1} className="mt-4">
-            <Field label={t("courses.edit.faqLabel")}>
-              <textarea
-                name="faqs"
-                rows={10}
-                maxLength={12000}
-                defaultValue={formatFaqs(course.faqs)}
-                placeholder={t("courses.edit.faqPlaceholder")}
-                className={controlClass}
-              />
-            </Field>
-          </FieldGrid>
-        </fieldset>
-
-        <div className="flex flex-wrap items-center gap-3">
-          <SubmitButton pendingLabel={t("courses.edit.saving")} className={buttonClass()}>
-            {t("courses.edit.savePage")}
-          </SubmitButton>
-          <Link
-            href={`/shop/${shopSlug}/courses/${slug}`}
-            className={buttonClass({ variant: "secondary", className: "text-foreground" })}
-          >
-            {t("courses.edit.preview")}
-          </Link>
-        </div>
-      </form>
+        </form>
+      </UnsavedChangesGuard>
     </main>
   );
 }

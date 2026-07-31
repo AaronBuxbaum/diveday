@@ -53,6 +53,7 @@ export default async function CalendarSubscriptionsPage() {
     turningOff: t("calendar.actions.turningOff"),
     copy: t("calendar.actions.copy"),
     copied: t("calendar.actions.copied"),
+    copyFailed: t("calendar.actions.copyFailed"),
     confirmRotate: t("calendar.actions.confirmRotate"),
     confirmTurnOff: t("calendar.actions.confirmTurnOff"),
     newLinkHeading: t("calendar.newLink.heading"),

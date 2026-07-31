@@ -54,7 +54,13 @@ export async function saveCourseContentAction(shopSlug: string, slug: string, fo
   const base = `/shop/${shopSlug}/courses/${slug}/edit`;
   const staff = await requireStaffSession();
   const parsed = contentSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) redirect(`${base}?error=invalid`);
+  if (!parsed.success) {
+    // The first failing field, so the page can anchor and highlight it rather
+    // than leaving a fifteen-input form to one generic "check the fields"
+    // message with no clue which one.
+    const field = parsed.error.issues[0]?.path[0];
+    redirect(`${base}?error=invalid${typeof field === "string" ? `&field=${field}` : ""}`);
+  }
   const value = parsed.data;
 
   const db = await getDb();
@@ -95,7 +101,7 @@ export async function saveCourseContentAction(shopSlug: string, slug: string, fo
   } catch {
     scheduleDays = null;
   }
-  if (scheduleDays === null) redirect(`${base}?error=invalid`);
+  if (scheduleDays === null) redirect(`${base}?error=invalid&field=scheduleDaysJson`);
 
   const saved = await updateCourseContent(db, staff.user.shopId, course.id, {
     summary: value.summary,

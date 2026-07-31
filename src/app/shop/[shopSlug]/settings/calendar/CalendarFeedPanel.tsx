@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
+import { Copyable } from "@/components/Copyable";
 import { ShopNotice } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { calendarFeedAction } from "./actions";
@@ -36,51 +37,6 @@ function ActionButton({
     >
       {pending ? pendingLabel : label}
     </button>
-  );
-}
-
-function CopyableUrl({
-  label,
-  hint,
-  url,
-  copy,
-  copied,
-}: {
-  label: string;
-  hint: string;
-  url: string;
-  copy: string;
-  copied: string;
-}) {
-  const [done, setDone] = useState(false);
-
-  async function copyUrl() {
-    try {
-      await navigator.clipboard.writeText(url);
-      setDone(true);
-      setTimeout(() => setDone(false), 4000);
-    } catch {
-      // Clipboard access can be denied outright; the URL is selectable on
-      // screen either way, so a failed copy must not look like a failed mint.
-      setDone(false);
-    }
-  }
-
-  return (
-    <div className="rounded-xl bg-surface-sunken p-3">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <p className="text-sm font-medium text-foreground">{label}</p>
-        <button
-          type="button"
-          onClick={copyUrl}
-          className={buttonClass({ variant: "ghost", size: "sm", className: "text-foreground" })}
-        >
-          <span aria-live="polite">{done ? copied : copy}</span>
-        </button>
-      </div>
-      <p className="mt-0.5 text-xs text-muted">{hint}</p>
-      <p className="mt-2 font-mono text-xs break-all text-foreground">{url}</p>
-    </div>
   );
 }
 
@@ -177,19 +133,21 @@ export function CalendarFeedPanel({
           <h3 className="text-sm font-semibold text-foreground">{copy.newLinkHeading}</h3>
           <p className="mt-1 text-sm text-foreground">{copy.shownOnce}</p>
           <div className="mt-3 grid gap-2">
-            <CopyableUrl
+            <Copyable
               label={copy.webcalLabel}
               hint={copy.webcalHint}
-              url={issued.webcalUrl}
-              copy={copy.copy}
-              copied={copy.copied}
+              value={issued.webcalUrl}
+              copyLabel={copy.copy}
+              copiedLabel={copy.copied}
+              failedLabel={copy.copyFailed}
             />
-            <CopyableUrl
+            <Copyable
               label={copy.httpsLabel}
               hint={copy.httpsHint}
-              url={issued.httpsUrl}
-              copy={copy.copy}
-              copied={copy.copied}
+              value={issued.httpsUrl}
+              copyLabel={copy.copy}
+              copiedLabel={copy.copied}
+              failedLabel={copy.copyFailed}
             />
           </div>
           <p className="mt-3 text-xs text-muted">{copy.sharedWarning}</p>

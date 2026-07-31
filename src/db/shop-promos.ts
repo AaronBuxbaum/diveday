@@ -1,5 +1,5 @@
 import { and, desc, eq, sql } from "drizzle-orm";
-import { nowDate } from "@/lib/clock";
+import { nowDate, nowMs } from "@/lib/clock";
 import {
   type PromotionProvider,
   promotionProviderFromEnvironment,
@@ -210,6 +210,93 @@ export async function setShopPromoEnabled(
     )
     .returning({ id: shopPromoCodes.id });
   return Boolean(updated);
+}
+
+export type RetryShopPromoOutcome =
+  | { ok: true; promo: ShopPromoCode }
+  | { ok: false; reason: "not_found" | "not_connected" | "stripe_failed" };
+
+/**
+ * Re-run Stripe creation for a code that failed the first time — same code,
+ * discount, scope, and window as originally entered; nothing re-typed. Only
+ * ever acts on a `failed` row: a `pending` one has no completed attempt to
+ * retry (see `deleteShopPromoCode` for clearing those out instead), and an
+ * `active`/`disabled` row already has live Stripe objects behind it.
+ */
+export async function retryShopPromoCode(
+  db: AppDb,
+  shopId: string,
+  promoId: string,
+  promotions: PromotionProvider = promotionProviderFromEnvironment(),
+): Promise<RetryShopPromoOutcome> {
+  const [existing] = await db
+    .select()
+    .from(shopPromoCodes)
+    .where(
+      and(
+        eq(shopPromoCodes.id, promoId),
+        eq(shopPromoCodes.shopId, shopId),
+        eq(shopPromoCodes.status, "failed"),
+      ),
+    )
+    .limit(1);
+  if (!existing) return { ok: false, reason: "not_found" };
+
+  const account = await getShopStripeAccount(db, shopId);
+  if (!canAcceptPayments(account)) return { ok: false, reason: "not_connected" };
+  const stripeAccountId = (account as NonNullable<typeof account>).stripeAccountId;
+
+  const stripeResult = await promotions.createShopPromotion({
+    stripeAccountId,
+    code: existing.code,
+    percentOff: existing.discountPercent,
+    name: existing.description?.trim() || `DiveDay promo — ${existing.code}`,
+    expiresAt: existing.expiresAt,
+    maxRedemptions: existing.maxRedemptions,
+    // A fresh key: the original insert id was already spent on the failed
+    // attempt, and reusing it would hand Stripe's idempotency cache back the
+    // same failure on every retry instead of actually trying again.
+    idempotencyKey: `${existing.id}:retry:${nowMs()}`,
+  });
+  if (stripeResult.status !== "created") return { ok: false, reason: "stripe_failed" };
+
+  const [active] = await db
+    .update(shopPromoCodes)
+    .set({
+      status: "active",
+      stripeCouponId: stripeResult.stripeCouponId,
+      stripePromotionCodeId: stripeResult.stripePromotionCodeId,
+    })
+    .where(eq(shopPromoCodes.id, existing.id))
+    .returning();
+  return active ? { ok: true, promo: active } : { ok: false, reason: "stripe_failed" };
+}
+
+/**
+ * Delete a code that never went live — `pending` (the Stripe call never
+ * finished) or `failed` (it finished and lost). Neither status ever carries a
+ * Stripe promotion-code id (`getRedeemableShopPromo` requires one to redeem
+ * anything), so neither can have a redemption row referencing it — a plain
+ * delete is safe and leaves nothing orphaned. `active`/`disabled` codes are
+ * switched off instead (`setShopPromoEnabled`), never deleted, so their
+ * redemption history always keeps a code row to point at.
+ */
+export async function deleteShopPromoCode(
+  db: AppDb,
+  shopId: string,
+  promoId: string,
+): Promise<boolean> {
+  const [deleted] = await db
+    .delete(shopPromoCodes)
+    .where(
+      and(
+        eq(shopPromoCodes.id, promoId),
+        eq(shopPromoCodes.shopId, shopId),
+        sql`${shopPromoCodes.status} in ('pending', 'failed')`,
+      ),
+    )
+    .returning({ id: shopPromoCodes.id });
+  return Boolean(deleted);
 }
 
 /**

@@ -136,12 +136,12 @@ async function savePackingAction(formData: FormData) {
     packingList.length > 12 ||
     packingList.some((item) => item.length > 100)
   ) {
-    redirect(`/shop/${session.user.shopSlug}/settings?notice=packing_invalid`);
+    redirect(`/shop/${session.user.shopSlug}/settings?notice=packing_invalid&saved=packing`);
   }
   await setShopPackingList(await getDb(), session.user.shopId, packingList);
   revalidateAndRedirect(
     `/shop/${session.user.shopSlug}/settings`,
-    `/shop/${session.user.shopSlug}/settings?notice=packing_saved`,
+    `/shop/${session.user.shopSlug}/settings?notice=packing_saved&saved=packing`,
   );
 }
 
@@ -155,9 +155,9 @@ async function saveDepthUnitAction(formData: FormData) {
   const session = await requireStaffSession();
   const settings = `/shop/${session.user.shopSlug}/settings`;
   const parsed = z.enum(["meters", "feet"]).safeParse(formData.get("depthUnit"));
-  if (!parsed.success) redirect(`${settings}?notice=depth_unit_invalid`);
+  if (!parsed.success) redirect(`${settings}?notice=depth_unit_invalid&saved=depthUnit`);
   await setShopDepthUnit(await getDb(), session.user.shopId, parsed.data);
-  revalidateAndRedirect(settings, `${settings}?notice=depth_unit_saved`);
+  revalidateAndRedirect(settings, `${settings}?notice=depth_unit_saved&saved=depthUnit`);
 }
 
 /** How many minutes before departure divers are asked to be at the dock. */
@@ -167,10 +167,10 @@ async function saveDockCallAction(formData: FormData) {
   const settings = `/shop/${session.user.shopSlug}/settings`;
   const minutes = Number(formData.get("dockCallMinutes"));
   if (!Number.isInteger(minutes) || minutes < 5 || minutes > 180) {
-    redirect(`${settings}?notice=dock_invalid`);
+    redirect(`${settings}?notice=dock_invalid&saved=dockCall`);
   }
   await setShopDockCallMinutes(await getDb(), session.user.shopId, minutes);
-  revalidateAndRedirect(settings, `${settings}?notice=dock_saved`);
+  revalidateAndRedirect(settings, `${settings}?notice=dock_saved&saved=dockCall`);
 }
 
 /** Which gear the shop rents. Unchecked kinds simply drop out of the catalog. */
@@ -188,7 +188,7 @@ async function saveRentalItemsAction(formData: FormData) {
   await setShopRentalItems(await getDb(), session.user.shopId, toRentableKinds(selected));
   revalidateAndRedirect(
     `/shop/${session.user.shopSlug}/settings`,
-    `/shop/${session.user.shopSlug}/settings?notice=rentals_saved`,
+    `/shop/${session.user.shopSlug}/settings?notice=rentals_saved&saved=rentals`,
   );
 }
 
@@ -219,7 +219,7 @@ async function saveRentalPricingAction(formData: FormData) {
   }
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
-  if (!shop) redirect(`${settings}?notice=rental_prices_invalid`);
+  if (!shop) redirect(`${settings}?notice=rental_prices_invalid&saved=rentalPricing`);
   const set = parsePriceDollars(formData.get("setPrice"));
   let invalid = !set.ok;
   const perItemCents: RentalPricing["perItemCents"] = {};
@@ -241,13 +241,13 @@ async function saveRentalPricingAction(formData: FormData) {
     if (!nitrox.ok) invalid = true;
     else nitroxCents = nitrox.cents;
   }
-  if (invalid || !set.ok) redirect(`${settings}?notice=rental_prices_invalid`);
+  if (invalid || !set.ok) redirect(`${settings}?notice=rental_prices_invalid&saved=rentalPricing`);
   await setShopRentalPricing(db, session.user.shopId, {
     setCents: set.cents,
     perItemCents,
     nitroxCents,
   });
-  revalidateAndRedirect(settings, `${settings}?notice=rental_prices_saved`);
+  revalidateAndRedirect(settings, `${settings}?notice=rental_prices_saved&saved=rentalPricing`);
 }
 
 /**
@@ -260,9 +260,9 @@ async function saveContactAction(formData: FormData) {
   const session = await requireStaffSession();
   const parsed = contactSchema.safeParse(Object.fromEntries(formData));
   const settings = `/shop/${session.user.shopSlug}/settings`;
-  if (!parsed.success) redirect(`${settings}?notice=contact_invalid`);
+  if (!parsed.success) redirect(`${settings}?notice=contact_invalid&saved=contact`);
   await setShopContact(await getDb(), session.user.shopId, parsed.data);
-  revalidateAndRedirect(settings, `${settings}?notice=contact_saved`);
+  revalidateAndRedirect(settings, `${settings}?notice=contact_saved&saved=contact`);
 }
 
 /** Where the post-trip recap's "leave us a review" link sends a diver. */
@@ -271,9 +271,9 @@ async function saveReviewUrlAction(formData: FormData) {
   const session = await requireStaffSession();
   const parsed = reviewUrlSchema.safeParse(Object.fromEntries(formData));
   const settings = `/shop/${session.user.shopSlug}/settings`;
-  if (!parsed.success) redirect(`${settings}?notice=review_url_invalid`);
+  if (!parsed.success) redirect(`${settings}?notice=review_url_invalid&saved=reviewLink`);
   await setShopReviewUrl(await getDb(), session.user.shopId, parsed.data.reviewUrl);
-  revalidateAndRedirect(settings, `${settings}?notice=review_url_saved`);
+  revalidateAndRedirect(settings, `${settings}?notice=review_url_saved&saved=reviewLink`);
 }
 
 async function disconnectAction() {
@@ -293,7 +293,7 @@ async function disconnectAction() {
   }
   revalidateAndRedirect(
     `/shop/${session.user.shopSlug}/settings`,
-    `/shop/${session.user.shopSlug}/settings?notice=disconnected`,
+    `/shop/${session.user.shopSlug}/settings?notice=disconnected&saved=stripe`,
   );
 }
 
@@ -314,7 +314,7 @@ async function refreshAction() {
   }
   revalidateAndRedirect(
     `/shop/${session.user.shopSlug}/settings`,
-    `/shop/${session.user.shopSlug}/settings?notice=refreshed`,
+    `/shop/${session.user.shopSlug}/settings?notice=refreshed&saved=stripe`,
   );
 }
 
@@ -369,16 +369,55 @@ function StatusRow({
   );
 }
 
+/**
+ * The nine forms on this page each carry their own section id through
+ * `?saved=<id>` (set by the action that redirects back here), so the notice
+ * that comes back renders inside the section that changed instead of one
+ * banner at the top of the page — after `PreserveFormScroll` restores the
+ * scroll position to wherever that section was, a top banner is off-screen
+ * and easy to miss entirely.
+ */
+const SECTION_IDS = [
+  "contact",
+  "reviewLink",
+  "packing",
+  "dockCall",
+  "depthUnit",
+  "rentals",
+  "rentalPricing",
+  "stripe",
+] as const;
+type SectionId = (typeof SECTION_IDS)[number];
+
+function SectionNotice({
+  banner,
+  section,
+  active,
+}: {
+  banner: { tone: "success" | "danger" | "warning"; text: string } | undefined;
+  section: SectionId;
+  active: SectionId | null;
+}) {
+  if (!banner || active !== section) return null;
+  return (
+    <div className="mt-4">
+      <ShopNotice tone={banner.tone} role={banner.tone === "danger" ? "alert" : "status"}>
+        {banner.text}
+      </ShopNotice>
+    </div>
+  );
+}
+
 export default async function PaymentsSettingsPage({
   params,
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{ notice?: string }>;
+  searchParams: Promise<{ notice?: string; saved?: string }>;
 }) {
   const session = await requireStaffSession();
   const { shopSlug } = await params;
-  const { notice } = await searchParams;
+  const { notice, saved } = await searchParams;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) redirect("/");
@@ -397,17 +436,23 @@ export default async function PaymentsSettingsPage({
   const canExport = canExportShopData(session.user.roles);
   const t = staffTranslator(await requestLocale(shop.defaultLocale));
   const banner = notice ? noticeMessages(t)[notice] : undefined;
+  // A recognized section renders the notice inline; anything else (chiefly
+  // `not_authorized`, which spans several sections rather than owning one)
+  // keeps the old top-of-page banner.
+  const activeSection = (SECTION_IDS as readonly string[]).includes(saved ?? "")
+    ? (saved as SectionId)
+    : null;
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
-      <FlashParams params={["notice"]} />
+      <FlashParams params={["notice", "saved"]} />
       <ShopPageHeader
         eyebrow={t("settings.main.eyebrow")}
         title={t("settings.main.title")}
         description={t("settings.main.description")}
       />
 
-      {banner ? (
+      {banner && !activeSection ? (
         <div className="mb-6">
           <ShopNotice tone={banner.tone} role={banner.tone === "danger" ? "alert" : "status"}>
             {banner.text}
@@ -418,6 +463,7 @@ export default async function PaymentsSettingsPage({
       <section className="rounded-lg border border-border bg-surface p-6">
         <h2 className="font-medium">{t("settings.main.contact.heading")}</h2>
         <p className="mt-1 text-sm text-muted">{t("settings.main.contact.description")}</p>
+        <SectionNotice banner={banner} section="contact" active={activeSection} />
         <FieldGrid as="form" action={saveContactAction} columns={2} className="mt-4">
           <Field label={t("settings.main.contact.emailLabel")}>
             <input
@@ -458,6 +504,7 @@ export default async function PaymentsSettingsPage({
       <section className="mt-6 rounded-lg border border-border bg-surface p-6">
         <h2 className="font-medium">{t("settings.main.reviewLink.heading")}</h2>
         <p className="mt-1 text-sm text-muted">{t("settings.main.reviewLink.description")}</p>
+        <SectionNotice banner={banner} section="reviewLink" active={activeSection} />
         <FieldGrid as="form" action={saveReviewUrlAction} columns={1} className="mt-4">
           <Field
             label={t("settings.main.reviewLink.label")}
@@ -486,6 +533,7 @@ export default async function PaymentsSettingsPage({
       <section className="mt-6 rounded-lg border border-border bg-surface p-6">
         <h2 className="font-medium">{t("settings.main.packing.heading")}</h2>
         <p className="mt-1 text-sm text-muted">{t("settings.main.packing.description")}</p>
+        <SectionNotice banner={banner} section="packing" active={activeSection} />
         <form action={savePackingAction} className="mt-4">
           <textarea
             name="packingList"
@@ -506,6 +554,7 @@ export default async function PaymentsSettingsPage({
       <section className="mt-6 rounded-lg border border-border bg-surface p-6">
         <h2 className="font-medium">{t("settings.main.dockCall.heading")}</h2>
         <p className="mt-1 text-sm text-muted">{t("settings.main.dockCall.description")}</p>
+        <SectionNotice banner={banner} section="dockCall" active={activeSection} />
         <FieldGrid as="form" action={saveDockCallAction} columns={2} className="mt-4">
           <Field label={t("settings.main.dockCall.label")}>
             <input
@@ -535,6 +584,7 @@ export default async function PaymentsSettingsPage({
       <section className="mt-6 rounded-lg border border-border bg-surface p-6">
         <h2 className="font-medium">{t("settings.main.depthUnit.heading")}</h2>
         <p className="mt-1 text-sm text-muted">{t("settings.main.depthUnit.description")}</p>
+        <SectionNotice banner={banner} section="depthUnit" active={activeSection} />
         <FieldGrid as="form" action={saveDepthUnitAction} columns={2} className="mt-4">
           <Field label={t("settings.main.depthUnit.label")}>
             <select name="depthUnit" defaultValue={shop.depthUnit} className={controlClass}>
@@ -566,6 +616,7 @@ export default async function PaymentsSettingsPage({
           <section className="mt-6 rounded-lg border border-border bg-surface p-6">
             <h2 className="font-medium">{t("settings.main.rentals.heading")}</h2>
             <p className="mt-1 text-sm text-muted">{t("settings.main.rentals.description")}</p>
+            <SectionNotice banner={banner} section="rentals" active={activeSection} />
             <form action={saveRentalItemsAction} className="mt-4">
               <fieldset>
                 <legend className="sr-only">{t("settings.main.rentals.legend")}</legend>
@@ -600,6 +651,7 @@ export default async function PaymentsSettingsPage({
             <p className="mt-1 text-sm text-muted">
               {t("settings.main.rentalPricing.description")}
             </p>
+            <SectionNotice banner={banner} section="rentalPricing" active={activeSection} />
             <form action={saveRentalPricingAction} className="mt-4">
               <FieldGrid columns={2}>
                 <PriceField
@@ -635,6 +687,7 @@ export default async function PaymentsSettingsPage({
           </section>
 
           <section className="mt-6 rounded-lg border border-border bg-surface p-6">
+            <SectionNotice banner={banner} section="stripe" active={activeSection} />
             {!account ? (
               <div>
                 <h2 className="font-medium">{t("settings.main.stripe.notConnectedHeading")}</h2>
