@@ -645,7 +645,7 @@ export default async function PaymentsSettingsPage({
                   </Link>
                 ) : (
                   <p className="mt-4 rounded-lg bg-warning/10 px-4 py-3 text-sm font-medium text-warning">
-                    {t("settings.main.stripe.notConfiguredWarning")}
+                    {t("settings.main.stripe.notConfiguredWarning", { email: FOUNDER_EMAIL })}
                   </p>
                 )}
               </div>

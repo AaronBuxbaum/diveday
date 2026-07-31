@@ -670,6 +670,7 @@
       "tryLiveDemo": "Probar la demo en vivo",
       "settingUp": "Configurando tu tienda…",
       "submit": "Crear tienda y empezar la prueba",
+      "trialMeaning": "Gratis mientras DiveDay está en acceso anticipado — sin tarjeta, sin fecha de fin definida. Te avisaremos con tiempo antes de que eso cambie.",
       "alreadyHaveShop": "¿Ya tienes una tienda?",
       "signIn": "Iniciar sesión",
       "errors": {
@@ -1117,6 +1118,10 @@
         "billing": {
           "question": "¿Cómo funciona la facturación?",
           "answer": "Mes a mes, por ubicación. Cancela cuando quieras y llévate los registros de tu tienda con el botón de exportar — sin cuota de alta y sin contrato anual."
+        },
+        "trialMeaning": {
+          "question": "¿Qué significa \"prueba\" ahora mismo?",
+          "answer": "Crear una tienda es gratis mientras DiveDay está en acceso anticipado — sin tarjeta y sin fecha de fin definida todavía. Te avisaremos con tiempo antes de que eso cambie, y la facturación de arriba es lo que las tiendas fundadoras fijan cuando llegue ese momento."
         },
         "seeBefore": {
           "question": "¿Puedo verlo antes de comprometerme?",

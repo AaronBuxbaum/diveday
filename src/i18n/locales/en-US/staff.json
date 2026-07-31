@@ -1564,7 +1564,7 @@
         "notConnectedHeading": "No Stripe account connected",
         "notConnectedDescription": "Connect a Stripe account you own — DiveDay never holds your money, and payments for orders and invoices go straight into your own Stripe balance.",
         "connect": "Connect Stripe",
-        "notConfiguredWarning": "Online payments aren't switched on for this DiveDay setup yet — ask whoever runs your hosting to finish the Stripe configuration.",
+        "notConfiguredWarning": "Online payments aren't configured for this DiveDay instance yet — contact {email} to get it set up.",
         "connectedHeading": "Stripe account connected",
         "disconnectedHeading": "Stripe account disconnected",
         "readyBadge": "Ready for payments",
@@ -1834,7 +1834,7 @@
       "eyebrow": "Settings",
       "title": "Website embed",
       "description": "Paste one of these into your own website so divers can browse and book without leaving your site. Both point at the same live schedule — no separate setup, no sync to keep working.",
-      "notConfigured": "Embed links need a configured public hosting address — ask whoever runs your DiveDay hosting to finish setup before these snippets can be generated.",
+      "notConfigured": "Embed links need a configured public hosting address for this DiveDay instance — contact {email} to get it set up.",
       "calendarEmbed": {
         "heading": "Calendar embed",
         "description": "A full booking calendar, sized to fit wherever you place it on your page. Best for a dedicated \"Book now\" page on your site.",

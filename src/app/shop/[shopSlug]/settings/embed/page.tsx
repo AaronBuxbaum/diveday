@@ -7,6 +7,7 @@ import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { escapeHtml } from "@/lib/html";
 import { publicAppUrl } from "@/lib/notifications";
+import { FOUNDER_EMAIL } from "@/lib/platform-mail";
 import { requireStaffSession } from "@/lib/session";
 import { SnippetField } from "./SnippetField";
 
@@ -37,7 +38,7 @@ export default async function EmbedSettingsPage() {
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
         <ShopPageHeader eyebrow={t("settings.embed.eyebrow")} title={t("settings.embed.title")} />
         <p className="rounded-lg bg-warning/10 px-4 py-3 text-sm font-medium text-warning">
-          {t("settings.embed.notConfigured")}
+          {t("settings.embed.notConfigured", { email: FOUNDER_EMAIL })}
         </p>
       </main>
     );

@@ -30,7 +30,17 @@ export async function generateMetadata({
   const { competitor } = await params;
   const guide = getMigrationGuide(competitor);
   if (!guide) return { title: "Switching to DiveDay" };
-  return { title: `${guide.metaTitle} — DiveDay`, description: guide.metaDescription };
+  const title = `${guide.metaTitle} — DiveDay`;
+  return {
+    title,
+    description: guide.metaDescription,
+    alternates: { canonical: `/switching/${guide.slug}` },
+    openGraph: {
+      title,
+      description: guide.metaDescription,
+      url: `/switching/${guide.slug}`,
+    },
+  };
 }
 
 export default async function MigrationGuidePage({
@@ -259,6 +269,28 @@ export default async function MigrationGuidePage({
 
             <SwitchingImportCta label={t("switching.competitor.openImportCta")} />
           </div>
+        </section>
+
+        {/* What the actual switch looks like — parallel-run, timing, re-import safety. */}
+        <section className="mx-auto max-w-4xl px-6 py-16 lg:py-20">
+          <h2 className="text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
+            {guide.cutover.heading}
+          </h2>
+          <p className="mt-5 max-w-2xl text-lg leading-8 text-muted">{guide.cutover.intro}</p>
+
+          <ol className="mt-10 space-y-6">
+            {guide.cutover.steps.map((step, index) => (
+              <li key={step.title} className="flex gap-4">
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+                  {index + 1}
+                </span>
+                <div className="pt-1">
+                  <h3 className="font-semibold leading-6">{step.title}</h3>
+                  <p className="mt-1.5 leading-7 text-muted">{step.detail}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
         </section>
 
         {/* The owner-authorized concierge switch offer (shared across /switching). */}

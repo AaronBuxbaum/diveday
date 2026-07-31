@@ -670,6 +670,7 @@
       "tryLiveDemo": "Try the live demo",
       "settingUp": "Setting up your shop…",
       "submit": "Create shop & start trial",
+      "trialMeaning": "Free while DiveDay is in early access — no card, no set end date. We'll tell you well before that changes.",
       "alreadyHaveShop": "Already have a shop?",
       "signIn": "Sign in",
       "errors": {
@@ -1117,6 +1118,10 @@
         "billing": {
           "question": "How does billing work?",
           "answer": "Month to month, per location. Cancel whenever you like and leave with your shop's records through the export button — no setup fee and no annual contract."
+        },
+        "trialMeaning": {
+          "question": "What does \"trial\" mean right now?",
+          "answer": "Starting a shop is free while DiveDay is in early access — no card, and no set end date yet. We'll tell you well before that changes, and the billing above is what founding shops lock in when it does."
         },
         "seeBefore": {
           "question": "Can I see it before I commit?",

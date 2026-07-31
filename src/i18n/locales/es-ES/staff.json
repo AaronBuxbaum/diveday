@@ -1564,7 +1564,7 @@
         "notConnectedHeading": "Ninguna cuenta de Stripe conectada",
         "notConnectedDescription": "Conecta una cuenta de Stripe de tu propiedad — DiveDay nunca retiene tu dinero, y los pagos de pedidos y facturas van directo a tu propio saldo de Stripe.",
         "connect": "Conectar Stripe",
-        "notConfiguredWarning": "Los pagos en línea aún no están activados en esta instalación de DiveDay — pide a quien administre tu alojamiento que termine la configuración de Stripe.",
+        "notConfiguredWarning": "Los pagos en línea no están configurados en esta instancia de DiveDay — contacta a {email} para activarlos.",
         "connectedHeading": "Cuenta de Stripe conectada",
         "disconnectedHeading": "Cuenta de Stripe desconectada",
         "readyBadge": "Lista para pagos",
@@ -1834,7 +1834,7 @@
       "eyebrow": "Ajustes",
       "title": "Widget para tu web",
       "description": "Pega uno de estos en tu propia web para que los buceadores puedan explorar y reservar sin salir de tu sitio. Ambos apuntan al mismo calendario en directo — sin configuración aparte, sin sincronización que mantener.",
-      "notConfigured": "Los widgets necesitan una dirección de alojamiento público configurada — pide a quien administre tu alojamiento de DiveDay que termine la configuración antes de generar estos fragmentos.",
+      "notConfigured": "Los widgets necesitan una dirección de alojamiento público configurada en esta instancia de DiveDay — contacta a {email} para activarla.",
       "calendarEmbed": {
         "heading": "Widget de calendario",
         "description": "Un calendario de reservas completo, ajustado al tamaño donde lo coloques en tu página. Ideal para una página dedicada de \"Reservar ahora\" en tu web.",
