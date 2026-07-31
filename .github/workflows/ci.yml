@@ -123,6 +123,16 @@ jobs:
       fail-fast: false
       matrix:
         shard: [1, 2, 3, 4]
+    env:
+      # e2e/servers.ts defaults to floor(cpus/4) (1 worker on this 4-core
+      # runner) — tuned against the 3-core macOS runners CI used before
+      # 20260730-linux-ci-runners.md moved to real 4-core/16GB Linux boxes.
+      # Trying 2 here now that the hardware is stronger
+      # (20260731-ci-parallelization-resources-build-concurrency.md); revert
+      # this override if it reintroduces the timeout-driven contention
+      # flakiness 20260720-e2e-parallel-prod-fleet.md documented at 2 workers
+      # on 4 cores.
+      E2E_WORKERS: "2"
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -170,6 +180,12 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      # See the matching comment on the `playwright` job above: trying 2
+      # e2e/servers.ts workers now that CI runs on real 4-core/16GB Linux
+      # boxes instead of the 3-core macOS runners this default was tuned
+      # against.
+      E2E_WORKERS: "2"
     steps:
       # reg-keygen-git-hash-plugin derives both keys from git: the actual one
       # from HEAD, the expected one by walking back to this commit's parent and
