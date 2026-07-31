@@ -38,6 +38,12 @@ Read the PNGs in `e2e/screenshots/` (gitignored) and check them against the chec
 `docs/design/principles.md`. For significant UI work, also run the `design-review` skill.
 Send the screenshots to the user when reporting completion.
 
+Prefer this Playwright-driven capture over backgrounding `pnpm dev` and browsing it manually: the
+Playwright commands build, run, and exit on their own, while a backgrounded dev server doesn't —
+see the `debug` skill's **Long-running background processes** section for why a leaked one causes
+real problems (stale-server corruption, and sessions getting stuck waiting on a readiness signal
+that a leftover process will never emit).
+
 ## 4. Behavior changed: exercise it
 
 For domain logic with no UI yet, drive it directly (a scratch script or `vitest run` on the new

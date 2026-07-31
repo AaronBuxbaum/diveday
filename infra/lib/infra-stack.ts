@@ -130,5 +130,38 @@ export class InfraStack extends cdk.Stack {
       description:
         "Instructions for generating the access key for the cdk-deployer IAM user. Do not store in plaintext!",
     });
+
+    // 6. Read-only IAM identities for the AWS API MCP server (see .mcp.json's
+    // "aws" entry). Local dev and Claude Code's cloud environment each get their
+    // own principal so either can be rotated or revoked without touching the
+    // other. Both hold only the AWS-managed ReadOnlyAccess policy — no write or
+    // delete action exists on these credentials at all, so a bug in the MCP
+    // server's own READ_OPERATIONS_ONLY allowlist still can't mutate anything.
+    // Access keys are minted out-of-band via `aws iam create-access-key`
+    // (mirroring the cdk-deployer pattern above) rather than CfnAccessKey, so no
+    // secret ever lands in this template, CloudFormation state, or a stack output.
+    const readOnlyAccess = iam.ManagedPolicy.fromAwsManagedPolicyName("ReadOnlyAccess");
+
+    const mcpReadOnlyLocalUser = new iam.User(this, "McpReadOnlyLocalUser", {
+      userName: "diveday-mcp-readonly-local",
+      managedPolicies: [readOnlyAccess],
+    });
+
+    const mcpReadOnlyCloudUser = new iam.User(this, "McpReadOnlyCloudUser", {
+      userName: "diveday-mcp-readonly-cloud",
+      managedPolicies: [readOnlyAccess],
+    });
+
+    new cdk.CfnOutput(this, "McpReadOnlyLocalAccessKeyInstructions", {
+      value: `aws iam create-access-key --user-name ${mcpReadOnlyLocalUser.userName}`,
+      description:
+        "Run to mint local-dev AWS MCP server credentials. Store the output in a named AWS CLI profile (~/.aws/credentials) — never in the repo.",
+    });
+
+    new cdk.CfnOutput(this, "McpReadOnlyCloudAccessKeyInstructions", {
+      value: `aws iam create-access-key --user-name ${mcpReadOnlyCloudUser.userName}`,
+      description:
+        "Run to mint AWS MCP server credentials for Claude Code's cloud environment. Store the output in that environment's secret/env-var settings — never in the repo.",
+    });
   }
 }
