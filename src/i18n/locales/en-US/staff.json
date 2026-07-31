@@ -47,8 +47,7 @@
     "notice": {
       "denied": "You do not have access to that calendar scope."
     },
-    "coverage": "Covers departures from {past} days ago through {future} days ahead.",
-    "settingsLink": "Manage subscriptions"
+    "coverage": "Covers departures from {past} days ago through {future} days ahead."
   },
   "staffing": {
     "eyebrow": "Operations",
@@ -1584,6 +1583,11 @@
         "heading": "Website embed",
         "description": "Copy-paste snippets that put your live booking calendar on your own website.",
         "cta": "Get embed code"
+      },
+      "calendar": {
+        "heading": "Calendar subscriptions",
+        "description": "Put your departures on the calendar app you already use — read-only, so DiveDay never touches it.",
+        "cta": "Manage subscriptions"
       },
       "data": {
         "heading": "Data",

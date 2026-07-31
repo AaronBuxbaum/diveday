@@ -47,8 +47,7 @@
     "notice": {
       "denied": "No tienes acceso a ese ámbito de calendario."
     },
-    "coverage": "Incluye salidas desde hace {past} días hasta dentro de {future} días.",
-    "settingsLink": "Gestionar suscripciones"
+    "coverage": "Incluye salidas desde hace {past} días hasta dentro de {future} días."
   },
   "staffing": {
     "eyebrow": "Operaciones",
@@ -1584,6 +1583,11 @@
         "heading": "Widget para tu web",
         "description": "Fragmentos para copiar y pegar que ponen tu calendario de reservas en directo en tu propia web.",
         "cta": "Obtener código del widget"
+      },
+      "calendar": {
+        "heading": "Suscripciones al calendario",
+        "description": "Pon tus salidas en la app de calendario que ya usas — de solo lectura, así que DiveDay nunca la modifica.",
+        "cta": "Gestionar suscripciones"
       },
       "data": {
         "heading": "Datos",

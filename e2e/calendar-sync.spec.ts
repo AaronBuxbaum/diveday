@@ -56,6 +56,32 @@ async function mintLink(panel: Locator, page: Page): Promise<string> {
 }
 
 test.describe("staff calendar subscriptions", () => {
+  test("the Settings card teases the calendar page instead of repeating its full title and description", async ({
+    page,
+  }) => {
+    await signInAsOwner(page);
+    await page.goto("/shop/blue-mantis/settings");
+    const card = page
+      .locator("section")
+      .filter({ has: page.getByRole("heading", { name: "Calendar subscriptions" }) });
+    await expect(card).toBeVisible();
+    // The card's own short teaser, not the full page's read-only explainer —
+    // that longer sentence belongs to the destination page alone.
+    await expect(
+      card.getByText("Put your departures on the calendar app you already use"),
+    ).toBeVisible();
+    await expect(
+      card.getByText(
+        "Subscribing is read-only: DiveDay never reads or changes anything in your calendar.",
+      ),
+    ).toHaveCount(0);
+
+    await card.getByRole("link", { name: "Manage subscriptions" }).click();
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Calendar subscriptions" }),
+    ).toBeVisible();
+  });
+
   test("an owner mints a feed and the URL serves their departures with no session", async ({
     page,
     request,
