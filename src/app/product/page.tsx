@@ -230,25 +230,42 @@ export default async function ProductPage() {
                 {t("marketing.product.boxDescription")}
               </p>
             </div>
-            <div className="mt-12 grid gap-x-10 gap-y-10 md:grid-cols-2 lg:grid-cols-3">
-              {productCapabilityIndex.map((group) => (
-                <section key={group.area}>
-                  <h3 className="text-xs font-semibold tracking-widest text-primary uppercase">
-                    {group.area}
-                  </h3>
-                  <ul className="mt-4 space-y-2.5 text-sm leading-6 text-muted">
-                    {group.items.map((item) => (
-                      <li key={item} className="flex gap-2.5">
-                        <span aria-hidden="true" className="font-semibold text-primary">
-                          ✓
-                        </span>
-                        <span>{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
-              ))}
-            </div>
+            <details className="mt-12 group">
+              <summary className="flex min-h-11 w-fit cursor-pointer list-none items-center gap-2 text-sm font-semibold text-primary [&::-webkit-details-marker]:hidden">
+                {t("marketing.product.fullListSummary")}
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="size-4 transition-transform group-open:rotate-180"
+                >
+                  <path d="m6 9 6 6 6-6" />
+                </svg>
+              </summary>
+              <div className="mt-8 grid gap-x-10 gap-y-10 md:grid-cols-2 lg:grid-cols-3">
+                {productCapabilityIndex.map((group) => (
+                  <section key={group.area}>
+                    <h3 className="text-xs font-semibold tracking-widest text-primary uppercase">
+                      {group.area}
+                    </h3>
+                    <ul className="mt-4 space-y-2.5 text-sm leading-6 text-muted">
+                      {group.items.map((item) => (
+                        <li key={item} className="flex gap-2.5">
+                          <span aria-hidden="true" className="font-semibold text-primary">
+                            ✓
+                          </span>
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                ))}
+              </div>
+            </details>
           </div>
         </section>
 

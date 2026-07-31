@@ -349,7 +349,6 @@ export default async function NewTripPage({
             <FieldGrid columns={2} className="mt-4 gap-x-5 gap-y-5">
               <Field
                 label={t("trips.new.depositLabel")}
-                hint={t("trips.new.optionalHint")}
                 description={t("trips.new.depositDescription")}
               >
                 <input
@@ -358,12 +357,12 @@ export default async function NewTripPage({
                   step="0.01"
                   min={0}
                   placeholder="$0.00"
+                  title={t("trips.new.depositTitle")}
                   className={`${controlClass} tabular-nums sm:w-40`}
                 />
               </Field>
               <Field
                 label={t("trips.new.cancellationWindowLabel")}
-                hint={t("trips.new.optionalHint")}
                 description={t("trips.new.cancellationWindowDescription")}
               >
                 <div className="flex items-center gap-2">

@@ -136,7 +136,6 @@ export function DetailsSection({
           <FieldGrid columns={2} className="mt-4 gap-x-5 gap-y-5">
             <Field
               label={t("trips.details.depositLabel")}
-              hint={t("trips.details.optionalHint")}
               description={t("trips.details.depositDescription")}
             >
               <input
@@ -148,12 +147,12 @@ export function DetailsSection({
                 defaultValue={
                   trip.depositCents === null ? "" : (trip.depositCents / 100).toFixed(2)
                 }
+                title={t("trips.details.depositTitle")}
                 className={`${controlClass} tabular-nums sm:w-40`}
               />
             </Field>
             <Field
               label={t("trips.details.cancellationWindowLabel")}
-              hint={t("trips.details.optionalHint")}
               description={t("trips.details.cancellationWindowDescription")}
             >
               <div className="flex items-center gap-2">

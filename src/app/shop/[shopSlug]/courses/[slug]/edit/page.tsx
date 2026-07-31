@@ -137,7 +137,6 @@ export default async function EditCoursePage({
             </Field>
             <Field
               label={t("courses.edit.overviewLabel")}
-              hint={t("courses.edit.optionalHint")}
               description={t("courses.edit.overviewDescription")}
             >
               <textarea
@@ -155,10 +154,7 @@ export default async function EditCoursePage({
           <legend className="px-1 text-sm font-semibold">{t("courses.edit.pricingLegend")}</legend>
           <p className="mt-1 text-sm text-muted">{t("courses.edit.pricingDescription")}</p>
           <FieldGrid columns={2} className="mt-4 gap-y-5">
-            <Field
-              label={t("courses.edit.instructionFeeLabel")}
-              hint={t("courses.edit.optionalHint")}
-            >
+            <Field label={t("courses.edit.instructionFeeLabel")}>
               <input
                 name="price"
                 inputMode="decimal"
@@ -249,7 +245,7 @@ export default async function EditCoursePage({
           <legend className="px-1 text-sm font-semibold">{t("courses.edit.glanceLegend")}</legend>
           <p className="mt-1 text-sm text-muted">{t("courses.edit.glanceDescription")}</p>
           <FieldGrid columns={2} className="mt-4 gap-y-5">
-            <Field label={t("courses.edit.durationLabel")} hint={t("courses.edit.optionalHint")}>
+            <Field label={t("courses.edit.durationLabel")}>
               <input
                 name="durationText"
                 maxLength={120}
@@ -258,7 +254,7 @@ export default async function EditCoursePage({
                 className={controlClass}
               />
             </Field>
-            <Field label={t("courses.edit.groupSizeLabel")} hint={t("courses.edit.optionalHint")}>
+            <Field label={t("courses.edit.groupSizeLabel")}>
               <input
                 name="groupSizeText"
                 maxLength={120}
@@ -281,10 +277,7 @@ export default async function EditCoursePage({
             })}
           </p>
           <FieldGrid columns={1} className="mt-4 gap-y-5">
-            <Field
-              label={t("courses.edit.prerequisiteLabel")}
-              hint={t("courses.edit.optionalHint")}
-            >
+            <Field label={t("courses.edit.prerequisiteLabel")}>
               <textarea
                 name="prerequisiteNote"
                 rows={4}
@@ -346,6 +339,7 @@ export default async function EditCoursePage({
                 endTimeLabel: t("courses.dayByDay.endTimeLabel"),
                 timeNoteLabel: t("courses.dayByDay.timeNoteLabel"),
                 timeNoteDescription: t("courses.dayByDay.timeNoteDescription"),
+                timeNoteTitle: t("courses.dayByDay.timeNoteTitle"),
                 timeNotePlaceholder: t("courses.dayByDay.timeNotePlaceholder"),
                 whatHappens: t("courses.dayByDay.whatHappens"),
                 itemLabel: t("courses.dayByDay.itemLabel"),
@@ -356,7 +350,6 @@ export default async function EditCoursePage({
                 addItem: t("courses.dayByDay.addItem"),
                 daysMax: t("courses.dayByDay.daysMax"),
                 addDay: t("courses.dayByDay.addDay"),
-                optionalHint: t("courses.dayByDay.optionalHint"),
               }}
             />
           </div>
@@ -366,7 +359,7 @@ export default async function EditCoursePage({
           <legend className="px-1 text-sm font-semibold">{t("courses.edit.faqLegend")}</legend>
           <p className="mt-1 text-sm text-muted">{t("courses.edit.faqDescription")}</p>
           <FieldGrid columns={1} className="mt-4">
-            <Field label={t("courses.edit.faqLabel")} hint={t("courses.edit.optionalHint")}>
+            <Field label={t("courses.edit.faqLabel")}>
               <textarea
                 name="faqs"
                 rows={10}

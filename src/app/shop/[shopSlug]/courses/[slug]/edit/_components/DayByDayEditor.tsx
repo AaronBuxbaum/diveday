@@ -22,6 +22,7 @@ export interface DayByDayEditorCopy {
   endTimeLabel: string;
   timeNoteLabel: string;
   timeNoteDescription: string;
+  timeNoteTitle: string;
   timeNotePlaceholder: string;
   whatHappens: string;
   itemLabel: string;
@@ -32,7 +33,6 @@ export interface DayByDayEditorCopy {
   addItem: string;
   daysMax: string;
   addDay: string;
-  optionalHint: string;
 }
 
 /** One-level `{token}` substitution — not a translator, just string.replace. */
@@ -127,10 +127,7 @@ export function DayByDayEditor({
                 />
               </Field>
               <FieldGrid columns={2}>
-                <Field
-                  label={fill(copy.startTimeLabel, { number: dayNumber })}
-                  hint={copy.optionalHint}
-                >
+                <Field label={fill(copy.startTimeLabel, { number: dayNumber })}>
                   <input
                     type="time"
                     value={day.startTime ?? ""}
@@ -138,10 +135,7 @@ export function DayByDayEditor({
                     className={controlClass}
                   />
                 </Field>
-                <Field
-                  label={fill(copy.endTimeLabel, { number: dayNumber })}
-                  hint={copy.optionalHint}
-                >
+                <Field label={fill(copy.endTimeLabel, { number: dayNumber })}>
                   <input
                     type="time"
                     value={day.endTime ?? ""}
@@ -152,7 +146,6 @@ export function DayByDayEditor({
               </FieldGrid>
               <Field
                 label={fill(copy.timeNoteLabel, { number: dayNumber })}
-                hint={copy.optionalHint}
                 description={copy.timeNoteDescription}
               >
                 <input
@@ -160,6 +153,7 @@ export function DayByDayEditor({
                   onChange={(event) => updateDay(dayIndex, { timeNote: event.target.value })}
                   maxLength={120}
                   placeholder={copy.timeNotePlaceholder}
+                  title={copy.timeNoteTitle}
                   className={controlClass}
                 />
               </Field>

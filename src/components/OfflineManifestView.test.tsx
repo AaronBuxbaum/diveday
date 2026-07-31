@@ -189,11 +189,7 @@ describe("OfflineManifestView — list mode (no ?trip=)", () => {
     render(<OfflineManifestView />);
 
     await waitFor(() => expect(syncOfflineManifest).toHaveBeenCalledWith("trip-1"));
-    expect(
-      await screen.findByText(
-        "Every offline change across these trips is caught up with the live manifest.",
-      ),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("Everything's sent across these trips.")).toBeInTheDocument();
   });
 
   it("never reconciles a foreign shop's pending trip under the current session", async () => {

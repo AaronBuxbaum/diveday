@@ -291,7 +291,7 @@
     },
     "remove": {
       "heading": "Remove from active divers",
-      "description": "This is a soft delete: the person disappears from active shop lists, while bookings, cards, and rental fit remain intact for records and safety review.",
+      "description": "They come off your active lists; bookings, cards, and sizes stay on file.",
       "removePersonSummary": "Remove {name}",
       "addAgainNote": "You can add them again later as a new active record.",
       "removing": "Removing…",
@@ -317,7 +317,7 @@
       "flaggedHeading": "Flagged for hands-on fitting",
       "cantFillHeading": "Can't fill one of these sizes?",
       "flaggedBody": "Flagged for hands-on fitting — they still count on the prep list, but without a size, and the crew fits them from what's aboard at check-in.",
-      "cantFillBody": "Flag them for hands-on fitting at check-in. Their count stays on the packing list but the size comes off, so nobody lays out a size the shop is short of — better than quietly substituting one.",
+      "cantFillBody": "Flag them for hands-on fitting at check-in. Their count stays on the packing list but the size comes off, so nobody lays out a size the shop is short of.",
       "clearing": "Clearing…",
       "fitResolved": "Fit resolved — pack their sizes again",
       "clearingRestricted": "Clearing this is limited to owners, managers, instructors, and divemasters — they confirm the diver can be packed to their stated sizes again.",
@@ -479,7 +479,8 @@
       "startTimeLabel": "Day {number} start time",
       "endTimeLabel": "Day {number} end time",
       "timeNoteLabel": "Day {number} time note",
-      "timeNoteDescription": "For a day with no fixed clock time, e.g. \"week 1–2\" or \"about 3 hours\". Ignored when start time is set.",
+      "timeNoteDescription": "For a day with no fixed clock time, e.g. \"week 1–2\" or \"about 3 hours\".",
+      "timeNoteTitle": "Ignored when a start time is set for this day.",
       "timeNotePlaceholder": "about 3 hours",
       "whatHappens": "What happens",
       "itemLabel": "Day {number} item {index}",
@@ -489,8 +490,7 @@
       "itemsMax": "{max} items max",
       "addItem": "Add item",
       "daysMax": "{max} days max",
-      "addDay": "Add day",
-      "optionalHint": "(optional)"
+      "addDay": "Add day"
     },
     "pathBuilder": {
       "orHigher": "{level} or higher",
@@ -755,7 +755,7 @@
       "stripeFailed": "Stripe didn't create that code. It's saved as failed here and can't discount anything; try again.",
       "notAuthorized": "Promo codes discount real money, so they're limited to owners and managers."
     },
-    "connectBanner": "Connect your Stripe account in <settingsLink>Settings</settingsLink> before creating a code — the coupon lives on your account, not DiveDay's.",
+    "connectBanner": "Connect your Stripe account in <settingsLink>Settings</settingsLink> before creating a code — codes are created on your own Stripe account, not DiveDay's.",
     "settingsLink": "Settings",
     "scope": {
       "all": "Trips and courses",
@@ -827,15 +827,15 @@
       "past": "Bookings, revenue, seat fill, and waivers for the trips that sailed."
     },
     "paymentOps": {
-      "sectionLabel": "Payment operations needing reconciliation",
-      "heading": "{count, plural, one {# payment attempt} other {# payment attempts}} need reconciliation",
+      "sectionLabel": "Payments that need a check",
+      "heading": "{count, plural, one {# payment} other {# payments}} we couldn't confirm. Check them in Stripe.",
       "detail": "Stripe was asked to do something and the app never confirmed how it went — check each against the Stripe dashboard and finish it by hand.",
       "started": "started {date}",
       "stripeId": "Stripe: {id}",
       "openTrip": "Open trip"
     },
     "mediaDeletions": {
-      "sectionLabel": "Photo deletions needing reconciliation",
+      "sectionLabel": "Photos that didn't finish deleting",
       "heading": "{count, plural, one {# photo} other {# photos}} removed but not yet deleted from storage",
       "detail": "The photo is already gone from the app; the stored file wasn't — retry the delete, or leave it for tonight's automatic retry.",
       "queued": "queued {date}",
@@ -1076,7 +1076,8 @@
       "payAtBookingLegend": "Pay at booking",
       "payAtBookingDescription": "Optional. Leave the deposit blank to charge the full fare when a diver books online.",
       "depositLabel": "Deposit per diver",
-      "depositDescription": "Charged now; the balance is still owed at the dock. Ignored if it's blank or not below the price. Many shops set 20–30% of the fare.",
+      "depositDescription": "Charged now; the balance is still owed at the dock. Many shops set 20–30% of the fare.",
+      "depositTitle": "Only applies when set below the trip price.",
       "cancellationWindowLabel": "Free cancellation window",
       "cancellationWindowDescription": "Hours before departure a diver can cancel for a refund. Shown to divers; refunds stay staff-run. 48 hours is a common window.",
       "hoursSuffix": "hours",
@@ -1293,7 +1294,7 @@
       "missingDiversTapHint": "Tap a diver's profile avatar to scroll directly to their roll-call row.",
       "rentsKitLabel": "Rentals 🤿",
       "ownKitLabel": "Own kit ⛵",
-      "description": "The authoritative roster: everyone aboard — divers and crew — with emergency contacts, at every checkpoint. Board the ready divers on <strong>Before departure</strong>, then run roll call again after each dive.",
+      "description": "Everyone aboard — divers and crew — with emergency contacts, at every checkpoint. Board the ready divers on <strong>Before departure</strong>, then run roll call again after each dive.",
       "liveManifestBadge": "Live manifest · save an offline copy below",
       "glareModeActive": "Glare mode active ☀",
       "summaryDivers": "Divers",
@@ -1311,7 +1312,7 @@
       "stillToCall": "{count, plural, one {# diver still to call.} other {# divers still to call.}}",
       "readinessNeedsAttention": "Readiness needs attention",
       "blockedDeparture": "{count, plural, one {# diver is blocked. They remain on this manifest and cannot board until their readiness check clears.} other {# divers are blocked. They remain on this manifest and cannot board until their readiness check clears.}}",
-      "blockedAfterDive": "{count, plural, one {# diver is blocked. They already sailed — record whoever is aboard. Their readiness is a paperwork flag to follow up on shore, not a bar to this head count.} other {# divers are blocked. They already sailed — record whoever is aboard. Their readiness is a paperwork flag to follow up on shore, not a bar to this head count.}}",
+      "blockedAfterDive": "{count, plural, one {# diver already sailed — record them anyway; readiness follow-up happens ashore, not here.} other {# divers already sailed — record them anyway; readiness follow-up happens ashore, not here.}}",
       "crewHeading": "Crew",
       "noCrew": "No crew on this trip yet — assign instructors and crew from the trip page.",
       "checkpointRollCallHeading": "{checkpoint} roll call",
@@ -1344,11 +1345,11 @@
     },
     "offlineManifestManager": {
       "checkingDevice": "Checking this device…",
-      "reconcileRejectedOne": "1 offline change didn't match the live manifest and wasn't applied — open the live manifest to sort it out.",
-      "reconcileRejectedOther": "{count} offline changes didn't match the live manifest and weren't applied — open the live manifest to sort it out.",
-      "reconcilePendingOne": "1 offline change is still waiting to send.",
-      "reconcilePendingOther": "{count} offline changes are still waiting to send.",
-      "reconcileCaughtUp": "Offline roll call is all caught up with the live manifest.",
+      "reconcileRejectedOne": "1 change needs a look — open the live manifest to sort it out.",
+      "reconcileRejectedOther": "{count} changes need a look — open the live manifest to sort it out.",
+      "reconcilePendingOne": "1 change is still sending.",
+      "reconcilePendingOther": "{count} changes are still sending.",
+      "reconcileCaughtUp": "Everything's sent.",
       "reconcileErrorFallback": "Couldn't reach DiveDay just now — your offline changes are still saved here and will try to send again on reconnect.",
       "savingMessage": "Saving the latest manifest to this device…",
       "saveSuccessMessage": "This device has an up-to-date offline copy.",
@@ -1415,7 +1416,7 @@
       "privateWaiverLinkReady": "Private waiver link ready",
       "waiverLinkDescription": "Share this link with the diver. It expires in seven days and is replaced if you issue a new one.",
       "openWaiverLink": "Open waiver link",
-      "demandSignal": "Demand signal",
+      "demandSignal": "This boat could take more",
       "demandHeading": "This departure could support more capacity",
       "scheduleAnotherDeparture": "Schedule another departure",
       "activityHeading": "Activity",
@@ -1449,7 +1450,8 @@
       "payAtBookingLegend": "Pay at booking",
       "payAtBookingDescription": "Optional. When the trip is priced and the shop takes card payments, divers pay online as they book. Leave the deposit blank to charge the full fare up front.",
       "depositLabel": "Deposit per diver",
-      "depositDescription": "Charged now; the balance is still owed at the dock. Ignored if it's blank or not below the price. Many shops set 20–30% of the fare.",
+      "depositDescription": "Charged now; the balance is still owed at the dock. Many shops set 20–30% of the fare.",
+      "depositTitle": "Only applies when set below the trip price.",
       "cancellationWindowLabel": "Free cancellation window",
       "cancellationWindowDescription": "Hours before departure a diver can cancel for a refund. Shown to divers; refunds stay staff-run. 48 hours is a common window.",
       "hoursSuffix": "hours",
@@ -1543,7 +1545,7 @@
       },
       "rentalPricing": {
         "heading": "Rental prices",
-        "description": "What a diver is quoted when they set their rental fit. Price the full set for the diver who takes everything (usually cheaper than the pieces), and per-piece for a partial kit — a diver renting all five core items is quoted the set, anyone renting fewer pays per piece. Leave a box blank to settle that item at the shop.",
+        "description": "What a diver is quoted for their rental fit. Price the full set (usually cheaper) and each piece separately — five items quotes the set, fewer pays per piece. Leave a box blank to settle at the shop.",
         "fullSetLabel": "Full set",
         "fullSetHint": "(BCD, reg, wetsuit, mask & fins, weights, dive computer)",
         "nitroxLabel": "Nitrox",
@@ -1668,16 +1670,16 @@
       "rowCount": "{count, plural, one {# row} other {# rows}}",
       "notIncluded": {
         "label": "Not included, on purpose:",
-        "text": "offline manifest copies saved on staff phones, private staff notes and activity, notification logs, Stripe checkout attempts (every money outcome is in the bookings and orders files), and any pasted image URL a CSV references that was never stored through DiveDay. Every card photo, dive-site image, and course image DiveDay itself stores comes along as a real file in the bundle's <mono>photos/</mono> folder, so it survives even after this account closes. Sign-in credentials and staff calendar-subscription links are never exported. The bundle's README lists the same gaps."
+        "text": "offline manifest copies, staff notes, notification logs, Stripe checkout attempts (see bookings and orders for outcomes), and unstored pasted image URLs. DiveDay's own photos export as real files in <mono>photos/</mono>. Sign-in credentials and calendar-subscription links never export — see the README."
       }
     },
     "import": {
       "eyebrow": "Settings",
       "title": "Import contacts",
-      "description": "Bring your divers, cards, rental sizes, and prior waiver acceptance in from a CSV — from your old system or from DiveDay's own export. We're honest about what comes across: imported cards land verified and flagged imported, with a one-tap confirm on each diver's record, and a row claiming a waiver was already accepted is trusted and marked imported.",
+      "description": "Bring your divers, cards, rental sizes, and prior waiver acceptance in from a CSV — from your old system or from DiveDay's own export. See exactly what comes across below.",
       "comesAcross": {
         "heading": "What comes across",
-        "description": "A card already in your system was checked there, so DiveDay trusts it: imported cards land verified and flagged imported, ready from the first trip, with a one-tap confirm for staff, and their refresher-due dates come across too. A specialty card waits on that confirm before it clears the dive it authorizes. Individual medical answers are never reconstructed."
+        "description": "The specifics, row by row:"
       },
       "scopeChip": {
         "included": "Comes across",
@@ -1685,7 +1687,7 @@
       },
       "wizard": {
         "heading": "Upload a contacts file",
-        "intro": "A CSV from your old system, or DiveDay's own <mono>contacts.csv</mono> from the data export. Rows with an email are matched to your existing divers, so re-importing one updates that diver instead of duplicating them; rows without an email always come in as new records. Nothing is written until you review the preview and confirm.",
+        "intro": "A CSV from your old system, or DiveDay's own <mono>contacts.csv</mono> export. An email match updates that diver on re-import; without one, it's a new record. Nothing is written until you review the preview and confirm.",
         "chooseFile": "Choose CSV file",
         "chooseDifferentFile": "Choose a different file",
         "columnTitle": "Column “{header}”",
@@ -1723,10 +1725,10 @@
           "visit_amount": "Past visit amount",
           "visit_reference": "Booking reference"
         },
-        "ignoredMedicalColumns": "Left behind on purpose: {columns}. These weren't recognized as a waiver column, so their contents never import — individual medical answers are never reconstructed from another system. A recognized “waiver accepted” column is trusted instead; see below.",
+        "ignoredMedicalColumns": "Left behind on purpose: {columns}. These weren't recognized as a waiver column, so their contents never import. A recognized “waiver accepted” column is trusted instead; see below.",
         "unmappedColumns": "Not recognized, so ignored: {columns}.",
         "waiverRowsNotice": "{count, plural, one {# row claims} other {# rows claim}} a waiver already accepted at a prior shop. DiveDay trusts that — including its medical clearance — and marks the record “imported” so it's never confused with a release signed here. See “What comes across” above.",
-        "visitRowsNotice": "{count, plural, one {# row records} other {# rows record}} a past visit. Those come across as history on the diver's profile — what was booked, when, and what your old system called it — and nothing more: they never become trips on your schedule, never count toward capacity or reporting, and a booking is not proof anyone dived.",
+        "visitRowsNotice": "{count, plural, one {# row records} other {# rows record}} a past visit. See “What comes across” above for what that does and doesn't mean.",
         "stats": {
           "diversInFile": "Divers in file",
           "extraCardRows": "Extra card rows",
@@ -1840,7 +1842,7 @@
   },
   "blockers": {
     "eyebrow": "Front desk",
-    "title": "Blockers",
+    "title": "Not ready",
     "description": {
       "none": "Everyone booked on an upcoming departure is ready to board.",
       "some": "{blocked, plural, one {# diver} other {# divers}} across {departures, plural, one {# departure} other {# departures}} can't board yet. Clearing a row takes you straight to the fix."
@@ -1856,7 +1858,7 @@
   },
   "checkIn": {
     "eyebrow": "Counter mode",
-    "title": "Line-busting check-in",
+    "title": "Counter check-in",
     "description": "Scan a booking code or search a diver, confirm live readiness, and keep the line moving. Check-in is arrival status; boarding is still confirmed on the manifest.",
     "queueAriaLabel": "Check-in queue",
     "readyHeading": "Ready at the counter",
@@ -1938,7 +1940,7 @@
     },
     "versionInfo": "Version {version} · saved {date}",
     "integrityHeading": "Signed record integrity",
-    "integrityDescription": "New signed records carry a server-sealed HMAC over their signed metadata and template snapshot. A mismatch is an audit stop; older imported or legacy records are clearly marked unsealed.",
+    "integrityDescription": "Signed waivers are tamper-evident — if a record has been altered, we flag it. Older imported or legacy records are marked unsealed below.",
     "noSignedRecords": "No signed records yet.",
     "noSignatureDate": "No signature date",
     "integrityValid": "Integrity verified",
@@ -2031,7 +2033,7 @@
       "groupTrips": "Trips",
       "groupGoTo": "Go to",
       "goToToday": "Today",
-      "goToBlockers": "Blockers",
+      "goToBlockers": "Not ready",
       "goToSchedule": "Schedule",
       "goToDivers": "Divers",
       "goToSettings": "Settings",
@@ -2096,7 +2098,7 @@
       "more": "More",
       "today": "Today",
       "checkIn": "Check-in",
-      "blockers": "Blockers",
+      "blockers": "Not ready",
       "divers": "Divers",
       "schedule": "Schedule",
       "staffing": "Staffing",
@@ -2287,9 +2289,9 @@
     },
     "offlineManifest": {
       "freshnessCopy": {
-        "current": "This copy was saved in the last few minutes",
-        "aging": "This copy was saved a while ago — check it against the live manifest when you're back in signal",
-        "stale": "This copy is old — don't rely on it until you've refreshed it from the live manifest"
+        "current": "This copy is current",
+        "aging": "This copy is a little old",
+        "stale": "This copy is old"
       },
       "freshnessPill": {
         "current": "Fresh copy",
@@ -2299,15 +2301,15 @@
       "loadingMessage": "Opening the manifest saved on this device…",
       "reconcile": {
         "reachError": "Couldn't reach DiveDay just now — your changes are still saved on this phone and will try to send again on the next change or reconnect.",
-        "pendingRejectedSingle": "{count, plural, one {# offline change didn't match the live manifest and wasn't applied — open the live manifest to sort it out.} other {# offline changes didn't match the live manifest and weren't applied — open the live manifest to sort it out.}}",
-        "pendingWaiting": "{count, plural, one {# change is still waiting to send.} other {# changes are still waiting to send.}}",
-        "allCaughtUp": "All offline changes are caught up with the live manifest.",
+        "pendingRejectedSingle": "{count, plural, one {# change needs a look — open the live manifest to sort it out.} other {# changes need a look — open the live manifest to sort it out.}}",
+        "pendingWaiting": "{count, plural, one {# change is still sending.} other {# changes are still sending.}}",
+        "allCaughtUp": "Everything's sent.",
         "listLoadError": "This device couldn't open its saved manifests. Save a fresh copy while you have signal.",
         "singleLoadError": "This device couldn't open its saved manifest. Save a fresh copy while you have signal.",
         "savedCount": "{count, plural, one {# saved manifest} other {# saved manifests}} on this device.",
         "noneSavedYet": "Nothing saved on this device yet.",
-        "listPendingRejected": "{count, plural, one {# offline change doesn't match the live manifest — open that trip to sort it out.} other {# offline changes don't match the live manifest — open that trip to sort it out.}}",
-        "listAllCaughtUp": "Every offline change across these trips is caught up with the live manifest.",
+        "listPendingRejected": "{count, plural, one {# change needs a look — open that trip to sort it out.} other {# changes need a look — open that trip to sort it out.}}",
+        "listAllCaughtUp": "Everything's sent across these trips.",
         "ready": "The manifest saved on this device is ready.",
         "noneForTrip": "There's no current saved manifest for this trip on this device."
       },
@@ -2326,7 +2328,7 @@
         "skipLink": "Skip to offline roll call",
         "savedAt": "Saved {when}",
         "expiredBanner": "This saved copy has expired and can't be used to board divers. Any change still waiting to send below will keep trying, but new roll call must be recorded on the live manifest.",
-        "freshnessBanner": "{freshnessNote}. Boarding goes by readiness as it stood when this copy was saved — DiveDay checks everything again once you're back in service.",
+        "freshnessBanner": "{freshnessNote}. Readiness reflects that moment — we'll re-check everything once you're back in signal.",
         "pendingRejectedCounts": "{pending} waiting to send · {rejected} need a look",
         "checkpointNavAria": "Roll-call checkpoint",
         "statsDivers": "Divers",

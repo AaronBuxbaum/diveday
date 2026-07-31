@@ -25,8 +25,8 @@ test("the command palette finds a diver by name and ⌘K jumps to a page shortcu
   await page.keyboard.press("ControlOrMeta+k");
   const reopened = page.getByRole("combobox", { name: /Search divers/ });
   await expect(reopened).toBeFocused();
-  await reopened.fill("Blockers");
-  await page.getByRole("option", { name: "Blockers" }).click();
+  await reopened.fill("Not ready");
+  await page.getByRole("option", { name: "Not ready" }).click();
   await expect(page).toHaveURL(/\/blockers$/);
 });
 

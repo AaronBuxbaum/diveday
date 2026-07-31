@@ -422,7 +422,7 @@ export const IMPORT_HONESTY_TABLE: {
     what: "Names, email, phone",
     scope: "included",
     detail:
-      "Imported as given. A row with an email is matched to an existing diver so a re-import updates them; a row without one always comes in as a new record.",
+      "Imported as given. A row with an email matches an existing diver on re-import; without one, it's always a new record.",
   },
   {
     what: "Emergency contact",
@@ -433,7 +433,7 @@ export const IMPORT_HONESTY_TABLE: {
     what: "Dive insurance (DAN)",
     scope: "included",
     detail:
-      "Carried across as free text, exactly as your file holds it (“DAN #12345”). Never a gate — it's the detail the crew wants on hand in an incident.",
+      "Carried across as free text, exactly as your file holds it. Never a gate — just detail the crew wants on hand.",
   },
   {
     what: "Rental sizes",
@@ -444,31 +444,31 @@ export const IMPORT_HONESTY_TABLE: {
     what: "Certification card",
     scope: "included",
     detail:
-      "Imported verified and flagged imported — DiveDay trusts the card your system already checked, so a diver is ready from the first trip. A card lands with a card number and a recognized level; staff give it a one-tap confirm. A refresher-due date comes across with it, read from whatever date format your file writes, and a date already past lands as a card that's due rather than one that looks current forever. Two things import for staff review instead of as verified: a card your own file marks unverified, and a card whose refresher date we can't read — we won't guess at a date the boat depends on. Unrecognized levels are left for a person to enter.",
+      "Imported verified and flagged imported, refresher date included — staff give it a one-tap confirm; unrecognized levels need manual entry.",
   },
   {
     what: "Specialty cards (deep, wreck, night, drysuit)",
     scope: "included",
     detail:
-      "Imported as verified specialty cards, flagged imported — from a specialty column, or from a certification row that names one (“PADI Deep Diver”). Your diver's agency number is what carries them, the same number their level card uses, so a “Deep, Wreck” cell comes across as both cards and a certification file with one row per card brings in every card a diver holds. A specialty is what clears a riskier dive, so this one is stricter than a level card: the dive that requires it waits until a staffer confirms they've seen the card, and everything else about the diver's day does not.",
+      "Imported as verified specialty cards, flagged imported; each one still needs a staff confirm before the dive that requires it.",
   },
   {
     what: "Nitrox",
     scope: "included",
     detail:
-      "Imported as a verified nitrox card, flagged imported, whenever the row carries a nitrox card number — so a diver can request Nitrox right away. A fill is the highest-stakes gate, so an imported nitrox card gives plain air until a staffer confirms they've seen the card or checked the number with the agency; boarding never waits on it.",
+      "Imported as a verified nitrox card, flagged imported — but a diver gets plain air until staff confirm it; boarding never waits.",
   },
   {
     what: "Signed waivers & medical clearance",
     scope: "included",
     detail:
-      "When a row says the diver already accepted a waiver at the prior shop, DiveDay trusts it — including its medical clearance — and the diver is not asked to sign again. The record is marked imported everywhere staff see it, snapshots your shop's current release for reference only (the diver did not agree to that exact text), and is dated to the acceptance date the row gives (or the import date if it doesn't). Individual medical answers are never reconstructed — only the accept/no-review-needed outcome carries over. Trusting a prior shop's acceptance is a deliberate choice on our side, not an accident of the import.",
+      "A row marked already-accepted is trusted, medical clearance included, and marked imported — individual medical answers are never reconstructed, only the outcome.",
   },
   {
     what: "Waiver / medical documents",
     scope: "included",
     detail:
-      "A row's waiver_document_url / medical_document_url is fetched once and re-stored in DiveDay's own storage for audit, the same way a pasted card photo is. Image files (JPEG/PNG/WebP/HEIC) and PDFs are supported, 5 MB max.",
+      "Fetched once from your file's URL and re-stored in DiveDay's own storage for audit. Images and PDFs up to 5 MB.",
   },
   {
     what: "Role",
@@ -484,13 +484,13 @@ export const IMPORT_HONESTY_TABLE: {
     what: "Past visits (what they booked, when)",
     scope: "included",
     detail:
-      "A bookings or orders export comes across one line per booking, and lands on the diver's profile as history: the date, what your old system called the trip, its own status word, and the price it recorded. Two things it deliberately is not. It is not a trip — imported history never appears on your schedule, never counts toward a boat's capacity, and never reaches a manifest. And a booking is not a dive: an export holds cancellations and no-shows too, so DiveDay shows your old system's own word for each line rather than counting them all as dives the diver made. The amounts are there to read, not to add up — they stay out of your reporting, which covers what you've run here.",
+      "One row per booking becomes visit history — not a dive, and it never appears on your schedule or counts toward capacity.",
   },
   {
     what: "Receipts & service history",
     scope: "stays-behind",
     detail:
-      "Payment records stay with your processor, and gear-service history has nowhere to land — DiveDay tracks the sizes a diver takes, not individual rigs. Your full-shop export carries your DiveDay history when you want it.",
+      "Payment records stay with your processor; gear-service history has nowhere to land — DiveDay tracks sizes, not individual rigs.",
   },
 ];
 
