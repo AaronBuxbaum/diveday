@@ -11,6 +11,7 @@ import type { StaffMessageKey, StaffTranslator } from "./staff-messages";
 
 /** Every `TodayUrgency` the queue groups by, to its section-heading key. */
 export const URGENCY_KEYS: Record<TodayUrgency, StaffMessageKey> = {
+  imminent: "shared.today.urgency.imminent",
   now: "shared.today.urgency.now",
   soon: "shared.today.urgency.soon",
   later: "shared.today.urgency.later",
@@ -128,6 +129,85 @@ export function blockerDetailWithRemainingText(
 /** A collapsed row's headline blocker plus the names it stands for. */
 export function blockerDetailGroupText(t: StaffTranslator, detail: string, names: string): string {
   return t("shared.today.blockerDetail.group", { detail, names });
+}
+
+/** The remaining `src/db/today.ts` action rows, resolved through the same bundle-only rule. */
+
+export function missingFitDetailText(t: StaffTranslator, count: number): string {
+  return t("shared.today.detail.missingFit", { count });
+}
+
+export function ungatedNitroxDetailText(t: StaffTranslator, count: number): string {
+  return t("shared.today.detail.ungatedNitrox", { count });
+}
+
+export function instructorMissingDetailText(t: StaffTranslator): string {
+  return t("shared.today.detail.instructorMissing");
+}
+
+export function missingContactDetailText(t: StaffTranslator, count: number): string {
+  return t("shared.today.detail.missingContact", { count });
+}
+
+export function lastMinuteFillDetailText(t: StaffTranslator, seats: number): string {
+  return t("shared.today.detail.lastMinuteFill", { seats });
+}
+
+export function waitlistSeatDetailText(t: StaffTranslator, seats: number, waiting: number): string {
+  return t("shared.today.detail.waitlistSeat", { seats, waiting });
+}
+
+/**
+ * The two email-delivery detail sentences, kept as four whole ICU messages
+ * (waiver × confirmation, for each status) rather than one sentence stitched
+ * from a fragment — task 34's de-fragmentation rule applies here too.
+ */
+export function emailDeliveryDetailText(
+  t: StaffTranslator,
+  isWaiver: boolean,
+  // Widened past the two rows this action kind is meant for: the query's
+  // provider-status branch can technically surface other delivery statuses,
+  // and the original code's fallback branch treated all of them as "failed".
+  status: "sent" | "failed" | "not_configured",
+  attempts: number,
+): string {
+  if (status === "not_configured") {
+    return t(
+      isWaiver
+        ? "shared.today.detail.emailNotConfigured.waiver"
+        : "shared.today.detail.emailNotConfigured.confirmation",
+    );
+  }
+  return t(
+    isWaiver
+      ? "shared.today.detail.emailFailed.waiver"
+      : "shared.today.detail.emailFailed.confirmation",
+    { attempts },
+  );
+}
+
+export function openPrepListActionText(t: StaffTranslator): string {
+  return t("shared.today.actionLabel.openPrepList");
+}
+
+export function openTripActionText(t: StaffTranslator): string {
+  return t("shared.today.actionLabel.openTrip");
+}
+
+export function openGuestsActionText(t: StaffTranslator): string {
+  return t("shared.today.actionLabel.openGuests");
+}
+
+export function inviteFromWaitlistActionText(t: StaffTranslator): string {
+  return t("shared.today.actionLabel.inviteFromWaitlist");
+}
+
+export function emailResendActionText(t: StaffTranslator, isWaiver: boolean): string {
+  return t(
+    isWaiver
+      ? "shared.today.actionLabel.resendWaiverLink"
+      : "shared.today.actionLabel.resendConfirmation",
+  );
 }
 
 /** The one-line "how's my day?" headline, resolved from `summarizeDay`'s code. */

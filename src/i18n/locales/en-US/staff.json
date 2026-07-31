@@ -2203,6 +2203,7 @@
         "openRoster": "Open roster"
       },
       "urgency": {
+        "imminent": "Next 3 hours",
         "now": "Before today’s boats",
         "soon": "Next 3 days",
         "later": "This week"
@@ -2271,6 +2272,30 @@
       "blockerDetail": {
         "withRemaining": "{detail} {remaining, plural, one {# other blocker to clear too.} other {# other blockers to clear too.}}",
         "group": "{detail} {names}."
+      },
+      "detail": {
+        "missingFit": "{count, plural, one {# diver has} other {# divers have}} no rental fit on file, so the prep list is incomplete.",
+        "ungatedNitrox": "{count, plural, one {# diver wants} other {# divers want}} Nitrox without a verified card — those tanks are planned as air.",
+        "instructorMissing": "This course session has no instructor assigned and cannot take enrolments.",
+        "missingContact": "{count, plural, one {# diver has} other {# divers have}} no emergency contact on file — ask at the counter; it prints on the manifest.",
+        "lastMinuteFill": "{seats, plural, one {# seat} other {# seats}} open with no last-minute deal sent yet.",
+        "waitlistSeat": "{seats, plural, one {# seat} other {# seats}} opened up and {waiting, plural, one {# person is} other {# people are}} on the wait list.",
+        "emailNotConfigured": {
+          "waiver": "Their waiver link never sent — email is not configured.",
+          "confirmation": "Their booking confirmation never sent — email is not configured."
+        },
+        "emailFailed": {
+          "waiver": "Their waiver link could not be delivered{attempts, plural, =0 {} =1 {} other { after # attempts}}.",
+          "confirmation": "Their booking confirmation could not be delivered{attempts, plural, =0 {} =1 {} other { after # attempts}}."
+        }
+      },
+      "actionLabel": {
+        "openPrepList": "Open prep list",
+        "openTrip": "Open trip",
+        "openGuests": "Open guests",
+        "inviteFromWaitlist": "Invite from wait list",
+        "resendWaiverLink": "Resend waiver link",
+        "resendConfirmation": "Resend confirmation"
       },
       "summary": {
         "blocked": "{departures, plural, =0 {No boats out today} =1 {1 departure today} other {# departures today}}. {blockedToday, plural, =1 {1 diver still can’t board.} other {# divers still can’t board.}}",

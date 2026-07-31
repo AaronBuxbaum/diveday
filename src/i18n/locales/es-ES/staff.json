@@ -2203,6 +2203,7 @@
         "openRoster": "Ver lista"
       },
       "urgency": {
+        "imminent": "Próximas 3 horas",
         "now": "Antes de las salidas de hoy",
         "soon": "Próximos 3 días",
         "later": "Esta semana"
@@ -2271,6 +2272,30 @@
       "blockerDetail": {
         "withRemaining": "{detail} {remaining, plural, one {Queda # bloqueo más por resolver.} other {Quedan # bloqueos más por resolver.}}",
         "group": "{detail} {names}."
+      },
+      "detail": {
+        "missingFit": "{count, plural, one {# buceador no tiene} other {# buceadores no tienen}} equipo asignado, así que la lista de preparación está incompleta.",
+        "ungatedNitrox": "{count, plural, one {# buceador pidió} other {# buceadores pidieron}} nitrox sin una tarjeta verificada — esos tanques están planeados con aire.",
+        "instructorMissing": "Esta sesión de curso no tiene instructor asignado y no puede aceptar inscripciones.",
+        "missingContact": "{count, plural, one {# buceador no tiene} other {# buceadores no tienen}} contacto de emergencia registrado — pregunta en el mostrador; se imprime en el manifiesto.",
+        "lastMinuteFill": "{seats, plural, one {# plaza libre} other {# plazas libres}} sin oferta de última hora enviada todavía.",
+        "waitlistSeat": "{seats, plural, one {se liberó # plaza} other {se liberaron # plazas}} y {waiting, plural, one {# persona está} other {# personas están}} en la lista de espera.",
+        "emailNotConfigured": {
+          "waiver": "Su enlace de exención nunca se envió — el correo no está configurado.",
+          "confirmation": "Su confirmación de reserva nunca se envió — el correo no está configurado."
+        },
+        "emailFailed": {
+          "waiver": "No se pudo entregar su enlace de exención{attempts, plural, =0 {} =1 {} other { tras # intentos}}.",
+          "confirmation": "No se pudo entregar su confirmación de reserva{attempts, plural, =0 {} =1 {} other { tras # intentos}}."
+        }
+      },
+      "actionLabel": {
+        "openPrepList": "Abrir lista de preparación",
+        "openTrip": "Abrir salida",
+        "openGuests": "Abrir invitados",
+        "inviteFromWaitlist": "Invitar de la lista de espera",
+        "resendWaiverLink": "Reenviar enlace de exención",
+        "resendConfirmation": "Reenviar confirmación"
       },
       "summary": {
         "blocked": "{departures, plural, =0 {Hoy no sale ningún barco} =1 {1 salida hoy} other {# salidas hoy}}. {blockedToday, plural, =1 {1 buceador todavía no puede embarcar.} other {# buceadores todavía no pueden embarcar.}}",

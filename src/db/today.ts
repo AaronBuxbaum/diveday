@@ -1,5 +1,19 @@
 import { and, asc, eq, gte, inArray, lte, ne } from "drizzle-orm";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
+import {
+  emailDeliveryDetailText,
+  emailResendActionText,
+  instructorMissingDetailText,
+  inviteFromWaitlistActionText,
+  lastMinuteFillDetailText,
+  missingContactDetailText,
+  missingFitDetailText,
+  openGuestsActionText,
+  openPrepListActionText,
+  openTripActionText,
+  ungatedNitroxDetailText,
+  waitlistSeatDetailText,
+} from "@/i18n/today-labels";
 import { nowDate } from "@/lib/clock";
 import { formatTime } from "@/lib/format";
 import { collapseDiverActions, TODAY_HORIZON_MS, type TodayAction, urgencyFor } from "@/lib/today";
@@ -108,8 +122,8 @@ function shopDay(date: Date, timeZone: string): string {
   return toDateInputValue(utcToWallTime(date, timeZone));
 }
 
-function at(date: Date, timeZone: string): string {
-  return formatTime(date, "en-US", timeZone);
+function at(date: Date, timeZone: string, locale: string): string {
+  return formatTime(date, locale, timeZone);
 }
 
 /**
@@ -366,6 +380,8 @@ export async function getTodayWork(
    * passes its own request-locale translator.
    */
   t: StaffTranslator = staffTranslator("en-US"),
+  /** Formats every departure time (`at()`); defaults alongside `t` for the same reason. */
+  locale = "en-US",
 ): Promise<TodayWork> {
   const horizon = new Date(now.getTime() + TODAY_HORIZON_MS);
   // The board only ever shows the soonest MAX_TRIPS departures, so bound the
@@ -477,7 +493,7 @@ export async function getTodayWork(
 
   for (const trip of inWindow) {
     const tripHref = `/shop/${shopSlug}/trips/${trip.id}`;
-    const when = at(trip.startsAt, timeZone);
+    const when = at(trip.startsAt, timeZone, locale);
 
     const blockedDivers = (readinessByTrip.get(trip.id) ?? [])
       .filter((row) => row.readiness.status === "blocked")
@@ -500,8 +516,8 @@ export async function getTodayWork(
         urgency: urgencyFor(trip.startsAt, now),
         subject: trip.title,
         context: when,
-        detail: `${withoutFit} ${withoutFit === 1 ? "diver has" : "divers have"} no rental fit on file, so the prep list is incomplete.`,
-        actionLabel: "Open prep list",
+        detail: missingFitDetailText(t, withoutFit),
+        actionLabel: openPrepListActionText(t),
         href: `${tripHref}/prep`,
         dueAt: trip.startsAt,
       });
@@ -515,8 +531,8 @@ export async function getTodayWork(
         urgency: urgencyFor(trip.startsAt, now),
         subject: trip.title,
         context: when,
-        detail: `${ungatedCount} ${ungatedCount === 1 ? "diver wants" : "divers want"} Nitrox without a verified card — those tanks are planned as air.`,
-        actionLabel: "Open prep list",
+        detail: ungatedNitroxDetailText(t, ungatedCount),
+        actionLabel: openPrepListActionText(t),
         href: `${tripHref}/prep`,
         dueAt: trip.startsAt,
       });
@@ -529,8 +545,8 @@ export async function getTodayWork(
         urgency: urgencyFor(trip.startsAt, now),
         subject: trip.title,
         context: when,
-        detail: "This course session has no instructor assigned and cannot take enrolments.",
-        actionLabel: "Open trip",
+        detail: instructorMissingDetailText(t),
+        actionLabel: openTripActionText(t),
         href: tripHref,
         dueAt: trip.startsAt,
       });
@@ -548,8 +564,8 @@ export async function getTodayWork(
         urgency: urgencyFor(trip.startsAt, now),
         subject: trip.title,
         context: when,
-        detail: `${withoutContact} ${withoutContact === 1 ? "diver has" : "divers have"} no emergency contact on file — ask at the counter; it prints on the manifest.`,
-        actionLabel: "Open guests",
+        detail: missingContactDetailText(t, withoutContact),
+        actionLabel: openGuestsActionText(t),
         href: `${tripHref}/guests`,
         dueAt: trip.startsAt,
       });
@@ -573,8 +589,8 @@ export async function getTodayWork(
         urgency: urgencyFor(trip.startsAt, now),
         subject: trip.title,
         context: when,
-        detail: `${openSeats} ${openSeats === 1 ? "seat" : "seats"} open with no last-minute deal sent yet.`,
-        actionLabel: "Open trip",
+        detail: lastMinuteFillDetailText(t, openSeats),
+        actionLabel: openTripActionText(t),
         href: `${tripHref}/guests#last-minute-deal`,
         dueAt: trip.startsAt,
       });
@@ -589,10 +605,10 @@ export async function getTodayWork(
         urgency: urgencyFor(trip.startsAt, now),
         subject: trip.title,
         context: when,
-        detail: `${openSeats} ${openSeats === 1 ? "seat" : "seats"} opened up and ${waiting} ${waiting === 1 ? "person is" : "people are"} on the wait list.`,
+        detail: waitlistSeatDetailText(t, openSeats, waiting),
         // One tap invites the next in line straight from the queue; the href is
         // the no-JS fallback to the trip's wait-list section.
-        actionLabel: "Invite from wait list",
+        actionLabel: inviteFromWaitlistActionText(t),
         href: `${tripHref}/guests#waitlist`,
         invite: {
           tripId: trip.id,
@@ -611,22 +627,18 @@ export async function getTodayWork(
 
   for (const issue of deliveryIssues) {
     const isWaiver = issue.delivery.kind !== "booking_confirmation";
-    const what = isWaiver ? "waiver link" : "booking confirmation";
     const roster = `/shop/${shopSlug}/trips/${issue.trip.id}/guests#booking-${issue.booking.id}`;
     actions.push({
       id: `email:${issue.delivery.id}`,
       kind: "email_delivery",
       urgency: urgencyFor(issue.trip.startsAt, now),
       subject: issue.person.fullName,
-      context: `${issue.trip.title} · ${at(issue.trip.startsAt, timeZone)}`,
-      detail:
-        issue.delivery.status === "not_configured"
-          ? `Their ${what} never sent — email is not configured.`
-          : `Their ${what} could not be delivered${issue.attempts > 1 ? ` after ${issue.attempts} attempts` : ""}.`,
+      context: `${issue.trip.title} · ${at(issue.trip.startsAt, timeZone, locale)}`,
+      detail: emailDeliveryDetailText(t, isWaiver, issue.delivery.status, issue.attempts),
       // One tap resends in place. A waiver reuses the WP-1 issue-and-deliver path
       // (a fresh link, since the token is never stored); a confirmation retries
       // from the stored booking. `href` is the no-JS fallback to the roster row.
-      actionLabel: isWaiver ? "Resend waiver link" : "Resend confirmation",
+      actionLabel: emailResendActionText(t, isWaiver),
       ...(isWaiver
         ? { waiver: { bookingIds: [issue.booking.id] } }
         : { resend: { bookingId: issue.booking.id } }),
