@@ -457,6 +457,12 @@ export async function getTodayWork(
           .innerJoin(people, eq(people.id, tripAssignments.personId))
           .innerJoin(personRoles, eq(personRoles.personId, people.id))
           .where(inArray(tripAssignments.tripId, tripIds))
+          // Without an explicit order, row order is whatever the DB happens to
+          // return — unstable across runs (same class of bug tripCrewByTrip in
+          // trips.ts already guards against). Alphabetical by name, matching
+          // that function's convention, so the assigned-crew chips render in a
+          // stable order instead of shuffling per query plan.
+          .orderBy(asc(people.fullName))
       : [];
 
   const crewByTrip = new Map<string, { id: string; fullName: string; roles: string[] }[]>();

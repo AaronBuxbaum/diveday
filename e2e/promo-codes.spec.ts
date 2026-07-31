@@ -10,6 +10,34 @@ import { capture } from "./visual-capture";
  * codes cover the live-code surface.
  */
 
+// Visual regression capture for this file's surface (see e2e-and-visual
+// skill / e2e/visual-capture.ts). Moved here from the old e2e/visual.spec.ts
+// "site tour". **Must stay before every test below**: shop promo codes are
+// shop config that survives the per-test DB reset by design (docs ADR
+// 20260729-shop-promo-codes — "the codes themselves are shop config and
+// survive a schedule reset"), and "a code Stripe never minted..." below
+// creates a permanent, non-deletable "Failed at Stripe" row on the shared
+// blue-mantis shop with no UI action to remove it. Playwright keeps one
+// spec file's tests on a single worker in declaration order by default, so
+// running this capture first is what keeps its baseline showing the
+// pristine seeded codes instead of that test's leftover row.
+for (const scheme of ["light", "dark"] as const) {
+  test.describe(`${scheme} mode`, { tag: "@visual" }, () => {
+    // The reused per-worker session, not this file's own live signInAsOwner()
+    // helper — faster, and this capture has no reason to need a live sign-in.
+    signedInAsOwner();
+    test.use({ colorScheme: scheme, viewport: { width: 1280, height: 800 } });
+
+    test(`shop-wide discount codes render true to the design (${scheme})`, async ({ page }) => {
+      // Shop-wide discount codes: the create form plus the seeded codes with
+      // their windows and redemption counts.
+      await page.goto("/shop/blue-mantis/promos");
+      await page.getByRole("heading", { level: 1, name: "Discounts a diver can type" }).waitFor();
+      await capture(page, "staff-promos", scheme);
+    });
+  });
+}
+
 test("the promo page is owner/manager work, not open to every staff member", async ({ page }) => {
   await page.goto("/shop/blue-mantis/promos");
   // Signed out, the staff gate sends an anonymous visitor to sign in.
@@ -55,14 +83,27 @@ test("a code Stripe never minted is kept as failed evidence, and cannot be switc
 });
 
 test("a code the shop switched off stops being live", async ({ page }) => {
-  await signInAsOwner(page);
-  await page.goto("/shop/blue-mantis/promos");
-  const standing = page.locator("li").filter({ hasText: "REEF10" });
-  await standing.getByRole("button", { name: "Switch off" }).click();
-  await expect(page.getByText(/Code switched off/)).toBeVisible();
-  await expect(
-    page.locator("li").filter({ hasText: "REEF10" }).getByText("Switched off"),
-  ).toBeVisible();
+  // Restored in finally: REEF10 is shop config that survives the per-test DB
+  // reset (same reasoning as the rental-catalog toggle in e2e/nitrox.spec.ts),
+  // so leaving it off would leak into whatever else in this worker reads the
+  // shared blue-mantis shop's promo list.
+  try {
+    await signInAsOwner(page);
+    await page.goto("/shop/blue-mantis/promos");
+    const standing = page.locator("li").filter({ hasText: "REEF10" });
+    await standing.getByRole("button", { name: "Switch off" }).click();
+    await expect(page.getByText(/Code switched off/)).toBeVisible();
+    await expect(
+      page.locator("li").filter({ hasText: "REEF10" }).getByText("Switched off"),
+    ).toBeVisible();
+  } finally {
+    await page.goto("/shop/blue-mantis/promos");
+    const standing = page.locator("li").filter({ hasText: "REEF10" });
+    if (await standing.getByRole("button", { name: "Switch on" }).isVisible()) {
+      await standing.getByRole("button", { name: "Switch on" }).click();
+      await page.getByText(/Code switched on/).waitFor();
+    }
+  }
 });
 
 test("a diver can type a promo code on a payable trip's booking form", async ({
@@ -88,23 +129,3 @@ test("a diver can type a promo code on a payable trip's booking form", async ({
     await expect(page.getByText("(if you have one)")).toBeVisible();
   }
 });
-
-// Visual regression capture for this file's surface (see e2e-and-visual
-// skill / e2e/visual-capture.ts). Moved here from the old e2e/visual.spec.ts
-// "site tour".
-for (const scheme of ["light", "dark"] as const) {
-  test.describe(`${scheme} mode`, { tag: "@visual" }, () => {
-    // The reused per-worker session, not this file's own live signInAsOwner()
-    // helper — faster, and this capture has no reason to need a live sign-in.
-    signedInAsOwner();
-    test.use({ colorScheme: scheme, viewport: { width: 1280, height: 800 } });
-
-    test(`shop-wide discount codes render true to the design (${scheme})`, async ({ page }) => {
-      // Shop-wide discount codes: the create form plus the seeded codes with
-      // their windows and redemption counts.
-      await page.goto("/shop/blue-mantis/promos");
-      await page.getByRole("heading", { level: 1, name: "Discounts a diver can type" }).waitFor();
-      await capture(page, "staff-promos", scheme);
-    });
-  });
-}
