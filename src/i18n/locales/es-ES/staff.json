@@ -293,7 +293,7 @@
     },
     "remove": {
       "heading": "Eliminar de buceadores activos",
-      "description": "Esto es una eliminación suave: la persona desaparece de las listas activas de la tienda, mientras que las reservas, tarjetas y ajuste de alquiler permanecen intactos para los registros y la revisión de seguridad.",
+      "description": "Sale de tus listas activas; las reservas, tarjetas y tallas quedan registradas.",
       "removePersonSummary": "Eliminar a {name}",
       "addAgainNote": "Puedes añadirlos de nuevo más tarde como un nuevo registro activo.",
       "removing": "Eliminando…",
@@ -319,7 +319,7 @@
       "flaggedHeading": "Marcado para ajuste manual",
       "cantFillHeading": "¿No puedes cubrir alguna de estas tallas?",
       "flaggedBody": "Marcado para ajuste manual — sigue contando en la lista de preparación, pero sin talla, y la tripulación lo ajusta con lo disponible en el check-in.",
-      "cantFillBody": "Márcalos para ajuste manual en el check-in. Su recuento se mantiene en la lista de equipaje pero la talla se retira, así nadie prepara una talla de la que la tienda anda corta — mejor que sustituirla en silencio.",
+      "cantFillBody": "Márcalos para ajuste manual en el check-in. Su recuento se mantiene en la lista de equipaje pero la talla se retira, así nadie prepara una talla de la que la tienda anda corta.",
       "clearing": "Despejando…",
       "fitResolved": "Ajuste resuelto — vuelve a preparar sus tallas",
       "clearingRestricted": "Despejar esto está limitado a propietarios, gerentes, instructores y divemasters — ellos confirman que el buceador puede volver a prepararse con sus tallas indicadas.",
@@ -481,7 +481,8 @@
       "startTimeLabel": "Hora de inicio del día {number}",
       "endTimeLabel": "Hora de fin del día {number}",
       "timeNoteLabel": "Nota horaria del día {number}",
-      "timeNoteDescription": "Para un día sin hora fija, p. ej. «semana 1–2» o «unas 3 horas». Se ignora si hay hora de inicio.",
+      "timeNoteDescription": "Para un día sin hora fija, p. ej. «semana 1–2» o «unas 3 horas».",
+      "timeNoteTitle": "Se ignora si hay hora de inicio para este día.",
       "timeNotePlaceholder": "unas 3 horas",
       "whatHappens": "Qué sucede",
       "itemLabel": "Elemento {index} del día {number}",
@@ -491,8 +492,7 @@
       "itemsMax": "Máximo {max} elementos",
       "addItem": "Añadir elemento",
       "daysMax": "Máximo {max} días",
-      "addDay": "Añadir día",
-      "optionalHint": "(opcional)"
+      "addDay": "Añadir día"
     },
     "pathBuilder": {
       "orHigher": "{level} o superior",
@@ -758,7 +758,7 @@
       "stripeFailed": "Stripe no creó ese código. Se guarda aquí como fallido y no puede aplicar ningún descuento; inténtalo de nuevo.",
       "notAuthorized": "Los códigos promocionales descuentan dinero real, así que están limitados a propietarios y gerentes."
     },
-    "connectBanner": "Conecta tu cuenta de Stripe en <settingsLink>Ajustes</settingsLink> antes de crear un código — el cupón vive en tu cuenta, no en la de DiveDay.",
+    "connectBanner": "Conecta tu cuenta de Stripe en <settingsLink>Ajustes</settingsLink> antes de crear un código — los códigos se crean en tu propia cuenta de Stripe, no en la de DiveDay.",
     "settingsLink": "Ajustes",
     "scope": {
       "all": "Salidas y cursos",
@@ -830,15 +830,15 @@
       "past": "Reservas, ingresos, ocupación y hojas de exención de las salidas que zarparon."
     },
     "paymentOps": {
-      "sectionLabel": "Operaciones de pago pendientes de conciliar",
-      "heading": "{count, plural, one {# intento de pago necesita} other {# intentos de pago necesitan}} conciliación",
+      "sectionLabel": "Pagos que necesitan revisión",
+      "heading": "{count, plural, one {# pago} other {# pagos}} que no pudimos confirmar. Revísalos en Stripe.",
       "detail": "Se le pidió algo a Stripe y la aplicación nunca confirmó cómo salió — revisa cada uno en el panel de Stripe y termínalo a mano.",
       "started": "iniciado {date}",
       "stripeId": "Stripe: {id}",
       "openTrip": "Abrir salida"
     },
     "mediaDeletions": {
-      "sectionLabel": "Fotos pendientes de eliminar por conciliar",
+      "sectionLabel": "Fotos que no terminaron de eliminarse",
       "heading": "{count, plural, one {# foto eliminada} other {# fotos eliminadas}} pero todavía no borrada del almacenamiento",
       "detail": "La foto ya no está en la aplicación; el archivo guardado no se borró — reintenta la eliminación, o déjalo para el reintento automático de esta noche.",
       "queued": "en cola desde {date}",
@@ -1083,7 +1083,8 @@
       "payAtBookingLegend": "Pago al reservar",
       "payAtBookingDescription": "Opcional. Deja el depósito en blanco para cobrar la tarifa completa cuando un buceador reserve en línea.",
       "depositLabel": "Depósito por buceador",
-      "depositDescription": "Se cobra ahora; el resto se sigue debiendo en el muelle. Se ignora si está en blanco o no es menor que el precio. Muchos centros fijan un 20–30% de la tarifa.",
+      "depositDescription": "Se cobra ahora; el resto se sigue debiendo en el muelle. Muchos centros fijan un 20–30% de la tarifa.",
+      "depositTitle": "Solo se aplica si es menor que el precio de la salida.",
       "cancellationWindowLabel": "Plazo de cancelación gratuita",
       "cancellationWindowDescription": "Horas antes de la salida en las que un buceador puede cancelar y recibir un reembolso. Se muestra a los buceadores; los reembolsos los sigue gestionando el personal. 48 horas es un plazo habitual.",
       "hoursSuffix": "horas",
@@ -1300,7 +1301,7 @@
       "missingDiversTapHint": "Toca el avatar de un buceador para ir directamente a su fila del pase de lista.",
       "rentsKitLabel": "Alquiler 🤿",
       "ownKitLabel": "Equipo propio ⛵",
-      "description": "El listado oficial: todos a bordo — buceadores y tripulación — con sus contactos de emergencia, en cada punto de control. Embarca a los buceadores listos en <strong>Antes de zarpar</strong>, y vuelve a pasar lista después de cada inmersión.",
+      "description": "Todos a bordo — buceadores y tripulación — con sus contactos de emergencia, en cada punto de control. Embarca a los buceadores listos en <strong>Antes de zarpar</strong>, y vuelve a pasar lista después de cada inmersión.",
       "liveManifestBadge": "Manifiesto en vivo · guarda una copia sin conexión abajo",
       "glareModeActive": "Modo antirreflejo activado ☀",
       "summaryDivers": "Buceadores",
@@ -1318,7 +1319,7 @@
       "stillToCall": "{count, plural, one {Queda # buceador por pasar lista.} other {Quedan # buceadores por pasar lista.}}",
       "readinessNeedsAttention": "La preparación necesita atención",
       "blockedDeparture": "{count, plural, one {Hay # buceador bloqueado. Permanece en este manifiesto y no puede embarcar hasta que se despeje su control de preparación.} other {Hay # buceadores bloqueados. Permanecen en este manifiesto y no pueden embarcar hasta que se despeje su control de preparación.}}",
-      "blockedAfterDive": "{count, plural, one {Hay # buceador bloqueado. Ya zarparon — registra a quien esté a bordo. Su preparación es un aviso de papeleo para resolver en tierra, no un impedimento para este recuento.} other {Hay # buceadores bloqueados. Ya zarparon — registra a quien esté a bordo. Su preparación es un aviso de papeleo para resolver en tierra, no un impedimento para este recuento.}}",
+      "blockedAfterDive": "{count, plural, one {# buceador ya zarpó — regístralo igual; el seguimiento de su preparación se resuelve en tierra, no aquí.} other {# buceadores ya zarparon — regístralos igual; el seguimiento de su preparación se resuelve en tierra, no aquí.}}",
       "crewHeading": "Tripulación",
       "noCrew": "Todavía no hay tripulación en esta salida — asigna instructores y tripulación desde la página de la salida.",
       "checkpointRollCallHeading": "Pase de lista · {checkpoint}",
@@ -1351,11 +1352,11 @@
     },
     "offlineManifestManager": {
       "checkingDevice": "Comprobando este dispositivo…",
-      "reconcileRejectedOne": "1 cambio sin conexión no coincidió con el manifiesto en vivo y no se aplicó — abre el manifiesto en vivo para resolverlo.",
-      "reconcileRejectedOther": "{count} cambios sin conexión no coincidieron con el manifiesto en vivo y no se aplicaron — abre el manifiesto en vivo para resolverlo.",
-      "reconcilePendingOne": "1 cambio sin conexión sigue pendiente de enviarse.",
-      "reconcilePendingOther": "{count} cambios sin conexión siguen pendientes de enviarse.",
-      "reconcileCaughtUp": "El pase de lista sin conexión está al día con el manifiesto en vivo.",
+      "reconcileRejectedOne": "1 cambio necesita revisión — abre el manifiesto en vivo para resolverlo.",
+      "reconcileRejectedOther": "{count} cambios necesitan revisión — abre el manifiesto en vivo para resolverlo.",
+      "reconcilePendingOne": "1 cambio todavía se está enviando.",
+      "reconcilePendingOther": "{count} cambios todavía se están enviando.",
+      "reconcileCaughtUp": "Todo enviado.",
       "reconcileErrorFallback": "No se pudo contactar con DiveDay ahora mismo — tus cambios sin conexión siguen guardados aquí e intentarán enviarse de nuevo al reconectar.",
       "savingMessage": "Guardando el manifiesto más reciente en este dispositivo…",
       "saveSuccessMessage": "Este dispositivo tiene una copia sin conexión actualizada.",
@@ -1422,7 +1423,7 @@
       "privateWaiverLinkReady": "Enlace privado de exención listo",
       "waiverLinkDescription": "Comparte este enlace con el buceador. Caduca en siete días y se sustituye si emites uno nuevo.",
       "openWaiverLink": "Abrir enlace de exención",
-      "demandSignal": "Señal de demanda",
+      "demandSignal": "Este barco podría llevar más gente",
       "demandHeading": "Esta salida podría admitir más capacidad",
       "scheduleAnotherDeparture": "Programar otra salida",
       "activityHeading": "Actividad",
@@ -1456,7 +1457,8 @@
       "payAtBookingLegend": "Pago al reservar",
       "payAtBookingDescription": "Opcional. Cuando la salida tiene precio y el centro acepta pagos con tarjeta, los buceadores pagan en línea al reservar. Deja el depósito en blanco para cobrar la tarifa completa por adelantado.",
       "depositLabel": "Depósito por buceador",
-      "depositDescription": "Se cobra ahora; el resto se sigue debiendo en el muelle. Se ignora si está en blanco o no es menor que el precio. Muchos centros fijan un 20–30% de la tarifa.",
+      "depositDescription": "Se cobra ahora; el resto se sigue debiendo en el muelle. Muchos centros fijan un 20–30% de la tarifa.",
+      "depositTitle": "Solo se aplica si es menor que el precio de la salida.",
       "cancellationWindowLabel": "Plazo de cancelación gratuita",
       "cancellationWindowDescription": "Horas antes de la salida en las que un buceador puede cancelar y recibir un reembolso. Se muestra a los buceadores; los reembolsos los sigue gestionando el personal. 48 horas es un plazo habitual.",
       "hoursSuffix": "horas",
@@ -1550,7 +1552,7 @@
       },
       "rentalPricing": {
         "heading": "Precios de alquiler",
-        "description": "Lo que se cotiza a un buceador al configurar su equipo de alquiler. Pon precio al equipo completo para quien lo lleva todo (normalmente más barato que por piezas), y precio por pieza para un equipo parcial — un buceador que alquila los cinco artículos principales paga el precio del equipo completo, quien alquila menos paga por pieza. Deja un campo en blanco para resolver ese artículo en el mostrador.",
+        "description": "Lo que se cotiza a un buceador por su equipo de alquiler. Pon precio al equipo completo (normalmente más barato) y a cada pieza por separado — cinco artículos cotiza el equipo completo, menos paga por pieza. Deja un campo en blanco para resolverlo en el mostrador.",
         "fullSetLabel": "Equipo completo",
         "fullSetHint": "(BCD, regulador, traje, máscara y aletas, lastre, ordenador de buceo)",
         "nitroxLabel": "Nitrox",
@@ -1680,17 +1682,17 @@
       "rowCount": "{count, plural, one {# fila} other {# filas}}",
       "notIncluded": {
         "label": "No incluido, a propósito:",
-        "text": "las copias de manifiestos sin conexión guardadas en los teléfonos del personal, notas y actividad privadas del personal, registros de notificaciones, intentos de pago de Stripe (todo resultado de dinero está en los archivos de reservas y pedidos), y cualquier URL de imagen pegada que un CSV referencie pero que nunca se haya guardado a través de DiveDay. Cada foto de tarjeta, imagen de punto de inmersión e imagen de curso que DiveDay guarda directamente viene incluida como archivo real en la carpeta <mono>photos/</mono> del paquete, así que sobrevive incluso después de cerrar esta cuenta. Las credenciales de inicio de sesión y los enlaces de suscripción de calendario del personal nunca se exportan. El README del paquete enumera los mismos límites."
+        "text": "copias de manifiestos sin conexión, notas del personal, registros de notificaciones, intentos de pago de Stripe (los resultados están en reservas y pedidos), y URLs de imágenes pegadas que nunca se guardaron. Las fotos propias de DiveDay se exportan como archivos reales en <mono>photos/</mono>. Las credenciales y los enlaces de calendario nunca se exportan — consulta el README."
       }
     },
     "import": {
       "eyebrow": "Ajustes",
       "title": "Importar contactos",
-      "description": "Trae tus buceadores, tarjetas, tallas de alquiler y aceptación previa de waiver desde un CSV — de tu antiguo sistema o de la propia exportación de DiveDay. Somos claros sobre qué se importa: las tarjetas importadas llegan verificadas y marcadas como importadas, con una confirmación de un toque en el registro de cada buceador, y una fila que declara un waiver ya aceptado se confía y se marca como importada.",
+      "description": "Trae tus buceadores, tarjetas, tallas de alquiler y aceptación previa de waiver desde un CSV — de tu antiguo sistema o de la propia exportación de DiveDay. Consulta abajo exactamente qué se importa.",
       "comingFrom": "¿Vienes de <eve>EVE</eve>, <diveshop360>DiveShop360</diveshop360>, o de <spreadsheet>una hoja de cálculo</spreadsheet>? Consulta la guía correspondiente y vuelve aquí para importar.",
       "comesAcross": {
         "heading": "Qué se importa",
-        "description": "Una tarjeta ya presente en tu sistema fue verificada allí, así que DiveDay confía en ella: las tarjetas importadas llegan verificadas y marcadas como importadas, listas desde la primera salida, con una confirmación de un toque para el personal, y sus fechas de renovación también se importan. Una tarjeta de especialidad espera esa confirmación antes de habilitar la inmersión que autoriza. Las respuestas médicas individuales nunca se reconstruyen."
+        "description": "Los detalles, fila por fila:"
       },
       "scopeChip": {
         "included": "Se importa",
@@ -1698,7 +1700,7 @@
       },
       "wizard": {
         "heading": "Subir un archivo de contactos",
-        "intro": "Un CSV de tu antiguo sistema, o el propio <mono>contacts.csv</mono> de la exportación de datos. Las filas con correo se emparejan con tus buceadores existentes, así que reimportar una actualiza a ese buceador en lugar de duplicarlo; las filas sin correo siempre entran como registros nuevos. No se escribe nada hasta que revisas la vista previa y confirmas.",
+        "intro": "Un CSV de tu antiguo sistema, o el propio <mono>contacts.csv</mono> de DiveDay. Un correo coincidente actualiza a ese buceador al reimportar; sin uno, siempre es un registro nuevo. No se escribe nada hasta que revisas la vista previa y confirmas.",
         "chooseFile": "Elegir archivo CSV",
         "chooseDifferentFile": "Elegir otro archivo",
         "columnTitle": "Columna «{header}»",
@@ -1736,10 +1738,10 @@
           "visit_amount": "Importe de la visita anterior",
           "visit_reference": "Referencia de reserva"
         },
-        "ignoredMedicalColumns": "Dejadas fuera a propósito: {columns}. No se reconocieron como columna de waiver, así que su contenido nunca se importa — las respuestas médicas individuales nunca se reconstruyen a partir de otro sistema. En su lugar se confía en una columna «waiver aceptado» reconocida; ver más abajo.",
+        "ignoredMedicalColumns": "Dejadas fuera a propósito: {columns}. No se reconocieron como columna de waiver, así que su contenido nunca se importa. En su lugar se confía en una columna «waiver aceptado» reconocida; ver más abajo.",
         "unmappedColumns": "No reconocidas, así que se ignoran: {columns}.",
         "waiverRowsNotice": "{count, plural, one {# fila declara} other {# filas declaran}} un waiver ya aceptado en un centro anterior. DiveDay confía en eso — incluida su exención médica — y marca el registro como «importado» para que nunca se confunda con una firma hecha aquí. Ver «Qué se importa» arriba.",
-        "visitRowsNotice": "{count, plural, one {# fila registra} other {# filas registran}} una visita anterior. Eso se importa como historial en el perfil del buceador — qué se reservó, cuándo, y cómo lo llamaba tu antiguo sistema — y nada más: nunca se convierten en salidas de tu calendario, nunca cuentan para la capacidad ni los informes, y una reserva no es prueba de que alguien buceó.",
+        "visitRowsNotice": "{count, plural, one {# fila registra} other {# filas registran}} una visita anterior. Consulta «Qué se importa» arriba para ver qué significa eso y qué no.",
         "stats": {
           "diversInFile": "Buceadores en el archivo",
           "extraCardRows": "Filas de tarjetas extra",
@@ -1853,7 +1855,7 @@
   },
   "blockers": {
     "eyebrow": "Recepción",
-    "title": "Bloqueos",
+    "title": "No listos",
     "description": {
       "none": "Todos los reservados en una próxima salida están listos para embarcar.",
       "some": "{blocked, plural, one {# buceador} other {# buceadores}} en {departures, plural, one {# salida} other {# salidas}} no pueden embarcar todavía. Resolver una fila te lleva directo a la solución."
@@ -1869,7 +1871,7 @@
   },
   "checkIn": {
     "eyebrow": "Modo mostrador",
-    "title": "Check-in sin colas",
+    "title": "Check-in de mostrador",
     "description": "Escanea un código de reserva o busca a un buceador, confirma su preparación en tiempo real y mantén la fila en movimiento. El check-in es el estado de llegada; el embarque se confirma aparte en el manifiesto.",
     "queueAriaLabel": "Cola de check-in",
     "readyHeading": "Listos en el mostrador",
@@ -1951,7 +1953,7 @@
     },
     "versionInfo": "Versión {version} · guardado el {date}",
     "integrityHeading": "Integridad de los registros firmados",
-    "integrityDescription": "Los nuevos registros firmados llevan un HMAC sellado por el servidor sobre sus metadatos firmados y la plantilla usada. Un desajuste detiene la auditoría; los registros antiguos importados o heredados aparecen claramente marcados como no sellados.",
+    "integrityDescription": "Los waivers firmados son a prueba de manipulaciones — si un registro fue alterado, lo marcamos. Los registros antiguos importados o heredados aparecen como no sellados más abajo.",
     "noSignedRecords": "Todavía no hay registros firmados.",
     "noSignatureDate": "Sin fecha de firma",
     "integrityValid": "Integridad verificada",
@@ -2047,7 +2049,7 @@
       "groupOrders": "Pedidos",
       "groupGoTo": "Ir a",
       "goToToday": "Hoy",
-      "goToBlockers": "Bloqueos",
+      "goToBlockers": "No listos",
       "goToCheckIn": "Registro",
       "goToStaffing": "Personal",
       "goToDiveSites": "Sitios de buceo",
@@ -2119,7 +2121,7 @@
       "more": "Más",
       "today": "Hoy",
       "checkIn": "Registro",
-      "blockers": "Bloqueos",
+      "blockers": "No listos",
       "divers": "Buceadores",
       "schedule": "Calendario",
       "staffing": "Personal",
@@ -2310,9 +2312,9 @@
     },
     "offlineManifest": {
       "freshnessCopy": {
-        "current": "Esta copia se guardó hace unos minutos",
-        "aging": "Esta copia se guardó hace un rato — compárala con el manifiesto en vivo en cuanto tengas señal",
-        "stale": "Esta copia es antigua — no confíes en ella hasta actualizarla desde el manifiesto en vivo"
+        "current": "Esta copia está al día",
+        "aging": "Esta copia es un poco antigua",
+        "stale": "Esta copia es antigua"
       },
       "freshnessPill": {
         "current": "Copia reciente",
@@ -2322,15 +2324,15 @@
       "loadingMessage": "Abriendo el manifiesto guardado en este dispositivo…",
       "reconcile": {
         "reachError": "No se pudo contactar con DiveDay en este momento — tus cambios siguen guardados en este teléfono e intentarán enviarse de nuevo en el próximo cambio o al reconectar.",
-        "pendingRejectedSingle": "{count, plural, one {# cambio sin conexión no coincidió con el manifiesto en vivo y no se aplicó — abre el manifiesto en vivo para resolverlo.} other {# cambios sin conexión no coincidieron con el manifiesto en vivo y no se aplicaron — abre el manifiesto en vivo para resolverlo.}}",
-        "pendingWaiting": "{count, plural, one {# cambio todavía está esperando para enviarse.} other {# cambios todavía están esperando para enviarse.}}",
-        "allCaughtUp": "Todos los cambios sin conexión están al día con el manifiesto en vivo.",
+        "pendingRejectedSingle": "{count, plural, one {# cambio necesita revisión — abre el manifiesto en vivo para resolverlo.} other {# cambios necesitan revisión — abre el manifiesto en vivo para resolverlo.}}",
+        "pendingWaiting": "{count, plural, one {# cambio todavía se está enviando.} other {# cambios todavía se están enviando.}}",
+        "allCaughtUp": "Todo enviado.",
         "listLoadError": "Este dispositivo no pudo abrir sus manifiestos guardados. Guarda una copia nueva mientras tengas señal.",
         "singleLoadError": "Este dispositivo no pudo abrir su manifiesto guardado. Guarda una copia nueva mientras tengas señal.",
         "savedCount": "{count, plural, one {# manifiesto guardado} other {# manifiestos guardados}} en este dispositivo.",
         "noneSavedYet": "Todavía no hay nada guardado en este dispositivo.",
-        "listPendingRejected": "{count, plural, one {# cambio sin conexión no coincide con el manifiesto en vivo — abre esa salida para resolverlo.} other {# cambios sin conexión no coinciden con el manifiesto en vivo — abre esa salida para resolverlo.}}",
-        "listAllCaughtUp": "Todos los cambios sin conexión de estas salidas están al día con el manifiesto en vivo.",
+        "listPendingRejected": "{count, plural, one {# cambio necesita revisión — abre esa salida para resolverlo.} other {# cambios necesitan revisión — abre esa salida para resolverlo.}}",
+        "listAllCaughtUp": "Todo enviado en estas salidas.",
         "ready": "El manifiesto guardado en este dispositivo está listo.",
         "noneForTrip": "No hay ningún manifiesto guardado actualmente para esta salida en este dispositivo."
       },
@@ -2349,7 +2351,7 @@
         "skipLink": "Ir directo al pase de lista sin conexión",
         "savedAt": "Guardado {when}",
         "expiredBanner": "Esta copia guardada ha caducado y no se puede usar para embarcar buceadores. Cualquier cambio que siga esperando para enviarse abajo seguirá intentándolo, pero el nuevo pase de lista debe registrarse en el manifiesto en vivo.",
-        "freshnessBanner": "{freshnessNote}. El embarque se rige por la disponibilidad tal como estaba cuando se guardó esta copia — DiveDay lo vuelve a comprobar todo en cuanto recuperes la conexión.",
+        "freshnessBanner": "{freshnessNote}. La disponibilidad refleja ese momento — lo comprobamos todo de nuevo en cuanto tengas señal.",
         "pendingRejectedCounts": "{pending} esperando para enviarse · {rejected} necesitan revisión",
         "checkpointNavAria": "Punto del pase de lista",
         "statsDivers": "Buceadores",

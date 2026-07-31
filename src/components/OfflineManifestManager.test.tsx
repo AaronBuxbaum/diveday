@@ -12,13 +12,11 @@ import { OfflineManifestManager, type OfflineManifestManagerCopy } from "./Offli
 
 const copy: OfflineManifestManagerCopy = {
   checkingDevice: "Checking this device…",
-  reconcileRejectedOne:
-    "1 offline change didn't match the live manifest and wasn't applied — open the live manifest to sort it out.",
-  reconcileRejectedOther:
-    "{count} offline changes didn't match the live manifest and weren't applied — open the live manifest to sort it out.",
-  reconcilePendingOne: "1 offline change is still waiting to send.",
-  reconcilePendingOther: "{count} offline changes are still waiting to send.",
-  reconcileCaughtUp: "Offline roll call is all caught up with the live manifest.",
+  reconcileRejectedOne: "1 change needs a look — open the live manifest to sort it out.",
+  reconcileRejectedOther: "{count} changes need a look — open the live manifest to sort it out.",
+  reconcilePendingOne: "1 change is still sending.",
+  reconcilePendingOther: "{count} changes are still sending.",
+  reconcileCaughtUp: "Everything's sent.",
   reconcileErrorFallback:
     "Couldn't reach DiveDay just now — your offline changes are still saved here and will try to send again on reconnect.",
   savingMessage: "Saving the latest manifest to this device…",

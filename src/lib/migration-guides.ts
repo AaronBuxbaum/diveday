@@ -116,6 +116,45 @@ export type MigrationGuide = {
   sources: { label: string; url: string }[];
 };
 
+/**
+ * Shared body for the two booking-channel guides' `coexist.runsInDiveDay` list
+ * (FareHarbor, Rezdy). Four of the six items name no incumbent at all; the other
+ * two take the competitor's name as a parameter — this is the one place that
+ * text is authored, so the guides can't drift apart line by line.
+ */
+function coexistRunsInDiveDay(competitor: string): { title: string; detail: string }[] {
+  return [
+    {
+      title: "Readiness that won't let an unready diver board",
+      detail: `The trip and the dive site decide what each diver needs; if a card or waiver can't be verified, DiveDay says so plainly instead of passing them through. ${competitor} takes the booking — it never checks whether the diver is cleared to get on the boat.`,
+    },
+    {
+      title: "Certification checks that actually gate the dive",
+      detail:
+        "DiveDay gates the dive on the card: a deep dive won't clear a diver who isn't carded for it, and every nitrox fill is re-checked at fill time. Cards you enter are verified by staff; cards you bring in come across verified and flagged imported, with a one-tap confirm. A general booking engine has no concept of a C-card.",
+    },
+    {
+      title: "Native waivers with medical review — in every tier",
+      detail:
+        "Waivers are built in and versioned against your own release, and a medical answer that calls for a physician's sign-off blocks the diver until that review — it doesn't just warn. Not a form stapled to a checkout, and not a paid add-on.",
+    },
+    {
+      title: "A roll-call manifest that survives the dock",
+      detail:
+        "Big Boarded / Not-boarded buttons for wet thumbs, a head count for every dive, and a manifest the crew saves to the phone so it keeps working after the signal drops at the ramp.",
+    },
+    {
+      title: "Rental fit and the trip's packing list",
+      detail: `Every diver's sizes become the boat's kit list, with a tank per diver per dive split by air and nitrox. ${competitor} doesn't know a diver's wetsuit size.`,
+    },
+    {
+      title: "The night-before brief and a recap they share",
+      detail:
+        "Each diver gets a plain-language brief the night before — dock time, conditions, what to bring — and a shareable recap page after. The booking confirmation was the start; this is the rest of the relationship.",
+    },
+  ];
+}
+
 const eve: MigrationGuide = {
   slug: "eve",
   competitor: "EVE",
@@ -133,7 +172,7 @@ const eve: MigrationGuide = {
 
   context: [
     "EVE (from Integrated Scuba Systems) is the desktop shop-management system PADI retailers ran for years, and DiveShop360 acquired it in 2023. If you're planning a move off it, this guide is about the practical part: getting your people and their cards out of EVE and into DiveDay.",
-    "The part that makes leaving feel risky is real: EVE stores its data in a database on your own PC, and shops report that years of purchase and service history are hard to pull out cleanly. DiveDay's import is deliberately not trying to move all of that. It moves the thing you actually need on day one — your roster, their certification cards, and their rental sizes — so your people are trip-ready from the first booking, every card coming across verified and flagged imported with a one-tap confirm for staff, and the history stays where it already is.",
+    "The part that makes leaving feel risky is real: EVE stores its data in a database on your own PC, and shops report that years of purchase and service history are hard to pull out cleanly. DiveDay's import is deliberately not trying to move all of that. It moves the thing you actually need on day one — your roster, their certification cards, and their rental sizes — so your people are trip-ready from the first booking (see what comes across below), and the history stays where it already is.",
     "One rule we won't bend: you export your own file from your own EVE install. DiveDay never logs into EVE and never reaches across to another system to pull your data — that's your data to hand us, not ours to take.",
   ],
 
@@ -313,7 +352,7 @@ const diveadmin: MigrationGuide = {
     "Export your bookings as well as your customers if DiveAdmin offers both — a file with one row per booking carries your divers' visit history across. Message history stays in DiveAdmin; see the scope table below.",
   ],
   importerNote:
-    'If your certifications export as free text ("PADI Advanced Open Water"), DiveDay recognizes the common levels and lands each verified and flagged imported, with a one-tap confirm for staff. It reads the specialties the same way — a "PADI Deep Diver" row with a card number becomes a deep specialty card — and anything it doesn\'t recognize is flagged in the preview for a person to enter by hand.',
+    'If your certifications export as free text ("PADI Advanced Open Water"), DiveDay recognizes the common levels (see what comes across below). It reads the specialties the same way — a "PADI Deep Diver" row with a card number becomes a deep specialty card — and anything it doesn\'t recognize is flagged in the preview for a person to enter by hand.',
   sources: [
     {
       label: "DiveAdmin API documentation",
@@ -414,38 +453,7 @@ const fareharbor: MigrationGuide = {
     heading: "Keep FareHarbor. Add the day it can't run.",
     intro:
       'DiveDay runs the water side — everything between "booked" and "back at the dock" that a booking engine was never built to touch. Point-for-point, this is what FareHarbor leaves to your clipboard:',
-    runsInDiveDay: [
-      {
-        title: "Readiness that won't let an unready diver board",
-        detail:
-          "The trip and the dive site decide what each diver needs; if a card or waiver can't be verified, DiveDay says so plainly instead of passing them through. FareHarbor takes the booking — it never checks whether the diver is cleared to get on the boat.",
-      },
-      {
-        title: "Certification checks that actually gate the dive",
-        detail:
-          "DiveDay gates the dive on the card: a deep dive won't clear a diver who isn't carded for it, and every nitrox fill is re-checked at fill time. Cards you enter are verified by staff; cards you bring in come across verified and flagged imported, with a one-tap confirm. A general booking engine has no concept of a C-card.",
-      },
-      {
-        title: "Native waivers with medical review — in every tier",
-        detail:
-          "Waivers are built in and versioned against your own release, and a medical answer that calls for a physician's sign-off blocks the diver until that review — it doesn't just warn. Not a form stapled to a checkout, and not a paid add-on.",
-      },
-      {
-        title: "A roll-call manifest that survives the dock",
-        detail:
-          "Big Boarded / Not-boarded buttons for wet thumbs, a head count for every dive, and a manifest the crew saves to the phone so it keeps working after the signal drops at the ramp.",
-      },
-      {
-        title: "Rental fit and the trip's packing list",
-        detail:
-          "Every diver's sizes become the boat's kit list, with a tank per diver per dive split by air and nitrox. FareHarbor doesn't know a diver's wetsuit size.",
-      },
-      {
-        title: "The night-before brief and a recap they share",
-        detail:
-          "Each diver gets a plain-language brief the night before — dock time, conditions, what to bring — and a shareable recap page after. The booking confirmation was the start; this is the rest of the relationship.",
-      },
-    ],
+    runsInDiveDay: coexistRunsInDiveDay("FareHarbor"),
     bridgeNote:
       "FareHarbor keeps doing what it's good at — taking the online booking and putting you in front of its hotel and reseller network, which DiveDay has no equivalent for and won't pretend to. There's no wire between the two systems: you bring your divers into DiveDay with the CSV export below, and re-import as your roster grows. What you get back for that is the dive day itself.",
     replace: {
@@ -542,38 +550,7 @@ const rezdy: MigrationGuide = {
     heading: "Keep Rezdy. Add the day it can't run.",
     intro:
       'DiveDay runs the water side — everything between "booked" and "back at the dock" that a booking engine was never built to touch. Point-for-point, this is what Rezdy leaves to your clipboard:',
-    runsInDiveDay: [
-      {
-        title: "Readiness that won't let an unready diver board",
-        detail:
-          "The trip and the dive site decide what each diver needs; if a card or waiver can't be verified, DiveDay says so plainly instead of passing them through. Rezdy takes the booking — it never checks whether the diver is cleared to get on the boat.",
-      },
-      {
-        title: "Certification checks that actually gate the dive",
-        detail:
-          "DiveDay gates the dive on the card: a deep dive won't clear a diver who isn't carded for it, and every nitrox fill is re-checked at fill time. Cards you enter are verified by staff; cards you bring in come across verified and flagged imported, with a one-tap confirm. A general booking engine has no concept of a C-card.",
-      },
-      {
-        title: "Native waivers with medical review — in every tier",
-        detail:
-          "Waivers are built in and versioned against your own release, and a medical answer that calls for a physician's sign-off blocks the diver until that review — it doesn't just warn. Not a form stapled to a checkout, and not a paid add-on.",
-      },
-      {
-        title: "A roll-call manifest that survives the dock",
-        detail:
-          "Big Boarded / Not-boarded buttons for wet thumbs, a head count for every dive, and a manifest the crew saves to the phone so it keeps working after the signal drops at the ramp.",
-      },
-      {
-        title: "Rental fit and the trip's packing list",
-        detail:
-          "Every diver's sizes become the boat's kit list, with a tank per diver per dive split by air and nitrox. Rezdy doesn't know a diver's wetsuit size.",
-      },
-      {
-        title: "The night-before brief and a recap they share",
-        detail:
-          "Each diver gets a plain-language brief the night before — dock time, conditions, what to bring — and a shareable recap page after. The booking confirmation was the start; this is the rest of the relationship.",
-      },
-    ],
+    runsInDiveDay: coexistRunsInDiveDay("Rezdy"),
     bridgeNote:
       "Rezdy keeps doing what it's good at — taking the online booking and pushing your trips to its reseller marketplace and the OTAs, which DiveDay has no equivalent for and won't pretend to. There's no wire between the two systems: you bring your divers into DiveDay with the CSV export below, and re-import as your roster grows. What you get back for that is the dive day itself.",
     replace: {

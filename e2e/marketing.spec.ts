@@ -54,6 +54,8 @@ test("public marketing pages lead to the product and pricing details", async ({ 
     page.getByRole("heading", { name: "The money runs through your Stripe account, not ours." }),
   ).toBeVisible();
   await expect(page.getByRole("heading", { name: "The whole list, plainly." })).toBeVisible();
+  // The full capability index sits behind a disclosure by default.
+  await page.getByText("The full list").click();
   await expect(page.getByRole("heading", { name: "Booking and the public pages" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Your records" })).toBeVisible();
   // The honest-no scope block and the demo CTA both land on the product page.

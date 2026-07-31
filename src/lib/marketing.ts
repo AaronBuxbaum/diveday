@@ -143,7 +143,7 @@ export const productCapabilityIndex = [
       "A rental prep list derived from the sizes divers gave you",
       "Dive-site briefings with routes, landmarks, a field guide, and diver moments",
       "Crew conditions predictions and an automated marine outlook",
-      "A line-busting check-in counter for the morning rush",
+      "A counter check-in for the morning rush",
     ],
   },
   {
@@ -166,7 +166,7 @@ export const productCapabilityIndex = [
       "Repeating trip series, edited and rolled forward as one",
       "A course catalog with certification paths you define yourself",
       "Staff roles with real boundaries, and a staffing view that shows coverage gaps",
-      "Saved diver views, a command palette, and search across divers and trips",
+      "Saved diver views and search that jumps straight to a diver or a trip",
       "Reports on the numbers a shop actually asks about",
     ],
   },

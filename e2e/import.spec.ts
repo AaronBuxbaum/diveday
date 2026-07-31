@@ -227,7 +227,7 @@ test.describe("contact import — prior visits", () => {
 
     // Three booking rows, one diver: the preview says so before anything is written.
     await expect(page.getByText(/3 rows record a past visit/)).toBeVisible();
-    await expect(page.getByText(/never become trips on your schedule/)).toBeVisible();
+    await expect(page.getByText(/See .What comes across. above/)).toBeVisible();
     await page.getByRole("button", { name: /Import 1 contact/ }).click();
     await expect(page.getByText(/Imported\. 1 added/)).toBeVisible();
     await expect(page.getByText(/3 past visits added to divers' shop history/)).toBeVisible();

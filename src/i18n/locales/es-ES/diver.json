@@ -272,7 +272,7 @@
     "tipCrew": "Deja propina a la tripulación",
     "bringABuddy": "Trae a un compañero la próxima vez",
     "unavailableHeading": "Este enlace de resumen no está disponible",
-    "unavailableBody": "Pide a tu centro un enlace nuevo — aquí no hay nada privado salvo para ti.",
+    "unavailableBody": "Pide a tu centro un enlace nuevo.",
     "photoAdded": "Añadida a tu resumen — ¡gracias por compartirla!",
     "photoMissing": "Elige primero una foto y luego añádela.",
     "photoUnsupported": "Este centro todavía no tiene activada la subida de fotos — sin problema, etiquétalas cuando publiques.",
@@ -326,7 +326,7 @@
     "openingPayment": "Abriendo el pago…",
     "cancelledHeading": "Esta reserva se canceló",
     "unavailableHeading": "Este enlace de preparación no está disponible",
-    "unavailableBody": "Pide a tu centro un enlace nuevo — aquí no hay nada privado salvo para ti.",
+    "unavailableBody": "Pide a tu centro un enlace nuevo.",
     "contactSaved": "Contacto de emergencia guardado — gracias.",
     "contactIncomplete": "Necesitamos un nombre y un teléfono para que la tripulación pueda localizar a alguien.",
     "contactTooLong": "Ese nombre o teléfono es demasiado largo — prueba con una versión más corta.",
@@ -690,7 +690,7 @@
     "concierge": {
       "eyebrow": "Una persona, no un asistente automático",
       "title": "Te ayudamos a cambiarte — y a salir — nosotros mismos.",
-      "description": "Envíanos lo que tengas — una exportación limpia o una década de pestañas desordenadas — y uno de nosotros mapea las columnas y trae a tus buceadores contigo, gratis, en cualquier plan. Y si DiveDay alguna vez no encaja, la puerta se abre igual de personalmente en la otra dirección: tus datos son tuyos, y te ayudamos a llevártelos todos de vuelta. Entrar, y salir, no debería ser la parte difícil.",
+      "description": "Envíanos lo que tengas — una exportación limpia o una década de pestañas desordenadas — y mapeamos las columnas y traemos a tus buceadores contigo, gratis. Si DiveDay alguna vez no encaja, tus datos son tuyos — te ayudamos a llevártelos todos de vuelta, igual de personalmente.",
       "emailCta": "Escríbenos a {email}"
     },
     "hub": {
@@ -712,7 +712,7 @@
       "step2": "Paso 2",
       "step3": "Paso 3",
       "scopeTableTitle": "Qué se traslada — y qué no",
-      "scopeTableDescription": "Esta es la misma tabla de alcance que DiveDay muestra antes de importar una sola fila. Una tarjeta que tu sistema ya comprobó se traslada verificada y marcada como importada, lista para usar, con una confirmación de un toque para el personal, y su fecha de vencimiento de repaso llega con ella. Una tarjeta de especialidad es la que espera esa confirmación antes de habilitar la inmersión que autoriza; las respuestas médicas individuales nunca se reconstruyen.",
+      "scopeTableDescription": "Esta es la misma tabla de alcance que DiveDay muestra antes de importar una sola fila — los detalles están abajo.",
       "comesAcross": "Se traslada",
       "staysBehind": "Se queda atrás",
       "bringFileTitle": "Trae el archivo a DiveDay",
@@ -720,9 +720,9 @@
       "openSettingsTitle": "Abre Ajustes → Importar contactos",
       "openSettingsBody": "En tu tienda de DiveDay, el propietario o gerente abre la página de importación y sube el CSV que exportaste.",
       "checkPreviewTitle": "Revisa la vista previa",
-      "checkPreviewBody": "DiveDay mapea tus columnas automáticamente y previsualiza el archivo antes de guardar nada — cómo aterrizó cada columna, qué tarjetas llegarán verificadas y marcadas como importadas, y qué deja atrás. Las filas con un correo coincidente actualizan al buceador existente en vez de duplicarlo; las filas pasan la importación cuando confirmas.",
+      "checkPreviewBody": "DiveDay mapea tus columnas automáticamente y previsualiza el archivo antes de guardar nada — cómo aterrizó cada columna, y qué deja atrás. Las filas con un correo coincidente actualizan al buceador existente en vez de duplicarlo; nada se importa hasta que confirmas.",
       "importReadyTitle": "Importar — tu plantilla está lista",
-      "importReadyBody": "El plantel, las tallas de alquiler y las tarjetas quedan listos de inmediato: las tarjetas llegan verificadas y marcadas como importadas, así que los buceadores están listos para el viaje desde la primera reserva. Cada tarjeta importada lleva una confirmación de un toque en el registro del buceador para que el personal le eche un vistazo cuando tenga un momento — nadie espera para embarcar por eso. Lo único que sí espera es una inmersión que requiere una tarjeta de especialidad: esa puerta se abre cuando un miembro del personal confirma la tarjeta, que es un toque en el registro del buceador.",
+      "importReadyBody": "El plantel, las tallas de alquiler y las tarjetas quedan listos de inmediato — las tarjetas llegan verificadas y marcadas como importadas, con una confirmación de un toque para el personal. Solo una inmersión que exige una especialidad espera esa confirmación.",
       "openImportCta": "Abrir Importar en tu tienda",
       "forExportPrefix": "Para una exportación de {competitor}:",
       "runTheDay": "Lleva el día de buceo que {competitor} no puede.",
@@ -736,7 +736,7 @@
       "backToGuides": "← Todas las guías de cambio",
       "eyebrow": "Vienes de una hoja de cálculo",
       "title": "La hoja de cálculo te trajo hasta aquí.",
-      "heroLede": "No marcará al buceador del barco de mañana cuya tarjeta nadie ha verificado, no perseguirá el descargo que nadie firmó, ni dejará que un buceador reserve su propio asiento un domingo por la noche. DiveDay lee la hoja que ya llevas — tus buceadores, sus tarjetas, sus tallas — y se encarga del resto. Ningún sistema que arrancar primero; ya tienes el archivo.",
+      "heroLede": "No marcará una tarjeta sin verificar, no perseguirá un descargo sin firmar, ni dejará que un buceador reserve su propio asiento un domingo por la noche. DiveDay lee la hoja que ya llevas — buceadores, tarjetas, tallas — y se encarga del resto. Ningún sistema que arrancar; ya tienes el archivo.",
       "wedgeIntro1": "Una hoja de cálculo es una buena memoria y un mal compañero de equipo. Guarda nombres y números, pero no puede hacer el trabajo que de verdad mantiene un día de buceo tranquilo y seguro — la parte que estás haciendo a mano ahora mismo, en tu cabeza y en una pila de papeles.",
       "wedgeIntro2": "Ese es el intercambio que hace que valga la pena DiveDay. No una lista más bonita — los trabajos que una lista no puede sostener:",
       "wedge": {
@@ -784,19 +784,19 @@
         },
         "certification": {
           "column": "Certificación",
-          "detail": "Agencia, nivel y número de tarjeta. El número de tarjeta es lo que permite que una tarjeta se traslade — llega verificada y marcada como importada, lista para usar, con una confirmación de un toque para el personal."
+          "detail": "Agencia, nivel y número de tarjeta. El número de tarjeta es lo que permite que una tarjeta se traslade — consulta la tabla de alcance de abajo para ver cómo se verifica."
         },
         "refresherDue": {
           "column": "Vencimiento del repaso",
-          "detail": "Si llevas una fecha de repaso en una tarjeta, se traslada con ella — escrita como sea que tu hoja escriba fechas (05/04/2030, 4-may-2030, 2030-05-04). Una fecha ya pasada llega como una tarjeta vencida, que es el objetivo. Una fecha que no podemos leer deja la tarjeta para revisión del personal en vez de verificada: no adivinamos una fecha de la que depende el barco."
+          "detail": "Si llevas una fecha de repaso, se traslada como sea que tu hoja escriba fechas (05/04/2030, 4-may-2030, 2030-05-04). Una fecha ya pasada llega como una tarjeta vencida — ese es el objetivo. Una fecha ilegible pasa a revisión del personal en vez de verificada."
         },
         "specialty": {
           "column": "Especialidad",
-          "detail": "Profundidad, naufragios, nocturna o traje seco — una celda puede nombrar varias («Profundidad, Naufragios») y cada una se convierte en su propia tarjeta bajo el número de agencia del buceador. Llegan verificadas y marcadas como importadas, y la inmersión que necesita una se habilita en cuanto un miembro del personal confirma que ha visto esa tarjeta."
+          "detail": "Profundidad, naufragios, nocturna o traje seco — una celda puede nombrar varias («Profundidad, Naufragios») y cada una se convierte en su propia tarjeta bajo el número de agencia del buceador. Consulta la tabla de alcance de abajo para ver cómo se verifica."
         },
         "nitrox": {
           "column": "Nitrox",
-          "detail": "Una columna de sí/no, más el número de tarjeta de nitrox si llevas uno — el número de tarjeta es lo que realmente lo traslada, importado como una tarjeta de nitrox verificada. El llenado de Nitrox da aire normal hasta que un miembro del personal confirma que ha visto esa tarjeta."
+          "detail": "Una columna de sí/no, más el número de tarjeta de nitrox si llevas uno — eso es lo que lo traslada. Consulta la tabla de alcance de abajo para ver cómo se controla un llenado de nitrox."
         },
         "rentalSizes": {
           "column": "Tallas de alquiler",
@@ -804,21 +804,21 @@
         },
         "pastVisits": {
           "column": "Visitas pasadas",
-          "detail": "¿Llevas un registro de reservas? Una columna de fecha, más cómo llamaste el viaje y qué cobraste, convierte cada fila en el historial de ese buceador aquí — así un habitual llega como habitual. Repite el correo del buceador en cada una de sus filas; así es como las filas encuentran a la persona correcta. Es historial, no calendario: las visitas importadas nunca se convierten en viajes, y una reserva que diste por cancelada sigue leyéndose cancelada."
+          "detail": "¿Llevas un registro de reservas? Una fecha, el nombre del viaje y el precio por fila se vuelven el historial de ese buceador aquí, así un habitual llega como habitual. Repite su correo en cada fila para encontrar a la persona correcta. Consulta la tabla de alcance de abajo para ver qué significa."
         }
       },
       "step2": "Paso 2",
       "scopeTableTitle": "Qué se traslada — y qué no",
-      "scopeTableDescription": "Esta es la misma tabla de alcance que DiveDay muestra antes de importar una sola fila. Una tarjeta ya en tu hoja fue comprobada por ti, así que DiveDay confía en ella: las tarjetas se trasladan verificadas y marcadas como importadas, con una confirmación de un toque para el personal — y sus fechas de vencimiento de repaso llegan con ellas. Una tarjeta de especialidad es la que espera esa confirmación antes de habilitar la inmersión que autoriza. Las respuestas médicas individuales nunca se reconstruyen.",
+      "scopeTableDescription": "Esta es la misma tabla de alcance que DiveDay muestra antes de importar una sola fila — los detalles están abajo.",
       "step3": "Paso 3",
       "bringFileTitle": "Trae el archivo a DiveDay",
       "bringFileIntro": "Guarda tu hoja como CSV, y el resto está en DiveDay y lleva minutos.",
       "openSettingsTitle": "Abre Ajustes → Importar contactos",
       "openSettingsBody": "En tu tienda de DiveDay, el propietario o gerente abre la página de importación y sube el CSV.",
       "checkPreviewTitle": "Revisa la vista previa",
-      "checkPreviewBody": "DiveDay mapea tus columnas automáticamente y previsualiza el archivo antes de guardar nada — cómo aterrizó cada columna, qué tarjetas llegarán verificadas y marcadas como importadas, y qué deja atrás, incluida cualquier fila que no pueda trasladar (una sin nombre, o un correo repetido). Las filas pasan la importación cuando confirmas.",
+      "checkPreviewBody": "DiveDay mapea tus columnas automáticamente y previsualiza el archivo antes de guardar nada — cómo aterrizó cada columna, y qué deja atrás, incluida cualquier fila que no pueda trasladar (una sin nombre, o un correo repetido). Nada se importa hasta que confirmas.",
       "importReadyTitle": "Importar — tu plantel está listo",
-      "importReadyBody": "El plantel, las tallas de alquiler y las tarjetas quedan listos de inmediato: las tarjetas llegan verificadas y marcadas como importadas, así que los buceadores están listos para el viaje desde la primera reserva. Cada tarjeta importada lleva una confirmación de un toque en el registro del buceador para que el personal le eche un vistazo cuando tenga un momento — nadie espera para embarcar por eso. Lo único que sí espera es una inmersión que requiere una tarjeta de especialidad: esa puerta se abre cuando un miembro del personal confirma la tarjeta, que es un toque en el registro del buceador.",
+      "importReadyBody": "El plantel, las tallas de alquiler y las tarjetas quedan listos de inmediato — las tarjetas llegan verificadas y marcadas como importadas, con una confirmación de un toque para el personal. Solo una inmersión que exige una especialidad espera esa confirmación.",
       "openImportCta": "Abrir Importar en tu tienda",
       "closingTitle": "Míralo antes de cambiar nada.",
       "closingDescription": "Recorre la demo en vivo como propietario, capitán o buceador — sin registro, nada que importar, solo la tienda funcionando. Empieza una prueba cuando encaje.",
@@ -930,7 +930,7 @@
         "frontDesk": {
           "role": "Para la recepción",
           "title": "Una sola respuesta a «¿están listos?»",
-          "description": "Descargo de responsabilidad, certificación, requisitos del sitio, pago y ajuste del equipo se juntan antes de que un problema llegue al muelle — y cuando algo no se puede verificar, DiveDay lo dice con claridad en vez de dejarlo pasar en silencio.",
+          "description": "Descargo de responsabilidad, certificación, requisitos del sitio, pago y ajuste del equipo se juntan antes de que un problema llegue al muelle — y cuando algo no se puede verificar, DiveDay lo dice con claridad en vez de dejarlo pasar.",
           "mockupLabel": "La sección de preparación de la salida mostrando claramente los estados de buceador listo y bloqueado."
         }
       },
@@ -968,9 +968,9 @@
       "heroDescription": "DiveDay no es un producto secundario dentro de una empresa más grande, ni una hoja de ruta fijada por un comité que nunca ha visto un barco. Lo construye un pequeño equipo de buceadores, con un fundador responsable de cada decisión que toma.",
       "founderEyebrow": "Del fundador",
       "founderTitle": "Por qué existe esto.",
-      "founderP1": "Un dueño de una tienda de buceo me explicó un día cualquiera: una pizarra para el barco de mañana, una tablilla para el listado, una hoja de cálculo que alguien actualiza a mano, y un par de aplicaciones que no se hablan entre sí. Pagaba por todo eso dos veces — una por el software, otra en las horas que le robaba a sus buceadores. Nada de eso era culpa suya ni de su equipo; llevan una operación ajustada. Las herramientas simplemente nunca llegaron para este sector.",
-      "founderP2": "Ese es el patrón en cuanto lo buscas: un sector entero funcionando con software que nadie construyó realmente para él. Lo que existe es, en el mejor caso, anticuado y, en el peor, hostil — hecho para una oficina trasera, no para un muelle mojado. Así que las tiendas se quedan con la pizarra y la tablilla, porque el papel nunca falla, nunca te desconecta y nunca te hace tocar cinco pantallas con las manos mojadas.",
-      "founderP3": "DiveDay existe para cerrar esa brecha: software lo bastante rápido, claro y tolerante como para que un equipo lo use sin que se lo pidan — construido observando cómo transcurre de verdad un día de barco, no a partir de una especificación escrita lejos del agua. Si tu equipo no lo abriría una mañana ajetreada, no ha cumplido su función.",
+      "founderP1": "Un dueño de una tienda de buceo me explicó un día cualquiera: una pizarra, una tablilla, una hoja de cálculo actualizada a mano, y un par de aplicaciones que no se hablan entre sí. Pagaba por todo eso dos veces — una por el software, otra en las horas que le robaba a sus buceadores. Su equipo lleva una operación ajustada; las herramientas simplemente nunca llegaron para este sector.",
+      "founderP2": "Ese es el patrón: un sector entero funcionando con software que nadie construyó para él — anticuado en el mejor caso, hostil en el peor, hecho para una oficina trasera, no para un muelle mojado. Las tiendas se quedan con la pizarra y la tablilla porque el papel nunca falla, nunca te desconecta, nunca exige cinco pantallas con las manos mojadas.",
+      "founderP3": "DiveDay cierra esa brecha: software rápido, claro y tolerante para que un equipo lo use sin que se lo pidan — construido observando cómo transcurre un día de barco, no desde una especificación escrita lejos del agua. Si tu equipo no lo abriría una mañana ajetreada, no ha cumplido su función.",
       "runEyebrow": "Cómo se lleva",
       "runTitle": "Puedes contactar al fundador.",
       "runP1": "Escribe sobre una mala mañana en el mostrador y llegas al fundador — no a una cola, ni a un número de ticket, ni a un formulario que te pide adjuntar una captura antes de que alguien lo lea. Quien responde es quien puede resolverlo.",
@@ -1039,7 +1039,7 @@
     "product": {
       "eyebrow": "El producto",
       "heroTitle": "Desde la primera reserva hasta el último recuento.",
-      "heroDescription": "DiveDay se organiza en torno al propio viaje. Cada reserva, descargo de responsabilidad, certificación, pago, decisión de equipo y evento de pase de lista queda vinculado a las personas que salen en el barco.",
+      "heroDescription": "DiveDay se organiza en torno al propio viaje. Cada reserva, descargo de responsabilidad, certificación, pago, decisión de equipo y recuento queda vinculado a las personas que salen en el barco.",
       "readinessEyebrow": "Antes de salir",
       "readinessTitle": "Una sola respuesta de preparación, compartida donde importa.",
       "readinessDescription": "La recepción ve por qué un buceador está bloqueado. El capitán ve la misma respuesta en el listado. Nadie tiene que adivinar si un descargo que falta o una tarjeta pendiente se puede ignorar.",
@@ -1052,11 +1052,11 @@
       "dockEyebrow": "En el muelle",
       "dockTitle": "Un listado que sigue siendo útil cuando desaparece la señal.",
       "dockDescription": "El equipo obtiene controles grandes para el teléfono, recuentos para cada inmersión, bloqueos que no se pueden ignorar, un historial de embarque que conserva cada corrección, y una vista de impresión desde el mismo listado.",
-      "dockNote": "El equipo guarda el listado en su teléfono antes de salir del muelle. Todo lo marcado sin conexión queda claramente etiquetado hasta que DiveDay vuelve a tener servicio y lo verifica contra el listado en vivo — nada se sobrescribe jamás en silencio.",
+      "dockNote": "El equipo guarda el listado en su teléfono antes de salir del muelle. Todo lo marcado sin conexión queda claramente etiquetado hasta que DiveDay vuelve a tener servicio y lo verifica contra el listado en vivo — nada se sobrescribe jamás.",
       "captainPhoneLabel": "Un capitán usando la vista móvil de pase de lista en DiveDay.",
       "paymentEyebrow": "Cobrar",
       "paymentTitle": "El dinero pasa por tu cuenta de Stripe, no por la nuestra.",
-      "paymentDescription": "Los buceadores pagan al reservar, o dejan un depósito y liquidan el saldo en el muelle. El personal emite una factura en el mostrador por un viaje, un curso, alquileres, nitrox o una línea de venta. Cuando un buceador cancela dentro de la ventana que publicaste, el reembolso se hace automáticamente — y cuando no, la página lo dice antes de confirmar, no después.",
+      "paymentDescription": "Los buceadores pagan al reservar, o dejan un depósito y liquidan el saldo en el muelle. El personal puede facturar un viaje, curso, alquiler, nitrox o línea de venta. Una cancelación dentro de tu ventana publicada se reembolsa automáticamente — si no, la página lo dice de antemano.",
       "yourAccountTitle": "Tu cuenta, tu dinero",
       "yourAccountBody": "Los pagos, disputas e historial permanecen en la cuenta de Stripe que ya controlas. DiveDay nunca se interpone entre tú y el pago — y no hay comisión por reserva sobre el precio fijo.",
       "pricedTitle": "Con el pago resuelto antes de embarcar",
@@ -1073,6 +1073,7 @@
       "boxEyebrow": "Todo incluido",
       "boxTitle": "La lista completa, sin rodeos.",
       "boxDescription": "Sin niveles, sin extras, nada aquí reservado para un plan superior. Cada línea es algo que puedes ir a probar ahora mismo en la demo — ábrela en otra pestaña y compruébanoslo.",
+      "fullListSummary": "La lista completa",
       "noEyebrow": "Un no honesto",
       "noTitle": "Lo que DiveDay no hace.",
       "noDescription": "Estás evaluando a un proveedor del que nunca oíste hablar; lo mínimo que podemos hacer es marcar nuestros propios límites antes de que los encuentres tú.",
@@ -1131,15 +1132,15 @@
         },
         "switching": {
           "question": "¿Qué implica realmente cambiarse a DiveDay?",
-          "answer": "Exporta una hoja de cálculo de clientes de tu sistema actual, y el importador de DiveDay trae a tus buceadores, sus tarjetas de certificación, sus tallas de alquiler y cualquier descargo que tu sistema anterior ya tuviera firmado — mostrándote exactamente qué va a pasar antes de guardar nada. Cuando reconoce un correo, actualiza al buceador existente en vez de duplicarlo. Las tarjetas importadas llegan verificadas y marcadas como importadas, listas para confirmar con un toque; un descargo que tu sistema anterior ya tenía firmado llega marcado como importado, así que nadie tiene que firmarlo de nuevo. Hay guías paso a paso para {competitors}."
+          "answer": "Exporta una hoja de cálculo de clientes de tu sistema actual, y el importador de DiveDay trae a tus buceadores, tarjetas y tallas de alquiler — mostrando exactamente qué va a pasar antes de guardar nada. Hay guías paso a paso para {competitors}."
         },
         "agency": {
           "question": "¿DiveDay se conecta con PADI o SSI?",
-          "answer": "No — ninguna agencia ofrece al software de tiendas una forma de verificar automáticamente una tarjeta C, así que DiveDay no lo finge. Una foto de la tarjeta se sube una vez al perfil del buceador, tu personal confirma el número con la agencia y la marca certificada, y esa tarjeta queda con el buceador para cada reserva futura. Los cursos llegan como la copia de tu tienda del catálogo de la agencia, con las plantillas publicadas de DiveDay como punto de partida — tú fijas los precios y eliges qué se muestra."
+          "answer": "Ninguna agencia deja verificar una tarjeta C por software, así que DiveDay no lo finge. Una foto se sube una vez al perfil del buceador; tu personal la confirma con la agencia, y queda con ellos para siempre. Los cursos llegan como la copia de tu tienda del catálogo de la agencia — tú fijas los precios y la visibilidad."
         },
         "pos": {
           "question": "¿DiveDay sustituye mi TPV?",
-          "answer": "No — conserva tu caja. DiveDay lleva el lado acuático de la tienda: reservas, cursos, preparación, previa del viaje y el barco, con los pagos de viajes y cursos a través de la cuenta de Stripe de tu propia tienda. Puedes añadir una línea de venta a un pedido de DiveDay, pero aquí no hay caja registradora, lector de código de barras ni control de inventario, y preferimos decirlo con claridad antes que fingir."
+          "answer": "No — conserva tu caja. DiveDay lleva el lado acuático: reservas, cursos, preparación, previa del viaje y el barco, pagado a través de tu propia cuenta de Stripe. Añade una línea de venta a un pedido, pero aquí no hay caja ni control de inventario — preferimos decirlo con claridad."
         },
         "whyFounding": {
           "question": "¿Por qué ser una tienda fundadora?",
@@ -1147,7 +1148,7 @@
         },
         "multipleLocations": {
           "question": "¿Qué pasa con varias ubicaciones?",
-          "answer": "Cada espacio de trabajo de DiveDay lleva una tienda por ahora. Si operas más de una ubicación, escribe a aaron@dive.day — preferimos construir eso contigo antes que fingir que ya existe."
+          "answer": "Cada tienda de DiveDay lleva una ubicación por ahora. Si operas más de una ubicación, escribe a aaron@dive.day — preferimos construir eso contigo antes que fingir que ya existe."
         }
       },
       "stillQuestion": "¿Sigues teniendo una pregunta que las FAQ no responden? Las tiendas fundadoras tienen una línea directa con el fundador — úsala, siempre es bienvenida.",

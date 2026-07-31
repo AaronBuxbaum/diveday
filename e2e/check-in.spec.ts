@@ -6,7 +6,7 @@ test("counter check-in searches by diver, confirms live readiness, and keeps blo
   page,
 }) => {
   await page.goto("/shop/blue-mantis/check-in");
-  await expect(page.getByRole("heading", { name: "Line-busting check-in" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Counter check-in" })).toBeVisible();
   await expect(page.getByRole("region", { name: "Check-in queue" })).toBeVisible();
 
   const search = page.getByRole("searchbox", { name: "Scan or search diver" });
