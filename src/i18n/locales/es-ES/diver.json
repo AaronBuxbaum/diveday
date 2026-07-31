@@ -32,7 +32,11 @@
     "previousMonth": "Mes anterior",
     "nextMonth": "Mes siguiente",
     "calendarDive": "inmersión de las {time}",
-    "calendarDiveFull": "inmersión de las {time} (completa)"
+    "calendarDiveFull": "inmersión de las {time} (completa)",
+    "nextDeparture": {
+      "eyebrow": "Próxima salida",
+      "title": "{when} — {trip}"
+    }
   },
   "trip": {
     "courseSession": "Sesión de curso",

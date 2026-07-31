@@ -188,6 +188,14 @@ export default async function TripsPage({
     ]);
   const hasUpcoming = range.first !== null;
 
+  // A prominent quick link to the soonest departure with room, so a returning
+  // diver who already knows what they want never has to scroll the full list.
+  // Only on the default (unbounded) view — once a diver has paged the
+  // calendar to a specific month, `upcoming` is bounded to it and its first
+  // trip is no longer necessarily the shop's actual next departure.
+  const nextDeparture =
+    !staffView && !explicitMonth ? (upcoming.find((trip) => !isFull(trip)) ?? null) : null;
+
   // Diver-facing month calendar: place the month's dives on their shop-local
   // day (storage is UTC; the diver thinks in the shop's wall clock), and page
   // through the months that actually have dives on the books.
@@ -382,6 +390,34 @@ export default async function TripsPage({
           }
         />
       )}
+
+      {nextDeparture ? (
+        <Link
+          href={`/shop/${shopSlug}/schedule/${nextDeparture.id}${isEmbed ? "?embed=1" : ""}#book`}
+          className="card-scale-hint mb-8 flex items-center justify-between gap-4 rounded-2xl border border-primary/30 bg-primary/5 p-5 shadow-sm transition-all duration-200 hover:border-primary/50"
+        >
+          <div className="min-w-0">
+            <p className="text-xs font-semibold tracking-wide text-primary uppercase">
+              {t("schedule.nextDeparture.eyebrow")}
+            </p>
+            <p className="mt-1 truncate text-lg font-semibold">
+              {t("schedule.nextDeparture.title", {
+                when: `${formatShortDate(nextDeparture.startsAt, locale, shop.timezone)} · ${formatTime(nextDeparture.startsAt, locale, shop.timezone)}`,
+                trip: nextDeparture.title,
+              })}
+            </p>
+          </div>
+          <Badge tone="primary" tabularNums className="shrink-0">
+            {(() => {
+              const label = capacityLabel(nextDeparture);
+              return label.kind === "full"
+                ? t("fallback.full")
+                : t("fallback.spotsLeft", { count: label.remaining });
+            })()}
+          </Badge>
+        </Link>
+      ) : null}
+
       {staffView && stats ? (
         <section
           aria-label={st("schedule.overview.ariaLabel")}

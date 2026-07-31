@@ -32,7 +32,11 @@
     "previousMonth": "Previous month",
     "nextMonth": "Next month",
     "calendarDive": "{time} dive",
-    "calendarDiveFull": "{time} dive (full)"
+    "calendarDiveFull": "{time} dive (full)",
+    "nextDeparture": {
+      "eyebrow": "Next boat out",
+      "title": "{when} — {trip}"
+    }
   },
   "trip": {
     "courseSession": "Course session",
