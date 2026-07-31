@@ -4,10 +4,15 @@ import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass } from "@/components/ui/form";
 import type { listBookingNotes } from "@/db/operations";
+import { birthdayText } from "@/i18n/birthday-labels";
+import { depthWarningText } from "@/i18n/depth-labels";
 import { readinessBlockerText } from "@/i18n/readiness-labels";
 import { rentalFitLineText } from "@/i18n/rental-labels";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
+import { ageOnDate, birthdayCallout, isMinorOnDate } from "@/lib/age";
+import type { CalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
+import type { DepthUnit } from "@/lib/depth-units";
 import { rentalFitLine } from "@/lib/dive-prep";
 import { formatDateTimeTz } from "@/lib/format";
 import { flaggedMedicalPrompts } from "@/lib/medical";
@@ -97,6 +102,8 @@ export function RosterSection({
   notesByBooking,
   addNoteAction,
   deleteNoteAction,
+  depthUnit,
+  tripDate,
 }: {
   shopSlug: string;
   shopTimezone: string;
@@ -120,6 +127,10 @@ export function RosterSection({
   notesByBooking: Map<string, Awaited<ReturnType<typeof listBookingNotes>>>;
   addNoteAction: (formData: FormData) => void;
   deleteNoteAction: (formData: FormData) => void;
+  /** How this shop reads depth; the stored figure is always metres. */
+  depthUnit: DepthUnit;
+  /** The trip's own shop-local calendar date — when age and birthdays are measured. */
+  tripDate: CalendarDate;
 }) {
   const t = staffTranslator(locale);
   const WAIVER_CONTROLS = Object.fromEntries(
@@ -207,6 +218,17 @@ export function RosterSection({
             const identityUnconfirmed = Boolean(
               readiness?.blockers.some((blocker) => blocker.code === "identity_unconfirmed"),
             );
+            // Age is shown only when the shop actually holds a date of birth —
+            // no date, no line, rather than an "unknown" that reads as a gap to
+            // fill on every diver who has never been asked (H-21).
+            const dateOfBirth = person.dateOfBirth;
+            const age = dateOfBirth ? ageOnDate(dateOfBirth, tripDate) : null;
+            const minor = dateOfBirth ? isMinorOnDate(dateOfBirth, tripDate) : false;
+            const birthday = birthdayCallout(dateOfBirth, tripDate);
+            // A warning, never a gate: the site goes deeper than this diver's
+            // training, which an instructor may well have already planned around
+            // (H-08). It sits apart from the blocker list for that reason.
+            const depth = readinessByBooking.get(booking.id)?.depthAdvisory;
             return (
               <li
                 key={booking.id}
@@ -249,6 +271,30 @@ export function RosterSection({
                       <p className="text-sm text-muted">
                         {person.email ?? t("trips.roster.noEmailOnFile")}
                       </p>
+                      {age !== null ? (
+                        <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted">
+                          <span className="tabular-nums">
+                            {t("trips.roster.ageYears", { age })}
+                          </span>
+                          {/* Text, never colour alone — this is read in sunlight
+                              on a moving boat (design/principles.md #2). */}
+                          {minor ? (
+                            <Badge tone="warning" size="sm">
+                              {t("trips.roster.minorBadge")}
+                            </Badge>
+                          ) : null}
+                          {/* The cake carries the meaning; the words are just
+                              when. `sr-only` keeps that legible to a screen
+                              reader, which would otherwise hear "in 2d" alone. */}
+                          {birthday ? (
+                            <Badge tone="primary" size="sm">
+                              <span aria-hidden="true">🎂</span>
+                              <span className="sr-only">{t("shared.birthday.label")}</span>
+                              <span className="ms-1">{birthdayText(t, birthday)}</span>
+                            </Badge>
+                          ) : null}
+                        </p>
+                      ) : null}
                     </div>
                   </div>
                   {readiness ? (
@@ -280,6 +326,17 @@ export function RosterSection({
                       </li>
                     ))}
                   </ul>
+                ) : null}
+
+                {/* Warning tone, not danger, and deliberately outside the
+                    blocker list above: this diver can board. It says the site
+                    goes deeper than their training, which the instructor may
+                    already be planning around (H-08). */}
+                {depth?.status === "exceeds" ? (
+                  <p className="mt-3 flex gap-2 rounded-lg bg-warning/10 px-3 py-2 text-sm text-warning">
+                    <span aria-hidden="true">▲</span>
+                    <span>{depthWarningText(t, depth)}</span>
+                  </p>
                 ) : null}
 
                 {/* This seat reused an existing diver's email under a different

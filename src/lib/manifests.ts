@@ -1,3 +1,5 @@
+import type { BirthdayCallout } from "./age";
+import type { DepthCeilingCheck } from "./depth-ceiling";
 import type { RentalFitLine } from "./dive-prep";
 import type { ReadinessResult } from "./readiness";
 import { unavailableReadiness } from "./readiness";
@@ -93,6 +95,24 @@ export type ManifestDiverInput = {
    * still analyzes and signs for the actual mix before anyone breathes it.
    */
   nitroxRequested: boolean;
+  /**
+   * Whole years on the trip date, and whether that makes them a minor (H-21).
+   * Both null/false when the shop holds no date of birth — the captain reading
+   * the boarding list sees nothing rather than an "unknown age" on most of the
+   * boat. Not a gate: nothing here blocks boarding, it is a fact the crew is
+   * entitled to know before the lines come off.
+   */
+  age?: number | null;
+  minor?: boolean;
+  /** The diver has a birthday today or within the callout window (H-21). */
+  birthday?: BirthdayCallout | null;
+  /**
+   * Whether the trip's deepest site goes past this diver's ceiling (H-08).
+   * Carried here and not only on the roster because the plan for dive two is
+   * made on the boat during the surface interval, from this list — which is
+   * exactly when a depth advisory is actionable. Never a gate.
+   */
+  depthAdvisory?: DepthCeilingCheck;
   /**
    * When and how the diver's medical currency was last established, for spotting
    * a statement going stale. Null unless the governing waiver is a clean

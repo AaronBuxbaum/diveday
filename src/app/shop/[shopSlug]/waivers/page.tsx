@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { FlashParams } from "@/components/FlashParams";
@@ -34,11 +35,11 @@ export default async function WaiverTemplatesPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{ notice?: string }>;
+  searchParams: Promise<{ notice?: string; after?: string }>;
 }) {
   const session = await requireStaffSession();
   const { shopSlug } = await params;
-  const { notice } = await searchParams;
+  const { notice, after } = await searchParams;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   // Staff read dates in the language their own device asks for, same
@@ -57,7 +58,9 @@ export default async function WaiverTemplatesPage({
   );
   if (!canManage) redirect(`/shop/${shopSlug}`);
   const current = await getCurrentWaiverTemplate(db, shop.id);
-  const integrityAudit = await listWaiverIntegrityAudit(db, shop.id);
+  const { entries: integrityAudit, nextCursor } = await listWaiverIntegrityAudit(db, shop.id, {
+    cursor: after,
+  });
 
   async function saveWaiverAction(formData: FormData) {
     "use server";
@@ -162,12 +165,12 @@ export default async function WaiverTemplatesPage({
         <p className="mt-1 max-w-2xl text-sm text-muted">
           {t("waiversStaff.integrityDescription")}
         </p>
-        {integrityAudit.length === 0 ? (
+        {integrityAudit.length === 0 && !after ? (
           <p className="mt-4 text-sm text-muted">{t("waiversStaff.noSignedRecords")}</p>
         ) : (
           <>
             <ul className="mt-4 divide-y divide-border rounded-lg border border-border bg-surface">
-              {integrityAudit.slice(0, 20).map((entry) => (
+              {integrityAudit.map((entry) => (
                 <li
                   key={entry.id}
                   className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm"
@@ -198,8 +201,25 @@ export default async function WaiverTemplatesPage({
                 </li>
               ))}
             </ul>
-            {integrityAudit.length > 20 ? (
-              <p className="mt-2 text-xs text-muted">{t("waiversStaff.truncatedNotice")}</p>
+            {nextCursor || after ? (
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                {nextCursor ? (
+                  <Link
+                    href={`/shop/${shopSlug}/waivers?after=${encodeURIComponent(nextCursor)}#waiver-integrity-heading`}
+                    className={buttonClass({ variant: "secondary" })}
+                  >
+                    {t("waiversStaff.showMoreRecords")}
+                  </Link>
+                ) : null}
+                {after ? (
+                  <Link
+                    href={`/shop/${shopSlug}/waivers#waiver-integrity-heading`}
+                    className="text-sm font-medium text-primary hover:underline"
+                  >
+                    {t("waiversStaff.backToTop")}
+                  </Link>
+                ) : null}
+              </div>
             ) : null}
           </>
         )}

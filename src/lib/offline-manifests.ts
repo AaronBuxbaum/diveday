@@ -7,11 +7,17 @@ import type { ReadinessBlocker, ReadinessBlockerCode } from "./readiness";
  * data, so an older cached snapshot fails to decrypt rather than being read
  * back into a type it no longer matches.
  *
- * v3 adds the carried-forward (`implied`) flag to roll-call records so a diver
+ * v3 added the carried-forward (`implied`) flag to roll-call records so a diver
  * who left the boat earlier reads as "not boarded · carried" offline, matching
  * the live manifest, instead of a fabricated explicit result.
+ *
+ * v4 narrows the diver shape from a deny-list to an explicit allow-list. The
+ * bump is doing real work here: age and minor status briefly rode into this
+ * payload (see the note on `divers` below), and only a version change purges
+ * the copies already written to crew devices — they fail to decrypt and are
+ * discarded rather than lingering to their natural 14-day expiry.
  */
-export const OFFLINE_MANIFEST_RECORD_VERSION = 3 as const;
+export const OFFLINE_MANIFEST_RECORD_VERSION = 4 as const;
 export const OFFLINE_MANIFEST_CURRENT_MS = 15 * 60 * 1000;
 export const OFFLINE_MANIFEST_AGING_MS = 4 * 60 * 60 * 1000;
 export const OFFLINE_MANIFEST_MAX_RETENTION_MS = 14 * 24 * 60 * 60 * 1000;
@@ -30,8 +36,28 @@ export type OfflineManifestPayload = {
         startsAt: string;
         endsAt: string;
       };
+      /**
+       * An explicit **allow-list**, not `Omit<...>`. It used to be a deny-list,
+       * which meant every field later added to a manifest diver silently
+       * shipped to every crew phone — that is exactly how H-21's `age`,
+       * `minor`, and `birthday` reached this payload, retained for up to 14
+       * days on personal devices, rendered by nothing, and describing children.
+       * Written this way the next new field fails to compile instead.
+       *
+       * Only what dock-side roll call actually needs belongs here.
+       */
       divers: Array<
-        Omit<TripManifest["divers"][number], "rollCall" | "medicalWaiver" | "readiness"> & {
+        Pick<
+          TripManifest["divers"][number],
+          | "bookingId"
+          | "fullName"
+          | "emergencyContactName"
+          | "emergencyContactPhone"
+          | "rentalFit"
+          | "nitroxRequested"
+        > & {
+          /** Dropped at save time; the dock does not need it (kept for shape parity). */
+          email: null;
           /**
            * `text` is resolved once, at save time — this snapshot may be read
            * back with no network and no translator available, so unlike the
@@ -96,13 +122,22 @@ export function serializeManifests(
         startsAt: manifest.trip.startsAt.toISOString(),
         endsAt: manifest.trip.endsAt.toISOString(),
       },
-      divers: manifest.divers.map(({ medicalWaiver: _medicalWaiver, readiness, ...diver }) => ({
-        ...diver,
-        // Email is not needed for dock-side roll call; minimize retained private data.
-        email: null,
+      // Built field-by-field rather than spread, matching the allow-list type
+      // above: what the dock needs, and nothing else. Age, minor status, and
+      // birthdays (H-21) are deliberately absent — they are staff-screen facts,
+      // not something to persist on a deckhand's phone for a fortnight.
+      divers: manifest.divers.map((diver) => ({
+        bookingId: diver.bookingId,
+        fullName: diver.fullName,
+        emergencyContactName: diver.emergencyContactName,
+        emergencyContactPhone: diver.emergencyContactPhone,
+        rentalFit: diver.rentalFit,
+        nitroxRequested: diver.nitroxRequested,
+        // Not needed for dock-side roll call; minimize retained private data.
+        email: null as null,
         readiness: {
-          status: readiness.status,
-          blockers: readiness.blockers.map((blocker) => ({
+          status: diver.readiness.status,
+          blockers: diver.readiness.blockers.map((blocker) => ({
             code: blocker.code,
             text: resolveBlockerText(blocker),
           })),

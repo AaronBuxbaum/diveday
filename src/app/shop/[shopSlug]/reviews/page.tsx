@@ -8,7 +8,11 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
-import { getShopReviewAggregate, listShopReviewsForStaff } from "@/db/reviews";
+import {
+  countReviewsAwaitingModeration,
+  getShopReviewAggregate,
+  listShopReviewsForStaff,
+} from "@/db/reviews";
 import { getShopById } from "@/db/shops";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
@@ -33,18 +37,19 @@ export default async function ReviewsPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{ notice?: string }>;
+  searchParams: Promise<{ notice?: string; after?: string }>;
 }) {
   const session = await requireStaffSession();
   const { shopSlug } = await params;
-  const { notice } = await searchParams;
+  const { notice, after } = await searchParams;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
-  const [reviews, aggregate] = await Promise.all([
-    listShopReviewsForStaff(db, session.user.shopId),
+  const [reviewPage, aggregate, waitingCount] = await Promise.all([
+    listShopReviewsForStaff(db, session.user.shopId, { cursor: after }),
     getShopReviewAggregate(db, session.user.shopId),
+    countReviewsAwaitingModeration(db, session.user.shopId),
   ]);
-  const waiting = reviews.filter((review) => !review.isPublished);
+  const { reviews, nextCursor, total } = reviewPage;
   const banner = notice ? NOTICES[notice] : undefined;
   const locale = await requestLocale(shop?.defaultLocale);
   const t = staffTranslator(locale);
@@ -93,13 +98,13 @@ export default async function ReviewsPage({
         />
         <ShopStat
           label={t("reviews.waitingOnYou")}
-          value={waiting.length}
+          value={waitingCount}
           detail={t("reviews.waitingDetail")}
-          tone={waiting.length > 0 ? "primary" : undefined}
+          tone={waitingCount > 0 ? "primary" : undefined}
         />
       </section>
 
-      {reviews.length === 0 ? (
+      {total === 0 ? (
         <EmptyState>
           <h2 className="font-medium">{t("reviews.emptyHeading")}</h2>
           <p className="mt-1 text-sm text-muted">{t("reviews.emptyDetail")}</p>
@@ -157,6 +162,27 @@ export default async function ReviewsPage({
           ))}
         </ul>
       )}
+
+      {nextCursor || after ? (
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          {nextCursor ? (
+            <Link
+              href={`/shop/${shopSlug}/reviews?after=${encodeURIComponent(nextCursor)}`}
+              className={buttonClass({ variant: "secondary" })}
+            >
+              {t("reviews.showMoreReviews")}
+            </Link>
+          ) : null}
+          {after ? (
+            <Link
+              href={`/shop/${shopSlug}/reviews`}
+              className="text-sm font-medium text-primary hover:underline"
+            >
+              {t("reviews.backToTop")}
+            </Link>
+          ) : null}
+        </div>
+      ) : null}
     </main>
   );
 }

@@ -107,5 +107,43 @@ for (const scheme of ["light", "dark"] as const) {
       await page.getByText("Identity unconfirmed").first().waitFor();
       await capture(page, "trip-guests-identity", scheme);
     });
+
+    // H-08: a site deeper than a diver's certification trains for. Warning
+    // tone and *outside* the red blocker list, because it never blocks — an
+    // instructor may be keeping that diver shallower on purpose. Nothing in
+    // the seed reaches this state (every seeded site sits within its divers'
+    // ceilings), so the depth is raised for the capture and put back after,
+    // matching the nitrox pattern in e2e/nitrox.spec.ts. Its own test so the
+    // mutation is contained and reverted regardless of pass/fail.
+    test(`the roster's depth warning renders true to the design (${scheme})`, async ({ page }) => {
+      const setDepth = async (meters: string) => {
+        await page.goto("/shop/blue-mantis/dive-sites");
+        await page.getByRole("link", { name: "Molasses Reef" }).first().click();
+        await page.waitForURL(/\/dive-sites\//);
+        // The seeded briefing's photo URLs can't be re-ingested from the e2e
+        // sandbox and would bounce the save to ?error=images.
+        await page.getByLabel(/Site photo URLs/).fill("");
+        await page.getByLabel(/Maximum depth/).fill(meters);
+        await page.getByRole("button", { name: "Save briefing" }).click();
+        await page.getByText("Site briefing saved.").waitFor();
+      };
+      try {
+        await setDepth("32");
+        await page.goto("/shop/blue-mantis/schedule");
+        await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
+        await page
+          .getByRole("navigation", { name: "Trip" })
+          .getByRole("link", { name: "Guests" })
+          .click();
+        await page.waitForURL(/\/guests/);
+        await page
+          .getByText(/deeper than the/)
+          .first()
+          .waitFor();
+        await capture(page, "trip-guests-depth-warning", scheme);
+      } finally {
+        await setDepth("12");
+      }
+    });
   });
 }

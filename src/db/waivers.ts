@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, isNull, ne } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, lt, ne, or } from "drizzle-orm";
 import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { inPersonAttestationProvider, localTypedConsentProvider } from "@/lib/signatures";
@@ -10,6 +10,7 @@ import {
   WAIVER_LINK_TTL_MS,
 } from "@/lib/waivers";
 import type { AppDb, DbExecutor } from "./client";
+import { decodeCursor, encodeCursor } from "./cursor";
 import type { MedicalAnswers } from "./schema";
 import {
   bookings,
@@ -50,8 +51,38 @@ export async function listWaiverTemplateHistory(db: DbExecutor, shopId: string) 
     .orderBy(desc(waiverTemplates.version));
 }
 
-/** Signed evidence audit, intentionally excluding bearer tokens and medical answers. */
-export async function listWaiverIntegrityAudit(db: DbExecutor, shopId: string) {
+/** How many audit rows the waivers page shows per page before "Show more". */
+export const WAIVER_INTEGRITY_PAGE_SIZE = 50;
+
+/**
+ * `signedAt` is nullable on the schema only for a still-pending record; every
+ * write path that reaches status `completed`/`medical_review` sets it in the
+ * same statement (`completeWaiver`, `recordInPersonWaiver`, the CSV import),
+ * so a row this audit selects always has one.
+ */
+function requireSignedAt(record: { signedAt: Date | null }): Date {
+  if (!record.signedAt) {
+    throw new Error("Completed waiver record is missing signedAt");
+  }
+  return record.signedAt;
+}
+
+/**
+ * Signed evidence audit, intentionally excluding bearer tokens and medical
+ * answers — one keyset page at a time (ordered by signature, then id for a
+ * stable tiebreak), same idiom as `pagedUpcomingTripsWithCounts` and
+ * `listDiverSummaries` so a shop with years of signed waivers costs one page,
+ * not the whole table.
+ */
+export async function listWaiverIntegrityAudit(
+  db: DbExecutor,
+  shopId: string,
+  options: { cursor?: string; limit?: number } = {},
+) {
+  const limit = options.limit ?? WAIVER_INTEGRITY_PAGE_SIZE;
+  const after = decodeCursor(options.cursor);
+  const afterDate = after ? new Date(after[0]) : null;
+
   const rows = await db
     .select({
       record: waiverRecords,
@@ -63,16 +94,32 @@ export async function listWaiverIntegrityAudit(db: DbExecutor, shopId: string) {
       and(
         eq(waiverRecords.shopId, shopId),
         inArray(waiverRecords.status, ["completed", "medical_review"]),
+        afterDate && after && !Number.isNaN(afterDate.getTime())
+          ? or(
+              lt(waiverRecords.signedAt, afterDate),
+              and(eq(waiverRecords.signedAt, afterDate), lt(waiverRecords.id, after[1])),
+            )
+          : undefined,
       ),
     )
-    .orderBy(desc(waiverRecords.signedAt));
-  return rows.map((row) => ({
-    id: row.record.id,
-    personName: row.personName,
-    status: row.record.status,
-    signedAt: row.record.signedAt,
-    integrity: verifyWaiverIntegrity(row.record),
-  }));
+    .orderBy(desc(waiverRecords.signedAt), desc(waiverRecords.id))
+    .limit(limit + 1);
+
+  const pageRows = rows.slice(0, limit);
+  const last = pageRows.at(-1);
+  return {
+    entries: pageRows.map((row) => ({
+      id: row.record.id,
+      personName: row.personName,
+      status: row.record.status,
+      signedAt: row.record.signedAt,
+      integrity: verifyWaiverIntegrity(row.record),
+    })),
+    nextCursor:
+      rows.length > limit && last
+        ? encodeCursor(requireSignedAt(last.record).toISOString(), last.record.id)
+        : null,
+  };
 }
 
 /**

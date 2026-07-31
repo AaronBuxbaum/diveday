@@ -123,7 +123,7 @@ describe("public review reads", () => {
     await submitTripReview(db, { bookingId: bookingIds[1], rating: 4, comment: "Great briefing" });
 
     const staffQueue = await listShopReviewsForStaff(db, shop.id);
-    for (const review of staffQueue) await setReviewPublished(db, shop.id, review.id, true);
+    for (const review of staffQueue.reviews) await setReviewPublished(db, shop.id, review.id, true);
 
     const published = await listPublishedShopReviews(db, shop.id);
     expect(published.map((r) => r.reviewer).sort()).toEqual(["Kai N.", "Marta R."]);
@@ -137,7 +137,7 @@ describe("public review reads", () => {
     await submitTripReview(db, { bookingId: bookingIds[0], rating: 5 });
     await submitTripReview(db, { bookingId: bookingIds[1], rating: 3, comment: "Choppy day" });
     const queued = await listShopReviewsForStaff(db, shop.id);
-    const withComment = queued.find((r) => r.comment !== null);
+    const withComment = queued.reviews.find((r) => r.comment !== null);
     if (!withComment) throw new Error("expected a review with a comment");
     await setReviewPublished(db, shop.id, withComment.id, true);
 
@@ -153,10 +153,50 @@ describe("public review reads", () => {
 
     expect(await getShopReviewAggregate(db, OTHER_SHOP_ID)).toEqual({ count: 0, average: null });
     expect(await listPublishedShopReviews(db, OTHER_SHOP_ID)).toEqual([]);
-    expect(await listShopReviewsForStaff(db, OTHER_SHOP_ID)).toEqual([]);
+    expect(await listShopReviewsForStaff(db, OTHER_SHOP_ID)).toEqual({
+      reviews: [],
+      nextCursor: null,
+      total: 0,
+    });
     expect(await countReviewsAwaitingModeration(db, OTHER_SHOP_ID)).toBe(0);
     // …and the real shop still sees it, so the assertions above aren't vacuous.
     expect(await getShopReviewAggregate(db, shop.id)).toEqual({ count: 1, average: 5 });
+  });
+});
+
+describe("listShopReviewsForStaff pagination", () => {
+  it("pages with a keyset cursor and never repeats or skips a review", async () => {
+    const { db, shop, bookingIds } = await reviewContext(["Diver One", "Diver Two"]);
+    await submitTripReview(db, { bookingId: bookingIds[0], rating: 5, comment: "First review" });
+    await submitTripReview(db, { bookingId: bookingIds[1], rating: 3, comment: "Second review" });
+
+    const all = await listShopReviewsForStaff(db, shop.id);
+    expect(all.nextCursor).toBeNull();
+    expect(all.total).toBe(2);
+    expect(all.reviews).toHaveLength(2);
+
+    const seen: string[] = [];
+    let cursor: string | undefined;
+    for (let hops = 0; hops < 3; hops++) {
+      const page = await listShopReviewsForStaff(db, shop.id, { cursor, limit: 1 });
+      expect(page.reviews.length).toBeLessThanOrEqual(1);
+      expect(page.total).toBe(2);
+      seen.push(...page.reviews.map((r) => r.id));
+      if (!page.nextCursor) break;
+      cursor = page.nextCursor;
+    }
+    expect(seen).toEqual(all.reviews.map((r) => r.id));
+    expect(new Set(seen).size).toBe(seen.length);
+  });
+
+  it("treats a mangled cursor as the first page", async () => {
+    const { db, shop, bookingIds } = await reviewContext(["Diver One", "Diver Two"]);
+    await submitTripReview(db, { bookingId: bookingIds[0], rating: 5, comment: "First review" });
+    await submitTripReview(db, { bookingId: bookingIds[1], rating: 3, comment: "Second review" });
+
+    const all = await listShopReviewsForStaff(db, shop.id);
+    const mangled = await listShopReviewsForStaff(db, shop.id, { cursor: "not-a-real-cursor" });
+    expect(mangled.reviews.map((r) => r.id)).toEqual(all.reviews.map((r) => r.id));
   });
 });
 
@@ -164,7 +204,7 @@ describe("setReviewPublished", () => {
   it("refuses to moderate another shop's review", async () => {
     const { db, shop, bookingIds } = await reviewContext();
     await submitTripReview(db, { bookingId: bookingIds[0], rating: 4, comment: "Nice day out" });
-    const [review] = await listShopReviewsForStaff(db, shop.id);
+    const [review] = (await listShopReviewsForStaff(db, shop.id)).reviews;
 
     expect(await setReviewPublished(db, OTHER_SHOP_ID, review.id, true)).toBe(false);
     expect(await getShopReviewAggregate(db, shop.id)).toEqual({ count: 0, average: null });
@@ -175,7 +215,7 @@ describe("setReviewPublished", () => {
   it("takes a review back down, dropping it from the list and the average", async () => {
     const { db, shop, bookingIds } = await reviewContext();
     await submitTripReview(db, { bookingId: bookingIds[0], rating: 1, comment: "Not for me" });
-    const [review] = await listShopReviewsForStaff(db, shop.id);
+    const [review] = (await listShopReviewsForStaff(db, shop.id)).reviews;
     await setReviewPublished(db, shop.id, review.id, true);
     expect(await getShopReviewAggregate(db, shop.id)).toEqual({ count: 1, average: 1 });
 

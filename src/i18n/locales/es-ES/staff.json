@@ -620,6 +620,9 @@
       "difficultyPlaceholder": "Tranquilo, intermedio, avanzado",
       "depthRangeLabel": "Rango de profundidad",
       "depthRangePlaceholder": "20–45 ft",
+      "maxDepthMetersLabel": "Profundidad máxima (metros)",
+      "maxDepthFeetLabel": "Profundidad máxima (pies)",
+      "maxDepthHint": "(opcional · avisa cuando la titulación no llega)",
       "currentNoteLabel": "Notas de corriente y condiciones",
       "divePlanLabel": "Plan de inmersión",
       "divePlanPlaceholder": "Entrada, ruta, punto de retorno y notas de salida.",
@@ -894,7 +897,9 @@
     "reviewMeta": "{diverName} · <trip>{tripTitle}</trip> · {date}",
     "hide": "Ocultar",
     "publish": "Publicar",
-    "saving": "Guardando…"
+    "saving": "Guardando…",
+    "showMoreReviews": "Mostrar más reseñas",
+    "backToTop": "← Volver al principio de la lista"
   },
   "schedule": {
     "fullTripForm": "Formulario completo de salida",
@@ -1240,6 +1245,11 @@
       "noEmailOnFile": "sin correo registrado",
       "ready": "Listo",
       "needsAttention": "Necesita atención",
+      "ageYears": "{age} años",
+      "minorBadge": "Menor",
+      "depthWarning": "Esta salida llega a {site} {unit} — más de los {limit} {unit} para los que le habilita su tarjeta. No es un bloqueo: planifica la inmersión más somera o confirma que el guía lo mantiene dentro de sus límites.",
+      "depthWarningJunior": "Esta salida llega a {site} {unit} — más de los {limit} {unit} permitidos a su edad. No es un bloqueo: planifica la inmersión más somera o confirma que el guía lo mantiene dentro de sus límites.",
+      "depthWarningNoCard": "Esta salida llega a {site} {unit} y no hay ninguna tarjeta registrada con la que compararla — {limit} {unit} es el límite de iniciación. No es un bloqueo: comprueba qué titulación tiene o confirma que el guía lo mantiene dentro de sus límites.",
       "buddyGroupNote": "Nota de grupo de buceo:",
       "confirming": "Confirmando…",
       "confirmIdentityMessage": "¿Confirmar que esta reserva realmente es de {name}? Hazlo solo una vez que hayas comprobado que es la misma persona — no alguien más compartiendo el correo.",
@@ -1271,6 +1281,10 @@
       "addNoteLabel": "Añadir una nota que solo vea el personal",
       "adding": "Añadiendo…",
       "addPrivateNote": "Añadir nota privada"
+    },
+    "celebrations": {
+      "heading": "Celebraciones",
+      "description": "Alguien a bordo cumple años. Una felicitación en el intervalo de superficie no cuesta nada y no se olvida."
     },
     "manifest": {
       "skipToRollCall": "Ir al pase de lista",
@@ -1305,6 +1319,8 @@
       "shopTimeLabel": "Hora del centro: {timezone}",
       "readyToBoard": "Listo para embarcar",
       "blockedBadge": "Bloqueado",
+      "age": "{age} años",
+      "minorAge": "Menor · {age} años",
       "emergencyContactLabel": "Contacto de emergencia",
       "notOnFile": "No registrado",
       "rentalFitLabel": "Equipo de alquiler",
@@ -1460,6 +1476,8 @@
         "packingInvalid": "Añade entre uno y doce artículos a la lista.",
         "dockSaved": "Hora de presentación en el muelle guardada para todas las confirmaciones y recordatorios.",
         "dockInvalid": "Introduce una hora de presentación en el muelle de entre 5 y 180 minutos.",
+        "depthUnitSaved": "Unidad de profundidad guardada. Las profundidades registradas no cambian — solo cómo se muestran.",
+        "depthUnitInvalid": "Elige metros o pies.",
         "rentalsSaved": "Catálogo de alquiler guardado.",
         "rentalPricesSaved": "Precios de alquiler guardados.",
         "rentalPricesInvalid": "Introduce cada precio como una cantidad en dólares (o deja el campo vacío), entre $0 y $100.000.",
@@ -1502,6 +1520,15 @@
         "description": "Con cuánta antelación se pide a los buceadores que lleguen antes de zarpar — para preparar el equipo, revisar certificaciones y hacer el briefing. Aparece en las confirmaciones de reserva, el ritmo del día de muelle y todos los recordatorios previos al viaje.",
         "label": "Minutos antes de zarpar",
         "submit": "Guardar hora de presentación",
+        "submitting": "Guardando…"
+      },
+      "depthUnit": {
+        "heading": "Unidad de profundidad",
+        "description": "Si tu tripulación lee las profundidades en metros o en pies. Las profundidades siempre se guardan en metros, así que cambiar esto solo afecta a lo que escribes y lees — ninguna profundidad registrada se mueve.",
+        "label": "Mostrar profundidades en",
+        "meters": "Metros (m)",
+        "feet": "Pies (ft)",
+        "submit": "Guardar unidad de profundidad",
         "submitting": "Guardando…"
       },
       "paymentsGate": {
@@ -1886,7 +1913,8 @@
     "integrityValid": "Integridad verificada",
     "integrityInvalid": "Integridad no coincide",
     "integrityUnsealed": "Registro heredado sin sellar",
-    "truncatedNotice": "Mostrando los 20 registros firmados más recientes. Para ver el historial completo, usa la exportación CSV."
+    "showMoreRecords": "Mostrar más registros",
+    "backToTop": "← Volver al principio de la lista"
   },
   "shopHome": {
     "createdNotice": {
@@ -1903,6 +1931,16 @@
     "scheduleTrip": "Programar una salida"
   },
   "shared": {
+    "depth": {
+      "meters": "m",
+      "feet": "ft"
+    },
+    "birthday": {
+      "label": "Cumpleaños",
+      "today": "hoy",
+      "soon": "en {days} d",
+      "recent": "hace {days} d"
+    },
     "printButton": {
       "label": "Imprimir / guardar PDF"
     },

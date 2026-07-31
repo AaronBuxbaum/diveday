@@ -221,4 +221,55 @@ describe("offline manifest policy", () => {
     // Private data the dock does not need is still dropped.
     expect(payload.manifests[0]?.divers[0]?.email).toBeNull();
   });
+
+  it("never writes age, minor status, or birthdays to a crew device", () => {
+    // H-21 put these on the roster and the live manifest — staff screens. The
+    // offline copy is different: it persists to a personal phone for up to two
+    // weeks with no delete button, nothing renders these fields there, and they
+    // describe children. The payload type is an allow-list so a future field
+    // can't repeat the mistake; this asserts the behaviour that type protects.
+    const manifest: TripManifest = {
+      trip: {
+        id: "trip-1",
+        title: "Two-Tank Reef",
+        startsAt: new Date("2026-07-20T12:00:00.000Z"),
+        endsAt: new Date("2026-07-20T16:00:00.000Z"),
+        plannedDives: 2,
+      },
+      checkpoint: "departure",
+      crew: [],
+      divers: [
+        {
+          bookingId: "booking-1",
+          fullName: "Lena Fischer",
+          email: "lena@example.com",
+          emergencyContactName: null,
+          emergencyContactPhone: null,
+          readiness: { status: "ready", blockers: [] },
+          rentalFit: { state: "own_kit" },
+          nitroxRequested: false,
+          age: 12,
+          minor: true,
+          birthday: { status: "today" },
+          rollCall: undefined,
+        },
+      ],
+      summary: { totalDivers: 1, ready: 1, blocked: 0, boarded: 0, notBoarded: 0, awaiting: 1 },
+    };
+
+    const payload = serializeManifests(
+      [manifest],
+      { slug: "blue-mantis", name: "Blue Mantis", timezone: "America/New_York" },
+      (blocker) => blocker.code,
+    );
+    const diver = payload.manifests[0]?.divers[0] as Record<string, unknown> | undefined;
+    expect(diver).toBeDefined();
+    expect(diver).not.toHaveProperty("age");
+    expect(diver).not.toHaveProperty("minor");
+    expect(diver).not.toHaveProperty("birthday");
+    // The serialized JSON is what actually lands in IndexedDB — check there too,
+    // so an inherited property could never sneak past the assertions above.
+    expect(JSON.stringify(payload)).not.toContain("minor");
+    expect(JSON.stringify(payload)).not.toContain("birthday");
+  });
 });

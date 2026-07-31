@@ -78,7 +78,7 @@ function envelope(
               name: opts.shopName ?? base.shop.name,
             }
           : base.shop,
-      version: 3,
+      version: 4,
       snapshotId: `snap-${tripId}`,
       savedAt: opts.savedAt ?? new Date(FROZEN_MS).toISOString(),
       expiresAt: opts.expiresAt ?? new Date(FROZEN_MS + 1_000_000).toISOString(),

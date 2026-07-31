@@ -146,4 +146,24 @@ for (const scheme of ["light", "dark"] as const) {
       await capture(page, "waiver-active", scheme);
     });
   });
+
+  // The staff waiver settings page: default session from this file's own
+  // signedInAsOwner() above (unlike the diver-facing capture above, this one
+  // needs the staff session, not a signed-out visitor).
+  test.describe(`${scheme} mode`, { tag: "@visual" }, () => {
+    test.use({ colorScheme: scheme, viewport: { width: 1280, height: 800 } });
+
+    test(`the staff waiver settings page renders true to the design (${scheme})`, async ({
+      page,
+    }) => {
+      // The waiver: the release editor plus the signed-record integrity
+      // audit, paginated (`listWaiverIntegrityAudit`, `WAIVER_INTEGRITY_PAGE_SIZE`)
+      // so the demo shop's 150+ signed records render as one page with a
+      // "Show more records" link rather than a silent truncation notice.
+      await page.goto("/shop/blue-mantis/waivers");
+      await page.getByRole("heading", { level: 1, name: "Waiver" }).waitFor();
+      await page.getByRole("link", { name: "Show more records" }).waitFor();
+      await capture(page, "staff-waivers", scheme);
+    });
+  });
 }

@@ -1,13 +1,15 @@
 import type { BadgeTone } from "@/components/ui/badge";
 import type { getDiverProfile } from "@/db/divers";
 import type { getShopById } from "@/db/shops";
-import type { upcomingTripsWithCounts } from "@/db/trips";
+import type { pagedUpcomingTripsWithCounts } from "@/db/trips";
 import type { StaffMessageKey } from "@/i18n/staff-messages";
 import { type CalendarDate, isCalendarDateExpired } from "@/lib/calendar-date";
 
 export type DiverProfile = NonNullable<Awaited<ReturnType<typeof getDiverProfile>>>;
 export type Shop = NonNullable<Awaited<ReturnType<typeof getShopById>>>;
-export type UpcomingTrip = Awaited<ReturnType<typeof upcomingTripsWithCounts>>[number];
+export type UpcomingTrip = Awaited<
+  ReturnType<typeof pagedUpcomingTripsWithCounts>
+>["trips"][number];
 
 type Agency = "padi" | "ssi" | "naui" | "sdi" | "tdi" | "other";
 
