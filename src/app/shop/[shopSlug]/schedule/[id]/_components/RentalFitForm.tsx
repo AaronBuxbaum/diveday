@@ -112,6 +112,13 @@ export function RentalFitForm({
     style: "long",
     type: "conjunction",
   }).format(coreSetLabels);
+  // Plain-language glossary hints (task 6) for the two acronyms this
+  // checklist is most likely to stump a newcomer with — shown once, only for
+  // whichever the shop actually offers, right where the diver is deciding
+  // whether to check the box.
+  const jargonHintKeys: DiverMessageKey[] = [];
+  if (offers.has("bcd")) jargonHintKeys.push("rental.jargonHints.bcd");
+  if (offers.has("regulator")) jargonHintKeys.push("rental.jargonHints.regulator");
   return (
     <section className="mt-5 rounded-lg border border-border bg-surface/70 p-4 text-left">
       <h3 className="font-medium">{t("rental.heading")}</h3>
@@ -190,19 +197,28 @@ export function RentalFitForm({
                     />
                     <span className="flex-1">{t(RENTABLE_ITEM_LABEL_KEYS[kind])}</span>
                     {showPricing && priceCents !== undefined ? (
-                      <span className="text-muted">{formatMoneyCents(priceCents)}</span>
+                      <span className="text-muted">
+                        {formatMoneyCents(priceCents, "usd", locale)}
+                      </span>
                     ) : null}
                   </label>
                 );
               })}
             </div>
+            {jargonHintKeys.length > 0 ? (
+              <ul className="mt-2 flex flex-col gap-0.5 text-xs text-muted/80">
+                {jargonHintKeys.map((key) => (
+                  <li key={key}>{t(key)}</li>
+                ))}
+              </ul>
+            ) : null}
             <p className="mt-2 text-sm text-muted">
               {t("rental.tankPlan", { count: plannedDives })}{" "}
               {showPricing
                 ? pricing.setCents !== null && coreSetSentence
                   ? t("rental.fullSetOffer", {
                       set: coreSetSentence,
-                      price: formatMoneyCents(pricing.setCents),
+                      price: formatMoneyCents(pricing.setCents, "usd", locale),
                     })
                   : t("rental.perPiece")
                 : t("rental.askWhatsIncluded")}
@@ -212,10 +228,10 @@ export function RentalFitForm({
                 <span className="font-medium">
                   {quote.unpricedKinds.length > 0
                     ? t("rental.estimatedRentalWithExtras", {
-                        price: formatMoneyCents(quote.subtotalCents),
+                        price: formatMoneyCents(quote.subtotalCents, "usd", locale),
                       })
                     : t("rental.estimatedRental", {
-                        price: formatMoneyCents(quote.subtotalCents),
+                        price: formatMoneyCents(quote.subtotalCents, "usd", locale),
                       })}
                 </span>{" "}
                 {t("rental.confirmAtDock")}
@@ -227,6 +243,7 @@ export function RentalFitForm({
         {nitroxOffered ? (
           <fieldset>
             <legend className="text-sm font-medium">{t("rental.nitroxLegend")}</legend>
+            <p className="mt-1 text-xs text-muted/80">{t("rental.jargonHints.nitrox")}</p>
             <label className="mt-2 flex min-h-11 items-center gap-3 rounded-lg border border-border px-3 text-sm">
               <input
                 name="nitrox"
@@ -238,7 +255,7 @@ export function RentalFitForm({
               <span className="flex-1">
                 {showPricing && pricing.nitroxCents !== null
                   ? t("rental.nitroxReserveWithPrice", {
-                      price: formatMoneyCents(pricing.nitroxCents),
+                      price: formatMoneyCents(pricing.nitroxCents, "usd", locale),
                     })
                   : t("rental.nitroxReserveNoPrice")}
               </span>

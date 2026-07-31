@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { buttonClass } from "@/components/ui/button";
 import type { Course } from "@/db/schema";
-import type { DiverTranslator } from "@/i18n/messages";
+import type { DiverMessageKey, DiverTranslator } from "@/i18n/messages";
 import { type CourseFaq, type CourseScheduleDay, formatScheduleDayTime } from "@/lib/courses";
 import { formatShortDate, formatTime, formatTimeRangeTz } from "@/lib/format";
 import { capacityLabel, isFull } from "@/lib/trips";
@@ -19,6 +19,21 @@ export type PathTrail = {
   title: string;
   summary: string | null;
   steps: Array<{ id: string; title: string; slug: string }>;
+};
+
+/**
+ * The known certification agencies' full names, for one first-mention
+ * expansion on the course hero (task 5) — a newcomer meets "PADI" with no
+ * idea it's an acronym, let alone what it stands for. Anything outside this
+ * short, shop-typed list (src/app/shop/[shopSlug]/divers/[personId]/actions.ts
+ * has the same enum) falls back to the bare code, same as before.
+ */
+const AGENCY_FULL_NAME_KEYS: Record<string, DiverMessageKey> = {
+  padi: "course.agencyFullNames.padi",
+  ssi: "course.agencyFullNames.ssi",
+  naui: "course.agencyFullNames.naui",
+  sdi: "course.agencyFullNames.sdi",
+  tdi: "course.agencyFullNames.tdi",
 };
 
 /** Photo from a shop's blob store, a bundled path, or a link the shop pasted. */
@@ -63,7 +78,15 @@ export function CourseHero({
       ) : null}
       <div className="p-6 sm:p-8">
         <p className="text-xs font-semibold tracking-[0.18em] text-primary uppercase">
-          {t("course.agencyCourse", { agency: course.agency.toUpperCase() })}
+          {t("course.agencyCourse", {
+            // First mention on the page expands the acronym (task 5) — "PADI"
+            // means nothing to a diver who has never heard of a certification
+            // agency; an unrecognized/shop-typed-"other" agency falls back to
+            // the bare code, same as before this.
+            agency: AGENCY_FULL_NAME_KEYS[course.agency]
+              ? t(AGENCY_FULL_NAME_KEYS[course.agency])
+              : course.agency.toUpperCase(),
+          })}
         </p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">{course.title}</h1>
         {course.summary ? (

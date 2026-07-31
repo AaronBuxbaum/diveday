@@ -13,6 +13,9 @@
     "saving": "Saving…",
     "rateLimited": "Too many attempts. Please wait a few minutes and try again."
   },
+  "shopChrome": {
+    "footerLine": "{shop} · Powered by DiveDay"
+  },
   "schedule": {
     "eyebrow": "Trips",
     "title": "Schedule",
@@ -33,11 +36,14 @@
       "noMatches": "No trips match these filters — try clearing one."
     },
     "showLater": "Show later departures",
+    "showEarlier": "Show earlier departures",
     "backToNext": "← Back to the next departure",
     "courseSession": "Course session",
     "diveSite": "Dive site",
     "twoTank": "Two-tank trip",
+    "twoTankHint": "A boat trip with two separate dives, back to back, with a rest break (a surface interval) in between — not two tanks worn at once.",
     "diveCount": "{count, plural, other {# dives}}",
+    "tripCardLabel": "{when} · {trip} · {capacity}",
     "calendarLabel": "Dive schedule calendar",
     "previousMonth": "Previous month",
     "nextMonth": "Next month",
@@ -53,6 +59,10 @@
     "courseSession": "Course session",
     "depositLine": "{deposit} deposit at booking · {balance} balance at the dock",
     "freeCancellationUntil": "Free cancellation until {when}",
+    "cancellationAskShop": "Cancellation questions? Ask the shop — {contact}",
+    "cancellationAskShopNoContact": "Cancellation questions? Ask the shop.",
+    "courseFeeBreakdown": "{course} course + {eLearning} e-learning",
+    "minimumAge": "Minimum age: {age}",
     "planAndShare": "Plan and share this trip",
     "addToCalendar": "Add to calendar",
     "getDirections": "Get directions",
@@ -148,6 +158,12 @@
     "preferencePlaceholder": "Macro photos, a relaxed pace, or staying with friends",
     "promoLabel": "Promo code",
     "promoHint": "(if you have one)",
+    "partyTotal": "{count, plural, one {# diver} other {# divers}} × {price} = {total}",
+    "stripeHint": "You'll finish paying on a secure Stripe page.",
+    "ageAttestation": "I confirm every diver on this booking meets the minimum age of {age}.",
+    "cancelledHeading": "This trip was cancelled",
+    "cancelledBody": "for another date, or get in touch with the shop.",
+    "cancelledContact": "Questions? Contact the shop at {contact}.",
     "bookAndPay": "Book and pay",
     "bookAndPayLastSpot": "Book and pay — last spot",
     "bookLastSpot": "Book the last spot",
@@ -196,7 +212,8 @@
       "full": "Someone grabbed the last spot just before you — the boat's full.",
       "available": "Good news — a spot just opened. Book it before it goes.",
       "already": "You're already on this trip's list — no need to book twice.",
-      "unavailable": "This trip isn't taking bookings anymore.",
+      "unavailable": "This trip isn't taking bookings right now. Get in touch and the shop can help you find the right fit.",
+      "unavailableWithContact": "This trip isn't taking bookings right now. Email {contact} and the shop can help you find the right fit.",
       "courseUnavailable": "This course still needs an assigned instructor before it can take bookings.",
       "courseRatioFull": "This session is at its instructor-to-student ratio limit — call the shop, they may be able to add another instructor or certified assistant.",
       "fit": "We couldn't save that rental fit. Please check the details and try again.",
@@ -208,7 +225,8 @@
       "nameTooLong": "That name is too long.",
       "emailInvalid": "Enter a valid email address.",
       "phoneTooLong": "That phone number is too long.",
-      "noteTooLong": "Keep this note under 300 characters."
+      "noteTooLong": "Keep this note under 300 characters.",
+      "promoInvalid": "That code isn't active."
     }
   },
   "lastMinute": {
@@ -232,6 +250,13 @@
     "backToEditing": "Back to editing",
     "noCertification": "No certification required",
     "agencyCourse": "{agency} course",
+    "agencyFullNames": {
+      "padi": "PADI (Professional Association of Diving Instructors)",
+      "ssi": "SSI (Scuba Schools International)",
+      "naui": "NAUI (National Association of Underwater Instructors)",
+      "sdi": "SDI (Scuba Diving International)",
+      "tdi": "TDI (Technical Diving International)"
+    },
     "seeDates": "See dates",
     "askAboutDates": "Ask about dates",
     "whoCanEnroll": "Who can enroll",
@@ -516,6 +541,11 @@
       "weights": "Weights",
       "diveComputer": "Dive computer",
       "gopro": "GoPro"
+    },
+    "jargonHints": {
+      "bcd": "BCD — the inflatable vest you wear that holds your tank and lets you control whether you float or sink.",
+      "regulator": "Regulator — the mouthpiece and hose that let you breathe normal air from your tank underwater.",
+      "nitrox": "Nitrox is a breathing gas with extra oxygen that lets specially trained divers spend a bit more time underwater on some dives — you don't need to know more than that as a beginner."
     }
   },
   "party": {
@@ -530,7 +560,11 @@
     "phoneLabel": "Phone",
     "phoneHint": "(if the crew needs to reach you)",
     "didYouMeanEmail": "Did you mean {email}?",
-    "rememberedChip": "Booking as <strong>{name}</strong> · <button>Not you?</button>"
+    "rememberedChip": "Booking as <strong>{name}</strong> · <button>Not you?</button>",
+    "useMainContactEmail": "Use the main contact's email for this diver",
+    "bigGroupContactEmail": "Bringing more than {count}? <a>Contact the shop — {contact}</a>",
+    "bigGroupContactPhone": "Bringing more than {count}? <a>Contact the shop — {contact}</a>",
+    "bigGroupContactGeneric": "Bringing more than {count}? Contact the shop."
   },
   "site": {
     "seeMoreHeading": "See more by slowing down",

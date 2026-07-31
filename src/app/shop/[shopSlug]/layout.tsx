@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { DemoBanner } from "@/components/DemoBanner";
 import { OfflineManifestAutoSave } from "@/components/OfflineManifestAutoSave";
 import { PreserveFormScroll } from "@/components/PreserveFormScroll";
+import { PublicShopFooter, PublicShopHeader } from "@/components/PublicShopChrome";
 import { ShopNav } from "@/components/ShopNav";
 import { getDb } from "@/db/client";
 import { DEMO_SHOP_SLUG } from "@/db/dev-credentials";
@@ -188,6 +189,11 @@ export default async function ShopLayout({
           locale={locale}
         />
       ) : null}
+      {/* The signed-out counterpart to ShopNav above — an anonymous or
+          non-staff visitor gets the shop's own identity instead of staff
+          chrome (task 9). Mutually exclusive with ShopNav by construction:
+          exactly one of the two conditions is ever true. */}
+      {!isEmbed && !(session?.user && shop) && shop ? <PublicShopHeader shop={shop} /> : null}
       {/* Keeps every trip in the shop's near-term board saved offline, not just
           a trip whose live manifest someone opened — see ADR
           20260726-shopwide-offline-manifest-priming. Gated to staff actually
@@ -206,6 +212,9 @@ export default async function ShopLayout({
       ) : null}
       <PreserveFormScroll />
       <div className="flex-1">{children}</div>
+      {!isEmbed && !(session?.user && shop) && shop ? (
+        <PublicShopFooter shop={shop} t={diverTranslator(locale)} />
+      ) : null}
     </>
   );
 }

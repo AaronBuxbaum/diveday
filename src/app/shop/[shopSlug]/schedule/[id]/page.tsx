@@ -45,6 +45,7 @@ import { isFull, spotsRemaining } from "@/lib/trips";
 import { BookingConfirmation } from "./_components/BookingConfirmation";
 import {
   BookSpotSection,
+  CancelledTripNotice,
   ConditionsHoldSection,
   TripFullSection,
   TripSailedNotice,
@@ -132,7 +133,38 @@ export default async function TripDetailPage({
     getTripWithBooked(db, shop.id, tripId),
     listTripDives(db, shop.id, tripId),
   ]);
-  if (trip?.status !== "scheduled") notFound();
+  if (!trip) notFound();
+  // A cancelled trip gets its own soft landing (task 13) rather than the same
+  // bare `notFound()` as a typo'd URL — a diver who followed a saved or
+  // shared link into a since-cancelled departure gets told what happened and
+  // a way back, not a dead end. Nothing past this point (booking, forecast,
+  // dive briefings) applies to a cancelled departure, so it renders before
+  // any of that is fetched.
+  if (trip.status === "cancelled") {
+    return (
+      <DiverIntlProvider locale={locale} timeZone={shop.timezone}>
+        <main
+          className={
+            isEmbed ? "w-full flex-1 px-3 py-4" : "mx-auto w-full max-w-2xl flex-1 px-6 py-16"
+          }
+        >
+          {isEmbed ? null : (
+            <Link
+              href={`/shop/${shopSlug}/schedule`}
+              className="inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline"
+            >
+              ← {t("trip.backToAllTrips")}
+            </Link>
+          )}
+          <CancelledTripNotice
+            shopSlug={shopSlug}
+            embed={isEmbed}
+            contactEmail={shop.contactEmail}
+          />
+        </main>
+      </DiverIntlProvider>
+    );
+  }
   const crewPrediction = hasCrewPrediction(trip);
   const forecastPoint =
     trip.diveSite &&
@@ -280,7 +312,12 @@ export default async function TripDetailPage({
             }
           />
         ) : null}
-        {!confirmed && !inPast && !full && !trip.conditionsHold ? (
+        {/* Full keeps the same sticky CTA rather than hiding it — a diver who
+            scrolls to a full boat still has one obvious next step (the wait
+            list), not a dead-ended thumb (task 12). Both destinations share
+            the `#book` anchor: `BookSpotSection` and `TripFullSection`'s
+            wait-list form each carry it. */}
+        {!confirmed && !inPast && !trip.conditionsHold ? (
           <a
             href="#book"
             className={buttonClass({
@@ -288,7 +325,7 @@ export default async function TripDetailPage({
               className: "fixed right-4 bottom-4 z-20 rounded-full shadow-lg sm:hidden",
             })}
           >
-            {t("trip.bookAndSpotsLeft", { count: remaining })}
+            {full ? t("booking.waitlistHeading") : t("trip.bookAndSpotsLeft", { count: remaining })}
           </a>
         ) : null}
 
@@ -343,6 +380,8 @@ export default async function TripDetailPage({
             tripRef={tripRef}
             remaining={remaining}
             errorMessage={errorMessage}
+            contactEmail={shop.contactEmail}
+            contactPhone={shop.contactPhone}
           />
         ) : (
           <BookSpotSection
@@ -353,6 +392,8 @@ export default async function TripDetailPage({
             payAtBooking={payAtBooking}
             perDiverPriceCents={perDiverPriceCents}
             locale={locale}
+            contactEmail={shop.contactEmail}
+            contactPhone={shop.contactPhone}
           />
         )}
 

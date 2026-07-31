@@ -120,15 +120,34 @@ export function ScheduleCalendar({
         {weeks.flat().map((day) => {
           const trips = tripsByDay.get(day.iso) ?? [];
           const isToday = day.iso === todayIso;
+          // A day with exactly one departure gets the whole cell as its tap
+          // target (task 11) — the common case for a shop that runs one trip
+          // a day, and a much easier mobile target than the small chip below.
+          // A day with several departures can't share one link between them,
+          // so it keeps the per-trip chip list, each now showing an
+          // abbreviated name rather than only a time (the full name still
+          // rides along in `title=` for a mouse hover).
+          const soleTrip = trips.length === 1 ? trips[0] : null;
           return (
             <div
               key={day.iso}
-              className={`flex min-h-16 flex-col items-center rounded-lg border p-1 sm:min-h-24 ${
+              className={`relative flex min-h-16 flex-col items-center rounded-lg border p-1 sm:min-h-24 ${
                 day.inMonth ? "border-border" : "border-transparent"
               } ${trips.length > 0 && day.inMonth ? "bg-primary/5" : ""}`}
             >
+              {soleTrip ? (
+                <Link
+                  href={`/shop/${shopSlug}/schedule/${soleTrip.id}${embed ? "?embed=1" : ""}`}
+                  aria-label={t(
+                    soleTrip.full ? "schedule.calendarDiveFull" : "schedule.calendarDive",
+                    { time: soleTrip.time },
+                  )}
+                  title={`${soleTrip.title} · ${soleTrip.time}`}
+                  className="absolute inset-0 z-0 rounded-lg"
+                />
+              ) : null}
               <div
-                className={`flex size-6 shrink-0 items-center justify-center self-start rounded-full text-xs font-medium tabular-nums ${
+                className={`relative z-10 flex size-6 shrink-0 items-center justify-center self-start rounded-full text-xs font-medium tabular-nums ${soleTrip ? "pointer-events-none" : ""} ${
                   isToday
                     ? "bg-primary text-primary-foreground"
                     : day.inMonth
@@ -138,8 +157,21 @@ export function ScheduleCalendar({
               >
                 {day.day}
               </div>
-              {trips.length > 0 ? (
-                <ul className="mt-1 flex w-full flex-col gap-1">
+              {soleTrip ? (
+                <div className="relative z-10 mt-1 flex w-full flex-col gap-0.5 px-1.5 py-1.5 pointer-events-none">
+                  <span
+                    className={`block truncate text-xs leading-tight font-medium ${
+                      soleTrip.full ? "text-muted" : "text-primary"
+                    }`}
+                  >
+                    {soleTrip.title}
+                  </span>
+                  <span className="block truncate text-[11px] leading-tight text-muted tabular-nums">
+                    {soleTrip.time}
+                  </span>
+                </div>
+              ) : trips.length > 0 ? (
+                <ul className="relative z-10 mt-1 flex w-full flex-col gap-1">
                   {trips.map((trip) => (
                     <li key={trip.id}>
                       <Link
@@ -161,7 +193,7 @@ export function ScheduleCalendar({
                         }`}
                         title={`${trip.title} · ${trip.time}`}
                       >
-                        {trip.time}
+                        {trip.title}
                       </Link>
                     </li>
                   ))}

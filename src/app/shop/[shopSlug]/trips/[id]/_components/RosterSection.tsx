@@ -104,7 +104,6 @@ export function RosterSection({
   notesByBooking,
   addNoteAction,
   deleteNoteAction,
-  depthUnit,
   tripDate,
 }: {
   shopSlug: string;

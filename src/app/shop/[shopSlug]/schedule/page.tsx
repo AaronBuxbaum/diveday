@@ -42,6 +42,12 @@ import {
 import { nowDate } from "@/lib/clock";
 import { formatShortDate, formatTime, formatTimeRange } from "@/lib/format";
 import { publicAppUrl } from "@/lib/notifications";
+import {
+  decodeCursorStack,
+  encodeCursorStack,
+  popCursor,
+  pushCursor,
+} from "@/lib/schedule-pagination";
 import { scheduleJsonLd } from "@/lib/structured-data";
 import { capacityLabel, isFull } from "@/lib/trips";
 import { toDateInputValue, toTimeInputValue, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
@@ -116,6 +122,10 @@ export default async function TripsPage({
   searchParams: Promise<{
     month?: string;
     after?: string;
+    /** The stack of every earlier page's cursor, oldest first — how
+     * "Previous page" (task 17) finds its way back without a backward
+     * keyset query. See src/lib/schedule-pagination.ts. */
+    back?: string;
     embed?: string;
     builder?: string;
     preview?: string;
@@ -125,7 +135,7 @@ export default async function TripsPage({
 }) {
   await connection(); // schedule is live data — render per request, not at build
   const { shopSlug } = await params;
-  const { month, after, embed, builder, preview, hasSpace, tripType } = await searchParams;
+  const { month, after, back, embed, builder, preview, hasSpace, tripType } = await searchParams;
   const hasSpaceFilter = hasSpace === "1";
   const tripTypeFilter = tripType === "fun_dive" || tripType === "course" ? tripType : undefined;
   // Embed mode is the compact, chrome-light surface a shop pastes into its own
@@ -565,77 +575,139 @@ export default async function TripsPage({
         </p>
       ) : (
         <ul className="flex flex-col gap-3" aria-label={t("schedule.tripListLabel")}>
-          {upcoming.map((trip) => {
-            const full = isFull(trip);
-            const capacityLabelValue = capacityLabel(trip);
-            const capacityText =
-              capacityLabelValue.kind === "full"
-                ? t("fallback.full")
-                : t("fallback.spotsLeft", { count: capacityLabelValue.remaining });
-            return (
-              <li key={trip.id}>
-                <Link
-                  // Staff manage a trip on /trips/[id]; anonymous and diver
-                  // visitors book on /schedule/[id]. Linking staff straight to
-                  // the management view removes the /schedule/[id] redirect hop.
-                  href={
-                    staffView
-                      ? `/shop/${shopSlug}/trips/${trip.id}`
-                      : `/shop/${shopSlug}/schedule/${trip.id}${isEmbed ? "?embed=1" : ""}`
-                  }
-                  className="group card-scale-hint flex flex-col gap-3 rounded-2xl border border-border bg-surface p-5 shadow-sm transition-all duration-200 hover:border-primary/40 sm:flex-row sm:items-center"
-                >
-                  <div className="shrink-0 sm:w-32">
-                    <p className="font-medium">
-                      {formatShortDate(trip.startsAt, locale, shop.timezone)}
-                    </p>
-                    <p className="text-sm text-muted">
-                      {formatTimeRange(trip.startsAt, trip.endsAt, locale, shop.timezone)}
-                    </p>
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <h2 className="font-medium group-hover:text-primary">{trip.title}</h2>
-                    {trip.course ? (
-                      <p className="mt-0.5 text-sm font-medium text-primary">
-                        {t("schedule.courseSession")} · {trip.course.title}
+          {(() => {
+            // "Two-tank trip" (task 6) gets its plain-language explanation
+            // once, on the first card that says it — every later trip
+            // sharing that shape stays as it was, so a long list doesn't
+            // repeat the same aside a dozen times.
+            let twoTankHintShown = false;
+            return upcoming.map((trip) => {
+              const full = isFull(trip);
+              const capacityLabelValue = capacityLabel(trip);
+              const capacityText =
+                capacityLabelValue.kind === "full"
+                  ? t("fallback.full")
+                  : t("fallback.spotsLeft", { count: capacityLabelValue.remaining });
+              const showTwoTankHint = trip.plannedDives === 2 && !twoTankHintShown;
+              if (showTwoTankHint) twoTankHintShown = true;
+              // Staff manage a trip on /trips/[id]; anonymous and diver
+              // visitors book on /schedule/[id]. Linking staff straight to the
+              // management view removes the /schedule/[id] redirect hop.
+              const tripHref = staffView
+                ? `/shop/${shopSlug}/trips/${trip.id}`
+                : `/shop/${shopSlug}/schedule/${trip.id}${isEmbed ? "?embed=1" : ""}`;
+              return (
+                <li key={trip.id}>
+                  {/* A "stretched link" card: the whole row navigates to the
+                    trip via an invisible overlay anchor, while the course
+                    title keeps its own real link into the course page
+                    (task 1) — two <a> tags can never nest, so the overlay
+                    sits behind everything and the course link opts back
+                    onto z-10 to stay reachable by mouse and keyboard alike. */}
+                  <div className="group card-scale-hint relative flex flex-col gap-3 rounded-2xl border border-border bg-surface p-5 shadow-sm transition-all duration-200 hover:border-primary/40 sm:flex-row sm:items-center">
+                    <Link
+                      href={tripHref}
+                      className="absolute inset-0 z-0 rounded-2xl"
+                      aria-label={t("schedule.tripCardLabel", {
+                        when: `${formatShortDate(trip.startsAt, locale, shop.timezone)} · ${formatTimeRange(trip.startsAt, trip.endsAt, locale, shop.timezone)}`,
+                        trip: trip.title,
+                        capacity: capacityText,
+                      })}
+                    />
+                    <div className="shrink-0 sm:w-32">
+                      <p className="font-medium">
+                        {formatShortDate(trip.startsAt, locale, shop.timezone)}
                       </p>
-                    ) : null}
-                    {trip.description ? (
-                      <p className="mt-0.5 text-sm text-muted">{trip.description}</p>
-                    ) : null}
-                    {trip.priceCents !== null ? (
-                      <p className="mt-2 text-sm font-semibold tabular-nums">
-                        {money.format(trip.priceCents / 100)}{" "}
-                        <span className="font-normal text-muted">{t("common.perDiver")}</span>
+                      <p className="text-sm text-muted">
+                        {formatTimeRange(trip.startsAt, trip.endsAt, locale, shop.timezone)}
                       </p>
-                    ) : null}
-                    {trip.diveSite ? (
-                      <p className="mt-2 text-sm font-medium text-primary">
-                        {t("schedule.diveSite")} · {trip.diveSite.name}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h2 className="font-medium group-hover:text-primary">{trip.title}</h2>
+                      {trip.course ? (
+                        <p className="mt-0.5 text-sm font-medium text-primary">
+                          {t("schedule.courseSession")} ·{" "}
+                          <Link
+                            href={`/shop/${shopSlug}/courses/${trip.course.slug}`}
+                            className="relative z-10 underline-offset-2 hover:underline focus-visible:underline"
+                          >
+                            {trip.course.title}
+                          </Link>
+                        </p>
+                      ) : null}
+                      {trip.description ? (
+                        <p className="mt-0.5 text-sm text-muted">{trip.description}</p>
+                      ) : null}
+                      {trip.priceCents !== null ? (
+                        <p className="mt-2 text-sm font-semibold tabular-nums">
+                          {money.format(trip.priceCents / 100)}{" "}
+                          <span className="font-normal text-muted">{t("common.perDiver")}</span>
+                        </p>
+                      ) : null}
+                      {trip.diveSite ? (
+                        <p className="mt-2 text-sm font-medium text-primary">
+                          {t("schedule.diveSite")} · {trip.diveSite.name}
+                        </p>
+                      ) : null}
+                      <p className="mt-2 text-sm text-muted">
+                        {trip.plannedDives === 2 ? (
+                          <>
+                            {t("schedule.twoTank")}
+                            {showTwoTankHint ? (
+                              <span className="block text-xs text-muted/80">
+                                {t("schedule.twoTankHint")}
+                              </span>
+                            ) : null}
+                          </>
+                        ) : (
+                          t("schedule.diveCount", { count: trip.plannedDives })
+                        )}
                       </p>
-                    ) : null}
-                    <p className="mt-2 text-sm text-muted">
-                      {trip.plannedDives === 2
-                        ? t("schedule.twoTank")
-                        : t("schedule.diveCount", { count: trip.plannedDives })}
-                    </p>
+                    </div>
+                    <div className="shrink-0">
+                      <Badge tone={full ? "neutral" : "primary"} tabularNums>
+                        {capacityText}
+                      </Badge>
+                    </div>
                   </div>
-                  <div className="shrink-0">
-                    <Badge tone={full ? "neutral" : "primary"} tabularNums>
-                      {capacityText}
-                    </Badge>
-                  </div>
-                </Link>
-              </li>
-            );
-          })}
+                </li>
+              );
+            });
+          })()}
         </ul>
       )}
       {nextCursor || after ? (
         <div className="mt-5 flex flex-wrap items-center gap-3">
+          {(() => {
+            const backStack = decodeCursorStack(back);
+            const previous = popCursor(backStack);
+            if (!previous) return null;
+            const params = new URLSearchParams();
+            if (previous.after) params.set("after", previous.after);
+            if (previous.stack.length > 0) params.set("back", encodeCursorStack(previous.stack));
+            if (month) params.set("month", month);
+            if (isEmbed) params.set("embed", "1");
+            const query = params.toString();
+            return (
+              <Link
+                href={`/shop/${shopSlug}/schedule${query ? `?${query}` : ""}`}
+                className={buttonClass({ variant: "secondary" })}
+              >
+                {t("schedule.showEarlier")}
+              </Link>
+            );
+          })()}
           {nextCursor ? (
             <Link
-              href={`/shop/${shopSlug}/schedule?after=${encodeURIComponent(nextCursor)}${month ? `&month=${month}` : ""}${isEmbed ? "&embed=1" : ""}`}
+              href={(() => {
+                const params = new URLSearchParams();
+                params.set("after", nextCursor);
+                const nextStack = pushCursor(decodeCursorStack(back), after);
+                if (nextStack.length > 0) params.set("back", encodeCursorStack(nextStack));
+                if (month) params.set("month", month);
+                if (isEmbed) params.set("embed", "1");
+                return `/shop/${shopSlug}/schedule?${params.toString()}`;
+              })()}
               className={buttonClass({ variant: "secondary" })}
             >
               {t("schedule.showLater")}
