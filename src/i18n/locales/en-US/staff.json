@@ -454,6 +454,7 @@
       "ageSuffix": ", {age}+",
       "enrollDescription": "The one block on the page that answers “can I do this?”. The certification and minimum age come from the agency: <strong>{levelAge}</strong> — shown here automatically and not editable. Your note appears under them, labelled as the shop talking, so it never reads as replacing the card the desk checks.",
       "openToUncertified": "open to uncertified divers",
+      "introCourseLabel": "This is a taster session — no certification required (Discover Scuba, Try Scuba, …)",
       "prerequisiteLabel": "Prerequisite note",
       "prerequisitePlaceholder": "Comfortable swimming 200 m",
       "feeCoversLegend": "What the fee covers",
@@ -1368,6 +1369,9 @@
       "body": "This device keeps an offline copy of the manifest up to date automatically while you have signal. Roll call keeps working offline, and every change is double-checked against the live manifest once you're back.",
       "connectivityOfflineWithCopy": "No signal · device copy",
       "connectivityOffline": "No signal",
+      "connectivityOnline": "Online",
+      "connectivityOnlineTitle": "This device is online.",
+      "connectivityOfflineTitle": "This device has no connection right now.",
       "freshnessCurrent": "Fresh copy",
       "freshnessAging": "Aging copy",
       "freshnessStale": "Stale copy",
@@ -1998,6 +2002,35 @@
     }
   },
   "shared": {
+    "imageInput": {
+      "tooMany": "{count, plural, one {Choose up to # photo at a time.} other {Choose up to # photos at a time.}}",
+      "wrongTypeSuffix": ": use a JPG, PNG, WebP, or HEIC photo.",
+      "tooBigSuffix": ": that's over {maxMb} MB — try a smaller photo."
+    },
+    "waiverSend": {
+      "sending": "Sending…",
+      "copied": "Copied",
+      "copyLink": "Copy link",
+      "reasonNoEmailOne": "No email on file",
+      "reasonNoEmailOther": "{count} have no email on file",
+      "reasonFailedOne": "Email could not be delivered",
+      "reasonFailedOther": "Email could not be delivered to {count}",
+      "reasonTestRecipientOne": "This test email address can’t receive mail",
+      "reasonTestRecipientOther": "{count} test email addresses can’t receive mail",
+      "reasonUnconfigured": "This shop has no email provider configured yet",
+      "sharePrivateLinkOne": "this private link",
+      "sharePrivateLinkOther": "these private links",
+      "sent": "Waiver sent to {names}.",
+      "alreadyDoneOne": "{names} already has a signed waiver — nothing reissued.",
+      "alreadyDoneOther": "{names} already have a signed waiver — nothing reissued.",
+      "errors": "Couldn’t send to {names} — open the roster to check the booking."
+    },
+    "connectivity": {
+      "online": "Online",
+      "onlineTitle": "This device is online.",
+      "offlineTitle": "This device has no connection right now.",
+      "offlineWithCopy": "No signal · device copy"
+    },
     "capacity": {
       "full": "Full",
       "spotsLeft": "{count, plural, one {# spot left} other {# spots left}}"

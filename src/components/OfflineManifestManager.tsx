@@ -43,6 +43,9 @@ export interface OfflineManifestManagerCopy {
   body: string;
   connectivityOfflineWithCopy: string;
   connectivityOffline: string;
+  connectivityOnline: string;
+  connectivityOnlineTitle: string;
+  connectivityOfflineTitle: string;
   freshnessCurrent: string;
   freshnessAging: string;
   freshnessStale: string;
@@ -362,6 +365,11 @@ export function OfflineManifestManager({
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <ConnectivityStatus
               offlineLabel={saved ? copy.connectivityOfflineWithCopy : copy.connectivityOffline}
+              copy={{
+                online: copy.connectivityOnline,
+                onlineTitle: copy.connectivityOnlineTitle,
+                offlineTitle: copy.connectivityOfflineTitle,
+              }}
             />
             {freshness ? (
               <span

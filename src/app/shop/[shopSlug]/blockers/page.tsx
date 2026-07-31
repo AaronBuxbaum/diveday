@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { waiverSendCopy } from "@/app/actions/waiver-send-types";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { WaiverSendControl } from "@/components/today/WaiverSendControl";
 import { buttonClass } from "@/components/ui/button";
@@ -60,6 +61,7 @@ function DiverRow({
           surface="blockers"
           bookingIds={[diver.fix.bookingId]}
           label={diver.fix.label}
+          copy={waiverSendCopy(t)}
         />
       ) : (
         <Link
@@ -115,6 +117,7 @@ function TripGroup({
               bookingIds={batchIds}
               label={t("blockers.sendAllWaivers", { count: batchIds.length })}
               pendingLabel={t("blockers.sendingAll")}
+              copy={waiverSendCopy(t)}
             />
           ) : null}
         </div>

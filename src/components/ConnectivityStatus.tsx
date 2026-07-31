@@ -2,13 +2,21 @@
 
 import { useEffect, useState } from "react";
 
+export type ConnectivityStatusCopy = {
+  online: string;
+  onlineTitle: string;
+  offlineTitle: string;
+};
+
 export function ConnectivityStatus({
-  offlineLabel = "No signal · device copy",
+  offlineLabel,
+  copy,
 }: {
   /** What "offline" means on this surface (the manifest has a device copy; a
    * live-only surface like boarding warns its board may be stale instead). */
-  offlineLabel?: string;
-} = {}) {
+  offlineLabel: string;
+  copy: ConnectivityStatusCopy;
+}) {
   // Start "online" so the server render and the first client render agree — a
   // navigator.onLine read in the initializer differs across the boundary and
   // trips a hydration mismatch on any server-rendered surface. The effect
@@ -30,7 +38,7 @@ export function ConnectivityStatus({
     <span
       role="status"
       aria-live="polite"
-      title={online ? "This device is online." : "This device has no connection right now."}
+      title={online ? copy.onlineTitle : copy.offlineTitle}
       className={
         online
           ? "inline-flex min-h-9 items-center gap-2 rounded-full border border-success/30 bg-success/10 px-3 py-1.5 text-sm font-bold text-success"
@@ -40,7 +48,7 @@ export function ConnectivityStatus({
       <span aria-hidden="true" className="text-base leading-none">
         {online ? "●" : "×"}
       </span>
-      {online ? "Online" : offlineLabel}
+      {online ? copy.online : offlineLabel}
     </span>
   );
 }

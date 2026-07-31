@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { waiverSendCopy } from "@/app/actions/waiver-send-types";
 import { SubmitButton } from "@/components/SubmitButton";
 import { WaiverSendControl } from "@/components/today/WaiverSendControl";
 import { Badge } from "@/components/ui/badge";
@@ -385,6 +386,7 @@ export function RosterSection({
                           }
                           className={`inline-flex min-h-11 items-center gap-2 rounded-full px-4 text-sm font-medium transition-colors duration-200 ${waiverControl.tone}`}
                           wrapperClassName=""
+                          copy={waiverSendCopy(t)}
                         />
                       ) : (
                         <span

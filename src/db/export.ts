@@ -1432,6 +1432,7 @@ export async function loadShopExportBundleInput(
             "hero_image_url",
             "image_urls",
             "is_active",
+            "is_intro_course",
             "created_at",
           ],
           rows: courseRows.map((row) => [
@@ -1456,6 +1457,7 @@ export async function loadShopExportBundleInput(
             row.heroImageUrl,
             JSON.stringify(row.imageUrls),
             row.isActive,
+            row.isIntroCourse,
             row.createdAt,
           ]),
           note: EXPORT_FILE_NOTES["courses.csv"],

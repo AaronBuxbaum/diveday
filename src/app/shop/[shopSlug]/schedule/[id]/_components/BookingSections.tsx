@@ -183,13 +183,18 @@ export function BookSpotSection({
         </p>
       ) : null}
       <ErrorNotice message={state.error ?? errorMessage} />
-      {trip.course && /discover scuba|try scuba/i.test(trip.course.title) ? (
+      {trip.course?.isIntroCourse ? (
         <p className="mt-3 rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm text-muted">
           <strong className="text-foreground">{t("giftTitle")}</strong> {t("giftBody")}
         </p>
       ) : null}
       <form action={formAction} className="mt-4 flex flex-col gap-4">
-        <BookingPartyFields maxPartySize={remaining} leadPhone fieldErrors={state.fieldErrors} />
+        <BookingPartyFields
+          maxPartySize={remaining}
+          leadPhone
+          fieldErrors={state.fieldErrors}
+          remember={!tripRef.embed}
+        />
         <FieldGrid columns={1}>
           <Field label={t("preferenceLabel")} hint={t("preferenceHint")}>
             <textarea

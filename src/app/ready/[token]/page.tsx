@@ -35,10 +35,13 @@ import {
   signWaiverFromReady,
 } from "./actions";
 
-export const metadata: Metadata = {
-  title: "Your trip readiness — DiveDay",
-  robots: { index: false, follow: false },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = diverTranslator(await requestLocale());
+  return {
+    title: t("ready.metaTitle"),
+    robots: { index: false, follow: false },
+  };
+}
 
 const STATE_STYLE: Record<
   ChecklistState,
@@ -272,7 +275,7 @@ export default async function DiverReadinessPage({
   const { detail, shop, person } = data;
   const locale = await requestLocale(shop.defaultLocale);
   const t = diverTranslator(locale);
-  const firstName = detail.person.fullName.split(" ")[0] || "there";
+  const firstName = detail.person.fullName.split(" ")[0] || t("ready.namelessFallback");
   const when = formatShortDate(detail.trip.startsAt, shop.defaultLocale, detail.shop.timezone);
   const timeRange = formatTimeRangeTz(
     detail.trip.startsAt,
@@ -512,26 +515,43 @@ export default async function DiverReadinessPage({
         ) : null}
 
         <p className="mt-8 text-center text-sm text-muted">
-          {t("ready.questionsPrefix", { shop: detail.shop.name })}
-          {shop.contactPhone || shop.contactEmail ? " — " : ""}
-          {shop.contactPhone ? (
-            <a
-              href={telHref(shop.contactPhone)}
-              className="font-medium text-primary hover:underline"
-            >
-              {shop.contactPhone}
-            </a>
-          ) : null}
-          {shop.contactPhone && shop.contactEmail ? " · " : ""}
-          {shop.contactEmail ? (
-            <a
-              href={`mailto:${shop.contactEmail}`}
-              className="font-medium text-primary hover:underline"
-            >
-              {shop.contactEmail}
-            </a>
-          ) : null}
-          . {t("ready.questionsSuffix")}
+          {(() => {
+            const linkClass = "font-medium text-primary hover:underline";
+            const phoneTag = (chunks: React.ReactNode) => (
+              <a href={telHref(shop.contactPhone ?? "")} className={linkClass}>
+                {chunks}
+              </a>
+            );
+            const emailTag = (chunks: React.ReactNode) => (
+              <a href={`mailto:${shop.contactEmail}`} className={linkClass}>
+                {chunks}
+              </a>
+            );
+            if (shop.contactPhone && shop.contactEmail) {
+              return t.rich("ready.contactLineBoth", {
+                shop: detail.shop.name,
+                phoneNumber: shop.contactPhone,
+                emailAddress: shop.contactEmail,
+                phone: phoneTag,
+                email: emailTag,
+              });
+            }
+            if (shop.contactPhone) {
+              return t.rich("ready.contactLinePhoneOnly", {
+                shop: detail.shop.name,
+                phoneNumber: shop.contactPhone,
+                phone: phoneTag,
+              });
+            }
+            if (shop.contactEmail) {
+              return t.rich("ready.contactLineEmailOnly", {
+                shop: detail.shop.name,
+                emailAddress: shop.contactEmail,
+                email: emailTag,
+              });
+            }
+            return t("ready.contactLineNone", { shop: detail.shop.name });
+          })()}
         </p>
       </main>
     </DiverIntlProvider>

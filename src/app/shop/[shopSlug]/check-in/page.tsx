@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { waiverSendCopy } from "@/app/actions/waiver-send-types";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { WaiverSendControl } from "@/components/today/WaiverSendControl";
 import { Badge } from "@/components/ui/badge";
@@ -200,6 +201,7 @@ export default async function CheckInPage({
                               surface="check_in"
                               bookingIds={[fix.bookingId]}
                               label={fix.label}
+                              copy={waiverSendCopy(t)}
                             />
                           ) : (
                             <Link

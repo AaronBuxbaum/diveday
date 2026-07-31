@@ -434,7 +434,14 @@ export function OfflineManifestView() {
                 }}
               />
             </div>
-            <ConnectivityStatus />
+            <ConnectivityStatus
+              offlineLabel={t("shared.connectivity.offlineWithCopy")}
+              copy={{
+                online: t("shared.connectivity.online"),
+                onlineTitle: t("shared.connectivity.onlineTitle"),
+                offlineTitle: t("shared.connectivity.offlineTitle"),
+              }}
+            />
             <span
               className={
                 freshness === "current"

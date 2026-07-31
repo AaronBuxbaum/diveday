@@ -9,6 +9,7 @@ import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone, formatCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
+import { MAX_IMAGE_MB } from "@/lib/storage/limits";
 import { addCertificationAction, deleteCertificationAction, reviewAction } from "../actions";
 import {
   AGENCY_KEYS,
@@ -105,7 +106,13 @@ export async function CertificationCards({
               hint={t("divers.certifications.cardPhotoHint")}
               className="sm:col-span-2"
             >
-              <ImageFileInput name="cardImage" />
+              <ImageFileInput
+                name="cardImage"
+                copy={{
+                  wrongTypeSuffix: t("shared.imageInput.wrongTypeSuffix"),
+                  tooBigSuffix: t("shared.imageInput.tooBigSuffix", { maxMb: MAX_IMAGE_MB }),
+                }}
+              />
             </Field>
             <FieldActions>
               <SubmitButton

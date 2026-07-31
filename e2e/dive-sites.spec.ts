@@ -96,9 +96,16 @@ test("the seeded reef briefing shows a satellite map, a gentle route, landmarks,
   page,
 }) => {
   // The per-test fixture reset already restored the seeded briefing; read it
-  // straight off the public schedule as a diver.
+  // straight off the public schedule as a diver. Scoped to the trip-list
+  // item rather than a bare role query: this trip is also the schedule's
+  // soonest departure with room, so its title appears a second time in the
+  // "Next boat out" quick-link card above the list.
   await page.goto("/shop/blue-mantis/schedule");
-  await page.getByRole("link", { name: /Two-Tank Reef — Molasses & French/ }).click();
+  await page
+    .locator("li")
+    .filter({ hasText: "Two-Tank Reef — Molasses & French" })
+    .getByRole("link")
+    .click();
 
   await expect(page.getByTitle("Satellite map of Molasses Reef")).toBeVisible();
   await expect(page.getByText("Reef garden loop")).toBeVisible();

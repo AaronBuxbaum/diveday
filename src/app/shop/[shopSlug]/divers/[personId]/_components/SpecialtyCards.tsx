@@ -7,6 +7,7 @@ import { SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone, formatCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
+import { MAX_IMAGE_MB } from "@/lib/storage/limits";
 import { addSpecialtyAction, deleteSpecialtyAction, reviewSpecialtyAction } from "../actions";
 import {
   AGENCY_KEYS,
@@ -89,7 +90,13 @@ export function SpecialtyCards({
               hint={t("divers.certifications.cardPhotoHint")}
               className="sm:col-span-2"
             >
-              <ImageFileInput name="cardImage" />
+              <ImageFileInput
+                name="cardImage"
+                copy={{
+                  wrongTypeSuffix: t("shared.imageInput.wrongTypeSuffix"),
+                  tooBigSuffix: t("shared.imageInput.tooBigSuffix", { maxMb: MAX_IMAGE_MB }),
+                }}
+              />
             </Field>
             <FieldActions>
               <SubmitButton

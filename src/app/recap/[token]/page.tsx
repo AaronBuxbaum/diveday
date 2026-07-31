@@ -16,6 +16,7 @@ import { requestLocale, requestTranslator } from "@/i18n/request";
 import { formatShortDate } from "@/lib/format";
 import { verifyRecapToken } from "@/lib/recap-links";
 import { MAX_REVIEW_COMMENT_LENGTH, REVIEW_RATINGS } from "@/lib/reviews";
+import { MAX_IMAGE_MB } from "@/lib/storage/limits";
 import { startTipAction, submitReviewAction, uploadRecapPhotoAction } from "./actions";
 import { TipAmountPicker } from "./TipAmountPicker";
 
@@ -40,10 +41,13 @@ const TIP_NOTICES: Record<string, { tone: "success" | "danger"; key: DiverMessag
 
 const TIP_PRESETS_USD = [5, 10, 20];
 
-export const metadata: Metadata = {
-  title: "Your dive recap — DiveDay",
-  robots: { index: false, follow: false },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = diverTranslator(await requestLocale());
+  return {
+    title: t("recap.metaTitle"),
+    robots: { index: false, follow: false },
+  };
+}
 
 function Notice({ title, text }: { title: string; text: string }) {
   return (
@@ -81,11 +85,10 @@ function SiteCard({ site, lookForLabel }: { site: RecapSite; lookForLabel: strin
 }
 
 /** Name the sites in prose: "French Reef", "French Reef and Molasses", etc. */
-function sitesSentence(sites: RecapSite[]): string | null {
+function sitesSentence(sites: RecapSite[], locale: string): string | null {
   const names = sites.map((s) => s.name);
   if (names.length === 0) return null;
-  if (names.length === 1) return names[0];
-  return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+  return new Intl.ListFormat(locale, { type: "conjunction" }).format(names);
 }
 
 export default async function DiveRecapPage({
@@ -138,9 +141,9 @@ export default async function DiveRecapPage({
   const photoNotice = photo ? PHOTO_NOTICES[photo] : undefined;
   const tipNotice = tipParam ? TIP_NOTICES[tipParam] : undefined;
   const atPhotoLimit = photos.length >= MAX_RECAP_PHOTOS_PER_BOOKING;
-  const firstName = diverName.trim().split(/\s+/)[0] || "diver";
+  const firstName = diverName.trim().split(/\s+/)[0] || t("recap.namelessFallback");
   const when = formatShortDate(trip.startsAt, locale, shop.timezone);
-  const where = sitesSentence(sites);
+  const where = sitesSentence(sites, locale);
   const conditions = [
     trip.waterTemperatureC !== null
       ? { label: t("recap.waterTemp"), value: `${trip.waterTemperatureC}°C` }
@@ -163,7 +166,7 @@ export default async function DiveRecapPage({
       <EarnedMoment
         className="mt-8"
         eyebrow={t("recap.eyebrow")}
-        title={`${t("recap.heading")}, ${firstName}.`}
+        title={t("recap.greeting", { name: firstName })}
       >
         <p>
           {where
@@ -408,6 +411,10 @@ export default async function DiveRecapPage({
               // 44px dock-test floor — this is a mobile, post-dive, add-your-shots
               // flow where the tap target matters (design/principles.md #2).
               className="text-sm text-muted file:mr-3 file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-3 file:text-sm file:font-medium file:text-primary-foreground"
+              copy={{
+                wrongTypeSuffix: t("recap.photoWrongTypeSuffix"),
+                tooBigSuffix: t("recap.photoTooBigSuffix", { maxMb: MAX_IMAGE_MB }),
+              }}
             />
             <input
               type="text"

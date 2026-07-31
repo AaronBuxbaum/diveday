@@ -614,9 +614,11 @@ covers the fully empty queue).
     codes resolved through `today-labels.ts` (the blocker rows already show the pattern), and
     replace the `"en-US"` literal in its `at()` time helper with the negotiated locale. Bank
     the `check:domain-strings` reduction.
+    **Done — PR #274.**
 62. **[M] Add an "imminent" urgency band.** In `src/lib/today.ts`, split `now` (≤24h) into
     "next 3 hours" and "today," so the 7am boat's problems visibly outrank tonight's. Ranking
     is pure logic with tests — extend `sortActions`/`urgencyFor` test cases first.
+    **Done — PR #274.**
 63. **[M] Make the departure board's crew select the primary control.** In
     `src/components/today/DepartureBoard.tsx`, promote the existing `<select>` fallback to the
     visible default (keep DnD as desktop enhancement), give the staff chips and the unassign ×
@@ -851,17 +853,26 @@ best asset — is sold as a blind button with no preview of what's inside.
     `src/lib/migration-guides.ts` (the registry) instead of hand-written copy in
     `diver.json:switching` link text, `switching/page.tsx` meta description, and the pricing
     FAQ answer — so a new guide can never be omitted again.
+    **Done — already resolved before PR #274** (all three spots were already generated from
+    `MIGRATION_GUIDES` when checked; no diff needed).
 95. **[S] Reconcile the imported-cards claim.** Pricing FAQ says cards arrive "as claims for
     staff to verify"; the import code and guides say "verified and flagged imported"
     (`src/lib/import.ts`). Fix the FAQ to match the code.
+    **Done — already resolved before PR #274** (no "claims to verify" wording found anywhere
+    in the codebase; the pricing FAQ has no dedicated imported-cards question and the claim
+    doesn't appear elsewhere — no diff needed).
 96. **[S] Preserve onboard form values on error.** `onboard/actions.ts` redirects with only an
     error code; echo the non-secret fields back (query params or cookie flash) and set
     `defaultValue`s. Also add `autoComplete` attributes (`organization`, `name`, `email`,
     `new-password`) — currently none, so password managers ignore the form.
+    **Done — already resolved before PR #274** (landed in the earlier "starter dozen" commit;
+    no diff needed).
 97. **[S] Fix the timezone list.** Replace the eight hardcoded options in `onboard/page.tsx`
     with grouped IANA zones covering dive markets (Caribbean, Mexico, Red Sea, SE Asia,
     Pacific), or generate from `Intl.supportedValuesOf("timeZone")` with a curated
     dive-region group on top. The schema already validates real IANA zones.
+    **Done — already resolved before PR #274** (landed in the earlier "starter dozen" commit;
+    no diff needed).
 98. **[M] First-run checklist for new shops.** On an empty real shop's Today, render a 5-step
     setup card: contact details → first dive site → first trip → public schedule link (with
     copy button) → Stripe (optional). Each links to the exact screen; steps check off from
@@ -871,16 +882,20 @@ best asset — is sold as a blind button with no preview of what's inside.
     and `settings.main.notice.notConfigured` are reachable by self-serve owners. Reword for
     the actual audience ("Online payments aren't configured for this DiveDay instance yet —
     contact support") with the support email.
+    **Done — PR #274.** The doc's second key reference (`settings.main.notice.notConfigured`)
+    was actually `settings.embed.notConfigured` — fixed both real occurrences.
 100. **[S] State what "trial" means.** Add one honest sentence wherever "trial" appears
     (pricing FAQ, onboard button area): free while in early access, no card, no time limit
     yet — matching `docs/product/human-decisions.md`'s open pricing decision. Do not invent a
     trial length.
+    **Done — PR #274.**
 101. **[M] Answer the migration fears in the guides.** Add a short "Cutover without drama"
     section to each switching guide (`src/lib/migration-guides.ts` + the shared template):
     run both systems in parallel, switch in the off-season, what to do on a bad import
     (re-import updates in place — verify against `src/db/import.ts` behavior first and
     document what's actually true), and a rough time estimate per step. Conversion-sensitive:
     run the `conversion-reviewer` agent after drafting.
+    **Done — PR #274.** The `conversion-reviewer` agent pass is still outstanding on this PR.
 102. **[S] Ship example rows in the CSV template.** `public/diveday-diver-import-template.csv`
     is headers-only; add 2–3 realistic example rows (clearly fake names) and reconcile the
     column set with the columns the spreadsheet guide documents (dive insurance, specialty,
@@ -892,6 +907,7 @@ best asset — is sold as a blind button with no preview of what's inside.
 104. **[S] Add canonicals + OpenGraph to the switching pages.** `/switching` and every
     `/switching/[competitor]` page lack canonical and OG metadata — these are the pages that
     get pasted into WhatsApp groups. Follow the metadata pattern on `/pricing`.
+    **Done — PR #274.**
 
 ---
 
@@ -1006,24 +1022,47 @@ confirmation, no logo, and no unsubscribe link on the marketing-adjacent templat
     `error.tsx` for each top-level segment, prioritizing the diver token routes and Today.
     Follow the existing `trips/[id]/error.tsx` and address its documented i18n punt once
     rather than copying it.
+    **Done (partial) — PR #274.** The root `not-found.tsx` (branded, translated, already
+    good — task 13's ask) and most `error.tsx` boundaries (waivers, ready, recap, shop,
+    trips/[id]) predate this PR; added the three still-missing ones (verify, invite,
+    reset-password). Did not add a separate shop-level `not-found.tsx` — Next's
+    `not-found.tsx` takes no props, so it can't read `shopSlug` to build a shop-specific
+    link, and the shop layout's `ShopNav` already wraps any `notFound()` inside `/shop/**`
+    for a staff visitor, making the root page's generic link-home sufficient. Did not touch
+    `trips/[id]/error.tsx`'s i18n punt.
 119. **[S] `loading.tsx` for the token routes.** Body-shaped skeletons (the house style —
     see `blockers/loading.tsx`'s comment) for `/ready`, `/recap`, `/waivers/[token]`,
     `check-in`, `reviews`, `promos`, `reports`. Also fix the two skeleton/page max-width
     mismatches (Appendix A).
+    **Done (partial) — PR #274.** All seven named `loading.tsx` files added, each matching
+    its page's own max-width. Did not touch the separate `schedule`/`schedule/[id]`
+    max-width mismatch noted in Appendix A — a different pair of pages.
 120. **[M] Adopt `next/image` (or lazy + dimensions) for content images.** `sharp` is
     already a dependency; the four unlazied `<img>`s (`DiveBriefingCard`,
     `DiveSiteFieldGuide`, waiver sites peek, course gallery) need lazy loading, dimensions,
     and responsive sizes. Watch the visual-regression suite — pixel diffs expected and
     explainable.
+    **Done — PR #274.** Took the "lazy + dimensions" alternative the task itself offers,
+    not full `next/image` (would need `images.remotePatterns` for the wildcard
+    `*.public.blob.vercel-storage.com` blob host). Three of the four spots already had a
+    CSS-reserved box (fixed height or `aspect-*`) and only needed `loading="lazy"`; the
+    course gallery already had both — checked, not touched.
 121. **[S] Add a web app manifest.** `src/app/manifest.ts` with name, icons (assets exist in
     `icon.tsx`/`apple-icon.tsx`), `display: standalone`, theme color from the token values —
     so crew can install the roll call to a home screen. Small file, big boat win.
+    **Done — PR #274.**
 122. **[M] Wrap emails in a proper document.** One shared wrapper in
     `src/lib/notifications/` (doctype, `<html lang>`, viewport meta, max-width container,
     plain-text-adjacent styling), replace the packing block's Tailwind-blue `#3b82f6` with
     the brand token value, add the shop name as a text header and an unsubscribe link on
     last-minute-deal / waitlist / recap templates. Keep deliverability-safe simplicity —
     no image-heavy layouts.
+    **Done (partial) — PR #274.** `wrapEmailHtml()` wraps every outbound email via
+    `messageFor()`, the brand-token swap and shop-name header are shipped. The
+    unsubscribe-link half is deferred: there's no self-serve unsubscribe token/route today
+    (only a staff-side `unsubscribeLastMinuteListEntry`), and building one — a new token
+    type, a route, security review — is a real feature on its own, not a follow-on to a
+    document-wrapper task.
 123. **[S] Defer the analytics SDKs on public pages.** `observability-client.tsx` mounts
     `@vercel/analytics` + `@vercel/speed-insights` unconditionally; lazy-load them
     post-hydration (or drop speed-insights from anonymous diver pages) so 3G visitors get
@@ -1199,6 +1238,8 @@ direction.
     `WaiverSendControl` in `RosterSection`, deleting the redirect-based
     `issueWaiverAction`/banner variant so both surfaces share optimistic feedback and the
     no-email fallback.
+    **Done — PR #274.** The roster's checkbox-driven bulk sender
+    (`bulkSendWaiversAction`) is untouched — a different affordance the task didn't name.
 141. **[S] Name the time windows.** Today (7 days), Blockers (next 40 trips), check-in
     (−6h/+36h) slice the same readiness data with undocumented horizons — a diver "cleared"
     on one list still shows on another. Say the window in each page's description line.
