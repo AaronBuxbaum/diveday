@@ -454,6 +454,7 @@
       "ageSuffix": ", {age}+",
       "enrollDescription": "El único bloque de la página que responde «¿puedo hacer esto?». La certificación y la edad mínima vienen de la agencia: <strong>{levelAge}</strong> — se muestra aquí automáticamente y no es editable. Tu nota aparece debajo, etiquetada como texto de la tienda, así que nunca se lee como si sustituyera la tarjeta que revisa el mostrador.",
       "openToUncertified": "abierto a buceadores sin certificar",
+      "introCourseLabel": "Es una sesión introductoria — no requiere certificación (Discover Scuba, Try Scuba, …)",
       "prerequisiteLabel": "Nota de requisitos",
       "prerequisitePlaceholder": "Cómodo nadando 200 m",
       "feeCoversLegend": "Qué cubre la cuota",

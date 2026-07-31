@@ -454,6 +454,7 @@
       "ageSuffix": ", {age}+",
       "enrollDescription": "The one block on the page that answers “can I do this?”. The certification and minimum age come from the agency: <strong>{levelAge}</strong> — shown here automatically and not editable. Your note appears under them, labelled as the shop talking, so it never reads as replacing the card the desk checks.",
       "openToUncertified": "open to uncertified divers",
+      "introCourseLabel": "This is a taster session — no certification required (Discover Scuba, Try Scuba, …)",
       "prerequisiteLabel": "Prerequisite note",
       "prerequisitePlaceholder": "Comfortable swimming 200 m",
       "feeCoversLegend": "What the fee covers",

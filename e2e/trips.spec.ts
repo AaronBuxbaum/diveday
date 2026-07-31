@@ -15,9 +15,12 @@ test("the public schedule lists seeded trips with capacity states, a calendar, a
   // for a sub-frame during hydration, and Playwright throws strict-mode
   // violations immediately without retrying — so an unscoped `toBeVisible` here
   // flakes under load. `toHaveCount(1)` retries until the DOM settles, yet still
-  // fails loudly if two trips ever genuinely show the same capacity.
-  await expect(page.getByText("3 spots left")).toHaveCount(1); // 9 of 12 booked
-  await expect(page.getByText("Full")).toHaveCount(1); // sold-out wreck trip
+  // fails loudly if two trips ever genuinely show the same capacity. Scoped to
+  // the trip list itself: the "Next departure" card above it repeats whichever
+  // trip's capacity it names, so a page-wide match legitimately finds two.
+  const tripList = page.getByRole("list", { name: "Upcoming trips" });
+  await expect(tripList.getByText("3 spots left")).toHaveCount(1); // 9 of 12 booked
+  await expect(tripList.getByText("Full")).toHaveCount(1); // sold-out wreck trip
   await expect(page.getByRole("link", { name: "Full trip form" })).toHaveCount(0);
   await expect(page.getByLabel("Schedule overview")).toHaveCount(0);
   await expect(page.getByText(/reserve your spot/i)).toBeVisible();

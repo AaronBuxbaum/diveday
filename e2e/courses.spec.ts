@@ -36,6 +36,17 @@ test("an uncertified visitor can enroll in an instructor-staffed Discover Scuba 
   ).toBeVisible();
 });
 
+test("a regular fun-dive trip does not show the taster-session gift nudge", async ({ page }) => {
+  await page.goto("/shop/blue-mantis/schedule");
+  await page
+    .locator("li")
+    .filter({ hasText: "Two-Tank Reef — Molasses & French" })
+    .getByRole("link")
+    .click();
+  await expect(page).toHaveURL(/\/schedule\/[0-9a-f-]{36}/);
+  await expect(page.getByText("Giving this dive as a gift?")).not.toBeVisible();
+});
+
 test.describe("staff", () => {
   signedInAsOwner();
 
@@ -92,8 +103,14 @@ test.describe("staff", () => {
     await page.getByRole("button", { name: "Add item" }).last().click();
     await page.getByLabel("Day 4 item 1", { exact: true }).fill("Scenario retest");
     await page.getByLabel("FAQ").fill("Do I need my own gear?\nNo — we provide everything.");
+    // Off by default on a real certification course; the checkbox persists
+    // through a save/reload the same as every other field on this form.
+    const introCheckbox = page.getByRole("checkbox", { name: /taster session/ });
+    await expect(introCheckbox).not.toBeChecked();
+    await introCheckbox.check();
     await page.getByRole("button", { name: "Save course page" }).click();
     await expect(page.getByRole("status")).toContainText("Course page saved");
+    await expect(page.getByRole("checkbox", { name: /taster session/ })).toBeChecked();
 
     // Hide takes the page down; Show brings it back.
     await page.getByRole("button", { name: "Hide" }).click();

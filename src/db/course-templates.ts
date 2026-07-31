@@ -42,6 +42,7 @@ const blank: CourseContent = {
   excludes: [],
   scheduleDays: [],
   faqs: [],
+  isIntroCourse: false,
 };
 
 export const COURSE_TEMPLATES: CourseTemplate[] = [
@@ -54,6 +55,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     minimumCertificationLevel: null,
     content: {
       ...blank,
+      isIntroCourse: true,
       summary: "Try scuba for the first time, with an instructor at your shoulder",
       overview:
         "Discover Scuba Diving is not a certification — it is the afternoon you find out whether breathing underwater is for you. An instructor covers the few things that matter, fits your gear, and stays with you the whole time.\n\nYou will start in shallow, confined water, practice clearing your mask and recovering your regulator, and then, if you are comfortable, make a shallow open-water dive. Nobody is graded, and nobody goes deeper than they want to.\n\nIf you love it, your instructor can credit the skills you learn here toward the Open Water Diver course.",

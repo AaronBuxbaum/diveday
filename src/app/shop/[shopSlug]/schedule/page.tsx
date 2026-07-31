@@ -7,8 +7,10 @@ import { JsonLd } from "@/components/JsonLd";
 import { type CalendarTrip, ScheduleCalendar } from "@/components/ScheduleCalendar";
 import { ShopNotice, ShopPageHeader, ShopStat } from "@/components/ShopPageHeader";
 import { ShopReviews } from "@/components/ShopReviews";
+import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
+import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { canPersonConfigureTrips } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { listActiveCourses } from "@/db/courses";
@@ -117,11 +119,15 @@ export default async function TripsPage({
     embed?: string;
     builder?: string;
     preview?: string;
+    hasSpace?: string;
+    tripType?: string;
   }>;
 }) {
   await connection(); // schedule is live data — render per request, not at build
   const { shopSlug } = await params;
-  const { month, after, embed, builder, preview } = await searchParams;
+  const { month, after, embed, builder, preview, hasSpace, tripType } = await searchParams;
+  const hasSpaceFilter = hasSpace === "1";
+  const tripTypeFilter = tripType === "fun_dive" || tripType === "course" ? tripType : undefined;
   // Embed mode is the compact, chrome-light surface a shop pastes into its own
   // website (docs ADR 20260726-schedule-embed) — never for staff, who always
   // arrive signed in and never via a third-party iframe.
@@ -183,11 +189,25 @@ export default async function TripsPage({
     await Promise.all([
       upcomingScheduleRange(db, shop.id, now),
       staffView ? upcomingScheduleStats(db, shop.id, now) : null,
-      pagedUpcomingTripsWithCounts(db, shop.id, { cursor: after, now, ...listMonthBounds }),
+      pagedUpcomingTripsWithCounts(db, shop.id, {
+        cursor: after,
+        now,
+        ...listMonthBounds,
+        hasSpace: !staffView && hasSpaceFilter ? true : undefined,
+        tripType: !staffView ? tripTypeFilter : undefined,
+      }),
       getShopReviewAggregate(db, shop.id),
       listPublishedShopReviews(db, shop.id),
     ]);
   const hasUpcoming = range.first !== null;
+
+  // A prominent quick link to the soonest departure with room, so a returning
+  // diver who already knows what they want never has to scroll the full list.
+  // Only on the default (unbounded) view — once a diver has paged the
+  // calendar to a specific month, `upcoming` is bounded to it and its first
+  // trip is no longer necessarily the shop's actual next departure.
+  const nextDeparture =
+    !staffView && !explicitMonth ? (upcoming.find((trip) => !isFull(trip)) ?? null) : null;
 
   // Diver-facing month calendar: place the month's dives on their shop-local
   // day (storage is UTC; the diver thinks in the shop's wall clock), and page
@@ -383,6 +403,34 @@ export default async function TripsPage({
           }
         />
       )}
+
+      {nextDeparture ? (
+        <Link
+          href={`/shop/${shopSlug}/schedule/${nextDeparture.id}${isEmbed ? "?embed=1" : ""}#book`}
+          className="card-scale-hint mb-8 flex items-center justify-between gap-4 rounded-2xl border border-primary/30 bg-primary/5 p-5 shadow-sm transition-all duration-200 hover:border-primary/50"
+        >
+          <div className="min-w-0">
+            <p className="text-xs font-semibold tracking-wide text-primary uppercase">
+              {t("schedule.nextDeparture.eyebrow")}
+            </p>
+            <p className="mt-1 truncate text-lg font-semibold">
+              {t("schedule.nextDeparture.title", {
+                when: `${formatShortDate(nextDeparture.startsAt, locale, shop.timezone)} · ${formatTime(nextDeparture.startsAt, locale, shop.timezone)}`,
+                trip: nextDeparture.title,
+              })}
+            </p>
+          </div>
+          <Badge tone="primary" tabularNums className="shrink-0">
+            {(() => {
+              const label = capacityLabel(nextDeparture);
+              return label.kind === "full"
+                ? t("fallback.full")
+                : t("fallback.spotsLeft", { count: label.remaining });
+            })()}
+          </Badge>
+        </Link>
+      ) : null}
+
       {staffView && stats ? (
         <section
           aria-label={st("schedule.overview.ariaLabel")}
@@ -456,6 +504,42 @@ export default async function TripsPage({
         />
       ) : null}
 
+      {!staffView && hasUpcoming ? (
+        // Server-fed, same house pattern as the roster search in
+        // AddDiverSection.tsx: a GET reload carries the filters and the list
+        // below re-renders filtered. No client state, so the list stays
+        // pixel-stable for visual regression.
+        <form method="get" className="mb-6 flex flex-wrap items-end gap-3">
+          {isEmbed ? <input type="hidden" name="embed" value="1" /> : null}
+          {month ? <input type="hidden" name="month" value={month} /> : null}
+          <FieldGrid columns={1} className="min-w-40">
+            <Field label={t("schedule.filters.tripType")}>
+              <select name="tripType" defaultValue={tripTypeFilter ?? ""} className={controlClass}>
+                <option value="">{t("schedule.filters.allTrips")}</option>
+                <option value="fun_dive">{t("schedule.filters.funDive")}</option>
+                <option value="course">{t("schedule.filters.course")}</option>
+              </select>
+            </Field>
+          </FieldGrid>
+          <label className="flex min-h-11 items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              name="hasSpace"
+              value="1"
+              defaultChecked={hasSpaceFilter}
+              className="size-4"
+            />
+            {t("schedule.filters.hasSpace")}
+          </label>
+          <SubmitButton
+            pendingLabel={t("schedule.filters.applying")}
+            className={buttonClass({ variant: "secondary" })}
+          >
+            {t("schedule.filters.apply")}
+          </SubmitButton>
+        </form>
+      ) : null}
+
       {!hasUpcoming ? (
         <EmptyState>
           <h2 className="font-medium">{t("schedule.noTrips")}</h2>
@@ -474,9 +558,13 @@ export default async function TripsPage({
           )}
         </EmptyState>
       ) : staffView ? null : upcoming.length === 0 ? (
-        <p className="text-sm text-muted">{t("schedule.noTripsMonth")}</p>
+        <p className="text-sm text-muted">
+          {hasSpaceFilter || tripTypeFilter
+            ? t("schedule.filters.noMatches")
+            : t("schedule.noTripsMonth")}
+        </p>
       ) : (
-        <ul className="flex flex-col gap-3">
+        <ul className="flex flex-col gap-3" aria-label={t("schedule.tripListLabel")}>
           {upcoming.map((trip) => {
             const full = isFull(trip);
             const capacityLabelValue = capacityLabel(trip);

@@ -58,6 +58,7 @@ export async function createCourse(db: AppDb, input: NewCourse) {
       excludes: input.excludes ?? [],
       scheduleDays: input.scheduleDays ?? [],
       faqs: input.faqs ?? [],
+      isIntroCourse: input.isIntroCourse ?? false,
     })
     .returning();
   return course ?? null;
@@ -155,6 +156,7 @@ export async function updateCourseContent(
       excludes: input.excludes,
       scheduleDays: input.scheduleDays,
       faqs: input.faqs,
+      isIntroCourse: input.isIntroCourse,
     })
     .where(and(eq(courses.id, courseId), eq(courses.shopId, shopId)))
     .returning();

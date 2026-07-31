@@ -317,7 +317,11 @@ for (const scheme of ["light", "dark"] as const) {
       // decided the baseline. Two runs catching *different* skeleton frames is
       // what produced the schedule-dark diffs on builds with no code change.
       await page.goto("/shop/blue-mantis/schedule");
-      await page.getByRole("link", { name: /Two-Tank Reef — Molasses & French/ }).waitFor();
+      await page
+        .locator("li")
+        .filter({ hasText: "Two-Tank Reef — Molasses & French" })
+        .getByRole("link")
+        .waitFor();
       await capture(page, "schedule", scheme);
 
       // The embed widget's compact surface (docs ADR 20260726-schedule-embed):
@@ -328,7 +332,11 @@ for (const scheme of ["light", "dark"] as const) {
       // `fullPage` measured the viewport (844px tall) instead of the real page
       // (11802px). A baseline that is a blank viewport asserts nothing.
       await page.goto("/shop/blue-mantis/schedule?embed=1");
-      await page.getByRole("link", { name: /Two-Tank Reef — Molasses & French/ }).waitFor();
+      await page
+        .locator("li")
+        .filter({ hasText: "Two-Tank Reef — Molasses & French" })
+        .getByRole("link")
+        .waitFor();
       await capture(page, "schedule-embed", scheme);
 
       // Back to the standalone (non-embed) schedule before the trip-detail
@@ -339,7 +347,11 @@ for (const scheme of ["light", "dark"] as const) {
 
       // The seeded reef trip's public briefing: satellite map, gentle route,
       // landmarks, and the field guide — DiveDay's flagship "delight" surface.
-      await page.getByRole("link", { name: /Two-Tank Reef — Molasses & French/ }).click();
+      await page
+        .locator("li")
+        .filter({ hasText: "Two-Tank Reef — Molasses & French" })
+        .getByRole("link")
+        .click();
       await page.getByTitle("Satellite map of Molasses Reef").waitFor();
       await capture(page, "site-briefing", scheme);
 

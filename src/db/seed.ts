@@ -938,6 +938,7 @@ export async function seedDemoSchedule(
           description: "A supervised first underwater experience with an instructor.",
           priceCents: 17500,
           minimumCertificationLevel: null,
+          isIntroCourse: true,
         },
         {
           shopId,
@@ -1034,6 +1035,7 @@ export async function seedDemoSchedule(
           description: "A supervised first scuba experience.",
           priceCents: 15000,
           minimumCertificationLevel: null,
+          isIntroCourse: true,
         },
         {
           shopId,
