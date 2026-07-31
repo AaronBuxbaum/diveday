@@ -14,7 +14,7 @@ import {
   updateDiver,
 } from "./divers";
 import { saveRentalFit } from "./rental-fit";
-import { people } from "./schema";
+import { people, shops } from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
 
 describe("person-first diver records", () => {
@@ -93,6 +93,81 @@ describe("person-first diver records", () => {
       (row) => row.person.fullName === "Dana Reyes",
     );
     expect(staff).toBeUndefined();
+  });
+
+  // Task 144 (safety-adjacent — this prints on the manifest): staff can now
+  // type an emergency contact straight onto the diver record, not just "ask
+  // at the counter" with nowhere to record it.
+  describe("updateDiver emergency contact fields", () => {
+    it("writes both fields, leaves them untouched when omitted, and clears them on blank", async () => {
+      const { db, shop } = await seededShopContext();
+      const diver = await createDiver(db, { shopId: shop.id, fullName: "Contact Casey" });
+      if (!diver) throw new Error("diver insert failed");
+
+      const withContact = await updateDiver(db, {
+        shopId: shop.id,
+        personId: diver.id,
+        fullName: "Contact Casey",
+        emergencyContactName: "  Robin Casey  ",
+        emergencyContactPhone: "  +1 305 555 0177  ",
+      });
+      expect(withContact).toMatchObject({
+        emergencyContactName: "Robin Casey",
+        emergencyContactPhone: "+1 305 555 0177",
+      });
+
+      // Undefined (the field simply wasn't part of this save) leaves the
+      // existing value alone — a staffer editing only the phone number must
+      // never silently wipe the name.
+      const untouched = await updateDiver(db, {
+        shopId: shop.id,
+        personId: diver.id,
+        fullName: "Contact Casey",
+      });
+      expect(untouched).toMatchObject({
+        emergencyContactName: "Robin Casey",
+        emergencyContactPhone: "+1 305 555 0177",
+      });
+
+      // "" is an explicit clear — unlike the diver-facing capture on
+      // /ready and /waivers (saveBookingEmergencyContact), a staffer
+      // correcting a wrong entry here must be able to blank it out.
+      const cleared = await updateDiver(db, {
+        shopId: shop.id,
+        personId: diver.id,
+        fullName: "Contact Casey",
+        emergencyContactName: "   ",
+        emergencyContactPhone: "   ",
+      });
+      expect(cleared).toMatchObject({
+        emergencyContactName: null,
+        emergencyContactPhone: null,
+      });
+    });
+
+    it("never writes an emergency contact onto another shop's diver", async () => {
+      const { db, shop } = await seededShopContext();
+      const [otherShop] = await db
+        .insert(shops)
+        .values({ name: "Other Shop", slug: "other-shop-divers-contact-test", timezone: "UTC" })
+        .returning();
+      if (!otherShop) throw new Error("second shop insert failed");
+      const diver = await createDiver(db, { shopId: shop.id, fullName: "Cross Shop Devon" });
+      if (!diver) throw new Error("diver insert failed");
+
+      const result = await updateDiver(db, {
+        shopId: otherShop.id,
+        personId: diver.id,
+        fullName: "Cross Shop Devon",
+        emergencyContactName: "Should Not Land",
+        emergencyContactPhone: "+1 000 000 0000",
+      });
+      expect(result).toBeNull();
+
+      const [row] = await db.select().from(people).where(eq(people.id, diver.id));
+      expect(row?.emergencyContactName).toBeNull();
+      expect(row?.emergencyContactPhone).toBeNull();
+    });
   });
 
   it("soft-deletes a diver without erasing their record", async () => {

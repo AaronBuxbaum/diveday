@@ -4,7 +4,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { WaiverSendControl } from "@/components/today/WaiverSendControl";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass } from "@/components/ui/form";
+import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import type { listBookingNotes } from "@/db/operations";
 import { birthdayText } from "@/i18n/birthday-labels";
 import { depthWarningText } from "@/i18n/depth-labels";
@@ -104,7 +104,13 @@ export function RosterSection({
   notesByBooking,
   addNoteAction,
   deleteNoteAction,
-  depthUnit,
+  saveEmergencyContactAction,
+  // Accepted for interface parity with the caller/DepthUnit plumbing
+  // elsewhere on this page, but `depthWarningText` already embeds its own
+  // unit formatting — nothing in this component needs it directly.
+  // Pre-existing (unrelated to task 142/143/144); kept rather than dropped
+  // from the props contract in case another in-flight change depends on it.
+  depthUnit: _depthUnit,
   tripDate,
 }: {
   shopSlug: string;
@@ -129,6 +135,8 @@ export function RosterSection({
   notesByBooking: Map<string, Awaited<ReturnType<typeof listBookingNotes>>>;
   addNoteAction: (formData: FormData) => void;
   deleteNoteAction: (formData: FormData) => void;
+  /** Staff record or correct a diver's emergency contact from their card (task 144). */
+  saveEmergencyContactAction: (formData: FormData) => void;
   /** How this shop reads depth; the stored figure is always metres. */
   depthUnit: DepthUnit;
   /** The trip's own shop-local calendar date — when age and birthdays are measured. */
@@ -227,6 +235,12 @@ export function RosterSection({
             const age = dateOfBirth ? ageOnDate(dateOfBirth, tripDate) : null;
             const minor = dateOfBirth ? isMinorOnDate(dateOfBirth, tripDate) : false;
             const birthday = birthdayCallout(dateOfBirth, tripDate);
+            // A name with no number reads as "on file" but is unreachable in an
+            // incident — same both-fields rule `missingEmergencyContactByTrip`
+            // (src/db/today.ts) uses for Today's nudge.
+            const hasEmergencyContact = Boolean(
+              person.emergencyContactName && person.emergencyContactPhone,
+            );
             // A warning, never a gate: the site goes deeper than this diver's
             // training, which an instructor may well have already planned around
             // (H-08). It sits apart from the blocker list for that reason.
@@ -496,6 +510,72 @@ export function RosterSection({
                       </p>
                     ) : null}
                   </div>
+                </div>
+
+                {/* Task 144 — Today used to send staff here with "ask at the
+                    counter" and no field to type it into. Read-only summary
+                    plus a collapsed edit form, matching the "mark signed on
+                    paper" pattern above; writes through the same
+                    `saveBookingEmergencyContact` the diver's own /ready and
+                    /waivers capture uses. Prints on the manifest. */}
+                <div className="mt-4 border-t border-border pt-4">
+                  <p className="text-xs font-semibold tracking-widest text-muted uppercase">
+                    {t("trips.roster.emergencyContactHeading")}
+                  </p>
+                  {hasEmergencyContact ? (
+                    <p className="mt-2 text-sm text-muted">
+                      {t("trips.roster.emergencyContactOnFile", {
+                        name: person.emergencyContactName ?? "",
+                        phone: person.emergencyContactPhone ?? "",
+                      })}
+                    </p>
+                  ) : (
+                    <p className="mt-2 text-sm text-warning">
+                      {t("trips.roster.emergencyContactMissing")}
+                    </p>
+                  )}
+                  <details className="mt-2">
+                    <summary className="inline-flex min-h-11 cursor-pointer items-center text-sm font-medium text-primary hover:underline">
+                      {hasEmergencyContact
+                        ? t("trips.roster.emergencyContactEdit")
+                        : t("trips.roster.emergencyContactAdd")}
+                    </summary>
+                    <form
+                      action={saveEmergencyContactAction}
+                      className="mt-2 flex max-w-md flex-col gap-3 rounded-lg border border-border bg-surface-sunken/50 p-3"
+                    >
+                      <input type="hidden" name="bookingId" value={booking.id} />
+                      <FieldGrid columns={2}>
+                        <Field label={t("trips.roster.emergencyContactNameLabel")}>
+                          <input
+                            name="emergencyContactName"
+                            autoComplete="name"
+                            maxLength={120}
+                            defaultValue={person.emergencyContactName ?? ""}
+                            className={controlClass}
+                          />
+                        </Field>
+                        <Field label={t("trips.roster.emergencyContactPhoneLabel")}>
+                          <input
+                            name="emergencyContactPhone"
+                            type="tel"
+                            autoComplete="tel"
+                            maxLength={40}
+                            defaultValue={person.emergencyContactPhone ?? ""}
+                            className={controlClass}
+                          />
+                        </Field>
+                      </FieldGrid>
+                      <div>
+                        <SubmitButton
+                          pendingLabel={t("trips.roster.savingContact")}
+                          className={buttonClass({ variant: "secondary", size: "sm" })}
+                        >
+                          {t("trips.roster.saveEmergencyContact")}
+                        </SubmitButton>
+                      </div>
+                    </form>
+                  </details>
                 </div>
 
                 <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border pt-4">

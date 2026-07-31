@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { verifyWaiverIntegrity } from "@/lib/waiver-integrity";
 import { seededShopContext } from "@/test/db";
 import { getBookingReadiness } from "./readiness";
-import { people, waiverRecords } from "./schema";
+import { people, shops, waiverRecords } from "./schema";
 import { getTripRoster, listStaff, setTripStatus, upcomingTripsWithCounts } from "./trips";
 import {
   completeWaiver,
@@ -16,6 +16,7 @@ import {
   listWaiverIntegrityAudit,
   listWaiverTemplateHistory,
   recordInPersonWaiver,
+  saveBookingEmergencyContact,
   saveWaiverTemplate,
   WAIVER_INTEGRITY_PAGE_SIZE,
 } from "./waivers";
@@ -447,6 +448,69 @@ describe("emergency contact captured with the waiver", () => {
     await expect(getEmergencyContactForBooking(db, booking.id)).resolves.toEqual({
       name: "Existing Contact",
       phone: "555-0000",
+    });
+  });
+});
+
+// The roster's staff-facing capture (task 144) calls `saveBookingEmergencyContact`
+// directly rather than through a bearer token, so its shop-scoping is the only
+// thing standing between a staffer and another shop's booking — covered here
+// rather than only indirectly through `completeWaiver`.
+describe("saveBookingEmergencyContact (staff-facing write path, task 144)", () => {
+  it("writes a contact for a booking scoped to the given shop", async () => {
+    const { db, shop, booking } = await waiverContext();
+    const saved = await saveBookingEmergencyContact(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      name: "Alex Rivera",
+      phone: "+1 305 555 0133",
+    });
+    expect(saved).toBe(true);
+    await expect(getEmergencyContactForBooking(db, booking.id)).resolves.toEqual({
+      name: "Alex Rivera",
+      phone: "+1 305 555 0133",
+    });
+  });
+
+  it("refuses to write when the booking belongs to a different shop", async () => {
+    const { db, booking } = await waiverContext();
+    const [otherShop] = await db
+      .insert(shops)
+      .values({ name: "Other Shop", slug: "other-shop-emergency-contact-test", timezone: "UTC" })
+      .returning();
+    if (!otherShop) throw new Error("second shop insert failed");
+    // The seeded demo diver may already carry a contact — capture whatever it
+    // actually is rather than assume null, so this asserts nothing changed,
+    // not a specific starting value.
+    const before = await getEmergencyContactForBooking(db, booking.id);
+
+    const saved = await saveBookingEmergencyContact(db, {
+      shopId: otherShop.id,
+      bookingId: booking.id,
+      name: "Should Not Land",
+      phone: "+1 000 000 0000",
+    });
+    expect(saved).toBe(false);
+    await expect(getEmergencyContactForBooking(db, booking.id)).resolves.toEqual(before);
+  });
+
+  it("is a no-op when both fields are blank, never wiping what's on file", async () => {
+    const { db, shop, booking } = await waiverContext();
+    await db
+      .update(people)
+      .set({ emergencyContactName: "Kept Contact", emergencyContactPhone: "555-0099" })
+      .where(eq(people.id, booking.personId));
+
+    const saved = await saveBookingEmergencyContact(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      name: "   ",
+      phone: "",
+    });
+    expect(saved).toBe(false);
+    await expect(getEmergencyContactForBooking(db, booking.id)).resolves.toEqual({
+      name: "Kept Contact",
+      phone: "555-0099",
     });
   });
 });
