@@ -48,6 +48,16 @@ The `build` CI job never launches a browser (Chromium only runs in the separate 
 core count (`ubuntu-latest`: 4-core AMD EPYC 9V45, per `20260730-linux-ci-runners.md`) is available
 to static-generation workers.
 
+Separately, `e2e/servers.ts`'s `defaultWorkers` (how many `playwright`/`visual` worker
+servers — each a browser *and* a `next start` process — to run) computed `floor(cpus / 4)`, despite
+its own comment stating a "~2 cores per worker" budget (`floor(cpus / 2)`). The doubled-up divisor
+traced to a real finding in `20260720-e2e-parallel-prod-fleet.md`: 2 workers on a 4-core CI runner
+(4 heavy processes) blew assertion timeouts under contention. That finding predates this repo's
+move from 3-core macOS to real 4-core/16GB Linux CI runners and was never revisited after. A CI run
+on the current hardware confirmed 2 workers (matching the comment's stated budget) run clean with no
+contention, so `defaultWorkers` now divides by 2 to match — no env var override needed for CI to
+get the correct worker count on today's runners.
+
 ## Alternatives considered
 
 - **Unique file-backed `PGLITE_DATA_DIR` per worker** (e.g. keyed by a worker index) — works in
@@ -71,3 +81,7 @@ to static-generation workers.
 - If a future change makes local dev's default PGlite path also safe for concurrent workers (e.g.
   switching its default to per-invocation isolation), the remaining cap could be dropped entirely
   — revisit then.
+- `playwright`/`visual` CI jobs and local `pnpm e2e`/`pnpm visual` runs on comparable 4-core
+  machines now run 2 e2e worker servers by default instead of 1, roughly halving wall-clock for
+  that suite. If a future runner change reintroduces timeout-driven contention, `E2E_WORKERS`
+  still overrides the default without editing code.
