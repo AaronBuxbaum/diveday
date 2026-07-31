@@ -43,7 +43,11 @@ export async function generateMetadata({
   if (!course) return { title: "Course — DiveDay" };
   const canonical = shop ? `/shop/${shop.slug}/courses/${course.slug}` : undefined;
   const title = `${course.title} — ${shop?.name ?? "DiveDay"}`;
-  const description = course.summary ?? course.description ?? undefined;
+  // `description` is the internal staff-picker blurb (schema comment on
+  // `courses.description`), never diver-facing — falling back to it here
+  // would leak it into a public <meta> tag. `summary` is the only field this
+  // page may quote.
+  const description = course.summary ?? undefined;
   return {
     title,
     description,
