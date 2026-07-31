@@ -1,0 +1,1 @@
+ALTER TABLE "shop_stripe_accounts" ADD COLUMN "default_currency" text DEFAULT 'usd' NOT NULL;

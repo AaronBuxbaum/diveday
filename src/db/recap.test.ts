@@ -129,6 +129,22 @@ describe("getRecapPageData", () => {
     const data = await getRecapPageData(db, bookingId);
     expect(data?.canTip).toBe(false);
   });
+
+  it("defaults currency to usd with no connected Stripe account, and reads a connected one's own currency (task 60)", async () => {
+    const { db, shop, bookingId } = await recapContext();
+    const before = await getRecapPageData(db, bookingId);
+    expect(before?.currency).toBe("usd");
+
+    await upsertShopStripeAccount(db, shop.id, "acct_eur");
+    await setShopStripeAccountStatus(db, "acct_eur", {
+      chargesEnabled: true,
+      payoutsEnabled: true,
+      detailsSubmitted: true,
+      defaultCurrency: "eur",
+    });
+    const after = await getRecapPageData(db, bookingId);
+    expect(after?.currency).toBe("eur");
+  });
 });
 
 function fakeCheckout(overrides: Partial<CheckoutProvider> = {}): CheckoutProvider {

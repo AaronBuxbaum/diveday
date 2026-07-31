@@ -69,6 +69,12 @@ export async function startTipCheckout(
   const account = await getShopStripeAccount(db, row.shopId);
   if (!canAcceptPayments(account)) return { ok: false, reason: "not_connected" };
   const stripeAccountId = (account as NonNullable<typeof account>).stripeAccountId;
+  // The connected account's own settlement currency, not a hardcoded "usd" —
+  // task 60. `MIN_TIP_CENTS`/`MAX_TIP_CENTS` and the cents-based amount math
+  // below still assume a two-decimal currency; a zero-decimal account
+  // currency (e.g. JPY) is a known gap folded into the broader currency-i18n
+  // effort (task 35), not fixed here.
+  const currency = (account as NonNullable<typeof account>).defaultCurrency;
 
   // Locks the always-existing bookings row for the rest of this call — same
   // technique src/db/payments.ts uses for payment writes (a booking's first
@@ -131,7 +137,7 @@ export async function startTipCheckout(
 
     const session = await checkout.createCheckoutSession({
       stripeAccountId,
-      currency: "usd",
+      currency,
       description: "Tip for the crew",
       unitAmountCents: input.amountCents,
       quantity: 1,
@@ -161,7 +167,7 @@ export async function startTipCheckout(
         stripeAccountId,
         stripeSessionId: session.stripeSessionId,
         checkoutUrl: session.checkoutUrl,
-        currency: "usd",
+        currency,
         amountCents: input.amountCents,
         expiresAt: session.expiresAt,
       })

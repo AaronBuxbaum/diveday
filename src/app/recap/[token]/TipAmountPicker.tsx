@@ -16,12 +16,15 @@ import { useId, useState } from "react";
 export function TipAmountPicker({
   presets,
   defaultPreset,
+  currencySymbol,
   legend,
   otherPlaceholder,
   otherAriaLabel,
 }: {
   presets: number[];
   defaultPreset: number;
+  /** The shop's own connected-account currency symbol (e.g. "$", "€") — never hardcoded (task 60). */
+  currencySymbol: string;
   legend: string;
   otherPlaceholder: string;
   otherAriaLabel: string;
@@ -49,14 +52,15 @@ export function TipAmountPicker({
             }}
             className="sr-only"
           />
-          ${usd}
+          {currencySymbol}
+          {usd}
         </label>
       ))}
       <label
         htmlFor={customInputId}
         className="flex min-h-11 items-center gap-2 rounded-lg border border-border px-3 text-sm has-[:focus-within]:border-primary"
       >
-        <span className="text-muted">$</span>
+        <span className="text-muted">{currencySymbol}</span>
         <input
           id={customInputId}
           type="number"

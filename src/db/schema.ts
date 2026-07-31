@@ -1219,6 +1219,16 @@ export const shopStripeAccounts = pgTable(
     chargesEnabled: boolean("charges_enabled").notNull().default(false),
     payoutsEnabled: boolean("payouts_enabled").notNull().default(false),
     detailsSubmitted: boolean("details_submitted").notNull().default(false),
+    /**
+     * The connected account's own settlement currency (Stripe's
+     * `default_currency`, e.g. "usd", "eur"), refreshed alongside the status
+     * flags above. Defaults "usd" for a not-yet-refreshed row so every
+     * existing caller keeps working unchanged. Consumers that show a diver a
+     * currency symbol (recap tipping) or charge a card must read this instead
+     * of a hardcoded "$"/"usd" (task 60) — full multi-currency support
+     * elsewhere (orders, checkouts, invoicing) is still deferred (task 35).
+     */
+    defaultCurrency: text("default_currency").notNull().default("usd"),
     connectedAt: timestamp("connected_at", { withTimezone: true }).notNull().defaultNow(),
     /** Set on an OAuth deauthorize webhook; a later reconnect clears it. */
     disconnectedAt: timestamp("disconnected_at", { withTimezone: true }),

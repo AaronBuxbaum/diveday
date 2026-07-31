@@ -18,6 +18,8 @@ import { verifyRecapToken } from "@/lib/recap-links";
 import { MAX_REVIEW_COMMENT_LENGTH, REVIEW_RATINGS } from "@/lib/reviews";
 import { MAX_IMAGE_MB } from "@/lib/storage/limits";
 import { startTipAction, submitReviewAction, uploadRecapPhotoAction } from "./actions";
+import { RecapShareButton } from "./RecapShareButton";
+import { ShareReviewButton } from "./ShareReviewButton";
 import { TipAmountPicker } from "./TipAmountPicker";
 
 /**
@@ -29,6 +31,9 @@ const PHOTO_NOTICES: Record<string, { tone: "success" | "danger"; key: DiverMess
   none: { tone: "danger", key: "recap.photoMissing" },
   limit: { tone: "danger", key: "recap.photoLimit" },
   unconfigured: { tone: "danger", key: "recap.photoUnsupported" },
+  // A cancelled or no-show booking, not a bad file — "try a JPEG under 5 MB"
+  // would be a lie about what actually went wrong (task 56).
+  cancelled: { tone: "danger", key: "recap.photoCancelled" },
   error: { tone: "danger", key: "recap.photoFailed" },
 };
 
@@ -39,13 +44,40 @@ const TIP_NOTICES: Record<string, { tone: "success" | "danger"; key: DiverMessag
   error: { tone: "danger", key: "recap.tipFailed" },
 };
 
-const TIP_PRESETS_USD = [5, 10, 20];
+/** Tip amounts in the shop's own currency's minor-unit-free numbers (e.g. 5 = $5 or 5). */
+const TIP_PRESETS = [5, 10, 20];
 
-export async function generateMetadata(): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ token: string }>;
+}): Promise<Metadata> {
+  const { token } = await params;
   const t = diverTranslator(await requestLocale());
+  const bookingId = verifyRecapToken(token);
+  const db = bookingId ? await getDb() : null;
+  const data = db && bookingId ? await getRecapPageData(db, bookingId) : null;
+  if (!data) {
+    return { title: t("recap.metaTitle"), robots: { index: false, follow: false } };
+  }
+  // Bearer-token page: the URL itself is the credential, so whoever already
+  // has the link can see the whole page — but a link-preview unfurl (Slack,
+  // iMessage, ...) renders for bystanders who never clicked it. Keep the
+  // unfurl to the same non-personal facts a signed-out visitor of the shop's
+  // own public schedule page already sees — trip title, shop name, dive
+  // site names — never the diver's name, contact info, photos, review
+  // words, or tip amount (checked against
+  // docs/engineering/capability-telemetry-runbook.md; task 59).
+  const { shop, trip, sites } = data;
+  const siteNames = sitesSentence(sites, shop.defaultLocale);
+  const ogTitle = `${trip.title} · ${shop.name}`;
+  const ogDescription = siteNames
+    ? `A dive recap from ${shop.name} — ${siteNames}.`
+    : `A dive recap from ${shop.name}.`;
   return {
     title: t("recap.metaTitle"),
     robots: { index: false, follow: false },
+    openGraph: { title: ogTitle, description: ogDescription },
   };
 }
 
@@ -114,12 +146,27 @@ export default async function DiveRecapPage({
   const db = await getDb();
   const data = await getRecapPageData(db, bookingId);
   if (!data) {
+    // `getRecapPageData` nulls the whole page uniformly for a cancelled/
+    // no-show booking, same as a bad or forged token — so a diver who was
+    // rating or adding a photo when staff cancelled their booking underneath
+    // them lands right back here on redirect, never seeing a
+    // `reviews.savedDidNotDive`/`recap.photoCancelled` notice at all (those
+    // dictionary entries stay for a future page shape that doesn't collapse
+    // this state). This is the one honest thing this branch *can* say
+    // without weakening the fail-closed uniformity a forged token still
+    // gets: the token itself parsed (so this is a real diver on a real,
+    // now-cancelled booking, not a guess), and "didn't sail" reveals
+    // nothing more than the diver's own crew already told them (task 56).
+    const didNotDive = reviewParam === "did_not_dive" || photo === "cancelled";
     return (
-      <Notice title={anonT("recap.unavailableHeading")} text={anonT("waiver.unavailableBody")} />
+      <Notice
+        title={anonT("recap.unavailableHeading")}
+        text={anonT(didNotDive ? "recap.didNotDiveBody" : "waiver.unavailableBody")}
+      />
     );
   }
 
-  const { shop, trip, diverName, sites, shoutout, photos, canTip, tip } = data;
+  const { shop, trip, diverName, sites, shoutout, photos, canTip, tip, currency } = data;
   const { locale, t } = await requestTranslator(shop.defaultLocale);
   // A shop can disconnect Stripe (or lose chargesEnabled) after a tip was
   // already started or paid; canTip alone would then hide the diver's own
@@ -135,15 +182,39 @@ export default async function DiveRecapPage({
   const reviewNotices: Record<string, { tone: "success" | "danger"; text: string }> = {
     published: { tone: "success", text: t("reviews.savedPublished") },
     pending: { tone: "success", text: t("reviews.savedPending") },
+    // A no-show/cancelled booking never dived — "pick a rating and try
+    // again" would send them in a loop that can never succeed (task 56).
+    did_not_dive: { tone: "danger", text: t("reviews.savedDidNotDive") },
     error: { tone: "danger", text: t("reviews.savedError") },
   };
   const reviewNotice = reviewParam ? reviewNotices[reviewParam] : undefined;
+  // One review ask, not two: the "share it on Google too" CTA only appears
+  // right after a strong (4-5★) on-page submission just went through, folded
+  // into that success state instead of a second section that used to render
+  // unconditionally underneath it (task 57).
+  const justSubmittedStrongReview =
+    (reviewParam === "published" || reviewParam === "pending") &&
+    ownReview !== null &&
+    ownReview.rating >= 4;
   const photoNotice = photo ? PHOTO_NOTICES[photo] : undefined;
   const tipNotice = tipParam ? TIP_NOTICES[tipParam] : undefined;
   const atPhotoLimit = photos.length >= MAX_RECAP_PHOTOS_PER_BOOKING;
+  const remainingPhotoSlots = Math.max(0, MAX_RECAP_PHOTOS_PER_BOOKING - photos.length);
   const firstName = diverName.trim().split(/\s+/)[0] || t("recap.namelessFallback");
   const when = formatShortDate(trip.startsAt, locale, shop.timezone);
   const where = sitesSentence(sites, locale);
+  // The shop's own connected-account currency (task 60) — "usd" until one is
+  // connected/refreshed. Narrow symbol only ("$", "€"), not the full
+  // "US$"-style display next.js's Intl otherwise defaults to for en-US.
+  const currencySymbol =
+    new Intl.NumberFormat(locale, {
+      style: "currency",
+      currency: currency.toUpperCase(),
+      currencyDisplay: "narrowSymbol",
+      maximumFractionDigits: 0,
+    })
+      .formatToParts(0)
+      .find((part) => part.type === "currency")?.value ?? currency.toUpperCase();
   const conditions = [
     trip.waterTemperatureC !== null
       ? { label: t("recap.waterTemp"), value: `${trip.waterTemperatureC}°C` }
@@ -161,6 +232,18 @@ export default async function DiveRecapPage({
         <p className="text-sm font-medium tracking-widest text-primary uppercase">{shop.name}</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight text-balance">{trip.title}</h1>
         <p className="mt-1 text-base text-muted">{when}</p>
+        {/* Same share-then-clipboard-fallback affordance TripActions gives a
+            trip page — `recap-links.ts` already calls this link shareable,
+            this is what makes it actually be that (task 59). */}
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <RecapShareButton
+            shareTitle={trip.title}
+            shareText={t("recap.shareRecapText", { shop: shop.name })}
+            label={t("recap.shareRecap")}
+            copiedLabel={t("recap.linkCopied")}
+            copiedAnnouncement={t("recap.linkCopiedAnnouncement")}
+          />
+        </div>
       </header>
 
       <EarnedMoment
@@ -256,6 +339,9 @@ export default async function DiveRecapPage({
           <label htmlFor="review-comment" className="text-sm font-medium">
             {t("reviews.commentLabel")}
           </label>
+          <p id="review-comment-hint" className="text-xs text-muted">
+            {t("reviews.commentModerationHint")}
+          </p>
           <textarea
             id="review-comment"
             name="comment"
@@ -263,6 +349,7 @@ export default async function DiveRecapPage({
             maxLength={MAX_REVIEW_COMMENT_LENGTH}
             defaultValue={ownReview?.comment ?? ""}
             placeholder={t("reviews.commentPlaceholder")}
+            aria-describedby="review-comment-hint"
             className={controlClass}
           />
           <div>
@@ -271,24 +358,27 @@ export default async function DiveRecapPage({
             </SubmitButton>
           </div>
         </form>
-      </section>
 
-      {shop.reviewUrl ? (
-        <section className="mt-8 rounded-xl bg-surface-sunken p-5">
-          <h2 className="text-lg font-semibold">{t("recap.externalReviewHeading")}</h2>
-          <p className="mt-1 text-base text-muted">
-            {t("recap.externalReviewBody", { shop: shop.name })}
-          </p>
-          <a
-            href={shop.reviewUrl}
-            target="_blank"
-            rel="noopener"
-            className={buttonClass({ size: "cta", className: "mt-4" })}
-          >
-            {t("recap.externalReviewCta")}
-          </a>
-        </section>
-      ) : null}
+        {/* The one review ask left: a strong rating just landed, so offer to
+            carry it further instead of stacking a second, separately-worded
+            ask underneath (task 57). */}
+        {justSubmittedStrongReview && shop.reviewUrl ? (
+          <div className="mt-4 border-t border-border pt-4">
+            <h3 className="text-base font-semibold">{t("recap.externalReviewHeading")}</h3>
+            <p className="mt-1 text-sm text-muted">
+              {ownReview?.comment
+                ? t("recap.externalReviewBody", { shop: shop.name })
+                : t("recap.externalReviewBodyNoComment", { shop: shop.name })}
+            </p>
+            <ShareReviewButton
+              reviewUrl={shop.reviewUrl}
+              comment={ownReview?.comment ?? null}
+              cta={t("recap.externalReviewCta")}
+              copiedLabel={t("recap.commentCopied")}
+            />
+          </div>
+        ) : null}
+      </section>
 
       {showTipSection ? (
         <section className="mt-8 rounded-xl border border-border bg-surface p-5">
@@ -322,7 +412,7 @@ export default async function DiveRecapPage({
                 {t("recap.tipFinish", {
                   amount: new Intl.NumberFormat(locale, {
                     style: "currency",
-                    currency: "USD",
+                    currency: currency.toUpperCase(),
                     maximumFractionDigits: 0,
                   }).format(tip.amountCents / 100),
                 })}
@@ -335,8 +425,9 @@ export default async function DiveRecapPage({
               </p>
               <form action={startTipAction.bind(null, token)} className="mt-4 flex flex-col gap-3">
                 <TipAmountPicker
-                  presets={TIP_PRESETS_USD}
-                  defaultPreset={TIP_PRESETS_USD[1]}
+                  presets={TIP_PRESETS}
+                  defaultPreset={TIP_PRESETS[1]}
+                  currencySymbol={currencySymbol}
                   legend={t("recap.tipAmountLegend")}
                   otherPlaceholder={t("recap.otherTipPlaceholder")}
                   otherAriaLabel={t("recap.otherTipAriaLabel")}
@@ -407,6 +498,8 @@ export default async function DiveRecapPage({
               id="recap-photo"
               name="photo"
               required
+              multiple
+              maxFiles={remainingPhotoSlots}
               // file:py-3 (not py-2) so the "Choose file" pseudo-button clears the
               // 44px dock-test floor — this is a mobile, post-dive, add-your-shots
               // flow where the tap target matters (design/principles.md #2).
@@ -414,6 +507,7 @@ export default async function DiveRecapPage({
               copy={{
                 wrongTypeSuffix: t("recap.photoWrongTypeSuffix"),
                 tooBigSuffix: t("recap.photoTooBigSuffix", { maxMb: MAX_IMAGE_MB }),
+                tooMany: t("recap.photoTooMany", { max: remainingPhotoSlots }),
               }}
             />
             <input
@@ -423,9 +517,14 @@ export default async function DiveRecapPage({
               placeholder={t("recap.captionLabel")}
               className={controlClass}
             />
-            <button type="submit" className={buttonClass({ className: "self-start" })}>
-              {t("recap.addToMyRecap")}
-            </button>
+            <div>
+              <SubmitButton
+                pendingLabel={t("recap.addingPhoto")}
+                className={buttonClass({ className: "self-start" })}
+              >
+                {t("recap.addToMyRecap")}
+              </SubmitButton>
+            </div>
           </form>
         )}
       </section>

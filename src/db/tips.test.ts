@@ -147,6 +147,38 @@ describe("startTipCheckout", () => {
     expect(outcome).toEqual({ ok: false, reason: "invalid_booking" });
   });
 
+  it("charges in the shop's own connected-account currency, not a hardcoded usd (task 60)", async () => {
+    const { db, shop, bookingId } = await tipContext();
+    await setShopStripeAccountStatus(db, "acct_test", {
+      chargesEnabled: true,
+      payoutsEnabled: true,
+      detailsSubmitted: true,
+      defaultCurrency: "eur",
+    });
+    const seenCurrencies: string[] = [];
+    const provider = fakeCheckout({
+      async createCheckoutSession(request) {
+        seenCurrencies.push(request.currency);
+        return {
+          status: "created",
+          stripeSessionId: "cs_tip_eur",
+          stripeStatus: "open",
+          paymentStatus: "unpaid",
+          checkoutUrl: "https://checkout.stripe.com/c/pay/cs_tip_eur",
+          amountTotalCents: request.unitAmountCents,
+          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        };
+      },
+    });
+
+    const outcome = await startTipCheckout(db, tipInput(bookingId), provider);
+    expect(outcome.ok).toBe(true);
+    expect(seenCurrencies).toEqual(["eur"]);
+
+    const tip = await getLatestTipForBooking(db, shop.id, bookingId);
+    expect(tip?.currency).toBe("eur");
+  });
+
   it("reuses a still-open pending tip instead of minting a second Stripe session", async () => {
     const { db, bookingId } = await tipContext();
     const provider = fakeCheckout();
