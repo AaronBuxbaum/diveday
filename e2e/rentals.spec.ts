@@ -9,7 +9,7 @@ test("a diver sees rental prices and an estimate on the booking confirmation", a
   await page
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Christ of the Abyss" })
-    .getByRole("link", { name: "Two-Tank Reef — Christ of the Abyss", exact: true })
+    .getByRole("link", { name: "Two-Tank Reef — Christ of the Abyss" })
     .click();
   // The booking form is controlled, so wait for hydration before typing.
   await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");

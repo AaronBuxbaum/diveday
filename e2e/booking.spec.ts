@@ -170,7 +170,7 @@ test("a full boat lets a diver join the wait list without taking a seat", async 
   await page
     .locator("li")
     .filter({ hasText: "Wreck Trip — Spiegel Grove" })
-    .getByRole("link", { name: "Wreck Trip — Spiegel Grove", exact: true })
+    .getByRole("link", { name: "Wreck Trip — Spiegel Grove" })
     .click();
   await expect(page.getByRole("heading", { name: "This boat’s full" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Join the wait list" })).toBeVisible();
@@ -237,7 +237,7 @@ test("a shared-inbox booking under a different name is held for staff identity c
   await page
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Christ of the Abyss" })
-    .getByRole("link", { name: "Two-Tank Reef — Christ of the Abyss", exact: true })
+    .getByRole("link", { name: "Two-Tank Reef — Christ of the Abyss" })
     .click();
   // The booking form is controlled, so wait for hydration before typing.
   await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
@@ -284,7 +284,7 @@ test("a tampered or cross-trip confirmation token reveals nothing", async ({ pag
   await page
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Christ of the Abyss" })
-    .getByRole("link", { name: "Two-Tank Reef — Christ of the Abyss", exact: true })
+    .getByRole("link", { name: "Two-Tank Reef — Christ of the Abyss" })
     .click();
   // The booking form is controlled, so wait for hydration before typing.
   await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
@@ -309,7 +309,7 @@ test("a tampered or cross-trip confirmation token reveals nothing", async ({ pag
   await page
     .locator("li")
     .filter({ hasText: "Wreck Trip — Spiegel Grove" })
-    .getByRole("link", { name: "Wreck Trip — Spiegel Grove", exact: true })
+    .getByRole("link", { name: "Wreck Trip — Spiegel Grove" })
     .click();
   const otherTripUrl = new URL(page.url());
   otherTripUrl.searchParams.set("booking", realToken ?? "");

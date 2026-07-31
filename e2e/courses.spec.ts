@@ -41,7 +41,7 @@ test("a regular fun-dive trip does not show the taster-session gift nudge", asyn
   await page
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-    .getByRole("link", { name: "Two-Tank Reef — Molasses & French", exact: true })
+    .getByRole("link", { name: "Two-Tank Reef — Molasses & French" })
     .click();
   await expect(page).toHaveURL(/\/schedule\/[0-9a-f-]{36}/);
   await expect(page.getByText("Giving this dive as a gift?")).not.toBeVisible();
@@ -231,7 +231,10 @@ test.describe("staff", () => {
     // A course session refuses bookings until an instructor is on its crew — the
     // rule that makes this flow safe, and the reason the seeded session works.
     await page.goto("/shop/blue-mantis/schedule");
-    await page.getByRole("link", { name: new RegExp(sessionTitle) }).click();
+    // Anchored to the full accessible name: an unpriced trip's card also
+    // carries a "Set a price for {title}, ..." link whose name contains the
+    // session title as a substring, so an unanchored pattern matches both.
+    await page.getByRole("link", { name: new RegExp(`^${sessionTitle}$`) }).click();
     await expect(
       page.getByText("cannot take bookings until one assigned crew member has the instructor role"),
     ).toBeVisible();
@@ -279,7 +282,10 @@ test.describe("staff", () => {
     await expect(page.getByRole("status")).toBeVisible();
 
     await page.goto("/shop/blue-mantis/schedule");
-    await page.getByRole("link", { name: new RegExp(sessionTitle) }).click();
+    // Anchored to the full accessible name: an unpriced trip's card also
+    // carries a "Set a price for {title}, ..." link whose name contains the
+    // session title as a substring, so an unanchored pattern matches both.
+    await page.getByRole("link", { name: new RegExp(`^${sessionTitle}$`) }).click();
     await page.getByLabel("Assign crew").selectOption({ label: "Marcus Webb" }); // the seeded instructor
     await expect(page.getByRole("button", { name: "Unassign Marcus Webb" })).toBeVisible();
     const tripUrl = page.url();

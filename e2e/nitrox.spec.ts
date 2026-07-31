@@ -82,7 +82,7 @@ test.describe("staff", () => {
     await anon
       .locator("li")
       .filter({ hasText: "Two-Tank Reef — Christ of the Abyss" })
-      .getByRole("link", { name: "Two-Tank Reef — Christ of the Abyss", exact: true })
+      .getByRole("link", { name: "Two-Tank Reef — Christ of the Abyss" })
       .click();
     // The booking form is controlled, so wait for hydration before typing.
     await expect(anon.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
@@ -208,7 +208,7 @@ test("a diver without a verified card can request nitrox but is flagged, not blo
   await page
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Christ of the Abyss" })
-    .getByRole("link", { name: "Two-Tank Reef — Christ of the Abyss", exact: true })
+    .getByRole("link", { name: "Two-Tank Reef — Christ of the Abyss" })
     .click();
   // The booking form is controlled, so wait for hydration before typing.
   await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");

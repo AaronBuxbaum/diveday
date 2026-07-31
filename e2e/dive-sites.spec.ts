@@ -37,7 +37,14 @@ test.describe("staff", () => {
     await page.getByRole("button", { name: "Put it on the board" }).click();
     await expect(page.getByRole("status")).toBeVisible(); // created banner ⇒ the redirect settled
     await page.goto("/shop/blue-mantis/schedule");
-    await page.locator("li").filter({ hasText: tripTitle }).getByRole("link").click();
+    await page
+      .locator("li")
+      .filter({ hasText: tripTitle })
+      // Exact match: an unpriced trip's card also carries a "Set a price
+      // for {title}, ..." link whose accessible name contains the trip
+      // title as a substring.
+      .getByRole("link", { name: tripTitle, exact: true })
+      .click();
     await expect(page).toHaveURL(/\/shop\/blue-mantis\/trips\/[0-9a-f-]+$/);
     const manageTripUrl = page.url();
 
@@ -104,7 +111,7 @@ test("the seeded reef briefing shows a satellite map, a gentle route, landmarks,
   await page
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-    .getByRole("link", { name: "Two-Tank Reef — Molasses & French", exact: true })
+    .getByRole("link", { name: "Two-Tank Reef — Molasses & French" })
     .click();
 
   await expect(page.getByTitle("Satellite map of Molasses Reef")).toBeVisible();

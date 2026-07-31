@@ -350,7 +350,7 @@ for (const scheme of ["light", "dark"] as const) {
       await page
         .locator("li")
         .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-        .getByRole("link", { name: "Two-Tank Reef — Molasses & French", exact: true })
+        .getByRole("link", { name: "Two-Tank Reef — Molasses & French" })
         .click();
       await page.getByTitle("Satellite map of Molasses Reef").waitFor();
       await capture(page, "site-briefing", scheme);
@@ -434,7 +434,7 @@ for (const scheme of ["light", "dark"] as const) {
       await page
         .locator("li")
         .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-        .getByRole("link", { name: "Two-Tank Reef — Molasses & French", exact: true })
+        .getByRole("link", { name: "Two-Tank Reef — Molasses & French" })
         .click();
       await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
       await page.getByLabel("Name", { exact: true }).fill("Visual Regression Diver");
