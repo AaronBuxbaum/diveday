@@ -42,6 +42,7 @@ not commitments. Their surviving recommendations belong in the roadmap; read for
 | [assessments/fareharbor-positioning.md](product/assessments/fareharbor-positioning.md) | 2026-07-24 coexist-vs-compete strategy against FareHarbor as a booking channel, not a records system |
 | [assessments/switching-guide-landscape.md](product/assessments/switching-guide-landscape.md) | Survey of switching-guide candidates beyond the four shipped, ranked by dive adoption and verified export path |
 | [assessments/ux-personas-20260730.md](product/assessments/ux-personas-20260730.md) | 2026-07-30 fifteen-persona frontend walkthrough plus two lenses (over-explained copy; redundancy/coupling/findability) — 165 prompt-ready improvement tasks, tagged by size and ranked by leverage |
+| [assessments/specialist-optimization-audit-20260731.md](product/assessments/specialist-optimization-audit-20260731.md) | 2026-07-31 eight-lens specialist audit (UX, performance, a11y, SEO, security, ML/data, backend, DX) — ~70 prompt-ready tasks with priority/effort/verification, each grounded in cited code |
 
 **Archive** ([product/archive/](product/archive/)) — delivered or superseded snapshots, kept for
 rationale. Not open work; do not plan from them.
