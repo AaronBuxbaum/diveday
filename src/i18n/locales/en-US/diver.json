@@ -43,6 +43,7 @@
     "nextMonth": "Next month",
     "calendarDive": "{time} dive",
     "calendarDiveFull": "{time} dive (full)",
+    "tripListLabel": "Upcoming trips",
     "nextDeparture": {
       "eyebrow": "Next boat out",
       "title": "{when} — {trip}"

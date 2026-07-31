@@ -563,7 +563,7 @@ export default async function TripsPage({
             : t("schedule.noTripsMonth")}
         </p>
       ) : (
-        <ul className="flex flex-col gap-3">
+        <ul className="flex flex-col gap-3" aria-label={t("schedule.tripListLabel")}>
           {upcoming.map((trip) => {
             const full = isFull(trip);
             const capacityLabelValue = capacityLabel(trip);
