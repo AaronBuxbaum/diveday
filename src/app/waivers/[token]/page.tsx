@@ -34,10 +34,13 @@ import { revalidateAndRedirect } from "@/lib/navigation";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
 
-export const metadata: Metadata = {
-  title: "Complete your waiver — DiveDay",
-  robots: { index: false, follow: false },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = diverTranslator(await requestLocale());
+  return {
+    title: t("waiver.metaTitle"),
+    robots: { index: false, follow: false },
+  };
+}
 
 const signatureSchema = z.object({
   signerName: z.string().trim().max(120),

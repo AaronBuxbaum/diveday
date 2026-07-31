@@ -272,6 +272,7 @@
     "aggregate": "{average} out of 5 · {count, plural, one {# review} other {# reviews}}"
   },
   "recap": {
+    "metaTitle": "Your dive recap — DiveDay",
     "eyebrow": "That’s a wrap",
     "greeting": "Nice diving, {name}.",
     "namelessFallback": "diver",
@@ -326,7 +327,7 @@
     "reconstructedPath": "📍 Reconstructed boat path visiting {count, plural, one {# dive site} other {# dive sites}}"
   },
   "ready": {
-    "title": "Your trip readiness",
+    "metaTitle": "Your trip readiness — DiveDay",
     "namelessFallback": "there",
     "withTheShop": "With the shop",
     "allSetHeading": "You’re all set",
@@ -417,7 +418,7 @@
     "gearAndSetup": "Gear and setup"
   },
   "waiver": {
-    "title": "Complete your waiver",
+    "metaTitle": "Complete your waiver — DiveDay",
     "unavailableHeading": "This waiver link isn’t available",
     "unavailableBody": "Ask your dive shop for a fresh link.",
     "expiredHeading": "This waiver link has expired",
@@ -623,6 +624,7 @@
       "submit": "Set new password"
     },
     "signIn": {
+      "metaTitle": "Sign in — DiveDay",
       "title": "Welcome back",
       "description": "Sign in to run the shop.",
       "error": "That email and password don't match — give it another go.",

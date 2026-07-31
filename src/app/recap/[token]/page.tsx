@@ -41,10 +41,13 @@ const TIP_NOTICES: Record<string, { tone: "success" | "danger"; key: DiverMessag
 
 const TIP_PRESETS_USD = [5, 10, 20];
 
-export const metadata: Metadata = {
-  title: "Your dive recap — DiveDay",
-  robots: { index: false, follow: false },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = diverTranslator(await requestLocale());
+  return {
+    title: t("recap.metaTitle"),
+    robots: { index: false, follow: false },
+  };
+}
 
 function Notice({ title, text }: { title: string; text: string }) {
   return (

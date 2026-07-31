@@ -12,9 +12,10 @@ import { requestLocale } from "@/i18n/request";
 import { signIn } from "@/lib/auth";
 import { trialHref } from "@/lib/funnel";
 
-export const metadata: Metadata = {
-  title: "Sign in — DiveDay",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = diverTranslator(await requestLocale());
+  return { title: t("account.signIn.metaTitle") };
+}
 
 // Rate limiting lives in the Credentials provider's authorize() callback
 // (src/lib/auth.ts), not here — NextAuth invokes that for every credentials

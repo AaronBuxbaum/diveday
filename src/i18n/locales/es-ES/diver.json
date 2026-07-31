@@ -272,6 +272,7 @@
     "aggregate": "{average} sobre 5 · {count, plural, one {# opinión} other {# opiniones}}"
   },
   "recap": {
+    "metaTitle": "Tu resumen de la inmersión — DiveDay",
     "eyebrow": "Fin de la jornada",
     "greeting": "Buenas inmersiones, {name}.",
     "namelessFallback": "buceador",
@@ -326,7 +327,7 @@
     "reconstructedPath": "📍 Ruta del barco reconstruida visitando {count, plural, one {# punto de buceo} other {# puntos de buceo}}"
   },
   "ready": {
-    "title": "Tu preparación para la salida",
+    "metaTitle": "Tu preparación para la salida — DiveDay",
     "namelessFallback": "buceador",
     "withTheShop": "Con el centro",
     "allSetHeading": "Lo tienes todo listo",
@@ -417,7 +418,7 @@
     "gearAndSetup": "Equipo y ajuste"
   },
   "waiver": {
-    "title": "Completa tu exención de responsabilidad",
+    "metaTitle": "Completa tu exención de responsabilidad — DiveDay",
     "unavailableHeading": "Este enlace de exención no está disponible",
     "unavailableBody": "Pide a tu centro un enlace nuevo.",
     "expiredHeading": "Este enlace de exención ha caducado",
@@ -623,6 +624,7 @@
       "submit": "Guardar nueva contraseña"
     },
     "signIn": {
+      "metaTitle": "Iniciar sesión — DiveDay",
       "title": "Bienvenido de nuevo",
       "description": "Inicia sesión para llevar la tienda.",
       "error": "Ese correo y contraseña no coinciden — inténtalo de nuevo.",

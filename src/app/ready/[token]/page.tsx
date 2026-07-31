@@ -35,10 +35,13 @@ import {
   signWaiverFromReady,
 } from "./actions";
 
-export const metadata: Metadata = {
-  title: "Your trip readiness — DiveDay",
-  robots: { index: false, follow: false },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = diverTranslator(await requestLocale());
+  return {
+    title: t("ready.metaTitle"),
+    robots: { index: false, follow: false },
+  };
+}
 
 const STATE_STYLE: Record<
   ChecklistState,
