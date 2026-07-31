@@ -32,6 +32,7 @@ const PHOTO_NOTICES: Record<string, { tone: "success" | "danger"; key: DiverMess
 };
 
 const TIP_NOTICES: Record<string, { tone: "success" | "danger"; key: DiverMessageKey }> = {
+  paid: { tone: "success", key: "recap.tipThanksNotice" },
   cancelled: { tone: "danger", key: "recap.tipCancelled" },
   invalid: { tone: "danger", key: "recap.tipRange" },
   error: { tone: "danger", key: "recap.tipFailed" },
@@ -172,10 +173,55 @@ export default async function DiveRecapPage({
         </p>
       </EarnedMoment>
 
-      {/* The shop's own rating comes first: it's one tap, it stays on this
-          page, and it's the only review a diver can leave that DiveDay can
-          prove came from someone who was actually on the boat. The off-site
-          ask below it is a second, optional step, not the primary one. */}
+      {/* Memory before the ask: the crew shoutout, dive sites, and conditions
+          remind the diver why the day was good before anything asks them for
+          a rating, a tip, or a photo — earn the 5 before asking for it. */}
+      {shoutout ? (
+        <section className="mt-8 rounded-xl border border-primary/25 bg-primary/5 p-5">
+          <h2 className="text-sm font-medium tracking-widest text-primary uppercase">
+            {t("recap.fromYourCrew")}
+          </h2>
+          <p className="mt-2 text-base text-pretty">{shoutout}</p>
+        </section>
+      ) : null}
+
+      {sites.length ? (
+        <section className="mt-8">
+          <h2 className="text-lg font-semibold">{t("recap.whereYouDived")}</h2>
+          <RecapMap
+            sites={sites}
+            copy={{
+              mapAriaLabel: t("recap.mapAriaLabel"),
+              charterPath: t("recap.charterPath"),
+              boatTrack: t("recap.boatTrack"),
+              theDock: t("recap.theDock"),
+              reconstructedPath: t("recap.reconstructedPath", { count: sites.length }),
+            }}
+          />
+          <ul className="mt-4 space-y-3">
+            {sites.map((site) => (
+              <SiteCard key={site.name} site={site} lookForLabel={t("recap.lookFor")} />
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {conditions.length ? (
+        <section className="mt-8">
+          <h2 className="text-lg font-semibold">{t("recap.conditionsOnTheDay")}</h2>
+          <dl className="mt-3 grid gap-3 sm:grid-cols-3">
+            {conditions.map((tile) => (
+              <ConditionTile key={tile.label} label={tile.label} value={tile.value} />
+            ))}
+          </dl>
+        </section>
+      ) : null}
+
+      {/* Among the asks, the shop's own rating comes first: it's one tap, it
+          stays on this page, and it's the only review a diver can leave that
+          DiveDay can prove came from someone who was actually on the boat.
+          The off-site ask below it is a second, optional step, not the
+          primary one. */}
       <section className="mt-8 rounded-xl border border-border bg-surface p-5">
         <h2 className="text-lg font-semibold">{t("reviews.askHeading")}</h2>
         <p className="mt-1 text-base text-muted">{t("reviews.askBody")}</p>
@@ -258,6 +304,12 @@ export default async function DiveRecapPage({
           ) : null}
           {tip?.status === "paid" ? (
             <p className="mt-1 text-base text-muted">{t("recap.tipPaid", { shop: shop.name })}</p>
+          ) : tipParam === "paid" ? (
+            // Stripe already redirected the diver back with `?tip=paid`, but the
+            // webhook that flips `tip.status` to "paid" can lag a few seconds —
+            // never re-show the payment form or a stale checkout link in that
+            // window, which would read as "you still need to pay."
+            <p className="mt-1 text-base text-muted">{t("recap.tipConfirming")}</p>
           ) : tip?.status === "pending" && tip.checkoutUrl ? (
             <>
               <p className="mt-1 text-base text-muted">
@@ -297,47 +349,6 @@ export default async function DiveRecapPage({
               </form>
             </>
           ) : null}
-        </section>
-      ) : null}
-
-      {shoutout ? (
-        <section className="mt-8 rounded-xl border border-primary/25 bg-primary/5 p-5">
-          <h2 className="text-sm font-medium tracking-widest text-primary uppercase">
-            {t("recap.fromYourCrew")}
-          </h2>
-          <p className="mt-2 text-base text-pretty">{shoutout}</p>
-        </section>
-      ) : null}
-
-      {sites.length ? (
-        <section className="mt-8">
-          <h2 className="text-lg font-semibold">{t("recap.whereYouDived")}</h2>
-          <RecapMap
-            sites={sites}
-            copy={{
-              mapAriaLabel: t("recap.mapAriaLabel"),
-              charterPath: t("recap.charterPath"),
-              boatTrack: t("recap.boatTrack"),
-              theDock: t("recap.theDock"),
-              reconstructedPath: t("recap.reconstructedPath", { count: sites.length }),
-            }}
-          />
-          <ul className="mt-4 space-y-3">
-            {sites.map((site) => (
-              <SiteCard key={site.name} site={site} lookForLabel={t("recap.lookFor")} />
-            ))}
-          </ul>
-        </section>
-      ) : null}
-
-      {conditions.length ? (
-        <section className="mt-8">
-          <h2 className="text-lg font-semibold">{t("recap.conditionsOnTheDay")}</h2>
-          <dl className="mt-3 grid gap-3 sm:grid-cols-3">
-            {conditions.map((tile) => (
-              <ConditionTile key={tile.label} label={tile.label} value={tile.value} />
-            ))}
-          </dl>
         </section>
       ) : null}
 

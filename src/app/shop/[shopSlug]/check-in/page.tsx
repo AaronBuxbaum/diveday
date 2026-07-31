@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { Badge } from "@/components/ui/badge";
@@ -35,6 +36,11 @@ const noticeCopy: Record<
   not_found: { tone: "danger", key: "checkIn.notice.notFound" },
   staff_not_found: { tone: "danger", key: "checkIn.notice.staffNotFound" },
   invalid: { tone: "danger", key: "checkIn.notice.invalid" },
+  walkin_added: { tone: "success", key: "checkIn.notice.walkinAdded" },
+  walkin_full: { tone: "danger", key: "checkIn.notice.walkinFull" },
+  walkin_already: { tone: "neutral", key: "checkIn.notice.walkinAlready" },
+  walkin_unavailable: { tone: "danger", key: "checkIn.notice.walkinUnavailable" },
+  walkin_invalid: { tone: "danger", key: "checkIn.notice.walkinInvalid" },
 };
 
 export default async function CheckInPage({
@@ -65,6 +71,11 @@ export default async function CheckInPage({
         eyebrow={t("checkIn.eyebrow")}
         title={t("checkIn.title")}
         description={t("checkIn.description")}
+        actions={
+          <Link href={`/shop/${shopSlug}/check-in/walk-in`} className={buttonClass()}>
+            {t("checkIn.walkIn.title")}
+          </Link>
+        }
       />
 
       {copy ? (

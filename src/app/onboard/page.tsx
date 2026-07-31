@@ -67,9 +67,17 @@ export const metadata: Metadata = {
 export default async function OnboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; from?: string }>;
+  searchParams: Promise<{
+    error?: string;
+    from?: string;
+    shopName?: string;
+    shopSlug?: string;
+    timezone?: string;
+    ownerName?: string;
+    ownerEmail?: string;
+  }>;
 }) {
-  const { error, from } = await searchParams;
+  const { error, from, shopName, shopSlug, timezone, ownerName, ownerEmail } = await searchParams;
   // Which marketing page's "Start a trial" sent them here; the action reads it
   // back off the form for the trial_started funnel event.
   const source = eventSource(from);
@@ -127,6 +135,8 @@ export default async function OnboardPage({
                     name="shopName"
                     type="text"
                     required
+                    autoComplete="organization"
+                    defaultValue={shopName ?? ""}
                     placeholder={t("account.onboard.shopNamePlaceholder")}
                     className={controlClass}
                   />
@@ -136,6 +146,7 @@ export default async function OnboardPage({
                     name="shopSlug"
                     type="text"
                     required
+                    defaultValue={shopSlug ?? ""}
                     placeholder={t("account.onboard.shopLinkPlaceholder")}
                     pattern="^[a-z0-9-]+$"
                     title={t("account.onboard.shopLinkTitle")}
@@ -148,25 +159,51 @@ export default async function OnboardPage({
                   <select
                     name="timezone"
                     required
-                    defaultValue="America/New_York"
+                    defaultValue={timezone || "America/New_York"}
                     className={controlClass}
                   >
-                    <option value="America/New_York">
-                      {t("account.onboard.timezone.eastern")}
-                    </option>
-                    <option value="America/Chicago">{t("account.onboard.timezone.central")}</option>
-                    <option value="America/Denver">{t("account.onboard.timezone.mountain")}</option>
-                    <option value="America/Los_Angeles">
-                      {t("account.onboard.timezone.pacific")}
-                    </option>
-                    <option value="Europe/London">{t("account.onboard.timezone.london")}</option>
-                    <option value="Asia/Singapore">
-                      {t("account.onboard.timezone.singapore")}
-                    </option>
-                    <option value="Australia/Sydney">{t("account.onboard.timezone.sydney")}</option>
-                    <option value="Pacific/Auckland">
-                      {t("account.onboard.timezone.auckland")}
-                    </option>
+                    <optgroup label={t("account.onboard.timezoneGroup.americas")}>
+                      <option value="America/New_York">
+                        {t("account.onboard.timezone.eastern")}
+                      </option>
+                      <option value="America/Chicago">
+                        {t("account.onboard.timezone.central")}
+                      </option>
+                      <option value="America/Denver">
+                        {t("account.onboard.timezone.mountain")}
+                      </option>
+                      <option value="America/Los_Angeles">
+                        {t("account.onboard.timezone.pacific")}
+                      </option>
+                      <option value="Pacific/Honolulu">
+                        {t("account.onboard.timezone.hawaii")}
+                      </option>
+                    </optgroup>
+                    <optgroup label={t("account.onboard.timezoneGroup.caribbean")}>
+                      <option value="America/Cancun">{t("account.onboard.timezone.cancun")}</option>
+                      <option value="America/Puerto_Rico">
+                        {t("account.onboard.timezone.puertoRico")}
+                      </option>
+                      <option value="America/Nassau">{t("account.onboard.timezone.nassau")}</option>
+                    </optgroup>
+                    <optgroup label={t("account.onboard.timezoneGroup.europeRedSea")}>
+                      <option value="Europe/London">{t("account.onboard.timezone.london")}</option>
+                      <option value="Africa/Cairo">{t("account.onboard.timezone.cairo")}</option>
+                    </optgroup>
+                    <optgroup label={t("account.onboard.timezoneGroup.asiaPacific")}>
+                      <option value="Asia/Singapore">
+                        {t("account.onboard.timezone.singapore")}
+                      </option>
+                      <option value="Asia/Bangkok">{t("account.onboard.timezone.bangkok")}</option>
+                      <option value="Asia/Manila">{t("account.onboard.timezone.manila")}</option>
+                      <option value="Australia/Sydney">
+                        {t("account.onboard.timezone.sydney")}
+                      </option>
+                      <option value="Pacific/Auckland">
+                        {t("account.onboard.timezone.auckland")}
+                      </option>
+                      <option value="Pacific/Palau">{t("account.onboard.timezone.palau")}</option>
+                    </optgroup>
                   </select>
                 </Field>
               </FieldGrid>
@@ -182,6 +219,8 @@ export default async function OnboardPage({
                     name="ownerName"
                     type="text"
                     required
+                    autoComplete="name"
+                    defaultValue={ownerName ?? ""}
                     placeholder={t("account.onboard.fullNamePlaceholder")}
                     className={controlClass}
                   />
@@ -193,6 +232,8 @@ export default async function OnboardPage({
                     name="ownerEmail"
                     type="email"
                     required
+                    autoComplete="email"
+                    defaultValue={ownerEmail ?? ""}
                     placeholder={t("account.onboard.emailPlaceholder")}
                     className={controlClass}
                   />
@@ -202,6 +243,7 @@ export default async function OnboardPage({
                     name="ownerPassword"
                     type="password"
                     required
+                    autoComplete="new-password"
                     placeholder={t("account.onboard.passwordPlaceholder")}
                     minLength={8}
                     maxLength={72}

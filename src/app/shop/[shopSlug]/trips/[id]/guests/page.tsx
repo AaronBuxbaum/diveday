@@ -139,6 +139,11 @@ export default async function TripGuestsPage({
       ? bid
       : undefined;
   const cancelled = trip.status === "cancelled";
+  const capacityLabelValue = capacityLabel(trip);
+  const capacityText =
+    capacityLabelValue.kind === "full"
+      ? t("shared.capacity.full")
+      : t("shared.capacity.spotsLeft", { count: capacityLabelValue.remaining });
   const rentalFitByBooking = new Map(prepDivers.map((row) => [row.bookingId, row.fit] as const));
   const nitroxByBooking = new Map(
     prepDivers
@@ -173,7 +178,7 @@ export default async function TripGuestsPage({
                 // (design/principles.md #3) — "success" stands out where
                 // "neutral" would recede.
                 <Badge tone={isFull(trip) ? "success" : "primary"} tabularNums>
-                  {capacityLabel(trip)}
+                  {capacityText}
                 </Badge>
               )}
               <span className="text-muted">

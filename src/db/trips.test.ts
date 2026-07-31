@@ -665,6 +665,50 @@ describe("paged schedule queries", () => {
     expect(range.first?.getTime()).toBe(all[0]?.startsAt.getTime());
     expect(range.last?.getTime()).toBe(all.at(-1)?.startsAt.getTime());
   });
+
+  it("bounds the page to an explicit month, so the list can follow the calendar", async () => {
+    const { db, shop } = await seededShopContext();
+    const now = new Date("2030-07-01T00:00:00.000Z");
+
+    const august = await createTrip(db, {
+      shopId: shop.id,
+      title: "August trip",
+      startsAt: new Date("2030-08-15T12:00:00Z"),
+      endsAt: new Date("2030-08-15T16:00:00Z"),
+      capacity: 4,
+    });
+    const september = await createTrip(db, {
+      shopId: shop.id,
+      title: "September trip",
+      startsAt: new Date("2030-09-15T12:00:00Z"),
+      endsAt: new Date("2030-09-15T16:00:00Z"),
+      capacity: 4,
+    });
+    if (!august || !september) throw new Error("trip not created");
+
+    const augustPage = await pagedUpcomingTripsWithCounts(db, shop.id, {
+      now,
+      monthStart: new Date("2030-08-01T00:00:00Z"),
+      monthEnd: new Date("2030-09-01T00:00:00Z"),
+    });
+    expect(augustPage.trips.map((t) => t.id)).toEqual([august.id]);
+    expect(augustPage.nextCursor).toBeNull();
+
+    const septemberPage = await pagedUpcomingTripsWithCounts(db, shop.id, {
+      now,
+      monthStart: new Date("2030-09-01T00:00:00Z"),
+      monthEnd: new Date("2030-10-01T00:00:00Z"),
+    });
+    expect(septemberPage.trips.map((t) => t.id)).toEqual([september.id]);
+
+    // A month bound that starts before `now` still respects `now` as the floor.
+    const augustFromLaterNow = await pagedUpcomingTripsWithCounts(db, shop.id, {
+      now: new Date("2030-08-16T00:00:00Z"),
+      monthStart: new Date("2030-08-01T00:00:00Z"),
+      monthEnd: new Date("2030-09-01T00:00:00Z"),
+    });
+    expect(augustFromLaterNow.trips).toHaveLength(0);
+  });
 });
 
 describe("trip crew (CR-007: cross-tenant write path)", () => {

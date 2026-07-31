@@ -21,6 +21,7 @@
     "noTrips": "Todavía no hay salidas programadas",
     "noTripsStaff": "El tablón está vacío. Programa la primera salida y los buceadores podrán reservar.",
     "noTripsPublic": "Vuelve pronto — o llámanos y te buscamos un barco.",
+    "noTripsMonth": "No hay salidas este mes — prueba otro mes en el calendario de arriba.",
     "showLater": "Ver salidas posteriores",
     "backToNext": "← Volver a la próxima salida",
     "courseSession": "Sesión de curso",
@@ -276,6 +277,8 @@
     "tipCancelled": "Sin problema — no se ha cobrado la propina.",
     "tipRange": "Introduce una propina de entre 1 y 500 $.",
     "tipFailed": "No ha salido bien — inténtalo de nuevo en un momento.",
+    "tipThanksNotice": "¡Gracias por la propina a la tripulación! 🤿",
+    "tipConfirming": "Estamos confirmando tu pago con Stripe — normalmente tarda unos segundos. Actualiza la página si no se actualiza solo.",
     "photoLimit": "Es el máximo de fotos que admite un resumen ({max}).",
     "loggedAt": "Has registrado {count, plural, one {una inmersión} other {# inmersiones}} en {where}.",
     "loggedToday": "Has registrado {count, plural, one {una inmersión} other {# inmersiones}} hoy.",
@@ -617,15 +620,29 @@
       "shopLinkPlaceholder": "p. ej. green-lagoon",
       "shopLinkTitle": "Letras minúsculas, números y guiones — esto se convierte en la dirección web de tu tienda",
       "timezoneLabel": "Zona horaria",
+      "timezoneGroup": {
+        "americas": "América",
+        "caribbean": "Caribe y México",
+        "europeRedSea": "Europa y mar Rojo",
+        "asiaPacific": "Asia-Pacífico"
+      },
       "timezone": {
         "eastern": "Hora del Este (Nueva York)",
         "central": "Hora Central (Chicago)",
         "mountain": "Hora de Montaña (Denver)",
         "pacific": "Hora del Pacífico (Los Ángeles)",
+        "hawaii": "Hawái (Honolulu)",
+        "cancun": "Cancún / Cozumel",
+        "puertoRico": "Puerto Rico / Caribe oriental",
+        "nassau": "Nasáu, Bahamas",
         "london": "Londres",
+        "cairo": "El Cairo / mar Rojo",
         "singapore": "Singapur",
+        "bangkok": "Bangkok",
+        "manila": "Manila",
         "sydney": "Sídney",
-        "auckland": "Auckland"
+        "auckland": "Auckland",
+        "palau": "Palaos"
       },
       "youSectionTitle": "Tú",
       "fullNameLabel": "Nombre completo",
@@ -842,7 +859,8 @@
     "nightDive": "Inmersión nocturna",
     "tomorrowTime": "Mañana · 7:30",
     "fridayTime": "Viernes · 19:30",
-    "spotsLeft": "{count, plural, one {queda # plaza} other {quedan # plazas}}"
+    "spotsLeft": "{count, plural, one {queda # plaza} other {quedan # plazas}}",
+    "full": "Completo"
   },
   "demo": {
     "shopLabel": "Tienda de demostración",
@@ -919,7 +937,7 @@
       "exportDescription1": "DiveDay es nuevo, y no deberías tener que confiar a ciegas en un proveedor nuevo. Por eso la salida ya está incluida. {claim} {terms}",
       "exportDescription2": "¿Llegas en vez de irte? Trae la hoja de cálculo que ya llevas — el importador mapea tus columnas y muestra exactamente qué se traslada, y qué honestamente no, antes de guardar una sola fila. O pásanos la hoja y traemos a tus buceadores contigo, gratis.",
       "spreadsheetLink": "¿Llevas el día en una hoja de cálculo? Mira cómo se traslada →",
-      "switchingLink": "¿Cambias desde EVE, DiveShop360, DiveAdmin o Smartwaiver? Lee las guías →",
+      "switchingLink": "¿Cambias desde {competitors}? Lee las guías →",
       "inExportEyebrow": "En la exportación",
       "exportItem1": "Un ZIP de archivos CSV documentados, descargado desde Ajustes por ti",
       "exportItem2": "Buceadores, reservas, registros de descargo y historial de pagos",
@@ -1108,7 +1126,7 @@
         },
         "switching": {
           "question": "¿Qué implica realmente cambiarse a DiveDay?",
-          "answer": "Exporta una hoja de cálculo de clientes de tu sistema actual, y el importador de DiveDay trae a tus buceadores, sus tarjetas de certificación, sus tallas de alquiler y cualquier descargo que tu sistema anterior ya tuviera firmado — mostrándote exactamente qué va a pasar antes de guardar nada. Cuando reconoce un correo, actualiza al buceador existente en vez de duplicarlo. Las tarjetas importadas llegan como reclamaciones para que tu personal las verifique; un descargo que tu sistema anterior ya tenía firmado llega marcado como importado, así que nadie tiene que firmarlo de nuevo. Hay guías paso a paso para EVE, DiveShop360, DiveAdmin y Smartwaiver."
+          "answer": "Exporta una hoja de cálculo de clientes de tu sistema actual, y el importador de DiveDay trae a tus buceadores, sus tarjetas de certificación, sus tallas de alquiler y cualquier descargo que tu sistema anterior ya tuviera firmado — mostrándote exactamente qué va a pasar antes de guardar nada. Cuando reconoce un correo, actualiza al buceador existente en vez de duplicarlo. Las tarjetas importadas llegan verificadas y marcadas como importadas, listas para confirmar con un toque; un descargo que tu sistema anterior ya tenía firmado llega marcado como importado, así que nadie tiene que firmarlo de nuevo. Hay guías paso a paso para {competitors}."
         },
         "agency": {
           "question": "¿DiveDay se conecta con PADI o SSI?",
@@ -1130,6 +1148,11 @@
       "stillQuestion": "¿Sigues teniendo una pregunta que las FAQ no responden? Las tiendas fundadoras tienen una línea directa con el fundador — úsala, siempre es bienvenida.",
       "emailCta": "Escribe a {email}"
     }
+  },
+  "notFound": {
+    "heading": "No pudimos encontrar esa página",
+    "body": "El enlace puede ser antiguo, o la página puede haberse movido. Comprueba la dirección o vuelve a la página de inicio.",
+    "backHome": "Volver a la página de inicio"
   },
   "notifications": {
     "brief": {

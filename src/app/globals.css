@@ -25,6 +25,10 @@
   --primary: #0e7490;
   --primary-hover: #155e75;
   --primary-foreground: #ffffff;
+  /* Derived, not redeclared per skin: resolves against whichever --primary is
+     in scope (default/dark/boat-mode/glare-mode), same lazy-substitution
+     behavior the color-mix()s elsewhere in this file rely on. */
+  --primary-sunken: color-mix(in srgb, var(--primary) 65%, black);
 
   /* Accent — coral, used sparingly for moments of delight */
   --accent: #ff6f61;
@@ -34,6 +38,7 @@
   --success: #15803d;
   --warning: #b45309;
   --danger: #b91c1c;
+  --info: #4338ca;
 
   /* Shape & motion */
   --radius: 0.75rem;
@@ -66,6 +71,7 @@
     --success: #4ade80;
     --warning: #fbbf24;
     --danger: #f87171;
+    --info: #818cf8;
   }
 }
 
@@ -80,11 +86,13 @@
   --color-primary: var(--primary);
   --color-primary-hover: var(--primary-hover);
   --color-primary-foreground: var(--primary-foreground);
+  --color-primary-sunken: var(--primary-sunken);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-danger: var(--danger);
+  --color-info: var(--info);
   --radius-lg: var(--radius);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
@@ -136,6 +144,7 @@ body {
   --success: #166534;
   --warning: #92400e;
   --danger: #991b1b;
+  --info: #3730a3;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -154,6 +163,7 @@ body {
     --success: #5ce68f;
     --warning: #fcc63a;
     --danger: #fb8888;
+    --info: #a5b4fc;
   }
 }
 
@@ -256,6 +266,7 @@ summary {
     --success: #111827;
     --warning: #111827;
     --danger: #000000;
+    --info: #111827;
   }
 
   html {
@@ -378,6 +389,7 @@ summary {
   --success: #15803d;
   --warning: #b45309;
   --danger: #b91c1c;
+  --info: #3730a3;
 
   /* biome-ignore lint/complexity/noImportantStyles: glare-mode overrides need !important to scale any text sizing */
   font-size: 16px !important;
@@ -458,6 +470,7 @@ summary {
     --success: #4ade80;
     --warning: #fbbf24;
     --danger: #f87171;
+    --info: #a5b4fc;
   }
 }
 

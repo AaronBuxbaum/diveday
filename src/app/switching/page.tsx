@@ -9,13 +9,23 @@ import { SwitchingConcierge } from "@/components/SwitchingConcierge";
 import { buttonClass } from "@/components/ui/button";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
+import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
 import { trialHref } from "@/lib/funnel";
 import { MIGRATION_GUIDES } from "@/lib/migration-guides";
 
+// Generated from the migration-guides registry, never hand-listed, so a new
+// guide can't be silently omitted from this page's own metadata. `metadata`
+// is a static export (no `generateMetadata` here), so this stays fixed to the
+// default locale — consistent with the rest of this file's un-negotiated
+// metadata, and the reason this reaches for the named constant rather than a
+// literal (pnpm check:locale bans the literal outright).
+const metadataCompetitors = new Intl.ListFormat(DEFAULT_DIVER_LOCALE, {
+  type: "disjunction",
+}).format(MIGRATION_GUIDES.map((guide) => guide.competitor));
+
 export const metadata: Metadata = {
   title: "Switching guides — DiveDay",
-  description:
-    "On a spreadsheet, or leaving EVE, DiveShop360, DiveAdmin, or Smartwaiver? Step-by-step guides to bring your divers, cards, and sizes into DiveDay — with an honest account of what comes across.",
+  description: `On a spreadsheet, or leaving ${metadataCompetitors}? Step-by-step guides to bring your divers, cards, and sizes into DiveDay — with an honest account of what comes across.`,
 };
 
 export default async function SwitchHubPage() {

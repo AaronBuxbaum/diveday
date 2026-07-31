@@ -1378,16 +1378,22 @@ export const SCHEDULE_PAGE_SIZE = 50;
  * then id for a stable tiebreak). `upcomingTripsWithCounts` stays for callers
  * that genuinely need every upcoming trip in memory; the page never should —
  * a busy shop's board grows without bound.
+ *
+ * `monthStart`/`monthEnd` bound the page to a single shop-local month — the
+ * diver calendar passes both when it's on an explicit `?month=` so the list
+ * below it shows the same month instead of drifting back to "next N trips
+ * from now" (the calendar/list desync this closes).
  */
 export async function pagedUpcomingTripsWithCounts(
   db: AppDb,
   shopId: string,
-  options: { cursor?: string; limit?: number; now?: Date } = {},
+  options: { cursor?: string; limit?: number; now?: Date; monthStart?: Date; monthEnd?: Date } = {},
 ): Promise<{ trips: TripWithBookedCount[]; nextCursor: string | null }> {
   const now = options.now ?? nowDate();
   const limit = options.limit ?? SCHEDULE_PAGE_SIZE;
   const after = decodeCursor(options.cursor);
   const afterDate = after ? new Date(after[0]) : null;
+  const lowerBound = options.monthStart && options.monthStart > now ? options.monthStart : now;
 
   const rows = await db
     .select({
@@ -1404,7 +1410,8 @@ export async function pagedUpcomingTripsWithCounts(
       and(
         eq(trips.shopId, shopId),
         eq(trips.status, "scheduled"),
-        gte(trips.startsAt, now),
+        gte(trips.startsAt, lowerBound),
+        options.monthEnd ? lt(trips.startsAt, options.monthEnd) : undefined,
         afterDate && after && !Number.isNaN(afterDate.getTime())
           ? or(
               gt(trips.startsAt, afterDate),

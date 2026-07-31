@@ -524,6 +524,12 @@ for (const scheme of ["light", "dark"] as const) {
           .waitFor();
         await capture(page, "today", scheme);
 
+        // The fast walk-in flow: pick today's boat, then search or hand-enter
+        // a diver — no trip page detour, no required email at the counter.
+        await page.goto("/shop/blue-mantis/check-in/walk-in");
+        await page.getByRole("heading", { name: "Walk-in", level: 1 }).waitFor();
+        await capture(page, "check-in-walk-in", scheme);
+
         // The staff schedule as a builder: departures grouped by day, each row
         // carrying its own move/copy/remove controls and its crew.
         await page.goto("/shop/blue-mantis/schedule");

@@ -23,14 +23,21 @@ import {
 } from "./schema";
 
 /**
- * A booking names its diver one of two ways: a walk-in supplies a name and
- * email (deduped/created), or a returning diver is picked by identity so the
- * one person row — with its certs, waivers, rental fit, and history — is
- * reused instead of re-typed. "Enter once, reuse everywhere."
+ * A booking names its diver one of two ways: a walk-in supplies a name (and,
+ * usually, an email — deduped/created), or a returning diver is picked by
+ * identity so the one person row — with its certs, waivers, rental fit, and
+ * history — is reused instead of re-typed. "Enter once, reuse everywhere."
+ *
+ * Email is optional on the name path: a counter walk-in the crew can't wait
+ * to ask for an address gets a fresh person row with no email on file, the
+ * same as `createDiver` (src/db/divers.ts) already allows outside a booking —
+ * `people.email` is nullable precisely for this (schema.ts). There is
+ * nothing to dedup against without one, so a later booking with the same name
+ * and still no email creates its own row rather than guessing an identity.
  */
 export type BookingPerson =
   | { personId: string }
-  | { fullName: string; email: string; phone?: string };
+  | { fullName: string; email?: string; phone?: string };
 
 export type BookingRequest = {
   shopId: string;
@@ -186,12 +193,13 @@ async function createBookingRecord(db: AppDb, req: BookingRequest): Promise<Book
   // attached to a record that's invisible on the roster. Any new walk-in row is
   // only written after the capacity gate passes (`pendingInsert`).
   let person: typeof people.$inferSelect | undefined;
-  let pendingInsert: { fullName: string; email: string; phone?: string } | null = null;
+  let pendingInsert: { fullName: string; email: string | null; phone?: string } | null = null;
   // Set when this booking reused an existing person by email but the submitted
   // name did not match — a possible shared-inbox / different-human signal that
   // must not silently inherit the matched person's evidence (H-13). Only the
   // by-email path can raise it; the identity path re-books a diver picked from
-  // their own record and submits no name to disagree with.
+  // their own record and submits no name to disagree with, and a fresh
+  // no-email row has no prior identity to disagree with either.
   let identityUnconfirmed = false;
   if ("personId" in req) {
     [person] = await tx
@@ -204,18 +212,26 @@ async function createBookingRecord(db: AppDb, req: BookingRequest): Promise<Book
     // A copied URL or a since-removed diver must not book into this tenant.
     if (!person) return { ok: false, reason: "person_not_found" };
   } else {
-    const email = req.email.trim().toLowerCase();
-    [person] = await tx
-      .select()
-      .from(people)
-      .where(and(eq(people.shopId, req.shopId), eq(people.email, email), isNull(people.deletedAt)))
-      .limit(1);
-    if (person) {
-      // Reuse-by-email before the capacity gate: flag a name that doesn't match
-      // the person already on file for this address.
-      identityUnconfirmed = !personNamesMatch(person.fullName, req.fullName);
+    const email = req.email?.trim().toLowerCase() || null;
+    if (email) {
+      [person] = await tx
+        .select()
+        .from(people)
+        .where(
+          and(eq(people.shopId, req.shopId), eq(people.email, email), isNull(people.deletedAt)),
+        )
+        .limit(1);
+      if (person) {
+        // Reuse-by-email before the capacity gate: flag a name that doesn't match
+        // the person already on file for this address.
+        identityUnconfirmed = !personNamesMatch(person.fullName, req.fullName);
+      } else {
+        pendingInsert = { fullName: req.fullName.trim(), email, phone: req.phone };
+      }
     } else {
-      pendingInsert = { fullName: req.fullName.trim(), email, phone: req.phone };
+      // No email to dedup against — matching createDiver (src/db/divers.ts),
+      // this always gets a fresh person row rather than guessing an identity.
+      pendingInsert = { fullName: req.fullName.trim(), email: null, phone: req.phone };
     }
   }
 
@@ -284,12 +300,35 @@ async function createBookingRecord(db: AppDb, req: BookingRequest): Promise<Book
   }
 
   if (!person && pendingInsert) {
-    // Under concurrency this can still resolve to an existing row (a racing
-    // insert won); `nameMatches` reflects the row that actually landed, so a
-    // simultaneous shared-inbox booking is flagged the same as a serial one.
-    const resolved = await findOrCreatePerson(tx, { shopId: req.shopId, ...pendingInsert });
-    person = resolved.person;
-    identityUnconfirmed = !resolved.nameMatches;
+    if (pendingInsert.email) {
+      // Under concurrency this can still resolve to an existing row (a racing
+      // insert won); `nameMatches` reflects the row that actually landed, so a
+      // simultaneous shared-inbox booking is flagged the same as a serial one.
+      const resolved = await findOrCreatePerson(tx, {
+        shopId: req.shopId,
+        fullName: pendingInsert.fullName,
+        email: pendingInsert.email,
+        phone: pendingInsert.phone,
+      });
+      person = resolved.person;
+      identityUnconfirmed = !resolved.nameMatches;
+    } else {
+      // No email means no `people_shop_email_unique` row to race for (that
+      // index is partial — null emails never collide, schema.ts) — a plain
+      // insert, same shape as findOrCreatePerson's own insert branch.
+      const [inserted] = await tx
+        .insert(people)
+        .values({
+          shopId: req.shopId,
+          fullName: pendingInsert.fullName,
+          email: null,
+          phone: pendingInsert.phone,
+        })
+        .returning();
+      if (!inserted) throw new Error("createBookingRecord: person insert returned no row");
+      await tx.insert(personRoles).values({ personId: inserted.id, role: "diver" });
+      person = inserted;
+    }
   }
   // Only reachable on the identity path if the row vanished mid-transaction;
   // the walk-in path always has a pendingInsert. Guards the non-null uses below.

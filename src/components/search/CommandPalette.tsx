@@ -27,6 +27,7 @@ export type CommandPaletteCopy = {
   goToSettings: string;
   goToWaivers: string;
   goToBoarding: string;
+  goToWalkIn: string;
 };
 
 /**
@@ -107,6 +108,7 @@ export function CommandPalette({
     }
     const baseGoTo: { label: string; suffix: string }[] = [
       { label: copy.goToToday, suffix: "" },
+      { label: copy.goToWalkIn, suffix: "/check-in/walk-in" },
       { label: copy.goToBlockers, suffix: "/blockers" },
       { label: copy.goToSchedule, suffix: "/schedule" },
       { label: copy.goToDivers, suffix: "/divers" },

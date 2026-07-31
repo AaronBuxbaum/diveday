@@ -147,6 +147,7 @@ export function BookSpotSection({
   locale: string;
 }) {
   const t = useTranslations("booking");
+  const tRoot = useTranslations();
   const usd = new Intl.NumberFormat(locale, { style: "currency", currency: "USD" });
   const [state, formAction] = useActionState(bookSpot.bind(null, tripRef), INITIAL_BOOKING_STATE);
   const bookLabel = payAtBooking
@@ -156,11 +157,16 @@ export function BookSpotSection({
     : remaining === 1
       ? t("bookLastSpot")
       : t("bookSpots");
+  const capacityLabelValue = capacityLabel(trip);
+  const capacityText =
+    capacityLabelValue.kind === "full"
+      ? tRoot("fallback.full")
+      : tRoot("fallback.spotsLeft", { count: capacityLabelValue.remaining });
   return (
     <section id="book" className="mt-10">
       <div className="flex items-baseline justify-between gap-3">
         <h2 className="text-lg font-semibold">{t("heading")}</h2>
-        <span className="text-sm font-medium text-primary tabular-nums">{capacityLabel(trip)}</span>
+        <span className="text-sm font-medium text-primary tabular-nums">{capacityText}</span>
       </div>
       {payAtBooking && perDiverPriceCents ? (
         <p className="mt-1 text-sm text-muted">

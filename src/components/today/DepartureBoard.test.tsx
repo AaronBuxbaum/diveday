@@ -20,6 +20,8 @@ const COPY: DepartureBoardCopy = {
   assignCrewOption: "Assign crew…",
   unassignAria: "Unassign {name}",
   noCrewAssigned: "No crew assigned. Drag staff from above here.",
+  assignCrewLabel: "Assign crew",
+  assignFailed: "That didn’t save — recheck your connection or try again.",
   countReady: "Ready",
   countBlocked: "Blocked",
   countBoarded: "Boarded",
@@ -72,6 +74,10 @@ describe("DepartureBoard Drag and Drop Crew Assign", () => {
 
     expect(screen.getByRole("button", { name: /unassign keiko tanaka/i })).toBeInTheDocument();
     expect(screen.getByText("Sal Moretti 👤")).toBeInTheDocument();
+    // The dropdown is the primary way to crew a boat — its label must be
+    // visible on the page, not only reachable via aria-label, since
+    // drag-and-drop above it doesn't work on a phone.
+    expect(screen.getByText(COPY.assignCrewLabel)).toBeVisible();
   });
 
   it("optimistically adds crew on drop and calls updateCrewAction", async () => {
@@ -167,6 +173,8 @@ describe("DepartureBoard Drag and Drop Crew Assign", () => {
     });
 
     expect(screen.queryByRole("button", { name: /unassign sal moretti/i })).toBeNull();
+    // A silent revert reads as "nothing happened" — the rollback must say so.
+    expect(screen.getByRole("alert")).toHaveTextContent(COPY.assignFailed);
   });
 
   it("rolls back crew assignment when updateCrewAction throws", async () => {
@@ -197,6 +205,7 @@ describe("DepartureBoard Drag and Drop Crew Assign", () => {
     });
 
     expect(screen.queryByRole("button", { name: /unassign sal moretti/i })).toBeNull();
+    expect(screen.getByRole("alert")).toHaveTextContent(COPY.assignFailed);
   });
 
   it("optimistically removes crew on unassign button click and calls updateCrewAction", async () => {

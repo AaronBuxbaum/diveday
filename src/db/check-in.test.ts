@@ -2,7 +2,7 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
-import { checkInBooking, listCheckInQueue } from "./check-in";
+import { checkInBooking, listCheckInQueue, listWalkInTrips } from "./check-in";
 import { listTripsReadiness } from "./readiness";
 import { bookings } from "./schema";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
@@ -39,6 +39,16 @@ describe("counter check-in", () => {
     const searched = await listCheckInQueue(db, shop.id, { query: "Priya Sharma" });
     expect(searched).toHaveLength(1);
     expect(searched[0]?.readiness.status).toBe("blocked");
+  });
+
+  it("offers the same day-of trips for a walk-in as the check-in queue reads", async () => {
+    const { db, shop, reef } = await context();
+    const options = await listWalkInTrips(db, shop.id);
+    expect(options.length).toBeGreaterThan(0);
+    expect(options.map((o) => o.tripId)).toContain(reef.id);
+    const reefOption = options.find((o) => o.tripId === reef.id);
+    expect(reefOption?.capacity).toBe(reef.capacity);
+    expect(reefOption?.booked).toBe(reef.booked);
   });
 
   it("rechecks readiness, records a successful check-in, and is idempotent", async () => {

@@ -81,6 +81,49 @@ describe("createBooking (in-memory PGlite)", () => {
     expect(matches).toHaveLength(1);
   });
 
+  it("books a counter walk-in with no email on file, never deduping two of them together", async () => {
+    const { db, shop, open } = await seededContext();
+    const trips = await upcomingTripsWithCounts(db, shop.id);
+    const night = trips.find((t) => t.title.startsWith("Night Dive"));
+    if (!night) throw new Error("night trip missing");
+
+    const first = await createBooking(db, {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: open.id,
+      fullName: "Walk-in Diver",
+    });
+    expect(first).toMatchObject({ ok: true, personName: "Walk-in Diver" });
+
+    // A second walk-in booked under the exact same name, still no email — with
+    // nothing to dedup against, this must never collapse onto the first
+    // person's row (that would attach a stranger's booking to their history).
+    const second = await createBooking(db, {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: night.id,
+      fullName: "Walk-in Diver",
+    });
+    expect(second).toMatchObject({ ok: true, personName: "Walk-in Diver" });
+    if (!first.ok || !second.ok) throw new Error("expected both bookings to succeed");
+
+    const rows = await db
+      .select()
+      .from(people)
+      .where(and(eq(people.shopId, shop.id), eq(people.fullName, "Walk-in Diver")));
+    expect(rows).toHaveLength(2);
+    expect(rows.every((row) => row.email === null)).toBe(true);
+
+    const roster = await getTripRoster(db, shop.id, open.id);
+    const walkIn = roster.find((r) => r.person.fullName === "Walk-in Diver");
+    if (!walkIn) throw new Error("walk-in not on roster");
+    const roles = await db
+      .select()
+      .from(personRoles)
+      .where(eq(personRoles.personId, walkIn.person.id));
+    expect(roles.map((r) => r.role)).toContain("diver");
+  });
+
   it("rejects a full trip", async () => {
     const { db, shop, fullTrip } = await seededContext();
     const outcome = await bookVisitor(db, shop.id, fullTrip.id);

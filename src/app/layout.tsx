@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Noto_Sans_Symbols_2 } from "next/font/google";
 import "./globals.css";
+import { requestLocale } from "@/i18n/request";
 import { publicAppUrl } from "@/lib/notifications";
 import { Observability } from "./observability-client";
 
@@ -51,14 +52,15 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const locale = await requestLocale();
   return (
     <html
-      lang="en"
+      lang={locale}
       className={`${geistSans.variable} ${geistMono.variable} ${notoSymbols.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">

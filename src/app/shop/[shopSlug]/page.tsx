@@ -5,11 +5,14 @@ import { Suspense } from "react";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { DepartureBoard } from "@/components/today/DepartureBoard";
+import { FirstRunChecklist } from "@/components/today/FirstRunChecklist";
 import { TodayQueue } from "@/components/today/TodayQueue";
 import { YourSessions } from "@/components/today/YourSessions";
 import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
+import { listDiveSites } from "@/db/dive-sites";
 import { getShopById } from "@/db/shops";
+import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { getTodayWork } from "@/db/today";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -17,6 +20,7 @@ import { GREETING_KEYS, summarizeDayText } from "@/i18n/today-labels";
 import { trackEvent } from "@/lib/analytics";
 import { nowDate } from "@/lib/clock";
 import { formatShortDate, formatTime } from "@/lib/format";
+import { publicAppUrl } from "@/lib/notifications";
 import { requireStaffSession } from "@/lib/session";
 import { getTimeOfDayGreeting, leadWithCrewed, roleLensFor, summarizeDay } from "@/lib/today";
 import { inviteWaitlistAction, updateTripCrewAction } from "./trips/[id]/actions";
@@ -99,6 +103,13 @@ async function TodayBody({
     t,
   );
   const { actions, nextDeparture, crewedTripIds, crewedSessions, availableStaff } = work;
+  // The first-run checklist only matters for a real shop with nothing on the
+  // books yet — for any other visit these two extra queries never run.
+  const showFirstRunChecklist = !shop.isDemo && !nextDeparture;
+  const [firstRunDiveSites, firstRunStripeAccount] = showFirstRunChecklist
+    ? await Promise.all([listDiveSites(db, shop.id), getShopStripeAccount(db, shop.id)])
+    : [null, null];
+  const firstRunOrigin = showFirstRunChecklist ? publicAppUrl() : null;
   const crewedSet = new Set(crewedTripIds);
   const departures = lens === "boat" ? leadWithCrewed(work.departures, crewedSet) : work.departures;
   // Blocker frequency, after the response so it never delays the queue: how many
@@ -188,6 +199,8 @@ async function TodayBody({
           assignCrewOption: t("shared.today.departureBoard.assignCrewOption"),
           unassignAria: t("shared.today.departureBoard.unassignAria"),
           noCrewAssigned: t("shared.today.departureBoard.noCrewAssigned"),
+          assignCrewLabel: t("shared.today.departureBoard.assignCrewLabel"),
+          assignFailed: t("shared.today.departureBoard.assignFailed"),
           countReady: t("shared.today.departureBoard.countReady"),
           countBlocked: t("shared.today.departureBoard.countBlocked"),
           countBoarded: t("shared.today.departureBoard.countBoarded"),
@@ -226,7 +239,7 @@ async function TodayBody({
                 time: formatTime(nextDeparture.startsAt, locale, shop.timezone),
               })}
             </p>
-          ) : (
+          ) : !showFirstRunChecklist ? (
             <>
               <p className="mt-1 text-muted">{t("shopHome.noDeparturesEmpty")}</p>
               <Link
@@ -236,8 +249,49 @@ async function TodayBody({
                 {t("shopHome.scheduleTrip")}
               </Link>
             </>
-          )}
+          ) : null}
         </section>
+      ) : null}
+
+      {showFirstRunChecklist ? (
+        <FirstRunChecklist
+          shopSlug={shopSlug}
+          scheduleUrl={
+            // No configured APP_HOST (local dev, some test environments) means
+            // no origin to build an absolute URL from — fall back to the path
+            // alone rather than crash the whole page on a malformed base URL.
+            firstRunOrigin
+              ? new URL(`/shop/${shopSlug}/schedule`, `${firstRunOrigin}/`).toString()
+              : `/shop/${shopSlug}/schedule`
+          }
+          contactDone={Boolean(shop.contactEmail || shop.contactPhone)}
+          diveSiteCount={firstRunDiveSites?.length ?? 0}
+          stripeDone={canAcceptPayments(firstRunStripeAccount)}
+          copy={{
+            heading: t("shopHome.firstRun.heading"),
+            subtitle: t("shopHome.firstRun.subtitle"),
+            contactTitle: t("shopHome.firstRun.contactTitle"),
+            contactBody: t("shopHome.firstRun.contactBody"),
+            contactAction: t("shopHome.firstRun.contactAction"),
+            contactDone: t("shopHome.firstRun.contactDone"),
+            siteTitle: t("shopHome.firstRun.siteTitle"),
+            siteBody: t("shopHome.firstRun.siteBody"),
+            siteAction: t("shopHome.firstRun.siteAction"),
+            siteDone: t("shopHome.firstRun.siteDone", { count: firstRunDiveSites?.length ?? 0 }),
+            tripTitle: t("shopHome.firstRun.tripTitle"),
+            tripBody: t("shopHome.firstRun.tripBody"),
+            tripAction: t("shopHome.firstRun.tripAction"),
+            scheduleTitle: t("shopHome.firstRun.scheduleTitle"),
+            scheduleBody: t("shopHome.firstRun.scheduleBody"),
+            scheduleCopy: t("shopHome.firstRun.scheduleCopy"),
+            scheduleCopied: t("shopHome.firstRun.scheduleCopied"),
+            stripeTitle: t("shopHome.firstRun.stripeTitle"),
+            stripeBody: t("shopHome.firstRun.stripeBody"),
+            stripeAction: t("shopHome.firstRun.stripeAction"),
+            stripeDone: t("shopHome.firstRun.stripeDone"),
+            doneBadge: t("shopHome.firstRun.doneBadge"),
+          }}
+        />
       ) : null}
 
       <TodayQueue

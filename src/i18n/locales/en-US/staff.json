@@ -1883,7 +1883,38 @@
       "notBookable": "That booking is no longer available for check-in.",
       "notFound": "That booking could not be found.",
       "staffNotFound": "Your staff access could not be confirmed.",
-      "invalid": "Choose a diver from the queue before checking in."
+      "invalid": "Choose a diver from the queue before checking in.",
+      "walkinAdded": "Added and on the boat.",
+      "walkinFull": "That boat is full — try the wait list from its trip page instead.",
+      "walkinAlready": "That diver is already on this boat.",
+      "walkinUnavailable": "That boat isn’t taking walk-ins right now — check its trip page for why.",
+      "walkinInvalid": "Choose a boat and enter a name before adding a walk-in."
+    },
+    "walkIn": {
+      "eyebrow": "Counter mode",
+      "title": "Walk-in",
+      "description": "Pick today’s boat, then find the diver or add them fresh — no email required at the counter.",
+      "backToQueue": "Back to check-in",
+      "tripLabel": "Which boat?",
+      "tripEmpty": "No boats sail in the next day and a half — check the schedule instead.",
+      "tripSummary": "{title} · {date} · {time} · {booked}/{capacity} booked",
+      "changeTrip": "Not this one? Pick a different boat.",
+      "findHeading": "Find a returning diver",
+      "findLabel": "Search by name, email, or phone",
+      "findPlaceholder": "Start typing a name…",
+      "search": "Search",
+      "searching": "Searching…",
+      "noMatches": "No matches for “{query}” — add them fresh below.",
+      "noEmailOnFile": "No email on file",
+      "addToBoat": "Add to boat",
+      "addPersonAriaLabel": "Add {name} to this boat",
+      "adding": "Adding…",
+      "handEntryHeading": "New diver",
+      "handEntryDescription": "Email is optional — the crew can collect it later. A name is enough to get them on the boat now.",
+      "nameLabel": "Full name",
+      "emailLabel": "Email",
+      "phoneLabel": "Phone",
+      "optionalHint": "Optional"
     }
   },
   "waiversStaff": {
@@ -1928,9 +1959,37 @@
     "noDeparturesHeading": "No boats out today",
     "nextDeparture": "Next up is <link>{title}</link> on {date} at {time}.",
     "noDeparturesEmpty": "Nothing is on the books yet. Schedule a trip and it will show up here the morning it sails.",
-    "scheduleTrip": "Schedule a trip"
+    "scheduleTrip": "Schedule a trip",
+    "firstRun": {
+      "heading": "Get your shop ready",
+      "subtitle": "Five steps and divers can start booking.",
+      "contactTitle": "Add your contact details",
+      "contactBody": "Phone and email so divers — and DiveDay — can reach you.",
+      "contactAction": "Add contact details",
+      "contactDone": "Contact details on file.",
+      "siteTitle": "Add your first dive site",
+      "siteBody": "The place you’ll pin your trips to.",
+      "siteAction": "Add a dive site",
+      "siteDone": "{count, plural, one {# dive site added.} other {# dive sites added.}}",
+      "tripTitle": "Schedule your first trip",
+      "tripBody": "Put a departure on the board — divers can’t book until one exists.",
+      "tripAction": "Schedule a trip",
+      "scheduleTitle": "Share your public schedule",
+      "scheduleBody": "The page divers actually book from — paste it on your website or socials.",
+      "scheduleCopy": "Copy link",
+      "scheduleCopied": "Copied",
+      "stripeTitle": "Connect Stripe (optional)",
+      "stripeBody": "Take payment online. Skip this and collect payment at the counter instead.",
+      "stripeAction": "Connect Stripe",
+      "stripeDone": "Stripe connected.",
+      "doneBadge": "Done"
+    }
   },
   "shared": {
+    "capacity": {
+      "full": "Full",
+      "spotsLeft": "{count, plural, one {# spot left} other {# spots left}}"
+    },
     "depth": {
       "meters": "m",
       "feet": "ft"
@@ -1977,7 +2036,8 @@
       "goToDivers": "Divers",
       "goToSettings": "Settings",
       "goToWaivers": "Waivers",
-      "goToBoarding": "Boarding — today's boat"
+      "goToBoarding": "Boarding — today's boat",
+      "goToWalkIn": "Walk-in"
     },
     "keyboardShortcuts": {
       "buttonAriaLabel": "Keyboard shortcuts",
@@ -2077,6 +2137,8 @@
         "assignCrewMemberAria": "Assign crew member to {title}",
         "assignedCrewHeading": "Assigned Crew (drag staff here to assign)",
         "assignCrewOption": "Assign crew…",
+        "assignCrewLabel": "Assign crew",
+        "assignFailed": "That didn’t save — recheck your connection or try again.",
         "unassignAria": "Unassign {name}",
         "noCrewAssigned": "No crew assigned. Drag staff from above here.",
         "countReady": "Ready",
@@ -2089,7 +2151,7 @@
         "clearToBoard": "Everyone aboard this trip is clear to board.",
         "sailingToday": "Sailing today",
         "sailingTodaySubtitle": "Check divers in at the counter or run roll call from the manifest — readiness is rechecked the moment you board someone.",
-        "dragStaffLabel": "Drag staff to assign:"
+        "dragStaffLabel": "Or drag to assign (desktop):"
       },
       "todayQueue": {
         "emptyHeading": "Nothing is waiting on you",
