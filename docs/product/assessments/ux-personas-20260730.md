@@ -80,16 +80,22 @@ loses the lead entirely.
    is available on the trip's course relation; check `src/db/trips.ts` for the query shape). Keep
    the existing visual style, add a hover/focus underline. Verify: from the public schedule,
    signed out, you can tap through to the course page. Add a line to the e2e schedule spec.
+   **Done — this PR.**
 2. **[L] Open the public course catalog.** Make `/shop/[shopSlug]/courses` (index) publicly
    viewable for active courses: extend `isPublicShopRoute` in `src/lib/auth.config.ts` and split
    the page's staff editor affordances behind the session check, the way the schedule page
    already does. This touches the public-route allowlist → **needs a `security-reviewer` pass**
    per AGENTS.md. Verify: signed-out visit renders active courses only; editor controls absent;
    e2e spec for the signed-out view.
+   **Done — this PR.** Implemented per the security-reviewer note above: `$`-anchored
+   `COURSES_INDEX`/`COURSE_PATHS_INDEX`/`COURSE_PATH_PAGE` patterns kept separate from
+   `PUBLIC_SCHEDULE`'s open-ended tail, public branch uses `listActiveCourses`/`isActive`-filtered
+   path queries, shop resolves via `getShopBySlug` never session. Security-reviewer pass pending.
 3. **[L] Give certification paths a public page.** `courses/paths/page.tsx` and
    `paths/[pathSlug]/page.tsx` are staff-gated; the data is guidance, not a gate (see the route
    map note in AGENTS.md). Allowlist them like task 2 (same security-review requirement), and add
    a "Not sure where to start?" link from the public course index. Verify signed-out rendering.
+   **Done — this PR.** Same commit as task 2; security-reviewer pass pending.
 
     **Security-reviewer note (tasks 2–3).** The shop must resolve from the URL slug
     (`getShopBySlug`), never the session, following the `staffView = session?.user?.shopId ===
@@ -130,16 +136,20 @@ loses the lead entirely.
    to a neutral truth, e.g. "This session has admission requirements — get in touch and the shop
    will help you find the right starting point." New key in `src/i18n/locales/*/diver.json` via
    the `i18n-copy` skill; link the shop's contact email when present.
+   **Done — this PR.**
 5. **[S] Expand agency acronyms once per page.** On course pages
    (`_components/CourseSections.tsx`), "{agency} course" renders `PADI` / `SSI` bare. Add a
    translated title/abbr treatment, e.g. "PADI (Professional Association of Diving Instructors)"
    on first mention, or a short "an international scuba training agency" hint line. Keep it to
    the course hero.
+   **Done — this PR.**
 6. **[M] Explain jargon at point of use.** Add a small translated glossary-hint pattern (tooltip
    or muted parenthetical) for the first occurrence of: "two-tank trip" (= two dives in one
    outing), "BCD," "Regulator," "nitrox" on public surfaces (`schedule/page.tsx`,
    `RentalFitForm.tsx`, `DiveBriefingsSection.tsx`). Coordinate wording with the
    `dive-domain-expert` agent; all strings via message bundles.
+   **Done — this PR.** Used the plain-language definitions from the dive-domain-expert review
+   below verbatim.
 
     **Dive-domain-expert review.** Safe plain-language definitions — *two-tank trip*: "A boat
     trip with two separate dives, back to back, with a rest break (a surface interval) in
@@ -158,9 +168,11 @@ loses the lead entirely.
    the inquiry (a small `course_inquiries` table — see the `schema-change` skill) and notifies the
    shop via the existing `src/lib/notifications/` adapter, keeping the `mailto:` as a fallback.
    Happy-path + failure-path tests per AGENTS.md.
+   **Done — this PR.**
 8. **[S] Make the experience dropdown required.** In `CourseInquiry.tsx` the experience level
    select ("I have tried scuba once…") defaults to "Choose one" and is skippable — it's the most
    useful field for the shop. Mark it required and preselect nothing.
+   **Done — this PR.**
 
 ---
 
@@ -190,44 +202,58 @@ soften it. If the trip is full, the sticky mobile CTA disappears entirely instea
    shop name as the `<h1>`-adjacent brand, contact phone/email (fields exist on `shops`), and a
    footer line. Keep it out of `?embed=1` mode. Verify in light + dark, mobile + desktop; update
    the visual spec.
+   **Done — this PR.** `PublicShopChrome.tsx` (new), mounted from the shop layout.
 10. **[M] Synchronize calendar and list.** In `schedule/page.tsx`, pass the selected month into
     the trip-list query so the list follows the calendar, or scroll-link the list to the chosen
     day. Read `src/db/trips.ts` for the paged query; add a unit test for the month-filtered
     variant. This is the single most confusing behavior on the page.
+    **Done** — the core month-bound fix already shipped in an earlier commit this session
+    (`5c82a84`, predates this PR's doc tracking); this PR builds further schedule fixes on top.
 11. **[S] Make calendar day cells tappable and show trip names.** In
     `_components/ScheduleCalendar.tsx`, make the whole day cell a link when it has departures,
     and show an abbreviated trip name in the chip (truncate; the full name can stay in
     `title=`).
+    **Done — this PR.**
 12. **[S] Keep a sticky CTA on full trips.** In `schedule/[id]/page.tsx` the sticky mobile CTA
     requires `!full`. When full, render it as "Join the wait list" anchored to the wait-list
     form instead of hiding it.
+    **Done — this PR.**
 13. **[M] Soft-land cancelled and missing trips.** Add `src/app/not-found.tsx` (app-level) and a
     branded handler for cancelled trips: instead of `notFound()`, render "This trip was
     cancelled" with links to the schedule and shop contact. Copy via bundles. Tests for the
     cancelled path.
+    **Done — this PR.** The app-level `not-found.tsx` already existed (`5c82a84`); this PR adds
+    the cancelled-trip-specific branded landing on the trip page.
 14. **[S] Always say something about cancellation.** In `_components/TripHeader.tsx`, when
     `cancellationWindowHours` is null, render a fallback translated line ("Cancellation questions?
     Ask the shop — {contact}") instead of nothing.
+    **Done — this PR.**
 15. **[M] Reconcile the two prices on the trip page.** Make `TripHeader` render the same
     per-diver total the booking section charges (`perDiverPriceCents`, including course fees),
     with a breakdown line when course fees apply ("$450 course + $149 e-learning"). One money
     truth per page. Unit-test the header amount for a course session.
+    **Done — this PR.**
 16. **[S] One money format per page.** `TripHeader.tsx` calls `formatMoneyCents` without a locale
     (falls back to en-US) while `BookingSections.tsx` formats locale-aware. Thread the request
     locale into every `formatMoneyCents` call on public pages; `pnpm check:locale` should already
     flag stragglers — clear them.
+    **Done — this PR.**
 17. **[M] Add "previous page" to schedule pagination**, or replace jump-to-start with true
     bidirectional keyset paging in `schedule/page.tsx` (`pagedUpcomingTripsWithCounts` in
     `src/db/trips.ts` needs a backward cursor).
+    **Done — this PR.** `src/lib/schedule-pagination.ts` (new) implements the backward cursor.
 18. **[S] Show a running party total.** In `BookingSections.tsx`, when party size > 1 render
     "3 divers × $120 = $360" above the submit button. Locale-aware formatting.
+    **Done — this PR.**
 19. **[S] Tell the diver they're leaving for Stripe.** The pay button label is "Heading to
     payment…" only after tap. Add a persistent hint under the button: "You'll finish paying on a
     secure Stripe page." (translated key). Calms the scariest hop on hotel wifi.
+    **Done — this PR.**
 20. **[S] Fix the promo-code silent failure.** An invalid promo simply doesn't discount
     (`actions.ts` treats it as no-op) and the diver finds out on the Stripe page. Validate on
     submit and return a field-level "That code isn't active" error, reusing the redeemability
     predicate in `src/lib/promo-codes.ts` / `src/db/shop-promos.ts`.
+    **Done — this PR.**
 
 ---
 
@@ -252,15 +278,23 @@ and discover it at the dock.
     lead's contact for notifications. Check the booking transaction's duplicate-email guard in
     `src/db/bookings.ts` first (its tests are the contract) — dedupe logic must not collapse
     two members sharing an email into "already booked." Failure-path tests required.
+    **Done — this PR.**
 22. **[S] Re-enable autofill for extra party members.** Remove the `autoComplete="off"` overrides
     for divers 2+ in `BookingPartyFields.tsx` (use `name`/`email` tokens); document in the PR why
     it was off if a reason surfaces in git blame.
+    **Done — this PR.**
 23. **[M] Enforce and surface course minimum age for public bookings.** Safety-adjacent: in
     `src/db/bookings.ts`, evaluate `course_min_age` for public actors too (collect birth year or
     an "all divers meet the minimum age of {n}" attestation checkbox in the booking form), and
     render the course's `minimumAge` on the trip page for course sessions. Needs
     `dive-domain-expert` review per AGENTS.md (cert/admission gating). Begin with a failing
     regression test for the public-actor gap.
+    **Partial — this PR.** Implemented only the safe subset the dive-domain-expert review below
+    calls for: `minimumAge` now renders on course trip pages, and the booking form requires a
+    self-declared attestation checkbox. No birth date is persisted and `course_min_age` still
+    isn't a hard gate for public actors — doing that would reverse human-decision H-08 (age
+    refusals as a probing vector, H-22) and needs its own human-decision entry, not just an
+    engineering change. **Deferred pending that decision.**
 
     **Dive-domain-expert review.** This needs reframing before implementation, not just building
     as written — `course_min_age` is deliberately unenforced for public actors today
@@ -286,10 +320,12 @@ and discover it at the dock.
     courses where a birthday could fall between sessions.
 24. **[S] Add a big-group escape hatch.** When `maxPartySize` caps the select, render a translated
     line "Bringing more than {n}? Contact the shop — {contact link}" under the party-size field.
+    **Done — this PR.**
 25. **[S] Attribute party booking failures to the right member.** `createBookingParty` returns one
     reason for the whole rollback; the UI shows "You're already on this trip's list" even when
     diver 4 is the duplicate. Thread the failing member index through the action's error state
     and highlight that fieldset. (Read `bookings.test.ts` "rolls back the whole party" first.)
+    **Done — this PR.**
 26. **[S] Replace the gift-detection regex with a course flag.** "Giving this dive as a gift?"
     triggers off `/discover scuba|try scuba/i` on the course title
     (`BookingSections.tsx`) — English-only. Add an `isIntroCourse`-style boolean to the course
@@ -476,6 +512,9 @@ no site photos — the night-before *email* is richer than the page it links to.
     prefill from saved answers). Render "Yes" before "No" to match the paper RSTC convention.
     Safety-critical surface: adversarial tests (submit with an unanswered question) +
     `dive-domain-expert` review.
+    **Done** — shipped in an earlier commit this session (`5c82a84`, dive-domain-expert reviewed,
+    predates this PR's doc tracking); this PR's Rob batch built the remaining waiver/ready fixes
+    on top of it.
 
     **Dive-domain-expert review.** Confirmed on both counts. `RadioQuestion` currently sets
     `defaultChecked={yes !== true}` on "No" for all eight questions, so a diver can submit
@@ -491,17 +530,22 @@ no site photos — the night-before *email* is richer than the page it links to.
     inline translated note under that question: "A yes means a doctor should confirm you're fit
     to dive — it doesn't cancel your trip." (Progressive enhancement; fine to also always render
     it statically under each question in small text if client JS is unwanted.)
+    **Done — this PR.**
 42. **[M] Name the trip on the waiver.** Render trip title + date + time in the waiver header
     (`waivers/[token]/page.tsx` already loads the booking's trip for the sites peek — reuse it),
     so the diver can verify what they're signing for.
+    **Done — this PR.**
 43. **[S] Fix the rate-limit mislabel.** `saveDraftAction`/`completeAction` redirect to
     `?error=invalid` when throttled, rendering "Please answer every question…". Add a distinct
     `?error=rate` → translated "Give it a few seconds and try again — nothing was lost."
+    **Done — this PR.**
 44. **[M] Warm up the medical-review dead end.** The `medical_review` completed state
     ("Waiver received" / "don't assume you're cleared") gets: the shop's phone/email as tappable
     links (the ready page already shows how), a "what happens next" line ("The shop reviews
     this — usually before your trip day"), and the same `EarnedMoment` treatment for the parts
     that *are* done. Copy through `dive-domain-expert`.
+    **Done — this PR.** Used the corrected copy from the dive-domain-expert review below
+    verbatim, not the original "usually before your trip day" draft.
 
     **Dive-domain-expert review.** The proposed "what happens next" line is inaccurate and needs
     correcting before it ships. A "yes" on a referral-flagged question requires a **physician's
@@ -518,28 +562,35 @@ no site photos — the night-before *email* is richer than the page it links to.
     branches return before `getShopById` runs, rendering zero interactive elements. Load the
     shop first and render name + contact links on every terminal card (waiver, and check
     `/verify` which has the same no-link dead end).
+    **Done — this PR.**
 46. **[S] Put the dock-call time on /ready.** `dockCallMinutes` renders "be at the dock by
     7:30am" in the day-before email (`src/lib/notifications/email.ts`) but never on
     `ready/[token]/page.tsx`. Compute the same line and show it under the trip header.
+    **Done — this PR.**
 47. **[M] Bring anticipation to /ready.** Add the dive-site peek (photos, depth, difficulty —
     the component pattern exists on the waiver success page) and a relative-time line
     ("in 2 days") to `/ready`. The page a diver opens the night before should be at least as
     rich as the email that got them there.
+    **Done — this PR.** `DiveSitesPeek.tsx` (new, shared with the waiver success page).
 48. **[S] Fix the "no information was submitted" draft lie.** The expired-waiver copy says
     "no information was submitted," but drafts persist via `saveWaiverDraft`. Reword to be
     truthful for both cases ("Your saved answers are kept — ask the shop for a fresh link.").
+    **Done — this PR.**
 49. **[S] Surface silent rate-limits on /ready.** Every throttled action on
     `ready/[token]/actions.ts` redirects with no error param — buttons appear to do nothing. Add
     a `?error=rate` notice to `READY_NOTICES`, and add the missing `error-fit` entry while
     there (a failed gear save currently renders nothing at all).
+    **Done — this PR.**
 50. **[M] Replace `window.confirm` for cancel/reschedule.** The two money-moving actions on
     `/ready` confirm via native OS dialogs that can't show the refund preview the page already
     computed. Build a small translated inline-confirm (server-roundtrip pattern is fine)
     showing the refund line before the destructive submit. Also used by staff surfaces — see
     task 96; consider one shared component.
+    **Done — this PR.** `src/components/ui/InlineConfirm.tsx` (new, shared).
 51. **[S] Show waiver link expiry on the page.** The email states the exact expiry; the page
     says only "before it expires." Render "This link works until {date}" from the token's
     known TTL.
+    **Done — this PR.**
 
 ---
 
@@ -565,31 +616,42 @@ again) with no gift left.
     sections above the review and tip sections in `recap/[token]/page.tsx`. The code comment
     explains the current order deliberately — update the comment with the new rationale: earn
     the 5 before asking for it.
+    **Done** — shipped in an earlier commit this session (`5c82a84`, predates this PR's doc
+    tracking); the rest of Amara's persona shipped in this PR on top of it.
 53. **[S] Add the missing `tip=paid` notice.** `TIP_NOTICES` lacks the success case its own
     action sets. Add "Thanks — your tip is on its way to the crew 🤿" and handle the
     webhook-pending window (don't re-render the tip form as if nothing happened).
+    **Done** — shipped alongside task 52 in `5c82a84`.
 54. **[S] Disclose comment moderation up front.** Next to the comment textarea, render the
     existing fact as a hint: "Ratings post right away; the shop reads written words first."
     (Currently discovered only after submitting.)
+    **Done — this PR.**
 55. **[S] Multi-photo upload.** Add `multiple` to the recap `ImageFileInput` and loop server-side
     (cap stays `MAX_RECAP_PHOTOS_PER_BOOKING`). Give the upload button the `SubmitButton`
     pending treatment it's missing.
+    **Done — this PR.**
 56. **[S] Honest no-show and cancelled states.** `did_not_dive` flattens to "pick a rating and
     try again"; a cancelled booking's photo refusal advises re-encoding a JPEG. Map both reasons
     to truthful translated messages.
+    **Done — this PR.**
 57. **[M] Merge the two review asks.** Fold the external-review CTA into the on-page review's
     success state: after a 4–5★ submission, offer "Share it on Google too" (copy their comment
     to clipboard). One ask at a time; the sequencing logic is a few lines in
     `recap/[token]/page.tsx`.
+    **Done — this PR.** `ShareReviewButton.tsx` (new).
 58. **[S] Fix "today" in evergreen copy.** `recap.externalReviewBody` says "took you out today"
     on a link that never expires. Reword to timeless ("took you out").
+    **Done — this PR.**
 59. **[M] Make the recap shareable.** `recap-links.ts` calls itself shareable but the page has
     no share affordance. Add the existing `navigator.share`/clipboard pattern
     (`TripActions.tsx`) with an OG image for the recap route so the link unfurls with the trip
     title and site names. Bearer-token caveat: confirm with the capability-telemetry runbook
     before adding any metadata that leaks through the token URL.
+    **Done — this PR.** `RecapShareButton.tsx` + `opengraph-image.tsx` (new).
 60. **[S] Localize tip presets/currency** — folded into task 35 (shop currency); until then, at
     least derive the currency label from the shop's Stripe account rather than hardcoding `$`.
+    **Done — this PR.** Added a `defaultCurrency` on the shop's Stripe account
+    (`TipAmountPicker.tsx` now reads it); full cross-surface currency i18n stays task 35, deferred.
 
 ---
 
@@ -625,17 +687,23 @@ covers the fully empty queue).
     real tap targets (`min-h-11` wrappers — see the `RosterSection.tsx` checkbox precedent),
     and surface assignment failures with a worded rollback like `RollCallButton.tsx` instead of
     silent revert.
+    **Done** — the select-as-primary-control and worded-rollback core shipped in an earlier
+    commit this session (`5c82a84`, predates this PR's doc tracking); this PR's Dana batch
+    added the remaining Today-queue fixes on top.
 64. **[S] Celebrate the cleared morning.** When the "Before today's boats" group empties but
     later groups remain, render a small earned moment ("Today's boats are all clear 🤙") in
     `TodayQueue.tsx`. The seasonal-briefing copy system in `today.ts` shows where celebration
     strings live.
+    **Done — this PR.**
 65. **[M] Let payment rows act in place.** `payment_due` rows send Dana to the roster. Add a
     "copy payment link" / "resend invoice" inline action on the Today row, reusing the
     invoicing path in `src/lib/payments/`. (Scope check: if invoicing isn't wired for that
     booking type, fall back to the current navigation — never a dead button.)
+    **Done — this PR.** `PaymentActionControl.tsx` (new).
 66. **[S] Give Today a scannable count.** `summarizeDay` is prose; add "{n} items" chips to the
     group headers so a glance distinguishes a 5-job morning from a 40-job one (the count is
     already computed for group rendering).
+    **Done — this PR.**
 
 ---
 
@@ -661,20 +729,26 @@ bullets silently truncate at three. The roster's per-diver cards are ~200px tall
     check what `src/db/bookings.ts` minimally requires and relax the form, not the
     transaction). Books as staff actor with counter payment deferred. This is the single
     highest-friction common task on the staff side. E2e spec required (booking flow).
+    **Done** — shipped in an earlier commit this session (`5c82a84`, security-reviewer reviewed,
+    predates this PR's doc tracking): `/check-in/walk-in`, wired into the command palette.
 68. **[M] Give blocked divers an action on Check-in.** Reuse the Blockers page's one-tap-fix
     row pattern (`blockers/page.tsx`) inside `check-in/page.tsx`'s blocked-diver card: send
     waiver, open the exact record. Also render "+{n} more" instead of silently truncating at
     three bullets.
+    **Done — this PR.**
 69. **[S] Add an "unsigned waivers" filter to the roster.** In
     `trips/[id]/_components/RosterSection.tsx`, add a filter chip row (all / needs waiver /
     blocked) as server-rendered query params, and show counts in the section heading.
+    **Done — this PR.**
 70. **[S] Link the not-ready refusal to the blocker.** `checkIn.notice.notReady` says "resolve
     the blocker before checking them in" without a link; make it a `t.rich` link to the
     diver's guest row (the manifest's `not_ready` refusal already does exactly this — copy
     the pattern).
+    **Done — this PR.**
 71. **[S] Celebrate the cleared queue.** When the last diver checks in, swap the empty state
     for "Everyone's aboard the day 🎉 — {n} divers checked in." One translated string in
     `check-in/page.tsx`.
+    **Done — this PR.**
 
 ---
 
@@ -722,22 +796,35 @@ note on the next tap (never cleared). The offline manager's "Saved …" timestam
     reads zero. (5) Reconciliation on sync is the final authority, not the offline UI — keep
     surfacing pending/rejected sync counts as today; a satisfying "all boarded" animation must
     never imply server-confirmed state while sync is still pending.
+    **Done — this PR.** While porting, found and fixed a real latent bug the review above
+    anticipated: `canRecordOfflineStatus` was gating readiness at *every* checkpoint instead of
+    only "departure" (mismatching `recordRollCall`'s server-side gate), silently refusing
+    legitimate post-dive headcount boarding for a not-ready diver. Added a `checkpoint` parameter
+    and a regression test (`offline-manifests.test.ts`) covering exactly that scenario. **Needs a
+    follow-up `dive-domain-expert` review pass before merge** given the fail-closed-logic change,
+    per AGENTS.md's safety-critical rule.
 73. **[S] Clear the offline note after recording.** `record()` in `OfflineManifestView.tsx`
     never clears `noteByBooking`, so a note rides along on re-taps. Clear it on success.
+    **Done — this PR.**
 74. **[S] Boat-size the checkpoint controls.** Checkpoint tabs on both live and offline
     manifests are `min-h-11`; promote to the `boat` size (`buttonClass` already defines it)
     since they sit on the same wet-hands surface as the 56px targets.
+    **Done — this PR.**
 75. **[S] Collapse the summary tiles on mobile.** The six `grid-cols-2` tiles push the first
     diver below the fold; render two key tiles (Boarded / Awaiting) + a `<details>` for the
     rest at narrow widths in `manifest/page.tsx`.
+    **Done — this PR.**
 76. **[S] Fix the offline timestamp locale.** `OfflineManifestManager.tsx` uses
     `toLocaleString()`; use the same `formatDateTimeTz` + shop timezone as everywhere else.
+    **Done — this PR.**
 77. **[S] Make the offline entry point findable.** "Open offline roll call" is a normal button
     below the live manifest header. Add it to the command palette and give it boat-size on the
     manifest page; consider a nav presence when a snapshot exists on this device.
+    **Done — this PR.**
 78. **[S] Give WaterLocker an off switch.** It mounts unconditionally on the manifest —
     including desktops. Add a small "disable spray guard on this device" toggle persisted like
     the glare preference (`AmbientGlareDetector` shows the localStorage pattern).
+    **Done — this PR.**
 
 ---
 
@@ -761,19 +848,25 @@ mobile) and the "?" shortcuts dialog is an unlabeled icon.
     ("Try:" prompts per role) as a dismissible first-visit card on Today for newly invited
     staff (persist dismissal per account). Content varies by role — captain sees the manifest
     tour, front desk sees check-in.
+    **Done — this PR.** `RoleOrientationCard.tsx` (new); dismissal persisted via a new
+    `user_accounts.orientation_dismissed_at` column.
 80. **[S] Fix the "More" menu.** Add click-outside + Escape dismissal (small client wrapper on
     `ShopNavLinks.tsx`), and a scrim at mobile widths.
+    **Done — this PR.**
 81. **[S] Confirm sign-out.** One-step inline confirm on the sign-out button in `ShopNav.tsx`
     (mis-tap protection matters more on boats than ceremony; a two-tap "Sign out? → Confirm"
     is enough).
+    **Done — this PR.** `InlineConfirmButton.tsx` (new).
 82. **[S] Route Promos' auth refusal to its own message.** `promos/page.tsx` redirects
     non-owners to `/settings?notice=not_authorized` (a message about rental prices). The
     correct promo-specific string already exists (`promos.notice.notAuthorized`) — redirect
     with that notice instead, and audit the other silent authorization redirects
     (`waivers/page.tsx`, `settings/export/page.tsx`) to land with an explanatory notice.
+    **Done — this PR.**
 83. **[S] Badge the nav with pending work.** Reviews "waiting on you" and Blockers counts
     exist on their pages; surface small count badges on the nav items (server-rendered in
     `ShopNavLinks.tsx`) so Maren and Kai discover work without visiting each page.
+    **Done — this PR.**
 
 ---
 
@@ -798,31 +891,40 @@ adjacent "Preview" link discards every unsaved edit without warning.
 84. **[S] Float unmoderated reviews to the top.** Add "waiting first" ordering (or a filter
     tab) to the reviews query in `src/db/reviews.ts` + `reviews/page.tsx`, linked from the
     "Waiting on you" stat.
+    **Done — this PR.**
 85. **[S] Confirm hiding a published review.** Add the same confirm treatment other
     destructive actions get (see task 50's shared inline-confirm) to the hide toggle in
     `reviews/page.tsx`.
+    **Done — this PR.**
 86. **[M] Celebrate good reviews.** When a 5★ review is published, show it with the accent
     treatment (`EarnedMoment` pattern); add a small "this month: {n}★ average from {m}
     reviews" line to the stats row. Data already computed for the page.
+    **Done — this PR.**
 87. **[S] Copy button for promo codes.** Reuse `CopyableUrl` (generalize to `Copyable`) from
     `settings/calendar/CalendarFeedPanel.tsx` on the promo-code cell in `promos/page.tsx` —
     and fix its silent clipboard-failure path while there (show "copied" / "couldn't copy —
     select it manually").
+    **Done — this PR.** `src/components/Copyable.tsx` (new, generalized).
 88. **[S] Retry/delete for failed promos.** A `failed` Stripe promo shows a badge and nothing
     else. Add a "Try again" action (re-run creation) and allow deleting `failed`/`pending`
     codes (`promos/actions.ts`, `src/db/shop-promos.ts`).
+    **Done — this PR.**
 89. **[S] Label promo datetimes with the shop timezone.** Add "times are in {shop timezone}"
     hint under the `datetime-local` inputs in `promos/page.tsx`, matching how the list
     renders.
+    **Done — this PR.**
 90. **[M] Anchor Settings save notices to their section.** Nine forms share one top-of-page
     notice banner that's off-screen after scroll restore (`SettingsPage.tsx`). Carry a
     `?saved=<section>` param and render the success notice inside the section that was saved.
+    **Done — this PR.**
 91. **[M] Guard the course editor against silent data loss.** In `courses/[slug]/edit`, warn
     before navigating with unsaved changes (a small dirty-state client wrapper +
     `beforeunload`), and make "Preview" open in a new tab so it can't destroy edits.
+    **Done — this PR.** `UnsavedChangesGuard.tsx` (new).
 92. **[S] Say which field failed in the course editor.** `courses.edit.errorInvalid` ("Check
     the fields and try again") spans ~15 inputs. Return the failing field name in the error
     state and anchor/highlight it.
+    **Done — this PR.** `FieldErrorFocus.tsx` (new).
 
 ---
 
@@ -849,6 +951,7 @@ best asset — is sold as a blind button with no preview of what's inside.
 
 93. **[S] Add Switching and About to the top nav.** `src/components/MarketingNav.tsx` — two
     links. Check the mobile nav variant too.
+    **Done — this PR.**
 94. **[S] Fix the stale competitor list in all three places.** Generate the list from
     `src/lib/migration-guides.ts` (the registry) instead of hand-written copy in
     `diver.json:switching` link text, `switching/page.tsx` meta description, and the pricing
@@ -878,6 +981,9 @@ best asset — is sold as a blind button with no preview of what's inside.
     copy button) → Stripe (optional). Each links to the exact screen; steps check off from
     real data (all queries exist). This is the largest conversion lever in the product —
     the current landing is an empty work queue.
+    **Done** — shipped in an earlier commit this session (`5c82a84`, predates this PR's doc
+    tracking): `FirstRunChecklist.tsx`, rendered on Today when a real shop has no next
+    departure.
 99. **[S] Rewrite the two "ask whoever runs your hosting" strings.** `settings.main.stripe.notConfiguredWarning`
     and `settings.main.notice.notConfigured` are reachable by self-serve owners. Reword for
     the actual audience ("Online payments aren't configured for this DiveDay instance yet —
@@ -900,10 +1006,13 @@ best asset — is sold as a blind button with no preview of what's inside.
     is headers-only; add 2–3 realistic example rows (clearly fake names) and reconcile the
     column set with the columns the spreadsheet guide documents (dive insurance, specialty,
     refresher due are documented but missing from the template).
+    **Done — this PR.**
 103. **[M] Preview the demo before the click.** The five per-role "Try:" prompts already exist
     (`demo.roles.*`); surface them on the landing page as a role-picker under the demo CTA
     ("Enter as: Owner · Front desk · Captain…") wiring each to `enterDemoAction`. Turns a
     blind button into a menu.
+    **Done — this PR.** `src/lib/demo-roles.ts` extracted so the landing page and the demo
+    banner share one source of role metadata. Conversion-reviewer pass still outstanding.
 104. **[S] Add canonicals + OpenGraph to the switching pages.** `/switching` and every
     `/switching/[competitor]` page lack canonical and OG metadata — these are the pages that
     get pasted into WhatsApp groups. Follow the metadata pattern on `/pricing`.
@@ -943,55 +1052,69 @@ indicator; and status tones rely on hue + reading the words — no icon or sr-on
     Add an optional caption/alt field to the course photo editor
     (`courses/[slug]/edit`), falling back to "{course title} — photo {n}" rather than
     decorative silence.
+    **Done — this PR.**
 106. **[S] Mark required fields visibly.** `Field` in `src/components/ui/form.tsx` renders
     required and optional controls identically. Add a visible required marker (or an
     "all fields required unless marked optional" line at the top of each form — pick one
     convention, apply everywhere, document in `docs/design/forms-and-controls.md`).
+    **Done — this PR.**
 107. **[M] Audit icon-only controls.** Sweep `src/components/` and `src/app/shop` for
     icon-only buttons (`?` shortcuts trigger, unassign ×, calendar chevrons) and ensure each
     has an `aria-label` from the message bundles. Add a lint note to the forms doc.
+    **Done — this PR.**
 108. **[M] Keyboard-and-SR pass on the booking flow.** Tab-order and announcement walkthrough
     of schedule → trip → booking form → confirmation (the e2e flow exists; add an
     axe-core/playwright a11y assertion pass to it). Fix what it finds; keep the axe check in
     the spec so it ratchets.
+    **Done — this PR.**
 109. **[S] Skip links everywhere.** Generalize the manifest's skip-link pattern into the root
     and shop layouts (`src/app/layout.tsx`, `shop/[shopSlug]/layout.tsx`) so every page—not
     just two—lets keyboard users jump past the header.
+    **Done — this PR.** `SkipLink.tsx` (new, shared).
 110. **[M] Fix the two portal dialogs.** `CommandPalette.tsx`: add `role="dialog"`,
     `aria-modal`, focus trap, focus restore on close, and an `aria-live` region announcing
     result counts ("3 divers, 2 trips"). `KeyboardShortcuts.tsx`: same trap/restore (it
     already claims `aria-modal`). One shared focus-trap utility for both.
+    **Done — this PR.** `useFocusTrap.ts` (new, shared).
 111. **[S] Label the contrast slider.** `AmbientGlareDetector.tsx`'s range input needs
     `aria-label` + `aria-valuetext` mapping 0/1/2 → Auto/Standard/Full AAA (strings from the
     staff bundle via props).
+    **Done — this PR.**
 112. **[S] Un-suppress the digital cert card.** `DigitalCardFlip.tsx`'s wrapping
     `aria-label` overrides all inner text (agency, level, name, verification status). Move
     the flip affordance to a small labeled control, or use `aria-describedby` so inner
     content stays readable. Also fixes the `<h4>`-inside-a-button nesting.
+    **Done — this PR.**
 113. **[S] Give WaterLocker dialog semantics + an announcement.** `role="dialog"`,
     `aria-modal`, focus containment, and an `aria-live` explanation when it engages, so an
     assistive-tech user locked out of roll call knows why and how to unlock. Pairs with the
     off-switch in task 78.
+    **Done — this PR.**
 114. **[M] Wire `aria-describedby` in `Field`.** `ui/form.tsx` should emit an id for the
     description and reference it from the control instead of folding hint text into the
     accessible name of ~25 fields. While in the file: extend the per-field
     `aria-invalid`/`aria-describedby` error pattern (currently only `BookingPartyFields` and
     `ImageFileInput`) so page-level `role="alert"` banners also point at the failing control.
+    **Done — this PR.**
 115. **[S] Tone icons in the primitives.** Add a small glyph or `sr-only` tone prefix
     ("Error:", "Done:") to `Badge` and `ShopNotice` so status survives colorblind scanning;
     nudge the `success`/`warning` sm-badge text colors to ≥4.5:1. Neutral-color the
     missing-divers avatar hash (`MissingDiversGrid.tsx`) so red stops meaning nothing.
+    **Done — this PR.**
 116. **[S] Un-scope `prefers-contrast: more`.** `globals.css` limits both increased-contrast
     blocks to `.boat-mode`; honor the OS preference app-wide. Also: the glare-mode 16px text
     floor matches `text-xs`/`text-sm` but misses arbitrary sizes (`text-[10px]`,
     `text-[8px]` in `DigitalCardFlip`, `MissingDiversGrid`, the contrast slider ticks) —
     raise those to tokens the floor can catch.
+    **Done — this PR.**
 117. **[S] Define the missing tokens.** Three classes reference tokens that don't exist and
     render invisible UI: `bg-info` (`RollCallNote.tsx` — the queued-status dot),
     `bg-primary-sunken` (`WaterLocker.tsx` — the hold-to-unlock progress fill!), and
     `to-primary-sunken` (`DigitalCardFlip.tsx`). Define `--info` and `--primary-sunken` in
     `globals.css` (all four theme skins) or swap to existing tokens. The invisible unlock
     progress is a real boat-surface bug, not just polish.
+    **Done** — shipped in an earlier commit this session (`5c82a84`, predates this PR's doc
+    tracking); the rest of June's persona shipped in this PR.
 
 ---
 
@@ -1067,11 +1190,13 @@ confirmation, no logo, and no unsubscribe link on the marketing-adjacent templat
     `@vercel/analytics` + `@vercel/speed-insights` unconditionally; lazy-load them
     post-hydration (or drop speed-insights from anonymous diver pages) so 3G visitors get
     the booking form first.
+    **Done — this PR.** Dynamic-imported, mounted post-hydration via `requestIdleCallback`.
 124. **[M] Tell the crew about stale offline versions.** A deploy while a device is offline
     leaves it holding old shell assets with no signal (`manifest-sw.js` is hand-versioned,
     `skipWaiting` swaps silently). Surface "this saved copy is from an older version of
     DiveDay" in `OfflineManifestView` when the SW cache version and app version disagree,
     and add a visible refresh nudge when a new worker activates mid-session.
+    **Done — this PR.** `OfflineShellVersionBanner.tsx` (new).
 
 ---
 
