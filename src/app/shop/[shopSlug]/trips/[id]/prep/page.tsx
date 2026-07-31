@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PrintButton } from "@/components/PrintButton";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
@@ -31,7 +32,7 @@ export default async function TripPrepPage({
   params: Promise<{ shopSlug: string; id: string }>;
 }) {
   const session = await requireStaffSession();
-  const { id: tripId } = await params;
+  const { shopSlug, id: tripId } = await params;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   // Staff read dates in the language their own device asks for, same
@@ -153,7 +154,15 @@ export default async function TripPrepPage({
               <p className="mt-1 text-sm">{t("trips.prep.nitroxBlockedDescription")}</p>
               <ul className="mt-2 flex flex-col gap-1 text-sm">
                 {checklist.nitroxBlockers.map((blocker) => (
-                  <li key={blocker.bookingId}>• {blocker.fullName}</li>
+                  <li key={blocker.bookingId}>
+                    •{" "}
+                    <Link
+                      href={`/shop/${shopSlug}/divers/${blocker.personId}`}
+                      className="font-medium hover:text-primary hover:underline"
+                    >
+                      {blocker.fullName}
+                    </Link>
+                  </li>
                 ))}
               </ul>
             </section>
@@ -169,8 +178,16 @@ export default async function TripPrepPage({
               </h2>
               <p className="mt-1 text-sm text-muted">{t("trips.prep.noFitDescription")}</p>
               <ul className="mt-2 flex flex-col gap-1 text-sm">
-                {checklist.diversWithoutFit.map((name) => (
-                  <li key={name}>• {name}</li>
+                {checklist.diversWithoutFit.map((diver) => (
+                  <li key={diver.personId}>
+                    •{" "}
+                    <Link
+                      href={`/shop/${shopSlug}/divers/${diver.personId}`}
+                      className="font-medium hover:text-primary hover:underline"
+                    >
+                      {diver.fullName}
+                    </Link>
+                  </li>
                 ))}
               </ul>
             </section>
@@ -187,8 +204,14 @@ export default async function TripPrepPage({
               <p className="mt-1 text-sm text-muted">{t("trips.prep.staffFitDescription")}</p>
               <ul className="mt-2 flex flex-col gap-1 text-sm">
                 {checklist.diversNeedingStaffFit.map((diver) => (
-                  <li key={diver.fullName}>
-                    • {diver.fullName}
+                  <li key={diver.personId}>
+                    •{" "}
+                    <Link
+                      href={`/shop/${shopSlug}/divers/${diver.personId}`}
+                      className="font-medium hover:text-primary hover:underline"
+                    >
+                      {diver.fullName}
+                    </Link>
                     {diver.note ? <span className="text-muted"> — {diver.note}</span> : null}
                     {/* What they asked for. The captain doing the fit can't edit
                         the profile and sees no size on the packing line, so

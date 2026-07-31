@@ -362,7 +362,12 @@ export default async function ReportsPage({
                     return (
                       <tr key={trip.tripId}>
                         <td className="px-4 py-3">
-                          <div className="font-medium text-foreground">{trip.title}</div>
+                          <Link
+                            href={`/shop/${shopSlug}/trips/${trip.tripId}/guests`}
+                            className="font-medium text-foreground hover:text-primary hover:underline"
+                          >
+                            {trip.title}
+                          </Link>
                           <div className="text-xs text-muted">
                             {formatShortDate(trip.startsAt, locale, tz)}
                             {/* The raw ratio the Seats column carries on wider screens,

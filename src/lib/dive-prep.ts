@@ -60,6 +60,7 @@ export type RentalFit = {
 
 export type PrepDiver = {
   bookingId: string;
+  personId: string;
   fullName: string;
   /** Null when the shop has never recorded a fit for this diver. */
   fit: RentalFit | null;
@@ -92,6 +93,7 @@ export type TankPlan = {
 
 export type NitroxBlocker = {
   bookingId: string;
+  personId: string;
   fullName: string;
   reason: "no_verified_card";
 };
@@ -106,7 +108,7 @@ export type DivePrepChecklist = {
   /** Divers who asked for enriched air but have no verified card — packed as air. */
   nitroxBlockers: NitroxBlocker[];
   /** Divers with no rental fit on file; staff still has to ask them. */
-  diversWithoutFit: string[];
+  diversWithoutFit: { fullName: string; personId: string }[];
   /**
    * Divers whose stated size couldn't be filled, flagged for hands-on fitting
    * (H-06). Their pieces stay on `lines` with the count intact and the size
@@ -114,6 +116,7 @@ export type DivePrepChecklist = {
    * against a size the shop is short of.
    */
   diversNeedingStaffFit: {
+    personId: string;
     fullName: string;
     note: string | null;
     /**
@@ -254,7 +257,7 @@ export function buildDivePrepChecklist(input: {
   const diveCount = Math.max(1, Math.trunc(input.plannedDives) || 1);
   const grouped = new Map<string, PrepLine>();
   const nitroxBlockers: NitroxBlocker[] = [];
-  const diversWithoutFit: string[] = [];
+  const diversWithoutFit: { fullName: string; personId: string }[] = [];
   const now = input.now ?? nowDate();
   const diversNeedingStaffFit: DivePrepChecklist["diversNeedingStaffFit"] = [];
   let nitroxDivers = 0;
@@ -264,13 +267,14 @@ export function buildDivePrepChecklist(input: {
     else if (diver.wantsNitrox) {
       nitroxBlockers.push({
         bookingId: diver.bookingId,
+        personId: diver.personId,
         fullName: diver.fullName,
         reason: "no_verified_card",
       });
     }
 
     if (!diver.fit) {
-      diversWithoutFit.push(diver.fullName);
+      diversWithoutFit.push({ fullName: diver.fullName, personId: diver.personId });
       continue;
     }
     // Flagged for hands-on fitting: name them here *and* keep their pieces on
@@ -278,6 +282,7 @@ export function buildDivePrepChecklist(input: {
     // count stays right without anyone laying out a size the shop is short of.
     if (diver.fit.needsStaffFitAt) {
       diversNeedingStaffFit.push({
+        personId: diver.personId,
         fullName: diver.fullName,
         note: diver.fit.needsStaffFitNote?.trim() || null,
         statedSizes: statedSizeItems(diver.fit),

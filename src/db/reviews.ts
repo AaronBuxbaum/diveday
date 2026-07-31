@@ -198,6 +198,7 @@ export type StaffReview = {
   isPublished: boolean;
   /** Staff see who actually wrote it — the abbreviation is a public-page rule, not an internal one. */
   diverName: string;
+  personId: string;
   tripId: string;
   tripTitle: string;
   divedAt: Date;
@@ -238,6 +239,7 @@ export async function listShopReviewsForStaff(
         comment: tripReviews.comment,
         isPublished: tripReviews.isPublished,
         diverName: people.fullName,
+        personId: tripReviews.personId,
         tripId: tripReviews.tripId,
         tripTitle: trips.title,
         divedAt: trips.startsAt,

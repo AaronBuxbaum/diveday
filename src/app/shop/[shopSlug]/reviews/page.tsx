@@ -133,6 +133,14 @@ export default async function ReviewsPage({
                     diverName: review.diverName,
                     tripTitle: review.tripTitle,
                     date: formatShortDate(review.divedAt, locale, timezone),
+                    diver: (chunks) => (
+                      <Link
+                        href={`/shop/${shopSlug}/divers/${review.personId}`}
+                        className="font-medium text-primary hover:underline"
+                      >
+                        {chunks}
+                      </Link>
+                    ),
                     trip: (chunks) => (
                       <Link
                         href={`/shop/${shopSlug}/trips/${review.tripId}`}

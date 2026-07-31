@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
+import { WaiverSendControl } from "@/components/today/WaiverSendControl";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { listCheckInQueue } from "@/db/check-in";
@@ -10,6 +11,7 @@ import { getShopBySlug } from "@/db/shops";
 import { readinessBlockerText } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
+import { blockerFixFor } from "@/lib/blockers";
 import { formatShortDate, formatTimeRange } from "@/lib/format";
 import { requireStaffSession } from "@/lib/session";
 import { checkInAction } from "./actions";
@@ -119,6 +121,19 @@ export default async function CheckInPage({
             {queue.map((row) => {
               const ready = row.readiness.status === "ready";
               const checkedIn = row.bookingStatus === "checked_in";
+              const fix = ready
+                ? null
+                : blockerFixFor(
+                    row.readiness.blockers,
+                    {
+                      shopSlug,
+                      tripId: row.tripId,
+                      personId: row.personId,
+                      bookingId: row.bookingId,
+                      fullName: row.personName,
+                    },
+                    t,
+                  );
               return (
                 <article
                   key={row.bookingId}
@@ -128,12 +143,22 @@ export default async function CheckInPage({
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="text-lg font-semibold">{row.personName}</h3>
+                        <Link
+                          href={`/shop/${shopSlug}/divers/${row.personId}`}
+                          className="text-lg font-semibold hover:text-primary hover:underline"
+                        >
+                          {row.personName}
+                        </Link>
                         {checkedIn ? (
                           <Badge tone="success">{t("checkIn.checkedInBadge")}</Badge>
                         ) : null}
                       </div>
-                      <p className="mt-1 text-sm font-medium text-primary">{row.tripTitle}</p>
+                      <Link
+                        href={`/shop/${shopSlug}/trips/${row.tripId}/manifest`}
+                        className="mt-1 block text-sm font-medium text-primary hover:underline"
+                      >
+                        {row.tripTitle}
+                      </Link>
                       <p className="mt-1 text-sm text-muted">
                         {formatShortDate(row.startsAt, locale, shop.timezone)} ·{" "}
                         {formatTimeRange(row.startsAt, row.endsAt, locale, shop.timezone)}
@@ -161,11 +186,32 @@ export default async function CheckInPage({
                     </div>
                   </div>
                   {!ready ? (
-                    <ul className="mt-4 space-y-1 border-t border-border pt-3 text-sm text-warning">
-                      {row.readiness.blockers.slice(0, 3).map((blocker) => (
-                        <li key={blocker.code}>• {readinessBlockerText(t, blocker)}</li>
-                      ))}
-                    </ul>
+                    <>
+                      <ul className="mt-4 space-y-1 border-t border-border pt-3 text-sm text-warning">
+                        {row.readiness.blockers.slice(0, 3).map((blocker) => (
+                          <li key={blocker.code}>• {readinessBlockerText(t, blocker)}</li>
+                        ))}
+                      </ul>
+                      {fix ? (
+                        <div className="mt-3">
+                          {fix.sendsWaiver ? (
+                            <WaiverSendControl
+                              shopSlug={shopSlug}
+                              surface="check_in"
+                              bookingIds={[fix.bookingId]}
+                              label={fix.label}
+                            />
+                          ) : (
+                            <Link
+                              href={fix.href}
+                              className={buttonClass({ variant: "secondary", size: "sm" })}
+                            >
+                              {fix.label}
+                            </Link>
+                          )}
+                        </div>
+                      ) : null}
+                    </>
                   ) : null}
                 </article>
               );
