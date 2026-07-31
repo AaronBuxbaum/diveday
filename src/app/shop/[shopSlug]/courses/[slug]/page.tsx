@@ -30,6 +30,7 @@ import {
   CourseSessions,
   CourseSpecs,
 } from "./_components/CourseSections";
+import { submitCourseInquiryAction } from "./actions";
 
 export async function generateMetadata({
   params,
@@ -185,6 +186,7 @@ export default async function CoursePage({
         // useTranslations() inside CourseInquiry work rather than throw.
         <DiverIntlProvider locale={locale} timeZone={shop.timezone}>
           <CourseInquiry
+            submitInquiry={submitCourseInquiryAction.bind(null, shopSlug, slug)}
             courseTitle={course.title}
             shopName={shop.name}
             contactEmail={shop.contactEmail}
@@ -194,8 +196,13 @@ export default async function CoursePage({
               noDateBody: t("inquiry.noDateBody"),
               yourName: t("inquiry.yourName"),
               namePlaceholder: t("inquiry.namePlaceholder"),
+              yourEmail: t("inquiry.yourEmail"),
+              emailPlaceholder: t("inquiry.emailPlaceholder"),
+              yourPhone: t("inquiry.yourPhone"),
+              phonePlaceholder: t("inquiry.phonePlaceholder"),
               howManyDivers: t("inquiry.howManyDivers"),
               optional: t("common.optional"),
+              required: t("inquiry.required"),
               whenSuits: t("inquiry.whenSuits"),
               whenSuitsHint: t("inquiry.whenSuitsHint"),
               whenSuitsPlaceholder: t("inquiry.whenSuitsPlaceholder"),
@@ -209,6 +216,10 @@ export default async function CoursePage({
               copied: t("inquiry.copied"),
               orWriteTo: t("inquiry.orWriteTo"),
               callLabel: t("inquiry.callLabel"),
+              send: t("inquiry.send"),
+              sending: t("inquiry.sending"),
+              sentHeading: t("inquiry.sentHeading"),
+              sentBody: t("inquiry.sentBody"),
             }}
           />
         </DiverIntlProvider>

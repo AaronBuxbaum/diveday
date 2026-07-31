@@ -564,6 +564,8 @@
   },
   "inquiry": {
     "yourName": "Your name",
+    "yourEmail": "Your email",
+    "yourPhone": "Your phone",
     "howManyDivers": "How many divers",
     "whenSuits": "When suits you",
     "whenSuitsHint": "Rough is fine — a month or “any weekend” tells us plenty.",
@@ -575,6 +577,8 @@
     "getInTouch": "Get in touch",
     "noDateBody": "No date that works, or a question first? Answer what you can and we will write the email for you — it sends from your own mail app, so our reply lands where you expect it.",
     "namePlaceholder": "Priya Sharma",
+    "emailPlaceholder": "you@example.com",
+    "phonePlaceholder": "+1 305 555 0134",
     "whenSuitsPlaceholder": "The week of 12 August",
     "messagePlaceholder": "We are on a cruise and only ashore on Tuesday.",
     "messageSoFar": "Your message so far",
@@ -582,6 +586,11 @@
     "orWriteTo": "Or write to",
     "callLabel": "call",
     "notSaid": "Not said",
+    "required": "(required)",
+    "send": "Send inquiry",
+    "sending": "Sending…",
+    "sentHeading": "Inquiry sent",
+    "sentBody": "We'll be in touch. You can still reach us directly using the details below.",
     "subject": "Course inquiry: {courseTitle}",
     "body": "Hello {shopName},\n\nI would like to take the {courseTitle} course.\n\nWhen: {timing}\nHow many divers: {divers}\nExperience so far: {experience}{hasNote, select, yes {\n\n{note}} other {}}\n\nThank you,{hasName, select, yes {\n{name}} other {}}",
     "experience": {
@@ -589,6 +598,11 @@
       "tried": "I have tried scuba once, but I am not certified",
       "certified": "I am certified, and I have my card",
       "lapsed": "I am certified, but it has been a while"
+    },
+    "errors": {
+      "invalid": "Check the highlighted field and try again.",
+      "unavailable": "This course isn't available right now.",
+      "experienceRequired": "Let us know where you are up to before sending."
     }
   },
   "account": {
@@ -1296,6 +1310,15 @@
       "body": "{inviterName} added you to {shopName} on DiveDay as {roles}.",
       "setPassword": "Set your password to get started",
       "expiry": "This link expires {expiresAt}. If you weren't expecting this, you can ignore it."
+    },
+    "courseInquiry": {
+      "anonymous": "Someone",
+      "subject": "New course inquiry: {courseTitle}",
+      "intro": "{name} is asking about {courseTitle} through your course page.",
+      "contact": "Email: {email} · Phone: {phone}",
+      "timing": "When: {timing}",
+      "divers": "How many divers: {divers}",
+      "experience": "Experience so far: {experience}"
     },
     "passwordReset": {
       "subject": "Reset your DiveDay password",

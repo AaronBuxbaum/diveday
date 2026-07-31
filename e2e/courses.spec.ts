@@ -320,3 +320,40 @@ test("a diver with no workable date gets a written email instead of a dead end",
   expect(params.get("body")).toContain("Experience so far: I have never dived before");
   expect(params.get("body")).toContain("Mira Delgado");
 });
+
+test("a blank inquiry is rejected, not defaulted — experience is required (task 8)", async ({
+  page,
+}) => {
+  await page.goto("/shop/blue-mantis/courses/open-water-diver");
+  const inquiry = page.getByRole("region", { name: "Get in touch" });
+  await inquiry.scrollIntoViewIfNeeded();
+
+  // No experience picked: every path the composer offers refuses to go
+  // through, not just the one a diver happens to reach for first.
+  await inquiry.getByRole("button", { name: "Send inquiry" }).click();
+  await expect(inquiry.getByText("Let us know where you are up to before sending.")).toBeVisible();
+  await expect(inquiry.getByText("Inquiry sent")).toHaveCount(0);
+
+  await inquiry.getByRole("link", { name: "Open in your email app" }).click();
+  await expect(inquiry.getByText("Let us know where you are up to before sending.")).toBeVisible();
+});
+
+test("a diver's inquiry is recorded server-side and the shop's details stay reachable after sending", async ({
+  page,
+}) => {
+  await page.goto("/shop/blue-mantis/courses/open-water-diver");
+  const inquiry = page.getByRole("region", { name: "Get in touch" });
+  await inquiry.scrollIntoViewIfNeeded();
+  await page.getByLabel("Your name").fill("Sena Okafor");
+  await page.getByLabel("Your email").fill("sena.okafor.e2e@example.com");
+  await page.getByLabel("Your phone").fill("+1 305 555 0199");
+  await page.getByLabel("Where you are up to").selectOption("certified");
+
+  await inquiry.getByRole("button", { name: "Send inquiry" }).click();
+
+  // The composer collapses into a confirmation — task 7's server-recorded
+  // send, not just the mailto fallback — and still leaves the shop's own
+  // contact details on screen underneath it.
+  await expect(inquiry.getByText("Inquiry sent")).toBeVisible();
+  await expect(inquiry.getByText("hello@demo.invalid")).toBeVisible();
+});

@@ -168,6 +168,8 @@ export const RATE_LIMITS = {
   recapUploadByIp: perHour(30),
   /** Public wait-list joins, per IP. */
   waitlistJoin: perHour(10),
+  /** Course inquiry submissions from the public course page, per IP. */
+  courseInquiry: perHour(10),
   /** Public last-minute-list joins, per IP. */
   lastMinuteListJoin: perHour(10),
   /** Starting a post-trip tip checkout, per recap token. */

@@ -564,6 +564,8 @@
   },
   "inquiry": {
     "yourName": "Tu nombre",
+    "yourEmail": "Tu correo",
+    "yourPhone": "Tu teléfono",
     "howManyDivers": "Cuántos buceadores",
     "whenSuits": "Cuándo te viene bien",
     "whenSuitsHint": "Con algo aproximado basta — un mes o «cualquier fin de semana» ya nos dice mucho.",
@@ -575,6 +577,8 @@
     "getInTouch": "Ponte en contacto",
     "noDateBody": "¿Ninguna fecha te viene bien, o tienes una pregunta primero? Responde lo que puedas y escribiremos el correo por ti — se envía desde tu propia aplicación de correo, así que nuestra respuesta llega donde la esperas.",
     "namePlaceholder": "Priya Sharma",
+    "emailPlaceholder": "tu@ejemplo.com",
+    "phonePlaceholder": "+34 600 000 000",
     "whenSuitsPlaceholder": "La semana del 12 de agosto",
     "messagePlaceholder": "Estamos en un crucero y solo bajamos a tierra los martes.",
     "messageSoFar": "Tu mensaje hasta ahora",
@@ -582,6 +586,11 @@
     "orWriteTo": "O escribe a",
     "callLabel": "llama",
     "notSaid": "No indicado",
+    "required": "(obligatorio)",
+    "send": "Enviar consulta",
+    "sending": "Enviando…",
+    "sentHeading": "Consulta enviada",
+    "sentBody": "Nos pondremos en contacto contigo. También puedes escribirnos directamente con los datos de abajo.",
     "subject": "Consulta sobre el curso: {courseTitle}",
     "body": "Hola {shopName},\n\nMe gustaría hacer el curso {courseTitle}.\n\nCuándo: {timing}\nCuántos buceadores: {divers}\nExperiencia hasta ahora: {experience}{hasNote, select, yes {\n\n{note}} other {}}\n\nGracias,{hasName, select, yes {\n{name}} other {}}",
     "experience": {
@@ -589,6 +598,11 @@
       "tried": "He probado el buceo una vez, pero no estoy certificado",
       "certified": "Estoy certificado y tengo mi tarjeta",
       "lapsed": "Estoy certificado, pero ha pasado tiempo"
+    },
+    "errors": {
+      "invalid": "Revisa el campo señalado e inténtalo de nuevo.",
+      "unavailable": "Este curso no está disponible en este momento.",
+      "experienceRequired": "Cuéntanos por dónde vas antes de enviar."
     }
   },
   "account": {
@@ -1296,6 +1310,15 @@
       "body": "{inviterName} te añadió a {shopName} en DiveDay como {roles}.",
       "setPassword": "Configura tu contraseña para empezar",
       "expiry": "Este enlace caduca el {expiresAt}. Si no esperabas esto, puedes ignorarlo."
+    },
+    "courseInquiry": {
+      "anonymous": "Alguien",
+      "subject": "Nueva consulta de curso: {courseTitle}",
+      "intro": "{name} está preguntando por {courseTitle} desde la página del curso.",
+      "contact": "Correo: {email} · Teléfono: {phone}",
+      "timing": "Cuándo: {timing}",
+      "divers": "Cuántos buceadores: {divers}",
+      "experience": "Experiencia hasta ahora: {experience}"
     },
     "passwordReset": {
       "subject": "Restablece tu contraseña de DiveDay",

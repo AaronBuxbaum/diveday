@@ -393,6 +393,58 @@ export const coursePathSteps = pgTable(
 );
 
 /**
+ * The one question that changes what the shop replies with — enrollment,
+ * referral to an earlier course, or a card the desk reviews first. Mirrors
+ * `CourseInquiryExperience` in src/lib/course-inquiry.ts exactly; keep both
+ * in sync on change.
+ */
+export const courseInquiryExperience = pgEnum("course_inquiry_experience", [
+  "never",
+  "tried",
+  "certified",
+  "lapsed",
+]);
+
+/**
+ * A lead from the public course page's "get in touch" composer
+ * (courses/[slug]/_components/CourseInquiry.tsx). Deliberately small: name,
+ * email, and phone are each optional (a diver may leave only one way to reach
+ * them, or none besides the message itself — the `mailto:` composer stays the
+ * fallback for that case), and there is no status/response tracking here —
+ * follow-up happens off-platform, in the shop's own inbox, once the
+ * notification email lands.
+ */
+export const courseInquiries = pgTable(
+  "course_inquiries",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    courseId: uuid("course_id")
+      .notNull()
+      .references(() => courses.id),
+    name: text("name"),
+    email: text("email"),
+    phone: text("phone"),
+    /** The one field the form requires — see courseInquiryExperience above. */
+    experienceLevel: courseInquiryExperience("experience_level").notNull(),
+    /** Free prose — "the week of 12 August", "any weekend in the autumn". */
+    timing: text("timing"),
+    /** How many people, including the writer; null when left blank. */
+    divers: integer("divers"),
+    message: text("message"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    // The notification/moderation read: this shop's inquiries, newest first.
+    index("course_inquiries_shop_created_idx").on(table.shopId, table.createdAt),
+    // "Who's asking about this course" for a course-scoped view.
+    index("course_inquiries_course_idx").on(table.courseId),
+  ],
+);
+
+/**
  * A reusable, shop-owned briefing for one dive site. Trip conditions are
  * intentionally kept on the dated trip: a site library entry is evergreen,
  * while water temperature and visibility are not.
