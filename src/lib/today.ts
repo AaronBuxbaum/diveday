@@ -61,7 +61,9 @@ export type TodayActionKind =
   | "waitlist_seat"
   | "last_minute_fill"
   | "email_delivery"
-  | "emergency_contact";
+  | "emergency_contact"
+  | "stuck_payment_operation"
+  | "failed_photo_deletion";
 
 /**
  * Severity breaks ties inside a single departure. It ranks by how long the fix
@@ -88,6 +90,10 @@ const KIND_SEVERITY: Record<TodayActionKind, number> = {
   last_minute_fill: 12,
   // Dock-settleable and never a boarding blocker, so it rides at the bottom.
   emergency_contact: 13,
+  // Platform-health chores (task 157) — never a departure blocker, so they
+  // sink below every per-diver row when severity is what breaks a tie.
+  stuck_payment_operation: 14,
+  failed_photo_deletion: 15,
 };
 
 /**
@@ -111,6 +117,8 @@ export const ACTION_KIND_META = {
   waitlist_seat: { tone: "neutral" },
   last_minute_fill: { tone: "neutral" },
   emergency_contact: { tone: "neutral" },
+  stuck_payment_operation: { tone: "warning" },
+  failed_photo_deletion: { tone: "warning" },
 } as const satisfies Record<TodayActionKind, { tone: "danger" | "warning" | "neutral" }>;
 
 export type TodayAction = {

@@ -18,6 +18,7 @@ import {
   getBookingContext,
   getOrder,
   listOrders,
+  listShopOrders,
   markOrderPaidByInvoiceId,
   markOrderVoidedByInvoiceId,
   refreshOrderStatus,
@@ -531,5 +532,120 @@ describe("orders", () => {
 
     // An ordinary charter has no course, so the form falls back to the trip fee.
     expect((await getBookingContext(db, shop.id, entry.booking.id))?.course).toBeNull();
+  });
+
+  describe("listShopOrders", () => {
+    it("filters by status, diver, and date range — the /orders index's three filters", async () => {
+      const { db, shop, reef, entry } = await orderContext();
+      await upsertShopStripeAccount(db, shop.id, "acct_123");
+      await setShopStripeAccountStatus(db, "acct_123", {
+        chargesEnabled: true,
+        payoutsEnabled: true,
+        detailsSubmitted: true,
+      });
+      const roster = await getTripRoster(db, shop.id, reef.id);
+      const other = roster.find((row) => row.person.id !== entry.person.id);
+      if (!other) throw new Error("expected a second diver on the seeded reef trip");
+
+      const openResult = await createOrder(
+        db,
+        {
+          shopId: shop.id,
+          personId: entry.person.id,
+          createdByPersonId: entry.person.id,
+          lineItems,
+        },
+        fakeInvoicing(),
+      );
+      if (!openResult.ok) throw new Error("expected the open order to be created");
+
+      const paidResult = await createOrder(
+        db,
+        {
+          shopId: shop.id,
+          personId: other.person.id,
+          createdByPersonId: entry.person.id,
+          lineItems,
+        },
+        fakeInvoicing({
+          async createInvoice(request) {
+            const totalCents = request.lineItems.reduce(
+              (sum, item) => sum + item.quantity * item.unitAmountCents,
+              0,
+            );
+            return {
+              status: "created",
+              stripeCustomerId: "cus_paid",
+              stripeInvoiceId: "in_paid",
+              stripeStatus: "paid",
+              hostedInvoiceUrl: null,
+              invoicePdfUrl: null,
+              totalCents,
+            };
+          },
+        }),
+      );
+      if (!paidResult.ok) throw new Error("expected the paid order to be created");
+
+      // No filter: every order this shop has ever sent, newest first.
+      const all = await listShopOrders(db, shop.id);
+      const allIds = all.map((row) => row.order.id);
+      expect(allIds).toContain(openResult.order.id);
+      expect(allIds).toContain(paidResult.order.id);
+
+      // Status.
+      const paidOnly = await listShopOrders(db, shop.id, { status: "paid" });
+      expect(paidOnly.map((row) => row.order.id)).toEqual([paidResult.order.id]);
+
+      // Diver, by exact id (the roster/diver-record "view orders" link) and by
+      // a name substring (the index page's own search box).
+      const forEntry = await listShopOrders(db, shop.id, { personId: entry.person.id });
+      expect(forEntry.map((row) => row.order.id)).toEqual([openResult.order.id]);
+      const byNameFragment = await listShopOrders(db, shop.id, {
+        personQuery: other.person.fullName.slice(0, 4),
+      });
+      expect(byNameFragment.map((row) => row.order.id)).toContain(paidResult.order.id);
+      expect(byNameFragment.map((row) => row.order.id)).not.toContain(openResult.order.id);
+
+      // Date range: a window around now catches both; a window that closes
+      // before now catches neither (Reports' "revenue rows" link a month range
+      // this same way).
+      const soon = new Date(Date.now() + 60_000);
+      const justNow = new Date(Date.now() - 60_000);
+      const longAgo = new Date("2000-01-01T00:00:00Z");
+      const inRange = await listShopOrders(db, shop.id, { from: justNow, to: soon });
+      expect(inRange.map((row) => row.order.id)).toEqual(
+        expect.arrayContaining([openResult.order.id, paidResult.order.id]),
+      );
+      const outOfRange = await listShopOrders(db, shop.id, { from: longAgo, to: justNow });
+      expect(outOfRange.map((row) => row.order.id)).not.toEqual(
+        expect.arrayContaining([openResult.order.id, paidResult.order.id]),
+      );
+    });
+
+    it("is tenant-safe: another shop's filter sees none of this shop's orders", async () => {
+      const { db, shop, entry } = await orderContext();
+      await upsertShopStripeAccount(db, shop.id, "acct_123");
+      await setShopStripeAccountStatus(db, "acct_123", {
+        chargesEnabled: true,
+        payoutsEnabled: true,
+        detailsSubmitted: true,
+      });
+      const result = await createOrder(
+        db,
+        {
+          shopId: shop.id,
+          personId: entry.person.id,
+          createdByPersonId: entry.person.id,
+          lineItems,
+        },
+        fakeInvoicing(),
+      );
+      if (!result.ok) throw new Error("expected order creation to succeed");
+
+      const otherShopId = "00000000-0000-4000-8000-000000000000";
+      const otherShopOrders = await listShopOrders(db, otherShopId);
+      expect(otherShopOrders.map((row) => row.order.id)).not.toContain(result.order.id);
+    });
   });
 });

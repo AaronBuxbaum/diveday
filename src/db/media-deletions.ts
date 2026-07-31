@@ -98,9 +98,12 @@ export async function queueAndAttemptMediaDeletion(
  * died before ever resolving it — indistinguishable, for retry purposes, from
  * a `failed` row (CR-012's "provider-delete failure is owner-visible and
  * retryable" case covers both). Defaults to five minutes ago; injectable so
- * tests don't depend on real wall-clock time passing.
+ * tests don't depend on real wall-clock time passing. Exported so
+ * `src/db/today.ts` can build the same cutoff from its own `now` (task 157)
+ * instead of reading the live clock the way `listPendingMediaDeletions`'s
+ * default argument does.
  */
-const STALE_PENDING_AFTER_MS = 5 * 60 * 1000;
+export const STALE_PENDING_AFTER_MS = 5 * 60 * 1000;
 
 function defaultStaleBefore(): Date {
   return new Date(nowDate().getTime() - STALE_PENDING_AFTER_MS);

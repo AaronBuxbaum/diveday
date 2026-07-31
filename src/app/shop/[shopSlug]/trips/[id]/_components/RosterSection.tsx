@@ -521,6 +521,12 @@ export function RosterSection({
                   >
                     {t("trips.roster.createOrder")}
                   </Link>
+                  <Link
+                    href={`/shop/${shopSlug}/orders?personId=${person.id}`}
+                    className="inline-flex min-h-11 items-center py-2 text-sm font-medium text-primary hover:underline"
+                  >
+                    {t("trips.roster.viewOrders")}
+                  </Link>
                   {/* A cancel inside the shop's refund window fires an automatic
                       Stripe refund that the Undo banner can't claw back — a real
                       send of money, not a purely reversible edit — so this gets a

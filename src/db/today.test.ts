@@ -1,13 +1,16 @@
 // @vitest-environment node
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { staffTranslator } from "@/i18n/staff-messages";
 import type { CreateTripPromotionResult, PromotionProvider } from "@/lib/payments/promotions";
 import { seededShopContext } from "@/test/db";
 import { cancelBooking } from "./bookings";
 import { joinLastMinuteList } from "./last-minute-list";
 import { getTripManifest, recordRollCall } from "./manifests";
+import { queueMediaDeletion, resolveMediaDeletion } from "./media-deletions";
 import { setBookingNitrox } from "./nitrox";
 import { recordNotificationDelivery } from "./notifications";
+import { startPaymentOperation } from "./payment-operations";
 import { saveRentalFit } from "./rental-fit";
 import { nitroxCertifications, people, tripWaitlistEntries } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
@@ -487,5 +490,108 @@ describe("role lens raw material", () => {
     const anonymous = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
     expect(anonymous.crewedTripIds).toHaveLength(0);
     expect(anonymous.crewedSessions).toHaveLength(0);
+  });
+
+  describe("ops alerts (task 157)", () => {
+    it("surfaces a stuck payment operation as an urgency: now row, only when the caller opts in", async () => {
+      const { db, shop } = await seededShopContext();
+      const intent = await startPaymentOperation(db, { shopId: shop.id, kind: "invoice" });
+      // No wall-clock trickery needed on the write side: reading the queue from
+      // ten minutes in its own future is what makes the just-started intent
+      // read as stuck (same trick `listStuckPaymentOperations`' own tests use).
+      const future = new Date(Date.now() + 10 * 60 * 1000);
+      const t = staffTranslator("en-US");
+
+      const withoutFlag = await getTodayWork(
+        db,
+        shop.id,
+        shop.slug,
+        shop.timezone,
+        future,
+        undefined,
+        t,
+        "en-US",
+      );
+      expect(
+        withoutFlag.actions.find((a) => a.id === `stuck-payment-op:${intent.id}`),
+      ).toBeUndefined();
+
+      const withFlag = await getTodayWork(
+        db,
+        shop.id,
+        shop.slug,
+        shop.timezone,
+        future,
+        undefined,
+        t,
+        "en-US",
+        true,
+      );
+      const row = withFlag.actions.find((a) => a.id === `stuck-payment-op:${intent.id}`);
+      expect(row).toBeDefined();
+      expect(row?.kind).toBe("stuck_payment_operation");
+      // Forced "now" regardless of any departure — there isn't one — but still
+      // undated, so it never jumps ahead of a real diver blocker within that band.
+      expect(row?.urgency).toBe("now");
+      expect(row?.dueAt).toBeNull();
+      expect(row?.href).toBe(`/shop/${shop.slug}/reports`);
+    });
+
+    it("surfaces a failed photo-deletion retry as an urgency: now row, only when the caller opts in", async () => {
+      const { db, shop } = await seededShopContext();
+      const attempt = await queueMediaDeletion(db, {
+        shopId: shop.id,
+        kind: "recap_photo",
+        url: "https://example123.public.blob.vercel-storage.com/example/photo.jpg",
+      });
+      if (!attempt) throw new Error("expected a managed blob URL to queue");
+      await resolveMediaDeletion(db, attempt.id, { status: "failed", error: "network error" });
+      const t = staffTranslator("en-US");
+
+      const withoutFlag = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+      expect(
+        withoutFlag.actions.find((a) => a.id === `media-deletion:${attempt.id}`),
+      ).toBeUndefined();
+
+      const withFlag = await getTodayWork(
+        db,
+        shop.id,
+        shop.slug,
+        shop.timezone,
+        undefined,
+        undefined,
+        t,
+        "en-US",
+        true,
+      );
+      const row = withFlag.actions.find((a) => a.id === `media-deletion:${attempt.id}`);
+      expect(row).toBeDefined();
+      expect(row?.kind).toBe("failed_photo_deletion");
+      expect(row?.urgency).toBe("now");
+      expect(row?.dueAt).toBeNull();
+      expect(row?.href).toBe(`/shop/${shop.slug}/reports`);
+    });
+
+    it("is tenant-safe: another shop's queue never surfaces this shop's ops alerts", async () => {
+      const { db, shop } = await seededShopContext();
+      const intent = await startPaymentOperation(db, { shopId: shop.id, kind: "invoice" });
+      const future = new Date(Date.now() + 10 * 60 * 1000);
+
+      const otherShopId = "00000000-0000-4000-8000-000000000000";
+      const otherWork = await getTodayWork(
+        db,
+        otherShopId,
+        "other-shop",
+        shop.timezone,
+        future,
+        undefined,
+        staffTranslator("en-US"),
+        "en-US",
+        true,
+      );
+      expect(
+        otherWork.actions.find((a) => a.id === `stuck-payment-op:${intent.id}`),
+      ).toBeUndefined();
+    });
   });
 });

@@ -18,6 +18,7 @@ import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { GREETING_KEYS, summarizeDayText } from "@/i18n/today-labels";
 import { trackEvent } from "@/lib/analytics";
+import { canViewShopReports } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { formatShortDate, formatTime } from "@/lib/format";
 import { publicAppUrl } from "@/lib/notifications";
@@ -102,6 +103,9 @@ async function TodayBody({
     lens ? session.user.personId : undefined,
     t,
     locale,
+    // Stuck Stripe operations and failed photo deletions are owner/manager
+    // chores — same gate as Reports (task 157).
+    canViewShopReports(session.user.roles),
   );
   const { actions, nextDeparture, crewedTripIds, crewedSessions, availableStaff } = work;
   // The first-run checklist only matters for a real shop with nothing on the
