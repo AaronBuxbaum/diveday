@@ -75,11 +75,7 @@ describe("searchShop", () => {
 
   it("finds a course by a substring of its title", async () => {
     const { db, shop } = await seededShopContext();
-    const [course] = await db
-      .select()
-      .from(courses)
-      .where(eq(courses.shopId, shop.id))
-      .limit(1);
+    const [course] = await db.select().from(courses).where(eq(courses.shopId, shop.id)).limit(1);
     if (!course) throw new Error("seed course missing");
 
     const result = await searchShop(db, shop.id, course.title, "America/New_York");
