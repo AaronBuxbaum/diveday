@@ -1977,6 +1977,48 @@
     "nextDeparture": "La próxima es <link>{title}</link> el {date} a las {time}.",
     "noDeparturesEmpty": "Todavía no hay nada programado. Programa una salida y aparecerá aquí la mañana que zarpe.",
     "scheduleTrip": "Programar una salida",
+    "notice": {
+      "waiversNotAuthorized": "Editar el waiver está limitado a propietarios y gerentes.",
+      "exportNotAuthorized": "La exportación de datos está limitada a propietarios y gerentes."
+    },
+    "orientation": {
+      "heading": "¿Recién llegado? Algunas pistas para tu puesto.",
+      "subtitle": "Esto solo se muestra una vez — puedes descartarlo cuando quieras.",
+      "tryLabel": "Prueba:",
+      "dismiss": "Entendido",
+      "roles": {
+        "owner": {
+          "title": "Estás al mando de toda la tienda",
+          "desc": "Hoy es tu cola de trabajo — reservas, bloqueos y las salidas de hoy en un solo lugar.",
+          "tryThis": "Abre Calendario para ver las salidas de esta semana."
+        },
+        "manager": {
+          "title": "Manteniendo la tienda en marcha día a día",
+          "desc": "Hoy muestra lo que necesita atención primero; el resto de la administración de la tienda está en Más, en el menú.",
+          "tryThis": "Revisa Reseñas para ver los comentarios pendientes."
+        },
+        "instructor": {
+          "title": "Enseñando y certificando buceadores",
+          "desc": "Buceadores guarda las tarjetas de certificación y el historial de especialidades de cada uno.",
+          "tryThis": "Abre Buceadores para revisar una tarjeta de certificación antes de clase."
+        },
+        "divemaster": {
+          "title": "Preparando a los buceadores para embarcar",
+          "desc": "Bloqueos enumera a todos los que aún no pueden embarcar, con el único toque que resuelve cada caso.",
+          "tryThis": "Abre Bloqueos para ver quién todavía necesita preparación."
+        },
+        "captain": {
+          "title": "Dirigiendo el barco",
+          "desc": "El manifiesto es tu pase de embarque y lista de pasajeros, pensado para manos mojadas y señal débil.",
+          "tryThis": "Abre el manifiesto de hoy para ver quién va en el barco."
+        },
+        "crew": {
+          "title": "Registrando a los buceadores a su llegada",
+          "desc": "Check-in muestra quién ha llegado, a quién le falta papeleo y qué hacer al respecto.",
+          "tryThis": "Abre Check-in para registrar a los buceadores a su llegada."
+        }
+      }
+    },
     "firstRun": {
       "heading": "Prepara tu tienda",
       "subtitle": "Cinco pasos y los buceadores podrán empezar a reservar.",
@@ -2146,7 +2188,9 @@
     },
     "shopNav": {
       "home": "Inicio de DiveDay",
-      "signOut": "Cerrar sesión"
+      "signOut": "Cerrar sesión",
+      "signOutConfirm": "¿Cerrar sesión? Confirmar",
+      "signOutPending": "Cerrando sesión…"
     },
     "shopNavLinks": {
       "primaryNavAriaLabel": "Principal",

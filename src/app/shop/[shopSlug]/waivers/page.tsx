@@ -56,7 +56,10 @@ export default async function WaiverTemplatesPage({
     session.user.shopId,
     session.user.personId,
   );
-  if (!canManage) redirect(`/shop/${shopSlug}`);
+  // Bounced to Today, same as every other H-14 refusal — but with an
+  // explanatory notice rather than teleporting silently (task 82, UX persona
+  // 11 "Kai"): Today already renders `shopHome.notice.*` codes.
+  if (!canManage) redirect(`/shop/${shopSlug}?notice=waivers_not_authorized`);
   const current = await getCurrentWaiverTemplate(db, shop.id);
   const { entries: integrityAudit, nextCursor } = await listWaiverIntegrityAudit(db, shop.id, {
     cursor: after,
@@ -67,7 +70,7 @@ export default async function WaiverTemplatesPage({
     const staff = await requireStaffSession();
     const editor = await getDb();
     if (!(await canPersonManageWaiverTemplates(editor, staff.user.shopId, staff.user.personId))) {
-      redirect(`/shop/${staff.user.shopSlug}`);
+      redirect(`/shop/${staff.user.shopSlug}?notice=waivers_not_authorized`);
     }
     const parsed = templateSchema.safeParse(Object.fromEntries(formData));
     if (!parsed.success) redirect(`/shop/${staff.user.shopSlug}/waivers?notice=invalid`);

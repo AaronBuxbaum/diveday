@@ -75,6 +75,11 @@ function noticeMessages(
     disconnected: { tone: "success", text: t("settings.main.notice.disconnected") },
     refreshed: { tone: "success", text: t("settings.main.notice.refreshed") },
     not_authorized: { tone: "danger", text: t("settings.main.notice.notAuthorized") },
+    // Promos' own gate (`shop/[shopSlug]/promos/page.tsx`) bounces a
+    // non-owner/manager here — a distinct code from `not_authorized` above
+    // so it shows the promo-specific explanation rather than the rentals
+    // one (task 82, UX persona 11 "Kai").
+    promos_not_authorized: { tone: "danger", text: t("promos.notice.notAuthorized") },
   };
 }
 

@@ -99,3 +99,33 @@ export async function getBlockerQueue(
   annotateAlsoOn(trips);
   return { trips, truncated: nextCursor !== null };
 }
+
+/**
+ * Distinct divers who can't board yet, across the same upcoming-departure
+ * window `getBlockerQueue` inspects — for the nav badge (task 83, UX persona
+ * 11 "Kai"/12 "Maren"), which only needs the headline count, not each row's
+ * fix label/href. Still walks readiness per inspected trip (there is no
+ * cheaper SQL-only signal — "blocked" is a business rule computed from
+ * certs/waivers/payment, not a stored flag), so this costs the same queries
+ * as the Blockers page itself; kept as its own function so a future cheaper
+ * path doesn't have to thread through label-building code that only the full
+ * page needs.
+ */
+export async function countBlockedDivers(
+  db: AppDb,
+  shopId: string,
+  now: Date = nowDate(),
+): Promise<number> {
+  const { trips: inspected } = await pagedUpcomingTripsWithCounts(db, shopId, {
+    now,
+    limit: MAX_TRIPS,
+  });
+  const blocked = new Set<string>();
+  for (const trip of inspected) {
+    const rows = await listTripReadiness(db, shopId, trip.id);
+    for (const row of rows) {
+      if (row.readiness.status === "blocked") blocked.add(row.person.id);
+    }
+  }
+  return blocked.size;
+}

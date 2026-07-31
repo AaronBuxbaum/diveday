@@ -1,5 +1,6 @@
+import { DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
 import { expect, test } from "./fixtures";
-import { openTripFromBoard, signInAsOwner } from "./helpers";
+import { openTripFromBoard, signInAs, signInAsOwner } from "./helpers";
 
 /**
  * Shop-wide promo codes (docs ADR 20260729-shop-promo-codes). The fleet has no
@@ -13,6 +14,27 @@ test("the promo page is owner/manager work, not open to every staff member", asy
   await page.goto("/shop/blue-mantis/promos");
   // Signed out, the staff gate sends an anonymous visitor to sign in.
   await expect(page).toHaveURL(/\/sign-in/);
+});
+
+test("a non-owner is bounced to Settings with the promo-specific refusal, not the rentals one", async ({
+  page,
+}) => {
+  // A captain has no use for promo codes (they discount real money). Lands on
+  // Settings — this gate's redirect target — but must show *why Promos
+  // refused*, not Settings' own rental-prices `not_authorized` message
+  // (task 82, UX persona 11 "Kai").
+  await signInAs(page, DEV_STAFF_LOGINS.captain);
+  await page.goto("/shop/blue-mantis/promos");
+  // Not a URL assertion: FlashParams strips `?notice=promos_not_authorized`
+  // via history.replaceState shortly after mount — the rendered banner is
+  // the stable signal.
+  await expect(page).toHaveURL(/\/shop\/blue-mantis\/settings(\?.*)?$/);
+  await expect(
+    page.getByText("Promo codes discount real money, so they're limited to owners and managers."),
+  ).toBeVisible();
+  await expect(
+    page.getByText("The rental catalog, rental prices, and Stripe connection"),
+  ).toHaveCount(0);
 });
 
 test("an owner sees the shop's codes with their scope, window, and redemption count", async ({

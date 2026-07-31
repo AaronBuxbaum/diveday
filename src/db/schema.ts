@@ -1603,6 +1603,13 @@ export const userAccounts = pgTable(
      * verified one today.
      */
     emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
+    /**
+     * Null until this account dismisses its first-visit role orientation card
+     * on Today (UX-persona task 79 — Kai, the day-one seasonal hire).
+     * Per-account, not per-browser/device, so dismissing on the shop's shared
+     * tablet also clears it on the same person's own phone.
+     */
+    orientationDismissedAt: timestamp("orientation_dismissed_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
