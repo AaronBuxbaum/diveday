@@ -497,7 +497,8 @@
     "diverEmailLabel": "Diver {number} email",
     "phoneLabel": "Phone",
     "phoneHint": "(if the crew needs to reach you)",
-    "didYouMeanEmail": "Did you mean {email}?"
+    "didYouMeanEmail": "Did you mean {email}?",
+    "rememberedChip": "Booking as <strong>{name}</strong> · <button>Not you?</button>"
   },
   "site": {
     "seeMoreHeading": "See more by slowing down",

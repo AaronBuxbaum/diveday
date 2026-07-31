@@ -189,7 +189,12 @@ export function BookSpotSection({
         </p>
       ) : null}
       <form action={formAction} className="mt-4 flex flex-col gap-4">
-        <BookingPartyFields maxPartySize={remaining} leadPhone fieldErrors={state.fieldErrors} />
+        <BookingPartyFields
+          maxPartySize={remaining}
+          leadPhone
+          fieldErrors={state.fieldErrors}
+          remember={!tripRef.embed}
+        />
         <FieldGrid columns={1}>
           <Field label={t("preferenceLabel")} hint={t("preferenceHint")}>
             <textarea

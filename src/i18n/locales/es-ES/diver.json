@@ -497,7 +497,8 @@
     "diverEmailLabel": "Correo del buceador {number}",
     "phoneLabel": "Teléfono",
     "phoneHint": "(por si la tripulación necesita contactarte)",
-    "didYouMeanEmail": "¿Quisiste decir {email}?"
+    "didYouMeanEmail": "¿Quisiste decir {email}?",
+    "rememberedChip": "Reservando como <strong>{name}</strong> · <button>¿No eres tú?</button>"
   },
   "site": {
     "seeMoreHeading": "Ve más yendo despacio",

@@ -7,6 +7,7 @@ import { checklistCategoryText, checklistDetailText } from "@/i18n/readiness-sum
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { buildDiverChecklist, nextDiverStep } from "@/lib/readiness-summary";
 import { payForBooking, type RentalFitRef, saveRentalFitRequest } from "../actions";
+import { RememberBooker } from "./RememberBooker";
 import { RentalFitForm } from "./RentalFitForm";
 import type {
   Confirmed,
@@ -137,6 +138,12 @@ export function BookingConfirmation({
 
   return (
     <>
+      {/* Client-only, per-device convenience (task 27) — never in the embed
+          widget, whose whole point is to leave no trace on a shop's own
+          site (docs ADR 20260726-schedule-embed). */}
+      {!fitRef.embed && confirmed.person.email ? (
+        <RememberBooker fullName={confirmed.person.fullName} email={confirmed.person.email} />
+      ) : null}
       {/* Same shared component /ready and /recap use for their earned moment
           — this page hand-rolled its own accent box before, which is how its
           radius (rounded-lg) and missing eyebrow drifted from theirs

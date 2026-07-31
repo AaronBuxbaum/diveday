@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { suggestEmailTypo } from "@/lib/email-typo";
+import { loadReturningDiver, type ReturningDiver } from "@/lib/returning-diver";
 
 const diverSlots = ["one", "two", "three", "four", "five", "six"] as const;
 
@@ -37,11 +38,15 @@ export function BookingPartyFields({
   maxPartySize,
   leadPhone = false,
   fieldErrors,
+  remember = false,
 }: {
   maxPartySize: number;
   /** Show an optional phone field for the lead booker (diver 1). */
   leadPhone?: boolean;
   fieldErrors?: BookingFieldErrors;
+  /** Prefill the lead diver from a previous booking on this device (task 27
+   * — Marco). Never in the embed widget; the caller decides that. */
+  remember?: boolean;
 }) {
   const t = useTranslations();
   const [size, setSize] = useState(1);
@@ -51,11 +56,26 @@ export function BookingPartyFields({
   );
   const [phone, setPhone] = useState("");
   const [blurred, setBlurred] = useState<Record<number, boolean>>({});
+  const [rememberedDiver, setRememberedDiver] = useState<ReturningDiver | null>(null);
   const limit = Math.max(1, Math.min(6, maxPartySize));
   useEffect(() => setHydrated(true), []);
 
   function updateMember(index: number, patch: Partial<PartyMember>) {
     setParty((current) => current.map((m, i) => (i === index ? { ...m, ...patch } : m)));
+  }
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: only ever applied once on mount
+  useEffect(() => {
+    if (!remember) return;
+    const stored = loadReturningDiver();
+    if (!stored) return;
+    setRememberedDiver(stored);
+    updateMember(0, { fullName: stored.fullName, email: stored.email });
+  }, [remember]);
+
+  function forgetRememberedDiver() {
+    setRememberedDiver(null);
+    updateMember(0, { fullName: "", email: "" });
   }
 
   return (
@@ -91,6 +111,25 @@ export function BookingPartyFields({
             <legend className="px-1 text-sm font-semibold text-muted">
               {index === 0 ? t("party.yourDetails") : t("party.diverN", { number: index + 1 })}
             </legend>
+            {index === 0 && rememberedDiver ? (
+              <p className="-mt-1 mb-3 px-1 text-sm text-muted">
+                {t.rich("party.rememberedChip", {
+                  name: rememberedDiver.fullName,
+                  strong: (chunks) => (
+                    <strong className="font-semibold text-foreground">{chunks}</strong>
+                  ),
+                  button: (chunks) => (
+                    <button
+                      type="button"
+                      onClick={forgetRememberedDiver}
+                      className="font-medium text-primary hover:underline"
+                    >
+                      {chunks}
+                    </button>
+                  ),
+                })}
+              </p>
+            ) : null}
             <FieldGrid columns={2}>
               <Field
                 label={
