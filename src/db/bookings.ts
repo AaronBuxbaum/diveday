@@ -82,7 +82,17 @@ export type BookingOutcome =
 
 export type BookingPartyOutcome =
   | { ok: true; bookings: Array<{ bookingId: string; personName: string }> }
-  | Exclude<BookingOutcome, { ok: true }>;
+  | (Exclude<BookingOutcome, { ok: true }> & {
+      /**
+       * Which request in the submitted array the rollback happened on
+       * (task 25) — a caller can then point a per-member error at the right
+       * fieldset instead of a generic top-of-form banner that reads as if
+       * the first diver were the problem when it was a later one. Present
+       * for every failure; a caller only has field positions to highlight
+       * for reasons that are actually about one member (`already_booked`).
+       */
+      failedIndex: number;
+    });
 
 /**
  * The whole "grab a spot" operation in one transaction: trip must be
@@ -101,25 +111,30 @@ export async function createBookingParty(
   db: AppDb,
   requests: BookingRequest[],
 ): Promise<BookingPartyOutcome> {
-  if (requests.length === 0) return { ok: false, reason: "trip_unavailable" };
+  if (requests.length === 0) return { ok: false, reason: "trip_unavailable", failedIndex: -1 };
   return db
     .transaction(async (tx) => {
       const created: Array<{ bookingId: string; personName: string }> = [];
-      for (const request of requests) {
+      for (const [index, request] of requests.entries()) {
         const outcome = await createBookingRecord(tx as unknown as AppDb, request);
-        if (!outcome.ok) throw new PartyBookingError(outcome.reason);
+        if (!outcome.ok) throw new PartyBookingError(outcome.reason, index);
         created.push(outcome);
       }
       return { ok: true as const, bookings: created };
     })
     .catch((error: unknown) => {
-      if (error instanceof PartyBookingError) return { ok: false as const, reason: error.reason };
+      if (error instanceof PartyBookingError) {
+        return { ok: false as const, reason: error.reason, failedIndex: error.index };
+      }
       throw error;
     });
 }
 
 class PartyBookingError extends Error {
-  constructor(public readonly reason: Exclude<BookingOutcome, { ok: true }>["reason"]) {
+  constructor(
+    public readonly reason: Exclude<BookingOutcome, { ok: true }>["reason"],
+    public readonly index: number,
+  ) {
     super(reason);
   }
 }

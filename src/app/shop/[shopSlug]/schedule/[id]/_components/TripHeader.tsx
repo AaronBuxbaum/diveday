@@ -1,4 +1,5 @@
 import { diverTranslator } from "@/i18n/messages";
+import { courseCharges, perDiverBookingPriceCents } from "@/lib/courses";
 import { cancellationDeadline, checkoutCharge } from "@/lib/deposits";
 import { formatDateTimeTz, formatMoneyCents, formatShortDate, formatTimeRange } from "@/lib/format";
 import type { Shop, Trip } from "./types";
@@ -7,6 +8,22 @@ export function TripHeader({ shop, trip, locale }: { shop: Shop; trip: Trip; loc
   const charge = checkoutCharge(trip, trip.course);
   const deadline = cancellationDeadline(trip);
   const t = diverTranslator(locale);
+  // The same total the booking section actually charges — course fee and
+  // e-learning included — not the bare trip row (task 15). Before this fix a
+  // course session could show one price in the hero and a higher one once
+  // the diver reached the form.
+  const perDiverPriceCents = perDiverBookingPriceCents(trip, trip.course);
+  const breakdown = trip.course
+    ? courseCharges({
+        title: trip.course.title,
+        priceCents: trip.course.priceCents ?? trip.priceCents,
+        eLearningPriceCents: trip.course.eLearningPriceCents,
+      })
+    : [];
+  const courseFeeCents = breakdown.find((line) => line.kind === "course_fee")?.amountCents ?? null;
+  const eLearningFeeCents =
+    breakdown.find((line) => line.kind === "e_learning_fee")?.amountCents ?? null;
+  const cancellationContact = shop.contactEmail || shop.contactPhone;
   return (
     <header className="mt-4">
       <p className="text-sm font-medium tracking-widest text-primary uppercase">{shop.name}</p>
@@ -20,18 +37,36 @@ export function TripHeader({ shop, trip, locale }: { shop: Shop; trip: Trip; loc
           {t("trip.courseSession")} · {trip.course.title}
         </p>
       ) : null}
+      {/* Minimum age was previously shown only on the course page, never here
+          where a parent is actually about to book (task 23) — the trip page
+          is a self-declared display only; enforcement stays out of scope
+          pending a human-decision entry (see the booking form's attestation
+          checkbox and docs/product/human-decisions.md H-08/H-22). */}
+      {trip.course?.minimumAge ? (
+        <p className="mt-1 text-sm text-muted">
+          {t("trip.minimumAge", { age: trip.course.minimumAge })}
+        </p>
+      ) : null}
       {trip.description ? <p className="mt-3 text-muted">{trip.description}</p> : null}
-      {trip.priceCents !== null ? (
+      {perDiverPriceCents !== null ? (
         <p className="mt-3 text-lg font-semibold tabular-nums">
-          {formatMoneyCents(trip.priceCents)}{" "}
+          {formatMoneyCents(perDiverPriceCents, "usd", locale)}{" "}
           <span className="text-sm font-normal text-muted">{t("common.perDiver")}</span>
+        </p>
+      ) : null}
+      {courseFeeCents !== null && eLearningFeeCents !== null ? (
+        <p className="mt-1 text-sm text-muted tabular-nums">
+          {t("trip.courseFeeBreakdown", {
+            course: formatMoneyCents(courseFeeCents, "usd", locale),
+            eLearning: formatMoneyCents(eLearningFeeCents, "usd", locale),
+          })}
         </p>
       ) : null}
       {charge?.isDeposit ? (
         <p className="mt-1 text-sm text-muted tabular-nums">
           {t("trip.depositLine", {
-            deposit: formatMoneyCents(charge.amountCents),
-            balance: formatMoneyCents(charge.balanceDueCents),
+            deposit: formatMoneyCents(charge.amountCents, "usd", locale),
+            balance: formatMoneyCents(charge.balanceDueCents, "usd", locale),
           })}
         </p>
       ) : null}
@@ -41,7 +76,13 @@ export function TripHeader({ shop, trip, locale }: { shop: Shop; trip: Trip; loc
             when: formatDateTimeTz(deadline, locale, shop.timezone),
           })}
         </p>
-      ) : null}
+      ) : cancellationContact ? (
+        <p className="mt-1 text-sm text-muted">
+          {t("trip.cancellationAskShop", { contact: cancellationContact })}
+        </p>
+      ) : (
+        <p className="mt-1 text-sm text-muted">{t("trip.cancellationAskShopNoContact")}</p>
+      )}
     </header>
   );
 }

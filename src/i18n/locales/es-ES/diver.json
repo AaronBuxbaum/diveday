@@ -13,6 +13,9 @@
     "saving": "Guardando…",
     "rateLimited": "Demasiados intentos. Espera unos minutos e inténtalo de nuevo."
   },
+  "shopChrome": {
+    "footerLine": "{shop} · Con la tecnología de DiveDay"
+  },
   "schedule": {
     "eyebrow": "Salidas",
     "title": "Calendario",
@@ -33,11 +36,14 @@
       "noMatches": "Ninguna salida coincide con estos filtros — prueba a quitar uno."
     },
     "showLater": "Ver salidas posteriores",
+    "showEarlier": "Ver salidas anteriores",
     "backToNext": "← Volver a la próxima salida",
     "courseSession": "Sesión de curso",
     "diveSite": "Punto de buceo",
     "twoTank": "Salida de dos inmersiones",
+    "twoTankHint": "Una salida en barco con dos inmersiones independientes, una tras otra, con un descanso (un intervalo de superficie) entre medias — no dos botellas puestas a la vez.",
     "diveCount": "{count, plural, other {# inmersiones}}",
+    "tripCardLabel": "{when} · {trip} · {capacity}",
     "calendarLabel": "Calendario de salidas",
     "previousMonth": "Mes anterior",
     "nextMonth": "Mes siguiente",
@@ -53,6 +59,10 @@
     "courseSession": "Sesión de curso",
     "depositLine": "{deposit} de señal al reservar · {balance} restante en el muelle",
     "freeCancellationUntil": "Cancelación gratuita hasta el {when}",
+    "cancellationAskShop": "¿Dudas sobre la cancelación? Pregunta a la tienda — {contact}",
+    "cancellationAskShopNoContact": "¿Dudas sobre la cancelación? Pregunta a la tienda.",
+    "courseFeeBreakdown": "{course} del curso + {eLearning} de e-learning",
+    "minimumAge": "Edad mínima: {age}",
     "planAndShare": "Planifica y comparte esta salida",
     "addToCalendar": "Añadir al calendario",
     "getDirections": "Cómo llegar",
@@ -148,6 +158,12 @@
     "preferencePlaceholder": "Fotografía macro, un ritmo tranquilo o quedarte con tus amigos",
     "promoLabel": "Código promocional",
     "promoHint": "(si tienes uno)",
+    "partyTotal": "{count, plural, one {# buceador} other {# buceadores}} × {price} = {total}",
+    "stripeHint": "Terminarás de pagar en una página segura de Stripe.",
+    "ageAttestation": "Confirmo que todos los buceadores de esta reserva cumplen la edad mínima de {age}.",
+    "cancelledHeading": "Esta salida se canceló",
+    "cancelledBody": "para otra fecha, o ponte en contacto con el centro.",
+    "cancelledContact": "¿Dudas? Contacta con el centro en {contact}.",
     "bookAndPay": "Reservar y pagar",
     "bookAndPayLastSpot": "Reservar y pagar — última plaza",
     "bookLastSpot": "Reservar la última plaza",
@@ -196,7 +212,8 @@
       "full": "Alguien reservó la última plaza justo antes que tú — el barco está completo.",
       "available": "Buenas noticias — se acaba de liberar una plaza. Resérvala antes de que se agote.",
       "already": "Ya estás en la lista de esta salida — no hace falta reservar dos veces.",
-      "unavailable": "Esta salida ya no acepta reservas.",
+      "unavailable": "Esta salida no acepta reservas ahora mismo. Ponte en contacto y el centro te ayudará a encontrar la opción adecuada.",
+      "unavailableWithContact": "Esta salida no acepta reservas ahora mismo. Escribe a {contact} y el centro te ayudará a encontrar la opción adecuada.",
       "courseUnavailable": "Este curso todavía necesita un instructor asignado antes de poder aceptar reservas.",
       "courseRatioFull": "Esta sesión alcanzó su límite de proporción instructor-alumno — llama al centro, puede que puedan añadir otro instructor o ayudante certificado.",
       "fit": "No hemos podido guardar ese ajuste de equipo. Revisa los detalles e inténtalo de nuevo.",
@@ -208,7 +225,8 @@
       "nameTooLong": "Ese nombre es demasiado largo.",
       "emailInvalid": "Escribe un correo electrónico válido.",
       "phoneTooLong": "Ese número de teléfono es demasiado largo.",
-      "noteTooLong": "Deja esta nota en menos de 300 caracteres."
+      "noteTooLong": "Deja esta nota en menos de 300 caracteres.",
+      "promoInvalid": "Ese código no está activo."
     }
   },
   "lastMinute": {
@@ -232,6 +250,13 @@
     "backToEditing": "Volver a la edición",
     "noCertification": "No se requiere titulación",
     "agencyCourse": "Curso {agency}",
+    "agencyFullNames": {
+      "padi": "PADI (Asociación Profesional de Instructores de Buceo)",
+      "ssi": "SSI (Scuba Schools International)",
+      "naui": "NAUI (Asociación Nacional de Instructores de Buceo)",
+      "sdi": "SDI (Scuba Diving International)",
+      "tdi": "TDI (Technical Diving International)"
+    },
     "seeDates": "Ver fechas",
     "askAboutDates": "Consultar fechas",
     "whoCanEnroll": "Quién puede matricularse",
@@ -572,6 +597,11 @@
       "weights": "Lastre",
       "diveComputer": "Ordenador de buceo",
       "gopro": "GoPro"
+    },
+    "jargonHints": {
+      "bcd": "Chaleco (BCD) — el chaleco inflable que llevas puesto, sujeta tu botella y te permite controlar si flotas o te hundes.",
+      "regulator": "Regulador — la boquilla y la manguera que te dejan respirar aire normal de tu botella bajo el agua.",
+      "nitrox": "El nitrox es una mezcla de aire con más oxígeno que permite a buceadores con formación específica pasar algo más de tiempo bajo el agua en algunas inmersiones — no necesitas saber más como principiante."
     }
   },
   "party": {
@@ -586,7 +616,11 @@
     "phoneLabel": "Teléfono",
     "phoneHint": "(por si la tripulación necesita contactarte)",
     "didYouMeanEmail": "¿Quisiste decir {email}?",
-    "rememberedChip": "Reservando como <strong>{name}</strong> · <button>¿No eres tú?</button>"
+    "rememberedChip": "Reservando como <strong>{name}</strong> · <button>¿No eres tú?</button>",
+    "useMainContactEmail": "Usar el correo del contacto principal para este buceador",
+    "bigGroupContactEmail": "¿Sois más de {count}? <a>Contacta con el centro — {contact}</a>",
+    "bigGroupContactPhone": "¿Sois más de {count}? <a>Contacta con el centro — {contact}</a>",
+    "bigGroupContactGeneric": "¿Sois más de {count}? Contacta con el centro."
   },
   "site": {
     "seeMoreHeading": "Ve más yendo despacio",

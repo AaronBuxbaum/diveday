@@ -39,6 +39,9 @@ export function BookingPartyFields({
   leadPhone = false,
   fieldErrors,
   remember = false,
+  onSizeChange,
+  contactEmail,
+  contactPhone,
 }: {
   maxPartySize: number;
   /** Show an optional phone field for the lead booker (diver 1). */
@@ -47,6 +50,16 @@ export function BookingPartyFields({
   /** Prefill the lead diver from a previous booking on this device (task 27
    * — Marco). Never in the embed widget; the caller decides that. */
   remember?: boolean;
+  /** Told every time the diver-selected party size changes (including on
+   * mount), so a caller can show its own party-size-dependent content (task
+   * 18's running total). Pass a stable reference (`useState`'s setter, not
+   * an inline arrow) — this fires from an effect keyed on it. */
+  onSizeChange?: (size: number) => void;
+  /** The shop's own contact, for the "bigger group?" escape hatch (task 24)
+   * below the party-size field. Either or both may be null when the shop
+   * hasn't set one. */
+  contactEmail?: string | null;
+  contactPhone?: string | null;
 }) {
   const t = useTranslations();
   const [size, setSize] = useState(1);
@@ -57,8 +70,19 @@ export function BookingPartyFields({
   const [phone, setPhone] = useState("");
   const [blurred, setBlurred] = useState<Record<number, boolean>>({});
   const [rememberedDiver, setRememberedDiver] = useState<ReturningDiver | null>(null);
+  // Per-member (index > 0 only): "use the main contact's email instead of
+  // typing one" (task 21) — Priya's kids don't each need their own address.
+  // The field is simply left out of the submission when checked (a disabled
+  // input never lands in FormData), so the booking transaction takes the
+  // same no-email walk-in path a counter booking already uses — a fresh
+  // person row with no email, never a second row sharing the lead's address
+  // (which would collide with it as "already booked" the moment a second
+  // member opted in — see src/db/bookings.ts and its "rolls back the whole
+  // party" test).
+  const [useLeadEmail, setUseLeadEmail] = useState<Record<number, boolean>>({});
   const limit = Math.max(1, Math.min(6, maxPartySize));
   useEffect(() => setHydrated(true), []);
+  useEffect(() => onSizeChange?.(size), [size, onSizeChange]);
 
   function updateMember(index: number, patch: Partial<PartyMember>) {
     setParty((current) => current.map((m, i) => (i === index ? { ...m, ...patch } : m)));
@@ -97,6 +121,41 @@ export function BookingPartyFields({
           </select>
         </Field>
       </FieldGrid>
+      {/* The select tops out at `limit` (either the absolute party cap of 6
+          or however many seats remain) — a bigger group has no way to book
+          itself here, so it needs an explicit way out rather than a dead end
+          at the last option (task 24). */}
+      {limit < 6 ? (
+        <p className="-mt-2 text-sm text-muted">
+          {contactEmail
+            ? t.rich("party.bigGroupContactEmail", {
+                count: limit,
+                contact: contactEmail,
+                a: (chunks) => (
+                  <a
+                    href={`mailto:${contactEmail}`}
+                    className="font-medium text-primary hover:underline"
+                  >
+                    {chunks}
+                  </a>
+                ),
+              })
+            : contactPhone
+              ? t.rich("party.bigGroupContactPhone", {
+                  count: limit,
+                  contact: contactPhone,
+                  a: (chunks) => (
+                    <a
+                      href={`tel:${contactPhone}`}
+                      className="font-medium text-primary hover:underline"
+                    >
+                      {chunks}
+                    </a>
+                  ),
+                })
+              : t("party.bigGroupContactGeneric", { count: limit })}
+        </p>
+      ) : null}
       {diverSlots.slice(0, size).map((slot, index) => {
         const member = party[index] ?? emptyMember;
         const nameError = fieldErrors?.[`fullName-${index}`];
@@ -144,7 +203,14 @@ export function BookingPartyFields({
                   name={`fullName-${index}`}
                   required
                   maxLength={120}
-                  autoComplete={index === 0 ? "name" : "off"}
+                  // Every slot gets a real autofill token (task 22) — a
+                  // browser scopes repeated `name`/`email` tokens per
+                  // fieldset via `section-*`, so diver 2's autofill offer
+                  // never collides with diver 1's. `autoComplete="off"` here
+                  // used to suppress that entirely for every diver past the
+                  // first, which is exactly the friction Priya hits typing
+                  // three names by hand on a phone.
+                  autoComplete={index === 0 ? "name" : `section-diver${index} name`}
                   aria-invalid={nameError ? "true" : undefined}
                   aria-describedby={nameError ? `fullName-${index}-error` : undefined}
                   value={member.fullName}
@@ -177,10 +243,11 @@ export function BookingPartyFields({
                 <input
                   name={`email-${index}`}
                   type="email"
-                  required
+                  required={index === 0 || !useLeadEmail[index]}
+                  disabled={index > 0 && useLeadEmail[index]}
                   maxLength={200}
                   inputMode="email"
-                  autoComplete={index === 0 ? "email" : "off"}
+                  autoComplete={index === 0 ? "email" : `section-diver${index} email`}
                   aria-invalid={emailError ? "true" : undefined}
                   aria-describedby={emailError ? `email-${index}-error` : undefined}
                   value={member.email}
@@ -189,6 +256,21 @@ export function BookingPartyFields({
                   className={controlClass}
                 />
               </Field>
+              {index > 0 ? (
+                <label className="flex min-h-11 items-center gap-2 text-sm text-muted sm:col-span-2">
+                  <input
+                    type="checkbox"
+                    checked={!!useLeadEmail[index]}
+                    onChange={(event) => {
+                      const checked = event.target.checked;
+                      setUseLeadEmail((current) => ({ ...current, [index]: checked }));
+                      if (checked) updateMember(index, { email: "" });
+                    }}
+                    className="size-4"
+                  />
+                  {t("party.useMainContactEmail")}
+                </label>
+              ) : null}
               {index === 0 && leadPhone ? (
                 <Field
                   label={t("party.phoneLabel")}
