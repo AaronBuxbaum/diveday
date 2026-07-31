@@ -11,10 +11,12 @@ import {
   openGuestsActionText,
   openPrepListActionText,
   openTripActionText,
+  overRatioDetailText,
   ungatedNitroxDetailText,
   waitlistSeatDetailText,
 } from "@/i18n/today-labels";
 import { nowDate } from "@/lib/clock";
+import { courseCrewGap } from "@/lib/course-ratios";
 import { formatTime } from "@/lib/format";
 import { collapseDiverActions, TODAY_HORIZON_MS, type TodayAction, urgencyFor } from "@/lib/today";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
@@ -334,11 +336,20 @@ async function waitlistFrontByTrip(db: AppDb, shopId: string, tripIds: string[])
   return fronts;
 }
 
-/** Trips that already have an instructor on the crew list. */
-async function tripsWithInstructor(db: AppDb, shopId: string, tripIds: string[]) {
-  if (tripIds.length === 0) return new Set<string>();
+/** How many instructors and certified assistants (divemasters) each course trip's crew has. */
+async function courseCrewCountsByTrip(
+  db: AppDb,
+  shopId: string,
+  tripIds: string[],
+): Promise<Map<string, { instructorCount: number; assistantCount: number }>> {
+  const counts = new Map<string, { instructorCount: number; assistantCount: number }>();
+  if (tripIds.length === 0) return counts;
   const rows = await db
-    .select({ tripId: tripAssignments.tripId })
+    .select({
+      tripId: tripAssignments.tripId,
+      personId: tripAssignments.personId,
+      role: personRoles.role,
+    })
     .from(tripAssignments)
     // `trip_assignments` carries no shop_id of its own; proving the trip
     // itself belongs to shopId (not just the assigned person) is what closes
@@ -353,11 +364,30 @@ async function tripsWithInstructor(db: AppDb, shopId: string, tripIds: string[])
       and(
         eq(trips.shopId, shopId),
         eq(people.shopId, shopId),
-        eq(personRoles.role, "instructor"),
+        inArray(personRoles.role, ["instructor", "divemaster"]),
         inArray(tripAssignments.tripId, tripIds),
       ),
     );
-  return new Set(rows.map((row) => row.tripId));
+  const rolesByTrip = new Map<string, Map<string, Set<string>>>();
+  for (const row of rows) {
+    const rolesByPerson = rolesByTrip.get(row.tripId) ?? new Map<string, Set<string>>();
+    const roles = rolesByPerson.get(row.personId) ?? new Set<string>();
+    roles.add(row.role);
+    rolesByPerson.set(row.personId, roles);
+    rolesByTrip.set(row.tripId, rolesByPerson);
+  }
+  for (const tripId of tripIds) {
+    const rolesByPerson = rolesByTrip.get(tripId) ?? new Map<string, Set<string>>();
+    let instructorCount = 0;
+    let assistantCount = 0;
+    for (const roles of rolesByPerson.values()) {
+      if (roles.has("instructor")) instructorCount += 1;
+      // A person holding both roles is the instructor, not their own assistant.
+      else if (roles.has("divemaster")) assistantCount += 1;
+    }
+    counts.set(tripId, { instructorCount, assistantCount });
+  }
+  return counts;
 }
 
 /**
@@ -422,7 +452,7 @@ export async function getTodayWork(
     ungatedNitrox,
     missingContact,
     waitlisted,
-    staffedTrips,
+    courseCrewCounts,
     deliveryIssues,
     neverSentLastMinuteDeal,
   ] = await Promise.all([
@@ -439,7 +469,7 @@ export async function getTodayWork(
       shopId,
       inWindow.map((trip) => trip.id),
     ),
-    tripsWithInstructor(
+    courseCrewCountsByTrip(
       db,
       shopId,
       inWindow.filter((trip) => trip.course).map((trip) => trip.id),
@@ -538,16 +568,31 @@ export async function getTodayWork(
       });
     }
 
-    if (trip.course && !staffedTrips.has(trip.id)) {
+    // The one "course crew gap" computation (Lens 17 task 151) — also
+    // consumed by the trip page and the staffing coverage list, so a course
+    // Today calls fully crewed can't secretly still be over its ratio there.
+    const counts = courseCrewCounts.get(trip.id) ?? { instructorCount: 0, assistantCount: 0 };
+    const crewGap = courseCrewGap({
+      course: trip.course,
+      instructorCount: counts.instructorCount,
+      assistantCount: counts.assistantCount,
+      booked: trip.booked,
+    });
+    if (crewGap.code !== "none") {
       actions.push({
         id: `instructor:${trip.id}`,
         kind: "instructor_missing",
         urgency: urgencyFor(trip.startsAt, now),
         subject: trip.title,
         context: when,
-        detail: instructorMissingDetailText(t),
+        detail:
+          crewGap.code === "over_ratio"
+            ? overRatioDetailText(t, crewGap.booked, crewGap.capacity)
+            : instructorMissingDetailText(t),
         actionLabel: openTripActionText(t),
-        href: tripHref,
+        // The trip's crew editor, not the bare Overview it used to land on
+        // (Lens 17 task 139) — the fix for either gap lives right there.
+        href: `${tripHref}#crew`,
         dueAt: trip.startsAt,
       });
     }

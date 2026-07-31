@@ -11,6 +11,7 @@ import { getDb } from "@/db/client";
 import { listDiveSites } from "@/db/dive-sites";
 import { getTripRequirements, getTripSiteRequirement } from "@/db/readiness";
 import { getShopById } from "@/db/shops";
+import { crewShiftCoverage } from "@/db/staffing";
 import {
   getTripCrewIds,
   getTripSeriesSummary,
@@ -21,7 +22,7 @@ import {
 } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { entryLevelCourseCapacity } from "@/lib/course-ratios";
+import { courseCrewGap } from "@/lib/course-ratios";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { recurrenceSummary } from "@/lib/recurrence";
 import { requireStaffSession } from "@/lib/session";
@@ -43,10 +44,10 @@ import {
   extendSeriesAction,
   reinstateTripAction,
   saveConditionsAction,
-  saveCrewAction,
   saveDetails,
   saveRecapShoutoutAction,
   saveRequirementsAction,
+  updateTripCrewAction,
 } from "./actions";
 
 export const metadata: Metadata = {
@@ -104,24 +105,27 @@ export default async function ManageTripPage({
   const endWall = utcToWallTime(trip.endsAt, shop.timezone);
   const cancelled = trip.status === "cancelled";
   const assignedCrew = staff.filter((entry) => crewIds.includes(entry.person.id));
-  const hasCourseInstructor = Boolean(
-    trip.course && assignedCrew.some((entry) => entry.roles.includes("instructor")),
-  );
   // Staff can freely change crew after divers are already booked (H-14 lets
-  // any staff member do this — it's day-of operating work). If that leaves an
-  // entry-level (PADI, ungated) session's current crew short of the ratio its
-  // booked count assumed, this is the visible nudge to fix it before sailing —
-  // never a retroactive block on the bookings already taken.
-  const entryLevelRatioCap =
-    trip.course?.agency === "padi" && !trip.course.minimumCertificationLevel
-      ? entryLevelCourseCapacity(
-          assignedCrew.filter((entry) => entry.roles.includes("instructor")).length,
-          assignedCrew.filter(
-            (entry) => entry.roles.includes("divemaster") && !entry.roles.includes("instructor"),
-          ).length,
-        )
-      : null;
-  const overRatio = entryLevelRatioCap !== null && trip.booked > entryLevelRatioCap;
+  // any staff member do this — it's day-of operating work). `courseCrewGap`
+  // (src/lib/course-ratios.ts) is the one computation of "does this course
+  // session have enough crew", also consumed by the staffing coverage list
+  // and the Today queue (docs/product/assessments/ux-personas-20260730.md,
+  // Lens 17 task 151) — over_ratio is the visible nudge to fix an entry-level
+  // (PADI, ungated) session before sailing, never a retroactive block on the
+  // bookings already taken.
+  const crewGap = courseCrewGap({
+    course: trip.course,
+    instructorCount: assignedCrew.filter((entry) => entry.roles.includes("instructor")).length,
+    assistantCount: assignedCrew.filter(
+      (entry) => entry.roles.includes("divemaster") && !entry.roles.includes("instructor"),
+    ).length,
+    booked: trip.booked,
+  });
+  // The other half of the shift ↔ crew cross-link (Lens 17 task 165): whether
+  // each assigned crew member actually has a working shift covering this
+  // sailing, read straight from CrewSection instead of a separate trip to
+  // the staffing page.
+  const onShiftIds = [...(await crewShiftCoverage(db, shop.id, trip, crewIds))];
   const capacityLabelValue = capacityLabel(trip);
   const capacityText =
     capacityLabelValue.kind === "full"
@@ -274,25 +278,40 @@ export default async function ManageTripPage({
         />
       ) : null}
 
-      {overRatio ? (
-        <div className="mt-6">
-          <ShopNotice tone="warning" role="status">
-            {t("trips.detail.overRatioWarning", {
-              booked: trip.booked,
-              cap: entryLevelRatioCap ?? 0,
-            })}
-          </ShopNotice>
-        </div>
-      ) : null}
-
-      {/* Who's aboard is manifest accuracy (glossary) — open to all staff. */}
+      {/* Who's aboard is manifest accuracy (glossary) — open to all staff.
+          Per-person assign/unassign (updateTripCrewAction), the same mutation
+          Today's DepartureBoard uses — not a whole-set replace — so two staff
+          editing crew at once can no longer clobber each other (Lens 17 task
+          139). */}
       <CrewSection
-        action={saveCrewAction.bind(null, shopSlug, tripId)}
-        trip={trip}
+        shopSlug={shopSlug}
+        tripId={tripId}
         staff={staff}
         crewIds={crewIds}
-        hasCourseInstructor={hasCourseInstructor}
-        locale={locale}
+        onShiftIds={onShiftIds}
+        crewGapCode={crewGap.code}
+        updateCrewAction={updateTripCrewAction.bind(null, shopSlug)}
+        copy={{
+          heading: t("trips.crew.heading"),
+          description: t("trips.crew.description"),
+          courseNeedsInstructor: t("trips.crew.courseNeedsInstructor"),
+          overRatioWarning:
+            crewGap.code === "over_ratio"
+              ? t("trips.detail.overRatioWarning", {
+                  booked: crewGap.booked,
+                  cap: crewGap.capacity,
+                })
+              : null,
+          noStaff: t("trips.crew.noCrew"),
+          notAssignedYet: t("trips.crew.notAssignedYet"),
+          assignLabel: t("shared.today.departureBoard.assignCrewLabel"),
+          assignOption: t("shared.today.departureBoard.assignCrewOption"),
+          unassignAria: t("shared.today.departureBoard.unassignAria"),
+          assignFailed: t("shared.today.departureBoard.assignFailed"),
+          onShift: t("trips.crew.onShift"),
+          notOnShift: t("trips.crew.notOnShift"),
+          manageShifts: t("trips.crew.manageShifts"),
+        }}
       />
 
       {canConfigure && series ? (

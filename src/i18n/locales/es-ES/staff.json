@@ -63,7 +63,9 @@
       "managerOnly": "Cambiar turnos requiere ser propietario o gerente",
       "notScheduled": "Sin turnos en este periodo.",
       "remove": "Quitar",
-      "removing": "Quitando…"
+      "removing": "Quitando…",
+      "crewingHeading": "Tripulación",
+      "crewingEmpty": "No forma parte de la tripulación de ninguna salida en este periodo."
     },
     "capability": {
       "teach": "Puede enseñar",
@@ -1113,8 +1115,10 @@
       "description": "Quién dirige esta salida.",
       "courseNeedsInstructor": "Este curso no puede aceptar reservas hasta que un miembro de la tripulación asignado tenga el rol de instructor.",
       "noCrew": "Todavía no hay tripulación que asignar — tus instructores y divemasters aparecerán aquí en cuanto se unan al equipo.",
-      "saving": "Guardando tripulación…",
-      "save": "Guardar tripulación"
+      "notAssignedYet": "Todavía no asignado — elige a alguien abajo.",
+      "manageShifts": "Gestionar turnos",
+      "onShift": "De turno",
+      "notOnShift": "Sin turno"
     },
     "recapNote": {
       "heading": "Nota de resumen post-salida",
@@ -2307,6 +2311,7 @@
         "missingFit": "{count, plural, one {# buceador no tiene} other {# buceadores no tienen}} equipo asignado, así que la lista de preparación está incompleta.",
         "ungatedNitrox": "{count, plural, one {# buceador pidió} other {# buceadores pidieron}} nitrox sin una tarjeta verificada — esos tanques están planeados con aire.",
         "instructorMissing": "Esta sesión de curso no tiene instructor asignado y no puede aceptar inscripciones.",
+        "overRatio": "{booked} reservados, pero la tripulación asignada solo cubre {capacity} según la ratio de nivel inicial publicada por PADI.",
         "missingContact": "{count, plural, one {# buceador no tiene} other {# buceadores no tienen}} contacto de emergencia registrado — pregunta en el mostrador; se imprime en el manifiesto.",
         "lastMinuteFill": "{seats, plural, one {# plaza libre} other {# plazas libres}} sin oferta de última hora enviada todavía.",
         "waitlistSeat": "{seats, plural, one {se liberó # plaza} other {se liberaron # plazas}} y {waiting, plural, one {# persona está} other {# personas están}} en la lista de espera.",

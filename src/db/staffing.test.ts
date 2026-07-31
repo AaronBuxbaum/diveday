@@ -1,10 +1,18 @@
 // @vitest-environment node
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
-import { people, staffShifts } from "./schema";
-import { createStaffShift, getStaffingView } from "./staffing";
-import { listStaff, setTripCrew, upcomingTripsWithCounts } from "./trips";
+import { createBooking } from "./bookings";
+import { bookings, courses, people, staffShifts } from "./schema";
+import { createStaffShift, crewShiftCoverage, getStaffingView } from "./staffing";
+import { createTrip, listStaff, setTripCrew, upcomingTripsWithCounts } from "./trips";
+
+/**
+ * 180 days out, matching src/db/courses.test.ts's OPEN_TEST_SESSION_OFFSET_MS
+ * reasoning: far enough past the seeded demo's instructor calendar (day 75)
+ * that a synthetic session never collides with the seed's real crew overlaps.
+ */
+const OPEN_TEST_SESSION_OFFSET_MS = 180 * 24 * 60 * 60 * 1000;
 
 describe("staffing view", () => {
   it("shows roles, working windows, teaching/crew capabilities, and coverage gaps", async () => {
@@ -61,5 +69,120 @@ describe("staffing view", () => {
 
     const [person] = await db.select().from(people).where(eq(people.id, staff.person.id));
     expect(person?.shopId).toBe(shop.id);
+  });
+
+  // The one "course crew gap" computation (Lens 17 task 151): an entry-level
+  // PADI session with an instructor but no assistant, booked past the 8-seat
+  // solo-instructor ratio, is *still* a coverage gap — the old boolean
+  // "has an instructor?" check would have called this trip covered. Both
+  // `createBooking` and the crew-change writes already refuse to *create* an
+  // over-ratio trip going forward, so the 9th seat here is inserted directly
+  // — standing in for a trip a data import or a since-tightened rule left in
+  // that state, which is exactly the case staff need the warning for.
+  it("flags course_needs_instructor for a ratio-over-capacity trip even though it has an instructor", async () => {
+    const { db, shop } = await seededShopContext();
+    const [discoverCourse] = await db
+      .select()
+      .from(courses)
+      .where(and(eq(courses.shopId, shop.id), eq(courses.title, "Discover Scuba Diving")));
+    if (!discoverCourse) throw new Error("Discover Scuba Diving course missing");
+    const staff = await listStaff(db, shop.id);
+    const instructor = staff.find((entry) => entry.roles.includes("instructor"));
+    if (!instructor) throw new Error("seeded instructor missing");
+
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      courseId: discoverCourse.id,
+      title: "Ratio-over-capacity session",
+      startsAt: new Date(Date.now() + OPEN_TEST_SESSION_OFFSET_MS),
+      endsAt: new Date(Date.now() + OPEN_TEST_SESSION_OFFSET_MS + 4 * 60 * 60 * 1000),
+      capacity: 20,
+      plannedDives: 2,
+    });
+    if (!trip) throw new Error("failed to create ratio test trip");
+    expect(await setTripCrew(db, shop.id, trip.id, [instructor.person.id])).toBe(true);
+    for (let i = 0; i < 8; i++) {
+      const outcome = await createBooking(db, {
+        actor: "staff",
+        shopId: shop.id,
+        tripId: trip.id,
+        fullName: `Ratio Diver ${i}`,
+        email: `staffing-ratio-diver-${i}@example.com`,
+      });
+      expect(outcome).toMatchObject({ ok: true });
+    }
+    const [extraDiver] = await db
+      .insert(people)
+      .values({
+        shopId: shop.id,
+        fullName: "Ratio Diver 8",
+        email: "staffing-ratio-diver-8@example.com",
+      })
+      .returning();
+    if (!extraDiver) throw new Error("failed to insert extra diver");
+    await db.insert(bookings).values({ shopId: shop.id, tripId: trip.id, personId: extraDiver.id });
+
+    const view = await getStaffingView(
+      db,
+      shop.id,
+      new Date(trip.startsAt.getTime() - 60 * 60 * 1000),
+      new Date(trip.endsAt.getTime() + 60 * 60 * 1000),
+    );
+    const entry = view.trips.find((row) => row.trip.id === trip.id);
+    expect(entry?.gaps).toContain("course_needs_instructor");
+  });
+
+  it("shows a staff member's crewed trips on their staffing card", async () => {
+    const { db, shop } = await seededShopContext();
+    const staff = await listStaff(db, shop.id);
+    const instructor = staff.find((entry) => entry.roles.includes("instructor"));
+    const [trip] = await upcomingTripsWithCounts(db, shop.id);
+    if (!instructor || !trip) throw new Error("seeded staffing fixture missing");
+    expect(await setTripCrew(db, shop.id, trip.id, [instructor.person.id])).toBe(true);
+
+    const view = await getStaffingView(
+      db,
+      shop.id,
+      new Date(trip.startsAt.getTime() - 60 * 60 * 1000),
+      new Date(trip.endsAt.getTime() + 60 * 60 * 1000),
+    );
+    const working = view.staff.find((entry) => entry.person.id === instructor.person.id);
+    expect(working?.crewingTrips).toEqual(
+      expect.arrayContaining([expect.objectContaining({ tripId: trip.id, title: trip.title })]),
+    );
+  });
+});
+
+describe("crewShiftCoverage", () => {
+  it("reports which of a trip's crew have a shift overlapping the trip window", async () => {
+    const { db, shop } = await seededShopContext();
+    await db.delete(staffShifts).where(eq(staffShifts.shopId, shop.id));
+    const staff = await listStaff(db, shop.id);
+    const [onShift, offShift] = staff;
+    if (!onShift || !offShift) throw new Error("seeded staffing fixture needs two staff");
+    const [trip] = await upcomingTripsWithCounts(db, shop.id);
+    if (!trip) throw new Error("seeded upcoming trip missing");
+
+    const shift = await createStaffShift(db, {
+      shopId: shop.id,
+      personId: onShift.person.id,
+      startsAt: new Date(trip.startsAt.getTime() - 30 * 60 * 1000),
+      endsAt: new Date(trip.endsAt.getTime() + 30 * 60 * 1000),
+    });
+    expect(shift.ok).toBe(true);
+
+    const covered = await crewShiftCoverage(db, shop.id, trip, [
+      onShift.person.id,
+      offShift.person.id,
+    ]);
+    expect(covered.has(onShift.person.id)).toBe(true);
+    expect(covered.has(offShift.person.id)).toBe(false);
+  });
+
+  it("returns an empty set for no crew, without querying", async () => {
+    const { db, shop } = await seededShopContext();
+    const [trip] = await upcomingTripsWithCounts(db, shop.id);
+    if (!trip) throw new Error("seeded upcoming trip missing");
+    expect(await crewShiftCoverage(db, shop.id, trip, [])).toEqual(new Set());
   });
 });

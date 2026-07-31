@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
@@ -181,6 +182,33 @@ export default async function StaffingPage({
                   ))}
                 </ul>
               )}
+              {/* The other half of the shift ↔ crew cross-link (task 165): a
+                  shift alone doesn't say which boat, if any, this person is
+                  actually on — this is where that becomes visible. */}
+              <div className="mt-3 border-t border-border pt-3">
+                <p className="text-xs font-bold tracking-wide text-muted uppercase">
+                  {t("staffing.working.crewingHeading")}
+                </p>
+                {member.crewingTrips.length === 0 ? (
+                  <p className="mt-1 text-sm text-muted">{t("staffing.working.crewingEmpty")}</p>
+                ) : (
+                  <ul className="mt-1 space-y-1 text-sm">
+                    {member.crewingTrips.map((trip) => (
+                      <li key={trip.tripId}>
+                        <Link
+                          href={`/shop/${shopSlug}/trips/${trip.tripId}#crew`}
+                          className="font-medium text-primary hover:underline"
+                        >
+                          {trip.title}
+                        </Link>{" "}
+                        <span className="text-muted">
+                          {formatTimeRangeTz(trip.startsAt, trip.endsAt, locale, shop.timezone)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             </article>
           ))}
         </div>
@@ -263,7 +291,17 @@ export default async function StaffingPage({
             <article key={entry.trip.id} className="rounded-xl border border-border bg-surface p-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <h3 className="font-semibold">{entry.trip.title}</h3>
+                  <h3 className="font-semibold">
+                    {/* The trip's own crew editor — every gap below is fixed
+                        here, so the coverage list is never a dead end
+                        (Lens 17 task 139). */}
+                    <Link
+                      href={`/shop/${shopSlug}/trips/${entry.trip.id}#crew`}
+                      className="text-primary hover:underline"
+                    >
+                      {entry.trip.title}
+                    </Link>
+                  </h3>
                   <p className="mt-1 text-sm text-muted">
                     {formatTimeRangeTz(
                       entry.trip.startsAt,
@@ -283,7 +321,14 @@ export default async function StaffingPage({
               {entry.gaps.length > 0 ? (
                 <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-warning">
                   {entry.gaps.map((gap) => (
-                    <li key={gap}>{t(GAP_KEYS[gap])}</li>
+                    <li key={gap}>
+                      <Link
+                        href={`/shop/${shopSlug}/trips/${entry.trip.id}#crew`}
+                        className="hover:underline"
+                      >
+                        {t(GAP_KEYS[gap])}
+                      </Link>
+                    </li>
                   ))}
                 </ul>
               ) : (

@@ -194,8 +194,10 @@ test.describe("staff", () => {
     await expect(
       page.getByText("cannot take bookings until one assigned crew member has the instructor role"),
     ).toBeVisible();
-    await page.getByLabel(/Marcus Webb/).check();
-    await page.getByRole("button", { name: "Save crew" }).click();
+    // Per-person assign, the same mutation Today's departure board uses
+    // (Lens 17 task 139) — not a checkbox roster with a single submit.
+    await page.getByLabel("Assign crew").selectOption({ label: "Marcus Webb" });
+    await expect(page.getByRole("button", { name: "Unassign Marcus Webb" })).toBeVisible();
     await expect(
       page.getByText("cannot take bookings until one assigned crew member has the instructor role"),
     ).toBeHidden();
@@ -237,9 +239,8 @@ test.describe("staff", () => {
 
     await page.goto("/shop/blue-mantis/schedule");
     await page.getByRole("link", { name: new RegExp(sessionTitle) }).click();
-    await page.getByLabel(/Marcus Webb/).check(); // the seeded instructor
-    await page.getByRole("button", { name: "Save crew" }).click();
-    await expect(page.getByRole("status")).toContainText("Crew updated");
+    await page.getByLabel("Assign crew").selectOption({ label: "Marcus Webb" }); // the seeded instructor
+    await expect(page.getByRole("button", { name: "Unassign Marcus Webb" })).toBeVisible();
     const tripUrl = page.url();
 
     await page.context().clearCookies();

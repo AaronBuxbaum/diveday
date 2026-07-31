@@ -63,7 +63,9 @@
       "managerOnly": "Shift changes require owner or manager",
       "notScheduled": "Not scheduled in this window.",
       "remove": "Remove",
-      "removing": "Removing…"
+      "removing": "Removing…",
+      "crewingHeading": "Crewing",
+      "crewingEmpty": "Not on any trip's crew in this window."
     },
     "capability": {
       "teach": "Can teach",
@@ -1113,8 +1115,10 @@
       "description": "Who's running this trip.",
       "courseNeedsInstructor": "This course cannot take bookings until one assigned crew member has the instructor role.",
       "noCrew": "No crew to assign yet — your instructors and divemasters show up here once they’re on the team.",
-      "saving": "Saving crew…",
-      "save": "Save crew"
+      "notAssignedYet": "Not yet assigned — pick someone below.",
+      "manageShifts": "Manage shifts",
+      "onShift": "On shift",
+      "notOnShift": "Not on a shift"
     },
     "recapNote": {
       "heading": "Post-trip recap note",
@@ -2307,6 +2311,7 @@
         "missingFit": "{count, plural, one {# diver has} other {# divers have}} no rental fit on file, so the prep list is incomplete.",
         "ungatedNitrox": "{count, plural, one {# diver wants} other {# divers want}} Nitrox without a verified card — those tanks are planned as air.",
         "instructorMissing": "This course session has no instructor assigned and cannot take enrolments.",
+        "overRatio": "{booked} booked, but the assigned crew only covers {capacity} at PADI's published entry-level ratio.",
         "missingContact": "{count, plural, one {# diver has} other {# divers have}} no emergency contact on file — ask at the counter; it prints on the manifest.",
         "lastMinuteFill": "{seats, plural, one {# seat} other {# seats}} open with no last-minute deal sent yet.",
         "waitlistSeat": "{seats, plural, one {# seat} other {# seats}} opened up and {waiting, plural, one {# person is} other {# people are}} on the wait list.",

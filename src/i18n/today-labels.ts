@@ -145,6 +145,11 @@ export function instructorMissingDetailText(t: StaffTranslator): string {
   return t("shared.today.detail.instructorMissing");
 }
 
+/** The `over_ratio` half of `courseCrewGap` (src/lib/course-ratios.ts) — an instructor is on the crew, but not enough for the booked count. */
+export function overRatioDetailText(t: StaffTranslator, booked: number, capacity: number): string {
+  return t("shared.today.detail.overRatio", { booked, capacity });
+}
+
 export function missingContactDetailText(t: StaffTranslator, count: number): string {
   return t("shared.today.detail.missingContact", { count });
 }
