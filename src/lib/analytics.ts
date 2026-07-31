@@ -24,7 +24,7 @@ export type AnalyticsEvent =
   | {
       /** Staff cleared a readiness blocker in place (the recovery path). */
       name: "staff_recovery";
-      kind: "waiver_sent" | "confirmation_resent" | "waitlist_invited";
+      kind: "waiver_sent" | "confirmation_resent" | "waitlist_invited" | "invoice_resent";
       surface: EventSurface;
     }
   | {

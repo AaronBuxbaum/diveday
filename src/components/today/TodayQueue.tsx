@@ -9,6 +9,7 @@ import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { ACTION_KIND_KEYS, seasonalBriefingText, URGENCY_KEYS } from "@/i18n/today-labels";
 import { nowDate } from "@/lib/clock";
 import { ACTION_KIND_META, getSeasonalBriefing, groupActions, type TodayAction } from "@/lib/today";
+import { PaymentActionControl, type PaymentActionCopy } from "./PaymentActionControl";
 import {
   ResendConfirmationControl,
   type ResendConfirmationCopy,
@@ -43,6 +44,7 @@ function ActionRow({
   waiverCopy,
   resendCopy,
   inviteCopy,
+  paymentCopy,
   t,
 }: {
   action: TodayAction;
@@ -52,6 +54,7 @@ function ActionRow({
   waiverCopy: WaiverSendCopy;
   resendCopy: ResendConfirmationCopy;
   inviteCopy: WaitlistInviteCopy;
+  paymentCopy: PaymentActionCopy;
   t: StaffTranslator;
 }) {
   return (
@@ -92,6 +95,13 @@ function ActionRow({
             tripWhen={action.invite.tripWhen}
             invite={inviteAction.bind(null, action.invite.tripId)}
             copy={inviteCopy}
+          />
+        ) : action.payment?.orderId ? (
+          <PaymentActionControl
+            shopSlug={shopSlug}
+            orderId={action.payment.orderId}
+            hostedInvoiceUrl={action.payment.hostedInvoiceUrl ?? null}
+            copy={paymentCopy}
           />
         ) : (
           <Link
@@ -154,6 +164,20 @@ export function TodayQueue({
     emailSubject: t("trips.waitlist.emailSubject"),
     emailBody: t("trips.waitlist.emailBody"),
   };
+  const paymentCopy: PaymentActionCopy = {
+    copyLink: t("shared.today.paymentAction.copyLink"),
+    linkCopied: t("shared.today.paymentAction.linkCopied"),
+    copyFailed: t("shared.today.paymentAction.copyFailed"),
+    resendInvoice: t("shared.today.paymentAction.resendInvoice"),
+    resending: t("shared.today.paymentAction.resending"),
+    invoiceResent: t("shared.today.paymentAction.invoiceResent"),
+    errors: {
+      notFound: t("shared.today.paymentAction.errors.notFound"),
+      notOpen: t("shared.today.paymentAction.errors.notOpen"),
+      notConfigured: t("shared.today.paymentAction.errors.notConfigured"),
+      failed: t("shared.today.paymentAction.errors.failed"),
+    },
+  };
 
   if (groups.length === 0) {
     return (
@@ -178,12 +202,30 @@ export function TodayQueue({
     );
   }
 
+  // The morning's boats — "imminent" (next 3 hours) and "now" ("Before
+  // today's boats") — are the two urgency bands a diver could still be
+  // standing at the dock for. Once neither has any work left but a later
+  // group still does, that's a real earned moment: the last blocker of the
+  // morning just cleared, not the whole queue (the 🤙 empty state above
+  // already covers that case).
+  const todaysBoatsClear = !groups.some(
+    (group) => group.urgency === "imminent" || group.urgency === "now",
+  );
+
   return (
     <section aria-labelledby="queue-heading">
       <h2 id="queue-heading" className="text-lg font-semibold">
         {t("shared.today.todayQueue.needsYouHeading")}
       </h2>
       <p className="mt-1 text-sm text-muted">{t("shared.today.todayQueue.needsYouSubtitle")}</p>
+      {todaysBoatsClear ? (
+        <p
+          role="status"
+          className="rise-in mt-4 rounded-lg border border-accent/40 bg-accent/10 px-3 py-2 text-sm font-semibold"
+        >
+          {t("shared.today.todayQueue.boatsClear")}
+        </p>
+      ) : null}
       <div className="mt-5 flex flex-col gap-8">
         {groups.map((group) => (
           <div key={group.urgency}>
@@ -191,8 +233,8 @@ export function TodayQueue({
               <h3 className="text-xs font-bold tracking-[0.18em] text-muted uppercase">
                 {t(URGENCY_KEYS[group.urgency])}
               </h3>
-              <span className="text-xs font-semibold text-muted tabular-nums">
-                {group.actions.length}
+              <span className="rounded-full border border-border bg-surface-sunken px-2 py-0.5 text-xs font-semibold text-muted tabular-nums">
+                {t("shared.today.todayQueue.itemsCount", { count: group.actions.length })}
               </span>
             </div>
             <ul className="mt-3 flex flex-col gap-3">
@@ -206,6 +248,7 @@ export function TodayQueue({
                   waiverCopy={waiverCopy}
                   resendCopy={resendCopy}
                   inviteCopy={inviteCopy}
+                  paymentCopy={paymentCopy}
                   t={t}
                 />
               ))}

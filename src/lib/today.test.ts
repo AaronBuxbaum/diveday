@@ -141,6 +141,32 @@ describe("diverBlockerAction", () => {
   it("produces nothing for a diver with no blockers", () => {
     expect(diverBlockerAction({ ...input, blockers: [] }, "blue-reef", NOW)).toBeNull();
   });
+
+  it("marks a payment_due row with the single booking it can act on in place", () => {
+    const result = diverBlockerAction(
+      { ...input, blockers: [blocker("payment_due")] },
+      "blue-reef",
+      NOW,
+    );
+    // Only the bookingId — src/db/today.ts fills in orderId/hostedInvoiceUrl
+    // once it knows the booking was actually invoiced through Stripe.
+    expect(result?.payment).toEqual({ bookingId: "b1" });
+    expect(result?.payment?.orderId).toBeUndefined();
+  });
+
+  it("marks a payment_refunded row the same way", () => {
+    const result = diverBlockerAction(
+      { ...input, blockers: [blocker("payment_refunded")] },
+      "blue-reef",
+      NOW,
+    );
+    expect(result?.payment).toEqual({ bookingId: "b1" });
+  });
+
+  it("never marks a non-payment row for the inline payment control", () => {
+    const result = diverBlockerAction(input, "blue-reef", NOW);
+    expect(result?.payment).toBeUndefined();
+  });
 });
 
 describe("collapseDiverActions", () => {
@@ -181,6 +207,9 @@ describe("collapseDiverActions", () => {
     );
     expect(result[0]?.actionLabel).toBe("Open roster");
     expect(result[0]?.waiver).toBeUndefined();
+    // A collapsed row stands for several bookings, so there is no single one
+    // for the inline payment control to act on — it keeps the roster link.
+    expect(result[0]?.payment).toBeUndefined();
   });
 
   it("abbreviates a long roster instead of listing everyone", () => {

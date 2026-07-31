@@ -2212,7 +2212,9 @@
         "emptyHeading": "Nothing is waiting on you",
         "emptyBody": "Every diver booked in the next week has their waiver, cards, and payment in order.",
         "needsYouHeading": "Needs you",
-        "needsYouSubtitle": "Sorted by the boat each one holds up. Clearing a row takes you straight to the fix."
+        "needsYouSubtitle": "Sorted by the boat each one holds up. Clearing a row takes you straight to the fix.",
+        "boatsClear": "Today's boats are all clear 🤙",
+        "itemsCount": "{count, plural, one {# item} other {# items}}"
       },
       "resendConfirmation": {
         "resending": "Resending…",
@@ -2222,6 +2224,20 @@
           "noEmail": "No email on file — add one from the roster, then resend.",
           "notConfigured": "Email isn’t configured for this shop yet.",
           "failed": "Still couldn’t deliver it — open the trip to check the booking."
+        }
+      },
+      "paymentAction": {
+        "copyLink": "Copy payment link",
+        "linkCopied": "Link copied.",
+        "copyFailed": "Couldn’t copy — copy it from the invoice instead.",
+        "resendInvoice": "Resend invoice",
+        "resending": "Resending…",
+        "invoiceResent": "Invoice resent.",
+        "errors": {
+          "notFound": "That invoice could not be found — open the trip to check it.",
+          "notOpen": "This invoice is no longer open — open the trip to check its status.",
+          "notConfigured": "Payments aren’t connected for this shop yet.",
+          "failed": "Still couldn’t resend it — open the trip to check the invoice."
         }
       },
       "yourSessions": {

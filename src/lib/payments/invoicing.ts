@@ -61,6 +61,7 @@ export type InvoiceLookupResult =
   | { status: "failed" };
 
 export type VoidInvoiceResult = { status: "voided" | "not_configured" | "failed" };
+export type ResendInvoiceResult = { status: "sent" | "not_configured" | "failed" };
 export type RefundInvoiceResult = {
   status: "refunded" | "not_configured" | "not_refundable" | "failed";
   refundId?: string;
@@ -69,6 +70,13 @@ export type RefundInvoiceResult = {
 export interface InvoicingProvider {
   createInvoice(request: CreateInvoiceRequest): Promise<CreateInvoiceResult>;
   voidInvoice(stripeAccountId: string, stripeInvoiceId: string): Promise<VoidInvoiceResult>;
+  /**
+   * Re-sends the email for an invoice already created and finalized (the
+   * same `/send` call `createInvoice` makes best-effort on the way out) —
+   * the Today queue's "resend invoice" row acts on an existing invoice, it
+   * never creates a second one.
+   */
+  resendInvoice(stripeAccountId: string, stripeInvoiceId: string): Promise<ResendInvoiceResult>;
   /** `idempotencyKey` — see CreateInvoiceRequest; a retry converges on one Stripe refund. */
   refundInvoice(
     stripeAccountId: string,
@@ -221,6 +229,19 @@ export function stripeInvoicingProvider(
       }
     },
 
+    async resendInvoice(stripeAccountId, stripeInvoiceId) {
+      try {
+        const response = await post(
+          stripeAccountId,
+          `/invoices/${stripeInvoiceId}/send`,
+          new URLSearchParams(),
+        );
+        return { status: response.ok ? "sent" : "failed" };
+      } catch {
+        return { status: "failed" };
+      }
+    },
+
     async refundInvoice(stripeAccountId, stripeInvoiceId, idempotencyKey) {
       try {
         const invoiceResponse = await fetchImpl(
@@ -279,6 +300,9 @@ const disabledInvoicingProvider: InvoicingProvider = {
     return { status: "not_configured" };
   },
   async voidInvoice() {
+    return { status: "not_configured" };
+  },
+  async resendInvoice() {
     return { status: "not_configured" };
   },
   async refundInvoice() {
