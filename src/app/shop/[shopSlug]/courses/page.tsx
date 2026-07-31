@@ -1,18 +1,22 @@
 import type { Metadata } from "next";
 import { revalidatePath } from "next/cache";
 import Link from "next/link";
+import { notFound } from "next/navigation";
+import { connection } from "next/server";
+import { EmptyState } from "@/components/EmptyState";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
-import { listCourses, setCourseVisibility } from "@/db/courses";
-import { getShopById } from "@/db/shops";
-import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
-import { requestLocale } from "@/i18n/request";
+import { listActiveCourses, listCourses, setCourseVisibility } from "@/db/courses";
+import { getShopBySlug } from "@/db/shops";
+import { CERTIFICATION_LEVEL_KEYS, DIVER_CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
+import { requestTranslator } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
+import { auth } from "@/lib/auth";
+import { isStaff } from "@/lib/authz";
+import { courseTotalCents } from "@/lib/courses";
 import { requireStaffSession } from "@/lib/session";
-
-export const metadata: Metadata = { title: "Courses — DiveDay" };
 
 /** A closed eye — shown for a course currently hidden from scheduling lists. */
 function EyeOffIcon() {
@@ -73,13 +77,48 @@ function LinkIcon() {
   );
 }
 
-export default async function CoursesPage() {
-  const session = await requireStaffSession();
+/**
+ * Per-shop title, description, and canonical URL for the public catalog.
+ * Diver copy only — a staff visitor sees the same `<head>`, which is fine
+ * since the catalog's existence isn't a secret, only the editor beneath it.
+ */
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ shopSlug: string }>;
+}): Promise<Metadata> {
+  const { shopSlug } = await params;
+  const shop = await getShopBySlug(await getDb(), shopSlug);
+  if (!shop) return { title: "Courses — DiveDay" };
+  const { t } = await requestTranslator(shop.defaultLocale);
+  const description = t("courses.index.description");
+  return {
+    title: `Courses — ${shop.name}`,
+    description,
+    alternates: { canonical: `/shop/${shop.slug}/courses` },
+    openGraph: { title: `Courses — ${shop.name}`, description, url: `/shop/${shop.slug}/courses` },
+  };
+}
+
+/**
+ * The course catalog. Auth-exempt in src/lib/auth.config.ts (`COURSES_INDEX`)
+ * for a signed-out diver browsing active courses; a signed-in staff member of
+ * this same shop instead gets the full roster with edit/visibility controls,
+ * the way `schedule/page.tsx` and `courses/[slug]/page.tsx` already split.
+ * The shop always resolves from the URL slug, never the session, so a
+ * signed-in staff member from a different shop still gets the public view.
+ */
+export default async function CoursesPage({ params }: { params: Promise<{ shopSlug: string }> }) {
+  await connection(); // visibility can change between requests — render per request
+  const { shopSlug } = await params;
   const db = await getDb();
-  const shop = await getShopById(db, session.user.shopId);
-  if (!shop) return null;
-  const courseList = await listCourses(db, shop.id);
-  const t = staffTranslator(await requestLocale(shop.defaultLocale));
+  const shop = await getShopBySlug(db, shopSlug);
+  if (!shop) notFound();
+
+  const session = await auth();
+  const staffView = session?.user?.shopId === shop.id && isStaff(session.user.roles);
+
+  const { locale, t } = await requestTranslator(shop.defaultLocale);
 
   // No redirect: the icon and the "Hidden" badge already show the new state
   // in place, and a same-page redirect after a form submit resets scroll to
@@ -93,86 +132,159 @@ export default async function CoursesPage() {
     revalidatePath(`/shop/${staff.user.shopSlug}/courses`);
   }
 
+  if (staffView) {
+    const st = staffTranslator(locale);
+    const courseList = await listCourses(db, shop.id);
+    return (
+      <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+        <ShopPageHeader
+          eyebrow={st("courses.list.eyebrow")}
+          title={st("courses.list.title")}
+          description={st("courses.list.description")}
+          actions={
+            <Link
+              href={`/shop/${shopSlug}/courses/paths`}
+              className={buttonClass({ variant: "secondary" })}
+            >
+              {st("courses.list.certificationPaths")}
+            </Link>
+          }
+        />
+
+        <ul className="mt-8 divide-y divide-border overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
+          {courseList.map((course) => (
+            <li
+              key={course.id}
+              className={`flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-4 sm:px-5 ${
+                course.isActive ? "" : "text-muted"
+              }`}
+            >
+              <div className="min-w-0 flex-1">
+                <span className="flex flex-wrap items-center gap-2">
+                  <span className="font-semibold text-foreground">{course.title}</span>
+                  <span className="rounded-full bg-surface-sunken px-2 py-0.5 text-xs font-semibold tracking-wider text-muted uppercase">
+                    {course.agency}
+                  </span>
+                  {course.isActive ? null : (
+                    <span className="rounded-full bg-surface-sunken px-2 py-0.5 text-xs font-semibold text-muted">
+                      {st("courses.list.hidden")}
+                    </span>
+                  )}
+                </span>
+                <p className="mt-1 text-sm text-muted">
+                  {course.minimumCertificationLevel
+                    ? st("courses.list.orHigher", {
+                        level: st(CERTIFICATION_LEVEL_KEYS[course.minimumCertificationLevel]),
+                      })
+                    : st("courses.list.openToUncertified")}
+                </p>
+              </div>
+              <div className="flex items-center gap-1">
+                <Link
+                  href={`/shop/${shop.slug}/courses/${course.slug}/edit`}
+                  className={buttonClass({ variant: "secondary", size: "sm" })}
+                >
+                  {st("courses.list.edit")}
+                </Link>
+                <form action={visibilityAction}>
+                  <input type="hidden" name="courseId" value={course.id} />
+                  <input type="hidden" name="visible" value={course.isActive ? "false" : "true"} />
+                  <SubmitButton
+                    pendingLabel="…"
+                    className={buttonClass({ variant: "ghost", size: "sm", className: "px-2" })}
+                  >
+                    {course.isActive ? <EyeIcon /> : <EyeOffIcon />}
+                    <span className="sr-only">
+                      {st("courses.list.hideShowSrLabel", {
+                        action: course.isActive ? st("courses.list.hide") : st("courses.list.show"),
+                        title: course.title,
+                      })}
+                    </span>
+                  </SubmitButton>
+                </form>
+                <Link
+                  href={`/shop/${shop.slug}/courses/${course.slug}`}
+                  className={buttonClass({ variant: "ghost", size: "sm", className: "px-2" })}
+                >
+                  <LinkIcon />
+                  <span className="sr-only">
+                    {st("courses.list.previewSrLabel", { title: course.title })}
+                  </span>
+                </Link>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </main>
+    );
+  }
+
+  const courseList = await listActiveCourses(db, shop.id);
+  const money = new Intl.NumberFormat(locale, { style: "currency", currency: "USD" });
+
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <ShopPageHeader
-        eyebrow={t("courses.list.eyebrow")}
-        title={t("courses.list.title")}
-        description={t("courses.list.description")}
-        actions={
-          <Link
-            href={`/shop/${shop.slug}/courses/paths`}
-            className={buttonClass({ variant: "secondary" })}
-          >
-            {t("courses.list.certificationPaths")}
-          </Link>
-        }
+        eyebrow={t("courses.index.eyebrow")}
+        title={t("courses.index.title")}
+        description={t("courses.index.description")}
       />
 
-      <ul className="mt-8 divide-y divide-border overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
-        {courseList.map((course) => (
-          <li
-            key={course.id}
-            className={`flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-4 sm:px-5 ${
-              course.isActive ? "" : "text-muted"
-            }`}
-          >
-            <div className="min-w-0 flex-1">
-              <span className="flex flex-wrap items-center gap-2">
-                <span className="font-semibold text-foreground">{course.title}</span>
-                <span className="rounded-full bg-surface-sunken px-2 py-0.5 text-xs font-semibold tracking-wider text-muted uppercase">
-                  {course.agency}
-                </span>
-                {course.isActive ? null : (
-                  <span className="rounded-full bg-surface-sunken px-2 py-0.5 text-xs font-semibold text-muted">
-                    {t("courses.list.hidden")}
-                  </span>
-                )}
-              </span>
-              <p className="mt-1 text-sm text-muted">
-                {course.minimumCertificationLevel
-                  ? t("courses.list.orHigher", {
-                      level: t(CERTIFICATION_LEVEL_KEYS[course.minimumCertificationLevel]),
-                    })
-                  : t("courses.list.openToUncertified")}
-              </p>
-            </div>
-            <div className="flex items-center gap-1">
-              <Link
-                href={`/shop/${shop.slug}/courses/${course.slug}/edit`}
-                className={buttonClass({ variant: "secondary", size: "sm" })}
-              >
-                {t("courses.list.edit")}
-              </Link>
-              <form action={visibilityAction}>
-                <input type="hidden" name="courseId" value={course.id} />
-                <input type="hidden" name="visible" value={course.isActive ? "false" : "true"} />
-                <SubmitButton
-                  pendingLabel="…"
-                  className={buttonClass({ variant: "ghost", size: "sm", className: "px-2" })}
+      {courseList.length === 0 ? (
+        <EmptyState>
+          <h2 className="font-medium">{t("courses.index.noCoursesHeading")}</h2>
+          <p className="mt-1 text-sm text-muted">{t("courses.index.noCoursesBody")}</p>
+        </EmptyState>
+      ) : (
+        <ul className="mt-8 flex flex-col gap-3">
+          {courseList.map((course) => {
+            const totalCents = courseTotalCents(course);
+            return (
+              <li key={course.id}>
+                <Link
+                  href={`/shop/${shopSlug}/courses/${course.slug}`}
+                  className="group card-scale-hint flex flex-col gap-2 rounded-2xl border border-border bg-surface p-5 shadow-sm transition-all duration-200 hover:border-primary/40 sm:flex-row sm:items-center sm:justify-between"
                 >
-                  {course.isActive ? <EyeIcon /> : <EyeOffIcon />}
-                  <span className="sr-only">
-                    {t("courses.list.hideShowSrLabel", {
-                      action: course.isActive ? t("courses.list.hide") : t("courses.list.show"),
-                      title: course.title,
-                    })}
-                  </span>
-                </SubmitButton>
-              </form>
-              <Link
-                href={`/shop/${shop.slug}/courses/${course.slug}`}
-                className={buttonClass({ variant: "ghost", size: "sm", className: "px-2" })}
-              >
-                <LinkIcon />
-                <span className="sr-only">
-                  {t("courses.list.previewSrLabel", { title: course.title })}
-                </span>
-              </Link>
-            </div>
-          </li>
-        ))}
-      </ul>
+                  <div className="min-w-0">
+                    <span className="flex flex-wrap items-center gap-2">
+                      <h2 className="font-medium group-hover:text-primary">{course.title}</h2>
+                      <span className="rounded-full bg-surface-sunken px-2 py-0.5 text-xs font-semibold tracking-wider text-muted uppercase">
+                        {course.agency}
+                      </span>
+                    </span>
+                    {course.summary ? (
+                      <p className="mt-1 text-sm text-muted">{course.summary}</p>
+                    ) : null}
+                    <p className="mt-1 text-sm text-muted">
+                      {course.minimumCertificationLevel
+                        ? t("course.certificationOrHigher", {
+                            level: t(
+                              DIVER_CERTIFICATION_LEVEL_KEYS[course.minimumCertificationLevel],
+                            ),
+                          })
+                        : t("course.noCertification")}
+                    </p>
+                  </div>
+                  {totalCents !== null ? (
+                    <p className="shrink-0 text-sm font-semibold tabular-nums">
+                      {money.format(totalCents / 100)}
+                    </p>
+                  ) : null}
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
+      <p className="mt-8 text-sm">
+        <Link
+          href={`/shop/${shopSlug}/courses/paths`}
+          className="font-medium text-primary hover:underline"
+        >
+          {t("courses.index.pathsLink")}
+        </Link>
+      </p>
     </main>
   );
 }

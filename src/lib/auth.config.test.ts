@@ -14,10 +14,19 @@ describe("isPublicShopRoute", () => {
     expect(isPublicShopRoute("/shop/blue-mantis/courses/open-water-diver/")).toBe(true);
   });
 
-  it("keeps the staff course catalog and editor gated", () => {
-    expect(isPublicShopRoute("/shop/blue-mantis/courses")).toBe(false);
-    expect(isPublicShopRoute("/shop/blue-mantis/courses/")).toBe(false);
+  it("opens the course catalog index and certification paths to a signed-out diver", () => {
+    expect(isPublicShopRoute("/shop/blue-mantis/courses")).toBe(true);
+    expect(isPublicShopRoute("/shop/blue-mantis/courses/")).toBe(true);
+    expect(isPublicShopRoute("/shop/blue-mantis/courses/paths")).toBe(true);
+    expect(isPublicShopRoute("/shop/blue-mantis/courses/paths/")).toBe(true);
+    expect(isPublicShopRoute("/shop/blue-mantis/courses/paths/open-water-to-rescue")).toBe(true);
+    expect(isPublicShopRoute("/shop/blue-mantis/courses/paths/open-water-to-rescue/")).toBe(true);
+  });
+
+  it("keeps the course editor and creation routes gated", () => {
     expect(isPublicShopRoute("/shop/blue-mantis/courses/open-water-diver/edit")).toBe(false);
+    expect(isPublicShopRoute("/shop/blue-mantis/courses/new")).toBe(false);
+    expect(isPublicShopRoute("/shop/blue-mantis/courses/new/")).toBe(false);
   });
 
   it("refuses the staff segments a course slug could otherwise impersonate", () => {
@@ -52,7 +61,10 @@ describe("isEmbeddableShopRoute", () => {
   it("refuses everything else, including other public routes", () => {
     for (const path of [
       "/shop/blue-mantis",
+      "/shop/blue-mantis/courses",
       "/shop/blue-mantis/courses/open-water-diver",
+      "/shop/blue-mantis/courses/paths",
+      "/shop/blue-mantis/courses/paths/open-water-to-rescue",
       "/shop/blue-mantis/settings",
       "/shop/blue-mantis/trips/abc-123",
       "/sign-in",

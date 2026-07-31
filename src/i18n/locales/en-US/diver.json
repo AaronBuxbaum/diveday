@@ -264,10 +264,36 @@
       "instructor": "Instructor"
     }
   },
+  "courses": {
+    "index": {
+      "eyebrow": "Courses",
+      "title": "Courses",
+      "description": "Everything this shop teaches, from a first taste of scuba to advanced training.",
+      "noCoursesHeading": "No courses listed yet",
+      "noCoursesBody": "Check back soon, or get in touch and we’ll help you find a starting point.",
+      "pathsLink": "Not sure where to start? See certification paths"
+    }
+  },
   "path": {
     "sectionTitle": "Where this fits",
     "nextUp": "Next after this one: {course}.",
     "lastStep": "This is the last step on {path} — after it, ask us where to go next."
+  },
+  "coursePaths": {
+    "index": {
+      "eyebrow": "Certification paths",
+      "title": "Certification paths",
+      "description": "Progressions the shop recommends, one course after another. These are guidance, not a requirement — every course states its own admission on its own page.",
+      "noPathsHeading": "No certification paths published yet",
+      "noPathsBody": "Check back soon, or get in touch and we’ll help you plan your next course.",
+      "backToCourses": "All courses"
+    },
+    "page": {
+      "eyebrow": "Certification path",
+      "backToPaths": "All certification paths",
+      "stepsHeading": "What this path covers",
+      "noStepsBody": "This path doesn’t list any courses yet."
+    }
   },
   "reviews": {
     "sectionTitle": "What divers say",

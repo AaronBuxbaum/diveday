@@ -47,6 +47,41 @@ test("a regular fun-dive trip does not show the taster-session gift nudge", asyn
   await expect(page.getByText("Giving this dive as a gift?")).not.toBeVisible();
 });
 
+test("a signed-out visitor browses the public course catalog to certification paths, with the editor still gated", async ({
+  page,
+}) => {
+  await page.goto("/shop/blue-mantis/courses");
+  await expect(page.getByRole("heading", { level: 1, name: "Courses" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 2, name: "Open Water Diver", exact: true }),
+  ).toBeVisible();
+  // No staff affordance renders at all — not disabled, absent (AGENTS.md
+  // hard rule: gate by not rendering).
+  await expect(page.getByRole("link", { name: "Edit" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /^Hide|^Show/ })).toHaveCount(0);
+
+  await page
+    .getByRole("link", { name: "Not sure where to start? See certification paths" })
+    .click();
+  await expect(page).toHaveURL(/\/courses\/paths$/);
+  await expect(page.getByRole("heading", { level: 1, name: "Certification paths" })).toBeVisible();
+  const seededPath = page.getByRole("link", { name: "From first breath to Rescue Diver" });
+  await expect(seededPath).toBeVisible();
+  await expect(page.getByLabel("Path name")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Create path" })).toHaveCount(0);
+
+  await seededPath.click();
+  await expect(page).toHaveURL(/\/courses\/paths\/from-first-breath-to-rescue-diver$/);
+  await expect(
+    page.getByRole("heading", { level: 1, name: "From first breath to Rescue Diver" }),
+  ).toBeVisible();
+  const steps = page.getByRole("list");
+  await expect(steps.getByRole("link", { name: "Discover Scuba Diving" })).toBeVisible();
+  await expect(steps.getByRole("link", { name: "Rescue Diver" })).toBeVisible();
+  // No path editor surfaces for a signed-out visitor.
+  await expect(page.getByRole("checkbox", { name: /Offer this path/ })).toHaveCount(0);
+});
+
 test.describe("staff", () => {
   signedInAsOwner();
 
@@ -132,11 +167,17 @@ test.describe("staff", () => {
     await expect(page.getByRole("heading", { name: "Day 4" })).toBeVisible();
     await expect(page.getByText("Do I need my own gear?")).toBeVisible();
 
-    // The staff pages above and below it stay closed to that same visitor.
+    // The editor stays closed to that same visitor. The catalog index above it
+    // is a public page now (task 2) — it renders the catalog rather than
+    // bouncing to sign-in, and carries no edit affordance.
     await page.goto("/shop/blue-mantis/courses/rescue-diver/edit");
     await expect(page).toHaveURL(/\/sign-in/);
-    await page.goto("/shop/blue-mantis/courses");
+    await page.goto("/shop/blue-mantis/courses/new");
     await expect(page).toHaveURL(/\/sign-in/);
+    await page.goto("/shop/blue-mantis/courses");
+    await expect(page).not.toHaveURL(/\/sign-in/);
+    await expect(page.getByRole("heading", { level: 1, name: "Courses" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Edit" })).toHaveCount(0);
   });
 
   test("oversize and over-limit course photos are rejected client-side (CR-011)", async ({

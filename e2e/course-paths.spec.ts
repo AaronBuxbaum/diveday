@@ -87,6 +87,62 @@ test.describe("certification paths", () => {
     // The other seeded path doesn't contain Wreck Diver, so the section goes.
     await expect(page.getByRole("heading", { name: "Where this fits" })).toHaveCount(0);
   });
+
+  test("hiding a rung's course drops it from the public path listing and detail page, without hiding the path", async ({
+    page,
+  }) => {
+    // Advanced Open Water Diver is the second rung on the seeded "From first
+    // breath to Rescue Diver" path — hide the course, not the path.
+    await page.goto(`/shop/${SHOP}/courses`);
+    const row = page.getByRole("listitem").filter({ hasText: "Advanced Open Water Diver" });
+    await row.getByRole("button", { name: "Hide Advanced Open Water Diver" }).click();
+    await expect(row.getByText("Hidden")).toBeVisible();
+
+    try {
+      await page.context().clearCookies();
+      await page.goto(PATHS);
+      const listing = page
+        .getByRole("listitem")
+        .filter({ has: page.getByRole("link", { name: "From first breath to Rescue Diver" }) });
+      await expect(listing).not.toContainText("Advanced Open Water Diver");
+      await expect(listing).toContainText("Discover Scuba Diving");
+
+      await page.goto(`${PATHS}/from-first-breath-to-rescue-diver`);
+      const steps = page.getByRole("list");
+      await expect(steps.getByRole("link", { name: "Advanced Open Water Diver" })).toHaveCount(0);
+      await expect(steps.getByRole("link", { name: "Rescue Diver" })).toBeVisible();
+    } finally {
+      // Restore it — other specs sharing this database expect the seeded
+      // catalog visible by default.
+      await signInAs(page, DEV_STAFF_LOGINS.owner);
+      await page.goto(`/shop/${SHOP}/courses`);
+      const row2 = page.getByRole("listitem").filter({ hasText: "Advanced Open Water Diver" });
+      await row2.getByRole("button", { name: "Show Advanced Open Water Diver" }).click();
+      await expect(row2.getByText("Hidden")).toHaveCount(0);
+    }
+  });
+
+  test("a hidden path's own public page 404s for a signed-out visitor, while staff can still open it", async ({
+    page,
+  }) => {
+    const title = `Vault Path ${e2eNow().getTime()}`;
+    await page.goto(PATHS);
+    await page.getByLabel("Path name").fill(title);
+    await page.getByRole("button", { name: "Create path" }).click();
+    await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
+    const slug = new URL(page.url()).pathname.split("/").at(-1);
+
+    await page.getByRole("checkbox", { name: "Offer this path to divers" }).uncheck();
+    await page.getByRole("button", { name: "Save path" }).click();
+    await expect(page.getByRole("status")).toContainText("Path saved.");
+
+    await page.context().clearCookies();
+    const response = await page.goto(`${PATHS}/${slug}`);
+    expect(response?.status()).toBe(404);
+    // And it never shows up in the public index either.
+    await page.goto(PATHS);
+    await expect(page.getByRole("link", { name: title })).toHaveCount(0);
+  });
 });
 
 test.describe("certification paths, as the daily crew", () => {

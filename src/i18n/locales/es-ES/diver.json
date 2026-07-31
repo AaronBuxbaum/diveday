@@ -264,10 +264,36 @@
       "instructor": "Instructor"
     }
   },
+  "courses": {
+    "index": {
+      "eyebrow": "Cursos",
+      "title": "Cursos",
+      "description": "Todo lo que enseña este centro, desde un primer contacto con el buceo hasta formación avanzada.",
+      "noCoursesHeading": "Todavía no hay cursos publicados",
+      "noCoursesBody": "Vuelve pronto, o escríbenos y te ayudamos a encontrar un punto de partida.",
+      "pathsLink": "¿No sabes por dónde empezar? Consulta las rutas de titulación"
+    }
+  },
   "path": {
     "sectionTitle": "Dónde encaja este curso",
     "nextUp": "Lo siguiente después de este: {course}.",
     "lastStep": "Este es el último paso de {path}. Después, pregúntanos hacia dónde seguir."
+  },
+  "coursePaths": {
+    "index": {
+      "eyebrow": "Rutas de titulación",
+      "title": "Rutas de titulación",
+      "description": "Progresiones que recomienda el centro, un curso tras otro. Son una orientación, no un requisito — cada curso indica su propia admisión en su propia página.",
+      "noPathsHeading": "Todavía no hay rutas de titulación publicadas",
+      "noPathsBody": "Vuelve pronto, o escríbenos y te ayudamos a planear tu próximo curso.",
+      "backToCourses": "Todos los cursos"
+    },
+    "page": {
+      "eyebrow": "Ruta de titulación",
+      "backToPaths": "Todas las rutas de titulación",
+      "stepsHeading": "Qué incluye esta ruta",
+      "noStepsBody": "Esta ruta todavía no incluye ningún curso."
+    }
   },
   "reviews": {
     "sectionTitle": "Lo que dicen los buceadores",
