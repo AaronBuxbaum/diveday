@@ -1,6 +1,7 @@
 import { ShopNotice } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
+import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
 
 /**
  * One entry per notice code, carrying its own tone and message key(s) — same
@@ -11,7 +12,7 @@ import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
  */
 const NOTICE_KEYS: Record<
   string,
-  { tone: "success" | "danger"; key: StaffMessageKey; countKey?: StaffMessageKey }
+  { tone: "success" | "danger" | "warning"; key: StaffMessageKey; countKey?: StaffMessageKey }
 > = {
   saved: { tone: "success", key: "trips.notices.saved" },
   cancelled: { tone: "danger", key: "trips.notices.cancelled" },
@@ -44,6 +45,8 @@ const NOTICE_KEYS: Record<
   "diver-added": { tone: "success", key: "trips.notices.diverAdded" },
   "diver-waitlisted": { tone: "success", key: "trips.notices.diverWaitlisted" },
   "identity-confirmed": { tone: "success", key: "trips.notices.identityConfirmed" },
+  "contact-saved": { tone: "success", key: "trips.notices.contactSaved" },
+  "contact-incomplete": { tone: "warning", key: "trips.notices.contactIncomplete" },
   "diver-invalid": { tone: "danger", key: "trips.notices.diverInvalid" },
   "diver-full": { tone: "danger", key: "trips.notices.diverFull" },
   "diver-waitlist-available": { tone: "danger", key: "trips.notices.diverWaitlistAvailable" },
@@ -118,10 +121,7 @@ export function TripNoticeBanner({
   // notices render the same banner without one.
   undoAction?: (formData: FormData) => void;
 }) {
-  // `Object.hasOwn`, not a bare lookup: `notice` is an attacker-supplied query
-  // param, and `?notice=constructor` would otherwise return a truthy inherited
-  // value and render an empty banner.
-  const banner = notice && Object.hasOwn(NOTICE_KEYS, notice) ? NOTICE_KEYS[notice] : undefined;
+  const banner = noticeFromParam(notice, NOTICE_KEYS);
   if (!banner) return null;
   const t = staffTranslator(locale);
   const parsedCount = count !== undefined && /^\d+$/.test(count) ? Number(count) : undefined;
@@ -131,7 +131,7 @@ export function TripNoticeBanner({
       : t(banner.key);
   return (
     <div className="mt-6">
-      <ShopNotice tone={banner.tone} role={banner.tone === "danger" ? "alert" : "status"}>
+      <ShopNotice tone={banner.tone} role={noticeRole(banner.tone)}>
         <div className="flex items-center justify-between gap-3">
           <span>{text}</span>
           {undoBookingId && undoAction ? (

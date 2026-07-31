@@ -1,4 +1,5 @@
 import { expect, test } from "./fixtures";
+import { acceptAgeAttestation } from "./helpers";
 
 test("a device that just booked prefills the next booking form, with a one-tap way out", async ({
   page,
@@ -8,11 +9,12 @@ test("a device that just booked prefills the next booking form, with a one-tap w
   await page
     .locator("li")
     .filter({ hasText: "Discover Scuba — Pool & Reef" })
-    .getByRole("link")
+    .getByRole("link", { name: "Discover Scuba — Pool & Reef" })
     .click();
   await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
   await page.getByLabel("Name").fill("Marco Reyes");
   await page.getByLabel("Email").fill("marco@example.com");
+  await acceptAgeAttestation(page);
   await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
   await expect(page.getByRole("heading", { name: /You’re on the boat, Marco/ })).toBeVisible();
 
@@ -22,7 +24,7 @@ test("a device that just booked prefills the next booking form, with a one-tap w
   await page
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-    .getByRole("link")
+    .getByRole("link", { name: "Two-Tank Reef — Molasses & French" })
     .click();
   await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
   await expect(page.getByLabel("Name")).toHaveValue("Marco Reyes");
@@ -41,11 +43,12 @@ test("the embed widget never prefills or remembers a booker", async ({ page }) =
   await page
     .locator("li")
     .filter({ hasText: "Discover Scuba — Pool & Reef" })
-    .getByRole("link")
+    .getByRole("link", { name: "Discover Scuba — Pool & Reef" })
     .click();
   await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
   await page.getByLabel("Name").fill("Sal Moretti");
   await page.getByLabel("Email").fill("sal@example.com");
+  await acceptAgeAttestation(page);
   await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
   await expect(page.getByRole("heading", { name: /You’re on the boat, Sal/ })).toBeVisible();
 

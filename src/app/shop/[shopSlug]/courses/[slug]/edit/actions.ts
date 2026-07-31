@@ -54,7 +54,13 @@ export async function saveCourseContentAction(shopSlug: string, slug: string, fo
   const base = `/shop/${shopSlug}/courses/${slug}/edit`;
   const staff = await requireStaffSession();
   const parsed = contentSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) redirect(`${base}?error=invalid`);
+  if (!parsed.success) {
+    // The first failing field, so the page can anchor and highlight it rather
+    // than leaving a fifteen-input form to one generic "check the fields"
+    // message with no clue which one.
+    const field = parsed.error.issues[0]?.path[0];
+    redirect(`${base}?error=invalid${typeof field === "string" ? `&field=${field}` : ""}`);
+  }
   const value = parsed.data;
 
   const db = await getDb();
@@ -86,8 +92,22 @@ export async function saveCourseContentAction(shopSlug: string, slug: string, fo
     redirect(`${base}?error=images`);
   }
 
+  // Captions travel as two parallel arrays (one hidden input per existing
+  // photo's URL, one text input for its caption) rather than one input keyed
+  // by the URL, so a URL never has to survive being an HTML attribute value.
+  // A freshly-uploaded photo has no caption input yet — it starts blank and
+  // falls back to the generated "{title} — photo {n}" caption until edited.
+  const altUrls = formData.getAll("galleryAltUrls").map(String);
+  const altValues = formData.getAll("galleryAltValues").map(String);
+  const altByUrl = new Map(altUrls.map((url, index) => [url, altValues[index]?.trim() ?? ""]));
+  const imageAlts = imageUrls.map((url) => altByUrl.get(url) ?? "");
+
   const removeHero = formData.get("removeHero") === "true";
   const heroImageUrl = hero.url ?? (removeHero ? "" : (course.heroImageUrl ?? ""));
+  // A freshly-uploaded or removed hero has no caption input on screen yet —
+  // starts blank rather than carrying over the previous photo's caption.
+  const heroImageAlt =
+    hero.url || removeHero ? "" : String(formData.get("heroImageAlt") ?? "").trim();
 
   let scheduleDays: ReturnType<typeof sanitizeScheduleDays>;
   try {
@@ -95,13 +115,15 @@ export async function saveCourseContentAction(shopSlug: string, slug: string, fo
   } catch {
     scheduleDays = null;
   }
-  if (scheduleDays === null) redirect(`${base}?error=invalid`);
+  if (scheduleDays === null) redirect(`${base}?error=invalid&field=scheduleDaysJson`);
 
   const saved = await updateCourseContent(db, staff.user.shopId, course.id, {
     summary: value.summary,
     overview: value.overview,
     heroImageUrl,
+    heroImageAlt,
     imageUrls,
+    imageAlts,
     durationText: value.durationText,
     groupSizeText: value.groupSizeText,
     prerequisiteNote: value.prerequisiteNote,

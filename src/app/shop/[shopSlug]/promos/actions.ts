@@ -3,7 +3,12 @@
 import { z } from "zod";
 import { canPersonManagePaymentSettings } from "@/db/authz";
 import { getDb } from "@/db/client";
-import { createShopPromoCode, setShopPromoEnabled } from "@/db/shop-promos";
+import {
+  createShopPromoCode,
+  deleteShopPromoCode,
+  retryShopPromoCode,
+  setShopPromoEnabled,
+} from "@/db/shop-promos";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { PROMO_DISCOUNT_MAX, PROMO_DISCOUNT_MIN } from "@/lib/promo-codes";
 import { requireStaffSession } from "@/lib/session";
@@ -78,4 +83,29 @@ export async function setPromoEnabledAction(formData: FormData) {
     promos,
     `${promos}?notice=${changed ? (enable ? "enabled" : "disabled") : "invalid"}`,
   );
+}
+
+/** Re-run Stripe creation for a `failed` code, unchanged from how it was entered. */
+export async function retryPromoAction(formData: FormData) {
+  const { session, allowed, promos } = await requirePromoManager();
+  if (!allowed) revalidateAndRedirect(promos, `${promos}?notice=not_authorized`);
+
+  const promoId = String(formData.get("promoId") ?? "");
+  if (!promoId) revalidateAndRedirect(promos, `${promos}?notice=invalid`);
+  const outcome = await retryShopPromoCode(await getDb(), session.user.shopId, promoId);
+  revalidateAndRedirect(
+    promos,
+    `${promos}?notice=${outcome.ok ? "created" : outcome.reason === "not_found" ? "invalid" : outcome.reason}`,
+  );
+}
+
+/** Remove a code that never went live — `pending` or `failed` only. */
+export async function deletePromoAction(formData: FormData) {
+  const { session, allowed, promos } = await requirePromoManager();
+  if (!allowed) revalidateAndRedirect(promos, `${promos}?notice=not_authorized`);
+
+  const promoId = String(formData.get("promoId") ?? "");
+  if (!promoId) revalidateAndRedirect(promos, `${promos}?notice=invalid`);
+  const deleted = await deleteShopPromoCode(await getDb(), session.user.shopId, promoId);
+  revalidateAndRedirect(promos, `${promos}?notice=${deleted ? "deleted" : "invalid"}`);
 }

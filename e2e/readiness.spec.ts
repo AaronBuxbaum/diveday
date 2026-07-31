@@ -1,5 +1,5 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { daysFromNow, e2eNow } from "./helpers";
+import { daysFromNow, e2eNow, signOut } from "./helpers";
 
 test.describe("staff-prepared trip", () => {
   signedInAsOwner();
@@ -22,12 +22,20 @@ test.describe("staff-prepared trip", () => {
     await page.getByLabel("Capacity").fill("6");
     await page.getByRole("button", { name: "Put it on the board" }).click();
     await expect(page.getByRole("status")).toBeVisible();
-    await page.getByRole("button", { name: "Sign out" }).click();
-    await expect(page).toHaveURL(/\/$/);
+    await signOut(page);
 
     // A visitor books it.
     await page.goto("/shop/blue-mantis/schedule", { waitUntil: "domcontentloaded" });
-    await page.locator("li").filter({ hasText: title }).getByRole("link").click();
+    // Scoped to the trip list itself: a day with more than one departure
+    // also renders a same-titled <li> in the month calendar
+    // (src/components/ScheduleCalendar.tsx), and an unscoped locator can
+    // resolve to both.
+    await page
+      .getByRole("list", { name: "Upcoming trips" })
+      .locator("li")
+      .filter({ hasText: title })
+      .getByRole("link")
+      .click();
     // The booking form is controlled, so wait for hydration before typing.
     await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
     await page.getByLabel("Name", { exact: true }).fill("Nemo Quinn");

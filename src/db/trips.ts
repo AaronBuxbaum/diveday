@@ -592,6 +592,57 @@ export async function getTripWithBooked(db: AppDb, shopId: string, tripId: strin
     : null;
 }
 
+/** One dive site's diver-facing preview facts — no shop-internal fields. */
+export type TripSitePeek = {
+  name: string;
+  description: string | null;
+  difficulty: string | null;
+  depthRange: string | null;
+  imageUrls: string[];
+};
+
+/**
+ * Every distinct dive site a trip touches, diver-facing preview shape only —
+ * the trip's own single `diveSiteId` plus any per-dive sites recorded on
+ * `tripDives` for a multi-dive trip, deduped by name (primary site first).
+ * Shared by every diver-facing page that shows "what you'll explore" (the
+ * waiver success page and `/ready`), so the two surfaces can't drift apart
+ * on what counts as the trip's site list.
+ */
+export async function getTripDiveSitesPeek(
+  db: DbExecutor,
+  tripId: string,
+): Promise<TripSitePeek[]> {
+  const peekColumns = {
+    name: diveSites.name,
+    description: diveSites.description,
+    difficulty: diveSites.difficulty,
+    depthRange: diveSites.depthRange,
+    imageUrls: diveSites.imageUrls,
+  };
+  const primarySite = await db
+    .select(peekColumns)
+    .from(trips)
+    .innerJoin(diveSites, eq(diveSites.id, trips.diveSiteId))
+    .where(eq(trips.id, tripId))
+    .limit(1);
+  const multiDiveSites = await db
+    .select(peekColumns)
+    .from(tripDives)
+    .innerJoin(diveSites, eq(diveSites.id, tripDives.diveSiteId))
+    .where(eq(tripDives.tripId, tripId));
+
+  const seenNames = new Set<string>();
+  const sites: TripSitePeek[] = [];
+  for (const site of [...primarySite, ...multiDiveSites]) {
+    if (!seenNames.has(site.name)) {
+      seenNames.add(site.name);
+      sites.push(site);
+    }
+  }
+  return sites;
+}
+
 export type TripPatch = {
   title: string;
   description?: string;

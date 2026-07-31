@@ -4,7 +4,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { WaiverSendControl } from "@/components/today/WaiverSendControl";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass } from "@/components/ui/form";
+import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import type { listBookingNotes } from "@/db/operations";
 import { birthdayText } from "@/i18n/birthday-labels";
 import { depthWarningText } from "@/i18n/depth-labels";
@@ -47,6 +47,17 @@ type WaiverControlKeys = {
   action: "send" | "resend" | null;
   confirm: boolean;
 };
+
+/**
+ * The roster's filter chips (server-rendered `?rf=` query param, task 69):
+ * scanning a 12-person boat for who still needs a waiver, or who's flat-out
+ * blocked, beats reading every ~200px card end to end.
+ */
+export type RosterFilter = "all" | "needs_waiver" | "blocked";
+
+export function isRosterFilter(value: string | undefined): value is RosterFilter {
+  return value === "all" || value === "needs_waiver" || value === "blocked";
+}
 
 const WAIVER_CONTROL_KEYS: Record<ReturnType<typeof waiverState>, WaiverControlKeys> = {
   not_sent: {
@@ -104,8 +115,15 @@ export function RosterSection({
   notesByBooking,
   addNoteAction,
   deleteNoteAction,
-  depthUnit,
+  saveEmergencyContactAction,
+  // Accepted for interface parity with callers/DepthUnit plumbing elsewhere
+  // on this page, but `depthWarningText` already embeds its own unit
+  // formatting — nothing in this component needs it directly. Pre-existing
+  // (unrelated to manifests/roll-call); kept rather than dropped from the
+  // props contract in case another in-flight change depends on it.
+  depthUnit: _depthUnit,
   tripDate,
+  rosterFilter,
 }: {
   shopSlug: string;
   shopTimezone: string;
@@ -114,6 +132,8 @@ export function RosterSection({
   booked: number;
   capacity: number;
   roster: RosterEntry[];
+  /** Server-rendered `?rf=` selection (task 69) — defaults to "all" upstream. */
+  rosterFilter: RosterFilter;
   readinessByBooking: ReadinessByBooking;
   waiverByBooking: WaiverByBooking;
   rentalFitByBooking: RentalFitByBooking;
@@ -129,6 +149,8 @@ export function RosterSection({
   notesByBooking: Map<string, Awaited<ReturnType<typeof listBookingNotes>>>;
   addNoteAction: (formData: FormData) => void;
   deleteNoteAction: (formData: FormData) => void;
+  /** Staff record or correct a diver's emergency contact from their card (task 144). */
+  saveEmergencyContactAction: (formData: FormData) => void;
   /** How this shop reads depth; the stored figure is always metres. */
   depthUnit: DepthUnit;
   /** The trip's own shop-local calendar date — when age and birthdays are measured. */
@@ -168,6 +190,31 @@ export function RosterSection({
       WAIVER_CONTROLS[waiverState(waiverByBooking.get(booking.id)?.waiver ?? null)].action;
     return action !== null;
   }).length;
+  // Filter chips read against the *full* roster's own signals, never a
+  // separate query, so the counts and the cards they gate can never disagree.
+  const needsWaiver = ({ booking }: RosterEntry) =>
+    waiverState(waiverByBooking.get(booking.id)?.waiver ?? null) !== "complete";
+  const isBlocked = ({ booking }: RosterEntry) =>
+    readinessByBooking.get(booking.id)?.readiness?.status !== "ready";
+  const filterCounts = {
+    all: roster.length,
+    needs_waiver: roster.filter(needsWaiver).length,
+    blocked: roster.filter(isBlocked).length,
+  } as const;
+  const filteredRoster =
+    rosterFilter === "needs_waiver"
+      ? roster.filter(needsWaiver)
+      : rosterFilter === "blocked"
+        ? roster.filter(isBlocked)
+        : roster;
+  const filterChipHref = (filter: RosterFilter) =>
+    `/shop/${shopSlug}/trips/${tripId}/guests${filter === "all" ? "" : `?rf=${filter}`}#roster`;
+  const filterChipClass = (active: boolean) =>
+    `inline-flex min-h-9 items-center rounded-full border px-3 text-sm font-medium transition-colors ${
+      active
+        ? "border-primary bg-primary/10 text-primary"
+        : "border-border text-muted hover:bg-surface-sunken hover:text-foreground"
+    }`;
   return (
     <section id="roster" className="mt-10">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -196,13 +243,35 @@ export function RosterSection({
           </form>
         ) : null}
       </div>
+      {roster.length > 0 ? (
+        <nav aria-label={t("trips.roster.filterAriaLabel")} className="mt-4 flex flex-wrap gap-2">
+          {(["all", "needs_waiver", "blocked"] as const).map((filter) => (
+            <Link
+              key={filter}
+              href={filterChipHref(filter)}
+              scroll={false}
+              className={filterChipClass(rosterFilter === filter)}
+            >
+              {filter === "all"
+                ? t("trips.roster.filterAll", { count: filterCounts.all })
+                : filter === "needs_waiver"
+                  ? t("trips.roster.filterNeedsWaiver", { count: filterCounts.needs_waiver })
+                  : t("trips.roster.filterBlocked", { count: filterCounts.blocked })}
+            </Link>
+          ))}
+        </nav>
+      ) : null}
       {roster.length === 0 ? (
         <p className="mt-4 rounded-lg border border-border bg-surface px-4 py-6 text-center text-sm text-muted">
           {t("trips.roster.noBookings")}
         </p>
+      ) : filteredRoster.length === 0 ? (
+        <p className="mt-4 rounded-lg border border-border bg-surface px-4 py-6 text-center text-sm text-muted">
+          {t("trips.roster.noneMatchFilter")}
+        </p>
       ) : (
         <ul className="mt-5 grid gap-4">
-          {roster.map(({ booking, person }) => {
+          {filteredRoster.map(({ booking, person }) => {
             const readiness = readinessByBooking.get(booking.id)?.readiness;
             const paymentStatus = readinessByBooking.get(booking.id)?.paymentStatus;
             const paymentSource = paymentSourceLine(
@@ -227,6 +296,12 @@ export function RosterSection({
             const age = dateOfBirth ? ageOnDate(dateOfBirth, tripDate) : null;
             const minor = dateOfBirth ? isMinorOnDate(dateOfBirth, tripDate) : false;
             const birthday = birthdayCallout(dateOfBirth, tripDate);
+            // A name with no number reads as "on file" but is unreachable in an
+            // incident — same both-fields rule `missingEmergencyContactByTrip`
+            // (src/db/today.ts) uses for Today's nudge.
+            const hasEmergencyContact = Boolean(
+              person.emergencyContactName && person.emergencyContactPhone,
+            );
             // A warning, never a gate: the site goes deeper than this diver's
             // training, which an instructor may well have already planned around
             // (H-08). It sits apart from the blocker list for that reason.
@@ -473,6 +548,14 @@ export function RosterSection({
                         ) : (
                           <p className="mt-1">{t("trips.roster.medicalFollowUpDescription")}</p>
                         )}
+                        {currentWaiver ? (
+                          <Link
+                            href={`/shop/${shopSlug}/waivers/signatures?record=${currentWaiver.id}`}
+                            className="mt-2 inline-block text-xs font-semibold underline"
+                          >
+                            {t("trips.roster.viewSignedRecord")}
+                          </Link>
+                        ) : null}
                       </div>
                     ) : null}
                   </div>
@@ -498,6 +581,72 @@ export function RosterSection({
                   </div>
                 </div>
 
+                {/* Task 144 — Today used to send staff here with "ask at the
+                    counter" and no field to type it into. Read-only summary
+                    plus a collapsed edit form, matching the "mark signed on
+                    paper" pattern above; writes through the same
+                    `saveBookingEmergencyContact` the diver's own /ready and
+                    /waivers capture uses. Prints on the manifest. */}
+                <div className="mt-4 border-t border-border pt-4">
+                  <p className="text-xs font-semibold tracking-widest text-muted uppercase">
+                    {t("trips.roster.emergencyContactHeading")}
+                  </p>
+                  {hasEmergencyContact ? (
+                    <p className="mt-2 text-sm text-muted">
+                      {t("trips.roster.emergencyContactOnFile", {
+                        name: person.emergencyContactName ?? "",
+                        phone: person.emergencyContactPhone ?? "",
+                      })}
+                    </p>
+                  ) : (
+                    <p className="mt-2 text-sm text-warning">
+                      {t("trips.roster.emergencyContactMissing")}
+                    </p>
+                  )}
+                  <details className="mt-2">
+                    <summary className="inline-flex min-h-11 cursor-pointer items-center text-sm font-medium text-primary hover:underline">
+                      {hasEmergencyContact
+                        ? t("trips.roster.emergencyContactEdit")
+                        : t("trips.roster.emergencyContactAdd")}
+                    </summary>
+                    <form
+                      action={saveEmergencyContactAction}
+                      className="mt-2 flex max-w-md flex-col gap-3 rounded-lg border border-border bg-surface-sunken/50 p-3"
+                    >
+                      <input type="hidden" name="bookingId" value={booking.id} />
+                      <FieldGrid columns={2}>
+                        <Field label={t("trips.roster.emergencyContactNameLabel")}>
+                          <input
+                            name="emergencyContactName"
+                            autoComplete="name"
+                            maxLength={120}
+                            defaultValue={person.emergencyContactName ?? ""}
+                            className={controlClass}
+                          />
+                        </Field>
+                        <Field label={t("trips.roster.emergencyContactPhoneLabel")}>
+                          <input
+                            name="emergencyContactPhone"
+                            type="tel"
+                            autoComplete="tel"
+                            maxLength={40}
+                            defaultValue={person.emergencyContactPhone ?? ""}
+                            className={controlClass}
+                          />
+                        </Field>
+                      </FieldGrid>
+                      <div>
+                        <SubmitButton
+                          pendingLabel={t("trips.roster.savingContact")}
+                          className={buttonClass({ variant: "secondary", size: "sm" })}
+                        >
+                          {t("trips.roster.saveEmergencyContact")}
+                        </SubmitButton>
+                      </div>
+                    </form>
+                  </details>
+                </div>
+
                 <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border pt-4">
                   {requiresPayment ? (
                     <PaymentStatusControl
@@ -520,6 +669,12 @@ export function RosterSection({
                     className="inline-flex min-h-11 items-center py-2 text-sm font-medium text-primary hover:underline"
                   >
                     {t("trips.roster.createOrder")}
+                  </Link>
+                  <Link
+                    href={`/shop/${shopSlug}/orders?personId=${person.id}`}
+                    className="inline-flex min-h-11 items-center py-2 text-sm font-medium text-primary hover:underline"
+                  >
+                    {t("trips.roster.viewOrders")}
                   </Link>
                   {/* A cancel inside the shop's refund window fires an automatic
                       Stripe refund that the Undo banner can't claw back — a real

@@ -4,18 +4,20 @@ import { describe, expect, it } from "vitest";
 import { verifyWaiverIntegrity } from "@/lib/waiver-integrity";
 import { seededShopContext } from "@/test/db";
 import { getBookingReadiness } from "./readiness";
-import { people, waiverRecords } from "./schema";
+import { people, shops, waiverRecords, waiverTemplates } from "./schema";
 import { getTripRoster, listStaff, setTripStatus, upcomingTripsWithCounts } from "./trips";
 import {
   completeWaiver,
   getCurrentWaiverTemplate,
   getEmergencyContactForBooking,
+  getSignedWaiverRecordForShop,
   getWaiverForToken,
   issueWaiverRequest,
   listTripWaiverActivity,
   listWaiverIntegrityAudit,
   listWaiverTemplateHistory,
   recordInPersonWaiver,
+  saveBookingEmergencyContact,
   saveWaiverTemplate,
   WAIVER_INTEGRITY_PAGE_SIZE,
 } from "./waivers";
@@ -139,9 +141,11 @@ describe("waiver records (in-memory PGlite)", () => {
       now,
     });
     if (!issued.ok) throw new Error("expected a waiver link");
-    expect(await getWaiverForToken(db, issued.token, issued.expiresAt)).toEqual({
-      state: "expired",
-    });
+    const expiredState = await getWaiverForToken(db, issued.token, issued.expiresAt);
+    // Still carries the record — a dead link's page needs the shop id off of
+    // it to show contact details, not just a bare "expired" flag.
+    expect(expiredState.state).toBe("expired");
+    expect(expiredState.state === "expired" && expiredState.record.shopId).toBe(shop.id);
     expect(
       await issueWaiverRequest(db, {
         shopId: "00000000-0000-4000-8000-000000000000",
@@ -275,6 +279,191 @@ describe("listWaiverIntegrityAudit pagination", () => {
       limit: 5,
     });
     expect(mangled.entries.map((entry) => entry.id)).toEqual(all.entries.map((entry) => entry.id));
+  });
+});
+
+// The Signatures tab's data (task 155, UX persona assessment Lens 17): the
+// same audit, enriched with the trip a record was issued against and a
+// medical-flag summary, never the raw questionnaire.
+describe("listWaiverIntegrityAudit signature evidence (task 155)", () => {
+  it("carries the trip and a medical-flag summary, never the raw answer set", async () => {
+    const { db, shop, trip, booking } = await waiverContext();
+    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
+    if (!issued.ok) throw new Error("expected a waiver link");
+    const outcome = await completeWaiver(db, issued.token, {
+      signerName: "Nora Quinn",
+      agreed: true,
+      medicalAnswers: { ...clearAnswers, responses: { heart_lung: true } },
+      now,
+    });
+    expect(outcome).toMatchObject({ ok: true, status: "medical_review" });
+
+    const [diver] = await db.select().from(people).where(eq(people.id, booking.personId));
+    if (!diver) throw new Error("booking's diver missing");
+
+    const { entries } = await listWaiverIntegrityAudit(db, shop.id, { limit: 1000 });
+    const entry = entries.find((candidate) => candidate.id === issued.recordId);
+    expect(entry).toBeDefined();
+    expect(entry?.personName).toBe(diver.fullName);
+    expect(entry?.tripId).toBe(trip.id);
+    expect(entry?.tripTitle).toBe(trip.title);
+    expect(entry?.status).toBe("medical_review");
+    expect(entry?.flaggedPrompts).toContain(
+      "Do you have, or have you had, a heart, lung, or breathing condition (including asthma) affecting exercise?",
+    );
+    // The raw questionnaire never rides along — only the flagged prompts do.
+    expect(entry).not.toHaveProperty("medicalAnswers");
+    expect(entry).not.toHaveProperty("tokenHash");
+
+    // A clean signature (no medical flag) carries an empty summary, not a hole.
+    const { db: db2, shop: shop2, booking: booking2 } = await waiverContext();
+    const cleanIssued = await issueWaiverRequest(db2, {
+      shopId: shop2.id,
+      bookingId: booking2.id,
+      now,
+    });
+    if (!cleanIssued.ok) throw new Error("expected a second waiver link");
+    await completeWaiver(db2, cleanIssued.token, {
+      signerName: "Clean Diver",
+      agreed: true,
+      medicalAnswers: clearAnswers,
+      now,
+    });
+    const { entries: entries2 } = await listWaiverIntegrityAudit(db2, shop2.id, { limit: 1000 });
+    const cleanEntry = entries2.find((candidate) => candidate.id === cleanIssued.recordId);
+    expect(cleanEntry?.flaggedPrompts).toEqual([]);
+  });
+
+  it("shows an imported record (no booking) with no trip rather than throwing", async () => {
+    const { db, shop, template } = await waiverContext();
+    const [diver] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Imported Diver" })
+      .returning();
+    if (!diver) throw new Error("diver insert failed");
+    await db.insert(waiverRecords).values({
+      shopId: shop.id,
+      bookingId: null,
+      personId: diver.id,
+      templateId: template.id,
+      templateTitle: template.title,
+      templateVersion: template.version,
+      templateBody: template.body,
+      status: "completed",
+      tokenHash: "imported-record-token-hash",
+      expiresAt: now,
+      signedAt: now,
+      importedFromLabel: "Prior shop system",
+    });
+    const { entries } = await listWaiverIntegrityAudit(db, shop.id, { limit: 1000 });
+    const entry = entries.find((candidate) => candidate.personName === "Imported Diver");
+    expect(entry).toBeDefined();
+    expect(entry?.tripId).toBeNull();
+    expect(entry?.tripTitle).toBeNull();
+  });
+
+  it("never leaks another shop's signed records, in either direction (cross-tenant)", async () => {
+    const { db, shop } = await waiverContext();
+
+    const [rival] = await db
+      .insert(shops)
+      .values({ name: "Rival Reef", slug: "rival-reef-155", timezone: "America/New_York" })
+      .returning();
+    if (!rival) throw new Error("rival shop insert failed");
+    const [rivalTemplate] = await db
+      .insert(waiverTemplates)
+      .values({ shopId: rival.id, title: "Rival Release", body: "Rival release body.", version: 1 })
+      .returning();
+    if (!rivalTemplate) throw new Error("rival template insert failed");
+    const [rivalDiver] = await db
+      .insert(people)
+      .values({ shopId: rival.id, fullName: "Rival Rae" })
+      .returning();
+    if (!rivalDiver) throw new Error("rival diver insert failed");
+    const [rivalRecord] = await db
+      .insert(waiverRecords)
+      .values({
+        shopId: rival.id,
+        bookingId: null,
+        personId: rivalDiver.id,
+        templateId: rivalTemplate.id,
+        templateTitle: rivalTemplate.title,
+        templateVersion: rivalTemplate.version,
+        templateBody: rivalTemplate.body,
+        status: "completed",
+        tokenHash: "rival-record-token-hash",
+        expiresAt: now,
+        signedAt: now,
+      })
+      .returning();
+    if (!rivalRecord) throw new Error("rival record insert failed");
+
+    // Shop A's own audit (well past a page's worth of seeded history) never
+    // includes the rival's record.
+    const shopEntries = await listWaiverIntegrityAudit(db, shop.id, { limit: 1000 });
+    expect(shopEntries.entries.some((entry) => entry.id === rivalRecord.id)).toBe(false);
+    expect(shopEntries.entries.some((entry) => entry.personName === "Rival Rae")).toBe(false);
+
+    // And the rival's own audit sees exactly its one record — not shop A's
+    // 150+ seeded history, and not shop A's record ids either.
+    const rivalEntries = await listWaiverIntegrityAudit(db, rival.id, { limit: 1000 });
+    expect(rivalEntries.entries).toHaveLength(1);
+    expect(rivalEntries.entries[0]).toMatchObject({
+      id: rivalRecord.id,
+      personName: "Rival Rae",
+    });
+    const shopRecordIds = new Set(shopEntries.entries.map((entry) => entry.id));
+    expect(shopRecordIds.has(rivalRecord.id)).toBe(false);
+
+    // getSignedWaiverRecordForShop — the roster's "View signed record" deep
+    // link — is scoped exactly the same way: shop A can never resolve the
+    // rival's record id, and the rival can never resolve shop A's, even
+    // though both are valid record ids that genuinely exist.
+    expect(await getSignedWaiverRecordForShop(db, shop.id, rivalRecord.id)).toBeNull();
+    const [shopRecord] = shopEntries.entries;
+    if (!shopRecord) throw new Error("shop A has no signed records to cross-check");
+    expect(await getSignedWaiverRecordForShop(db, rival.id, shopRecord.id)).toBeNull();
+
+    // Each shop resolves its own record correctly.
+    expect(await getSignedWaiverRecordForShop(db, rival.id, rivalRecord.id)).toMatchObject({
+      id: rivalRecord.id,
+      personName: "Rival Rae",
+    });
+    expect(await getSignedWaiverRecordForShop(db, shop.id, shopRecord.id)).toMatchObject({
+      id: shopRecord.id,
+    });
+  });
+
+  it("getSignedWaiverRecordForShop finds a record past the audit's first page — the roster's deep link never silently lands on nothing", async () => {
+    const { db, shop, trip, booking } = await waiverContext();
+    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
+    if (!issued.ok) throw new Error("expected a waiver link");
+    await completeWaiver(db, issued.token, {
+      signerName: "Nora Quinn",
+      agreed: true,
+      medicalAnswers: { ...clearAnswers, responses: { heart_lung: true } },
+      now,
+    });
+
+    // Confirm this record genuinely sits past a small page size — the
+    // scenario the roster's link has to survive on a shop with real history.
+    const firstPage = await listWaiverIntegrityAudit(db, shop.id, { limit: 5 });
+    expect(firstPage.entries.some((entry) => entry.id === issued.recordId)).toBe(false);
+
+    const found = await getSignedWaiverRecordForShop(db, shop.id, issued.recordId);
+    expect(found).toMatchObject({
+      id: issued.recordId,
+      tripId: trip.id,
+      status: "medical_review",
+    });
+    expect(found?.flaggedPrompts.length).toBeGreaterThan(0);
+  });
+
+  it("getSignedWaiverRecordForShop returns null for an unknown id instead of throwing", async () => {
+    const { db, shop } = await waiverContext();
+    expect(
+      await getSignedWaiverRecordForShop(db, shop.id, "00000000-0000-4000-8000-000000000000"),
+    ).toBeNull();
   });
 });
 
@@ -447,6 +636,69 @@ describe("emergency contact captured with the waiver", () => {
     await expect(getEmergencyContactForBooking(db, booking.id)).resolves.toEqual({
       name: "Existing Contact",
       phone: "555-0000",
+    });
+  });
+});
+
+// The roster's staff-facing capture (task 144) calls `saveBookingEmergencyContact`
+// directly rather than through a bearer token, so its shop-scoping is the only
+// thing standing between a staffer and another shop's booking — covered here
+// rather than only indirectly through `completeWaiver`.
+describe("saveBookingEmergencyContact (staff-facing write path, task 144)", () => {
+  it("writes a contact for a booking scoped to the given shop", async () => {
+    const { db, shop, booking } = await waiverContext();
+    const saved = await saveBookingEmergencyContact(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      name: "Alex Rivera",
+      phone: "+1 305 555 0133",
+    });
+    expect(saved).toBe(true);
+    await expect(getEmergencyContactForBooking(db, booking.id)).resolves.toEqual({
+      name: "Alex Rivera",
+      phone: "+1 305 555 0133",
+    });
+  });
+
+  it("refuses to write when the booking belongs to a different shop", async () => {
+    const { db, booking } = await waiverContext();
+    const [otherShop] = await db
+      .insert(shops)
+      .values({ name: "Other Shop", slug: "other-shop-emergency-contact-test", timezone: "UTC" })
+      .returning();
+    if (!otherShop) throw new Error("second shop insert failed");
+    // The seeded demo diver may already carry a contact — capture whatever it
+    // actually is rather than assume null, so this asserts nothing changed,
+    // not a specific starting value.
+    const before = await getEmergencyContactForBooking(db, booking.id);
+
+    const saved = await saveBookingEmergencyContact(db, {
+      shopId: otherShop.id,
+      bookingId: booking.id,
+      name: "Should Not Land",
+      phone: "+1 000 000 0000",
+    });
+    expect(saved).toBe(false);
+    await expect(getEmergencyContactForBooking(db, booking.id)).resolves.toEqual(before);
+  });
+
+  it("is a no-op when both fields are blank, never wiping what's on file", async () => {
+    const { db, shop, booking } = await waiverContext();
+    await db
+      .update(people)
+      .set({ emergencyContactName: "Kept Contact", emergencyContactPhone: "555-0099" })
+      .where(eq(people.id, booking.personId));
+
+    const saved = await saveBookingEmergencyContact(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      name: "   ",
+      phone: "",
+    });
+    expect(saved).toBe(false);
+    await expect(getEmergencyContactForBooking(db, booking.id)).resolves.toEqual({
+      name: "Kept Contact",
+      phone: "555-0099",
     });
   });
 });

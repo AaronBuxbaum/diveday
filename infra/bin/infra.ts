@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import * as cdk from "aws-cdk-lib";
 import { InfraStack } from "../lib/infra-stack";
+
 const app = new cdk.App();
 
 // If AWS_ACCOUNT_ID is specified in .env.local, use it to pin the environment.

@@ -1,5 +1,6 @@
+import { DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
 import { expect, test } from "./fixtures";
-import { openTripFromBoard, signInAsOwner } from "./helpers";
+import { openTripFromBoard, signInAs, signInAsOwner } from "./helpers";
 
 /**
  * Shop-wide promo codes (docs ADR 20260729-shop-promo-codes). The fleet has no
@@ -15,6 +16,32 @@ test("the promo page is owner/manager work, not open to every staff member", asy
   await expect(page).toHaveURL(/\/sign-in/);
 });
 
+test("a non-owner is bounced to Settings with the promo-specific refusal, not the rentals one", async ({
+  page,
+}) => {
+  // A captain has no use for promo codes (they discount real money). Lands on
+  // Settings — this gate's redirect target — but must show *why Promos
+  // refused*, not Settings' own rental-prices `not_authorized` message
+  // (task 82, UX persona 11 "Kai").
+  await signInAs(page, DEV_STAFF_LOGINS.captain);
+  await page.goto("/shop/blue-mantis/promos");
+  // Not a URL assertion: FlashParams strips `?notice=promos_not_authorized`
+  // via history.replaceState shortly after mount — the rendered banner is
+  // the stable signal.
+  await expect(page).toHaveURL(/\/shop\/blue-mantis\/settings(\?.*)?$/);
+  // Scoped to the flash notice itself (role="alert", ShopNotice's danger
+  // tone): the settings page also carries its own standing "payments are
+  // gated" paragraph, unconditionally shown to any non-owner regardless of
+  // which page redirected them here, and it happens to share a leading
+  // clause with the rentals notAuthorized message — a page-wide substring
+  // search can't tell the two apart, but the alert region can.
+  const flash = page.getByRole("alert");
+  await expect(flash).toContainText(
+    "Promo codes discount real money, so they're limited to owners and managers.",
+  );
+  await expect(flash).not.toContainText("The rental catalog, rental prices, and Stripe connection");
+});
+
 test("an owner sees the shop's codes with their scope, window, and redemption count", async ({
   page,
 }) => {
@@ -25,7 +52,11 @@ test("an owner sees the shop's codes with their scope, window, and redemption co
   const standing = page.locator("li").filter({ hasText: "REEF10" });
   await expect(standing.getByText("10% off")).toBeVisible();
   await expect(standing.getByText("Trips and courses")).toBeVisible();
-  await expect(standing.getByText("Live", { exact: true })).toBeVisible();
+  // The success-tone Badge prepends a decorative aria-hidden glyph
+  // (Badge.tsx toneGlyph), so the element's own text is "✓ Live", not
+  // "Live" alone — and a bare substring match also picks up the "live
+  // now" window text elsewhere in this same card.
+  await expect(standing.getByText("✓ Live")).toBeVisible();
 
   // An expired code is honestly not live, rather than quietly still offered.
   const expired = page.locator("li").filter({ hasText: "OPENWATER25" });
@@ -48,9 +79,10 @@ test("a code Stripe never minted is kept as failed evidence, and cannot be switc
 
   const failed = page.locator("li").filter({ hasText: "E2ETEST" });
   await expect(failed.getByText("Failed at Stripe")).toBeVisible();
-  // No switch-on affordance: enabling it would validate locally then fail at
-  // checkout, which is worse than staying visibly broken.
-  await expect(failed.getByRole("button")).toHaveCount(0);
+  // No switch-on/off affordance: enabling it would validate locally then
+  // fail at checkout, which is worse than staying visibly broken. "Copy
+  // code", "Try again", and "Delete" are all legitimate for a failed row.
+  await expect(failed.getByRole("button", { name: /^Switch/ })).toHaveCount(0);
 });
 
 test("a code the shop switched off stops being live", async ({ page }) => {

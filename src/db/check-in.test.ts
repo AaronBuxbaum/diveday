@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
 import { checkInBooking, listCheckInQueue, listWalkInTrips } from "./check-in";
+import { recordRollCall } from "./manifests";
 import { listTripsReadiness } from "./readiness";
 import { bookings } from "./schema";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
@@ -84,6 +85,40 @@ describe("counter check-in", () => {
     ).resolves.toMatchObject({ ok: true, duplicate: true });
   });
 
+  it("shows a diver as boarded once roll call records them, independent of counter check-in (task 149)", async () => {
+    // Check-in and boarding are two different questions — arrived vs.
+    // aboard. The check-in queue's own description promises this split, but
+    // the queue never actually showed boarding before task 149.
+    const { db, shop, reef, staff, booking, personName } = await context();
+    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id });
+    expect(issued.ok).toBe(true);
+    if (!issued.ok) return;
+    await completeWaiver(db, issued.token, {
+      signerName: personName,
+      agreed: true,
+      medicalAnswers: clearAnswers,
+    });
+
+    const beforeBoarding = await listCheckInQueue(db, shop.id, { query: personName });
+    expect(beforeBoarding[0]?.boarded).toBe(false);
+
+    await expect(
+      recordRollCall(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        bookingId: booking.id,
+        recordedByPersonId: staff.id,
+        status: "boarded",
+      }),
+    ).resolves.toMatchObject({ ok: true });
+
+    const afterBoarding = await listCheckInQueue(db, shop.id, { query: personName });
+    // Boarded on the manifest, but never checked in at the counter — the two
+    // states stay independent rather than one implying the other.
+    expect(afterBoarding[0]?.boarded).toBe(true);
+    expect(afterBoarding[0]?.bookingStatus).toBe("booked");
+  });
+
   it("refuses a cross-tenant booking or non-staff actor", async () => {
     const { db, booking } = await context();
     await expect(
@@ -95,14 +130,17 @@ describe("counter check-in", () => {
     ).resolves.toEqual({ ok: false, reason: "staff_not_found" });
   });
 
-  it("refuses to check in a booking that is not ready", async () => {
+  it("refuses to check in a booking that is not ready, carrying the trip id for the guest-row link", async () => {
     const { db, shop, staff, booking } = await context();
     const outcome = await checkInBooking(db, {
       shopId: shop.id,
       bookingId: booking.id,
       recordedByPersonId: staff.id,
     });
-    expect(outcome).toMatchObject({ ok: false, reason: "not_ready" });
+    // The staff `not_ready` notice links straight to the diver's guest row
+    // (checkIn.notice.notReady, task 70) — that link needs the trip id, not
+    // just the refusal reason.
+    expect(outcome).toMatchObject({ ok: false, reason: "not_ready", tripId: booking.tripId });
   });
 
   it("queries readiness for multiple trips at once using listTripsReadiness", async () => {

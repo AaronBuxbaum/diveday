@@ -6,14 +6,21 @@ import type { CreateTripPromotionResult, PromotionProvider } from "@/lib/payment
 import { seededShopContext } from "@/test/db";
 import { createBookingParty } from "./bookings";
 import { markCheckoutPaidBySessionId, startBookingCheckout } from "./checkouts";
+import { shopPromoCodes } from "./schema";
 import {
   createShopPromoCode,
+  deleteShopPromoCode,
   getRedeemableShopPromo,
   getShopPromoByCode,
   listShopPromoCodes,
+  retryShopPromoCode,
   setShopPromoEnabled,
 } from "./shop-promos";
-import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
+import {
+  disconnectShopStripeAccount,
+  setShopStripeAccountStatus,
+  upsertShopStripeAccount,
+} from "./stripe-accounts";
 import { upcomingTripsWithCounts, updateTrip } from "./trips";
 
 const OTHER_SHOP_ID = "00000000-0000-0000-0000-000000000000";
@@ -363,5 +370,126 @@ describe("redemption recording", () => {
     await markCheckoutPaidBySessionId(db, started.checkout.stripeSessionId);
 
     expect((await promoNamed(db, shop.id, "REEF20")).timesRedeemed).toBe(0);
+  });
+});
+
+/** A promo row stuck failed — Stripe refused the first attempt. */
+async function failedPromoContext(overrides: Record<string, unknown> = {}) {
+  const { db, shop } = await promoContext();
+  await createShopPromoCode(
+    db,
+    promoInput(shop.id, overrides),
+    fakePromotions({
+      async createShopPromotion(): Promise<CreateTripPromotionResult> {
+        return { status: "failed" };
+      },
+    }),
+  );
+  const promo = await promoNamed(db, shop.id, (overrides.code as string | undefined) ?? "REEF20");
+  return { db, shop, promo };
+}
+
+describe("retryShopPromoCode", () => {
+  it("mints the code on Stripe and flips it active, unchanged from how it was entered", async () => {
+    const { db, shop, promo } = await failedPromoContext();
+    const outcome = await retryShopPromoCode(db, shop.id, promo.id, fakePromotions());
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) throw new Error("expected ok");
+    expect(outcome.promo.status).toBe("active");
+    expect(outcome.promo.code).toBe("REEF20");
+    expect(outcome.promo.discountPercent).toBe(20);
+    expect(outcome.promo.stripePromotionCodeId).toBe("promo_1");
+
+    expect(
+      await getRedeemableShopPromo(db, { shopId: shop.id, code: "REEF20", kind: "trip", now: NOW }),
+    ).not.toBeNull();
+  });
+
+  it("leaves the code failed when Stripe refuses again", async () => {
+    const { db, shop, promo } = await failedPromoContext();
+    const outcome = await retryShopPromoCode(
+      db,
+      shop.id,
+      promo.id,
+      fakePromotions({
+        async createShopPromotion(): Promise<CreateTripPromotionResult> {
+          return { status: "failed" };
+        },
+      }),
+    );
+    expect(outcome).toEqual({ ok: false, reason: "stripe_failed" });
+    expect((await promoNamed(db, shop.id, "REEF20")).status).toBe("failed");
+  });
+
+  it("refuses a code that is not failed — active, disabled, or already retried", async () => {
+    const { db, shop } = await promoContext();
+    const created = await createShopPromoCode(db, promoInput(shop.id), fakePromotions());
+    if (!created.ok) throw new Error("expected promo");
+
+    expect(await retryShopPromoCode(db, shop.id, created.promo.id, fakePromotions())).toEqual({
+      ok: false,
+      reason: "not_found",
+    });
+  });
+
+  it("refuses another shop's failed code", async () => {
+    const { db, promo } = await failedPromoContext();
+    expect(await retryShopPromoCode(db, OTHER_SHOP_ID, promo.id, fakePromotions())).toEqual({
+      ok: false,
+      reason: "not_found",
+    });
+  });
+
+  it("refuses to retry once Stripe is disconnected between the failed attempt and now", async () => {
+    const { db, shop, promo } = await failedPromoContext();
+    await disconnectShopStripeAccount(db, "acct_test");
+
+    expect(await retryShopPromoCode(db, shop.id, promo.id, fakePromotions())).toEqual({
+      ok: false,
+      reason: "not_connected",
+    });
+    // Refusing to retry must not resurrect the row some other way.
+    expect((await promoNamed(db, shop.id, "REEF20")).status).toBe("failed");
+  });
+});
+
+describe("deleteShopPromoCode", () => {
+  it("deletes a failed code", async () => {
+    const { db, shop, promo } = await failedPromoContext();
+    expect(await deleteShopPromoCode(db, shop.id, promo.id)).toBe(true);
+    expect(await getShopPromoByCode(db, shop.id, "REEF20")).toBeNull();
+  });
+
+  it("deletes a pending code — one whose Stripe call never finished", async () => {
+    const { db, shop } = await promoContext();
+    const stuck = await db
+      .insert(shopPromoCodes)
+      .values({ shopId: shop.id, code: "STUCK10", discountPercent: 10, scope: "all" })
+      .returning();
+    const row = stuck[0];
+    if (!row) throw new Error("expected inserted row");
+    expect(row.status).toBe("pending");
+
+    expect(await deleteShopPromoCode(db, shop.id, row.id)).toBe(true);
+    expect(await getShopPromoByCode(db, shop.id, "STUCK10")).toBeNull();
+  });
+
+  it("refuses to delete a live or disabled code — those go through setShopPromoEnabled instead", async () => {
+    const { db, shop } = await promoContext();
+    const created = await createShopPromoCode(db, promoInput(shop.id), fakePromotions());
+    if (!created.ok) throw new Error("expected promo");
+
+    expect(await deleteShopPromoCode(db, shop.id, created.promo.id)).toBe(false);
+    expect(await getShopPromoByCode(db, shop.id, "REEF20")).not.toBeNull();
+
+    await setShopPromoEnabled(db, shop.id, created.promo.id, false);
+    expect(await deleteShopPromoCode(db, shop.id, created.promo.id)).toBe(false);
+    expect((await getShopPromoByCode(db, shop.id, "REEF20"))?.status).toBe("disabled");
+  });
+
+  it("refuses another shop's code", async () => {
+    const { db, promo } = await failedPromoContext();
+    expect(await deleteShopPromoCode(db, OTHER_SHOP_ID, promo.id)).toBe(false);
+    expect(await getShopPromoByCode(db, promo.shopId, "REEF20")).not.toBeNull();
   });
 });

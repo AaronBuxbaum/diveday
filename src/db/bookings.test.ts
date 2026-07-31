@@ -222,8 +222,39 @@ describe("createBooking (in-memory PGlite)", () => {
         email: "nora@example.com",
       },
     ]);
-    expect(outcome).toEqual({ ok: false, reason: "already_booked" });
+    // failedIndex: 1 — the second member is the one whose insert collided
+    // (task 25), so a caller can highlight *that* fieldset rather than a
+    // generic banner that reads as if the first diver were the problem.
+    expect(outcome).toEqual({ ok: false, reason: "already_booked", failedIndex: 1 });
     expect(await getTripRoster(db, shop.id, open.id)).toHaveLength(before);
+  });
+
+  it("books several party members with no email each without colliding (task 21)", async () => {
+    // Priya's kids: two more divers who left email to their parent's contact
+    // (BookingPartyFields.tsx's "use the main contact's email" checkbox
+    // submits nothing for that field) must not be treated as a duplicate of
+    // each other, or of the lead — each gets its own person row, matching the
+    // existing no-email walk-in path (`createDiver`/counter booking).
+    const { db, shop, open } = await seededContext();
+    const outcome = await createBookingParty(db, [
+      {
+        actor: "public",
+        shopId: shop.id,
+        tripId: open.id,
+        fullName: "Priya Shah",
+        email: "priya@example.com",
+      },
+      { actor: "public", shopId: shop.id, tripId: open.id, fullName: "Kid One" },
+      { actor: "public", shopId: shop.id, tripId: open.id, fullName: "Kid Two" },
+    ]);
+    expect(outcome.ok).toBe(true);
+    const roster = await getTripRoster(db, shop.id, open.id);
+    const names = roster.map((row) => row.person.fullName);
+    expect(names).toEqual(expect.arrayContaining(["Priya Shah", "Kid One", "Kid Two"]));
+    const kids = roster.filter((row) => row.person.fullName.startsWith("Kid"));
+    expect(kids.every((row) => row.person.email === null)).toBe(true);
+    // Two distinct person rows, not one reused for both kids.
+    expect(new Set(kids.map((row) => row.person.id)).size).toBe(2);
   });
 
   it("does not attach a booking to a soft-deleted person", async () => {

@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
+import { useFocusTrap } from "@/components/useFocusTrap";
+import { fill } from "@/i18n/fill";
 
 export type WaterLockerCopy = {
   rainAlt: string;
@@ -12,21 +14,78 @@ export type WaterLockerCopy = {
   holdToUnlock: string;
 };
 
-/** Fills `{name}` placeholders in a plain ICU-style template — never a translator crossing the client boundary. */
-function fill(template: string, values: Record<string, string | number>): string {
-  return template.replace(/\{(\w+)\}/g, (match, key) =>
-    key in values ? String(values[key]) : match,
-  );
+export type WaterLockerToggleCopy = {
+  disableToggleLabel: string;
+};
+
+/**
+ * Persisted per-device, same pattern as `AmbientGlareDetector`'s contrast
+ * mode (`CONTRAST_MODE_STORAGE_KEY`/`CONTRAST_MODE_CHANGE_EVENT`): a
+ * localStorage key `WaterLockerToggle` writes and a same-tab
+ * `CustomEvent` broadcasts, so every `WaterLocker` mounted elsewhere on the
+ * page (the live manifest, the offline view) picks up the change immediately
+ * without a full reload.
+ */
+export const WATER_LOCKER_DISABLED_STORAGE_KEY = "diveday:water-locker-disabled";
+export const WATER_LOCKER_DISABLED_CHANGE_EVENT = "diveday:water-locker-disabled-change";
+
+function readWaterLockerDisabled(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return localStorage.getItem(WATER_LOCKER_DISABLED_STORAGE_KEY) === "true";
+  } catch (err) {
+    console.warn("Failed to read spray guard preference from localStorage:", err);
+    return false;
+  }
 }
 
 export function WaterLocker({ copy }: { copy: WaterLockerCopy }) {
   const [isLocked, setIsLocked] = useState(false);
   const [holdProgress, setHoldProgress] = useState(0);
+  // Starts `false` (matching what a server render would produce) and reads
+  // the real preference in an effect, same defensive SSR-safe order
+  // `AmbientGlareDetector`'s mode uses — this component itself never runs on
+  // the server (it's mounted only from client pages), but the pattern still
+  // avoids a spurious first-paint flash if that ever changes.
+  const [disabled, setDisabled] = useState(false);
   const touchHistory = useRef<{ x: number; y: number; time: number }[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const headingId = useId();
+  const bodyId = useId();
+
+  // A locked screen isn't a request the diver or captain made — it can engage
+  // mid-task from a spray of water the touch heuristic mistakes for input, so
+  // it needs a dialog's focus containment (a stray tap on "what's underneath"
+  // must not reach the roll call it's covering) *and* an immediate
+  // announcement of why, not just a focus move a screen reader might miss.
+  useFocusTrap(isLocked, dialogRef);
 
   useEffect(() => {
+    setDisabled(readWaterLockerDisabled());
+  }, []);
+
+  useEffect(() => {
+    const handleChange = (e: Event) => {
+      const detail = (e as CustomEvent<{ disabled: boolean }>)?.detail;
+      if (typeof detail?.disabled === "boolean") setDisabled(detail.disabled);
+    };
+    window.addEventListener(WATER_LOCKER_DISABLED_CHANGE_EVENT, handleChange);
+    return () => window.removeEventListener(WATER_LOCKER_DISABLED_CHANGE_EVENT, handleChange);
+  }, []);
+
+  // Disabling mid-lock releases it immediately rather than leaving a captain
+  // stuck behind a hold-to-unlock screen for a feature they just turned off.
+  useEffect(() => {
+    if (disabled && isLocked) {
+      setIsLocked(false);
+      setHoldProgress(0);
+    }
+  }, [disabled, isLocked]);
+
+  useEffect(() => {
+    if (disabled) return;
     const handleTouchStart = (e: TouchEvent) => {
       if (e.touches.length > 2) {
         e.preventDefault();
@@ -62,7 +121,7 @@ export function WaterLocker({ copy }: { copy: WaterLockerCopy }) {
     return () => {
       window.removeEventListener("touchstart", handleTouchStart, { capture: true });
     };
-  }, []);
+  }, [disabled]);
 
   const startHold = () => {
     setHoldProgress(0);
@@ -100,16 +159,29 @@ export function WaterLocker({ copy }: { copy: WaterLockerCopy }) {
     setHoldProgress(0);
   };
 
-  if (!isLocked) return null;
+  if (disabled || !isLocked) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/90 p-6 backdrop-blur-md animate-fade-in">
+    <div
+      ref={dialogRef}
+      role="alertdialog"
+      aria-modal="true"
+      aria-live="assertive"
+      aria-labelledby={headingId}
+      aria-describedby={bodyId}
+      tabIndex={-1}
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/90 p-6 backdrop-blur-md animate-fade-in outline-none"
+    >
       <div className="max-w-md text-center">
         <span className="text-5xl animate-bounce" role="img" aria-label={copy.rainAlt}>
           🌧️
         </span>
-        <h2 className="mt-6 text-2xl font-bold tracking-tight">{copy.heading}</h2>
-        <p className="mt-3 text-base text-muted">{copy.body}</p>
+        <h2 id={headingId} className="mt-6 text-2xl font-bold tracking-tight">
+          {copy.heading}
+        </h2>
+        <p id={bodyId} className="mt-3 text-base text-muted">
+          {copy.body}
+        </p>
 
         <div className="mt-8 flex flex-col items-center gap-4">
           <button
@@ -152,5 +224,54 @@ export function WaterLocker({ copy }: { copy: WaterLockerCopy }) {
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * A small per-device opt-out for `WaterLocker`, which otherwise mounts
+ * unconditionally on every manifest surface — including a desktop with no
+ * touchscreen to catch rain on. Persists like `AmbientContrastSlider`'s
+ * contrast mode: localStorage plus a same-tab `CustomEvent` so any
+ * already-mounted `WaterLocker` on the page (this toggle and the lock screen
+ * it controls are always siblings, never the same component) picks up the
+ * change without a reload.
+ */
+export function WaterLockerToggle({ copy }: { copy: WaterLockerToggleCopy }) {
+  const [disabled, setDisabled] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    setDisabled(readWaterLockerDisabled());
+  }, []);
+
+  const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const next = event.target.checked;
+    setDisabled(next);
+    try {
+      localStorage.setItem(WATER_LOCKER_DISABLED_STORAGE_KEY, String(next));
+    } catch (err) {
+      console.warn("Failed to write spray guard preference to localStorage:", err);
+    }
+    window.dispatchEvent(
+      new CustomEvent(WATER_LOCKER_DISABLED_CHANGE_EVENT, { detail: { disabled: next } }),
+    );
+  };
+
+  // Nothing to show before the real preference has loaded from localStorage
+  // — an unchecked flash-then-check would misreport "spray guard on" for a
+  // device that had actually turned it off.
+  if (!mounted) return null;
+
+  return (
+    <label className="inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-2 rounded-lg border border-border px-3 text-sm font-medium text-muted transition-colors hover:bg-surface-sunken hover:text-foreground print:hidden">
+      <input
+        type="checkbox"
+        checked={disabled}
+        onChange={handleChange}
+        className="size-4 accent-primary"
+      />
+      {copy.disableToggleLabel}
+    </label>
   );
 }

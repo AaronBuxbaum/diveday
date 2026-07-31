@@ -1,5 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { entryLevelCourseCapacity } from "./course-ratios";
+import {
+  type CourseCrewGapCourse,
+  courseCrewGap,
+  entryLevelCourseCapacity,
+  hasCourseCrewGap,
+} from "./course-ratios";
+
+const padiEntryLevel: CourseCrewGapCourse = { agency: "padi", minimumCertificationLevel: null };
+const padiAdvanced: CourseCrewGapCourse = {
+  agency: "padi",
+  minimumCertificationLevel: "open_water",
+};
+const ssiEntryLevel: CourseCrewGapCourse = { agency: "ssi", minimumCertificationLevel: null };
 
 describe("entryLevelCourseCapacity", () => {
   it("seats nobody with no instructor, regardless of assistants", () => {
@@ -24,5 +36,67 @@ describe("entryLevelCourseCapacity", () => {
 
   it("never exceeds the per-instructor ceiling even with excess assistants", () => {
     expect(entryLevelCourseCapacity(2, 10)).toBe(24); // 2 * 12
+  });
+});
+
+describe("courseCrewGap", () => {
+  it("has no gap for a fun dive (no course)", () => {
+    expect(
+      courseCrewGap({ course: null, instructorCount: 0, assistantCount: 0, booked: 5 }),
+    ).toEqual({
+      code: "none",
+    });
+  });
+
+  it("is no_instructor for any course with zero instructors, regardless of agency", () => {
+    expect(
+      courseCrewGap({ course: padiEntryLevel, instructorCount: 0, assistantCount: 2, booked: 3 }),
+    ).toEqual({ code: "no_instructor" });
+    expect(
+      courseCrewGap({ course: ssiEntryLevel, instructorCount: 0, assistantCount: 0, booked: 0 }),
+    ).toEqual({ code: "no_instructor" });
+  });
+
+  it("is none for a non-entry-level (gated) course once it has an instructor, ratio unchecked", () => {
+    // Advanced/Rescue/specialties already gate on a verified card at booking
+    // and PADI publishes no comparable numeric ratio for them.
+    expect(
+      courseCrewGap({ course: padiAdvanced, instructorCount: 1, assistantCount: 0, booked: 40 }),
+    ).toEqual({ code: "none" });
+  });
+
+  it("is none for a non-PADI entry-level course once it has an instructor, ratio unchecked", () => {
+    expect(
+      courseCrewGap({ course: ssiEntryLevel, instructorCount: 1, assistantCount: 0, booked: 40 }),
+    ).toEqual({ code: "none" });
+  });
+
+  it("is none for a PADI entry-level course within ratio", () => {
+    expect(
+      courseCrewGap({ course: padiEntryLevel, instructorCount: 1, assistantCount: 0, booked: 8 }),
+    ).toEqual({ code: "none" });
+  });
+
+  it("is over_ratio for a PADI entry-level course booked past its crew's capacity", () => {
+    expect(
+      courseCrewGap({ course: padiEntryLevel, instructorCount: 1, assistantCount: 0, booked: 9 }),
+    ).toEqual({ code: "over_ratio", booked: 9, capacity: 8 });
+  });
+
+  it("credits certified assistants toward the ratio", () => {
+    expect(
+      courseCrewGap({ course: padiEntryLevel, instructorCount: 1, assistantCount: 1, booked: 10 }),
+    ).toEqual({ code: "none" });
+    expect(
+      courseCrewGap({ course: padiEntryLevel, instructorCount: 1, assistantCount: 1, booked: 11 }),
+    ).toEqual({ code: "over_ratio", booked: 11, capacity: 10 });
+  });
+});
+
+describe("hasCourseCrewGap", () => {
+  it("is false only for 'none'", () => {
+    expect(hasCourseCrewGap({ code: "none" })).toBe(false);
+    expect(hasCourseCrewGap({ code: "no_instructor" })).toBe(true);
+    expect(hasCourseCrewGap({ code: "over_ratio", booked: 9, capacity: 8 })).toBe(true);
   });
 });

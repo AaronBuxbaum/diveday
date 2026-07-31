@@ -3,24 +3,34 @@ import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import {
   emailDeliveryDetailText,
   emailResendActionText,
+  failedPhotoDeletionDetailText,
   instructorMissingDetailText,
   inviteFromWaitlistActionText,
   lastMinuteFillDetailText,
+  mediaDeletionKindText,
   missingContactDetailText,
   missingFitDetailText,
   openGuestsActionText,
   openPrepListActionText,
+  openReportsActionText,
   openTripActionText,
+  overRatioDetailText,
+  stuckOperationKindText,
+  stuckPaymentOperationDetailText,
   ungatedNitroxDetailText,
   waitlistSeatDetailText,
 } from "@/i18n/today-labels";
 import { nowDate } from "@/lib/clock";
-import { formatTime } from "@/lib/format";
+import { courseCrewGap } from "@/lib/course-ratios";
+import { formatShortDate, formatTime } from "@/lib/format";
 import { collapseDiverActions, TODAY_HORIZON_MS, type TodayAction, urgencyFor } from "@/lib/today";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import type { AppDb } from "./client";
+import { listPendingMediaDeletions, STALE_PENDING_AFTER_MS } from "./media-deletions";
 import { authorizesNitroxFill } from "./nitrox";
 import { listNotificationDeliveryIssues } from "./notifications";
+import { openOrdersForBookings } from "./orders";
+import { listStuckPaymentOperations, STALE_AFTER_MS } from "./payment-operations";
 import { listTripsReadiness } from "./readiness";
 import {
   bookings,
@@ -33,6 +43,7 @@ import {
   trips,
   tripWaitlistEntries,
 } from "./schema";
+import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 import { tripIdsNeverSentLastMinuteDeal } from "./trip-promos";
 import { listStaff, pagedUpcomingTripsWithCounts } from "./trips";
 
@@ -334,11 +345,20 @@ async function waitlistFrontByTrip(db: AppDb, shopId: string, tripIds: string[])
   return fronts;
 }
 
-/** Trips that already have an instructor on the crew list. */
-async function tripsWithInstructor(db: AppDb, shopId: string, tripIds: string[]) {
-  if (tripIds.length === 0) return new Set<string>();
+/** How many instructors and certified assistants (divemasters) each course trip's crew has. */
+async function courseCrewCountsByTrip(
+  db: AppDb,
+  shopId: string,
+  tripIds: string[],
+): Promise<Map<string, { instructorCount: number; assistantCount: number }>> {
+  const counts = new Map<string, { instructorCount: number; assistantCount: number }>();
+  if (tripIds.length === 0) return counts;
   const rows = await db
-    .select({ tripId: tripAssignments.tripId })
+    .select({
+      tripId: tripAssignments.tripId,
+      personId: tripAssignments.personId,
+      role: personRoles.role,
+    })
     .from(tripAssignments)
     // `trip_assignments` carries no shop_id of its own; proving the trip
     // itself belongs to shopId (not just the assigned person) is what closes
@@ -353,11 +373,30 @@ async function tripsWithInstructor(db: AppDb, shopId: string, tripIds: string[])
       and(
         eq(trips.shopId, shopId),
         eq(people.shopId, shopId),
-        eq(personRoles.role, "instructor"),
+        inArray(personRoles.role, ["instructor", "divemaster"]),
         inArray(tripAssignments.tripId, tripIds),
       ),
     );
-  return new Set(rows.map((row) => row.tripId));
+  const rolesByTrip = new Map<string, Map<string, Set<string>>>();
+  for (const row of rows) {
+    const rolesByPerson = rolesByTrip.get(row.tripId) ?? new Map<string, Set<string>>();
+    const roles = rolesByPerson.get(row.personId) ?? new Set<string>();
+    roles.add(row.role);
+    rolesByPerson.set(row.personId, roles);
+    rolesByTrip.set(row.tripId, rolesByPerson);
+  }
+  for (const tripId of tripIds) {
+    const rolesByPerson = rolesByTrip.get(tripId) ?? new Map<string, Set<string>>();
+    let instructorCount = 0;
+    let assistantCount = 0;
+    for (const roles of rolesByPerson.values()) {
+      if (roles.has("instructor")) instructorCount += 1;
+      // A person holding both roles is the instructor, not their own assistant.
+      else if (roles.has("divemaster")) assistantCount += 1;
+    }
+    counts.set(tripId, { instructorCount, assistantCount });
+  }
+  return counts;
 }
 
 /**
@@ -382,6 +421,15 @@ export async function getTodayWork(
   t: StaffTranslator = staffTranslator("en-US"),
   /** Formats every departure time (`at()`); defaults alongside `t` for the same reason. */
   locale = "en-US",
+  /**
+   * Stuck Stripe operations and failed photo-deletion retries (task 157) are
+   * owner/manager chores — the same accountable gate Reports' monthly view
+   * already uses (ADR 20260723-owner-reporting) — so they only join the queue
+   * when a caller that has already checked `canViewShopReports` passes true.
+   * Defaults false so every pre-existing caller (tests included) keeps
+   * getting the diver-blocker-only queue.
+   */
+  includeOpsAlerts = false,
 ): Promise<TodayWork> {
   const horizon = new Date(now.getTime() + TODAY_HORIZON_MS);
   // The board only ever shows the soonest MAX_TRIPS departures, so bound the
@@ -422,7 +470,7 @@ export async function getTodayWork(
     ungatedNitrox,
     missingContact,
     waitlisted,
-    staffedTrips,
+    courseCrewCounts,
     deliveryIssues,
     neverSentLastMinuteDeal,
   ] = await Promise.all([
@@ -439,7 +487,7 @@ export async function getTodayWork(
       shopId,
       inWindow.map((trip) => trip.id),
     ),
-    tripsWithInstructor(
+    courseCrewCountsByTrip(
       db,
       shopId,
       inWindow.filter((trip) => trip.course).map((trip) => trip.id),
@@ -538,16 +586,31 @@ export async function getTodayWork(
       });
     }
 
-    if (trip.course && !staffedTrips.has(trip.id)) {
+    // The one "course crew gap" computation (Lens 17 task 151) — also
+    // consumed by the trip page and the staffing coverage list, so a course
+    // Today calls fully crewed can't secretly still be over its ratio there.
+    const counts = courseCrewCounts.get(trip.id) ?? { instructorCount: 0, assistantCount: 0 };
+    const crewGap = courseCrewGap({
+      course: trip.course,
+      instructorCount: counts.instructorCount,
+      assistantCount: counts.assistantCount,
+      booked: trip.booked,
+    });
+    if (crewGap.code !== "none") {
       actions.push({
         id: `instructor:${trip.id}`,
         kind: "instructor_missing",
         urgency: urgencyFor(trip.startsAt, now),
         subject: trip.title,
         context: when,
-        detail: instructorMissingDetailText(t),
+        detail:
+          crewGap.code === "over_ratio"
+            ? overRatioDetailText(t, crewGap.booked, crewGap.capacity)
+            : instructorMissingDetailText(t),
         actionLabel: openTripActionText(t),
-        href: tripHref,
+        // The trip's crew editor, not the bare Overview it used to land on
+        // (Lens 17 task 139) — the fix for either gap lives right there.
+        href: `${tripHref}#crew`,
         dueAt: trip.startsAt,
       });
     }
@@ -645,6 +708,86 @@ export async function getTodayWork(
       href: roster,
       dueAt: issue.trip.startsAt,
     });
+  }
+
+  // A payment row only gets the inline "copy link"/"resend invoice" control
+  // once we know the booking was actually invoiced through Stripe: a diver
+  // who owes at the counter has no invoice to act on, and a shop with no
+  // connected Stripe account has nothing to resend either. Both cases keep
+  // the row's `href` fallback to the roster instead of a dead button.
+  const paymentBookingIds = actions
+    .map((action) => action.payment?.bookingId)
+    .filter((id): id is string => Boolean(id));
+  if (paymentBookingIds.length > 0) {
+    const account = await getShopStripeAccount(db, shopId);
+    const openOrders = canAcceptPayments(account)
+      ? await openOrdersForBookings(db, shopId, paymentBookingIds)
+      : new Map<string, { id: string; hostedInvoiceUrl: string | null }>();
+    for (const action of actions) {
+      if (!action.payment) continue;
+      const order = openOrders.get(action.payment.bookingId);
+      action.payment = order
+        ? {
+            bookingId: action.payment.bookingId,
+            orderId: order.id,
+            hostedInvoiceUrl: order.hostedInvoiceUrl,
+          }
+        : undefined;
+    }
+  }
+
+  // Platform-health chores (task 157, UX persona lens 17): stuck Stripe
+  // operations and photo deletions that never finished used to surface only
+  // on the owner-only monthly Reports page — urgent work buried behind a
+  // report nobody opens daily. Forced `urgency: "now"` (not derived from a
+  // departure — there isn't one) so they land in today's queue the same day
+  // they go stale; `dueAt: null` still sorts them after every dated row
+  // within that band, matching the "undated work never jumps the line"
+  // invariant every other action kind already follows. Reports keeps its own
+  // panel — this is "also surface on Today", not "move".
+  if (includeOpsAlerts) {
+    const [stuckOperations, pendingDeletions] = await Promise.all([
+      listStuckPaymentOperations(db, shopId, new Date(now.getTime() - STALE_AFTER_MS)),
+      listPendingMediaDeletions(db, shopId, new Date(now.getTime() - STALE_PENDING_AFTER_MS)),
+    ]);
+
+    for (const op of stuckOperations) {
+      const when = formatShortDate(op.intent.startedAt, locale, timeZone);
+      actions.push({
+        id: `stuck-payment-op:${op.intent.id}`,
+        kind: "stuck_payment_operation",
+        urgency: "now",
+        subject: op.personName ?? op.tripTitle ?? stuckOperationKindText(t, op.intent.kind),
+        context: op.personName && op.tripTitle ? op.tripTitle : null,
+        detail: stuckPaymentOperationDetailText(t, op.intent.kind, when, op.intent.stripeObjectId),
+        // Points at the trip roster when there's one to point at; otherwise
+        // Reports is the only surface with the reconciliation detail
+        // (Stripe id, exact timestamp) to act from.
+        actionLabel: op.tripId ? openTripActionText(t) : openReportsActionText(t),
+        href: op.tripId
+          ? `/shop/${shopSlug}/trips/${op.tripId}/guests`
+          : `/shop/${shopSlug}/reports`,
+        dueAt: null,
+      });
+    }
+
+    for (const attempt of pendingDeletions) {
+      actions.push({
+        id: `media-deletion:${attempt.id}`,
+        kind: "failed_photo_deletion",
+        urgency: "now",
+        subject: mediaDeletionKindText(t, attempt.kind),
+        context: null,
+        detail: failedPhotoDeletionDetailText(
+          t,
+          attempt.kind,
+          formatShortDate(attempt.createdAt, locale, timeZone),
+        ),
+        actionLabel: openReportsActionText(t),
+        href: `/shop/${shopSlug}/reports`,
+        dueAt: null,
+      });
+    }
   }
 
   const departures: DepartureSummary[] = todayTrips.map((trip) => {

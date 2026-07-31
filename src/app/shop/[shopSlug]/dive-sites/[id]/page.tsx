@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
-import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
@@ -236,13 +236,13 @@ export default async function EditDiveSitePage({
         </p>
       ) : null}
       {error ? (
-        <p role="alert" className="mt-6 rounded-lg bg-danger/10 px-3 py-2 text-sm text-danger">
+        <ShopNotice tone="danger" role="alert" className="mt-6">
           {error === "images"
             ? t("diveSites.form.errorImages")
             : error === "images-unconfigured"
               ? t("diveSites.form.errorImagesUnconfigured")
               : t("diveSites.edit.errorInvalid")}
-        </p>
+        </ShopNotice>
       ) : null}
       {upcomingTrips.length > 0 ? (
         <section aria-labelledby="upcoming-dives-heading" className="mt-8">

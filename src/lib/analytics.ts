@@ -1,4 +1,5 @@
 import { track as vercelTrack } from "@vercel/analytics/server";
+import type { DemoRoleId } from "./demo-roles";
 import type { FunnelSource } from "./funnel";
 import type { RollCallCheckpoint } from "./manifests";
 
@@ -24,7 +25,7 @@ export type AnalyticsEvent =
   | {
       /** Staff cleared a readiness blocker in place (the recovery path). */
       name: "staff_recovery";
-      kind: "waiver_sent" | "confirmation_resent" | "waitlist_invited";
+      kind: "waiver_sent" | "confirmation_resent" | "waitlist_invited" | "invoice_resent";
       surface: EventSurface;
     }
   | {
@@ -42,10 +43,13 @@ export type AnalyticsEvent =
       /**
        * A visitor entered the live demo — the primary skeptic funnel on the
        * marketing pages. `source` names the page the click came from so the
-       * demo-vs-trial story can be read per surface.
+       * demo-vs-trial story can be read per surface; `role` names which of the
+       * landing page's role-picker options they chose (or "owner", the primary
+       * CTA's default when no picker option was used).
        */
       name: "demo_entered";
       source: FunnelSource | "unknown";
+      role: DemoRoleId;
     }
   | {
       /**

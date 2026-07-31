@@ -15,7 +15,7 @@ Sections: [UX & interaction design](#1-ux--interaction-design) ·
 [ML & data](#6-ml--data) · [Backend & data architecture](#7-backend--data-architecture) ·
 [Developer & agent experience](#8-developer--agent-experience)
 
-**Overlap with `docs/product/assessments/ux-personas-20260730.md`.** That document's tasks were
+**Overlap with `docs/product/archive/ux-personas-20260730-findings.md`.** That document's tasks were
 cross-checked against this one on 2026-07-31. Three tasks below were already fully shipped by
 ux-persona work landed before this audit and are marked done in place rather than removed, so the
 cross-reference survives: *content-shaped skeletons for bearer-token pages* (§1, ux-persona task
@@ -50,7 +50,7 @@ and the main diver/staff flows.
 
 ### Add content-shaped skeletons to the bearer-token diver pages
 
-**Already done — drop this task.** `docs/product/assessments/ux-personas-20260730.md` task 119
+**Already done — drop this task.** `docs/product/archive/ux-personas-20260730-findings.md` task 119
 shipped this exact fix in PR #274: `loading.tsx` now exists next to `src/app/waivers/[token]/page.tsx`,
 `src/app/ready/[token]/page.tsx`, and `src/app/recap/[token]/page.tsx`, each matching its page's
 own max-width — confirmed present in the current tree. No further action needed.
@@ -156,7 +156,7 @@ server-action body limit.
 
 - **Priority**: medium
 - **Effort**: M
-- **Scope update**: `docs/product/assessments/ux-personas-20260730.md` task 119 (PR #274) already
+- **Scope update**: `docs/product/archive/ux-personas-20260730-findings.md` task 119 (PR #274) already
   added `loading.tsx` to `check-in/`, `reports/`, `reviews/`, and `promos/` under
   `src/app/shop/[shopSlug]/` — confirmed present in the current tree. Only `waivers/` and
   `staffing/` still lack one; `orders/` has no top-level index page to attach a skeleton to yet
@@ -205,7 +205,7 @@ token hex values.
 
 ### Set the document language from the negotiated locale
 
-**Already done — drop this task.** `docs/product/assessments/ux-personas-20260730.md` task 125
+**Already done — drop this task.** `docs/product/archive/ux-personas-20260730-findings.md` task 125
 shipped this exact fix in PR #272: `src/app/layout.tsx` renders `lang={locale}` from the
 negotiated request locale instead of a hardcoded `lang="en"` — confirmed in the current tree
 (line 63). No further action needed. (The coordination note this task raised with the §2
@@ -222,7 +222,7 @@ marketing-page-caching task still applies to whoever picks that one up.)
 
 - **Priority**: medium
 - **Effort**: M
-- **Scope update**: `docs/product/assessments/ux-personas-20260730.md` task 110 ("Fix the two
+- **Scope update**: `docs/product/archive/ux-personas-20260730-findings.md` task 110 ("Fix the two
   portal dialogs") targets this exact gap in `KeyboardShortcuts.tsx` — focus trap, focus restore
   on close — as one shared focus-trap utility used by both it and `CommandPalette.tsx`. As of
   this audit neither fix has landed (`KeyboardShortcuts.tsx` still only sets `role="dialog"
@@ -258,7 +258,7 @@ marketing-page-caching task still applies to whoever picks that one up.)
 ### Add a skip link to the staff shell and public schedule
 
 **Superseded — drop this task if ux-personas task 109 has landed.**
-`docs/product/assessments/ux-personas-20260730.md` task 109 ("Skip links everywhere") is a
+`docs/product/archive/ux-personas-20260730-findings.md` task 109 ("Skip links everywhere") is a
 strict superset of this ask: it generalizes the offline manifest's skip-link pattern into
 *both* `src/app/layout.tsx` and `shop/[shopSlug]/layout.tsx`, covering every page rather than
 just the staff shell and public schedule. As of this audit it has not landed (confirmed:
@@ -283,7 +283,7 @@ standalone fix.
 
 - **Priority**: medium
 - **Effort**: M
-- **Scope update**: `docs/product/assessments/ux-personas-20260730.md` task 108
+- **Scope update**: `docs/product/archive/ux-personas-20260730-findings.md` task 108
   ("Keyboard-and-SR pass on the booking flow") adds `axe-core/playwright` and runs an
   assertion pass against the booking-flow spec — confirmed not yet present (`@axe-core/playwright`
   is absent from `package.json` and no `e2e/a11y.spec.ts` exists in the current tree). If task
@@ -318,7 +318,7 @@ in 2023), and JSON-LD in embed mode or on token pages (correctly prohibited toda
 
 - **Priority**: high
 - **Effort**: S
-- **Scope update**: `docs/product/assessments/ux-personas-20260730.md` task 1 ("Make course
+- **Scope update**: `docs/product/archive/ux-personas-20260730-findings.md` task 1 ("Make course
   sessions on the schedule link to their course page") is the schedule-list half of this exact
   task, targeting the same `{t("schedule.courseSession")} · {trip.course.title}` line in
   `src/app/shop/[shopSlug]/schedule/page.tsx`. As of this audit it is unimplemented (confirmed:
@@ -331,7 +331,7 @@ in 2023), and JSON-LD in embed mode or on token pages (correctly prohibited toda
 
 ### Add canonicals and OpenGraph to the switching pages
 
-**Already done — drop this task.** `docs/product/assessments/ux-personas-20260730.md` task 104
+**Already done — drop this task.** `docs/product/archive/ux-personas-20260730-findings.md` task 104
 shipped this exact fix in PR #274: `src/app/switching/page.tsx`,
 `src/app/switching/[competitor]/page.tsx`, and `src/app/switching/spreadsheet/page.tsx` all carry
 `alternates.canonical` and `openGraph` metadata — confirmed in the current tree. No further

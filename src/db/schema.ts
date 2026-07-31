@@ -284,7 +284,11 @@ export const courses = pgTable(
     summary: text("summary"),
     overview: text("overview"),
     heroImageUrl: text("hero_image_url"),
+    /** Real alt text, staff-authored; falls back to "{title} — photo N" when blank (H-accessibility). */
+    heroImageAlt: text("hero_image_alt"),
     imageUrls: jsonb("image_urls").$type<string[]>().notNull().default([]),
+    /** Parallel to `imageUrls` — same length, same order, "" where no caption was given. */
+    imageAlts: jsonb("image_alts").$type<string[]>().notNull().default([]),
     durationText: text("duration_text"),
     groupSizeText: text("group_size_text"),
     minimumAge: integer("minimum_age"),
@@ -389,6 +393,58 @@ export const coursePathSteps = pgTable(
   (table) => [
     uniqueIndex("course_path_steps_path_position_unique").on(table.pathId, table.position),
     uniqueIndex("course_path_steps_path_course_unique").on(table.pathId, table.courseId),
+  ],
+);
+
+/**
+ * The one question that changes what the shop replies with — enrollment,
+ * referral to an earlier course, or a card the desk reviews first. Mirrors
+ * `CourseInquiryExperience` in src/lib/course-inquiry.ts exactly; keep both
+ * in sync on change.
+ */
+export const courseInquiryExperience = pgEnum("course_inquiry_experience", [
+  "never",
+  "tried",
+  "certified",
+  "lapsed",
+]);
+
+/**
+ * A lead from the public course page's "get in touch" composer
+ * (courses/[slug]/_components/CourseInquiry.tsx). Deliberately small: name,
+ * email, and phone are each optional (a diver may leave only one way to reach
+ * them, or none besides the message itself — the `mailto:` composer stays the
+ * fallback for that case), and there is no status/response tracking here —
+ * follow-up happens off-platform, in the shop's own inbox, once the
+ * notification email lands.
+ */
+export const courseInquiries = pgTable(
+  "course_inquiries",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    courseId: uuid("course_id")
+      .notNull()
+      .references(() => courses.id),
+    name: text("name"),
+    email: text("email"),
+    phone: text("phone"),
+    /** The one field the form requires — see courseInquiryExperience above. */
+    experienceLevel: courseInquiryExperience("experience_level").notNull(),
+    /** Free prose — "the week of 12 August", "any weekend in the autumn". */
+    timing: text("timing"),
+    /** How many people, including the writer; null when left blank. */
+    divers: integer("divers"),
+    message: text("message"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    // The notification/moderation read: this shop's inquiries, newest first.
+    index("course_inquiries_shop_created_idx").on(table.shopId, table.createdAt),
+    // "Who's asking about this course" for a course-scoped view.
+    index("course_inquiries_course_idx").on(table.courseId),
   ],
 );
 
@@ -1219,6 +1275,16 @@ export const shopStripeAccounts = pgTable(
     chargesEnabled: boolean("charges_enabled").notNull().default(false),
     payoutsEnabled: boolean("payouts_enabled").notNull().default(false),
     detailsSubmitted: boolean("details_submitted").notNull().default(false),
+    /**
+     * The connected account's own settlement currency (Stripe's
+     * `default_currency`, e.g. "usd", "eur"), refreshed alongside the status
+     * flags above. Defaults "usd" for a not-yet-refreshed row so every
+     * existing caller keeps working unchanged. Consumers that show a diver a
+     * currency symbol (recap tipping) or charge a card must read this instead
+     * of a hardcoded "$"/"usd" (task 60) — full multi-currency support
+     * elsewhere (orders, checkouts, invoicing) is still deferred (task 35).
+     */
+    defaultCurrency: text("default_currency").notNull().default("usd"),
     connectedAt: timestamp("connected_at", { withTimezone: true }).notNull().defaultNow(),
     /** Set on an OAuth deauthorize webhook; a later reconnect clears it. */
     disconnectedAt: timestamp("disconnected_at", { withTimezone: true }),
@@ -1593,6 +1659,13 @@ export const userAccounts = pgTable(
      * verified one today.
      */
     emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
+    /**
+     * Null until this account dismisses its first-visit role orientation card
+     * on Today (UX-persona task 79 — Kai, the day-one seasonal hire).
+     * Per-account, not per-browser/device, so dismissing on the shop's shared
+     * tablet also clears it on the same person's own phone.
+     */
+    orientationDismissedAt: timestamp("orientation_dismissed_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [

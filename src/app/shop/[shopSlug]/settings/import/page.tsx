@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { canPersonImportShopData } from "@/db/import";
 import { getShopById } from "@/db/shops";
@@ -210,6 +212,14 @@ export default async function ImportContactsPage({
         eyebrow={t("settings.import.eyebrow")}
         title={t("settings.import.title")}
         description={t("settings.import.description")}
+        actions={
+          <Link
+            href={`/shop/${shopSlug}/settings`}
+            className={buttonClass({ variant: "secondary", className: "text-foreground" })}
+          >
+            {t("settings.main.backToSettings")}
+          </Link>
+        }
       />
 
       <p className="-mt-2 mb-6 text-sm text-muted">

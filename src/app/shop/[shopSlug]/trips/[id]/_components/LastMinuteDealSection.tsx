@@ -3,13 +3,22 @@ import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import type { TripLastMinutePromo } from "@/db/schema";
-import { staffTranslator } from "@/i18n/staff-messages";
+import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz } from "@/lib/format";
 
 const STATUS_TONE: Record<TripLastMinutePromo["status"], BadgeTone> = {
   sent: "success",
   pending: "neutral",
   failed: "danger",
+};
+
+// A raw `status` enum value is a database detail, not copy — the badge shows
+// the translated label the bundle carries for it (docs ADR
+// 20260730-staff-copy-localization), the same shape as `promos.status`.
+const STATUS_KEYS: Record<TripLastMinutePromo["status"], StaffMessageKey> = {
+  sent: "trips.lastMinute.status.sent",
+  pending: "trips.lastMinute.status.pending",
+  failed: "trips.lastMinute.status.failed",
 };
 
 /**
@@ -102,7 +111,7 @@ export function LastMinuteDealSection({
                   })}
                 </p>
               </div>
-              <Badge tone={STATUS_TONE[promo.status]}>{promo.status}</Badge>
+              <Badge tone={STATUS_TONE[promo.status]}>{t(STATUS_KEYS[promo.status])}</Badge>
             </li>
           ))}
         </ol>

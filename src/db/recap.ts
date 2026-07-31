@@ -73,6 +73,8 @@ export type RecapPageData = {
   photos: RecapPhotoView[];
   /** True when the shop's own Stripe account can take a tip charge right now. */
   canTip: boolean;
+  /** The shop's connected Stripe account currency (e.g. "usd"), for the tip presets' label/symbol (task 60). */
+  currency: string;
   /** The most recent tip attempt for this booking, if any — drives the tip panel's state. */
   tip: {
     status: "pending" | "paid" | "expired";
@@ -191,6 +193,7 @@ export async function getRecapPageData(
     // customer email; offering the form anyway would fail on every
     // submission (Codex finding).
     canTip: Boolean(row.diverEmail) && canAcceptPayments(stripeAccount),
+    currency: stripeAccount?.defaultCurrency ?? "usd",
     tip: tip
       ? {
           status: tip.status,

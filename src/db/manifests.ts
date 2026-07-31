@@ -97,6 +97,43 @@ async function listLatestRollCallByBooking(
 }
 
 /**
+ * Bookings whose latest departure roll-call record is "boarded", across
+ * multiple trips at once. This is the manifest's half of the same coupling
+ * task 149 closes from the other side (`checkedIn` on `ManifestDiverInput`):
+ * `checked_in` used to have exactly one reader in the app, the check-in page,
+ * and boarding was invisible there. A later `cleared` event still wins over
+ * an older `boarded` one — same "latest event, not latest boarded event"
+ * semantics as `listLatestRollCallByBooking` — so an undone board correctly
+ * drops out of the returned set.
+ */
+export async function listDepartureBoardedBookingIds(
+  db: AppDb,
+  shopId: string,
+  tripIds: string[],
+): Promise<Set<string>> {
+  if (tripIds.length === 0) return new Set();
+  const rows = await db
+    .select({ bookingId: rollCallEvents.bookingId, status: rollCallEvents.status })
+    .from(rollCallEvents)
+    .where(
+      and(
+        eq(rollCallEvents.shopId, shopId),
+        inArray(rollCallEvents.tripId, tripIds),
+        eq(rollCallEvents.checkpoint, "departure"),
+      ),
+    )
+    .orderBy(desc(rollCallEvents.occurredAt), desc(rollCallEvents.createdAt));
+  const seen = new Set<string>();
+  const boarded = new Set<string>();
+  for (const row of rows) {
+    if (seen.has(row.bookingId)) continue;
+    seen.add(row.bookingId);
+    if (row.status === "boarded") boarded.add(row.bookingId);
+  }
+  return boarded;
+}
+
+/**
  * The manifest is a derived safety view, never a separate roster people can
  * accidentally edit out of sync. Every active booking starts from the trip
  * roster and is joined with the shared readiness, fit, and roll-call records.
@@ -161,6 +198,7 @@ export async function getTripManifests(
       minor: person.dateOfBirth ? isMinorOnDate(person.dateOfBirth, tripDate) : false,
       birthday: birthdayCallout(person.dateOfBirth, tripDate),
       depthAdvisory: depthByBooking.get(booking.id),
+      checkedIn: booking.status === "checked_in",
     };
   });
   // Carry a not-boarded result forward across the ordered checkpoints so an

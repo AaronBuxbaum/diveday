@@ -3,7 +3,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { FlashParams } from "@/components/FlashParams";
-import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
+import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
@@ -18,6 +19,7 @@ import { bookingInvoiceLines } from "@/lib/courses";
 import { formatShortDate } from "@/lib/format";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
+import { noticeFromParam } from "@/lib/staff-notices";
 
 export const metadata: Metadata = { title: "New order — DiveDay" };
 
@@ -134,6 +136,7 @@ export default async function NewOrderPage({
 
   const locale = await requestLocale();
   const t = staffTranslator(locale);
+  const noticeKey = noticeFromParam(notice, NOTICE_KEYS);
   const [customers, bookingContext, shop] = await Promise.all([
     listOrderableCustomers(db, session.user.shopId),
     prefillBookingId ? getBookingContext(db, session.user.shopId, prefillBookingId) : null,
@@ -172,11 +175,9 @@ export default async function NewOrderPage({
       />
 
       {notice ? (
-        <div className="mb-6">
-          <ShopNotice tone="danger" role="alert">
-            {NOTICE_KEYS[notice] ? t(NOTICE_KEYS[notice]) : t("orders.new.notice.fallback")}
-          </ShopNotice>
-        </div>
+        <StaffNoticeBanner tone="danger">
+          {noticeKey ? t(noticeKey) : t("orders.new.notice.fallback")}
+        </StaffNoticeBanner>
       ) : null}
 
       {bookingContext ? (

@@ -1,5 +1,6 @@
 import { DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
 import { expect, test } from "./fixtures";
+import { signOut } from "./helpers";
 
 test("unauthenticated /shop redirects to sign-in", async ({ page }) => {
   await page.goto("/shop");
@@ -34,8 +35,7 @@ test("staff sign-in lands on the shop dashboard and sign-out locks it again", as
   await expect(page.getByRole("heading", { name: "Sailing today" })).toBeVisible();
   await expect(page.getByText("9 of 12 booked")).toBeVisible();
 
-  await page.getByRole("button", { name: "Sign out" }).click();
-  await expect(page).toHaveURL(/\/$/);
+  await signOut(page);
   await page.goto("/shop");
   await expect(page).toHaveURL(/\/sign-in/);
 });

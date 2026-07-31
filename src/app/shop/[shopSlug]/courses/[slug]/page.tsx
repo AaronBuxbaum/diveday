@@ -30,6 +30,7 @@ import {
   CourseSessions,
   CourseSpecs,
 } from "./_components/CourseSections";
+import { submitCourseInquiryAction } from "./actions";
 
 export async function generateMetadata({
   params,
@@ -41,9 +42,22 @@ export async function generateMetadata({
   const shop = await getShopBySlug(db, shopSlug);
   const course = shop ? await getCourseBySlug(db, shop.id, slug) : null;
   if (!course) return { title: "Course — DiveDay" };
+  // A hidden course 404s in the page body for anyone but this shop's own
+  // staff (`staffView` below) — metadata must refuse it the same way, since
+  // Next resolves `generateMetadata` independently of that later `notFound()`
+  // and would otherwise leak the title/summary into the anonymous <head>.
+  const session = await auth();
+  const staffView = Boolean(
+    shop && session?.user?.shopId === shop.id && isStaff(session.user.roles),
+  );
+  if (!course.isActive && !staffView) return { title: "Course — DiveDay" };
   const canonical = shop ? `/shop/${shop.slug}/courses/${course.slug}` : undefined;
   const title = `${course.title} — ${shop?.name ?? "DiveDay"}`;
-  const description = course.summary ?? course.description ?? undefined;
+  // `description` is the internal staff-picker blurb (schema comment on
+  // `courses.description`), never diver-facing — falling back to it here
+  // would leak it into a public <meta> tag. `summary` is the only field this
+  // page may quote.
+  const description = course.summary ?? undefined;
   return {
     title,
     description,
@@ -167,7 +181,12 @@ export default async function CoursePage({
         t={t}
       />
       <CourseOverview overview={course.overview} />
-      <CourseGallery imageUrls={course.imageUrls} title={course.title} t={t} />
+      <CourseGallery
+        imageUrls={course.imageUrls}
+        imageAlts={course.imageAlts}
+        title={course.title}
+        t={t}
+      />
       <CourseSchedule days={course.scheduleDays} t={t} />
       <CourseIncludes includes={course.includes} excludes={course.excludes} t={t} />
       <CourseSessions
@@ -185,6 +204,7 @@ export default async function CoursePage({
         // useTranslations() inside CourseInquiry work rather than throw.
         <DiverIntlProvider locale={locale} timeZone={shop.timezone}>
           <CourseInquiry
+            submitInquiry={submitCourseInquiryAction.bind(null, shopSlug, slug)}
             courseTitle={course.title}
             shopName={shop.name}
             contactEmail={shop.contactEmail}
@@ -194,8 +214,13 @@ export default async function CoursePage({
               noDateBody: t("inquiry.noDateBody"),
               yourName: t("inquiry.yourName"),
               namePlaceholder: t("inquiry.namePlaceholder"),
+              yourEmail: t("inquiry.yourEmail"),
+              emailPlaceholder: t("inquiry.emailPlaceholder"),
+              yourPhone: t("inquiry.yourPhone"),
+              phonePlaceholder: t("inquiry.phonePlaceholder"),
               howManyDivers: t("inquiry.howManyDivers"),
               optional: t("common.optional"),
+              required: t("inquiry.required"),
               whenSuits: t("inquiry.whenSuits"),
               whenSuitsHint: t("inquiry.whenSuitsHint"),
               whenSuitsPlaceholder: t("inquiry.whenSuitsPlaceholder"),
@@ -209,6 +234,10 @@ export default async function CoursePage({
               copied: t("inquiry.copied"),
               orWriteTo: t("inquiry.orWriteTo"),
               callLabel: t("inquiry.callLabel"),
+              send: t("inquiry.send"),
+              sending: t("inquiry.sending"),
+              sentHeading: t("inquiry.sentHeading"),
+              sentBody: t("inquiry.sentBody"),
             }}
           />
         </DiverIntlProvider>

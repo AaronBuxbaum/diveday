@@ -4,7 +4,15 @@ import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AmbientContrastSlider, AmbientGlareDetector } from "@/components/AmbientGlareDetector";
 import { ConnectivityStatus } from "@/components/ConnectivityStatus";
+import { MilestoneHaptics } from "@/components/MilestoneHaptics";
+import { MissingDiversGrid } from "@/components/MissingDiversGrid";
+import { OfflineShellVersionBanner } from "@/components/OfflineShellVersionBanner";
+import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { SkipLink } from "@/components/SkipLink";
+import { SubSurfaceRipple } from "@/components/SubSurfaceRipple";
+import { buttonClass } from "@/components/ui/button";
 import { controlClass } from "@/components/ui/form";
+import { WaterLocker, WaterLockerToggle } from "@/components/WaterLocker";
 import { rollCallCheckpointText } from "@/i18n/manifest-labels";
 import { matchLocale } from "@/i18n/negotiate";
 import { rentalFitLineText } from "@/i18n/rental-labels";
@@ -68,6 +76,14 @@ export function OfflineManifestView() {
   // device's language doesn't change mid-session, so recreating the
   // translator on every render bought nothing except spurious effect reruns.
   const { t, locale } = useMemo(() => offlineManifestTranslator(), []);
+  const shellVersionCopy = useMemo(
+    () => ({
+      staleBanner: t("shared.offlineManifest.shellVersion.staleBanner"),
+      updateBanner: t("shared.offlineManifest.shellVersion.updateBanner"),
+      refreshButton: t("shared.offlineManifest.shellVersion.refreshButton"),
+    }),
+    [t],
+  );
   const searchParams = useSearchParams();
   const [envelope, setEnvelope] = useState<OfflineManifestEnvelope | null>(null);
   const [list, setList] = useState<OfflineManifestEnvelope[] | null>(null);
@@ -250,17 +266,20 @@ export function OfflineManifestView() {
     const savedTrips = list ?? [];
     return (
       <main className="boat-mode mx-auto w-full max-w-3xl flex-1 px-6 py-16">
-        <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-          {t("shared.offlineManifest.list.eyebrow")}
-        </p>
-        <h1 className="mt-3 text-3xl font-semibold">
-          {savedTrips.length > 0
-            ? t("shared.offlineManifest.list.headingWithTrips")
-            : t("shared.offlineManifest.list.headingEmpty")}
-        </h1>
-        <p className="mt-3 text-muted" role="status" aria-live="polite">
-          {message}
-        </p>
+        <OfflineShellVersionBanner copy={shellVersionCopy} />
+        <ShopPageHeader
+          eyebrow={t("shared.offlineManifest.list.eyebrow")}
+          title={
+            savedTrips.length > 0
+              ? t("shared.offlineManifest.list.headingWithTrips")
+              : t("shared.offlineManifest.list.headingEmpty")
+          }
+          meta={
+            <p className="text-muted" role="status" aria-live="polite">
+              {message}
+            </p>
+          }
+        />
         {savedTrips.length > 0 ? (
           <ul className="mt-6 divide-y divide-border rounded-xl border border-border bg-surface">
             {savedTrips.map((saved) => {
@@ -327,16 +346,18 @@ export function OfflineManifestView() {
   if (!envelope) {
     return (
       <main className="boat-mode mx-auto w-full max-w-3xl flex-1 px-6 py-16">
-        <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-          {t("shared.offlineManifest.single.eyebrow")}
-        </p>
-        <h1 className="mt-3 text-3xl font-semibold">
-          {t("shared.offlineManifest.single.emptyHeading")}
-        </h1>
-        <p className="mt-3 text-muted" role="status">
-          {message}
-        </p>
-        <p className="mt-2 text-muted">{t("shared.offlineManifest.single.emptyHint")}</p>
+        <ShopPageHeader
+          eyebrow={t("shared.offlineManifest.single.eyebrow")}
+          title={t("shared.offlineManifest.single.emptyHeading")}
+          meta={
+            <>
+              <p className="text-muted" role="status">
+                {message}
+              </p>
+              <p className="mt-2 text-muted">{t("shared.offlineManifest.single.emptyHint")}</p>
+            </>
+          }
+        />
       </main>
     );
   }
@@ -362,6 +383,19 @@ export function OfflineManifestView() {
   const boarded = localStates.filter((state) => state?.state === "boarded").length;
   const awaiting = localStates.filter((state) => !state).length;
   const rollCallComplete = manifest.summary.totalDivers > 0 && awaiting === 0;
+  // The actual roster rendered on this device, not the (possibly stale,
+  // save-time) `manifest.summary.totalDivers`. Feeds MilestoneHaptics and the
+  // roll-call-complete celebration below.
+  const totalDivers = manifest.divers.length;
+  // Dive-domain-expert review (task 72, invariant 4): "not boarded" carries
+  // forward at later checkpoints and never resets to awaiting, so
+  // `rollCallComplete` (awaiting === 0) goes true for a checkpoint with
+  // carried-forward not-boarded divers on it — that's correct for the
+  // heading text above ("Roll call complete" is accurate either way), but an
+  // "everyone's aboard" celebration must not fire on that basis. Gate it on
+  // the true boarded count instead.
+  const allBoarded = totalDivers > 0 && boarded === totalDivers;
+  const missingDivers = manifest.divers.filter((_diver, index) => !localStates[index]);
 
   async function record(bookingId: string, status: "boarded" | "not_boarded", note = "") {
     if (expired) {
@@ -378,6 +412,15 @@ export function OfflineManifestView() {
       });
       setEnvelope(next);
       setMessage(t("shared.offlineManifest.single.record.saved"));
+      // Task 73: a typed note must not silently ride along on the next tap
+      // for this diver (e.g. tapping "Not boarded" again later re-sends a
+      // stale note nobody re-typed).
+      setNoteByBooking((current) => {
+        if (!(bookingId in current)) return current;
+        const next = { ...current };
+        delete next[bookingId];
+        return next;
+      });
       if (navigator.onLine) await reconcile();
     } catch (error) {
       setMessage(
@@ -399,62 +442,55 @@ export function OfflineManifestView() {
   return (
     <main className="boat-mode mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6">
       <AmbientGlareDetector />
-      <a
-        href="#offline-roll-call"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-lg focus:bg-primary focus:px-4 focus:py-3 focus:text-primary-foreground"
-      >
-        {t("shared.offlineManifest.single.skipLink")}
-      </a>
-      <header className="border-b border-border pb-6">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-              {t("shared.offlineManifest.single.eyebrow")}
-            </p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight">{manifest.trip.title}</h1>
-            <p className="mt-1 text-base text-muted">
-              {t("shared.offlineManifest.single.savedAt", {
-                when: dateTime.format(new Date(envelope.snapshot.savedAt)),
-              })}
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            <div className="print:hidden">
-              <AmbientContrastSlider
+      <OfflineShellVersionBanner copy={shellVersionCopy} />
+      <SkipLink href="#offline-roll-call" label={t("shared.offlineManifest.single.skipLink")} />
+      <div className="border-b border-border pb-6">
+        <ShopPageHeader
+          align="start"
+          eyebrow={t("shared.offlineManifest.single.eyebrow")}
+          title={manifest.trip.title}
+          description={t("shared.offlineManifest.single.savedAt", {
+            when: dateTime.format(new Date(envelope.snapshot.savedAt)),
+          })}
+          actions={
+            <>
+              <div className="print:hidden">
+                <AmbientContrastSlider
+                  copy={{
+                    contrastAutoFallback: t("shared.ambientContrast.contrastAutoFallback"),
+                    contrastIconTitle: t("shared.ambientContrast.contrastIconTitle"),
+                    contrastLabel: t("shared.ambientContrast.contrastLabel"),
+                    labelAuto: t("shared.ambientContrast.labelAuto"),
+                    labelStandard: t("shared.ambientContrast.labelStandard"),
+                    labelFullAaa: t("shared.ambientContrast.labelFullAaa"),
+                    modeAuto: t("shared.ambientContrast.modeAuto"),
+                    modeStandard: t("shared.ambientContrast.modeStandard"),
+                    modeFullAaa: t("shared.ambientContrast.modeFullAaa"),
+                  }}
+                />
+              </div>
+              <ConnectivityStatus
+                offlineLabel={t("shared.connectivity.offlineWithCopy")}
                 copy={{
-                  contrastAutoFallback: t("shared.ambientContrast.contrastAutoFallback"),
-                  contrastIconTitle: t("shared.ambientContrast.contrastIconTitle"),
-                  contrastLabel: t("shared.ambientContrast.contrastLabel"),
-                  labelAuto: t("shared.ambientContrast.labelAuto"),
-                  labelStandard: t("shared.ambientContrast.labelStandard"),
-                  labelFullAaa: t("shared.ambientContrast.labelFullAaa"),
-                  modeAuto: t("shared.ambientContrast.modeAuto"),
-                  modeStandard: t("shared.ambientContrast.modeStandard"),
-                  modeFullAaa: t("shared.ambientContrast.modeFullAaa"),
+                  online: t("shared.connectivity.online"),
+                  onlineTitle: t("shared.connectivity.onlineTitle"),
+                  offlineTitle: t("shared.connectivity.offlineTitle"),
                 }}
               />
-            </div>
-            <ConnectivityStatus
-              offlineLabel={t("shared.connectivity.offlineWithCopy")}
-              copy={{
-                online: t("shared.connectivity.online"),
-                onlineTitle: t("shared.connectivity.onlineTitle"),
-                offlineTitle: t("shared.connectivity.offlineTitle"),
-              }}
-            />
-            <span
-              className={
-                freshness === "current"
-                  ? "rounded-full border border-success/30 bg-success/10 px-3 py-2 text-sm font-bold text-success"
-                  : freshness === "aging"
-                    ? "rounded-full border border-warning/40 bg-warning/10 px-3 py-2 text-sm font-bold text-warning"
-                    : "rounded-full border border-danger/30 bg-danger/10 px-3 py-2 text-sm font-bold text-danger"
-              }
-            >
-              {t(`shared.offlineManifest.freshnessPill.${freshness}`)}
-            </span>
-          </div>
-        </div>
+              <span
+                className={
+                  freshness === "current"
+                    ? "rounded-full border border-success/30 bg-success/10 px-3 py-2 text-sm font-bold text-success"
+                    : freshness === "aging"
+                      ? "rounded-full border border-warning/40 bg-warning/10 px-3 py-2 text-sm font-bold text-warning"
+                      : "rounded-full border border-danger/30 bg-danger/10 px-3 py-2 text-sm font-bold text-danger"
+                }
+              >
+                {t(`shared.offlineManifest.freshnessPill.${freshness}`)}
+              </span>
+            </>
+          }
+        />
         {expired ? (
           <p className="mt-4 rounded-lg border border-danger/40 bg-danger/10 p-3 text-base leading-6 font-semibold text-danger">
             {t("shared.offlineManifest.single.expiredBanner")}
@@ -472,10 +508,10 @@ export function OfflineManifestView() {
         <p className="mt-1 text-sm text-muted">
           {t("shared.offlineManifest.single.pendingRejectedCounts", { pending, rejected })}
         </p>
-      </header>
+      </div>
 
       <nav
-        className="mt-6 flex gap-2 overflow-x-auto pb-2"
+        className="mt-6 flex flex-wrap items-center gap-2 overflow-x-auto pb-2"
         aria-label={t("shared.offlineManifest.single.checkpointNavAria")}
       >
         {rollCallCheckpoints(manifest.trip.plannedDives).map((value) => (
@@ -483,15 +519,18 @@ export function OfflineManifestView() {
             key={value}
             type="button"
             onClick={() => setCheckpoint(value)}
-            className={
-              value === checkpoint
-                ? "inline-flex min-h-11 shrink-0 items-center justify-center rounded-lg bg-primary px-4 font-semibold text-primary-foreground"
-                : "inline-flex min-h-11 shrink-0 items-center justify-center rounded-lg border border-border-strong px-4 font-semibold"
-            }
+            className={buttonClass({
+              variant: value === checkpoint ? "primary" : "secondary",
+              size: "boat",
+              className: "shrink-0",
+            })}
           >
             {rollCallCheckpointText(t, value)}
           </button>
         ))}
+        <WaterLockerToggle
+          copy={{ disableToggleLabel: t("shared.waterLocker.disableToggleLabel") }}
+        />
       </nav>
 
       <section
@@ -532,7 +571,8 @@ export function OfflineManifestView() {
         ) : null}
         <ul
           id="offline-roll-call"
-          className="mt-4 divide-y divide-border rounded-xl border border-border bg-surface"
+          tabIndex={-1}
+          className="mt-4 divide-y divide-border rounded-xl border border-border bg-surface outline-none"
         >
           {manifest.divers.map((diver, index) => {
             const state = latestOfflineRollCall(
@@ -694,6 +734,21 @@ export function OfflineManifestView() {
         </ul>
       </section>
 
+      <MissingDiversGrid
+        divers={missingDivers.map((diver) => ({
+          bookingId: diver.bookingId,
+          fullName: diver.fullName,
+          rentsKit: diver.rentalFit.state === "rents",
+        }))}
+        copy={{
+          heading: t("trips.manifest.missingDiversHeading", { count: missingDivers.length }),
+          awaitingBoarding: t("trips.manifest.awaitingBoarding"),
+          tapHint: t("trips.manifest.missingDiversTapHint"),
+          rentsKitLabel: t("trips.manifest.rentsKitLabel"),
+          ownKitLabel: t("trips.manifest.ownKitLabel"),
+        }}
+      />
+
       <footer className="mt-8 flex flex-wrap items-center gap-4 border-t border-border pt-5">
         <a
           href={`/shop/${envelope.snapshot.shop.slug}/trips/${tripId}/manifest?checkpoint=${checkpoint}`}
@@ -702,6 +757,51 @@ export function OfflineManifestView() {
           {t("shared.offlineManifest.single.openLiveManifest")}
         </a>
       </footer>
+
+      {/*
+       * Dive-domain-expert review (task 72, invariant 3): none of these three
+       * react to an attempted board/not-board tap — only to the envelope's
+       * own boarded/awaiting counts, which cannot change while `expired` is
+       * true (record() above refuses before ever calling
+       * appendOfflineRollCall). So an expired copy — where no board/not-board
+       * buttons render at all — never fires a haptic or the ripple for an
+       * action the store was about to reject; there's no action for it to be
+       * attempted for. MilestoneHaptics and SubSurfaceRipple both skip their
+       * very first render besides (see their own components), so mounting
+       * with an already-complete roll call never fires either on load.
+       *
+       * Invariant 5: the ripple and haptics are a same-device UI reaction,
+       * not a claim that the server has confirmed anything — pending/rejected
+       * counts stay visible in the header above regardless, and sync
+       * reconciliation (reconcile(), above) remains the only thing that ever
+       * changes `syncStatus`.
+       */}
+      <WaterLocker
+        copy={{
+          rainAlt: t("shared.waterLocker.rainAlt"),
+          heading: t("shared.waterLocker.heading"),
+          body: t("shared.waterLocker.body"),
+          holdLine1: t("shared.waterLocker.holdLine1"),
+          holdLine2: t("shared.waterLocker.holdLine2"),
+          unlockingProgress: t("shared.waterLocker.unlockingProgress"),
+          holdToUnlock: t("shared.waterLocker.holdToUnlock"),
+        }}
+      />
+      <MilestoneHaptics total={totalDivers} boarded={boarded} />
+      {/*
+       * Gated on `allBoarded` (the true boarded count), not `rollCallComplete`
+       * (awaiting === 0) — task 72, invariant 4. A checkpoint with a
+       * carried-forward not-boarded diver reaches awaiting === 0 without
+       * everyone being aboard; the celebration must not read as "everyone's
+       * aboard" for that manifest.
+       */}
+      <SubSurfaceRipple
+        complete={allBoarded}
+        copy={{
+          iconTitle: t("shared.subSurfaceRipple.iconTitle"),
+          message: t("shared.subSurfaceRipple.message"),
+        }}
+      />
     </main>
   );
 }

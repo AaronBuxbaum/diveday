@@ -150,8 +150,20 @@ export async function bookSpot(
     if (!fullName) fieldErrors[`fullName-${index}`] = t("booking.fieldErrors.nameRequired");
     if (fullName.length > 120)
       fieldErrors[`fullName-${index}`] = t("booking.fieldErrors.nameTooLong");
-    if (!emailField.safeParse(email).success)
+    // The lead booker's email is the one address DiveDay actually uses (the
+    // confirmation, the waiver, the readiness link) and stays required.
+    // Every other party member's is optional (task 21) — a disabled "use the
+    // main contact's email" checkbox in BookingPartyFields.tsx simply omits
+    // the field from the submission, and an empty non-lead email books that
+    // diver through the same no-email walk-in path a counter booking already
+    // uses (src/db/bookings.ts), never by writing the lead's own address onto
+    // a second person row (which would collide as "already booked" the
+    // moment a third member also opted in).
+    if (index === 0 && !email) {
       fieldErrors[`email-${index}`] = t("booking.fieldErrors.emailInvalid");
+    } else if (email && !emailField.safeParse(email).success) {
+      fieldErrors[`email-${index}`] = t("booking.fieldErrors.emailInvalid");
+    }
     validParty.push({ fullName, email });
   }
   const phone = String(formData.get("phone") ?? "").trim();
@@ -166,6 +178,40 @@ export async function bookSpot(
   const dbi = await getDb();
   const shopNow = await getShopBySlug(dbi, shopSlug);
   if (!shopNow) return { error: t(ERROR_MESSAGE_KEYS.unavailable) };
+
+  // Validate a typed promo code before the party is booked, not after (task
+  // 20) — the old order resolved it only once building the Stripe checkout,
+  // so an invalid code silently didn't discount and the diver found out on
+  // Stripe's own page having already committed seats. `isPromoRedeemable`'s
+  // own contract is that every failure reason looks identical to the diver
+  // (unknown code, wrong scope, expired, not started) — reusing that here
+  // keeps this check from becoming a second oracle for enumerating a shop's
+  // live codes; it only ever says "doesn't apply".
+  const promoCodeInput = String(formData.get("promoCode") ?? "").trim();
+  let tripPromo: Awaited<ReturnType<typeof getActiveTripPromoByCode>> = null;
+  let shopPromo: Awaited<ReturnType<typeof getRedeemableShopPromo>> = null;
+  if (promoCodeInput) {
+    const tripForPromo = await getTripWithBooked(dbi, shopNow.id, tripId);
+    tripPromo = await getActiveTripPromoByCode(dbi, {
+      shopId: shopNow.id,
+      tripId,
+      code: promoCodeInput,
+    });
+    shopPromo = tripPromo
+      ? null
+      : await getRedeemableShopPromo(dbi, {
+          shopId: shopNow.id,
+          code: promoCodeInput,
+          kind: tripForPromo?.courseId ? "course" : "trip",
+        });
+    if (!tripPromo && !shopPromo) {
+      return {
+        error: t("booking.errors.checkFields"),
+        fieldErrors: { promoCode: t("booking.fieldErrors.promoInvalid") },
+      };
+    }
+  }
+
   const outcome = await createBookingParty(
     dbi,
     validParty.map((entry, index) => ({
@@ -173,7 +219,10 @@ export async function bookSpot(
       tripId,
       actor: "public" as const,
       fullName: entry.fullName,
-      email: entry.email,
+      // Empty for any non-lead diver who left the field to the "use the main
+      // contact's email" checkbox — never the lead's own address (see the
+      // comment above the loop that builds `validParty`).
+      email: entry.email || undefined,
       // Only the lead booker's phone is collected, so the crew can reach the party.
       phone: index === 0 && phone ? phone : undefined,
       groupPreference: groupPreference || undefined,
@@ -201,7 +250,22 @@ export async function bookSpot(
             : outcome.reason === "course_ratio_full"
               ? "course-ratio-full"
               : "unavailable";
-    return { error: t(ERROR_MESSAGE_KEYS[code]) };
+    // "already_booked" is the one refusal that names a specific party member
+    // (task 25) — `createBookingParty` reports which index it rolled back
+    // on, so the form can highlight that diver's fieldset instead of the
+    // generic top-of-form banner reading as if diver 1 were the problem when
+    // it was diver 4 (src/db/bookings.ts "rolls back the whole party" is the
+    // contract this reads off of). Every other refusal reason isn't about
+    // any one member, so it stays the plain banner.
+    const memberFieldErrors =
+      code === "already" && outcome.failedIndex !== undefined
+        ? { [`email-${outcome.failedIndex}`]: t(ERROR_MESSAGE_KEYS[code]) }
+        : undefined;
+    const message =
+      code === "unavailable" && shopNow.contactEmail
+        ? t("booking.errors.unavailableWithContact", { contact: shopNow.contactEmail })
+        : t(ERROR_MESSAGE_KEYS[code]);
+    return { error: message, fieldErrors: memberFieldErrors };
   }
   await trackEvent({ name: "booking_completed", source: "diver", partySize: validParty.length });
   const primaryBookingId = outcome.bookings[0]?.bookingId;
@@ -273,33 +337,15 @@ export async function bookSpot(
   // no configured origin, Stripe down — degrades to the ordinary
   // book-now-pay-later confirmation, never to a lost booking.
   const base = `/shop/${shopSlug}/schedule/${tripId}`;
-  // An invalid/expired/wrong-trip code is never a booking error — it just
-  // doesn't discount. Stripe's own hosted checkout page shows the diver the
-  // real price before they pay, so a code that silently failed to apply is
-  // never hidden from them at the point money actually moves.
-  // Two kinds of code reach this one field, and the diver can't tell them
-  // apart: a trip-scoped last-minute deal (docs ADR
-  // 20260727-last-minute-fill-promos) and a shop-wide code (docs ADR
-  // 20260729-shop-promo-codes). The trip-scoped lookup runs first — a code
-  // issued for *this* departure is the more specific match — and the shop-wide
-  // one is the fallback. Only one is ever applied: Stripe Checkout takes a
-  // single promotion code, and stacking discounts is not a thing DiveDay does.
-  const promoCodeInput = String(formData.get("promoCode") ?? "").trim();
-  const tripPromo = promoCodeInput
-    ? await getActiveTripPromoByCode(dbi, { shopId: shopNow.id, tripId, code: promoCodeInput })
-    : null;
-  const shopPromo =
-    promoCodeInput && !tripPromo
-      ? await getRedeemableShopPromo(dbi, {
-          shopId: shopNow.id,
-          code: promoCodeInput,
-          // A trip we can no longer read is treated as an ordinary charter for
-          // scope purposes; a courses-only code then simply doesn't apply,
-          // which is the fail-closed direction.
-          kind: tripNow?.courseId ? "course" : "trip",
-        })
-      : null;
-
+  // `tripPromo`/`shopPromo` were already resolved above, before the party was
+  // booked (task 20) — an invalid/expired/wrong-scope code now fails the
+  // submit itself with a field error, rather than being silently dropped
+  // here and only surfacing on Stripe's own page. Two kinds of code share
+  // this one field, and the diver can't tell them apart: a trip-scoped
+  // last-minute deal (docs ADR 20260727-last-minute-fill-promos) and a
+  // shop-wide code (docs ADR 20260729-shop-promo-codes) — the trip-scoped
+  // lookup ran first, as the more specific match, and only one is ever
+  // applied: Stripe Checkout takes a single promotion code.
   const checkoutUrl = confirmCapability
     ? await startCheckoutUrl(dbi, {
         shopId: shopNow.id,

@@ -1,6 +1,6 @@
 import { DEMO_SHOP_SLUG, DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { daysFromNow, e2eNow, signInAs } from "./helpers";
+import { acceptAgeAttestation, daysFromNow, e2eNow, signInAs, signOut } from "./helpers";
 
 const SHOP = DEMO_SHOP_SLUG;
 
@@ -165,9 +165,8 @@ test.describe("minimum age (H-08, fail open)", () => {
 
     const tripPath = await tripPathByTitle(page, sessionTitle);
     await page.goto(tripPath);
-    await page.getByLabel(/Marcus Webb/).check();
-    await page.getByRole("button", { name: "Save crew" }).click();
-    await expect(page.getByRole("status")).toContainText("Crew updated");
+    await page.getByLabel("Assign crew").selectOption({ label: "Marcus Webb" });
+    await expect(page.getByRole("button", { name: "Unassign Marcus Webb" })).toBeVisible();
 
     // Fail open: a walk-in has no date on file — the same state every diver in
     // a live shop starts from — and books exactly as before.
@@ -219,15 +218,13 @@ test.describe("minimum age (H-08, fail open)", () => {
 
     const tripPath = await tripPathByTitle(page, sessionTitle);
     await page.goto(tripPath);
-    await page.getByLabel(/Marcus Webb/).check();
-    await page.getByRole("button", { name: "Save crew" }).click();
-    await expect(page.getByRole("status")).toContainText("Crew updated");
+    await page.getByLabel("Assign crew").selectOption({ label: "Marcus Webb" });
+    await expect(page.getByRole("button", { name: "Unassign Marcus Webb" })).toBeVisible();
 
     // Staff must step aside for the public flow: /schedule/[id] redirects a
     // signed-in staff member of this shop straight to the trip's own staff
     // page, so "Book this date" would never reach the public booking form.
-    await page.getByRole("button", { name: "Sign out" }).click();
-    await expect(page).toHaveURL(/\/$/);
+    await signOut(page);
 
     // The PUBLIC form — actor: "public" in bookSpot — never refuses on age.
     // No date is on file yet, so this books exactly like any other walk-in
@@ -240,6 +237,7 @@ test.describe("minimum age (H-08, fail open)", () => {
     await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
     await page.getByLabel("Name").fill(diverName);
     await page.getByLabel("Email").fill(`late-bloomer-${stamp}@example.com`);
+    await acceptAgeAttestation(page);
     await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
     // The confirmation heading greets by first name only ("...boat, Late! 🤿").
     await expect(

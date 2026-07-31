@@ -7,7 +7,7 @@ async function openWreckTrip(page: Page) {
   await page
     .locator("li")
     .filter({ hasText: "Wreck Trip — Spiegel Grove" })
-    .getByRole("link")
+    .getByRole("link", { name: "Wreck Trip — Spiegel Grove", exact: true })
     .click();
 }
 
@@ -82,7 +82,7 @@ test.describe("staff", () => {
     await anon
       .locator("li")
       .filter({ hasText: "Two-Tank Reef — Christ of the Abyss" })
-      .getByRole("link")
+      .getByRole("link", { name: "Two-Tank Reef — Christ of the Abyss" })
       .click();
     // The booking form is controlled, so wait for hydration before typing.
     await expect(anon.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
@@ -151,7 +151,7 @@ test.describe("staff", () => {
       await page
         .locator("li")
         .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-        .getByRole("link")
+        .getByRole("link", { name: "Two-Tank Reef — Molasses & French", exact: true })
         .click();
       await page
         .getByRole("navigation", { name: "Trip" })
@@ -208,7 +208,7 @@ test("a diver without a verified card can request nitrox but is flagged, not blo
   await page
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Christ of the Abyss" })
-    .getByRole("link")
+    .getByRole("link", { name: "Two-Tank Reef — Christ of the Abyss" })
     .click();
   // The booking form is controlled, so wait for hydration before typing.
   await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");

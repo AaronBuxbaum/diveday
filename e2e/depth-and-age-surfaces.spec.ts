@@ -68,12 +68,15 @@ test.describe("staff", () => {
     // (src/db/seed.ts), so the roster carries both the age and the minor badge.
     await expect(page.getByText(/Age \d+/).first()).toBeVisible();
 
-    const minorBadge = page.getByText("Minor", { exact: true }).first();
+    // The warning-tone Badge prepends a decorative aria-hidden glyph
+    // (Badge.tsx toneGlyph), so the element's own text is "▲ Minor", not
+    // "Minor" alone.
+    const minorBadge = page.getByText("▲ Minor").first();
     await expect(minorBadge).toBeVisible();
 
     // The whole point: being a minor is a fact the crew is told, never a gate.
     // The row that carries the badge must not have gained a blocker for it.
-    const minorRow = page.locator("li", { has: page.getByText("Minor", { exact: true }) }).last();
+    const minorRow = page.locator("li", { has: page.getByText("▲ Minor") }).last();
     await expect(minorRow).not.toContainText(/under 18|too young|not permitted/i);
   });
 

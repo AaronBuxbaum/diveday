@@ -17,6 +17,7 @@ import { buttonClass } from "@/components/ui/button";
 import { DEMO_SHOP_SLUG } from "@/db/dev-credentials";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
+import { DEMO_ROLE_KEYS, DEMO_ROLE_META } from "@/lib/demo-roles";
 import { scheduleAttributionHref, trialHref } from "@/lib/funnel";
 import { earlyAccessPriceAmount, fullShopExport } from "@/lib/marketing";
 import { MIGRATION_GUIDES } from "@/lib/migration-guides";
@@ -57,6 +58,19 @@ export default async function Home() {
   const competitors = new Intl.ListFormat(locale, { type: "disjunction" }).format(
     MIGRATION_GUIDES.map((guide) => guide.competitor),
   );
+  // The five per-role "Try:" prompts, surfaced as a picker under the demo CTA
+  // instead of a blind button (UX persona review #103) — each option wires
+  // straight to `enterDemoAction`'s `role` field.
+  const demoRoleOptions = DEMO_ROLE_META.map((role) => {
+    const title = t(DEMO_ROLE_KEYS[role.id].title);
+    return {
+      id: role.id,
+      icon: role.icon,
+      title,
+      tryThis: t(DEMO_ROLE_KEYS[role.id].tryThis),
+      ariaLabel: t("marketing.home.enterAsAria", { role: title }),
+    };
+  });
   const dailyMoments = [
     {
       role: t("marketing.home.moments.diver.role"),
@@ -101,11 +115,13 @@ export default async function Home() {
                 <HomeCTA
                   enterDemoAction={enterDemoAction}
                   scheduleHref={scheduleAttributionHref(DEMO_SHOP_SLUG, "home-hero")}
+                  roleOptions={demoRoleOptions}
                   copy={{
                     gettingReady: t("nav.gettingReady"),
                     tryDemo: t("nav.tryDemo"),
                     startTrial: t("nav.startTrial"),
                     seeLiveSchedule: t("nav.seeLiveSchedule"),
+                    enterAsLabel: t("marketing.home.enterAsLabel"),
                   }}
                 />
               </div>

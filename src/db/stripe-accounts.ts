@@ -54,11 +54,18 @@ export async function upsertShopStripeAccount(
 export async function setShopStripeAccountStatus(
   db: AppDb,
   stripeAccountId: string,
-  status: { chargesEnabled: boolean; payoutsEnabled: boolean; detailsSubmitted: boolean },
+  status: {
+    chargesEnabled: boolean;
+    payoutsEnabled: boolean;
+    detailsSubmitted: boolean;
+    /** Omit to leave the stored currency untouched (e.g. a caller that hasn't read it from Stripe). */
+    defaultCurrency?: string;
+  },
 ): Promise<ShopStripeAccount | null> {
+  const { defaultCurrency, ...flags } = status;
   const [row] = await db
     .update(shopStripeAccounts)
-    .set({ ...status, updatedAt: nowDate() })
+    .set({ ...flags, ...(defaultCurrency ? { defaultCurrency } : {}), updatedAt: nowDate() })
     .where(eq(shopStripeAccounts.stripeAccountId, stripeAccountId))
     .returning();
   return row ?? null;
@@ -100,5 +107,6 @@ export async function refreshShopStripeAccountStatus(
     chargesEnabled: result.account.chargesEnabled,
     payoutsEnabled: result.account.payoutsEnabled,
     detailsSubmitted: result.account.detailsSubmitted,
+    defaultCurrency: result.account.defaultCurrency,
   });
 }

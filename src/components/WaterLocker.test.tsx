@@ -2,11 +2,18 @@
 
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { WaterLocker, type WaterLockerCopy } from "./WaterLocker";
+import {
+  WATER_LOCKER_DISABLED_STORAGE_KEY,
+  WaterLocker,
+  type WaterLockerCopy,
+  WaterLockerToggle,
+  type WaterLockerToggleCopy,
+} from "./WaterLocker";
 
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
+  localStorage.clear();
 });
 
 const COPY: WaterLockerCopy = {
@@ -17,6 +24,10 @@ const COPY: WaterLockerCopy = {
   holdLine2: "2s",
   unlockingProgress: "Unlocking... {percent}%",
   holdToUnlock: "Hold button to unlock",
+};
+
+const TOGGLE_COPY: WaterLockerToggleCopy = {
+  disableToggleLabel: "Disable spray guard on this device",
 };
 
 describe("WaterLocker", () => {
@@ -145,5 +156,84 @@ describe("WaterLocker", () => {
     act(() => vi.advanceTimersByTime(2000));
 
     expect(screen.queryByText("Screen locked — water detected")).toBeNull();
+  });
+
+  it("never locks when the spray guard has been disabled on this device (task 78)", async () => {
+    localStorage.setItem(WATER_LOCKER_DISABLED_STORAGE_KEY, "true");
+    render(<WaterLocker copy={COPY} />);
+    // The preference loads in an effect after mount — wait for it before
+    // asserting the multi-touch anomaly is ignored.
+    await act(async () => {});
+
+    act(() => {
+      window.dispatchEvent(
+        new TouchEvent("touchstart", {
+          touches: [
+            { clientX: 10, clientY: 10 } as Touch,
+            { clientX: 20, clientY: 20 } as Touch,
+            { clientX: 30, clientY: 30 } as Touch,
+          ],
+        }),
+      );
+    });
+
+    expect(screen.queryByText("Screen locked — water detected")).toBeNull();
+  });
+
+  it("releases an in-progress lock the instant the toggle disables it, same tab", async () => {
+    render(
+      <>
+        <WaterLocker copy={COPY} />
+        <WaterLockerToggle copy={TOGGLE_COPY} />
+      </>,
+    );
+    await act(async () => {});
+
+    act(() => {
+      window.dispatchEvent(
+        new TouchEvent("touchstart", {
+          touches: [
+            { clientX: 10, clientY: 10 } as Touch,
+            { clientX: 20, clientY: 20 } as Touch,
+            { clientX: 30, clientY: 30 } as Touch,
+          ],
+        }),
+      );
+    });
+    expect(screen.getByText("Screen locked — water detected")).toBeInTheDocument();
+
+    const checkbox = screen.getByRole("checkbox", { name: "Disable spray guard on this device" });
+    act(() => fireEvent.click(checkbox));
+
+    expect(screen.queryByText("Screen locked — water detected")).toBeNull();
+    expect(localStorage.getItem(WATER_LOCKER_DISABLED_STORAGE_KEY)).toBe("true");
+  });
+
+  it("re-locks after the toggle is switched back on", async () => {
+    render(
+      <>
+        <WaterLocker copy={COPY} />
+        <WaterLockerToggle copy={TOGGLE_COPY} />
+      </>,
+    );
+    await act(async () => {});
+
+    const checkbox = screen.getByRole("checkbox", { name: "Disable spray guard on this device" });
+    act(() => fireEvent.click(checkbox)); // disable
+    act(() => fireEvent.click(checkbox)); // re-enable
+
+    act(() => {
+      window.dispatchEvent(
+        new TouchEvent("touchstart", {
+          touches: [
+            { clientX: 10, clientY: 10 } as Touch,
+            { clientX: 20, clientY: 20 } as Touch,
+            { clientX: 30, clientY: 30 } as Touch,
+          ],
+        }),
+      );
+    });
+
+    expect(screen.getByText("Screen locked — water detected")).toBeInTheDocument();
   });
 });

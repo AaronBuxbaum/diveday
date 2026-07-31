@@ -197,37 +197,36 @@ export function PathBuilder({
       )}
 
       <div className="rounded-xl border border-border bg-surface-sunken/40 p-4">
-        <FieldGrid columns={1} className="gap-y-3">
+        <div className="flex flex-wrap items-end gap-2">
           <Field
             label={copy.addACourse}
             description={atCap ? copy.atCapDescription : copy.notOnPathDescription}
+            className="min-w-0"
           >
-            <div className="flex flex-wrap items-center gap-2">
-              <select
-                value={picked}
-                onChange={(event) => setPicked(event.target.value)}
-                disabled={available.length === 0 || atCap}
-                className={`${controlClass} sm:max-w-sm`}
-              >
-                <option value="">{copy.chooseACourse}</option>
-                {available.map((course) => (
-                  <option key={course.id} value={course.id}>
-                    {course.title} · {course.agency.toUpperCase()}
-                    {course.isActive ? "" : copy.hiddenSuffix}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="button"
-                onClick={addStep}
-                disabled={!picked || atCap}
-                className={buttonClass({ variant: "secondary" })}
-              >
-                {copy.addToPath}
-              </button>
-            </div>
+            <select
+              value={picked}
+              onChange={(event) => setPicked(event.target.value)}
+              disabled={available.length === 0 || atCap}
+              className={`${controlClass} sm:max-w-sm`}
+            >
+              <option value="">{copy.chooseACourse}</option>
+              {available.map((course) => (
+                <option key={course.id} value={course.id}>
+                  {course.title} · {course.agency.toUpperCase()}
+                  {course.isActive ? "" : copy.hiddenSuffix}
+                </option>
+              ))}
+            </select>
           </Field>
-        </FieldGrid>
+          <button
+            type="button"
+            onClick={addStep}
+            disabled={!picked || atCap}
+            className={buttonClass({ variant: "secondary" })}
+          >
+            {copy.addToPath}
+          </button>
+        </div>
         {available.length === 0 ? (
           <p className="mt-2 text-sm text-muted">{copy.allCoursesOnPath}</p>
         ) : null}

@@ -29,6 +29,7 @@
       "turningOff": "Turning off…",
       "copy": "Copy",
       "copied": "Copied",
+      "copyFailed": "Couldn't copy — select it manually",
       "confirmRotate": "Replace this link? Any calendar still using the old one stops updating.",
       "confirmTurnOff": "Turn off this subscription? The link stops working immediately."
     },
@@ -63,7 +64,9 @@
       "managerOnly": "Shift changes require owner or manager",
       "notScheduled": "Not scheduled in this window.",
       "remove": "Remove",
-      "removing": "Removing…"
+      "removing": "Removing…",
+      "crewingHeading": "Crewing",
+      "crewingEmpty": "Not on any trip's crew in this window."
     },
     "capability": {
       "teach": "Can teach",
@@ -261,6 +264,8 @@
       "diveInsuranceFieldLabel": "Dive insurance",
       "diveInsuranceHint": "(DAN or other, optional)",
       "diveInsurancePlaceholder": "DAN #12345",
+      "emergencyContactNameLabel": "Emergency contact name",
+      "emergencyContactPhoneLabel": "Emergency contact phone",
       "saving": "Saving…",
       "saveDetails": "Save details"
     },
@@ -443,6 +448,9 @@
       "galleryPhotosLabel": "Gallery photos",
       "galleryPhotosHint": "(up to eight in total, {max} new per save)",
       "removeLabel": "Remove",
+      "photoCaptionLabel": "Caption",
+      "photoCaptionHint": "(optional — read aloud by screen readers)",
+      "photoCaptionPlaceholder": "What's in photo {n}?",
       "glanceLegend": "At a glance",
       "glanceDescription": "The chips across the top of the page — how the course runs. Who may take it is the next box.",
       "durationLabel": "Duration",
@@ -740,6 +748,32 @@
         "notAuthorized": "Refunds are limited to owners and managers — ask one of them to issue this refund.",
         "demoDisabled": "This is a demo order — it isn't backed by a live Stripe invoice, so it can't be changed."
       }
+    },
+    "index": {
+      "eyebrow": "Front desk",
+      "title": "Orders",
+      "description": "Every invoice the shop has sent, across every diver and trip.",
+      "newOrder": "New order",
+      "filters": {
+        "statusLabel": "Status",
+        "statusAll": "All statuses",
+        "diverLabel": "Diver",
+        "diverPlaceholder": "Search by name",
+        "fromLabel": "From",
+        "toLabel": "To",
+        "apply": "Apply filters",
+        "clear": "Clear filters"
+      },
+      "filteredByDiver": "Showing orders for {name}.",
+      "emptyAll": "No orders yet — they show up here as soon as the front desk sends one.",
+      "emptyFiltered": "No orders match these filters.",
+      "table": {
+        "diver": "Diver",
+        "trip": "Trip",
+        "status": "Status",
+        "date": "Date",
+        "amount": "Amount"
+      }
     }
   },
   "promos": {
@@ -757,7 +791,8 @@
       "duplicate": "You already have a code with that text.",
       "notConnected": "Connect your Stripe account in Settings first — a code is created on your own account.",
       "stripeFailed": "Stripe didn't create that code. It's saved as failed here and can't discount anything; try again.",
-      "notAuthorized": "Promo codes discount real money, so they're limited to owners and managers."
+      "notAuthorized": "Promo codes discount real money, so they're limited to owners and managers.",
+      "deleted": "Code deleted."
     },
     "connectBanner": "Connect your Stripe account in <settingsLink>Settings</settingsLink> before creating a code — codes are created on your own Stripe account, not DiveDay's.",
     "settingsLink": "Settings",
@@ -786,7 +821,8 @@
       "expiresHint": "(optional)",
       "whatFor": "What it's for",
       "whatForHint": "(optional — your note, never shown to divers)",
-      "whatForPlaceholder": "Autumn returning-diver push"
+      "whatForPlaceholder": "Autumn returning-diver push",
+      "timezoneHint": "Times are in {timezone}, your shop's timezone."
     },
     "creating": "Creating…",
     "createCode": "Create code",
@@ -811,7 +847,23 @@
     "redeemedNoCap": "{count, plural, one {Redeemed # time} other {Redeemed # times}}",
     "switchOff": "Switch off",
     "switchOn": "Switch on",
-    "saving": "Saving…"
+    "saving": "Saving…",
+    "copyCode": "Copy code",
+    "copyCodeCopied": "Copied",
+    "copyCodeFailed": "Couldn't copy — select it manually",
+    "retry": "Try again",
+    "retrying": "Trying again…",
+    "delete": "Delete",
+    "deleting": "Deleting…",
+    "deleteConfirm": "Delete the code {code}? It never went live, so nothing was discounted — this can't be undone.",
+    "tripDeals": {
+      "heading": "Trip deals",
+      "description": "One-trip discounts sent from a departure's page — the other half of every live code, gathered here so nothing is only visible from the trip it was sent on.",
+      "empty": "No trip deals are outstanding right now. Send one from a departure's page when a boat needs filling.",
+      "recipients": "{count, plural, one {Sent to # diver} other {Sent to # divers}}",
+      "expiresAt": "Expires {date}",
+      "rangeNote": "Trip deals top out at 90% off — the boat is sailing either way, so a deal always leaves something on the table. Shop-wide codes above can go to 100% because staff also use them for comps and loyalty, not only for filling seats."
+    }
   },
   "reports": {
     "operationKind": {
@@ -862,7 +914,8 @@
       "seatFillDetail": "{booked} of {offered} seats · {count, plural, one {# boat} other {# boats}} full",
       "waiversLabel": "Waivers signed",
       "waiversOutstanding": "{count} still to collect",
-      "waiversAllIn": "Everyone's paperwork is in"
+      "waiversAllIn": "Everyone's paperwork is in",
+      "revenueViewOrders": "View orders"
     },
     "noTripsFuture": "Nothing on the books for this month yet — bookings will show up here as they come in.",
     "noTripsPast": "No trips sailed this month. Pick another month to see how it went.",
@@ -895,15 +948,25 @@
     "publishedDetail": "Shown on your schedule page",
     "waitingOnYou": "Waiting on you",
     "waitingDetail": "Reviews with words to read",
+    "thisMonthStat": "This month: {rating}★ average from {count, plural, one {# review} other {# reviews}}",
+    "standout": "✦ Standout review",
     "emptyHeading": "No reviews yet",
     "emptyDetail": "Divers are asked for one on their recap page after a trip sails. The first ones will land here.",
+    "emptyWaitingHeading": "Nothing waiting on you",
+    "emptyWaitingDetail": "Every review with words has been read. New ones land here as soon as a diver leaves one.",
     "ratingOnly": "Rating only — no words to review.",
     "reviewMeta": "<diver>{diverName}</diver> · <trip>{tripTitle}</trip> · {date}",
     "hide": "Hide",
+    "hideConfirm": "Hide this review? It stops counting toward your public rating.",
     "publish": "Publish",
     "saving": "Saving…",
     "showMoreReviews": "Show more reviews",
-    "backToTop": "← Back to the top of the list"
+    "backToTop": "← Back to the top of the list",
+    "filterLabel": "Filter reviews",
+    "filter": {
+      "all": "All reviews",
+      "waiting": "Waiting on you ({count})"
+    }
   },
   "schedule": {
     "fullTripForm": "Full trip form",
@@ -945,6 +1008,8 @@
       "dayCountLabel": "{count} days",
       "crewLabel": "Crew:",
       "crewNobodyYet": "nobody yet",
+      "noPriceSet": "No price set",
+      "noPriceSetAria": "Set a price for {ref}",
       "move": "Move",
       "moveAria": "Move {ref}",
       "copy": "Copy",
@@ -1007,6 +1072,8 @@
       "diverAdded": "Diver added to the trip.",
       "diverWaitlisted": "Diver added to the wait list.",
       "identityConfirmed": "Identity confirmed — this diver can be cleared to board.",
+      "contactSaved": "Emergency contact saved.",
+      "contactIncomplete": "A contact needs both a name and a phone number before the crew can actually reach someone.",
       "diverInvalid": "Enter a name and a valid email to add a diver.",
       "diverFull": "That trip is full — add them to the wait list instead.",
       "diverWaitlistAvailable": "There's room on this trip — add them to the trip instead of the wait list.",
@@ -1113,8 +1180,10 @@
       "description": "Who's running this trip.",
       "courseNeedsInstructor": "This course cannot take bookings until one assigned crew member has the instructor role.",
       "noCrew": "No crew to assign yet — your instructors and divemasters show up here once they’re on the team.",
-      "saving": "Saving crew…",
-      "save": "Save crew"
+      "notAssignedYet": "Not yet assigned — pick someone below.",
+      "manageShifts": "Manage shifts",
+      "onShift": "On shift",
+      "notOnShift": "Not on a shift"
     },
     "recapNote": {
       "heading": "Post-trip recap note",
@@ -1227,7 +1296,12 @@
       "fullNotice": "This trip is full — there's nothing to fill.",
       "noneAroundNotice": "No one on the last-minute list is around for this date yet.",
       "percentOff": "{percent}% off",
-      "sentTo": "{count, plural, one {Sent {date} to # diver} other {Sent {date} to # divers}}"
+      "sentTo": "{count, plural, one {Sent {date} to # diver} other {Sent {date} to # divers}}",
+      "status": {
+        "sent": "Sent",
+        "pending": "Never finished",
+        "failed": "Failed at Stripe"
+      }
     },
     "roster": {
       "waiverSend": "Send waiver",
@@ -1246,6 +1320,11 @@
       "paymentUpdating": "Updating…",
       "heading": "Divers",
       "bookedOfCapacity": "{booked} of {capacity}",
+      "filterAriaLabel": "Filter the roster",
+      "filterAll": "All ({count})",
+      "filterNeedsWaiver": "Needs waiver ({count})",
+      "filterBlocked": "Blocked ({count})",
+      "noneMatchFilter": "No divers match this filter.",
       "tickDiversThen": "Tick divers, then",
       "sending": "Sending…",
       "sendWaiversToSelected": "Send waivers to selected",
@@ -1275,6 +1354,7 @@
       "signedImported": "Signed {date} · imported from a prior shop",
       "followUpBeforeBoarding": "Follow up before boarding",
       "medicalFollowUpDescription": "A diver answered yes to a medical question. Confirm physician clearance before boarding.",
+      "viewSignedRecord": "View signed record",
       "rentalFitColumnHeading": "Rental fit",
       "nitroxApproved": "Nitrox requested — verified card, billed per dive. The mix is still analyzed and signed for at the fill station.",
       "nitroxUnverified": "Nitrox requested, but no verified card. Planned as air.",
@@ -1289,7 +1369,17 @@
       "delete": "Delete",
       "addNoteLabel": "Add a note only staff can see",
       "adding": "Adding…",
-      "addPrivateNote": "Add private note"
+      "addPrivateNote": "Add private note",
+      "emergencyContactHeading": "Emergency contact",
+      "emergencyContactOnFile": "{name} · {phone}",
+      "emergencyContactMissing": "Not on file — ask at the counter and add it below; it prints on the manifest.",
+      "emergencyContactAdd": "Add emergency contact",
+      "emergencyContactEdit": "Edit emergency contact",
+      "emergencyContactNameLabel": "Contact name",
+      "emergencyContactPhoneLabel": "Contact phone",
+      "savingContact": "Saving…",
+      "saveEmergencyContact": "Save contact",
+      "viewOrders": "View orders"
     },
     "celebrations": {
       "heading": "Celebrations",
@@ -1311,6 +1401,7 @@
       "summaryBoarded": "Boarded",
       "summaryNotBoarded": "Not boarded",
       "summaryAwaiting": "Awaiting",
+      "moreStatsSummary": "More stats",
       "checkpointNavAriaLabel": "Roll-call checkpoint",
       "activeCheckpoint": "Active checkpoint",
       "rollCallComplete": "Roll call complete ✦",
@@ -1328,6 +1419,7 @@
       "shopTimeLabel": "Shop time: {timezone}",
       "readyToBoard": "Ready to board",
       "blockedBadge": "Blocked",
+      "checkedInPill": "Checked in ✓",
       "age": "Age {age}",
       "minorAge": "Minor · age {age}",
       "emergencyContactLabel": "Emergency contact",
@@ -1428,7 +1520,9 @@
       "demandHeading": "This departure could support more capacity",
       "scheduleAnotherDeparture": "Schedule another departure",
       "activityHeading": "Activity",
-      "noActivity": "No staff activity recorded yet."
+      "noActivity": "No staff activity recorded yet.",
+      "promoteHeading": "Promote this trip",
+      "promoteSentCount": "{count, plural, one {# deal sent} other {# deals sent}}"
     },
     "new": {
       "errorInvalid": "That didn't save — check the date, times, and capacity, then try again.",
@@ -1599,10 +1693,20 @@
         "exportCta": "Data export"
       },
       "founder": {
-        "heading": "Talk to the founder",
         "description": "A bad morning at the counter, a feature you're missing, a bug — write in any time. It reaches Aaron directly, not a ticket queue, and reaching out is always welcome.",
         "emailCta": "Email {email}"
-      }
+      },
+      "groups": {
+        "yourShop": "Your shop",
+        "money": "Money",
+        "dataIntegrations": "Data & integrations"
+      },
+      "orders": {
+        "heading": "Orders",
+        "description": "Every invoice and payment the shop has sent — filter by status, date, or diver.",
+        "cta": "View orders"
+      },
+      "backToSettings": "Back to settings"
     },
     "team": {
       "eyebrow": "Settings",
@@ -1861,6 +1965,7 @@
       "none": "Everyone booked on an upcoming departure is ready to board.",
       "some": "{blocked, plural, one {# diver} other {# divers}} across {departures, plural, one {# departure} other {# departures}} can't board yet. Clearing a row takes you straight to the fix."
     },
+    "windowNote": "Looking at the nearest 40 departures on the board.",
     "alsoBlockedOn": "Also blocked on {trips} — same diver, fix once.",
     "tripBlockedCount": "{blocked} of {booked} blocked",
     "sendAllWaivers": "{count, plural, one {Send all # waiver} other {Send all # waivers}}",
@@ -1874,6 +1979,7 @@
     "eyebrow": "Counter mode",
     "title": "Counter check-in",
     "description": "Scan a booking code or search a diver, confirm live readiness, and keep the line moving. Check-in is arrival status; boarding is still confirmed on the manifest.",
+    "windowNote": "Showing arrivals from 6 hours ago through the next 36 hours.",
     "queueAriaLabel": "Check-in queue",
     "readyHeading": "Ready at the counter",
     "searchResultsFor": "Search results for “{query}”.",
@@ -1881,11 +1987,14 @@
     "diverCount": "{count, plural, one {# diver} other {# divers}}",
     "emptyTitle": "No one matches that scan",
     "emptyDescription": "Try the diver’s name, email, or full booking ID.",
+    "clearedTitle": "Everyone’s aboard the day 🎉 — {count, plural, one {# diver} other {# divers}} checked in.",
     "checkedInBadge": "Checked in",
+    "boardedBadge": "Boarded",
     "readyBadge": "Ready",
     "needsAttentionBadge": "Needs attention",
     "checkInButton": "Check in",
     "checkInAriaLabel": "Check in {name}",
+    "blockersMore": "+{count} more",
     "search": {
       "label": "Scan or search diver",
       "hint": "A barcode scanner can type a booking ID here.",
@@ -1895,7 +2004,7 @@
     "notice": {
       "checkedIn": "Diver checked in. Next diver is ready when you are.",
       "alreadyCheckedIn": "That diver is already checked in.",
-      "notReady": "Readiness changed — resolve the blocker before checking them in.",
+      "notReady": "Readiness changed. <guestsLink>Open Guests to resolve the blocker</guestsLink>, then try again.",
       "notBookable": "That booking is no longer available for check-in.",
       "notFound": "That booking could not be found.",
       "staffNotFound": "Your staff access could not be confirmed.",
@@ -1935,7 +2044,7 @@
   },
   "waiversStaff": {
     "eyebrow": "Settings",
-    "title": "Waiver",
+    "title": "Waiver template",
     "description": "Every diver signs this one release. Edit it to fit your shop.",
     "banner": {
       "savedNew": "Saved as a new version.",
@@ -1953,15 +2062,28 @@
       "sample": "This is sample wording to start from — edit it to fit your shop, and have your own counsel review it."
     },
     "versionInfo": "Version {version} · saved {date}",
-    "integrityHeading": "Signed record integrity",
-    "integrityDescription": "Signed waivers are tamper-evident — if a record has been altered, we flag it. Older imported or legacy records are marked unsealed below.",
-    "noSignedRecords": "No signed records yet.",
-    "noSignatureDate": "No signature date",
-    "integrityValid": "Integrity verified",
-    "integrityInvalid": "Integrity mismatch",
-    "integrityUnsealed": "Unsealed legacy record",
-    "showMoreRecords": "Show more records",
-    "backToTop": "← Back to the top of the list"
+    "tabs": {
+      "ariaLabel": "Waiver sections",
+      "template": "Template",
+      "signatures": "Signatures"
+    },
+    "signatures": {
+      "eyebrow": "Settings",
+      "title": "Signatures",
+      "description": "Every signed release on file for this shop — who signed, which trip, and any medical follow-up. Signed waivers are tamper-evident — if a record has been altered, we flag it.",
+      "signedRecordHeading": "Signed record",
+      "heading": "Signed records",
+      "noSignedRecords": "No signed records yet.",
+      "noSignatureDate": "No signature date",
+      "noTrip": "Imported record",
+      "integrityValid": "Integrity verified",
+      "integrityInvalid": "Integrity mismatch",
+      "integrityUnsealed": "Unsealed legacy record",
+      "medicalFlag": "Medical follow-up flagged",
+      "viewFlaggedAnswers": "View flagged answers",
+      "showMoreRecords": "Show more records",
+      "backToTop": "← Back to the top of the list"
+    }
   },
   "shopHome": {
     "createdNotice": {
@@ -1972,10 +2094,53 @@
     "emailResent": "Confirmation email re-sent.",
     "emailFailed": "That email still couldn’t be sent — check the address and email configuration.",
     "crewingBoat": "You’re crewing the {time} {title}.",
+    "windowNote": "Showing work due in the next 7 days.",
     "noDeparturesHeading": "No boats out today",
     "nextDeparture": "Next up is <link>{title}</link> on {date} at {time}.",
     "noDeparturesEmpty": "Nothing is on the books yet. Schedule a trip and it will show up here the morning it sails.",
     "scheduleTrip": "Schedule a trip",
+    "notice": {
+      "waiversNotAuthorized": "Editing the waiver is limited to owners and managers.",
+      "exportNotAuthorized": "Data export is limited to owners and managers."
+    },
+    "orientation": {
+      "heading": "New here? A few pointers for your role.",
+      "subtitle": "This only shows once — dismiss it any time.",
+      "tryLabel": "Try:",
+      "dismiss": "Got it",
+      "roles": {
+        "owner": {
+          "title": "You're steering the whole shop",
+          "desc": "Today is your work queue — bookings, blockers, and today's departures in one place.",
+          "tryThis": "Open Schedule to see this week's departures."
+        },
+        "manager": {
+          "title": "Keeping the shop running day to day",
+          "desc": "Today surfaces what needs attention first; the rest of the shop's admin lives under More in the nav.",
+          "tryThis": "Check Reviews for feedback waiting on you."
+        },
+        "instructor": {
+          "title": "Teaching and certifying divers",
+          "desc": "Divers holds every diver's certification cards and specialty history.",
+          "tryThis": "Open Divers to check a certification card before class."
+        },
+        "divemaster": {
+          "title": "Getting divers ready to board",
+          "desc": "Blockers lists everyone who can't board yet, with the one tap that fixes each one.",
+          "tryThis": "Open Blockers to see who still needs prep."
+        },
+        "captain": {
+          "title": "Running the boat",
+          "desc": "The manifest is your boarding pass and roll call, built for wet hands and spotty signal.",
+          "tryThis": "Open today's manifest to see who's on the boat."
+        },
+        "crew": {
+          "title": "Checking divers in as they arrive",
+          "desc": "Check-in shows who's arrived, who's still missing paperwork, and what to do about it.",
+          "tryThis": "Open Check-in to check divers in as they arrive."
+        }
+      }
+    },
     "firstRun": {
       "heading": "Get your shop ready",
       "subtitle": "Five steps and divers can start booking.",
@@ -2002,6 +2167,7 @@
     }
   },
   "shared": {
+    "skipToContent": "Skip to main content",
     "imageInput": {
       "tooMany": "{count, plural, one {Choose up to # photo at a time.} other {Choose up to # photos at a time.}}",
       "wrongTypeSuffix": ": use a JPG, PNG, WebP, or HEIC photo.",
@@ -2068,6 +2234,7 @@
     },
     "commandPalette": {
       "search": "Search",
+      "dialogAriaLabel": "Quick search",
       "comboboxAriaLabel": "Search divers, trips, and pages",
       "placeholder": "Search divers, trips, or jump to a page…",
       "emptyShort": "Type to search people and trips, or jump to a page.",
@@ -2090,9 +2257,11 @@
       "goToSchedule": "Schedule",
       "goToDivers": "Divers",
       "goToSettings": "Settings",
-      "goToWaivers": "Waivers",
+      "goToWaivers": "Waiver template",
       "goToBoarding": "Boarding — today's boat",
-      "goToWalkIn": "Walk-in"
+      "goToWalkIn": "Walk-in",
+      "goToOfflineRollCall": "Open offline roll call",
+      "goToOrders": "Orders"
     },
     "keyboardShortcuts": {
       "buttonAriaLabel": "Keyboard shortcuts",
@@ -2144,7 +2313,9 @@
     },
     "shopNav": {
       "home": "DiveDay home",
-      "signOut": "Sign out"
+      "signOut": "Sign out",
+      "signOutConfirm": "Sign out? Confirm",
+      "signOutPending": "Signing out…"
     },
     "shopNavLinks": {
       "primaryNavAriaLabel": "Primary",
@@ -2158,7 +2329,7 @@
       "diveSites": "Dive sites",
       "courses": "Courses",
       "reviews": "Reviews",
-      "waivers": "Waivers",
+      "waivers": "Waiver template",
       "reports": "Reports",
       "promoCodes": "Promo codes",
       "settings": "Settings",
@@ -2175,7 +2346,8 @@
       "holdLine1": "HOLD",
       "holdLine2": "2s",
       "unlockingProgress": "Unlocking... {percent}%",
-      "holdToUnlock": "Hold button to unlock"
+      "holdToUnlock": "Hold button to unlock",
+      "disableToggleLabel": "Disable spray guard on this device"
     },
     "undoToast": {
       "pendingLabel": "Undoing…",
@@ -2212,7 +2384,9 @@
         "emptyHeading": "Nothing is waiting on you",
         "emptyBody": "Every diver booked in the next week has their waiver, cards, and payment in order.",
         "needsYouHeading": "Needs you",
-        "needsYouSubtitle": "Sorted by the boat each one holds up. Clearing a row takes you straight to the fix."
+        "needsYouSubtitle": "Sorted by the boat each one holds up. Clearing a row takes you straight to the fix.",
+        "boatsClear": "Today's boats are all clear 🤙",
+        "itemsCount": "{count, plural, one {# item} other {# items}}"
       },
       "resendConfirmation": {
         "resending": "Resending…",
@@ -2222,6 +2396,20 @@
           "noEmail": "No email on file — add one from the roster, then resend.",
           "notConfigured": "Email isn’t configured for this shop yet.",
           "failed": "Still couldn’t deliver it — open the trip to check the booking."
+        }
+      },
+      "paymentAction": {
+        "copyLink": "Copy payment link",
+        "linkCopied": "Link copied.",
+        "copyFailed": "Couldn’t copy — copy it from the invoice instead.",
+        "resendInvoice": "Resend invoice",
+        "resending": "Resending…",
+        "invoiceResent": "Invoice resent.",
+        "errors": {
+          "notFound": "That invoice could not be found — open the trip to check it.",
+          "notOpen": "This invoice is no longer open — open the trip to check its status.",
+          "notConfigured": "Payments aren’t connected for this shop yet.",
+          "failed": "Still couldn’t resend it — open the trip to check the invoice."
         }
       },
       "yourSessions": {
@@ -2252,7 +2440,9 @@
         "emailDelivery": "Email",
         "waitlistSeat": "Wait list",
         "lastMinuteFill": "Fill seats",
-        "emergencyContact": "Contact"
+        "emergencyContact": "Contact",
+        "stuckPaymentOperation": "Stripe",
+        "failedPhotoDeletion": "Cleanup"
       },
       "blockerAction": {
         "setRequirements": "Set requirements",
@@ -2307,6 +2497,7 @@
         "missingFit": "{count, plural, one {# diver has} other {# divers have}} no rental fit on file, so the prep list is incomplete.",
         "ungatedNitrox": "{count, plural, one {# diver wants} other {# divers want}} Nitrox without a verified card — those tanks are planned as air.",
         "instructorMissing": "This course session has no instructor assigned and cannot take enrolments.",
+        "overRatio": "{booked} booked, but the assigned crew only covers {capacity} at PADI's published entry-level ratio.",
         "missingContact": "{count, plural, one {# diver has} other {# divers have}} no emergency contact on file — ask at the counter; it prints on the manifest.",
         "lastMinuteFill": "{seats, plural, one {# seat} other {# seats}} open with no last-minute deal sent yet.",
         "waitlistSeat": "{seats, plural, one {# seat} other {# seats}} opened up and {waiting, plural, one {# person is} other {# people are}} on the wait list.",
@@ -2325,7 +2516,8 @@
         "openGuests": "Open guests",
         "inviteFromWaitlist": "Invite from wait list",
         "resendWaiverLink": "Resend waiver link",
-        "resendConfirmation": "Resend confirmation"
+        "resendConfirmation": "Resend confirmation",
+        "openReports": "Review in Reports"
       },
       "summary": {
         "blocked": "{departures, plural, =0 {No boats out today} =1 {1 departure today} other {# departures today}}. {blockedToday, plural, =1 {1 diver still can’t board.} other {# divers still can’t board.}}",
@@ -2344,6 +2536,22 @@
         "autumn": "Enjoy the surface interval — grab a warm towel{hasShop, select, true { at {shopName}} other {}}, check the breeze, and we'll see you on the next boat.",
         "winter": "Enjoy the surface interval — warm up with a dry coat{hasShop, select, true { at {shopName}} other {}}, and we'll see you on the next boat.",
         "spring": "Enjoy the surface interval — catch some sun{hasShop, select, true { at {shopName}} other {}}, check your gear, and we'll see you on the next boat."
+      },
+      "opsAlert": {
+        "operationKind": {
+          "checkoutSession": "Checkout",
+          "invoice": "Invoice",
+          "refund": "Refund"
+        },
+        "mediaKind": {
+          "coursePhoto": "Course photo",
+          "recapPhoto": "Recap photo"
+        },
+        "stuckDetail": {
+          "withId": "{kind} stuck since {when} — Stripe: {id}. Check it against the Stripe dashboard.",
+          "withoutId": "{kind} stuck since {when}. Check it against the Stripe dashboard."
+        },
+        "mediaDeletionDetail": "{kind} removed from the app but not yet deleted from storage — queued {when}."
       }
     },
     "tripDiveFields": {
@@ -2443,6 +2651,11 @@
           "saved": "Saved on this phone — it'll send when you're back in service.",
           "genericError": "That change couldn't be saved on this device — try it again."
         }
+      },
+      "shellVersion": {
+        "staleBanner": "This saved copy is from an older version of DiveDay. Refresh with signal to update it before boarding divers.",
+        "updateBanner": "A newer version of DiveDay is ready.",
+        "refreshButton": "Refresh now"
       }
     },
     "ambientContrast": {

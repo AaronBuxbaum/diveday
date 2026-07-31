@@ -19,6 +19,12 @@ const STAFF_PREFIX = "/shop";
 
 const PUBLIC_SCHEDULE = /^\/shop\/[a-z0-9-]+\/schedule(\/.*)?$/;
 const COURSE_PAGE = /^\/shop\/([a-z0-9-]+)\/courses\/([a-z0-9-]+)\/?$/;
+// $-anchored to exactly "/courses" (or "/courses/") — never the open-ended
+// `(\/.*)?` tail PUBLIC_SCHEDULE uses, because that tail would also swallow
+// the staff editor living one segment further down this same path space.
+const COURSES_INDEX = /^\/shop\/[a-z0-9-]+\/courses\/?$/;
+const COURSE_PATHS_INDEX = /^\/shop\/[a-z0-9-]+\/courses\/paths\/?$/;
+const COURSE_PATH_PAGE = /^\/shop\/[a-z0-9-]+\/courses\/paths\/[a-z0-9-]+\/?$/;
 
 /**
  * Which /shop routes a signed-out diver may read. Everything else under /shop
@@ -26,13 +32,23 @@ const COURSE_PAGE = /^\/shop\/([a-z0-9-]+)\/courses\/([a-z0-9-]+)\/?$/;
  *
  * Courses are the delicate one: the catalog index and the editor sit above and
  * below a public course page in the same path space. The match is anchored to
- * exactly one segment after /courses/ — so /courses and /courses/<slug>/edit
- * stay gated — and refuses the staff segments that would otherwise look like a
- * slug. Course slugs are minted through `courseSlug`, which refuses them too,
- * so the two halves cannot drift apart.
+ * exactly one segment after /courses/ — so /courses/<slug>/edit and
+ * /courses/new stay gated — and refuses the staff segments that would
+ * otherwise look like a slug. Course slugs are minted through `courseSlug`,
+ * which refuses them too, so the two halves cannot drift apart.
+ *
+ * The catalog index (/courses) and certification paths (/courses/paths,
+ * /courses/paths/<slug>) are public guidance surfaces, not gates — see the
+ * route map note in AGENTS.md. Each is matched by its own `$`-anchored,
+ * single-segment pattern rather than folded into COURSE_PAGE's reserved-word
+ * carve-out, so none of these additions can accidentally widen what COURSE_PAGE
+ * treats as a slug.
  */
 export function isPublicShopRoute(pathname: string): boolean {
   if (PUBLIC_SCHEDULE.test(pathname)) return true;
+  if (COURSES_INDEX.test(pathname)) return true;
+  if (COURSE_PATHS_INDEX.test(pathname)) return true;
+  if (COURSE_PATH_PAGE.test(pathname)) return true;
   const course = COURSE_PAGE.exec(pathname);
   return Boolean(course && !RESERVED_COURSE_SEGMENTS.has(course[2]));
 }

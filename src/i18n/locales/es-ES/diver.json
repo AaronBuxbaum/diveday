@@ -13,6 +13,9 @@
     "saving": "Guardando…",
     "rateLimited": "Demasiados intentos. Espera unos minutos e inténtalo de nuevo."
   },
+  "shopChrome": {
+    "footerLine": "{shop} · Con la tecnología de DiveDay"
+  },
   "schedule": {
     "eyebrow": "Salidas",
     "title": "Calendario",
@@ -33,11 +36,14 @@
       "noMatches": "Ninguna salida coincide con estos filtros — prueba a quitar uno."
     },
     "showLater": "Ver salidas posteriores",
+    "showEarlier": "Ver salidas anteriores",
     "backToNext": "← Volver a la próxima salida",
     "courseSession": "Sesión de curso",
     "diveSite": "Punto de buceo",
     "twoTank": "Salida de dos inmersiones",
+    "twoTankHint": "Una salida en barco con dos inmersiones independientes, una tras otra, con un descanso (un intervalo de superficie) entre medias — no dos botellas puestas a la vez.",
     "diveCount": "{count, plural, other {# inmersiones}}",
+    "tripCardLabel": "{when} · {trip} · {capacity}",
     "calendarLabel": "Calendario de salidas",
     "previousMonth": "Mes anterior",
     "nextMonth": "Mes siguiente",
@@ -53,6 +59,10 @@
     "courseSession": "Sesión de curso",
     "depositLine": "{deposit} de señal al reservar · {balance} restante en el muelle",
     "freeCancellationUntil": "Cancelación gratuita hasta el {when}",
+    "cancellationAskShop": "¿Dudas sobre la cancelación? Pregunta a la tienda — {contact}",
+    "cancellationAskShopNoContact": "¿Dudas sobre la cancelación? Pregunta a la tienda.",
+    "courseFeeBreakdown": "{course} del curso + {eLearning} de e-learning",
+    "minimumAge": "Edad mínima: {age}",
     "planAndShare": "Planifica y comparte esta salida",
     "addToCalendar": "Añadir al calendario",
     "getDirections": "Cómo llegar",
@@ -148,6 +158,12 @@
     "preferencePlaceholder": "Fotografía macro, un ritmo tranquilo o quedarte con tus amigos",
     "promoLabel": "Código promocional",
     "promoHint": "(si tienes uno)",
+    "partyTotal": "{count, plural, one {# buceador} other {# buceadores}} × {price} = {total}",
+    "stripeHint": "Terminarás de pagar en una página segura de Stripe.",
+    "ageAttestation": "Confirmo que todos los buceadores de esta reserva cumplen la edad mínima de {age}.",
+    "cancelledHeading": "Esta salida se canceló",
+    "cancelledBody": "para otra fecha, o ponte en contacto con el centro.",
+    "cancelledContact": "¿Dudas? Contacta con el centro en {contact}.",
     "bookAndPay": "Reservar y pagar",
     "bookAndPayLastSpot": "Reservar y pagar — última plaza",
     "bookLastSpot": "Reservar la última plaza",
@@ -196,7 +212,8 @@
       "full": "Alguien reservó la última plaza justo antes que tú — el barco está completo.",
       "available": "Buenas noticias — se acaba de liberar una plaza. Resérvala antes de que se agote.",
       "already": "Ya estás en la lista de esta salida — no hace falta reservar dos veces.",
-      "unavailable": "Esta salida ya no acepta reservas.",
+      "unavailable": "Esta salida no acepta reservas ahora mismo. Ponte en contacto y el centro te ayudará a encontrar la opción adecuada.",
+      "unavailableWithContact": "Esta salida no acepta reservas ahora mismo. Escribe a {contact} y el centro te ayudará a encontrar la opción adecuada.",
       "courseUnavailable": "Este curso todavía necesita un instructor asignado antes de poder aceptar reservas.",
       "courseRatioFull": "Esta sesión alcanzó su límite de proporción instructor-alumno — llama al centro, puede que puedan añadir otro instructor o ayudante certificado.",
       "fit": "No hemos podido guardar ese ajuste de equipo. Revisa los detalles e inténtalo de nuevo.",
@@ -208,7 +225,8 @@
       "nameTooLong": "Ese nombre es demasiado largo.",
       "emailInvalid": "Escribe un correo electrónico válido.",
       "phoneTooLong": "Ese número de teléfono es demasiado largo.",
-      "noteTooLong": "Deja esta nota en menos de 300 caracteres."
+      "noteTooLong": "Deja esta nota en menos de 300 caracteres.",
+      "promoInvalid": "Ese código no está activo."
     }
   },
   "lastMinute": {
@@ -232,6 +250,13 @@
     "backToEditing": "Volver a la edición",
     "noCertification": "No se requiere titulación",
     "agencyCourse": "Curso {agency}",
+    "agencyFullNames": {
+      "padi": "PADI (Asociación Profesional de Instructores de Buceo)",
+      "ssi": "SSI (Scuba Schools International)",
+      "naui": "NAUI (Asociación Nacional de Instructores de Buceo)",
+      "sdi": "SDI (Scuba Diving International)",
+      "tdi": "TDI (Technical Diving International)"
+    },
     "seeDates": "Ver fechas",
     "askAboutDates": "Consultar fechas",
     "whoCanEnroll": "Quién puede matricularse",
@@ -241,6 +266,7 @@
     "fromTheShop": "Del centro",
     "feeCovers": "Qué cubre el precio",
     "galleryHeading": "Fotos del curso {course}",
+    "photoAltFallback": "{course} — foto {n}",
     "datesHeading": "Próximas fechas",
     "noDatesLead": "Ahora mismo no hay fechas programadas — este curso se organiza bajo petición.",
     "seeFullSchedule": "Ver el calendario completo",
@@ -264,10 +290,36 @@
       "instructor": "Instructor"
     }
   },
+  "courses": {
+    "index": {
+      "eyebrow": "Cursos",
+      "title": "Cursos",
+      "description": "Todo lo que enseña este centro, desde un primer contacto con el buceo hasta formación avanzada.",
+      "noCoursesHeading": "Todavía no hay cursos publicados",
+      "noCoursesBody": "Vuelve pronto, o escríbenos y te ayudamos a encontrar un punto de partida.",
+      "pathsLink": "¿No sabes por dónde empezar? Consulta las rutas de titulación"
+    }
+  },
   "path": {
     "sectionTitle": "Dónde encaja este curso",
     "nextUp": "Lo siguiente después de este: {course}.",
     "lastStep": "Este es el último paso de {path}. Después, pregúntanos hacia dónde seguir."
+  },
+  "coursePaths": {
+    "index": {
+      "eyebrow": "Rutas de titulación",
+      "title": "Rutas de titulación",
+      "description": "Progresiones que recomienda el centro, un curso tras otro. Son una orientación, no un requisito — cada curso indica su propia admisión en su propia página.",
+      "noPathsHeading": "Todavía no hay rutas de titulación publicadas",
+      "noPathsBody": "Vuelve pronto, o escríbenos y te ayudamos a planear tu próximo curso.",
+      "backToCourses": "Todos los cursos"
+    },
+    "page": {
+      "eyebrow": "Ruta de titulación",
+      "backToPaths": "Todas las rutas de titulación",
+      "stepsHeading": "Qué incluye esta ruta",
+      "noStepsBody": "Esta ruta todavía no incluye ningún curso."
+    }
   },
   "reviews": {
     "sectionTitle": "Lo que dicen los buceadores",
@@ -277,11 +329,13 @@
     "ratingLegend": "Tu puntuación",
     "ratingOption": "{rating} sobre 5 estrellas",
     "commentLabel": "¿Algo que le contarías a otro buceador?",
+    "commentModerationHint": "Las puntuaciones se publican al momento; el centro lee antes tus palabras.",
     "commentPlaceholder": "La tripulación, los puntos, cómo fue la jornada",
     "submit": "Enviar mi opinión",
     "submitting": "Enviando…",
     "savedPublished": "Gracias — tu puntuación ya está publicada.",
     "savedPending": "Gracias — el centro leerá tus palabras antes de publicarlas.",
+    "savedDidNotDive": "No hay inmersión que puntuar — esta reserva no llegó a salir. Contacta con el centro si no es correcto.",
     "savedError": "No se ha guardado — elige una puntuación e inténtalo de nuevo.",
     "yourRating": "Le has puesto un {rating} sobre 5.",
     "aggregate": "{average} sobre 5 · {count, plural, one {# opinión} other {# opiniones}}"
@@ -291,9 +345,11 @@
     "eyebrow": "Fin de la jornada",
     "greeting": "Buenas inmersiones, {name}.",
     "namelessFallback": "buceador",
-    "externalReviewHeading": "¿Has disfrutado la inmersión?",
-    "externalReviewBody": "Una opinión pública ayuda a otros buceadores a encontrar {shop} — y significa mucho para la tripulación que te ha sacado hoy.",
+    "externalReviewHeading": "Compártelo también en Google",
+    "externalReviewBody": "Hemos copiado lo que has escrito — pégalo en una opinión pública y ayuda a otros buceadores a encontrar {shop}.",
+    "externalReviewBodyNoComment": "Una puntuación rápida en Google ayuda a otros buceadores a encontrar {shop}.",
     "externalReviewCta": "Dejar una opinión pública",
+    "commentCopied": "Copiado — pégalo cuando llegues",
     "whereYouDived": "Dónde has buceado",
     "conditionsOnTheDay": "Condiciones del día",
     "lookFor": "Busca:",
@@ -303,10 +359,12 @@
     "bringABuddy": "Trae a un compañero la próxima vez",
     "unavailableHeading": "Este enlace de resumen no está disponible",
     "unavailableBody": "Pide a tu centro un enlace nuevo.",
+    "didNotDiveBody": "Esta reserva no llegó a salir, así que no hay nada que puntuar ni foto que añadir.",
     "photoAdded": "Añadida a tu resumen — ¡gracias por compartirla!",
     "photoMissing": "Elige primero una foto y luego añádela.",
     "photoUnsupported": "Este centro todavía no tiene activada la subida de fotos — sin problema, etiquétalas cuando publiques.",
     "photoFailed": "Esa foto no se ha subido — prueba con un JPEG o PNG de menos de 5 MB.",
+    "photoCancelled": "Esta reserva no llegó a salir, así que no hay resumen al que añadir una foto.",
     "tipCancelled": "Sin problema — no se ha cobrado la propina.",
     "tipRange": "Introduce una propina de entre 1 y 500 $.",
     "tipFailed": "No ha salido bien — inténtalo de nuevo en un momento.",
@@ -328,13 +386,19 @@
     "addAPhoto": "Añadir una foto",
     "photoWrongTypeSuffix": ": usa una foto JPG, PNG, WebP o HEIC.",
     "photoTooBigSuffix": ": supera los {maxMb} MB — prueba con una foto más pequeña.",
+    "photoTooMany": "Elige un máximo de {max} fotos a la vez.",
+    "addingPhoto": "Añadiendo…",
     "addToMyRecap": "Añadir a mi resumen",
     "buddyBody": "Bucear es mejor con alguien conocido. Reserva plaza en la próxima salida y tráetelo.",
     "seeWhatsNext": "Ver la próxima salida",
     "messageTheShop": "Escribir al centro",
     "tipAmountLegend": "Cantidad de propina",
     "otherTipPlaceholder": "Otra",
-    "otherTipAriaLabel": "Otra cantidad de propina, en dólares",
+    "otherTipAriaLabel": "Otra cantidad de propina",
+    "shareRecap": "Compartir este resumen",
+    "shareRecapText": "Aquí tienes mi resumen de inmersión de {shop} — échale un vistazo.",
+    "linkCopied": "Enlace copiado",
+    "linkCopiedAnnouncement": "Enlace del resumen copiado al portapapeles.",
     "mapAriaLabel": "Mapa estilizado del resumen de navegación de tus puntos de buceo",
     "charterPath": "RUTA DE LA SALIDA",
     "boatTrack": "Trayecto del barco",
@@ -413,7 +477,7 @@
       "paymentDone": "Pagado — gracias.",
       "certificationMultipleNeeded": "Esta inmersión necesita más de una certificación registrada — comparte cada tarjeta que se requiera (una foto o un mensaje rápido sirve), y tu tienda confirmará que estás listo."
     },
-    "emergencyOnFile": "Registrado — {name}. Actualízalo abajo si ha cambiado.",
+    "emergencyOnFile": "Registrado — {name}.",
     "changePlans": "¿Necesitas cambiar tus planes?",
     "reschedulePitch": "Elige otra salida y te movemos — tu plaza actual solo se libera cuando la nueva queda confirmada, así que nunca te quedas sin ninguna.",
     "pickATrip": "Elige una salida",
@@ -430,30 +494,48 @@
     "contactLinePhoneOnly": "¿Dudas? Escribe a {shop} — <phone>{phoneNumber}</phone>. Verán exactamente lo que hay en esta página.",
     "contactLineEmailOnly": "¿Dudas? Escribe a {shop} — <email>{emailAddress}</email>. Verán exactamente lo que hay en esta página.",
     "contactLineNone": "¿Dudas? Escribe a {shop}. Verán exactamente lo que hay en esta página.",
-    "gearAndSetup": "Equipo y ajuste"
+    "gearAndSetup": "Equipo y ajuste",
+    "dockCallLine": "Procura estar en el muelle a las {time} — {dock} antes de zarpar.",
+    "rateLimited": "Espera unos segundos e inténtalo de nuevo — no se ha perdido nada.",
+    "fitUnavailable": "No hemos podido guardar tu equipo y ajuste ahora mismo. Inténtalo de nuevo en un momento.",
+    "cancelConfirmButton": "Sí, cancelar mi plaza",
+    "moveConfirmButton": "Sí, mover mi reserva",
+    "neverMind": "Mejor no",
+    "scheduledSites": "Tus puntos de buceo previstos",
+    "sitesPeek": "Aquí tienes un avance de lo que vas a explorar en esta salida:"
   },
   "waiver": {
     "metaTitle": "Completa tu exención de responsabilidad — DiveDay",
     "unavailableHeading": "Este enlace de exención no está disponible",
     "unavailableBody": "Pide a tu centro un enlace nuevo.",
     "expiredHeading": "Este enlace de exención ha caducado",
-    "expiredBody": "Pide a tu centro un enlace nuevo — no se envió ninguna información.",
+    "expiredBody": "Tus respuestas guardadas se conservan — pide al centro un enlace nuevo.",
     "scheduledSites": "Tus puntos de buceo previstos",
     "templateVersion": "{title} · versión {version}",
     "emergencyContact": "Contacto de emergencia",
     "contactName": "Nombre del contacto",
     "contactPhone": "Teléfono del contacto",
+    "emergencyOnFile": "Ya registrado: {name} · {phone}.",
     "signature": "Tu firma",
     "typeFullName": "Escribe tu nombre completo",
     "incomplete": "Responde a todas las preguntas, escribe tu nombre completo y confirma tu conformidad.",
     "linkInactive": "Ese enlace ya no está activo. Pide uno nuevo al centro.",
+    "rateLimited": "Espera unos segundos e inténtalo de nuevo — no se ha perdido nada.",
     "medicalReview": "Gracias — una de tus respuestas médicas requiere una revisión más detenida y puede que necesites el visto bueno de un médico. No des por hecho que estás autorizado hasta que tu centro te lo confirme.",
+    "medicalReviewNext": "Una respuesta “sí” significa que necesitarás que un médico confirme por escrito que estás en condiciones de bucear antes de poder salir — esto es así en todos los centros, no solo en este. El centro se pondrá en contacto contigo sobre los siguientes pasos. Si tu salida es pronto, contacta con ellos ahora, ya que conseguir el visto bueno de un médico puede llevar unos días.",
+    "medicalContactBoth": "¿Dudas sobre los siguientes pasos? Escribe a {shop} — <phone>{phoneNumber}</phone> · <email>{emailAddress}</email>.",
+    "medicalContactPhoneOnly": "¿Dudas sobre los siguientes pasos? Escribe a {shop} — <phone>{phoneNumber}</phone>.",
+    "medicalContactEmailOnly": "¿Dudas sobre los siguientes pasos? Escribe a {shop} — <email>{emailAddress}</email>.",
+    "medicalContactNone": "¿Dudas sobre los siguientes pasos? Escribe a {shop}.",
     "signedBody": "Firmado, guardado y fuera de tu cabeza. Nos vemos en el muelle — tu centro te avisará si hace falta algo más.",
     "seeWhatsLeft": "Mira qué te queda antes de zarpar",
     "sitesPeek": "Aquí tienes un avance de lo que vas a explorar en esta salida:",
     "signing": "Firmando…",
     "beforeDockTitle": "Un paso rápido antes del muelle",
     "beforeDockDescription": "Esta exención privada lleva unos dos minutos. Puedes guardar tu progreso y volver a este enlace antes de que caduque.",
+    "tripHeader": "{trip} — {when}, {time}",
+    "linkExpiresAt": "Este enlace funciona hasta {date}.",
+    "yesReassurance": "Un “sí” significa que un médico debería confirmar que estás en condiciones de bucear — no cancela tu salida.",
     "progressSaved": "Tu progreso está guardado. Termina cuando quieras.",
     "emergencyContactDescription": "Alguien a quien podamos contactar por ti ese día — opcional, pero es lo que tiene el equipo si pasa algo en el agua.",
     "agreementCheckbox": "He leído esta exención, la entiendo y estoy de acuerdo con ella.",
@@ -516,6 +598,11 @@
       "weights": "Lastre",
       "diveComputer": "Ordenador de buceo",
       "gopro": "GoPro"
+    },
+    "jargonHints": {
+      "bcd": "Chaleco (BCD) — el chaleco inflable que llevas puesto, sujeta tu botella y te permite controlar si flotas o te hundes.",
+      "regulator": "Regulador — la boquilla y la manguera que te dejan respirar aire normal de tu botella bajo el agua.",
+      "nitrox": "El nitrox es una mezcla de aire con más oxígeno que permite a buceadores con formación específica pasar algo más de tiempo bajo el agua en algunas inmersiones — no necesitas saber más como principiante."
     }
   },
   "party": {
@@ -530,7 +617,11 @@
     "phoneLabel": "Teléfono",
     "phoneHint": "(por si la tripulación necesita contactarte)",
     "didYouMeanEmail": "¿Quisiste decir {email}?",
-    "rememberedChip": "Reservando como <strong>{name}</strong> · <button>¿No eres tú?</button>"
+    "rememberedChip": "Reservando como <strong>{name}</strong> · <button>¿No eres tú?</button>",
+    "useMainContactEmail": "Usar el correo del contacto principal para este buceador",
+    "bigGroupContactEmail": "¿Sois más de {count}? <a>Contacta con el centro — {contact}</a>",
+    "bigGroupContactPhone": "¿Sois más de {count}? <a>Contacta con el centro — {contact}</a>",
+    "bigGroupContactGeneric": "¿Sois más de {count}? Contacta con el centro."
   },
   "site": {
     "seeMoreHeading": "Ve más yendo despacio",
@@ -564,6 +655,8 @@
   },
   "inquiry": {
     "yourName": "Tu nombre",
+    "yourEmail": "Tu correo",
+    "yourPhone": "Tu teléfono",
     "howManyDivers": "Cuántos buceadores",
     "whenSuits": "Cuándo te viene bien",
     "whenSuitsHint": "Con algo aproximado basta — un mes o «cualquier fin de semana» ya nos dice mucho.",
@@ -575,6 +668,8 @@
     "getInTouch": "Ponte en contacto",
     "noDateBody": "¿Ninguna fecha te viene bien, o tienes una pregunta primero? Responde lo que puedas y escribiremos el correo por ti — se envía desde tu propia aplicación de correo, así que nuestra respuesta llega donde la esperas.",
     "namePlaceholder": "Priya Sharma",
+    "emailPlaceholder": "tu@ejemplo.com",
+    "phonePlaceholder": "+34 600 000 000",
     "whenSuitsPlaceholder": "La semana del 12 de agosto",
     "messagePlaceholder": "Estamos en un crucero y solo bajamos a tierra los martes.",
     "messageSoFar": "Tu mensaje hasta ahora",
@@ -582,6 +677,11 @@
     "orWriteTo": "O escribe a",
     "callLabel": "llama",
     "notSaid": "No indicado",
+    "required": "(obligatorio)",
+    "send": "Enviar consulta",
+    "sending": "Enviando…",
+    "sentHeading": "Consulta enviada",
+    "sentBody": "Nos pondremos en contacto contigo. También puedes escribirnos directamente con los datos de abajo.",
     "subject": "Consulta sobre el curso: {courseTitle}",
     "body": "Hola {shopName},\n\nMe gustaría hacer el curso {courseTitle}.\n\nCuándo: {timing}\nCuántos buceadores: {divers}\nExperiencia hasta ahora: {experience}{hasNote, select, yes {\n\n{note}} other {}}\n\nGracias,{hasName, select, yes {\n{name}} other {}}",
     "experience": {
@@ -589,6 +689,11 @@
       "tried": "He probado el buceo una vez, pero no estoy certificado",
       "certified": "Estoy certificado y tengo mi tarjeta",
       "lapsed": "Estoy certificado, pero ha pasado tiempo"
+    },
+    "errors": {
+      "invalid": "Revisa el campo señalado e inténtalo de nuevo.",
+      "unavailable": "Este curso no está disponible en este momento.",
+      "experienceRequired": "Cuéntanos por dónde vas antes de enviar."
     }
   },
   "account": {
@@ -873,6 +978,7 @@
     "signIn": "Iniciar sesión",
     "startTrial": "Empezar una prueba",
     "mainNavigation": "Navegación principal",
+    "skipToContent": "Saltar al contenido principal",
     "tagline": "Una forma más tranquila de llevar un día de buceo.",
     "sayHello": "Escríbenos — siempre es bienvenido",
     "seeLiveSchedule": "Ver la página de reservas de un buceador →",
@@ -952,6 +1058,8 @@
       "heroTitle": "Lleva todo el día de buceo, desde la reserva hasta el recuento final.",
       "heroDescription": "DiveDay reúne reservas, preparación y el listado del barco en un solo lugar — para que tu equipo dedique menos tiempo al papeleo y más a cuidar de los buceadores.",
       "exploreNote": "Explora una tienda real en funcionamiento. Cambia entre las vistas de propietario, instructor, divemaster, capitán y buceador.",
+      "enterAsLabel": "O entra como:",
+      "enterAsAria": "Probar la demo como {role}",
       "phoneFrameLabel": "Un capitán marcando buceadores embarcados en la pantalla móvil de pase de lista de DiveDay.",
       "dockEyebrow": "En el muelle",
       "dockDetail": "Botones de pase de lista lo bastante grandes para dedos mojados — con o sin señal.",
@@ -1296,6 +1404,15 @@
       "body": "{inviterName} te añadió a {shopName} en DiveDay como {roles}.",
       "setPassword": "Configura tu contraseña para empezar",
       "expiry": "Este enlace caduca el {expiresAt}. Si no esperabas esto, puedes ignorarlo."
+    },
+    "courseInquiry": {
+      "anonymous": "Alguien",
+      "subject": "Nueva consulta de curso: {courseTitle}",
+      "intro": "{name} está preguntando por {courseTitle} desde la página del curso.",
+      "contact": "Correo: {email} · Teléfono: {phone}",
+      "timing": "Cuándo: {timing}",
+      "divers": "Cuántos buceadores: {divers}",
+      "experience": "Experiencia hasta ahora: {experience}"
     },
     "passwordReset": {
       "subject": "Restablece tu contraseña de DiveDay",

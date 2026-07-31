@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ConnectivityStatus } from "@/components/ConnectivityStatus";
 import { buttonClass } from "@/components/ui/button";
+import { fill, pluralForm } from "@/i18n/fill";
+import { formatDateTimeTz } from "@/lib/format";
 import {
   loadOfflineManifest,
   primeOfflineManifestShell,
@@ -56,15 +58,14 @@ export interface OfflineManifestManagerCopy {
   openOfflineRollCall: string;
 }
 
-function fill(template: string, values: Record<string, string>): string {
-  return template.replace(/\{(\w+)\}/g, (match, key) => (key in values ? values[key] : match));
-}
-
 export function OfflineManifestManager({
   payload,
+  locale,
   copy,
 }: {
   payload: OfflineManifestPayload;
+  /** Negotiated request locale (see requestLocale) — never hard-coded, per AGENTS.md. */
+  locale: string;
   copy: OfflineManifestManagerCopy;
 }) {
   const router = useRouter();
@@ -120,13 +121,21 @@ export function OfflineManifestManager({
         if (pendingBefore > 0 || rejected > rejectedBefore) {
           setMessage(
             rejected > 0
-              ? fill(rejected === 1 ? copy.reconcileRejectedOne : copy.reconcileRejectedOther, {
-                  count: String(rejected),
-                })
+              ? fill(
+                  pluralForm(rejected, {
+                    one: copy.reconcileRejectedOne,
+                    other: copy.reconcileRejectedOther,
+                  }),
+                  { count: rejected },
+                )
               : pending > 0
-                ? fill(pending === 1 ? copy.reconcilePendingOne : copy.reconcilePendingOther, {
-                    count: String(pending),
-                  })
+                ? fill(
+                    pluralForm(pending, {
+                      one: copy.reconcilePendingOne,
+                      other: copy.reconcilePendingOther,
+                    }),
+                    { count: pending },
+                  )
                 : copy.reconcileCaughtUp,
           );
           router.refresh();
@@ -391,7 +400,11 @@ export function OfflineManifestManager({
           {saved ? (
             <p className="mt-1 text-xs text-muted">
               {fill(copy.savedSummary, {
-                date: new Date(saved.snapshot.savedAt).toLocaleString(),
+                date: formatDateTimeTz(
+                  new Date(saved.snapshot.savedAt),
+                  locale,
+                  payload.shop.timezone,
+                ),
                 pending: String(pending),
                 rejected: String(rejected),
               })}
@@ -410,7 +423,7 @@ export function OfflineManifestManager({
           {saved ? (
             <a
               href={`/offline-manifest?trip=${tripId}`}
-              className={buttonClass({ variant: "primary" })}
+              className={buttonClass({ variant: "primary", size: "boat" })}
             >
               {copy.openOfflineRollCall}
             </a>

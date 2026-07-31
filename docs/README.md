@@ -10,6 +10,8 @@ writing code, and update them **in the same PR** as the change that invalidates 
 | Doc | What it holds | Update when… |
 | --- | --- | --- |
 | [product/vision.md](product/vision.md) | Why this product exists, who it serves, what "delight-first" means | positioning or personas change |
+| [product/personas.md](product/personas.md) | The standing UX-persona eval frame — fifteen personas plus two cross-cutting lenses, each with a "hold the line on" checklist | a persona's actual needs or context change (new findings go to story-backlog.md, not here) |
+| [product/story-backlog.md](product/story-backlog.md) | Open, partial, or review-blocked tickets, cross-referenced to the persona/lens they serve | a ticket is picked up (close it out) or a new gap is found against personas.md |
 | [product/glossary.md](product/glossary.md) | Dive-industry domain terms and how we model them | you introduce or rename a domain concept |
 | [product/roadmap.md](product/roadmap.md) | What is **not** built yet, in priority order | scope shifts; when an item ships, move it to shipped.md |
 | [product/shipped.md](product/shipped.md) | Scannable index of what's already built, ADR-linked | a slice ships (move it here from the roadmap) |
@@ -41,7 +43,6 @@ not commitments. Their surviving recommendations belong in the roadmap; read for
 | [assessments/competitive-strategy.md](product/assessments/competitive-strategy.md) | The battle plan against DiveAdmin and DiveShop360 and the data-portability wedge |
 | [assessments/fareharbor-positioning.md](product/assessments/fareharbor-positioning.md) | 2026-07-24 coexist-vs-compete strategy against FareHarbor as a booking channel, not a records system |
 | [assessments/switching-guide-landscape.md](product/assessments/switching-guide-landscape.md) | Survey of switching-guide candidates beyond the four shipped, ranked by dive adoption and verified export path |
-| [assessments/ux-personas-20260730.md](product/assessments/ux-personas-20260730.md) | 2026-07-30 fifteen-persona frontend walkthrough plus two lenses (over-explained copy; redundancy/coupling/findability) — 165 prompt-ready improvement tasks, tagged by size and ranked by leverage |
 | [assessments/specialist-optimization-audit-20260731.md](product/assessments/specialist-optimization-audit-20260731.md) | 2026-07-31 eight-lens specialist audit (UX, performance, a11y, SEO, security, ML/data, backend, DX) — ~70 prompt-ready tasks with priority/effort/verification, each grounded in cited code |
 
 **Archive** ([product/archive/](product/archive/)) — delivered or superseded snapshots, kept for
@@ -56,6 +57,7 @@ rationale. Not open work; do not plan from them.
 | [archive/delight-and-experience.md](product/archive/delight-and-experience.md) | Completed delight-and-experience brainstorm; delivered ideas are summarized in shipped.md |
 | [archive/diver-booking-delight-20260729.md](product/archive/diver-booking-delight-20260729.md) | Completed diver-booking-delight follow-on brainstorm; delivered ideas are summarized in shipped.md |
 | [archive/fareharbor-feature-gaps-20260726.md](product/archive/fareharbor-feature-gaps-20260726.md) | 2026-07-26 feature-level audit vs FareHarbor (embed, promo codes, self-service cancel, abandoned cart, reviews, structured data); closed 2026-07-30 — those shipped, and gift cards, charters, and upsells moved to future-features.md |
+| [archive/ux-personas-20260730-findings.md](product/archive/ux-personas-20260730-findings.md) | 2026-07-30 fifteen-persona frontend walkthrough plus two lenses — 165 prompt-ready tasks; closed out 2026-07-31, the vast majority shipped. The standing persona reference is [product/personas.md](product/personas.md); open follow-ons are in [product/story-backlog.md](product/story-backlog.md) |
 
 ## Rules
 

@@ -78,10 +78,15 @@ test("the export never leaves without a staff session", async ({ request }) => {
 test("staff outside owner/manager can't reach export", async ({ page, request }) => {
   // The bundle carries the whole roster's medical evidence, so a captain —
   // staff everywhere else in the app — has no use for this surface. Bounced
-  // to Today rather than shown a read-only/explained page.
+  // to Today with an explanation, not teleported there silently (task 82,
+  // UX persona 11 "Kai").
   await signInAs(page, DEV_STAFF_LOGINS.captain);
   await page.goto("/shop/blue-mantis/settings/export");
-  await expect(page).toHaveURL(/\/shop\/blue-mantis$/);
+  // Not a URL assertion: FlashParams strips `?notice=export_not_authorized`
+  // via history.replaceState shortly after mount — the rendered banner is
+  // the stable signal.
+  await expect(page).toHaveURL(/\/shop\/blue-mantis(\?.*)?$/);
+  await expect(page.getByText("Data export is limited to owners and managers.")).toBeVisible();
   await expect(page.getByRole("link", { name: "Download export" })).toHaveCount(0);
 
   const cookies = await page.context().cookies();

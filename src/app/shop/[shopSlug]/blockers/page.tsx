@@ -161,6 +161,10 @@ export default async function BlockersPage({ params }: { params: Promise<{ shopS
             ? t("blockers.description.none")
             : t("blockers.description.some", { blocked, departures: trips.length })
         }
+        // Today, Blockers, and Check-in each slice the same readiness data on
+        // a different, undocumented horizon (task 141, UX persona lens 17) —
+        // a diver "cleared" here can still show on one of the other two.
+        meta={<p className="text-sm text-muted">{t("blockers.windowNote")}</p>}
       />
 
       {trips.length === 0 ? (

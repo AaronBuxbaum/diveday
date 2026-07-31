@@ -37,7 +37,14 @@ test.describe("staff", () => {
     await page.getByRole("button", { name: "Put it on the board" }).click();
     await expect(page.getByRole("status")).toBeVisible(); // created banner ⇒ the redirect settled
     await page.goto("/shop/blue-mantis/schedule");
-    await page.locator("li").filter({ hasText: tripTitle }).getByRole("link").click();
+    await page
+      .locator("li")
+      .filter({ hasText: tripTitle })
+      // Exact match: an unpriced trip's card also carries a "Set a price
+      // for {title}, ..." link whose accessible name contains the trip
+      // title as a substring.
+      .getByRole("link", { name: tripTitle, exact: true })
+      .click();
     await expect(page).toHaveURL(/\/shop\/blue-mantis\/trips\/[0-9a-f-]+$/);
     const manageTripUrl = page.url();
 
@@ -53,7 +60,16 @@ test.describe("staff", () => {
     // out, then sign back in to finish the staff-side edits below.
     await page.context().clearCookies();
     await page.goto("/shop/blue-mantis/schedule");
-    await page.locator("li").filter({ hasText: tripTitle }).getByRole("link").click();
+    // Scoped to the trip list itself: a day with more than one departure
+    // also renders a same-titled <li> in the month calendar
+    // (src/components/ScheduleCalendar.tsx), and an unscoped locator can
+    // resolve to both.
+    await page
+      .getByRole("list", { name: "Upcoming trips" })
+      .locator("li")
+      .filter({ hasText: tripTitle })
+      .getByRole("link")
+      .click();
     await expect(page.getByRole("heading", { name: siteName })).toBeVisible();
     // Marine life folds behind the per-dive "look for" tap (P2 content fold).
     await page.getByText("What to look for down there").first().click();
@@ -104,7 +120,7 @@ test("the seeded reef briefing shows a satellite map, a gentle route, landmarks,
   await page
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-    .getByRole("link")
+    .getByRole("link", { name: "Two-Tank Reef — Molasses & French" })
     .click();
 
   await expect(page.getByTitle("Satellite map of Molasses Reef")).toBeVisible();

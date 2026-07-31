@@ -3,14 +3,19 @@ import { headers } from "next/headers";
 import { DemoBanner } from "@/components/DemoBanner";
 import { OfflineManifestAutoSave } from "@/components/OfflineManifestAutoSave";
 import { PreserveFormScroll } from "@/components/PreserveFormScroll";
+import { PublicShopFooter, PublicShopHeader } from "@/components/PublicShopChrome";
 import { ShopNav } from "@/components/ShopNav";
+import { SkipLink } from "@/components/SkipLink";
+import { countBlockedDivers } from "@/db/blockers";
 import { getDb } from "@/db/client";
 import { DEMO_SHOP_SLUG } from "@/db/dev-credentials";
+import { countReviewsAwaitingModeration } from "@/db/reviews";
 import { people, personRoles } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
 import { todayNextDepartureTripId } from "@/db/today";
-import { type DiverMessageKey, diverTranslator } from "@/i18n/messages";
+import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { auth } from "@/lib/auth";
 import { EMBED_REQUEST_HEADER } from "@/lib/auth.config";
 import {
@@ -19,49 +24,9 @@ import {
   canViewShopReports,
   isStaff,
 } from "@/lib/authz";
+import { nowDate } from "@/lib/clock";
 import { DEMO_BYPASS_PASSWORD } from "@/lib/credentials";
-
-type DemoRoleId = "owner" | "instructor" | "divemaster" | "captain" | "diver";
-
-/** Data (icon/sample name), not copy — the words come from the demo bundle namespace. */
-const DEMO_ROLE_META: { id: DemoRoleId; icon: string; name: string }[] = [
-  { id: "owner", icon: "👑", name: "Dana Reyes" },
-  { id: "instructor", icon: "🎓", name: "Marcus Webb" },
-  { id: "divemaster", icon: "🤿", name: "Keiko Tanaka" },
-  { id: "captain", icon: "⚓", name: "Sal Moretti" },
-  { id: "diver", icon: "🐬", name: "Public Guest" },
-];
-
-const DEMO_ROLE_KEYS: Record<
-  DemoRoleId,
-  { title: DiverMessageKey; desc: DiverMessageKey; tryThis: DiverMessageKey }
-> = {
-  owner: {
-    title: "demo.roles.owner.title",
-    desc: "demo.roles.owner.desc",
-    tryThis: "demo.roles.owner.tryThis",
-  },
-  instructor: {
-    title: "demo.roles.instructor.title",
-    desc: "demo.roles.instructor.desc",
-    tryThis: "demo.roles.instructor.tryThis",
-  },
-  divemaster: {
-    title: "demo.roles.divemaster.title",
-    desc: "demo.roles.divemaster.desc",
-    tryThis: "demo.roles.divemaster.tryThis",
-  },
-  captain: {
-    title: "demo.roles.captain.title",
-    desc: "demo.roles.captain.desc",
-    tryThis: "demo.roles.captain.tryThis",
-  },
-  diver: {
-    title: "demo.roles.diver.title",
-    desc: "demo.roles.diver.desc",
-    tryThis: "demo.roles.diver.tryThis",
-  },
-};
+import { DEMO_ROLE_KEYS, DEMO_ROLE_META } from "@/lib/demo-roles";
 
 /**
  * Staff-surface shell. If the shop is a demo shop, it hangs the demo banner
@@ -136,9 +101,29 @@ export default async function ShopLayout({
   }
 
   const demoT = showBanner ? diverTranslator(await requestLocale(shop?.defaultLocale)) : undefined;
+  const staffT = staffTranslator(locale);
+
+  const showNav = !isEmbed && Boolean(session?.user) && Boolean(shop);
+  // Small "pending work" counts for the Reviews/Blockers nav badges (task 83,
+  // UX persona 11 "Kai"/12 "Maren") — both queries the shop's own pages
+  // already run on every visit, gated the same way the nav itself is so a
+  // signed-out or embedded render never pays for them.
+  const [navReviewsCount, navBlockersCount] =
+    showNav && session?.user && shop
+      ? await Promise.all([
+          countReviewsAwaitingModeration(db, shop.id),
+          countBlockedDivers(db, shop.id, nowDate()),
+        ])
+      : [0, 0];
 
   return (
     <>
+      {/* Every /shop page fronts ShopNav's 10-15 header tab stops (persona 14,
+          ux-personas-20260730-findings.md) — this jumps a keyboard user past it and the
+          demo banner straight to the page's own content. Rendered even on the
+          public schedule/course pages where ShopNav is absent for staff, so
+          the pattern is unconditional like the manifest's own skip link. */}
+      <SkipLink href="#shop-main-content" label={staffT("shared.skipToContent")} />
       {showBanner && demoT ? (
         <DemoBanner
           currentRole={currentRole}
@@ -175,7 +160,7 @@ export default async function ShopLayout({
           demoPassword={DEMO_BYPASS_PASSWORD}
         />
       ) : null}
-      {!isEmbed && session?.user && shop ? (
+      {showNav && session?.user && shop ? (
         <ShopNav
           shopSlug={shopSlug}
           shopName={shop.name}
@@ -185,9 +170,15 @@ export default async function ShopLayout({
             reports: canViewShopReports(session.user.roles),
             team: canManageStaffAccounts(session.user.roles),
           }}
+          navCounts={{ reviews: navReviewsCount, blockers: navBlockersCount }}
           locale={locale}
         />
       ) : null}
+      {/* The signed-out counterpart to ShopNav above — an anonymous or
+          non-staff visitor gets the shop's own identity instead of staff
+          chrome (task 9). Mutually exclusive with ShopNav by construction:
+          exactly one of the two conditions is ever true. */}
+      {!isEmbed && !(session?.user && shop) && shop ? <PublicShopHeader shop={shop} /> : null}
       {/* Keeps every trip in the shop's near-term board saved offline, not just
           a trip whose live manifest someone opened — see ADR
           20260726-shopwide-offline-manifest-priming. Gated to staff actually
@@ -205,7 +196,12 @@ export default async function ShopLayout({
         <OfflineManifestAutoSave />
       ) : null}
       <PreserveFormScroll />
-      <div className="flex-1">{children}</div>
+      <div id="shop-main-content" tabIndex={-1} className="flex-1 outline-none">
+        {children}
+      </div>
+      {!isEmbed && !(session?.user && shop) && shop ? (
+        <PublicShopFooter shop={shop} t={diverTranslator(locale)} />
+      ) : null}
     </>
   );
 }

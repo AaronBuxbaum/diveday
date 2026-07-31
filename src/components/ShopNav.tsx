@@ -1,9 +1,15 @@
 import Link from "next/link";
+import { InlineConfirmButton } from "@/components/InlineConfirmButton";
 import { KeyboardShortcuts, type KeyboardShortcutsCopy } from "@/components/KeyboardShortcuts";
 import { LogoMark } from "@/components/Logo";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { signOut } from "@/lib/auth";
-import { type ShopNavGates, ShopNavLinks, type ShopNavLinksCopy } from "./ShopNavLinks";
+import {
+  type ShopNavCounts,
+  type ShopNavGates,
+  ShopNavLinks,
+  type ShopNavLinksCopy,
+} from "./ShopNavLinks";
 import { CommandPalette } from "./search/CommandPalette";
 import { buttonClass } from "./ui/button";
 
@@ -17,6 +23,7 @@ export function ShopNav({
   shopName,
   boatBoardingHref,
   navGates,
+  navCounts,
   locale,
 }: {
   shopSlug: string;
@@ -25,6 +32,8 @@ export function ShopNav({
   boatBoardingHref?: string;
   /** Owner/manager surfaces (H-14) to hide from nav, shortcuts, and search for everyone else. */
   navGates: ShopNavGates;
+  /** Small pending-work counts for the Reviews/Blockers nav badges (task 83). */
+  navCounts?: ShopNavCounts;
   locale: string;
 }) {
   const root = `/shop/${shopSlug}`;
@@ -85,6 +94,7 @@ export function ShopNav({
             canManageReports={navGates.reports}
             copy={{
               search: t("shared.commandPalette.search"),
+              dialogAriaLabel: t("shared.commandPalette.dialogAriaLabel"),
               comboboxAriaLabel: t("shared.commandPalette.comboboxAriaLabel"),
               placeholder: t("shared.commandPalette.placeholder"),
               emptyShort: t("shared.commandPalette.emptyShort"),
@@ -110,22 +120,31 @@ export function ShopNav({
               goToWaivers: t("shared.commandPalette.goToWaivers"),
               goToBoarding: t("shared.commandPalette.goToBoarding"),
               goToWalkIn: t("shared.commandPalette.goToWalkIn"),
+              goToOfflineRollCall: t("shared.commandPalette.goToOfflineRollCall"),
+              goToOrders: t("shared.commandPalette.goToOrders"),
             }}
           />
           <KeyboardShortcuts shopSlug={shopSlug} copy={keyboardShortcutsCopy} />
           <form action={signOutAction} className="shrink-0" data-scroll-reset="true">
-            <button
-              type="submit"
-              aria-label={t("shared.shopNav.signOut")}
-              className={buttonClass({ variant: "ghost", size: "sm", className: "rounded-xl" })}
-            >
-              {t("shared.shopNav.signOut")}
-            </button>
+            {/* Two-tap mis-tap protection (task 81): sits right beside Search,
+                so one stray tap used to log the whole crew out mid-shift. */}
+            <InlineConfirmButton
+              idleLabel={t("shared.shopNav.signOut")}
+              confirmLabel={t("shared.shopNav.signOutConfirm")}
+              pendingLabel={t("shared.shopNav.signOutPending")}
+              idleClassName={buttonClass({ variant: "ghost", size: "sm", className: "rounded-xl" })}
+              confirmClassName={buttonClass({
+                variant: "danger",
+                size: "sm",
+                className: "rounded-xl",
+              })}
+            />
           </form>
         </div>
         <ShopNavLinks
           root={root}
           gates={navGates}
+          counts={navCounts}
           copy={
             {
               primaryNavAriaLabel: t("shared.shopNavLinks.primaryNavAriaLabel"),

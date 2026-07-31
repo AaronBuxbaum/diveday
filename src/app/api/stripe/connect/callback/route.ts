@@ -81,6 +81,7 @@ export async function GET(request: Request) {
       chargesEnabled: status.account.chargesEnabled,
       payoutsEnabled: status.account.payoutsEnabled,
       detailsSubmitted: status.account.detailsSubmitted,
+      defaultCurrency: status.account.defaultCurrency,
     });
   }
 

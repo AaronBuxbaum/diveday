@@ -1,5 +1,5 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { daysFromNow, e2eNow } from "./helpers";
+import { acceptAgeAttestation, daysFromNow, e2eNow } from "./helpers";
 
 test("an uncertified visitor can enroll in an instructor-staffed Discover Scuba session and save rental preferences", async ({
   page,
@@ -25,6 +25,7 @@ test("an uncertified visitor can enroll in an instructor-staffed Discover Scuba 
   await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
   await page.getByLabel("Name").fill("Nora Quinn");
   await page.getByLabel("Email").fill("nora@example.com");
+  await acceptAgeAttestation(page);
   await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
   await expect(page.getByRole("heading", { name: /You’re on the boat, Nora/ })).toBeVisible();
 
@@ -41,10 +42,45 @@ test("a regular fun-dive trip does not show the taster-session gift nudge", asyn
   await page
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-    .getByRole("link")
+    .getByRole("link", { name: "Two-Tank Reef — Molasses & French" })
     .click();
   await expect(page).toHaveURL(/\/schedule\/[0-9a-f-]{36}/);
   await expect(page.getByText("Giving this dive as a gift?")).not.toBeVisible();
+});
+
+test("a signed-out visitor browses the public course catalog to certification paths, with the editor still gated", async ({
+  page,
+}) => {
+  await page.goto("/shop/blue-mantis/courses");
+  await expect(page.getByRole("heading", { level: 1, name: "Courses" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 2, name: "Open Water Diver", exact: true }),
+  ).toBeVisible();
+  // No staff affordance renders at all — not disabled, absent (AGENTS.md
+  // hard rule: gate by not rendering).
+  await expect(page.getByRole("link", { name: "Edit" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /^Hide|^Show/ })).toHaveCount(0);
+
+  await page
+    .getByRole("link", { name: "Not sure where to start? See certification paths" })
+    .click();
+  await expect(page).toHaveURL(/\/courses\/paths$/);
+  await expect(page.getByRole("heading", { level: 1, name: "Certification paths" })).toBeVisible();
+  const seededPath = page.getByRole("link", { name: "From first breath to Rescue Diver" });
+  await expect(seededPath).toBeVisible();
+  await expect(page.getByLabel("Path name")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Create path" })).toHaveCount(0);
+
+  await seededPath.click();
+  await expect(page).toHaveURL(/\/courses\/paths\/from-first-breath-to-rescue-diver$/);
+  await expect(
+    page.getByRole("heading", { level: 1, name: "From first breath to Rescue Diver" }),
+  ).toBeVisible();
+  const steps = page.getByRole("list");
+  await expect(steps.getByRole("link", { name: "Discover Scuba Diving" })).toBeVisible();
+  await expect(steps.getByRole("link", { name: "Rescue Diver" })).toBeVisible();
+  // No path editor surfaces for a signed-out visitor.
+  await expect(page.getByRole("checkbox", { name: /Offer this path/ })).toHaveCount(0);
 });
 
 test.describe("staff", () => {
@@ -132,11 +168,17 @@ test.describe("staff", () => {
     await expect(page.getByRole("heading", { name: "Day 4" })).toBeVisible();
     await expect(page.getByText("Do I need my own gear?")).toBeVisible();
 
-    // The staff pages above and below it stay closed to that same visitor.
+    // The editor stays closed to that same visitor. The catalog index above it
+    // is a public page now (task 2) — it renders the catalog rather than
+    // bouncing to sign-in, and carries no edit affordance.
     await page.goto("/shop/blue-mantis/courses/rescue-diver/edit");
     await expect(page).toHaveURL(/\/sign-in/);
-    await page.goto("/shop/blue-mantis/courses");
+    await page.goto("/shop/blue-mantis/courses/new");
     await expect(page).toHaveURL(/\/sign-in/);
+    await page.goto("/shop/blue-mantis/courses");
+    await expect(page).not.toHaveURL(/\/sign-in/);
+    await expect(page.getByRole("heading", { level: 1, name: "Courses" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Edit" })).toHaveCount(0);
   });
 
   test("oversize and over-limit course photos are rejected client-side (CR-011)", async ({
@@ -190,12 +232,17 @@ test.describe("staff", () => {
     // A course session refuses bookings until an instructor is on its crew — the
     // rule that makes this flow safe, and the reason the seeded session works.
     await page.goto("/shop/blue-mantis/schedule");
-    await page.getByRole("link", { name: new RegExp(sessionTitle) }).click();
+    // Anchored to the full accessible name: an unpriced trip's card also
+    // carries a "Set a price for {title}, ..." link whose name contains the
+    // session title as a substring, so an unanchored pattern matches both.
+    await page.getByRole("link", { name: new RegExp(`^${sessionTitle}$`) }).click();
     await expect(
       page.getByText("cannot take bookings until one assigned crew member has the instructor role"),
     ).toBeVisible();
-    await page.getByLabel(/Marcus Webb/).check();
-    await page.getByRole("button", { name: "Save crew" }).click();
+    // Per-person assign, the same mutation Today's departure board uses
+    // (Lens 17 task 139) — not a checkbox roster with a single submit.
+    await page.getByLabel("Assign crew").selectOption({ label: "Marcus Webb" });
+    await expect(page.getByRole("button", { name: "Unassign Marcus Webb" })).toBeVisible();
     await expect(
       page.getByText("cannot take bookings until one assigned crew member has the instructor role"),
     ).toBeHidden();
@@ -213,6 +260,7 @@ test.describe("staff", () => {
     const diver = `Ravi ${e2eNow().getTime()}`;
     await page.getByLabel("Name").fill(diver);
     await page.getByLabel("Email").fill(`ravi-${e2eNow().getTime()}@example.com`);
+    await acceptAgeAttestation(page);
     await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
     await expect(page.getByRole("heading", { name: /You’re on the boat, Ravi/ })).toBeVisible();
   });
@@ -236,10 +284,12 @@ test.describe("staff", () => {
     await expect(page.getByRole("status")).toBeVisible();
 
     await page.goto("/shop/blue-mantis/schedule");
-    await page.getByRole("link", { name: new RegExp(sessionTitle) }).click();
-    await page.getByLabel(/Marcus Webb/).check(); // the seeded instructor
-    await page.getByRole("button", { name: "Save crew" }).click();
-    await expect(page.getByRole("status")).toContainText("Crew updated");
+    // Anchored to the full accessible name: an unpriced trip's card also
+    // carries a "Set a price for {title}, ..." link whose name contains the
+    // session title as a substring, so an unanchored pattern matches both.
+    await page.getByRole("link", { name: new RegExp(`^${sessionTitle}$`) }).click();
+    await page.getByLabel("Assign crew").selectOption({ label: "Marcus Webb" }); // the seeded instructor
+    await expect(page.getByRole("button", { name: "Unassign Marcus Webb" })).toBeVisible();
     const tripUrl = page.url();
 
     await page.context().clearCookies();
@@ -262,6 +312,7 @@ test.describe("staff", () => {
         await nameField.fill(`Ratio Diver ${label}`);
         await emailField.fill(`ratio-${stamp}-${label}@example.com`);
       }
+      await acceptAgeAttestation(page);
       await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
       await expect(page.getByRole("heading", { name: /You’re on the boat/ })).toBeVisible();
     };
@@ -277,6 +328,7 @@ test.describe("staff", () => {
     await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
     await page.getByLabel("Name", { exact: true }).fill(`Ratio Diver ${stamp}-9`);
     await page.getByLabel("Email", { exact: true }).fill(`ratio-${stamp}-9@example.com`);
+    await acceptAgeAttestation(page);
     await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
     await expect(
       page.getByText("This session is at its instructor-to-student ratio limit"),
@@ -319,4 +371,41 @@ test("a diver with no workable date gets a written email instead of a dead end",
   expect(params.get("subject")).toBe("Course inquiry: Open Water Diver");
   expect(params.get("body")).toContain("Experience so far: I have never dived before");
   expect(params.get("body")).toContain("Mira Delgado");
+});
+
+test("a blank inquiry is rejected, not defaulted — experience is required (task 8)", async ({
+  page,
+}) => {
+  await page.goto("/shop/blue-mantis/courses/open-water-diver");
+  const inquiry = page.getByRole("region", { name: "Get in touch" });
+  await inquiry.scrollIntoViewIfNeeded();
+
+  // No experience picked: every path the composer offers refuses to go
+  // through, not just the one a diver happens to reach for first.
+  await inquiry.getByRole("button", { name: "Send inquiry" }).click();
+  await expect(inquiry.getByText("Let us know where you are up to before sending.")).toBeVisible();
+  await expect(inquiry.getByText("Inquiry sent")).toHaveCount(0);
+
+  await inquiry.getByRole("link", { name: "Open in your email app" }).click();
+  await expect(inquiry.getByText("Let us know where you are up to before sending.")).toBeVisible();
+});
+
+test("a diver's inquiry is recorded server-side and the shop's details stay reachable after sending", async ({
+  page,
+}) => {
+  await page.goto("/shop/blue-mantis/courses/open-water-diver");
+  const inquiry = page.getByRole("region", { name: "Get in touch" });
+  await inquiry.scrollIntoViewIfNeeded();
+  await page.getByLabel("Your name").fill("Sena Okafor");
+  await page.getByLabel("Your email").fill("sena.okafor.e2e@example.com");
+  await page.getByLabel("Your phone").fill("+1 305 555 0199");
+  await page.getByLabel("Where you are up to").selectOption("certified");
+
+  await inquiry.getByRole("button", { name: "Send inquiry" }).click();
+
+  // The composer collapses into a confirmation — task 7's server-recorded
+  // send, not just the mailto fallback — and still leaves the shop's own
+  // contact details on screen underneath it.
+  await expect(inquiry.getByText("Inquiry sent")).toBeVisible();
+  await expect(inquiry.getByText("hello@demo.invalid")).toBeVisible();
 });

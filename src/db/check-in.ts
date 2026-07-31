@@ -2,6 +2,7 @@ import { and, asc, count, eq, gte, ilike, inArray, lte, ne, or } from "drizzle-o
 import { nowDate } from "@/lib/clock";
 import type { ReadinessResult } from "@/lib/readiness";
 import type { AppDb, DbExecutor } from "./client";
+import { listDepartureBoardedBookingIds } from "./manifests";
 import { getBookingReadiness, listTripsReadiness } from "./readiness";
 import { activityEvents, bookings, people, personRoles, trips } from "./schema";
 
@@ -21,6 +22,15 @@ export type CheckInQueueRow = {
   endsAt: Date;
   bookingStatus: "booked" | "checked_in";
   readiness: ReadinessResult;
+  /**
+   * The diver's latest departure roll-call record on the manifest is
+   * "boarded". Check-in and boarding are two different questions — arrived
+   * vs. aboard — and `checked_in` used to have exactly one reader in the app
+   * (this queue itself never showed boarding). See `checkedIn` on
+   * `ManifestDiverInput` for the manifest's half of the same fix (task 149,
+   * UX persona lens 17).
+   */
+  boarded: boolean;
 };
 
 /**
@@ -77,10 +87,12 @@ export async function listCheckInQueue(
   for (const row of readinessRows) {
     readinessByBooking.set(row.booking.id, row.readiness);
   }
+  const boardedBookingIds = await listDepartureBoardedBookingIds(db, shopId, tripIds);
 
   return rows.map((row) => ({
     ...row,
     bookingStatus: row.bookingStatus as "booked" | "checked_in",
+    boarded: boardedBookingIds.has(row.bookingId),
     readiness: readinessByBooking.get(row.bookingId) ?? {
       status: "blocked",
       blockers: [{ code: "readiness_unavailable" }],
@@ -136,6 +148,10 @@ export type CheckInOutcome =
       ok: false;
       reason: "not_found" | "already_checked_in" | "not_bookable" | "not_ready" | "staff_not_found";
       blockers?: ReadinessResult["blockers"];
+      // Only set on `not_ready` — the caller needs it to link straight back to
+      // the diver's guest row (`trips/[id]/guests#booking-<id>`), the same
+      // rich-link pattern the manifest's `not_ready` refusal already uses.
+      tripId?: string;
     };
 
 /**
@@ -188,7 +204,12 @@ export async function checkInBooking(
 
     const readiness = await getBookingReadiness(tx as DbExecutor, input.shopId, booking.id);
     if (readiness?.status !== "ready") {
-      return { ok: false, reason: "not_ready", blockers: readiness?.blockers };
+      return {
+        ok: false,
+        reason: "not_ready",
+        blockers: readiness?.blockers,
+        tripId: booking.tripId,
+      };
     }
 
     const [updated] = await tx

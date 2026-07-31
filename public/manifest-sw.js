@@ -1,4 +1,12 @@
+// Bump the trailing "-v<n>" on a deploy that changes the offline shell, and
+// bump `OFFLINE_MANIFEST_SHELL_VERSION` in src/lib/offline-manifests.ts to
+// match — this file is static and outside the Next.js build, so it can't
+// import that constant; the two are compared at runtime instead
+// (`getActiveOfflineShellVersion`) to tell a crew member holding a copy of
+// this worker from an older deploy, rather than serving it with no signal
+// anything's stale (task 124 / persona 15, Leo).
 const CACHE_NAME = "diveday-offline-manifest-shell-v1";
+const SHELL_VERSION = CACHE_NAME.slice(CACHE_NAME.lastIndexOf("-v") + 1);
 const OFFLINE_SHELL = "/offline-manifest";
 // Matches the live, authenticated roll-call page this shell backs up —
 // never any other /shop route — so a captain who reloads mid-departure with
@@ -64,6 +72,10 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("message", (event) => {
+  if (event.data?.type === "GET_SHELL_VERSION") {
+    event.ports[0]?.postMessage({ version: SHELL_VERSION });
+    return;
+  }
   if (event.data?.type === "CACHE_OFFLINE_MANIFEST_SHELL") {
     // Reply on the caller's port instead of firing and forgetting: the client
     // treats a save as safe to announce as "ready" only once the shell (and

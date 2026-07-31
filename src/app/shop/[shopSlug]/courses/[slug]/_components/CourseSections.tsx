@@ -1,8 +1,14 @@
 import Link from "next/link";
+import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import type { Course } from "@/db/schema";
-import type { DiverTranslator } from "@/i18n/messages";
-import { type CourseFaq, type CourseScheduleDay, formatScheduleDayTime } from "@/lib/courses";
+import type { DiverMessageKey, DiverTranslator } from "@/i18n/messages";
+import {
+  type CourseFaq,
+  type CourseScheduleDay,
+  formatScheduleDayTime,
+  resolveImageAlt,
+} from "@/lib/courses";
 import { formatShortDate, formatTime, formatTimeRangeTz } from "@/lib/format";
 import { capacityLabel, isFull } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
@@ -19,6 +25,21 @@ export type PathTrail = {
   title: string;
   summary: string | null;
   steps: Array<{ id: string; title: string; slug: string }>;
+};
+
+/**
+ * The known certification agencies' full names, for one first-mention
+ * expansion on the course hero (task 5) — a newcomer meets "PADI" with no
+ * idea it's an acronym, let alone what it stands for. Anything outside this
+ * short, shop-typed list (src/app/shop/[shopSlug]/divers/[personId]/actions.ts
+ * has the same enum) falls back to the bare code, same as before.
+ */
+const AGENCY_FULL_NAME_KEYS: Record<string, DiverMessageKey> = {
+  padi: "course.agencyFullNames.padi",
+  ssi: "course.agencyFullNames.ssi",
+  naui: "course.agencyFullNames.naui",
+  sdi: "course.agencyFullNames.sdi",
+  tdi: "course.agencyFullNames.tdi",
 };
 
 /** Photo from a shop's blob store, a bundled path, or a link the shop pasted. */
@@ -53,23 +74,32 @@ export function CourseHero({
     maximumFractionDigits: 0,
   });
   return (
-    <header className="overflow-hidden rounded-3xl border border-border bg-surface shadow-sm">
+    <div className="overflow-hidden rounded-3xl border border-border bg-surface shadow-sm">
       {course.heroImageUrl ? (
         <CourseImage
           src={course.heroImageUrl}
-          alt=""
+          alt={resolveImageAlt(
+            course.heroImageAlt,
+            t("course.photoAltFallback", { course: course.title, n: 1 }),
+          )}
           className="h-56 w-full object-cover sm:h-80"
         />
       ) : null}
       <div className="p-6 sm:p-8">
-        <p className="text-xs font-semibold tracking-[0.18em] text-primary uppercase">
-          {t("course.agencyCourse", { agency: course.agency.toUpperCase() })}
-        </p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">{course.title}</h1>
-        {course.summary ? (
-          <p className="mt-3 max-w-2xl text-lg leading-relaxed text-muted">{course.summary}</p>
-        ) : null}
-        <div className="mt-6 flex flex-wrap items-center gap-4">
+        <ShopPageHeader
+          eyebrow={t("course.agencyCourse", {
+            // First mention on the page expands the acronym (task 5) — "PADI"
+            // means nothing to a diver who has never heard of a certification
+            // agency; an unrecognized/shop-typed-"other" agency falls back to
+            // the bare code, same as before this.
+            agency: AGENCY_FULL_NAME_KEYS[course.agency]
+              ? t(AGENCY_FULL_NAME_KEYS[course.agency])
+              : course.agency.toUpperCase(),
+          })}
+          title={course.title}
+          description={course.summary ?? undefined}
+        />
+        <div className="flex flex-wrap items-center gap-4">
           {totalCents === null ? null : (
             <p className="text-2xl font-semibold tabular-nums">
               {usd.format(totalCents / 100)}
@@ -87,7 +117,7 @@ export function CourseHero({
           ) : null}
         </div>
       </div>
-    </header>
+    </div>
   );
 }
 
@@ -357,10 +387,13 @@ export function CourseIncludes({
 
 export function CourseGallery({
   imageUrls,
+  imageAlts,
   title,
   t,
 }: {
   imageUrls: string[];
+  /** Parallel to `imageUrls`; a blank entry falls back to a generated caption. */
+  imageAlts: string[];
   title: string;
   t: DiverTranslator;
 }) {
@@ -369,11 +402,15 @@ export function CourseGallery({
     <section className="mt-12">
       <h2 className="sr-only">{t("course.galleryHeading", { course: title })}</h2>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        {imageUrls.map((url) => (
+        {imageUrls.map((url, index) => (
           <CourseImage
             key={url}
             src={url}
-            alt=""
+            // The hero photo claims "photo 1"; gallery photos continue from 2.
+            alt={resolveImageAlt(
+              imageAlts[index],
+              t("course.photoAltFallback", { course: title, n: index + 2 }),
+            )}
             className="h-40 w-full rounded-2xl border border-border object-cover sm:h-48"
           />
         ))}

@@ -87,6 +87,10 @@ test("a published review can be taken back down, and leaves the public page with
   const comment = "Vis was unreal and the crew found us a turtle on the second tank.";
   const published = page.locator("li").filter({ hasText: comment });
   await expect(published.getByText("Published")).toBeVisible();
+  // Hiding a published review is asked to confirm (SubmitButton's
+  // confirmMessage → window.confirm) — unhandled, Playwright auto-dismisses
+  // the dialog and the form never submits.
+  page.once("dialog", (dialog) => void dialog.accept());
   await published.getByRole("button", { name: "Hide" }).click();
   await expect(
     page.getByText("Review hidden — it no longer counts toward your rating."),

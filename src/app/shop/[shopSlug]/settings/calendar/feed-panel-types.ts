@@ -33,6 +33,7 @@ export type CalendarFeedCopy = {
   turningOff: string;
   copy: string;
   copied: string;
+  copyFailed: string;
   confirmRotate: string;
   confirmTurnOff: string;
   newLinkHeading: string;

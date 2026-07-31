@@ -33,7 +33,14 @@ test("staff schedules a trip and it appears on shop and public schedules", async
   // public dive-plan briefing ("Your N-dive plan") is the signed-out view.
   await page.context().clearCookies();
   await page.goto("/shop/blue-mantis/schedule");
-  const card = page.locator("li").filter({ hasText: title });
+  // Scoped to the trip list itself: an unrelated trip sharing this one's
+  // calendar day also renders a same-titled <li> in the month calendar
+  // (src/components/ScheduleCalendar.tsx), and an unscoped locator can
+  // resolve to both.
+  const card = page
+    .getByRole("list", { name: "Upcoming trips" })
+    .locator("li")
+    .filter({ hasText: title });
   await expect(card).toBeVisible();
   await expect(card.getByText("8 spots left")).toBeVisible();
 

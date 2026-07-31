@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { canPersonExportShopData, loadShopExportCounts } from "@/db/export";
 import { getShopById } from "@/db/shops";
@@ -22,8 +24,11 @@ export default async function DataExportPage() {
   const db = await getDb();
 
   // Checked against the database, not the JWT — see the download route.
+  // Bounced to Today with an explanatory notice rather than teleporting
+  // silently (task 82, UX persona 11 "Kai") — Today already renders
+  // `shopHome.notice.*` codes.
   if (!(await canPersonExportShopData(db, session.user.shopId, session.user.personId))) {
-    redirect(`/shop/${session.user.shopSlug}`);
+    redirect(`/shop/${session.user.shopSlug}?notice=export_not_authorized`);
   }
 
   const families = await loadShopExportCounts(db, session.user.shopId);
@@ -39,11 +44,19 @@ export default async function DataExportPage() {
         title={t("settings.export.title")}
         description={t("settings.export.description")}
         actions={
-          <DownloadExportButton
-            href={`/shop/${session.user.shopSlug}/settings/export/download`}
-            idleLabel={t("settings.export.downloadButton.idle")}
-            acknowledgedLabel={t("settings.export.downloadButton.acknowledged")}
-          />
+          <>
+            <Link
+              href={`/shop/${session.user.shopSlug}/settings`}
+              className={buttonClass({ variant: "secondary", className: "text-foreground" })}
+            >
+              {t("settings.main.backToSettings")}
+            </Link>
+            <DownloadExportButton
+              href={`/shop/${session.user.shopSlug}/settings/export/download`}
+              idleLabel={t("settings.export.downloadButton.idle")}
+              acknowledgedLabel={t("settings.export.downloadButton.acknowledged")}
+            />
+          </>
         }
       />
 

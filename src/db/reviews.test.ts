@@ -225,3 +225,55 @@ describe("setReviewPublished", () => {
     expect(await countReviewsAwaitingModeration(db, shop.id)).toBe(1);
   });
 });
+
+describe("listShopReviewsForStaff onlyWaiting filter", () => {
+  it("narrows the queue to unpublished reviews and its total along with it", async () => {
+    const { db, shop, bookingIds } = await reviewContext(["Diver One", "Diver Two"]);
+    await submitTripReview(db, { bookingId: bookingIds[0], rating: 5 }); // bare rating, publishes
+    await submitTripReview(db, {
+      bookingId: bookingIds[1],
+      rating: 3,
+      comment: "Waiting on a read",
+    });
+
+    const all = await listShopReviewsForStaff(db, shop.id);
+    expect(all.total).toBe(2);
+
+    const waiting = await listShopReviewsForStaff(db, shop.id, { onlyWaiting: true });
+    expect(waiting.total).toBe(1);
+    expect(waiting.reviews.every((r) => !r.isPublished)).toBe(true);
+    expect(waiting.reviews.map((r) => r.comment)).toEqual(["Waiting on a read"]);
+  });
+
+  it("comes back empty once every review with words has been moderated", async () => {
+    const { db, shop, bookingIds } = await reviewContext();
+    await submitTripReview(db, { bookingId: bookingIds[0], rating: 4, comment: "All caught up" });
+    const [review] = (await listShopReviewsForStaff(db, shop.id, { onlyWaiting: true })).reviews;
+    await setReviewPublished(db, shop.id, review.id, true);
+
+    const waiting = await listShopReviewsForStaff(db, shop.id, { onlyWaiting: true });
+    expect(waiting).toEqual({ reviews: [], nextCursor: null, total: 0 });
+  });
+});
+
+describe("getShopReviewAggregate since", () => {
+  it("scopes the average to reviews published on or after the given instant", async () => {
+    const { db, shop, bookingIds } = await reviewContext(["Diver One", "Diver Two"]);
+    // Both bare ratings publish immediately, at whatever instant the test runs.
+    await submitTripReview(db, { bookingId: bookingIds[0], rating: 5 });
+    await submitTripReview(db, { bookingId: bookingIds[1], rating: 3 });
+
+    const past = new Date("2000-01-01T00:00:00.000Z");
+    const future = new Date("2999-01-01T00:00:00.000Z");
+    expect(await getShopReviewAggregate(db, shop.id, { since: past })).toEqual({
+      count: 2,
+      average: 4,
+    });
+    expect(await getShopReviewAggregate(db, shop.id, { since: future })).toEqual({
+      count: 0,
+      average: null,
+    });
+    // Omitted `since` keeps behaving as the all-time aggregate.
+    expect(await getShopReviewAggregate(db, shop.id)).toEqual({ count: 2, average: 4 });
+  });
+});

@@ -23,6 +23,10 @@ const accountObjectSchema = z.object({
   charges_enabled: z.boolean(),
   payouts_enabled: z.boolean(),
   details_submitted: z.boolean(),
+  // Optional: a fixture or an unusual event payload missing it still
+  // parses — `setShopStripeAccountStatus` leaves the stored currency
+  // untouched rather than resetting it to "usd" (task 60).
+  default_currency: z.string().optional(),
 });
 
 /**
@@ -107,6 +111,7 @@ export async function POST(request: Request) {
           chargesEnabled: account.data.charges_enabled,
           payoutsEnabled: account.data.payouts_enabled,
           detailsSubmitted: account.data.details_submitted,
+          defaultCurrency: account.data.default_currency,
         });
       }
       break;

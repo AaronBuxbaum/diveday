@@ -62,9 +62,15 @@ describe("shop stripe accounts", () => {
 
     const refreshed = await refreshShopStripeAccountStatus(db, "acct_123", {
       status: "ok",
-      account: { chargesEnabled: true, payoutsEnabled: false, detailsSubmitted: true },
+      account: {
+        chargesEnabled: true,
+        payoutsEnabled: false,
+        detailsSubmitted: true,
+        defaultCurrency: "eur",
+      },
     });
     expect(refreshed).toMatchObject({ chargesEnabled: true, payoutsEnabled: false });
+    expect(refreshed?.defaultCurrency).toBe("eur"); // task 60 — flows through, not hardcoded
 
     const afterFailedLookup = await refreshShopStripeAccountStatus(db, "acct_123", {
       status: "failed",

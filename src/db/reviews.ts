@@ -1,4 +1,4 @@
-import { and, count, desc, eq, isNotNull, lt, or, sql } from "drizzle-orm";
+import { and, count, desc, eq, gte, isNotNull, lt, or, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import {
   EMPTY_REVIEW_AGGREGATE,
@@ -109,11 +109,14 @@ export async function getReviewForBooking(
 /**
  * The shop's published rating, counted in the database. Published rows only —
  * the same set the public list renders, so the number and the reviews under it
- * can never describe different things.
+ * can never describe different things. Pass `since` to scope it to reviews
+ * published on or after an instant (the moderation page's "this month" line);
+ * omitted, it is the shop's all-time rating.
  */
 export async function getShopReviewAggregate(
   db: DbExecutor,
   shopId: string,
+  options: { since?: Date } = {},
 ): Promise<ReviewAggregate> {
   const [row] = await db
     .select({
@@ -121,7 +124,13 @@ export async function getShopReviewAggregate(
       sum: sql<number>`coalesce(sum(${tripReviews.rating}), 0)::int`,
     })
     .from(tripReviews)
-    .where(and(eq(tripReviews.shopId, shopId), eq(tripReviews.isPublished, true)));
+    .where(
+      and(
+        eq(tripReviews.shopId, shopId),
+        eq(tripReviews.isPublished, true),
+        options.since ? gte(tripReviews.publishedAt, options.since) : undefined,
+      ),
+    );
   return row ? reviewAggregate(row.count, row.sum) : EMPTY_REVIEW_AGGREGATE;
 }
 
@@ -220,16 +229,24 @@ export type StaffReviewPage = {
  * stable tiebreak), same idiom as `pagedUpcomingTripsWithCounts` and
  * `listDiverSummaries` so a shop with years of trips costs one page, not the
  * whole table.
+ *
+ * `onlyWaiting` narrows the same query to unpublished rows only — the
+ * "Waiting on you" tab. It stays a plain extra `where` clause rather than a
+ * different sort order, so the keyset cursor (creation time, then id) keeps
+ * meaning the same thing in both tabs.
  */
 export async function listShopReviewsForStaff(
   db: DbExecutor,
   shopId: string,
-  options: { cursor?: string; limit?: number } = {},
+  options: { cursor?: string; limit?: number; onlyWaiting?: boolean } = {},
 ): Promise<StaffReviewPage> {
   const limit = options.limit ?? STAFF_REVIEW_PAGE_SIZE;
   const after = decodeCursor(options.cursor);
   const afterDate = after ? new Date(after[0]) : null;
-  const scope = eq(tripReviews.shopId, shopId);
+  const scope = and(
+    eq(tripReviews.shopId, shopId),
+    options.onlyWaiting ? eq(tripReviews.isPublished, false) : undefined,
+  );
 
   const [rows, [counted]] = await Promise.all([
     db

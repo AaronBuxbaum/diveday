@@ -25,7 +25,10 @@ export function DetailsSection({
 }) {
   const t = staffTranslator(locale);
   return (
-    <section className="mt-10">
+    // Anchor target for the builder's "No price set" flag (task 150, UX
+    // persona lens 17) — a builder-created trip publishes with no price and
+    // no warning; this is where staff land to fix it.
+    <section id="details" className="mt-10 scroll-mt-24">
       <h2 className="text-lg font-semibold">{t("trips.details.heading")}</h2>
       <form action={action} className="mt-4 flex flex-col gap-5">
         <FieldGrid columns={1} className="max-w-2xl gap-y-5">

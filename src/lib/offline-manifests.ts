@@ -18,6 +18,22 @@ import type { ReadinessBlocker, ReadinessBlockerCode } from "./readiness";
  * discarded rather than lingering to their natural 14-day expiry.
  */
 export const OFFLINE_MANIFEST_RECORD_VERSION = 4 as const;
+
+/**
+ * The offline shell's own cache generation — distinct from
+ * `OFFLINE_MANIFEST_RECORD_VERSION` above, which versions the encrypted
+ * snapshot payload. This one versions the *app shell itself* (the cached
+ * HTML/JS `public/manifest-sw.js` serves while offline) and must be bumped
+ * there in lockstep — `CACHE_NAME`'s `-v<n>` suffix — whenever a deploy
+ * changes that shell. `manifest-sw.js` is a static file outside the Next.js
+ * build, so it can't import this constant directly; the two are compared at
+ * runtime instead (`getActiveOfflineShellVersion` in
+ * `offline-manifest-store.ts`) to warn a crew member holding a copy of the
+ * shell from an older deploy (task 124 / persona 15, Leo) rather than
+ * silently serving it with no signal anything's stale.
+ */
+export const OFFLINE_MANIFEST_SHELL_VERSION = "v1";
+
 export const OFFLINE_MANIFEST_CURRENT_MS = 15 * 60 * 1000;
 export const OFFLINE_MANIFEST_AGING_MS = 4 * 60 * 60 * 1000;
 export const OFFLINE_MANIFEST_MAX_RETENTION_MS = 14 * 24 * 60 * 60 * 1000;
@@ -191,14 +207,33 @@ export function isOfflineManifestExpired(
   return new Date(snapshot.expiresAt) <= now;
 }
 
+/**
+ * The real fail-closed authority for offline roll call, independent of the
+ * UI. Mirrors `recordRollCall`'s server-side gate exactly (src/db/manifests.ts:
+ * `if (input.status === "boarded" && checkpoint === "departure")`): readiness
+ * blocks boarding only at the "departure" checkpoint. After any numbered dive,
+ * boarding is a pure head count — a diver already aboard is recorded present
+ * regardless of a paperwork state that changed after the boat left.
+ *
+ * A missing `checkpoint` argument used to make this the same check at every
+ * checkpoint, always keyed off `snapshot.manifests[0]` (whichever manifest
+ * happens to be first, always "departure" per `rollCallCheckpoints`) — so an
+ * offline board recorded after dive 1 against a not-ready snapshot was
+ * silently refused here even though the UI renders a live "Board" button for
+ * exactly that case (`ready || !isDeparture` in OfflineManifestView). See the
+ * regression test in offline-manifests.test.ts and offline-manifest-store.test.ts.
+ */
 export function canRecordOfflineStatus(
   snapshot: OfflineManifestSnapshot,
   bookingId: string,
   status: OfflineRollCallEvent["status"],
+  checkpoint: OfflineManifestSnapshot["manifests"][number]["checkpoint"],
 ): boolean {
   const diver = snapshot.manifests[0]?.divers.find((entry) => entry.bookingId === bookingId);
   if (!diver) return false;
-  return status === "not_boarded" || diver.readiness.status === "ready";
+  if (status === "not_boarded") return true;
+  if (checkpoint !== "departure") return true;
+  return diver.readiness.status === "ready";
 }
 
 export function latestOfflineRollCall(

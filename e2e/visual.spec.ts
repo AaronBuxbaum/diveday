@@ -350,7 +350,7 @@ for (const scheme of ["light", "dark"] as const) {
       await page
         .locator("li")
         .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-        .getByRole("link")
+        .getByRole("link", { name: "Two-Tank Reef — Molasses & French" })
         .click();
       await page.getByTitle("Satellite map of Molasses Reef").waitFor();
       await capture(page, "site-briefing", scheme);
@@ -405,7 +405,7 @@ for (const scheme of ["light", "dark"] as const) {
       await staffPage
         .locator("li")
         .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-        .getByRole("link")
+        .getByRole("link", { name: "Two-Tank Reef — Molasses & French", exact: true })
         .click();
       await staffPage.waitForURL(/\/shop\/blue-mantis\/trips\//);
       await staffPage
@@ -434,7 +434,7 @@ for (const scheme of ["light", "dark"] as const) {
       await page
         .locator("li")
         .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-        .getByRole("link")
+        .getByRole("link", { name: "Two-Tank Reef — Molasses & French" })
         .click();
       await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
       await page.getByLabel("Name", { exact: true }).fill("Visual Regression Diver");
@@ -748,14 +748,23 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { level: 1, name: "How's your month" }).waitFor();
         await capture(page, "reports", scheme);
 
-        // The waiver: the release editor plus the signed-record integrity
-        // audit, paginated (`listWaiverIntegrityAudit`, `WAIVER_INTEGRITY_PAGE_SIZE`)
-        // so the demo shop's 150+ signed records render as one page with a
-        // "Show more records" link rather than a silent truncation notice.
+        // The waiver: two tabs (task 155) — Template is the release editor;
+        // Signatures is the signed-record evidence audit, paginated
+        // (`listWaiverIntegrityAudit`, `WAIVER_INTEGRITY_PAGE_SIZE`) so the
+        // demo shop's 150+ signed records render as one page with a "Show
+        // more records" link rather than a silent truncation notice.
         await page.goto("/shop/blue-mantis/waivers");
-        await page.getByRole("heading", { level: 1, name: "Waiver" }).waitFor();
-        await page.getByRole("link", { name: "Show more records" }).waitFor();
+        await page.getByRole("heading", { level: 1, name: "Waiver template" }).waitFor();
         await capture(page, "staff-waivers", scheme);
+
+        await page
+          .getByRole("navigation", { name: "Waiver sections" })
+          .getByRole("link", { name: "Signatures" })
+          .click();
+        await page.waitForURL(/\/waivers\/signatures/);
+        await page.getByRole("heading", { level: 1, name: "Signatures" }).waitFor();
+        await page.getByRole("link", { name: "Show more records" }).waitFor();
+        await capture(page, "staff-waivers-signatures", scheme);
 
         // The moderation queue: published reviews, and the "waiting on you"
         // card a written review sits in until staff release it
@@ -807,7 +816,7 @@ for (const scheme of ["light", "dark"] as const) {
           await page
             .locator("li")
             .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-            .getByRole("link")
+            .getByRole("link", { name: "Two-Tank Reef — Molasses & French", exact: true })
             .click();
           await page.waitForURL(/\/shop\/blue-mantis\/trips\//);
           await page
@@ -889,7 +898,7 @@ test.describe("print", () => {
     await page
       .locator("li")
       .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-      .getByRole("link")
+      .getByRole("link", { name: "Two-Tank Reef — Molasses & French", exact: true })
       .click();
     await page.waitForURL(/\/shop\/blue-mantis\/trips\//);
     const tripPath = new URL(page.url()).pathname;

@@ -84,3 +84,35 @@ export function formatTimeRangeTz(
   }).format(end);
   return `${formatTime(start, locale, timeZone)} – ${endWithZone}`;
 }
+
+/** The calendar day a date falls on in a given timezone, as a UTC-midnight instant — for day-granularity diffs, never for display. */
+function calendarDayMs(date: Date, timeZone?: string): number {
+  const iso = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+  const [year, month, day] = iso.split("-").map(Number);
+  return Date.UTC(year, (month ?? 1) - 1, day ?? 1);
+}
+
+/**
+ * "today" / "tomorrow" / "in 3 days" (or the past-tense equivalents), from
+ * the calendar day `date` falls on in `timeZone` relative to the calendar day
+ * `now` falls on there — a raw millisecond difference would misreport a trip
+ * departing at 6am tomorrow as "today" once the diver reads this the same
+ * evening. `Intl.RelativeTimeFormat`'s `numeric: "auto"` picks the day-name
+ * wording automatically per locale, so this never hard-codes English.
+ */
+export function formatRelativeDay(
+  date: Date,
+  now: Date,
+  locale = "en-US",
+  timeZone?: string,
+): string {
+  const diffDays = Math.round(
+    (calendarDayMs(date, timeZone) - calendarDayMs(now, timeZone)) / 86_400_000,
+  );
+  return new Intl.RelativeTimeFormat(locale, { numeric: "auto" }).format(diffDays, "day");
+}

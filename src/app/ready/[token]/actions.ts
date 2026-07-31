@@ -8,7 +8,7 @@ import { startBookingCheckout } from "@/db/checkouts";
 import { getDb } from "@/db/client";
 import { setBookingNitrox } from "@/db/nitrox";
 import { sendAndRecordNotification } from "@/db/notifications";
-import { getReadyPageData } from "@/db/ready";
+import { getReadyPageData, type ReadyPageData } from "@/db/ready";
 import { refundBookingOnCancellation } from "@/db/refunds";
 import { saveRentalFit } from "@/db/rental-fit";
 import { getTripWithBooked } from "@/db/trips";
@@ -34,23 +34,39 @@ import { clientIp } from "@/lib/request-ip";
 
 const base = (token: string) => `/ready/${token}`;
 
+/** Where a resolved action redirects when it can't proceed — a query param the page can turn into a real notice, never silence. */
+function bounceTarget(token: string, reason: "rate_limited" | "invalid"): string {
+  return reason === "rate_limited" ? `${base(token)}?error=rate` : base(token);
+}
+
+type ReadyContext = { db: AwaitedDb; bookingId: string; data: ReadyPageData };
+type ReadyContextResult =
+  | ({ ok: true } & ReadyContext)
+  | { ok: false; reason: "rate_limited" | "invalid" };
+
+type AwaitedDb = Awaited<ReturnType<typeof getDb>>;
+
 /**
- * Resolve the token to its booking + shop context, or bounce to a plain
- * notice. Rate-limited by IP before verification, so this one chokepoint
+ * Resolve the token to its booking + shop context, or report why it can't be
+ * used. Rate-limited by IP before verification, so this one chokepoint
  * throttles every action in this file against both token guessing and
- * replay spam of a known link (CR-013).
+ * replay spam of a known link (CR-013). Every call site distinguishes the
+ * two failure reasons (task 49): a throttled attempt tells the diver to wait
+ * a moment, rather than redirecting silently and looking like the button did
+ * nothing at all — a stale/invalid token still just bounces to the plain
+ * unavailable notice, since there's nothing actionable to say about it.
  */
-async function contextFor(token: string) {
+async function contextFor(token: string): Promise<ReadyContextResult> {
   const ip = await clientIp();
   if (!checkRateLimit(rateLimitKey("readiness-token", ip), RATE_LIMITS.capabilityAction).allowed) {
-    return null;
+    return { ok: false, reason: "rate_limited" };
   }
   const db = await getDb();
   const capability = await verifyBookingCapability(db, { token, purpose: "readiness" });
-  if (!capability) return null;
+  if (!capability) return { ok: false, reason: "invalid" };
   const data = await getReadyPageData(db, capability.bookingId);
-  if (!data || data.detail.cancelled) return null;
-  return { db, bookingId: capability.bookingId, data };
+  if (!data || data.detail.cancelled) return { ok: false, reason: "invalid" };
+  return { ok: true, db, bookingId: capability.bookingId, data };
 }
 
 /**
@@ -61,7 +77,7 @@ async function contextFor(token: string) {
  */
 export async function signWaiverFromReady(token: string) {
   const ctx = await contextFor(token);
-  if (!ctx) redirect(base(token));
+  if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
   const issued = await issueWaiverRequest(ctx.db, {
     shopId: ctx.data.shop.id,
     bookingId: ctx.bookingId,
@@ -72,7 +88,7 @@ export async function signWaiverFromReady(token: string) {
 
 export async function saveEmergencyContactFromReady(token: string, formData: FormData) {
   const ctx = await contextFor(token);
-  if (!ctx) redirect(base(token));
+  if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
   const parsed = emergencyContactSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(`${base(token)}?error=contact`);
   const name = (parsed.data.emergencyContactName ?? "").trim();
@@ -111,7 +127,7 @@ const fitSchema = z.object({
 
 export async function saveFitFromReady(token: string, formData: FormData) {
   const ctx = await contextFor(token);
-  if (!ctx) redirect(base(token));
+  if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
   const parsed = fitSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(`${base(token)}?error=fit`);
   const saved = await saveRentalFit(ctx.db, {
@@ -155,7 +171,7 @@ export async function saveFitFromReady(token: string, formData: FormData) {
  */
 export async function payFromReady(token: string) {
   const ctx = await contextFor(token);
-  if (!ctx) redirect(base(token));
+  if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
   const origin = publicAppUrl();
   if (!ctx.data.canPay || !origin || !ctx.data.person.email) {
     redirect(`${base(token)}?error=pay`);
@@ -187,10 +203,10 @@ export async function cancelMyBookingAction(token: string) {
   if (
     !checkRateLimit(rateLimitKey("booking-self-cancel", ip), RATE_LIMITS.bookingSelfCancel).allowed
   ) {
-    redirect(base(token));
+    redirect(bounceTarget(token, "rate_limited"));
   }
   const ctx = await contextFor(token);
-  if (!ctx) redirect(base(token));
+  if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
 
   const cancelled = await selfCancelBooking(ctx.db, {
     shopId: ctx.data.shop.id,
@@ -250,10 +266,10 @@ export async function rescheduleMyBookingAction(token: string, formData: FormDat
   if (
     !checkRateLimit(rateLimitKey("booking-self-cancel", ip), RATE_LIMITS.bookingSelfCancel).allowed
   ) {
-    redirect(base(token));
+    redirect(bounceTarget(token, "rate_limited"));
   }
   const ctx = await contextFor(token);
-  if (!ctx) redirect(base(token));
+  if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
 
   const parsedTripId = z.uuid().safeParse(formData.get("newTripId"));
   if (!parsedTripId.success) redirect(`${base(token)}?error=reschedule`);

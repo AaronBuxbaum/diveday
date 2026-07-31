@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { eq } from "drizzle-orm";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { courseTotalCents } from "@/lib/courses";
 import type {
   CreateInvoiceRequest,
@@ -8,6 +8,7 @@ import type {
   InvoiceLookupResult,
   InvoicingProvider,
   RefundInvoiceResult,
+  ResendInvoiceResult,
   VoidInvoiceResult,
 } from "@/lib/payments/invoicing";
 import { seededShopContext } from "@/test/db";
@@ -16,12 +17,16 @@ import { updateCourse } from "./courses";
 import {
   createOrder,
   getBookingContext,
+  getOpenOrderForBooking,
   getOrder,
   listOrders,
+  listShopOrders,
   markOrderPaidByInvoiceId,
   markOrderVoidedByInvoiceId,
+  openOrdersForBookings,
   refreshOrderStatus,
   refundOrder,
+  resendOrderInvoice,
   voidOrder,
 } from "./orders";
 import { getBookingPayment, setBookingPayment } from "./payments";
@@ -65,6 +70,9 @@ function fakeInvoicing(overrides: Partial<InvoicingProvider> = {}): InvoicingPro
           totalCents: 22_000,
         },
       };
+    },
+    async resendInvoice(): Promise<ResendInvoiceResult> {
+      return { status: "sent" };
     },
     ...overrides,
   };
@@ -531,5 +539,249 @@ describe("orders", () => {
 
     // An ordinary charter has no course, so the form falls back to the trip fee.
     expect((await getBookingContext(db, shop.id, entry.booking.id))?.course).toBeNull();
+  });
+
+  describe("listShopOrders", () => {
+    it("filters by status, diver, and date range — the /orders index's three filters", async () => {
+      const { db, shop, reef, entry } = await orderContext();
+      await upsertShopStripeAccount(db, shop.id, "acct_123");
+      await setShopStripeAccountStatus(db, "acct_123", {
+        chargesEnabled: true,
+        payoutsEnabled: true,
+        detailsSubmitted: true,
+      });
+      const roster = await getTripRoster(db, shop.id, reef.id);
+      const other = roster.find((row) => row.person.id !== entry.person.id);
+      if (!other) throw new Error("expected a second diver on the seeded reef trip");
+
+      const openResult = await createOrder(
+        db,
+        {
+          shopId: shop.id,
+          personId: entry.person.id,
+          createdByPersonId: entry.person.id,
+          lineItems,
+        },
+        fakeInvoicing(),
+      );
+      if (!openResult.ok) throw new Error("expected the open order to be created");
+
+      const paidResult = await createOrder(
+        db,
+        {
+          shopId: shop.id,
+          personId: other.person.id,
+          createdByPersonId: entry.person.id,
+          lineItems,
+        },
+        fakeInvoicing({
+          async createInvoice(request) {
+            const totalCents = request.lineItems.reduce(
+              (sum, item) => sum + item.quantity * item.unitAmountCents,
+              0,
+            );
+            return {
+              status: "created",
+              stripeCustomerId: "cus_paid",
+              stripeInvoiceId: "in_paid",
+              stripeStatus: "paid",
+              hostedInvoiceUrl: null,
+              invoicePdfUrl: null,
+              totalCents,
+            };
+          },
+        }),
+      );
+      if (!paidResult.ok) throw new Error("expected the paid order to be created");
+
+      // No filter: every order this shop has ever sent, newest first.
+      const all = await listShopOrders(db, shop.id);
+      const allIds = all.map((row) => row.order.id);
+      expect(allIds).toContain(openResult.order.id);
+      expect(allIds).toContain(paidResult.order.id);
+
+      // Status.
+      const paidOnly = await listShopOrders(db, shop.id, { status: "paid" });
+      expect(paidOnly.map((row) => row.order.id)).toEqual([paidResult.order.id]);
+
+      // Diver, by exact id (the roster/diver-record "view orders" link) and by
+      // a name substring (the index page's own search box).
+      const forEntry = await listShopOrders(db, shop.id, { personId: entry.person.id });
+      expect(forEntry.map((row) => row.order.id)).toEqual([openResult.order.id]);
+      const byNameFragment = await listShopOrders(db, shop.id, {
+        personQuery: other.person.fullName.slice(0, 4),
+      });
+      expect(byNameFragment.map((row) => row.order.id)).toContain(paidResult.order.id);
+      expect(byNameFragment.map((row) => row.order.id)).not.toContain(openResult.order.id);
+
+      // Date range: a window around now catches both; a window that closes
+      // before now catches neither (Reports' "revenue rows" link a month range
+      // this same way).
+      const soon = new Date(Date.now() + 60_000);
+      const justNow = new Date(Date.now() - 60_000);
+      const longAgo = new Date("2000-01-01T00:00:00Z");
+      const inRange = await listShopOrders(db, shop.id, { from: justNow, to: soon });
+      expect(inRange.map((row) => row.order.id)).toEqual(
+        expect.arrayContaining([openResult.order.id, paidResult.order.id]),
+      );
+      const outOfRange = await listShopOrders(db, shop.id, { from: longAgo, to: justNow });
+      expect(outOfRange.map((row) => row.order.id)).not.toEqual(
+        expect.arrayContaining([openResult.order.id, paidResult.order.id]),
+      );
+    });
+
+    it("is tenant-safe: another shop's filter sees none of this shop's orders", async () => {
+      const { db, shop, entry } = await orderContext();
+      await upsertShopStripeAccount(db, shop.id, "acct_123");
+      await setShopStripeAccountStatus(db, "acct_123", {
+        chargesEnabled: true,
+        payoutsEnabled: true,
+        detailsSubmitted: true,
+      });
+      const result = await createOrder(
+        db,
+        {
+          shopId: shop.id,
+          personId: entry.person.id,
+          createdByPersonId: entry.person.id,
+          lineItems,
+        },
+        fakeInvoicing(),
+      );
+      if (!result.ok) throw new Error("expected order creation to succeed");
+
+      const otherShopId = "00000000-0000-4000-8000-000000000000";
+      const otherShopOrders = await listShopOrders(db, otherShopId);
+      expect(otherShopOrders.map((row) => row.order.id)).not.toContain(result.order.id);
+    });
+  });
+});
+
+/** Connects Stripe and creates an open, invoiced order for the fixture booking — the Today payment row's happy path. */
+async function invoicedOrderContext() {
+  const { db, shop, entry } = await orderContext();
+  await upsertShopStripeAccount(db, shop.id, "acct_today");
+  await setShopStripeAccountStatus(db, "acct_today", {
+    chargesEnabled: true,
+    payoutsEnabled: true,
+    detailsSubmitted: true,
+  });
+  const result = await createOrder(
+    db,
+    {
+      shopId: shop.id,
+      personId: entry.person.id,
+      createdByPersonId: entry.person.id,
+      bookingId: entry.booking.id,
+      lineItems,
+    },
+    fakeInvoicing(),
+  );
+  if (!result.ok) throw new Error(`expected order creation to succeed: ${result.reason}`);
+  return { db, shop, entry, order: result.order };
+}
+
+describe("getOpenOrderForBooking / openOrdersForBookings", () => {
+  it("finds nothing for a booking that was never invoiced", async () => {
+    const { db, shop, entry } = await orderContext();
+    expect(await getOpenOrderForBooking(db, shop.id, entry.booking.id)).toBeNull();
+    expect(await openOrdersForBookings(db, shop.id, [entry.booking.id])).toEqual(new Map());
+  });
+
+  it("returns an empty map for an empty booking list without querying", async () => {
+    const { db, shop } = await orderContext();
+    expect(await openOrdersForBookings(db, shop.id, [])).toEqual(new Map());
+  });
+
+  it("finds the open order for an invoiced booking", async () => {
+    const { db, shop, entry, order } = await invoicedOrderContext();
+    const found = await getOpenOrderForBooking(db, shop.id, entry.booking.id);
+    expect(found?.id).toBe(order.id);
+    expect(found?.hostedInvoiceUrl).toBe(order.hostedInvoiceUrl);
+
+    const batch = await openOrdersForBookings(db, shop.id, [entry.booking.id]);
+    expect(batch.get(entry.booking.id)?.id).toBe(order.id);
+  });
+
+  it("stops surfacing a booking's order once it is paid — no longer 'open'", async () => {
+    const { db, shop, entry, order } = await invoicedOrderContext();
+    await markOrderPaidByInvoiceId(db, order.stripeInvoiceId, order.totalCents);
+    expect(await getOpenOrderForBooking(db, shop.id, entry.booking.id)).toBeNull();
+    expect(await openOrdersForBookings(db, shop.id, [entry.booking.id])).toEqual(new Map());
+  });
+
+  it("never leaks an order across shops", async () => {
+    const { db, entry } = await invoicedOrderContext();
+    const otherShopId = "00000000-0000-4000-8000-000000000000";
+    expect(await getOpenOrderForBooking(db, otherShopId, entry.booking.id)).toBeNull();
+  });
+});
+
+describe("resendOrderInvoice", () => {
+  it("resends the email for an existing open invoice", async () => {
+    const { db, shop, order } = await invoicedOrderContext();
+    const resend = vi.fn().mockResolvedValue({ status: "sent" } satisfies ResendInvoiceResult);
+    const outcome = await resendOrderInvoice(
+      db,
+      shop.id,
+      order.id,
+      fakeInvoicing({ resendInvoice: resend }),
+    );
+    expect(outcome).toEqual({ status: "sent" });
+    expect(resend).toHaveBeenCalledWith(order.stripeAccountId, order.stripeInvoiceId);
+  });
+
+  it("reports not_found for an unknown or cross-shop order id", async () => {
+    const { db, order } = await invoicedOrderContext();
+    const otherShopId = "00000000-0000-4000-8000-000000000000";
+    expect(await resendOrderInvoice(db, otherShopId, order.id, fakeInvoicing())).toEqual({
+      status: "not_found",
+    });
+    expect(
+      await resendOrderInvoice(
+        db,
+        (await orderContext()).shop.id,
+        "00000000-0000-4000-8000-000000000001",
+        fakeInvoicing(),
+      ),
+    ).toEqual({ status: "not_found" });
+  });
+
+  it("refuses to resend an invoice that already closed (paid, voided, or refunded)", async () => {
+    const { db, shop, order } = await invoicedOrderContext();
+    await markOrderPaidByInvoiceId(db, order.stripeInvoiceId, order.totalCents);
+    expect(await resendOrderInvoice(db, shop.id, order.id, fakeInvoicing())).toEqual({
+      status: "not_open",
+    });
+  });
+
+  it("surfaces a Stripe failure instead of pretending the resend happened", async () => {
+    const { db, shop, order } = await invoicedOrderContext();
+    const outcome = await resendOrderInvoice(
+      db,
+      shop.id,
+      order.id,
+      fakeInvoicing({
+        async resendInvoice(): Promise<ResendInvoiceResult> {
+          return { status: "failed" };
+        },
+      }),
+    );
+    expect(outcome).toEqual({ status: "failed" });
+  });
+
+  it("reports not_configured when the shop's Stripe connection has since gone away", async () => {
+    const { db, shop, order } = await invoicedOrderContext();
+    const outcome = await resendOrderInvoice(
+      db,
+      shop.id,
+      order.id,
+      fakeInvoicing({
+        async resendInvoice(): Promise<ResendInvoiceResult> {
+          return { status: "not_configured" };
+        },
+      }),
+    );
+    expect(outcome).toEqual({ status: "not_configured" });
   });
 });

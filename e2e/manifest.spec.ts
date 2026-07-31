@@ -31,7 +31,7 @@ test("live manifest retains blocked divers and records an explicit not-boarded r
   await page
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-    .getByRole("link")
+    .getByRole("link", { name: "Two-Tank Reef — Molasses & French", exact: true })
     .click();
   await page
     .getByRole("navigation", { name: "Trip" })
@@ -84,7 +84,14 @@ test("live manifest retains blocked divers and records an explicit not-boarded r
     .poll(async () => Math.abs((await page.evaluate(() => window.scrollY)) - rollCallScroll))
     .toBeLessThan(100);
   await expect(page).not.toHaveURL(/#roll-call-/);
-  await expect(page.getByText("Not boarded", { exact: true }).first()).toBeVisible();
+  // The mobile-only summary tiles (collapsed behind "More stats", sm:hidden)
+  // and the desktop-only ones (hidden below sm) both carry this label — at
+  // the default desktop test viewport the mobile copy is DOM-first but
+  // never visible, so an unfiltered .first() picks it and the assertion
+  // below would report "hidden" forever. Filter to the one actually shown.
+  await expect(
+    page.getByText("Not boarded", { exact: true }).and(page.locator(":visible")).first(),
+  ).toBeVisible();
   await expect(page.getByText("Guest asked to sit out before departure.")).toBeVisible();
   await page.getByRole("button", { name: "Mark not boarded" }).first().click();
   await expect(page.getByRole("button", { name: "Not boarded ✓" })).toHaveCount(2);
@@ -98,7 +105,7 @@ test("captain saves the full checkpoint manifest, reloads it offline, and reconc
   await page
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-    .getByRole("link")
+    .getByRole("link", { name: "Two-Tank Reef — Molasses & French", exact: true })
     .click();
   await page
     .getByRole("navigation", { name: "Trip" })
@@ -142,7 +149,7 @@ test("a captain who lost the saved copy to storage eviction still lands on a pag
   await page
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-    .getByRole("link")
+    .getByRole("link", { name: "Two-Tank Reef — Molasses & French", exact: true })
     .click();
   await page
     .getByRole("navigation", { name: "Trip" })
@@ -206,7 +213,7 @@ test("the offline fallback never reaches beyond the manifest route", async ({ pa
   await page
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-    .getByRole("link")
+    .getByRole("link", { name: "Two-Tank Reef — Molasses & French", exact: true })
     .click();
   await page
     .getByRole("navigation", { name: "Trip" })
@@ -242,7 +249,7 @@ test("the live manifest response never enters Cache Storage", async ({ page }) =
   await page
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-    .getByRole("link")
+    .getByRole("link", { name: "Two-Tank Reef — Molasses & French", exact: true })
     .click();
   await page
     .getByRole("navigation", { name: "Trip" })
@@ -274,7 +281,7 @@ test("an out-of-range checkpoint in the offline URL falls back to departure, not
   await page
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-    .getByRole("link")
+    .getByRole("link", { name: "Two-Tank Reef — Molasses & French", exact: true })
     .click();
   await page
     .getByRole("navigation", { name: "Trip" })
@@ -347,7 +354,7 @@ test("displays missing diver face-grid on manifest page", async ({ page }) => {
   await page
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-    .getByRole("link")
+    .getByRole("link", { name: "Two-Tank Reef — Molasses & French", exact: true })
     .click();
   await page
     .getByRole("navigation", { name: "Trip" })

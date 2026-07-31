@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { FlashParams } from "@/components/FlashParams";
@@ -10,11 +9,7 @@ import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { canPersonManageWaiverTemplates } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
-import {
-  getCurrentWaiverTemplate,
-  listWaiverIntegrityAudit,
-  saveWaiverTemplate,
-} from "@/db/waivers";
+import { getCurrentWaiverTemplate, saveWaiverTemplate } from "@/db/waivers";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate } from "@/lib/format";
@@ -23,7 +18,7 @@ import { requireStaffSession } from "@/lib/session";
 import { DEFAULT_WAIVER_BODY, DEFAULT_WAIVER_TITLE } from "@/lib/waivers";
 
 export const metadata: Metadata = {
-  title: "Waiver — DiveDay",
+  title: "Waiver template — DiveDay",
 };
 
 const templateSchema = z.object({
@@ -35,11 +30,11 @@ export default async function WaiverTemplatesPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{ notice?: string; after?: string }>;
+  searchParams: Promise<{ notice?: string }>;
 }) {
   const session = await requireStaffSession();
   const { shopSlug } = await params;
-  const { notice, after } = await searchParams;
+  const { notice } = await searchParams;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   // Staff read dates in the language their own device asks for, same
@@ -51,23 +46,25 @@ export default async function WaiverTemplatesPage({
   // jurisdiction it presents) is owner/manager work (H-14, ADR
   // 20260724-role-authorization). Other roles have no use for it, so the
   // surface doesn't exist for them rather than showing a read-only copy.
+  // The Signatures tab (`./signatures/page.tsx`) runs the exact same gate —
+  // never a looser one, since it's read access to signed medical records.
   const canManage = await canPersonManageWaiverTemplates(
     db,
     session.user.shopId,
     session.user.personId,
   );
-  if (!canManage) redirect(`/shop/${shopSlug}`);
+  // Bounced to Today, same as every other H-14 refusal — but with an
+  // explanatory notice rather than teleporting silently (task 82, UX persona
+  // 11 "Kai"): Today already renders `shopHome.notice.*` codes.
+  if (!canManage) redirect(`/shop/${shopSlug}?notice=waivers_not_authorized`);
   const current = await getCurrentWaiverTemplate(db, shop.id);
-  const { entries: integrityAudit, nextCursor } = await listWaiverIntegrityAudit(db, shop.id, {
-    cursor: after,
-  });
 
   async function saveWaiverAction(formData: FormData) {
     "use server";
     const staff = await requireStaffSession();
     const editor = await getDb();
     if (!(await canPersonManageWaiverTemplates(editor, staff.user.shopId, staff.user.personId))) {
-      redirect(`/shop/${staff.user.shopSlug}`);
+      redirect(`/shop/${staff.user.shopSlug}?notice=waivers_not_authorized`);
     }
     const parsed = templateSchema.safeParse(Object.fromEntries(formData));
     if (!parsed.success) redirect(`/shop/${staff.user.shopSlug}/waivers?notice=invalid`);
@@ -119,7 +116,7 @@ export default async function WaiverTemplatesPage({
   );
 
   return (
-    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <>
       <FlashParams params={["notice"]} />
       <ShopPageHeader
         eyebrow={t("waiversStaff.eyebrow")}
@@ -157,73 +154,6 @@ export default async function WaiverTemplatesPage({
           {editForm}
         </div>
       </section>
-
-      <section className="mt-10" aria-labelledby="waiver-integrity-heading">
-        <h2 id="waiver-integrity-heading" className="text-lg font-semibold">
-          {t("waiversStaff.integrityHeading")}
-        </h2>
-        <p className="mt-1 max-w-2xl text-sm text-muted">
-          {t("waiversStaff.integrityDescription")}
-        </p>
-        {integrityAudit.length === 0 && !after ? (
-          <p className="mt-4 text-sm text-muted">{t("waiversStaff.noSignedRecords")}</p>
-        ) : (
-          <>
-            <ul className="mt-4 divide-y divide-border rounded-lg border border-border bg-surface">
-              {integrityAudit.map((entry) => (
-                <li
-                  key={entry.id}
-                  className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm"
-                >
-                  <span>
-                    <span className="font-medium">{entry.personName}</span>
-                    <span className="ml-2 text-muted">
-                      {entry.signedAt
-                        ? formatShortDate(entry.signedAt, locale, shop.timezone)
-                        : t("waiversStaff.noSignatureDate")}
-                    </span>
-                  </span>
-                  <span
-                    className={
-                      entry.integrity === "valid"
-                        ? "font-medium text-success"
-                        : entry.integrity === "invalid"
-                          ? "font-medium text-danger"
-                          : "font-medium text-warning"
-                    }
-                  >
-                    {entry.integrity === "valid"
-                      ? t("waiversStaff.integrityValid")
-                      : entry.integrity === "invalid"
-                        ? t("waiversStaff.integrityInvalid")
-                        : t("waiversStaff.integrityUnsealed")}
-                  </span>
-                </li>
-              ))}
-            </ul>
-            {nextCursor || after ? (
-              <div className="mt-4 flex flex-wrap items-center gap-3">
-                {nextCursor ? (
-                  <Link
-                    href={`/shop/${shopSlug}/waivers?after=${encodeURIComponent(nextCursor)}#waiver-integrity-heading`}
-                    className={buttonClass({ variant: "secondary" })}
-                  >
-                    {t("waiversStaff.showMoreRecords")}
-                  </Link>
-                ) : null}
-                {after ? (
-                  <Link
-                    href={`/shop/${shopSlug}/waivers#waiver-integrity-heading`}
-                    className="text-sm font-medium text-primary hover:underline"
-                  >
-                    {t("waiversStaff.backToTop")}
-                  </Link>
-                ) : null}
-              </div>
-            ) : null}
-          </>
-        )}
-      </section>
-    </main>
+    </>
   );
 }

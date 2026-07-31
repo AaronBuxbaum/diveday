@@ -1,7 +1,8 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
+import { distinctBlockedDivers } from "@/lib/blockers";
 import { seededShopContext } from "@/test/db";
-import { getBlockerQueue } from "./blockers";
+import { countBlockedDivers, getBlockerQueue } from "./blockers";
 import { upsertTripRequirements } from "./readiness";
 import { upcomingTripsWithCounts } from "./trips";
 
@@ -42,5 +43,36 @@ describe("blocker queue (in-memory PGlite)", () => {
 
     const queue = await getBlockerQueue(db, shop.id, shop.slug, new Date(0));
     expect(queue.trips.some((trip) => trip.tripId === target.id)).toBe(false);
+  });
+
+  it("countBlockedDivers matches the full queue's distinct-diver headline count (nav badge, task 83)", async () => {
+    const { db, shop } = await seededShopContext();
+    const queue = await getBlockerQueue(db, shop.id, shop.slug, new Date(0));
+    const expected = distinctBlockedDivers(queue.trips);
+    expect(expected).toBeGreaterThan(0);
+
+    expect(await countBlockedDivers(db, shop.id, new Date(0))).toBe(expected);
+  });
+
+  it("countBlockedDivers drops when a departure's blockers are cleared, tracking the full queue", async () => {
+    const { db, shop } = await seededShopContext();
+    const before = await countBlockedDivers(db, shop.id, new Date(0));
+    const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
+    const target = trips[0];
+    if (!target) throw new Error("expected an upcoming trip");
+    await upsertTripRequirements(db, {
+      shopId: shop.id,
+      tripId: target.id,
+      requiresWaiver: false,
+      minimumCertificationLevel: null,
+      requiredSpecialties: [],
+      requiresNitrox: false,
+      requiresPayment: false,
+    });
+
+    const after = await countBlockedDivers(db, shop.id, new Date(0));
+    expect(after).toBeLessThanOrEqual(before);
+    const queue = await getBlockerQueue(db, shop.id, shop.slug, new Date(0));
+    expect(after).toBe(distinctBlockedDivers(queue.trips));
   });
 });

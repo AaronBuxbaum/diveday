@@ -1,5 +1,5 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { daysFromNow, e2eNow } from "./helpers";
+import { daysFromNow, e2eNow, signOut } from "./helpers";
 
 /**
  * Diver self-service cancel/reschedule from their own readiness page
@@ -28,12 +28,20 @@ test.describe("staff-prepared trips", () => {
     await page.getByRole("button", { name: "Put it on the board" }).click();
     await expect(page.getByRole("status")).toBeVisible();
 
-    await page.getByRole("button", { name: "Sign out" }).click();
-    await expect(page).toHaveURL(/\/$/);
+    await signOut(page);
 
     // A visitor books it.
     await page.goto("/shop/blue-mantis/schedule", { waitUntil: "domcontentloaded" });
-    await page.locator("li").filter({ hasText: originalTitle }).getByRole("link").click();
+    // Scoped to the trip list itself: a day with more than one departure
+    // also renders a same-titled <li> in the month calendar
+    // (src/components/ScheduleCalendar.tsx), and an unscoped locator can
+    // resolve to both.
+    await page
+      .getByRole("list", { name: "Upcoming trips" })
+      .locator("li")
+      .filter({ hasText: originalTitle })
+      .getByRole("link")
+      .click();
     await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
     await page.getByLabel("Name", { exact: true }).fill("Nemo Quinn");
     await page.getByLabel("Email", { exact: true }).fill(`nemo-${suffix}@example.com`);
@@ -65,8 +73,11 @@ test.describe("staff-prepared trips", () => {
     if (!match) throw new Error(`unexpected option label format: ${selectedLabel}`);
     const [, expectedTitle, expectedWhen] = match;
 
-    page.once("dialog", (dialog) => dialog.accept());
+    // The trigger arms an inline confirm panel (task 50 — replaces
+    // window.confirm, which can't show a translated message) rather than
+    // submitting straight away; the real submit is the second click.
     await page.getByRole("button", { name: "Move my booking" }).click();
+    await page.getByRole("button", { name: "Yes, move my booking" }).click();
 
     await expect(page).toHaveURL(/\/ready\//);
     await expect(page.getByRole("status").filter({ hasText: "You’re moved!" })).toBeVisible();
@@ -86,11 +97,19 @@ test.describe("staff-prepared trips", () => {
     await page.getByLabel("Capacity").fill("6");
     await page.getByRole("button", { name: "Put it on the board" }).click();
     await expect(page.getByRole("status")).toBeVisible();
-    await page.getByRole("button", { name: "Sign out" }).click();
-    await expect(page).toHaveURL(/\/$/);
+    await signOut(page);
 
     await page.goto("/shop/blue-mantis/schedule", { waitUntil: "domcontentloaded" });
-    await page.locator("li").filter({ hasText: title }).getByRole("link").click();
+    // Scoped to the trip list itself: a day with more than one departure
+    // also renders a same-titled <li> in the month calendar
+    // (src/components/ScheduleCalendar.tsx), and an unscoped locator can
+    // resolve to both.
+    await page
+      .getByRole("list", { name: "Upcoming trips" })
+      .locator("li")
+      .filter({ hasText: title })
+      .getByRole("link")
+      .click();
     await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
     await page.getByLabel("Name", { exact: true }).fill("Coral Reyes");
     await page.getByLabel("Email", { exact: true }).fill(`coral-${suffix}@example.com`);
@@ -101,8 +120,9 @@ test.describe("staff-prepared trips", () => {
     const readyUrl = page.url();
 
     await expect(page.getByRole("button", { name: "Cancel my spot" })).toBeVisible();
-    page.once("dialog", (dialog) => dialog.accept());
+    // Same two-step inline confirm as the reschedule flow above.
     await page.getByRole("button", { name: "Cancel my spot" }).click();
+    await page.getByRole("button", { name: "Yes, cancel my spot" }).click();
 
     await expect(page.getByRole("heading", { name: "This booking was cancelled" })).toBeVisible();
 

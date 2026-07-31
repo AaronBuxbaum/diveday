@@ -92,6 +92,15 @@ export async function updateDiver(
     diveInsurance?: string;
     /** Date-only "YYYY-MM-DD", or "" to clear. Undefined leaves it untouched. */
     dateOfBirth?: string;
+    /**
+     * Staff-entered directly on the diver record (task 144 — Today used to say
+     * "ask at the counter" with no field to type it into). Undefined leaves it
+     * untouched; "" clears it — unlike `saveBookingEmergencyContact`'s
+     * blanks-never-overwrite rule for the diver-facing capture on /ready and
+     * /waivers, a staffer correcting a wrong entry here must be able to blank it.
+     */
+    emergencyContactName?: string;
+    emergencyContactPhone?: string;
   },
 ) {
   const email = input.email?.trim().toLowerCase() || null;
@@ -123,6 +132,12 @@ export async function updateDiver(
         ...(input.dateOfBirth === undefined
           ? {}
           : { dateOfBirth: input.dateOfBirth.trim() || null }),
+        ...(input.emergencyContactName === undefined
+          ? {}
+          : { emergencyContactName: input.emergencyContactName.trim() || null }),
+        ...(input.emergencyContactPhone === undefined
+          ? {}
+          : { emergencyContactPhone: input.emergencyContactPhone.trim() || null }),
       })
       .where(
         and(

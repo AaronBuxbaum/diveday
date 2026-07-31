@@ -1,6 +1,33 @@
+import { DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
 import { expect, signedInAsOwner, test } from "./fixtures";
+import { signInAs } from "./helpers";
 
 signedInAsOwner();
+
+test.describe("signed out", () => {
+  // The file-wide owner session (signedInAsOwner() above) would otherwise
+  // bounce /sign-in straight to the shop before the captain can sign in
+  // (auth.config.ts's authorized() callback redirects an already-staff
+  // session away from /sign-in) — same pattern as course-paths.spec.ts and
+  // schedule-builder.spec.ts's captain tests.
+  test.use({ storageState: { cookies: [], origins: [] } });
+
+  test("staff outside owner/manager can't reach the waiver editor", async ({ page }) => {
+    // Editing the waiver (and the medical jurisdiction it presents) is
+    // owner/manager work; a captain — signed in fresh, overriding the
+    // file-wide owner session — is bounced to Today with an explanation
+    // rather than teleported there silently (task 82, UX persona 11 "Kai").
+    await signInAs(page, DEV_STAFF_LOGINS.captain);
+    await page.goto("/shop/blue-mantis/waivers");
+    // Not a URL assertion: FlashParams strips `?notice=waivers_not_authorized`
+    // via history.replaceState shortly after mount — the rendered banner is
+    // the stable signal.
+    await expect(page).toHaveURL(/\/shop\/blue-mantis(\?.*)?$/);
+    await expect(
+      page.getByText("Editing the waiver is limited to owners and managers."),
+    ).toBeVisible();
+  });
+});
 
 test("one waiver button sends a resumable link and a medical yes surfaces follow-up", async ({
   page,
@@ -9,7 +36,7 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
   await page
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-    .getByRole("link")
+    .getByRole("link", { name: "Two-Tank Reef — Molasses & French", exact: true })
     .click();
   await page.waitForURL(/\/shop\/blue-mantis\/trips\//);
   // The roster and its waiver control live on the Guests tab.
@@ -36,6 +63,13 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
 
   await page.goto(waiverHref ?? "/");
   await expect(page.getByRole("heading", { name: "A quick step before the dock" })).toBeVisible();
+  // The trip this waiver is for is named on the page itself (task 42) — a
+  // diver can verify what they're signing for instead of trusting a link
+  // that only ever named the shop.
+  await expect(page.getByText(/Two-Tank Reef — Molasses & French —/)).toBeVisible();
+  // The link's own expiry is stated on the page, not just in the email that
+  // sent it (task 51).
+  await expect(page.getByText(/This link works until/)).toBeVisible();
   // The footer's "need help" link goes to the shop's own contact channel, not
   // DiveDay's marketing homepage (a regression this page used to have).
   await expect(page.getByRole("link", { name: "Contact Blue Mantis Divers" })).toHaveAttribute(
@@ -64,7 +98,18 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
 
   // The first question's affirmative answer must not disappear into a generic
   // success state; it becomes an explicit staff follow-up item.
-  await page.getByRole("radio", { name: "Yes" }).first().check();
+  const firstFieldset = page.locator("fieldset").first();
+  await firstFieldset.getByRole("radio", { name: "Yes" }).check();
+  // Task 41: the reassurance line reveals right under that question the
+  // moment "Yes" is picked — repeated at the point of anxiety, not just once
+  // in the small print above the whole questionnaire. Every question renders
+  // the same reassurance text (only the one under a checked "Yes" is
+  // actually visible via CSS), so this is scoped to the one fieldset that
+  // was just checked rather than matching all eight and hitting Playwright's
+  // strict-mode ambiguity.
+  await expect(
+    firstFieldset.getByText("A yes means a doctor should confirm you’re fit to dive"),
+  ).toBeVisible();
   const waiverUrl = page.url();
   await page.getByRole("button", { name: "Sign waiver" }).click();
   // Signing sends the diver straight to "what's left" instead of stopping on
@@ -82,6 +127,21 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
   // the level explicitly so a regression back to <h2> (no <h1> on the page at
   // all) fails here instead of silently passing a level-agnostic query.
   await expect(page.getByRole("heading", { name: "Waiver received", level: 1 })).toBeVisible();
+  // Task 44's corrected copy, verbatim from the dive-domain-expert review: a
+  // physician's own sign-off is required — the shop only receives and checks
+  // for it, and there is no promised timeline the diver's own doctor
+  // controls. Also the shop's contact as a tappable link, not a dead end.
+  await expect(
+    page.getByText(
+      "A “yes” answer means you’ll need a doctor to confirm in writing that you’re fit to dive before you can go out",
+    ),
+  ).toBeVisible();
+  await expect(page.getByText("The shop will reach out about next steps.")).toBeVisible();
+  await expect(page.getByText("usually before your trip day")).not.toBeVisible();
+  await expect(page.getByRole("link", { name: "hello@demo.invalid" })).toHaveAttribute(
+    "href",
+    "mailto:hello@demo.invalid",
+  );
   await expect(page.getByRole("link", { name: /left before you sail/ })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Your scheduled dive sites" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Molasses Reef" })).toBeVisible();
@@ -91,6 +151,31 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
   await page.goto(staffTripUrl);
   await expect(diverSection.getByText("Medical review", { exact: true })).toBeVisible();
   await expect(diverSection.getByText("Follow up before boarding")).toBeVisible();
+
+  // The roster's follow-up notice links straight to the signed-record
+  // evidence (task 155) — closing the loop between signature chasing here and
+  // the Signatures tab, rather than leaving them as unconnected surfaces. It
+  // carries the record's id as `?record=` (resolved through
+  // `getSignedWaiverRecordForShop`, pinned above the paginated list) rather
+  // than a bare URL anchor into the list, so it still resolves on a shop with
+  // enough signed history that the record falls off the list's first page.
+  await diverSection.getByRole("link", { name: "View signed record" }).click();
+  await page.waitForURL(/\/waivers\/signatures\?record=/);
+  await expect(
+    page.getByRole("heading", { level: 2, name: "Signed record", exact: true }),
+  ).toBeVisible();
+  const recordRow = page.locator(`li[id^="waiver-record-"]`).first();
+  await expect(recordRow.getByText("Priya Sharma")).toBeVisible();
+  await expect(recordRow.getByText("Medical follow-up flagged")).toBeVisible();
+  // The list itself never shows the flagged prompt text — it sits behind the
+  // per-record disclosure, mirroring the roster's own gating.
+  await expect(
+    page.getByText("Do you have, or have you had, a heart, lung, or breathing condition"),
+  ).not.toBeVisible();
+  await recordRow.getByText("View flagged answers").click();
+  await expect(
+    recordRow.getByText("Do you have, or have you had, a heart, lung, or breathing condition"),
+  ).toBeVisible();
 });
 
 test("the medical questionnaire refuses to complete with an unanswered question, even past client validation", async ({
@@ -100,7 +185,7 @@ test("the medical questionnaire refuses to complete with an unanswered question,
   await page
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-    .getByRole("link")
+    .getByRole("link", { name: "Two-Tank Reef — Molasses & French", exact: true })
     .click();
   await page.waitForURL(/\/shop\/blue-mantis\/trips\//);
   await page
@@ -146,7 +231,7 @@ test("a non-English visitor sees a notice that the waiver text itself stays in E
   await page
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-    .getByRole("link")
+    .getByRole("link", { name: "Two-Tank Reef — Molasses & French", exact: true })
     .click();
   await page.waitForURL(/\/shop\/blue-mantis\/trips\//);
   await page
@@ -187,7 +272,7 @@ test("saving a draft also refuses an unanswered question, even past client valid
   await page
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-    .getByRole("link")
+    .getByRole("link", { name: "Two-Tank Reef — Molasses & French", exact: true })
     .click();
   await page.waitForURL(/\/shop\/blue-mantis\/trips\//);
   await page

@@ -2,6 +2,7 @@ import type { DiverTranslator } from "@/i18n/messages";
 import { diverTranslator } from "@/i18n/messages";
 import { reminderActionText } from "@/i18n/reminder-labels";
 import type { DiverLocale } from "@/i18n/settings";
+import { COURSE_INQUIRY_EXPERIENCE_KEYS, type CourseInquiryExperience } from "@/lib/course-inquiry";
 import { formatDateTimeTz, formatShortDate, formatTime, formatTimeRangeTz } from "@/lib/format";
 import { escapeHtml } from "@/lib/html";
 import type { ReminderActionCode } from "@/lib/readiness-summary";
@@ -719,5 +720,60 @@ export function waiverRequestEmail(input: WaiverRequestEmailInput): Notification
     subject: t("notifications.waiverRequest.subject", { tripTitle: input.tripTitle }),
     text: `${t("notifications.common.greeting", { firstName })}\n\n${body} ${completeText}:\n${input.completionUrl}\n\n${expiry}\n`,
     html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p><p><a href="${url}">${completeLink}</a></p><p>${t("notifications.waiverRequest.expiry", { expiresAt: escapeHtml(expiresAt) })}</p>`,
+  };
+}
+
+type CourseInquiryEmailInput = {
+  locale: DiverLocale;
+  shopName: string;
+  courseTitle: string;
+  /** Every field the diver could have left blank — the shop's own inbox
+   *  shows "Not said" rather than an empty line (mirrors src/lib/course-inquiry.ts). */
+  inquirerName?: string;
+  inquirerEmail?: string;
+  inquirerPhone?: string;
+  experience: CourseInquiryExperience;
+  timing?: string;
+  divers?: number;
+  message?: string;
+};
+
+/**
+ * Lands in the shop's own contact inbox, not a diver's — the notification
+ * counterpart to the `mailto:` composer a diver can still use directly
+ * (CourseInquiry.tsx). Uses the shop's locale like every other shop-facing
+ * send (staffInviteEmail), not English-only like the founder-only
+ * new_account_alert.
+ */
+export function courseInquiryEmail(input: CourseInquiryEmailInput): NotificationEmail {
+  const t = diverTranslator(input.locale);
+  const notSaid = t("inquiry.notSaid");
+  const name = input.inquirerName?.trim() || t("notifications.courseInquiry.anonymous");
+  const email = input.inquirerEmail?.trim() || notSaid;
+  const phone = input.inquirerPhone?.trim() || notSaid;
+  const timing = input.timing?.trim() || notSaid;
+  const divers = input.divers != null ? String(input.divers) : notSaid;
+  const experience = t(COURSE_INQUIRY_EXPERIENCE_KEYS[input.experience]);
+  const message = input.message?.trim() || "";
+
+  const courseTitle = escapeHtml(input.courseTitle);
+  const intro = t("notifications.courseInquiry.intro", { name, courseTitle: input.courseTitle });
+  const introHtml = t("notifications.courseInquiry.intro", {
+    name: escapeHtml(name),
+    courseTitle: `<strong>${courseTitle}</strong>`,
+  });
+  const contact = t("notifications.courseInquiry.contact", { email, phone });
+  const contactHtml = t("notifications.courseInquiry.contact", {
+    email: escapeHtml(email),
+    phone: escapeHtml(phone),
+  });
+  const timingLine = t("notifications.courseInquiry.timing", { timing });
+  const diversLine = t("notifications.courseInquiry.divers", { divers });
+  const experienceLine = t("notifications.courseInquiry.experience", { experience });
+
+  return {
+    subject: t("notifications.courseInquiry.subject", { courseTitle: input.courseTitle }),
+    text: `${intro}\n\n${contact}\n${timingLine}\n${diversLine}\n${experienceLine}${message ? `\n\n${message}` : ""}\n`,
+    html: `<p>${introHtml}</p><p>${contactHtml}<br>${escapeHtml(timingLine)}<br>${escapeHtml(diversLine)}<br>${escapeHtml(experienceLine)}</p>${message ? `<p>${escapeHtml(message)}</p>` : ""}`,
   };
 }

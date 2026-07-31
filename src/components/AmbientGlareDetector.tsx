@@ -243,9 +243,11 @@ export function AmbientContrastSlider({ copy }: { copy: AmbientContrastCopy }) {
         step="1"
         value={sliderVal}
         onChange={handleChange}
+        aria-label={copy.contrastLabel}
+        aria-valuetext={modeLabel}
         className="w-full h-1 bg-surface-sunken rounded-lg appearance-none cursor-pointer accent-primary"
       />
-      <div className="flex justify-between text-[8px] text-muted font-bold px-0.5 uppercase tracking-wider">
+      <div className="flex justify-between text-xs text-muted font-bold px-0.5 uppercase tracking-wider">
         <span>{copy.labelAuto}</span>
         <span>{copy.labelStandard}</span>
         <span>{copy.labelFullAaa}</span>

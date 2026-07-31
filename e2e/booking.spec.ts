@@ -1,5 +1,5 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { daysFromNow, e2eNow, signInAsOwner } from "./helpers";
+import { daysFromNow, e2eNow, signInAsOwner, signOut } from "./helpers";
 
 test.describe("staff", () => {
   signedInAsOwner();
@@ -17,12 +17,20 @@ test.describe("staff", () => {
     await page.getByLabel(/Price per diver/).fill("120");
     await page.getByRole("button", { name: "Put it on the board" }).click();
     await expect(page.getByRole("status")).toBeVisible(); // created banner (param is one-shot)
-    await page.getByRole("button", { name: "Sign out" }).click();
-    await expect(page).toHaveURL(/\/$/);
+    await signOut(page);
 
     // A visitor books it from the public schedule — no account.
     await page.goto("/shop/blue-mantis/schedule", { waitUntil: "domcontentloaded" });
-    await page.locator("li").filter({ hasText: title }).getByRole("link").click();
+    // Scoped to the trip list itself: a day with more than one departure
+    // also renders a same-titled <li> in the month calendar
+    // (src/components/ScheduleCalendar.tsx), and an unscoped locator can
+    // resolve to both.
+    await page
+      .getByRole("list", { name: "Upcoming trips" })
+      .locator("li")
+      .filter({ hasText: title })
+      .getByRole("link")
+      .click();
     await expect(page.getByRole("heading", { name: title })).toBeVisible();
     await expect(page.getByText("6 spots left")).toBeVisible();
     await expect(page.getByText("$120.00")).toBeVisible();
@@ -114,8 +122,7 @@ test.describe("staff", () => {
     await expect(page.getByRole("status")).toContainText(
       "Crew prediction published — divers will see it now.",
     );
-    await page.getByRole("button", { name: "Sign out" }).click();
-    await expect(page).toHaveURL(/\/$/);
+    await signOut(page);
 
     await page.goto(`/shop/blue-mantis/schedule/${tripId}`);
     await expect(
@@ -142,7 +149,14 @@ test.describe("staff", () => {
     // Edit the title from the manage page (opened from the schedule). Staff are
     // routed to the editable trip view, never the public booking form.
     await page.goto("/shop/blue-mantis/schedule");
-    await page.locator("li").filter({ hasText: title }).getByRole("link").click();
+    await page
+      .locator("li")
+      .filter({ hasText: title })
+      // Exact match: an unpriced trip's card also carries a "Set a price
+      // for {title}, ..." link whose accessible name contains the trip
+      // title as a substring.
+      .getByRole("link", { name: title, exact: true })
+      .click();
     await expect(page.getByRole("button", { name: "Book my spot" })).toHaveCount(0);
     await page.getByLabel("Title").fill(renamed);
     await page.getByRole("button", { name: "Save changes" }).click();
@@ -152,7 +166,12 @@ test.describe("staff", () => {
 
     // Cancel: gone from public schedule; reinstate: back.
     await page.getByRole("button", { name: "Cancel trip" }).click();
-    await expect(page.getByText("Cancelled", { exact: true })).toBeVisible();
+    // The danger-tone Badge prepends a decorative aria-hidden glyph
+    // (Badge.tsx toneGlyph), so the element's own text is "✕ Cancelled" —
+    // matching the bare word would also hit the "Trip cancelled — it's off
+    // the public schedule." alert on the same page (getByText is
+    // case-insensitive substring by default).
+    await expect(page.getByText("✕ Cancelled")).toBeVisible();
     await page.goto("/shop/blue-mantis/schedule");
     await expect(page.locator("li").filter({ hasText: renamed })).toHaveCount(0);
 
@@ -170,7 +189,7 @@ test("a full boat lets a diver join the wait list without taking a seat", async 
   await page
     .locator("li")
     .filter({ hasText: "Wreck Trip — Spiegel Grove" })
-    .getByRole("link")
+    .getByRole("link", { name: "Wreck Trip — Spiegel Grove" })
     .click();
   await expect(page.getByRole("heading", { name: "This boat’s full" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Join the wait list" })).toBeVisible();
@@ -198,7 +217,7 @@ test("a full boat lets a diver join the wait list without taking a seat", async 
   await page
     .locator("li")
     .filter({ hasText: "Wreck Trip — Spiegel Grove" })
-    .getByRole("link")
+    .getByRole("link", { name: "Wreck Trip — Spiegel Grove", exact: true })
     .click();
   await page
     .getByRole("navigation", { name: "Trip" })
@@ -227,17 +246,16 @@ test("a shared-inbox booking under a different name is held for staff identity c
   await page.getByLabel("Returns").fill("21:00");
   await page.getByRole("button", { name: "Put it on the board" }).click();
   await expect(page.getByRole("status")).toBeVisible();
-  await page.getByRole("button", { name: "Sign out" }).click();
-  // Wait for the sign-out redirect to land before booking as the public — a
+  // Waits for the sign-out redirect to land before booking as the public — a
   // signed-in staffer opening a trip gets the manage view, not the booking form.
-  await expect(page).toHaveURL(/\/$/);
+  await signOut(page);
 
   // Nora books the seeded reef trip under her email.
   await page.goto("/shop/blue-mantis/schedule");
   await page
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Christ of the Abyss" })
-    .getByRole("link")
+    .getByRole("link", { name: "Two-Tank Reef — Christ of the Abyss" })
     .click();
   // The booking form is controlled, so wait for hydration before typing.
   await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
@@ -248,7 +266,16 @@ test("a shared-inbox booking under a different name is held for staff identity c
 
   // A different name on the same inbox books trip B — reuses Nora's record.
   await page.goto("/shop/blue-mantis/schedule");
-  await page.locator("li").filter({ hasText: tripB }).getByRole("link").click();
+  // Scoped to the trip list itself: a day with more than one departure also
+  // renders a same-titled <li> in the month calendar
+  // (src/components/ScheduleCalendar.tsx), and an unscoped locator can
+  // resolve to both.
+  await page
+    .getByRole("list", { name: "Upcoming trips" })
+    .locator("li")
+    .filter({ hasText: tripB })
+    .getByRole("link")
+    .click();
   await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
   await page.getByLabel("Name", { exact: true }).fill("Ben Quinn");
   await page.getByLabel("Email", { exact: true }).fill(email);
@@ -258,7 +285,14 @@ test("a shared-inbox booking under a different name is held for staff identity c
   // Staff open trip B's roster: the diver is held on identity, not ready.
   await signInAsOwner(page);
   await page.goto("/shop/blue-mantis/schedule");
-  await page.locator("li").filter({ hasText: tripB }).getByRole("link").click();
+  await page
+    .locator("li")
+    .filter({ hasText: tripB })
+    // Exact match: an unpriced trip's card also carries a "Set a price for
+    // {title}, ..." link whose accessible name contains the trip title as a
+    // substring.
+    .getByRole("link", { name: tripB, exact: true })
+    .click();
   await page
     .getByRole("navigation", { name: "Trip" })
     .getByRole("link", { name: "Guests" })
@@ -284,7 +318,7 @@ test("a tampered or cross-trip confirmation token reveals nothing", async ({ pag
   await page
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Christ of the Abyss" })
-    .getByRole("link")
+    .getByRole("link", { name: "Two-Tank Reef — Christ of the Abyss" })
     .click();
   // The booking form is controlled, so wait for hydration before typing.
   await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
@@ -309,7 +343,7 @@ test("a tampered or cross-trip confirmation token reveals nothing", async ({ pag
   await page
     .locator("li")
     .filter({ hasText: "Wreck Trip — Spiegel Grove" })
-    .getByRole("link")
+    .getByRole("link", { name: "Wreck Trip — Spiegel Grove" })
     .click();
   const otherTripUrl = new URL(page.url());
   otherTripUrl.searchParams.set("booking", realToken ?? "");

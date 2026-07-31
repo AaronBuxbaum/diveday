@@ -1,7 +1,16 @@
-import { and, asc, eq, gt, inArray, isNull, lt } from "drizzle-orm";
+import { and, asc, count, eq, gt, inArray, isNull, lt, ne } from "drizzle-orm";
 import { STAFF_ROLES } from "@/lib/authz";
+import { courseCrewGap, hasCourseCrewGap } from "@/lib/course-ratios";
 import type { AppDb } from "./client";
-import { courses, people, personRoles, staffShifts, tripAssignments, trips } from "./schema";
+import {
+  bookings,
+  courses,
+  people,
+  personRoles,
+  staffShifts,
+  tripAssignments,
+  trips,
+} from "./schema";
 import { listStaff } from "./trips";
 
 export type StaffCapability = "teach" | "crew" | "captain";
@@ -25,6 +34,14 @@ export function capabilitiesForRoles(roles: readonly string[]): StaffCapability[
  */
 export type StaffingGapCode = "no_crew" | "course_needs_instructor" | "no_shift_coverage";
 
+/** A trip a staff member crews, shown on their staffing card (task 165). */
+export type StaffCrewingTrip = {
+  tripId: string;
+  title: string;
+  startsAt: Date;
+  endsAt: Date;
+};
+
 export type StaffingView = {
   from: Date;
   to: Date;
@@ -33,6 +50,10 @@ export type StaffingView = {
     roles: string[];
     capabilities: StaffCapability[];
     shifts: (typeof staffShifts.$inferSelect)[];
+    /** Trips in this window this person is on the crew of — a shift with no
+     * boat and a boat with no shift are otherwise invisible to each other
+     * (Lens 17 task 165). */
+    crewingTrips: StaffCrewingTrip[];
   }[];
   trips: {
     trip: typeof trips.$inferSelect;
@@ -49,7 +70,7 @@ export async function getStaffingView(
   from: Date,
   to: Date,
 ): Promise<StaffingView> {
-  const [staffRows, shiftRows, tripRows] = await Promise.all([
+  const [staffRows, shiftRows, tripCourseRows, crewRows] = await Promise.all([
     listStaff(db, shopId),
     db
       .select({ shift: staffShifts })
@@ -63,18 +84,38 @@ export async function getStaffingView(
         ),
       )
       .orderBy(asc(staffShifts.startsAt)),
+    // Trip + course + booked count, independent of who (if anyone) crews it —
+    // `courseCrewGap` needs the course's ratio inputs (agency,
+    // minimumCertificationLevel) and the booked count on every trip in the
+    // window, not just the ones with a coverage gap.
+    db
+      .select({ trip: trips, course: courses, booked: count(bookings.id) })
+      .from(trips)
+      .leftJoin(courses, eq(courses.id, trips.courseId))
+      .leftJoin(bookings, and(eq(bookings.tripId, trips.id), ne(bookings.status, "cancelled")))
+      .where(
+        and(
+          eq(trips.shopId, shopId),
+          eq(trips.status, "scheduled"),
+          lt(trips.startsAt, to),
+          gt(trips.endsAt, from),
+        ),
+      )
+      .groupBy(trips.id, courses.id)
+      .orderBy(asc(trips.startsAt)),
+    // Crew assignments, queried separately from the trip/course row above so
+    // this join's fan-out (one row per assignment×role) never multiplies the
+    // booked count computed alongside it.
     db
       .select({
-        trip: trips,
-        courseTitle: courses.title,
-        personId: tripAssignments.personId,
+        tripId: tripAssignments.tripId,
+        personId: people.id,
         personName: people.fullName,
         role: personRoles.role,
       })
-      .from(trips)
-      .leftJoin(courses, eq(courses.id, trips.courseId))
-      .leftJoin(tripAssignments, eq(tripAssignments.tripId, trips.id))
-      .leftJoin(people, eq(people.id, tripAssignments.personId))
+      .from(tripAssignments)
+      .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
+      .innerJoin(people, eq(people.id, tripAssignments.personId))
       .leftJoin(personRoles, eq(personRoles.personId, tripAssignments.personId))
       .where(
         and(
@@ -84,51 +125,84 @@ export async function getStaffingView(
           gt(trips.endsAt, from),
           isNull(people.deletedAt),
         ),
-      )
-      .orderBy(asc(trips.startsAt), asc(people.fullName)),
+      ),
   ]);
 
-  // `people.deleted_at is null` needs an explicit SQL predicate; keeping it out
-  // of the nullable left join would turn an unassigned trip into no row.
-  const activeTripRows = tripRows.filter((row) => row.personId === null || row.personName !== null);
   const shiftsByPerson = new Map<string, (typeof staffShifts.$inferSelect)[]>();
   for (const row of shiftRows) {
     const shifts = shiftsByPerson.get(row.shift.personId) ?? [];
     shifts.push(row.shift);
     shiftsByPerson.set(row.shift.personId, shifts);
   }
+
+  type TripEntry = {
+    trip: typeof trips.$inferSelect;
+    courseTitle: string | null;
+    course: typeof courses.$inferSelect | null;
+    booked: number;
+    crew: { personId: string; name: string; roles: string[] }[];
+  };
+  const tripMap = new Map<string, TripEntry>();
+  for (const row of tripCourseRows) {
+    tripMap.set(row.trip.id, {
+      trip: row.trip,
+      courseTitle: row.course?.title ?? null,
+      course: row.course,
+      booked: row.booked,
+      crew: [],
+    });
+  }
+  for (const row of crewRows) {
+    const entry = tripMap.get(row.tripId);
+    if (!entry) continue;
+    let crew = entry.crew.find((member) => member.personId === row.personId);
+    if (!crew) {
+      crew = { personId: row.personId, name: row.personName, roles: [] };
+      entry.crew.push(crew);
+    }
+    if (row.role && !crew.roles.includes(row.role)) crew.roles.push(row.role);
+  }
+
+  const crewingByPerson = new Map<string, StaffCrewingTrip[]>();
+  for (const entry of tripMap.values()) {
+    for (const member of entry.crew) {
+      const trips = crewingByPerson.get(member.personId) ?? [];
+      trips.push({
+        tripId: entry.trip.id,
+        title: entry.trip.title,
+        startsAt: entry.trip.startsAt,
+        endsAt: entry.trip.endsAt,
+      });
+      crewingByPerson.set(member.personId, trips);
+    }
+  }
+  for (const trips of crewingByPerson.values()) {
+    trips.sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
+  }
+
   const staff = staffRows.map((entry) => ({
     ...entry,
     capabilities: capabilitiesForRoles(entry.roles),
     shifts: shiftsByPerson.get(entry.person.id) ?? [],
+    crewingTrips: crewingByPerson.get(entry.person.id) ?? [],
   }));
 
-  const tripMap = new Map<string, StaffingView["trips"][number]>();
-  for (const row of activeTripRows) {
-    const existing = tripMap.get(row.trip.id) ?? {
-      trip: row.trip,
-      courseTitle: row.courseTitle,
-      crew: [],
-      coveredByShift: false,
-      gaps: [],
-    };
-    if (row.personId && row.personName) {
-      const crew = existing.crew.find((member) => member.personId === row.personId);
-      if (crew) {
-        if (row.role && !crew.roles.includes(row.role)) crew.roles.push(row.role);
-      } else {
-        existing.crew.push({
-          personId: row.personId,
-          name: row.personName,
-          roles: row.role ? [row.role] : [],
-        });
-      }
-    }
-    tripMap.set(row.trip.id, existing);
-  }
-
   const tripsView = [...tripMap.values()].map((entry) => {
-    const hasInstructor = entry.crew.some((member) => member.roles.includes("instructor"));
+    const instructorCount = entry.crew.filter((member) =>
+      member.roles.includes("instructor"),
+    ).length;
+    const assistantCount = entry.crew.filter(
+      (member) => member.roles.includes("divemaster") && !member.roles.includes("instructor"),
+    ).length;
+    // The one "course crew gap" computation (Lens 17 task 151) — also
+    // consumed by the trip page and the Today queue — so a course this
+    // window calls "needs an instructor" isn't secretly fine on Today.
+    const gap = courseCrewGap({
+      course: entry.course,
+      instructorCount,
+      assistantCount,
+      booked: entry.booked,
+    });
     const crewShifted = entry.crew.some((member) =>
       (shiftsByPerson.get(member.personId) ?? []).some(
         (shift) => shift.startsAt < entry.trip.endsAt && shift.endsAt > entry.trip.startsAt,
@@ -136,13 +210,46 @@ export async function getStaffingView(
     );
     const gaps: StaffingGapCode[] = [
       ...(entry.crew.length === 0 ? (["no_crew"] as const) : []),
-      ...(entry.courseTitle && !hasInstructor ? (["course_needs_instructor"] as const) : []),
+      ...(hasCourseCrewGap(gap) ? (["course_needs_instructor"] as const) : []),
       ...(!crewShifted ? (["no_shift_coverage"] as const) : []),
     ];
-    return { ...entry, coveredByShift: crewShifted, gaps };
+    return {
+      trip: entry.trip,
+      courseTitle: entry.courseTitle,
+      crew: entry.crew,
+      coveredByShift: crewShifted,
+      gaps,
+    };
   });
 
   return { from, to, staff, trips: tripsView };
+}
+
+/**
+ * Which of a trip's assigned crew (`personIds`) have a staff shift
+ * overlapping the trip's own window — the other half of task 165's
+ * cross-link, read from the trip's `CrewSection` rather than the staffing
+ * page.
+ */
+export async function crewShiftCoverage(
+  db: AppDb,
+  shopId: string,
+  trip: { startsAt: Date; endsAt: Date },
+  personIds: readonly string[],
+): Promise<Set<string>> {
+  if (personIds.length === 0) return new Set();
+  const rows = await db
+    .select({ personId: staffShifts.personId })
+    .from(staffShifts)
+    .where(
+      and(
+        eq(staffShifts.shopId, shopId),
+        inArray(staffShifts.personId, [...personIds]),
+        lt(staffShifts.startsAt, trip.endsAt),
+        gt(staffShifts.endsAt, trip.startsAt),
+      ),
+    );
+  return new Set(rows.map((row) => row.personId));
 }
 
 export type CreateStaffShiftOutcome =

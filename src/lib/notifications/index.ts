@@ -1,10 +1,12 @@
 import { z } from "zod";
 import { DIVER_LOCALES } from "@/i18n/settings";
 import { nowMs } from "@/lib/clock";
+import { COURSE_INQUIRY_EXPERIENCE } from "@/lib/course-inquiry";
 import { REMINDER_ACTION_CODES } from "@/lib/readiness-summary";
 import {
   bookingConfirmationEmail,
   checkoutRecoveryEmail,
+  courseInquiryEmail,
   lastMinuteDealEmail,
   type NotificationEmail,
   newAccountAlertEmail,
@@ -279,6 +281,27 @@ const newAccountAlertSchema = z.object({
   shopSlug: z.string().trim().min(1).max(120),
 });
 
+// The shop's own inbox learns about a lead the moment the diver submits the
+// public course-page composer (docs/product/archive/ux-personas-20260730-findings.md
+// task 7) — carries the course_inquiries row id so a retried send can't double
+// up, exactly like waiver_request keys off its own row.
+const courseInquirySchema = z.object({
+  kind: z.literal("course_inquiry"),
+  courseInquiryId: z.uuid(),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  shopName: z.string().trim().min(1).max(120),
+  courseTitle: z.string().trim().min(1).max(200),
+  inquirerName: z.string().trim().min(1).max(120).optional(),
+  inquirerEmail: emailAddressSchema.optional(),
+  inquirerPhone: z.string().trim().min(1).max(30).optional(),
+  experience: z.enum(COURSE_INQUIRY_EXPERIENCE),
+  timing: z.string().trim().min(1).max(200).optional(),
+  divers: z.number().int().min(1).max(12).optional(),
+  message: z.string().trim().min(1).max(1500).optional(),
+});
+
 const passwordChangedSchema = z.object({
   kind: z.literal("password_changed"),
   userAccountId: z.uuid(),
@@ -307,6 +330,7 @@ export const notificationSchema = z.discriminatedUnion("kind", [
   checkoutRecoverySchema,
   lastMinuteDealSchema,
   newAccountAlertSchema,
+  courseInquirySchema,
 ]);
 
 export type Notification = z.infer<typeof notificationSchema>;
@@ -420,6 +444,7 @@ function rawMessageFor(notification: Notification): NotificationEmail {
   if (notification.kind === "checkout_recovery") return checkoutRecoveryEmail(notification);
   if (notification.kind === "last_minute_deal") return lastMinuteDealEmail(notification);
   if (notification.kind === "new_account_alert") return newAccountAlertEmail(notification);
+  if (notification.kind === "course_inquiry") return courseInquiryEmail(notification);
   return passwordChangedEmail(notification);
 }
 
@@ -473,6 +498,9 @@ export function notificationIdempotencyKey(notification: Notification): string {
     // One alert per account, ever — same key shape as welcome above.
     case "new_account_alert":
       return `new-account-alert/${notification.userAccountId}`;
+    // One notification per submitted inquiry row.
+    case "course_inquiry":
+      return `course-inquiry/${notification.courseInquiryId}`;
   }
 }
 
