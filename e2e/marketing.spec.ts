@@ -1,4 +1,27 @@
+import { DEMO_SHOP_SLUG } from "../src/db/dev-credentials";
 import { expect, test } from "./fixtures";
+
+test("the homepage hero distinguishes trying the staff app from previewing a diver's booking page", async ({
+  page,
+}) => {
+  await page.goto("/");
+
+  // "Try the staff app" mints a fresh demo shop and drops the visitor into it
+  // — a different door than the schedule preview below, so the two must read
+  // as distinct rather than both promising "a live demo".
+  await expect(page.getByRole("button", { name: "Try the staff app" })).toBeVisible();
+
+  const scheduleLink = page.getByRole("link", { name: "See a diver's booking page →" });
+  const href = await scheduleLink.getAttribute("href");
+  // Sourced from DEMO_SHOP_SLUG rather than a hand-typed literal, and tagged
+  // for funnel attribution the same way the trial link is.
+  expect(href).toBe(`/shop/${DEMO_SHOP_SLUG}/schedule?from=home-hero`);
+
+  await scheduleLink.click();
+  await expect(page.getByRole("heading", { name: "Schedule", level: 1 })).toBeVisible();
+  // The diver-facing schedule, not a staff console — no sign-in chrome.
+  await expect(page.getByRole("button", { name: "Sign out" })).toHaveCount(0);
+});
 
 test("public marketing pages lead to the product and pricing details", async ({ page }) => {
   await page.goto("/");

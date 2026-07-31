@@ -8,6 +8,8 @@ import { trialHref } from "@/lib/funnel";
 
 interface HomeCTAProps {
   enterDemoAction: (formData: FormData) => Promise<void>;
+  /** The demo shop's public schedule, tagged for attribution — see `scheduleAttributionHref`. */
+  scheduleHref: string;
   copy: {
     gettingReady: string;
     tryDemo: string;
@@ -16,7 +18,7 @@ interface HomeCTAProps {
   };
 }
 
-export function HomeCTA({ enterDemoAction, copy }: HomeCTAProps) {
+export function HomeCTA({ enterDemoAction, scheduleHref, copy }: HomeCTAProps) {
   return (
     <div className="flex flex-col items-start gap-3">
       <div className="flex flex-col gap-3 sm:flex-row">
@@ -43,10 +45,7 @@ export function HomeCTA({ enterDemoAction, copy }: HomeCTAProps) {
           {copy.startTrial}
         </Link>
       </div>
-      <Link
-        href="/shop/blue-mantis/schedule"
-        className={buttonClass({ variant: "link", className: "px-0" })}
-      >
+      <Link href={scheduleHref} className={buttonClass({ variant: "link", className: "px-0" })}>
         {copy.seeLiveSchedule}
       </Link>
     </div>

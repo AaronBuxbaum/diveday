@@ -834,9 +834,9 @@
     "mainNavigation": "Navegación principal",
     "tagline": "Una forma más tranquila de llevar un día de buceo.",
     "sayHello": "Escríbenos — siempre es bienvenido",
-    "seeLiveSchedule": "Ver un horario en vivo →",
+    "seeLiveSchedule": "Ver la página de reservas de un buceador →",
     "gettingReady": "Preparando tu tienda…",
-    "tryDemo": "Probar la demo en vivo"
+    "tryDemo": "Probar la app del personal"
   },
   "fallback": {
     "offlineCopy": "Copia sin conexión · al día",

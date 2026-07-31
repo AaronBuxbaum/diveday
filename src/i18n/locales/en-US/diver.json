@@ -834,9 +834,9 @@
     "mainNavigation": "Main navigation",
     "tagline": "A calmer way to run a dive day.",
     "sayHello": "Say hello — always welcome",
-    "seeLiveSchedule": "See a live schedule →",
+    "seeLiveSchedule": "See a diver's booking page →",
     "gettingReady": "Getting your shop ready…",
-    "tryDemo": "Try the live demo"
+    "tryDemo": "Try the staff app"
   },
   "fallback": {
     "offlineCopy": "Offline copy · up to date",
