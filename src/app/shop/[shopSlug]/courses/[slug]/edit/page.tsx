@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { ImageFileInput } from "@/components/ImageFileInput";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
+import { StoredPhoto } from "@/components/StoredPhoto";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid, PriceField } from "@/components/ui/form";
@@ -23,12 +24,6 @@ import { UnsavedChangesGuard } from "./_components/UnsavedChangesGuard";
 import { saveCourseContentAction, setCourseVisibilityAction } from "./actions";
 
 export const metadata: Metadata = { title: "Edit course page — DiveDay" };
-
-/** Course media comes from the shop's own uploads; render it as it was stored. */
-function Thumb({ src, className }: { src: string; className: string }) {
-  // biome-ignore lint/performance/noImgElement: course media comes from shop-provided hosts and the blob store, which no build-time image allowlist can enumerate.
-  return <img src={src} alt="" className={className} />;
-}
 
 export default async function EditCoursePage({
   params,
@@ -192,9 +187,11 @@ export default async function EditCoursePage({
               >
                 {course.heroImageUrl ? (
                   <div className="mb-2 flex items-center gap-3">
-                    <Thumb
+                    <StoredPhoto
                       src={course.heroImageUrl}
-                      className="h-16 w-24 rounded-lg border border-border object-cover"
+                      alt=""
+                      className="h-16 w-24 shrink-0 rounded-lg border border-border"
+                      sizes="96px"
                     />
                     <label className="flex min-h-11 items-center gap-2 text-sm">
                       <input type="checkbox" name="removeHero" value="true" className="size-4" />
@@ -245,9 +242,11 @@ export default async function EditCoursePage({
                             value={url}
                             className="peer sr-only"
                           />
-                          <Thumb
+                          <StoredPhoto
                             src={url}
-                            className="h-24 w-full rounded-lg border-2 border-border object-cover transition peer-checked:border-danger peer-checked:opacity-50"
+                            alt=""
+                            className="h-24 w-full rounded-lg border-2 border-border transition peer-checked:border-danger peer-checked:opacity-50"
+                            sizes="(min-width: 640px) 25vw, 50vw"
                           />
                           <span
                             aria-hidden="true"

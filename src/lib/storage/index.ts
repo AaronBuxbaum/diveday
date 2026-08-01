@@ -27,9 +27,6 @@ export type ImageUpload = {
   bytes: ArrayBuffer | Buffer;
 };
 
-/** @deprecated Use `ImageUpload`; kept so card-capture call sites read unchanged. */
-export type CardImageUpload = ImageUpload;
-
 export interface ImageStorageProvider {
   upload(input: ImageUpload): Promise<StoredImage>;
 }
