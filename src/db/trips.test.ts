@@ -1006,3 +1006,79 @@ describe("moveTrip / duplicateTrip across a DST transition", () => {
     });
   });
 });
+
+describe("moveTrip / duplicateTrip when the start's clock time also changes", () => {
+  // A move isn't always "same time, new day" — the schedule builder lets
+  // staff pick a new date *and* a new departure time in one step. endsAt (and
+  // any other schedule day) must carry that time-of-day change too, or the
+  // trip's duration silently changes: a departure created 09:00-13:00 (4h)
+  // and moved to 07:15 must land at 07:15-11:15, not stay stuck at 13:00.
+  const tz = "America/New_York";
+  const wall = (day: number, hour: number, minute = 0) =>
+    wallTimeToUtc({ year: 2026, month: 6, day, hour, minute }, tz);
+
+  it("moveTrip shifts endsAt by the same wall-clock delta as the new start time", async () => {
+    const { db, shop } = await seededShopContext();
+    expect(shop.timezone).toBe(tz);
+
+    const source = await createTrip(db, {
+      shopId: shop.id,
+      title: "Time-change regression",
+      startsAt: wall(10, 9, 0),
+      endsAt: wall(10, 13, 0),
+      capacity: 4,
+    });
+    if (!source) throw new Error("source trip not created");
+
+    const outcome = await moveTrip(db, shop.id, source.id, wall(12, 7, 15));
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+
+    expect(utcToWallTime(outcome.trip.startsAt, tz)).toEqual({
+      year: 2026,
+      month: 6,
+      day: 12,
+      hour: 7,
+      minute: 15,
+    });
+    expect(utcToWallTime(outcome.trip.endsAt, tz)).toEqual({
+      year: 2026,
+      month: 6,
+      day: 12,
+      hour: 11,
+      minute: 15,
+    });
+  });
+
+  it("duplicateTrip shifts endsAt by the same wall-clock delta as the new start time", async () => {
+    const { db, shop } = await seededShopContext();
+    expect(shop.timezone).toBe(tz);
+
+    const source = await createTrip(db, {
+      shopId: shop.id,
+      title: "Time-change regression",
+      startsAt: wall(10, 9, 0),
+      endsAt: wall(10, 13, 0),
+      capacity: 4,
+    });
+    if (!source) throw new Error("source trip not created");
+
+    const copy = await duplicateTrip(db, shop.id, source.id, wall(12, 7, 15));
+    if (!copy) throw new Error("duplicate not created");
+
+    expect(utcToWallTime(copy.startsAt, tz)).toEqual({
+      year: 2026,
+      month: 6,
+      day: 12,
+      hour: 7,
+      minute: 15,
+    });
+    expect(utcToWallTime(copy.endsAt, tz)).toEqual({
+      year: 2026,
+      month: 6,
+      day: 12,
+      hour: 11,
+      minute: 15,
+    });
+  });
+});
