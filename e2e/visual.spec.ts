@@ -103,6 +103,27 @@ const VIEWPORTS = [
  * Each is bounded and failure-tolerant — a broken or never-loading `src` must
  * leave a capture slightly wrong, never hang the suite. CSS background images
  * are still out of reach; nothing in the DOM exposes their decode state.
+ *
+ * **Awaiting `decode()` once is not enough, because the selection moves.**
+ * `capture()` resizes the viewport immediately before this runs, and a resize
+ * re-evaluates `sizes`/`srcset`, so `next/image` can swap an image to a
+ * different candidate width — a source that has to be fetched, and that
+ * `/_next/image` has to *generate* with sharp before any bytes exist. Awaiting
+ * the decode of whatever was selected a moment earlier therefore proves nothing
+ * about what the shot will contain. So the wait loops: decode everything
+ * currently selected, then require both that no image is still loading and that
+ * `currentSrc` did not change during the pass, which costs a mandatory second
+ * pass and buys the guarantee. `VIEWPORTS` puts 390 first, so the light-390
+ * capture of a photo page is the coldest moment in the whole run — first
+ * viewport, first scheme, nothing generated yet — and it is exactly where this
+ * surfaced: `course-page-light-vw-390` and `recap-light-vw-390` differing
+ * run-to-run on an unchanged build, every glyph around the photos identical.
+ *
+ * The bound is reported, not silent. A capture that gives up on an image still
+ * looks like a clean capture, so the old 5s-per-image race could ship a
+ * half-loaded photo with nothing in the log to say so — the diff then reads as
+ * an unexplained content change and costs a triage cycle. Like the frame waits,
+ * hitting the bound now warns with a count.
  */
 /**
  * Every wait below is bounded, because `requestAnimationFrame` is not a promise
@@ -129,10 +150,14 @@ const VIEWPORTS = [
 const FRAME_WAIT_MS = 500;
 const SCROLL_BUDGET_MS = 20_000;
 const FONTS_WAIT_MS = 5_000;
+// Budget for the whole image pass, not per image. It has to cover a cold
+// `/_next/image` generating a width it has never been asked for, on a CI runner
+// already running the other shards — the 5s this replaced was under that.
+const IMAGE_SETTLE_MS = 15_000;
 
 async function paintWholeDocument(page: Page) {
-  const stalledFrames = await page.evaluate(
-    async ({ frameWaitMs, scrollBudgetMs }) => {
+  const { stalled: stalledFrames, unsettled: unsettledImages } = await page.evaluate(
+    async ({ frameWaitMs, scrollBudgetMs, imageSettleMs }) => {
       let stalled = 0;
       const settle = () =>
         new Promise<void>((resolve) => {
@@ -163,25 +188,85 @@ async function paintWholeDocument(page: Page) {
       window.scrollTo(0, 0);
       await settle();
 
-      await Promise.all(
-        Array.from(document.images).map(
-          (image) =>
-            Promise.race([
-              image.decode().catch(() => undefined),
-              new Promise((resolve) => setTimeout(resolve, 5000)),
-            ]) as Promise<unknown>,
-        ),
-      );
+      const imageDeadline = performance.now() + imageSettleMs;
+      const selectionOf = () =>
+        Array.from(document.images)
+          .map((image) => image.currentSrc)
+          .join("\n");
+      let unsettled = 0;
+      for (;;) {
+        const images = Array.from(document.images);
+        // Sampled before the decode and re-read after it, so a swap that starts
+        // *during* the await is caught without costing every settled page an
+        // extra confirmation pass — this runs 32 times per scheme and the
+        // test's own budget is not generous.
+        const selectionBefore = selectionOf();
+        await Promise.all(
+          images
+            // `decode()` on an image with no source selected never settles —
+            // there is nothing to decode and nothing coming, so the promise
+            // simply hangs and the race below burns its entire bound. The
+            // trip-detail pages carry 14 such `loading="lazy"` tiles, which is
+            // how one page came to cost the whole budget on every capture while
+            // changing not a single pixel. Nothing to decode, nothing to wait
+            // for: skip them and let the `pending` check below speak for them.
+            .filter((image) => image.currentSrc !== "")
+            .map(
+              (image) =>
+                Promise.race([
+                  image.decode().catch(() => undefined),
+                  new Promise((resolve) =>
+                    setTimeout(resolve, Math.max(0, imageDeadline - performance.now())),
+                  ),
+                ]) as Promise<unknown>,
+            ),
+        );
+        const selectionStable = selectionOf() === selectionBefore;
+        // Pending means "a load is actually in flight", which is `!complete`
+        // *and* a source already selected. Both halves matter:
+        //
+        // - `complete` goes true when an attempt *finishes*, success or failure,
+        //   so a broken `src` is settled-and-stable, not pending — it renders
+        //   identically every run.
+        // - An empty `currentSrc` means the browser has not selected a source at
+        //   all. A `loading="lazy"` image the scroll swept past without tripping
+        //   its intersection sits here indefinitely: `complete` false, nothing
+        //   in flight, nothing coming. Waiting on those spent the entire budget
+        //   on every capture of the trip-detail pages (14 of them there) and
+        //   blew the test's own timeout, while the thing we actually need to
+        //   wait for — a `srcset` swap, which sets `currentSrc` as it starts —
+        //   was already covered.
+        const pending = Array.from(document.images).filter(
+          (image) => !image.complete && image.currentSrc !== "",
+        );
+        if (pending.length === 0 && selectionStable) break;
+        if (performance.now() > imageDeadline) {
+          unsettled = pending.length;
+          break;
+        }
+        await settle();
+      }
       // One more frame so anything decoded above is composited before the shot.
       await settle();
-      return stalled;
+      return { stalled, unsettled };
     },
-    { frameWaitMs: FRAME_WAIT_MS, scrollBudgetMs: SCROLL_BUDGET_MS },
+    {
+      frameWaitMs: FRAME_WAIT_MS,
+      scrollBudgetMs: SCROLL_BUDGET_MS,
+      imageSettleMs: IMAGE_SETTLE_MS,
+    },
   );
   if (stalledFrames > 0) {
     console.warn(
       `visual: ${stalledFrames} frame wait(s) hit the ${FRAME_WAIT_MS}ms bound at ${page.url()} — ` +
         "a band may be captured unpainted; check the diff for a blank stripe.",
+    );
+  }
+  if (unsettledImages > 0) {
+    console.warn(
+      `visual: ${unsettledImages} image(s) had not finished loading within the ` +
+        `${IMAGE_SETTLE_MS}ms bound at ${page.url()} — the shot may contain a partly-loaded ` +
+        "photo; check the diff for a changed image tile.",
     );
   }
   // Same reasoning as the frame waits: a webfont that never resolves must cost
