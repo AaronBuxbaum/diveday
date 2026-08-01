@@ -20,7 +20,14 @@ import { publicAppUrl } from "@/lib/notifications";
  * No `lastModified` is set: there is no cheap, honest "last updated" signal
  * for a shop or course readily available without an extra query, and
  * fabricating one would be worse than omitting it.
+ *
+ * This route has no request-time API (no `headers()`, no session), so Next
+ * caches it statically at build time by default — a shop that signs up
+ * between deploys would otherwise stay out of the sitemap until the next
+ * one ships. `revalidate` puts a ceiling on that staleness instead.
  */
+export const revalidate = 3600;
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const origin = publicAppUrl() ?? "http://localhost:3000";
   const entries: Array<{ path: string; priority: number }> = [
