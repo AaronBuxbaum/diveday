@@ -17,10 +17,13 @@ report.)
 - Human-owned approvals, provisional defaults, and validation gates are in
   [../human-decisions.md](../human-decisions.md); the deep buyer/rival analysis is in
   [competitive-analysis.md](../assessments/competitive-analysis.md) and
-  [competitive-strategy.md](../assessments/competitive-strategy.md); the open specialist-audit tasks
-  (accessibility, security) are in
-  [specialist-optimization-audit-20260731.md](../assessments/specialist-optimization-audit-20260731.md)
-  — its ML & data tasks moved into [ai-ml.md](ai-ml.md) in the same 2026-08-01 consolidation.
+  [competitive-strategy.md](../assessments/competitive-strategy.md). The 2026-07-31 specialist
+  optimization audit is archived
+  ([../archive/specialist-optimization-audit-20260731.md](../archive/specialist-optimization-audit-20260731.md))
+  — every lens shipped or moved out by 2026-08-01: ML & data into [ai-ml.md](ai-ml.md), security &
+  privacy into [../shipped.md](../shipped.md), and its three still-open accessibility contrast
+  fixes into this file's own [Accessibility contrast fixes](#accessibility-contrast-fixes-blocked-on-a-color-guide-decision)
+  section below.
 - Open UX tickets carried out of the persona review live in [story-backlog.md](story-backlog.md);
   raw, unfiltered ideas live in [brainstorm.md](brainstorm.md) (AI-required ideas in
   [ai-ml.md](ai-ml.md)) and are not commitments.
@@ -141,6 +144,39 @@ These are per-feature rough edges on shipped work, not future subsystems. They a
   [20260729-verified-diver-reviews](../../architecture/decisions/20260729-verified-diver-reviews.md).
 - Currencies beyond the shop's declared one on a single order, and Stripe-reported settlement
   currency drift — [20260731-shop-currency](../../architecture/decisions/20260731-shop-currency.md).
+
+## Accessibility contrast fixes (blocked on a color-guide decision)
+
+Carried over verbatim from the archived [2026-07-31 specialist optimization
+audit](../archive/specialist-optimization-audit-20260731.md#3-accessibility-contrast-tasks-moved)
+§3 — re-verified against the running `src/app/globals.css` as of that audit's last update
+(2026-08-01) and still failing. **Deliberately not built**: the product owner ruled out touching
+contrast values in the same pass that delivered the rest of the accessibility lens, because it
+would fight the current color guide. Pick these up once that guide decision is made, not before —
+re-verify the computed ratios against `globals.css` first, since token values may have drifted.
+`e2e/a11y.spec.ts`'s axe scan excludes the `color-contrast` rule for exactly this reason; re-include
+it once this section is cleared.
+
+### Fix the global focus indicator's contrast in light mode
+
+- **Priority**: high
+- **Effort**: S
+- **Prompt**: In `src/app/globals.css`, the app-wide keyboard focus indicator is `outline: 3px solid color-mix(in srgb, var(--primary) 55%, transparent)` (in the `:where(a, button, input, select, textarea, summary):focus-visible` rule). In the light palette that computes to ~2.3:1 against `--background` (#faf9f6) and `--surface` (#ffffff), failing WCAG 1.4.11's 3:1 minimum for focus indicators — keyboard staff users can lose the focus ring entirely in sunlight. Introduce a dedicated semantic token (e.g. `--focus-ring`) defined per scheme in the `:root` and dark blocks — full-strength `--primary` in light mode is 5.36:1 on white and passes — and use it in the `:focus-visible` rule instead of the 55% mix. Keep the token semantic per ADR-0004 and also define it in the `.boat-mode` and `.glare-mode` blocks so those palettes keep a passing ring. Do not weaken the dark-mode ring (currently ~3.8:1, passing).
+- **Verification**: Recompute ratios with the same formula (a small node script against the hex values) confirming ≥3:1 for light, dark, boat, and glare palettes; keyboard-Tab through `/sign-in` and the schedule in light mode and screenshot to confirm the ring is clearly visible; `pnpm check` green (the token change must not trip the semantic-token safeguard).
+
+### Raise tinted status-banner text above 4.5:1
+
+- **Priority**: medium
+- **Effort**: S
+- **Prompt**: Light-mode success and warning text on their 10% tinted fills fails AA for the small text sizes used: `--success` #15803d on `bg-success/10` over white computes to 4.38:1 and `--warning` #b45309 on `bg-warning/10` to 4.39:1. Concrete instances: the waiver "progress saved" banner (`text-sm font-medium text-success` on `bg-success/10`, `src/app/waivers/[token]/page.tsx`), the payment-received panel (`text-success` on `bg-success/10`, `src/app/shop/[shopSlug]/schedule/[id]/_components/BookingConfirmation.tsx`), and warning-tinted notices/`ShopNotice tone="warning"` surfaces. Fix at the token level in `src/app/globals.css`: darken light-mode `--success` to ~#166534 and `--warning` to ~#92400e (the values boat-mode already uses), then re-verify every existing light-mode use of `text-success`/`text-warning` on `bg-surface`, `bg-background`, and the /10 tints clears 4.5:1. Dark mode already passes (7.5–8:1) — do not touch it.
+- **Verification**: Node contrast script over the new hex values against `#ffffff`, `#faf9f6`, `#f1efe9`, and each color mixed at 10% over white, all ≥4.5:1; `pnpm visual` and review the diffs (an intentional token darkening, explained in the PR per the visual-triage skill); light/dark screenshots of the waiver saved banner and booking payment panel.
+
+### Fix placeholder text contrast
+
+- **Priority**: medium
+- **Effort**: S
+- **Prompt**: `src/app/globals.css` sets `input::placeholder`/`textarea::placeholder` to `color-mix(in srgb, var(--muted) 78%, transparent)`, which computes to 3.35:1 on white surfaces and 3.07:1 on `--surface-sunken` in light mode — placeholder text is real text under WCAG 1.4.3 and needs 4.5:1 (the schedule builder's title placeholder and search inputs rely on it). Change the rule to use `var(--muted)` at full strength (5.0:1 on background, 4.58:1 on sunken — passing) or raise the mix to a percentage that clears 4.5:1 on the darkest light-mode surface it sits on; placeholders remain visually distinct from typed text because typed text uses `--foreground`, not `--muted`. Dark mode currently sits at 4.54:1 — keep it at or above that.
+- **Verification**: Node contrast script confirming ≥4.5:1 for the computed placeholder color over `#ffffff`, `#faf9f6`, and `#f1efe9` (light) and `#0d222d` (dark); axe run (or DevTools contrast checker) on the schedule builder's Add panel; `pnpm visual` diff reviewed and explained.
 
 ## Engineering enablement
 

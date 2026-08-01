@@ -27,7 +27,9 @@ import { clientIp } from "@/lib/request-ip";
 export async function submitPasswordReset(token: string, formData: FormData) {
   const base = `/reset-password/${token}`;
   const ip = await clientIp();
-  if (!checkRateLimit(rateLimitKey("reset-token", ip), RATE_LIMITS.accountTokenAction).allowed) {
+  if (
+    !(await checkRateLimit(rateLimitKey("reset-token", ip), RATE_LIMITS.accountTokenAction)).allowed
+  ) {
     redirect(base);
   }
 

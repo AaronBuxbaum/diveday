@@ -20,7 +20,10 @@ import { clientIp } from "@/lib/request-ip";
 export async function acceptStaffInvite(token: string, formData: FormData) {
   const base = `/invite/${token}`;
   const ip = await clientIp();
-  if (!checkRateLimit(rateLimitKey("invite-token", ip), RATE_LIMITS.accountTokenAction).allowed) {
+  if (
+    !(await checkRateLimit(rateLimitKey("invite-token", ip), RATE_LIMITS.accountTokenAction))
+      .allowed
+  ) {
     redirect(base);
   }
 

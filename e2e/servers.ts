@@ -44,6 +44,22 @@ export function e2eBaseURL(workerIndex: number): string {
 export const e2eWorkerIndexes: number[] = Array.from({ length: E2E_WORKER_COUNT }, (_, i) => i);
 
 /**
+ * Bearer secret the harness must present to every `/api/test/*` route
+ * (specialist-optimization-audit-20260731.md §5) — `e2eTestRouteAuthorized`
+ * (src/lib/e2e-test-routes.ts) fails closed without it, exactly like
+ * `CRON_SECRET` on the reminders cron route, so a misconfigured deployment
+ * satisfying only the env-var predicate (DIVEDAY_E2E=1 left set, PGlite
+ * fallback) still can't reach these routes. A fixed test-only value, pinned
+ * into both the worker servers' env (playwright.config.ts's `serverEnv`) and
+ * every outgoing test request (`use.extraHTTPHeaders` + this file's own
+ * manual context in global-setup.ts) — not meant to resist anything beyond
+ * "this request came from the e2e harness," the same bar `AUTH_SECRET`'s
+ * `diveday-e2e-secret` pin sets a few lines up in playwright.config.ts.
+ */
+export const E2E_TEST_ROUTE_SECRET =
+  process.env.DIVEDAY_E2E_SECRET || "diveday-e2e-test-route-secret";
+
+/**
  * The instant the whole e2e fleet pretends "now" is. The demo seed is
  * clock-anchored and dozens of surfaces render relative time, so against a live
  * clock every visual baseline diffs on nothing but the passage of

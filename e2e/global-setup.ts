@@ -1,6 +1,6 @@
 import { chromium, request } from "@playwright/test";
 import { chromiumLaunchOptions } from "./browser";
-import { e2eBaseURL, e2eWorkerIndexes } from "./servers";
+import { E2E_TEST_ROUTE_SECRET, e2eBaseURL, e2eWorkerIndexes } from "./servers";
 
 /**
  * Pay the run's one-time costs here, where nothing is on a test's clock.
@@ -76,7 +76,13 @@ export default async function globalSetup() {
 async function warmServers() {
   await Promise.all(
     e2eWorkerIndexes.map(async (i) => {
-      const context = await request.newContext({ baseURL: e2eBaseURL(i) });
+      const context = await request.newContext({
+        baseURL: e2eBaseURL(i),
+        // /api/test/reset now requires this bearer token (src/lib/e2e-test-routes.ts);
+        // this manual context is built outside Playwright's fixture system, so
+        // it doesn't inherit playwright.config.ts's `use.extraHTTPHeaders`.
+        extraHTTPHeaders: { authorization: `Bearer ${E2E_TEST_ROUTE_SECRET}` },
+      });
       try {
         // This first reset pays the one-time migrate + seed, the heaviest
         // single request in the run; 30s is ample and still fails fast if the

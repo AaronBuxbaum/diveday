@@ -42,7 +42,7 @@ export async function onboardAction(formData: FormData) {
   };
 
   const ip = await clientIp();
-  if (!checkRateLimit(rateLimitKey("onboard", ip), RATE_LIMITS.onboard).allowed) {
+  if (!(await checkRateLimit(rateLimitKey("onboard", ip), RATE_LIMITS.onboard)).allowed) {
     // A code, like every other `backToForm` call below that names a specific
     // field problem — OnboardPage resolves it through ONBOARD_ERROR_MESSAGES
     // (falling back to rendering the string as-is for the handful of

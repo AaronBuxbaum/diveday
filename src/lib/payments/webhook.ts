@@ -25,6 +25,16 @@ const stripeEventSchema = z.object({
    * `stripe_webhook_events` refuse a stale out-of-order `account.updated`.
    */
   created: z.number().optional(),
+  /**
+   * Whether this event happened against Stripe's live or test mode. Real
+   * Stripe events always send this; optional here only so a hand-built
+   * fixture that omits it still parses. The webhook route cross-checks it
+   * against which of `STRIPE_WEBHOOK_SECRET`/`STRIPE_TEST_WEBHOOK_SECRET`
+   * actually verified the signature, so a correctly-signed test-mode event
+   * can never mutate live payment state (security review finding, docs
+   * product/archive/specialist-optimization-audit-20260731.md §5).
+   */
+  livemode: z.boolean().optional(),
   data: z.object({ object: z.record(z.string(), z.unknown()) }),
 });
 

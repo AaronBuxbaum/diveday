@@ -116,6 +116,28 @@ describe("card image storage seam", () => {
     );
     expect(await storeCardImage(upload(), provider)).toEqual({ status: "failed" });
   });
+
+  it("keys every upload with a CSPRNG suffix, never a colliding or guessable one", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ url: "https://blob.example/cards/x-padi-ow.jpg" }),
+    });
+    const provider = imageStorageProviderFromEnvironment(
+      { BLOB_READ_WRITE_TOKEN: "test-token" },
+      fetchImpl as unknown as typeof fetch,
+    );
+    const pathnames: string[] = [];
+    for (let i = 0; i < 20; i++) {
+      await storeCardImage(upload(), provider);
+      const [url] = fetchImpl.mock.calls[i];
+      const pathname = new URL(String(url)).pathname;
+      // "/cards/<22-char base64url suffix>-padi-ow.jpg"
+      const suffix = pathname.split("/")[2]?.split("-padi-ow.jpg")[0];
+      expect(suffix).toMatch(/^[A-Za-z0-9_-]{22}$/);
+      pathnames.push(pathname);
+    }
+    expect(new Set(pathnames).size).toBe(pathnames.length);
+  });
 });
 
 describe("course image storage", () => {

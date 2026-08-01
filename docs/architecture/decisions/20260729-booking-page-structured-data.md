@@ -75,7 +75,7 @@ would be strange to fix the machine-readable half and leave every departure titl
 - **A sitemap** — out of scope here, and genuinely useful; it belongs with the read-API/webhooks work
   in the roadmap rather than bolted onto this. *(Update: `src/app/sitemap.ts` now publishes exactly
   the shop-schedule and course pages this ADR gives structured data to — see the SEO & growth work
-  in docs/product/assessments/specialist-optimization-audit-20260731.md.)*
+  in docs/product/archive/specialist-optimization-audit-20260731.md.)*
 
 ## Consequences
 

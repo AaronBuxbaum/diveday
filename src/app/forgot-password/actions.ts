@@ -34,14 +34,17 @@ export async function requestPasswordReset(formData: FormData) {
   const email = parsed.data.email.toLowerCase();
 
   const ip = await clientIp();
-  const byIp = checkRateLimit(
-    rateLimitKey("password-reset-ip", ip),
-    RATE_LIMITS.passwordResetRequestByIp,
-  );
-  const byEmail = checkRateLimit(
-    rateLimitKey("password-reset-email", email),
-    RATE_LIMITS.passwordResetRequestByEmail,
-  );
+  // Parallel, not sequential: both checks happen on every request regardless
+  // of whether the email matches, so running them concurrently keeps that
+  // symmetry under the distributed store's real network latency too (see the
+  // module comment's timing-side-channel note).
+  const [byIp, byEmail] = await Promise.all([
+    checkRateLimit(rateLimitKey("password-reset-ip", ip), RATE_LIMITS.passwordResetRequestByIp),
+    checkRateLimit(
+      rateLimitKey("password-reset-email", email),
+      RATE_LIMITS.passwordResetRequestByEmail,
+    ),
+  ]);
   if (!byIp.allowed || !byEmail.allowed) redirect("/forgot-password?sent=1");
 
   const db = await getDb();

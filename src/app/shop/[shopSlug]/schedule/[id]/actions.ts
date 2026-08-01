@@ -82,7 +82,9 @@ export type RentalFitRef = TripRef & { token: string };
  */
 async function confirmContextFor(tripId: string, token: string) {
   const ip = await clientIp();
-  if (!checkRateLimit(rateLimitKey("confirm-token", ip), RATE_LIMITS.capabilityAction).allowed) {
+  if (
+    !(await checkRateLimit(rateLimitKey("confirm-token", ip), RATE_LIMITS.capabilityAction)).allowed
+  ) {
     return null;
   }
   const db = await getDb();
@@ -141,7 +143,7 @@ export async function bookSpot(
   // flow back through page.tsx, which resolves them itself).
   const t = diverTranslator(await requestLocale());
   const ip = await clientIp();
-  if (!checkRateLimit(rateLimitKey("booking", ip), RATE_LIMITS.booking).allowed) {
+  if (!(await checkRateLimit(rateLimitKey("booking", ip), RATE_LIMITS.booking)).allowed) {
     return { error: t(ERROR_MESSAGE_KEYS.rate_limited) };
   }
 
@@ -565,7 +567,7 @@ export async function payForBooking(
 
 export async function joinWaitlist({ shopSlug, tripId, embed }: TripRef, formData: FormData) {
   const ip = await clientIp();
-  if (!checkRateLimit(rateLimitKey("waitlist", ip), RATE_LIMITS.waitlistJoin).allowed) {
+  if (!(await checkRateLimit(rateLimitKey("waitlist", ip), RATE_LIMITS.waitlistJoin)).allowed) {
     redirect(`/shop/${shopSlug}/schedule/${tripId}?error=unavailable${embedParam(embed, "&")}`);
   }
   const parsed = bookSchema.safeParse({
