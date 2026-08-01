@@ -9,10 +9,16 @@ budgets make that regression a failed check instead of a field complaint.
 **Shared first-load JavaScript** — the chunks every route pulls before it can paint (Next's
 `rootMainFiles` plus polyfills), measured **gzipped**, since that is what crosses the wire.
 
-- **Budget: ≤ 260 KB gzip.** Current: ~252 KB.
+- **Budget: ≤ 262 KB gzip.** Current: ~260.2 KB.
 - **Target: trend toward ≤ 150 KB (excluding Sentry where possible).** The budget is a ceiling that fails CI; the target is where we
   want the number heading. Lower the budget when the number drops, rather than letting slack
-  accumulate. We raised the budget to 260 KB to accommodate the static inclusion of the Sentry browser SDK (which is statically bundled on every route for error monitoring).
+  accumulate. We raised the budget to 260 KB to accommodate the static inclusion of the Sentry browser SDK (which is statically bundled on every route for error monitoring), and to 262 KB (2026-08-01) when enabling `cacheComponents` in `next.config.ts` (ADR `20260801-cache-components-activity-state.md`) added React's `<Activity>`-based
+  state-preservation runtime to the shared client bundle — this is framework-level cost for a
+  feature every route now depends on (it's what makes the per-locale marketing-page caching and
+  the public-schedule streaming safe to ship), not a discretionary dependency to trim. We confirmed
+  the Sentry client-bundle-reduction levers investigated separately (`bundleSizeOptimizations` in
+  `next.config.ts`) are inert under this app's Turbopack build (webpack-only in the SDK today), so
+  that avenue is not currently available to offset this.
 
 This is the floor cost paid on every staff surface — the Today queue, the manifest, the roster — so
 it is both the largest single lever and the easiest to regress without noticing. Per-route budgets
