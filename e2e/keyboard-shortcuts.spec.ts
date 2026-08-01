@@ -15,10 +15,12 @@ test("the ? help lists shortcuts and a g-sequence jumps between surfaces", async
   await page.keyboard.press("Escape");
   await expect(dialog).toBeHidden();
 
-  // `g` then `s` navigates to the schedule without touching the mouse.
+  // `g` then `s` navigates to the staff schedule board without touching the
+  // mouse — the same destination as every other staff entry point (nav,
+  // command palette) since the schedule route split (Lens 17, task 153).
   await page.keyboard.press("g");
   await page.keyboard.press("s");
-  await expect(page).toHaveURL(/\/schedule$/);
+  await expect(page).toHaveURL(/\/schedule\/board$/);
 
   // `g` then `d` jumps to the diver roster.
   await page.keyboard.press("g");
