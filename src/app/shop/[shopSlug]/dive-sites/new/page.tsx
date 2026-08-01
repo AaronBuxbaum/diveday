@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 import { z } from "zod";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -22,10 +23,6 @@ import { splitMediaUrls } from "@/lib/dive-sites";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { ingestDiveSiteMedia } from "@/lib/storage/ingest-dive-site-media";
-
-// TODO: Cache Components adoption. Refactor this route so this opt-out can be removed.
-// See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
-export const instant = false;
 
 export const metadata: Metadata = { title: "Create dive site — DiveDay" };
 
@@ -64,7 +61,30 @@ const siteSchema = z
     "Add both forecast coordinates or leave both blank.",
   );
 
-export default async function NewDiveSitePage({
+// Not `instant = false` (a dev-time validation opt-out only, with zero
+// production effect — see ADR 20260801-cache-components-e2e-activity-migration's
+// Outcome section). Without a real Suspense boundary, this route still got a
+// Partial-Prerendered shell with an implicit dynamic hole around the
+// unwrapped `searchParams`/session/shop reads below, and a
+// `redirect(...?error=...)` fired from `createAction` on a rejected form
+// raced that hole's pending fetch and lost — the error banner never
+// rendered. An explicit boundary makes the dynamic part exactly what streams
+// in on redirect, instead of leaving Next to guess.
+export default function NewDiveSitePage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ shopSlug: string }>;
+  searchParams: Promise<{ error?: string }>;
+}) {
+  return (
+    <Suspense fallback={<main className="flex-1" />}>
+      <NewDiveSiteBody params={params} searchParams={searchParams} />
+    </Suspense>
+  );
+}
+
+async function NewDiveSiteBody({
   params,
   searchParams,
 }: {

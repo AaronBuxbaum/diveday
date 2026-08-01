@@ -1,6 +1,9 @@
 # 20260801-cache-components-e2e-activity-migration — Make the e2e suite Activity-safe before re-enabling `cacheComponents`
 
-- **Status:** Proposed
+- **Status:** Accepted — Phases 1-4 landed; `cacheComponents: true` is back on. See "Outcome"
+  below for what Phase 2's full-suite proof actually found: the `getByRole`/`getByLabel`
+  discrepancy this ADR flagged rather than resolved (see Context) turned out real, and three
+  genuine (non-locator) bugs, not just strict-mode noise.
 - **Date:** 2026-08-01
 
 ## Context
@@ -166,3 +169,87 @@ add it — same spirit as the "recommendation, not built here" closing note in t
   strict-mode violations for some specs (e.g. two logically-distinct but simultaneously-visible
   instances of the same text within one live route), those become named, commented per-spec
   exceptions — not a reason to abandon the flag or the fixture approach.
+
+## Outcome
+
+All four phases landed, `cacheComponents: true` is back on. What Phase 2's full-suite proof
+actually found, against the plan above:
+
+- **The `getByRole`/`getByLabel` discrepancy (Context) resolved in favor of "yes, they need the
+  filter too."** Contrary to the bundled docs, both threw real "resolved to N elements" strict-mode
+  failures against this app — not flakes, confirmed by inspecting the matched elements' markup
+  against the source in each case (e.g. `getByLabel("Name")` matching both a trip page's
+  `BookingPartyFields` input and a hidden previous route's `LastMinuteListForm` input after a
+  client-side navigation from the public schedule list to a trip page). The fixture wrapper was
+  widened to patch `getByRole`/`getByLabel`/`getByPlaceholder` the same way as `getByText`, and the
+  patching logic was pulled out into an exported `makeActivitySafe(page)` helper so a spec that
+  opens a second actor's page via `browser.newContext()`/`context.newPage()` — a separate `Page`
+  instance the `page` fixture never touches — can apply the same patch explicitly.
+  `pnpm check:e2e-fixtures` now flags an unwrapped `.newPage()` call.
+- **Three genuine bugs surfaced, not just locator gaps** — exactly the second bucket Phase 2's plan
+  anticipated ("Genuine Activity-preserved-state bugs"), though none were state-preservation bugs
+  in the sense the sister ADR catalogued. All three were re-verified as fixed against a full local
+  `pnpm e2e` run with the flag on before landing:
+  1. `e2e/self-service-reschedule.spec.ts` — a closed `<select>`'s `<option>` children never get a
+     layout box in Chromium, so `.filter({ visible: true })` (added during the Phase 1 triage pass)
+     zero-matched every option and hung the test forever. Same category as the `<script>`/`<meta>`
+     exceptions noted elsewhere in the triage; this one was missed in Phase 1 and caught by CI on
+     the first real run, not locally — see the escape-hatch guidance above, now also documented in
+     the e2e-and-visual skill.
+  2. `src/app/sign-in/page.tsx` — `instant = false` is a **dev-time validation opt-out only**
+     (`node_modules/next/dist/docs/01-app/03-api-reference/03-file-conventions/02-route-segment-config/instant.md`
+     says so explicitly) and has zero effect on production rendering. Every page across this app
+     that carries `instant = false` under the (incorrect) assumption that it forces genuinely
+     dynamic, request-scoped rendering is still eligible for a Partial-Prerendered shell with an
+     implicit dynamic hole around any unwrapped `searchParams`/`headers`/`cookies` read. For
+     sign-in specifically, that hole raced a `redirect("/sign-in?error=1")` fired from the
+     wrong-password path and lost — `net::ERR_ABORTED`, confirmed via `page.on("response"/
+     "requestfailed")` tracing — leaving the form stuck on "Signing in…" forever. Fixed with a real
+     `<Suspense>` boundary around the dynamic part, per the documented migration pattern.
+  3. `src/app/shop/[shopSlug]/dive-sites/new/page.tsx` — the exact same bug, confirmed independently:
+     a `createAction` redirect to `.../new?error=invalid` after a rejected form (this repo's
+     `dive-sites.spec.ts` CR-020 SSRF-block test) never rendered the error banner. Same fix, same
+     shape (outer sync shell, inner async body in `<Suspense>`), 3/3 clean fresh-server runs
+     afterward. This is the confirmation, not just a theory, that the class of bug is real and
+     `grep`-findable: **12 more pages carry the identical shape** — `instant = false`, an unwrapped
+     `searchParams` read, and a `redirect(...)` inside a `"use server"` action in the same file —
+     `waivers/[token]`, `shop/[shopSlug]/staffing`, `shop/[shopSlug]/waivers`,
+     `shop/[shopSlug]/waivers/signatures`, `shop/[shopSlug]/trips/new`,
+     `shop/[shopSlug]/orders/new`, `shop/[shopSlug]/settings/team`,
+     `shop/[shopSlug]/schedule/[id]`, `shop/[shopSlug]/divers`, `shop/[shopSlug]/promos`,
+     `shop/[shopSlug]/reports`, `shop/[shopSlug]/dive-sites/[id]`. None of these are proven broken
+     by a current test — the race is probabilistic, not guaranteed on every redirect, so a page
+     without a failing test today isn't a page confirmed safe — left as the tracked follow-up
+     below rather than restructured blind.
+  4. `src/app/switching/[competitor]/page.tsx` — `notFound()` for an unregistered competitor slug
+     was called from inside a Suspense-wrapped child, so the shell had already streamed a 200 by
+     the time the child resolved. Moved the params resolution and `notFound()` check to the top of
+     the page component, before any Suspense boundary — confirmed 404 status across multiple fresh
+     server starts afterward.
+- **A fifth case, `e2e/course-paths.spec.ts`'s hidden-path-404 check, could not be fixed the same
+  way and is left as a known, documented Next 16 limitation.** That route (unlike
+  `switching/[competitor]`) has no `generateStaticParams` coverage at all — paths are created by
+  shop staff at any time, so no build-time list could ever be exhaustive — and cacheComponents'
+  Partial Prerendering unconditionally serves an optimistic 200 "App Shell" for any dynamic-param
+  combination without static coverage, upgrading it in the background once `notFound()` resolves.
+  Verified there is no per-route opt-out: `dynamicParams = false` throws a hard build error under
+  `nextConfig.cacheComponents` ("not compatible... Please remove it"), and `experimental_ppr` is
+  removed entirely (`cacheComponents.md`: "no longer necessary and have been removed"). Moving
+  `notFound()` above the Suspense boundary (the fix that worked for `switching/[competitor]`) made
+  no difference here — confirmed via `x-nextjs-postponed: 1` response headers present in both the
+  passing and failing cases, and 3/3 consistent failures across fresh server starts either way. The
+  practical impact is narrow: inspecting the rendered document confirmed it correctly lands on
+  Next's own not-found boundary (`<html id="__next_error__">`, `<meta name="robots"
+  content="noindex">`) — nothing about the hidden path leaks to a real visitor or a
+  robots-respecting crawler, only the raw first-byte HTTP status is wrong. The test was updated to
+  assert on that rendered content instead of `response.status()`. Revisit if a future Next version
+  adds a real per-route Partial Prerendering opt-out.
+- **Recommendation, not built here:** restructure the 12 listed pages the same way (outer sync
+  shell, inner async body in `<Suspense>`) — the pattern is now proven twice, not theoretical.
+  Prioritize by how often each page's redirect path actually fires in practice: form-validation
+  failures (`trips/new`, `orders/new`, `settings/team`, `dive-sites/[id]`, `promos`) over rarer
+  paths. A `pnpm check:architecture`-style guard that flags a page with `instant = false`, an
+  unwrapped `searchParams` read, and a `redirect(...)` call inside a `"use server"` action in the
+  same file would catch the next instance of this class at review time — the same `grep` used to
+  find the 12 above (`instant = false` + `searchParams` + `redirect(` in one `page.tsx`) is a
+  reasonable starting point for that check's rule.

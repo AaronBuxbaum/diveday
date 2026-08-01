@@ -55,11 +55,17 @@ the full suite locally with identical pass counts across repeated runs.
 
 - **Test behavior, not implementation.** Query the DOM by role/label, assert outcomes; don't
   reach into component internals or test styling classes.
-- **Prefer `getByRole`/`getByLabel` over `getByText` in Playwright specs.** They query the
-  accessibility tree and already exclude hidden (`display:none`) content; `getByText` and a bare
-  `.locator()` used as a final matcher don't, so they can strict-mode-fail against something
-  hidden but still in the DOM. See the **e2e-and-visual** skill and
-  [ADR 20260801-cache-components-e2e-activity-migration](../architecture/decisions/20260801-cache-components-e2e-activity-migration.md).
+- **Prefer `getByRole`/`getByLabel` over `getByText` in Playwright specs**, but don't hand-roll the
+  visibility filter — `e2e/fixtures.ts`'s `page` fixture patches `getByText`, `getByRole`,
+  `getByLabel`, and `getByPlaceholder` to `.filter({ visible: true })` automatically, so a
+  React `<Activity mode="hidden">` boundary (`cacheComponents`, on since
+  [ADR 20260801-cache-components-e2e-activity-migration](../architecture/decisions/20260801-cache-components-e2e-activity-migration.md))
+  can't strict-mode-fail a `page.<query>(...)` call against a hidden previous route. A raw
+  `.locator()` used as a final matcher, or a second actor's page opened via
+  `browser.newContext()`/`context.newPage()` (wrap it with `makeActivitySafe(...)`, also exported
+  from `./fixtures`), aren't covered by the fixture and need the filter or wrapper at the call
+  site. See the **e2e-and-visual** skill for the full pattern and its exceptions (elements with no
+  layout box, intentional hidden-element assertions).
 - **Domain logic is where coverage lives.** `src/lib/` functions get thorough cases — edges
   included (full boat, expired service, uncertified diver, physician-flagged medical). UI tests
   stay thin.
