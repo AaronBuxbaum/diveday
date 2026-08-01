@@ -4,6 +4,14 @@ These bundled JPEGs are sourced from Wikimedia Commons so the briefing still wor
 browser cannot reach external image hosts. Each source page contains the photographer credit and
 the applicable public-domain or Creative Commons terms:
 
+**These are downscaled derivatives, not the originals** — bounded to **1024px on the long edge**,
+re-encoded as mozjpeg quality 80, EXIF orientation baked in and metadata stripped (noted here
+because the CC licences ask that changes be indicated). Three files whose re-encode came out
+*larger* than the original are the untouched originals. Keep any photo added here inside the same
+bound: the originals ran to 1920px and 1.6 MB apiece for tiles that render ~150 CSS px wide, which
+cost a diver on a phone megabytes per dive site and made the visual suite's image waits so slow
+they burned the capture budget.
+
 - [AtlanticGoliathGrouper](https://commons.wikimedia.org/wiki/File:AtlanticGoliathGrouper.jpg)
 - [Blue Tang Pickles 20080310](https://commons.wikimedia.org/wiki/File:Blue_Tang_Pickles_20080310.jpg)
 - [Blue Tangs Molasses Reef 1999](https://commons.wikimedia.org/wiki/File:Blue_Tangs_Molasses_Reef_1999.jpg)
