@@ -453,17 +453,22 @@ export async function restoreBooking(
 }
 
 export async function cancelBooking(db: AppDb, shopId: string, bookingId: string) {
-  const [booking] = await db
-    .update(bookings)
-    .set({ status: "cancelled" })
-    .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId)))
-    .returning();
-  if (!booking) return null;
-  // Belt-and-suspenders: verifyBookingCapability already fails closed on a
-  // cancelled booking, but revoking outright keeps the capability table's
-  // own audit trail honest and stops relying solely on that join.
-  await revokeBookingCapabilities(db, { shopId, bookingId });
-  return booking;
+  return db.transaction(async (tx) => {
+    const [booking] = await tx
+      .update(bookings)
+      .set({ status: "cancelled" })
+      .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId)))
+      .returning();
+    if (!booking) return null;
+    // Belt-and-suspenders: verifyBookingCapability already fails closed on a
+    // cancelled booking, but revoking outright keeps the capability table's
+    // own audit trail honest and stops relying solely on that join. Both
+    // writes share this transaction so a revoke failure rolls the status
+    // change back too, instead of leaving a cancelled booking whose
+    // capabilities are still live.
+    await revokeBookingCapabilities(tx as unknown as AppDb, { shopId, bookingId });
+    return booking;
+  });
 }
 
 export type SelfCancelResult =
