@@ -114,14 +114,14 @@ jobs:
           retention-days: 1
 
   playwright:
-    name: Playwright shard ${{ matrix.shard }}/4
+    name: Playwright shard ${{ matrix.shard }}/8
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4]
+        shard: [1, 2, 3, 4, 5, 6, 7, 8]
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
@@ -138,7 +138,7 @@ jobs:
               spec_files+=("$spec")
             fi
           done
-          pnpm exec playwright test "${spec_files[@]}" --shard=${{ matrix.shard }}/4
+          pnpm exec playwright test "${spec_files[@]}" --shard=${{ matrix.shard }}/8
         env:
           # e2e/servers.ts's default (cpus/2, 2 workers on this runner's 4
           # cores) was calibrated pre-cacheComponents
@@ -153,12 +153,27 @@ jobs:
           # never the same failure twice — spread across
           # dive-sites/refunds/import/role-permissions/add-diver/
           # gear-fit-and-age.spec.ts, none of which this branch's app-code
-          # changes touch. Pinning to 1 worker per shard is the override
-          # that comment already anticipated ("If a future runner change
-          # reintroduces timeout-driven contention, E2E_WORKERS still
-          # overrides the default without editing code") — trades this
-          # job's wall-clock for reliability rather than widening a
-          # per-assertion timeout to paper over it.
+          # changes touch. Confirmed with a direct A/B (18 shared tests,
+          # repeated): 2 workers failed 6/18 then 1/18 across two runs, 1
+          # worker passed 18/18 both times — genuine, reproducible
+          # contention, not a one-off. Also checked whether this is
+          # *wasted* PPR overhead on the ~46 routes that opt out with
+          # `instant = false` (all of them fully dynamic, no static shell
+          # to gain from Partial Prerendering) — it isn't: single-request
+          # and 20-concurrent-request server timing, and isolated
+          # full-browser page loads, were all statistically the same or
+          # faster with cacheComponents on. The contention is specific to
+          # *concurrent* browser+server pairs, a scheduling characteristic
+          # of this Next 16 preview's PPR implementation under load, not
+          # a fixable inefficiency in these routes. Pinning to 1 worker
+          # per shard is the override e2e/servers.ts's own comment already
+          # anticipated ("If a future runner change reintroduces
+          # timeout-driven contention, E2E_WORKERS still overrides the
+          # default without editing code") — and doubling the shard count
+          # (4 → 8) recovers the wall-clock that pin costs: same total
+          # single-worker test-minutes, spread across twice the parallel
+          # runners, so the critical path is back to roughly what 4
+          # shards × 2 workers used to take.
           E2E_WORKERS: "1"
       - uses: actions/upload-artifact@v7
         if: failure()

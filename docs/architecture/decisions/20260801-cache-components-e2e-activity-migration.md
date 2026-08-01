@@ -347,3 +347,18 @@ actually found, against the plan above:
   "1"` was left on the `visual` job's step regardless — harmless, and it does still remove
   browser-vs-server contention within that job's own single process — but the comment there no
   longer claims it fixed anything.
+- **An eleventh finding: the `playwright` job's contention is real (re-confirmed with a direct
+  A/B), but it is not wasted per-request Partial Prerendering overhead on the ~46 routes that opt
+  out with `instant = false` — those are all fully dynamic (staff-only, session-gated, no static
+  shell to ever gain from PPR), which raised the question of whether `cacheComponents` is pure tax
+  there with no offsetting benefit.** It measurably isn't: single-request and 20-concurrent-request
+  server-only timing (`curl`, no browser) against a representative fully-dynamic route were
+  statistically the same with `cacheComponents` on vs off, and isolated full-browser page loads (one
+  at a time, real Chromium, no other worker running) were *faster* on than off. The contention is
+  specific to concurrent browser+server pairs competing for the runner's cores — a scheduling
+  characteristic of this Next 16 preview's PPR implementation under load, confirmed by a direct A/B
+  (the same 18 tests, run twice at 2 workers: 6 failures then 1, never the same specs; run at 1
+  worker: 0/18 both — see the CI comment on the `playwright` job) — not evidence of an inefficiency
+  this app's own routing/Suspense structure could fix. `E2E_WORKERS: "1"` stays the right lever;
+  the job's shard count was doubled (4 → 8) to recover the wall-clock it costs, since the total
+  single-worker test-minutes are unchanged and simply run across twice the parallel GitHub runners.
