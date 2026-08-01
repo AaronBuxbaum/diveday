@@ -26,9 +26,9 @@ export type BadgeTone = keyof typeof toneClass;
  * not a status to disambiguate.
  */
 const toneGlyph: Partial<Record<BadgeTone, string>> = {
-  success: "✓ ",
-  warning: "▲ ",
-  danger: "✕ ",
+  success: "✓",
+  warning: "▲",
+  danger: "✕",
 };
 
 const sizeClass = {
@@ -55,9 +55,11 @@ export function Badge({
   const glyph = toneGlyph[tone];
   return (
     <span
-      className={`inline-flex items-center rounded-full font-medium ${sizeClass[size]} ${
-        toneClass[tone]
-      }${tabularNums ? " tabular-nums" : ""}${className ? ` ${className}` : ""}`}
+      className={`inline-flex items-center rounded-full font-medium ${
+        glyph ? "gap-1" : ""
+      } ${sizeClass[size]} ${toneClass[tone]}${tabularNums ? " tabular-nums" : ""}${
+        className ? ` ${className}` : ""
+      }`}
     >
       {glyph ? <span aria-hidden="true">{glyph}</span> : null}
       {children}
