@@ -11,7 +11,8 @@
   pages" task that turned the flag on ever asked for. The staff-surface findings and fixes below
   remain in the tree (they're good defensive state handling on their own merits) but are currently
   inert, since Activity isn't active without the flag. Kept for the day this app deliberately
-  re-adopts `cacheComponents` with its own e2e migration plan.
+  re-adopts `cacheComponents` with its own e2e migration plan. That plan is now written:
+  20260801-cache-components-e2e-activity-migration.md.
 - **Status (original):** Accepted
 - **Date:** 2026-08-01
 
