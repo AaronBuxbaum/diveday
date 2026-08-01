@@ -154,12 +154,13 @@ export default async function TripsPage({
   // suppresses reviews on (see below). Never reachable by accident: it takes
   // the exact query param, not a default.
   const isPreview = preview === "1";
-  const db = await getDb();
+  // db and the session are independent lookups — auth() doesn't read the
+  // shop row, so it doesn't need to wait behind getShopBySlug().
+  const [db, session] = await Promise.all([getDb(), auth()]);
   const shop = await getShopBySlug(db, shopSlug);
   if (!shop) {
     notFound();
   }
-  const session = await auth();
   // Embed mode always renders the diver-facing surface, even for a signed-in
   // staff member previewing the page — an iframe on the shop's own website
   // must never expose the staff board.

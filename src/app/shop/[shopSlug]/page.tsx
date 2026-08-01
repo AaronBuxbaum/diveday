@@ -71,9 +71,13 @@ export default async function ShopPage({
     notice?: string;
   }>;
 }) {
-  const session = await requireStaffSession();
-  const { shopSlug } = await params;
-  const { created, series, reset, email, notice } = await searchParams;
+  // The session and the two route-param promises don't depend on one
+  // another — resolve them together instead of serially.
+  const [session, { shopSlug }, { created, series, reset, email, notice }] = await Promise.all([
+    requireStaffSession(),
+    params,
+    searchParams,
+  ]);
   const seriesCount = series ? Number.parseInt(series, 10) : 0;
 
   return (
