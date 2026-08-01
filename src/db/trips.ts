@@ -54,7 +54,7 @@ import {
  * common single-day case, e.g. "move to Thursday at 7am instead of 9am")
  * carries that same time change through to `endsAt` so the trip's duration
  * is preserved instead of leaving `endsAt` stuck at its old wall-clock hour
- * (see docs/product/assessments/specialist-optimization-audit-20260731.md
+ * (see docs/product/archive/specialist-optimization-audit-20260731.md
  * §7).
  */
 function tripShiftPlan(existingStartsAt: Date, newStartsAt: Date, timeZone: string) {
@@ -1464,7 +1464,7 @@ export async function listTripIdsInOfflineManifestWindow(
   return rows.map((row) => row.id);
 }
 
-export const SCHEDULE_PAGE_SIZE = 50;
+export const SCHEDULE_PAGE_SIZE = 20;
 
 /**
  * The schedule page's list, one keyset page at a time (ordered by departure,

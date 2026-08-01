@@ -13,7 +13,7 @@ export type LogContext = Record<string, string | number | boolean | null | undef
  * Emit one structured JSON line describing an event on the money path (the Stripe and
  * Resend webhooks) or the daily cron — the only observability those paths had before
  * this (docs
- * product/assessments/specialist-optimization-audit-20260731.md §7, "Add structured
+ * product/archive/specialist-optimization-audit-20260731.md §7, "Add structured
  * logging to the payment webhook and cron paths"). No new runtime dependency: this
  * writes over `console.error`/`console.warn`/`console.log`, so whatever log drain the
  * deployment already tails (Vercel's, or any other) picks the line up unchanged —

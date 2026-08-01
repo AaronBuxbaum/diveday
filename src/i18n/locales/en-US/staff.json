@@ -229,8 +229,6 @@
       "removeSavedViewAriaLabel": "Remove saved view {name}",
       "saveThisView": "+ Save this view",
       "peopleHeading": "People",
-      "matchesText": "{count, plural, one {# match} other {# matches}}",
-      "onFileShowingText": "{total} on file — showing {shown} at a time",
       "searchHintText": "Search by name, email, or phone.",
       "searchDiversLabel": "Search divers",
       "searchPlaceholder": "Search people",
@@ -239,15 +237,13 @@
       "tryDifferentSearch": "Try a different search or view, or add a new diver above.",
       "addOneHere": "Add one here or accept a booking to create their person record.",
       "noContactDetails": "No contact details yet",
-      "cardCountText": "{count, plural, one {# card} other {# cards}}",
-      "fitSaved": "Fit saved",
-      "noFitOnFile": "No fit on file",
+      "cardCountOne": "{count} card",
+      "cardCountOther": "{count} cards",
       "pendingReviewText": "{count} pending review",
       "toConfirmText": "{count} to confirm",
       "noneText": "None",
       "tableHeaderPerson": "Person",
       "tableHeaderCards": "Cards",
-      "tableHeaderRentalFit": "Rental fit",
       "tableHeaderAttention": "Attention",
       "showMoreDivers": "Show more divers",
       "backToTop": "← Back to the top of the list"
@@ -960,7 +956,7 @@
     "overviewLabel": "Rating overview",
     "publicRating": "Public rating",
     "noneYet": "Nothing published yet",
-    "acrossCount": "Across {count, plural, one {# published review} other {# published reviews}}",
+    "fromPublished": "From your published reviews",
     "published": "Published",
     "publishedDetail": "Shown on your schedule page",
     "waitingOnYou": "Waiting on you",
@@ -981,7 +977,7 @@
     "filterLabel": "Filter reviews",
     "filter": {
       "all": "All reviews",
-      "waiting": "Waiting on you ({count})"
+      "waiting": "Waiting on you"
     }
   },
   "schedule": {
@@ -2045,7 +2041,7 @@
     "diverCount": "{count, plural, one {# diver} other {# divers}}",
     "emptyTitle": "No one matches that scan",
     "emptyDescription": "Try the diver’s name, email, or full booking ID.",
-    "clearedTitle": "Everyone’s aboard the day 🎉 — {count, plural, one {# diver} other {# divers}} checked in.",
+    "clearedTitle": "Everyone’s aboard the day 🎉 — all checked in.",
     "checkedInBadge": "Checked in",
     "boardedBadge": "Boarded",
     "readyBadge": "Ready",

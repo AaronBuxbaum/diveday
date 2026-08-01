@@ -229,8 +229,6 @@
       "removeSavedViewAriaLabel": "Eliminar vista guardada {name}",
       "saveThisView": "+ Guardar esta vista",
       "peopleHeading": "Personas",
-      "matchesText": "{count, plural, one {# coincidencia} other {# coincidencias}}",
-      "onFileShowingText": "{total} registrados — mostrando {shown} a la vez",
       "searchHintText": "Busca por nombre, correo o teléfono.",
       "searchDiversLabel": "Buscar buceadores",
       "searchPlaceholder": "Buscar personas",
@@ -239,15 +237,13 @@
       "tryDifferentSearch": "Prueba una búsqueda o vista distinta, o añade un nuevo buceador arriba.",
       "addOneHere": "Añade uno aquí o acepta una reserva para crear su registro de persona.",
       "noContactDetails": "Aún sin datos de contacto",
-      "cardCountText": "{count, plural, one {# tarjeta} other {# tarjetas}}",
-      "fitSaved": "Ajuste guardado",
-      "noFitOnFile": "Sin ajuste registrado",
+      "cardCountOne": "{count} tarjeta",
+      "cardCountOther": "{count} tarjetas",
       "pendingReviewText": "{count} pendiente de revisión",
       "toConfirmText": "{count} por confirmar",
       "noneText": "Ninguno",
       "tableHeaderPerson": "Persona",
       "tableHeaderCards": "Tarjetas",
-      "tableHeaderRentalFit": "Ajuste de alquiler",
       "tableHeaderAttention": "Atención",
       "showMoreDivers": "Mostrar más buceadores",
       "backToTop": "← Volver al principio de la lista"
@@ -960,7 +956,7 @@
     "overviewLabel": "Resumen de valoraciones",
     "publicRating": "Valoración pública",
     "noneYet": "Nada publicado todavía",
-    "acrossCount": "En {count, plural, one {# reseña publicada} other {# reseñas publicadas}}",
+    "fromPublished": "De tus reseñas publicadas",
     "published": "Publicado",
     "publishedDetail": "Se muestra en tu página de calendario",
     "waitingOnYou": "Esperando tu revisión",
@@ -981,7 +977,7 @@
     "filterLabel": "Filtrar reseñas",
     "filter": {
       "all": "Todas las reseñas",
-      "waiting": "Esperando tu revisión ({count})"
+      "waiting": "Esperando tu revisión"
     }
   },
   "schedule": {
@@ -2045,7 +2041,7 @@
     "diverCount": "{count, plural, one {# buceador} other {# buceadores}}",
     "emptyTitle": "Nadie coincide con ese escaneo",
     "emptyDescription": "Prueba con el nombre, el correo o el ID de reserva completo del buceador.",
-    "clearedTitle": "Todos a bordo por hoy 🎉 — {count, plural, one {# buceador registrado} other {# buceadores registrados}}.",
+    "clearedTitle": "Todos a bordo por hoy 🎉 — todos registrados.",
     "checkedInBadge": "Registrado",
     "boardedBadge": "Embarcado",
     "readyBadge": "Listo",

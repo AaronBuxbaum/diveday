@@ -35,14 +35,21 @@ export async function uploadRecapPhotoAction(token: string, formData: FormData) 
   // token guessing, not just abuse of a link already known to be valid
   // (CR-013).
   const ip = await clientIp();
-  if (!checkRateLimit(rateLimitKey("recap-upload-ip", ip), RATE_LIMITS.recapUploadByIp).allowed) {
+  if (
+    !(await checkRateLimit(rateLimitKey("recap-upload-ip", ip), RATE_LIMITS.recapUploadByIp))
+      .allowed
+  ) {
     redirect(`${back}?photo=error`);
   }
   const bookingId = verifyRecapToken(token);
   if (!bookingId) redirect(`${back}?photo=error`);
   if (
-    !checkRateLimit(rateLimitKey("recap-upload-booking", bookingId), RATE_LIMITS.recapUploadByToken)
-      .allowed
+    !(
+      await checkRateLimit(
+        rateLimitKey("recap-upload-booking", bookingId),
+        RATE_LIMITS.recapUploadByToken,
+      )
+    ).allowed
   ) {
     redirect(`${back}?photo=error`);
   }
@@ -136,12 +143,15 @@ export async function uploadRecapPhotoAction(token: string, formData: FormData) 
 export async function startTipAction(token: string, formData: FormData) {
   const back = `/recap/${token}`;
   const ip = await clientIp();
-  if (!checkRateLimit(rateLimitKey("recap-tip-ip", ip), RATE_LIMITS.tipStart).allowed) {
+  if (!(await checkRateLimit(rateLimitKey("recap-tip-ip", ip), RATE_LIMITS.tipStart)).allowed) {
     redirect(`${back}?tip=error`);
   }
   const bookingId = verifyRecapToken(token);
   if (!bookingId) redirect(`${back}?tip=error`);
-  if (!checkRateLimit(rateLimitKey("recap-tip-booking", bookingId), RATE_LIMITS.tipStart).allowed) {
+  if (
+    !(await checkRateLimit(rateLimitKey("recap-tip-booking", bookingId), RATE_LIMITS.tipStart))
+      .allowed
+  ) {
     redirect(`${back}?tip=error`);
   }
 
@@ -198,15 +208,20 @@ export async function startTipAction(token: string, formData: FormData) {
 export async function submitReviewAction(token: string, formData: FormData) {
   const back = `/recap/${token}`;
   const ip = await clientIp();
-  if (!checkRateLimit(rateLimitKey("recap-review-ip", ip), RATE_LIMITS.reviewSubmitByIp).allowed) {
+  if (
+    !(await checkRateLimit(rateLimitKey("recap-review-ip", ip), RATE_LIMITS.reviewSubmitByIp))
+      .allowed
+  ) {
     redirect(`${back}?review=error`);
   }
   const bookingId = verifyRecapToken(token);
   if (!bookingId) redirect(`${back}?review=error`);
   if (
-    !checkRateLimit(
-      rateLimitKey("recap-review-booking", bookingId),
-      RATE_LIMITS.reviewSubmitByToken,
+    !(
+      await checkRateLimit(
+        rateLimitKey("recap-review-booking", bookingId),
+        RATE_LIMITS.reviewSubmitByToken,
+      )
     ).allowed
   ) {
     redirect(`${back}?review=error`);

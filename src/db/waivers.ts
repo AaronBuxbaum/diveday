@@ -53,7 +53,7 @@ export async function listWaiverTemplateHistory(db: DbExecutor, shopId: string) 
 }
 
 /** How many audit rows the waivers page shows per page before "Show more". */
-export const WAIVER_INTEGRITY_PAGE_SIZE = 50;
+export const WAIVER_INTEGRITY_PAGE_SIZE = 20;
 
 /**
  * `signedAt` is nullable on the schema only for a still-pending record; every

@@ -19,7 +19,8 @@ import { clientIp } from "@/lib/request-ip";
 export async function confirmUnsubscribe(token: string) {
   const ip = await clientIp();
   if (
-    !checkRateLimit(rateLimitKey("unsubscribe-token", ip), RATE_LIMITS.accountTokenAction).allowed
+    !(await checkRateLimit(rateLimitKey("unsubscribe-token", ip), RATE_LIMITS.accountTokenAction))
+      .allowed
   ) {
     redirect(`/unsubscribe/${token}`);
   }

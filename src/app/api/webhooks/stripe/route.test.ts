@@ -60,7 +60,11 @@ function webhookRequest(payload: string, signature: string | null) {
 }
 
 function eventPayload(event: Record<string, unknown>) {
-  return JSON.stringify(event);
+  // Every test in this file signs with the "live" secret (STRIPE_WEBHOOK_SECRET)
+  // unless it explicitly overrides `livemode` or signs with the test secret, so
+  // default livemode:true keeps the whole suite realistic without touching
+  // every call site individually.
+  return JSON.stringify({ livemode: true, ...event });
 }
 
 const FAKE_CHECKOUT = { id: "checkout_1" };
@@ -129,6 +133,7 @@ describe("POST /api/webhooks/stripe — fails closed on a bad signature", () => 
     const payload = eventPayload({
       id: "evt_1",
       type: "invoice.paid",
+      livemode: false,
       data: { object: { id: "in_123", amount_paid: 4500 } },
     });
     const header = signedHeader(payload, Math.floor(nowMs() / 1000), "whsec_test_mode");
@@ -143,12 +148,62 @@ describe("POST /api/webhooks/stripe — fails closed on a bad signature", () => 
     const payload = eventPayload({
       id: "evt_1",
       type: "invoice.paid",
+      livemode: false,
       data: { object: { id: "in_123", amount_paid: 4500 } },
     });
     const header = signedHeader(payload, Math.floor(nowMs() / 1000), "whsec_test_mode");
     const response = await POST(webhookRequest(payload, header));
     expect(response.status).toBe(200);
     expect(markOrderPaidByInvoiceId).toHaveBeenCalledWith(FAKE_DB, "in_123", 4500, undefined);
+  });
+
+  it("ignores (200, no state change) a checkout.session.completed signed by the live secret but claiming livemode:false", async () => {
+    vi.stubEnv("STRIPE_WEBHOOK_SECRET", "whsec_live_mode");
+    vi.stubEnv("STRIPE_TEST_WEBHOOK_SECRET", "");
+    const payload = eventPayload({
+      id: "evt_1",
+      type: "checkout.session.completed",
+      livemode: false,
+      data: { object: { id: "cs_123", payment_status: "paid" } },
+    });
+    const header = signedHeader(payload, Math.floor(nowMs() / 1000), "whsec_live_mode");
+    const response = await POST(webhookRequest(payload, header));
+    expect(response.status).toBe(200);
+    expect(markCheckoutPaidBySessionId).not.toHaveBeenCalled();
+    expect(markTipPaidBySessionId).not.toHaveBeenCalled();
+    expect(claimStripeWebhookEvent).not.toHaveBeenCalled();
+  });
+
+  it("ignores (200, no state change) a checkout.session.completed signed by the test secret but claiming livemode:true", async () => {
+    vi.stubEnv("STRIPE_WEBHOOK_SECRET", "");
+    vi.stubEnv("STRIPE_TEST_WEBHOOK_SECRET", "whsec_test_mode");
+    const payload = eventPayload({
+      id: "evt_1",
+      type: "checkout.session.completed",
+      livemode: true,
+      data: { object: { id: "cs_123", payment_status: "paid" } },
+    });
+    const header = signedHeader(payload, Math.floor(nowMs() / 1000), "whsec_test_mode");
+    const response = await POST(webhookRequest(payload, header));
+    expect(response.status).toBe(200);
+    expect(markCheckoutPaidBySessionId).not.toHaveBeenCalled();
+    expect(markTipPaidBySessionId).not.toHaveBeenCalled();
+    expect(claimStripeWebhookEvent).not.toHaveBeenCalled();
+  });
+
+  it("ignores (200, no state change) an event with livemode omitted entirely", async () => {
+    vi.stubEnv("STRIPE_WEBHOOK_SECRET", "whsec_live_mode");
+    vi.stubEnv("STRIPE_TEST_WEBHOOK_SECRET", "");
+    const payload = JSON.stringify({
+      id: "evt_1",
+      type: "checkout.session.completed",
+      data: { object: { id: "cs_123", payment_status: "paid" } },
+    });
+    const header = signedHeader(payload, Math.floor(nowMs() / 1000), "whsec_live_mode");
+    const response = await POST(webhookRequest(payload, header));
+    expect(response.status).toBe(200);
+    expect(markCheckoutPaidBySessionId).not.toHaveBeenCalled();
+    expect(claimStripeWebhookEvent).not.toHaveBeenCalled();
   });
 
   it("fails with 400 when both are configured but signature matches neither", async () => {

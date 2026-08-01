@@ -3,6 +3,7 @@ import { getDb } from "@/db/client";
 import { DEMO_SHOP_SLUG } from "@/db/dev-credentials";
 import { purgeMintedDemoShops, resetDemoSchedule } from "@/db/seed";
 import { getShopBySlug } from "@/db/shops";
+import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
 
 /**
  * Resets the seeded demo shop's schedule to its canonical fixture state.
@@ -13,20 +14,11 @@ import { getShopBySlug } from "@/db/shops";
  * target ever changed.
  *
  * It wipes and reseeds data, so it must never be reachable in a real
- * deployment. Two independent guards enforce that:
- *   1. A real database (DATABASE_URL) is always set in production and never in
- *      the e2e fleet — this alone blocks production.
- *   2. Outside a production runtime the route is freely available for `pnpm
- *      dev` and the dev-server e2e path. Inside one — the precompiled
- *      `next start` servers the browser suite runs against — it additionally
- *      requires the harness to opt in via DIVEDAY_E2E, which production never
- *      sets.
+ * deployment — see `e2eTestRouteAuthorized` for the two independent guards
+ * (env-var predicate + `DIVEDAY_E2E_SECRET` bearer token) enforcing that.
  */
-export async function POST() {
-  const hasRealDatabase = Boolean(process.env.DATABASE_URL);
-  const productionRuntime = process.env.NODE_ENV === "production";
-  const e2eHarness = process.env.DIVEDAY_E2E === "1";
-  if (hasRealDatabase || (productionRuntime && !e2eHarness)) {
+export async function POST(request: Request) {
+  if (!e2eTestRouteAuthorized(request)) {
     return NextResponse.json({ error: "not_available" }, { status: 404 });
   }
   const db = await getDb();

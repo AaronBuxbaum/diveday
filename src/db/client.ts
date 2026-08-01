@@ -86,7 +86,7 @@ export async function isDemoShopSeeded(db: DbExecutor): Promise<boolean> {
 }
 
 /**
- * Cold-start seed/backfill fast path (audit: docs/product/assessments/
+ * Cold-start seed/backfill fast path (audit: docs/product/archive/
  * specialist-optimization-audit-20260731.md §7 "Trim production cold-start
  * work"). Every cold start used to unconditionally open a transaction, take
  * a cross-process advisory lock, and run three scans of seed.ts's checks —

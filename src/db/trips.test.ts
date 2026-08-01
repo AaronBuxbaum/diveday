@@ -24,6 +24,7 @@ import {
   listTripScheduleDays,
   moveTrip,
   pagedUpcomingTripsWithCounts,
+  SCHEDULE_PAGE_SIZE,
   setTripCrew,
   setTripStatus,
   upcomingScheduleRange,
@@ -647,9 +648,13 @@ describe("paged schedule queries", () => {
     }
     expect(seen).toEqual(all.map((t) => t.id));
 
+    // The extended roster is well past SCHEDULE_PAGE_SIZE, so the default
+    // page truncates to the first page's worth, in departure order.
     const onePage = await pagedUpcomingTripsWithCounts(db, shop.id);
-    expect(onePage.nextCursor).toBeNull(); // seed fits one default page
-    expect(onePage.trips.map((t) => t.id)).toEqual(all.map((t) => t.id));
+    expect(onePage.nextCursor).not.toBeNull();
+    expect(onePage.trips.map((t) => t.id)).toEqual(
+      all.slice(0, SCHEDULE_PAGE_SIZE).map((t) => t.id),
+    );
   });
 
   it("filters to fun dives or course sessions on request", async () => {
@@ -658,11 +663,19 @@ describe("paged schedule queries", () => {
     expect(all.some((t) => t.course !== null)).toBe(true);
     expect(all.some((t) => t.course === null)).toBe(true);
 
-    const funDives = await pagedUpcomingTripsWithCounts(db, shop.id, { tripType: "fun_dive" });
+    // A large limit — this test verifies filtering correctness across the
+    // whole seed, not pagination, so neither call should be page-size-clipped.
+    const funDives = await pagedUpcomingTripsWithCounts(db, shop.id, {
+      tripType: "fun_dive",
+      limit: 1000,
+    });
     expect(funDives.trips.length).toBeGreaterThan(0);
     expect(funDives.trips.every((t) => t.course === null)).toBe(true);
 
-    const courseSessions = await pagedUpcomingTripsWithCounts(db, shop.id, { tripType: "course" });
+    const courseSessions = await pagedUpcomingTripsWithCounts(db, shop.id, {
+      tripType: "course",
+      limit: 1000,
+    });
     expect(courseSessions.trips.length).toBeGreaterThan(0);
     expect(courseSessions.trips.every((t) => t.course !== null)).toBe(true);
 

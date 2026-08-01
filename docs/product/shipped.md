@@ -36,12 +36,62 @@ evaluation frame is [personas.md](personas.md), and what's still open is in
   specialist audit later credited: a skip link in both layouts, `<html lang>` from the negotiated
   locale, and a real focus trap on the portal dialogs.
 
+## Specialist optimization audit — security & privacy delivered (2026-08-01)
+
+Continuing the [specialist optimization audit](archive/specialist-optimization-audit-20260731.md)
+(now archived — every lens shipped or moved out): six of the seven security/privacy (§5) findings
+shipped, each with a `security-reviewer` pass per the repo's hard rules.
+
+- **Blob object keys use a CSPRNG.** `vercelBlobStorageProvider.upload` (`src/lib/storage/index.ts`)
+  now suffixes every object path with `randomBytes(16).toString("base64url")` (128 bits) instead of
+  `Math.random()` (~41 bits, non-cryptographic) — these blobs, including certification-card photos,
+  live on a public unauthenticated host where URL unguessability is the only access control.
+- **Stripe webhook events are checked against the secret that verified them.** A live-secret-verified
+  event must carry `livemode: true` and a test-secret-verified event `livemode: false`
+  (`src/lib/payments/webhook.ts`, `src/app/api/webhooks/stripe/route.ts`); a mismatch is refused
+  with 200-and-ignore (a non-2xx would make Stripe retry forever) rather than mutating live payment
+  state. Closes the gap where a correctly-signed test-mode event could reach the handlers that flip
+  live orders to paid, if both secrets were ever configured together.
+- **Baseline security headers ship beyond frame protection** — `next.config.ts`'s `headers()`
+  (`src/lib/security-headers.ts`) adds HSTS, `X-Content-Type-Options: nosniff`,
+  `Referrer-Policy: strict-origin-when-cross-origin` (tightened to `no-referrer` on every
+  bearer-token route — waivers, ready, recap, verify, reset-password, invite, unsubscribe,
+  calendar), and a `Permissions-Policy` disabling camera/microphone/geolocation. Covers `/api` and
+  static assets, which `src/proxy.ts`'s frame-header matcher deliberately excludes; the two layers
+  set disjoint header keys and don't interact.
+- **Recap tokens get their own signing key and a lifetime.** `src/lib/recap-links.ts` derives its
+  HMAC key via HKDF from `AUTH_SECRET` (or a dedicated `RECAP_LINK_SECRET`) instead of signing
+  directly with the session-JWT secret, and folds an issued-at timestamp into the payload, rejected
+  past a 180-day window. A recap link no longer works forever once leaked, and `AUTH_SECRET` can
+  rotate without silently killing every outstanding recap link.
+- **Sign-in and every other rate limit can now be enforced globally, not just per server instance.**
+  `src/lib/rate-limit.ts` gained `upstashRateLimitStore` — Upstash Redis over its REST API (no SDK
+  dependency, matching the Stripe/Blob precedent), with the whole token-bucket read/refill/decide/write
+  cycle run atomically via one `EVAL`'d Lua script per check. `checkRateLimit` is now `async`;
+  `rateLimitStoreFromEnvironment()` falls back to the original in-memory store when
+  `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` aren't both set, so dev/e2e/CI stay zero-setup.
+  See [20260801-distributed-rate-limit-store](../architecture/decisions/20260801-distributed-rate-limit-store.md).
+- **The `/api/test/*` seed endpoints require a bearer secret, not just env-var configuration.**
+  `e2eTestRouteAuthorized` (`src/lib/e2e-test-routes.ts`) fails closed on a missing/wrong
+  `DIVEDAY_E2E_SECRET`, exactly like `CRON_SECRET` on the reminders cron route — a misconfigured
+  staging deployment (production build, `DIVEDAY_E2E=1` left set, PGlite fallback) can no longer
+  reach a route that mints password-reset tokens or wipes data on the env-var predicate alone.
+  Wired into the Playwright harness (`playwright.config.ts`, `e2e/global-setup.ts`).
+
+**"Close the revocation window on base staff surfaces" was not built** — it re-proposed exactly what
+[H-15](human-decisions.md#decision-register) already decided against on 2026-07-24; see
+[20260724-staff-session-and-capability-migration-policy](../architecture/decisions/20260724-staff-session-and-capability-migration-policy.md).
+**"Reduce what a stolen device can read from offline manifests" remains open by deliberate human
+decision**, kept in full in the archived audit's §5 for whoever eventually revisits it.
+
 ## Specialist optimization audit — accessibility non-contrast items and CI dedup (2026-08-01)
 
-Continuing the [specialist optimization audit](assessments/specialist-optimization-audit-20260731.md):
+Continuing the [specialist optimization audit](archive/specialist-optimization-audit-20260731.md):
 developer/agent experience (§8) is now fully delivered, and three of the six remaining accessibility
-(§3) tasks landed. Security/privacy, ML & data, and three contrast-specific accessibility tasks
-remain open in that file — the contrast tasks are deliberately deferred (see below), not forgotten.
+(§3) tasks landed. The three contrast-specific accessibility tasks are deliberately deferred (see
+below) and moved to
+[features/roadmap.md](features/roadmap.md#accessibility-contrast-fixes-blocked-on-a-color-guide-decision),
+not forgotten.
 
 - **CI job setup is now one composite action, not eight copies** — `.github/actions/setup/action.yml`
   holds the shared pnpm/node/install steps and `.github/actions/playwright-shell/action.yml` holds
@@ -71,9 +121,11 @@ remain open in that file — the contrast tasks are deliberately deferred (see b
 ## Specialist optimization audit — five lenses delivered (2026-07-31 → 08-01)
 
 Five of the eight lenses of the [specialist optimization
-audit](assessments/specialist-optimization-audit-20260731.md) shipped in full; accessibility and
-security/privacy are still open and remain in that file, while ML & data moved in full to
-[features/ai-ml.md](features/ai-ml.md#scoped-prompt-ready--from-the-2026-07-31-specialist-audit).
+audit](archive/specialist-optimization-audit-20260731.md) shipped in full. At the time, accessibility
+and security/privacy were still open and ML & data had just moved to
+[features/ai-ml.md](features/ai-ml.md#scoped-prompt-ready--from-the-2026-07-31-specialist-audit); both
+of the others have since shipped or moved too (see the entries above) and the audit is now fully
+archived.
 
 - **UX & interaction design (§1)** — every button and button-shaped link gets a press dip on touch
   (one `active:scale-[0.98]` in `buttonClass`, so no call site changed); the `/ready` checklist now

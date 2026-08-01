@@ -152,9 +152,7 @@ export default async function CheckInPage({
           </EmptyState>
         ) : cleared ? (
           <div className="rounded-2xl border border-dashed border-success/40 bg-success/5 p-8 text-center">
-            <h3 className="font-semibold text-success">
-              {t("checkIn.clearedTitle", { count: queue.length })}
-            </h3>
+            <h3 className="font-semibold text-success">{t("checkIn.clearedTitle")}</h3>
           </div>
         ) : (
           <div className="flex flex-col gap-3">

@@ -41,7 +41,6 @@ context. When an assessment's recommendations ship, delete them from it and reco
 | [assessments/competitive-strategy.md](product/assessments/competitive-strategy.md) | The battle plan against DiveAdmin and DiveShop360 and the data-portability wedge |
 | [assessments/fareharbor-positioning.md](product/assessments/fareharbor-positioning.md) | 2026-07-24 coexist-vs-compete strategy against FareHarbor as a booking channel, not a records system |
 | [assessments/switching-guide-landscape.md](product/assessments/switching-guide-landscape.md) | Survey of switching-guide candidates beyond the four shipped, ranked by dive adoption and verified export path |
-| [assessments/specialist-optimization-audit-20260731.md](product/assessments/specialist-optimization-audit-20260731.md) | 2026-07-31 eight-lens specialist audit. Five lenses (UX, performance, SEO, backend, DX) shipped 2026-08-01 and their prompts were removed; the ML & data lens moved in full to [product/features/ai-ml.md](product/features/ai-ml.md) the same day. The file now holds the remaining **open** work — accessibility, security/privacy — plus a per-lens status ledger that `src/` comments cite by section number |
 
 **Archive** ([product/archive/](product/archive/)) — delivered or superseded snapshots, kept for
 rationale. Not open work; do not plan from them.
@@ -56,6 +55,7 @@ rationale. Not open work; do not plan from them.
 | [archive/diver-booking-delight-20260729.md](product/archive/diver-booking-delight-20260729.md) | Completed diver-booking-delight follow-on brainstorm; delivered ideas are summarized in shipped.md |
 | [archive/fareharbor-feature-gaps-20260726.md](product/archive/fareharbor-feature-gaps-20260726.md) | 2026-07-26 feature-level audit vs FareHarbor (embed, promo codes, self-service cancel, abandoned cart, reviews, structured data); closed 2026-07-30 — those shipped, and gift cards and charters carried forward to [product/features/roadmap.md](product/features/roadmap.md#not-scheduled--candidate-subsystems) |
 | [archive/ux-personas-20260730-findings.md](product/archive/ux-personas-20260730-findings.md) | 2026-07-30 fifteen-persona frontend walkthrough plus two lenses — 165 prompt-ready tasks; closed out 2026-07-31, the vast majority shipped. The standing persona reference is [product/personas.md](product/personas.md); open follow-ons are in [product/features/story-backlog.md](product/features/story-backlog.md) |
+| [archive/specialist-optimization-audit-20260731.md](product/archive/specialist-optimization-audit-20260731.md) | 2026-07-31 eight-lens specialist audit; closed out 2026-08-01 — every lens shipped or moved out. ML & data moved into [product/features/ai-ml.md](product/features/ai-ml.md); accessibility's three contrast tasks (deliberately deferred, pending a color-guide decision) moved into [product/features/roadmap.md](product/features/roadmap.md#accessibility-contrast-fixes-blocked-on-a-color-guide-decision); everything else, including security/privacy, shipped — see [product/shipped.md](product/shipped.md) |
 
 ## Rules
 

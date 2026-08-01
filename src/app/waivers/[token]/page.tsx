@@ -347,7 +347,10 @@ export default async function WaiverPage({
   async function saveDraftAction(formData: FormData) {
     "use server";
     const ip = await clientIp();
-    if (!checkRateLimit(rateLimitKey("waiver-token", ip), RATE_LIMITS.capabilityAction).allowed) {
+    if (
+      !(await checkRateLimit(rateLimitKey("waiver-token", ip), RATE_LIMITS.capabilityAction))
+        .allowed
+    ) {
       redirect(`/waivers/${token}?error=rate`);
     }
     const parsed = signatureSchema.safeParse(Object.fromEntries(formData));
@@ -395,7 +398,10 @@ export default async function WaiverPage({
   async function completeAction(formData: FormData) {
     "use server";
     const ip = await clientIp();
-    if (!checkRateLimit(rateLimitKey("waiver-token", ip), RATE_LIMITS.capabilityAction).allowed) {
+    if (
+      !(await checkRateLimit(rateLimitKey("waiver-token", ip), RATE_LIMITS.capabilityAction))
+        .allowed
+    ) {
       redirect(`/waivers/${token}?error=rate`);
     }
     const parsed = completeSignatureSchema.safeParse(Object.fromEntries(formData));

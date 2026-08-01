@@ -48,7 +48,9 @@ export async function submitCourseInquiryAction(
   // Component render in between to translate it first.
   const t = diverTranslator(await requestLocale());
   const ip = await clientIp();
-  if (!checkRateLimit(rateLimitKey("course-inquiry", ip), RATE_LIMITS.courseInquiry).allowed) {
+  if (
+    !(await checkRateLimit(rateLimitKey("course-inquiry", ip), RATE_LIMITS.courseInquiry)).allowed
+  ) {
     return { error: t("common.rateLimited") };
   }
 

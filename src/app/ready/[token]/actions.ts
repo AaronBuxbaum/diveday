@@ -72,7 +72,10 @@ type AwaitedDb = Awaited<ReturnType<typeof getDb>>;
  */
 async function contextFor(token: string): Promise<ReadyContextResult> {
   const ip = await clientIp();
-  if (!checkRateLimit(rateLimitKey("readiness-token", ip), RATE_LIMITS.capabilityAction).allowed) {
+  if (
+    !(await checkRateLimit(rateLimitKey("readiness-token", ip), RATE_LIMITS.capabilityAction))
+      .allowed
+  ) {
     return { ok: false, reason: "rate_limited" };
   }
   const db = await getDb();
@@ -235,7 +238,8 @@ export async function payFromReady(token: string) {
 export async function cancelMyBookingAction(token: string) {
   const ip = await clientIp();
   if (
-    !checkRateLimit(rateLimitKey("booking-self-cancel", ip), RATE_LIMITS.bookingSelfCancel).allowed
+    !(await checkRateLimit(rateLimitKey("booking-self-cancel", ip), RATE_LIMITS.bookingSelfCancel))
+      .allowed
   ) {
     redirect(bounceTarget(token, "rate_limited"));
   }
@@ -298,7 +302,8 @@ export async function cancelMyBookingAction(token: string) {
 export async function rescheduleMyBookingAction(token: string, formData: FormData) {
   const ip = await clientIp();
   if (
-    !checkRateLimit(rateLimitKey("booking-self-cancel", ip), RATE_LIMITS.bookingSelfCancel).allowed
+    !(await checkRateLimit(rateLimitKey("booking-self-cancel", ip), RATE_LIMITS.bookingSelfCancel))
+      .allowed
   ) {
     redirect(bounceTarget(token, "rate_limited"));
   }

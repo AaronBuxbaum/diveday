@@ -40,6 +40,11 @@ export async function POST(request: Request) {
   const payload = await request.text();
   const signature = request.headers.get("stripe-signature");
   let verification = verifyStripeWebhook(payload, signature, process.env.STRIPE_WEBHOOK_SECRET);
+  // Which secret actually verified the signature — used below to refuse a
+  // livemode mismatch (security review finding, specialist-optimization-audit
+  // §5): a correctly-signed *test-mode* event must never reach the handlers
+  // that flip live orders/checkouts/tips to paid.
+  let verifiedWith: "live" | "test" = "live";
 
   if (
     (verification.status === "not_configured" || verification.status === "invalid_signature") &&
@@ -52,6 +57,7 @@ export async function POST(request: Request) {
     );
     if (testVerification.status === "verified" || verification.status === "not_configured") {
       verification = testVerification;
+      verifiedWith = "test";
     }
   }
 
@@ -71,7 +77,7 @@ export async function POST(request: Request) {
   // The only observability this endpoint has: one line per delivery naming the
   // event id/type/connected account, and one more per outcome below —
   // including a `null`/refused handler result, which is otherwise a silent
-  // 200 with no trace anywhere (docs product/assessments/
+  // 200 with no trace anywhere (docs product/archive/
   // specialist-optimization-audit-20260731.md §7).
   log("stripe_webhook.event_received", "info", {
     eventId: event.id,
@@ -86,6 +92,18 @@ export async function POST(request: Request) {
       outcome,
       ...extra,
     });
+
+  // A live-secret-verified event must carry livemode:true and a
+  // test-secret-verified event must carry livemode:false — Stripe's own
+  // events always satisfy this by construction. Anything else (including a
+  // real event's mode not matching the secret that verified it, or the field
+  // being absent) is refused with a 200-and-ignore rather than a non-2xx,
+  // since a non-2xx makes Stripe retry the same mismatched event forever.
+  const expectedLivemode = verifiedWith === "live";
+  if (event.livemode !== expectedLivemode) {
+    logOutcome("livemode_mismatch", { verifiedWith, livemode: event.livemode ?? null });
+    return new Response(null, { status: 200 });
+  }
 
   // Claim this event id before doing anything else: a redelivered event
   // (Stripe's webhooks are at-least-once) is a no-op past this point,
