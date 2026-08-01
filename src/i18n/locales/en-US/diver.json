@@ -256,6 +256,16 @@
       "unavailableText": "It may be from a shop that's no longer active. If you're still getting emails you don't want, reply to one and ask the shop directly."
     }
   },
+  "courtesyEmailUnsubscribe": {
+    "title": "Stop these emails?",
+    "description": "You're on {shopName}'s list for wait-list openings and post-trip recaps. Tap below and we'll stop sending them — you'll still get emails about your own bookings, waivers, and trip updates.",
+    "submit": "Stop these emails",
+    "submitting": "Stopping…",
+    "confirmedTitle": "You're unsubscribed",
+    "confirmedText": "You won't get wait-list or recap emails from {shopName} anymore. You'll still get emails about your own bookings, waivers, and trip updates.",
+    "unavailableTitle": "This link isn't available",
+    "unavailableText": "It may be from a shop that's no longer active. If you're still getting emails you don't want, reply to one and ask the shop directly."
+  },
   "course": {
     "hidden": "Hidden — divers cannot see this page.",
     "backToEditing": "Back to editing",
@@ -1355,7 +1365,8 @@
       "trackWhatsLeft": "Track what's left before you sail",
       "seeWhatsLeft": "See what's left before you sail",
       "outstandingHeading": "Still to sort before you board:",
-      "medicalReviewNote": "Check whether a medical answer needs a doctor's sign-off before you travel"
+      "medicalReviewNote": "Check whether a medical answer needs a doctor's sign-off before you travel",
+      "courtesyUnsubscribe": "Stop wait-list and recap emails from {shopName}"
     },
     "tripConditionsHold": {
       "subject": "Conditions hold — {tripTitle}",

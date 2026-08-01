@@ -116,6 +116,7 @@ const waitlistInviteSchema = z.object({
   bookingUrl: z.url().max(2_000),
   /** The invite timestamp, so each explicit re-invite is a distinct send. */
   invitedAt: z.date(),
+  unsubscribeUrl: z.url().max(2_000),
 });
 
 // A staff-triggered last-minute-fill blast (docs ADR
@@ -213,6 +214,7 @@ const tripRecapSchema = z.object({
   timezone: z.string().trim().min(1).max(100),
   sites: z.array(z.string().trim().min(1).max(120)).max(10).optional(),
   recapUrl: z.url().max(2_000),
+  unsubscribeUrl: z.url().max(2_000),
 });
 
 const tripConditionsHoldSchema = z.object({

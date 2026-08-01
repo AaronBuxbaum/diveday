@@ -2,6 +2,7 @@ import { and, count, eq, ne } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { publicAppUrl, recipientLocale } from "@/lib/notifications";
 import type { AppDb } from "./client";
+import { issuePersonCourtesyEmailUnsubscribeToken } from "./courtesy-email";
 import { sendNotification } from "./notifications";
 import { findOrCreatePerson } from "./people";
 import { bookings, people, shops, trips, tripWaitlistEntries } from "./schema";
@@ -34,9 +35,12 @@ export async function recordWaitlistInvite(
  * How the freed-seat invite actually reached (or did not reach) the diver.
  * Anything but `sent` means the UI must hand staff the composer fallback (a
  * prewritten mailto/copy message) rather than pretend an email went out —
- * the exact mirror of `WaiverDelivery`.
+ * the exact mirror of `WaiverDelivery`. `opted_out` means the diver
+ * self-served out of courtesy email (`people.courtesyEmailOptOutAt`) — staff
+ * still needs to reach them about their held seat, just not via another
+ * automated send.
  */
-export type WaitlistInviteDelivery = "sent" | "no_email" | "unconfigured";
+export type WaitlistInviteDelivery = "sent" | "no_email" | "unconfigured" | "opted_out";
 
 export type InviteWaitlistDiverResult =
   | { ok: true; delivery: WaitlistInviteDelivery; invitedAt: Date }
@@ -77,7 +81,13 @@ export async function inviteWaitlistDiver(
   let delivery: WaitlistInviteDelivery = "unconfigured";
   if (!ctx.person.email) {
     delivery = "no_email";
+  } else if (ctx.person.courtesyEmailOptOutAt) {
+    delivery = "opted_out";
   } else if (origin) {
+    const unsubscribeToken = await issuePersonCourtesyEmailUnsubscribeToken(db, {
+      shopId: input.shopId,
+      personId: ctx.person.id,
+    });
     const result = await sendNotification(db, {
       kind: "waitlist_invite",
       waitlistEntryId: ctx.entry.id,
@@ -95,6 +105,7 @@ export async function inviteWaitlistDiver(
         `${origin}/`,
       ).toString(),
       invitedAt,
+      unsubscribeUrl: new URL(`/unsubscribe/${unsubscribeToken}`, `${origin}/`).toString(),
     }).catch(() => ({ status: "failed" as const }));
     delivery = result.status === "sent" ? "sent" : "unconfigured";
   }

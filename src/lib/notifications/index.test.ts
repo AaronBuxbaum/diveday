@@ -307,6 +307,7 @@ describe("notify", () => {
           timezone: "America/New_York",
           bookingUrl: "https://diveday.example/shop/blue-mantis/schedule/trip-1",
           invitedAt: new Date("2026-07-21T10:00:00.000Z"),
+          unsubscribeUrl: "https://diveday.example/unsubscribe/tok_abc123",
         },
         provider,
       ),
@@ -488,6 +489,7 @@ describe("waitlistInviteEmail", () => {
       endsAt: new Date("2026-08-01T15:00:00.000Z"),
       timezone: "America/New_York",
       bookingUrl: "https://diveday.example/shop/blue-mantis/schedule/trip-1",
+      unsubscribeUrl: "https://diveday.example/unsubscribe/tok_abc123",
     });
 
     expect(email.subject).toContain('<Reef "Special">');

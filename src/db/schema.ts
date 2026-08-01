@@ -177,6 +177,19 @@ export const people = pgTable(
      * nothing about what the diver reads.
      */
     locale: text("locale"),
+    /**
+     * Set once this person self-serves out of courtesy email — wait-list
+     * openings (`waitlist_invite`) and post-trip recaps (`trip_recap`), the two
+     * kinds that ask something of the diver's attention beyond their own
+     * booking rather than confirm or protect it (docs story-backlog.md "Leo —
+     * self-serve email unsubscribe"). Deliberately narrower than
+     * `lastMinuteListEntries.unsubscribedAt`: that column opts a person out of
+     * a *list they joined*, this one opts a person out of two notification
+     * *kinds* everyone is eligible for, so it can't reuse the same row. Never
+     * suppresses booking confirmations, waiver requests, trip reminders, or a
+     * conditions hold — those stay mandatory regardless of this flag.
+     */
+    courtesyEmailOptOutAt: timestamp("courtesy_email_opt_out_at", { withTimezone: true }),
     /** Keeps history intact while removing a person from active shop workspaces. */
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -967,6 +980,35 @@ export const lastMinuteListUnsubscribeTokens = pgTable(
   (table) => [
     index("last_minute_list_unsubscribe_tokens_token_hash_idx").on(table.tokenHash),
     index("last_minute_list_unsubscribe_tokens_entry_idx").on(table.entryId),
+  ],
+);
+
+/**
+ * A diver-facing, self-serve bearer link to opt one person out of courtesy
+ * email — `waitlist_invite` and `trip_recap`, the two kinds `people.courtesyEmailOptOutAt`
+ * governs (docs story-backlog.md "Leo — self-serve email unsubscribe"). Same
+ * shape and reasoning as `lastMinuteListUnsubscribeTokens`: a fresh token per
+ * send rather than one stable token per person, never expires, and consuming
+ * it is an idempotent write (only ever sets `courtesyEmailOptOutAt`) — kept as
+ * a separate table rather than folded into `lastMinuteListUnsubscribeTokens`
+ * because it resolves to a person, not a last-minute-list entry.
+ */
+export const personCourtesyEmailUnsubscribeTokens = pgTable(
+  "person_courtesy_email_unsubscribe_tokens",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    personId: uuid("person_id")
+      .notNull()
+      .references(() => people.id),
+    tokenHash: text("token_hash").notNull().unique(),
+    issuedAt: timestamp("issued_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("person_courtesy_email_unsubscribe_tokens_token_hash_idx").on(table.tokenHash),
+    index("person_courtesy_email_unsubscribe_tokens_person_idx").on(table.personId),
   ],
 );
 
@@ -2524,6 +2566,8 @@ export type Booking = typeof bookings.$inferSelect;
 export type TripWaitlistEntry = typeof tripWaitlistEntries.$inferSelect;
 export type LastMinuteListEntry = typeof lastMinuteListEntries.$inferSelect;
 export type LastMinuteListUnsubscribeToken = typeof lastMinuteListUnsubscribeTokens.$inferSelect;
+export type PersonCourtesyEmailUnsubscribeToken =
+  typeof personCourtesyEmailUnsubscribeTokens.$inferSelect;
 export type TripLastMinutePromo = typeof tripLastMinutePromos.$inferSelect;
 export type NotificationDeliveryRecord = typeof notificationDeliveries.$inferSelect;
 export type NotificationDeliveryAttempt = typeof notificationDeliveryAttempts.$inferSelect;

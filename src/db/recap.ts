@@ -17,6 +17,7 @@ import {
 import type { CheckoutProvider } from "@/lib/payments/checkout";
 import { recapLinkPath } from "@/lib/recap-links";
 import type { AppDb } from "./client";
+import { issuePersonCourtesyEmailUnsubscribeToken } from "./courtesy-email";
 import {
   notificationProviderForDb,
   recordNotificationDelivery,
@@ -408,6 +409,8 @@ export type RecapRunSummary = {
   skipped: number;
   /** Recaps whose tracked channel failed or was not configured. */
   failed: number;
+  /** Divers who self-served out of courtesy email (`people.courtesyEmailOptOutAt`). */
+  optedOut: number;
 };
 
 export type SendDueRecapsOptions = {
@@ -456,7 +459,13 @@ export async function sendDueRecaps(
       ),
     );
 
-  const summary: RecapRunSummary = { scanned: rows.length, sent: 0, skipped: 0, failed: 0 };
+  const summary: RecapRunSummary = {
+    scanned: rows.length,
+    sent: 0,
+    skipped: 0,
+    failed: 0,
+    optedOut: 0,
+  };
   if (rows.length === 0) return summary;
 
   const bookingIds = rows.map((r) => r.booking.id);
@@ -520,7 +529,11 @@ export async function sendDueRecaps(
       ? t("notifications.sms.recap", { shopName: shop.name, tripTitle: trip.title, recapUrl })
       : "";
 
-    if (recapUrl && person.email) {
+    if (recapUrl && person.email && !person.courtesyEmailOptOutAt) {
+      const unsubscribeToken = await issuePersonCourtesyEmailUnsubscribeToken(db, {
+        shopId: shop.id,
+        personId: person.id,
+      });
       emailWork.push({
         bookingId: booking.id,
         shopId: shop.id,
@@ -539,6 +552,7 @@ export async function sendDueRecaps(
           timezone: shop.timezone,
           sites,
           recapUrl,
+          unsubscribeUrl: new URL(`/unsubscribe/${unsubscribeToken}`, `${origin}/`).toString(),
         },
       });
     } else if (recapUrl && phone) {
@@ -548,6 +562,10 @@ export async function sendDueRecaps(
         phone,
         smsBody,
       });
+    } else if (recapUrl && person.email && person.courtesyEmailOptOutAt) {
+      // Opted out of courtesy email and no phone to fall back to — not a
+      // delivery problem, so no `not_configured` row; just don't send.
+      summary.optedOut += 1;
     } else {
       // No app origin (no link to send) or no reachable channel — record the gap.
       await recordNotificationDelivery(db, {
