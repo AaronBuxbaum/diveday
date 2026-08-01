@@ -32,6 +32,24 @@ Do not mask clock-derived content or moving UI. Freeze the clock at the harness 
 - Reuse the per-worker owner session with `signedInAsOwner()` for staff flows; keep auth lifecycle coverage on the live sign-in form.
 - Keep safety-critical failure paths (capacity, waiver/medical state, cert/nitrox gating, and manifest/roll call) explicit.
 
+## Locator visibility: prefer getByRole/getByLabel over getByText
+
+`getByRole`, `getByLabel`, and `getByPlaceholder` query the accessibility tree, which already
+excludes anything a hidden `display:none` ancestor removes from accessibility — a collapsed
+`<details>`, a tab panel, and (should this app re-enable `cacheComponents`; see
+ADR 20260801-cache-components-e2e-activity-migration, currently Proposed) a React
+`<Activity mode="hidden">` boundary from client-side navigation. `getByText` and a raw `.locator()`
+used as a final matcher do **not** filter by visibility — they match hidden elements too, so a
+strict-mode call can throw "resolved to N elements" the moment two matching elements exist
+anywhere in the DOM, visible or not, not just when both are actually on screen.
+
+Default to `getByRole`/`getByLabel` for anything with an accessible role or label; reach for
+`getByText` only when there's no role/label to query (plain prose, a status message). If a spec's
+`getByText` genuinely needs to be visibility-safe, chain `.filter({ visible: true })` — the
+pattern `node_modules/next/dist/docs/01-app/02-guides/preserving-ui-state.md`'s Testing section
+itself recommends. Read that file directly before relying on more than this paragraph — it's a
+provider doc, not something to treat as this repo's own contract.
+
 ## Capture full-size; bound the page in code
 
 Captures are `fullPage` and unfiltered. If a surface screenshots enormous, that is a finding about
