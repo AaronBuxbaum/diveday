@@ -294,3 +294,18 @@ actually found, against the plan above:
   dive-domain-expert review of the first fix found the identical unfixed pattern in the second,
   gating the same server check via the same `updateCrewAction`. Both now have a unit test proving
   the assigned-crew UI never renders before the mock action's promise resolves.
+- **An eighth finding: `<title>` streaming can race an axe-core scan on a route with no build-time
+  param coverage.** `e2e/a11y.spec.ts`'s trip-booking scan visits a just-created trip's public
+  page (`schedule/[id]/page.tsx` — `generateMetadata` reads the trip from the DB, so the title is
+  necessarily dynamic; every trip id is a first-ever, uncoverable visit, unlike a route with
+  `generateStaticParams`). Flaked at roughly 50% even after the scan first waited for
+  `page.title()` to be non-empty — axe-core still occasionally found no `<title>` **element** in
+  the DOM at scan time despite `document.title` reading non-empty a moment earlier, meaning the
+  title element itself is still settling (being replaced or briefly removed) after the JS-visible
+  property already resolved. 5/5 clean against `main` (no `cacheComponents`), confirming this is
+  PPR-specific. `expectNoA11yViolations` now also waits for `page.waitForLoadState("networkidle")`
+  after the title check, which resolved it across 14 consecutive isolated runs plus 3 full-file
+  runs. Unlike the sixth/seventh findings this one wasn't traced to a specific root cause in
+  React's title-streaming internals — the fix is an empirically-verified settle wait, not a proof
+  of exactly what races what. Revisit if it recurs; the fix is in one shared helper, so a next
+  instance would surface here rather than needing a new per-route diagnosis.

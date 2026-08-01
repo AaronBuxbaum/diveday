@@ -23,6 +23,18 @@ import { daysFromNow, e2eNow, signOut } from "./helpers";
  * deliberately deferred contrast debt. Re-include it once that work lands.
  */
 async function expectNoA11yViolations(page: Page) {
+  // A dynamic route with no build-time param coverage (a just-created trip,
+  // never visited before) computes its <title> from a DB read inside
+  // generateMetadata — under cacheComponents' Partial Prerendering, that
+  // resolves on the same postponed-content channel as the page body, but not
+  // always in lockstep with it: a scan that fires the instant the body's own
+  // heading becomes visible can still catch a document with no <title> yet,
+  // even though the page settles correctly moments later. Waiting for a
+  // non-empty title first scans the settled document instead of a genuinely
+  // transient in-between state — this is not a real a11y defect a visitor
+  // ever perceives, just the render finishing.
+  await expect(page).toHaveTitle(/.+/);
+  await page.waitForLoadState("networkidle");
   const results = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag22aa"])
     .disableRules(["color-contrast"])
