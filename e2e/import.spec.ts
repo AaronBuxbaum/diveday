@@ -29,7 +29,10 @@ test.describe("contact import", () => {
     await page.goto("/shop/blue-mantis/settings/import");
     await expect(page.getByRole("heading", { name: "Import contacts" })).toBeVisible();
     // The preview runs in the browser, so a file chosen before hydration is lost.
-    await expect(page.locator('input[type="file"]')).toHaveAttribute("data-hydrated", "true");
+    await expect(page.locator('input[type="file"]').filter({ visible: true })).toHaveAttribute(
+      "data-hydrated",
+      "true",
+    );
 
     // The published honesty table is on the page before any file is chosen.
     await expect(page.getByRole("heading", { name: "What comes across" })).toBeVisible();
@@ -79,7 +82,7 @@ test.describe("contact import", () => {
     const levelCard = page.locator("li").filter({ hasText: "PADI · Advanced Open Water" });
     await levelCard.getByRole("button", { name: "Confirm card" }).click();
     await expect(levelCard.getByRole("button", { name: "Confirm card" })).toHaveCount(0);
-    await expect(levelCard.getByText(/^imported(?: ·|$)/i)).toBeVisible();
+    await expect(levelCard.getByText(/^imported(?: ·|$)/i).filter({ visible: true })).toBeVisible();
   });
 });
 
@@ -110,7 +113,10 @@ test.describe("contact import — specialty cards", () => {
     await page.goto("/shop/blue-mantis/settings/import");
     // The honesty table now says specialty cards come across.
     await expect(page.getByText("Specialty cards (deep, wreck, night, drysuit)")).toBeVisible();
-    await expect(page.locator('input[type="file"]')).toHaveAttribute("data-hydrated", "true");
+    await expect(page.locator('input[type="file"]').filter({ visible: true })).toHaveAttribute(
+      "data-hydrated",
+      "true",
+    );
 
     await page.setInputFiles('input[type="file"]', {
       name: "specialties.csv",
@@ -177,9 +183,11 @@ test.describe("contact import — specialty cards", () => {
     // The confirm is no longer a bare tap: it states what the staffer asserts,
     // because this is what opens the deep dive (H-24).
     const deepCard = page.locator("li").filter({ hasText: "PADI · Deep" });
-    await deepCard.getByText("Confirm card").first().click();
+    await deepCard.getByText("Confirm card").filter({ visible: true }).first().click();
     await expect(
-      deepCard.getByText(/I've seen this diver's card, or checked the number/),
+      deepCard
+        .getByText(/I've seen this diver's card, or checked the number/)
+        .filter({ visible: true }),
     ).toBeVisible();
     await deepCard.getByRole("checkbox", { name: /I've seen this diver's card/ }).check();
     await deepCard.getByRole("button", { name: "Confirm card" }).click();
@@ -217,7 +225,10 @@ test.describe("contact import — prior visits", () => {
     await page.goto("/shop/blue-mantis/settings/import");
     // The honesty table says past visits come across, and says what they aren't.
     await expect(page.getByText("Past visits (what they booked, when)")).toBeVisible();
-    await expect(page.locator('input[type="file"]')).toHaveAttribute("data-hydrated", "true");
+    await expect(page.locator('input[type="file"]').filter({ visible: true })).toHaveAttribute(
+      "data-hydrated",
+      "true",
+    );
 
     await page.setInputFiles('input[type="file"]', {
       name: "bookings.csv",
@@ -237,18 +248,27 @@ test.describe("contact import — prior visits", () => {
     await page.goto("/shop/blue-mantis/divers?q=regular.rosa@example.com");
     await page.getByRole("link", { name: /Regular Rosa/ }).click();
     const history = page.locator("section").filter({ has: page.getByText("Shop history") });
-    await expect(history.getByText(/3 visits came across from your previous system/)).toBeVisible();
-    await expect(history.getByText(/booking records, not dive records/)).toBeVisible();
-    await expect(history.getByText("Two-tank Molasses Reef")).toBeVisible();
-    await expect(history.getByText("$165.00")).toBeVisible();
+    await expect(
+      history.getByText(/3 visits came across from your previous system/).filter({ visible: true }),
+    ).toBeVisible();
+    await expect(
+      history.getByText(/booking records, not dive records/).filter({ visible: true }),
+    ).toBeVisible();
+    await expect(
+      history.getByText("Two-tank Molasses Reef").filter({ visible: true }),
+    ).toBeVisible();
+    await expect(history.getByText("$165.00").filter({ visible: true })).toBeVisible();
     // The cancelled booking is shown as cancelled, not quietly counted as a dive.
-    await expect(history.getByText("Cancelled")).toBeVisible();
+    await expect(history.getByText("Cancelled").filter({ visible: true })).toBeVisible();
     await expect(history.getByRole("link", { name: "Drift the Wall" })).toHaveCount(0);
 
     // Re-running the same export is the normal thing an owner does as their
     // roster grows — it must update, never double.
     await page.goto("/shop/blue-mantis/settings/import");
-    await expect(page.locator('input[type="file"]')).toHaveAttribute("data-hydrated", "true");
+    await expect(page.locator('input[type="file"]').filter({ visible: true })).toHaveAttribute(
+      "data-hydrated",
+      "true",
+    );
     await page.setInputFiles('input[type="file"]', {
       name: "bookings.csv",
       mimeType: "text/csv",
@@ -263,7 +283,8 @@ test.describe("contact import — prior visits", () => {
       page
         .locator("section")
         .filter({ has: page.getByText("Shop history") })
-        .getByText(/3 visits came across/),
+        .getByText(/3 visits came across/)
+        .filter({ visible: true }),
     ).toBeVisible();
   });
 });
@@ -275,7 +296,10 @@ test.describe("contact import — explicit bounds (CR-016)", () => {
     page,
   }) => {
     await page.goto("/shop/blue-mantis/settings/import");
-    await expect(page.locator('input[type="file"]')).toHaveAttribute("data-hydrated", "true");
+    await expect(page.locator('input[type="file"]').filter({ visible: true })).toHaveAttribute(
+      "data-hydrated",
+      "true",
+    );
     // MAX_IMPORT_COLUMNS is 64 in src/lib/import.ts (raised for the column-heavy
     // bookings exports prior visits read) — 66 headers trips the limit without
     // needing a slow multi-megabyte fixture.
@@ -323,5 +347,5 @@ test("import is refused for staff below owner/manager", async ({ page }) => {
   await signInAs(page, DEV_STAFF_LOGINS.captain);
   await page.goto("/shop/blue-mantis/settings/import");
   await expect(page).toHaveURL(/\/shop\/blue-mantis$/);
-  await expect(page.locator('input[type="file"]')).toHaveCount(0);
+  await expect(page.locator('input[type="file"]').filter({ visible: true })).toHaveCount(0);
 });

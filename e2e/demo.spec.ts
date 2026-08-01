@@ -70,11 +70,17 @@ test("picking the diver role from the homepage skips straight to the public sche
 
 test("an onboarded trial shop is a real shop, not demo mode", async ({ page }) => {
   await page.goto("/onboard");
-  await page.locator('input[name="shopName"]').fill("Coral Cove Divers");
-  await page.locator('input[name="shopSlug"]').fill("coral-cove-e2e");
-  await page.locator('input[name="ownerName"]').fill("Riva Okonkwo");
-  await page.locator('input[name="ownerEmail"]').fill("riva-e2e@coralcove.example");
-  await page.locator('input[name="ownerPassword"]').fill("trial-pass-123");
+  await page.locator('input[name="shopName"]').filter({ visible: true }).fill("Coral Cove Divers");
+  await page.locator('input[name="shopSlug"]').filter({ visible: true }).fill("coral-cove-e2e");
+  await page.locator('input[name="ownerName"]').filter({ visible: true }).fill("Riva Okonkwo");
+  await page
+    .locator('input[name="ownerEmail"]')
+    .filter({ visible: true })
+    .fill("riva-e2e@coralcove.example");
+  await page
+    .locator('input[name="ownerPassword"]')
+    .filter({ visible: true })
+    .fill("trial-pass-123");
   // A real shop is never seeded — there's no sample-data option to toggle. It
   // starts clean and must not be a demo playground (ADR 20260724).
   await page.getByRole("button", { name: "Create shop & start trial" }).click();

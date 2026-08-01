@@ -11,7 +11,10 @@ signedInAsOwner();
  * against. Check before toggling instead of guessing.
  */
 async function openPrivateNotes(page: Page) {
-  const details = page.locator("details").filter({ hasText: "Private staff notes" });
+  const details = page
+    .locator("details")
+    .filter({ hasText: "Private staff notes" })
+    .filter({ visible: true });
   const isOpen = await details.evaluate((el) => (el as HTMLDetailsElement).open);
   if (!isOpen) await details.locator("summary").click();
 }
@@ -45,7 +48,8 @@ test("staff adds a walk-in diver, then wait-lists one once the trip is full", as
 
   const addDiver = page
     .locator("section")
-    .filter({ has: page.getByRole("heading", { name: "Add a diver" }) });
+    .filter({ has: page.getByRole("heading", { name: "Add a diver" }) })
+    .filter({ visible: true });
   await addDiver.scrollIntoViewIfNeeded();
   await addDiver.getByLabel("Name").fill("Walk-in Wanda");
   await addDiver.getByLabel("Email").fill(`wanda-${e2eNow().getTime()}@example.com`);
@@ -105,7 +109,7 @@ test("staff adds a walk-in diver, then wait-lists one once the trip is full", as
     .locator("section")
     .filter({ has: page.getByRole("heading", { name: "Wait list" }) });
   await waitlist.getByRole("button", { name: /Email .* an invite/ }).click();
-  await expect(waitlist.getByText(/Invited/)).toBeVisible();
+  await expect(waitlist.getByText(/Invited/).filter({ visible: true })).toBeVisible();
   await expect(waitlist.getByRole("button", { name: "Re-send invite" })).toBeVisible();
 });
 
@@ -131,7 +135,8 @@ test("staff adds a returning diver by picking them, no re-entry", async ({ page 
 
   const addDiver = page
     .locator("section")
-    .filter({ has: page.getByRole("heading", { name: "Add a diver" }) });
+    .filter({ has: page.getByRole("heading", { name: "Add a diver" }) })
+    .filter({ visible: true });
   await addDiver.scrollIntoViewIfNeeded();
 
   // Search the shop's existing people and add one by identity — their record,
@@ -147,7 +152,7 @@ test("staff adds a returning diver by picking them, no re-entry", async ({ page 
   const roster = page
     .locator("section")
     .filter({ has: page.getByRole("heading", { name: "Divers" }) });
-  await expect(roster.getByText("Priya Sharma")).toBeVisible();
+  await expect(roster.getByText("Priya Sharma").filter({ visible: true })).toBeVisible();
 
   // Picking the same diver again is no longer offered — the roster can't
   // double-book them.

@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { FunnelTag } from "@/components/FunnelTag";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -77,6 +78,19 @@ export function HomeCTA({ enterDemoAction, scheduleHref, roleOptions, copy }: Ho
   // the same "Try:" prompt the in-app role switcher shows once you're already
   // inside the demo (docs/product/archive/ux-personas-20260730-findings.md #103).
   const [preview, setPreview] = useState<string | null>(null);
+
+  // With cacheComponents' <Activity> preservation, navigating away and back
+  // (e.g. via the browser back button) can reshow this component instead of
+  // remounting it, and mouse/focus events don't reliably fire their "leave"
+  // counterpart across a navigation — so a hover-triggered preview could
+  // otherwise resurface with no pointer actually over the button. Reset on
+  // every (re)navigation, same pattern as
+  // ADR 20260801-cache-components-activity-state's usePathname()-keyed fixes.
+  const pathname = usePathname();
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `pathname` is a trigger, not a value the effect body reads — any change clears the preview, which is the point.
+  useEffect(() => {
+    setPreview(null);
+  }, [pathname]);
 
   return (
     <div className="flex flex-col items-start gap-3">

@@ -15,7 +15,10 @@ test("counter check-in searches by diver, confirms live readiness, and keeps blo
   await search.press("Enter");
   await expect(page).toHaveURL(/\/check-in\?q=Priya\+Sharma/);
 
-  const card = page.locator("article").filter({ hasText: "Priya Sharma" });
+  const card = page
+    .locator("article")
+    .filter({ hasText: "Priya Sharma" })
+    .filter({ visible: true });
   await expect(card).toHaveCount(1);
   // The warning-tone Badge prepends a decorative aria-hidden glyph
   // (Badge.tsx toneGlyph), so the element's own text is "▲ Needs
@@ -35,7 +38,7 @@ test("a counter walk-in books straight onto a boat with no email required", asyn
   await expect(page.getByRole("heading", { name: "Walk-in", level: 1 })).toBeVisible();
 
   const tripSection = page.locator("section").filter({ hasText: "Which boat?" });
-  const firstTrip = tripSection.locator("ul li a").first();
+  const firstTrip = tripSection.locator("ul li a").filter({ visible: true }).first();
   await expect(firstTrip).toBeVisible();
   const tripText = await firstTrip.innerText();
   const tripTitle = tripText.split(" · ")[0];
@@ -51,13 +54,15 @@ test("a counter walk-in books straight onto a boat with no email required", asyn
   await search.press("Enter");
   await expect(page.getByText(/No matches for/)).toBeVisible();
 
-  await page.locator('input[name="fullName"]').fill("Walk-in Test Diver");
+  await page.locator('input[name="fullName"]').filter({ visible: true }).fill("Walk-in Test Diver");
   // Email and phone are left blank on purpose — the whole point of this flow.
   await page.getByRole("button", { name: "Add to boat" }).click();
 
   await expect(page).toHaveURL(/\/check-in\?notice=walkin_added/);
   await expect(page.getByText("Added and on the boat.")).toBeVisible();
-  await expect(page.locator("article").filter({ hasText: "Walk-in Test Diver" })).toHaveCount(1);
+  await expect(
+    page.locator("article").filter({ hasText: "Walk-in Test Diver" }).filter({ visible: true }),
+  ).toHaveCount(1);
 });
 
 test("a full boat refuses a counter walk-in with the wait-list nudge", async ({ page }) => {
@@ -93,12 +98,14 @@ test("a full boat refuses a counter walk-in with the wait-list nudge", async ({ 
   // The boat is now full — a counter walk-in onto it is refused, not silently
   // dropped, and points the crew at the wait list instead.
   await page.goto(`/shop/blue-mantis/check-in/walk-in?tripId=${tripId}`);
-  await page.locator('input[name="fullName"]').fill("Turned Away Tara");
+  await page.locator('input[name="fullName"]').filter({ visible: true }).fill("Turned Away Tara");
   await page.getByRole("button", { name: "Add to boat" }).click();
 
   await expect(page).toHaveURL(/\/check-in\?notice=walkin_full/);
   await expect(
     page.getByText("That boat is full — try the wait list from its trip page instead."),
   ).toBeVisible();
-  await expect(page.locator("article").filter({ hasText: "Turned Away Tara" })).toHaveCount(0);
+  await expect(
+    page.locator("article").filter({ hasText: "Turned Away Tara" }).filter({ visible: true }),
+  ).toHaveCount(0);
 });

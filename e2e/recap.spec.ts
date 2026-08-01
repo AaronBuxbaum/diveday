@@ -23,7 +23,7 @@ test("an oversize recap photo is rejected client-side before it ever reaches the
   // Assert stylized recap map is rendered (delight feature)
   await expect(page.getByLabel("Stylized recap navigation map of your dive sites")).toBeVisible();
 
-  const photoInput = page.locator('input[name="photo"]');
+  const photoInput = page.locator('input[name="photo"]').filter({ visible: true });
   await photoInput.setInputFiles({
     name: "recap.jpg",
     mimeType: "image/jpeg",
@@ -152,7 +152,7 @@ test("a whole pick of photos submits in one request, not one page reload per pho
   page,
 }) => {
   await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
-  const photoInput = page.locator('input[name="photo"]');
+  const photoInput = page.locator('input[name="photo"]').filter({ visible: true });
   await expect(photoInput).toHaveAttribute("multiple", "");
 
   // Real, decodable JPEGs — the server validates content, not just the

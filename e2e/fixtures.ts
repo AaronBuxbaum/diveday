@@ -1,4 +1,5 @@
 import path from "node:path";
+import type { Page } from "@playwright/test";
 import { test as base, expect } from "@playwright/test";
 import { signInAsOwner } from "./helpers";
 import { E2E_FROZEN_CLOCK, e2eBaseURL } from "./servers";
@@ -130,6 +131,25 @@ export const test = base.extend<
   // Point the built-in page/request fixtures at this worker's own server.
   baseURL: async ({ workerBaseURL }, use) => {
     await use(workerBaseURL);
+  },
+
+  // `getByRole`/`getByLabel`/`getByPlaceholder` query the accessibility tree,
+  // which already excludes a `display:none` route React's <Activity> keeps in
+  // the DOM for instant back-navigation (cacheComponents' Activity behavior,
+  // see ADR 20260801-cache-components-e2e-activity-migration). `getByText`
+  // does not, so it can strict-mode-fail against a hidden previous route.
+  // Patched once here, at the fixture choke point every spec already imports
+  // through, so every existing `page.getByText(...)` call site stays
+  // Activity-safe without a per-spec change — the pattern Next's own docs
+  // recommend (`page.getByText(text).filter({ visible: true })`).
+  // A spec that genuinely needs to match hidden text (e.g. asserting
+  // `toBeHidden()`) can bypass this with `page.locator("text=...")`, which
+  // this fixture leaves unpatched.
+  page: async ({ page }, use) => {
+    const rawGetByText = page.getByText.bind(page);
+    page.getByText = ((text: string | RegExp, options?: { exact?: boolean }) =>
+      rawGetByText(text, options).filter({ visible: true })) as Page["getByText"];
+    await use(page);
   },
 
   // One real UI sign-in per worker; every staff test after that starts from

@@ -59,7 +59,8 @@ test.describe("certification paths", () => {
     await page.goto(`/shop/${SHOP}/courses/night-diver`);
     const trail = page
       .locator("article")
-      .filter({ has: page.getByRole("heading", { name: title }) });
+      .filter({ has: page.getByRole("heading", { name: title }) })
+      .filter({ visible: true });
     await expect(trail).toContainText("Two nights and a torch.");
     await expect(trail).toContainText("This is the last step on");
     await expect(trail.getByRole("link", { name: "Advanced Open Water Diver" })).toBeVisible();

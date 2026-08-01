@@ -59,8 +59,8 @@ test.describe("staff-prepared trips", () => {
     // the destination page's own title and date/time back to what was
     // selected, rather than assuming which trip sorts first.
     await expect(page.getByRole("heading", { name: "Need to change your plans?" })).toBeVisible();
-    const select = page.locator("#newTripId");
-    const options = select.locator("option");
+    const select = page.locator("#newTripId").filter({ visible: true });
+    const options = select.locator("option").filter({ visible: true });
     await expect(options).not.toHaveCount(1); // more than just the placeholder
     await select.selectOption({ index: 1 });
     const selectedLabel = (await options.nth(1).innerText()).trim();

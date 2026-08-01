@@ -27,7 +27,8 @@ test("a repeating series is scheduled, then rolled forward and cancelled as one"
   const tripUrl = page.url();
   const series = page
     .locator("section")
-    .filter({ has: page.getByRole("heading", { name: "Repeating series" }) });
+    .filter({ has: page.getByRole("heading", { name: "Repeating series" }) })
+    .filter({ visible: true });
   await expect(series).toBeVisible();
 
   // Roll the horizon forward by two dates.

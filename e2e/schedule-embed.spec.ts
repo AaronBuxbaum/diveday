@@ -57,7 +57,7 @@ test("booking through the embed keeps embed mode through the confirmation", asyn
   await signOut(page);
 
   await page.goto("/shop/blue-mantis/schedule?embed=1", { waitUntil: "domcontentloaded" });
-  await page.locator("li, a").filter({ hasText: title }).first().click();
+  await page.locator("li, a").filter({ hasText: title }).filter({ visible: true }).first().click();
   await expect(page).toHaveURL(/embed=1/);
   await expect(page.getByRole("link", { name: "← All trips" })).toHaveCount(0);
 
@@ -90,6 +90,11 @@ test("the embed widget carries a discreet Powered-by-DiveDay attribution link wi
   expect(href).toContain("utm_source=embed");
   expect(href).toContain("utm_medium=widget");
   expect(href).toContain("utm_campaign=blue-mantis");
+  // Intentionally not filtered by visibility: <script> elements never have a
+  // layout box, so `.filter({ visible: true })` would always yield 0 matches
+  // regardless of whether a JSON-LD script is actually present, defeating
+  // this assertion. Also reached via a fresh `page.goto` above, not a
+  // client-side navigation, so there's no prior Activity tree to leak here.
   await expect(page.locator('script[type="application/ld+json"]')).toHaveCount(0);
 });
 

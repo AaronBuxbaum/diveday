@@ -29,6 +29,7 @@
     "check:adrs": "node scripts/check-adrs.mjs",
     "check:docs": "node scripts/check-doc-links.mjs",
     "check:agents": "node scripts/check-agents.mjs",
+    "check:e2e-fixtures": "node scripts/check-e2e-fixtures.mjs",
     "check:text": "node scripts/check-source-text.mjs",
     "check:locale": "node scripts/check-locale.mjs",
     "check:copy": "node scripts/check-copy.mjs",

@@ -31,8 +31,11 @@ test.describe("staff", () => {
     const specialtyForm = page.locator("form", {
       has: page.getByRole("button", { name: "Capture specialty for review" }),
     });
-    await specialtyForm.locator('select[name="specialty"]').selectOption("nitrox");
-    await specialtyForm.locator('input[name="identifier"]').fill(cardNo);
+    await specialtyForm
+      .locator('select[name="specialty"]')
+      .filter({ visible: true })
+      .selectOption("nitrox");
+    await specialtyForm.locator('input[name="identifier"]').filter({ visible: true }).fill(cardNo);
     await page.getByRole("button", { name: "Capture specialty for review" }).click();
     await expect(page.getByRole("status")).toContainText("captured");
 
@@ -52,7 +55,10 @@ test.describe("staff", () => {
     await expect(page.getByRole("heading", { name: "Rental kit" })).toBeVisible();
     // One tank per diver per dive, and the seeded nitrox request is on the split.
     await expect(page.getByText("one tank per diver per dive")).toBeVisible();
-    const tanks = page.getByRole("heading", { name: "Tanks" }).locator("xpath=..");
+    const tanks = page
+      .getByRole("heading", { name: "Tanks" })
+      .locator("xpath=..")
+      .filter({ visible: true });
     await expect(tanks).toContainText("Nitrox");
     // Nothing on this page claims to know what is in a cylinder.
     await expect(page.getByText("DiveDay logs no gas analysis")).toBeVisible();
@@ -91,9 +97,9 @@ test.describe("staff", () => {
     await anon.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
     await expect(anon.getByRole("heading", { name: /You’re on the boat, Priya/ })).toBeVisible();
 
-    await anon.locator('input[name="nitrox"]').check();
+    await anon.locator('input[name="nitrox"]').filter({ visible: true }).check();
     await anon.getByRole("button", { name: "Save rental fit" }).click();
-    await expect(anon.locator('input[name="nitrox"]')).toBeChecked();
+    await expect(anon.locator('input[name="nitrox"]').filter({ visible: true })).toBeChecked();
     const bookingUrl = anon.url();
     // The trip id rides along in the confirmation URL — reuse it below
     // instead of clicking back through the schedule as staff.
@@ -110,16 +116,19 @@ test.describe("staff", () => {
       // gone (the shop doesn't fill it any more), but saving must not
       // silently erase the request already on file for this trip.
       await anon.goto(bookingUrl);
-      await expect(anon.locator('input[name="nitrox"]')).toHaveCount(0);
+      await expect(anon.locator('input[name="nitrox"]').filter({ visible: true })).toHaveCount(0);
       await anon.getByLabel("Anything else the crew should know?").fill("Bringing my own mask.");
       await anon.getByRole("button", { name: "Save rental fit" }).click();
-      await expect(anon.getByText("Saved.")).toBeVisible();
+      await expect(anon.getByText("Saved.").filter({ visible: true })).toBeVisible();
 
       // The request survives even with nitrox off — read it back from the
       // prep list (visible with the catalog disabled per the live-data check
       // above) rather than re-enabling nitrox just to look at the checkbox.
       await page.goto(`/shop/blue-mantis/trips/${tripId}/prep`);
-      const tanks = page.getByRole("heading", { name: "Tanks" }).locator("xpath=..");
+      const tanks = page
+        .getByRole("heading", { name: "Tanks" })
+        .locator("xpath=..")
+        .filter({ visible: true });
       await expect(tanks).toContainText("Nitrox");
     } finally {
       // Restore the shared demo shop's catalog — resetDemoSchedule only
@@ -157,7 +166,10 @@ test.describe("staff", () => {
         .getByRole("navigation", { name: "Trip" })
         .getByRole("link", { name: "Prep" })
         .click();
-      const tanks = page.getByRole("heading", { name: "Tanks" }).locator("xpath=..");
+      const tanks = page
+        .getByRole("heading", { name: "Tanks" })
+        .locator("xpath=..")
+        .filter({ visible: true });
       await expect(tanks.getByText("Total", { exact: true })).toHaveCount(1);
       await expect(tanks.getByText("Air", { exact: true })).toHaveCount(0);
       await expect(tanks.getByText("Nitrox", { exact: true })).toHaveCount(0);
@@ -181,11 +193,17 @@ test("a freshly onboarded shop starts without nitrox, and turning it on unlocks 
   page,
 }) => {
   await page.goto("/onboard");
-  await page.locator('input[name="shopName"]').fill("Nitrox Off Divers");
-  await page.locator('input[name="shopSlug"]').fill("nitrox-off-e2e");
-  await page.locator('input[name="ownerName"]').fill("Nadia Cole");
-  await page.locator('input[name="ownerEmail"]').fill("nadia-nitrox-e2e@example.com");
-  await page.locator('input[name="ownerPassword"]').fill("trial-pass-123");
+  await page.locator('input[name="shopName"]').filter({ visible: true }).fill("Nitrox Off Divers");
+  await page.locator('input[name="shopSlug"]').filter({ visible: true }).fill("nitrox-off-e2e");
+  await page.locator('input[name="ownerName"]').filter({ visible: true }).fill("Nadia Cole");
+  await page
+    .locator('input[name="ownerEmail"]')
+    .filter({ visible: true })
+    .fill("nadia-nitrox-e2e@example.com");
+  await page
+    .locator('input[name="ownerPassword"]')
+    .filter({ visible: true })
+    .fill("trial-pass-123");
   await page.getByRole("button", { name: "Create shop & start trial" }).click();
   await expect(page).toHaveURL(/\/shop\/nitrox-off-e2e/);
 
@@ -193,12 +211,12 @@ test("a freshly onboarded shop starts without nitrox, and turning it on unlocks 
   const nitroxCheckbox = page.getByRole("checkbox", { name: "Nitrox fills" });
   await expect(nitroxCheckbox).not.toBeChecked();
   // Most shops don't fill nitrox: no price field to fill in until it's ticked.
-  await expect(page.locator('input[name="nitroxPrice"]')).toHaveCount(0);
+  await expect(page.locator('input[name="nitroxPrice"]').filter({ visible: true })).toHaveCount(0);
 
   await nitroxCheckbox.check();
   await page.getByRole("button", { name: "Save rental catalog" }).click();
   await expect(page.getByText("Rental catalog saved.")).toBeVisible();
-  await expect(page.locator('input[name="nitroxPrice"]')).toHaveCount(1);
+  await expect(page.locator('input[name="nitroxPrice"]').filter({ visible: true })).toHaveCount(1);
 });
 
 test("a diver without a verified card can request nitrox but is flagged, not blocked", async ({
@@ -228,12 +246,12 @@ test("a diver without a verified card can request nitrox but is flagged, not blo
       "A verified nitrox card is needed before the crew can reserve nitrox-compatible tanks.",
     ),
   ).toBeVisible();
-  const nitrox = page.locator('input[name="nitrox"]');
+  const nitrox = page.locator('input[name="nitrox"]').filter({ visible: true });
   await expect(nitrox).toHaveCount(1);
   await nitrox.check();
   await page.getByRole("button", { name: "Save rental fit" }).click();
 
   // The request stuck (checkbox stays on) and the flag still explains what's needed.
-  await expect(page.locator('input[name="nitrox"]')).toBeChecked();
+  await expect(page.locator('input[name="nitrox"]').filter({ visible: true })).toBeChecked();
   await expect(page.getByText("Your Nitrox request is on file")).toBeVisible();
 });

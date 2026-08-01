@@ -25,7 +25,8 @@ test("a diver sees rental prices and an estimate on the booking confirmation", a
   // default-on and now part of the set — is estimated at the set price ($45.00).
   const fit = page
     .locator("section")
-    .filter({ has: page.getByRole("heading", { name: "Rental fit" }) });
+    .filter({ has: page.getByRole("heading", { name: "Rental fit" }) })
+    .filter({ visible: true });
   await expect(
     fit.getByText(
       "A full set includes BCD, regulator, wetsuit, mask & fins, weights, and dive computer.",

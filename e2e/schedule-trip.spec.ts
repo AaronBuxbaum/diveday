@@ -40,9 +40,10 @@ test("staff schedules a trip and it appears on shop and public schedules", async
   const card = page
     .getByRole("list", { name: "Upcoming trips" })
     .locator("li")
-    .filter({ hasText: title });
+    .filter({ hasText: title })
+    .filter({ visible: true });
   await expect(card).toBeVisible();
-  await expect(card.getByText("8 spots left")).toBeVisible();
+  await expect(card.getByText("8 spots left").filter({ visible: true })).toBeVisible();
 
   await card.click();
   await expect(page.getByRole("heading", { name: "Your 3-dive plan" })).toBeVisible();

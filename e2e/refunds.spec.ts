@@ -73,7 +73,7 @@ test.describe("refunds", () => {
       .getByRole("link", { name: "Guests" })
       .click();
 
-    const noraRow = page.locator("li").filter({ hasText: "Nora Quinn" });
+    const noraRow = page.locator("li").filter({ hasText: "Nora Quinn" }).filter({ visible: true });
     await noraRow.getByRole("combobox").selectOption("paid");
     await noraRow.getByRole("button", { name: "Update" }).click();
     await expect(page.getByRole("status")).toContainText("Payment status updated");

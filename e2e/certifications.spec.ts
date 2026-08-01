@@ -7,14 +7,18 @@ signedInAsOwner();
 
 /** The diver detail page has two capture forms; scope by the form's own submit button. */
 function levelForm(page: Page) {
-  return page.locator("form", {
-    has: page.getByRole("button", { name: "Capture for review", exact: true }),
-  });
+  return page
+    .locator("form", {
+      has: page.getByRole("button", { name: "Capture for review", exact: true }),
+    })
+    .filter({ visible: true });
 }
 function specialtyForm(page: Page) {
-  return page.locator("form", {
-    has: page.getByRole("button", { name: "Capture specialty for review" }),
-  });
+  return page
+    .locator("form", {
+      has: page.getByRole("button", { name: "Capture specialty for review" }),
+    })
+    .filter({ visible: true });
 }
 
 test("staff captures and verifies level and specialty cards before either can be trusted", async ({
@@ -35,7 +39,11 @@ test("staff captures and verifies level and specialty cards before either can be
   await form.getByRole("button", { name: "Capture for review", exact: true }).click();
   await expect(page.getByRole("status")).toContainText("pending");
 
-  const pendingRow = page.locator("li").filter({ hasText: "pending" }).last();
+  const pendingRow = page
+    .locator("li")
+    .filter({ hasText: "pending" })
+    .filter({ visible: true })
+    .last();
   await pendingRow.getByRole("button", { name: "Mark certified" }).click();
   await expect(page.getByRole("status")).toContainText("certified");
 
@@ -51,7 +59,11 @@ test("staff captures and verifies level and specialty cards before either can be
 
   // Scope to this card's row by its unique number; the specialty card shows
   // "<agency> · <specialty>", not the literal word "specialty".
-  const specialtyRow = page.locator("li").filter({ hasText: cardNo }).last();
+  const specialtyRow = page
+    .locator("li")
+    .filter({ hasText: cardNo })
+    .filter({ visible: true })
+    .last();
   await specialtyRow.getByRole("button", { name: "Mark certified" }).click();
   await expect(page.getByRole("status")).toContainText("certified");
 
@@ -61,13 +73,16 @@ test("staff captures and verifies level and specialty cards before either can be
   await page
     .locator("li")
     .filter({ hasText: cardNo })
+    .filter({ visible: true })
     .last()
     .getByRole("button", {
       name: "Delete",
     })
     .click();
   await expect(page.getByRole("status")).toContainText("Card removed");
-  await expect(page.locator("li").filter({ hasText: cardNo })).toHaveCount(0);
+  await expect(
+    page.locator("li").filter({ hasText: cardNo }).filter({ visible: true }),
+  ).toHaveCount(0);
 });
 
 test("an oversize card photo is rejected client-side before it ever reaches the server (CR-011)", async ({
@@ -151,7 +166,11 @@ test("a certification past its refresher-due date reads as refresher due, not ce
 
   // Real C-cards don't expire; a lapsed shop refresher-due date reads as
   // "refresher due" (H-08), never as a still-valid "certified".
-  const refresherRow = page.locator("li").filter({ hasText: "refresher" }).first();
+  const refresherRow = page
+    .locator("li")
+    .filter({ hasText: "refresher" })
+    .filter({ visible: true })
+    .first();
   await expect(refresherRow).toBeVisible();
   await expect(refresherRow).not.toContainText("certified");
 });

@@ -29,7 +29,7 @@ test("an owner invites a new instructor, who accepts the invite and lands signed
   // history.replaceState shortly after mount (same reasoning as
   // e2e/account-lifecycle.spec.ts) — the rendered banner is the stable signal.
   await expect(page.getByText("Invite sent.")).toBeVisible();
-  const row = page.locator("li").filter({ hasText: "Priya Nair" });
+  const row = page.locator("li").filter({ hasText: "Priya Nair" }).filter({ visible: true });
   await expect(row.getByText("Invited")).toBeVisible();
 
   const seeded = await request.post("/api/test/seed-account-token", {
@@ -92,7 +92,7 @@ test("removing a staff member lands immediately with an Undo banner, no confirm 
   await signOut(page);
   await signInAsOwner(page);
   await page.goto(`/shop/${SHOP}/settings/team`);
-  const row = page.locator("li").filter({ hasText: "Talia Reyes" });
+  const row = page.locator("li").filter({ hasText: "Talia Reyes" }).filter({ visible: true });
   await row.getByRole("button", { name: "Disable" }).click();
   await expect(row.getByText("Disabled")).toBeVisible();
 
@@ -100,11 +100,16 @@ test("removing a staff member lands immediately with an Undo banner, no confirm 
   // dialog — the removal takes effect immediately and an Undo banner offers
   // a one-tap reversal.
   await row.getByRole("button", { name: /^Delete/ }).click();
-  await expect(page.locator("li").filter({ hasText: "Talia Reyes" })).toHaveCount(0);
+  await expect(
+    page.locator("li").filter({ hasText: "Talia Reyes" }).filter({ visible: true }),
+  ).toHaveCount(0);
   await expect(page.getByText("Removed Talia Reyes from the team.")).toBeVisible();
 
   await page.getByRole("button", { name: "Undo" }).click();
-  const restoredRow = page.locator("li").filter({ hasText: "Talia Reyes" });
+  const restoredRow = page
+    .locator("li")
+    .filter({ hasText: "Talia Reyes" })
+    .filter({ visible: true });
   await expect(restoredRow.getByText("Active")).toBeVisible();
   await expect(restoredRow.getByLabel("Instructor")).toBeChecked();
 });
@@ -123,6 +128,10 @@ test("the last-owner guard refuses removing the shop's sole owner", async ({ pag
 
   await expect(page.getByText("the shop needs at least one owner")).toBeVisible();
   await expect(
-    page.locator("li").filter({ hasText: DEV_STAFF_LOGINS.owner.email }).getByText("Active"),
+    page
+      .locator("li")
+      .filter({ hasText: DEV_STAFF_LOGINS.owner.email })
+      .filter({ visible: true })
+      .getByText("Active"),
   ).toBeVisible();
 });
