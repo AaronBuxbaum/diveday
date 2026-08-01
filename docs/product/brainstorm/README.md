@@ -90,12 +90,13 @@ Lens: make connected data compound while keeping safety facts human-verifiable a
 
 - **Cohort and retention view.** Show repeat-diver rate, course-funnel conversion, and retention by
   trip/course type. *(M, cross-cutting, quick win.)*
-- **Sharded feature/entity docs with generated aggregate.** Split high-conflict docs only after
-  collisions prove the need; generate the readable overview. *(M, tooling, parked.)*
-- **Machine-readable task manifest.** Give external orchestrators a structured list of safe paths,
-  invariants, and validation commands. *(M, tooling, parked.)*
 - **North-star measures from real data.** Track blocker-resolution time, waiver completion rate, and
-  fully-ready departures from production data. *(M, cross-cutting, quick win.)*
+  fully-ready departures from production data — the list to instrument is
+  [roadmap.md's measures](../roadmap.md#measures). *(M, cross-cutting, quick win.)*
+
+Tooling ideas that were duplicated here — sharded feature/entity docs, and a machine-readable task
+manifest for external orchestrators — now live once, in
+[roadmap.md's engineering enablement backlog](../roadmap.md#p2--when-parallelism-or-scale-proves-the-need).
 
 ## Delight And Micro-Interactions
 

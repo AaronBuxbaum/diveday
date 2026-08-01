@@ -534,6 +534,22 @@ summary {
     /* biome-ignore lint/complexity/noImportantStyles: accessibility kill-switch must win every cascade */
     transition-duration: 0.01ms !important;
   }
+
+  /*
+   * The universal rule above is `!important`, but so is `.progress-wave-fill`'s
+   * animation — and between two `!important` declarations the higher-specificity
+   * class selector wins, so the /ready readiness bar would keep looping forever
+   * for someone who asked for reduced motion (WCAG 2.3.3). Kill it by name. The
+   * solid `background-color` still carries the fill, and the "N of M done" label
+   * still carries the meaning. Any future animated `!important` declaration needs
+   * a matching entry here.
+   */
+  .progress-wave-fill {
+    /* biome-ignore lint/complexity/noImportantStyles: must beat the class rule's own !important */
+    animation: none !important;
+    /* biome-ignore lint/complexity/noImportantStyles: must beat the class rule's own !important */
+    background-image: none !important;
+  }
 }
 
 /* Waiver Signature Coral Bubbles */

@@ -15,7 +15,6 @@ export const areas = {
   waivers: {
     goal: "Extend the waiver flow without weakening its immutable signed history or fail-closed medical referral states.",
     docs: [
-      "docs/product/next-steps.md",
       "docs/product/roadmap.md",
       "docs/product/glossary.md",
       "docs/design/principles.md",
@@ -47,7 +46,6 @@ export const areas = {
     docs: [
       "docs/product/roadmap.md",
       "docs/product/glossary.md",
-      "docs/product/next-steps.md",
       "docs/design/principles.md",
       "docs/architecture/overview.md",
     ],
@@ -76,7 +74,6 @@ export const areas = {
     docs: [
       "docs/product/roadmap.md",
       "docs/product/glossary.md",
-      "docs/product/next-steps.md",
       "docs/design/principles.md",
       "docs/architecture/overview.md",
     ],
@@ -105,7 +102,6 @@ export const areas = {
     docs: [
       "docs/product/roadmap.md",
       "docs/product/glossary.md",
-      "docs/product/next-steps.md",
       "docs/design/principles.md",
       "docs/architecture/overview.md",
       "docs/architecture/decisions/20260718-offline-manifest-snapshots.md",
@@ -235,7 +231,7 @@ export const areas = {
     docs: [
       "docs/design/principles.md",
       "docs/product/vision.md",
-      "docs/product/next-steps.md",
+      "docs/product/roadmap.md",
       "docs/architecture/decisions/0004-design-tokens.md",
     ],
     code: ["src/app/globals.css", "src/app", "src/components"],

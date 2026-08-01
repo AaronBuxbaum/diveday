@@ -82,7 +82,7 @@ recording a choice, not building anything:
 ## Where outcomes land
 
 - H-07 and H-12 rows updated; pricing display changes go through the
-  [pricing boundary](../marketing.md#pricing-boundary) (`src/lib/marketing.ts` is the source of
+  [pricing boundary](../marketing.md#claims-policy-hard-rules) (`src/lib/marketing.ts` is the source of
   truth — never edit a price in page copy).
 - A subscription-billing mechanism, if chosen, enters [roadmap.md](../roadmap.md) with an ADR
   (new runtime dependency rule).
