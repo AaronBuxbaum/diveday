@@ -28,38 +28,6 @@ implementation, and the persisted-birthdate path needs a `security-reviewer` pas
 
 ---
 
-## Ingrid (persona 5) — localize money end-to-end
-
-**Origin:** archive task 35. **Status:** deferred, not started.
-
-**Left to do:** add `currency` to `shops` (schema-change skill), thread it through
-`formatMoneyCents` (`src/lib/format.ts` defaults `"usd"`), checkout creation
-(`src/db/checkouts.ts`), tip presets, and course fee display. Stripe owns conversion arithmetic.
-Prerequisite for any non-US shop. Needs its own ADR and careful payments-path test coverage — large
-enough to warrant a dedicated change, not a follow-on to a copy pass.
-
-## Ingrid (persona 5) — move Stripe line descriptions out of the domain layer
-
-**Origin:** archive task 36. **Status:** deferred, blocked on the item above.
-
-**Left to do:** `` `Deposit — ${title}` `` (`src/db/checkouts.ts`) and
-`` `${course.title} — instruction` `` (`src/lib/courses.ts`) are English sentences composed in
-`src/db`/`src/lib`. Return structured parts and compose the localized label at the call boundary —
-natural to do together with the currency work above, since both touch the same Stripe line-item
-composition point.
-
-## Ingrid (persona 5) — per-recipient notification language
-
-**Origin:** archive task 128. **Status:** deliberately deferred by standing architecture decision,
-not a live gap.
-
-**Left to do:** nothing right now. `src/lib/notifications/index.ts` picks the shop's locale for
-every email; a diver whose own negotiated locale differs gets the shop's language instead. ADR
-20260731-notification-locale scopes this to future work on purpose — revisit only alongside a
-fresh review of that ADR, not as a standalone fix.
-
----
-
 ## Nadia (persona 1) — security-reviewer pass on the public course catalog
 
 **Origin:** archive tasks 2–3. **Status:** implementation shipped (public course index +

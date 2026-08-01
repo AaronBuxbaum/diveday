@@ -7,6 +7,7 @@ import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import type { DiverMessageKey } from "@/i18n/messages";
 import { formatMoneyCents } from "@/lib/format";
+import type { ShopCurrency } from "@/lib/money";
 import {
   CORE_RENTAL_KINDS,
   hasAnyRentalPricing,
@@ -55,6 +56,7 @@ export function RentalFitForm({
   nitroxCardVerified,
   plannedDives,
   saved,
+  currency,
 }: {
   action: (formData: FormData) => void;
   rentalFit: RentalFit;
@@ -64,6 +66,13 @@ export function RentalFitForm({
   nitroxCardVerified: boolean;
   plannedDives: number;
   saved: boolean;
+  /**
+   * The shop's currency for the rental quote — a list price, so it follows
+   * `shops.currency` (docs ADR 20260731-shop-currency). Required, not
+   * defaulted: a default is how `/ready/[token]` quietly went on quoting gear
+   * in dollars after every other surface had moved.
+   */
+  currency: ShopCurrency;
 }) {
   const t = useTranslations();
   const locale = useLocale();
@@ -198,7 +207,7 @@ export function RentalFitForm({
                     <span className="flex-1">{t(RENTABLE_ITEM_LABEL_KEYS[kind])}</span>
                     {showPricing && priceCents !== undefined ? (
                       <span className="text-muted">
-                        {formatMoneyCents(priceCents, "usd", locale)}
+                        {formatMoneyCents(priceCents, currency, locale)}
                       </span>
                     ) : null}
                   </label>
@@ -218,7 +227,7 @@ export function RentalFitForm({
                 ? pricing.setCents !== null && coreSetSentence
                   ? t("rental.fullSetOffer", {
                       set: coreSetSentence,
-                      price: formatMoneyCents(pricing.setCents, "usd", locale),
+                      price: formatMoneyCents(pricing.setCents, currency, locale),
                     })
                   : t("rental.perPiece")
                 : t("rental.askWhatsIncluded")}
@@ -228,10 +237,10 @@ export function RentalFitForm({
                 <span className="font-medium">
                   {quote.unpricedKinds.length > 0
                     ? t("rental.estimatedRentalWithExtras", {
-                        price: formatMoneyCents(quote.subtotalCents, "usd", locale),
+                        price: formatMoneyCents(quote.subtotalCents, currency, locale),
                       })
                     : t("rental.estimatedRental", {
-                        price: formatMoneyCents(quote.subtotalCents, "usd", locale),
+                        price: formatMoneyCents(quote.subtotalCents, currency, locale),
                       })}
                 </span>{" "}
                 {t("rental.confirmAtDock")}
@@ -255,7 +264,7 @@ export function RentalFitForm({
               <span className="flex-1">
                 {showPricing && pricing.nitroxCents !== null
                   ? t("rental.nitroxReserveWithPrice", {
-                      price: formatMoneyCents(pricing.nitroxCents, "usd", locale),
+                      price: formatMoneyCents(pricing.nitroxCents, currency, locale),
                     })
                   : t("rental.nitroxReserveNoPrice")}
               </span>

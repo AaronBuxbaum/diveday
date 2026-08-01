@@ -546,6 +546,11 @@
     "needHelpPlain": "¿Necesitas ayuda? Contacta directamente con {shop}.",
     "englishOnlyNotice": "Por ahora, esta exención y el cuestionario médico solo están disponibles en inglés. Si no te sientes cómodo/a leyendo texto legal o médico en inglés, trae a alguien que pueda ayudarte a leerlo con atención, o consulta con el centro antes de tu salida — no firmes nada que no entiendas."
   },
+  "checkoutLine": {
+    "deposit": "Depósito — {tripTitle}",
+    "full": "{tripTitle}",
+    "tip": "Propina para la tripulación"
+  },
   "capability": {
     "waiverReceived": "Exención recibida",
     "waiverDone": "Papeleo terminado ✓",

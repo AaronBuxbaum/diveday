@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { matchLocale, negotiateLocale, parseAcceptLanguage } from "./negotiate";
+import { firstHandLocale, matchLocale, negotiateLocale, parseAcceptLanguage } from "./negotiate";
 
 describe("parseAcceptLanguage", () => {
   it("orders by quality, best first", () => {
@@ -65,5 +65,34 @@ describe("negotiateLocale", () => {
   it("falls back again to English when the shop's stored value is unusable", () => {
     expect(negotiateLocale(null, "kl-GL")).toBe("en-US");
     expect(negotiateLocale(null, null)).toBe("en-US");
+  });
+});
+
+// What separates "they asked for this" from "we defaulted to this" — the
+// distinction the per-person locale column is only allowed to record the first
+// half of (docs ADR 20260731-per-person-notification-locale).
+describe("firstHandLocale", () => {
+  it("answers with what the device actually asked for", () => {
+    expect(firstHandLocale("es-MX,en;q=0.5")).toBe("es-ES");
+    expect(firstHandLocale("en-GB")).toBe("en-US");
+  });
+
+  it("answers null where negotiateLocale would answer with the shop's default", () => {
+    // Same inputs, two different jobs: the page still renders in Spanish, but
+    // nothing about this visitor has been learned, so nothing may be stored.
+    expect(negotiateLocale("fr-FR", "es-ES")).toBe("es-ES");
+    expect(firstHandLocale("fr-FR")).toBeNull();
+
+    expect(negotiateLocale(null, "es-ES")).toBe("es-ES");
+    expect(firstHandLocale(null)).toBeNull();
+  });
+
+  it("never lets an unsupported or malformed header through", () => {
+    for (const header of ["", ";;;", "*", "de-DE", "en;q=notanumber", "🙂", "es-ES; DROP TABLE"]) {
+      const result = firstHandLocale(header);
+      expect(result === null || result === "en-US" || result === "es-ES").toBe(true);
+    }
+    expect(firstHandLocale("de-DE,fr;q=0.8")).toBeNull();
+    expect(firstHandLocale("🙂")).toBeNull();
   });
 });

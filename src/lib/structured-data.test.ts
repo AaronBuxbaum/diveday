@@ -20,6 +20,7 @@ const shop: ShopForStructuredData = {
   slug: "blue-mantis",
   contactEmail: "hello@bluemantis.example",
   contactPhone: "+1 305 555 0134",
+  currency: "usd",
 };
 
 const trip: TripForStructuredData = {
@@ -109,6 +110,20 @@ describe("tripPageJsonLd", () => {
     expect(at(graph, "location.name")).toBe("Molasses Reef");
     expect(at(graph, "offers.price")).toBe("180.00");
     expect(at(graph, "offers.availability")).toBe("https://schema.org/InStock");
+  });
+
+  it("publishes the offer in the shop's own currency, not dollars", () => {
+    const graph = tripPageJsonLd({ ...shop, currency: "mxn" }, trip, ORIGIN);
+    expect(at(graph, "offers.priceCurrency")).toBe("MXN");
+    expect(at(graph, "offers.price")).toBe("180.00");
+  });
+
+  // A fixed `.toFixed(2)` published a ¥18,000 charter as "180.00" — a price a
+  // hundred times too low, to the one audience that can't ask about it.
+  it("uses the currency's own decimal places for a zero-decimal currency", () => {
+    const graph = tripPageJsonLd({ ...shop, currency: "jpy" }, trip, ORIGIN);
+    expect(at(graph, "offers.priceCurrency")).toBe("JPY");
+    expect(at(graph, "offers.price")).toBe("18000");
   });
 
   it("falls back to the shop as the venue when no dive site is named", () => {

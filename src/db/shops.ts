@@ -1,5 +1,6 @@
 import { eq, sql } from "drizzle-orm";
 import type { DepthUnit } from "@/lib/depth-units";
+import type { ShopCurrency } from "@/lib/money";
 import type { RentalPricing } from "@/lib/rentals";
 import type { AppDb, DbExecutor } from "./client";
 import { shops } from "./schema";
@@ -41,6 +42,23 @@ export async function setShopDockCallMinutes(db: AppDb, shopId: string, dockCall
     .set({ dockCallMinutes })
     .where(eq(shops.id, shopId))
     .returning();
+  return shop ?? null;
+}
+
+/**
+ * Sets the currency the shop displays and charges in. Unlike the depth unit
+ * below, this is **not** lossless: every stored `*_cents` amount is an integer
+ * count of the old currency's minor unit and no conversion happens here, so a
+ * shop switching usd → jpy reinterprets a $130.00 trip as ¥13,000. Rows that
+ * already settled (orders, checkouts, payments, refunds) carry their own
+ * currency and are unaffected — it is the shop's own price list that needs
+ * re-checking, which the settings copy says out loud.
+ *
+ * The route narrows the incoming value through `toShopCurrency` before calling
+ * this, so an unsupported code can never be stored.
+ */
+export async function setShopCurrency(db: AppDb, shopId: string, currency: ShopCurrency) {
+  const [shop] = await db.update(shops).set({ currency }).where(eq(shops.id, shopId)).returning();
   return shop ?? null;
 }
 

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   formatPercent,
+  formatReportMoney,
   type MonthlyReportInput,
   type ReportTrip,
   summarizeMonth,
@@ -122,5 +123,30 @@ describe("tripFillRate", () => {
 
   it("is null for a trip that offered no seats", () => {
     expect(tripFillRate({ capacity: 0, activeBookings: 0 })).toBeNull();
+  });
+});
+
+describe("formatReportMoney", () => {
+  it("headlines a month in whole major units, with no trailing minor units", () => {
+    expect(formatReportMoney(578_900, "usd", "en-US")).toBe("$5,789");
+  });
+
+  it("uses the shop's own currency, not dollars", () => {
+    // A Cozumel shop's month is pesos and a German diver's browser groups
+    // them its own way — neither is a hardcoded US default.
+    expect(formatReportMoney(578_900, "mxn", "en-US")).toBe("MX$5,789");
+    // `\u00a0` — Intl separates a German amount from its symbol with a
+    // non-breaking space, so normalize rather than assert an invisible glyph.
+    expect(formatReportMoney(578_900, "eur", "de-DE").replace(/\u00a0/g, " ")).toBe("5.789 €");
+  });
+
+  it("does not divide a zero-decimal currency by a hundred", () => {
+    // JPY stores whole yen, so ¥580,000 collected is ¥580,000 — a literal
+    // `/ 100` here would headline the month as ¥5,800 and understate it 100x.
+    expect(formatReportMoney(580_000, "jpy", "en-US")).toBe("¥580,000");
+  });
+
+  it("still reads as dollars when no currency is passed", () => {
+    expect(formatReportMoney(578_900)).toBe("$5,789");
   });
 });

@@ -15,6 +15,14 @@ import { createTrip, createTripSeries } from "@/db/trips";
 import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
+import { formatMoneyCents } from "@/lib/format";
+import {
+  currencyFractionDigits,
+  MAX_PRICE_MINOR_UNITS,
+  majorToMinor,
+  maxPriceMajor,
+  toShopCurrency,
+} from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import {
   MAX_SERIES_OCCURRENCES,
@@ -111,8 +119,19 @@ async function scheduleTrip(formData: FormData) {
     redirect(`/shop/${session.user.shopSlug}/trips/new?error=end-before-start`);
 
   const dives = tripDiveDraftsFromForm(formData, plannedDives);
-  const priceCents = priceDollars === undefined ? null : Math.round(priceDollars * 100);
-  const depositCents = depositDollars === undefined ? null : Math.round(depositDollars * 100);
+  // The shop's currency decides the multiplier: 5000 in a JPY shop's price
+  // box is ¥5,000 and stores 5000, not a hundredfold ¥500,000.
+  const currency = toShopCurrency(shop.currency);
+  const priceCents = priceDollars === undefined ? null : majorToMinor(priceDollars, currency);
+  const depositCents = depositDollars === undefined ? null : majorToMinor(depositDollars, currency);
+  // Same ceiling every other price validator applies — see the matching check
+  // in `trips/[id]/actions.ts`.
+  if (
+    (priceCents !== null && priceCents > MAX_PRICE_MINOR_UNITS) ||
+    (depositCents !== null && depositCents > MAX_PRICE_MINOR_UNITS)
+  ) {
+    redirect(`/shop/${session.user.shopSlug}/trips/new?error=invalid`);
+  }
   const cancellationWindowHoursValue = cancellationWindowHours ?? null;
   const shopHref = `/shop/${session.user.shopSlug}`;
 
@@ -194,6 +213,13 @@ export default async function NewTripPage({
   ]);
   const locale = await requestLocale(shop?.defaultLocale);
   const t = staffTranslator(locale);
+  // Both price boxes follow the shop's currency: whole-number entry and a
+  // symbol-only placeholder for a zero-decimal currency, where "$0.00" was
+  // wrong twice over.
+  const shopCurrency = toShopCurrency(shop?.currency);
+  const priceDigits = currencyFractionDigits(shopCurrency);
+  const priceStep = priceDigits === 0 ? "1" : `0.${"0".repeat(priceDigits - 1)}1`;
+  const pricePlaceholder = formatMoneyCents(0, shopCurrency, locale);
   const selectedCourse = courseList.find((course) => course.id === selectedCourseId);
   const message = error && Object.hasOwn(ERROR_KEYS, error) ? t(ERROR_KEYS[error]) : undefined;
 
@@ -334,9 +360,10 @@ export default async function NewTripPage({
               <input
                 name="priceDollars"
                 type="number"
-                step="0.01"
+                step={priceStep}
                 min={0}
-                placeholder="$0.00"
+                max={maxPriceMajor(shopCurrency)}
+                placeholder={pricePlaceholder}
                 className={`${controlClass} tabular-nums sm:w-40`}
               />
             </Field>
@@ -354,9 +381,10 @@ export default async function NewTripPage({
                 <input
                   name="depositDollars"
                   type="number"
-                  step="0.01"
+                  step={priceStep}
                   min={0}
-                  placeholder="$0.00"
+                  max={maxPriceMajor(shopCurrency)}
+                  placeholder={pricePlaceholder}
                   title={t("trips.new.depositTitle")}
                   className={`${controlClass} tabular-nums sm:w-40`}
                 />

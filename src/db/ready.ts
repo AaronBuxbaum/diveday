@@ -52,6 +52,8 @@ export type ReadyPageData = {
     id: string;
     slug: string;
     defaultLocale: string;
+    /** The shop's own currency, so the rental quote is not quoted in dollars. */
+    currency: string;
     contactEmail: string | null;
     contactPhone: string | null;
     rentalItems: string[];
@@ -65,6 +67,9 @@ export type ReadyPageData = {
   person: {
     id: string;
     email: string | null;
+    /** Their own recorded reading language, or null when DiveDay has never
+     * heard one first-hand (docs ADR 20260731-per-person-notification-locale). */
+    locale: string | null;
     emergencyContactName: string | null;
     emergencyContactPhone: string | null;
   };
@@ -119,12 +124,14 @@ export async function getReadyPageData(
       status: bookings.status,
       slug: shops.slug,
       defaultLocale: shops.defaultLocale,
+      currency: shops.currency,
       contactEmail: shops.contactEmail,
       contactPhone: shops.contactPhone,
       rentalItems: shops.rentalItems,
       rentalPricing: shops.rentalPricing,
       dockCallMinutes: shops.dockCallMinutes,
       personEmail: people.email,
+      personLocale: people.locale,
       emergencyContactName: people.emergencyContactName,
       emergencyContactPhone: people.emergencyContactPhone,
     })
@@ -215,6 +222,7 @@ export async function getReadyPageData(
       id: row.shopId,
       slug: row.slug,
       defaultLocale: row.defaultLocale,
+      currency: row.currency,
       contactEmail: row.contactEmail,
       contactPhone: row.contactPhone,
       rentalItems: row.rentalItems,
@@ -226,6 +234,7 @@ export async function getReadyPageData(
     person: {
       id: row.personId,
       email: row.personEmail,
+      locale: row.personLocale,
       emergencyContactName: row.emergencyContactName,
       emergencyContactPhone: row.emergencyContactPhone,
     },

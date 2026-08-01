@@ -4,8 +4,8 @@ import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
 import type { AppDb } from "./client";
 import { DEV_STAFF_LOGINS } from "./dev-credentials";
-import { userAccounts } from "./schema";
-import { dismissOrientation, isOrientationDismissed } from "./user-accounts";
+import { people, shops, userAccounts } from "./schema";
+import { dismissOrientation, getAccountContact, isOrientationDismissed } from "./user-accounts";
 
 async function seededPersonId(db: AppDb, email: string): Promise<string> {
   const [account] = await db
@@ -47,5 +47,29 @@ describe("orientation dismissal (in-memory PGlite)", () => {
   it("an unknown person id reads as not dismissed rather than throwing", async () => {
     const { db } = await seededShopContext();
     expect(await isOrientationDismissed(db, "00000000-0000-0000-0000-000000000000")).toBe(false);
+  });
+});
+
+describe("account-lifecycle mail language (docs ADR 20260731-per-person-notification-locale)", () => {
+  it("stays on the shop's locale even when the staff member's person row carries one", async () => {
+    // Staff-addressed mail — a welcome, a verify link, a password reset — must
+    // never pick up `people.locale`. That column is a *diver's* first-hand
+    // signal from their own booking/waiver request; a staff member's row could
+    // only have picked one up by accident, and this join is the place that
+    // would silently launder it into their inbox.
+    const { db, shop } = await seededShopContext();
+    const personId = await seededPersonId(db, DEV_STAFF_LOGINS.owner.email);
+    await db.update(shops).set({ defaultLocale: "es-ES" }).where(eq(shops.id, shop.id));
+    await db.update(people).set({ locale: "en-US" }).where(eq(people.id, personId));
+
+    const [account] = await db
+      .select({ id: userAccounts.id })
+      .from(userAccounts)
+      .where(eq(userAccounts.personId, personId))
+      .limit(1);
+    if (!account) throw new Error("seeded owner account missing");
+
+    const contact = await getAccountContact(db, account.id);
+    expect(contact?.defaultLocale).toBe("es-ES");
   });
 });

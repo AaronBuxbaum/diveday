@@ -8,6 +8,8 @@ import { ShopNotice } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { formatMoneyCents } from "@/lib/format";
+import type { ShopCurrency } from "@/lib/money";
 import { capacityLabel } from "@/lib/trips";
 import { type BookingFormState, bookSpot, joinWaitlist, type TripRef } from "../actions";
 import type { Trip } from "./types";
@@ -205,6 +207,7 @@ export function BookSpotSection({
   errorMessage,
   payAtBooking,
   perDiverPriceCents,
+  currency,
   locale,
   contactEmail,
   contactPhone,
@@ -215,13 +218,15 @@ export function BookSpotSection({
   errorMessage?: string;
   payAtBooking: boolean;
   perDiverPriceCents: number | null;
+  /** The shop's currency — this is a list price, so it follows the shop, not a payment row. */
+  currency: ShopCurrency;
   locale: string;
   contactEmail?: string | null;
   contactPhone?: string | null;
 }) {
   const t = useTranslations("booking");
   const tRoot = useTranslations();
-  const usd = new Intl.NumberFormat(locale, { style: "currency", currency: "USD" });
+  const money = (cents: number) => formatMoneyCents(cents, currency, locale);
   const [state, formAction] = useActionState(bookSpot.bind(null, tripRef), INITIAL_BOOKING_STATE);
   // Task 18: "3 divers × $120 = $360" above the submit button once the party
   // grows past one — `BookingPartyFields` owns the size selector, so it
@@ -247,7 +252,7 @@ export function BookSpotSection({
       </div>
       {payAtBooking && perDiverPriceCents ? (
         <p className="mt-1 text-sm text-muted">
-          {t("paidSecurely", { price: usd.format(perDiverPriceCents / 100) })}
+          {t("paidSecurely", { price: money(perDiverPriceCents) })}
         </p>
       ) : null}
       <ErrorNotice message={state.error ?? errorMessage} />
@@ -270,8 +275,8 @@ export function BookSpotSection({
           <p className="-mt-2 text-sm font-medium tabular-nums">
             {t("partyTotal", {
               count: partySize,
-              price: usd.format(perDiverPriceCents / 100),
-              total: usd.format((partySize * perDiverPriceCents) / 100),
+              price: money(perDiverPriceCents),
+              total: money(partySize * perDiverPriceCents),
             })}
           </p>
         ) : null}

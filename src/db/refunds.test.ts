@@ -80,6 +80,7 @@ async function paidBookingContext(windowHours: number | null = 48) {
       customerEmail: "pat@example.com",
       successUrl: "https://diveday.example/return",
       cancelUrl: "https://diveday.example/cancel",
+      describeLine: ({ tripTitle }) => tripTitle,
     },
     fakeCheckout({ status: "refunded", refundId: "re_seed" }),
   );
@@ -134,6 +135,7 @@ describe("refundBookingOnCancellation", () => {
       shopId: shop.id,
       bookingId,
       status: "paid",
+      currency: "usd",
       amountCents: REEF_PRICE_CENTS,
       note: "cash at counter",
     });
@@ -153,6 +155,7 @@ describe("refundBookingOnCancellation", () => {
       shopId: shop.id,
       bookingId,
       status: "paid",
+      currency: "usd",
       note: "cash at counter",
     });
     const outcome = await refundBookingOnCancellation(

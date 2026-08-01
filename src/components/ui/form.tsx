@@ -6,6 +6,7 @@ import {
   type ReactNode,
   useId,
 } from "react";
+import { currencyFractionDigits, currencySymbol, maxPriceMajor, minorToMajor } from "@/lib/money";
 
 /**
  * Canonical form primitives.
@@ -208,10 +209,22 @@ export function FieldActions({
 }
 
 /**
- * A dollar price box, prefilled from stored minor units. An empty box means
- * unpriced — the one price-entry pattern every form uses, so a shop never
- * sees `type="number"` inputs in one place and free-text decimals in
- * another.
+ * A price box in the shop's currency, prefilled from stored minor units. An
+ * empty box means unpriced — the one price-entry pattern every form uses, so a
+ * shop never sees `type="number"` inputs in one place and free-text decimals
+ * in another.
+ *
+ * Everything currency-dependent here is derived, never assumed: the prefix is
+ * the currency's own symbol rather than a literal `$`, the prefill divides by
+ * the currency's minor unit rather than 100, and `step` follows the currency's
+ * decimal places — a zero-decimal currency like JPY gets whole-number entry,
+ * because `step="0.01"` would invite ¥1,234.56, which does not exist.
+ *
+ * `currency` and `locale` are both required rather than defaulted. A defaulted
+ * currency is exactly how a page silently keeps charging dollars after the shop
+ * switched (ADR 20260731-shop-currency), and a defaulted locale is the hard-coded
+ * formatting `pnpm check:locale` exists to keep out — the caller has the
+ * negotiated one in hand either way.
  */
 export function PriceField({
   id,
@@ -219,26 +232,31 @@ export function PriceField({
   label,
   hint,
   cents,
+  currency,
+  locale,
 }: {
   id?: string;
   name: string;
   label: string;
   hint?: string;
   cents: number | null;
+  currency: string;
+  locale: string;
 }) {
+  const digits = currencyFractionDigits(currency);
   return (
     <Field label={label} hint={hint}>
       <div className="flex items-center gap-2">
-        <span className="text-sm text-muted">$</span>
+        <span className="text-sm text-muted">{currencySymbol(currency, locale)}</span>
         <input
           id={id}
           name={name}
           type="number"
           inputMode="decimal"
           min={0}
-          max={100000}
-          step="0.01"
-          defaultValue={cents === null ? "" : String(cents / 100)}
+          max={maxPriceMajor(currency)}
+          step={digits === 0 ? "1" : `0.${"0".repeat(digits - 1)}1`}
+          defaultValue={cents === null ? "" : String(minorToMajor(cents, currency))}
           placeholder="—"
           className={controlClass}
         />

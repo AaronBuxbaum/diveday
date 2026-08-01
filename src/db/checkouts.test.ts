@@ -19,6 +19,7 @@ import {
 } from "./checkouts";
 import { getBookingPayment, setBookingPayment } from "./payments";
 import { bookingCheckouts } from "./schema";
+import { setShopCurrency } from "./shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { getTripRoster, upcomingTripsWithCounts, updateTrip } from "./trips";
 
@@ -114,6 +115,29 @@ async function checkoutContext() {
   return { db, shop, reef, bookingIds };
 }
 
+/**
+ * Stands in for the caller's message bundle. The real callers compose these
+ * words from `checkoutLine.*` (docs ADR 20260731-domain-layer-copy-leaks); the
+ * marker prefixes make it obvious in an assertion that the label came from the
+ * caller and not from `src/db`.
+ */
+function describeTestLine({ isDeposit, tripTitle }: { isDeposit: boolean; tripTitle: string }) {
+  return isDeposit ? `DEPOSIT:${tripTitle}` : `FULL:${tripTitle}`;
+}
+
+/** A provider that records every request it was handed, for currency/label assertions. */
+function capturedRequests() {
+  const requests: Parameters<CheckoutProvider["createCheckoutSession"]>[0][] = [];
+  const inner = fakeCheckout();
+  const provider = fakeCheckout({
+    async createCheckoutSession(request) {
+      requests.push(request);
+      return inner.createCheckoutSession(request);
+    },
+  });
+  return { requests, provider };
+}
+
 function startInput(shopId: string, tripId: string, bookingIds: string[]) {
   return {
     shopId,
@@ -122,6 +146,7 @@ function startInput(shopId: string, tripId: string, bookingIds: string[]) {
     customerEmail: "pat@example.com",
     successUrl: "https://diveday.example/return",
     cancelUrl: "https://diveday.example/cancel",
+    describeLine: describeTestLine,
   };
 }
 
@@ -146,6 +171,90 @@ describe("startBookingCheckout", () => {
       const linked = await getLatestCheckoutForBooking(db, shop.id, bookingId);
       expect(linked?.id).toBe(outcome.checkout.id);
     }
+  });
+
+  it("charges in the shop's currency and takes its line words from the caller", async () => {
+    const { db, shop, reef, bookingIds } = await checkoutContext();
+    await setShopCurrency(db, shop.id, "eur");
+    const seen = capturedRequests();
+    const outcome = await startBookingCheckout(
+      db,
+      startInput(shop.id, reef.id, bookingIds),
+      seen.provider,
+    );
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+    expect(seen.requests[0]?.currency).toBe("eur");
+    // Not `Deposit — …`/the bare title composed inside `src/db`: the caller's
+    // marker proves the words came from its own bundle (docs ADR
+    // 20260731-domain-layer-copy-leaks). This trip has no deposit policy, so
+    // it is the full-fare branch.
+    expect(seen.requests[0]?.description).toBe(`FULL:${reef.title}`);
+    // Snapshotted onto the row that is evidence of what the diver was asked for.
+    expect(outcome.checkout.currency).toBe("eur");
+  });
+
+  it("labels a deposit through the caller's deposit branch", async () => {
+    const { db, shop, reef, bookingIds } = await checkoutContext();
+    await updateTrip(db, shop.id, reef.id, {
+      title: reef.title,
+      startsAt: reef.startsAt,
+      endsAt: reef.endsAt,
+      capacity: reef.capacity,
+      plannedDives: reef.plannedDives,
+      priceCents: REEF_PRICE_CENTS,
+      depositCents: 5_000,
+    });
+    const seen = capturedRequests();
+    const outcome = await startBookingCheckout(
+      db,
+      startInput(shop.id, reef.id, bookingIds),
+      seen.provider,
+    );
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+    expect(outcome.checkout.isDeposit).toBe(true);
+    expect(seen.requests[0]?.description).toBe(`DEPOSIT:${reef.title}`);
+  });
+
+  it("never divides a zero-decimal currency by 100", async () => {
+    const { db, shop, reef, bookingIds } = await checkoutContext();
+    await setShopCurrency(db, shop.id, "jpy");
+    const seen = capturedRequests();
+    const outcome = await startBookingCheckout(
+      db,
+      startInput(shop.id, reef.id, bookingIds),
+      seen.provider,
+    );
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+    // ¥18,000 is 18000 minor units, not 1,800,000 — the stored integer is
+    // already the currency's minor unit and reaches Stripe untouched
+    // (docs ADR 20260731-shop-currency).
+    expect(seen.requests[0]?.currency).toBe("jpy");
+    expect(seen.requests[0]?.unitAmountCents).toBe(REEF_PRICE_CENTS);
+    expect(outcome.checkout.amountPerDiverCents).toBe(REEF_PRICE_CENTS);
+    expect(outcome.checkout.totalCents).toBe(REEF_PRICE_CENTS * 2);
+  });
+
+  it("keeps a settled checkout's own currency after the shop switches", async () => {
+    const { db, shop, reef, bookingIds } = await checkoutContext();
+    await setShopCurrency(db, shop.id, "eur");
+    const started = await startBookingCheckout(
+      db,
+      startInput(shop.id, reef.id, bookingIds),
+      fakeCheckout(),
+    );
+    if (!started.ok) throw new Error("expected ok");
+    await markCheckoutPaidBySessionId(db, started.checkout.stripeSessionId);
+
+    await setShopCurrency(db, shop.id, "jpy");
+    const settled = await getLatestCheckoutForBooking(db, shop.id, bookingIds[0]);
+    // Evidence, not a view over today's setting.
+    expect(settled?.currency).toBe("eur");
+    expect(settled?.amountPerDiverCents).toBe(REEF_PRICE_CENTS);
+    // …and the payment the cascade wrote carries the same one.
+    expect((await getBookingPayment(db, shop.id, bookingIds[0]))?.currency).toBe("eur");
   });
 
   it("refuses without a connected, charges-enabled Stripe account", async () => {
@@ -576,6 +685,7 @@ describe("refreshCheckoutFromStripe", () => {
       shopId: shop.id,
       bookingId: bookingIds[0],
       status: "paid",
+      currency: "usd",
       note: "cash at counter",
     });
     await markCheckoutPaidBySessionId(db, checkout.stripeSessionId);

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { type StaffMessageKey, type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
-import { formatShortDate } from "@/lib/format";
+import { formatMoneyCents, formatShortDate } from "@/lib/format";
 import { refundPaymentAction } from "../actions";
 import { type DiverProfile, ORDER_STATUS_KEYS, PAYMENT_STATUS_KEYS, type Shop } from "./shared";
 
@@ -178,7 +178,11 @@ export function PaymentsSection({
                     {order.description || t("divers.payments.shopPaymentFallback")}
                   </p>
                   <p className="text-sm text-muted">
-                    ${(order.totalCents / 100).toFixed(2)} {order.currency.toUpperCase()}
+                    {/* The order's *own* stored currency, not today's shop
+                        setting — a settled amount is evidence of what was
+                        charged (docs ADR 20260731-shop-currency), and the
+                        divisor comes from that currency's minor unit. */}
+                    {formatMoneyCents(order.totalCents, order.currency, locale)}
                     {t("divers.payments.noTripAttached")}
                   </p>
                 </div>

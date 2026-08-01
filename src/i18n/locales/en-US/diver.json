@@ -546,6 +546,11 @@
     "needHelpPlain": "Need help? Contact {shop} directly.",
     "englishOnlyNotice": "This waiver and medical form are only available in English right now. If you're not comfortable reading English legal or medical text, please bring someone who can help you read it carefully, or ask the shop before your trip — don't sign anything you don't understand."
   },
+  "checkoutLine": {
+    "deposit": "Deposit — {tripTitle}",
+    "full": "{tripTitle}",
+    "tip": "Tip for the crew"
+  },
   "capability": {
     "waiverReceived": "Waiver received",
     "waiverDone": "That’s the paperwork done ✓",

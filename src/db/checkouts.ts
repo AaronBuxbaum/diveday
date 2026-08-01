@@ -1,7 +1,11 @@
 import { and, desc, eq, inArray, ne } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { checkoutCharge } from "@/lib/deposits";
-import { type CheckoutProvider, checkoutProviderFromEnvironment } from "@/lib/payments/checkout";
+import {
+  type CheckoutProvider,
+  checkoutProviderFromEnvironment,
+  stripeLineDescription,
+} from "@/lib/payments/checkout";
 import type { AppDb, DbExecutor } from "./client";
 import {
   claimBookingsForCheckout,
@@ -15,7 +19,7 @@ import { setBookingPaymentIfNotFinal } from "./payments";
 import type { BookingCheckout } from "./schema";
 import { bookingCheckoutBookings, bookingCheckouts, bookings, courses, trips } from "./schema";
 import { recordShopPromoRedemption } from "./shop-promos";
-import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
+import { canAcceptPayments, getShopCurrency, getShopStripeAccount } from "./stripe-accounts";
 
 export type StartCheckoutInput = {
   shopId: string;
@@ -40,6 +44,23 @@ export type StartCheckoutInput = {
    * was quoted. Absent for a trip-scoped last-minute code, which has its own row.
    */
   shopPromo?: { id: string; code: string };
+  /**
+   * The words for the single line on the hosted Stripe page. Supplied by the
+   * caller because this layer returns codes, not sentences (docs ADR
+   * 20260731-domain-layer-copy-leaks) — but supplied as a *callback* rather
+   * than a finished string, because only this function knows two things the
+   * caller doesn't: whether the charge is a deposit or the whole fare
+   * (`checkoutCharge` decides that here, from the trip's own deposit policy),
+   * and the trip's title (looked up below). The caller answers "what would
+   * you call it, given these parts?" in its own locale.
+   *
+   * Whatever it returns is what Stripe shows the diver on the hosted page and
+   * keeps on the session and receipt forever, so it is composed once, at
+   * checkout time, in the language the diver is reading right then — never
+   * re-translated afterwards, which would make our record of the charge
+   * disagree with theirs.
+   */
+  describeLine: (parts: { isDeposit: boolean; tripTitle: string }) => string;
 };
 
 export type StartCheckoutOutcome =
@@ -80,6 +101,11 @@ export async function startBookingCheckout(
   const charge = checkoutCharge(tripRow.trip, tripRow.course);
   if (charge === null) return { ok: false, reason: "unpriced" };
   const amountPerDiverCents = charge.amountCents;
+  // The shop's own currency, never the connected account's and never a
+  // hardcoded "usd" (docs ADR 20260731-shop-currency). `amountPerDiverCents`
+  // is already an integer count of this currency's minor unit, so it reaches
+  // Stripe unchanged — there is no divisor anywhere on this path.
+  const currency = await getShopCurrency(db, input.shopId);
 
   const bookingRows = await db
     .select({ id: bookings.id })
@@ -131,10 +157,13 @@ export async function startBookingCheckout(
   try {
     const session = await checkout.createCheckoutSession({
       stripeAccountId,
-      currency: "usd",
+      currency,
       // A deposit is labelled as one on the hosted page so the diver knows a
-      // balance is still due, not that this is the whole fare.
-      description: charge.isDeposit ? `Deposit — ${tripRow.trip.title}` : tripRow.trip.title,
+      // balance is still due, not that this is the whole fare — but the words
+      // come from the caller's message bundle, not from here.
+      description: stripeLineDescription(
+        input.describeLine({ isDeposit: charge.isDeposit, tripTitle: tripRow.trip.title }),
+      ),
       unitAmountCents: amountPerDiverCents,
       quantity: input.bookingIds.length,
       customerEmail: input.customerEmail,
@@ -170,7 +199,11 @@ export async function startBookingCheckout(
           stripeSessionId: session.stripeSessionId,
           checkoutUrl: session.checkoutUrl,
           customerEmail: input.customerEmail,
-          currency: "usd",
+          // Snapshotted, not a foreign key to today's shop setting: this row
+          // is evidence of what the diver was asked for. A shop that later
+          // switches currency must never reinterpret a settled amount
+          // (docs ADR 20260731-shop-currency).
+          currency,
           amountPerDiverCents,
           totalCents: amountPerDiverCents * input.bookingIds.length,
           isDeposit: charge.isDeposit,

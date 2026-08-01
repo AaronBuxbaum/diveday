@@ -139,6 +139,7 @@ async function pendingCheckoutContext(hoursAgo: number, partySize: 1 | 2 = 1) {
       customerEmail: "casey-cart@example.com",
       successUrl: "https://diveday.example/return",
       cancelUrl: "https://diveday.example/cancel",
+      describeLine: ({ tripTitle }) => tripTitle,
     },
     fakeCheckoutProvider(stillOpen),
   );
@@ -369,6 +370,7 @@ describe("sendDueCheckoutRecoveries", () => {
         shopId: shop.id,
         bookingId: bookingIds[0],
         status: "paid",
+        currency: "usd",
         amountCents: 18_000,
         provider: null,
         note: "Paid cash at the counter, mid-batch",
@@ -431,6 +433,7 @@ describe("sendDueCheckoutRecoveries", () => {
       shopId: shop.id,
       bookingId: bookingIds[1],
       status: "paid",
+      currency: "usd",
       amountCents: 18_000,
       provider: null,
       note: "Paid cash at the counter",

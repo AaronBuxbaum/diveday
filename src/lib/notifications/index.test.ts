@@ -5,6 +5,7 @@ import {
   notificationProviderFromEnvironment,
   notify,
   publicAppUrl,
+  recipientLocale,
   resendNotificationProvider,
 } from "./index";
 
@@ -565,5 +566,33 @@ describe("checkPublicHost", () => {
 
   it("rejects an unparseable value", () => {
     expect(checkPublicHost("not a url", true).status).toBe("invalid");
+  });
+});
+
+describe("recipientLocale (docs ADR 20260731-per-person-notification-locale)", () => {
+  it("writes to the diver in the language they told us they read", () => {
+    // The case that motivated the ADR: a German-speaking diver at a Cozumel
+    // shop, who had been getting Spanish mail because the shop's default was
+    // the only signal. Only the languages DiveDay carries can be stored, so
+    // the fix she actually gets is English rather than Spanish.
+    expect(recipientLocale("en-US", "es-ES")).toBe("en-US");
+    expect(recipientLocale("es-ES", "en-US")).toBe("es-ES");
+  });
+
+  it("falls back to the shop's default when DiveDay has never heard from them", () => {
+    expect(recipientLocale(null, "es-ES")).toBe("es-ES");
+    expect(recipientLocale(undefined, "es-ES")).toBe("es-ES");
+  });
+
+  it("falls back rather than trusting a stored value we no longer carry", () => {
+    // A locale retired between the write and this send, or a value put there
+    // by some future admin tool — never render blanks over it.
+    expect(recipientLocale("de-DE", "es-ES")).toBe("es-ES");
+    expect(recipientLocale("", "es-ES")).toBe("es-ES");
+  });
+
+  it("still ends at English when neither side is usable", () => {
+    expect(recipientLocale(null, null)).toBe("en-US");
+    expect(recipientLocale("kl-GL", "kl-GL")).toBe("en-US");
   });
 });

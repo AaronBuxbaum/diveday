@@ -13,6 +13,7 @@ import { getOrder, refreshOrderStatus, refundOrder, voidOrder } from "@/db/order
 import { getShopById } from "@/db/shops";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
+import { formatMoneyCents } from "@/lib/format";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { type NoticeTone, noticeFromParam } from "@/lib/staff-notices";
@@ -41,10 +42,6 @@ const KIND_KEYS: Record<string, StaffMessageKey> = {
   merchandise: "orders.detail.kind.merchandise",
   other: "orders.detail.kind.other",
 };
-
-function centsToDisplay(cents: number, currency: string): string {
-  return `$${(cents / 100).toFixed(2)} ${currency.toUpperCase()}`;
-}
 
 /**
  * Demo shops carry seeded orders whose Stripe invoice ids are fabricated (the
@@ -199,7 +196,7 @@ export default async function OrderDetailPage({
               : order.order.status}
           </Badge>
           <span className="text-lg font-semibold tabular-nums">
-            {centsToDisplay(order.order.totalCents, order.order.currency)}
+            {formatMoneyCents(order.order.totalCents, order.order.currency, locale)}
           </span>
         </div>
 
@@ -214,7 +211,11 @@ export default async function OrderDetailPage({
                 </span>
               </span>
               <span className="tabular-nums">
-                {centsToDisplay(item.unitAmountCents * item.quantity, order.order.currency)}
+                {formatMoneyCents(
+                  item.unitAmountCents * item.quantity,
+                  order.order.currency,
+                  locale,
+                )}
               </span>
             </li>
           ))}

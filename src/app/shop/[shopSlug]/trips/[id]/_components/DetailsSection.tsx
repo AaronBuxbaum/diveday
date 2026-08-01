@@ -3,6 +3,8 @@ import { TripDiveFields } from "@/components/TripDiveFields";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { staffTranslator } from "@/i18n/staff-messages";
+import { formatMoneyCents } from "@/lib/format";
+import { currencyFractionDigits, maxPriceMajor, minorToMajor } from "@/lib/money";
 import { toDateInputValue, toTimeInputValue, type WallTime } from "@/lib/zoned";
 import type { DiveSiteList, Trip, TripDiveList } from "./types";
 
@@ -14,6 +16,7 @@ export function DetailsSection({
   startWall,
   endWall,
   locale,
+  currency,
 }: {
   action: (formData: FormData) => void;
   trip: Trip;
@@ -22,8 +25,16 @@ export function DetailsSection({
   startWall: WallTime;
   endWall: WallTime;
   locale: string;
+  /** The shop's currency — what the numbers in these price boxes mean. */
+  currency: string;
 }) {
   const t = staffTranslator(locale);
+  // Both price boxes follow the shop's currency: whole-number entry and a
+  // symbol-only placeholder for a zero-decimal currency, where "$0.00" was
+  // wrong twice over.
+  const digits = currencyFractionDigits(currency);
+  const priceStep = digits === 0 ? "1" : `0.${"0".repeat(digits - 1)}1`;
+  const pricePlaceholder = formatMoneyCents(0, currency, locale);
   return (
     // Anchor target for the builder's "No price set" flag (task 150, UX
     // persona lens 17) — a builder-created trip publishes with no price and
@@ -123,10 +134,11 @@ export function DetailsSection({
             <input
               name="priceDollars"
               type="number"
-              step="0.01"
+              step={priceStep}
               min={0}
-              placeholder="$0.00"
-              defaultValue={trip.priceCents === null ? "" : (trip.priceCents / 100).toFixed(2)}
+              max={maxPriceMajor(currency)}
+              placeholder={pricePlaceholder}
+              defaultValue={trip.priceCents === null ? "" : minorToMajor(trip.priceCents, currency)}
               className={`${controlClass} tabular-nums`}
             />
           </Field>
@@ -144,11 +156,12 @@ export function DetailsSection({
               <input
                 name="depositDollars"
                 type="number"
-                step="0.01"
+                step={priceStep}
                 min={0}
-                placeholder="$0.00"
+                max={maxPriceMajor(currency)}
+                placeholder={pricePlaceholder}
                 defaultValue={
-                  trip.depositCents === null ? "" : (trip.depositCents / 100).toFixed(2)
+                  trip.depositCents === null ? "" : minorToMajor(trip.depositCents, currency)
                 }
                 title={t("trips.details.depositTitle")}
                 className={`${controlClass} tabular-nums sm:w-40`}

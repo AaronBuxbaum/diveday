@@ -3,6 +3,7 @@
 import { getDb } from "@/db/client";
 import { type SearchResults, searchShop } from "@/db/search";
 import { getShopById } from "@/db/shops";
+import { requestLocale } from "@/i18n/request";
 import { requireStaffSession } from "@/lib/session";
 
 /**
@@ -15,5 +16,11 @@ export async function searchShopAction(query: string): Promise<SearchResults> {
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) return { divers: [], trips: [], diveSites: [], courses: [], orders: [] };
-  return searchShop(db, session.user.shopId, query, shop.timezone);
+  return searchShop(
+    db,
+    session.user.shopId,
+    query,
+    shop.timezone,
+    await requestLocale(shop.defaultLocale),
+  );
 }

@@ -3,6 +3,8 @@
  * display dates to divers, so keep every user-facing date/time format here.
  */
 
+import { minorToMajor } from "./money";
+
 /**
  * True for a real IANA timezone name — the only thing an app-wide "store UTC
  * + IANA timezone" invariant (AGENTS.md) can trust. `Intl.DateTimeFormat`
@@ -18,12 +20,21 @@ export function isValidTimeZone(timeZone: string): boolean {
   }
 }
 
-/** Minor units (cents) to a localized currency string, e.g. 13000 → "$130.00". */
+/**
+ * Minor units to a localized currency string, e.g. 13000 usd → "$130.00",
+ * 5000 jpy → "¥5,000".
+ *
+ * The divisor comes from the currency, not a literal 100 — a zero-decimal
+ * currency stores whole major units, so dividing would show ¥50 for a ¥5,000
+ * trip (`src/lib/money.ts`). The `currency` default is the shop-column default
+ * rather than an assumption that money is dollars; callers with a shop row in
+ * hand should always pass `shop.currency`.
+ */
 export function formatMoneyCents(cents: number, currency = "usd", locale = "en-US"): string {
   return new Intl.NumberFormat(locale, {
     style: "currency",
     currency: currency.toUpperCase(),
-  }).format(cents / 100);
+  }).format(minorToMajor(cents, currency));
 }
 
 export function formatShortDate(date: Date, locale = "en-US", timeZone?: string): string {

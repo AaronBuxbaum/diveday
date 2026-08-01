@@ -3,9 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getDb } from "@/db/client";
+import { recordDiverOwnLocaleForBooking } from "@/db/people";
 import { addRecapPhoto, canAddRecapPhoto, MAX_RECAP_PHOTOS_PER_BOOKING } from "@/db/recap";
 import { submitTripReview } from "@/db/reviews";
-import { MAX_TIP_CENTS, MIN_TIP_CENTS, startTipCheckout } from "@/db/tips";
+import { getTipCurrencyForBooking, startTipCheckout, tipBoundsCents } from "@/db/tips";
+import { diverTranslator } from "@/i18n/messages";
+import { requestFirstHandLocale, requestLocale } from "@/i18n/request";
+import { majorToMinor } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { verifyRecapToken } from "@/lib/recap-links";
@@ -52,6 +56,13 @@ export async function uploadRecapPhotoAction(token: string, formData: FormData) 
   if (files.length === 0) redirect(`${back}?photo=none`);
   const caption = String(formData.get("caption") ?? "");
   const db = await getDb();
+  // The recap link is the diver's own, and this is a form they just submitted
+  // from their own device — first-hand evidence of the language they read
+  // (docs ADR 20260731-per-person-notification-locale).
+  await recordDiverOwnLocaleForBooking(db, {
+    bookingId,
+    locale: await requestFirstHandLocale(),
+  });
 
   // Gate before the expensive side effect: refuse a cancelled/no-show or
   // already-capped booking without ever writing to blob storage. A cancelled
@@ -139,21 +150,35 @@ export async function startTipAction(token: string, formData: FormData) {
   // custom value can never be shadowed by whichever preset happens to be
   // checked in DOM order.
   const custom = String(formData.get("customAmount") ?? "").trim();
-  const dollars = Number(custom || formData.get("amount"));
-  const amountCents = Math.round(dollars * 100);
-  if (!Number.isFinite(dollars) || amountCents < MIN_TIP_CENTS || amountCents > MAX_TIP_CENTS) {
+  const typed = Number(custom || formData.get("amount"));
+
+  const db = await getDb();
+  // The diver types a major-unit amount ("20"); what gets charged is an integer
+  // count of the *shop currency's* minor unit. The conversion is the currency's
+  // own, never a literal 100 — a ¥ tip of 20 is 20, not 2000 (docs ADR
+  // 20260731-shop-currency). The currency comes from the booking, never from
+  // the form. `startTipCheckout` re-derives and re-checks both, so a caller
+  // that skipped this can't push an out-of-bounds amount through.
+  const currency = await getTipCurrencyForBooking(db, bookingId);
+  if (!currency) redirect(`${back}?tip=error`);
+  const amountCents = Number.isFinite(typed) ? majorToMinor(typed, currency) : Number.NaN;
+  const { minCents, maxCents } = tipBoundsCents(currency);
+  if (!Number.isFinite(amountCents) || amountCents < minCents || amountCents > maxCents) {
     redirect(`${back}?tip=invalid`);
   }
 
   const origin = publicAppUrl();
   if (!origin) redirect(`${back}?tip=error`);
 
-  const db = await getDb();
+  const t = diverTranslator(await requestLocale());
   const outcome = await startTipCheckout(db, {
     bookingId,
     amountCents,
     successUrl: `${origin}${back}?tip=paid`,
     cancelUrl: `${origin}${back}?tip=cancelled`,
+    // The words on the hosted Stripe line come from the diver's bundle, not
+    // from `src/db` (docs ADR 20260731-domain-layer-copy-leaks).
+    lineDescription: t("checkoutLine.tip"),
   }).catch(() => null);
   if (!outcome?.ok) redirect(`${back}?tip=error`);
   redirect(outcome.checkoutUrl);
@@ -189,6 +214,14 @@ export async function submitReviewAction(token: string, formData: FormData) {
 
   const rating = parseReviewRating(formData.get("rating"));
   if (rating === null) redirect(`${back}?review=error`);
+
+  // Same first-hand signal as the photo upload above (docs ADR
+  // 20260731-per-person-notification-locale) — the diver wrote this review
+  // themselves, on their own device, through their own link.
+  await recordDiverOwnLocaleForBooking(await getDb(), {
+    bookingId,
+    locale: await requestFirstHandLocale(),
+  });
 
   const outcome = await submitTripReview(await getDb(), {
     bookingId,

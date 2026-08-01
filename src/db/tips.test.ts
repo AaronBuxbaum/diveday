@@ -6,14 +6,15 @@ import type { CheckoutProvider, CreateCheckoutSessionResult } from "@/lib/paymen
 import { seededShopContext } from "@/test/db";
 import { createBookingParty } from "./bookings";
 import { bookings, tips } from "./schema";
+import { setShopCurrency } from "./shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import {
   getLatestTipForBooking,
-  MAX_TIP_CENTS,
-  MIN_TIP_CENTS,
+  getTipCurrencyForBooking,
   markTipExpiredBySessionId,
   markTipPaidBySessionId,
   startTipCheckout,
+  tipBoundsCents,
 } from "./tips";
 import { upcomingTripsWithCounts } from "./trips";
 
@@ -40,6 +41,19 @@ function fakeCheckout(overrides: Partial<CheckoutProvider> = {}): CheckoutProvid
     },
     ...overrides,
   };
+}
+
+/** A provider that records every request it was handed, for currency/amount assertions. */
+function capturedRequests() {
+  const requests: Parameters<CheckoutProvider["createCheckoutSession"]>[0][] = [];
+  const inner = fakeCheckout();
+  const provider = fakeCheckout({
+    async createCheckoutSession(request) {
+      requests.push(request);
+      return inner.createCheckoutSession(request);
+    },
+  });
+  return { requests, provider };
 }
 
 async function tipContext() {
@@ -72,6 +86,10 @@ function tipInput(bookingId: string, amountCents = 1000) {
     amountCents,
     successUrl: "https://diveday.example/recap/tok?tip=paid",
     cancelUrl: "https://diveday.example/recap/tok?tip=cancelled",
+    // The real caller composes this from `checkoutLine.tip`; the marker makes
+    // it obvious in an assertion that the words came from the caller, not from
+    // `src/db` (docs ADR 20260731-domain-layer-copy-leaks).
+    lineDescription: "CALLER_TIP_LABEL",
   };
 }
 
@@ -93,18 +111,14 @@ describe("startTipCheckout", () => {
 
   it("refuses an amount outside the bounds", async () => {
     const { db, bookingId } = await tipContext();
-    const tooLow = await startTipCheckout(
-      db,
-      tipInput(bookingId, MIN_TIP_CENTS - 1),
-      fakeCheckout(),
-    );
+    const { minCents, maxCents } = tipBoundsCents("usd");
+    const tooLow = await startTipCheckout(db, tipInput(bookingId, minCents - 1), fakeCheckout());
     expect(tooLow).toEqual({ ok: false, reason: "invalid_amount" });
-    const tooHigh = await startTipCheckout(
-      db,
-      tipInput(bookingId, MAX_TIP_CENTS + 1),
-      fakeCheckout(),
-    );
+    const tooHigh = await startTipCheckout(db, tipInput(bookingId, maxCents + 1), fakeCheckout());
     expect(tooHigh).toEqual({ ok: false, reason: "invalid_amount" });
+    // A fractional minor unit is not a chargeable amount in any currency.
+    const fractional = await startTipCheckout(db, tipInput(bookingId, 1000.5), fakeCheckout());
+    expect(fractional).toEqual({ ok: false, reason: "invalid_amount" });
   });
 
   it("refuses when the shop has no connected, charges-enabled Stripe account", async () => {
@@ -147,36 +161,68 @@ describe("startTipCheckout", () => {
     expect(outcome).toEqual({ ok: false, reason: "invalid_booking" });
   });
 
-  it("charges in the shop's own connected-account currency, not a hardcoded usd (task 60)", async () => {
+  it("charges in the shop's own currency, not the connected account's and not a hardcoded usd", async () => {
     const { db, shop, bookingId } = await tipContext();
+    await setShopCurrency(db, shop.id, "eur");
+    // Stripe reports something else for the connected account. That stays
+    // advisory (`stripeCurrencyMismatch` surfaces it in settings) and must
+    // never override what the shop declared (task 35, superseding task 60's
+    // read of `default_currency` here).
     await setShopStripeAccountStatus(db, "acct_test", {
       chargesEnabled: true,
       payoutsEnabled: true,
       detailsSubmitted: true,
-      defaultCurrency: "eur",
+      defaultCurrency: "usd",
     });
-    const seenCurrencies: string[] = [];
-    const provider = fakeCheckout({
-      async createCheckoutSession(request) {
-        seenCurrencies.push(request.currency);
-        return {
-          status: "created",
-          stripeSessionId: "cs_tip_eur",
-          stripeStatus: "open",
-          paymentStatus: "unpaid",
-          checkoutUrl: "https://checkout.stripe.com/c/pay/cs_tip_eur",
-          amountTotalCents: request.unitAmountCents,
-          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-        };
-      },
-    });
+    const seen = capturedRequests();
 
-    const outcome = await startTipCheckout(db, tipInput(bookingId), provider);
+    const outcome = await startTipCheckout(db, tipInput(bookingId), seen.provider);
     expect(outcome.ok).toBe(true);
-    expect(seenCurrencies).toEqual(["eur"]);
+    expect(seen.requests.map((r) => r.currency)).toEqual(["eur"]);
 
     const tip = await getLatestTipForBooking(db, shop.id, bookingId);
     expect(tip?.currency).toBe("eur");
+  });
+
+  it("never divides a zero-decimal currency by 100, and bounds it by value", async () => {
+    const { db, shop, bookingId } = await tipContext();
+    await setShopCurrency(db, shop.id, "jpy");
+    expect(await getTipCurrencyForBooking(db, bookingId)).toBe("jpy");
+
+    // ¥1,000 is 1000 minor units, not 100,000 — the divisor comes from the
+    // currency, and JPY's minor unit *is* the yen (docs ADR 20260731-shop-currency).
+    const seen = capturedRequests();
+    const outcome = await startTipCheckout(db, tipInput(bookingId, 1000), seen.provider);
+    expect(outcome.ok).toBe(true);
+    expect(seen.requests[0]?.currency).toBe("jpy");
+    expect(seen.requests[0]?.unitAmountCents).toBe(1000);
+    expect((await getLatestTipForBooking(db, shop.id, bookingId))?.amountCents).toBe(1000);
+
+    // The bound means roughly the same amount of money, not the same integer:
+    // ¥1,000 sits well inside a yen-denominated range, where the old flat
+    // 100–50,000 minor-unit bound would have capped a tip at about $3.
+    const { minCents, maxCents } = tipBoundsCents("jpy");
+    expect(minCents).toBeLessThan(1000);
+    expect(maxCents).toBeGreaterThan(50_000);
+    // …and nothing about that range is a multiple of a hundred cents.
+    expect(Number.isInteger(minCents)).toBe(true);
+    expect(Number.isInteger(maxCents)).toBe(true);
+  });
+
+  it("keeps a settled tip's own currency after the shop switches", async () => {
+    const { db, shop, bookingId } = await tipContext();
+    await setShopCurrency(db, shop.id, "eur");
+    const started = await startTipCheckout(db, tipInput(bookingId, 2000), fakeCheckout());
+    expect(started.ok).toBe(true);
+    const [row] = await db.select().from(tips).where(eq(tips.bookingId, bookingId));
+    if (!row) throw new Error("tip row missing");
+    await markTipPaidBySessionId(db, row.stripeSessionId);
+
+    await setShopCurrency(db, shop.id, "jpy");
+    const settled = await getLatestTipForBooking(db, shop.id, bookingId);
+    // A settled amount is evidence, never re-read through today's setting.
+    expect(settled?.currency).toBe("eur");
+    expect(settled?.amountCents).toBe(2000);
   });
 
   it("reuses a still-open pending tip instead of minting a second Stripe session", async () => {

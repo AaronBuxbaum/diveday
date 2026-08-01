@@ -8,18 +8,21 @@ import { startBookingCheckout } from "@/db/checkouts";
 import { getDb } from "@/db/client";
 import { setBookingNitrox } from "@/db/nitrox";
 import { sendAndRecordNotification } from "@/db/notifications";
+import { recordDiverOwnLocale } from "@/db/people";
 import { getReadyPageData, type ReadyPageData } from "@/db/ready";
 import { refundBookingOnCancellation } from "@/db/refunds";
 import { saveRentalFit } from "@/db/rental-fit";
 import { getTripWithBooked } from "@/db/trips";
 import { issueWaiverRequest, saveBookingEmergencyContact } from "@/db/waivers";
-import { toDiverLocale } from "@/i18n/settings";
+import { diverTranslator } from "@/i18n/messages";
+import { requestFirstHandLocale } from "@/i18n/request";
+import type { DiverLocale } from "@/i18n/settings";
 import { trackEvent } from "@/lib/analytics";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
 import { emergencyContactSchema } from "@/lib/contact";
 import { revalidateAndRedirect } from "@/lib/navigation";
-import { publicAppUrl } from "@/lib/notifications";
+import { publicAppUrl, recipientLocale } from "@/lib/notifications";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { shopOffersNitrox } from "@/lib/rentals";
 import { clientIp } from "@/lib/request-ip";
@@ -39,7 +42,18 @@ function bounceTarget(token: string, reason: "rate_limited" | "invalid"): string
   return reason === "rate_limited" ? `${base(token)}?error=rate` : base(token);
 }
 
-type ReadyContext = { db: AwaitedDb; bookingId: string; data: ReadyPageData };
+type ReadyContext = {
+  db: AwaitedDb;
+  bookingId: string;
+  data: ReadyPageData;
+  /**
+   * What *this* request's `Accept-Language` asked for, or null when it carried
+   * nothing DiveDay speaks. Already recorded on the person by `contextFor`;
+   * carried here so a send in the same request uses the fresh signal rather
+   * than the row read a moment before the write.
+   */
+  ownLocale: DiverLocale | null;
+};
 type ReadyContextResult =
   | ({ ok: true } & ReadyContext)
   | { ok: false; reason: "rate_limited" | "invalid" };
@@ -66,7 +80,19 @@ async function contextFor(token: string): Promise<ReadyContextResult> {
   if (!capability) return { ok: false, reason: "invalid" };
   const data = await getReadyPageData(db, capability.bookingId);
   if (!data || data.detail.cancelled) return { ok: false, reason: "invalid" };
-  return { ok: true, db, bookingId: capability.bookingId, data };
+  // The readiness link is the diver's own capability, so every action reaching
+  // this point is the diver acting on their own booking from their own device
+  // — first-hand evidence of the language they read (docs ADR
+  // 20260731-per-person-notification-locale). Captured at this one chokepoint
+  // so no individual action below has to remember to, and so it can never be
+  // reached from a staff surface, whose header belongs to staff.
+  const ownLocale = await requestFirstHandLocale();
+  await recordDiverOwnLocale(db, {
+    shopId: data.shop.id,
+    personId: data.person.id,
+    locale: ownLocale,
+  });
+  return { ok: true, db, bookingId: capability.bookingId, data, ownLocale };
 }
 
 /**
@@ -177,6 +203,12 @@ export async function payFromReady(token: string) {
     redirect(`${base(token)}?error=pay`);
   }
   const returnBase = `${origin}${base(token)}`;
+  // The words on the hosted Stripe line come from the diver's own bundle here,
+  // not from `src/db` (docs ADR 20260731-domain-layer-copy-leaks). Only
+  // `startBookingCheckout` knows whether the trip's deposit policy makes this
+  // a deposit or the whole fare, so it asks — the caller supplies the words for
+  // both branches.
+  const t = diverTranslator(recipientLocale(ctx.ownLocale, ctx.data.shop.defaultLocale));
   const outcome = await startBookingCheckout(ctx.db, {
     shopId: ctx.data.shop.id,
     tripId: ctx.data.trip.id,
@@ -184,6 +216,8 @@ export async function payFromReady(token: string) {
     customerEmail: ctx.data.person.email,
     successUrl: `${returnBase}?pay=paid`,
     cancelUrl: `${returnBase}?pay=cancelled`,
+    describeLine: ({ isDeposit, tripTitle }) =>
+      isDeposit ? t("checkoutLine.deposit", { tripTitle }) : t("checkoutLine.full", { tripTitle }),
   }).catch(() => null);
   const url = outcome?.ok ? outcome.checkout.checkoutUrl : null;
   if (!url) redirect(`${base(token)}?error=pay`);
@@ -307,7 +341,10 @@ export async function rescheduleMyBookingAction(token: string, formData: FormDat
           bookingId: result.newBookingId,
           shopId: ctx.data.shop.id,
           to: ctx.data.person.email,
-          locale: toDiverLocale(ctx.data.shop.defaultLocale),
+          locale: recipientLocale(
+            ctx.ownLocale ?? ctx.data.person.locale,
+            ctx.data.shop.defaultLocale,
+          ),
           diverName: ctx.data.detail.person.fullName,
           shopName: ctx.data.detail.shop.name,
           tripTitle: newTrip.title,
