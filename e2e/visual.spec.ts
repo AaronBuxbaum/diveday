@@ -971,8 +971,23 @@ for (const scheme of ["light", "dark"] as const) {
     // scenario — same flow as e2e/onboard.spec.ts's first-run checklist test.
     test(`a freshly onboarded shop's Today tab renders true to the design (${scheme})`, async ({
       page,
-    }) => {
-      const unique = `today-empty-${Date.now()}`;
+    }, testInfo) => {
+      /**
+       * Deterministic, because this slug is *rendered* — the "Share your public
+       * schedule" row prints `/shop/<slug>/schedule` right there on the page.
+       * A `Date.now()` suffix (what this used before) put the wall clock into a
+       * baseline, so the capture diffed on every run forever; it went unnoticed
+       * only because this test landed one merge ago and this is the first PR to
+       * compare against it.
+       *
+       * Scoped by scheme so the light and dark tests don't collide, and by
+       * retry attempt because an onboarded shop is a real trial signup
+       * (`isDemo: false`) that `/api/test/reset`'s `purgeMintedDemoShops`
+       * deliberately does not delete — so a retry inside the same server
+       * process would otherwise hit a taken slug. Attempt 0 is the baseline
+       * path and is fully stable.
+       */
+      const unique = `today-empty-${scheme}${testInfo.retry ? `-r${testInfo.retry}` : ""}`;
       await page.goto("/onboard");
       await page.locator('input[name="shopName"]').fill("Fresh Shop E2E");
       await page.locator('input[name="shopSlug"]').fill(unique);
