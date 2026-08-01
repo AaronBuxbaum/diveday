@@ -50,6 +50,7 @@
     "calendarDive": "{time} dive",
     "calendarDiveFull": "{time} dive (full)",
     "tripListLabel": "Upcoming trips",
+    "spotsLeftUrgent": "{count, plural, one {Only # spot left} other {Only # spots left}}",
     "nextDeparture": {
       "eyebrow": "Next boat out",
       "title": "{when} — {trip}"
