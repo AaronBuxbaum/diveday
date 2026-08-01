@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
+import { Suspense } from "react";
 import { EmptyState } from "@/components/EmptyState";
 import { JsonLd } from "@/components/JsonLd";
 import { type CalendarTrip, ScheduleCalendar } from "@/components/ScheduleCalendar";
@@ -12,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { canPersonConfigureTrips } from "@/db/authz";
-import { getDb } from "@/db/client";
+import { type AppDb, getDb } from "@/db/client";
 import { listActiveCourses } from "@/db/courses";
 import { listDiveSites } from "@/db/dive-sites";
 import { getShopReviewAggregate, listPublishedShopReviews } from "@/db/reviews";
@@ -26,6 +27,7 @@ import {
   upcomingTripsForCalendar,
 } from "@/db/trips";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
+import type { DiverTranslator } from "@/i18n/messages";
 import { requestTranslator } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { auth } from "@/lib/auth";
@@ -33,6 +35,7 @@ import { isStaff } from "@/lib/authz";
 import {
   addMonths,
   buildCalendarWeeks,
+  type CalendarDay,
   type MonthRef,
   monthKey,
   monthLabel,
@@ -202,20 +205,21 @@ export default async function TripsPage({
   const explicitMonth = !staffView ? parseMonthKey(month) : null;
   const listMonthBounds = explicitMonth ? monthBoundsUtc(explicitMonth) : null;
 
-  const [range, stats, { trips: upcoming, nextCursor }, reviewAggregate, reviews] =
-    await Promise.all([
-      upcomingScheduleRange(db, shop.id, now),
-      staffView ? upcomingScheduleStats(db, shop.id, now) : null,
-      pagedUpcomingTripsWithCounts(db, shop.id, {
-        cursor: after,
-        now,
-        ...listMonthBounds,
-        hasSpace: !staffView && hasSpaceFilter ? true : undefined,
-        tripType: !staffView ? tripTypeFilter : undefined,
-      }),
-      getShopReviewAggregate(db, shop.id),
-      listPublishedShopReviews(db, shop.id),
-    ]);
+  // The review aggregate and published-review list stream in separately
+  // (below, via <ScheduleReviewsSection>) rather than joining this batch —
+  // reviews are a slower, independent read the shell and trip list never
+  // needed to wait behind (docs task 119 follow-up: streaming the schedule).
+  const [range, stats, { trips: upcoming, nextCursor }] = await Promise.all([
+    upcomingScheduleRange(db, shop.id, now),
+    staffView ? upcomingScheduleStats(db, shop.id, now) : null,
+    pagedUpcomingTripsWithCounts(db, shop.id, {
+      cursor: after,
+      now,
+      ...listMonthBounds,
+      hasSpace: !staffView && hasSpaceFilter ? true : undefined,
+      tripType: !staffView ? tripTypeFilter : undefined,
+    }),
+  ]);
   const hasUpcoming = range.first !== null;
 
   // A prominent quick link to the soonest departure with room, so a returning
@@ -358,46 +362,21 @@ export default async function TripsPage({
     });
   }
 
-  const tripsByDay = new Map<string, CalendarTrip[]>();
-  if (!staffView && hasUpcoming) {
-    const { monthStart, monthEnd } = listMonthBounds ?? monthBoundsUtc(currentMonth);
-    const monthTrips = await upcomingTripsForCalendar(db, shop.id, monthStart, monthEnd, now);
-    for (const trip of monthTrips) {
-      const iso = toDateInputValue(utcToWallTime(trip.startsAt, tz));
-      const list = tripsByDay.get(iso) ?? [];
-      list.push({
-        id: trip.id,
-        title: trip.title,
-        time: formatTime(trip.startsAt, locale, tz),
-        full: isFull(trip),
-      });
-      tripsByDay.set(iso, list);
-    }
-  }
+  // The month grid's own trip lookup (`upcomingTripsForCalendar`) is a
+  // second, genuinely sequential query — it can't start until `currentMonth`
+  // is known above — so it moves into <ScheduleCalendarSection> below and
+  // streams in behind the shell and trip list instead of blocking them.
+  // Only the (cheap, synchronous) month boundary math happens here.
+  const { monthStart: calendarMonthStart, monthEnd: calendarMonthEnd } =
+    listMonthBounds ?? monthBoundsUtc(currentMonth);
 
   // Structured data describes the canonical standalone page only — see
   // generateMetadata above. Staff see their own board, which is not a public
-  // document and has no business carrying an Event graph.
-  const structuredData =
-    isEmbed || staffView
-      ? null
-      : scheduleJsonLd(
-          shop,
-          upcoming.map((trip) => ({
-            id: trip.id,
-            title: trip.title,
-            description: trip.description,
-            startsAt: trip.startsAt,
-            endsAt: trip.endsAt,
-            capacity: trip.capacity,
-            booked: trip.booked,
-            priceCents: trip.priceCents,
-            diveSiteName: trip.diveSite?.name ?? null,
-            conditionsHold: trip.conditionsHold,
-          })),
-          publicAppUrl(),
-          reviewAggregate,
-        );
+  // document and has no business carrying an Event graph. The graph's
+  // `aggregateRating` needs the review aggregate, which streams in with the
+  // reviews section below (<ScheduleReviewsSection>) rather than blocking
+  // here — it renders the JsonLd script tag alongside the reviews it describes.
+  const showReviews = !isEmbed && !staffView;
 
   return (
     <main
@@ -407,7 +386,6 @@ export default async function TripsPage({
           : "mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10"
       }
     >
-      {structuredData ? <JsonLd data={structuredData} /> : null}
       {isEmbed ? null : (
         <ShopPageHeader
           eyebrow={t("schedule.eyebrow")}
@@ -512,18 +490,29 @@ export default async function TripsPage({
       ) : null}
 
       {!staffView && hasUpcoming ? (
-        <ScheduleCalendar
-          shopSlug={shopSlug}
-          label={monthLabel(currentMonth)}
-          weeks={buildCalendarWeeks(currentMonth, weekStartsOn(locale))}
-          todayIso={todayIso}
-          tripsByDay={tripsByDay}
-          locale={locale}
-          t={t}
-          prevMonthKey={prevMonthKey}
-          nextMonthKey={nextMonthKey}
-          embed={isEmbed}
-        />
+        // The month grid's own query is the one genuinely sequential fetch
+        // on this page (it depends on `currentMonth`, computed above) — a
+        // Suspense boundary lets the trip list below stream in without
+        // waiting on it (docs task 119 follow-up: streaming the schedule).
+        <Suspense fallback={<ScheduleCalendarSkeleton />}>
+          <ScheduleCalendarSection
+            db={db}
+            shopId={shop.id}
+            shopSlug={shopSlug}
+            monthStart={calendarMonthStart}
+            monthEnd={calendarMonthEnd}
+            now={now}
+            tz={tz}
+            locale={locale}
+            t={t}
+            label={monthLabel(currentMonth)}
+            weeks={buildCalendarWeeks(currentMonth, weekStartsOn(locale))}
+            todayIso={todayIso}
+            prevMonthKey={prevMonthKey}
+            nextMonthKey={nextMonthKey}
+            embed={isEmbed}
+          />
+        </Suspense>
       ) : null}
 
       {!staffView && hasUpcoming ? (
@@ -741,15 +730,24 @@ export default async function TripsPage({
           20260726-schedule-embed); this is a full-page-only surface. */}
       {/* Reviews are a full-page, diver-facing signal: the embed stays a
           compact booking widget (docs ADR 20260726-schedule-embed), and staff
-          moderate from /shop/[shopSlug]/reviews rather than reading them here. */}
-      {!isEmbed && !staffView ? (
-        <ShopReviews
-          aggregate={reviewAggregate}
-          reviews={reviews}
-          locale={locale}
-          timezone={tz}
-          t={t}
-        />
+          moderate from /shop/[shopSlug]/reviews rather than reading them here.
+          The aggregate + published-review queries stream in behind the shell
+          and trip list instead of gating them (docs task 119 follow-up:
+          streaming the schedule); the section also carries the page's
+          structured-data script tag, since its aggregateRating needs the
+          same fetch. */}
+      {showReviews ? (
+        <Suspense fallback={<ScheduleReviewsSkeleton />}>
+          <ScheduleReviewsSection
+            db={db}
+            shop={shop}
+            upcoming={upcoming}
+            origin={publicAppUrl()}
+            locale={locale}
+            tz={tz}
+            t={t}
+          />
+        </Suspense>
       ) : null}
       {/* The only Client Component on this page that reads copy, so the
           provider wraps it alone rather than the whole tree — the diver bundle
@@ -760,5 +758,172 @@ export default async function TripsPage({
         </DiverIntlProvider>
       ) : null}
     </main>
+  );
+}
+
+/**
+ * The month grid's own trip lookup, isolated behind its `<Suspense>` boundary
+ * above so a shop with a slow month query never holds up the shell or the
+ * trip list rendered ahead of it.
+ */
+async function ScheduleCalendarSection({
+  db,
+  shopId,
+  shopSlug,
+  monthStart,
+  monthEnd,
+  now,
+  tz,
+  locale,
+  t,
+  label,
+  weeks,
+  todayIso,
+  prevMonthKey,
+  nextMonthKey,
+  embed,
+}: {
+  db: AppDb;
+  shopId: string;
+  shopSlug: string;
+  monthStart: Date;
+  monthEnd: Date;
+  now: Date;
+  tz: string;
+  locale: string;
+  t: DiverTranslator;
+  label: string;
+  weeks: CalendarDay[][];
+  todayIso: string;
+  prevMonthKey: string | null;
+  nextMonthKey: string | null;
+  embed: boolean;
+}) {
+  const monthTrips = await upcomingTripsForCalendar(db, shopId, monthStart, monthEnd, now);
+  const tripsByDay = new Map<string, CalendarTrip[]>();
+  for (const trip of monthTrips) {
+    const iso = toDateInputValue(utcToWallTime(trip.startsAt, tz));
+    const list = tripsByDay.get(iso) ?? [];
+    list.push({
+      id: trip.id,
+      title: trip.title,
+      time: formatTime(trip.startsAt, locale, tz),
+      full: isFull(trip),
+    });
+    tripsByDay.set(iso, list);
+  }
+  return (
+    <ScheduleCalendar
+      shopSlug={shopSlug}
+      label={label}
+      weeks={weeks}
+      todayIso={todayIso}
+      tripsByDay={tripsByDay}
+      locale={locale}
+      t={t}
+      prevMonthKey={prevMonthKey}
+      nextMonthKey={nextMonthKey}
+      embed={embed}
+    />
+  );
+}
+
+/** Shaped like `ScheduleCalendar`'s header + 7x5 day grid (design principle 1). */
+function ScheduleCalendarSkeleton() {
+  return (
+    <section
+      aria-hidden="true"
+      className="mb-8 animate-pulse rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-5"
+    >
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="h-6 w-32 rounded bg-surface-sunken" />
+        <div className="flex items-center gap-2">
+          <div className="size-11 rounded-lg bg-surface-sunken" />
+          <div className="size-11 rounded-lg bg-surface-sunken" />
+        </div>
+      </div>
+      <div className="grid grid-cols-7 gap-1">
+        {Array.from({ length: 35 }, (_, i) => i).map((cell) => (
+          <div key={cell} className="min-h-16 rounded-lg bg-surface-sunken/60 sm:min-h-24" />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/**
+ * The review aggregate and published-review list, isolated behind its
+ * `<Suspense>` boundary above — the slowest of the page's independent reads,
+ * now free to stream in behind the shell and trip list rather than gate them.
+ * Also carries the page's structured-data script tag: its `aggregateRating`
+ * comes from the same aggregate, so one fetch serves both rather than two.
+ */
+async function ScheduleReviewsSection({
+  db,
+  shop,
+  upcoming,
+  origin,
+  locale,
+  tz,
+  t,
+}: {
+  db: AppDb;
+  shop: NonNullable<Awaited<ReturnType<typeof getShopBySlug>>>;
+  upcoming: Awaited<ReturnType<typeof pagedUpcomingTripsWithCounts>>["trips"];
+  origin: string | null;
+  locale: string;
+  tz: string;
+  t: DiverTranslator;
+}) {
+  const [reviewAggregate, reviews] = await Promise.all([
+    getShopReviewAggregate(db, shop.id),
+    listPublishedShopReviews(db, shop.id),
+  ]);
+  const structuredData = scheduleJsonLd(
+    shop,
+    upcoming.map((trip) => ({
+      id: trip.id,
+      title: trip.title,
+      description: trip.description,
+      startsAt: trip.startsAt,
+      endsAt: trip.endsAt,
+      capacity: trip.capacity,
+      booked: trip.booked,
+      priceCents: trip.priceCents,
+      diveSiteName: trip.diveSite?.name ?? null,
+      conditionsHold: trip.conditionsHold,
+    })),
+    origin,
+    reviewAggregate,
+  );
+  return (
+    <>
+      <JsonLd data={structuredData} />
+      <ShopReviews
+        aggregate={reviewAggregate}
+        reviews={reviews}
+        locale={locale}
+        timezone={tz}
+        t={t}
+      />
+    </>
+  );
+}
+
+/** Shaped like `ShopReviews`'s heading + rating line + review cards (design principle 1). */
+function ScheduleReviewsSkeleton() {
+  return (
+    <section aria-hidden="true" className="mt-10 animate-pulse">
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <div className="h-6 w-40 rounded bg-surface-sunken" />
+        <div className="h-4 w-28 rounded bg-surface-sunken" />
+      </div>
+      <div className="mt-1 h-4 w-72 max-w-full rounded bg-surface-sunken" />
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        {[0, 1].map((i) => (
+          <div key={i} className="h-28 rounded-2xl border border-border bg-surface" />
+        ))}
+      </div>
+    </section>
   );
 }
