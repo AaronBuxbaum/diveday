@@ -29,6 +29,29 @@ import { DEMO_BYPASS_PASSWORD } from "@/lib/credentials";
 import { DEMO_ROLE_KEYS, DEMO_ROLE_META } from "@/lib/demo-roles";
 
 /**
+ * Every /shop page reads the session, the shop row, and staff-role state up
+ * front — genuinely request-scoped, not something a static shell can serve.
+ * Under Cache Components, that unwrapped `headers()`/`auth()`/DB access would
+ * otherwise fail the build ("blocking-prerender-dynamic": the fix options are
+ * cache it, wrap it in `<Suspense>`, or explicitly allow the block). None of
+ * `/shop/**` is a candidate for a static shell or Partial Prerendering — it's
+ * staff-only, auth-gated, and safety-critical (manifests, roll call, cert and
+ * medical data) — so this opts the whole subtree (schedule, manifest,
+ * waivers, orders, divers, trips, offline-manifest, everything under
+ * `/shop/[shopSlug]/**`) out with `instant = false` rather than restructure
+ * it around Suspense boundaries. This keeps the route exactly as fully
+ * dynamic and request-scoped as it was before Cache Components — same
+ * render-per-request behavior, just no longer implied by the old
+ * "reading headers() opts the whole route into dynamic rendering" model.
+ * `instant = false` does not itself force dynamic rendering (a genuinely
+ * prerenderable descendant would still get a static shell); it only permits
+ * *this* layout's already-inherent blocking reads to run without erroring.
+ * Do not remove without an accompanying restructure verified end to end —
+ * see the safety-critical-surfaces rule in AGENTS.md.
+ */
+export const instant = false;
+
+/**
  * Staff-surface shell. If the shop is a demo shop, it hangs the demo banner
  * (with its reset) above every /shop page so the "this is a playground" framing
  * is always present (docs ADR 20260718-demo-mode).

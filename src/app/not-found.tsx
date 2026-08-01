@@ -1,7 +1,9 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { buttonClass } from "@/components/ui/button";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
+import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
 
 /**
  * The app-wide backstop for `notFound()` — a stale email link, a typo'd URL,
@@ -9,12 +11,34 @@ import { requestLocale } from "@/i18n/request";
  * English default. A plain Server Component (not `error.tsx`, which must be a
  * Client Component), so it renders for the visitor's negotiated locale like
  * every other page rather than picking a fixed one.
+ *
+ * Under Cache Components, `/_not-found` must still produce a static App
+ * Shell (it's a framework-synthesized route Next prerenders up front), so
+ * the `requestLocale()` read (backed by `headers()`) is isolated to a small
+ * `<Suspense>`-wrapped child instead of the top-level component — the shell
+ * (layout, copy structure) prerenders, and only the localized text streams
+ * in at request time.
  */
-export default async function NotFound() {
-  const t = diverTranslator(await requestLocale());
+export default function NotFound() {
   return (
     <main className="mx-auto flex w-full max-w-xl flex-1 flex-col items-center justify-center px-6 py-16 text-center">
       <p className="text-sm font-medium tracking-widest text-primary uppercase">DiveDay</p>
+      <Suspense fallback={<NotFoundCopy locale={DEFAULT_DIVER_LOCALE} />}>
+        <LocalizedNotFoundCopy />
+      </Suspense>
+    </main>
+  );
+}
+
+async function LocalizedNotFoundCopy() {
+  const locale = await requestLocale();
+  return <NotFoundCopy locale={locale} />;
+}
+
+function NotFoundCopy({ locale }: { locale: Parameters<typeof diverTranslator>[0] }) {
+  const t = diverTranslator(locale);
+  return (
+    <>
       <h1 className="mt-2 text-2xl font-semibold tracking-tight text-balance">
         {t("notFound.heading")}
       </h1>
@@ -22,6 +46,6 @@ export default async function NotFound() {
       <Link href="/" className={buttonClass({ className: "mt-6" })}>
         {t("notFound.backHome")}
       </Link>
-    </main>
+    </>
   );
 }

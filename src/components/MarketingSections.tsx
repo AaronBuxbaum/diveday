@@ -4,6 +4,7 @@ import {
   DiverBookingFallback,
   FrontDeskReadinessFallback,
 } from "@/components/MarketingScreenFallbacks";
+import type { DiverLocale } from "@/i18n/settings";
 import { productFeatureGroups } from "@/lib/marketing";
 
 /**
@@ -38,9 +39,11 @@ export function MarketingMockup({
 /** The captain roll-call mockup inside a phone device frame (landing hero + product dock). */
 export function CaptainPhoneFrame({
   label,
+  locale,
   className = "",
 }: {
   label: string;
+  locale: DiverLocale;
   className?: string;
 }) {
   return (
@@ -49,7 +52,7 @@ export function CaptainPhoneFrame({
     >
       <div className="mx-auto mb-1.5 h-1.5 w-20 rounded-full bg-surface-sunken" />
       <MarketingMockup label={label} className="rounded-[1.9rem] border-0">
-        <CaptainRollCallFallback />
+        <CaptainRollCallFallback locale={locale} />
       </MarketingMockup>
     </div>
   );
@@ -85,8 +88,10 @@ export function MarketingMomentCard({
  * `MarketingMockup`'s own `aria-label`).
  */
 export const marketingMockups = {
-  diverBooking: { render: () => <DiverBookingFallback /> },
-  frontDeskReadiness: { render: () => <FrontDeskReadinessFallback /> },
+  diverBooking: { render: (locale: DiverLocale) => <DiverBookingFallback locale={locale} /> },
+  frontDeskReadiness: {
+    render: (locale: DiverLocale) => <FrontDeskReadinessFallback locale={locale} />,
+  },
 } as const;
 
 /**

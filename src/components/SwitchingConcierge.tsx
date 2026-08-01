@@ -1,6 +1,6 @@
 import { buttonClass } from "@/components/ui/button";
 import { diverTranslator } from "@/i18n/messages";
-import { requestLocale } from "@/i18n/request";
+import type { DiverLocale } from "@/i18n/settings";
 
 /**
  * The concierge switch offer, shared by every /switching page (the hub, each
@@ -14,13 +14,18 @@ import { requestLocale } from "@/i18n/request";
  * out) — the "safe to leave" pillar made a hand, not just an export button. Both
  * route to the same real inbox so a shop has a person to talk to, not just the
  * self-service importer and export.
+ *
+ * Takes `locale` as a plain prop (rather than reading `requestLocale()`
+ * itself) so every caller can render this from inside a `"use cache"` page
+ * body — cached scopes cannot call `headers()`-backed functions themselves
+ * (see AGENTS.md's `cacheComponents` notes and each `/switching/**` page).
  */
 
 /** Where the concierge switch offer routes (product-owner provided). */
 export const SWITCH_EMAIL = "switch@dive.day";
 
-export async function SwitchingConcierge() {
-  const t = diverTranslator(await requestLocale());
+export function SwitchingConcierge({ locale }: { locale: DiverLocale }) {
+  const t = diverTranslator(locale);
   return (
     <section className="mx-auto max-w-4xl px-6 py-16 lg:py-20">
       <div className="rounded-2xl border border-primary/30 bg-primary/5 p-8 sm:p-10">

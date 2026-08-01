@@ -22,6 +22,10 @@ import { FieldErrorFocus } from "./_components/FieldErrorFocus";
 import { UnsavedChangesGuard } from "./_components/UnsavedChangesGuard";
 import { saveCourseContentAction, setCourseVisibilityAction } from "./actions";
 
+// TODO: Cache Components adoption. Refactor this route so this opt-out can be removed.
+// See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
+export const instant = false;
+
 export const metadata: Metadata = { title: "Edit course page — DiveDay" };
 
 /** Course media comes from the shop's own uploads; render it as it was stored. */

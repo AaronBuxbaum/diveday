@@ -19,8 +19,6 @@ function demoShopMaxAgeMs(): number | undefined {
   return Number.isFinite(days) && days > 0 ? days * DAY_MS : undefined;
 }
 
-export const runtime = "nodejs";
-
 /**
  * The scheduled trip-notification entry point. The app holds no timer by design
  * (docs ADR 20260721-scheduled-reminder-cadence); an external scheduler

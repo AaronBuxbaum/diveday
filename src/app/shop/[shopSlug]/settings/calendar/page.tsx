@@ -18,6 +18,10 @@ import { requireStaffSession } from "@/lib/session";
 import { CalendarFeedPanel } from "./CalendarFeedPanel";
 import type { CalendarFeedCopy, FeedScopeView } from "./feed-panel-types";
 
+// TODO: Cache Components adoption. Refactor this route so this opt-out can be removed.
+// See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
+export const instant = false;
+
 /**
  * Static metadata resolves before locale negotiation, so it stays English —
  * the same documented exemption every other page's title carries (docs ADR
