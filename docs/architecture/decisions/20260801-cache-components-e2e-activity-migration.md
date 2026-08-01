@@ -8,29 +8,66 @@
 Commit d8e7b32 turned on `nextConfig.cacheComponents` to cache seven marketing pages
 (`/`, `/pricing`, `/product`, `/about`, `/switching`, `/switching/[competitor]`,
 `/switching/spreadsheet`) per negotiated locale via `"use cache"`. The flag is app-wide, not
-per-route: per Next's docs it also unconditionally turns on React `<Activity>`-based state
-preservation for client-side navigation everywhere, keeping up to 3 previously-visited routes'
-DOM trees alive as `display:none` instead of unmounting them, so back-navigation is instant.
-Real visitors never see the hidden tree. Playwright's `getByLabel`/`getByText`/`getByRole` do —
-by default they resolve against the whole document, hidden trees included, so a hidden
-previous-route's "Sign in" button and the current route's own "Sign in" button both match a
-strict-mode locator and the call throws "resolved to 2 elements."
+per-route: per `node_modules/next/dist/docs/01-app/03-api-reference/05-config/01-next-config-js/cacheComponents.md`
+("Navigation with Activity"), it also unconditionally turns on React `<Activity>`-based state
+preservation for client-side navigation everywhere — the previous route is set to
+`<Activity mode="hidden">` instead of unmounting, so back-navigation is instant. The doc is
+explicit that the retention window is a heuristic, not a fixed count ("Next.js uses heuristics to
+keep a few recently visited routes 'hidden', while older routes are removed from the DOM"); an
+earlier draft of this ADR asserted a specific number ("up to 3") that isn't in the documented
+contract and shouldn't be relied on. Real visitors never see the hidden tree.
+
+**Verified against the bundled docs (`node_modules/next/dist/docs/01-app/02-guides/preserving-ui-state.md`,
+"Testing" section) rather than assumed:** hidden Activity content keeps `display:none` but stays
+in the DOM, and the actual Playwright risk is narrower than "every locator breaks." `getByRole`,
+`getByLabel`, and `getByPlaceholder` query the accessibility tree, which already excludes hidden
+elements — the docs call this out explicitly ("`getByRole` is robust to Activity... It queries the
+accessibility tree, which excludes hidden elements") and show it as the *recommended* pattern, not
+a hazard to guard against. `getByText` and a raw `.locator()` call (CSS/text selector used as a
+final matcher, not just a scoping ancestor before a chained `getByRole`) are the ones that don't
+filter automatically and are the documented risk: the docs' own example labels
+`page.locator('.product-card').first().click()` "Avoid — may match hidden elements in Activity
+boundaries" and recommends `.filter({ visible: true })` instead.
+
+That materially narrows the fix. Against this repo's suite: `grep -c getByText e2e/*.spec.ts`
+totals **346 call sites across 46 spec files** (versus 1,434 `getByRole`/`getByLabel` call sites
+that the docs say are already safe), plus some share of **227 raw `.locator()` calls**, not all of
+which are leaf matchers — many chain into a `.getByRole()`/`.getByLabel()` immediately after and
+inherit that safety; each needs a one-time look during Phase 1 to sort "scoping ancestor" (safe)
+from "leaf matcher" (needs `.filter({ visible: true })`).
+
+**One discrepancy this ADR flags rather than resolves:** commit 100fcf8's revert message describes
+the original CI failures as hitting `getByLabel` as well as `getByText` ("Playwright's
+`getByLabel`/`getByText` locators don't reliably filter it out"), which doesn't match the bundled
+docs' claim that `getByLabel` is accessibility-tree-based and already visibility-safe. This ADR
+does not have a way to adjudicate that from static analysis alone — Phase 2 (the full suite run
+with the flag actually on) is what settles it empirically, and if `getByLabel` genuinely breaks
+too despite the docs, Phase 1's fixture wrapper should cover it as well, not just `getByText`.
+
+Every spec in the suite imports its `test`/`expect` from one place, `e2e/fixtures.ts`
+(`docs/engineering/testing.md` — "Every spec imports `test`/`expect` from `e2e/fixtures.ts`, not
+`@playwright/test` directly"). That existing choke point is what makes this tractable regardless
+of which locators end up needing the fix: it belongs in the fixture, not in per-spec call sites.
 
 Commit 100fcf8 reverted the flag the same day: CI on PR #286 failed 22+ pre-existing e2e specs
 across unrelated surfaces (sign-in, divers, dive-sites, export, manifest, booking, courses,
-waivers) on exactly that failure mode. ADR 20260801-cache-components-activity-state.md (now
-Superseded) did the AGENTS.md-required safety audit of `/shop/**` for a *different* Activity
-hazard — component-local `useState`/`useRef` silently surviving a hide/reshow cycle — and landed
-six defensive fixes that are still in the tree, inert until the flag is back on. That ADR's
-closing line: "Kept for the day this app deliberately re-adopts `cacheComponents` with its own
-e2e migration plan." This ADR is that plan.
+waivers) on this failure mode. ADR 20260801-cache-components-activity-state.md (now Superseded)
+did the AGENTS.md-required safety audit of `/shop/**` for a *different* Activity hazard —
+component-local `useState`/`useRef` silently surviving a hide/reshow cycle — and landed six
+defensive fixes that are still in the tree, inert until the flag is back on. That ADR's closing
+line: "Kept for the day this app deliberately re-adopts `cacheComponents` with its own e2e
+migration plan." This ADR is that plan.
 
-Scale of the testing-strategy problem: `grep -c 'getByLabel\|getByText\|getByRole' e2e/*.spec.ts`
-totals **1,776 call sites across all 50 spec files** — every spec in the suite uses these
-locators, and every spec imports its `test`/`expect` from one place, `e2e/fixtures.ts`
-(`docs/engineering/testing.md` — "Every spec imports `test`/`expect` from `e2e/fixtures.ts`, not
-`@playwright/test` directly"). That existing choke point is what makes this tractable: the fix
-belongs in the fixture, not in 1,776 call sites across 50 files.
+**`@next/playwright`'s `instant()` helper, evaluated and not a fit for this problem.** Commit
+100fcf8's message cited "Next's own `instant()` helper and an 'optimizer' skill for exactly this
+problem," which this ADR originally repeated without having read the source. Having now installed
+dependencies and read `node_modules/next/dist/docs/01-app/02-guides/instant-navigation.md`
+directly: `@next/playwright`'s `instant(page, callback)` is real and does exist on npm, but it
+solves a different problem — scoping assertions to only the static shell during a navigation, to
+catch a route that stops rendering instantly. It has nothing to do with hidden-Activity-tree
+locator matching; adopting it doesn't address Phase 1 below. It may be worth adding later, in
+Phase 3, as a regression guard on the *reason* the marketing pages are being cached (that they stay
+instant), but that is a separate, optional addition, not a substitute for the locator-safety work.
 
 ## Decision
 
@@ -39,18 +76,17 @@ green against the flag turned on locally — then re-enable the flag in a second
 is met.
 
 **Phase 1 — Activity-safe locators at the fixture choke point.**
-In `e2e/fixtures.ts`, wrap the `page` fixture so `getByRole`/`getByLabel`/`getByText` resolve
-only against the currently-visible route tree, not any Activity-hidden previous one. Playwright's
-locator engine supports intersecting two locators with `.and()`; a `:visible` pseudo-class
-locator (`page.locator(":visible")`) is a per-element visibility filter that composes with any
-`getBy*` result. Concretely, in the `test.extend` for the `page` fixture, wrap each of the three
-methods so `page.getByRole(role, opts)` returns `page.getByRole(role, opts).and(page.locator(":visible"))`
-(same for `getByLabel`/`getByText`), applied once at fixture construction. Every spec's existing
-call sites are unchanged — no 1,776-site rewrite. Before writing this by hand, read
-`node_modules/next/dist/docs` for `@next/playwright` (referenced in commit 100fcf8 as Next's own
-"instant() helper and an optimizer skill" for exactly this problem) — if Next ships an official
-fixture wrapper by implementation time, prefer it over the bespoke one above and drop this phase
-to "adopt it in `e2e/fixtures.ts`."
+`getByRole`/`getByLabel`/`getByPlaceholder` are already visibility-safe per the bundled docs — do
+not touch them. In `e2e/fixtures.ts`, wrap the `page` fixture's `getByText` so it resolves only
+against the currently-visible route tree, using the pattern the docs themselves recommend:
+`page.getByText(text).filter({ visible: true })`, applied once at fixture construction so every
+spec's existing `getByText` call sites are unchanged. Then do a one-time pass over the 227 raw
+`.locator()` call sites: leave alone any that only scope a subsequent `.getByRole()`/`.getByLabel()`
+chain (that chain's own visibility-safety already applies), and add the same `.filter({ visible: true })`
+to any used as a final matcher (a direct `.click()`, `.fill()`, `.textContent()`, or count/visibility
+assertion on the raw locator). If Phase 2 shows `getByRole`/`getByLabel` breaking too (see the
+discrepancy noted in Context), extend the same fixture wrapper to them — the fixture is still the
+one place to make that change regardless of which locators end up needing it.
 
 Exceptions: a spec that legitimately asserts on a *hidden* element (e.g. `toBeHidden()`, or an
 `aria-hidden` dialog backdrop) should reach for a documented escape hatch — an
@@ -60,9 +96,9 @@ fixture — rather than lose the default safety.
 **Phase 2 — full-suite proof, flag on, uncommitted.**
 Turn `cacheComponents: true` back on locally (do not merge net-new marketing-page caching yet)
 and run `pnpm e2e` full suite. Triage failures into two buckets:
-- Locator strict-mode violations the Phase 1 wrapper didn't catch (e.g. a raw `page.locator()`
-  call, or a spec that intentionally wants two matches and needs `.first()`/`.filter()` — those
-  already exist independent of Activity and are unaffected).
+- Locator strict-mode violations the Phase 1 wrapper didn't catch — this is also where the
+  `getByLabel` discrepancy from Context gets settled: if `getByLabel` failures show up despite the
+  docs' claim, that's real signal to widen Phase 1's fixture wrapper, not a surprise to explain away.
 - Genuine Activity-preserved-state bugs, the same class ADR 20260801-cache-components-activity-state.md
   found for `/shop/**`. That audit was scoped to staff routes only; Activity is app-wide, so this
   phase must repeat the audit's method (an unkeyed `useState`/`useRef` in a client component
@@ -85,15 +121,20 @@ stray hidden-tree artifact before trusting the rest of the baseline set.
 Update `docs/engineering/testing.md` and the `e2e-and-visual` skill to state the Activity-safe
 locator rule as a permanent convention (not a one-time migration), so a spec written after this
 lands doesn't regress to a bare `@playwright/test` import. If a `pnpm check:architecture`-style
-guard is cheap to add (flagging a spec file that imports `getByRole`/`getByLabel`/`getByText`
-from `@playwright/test` instead of `./fixtures`), add it — same spirit as the "recommendation, not
-built here" closing note in the superseded ADR.
+guard is cheap to add (flagging a spec file that imports `test`/`expect` from `@playwright/test`
+instead of `./fixtures`, the existing rule `docs/engineering/testing.md` already states in prose),
+add it — same spirit as the "recommendation, not built here" closing note in the superseded ADR.
 
 ## Alternatives considered
 
-- **Rewrite all 1,776 call sites directly** — rejected; same outcome as the fixture wrapper with
-  a 50-file diff instead of a one-file one, and any spec written afterward would need to remember
-  the pattern by hand instead of getting it for free through the shared fixture.
+- **Rewrite all 346 `getByText` call sites (plus the risky share of the 227 raw `.locator()`
+  calls) by hand** — rejected; same outcome as the fixture wrapper with a many-file diff instead
+  of a one-file one, and any spec written afterward would need to remember the pattern by hand
+  instead of getting it for free through the shared fixture.
+- **Wrap `getByRole`/`getByLabel` too, preemptively, alongside `getByText`** — rejected for Phase
+  1; the bundled docs say they're already visibility-safe, and wrapping code that doesn't need it
+  is unjustified surface area. Revisit only if Phase 2 proves the docs wrong for this app (see the
+  `getByLabel` discrepancy in Context).
 - **Scope `cacheComponents` to only the marketing routes** — not available; restated from the
   superseded ADR, this is an app-wide Next build flag with no per-route opt-out for the Activity
   behavior specifically (`instant = false`, used elsewhere in d8e7b32, opts a route out of
@@ -112,14 +153,16 @@ built here" closing note in the superseded ADR.
 - Once landed, `cacheComponents` (or any future Next feature riding on the same Activity
   mechanism) can be turned on without a suite-wide fire drill — new specs get Activity safety by
   default through the fixture, no per-spec discipline required.
-- The fixture wrapper is a global behavior change to how every existing spec's locators resolve;
-  Phase 1 needs a full local `pnpm e2e` green run against the *current* `cacheComponents: false`
-  state as its own acceptance bar (proving it doesn't change behavior when Activity is off) before
-  Phase 2 turns the flag on to prove the actual fix.
+- The fixture wrapper changes how every existing `getByText` call resolves (and any raw
+  `.locator()` leaf matcher touched during the Phase 1 triage pass); Phase 1 needs a full local
+  `pnpm e2e` green run against the *current* `cacheComponents: false` state as its own acceptance
+  bar (proving it doesn't change behavior when Activity is off) before Phase 2 turns the flag on
+  to prove the actual fix. Because `getByRole`/`getByLabel` are left untouched, this is a narrower
+  blast radius than wrapping every locator method would have been.
 - Phase 2's full-app Activity audit (beyond the six `/shop/**` fixes already in the tree) is the
   real unknown-sized cost here — size it before committing to a re-enable date; the six known
   fixes were staff-surface-only and marketing/bearer-token surfaces have not been audited at all.
-- Escape hatch: if the fixture-level `:visible` intersection does not fully eliminate strict-mode
-  violations for some specs (e.g. two logically-distinct but simultaneously-visible instances of
-  the same role/label within one live route), those become named, commented per-spec exceptions —
-  not a reason to abandon the flag or the fixture approach.
+- Escape hatch: if the fixture-level `.filter({ visible: true })` does not fully eliminate
+  strict-mode violations for some specs (e.g. two logically-distinct but simultaneously-visible
+  instances of the same text within one live route), those become named, commented per-spec
+  exceptions — not a reason to abandon the flag or the fixture approach.

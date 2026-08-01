@@ -55,6 +55,11 @@ the full suite locally with identical pass counts across repeated runs.
 
 - **Test behavior, not implementation.** Query the DOM by role/label, assert outcomes; don't
   reach into component internals or test styling classes.
+- **Prefer `getByRole`/`getByLabel` over `getByText` in Playwright specs.** They query the
+  accessibility tree and already exclude hidden (`display:none`) content; `getByText` and a bare
+  `.locator()` used as a final matcher don't, so they can strict-mode-fail against something
+  hidden but still in the DOM. See the **e2e-and-visual** skill and
+  [ADR 20260801-cache-components-e2e-activity-migration](../architecture/decisions/20260801-cache-components-e2e-activity-migration.md).
 - **Domain logic is where coverage lives.** `src/lib/` functions get thorough cases — edges
   included (full boat, expired service, uncertified diver, physician-flagged medical). UI tests
   stay thin.
