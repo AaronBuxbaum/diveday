@@ -1464,7 +1464,7 @@ export async function listTripIdsInOfflineManifestWindow(
   return rows.map((row) => row.id);
 }
 
-export const SCHEDULE_PAGE_SIZE = 50;
+export const SCHEDULE_PAGE_SIZE = 20;
 
 /**
  * The schedule page's list, one keyset page at a time (ordered by departure,

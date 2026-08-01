@@ -106,11 +106,7 @@ export default async function ReviewsPage({
         <ShopStat
           label={t("reviews.publicRating")}
           value={aggregate.average === null ? "—" : aggregate.average.toFixed(1)}
-          detail={
-            aggregate.count === 0
-              ? t("reviews.noneYet")
-              : t("reviews.acrossCount", { count: aggregate.count })
-          }
+          detail={aggregate.count === 0 ? t("reviews.noneYet") : t("reviews.fromPublished")}
           tone="primary"
         />
         <ShopStat
@@ -150,7 +146,7 @@ export default async function ReviewsPage({
           href={`${base}?filter=waiting`}
           className={buttonClass({ variant: onlyWaiting ? "primary" : "secondary", size: "sm" })}
         >
-          {t("reviews.filter.waiting", { count: waitingCount })}
+          {t("reviews.filter.waiting")}
         </Link>
       </nav>
 

@@ -215,7 +215,7 @@ export type StaffReview = {
 };
 
 /** How many reviews the moderation queue shows per page before "Show more". */
-export const STAFF_REVIEW_PAGE_SIZE = 50;
+export const STAFF_REVIEW_PAGE_SIZE = 20;
 
 export type StaffReviewPage = {
   reviews: StaffReview[];
