@@ -29,7 +29,10 @@ function fakeCheckoutProvider(
         stripeStatus: "open",
         paymentStatus: "unpaid",
         checkoutUrl: `https://checkout.stripe.com/c/pay/cs_${counter}`,
-        amountTotalCents: request.unitAmountCents * request.quantity,
+        amountTotalCents: request.lineItems.reduce(
+          (sum, line) => sum + line.unitAmountCents * line.quantity,
+          0,
+        ),
         expiresAt: new Date(NOW.getTime() + 24 * HOUR_MS),
       };
     },

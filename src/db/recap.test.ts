@@ -169,7 +169,10 @@ function fakeCheckout(overrides: Partial<CheckoutProvider> = {}): CheckoutProvid
         stripeStatus: "open",
         paymentStatus: "unpaid",
         checkoutUrl: "https://checkout.stripe.com/c/pay/cs_recap_tip_1",
-        amountTotalCents: request.unitAmountCents * request.quantity,
+        amountTotalCents: request.lineItems.reduce(
+          (sum, line) => sum + line.unitAmountCents * line.quantity,
+          0,
+        ),
         expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
       };
     },

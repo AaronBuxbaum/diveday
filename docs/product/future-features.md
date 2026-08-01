@@ -9,34 +9,15 @@ than a slice on top of what exists, not because it was judged unimportant.
   list.
 - Every entry says what already exists in the code, what is actually missing, and why it isn't
   scheduled. Verified against the running code 2026-07-30; re-verify before planning from it.
-- All three came out of the FareHarbor feature-gap audit
+- Both came out of the FareHarbor feature-gap audit
   ([archive/fareharbor-feature-gaps-20260726.md](archive/fareharbor-feature-gaps-20260726.md)), whose
-  every other row has shipped. Read the audit for the FareHarbor sourcing and the comparison; read
-  this file for the state of what remains.
+  every other row has shipped — including diver-selectable checkout upsells, this shortlist's third
+  entry, once the ADR here unblocked it (see
+  [shipped.md](shipped.md#diver-selectable-checkout-upsells--rental-gear-delivered-2026-08-01)). Read
+  the audit for the FareHarbor sourcing and the comparison; read this file for the state of what
+  remains.
 
-## 1. Diver-selectable upsells at checkout (rental gear first)
-
-A diver adds priced rental gear — and later other extras — to their booking *while booking it*,
-instead of a staff member adding a line item afterwards.
-
-- **Exists:** the pricing math is real and shop-configured — `RentalPricing` / `quoteRentalFit` in
-  `src/lib/rentals.ts`, with the diver-facing quote rendered by `RentalFitForm`. Staff can already
-  add arbitrary line items to an order after the fact (`src/app/shop/[shopSlug]/orders/new/`).
-- **Missing:** the ordering, not the price. `bookSpot` sends the diver to Stripe *before*
-  `RentalFitForm` ever renders — the fit form lives on the post-booking confirmation
-  (`BookingConfirmation.tsx`) and on `/ready/[token]` — so no selection or quote exists when the
-  first checkout session is created. `src/lib/payments/checkout.ts` also builds exactly one line item
-  (`line_items[0]`, hardcoded), so a multi-item cart changes the checkout request shape rather than
-  just a number.
-- **Why it isn't scheduled:** it needs a decision between two shapes — move rental selection ahead of
-  the first checkout, changing the booking flow every diver walks, or add a second post-booking
-  payment for extras, which means two payments and two refund paths per trip. **ADR required.**
-  Highest leverage per effort of the three here, since the pricing is already shipped.
-- **Not a contradiction of the pricing claim.** "No add-ons" on the public pages is about DiveDay not
-  charging *shops* per feature ([marketing.md](marketing.md)); this is a shop charging a *diver* for
-  gear they are renting anyway. Keep the two apart in copy.
-
-## 2. Gift cards
+## 1. Gift cards
 
 A shop sells stored value and a diver redeems it against any trip or course.
 
@@ -51,7 +32,7 @@ A shop sells stored value and a diver redeems it against any trip or course.
   [stakeholders/finance-and-tax.md](stakeholders/finance-and-tax.md)). It is a seasonal revenue lever;
   revisit ahead of a gifting season with real shops on the platform. **ADR required.**
 
-## 3. Private / buyout charters
+## 2. Private / buyout charters
 
 A group buys out a whole departure: proposal, contract, deposit, and the boat off public sale.
 

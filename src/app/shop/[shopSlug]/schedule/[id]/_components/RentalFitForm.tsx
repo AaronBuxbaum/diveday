@@ -29,7 +29,7 @@ const SIZES = ["XS", "S", "M", "L", "XL", "XXL"];
  * diver-facing counterpart, kept local rather than shared with that staff
  * resolver so a diver's client bundle never pulls in staff.json.
  */
-const RENTABLE_ITEM_LABEL_KEYS: Record<RentableItemKind, DiverMessageKey> = {
+export const RENTABLE_ITEM_LABEL_KEYS: Record<RentableItemKind, DiverMessageKey> = {
   bcd: "rental.itemLabels.bcd",
   regulator: "rental.itemLabels.regulator",
   wetsuit: "rental.itemLabels.wetsuit",

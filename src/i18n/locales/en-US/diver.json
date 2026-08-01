@@ -160,6 +160,7 @@
     "promoLabel": "Promo code",
     "promoHint": "(if you have one)",
     "partyTotal": "{count, plural, one {# diver} other {# divers}} × {price} = {total}",
+    "totalDueAtCheckout": "Total due at checkout, gear included: {total}",
     "stripeHint": "You'll finish paying on a secure Stripe page.",
     "ageAttestation": "I confirm every diver on this booking meets the minimum age of {age}.",
     "cancelledHeading": "This trip was cancelled",
@@ -229,6 +230,12 @@
       "noteTooLong": "Keep this note under 300 characters.",
       "promoInvalid": "That code isn't active."
     }
+  },
+  "bookingGear": {
+    "heading": "Rental gear",
+    "introBody": "Add what you need and we'll charge it together with your booking. You can fine-tune exact sizes after booking.",
+    "diverNHeading": "Diver {number}'s gear",
+    "gearTotal": "Gear for this diver: {price}"
   },
   "lastMinute": {
     "heading": "Want a deal on a last-minute spot?",
@@ -571,6 +578,8 @@
   "checkoutLine": {
     "deposit": "Deposit — {tripTitle}",
     "full": "{tripTitle}",
+    "gear": "Rental gear",
+    "gearForDiver": "Rental gear — {name}",
     "tip": "Tip for the crew"
   },
   "capability": {
