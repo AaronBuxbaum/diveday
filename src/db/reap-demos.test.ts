@@ -12,6 +12,7 @@ import {
   lastMinuteListEntries,
   lastMinuteListUnsubscribeTokens,
   people,
+  personCourtesyEmailUnsubscribeTokens,
   personRoles,
   shops,
   tips,
@@ -187,6 +188,40 @@ describe("deleteDemoShopCascade", () => {
           .select()
           .from(lastMinuteListUnsubscribeTokens)
           .where(eq(lastMinuteListUnsubscribeTokens.shopId, shop.id))
+      ).length,
+    ).toBe(0);
+  });
+
+  /**
+   * The exact same class of bug the last-minute unsubscribe token test above
+   * regression-tests, this time for the courtesy-email unsubscribe token that
+   * shipped with Leo's general self-serve unsubscribe (story-backlog task
+   * 122): `person_courtesy_email_unsubscribe_tokens` references `people`
+   * directly (not through an entry), so it must be deleted before people or
+   * the whole reset FK-violates and aborts mid-run.
+   */
+  it("deletes a courtesy-email unsubscribe token instead of FK-violating on its person", async () => {
+    const db = await seededTestDb();
+    const { slug } = await createDemoShop(db);
+    const shop = await requireShop(db, slug);
+    const [person] = await db.select().from(people).where(eq(people.shopId, shop.id)).limit(1);
+    if (!person) throw new Error("test setup: demo shop has no people");
+    await db.insert(personCourtesyEmailUnsubscribeTokens).values({
+      shopId: shop.id,
+      personId: person.id,
+      tokenHash: `hash_${person.id}`,
+    });
+
+    // No FK violation here is the real assertion — tokens must go before people.
+    await deleteDemoShopCascade(db, shop.id);
+
+    expect(await findShop(db, slug)).toBeUndefined();
+    expect(
+      (
+        await db
+          .select()
+          .from(personCourtesyEmailUnsubscribeTokens)
+          .where(eq(personCourtesyEmailUnsubscribeTokens.shopId, shop.id))
       ).length,
     ).toBe(0);
   });

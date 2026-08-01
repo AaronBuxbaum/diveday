@@ -415,6 +415,8 @@ export default async function TripDetailPage({
             locale={locale}
             contactEmail={shop.contactEmail}
             contactPhone={shop.contactPhone}
+            rentalItems={shop.rentalItems}
+            rentalPricing={shop.rentalPricing}
           />
         )}
 

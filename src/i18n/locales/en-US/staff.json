@@ -297,7 +297,8 @@
       "noTripAttached": " · no trip attached",
       "refund": "Refund",
       "refunding": "Refunding…",
-      "demoRefundHint": "Demo orders aren't backed by a live Stripe invoice, so refunds are disabled here."
+      "demoRefundHint": "Demo orders aren't backed by a live Stripe invoice, so refunds are disabled here.",
+      "showOlderPayments": "{count, plural, one {Show # older payment} other {Show # older payments}}"
     },
     "remove": {
       "heading": "Remove from active divers",
@@ -984,6 +985,7 @@
     }
   },
   "schedule": {
+    "viewPublicPage": "View public page",
     "fullTripForm": "Full trip form",
     "scheduleTrip": "Schedule a trip",
     "overview": {
@@ -1104,8 +1106,6 @@
       "waiverInPerson": "Paper waiver recorded — the diver's release is on file.",
       "waiverMedicalAttestation": "Confirm you reviewed the medical questionnaire before recording a paper waiver — or send the digital link so the diver answers it.",
       "waiverError": "That waiver link could not be created. Try a current booking and template.",
-      "bulkWaiver": "Waiver links sent to the selected divers who still needed one — anyone already signed was left alone.",
-      "bulkWaiverNone": "Tick at least one diver, then send the waiver to the whole selection.",
       "seriesApplied": "Those details now apply to every upcoming date in this series.",
       "seriesAppliedPartial": "Applied to the upcoming dates in this series. A few already had more divers than the new capacity, or already had a roll call recorded past the new dive count, so those were left as they were — adjust them from their own trip pages.",
       "seriesCancelled": "Cancelled every upcoming date in this series. Reinstate any single date from its own trip page.",
@@ -2230,7 +2230,8 @@
       "alreadyDoneOther": "{names} already have a signed waiver — nothing reissued.",
       "errors": "Couldn’t send to {names} — open the roster to check the booking.",
       "confirmResend": "Yes, resend",
-      "neverMind": "Never mind"
+      "neverMind": "Never mind",
+      "emptySelection": "Tick at least one diver, then send the waiver to the whole selection."
     },
     "connectivity": {
       "online": "Online",

@@ -27,7 +27,7 @@ async function waitForShellPrimed(page: Page) {
 test("live manifest retains blocked divers and records an explicit not-boarded result", async ({
   page,
 }) => {
-  await page.goto("/shop/blue-mantis/schedule");
+  await page.goto("/shop/blue-mantis/schedule/board");
   await page
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Molasses & French" })
@@ -101,7 +101,7 @@ test("captain saves the full checkpoint manifest, reloads it offline, and reconc
   page,
   context,
 }) => {
-  await page.goto("/shop/blue-mantis/schedule");
+  await page.goto("/shop/blue-mantis/schedule/board");
   await page
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Molasses & French" })
@@ -145,7 +145,7 @@ test("a captain who lost the saved copy to storage eviction still lands on a pag
   page,
   context,
 }) => {
-  await page.goto("/shop/blue-mantis/schedule");
+  await page.goto("/shop/blue-mantis/schedule/board");
   await page
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Molasses & French" })
@@ -209,7 +209,7 @@ test("a captain who lost the saved copy to storage eviction still lands on a pag
 });
 
 test("the offline fallback never reaches beyond the manifest route", async ({ page, context }) => {
-  await page.goto("/shop/blue-mantis/schedule");
+  await page.goto("/shop/blue-mantis/schedule/board");
   await page
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Molasses & French" })
@@ -245,7 +245,7 @@ test("the offline fallback never reaches beyond the manifest route", async ({ pa
 });
 
 test("the live manifest response never enters Cache Storage", async ({ page }) => {
-  await page.goto("/shop/blue-mantis/schedule");
+  await page.goto("/shop/blue-mantis/schedule/board");
   await page
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Molasses & French" })
@@ -277,7 +277,7 @@ test("the live manifest response never enters Cache Storage", async ({ page }) =
 test("an out-of-range checkpoint in the offline URL falls back to departure, not just its shape", async ({
   page,
 }) => {
-  await page.goto("/shop/blue-mantis/schedule");
+  await page.goto("/shop/blue-mantis/schedule/board");
   await page
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Molasses & French" })
@@ -306,7 +306,7 @@ test("visiting any shop page auto-saves the near-term board without opening a ma
   // The schedule page, not a trip's own manifest — the auto-save component
   // lives in the shop layout, so it runs here too (ADR
   // 20260726-shopwide-offline-manifest-priming).
-  await page.goto("/shop/blue-mantis/schedule");
+  await page.goto("/shop/blue-mantis/schedule/board");
   await waitForShellPrimed(page);
 
   // A device copy shows up from this single page visit alone — the 48-hour
@@ -350,7 +350,7 @@ test("visiting any shop page auto-saves the near-term board without opening a ma
 });
 
 test("displays missing diver face-grid on manifest page", async ({ page }) => {
-  await page.goto("/shop/blue-mantis/schedule");
+  await page.goto("/shop/blue-mantis/schedule/board");
   await page
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Molasses & French" })

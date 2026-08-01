@@ -297,7 +297,8 @@
       "noTripAttached": " · sin salida asociada",
       "refund": "Reembolsar",
       "refunding": "Reembolsando…",
-      "demoRefundHint": "Los pedidos de demostración no están respaldados por una factura real de Stripe, así que los reembolsos están deshabilitados aquí."
+      "demoRefundHint": "Los pedidos de demostración no están respaldados por una factura real de Stripe, así que los reembolsos están deshabilitados aquí.",
+      "showOlderPayments": "{count, plural, one {Mostrar # pago anterior} other {Mostrar # pagos anteriores}}"
     },
     "remove": {
       "heading": "Eliminar de buceadores activos",
@@ -984,6 +985,7 @@
     }
   },
   "schedule": {
+    "viewPublicPage": "Ver la página pública",
     "fullTripForm": "Formulario completo de salida",
     "scheduleTrip": "Programar una salida",
     "overview": {
@@ -1104,8 +1106,6 @@
       "waiverInPerson": "Exención en papel registrada — la liberación del buceador está archivada.",
       "waiverMedicalAttestation": "Confirma que revisaste el cuestionario médico antes de registrar una exención en papel — o envía el enlace digital para que el buceador lo responda.",
       "waiverError": "No se pudo crear ese enlace de exención. Prueba con una reserva y una plantilla vigentes.",
-      "bulkWaiver": "Enlaces de exención enviados a los buceadores seleccionados que aún los necesitaban — a quienes ya habían firmado no se les envió nada.",
-      "bulkWaiverNone": "Marca al menos un buceador y envía la exención a toda la selección.",
       "seriesApplied": "Esos detalles ahora se aplican a todas las próximas fechas de esta serie.",
       "seriesAppliedPartial": "Aplicado a las próximas fechas de esta serie. Algunas ya tenían más buceadores que la nueva capacidad, o ya tenían un pase de lista registrado más allá del nuevo número de inmersiones, así que se dejaron como estaban — ajústalas desde sus propias páginas de salida.",
       "seriesCancelled": "Se canceló cada próxima fecha de esta serie. Reactiva cualquier fecha concreta desde su propia página de salida.",
@@ -2230,7 +2230,8 @@
       "alreadyDoneOther": "{names} ya tienen una exención firmada — no se reenvió nada.",
       "errors": "No se pudo enviar a {names} — revisa la reserva en el listado.",
       "confirmResend": "Sí, reenviar",
-      "neverMind": "Cancelar"
+      "neverMind": "Cancelar",
+      "emptySelection": "Marca al menos un buceador y envía la exención a toda la selección."
     },
     "connectivity": {
       "online": "En línea",

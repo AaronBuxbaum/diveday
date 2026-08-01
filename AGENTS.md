@@ -52,12 +52,12 @@ ignored and the full suite runs instead. Pass args directly: `pnpm test <file> -
 
 | You need | Go to |
 | --- | --- |
-| Public pages (landing, sign-in) | `src/app/` — auth-exempt shop routes are the schedule (`shop/[shopSlug]/schedule`) and course pages (`shop/[shopSlug]/courses/[slug]`), allowlisted in `isPublicShopRoute`; staff trip management is `src/app/shop/[shopSlug]/trips/**` |
+| Public pages (landing, sign-in) | `src/app/` — auth-exempt shop routes are the schedule (`shop/[shopSlug]/schedule`, always public regardless of session — the staff operations board is the separate, gated `shop/[shopSlug]/schedule/board`) and course pages (`shop/[shopSlug]/courses/[slug]`), allowlisted in `isPublicShopRoute`; staff trip management is `src/app/shop/[shopSlug]/trips/**` |
 | Bearer-token pages (waiver signing, trip-prep "ready", recap, email verify, password reset, staff calendar feed) | `src/app/waivers/[token]`, `src/app/ready/[token]`, `src/app/recap/[token]`, `src/app/verify/[token]`, `src/app/reset-password/[token]`, `src/app/calendar/[token]` — the URL *is* the capability; see [docs/engineering/capability-telemetry-runbook.md](docs/engineering/capability-telemetry-runbook.md) before touching |
 | Account lifecycle (sign-up welcome/verify, forgot/reset password) | `src/app/onboard/`, `src/app/forgot-password/`, `src/app/verify/[token]`, `src/app/reset-password/[token]`; tokens in `src/db/account-tokens.ts` / `src/lib/account-tokens.ts`; account rows in `src/db/user-accounts.ts` |
 | Course pages (public content + editor) | `src/app/shop/[shopSlug]/courses/**`; content shapes and parsers in `src/lib/courses.ts`; DiveDay-published templates in `src/db/course-templates.ts` |
 | Certification paths (the catalog's progressions) | `src/db/course-paths.ts` + `src/app/shop/[shopSlug]/courses/paths/**`. Guidance, never a gate — admission stays on each course's `minimum_certification_level` |
-| The staff schedule builder (add / move / copy / remove a departure) | `src/app/shop/[shopSlug]/schedule/_components/ScheduleBuilder.tsx` + that route's `actions.ts`; the mutations and their refusals live in `src/db/trips.ts` (`moveTrip`, `duplicateTrip`, `deleteTrip`) |
+| The staff schedule builder (add / move / copy / remove a departure) | `src/app/shop/[shopSlug]/schedule/board/_components/ScheduleBuilder.tsx` + `schedule/board/actions.ts`; the mutations and their refusals live in `src/db/trips.ts` (`moveTrip`, `duplicateTrip`, `deleteTrip`) |
 | Staff surfaces (all `/shop/**`, auth-gated) | `src/app/shop/` |
 | Email: sending and delivery outcomes | `src/lib/notifications/` + `src/app/api/webhooks/resend/`; setup in [docs/engineering/resend-email-runbook.md](docs/engineering/resend-email-runbook.md). Mail *to* DiveDay is hosted mailboxes, not code |
 | The Today work queue (ranking rules / assembly) | `src/lib/today.ts` / `src/db/today.ts` |

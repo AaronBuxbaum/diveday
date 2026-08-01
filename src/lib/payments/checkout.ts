@@ -21,13 +21,24 @@ export function stripeLineDescription(value: string): string {
   return value.trim().slice(0, MAX_LINE_DESCRIPTION_LENGTH);
 }
 
-export type CreateCheckoutSessionRequest = {
-  stripeAccountId: string;
-  currency: string;
-  /** One priced line: the per-diver amount, quantity = party size. */
+/** One priced line on the hosted page — the trip fee (quantity = party size) or one diver's gear. */
+export type CheckoutLineItem = {
   description: string;
   unitAmountCents: number;
   quantity: number;
+};
+
+export type CreateCheckoutSessionRequest = {
+  stripeAccountId: string;
+  currency: string;
+  /**
+   * One or more priced lines: the trip-fee line always comes first (unit
+   * amount = the per-diver charge, quantity = party size), followed by zero
+   * or more single-quantity gear lines for divers who priced rental gear at
+   * checkout (docs ADR 20260801-checkout-upsells-rental-gear). Never empty —
+   * a checkout with nothing to charge simply doesn't run.
+   */
+  lineItems: CheckoutLineItem[];
   customerEmail: string;
   successUrl: string;
   cancelUrl: string;
@@ -146,16 +157,19 @@ export function stripeCheckoutProvider(
 ): CheckoutProvider {
   return {
     async createCheckoutSession(request) {
+      if (request.lineItems.length === 0) return { status: "failed" };
       try {
         const form = new URLSearchParams({
           mode: "payment",
           success_url: request.successUrl,
           cancel_url: request.cancelUrl,
           customer_email: request.customerEmail,
-          "line_items[0][price_data][currency]": request.currency,
-          "line_items[0][price_data][product_data][name]": request.description,
-          "line_items[0][price_data][unit_amount]": String(request.unitAmountCents),
-          "line_items[0][quantity]": String(request.quantity),
+        });
+        request.lineItems.forEach((line, index) => {
+          form.set(`line_items[${index}][price_data][currency]`, request.currency);
+          form.set(`line_items[${index}][price_data][product_data][name]`, line.description);
+          form.set(`line_items[${index}][price_data][unit_amount]`, String(line.unitAmountCents));
+          form.set(`line_items[${index}][quantity]`, String(line.quantity));
         });
         if (request.promotionCode) {
           form.set("discounts[0][promotion_code]", request.promotionCode);

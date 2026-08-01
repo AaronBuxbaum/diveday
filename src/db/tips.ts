@@ -256,9 +256,13 @@ export async function startTipCheckout(
     const session = await checkout.createCheckoutSession({
       stripeAccountId,
       currency,
-      description: stripeLineDescription(input.lineDescription),
-      unitAmountCents: input.amountCents,
-      quantity: 1,
+      lineItems: [
+        {
+          description: stripeLineDescription(input.lineDescription),
+          unitAmountCents: input.amountCents,
+          quantity: 1,
+        },
+      ],
       customerEmail,
       successUrl: input.successUrl,
       cancelUrl: input.cancelUrl,

@@ -29,6 +29,15 @@ export type StartCheckoutInput = {
   successUrl: string;
   cancelUrl: string;
   /**
+   * Priced rental gear a diver chose at booking, one entry per booking that
+   * has any (docs ADR 20260801-checkout-upsells-rental-gear). Each becomes its
+   * own single-quantity Stripe line alongside the trip-fee line, and is always
+   * charged in full — the trip's deposit policy applies only to the trip fee.
+   * A bookingId outside `bookingIds`, or a non-positive amount, is dropped
+   * rather than trusted.
+   */
+  gearLines?: Array<{ bookingId: string; description: string; amountCents: number }>;
+  /**
    * A Stripe `PromotionCode` id, already resolved and scope-checked by the
    * caller — `getActiveTripPromoByCode` (src/db/trip-promos.ts) for a
    * trip-scoped last-minute deal, or `getRedeemableShopPromo`
@@ -120,6 +129,16 @@ export async function startBookingCheckout(
     );
   if (bookingRows.length !== input.bookingIds.length) return { ok: false, reason: "invalid" };
 
+  // Never trust a gear line for a booking outside this exact party, or a
+  // non-positive amount — the caller composes these from a diver's own
+  // checkbox selections, but this is the boundary that actually charges money.
+  const validBookingIds = new Set(input.bookingIds);
+  const gearLines = (input.gearLines ?? []).filter(
+    (line) => validBookingIds.has(line.bookingId) && line.amountCents > 0,
+  );
+  const gearCentsByBooking = new Map(gearLines.map((line) => [line.bookingId, line.amountCents]));
+  const gearTotalCents = gearLines.reduce((sum, line) => sum + line.amountCents, 0);
+
   const existing = await latestCheckoutForBookingIds(db, input.shopId, input.bookingIds);
   if (
     existing?.status === "pending" &&
@@ -158,14 +177,26 @@ export async function startBookingCheckout(
     const session = await checkout.createCheckoutSession({
       stripeAccountId,
       currency,
-      // A deposit is labelled as one on the hosted page so the diver knows a
-      // balance is still due, not that this is the whole fare — but the words
-      // come from the caller's message bundle, not from here.
-      description: stripeLineDescription(
-        input.describeLine({ isDeposit: charge.isDeposit, tripTitle: tripRow.trip.title }),
-      ),
-      unitAmountCents: amountPerDiverCents,
-      quantity: input.bookingIds.length,
+      lineItems: [
+        {
+          // A deposit is labelled as one on the hosted page so the diver knows
+          // a balance is still due, not that this is the whole fare — but the
+          // words come from the caller's message bundle, not from here.
+          description: stripeLineDescription(
+            input.describeLine({ isDeposit: charge.isDeposit, tripTitle: tripRow.trip.title }),
+          ),
+          unitAmountCents: amountPerDiverCents,
+          quantity: input.bookingIds.length,
+        },
+        // One single-quantity line per diver's priced gear, always charged in
+        // full — a deposit only ever discounts the trip fee above (docs ADR
+        // 20260801-checkout-upsells-rental-gear).
+        ...gearLines.map((line) => ({
+          description: stripeLineDescription(line.description),
+          unitAmountCents: line.amountCents,
+          quantity: 1,
+        })),
+      ],
       customerEmail: input.customerEmail,
       successUrl: input.successUrl,
       cancelUrl: input.cancelUrl,
@@ -205,7 +236,7 @@ export async function startBookingCheckout(
           // (docs ADR 20260731-shop-currency).
           currency,
           amountPerDiverCents,
-          totalCents: amountPerDiverCents * input.bookingIds.length,
+          totalCents: amountPerDiverCents * input.bookingIds.length + gearTotalCents,
           isDeposit: charge.isDeposit,
           expiresAt: session.expiresAt,
           promoCodeId: input.shopPromo?.id ?? null,
@@ -218,6 +249,7 @@ export async function startBookingCheckout(
           shopId: input.shopId,
           checkoutId: row.id,
           bookingId,
+          gearCents: gearCentsByBooking.get(bookingId) ?? 0,
         })),
       );
       return row;

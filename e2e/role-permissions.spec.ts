@@ -23,7 +23,7 @@ async function firstDiverDetailHref(page: import("@playwright/test").Page): Prom
 async function firstTripManageHref(page: import("@playwright/test").Page): Promise<string> {
   // Signed-in staff see the schedule's cards link straight to trip management.
   // Exclude the "Schedule a trip" CTA (/trips/new) — we want a real trip's id.
-  await page.goto(`/shop/${SHOP}/schedule`);
+  await page.goto(`/shop/${SHOP}/schedule/board`);
   const href = await page
     .locator(`a[href^="/shop/${SHOP}/trips/"]:not([href="/shop/${SHOP}/trips/new"])`)
     .first()

@@ -8,9 +8,7 @@ function providerWith(env: Record<string, string | undefined>, fetchImpl: unknow
 const request = {
   stripeAccountId: "acct_123",
   currency: "usd",
-  description: "Two-tank charter",
-  unitAmountCents: 18_000,
-  quantity: 2,
+  lineItems: [{ description: "Two-tank charter", unitAmountCents: 18_000, quantity: 2 }],
   customerEmail: "diver@example.com",
   successUrl: "https://diveday.example/shop/reef/schedule/t1?booking=b1",
   cancelUrl: "https://diveday.example/shop/reef/schedule/t1?booking=b1&pay=cancelled",
@@ -64,6 +62,43 @@ describe("stripe checkout provider", () => {
     expect(form.get("customer_email")).toBe("diver@example.com");
     expect(form.get("success_url")).toBe(request.successUrl);
     expect(form.get("cancel_url")).toBe(request.cancelUrl);
+  });
+
+  it("creates one Stripe line item per entry in lineItems", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(
+      ok({
+        id: "cs_2",
+        status: "open",
+        payment_status: "unpaid",
+        url: "https://checkout.stripe.com/c/pay/cs_2",
+        amount_total: 42_000,
+        expires_at: 1_790_000_000,
+      }),
+    );
+    const provider = providerWith({ STRIPE_SECRET_KEY: "sk_test" }, fetchImpl);
+    await provider.createCheckoutSession({
+      ...request,
+      lineItems: [
+        { description: "Two-tank charter", unitAmountCents: 18_000, quantity: 2 },
+        { description: "Rental gear — Dana", unitAmountCents: 6_000, quantity: 1 },
+      ],
+    });
+    const form = new URLSearchParams(fetchImpl.mock.calls[0][1].body);
+    expect(form.get("line_items[0][price_data][unit_amount]")).toBe("18000");
+    expect(form.get("line_items[0][quantity]")).toBe("2");
+    expect(form.get("line_items[0][price_data][product_data][name]")).toBe("Two-tank charter");
+    expect(form.get("line_items[1][price_data][unit_amount]")).toBe("6000");
+    expect(form.get("line_items[1][quantity]")).toBe("1");
+    expect(form.get("line_items[1][price_data][product_data][name]")).toBe("Rental gear — Dana");
+  });
+
+  it("fails without calling Stripe when lineItems is empty", async () => {
+    const fetchImpl = vi.fn();
+    const provider = providerWith({ STRIPE_SECRET_KEY: "sk_test" }, fetchImpl);
+    expect(await provider.createCheckoutSession({ ...request, lineItems: [] })).toEqual({
+      status: "failed",
+    });
+    expect(fetchImpl).not.toHaveBeenCalled();
   });
 
   it("applies a promotion code as a Checkout discount when one is validated", async () => {

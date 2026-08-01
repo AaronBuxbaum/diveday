@@ -1,7 +1,8 @@
 // @vitest-environment node
+import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
-import { shops } from "./schema";
+import { people, shops } from "./schema";
 import {
   getTripRoster,
   getTripWaitlist,
@@ -121,6 +122,30 @@ describe("inviteWaitlistDiver", () => {
       (row) => row.entry.id === joined.entryId,
     );
     expect(entry?.entry.invitedAt?.toISOString()).toBe(now.toISOString());
+  });
+
+  it("reports opted_out and skips the send for a diver who self-served out of courtesy email", async () => {
+    // Leo — self-serve email unsubscribe: `waitlist_invite` is one of the two
+    // kinds `people.courtesyEmailOptOutAt` governs, so an opted-out diver
+    // still gets stamped invited (their held seat is real) but the composer
+    // fallback stands in for the automated email that never goes out.
+    const { db, shop, fullTrip } = await seededContext();
+    const joined = await joinTripWaitlist(db, { shopId: shop.id, tripId: fullTrip.id, ...visitor });
+    if (!joined.ok) throw new Error(`join failed: ${joined.reason}`);
+    await db
+      .update(people)
+      .set({ courtesyEmailOptOutAt: new Date("2026-07-20T00:00:00.000Z") })
+      .where(eq(people.email, visitor.email));
+
+    const now = new Date("2026-07-21T10:00:00.000Z");
+    const result = await inviteWaitlistDiver(db, {
+      shopId: shop.id,
+      shopSlug: "blue-mantis",
+      entryId: joined.entryId,
+      now,
+    });
+
+    expect(result).toEqual({ ok: true, delivery: "opted_out", invitedAt: now });
   });
 
   it("does not stamp or invite an entry from another shop", async () => {

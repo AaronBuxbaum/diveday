@@ -20,6 +20,7 @@ import {
   orders,
   paymentOperationIntents,
   people,
+  personCourtesyEmailUnsubscribeTokens,
   personRoles,
   shopStripeAccounts,
   shops,
@@ -222,6 +223,35 @@ describe("resetDemoSchedule", () => {
         .select()
         .from(lastMinuteListUnsubscribeTokens)
         .where(eq(lastMinuteListUnsubscribeTokens.shopId, shop.id)),
+    ).toHaveLength(0);
+  });
+
+  /**
+   * The exact same class of regression as the last-minute unsubscribe token
+   * test above, this time for the courtesy-email unsubscribe token that
+   * shipped with Leo's general self-serve unsubscribe (story-backlog task
+   * 122): `person_courtesy_email_unsubscribe_tokens` references `people`
+   * directly, so it must be cleared before the people delete or this
+   * FK-violates and aborts the reset mid-run.
+   */
+  it("clears courtesy-email unsubscribe tokens instead of FK-violating on their person", async () => {
+    const { db, shop } = await seededShopContext();
+    const [person] = await db.select().from(people).where(eq(people.shopId, shop.id)).limit(1);
+    if (!person) throw new Error("test setup: seeded shop has no people");
+    await db.insert(personCourtesyEmailUnsubscribeTokens).values({
+      shopId: shop.id,
+      personId: person.id,
+      tokenHash: `hash_${person.id}`,
+    });
+
+    // Resolving rather than throwing is the whole assertion.
+    await expect(resetDemoSchedule(db, shop.id)).resolves.toBeUndefined();
+
+    expect(
+      await db
+        .select()
+        .from(personCourtesyEmailUnsubscribeTokens)
+        .where(eq(personCourtesyEmailUnsubscribeTokens.shopId, shop.id)),
     ).toHaveLength(0);
   });
 

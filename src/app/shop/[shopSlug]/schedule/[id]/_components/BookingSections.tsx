@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { useActionState, useState } from "react";
+import { useActionState, useCallback, useState } from "react";
 import { BookingPartyFields } from "@/components/BookingPartyFields";
 import { ShopNotice } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -10,8 +10,10 @@ import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { formatMoneyCents } from "@/lib/format";
 import type { ShopCurrency } from "@/lib/money";
+import { hasAnyRentalPricing, type RentalPricing } from "@/lib/rentals";
 import { capacityLabel } from "@/lib/trips";
 import { type BookingFormState, bookSpot, joinWaitlist, type TripRef } from "../actions";
+import { BookingGearFields } from "./BookingGearFields";
 import type { Trip } from "./types";
 
 function ErrorNotice({ message }: { message?: string }) {
@@ -200,6 +202,9 @@ export function TripFullSection({
 
 const INITIAL_BOOKING_STATE: BookingFormState = {};
 
+/** Stable per-slot keys for the gear fieldsets — mirrors `BookingPartyFields`'s `diverSlots`. */
+const GEAR_SLOTS = ["gear-one", "gear-two", "gear-three", "gear-four", "gear-five", "gear-six"];
+
 export function BookSpotSection({
   trip,
   tripRef,
@@ -211,6 +216,8 @@ export function BookSpotSection({
   locale,
   contactEmail,
   contactPhone,
+  rentalItems,
+  rentalPricing,
 }: {
   trip: Trip;
   tripRef: TripRef;
@@ -223,6 +230,9 @@ export function BookSpotSection({
   locale: string;
   contactEmail?: string | null;
   contactPhone?: string | null;
+  /** The shop's rental catalog and price list — a gear step only renders when both offer something priced. */
+  rentalItems: string[];
+  rentalPricing: RentalPricing;
 }) {
   const t = useTranslations("booking");
   const tRoot = useTranslations();
@@ -232,6 +242,25 @@ export function BookSpotSection({
   // grows past one — `BookingPartyFields` owns the size selector, so it
   // reports changes back up rather than this section duplicating that state.
   const [partySize, setPartySize] = useState(1);
+  // Per-diver gear subtotal, reported up by each `BookingGearFields` slot
+  // (docs ADR 20260801-checkout-upsells-rental-gear) — summed into the running
+  // total below so "3 divers × $120" becomes accurate once gear is added.
+  const [gearSubtotals, setGearSubtotals] = useState<Record<number, number>>({});
+  const onGearSubtotalChange = useCallback((index: number, cents: number) => {
+    setGearSubtotals((current) =>
+      current[index] === cents ? current : { ...current, [index]: cents },
+    );
+  }, []);
+  const showGearFields = payAtBooking && hasAnyRentalPricing(rentalPricing);
+  // Shrinking the party leaves a stale subtotal behind for the dropped slot
+  // (BookingGearFields unmounts, but its last report stays in state) — sum
+  // only the indexes still in play.
+  const activeGearIndexes = new Set(Array.from({ length: partySize }, (_, index) => String(index)));
+  const gearTotalCents = showGearFields
+    ? Object.entries(gearSubtotals)
+        .filter(([index]) => activeGearIndexes.has(index))
+        .reduce((sum, [, cents]) => sum + cents, 0)
+    : 0;
   const bookLabel = payAtBooking
     ? remaining === 1
       ? t("bookAndPayLastSpot")
@@ -271,7 +300,27 @@ export function BookSpotSection({
           contactEmail={contactEmail}
           contactPhone={contactPhone}
         />
-        {partySize > 1 && perDiverPriceCents ? (
+        {showGearFields
+          ? Array.from({ length: partySize }, (_, index) => (
+              <BookingGearFields
+                key={GEAR_SLOTS[index]}
+                index={index}
+                showDiverLabel={partySize > 1}
+                rentalItems={rentalItems}
+                pricing={rentalPricing}
+                plannedDives={trip.plannedDives}
+                currency={currency}
+                onSubtotalChange={onGearSubtotalChange}
+              />
+            ))
+          : null}
+        {perDiverPriceCents && gearTotalCents > 0 ? (
+          <p className="-mt-2 text-sm font-medium tabular-nums">
+            {t("totalDueAtCheckout", {
+              total: money(partySize * perDiverPriceCents + gearTotalCents),
+            })}
+          </p>
+        ) : partySize > 1 && perDiverPriceCents ? (
           <p className="-mt-2 text-sm font-medium tabular-nums">
             {t("partyTotal", {
               count: partySize,

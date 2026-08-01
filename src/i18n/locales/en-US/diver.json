@@ -160,6 +160,7 @@
     "promoLabel": "Promo code",
     "promoHint": "(if you have one)",
     "partyTotal": "{count, plural, one {# diver} other {# divers}} × {price} = {total}",
+    "totalDueAtCheckout": "Total due at checkout, gear included: {total}",
     "stripeHint": "You'll finish paying on a secure Stripe page.",
     "ageAttestation": "I confirm every diver on this booking meets the minimum age of {age}.",
     "cancelledHeading": "This trip was cancelled",
@@ -230,6 +231,12 @@
       "promoInvalid": "That code isn't active."
     }
   },
+  "bookingGear": {
+    "heading": "Rental gear",
+    "introBody": "Add what you need and we'll charge it together with your booking. You can fine-tune exact sizes after booking.",
+    "diverNHeading": "Diver {number}'s gear",
+    "gearTotal": "Gear for this diver: {price}"
+  },
   "lastMinute": {
     "heading": "Want a deal on a last-minute spot?",
     "body": "Tell us when you’re around and we’ll email you if a boat needs to fill seats at a discount.",
@@ -255,6 +262,16 @@
       "unavailableTitle": "This link isn't available",
       "unavailableText": "It may be from a shop that's no longer active. If you're still getting emails you don't want, reply to one and ask the shop directly."
     }
+  },
+  "courtesyEmailUnsubscribe": {
+    "title": "Stop these emails?",
+    "description": "You're on {shopName}'s list for wait-list openings and post-trip recaps. Tap below and we'll stop sending them — you'll still get emails about your own bookings, waivers, and trip updates.",
+    "submit": "Stop these emails",
+    "submitting": "Stopping…",
+    "confirmedTitle": "You're unsubscribed",
+    "confirmedText": "You won't get wait-list or recap emails from {shopName} anymore. You'll still get emails about your own bookings, waivers, and trip updates.",
+    "unavailableTitle": "This link isn't available",
+    "unavailableText": "It may be from a shop that's no longer active. If you're still getting emails you don't want, reply to one and ask the shop directly."
   },
   "course": {
     "hidden": "Hidden — divers cannot see this page.",
@@ -561,6 +578,8 @@
   "checkoutLine": {
     "deposit": "Deposit — {tripTitle}",
     "full": "{tripTitle}",
+    "gear": "Rental gear",
+    "gearForDiver": "Rental gear — {name}",
     "tip": "Tip for the crew"
   },
   "capability": {
@@ -1355,7 +1374,8 @@
       "trackWhatsLeft": "Track what's left before you sail",
       "seeWhatsLeft": "See what's left before you sail",
       "outstandingHeading": "Still to sort before you board:",
-      "medicalReviewNote": "Check whether a medical answer needs a doctor's sign-off before you travel"
+      "medicalReviewNote": "Check whether a medical answer needs a doctor's sign-off before you travel",
+      "courtesyUnsubscribe": "Stop wait-list and recap emails from {shopName}"
     },
     "tripConditionsHold": {
       "subject": "Conditions hold — {tripTitle}",
