@@ -2,6 +2,7 @@ import { z } from "zod";
 import { DIVER_LOCALES, type DiverLocale, isDiverLocale, toDiverLocale } from "@/i18n/settings";
 import { nowMs } from "@/lib/clock";
 import { COURSE_INQUIRY_EXPERIENCE } from "@/lib/course-inquiry";
+import { log } from "@/lib/log";
 import { REMINDER_ACTION_CODES } from "@/lib/readiness-summary";
 import {
   bookingConfirmationEmail,
@@ -725,7 +726,7 @@ export function resendNotificationProvider(
         },
       );
       if (!result.ok) {
-        console.warn("Resend email request failed", {
+        log("notification.resend_send_failed", "warn", {
           httpStatus: result.httpStatus,
           errorCode: result.errorCode,
           retryAfterMs: result.retryAfterMs,
@@ -768,7 +769,7 @@ export function resendNotificationProvider(
         messages,
       );
       if (!result.ok) {
-        console.warn("Resend batch request failed", {
+        log("notification.resend_batch_send_failed", "warn", {
           count: notifications.length,
           httpStatus: result.httpStatus,
           errorCode: result.errorCode,

@@ -1,5 +1,5 @@
 import { createHmac } from "node:crypto";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { nowMs } from "@/lib/clock";
 
 vi.mock("@/db/client", async (importOriginal) => {
@@ -117,5 +117,74 @@ describe("resend webhook route — delivery events", () => {
     );
     expect(response.status).toBe(200);
     expect(applyProviderEmailEvent).not.toHaveBeenCalled();
+  });
+});
+
+describe("resend webhook route — structured logging", () => {
+  beforeEach(() => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.mocked(console.log).mockRestore();
+    vi.mocked(console.warn).mockRestore();
+  });
+
+  it("logs an applied delivery at info level", async () => {
+    vi.mocked(applyProviderEmailEvent).mockResolvedValue("applied");
+    await POST(
+      webhookRequest({
+        type: "email.delivered",
+        data: { email_id: "em_applied" },
+      }),
+    );
+
+    expect(console.log).toHaveBeenCalledTimes(1);
+    const line = JSON.parse(vi.mocked(console.log).mock.calls[0]?.[0] as string);
+    expect(line).toEqual(
+      expect.objectContaining({
+        event: "resend_webhook.delivery_applied",
+        providerMessageId: "em_applied",
+        status: "delivered",
+        result: "applied",
+      }),
+    );
+  });
+
+  it("logs an unknown_message delivery at warn level, not info", async () => {
+    vi.mocked(applyProviderEmailEvent).mockResolvedValue("unknown_message");
+    await POST(
+      webhookRequest({
+        type: "email.delivered",
+        data: { email_id: "em_unknown" },
+      }),
+    );
+
+    expect(console.warn).toHaveBeenCalledTimes(1);
+    expect(console.log).not.toHaveBeenCalled();
+    const line = JSON.parse(vi.mocked(console.warn).mock.calls[0]?.[0] as string);
+    expect(line).toEqual(
+      expect.objectContaining({
+        event: "resend_webhook.delivery_applied",
+        result: "unknown_message",
+      }),
+    );
+  });
+
+  it("logs a stale delivery at warn level", async () => {
+    vi.mocked(applyProviderEmailEvent).mockResolvedValue("stale");
+    await POST(
+      webhookRequest({
+        type: "email.bounced",
+        data: { email_id: "em_stale" },
+      }),
+    );
+
+    expect(console.warn).toHaveBeenCalledTimes(1);
+    const line = JSON.parse(vi.mocked(console.warn).mock.calls[0]?.[0] as string);
+    expect(line).toEqual(
+      expect.objectContaining({ event: "resend_webhook.delivery_applied", result: "stale" }),
+    );
   });
 });

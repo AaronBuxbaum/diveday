@@ -1,6 +1,7 @@
 import { and, desc, eq, inArray, ne } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { checkoutCharge } from "@/lib/deposits";
+import { log } from "@/lib/log";
 import {
   type CheckoutProvider,
   checkoutProviderFromEnvironment,
@@ -346,7 +347,7 @@ export async function markCheckoutPaidBySessionId(
     // match alone. `expectedAccountId === undefined` opts out (tests, an
     // internal caller with no event to cross-check).
     if (expectedAccountId !== undefined && expectedAccountId !== checkout.stripeAccountId) {
-      console.error("markCheckoutPaidBySessionId: refused an account mismatch", {
+      log("checkout.paid_account_mismatch", "error", {
         checkoutId: checkout.id,
         shopId: checkout.shopId,
         expectedAccountId,
@@ -372,14 +373,12 @@ export async function markCheckoutPaidBySessionId(
     // run (checkout marked completed, but the payment write below never
     // landed) still needs to fall through and repair it below.
     if (checkout.status !== "pending" && checkout.status !== "completed") {
-      console.error(
-        "markCheckoutPaidBySessionId: ignored a completion for a disqualified checkout",
-        {
-          shopId: checkout.shopId,
-          stripeSessionId: checkout.stripeSessionId,
-          localStatus: checkout.status,
-        },
-      );
+      log("checkout.paid_disqualified", "error", {
+        shopId: checkout.shopId,
+        checkoutId: checkout.id,
+        stripeSessionId: checkout.stripeSessionId,
+        localStatus: checkout.status,
+      });
       return null;
     }
 
