@@ -10,8 +10,11 @@ test.describe("demo billing history", () => {
   signedInAsOwner();
 
   test("a paid demo order's refund control is disabled with a reason", async ({ page }) => {
-    // A seeded historical diver with a paid invoice on file.
+    // A seeded historical diver with a paid invoice on file. The extended
+    // roster is well past one default page, sorted alphabetically — search
+    // for her rather than assume she's on the unfiltered first page.
     await page.goto("/shop/blue-mantis/divers");
+    await page.getByRole("searchbox", { name: "Search divers" }).fill("Grace Halloran");
     await page
       .getByRole("row")
       .filter({ hasText: "Grace Halloran" })

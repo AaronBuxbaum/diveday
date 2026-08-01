@@ -187,7 +187,7 @@ export async function restoreDiver(db: AppDb, shopId: string, personId: string) 
   }
 }
 
-export const DIVER_PAGE_SIZE = 50;
+export const DIVER_PAGE_SIZE = 20;
 
 /**
  * The diver roster stays server-fed: search is indexed `ilike` over the

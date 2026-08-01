@@ -4,6 +4,7 @@ import { z } from "zod";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
+import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { canPersonDeleteDiver } from "@/db/authz";
@@ -43,7 +44,8 @@ export default async function DiversPage({
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) return null;
-  const t = staffTranslator(await requestLocale(shop.defaultLocale));
+  const locale = await requestLocale(shop.defaultLocale);
+  const t = staffTranslator(locale);
   const query = q?.trim() ?? "";
   const filter = isDiverFilter(filterParam) ? filterParam : "all";
   const diverPage = await listDiverSummaries(db, shop.id, { query, cursor: after, filter });
@@ -110,10 +112,17 @@ export default async function DiversPage({
         title={t("divers.page.title")}
         description={t("divers.page.description")}
         meta={
-          <span className="text-sm text-muted">
-            {query
-              ? t("divers.page.matchingCount", { count: diverPage.total })
-              : t("divers.page.onFileCount", { count: diverPage.total })}
+          <span className="inline-flex items-center">
+            <span aria-hidden="true">
+              <Badge tone="primary" tabularNums>
+                {diverPage.total}
+              </Badge>
+            </span>
+            <span className="sr-only">
+              {query
+                ? t("divers.page.matchingCount", { count: diverPage.total })
+                : t("divers.page.onFileCount", { count: diverPage.total })}
+            </span>
           </span>
         }
       />
@@ -176,6 +185,7 @@ export default async function DiversPage({
         query={query}
         filter={filter}
         cursorActive={Boolean(after)}
+        locale={locale}
         copy={{
           viewAllDivers: t("divers.list.viewAllDivers"),
           viewMissingContact: t("divers.list.viewMissingContact"),
@@ -185,8 +195,6 @@ export default async function DiversPage({
           removeSavedViewAriaLabel: t("divers.list.removeSavedViewAriaLabel"),
           saveThisView: t("divers.list.saveThisView"),
           peopleHeading: t("divers.list.peopleHeading"),
-          matchesText: t("divers.list.matchesText"),
-          onFileShowingText: t("divers.list.onFileShowingText"),
           searchHintText: t("divers.list.searchHintText"),
           searchDiversLabel: t("divers.list.searchDiversLabel"),
           searchPlaceholder: t("divers.list.searchPlaceholder"),
@@ -195,15 +203,13 @@ export default async function DiversPage({
           tryDifferentSearch: t("divers.list.tryDifferentSearch"),
           addOneHere: t("divers.list.addOneHere"),
           noContactDetails: t("divers.list.noContactDetails"),
-          cardCountText: t("divers.list.cardCountText"),
-          fitSaved: t("divers.list.fitSaved"),
-          noFitOnFile: t("divers.list.noFitOnFile"),
+          cardCountOne: t("divers.list.cardCountOne"),
+          cardCountOther: t("divers.list.cardCountOther"),
           pendingReviewText: t("divers.list.pendingReviewText"),
           toConfirmText: t("divers.list.toConfirmText"),
           noneText: t("divers.list.noneText"),
           tableHeaderPerson: t("divers.list.tableHeaderPerson"),
           tableHeaderCards: t("divers.list.tableHeaderCards"),
-          tableHeaderRentalFit: t("divers.list.tableHeaderRentalFit"),
           tableHeaderAttention: t("divers.list.tableHeaderAttention"),
           showMoreDivers: t("divers.list.showMoreDivers"),
           backToTop: t("divers.list.backToTop"),

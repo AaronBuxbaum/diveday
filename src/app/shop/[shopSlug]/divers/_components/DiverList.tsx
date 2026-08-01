@@ -8,16 +8,18 @@ import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass } from "@/components/ui/form";
 import type { DiverFilter, listDiverSummaries } from "@/db/divers";
+import { fill, pluralForm } from "@/i18n/fill";
 
 type DiverPage = Awaited<ReturnType<typeof listDiverSummaries>>;
 type DiverSummary = DiverPage["divers"][number];
 
 /**
- * Every value is a plain string (or, for count-driven text, an ICU-style
- * template substituted locally by `fill()`) — never a function. This is a
- * client component with its own client-side-only state (search text, saved
- * views), so the translated copy is fully resolved server-side and handed
- * down as plain data; no translator ever crosses the Server->Client boundary.
+ * Every value is a plain string — never a function. This is a client
+ * component with its own client-side-only state (search text, saved views),
+ * so the translated copy is fully resolved server-side and handed down as
+ * plain data; no translator ever crosses the Server->Client boundary.
+ * Count-driven text is a translated `{ one, other }` pair, picked and filled
+ * at render time via `pluralForm()`/`fill()` (`@/i18n/fill`).
  */
 export interface DiverListCopy {
   viewAllDivers: string;
@@ -28,8 +30,6 @@ export interface DiverListCopy {
   removeSavedViewAriaLabel: string;
   saveThisView: string;
   peopleHeading: string;
-  matchesText: string;
-  onFileShowingText: string;
   searchHintText: string;
   searchDiversLabel: string;
   searchPlaceholder: string;
@@ -38,25 +38,16 @@ export interface DiverListCopy {
   tryDifferentSearch: string;
   addOneHere: string;
   noContactDetails: string;
-  cardCountText: string;
-  fitSaved: string;
-  noFitOnFile: string;
+  cardCountOne: string;
+  cardCountOther: string;
   pendingReviewText: string;
   toConfirmText: string;
   noneText: string;
   tableHeaderPerson: string;
   tableHeaderCards: string;
-  tableHeaderRentalFit: string;
   tableHeaderAttention: string;
   showMoreDivers: string;
   backToTop: string;
-}
-
-/** One-level `{token}` substitution — not a translator, just string.replace. */
-function fill(template: string, values: Record<string, string | number>): string {
-  return template.replace(/\{(\w+)\}/g, (match, key) =>
-    key in values ? String(values[key]) : match,
-  );
 }
 
 /** A staffer's own pinned view — a name over a search + filter, stored per shop. */
@@ -111,6 +102,7 @@ export function DiverList({
   query,
   filter,
   cursorActive,
+  locale,
   copy,
 }: {
   page: DiverPage;
@@ -118,8 +110,13 @@ export function DiverList({
   query: string;
   filter: DiverFilter;
   cursorActive: boolean;
+  locale: string;
   copy: DiverListCopy;
 }) {
+  const cardCountText = (count: number) =>
+    fill(pluralForm(count, { one: copy.cardCountOne, other: copy.cardCountOther }, locale), {
+      count,
+    });
   const BUILT_IN_VIEWS: { label: string; filter: DiverFilter }[] = [
     { label: copy.viewAllDivers, filter: "all" },
     { label: copy.viewMissingContact, filter: "missing_contact" },
@@ -171,7 +168,7 @@ export function DiverList({
     setSavedViews(next);
   };
 
-  const { divers, nextCursor, total } = page;
+  const { divers, nextCursor } = page;
   const nextHref = nextCursor ? hrefFor(query, filter, nextCursor) : null;
   const topHref = hrefFor(query, filter);
   const chipClass = (active: boolean) =>
@@ -229,13 +226,7 @@ export function DiverList({
           <h2 id="diver-list-heading" className="text-lg font-semibold">
             {copy.peopleHeading}
           </h2>
-          <p className="mt-1 text-sm text-muted">
-            {query
-              ? fill(copy.matchesText, { count: total })
-              : total > divers.length || cursorActive
-                ? fill(copy.onFileShowingText, { total, shown: divers.length })
-                : copy.searchHintText}
-          </p>
+          {query ? null : <p className="mt-1 text-sm text-muted">{copy.searchHintText}</p>}
         </div>
         <div className="w-full sm:w-80">
           <label className="sr-only" htmlFor="diver-search">
@@ -286,11 +277,8 @@ export function DiverList({
                   </span>
                   <span className="mt-3 flex flex-wrap items-center gap-2 text-sm">
                     <Badge tone="primary" className="whitespace-nowrap">
-                      {fill(copy.cardCountText, { count: cardCount(diver) })}
+                      {cardCountText(cardCount(diver))}
                     </Badge>
-                    <span className="text-muted">
-                      {diver.rentalFit ? copy.fitSaved : copy.noFitOnFile}
-                    </span>
                     {pendingCount(diver) > 0 ? (
                       <Badge tone="warning">
                         {fill(copy.pendingReviewText, { count: pendingCount(diver) })}
@@ -315,9 +303,6 @@ export function DiverList({
                   </th>
                   <th scope="col" className="px-4 py-3 font-medium">
                     {copy.tableHeaderCards}
-                  </th>
-                  <th scope="col" className="px-4 py-3 font-medium">
-                    {copy.tableHeaderRentalFit}
                   </th>
                   <th scope="col" className="px-4 py-3 font-medium">
                     {copy.tableHeaderAttention}
@@ -359,11 +344,8 @@ export function DiverList({
                     </td>
                     <td className="px-4 py-3 text-sm">
                       <Badge tone="primary" className="whitespace-nowrap">
-                        {fill(copy.cardCountText, { count: cardCount(diver) })}
+                        {cardCountText(cardCount(diver))}
                       </Badge>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-muted">
-                      {diver.rentalFit ? copy.fitSaved : copy.noFitOnFile}
                     </td>
                     <td className="px-4 py-3 text-sm">
                       <div className="flex flex-wrap gap-2">
