@@ -45,7 +45,7 @@ export async function POST(request: Request) {
   // of which is an error response (Resend retries a non-2xx, and a message id
   // we never tracked or a delivery already superseded is not a fault of this
   // endpoint) but every one of which is worth a trace (docs product/
-  // assessments/specialist-optimization-audit-20260731.md §7).
+  // archive/specialist-optimization-audit-20260731.md §7).
   log("resend_webhook.delivery_applied", result === "applied" ? "info" : "warn", {
     providerMessageId: event.providerMessageId,
     status: event.status,

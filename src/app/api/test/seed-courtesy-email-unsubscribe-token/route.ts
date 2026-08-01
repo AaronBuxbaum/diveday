@@ -5,6 +5,7 @@ import { getDb } from "@/db/client";
 import { issuePersonCourtesyEmailUnsubscribeToken } from "@/db/courtesy-email";
 import { people } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
+import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
 
 /**
  * Mints a real, valid `person_courtesy_email_unsubscribe_tokens` row for an
@@ -23,10 +24,7 @@ const bodySchema = z.object({
 });
 
 export async function POST(request: Request) {
-  const hasRealDatabase = Boolean(process.env.DATABASE_URL);
-  const productionRuntime = process.env.NODE_ENV === "production";
-  const e2eHarness = process.env.DIVEDAY_E2E === "1";
-  if (hasRealDatabase || (productionRuntime && !e2eHarness)) {
+  if (!e2eTestRouteAuthorized(request)) {
     return NextResponse.json({ error: "not_available" }, { status: 404 });
   }
 

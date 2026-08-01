@@ -17,7 +17,10 @@ import { clientIp } from "@/lib/request-ip";
  */
 export async function confirmEmailVerification(token: string) {
   const ip = await clientIp();
-  if (!checkRateLimit(rateLimitKey("verify-token", ip), RATE_LIMITS.accountTokenAction).allowed) {
+  if (
+    !(await checkRateLimit(rateLimitKey("verify-token", ip), RATE_LIMITS.accountTokenAction))
+      .allowed
+  ) {
     redirect(`/verify/${token}`);
   }
   const db = await getDb();

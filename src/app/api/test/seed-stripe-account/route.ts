@@ -3,6 +3,7 @@ import { getDb } from "@/db/client";
 import { DEMO_SHOP_SLUG } from "@/db/dev-credentials";
 import { getShopBySlug } from "@/db/shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "@/db/stripe-accounts";
+import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
 
 /**
  * Marks the seeded demo shop as connected + charges-enabled, without ever
@@ -19,11 +20,8 @@ import { setShopStripeAccountStatus, upsertShopStripeAccount } from "@/db/stripe
  * Gated identically to /api/test/reset, so it can never be reachable in a
  * real deployment.
  */
-export async function POST() {
-  const hasRealDatabase = Boolean(process.env.DATABASE_URL);
-  const productionRuntime = process.env.NODE_ENV === "production";
-  const e2eHarness = process.env.DIVEDAY_E2E === "1";
-  if (hasRealDatabase || (productionRuntime && !e2eHarness)) {
+export async function POST(request: Request) {
+  if (!e2eTestRouteAuthorized(request)) {
     return NextResponse.json({ error: "not_available" }, { status: 404 });
   }
   const db = await getDb();

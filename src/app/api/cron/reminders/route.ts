@@ -71,7 +71,7 @@ export async function GET(request: Request) {
   const demoShops = await reapExpiredDemoShops(db, maxAgeMs ? { maxAgeMs } : {});
   // The only observability on the daily tick: one line per scan's own summary
   // counts, already computed above for the response body (docs product/
-  // assessments/specialist-optimization-audit-20260731.md §7).
+  // archive/specialist-optimization-audit-20260731.md §7).
   log("cron_reminders.scan_complete", "info", {
     notificationRetriesScanned: notificationRetries.scanned,
     notificationRetriesSent: notificationRetries.sent,

@@ -1,9 +1,15 @@
 import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
+import { securityHeaderRules } from "./src/lib/security-headers";
 
 const isE2EBuild = process.env.DIVEDAY_E2E === "1";
 
 const nextConfig: NextConfig = {
+  // Baseline security headers (specialist-optimization-audit-20260731.md §5)
+  // — see src/lib/security-headers.ts for the header set and rationale.
+  async headers() {
+    return securityHeaderRules();
+  },
   // PGlite ships WASM assets that must load from node_modules at runtime,
   // not be inlined into the server bundle (ADR-0005). node-postgres (pg)
   // dynamically requires optional native/cloud drivers it doesn't use here;

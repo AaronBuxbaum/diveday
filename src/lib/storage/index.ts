@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { z } from "zod";
 import { ALLOWED_IMAGE_CONTENT_TYPES, MAX_IMAGE_BYTES, PDF_CONTENT_TYPE } from "./limits";
 import { processImage } from "./process-image";
@@ -104,7 +105,7 @@ export function vercelBlobStorageProvider(
 ): ImageStorageProvider {
   return {
     async upload(input) {
-      const suffix = Math.random().toString(36).slice(2, 10);
+      const suffix = randomBytes(16).toString("base64url");
       const pathname = `${input.keyPrefix}/${suffix}-${safeName(input.filename)}`;
       try {
         const response = await fetchImpl(`https://blob.vercel-storage.com/${pathname}`, {

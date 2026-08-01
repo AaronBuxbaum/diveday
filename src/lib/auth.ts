@@ -28,11 +28,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const parsed = credentialsSchema.safeParse(credentials);
         if (!parsed.success) return null;
         const ip = await clientIp({ get: (name) => request.headers.get(name) });
-        const byIp = checkRateLimit(rateLimitKey("sign-in-ip", ip), RATE_LIMITS.signInByIp);
-        const byEmail = checkRateLimit(
-          rateLimitKey("sign-in-email", parsed.data.email.toLowerCase()),
-          RATE_LIMITS.signInByEmail,
-        );
+        const [byIp, byEmail] = await Promise.all([
+          checkRateLimit(rateLimitKey("sign-in-ip", ip), RATE_LIMITS.signInByIp),
+          checkRateLimit(
+            rateLimitKey("sign-in-email", parsed.data.email.toLowerCase()),
+            RATE_LIMITS.signInByEmail,
+          ),
+        ]);
         if (!byIp.allowed || !byEmail.allowed) {
           // Fire-and-forget: telemetry must never add latency to the sign-in
           // chokepoint, and trackEvent already swallows its own errors.

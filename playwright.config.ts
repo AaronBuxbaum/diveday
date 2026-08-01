@@ -2,6 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 import { chromiumLaunchOptions } from "./e2e/browser";
 import {
   E2E_FROZEN_CLOCK,
+  E2E_TEST_ROUTE_SECRET,
   E2E_WORKER_COUNT,
   e2eBaseURL,
   e2ePort,
@@ -21,6 +22,10 @@ process.env.AUTH_SECRET ??= "diveday-e2e-secret";
 //   - AUTH_TRUST_HOST lets Auth.js accept the loopback test host.
 //   - DIVEDAY_E2E re-opens /api/test/reset, which is otherwise closed in a
 //     production runtime (see src/app/api/test/reset/route.ts).
+//   - DIVEDAY_E2E_SECRET is the bearer token every /api/test/* route also
+//     requires (src/lib/e2e-test-routes.ts) — sent on every outgoing test
+//     request below via `use.extraHTTPHeaders` and global-setup.ts's own
+//     manual request context.
 const serverEnv = {
   ...process.env,
   APP_HOST: "",
@@ -28,6 +33,7 @@ const serverEnv = {
   DATABASE_URL_UNPOOLED: "",
   PGLITE_DATA_DIR: "memory",
   DIVEDAY_E2E: "1",
+  DIVEDAY_E2E_SECRET: E2E_TEST_ROUTE_SECRET,
   // Freeze the server clock so the clock-anchored seed and every relative
   // render resolve to one fixed instant on every run — the server half of what
   // keeps visual baselines stable (the browser half is the `context` init
@@ -93,6 +99,13 @@ export default defineConfig({
     // Which Chromium, and the flags that make it rasterize reproducibly — see
     // e2e/browser.ts for why each one is there and what it costs.
     launchOptions: chromiumLaunchOptions(),
+    // Every /api/test/* route now requires this bearer token in addition to
+    // its env-var predicate (src/lib/e2e-test-routes.ts). Setting it here
+    // once covers every spec's `request`/`context`/`page` fixture (including
+    // e2e/fixtures.ts's auto `demoReset` reset) without touching each call
+    // site; it's a harmless extra header on ordinary page navigations, which
+    // the app never reads outside these test-only routes.
+    extraHTTPHeaders: { authorization: `Bearer ${E2E_TEST_ROUTE_SECRET}` },
   },
   projects: [
     {

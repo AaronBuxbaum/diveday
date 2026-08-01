@@ -36,7 +36,8 @@ export async function joinLastMinuteListAction(
   const t = diverTranslator(await requestLocale());
   const ip = await clientIp();
   if (
-    !checkRateLimit(rateLimitKey("last-minute-list", ip), RATE_LIMITS.lastMinuteListJoin).allowed
+    !(await checkRateLimit(rateLimitKey("last-minute-list", ip), RATE_LIMITS.lastMinuteListJoin))
+      .allowed
   ) {
     return { error: t("common.rateLimited") };
   }

@@ -73,7 +73,7 @@ export async function enterDemoAction(formData?: FormData) {
   // Each demo mints a whole seeded shop, so throttle per IP — the reaper bounds
   // total growth, this bounds the burst one visitor can drive.
   const ip = await clientIp();
-  if (!checkRateLimit(rateLimitKey("demo-create", ip), RATE_LIMITS.demoCreate).allowed) {
+  if (!(await checkRateLimit(rateLimitKey("demo-create", ip), RATE_LIMITS.demoCreate)).allowed) {
     redirect("/sign-in?error=1");
   }
 

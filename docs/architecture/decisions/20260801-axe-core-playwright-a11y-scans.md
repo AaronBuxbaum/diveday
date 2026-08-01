@@ -5,7 +5,7 @@
 
 ## Context
 
-The specialist optimization audit's accessibility lens (`docs/product/assessments/specialist-optimization-audit-20260731.md`
+The specialist optimization audit's accessibility lens (`docs/product/archive/specialist-optimization-audit-20260731.md`
 §3) found that `e2e/` asserts behavior almost entirely through accessible roles and names — good
 practice, but nothing in the suite runs an automated accessibility scan, and only
 `keyboard-shortcuts.spec.ts` asserts any focus behavior. A missing label or a failing contrast
