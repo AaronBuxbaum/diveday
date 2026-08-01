@@ -76,6 +76,42 @@ export function utcToWallTime(date: Date, timeZone: string): WallTime {
   };
 }
 
+/**
+ * Adds `days` calendar days to a wall date, keeping hour/minute unchanged and
+ * rolling month/year over as needed. Pure calendar arithmetic — no timezone
+ * involved, since a `WallTime` is already a local wall-clock reading.
+ */
+export function addCalendarDays(wall: WallTime, days: number): WallTime {
+  const shifted = new Date(
+    Date.UTC(wall.year, wall.month - 1, wall.day + days, wall.hour, wall.minute),
+  );
+  return {
+    year: shifted.getUTCFullYear(),
+    month: shifted.getUTCMonth() + 1,
+    day: shifted.getUTCDate(),
+    hour: shifted.getUTCHours(),
+    minute: shifted.getUTCMinutes(),
+  };
+}
+
+/** Whole calendar days between two wall dates' date parts, ignoring time-of-day. */
+export function calendarDayDelta(from: WallTime, to: WallTime): number {
+  const fromUtc = Date.UTC(from.year, from.month - 1, from.day);
+  const toUtc = Date.UTC(to.year, to.month - 1, to.day);
+  return Math.round((toUtc - fromUtc) / 86_400_000);
+}
+
+/**
+ * Shifts a UTC instant by `days` calendar days while preserving its
+ * wall-clock time in `timeZone` — moving a multi-day trip by whole days
+ * without drifting its published times across a DST transition, unlike
+ * adding a fixed millisecond delta (which drifts by the DST offset change).
+ */
+export function shiftInstantByCalendarDays(date: Date, days: number, timeZone: string): Date {
+  if (days === 0) return date;
+  return wallTimeToUtc(addCalendarDays(utcToWallTime(date, timeZone), days), timeZone);
+}
+
 const pad = (n: number) => String(n).padStart(2, "0");
 
 /** "2026-07-18" — value for an HTML date input. */
