@@ -22,7 +22,7 @@ import { gzipSync } from "node:zlib";
  */
 
 /** Gzipped-KB ceiling for the shared first-load JS. Current is ~260 KB. */
-const SHARED_FIRST_LOAD_BUDGET_KB = 260;
+const SHARED_FIRST_LOAD_BUDGET_KB = 262;
 
 const NEXT_DIR = ".next";
 

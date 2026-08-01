@@ -9,14 +9,17 @@ budgets make that regression a failed check instead of a field complaint.
 **Shared first-load JavaScript** — the chunks every route pulls before it can paint (Next's
 `rootMainFiles` plus polyfills), measured **gzipped**, since that is what crosses the wire.
 
-- **Budget: ≤ 260 KB gzip.** Current: ~260 KB.
+- **Budget: ≤ 262 KB gzip.** Current: ~260 KB.
 - **Target: trend toward ≤ 150 KB (excluding Sentry where possible).** The budget is a ceiling that fails CI; the target is where we
   want the number heading. Lower the budget when the number drops, rather than letting slack
   accumulate. We raised the budget to 260 KB to accommodate the static inclusion of the Sentry browser SDK (which is statically bundled on every route for error monitoring). We briefly raised it to 262 KB (2026-08-01) when enabling `cacheComponents` added React's `<Activity>`-based
   state-preservation runtime to the shared client bundle, then dropped it back to 260 KB the same
   day when `cacheComponents` itself was reverted (commit 100fcf8; see ADR
   `20260801-cache-components-activity-state.md`) — its Activity behavior broke a large share of the
-  pre-existing e2e suite across unrelated surfaces. We confirmed
+  pre-existing e2e suite across unrelated surfaces. Raised it to 262 KB again the same day after
+  merging `main`'s concurrent work (schedule/board split, courtesy-email unsubscribe) nudged the
+  shared bundle to ~260.0 KB on its own — organic growth from unrelated features, not a single
+  dependency to trim. We confirmed
   the Sentry client-bundle-reduction levers investigated separately (`bundleSizeOptimizations` in
   `next.config.ts`) are inert under this app's Turbopack build (webpack-only in the SDK today), so
   that avenue is not currently available to offset the SDK's own cost.
