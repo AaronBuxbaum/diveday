@@ -60,7 +60,13 @@ test.describe("staff-prepared trips", () => {
     // selected, rather than assuming which trip sorts first.
     await expect(page.getByRole("heading", { name: "Need to change your plans?" })).toBeVisible();
     const select = page.locator("#newTripId").filter({ visible: true });
-    const options = select.locator("option").filter({ visible: true });
+    // Not `.filter({ visible: true })`: a closed <select>'s <option>s never
+    // get a layout box in Chromium, so Playwright never considers them
+    // "visible" — the filter would zero-match every option and hang. `select`
+    // above is already narrowed to exactly one (visible) <select>, so its
+    // <option> children can't ambiguously match a hidden Activity route's
+    // stale copy of this same #newTripId anyway.
+    const options = select.locator("option");
     await expect(options).not.toHaveCount(1); // more than just the placeholder
     await select.selectOption({ index: 1 });
     const selectedLabel = (await options.nth(1).innerText()).trim();
