@@ -1,8 +1,9 @@
 // @vitest-environment node
 import { and, eq } from "drizzle-orm";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
+import * as bookingCapabilitiesModule from "./booking-capabilities";
 import {
   cancelBooking,
   confirmBookingIdentity,
@@ -16,6 +17,7 @@ import type { AppDb } from "./client";
 import { createDiver } from "./divers";
 import { setBookingPayment } from "./payments";
 import {
+  bookingCapabilities,
   bookingCheckoutBookings,
   bookingCheckouts,
   bookings,
@@ -959,5 +961,63 @@ describe("rescheduleBooking (diver self-service, docs ADR 20260727-diver-self-se
     if (!result.ok) throw new Error("expected ok");
     const [newRow] = await db.select().from(bookings).where(eq(bookings.id, result.newBookingId));
     expect(newRow?.wantsNitrox).toBe(true);
+  });
+});
+
+describe("cancelBooking (staff cancellation runs status update + capability revoke atomically)", () => {
+  it("cancels the booking and revokes its outstanding capabilities together", async () => {
+    const { db, shop, open } = await seededContext();
+    const booked = await bookVisitor(db, shop.id, open.id);
+    if (!booked.ok) throw new Error("setup booking failed");
+    const issued = await bookingCapabilitiesModule.issueBookingCapability(db, {
+      shopId: shop.id,
+      bookingId: booked.bookingId,
+      purpose: "readiness",
+    });
+    if (!issued) throw new Error("setup capability failed");
+
+    await cancelBooking(db, shop.id, booked.bookingId);
+
+    const [row] = await db.select().from(bookings).where(eq(bookings.id, booked.bookingId));
+    expect(row?.status).toBe("cancelled");
+    const [capability] = await db
+      .select()
+      .from(bookingCapabilities)
+      .where(eq(bookingCapabilities.bookingId, booked.bookingId));
+    expect(capability?.revokedAt).not.toBeNull();
+  });
+
+  it("rolls the booking status back to booked when the capability revoke fails, instead of leaving it cancelled with live capabilities", async () => {
+    const { db, shop, open } = await seededContext();
+    const booked = await bookVisitor(db, shop.id, open.id);
+    if (!booked.ok) throw new Error("setup booking failed");
+    const issued = await bookingCapabilitiesModule.issueBookingCapability(db, {
+      shopId: shop.id,
+      bookingId: booked.bookingId,
+      purpose: "readiness",
+    });
+    if (!issued) throw new Error("setup capability failed");
+
+    const revokeSpy = vi
+      .spyOn(bookingCapabilitiesModule, "revokeBookingCapabilities")
+      .mockRejectedValueOnce(new Error("simulated revoke failure"));
+    try {
+      await expect(cancelBooking(db, shop.id, booked.bookingId)).rejects.toThrow(
+        "simulated revoke failure",
+      );
+    } finally {
+      revokeSpy.mockRestore();
+    }
+
+    // The failed revoke must have rolled the status write back too — an
+    // atomic cancelBooking never leaves the booking cancelled while its
+    // capabilities are still live.
+    const [row] = await db.select().from(bookings).where(eq(bookings.id, booked.bookingId));
+    expect(row?.status).toBe("booked");
+    const [capability] = await db
+      .select()
+      .from(bookingCapabilities)
+      .where(eq(bookingCapabilities.bookingId, booked.bookingId));
+    expect(capability?.revokedAt).toBeNull();
   });
 });
