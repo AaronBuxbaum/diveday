@@ -292,6 +292,7 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
     title: "Blue Mantis Diving Release",
     version: 1,
     body: DEFAULT_WAIVER_BODY,
+    createdAt: nowDate(),
   });
 
   const staffDefs = [
@@ -426,6 +427,7 @@ export async function createDemoShop(
     title: DEFAULT_WAIVER_TITLE,
     version: 1,
     body: DEFAULT_WAIVER_BODY,
+    createdAt: nowDate(),
   });
 
   const staffDefs = [
@@ -4242,6 +4244,7 @@ export async function resetDemoSchedule(
     title: existingWaiver?.title ?? DEFAULT_WAIVER_TITLE,
     version: 1,
     body: DEFAULT_WAIVER_BODY,
+    createdAt: nowDate(),
   });
 
   await seedDemoSchedule(db, shopId, { history: opts.history === true });
