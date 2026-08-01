@@ -70,6 +70,32 @@ test.describe("schedule builder", () => {
     }
   });
 
+  test("opening and cancelling the add/move panels manages keyboard focus", async ({ page }) => {
+    await page.goto(BOARD);
+    await expect(page.getByRole("heading", { name: "The board" })).toBeVisible();
+
+    // Opening the top "Add a departure" panel moves focus straight into its
+    // first field, rather than leaving a keyboard user on the button that
+    // just revealed a form below it.
+    const addToggle = page.getByRole("button", { name: "Add a departure", exact: true });
+    await addToggle.click();
+    await expect(page.getByLabel("What is it")).toBeFocused();
+
+    // Cancelling hands focus back to the toggle that opened the panel, not
+    // to <body>.
+    await page.getByRole("button", { name: "Cancel" }).click();
+    await expect(page.getByLabel("What is it")).not.toBeVisible();
+    await expect(addToggle).toBeFocused();
+
+    // Same contract for a row's Move panel.
+    const moveToggle = control(page, "Move", "Two-Tank Reef — Molasses & French");
+    await moveToggle.click();
+    await expect(page.getByLabel("New date")).toBeFocused();
+    await page.getByRole("button", { name: "Cancel" }).click();
+    await expect(page.getByLabel("New date")).not.toBeVisible();
+    await expect(moveToggle).toBeFocused();
+  });
+
   test("a departure divers have booked refuses to be deleted and says why", async ({ page }) => {
     await page.goto(BOARD);
 

@@ -15,7 +15,7 @@ export const areas = {
   waivers: {
     goal: "Extend the waiver flow without weakening its immutable signed history or fail-closed medical referral states.",
     docs: [
-      "docs/product/roadmap.md",
+      "docs/product/features/roadmap.md",
       "docs/product/glossary.md",
       "docs/design/principles.md",
       "docs/architecture/overview.md",
@@ -44,7 +44,7 @@ export const areas = {
   certifications: {
     goal: "Build certification evidence and a fail-closed readiness result shared by staff, divers, and manifests.",
     docs: [
-      "docs/product/roadmap.md",
+      "docs/product/features/roadmap.md",
       "docs/product/glossary.md",
       "docs/design/principles.md",
       "docs/architecture/overview.md",
@@ -72,7 +72,7 @@ export const areas = {
   "rental-fit": {
     goal: "Maintain rental fit and the derived per-trip prep list (tanks, kit, nitrox split).",
     docs: [
-      "docs/product/roadmap.md",
+      "docs/product/features/roadmap.md",
       "docs/product/glossary.md",
       "docs/design/principles.md",
       "docs/architecture/overview.md",
@@ -100,7 +100,7 @@ export const areas = {
   manifests: {
     goal: "Extend manifests and roll call without weakening the shared fail-closed readiness result they display and act on.",
     docs: [
-      "docs/product/roadmap.md",
+      "docs/product/features/roadmap.md",
       "docs/product/glossary.md",
       "docs/design/principles.md",
       "docs/architecture/overview.md",
@@ -142,7 +142,7 @@ export const areas = {
   nitrox: {
     goal: "Extend nitrox fill logging without weakening the verified-card gate or the derived, fail-closed MOD.",
     docs: [
-      "docs/product/roadmap.md",
+      "docs/product/features/roadmap.md",
       "docs/product/glossary.md",
       "docs/product/human-decisions.md",
       "docs/design/principles.md",
@@ -171,7 +171,7 @@ export const areas = {
   courses: {
     goal: "Extend the course catalog, sessions, enrollment gates, and public course pages.",
     docs: [
-      "docs/product/roadmap.md",
+      "docs/product/features/roadmap.md",
       "docs/product/glossary.md",
       "docs/design/principles.md",
       "docs/architecture/overview.md",
@@ -208,7 +208,11 @@ export const areas = {
   },
   today: {
     goal: "Maintain the Today work queue: urgency ranking, blocker collapse, and actionable next steps.",
-    docs: ["docs/product/roadmap.md", "docs/product/glossary.md", "docs/design/principles.md"],
+    docs: [
+      "docs/product/features/roadmap.md",
+      "docs/product/glossary.md",
+      "docs/design/principles.md",
+    ],
     code: [
       "src/lib/today.ts",
       "src/db/today.ts",
@@ -231,7 +235,7 @@ export const areas = {
     docs: [
       "docs/design/principles.md",
       "docs/product/vision.md",
-      "docs/product/roadmap.md",
+      "docs/product/features/roadmap.md",
       "docs/architecture/decisions/0004-design-tokens.md",
     ],
     code: ["src/app/globals.css", "src/app", "src/components"],
@@ -296,7 +300,7 @@ export const areas = {
   bookings: {
     goal: "Extend booking behavior without weakening capacity, authorization, or user-facing recovery states.",
     docs: [
-      "docs/product/roadmap.md",
+      "docs/product/features/roadmap.md",
       "docs/product/glossary.md",
       "docs/design/principles.md",
       "docs/architecture/overview.md",
@@ -345,7 +349,7 @@ export const areas = {
   payments: {
     goal: "Extend Stripe Connect checkout, orders, invoicing, and refunds without breaking idempotency or currency/tenant guarantees. Security-sensitive (AGENTS.md Hard rules) — changes need a security-reviewer pass before merge.",
     docs: [
-      "docs/product/roadmap.md",
+      "docs/product/features/roadmap.md",
       "docs/product/glossary.md",
       "docs/architecture/overview.md",
       "docs/architecture/decisions/20260719-stripe-connect-orders.md",
@@ -396,7 +400,7 @@ export const areas = {
   notifications: {
     goal: "Extend email/SMS notification delivery without breaking idempotency, per-recipient locale, or delivery-status accuracy.",
     docs: [
-      "docs/product/roadmap.md",
+      "docs/product/features/roadmap.md",
       "docs/product/glossary.md",
       "docs/engineering/resend-email-runbook.md",
       "docs/architecture/decisions/20260718-notification-delivery-status.md",
@@ -436,7 +440,7 @@ export const areas = {
   reviews: {
     goal: "Extend verified diver reviews and discount codes (shop-wide promos + last-minute trip fills) without weakening the review provenance/moderation gate or the redeemability checks Stripe actually enforces.",
     docs: [
-      "docs/product/roadmap.md",
+      "docs/product/features/roadmap.md",
       "docs/product/glossary.md",
       "docs/architecture/overview.md",
       "docs/architecture/decisions/20260729-verified-diver-reviews.md",
@@ -477,7 +481,7 @@ export const areas = {
   "data-portability": {
     goal: "Extend CSV export/import without weakening tenant scoping or the verification gates on imported evidence. Security-sensitive (AGENTS.md Hard rules) — changes need a security-reviewer pass before merge.",
     docs: [
-      "docs/product/roadmap.md",
+      "docs/product/features/roadmap.md",
       "docs/product/glossary.md",
       "docs/architecture/decisions/20260724-export-bundled-photos.md",
       "docs/architecture/decisions/20260724-import-verified-cards.md",

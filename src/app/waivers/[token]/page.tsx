@@ -24,7 +24,7 @@ import {
   saveBookingEmergencyContact,
   saveWaiverDraft,
 } from "@/db/waivers";
-import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
+import { type DiverMessageKey, type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { requestFirstHandLocale, requestLocale } from "@/i18n/request";
 import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
 import { trackEvent } from "@/lib/analytics";
@@ -56,6 +56,36 @@ const completeSignatureSchema = z.object({
   signerName: z.string().trim().min(2).max(120),
   acknowledged: z.literal("on"),
 });
+
+type WaiverInvalidField = "medical" | "signerName" | "acknowledged";
+
+/**
+ * Which control to point the fallback error banner at, in the same order a
+ * keyboard user tabs through the form — medical questions, then the
+ * signature name, then the agreement checkbox. `signerName`/`acknowledged`
+ * now carry `required` (`minLength` too, on the name) so the browser's own
+ * validation blocks-and-focuses the first invalid control before a normal
+ * submit ever reaches here; this is only reached when that was bypassed (JS
+ * disabled, or a non-browser client) — the zod schemas above stay the
+ * enforcement of record either way.
+ */
+function firstInvalidWaiverField(
+  signatureIssuePaths: ReadonlySet<PropertyKey>,
+  answers: MedicalAnswers | null,
+): WaiverInvalidField | undefined {
+  if (!answers) return "medical";
+  if (signatureIssuePaths.has("signerName")) return "signerName";
+  if (signatureIssuePaths.has("acknowledged")) return "acknowledged";
+  return undefined;
+}
+
+/** Copy and same-page anchor for each field a fallback submit can name as missing. */
+const WAIVER_FIELD_ERROR: Record<WaiverInvalidField, { textKey: DiverMessageKey; anchor: string }> =
+  {
+    medical: { textKey: "waiver.errorMedical", anchor: "medical-questionnaire" },
+    signerName: { textKey: "waiver.errorName", anchor: "signerName" },
+    acknowledged: { textKey: "waiver.errorAgreement", anchor: "acknowledged" },
+  };
 
 /** Reads every question's yes/no answer for the presented questionnaire. */
 function readMedicalAnswers(
@@ -139,11 +169,15 @@ export default async function WaiverPage({
   searchParams,
 }: {
   params: Promise<{ token: string }>;
-  searchParams: Promise<{ saved?: string; error?: string }>;
+  searchParams: Promise<{ saved?: string; error?: string; field?: string }>;
 }) {
   await connection();
   const { token } = await params;
-  const { saved, error } = await searchParams;
+  const { saved, error, field } = await searchParams;
+  const fieldError =
+    error === "invalid" && field && field in WAIVER_FIELD_ERROR
+      ? WAIVER_FIELD_ERROR[field as WaiverInvalidField]
+      : undefined;
   const db = await getDb();
   // A dead or expired link resolves no shop, so there is no
   // `shops.default_locale` to fall back to — negotiate from the visitor's own
@@ -303,7 +337,7 @@ export default async function WaiverPage({
     .then((rows) => rows[0] ?? null);
   const errorText =
     error === "invalid"
-      ? t("waiver.incomplete")
+      ? t(fieldError?.textKey ?? "waiver.incomplete")
       : error === "unavailable"
         ? t("waiver.linkInactive")
         : error === "rate"
@@ -318,7 +352,13 @@ export default async function WaiverPage({
     }
     const parsed = signatureSchema.safeParse(Object.fromEntries(formData));
     const answers = readMedicalAnswers(formData, questionnaire);
-    if (!parsed.success || !answers) redirect(`/waivers/${token}?error=invalid`);
+    if (!parsed.success || !answers) {
+      const invalidField = firstInvalidWaiverField(
+        parsed.success ? new Set() : new Set(parsed.error.issues.map((issue) => issue.path[0])),
+        answers,
+      );
+      redirect(`/waivers/${token}?error=invalid${invalidField ? `&field=${invalidField}` : ""}`);
+    }
     const db = await getDb();
     // A form the diver themselves just submitted through their own bearer
     // link — first-hand evidence of the language they read (docs ADR
@@ -360,7 +400,13 @@ export default async function WaiverPage({
     }
     const parsed = completeSignatureSchema.safeParse(Object.fromEntries(formData));
     const answers = readMedicalAnswers(formData, questionnaire);
-    if (!parsed.success || !answers) redirect(`/waivers/${token}?error=invalid`);
+    if (!parsed.success || !answers) {
+      const invalidField = firstInvalidWaiverField(
+        parsed.success ? new Set() : new Set(parsed.error.issues.map((issue) => issue.path[0])),
+        answers,
+      );
+      redirect(`/waivers/${token}?error=invalid${invalidField ? `&field=${invalidField}` : ""}`);
+    }
     const contact = emergencyContactSchema.safeParse(Object.fromEntries(formData));
     // Same first-hand signal as the draft save above (docs ADR
     // 20260731-per-person-notification-locale) — signing is the strongest
@@ -405,7 +451,7 @@ export default async function WaiverPage({
 
   return (
     <main className="mx-auto w-full max-w-xl flex-1 px-6 py-10 sm:py-16">
-      <FlashParams params={["saved", "error"]} />
+      <FlashParams params={["saved", "error", "field"]} />
       <header>
         <p className="text-sm font-medium tracking-widest text-primary uppercase">{shopName}</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight text-balance">
@@ -443,10 +489,16 @@ export default async function WaiverPage({
       ) : null}
       {errorText ? (
         <p
+          id="waiver-error"
           role="alert"
           className="mt-6 rounded-lg bg-danger/10 px-4 py-3 text-sm font-medium text-danger"
         >
-          {errorText}
+          {errorText}{" "}
+          {fieldError ? (
+            <a href={`#${fieldError.anchor}`} className="underline underline-offset-2">
+              {t("waiver.errorJumpToField")}
+            </a>
+          ) : null}
         </p>
       ) : null}
 
@@ -467,7 +519,7 @@ export default async function WaiverPage({
       </section>
 
       <form action={completeAction} className="mt-8 flex flex-col gap-6">
-        <section>
+        <section id="medical-questionnaire">
           <QuestionnaireProgress
             total={questionnaire.questions.length}
             labelTemplate={t("waiver.questionsAnswered")}
@@ -536,8 +588,11 @@ export default async function WaiverPage({
           <FieldGrid columns={1} className="mt-4">
             <Field label={t("waiver.typeFullName")}>
               <input
+                id="signerName"
                 name="signerName"
                 autoComplete="name"
+                required
+                minLength={2}
                 maxLength={120}
                 defaultValue={record.draftSignerName ?? ""}
                 className={controlClass}
@@ -546,9 +601,11 @@ export default async function WaiverPage({
           </FieldGrid>
           <label className="mt-4 flex min-h-11 items-center gap-3 text-base">
             <input
+              id="acknowledged"
               name="acknowledged"
               type="checkbox"
               value="on"
+              required
               defaultChecked={record.draftAcknowledged}
               className="size-4 accent-primary"
             />
@@ -561,6 +618,11 @@ export default async function WaiverPage({
           <button
             type="submit"
             formAction={saveDraftAction}
+            // Drafts intentionally accept partial answers — the new
+            // `required` on signerName/acknowledged (and the pre-existing
+            // one on each medical radio) would otherwise let the browser
+            // block a legitimate "save what I have so far" submit.
+            formNoValidate
             className={buttonClass({
               variant: "secondary",
               className: `text-(color:--color-foreground) ${labelTextBase}`,

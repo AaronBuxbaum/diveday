@@ -37,7 +37,7 @@ export type OfflineSyncResult = {
  * `OfflineManifestManager`) display these to a captain mid-roll-call, so a
  * bare `Error("...")` string here would be the literal on-screen refusal text
  * for the fail-closed boarding gate, unlocalized (dive-domain-expert review,
- * docs/product/story-backlog.md, Sal). Callers map the code through their own
+ * docs/product/features/story-backlog.md, Sal). Callers map the code through their own
  * translator.
  */
 export type OfflineManifestErrorCode =

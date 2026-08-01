@@ -1,6 +1,6 @@
-import Image from "next/image";
 import Link from "next/link";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { StoredPhoto } from "@/components/StoredPhoto";
 import { buttonClass } from "@/components/ui/button";
 import type { Course } from "@/db/schema";
 import type { DiverMessageKey, DiverTranslator } from "@/i18n/messages";
@@ -12,7 +12,6 @@ import {
 } from "@/lib/courses";
 import { formatShortDate, formatTime, formatTimeRangeTz } from "@/lib/format";
 import { minorToMajor, type ShopCurrency } from "@/lib/money";
-import { isManagedBlobUrl } from "@/lib/storage/blob-host";
 import { capacityLabel, isFull } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 
@@ -44,43 +43,6 @@ const AGENCY_FULL_NAME_KEYS: Record<string, DiverMessageKey> = {
   sdi: "course.agencyFullNames.sdi",
   tdi: "course.agencyFullNames.tdi",
 };
-
-/**
- * Photo from a shop's blob store, a bundled path, or (for a course saved before
- * uploads replaced pasted URLs) a link the shop typed in directly. `className`
- * sizes the box (height/width/rounding/border) — `object-cover` is applied
- * internally so it reaches whichever element (Image or plain img) actually
- * renders.
- */
-function CourseImage({
-  src,
-  alt,
-  className,
-  sizes,
-}: {
-  src: string;
-  alt: string;
-  className: string;
-  sizes: string;
-}) {
-  if (src.startsWith("/") || isManagedBlobUrl(src)) {
-    return (
-      <div className={`relative overflow-hidden ${className}`}>
-        <Image src={src} alt={alt} fill sizes={sizes} className="object-cover" />
-      </div>
-    );
-  }
-  return (
-    // biome-ignore lint/performance/noImgElement: a legacy shop-pasted URL outside the blob store next.config.ts allowlists for next/image.
-    <img
-      src={src}
-      alt={alt}
-      loading="lazy"
-      decoding="async"
-      className={`${className} object-cover`}
-    />
-  );
-}
 
 export function CourseHero({
   course,
@@ -116,7 +78,7 @@ export function CourseHero({
   return (
     <div className="overflow-hidden rounded-3xl border border-border bg-surface shadow-sm">
       {course.heroImageUrl ? (
-        <CourseImage
+        <StoredPhoto
           src={course.heroImageUrl}
           alt={resolveImageAlt(
             course.heroImageAlt,
@@ -444,7 +406,7 @@ export function CourseGallery({
       <h2 className="sr-only">{t("course.galleryHeading", { course: title })}</h2>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         {imageUrls.map((url, index) => (
-          <CourseImage
+          <StoredPhoto
             key={url}
             src={url}
             // The hero photo claims "photo 1"; gallery photos continue from 2.

@@ -7,7 +7,7 @@ description: Build a product feature end to end — the full loop from docs to v
 
 The full loop. Details live in `docs/engineering/workflow.md` — this is the executable order.
 
-1. **Context** — read `docs/product/roadmap.md` (right milestone?), `docs/product/glossary.md`
+1. **Context** — read `docs/product/features/roadmap.md` (right milestone?), `docs/product/glossary.md`
    (domain terms), and skim relevant ADRs. Touching Next.js APIs → read the matching guide in
    `node_modules/next/dist/docs/` first.
 2. **Slice** — define the smallest vertical slice a user could see working. State it in one

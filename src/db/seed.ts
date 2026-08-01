@@ -185,60 +185,6 @@ export async function seedIfEmpty(db: DbExecutor): Promise<void> {
 }
 
 /**
- * Repairs the original shared demo after it has already been created by an
- * older release. Fresh seeds already contain these payment rows; this small,
- * idempotent backfill keeps the Reports page useful for a persisted demo
- * without touching real shops or inventing revenue for unpaid seats.
- */
-export async function backfillDemoReportingData(db: DbExecutor): Promise<void> {
-  const [shop] = await db
-    .select({ id: shops.id })
-    .from(shops)
-    .where(and(eq(shops.slug, DEMO_SHOP_SLUG), eq(shops.isDemo, true)))
-    .limit(1);
-  if (!shop) return;
-
-  const [wreck] = await db
-    .select({ id: trips.id })
-    .from(trips)
-    .where(
-      and(
-        eq(trips.shopId, shop.id),
-        eq(trips.title, "Wreck Trip — Spiegel Grove"),
-        eq(trips.status, "scheduled"),
-      ),
-    )
-    .limit(1);
-  if (!wreck) return;
-
-  const seats = await db
-    .select({ id: bookings.id })
-    .from(bookings)
-    .where(and(eq(bookings.shopId, shop.id), eq(bookings.tripId, wreck.id)))
-    .orderBy(bookings.createdAt)
-    .limit(2);
-  if (seats.length === 0) return;
-
-  const existing = await db
-    .select({ bookingId: bookingPayments.bookingId })
-    .from(bookingPayments)
-    .where(eq(bookingPayments.shopId, shop.id));
-  const existingIds = new Set(existing.map((row) => row.bookingId));
-  const missing = seats.filter((seat) => !existingIds.has(seat.id));
-  if (missing.length === 0) return;
-
-  await db.insert(bookingPayments).values(
-    missing.map((seat, index) => ({
-      shopId: shop.id,
-      bookingId: seat.id,
-      status: index === 0 ? ("paid" as const) : ("deposit_paid" as const),
-      amountCents: index === 0 ? 18_000 : 6_000,
-      currency: "usd",
-    })),
-  );
-}
-
-/**
  * The stable half of the demo: the shop, its default waiver template, its
  * staff, and their logins. Seeded once and left alone — resetting the demo
  * playground never touches these, so a signed-in demo session survives a reset

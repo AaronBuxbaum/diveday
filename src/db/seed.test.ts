@@ -12,7 +12,6 @@ import {
   bookingCapabilities,
   bookingCheckoutBookings,
   bookingCheckouts,
-  bookingPayments,
   bookings,
   lastMinuteListEntries,
   lastMinuteListUnsubscribeTokens,
@@ -29,12 +28,7 @@ import {
   tripRequirements,
   userAccounts,
 } from "./schema";
-import {
-  backfillDemoReportingData,
-  demoTodayDepartureStart,
-  resetDemoSchedule,
-  seedIfEmpty,
-} from "./seed";
+import { demoTodayDepartureStart, resetDemoSchedule, seedIfEmpty } from "./seed";
 import { inviteStaffMember } from "./staff-accounts";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { listStaff, upcomingTripsWithCounts } from "./trips";
@@ -537,26 +531,6 @@ describe("resetDemoSchedule", () => {
       .from(personRoles)
       .innerJoin(people, eq(people.id, personRoles.personId));
     expect(orphanedRoles).toHaveLength(roles.length);
-  });
-});
-
-describe("backfillDemoReportingData", () => {
-  it("repairs a legacy demo without duplicating payments on the next boot", async () => {
-    const { db, shop } = await seededShopContext({ history: true });
-    await db.delete(bookingPayments).where(eq(bookingPayments.shopId, shop.id));
-
-    await backfillDemoReportingData(db);
-    const repaired = await db
-      .select()
-      .from(bookingPayments)
-      .where(eq(bookingPayments.shopId, shop.id));
-    expect(repaired.length).toBeGreaterThan(0);
-    expect(repaired.some((payment) => payment.status === "paid")).toBe(true);
-
-    await backfillDemoReportingData(db);
-    await expect(
-      db.select().from(bookingPayments).where(eq(bookingPayments.shopId, shop.id)),
-    ).resolves.toHaveLength(repaired.length);
   });
 });
 

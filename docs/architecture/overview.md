@@ -23,7 +23,7 @@ service until something other than the web app needs one ([ADR-0001](decisions/0
 | Marine outlook | Open-Meteo Marine API behind `src/lib/marine-forecast.ts` | [20260718 marine outlook](decisions/20260718-automated-marine-outlook.md) |
 | Lint/format | Biome | [0002](decisions/0002-toolchain.md) |
 | Unit tests | Vitest + Testing Library, MSW for real fetch boundaries | [0002](decisions/0002-toolchain.md), [20260719 MSW scope](decisions/20260719-msw-offline-sync-only.md) |
-| E2E tests | Playwright flows + reg-suit visual regression | [0002](decisions/0002-toolchain.md), [20260729 reg-suit](decisions/20260729-reg-suit-visual-regression.md), [20260719 MSW scope](decisions/20260719-msw-offline-sync-only.md) |
+| E2E tests | Playwright flows + reg-suit visual regression + `@axe-core/playwright` a11y scans | [0002](decisions/0002-toolchain.md), [20260729 reg-suit](decisions/20260729-reg-suit-visual-regression.md), [20260719 MSW scope](decisions/20260719-msw-offline-sync-only.md), [20260801 axe scans](decisions/20260801-axe-core-playwright-a11y-scans.md) |
 | Package manager | pnpm | [0002](decisions/0002-toolchain.md) |
 
 ⚠️ Next.js 16 differs from most training data — read the guides in `node_modules/next/dist/docs/`

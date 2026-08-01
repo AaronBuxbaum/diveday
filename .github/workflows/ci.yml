@@ -16,12 +16,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup
       - run: pnpm check:repo
 
   lint:
@@ -30,12 +25,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup
       - run: pnpm lint
 
   typecheck:
@@ -44,12 +34,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup
       - run: pnpm typecheck
 
   unit-tests:
@@ -62,12 +47,7 @@ jobs:
         shard: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup
       # Not `pnpm test -- ...`: pnpm/npm insert a literal `--` before forwarded
       # args when the target script is itself a bare command (`vitest run`),
       # so the underlying CLI sees `vitest run -- --reporter=dot --shard=…`
@@ -81,12 +61,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup
       # No restore-keys fallback: a prefix match would happily hand this branch
       # another branch's `.next/cache` whenever the exact key misses (e.g. main
       # has since diverged), and Turbopack's persistent cache does not always
@@ -149,29 +124,12 @@ jobs:
         shard: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup
       - uses: actions/download-artifact@v8
         with:
           name: next-build
           path: .next
-      - uses: actions/cache@v6
-        with:
-          path: ~/.cache/ms-playwright
-          # `-shell` on the key, not just the command, deliberately forces a
-          # fresh cache the first time this lands: the previous key already
-          # has a hit from the pre-`--only-shell` full Chromium download (that
-          # install pulls the headed browser and the headless shell as one
-          # dependency group), and restoring it would keep paying for the
-          # headed binary this fleet never launches until the cache aged out
-          # on its own. See e2e/browser.ts for why only the shell is needed —
-          # every launch here is headless.
-          key: ${{ runner.os }}-playwright-shell-${{ hashFiles('pnpm-lock.yaml') }}
-      - run: pnpm exec playwright install --only-shell chromium
+      - uses: ./.github/actions/playwright-shell
       - name: Run non-visual Playwright tests
         run: |
           spec_files=()
@@ -229,29 +187,12 @@ jobs:
           if git rev-parse --verify -q HEAD^ > /dev/null; then
             git branch reg-suit-baseline-parent HEAD^
           fi
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup
       - uses: actions/download-artifact@v8
         with:
           name: next-build
           path: .next
-      - uses: actions/cache@v6
-        with:
-          path: ~/.cache/ms-playwright
-          # `-shell` on the key, not just the command, deliberately forces a
-          # fresh cache the first time this lands: the previous key already
-          # has a hit from the pre-`--only-shell` full Chromium download (that
-          # install pulls the headed browser and the headless shell as one
-          # dependency group), and restoring it would keep paying for the
-          # headed binary this fleet never launches until the cache aged out
-          # on its own. See e2e/browser.ts for why only the shell is needed —
-          # every launch here is headless.
-          key: ${{ runner.os }}-playwright-shell-${{ hashFiles('pnpm-lock.yaml') }}
-      - run: pnpm exec playwright install --only-shell chromium
+      - uses: ./.github/actions/playwright-shell
       # `pnpm visual` (the local/dev script) rebuilds via e2e:build before testing —
       # this job already downloaded that exact build above, so `visual:run` (the
       # shared tail both scripts call) skips straight to the Playwright run

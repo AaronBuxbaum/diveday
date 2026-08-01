@@ -194,7 +194,7 @@ export const people = pgTable(
      * Set once this person self-serves out of courtesy email — wait-list
      * openings (`waitlist_invite`) and post-trip recaps (`trip_recap`), the two
      * kinds that ask something of the diver's attention beyond their own
-     * booking rather than confirm or protect it (docs story-backlog.md "Leo —
+     * booking rather than confirm or protect it (docs features/story-backlog.md "Leo —
      * self-serve email unsubscribe"). Deliberately narrower than
      * `lastMinuteListEntries.unsubscribedAt`: that column opts a person out of
      * a *list they joined*, this one opts a person out of two notification
@@ -969,7 +969,7 @@ export const lastMinuteListEntries = pgTable(
 
 /**
  * A diver-facing, self-serve bearer link to unsubscribe one last-minute-list
- * entry (docs story-backlog.md "Leo — self-serve email unsubscribe"). A fresh
+ * entry (docs features/story-backlog.md "Leo — self-serve email unsubscribe"). A fresh
  * token is minted for every deal blast rather than one stable token per entry
  * (mirrors `bookingCapabilities`, not `calendarFeeds`), so an old email's link
  * keeps working even after a later blast mints another — deliberately never
@@ -1001,7 +1001,7 @@ export const lastMinuteListUnsubscribeTokens = pgTable(
 /**
  * A diver-facing, self-serve bearer link to opt one person out of courtesy
  * email — `waitlist_invite` and `trip_recap`, the two kinds `people.courtesyEmailOptOutAt`
- * governs (docs story-backlog.md "Leo — self-serve email unsubscribe"). Same
+ * governs (docs features/story-backlog.md "Leo — self-serve email unsubscribe"). Same
  * shape and reasoning as `lastMinuteListUnsubscribeTokens`: a fresh token per
  * send rather than one stable token per person, never expires, and consuming
  * it is an idempotent write (only ever sets `courtesyEmailOptOutAt`) — kept as

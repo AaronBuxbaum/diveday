@@ -6,19 +6,26 @@ sequenced item ships a usable vertical slice. Re-order only with a note here exp
 This is the **single home for unbuilt work**: the sequenced slices, the unscheduled candidates that
 have not earned a slot, the engineering-enablement backlog that keeps parallel agents productive,
 and the human-owned gates that block real operations. (It absorbed `future-features.md` and
-`next-steps.md` on 2026-08-01 — three files were three places to look for the same question.)
+`next-steps.md` on 2026-08-01 — three files were three places to look for the same question. On the
+same day, this file and its siblings moved into the [features/](README.md) folder alongside
+`story-backlog.md`, `brainstorm.md`, and `ai-ml.md` — one folder is the home for every unbuilt-work
+shape instead of three loose files plus AI ideas split across a brainstorm note and an audit
+report.)
 
-- What already shipped is indexed in [shipped.md](shipped.md) — check there before assuming a gap.
+- What already shipped is indexed in [../shipped.md](../shipped.md) — check there before assuming a
+  gap.
 - Human-owned approvals, provisional defaults, and validation gates are in
-  [human-decisions.md](human-decisions.md); the deep buyer/rival analysis is in
-  [competitive-analysis.md](assessments/competitive-analysis.md) and
-  [competitive-strategy.md](assessments/competitive-strategy.md); the open specialist-audit tasks
-  (accessibility, security, ML/data) are in
-  [specialist-optimization-audit-20260731.md](assessments/specialist-optimization-audit-20260731.md).
+  [../human-decisions.md](../human-decisions.md); the deep buyer/rival analysis is in
+  [competitive-analysis.md](../assessments/competitive-analysis.md) and
+  [competitive-strategy.md](../assessments/competitive-strategy.md); the open specialist-audit tasks
+  (accessibility, security) are in
+  [specialist-optimization-audit-20260731.md](../assessments/specialist-optimization-audit-20260731.md)
+  — its ML & data tasks moved into [ai-ml.md](ai-ml.md) in the same 2026-08-01 consolidation.
 - Open UX tickets carried out of the persona review live in [story-backlog.md](story-backlog.md);
-  raw, unfiltered ideas live in [brainstorm/](brainstorm/README.md) and are not commitments.
-- When an item here ships, **move it to [shipped.md](shipped.md)** (compress to a line, link its ADR)
-  rather than leaving it marked done — that pollution is what this file exists to avoid.
+  raw, unfiltered ideas live in [brainstorm.md](brainstorm.md) (AI-required ideas in
+  [ai-ml.md](ai-ml.md)) and are not commitments.
+- When an item here ships, **move it to [../shipped.md](../shipped.md)** (compress to a line, link
+  its ADR) rather than leaving it marked done — that pollution is what this file exists to avoid.
 - This tracks the substantial open work; small per-feature follow-ons may also live in the ADR that
   introduced the feature (grep the ADR's *Consequences* for "follow-up").
 
@@ -29,7 +36,7 @@ manifests), Stripe Connect payments with checkout-at-booking and deposits, multi
 notifications with scheduled reminders, the Today work queue, owner reporting, and full-shop export
 — plus the UX arc that made those surfaces *act* (one-tap sends, transactional `/ready`, command
 palette), the growth layer (reviews, promo codes, SEO, embed), and full diver **and** staff copy
-localization. See [shipped.md](shipped.md).
+localization. See [../shipped.md](../shipped.md).
 
 The next arc is **not new pillars.** It is finishing the data-portability wedge, closing the
 production-readiness gaps, and answering the buyer objection that still loses deals (no gear
@@ -40,8 +47,8 @@ register). Breadth is done; depth and proof are the work.
 ### 1. Data-portability follow-ons (the wedge)
 
 Export, the diver/customer CSV importer, and the public migration guides have shipped (see
-[shipped.md](shipped.md)); the rest of the "switching is safe" story is greenfield. Sequenced in
-[competitive-strategy.md](assessments/competitive-strategy.md#the-build-plan-in-order).
+[../shipped.md](../shipped.md)); the rest of the "switching is safe" story is greenfield. Sequenced
+in [competitive-strategy.md](../assessments/competitive-strategy.md#the-build-plan-in-order).
 
 - **Scheduled backup export** to shop-owned storage (weekly bundle; `.ics` trip feeds ride along).
 - **Read API + webhooks**, every tier — token-scoped reads over the export schema plus
@@ -52,13 +59,13 @@ Export, the diver/customer CSV importer, and the public migration guides have sh
 The waiver signature is still in-house typed consent (`src/lib/signatures.ts` — local and in-person
 providers only). A vendor adapter behind the existing `SignatureProvider` seam is follow-up work,
 gated on the H-01/H-03 legal decisions
-([waiver-signature-retention](../architecture/decisions/20260718-waiver-signature-retention.md)).
+([waiver-signature-retention](../../architecture/decisions/20260718-waiver-signature-retention.md)).
 
 ### 3. Minimal gear register (an M5 reversal, deliberately smaller)
 
 M5 removed equipment inventory on purpose, but "who has what, what's due for service" is table stakes
 for gear-heavy shops and a disqualifier for the classic retail shop
-([competitive-analysis.md](assessments/competitive-analysis.md#what-blocks-the-purchase) #3). The re-entry is a
+([competitive-analysis.md](../assessments/competitive-analysis.md#what-blocks-the-purchase) #3). The re-entry is a
 lightweight who-has-what + service-due register — **not** a POS, and **not** the deleted assignment
 model. **ADR required** (it reverses a shipped decision).
 
@@ -66,7 +73,7 @@ model. **ADR required** (it reverses a shipped decision).
 
 The analyzed-fill log was retired with gear inventory (it referenced a tracked cylinder). Whether a
 fill/analysis record should return in some tank-free form is genuinely open, gated on the nitrox
-policy decision — V-05 and H-11 in [human-decisions.md](human-decisions.md).
+policy decision — V-05 and H-11 in [../human-decisions.md](../human-decisions.md).
 
 ### 5. Multi-boat / multi-shop configuration
 
@@ -83,9 +90,9 @@ dive-shop use case with a verified gap behind it; each is here because it is clo
 subsystem than a slice on top of what exists, not because it was judged unimportant. **Nothing in
 this section is sequenced** — an item leaves it by earning a numbered slot above and the ADR it
 needs, not by being built straight from the list. Both came out of the FareHarbor feature-gap audit
-([archive/fareharbor-feature-gaps-20260726.md](archive/fareharbor-feature-gaps-20260726.md)), whose
+([archive/fareharbor-feature-gaps-20260726.md](../archive/fareharbor-feature-gaps-20260726.md)), whose
 every other row has shipped — including diver-selectable checkout upsells, once its ADR unblocked it
-(see [shipped.md](shipped.md#diver-selectable-checkout-upsells--rental-gear-delivered-2026-08-01)).
+(see [../shipped.md](../shipped.md#diver-selectable-checkout-upsells--rental-gear-delivered-2026-08-01)).
 Verified against the running code 2026-08-01; re-verify before planning from it.
 
 ### Gift cards
@@ -100,7 +107,7 @@ A shop sells stored value and a diver redeems it against any trip or course.
   tweak.
 - **Why it isn't scheduled:** the ledger is a new subsystem, and unclaimed-balance rules are
   jurisdictional — a finance/legal question before an engineering one (see
-  [stakeholders/finance-and-tax.md](stakeholders/finance-and-tax.md)). It is a seasonal revenue lever;
+  [stakeholders/finance-and-tax.md](../stakeholders/finance-and-tax.md)). It is a seasonal revenue lever;
   revisit ahead of a gifting season with real shops on the platform. **ADR required.**
 
 ### Private / buyout charters
@@ -124,23 +131,23 @@ These are per-feature rough edges on shipped work, not future subsystems. They a
 *Consequences* of the ADR that shipped each feature, which stays the place to look:
 
 - Fixed-amount (rather than percent) discounts, auto-applied codes, and Stripe-side drift on a code's
-  status — [20260729-shop-promo-codes](../architecture/decisions/20260729-shop-promo-codes.md).
+  status — [20260729-shop-promo-codes](../../architecture/decisions/20260729-shop-promo-codes.md).
 - Self-service reschedule of a *paid* booking, which still requires staff —
-  [20260727-diver-self-service-cancel](../architecture/decisions/20260727-diver-self-service-cancel.md).
+  [20260727-diver-self-service-cancel](../../architecture/decisions/20260727-diver-self-service-cancel.md).
 - Recovery-email timing on the daily cron, and the party "purchaser" being the first-named diver
   rather than a verified who's-paying field —
-  [20260726-abandoned-checkout-recovery](../architecture/decisions/20260726-abandoned-checkout-recovery.md).
+  [20260726-abandoned-checkout-recovery](../../architecture/decisions/20260726-abandoned-checkout-recovery.md).
 - Per-trip (rather than per-shop) ratings, replies to reviews, and any third-party review widget —
-  [20260729-verified-diver-reviews](../architecture/decisions/20260729-verified-diver-reviews.md).
+  [20260729-verified-diver-reviews](../../architecture/decisions/20260729-verified-diver-reviews.md).
 - Currencies beyond the shop's declared one on a single order, and Stripe-reported settlement
-  currency drift — [20260731-shop-currency](../architecture/decisions/20260731-shop-currency.md).
+  currency drift — [20260731-shop-currency](../../architecture/decisions/20260731-shop-currency.md).
 
 ## Engineering enablement
 
 The still-open work that keeps many short-lived AI agents productive and safe. Product slices are
 above; this is the repository making the correct implementation path easier than an expedient wrong
-one. Keep it to still-open work: when an item ships, move it to [shipped.md](shipped.md) or an ADR
-rather than letting this become an unbounded second backlog.
+one. Keep it to still-open work: when an item ships, move it to [../shipped.md](../shipped.md) or an
+ADR rather than letting this become an unbounded second backlog.
 
 ### P1 — next
 
@@ -171,7 +178,7 @@ rather than letting this become an unbounded second backlog.
 4. Add automated PR scope/collision warnings based on changed paths and declared ownership.
 
 (Feature-folder boundaries were P2 and are now settled — see
-[20260730-feature-module-contracts](../architecture/decisions/20260730-feature-module-contracts.md)
+[20260730-feature-module-contracts](../../architecture/decisions/20260730-feature-module-contracts.md)
 and `pnpm check:architecture`.)
 
 ## Measures
@@ -191,14 +198,14 @@ departure, or faster agent delivery.
 ## Delight backlog
 
 Cross-cutting quality to fold into slices as they're touched, not defer to a final "polish" pass.
-Empty right now — the last open list shipped 2026-07-23 (see [shipped.md](shipped.md)). Fold new
-cross-cutting quality in here as it arises.
+Empty right now — the last open list shipped 2026-07-23 (see [../shipped.md](../shipped.md)). Fold
+new cross-cutting quality in here as it arises.
 
 ## Production-readiness gates (human-owned)
 
 These block real operations regardless of code completeness; owners and evidence live in
-[human-decisions.md](human-decisions.md), and the per-discipline playbooks for clearing them
-(who to talk to, with what prepared) live in [stakeholders/](stakeholders/README.md):
+[../human-decisions.md](../human-decisions.md), and the per-discipline playbooks for clearing them
+(who to talk to, with what prepared) live in [stakeholders/](../stakeholders/README.md):
 
 - **V-02 — field-validate the offline manifest** on a phone, outdoors, wet hands, airplane-mode.
   Until it passes, the safety differentiator is unproven and unclaimable.
@@ -206,11 +213,11 @@ These block real operations regardless of code completeness; owners and evidence
   early-access and still moving; H-12, 2026-07-24). H-12 also closed the founding-cohort terms —
   a **two-year price lock** and **founder-direct, same-day support** — both now published on the
   pricing and home pages. Billing cadence, taxes/fees, and the contract flow remain open. See
-  [competitive-analysis.md](assessments/competitive-analysis.md#pricing-posture).
+  [competitive-analysis.md](../assessments/competitive-analysis.md#pricing-posture).
 - **Legal / policy sign-off** for waivers, medical, retention, course rules, nitrox parameters, and
   notification consent — H-01…H-11.
 
 ## Standing rule
 
 If a slice can't be demoed in the browser, it isn't done. Every milestone ends with a design review
-against [design/principles.md](../design/principles.md).
+against [design/principles.md](../../design/principles.md).

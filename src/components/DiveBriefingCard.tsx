@@ -3,9 +3,7 @@ import type { diveSites } from "@/db/schema";
 import { diverTranslator } from "@/i18n/messages";
 import { buildDiveSiteLandmarks } from "@/lib/dive-site-landmarks";
 import { getSeedDiveSiteMap } from "@/lib/dive-site-map";
-import { resolveDiveSiteImageUrl } from "@/lib/dive-site-media";
 import { siteFit } from "@/lib/diver-planning";
-import { isManagedBlobUrl } from "@/lib/storage/blob-host";
 import { DiveSiteFieldGuide } from "./DiveSiteFieldGuide";
 import { DiveSiteLandmarks } from "./DiveSiteLandmarks";
 import { DiveSiteMap } from "./DiveSiteMap";
@@ -67,13 +65,9 @@ export function DiveBriefingCard({
   ]
     .filter(Boolean)
     .join(" · ");
-  // Staff-moderated but staff-pasted (dive_site_moments.imageUrl): a bundled/blob
-  // URL renders optimized; an unrecognized host — a legacy live Commons URL that
-  // predates the bundled set, or another approved external host — still renders,
-  // just without next/image's optimization (its host isn't in remotePatterns).
-  const momentImageUrl = moments[0]?.imageUrl ? resolveDiveSiteImageUrl(moments[0].imageUrl) : null;
-  const momentImageIsOptimizable =
-    momentImageUrl !== null && (momentImageUrl.startsWith("/") || isManagedBlobUrl(momentImageUrl));
+  // First-party by construction, like the satellite image below: a staff-pasted
+  // moment URL is fetched and re-stored at save time, never persisted raw.
+  const momentImageUrl = moments[0]?.imageUrl ?? null;
 
   return (
     <article className="w-[min(90vw,42rem)] shrink-0 snap-center self-start overflow-hidden rounded-2xl border border-border bg-surface sm:w-full">
@@ -174,7 +168,6 @@ export function DiveBriefingCard({
                       alt={t("trip.siteMomentAlt", { site: site?.name ?? heading })}
                       fill
                       sizes="(min-width: 640px) 12rem, 100vw"
-                      unoptimized={!momentImageIsOptimizable}
                       className="object-cover"
                     />
                   </div>

@@ -22,12 +22,12 @@ delivered lens keeps its row here rather than being renumbered away.
 | --- | --- | --- |
 | 1 | UX & interaction design | ✅ **Delivered** 2026-08-01 (PR #291) — see [shipped.md](../shipped.md#specialist-optimization-audit--five-lenses-delivered-2026-07-31--08-01) |
 | 2 | Frontend performance | ✅ **Delivered** 2026-08-01 (PR #286), except marketing-page caching — [reopened as independent work](#2-frontend-performance-one-task-open) |
-| 3 | Accessibility | ◐ **Partly delivered** — the skip link, `<html lang>`, and the shortcuts-dialog focus trap landed with the ux-persona work; [six tasks open](#3-accessibility-six-tasks-open) |
+| 3 | Accessibility | ◐ **Partly delivered** — the skip link, `<html lang>`, and the shortcuts-dialog focus trap landed with the ux-persona work; waiver field errors, schedule-builder panel focus, and automated axe scans landed 2026-08-01; [three contrast tasks open](#3-accessibility-three-contrast-tasks-open), deliberately deferred — see that section |
 | 4 | SEO & growth | ✅ **Delivered** 2026-08-01 (PR #288) |
 | 5 | Security & privacy | ○ **Open** — [seven tasks](#5-security--privacy-open), none started |
-| 6 | ML & data | ○ **Open** — [eight tasks](#6-ml--data-open), none started |
+| 6 | ML & data | ○ **Open** — eight tasks, none started; moved to [features/ai-ml.md](../features/ai-ml.md#scoped-prompt-ready--from-the-2026-07-31-specialist-audit) in the 2026-08-01 doc consolidation so every AI/ML idea lives in one place |
 | 7 | Backend & data architecture | ✅ **Delivered** 2026-08-01 (PR #292) |
-| 8 | Developer & agent experience | ✅ **Delivered** 2026-08-01 (PR #290), except the CI composite action — [one task open](#8-developer--agent-experience-one-task-open) |
+| 8 | Developer & agent experience | ✅ **Delivered** 2026-08-01, including the CI composite action |
 
 What the delivered lenses actually shipped is indexed in
 [shipped.md](../shipped.md#specialist-optimization-audit--five-lenses-delivered-2026-07-31--08-01);
@@ -72,7 +72,7 @@ command-palette GET route, and the hoisted `AddPanel`.
 
 ---
 
-## 3. Accessibility (six tasks open)
+## 3. Accessibility (three contrast tasks open)
 
 Auditor's baseline: much is genuinely good — semantic radios for star ratings, fieldset/legend
 medical questions, widespread `aria-live`, a reduced-motion kill-switch, glare/boat contrast modes.
@@ -85,32 +85,29 @@ Delivered since the audit, by other work: the document `lang` now comes from the
 (`useFocusTrap` in `src/components/KeyboardShortcuts.tsx`), and `.progress-wave-fill` is now
 neutralised by the reduced-motion block.
 
+Delivered 2026-08-01, non-contrast: the waiver page's `signerName`/`acknowledged` controls now carry
+`required`/`minLength`, the fallback error banner names and links to the specific field that failed
+(`firstInvalidWaiverField` in `src/app/waivers/[token]/page.tsx`); the schedule builder's Add/Move/Copy
+panels move focus into their first field on open and return it to the toggle on Cancel, and the
+hand-rolled Cancel buttons now go through `buttonClass({ variant: "ghost", size: "sm" })`
+(`src/app/shop/[shopSlug]/schedule/board/_components/ScheduleBuilder.tsx` — the panel-completion
+announcement this task also asked for turned out to already exist, via the `ShopNotice role="status"`
+banner `ScheduleBoardPage` renders from `?builder=added|moved|copied|removed`, so no new region was
+needed there); and `@axe-core/playwright` now scans five surfaces in `e2e/a11y.spec.ts` on every CI
+run (ADR [20260801-axe-core-playwright-a11y-scans](../../architecture/decisions/20260801-axe-core-playwright-a11y-scans.md)).
+
+**The three contrast tasks below are deliberately still open** — the product owner ruled out
+touching contrast values in the same pass that delivered the rest of this lens (it would fight the
+current color guide), so they stay tracked here rather than folded into "delivered." The axe scan
+above excludes the `color-contrast` rule for exactly this reason (see the spec's own comment) — it
+would otherwise fail on this same known, tracked debt on every run.
+
 ### Fix the global focus indicator's contrast in light mode
 
 - **Priority**: high
 - **Effort**: S
 - **Prompt**: In `src/app/globals.css`, the app-wide keyboard focus indicator is `outline: 3px solid color-mix(in srgb, var(--primary) 55%, transparent)` (in the `:where(a, button, input, select, textarea, summary):focus-visible` rule). In the light palette that computes to ~2.3:1 against `--background` (#faf9f6) and `--surface` (#ffffff), failing WCAG 1.4.11's 3:1 minimum for focus indicators — keyboard staff users can lose the focus ring entirely in sunlight. Introduce a dedicated semantic token (e.g. `--focus-ring`) defined per scheme in the `:root` and dark blocks — full-strength `--primary` in light mode is 5.36:1 on white and passes — and use it in the `:focus-visible` rule instead of the 55% mix. Keep the token semantic per ADR-0004 and also define it in the `.boat-mode` and `.glare-mode` blocks so those palettes keep a passing ring. Do not weaken the dark-mode ring (currently ~3.8:1, passing).
 - **Verification**: Recompute ratios with the same formula (a small node script against the hex values) confirming ≥3:1 for light, dark, boat, and glare palettes; keyboard-Tab through `/sign-in` and the schedule in light mode and screenshot to confirm the ring is clearly visible; `pnpm check` green (the token change must not trip the semantic-token safeguard).
-
-### Associate waiver errors with fields and mirror constraints client-side
-
-- **Priority**: high
-- **Effort**: M
-- **Prompt**: On the waiver signing page `src/app/waivers/[token]/page.tsx`, a failed submit redirects to `?error=invalid` and renders one generic `role="alert"` banner; the signature input (`name="signerName"`) and agreement checkbox (`name="acknowledged"`) carry no `required`, no `aria-invalid`, and no `aria-describedby`, so a screen-reader or cognitive-disability user gets "check that every question is answered" with no pointer to which of ~10+ medical questions, the name, or the checkbox is missing — on a legally required, safety-critical flow (WCAG 3.3.1/3.3.3). Add `required` and `minLength={2}` to the `signerName` input and `required` to the `acknowledged` checkbox so the browser blocks-and-focuses the first invalid control before the round trip (the medical radios already have `required`; the server schemas near the top of the file stay the enforcement of record). Keep the server fallback but follow the pattern already established in `src/components/BookingPartyFields.tsx`: where the error banner renders, also give it an anchor (`id`) and make it a link-or-text that names what failed. Note the `saveDraftAction` "save for later" button must NOT be blocked by the new `required` attributes — give it `formNoValidate` since drafts intentionally accept partial answers.
-- **Verification**: Keyboard walkthrough: submit the sign form empty → browser focuses the first missing control and announces its validation message; "Save for later" still works with a partial form; `pnpm e2e waivers.spec.ts --reporter=line` green, plus a new assertion that an incomplete "sign" submit leaves focus on/announces the offending field.
-
-### Manage focus and announcements in the schedule builder's panel flow
-
-- **Priority**: medium
-- **Effort**: M
-- **Scope update**: the component moved — it is now
-  `src/app/shop/[shopSlug]/schedule/board/_components/ScheduleBuilder.tsx`, on the staff operations
-  board route rather than the public schedule. Nothing else about this task has landed: a grep for
-  `useRef`/`.focus()` in that file finds nothing, and all three Cancel controls still carry the
-  hand-rolled `className="text-sm font-medium text-muted hover:text-foreground"` (re-confirmed
-  2026-08-01).
-- **Prompt**: In `src/app/shop/[shopSlug]/schedule/board/_components/ScheduleBuilder.tsx`, the Add/Move/Copy toggles correctly use `aria-expanded` and per-row accessible names, but opening a panel does not move focus into it, Cancel does not return focus to its toggle, and when a server action completes the whole panel unmounts leaving keyboard focus on `<body>`; only Remove gets an announcement (via `UndoToast`'s `role="status"`). Add a small effect keyed on `open` that focuses the first input of the newly opened panel; make each Cancel restore focus to the button that opened the panel (hold the toggle in a ref keyed by panel id); and render a visually-hidden `role="status"` region (or reuse the redirect-flash pattern the waiver page uses with `FlashParams`) that announces "departure added/moved/copied" after the action's redirect. While there, replace the three hand-rolled Cancel text buttons with `buttonClass({ variant: "ghost", size: "sm" })` — the project's hard rule ("button-shaped things via `buttonClass`") and the WCAG 2.5.8 24px target floor both require it. All new copy goes through `staff.json` per the i18n-copy skill.
-- **Verification**: Keyboard-only walkthrough at `/shop/<slug>/schedule/board`: open Add with Enter → focus is in the title input; Escape/Cancel → focus back on the "+ Add" button; submit Move → screen reader (or Playwright `getByRole("status")`) sees the confirmation. The schedule-builder e2e spec green with a new focus assertion; `pnpm check` green.
 
 ### Raise tinted status-banner text above 4.5:1
 
@@ -125,17 +122,6 @@ neutralised by the reduced-motion block.
 - **Effort**: S
 - **Prompt**: `src/app/globals.css` sets `input::placeholder`/`textarea::placeholder` to `color-mix(in srgb, var(--muted) 78%, transparent)`, which computes to 3.35:1 on white surfaces and 3.07:1 on `--surface-sunken` in light mode — placeholder text is real text under WCAG 1.4.3 and needs 4.5:1 (the schedule builder's title placeholder and search inputs rely on it). Change the rule to use `var(--muted)` at full strength (5.0:1 on background, 4.58:1 on sunken — passing) or raise the mix to a percentage that clears 4.5:1 on the darkest light-mode surface it sits on; placeholders remain visually distinct from typed text because typed text uses `--foreground`, not `--muted`. Dark mode currently sits at 4.54:1 — keep it at or above that.
 - **Verification**: Node contrast script confirming ≥4.5:1 for the computed placeholder color over `#ffffff`, `#faf9f6`, and `#f1efe9` (light) and `#0d222d` (dark); axe run (or DevTools contrast checker) on the schedule builder's Add panel; `pnpm visual` diff reviewed and explained.
-
-### Add automated axe scans and keyboard assertions to the e2e suite
-
-- **Priority**: medium
-- **Effort**: M
-- **Scope update**: the ux-persona task this once overlapped with (task 108) closed out without
-  adding the dependency — `@axe-core/playwright` is still absent from `package.json` and there is
-  still no `e2e/a11y.spec.ts`, re-confirmed 2026-08-01. The full scope below stands, including the
-  ADR for the dependency.
-- **Prompt**: The e2e suite (`e2e/`) asserts behavior almost entirely through accessible roles/names (good), but nothing runs an automated a11y scan and no spec asserts focus behavior beyond `keyboard-shortcuts.spec.ts` — regressions like the failing focus ring or a missing label ship silently. Add `@axe-core/playwright` as a devDependency (write an ADR per the "new runtime dependency → ADR" rule, noting it is test-only, using a `YYYYMMDD-short-slug` id) and create `e2e/a11y.spec.ts` that runs `new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag22aa"]).analyze()` and asserts zero violations on the five highest-stakes surfaces: the public schedule (`/shop/<slug>/schedule`), the trip booking page + confirmation, the waiver page (`/waivers/<token>` — seed a token via the existing helpers in `e2e/helpers.ts`/`e2e/fixtures.ts`, following how `waivers.spec.ts` obtains one), the staff manifest page, and `/offline-manifest`. Triage any violations the scan finds into the fixes above rather than filtering rules; only document a rule exclusion with an inline comment if it is a genuine false positive.
-- **Verification**: `pnpm e2e a11y.spec.ts --reporter=line` passes locally (never `pnpm e2e -- a11y.spec.ts` — the `--` breaks pnpm arg forwarding per AGENTS.md); intentionally removing an `aria-label` in `ScheduleBuilder.tsx` locally makes the scan fail, proving it bites; `pnpm check` green and the ADR committed in the same change.
 
 ---
 
@@ -214,87 +200,16 @@ Nothing in this lens has been started; all seven findings were re-confirmed pres
 
 ## 6. ML & data (open)
 
-Auditor's baseline: the app has no LLM dependency today (new runtime dependency → ADR), a strict
-external-HTTP seam pattern (`marine-forecast.ts`/`analytics.ts` + `DIVEDAY_DISABLE_EXTERNAL_HTTP`),
-and existing deliberately-conservative heuristics (`demandRecommendation`, `KIND_SEVERITY`) that
-should be extended, not replaced with models. At single-shop data scale, SQL aggregates and
-transparent scoring beat trained models everywhere except language tasks (moderation, translation,
-summarization), where the Claude API is the right tool. **Explicitly rejected as not worth
-building now**: training any custom model (every surface is below the data volume where one beats
-the existing heuristics), LLM-drafted replies to reviews (the reply feature itself doesn't exist),
-LLM anything on cert gating/manifests/medical decisions (hard rule: assistive only — and the
-assistive versions below are deliberately model-free), and dynamic pricing beyond the last-minute
-rule table (Stripe owns arithmetic; trust risk exceeds upside for a delight-first product).
-
-Nothing in this lens has been started; none of the eight modules below exist in the tree as of
-2026-08-01.
-
-### Add departure-demand insights to the schedule builder
-
-- **Priority**: high
-- **Effort**: M
-- **Prompt**: Build a demand-history signal for staff scheduling, grounded in data the app already has: `trips` (startsAt, capacity, status), `bookings` (active statuses `booked`/`checked_in`), and `trip_waitlist_entries`. Add a pure function in a new `src/lib/demand-history.ts` (with `demand-history.test.ts` first) that takes per-slot aggregates and returns codes like `{ code: "underserved_slot", weekday, timeband, avgFillRate, waitlistedTotal }`; add the SQL aggregates (fill rate and waitlist depth grouped by shop-local weekday × morning/afternoon band over the trailing 12 weeks, using `utcToWallTime` from `src/lib/zoned.ts` and `nowDate()` from `src/lib/clock.ts` — never `new Date()`) in a new `src/db/demand-history.ts`. Surface it as one quiet line in the staff schedule builder's route server component (`src/app/shop/[shopSlug]/schedule/board/`), reusing the existing conservative style of `src/lib/demand.ts` (`demandRecommendation`) — a signal only fires when a slot averaged ≥90% full or carried waitlists across ≥2 recent departures. This is deliberately statistics-not-ML: at a single shop's volume (tens of trips/month) a rolling aggregate is more trustworthy than any forecast model, and it must be presented as guidance, never auto-creating trips. All staff-facing words go through `staff.json` codes per the domain-layer-copy rule; run `pnpm check` and add the surface to `e2e/visual.spec.ts`.
-- **Verification**: Unit tests cover the threshold edges (fires at 2 qualifying departures, not 1; empty history returns nothing). Seed data via `createTestDb()` + `src/db/seed.ts` shows the line on the schedule board; `pnpm check` green; visual diff explained in the PR.
-
-### Suggest last-minute deal parameters from past blast outcomes
-
-- **Priority**: high
-- **Effort**: M
-- **Prompt**: The one-tap last-minute blast exists (`src/db/trip-promos.ts` `sendLastMinuteDealBlast`, history via `listTripLastMinutePromos`, Today surfaces `last_minute_fill` rows via `tripIdsNeverSentLastMinuteDeal`), but staff pick the discount percent blind. Add a pure advisor in a new `src/lib/last-minute-advisor.ts` that, given open-seat ratio, hours until departure, matching `last_minute_list_entries` count (reuse `lastMinuteEntryMatchesTripDate` in `src/lib/last-minute-list.ts`), and the shop's past blasts with their fill outcomes, returns a code-shaped suggestion `{ suggestedPercent, rationale: "many_seats_soon" | "few_seats" | ... }` — a transparent rule table (e.g. ≥50% empty inside 48h → 20–25%; <25% empty → 10%), clamped by `isValidLastMinuteDiscountPercent`. Compute past-blast outcomes in `src/db/trip-promos.ts` as a SQL aggregate: for each `sent` promo, seats booked between `createdAt` and `expiresAt` from `bookings`. Prefill (never auto-send) the discount field on the trip's last-minute-deal form under `src/app/shop/[shopSlug]/trips/**`, with the rationale rendered from `staff.json`. Do not build an ML price model — a shop has single-digit blasts of history; state in the module doc that the rule table is the honest ceiling until there are hundreds of blasts. Stripe still owns all discount arithmetic.
-- **Verification**: Table-driven unit tests for every rationale branch and the clamp; a `src/db` test seeding two past blasts asserts the outcome aggregate; open the trip page in dev and confirm the prefilled percent; `pnpm check` green.
-
-### Ship an assistive review-moderation and themes assistant (Claude API)
-
-- **Priority**: high
-- **Effort**: L
-- **Prompt**: Staff moderate every commented review by hand (`src/db/reviews.ts` `listShopReviewsForStaff`/`setReviewPublished`, queue count in `countReviewsAwaitingModeration`, UI at `src/app/shop/[shopSlug]/reviews`). Add an assistive triage: a new seam module at `src/lib/review-assist/` that calls the Claude API (`@anthropic-ai/sdk`, structured JSON output) to classify each pending comment `{ flags: ("names_third_party" | "contact_info" | "safety_complaint" | "profanity")[], sentiment: "positive"|"mixed"|"negative" }` and, on demand, summarize the trailing 90 days of *published* comments into 3–5 recurring theme codes for the owner. Follow the repo's provider-seam rules exactly: injectable provider defaulting from environment (mirror `src/lib/marine-forecast.ts`), a no-op when `ANTHROPIC_API_KEY` is unset or `DIVEDAY_DISABLE_EXTERNAL_HTTP === "1"`, failures degrade to "no assist" — the moderation queue must work identically with the feature dark. Hard guardrails: the model never publishes or unpublishes anything (`setReviewPublished` remains staff-tap only), flags render as neutral chips whose words live in `staff.json`, and review comments sent to the API contain no diver identity beyond the comment text. This adds a runtime dependency, so write an ADR (`YYYYMMDD-review-assist-llm` id format) and request `security-reviewer` sign-off since it exports user-generated content to a third party.
-- **Verification**: Unit tests with a fake provider cover flag mapping, provider-error fallback, and the disabled-env path; `pnpm test src/lib/review-assist --reporter=dot`; manually seed a review with a phone number in dev and see the chip; confirm the queue renders unchanged with the key unset; `pnpm check` green and ADR present.
-
-### Build a translation-drafting script for the locale-coverage ratchet
-
-- **Priority**: high
-- **Effort**: M
-- **Prompt**: `pnpm check:locale` enforces translation coverage across `src/i18n/locales/<locale>/diver.json` and `staff.json`, which makes every copy extraction a multi-locale chore. Write a dev-time script `scripts/draft-translations.mjs` that diffs each non-English locale file against `en-US`, sends only the missing key/value pairs to the Claude API (one batched request per locale, structured JSON output keyed identically), and writes the drafts back with a `--write` flag (default is a dry-run report, mirroring the `check-copy.mjs` flag conventions). Include the surrounding keys of each missing entry as context so tone matches DiveDay's dive-briefing voice, and instruct the model to preserve ICU placeholders like `{name}` verbatim, validating placeholder parity in the script and rejecting any drafted string whose placeholders differ. Guardrails: drafts land in the working tree for human review in the PR — never auto-committed; waiver/medical wording stays English pending H-01/H-03 (`docs/product/human-decisions.md`), so skip keys under those namespaces; the script reads `ANTHROPIC_API_KEY` from the environment and exits cleanly with a message when unset. Since this is dev tooling, add `@anthropic-ai/sdk` as a devDependency, but still record a short ADR because generated locale text changes what users read. Note this serves *ongoing* locale maintenance — the original extraction backlog is finished and both baselines are empty.
-- **Verification**: Run the script dry against a locale with a deliberately deleted key and confirm the report; run `--write` and confirm `pnpm check:locale` goes green and placeholders survive; a unit-testable pure helper for placeholder-parity checking gets its own test file.
-
-### Detect changed medical answers between a diver's waivers (assistive, never gating)
-
-- **Priority**: medium
-- **Effort**: M
-- **Prompt**: Waivers store versioned medical questionnaire answers (`waiver_records` in `src/db/schema.ts`, shapes in `src/lib/medical.ts` — `needsPhysicianReview`, `flaggedMedicalPrompts`). Add a pure comparator `medicalAnswerChanges(previous, current)` in `src/lib/medical.ts` returning codes for each question whose answer flipped, distinguishing `yes_to_no` (the one worth a human glance — a previously disclosed condition now undisclosed) from `no_to_yes` (already handled by the physician-review gate). In `src/db/waivers.ts`, when a completed waiver supersedes an older completed one for the same person and shop, compute the diff against the most recent prior record — only comparing answers captured against the same `questionnaireId` (a questionnaire change is not a flip). Surface `yes_to_no` flips as a quiet informational note on the diver record and the roster's medical-review panel, worded in `staff.json` as "answered differently than last time", with the prior date. Absolute guardrails: this is statistics-free, model-free, and must never block boarding, alter `needsPhysicianReview`, create a readiness blocker, or auto-message the diver — it is a prompt for a human conversation only. This touches medical data on a safety-critical surface: write failure-path and adversarial tests (unknown question ids, mismatched questionnaire versions fail closed to "no diff reported") and request both `dive-domain-expert` and `security-reviewer` review.
-- **Verification**: Unit tests in `src/lib/medical.test.ts` cover both flip directions, same-answers, and cross-questionnaire no-ops; a `src/db/waivers.test.ts` case with two completed waivers asserts the diff is attached; confirm no readiness/blocker code path imports the new function; `pnpm check` green.
-
-### Recommend the diver's next course step on the recap page
-
-- **Priority**: medium
-- **Effort**: M
-- **Prompt**: Certification paths exist as guidance (`src/db/course-paths.ts`, including the pure `nextPathStep`, already used on the trip detail page), and the recap page (`src/app/recap/[token]`, data in `src/db/recap.ts`) is the highest-intent diver moment the app owns. Add a query in `src/db/course-paths.ts` that, given a person id, joins their highest `certifications` level against each visible path's steps and returns the first step whose course they haven't taken and whose `minimum_certification_level` they meet — reusing `nextPathStep` for the ordering logic rather than duplicating it. Render at most one suggestion on the recap page as a low-key card linking to the public course page (`shop/[shopSlug]/courses/[slug]`), with copy in `src/i18n/locales/<locale>/diver.json` and a `DiverIntlProvider` already above it (verify — a missing provider blanks the whole page). This is a deterministic join, not collaborative filtering: with one shop's enrollment volume, "the next step of the path you're on" is strictly better than any learned recommender, and the module doc should say so. Guidance never gates: admission stays on the course's own `minimum_certification_level` check at booking time. Respect the bearer-token page rules in `docs/engineering/capability-telemetry-runbook.md` — no new data exposure beyond this booking's diver, and no structured data on the token page.
-- **Verification**: `src/db/course-paths.test.ts` cases: uncertified diver → entry course, mid-path diver → next step, fully-certified → nothing, hidden path → nothing. E2e assertion on the recap spec that the card shows for the seeded diver; screenshot added to `e2e/visual.spec.ts`; `pnpm check` green.
-
-### Instrument Today-queue outcomes before touching its ranking
-
-- **Priority**: medium
-- **Effort**: S
-- **Prompt**: The Today ranking (`src/lib/today.ts` `KIND_SEVERITY`, `sortActions`, urgency windows) is hand-coded and well-reasoned; replacing it with learned ranking is unjustified without outcome data, so build the measurement first. Extend the typed event vocabulary in `src/lib/analytics.ts` with one event: `{ name: "today_action_opened"; kind: TodayActionKind; urgency: TodayUrgency; rank: number }`, emitted from the Today page's action taps alongside the existing `staff_recovery`/`blockers_surfaced` events (see `src/db/today.ts` and the Today route under `src/app/shop/[shopSlug]`). Keep it best-effort via `trackEvent` exactly as documented in that file — never awaited in a way that delays navigation, and silent under `DIVEDAY_DISABLE_EXTERNAL_HTTP`. Add a short note in the `src/lib/today.ts` module doc stating the tuning contract: severity constants may only be re-ordered with click-through/recovery evidence from these events, not by taste. Explicitly do not add any model, decay, or personalization now — the deliverable is the data seam plus the documented bar for future changes.
-- **Verification**: Type-level exhaustiveness keeps the event union sound (`pnpm typecheck`); a unit test with an injected fake tracker asserts the event fires with the row's rank; `pnpm check` green.
-
-### Score boarding risk as a transparent checklist, not a model
-
-- **Priority**: low
-- **Effort**: M
-- **Prompt**: "No-show risk scoring" is the classic ML pitch here, but the honest version at this data scale is a visible checklist score: the signals that predict a roll-call problem already exist as rows — unresolved readiness blockers near departure (`src/lib/readiness.ts` / `src/db/readiness.ts`), a prior `roll_call_events` absence for the same person, and a booking made under a heuristic lead-time threshold. Add `boardingAttention(input): { level: "watch" | null, reasons: BoardingAttentionCode[] }` in a new `src/lib/boarding-attention.ts` — additive named reasons, no weights or probabilities, returning `watch` only when ≥2 reasons hold — with the reason-gathering SQL in `src/db/check-in.ts` feeding the existing check-in queue (`listCheckInQueue`). Render it as a neutral informational chip on the check-in queue row with words from `staff.json`. Guardrails: this is safety-adjacent, so it must never gate boarding, never reorder the manifest, and never appear on diver-facing surfaces; prior absence data is sensitive, so the chip shows reasons only on tap and the change gets a `dive-domain-expert` review. Document in the module why a trained classifier is rejected: a shop sees too few no-shows per season to fit anything, and an opaque score on a boarding surface violates the "boring code on safety surfaces" rule.
-- **Verification**: Unit tests for each reason and the ≥2 threshold; a db test seeding a past `absent` roll-call event asserts the reason surfaces; check-in e2e spec still passes; `pnpm check` green.
-
-### List lapsed regulars for staff win-back (SQL, staff-initiated)
-
-- **Priority**: low
-- **Effort**: M
-- **Prompt**: Churn signals for a dive shop are diver-level and computable with one aggregate: a person whose merged history (`src/lib/prior-visits.ts` `mergeShopHistory` semantics — native `bookings` plus imported `prior_visits`) shows ≥3 lifetime visits but none in the trailing 12 months is a lapsed regular. Add `listLapsedRegulars(db, shopId, now)` in `src/db/divers.ts` (thresholds as named constants in a small pure helper in `src/lib/` with tests, clock via `nowDate()`), counting a prior visit only when `priorVisitStanding` says `recorded`, and excluding deleted people. Surface it as a filter or section on the staff divers list (`src/app/shop/[shopSlug]/divers`), showing last-visited date and a link to the diver record — from which staff can already add the person to the last-minute list (`src/db/last-minute-list.ts`), which is the consent-carrying channel for outreach. Hard guardrail: no automatic emailing — `sendNotificationBatch` must not be wired to this list; DiveDay surfaces the fact, the human decides the outreach, keeping the shop on the right side of marketing-consent rules. No ML: recency/frequency thresholds are the entire method, and the module doc should note that an RFM-style weighted score can come later only if shops ask for ordering within the list.
-- **Verification**: db test seeds a 3-visit diver with an old last booking (frozen clock) and asserts inclusion; cancelled-status prior visits don't count toward the 3; the divers page renders the section in dev; `pnpm check` green plus a `security-reviewer` glance since it aggregates personal history.
+Moved in full to
+[../features/ai-ml.md](../features/ai-ml.md#scoped-prompt-ready--from-the-2026-07-31-specialist-audit)
+on 2026-08-01 — AI/ML ideas were split across this section and a separate brainstorm file, so both
+now live in one place. The eight tasks, their prompts, and the auditor's baseline notes are
+unchanged; only the location moved. Code comments in `src/` citing "specialist-optimization-audit-20260731.md
+§6" refer to that file's numbering, which was preserved.
 
 ---
 
-## 8. Developer & agent experience (one task open)
+## 8. Developer & agent experience (delivered)
 
 The rest of this lens shipped: the stale copy-backlog claims are corrected everywhere, four new
 `task:context` areas exist (payments, notifications, reviews, data portability), `pnpm e2e:run` and
@@ -302,12 +217,16 @@ The rest of this lens shipped: the stale copy-backlog claims are corrected every
 `pnpm check:repo` runs its ten checks in parallel and reports all failures, and `check:agents`
 verifies AGENTS.md's route-map paths.
 
-### Deduplicate CI job setup with a composite action
-
-- **Priority**: low
-- **Effort**: M
-- **Prompt**: All seven jobs in `.github/workflows/ci.yml` repeat the same four setup steps (checkout, `pnpm/action-setup@v6`, `actions/setup-node@v7` with node 22 + pnpm cache, `pnpm install --frozen-lockfile`), and the two Playwright jobs additionally duplicate the browser-cache block including its long `-shell` key comment — eight near-identical stanzas that must be edited in lockstep, which is exactly the drift the repo's safeguards elsewhere exist to prevent. Create `.github/actions/setup/action.yml` (composite) holding the pnpm/node/install steps, and a second `.github/actions/playwright-shell/action.yml` holding the `~/.cache/ms-playwright` cache plus `pnpm exec playwright install --only-shell chromium`, moving the existing explanatory comments into the composite files so the rationale is not lost. Keep `actions/checkout` in each job (the visual job needs its special `fetch-depth: 0` variant untouched) and keep all job-level `timeout-minutes`, shard matrices, artifact steps, and env blocks exactly as they are. This is a refactor only — the effective step sequence per job must be unchanged.
-- **Verification**: Push to a branch and confirm all CI jobs run green with identical step behavior (install hits the pnpm cache, Playwright jobs hit the `-shell` browser cache); `git diff --stat` shows ci.yml shrinking substantially with no behavioral edits outside the extracted steps.
+**Deduplicate CI job setup with a composite action** — delivered 2026-08-01. All seven jobs in
+`.github/workflows/ci.yml` used to repeat the same four setup steps (checkout, `pnpm/action-setup@v6`,
+`actions/setup-node@v7` with node 22 + pnpm cache, `pnpm install --frozen-lockfile`), and the two
+Playwright jobs additionally duplicated the browser-cache block including its `-shell` key comment.
+`.github/actions/setup/action.yml` (composite) now holds the pnpm/node/install steps, and
+`.github/actions/playwright-shell/action.yml` holds the `~/.cache/ms-playwright` cache plus
+`pnpm exec playwright install --only-shell chromium`, with the original explanatory comments moved
+into the composite files rather than dropped. `actions/checkout` stays inline in every job (the
+visual job keeps its own `fetch-depth: 0` variant untouched), and every job-level `timeout-minutes`,
+shard matrix, artifact step, and env block is unchanged — a pure refactor of the shared setup only.
 
 ---
 
@@ -317,8 +236,9 @@ verifies AGENTS.md's route-map paths.
   ring, status-banner tokens, placeholder) — that is one natural slice, and one `pnpm visual` pass.
   The Stripe webhook is touched by the open livemode task (§5) on top of §7's already-shipped
   transition guards and event ledger; build the livemode check on that ledger rather than beside it.
-- **Reviews required by repo rules**: every §5 task needs `security-reviewer`; the §6 medical-diff,
-  boarding-attention, and review-assist tasks need `dive-domain-expert` too, and review-assist and
-  lapsed-regulars additionally need `security-reviewer`.
+- **Reviews required by repo rules**: every §5 task needs `security-reviewer`; the medical-diff,
+  boarding-attention, and review-assist tasks in [ai-ml.md](../features/ai-ml.md) (formerly §6) need
+  `dive-domain-expert` too, and review-assist and lapsed-regulars additionally need
+  `security-reviewer`.
 - **The marketing-caching task (§2) is now gated on the e2e Activity migration**, not on Next
   configuration — sequence the suite work first or the flag flip will be reverted again.

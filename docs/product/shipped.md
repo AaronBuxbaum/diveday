@@ -2,7 +2,7 @@
 
 What DiveDay has already built, as a scannable index. This is the "what exists" map; the *why* and
 the exact mechanism live in the linked ADRs and the code. Open work — what is **not** yet built —
-lives in [roadmap.md](roadmap.md), which this file keeps uncluttered.
+lives in [features/roadmap.md](features/roadmap.md), which this file keeps uncluttered.
 
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
@@ -13,7 +13,7 @@ The 165-task persona walkthrough closed out; the vast majority shipped across PR
 task-by-task rationale is archived in
 [archive/ux-personas-20260730-findings.md](archive/ux-personas-20260730-findings.md), the standing
 evaluation frame is [personas.md](personas.md), and what's still open is in
-[story-backlog.md](story-backlog.md). The headline slices:
+[features/story-backlog.md](features/story-backlog.md). The headline slices:
 
 - **The shop declares its own currency** — `shops.currency` (ISO 4217, chosen in settings) is the
   single source of truth for every checkout, order, invoice, tip, and displayed amount; Stripe's
@@ -36,11 +36,44 @@ evaluation frame is [personas.md](personas.md), and what's still open is in
   specialist audit later credited: a skip link in both layouts, `<html lang>` from the negotiated
   locale, and a real focus trap on the portal dialogs.
 
+## Specialist optimization audit — accessibility non-contrast items and CI dedup (2026-08-01)
+
+Continuing the [specialist optimization audit](assessments/specialist-optimization-audit-20260731.md):
+developer/agent experience (§8) is now fully delivered, and three of the six remaining accessibility
+(§3) tasks landed. Security/privacy, ML & data, and three contrast-specific accessibility tasks
+remain open in that file — the contrast tasks are deliberately deferred (see below), not forgotten.
+
+- **CI job setup is now one composite action, not eight copies** — `.github/actions/setup/action.yml`
+  holds the shared pnpm/node/install steps and `.github/actions/playwright-shell/action.yml` holds
+  the Chromium headless-shell cache+install, both reused across all seven `ci.yml` jobs. Pure
+  refactor: every job's effective step sequence, `timeout-minutes`, shard matrix, and artifact step
+  is unchanged; only the duplicated setup shrank.
+- **Waiver-signing errors point at the field that's actually wrong** — `signerName` and
+  `acknowledged` on `/waivers/[token]` now carry `required`/`minLength`, so the browser blocks and
+  focuses an incomplete submit before it ever reaches the server; the fallback error banner (reached
+  only when that's bypassed) names and links to the specific missing field instead of one generic
+  "check every question" message. The "Save for later" button keeps accepting partial drafts via
+  `formNoValidate`.
+- **The schedule builder's Add/Move/Copy panels manage keyboard focus** — opening a panel focuses its
+  first field, Cancel returns focus to the toggle that opened it, and the three hand-rolled Cancel
+  buttons now go through `buttonClass` like every other button-shaped control. The panel-completion
+  announcement this item also called for turned out to already exist (the board's `ShopNotice
+  role="status"` banner), so nothing new was needed there.
+- **Automated accessibility scans run in CI** — `@axe-core/playwright` (test-only devDependency, ADR
+  [20260801-axe-core-playwright-a11y-scans](../architecture/decisions/20260801-axe-core-playwright-a11y-scans.md))
+  scans five high-stakes surfaces — the public schedule, trip booking + confirmation, the waiver page,
+  the staff manifest, and the offline manifest viewer — against WCAG 2.0 A/AA and 2.2 AA on every
+  Playwright run, catching regressions like a missing label or broken landmark automatically. The
+  `color-contrast` rule is excluded on purpose: it fires on every surface over the same token values
+  the three still-open contrast tasks track, and the product owner ruled out touching contrast in
+  this pass (it would fight the current color guide) — re-include the rule once that work lands.
+
 ## Specialist optimization audit — five lenses delivered (2026-07-31 → 08-01)
 
 Five of the eight lenses of the [specialist optimization
-audit](assessments/specialist-optimization-audit-20260731.md) shipped in full; accessibility,
-security/privacy, and ML & data are still open and remain in that file.
+audit](assessments/specialist-optimization-audit-20260731.md) shipped in full; accessibility and
+security/privacy are still open and remain in that file, while ML & data moved in full to
+[features/ai-ml.md](features/ai-ml.md#scoped-prompt-ready--from-the-2026-07-31-specialist-audit).
 
 - **UX & interaction design (§1)** — every button and button-shaped link gets a press dip on touch
   (one `active:scale-[0.98]` in `buttonClass`, so no call site changed); the `/ready` checklist now
@@ -338,7 +371,7 @@ security/privacy, and ML & data are still open and remain in that file.
   ([trip-dive-briefings](../architecture/decisions/20260719-trip-dive-briefings.md)).
 
 > **Not yet done:** human field validation of the offline manifest (V-02) — the one manifest item
-> still open. Tracked in [roadmap.md](roadmap.md) and [human-decisions.md](human-decisions.md).
+> still open. Tracked in [roadmap.md](features/roadmap.md) and [human-decisions.md](human-decisions.md).
 
 ## Operational surfaces (M7)
 
@@ -412,7 +445,7 @@ security/privacy, and ML & data are still open and remain in that file.
   ever not right, take it back out, free (`SwitchingConcierge`, routed to `switch@dive.day`; an
   authorized service claim, H-20). Content in `src/lib/migration-guides.ts`, pages in
   `src/app/switching/` ([marketing.md](marketing.md#where-the-words-live)). Backups and the read API are
-  the open follow-ons in [roadmap.md](roadmap.md).
+  the open follow-ons in [roadmap.md](features/roadmap.md).
 - **FareHarbor guide (coexist-led)** (2026-07-24) — `/switching/fareharbor`, the same template with
   an optional `coexist` block, because FareHarbor is a booking/distribution *channel* (a general
   tours engine, Booking-Holdings-owned), not a records system to leave: the guide leads with "keep
@@ -654,7 +687,7 @@ The roadmap's §7 smaller follow-ons and the whole open Delight backlog shipped:
 - **The chosen fit and nitrox request are saved the moment the booking exists** — the same
   `saveRentalFit`/`setBookingNitrox` writes the post-booking form already made, just a step earlier;
   that form still exists for a diver who skipped the step or wants to add sizes afterward.
-  Was the highest-leverage of [roadmap.md](roadmap.md#not-scheduled--candidate-subsystems)'s deferred revenue-layer
+  Was the highest-leverage of [roadmap.md](features/roadmap.md#not-scheduled--candidate-subsystems)'s deferred revenue-layer
   candidates. See
   [20260801-checkout-upsells-rental-gear](../architecture/decisions/20260801-checkout-upsells-rental-gear.md).
 

@@ -7,22 +7,22 @@
 > the spine into surfaces" recommendation became the [UX audit](ux-audit-20260721.md), which has
 > itself since fully shipped. Its cut list was largely executed (Checkout seam and agency plumbing
 > removed; monster pages decomposed). Retained for the rationale; for current state see
-> [shipped.md](../shipped.md) and for open work see [roadmap.md](../roadmap.md). The one live residue
+> [shipped.md](../shipped.md) and for open work see [roadmap.md](../features/roadmap.md). The one live residue
 > — pausing/hiding the dive-site CMS and global catalog behind unproven value — is not yet on the
 > roadmap; raise it there if it still matters.
 
 > A strategic read of where DiveDay actually is versus where the vision says it should be, and an
 > opinionated recommendation for the next arc of work. Written 2026-07-20 from a full pass over
-> [vision](../vision.md), [roadmap](../roadmap.md),
+> [vision](../vision.md), [roadmap](../features/roadmap.md),
 > [human-decisions](../human-decisions.md), [glossary](../glossary.md),
 > [design principles](../../design/principles.md), the 2026-07-19 cleanup audit (executed and retired
 > 2026-07-20; its lasting rulings live in
 > [architecture/overview.md](../../architecture/overview.md#settled-shape-decisions)),
-> the consolidated [brainstorm backlog](../brainstorm/README.md), and the shipped code
+> the consolidated [brainstorm backlog](../features/brainstorm.md), and the shipped code
 > (`src/app/**`, `src/lib/**`, `src/db/schema.ts` — 33 tables).
 >
 > This is an assessment, not a commitment. Items that survive review move into
-> [roadmap.md](../roadmap.md) with a milestone; hard-to-reverse choices become ADRs.
+> [roadmap.md](../features/roadmap.md) with a milestone; hard-to-reverse choices become ADRs.
 
 ## The finding in one paragraph
 
@@ -42,7 +42,7 @@ The data model reaches further than the roadmap headline suggests — **33 table
 one readiness engine, multi-tenant to the core. Concretely shipped and working:
 
 - **The safety brainstorm is essentially complete.** Nearly every idea in the
-  [Safety and Trust backlog](../brainstorm/README.md#safety-and-trust) exists in code: the typed fail-closed
+  [Safety and Trust backlog](../features/brainstorm.md#safety-and-trust) exists in code: the typed fail-closed
   readiness result ([`src/lib/readiness.ts`](../../../src/lib/readiness.ts)), no-silent-disappearance +
   two-phase roll call, an encrypted offline manifest snapshot with explicit freshness and idempotent
   reconciliation, immutable versioned waivers, verified-vs-claimed cert states, nitrox write-time
@@ -65,14 +65,14 @@ be turned into felt product, and it mostly hasn't been.
 
 The single most-cited idea across all five brainstorm lenses is **one readiness engine, three
 views** — the same result feeding the staff roster, the diver confirmation, and the manifest
-([brainstorm](../brainstorm/README.md) readiness ideas). **The engine is built. Two of
+([brainstorm](../features/brainstorm.md) readiness ideas). **The engine is built. Two of
 the three high-value views are not.** `readiness.ts` is consumed only *inside* two 1,000+-line pages
 (`trips/[id]/page.tsx` — 1,278 lines; `divers/[personId]/page.tsx` — 1,132 lines). There is **no**
 staff blocker queue, **no** one-screen check-in, and **no** no-login diver readiness page (verified:
 no `check-in`, `blocker`, `ready`, or `today` route exists under `src/app/shop/[shopSlug]/`).
 
 This is the crux. The front desk's *entire job* is coordination — who's coming, who's ready, who to
-call ([Staff Operations](../brainstorm/README.md#staff-operations)). We have the data to answer that in one
+call ([Staff Operations](../features/brainstorm.md#staff-operations)). We have the data to answer that in one
 glance and we make staff assemble the answer by hand across a 1,300-line trip page. We built the
 brain and skipped the face.
 
@@ -82,12 +82,12 @@ Ranked by leverage against the north star (less staff coordination · more diver
 departure):
 
 1. **The staff blocker queue with one-tap actions** — the front desk's whole day as one actionable
-   list. Unbuilt. ([Staff Operations](../brainstorm/README.md#staff-operations).)
+   list. Unbuilt. ([Staff Operations](../features/brainstorm.md#staff-operations).)
 2. **One-screen check-in** ("ready to board" at a glance, one tap to board) — the daily-throughput
    surface where safety and efficiency converge. Unbuilt.
 3. **The no-login diver readiness page** — the diver-side mirror of the blocker queue; the thing that
    kills the "did you get my waiver?" call and raises confidence. Unbuilt.
-   ([Diver Experience and Growth](../brainstorm/README.md#diver-experience-and-growth).)
+   ([Diver Experience and Growth](../features/brainstorm.md#diver-experience-and-growth).)
 4. **Notifications don't actually send in a default deployment.** The Resend seam is real but resolves
    to a disabled stub without `RESEND_API_KEY`; policy (H-09) is unowned. So "chasing missing
    waivers" is still manual, one-tap nudges are hollow, and the waitlist recovers **zero** revenue
@@ -248,7 +248,7 @@ Delight over a product that can't operate is theater. In parallel with Move 2:
 
 ## How we'll know it worked
 
-The [roadmap measures](../roadmap.md#measures) become checkable once Move 2 + real notifications
+The [roadmap measures](../features/roadmap.md#measures) become checkable once Move 2 + real notifications
 land: median time to resolve a booking blocker, waiver completion rate before arrival, % of
 departures fully ready before trip day. The qualitative bar from the vision is the real test — *staff
 run the whole day from it, unprompted, and a diver compliments the booking flow.* We are not there

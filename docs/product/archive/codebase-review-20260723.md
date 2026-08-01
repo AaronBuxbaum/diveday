@@ -10,7 +10,7 @@
 > for H-15/H-16's reasoning. H-14 (role authority boundaries) is implemented — see
 > [shipped.md](../shipped.md#staff-role-authorization-delivered-2026-07-24).
 > Retained for the rationale behind each ticket; for current state see
-> [shipped.md](../shipped.md) and for open work see [roadmap.md](../roadmap.md).
+> [shipped.md](../shipped.md) and for open work see [roadmap.md](../features/roadmap.md).
 
 Status: evidence-backed engineering assessment, not a roadmap commitment.
 

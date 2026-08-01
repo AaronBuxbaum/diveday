@@ -73,7 +73,7 @@ const BUILDER_NOTICE_KEYS: Record<
 /**
  * The staff operations board — KPI tiles and the add/move/copy/remove
  * departure builder. Split out of the old `/schedule` (Lens 17,
- * docs/product/story-backlog.md): that route rendered this staff content
+ * docs/product/features/story-backlog.md): that route rendered this staff content
  * *or* the public schedule depending on session, which meant a signed-out
  * diver and a signed-in owner could never both point at the same URL and
  * mean the same thing. `/schedule` is now the public, canonical page this

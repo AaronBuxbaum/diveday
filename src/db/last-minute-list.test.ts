@@ -104,7 +104,7 @@ describe("listLastMinuteList cross-tenant isolation", () => {
   });
 });
 
-// Leo (persona 15) — self-serve email unsubscribe (docs/product/story-backlog.md).
+// Leo (persona 15) — self-serve email unsubscribe (docs/product/features/story-backlog.md).
 describe("self-serve unsubscribe token", () => {
   it("resolves a fresh token to the entry's shop, name, and not-yet-unsubscribed state", async () => {
     const { db, shop } = await seededShopContext();

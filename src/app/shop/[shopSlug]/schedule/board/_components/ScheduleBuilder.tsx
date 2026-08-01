@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
@@ -131,6 +131,18 @@ function fill(template: string, values: Record<string, string | number>): string
 }
 
 /**
+ * Moves focus into a panel's first field the moment it mounts. Every panel
+ * here is conditionally rendered (not just hidden), so this ref callback
+ * fires exactly once per open — biome's `noAutofocus` blocks the JSX
+ * `autoFocus` attribute outright (it can't tell a page-load autofocus from
+ * this one, which only ever runs in direct response to the staff member's
+ * own click on the toggle that revealed the panel).
+ */
+function focusOnMount(el: HTMLElement | null) {
+  el?.focus();
+}
+
+/**
  * The "add a departure" form, pre-dated to whichever day header it was opened
  * from. Hoisted to module scope (rather than defined inside `ScheduleBuilder`)
  * so its identity is stable across renders — a component defined in a parent's
@@ -169,6 +181,7 @@ function AddPanel({
           maxLength={120}
           placeholder={copy.titlePlaceholder}
           className={controlClass}
+          ref={focusOnMount}
         />
       </Field>
       <FieldGrid columns={3} className="gap-y-4">
@@ -247,7 +260,7 @@ function AddPanel({
         <button
           type="button"
           onClick={onCancel}
-          className="text-sm font-medium text-muted hover:text-foreground"
+          className={buttonClass({ variant: "ghost", size: "sm" })}
         >
           {copy.cancel}
         </button>
@@ -297,6 +310,18 @@ export function ScheduleBuilder({
   const [open, setOpen] = useState<string | null>(null);
   const toggle = (panel: string) => setOpen((current) => (current === panel ? null : panel));
 
+  // Every toggle button that can open a panel, keyed the same way `open` is,
+  // so Cancel can hand keyboard focus back to the exact control that opened
+  // it instead of leaving it on `<body>` when the panel unmounts.
+  const toggleRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const registerToggle = (key: string) => (el: HTMLButtonElement | null) => {
+    toggleRefs.current[key] = el;
+  };
+  const closePanel = (key: string) => {
+    setOpen(null);
+    toggleRefs.current[key]?.focus();
+  };
+
   // The schedule route has no dynamic id, so if `cacheComponents: true`'s
   // Activity-based navigation is ever re-enabled, this instance could
   // otherwise be preserved across a navigate-away-and-back with a panel left
@@ -320,6 +345,7 @@ export function ScheduleBuilder({
         {canConfigure ? (
           <button
             type="button"
+            ref={registerToggle("add:top")}
             onClick={() => toggle("add:top")}
             aria-expanded={open === "add:top"}
             className={buttonClass({ className: "rounded-xl" })}
@@ -339,7 +365,7 @@ export function ScheduleBuilder({
           diveSites={diveSites}
           copy={copy}
           onAdd={actions.add}
-          onCancel={() => setOpen(null)}
+          onCancel={() => closePanel("add:top")}
         />
       ) : null}
 
@@ -353,6 +379,7 @@ export function ScheduleBuilder({
               {canConfigure ? (
                 <button
                   type="button"
+                  ref={registerToggle(`add:${day.dateIso}`)}
                   onClick={() => toggle(`add:${day.dateIso}`)}
                   aria-expanded={open === `add:${day.dateIso}`}
                   aria-label={fill(copy.addDepartureOnDay, { day: day.label })}
@@ -369,7 +396,7 @@ export function ScheduleBuilder({
                 diveSites={diveSites}
                 copy={copy}
                 onAdd={actions.add}
-                onCancel={() => setOpen(null)}
+                onCancel={() => closePanel(`add:${day.dateIso}`)}
               />
             ) : null}
 
@@ -439,6 +466,7 @@ export function ScheduleBuilder({
                         <div className="flex shrink-0 flex-wrap items-center gap-1">
                           <button
                             type="button"
+                            ref={registerToggle(`move:${trip.id}`)}
                             onClick={() => toggle(`move:${trip.id}`)}
                             aria-expanded={open === `move:${trip.id}`}
                             aria-label={fill(copy.moveAria, { ref })}
@@ -448,6 +476,7 @@ export function ScheduleBuilder({
                           </button>
                           <button
                             type="button"
+                            ref={registerToggle(`copy:${trip.id}`)}
                             onClick={() => toggle(`copy:${trip.id}`)}
                             aria-expanded={open === `copy:${trip.id}`}
                             aria-label={fill(copy.copyAria, { ref })}
@@ -493,6 +522,7 @@ export function ScheduleBuilder({
                             required
                             defaultValue={trip.dateIso}
                             className={controlClass}
+                            ref={focusOnMount}
                           />
                         </Field>
                         <Field label={copy.newDepartureTime}>
@@ -510,8 +540,8 @@ export function ScheduleBuilder({
                           </SubmitButton>
                           <button
                             type="button"
-                            onClick={() => setOpen(null)}
-                            className="text-sm font-medium text-muted hover:text-foreground"
+                            onClick={() => closePanel(`move:${trip.id}`)}
+                            className={buttonClass({ variant: "ghost", size: "sm" })}
                           >
                             {copy.cancel}
                           </button>
@@ -534,6 +564,7 @@ export function ScheduleBuilder({
                             required
                             defaultValue={shiftIsoDay(trip.dateIso, 7)}
                             className={controlClass}
+                            ref={focusOnMount}
                           />
                         </Field>
                         <Field label={copy.departureTime}>
@@ -551,8 +582,8 @@ export function ScheduleBuilder({
                           </SubmitButton>
                           <button
                             type="button"
-                            onClick={() => setOpen(null)}
-                            className="text-sm font-medium text-muted hover:text-foreground"
+                            onClick={() => closePanel(`copy:${trip.id}`)}
+                            className={buttonClass({ variant: "ghost", size: "sm" })}
                           >
                             {copy.cancel}
                           </button>

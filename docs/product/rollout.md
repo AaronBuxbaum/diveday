@@ -12,7 +12,9 @@ Companions: [vision.md](vision.md) (what winning looks like),
 portability wedge), [marketing.md](marketing.md) (the public-page rulebook and claims policy),
 [human-decisions.md](human-decisions.md) (the gate register this plan sequences), and
 [stakeholders/](stakeholders/README.md) (the per-discipline playbooks — exact contacts, briefing
-packets, and question lists for every conversation this plan schedules).
+packets, and question lists for every conversation this plan schedules). This plan sequences and
+gates work; it does not describe features — for what a wedge item, punch-list fix, or pilot ask
+actually *is*, see [features/](features/README.md), the single home for feature detail.
 
 ## Where we stand
 
@@ -198,7 +200,7 @@ bounded).
   shops in the launch region beats any campaign at this scale.
 - **Ship the remaining wedge before shouting about openness** (per the standing rule: no pledge
   pages before the button works): scheduled backup export to shop-owned storage, then the read
-  API + webhooks (ADR first) — both already sequenced in [roadmap.md](roadmap.md). "Openness"
+  API + webhooks (ADR first) — both already sequenced in [roadmap.md](features/roadmap.md). "Openness"
   marketing stays scoped to what's live: export, importer, guides.
 - **Plant the review-site flags now:** claim/create the Capterra listing (DiveAdmin's sits at 0
   reviews — the first product in this niche with even five real reviews wins the comparison page
