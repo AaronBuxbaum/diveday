@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AuthError } from "next-auth";
-import { MarketingFooter } from "@/components/MarketingFooter";
-import { MarketingNav } from "@/components/MarketingNav";
+import { Suspense } from "react";
+import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
+import { MarketingNav, MarketingNavFallback } from "@/components/MarketingNav";
 import { ShopNotice } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
@@ -13,11 +14,17 @@ import { requestLocale } from "@/i18n/request";
 import { signIn } from "@/lib/auth";
 import { trialHref } from "@/lib/funnel";
 
-// Reads `searchParams`, `requestLocale()`, and `signIn`'s cookie-backed auth
-// state unguarded — genuinely request-scoped, not a marketing page in scope
-// for the "use cache" hoist. See the shop layout's `instant = false` comment
-// (src/app/shop/[shopSlug]/layout.tsx) for what this does and doesn't do.
-export const instant = false;
+// Reads `searchParams`/`requestLocale()` inside `SignInForm` below, wrapped in
+// its own `<Suspense>` — not `instant = false`, which (per
+// node_modules/next/dist/docs/.../instant.md) is a *dev-time validation
+// opt-out only and has no effect on production rendering. Without a real
+// Suspense boundary, this route still gets a Partial-Prerendered static shell
+// with an implicit dynamic hole around the unwrapped `searchParams`/
+// `requestLocale()` read — and a `redirect("/sign-in?error=1")` fired from
+// the wrong-password path raced that hole's own pending fetch and got
+// `net::ERR_ABORTED`, leaving the form stuck on "Signing in…" forever
+// (caught by e2e/auth.spec.ts). An explicit boundary here makes the dynamic
+// part exactly what streams in on redirect, instead of leaving Next to guess.
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = diverTranslator(await requestLocale());
@@ -46,65 +53,77 @@ async function authenticate(formData: FormData) {
   }
 }
 
-export default async function SignInPage({
+export default function SignInPage({
   searchParams,
 }: {
   searchParams: Promise<{ error?: string }>;
 }) {
+  return (
+    <div className="flex flex-1 flex-col">
+      <Suspense fallback={<MarketingNavFallback />}>
+        <MarketingNav />
+      </Suspense>
+      <Suspense fallback={<main className="flex-1" />}>
+        <SignInForm searchParams={searchParams} />
+      </Suspense>
+      <Suspense fallback={<MarketingFooterFallback />}>
+        <MarketingFooter />
+      </Suspense>
+    </div>
+  );
+}
+
+async function SignInForm({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const { error } = await searchParams;
   const t = diverTranslator(await requestLocale());
 
   return (
-    <div className="flex flex-1 flex-col">
-      <MarketingNav />
-      <main className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center gap-6 px-6 py-16">
-        <div className="rounded-lg border border-border bg-surface p-6">
-          <h1 className="text-2xl font-semibold tracking-tight">{t("account.signIn.title")}</h1>
-          <p className="mt-1 text-sm text-muted">{t("account.signIn.description")}</p>
-          {error ? (
-            <ShopNotice tone="danger" role="alert" className="mt-4">
-              {t("account.signIn.error")}
-            </ShopNotice>
-          ) : null}
-          <form action={authenticate} className="mt-5 flex flex-col gap-4">
-            <FieldGrid columns={1} className="gap-y-4">
-              <Field label={t("account.common.email")}>
-                <input
-                  name="email"
-                  type="email"
-                  required
-                  autoComplete="email"
-                  className={controlClass}
-                />
-              </Field>
-              <Field label={t("account.common.password")}>
-                <input
-                  name="password"
-                  type="password"
-                  required
-                  autoComplete="current-password"
-                  className={controlClass}
-                />
-              </Field>
-            </FieldGrid>
-            <div className="flex justify-end">
-              <Link href="/forgot-password" className="text-sm text-primary hover:underline">
-                {t("account.signIn.forgotPassword")}
-              </Link>
-            </div>
-            <SubmitButton pendingLabel={t("account.signIn.signingIn")} className={buttonClass()}>
-              {t("account.signIn.submit")}
-            </SubmitButton>
-          </form>
-          <p className="mt-4 text-center text-sm text-muted">
-            {t("account.signIn.needShop")}{" "}
-            <Link href={trialHref("sign-in")} className="text-primary font-medium hover:underline">
-              {t("account.signIn.createShop")}
+    <main className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center gap-6 px-6 py-16">
+      <div className="rounded-lg border border-border bg-surface p-6">
+        <h1 className="text-2xl font-semibold tracking-tight">{t("account.signIn.title")}</h1>
+        <p className="mt-1 text-sm text-muted">{t("account.signIn.description")}</p>
+        {error ? (
+          <ShopNotice tone="danger" role="alert" className="mt-4">
+            {t("account.signIn.error")}
+          </ShopNotice>
+        ) : null}
+        <form action={authenticate} className="mt-5 flex flex-col gap-4">
+          <FieldGrid columns={1} className="gap-y-4">
+            <Field label={t("account.common.email")}>
+              <input
+                name="email"
+                type="email"
+                required
+                autoComplete="email"
+                className={controlClass}
+              />
+            </Field>
+            <Field label={t("account.common.password")}>
+              <input
+                name="password"
+                type="password"
+                required
+                autoComplete="current-password"
+                className={controlClass}
+              />
+            </Field>
+          </FieldGrid>
+          <div className="flex justify-end">
+            <Link href="/forgot-password" className="text-sm text-primary hover:underline">
+              {t("account.signIn.forgotPassword")}
             </Link>
-          </p>
-        </div>
-      </main>
-      <MarketingFooter />
-    </div>
+          </div>
+          <SubmitButton pendingLabel={t("account.signIn.signingIn")} className={buttonClass()}>
+            {t("account.signIn.submit")}
+          </SubmitButton>
+        </form>
+        <p className="mt-4 text-center text-sm text-muted">
+          {t("account.signIn.needShop")}{" "}
+          <Link href={trialHref("sign-in")} className="text-primary font-medium hover:underline">
+            {t("account.signIn.createShop")}
+          </Link>
+        </p>
+      </div>
+    </main>
   );
 }

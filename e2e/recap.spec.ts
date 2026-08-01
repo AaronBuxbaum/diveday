@@ -1,7 +1,7 @@
 import sharp from "sharp";
 import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed";
 import { signRecapToken } from "../src/lib/recap-links";
-import { expect, test } from "./fixtures";
+import { expect, makeActivitySafe, test } from "./fixtures";
 import { signInAsOwner, signOut } from "./helpers";
 
 // The recap page (`/recap/[token]`) is a public, signed-token diver surface, the
@@ -110,7 +110,7 @@ test("a booking cancelled after the recap page loaded gets an honest notice, not
   // has no idea yet, the exact race the code comments call out.
   const staffContext = await page.context().browser()?.newContext();
   if (!staffContext) throw new Error("could not open a second browser context");
-  const staffPage = await staffContext.newPage();
+  const staffPage = makeActivitySafe(await staffContext.newPage());
   await signInAsOwner(staffPage);
   // The seed schedules several other trips under this same title (task 56's
   // fixture isn't the only "Two-Tank Reef — Molasses & French" departure),

@@ -1,5 +1,5 @@
 import { DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
-import { expect, signedInAsOwner, test } from "./fixtures";
+import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import { signInAs } from "./helpers";
 
 signedInAsOwner();
@@ -284,7 +284,7 @@ test("a non-English visitor sees a notice that the waiver text itself stays in E
   // not the shop.
   const visitorContext = await page.context().browser()?.newContext({ locale: "es-ES" });
   if (!visitorContext) throw new Error("expected a browser to create a second context from");
-  const visitorPage = await visitorContext.newPage();
+  const visitorPage = makeActivitySafe(await visitorContext.newPage());
   await visitorPage.goto(`${new URL(page.url()).origin}${waiverHref}`);
   await expect(
     visitorPage

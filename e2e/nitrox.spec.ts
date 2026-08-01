@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { expect, signedInAsOwner, test } from "./fixtures";
+import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import { e2eNow } from "./helpers";
 
 async function openWreckTrip(page: Page) {
@@ -83,7 +83,7 @@ test.describe("staff", () => {
       baseURL: workerBaseURL,
       storageState: { cookies: [], origins: [] },
     });
-    const anon = await anonContext.newPage();
+    const anon = makeActivitySafe(await anonContext.newPage());
     await anon.goto("/shop/blue-mantis/schedule");
     await anon
       .locator("li")

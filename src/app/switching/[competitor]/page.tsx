@@ -52,28 +52,33 @@ export async function generateMetadata({
   };
 }
 
-export default function MigrationGuidePage({
+export default async function MigrationGuidePage({
   params,
 }: {
   params: Promise<{ competitor: string }>;
 }) {
+  // Resolved and checked here, before any Suspense boundary starts streaming
+  // the shell: `notFound()` only changes the response's HTTP status if it
+  // throws before the first byte goes out. Called from inside a
+  // Suspense-wrapped child instead (as this used to), the shell had already
+  // streamed with a 200 by the time the child resolved and rendered its
+  // not-found UI, so the page LOOKED right but answered a request for an
+  // unregistered competitor with status 200, not 404 — caught by
+  // e2e/marketing.spec.ts's `expect(response?.status()).toBe(404)`. Resolving
+  // `params` here doesn't cost this route its static shell for a *registered*
+  // slug: `generateStaticParams` still prerenders each one at build time, and
+  // this lookup is a synchronous in-memory match against
+  // `MIGRATION_GUIDE_SLUGS`, not a dynamic API call.
+  const { competitor } = await params;
+  const guide = getMigrationGuide(competitor);
+  if (!guide) notFound();
   return (
     <div className="flex flex-1 flex-col">
       <Suspense fallback={<MarketingNavFallback />}>
         <MarketingNav />
       </Suspense>
-      {/*
-       * No meaningful fallback exists here: the content is keyed by
-       * `competitor`, which isn't known until `params` resolves, and there's
-       * no "default guide" to show in the meantime. For every registered
-       * slug (the only ones `generateStaticParams` returns) this resolves
-       * during that page's own static generation, so the fallback below
-       * never actually paints for real traffic — it only covers an
-       * unregistered slug reaching this route at request time, which
-       * `notFound()` catches a moment later.
-       */}
       <Suspense fallback={<main className="flex-1" />}>
-        <LocalizedGuideBody params={params} />
+        <LocalizedGuideBody guide={guide} />
       </Suspense>
       <Suspense fallback={<MarketingFooterFallback />}>
         <MarketingFooter />
@@ -82,10 +87,7 @@ export default function MigrationGuidePage({
   );
 }
 
-async function LocalizedGuideBody({ params }: { params: Promise<{ competitor: string }> }) {
-  const { competitor } = await params;
-  const guide = getMigrationGuide(competitor);
-  if (!guide) notFound();
+async function LocalizedGuideBody({ guide }: { guide: MigrationGuide }) {
   const locale = await requestLocale();
   const t = diverTranslator(locale);
   return (

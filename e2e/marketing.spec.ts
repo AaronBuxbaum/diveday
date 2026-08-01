@@ -86,7 +86,13 @@ test("the sign-up form answers the hesitation it creates", async ({ page }) => {
   await page.goto("/pricing");
   await page.getByRole("link", { name: "Start a trial" }).last().click();
   await expect(page).toHaveURL(/\/onboard\?from=pricing$/);
-  await expect(page.locator('input[name="source"]')).toHaveValue("pricing");
+  // A hidden input can't be scoped with `.filter({ visible: true })` (it would
+  // never match), and the previous route's own `input[name="source"]` (this
+  // page's FunnelTag) stays reachable while Activity keeps it in the DOM — so
+  // scope through the current page's own `<main>` landmark instead, which
+  // `getByRole` (visibility-safe, see e2e/fixtures.ts) narrows to the one
+  // that's actually on screen.
+  await expect(page.getByRole("main").locator('input[name="source"]')).toHaveValue("pricing");
 
   // Asking for a password is the moment of maximum hesitation, so the three
   // reassurances sit with the form, not on a page the visitor already left.

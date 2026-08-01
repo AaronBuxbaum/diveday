@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
 import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed";
 import { signRecapToken } from "../src/lib/recap-links";
-import { expect, signedInAsOwner, test } from "./fixtures";
+import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import { openTripFromBoard } from "./helpers";
 
 /**
@@ -457,7 +457,7 @@ for (const scheme of ["light", "dark"] as const) {
       // 20260726-post-trip-review-request — without signing the public
       // `page` itself in.
       const reviewSettingsContext = await browser.newContext({ storageState: ownerStorageState });
-      const reviewSettingsPage = await reviewSettingsContext.newPage();
+      const reviewSettingsPage = makeActivitySafe(await reviewSettingsContext.newPage());
       await reviewSettingsPage.goto("/shop/blue-mantis/settings");
       await reviewSettingsPage
         .getByLabel("Review link")
@@ -489,7 +489,7 @@ for (const scheme of ["light", "dark"] as const) {
       // sign-in — so `page` itself stays the same unauthenticated visitor
       // throughout, exactly as a real diver reaches these links.
       const staffContext = await browser.newContext({ storageState: ownerStorageState });
-      const staffPage = await staffContext.newPage();
+      const staffPage = makeActivitySafe(await staffContext.newPage());
       await staffPage.goto("/shop/blue-mantis/schedule/board");
       await staffPage
         .locator("li")
