@@ -1,16 +1,22 @@
 # Roadmap
 
-What is **not** built yet, and the order to build it. Sequencing guidance, not a contract; each item
-ships a usable vertical slice. Re-order only with a note here explaining why.
+What is **not** built yet, and the order to build it. Sequencing guidance, not a contract; each
+sequenced item ships a usable vertical slice. Re-order only with a note here explaining why.
+
+This is the **single home for unbuilt work**: the sequenced slices, the unscheduled candidates that
+have not earned a slot, the engineering-enablement backlog that keeps parallel agents productive,
+and the human-owned gates that block real operations. (It absorbed `future-features.md` and
+`next-steps.md` on 2026-08-01 — three files were three places to look for the same question.)
 
 - What already shipped is indexed in [shipped.md](shipped.md) — check there before assuming a gap.
-- Deferred revenue-layer candidates — gift cards, private/buyout charters, multi-currency — are in
-  [future-features.md](future-features.md). They are *not* sequenced; an item earns a slot here (with
-  its ADR) before it gets built.
 - Human-owned approvals, provisional defaults, and validation gates are in
   [human-decisions.md](human-decisions.md); the deep buyer/rival analysis is in
   [competitive-analysis.md](assessments/competitive-analysis.md) and
-  [competitive-strategy.md](assessments/competitive-strategy.md).
+  [competitive-strategy.md](assessments/competitive-strategy.md); the open specialist-audit tasks
+  (accessibility, security, ML/data) are in
+  [specialist-optimization-audit-20260731.md](assessments/specialist-optimization-audit-20260731.md).
+- Open UX tickets carried out of the persona review live in [story-backlog.md](story-backlog.md);
+  raw, unfiltered ideas live in [brainstorm/](brainstorm/README.md) and are not commitments.
 - When an item here ships, **move it to [shipped.md](shipped.md)** (compress to a line, link its ADR)
   rather than leaving it marked done — that pollution is what this file exists to avoid.
 - This tracks the substantial open work; small per-feature follow-ons may also live in the ADR that
@@ -22,11 +28,12 @@ Milestones M0–M7 are built: the five pillars (bookings, waivers, cert checks, 
 manifests), Stripe Connect payments with checkout-at-booking and deposits, multi-channel
 notifications with scheduled reminders, the Today work queue, owner reporting, and full-shop export
 — plus the UX arc that made those surfaces *act* (one-tap sends, transactional `/ready`, command
-palette). See [shipped.md](shipped.md).
+palette), the growth layer (reviews, promo codes, SEO, embed), and full diver **and** staff copy
+localization. See [shipped.md](shipped.md).
 
 The next arc is **not new pillars.** It is finishing the data-portability wedge, closing the
 production-readiness gaps, and answering the buyer objection that still loses deals (no gear
-register — owner reporting shipped 2026-07-23). Breadth is done; depth and proof are the work.
+register). Breadth is done; depth and proof are the work.
 
 ## Open work, in priority order
 
@@ -42,7 +49,7 @@ Export, the diver/customer CSV importer, and the public migration guides have sh
 
 ### 2. Third-party e-signature adapter (M3 follow-up)
 
-The waiver signature is still in-house typed consent (`src/lib/signatures.ts` — local + in-person
+The waiver signature is still in-house typed consent (`src/lib/signatures.ts` — local and in-person
 providers only). A vendor adapter behind the existing `SignatureProvider` seam is follow-up work,
 gated on the H-01/H-03 legal decisions
 ([waiver-signature-retention](../architecture/decisions/20260718-waiver-signature-retention.md)).
@@ -66,18 +73,120 @@ policy decision — V-05 and H-11 in [human-decisions.md](human-decisions.md).
 Multi-shop tenancy exists (`shop_id` everywhere); there is **no boat entity** — a trip is the
 boat-day. Per-boat configuration and multi-location operating views are unbuilt, and their
 provider/policy decisions are open. Deliberately deferred until a real operator needs it. The
-private/buyout charter workflow in [future-features.md](future-features.md#3-private--buyout-charters)
-blocks on this same modeling — design the two together, not separately.
+private/buyout charter workflow below blocks on this same modeling — design the two together, not
+separately.
 
-### 6. Staff-surface copy extraction (finishing localization)
+## Not scheduled — candidate subsystems
 
-Locale-correct *formatting* is app-wide and done; translated *copy* currently covers only the
-diver-facing surface (see
-[diver-copy-localization](../architecture/decisions/20260729-diver-copy-localization.md)). Staff
-screens under `/shop/**` still carry inline English — roughly 16,000 lines of TSX across ~89 route
-files and ~52 components. Extracting them into `src/i18n/locales/<locale>/diver.json` (or a second
-`staff` namespace) is mechanical but large, and is what "the whole app is localized" actually
-requires. The waiver body and medical questionnaire stay out until H-01/H-03 clear.
+Revenue-layer features DiveDay has deliberately **not** built, kept as a shortlist. Each is a real
+dive-shop use case with a verified gap behind it; each is here because it is closer to a new
+subsystem than a slice on top of what exists, not because it was judged unimportant. **Nothing in
+this section is sequenced** — an item leaves it by earning a numbered slot above and the ADR it
+needs, not by being built straight from the list. Both came out of the FareHarbor feature-gap audit
+([archive/fareharbor-feature-gaps-20260726.md](archive/fareharbor-feature-gaps-20260726.md)), whose
+every other row has shipped — including diver-selectable checkout upsells, once its ADR unblocked it
+(see [shipped.md](shipped.md#diver-selectable-checkout-upsells--rental-gear-delivered-2026-08-01)).
+Verified against the running code 2026-08-01; re-verify before planning from it.
+
+### Gift cards
+
+A shop sells stored value and a diver redeems it against any trip or course.
+
+- **Exists:** nothing — zero references in `src`. The nearest neighbours are Stripe Connect,
+  orders/refunds, and the shop-configured discount surface that shipped with promo codes.
+- **Missing:** a stored-value ledger — issue, balance, partial redemption, expiry, and how a
+  redemption interacts with a refund. A promo code is a discount Stripe computes at payment time; a
+  gift card is customer money DiveDay would be holding, so it is a liability to track, not a checkout
+  tweak.
+- **Why it isn't scheduled:** the ledger is a new subsystem, and unclaimed-balance rules are
+  jurisdictional — a finance/legal question before an engineering one (see
+  [stakeholders/finance-and-tax.md](stakeholders/finance-and-tax.md)). It is a seasonal revenue lever;
+  revisit ahead of a gifting season with real shops on the platform. **ADR required.**
+
+### Private / buyout charters
+
+A group buys out a whole departure: proposal, contract, deposit, and the boat off public sale.
+
+- **Exists:** party booking ships — the public form books a party of up to six atomically
+  (`createBookingParty`) on one shared checkout (`startBookingCheckout`), and deposits ship. So
+  "group booking" is not the gap. "Charter" elsewhere in the code is only a synonym for a scheduled
+  trip (`src/db/seed.ts`).
+- **Missing:** the buyout workflow — quote/proposal → contract → deposit → the departure withdrawn
+  from public sale — and the resource it blocks. There is still no boat entity; a trip *is* the
+  boat-day.
+- **Why it isn't scheduled:** it depends on the boat/resource modeling that
+  [§5 above](#5-multi-boat--multi-shop-configuration) already holds open, and should be designed
+  together with it rather than as a separate effort. **ADR required.**
+
+### Smaller follow-ons live with their ADRs
+
+These are per-feature rough edges on shipped work, not future subsystems. They are recorded in the
+*Consequences* of the ADR that shipped each feature, which stays the place to look:
+
+- Fixed-amount (rather than percent) discounts, auto-applied codes, and Stripe-side drift on a code's
+  status — [20260729-shop-promo-codes](../architecture/decisions/20260729-shop-promo-codes.md).
+- Self-service reschedule of a *paid* booking, which still requires staff —
+  [20260727-diver-self-service-cancel](../architecture/decisions/20260727-diver-self-service-cancel.md).
+- Recovery-email timing on the daily cron, and the party "purchaser" being the first-named diver
+  rather than a verified who's-paying field —
+  [20260726-abandoned-checkout-recovery](../architecture/decisions/20260726-abandoned-checkout-recovery.md).
+- Per-trip (rather than per-shop) ratings, replies to reviews, and any third-party review widget —
+  [20260729-verified-diver-reviews](../architecture/decisions/20260729-verified-diver-reviews.md).
+- Currencies beyond the shop's declared one on a single order, and Stripe-reported settlement
+  currency drift — [20260731-shop-currency](../architecture/decisions/20260731-shop-currency.md).
+
+## Engineering enablement
+
+The still-open work that keeps many short-lived AI agents productive and safe. Product slices are
+above; this is the repository making the correct implementation path easier than an expedient wrong
+one. Keep it to still-open work: when an item ships, move it to [shipped.md](shipped.md) or an ADR
+rather than letting this become an unbounded second backlog.
+
+### P1 — next
+
+1. **Provider adapters for non-Claude agents.** Keep the provider-neutral workflow — `AGENTS.md`,
+   `docs/`, `scripts/`, tests, and the canonical skills under `.claude/skills/` — as the single
+   source of truth, and generate or maintain thin per-provider adapters (skill indexes, config
+   pointers) that never introduce unique requirements. The internal-consistency half is done:
+   `pnpm check:agents` fails `check:repo` when skills, the skill index, AGENTS.md references,
+   AGENTS.md route-map paths, or `task:context` doc paths drift. Still open: the per-provider
+   adapters themselves and checking *them* against the canonical layer.
+2. **Path-aware CI.** Run the smallest trustworthy check set for a change while preserving the full
+   `pnpm check` gate before merge. The per-developer half of this shipped (`pnpm test:changed`,
+   `pnpm e2e:run`); what's open is job selection in `.github/workflows/ci.yml` based on changed
+   paths. Changed-UI evidence is already covered — reg-suit posts a visual report per PR and
+   AGENTS.md makes accounting for every diff a hard rule.
+3. **Realistic seeded scenarios and visual-regression coverage for the states that aren't the happy
+   path** — empty, loading, error, and safety states. The seed is realistic and busy, and the money
+   surfaces and a first empty state are captured; systematic coverage of the rest is not.
+
+### P2 — when parallelism or scale proves the need
+
+1. Shard feature/entity docs and generate optional aggregates rather than maintaining a
+   merge-conflict-prone central catalog. Split only after collisions prove the need.
+2. Serialize migration finalization if concurrent schema PRs collide repeatedly.
+3. Add a machine-readable task manifest for external orchestrators — a structured list of safe
+   paths, invariants, and validation commands, generated from the same data `pnpm task:context`
+   reads.
+4. Add automated PR scope/collision warnings based on changed paths and declared ownership.
+
+(Feature-folder boundaries were P2 and are now settled — see
+[20260730-feature-module-contracts](../architecture/decisions/20260730-feature-module-contracts.md)
+and `pnpm check:architecture`.)
+
+## Measures
+
+Track a small set of measures so "delight" and "agent efficiency" stay concrete. Every meaningful
+increment should improve at least one of: less staff coordination work, more diver confidence, safer
+departure, or faster agent delivery.
+
+- median time for staff to resolve a booking blocker;
+- waiver completion rate before arrival and median completion time;
+- percentage of departures with all readiness checks complete before the day of the trip;
+- agent time from task start to first relevant test;
+- tokens/files read before first code change (sampled, not exhaustively instrumented);
+- PR rework caused by missed invariants, architecture drift, or merge collisions;
+- escaped defects in safety-critical flows.
 
 ## Delight backlog
 

@@ -167,7 +167,7 @@ Ordered by leverage per effort; imports touch certs and medical state, so the im
    survey of remaining candidates — WeTravel, Rezgo, Bókun, Bloowatch, Peek Pro, and why the
    agencies (PADI/SSI) are import rails, not switching targets — is in
    [switching-guide-landscape.md](switching-guide-landscape.md). See
-   [marketing.md](../marketing.md#migration-guides).
+   [marketing.md](../marketing.md#where-the-words-live).
 4. **Scheduled backup export to shop-owned storage** *(S–M)*. Weekly bundle from #1 to the shop's
    email/Drive. Matches DiveAdmin's one real portability lever and converts "your data is yours"
    from pledge to running fact. Calendar (.ics) feeds for trips ride along cheaply here.

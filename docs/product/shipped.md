@@ -7,6 +7,80 @@ lives in [roadmap.md](roadmap.md), which this file keeps uncluttered.
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## UX persona review — fifteen personas delivered (2026-07-30 → 07-31)
+
+The 165-task persona walkthrough closed out; the vast majority shipped across PRs #268–#280. The
+task-by-task rationale is archived in
+[archive/ux-personas-20260730-findings.md](archive/ux-personas-20260730-findings.md), the standing
+evaluation frame is [personas.md](personas.md), and what's still open is in
+[story-backlog.md](story-backlog.md). The headline slices:
+
+- **The shop declares its own currency** — `shops.currency` (ISO 4217, chosen in settings) is the
+  single source of truth for every checkout, order, invoice, tip, and displayed amount; Stripe's
+  reported `default_currency` is kept but advisory, and the settings page warns when the two
+  disagree. Zero-decimal currencies like JPY are handled at display time
+  ([shop-currency](../architecture/decisions/20260731-shop-currency.md)).
+- **Notifications go out in the language the diver reads** — outbound email and SMS localize
+  ([notification-locale](../architecture/decisions/20260731-notification-locale.md)), and
+  `people.locale` records a diver's own language when *they* made the request (a public booking as
+  lead booker, or any action on their own waiver/ready/recap link), outranking the shop default. A
+  staff-triggered send never writes it
+  ([per-person-notification-locale](../architecture/decisions/20260731-per-person-notification-locale.md)).
+- **Numeric site depth and diver age reach the surfaces that need them** — `dive_sites.max_depth_meters`
+  sits alongside the free-text range so a site's depth can be compared to a certification ceiling,
+  and it renders as an advisory *beside* readiness, never a blocker inside it; the crew's list shows
+  a diver's age where it matters
+  ([site-depth-and-diver-age-surfaces](../architecture/decisions/20260730-site-depth-and-diver-age-surfaces.md)).
+- **Self-serve email unsubscribe**, a staff operations board split out from the always-public
+  schedule, copy-density and jargon cuts across the diver surfaces, and the accessibility fixes the
+  specialist audit later credited: a skip link in both layouts, `<html lang>` from the negotiated
+  locale, and a real focus trap on the portal dialogs.
+
+## Specialist optimization audit — five lenses delivered (2026-07-31 → 08-01)
+
+Five of the eight lenses of the [specialist optimization
+audit](assessments/specialist-optimization-audit-20260731.md) shipped in full; accessibility,
+security/privacy, and ML & data are still open and remain in that file.
+
+- **UX & interaction design (§1)** — every button and button-shaped link gets a press dip on touch
+  (one `active:scale-[0.98]` in `buttonClass`, so no call site changed); the `/ready` checklist now
+  leads with a wave-fill readiness bar carrying a "N of M done" label; public schedule cards say
+  "only N spots left" in words when a departure is nearly full; the schedule builder's add/move/copy
+  panels animate open; the undo toast pauses on hover/focus and fades out instead of vanishing; the
+  Today board lights its crew drop zone during a drag; the waiver's medical questionnaire has a
+  sticky progress cue; and the shared `EmptyState` carries a quiet dive-themed mark.
+- **Frontend performance (§2)** — uploads are bounded to ~2048px in the sharp pipeline before the
+  JPEG encode; every photo surface moved to `next/image` with `remotePatterns` for the Blob host, so
+  phones stop downloading full-resolution originals and photo grids stop shifting; the diver message
+  bundle ships per-namespace instead of all 80 KB; the Sentry client SDK was trimmed and the
+  first-load budget ratcheted down; the public schedule streams its calendar and reviews behind
+  Suspense and the last staff routes got `loading.tsx`; independent session/shop/locale lookups run
+  in one `Promise.all`; command-palette search moved from a serialized Server Action to a
+  cancellable GET route; and `AddPanel` was hoisted out of the render body.
+- **SEO & growth (§4)** — the sitemap publishes every public shop schedule and active course page
+  (per-visitor demo shops excluded); course sessions on the schedule link to their course page;
+  `robots.txt` disallows every bearer-token prefix; per-shop and per-trip OpenGraph images render
+  the shop/trip a diver is actually sharing; published reviews emit `schema.org/Review`; the embed
+  snippet carries a "Powered by DiveDay" backlink with UTM params; shops carry a physical address so
+  Event rich results become eligible; and `e2e/seo.spec.ts` locks the whole surface in.
+- **Backend & data architecture (§7)** — order status transitions are now a guarded table with a
+  `FOR UPDATE` re-read, so a replayed or out-of-order Stripe `invoice.*` event can't flip a refunded
+  order back to paid; a `stripe_webhook_events` ledger dedupes deliveries and cross-checks the
+  connected account; `src/lib/log.ts` puts structured JSON lines on the money and cron paths that
+  previously logged nothing; `moveTrip`/`duplicateTrip` preserve shop-local wall-clock time across a
+  DST boundary instead of shifting by an absolute delta; `applyProviderEmailEvent` became one
+  conditional update so a late `delivered` can't beat an earlier `bounced`; staff `cancelBooking`
+  revokes capabilities inside the same transaction; per-person indexes landed on `bookings` and
+  `orders`; and production cold starts skip the seed/backfill scan behind a cheap marker check with
+  an explicitly configured `pg` Pool.
+- **Developer & agent experience (§8)** — four new `task:context` areas (payments, notifications,
+  reviews, data portability) and refreshed goals on the milestone-era ones; `pnpm e2e:run` reuses an
+  existing build with a staleness guard, and `pnpm test:changed` runs only the tests a diff affects;
+  `src/features` is inside the copy safeguards; `pnpm check:repo` runs its ten checks in parallel and
+  reports *all* failures rather than stopping at the first; `check:agents` now verifies every
+  route-map path in AGENTS.md exists on disk; and the stale "~1,000 strings still to extract" claim
+  was corrected everywhere — that backlog is finished.
+
 ## List pagination and query bounding (delivered 2026-07-30)
 
 - **Cursor pagination reaches the waiver integrity audit and the staff reviews queue** — both now
@@ -337,7 +411,7 @@ it marked done in the roadmap. If code and this list disagree, one of them is wr
   shared **concierge switch offer** — a person will help you bring your data in *and*, if DiveDay is
   ever not right, take it back out, free (`SwitchingConcierge`, routed to `switch@dive.day`; an
   authorized service claim, H-20). Content in `src/lib/migration-guides.ts`, pages in
-  `src/app/switching/` ([marketing.md](marketing.md#migration-guides)). Backups and the read API are
+  `src/app/switching/` ([marketing.md](marketing.md#where-the-words-live)). Backups and the read API are
   the open follow-ons in [roadmap.md](roadmap.md).
 - **FareHarbor guide (coexist-led)** (2026-07-24) — `/switching/fareharbor`, the same template with
   an optional `coexist` block, because FareHarbor is a booking/distribution *channel* (a general
@@ -580,7 +654,7 @@ The roadmap's §7 smaller follow-ons and the whole open Delight backlog shipped:
 - **The chosen fit and nitrox request are saved the moment the booking exists** — the same
   `saveRentalFit`/`setBookingNitrox` writes the post-booking form already made, just a step earlier;
   that form still exists for a diver who skipped the step or wants to add sizes afterward.
-  Was the highest-leverage of [future-features.md](future-features.md)'s deferred revenue-layer
+  Was the highest-leverage of [roadmap.md](roadmap.md#not-scheduled--candidate-subsystems)'s deferred revenue-layer
   candidates. See
   [20260801-checkout-upsells-rental-gear](../architecture/decisions/20260801-checkout-upsells-rental-gear.md).
 

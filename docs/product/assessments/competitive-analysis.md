@@ -97,7 +97,7 @@ multi-location (say "not yet" honestly, as the pricing FAQ already does).
 
 ## Pricing posture
 
-The founding-shop price ([marketing.md](../marketing.md#pricing-boundary), set in
+The founding-shop price ([marketing.md](../marketing.md#claims-policy-hard-rules), set in
 `src/lib/marketing.ts`) came **down** from the original $249 toward the specialist tier (DiveAdmin
 tops out at $119, Bloowatch at €119, DiveShop360's POS-inclusive Startup is ~$149–199) — the "meet
 the market" posture below, which is the one **H-12 closed on 2026-07-24**: **$99 flat per location /

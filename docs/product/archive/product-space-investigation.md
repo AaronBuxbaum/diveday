@@ -13,7 +13,7 @@
 
 > A strategic read of where DiveDay actually is versus where the vision says it should be, and an
 > opinionated recommendation for the next arc of work. Written 2026-07-20 from a full pass over
-> [vision](../vision.md), [roadmap](../roadmap.md), [next-steps](../next-steps.md),
+> [vision](../vision.md), [roadmap](../roadmap.md),
 > [human-decisions](../human-decisions.md), [glossary](../glossary.md),
 > [design principles](../../design/principles.md), the 2026-07-19 cleanup audit (executed and retired
 > 2026-07-20; its lasting rulings live in
@@ -248,7 +248,7 @@ Delight over a product that can't operate is theater. In parallel with Move 2:
 
 ## How we'll know it worked
 
-The [next-steps measures](../next-steps.md#measures) become checkable once Move 2 + real notifications
+The [roadmap measures](../roadmap.md#measures) become checkable once Move 2 + real notifications
 land: median time to resolve a booking blocker, waiver completion rate before arrival, % of
 departures fully ready before trip day. The qualitative bar from the vision is the real test — *staff
 run the whole day from it, unprompted, and a diver compliments the booking flow.* We are not there
