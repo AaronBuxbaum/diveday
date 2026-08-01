@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { buttonClass } from "@/components/ui/button";
 import type { DepartureSummary } from "@/db/today";
 import { fill, pluralForm } from "@/i18n/fill";
@@ -88,6 +88,12 @@ function DepartureCard({
   const { blocked, ready, boarded, booked, capacity } = departure;
   const [localCrew, setLocalCrew] = useState(departure.crew || []);
   const [assignError, setAssignError] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [justAddedId, setJustAddedId] = useState<string | null>(null);
+  // dragenter/dragleave fire on every child of the drop zone as the pointer
+  // crosses them, not just the zone boundary — a depth counter is the only
+  // way to know when the pointer has actually left the whole zone.
+  const dragDepthRef = useRef(0);
 
   useEffect(() => {
     setLocalCrew(departure.crew || []);
@@ -100,6 +106,7 @@ function DepartureCard({
 
     const updated = [...localCrew, staff];
     setLocalCrew(updated);
+    setJustAddedId(staffId);
     setAssignError(false);
 
     try {
@@ -183,12 +190,27 @@ function DepartureCard({
       <section
         aria-label={copy.crewDropZoneAria}
         onDragOver={(e) => e.preventDefault()}
+        onDragEnter={(e) => {
+          e.preventDefault();
+          dragDepthRef.current += 1;
+          setIsDragOver(true);
+        }}
+        onDragLeave={() => {
+          dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
+          if (dragDepthRef.current === 0) {
+            setIsDragOver(false);
+          }
+        }}
         onDrop={(e) => {
           e.preventDefault();
+          dragDepthRef.current = 0;
+          setIsDragOver(false);
           const staffId = e.dataTransfer.getData("text/plain");
           handleAssign(staffId);
         }}
-        className="mt-4 rounded-xl border border-dashed border-border bg-surface p-3 transition-colors hover:border-primary/40"
+        className={`mt-4 rounded-xl border border-dashed p-3 transition-colors hover:border-primary/40 ${
+          isDragOver ? "border-primary bg-primary/5" : "border-border bg-surface"
+        }`}
       >
         <div className="flex flex-col gap-2">
           <p className="text-xs font-bold tracking-wide text-muted uppercase">
@@ -230,7 +252,12 @@ function DepartureCard({
             {localCrew.map((c) => (
               <span
                 key={c.id}
-                className="inline-flex items-center gap-1 rounded-full border border-border-strong bg-surface py-0.5 pl-2.5 text-xs font-medium"
+                onAnimationEnd={() => {
+                  if (c.id === justAddedId) setJustAddedId(null);
+                }}
+                className={`inline-flex items-center gap-1 rounded-full border border-border-strong bg-surface py-0.5 pl-2.5 text-xs font-medium ${
+                  c.id === justAddedId ? "animate-scale-in" : ""
+                }`}
               >
                 {c.fullName}
                 <button
