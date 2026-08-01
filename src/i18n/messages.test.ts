@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DIVER_MESSAGES, diverTranslator, messagesFor } from "./messages";
+import { DIVER_MESSAGES, diverTranslator, messagesFor, messagesForNamespaces } from "./messages";
 import { DEFAULT_DIVER_LOCALE, DIVER_LOCALES, isDiverLocale, toDiverLocale } from "./settings";
 
 /** Every leaf as `dotted.path` → message. */
@@ -74,6 +74,36 @@ describe("diverTranslator", () => {
     // an unsupported locale still gets a usable booking page.
     expect(diverTranslator("fr-FR")("schedule.title")).toBe("Schedule");
     expect(diverTranslator(null)("booking.heading")).toBe("Grab a spot");
+  });
+});
+
+describe("messagesForNamespaces", () => {
+  it("returns only the requested top-level namespaces", () => {
+    const picked = messagesForNamespaces("en-US", ["rental", "common"]);
+    expect(Object.keys(picked).sort()).toEqual(["common", "rental"]);
+    expect(picked.rental).toEqual(DIVER_MESSAGES["en-US"].rental);
+    expect(picked.common).toEqual(DIVER_MESSAGES["en-US"].common);
+  });
+
+  it("carries the same content as the full bundle for each picked namespace, in any locale", () => {
+    const picked = messagesForNamespaces("es-ES", ["booking"]);
+    expect(picked).toEqual({ booking: DIVER_MESSAGES["es-ES"].booking });
+  });
+
+  it("is dramatically smaller than the full bundle it's picked from", () => {
+    const full = JSON.stringify(messagesFor("en-US"));
+    const picked = JSON.stringify(messagesForNamespaces("en-US", ["lastMinute", "common"]));
+    expect(picked.length).toBeLessThan(full.length / 4);
+  });
+
+  it("returns an empty object for an empty namespace list, rather than the whole bundle", () => {
+    expect(messagesForNamespaces("en-US", [])).toEqual({});
+  });
+
+  it("falls back to the default locale's bundle for an unsupported locale, same as messagesFor", () => {
+    expect(messagesForNamespaces("fr-FR", ["common"])).toEqual({
+      common: DIVER_MESSAGES[DEFAULT_DIVER_LOCALE].common,
+    });
   });
 });
 

@@ -753,7 +753,7 @@ export default async function TripsPage({
           provider wraps it alone rather than the whole tree — the diver bundle
           then crosses to the browser once, on the one surface that needs it. */}
       {!isEmbed && !staffView ? (
-        <DiverIntlProvider locale={locale} timeZone={tz}>
+        <DiverIntlProvider locale={locale} timeZone={tz} namespaces={["lastMinute", "common"]}>
           <LastMinuteListForm shopSlug={shopSlug} />
         </DiverIntlProvider>
       ) : null}

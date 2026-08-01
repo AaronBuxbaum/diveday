@@ -1,7 +1,7 @@
 import { NextIntlClientProvider } from "next-intl";
 import type { ReactNode } from "react";
 import { nowDate } from "@/lib/clock";
-import { messagesFor } from "./messages";
+import { type DiverMessageNamespace, messagesForNamespaces } from "./messages";
 import { toDiverLocale } from "./settings";
 
 /**
@@ -22,6 +22,14 @@ import { toDiverLocale } from "./settings";
  * rendering — a 200 with nothing in it, which is exactly how this surfaced.
  *
  * - `locale`/`messages`: the shop's, negotiated per request.
+ * - `namespaces`: the top-level bundle sections the Client Components under
+ *   this provider actually call `useTranslations()` for — required, and
+ *   deliberately not defaulted to "everything," because the full diver bundle
+ *   is ~80 KB and `messages` is serialized into the RSC payload of every page
+ *   that mounts this provider. Grep the subtree for `useTranslations(` to find
+ *   the namespace list; a key missing from it renders as itself
+ *   (`"booking.heading"`) instead of throwing, so an incomplete list is a
+ *   silent visual bug, not a crash — check it by eye or in a test.
  * - `timeZone`: the shop's, so a client-rendered time never lands in whatever
  *   zone the server process happens to run in.
  * - `now`: through `nowDate()`, which the e2e fleet freezes — a live clock here
@@ -32,17 +40,19 @@ import { toDiverLocale } from "./settings";
 export function DiverIntlProvider({
   locale,
   timeZone,
+  namespaces,
   children,
 }: {
   locale: string;
   timeZone: string;
+  namespaces: readonly DiverMessageNamespace[];
   children: ReactNode;
 }) {
   const resolved = toDiverLocale(locale);
   return (
     <NextIntlClientProvider
       locale={resolved}
-      messages={messagesFor(resolved)}
+      messages={messagesForNamespaces(resolved, namespaces)}
       timeZone={timeZone}
       now={nowDate()}
       formats={{}}
