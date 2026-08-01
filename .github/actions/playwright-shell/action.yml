@@ -1,0 +1,21 @@
+name: Cache and install the Playwright Chromium headless shell
+description: >
+  Restores the ms-playwright cache and installs only the Chromium headless
+  shell — shared by every job that runs Playwright.
+runs:
+  using: composite
+  steps:
+    - uses: actions/cache@v6
+      with:
+        path: ~/.cache/ms-playwright
+        # `-shell` on the key, not just the command, deliberately forces a
+        # fresh cache the first time this lands: the previous key already
+        # has a hit from the pre-`--only-shell` full Chromium download (that
+        # install pulls the headed browser and the headless shell as one
+        # dependency group), and restoring it would keep paying for the
+        # headed binary this fleet never launches until the cache aged out
+        # on its own. See e2e/browser.ts for why only the shell is needed —
+        # every launch here is headless.
+        key: ${{ runner.os }}-playwright-shell-${{ hashFiles('pnpm-lock.yaml') }}
+    - run: pnpm exec playwright install --only-shell chromium
+      shell: bash

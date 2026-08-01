@@ -36,6 +36,38 @@ evaluation frame is [personas.md](personas.md), and what's still open is in
   specialist audit later credited: a skip link in both layouts, `<html lang>` from the negotiated
   locale, and a real focus trap on the portal dialogs.
 
+## Specialist optimization audit — accessibility non-contrast items and CI dedup (2026-08-01)
+
+Continuing the [specialist optimization audit](assessments/specialist-optimization-audit-20260731.md):
+developer/agent experience (§8) is now fully delivered, and three of the six remaining accessibility
+(§3) tasks landed. Security/privacy, ML & data, and three contrast-specific accessibility tasks
+remain open in that file — the contrast tasks are deliberately deferred (see below), not forgotten.
+
+- **CI job setup is now one composite action, not eight copies** — `.github/actions/setup/action.yml`
+  holds the shared pnpm/node/install steps and `.github/actions/playwright-shell/action.yml` holds
+  the Chromium headless-shell cache+install, both reused across all seven `ci.yml` jobs. Pure
+  refactor: every job's effective step sequence, `timeout-minutes`, shard matrix, and artifact step
+  is unchanged; only the duplicated setup shrank.
+- **Waiver-signing errors point at the field that's actually wrong** — `signerName` and
+  `acknowledged` on `/waivers/[token]` now carry `required`/`minLength`, so the browser blocks and
+  focuses an incomplete submit before it ever reaches the server; the fallback error banner (reached
+  only when that's bypassed) names and links to the specific missing field instead of one generic
+  "check every question" message. The "Save for later" button keeps accepting partial drafts via
+  `formNoValidate`.
+- **The schedule builder's Add/Move/Copy panels manage keyboard focus** — opening a panel focuses its
+  first field, Cancel returns focus to the toggle that opened it, and the three hand-rolled Cancel
+  buttons now go through `buttonClass` like every other button-shaped control. The panel-completion
+  announcement this item also called for turned out to already exist (the board's `ShopNotice
+  role="status"` banner), so nothing new was needed there.
+- **Automated accessibility scans run in CI** — `@axe-core/playwright` (test-only devDependency, ADR
+  [20260801-axe-core-playwright-a11y-scans](../architecture/decisions/20260801-axe-core-playwright-a11y-scans.md))
+  scans five high-stakes surfaces — the public schedule, trip booking + confirmation, the waiver page,
+  the staff manifest, and the offline manifest viewer — against WCAG 2.0 A/AA and 2.2 AA on every
+  Playwright run, catching regressions like a missing label or broken landmark automatically. The
+  `color-contrast` rule is excluded on purpose: it fires on every surface over the same token values
+  the three still-open contrast tasks track, and the product owner ruled out touching contrast in
+  this pass (it would fight the current color guide) — re-include the rule once that work lands.
+
 ## Specialist optimization audit — five lenses delivered (2026-07-31 → 08-01)
 
 Five of the eight lenses of the [specialist optimization
