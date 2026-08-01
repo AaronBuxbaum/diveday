@@ -478,6 +478,8 @@
     "almostThere": "Ya casi está, {name}.",
     "nextDetail": "Siguiente: {detail}",
     "checklistHeading": "Tu lista antes de la salida",
+    "checklistProgress": "{done} de {total} completados",
+    "checklistProgressAriaLabel": "Progreso de la lista: {done} de {total} completados",
     "checklistCategoryWaiver": "Exención",
     "checklistCategoryCertification": "Certificación",
     "checklistCategoryPayment": "Pago",

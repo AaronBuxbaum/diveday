@@ -478,6 +478,8 @@
     "almostThere": "Almost there, {name}.",
     "nextDetail": "Next: {detail}",
     "checklistHeading": "Your pre-trip checklist",
+    "checklistProgress": "{done} of {total} done",
+    "checklistProgressAriaLabel": "Checklist progress: {done} of {total} done",
     "checklistCategoryWaiver": "Waiver",
     "checklistCategoryCertification": "Certification",
     "checklistCategoryPayment": "Payment",
