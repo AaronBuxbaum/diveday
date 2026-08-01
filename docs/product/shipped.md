@@ -564,6 +564,25 @@ The roadmap's §7 smaller follow-ons and the whole open Delight backlog shipped:
 - **Private notes and operational activity** — staff can add booking notes that no diver-facing
   surface reads; each note adds an append-only, plain-language activity sentence to the trip.
 
+## Diver-selectable checkout upsells — rental gear (delivered 2026-08-01)
+
+- **Rental gear selection moves ahead of the first checkout.** A shop that has priced any rental
+  gear online (`hasAnyRentalPricing`) shows a per-diver gear step on the public booking form, right
+  next to the party fields — checkboxes for every offered item plus nitrox, defaulting to the
+  shop's own defaults, with a live per-diver quote (`quoteRentalFit`, unchanged). A shop that has
+  priced nothing keeps today's flow with zero change.
+- **One combined Stripe Checkout.** The trip fee and every diver's priced gear ride the same hosted
+  session as separate line items — `CreateCheckoutSessionRequest` moved from one hardcoded line to
+  a `lineItems` array. Gear is always charged in full; a trip's deposit policy discounts only the
+  trip-fee line. Each diver's gear subtotal is snapshotted onto `booking_checkout_bookings.gear_cents`
+  so a later refund or report can attribute money back to trip vs. gear.
+- **The chosen fit and nitrox request are saved the moment the booking exists** — the same
+  `saveRentalFit`/`setBookingNitrox` writes the post-booking form already made, just a step earlier;
+  that form still exists for a diver who skipped the step or wants to add sizes afterward.
+  Was the highest-leverage of [future-features.md](future-features.md)'s deferred revenue-layer
+  candidates. See
+  [20260801-checkout-upsells-rental-gear](../architecture/decisions/20260801-checkout-upsells-rental-gear.md).
+
 ## Simplification rulings (2026-07-19 → 20 audit)
 
 The cleanup audit executed in full; its durable "don't re-litigate this" rulings — separate

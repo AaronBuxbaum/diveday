@@ -1,6 +1,6 @@
 // @vitest-environment node
 
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import type {
   CheckoutProvider,
@@ -18,7 +18,7 @@ import {
   startBookingCheckout,
 } from "./checkouts";
 import { getBookingPayment, setBookingPayment } from "./payments";
-import { bookingCheckouts } from "./schema";
+import { bookingCheckoutBookings, bookingCheckouts } from "./schema";
 import { setShopCurrency } from "./shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { getTripRoster, upcomingTripsWithCounts, updateTrip } from "./trips";
@@ -34,7 +34,10 @@ function fakeCheckout(overrides: Partial<CheckoutProvider> = {}): CheckoutProvid
         stripeStatus: "open",
         paymentStatus: "unpaid",
         checkoutUrl: `https://checkout.stripe.com/c/pay/cs_${counter}`,
-        amountTotalCents: request.unitAmountCents * request.quantity,
+        amountTotalCents: request.lineItems.reduce(
+          (sum, line) => sum + line.unitAmountCents * line.quantity,
+          0,
+        ),
         expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
       };
     },
@@ -189,7 +192,7 @@ describe("startBookingCheckout", () => {
     // marker proves the words came from its own bundle (docs ADR
     // 20260731-domain-layer-copy-leaks). This trip has no deposit policy, so
     // it is the full-fare branch.
-    expect(seen.requests[0]?.description).toBe(`FULL:${reef.title}`);
+    expect(seen.requests[0]?.lineItems[0]?.description).toBe(`FULL:${reef.title}`);
     // Snapshotted onto the row that is evidence of what the diver was asked for.
     expect(outcome.checkout.currency).toBe("eur");
   });
@@ -214,7 +217,95 @@ describe("startBookingCheckout", () => {
     expect(outcome.ok).toBe(true);
     if (!outcome.ok) return;
     expect(outcome.checkout.isDeposit).toBe(true);
-    expect(seen.requests[0]?.description).toBe(`DEPOSIT:${reef.title}`);
+    expect(seen.requests[0]?.lineItems[0]?.description).toBe(`DEPOSIT:${reef.title}`);
+  });
+
+  it("adds a per-diver gear line, always in full even under a deposit policy", async () => {
+    const { db, shop, reef, bookingIds } = await checkoutContext();
+    await updateTrip(db, shop.id, reef.id, {
+      title: reef.title,
+      startsAt: reef.startsAt,
+      endsAt: reef.endsAt,
+      capacity: reef.capacity,
+      plannedDives: reef.plannedDives,
+      priceCents: REEF_PRICE_CENTS,
+      depositCents: 5_000,
+    });
+    const seen = capturedRequests();
+    const outcome = await startBookingCheckout(
+      db,
+      {
+        ...startInput(shop.id, reef.id, bookingIds),
+        gearLines: [
+          { bookingId: bookingIds[0], description: "Rental gear — Pat", amountCents: 6_000 },
+        ],
+      },
+      seen.provider,
+    );
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+    expect(outcome.checkout.isDeposit).toBe(true);
+    // Deposit ($50) x 2 divers, plus the one diver's gear in full ($60) — the
+    // deposit tier never discounts gear (docs ADR 20260801-checkout-upsells-rental-gear).
+    expect(outcome.checkout.totalCents).toBe(5_000 * 2 + 6_000);
+    expect(seen.requests[0]?.lineItems).toHaveLength(2);
+    expect(seen.requests[0]?.lineItems[1]).toEqual({
+      description: "Rental gear — Pat",
+      unitAmountCents: 6_000,
+      quantity: 1,
+    });
+
+    const [gearBooking, plainBooking] = await Promise.all(
+      bookingIds.map((bookingId) => getLatestCheckoutForBooking(db, shop.id, bookingId)),
+    );
+    expect(gearBooking?.id).toBe(outcome.checkout.id);
+    expect(plainBooking?.id).toBe(outcome.checkout.id);
+
+    // The gear subtotal is snapshotted per diver, not just in the checkout total.
+    const [gearRow] = await db
+      .select({ gearCents: bookingCheckoutBookings.gearCents })
+      .from(bookingCheckoutBookings)
+      .where(
+        and(
+          eq(bookingCheckoutBookings.checkoutId, outcome.checkout.id),
+          eq(bookingCheckoutBookings.bookingId, bookingIds[0]),
+        ),
+      );
+    const [noGearRow] = await db
+      .select({ gearCents: bookingCheckoutBookings.gearCents })
+      .from(bookingCheckoutBookings)
+      .where(
+        and(
+          eq(bookingCheckoutBookings.checkoutId, outcome.checkout.id),
+          eq(bookingCheckoutBookings.bookingId, bookingIds[1]),
+        ),
+      );
+    expect(gearRow?.gearCents).toBe(6_000);
+    expect(noGearRow?.gearCents).toBe(0);
+  });
+
+  it("drops a gear line for a booking outside the party and a non-positive amount", async () => {
+    const { db, shop, reef, bookingIds } = await checkoutContext();
+    const seen = capturedRequests();
+    const outcome = await startBookingCheckout(
+      db,
+      {
+        ...startInput(shop.id, reef.id, bookingIds),
+        gearLines: [
+          {
+            bookingId: "00000000-0000-0000-0000-000000000000",
+            description: "Ghost",
+            amountCents: 1_000,
+          },
+          { bookingId: bookingIds[0], description: "Zero", amountCents: 0 },
+        ],
+      },
+      seen.provider,
+    );
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+    expect(outcome.checkout.totalCents).toBe(REEF_PRICE_CENTS * 2);
+    expect(seen.requests[0]?.lineItems).toHaveLength(1);
   });
 
   it("never divides a zero-decimal currency by 100", async () => {
@@ -232,7 +323,7 @@ describe("startBookingCheckout", () => {
     // already the currency's minor unit and reaches Stripe untouched
     // (docs ADR 20260731-shop-currency).
     expect(seen.requests[0]?.currency).toBe("jpy");
-    expect(seen.requests[0]?.unitAmountCents).toBe(REEF_PRICE_CENTS);
+    expect(seen.requests[0]?.lineItems[0]?.unitAmountCents).toBe(REEF_PRICE_CENTS);
     expect(outcome.checkout.amountPerDiverCents).toBe(REEF_PRICE_CENTS);
     expect(outcome.checkout.totalCents).toBe(REEF_PRICE_CENTS * 2);
   });

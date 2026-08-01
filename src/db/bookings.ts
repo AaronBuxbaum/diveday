@@ -66,7 +66,7 @@ export type BookingRequest = {
 } & BookingPerson;
 
 export type BookingOutcome =
-  | { ok: true; bookingId: string; personName: string }
+  | { ok: true; bookingId: string; personId: string; personName: string }
   | {
       ok: false;
       reason:
@@ -81,7 +81,7 @@ export type BookingOutcome =
     };
 
 export type BookingPartyOutcome =
-  | { ok: true; bookings: Array<{ bookingId: string; personName: string }> }
+  | { ok: true; bookings: Array<{ bookingId: string; personId: string; personName: string }> }
   | (Exclude<BookingOutcome, { ok: true }> & {
       /**
        * Which request in the submitted array the rollback happened on
@@ -114,7 +114,7 @@ export async function createBookingParty(
   if (requests.length === 0) return { ok: false, reason: "trip_unavailable", failedIndex: -1 };
   return db
     .transaction(async (tx) => {
-      const created: Array<{ bookingId: string; personName: string }> = [];
+      const created: Array<{ bookingId: string; personId: string; personName: string }> = [];
       for (const [index, request] of requests.entries()) {
         const outcome = await createBookingRecord(tx as unknown as AppDb, request);
         if (!outcome.ok) throw new PartyBookingError(outcome.reason, index);
@@ -367,7 +367,7 @@ async function createBookingRecord(db: AppDb, req: BookingRequest): Promise<Book
         identityUnconfirmedAt: identityUnconfirmed ? nowDate() : null,
       })
       .where(eq(bookings.id, existing.id));
-    return { ok: true, bookingId: existing.id, personName: person.fullName };
+    return { ok: true, bookingId: existing.id, personId: person.id, personName: person.fullName };
   }
 
   const [created] = await tx
@@ -382,7 +382,7 @@ async function createBookingRecord(db: AppDb, req: BookingRequest): Promise<Book
     })
     .returning();
   if (!created) throw new Error("createBooking: booking insert returned no row");
-  return { ok: true, bookingId: created.id, personName: person.fullName };
+  return { ok: true, bookingId: created.id, personId: person.id, personName: person.fullName };
 }
 
 /**

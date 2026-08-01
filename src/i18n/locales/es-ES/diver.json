@@ -160,6 +160,7 @@
     "promoLabel": "Código promocional",
     "promoHint": "(si tienes uno)",
     "partyTotal": "{count, plural, one {# buceador} other {# buceadores}} × {price} = {total}",
+    "totalDueAtCheckout": "Total a pagar al finalizar, equipo incluido: {total}",
     "stripeHint": "Terminarás de pagar en una página segura de Stripe.",
     "ageAttestation": "Confirmo que todos los buceadores de esta reserva cumplen la edad mínima de {age}.",
     "cancelledHeading": "Esta salida se canceló",
@@ -229,6 +230,12 @@
       "noteTooLong": "Deja esta nota en menos de 300 caracteres.",
       "promoInvalid": "Ese código no está activo."
     }
+  },
+  "bookingGear": {
+    "heading": "Equipo de alquiler",
+    "introBody": "Añade lo que necesites y lo cobraremos junto con tu reserva. Podrás ajustar las tallas exactas después de reservar.",
+    "diverNHeading": "Equipo del buceador {number}",
+    "gearTotal": "Equipo para este buceador: {price}"
   },
   "lastMinute": {
     "heading": "¿Quieres una oferta de última hora?",
@@ -561,6 +568,8 @@
   "checkoutLine": {
     "deposit": "Depósito — {tripTitle}",
     "full": "{tripTitle}",
+    "gear": "Equipo de alquiler",
+    "gearForDiver": "Equipo de alquiler — {name}",
     "tip": "Propina para la tripulación"
   },
   "capability": {

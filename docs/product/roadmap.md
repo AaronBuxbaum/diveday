@@ -4,9 +4,9 @@ What is **not** built yet, and the order to build it. Sequencing guidance, not a
 ships a usable vertical slice. Re-order only with a note here explaining why.
 
 - What already shipped is indexed in [shipped.md](shipped.md) — check there before assuming a gap.
-- Deferred revenue-layer candidates — gift cards, private/buyout charters, diver-selectable checkout
-  upsells, multi-currency — are in [future-features.md](future-features.md). They are *not* sequenced;
-  an item earns a slot here (with its ADR) before it gets built.
+- Deferred revenue-layer candidates — gift cards, private/buyout charters, multi-currency — are in
+  [future-features.md](future-features.md). They are *not* sequenced; an item earns a slot here (with
+  its ADR) before it gets built.
 - Human-owned approvals, provisional defaults, and validation gates are in
   [human-decisions.md](human-decisions.md); the deep buyer/rival analysis is in
   [competitive-analysis.md](assessments/competitive-analysis.md) and
