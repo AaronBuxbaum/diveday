@@ -4,6 +4,10 @@ import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { TripSubNav, type TripSubNavCopy } from "./_components/TripSubNav";
 
+// TODO: Cache Components adoption. Refactor this route so this opt-out can be removed.
+// See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
+export const instant = false;
+
 /**
  * One shell for every trip surface — Overview, Guests, Manifest, Prep. Owning
  * the container width, padding, and the sub-nav here (rather than repeating them

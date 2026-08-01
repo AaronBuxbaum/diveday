@@ -24,6 +24,14 @@ export const metadata: Metadata = {
  * `/reset-password/[token]` — only the form's own submit consumes the
  * one-time token (20260726-staff-invite-accounts).
  */
+// Bearer-token page (the URL is the capability, docs/engineering/
+// capability-telemetry-runbook.md) — reads `params`/`searchParams`/
+// `requestLocale()`/`connection()` unguarded, genuinely request-scoped, not
+// in scope for the "use cache" hoist. See the shop layout's `instant =
+// false` comment (src/app/shop/[shopSlug]/layout.tsx) for what this does
+// and doesn't do.
+export const instant = false;
+
 export default async function InvitePage({
   params,
   searchParams,

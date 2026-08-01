@@ -5,9 +5,10 @@ import { auth } from "@/lib/auth";
 import { isStaff } from "@/lib/authz";
 
 // Node runtime, not Edge: the shared LISTEN client (src/db/manifest-events.ts)
-// needs the `pg` driver. See ADR 20260726-manifest-push-refresh.
-export const runtime = "nodejs";
-
+// needs the `pg` driver. See ADR 20260726-manifest-push-refresh. Cache
+// Components requires the Node.js runtime for every route (edge is no
+// longer an option), so the explicit `runtime` export is now redundant and
+// incompatible with `nextConfig.cacheComponents` — removed, not relaxed.
 const HEARTBEAT_MS = 25_000;
 
 /**

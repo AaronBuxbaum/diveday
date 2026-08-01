@@ -48,6 +48,10 @@ import { capacityLabel, isFull } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { LastMinuteListForm } from "./_components/LastMinuteListForm";
 
+// TODO: Cache Components adoption. Refactor this route so this opt-out can be removed.
+// See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
+export const instant = false;
+
 /**
  * Per-shop title, description, and canonical URL. The embed surface points its
  * canonical at the standalone page: the same departures rendered at two URLs is
