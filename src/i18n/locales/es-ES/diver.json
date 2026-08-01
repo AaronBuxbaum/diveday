@@ -565,6 +565,7 @@
     "tripHeader": "{trip} — {when}, {time}",
     "linkExpiresAt": "Este enlace funciona hasta {date}.",
     "yesReassurance": "Un “sí” significa que un médico debería confirmar que estás en condiciones de bucear — no cancela tu salida.",
+    "questionsAnswered": "{answered} de {total} respondidas",
     "progressSaved": "Tu progreso está guardado. Termina cuando quieras.",
     "emergencyContactDescription": "Alguien a quien podamos contactar por ti ese día — opcional, pero es lo que tiene el equipo si pasa algo en el agua.",
     "agreementCheckbox": "He leído esta exención, la entiendo y estoy de acuerdo con ella.",

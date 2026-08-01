@@ -37,6 +37,7 @@ import { questionnaireForJurisdiction } from "@/lib/medical";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
+import { QuestionnaireProgress } from "./QuestionnaireProgress";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = diverTranslator(await requestLocale());
@@ -460,19 +461,24 @@ export default async function WaiverPage({
 
       <form action={completeAction} className="mt-8 flex flex-col gap-6">
         <section>
-          <h2 className="text-lg font-semibold">{questionnaire.title}</h2>
-          <p className="mt-1 text-sm text-muted">{questionnaire.intro}</p>
-          <div className="mt-4 flex flex-col gap-3">
-            {questionnaire.questions.map((question) => (
-              <RadioQuestion
-                key={question.id}
-                name={`q_${question.id}`}
-                yes={draftResponses?.[question.id]}
-                question={question.prompt}
-                reassurance={t("waiver.yesReassurance")}
-              />
-            ))}
-          </div>
+          <QuestionnaireProgress
+            total={questionnaire.questions.length}
+            labelTemplate={t("waiver.questionsAnswered")}
+          >
+            <h2 className="text-lg font-semibold">{questionnaire.title}</h2>
+            <p className="mt-1 text-sm text-muted">{questionnaire.intro}</p>
+            <div className="mt-4 flex flex-col gap-3">
+              {questionnaire.questions.map((question) => (
+                <RadioQuestion
+                  key={question.id}
+                  name={`q_${question.id}`}
+                  yes={draftResponses?.[question.id]}
+                  question={question.prompt}
+                  reassurance={t("waiver.yesReassurance")}
+                />
+              ))}
+            </div>
+          </QuestionnaireProgress>
         </section>
 
         <section className="rounded-lg border border-border bg-surface p-5">
