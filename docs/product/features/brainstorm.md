@@ -1,12 +1,13 @@
 # Brainstorm
 
 Idea exploration, not commitments. This is the active backlog for raw DiveDay ideas that are not yet
-scheduled and do not require AI. Ideas that require AI live in [ai-ideas.md](ai-ideas.md). Nothing
-here is approved scope until it moves into [roadmap.md](../roadmap.md) with a milestone and a note.
+scheduled and do not require AI. Ideas that require AI, model-based extraction, or natural-language
+generation live in [ai-ml.md](ai-ml.md). Nothing here is approved scope until it moves into
+[roadmap.md](roadmap.md) with a milestone and a note.
 
 Keep this file to open ideas. When an idea ships, remove it from here and capture the delivered slice
-in [shipped.md](../shipped.md) or the ADR that made the decision. When a whole brainstorm is complete,
-move that snapshot to [archive/](../archive/).
+in [../shipped.md](../shipped.md) or the ADR that made the decision. When a whole brainstorm is
+complete, move that snapshot to [../archive/](../archive/).
 
 Every idea is tagged so you can triage fast:
 
@@ -92,11 +93,11 @@ Lens: make connected data compound while keeping safety facts human-verifiable a
   trip/course type. *(M, cross-cutting, quick win.)*
 - **North-star measures from real data.** Track blocker-resolution time, waiver completion rate, and
   fully-ready departures from production data — the list to instrument is
-  [roadmap.md's measures](../roadmap.md#measures). *(M, cross-cutting, quick win.)*
+  [roadmap.md's measures](roadmap.md#measures). *(M, cross-cutting, quick win.)*
 
 Tooling ideas that were duplicated here — sharded feature/entity docs, and a machine-readable task
 manifest for external orchestrators — now live once, in
-[roadmap.md's engineering enablement backlog](../roadmap.md#p2--when-parallelism-or-scale-proves-the-need).
+[roadmap.md's engineering enablement backlog](roadmap.md#p2--when-parallelism-or-scale-proves-the-need).
 
 ## Delight And Micro-Interactions
 
@@ -116,22 +117,22 @@ Lens: speed, feel, and authentic divemaster voice. Keep delight rationed; safety
 
 Completed work does not live here. Use these records instead:
 
-- [shipped.md](../shipped.md) is the canonical index of delivered slices.
-- [archive/delight-and-experience.md](../archive/delight-and-experience.md) is the completed
+- [../shipped.md](../shipped.md) is the canonical index of delivered slices.
+- [../archive/delight-and-experience.md](../archive/delight-and-experience.md) is the completed
   delight-and-experience brainstorm.
-- [archive/diver-booking-delight-20260729.md](../archive/diver-booking-delight-20260729.md) is the
+- [../archive/diver-booking-delight-20260729.md](../archive/diver-booking-delight-20260729.md) is the
   completed diver-booking-delight follow-on brainstorm.
-- [ai-ideas.md](ai-ideas.md) holds AI-required ideas, including natural-language assistants and
+- [ai-ml.md](ai-ml.md) holds AI-required ideas, including natural-language assistants and
   model-based evidence extraction.
-- [shipped.md](../shipped.md#demand-crew-and-staff-context-delivered-2026-07-29) covers demand
+- [../shipped.md](../shipped.md#demand-crew-and-staff-context-delivered-2026-07-29) covers demand
   intelligence, conflict-safe crew assignment, private booking notes, and operational activity.
-- [shipped.md](../shipped.md#bookings-m2) covers the returning-diver picker; existing people carry
+- [../shipped.md](../shipped.md#bookings-m2) covers the returning-diver picker; existing people carry
   their certs, waivers, contact details, and rental fit forward instead of being re-entered.
-- [shipped.md](../shipped.md#growth-layer-reviews-discounts-seo-and-languages-delivered-2026-07-29)
+- [../shipped.md](../shipped.md#growth-layer-reviews-discounts-seo-and-languages-delivered-2026-07-29)
   covers localization-ready copy, which shipped as a real next-intl layer with Spanish alongside
   English.
-- [shipped.md](../shipped.md#operational-surfaces-m7) covers the automated marine outlook and the
-  first-timer night-before brief; [shipped.md](../shipped.md#rental-fit-and-trip-prep-m5) covers the
+- [../shipped.md](../shipped.md#operational-surfaces-m7) covers the automated marine outlook and the
+  first-timer night-before brief; [../shipped.md](../shipped.md#rental-fit-and-trip-prep-m5) covers the
   rental-fit prep work that the gear-status indicator builds on.
 - Superseded gear-inventory ideas are represented by the smaller gear-register question in
-  [roadmap.md](../roadmap.md#3-minimal-gear-register-an-m5-reversal-deliberately-smaller).
+  [roadmap.md](roadmap.md#3-minimal-gear-register-an-m5-reversal-deliberately-smaller).

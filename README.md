@@ -37,4 +37,4 @@ rationale in [docs/architecture/decisions/](docs/architecture/decisions/README.m
 
 1. [docs/product/vision.md](docs/product/vision.md) — why this exists
 2. [docs/design/principles.md](docs/design/principles.md) — what "delight-first" means concretely
-3. [docs/product/roadmap.md](docs/product/roadmap.md) — where it's headed
+3. [docs/product/features/roadmap.md](docs/product/features/roadmap.md) — where it's headed

@@ -8,8 +8,8 @@ How to build anything here. Written for AI agents; humans may follow along.
    work, principles for UI work, overview + ADRs for structural work).
 2. Touching Next.js APIs? Read the relevant guide in `node_modules/next/dist/docs/` first —
    Next 16 differs from training data.
-3. Check [product/roadmap.md](../product/roadmap.md) — build the current milestone's slice, not
-   a future one.
+3. Check [product/features/roadmap.md](../product/features/roadmap.md) — build the current
+   milestone's slice, not a future one.
 
 ## The loop
 

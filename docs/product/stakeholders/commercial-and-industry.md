@@ -86,5 +86,5 @@ referral offer (a free month both sides).
   [rollout.md](../rollout.md).
 - Anything promised to a pilot in writing must already exist in the
   [claims policy](../marketing.md) or get added there — the offer document is a claims surface.
-- Punch-list items from pilots triage into [roadmap.md](../roadmap.md); safety findings follow
+- Punch-list items from pilots triage into [roadmap.md](../features/roadmap.md); safety findings follow
   the stop-the-line rule in [dive-operations.md](dive-operations.md).

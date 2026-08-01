@@ -5,7 +5,7 @@
 
 ## Context
 
-[future-features.md, now merged into roadmap.md](../../product/roadmap.md#not-scheduled--candidate-subsystems)
+[future-features.md, now merged into roadmap.md](../../product/features/roadmap.md#not-scheduled--candidate-subsystems)
 flagged this as the highest-leverage of the three deferred revenue-layer candidates, gated on a
 shape decision between two payment models, and required an ADR before scheduling. The pricing math
 already ships (`RentalPricing` / `quoteRentalFit`, `src/lib/rentals.ts`) and is shop-configured; what

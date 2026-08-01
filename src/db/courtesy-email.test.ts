@@ -20,7 +20,7 @@ async function seededPerson() {
   return { db, shop, person };
 }
 
-// Leo (persona 15) — self-serve email unsubscribe (docs/product/story-backlog.md):
+// Leo (persona 15) — self-serve email unsubscribe (docs/product/features/story-backlog.md):
 // the general, cross-kind counterpart to the last-minute-list entry's own
 // token, governing `waitlist_invite` and `trip_recap` instead.
 describe("self-serve courtesy-email unsubscribe token", () => {

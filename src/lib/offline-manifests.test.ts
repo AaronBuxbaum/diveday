@@ -149,7 +149,7 @@ describe("offline manifest policy", () => {
     });
   });
 
-  // Dive-domain-expert review (docs/product/story-backlog.md, Sal): the old
+  // Dive-domain-expert review (docs/product/features/story-backlog.md, Sal): the old
   // implementation filtered out rejected events *before* picking "the
   // latest," so a rejected correction fell through to an older, superseded
   // local event instead of the snapshot's own server value — reasserting the

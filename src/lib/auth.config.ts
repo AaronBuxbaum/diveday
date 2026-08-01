@@ -19,7 +19,7 @@ const STAFF_PREFIX = "/shop";
 
 const SCHEDULE_ROOT = /^\/shop\/[a-z0-9-]+\/schedule\/?$/;
 const SCHEDULE_TRIP_PAGE = /^\/shop\/[a-z0-9-]+\/schedule\/([a-z0-9-]+)(\/.*)?$/;
-// The staff operations board (Lens 17, docs/product/story-backlog.md) sits
+// The staff operations board (Lens 17, docs/product/features/story-backlog.md) sits
 // one segment below the public schedule, in the same path space a trip's own
 // id occupies — carved out the same way COURSE_PAGE below refuses staff
 // segments a course slug could otherwise impersonate. Trip ids are UUIDs, so

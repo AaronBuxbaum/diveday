@@ -106,4 +106,4 @@ accumulates until an operator handles it.
 
 **Sending from these addresses is deliberately not built.** Receiving is the half that was
 load-bearing; replying happens in the operator's own mail client for now, which means those replies
-are not recorded here. See `docs/product/roadmap.md`.
+are not recorded here. See `docs/product/features/roadmap.md`.

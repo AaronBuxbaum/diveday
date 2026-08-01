@@ -62,7 +62,7 @@ card tells a visitor nothing.
 - **Hold the aggregate over all reviews, moderate only the text** — rejected as quietly dishonest:
   "4.2 from 30 reviews" above six visible cards invites the reader to assume the six are a sample of
   the thirty, when the other twenty-four were withheld by the shop.
-- **A minimum review count before showing a rating** — rejected. `docs/product/brainstorm` already
+- **A minimum review count before showing a rating** — rejected. `docs/product/features/brainstorm.md` already
   states the house rule for computed public stats: display the real numbers, even when imperfect.
   One review reads as "1 review" and a visitor can weigh it themselves.
 

@@ -83,7 +83,7 @@ export async function generateMetadata({
  * copy/remove) lives at `/schedule/board` instead (Lens 17 — this route used
  * to be four products crammed onto one, including a staff branch that could
  * never coexist with the diver-facing content it shared a component tree
- * with; see docs/product/story-backlog.md and the archive it supersedes).
+ * with; see docs/product/features/story-backlog.md and the archive it supersedes).
  */
 export default async function SchedulePage({
   params,

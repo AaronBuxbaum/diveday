@@ -5,7 +5,7 @@
 > and API docs, review platforms, ScubaBoard, migration-industry and regulatory sources), checked
 > against the running codebase. Companion to [competitive-analysis.md](competitive-analysis.md)
 > (the buyer's whole-market view); this document is the operator's view of two specific fights.
-> An assessment, not a commitment; items that survive review move to [roadmap.md](../roadmap.md).
+> An assessment, not a commitment; items that survive review move to [roadmap.md](../features/roadmap.md).
 
 ## The two rivals, verified
 

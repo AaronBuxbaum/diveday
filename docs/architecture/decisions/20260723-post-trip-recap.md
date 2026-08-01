@@ -5,7 +5,7 @@
 
 ## Context
 
-The [Revenue and Recovery brainstorm](../../product/brainstorm/README.md#revenue-and-recovery) names
+The [Revenue and Recovery brainstorm](../../product/features/brainstorm.md#revenue-and-recovery) names
 the hours after a great dive as the highest-leverage, entirely-unused marketing window a shop has. The
 build is the post-trip recap: a shareable per-diver-per-trip page, delivered automatically once the
 trip departs. The pre-trip reminders already established the machinery this rides on — a framework-free
