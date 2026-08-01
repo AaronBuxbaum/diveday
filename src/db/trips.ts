@@ -21,7 +21,7 @@ import { entryLevelCourseCapacity } from "@/lib/course-ratios";
 import { reviewManifestChange } from "@/lib/manifest-change-review";
 import { maxRecordedDiveNumber } from "@/lib/manifests";
 import type { TripRecurrenceFrequency } from "@/lib/recurrence";
-import { calendarDayDelta, shiftInstantByCalendarDays, utcToWallTime } from "@/lib/zoned";
+import { shiftInstantByWallTimeDelta, utcToWallTime, wallTimeDeltaMs } from "@/lib/zoned";
 import type { AppDb, AppTransaction, DbExecutor } from "./client";
 import { decodeCursor, encodeCursor } from "./cursor";
 import type { Course, Trip } from "./schema";
@@ -44,20 +44,25 @@ import {
 } from "./schema";
 
 /**
- * Calendar-day delta between an existing instant and a new one, computed in
- * the shop's own timezone rather than as a raw millisecond difference — the
+ * Wall-clock delta between an existing start and a new one, computed in the
+ * shop's own timezone rather than as a raw millisecond difference — the
  * DST-safe way to move a multi-day trip. `moveTrip`/`duplicateTrip` use this
- * so day 2, day 3, and `endsAt` shift by the same number of *wall-clock* days
- * as the start, keeping each one's own published hour intact even when the
- * span crosses a DST transition (see docs/product/assessments/
- * specialist-optimization-audit-20260731.md §7).
+ * so `endsAt` and every schedule day shift by the same *wall-clock* delta as
+ * the start: a whole-day shift alone (the common multi-day-course case)
+ * keeps each day's own published hour intact even when the span crosses a
+ * DST transition, and a shift that also changes the start's clock time (the
+ * common single-day case, e.g. "move to Thursday at 7am instead of 9am")
+ * carries that same time change through to `endsAt` so the trip's duration
+ * is preserved instead of leaving `endsAt` stuck at its old wall-clock hour
+ * (see docs/product/assessments/specialist-optimization-audit-20260731.md
+ * §7).
  */
 function tripShiftPlan(existingStartsAt: Date, newStartsAt: Date, timeZone: string) {
-  const days = calendarDayDelta(
+  const deltaMs = wallTimeDeltaMs(
     utcToWallTime(existingStartsAt, timeZone),
     utcToWallTime(newStartsAt, timeZone),
   );
-  return (date: Date) => shiftInstantByCalendarDays(date, days, timeZone);
+  return (date: Date) => shiftInstantByWallTimeDelta(date, deltaMs, timeZone);
 }
 
 export type NewTrip = {
@@ -768,14 +773,15 @@ export type MoveTripOutcome =
 /**
  * Slides a whole departure to a new instant, keeping its shape.
  *
- * Only the *start* moves; the end and every schedule day shift by the same
- * number of calendar days in the shop's own timezone, so a two-tank morning
- * stays three and a half hours long and a three-day course stays three days
- * with its second and third mornings intact — at the *same wall-clock hour*
- * even when the move crosses a DST transition (a fixed millisecond shift
- * would drift day 2/3 by the DST offset change; see `tripShiftPlan`).
- * Editing the individual windows is still the trip page's job — this is the
- * schedule builder's "drag it to Thursday", nothing more.
+ * The caller sets a new *start*; the end and every schedule day shift by
+ * that same wall-clock delta in the shop's own timezone, so a two-tank
+ * morning stays three and a half hours long even when the move also changes
+ * the start's clock time, and a three-day course stays three days with its
+ * second and third mornings at their own published wall-clock hour even
+ * when the move crosses a DST transition (a fixed millisecond shift would
+ * drift day 2/3 by the DST offset change; see `tripShiftPlan`). Editing the
+ * individual windows is still the trip page's job — this is the schedule
+ * builder's "drag it to Thursday", nothing more.
  *
  * Refuses a trip that has any roll-call history: the crew has begun counting
  * heads against that departure, and moving the date under a manifest already in
@@ -905,12 +911,12 @@ export async function deleteTrip(
  *
  * Copies what defines the dive: title, description, course, capacity, planned
  * dives and their sites, prices, and the cancellation window, with every
- * schedule day shifted by the same number of calendar days (in the shop's own
- * timezone, DST-safe — see `tripShiftPlan`) so a multi-day course keeps its
- * shape and its published wall-clock hours. Copies nothing about the *day*: no
- * roster, no wait list, no crew, no conditions, no series membership. A
- * duplicate is a fresh departure that looks like the old one, never a second
- * view of it.
+ * schedule day shifted by the same wall-clock delta as the start (in the
+ * shop's own timezone, DST-safe — see `tripShiftPlan`) so a multi-day course
+ * keeps its shape and its published wall-clock hours. Copies nothing about
+ * the *day*: no roster, no wait list, no crew, no conditions, no series
+ * membership. A duplicate is a fresh departure that looks like the old one,
+ * never a second view of it.
  */
 export async function duplicateTrip(
   db: AppDb,

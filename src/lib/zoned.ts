@@ -112,6 +112,47 @@ export function shiftInstantByCalendarDays(date: Date, days: number, timeZone: s
   return wallTimeToUtc(addCalendarDays(utcToWallTime(date, timeZone), days), timeZone);
 }
 
+/**
+ * Wall-clock delta between two wall times, in milliseconds — pure calendar
+ * arithmetic on the local reading itself (no timezone/DST involved, since a
+ * `WallTime` is already what a clock on the wall would show).
+ */
+export function wallTimeDeltaMs(from: WallTime, to: WallTime): number {
+  const fromMs = Date.UTC(from.year, from.month - 1, from.day, from.hour, from.minute);
+  const toMs = Date.UTC(to.year, to.month - 1, to.day, to.hour, to.minute);
+  return toMs - fromMs;
+}
+
+/**
+ * Shifts a UTC instant by a wall-clock delta (from `wallTimeDeltaMs`) while
+ * staying DST-safe: the delta is applied to `date`'s own wall-clock reading,
+ * not its raw UTC instant, so the whole-day part of the delta moves the
+ * calendar date without drifting the hour across a DST transition, and any
+ * sub-day remainder — a genuine time-of-day change, e.g. a trip moved to a
+ * new start *time* — shifts the hour/minute exactly as requested. This is
+ * what lets `moveTrip`/`duplicateTrip` (`src/db/trips.ts`) keep a departure's
+ * duration intact when its start time also changes, while a multi-day
+ * course's later days, which only ever carry the whole-day part of the
+ * delta, keep their own published wall-clock hour across a DST transition.
+ */
+export function shiftInstantByWallTimeDelta(date: Date, deltaMs: number, timeZone: string): Date {
+  if (deltaMs === 0) return date;
+  const wall = utcToWallTime(date, timeZone);
+  const shifted = new Date(
+    Date.UTC(wall.year, wall.month - 1, wall.day, wall.hour, wall.minute) + deltaMs,
+  );
+  return wallTimeToUtc(
+    {
+      year: shifted.getUTCFullYear(),
+      month: shifted.getUTCMonth() + 1,
+      day: shifted.getUTCDate(),
+      hour: shifted.getUTCHours(),
+      minute: shifted.getUTCMinutes(),
+    },
+    timeZone,
+  );
+}
+
 const pad = (n: number) => String(n).padStart(2, "0");
 
 /** "2026-07-18" — value for an HTML date input. */
