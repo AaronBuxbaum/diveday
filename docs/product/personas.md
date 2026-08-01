@@ -4,11 +4,11 @@ Fifteen personas plus two cross-cutting lenses, distilled from the 2026-07-30 fr
 (archived at [archive/ux-personas-20260730-findings.md](archive/ux-personas-20260730-findings.md))
 into evergreen guidance. Use this doc to evaluate *new* UX work — "how does this land for Nadia?"
 — not to look up what was already fixed. Open follow-on work from the original review lives in
-[story-backlog.md](story-backlog.md), each ticket tagged with the persona it serves.
+[features/story-backlog.md](features/story-backlog.md), each ticket tagged with the persona it serves.
 
 **How to use this doc.** Before shipping a diver- or staff-facing change, skim the personas whose
 surfaces it touches and check the change against their "what to hold the line on" list. When you
-find a new gap for a persona, add it to `story-backlog.md` rather than editing the narrative here
+find a new gap for a persona, add it to `features/story-backlog.md` rather than editing the narrative here
 — this document should stay a stable frame, not a running bug list.
 
 ## Contents
@@ -72,7 +72,7 @@ member; a party-size cap always offers a "bigger group? contact us" escape; a co
 age is visible wherever the booking happens, not only buried on the course page. **Open:**
 `course_min_age` is still not a hard gate for public bookings — a self-declared attestation
 checkbox is the current safe mechanism, and any move toward hard enforcement is a policy question
-(H-08), not just an engineering one — see `story-backlog.md`.
+(H-08), not just an engineering one — see `features/story-backlog.md`.
 
 ## 4. Marco — the repeat local who wants to book in ten seconds
 
@@ -94,7 +94,7 @@ composed as single ICU messages, not assembled from JSX fragments that break wor
 translation; `pnpm check:locale` and `pnpm check:copy` stay clean. **Open:** money is still
 USD-hardcoded end-to-end (currency isn't a `shops` column yet), Stripe line-item text is still
 composed in the domain layer, and every outbound email still uses the shop's locale rather than
-the recipient's — see `story-backlog.md`.
+the recipient's — see `features/story-backlog.md`.
 
 ## 6. Rob — the diver the night before (waiver, medical, readiness)
 
@@ -231,4 +231,4 @@ feature to an already-overloaded route.
 *This document supersedes the persona narratives in the archived 2026-07-30 review
 ([archive/ux-personas-20260730-findings.md](archive/ux-personas-20260730-findings.md)), rewritten
 as standing guidance rather than a dated bug list. Update it only when a persona's actual needs or
-context change — new findings against these personas belong in `story-backlog.md`, not here.*
+context change — new findings against these personas belong in `features/story-backlog.md`, not here.*

@@ -12,7 +12,7 @@
 > chair of a skeptical shop owner, written 2026-07-23 against the live pages (screenshots, light +
 > dark, desktop + phone), the codebase, and the two competitive assessments. An assessment, not a
 > commitment; the maintenance rules that came out of it live in [marketing.md](../marketing.md), and
-> tasks that survive review move to the [roadmap](../roadmap.md).
+> tasks that survive review move to the [roadmap](../features/roadmap.md).
 
 ## Context: what these pages must do
 
@@ -72,7 +72,7 @@ For a no-brand entrant, search and shared links are the only free inbound channe
 - No structured data at all — the pricing FAQ is sitting there unmarked (`FAQPage`), and
   `SoftwareApplication` with an honest price is available.
 - No high-intent pages: the migration guides ("Switching from EVE / DiveShop360 / DiveAdmin /
-  Smartwaiver") are prescribed by the [roadmap](../roadmap.md) and competitive strategy, capture
+  Smartwaiver") are prescribed by the [roadmap](../features/roadmap.md) and competitive strategy, capture
   the market's most motivated buyers (the EVE forced-migration pool), and do not exist.
 
 ### 3. The objection layer answers easy questions, not deal-killers

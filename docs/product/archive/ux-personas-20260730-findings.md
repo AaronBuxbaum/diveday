@@ -7,7 +7,7 @@ deferred and why. Not open work; do not plan from it. For current state, use:
 
 - [product/personas.md](../personas.md) — the standing persona reference this review produced,
   rewritten as evergreen guidance (not a dated bug list) for evaluating future UX work.
-- [product/story-backlog.md](../story-backlog.md) — every ticket from this review that is still
+- [product/features/story-backlog.md](../features/story-backlog.md) — every ticket from this review that is still
   open, partially done, or blocked on a pending review pass, cross-referenced back to its persona.
 
 ---
@@ -26,7 +26,7 @@ Before implementing anything here, follow AGENTS.md (skills: `new-feature`, `i18
 `design-review`, `verify`) — these prompts state *what* and *where*; the repo rules state *how*.
 
 **Status note.** This is an assessment, not a commitment. Tasks conflict with none of
-`product/roadmap.md` as of this date, but the roadmap owns priority. Several tasks touch
+`product/features/roadmap.md` as of this date, but the roadmap owns priority. Several tasks touch
 security-sensitive or safety-critical surfaces and say so inline.
 
 **Completion tracking.** Finished tasks carry a trailing `**Done — PR #N.**` (or `**Deferred —

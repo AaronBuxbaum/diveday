@@ -2,7 +2,7 @@
 
 What DiveDay has already built, as a scannable index. This is the "what exists" map; the *why* and
 the exact mechanism live in the linked ADRs and the code. Open work — what is **not** yet built —
-lives in [roadmap.md](roadmap.md), which this file keeps uncluttered.
+lives in [features/roadmap.md](features/roadmap.md), which this file keeps uncluttered.
 
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
@@ -13,7 +13,7 @@ The 165-task persona walkthrough closed out; the vast majority shipped across PR
 task-by-task rationale is archived in
 [archive/ux-personas-20260730-findings.md](archive/ux-personas-20260730-findings.md), the standing
 evaluation frame is [personas.md](personas.md), and what's still open is in
-[story-backlog.md](story-backlog.md). The headline slices:
+[features/story-backlog.md](features/story-backlog.md). The headline slices:
 
 - **The shop declares its own currency** — `shops.currency` (ISO 4217, chosen in settings) is the
   single source of truth for every checkout, order, invoice, tip, and displayed amount; Stripe's
@@ -39,8 +39,9 @@ evaluation frame is [personas.md](personas.md), and what's still open is in
 ## Specialist optimization audit — five lenses delivered (2026-07-31 → 08-01)
 
 Five of the eight lenses of the [specialist optimization
-audit](assessments/specialist-optimization-audit-20260731.md) shipped in full; accessibility,
-security/privacy, and ML & data are still open and remain in that file.
+audit](assessments/specialist-optimization-audit-20260731.md) shipped in full; accessibility and
+security/privacy are still open and remain in that file, while ML & data moved in full to
+[features/ai-ml.md](features/ai-ml.md#scoped-prompt-ready--from-the-2026-07-31-specialist-audit).
 
 - **UX & interaction design (§1)** — every button and button-shaped link gets a press dip on touch
   (one `active:scale-[0.98]` in `buttonClass`, so no call site changed); the `/ready` checklist now
@@ -338,7 +339,7 @@ security/privacy, and ML & data are still open and remain in that file.
   ([trip-dive-briefings](../architecture/decisions/20260719-trip-dive-briefings.md)).
 
 > **Not yet done:** human field validation of the offline manifest (V-02) — the one manifest item
-> still open. Tracked in [roadmap.md](roadmap.md) and [human-decisions.md](human-decisions.md).
+> still open. Tracked in [roadmap.md](features/roadmap.md) and [human-decisions.md](human-decisions.md).
 
 ## Operational surfaces (M7)
 
@@ -412,7 +413,7 @@ security/privacy, and ML & data are still open and remain in that file.
   ever not right, take it back out, free (`SwitchingConcierge`, routed to `switch@dive.day`; an
   authorized service claim, H-20). Content in `src/lib/migration-guides.ts`, pages in
   `src/app/switching/` ([marketing.md](marketing.md#where-the-words-live)). Backups and the read API are
-  the open follow-ons in [roadmap.md](roadmap.md).
+  the open follow-ons in [roadmap.md](features/roadmap.md).
 - **FareHarbor guide (coexist-led)** (2026-07-24) — `/switching/fareharbor`, the same template with
   an optional `coexist` block, because FareHarbor is a booking/distribution *channel* (a general
   tours engine, Booking-Holdings-owned), not a records system to leave: the guide leads with "keep
@@ -654,7 +655,7 @@ The roadmap's §7 smaller follow-ons and the whole open Delight backlog shipped:
 - **The chosen fit and nitrox request are saved the moment the booking exists** — the same
   `saveRentalFit`/`setBookingNitrox` writes the post-booking form already made, just a step earlier;
   that form still exists for a diver who skipped the step or wants to add sizes afterward.
-  Was the highest-leverage of [roadmap.md](roadmap.md#not-scheduled--candidate-subsystems)'s deferred revenue-layer
+  Was the highest-leverage of [roadmap.md](features/roadmap.md#not-scheduled--candidate-subsystems)'s deferred revenue-layer
   candidates. See
   [20260801-checkout-upsells-rental-gear](../architecture/decisions/20260801-checkout-upsells-rental-gear.md).
 

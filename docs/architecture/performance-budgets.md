@@ -73,5 +73,5 @@ The shared floor regressed. In order of preference:
 
 The automated budget bounds bytes over the wire; it does not prove the page feels fast on a specific
 phone. Real-user vitals flow to Vercel Speed Insights (`<SpeedInsights />` in the root layout);
-V-02's outdoor field test (`docs/product/roadmap.md`) is where the manifest is exercised on a real
+V-02's outdoor field test (`docs/product/features/roadmap.md`) is where the manifest is exercised on a real
 device on real marina Wi-Fi.

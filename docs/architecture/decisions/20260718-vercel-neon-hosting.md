@@ -43,7 +43,7 @@ hosting itself.
 - H-04's remaining scope — named database/secrets/backup/incident owner — is still open; this ADR
   resolves the technical half (provider, driver, migration procedure), not the ownership half.
 - Certification-card object storage is now provisioned through a private Vercel Blob store. Email
-  and payments remain deferred as described in `product/roadmap.md`.
+  and payments remain deferred as described in `product/features/roadmap.md`.
 
 ## Alternatives considered
 

@@ -151,7 +151,7 @@ Open questions for the generalist + CPA (do not decide these unilaterally):
 - H-01, H-02, H-03, H-18 rows updated with owner, outcome, date, and linked evidence.
 - Approved template text replaces the provisional shape in the product's waiver templates;
   if H-03 demands a vendor, the `SignatureProvider` adapter becomes a
-  [roadmap](../roadmap.md) item with an ADR.
+  [roadmap](../features/roadmap.md) item with an ADR.
 - V-03 performed against the approved policies; evidence recorded in the
   [verification queue](../human-decisions.md#human-verification-queue).
 - Contract set filed where the owner keeps executed documents; the terms-of-service obligations

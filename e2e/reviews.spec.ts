@@ -33,7 +33,7 @@ test("a diver's bare rating publishes straight away and reaches the public page"
 
 test("staff previewing the public page from Reviews actually see the reviews", async ({ page }) => {
   // /schedule is the public, canonical page regardless of session (Lens 17,
-  // docs/product/story-backlog.md — the staff operations board lives at its
+  // docs/product/features/story-backlog.md — the staff operations board lives at its
   // own /schedule/board instead), so the "View public page" link on Reviews
   // needs no special flag: signed-in staff land on exactly what a diver sees,
   // reviews included.

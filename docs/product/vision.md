@@ -28,7 +28,7 @@ concretely here.
 4. **Gear** — rental *fit*: the sizes each diver takes from the shop, feeding trip prep and
    packing lists. (Item-level inventory, booking assignment, and service history were deliberately
    removed as a half-maintained duplicate; a lightweight who-has-what / service-due register may
-   return — see [roadmap.md](roadmap.md).)
+   return — see [features/roadmap.md](features/roadmap.md).)
 5. **Boat manifests** — who's aboard, who's certified for the sites, roll call before departure
    and after every dive. A safety document first, a UI second.
 

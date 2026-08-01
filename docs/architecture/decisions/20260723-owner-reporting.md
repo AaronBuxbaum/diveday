@@ -9,7 +9,7 @@ The buyer is usually the owner, and the question they ask first — *"how's my m
 [competitive-analysis.md](../../product/assessments/competitive-analysis.md#what-blocks-the-purchase)
 lists "no owner reporting" as a recurring deal-blocker: rivals (DiveShop360, DiveAdmin, EVE) all show
 bookings, revenue, and fill at a glance, and its absence reads as "this is a tool for the crew, not
-for me." The [roadmap](../../product/roadmap.md) scopes the answer deliberately small — *"even a
+for me." The [roadmap](../../product/features/roadmap.md) scopes the answer deliberately small — *"even a
 modest dashboard over data that already exists removes the objection"* — because the data is already
 here: trips carry capacity, bookings carry status, `booking_payments` carry collected money, and
 `waiver_records` carry completion. Nothing new needs to be captured; it needs to be *summed*.

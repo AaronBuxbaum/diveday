@@ -7,7 +7,7 @@
 > inside; this document reads it from the outside — as a shop owner comparing us to
 > [DiveAdmin](https://diveadmin.com/en), EVE, DiveShop360, Bloowatch, and the generic booking
 > platforms. An assessment, not a commitment; items that survive review move to
-> [roadmap.md](../roadmap.md). For the operator's view of the two most dangerous named rivals —
+> [roadmap.md](../features/roadmap.md). For the operator's view of the two most dangerous named rivals —
 > verified company profiles, head-to-head axes, and the data-portability wedge — see
 > [competitive-strategy.md](competitive-strategy.md) (2026-07-22).
 

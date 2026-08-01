@@ -1,7 +1,7 @@
 # Human decision log
 
 The durable worklist for decisions, approvals, and verification that need a human owner. It
-complements the delivery sequence in [roadmap.md](roadmap.md): implementation can advance only
+complements the delivery sequence in [roadmap.md](features/roadmap.md): implementation can advance only
 when the relevant row is **Chosen** or intentionally **Deferred**.
 
 ## How to use this log

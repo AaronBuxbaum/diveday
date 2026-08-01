@@ -84,6 +84,6 @@ recording a choice, not building anything:
 - H-07 and H-12 rows updated; pricing display changes go through the
   [pricing boundary](../marketing.md#claims-policy-hard-rules) (`src/lib/marketing.ts` is the source of
   truth — never edit a price in page copy).
-- A subscription-billing mechanism, if chosen, enters [roadmap.md](../roadmap.md) with an ADR
+- A subscription-billing mechanism, if chosen, enters [roadmap.md](../features/roadmap.md) with an ADR
   (new runtime dependency rule).
 - Entity/tax outcomes land in H-18 with [legal.md](legal.md).
