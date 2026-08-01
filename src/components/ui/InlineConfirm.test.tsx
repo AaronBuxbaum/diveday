@@ -4,13 +4,31 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { InlineConfirm } from "./InlineConfirm";
 
+// A stand-in for Next's real router context: `usePathname()` is what
+// InlineConfirm keys its disarm-on-revisit effect on (see the component's
+// own doc comment). `setMockPathname` lets a test simulate a navigation
+// event — including an Activity-preserved show/hide cycle, should
+// `cacheComponents: true` be re-enabled (it re-fires effects the same way) —
+// without a real Next.js router.
+const { usePathname, setMockPathname } = vi.hoisted(() => {
+  let current = "/shop/blue-mantis/trips/trip-1/guests";
+  return {
+    usePathname: vi.fn(() => current),
+    setMockPathname: (next: string) => {
+      current = next;
+    },
+  };
+});
+vi.mock("next/navigation", () => ({ usePathname }));
+
 afterEach(() => {
   cleanup();
+  setMockPathname("/shop/blue-mantis/trips/trip-1/guests");
 });
 
 /** Renders inside a real <form> — InlineConfirm's confirm button is a real submit, guarded by this. */
 function renderInForm(onSubmit: () => void) {
-  render(
+  return render(
     <form
       onSubmit={(event) => {
         event.preventDefault();
@@ -69,6 +87,42 @@ describe("InlineConfirm", () => {
     expect(screen.getByRole("button", { name: "Cancel my spot" })).toBeInTheDocument();
     expect(screen.queryByText(/free-cancellation window/)).not.toBeInTheDocument();
     expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("disarms on a pathname change — an Activity-preserved show/hide cycle must never resurface it armed", async () => {
+    const onSubmit = vi.fn();
+    const { rerender } = renderInForm(onSubmit);
+
+    await userEvent.click(screen.getByRole("button", { name: "Cancel my spot" }));
+    expect(screen.getByText(/free-cancellation window/)).toBeInTheDocument();
+
+    // Simulate a navigate-away-and-back: the pathname changes and this
+    // instance's effects re-run (an Activity re-show, should cacheComponents
+    // be re-enabled, behaves like a fresh mount for effects, even though
+    // state survived).
+    setMockPathname("/shop/blue-mantis/trips/trip-1/manifest");
+    rerender(
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          onSubmit();
+        }}
+      >
+        <InlineConfirm
+          message="Cancel your spot on Reef Dive? This can't be undone. You're still inside the free-cancellation window, so what you paid comes back to you."
+          triggerLabel="Cancel my spot"
+          confirmLabel="Yes, cancel my spot"
+          cancelLabel="Never mind"
+          pendingLabel="Cancelling…"
+          triggerClassName="trigger"
+          confirmClassName="confirm"
+        />
+      </form>,
+    );
+
+    expect(screen.getByRole("button", { name: "Cancel my spot" })).toBeInTheDocument();
+    expect(screen.queryByText(/free-cancellation window/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Yes, cancel my spot" })).not.toBeInTheDocument();
   });
 });
 

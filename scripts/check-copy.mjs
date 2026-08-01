@@ -7,18 +7,19 @@ import process from "node:process";
  *
  * `pnpm check:locale` already guarantees that whatever *has* been extracted
  * into a message bundle is translated into every locale. It cannot see the much
- * larger problem: copy that never made it into a bundle at all. Around a
- * thousand English strings are still compiled into `src/app` and
- * `src/components` — `copy-baseline.json` holds the exact, current count —
- * and extracting them is a long mechanical job. Blocking on finishing it would
- * mean either never landing the rule or landing a rule nobody can satisfy.
+ * larger problem: copy that never made it into a bundle at all.
  *
- * So this is a **ratchet**, not a gate. `copy-baseline.json` records how much
+ * This is a **ratchet**, not a hand-authored gate. `copy-baseline.json` records how much
  * un-extracted copy each file still has. The build fails if a file grows, if a
  * file that isn't in the baseline has any at all, or — importantly — if a file
  * *shrinks* without its baseline entry being lowered in the same change. That
  * last rule is what keeps the number honest: the baseline can only ever go
  * down, and it tracks reality rather than drifting into a stale allowlist.
+ *
+ * The original extraction backlog (once ~1,000 strings across 110 files) is finished:
+ * `copy-baseline.json` holds only its `//` note, so the ratchet now behaves as a full gate —
+ * any hard-coded copy anywhere under the guarded roots fails the check. Trust the baseline
+ * file over any number in prose, here or elsewhere, since prose drifts and the file cannot.
  *
  * What counts as user-facing copy:
  *   - a JSX text node (`<p>Book now</p>`)
@@ -52,12 +53,11 @@ import process from "node:process";
  * and `schedule/[id]/_components/types.ts`'s `ERROR_MESSAGES`
  * (docs ADR 20260731-domain-layer-copy-leaks).
  *
- * **`src/lib` and `src/db`.** A sentence *returned* from domain or data code
- * is invisible to a scanner rooted at `src/app`/`src/components` — a sibling
- * script, `scripts/check-domain-strings.mjs`, covers this instead of widening
- * this one. See that file for why a separate, narrower tool was the right
- * shape rather than extending this scan's root list: this file stays about
- * JSX-adjacent copy, and it stays sound.
+ * **`src/lib`, `src/db`, and `src/features`.** A sentence *returned* from domain, data, or
+ * feature-module code is invisible to a scanner rooted at `src/app`/`src/components` — a sibling
+ * script, `scripts/check-domain-strings.mjs`, covers this instead of widening this one. See that
+ * file for why a separate, narrower tool was the right shape rather than extending this scan's
+ * root list: this file stays about JSX-adjacent copy, and it stays sound.
  *
  * The remaining rule is architectural, and it is stronger than either scan:
  * **`src/lib` and `src/db` return codes, `src/app` and `src/components` choose

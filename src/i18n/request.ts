@@ -8,10 +8,27 @@ import type { DiverLocale } from "./settings";
  * DiveDay carries it, otherwise the shop's stored default
  * (docs ADR 20260729-diver-copy-localization).
  *
- * Reading `headers()` opts a route into dynamic rendering. Every caller is
- * already dynamic — the public pages call `connection()` because a schedule is
- * live data, and the staff surfaces are session-gated — so this costs nothing
- * that wasn't already being paid.
+ * Reading `headers()` opts a route into dynamic rendering. That's free for the
+ * schedule/trip/staff surfaces — they already call `connection()` or sit
+ * behind a session — but it is *not* free for the marketing pages (`/`,
+ * `/pricing`, `/product`, `/about`, `/switching/**`): they have no session and
+ * no live data, so this `headers()` read is the only thing standing between
+ * them and a fully static, CDN-cacheable response. `DIVER_LOCALES` (./settings)
+ * is exactly two values, so the ideal fix is caching each page's body as a
+ * function of the negotiated `DiverLocale` with `"use cache"` + `cacheLife`,
+ * keeping only this thin negotiation dynamic.
+ *
+ * That fix needs the `cacheComponents` flag in `next.config.ts` — without it,
+ * `"use cache"` fails the build outright ("To use 'use cache', please enable
+ * the feature flag `cacheComponents`..."), and there is no old-model
+ * (route-segment-config) way to vary output by request header while still
+ * getting a static/ISR classification: `dynamic = 'force-static'` forces
+ * `headers()` to read empty, which would silently stop honoring
+ * `Accept-Language: es` rather than cache it. So this file still reads
+ * `headers()` per request, unmemoized, pending `cacheComponents` — verified by
+ * attempting the "use cache" restructuring directly (see the frontend
+ * performance audit notes); flip the flag first, then hoist each marketing
+ * page's body into a `"use cache"` function keyed by this locale.
  */
 export async function requestLocale(shopDefaultLocale?: string | null): Promise<DiverLocale> {
   const header = (await headers()).get("accept-language");

@@ -37,7 +37,9 @@ adapters and must not introduce unique requirements.
 | `pnpm lint` / `pnpm lint:fix` | Biome check / autofix |
 | `pnpm typecheck` | tsc |
 | `pnpm test <file> --reporter=dot` | focused Vitest run with low-noise success output |
+| `pnpm test:changed` | run only the tests affected by your diff against `origin/main` — a mid-iteration check across a handful of touched files; still run full `pnpm check` before commit |
 | `pnpm e2e <spec> --reporter=line` | use local Chromium, build, then run a focused Playwright suite |
+| `pnpm e2e:run <spec> --reporter=line` | fast-iteration path: build once with `pnpm e2e:build`, then `pnpm e2e:run <spec> --reporter=line` reuses that build and skips the rebuild |
 | `pnpm build` | production build |
 | `pnpm db:generate` | generate a Drizzle migration after editing `src/db/schema.ts` (see the **schema-change** skill) |
 | `pnpm db:reset` | clear the dev PGlite database; next `pnpm dev` re-migrates and re-seeds |
@@ -170,8 +172,11 @@ docs, tests, or code, the skill is stale and must be fixed in the same change.
   `src/i18n/locales/<locale>/diver.json`, staff copy in `staff.json`. `pnpm check:copy` is a
   **ratchet**: a file with no entry in `scripts/copy-baseline.json` may contain no hard-coded copy
   at all, an existing file's count may never rise, and a count that falls must be banked in the
-  same change (`node scripts/check-copy.mjs --write`, which refuses to raise anything). ~1,000
-  strings across 110 files are still to extract — that number is the honest state of it. `src/lib`
+  same change (`node scripts/check-copy.mjs --write`, which refuses to raise anything). The
+  original extraction backlog is finished — both `scripts/copy-baseline.json` and
+  `scripts/domain-strings-baseline.json` are empty, so the ratchet now behaves as a full gate: any
+  hard-coded copy anywhere under the guarded roots (including `src/features`) fails the check.
+  Check those files directly for current state rather than trusting a number here. `src/lib`
   and `src/db` return **codes, not sentences**; the UI picks the words. Waiver/medical wording
   stays English pending H-01/H-03. See the **i18n-copy** skill.
 - **Read time through the clock.** `src/lib`, `src/db`, and `src/features` never call `new Date()` / `Date.now()`

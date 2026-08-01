@@ -13,6 +13,18 @@ const MAX_IMAGE_PIXELS = 40_000_000;
 const OUTPUT_JPEG_QUALITY = 85;
 
 /**
+ * Long-edge cap for stored display images. Recap galleries, course pages, and
+ * briefing cards all serve the stored URL straight into an `<img>` — nothing
+ * downstream ever needs more than this for a full-bleed display image, so
+ * bounding it here (once, at the seam every upload passes through) keeps
+ * every one of those surfaces off full-resolution originals without each of
+ * them needing its own resize logic. `fit: "inside"` preserves aspect ratio
+ * and only ever shrinks; `withoutEnlargement` leaves a smaller original
+ * exactly as it is.
+ */
+const MAX_OUTPUT_DIMENSION = 2048;
+
+/**
  * Formats `sharp` will actually decode for us. Matches
  * `ALLOWED_IMAGE_CONTENT_TYPES` (`limits.ts`) by intent, not by import — this
  * checks what the bytes *decoded as*, not what the caller claimed, so the two
@@ -57,7 +69,14 @@ export async function processImage(bytes: ArrayBuffer | Buffer): Promise<Process
   if (metadata.width * metadata.height > MAX_IMAGE_PIXELS) return { ok: false };
 
   try {
-    const reencoded = await image.rotate().jpeg({ quality: OUTPUT_JPEG_QUALITY }).toBuffer();
+    const reencoded = await image
+      .rotate()
+      .resize(MAX_OUTPUT_DIMENSION, MAX_OUTPUT_DIMENSION, {
+        fit: "inside",
+        withoutEnlargement: true,
+      })
+      .jpeg({ quality: OUTPUT_JPEG_QUALITY })
+      .toBuffer();
     return { ok: true, bytes: reencoded, contentType: "image/jpeg" };
   } catch {
     return { ok: false };

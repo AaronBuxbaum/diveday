@@ -739,7 +739,13 @@ for (const scheme of ["light", "dark"] as const) {
         // One order in full: the total, and the per-line-item amounts that a
         // literal `$` and a hardcoded `/ 100` used to compose by hand.
         await page.locator('tbody tr a[href*="/orders/"]').first().click();
-        await page.getByText("Front desk").first().waitFor();
+        // Not "Front desk": the orders list this just navigated from carries
+        // the identical eyebrow text, already on screen, so waiting on it
+        // resolves instantly against the *old* page instead of the new one —
+        // capture() then fires while orders/[id] is still behind
+        // orders/loading.tsx's skeleton (no loading.tsx of its own, so it
+        // inherits the list's). "Back to diver" only exists on the detail page.
+        await page.getByRole("link", { name: "Back to diver" }).waitFor();
         await capture(page, "order-detail", scheme);
       });
 

@@ -26,6 +26,31 @@ export function messagesFor(locale: string | null | undefined): DiverMessages {
   return DIVER_MESSAGES[toDiverLocale(locale)] as DiverMessages;
 }
 
+/** A top-level section of the diver bundle (`"booking"`, `"rental"`, …). */
+export type DiverMessageNamespace = keyof DiverMessages;
+
+/**
+ * The bundle for a shop's locale, narrowed to only the requested top-level
+ * namespaces — an object pick over `DIVER_MESSAGES`.
+ *
+ * `DiverIntlProvider` serializes whatever this returns into the RSC payload
+ * of every page that mounts it, so a page that only renders a couple of
+ * Client Components (a contact form, a rental-fit form) should only ever ship
+ * those components' namespaces, not the full ~80 KB bundle. See that file's
+ * doc comment for why every other config prop stays explicit too.
+ */
+export function messagesForNamespaces<K extends DiverMessageNamespace>(
+  locale: string | null | undefined,
+  namespaces: readonly K[],
+): Pick<DiverMessages, K> {
+  const bundle = messagesFor(locale);
+  const picked = {} as Pick<DiverMessages, K>;
+  for (const namespace of namespaces) {
+    picked[namespace] = bundle[namespace];
+  }
+  return picked;
+}
+
 /**
  * A translator for one shop's locale, for use in Server Components and server
  * actions. Missing keys fall back to `DEFAULT_DIVER_LOCALE` before they fall

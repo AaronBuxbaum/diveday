@@ -7,7 +7,8 @@ import process from "node:process";
  * 20260731-domain-layer-copy-leaks).
  *
  * `scripts/check-copy.mjs` guards `src/app`/`src/components`, where copy shows up as a JSX text
- * node or a copy-attribute literal. Neither pattern exists in the domain and data layers — but a
+ * node or a copy-attribute literal. Neither pattern exists in the domain, data, or feature-module
+ * layers this script guards (`src/lib`, `src/db`, `src/features`) — but a
  * different leak does: a function builds an object with a field named `message` (or a
  * `_LABELS`-suffixed lookup const) whose value is a full English sentence, and a page renders it
  * via `{blocker.message}` — a variable reference, so the JSX scanner never sees it even though the
@@ -30,7 +31,9 @@ import process from "node:process";
 
 const ROOT = process.cwd();
 const BASELINE_PATH = "scripts/domain-strings-baseline.json";
-const guardedRoots = ["src/lib", "src/db"];
+// src/features sits on the lib/db side of the app → features → lib/db dependency direction
+// (ADR 20260730-feature-module-contracts), so the codes-not-sentences discipline applies there too.
+const guardedRoots = ["src/lib", "src/db", "src/features"];
 
 /**
  * Object-literal properties whose *name* marks them as prose. Deliberately narrow — the same list

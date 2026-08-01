@@ -9,6 +9,23 @@ const nextConfig: NextConfig = {
   // dynamically requires optional native/cloud drivers it doesn't use here;
   // keep it external too rather than have the bundler try to resolve them.
   serverExternalPackages: ["@electric-sql/pglite", "pg", "sharp"],
+  images: {
+    // Every photo this app stores (certification cards, course media, recap
+    // photos, dive-site briefings) lands in Vercel Blob behind a per-store
+    // subdomain of this suffix (`BLOB_PUBLIC_HOSTNAME_SUFFIX`,
+    // src/lib/storage/blob-host.ts) — `*` matches exactly that one subdomain
+    // segment. Anything else (a shop-pasted third-party URL that predates
+    // upload-based media, or a legacy Commons URL a dive-site row still
+    // carries) is rendered unoptimized or as a plain `<img>` rather than
+    // widened to a blanket pattern here.
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "*.public.blob.vercel-storage.com",
+        pathname: "/**",
+      },
+    ],
+  },
   // TypeScript 7 is the native (Go) compiler and no longer exposes the JS
   // compiler API Next used for its in-build type check. Next drives it through
   // the TS CLI instead (tsgo), which this flag enables.
@@ -58,17 +75,36 @@ export default withSentryConfig(nextConfig, {
   // side errors will fail.
   tunnelRoute: "/monitoring",
 
+  // Bundle-size treeshaking: strips the Sentry SDK's debug/tracing/replay
+  // code, which we never use (`tracesSampleRate: 0`, no `replayIntegration`
+  // call — see instrumentation-client.ts). Set for when it applies, but
+  // verify before crediting it with any KB: as of @sentry/nextjs 10.69.0 this
+  // (and the older `webpack.treeshake` option) is wired only for webpack
+  // builds via `webpack.DefinePlugin` — Sentry's own docs say so explicitly
+  // ("this guide... does not apply to Turbopack builds"), and this repo's
+  // `next build` uses Turbopack (Next 16 default), whose
+  // `constructTurbopackConfig`/`generateValueInjectionRules` in this SDK
+  // version inject build values for the tunnel route and Vercel Crons but
+  // nothing for bundle-size excludes. Measured here: adding this block plus
+  // dropping `enableLogs` below did not move the shared first-load number
+  // (259.9 KB gzip, unchanged) — confirmed by also diagnostically deleting
+  // the whole `Sentry.init` call, which dropped it to 167.5 KB, so Sentry's
+  // true footprint (~92 KB) is real but not reachable through this option
+  // today. Leaving it set anyway: harmless now, and it should start working
+  // for free if/when Sentry ships Turbopack parity for this feature.
+  bundleSizeOptimizations: {
+    excludeDebugStatements: true,
+    excludeTracing: true,
+    excludeReplayIframe: true,
+    excludeReplayShadowDom: true,
+    excludeReplayWorker: true,
+  },
+
   webpack: {
     // Enables automatic instrumentation of Vercel Cron Monitors. (Does not yet work with App Router route handlers.)
     // See the following for more information:
     // https://docs.sentry.io/product/crons/
     // https://vercel.com/docs/cron-jobs
     automaticVercelMonitors: true,
-
-    // Tree-shaking options for reducing bundle size
-    treeshake: {
-      // Automatically tree-shake Sentry logger statements to reduce bundle size
-      removeDebugLogging: true,
-    },
   },
 });

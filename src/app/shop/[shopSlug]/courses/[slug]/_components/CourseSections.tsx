@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
@@ -11,6 +12,7 @@ import {
 } from "@/lib/courses";
 import { formatShortDate, formatTime, formatTimeRangeTz } from "@/lib/format";
 import { minorToMajor, type ShopCurrency } from "@/lib/money";
+import { isManagedBlobUrl } from "@/lib/storage/blob-host";
 import { capacityLabel, isFull } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 
@@ -43,10 +45,41 @@ const AGENCY_FULL_NAME_KEYS: Record<string, DiverMessageKey> = {
   tdi: "course.agencyFullNames.tdi",
 };
 
-/** Photo from a shop's blob store, a bundled path, or a link the shop pasted. */
-function CourseImage({ src, alt, className }: { src: string; alt: string; className: string }) {
-  // biome-ignore lint/performance/noImgElement: course media comes from shop-provided hosts and the blob store, which no build-time image allowlist can enumerate.
-  return <img src={src} alt={alt} loading="lazy" className={className} />;
+/**
+ * Photo from a shop's blob store, a bundled path, or (for a course saved before
+ * uploads replaced pasted URLs) a link the shop typed in directly. `className`
+ * sizes the box (height/width/rounding/border) — `object-cover` is applied
+ * internally so it reaches whichever element (Image or plain img) actually
+ * renders.
+ */
+function CourseImage({
+  src,
+  alt,
+  className,
+  sizes,
+}: {
+  src: string;
+  alt: string;
+  className: string;
+  sizes: string;
+}) {
+  if (src.startsWith("/") || isManagedBlobUrl(src)) {
+    return (
+      <div className={`relative overflow-hidden ${className}`}>
+        <Image src={src} alt={alt} fill sizes={sizes} className="object-cover" />
+      </div>
+    );
+  }
+  return (
+    // biome-ignore lint/performance/noImgElement: a legacy shop-pasted URL outside the blob store next.config.ts allowlists for next/image.
+    <img
+      src={src}
+      alt={alt}
+      loading="lazy"
+      decoding="async"
+      className={`${className} object-cover`}
+    />
+  );
 }
 
 export function CourseHero({
@@ -89,7 +122,8 @@ export function CourseHero({
             course.heroImageAlt,
             t("course.photoAltFallback", { course: course.title, n: 1 }),
           )}
-          className="h-56 w-full object-cover sm:h-80"
+          className="h-56 w-full sm:h-80"
+          sizes="(min-width: 896px) 896px, 100vw"
         />
       ) : null}
       <div className="p-6 sm:p-8">
@@ -418,7 +452,8 @@ export function CourseGallery({
               imageAlts[index],
               t("course.photoAltFallback", { course: title, n: index + 2 }),
             )}
-            className="h-40 w-full rounded-2xl border border-border object-cover sm:h-48"
+            className="h-40 w-full rounded-2xl border border-border sm:h-48"
+            sizes="(min-width: 640px) 33vw, 50vw"
           />
         ))}
       </div>

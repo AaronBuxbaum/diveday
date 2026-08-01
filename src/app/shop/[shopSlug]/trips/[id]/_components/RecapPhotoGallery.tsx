@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import type { StaffRecapPhoto } from "@/db/recap";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -29,15 +30,20 @@ export function RecapPhotoGallery({
       <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
         {photos.map((photo) => (
           <li key={photo.id} className="overflow-hidden rounded-lg border border-border bg-surface">
-            {/* biome-ignore lint/performance/noImgElement: diver photos come from the blob store, which no build-time image allowlist can enumerate. */}
-            <img
-              src={photo.imageUrl}
-              alt={
-                photo.caption ?? t("trips.recapPhotos.photoFromAlt", { diverName: photo.diverName })
-              }
-              loading="lazy"
-              className="aspect-square w-full object-cover"
-            />
+            <div className="relative aspect-square w-full">
+              {/* Diver photos always come from the blob store (storeRecapImage), so the
+                  remotePatterns entry in next.config.ts covers every url here. */}
+              <Image
+                src={photo.imageUrl}
+                alt={
+                  photo.caption ??
+                  t("trips.recapPhotos.photoFromAlt", { diverName: photo.diverName })
+                }
+                fill
+                sizes="(min-width: 640px) 33vw, 50vw"
+                className="object-cover"
+              />
+            </div>
             <div className="flex items-center justify-between gap-2 px-2 py-1.5">
               <div className="min-w-0">
                 <p className="truncate text-xs font-medium">{photo.diverName}</p>

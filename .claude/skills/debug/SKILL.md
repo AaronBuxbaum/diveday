@@ -23,7 +23,8 @@ thread instead of pushing a second, competing fix.
    and constraint name are in the `error.cause` chain; walk it before speculating.
 3. **Isolate fast.** `pnpm exec vitest run <file> -t "<name>"` ·
    `pnpm exec playwright test e2e/<file>.spec.ts:<line>`. Iterate on the single failing case,
-   then rerun the full gate.
+   then rerun the full gate. For a Playwright bug, `pnpm e2e:build` once, then
+   `pnpm e2e:run e2e/<file>.spec.ts --reporter=line` reruns without paying for another build.
 4. **Three failed fix attempts on the same symptom → stop.** Write down what's known and ruled
    out, then re-question the diagnosis. A fourth variation of the same guess is how sessions
    burn hours.
