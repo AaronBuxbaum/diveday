@@ -33,18 +33,40 @@ export async function verifyCredentials(
   email: string,
   password: string,
 ): Promise<VerifiedUser | null> {
+  // TEMP DIAGNOSTIC (remove before merge): PR #286's visual-regression e2e
+  // job fails signInAsOwner() deterministically, never reproducible locally.
+  // ADR-0006 hides which check failed from the user; this instruments the
+  // actual reason to stderr (picked up by Playwright's [WebServer] log
+  // capture in CI) without changing the returned value or user-facing copy.
+  const diag = (reason: string, extra?: Record<string, unknown>) => {
+    if (process.env.DIVEDAY_E2E === "1") {
+      console.error(
+        `[diag-286] verifyCredentials fail: ${reason} email=${email.toLowerCase()}`,
+        extra ?? {},
+      );
+    }
+  };
   const [account] = await db
     .select()
     .from(userAccounts)
     .where(eq(userAccounts.email, email.toLowerCase()))
     .limit(1);
-  if (account?.status !== "active") return null;
+  if (account?.status !== "active") {
+    diag("account-not-active", { found: Boolean(account), status: account?.status });
+    return null;
+  }
 
   const [person] = await db.select().from(people).where(eq(people.id, account.personId)).limit(1);
-  if (!person) return null;
+  if (!person) {
+    diag("no-person", { personId: account.personId });
+    return null;
+  }
 
   const [shop] = await db.select().from(shops).where(eq(shops.id, person.shopId)).limit(1);
-  if (!shop) return null;
+  if (!shop) {
+    diag("no-shop", { shopId: person.shopId });
+    return null;
+  }
 
   let ok = await compare(password, account.hashedPassword);
   if (!ok) {
@@ -52,7 +74,10 @@ export async function verifyCredentials(
       ok = true;
     }
   }
-  if (!ok) return null;
+  if (!ok) {
+    diag("password-mismatch", { isDemo: shop.isDemo, shopSlug: shop.slug });
+    return null;
+  }
 
   const roleRows = await db
     .select({ role: personRoles.role })
@@ -62,7 +87,10 @@ export async function verifyCredentials(
 
   // Staff-only surface for now; customer sign-in arrives with the milestone
   // that needs it (ADR-0006).
-  if (!isStaff(roles)) return null;
+  if (!isStaff(roles)) {
+    diag("not-staff", { roles });
+    return null;
+  }
 
   return {
     id: account.id,

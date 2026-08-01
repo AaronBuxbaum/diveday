@@ -26,7 +26,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       // this is the authoritative check.
       async authorize(credentials, request) {
         const parsed = credentialsSchema.safeParse(credentials);
-        if (!parsed.success) return null;
+        if (!parsed.success) {
+          if (process.env.DIVEDAY_E2E === "1") {
+            console.error("[diag-286] authorize fail: schema-parse", parsed.error?.issues);
+          }
+          return null;
+        }
         const ip = await clientIp({ get: (name) => request.headers.get(name) });
         const byIp = checkRateLimit(rateLimitKey("sign-in-ip", ip), RATE_LIMITS.signInByIp);
         const byEmail = checkRateLimit(
@@ -34,6 +39,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           RATE_LIMITS.signInByEmail,
         );
         if (!byIp.allowed || !byEmail.allowed) {
+          if (process.env.DIVEDAY_E2E === "1") {
+            console.error("[diag-286] authorize fail: rate-limited", {
+              ip,
+              byIpAllowed: byIp.allowed,
+              byEmailAllowed: byEmail.allowed,
+            });
+          }
           // Fire-and-forget: telemetry must never add latency to the sign-in
           // chokepoint, and trackEvent already swallows its own errors.
           void trackEvent({ name: "sign_in_attempted", outcome: "rate_limited" });
