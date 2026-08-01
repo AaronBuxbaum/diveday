@@ -31,7 +31,10 @@
       "copied": "Copied",
       "copyFailed": "Couldn't copy — select it manually",
       "confirmRotate": "Replace this link? Any calendar still using the old one stops updating.",
-      "confirmTurnOff": "Turn off this subscription? The link stops working immediately."
+      "confirmRotateButton": "Yes, replace the link",
+      "confirmTurnOff": "Turn off this subscription? The link stops working immediately.",
+      "confirmTurnOffButton": "Yes, turn it off",
+      "cancel": "Never mind"
     },
     "newLink": {
       "heading": "Your subscription link",
@@ -796,7 +799,10 @@
       "notConnected": "Connect your Stripe account in Settings first — a code is created on your own account.",
       "stripeFailed": "Stripe didn't create that code. It's saved as failed here and can't discount anything; try again.",
       "notAuthorized": "Promo codes discount real money, so they're limited to owners and managers.",
-      "deleted": "Code deleted."
+      "deleted": "Code deleted.",
+      "deletedToast": "Code deleted.",
+      "restored": "Code re-created and live again on your Stripe account.",
+      "restoreFailed": "Couldn't restore that code. Create it again below."
     },
     "connectBanner": "Connect your Stripe account in <settingsLink>Settings</settingsLink> before creating a code — codes are created on your own Stripe account, not DiveDay's.",
     "settingsLink": "Settings",
@@ -859,7 +865,6 @@
     "retrying": "Trying again…",
     "delete": "Delete",
     "deleting": "Deleting…",
-    "deleteConfirm": "Delete the code {code}? It never went live, so nothing was discounted — this can't be undone.",
     "tripDeals": {
       "heading": "Trip deals",
       "description": "One-trip discounts sent from a departure's page — the other half of every live code, gathered here so nothing is only visible from the trip it was sent on.",
@@ -942,6 +947,7 @@
     "notice": {
       "published": "Review published to your schedule page.",
       "hidden": "Review hidden — it no longer counts toward your rating.",
+      "hiddenToast": "Review hidden.",
       "error": "That review couldn't be updated. Try again."
     },
     "overviewLabel": "Rating overview",
@@ -961,7 +967,6 @@
     "ratingOnly": "Rating only — no words to review.",
     "reviewMeta": "<diver>{diverName}</diver> · <trip>{tripTitle}</trip> · {date}",
     "hide": "Hide",
-    "hideConfirm": "Hide this review? It stops counting toward your public rating.",
     "publish": "Publish",
     "saving": "Saving…",
     "showMoreReviews": "Show more reviews",
@@ -1021,6 +1026,8 @@
       "remove": "Remove",
       "removeAria": "Remove {ref}",
       "removeConfirm": "Take “{title}” off the board for good?",
+      "removeConfirmButton": "Yes, remove the trip",
+      "removeCancel": "Never mind",
       "removePending": "…",
       "whatIsIt": "What is it",
       "titlePlaceholder": "Two-Tank Reef — Molasses & French",
@@ -1127,6 +1134,7 @@
       "viewBookingPage": "View booking page",
       "copyBookingLink": "Copy link",
       "linkCopied": "Copied!",
+      "linkCopyFailed": "Couldn’t copy — select the link above instead.",
       "cancelledBadge": "Cancelled",
       "meetingDaysSummary": "{count} meeting days · same instructors each day",
       "dayLabel": "Day {number}: {date} · {timeRange}",
@@ -1245,6 +1253,8 @@
       "photoFromAlt": "Photo from {diverName}",
       "removing": "…",
       "confirmRemove": "Remove this photo from the diver's recap?",
+      "removeConfirmButton": "Yes, remove the photo",
+      "removeCancel": "Never mind",
       "remove": "Remove"
     },
     "addDiver": {
@@ -1282,6 +1292,7 @@
       "emailAnInvite": "Email {firstName} an invite",
       "copied": "Copied",
       "copyInviteMessage": "Copy invite message",
+      "copyFailed": "Couldn’t copy — write the message down instead.",
       "justNow": "just now",
       "minutesAgo": "{mins}m ago",
       "hoursAgo": "{hours}h ago",
@@ -1346,6 +1357,8 @@
       "confirming": "Confirming…",
       "confirmIdentityMessage": "Confirm this booking really is {name}? Only do this once you’ve checked it’s the same person — not someone else sharing the email.",
       "confirmThisIs": "Confirm this is {name}",
+      "identityConfirmButton": "Yes, this is them",
+      "neverMind": "Never mind",
       "waiverColumnHeading": "Waiver",
       "resending": "Resending…",
       "confirmResendWaiver": "Send {name} a new waiver link? Their previous link will stop working.",
@@ -1367,9 +1380,10 @@
       "removing": "Removing…",
       "confirmRemoveBooking": "Remove {name} from this trip? If they're eligible for a refund, it's issued automatically.",
       "removeBooking": "Remove booking",
+      "removeBookingConfirmButton": "Yes, remove booking",
       "privateStaffNotes": "Private staff notes ({count})",
+      "noteDeletedToast": "Private note deleted.",
       "deletingEllipsis": "…",
-      "confirmDeleteNote": "Delete this private note?",
       "delete": "Delete",
       "addNoteLabel": "Add a note only staff can see",
       "adding": "Adding…",
@@ -1733,6 +1747,8 @@
         "reactivated": "Account re-enabled.",
         "disabled": "Account disabled — they can no longer sign in.",
         "removed": "Removed from the team.",
+        "restored": "Team access restored.",
+        "restoreFailed": "Couldn't restore that person's access — check their account first.",
         "inviteInvalid": "Enter a name, a valid email, and check at least one role.",
         "rolesInvalid": "Check at least one role before saving.",
         "inviteAlreadyOnTeam": "That person already has an account here.",
@@ -1783,7 +1799,7 @@
         "enableAriaLabel": "Enable {name}",
         "disableAriaLabel": "Disable {name}",
         "deleteAriaLabel": "Delete {name}",
-        "deleteConfirm": "Delete {name} from the team? This can't be undone."
+        "removedToast": "Removed {name} from the team."
       }
     },
     "export": {
@@ -1968,7 +1984,8 @@
       "footer": "Both snippets point at <link>your public schedule</link>. Editing a trip, adding a departure, or changing your rental prices shows up the moment a diver loads the embed — nothing to republish.",
       "snippetField": {
         "copy": "Copy",
-        "copied": "Copied"
+        "copied": "Copied",
+        "failed": "Couldn’t copy — select the code above instead."
       }
     }
   },
@@ -2173,6 +2190,7 @@
       "scheduleBody": "The page divers actually book from — paste it on your website or socials.",
       "scheduleCopy": "Copy link",
       "scheduleCopied": "Copied",
+      "scheduleCopyFailed": "Couldn’t copy — select the link above instead.",
       "stripeTitle": "Connect Stripe (optional)",
       "stripeBody": "Take payment online. Skip this and collect payment at the counter instead.",
       "stripeAction": "Connect Stripe",
@@ -2191,6 +2209,7 @@
       "sending": "Sending…",
       "copied": "Copied",
       "copyLink": "Copy link",
+      "copyFailed": "Couldn’t copy — select the link above instead.",
       "reasonNoEmailOne": "No email on file",
       "reasonNoEmailOther": "{count} have no email on file",
       "reasonFailedOne": "Email could not be delivered",
@@ -2203,7 +2222,9 @@
       "sent": "Waiver sent to {names}.",
       "alreadyDoneOne": "{names} already has a signed waiver — nothing reissued.",
       "alreadyDoneOther": "{names} already have a signed waiver — nothing reissued.",
-      "errors": "Couldn’t send to {names} — open the roster to check the booking."
+      "errors": "Couldn’t send to {names} — open the roster to check the booking.",
+      "confirmResend": "Yes, resend",
+      "neverMind": "Never mind"
     },
     "connectivity": {
       "online": "Online",

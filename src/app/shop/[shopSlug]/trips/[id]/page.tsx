@@ -158,6 +158,7 @@ export default async function ManageTripPage({
               path={`/shop/${shopSlug}/schedule/${tripId}`}
               label={t("trips.detail.copyBookingLink")}
               copiedLabel={t("trips.detail.linkCopied")}
+              failedLabel={t("trips.detail.linkCopyFailed")}
             />
           </>
         }

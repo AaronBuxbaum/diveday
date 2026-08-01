@@ -32,24 +32,24 @@ function mintedUrl(panel: Locator): Locator {
 }
 
 /** Leaves the panel with no live subscription, whatever state it started in. */
-async function clearSubscription(panel: Locator, page: Page) {
+async function clearSubscription(panel: Locator) {
   const turnOff = panel.getByRole("button", { name: "Turn off" });
   if ((await turnOff.count()) > 0) {
-    page.once("dialog", (dialog) => dialog.accept());
     await turnOff.click();
+    await panel.getByRole("button", { name: "Yes, turn it off" }).click();
     await expect(panel.getByRole("button", { name: "Create subscription link" })).toBeVisible();
   }
 }
 
 /** Mints a link from either state and returns its fetchable URL. */
-async function mintLink(panel: Locator, page: Page): Promise<string> {
+async function mintLink(panel: Locator): Promise<string> {
   const create = panel.getByRole("button", { name: "Create subscription link" });
   const replace = panel.getByRole("button", { name: "Replace link" });
   if ((await create.count()) > 0) {
     await create.click();
   } else {
-    page.once("dialog", (dialog) => dialog.accept());
     await replace.click();
+    await panel.getByRole("button", { name: "Yes, replace the link" }).click();
   }
   await expect(panel.getByRole("heading", { name: "Your subscription link" })).toBeVisible();
   return (await mintedUrl(panel).innerText()).trim();
@@ -93,11 +93,11 @@ test.describe("staff calendar subscriptions", () => {
     ).toBeVisible();
 
     const panel = panelFor(page, MY_DEPARTURES);
-    await clearSubscription(panel, page);
+    await clearSubscription(panel);
     // With nothing subscribed there is no link on screen to leak.
     await expect(panel.getByText("Not subscribed yet.")).toBeVisible();
 
-    const url = await mintLink(panel, page);
+    const url = await mintLink(panel);
     expect(url).toContain("/calendar/");
     expect(url).toMatch(/\.ics$/);
     expect(url).toMatch(/^https?:\/\//);
@@ -119,15 +119,15 @@ test.describe("staff calendar subscriptions", () => {
     await signInAsOwner(page);
     await page.goto(CALENDAR_SETTINGS);
     const panel = panelFor(page, MY_DEPARTURES);
-    await clearSubscription(panel, page);
+    await clearSubscription(panel);
 
-    const firstUrl = await mintLink(panel, page);
+    const firstUrl = await mintLink(panel);
     expect((await request.get(firstUrl, { headers: { cookie: "" } })).status()).toBe(200);
 
     // Re-render so the panel offers "Replace link" from server state, which is
     // the path a returning staff member actually takes.
     await page.reload();
-    const secondUrl = await mintLink(panelFor(page, MY_DEPARTURES), page);
+    const secondUrl = await mintLink(panelFor(page, MY_DEPARTURES));
 
     expect(secondUrl).not.toBe(firstUrl);
     expect((await request.get(firstUrl, { headers: { cookie: "" } })).status()).toBe(404);
@@ -138,13 +138,13 @@ test.describe("staff calendar subscriptions", () => {
     await signInAsOwner(page);
     await page.goto(CALENDAR_SETTINGS);
     const panel = panelFor(page, MY_DEPARTURES);
-    await clearSubscription(panel, page);
+    await clearSubscription(panel);
 
-    const url = await mintLink(panel, page);
+    const url = await mintLink(panel);
     expect((await request.get(url, { headers: { cookie: "" } })).status()).toBe(200);
 
-    page.once("dialog", (dialog) => dialog.accept());
     await panel.getByRole("button", { name: "Turn off" }).click();
+    await panel.getByRole("button", { name: "Yes, turn it off" }).click();
     await expect(panel.getByRole("button", { name: "Create subscription link" })).toBeVisible();
 
     expect((await request.get(url, { headers: { cookie: "" } })).status()).toBe(404);

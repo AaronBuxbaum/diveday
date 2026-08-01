@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState } from "react";
 import {
   IDLE_WAIVER_SEND_STATE,
   type WaiverFallbackLink,
@@ -9,29 +9,20 @@ import {
   type WaiverSendSurface,
 } from "@/app/actions/waiver-send-types";
 import { sendWaiversAction } from "@/app/actions/waivers";
+import { Copyable } from "@/components/Copyable";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { InlineConfirm } from "@/components/ui/InlineConfirm";
 
 function fill(template: string, values: Record<string, string>): string {
   return template.replace(/\{(\w+)\}/g, (match, key) => (key in values ? values[key] : match));
 }
 
 function CopyLink({ link, copy: copyText }: { link: WaiverFallbackLink; copy: WaiverSendCopy }) {
-  const [copied, setCopied] = useState(false);
   const url =
     typeof window === "undefined"
       ? ""
       : new URL(`/waivers/${link.token}`, window.location.origin).toString();
-
-  async function copy() {
-    try {
-      await navigator.clipboard.writeText(url || `/waivers/${link.token}`);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 4000);
-    } catch {
-      setCopied(false);
-    }
-  }
 
   return (
     <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -42,13 +33,13 @@ function CopyLink({ link, copy: copyText }: { link: WaiverFallbackLink; copy: Wa
       >
         /waivers/{link.token.slice(0, 8)}…
       </a>
-      <button
-        type="button"
-        onClick={copy}
-        className={buttonClass({ variant: "ghost", size: "sm", className: "text-foreground" })}
-      >
-        <span aria-live="polite">{copied ? copyText.copied : copyText.copyLink}</span>
-      </button>
+      <Copyable
+        layout="inline"
+        value={url || `/waivers/${link.token}`}
+        copyLabel={copyText.copyLink}
+        copiedLabel={copyText.copied}
+        failedLabel={copyText.copyFailed}
+      />
     </div>
   );
 }
@@ -169,7 +160,7 @@ export function WaiverSendControl({
   /** Short trailing detail (e.g. "tap to resend") — the roster's richer status pill uses this. */
   hint?: string;
   pendingLabel?: string;
-  /** A native confirm() prompt before a resend — the roster's already-sent case wants this. */
+  /** An in-page `InlineConfirm` guard before a resend — the roster's already-sent case wants this. */
   confirmMessage?: string;
   /** Overrides the default secondary-button look — the roster's per-status tone pill. */
   className?: string;
@@ -181,6 +172,21 @@ export function WaiverSendControl({
     sendWaiversAction.bind(null, shopSlug, surface, tripId),
     IDLE_WAIVER_SEND_STATE,
   );
+  const buttonClassName =
+    className ?? buttonClass({ variant: "secondary", className: "w-full shrink-0 sm:w-auto" });
+  const labelContent = (
+    <>
+      {label}
+      {hint ? (
+        <>
+          <span aria-hidden="true" className="opacity-40">
+            ·
+          </span>
+          <span className="font-normal opacity-70">{hint}</span>
+        </>
+      ) : null}
+    </>
+  );
 
   return (
     <div className={wrapperClassName ?? "sm:text-right"}>
@@ -188,24 +194,23 @@ export function WaiverSendControl({
         {bookingIds.map((id) => (
           <input key={id} type="hidden" name="bookingId" value={id} />
         ))}
-        <SubmitButton
-          pendingLabel={pendingLabel ?? copy.sending}
-          confirmMessage={confirmMessage}
-          className={
-            className ??
-            buttonClass({ variant: "secondary", className: "w-full shrink-0 sm:w-auto" })
-          }
-        >
-          {label}
-          {hint ? (
-            <>
-              <span aria-hidden="true" className="opacity-40">
-                ·
-              </span>
-              <span className="font-normal opacity-70">{hint}</span>
-            </>
-          ) : null}
-        </SubmitButton>
+        {/* Resending is a send, not a reversible edit (principle 7,
+            docs/design/principles.md) — a resend to someone who already got
+            one guards with a real confirm, not an undo. */}
+        {confirmMessage ? (
+          <InlineConfirm
+            triggerLabel={labelContent}
+            triggerClassName={buttonClassName}
+            message={confirmMessage}
+            confirmLabel={copy.confirmResend}
+            cancelLabel={copy.neverMind}
+            pendingLabel={pendingLabel ?? copy.sending}
+          />
+        ) : (
+          <SubmitButton pendingLabel={pendingLabel ?? copy.sending} className={buttonClassName}>
+            {labelContent}
+          </SubmitButton>
+        )}
       </form>
       <ResultNotice state={state} copy={copy} />
     </div>

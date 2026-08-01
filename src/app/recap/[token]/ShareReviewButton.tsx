@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { copyToClipboard } from "@/components/Copyable";
 import { buttonClass } from "@/components/ui/button";
 
 /**
@@ -8,7 +9,10 @@ import { buttonClass } from "@/components/ui/button";
  * what used to be two stacked asks into one). Copies the diver's own words
  * to the clipboard (nothing to copy for a bare rating) and sends them on to
  * the shop's own review link, so pasting into Google/TripAdvisor takes one
- * more click instead of retyping what they already wrote here.
+ * more click instead of retyping what they already wrote here. This is a
+ * link, not a `Copyable`-shaped button, so it keeps its own markup — but the
+ * write itself goes through Copyable's shared `copyToClipboard`, same as
+ * every other copy control.
  */
 export function ShareReviewButton({
   reviewUrl,
@@ -25,10 +29,12 @@ export function ShareReviewButton({
 
   function handleClick() {
     if (!comment) return;
-    navigator.clipboard.writeText(comment).then(
-      () => setCopied(true),
-      () => {}, // clipboard permission denied or unavailable — the link still opens
-    );
+    // A denied or unsupported clipboard is not worth an error state here:
+    // the link still opens either way, and the diver's words were only ever
+    // a convenience on top of it.
+    copyToClipboard(comment).then((ok) => {
+      if (ok) setCopied(true);
+    });
   }
 
   return (

@@ -6,6 +6,23 @@ import { buttonClass } from "@/components/ui/button";
 type CopyStatus = "idle" | "copied" | "failed";
 
 /**
+ * The single clipboard write every copy-to-clipboard control in the app goes
+ * through — `Copyable` itself, and the handful of sites whose control isn't
+ * `Copyable`-shaped (a share-then-fallback button, a link that copies as a
+ * courtesy on its way to an external site) but still must not hand-roll
+ * `navigator.clipboard.writeText` directly. Resolves `true` on success,
+ * `false` on a denied or unsupported clipboard — never throws.
+ */
+export async function copyToClipboard(value: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * A generalized copy-to-clipboard control (originally `CopyableUrl` in
  * `settings/calendar/CalendarFeedPanel.tsx`). Two layouts share the same
  * clipboard logic and status handling:
@@ -42,12 +59,8 @@ export function Copyable({
   const [status, setStatus] = useState<CopyStatus>("idle");
 
   async function copy() {
-    try {
-      await navigator.clipboard.writeText(value);
-      setStatus("copied");
-    } catch {
-      setStatus("failed");
-    }
+    const ok = await copyToClipboard(value);
+    setStatus(ok ? "copied" : "failed");
     setTimeout(() => setStatus("idle"), 4000);
   }
 

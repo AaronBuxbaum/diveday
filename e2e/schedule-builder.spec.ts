@@ -57,10 +57,12 @@ test.describe("schedule builder", () => {
     await expect(page.getByRole("status")).toContainText("Copied");
     await expect(page.getByRole("listitem").filter({ hasText: title })).toHaveCount(2);
 
-    // Remove — both copies come back off the board.
-    page.on("dialog", (dialog) => dialog.accept());
+    // Remove — a two-step in-page confirm (InlineConfirm), both copies come
+    // back off the board.
     for (let remaining = 2; remaining > 0; remaining -= 1) {
+      const row = page.getByRole("listitem").filter({ hasText: title }).first();
       await control(page, "Remove", title).first().click();
+      await row.getByRole("button", { name: "Yes, remove the trip" }).click();
       await expect(page.getByRole("status")).toContainText("Taken off the board.");
       await expect(page.getByRole("listitem").filter({ hasText: title })).toHaveCount(
         remaining - 1,
@@ -70,7 +72,6 @@ test.describe("schedule builder", () => {
 
   test("a departure divers have booked refuses to be deleted and says why", async ({ page }) => {
     await page.goto(BOARD);
-    page.on("dialog", (dialog) => dialog.accept());
 
     // The seeded two-tank reef trip carries a real roster.
     const booked = page
@@ -79,6 +80,7 @@ test.describe("schedule builder", () => {
       .first();
     await expect(booked).toBeVisible();
     await booked.getByRole("button", { name: /^Remove / }).click();
+    await booked.getByRole("button", { name: "Yes, remove the trip" }).click();
 
     await expect(page.getByRole("status")).toContainText("Divers have booked this departure");
     // Still on the board, roster intact.

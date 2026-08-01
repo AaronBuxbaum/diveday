@@ -48,6 +48,7 @@ export type WaiverSendCopy = {
   sending: string;
   copied: string;
   copyLink: string;
+  copyFailed: string;
   reasonNoEmailOne: string;
   reasonNoEmailOther: string;
   reasonFailedOne: string;
@@ -65,6 +66,9 @@ export type WaiverSendCopy = {
   alreadyDoneOther: string;
   /** "Couldn't send to {names} — open the roster to check the booking." */
   errors: string;
+  /** Confirm/cancel labels for the resend guard (`InlineConfirm`'s message mode). */
+  confirmResend: string;
+  neverMind: string;
 };
 
 /** Built once per page and threaded to every `WaiverSendControl` on it. */
@@ -73,6 +77,7 @@ export function waiverSendCopy(t: StaffTranslator): WaiverSendCopy {
     sending: t("shared.waiverSend.sending"),
     copied: t("shared.waiverSend.copied"),
     copyLink: t("shared.waiverSend.copyLink"),
+    copyFailed: t("shared.waiverSend.copyFailed"),
     reasonNoEmailOne: t("shared.waiverSend.reasonNoEmailOne"),
     reasonNoEmailOther: t("shared.waiverSend.reasonNoEmailOther"),
     reasonFailedOne: t("shared.waiverSend.reasonFailedOne"),
@@ -86,5 +91,7 @@ export function waiverSendCopy(t: StaffTranslator): WaiverSendCopy {
     alreadyDoneOne: t("shared.waiverSend.alreadyDoneOne"),
     alreadyDoneOther: t("shared.waiverSend.alreadyDoneOther"),
     errors: t("shared.waiverSend.errors"),
+    confirmResend: t("shared.waiverSend.confirmResend"),
+    neverMind: t("shared.waiverSend.neverMind"),
   };
 }

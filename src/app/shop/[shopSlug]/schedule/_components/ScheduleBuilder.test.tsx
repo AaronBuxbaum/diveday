@@ -25,6 +25,8 @@ const COPY: BuilderCopy = {
   remove: "Remove",
   removeAria: "Remove {ref}",
   removeConfirm: "Take “{title}” off the board for good?",
+  removeConfirmButton: "Yes, remove the trip",
+  removeCancel: "Never mind",
   removePending: "…",
   whatIsIt: "What is it",
   titlePlaceholder: "Two-Tank Reef",

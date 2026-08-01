@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { waiverSendCopy } from "@/app/actions/waiver-send-types";
+import { EmptyState } from "@/components/EmptyState";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { WaiverSendControl } from "@/components/today/WaiverSendControl";
 import { Badge } from "@/components/ui/badge";
@@ -141,10 +142,10 @@ export default async function CheckInPage({
         </div>
 
         {queue.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-border p-8 text-center">
+          <EmptyState>
             <h3 className="font-semibold">{t("checkIn.emptyTitle")}</h3>
             <p className="mt-1 text-sm text-muted">{t("checkIn.emptyDescription")}</p>
-          </div>
+          </EmptyState>
         ) : cleared ? (
           <div className="rounded-2xl border border-dashed border-success/40 bg-success/5 p-8 text-center">
             <h3 className="font-semibold text-success">

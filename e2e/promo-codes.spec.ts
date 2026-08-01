@@ -85,6 +85,39 @@ test("a code Stripe never minted is kept as failed evidence, and cannot be switc
   await expect(failed.getByRole("button", { name: /^Switch/ })).toHaveCount(0);
 });
 
+test("deleting a failed code can be undone from the toast, which re-runs Stripe creation", async ({
+  page,
+  request,
+}) => {
+  await request.post("/api/test/seed-stripe-account");
+  await signInAsOwner(page);
+  await page.goto("/shop/blue-mantis/promos");
+
+  await page.getByLabel("Code").fill("E2EUNDO");
+  await page.getByLabel("Discount").fill("15");
+  await page.getByRole("button", { name: "Create code" }).click();
+  await expect(page.getByText(/Stripe didn't create that code/)).toBeVisible();
+  const failed = page.locator("li").filter({ hasText: "E2EUNDO" });
+  await expect(failed.getByText("Failed at Stripe")).toBeVisible();
+
+  // A code that never went live needs no confirm dialog to delete (docs/design/principles.md
+  // #7): it's gone immediately, with a toast offering Undo instead of a
+  // blocking "are you sure?".
+  await failed.getByRole("button", { name: "Delete" }).click();
+  await expect(page.locator("li").filter({ hasText: "E2EUNDO" })).toHaveCount(0);
+  const toast = page.getByRole("status");
+  await expect(toast.getByText("Code deleted.")).toBeVisible();
+
+  // Undo re-runs Stripe creation with the same code, discount, and scope —
+  // the same path an ordinary "create a promo" takes, so it fails here for
+  // the same reason the original create did (no real Stripe key in the fleet).
+  await toast.getByRole("button", { name: "Undo" }).click();
+  await expect(page.getByText(/Couldn't restore that code/)).toBeVisible();
+  await expect(
+    page.locator("li").filter({ hasText: "E2EUNDO" }).getByText("Failed at Stripe"),
+  ).toBeVisible();
+});
+
 test("a code the shop switched off stops being live", async ({ page }) => {
   await signInAsOwner(page);
   await page.goto("/shop/blue-mantis/promos");

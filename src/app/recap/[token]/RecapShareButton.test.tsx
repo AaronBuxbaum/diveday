@@ -14,6 +14,7 @@ const copy = {
   label: "Share this recap",
   copiedLabel: "Link copied",
   copiedAnnouncement: "Recap link copied to clipboard.",
+  failedLabel: "Couldn’t copy — copy it from the address bar instead",
 };
 
 describe("RecapShareButton (task 59)", () => {

@@ -31,7 +31,10 @@
       "copied": "Copiado",
       "copyFailed": "No se pudo copiar: selecciónalo a mano",
       "confirmRotate": "¿Sustituir este enlace? Cualquier calendario que siga usando el anterior dejará de actualizarse.",
-      "confirmTurnOff": "¿Desactivar esta suscripción? El enlace dejará de funcionar de inmediato."
+      "confirmRotateButton": "Sí, sustituir el enlace",
+      "confirmTurnOff": "¿Desactivar esta suscripción? El enlace dejará de funcionar de inmediato.",
+      "confirmTurnOffButton": "Sí, desactivarla",
+      "cancel": "Mejor no"
     },
     "newLink": {
       "heading": "Tu enlace de suscripción",
@@ -796,7 +799,10 @@
       "notConnected": "Conecta tu cuenta de Stripe en Ajustes primero — un código se crea en tu propia cuenta.",
       "stripeFailed": "Stripe no creó ese código. Se guarda aquí como fallido y no puede aplicar ningún descuento; inténtalo de nuevo.",
       "notAuthorized": "Los códigos promocionales descuentan dinero real, así que están limitados a propietarios y gerentes.",
-      "deleted": "Código eliminado."
+      "deleted": "Código eliminado.",
+      "deletedToast": "Código eliminado.",
+      "restored": "Código recreado y activo de nuevo en tu cuenta de Stripe.",
+      "restoreFailed": "No se pudo restaurar ese código. Créalo de nuevo abajo."
     },
     "connectBanner": "Conecta tu cuenta de Stripe en <settingsLink>Ajustes</settingsLink> antes de crear un código — los códigos se crean en tu propia cuenta de Stripe, no en la de DiveDay.",
     "settingsLink": "Ajustes",
@@ -859,7 +865,6 @@
     "retrying": "Intentando de nuevo…",
     "delete": "Eliminar",
     "deleting": "Eliminando…",
-    "deleteConfirm": "¿Eliminar el código {code}? Nunca llegó a activarse, así que no se aplicó ningún descuento — esto no se puede deshacer.",
     "tripDeals": {
       "heading": "Ofertas por salida",
       "description": "Descuentos de una sola salida enviados desde la página de una salida — la otra mitad de cada código activo, reunidos aquí para que ninguno sea visible solo desde la salida en la que se envió.",
@@ -942,6 +947,7 @@
     "notice": {
       "published": "Reseña publicada en tu página de calendario.",
       "hidden": "Reseña oculta — ya no cuenta para tu valoración.",
+      "hiddenToast": "Reseña oculta.",
       "error": "No se pudo actualizar esa reseña. Inténtalo de nuevo."
     },
     "overviewLabel": "Resumen de valoraciones",
@@ -961,7 +967,6 @@
     "ratingOnly": "Solo valoración — sin palabras que revisar.",
     "reviewMeta": "<diver>{diverName}</diver> · <trip>{tripTitle}</trip> · {date}",
     "hide": "Ocultar",
-    "hideConfirm": "¿Ocultar esta reseña? Deja de contar para tu valoración pública.",
     "publish": "Publicar",
     "saving": "Guardando…",
     "showMoreReviews": "Mostrar más reseñas",
@@ -1021,6 +1026,8 @@
       "remove": "Quitar",
       "removeAria": "Quitar {ref}",
       "removeConfirm": "¿Quitar “{title}” del calendario definitivamente?",
+      "removeConfirmButton": "Sí, quitar la salida",
+      "removeCancel": "Mejor no",
       "removePending": "…",
       "whatIsIt": "Qué es",
       "titlePlaceholder": "Arrecife de dos tanques — Molasses y French",
@@ -1127,6 +1134,7 @@
       "viewBookingPage": "Ver página de reserva",
       "copyBookingLink": "Copiar enlace",
       "linkCopied": "¡Copiado!",
+      "linkCopyFailed": "No se pudo copiar — selecciona el enlace de arriba.",
       "cancelledBadge": "Cancelada",
       "meetingDaysSummary": "{count} días de encuentro · mismos instructores cada día",
       "dayLabel": "Día {number}: {date} · {timeRange}",
@@ -1245,6 +1253,8 @@
       "photoFromAlt": "Foto de {diverName}",
       "removing": "…",
       "confirmRemove": "¿Eliminar esta foto del resumen del buceador?",
+      "removeConfirmButton": "Sí, eliminar la foto",
+      "removeCancel": "Mejor no",
       "remove": "Eliminar"
     },
     "addDiver": {
@@ -1282,6 +1292,7 @@
       "emailAnInvite": "Enviar una invitación a {firstName}",
       "copied": "Copiado",
       "copyInviteMessage": "Copiar mensaje de invitación",
+      "copyFailed": "No se pudo copiar — anota el mensaje a mano.",
       "justNow": "ahora mismo",
       "minutesAgo": "hace {mins} min",
       "hoursAgo": "hace {hours} h",
@@ -1346,6 +1357,8 @@
       "confirming": "Confirmando…",
       "confirmIdentityMessage": "¿Confirmar que esta reserva realmente es de {name}? Hazlo solo una vez que hayas comprobado que es la misma persona — no alguien más compartiendo el correo.",
       "confirmThisIs": "Confirmar que es {name}",
+      "identityConfirmButton": "Sí, es esta persona",
+      "neverMind": "Mejor no",
       "waiverColumnHeading": "Exención",
       "resending": "Reenviando…",
       "confirmResendWaiver": "¿Enviar a {name} un nuevo enlace de exención? Su enlace anterior dejará de funcionar.",
@@ -1367,9 +1380,10 @@
       "removing": "Eliminando…",
       "confirmRemoveBooking": "¿Eliminar a {name} de esta salida? Si tiene derecho a reembolso, se emitirá automáticamente.",
       "removeBooking": "Eliminar reserva",
+      "removeBookingConfirmButton": "Sí, eliminar reserva",
       "privateStaffNotes": "Notas privadas del personal ({count})",
+      "noteDeletedToast": "Nota privada eliminada.",
       "deletingEllipsis": "…",
-      "confirmDeleteNote": "¿Eliminar esta nota privada?",
       "delete": "Eliminar",
       "addNoteLabel": "Añadir una nota que solo vea el personal",
       "adding": "Añadiendo…",
@@ -1733,6 +1747,8 @@
         "reactivated": "Cuenta reactivada.",
         "disabled": "Cuenta deshabilitada — ya no puede iniciar sesión.",
         "removed": "Eliminado del equipo.",
+        "restored": "Acceso al equipo restaurado.",
+        "restoreFailed": "No se pudo restaurar el acceso de esa persona — revisa su cuenta primero.",
         "inviteInvalid": "Introduce un nombre, un correo válido y marca al menos un rol.",
         "rolesInvalid": "Marca al menos un rol antes de guardar.",
         "inviteAlreadyOnTeam": "Esa persona ya tiene una cuenta aquí.",
@@ -1783,7 +1799,7 @@
         "enableAriaLabel": "Habilitar a {name}",
         "disableAriaLabel": "Deshabilitar a {name}",
         "deleteAriaLabel": "Eliminar a {name}",
-        "deleteConfirm": "¿Eliminar a {name} del equipo? Esto no se puede deshacer."
+        "removedToast": "Se eliminó a {name} del equipo."
       }
     },
     "export": {
@@ -1968,7 +1984,8 @@
       "footer": "Ambos fragmentos apuntan a <link>tu calendario público</link>. Editar una salida, añadir una fecha o cambiar tus precios de alquiler se refleja en el momento en que un buceador carga el widget — nada que volver a publicar.",
       "snippetField": {
         "copy": "Copiar",
-        "copied": "Copiado"
+        "copied": "Copiado",
+        "failed": "No se pudo copiar — selecciona el código de arriba."
       }
     }
   },
@@ -2173,6 +2190,7 @@
       "scheduleBody": "La página desde la que reservan de verdad los buceadores — pégala en tu web o redes sociales.",
       "scheduleCopy": "Copiar enlace",
       "scheduleCopied": "Copiado",
+      "scheduleCopyFailed": "No se pudo copiar — selecciona el enlace de arriba.",
       "stripeTitle": "Conecta Stripe (opcional)",
       "stripeBody": "Cobra en línea. Sáltate esto y cobra en el mostrador en su lugar.",
       "stripeAction": "Conectar Stripe",
@@ -2191,6 +2209,7 @@
       "sending": "Enviando…",
       "copied": "Copiado",
       "copyLink": "Copiar enlace",
+      "copyFailed": "No se pudo copiar — selecciona el enlace de arriba.",
       "reasonNoEmailOne": "Sin correo registrado",
       "reasonNoEmailOther": "{count} no tienen correo registrado",
       "reasonFailedOne": "No se pudo entregar el correo",
@@ -2203,7 +2222,9 @@
       "sent": "Exención enviada a {names}.",
       "alreadyDoneOne": "{names} ya tiene una exención firmada — no se reenvió nada.",
       "alreadyDoneOther": "{names} ya tienen una exención firmada — no se reenvió nada.",
-      "errors": "No se pudo enviar a {names} — revisa la reserva en el listado."
+      "errors": "No se pudo enviar a {names} — revisa la reserva en el listado.",
+      "confirmResend": "Sí, reenviar",
+      "neverMind": "Cancelar"
     },
     "connectivity": {
       "online": "En línea",

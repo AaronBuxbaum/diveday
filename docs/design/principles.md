@@ -58,6 +58,16 @@ something on the user's behalf ("DiveDay will catch up when you're back in servi
 otherwise stay out of the way: the product speaks as the shop's own tool, not as a character
 with a personality.
 
+**Empty states follow one rule: terminal vs. section.** A **terminal/whole-page** empty state —
+nothing else renders on the page (see `src/app/shop/[shopSlug]/blockers/page.tsx`) — uses the
+bespoke warm pattern: a large emoji in a rounded circle, a heading, and subtext, with no card
+border. An **empty section within an otherwise-populated page** — a list or panel sitting below
+filters, a header, or other real content — uses the shared `EmptyState` component
+(`src/components/EmptyState.tsx`), the dashed-border card. Never a bare `<p>`/`<li>` styled
+ad hoc for either case, and never the bespoke emoji pattern for a section that isn't the whole
+page — the emoji circle reads as "you've reached the end," which is false when siblings above it
+still have content.
+
 ## 5. Motion has a job
 
 Animation exists to explain (where did it go, what changed), 150–250 ms, ease-out
@@ -81,10 +91,32 @@ A reversible mutation gets an **undo**, never a blocking `confirm()` dialog. Two
   banner** — the action lands immediately and the banner offers a one-tap reversal.
 
 A blocking `confirm()` is reserved for what is genuinely **irreversible or a send** — issuing or
-reissuing a waiver link (the old link stops working, an email may go out), or removing a booking
+reissuing a waiver link (the old link stops working, an email may go out), removing a booking
 (inside the shop's refund window it fires an automatic Stripe refund; undo restores the seat but
-can't claw back money already sent). A `confirm()` on a purely reversible action is a bug: it
-slows the common path to guard against a mistake that undo already handles calmly.
+can't claw back money already sent), or resending a waiver to someone already notified. A
+`confirm()` on a purely reversible action is a bug: it slows the common path to guard against a
+mistake that undo already handles calmly.
+
+Three narrower carve-outs, found while sweeping the app's `confirm()` sites onto this rule — each
+looks like it should be undo-able on its face, but isn't, for a concrete reason rather than "hard
+to implement":
+
+- **Sign out** stays a two-tap confirm, not an undo banner. An undo window means the session (or a
+  passwordless resume) has to stay valid for a few seconds after the person walked away — on a
+  shared boat or front-desk device, that's a real window for whoever touches the device next to
+  reclaim the previous login, not just an inconvenience.
+- **Removing a trip from the schedule board** (the builder's "remove", for a departure nobody has
+  touched yet — distinct from cancelling one with a roster) stays a confirm. It deliberately hard-
+  deletes across several related tables rather than leaving a cancelled ghost behind ("clutter, not
+  history" — `src/db/trips.ts`); reconstructing that from an undo-toast payload would just
+  reintroduce the ghost-row problem it was built to avoid.
+- **Removing a recap photo** stays a confirm. The delete queues the stored image for deletion in
+  the same step; a true undo would mean holding that deletion back until the undo window passes,
+  which needs storage-layer support the surface doesn't have today.
+
+Everything else — a private note, a promo code that never went live, hiding a review, a staff
+member's roles and access — recreates cleanly from what the undo action already has on hand, so it
+gets the banner.
 
 ## 8. Fewer controls, one obvious action
 
@@ -134,3 +166,5 @@ sand (light) / open ocean at depth (dark); **lagoon** (`--primary`) is the actio
 - [ ] Keyboard reachable, focus visible, semantic HTML
 - [ ] One primary action per view/section; the rest are demoted, merged, or disclosed — not a
       row of same-weight buttons
+- [ ] Empty-state pattern matches terminal-vs-section (bespoke emoji pattern for a whole empty
+      page, shared `EmptyState` for an empty section within a populated page)

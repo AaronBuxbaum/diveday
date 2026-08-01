@@ -234,6 +234,7 @@ export default async function CoursePage({
               openInEmailApp: t("inquiry.openInEmailApp"),
               copyMessage: t("inquiry.copy"),
               copied: t("inquiry.copied"),
+              copyFailed: t("inquiry.copyFailed"),
               orWriteTo: t("inquiry.orWriteTo"),
               callLabel: t("inquiry.callLabel"),
               send: t("inquiry.send"),

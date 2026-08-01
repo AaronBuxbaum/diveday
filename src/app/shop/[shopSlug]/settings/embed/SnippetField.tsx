@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { buttonClass } from "@/components/ui/button";
+import { Copyable } from "@/components/Copyable";
 import { controlClass, Field } from "@/components/ui/form";
 
 /**
@@ -17,17 +16,15 @@ export function SnippetField({
   snippet,
   copyLabel,
   copiedLabel,
+  failedLabel,
 }: {
   label: string;
   rows: number;
   snippet: string;
   copyLabel: string;
   copiedLabel: string;
+  failedLabel: string;
 }) {
-  const [copied, setCopied] = useState(false);
-  const timer = useRef<number | undefined>(undefined);
-  useEffect(() => () => window.clearTimeout(timer.current), []);
-
   return (
     <Field label={label}>
       <div className="flex flex-col gap-2">
@@ -39,24 +36,13 @@ export function SnippetField({
           className={`${controlClass} font-mono text-xs`}
         />
         <div>
-          <button
-            type="button"
-            className={buttonClass({ variant: "secondary", size: "sm" })}
-            aria-live="polite"
-            onClick={async () => {
-              try {
-                await navigator.clipboard.writeText(snippet);
-                setCopied(true);
-                window.clearTimeout(timer.current);
-                timer.current = window.setTimeout(() => setCopied(false), 2000);
-              } catch {
-                // Clipboard permission denied or unavailable — the snippet is
-                // still selectable text in the box above, nothing is lost.
-              }
-            }}
-          >
-            {copied ? copiedLabel : copyLabel}
-          </button>
+          <Copyable
+            layout="inline"
+            value={snippet}
+            copyLabel={copyLabel}
+            copiedLabel={copiedLabel}
+            failedLabel={failedLabel}
+          />
         </div>
       </div>
     </Field>

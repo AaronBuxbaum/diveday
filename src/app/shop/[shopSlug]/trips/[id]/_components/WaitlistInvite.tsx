@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { copyToClipboard } from "@/components/Copyable";
 import { buttonClass } from "@/components/ui/button";
 import { nowDate } from "@/lib/clock";
 
@@ -15,6 +16,7 @@ export type WaitlistInviteCopy = {
   emailAnInvite: string;
   copied: string;
   copyInviteMessage: string;
+  copyFailed: string;
   justNow: string;
   minutesAgo: string;
   hoursAgo: string;
@@ -70,7 +72,7 @@ export function WaitlistInvite({
   copy: WaitlistInviteCopy;
 }) {
   const [pending, startTransition] = useTransition();
-  const [copied, setCopied] = useState(false);
+  const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "failed">("idle");
   const [emailed, setEmailed] = useState(false);
   const invited = invitedAt ? new Date(invitedAt) : null;
   const firstName = personName.split(" ")[0] || personName;
@@ -86,13 +88,9 @@ export function WaitlistInvite({
     : null;
 
   async function copyMessage() {
-    try {
-      await navigator.clipboard.writeText(`${subject}\n\n${body}`);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 4000);
-    } catch {
-      setCopied(false);
-    }
+    const ok = await copyToClipboard(`${subject}\n\n${body}`);
+    setCopyStatus(ok ? "copied" : "failed");
+    setTimeout(() => setCopyStatus("idle"), 4000);
   }
 
   // Email present: try the real server send first; only open the local composer
@@ -141,7 +139,13 @@ export function WaitlistInvite({
           disabled={pending}
           className={buttonClass({ variant: "secondary", size: "sm", className: "shrink-0" })}
         >
-          <span aria-live="polite">{copied ? copy.copied : copy.copyInviteMessage}</span>
+          <span aria-live="polite">
+            {copyStatus === "copied"
+              ? copy.copied
+              : copyStatus === "failed"
+                ? copy.copyFailed
+                : copy.copyInviteMessage}
+          </span>
         </button>
       )}
       {invited ? (

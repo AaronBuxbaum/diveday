@@ -9,6 +9,7 @@ import { getDb } from "@/db/client";
 import { sendNotification } from "@/db/notifications";
 import { getShopById } from "@/db/shops";
 import {
+  getStaffRoles,
   inviteStaffMember,
   listShopStaff,
   removeStaffMember,
@@ -234,25 +235,66 @@ export async function removeStaffAction(formData: FormData) {
 
   const personId = String(formData.get("personId") ?? "");
   const userAccountId = String(formData.get("userAccountId") ?? "");
+  const fullName = String(formData.get("fullName") ?? "");
   if (!personId || !userAccountId) redirect(path);
 
   const db = await getDb();
+  // Snapshotted before the strip below — a land-then-undo toast needs it to
+  // hand back to `setStaffRoles` on restore (principle 7: stripping roles is
+  // a purely reversible edit, not a send or a money-mover, so it gets an
+  // Undo banner rather than a blocking confirm).
+  const roles = await getStaffRoles(db, session.user.shopId, personId);
   const result = await removeStaffMember(db, {
     shopId: session.user.shopId,
     personId,
     userAccountId,
   });
-  if (result.ok) {
-    // Their calendar subscription dies on its next fetch regardless —
-    // `verifyCalendarFeed` re-derives roles every time — but leaving the row
-    // live means the shop cannot see it is gone. Revoke it now so "removed
-    // from the team" means removed everywhere it is visible.
-    //
-    // This coordination lives here, not in `removeStaffMember`: `src/db` may
-    // not import a feature module (ADR 20260730-feature-module-contracts), so
-    // the composition layer is where two features meet.
-    await revokeFeedsForFormerStaff(db, { shopId: session.user.shopId });
+  if (!result.ok) {
+    revalidateAndRedirect(path, `${path}?notice=${result.reason}`);
+    return;
   }
-  const notice = result.ok ? "removed" : result.reason;
+  // Their calendar subscription dies on its next fetch regardless —
+  // `verifyCalendarFeed` re-derives roles every time — but leaving the row
+  // live means the shop cannot see it is gone. Revoke it now so "removed
+  // from the team" means removed everywhere it is visible. Restoring roles
+  // via undo does not re-issue the old feed link; re-deriving from live
+  // roles on the next fetch is enough to let them subscribe again if needed.
+  //
+  // This coordination lives here, not in `removeStaffMember`: `src/db` may
+  // not import a feature module (ADR 20260730-feature-module-contracts), so
+  // the composition layer is where two features meet.
+  await revokeFeedsForFormerStaff(db, { shopId: session.user.shopId });
+  const undoParams = new URLSearchParams({
+    notice: "removed",
+    undoPersonId: personId,
+    undoUserAccountId: userAccountId,
+    undoRoles: roles.join(","),
+    undoName: fullName,
+  });
+  revalidateAndRedirect(path, `${path}?${undoParams.toString()}`);
+}
+
+export async function restoreStaffAction(formData: FormData) {
+  const session = await requireStaffSession();
+  const path = `/shop/${session.user.shopSlug}${TEAM_PATH_SUFFIX}`;
+  const blocked = await teamManagementBlock(session);
+  if (blocked) redirect(blocked);
+
+  const personId = String(formData.get("personId") ?? "");
+  const userAccountId = String(formData.get("userAccountId") ?? "");
+  const roles = String(formData.get("roles") ?? "")
+    .split(",")
+    .filter((value): value is Role => (STAFF_ROLES as readonly string[]).includes(value));
+  if (!personId || !userAccountId || roles.length === 0) redirect(path);
+
+  const db = await getDb();
+  const rolesResult = await setStaffRoles(db, { shopId: session.user.shopId, personId, roles });
+  const statusResult = await setStaffAccountStatus(db, {
+    shopId: session.user.shopId,
+    personId,
+    userAccountId,
+    status: "active",
+  });
+  const notice = rolesResult.ok && statusResult.ok ? "restored" : "restore_failed";
   revalidateAndRedirect(path, `${path}?notice=${notice}`);
 }

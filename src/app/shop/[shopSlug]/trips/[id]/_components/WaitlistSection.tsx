@@ -1,3 +1,4 @@
+import { EmptyState } from "@/components/EmptyState";
 import { staffTranslator } from "@/i18n/staff-messages";
 import type { Waitlist } from "./types";
 import { WaitlistInvite, type WaitlistInviteCopy } from "./WaitlistInvite";
@@ -35,6 +36,7 @@ export function WaitlistSection({
     emailAnInvite: t("trips.waitlist.emailAnInvite"),
     copied: t("trips.waitlist.copied"),
     copyInviteMessage: t("trips.waitlist.copyInviteMessage"),
+    copyFailed: t("trips.waitlist.copyFailed"),
     justNow: t("trips.waitlist.justNow"),
     minutesAgo: t("trips.waitlist.minutesAgo"),
     hoursAgo: t("trips.waitlist.hoursAgo"),
@@ -50,9 +52,9 @@ export function WaitlistSection({
       </h2>
       <p className="mt-1 text-sm text-muted">{t("trips.waitlist.description")}</p>
       {waitlist.length === 0 ? (
-        <p className="mt-4 rounded-lg border border-border bg-surface px-4 py-6 text-center text-sm text-muted">
-          {t("trips.waitlist.empty")}
-        </p>
+        <EmptyState className="mt-4">
+          <p className="text-sm text-muted">{t("trips.waitlist.empty")}</p>
+        </EmptyState>
       ) : (
         <ol className="mt-4 divide-y divide-border rounded-lg border border-border bg-surface">
           {waitlist.map(({ entry, person }, index) => (

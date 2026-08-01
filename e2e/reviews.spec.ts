@@ -87,18 +87,35 @@ test("a published review can be taken back down, and leaves the public page with
   const comment = "Vis was unreal and the crew found us a turtle on the second tank.";
   const published = page.locator("li").filter({ hasText: comment });
   await expect(published.getByText("Published")).toBeVisible();
-  // Hiding a published review is asked to confirm (SubmitButton's
-  // confirmMessage → window.confirm) — unhandled, Playwright auto-dismisses
-  // the dialog and the form never submits.
-  page.once("dialog", (dialog) => void dialog.accept());
+  // Hiding is one of DiveDay's land-then-undo actions (docs/design/principles.md
+  // #7, a reversible toggle): no confirm dialog — it hides immediately and
+  // offers Undo from a toast instead.
   await published.getByRole("button", { name: "Hide" }).click();
-  await expect(
-    page.getByText("Review hidden — it no longer counts toward your rating."),
-  ).toBeVisible();
+  await expect(page.getByRole("status").getByText("Review hidden.")).toBeVisible();
+  await expect(published.getByText("Waiting on you")).toBeVisible();
 
   await page.context().clearCookies();
   await page.goto("/shop/blue-mantis/schedule");
   await expect(page.getByText(comment)).toHaveCount(0);
+});
+
+test("hiding a review can be undone from the toast", async ({ page }) => {
+  await signInAsOwner(page);
+  await page.goto("/shop/blue-mantis/reviews");
+
+  const comment = "Vis was unreal and the crew found us a turtle on the second tank.";
+  const published = page.locator("li").filter({ hasText: comment });
+  await published.getByRole("button", { name: "Hide" }).click();
+  const toast = page.getByRole("status");
+  await expect(toast.getByText("Review hidden.")).toBeVisible();
+
+  await toast.getByRole("button", { name: "Undo" }).click();
+  await expect(page.getByText("Review published to your schedule page.")).toBeVisible();
+  await expect(published.getByText("Published")).toBeVisible();
+
+  await page.context().clearCookies();
+  await page.goto("/shop/blue-mantis/schedule");
+  await expect(page.getByText(comment)).toBeVisible();
 });
 
 test("the public schedule publishes the shop's rating as structured data", async ({ page }) => {
