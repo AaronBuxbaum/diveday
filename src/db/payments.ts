@@ -1,5 +1,6 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
+import { log } from "@/lib/log";
 import type { AppTransaction, DbExecutor } from "./client";
 import type { PaymentStatus } from "./schema";
 import { bookingPayments, bookings, trips } from "./schema";
@@ -132,7 +133,7 @@ export async function setBookingPaymentIfNotFinal(db: AppTransaction, input: Set
     // staff refund/waive write against a booking they just cancelled is the
     // normal, legitimate flow.
     if (booking.status === "cancelled") {
-      console.error("setBookingPaymentIfNotFinal: refused to pay a cancelled booking", {
+      log("payment.refused_cancelled_booking", "error", {
         shopId: input.shopId,
         bookingId: input.bookingId,
         attemptedStatus: input.status,
@@ -151,7 +152,7 @@ export async function setBookingPaymentIfNotFinal(db: AppTransaction, input: Set
         )
         .limit(1);
       if (current && FINAL_PAYMENT_STATUSES.has(current.status)) {
-        console.error("setBookingPaymentIfNotFinal: refused to regress a final payment status", {
+        log("payment.refused_final_status_regression", "error", {
           shopId: input.shopId,
           bookingId: input.bookingId,
           currentStatus: current.status,

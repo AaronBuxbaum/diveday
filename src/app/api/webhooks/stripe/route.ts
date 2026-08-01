@@ -6,6 +6,7 @@ import { disconnectShopStripeAccount, setShopStripeAccountStatus } from "@/db/st
 import { markTipExpiredBySessionId, markTipPaidBySessionId } from "@/db/tips";
 import { claimStripeWebhookEvent, hasNewerAccountUpdate } from "@/db/webhook-events";
 import { nowDate } from "@/lib/clock";
+import { type LogContext, log } from "@/lib/log";
 import { verifyStripeWebhook } from "@/lib/payments/webhook";
 
 export const runtime = "nodejs";
@@ -69,6 +70,25 @@ export async function POST(request: Request) {
   const occurredAt = event.created !== undefined ? new Date(event.created * 1000) : nowDate();
   const accountId = event.account ?? null;
 
+  // The only observability this endpoint has: one line per delivery naming the
+  // event id/type/connected account, and one more per outcome below —
+  // including a `null`/refused handler result, which is otherwise a silent
+  // 200 with no trace anywhere (docs product/assessments/
+  // specialist-optimization-audit-20260731.md §7).
+  log("stripe_webhook.event_received", "info", {
+    eventId: event.id,
+    eventType: event.type,
+    account: accountId,
+  });
+  const logOutcome = (outcome: string, extra: LogContext = {}) =>
+    log("stripe_webhook.handler_outcome", "info", {
+      eventId: event.id,
+      eventType: event.type,
+      account: accountId,
+      outcome,
+      ...extra,
+    });
+
   // Claim this event id before doing anything else: a redelivered event
   // (Stripe's webhooks are at-least-once) is a no-op past this point,
   // independent of whichever handler's own state machine it would have hit
@@ -81,24 +101,35 @@ export async function POST(request: Request) {
     account: accountId,
     occurredAt,
   });
-  if (!claimed) return new Response(null, { status: 200 });
+  if (!claimed) {
+    logOutcome("duplicate_event");
+    return new Response(null, { status: 200 });
+  }
 
   switch (event.type) {
     case "invoice.paid": {
       const invoice = invoiceObjectSchema.safeParse(event.data.object);
       if (invoice.success) {
-        await markOrderPaidByInvoiceId(
+        const order = await markOrderPaidByInvoiceId(
           db,
           invoice.data.id,
           invoice.data.amount_paid ?? 0,
           event.account,
         );
+        logOutcome(order ? "order_paid" : "order_not_found");
+      } else {
+        logOutcome("malformed_payload");
       }
       break;
     }
     case "invoice.voided": {
       const invoice = invoiceObjectSchema.safeParse(event.data.object);
-      if (invoice.success) await markOrderVoidedByInvoiceId(db, invoice.data.id, event.account);
+      if (invoice.success) {
+        const order = await markOrderVoidedByInvoiceId(db, invoice.data.id, event.account);
+        logOutcome(order ? "order_voided" : "order_not_found");
+      } else {
+        logOutcome("malformed_payload");
+      }
       break;
     }
     case "checkout.session.completed": {
@@ -112,7 +143,16 @@ export async function POST(request: Request) {
         // session id belongs to at most one, so try the booking-payment path
         // first and only fall back to tips when it finds nothing to mark.
         const checkout = await markCheckoutPaidBySessionId(db, session.data.id, event.account);
-        if (!checkout) await markTipPaidBySessionId(db, session.data.id, event.account);
+        if (checkout) {
+          logOutcome("checkout_paid");
+        } else {
+          const tip = await markTipPaidBySessionId(db, session.data.id, event.account);
+          logOutcome(tip ? "tip_paid" : "session_not_found");
+        }
+      } else if (session.success) {
+        logOutcome("payment_not_settled");
+      } else {
+        logOutcome("malformed_payload");
       }
       break;
     }
@@ -120,7 +160,14 @@ export async function POST(request: Request) {
       const session = checkoutSessionObjectSchema.safeParse(event.data.object);
       if (session.success) {
         const checkout = await markCheckoutPaidBySessionId(db, session.data.id, event.account);
-        if (!checkout) await markTipPaidBySessionId(db, session.data.id, event.account);
+        if (checkout) {
+          logOutcome("checkout_paid");
+        } else {
+          const tip = await markTipPaidBySessionId(db, session.data.id, event.account);
+          logOutcome(tip ? "tip_paid" : "session_not_found");
+        }
+      } else {
+        logOutcome("malformed_payload");
       }
       break;
     }
@@ -128,7 +175,14 @@ export async function POST(request: Request) {
       const session = checkoutSessionObjectSchema.safeParse(event.data.object);
       if (session.success) {
         const checkout = await markCheckoutExpiredBySessionId(db, session.data.id, event.account);
-        if (!checkout) await markTipExpiredBySessionId(db, session.data.id, event.account);
+        if (checkout) {
+          logOutcome("checkout_expired");
+        } else {
+          const tip = await markTipExpiredBySessionId(db, session.data.id, event.account);
+          logOutcome(tip ? "tip_expired" : "session_not_found");
+        }
+      } else {
+        logOutcome("malformed_payload");
       }
       break;
     }
@@ -141,10 +195,7 @@ export async function POST(request: Request) {
         // finding).
         const stale = await hasNewerAccountUpdate(db, account.data.id, event.id, occurredAt);
         if (stale) {
-          console.error("stripe webhook: refused a stale account.updated event", {
-            accountId: account.data.id,
-            eventId: event.id,
-          });
+          logOutcome("stale_account_update", { account: account.data.id });
           break;
         }
         await setShopStripeAccountStatus(db, account.data.id, {
@@ -153,15 +204,24 @@ export async function POST(request: Request) {
           detailsSubmitted: account.data.details_submitted,
           defaultCurrency: account.data.default_currency,
         });
+        logOutcome("account_updated", { account: account.data.id });
+      } else {
+        logOutcome("malformed_payload");
       }
       break;
     }
     case "account.application.deauthorized": {
-      if (event.account) await disconnectShopStripeAccount(db, event.account);
+      if (event.account) {
+        await disconnectShopStripeAccount(db, event.account);
+        logOutcome("account_disconnected");
+      } else {
+        logOutcome("missing_account");
+      }
       break;
     }
     default:
       // invoice.payment_failed and anything else: no local state change today.
+      logOutcome("unhandled_event_type");
       break;
   }
 

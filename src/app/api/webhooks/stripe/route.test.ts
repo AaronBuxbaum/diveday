@@ -1,5 +1,5 @@
 import { createHmac } from "node:crypto";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { nowMs } from "@/lib/clock";
 
 vi.mock("@/db/client", async (importOriginal) => {
@@ -476,5 +476,91 @@ describe("POST /api/webhooks/stripe — event ledger", () => {
       payoutsEnabled: true,
       detailsSubmitted: true,
     });
+  });
+});
+
+describe("POST /api/webhooks/stripe — structured logging", () => {
+  function post(event: Record<string, unknown>) {
+    const payload = eventPayload(event);
+    const header = signedHeader(payload, Math.floor(nowMs() / 1000));
+    return POST(webhookRequest(payload, header));
+  }
+
+  function loggedLines(calls: unknown[][]) {
+    return calls.map((call) => JSON.parse(call[0] as string));
+  }
+
+  beforeEach(() => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.mocked(console.log).mockRestore();
+    vi.mocked(console.warn).mockRestore();
+    vi.mocked(console.error).mockRestore();
+  });
+
+  it("logs the event id/type/account and the handler's outcome for a handled event", async () => {
+    await post({
+      id: "evt_log_1",
+      type: "invoice.paid",
+      account: "acct_123",
+      data: { object: { id: "in_123", amount_paid: 4500 } },
+    });
+
+    const lines = loggedLines(vi.mocked(console.log).mock.calls);
+    expect(lines).toContainEqual(
+      expect.objectContaining({
+        event: "stripe_webhook.event_received",
+        eventId: "evt_log_1",
+        eventType: "invoice.paid",
+        account: "acct_123",
+      }),
+    );
+    expect(lines).toContainEqual(
+      expect.objectContaining({
+        event: "stripe_webhook.handler_outcome",
+        eventId: "evt_log_1",
+        outcome: "order_not_found",
+      }),
+    );
+  });
+
+  it("logs a null/refused handler outcome rather than vanishing silently", async () => {
+    vi.mocked(markCheckoutPaidBySessionId).mockResolvedValue(null);
+    await post({
+      id: "evt_log_2",
+      type: "checkout.session.completed",
+      data: { object: { id: "cs_unknown", payment_status: "paid" } },
+    });
+
+    const lines = loggedLines(vi.mocked(console.log).mock.calls);
+    expect(lines).toContainEqual(
+      expect.objectContaining({
+        event: "stripe_webhook.handler_outcome",
+        eventId: "evt_log_2",
+        outcome: "session_not_found",
+      }),
+    );
+  });
+
+  it("logs a duplicate-event outcome without dispatching to a handler", async () => {
+    vi.mocked(claimStripeWebhookEvent).mockResolvedValue(false);
+    await post({
+      id: "evt_log_dup",
+      type: "invoice.paid",
+      data: { object: { id: "in_123" } },
+    });
+
+    const lines = loggedLines(vi.mocked(console.log).mock.calls);
+    expect(lines).toContainEqual(
+      expect.objectContaining({
+        event: "stripe_webhook.handler_outcome",
+        eventId: "evt_log_dup",
+        outcome: "duplicate_event",
+      }),
+    );
   });
 });
