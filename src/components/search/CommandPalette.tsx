@@ -3,7 +3,6 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { searchShopAction } from "@/app/actions/search";
 import { useFocusTrap } from "@/components/useFocusTrap";
 import type { SearchResults } from "@/db/search";
 
@@ -99,23 +98,33 @@ export function CommandPalette({
   }, [open]);
 
   // Debounced, race-safe shop search. Only queries of 2+ chars hit the server.
+  // A GET (rather than the old `searchShopAction` Server Action) so keystrokes
+  // don't queue behind Next's per-client Server Action serialization or any
+  // in-flight mutation action, and so a stale request can be `AbortController`
+  // cancelled instead of merely ignored.
   useEffect(() => {
     const trimmed = query.trim();
     if (trimmed.length < 2) {
       setResults(EMPTY);
       return;
     }
-    let cancelled = false;
+    const controller = new AbortController();
     const timer = setTimeout(async () => {
       try {
-        const next = await searchShopAction(trimmed);
-        if (!cancelled) setResults(next);
-      } catch {
-        if (!cancelled) setResults(EMPTY);
+        const response = await fetch(`/api/search?q=${encodeURIComponent(trimmed)}`, {
+          signal: controller.signal,
+        });
+        if (!response.ok) {
+          setResults(EMPTY);
+          return;
+        }
+        setResults((await response.json()) as SearchResults);
+      } catch (error) {
+        if ((error as { name?: string }).name !== "AbortError") setResults(EMPTY);
       }
     }, 150);
     return () => {
-      cancelled = true;
+      controller.abort();
       clearTimeout(timer);
     };
   }, [query]);
