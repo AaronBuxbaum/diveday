@@ -50,6 +50,7 @@
     "calendarDive": "inmersión de las {time}",
     "calendarDiveFull": "inmersión de las {time} (completa)",
     "tripListLabel": "Próximas salidas",
+    "spotsLeftUrgent": "{count, plural, one {Solo queda # plaza} other {Solo quedan # plazas}}",
     "nextDeparture": {
       "eyebrow": "Próxima salida",
       "title": "{when} — {trip}"
