@@ -103,13 +103,14 @@ function ResultNotice({ state, copy }: { state: WaiverSendState; copy: WaiverSen
     state.links.length === 0 &&
     state.alreadyDone.length === 0 &&
     state.errors.length === 0;
-  if (nothing) return null;
+  if (nothing && !state.emptySelection) return null;
 
   return (
     <div
       role="status"
       className="mt-3 rounded-xl border border-border bg-surface-sunken px-3 py-2.5 text-sm"
     >
+      {state.emptySelection ? <p className="text-danger">{copy.emptySelection}</p> : null}
       {state.sent.length > 0 ? (
         <p className="font-medium text-success">
           <span aria-hidden="true">✓ </span>

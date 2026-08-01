@@ -30,6 +30,13 @@ export type WaiverSendState = {
   alreadyDone: string[];
   /** Divers whose send failed outright (no current booking/template). */
   errors: string[];
+  /**
+   * True when the submit carried no `bookingId` at all — only reachable from
+   * the roster's bulk control, where the selection comes from checkboxes
+   * rather than a fixed prop, so an empty tick list is a real user outcome to
+   * name rather than a silent no-op.
+   */
+  emptySelection: boolean;
 };
 
 export const IDLE_WAIVER_SEND_STATE: WaiverSendState = {
@@ -38,6 +45,7 @@ export const IDLE_WAIVER_SEND_STATE: WaiverSendState = {
   links: [],
   alreadyDone: [],
   errors: [],
+  emptySelection: false,
 };
 
 /** Copy for `WaiverSendControl` (a Client Component) — resolved server-side
@@ -69,6 +77,8 @@ export type WaiverSendCopy = {
   /** Confirm/cancel labels for the resend guard (`InlineConfirm`'s message mode). */
   confirmResend: string;
   neverMind: string;
+  /** The roster's bulk control, submitted with nothing ticked. */
+  emptySelection: string;
 };
 
 /** Built once per page and threaded to every `WaiverSendControl` on it. */
@@ -93,5 +103,6 @@ export function waiverSendCopy(t: StaffTranslator): WaiverSendCopy {
     errors: t("shared.waiverSend.errors"),
     confirmResend: t("shared.waiverSend.confirmResend"),
     neverMind: t("shared.waiverSend.neverMind"),
+    emptySelection: t("shared.waiverSend.emptySelection"),
   };
 }

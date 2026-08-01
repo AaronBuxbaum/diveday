@@ -32,7 +32,7 @@ test("staff adds a walk-in diver, then wait-lists one once the trip is full", as
   await expect(page.getByRole("status")).toContainText(title);
 
   // Staff view of a trip card redirects straight into the manage-trip editor.
-  await page.goto("/shop/blue-mantis/schedule");
+  await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, title);
   await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
 
@@ -121,7 +121,7 @@ test("staff adds a returning diver by picking them, no re-entry", async ({ page 
   await page.getByRole("button", { name: "Put it on the board" }).click();
   await expect(page.getByRole("status")).toContainText(title);
 
-  await page.goto("/shop/blue-mantis/schedule");
+  await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, title);
   await page
     .getByRole("navigation", { name: "Trip" })
@@ -169,7 +169,7 @@ test("staff sends waivers to a multi-selected roster in one action", async ({ pa
   await page.getByRole("button", { name: "Put it on the board" }).click();
   await expect(page.getByRole("status")).toContainText(title);
 
-  await page.goto("/shop/blue-mantis/schedule");
+  await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, title);
   await page
     .getByRole("navigation", { name: "Trip" })
@@ -188,6 +188,15 @@ test("staff sends waivers to a multi-selected roster in one action", async ({ pa
     await addDiver.getByRole("button", { name: "Add to trip" }).click();
     await expect(page.getByRole("status")).toContainText("Diver added to the trip.");
   }
+  // Each add is its own server-action redirect; the "Diver added" toast
+  // renders from the *new* page immediately, but the router still settles
+  // in the background for a moment after that — ticking a checkbox before
+  // it does can catch the bulk selection's Client Component
+  // (BulkWaiverSelectionProvider) mid-remount and silently drop the tick.
+  // `networkidle` doesn't cover this (nothing here is a pending network
+  // request); a short explicit wait is the pragmatic fix until there's a
+  // concrete signal to await instead.
+  await page.waitForTimeout(1500);
 
   // The checkbox's real hit area is the label wrapping it, not just the 16px
   // input — .check() below clicks the input directly regardless of markup,
@@ -202,5 +211,48 @@ test("staff sends waivers to a multi-selected roster in one action", async ({ pa
   await page.getByRole("checkbox", { name: "Select Bulk Cal to send a waiver" }).check();
   await page.getByRole("button", { name: "Send waivers to selected" }).click();
 
-  await expect(page.getByRole("status")).toContainText("Waiver links sent to the selected divers");
+  // One unified control now handles both the per-diver and bulk sends (Lens
+  // 17 — one waiver-send control), so the bulk result reads the same optimistic
+  // per-diver breakdown as a single send. e2e has no email provider
+  // configured, so both land as private links to share rather than "sent".
+  const resultNotice = page.getByRole("status");
+  await expect(resultNotice).toContainText("This shop has no email provider configured yet");
+  await expect(resultNotice).toContainText("Bulk Bea");
+  await expect(resultNotice).toContainText("Bulk Cal");
+});
+
+test("the bulk waiver send nudges rather than silently no-ops with nothing ticked", async ({
+  page,
+}) => {
+  const title = `Bulk Waiver Empty ${e2eNow().getTime()}`;
+
+  await page.goto("/shop/blue-mantis/trips/new");
+  await page.getByLabel("Title").fill(title);
+  await page.getByLabel("Date").fill(daysFromNow(6));
+  await page.getByLabel("Departs").fill("09:00");
+  await page.getByLabel("Returns").fill("11:00");
+  await page.getByLabel("Capacity").fill("4");
+  await page.getByRole("button", { name: "Put it on the board" }).click();
+  await expect(page.getByRole("status")).toContainText(title);
+
+  await page.goto("/shop/blue-mantis/schedule/board");
+  await openTripFromBoard(page, title);
+  await page
+    .getByRole("navigation", { name: "Trip" })
+    .getByRole("link", { name: "Guests" })
+    .click();
+  await expect(page).toHaveURL(/\/guests/);
+
+  const addDiver = page
+    .locator("section")
+    .filter({ has: page.getByRole("heading", { name: "Add a diver" }) });
+  await addDiver.getByLabel("Name").fill("Bulk Drew");
+  await addDiver.getByLabel("Email").fill(`bulk.drew-${e2eNow().getTime()}@example.com`);
+  await addDiver.getByRole("button", { name: "Add to trip" }).click();
+  await expect(page.getByRole("status")).toContainText("Diver added to the trip.");
+
+  await page.getByRole("button", { name: "Send waivers to selected" }).click();
+  await expect(page.getByRole("status")).toContainText(
+    "Tick at least one diver, then send the waiver to the whole selection.",
+  );
 });

@@ -37,7 +37,6 @@ import {
   addExistingDiverAction,
   addInternalNoteAction,
   addToWaitlistAction,
-  bulkSendWaiversAction,
   confirmDiverIdentityAction,
   deleteInternalNoteAction,
   inviteWaitlistAction,
@@ -278,7 +277,6 @@ export default async function TripGuestsPage({
         nitroxByBooking={nitroxByBooking}
         requiresPayment={Boolean(requirement?.requiresPayment)}
         cancellationDeadline={cancellationDeadline(trip)}
-        bulkSendWaiversAction={bulkSendWaiversAction.bind(null, shopSlug, tripId)}
         markWaiverInPersonAction={markWaiverInPersonAction.bind(null, shopSlug, tripId)}
         markPaymentAction={markPaymentAction.bind(null, shopSlug, tripId)}
         removeBookingAction={removeBookingAction.bind(null, shopSlug, tripId)}
