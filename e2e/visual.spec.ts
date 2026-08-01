@@ -524,14 +524,17 @@ for (const scheme of ["light", "dark"] as const) {
       signedInAsOwner();
 
       test(`staff surfaces render true to the design (${scheme})`, async ({ page }) => {
-        // 25 navigate+capture surfaces (100 screenshots) in one test — same
+        // 28 navigate+capture surfaces (112 screenshots) in one test — same
         // reasoning as the public-surfaces override above: the suite's 15s
         // default is sized for a single real flow, not a full site tour.
         // The budget is sized to the surface count *and* to what each capture
         // now costs — `paintWholeDocument` scrolls the whole document before
         // every shot, so a tall page is materially slower than it was. This is
         // not a knob to widen when a capture goes flaky; that is a wait bug.
-        test.setTimeout(120_000);
+        // It moved from 120s with the three money surfaces added below
+        // (orders, order-detail, diver-profile-payments) — a bigger tour, not
+        // a slower one, which is the only reason this number may go up.
+        test.setTimeout(140_000);
         await page.goto("/shop/blue-mantis");
         await page
           .getByRole("heading", { name: /Good (morning|afternoon|evening|night), Dana/ })
@@ -599,6 +602,37 @@ for (const scheme of ["light", "dark"] as const) {
           .click();
         await page.getByRole("heading", { level: 1, name: "Hana Kobayashi" }).waitFor();
         await capture(page, "diver-profile-imported", scheme);
+
+        // A diver who has actually paid for something. None of the three
+        // profiles above carries a single order row — verified against the
+        // seed, not assumed — so `PaymentsSection` had only ever been
+        // photographed empty: no payment rows, no refund controls, no status
+        // pills. Talia Rosen is the seed's heaviest payer, so this is the
+        // widest version of the section.
+        //
+        // Deliberately a fourth capture rather than a repoint of
+        // `diver-profile`: Priya's profile is the baseline for the *other*
+        // states on that page, and moving it would trade one blind spot for
+        // another.
+        //
+        // What this still does NOT cover, and why: the `formatMoneyCents` line
+        // in `PaymentsSection` renders only for an order with
+        // `bookingId === null` — a standalone shop payment. Every seeded order
+        // is generated from a booking, so that branch is unreachable from the
+        // demo data and no diver profile can capture it. It stays covered by
+        // `PaymentsSection.test.tsx` alone. Seeding a standalone order would
+        // fix that, but it also moves the reports and orders baselines and is a
+        // demo-data change, so it belongs in its own commit rather than
+        // smuggled into a coverage one.
+        await page.goto("/shop/blue-mantis/divers?q=Talia");
+        await page
+          .getByRole("row")
+          .filter({ hasText: "Talia Rosen" })
+          .getByText("TR", { exact: true })
+          .click();
+        await page.getByRole("heading", { level: 1, name: "Talia Rosen" }).waitFor();
+        await page.getByRole("heading", { name: "Payments" }).waitFor();
+        await capture(page, "diver-profile-payments", scheme);
 
         // The seeded reef trip: schedule card → Overview (what the dive is) →
         // Guests (who is attending) → Manifest (the day-of boarding + roll call).
@@ -677,6 +711,29 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/settings");
         await page.getByRole("heading", { name: "Rental prices" }).waitFor();
         await capture(page, "settings-payments", scheme);
+
+        // The two orders surfaces — the densest money screens in the app, and
+        // until now the only ones with no baseline at all. That gap was found
+        // the honest way: the shop-currency change (ADR 20260731-shop-currency)
+        // rewrote how every amount here is formatted, and the visual suite
+        // reported nothing, because it had never looked. A surface whose whole
+        // job is stating amounts is exactly where a silent pass is worthless.
+        //
+        // Both render the *order row's own* stored currency, not the shop's
+        // current setting: a settled amount is evidence and is never
+        // re-denominated by a later settings change.
+        await page.goto("/shop/blue-mantis/orders");
+        await page.getByRole("heading", { level: 1, name: "Orders" }).waitFor();
+        // The money column itself, not just the heading — the table streams in
+        // and a capture taken on the header alone can bank an empty tbody.
+        await page.locator("tbody tr").first().waitFor();
+        await capture(page, "orders", scheme);
+
+        // One order in full: the total, and the per-line-item amounts that a
+        // literal `$` and a hardcoded `/ 100` used to compose by hand.
+        await page.locator('tbody tr a[href*="/orders/"]').first().click();
+        await page.getByText("Front desk").first().waitFor();
+        await capture(page, "order-detail", scheme);
 
         // The data-export surface: the "your data is yours" promise, concrete.
         await page.goto("/shop/blue-mantis/settings/export");

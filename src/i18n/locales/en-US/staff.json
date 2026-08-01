@@ -776,6 +776,12 @@
         "status": "Status",
         "date": "Date",
         "amount": "Amount"
+      },
+      "pagination": {
+        "label": "Order pages",
+        "previous": "Previous",
+        "next": "Next",
+        "position": "Page {page} of {pageCount} · {total} orders"
       }
     }
   },

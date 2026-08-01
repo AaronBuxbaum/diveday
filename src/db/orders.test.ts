@@ -711,23 +711,23 @@ describe("orders", () => {
 
       // No filter: every order this shop has ever sent, newest first.
       const all = await listShopOrders(db, shop.id);
-      const allIds = all.map((row) => row.order.id);
+      const allIds = all.rows.map((row) => row.order.id);
       expect(allIds).toContain(openResult.order.id);
       expect(allIds).toContain(paidResult.order.id);
 
       // Status.
       const paidOnly = await listShopOrders(db, shop.id, { status: "paid" });
-      expect(paidOnly.map((row) => row.order.id)).toEqual([paidResult.order.id]);
+      expect(paidOnly.rows.map((row) => row.order.id)).toEqual([paidResult.order.id]);
 
       // Diver, by exact id (the roster/diver-record "view orders" link) and by
       // a name substring (the index page's own search box).
       const forEntry = await listShopOrders(db, shop.id, { personId: entry.person.id });
-      expect(forEntry.map((row) => row.order.id)).toEqual([openResult.order.id]);
+      expect(forEntry.rows.map((row) => row.order.id)).toEqual([openResult.order.id]);
       const byNameFragment = await listShopOrders(db, shop.id, {
         personQuery: other.person.fullName.slice(0, 4),
       });
-      expect(byNameFragment.map((row) => row.order.id)).toContain(paidResult.order.id);
-      expect(byNameFragment.map((row) => row.order.id)).not.toContain(openResult.order.id);
+      expect(byNameFragment.rows.map((row) => row.order.id)).toContain(paidResult.order.id);
+      expect(byNameFragment.rows.map((row) => row.order.id)).not.toContain(openResult.order.id);
 
       // Date range: a window around now catches both; a window that closes
       // before now catches neither (Reports' "revenue rows" link a month range
@@ -736,13 +736,69 @@ describe("orders", () => {
       const justNow = new Date(Date.now() - 60_000);
       const longAgo = new Date("2000-01-01T00:00:00Z");
       const inRange = await listShopOrders(db, shop.id, { from: justNow, to: soon });
-      expect(inRange.map((row) => row.order.id)).toEqual(
+      expect(inRange.rows.map((row) => row.order.id)).toEqual(
         expect.arrayContaining([openResult.order.id, paidResult.order.id]),
       );
       const outOfRange = await listShopOrders(db, shop.id, { from: longAgo, to: justNow });
-      expect(outOfRange.map((row) => row.order.id)).not.toEqual(
+      expect(outOfRange.rows.map((row) => row.order.id)).not.toEqual(
         expect.arrayContaining([openResult.order.id, paidResult.order.id]),
       );
+    });
+
+    /**
+     * The index is bounded in the query, not by the caller remembering to slice.
+     * A shop that has traded for a season has thousands of invoices; the demo
+     * shop alone seeds 323, which rendered a ~17,700px page.
+     */
+    it("pages the index, keeps the total, and never repeats or drops a row", async () => {
+      const { db, shop } = await seededShopContext({ history: true });
+
+      const first = await listShopOrders(db, shop.id, {}, { page: 1, pageSize: 10 });
+      expect(first.rows).toHaveLength(10);
+      expect(first.page).toBe(1);
+      // The total counts every match, not just this page — it is what the
+      // "323 orders" line in the pager reads.
+      expect(first.total).toBeGreaterThan(10);
+      expect(first.pageCount).toBe(Math.ceil(first.total / 10));
+
+      const second = await listShopOrders(db, shop.id, {}, { page: 2, pageSize: 10 });
+      expect(second.rows).toHaveLength(10);
+      expect(second.total).toBe(first.total);
+
+      // The seed writes several orders within the same second, so ordering by
+      // `created_at` alone would let a row straddle the boundary. The id
+      // tiebreak is what makes the two pages disjoint.
+      const firstIds = first.rows.map((row) => row.order.id);
+      const secondIds = second.rows.map((row) => row.order.id);
+      expect(new Set([...firstIds, ...secondIds]).size).toBe(20);
+
+      // Walking every page visits each order exactly once.
+      const seen = new Set<string>();
+      for (let page = 1; page <= first.pageCount; page++) {
+        const chunk = await listShopOrders(db, shop.id, {}, { page, pageSize: 10 });
+        for (const row of chunk.rows) seen.add(row.order.id);
+      }
+      expect(seen.size).toBe(first.total);
+    });
+
+    it("treats a hand-typed page below 1 as the first page rather than a negative offset", async () => {
+      const { db, shop } = await seededShopContext({ history: true });
+      const first = await listShopOrders(db, shop.id, {}, { page: 1, pageSize: 5 });
+      for (const requested of [0, -3, Number.NaN]) {
+        const clamped = await listShopOrders(db, shop.id, {}, { page: requested, pageSize: 5 });
+        expect(clamped.page).toBe(1);
+        expect(clamped.rows.map((row) => row.order.id)).toEqual(
+          first.rows.map((row) => row.order.id),
+        );
+      }
+    });
+
+    it("reports one page and no pager when a shop has fewer orders than a page holds", async () => {
+      const { db, shop } = await orderContext();
+      const empty = await listShopOrders(db, shop.id);
+      expect(empty.pageCount).toBe(1);
+      expect(empty.total).toBe(0);
+      expect(empty.rows).toEqual([]);
     });
 
     it("is tenant-safe: another shop's filter sees none of this shop's orders", async () => {
@@ -767,7 +823,7 @@ describe("orders", () => {
 
       const otherShopId = "00000000-0000-4000-8000-000000000000";
       const otherShopOrders = await listShopOrders(db, otherShopId);
-      expect(otherShopOrders.map((row) => row.order.id)).not.toContain(result.order.id);
+      expect(otherShopOrders.rows.map((row) => row.order.id)).not.toContain(result.order.id);
     });
   });
 });
