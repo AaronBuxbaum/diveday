@@ -72,17 +72,24 @@ export default async function ManageTripPage({
   params: Promise<{ shopSlug: string; id: string }>;
   searchParams: Promise<{ notice?: string; count?: string }>;
 }) {
-  const session = await requireStaffSession();
-  const { shopSlug, id: tripId } = await params;
-  const { notice, count } = await searchParams;
-  const db = await getDb();
+  // The session, route params, and db handle don't depend on one another —
+  // resolve them together instead of serially.
+  const [session, { shopSlug, id: tripId }, { notice, count }, db] = await Promise.all([
+    requireStaffSession(),
+    params,
+    searchParams,
+    getDb(),
+  ]);
   const shop = await getShopById(db, session.user.shopId);
+  if (!shop) notFound();
   // Staff read dates in the language their own device asks for, same
   // negotiation as the public pages (docs ADR 20260729-diver-copy-localization).
-  const locale = await requestLocale(shop?.defaultLocale);
+  // Locale and the trip row both depend on `shop` but not on each other.
+  const [locale, trip] = await Promise.all([
+    requestLocale(shop.defaultLocale),
+    getTripWithBooked(db, shop.id, tripId),
+  ]);
   const t = staffTranslator(locale);
-  if (!shop) notFound();
-  const trip = await getTripWithBooked(db, shop.id, tripId);
   if (!trip) notFound();
   const [
     staff,

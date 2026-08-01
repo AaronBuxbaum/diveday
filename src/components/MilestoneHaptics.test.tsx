@@ -73,4 +73,29 @@ describe("MilestoneHaptics", () => {
 
     expect(vibrateMock).not.toHaveBeenCalled();
   });
+
+  it("a trip/checkpoint switch without a fresh instance would misfire — the reason the caller keys by trip id + checkpoint", () => {
+    // Trip A ends its roll call low (20%, below every threshold).
+    const { rerender } = render(<MilestoneHaptics total={10} boarded={2} />);
+    expect(vibrateMock).not.toHaveBeenCalled();
+
+    // Switching to Trip B, which happens to already be 80% boarded, as a
+    // same-instance rerender (what happens without the caller's key) reads
+    // as "progress jumped 20% -> 80%" and wrongly buzzes for a trip this
+    // instance never watched climb.
+    rerender(<MilestoneHaptics total={10} boarded={8} />);
+    expect(vibrateMock).toHaveBeenCalled();
+  });
+
+  it("a fresh instance (the caller's key on trip id + checkpoint, the fix) never buzzes off another trip's numbers", () => {
+    const { unmount } = render(<MilestoneHaptics total={10} boarded={2} />);
+    expect(vibrateMock).not.toHaveBeenCalled();
+    unmount();
+
+    // A `key` change unmounts the old instance and mounts a brand new one —
+    // fresh refs, so the first render is always treated as an initial
+    // snapshot, never a jump to buzz for.
+    render(<MilestoneHaptics total={10} boarded={8} />);
+    expect(vibrateMock).not.toHaveBeenCalled();
+  });
 });

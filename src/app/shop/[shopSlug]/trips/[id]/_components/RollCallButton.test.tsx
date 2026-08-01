@@ -94,4 +94,37 @@ describe("RollCallButton", () => {
       "/shop/blue-mantis/trips/trip-1/guests#booking-1",
     );
   });
+
+  it("keying by checkpoint (the caller's documented contract) drops a stale refusal on a checkpoint switch", async () => {
+    // manifest/page.tsx's real fix: the checkpoint switcher reuses the same
+    // route, so without a checkpoint-derived `key` this instance — and its
+    // useActionState `result`, which has no external setter — would survive
+    // a switch and misattribute a refusal to the wrong checkpoint. This
+    // stands in for that caller by wrapping the same `key` pattern.
+    function Harness({ checkpoint, action }: { checkpoint: string; action: RollCallAction }) {
+      return (
+        <RollCallButton
+          key={checkpoint}
+          action={action}
+          bookingId="00000000-0000-4000-8000-000000000001"
+          status="boarded"
+          label="Board"
+          pendingLabel="Boarding…"
+          className="btn"
+          copy={DEFAULT_COPY}
+        />
+      );
+    }
+
+    const action = mockAction({ ok: false, reason: "not_ready" });
+    const { rerender } = render(<Harness checkpoint="departure" action={action} />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Board" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(/still blocked/i);
+
+    // Switch checkpoints — same route, different key.
+    rerender(<Harness checkpoint="after_dive_1" action={action} />);
+
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
 });

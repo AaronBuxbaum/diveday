@@ -1,9 +1,11 @@
+import Image from "next/image";
 import type { diveSites } from "@/db/schema";
 import { diverTranslator } from "@/i18n/messages";
 import { buildDiveSiteLandmarks } from "@/lib/dive-site-landmarks";
 import { getSeedDiveSiteMap } from "@/lib/dive-site-map";
 import { resolveDiveSiteImageUrl } from "@/lib/dive-site-media";
 import { siteFit } from "@/lib/diver-planning";
+import { isManagedBlobUrl } from "@/lib/storage/blob-host";
 import { DiveSiteFieldGuide } from "./DiveSiteFieldGuide";
 import { DiveSiteLandmarks } from "./DiveSiteLandmarks";
 import { DiveSiteMap } from "./DiveSiteMap";
@@ -65,19 +67,30 @@ export function DiveBriefingCard({
   ]
     .filter(Boolean)
     .join(" · ");
+  // Staff-moderated but staff-pasted (dive_site_moments.imageUrl): a bundled/blob
+  // URL renders optimized; an unrecognized host — a legacy live Commons URL that
+  // predates the bundled set, or another approved external host — still renders,
+  // just without next/image's optimization (its host isn't in remotePatterns).
+  const momentImageUrl = moments[0]?.imageUrl ? resolveDiveSiteImageUrl(moments[0].imageUrl) : null;
+  const momentImageIsOptimizable =
+    momentImageUrl !== null && (momentImageUrl.startsWith("/") || isManagedBlobUrl(momentImageUrl));
 
   return (
     <article className="w-[min(90vw,42rem)] shrink-0 snap-center self-start overflow-hidden rounded-2xl border border-border bg-surface sm:w-full">
       {site && getSeedDiveSiteMap(site.name) ? (
         <DiveSiteMap siteName={site.name} t={t} />
       ) : site?.satelliteImageUrl ? (
-        // biome-ignore lint/performance/noImgElement: first-party blob/bundled URL only — ingested server-side at save time (CR-020), never a live third-party host.
-        <img
-          src={site.satelliteImageUrl}
-          alt={t("trip.siteSatelliteAlt", { site: site.name })}
-          loading="lazy"
-          className="h-56 w-full object-cover"
-        />
+        <div className="relative h-56 w-full">
+          {/* First-party blob/bundled URL only — ingested server-side at save time
+              (CR-020, src/lib/storage/ingest-dive-site-media.ts), never a live third-party host. */}
+          <Image
+            src={site.satelliteImageUrl}
+            alt={t("trip.siteSatelliteAlt", { site: site.name })}
+            fill
+            sizes="(min-width: 640px) 42rem, 90vw"
+            className="object-cover"
+          />
+        </div>
       ) : null}
       <div className="p-5 sm:p-6">
         <p className="text-xs font-bold tracking-[0.16em] text-primary uppercase">
@@ -154,14 +167,17 @@ export function DiveBriefingCard({
             ) : null}
             {moments[0] ? (
               <figure className="mt-6 overflow-hidden rounded-lg bg-accent/10 sm:grid sm:grid-cols-[12rem_1fr]">
-                {moments[0].imageUrl ? (
-                  // biome-ignore lint/performance/noImgElement: moderated dive-site media supports approved external hosts.
-                  <img
-                    src={resolveDiveSiteImageUrl(moments[0].imageUrl) ?? undefined}
-                    alt={t("trip.siteMomentAlt", { site: site?.name ?? heading })}
-                    loading="lazy"
-                    className="aspect-video h-full w-full object-cover sm:aspect-square"
-                  />
+                {momentImageUrl ? (
+                  <div className="relative aspect-video h-full w-full sm:aspect-square">
+                    <Image
+                      src={momentImageUrl}
+                      alt={t("trip.siteMomentAlt", { site: site?.name ?? heading })}
+                      fill
+                      sizes="(min-width: 640px) 12rem, 100vw"
+                      unoptimized={!momentImageIsOptimizable}
+                      className="object-cover"
+                    />
+                  </div>
                 ) : null}
                 <figcaption className="p-4 sm:self-center">
                   <h4 className="font-semibold">{t("trip.siteMomentHeading")}</h4>

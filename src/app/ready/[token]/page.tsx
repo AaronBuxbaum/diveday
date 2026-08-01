@@ -338,8 +338,14 @@ export default async function DiverReadinessPage({
     // The whole page under the provider, not just the one Client Component that
     // needs it today: a `useTranslations` call in a client child without it
     // throws during the server render and takes the entire page down to a blank
-    // 200 (which is exactly how RentalFitForm broke this surface once).
-    <DiverIntlProvider locale={locale} timeZone={detail.shop.timezone}>
+    // 200 (which is exactly how RentalFitForm broke this surface once). Its
+    // namespaces are "rental" (RentalFitForm's own copy) and "common"
+    // ("common.optional", shared with several field hints).
+    <DiverIntlProvider
+      locale={locale}
+      timeZone={detail.shop.timezone}
+      namespaces={["rental", "common"]}
+    >
       <main className="mx-auto w-full max-w-xl flex-1 px-6 py-10 sm:py-16">
         <FlashParams params={["saved", "error", "pay"]} />
         <header>
