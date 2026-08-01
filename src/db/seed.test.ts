@@ -14,6 +14,8 @@ import {
   bookingCheckouts,
   bookingPayments,
   bookings,
+  lastMinuteListEntries,
+  lastMinuteListUnsubscribeTokens,
   nitroxCertifications,
   orders,
   paymentOperationIntents,
@@ -188,6 +190,39 @@ describe("resetDemoSchedule", () => {
       .from(people)
       .where(and(eq(people.shopId, shop.id), eq(people.email, "wendy@example.com")));
     expect(wendy).toHaveLength(0);
+  });
+
+  /**
+   * The regression that made the e2e fleet flaky. `/api/test/reset` calls this
+   * before every browser test; once Leo's self-serve unsubscribe added
+   * `last_minute_list_unsubscribe_tokens` referencing the entries, the delete
+   * ordering FK-violated (23503) and aborted the reset **mid-run**, leaving the
+   * demo shop half-wiped. Whichever spec read it next failed on missing seeded
+   * data — which is why the failure appeared to wander between `manifest`,
+   * `courses`, and `gear-fit-and-age` rather than pointing at its own cause.
+   */
+  it("clears last-minute unsubscribe tokens instead of FK-violating on their entries", async () => {
+    const { db, shop } = await seededShopContext();
+    const [person] = await db.select().from(people).where(eq(people.shopId, shop.id)).limit(1);
+    if (!person) throw new Error("test setup: seeded shop has no people");
+    const [entry] = await db
+      .insert(lastMinuteListEntries)
+      .values({ shopId: shop.id, personId: person.id })
+      .returning();
+    if (!entry) throw new Error("test setup: last-minute entry insert returned no row");
+    await db
+      .insert(lastMinuteListUnsubscribeTokens)
+      .values({ shopId: shop.id, entryId: entry.id, tokenHash: `hash_${entry.id}` });
+
+    // Resolving rather than throwing is the whole assertion.
+    await expect(resetDemoSchedule(db, shop.id)).resolves.toBeUndefined();
+
+    expect(
+      await db
+        .select()
+        .from(lastMinuteListUnsubscribeTokens)
+        .where(eq(lastMinuteListUnsubscribeTokens.shopId, shop.id)),
+    ).toHaveLength(0);
   });
 
   it("restores shop-level fixtures a test can mutate directly, not just schedule/booking data (Codex finding)", async () => {
