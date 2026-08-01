@@ -331,6 +331,12 @@ export default async function DiverReadinessPage({
   const nextStep = nextDiverStep(items);
   const ready = detail.readiness.status === "ready";
   const hasEmergencyContact = Boolean(person.emergencyContactName && person.emergencyContactPhone);
+  // The emergency-contact row is rendered as its own `ChecklistRow` below,
+  // outside `items` — count it alongside the requirement-derived items so the
+  // progress bar and its label match what the diver actually sees in the list.
+  const checklistTotal = items.length + 1;
+  const checklistDone =
+    items.filter((item) => item.state === "done").length + (hasEmergencyContact ? 1 : 0);
   const noticeKey = saved ? `saved-${saved}` : error ? `error-${error}` : pay ? `pay-${pay}` : null;
   const notice = noticeKey ? READY_NOTICES[noticeKey] : undefined;
 
@@ -392,6 +398,30 @@ export default async function DiverReadinessPage({
           heading={t("ready.scheduledSites")}
           subheading={t("ready.sitesPeek")}
         />
+
+        {ready ? null : (
+          <div className="mt-6">
+            <div
+              role="progressbar"
+              aria-valuenow={checklistDone}
+              aria-valuemin={0}
+              aria-valuemax={checklistTotal}
+              aria-label={t("ready.checklistProgressAriaLabel", {
+                done: checklistDone,
+                total: checklistTotal,
+              })}
+              className="h-3 w-full overflow-hidden rounded-full bg-surface-sunken"
+            >
+              <div
+                className="progress-wave-fill h-full rounded-full"
+                style={{ width: `${(checklistDone / checklistTotal) * 100}%` }}
+              />
+            </div>
+            <p className="mt-2 text-sm font-medium text-muted">
+              {t("ready.checklistProgress", { done: checklistDone, total: checklistTotal })}
+            </p>
+          </div>
+        )}
 
         <section className="mt-6" aria-labelledby="checklist-heading">
           <h2
