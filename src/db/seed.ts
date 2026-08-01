@@ -38,6 +38,7 @@ import {
   orders,
   paymentOperationIntents,
   people,
+  personCourtesyEmailUnsubscribeTokens,
   personRoles,
   priorVisits,
   recapPhotos,
@@ -4135,6 +4136,13 @@ export async function resetDemoSchedule(
     .delete(lastMinuteListUnsubscribeTokens)
     .where(eq(lastMinuteListUnsubscribeTokens.shopId, shopId));
   await db.delete(lastMinuteListEntries).where(eq(lastMinuteListEntries.shopId, shopId));
+  // References people (courtesy-email opt-out tokens minted for waitlist
+  // invites and trip recaps), so it must go before the people deletes below
+  // or this FK-violates and aborts the whole reset mid-run — the same class
+  // of bug the last-minute-list unsubscribe token comment above already walks.
+  await db
+    .delete(personCourtesyEmailUnsubscribeTokens)
+    .where(eq(personCourtesyEmailUnsubscribeTokens.shopId, shopId));
   await db.delete(bookings).where(eq(bookings.shopId, shopId));
   await db.delete(tripRequirements).where(eq(tripRequirements.shopId, shopId));
   if (tripIds.length > 0) {
@@ -4309,6 +4317,10 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
     .delete(lastMinuteListUnsubscribeTokens)
     .where(eq(lastMinuteListUnsubscribeTokens.shopId, shopId));
   await db.delete(lastMinuteListEntries).where(eq(lastMinuteListEntries.shopId, shopId));
+  // References people, same reasoning as resetDemoSchedule above.
+  await db
+    .delete(personCourtesyEmailUnsubscribeTokens)
+    .where(eq(personCourtesyEmailUnsubscribeTokens.shopId, shopId));
   if (tripIds.length > 0) {
     await db.delete(tripAssignments).where(inArray(tripAssignments.tripId, tripIds));
     await db.delete(tripDives).where(inArray(tripDives.tripId, tripIds));
