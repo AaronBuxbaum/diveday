@@ -568,6 +568,7 @@
     "tripHeader": "{trip} — {when}, {time}",
     "linkExpiresAt": "This link works until {date}.",
     "yesReassurance": "A yes means a doctor should confirm you’re fit to dive — it doesn’t cancel your trip.",
+    "questionsAnswered": "{answered} of {total} answered",
     "progressSaved": "Your progress is saved. Finish whenever you're ready.",
     "emergencyContactDescription": "Someone we can reach for you on the day — optional, but it's what the crew has if anything happens on the water.",
     "agreementCheckbox": "I have read this waiver, understand it, and agree to it.",
