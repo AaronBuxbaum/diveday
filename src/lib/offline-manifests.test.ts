@@ -149,6 +149,52 @@ describe("offline manifest policy", () => {
     });
   });
 
+  // Dive-domain-expert review (docs/product/story-backlog.md, Sal): the old
+  // implementation filtered out rejected events *before* picking "the
+  // latest," so a rejected correction fell through to an older, superseded
+  // local event instead of the snapshot's own server value — reasserting the
+  // stale write reconciliation was supposed to overrule. A diver marked
+  // "boarded" then corrected to "not_boarded," where the correction is
+  // rejected on sync (e.g. another device's write landed first), must never
+  // keep reading "boarded".
+  it("falls back to the snapshot value, not a superseded local event, when the latest attempt was rejected", () => {
+    const saved = snapshot();
+    const latest = latestOfflineRollCall(
+      saved,
+      [
+        {
+          clientEventId: "event-older-applied",
+          snapshotId: saved.snapshotId,
+          snapshotSavedAt: saved.savedAt,
+          tripId: "trip-1",
+          bookingId: "ready",
+          checkpoint: "departure",
+          status: "boarded",
+          note: null,
+          occurredAt: "2026-07-20T11:00:00.000Z",
+          syncStatus: "applied",
+        },
+        {
+          clientEventId: "event-newer-rejected",
+          snapshotId: saved.snapshotId,
+          snapshotSavedAt: saved.savedAt,
+          tripId: "trip-1",
+          bookingId: "ready",
+          checkpoint: "departure",
+          status: "not_boarded",
+          note: null,
+          occurredAt: "2026-07-20T11:10:00.000Z",
+          syncStatus: "rejected",
+        },
+      ],
+      "ready",
+      "departure",
+    );
+    // No server-side rollCall recorded for "ready" in the fixture snapshot,
+    // so the correct fallback is undefined — never the older "boarded" event.
+    expect(latest).toBeUndefined();
+  });
+
   it("surfaces a carried-forward not-boarded from the snapshot as implied", () => {
     const saved = snapshot();
     saved.manifests[0]?.divers.push({

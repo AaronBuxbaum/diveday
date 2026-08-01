@@ -92,3 +92,41 @@ test("a failed send attempt does not silence the Today nudge — nothing actuall
   await page.goto("/shop/blue-mantis");
   await expect(page.getByText("3 seats open with no last-minute deal sent yet.")).toBeVisible();
 });
+
+// /api/test/seed-last-minute-unsubscribe-token mints a real
+// last_minute_list_unsubscribe_tokens row (test-only, gated identically to
+// /api/test/reset) so this drives the actual /unsubscribe/[token] page and
+// server action, since the real send flow can't reach a live email in e2e
+// (Stripe always fails first — see the tests above) and the token is
+// otherwise only ever readable from inside one and hashed at rest.
+test("a diver can self-serve unsubscribe from last-minute deal emails", async ({
+  page,
+  request,
+}) => {
+  await page.goto("/shop/blue-mantis/schedule");
+  await page.getByLabel("Name").fill("Uma Torres");
+  await page.getByLabel("Email").fill("uma.e2e@example.com");
+  await page.getByRole("button", { name: "Notify me" }).click();
+  await expect(page.getByRole("heading", { name: "You’re on the list." })).toBeVisible();
+
+  const seeded = await request.post("/api/test/seed-last-minute-unsubscribe-token", {
+    data: { shopSlug: "blue-mantis", email: "uma.e2e@example.com" },
+  });
+  expect(seeded.ok()).toBe(true);
+  const { token } = await seeded.json();
+
+  await page.goto(`/unsubscribe/${token}`);
+  await expect(page.getByRole("heading", { name: "Stop last-minute deal emails?" })).toBeVisible();
+  await expect(page.getByText("Blue Mantis Divers")).toBeVisible();
+  await page.getByRole("button", { name: "Stop these emails" }).click();
+  await expect(page.getByRole("heading", { name: "You're unsubscribed" })).toBeVisible();
+
+  // Revisiting the same link is idempotent, not a dead link.
+  await page.goto(`/unsubscribe/${token}`);
+  await expect(page.getByRole("heading", { name: "You're unsubscribed" })).toBeVisible();
+});
+
+test("an unknown unsubscribe link reads as unavailable, not a crash", async ({ page }) => {
+  await page.goto("/unsubscribe/not-a-real-token");
+  await expect(page.getByRole("heading", { name: "This link isn't available" })).toBeVisible();
+});

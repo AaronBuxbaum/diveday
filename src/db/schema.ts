@@ -939,6 +939,37 @@ export const lastMinuteListEntries = pgTable(
   ],
 );
 
+/**
+ * A diver-facing, self-serve bearer link to unsubscribe one last-minute-list
+ * entry (docs story-backlog.md "Leo — self-serve email unsubscribe"). A fresh
+ * token is minted for every deal blast rather than one stable token per entry
+ * (mirrors `bookingCapabilities`, not `calendarFeeds`), so an old email's link
+ * keeps working even after a later blast mints another — deliberately never
+ * expires: an expired unsubscribe link would leave someone unable to opt out,
+ * silently, the same reasoning `createBearerToken`'s calendar-feed case
+ * documents. Consuming a token only ever sets `unsubscribedAt`, an idempotent
+ * write, so unlike `bookingCapabilities`/`accountTokens` there is nothing to
+ * mark used or revoke.
+ */
+export const lastMinuteListUnsubscribeTokens = pgTable(
+  "last_minute_list_unsubscribe_tokens",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    entryId: uuid("entry_id")
+      .notNull()
+      .references(() => lastMinuteListEntries.id),
+    tokenHash: text("token_hash").notNull().unique(),
+    issuedAt: timestamp("issued_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("last_minute_list_unsubscribe_tokens_token_hash_idx").on(table.tokenHash),
+    index("last_minute_list_unsubscribe_tokens_entry_idx").on(table.entryId),
+  ],
+);
+
 export const tripLastMinutePromoStatus = pgEnum("trip_last_minute_promo_status", [
   "pending",
   "sent",
@@ -2492,6 +2523,7 @@ export type Course = typeof courses.$inferSelect;
 export type Booking = typeof bookings.$inferSelect;
 export type TripWaitlistEntry = typeof tripWaitlistEntries.$inferSelect;
 export type LastMinuteListEntry = typeof lastMinuteListEntries.$inferSelect;
+export type LastMinuteListUnsubscribeToken = typeof lastMinuteListUnsubscribeTokens.$inferSelect;
 export type TripLastMinutePromo = typeof tripLastMinutePromos.$inferSelect;
 export type NotificationDeliveryRecord = typeof notificationDeliveries.$inferSelect;
 export type NotificationDeliveryAttempt = typeof notificationDeliveryAttempts.$inferSelect;

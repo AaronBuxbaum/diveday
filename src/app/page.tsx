@@ -275,7 +275,7 @@ export default async function Home() {
                       className: "cursor-pointer disabled:opacity-70",
                     })}
                   >
-                    {t("marketing.home.tryDemo")}
+                    {t("nav.tryDemo")}
                   </SubmitButton>
                 </form>
                 <Link

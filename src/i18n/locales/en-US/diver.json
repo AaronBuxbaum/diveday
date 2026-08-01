@@ -244,7 +244,17 @@
     "submit": "Notify me",
     "submitting": "Notifying…",
     "joinedHeading": "You’re on the list.",
-    "joinedBody": "We’ll email you if a discounted last-minute spot opens up in your dates."
+    "joinedBody": "We’ll email you if a discounted last-minute spot opens up in your dates.",
+    "unsubscribe": {
+      "title": "Stop last-minute deal emails?",
+      "description": "You're on {shopName}'s list for last-minute deal emails. Tap below and we'll stop sending them.",
+      "submit": "Stop these emails",
+      "submitting": "Stopping…",
+      "confirmedTitle": "You're unsubscribed",
+      "confirmedText": "You won't get last-minute deal emails from {shopName} anymore. You can rejoin any time from their schedule page.",
+      "unavailableTitle": "This link isn't available",
+      "unavailableText": "It may be from a shop that's no longer active. If you're still getting emails you don't want, reply to one and ask the shop directly."
+    }
   },
   "course": {
     "hidden": "Hidden — divers cannot see this page.",
@@ -878,7 +888,7 @@
       "forExportPrefix": "For a {competitor} export:",
       "runTheDay": "Run the dive day {competitor} can't.",
       "readyToMove": "Ready to make the move off {competitor}?",
-      "walkDemoFirst": "Walk the live demo as the owner, the captain, or a diver first — then start a trial shop, bring your export, and see your roster land in DiveDay with the safety spine intact.",
+      "walkDemoFirst": "Walk the live demo as the owner, the captain, or a diver first — then start a trial shop, bring your export, and see your roster land in DiveDay with the same cert checks, waivers, and roll call already in place.",
       "gettingDemoReady": "Getting the demo ready…",
       "otherGuides": "Other switching guides →",
       "sources": "Sources"
@@ -1040,7 +1050,7 @@
       },
       "instructor": {
         "title": "Instructor",
-        "desc": "Assigned to teach courses. Focuses on student certification safety gating.",
+        "desc": "Assigned to teach courses, and makes sure a student is actually certified for what they're about to dive.",
         "tryThis": "Open a Discover Scuba course trip to see staff assignments."
       },
       "divemaster": {
@@ -1106,7 +1116,6 @@
       "tryTitle": "See how it feels when the whole shop is on the same page.",
       "tryDescription": "DiveDay is early, and the first shops shape it. Founding shops get a founder-direct line with same-day responses — what your crew runs into this season is what gets attention next.",
       "gettingReady": "Getting your shop ready…",
-      "tryDemo": "Try the live demo",
       "startTrial": "Start a trial",
       "viewPricing": "View pricing"
     },
@@ -1372,7 +1381,8 @@
       "body": "{shopName} just opened up {discountPercent}% off {tripTitle}.",
       "useCode": "Use code {code} at booking:",
       "bookLink": "Book {tripTitle}",
-      "expiry": "The code expires {expires} (departure) or once seats run out, whichever comes first."
+      "expiry": "The code expires {expires} (departure) or once seats run out, whichever comes first.",
+      "unsubscribe": "Stop last-minute deal emails from {shopName}"
     },
     "checkoutRecovery": {
       "subject": "Finish booking {tripTitle}?",

@@ -2684,7 +2684,9 @@
           "expiredCannotRecord": "This saved copy has expired — open the live manifest to record roll call.",
           "expiredRecordOnLive": "Expired — record on the live manifest",
           "saved": "Saved on this phone — it'll send when you're back in service.",
-          "genericError": "That change couldn't be saved on this device — try it again."
+          "genericError": "That change couldn't be saved on this device — try it again.",
+          "notAllowed": "This diver isn't ready to board yet — clear what's outstanding on the live manifest first.",
+          "unavailable": "This saved copy isn't available anymore — open the live manifest to record roll call."
         }
       },
       "shellVersion": {

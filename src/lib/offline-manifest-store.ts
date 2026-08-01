@@ -30,6 +30,31 @@ export type OfflineSyncResult = {
   reason?: string;
 };
 
+/**
+ * A code, not a sentence (`src/lib` returns codes, not English — ADR
+ * 20260731-domain-layer-copy-leaks) — this module is `"use client"` but still
+ * framework-free domain logic, and its callers (`OfflineManifestView`,
+ * `OfflineManifestManager`) display these to a captain mid-roll-call, so a
+ * bare `Error("...")` string here would be the literal on-screen refusal text
+ * for the fail-closed boarding gate, unlocalized (dive-domain-expert review,
+ * docs/product/story-backlog.md, Sal). Callers map the code through their own
+ * translator.
+ */
+export type OfflineManifestErrorCode =
+  | "unavailable"
+  | "expired"
+  | "not_allowed"
+  | "sync_unreachable";
+
+export class OfflineManifestError extends Error {
+  readonly code: OfflineManifestErrorCode;
+  constructor(code: OfflineManifestErrorCode) {
+    super(`offline-manifest-error:${code}`);
+    this.name = "OfflineManifestError";
+    this.code = code;
+  }
+}
+
 function requestResult<T>(request: IDBRequest<T>): Promise<T> {
   return new Promise((resolve, reject) => {
     request.onsuccess = () => resolve(request.result);
@@ -332,19 +357,19 @@ export async function appendOfflineRollCall(
 ): Promise<OfflineManifestEnvelope> {
   return withManifestLock(tripId, async () => {
     const envelope = await loadOfflineManifest(tripId);
-    if (!envelope) throw new Error("Saved manifest is unavailable or expired");
+    if (!envelope) throw new OfflineManifestError("unavailable");
     // A snapshot kept alive past its retention window (loadOfflineManifest
     // preserves one that still has an unsynced event) is not a boarding
     // source — the H-05 stop rule treats expired the same as missing. It
     // stays readable so its pending evidence can still reconcile, but
     // records no new roll call.
     if (isOfflineManifestExpired(envelope.snapshot)) {
-      throw new Error("This saved copy has expired — open the live manifest to record roll call.");
+      throw new OfflineManifestError("expired");
     }
     if (
       !canRecordOfflineStatus(envelope.snapshot, input.bookingId, input.status, input.checkpoint)
     ) {
-      throw new Error("This saved readiness record does not allow boarding");
+      throw new OfflineManifestError("not_allowed");
     }
     envelope.events.push({
       ...input,
@@ -375,10 +400,7 @@ export async function syncOfflineManifest(tripId: string): Promise<OfflineManife
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ events: pending }),
   });
-  if (!response.ok)
-    throw new Error(
-      "Back online, but your roll-call changes couldn't be checked against the live manifest yet.",
-    );
+  if (!response.ok) throw new OfflineManifestError("sync_unreachable");
   const body = (await response.json()) as { results: OfflineSyncResult[] };
   const byId = new Map(body.results.map((result) => [result.clientEventId, result]));
   // Re-read and merge under the lock instead of writing back the envelope

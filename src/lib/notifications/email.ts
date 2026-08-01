@@ -66,6 +66,8 @@ type LastMinuteDealEmailInput = {
   bookingUrl: string;
   /** When the code stops working — pinned to the trip's own departure. */
   expiresAt: Date;
+  /** This recipient's own self-serve unsubscribe link (Leo — self-serve email unsubscribe). */
+  unsubscribeUrl: string;
 };
 
 type CheckoutRecoveryEmailInput = {
@@ -364,14 +366,16 @@ export function lastMinuteDealEmail(input: LastMinuteDealEmailInput): Notificati
     code: `<strong>${code}</strong>`,
   });
   const expiry = t("notifications.lastMinuteDeal.expiry", { expires });
+  const unsubscribe = t("notifications.lastMinuteDeal.unsubscribe", { shopName: input.shopName });
+  const unsubscribeUrl = escapeHtml(input.unsubscribeUrl);
 
   return {
     subject: t("notifications.lastMinuteDeal.subject", {
       discountPercent: input.discountPercent,
       tripTitle: input.tripTitle,
     }),
-    text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n\n${date}\n${time}\n\n${useCode}\n${input.bookingUrl}\n\n${expiry}\n`,
-    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p><p>${useCodeHtml}</p><p><a href="${url}">${t("notifications.lastMinuteDeal.bookLink", { tripTitle: title })}</a></p><p>${t("notifications.lastMinuteDeal.expiry", { expires: escapeHtml(expires) })}</p>`,
+    text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n\n${date}\n${time}\n\n${useCode}\n${input.bookingUrl}\n\n${expiry}\n\n${unsubscribe}:\n${input.unsubscribeUrl}\n`,
+    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p><p>${useCodeHtml}</p><p><a href="${url}">${t("notifications.lastMinuteDeal.bookLink", { tripTitle: title })}</a></p><p>${t("notifications.lastMinuteDeal.expiry", { expires: escapeHtml(expires) })}</p><p><a href="${unsubscribeUrl}">${escapeHtml(unsubscribe)}</a></p>`,
   };
 }
 

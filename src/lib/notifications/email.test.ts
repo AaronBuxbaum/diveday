@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   bookingConfirmationEmail,
+  lastMinuteDealEmail,
   newAccountAlertEmail,
   passwordChangedEmail,
   passwordResetEmail,
@@ -258,6 +259,24 @@ describe("passwordChangedEmail", () => {
     const email = passwordChangedEmail({ locale: "en-US", ownerName: "Pat Diver" });
     expect(email.text).not.toContain("http");
     expect(email.text).toContain("request a new password");
+  });
+});
+
+describe("lastMinuteDealEmail", () => {
+  const dealBase = {
+    ...base,
+    discountPercent: 25,
+    code: "LASTMINUTE25",
+    bookingUrl: "https://diveday.example/shop/blue-mantis/schedule/trip-1",
+    expiresAt: new Date("2026-08-01T13:00:00.000Z"),
+    unsubscribeUrl: "https://diveday.example/unsubscribe/tok_abc123",
+  };
+
+  it("carries the recipient's own unsubscribe link in both bodies (Leo — self-serve email unsubscribe)", () => {
+    const email = lastMinuteDealEmail(dealBase);
+    expect(email.text).toContain(dealBase.unsubscribeUrl);
+    expect(email.html).toContain(`href="${dealBase.unsubscribeUrl}"`);
+    expect(email.html).toContain("Stop last-minute deal emails from Blue Mantis");
   });
 });
 

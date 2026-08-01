@@ -311,6 +311,9 @@ for (const scheme of ["light", "dark"] as const) {
       await page.goto("/reset-password/not-a-real-token");
       await capture(page, "reset-password-invalid", scheme);
 
+      await page.goto("/unsubscribe/not-a-real-token");
+      await capture(page, "unsubscribe-invalid", scheme);
+
       // Wait for a real departure card, not the loading skeleton: this capture
       // used to `goto` and shoot immediately, so it raced the schedule's
       // suspense fallback and whichever side of that race each run landed on

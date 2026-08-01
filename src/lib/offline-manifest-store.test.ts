@@ -398,7 +398,7 @@ describe("appendOfflineRollCall", () => {
         status: "boarded",
         note: null,
       }),
-    ).rejects.toThrow(/expired/);
+    ).rejects.toMatchObject({ code: "expired" });
 
     // The earlier pending event survives untouched — refusing a new one
     // doesn't discard evidence already recorded.
@@ -425,7 +425,7 @@ describe("appendOfflineRollCall", () => {
         status: "boarded",
         note: null,
       }),
-    ).rejects.toThrow(/does not allow boarding/);
+    ).rejects.toMatchObject({ code: "not_allowed" });
 
     // Same diver, same unresolved readiness — a pure headcount after dive 1
     // must succeed, matching what the "Board" button implies is possible.
@@ -526,9 +526,9 @@ describe("syncOfflineManifest", () => {
       http.post("/api/offline-manifests/sync", () => new HttpResponse(null, { status: 500 })),
     );
 
-    await expect(syncOfflineManifest(payload.manifests[0].trip.id)).rejects.toThrow(
-      /couldn't be checked against the live manifest/,
-    );
+    await expect(syncOfflineManifest(payload.manifests[0].trip.id)).rejects.toMatchObject({
+      code: "sync_unreachable",
+    });
 
     const reloaded = await loadOfflineManifest(payload.manifests[0].trip.id);
     expect(reloaded?.events[0].syncStatus).toBe("pending");

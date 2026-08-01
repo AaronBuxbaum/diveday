@@ -141,8 +141,12 @@ export function OfflineManifestManager({
           router.refresh();
         }
       }
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : copy.reconcileErrorFallback);
+    } catch {
+      // syncOfflineManifest throws a typed OfflineManifestError, not an
+      // English sentence (src/lib/offline-manifest-store.ts) — the only
+      // failure mode here is "couldn't reach the server," which the one
+      // fallback string already says.
+      setMessage(copy.reconcileErrorFallback);
     }
   }, [router, tripId, copy]);
 

@@ -14,7 +14,7 @@ import {
 import { spotsRemaining } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import type { AppDb, DbExecutor } from "./client";
-import { listLastMinuteList } from "./last-minute-list";
+import { issueLastMinuteListUnsubscribeToken, listLastMinuteList } from "./last-minute-list";
 import { notificationProviderForDb, sendNotificationBatch } from "./notifications";
 import { type TripLastMinutePromo, tripLastMinutePromos, trips } from "./schema";
 import { getShopById } from "./shops";
@@ -125,33 +125,36 @@ export async function sendLastMinuteDealBlast(
     : null;
 
   let sentCount = 0;
-  if (bookingUrl) {
-    const deliveries = await sendNotificationBatch(
-      db,
-      orderedMatches.flatMap(({ person }) =>
-        person.email
-          ? [
-              {
-                kind: "last_minute_deal" as const,
-                shopId: input.shopId,
-                to: person.email,
-                locale: recipientLocale(person.locale, shop.defaultLocale),
-                diverName: person.fullName,
-                shopName: shop.name,
-                tripTitle: tripRow.title,
-                startsAt: tripRow.startsAt,
-                endsAt: tripRow.endsAt,
-                timezone: shop.timezone,
-                discountPercent: input.discountPercent,
-                code,
-                bookingUrl,
-                expiresAt: tripRow.startsAt,
-              },
-            ]
-          : [],
-      ),
-      notificationProviderForDb(db),
+  if (origin && bookingUrl) {
+    const recipients = await Promise.all(
+      orderedMatches
+        .filter(({ person }) => Boolean(person.email))
+        .map(async ({ entry, person }) => {
+          const unsubscribeToken = await issueLastMinuteListUnsubscribeToken(db, {
+            shopId: input.shopId,
+            entryId: entry.id,
+          });
+          return {
+            kind: "last_minute_deal" as const,
+            shopId: input.shopId,
+            // Filtered above; non-null for every entry that reaches here.
+            to: person.email as string,
+            locale: recipientLocale(person.locale, shop.defaultLocale),
+            diverName: person.fullName,
+            shopName: shop.name,
+            tripTitle: tripRow.title,
+            startsAt: tripRow.startsAt,
+            endsAt: tripRow.endsAt,
+            timezone: shop.timezone,
+            discountPercent: input.discountPercent,
+            code,
+            bookingUrl,
+            expiresAt: tripRow.startsAt,
+            unsubscribeUrl: new URL(`/unsubscribe/${unsubscribeToken}`, `${origin}/`).toString(),
+          };
+        }),
     );
+    const deliveries = await sendNotificationBatch(db, recipients, notificationProviderForDb(db));
     sentCount = deliveries.filter((delivery) => delivery.status === "sent").length;
   }
 

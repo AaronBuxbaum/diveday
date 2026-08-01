@@ -27,6 +27,7 @@ import {
   appendOfflineRollCall,
   listOfflineManifests,
   loadOfflineManifest,
+  OfflineManifestError,
   syncOfflineManifest,
 } from "@/lib/offline-manifest-store";
 import {
@@ -441,11 +442,17 @@ export function OfflineManifestView() {
       });
       if (navigator.onLine) await reconcile();
     } catch (error) {
-      setMessage(
-        error instanceof Error
-          ? error.message
-          : t("shared.offlineManifest.single.record.genericError"),
-      );
+      if (error instanceof OfflineManifestError) {
+        setMessage(
+          error.code === "expired"
+            ? t("shared.offlineManifest.single.record.expiredCannotRecord")
+            : error.code === "not_allowed"
+              ? t("shared.offlineManifest.single.record.notAllowed")
+              : t("shared.offlineManifest.single.record.unavailable"),
+        );
+      } else {
+        setMessage(t("shared.offlineManifest.single.record.genericError"));
+      }
     } finally {
       setBusyBooking(null);
     }

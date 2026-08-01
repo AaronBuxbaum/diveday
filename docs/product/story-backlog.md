@@ -28,44 +28,6 @@ implementation, and the persisted-birthdate path needs a `security-reviewer` pas
 
 ---
 
-## Nadia (persona 1) — security-reviewer pass on the public course catalog
-
-**Origin:** archive tasks 2–3. **Status:** implementation shipped (public course index +
-certification-path pages), mandated review pass not yet done.
-
-**Left to do:** run the `security-reviewer` pass the original tasks called for before merge. The
-archived doc's inline review note is the checklist: shop must resolve via `getShopBySlug` (never
-session) and 404 on a missing shop; public branch must fetch `listActiveCourses`, never the staff
-`listCourses`; `courses/paths/page.tsx` and `paths/[pathSlug]/page.tsx` need the same `isActive`
-discipline; edit/visibility controls gated by not rendering (not disabling); the new allowlist
-entries must stay `$`-anchored, never copy `PUBLIC_SCHEDULE`'s open-ended tail; verify
-unauthenticated access to the new routes and to the still-gated editor routes; cross-tenant check;
-extend `src/lib/auth.config.test.ts`.
-
----
-
-## Sal (persona 10) — follow-up dive-domain-expert review on the offline manifest port
-
-**Origin:** archive task 72. **Status:** implementation shipped, including a fail-closed-logic fix
-found during the port; the mandated follow-up review is outstanding.
-
-**Left to do:** `canRecordOfflineStatus` was found gating readiness at every checkpoint instead of
-only "departure" and was fixed (with a regression test in `offline-manifests.test.ts`) — but
-AGENTS.md's safety-critical rule calls for a `dive-domain-expert` review pass specifically because
-this touched fail-closed boarding logic. Get that review before treating the surface as settled.
-
----
-
-## Victor (persona 13) — conversion-reviewer passes on two shipped surfaces
-
-**Origin:** archive tasks 101 and 103. **Status:** implementation shipped, review outstanding.
-
-**Left to do:** run `conversion-reviewer` against the "Cutover without drama" sections added to
-the switching guides (task 101) and the demo role-picker on the landing page (task 103). Both are
-conversion-sensitive surfaces the original tasks flagged for that pass.
-
----
-
 ## Leo (persona 15) — self-serve email unsubscribe
 
 **Origin:** archive task 122. **Status:** partial — the email document wrapper, brand-token swap,

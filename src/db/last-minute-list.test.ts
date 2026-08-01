@@ -1,12 +1,16 @@
 // @vitest-environment node
+import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
 import {
+  issueLastMinuteListUnsubscribeToken,
   joinLastMinuteList,
   listLastMinuteList,
+  resolveLastMinuteListUnsubscribeToken,
   unsubscribeLastMinuteListEntry,
+  unsubscribeLastMinuteListEntryByToken,
 } from "./last-minute-list";
-import { shops } from "./schema";
+import { lastMinuteListUnsubscribeTokens, shops } from "./schema";
 
 const visitor = { fullName: "Nora Quinn", email: "nora@example.com", phone: "+1-305-555-0199" };
 
@@ -97,5 +101,99 @@ describe("listLastMinuteList cross-tenant isolation", () => {
     if (!otherShop) throw new Error("second shop insert failed");
     await joinLastMinuteList(db, { shopId: shop.id, ...visitor });
     expect(await listLastMinuteList(db, otherShop.id)).toEqual([]);
+  });
+});
+
+// Leo (persona 15) — self-serve email unsubscribe (docs/product/story-backlog.md).
+describe("self-serve unsubscribe token", () => {
+  it("resolves a fresh token to the entry's shop, name, and not-yet-unsubscribed state", async () => {
+    const { db, shop } = await seededShopContext();
+    const joined = await joinLastMinuteList(db, { shopId: shop.id, ...visitor });
+    const token = await issueLastMinuteListUnsubscribeToken(db, {
+      shopId: shop.id,
+      entryId: joined.entryId,
+    });
+
+    const context = await resolveLastMinuteListUnsubscribeToken(db, token);
+    expect(context).toEqual({
+      shopId: shop.id,
+      shopName: shop.name,
+      entryId: joined.entryId,
+      alreadyUnsubscribed: false,
+    });
+  });
+
+  it("reads an unknown token as unavailable, not a crash", async () => {
+    const { db } = await seededShopContext();
+    expect(await resolveLastMinuteListUnsubscribeToken(db, "not-a-real-token")).toBeNull();
+  });
+
+  it("unsubscribes the entry the token names, removing it from the active list", async () => {
+    const { db, shop } = await seededShopContext();
+    const joined = await joinLastMinuteList(db, { shopId: shop.id, ...visitor });
+    const token = await issueLastMinuteListUnsubscribeToken(db, {
+      shopId: shop.id,
+      entryId: joined.entryId,
+    });
+
+    const context = await unsubscribeLastMinuteListEntryByToken(db, { token });
+    expect(context?.alreadyUnsubscribed).toBe(false);
+    expect(await listLastMinuteList(db, shop.id)).toEqual([]);
+  });
+
+  it("is idempotent — the same link clicked twice reads as already unsubscribed, never errors", async () => {
+    const { db, shop } = await seededShopContext();
+    const joined = await joinLastMinuteList(db, { shopId: shop.id, ...visitor });
+    const token = await issueLastMinuteListUnsubscribeToken(db, {
+      shopId: shop.id,
+      entryId: joined.entryId,
+    });
+
+    const first = await unsubscribeLastMinuteListEntryByToken(db, { token });
+    expect(first?.alreadyUnsubscribed).toBe(false);
+    // The second call's own write is a no-op, and its returned context
+    // correctly reports the entry was already unsubscribed — never an error.
+    const second = await unsubscribeLastMinuteListEntryByToken(db, { token });
+    expect(second?.alreadyUnsubscribed).toBe(true);
+  });
+
+  it("mints an independent token per blast — an earlier email's link keeps working after a later one is issued", async () => {
+    const { db, shop } = await seededShopContext();
+    const joined = await joinLastMinuteList(db, { shopId: shop.id, ...visitor });
+    const first = await issueLastMinuteListUnsubscribeToken(db, {
+      shopId: shop.id,
+      entryId: joined.entryId,
+    });
+    const second = await issueLastMinuteListUnsubscribeToken(db, {
+      shopId: shop.id,
+      entryId: joined.entryId,
+    });
+    expect(first).not.toBe(second);
+
+    await unsubscribeLastMinuteListEntryByToken(db, { token: first });
+    // The second (later-issued, still-unused) token still resolves — clicking
+    // whichever email a diver happens to open must always work.
+    const context = await resolveLastMinuteListUnsubscribeToken(db, second);
+    expect(context?.alreadyUnsubscribed).toBe(true);
+  });
+
+  it("never trusts a token whose stored shopId drifts from its entry's", async () => {
+    const { db, shop } = await seededShopContext();
+    const [otherShop] = await db
+      .insert(shops)
+      .values({ name: "Other Shop", slug: "other-shop-unsubscribe-token", timezone: "UTC" })
+      .returning();
+    if (!otherShop) throw new Error("second shop insert failed");
+    const joined = await joinLastMinuteList(db, { shopId: shop.id, ...visitor });
+    const token = await issueLastMinuteListUnsubscribeToken(db, {
+      shopId: shop.id,
+      entryId: joined.entryId,
+    });
+    await db
+      .update(lastMinuteListUnsubscribeTokens)
+      .set({ shopId: otherShop.id })
+      .where(eq(lastMinuteListUnsubscribeTokens.entryId, joined.entryId));
+
+    expect(await resolveLastMinuteListUnsubscribeToken(db, token)).toBeNull();
   });
 });
