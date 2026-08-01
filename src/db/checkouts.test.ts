@@ -605,6 +605,37 @@ describe("checkout completion", () => {
     expect(await markCheckoutExpiredBySessionId(db, "cs_unknown")).toBeNull();
   });
 
+  // Defense-in-depth (security review finding): a webhook event whose
+  // top-level `account` disagrees with the checkout's own connected account
+  // is refused even though the session id alone already matched a row.
+  it("refuses to mark a checkout paid or expired when the expected account doesn't match", async () => {
+    const { db, shop, reef, bookingIds } = await checkoutContext();
+    const start = await startBookingCheckout(
+      db,
+      startInput(shop.id, reef.id, bookingIds),
+      fakeCheckout(),
+    );
+    if (!start.ok) throw new Error("checkout start failed");
+
+    expect(
+      await markCheckoutPaidBySessionId(db, start.checkout.stripeSessionId, "acct_evil"),
+    ).toBeNull();
+    expect(
+      await markCheckoutExpiredBySessionId(db, start.checkout.stripeSessionId, "acct_evil"),
+    ).toBeNull();
+    for (const bookingId of bookingIds) {
+      expect(await getBookingPayment(db, shop.id, bookingId)).toBeNull();
+    }
+
+    // The real account still works.
+    const completed = await markCheckoutPaidBySessionId(
+      db,
+      start.checkout.stripeSessionId,
+      "acct_test",
+    );
+    expect(completed?.status).toBe("completed");
+  });
+
   it("never expires a checkout that already completed", async () => {
     const { db, shop, reef, bookingIds } = await checkoutContext();
     const start = await startBookingCheckout(

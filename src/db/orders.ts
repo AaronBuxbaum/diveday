@@ -434,16 +434,42 @@ export async function getOrder(db: DbExecutor, shopId: string, orderId: string) 
 }
 
 /**
+ * Every status transition a caller of `applyOrderUpdate` is allowed to write,
+ * keyed by the order's current status. A status is always allowed to repeat
+ * itself (an idempotent no-op for a duplicate delivery of the same webhook
+ * event); anything not listed here is refused rather than written (security
+ * review finding: a replayed or out-of-order `invoice.voided`/`invoice.paid`
+ * event must never flip a `paid`/`refunded` order back, the same way
+ * `voidOrder` already requires `status === "open"` for a staff-initiated void).
+ * `uncollectible` is reachable only through `refreshOrderStatus`'s direct
+ * Stripe read today (no webhook event drives it), but is listed here so that
+ * manual refresh path stays honest about what Stripe's own invoice lifecycle
+ * allows: open can still resolve to paid after being marked uncollectible.
+ */
+const ALLOWED_ORDER_TRANSITIONS: Record<OrderStatus, ReadonlySet<OrderStatus>> = {
+  open: new Set<OrderStatus>(["open", "paid", "void", "uncollectible"]),
+  paid: new Set<OrderStatus>(["paid", "refunded"]),
+  void: new Set<OrderStatus>(["void"]),
+  uncollectible: new Set<OrderStatus>(["uncollectible", "paid", "void"]),
+  refunded: new Set<OrderStatus>(["refunded"]),
+};
+
+/**
  * Applies a status/amount change to an order and cascades a completed
  * payment to its booking, both in one transaction so a crash between the
  * two writes can never leave the order "paid" with its booking still
- * unpaid. Re-reads the order fresh inside the transaction rather than
- * trusting the possibly-stale `order` the caller looked up, and always
- * re-applies the booking cascade for a "paid"/"refunded" target status
- * (not just on a transition into it) so a replay is self-healing —
- * idempotent and able to repair a booking-payment write that failed after
- * an earlier run's status update already committed (CR-004). A booking
- * already refunded or waived is never regressed back to paid by a
+ * unpaid. Re-reads the order fresh inside the transaction — under a
+ * `FOR UPDATE` lock, so two concurrent callers (a replayed webhook racing
+ * the original delivery) always serialize rather than both reading the same
+ * stale `current` row — rather than trusting the possibly-stale `order` the
+ * caller looked up. Refuses (and logs a refusal code rather than writing)
+ * any transition not in {@link ALLOWED_ORDER_TRANSITIONS}, so a replayed or
+ * out-of-order webhook can never move an order backward (security review
+ * finding). Always re-applies the booking cascade for a "paid"/"refunded"
+ * target status (not just on a transition into it) so a replay is
+ * self-healing — idempotent and able to repair a booking-payment write that
+ * failed after an earlier run's status update already committed (CR-004). A
+ * booking already refunded or waived is never regressed back to paid by a
  * duplicate or out-of-order webhook.
  */
 async function applyOrderUpdate(
@@ -457,8 +483,19 @@ async function applyOrderUpdate(
   },
 ): Promise<Order | null> {
   return db.transaction(async (tx) => {
-    const [current] = await tx.select().from(orders).where(eq(orders.id, order.id)).limit(1);
+    const [current] = await tx.select().from(orders).where(eq(orders.id, order.id)).for("update");
     if (!current) return null;
+
+    if (!ALLOWED_ORDER_TRANSITIONS[current.status].has(patch.status)) {
+      console.error("applyOrderUpdate: refused an illegal order status transition", {
+        orderId: current.id,
+        shopId: current.shopId,
+        from: current.status,
+        to: patch.status,
+      });
+      return current;
+    }
+
     const now = nowDate();
     const [updated] = await tx
       .update(orders)
@@ -501,11 +538,28 @@ async function applyOrderUpdate(
   });
 }
 
+/**
+ * True unless `expectedAccountId` is given and disagrees with the row's own
+ * `stripeAccountId` — a webhook event's top-level `account` field crossed
+ * against the connected account the matched row actually belongs to. Belt
+ * and suspenders (security review finding): `stripeInvoiceId`/session ids
+ * are already globally unique across every connected account, so this
+ * should never actually disagree, but the mark functions otherwise trust a
+ * matched-by-id row without ever checking which account the event claims to
+ * be from. `undefined` passes — a caller (tests, a fixture-less internal
+ * call) that doesn't supply an expected account opts out of the check
+ * rather than being refused by it.
+ */
+function accountMatches(expectedAccountId: string | undefined, rowAccountId: string): boolean {
+  return expectedAccountId === undefined || expectedAccountId === rowAccountId;
+}
+
 /** Called from the Stripe webhook: marks the order that owns this invoice paid and cascades to its booking. */
 export async function markOrderPaidByInvoiceId(
   db: AppDb,
   stripeInvoiceId: string,
   amountPaidCents: number,
+  expectedAccountId?: string,
 ): Promise<Order | null> {
   const [order] = await db
     .select()
@@ -513,12 +567,22 @@ export async function markOrderPaidByInvoiceId(
     .where(eq(orders.stripeInvoiceId, stripeInvoiceId))
     .limit(1);
   if (!order) return null;
+  if (!accountMatches(expectedAccountId, order.stripeAccountId)) {
+    console.error("markOrderPaidByInvoiceId: refused an account mismatch", {
+      orderId: order.id,
+      shopId: order.shopId,
+      expectedAccountId,
+      orderAccountId: order.stripeAccountId,
+    });
+    return null;
+  }
   return applyOrderUpdate(db, order, { status: "paid", amountPaidCents });
 }
 
 export async function markOrderVoidedByInvoiceId(
   db: AppDb,
   stripeInvoiceId: string,
+  expectedAccountId?: string,
 ): Promise<Order | null> {
   const [order] = await db
     .select()
@@ -526,6 +590,15 @@ export async function markOrderVoidedByInvoiceId(
     .where(eq(orders.stripeInvoiceId, stripeInvoiceId))
     .limit(1);
   if (!order) return null;
+  if (!accountMatches(expectedAccountId, order.stripeAccountId)) {
+    console.error("markOrderVoidedByInvoiceId: refused an account mismatch", {
+      orderId: order.id,
+      shopId: order.shopId,
+      expectedAccountId,
+      orderAccountId: order.stripeAccountId,
+    });
+    return null;
+  }
   return applyOrderUpdate(db, order, { status: "void" });
 }
 

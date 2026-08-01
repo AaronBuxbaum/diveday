@@ -106,6 +106,7 @@ const EXCLUDED_TABLES = [
   "booking_checkout_bookings",
   "shop_promo_redemptions", // points at a checkout attempt; Stripe holds the authoritative count
   "payment_operation_intents", // internal reconciliation ledger, not a shop record (CR-005)
+  "stripe_webhook_events", // provider webhook-delivery ledger, not a shop record — same reasoning as payment_operation_intents
   "media_deletion_attempts", // internal reconciliation ledger, not a shop record (CR-012)
   "global_dive_sites", // DiveDay's shared catalog; the shop's copies export
   "global_dive_site_versions",

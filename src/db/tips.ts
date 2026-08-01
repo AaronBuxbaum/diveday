@@ -327,6 +327,7 @@ export async function getLatestTipForBooking(
 export async function markTipPaidBySessionId(
   db: AppDb,
   stripeSessionId: string,
+  expectedAccountId?: string,
 ): Promise<Tip | null> {
   const [tip] = await db
     .select()
@@ -334,6 +335,17 @@ export async function markTipPaidBySessionId(
     .where(eq(tips.stripeSessionId, stripeSessionId))
     .limit(1);
   if (!tip) return null;
+  // Defense-in-depth account cross-check (security review finding) — see
+  // markCheckoutPaidBySessionId in src/db/checkouts.ts.
+  if (expectedAccountId !== undefined && expectedAccountId !== tip.stripeAccountId) {
+    console.error("markTipPaidBySessionId: refused an account mismatch", {
+      tipId: tip.id,
+      shopId: tip.shopId,
+      expectedAccountId,
+      tipAccountId: tip.stripeAccountId,
+    });
+    return null;
+  }
   if (tip.status === "paid") return tip;
   const [updated] = await db
     .update(tips)
@@ -347,11 +359,18 @@ export async function markTipPaidBySessionId(
 export async function markTipExpiredBySessionId(
   db: AppDb,
   stripeSessionId: string,
+  expectedAccountId?: string,
 ): Promise<Tip | null> {
   const [updated] = await db
     .update(tips)
     .set({ status: "expired" })
-    .where(and(eq(tips.stripeSessionId, stripeSessionId), eq(tips.status, "pending")))
+    .where(
+      and(
+        eq(tips.stripeSessionId, stripeSessionId),
+        eq(tips.status, "pending"),
+        expectedAccountId === undefined ? undefined : eq(tips.stripeAccountId, expectedAccountId),
+      ),
+    )
     .returning();
   return updated ?? null;
 }

@@ -330,6 +330,7 @@ export async function getLatestCheckoutForBooking(
 export async function markCheckoutPaidBySessionId(
   db: AppDb,
   stripeSessionId: string,
+  expectedAccountId?: string,
 ): Promise<BookingCheckout | null> {
   return db.transaction(async (tx) => {
     const [checkout] = await tx
@@ -338,6 +339,21 @@ export async function markCheckoutPaidBySessionId(
       .where(eq(bookingCheckouts.stripeSessionId, stripeSessionId))
       .limit(1);
     if (!checkout) return null;
+    // Defense-in-depth (security review finding): a Stripe session id is
+    // already globally unique across every connected account, so this
+    // should never actually disagree, but cross-check the webhook event's
+    // own account against the row it matched rather than trusting the id
+    // match alone. `expectedAccountId === undefined` opts out (tests, an
+    // internal caller with no event to cross-check).
+    if (expectedAccountId !== undefined && expectedAccountId !== checkout.stripeAccountId) {
+      console.error("markCheckoutPaidBySessionId: refused an account mismatch", {
+        checkoutId: checkout.id,
+        shopId: checkout.shopId,
+        expectedAccountId,
+        checkoutAccountId: checkout.stripeAccountId,
+      });
+      return null;
+    }
 
     // Anything besides `pending`/`completed` (most commonly `expired`) means
     // this checkout was already terminally disqualified locally — a departed
@@ -429,6 +445,7 @@ export async function markCheckoutPaidBySessionId(
 export async function markCheckoutExpiredBySessionId(
   db: AppDb,
   stripeSessionId: string,
+  expectedAccountId?: string,
 ): Promise<BookingCheckout | null> {
   const [updated] = await db
     .update(bookingCheckouts)
@@ -437,6 +454,12 @@ export async function markCheckoutExpiredBySessionId(
       and(
         eq(bookingCheckouts.stripeSessionId, stripeSessionId),
         eq(bookingCheckouts.status, "pending"),
+        // Defense-in-depth account cross-check (security review finding) —
+        // see markCheckoutPaidBySessionId. A no-op condition when
+        // expectedAccountId is undefined.
+        expectedAccountId === undefined
+          ? undefined
+          : eq(bookingCheckouts.stripeAccountId, expectedAccountId),
       ),
     )
     .returning();
