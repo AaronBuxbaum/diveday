@@ -1,5 +1,22 @@
+import type { Locator } from "@playwright/test";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { daysFromNow, e2eNow, signInAsOwner } from "./helpers";
+
+/**
+ * The photo an `<img>` ultimately renders, seen through `next/image`.
+ *
+ * An optimized image's `src` is `/_next/image?url=<the real source>&w=…&q=…`,
+ * with the source percent-encoded — so a bundled path that reads
+ * `/dive-sites/Sponge%2006%20…jpg` on a plain `<img>` arrives here as
+ * `%2Fdive-sites%2FSponge%252006%2520…jpg`. One decode of the `url` parameter
+ * gets back to the stored URL, which is what the assertions care about.
+ * Falls through unchanged for an image that isn't being optimized.
+ */
+async function bundledSource(image: Locator): Promise<string> {
+  const src = (await image.getAttribute("src")) ?? "";
+  const optimized = src.match(/^\/_next\/image\?url=([^&]+)/);
+  return optimized?.[1] ? decodeURIComponent(optimized[1]) : src;
+}
 
 test.describe("staff", () => {
   signedInAsOwner();
@@ -139,12 +156,16 @@ test("the seeded reef briefing shows a satellite map, a gentle route, landmarks,
   await expect(page.getByRole("heading", { name: "Molasses Reef Light" })).toBeVisible();
   await expect(page.getByText("11 likely sightings")).toBeVisible();
   await expect(page.getByRole("img", { name: "Stoplight parrotfish" }).first()).toBeVisible();
-  await expect(page.getByRole("img", { name: "Finger sponge" })).toHaveAttribute(
-    "src",
-    /\/dive-sites\//,
-  );
-  await expect(page.getByRole("img", { name: /southern stingray/i })).toHaveAttribute(
-    "src",
-    /Dasyatis%20americana%20NOAA\.jpg/,
-  );
+  // What these two assert is the CR-020 property: a public page serves the
+  // bundled first-party copy, never a live third-party Commons URL. Read it
+  // through `bundledSource` rather than off `src` directly — these photos go
+  // through `next/image` now, so the real source is the `url` parameter of an
+  // `/_next/image?...` request, and matching the raw attribute would only be
+  // asserting which optimizer is in front of it.
+  await expect
+    .poll(() => bundledSource(page.getByRole("img", { name: "Finger sponge" })))
+    .toMatch(/\/dive-sites\//);
+  await expect
+    .poll(() => bundledSource(page.getByRole("img", { name: /southern stingray/i })))
+    .toMatch(/Dasyatis%20americana%20NOAA\.jpg/);
 });

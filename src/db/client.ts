@@ -9,8 +9,7 @@ import { getDbPoolConfig } from "@/lib/db-pool-config";
 import { withExplicitSslMode } from "./connection-string";
 import { DEMO_SHOP_SLUG } from "./dev-credentials";
 import { shops } from "./schema";
-import { backfillDemoReportingData, seedIfEmpty } from "./seed";
-import { backfillLegacyNitroxOffering } from "./shops";
+import { seedIfEmpty } from "./seed";
 
 // drizzle 1.0 moved relational config out of the driver `schema` option
 // (into `defineRelations`); we build queries through `.select()/.from()`, which
@@ -119,11 +118,6 @@ export async function seedProductionDb(
     // through rolls back every row instead of leaving a half-seeded
     // shop a retry would find already-non-empty and stop repairing.
     await seedIfEmpty(tx);
-    await backfillDemoReportingData(tx);
-    // Idempotent, so safe alongside seedIfEmpty on every cold start: a
-    // shop that already priced or requested nitrox before it became an
-    // explicit catalog entry keeps working instead of going dark.
-    await backfillLegacyNitroxOffering(tx);
   });
 }
 

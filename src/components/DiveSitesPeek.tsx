@@ -1,3 +1,4 @@
+import { StoredPhoto } from "@/components/StoredPhoto";
 import type { TripSitePeek } from "@/db/trips";
 
 /**
@@ -27,12 +28,12 @@ export function DiveSitesPeek({
             className="overflow-hidden rounded-xl border border-border bg-surface shadow-sm"
           >
             {site.imageUrls && site.imageUrls.length > 0 ? (
-              // biome-ignore lint/performance/noImgElement: standard img tag is preferred for dynamic external site images
-              <img
+              <StoredPhoto
                 src={site.imageUrls[0]}
                 alt={site.name}
-                loading="lazy"
-                className="h-32 w-full object-cover"
+                className="h-32 w-full"
+                // One card per row on a phone, two from `sm:grid-cols-2` up.
+                sizes="(min-width: 640px) 50vw, 100vw"
               />
             ) : (
               <div className="h-32 w-full bg-surface-sunken flex items-center justify-center text-3xl">
