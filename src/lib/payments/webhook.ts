@@ -15,6 +15,16 @@ const stripeEventSchema = z.object({
   type: z.string().min(1),
   /** The connected account the event happened on; absent for platform-only events. */
   account: z.string().min(1).optional(),
+  /**
+   * Stripe's own unix-seconds event-creation time — real Stripe events always
+   * carry this. Optional here only so a hand-built fixture that omits it
+   * still parses; callers fall back to their own clock (`route.ts` uses
+   * `nowDate()`) rather than treating a missing timestamp as an error. This
+   * is the only reliable signal for which of two deliveries actually
+   * happened later — delivery order is not creation order — and is what lets
+   * `stripe_webhook_events` refuse a stale out-of-order `account.updated`.
+   */
+  created: z.number().optional(),
   data: z.object({ object: z.record(z.string(), z.unknown()) }),
 });
 

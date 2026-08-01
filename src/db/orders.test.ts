@@ -501,12 +501,165 @@ describe("orders", () => {
 
     // An unknown invoice id is a no-op, never an error.
     expect(await markOrderPaidByInvoiceId(db, "in_unknown", 100)).toBeNull();
+  });
 
-    const voided = await markOrderVoidedByInvoiceId(db, result.order.stripeInvoiceId);
-    // Already paid: void applies (status flips) but does not retroactively unpay the booking.
-    expect(voided?.status).toBe("void");
-    expect(await getBookingPayment(db, shop.id, entry.booking.id)).toMatchObject({
-      status: "paid",
+  // Security review finding: applyOrderUpdate's transition table must refuse
+  // an illegal move, not just the ones each caller happens to guard against
+  // today. voidOrder already required status === "open" before this fix; the
+  // webhook-driven mark functions had no equivalent guard.
+  describe("applyOrderUpdate transition guard", () => {
+    it("markOrderVoidedByInvoiceId on a paid order leaves it paid", async () => {
+      const { db, shop, entry } = await orderContext();
+      await upsertShopStripeAccount(db, shop.id, "acct_123");
+      await setShopStripeAccountStatus(db, "acct_123", {
+        chargesEnabled: true,
+        payoutsEnabled: true,
+        detailsSubmitted: true,
+      });
+      const result = await createOrder(
+        db,
+        {
+          shopId: shop.id,
+          personId: entry.person.id,
+          createdByPersonId: entry.person.id,
+          bookingId: entry.booking.id,
+          lineItems,
+        },
+        fakeInvoicing(),
+      );
+      if (!result.ok) throw new Error("expected order creation to succeed");
+      await markOrderPaidByInvoiceId(db, result.order.stripeInvoiceId, 22_000);
+
+      // A replayed or out-of-order invoice.voided event must not flip an
+      // already-paid order back to void.
+      const voided = await markOrderVoidedByInvoiceId(db, result.order.stripeInvoiceId);
+      expect(voided?.status).toBe("paid");
+      const [row] = await db.select().from(orders).where(eq(orders.id, result.order.id));
+      expect(row?.status).toBe("paid");
+      expect(row?.voidedAt).toBeNull();
+      expect(await getBookingPayment(db, shop.id, entry.booking.id)).toMatchObject({
+        status: "paid",
+      });
+    });
+
+    it("markOrderPaidByInvoiceId replayed after refundOrder leaves status refunded", async () => {
+      const { db, shop, entry } = await orderContext();
+      await upsertShopStripeAccount(db, shop.id, "acct_123");
+      await setShopStripeAccountStatus(db, "acct_123", {
+        chargesEnabled: true,
+        payoutsEnabled: true,
+        detailsSubmitted: true,
+      });
+      const result = await createOrder(
+        db,
+        {
+          shopId: shop.id,
+          personId: entry.person.id,
+          createdByPersonId: entry.person.id,
+          bookingId: entry.booking.id,
+          lineItems,
+        },
+        fakeInvoicing({
+          async retrieveInvoice(): Promise<InvoiceLookupResult> {
+            return {
+              status: "ok",
+              invoice: {
+                status: "paid",
+                hostedInvoiceUrl: null,
+                invoicePdfUrl: null,
+                amountPaidCents: 22_000,
+                totalCents: 22_000,
+              },
+            };
+          },
+          async refundInvoice(): Promise<RefundInvoiceResult> {
+            return { status: "refunded", refundId: "re_1" };
+          },
+        }),
+      );
+      if (!result.ok) throw new Error("expected order creation to succeed");
+      await markOrderPaidByInvoiceId(db, result.order.stripeInvoiceId, 22_000);
+      const refunded = await refundOrder(db, shop.id, result.order.id, fakeInvoicing());
+      expect(refunded?.status).toBe("refunded");
+
+      // A delayed/duplicate delivery of the original "paid" event arrives
+      // after the refund already went through.
+      const replayed = await markOrderPaidByInvoiceId(db, result.order.stripeInvoiceId, 22_000);
+      expect(replayed?.status).toBe("refunded");
+      const [row] = await db.select().from(orders).where(eq(orders.id, result.order.id));
+      expect(row?.status).toBe("refunded");
+      expect(row?.amountPaidCents).toBe(0);
+    });
+
+    it("a replayed invoice.paid on an already-paid order is a no-op success", async () => {
+      const { db, shop, entry } = await orderContext();
+      await upsertShopStripeAccount(db, shop.id, "acct_123");
+      await setShopStripeAccountStatus(db, "acct_123", {
+        chargesEnabled: true,
+        payoutsEnabled: true,
+        detailsSubmitted: true,
+      });
+      const result = await createOrder(
+        db,
+        {
+          shopId: shop.id,
+          personId: entry.person.id,
+          createdByPersonId: entry.person.id,
+          bookingId: entry.booking.id,
+          lineItems,
+        },
+        fakeInvoicing(),
+      );
+      if (!result.ok) throw new Error("expected order creation to succeed");
+      const first = await markOrderPaidByInvoiceId(db, result.order.stripeInvoiceId, 22_000);
+      expect(first?.status).toBe("paid");
+
+      const replayed = await markOrderPaidByInvoiceId(db, result.order.stripeInvoiceId, 22_000);
+      expect(replayed?.status).toBe("paid");
+      expect(replayed?.paidAt?.getTime()).toBe(first?.paidAt?.getTime());
+      expect(await getBookingPayment(db, shop.id, entry.booking.id)).toMatchObject({
+        status: "paid",
+      });
+    });
+
+    // Defense-in-depth (security review finding): a webhook event whose
+    // top-level `account` disagrees with the order's own connected account
+    // is refused even though the invoice id alone already matched a row.
+    it("refuses to mark an order paid or voided when the expected account doesn't match", async () => {
+      const { db, shop, entry } = await orderContext();
+      await upsertShopStripeAccount(db, shop.id, "acct_123");
+      await setShopStripeAccountStatus(db, "acct_123", {
+        chargesEnabled: true,
+        payoutsEnabled: true,
+        detailsSubmitted: true,
+      });
+      const result = await createOrder(
+        db,
+        {
+          shopId: shop.id,
+          personId: entry.person.id,
+          createdByPersonId: entry.person.id,
+          bookingId: entry.booking.id,
+          lineItems,
+        },
+        fakeInvoicing(),
+      );
+      if (!result.ok) throw new Error("expected order creation to succeed");
+
+      expect(
+        await markOrderPaidByInvoiceId(db, result.order.stripeInvoiceId, 22_000, "acct_evil"),
+      ).toBeNull();
+      expect(
+        await markOrderVoidedByInvoiceId(db, result.order.stripeInvoiceId, "acct_evil"),
+      ).toBeNull();
+      const [row] = await db.select().from(orders).where(eq(orders.id, result.order.id));
+      expect(row?.status).toBe("open");
+
+      // The real account still works.
+      expect(
+        (await markOrderPaidByInvoiceId(db, result.order.stripeInvoiceId, 22_000, "acct_123"))
+          ?.status,
+      ).toBe("paid");
     });
   });
 

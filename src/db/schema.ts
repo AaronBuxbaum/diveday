@@ -851,6 +851,8 @@ export const bookings = pgTable(
   (table) => [
     uniqueIndex("bookings_trip_person_unique").on(table.tripId, table.personId),
     index("bookings_trip_idx").on(table.tripId),
+    /** Backs the diver-record lookups (getDiverProfile, payment/booking history joins). */
+    index("bookings_shop_person_idx").on(table.shopId, table.personId),
   ],
 );
 
@@ -1471,8 +1473,37 @@ export const orders = pgTable(
     uniqueIndex("orders_stripe_invoice_unique").on(table.stripeInvoiceId),
     index("orders_shop_status_idx").on(table.shopId, table.status),
     index("orders_shop_booking_idx").on(table.shopId, table.bookingId),
+    /** Backs listOrdersForPerson — the person-first diver workspace's payment history. */
+    index("orders_shop_person_idx").on(table.shopId, table.personId),
     check("orders_total_nonnegative", sql`${table.totalCents} >= 0`),
     check("orders_amount_paid_nonnegative", sql`${table.amountPaidCents} >= 0`),
+  ],
+);
+
+/**
+ * A ledger of every Stripe webhook event this app has claimed, keyed by
+ * Stripe's own globally-unique event id — belt-and-suspenders on top of each
+ * handler's own idempotent state machine (docs ADR 20260719-stripe-connect-orders).
+ * `POST /api/webhooks/stripe` claims an event here (an `onConflictDoNothing`
+ * insert) before doing anything else, so a redelivered event is a no-op
+ * before it ever reaches a handler. `occurred_at` is Stripe's own
+ * event-creation time (not when we received it), which lets the
+ * `account.updated` handler — otherwise pure last-write-wins — refuse to
+ * apply an event that is chronologically older than one already applied for
+ * the same connected account.
+ */
+export const stripeWebhookEvents = pgTable(
+  "stripe_webhook_events",
+  {
+    id: text("id").primaryKey(),
+    type: text("type").notNull(),
+    /** The connected account the event happened on; null for platform-only events. */
+    account: text("account"),
+    occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
+    receivedAt: timestamp("received_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("stripe_webhook_events_account_type_idx").on(table.account, table.type, table.occurredAt),
   ],
 );
 
@@ -2612,6 +2643,7 @@ export type Order = typeof orders.$inferSelect;
 export type OrderStatus = (typeof orderStatus.enumValues)[number];
 export type OrderLineItem = typeof orderLineItems.$inferSelect;
 export type OrderLineItemKind = (typeof orderLineItemKind.enumValues)[number];
+export type StripeWebhookEvent = typeof stripeWebhookEvents.$inferSelect;
 export type BookingCheckout = typeof bookingCheckouts.$inferSelect;
 export type CheckoutStatus = (typeof checkoutStatus.enumValues)[number];
 export type Tip = typeof tips.$inferSelect;

@@ -1,5 +1,5 @@
 import { createHmac } from "node:crypto";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { nowMs } from "@/lib/clock";
 
 vi.mock("@/db/client", async (importOriginal) => {
@@ -22,6 +22,10 @@ vi.mock("@/db/stripe-accounts", () => ({
   setShopStripeAccountStatus: vi.fn(),
   disconnectShopStripeAccount: vi.fn(),
 }));
+vi.mock("@/db/webhook-events", () => ({
+  claimStripeWebhookEvent: vi.fn(),
+  hasNewerAccountUpdate: vi.fn(),
+}));
 
 const { getDb } = await import("@/db/client");
 const { markCheckoutPaidBySessionId, markCheckoutExpiredBySessionId } = await import(
@@ -32,6 +36,7 @@ const { markOrderPaidByInvoiceId, markOrderVoidedByInvoiceId } = await import("@
 const { setShopStripeAccountStatus, disconnectShopStripeAccount } = await import(
   "@/db/stripe-accounts"
 );
+const { claimStripeWebhookEvent, hasNewerAccountUpdate } = await import("@/db/webhook-events");
 const { POST } = await import("./route");
 
 const secret = "whsec_test";
@@ -76,6 +81,8 @@ beforeEach(() => {
   vi.mocked(disconnectShopStripeAccount).mockReset();
   vi.mocked(markTipPaidBySessionId).mockReset();
   vi.mocked(markTipExpiredBySessionId).mockReset();
+  vi.mocked(claimStripeWebhookEvent).mockReset().mockResolvedValue(true);
+  vi.mocked(hasNewerAccountUpdate).mockReset().mockResolvedValue(false);
 });
 
 describe("POST /api/webhooks/stripe — fails closed on a bad signature", () => {
@@ -127,7 +134,7 @@ describe("POST /api/webhooks/stripe — fails closed on a bad signature", () => 
     const header = signedHeader(payload, Math.floor(nowMs() / 1000), "whsec_test_mode");
     const response = await POST(webhookRequest(payload, header));
     expect(response.status).toBe(200);
-    expect(markOrderPaidByInvoiceId).toHaveBeenCalledWith(FAKE_DB, "in_123", 4500);
+    expect(markOrderPaidByInvoiceId).toHaveBeenCalledWith(FAKE_DB, "in_123", 4500, undefined);
   });
 
   it("tries test webhook secret if live webhook secret fails, and succeeds if test secret matches", async () => {
@@ -141,7 +148,7 @@ describe("POST /api/webhooks/stripe — fails closed on a bad signature", () => 
     const header = signedHeader(payload, Math.floor(nowMs() / 1000), "whsec_test_mode");
     const response = await POST(webhookRequest(payload, header));
     expect(response.status).toBe(200);
-    expect(markOrderPaidByInvoiceId).toHaveBeenCalledWith(FAKE_DB, "in_123", 4500);
+    expect(markOrderPaidByInvoiceId).toHaveBeenCalledWith(FAKE_DB, "in_123", 4500, undefined);
   });
 
   it("fails with 400 when both are configured but signature matches neither", async () => {
@@ -173,7 +180,7 @@ describe("POST /api/webhooks/stripe — event dispatch", () => {
       data: { object: { id: "in_123", amount_paid: 4500 } },
     });
     expect(response.status).toBe(200);
-    expect(markOrderPaidByInvoiceId).toHaveBeenCalledWith(FAKE_DB, "in_123", 4500);
+    expect(markOrderPaidByInvoiceId).toHaveBeenCalledWith(FAKE_DB, "in_123", 4500, undefined);
   });
 
   it("invoice.paid defaults amount to 0 when Stripe omits it", async () => {
@@ -183,7 +190,7 @@ describe("POST /api/webhooks/stripe — event dispatch", () => {
       data: { object: { id: "in_123" } },
     });
     expect(response.status).toBe(200);
-    expect(markOrderPaidByInvoiceId).toHaveBeenCalledWith(FAKE_DB, "in_123", 0);
+    expect(markOrderPaidByInvoiceId).toHaveBeenCalledWith(FAKE_DB, "in_123", 0, undefined);
   });
 
   it("invoice.voided marks the order void", async () => {
@@ -193,7 +200,18 @@ describe("POST /api/webhooks/stripe — event dispatch", () => {
       data: { object: { id: "in_123" } },
     });
     expect(response.status).toBe(200);
-    expect(markOrderVoidedByInvoiceId).toHaveBeenCalledWith(FAKE_DB, "in_123");
+    expect(markOrderVoidedByInvoiceId).toHaveBeenCalledWith(FAKE_DB, "in_123", undefined);
+  });
+
+  it("invoice.paid passes the event's top-level account through for the row's own cross-check", async () => {
+    const response = await post({
+      id: "evt_1",
+      type: "invoice.paid",
+      account: "acct_123",
+      data: { object: { id: "in_123", amount_paid: 4500 } },
+    });
+    expect(response.status).toBe(200);
+    expect(markOrderPaidByInvoiceId).toHaveBeenCalledWith(FAKE_DB, "in_123", 4500, "acct_123");
   });
 
   it("checkout.session.completed with payment_status paid marks the checkout paid", async () => {
@@ -203,7 +221,7 @@ describe("POST /api/webhooks/stripe — event dispatch", () => {
       data: { object: { id: "cs_123", payment_status: "paid" } },
     });
     expect(response.status).toBe(200);
-    expect(markCheckoutPaidBySessionId).toHaveBeenCalledWith(FAKE_DB, "cs_123");
+    expect(markCheckoutPaidBySessionId).toHaveBeenCalledWith(FAKE_DB, "cs_123", undefined);
     // A session id belongs to at most one of booking_checkouts or tips —
     // the booking-checkout path found a match, so the tip fallback never runs.
     expect(markTipPaidBySessionId).not.toHaveBeenCalled();
@@ -217,7 +235,7 @@ describe("POST /api/webhooks/stripe — event dispatch", () => {
       data: { object: { id: "cs_tip_1", payment_status: "paid" } },
     });
     expect(response.status).toBe(200);
-    expect(markTipPaidBySessionId).toHaveBeenCalledWith(FAKE_DB, "cs_tip_1");
+    expect(markTipPaidBySessionId).toHaveBeenCalledWith(FAKE_DB, "cs_tip_1", undefined);
   });
 
   it("checkout.session.completed does NOT mark paid when payment_status is unpaid (async payment pending)", async () => {
@@ -237,7 +255,7 @@ describe("POST /api/webhooks/stripe — event dispatch", () => {
       data: { object: { id: "cs_123" } },
     });
     expect(response.status).toBe(200);
-    expect(markCheckoutPaidBySessionId).toHaveBeenCalledWith(FAKE_DB, "cs_123");
+    expect(markCheckoutPaidBySessionId).toHaveBeenCalledWith(FAKE_DB, "cs_123", undefined);
     expect(markTipPaidBySessionId).not.toHaveBeenCalled();
   });
 
@@ -248,7 +266,7 @@ describe("POST /api/webhooks/stripe — event dispatch", () => {
       data: { object: { id: "cs_123" } },
     });
     expect(response.status).toBe(200);
-    expect(markCheckoutExpiredBySessionId).toHaveBeenCalledWith(FAKE_DB, "cs_123");
+    expect(markCheckoutExpiredBySessionId).toHaveBeenCalledWith(FAKE_DB, "cs_123", undefined);
     expect(markTipExpiredBySessionId).not.toHaveBeenCalled();
   });
 
@@ -260,7 +278,7 @@ describe("POST /api/webhooks/stripe — event dispatch", () => {
       data: { object: { id: "cs_tip_1" } },
     });
     expect(response.status).toBe(200);
-    expect(markTipExpiredBySessionId).toHaveBeenCalledWith(FAKE_DB, "cs_tip_1");
+    expect(markTipExpiredBySessionId).toHaveBeenCalledWith(FAKE_DB, "cs_tip_1", undefined);
   });
 
   it("account.updated sets the shop's charges/payouts/details status", async () => {
@@ -347,5 +365,202 @@ describe("POST /api/webhooks/stripe — event dispatch", () => {
     });
     expect(response.status).toBe(200);
     expect(markOrderPaidByInvoiceId).not.toHaveBeenCalled();
+  });
+});
+
+describe("POST /api/webhooks/stripe — event ledger", () => {
+  function post(event: Record<string, unknown>) {
+    const payload = eventPayload(event);
+    const header = signedHeader(payload, Math.floor(nowMs() / 1000));
+    return POST(webhookRequest(payload, header));
+  }
+
+  it("claims every verified event before dispatching to a handler", async () => {
+    const response = await post({
+      id: "evt_claim_1",
+      type: "invoice.paid",
+      account: "acct_123",
+      created: 1_700_000_000,
+      data: { object: { id: "in_123", amount_paid: 4500 } },
+    });
+    expect(response.status).toBe(200);
+    expect(claimStripeWebhookEvent).toHaveBeenCalledWith(FAKE_DB, {
+      id: "evt_claim_1",
+      type: "invoice.paid",
+      account: "acct_123",
+      occurredAt: new Date(1_700_000_000 * 1000),
+    });
+    expect(markOrderPaidByInvoiceId).toHaveBeenCalled();
+  });
+
+  // The ledger's whole job: a redelivered event (Stripe is at-least-once)
+  // must not reach any handler a second time, no matter what the handler's
+  // own state has since become — e.g. mark a checkout paid, then a human
+  // refunds it; the same event delivered again must not re-run the paid
+  // cascade and undo the refund.
+  it("a second delivery of the same event id performs no handler dispatch", async () => {
+    vi.mocked(claimStripeWebhookEvent).mockResolvedValueOnce(true).mockResolvedValueOnce(false);
+    const event = {
+      id: "evt_replay_1",
+      type: "checkout.session.completed",
+      data: { object: { id: "cs_123", payment_status: "paid" } },
+    };
+
+    const first = await post(event);
+    expect(first.status).toBe(200);
+    expect(markCheckoutPaidBySessionId).toHaveBeenCalledTimes(1);
+
+    const replayed = await post(event);
+    expect(replayed.status).toBe(200);
+    // Still just the one call from the first delivery — the replay never
+    // reached the handler at all.
+    expect(markCheckoutPaidBySessionId).toHaveBeenCalledTimes(1);
+  });
+
+  it("falls back to the local clock when a fixture event has no created timestamp", async () => {
+    const response = await post({
+      id: "evt_no_created",
+      type: "invoice.paid",
+      data: { object: { id: "in_123", amount_paid: 4500 } },
+    });
+    expect(response.status).toBe(200);
+    expect(claimStripeWebhookEvent).toHaveBeenCalledWith(
+      FAKE_DB,
+      expect.objectContaining({ id: "evt_no_created", occurredAt: expect.any(Date) }),
+    );
+  });
+
+  it("refuses a stale account.updated once the ledger says a newer one already landed", async () => {
+    vi.mocked(hasNewerAccountUpdate).mockResolvedValue(true);
+    const response = await post({
+      id: "evt_stale",
+      type: "account.updated",
+      created: 1_700_000_000,
+      data: {
+        object: {
+          id: "acct_123",
+          charges_enabled: false,
+          payouts_enabled: false,
+          details_submitted: false,
+        },
+      },
+    });
+    expect(response.status).toBe(200);
+    expect(hasNewerAccountUpdate).toHaveBeenCalledWith(
+      FAKE_DB,
+      "acct_123",
+      "evt_stale",
+      new Date(1_700_000_000 * 1000),
+    );
+    expect(setShopStripeAccountStatus).not.toHaveBeenCalled();
+  });
+
+  it("applies an account.updated when the ledger has nothing newer for that account", async () => {
+    vi.mocked(hasNewerAccountUpdate).mockResolvedValue(false);
+    const response = await post({
+      id: "evt_fresh",
+      type: "account.updated",
+      created: 1_700_000_100,
+      data: {
+        object: {
+          id: "acct_123",
+          charges_enabled: true,
+          payouts_enabled: true,
+          details_submitted: true,
+        },
+      },
+    });
+    expect(response.status).toBe(200);
+    expect(setShopStripeAccountStatus).toHaveBeenCalledWith(FAKE_DB, "acct_123", {
+      chargesEnabled: true,
+      payoutsEnabled: true,
+      detailsSubmitted: true,
+    });
+  });
+});
+
+describe("POST /api/webhooks/stripe — structured logging", () => {
+  function post(event: Record<string, unknown>) {
+    const payload = eventPayload(event);
+    const header = signedHeader(payload, Math.floor(nowMs() / 1000));
+    return POST(webhookRequest(payload, header));
+  }
+
+  function loggedLines(calls: unknown[][]) {
+    return calls.map((call) => JSON.parse(call[0] as string));
+  }
+
+  beforeEach(() => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.mocked(console.log).mockRestore();
+    vi.mocked(console.warn).mockRestore();
+    vi.mocked(console.error).mockRestore();
+  });
+
+  it("logs the event id/type/account and the handler's outcome for a handled event", async () => {
+    await post({
+      id: "evt_log_1",
+      type: "invoice.paid",
+      account: "acct_123",
+      data: { object: { id: "in_123", amount_paid: 4500 } },
+    });
+
+    const lines = loggedLines(vi.mocked(console.log).mock.calls);
+    expect(lines).toContainEqual(
+      expect.objectContaining({
+        event: "stripe_webhook.event_received",
+        eventId: "evt_log_1",
+        eventType: "invoice.paid",
+        account: "acct_123",
+      }),
+    );
+    expect(lines).toContainEqual(
+      expect.objectContaining({
+        event: "stripe_webhook.handler_outcome",
+        eventId: "evt_log_1",
+        outcome: "order_not_found",
+      }),
+    );
+  });
+
+  it("logs a null/refused handler outcome rather than vanishing silently", async () => {
+    vi.mocked(markCheckoutPaidBySessionId).mockResolvedValue(null);
+    await post({
+      id: "evt_log_2",
+      type: "checkout.session.completed",
+      data: { object: { id: "cs_unknown", payment_status: "paid" } },
+    });
+
+    const lines = loggedLines(vi.mocked(console.log).mock.calls);
+    expect(lines).toContainEqual(
+      expect.objectContaining({
+        event: "stripe_webhook.handler_outcome",
+        eventId: "evt_log_2",
+        outcome: "session_not_found",
+      }),
+    );
+  });
+
+  it("logs a duplicate-event outcome without dispatching to a handler", async () => {
+    vi.mocked(claimStripeWebhookEvent).mockResolvedValue(false);
+    await post({
+      id: "evt_log_dup",
+      type: "invoice.paid",
+      data: { object: { id: "in_123" } },
+    });
+
+    const lines = loggedLines(vi.mocked(console.log).mock.calls);
+    expect(lines).toContainEqual(
+      expect.objectContaining({
+        event: "stripe_webhook.handler_outcome",
+        eventId: "evt_log_dup",
+        outcome: "duplicate_event",
+      }),
+    );
   });
 });

@@ -15,7 +15,13 @@ import {
   retryBookingConfirmation,
   sendNotification,
 } from "./notifications";
-import { notificationRateLimitState, notificationSendQueue, people, shops } from "./schema";
+import {
+  notificationDeliveries,
+  notificationRateLimitState,
+  notificationSendQueue,
+  people,
+  shops,
+} from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
 
 async function seededBooking() {
@@ -256,6 +262,36 @@ describe("provider-reported delivery events", () => {
 
     const issues = await listNotificationDeliveryIssues(db, shop.id);
     expect(issues[0]?.delivery.providerStatus).toBe("bounced");
+  });
+
+  it("drops a late-arriving delivered-then-bounced event as stale, keeping the newer status", async () => {
+    const { db, shop, providerMessageId } = await sentConfirmation();
+    await applyProviderEmailEvent(db, {
+      providerMessageId,
+      status: "delivered",
+      detail: null,
+      occurredAt: new Date("2026-07-24T18:00:00.000Z"),
+    });
+
+    // A concurrent webhook delivery for the earlier bounce lands after the
+    // later "delivered" event was already applied; the conditional update
+    // must reject it rather than let the older event win the race.
+    await expect(
+      applyProviderEmailEvent(db, {
+        providerMessageId,
+        status: "bounced",
+        detail: "mailbox unavailable",
+        occurredAt: new Date("2026-07-24T17:00:00.000Z"),
+      }),
+    ).resolves.toBe("stale");
+
+    const issues = await listNotificationDeliveryIssues(db, shop.id);
+    expect(issues).toEqual([]);
+    const [delivery] = await db
+      .select({ providerStatus: notificationDeliveries.providerStatus })
+      .from(notificationDeliveries)
+      .where(eq(notificationDeliveries.providerMessageId, providerMessageId));
+    expect(delivery?.providerStatus).toBe("delivered");
   });
 
   it("reports an unknown message id without failing, so Resend stops retrying", async () => {

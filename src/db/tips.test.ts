@@ -315,4 +315,26 @@ describe("markTipPaidBySessionId / markTipExpiredBySessionId", () => {
     expect(await markTipPaidBySessionId(db, "cs_unknown")).toBeNull();
     expect(await markTipExpiredBySessionId(db, "cs_unknown")).toBeNull();
   });
+
+  // Defense-in-depth (security review finding): a webhook event whose
+  // top-level `account` disagrees with the tip's own connected account is
+  // refused even though the session id alone already matched a row.
+  it("refuses to mark a tip paid or expired when the expected account doesn't match", async () => {
+    const { db, bookingId } = await tipContext();
+    const started = await startTipCheckout(db, tipInput(bookingId), fakeCheckout());
+    if (!started.ok) throw new Error("expected ok");
+    const [row] = await db.select().from(tips).where(eq(tips.bookingId, bookingId));
+    if (!row) throw new Error("tip row missing");
+
+    expect(await markTipPaidBySessionId(db, row.stripeSessionId, "acct_evil")).toBeNull();
+    expect(await markTipExpiredBySessionId(db, row.stripeSessionId, "acct_evil")).toBeNull();
+
+    const untouched = await getLatestTipForBooking(db, row.shopId, bookingId);
+    expect(untouched?.status).toBe("pending");
+
+    // The real account still works.
+    expect((await markTipPaidBySessionId(db, row.stripeSessionId, "acct_test"))?.status).toBe(
+      "paid",
+    );
+  });
 });

@@ -525,23 +525,35 @@ export async function applyProviderEmailEvent(
     occurredAt: Date;
   },
 ): Promise<ApplyProviderEmailEventResult> {
-  const [existing] = await db
-    .select({ id: notificationDeliveries.id, statusAt: notificationDeliveries.providerStatusAt })
-    .from(notificationDeliveries)
-    .where(eq(notificationDeliveries.providerMessageId, input.providerMessageId))
-    .limit(1);
-  if (!existing) return "unknown_message";
-  if (existing.statusAt && existing.statusAt > input.occurredAt) return "stale";
-
-  await db
+  const [updated] = await db
     .update(notificationDeliveries)
     .set({
       providerStatus: input.status,
       providerStatusAt: input.occurredAt,
       providerDetail: input.detail,
     })
-    .where(eq(notificationDeliveries.id, existing.id));
-  return "applied";
+    .where(
+      and(
+        eq(notificationDeliveries.providerMessageId, input.providerMessageId),
+        or(
+          isNull(notificationDeliveries.providerStatusAt),
+          lte(notificationDeliveries.providerStatusAt, input.occurredAt),
+        ),
+      ),
+    )
+    .returning({ id: notificationDeliveries.id });
+  if (updated) return "applied";
+
+  // The condition filtered zero rows either because no delivery row carries
+  // this provider message id, or because one exists but already holds a
+  // status at or after `occurredAt`. Only this empty-result path pays for
+  // the extra lookup to tell those two apart.
+  const [existing] = await db
+    .select({ id: notificationDeliveries.id })
+    .from(notificationDeliveries)
+    .where(eq(notificationDeliveries.providerMessageId, input.providerMessageId))
+    .limit(1);
+  return existing ? "stale" : "unknown_message";
 }
 
 /**

@@ -6,6 +6,7 @@ import { drainNotificationRetries } from "@/db/notifications";
 import { sendDueRecaps } from "@/db/recap";
 import { sendDueReminders } from "@/db/reminders";
 import { reapExpiredDemoShops } from "@/db/seed";
+import { log } from "@/lib/log";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -68,6 +69,25 @@ export async function GET(request: Request) {
   // grow the database without bound (ADR 20260724-per-visitor-demo-shops).
   const maxAgeMs = demoShopMaxAgeMs();
   const demoShops = await reapExpiredDemoShops(db, maxAgeMs ? { maxAgeMs } : {});
+  // The only observability on the daily tick: one line per scan's own summary
+  // counts, already computed above for the response body (docs product/
+  // assessments/specialist-optimization-audit-20260731.md §7).
+  log("cron_reminders.scan_complete", "info", {
+    notificationRetriesScanned: notificationRetries.scanned,
+    notificationRetriesSent: notificationRetries.sent,
+    notificationRetriesFailed: notificationRetries.failed,
+    remindersScanned: reminders.scanned,
+    remindersSent: reminders.sent,
+    remindersFailed: reminders.failed,
+    recapsScanned: recaps.scanned,
+    recapsSent: recaps.sent,
+    recapsFailed: recaps.failed,
+    checkoutRecoveriesScanned: checkoutRecoveries.scanned,
+    checkoutRecoveriesSent: checkoutRecoveries.sent,
+    mediaDeletionsAttempted: mediaDeletions.attempted,
+    mediaDeletionsSucceeded: mediaDeletions.succeeded,
+    demoShopsDeleted: demoShops.deleted,
+  });
   return NextResponse.json({
     notificationRetries,
     reminders,

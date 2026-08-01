@@ -1,6 +1,7 @@
 import { getDb } from "@/db/client";
 import { applyProviderEmailEvent } from "@/db/notifications";
 import { nowDate } from "@/lib/clock";
+import { log } from "@/lib/log";
 import { parseResendEmailEvent } from "@/lib/notifications/events";
 import { verifyResendWebhook } from "@/lib/notifications/webhook";
 
@@ -34,11 +35,21 @@ export async function POST(request: Request) {
   const event = parseResendEmailEvent(verification.event, nowDate());
   if (event.kind === "ignored") return new Response(null, { status: 200 });
 
-  await applyProviderEmailEvent(await getDb(), {
+  const result = await applyProviderEmailEvent(await getDb(), {
     providerMessageId: event.providerMessageId,
     status: event.status,
     detail: event.detail,
     occurredAt: event.occurredAt,
+  });
+  // The only observability on this path: applied/stale/unknown_message, none
+  // of which is an error response (Resend retries a non-2xx, and a message id
+  // we never tracked or a delivery already superseded is not a fault of this
+  // endpoint) but every one of which is worth a trace (docs product/
+  // assessments/specialist-optimization-audit-20260731.md §7).
+  log("resend_webhook.delivery_applied", result === "applied" ? "info" : "warn", {
+    providerMessageId: event.providerMessageId,
+    status: event.status,
+    result,
   });
   return new Response(null, { status: 200 });
 }
