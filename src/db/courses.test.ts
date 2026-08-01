@@ -4,16 +4,19 @@ import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
 import { createBooking, rescheduleBooking } from "./bookings";
 import type { AppDb } from "./client";
+import { createTestDb } from "./client";
 import {
   archiveCourse,
   createCourse,
   getCourseBySlug,
   listActiveCourses,
+  listActiveCoursesForSitemap,
   setCourseVisibility,
   updateCourse,
   updateCourseContent,
 } from "./courses";
-import { courses, people, tripAssignments, tripRequirements } from "./schema";
+import { courses, people, shops, tripAssignments, tripRequirements } from "./schema";
+import { listShopsForSitemap } from "./shops";
 import {
   createTrip,
   getTripWithBooked,
@@ -620,5 +623,58 @@ describe("course content and public pages (in-memory PGlite)", () => {
 
     const distantFuture = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
     expect(await listUpcomingSessionsForCourse(db, shop.id, courseId, distantFuture)).toEqual([]);
+  });
+});
+
+describe("sitemap queries (in-memory PGlite)", () => {
+  it("includes a live shop's schedule and active course, and excludes hidden courses and demo shops", async () => {
+    const db = await createTestDb();
+    const [liveShop] = await db
+      .insert(shops)
+      .values({ name: "Live Shop", slug: "live-shop-sitemap", timezone: "America/New_York" })
+      .returning();
+    if (!liveShop) throw new Error("setup live shop insert failed");
+    const [demoShop] = await db
+      .insert(shops)
+      .values({
+        name: "Demo Shop",
+        slug: "demo-shop-sitemap",
+        timezone: "America/New_York",
+        isDemo: true,
+      })
+      .returning();
+    if (!demoShop) throw new Error("setup demo shop insert failed");
+
+    await createCourse(db, {
+      shopId: liveShop.id,
+      title: "Visible Course",
+      slug: "visible-course",
+    });
+    const hidden = await createCourse(db, {
+      shopId: liveShop.id,
+      title: "Hidden Course",
+      slug: "hidden-course",
+    });
+    if (!hidden) throw new Error("setup hidden course insert failed");
+    await setCourseVisibility(db, liveShop.id, hidden.id, false);
+    await createCourse(db, {
+      shopId: demoShop.id,
+      title: "Demo Course",
+      slug: "demo-course",
+    });
+
+    const shopRows = await listShopsForSitemap(db);
+    expect(shopRows).toContainEqual({ slug: "live-shop-sitemap" });
+    expect(shopRows.map((row) => row.slug)).not.toContain("demo-shop-sitemap");
+
+    const courseRows = await listActiveCoursesForSitemap(db);
+    expect(courseRows).toContainEqual({
+      shopSlug: "live-shop-sitemap",
+      courseSlug: "visible-course",
+    });
+    expect(courseRows).not.toContainEqual(expect.objectContaining({ courseSlug: "hidden-course" }));
+    expect(courseRows).not.toContainEqual(
+      expect.objectContaining({ shopSlug: "demo-shop-sitemap" }),
+    );
   });
 });

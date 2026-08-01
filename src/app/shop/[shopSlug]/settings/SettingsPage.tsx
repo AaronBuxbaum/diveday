@@ -14,6 +14,7 @@ import { canPersonManagePaymentSettings } from "@/db/authz";
 import { getDb } from "@/db/client";
 import {
   getShopById,
+  setShopAddress,
   setShopContact,
   setShopCurrency,
   setShopDepthUnit,
@@ -76,6 +77,8 @@ function noticeMessages(
     },
     contact_saved: { tone: "success", text: t("settings.main.notice.contactSaved") },
     contact_invalid: { tone: "danger", text: t("settings.main.notice.contactInvalid") },
+    address_saved: { tone: "success", text: t("settings.main.notice.addressSaved") },
+    address_invalid: { tone: "danger", text: t("settings.main.notice.addressInvalid") },
     review_url_saved: { tone: "success", text: t("settings.main.notice.reviewUrlSaved") },
     review_url_invalid: { tone: "danger", text: t("settings.main.notice.reviewUrlInvalid") },
     connected: { tone: "success", text: t("settings.main.notice.connected") },
@@ -115,6 +118,16 @@ const contactSchema = z.object({
   // one is printed on a public page for divers to write to.
   contactEmail: z.union([z.literal(""), z.email().max(200)]),
   contactPhone: z.string().trim().max(40),
+});
+
+const addressSchema = z.object({
+  // Every field is optional and clears independently on empty — a shop can
+  // publish just a country, or walk the whole address back to nothing.
+  addressStreet: z.string().trim().max(200),
+  addressLocality: z.string().trim().max(120),
+  addressRegion: z.string().trim().max(120),
+  addressPostalCode: z.string().trim().max(20),
+  addressCountry: z.string().trim().max(2),
 });
 
 const reviewUrlSchema = z.object({
@@ -315,6 +328,22 @@ async function saveContactAction(formData: FormData) {
   revalidateAndRedirect(settings, `${settings}?notice=contact_saved&saved=contact`);
 }
 
+/**
+ * The shop's physical business address — where a diver actually meets the
+ * boat or walks into the storefront. Published in structured data so search
+ * engines can place the shop as a real venue; every field clears
+ * independently on an empty box.
+ */
+async function saveAddressAction(formData: FormData) {
+  "use server";
+  const session = await requireStaffSession();
+  const parsed = addressSchema.safeParse(Object.fromEntries(formData));
+  const settings = `/shop/${session.user.shopSlug}/settings`;
+  if (!parsed.success) redirect(`${settings}?notice=address_invalid&saved=address`);
+  await setShopAddress(await getDb(), session.user.shopId, parsed.data);
+  revalidateAndRedirect(settings, `${settings}?notice=address_saved&saved=address`);
+}
+
 /** Where the post-trip recap's "leave us a review" link sends a diver. */
 async function saveReviewUrlAction(formData: FormData) {
   "use server";
@@ -416,7 +445,7 @@ function SettingsGroup({
 }
 
 /**
- * The nine forms on this page each carry their own section id through
+ * The ten forms on this page each carry their own section id through
  * `?saved=<id>` (set by the action that redirects back here), so the notice
  * that comes back renders inside the section that changed instead of one
  * banner at the top of the page — after `PreserveFormScroll` restores the
@@ -425,6 +454,7 @@ function SettingsGroup({
  */
 const SECTION_IDS = [
   "contact",
+  "address",
   "reviewLink",
   "packing",
   "dockCall",
@@ -543,6 +573,80 @@ export default async function SettingsPage({
                 className={buttonClass()}
               >
                 {t("settings.main.contact.submit")}
+              </SubmitButton>
+            </FieldActions>
+          </FieldGrid>
+        </section>
+
+        <section className="mt-6 rounded-lg border border-border bg-surface p-6">
+          <h3 className="font-medium">{t("settings.main.address.heading")}</h3>
+          <p className="mt-1 text-sm text-muted">{t("settings.main.address.description")}</p>
+          <SectionNotice banner={banner} section="address" active={activeSection} />
+          <FieldGrid as="form" action={saveAddressAction} columns={2} className="mt-4">
+            <Field label={t("settings.main.address.streetLabel")} className="sm:col-span-2">
+              <input
+                name="addressStreet"
+                type="text"
+                maxLength={200}
+                autoComplete="street-address"
+                defaultValue={shop.addressStreet ?? ""}
+                placeholder={t("settings.main.address.streetPlaceholder")}
+                className={controlClass}
+              />
+            </Field>
+            <Field label={t("settings.main.address.localityLabel")}>
+              <input
+                name="addressLocality"
+                type="text"
+                maxLength={120}
+                autoComplete="address-level2"
+                defaultValue={shop.addressLocality ?? ""}
+                placeholder={t("settings.main.address.localityPlaceholder")}
+                className={controlClass}
+              />
+            </Field>
+            <Field label={t("settings.main.address.regionLabel")}>
+              <input
+                name="addressRegion"
+                type="text"
+                maxLength={120}
+                autoComplete="address-level1"
+                defaultValue={shop.addressRegion ?? ""}
+                placeholder={t("settings.main.address.regionPlaceholder")}
+                className={controlClass}
+              />
+            </Field>
+            <Field label={t("settings.main.address.postalCodeLabel")}>
+              <input
+                name="addressPostalCode"
+                type="text"
+                maxLength={20}
+                autoComplete="postal-code"
+                defaultValue={shop.addressPostalCode ?? ""}
+                placeholder={t("settings.main.address.postalCodePlaceholder")}
+                className={controlClass}
+              />
+            </Field>
+            <Field
+              label={t("settings.main.address.countryLabel")}
+              hint={t("settings.main.address.countryHint")}
+            >
+              <input
+                name="addressCountry"
+                type="text"
+                maxLength={2}
+                autoComplete="country"
+                defaultValue={shop.addressCountry ?? ""}
+                placeholder={t("settings.main.address.countryPlaceholder")}
+                className={controlClass}
+              />
+            </Field>
+            <FieldActions>
+              <SubmitButton
+                pendingLabel={t("settings.main.address.submitting")}
+                className={buttonClass()}
+              >
+                {t("settings.main.address.submit")}
               </SubmitButton>
             </FieldActions>
           </FieldGrid>

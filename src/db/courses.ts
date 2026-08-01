@@ -3,7 +3,7 @@ import type { CourseContent } from "@/lib/courses";
 import { courseSlug } from "@/lib/courses";
 import type { CertificationLevel } from "@/lib/readiness";
 import type { AppDb } from "./client";
-import { courses } from "./schema";
+import { courses, shops } from "./schema";
 
 export type NewCourse = {
   shopId: string;
@@ -73,6 +73,23 @@ export async function listActiveCourses(db: AppDb, shopId: string) {
     .from(courses)
     .where(and(eq(courses.shopId, shopId), eq(courses.isActive, true)))
     .orderBy(asc(courses.title));
+}
+
+/**
+ * Every publicly-indexable course page, for the sitemap — active courses at
+ * non-demo shops, across the whole catalog rather than one shop at a time, so
+ * this joins to `shops` for the `isDemo` filter instead of looping
+ * {@link listActiveCourses} per shop.
+ */
+export async function listActiveCoursesForSitemap(
+  db: AppDb,
+): Promise<{ shopSlug: string; courseSlug: string }[]> {
+  const rows = await db
+    .select({ shopSlug: shops.slug, courseSlug: courses.slug })
+    .from(courses)
+    .innerJoin(shops, eq(courses.shopId, shops.id))
+    .where(and(eq(courses.isActive, true), eq(shops.isDemo, false)));
+  return rows;
 }
 
 /** Full shop copy, including entries hidden from new session scheduling. */

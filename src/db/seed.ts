@@ -255,6 +255,14 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
       // course pages, where it backs the "Get in touch" composer.
       contactEmail: "hello@demo.invalid",
       contactPhone: "+1 305 555 0142",
+      // A real street exercises the address end to end (structured data,
+      // settings form) without publishing anything a search engine could act
+      // on for a demo fixture.
+      addressStreet: "100 Ocean Drive",
+      addressLocality: "Key Largo",
+      addressRegion: "FL",
+      addressPostalCode: "33037",
+      addressCountry: "US",
       // Rents the core kit plus both add-ons and fills nitrox, and prices them:
       // a full set is cheaper than the pieces, each piece has its own price, and
       // nitrox is a per-dive surcharge. Divers see these when they set their

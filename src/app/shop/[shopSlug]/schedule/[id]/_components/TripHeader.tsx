@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { diverTranslator } from "@/i18n/messages";
 import { courseCharges, perDiverBookingPriceCents } from "@/lib/courses";
@@ -42,7 +43,13 @@ export function TripHeader({ shop, trip, locale }: { shop: Shop; trip: Trip; loc
             </p>
             {trip.course ? (
               <p className="mt-2 text-sm font-medium text-primary">
-                {t("trip.courseSession")} · {trip.course.title}
+                {t("trip.courseSession")} ·{" "}
+                <Link
+                  href={`/shop/${shop.slug}/courses/${trip.course.slug}`}
+                  className="underline-offset-2 hover:underline focus-visible:underline"
+                >
+                  {trip.course.title}
+                </Link>
               </p>
             ) : null}
             {/* Minimum age was previously shown only on the course page, never here

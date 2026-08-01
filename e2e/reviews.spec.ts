@@ -131,6 +131,26 @@ test("the public schedule publishes the shop's rating as structured data", async
   expect(graph?.toLowerCase()).not.toContain("bookingid");
 });
 
+test("the public schedule publishes its published reviews as Review objects", async ({ page }) => {
+  await page.goto("/shop/blue-mantis/schedule");
+  const graph = await page.locator('script[type="application/ld+json"]').first().textContent();
+  const parsed = JSON.parse(graph ?? "{}");
+  const reviews = parsed.review;
+  expect(Array.isArray(reviews)).toBe(true);
+  expect(reviews.length).toBeGreaterThan(0);
+  const [firstReview] = reviews;
+  expect(firstReview["@type"]).toBe("Review");
+  expect(firstReview.author["@type"]).toBe("Person");
+  expect(typeof firstReview.author.name).toBe("string");
+  expect(firstReview.reviewRating["@type"]).toBe("Rating");
+  expect(typeof firstReview.reviewBody).toBe("string");
+  expect(typeof firstReview.datePublished).toBe("string");
+  // Never threaded into a per-trip Event's organizer — only the page's own
+  // top-level graph carries the shop's full review list.
+  const firstTripOrganizer = parsed.itemListElement?.[0]?.item?.organizer;
+  expect(firstTripOrganizer?.review).toBeUndefined();
+});
+
 test("the embed widget emits no structured data — the standalone page is canonical", async ({
   page,
 }) => {

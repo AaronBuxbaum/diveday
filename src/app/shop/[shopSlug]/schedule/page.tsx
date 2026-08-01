@@ -199,10 +199,13 @@ export default async function SchedulePage({
     listMonthBounds ?? monthBoundsUtc(currentMonth);
 
   // Structured data describes the canonical standalone page only — see
-  // generateMetadata above. The graph's `aggregateRating` needs the review
-  // aggregate, which streams in with the reviews section below
-  // (<ScheduleReviewsSection>) rather than blocking here — it renders the
-  // JsonLd script tag alongside the reviews it describes.
+  // generateMetadata above. The graph's `aggregateRating` and `review` items
+  // both need the review fetch, which streams in with the reviews section
+  // below (<ScheduleReviewsSection>) rather than blocking here — it renders
+  // the JsonLd script tag alongside the reviews it describes. Reviews only
+  // ever come from that page's own top-level call: they're the same rows
+  // `<ShopReviews>` renders directly beneath it, never threaded into a
+  // per-trip Event's organizer.
   const showReviews = !isEmbed;
 
   return (
@@ -499,6 +502,27 @@ export default async function SchedulePage({
           <LastMinuteListForm shopSlug={shopSlug} />
         </DiverIntlProvider>
       ) : null}
+      {/* Human-discovery footer, embed mode only — a single small line, not a
+          banner, so the widget stays compact and booking-focused (docs ADR
+          20260726-schedule-embed). A relative href resolves against the
+          iframe's own document (this page's origin), not the parent page, so
+          it reaches the DiveDay homepage regardless of what site framed it. */}
+      {isEmbed ? (
+        <p className="mt-4 text-center text-xs text-muted">
+          <Link
+            href={`/?${new URLSearchParams({
+              utm_source: "embed",
+              utm_medium: "widget",
+              utm_campaign: shopSlug,
+            }).toString()}`}
+            target="_blank"
+            rel="noopener"
+            className="hover:underline"
+          >
+            {t("schedule.poweredByDiveDay")}
+          </Link>
+        </p>
+      ) : null}
     </main>
   );
 }
@@ -598,7 +622,8 @@ function ScheduleCalendarSkeleton() {
  * `<Suspense>` boundary above — the slowest of the page's independent reads,
  * now free to stream in behind the shell and trip list rather than gate them.
  * Also carries the page's structured-data script tag: its `aggregateRating`
- * comes from the same aggregate, so one fetch serves both rather than two.
+ * and `review` items both come from this same fetch, so one read serves all
+ * three rather than three.
  */
 async function ScheduleReviewsSection({
   db,
@@ -637,6 +662,18 @@ async function ScheduleReviewsSection({
     })),
     origin,
     reviewAggregate,
+    reviews.flatMap((review) =>
+      review.comment
+        ? [
+            {
+              reviewer: review.reviewer,
+              rating: review.rating,
+              comment: review.comment,
+              divedAt: review.divedAt,
+            },
+          ]
+        : [],
+    ),
   );
   return (
     <>
