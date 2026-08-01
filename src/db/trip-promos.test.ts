@@ -294,7 +294,7 @@ describe("listOutstandingLastMinutePromos", () => {
     // different trip (src/db/seed.ts) — assert this one is present rather
     // than that it's the only row, so the test doesn't depend on the seed's
     // shape.
-    const outstanding = await listOutstandingLastMinutePromos(db, shop.id);
+    const { deals: outstanding } = await listOutstandingLastMinutePromos(db, shop.id);
     expect(outstanding).toContainEqual(
       expect.objectContaining({
         id: outcome.promoId,
@@ -320,7 +320,7 @@ describe("listOutstandingLastMinutePromos", () => {
       }),
     );
 
-    const outstanding = await listOutstandingLastMinutePromos(db, shop.id);
+    const { deals: outstanding } = await listOutstandingLastMinutePromos(db, shop.id);
     expect(outstanding.map((promo) => promo.tripId)).not.toContain(openTrip.id);
   });
 
@@ -338,8 +338,46 @@ describe("listOutstandingLastMinutePromos", () => {
     // 20260727-last-minute-fill-promos) — asking "as of after departure"
     // is the same query the diver-facing lookup uses to treat it as dead.
     const afterDeparture = new Date(openTrip.startsAt.getTime() + 1);
-    const outstanding = await listOutstandingLastMinutePromos(db, shop.id, afterDeparture);
+    const { deals: outstanding } = await listOutstandingLastMinutePromos(
+      db,
+      shop.id,
+      afterDeparture,
+    );
     expect(outstanding.map((promo) => promo.tripId)).not.toContain(openTrip.id);
+  });
+
+  it("pages with a keyset cursor and never repeats or skips a deal", async () => {
+    const { db, shop, openTrip } = await context();
+    await connectStripe(db, shop.id);
+    await joinLastMinuteList(db, { shopId: shop.id, ...visitor });
+    await sendLastMinuteDealBlast(
+      db,
+      { shopId: shop.id, shopSlug: "blue-mantis", tripId: openTrip.id, discountPercent: 30 },
+      fakePromotions(),
+    );
+
+    // The seeded demo shop already carries its own outstanding deal on a
+    // different trip, so this is at least two rows without depending on the
+    // seed's exact shape.
+    const all = await listOutstandingLastMinutePromos(db, shop.id);
+    expect(all.nextCursor).toBeNull();
+    expect(all.deals.length).toBeGreaterThanOrEqual(2);
+
+    const seen: string[] = [];
+    let cursor: string | undefined;
+    const maxHops = all.deals.length + 1;
+    for (let hops = 0; hops < maxHops; hops++) {
+      const page = await listOutstandingLastMinutePromos(db, shop.id, undefined, {
+        cursor,
+        limit: 1,
+      });
+      expect(page.deals.length).toBeLessThanOrEqual(1);
+      seen.push(...page.deals.map((deal) => deal.id));
+      if (!page.nextCursor) break;
+      cursor = page.nextCursor;
+    }
+    expect(seen).toEqual(all.deals.map((deal) => deal.id));
+    expect(new Set(seen).size).toBe(seen.length);
   });
 });
 

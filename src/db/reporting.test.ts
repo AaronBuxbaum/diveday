@@ -4,7 +4,7 @@ import type { Role } from "@/lib/authz";
 import { summarizeMonth } from "@/lib/reporting";
 import { seededShopContext } from "@/test/db";
 import type { AppDb } from "./client";
-import { canPersonViewShopReports, getMonthlyReport } from "./reporting";
+import { canPersonViewShopReports, getMonthlyReport, pagedMonthlyReportTrips } from "./reporting";
 import {
   bookingCheckoutBookings,
   bookingCheckouts,
@@ -311,6 +311,81 @@ describe("getMonthlyReport", () => {
     const otherReport = await getMonthlyReport(db, otherShop.id, JUNE_START, JULY_START);
     expect(otherReport.trips).toEqual([]);
     expect(otherReport.revenueCents).toBe(0);
+  });
+});
+
+describe("pagedMonthlyReportTrips", () => {
+  it("pages with a keyset cursor and never repeats or skips a trip", async () => {
+    const { db, shop } = await seededShopContext();
+    for (let day = 1; day <= 5; day++) {
+      await makeTrip(db, shop.id, new Date(`2026-06-0${day}T10:00:00Z`), 4, `Trip ${day}`);
+    }
+
+    const all = await getMonthlyReport(db, shop.id, JUNE_START, JULY_START);
+    expect(all.trips.length).toBeGreaterThanOrEqual(5);
+
+    const sortedIds = [...all.trips]
+      .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime())
+      .map((trip) => trip.tripId);
+
+    const seen: string[] = [];
+    let cursor: string | undefined;
+    const maxHops = all.trips.length + 1;
+    for (let hops = 0; hops < maxHops; hops++) {
+      const page = await pagedMonthlyReportTrips(db, shop.id, JUNE_START, JULY_START, {
+        cursor,
+        limit: 2,
+      });
+      expect(page.trips.length).toBeLessThanOrEqual(2);
+      seen.push(...page.trips.map((trip) => trip.tripId));
+      if (!page.nextCursor) break;
+      cursor = page.nextCursor;
+    }
+    expect(seen).toEqual(sortedIds);
+    expect(new Set(seen).size).toBe(seen.length);
+  });
+
+  it("never truncates summarizeMonth's totals, even when the table page is tiny", async () => {
+    const { db, shop } = await seededShopContext();
+    const diver = await makePerson(db, shop.id, "Deep Dana");
+    for (let day = 1; day <= 4; day++) {
+      const tripId = await makeTrip(
+        db,
+        shop.id,
+        new Date(`2026-06-1${day}T10:00:00Z`),
+        1,
+        `T${day}`,
+      );
+      const bookingId = await makeBooking(db, shop.id, tripId, diver);
+      await pay(db, shop.id, bookingId, "paid", 10_000);
+    }
+
+    // A one-row display page — proof the headline metrics still see every
+    // trip in the month, not just the page a viewer happens to be on.
+    const tinyPage = await pagedMonthlyReportTrips(db, shop.id, JUNE_START, JULY_START, {
+      limit: 1,
+    });
+    expect(tinyPage.trips).toHaveLength(1);
+    expect(tinyPage.nextCursor).not.toBeNull();
+
+    const totals = summarizeMonth(await getMonthlyReport(db, shop.id, JUNE_START, JULY_START));
+    expect(totals.tripCount).toBeGreaterThanOrEqual(4);
+    expect(totals.seatsOffered).toBeGreaterThanOrEqual(4);
+    expect(totals.seatsBooked).toBeGreaterThanOrEqual(4);
+    expect(totals.atCapacityTrips).toBeGreaterThanOrEqual(4);
+    expect(totals.revenueCents).toBeGreaterThanOrEqual(40_000);
+  });
+
+  it("treats a mangled cursor as the first page", async () => {
+    const { db, shop } = await seededShopContext();
+    await makeTrip(db, shop.id, new Date("2026-06-02T10:00:00Z"), 4, "Trip A");
+    await makeTrip(db, shop.id, new Date("2026-06-03T10:00:00Z"), 4, "Trip B");
+
+    const all = await pagedMonthlyReportTrips(db, shop.id, JUNE_START, JULY_START);
+    const mangled = await pagedMonthlyReportTrips(db, shop.id, JUNE_START, JULY_START, {
+      cursor: "not-a-real-cursor",
+    });
+    expect(mangled.trips.map((trip) => trip.tripId)).toEqual(all.trips.map((trip) => trip.tripId));
   });
 });
 

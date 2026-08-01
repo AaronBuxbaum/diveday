@@ -1,5 +1,6 @@
 import {
   and,
+  asc,
   count,
   countDistinct,
   eq,
@@ -11,11 +12,13 @@ import {
   lt,
   ne,
   not,
+  or,
   sum,
 } from "drizzle-orm";
 import { canViewShopReports, type Role } from "@/lib/authz";
 import type { MonthlyReportInput, ReportTrip } from "@/lib/reporting";
 import type { DbExecutor } from "./client";
+import { decodeCursor, encodeCursor } from "./cursor";
 import {
   bookingCheckoutBookings,
   bookingCheckouts,
@@ -255,5 +258,119 @@ export async function getMonthlyReport(
       Number(baseRevenue?.total ?? 0) +
       Number(recoveredDeposits?.total ?? 0) +
       Number(invoiceRevenue?.total ?? 0),
+  };
+}
+
+/** How many trips the "Trips this month" table shows per page before "Show more". */
+export const REPORT_TRIPS_PAGE_SIZE = 20;
+
+export type MonthlyReportTripPage = {
+  trips: ReportTrip[];
+  nextCursor: string | null;
+};
+
+/**
+ * The month's trips, one keyset page at a time (ordered by departure, then id
+ * for a stable tiebreak) — the "Trips this month" table's own display slice.
+ * `getMonthlyReport`'s `trips` array stays unbounded on purpose:
+ * `summarizeMonth`'s totals (seat fill, waiver completion, at-capacity count)
+ * have to see every trip in the month, not just the page a viewer happens to
+ * be looking at, so a shop with a busy month costs the table one page, not
+ * the headline numbers going quietly wrong.
+ */
+export async function pagedMonthlyReportTrips(
+  db: DbExecutor,
+  shopId: string,
+  startUtc: Date,
+  endUtc: Date,
+  options: { cursor?: string; limit?: number } = {},
+): Promise<MonthlyReportTripPage> {
+  const limit = options.limit ?? REPORT_TRIPS_PAGE_SIZE;
+  const after = decodeCursor(options.cursor);
+  const afterDate = after ? new Date(after[0]) : null;
+
+  const inWindow = and(
+    eq(trips.shopId, shopId),
+    ne(trips.status, "cancelled"),
+    gte(trips.startsAt, startUtc),
+    lt(trips.startsAt, endUtc),
+    afterDate && after && !Number.isNaN(afterDate.getTime())
+      ? or(
+          gt(trips.startsAt, afterDate),
+          and(eq(trips.startsAt, afterDate), gt(trips.id, after[1])),
+        )
+      : undefined,
+  );
+
+  const tripRows = await db
+    .select({
+      tripId: trips.id,
+      title: trips.title,
+      startsAt: trips.startsAt,
+      capacity: trips.capacity,
+      activeBookings: count(bookings.id),
+    })
+    .from(trips)
+    .leftJoin(
+      bookings,
+      and(
+        eq(bookings.tripId, trips.id),
+        eq(bookings.shopId, shopId),
+        inArray(bookings.status, [...ACTIVE_BOOKING_STATUSES]),
+      ),
+    )
+    .where(inWindow)
+    .groupBy(trips.id, trips.title, trips.startsAt, trips.capacity)
+    .orderBy(asc(trips.startsAt), asc(trips.id))
+    .limit(limit + 1);
+
+  const pageRows = tripRows.slice(0, limit);
+  const tripIds = pageRows.map((row) => row.tripId);
+
+  const waiverRows = tripIds.length
+    ? await db
+        .select({
+          tripId: trips.id,
+          waiverComplete: countDistinct(bookings.id),
+        })
+        .from(trips)
+        .innerJoin(
+          bookings,
+          and(
+            eq(bookings.tripId, trips.id),
+            eq(bookings.shopId, shopId),
+            inArray(bookings.status, [...ACTIVE_BOOKING_STATUSES]),
+          ),
+        )
+        .innerJoin(
+          waiverRecords,
+          and(
+            eq(waiverRecords.personId, bookings.personId),
+            eq(waiverRecords.shopId, shopId),
+            eq(waiverRecords.status, "completed"),
+            isNull(waiverRecords.supersededAt),
+          ),
+        )
+        .where(inArray(trips.id, tripIds))
+        .groupBy(trips.id)
+    : [];
+  const waiverByTrip = new Map(waiverRows.map((row) => [row.tripId, Number(row.waiverComplete)]));
+
+  const reportTrips: ReportTrip[] = pageRows.map((row) => ({
+    tripId: row.tripId,
+    title: row.title,
+    startsAt: row.startsAt,
+    capacity: row.capacity,
+    activeBookings: Number(row.activeBookings),
+    waiverComplete: waiverByTrip.get(row.tripId) ?? 0,
+  }));
+
+  const last = pageRows.at(-1);
+  return {
+    trips: reportTrips,
+    nextCursor:
+      tripRows.length > limit && last
+        ? encodeCursor(last.startsAt.toISOString(), last.tripId)
+        : null,
   };
 }

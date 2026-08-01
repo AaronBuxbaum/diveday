@@ -1,4 +1,4 @@
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, lt, or, sql } from "drizzle-orm";
 import { nowDate, nowMs } from "@/lib/clock";
 import {
   type PromotionProvider,
@@ -12,6 +12,7 @@ import {
   type PromoScope,
 } from "@/lib/promo-codes";
 import type { AppDb, DbExecutor } from "./client";
+import { decodeCursor, encodeCursor } from "./cursor";
 import { type ShopPromoCode, shopPromoCodes, shopPromoRedemptions } from "./schema";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 
@@ -185,11 +186,29 @@ export async function getRedeemableShopPromo(
 
 export type ShopPromoWithUsage = ShopPromoCode & { timesRedeemed: number };
 
-/** Every code the shop has, newest first, each with its own redemption count. */
+/** How many codes the Promos page's "Your codes" list shows per page before "Show more". */
+export const SHOP_PROMO_PAGE_SIZE = 20;
+
+export type ShopPromoPage = {
+  promos: ShopPromoWithUsage[];
+  nextCursor: string | null;
+};
+
+/**
+ * Every code the shop has, newest first, each with its own redemption count —
+ * one keyset page at a time (ordered by creation, then id for a stable
+ * tiebreak), same idiom as `listShopReviewsForStaff` so a shop with years of
+ * codes costs one page, not the whole table.
+ */
 export async function listShopPromoCodes(
   db: DbExecutor,
   shopId: string,
-): Promise<ShopPromoWithUsage[]> {
+  options: { cursor?: string; limit?: number } = {},
+): Promise<ShopPromoPage> {
+  const limit = options.limit ?? SHOP_PROMO_PAGE_SIZE;
+  const after = decodeCursor(options.cursor);
+  const afterDate = after ? new Date(after[0]) : null;
+
   const rows = await db
     .select({
       promo: shopPromoCodes,
@@ -199,10 +218,30 @@ export async function listShopPromoCodes(
     })
     .from(shopPromoCodes)
     .leftJoin(shopPromoRedemptions, eq(shopPromoRedemptions.promoCodeId, shopPromoCodes.id))
-    .where(eq(shopPromoCodes.shopId, shopId))
+    .where(
+      and(
+        eq(shopPromoCodes.shopId, shopId),
+        afterDate && after && !Number.isNaN(afterDate.getTime())
+          ? or(
+              lt(shopPromoCodes.createdAt, afterDate),
+              and(eq(shopPromoCodes.createdAt, afterDate), lt(shopPromoCodes.id, after[1])),
+            )
+          : undefined,
+      ),
+    )
     .groupBy(shopPromoCodes.id)
-    .orderBy(desc(shopPromoCodes.createdAt));
-  return rows.map(({ promo, timesRedeemed }) => ({ ...promo, timesRedeemed }));
+    .orderBy(desc(shopPromoCodes.createdAt), desc(shopPromoCodes.id))
+    .limit(limit + 1);
+
+  const pageRows = rows
+    .slice(0, limit)
+    .map(({ promo, timesRedeemed }) => ({ ...promo, timesRedeemed }));
+  const last = pageRows.at(-1);
+  return {
+    promos: pageRows,
+    nextCursor:
+      rows.length > limit && last ? encodeCursor(last.createdAt.toISOString(), last.id) : null,
+  };
 }
 
 /**

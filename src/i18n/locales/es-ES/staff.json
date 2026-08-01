@@ -414,7 +414,9 @@
       "hide": "Ocultar",
       "show": "Mostrar",
       "hideShowSrLabel": "{action} {title}",
-      "previewSrLabel": "Vista previa de {title}"
+      "previewSrLabel": "Vista previa de {title}",
+      "showMore": "Mostrar más cursos",
+      "backToTop": "← Volver al principio de la lista"
     },
     "edit": {
       "backToCourses": "← Cursos",
@@ -840,6 +842,8 @@
     "creating": "Creando…",
     "createCode": "Crear código",
     "yourCodes": "Tus códigos",
+    "showMoreCodes": "Mostrar más códigos",
+    "backToTop": "← Volver al principio de la lista",
     "empty": {
       "heading": "Todavía no hay códigos",
       "detail": "Crea uno arriba, o envía una oferta de última hora desde la página de una salida cuando el barco necesite llenarse."
@@ -874,7 +878,9 @@
       "empty": "No hay ofertas por salida activas ahora mismo. Envía una desde la página de una salida cuando el barco necesite llenarse.",
       "recipients": "{count, plural, one {Enviado a # buceador} other {Enviado a # buceadores}}",
       "expiresAt": "Caduca {date}",
-      "rangeNote": "Las ofertas por salida llegan como máximo al 90% de descuento — el barco sale de todos modos, así que la oferta siempre deja algo sobre la mesa. Los códigos de toda la tienda de arriba pueden llegar al 100% porque el personal también los usa para cortesías y fidelización, no solo para llenar plazas."
+      "rangeNote": "Las ofertas por salida llegan como máximo al 90% de descuento — el barco sale de todos modos, así que la oferta siempre deja algo sobre la mesa. Los códigos de toda la tienda de arriba pueden llegar al 100% porque el personal también los usa para cortesías y fidelización, no solo para llenar plazas.",
+      "showMore": "Mostrar más ofertas",
+      "backToTop": "← Volver al principio de la lista"
     }
   },
   "reports": {
@@ -940,7 +946,9 @@
     },
     "seatsMobile": "{booked}/{capacity} plazas",
     "fillLabel": "{booked} de {capacity} plazas reservadas",
-    "waiversRowLabel": "{complete} de {total} hojas de exención firmadas"
+    "waiversRowLabel": "{complete} de {total} hojas de exención firmadas",
+    "showMoreTrips": "Mostrar más salidas",
+    "backToTop": "← Volver al principio de la lista"
   },
   "reviews": {
     "eyebrow": "Reseñas",

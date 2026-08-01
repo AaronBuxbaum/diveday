@@ -75,6 +75,8 @@ export default async function PromosPage({
     undoStartsAt?: string;
     undoExpiresAt?: string;
     undoMaxRedemptions?: string;
+    after?: string;
+    dealsAfter?: string;
   }>;
 }) {
   const session = await requireStaffSession();
@@ -88,6 +90,8 @@ export default async function PromosPage({
     undoStartsAt,
     undoExpiresAt,
     undoMaxRedemptions,
+    after,
+    dealsAfter,
   } = await searchParams;
   const db = await getDb();
   const allowed = await canPersonManagePaymentSettings(
@@ -104,18 +108,36 @@ export default async function PromosPage({
   // not a message about a different surface they never asked for.
   if (!allowed) redirect(`/shop/${shopSlug}/settings?notice=promos_not_authorized`);
 
-  const [shop, promos, stripeAccount, tripDeals] = await Promise.all([
+  const now = nowDate();
+  const [shop, promoPage, stripeAccount, dealPage] = await Promise.all([
     getShopById(db, session.user.shopId),
-    listShopPromoCodes(db, session.user.shopId),
+    listShopPromoCodes(db, session.user.shopId, { cursor: after }),
     getShopStripeAccount(db, session.user.shopId),
-    listOutstandingLastMinutePromos(db, session.user.shopId),
+    listOutstandingLastMinutePromos(db, session.user.shopId, now, { cursor: dealsAfter }),
   ]);
+  const { promos, nextCursor: promosNextCursor } = promoPage;
+  const { deals: tripDeals, nextCursor: dealsNextCursor } = dealPage;
+  // The two lists page independently, so changing one's cursor must carry the
+  // other's along rather than resetting it back to its own first page.
+  const promosHref = (cursor?: string) => {
+    const query = new URLSearchParams();
+    if (cursor) query.set("after", cursor);
+    if (dealsAfter) query.set("dealsAfter", dealsAfter);
+    const search = query.toString();
+    return search ? `/shop/${shopSlug}/promos?${search}` : `/shop/${shopSlug}/promos`;
+  };
+  const dealsHref = (cursor?: string) => {
+    const query = new URLSearchParams();
+    if (after) query.set("after", after);
+    if (cursor) query.set("dealsAfter", cursor);
+    const search = query.toString();
+    return search ? `/shop/${shopSlug}/promos?${search}` : `/shop/${shopSlug}/promos`;
+  };
   const connected = canAcceptPayments(stripeAccount);
   const banner = noticeFromParam(notice, NOTICES);
   const locale = await requestLocale(shop?.defaultLocale);
   const t = staffTranslator(locale);
   const timezone = shop?.timezone ?? "UTC";
-  const now = nowDate();
 
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
@@ -367,6 +389,23 @@ export default async function PromosPage({
           })}
         </ul>
       )}
+      {promosNextCursor || after ? (
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          {promosNextCursor ? (
+            <Link
+              href={promosHref(promosNextCursor)}
+              className={buttonClass({ variant: "secondary" })}
+            >
+              {t("promos.showMoreCodes")}
+            </Link>
+          ) : null}
+          {after ? (
+            <Link href={promosHref()} className="text-sm font-medium text-primary hover:underline">
+              {t("promos.backToTop")}
+            </Link>
+          ) : null}
+        </div>
+      ) : null}
 
       <h2 className="mt-10 font-medium">{t("promos.tripDeals.heading")}</h2>
       <p className="mt-1 text-sm text-muted">{t("promos.tripDeals.description")}</p>
@@ -403,6 +442,23 @@ export default async function PromosPage({
           ))}
         </ul>
       )}
+      {dealsNextCursor || dealsAfter ? (
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          {dealsNextCursor ? (
+            <Link
+              href={dealsHref(dealsNextCursor)}
+              className={buttonClass({ variant: "secondary" })}
+            >
+              {t("promos.tripDeals.showMore")}
+            </Link>
+          ) : null}
+          {dealsAfter ? (
+            <Link href={dealsHref()} className="text-sm font-medium text-primary hover:underline">
+              {t("promos.tripDeals.backToTop")}
+            </Link>
+          ) : null}
+        </div>
+      ) : null}
       <p className="mt-3 text-xs text-muted">{t("promos.tripDeals.rangeNote")}</p>
     </main>
   );

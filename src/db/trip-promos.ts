@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gt, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, gt, inArray, or } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import {
   generateLastMinutePromoCode,
@@ -14,6 +14,7 @@ import {
 import { spotsRemaining } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import type { AppDb, DbExecutor } from "./client";
+import { decodeCursor, encodeCursor } from "./cursor";
 import { issueLastMinuteListUnsubscribeToken, listLastMinuteList } from "./last-minute-list";
 import { notificationProviderForDb, sendNotificationBatch } from "./notifications";
 import { type TripLastMinutePromo, tripLastMinutePromos, trips } from "./schema";
@@ -189,22 +190,37 @@ export type OutstandingLastMinutePromo = TripLastMinutePromo & {
   tripStartsAt: Date;
 };
 
+/** How many deals the Promos page's "Trip deals" list shows per page before "Show more". */
+export const TRIP_DEAL_PAGE_SIZE = 20;
+
+export type OutstandingLastMinutePromoPage = {
+  deals: OutstandingLastMinutePromo[];
+  nextCursor: string | null;
+};
+
 /**
- * Every `sent`, unexpired last-minute code across the whole shop, newest
- * expiry first among what's soonest to lapse — the shop-wide counterpart to
- * `listTripLastMinutePromos`'s one-trip history. Backs the read-only "Trip
- * deals" section on `/promos` (task 148, UX-persona Lens 17): before this,
- * a live trip-scoped code was only ever visible from the one departure it was
- * sent on, so a code nobody remembered sending kept discounting quietly.
- * `pending`/`failed` rows are excluded — they were never redeemable and
- * showing them here would just be noise the trip's own send history already
- * carries.
+ * Every `sent`, unexpired last-minute code across the whole shop, soonest to
+ * expire first — the shop-wide counterpart to `listTripLastMinutePromos`'s
+ * one-trip history. Backs the read-only "Trip deals" section on `/promos`
+ * (task 148, UX-persona Lens 17): before this, a live trip-scoped code was
+ * only ever visible from the one departure it was sent on, so a code nobody
+ * remembered sending kept discounting quietly. `pending`/`failed` rows are
+ * excluded — they were never redeemable and showing them here would just be
+ * noise the trip's own send history already carries.
+ *
+ * One keyset page at a time (ordered by expiry, then id for a stable
+ * tiebreak), same idiom as `listShopPromoCodes`.
  */
 export async function listOutstandingLastMinutePromos(
   db: DbExecutor,
   shopId: string,
   now: Date = nowDate(),
-): Promise<OutstandingLastMinutePromo[]> {
+  options: { cursor?: string; limit?: number } = {},
+): Promise<OutstandingLastMinutePromoPage> {
+  const limit = options.limit ?? TRIP_DEAL_PAGE_SIZE;
+  const after = decodeCursor(options.cursor);
+  const afterDate = after ? new Date(after[0]) : null;
+
   const rows = await db
     .select({
       promo: tripLastMinutePromos,
@@ -218,10 +234,29 @@ export async function listOutstandingLastMinutePromos(
         eq(tripLastMinutePromos.shopId, shopId),
         eq(tripLastMinutePromos.status, "sent"),
         gt(tripLastMinutePromos.expiresAt, now),
+        afterDate && after && !Number.isNaN(afterDate.getTime())
+          ? or(
+              gt(tripLastMinutePromos.expiresAt, afterDate),
+              and(
+                eq(tripLastMinutePromos.expiresAt, afterDate),
+                gt(tripLastMinutePromos.id, after[1]),
+              ),
+            )
+          : undefined,
       ),
     )
-    .orderBy(asc(tripLastMinutePromos.expiresAt));
-  return rows.map(({ promo, tripTitle, tripStartsAt }) => ({ ...promo, tripTitle, tripStartsAt }));
+    .orderBy(asc(tripLastMinutePromos.expiresAt), asc(tripLastMinutePromos.id))
+    .limit(limit + 1);
+
+  const pageRows = rows
+    .slice(0, limit)
+    .map(({ promo, tripTitle, tripStartsAt }) => ({ ...promo, tripTitle, tripStartsAt }));
+  const last = pageRows.at(-1);
+  return {
+    deals: pageRows,
+    nextCursor:
+      rows.length > limit && last ? encodeCursor(last.expiresAt.toISOString(), last.id) : null,
+  };
 }
 
 /**

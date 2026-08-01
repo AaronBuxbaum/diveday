@@ -1,8 +1,9 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, gt, or } from "drizzle-orm";
 import type { CourseContent } from "@/lib/courses";
 import { courseSlug } from "@/lib/courses";
 import type { CertificationLevel } from "@/lib/readiness";
 import type { AppDb } from "./client";
+import { decodeCursor, encodeCursor } from "./cursor";
 import { courses, shops } from "./schema";
 
 export type NewCourse = {
@@ -92,13 +93,68 @@ export async function listActiveCoursesForSitemap(
   return rows;
 }
 
-/** Full shop copy, including entries hidden from new session scheduling. */
+/**
+ * Full shop copy, including entries hidden from new session scheduling. Used
+ * wherever the *complete* catalog is needed, not one page of it: the New Trip
+ * course dropdown, the certification-path builder's course picker, and the
+ * roster this file also exposes a paginated view of below. Never add a
+ * `limit` here — every one of those callers needs the whole set.
+ */
 export async function listCourses(db: AppDb, shopId: string) {
   return db
     .select()
     .from(courses)
     .where(eq(courses.shopId, shopId))
     .orderBy(asc(courses.agency), asc(courses.title));
+}
+
+/** How many courses the staff roster (`/courses`) shows per page before "Show more". */
+export const COURSE_PAGE_SIZE = 20;
+
+export type CoursePage = {
+  courses: Awaited<ReturnType<typeof listCourses>>;
+  nextCursor: string | null;
+};
+
+/**
+ * The staff roster's own paginated view of {@link listCourses} — same scope
+ * (full catalog, hidden entries included) and sort (agency, then title,
+ * which is unique per shop and so doubles as the keyset tiebreak), just one
+ * keyset page at a time. Every other caller of `listCourses`/
+ * `listActiveCourses` needs the complete set for a dropdown or picker and
+ * must keep calling those, not this.
+ */
+export async function pagedCourses(
+  db: AppDb,
+  shopId: string,
+  options: { cursor?: string; limit?: number } = {},
+): Promise<CoursePage> {
+  const limit = options.limit ?? COURSE_PAGE_SIZE;
+  const after = decodeCursor(options.cursor);
+
+  const rows = await db
+    .select()
+    .from(courses)
+    .where(
+      and(
+        eq(courses.shopId, shopId),
+        after
+          ? or(
+              gt(courses.agency, after[0]),
+              and(eq(courses.agency, after[0]), gt(courses.title, after[1])),
+            )
+          : undefined,
+      ),
+    )
+    .orderBy(asc(courses.agency), asc(courses.title))
+    .limit(limit + 1);
+
+  const pageRows = rows.slice(0, limit);
+  const last = pageRows.at(-1);
+  return {
+    courses: pageRows,
+    nextCursor: rows.length > limit && last ? encodeCursor(last.agency, last.title) : null,
+  };
 }
 
 export async function updateCourse(
