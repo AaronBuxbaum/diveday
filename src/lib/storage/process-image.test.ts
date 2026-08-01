@@ -58,6 +58,26 @@ describe("processImage (CR-012)", () => {
     }
   });
 
+  it("resizes an image larger than the 2048px bound down to fit, preserving aspect ratio", async () => {
+    const input = await realImage("jpeg", { width: 3000, height: 1500 });
+    const result = await processImage(input);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const decoded = await sharp(result.bytes).metadata();
+    expect(decoded.width).toBe(2048);
+    expect(decoded.height).toBe(1024);
+  });
+
+  it("does not enlarge an image already within the 2048px bound", async () => {
+    const input = await realImage("jpeg", { width: 12, height: 8 });
+    const result = await processImage(input);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const decoded = await sharp(result.bytes).metadata();
+    expect(decoded.width).toBe(12);
+    expect(decoded.height).toBe(8);
+  });
+
   it("strips EXIF/GPS metadata on re-encode instead of publishing it", async () => {
     const withExif = await realImage("jpeg", { withExif: true });
     const beforeMeta = await sharp(withExif).metadata();
