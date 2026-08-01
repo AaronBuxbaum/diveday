@@ -1513,6 +1513,14 @@ export const bookingCheckoutBookings = pgTable(
     bookingId: uuid("booking_id")
       .notNull()
       .references(() => bookings.id),
+    /**
+     * This diver's priced rental-gear subtotal on this checkout, snapshotted
+     * at checkout-creation time (docs ADR 20260801-checkout-upsells-rental-gear).
+     * 0 means either no gear was chosen or (for a historical row predating
+     * this column) gear was never part of checkout — both read the same way:
+     * nothing to attribute to gear for this diver on this payment.
+     */
+    gearCents: integer("gear_cents").notNull().default(0),
   },
   (table) => [
     uniqueIndex("booking_checkout_bookings_checkout_booking_unique").on(
@@ -1520,6 +1528,7 @@ export const bookingCheckoutBookings = pgTable(
       table.bookingId,
     ),
     index("booking_checkout_bookings_booking_idx").on(table.bookingId),
+    check("booking_checkout_bookings_gear_cents_nonnegative", sql`${table.gearCents} >= 0`),
   ],
 );
 

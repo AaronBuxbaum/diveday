@@ -13,6 +13,7 @@ import { recordDiverOwnLocaleForBooking } from "@/db/people";
 import { saveRentalFit } from "@/db/rental-fit";
 import { getRedeemableShopPromo } from "@/db/shop-promos";
 import { getShopById, getShopBySlug } from "@/db/shops";
+import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { getActiveTripPromoByCode } from "@/db/trip-promos";
 import { getTripWithBooked } from "@/db/trips";
 import { joinTripWaitlist } from "@/db/waitlist";
@@ -21,10 +22,17 @@ import { diverTranslator } from "@/i18n/messages";
 import { requestFirstHandLocale, requestLocale } from "@/i18n/request";
 import { trackEvent } from "@/lib/analytics";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
+import { perDiverBookingPriceCents } from "@/lib/courses";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl, recipientLocale } from "@/lib/notifications";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
-import { shopOffersNitrox } from "@/lib/rentals";
+import {
+  hasAnyRentalPricing,
+  offeredRentableItems,
+  quoteRentalFit,
+  type RentableItemKind,
+  shopOffersNitrox,
+} from "@/lib/rentals";
 import { clientIp } from "@/lib/request-ip";
 import { ERROR_MESSAGE_KEYS, type ErrorCode } from "./_components/types";
 
@@ -212,6 +220,41 @@ export async function bookSpot(
     }
   }
 
+  // Gear selection ahead of the first checkout (docs ADR
+  // 20260801-checkout-upsells-rental-gear): only when the shop has actually
+  // priced rental gear online *and* checkout is actually going to run — a
+  // shop that hasn't, or a trip/account that isn't payable, keeps today's
+  // book-first, fit-later flow with no gear step at all. This must mirror
+  // page.tsx's own `payAtBooking` computation exactly: `BookingGearFields`
+  // only renders (and only submits `gear-${index}-*`/`nitrox-${index}` fields)
+  // under that same condition, so parsing them under a looser one here would
+  // read every checkbox as unchecked and silently zero out the diver's fit.
+  const tripForGear = await getTripWithBooked(dbi, shopNow.id, tripId);
+  const perDiverPriceForGear = tripForGear
+    ? perDiverBookingPriceCents(tripForGear, tripForGear.course)
+    : null;
+  const stripeAccountForGear = perDiverPriceForGear
+    ? await getShopStripeAccount(dbi, shopNow.id)
+    : null;
+  const payAtBookingForGear = Boolean(
+    perDiverPriceForGear && canAcceptPayments(stripeAccountForGear) && publicAppUrl(),
+  );
+  const offersGearAtCheckout = payAtBookingForGear && hasAnyRentalPricing(shopNow.rentalPricing);
+  const offeredGearItems = offeredRentableItems(shopNow.rentalItems);
+  const nitroxOfferedAtCheckout = shopOffersNitrox(shopNow.rentalItems);
+  const gearSelections: Array<{ rentedKinds: RentableItemKind[]; wantsNitrox: boolean }> = [];
+  const plannedDives = tripForGear?.plannedDives ?? 2;
+  if (offersGearAtCheckout && (offeredGearItems.length > 0 || nitroxOfferedAtCheckout)) {
+    for (let index = 0; index < partySize.data; index++) {
+      gearSelections.push({
+        rentedKinds: offeredGearItems
+          .filter((item) => formData.get(`gear-${index}-${item.name}`) === "on")
+          .map((item) => item.kind),
+        wantsNitrox: nitroxOfferedAtCheckout && formData.get(`nitrox-${index}`) === "on",
+      });
+    }
+  }
+
   const outcome = await createBookingParty(
     dbi,
     validParty.map((entry, index) => ({
@@ -335,6 +378,44 @@ export async function bookSpot(
     }),
   );
 
+  // Persist each diver's chosen gear (and nitrox request) the moment their
+  // booking exists — the same durable record `saveRentalFit`/`setBookingNitrox`
+  // already write from the post-booking form, just written a step earlier. The
+  // seats are already committed, so a write failure here is logged and
+  // dropped, never turned into a booking error (docs ADR
+  // 20260801-checkout-upsells-rental-gear).
+  if (offersGearAtCheckout) {
+    await Promise.all(
+      outcome.bookings.map(async ({ bookingId, personId }, index) => {
+        const selection = gearSelections[index];
+        if (!selection) return;
+        const rentedSet = new Set(selection.rentedKinds);
+        try {
+          await saveRentalFit(dbi, {
+            shopId: shopNow.id,
+            personId,
+            rentsBcd: rentedSet.has("bcd"),
+            rentsRegulator: rentedSet.has("regulator"),
+            rentsWetsuit: rentedSet.has("wetsuit"),
+            rentsMaskFins: rentedSet.has("mask_fins"),
+            rentsWeights: rentedSet.has("weights"),
+            rentsDiveComputer: rentedSet.has("dive_computer"),
+            rentsGopro: rentedSet.has("gopro"),
+          });
+          if (nitroxOfferedAtCheckout) {
+            await setBookingNitrox(dbi, {
+              shopId: shopNow.id,
+              bookingId,
+              wantsNitrox: selection.wantsNitrox,
+            });
+          }
+        } catch {
+          console.error("Rental fit at booking could not be saved", { bookingId });
+        }
+      }),
+    );
+  }
+
   // The confirmation URL/action bears a purpose-bound `confirm` capability,
   // never the raw booking id — a leaked/guessed booking UUID must not be
   // enough to view or mutate someone else's booking (CR-003). A same-shop
@@ -361,6 +442,34 @@ export async function bookSpot(
   // shop-wide code (docs ADR 20260729-shop-promo-codes) — the trip-scoped
   // lookup ran first, as the more specific match, and only one is ever
   // applied: Stripe Checkout takes a single promotion code.
+  //
+  // One priced gear line per diver whose selection actually quotes to
+  // something — an item the shop hasn't priced online never reaches here
+  // (quoteRentalFit already leaves it off the subtotal), so it stays
+  // "settled at the shop" exactly as the post-booking form describes it.
+  const gearLines = offersGearAtCheckout
+    ? outcome.bookings
+        .map(({ bookingId, personName }, index) => {
+          const selection = gearSelections[index];
+          if (!selection) return null;
+          const quote = quoteRentalFit(shopNow.rentalPricing, {
+            rentedKinds: selection.rentedKinds,
+            offeredKinds: offeredGearItems.map((item) => item.kind),
+            wantsNitrox: selection.wantsNitrox,
+            plannedDives,
+          });
+          if (quote.subtotalCents <= 0) return null;
+          return {
+            bookingId,
+            amountCents: quote.subtotalCents,
+            description:
+              validParty.length > 1
+                ? t("checkoutLine.gearForDiver", { name: personName })
+                : t("checkoutLine.gear"),
+          };
+        })
+        .filter((line): line is NonNullable<typeof line> => line !== null)
+    : [];
   const checkoutUrl = confirmCapability
     ? await startCheckoutUrl(dbi, {
         shopId: shopNow.id,
@@ -373,6 +482,7 @@ export async function bookSpot(
         promotionCode:
           tripPromo?.stripePromotionCodeId ?? shopPromo?.stripePromotionCodeId ?? undefined,
         shopPromo: shopPromo ? { id: shopPromo.id, code: shopPromo.code } : undefined,
+        gearLines,
       })
     : null;
   if (checkoutUrl) {
@@ -400,6 +510,8 @@ async function startCheckoutUrl(
     embed?: boolean;
     promotionCode?: string;
     shopPromo?: { id: string; code: string };
+    /** Priced gear a diver chose at booking, threaded straight to `startBookingCheckout`. */
+    gearLines?: Array<{ bookingId: string; description: string; amountCents: number }>;
   },
 ): Promise<string | null> {
   const origin = publicAppUrl();
@@ -419,6 +531,7 @@ async function startCheckoutUrl(
     cancelUrl: `${returnBase}&pay=cancelled`,
     promotionCode: input.promotionCode,
     shopPromo: input.shopPromo,
+    gearLines: input.gearLines,
     describeLine: ({ isDeposit, tripTitle }) =>
       isDeposit ? t("checkoutLine.deposit", { tripTitle }) : t("checkoutLine.full", { tripTitle }),
   }).catch(() => null);

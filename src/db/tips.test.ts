@@ -29,7 +29,10 @@ function fakeCheckout(overrides: Partial<CheckoutProvider> = {}): CheckoutProvid
         stripeStatus: "open",
         paymentStatus: "unpaid",
         checkoutUrl: `https://checkout.stripe.com/c/pay/cs_tip_${counter}`,
-        amountTotalCents: request.unitAmountCents * request.quantity,
+        amountTotalCents: request.lineItems.reduce(
+          (sum, line) => sum + line.unitAmountCents * line.quantity,
+          0,
+        ),
         expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
       };
     },
@@ -195,7 +198,7 @@ describe("startTipCheckout", () => {
     const outcome = await startTipCheckout(db, tipInput(bookingId, 1000), seen.provider);
     expect(outcome.ok).toBe(true);
     expect(seen.requests[0]?.currency).toBe("jpy");
-    expect(seen.requests[0]?.unitAmountCents).toBe(1000);
+    expect(seen.requests[0]?.lineItems[0]?.unitAmountCents).toBe(1000);
     expect((await getLatestTipForBooking(db, shop.id, bookingId))?.amountCents).toBe(1000);
 
     // The bound means roughly the same amount of money, not the same integer:
