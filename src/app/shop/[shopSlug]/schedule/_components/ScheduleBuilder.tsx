@@ -130,6 +130,132 @@ function fill(template: string, values: Record<string, string | number>): string
 }
 
 /**
+ * The "add a departure" form, pre-dated to whichever day header it was opened
+ * from. Hoisted to module scope (rather than defined inside `ScheduleBuilder`)
+ * so its identity is stable across renders — a component defined in a parent's
+ * render body gets a new identity every render, which makes React unmount and
+ * remount it (and its uncontrolled `<input>`s) on any parent re-render,
+ * silently discarding whatever a staff member had typed.
+ */
+function AddPanel({
+  dateIso,
+  courses,
+  diveSites,
+  copy,
+  onAdd,
+  onCancel,
+}: {
+  dateIso: string;
+  courses: BuilderOption[];
+  diveSites: BuilderOption[];
+  copy: BuilderCopy;
+  // i18n-exempt: type annotation, not copy — the scanner misreads the union as a string.
+  onAdd: (formData: FormData) => void | Promise<void>;
+  onCancel: () => void;
+}) {
+  return (
+    <FieldGrid
+      as="form"
+      action={onAdd}
+      columns={1}
+      className="mt-3 rounded-xl border border-border bg-surface-sunken/50 p-4 gap-y-4"
+    >
+      <Field label={copy.whatIsIt}>
+        <input
+          name="title"
+          type="text"
+          required
+          maxLength={120}
+          placeholder={copy.titlePlaceholder}
+          className={controlClass}
+        />
+      </Field>
+      <FieldGrid columns={3} className="gap-y-4">
+        <Field label={copy.date}>
+          <input name="date" type="date" required defaultValue={dateIso} className={controlClass} />
+        </Field>
+        <Field label={copy.departs}>
+          <input
+            name="startTime"
+            type="time"
+            required
+            defaultValue="08:30"
+            className={controlClass}
+          />
+        </Field>
+        <Field label={copy.returns}>
+          <input
+            name="endTime"
+            type="time"
+            required
+            defaultValue="12:30"
+            className={controlClass}
+          />
+        </Field>
+      </FieldGrid>
+      <FieldGrid columns={2} className="gap-y-4">
+        <Field label={copy.seats}>
+          <input
+            name="capacity"
+            type="number"
+            required
+            min={1}
+            max={60}
+            defaultValue={12}
+            className={`${controlClass} tabular-nums`}
+          />
+        </Field>
+        <Field label={copy.dives}>
+          <input
+            name="plannedDives"
+            type="number"
+            required
+            min={1}
+            max={4}
+            defaultValue={2}
+            className={`${controlClass} tabular-nums`}
+          />
+        </Field>
+      </FieldGrid>
+      <FieldGrid columns={2} className="gap-y-4">
+        <Field label={copy.course} hint={copy.optional}>
+          <select name="courseId" defaultValue="" className={controlClass}>
+            <option value="">{copy.ordinaryTrip}</option>
+            {courses.map((course) => (
+              <option key={course.id} value={course.id}>
+                {course.title}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label={copy.diveSite} hint={copy.optional}>
+          <select name="diveSiteId" defaultValue="" className={controlClass}>
+            <option value="">{copy.decideLater}</option>
+            {diveSites.map((site) => (
+              <option key={site.id} value={site.id}>
+                {site.title}
+              </option>
+            ))}
+          </select>
+        </Field>
+      </FieldGrid>
+      <div className="flex items-center gap-3">
+        <SubmitButton pendingLabel={copy.adding} className={buttonClass()}>
+          {copy.putOnBoard}
+        </SubmitButton>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="text-sm font-medium text-muted hover:text-foreground"
+        >
+          {copy.cancel}
+        </button>
+      </div>
+    </FieldGrid>
+  );
+}
+
+/**
  * The staff schedule board, as a builder rather than a list.
  *
  * Departures sit under the shop-local day they sail on, and each row carries its
@@ -170,115 +296,6 @@ export function ScheduleBuilder({
   const [open, setOpen] = useState<string | null>(null);
   const toggle = (panel: string) => setOpen((current) => (current === panel ? null : panel));
 
-  function AddPanel({ dateIso }: { dateIso: string }) {
-    return (
-      <FieldGrid
-        as="form"
-        action={actions.add}
-        columns={1}
-        className="mt-3 rounded-xl border border-border bg-surface-sunken/50 p-4 gap-y-4"
-      >
-        <Field label={copy.whatIsIt}>
-          <input
-            name="title"
-            type="text"
-            required
-            maxLength={120}
-            placeholder={copy.titlePlaceholder}
-            className={controlClass}
-          />
-        </Field>
-        <FieldGrid columns={3} className="gap-y-4">
-          <Field label={copy.date}>
-            <input
-              name="date"
-              type="date"
-              required
-              defaultValue={dateIso}
-              className={controlClass}
-            />
-          </Field>
-          <Field label={copy.departs}>
-            <input
-              name="startTime"
-              type="time"
-              required
-              defaultValue="08:30"
-              className={controlClass}
-            />
-          </Field>
-          <Field label={copy.returns}>
-            <input
-              name="endTime"
-              type="time"
-              required
-              defaultValue="12:30"
-              className={controlClass}
-            />
-          </Field>
-        </FieldGrid>
-        <FieldGrid columns={2} className="gap-y-4">
-          <Field label={copy.seats}>
-            <input
-              name="capacity"
-              type="number"
-              required
-              min={1}
-              max={60}
-              defaultValue={12}
-              className={`${controlClass} tabular-nums`}
-            />
-          </Field>
-          <Field label={copy.dives}>
-            <input
-              name="plannedDives"
-              type="number"
-              required
-              min={1}
-              max={4}
-              defaultValue={2}
-              className={`${controlClass} tabular-nums`}
-            />
-          </Field>
-        </FieldGrid>
-        <FieldGrid columns={2} className="gap-y-4">
-          <Field label={copy.course} hint={copy.optional}>
-            <select name="courseId" defaultValue="" className={controlClass}>
-              <option value="">{copy.ordinaryTrip}</option>
-              {courses.map((course) => (
-                <option key={course.id} value={course.id}>
-                  {course.title}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label={copy.diveSite} hint={copy.optional}>
-            <select name="diveSiteId" defaultValue="" className={controlClass}>
-              <option value="">{copy.decideLater}</option>
-              {diveSites.map((site) => (
-                <option key={site.id} value={site.id}>
-                  {site.title}
-                </option>
-              ))}
-            </select>
-          </Field>
-        </FieldGrid>
-        <div className="flex items-center gap-3">
-          <SubmitButton pendingLabel={copy.adding} className={buttonClass()}>
-            {copy.putOnBoard}
-          </SubmitButton>
-          <button
-            type="button"
-            onClick={() => setOpen(null)}
-            className="text-sm font-medium text-muted hover:text-foreground"
-          >
-            {copy.cancel}
-          </button>
-        </div>
-      </FieldGrid>
-    );
-  }
-
   return (
     <section aria-label={copy.ariaLabel} className="mb-8">
       <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
@@ -301,7 +318,16 @@ export function ScheduleBuilder({
       {/* Keyed "add:top" rather than by its date: the header button and the
           first day's own "+ Add" would otherwise share a panel key and render
           two identical forms at once. */}
-      {canConfigure && open === "add:top" ? <AddPanel dateIso={defaultDateIso} /> : null}
+      {canConfigure && open === "add:top" ? (
+        <AddPanel
+          dateIso={defaultDateIso}
+          courses={courses}
+          diveSites={diveSites}
+          copy={copy}
+          onAdd={actions.add}
+          onCancel={() => setOpen(null)}
+        />
+      ) : null}
 
       <div className="mt-4 flex flex-col gap-5">
         {days.map((day) => (
@@ -323,7 +349,14 @@ export function ScheduleBuilder({
               ) : null}
             </div>
             {canConfigure && open === `add:${day.dateIso}` ? (
-              <AddPanel dateIso={day.dateIso} />
+              <AddPanel
+                dateIso={day.dateIso}
+                courses={courses}
+                diveSites={diveSites}
+                copy={copy}
+                onAdd={actions.add}
+                onCancel={() => setOpen(null)}
+              />
             ) : null}
 
             <ul className="mt-3 flex flex-col gap-2">
