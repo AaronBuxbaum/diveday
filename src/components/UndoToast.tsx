@@ -1,7 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
+
+// Matches the `.toast-dismiss` keyframe duration in globals.css. Kept as a
+// timer (not `onAnimationEnd`) because the reduced-motion kill-switch there
+// only shortens the animation to ~0ms — it doesn't skip it — and we want one
+// unmount path that works identically either way.
+const EXIT_DURATION_MS = 200;
 
 /**
  * A land-then-undo toast: the action already happened, and this offers a few
@@ -10,6 +16,11 @@ import { SubmitButton } from "@/components/SubmitButton";
  * driven by the redirect that carries the undo target in the URL, auto-dismisses
  * after a beat, and its Undo submits a bound server action. Deliberately generic:
  * pass any inverse action plus the hidden fields it needs.
+ *
+ * The auto-dismiss countdown pauses while a reader's mouse or keyboard focus
+ * is anywhere in the toast (including the Undo button) and resumes counting
+ * down from wherever it left off — not a reset to the full duration — once
+ * they leave, so tabbing in and out repeatedly can't keep it alive forever.
  */
 export function UndoToast({
   message,
@@ -30,16 +41,61 @@ export function UndoToast({
   autoDismissMs?: number;
 }) {
   const [visible, setVisible] = useState(true);
+  const [dismissing, setDismissing] = useState(false);
+
+  // Pending auto-dismiss timer, or null while paused (hover/focus) or once
+  // the exit animation has taken over. `remainingMs`/`startedAtMs` are the
+  // elapsed-time bookkeeping that lets a pause stop the clock and a resume
+  // pick up from where it left off instead of restarting at full duration.
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const remainingMsRef = useRef(autoDismissMs);
+  const startedAtMsRef = useRef(0);
+
   useEffect(() => {
-    const timer = setTimeout(() => setVisible(false), autoDismissMs);
-    return () => clearTimeout(timer);
+    remainingMsRef.current = autoDismissMs;
+    startedAtMsRef.current = Date.now();
+    timerRef.current = setTimeout(() => setDismissing(true), autoDismissMs);
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+    // Intentionally only [autoDismissMs]: pause()/resume() below manage the
+    // same timer without needing this effect to re-run on every render.
   }, [autoDismissMs]);
+
+  useEffect(() => {
+    if (!dismissing) return;
+    const timer = setTimeout(() => setVisible(false), EXIT_DURATION_MS);
+    return () => clearTimeout(timer);
+  }, [dismissing]);
+
+  function pause() {
+    if (dismissing || timerRef.current === null) return;
+    clearTimeout(timerRef.current);
+    timerRef.current = null;
+    remainingMsRef.current = Math.max(
+      remainingMsRef.current - (Date.now() - startedAtMsRef.current),
+      0,
+    );
+  }
+
+  function resume() {
+    if (dismissing || timerRef.current !== null) return;
+    startedAtMsRef.current = Date.now();
+    timerRef.current = setTimeout(() => setDismissing(true), remainingMsRef.current);
+  }
+
   if (!visible) return null;
   return (
     <div className="fixed inset-x-0 bottom-4 z-50 flex justify-center px-4 print:hidden">
       <div
         role="status"
-        className="rise-in flex items-center gap-4 rounded-xl border border-border bg-surface px-4 py-3 shadow-2xl"
+        onMouseEnter={pause}
+        onMouseLeave={resume}
+        onFocusCapture={pause}
+        onBlurCapture={resume}
+        className={`flex items-center gap-4 rounded-xl border border-border bg-surface px-4 py-3 shadow-2xl ${
+          dismissing ? "toast-dismiss" : "rise-in"
+        }`}
       >
         <span className="text-sm font-medium">{message}</span>
         <form action={action}>
