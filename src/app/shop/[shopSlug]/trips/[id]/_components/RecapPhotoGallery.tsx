@@ -1,4 +1,4 @@
-import { SubmitButton } from "@/components/SubmitButton";
+import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import type { StaffRecapPhoto } from "@/db/recap";
 import { staffTranslator } from "@/i18n/staff-messages";
 
@@ -47,13 +47,14 @@ export function RecapPhotoGallery({
               </div>
               <form action={removeAction}>
                 <input type="hidden" name="photoId" value={photo.id} />
-                <SubmitButton
+                <InlineConfirm
+                  triggerLabel={t("trips.recapPhotos.remove")}
+                  triggerClassName="shrink-0 rounded-md px-2 py-1 text-xs font-medium text-danger hover:bg-danger/10"
+                  message={t("trips.recapPhotos.confirmRemove")}
+                  confirmLabel={t("trips.recapPhotos.removeConfirmButton")}
+                  cancelLabel={t("trips.recapPhotos.removeCancel")}
                   pendingLabel={t("trips.recapPhotos.removing")}
-                  confirmMessage={t("trips.recapPhotos.confirmRemove")}
-                  className="shrink-0 rounded-md px-2 py-1 text-xs font-medium text-danger hover:bg-danger/10"
-                >
-                  {t("trips.recapPhotos.remove")}
-                </SubmitButton>
+                />
               </form>
             </div>
           </li>

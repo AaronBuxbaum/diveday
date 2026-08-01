@@ -43,7 +43,14 @@ export type SetPaymentInput = {
   bookingId: string;
   status: PaymentStatus;
   amountCents?: number | null;
-  currency?: string;
+  /**
+   * Required, not defaulted. The old `?? "usd"` meant the counter-cash path —
+   * which passes no currency — wrote `usd` onto a Mexican shop's settled row,
+   * and that row is what the diver's own confirmation panel reads back. A
+   * settled amount is evidence, so the currency has to be stated by whoever
+   * knows it rather than guessed here (ADR 20260731-shop-currency).
+   */
+  currency: string;
   provider?: string | null;
   providerRef?: string | null;
   note?: string | null;
@@ -68,7 +75,7 @@ export async function setBookingPayment(db: DbExecutor, input: SetPaymentInput) 
       bookingId: input.bookingId,
       status: input.status,
       amountCents: input.amountCents ?? null,
-      currency: input.currency ?? "usd",
+      currency: input.currency,
       provider: input.provider ?? null,
       providerRef: input.providerRef ?? null,
       note: input.note ?? null,

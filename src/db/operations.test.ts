@@ -73,11 +73,58 @@ describe("staff-only operational context", () => {
 
     await expect(
       deleteInternalNote(db, { shopId: shop.id, noteId: note.id, actorPersonId: actor.person.id }),
-    ).resolves.toBe(true);
+    ).resolves.toEqual({
+      deleted: true,
+      bookingId: rosterEntry.booking.id,
+      body: "Needs a size-large wetsuit.",
+    });
     expect(await listBookingNotes(db, shop.id, trip.id)).toHaveLength(0);
     expect((await listTripActivity(db, shop.id, trip.id))[0]?.message).toBe(
       `${actor.person.fullName} deleted a private note about ${rosterEntry.person.fullName}`,
     );
+  });
+
+  it("returns the deleted note's booking and text so a land-then-undo toast can recreate it", async () => {
+    // Regression for the roster's delete-then-undo flow (docs/design/principles.md
+    // §7): `deleteInternalNoteAction` reads this return value straight into the
+    // redirect that drives the toast, and `restoreInternalNoteAction` reuses
+    // `addInternalNote` with exactly these fields to recreate the note.
+    const { db, shop } = await seededShopContext();
+    const trip = (await upcomingTripsWithCounts(db, shop.id)).find((row) => row.booked > 0);
+    if (!trip) throw new Error("expected a booked trip");
+    const [rosterEntry] = await getTripRoster(db, shop.id, trip.id);
+    const [actor] = await listStaff(db, shop.id);
+    if (!rosterEntry || !actor) throw new Error("expected seeded people");
+
+    const note = await addInternalNote(db, {
+      shopId: shop.id,
+      bookingId: rosterEntry.booking.id,
+      actorPersonId: actor.person.id,
+      body: "Bring a spare mask for their kid.",
+    });
+    if (!note) throw new Error("expected note to be created");
+
+    const result = await deleteInternalNote(db, {
+      shopId: shop.id,
+      noteId: note.id,
+      actorPersonId: actor.person.id,
+    });
+    if (!result.deleted) throw new Error("expected the note to be deleted");
+    expect(await listBookingNotes(db, shop.id, trip.id)).toHaveLength(0);
+
+    // The restore recreates a *new* note with the deleted one's content — the
+    // old row's id is gone and isn't needed for that.
+    const restored = await addInternalNote(db, {
+      shopId: shop.id,
+      bookingId: result.bookingId,
+      actorPersonId: actor.person.id,
+      body: result.body,
+    });
+    expect(restored).toMatchObject({ body: "Bring a spare mask for their kid." });
+    expect(restored?.id).not.toBe(note.id);
+    const notesAfterRestore = await listBookingNotes(db, shop.id, trip.id);
+    expect(notesAfterRestore).toHaveLength(1);
+    expect(notesAfterRestore[0]?.note.body).toBe("Bring a spare mask for their kid.");
   });
 
   it("refuses to delete a note that doesn't exist or belongs to another shop", async () => {
@@ -92,7 +139,7 @@ describe("staff-only operational context", () => {
         noteId: "00000000-0000-4000-8000-000000000099",
         actorPersonId: actor.person.id,
       }),
-    ).resolves.toBe(false);
+    ).resolves.toEqual({ deleted: false });
 
     const trip = (await upcomingTripsWithCounts(db, shop.id)).find((row) => row.booked > 0);
     if (!trip) throw new Error("expected a booked trip");
@@ -112,7 +159,7 @@ describe("staff-only operational context", () => {
         noteId: note.id,
         actorPersonId: actor.person.id,
       }),
-    ).resolves.toBe(false);
+    ).resolves.toEqual({ deleted: false });
     expect(await listBookingNotes(db, shop.id, trip.id)).toHaveLength(1);
   });
 });

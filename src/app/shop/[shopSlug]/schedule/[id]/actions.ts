@@ -9,6 +9,7 @@ import { startBookingCheckout } from "@/db/checkouts";
 import { type AppDb, getDb } from "@/db/client";
 import { setBookingNitrox } from "@/db/nitrox";
 import { sendAndRecordNotification } from "@/db/notifications";
+import { recordDiverOwnLocaleForBooking } from "@/db/people";
 import { saveRentalFit } from "@/db/rental-fit";
 import { getRedeemableShopPromo } from "@/db/shop-promos";
 import { getShopById, getShopBySlug } from "@/db/shops";
@@ -17,12 +18,11 @@ import { getTripWithBooked } from "@/db/trips";
 import { joinTripWaitlist } from "@/db/waitlist";
 import { issueWaiverOnJoin } from "@/db/waiver-issue";
 import { diverTranslator } from "@/i18n/messages";
-import { requestLocale } from "@/i18n/request";
-import { toDiverLocale } from "@/i18n/settings";
+import { requestFirstHandLocale, requestLocale } from "@/i18n/request";
 import { trackEvent } from "@/lib/analytics";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { revalidateAndRedirect } from "@/lib/navigation";
-import { publicAppUrl } from "@/lib/notifications";
+import { publicAppUrl, recipientLocale } from "@/lib/notifications";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { shopOffersNitrox } from "@/lib/rentals";
 import { clientIp } from "@/lib/request-ip";
@@ -276,6 +276,21 @@ export async function bookSpot(
     getBookingForTrip(dbi, tripId, primaryBookingId),
     getTripWithBooked(dbi, shopNow.id, tripId),
   ]);
+  // This form is the diver's own — the public schedule page, submitted from
+  // their device — so its `Accept-Language` is first-hand evidence of the
+  // language the lead booker reads (docs ADR
+  // 20260731-per-person-notification-locale). Only the lead's: every other
+  // party member's name and address were typed *by* the lead, and this header
+  // says nothing about what those divers read.
+  const ownLocale = await requestFirstHandLocale();
+  // Through the booking-scoped writer, not the person-scoped one: it refuses
+  // an identity-unconfirmed booking, which is what stops someone who merely
+  // knows a diver's email address from re-languaging that diver's mail by
+  // booking a seat in their name (H-13, security-reviewer finding).
+  await recordDiverOwnLocaleForBooking(dbi, {
+    bookingId: primaryBookingId,
+    locale: ownLocale,
+  });
   if (confirmedBooking?.person.email && tripNow) {
     try {
       const delivery = await sendAndRecordNotification(dbi, {
@@ -283,7 +298,7 @@ export async function bookSpot(
         bookingId: primaryBookingId,
         shopId: shopNow.id,
         to: confirmedBooking.person.email,
-        locale: toDiverLocale(shopNow.defaultLocale),
+        locale: recipientLocale(ownLocale ?? confirmedBooking.person.locale, shopNow.defaultLocale),
         diverName: confirmedBooking.person.fullName,
         shopName: shopNow.name,
         tripTitle: tripNow.title,
@@ -390,6 +405,11 @@ async function startCheckoutUrl(
   const origin = publicAppUrl();
   if (!origin || !input.customerEmail) return null;
   const returnBase = `${origin}/shop/${input.shopSlug}/schedule/${input.tripId}?booking=${input.confirmToken}${embedParam(input.embed, "&")}`;
+  // The hosted Stripe line's words come from the diver's bundle, not from
+  // `src/db` (docs ADR 20260731-domain-layer-copy-leaks). Both callers of this
+  // helper are diver-initiated requests, so the negotiated request locale is
+  // the language the diver is reading the page in right now.
+  const t = diverTranslator(await requestLocale());
   const outcome = await startBookingCheckout(dbi, {
     shopId: input.shopId,
     tripId: input.tripId,
@@ -399,6 +419,8 @@ async function startCheckoutUrl(
     cancelUrl: `${returnBase}&pay=cancelled`,
     promotionCode: input.promotionCode,
     shopPromo: input.shopPromo,
+    describeLine: ({ isDeposit, tripTitle }) =>
+      isDeposit ? t("checkoutLine.deposit", { tripTitle }) : t("checkoutLine.full", { tripTitle }),
   }).catch(() => null);
   return outcome?.ok ? (outcome.checkout.checkoutUrl ?? null) : null;
 }

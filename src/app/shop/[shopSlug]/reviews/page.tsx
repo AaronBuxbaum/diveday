@@ -6,6 +6,7 @@ import { ShopPageHeader, ShopStat } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { StarRating } from "@/components/StarRating";
 import { SubmitButton } from "@/components/SubmitButton";
+import { UndoToast } from "@/components/UndoToast";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
@@ -41,11 +42,11 @@ export default async function ReviewsPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{ notice?: string; after?: string; filter?: string }>;
+  searchParams: Promise<{ notice?: string; undo?: string; after?: string; filter?: string }>;
 }) {
   const session = await requireStaffSession();
   const { shopSlug } = await params;
-  const { notice, after, filter } = await searchParams;
+  const { notice, undo, after, filter } = await searchParams;
   const onlyWaiting = filter === "waiting";
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
@@ -72,7 +73,7 @@ export default async function ReviewsPage({
 
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
-      <FlashParams params={["notice"]} />
+      <FlashParams params={["notice", "undo"]} />
       <ShopPageHeader
         eyebrow={t("reviews.eyebrow")}
         title={t("reviews.title")}
@@ -89,7 +90,17 @@ export default async function ReviewsPage({
         }
       />
 
-      {banner ? <StaffNoticeBanner tone={banner.tone}>{t(banner.key)}</StaffNoticeBanner> : null}
+      {notice === "hidden" && undo ? (
+        <UndoToast
+          message={t("reviews.notice.hiddenToast")}
+          action={setReviewPublishedAction}
+          fields={{ reviewId: undo, publish: "true" }}
+          pendingLabel={t("shared.undoToast.pendingLabel")}
+          undoLabel={t("shared.undoToast.undo")}
+        />
+      ) : banner ? (
+        <StaffNoticeBanner tone={banner.tone}>{t(banner.key)}</StaffNoticeBanner>
+      ) : null}
 
       <section aria-label={t("reviews.overviewLabel")} className="mb-2 grid gap-3 sm:grid-cols-3">
         <ShopStat
@@ -214,7 +225,6 @@ export default async function ReviewsPage({
                   <input type="hidden" name="publish" value={String(!review.isPublished)} />
                   <SubmitButton
                     pendingLabel={t("reviews.saving")}
-                    confirmMessage={review.isPublished ? t("reviews.hideConfirm") : undefined}
                     className={buttonClass(
                       review.isPublished
                         ? { variant: "secondary", className: "text-foreground" }

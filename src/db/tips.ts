@@ -1,6 +1,11 @@
 import { and, desc, eq } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
-import { type CheckoutProvider, checkoutProviderFromEnvironment } from "@/lib/payments/checkout";
+import { majorToMinor, type ShopCurrency, toShopCurrency } from "@/lib/money";
+import {
+  type CheckoutProvider,
+  checkoutProviderFromEnvironment,
+  stripeLineDescription,
+} from "@/lib/payments/checkout";
 import type { AppDb, DbExecutor } from "./client";
 import {
   idempotencyKeyFor,
@@ -8,14 +13,23 @@ import {
   resolvePaymentOperation,
   startPaymentOperation,
 } from "./payment-operations";
-import { bookings, people, type Tip, tips } from "./schema";
-import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
+import { bookings, people, shops, type Tip, tips } from "./schema";
+import { canAcceptPayments, getShopCurrency, getShopStripeAccount } from "./stripe-accounts";
 
 export type StartTipInput = {
   bookingId: string;
+  /** An integer count of the shop currency's minor unit — see `tipBoundsCents`. */
   amountCents: number;
   successUrl: string;
   cancelUrl: string;
+  /**
+   * The words for the single line on the hosted Stripe page, composed by the
+   * caller from the diver's message bundle — this layer returns codes, not
+   * sentences (docs ADR 20260731-domain-layer-copy-leaks). Unlike a booking
+   * checkout there is no branch to describe, so a finished string is the
+   * simplest honest shape.
+   */
+  lineDescription: string;
 };
 
 export type StartTipOutcome =
@@ -25,9 +39,104 @@ export type StartTipOutcome =
       reason: "not_connected" | "invalid_amount" | "invalid_booking" | "checkout_unavailable";
     };
 
-/** $1–$500, generous enough for a real gratitude tip, bounded against a mistyped/abusive amount. */
-export const MIN_TIP_CENTS = 100;
-export const MAX_TIP_CENTS = 50_000;
+/**
+ * The tip range in *major* units of a US-dollar-sized currency: generous enough
+ * for a real gratitude tip, bounded against a mistyped or abusive amount.
+ * `tipBoundsCents` turns these into the shop currency's own minor units.
+ */
+export const MIN_TIP_MAJOR = 1;
+export const MAX_TIP_MAJOR = 500;
+
+/**
+ * Roughly how many major units of a currency stand in for one US dollar,
+ * rounded hard to an order of magnitude.
+ *
+ * **This is not an exchange rate and must never be used as one.** Nothing
+ * charged, quoted, stored, or displayed is computed from it. Its only job is
+ * to keep the tip sanity bounds meaningful in currencies whose major unit is
+ * far smaller than a dollar: a flat 1–500 major-unit range would make the
+ * smallest legal tip in Indonesia Rp 1 (a fraction of a cent) and the largest
+ * Rp 500 (about three cents), refusing every real tip a diver would leave.
+ * Being 30% stale changes nothing about a bound whose whole purpose is to
+ * catch a typo two orders of magnitude out; a real FX source would be the
+ * wrong dependency to take on for it.
+ *
+ * Currencies within ~2x of the dollar (usd, eur, gbp, cad, aud, nzd, sgd, chf)
+ * are deliberately absent and take the default of 1.
+ */
+const APPROX_MAJOR_UNITS_PER_USD: Partial<Record<ShopCurrency, number>> = {
+  brl: 5,
+  dkk: 7,
+  egp: 50,
+  idr: 16_000,
+  ils: 4,
+  jpy: 150,
+  mxn: 20,
+  myr: 5,
+  nok: 10,
+  php: 55,
+  sek: 10,
+  thb: 35,
+  zar: 18,
+};
+
+/**
+ * The tip range in this currency's own minor units. Two conversions, both from
+ * `src/lib/money.ts` and neither a literal 100: the coarse scale above puts the
+ * bound at a comparable *value*, and `majorToMinor` puts it in the unit the
+ * column and Stripe both use — so a zero-decimal currency is never divided or
+ * multiplied by a hundred it doesn't have (docs ADR 20260731-shop-currency).
+ */
+export function tipBoundsCents(currency: string): { minCents: number; maxCents: number } {
+  const scale = APPROX_MAJOR_UNITS_PER_USD[toShopCurrency(currency)] ?? 1;
+  return {
+    minCents: majorToMinor(MIN_TIP_MAJOR * scale, currency),
+    maxCents: majorToMinor(MAX_TIP_MAJOR * scale, currency),
+  };
+}
+
+/** The suggested tip buttons, in a US-dollar-sized currency's major units. */
+const TIP_PRESETS_MAJOR = [5, 10, 20];
+
+/**
+ * The recap page's suggested tip amounts, in this currency's major units.
+ *
+ * Shares `APPROX_MAJOR_UNITS_PER_USD` with `tipBoundsCents` on purpose, and
+ * that is the whole point of it living here rather than in the page: a flat
+ * `[5, 10, 20]` sits *below* the scaled minimum in thirteen of the twenty-one
+ * supported currencies, so an Indonesian shop's diver was shown three tip
+ * buttons and every one of them bounced with a range error
+ * (security-reviewer finding). Presets and bounds now cannot drift apart.
+ */
+export function tipPresetsMajor(currency: string): number[] {
+  const scale = APPROX_MAJOR_UNITS_PER_USD[toShopCurrency(currency)] ?? 1;
+  return TIP_PRESETS_MAJOR.map((amount) => amount * scale);
+}
+
+/**
+ * The currency a tip for this booking will be charged in — the *shop's*
+ * currency, resolved through the booking exactly the way `startTipCheckout`
+ * resolves it, so the recap action can bound and convert the diver's typed
+ * amount against the same value this function will re-check it against. Null
+ * when the booking doesn't exist.
+ *
+ * Exported because the recap action must turn a typed major-unit amount into
+ * minor units before it has anything else to go on, and the currency is the
+ * only thing that decides how (docs ADR 20260731-shop-currency). Never take
+ * this from a form field: it decides what a diver is charged.
+ */
+export async function getTipCurrencyForBooking(
+  db: DbExecutor,
+  bookingId: string,
+): Promise<ShopCurrency | null> {
+  const [row] = await db
+    .select({ currency: shops.currency })
+    .from(bookings)
+    .innerJoin(shops, eq(shops.id, bookings.shopId))
+    .where(eq(bookings.id, bookingId))
+    .limit(1);
+  return row ? toShopCurrency(row.currency) : null;
+}
 
 /**
  * Hand the diver a hosted Stripe Checkout for a post-trip tip on the shop's
@@ -47,10 +156,6 @@ export async function startTipCheckout(
   input: StartTipInput,
   checkout: CheckoutProvider = checkoutProviderFromEnvironment(),
 ): Promise<StartTipOutcome> {
-  if (input.amountCents < MIN_TIP_CENTS || input.amountCents > MAX_TIP_CENTS) {
-    return { ok: false, reason: "invalid_amount" };
-  }
-
   const [row] = await db
     .select({ shopId: bookings.shopId, email: people.email, status: bookings.status })
     .from(bookings)
@@ -69,12 +174,25 @@ export async function startTipCheckout(
   const account = await getShopStripeAccount(db, row.shopId);
   if (!canAcceptPayments(account)) return { ok: false, reason: "not_connected" };
   const stripeAccountId = (account as NonNullable<typeof account>).stripeAccountId;
-  // The connected account's own settlement currency, not a hardcoded "usd" —
-  // task 60. `MIN_TIP_CENTS`/`MAX_TIP_CENTS` and the cents-based amount math
-  // below still assume a two-decimal currency; a zero-decimal account
-  // currency (e.g. JPY) is a known gap folded into the broader currency-i18n
-  // effort (task 35), not fixed here.
-  const currency = (account as NonNullable<typeof account>).defaultCurrency;
+  // The shop's own declared currency, not the connected account's
+  // `default_currency` (which task 60 read here) and not a hardcoded "usd":
+  // one source of truth for every amount this shop charges, so a tip is
+  // quoted in the same currency as the trip the diver just paid for
+  // (docs ADR 20260731-shop-currency). The account's reported currency stays
+  // advisory and surfaces as a settings warning (`stripeCurrencyMismatch`).
+  const currency = await getShopCurrency(db, row.shopId);
+  // Bounds in this currency's own minor units — the zero-decimal gap task 60
+  // deferred to task 35 is closed here: nothing on this path multiplies or
+  // divides by a literal 100, so a ¥ tip is bounded in whole yen and a $ tip
+  // in cents, both meaning roughly the same amount of money.
+  const { minCents, maxCents } = tipBoundsCents(currency);
+  if (
+    !Number.isInteger(input.amountCents) ||
+    input.amountCents < minCents ||
+    input.amountCents > maxCents
+  ) {
+    return { ok: false, reason: "invalid_amount" };
+  }
 
   // Locks the always-existing bookings row for the rest of this call — same
   // technique src/db/payments.ts uses for payment writes (a booking's first
@@ -138,7 +256,7 @@ export async function startTipCheckout(
     const session = await checkout.createCheckoutSession({
       stripeAccountId,
       currency,
-      description: "Tip for the crew",
+      description: stripeLineDescription(input.lineDescription),
       unitAmountCents: input.amountCents,
       quantity: 1,
       customerEmail,

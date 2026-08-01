@@ -15,7 +15,7 @@ import {
   retryBookingConfirmation,
   sendNotification,
 } from "./notifications";
-import { notificationRateLimitState, notificationSendQueue } from "./schema";
+import { notificationRateLimitState, notificationSendQueue, people, shops } from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
 
 async function seededBooking() {
@@ -290,5 +290,42 @@ describe("provider-reported delivery events", () => {
     // The replacement message has its own provider story; the previous
     // message's bounce must not be shown against it.
     await expect(listNotificationDeliveryIssues(db, shop.id)).resolves.toEqual([]);
+  });
+});
+
+describe("resend language (docs ADR 20260731-per-person-notification-locale)", () => {
+  function capturingProvider() {
+    const sent: Notification[] = [];
+    const provider: NotificationProvider = {
+      async send(notification) {
+        sent.push(notification);
+        return { status: "sent", providerMessageId: "em_resend" };
+      },
+    };
+    return { sent, provider };
+  }
+
+  it("writes a staff-triggered resend in the diver's language, not the staff member's", async () => {
+    // Staff press "resend" from the notifications dashboard, so the request's
+    // own Accept-Language belongs to *them*. The mail still lands in the
+    // diver's inbox, so it follows what the diver told us on their own booking.
+    const { db, shop, booking } = await seededBooking();
+    await db.update(shops).set({ defaultLocale: "es-ES" }).where(eq(shops.id, shop.id));
+    await db.update(people).set({ locale: "en-US" }).where(eq(people.email, "nora@example.com"));
+
+    const { sent, provider } = capturingProvider();
+    await retryBookingConfirmation(db, shop.id, booking.bookingId, provider);
+    expect(sent).toHaveLength(1);
+    expect(sent[0]).toMatchObject({ kind: "booking_confirmation", locale: "en-US" });
+  });
+
+  it("falls back to the shop's locale for a diver DiveDay has never heard from", async () => {
+    const { db, shop, booking } = await seededBooking();
+    await db.update(shops).set({ defaultLocale: "es-ES" }).where(eq(shops.id, shop.id));
+    await db.update(people).set({ locale: null }).where(eq(people.email, "nora@example.com"));
+
+    const { sent, provider } = capturingProvider();
+    await retryBookingConfirmation(db, shop.id, booking.bookingId, provider);
+    expect(sent[0]).toMatchObject({ locale: "es-ES" });
   });
 });

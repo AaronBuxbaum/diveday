@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { EmptyState } from "@/components/EmptyState";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
@@ -92,7 +93,9 @@ export default async function WalkInPage({
         <section className="mt-6 rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-6">
           <h2 className="text-lg font-semibold">{t("checkIn.walkIn.tripLabel")}</h2>
           {trips.length === 0 ? (
-            <p className="mt-2 text-sm text-muted">{t("checkIn.walkIn.tripEmpty")}</p>
+            <EmptyState className="mt-2">
+              <p className="text-sm text-muted">{t("checkIn.walkIn.tripEmpty")}</p>
+            </EmptyState>
           ) : (
             <ul className="mt-3 flex flex-col gap-2">
               {trips.map((trip) => (

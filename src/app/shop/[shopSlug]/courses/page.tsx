@@ -16,6 +16,8 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { auth } from "@/lib/auth";
 import { isStaff } from "@/lib/authz";
 import { courseTotalCents } from "@/lib/courses";
+import { formatMoneyCents } from "@/lib/format";
+import { toShopCurrency } from "@/lib/money";
 import { requireStaffSession } from "@/lib/session";
 
 /** A closed eye — shown for a course currently hidden from scheduling lists. */
@@ -220,7 +222,7 @@ export default async function CoursesPage({ params }: { params: Promise<{ shopSl
   }
 
   const courseList = await listActiveCourses(db, shop.id);
-  const money = new Intl.NumberFormat(locale, { style: "currency", currency: "USD" });
+  const currency = toShopCurrency(shop.currency);
 
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
@@ -267,7 +269,7 @@ export default async function CoursesPage({ params }: { params: Promise<{ shopSl
                   </div>
                   {totalCents !== null ? (
                     <p className="shrink-0 text-sm font-semibold tabular-nums">
-                      {money.format(totalCents / 100)}
+                      {formatMoneyCents(totalCents, currency, locale)}
                     </p>
                   ) : null}
                 </Link>

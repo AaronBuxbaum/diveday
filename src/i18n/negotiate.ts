@@ -69,3 +69,20 @@ export function negotiateLocale(
 ): DiverLocale {
   return matchLocale(parseAcceptLanguage(acceptLanguage)) ?? toDiverLocale(shopDefaultLocale);
 }
+
+/**
+ * What this request's own `Accept-Language` asked for, or null when it carried
+ * nothing DiveDay speaks.
+ *
+ * The difference from {@link negotiateLocale} is the whole point: that one
+ * always answers with *something*, because a page always has to render — and
+ * when the header matched nothing, the something it answers with is the
+ * **shop's** preference, not the visitor's. That is fine for rendering and
+ * wrong for recording. Anything that wants to remember what a person reads
+ * (docs ADR 20260731-per-person-notification-locale) has to be able to tell
+ * "they asked for Spanish" apart from "we defaulted to Spanish", so it asks
+ * this and stores nothing when the answer is null.
+ */
+export function firstHandLocale(acceptLanguage: string | null | undefined): DiverLocale | null {
+  return matchLocale(parseAcceptLanguage(acceptLanguage));
+}

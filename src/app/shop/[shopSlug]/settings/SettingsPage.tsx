@@ -15,6 +15,7 @@ import { getDb } from "@/db/client";
 import {
   getShopById,
   setShopContact,
+  setShopCurrency,
   setShopDepthUnit,
   setShopDockCallMinutes,
   setShopPackingList,
@@ -27,11 +28,14 @@ import {
   disconnectShopStripeAccount,
   getShopStripeAccount,
   refreshShopStripeAccountStatus,
+  stripeCurrencyMismatch,
 } from "@/db/stripe-accounts";
+import { currencyOptions } from "@/i18n/currency-labels";
 import { catalogItemLabel, rentableItemLabel } from "@/i18n/rental-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { canExportShopData, canImportShopData } from "@/lib/authz";
+import { isShopCurrency, majorToMinor, maxPriceMajor, toShopCurrency } from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { connectProviderFromEnvironment } from "@/lib/payments/connect";
 import { FOUNDER_EMAIL } from "@/lib/platform-mail";
@@ -62,6 +66,8 @@ function noticeMessages(
     dock_invalid: { tone: "danger", text: t("settings.main.notice.dockInvalid") },
     depth_unit_saved: { tone: "success", text: t("settings.main.notice.depthUnitSaved") },
     depth_unit_invalid: { tone: "danger", text: t("settings.main.notice.depthUnitInvalid") },
+    currency_saved: { tone: "success", text: t("settings.main.notice.currencySaved") },
+    currency_invalid: { tone: "danger", text: t("settings.main.notice.currencyInvalid") },
     rentals_saved: { tone: "success", text: t("settings.main.notice.rentalsSaved") },
     rental_prices_saved: { tone: "success", text: t("settings.main.notice.rentalPricesSaved") },
     rental_prices_invalid: {
@@ -163,6 +169,39 @@ async function saveDepthUnitAction(formData: FormData) {
   revalidateAndRedirect(settings, `${settings}?notice=depth_unit_saved&saved=depthUnit`);
 }
 
+/**
+ * The currency this shop displays and charges in.
+ *
+ * Unlike the depth unit above, this one is not lossless and the form says so:
+ * stored amounts are integer minor units of whatever currency was set when
+ * they were typed, and nothing is converted here. Already-settled rows keep
+ * their own currency, so this only ever changes what a *future* charge and the
+ * shop's own price list mean.
+ *
+ * Owner/manager only, re-checked here against live roles rather than trusted
+ * from the section merely having rendered — this decides what a diver's card
+ * is charged in.
+ */
+async function saveCurrencyAction(formData: FormData) {
+  "use server";
+  const session = await requireStaffSession();
+  const settings = `/shop/${session.user.shopSlug}/settings`;
+  const blocked = await paymentSettingsBlock(session);
+  if (blocked) {
+    revalidateAndRedirect(settings, blocked);
+    return;
+  }
+  const submitted = formData.get("currency");
+  // Not `toShopCurrency`: that coerces anything unknown to usd, which would
+  // silently save dollars for a shop that submitted a typo. An unrecognized
+  // value is a refusal.
+  if (!isShopCurrency(submitted)) {
+    redirect(`${settings}?notice=currency_invalid&saved=currency`);
+  }
+  await setShopCurrency(await getDb(), session.user.shopId, submitted);
+  revalidateAndRedirect(settings, `${settings}?notice=currency_saved&saved=currency`);
+}
+
 /** How many minutes before departure divers are asked to be at the dock. */
 async function saveDockCallAction(formData: FormData) {
   "use server";
@@ -196,18 +235,25 @@ async function saveRentalItemsAction(formData: FormData) {
 }
 
 /**
- * A dollar amount from a price box → minor units, or null for an empty box (not
- * priced online). Anything else — a negative, a non-number, an absurd amount —
- * is invalid so the whole save is rejected rather than silently zeroed.
+ * A major-unit amount from a price box → stored minor units, or null for an
+ * empty box (not priced online). Anything else — a negative, a non-number, an
+ * absurd amount — is invalid so the whole save is rejected rather than
+ * silently zeroed.
+ *
+ * The currency decides the multiplier: typing 5000 into a JPY shop's box means
+ * ¥5,000 and stores 5000, not 500000 (`majorToMinor`).
  */
-function parsePriceDollars(
+function parsePriceAmount(
   raw: FormDataEntryValue | null,
+  currency: string,
 ): { ok: true; cents: number | null } | { ok: false } {
   const text = String(raw ?? "").trim();
   if (!text) return { ok: true, cents: null };
-  const dollars = Number(text);
-  if (!Number.isFinite(dollars) || dollars < 0 || dollars > 100_000) return { ok: false };
-  return { ok: true, cents: Math.round(dollars * 100) };
+  const amount = Number(text);
+  if (!Number.isFinite(amount) || amount < 0 || amount > maxPriceMajor(currency)) {
+    return { ok: false };
+  }
+  return { ok: true, cents: majorToMinor(amount, currency) };
 }
 
 /** What the shop charges for rental gear: a set price, per-piece prices, and per-dive nitrox. */
@@ -223,11 +269,12 @@ async function saveRentalPricingAction(formData: FormData) {
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) redirect(`${settings}?notice=rental_prices_invalid&saved=rentalPricing`);
-  const set = parsePriceDollars(formData.get("setPrice"));
+  const currency = toShopCurrency(shop.currency);
+  const set = parsePriceAmount(formData.get("setPrice"), currency);
   let invalid = !set.ok;
   const perItemCents: RentalPricing["perItemCents"] = {};
   for (const item of RENTABLE_ITEMS) {
-    const parsed = parsePriceDollars(formData.get(`price_${item.name}`));
+    const parsed = parsePriceAmount(formData.get(`price_${item.name}`), currency);
     if (!parsed.ok) {
       invalid = true;
       continue;
@@ -240,7 +287,7 @@ async function saveRentalPricingAction(formData: FormData) {
   // still offered. Only interpret it when it could have been on the page.
   let nitroxCents = shop.rentalPricing.nitroxCents;
   if (shopOffersNitrox(shop.rentalItems)) {
-    const nitrox = parsePriceDollars(formData.get("nitroxPrice"));
+    const nitrox = parsePriceAmount(formData.get("nitroxPrice"), currency);
     if (!nitrox.ok) invalid = true;
     else nitroxCents = nitrox.cents;
   }
@@ -382,6 +429,7 @@ const SECTION_IDS = [
   "packing",
   "dockCall",
   "depthUnit",
+  "currency",
   "rentals",
   "rentalPricing",
   "stripe",
@@ -433,7 +481,10 @@ export default async function SettingsPage({
   );
   const canImport = canImportShopData(session.user.roles);
   const canExport = canExportShopData(session.user.roles);
-  const t = staffTranslator(await requestLocale(shop.defaultLocale));
+  const locale = await requestLocale(shop.defaultLocale);
+  const shopCurrency = toShopCurrency(shop.currency);
+  const currencyMismatch = stripeCurrencyMismatch(shopCurrency, account);
+  const t = staffTranslator(locale);
   const banner = noticeFromParam(notice, noticeMessages(t));
   // A recognized section renders the notice inline; anything else (chiefly
   // `not_authorized`, which spans several sections rather than owning one)
@@ -624,6 +675,53 @@ export default async function SettingsPage({
 
         {canPayments ? (
           <>
+            {/* Switching this reinterprets the shop's own price list rather than
+              converting it — the description says so, because nothing else in
+              this page has that property. */}
+            <section className="mt-6 rounded-lg border border-border bg-surface p-6">
+              <h3 className="font-medium">{t("settings.main.currency.heading")}</h3>
+              <p className="mt-1 text-sm text-muted">{t("settings.main.currency.description")}</p>
+              <SectionNotice banner={banner} section="currency" active={activeSection} />
+              {/* What Stripe reports for the connected account is advisory, so a
+                disagreement is surfaced rather than silently resolved either
+                way (ADR 20260731-shop-currency). Stripe refuses a session in a
+                currency the account can't settle, so this is the difference
+                between a warning here and a failed checkout later. */}
+              {currencyMismatch ? (
+                <div className="mt-4">
+                  <ShopNotice tone="warning" role="status">
+                    {t("settings.main.currency.mismatch", {
+                      shopCurrency: currencyMismatch.shopCurrency.toUpperCase(),
+                      accountCurrency: currencyMismatch.accountCurrency.toUpperCase(),
+                    })}
+                  </ShopNotice>
+                </div>
+              ) : null}
+              <FieldGrid as="form" action={saveCurrencyAction} columns={2} className="mt-4">
+                <Field label={t("settings.main.currency.label")}>
+                  <select
+                    name="currency"
+                    defaultValue={toShopCurrency(shop.currency)}
+                    className={controlClass}
+                  >
+                    {currencyOptions(locale).map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+                <FieldActions>
+                  <SubmitButton
+                    pendingLabel={t("settings.main.currency.submitting")}
+                    className={buttonClass()}
+                  >
+                    {t("settings.main.currency.submit")}
+                  </SubmitButton>
+                </FieldActions>
+              </FieldGrid>
+            </section>
+
             <section className="mt-6 rounded-lg border border-border bg-surface p-6">
               <h3 className="font-medium">{t("settings.main.rentals.heading")}</h3>
               <p className="mt-1 text-sm text-muted">{t("settings.main.rentals.description")}</p>
@@ -670,6 +768,8 @@ export default async function SettingsPage({
                     label={t("settings.main.rentalPricing.fullSetLabel")}
                     hint={t("settings.main.rentalPricing.fullSetHint")}
                     cents={shop.rentalPricing.setCents}
+                    currency={shopCurrency}
+                    locale={locale}
                   />
                   {RENTABLE_ITEMS.filter((item) => offeredKinds.has(item.kind)).map((item) => (
                     <PriceField
@@ -677,6 +777,8 @@ export default async function SettingsPage({
                       name={`price_${item.name}`}
                       label={rentableItemLabel(t, item.kind)}
                       cents={shop.rentalPricing.perItemCents[item.kind] ?? null}
+                      currency={shopCurrency}
+                      locale={locale}
                     />
                   ))}
                   {offeredKinds.has("nitrox") ? (
@@ -685,6 +787,8 @@ export default async function SettingsPage({
                       label={t("settings.main.rentalPricing.nitroxLabel")}
                       hint={t("settings.main.rentalPricing.nitroxHint")}
                       cents={shop.rentalPricing.nitroxCents}
+                      currency={shopCurrency}
+                      locale={locale}
                     />
                   ) : null}
                 </FieldGrid>

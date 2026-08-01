@@ -21,8 +21,10 @@ import {
   getOrder,
   listOrders,
   listShopOrders,
+  MAX_LINE_ITEM_UNIT_AMOUNT_MAJOR,
   markOrderPaidByInvoiceId,
   markOrderVoidedByInvoiceId,
+  maxLineItemUnitAmountCents,
   openOrdersForBookings,
   refreshOrderStatus,
   refundOrder,
@@ -31,6 +33,7 @@ import {
 } from "./orders";
 import { getBookingPayment, setBookingPayment } from "./payments";
 import { orders } from "./schema";
+import { setShopCurrency } from "./shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { getTripRoster, upcomingTripsWithCounts, updateTrip } from "./trips";
 
@@ -104,6 +107,19 @@ const lineItems = [
 ];
 
 const EMPTY_PRICING = { title: "", priceCents: null, eLearningPriceCents: null };
+
+/** A shop with a connected, charges-enabled Stripe account. */
+async function connectedShop(
+  db: Awaited<ReturnType<typeof seededShopContext>>["db"],
+  shopId: string,
+) {
+  await upsertShopStripeAccount(db, shopId, "acct_123");
+  await setShopStripeAccountStatus(db, "acct_123", {
+    chargesEnabled: true,
+    payoutsEnabled: true,
+    detailsSubmitted: true,
+  });
+}
 
 describe("orders", () => {
   it("refuses to create an order when the shop has no payment-ready Stripe account", async () => {
@@ -229,6 +245,105 @@ describe("orders", () => {
 
     // Not yet paid: the booking's payment gate is untouched.
     expect(await getBookingPayment(db, shop.id, entry.booking.id)).toBeNull();
+  });
+
+  it("invoices in the shop's currency, not a hardcoded usd", async () => {
+    const { db, shop, entry } = await orderContext();
+    await connectedShop(db, shop.id);
+    await setShopCurrency(db, shop.id, "eur");
+    // Stripe reports a different settlement currency for the connected
+    // account. That is advisory only (`stripeCurrencyMismatch` surfaces it in
+    // settings) and never overrides what the shop declared.
+    await setShopStripeAccountStatus(db, "acct_123", {
+      chargesEnabled: true,
+      payoutsEnabled: true,
+      detailsSubmitted: true,
+      defaultCurrency: "usd",
+    });
+    const seen: CreateInvoiceRequest[] = [];
+    const result = await createOrder(
+      db,
+      {
+        shopId: shop.id,
+        personId: entry.person.id,
+        createdByPersonId: entry.person.id,
+        lineItems,
+      },
+      fakeInvoicing({
+        async createInvoice(request) {
+          seen.push(request);
+          return fakeInvoicing().createInvoice(request);
+        },
+      }),
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(seen[0]?.currency).toBe("eur");
+    expect(result.order.currency).toBe("eur");
+  });
+
+  it("never divides a zero-decimal currency by 100, and bounds it in major units", async () => {
+    const { db, shop, entry } = await orderContext();
+    await connectedShop(db, shop.id);
+    await setShopCurrency(db, shop.id, "jpy");
+    const base = {
+      shopId: shop.id,
+      personId: entry.person.id,
+      createdByPersonId: entry.person.id,
+    };
+
+    // ¥18,000 stays 18000 minor units end to end.
+    const result = await createOrder(
+      db,
+      { ...base, lineItems: [{ ...lineItems[0], unitAmountCents: 18_000 }] },
+      fakeInvoicing(),
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.order.currency).toBe("jpy");
+    expect(result.order.totalCents).toBe(18_000);
+
+    // The ceiling is ¥100,000, the same *major-unit* bound a USD shop gets at
+    // $100,000 — not the hundred-times-looser one a literal `100_000 * 100`
+    // would have allowed (docs ADR 20260731-shop-currency).
+    expect(maxLineItemUnitAmountCents("jpy")).toBe(MAX_LINE_ITEM_UNIT_AMOUNT_MAJOR);
+    expect(maxLineItemUnitAmountCents("usd")).toBe(MAX_LINE_ITEM_UNIT_AMOUNT_MAJOR * 100);
+    expect(
+      await createOrder(
+        db,
+        {
+          ...base,
+          lineItems: [{ ...lineItems[0], unitAmountCents: MAX_LINE_ITEM_UNIT_AMOUNT_MAJOR + 1 }],
+        },
+        fakeInvoicing(),
+      ),
+    ).toEqual({ ok: false, reason: "invalid" });
+  });
+
+  it("keeps a settled order's own currency after the shop switches", async () => {
+    const { db, shop, entry } = await orderContext();
+    await connectedShop(db, shop.id);
+    await setShopCurrency(db, shop.id, "eur");
+    const result = await createOrder(
+      db,
+      {
+        shopId: shop.id,
+        personId: entry.person.id,
+        createdByPersonId: entry.person.id,
+        bookingId: entry.booking.id,
+        lineItems,
+      },
+      fakeInvoicing(),
+    );
+    if (!result.ok) throw new Error("expected ok");
+    await markOrderPaidByInvoiceId(db, result.order.stripeInvoiceId, result.order.totalCents);
+
+    await setShopCurrency(db, shop.id, "jpy");
+    const settled = await getOrder(db, shop.id, result.order.id);
+    // Evidence of what was billed — never re-read through today's setting.
+    expect(settled?.order.currency).toBe("eur");
+    expect(settled?.order.totalCents).toBe(22_000);
+    expect((await getBookingPayment(db, shop.id, entry.booking.id))?.currency).toBe("eur");
   });
 
   it("is tenant-safe: another shop cannot see or act on the order", async () => {

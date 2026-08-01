@@ -10,6 +10,7 @@ import {
   resolveImageAlt,
 } from "@/lib/courses";
 import { formatShortDate, formatTime, formatTimeRangeTz } from "@/lib/format";
+import { minorToMajor, type ShopCurrency } from "@/lib/money";
 import { capacityLabel, isFull } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 
@@ -53,6 +54,7 @@ export function CourseHero({
   totalCents,
   bookHref,
   inquiryHref,
+  currency,
   locale,
   t,
 }: {
@@ -64,13 +66,18 @@ export function CourseHero({
    * visible next step until they scroll past specs, admission, overview,
    * gallery, and the schedule (design/principles.md #2). */
   inquiryHref?: string | null;
+  /** The shop's currency — a Cozumel shop's course price is pesos, not dollars. */
+  currency: ShopCurrency;
   /** The shop's locale — money and dates on a public page follow it, not the server's. */
   locale: string;
   t: DiverTranslator;
 }) {
-  const usd = new Intl.NumberFormat(locale, {
+  // Whole major units: a hero price reads as a headline, and the trailing
+  // ".00" is noise. `minorToMajor` (not a literal 100) is what keeps a
+  // ¥48,000 course from rendering as ¥480.
+  const money = new Intl.NumberFormat(locale, {
     style: "currency",
-    currency: "USD",
+    currency: currency.toUpperCase(),
     maximumFractionDigits: 0,
   });
   return (
@@ -102,7 +109,7 @@ export function CourseHero({
         <div className="flex flex-wrap items-center gap-4">
           {totalCents === null ? null : (
             <p className="text-2xl font-semibold tabular-nums">
-              {usd.format(totalCents / 100)}
+              {money.format(minorToMajor(totalCents, currency))}
               <span className="ml-2 text-sm font-normal text-muted">{t("common.perDiver")}</span>
             </p>
           )}

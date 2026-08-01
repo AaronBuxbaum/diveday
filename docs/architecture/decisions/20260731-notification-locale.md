@@ -1,6 +1,6 @@
 # 20260731-notification-locale — Localize outbound email and SMS
 
-- **Status:** Accepted
+- **Status:** Superseded by [20260731-per-person-notification-locale](20260731-per-person-notification-locale.md)
 - **Date:** 2026-07-31
 
 ## Context

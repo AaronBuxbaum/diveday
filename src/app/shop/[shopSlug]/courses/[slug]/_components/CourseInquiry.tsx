@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
+import { copyToClipboard } from "@/components/Copyable";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import {
@@ -43,6 +44,7 @@ export interface CourseInquiryCopy {
   openInEmailApp: string;
   copyMessage: string;
   copied: string;
+  copyFailed: string;
   orWriteTo: string;
   callLabel: string;
   send: string;
@@ -103,7 +105,7 @@ export function CourseInquiry({
   const [diversInput, setDiversInput] = useState("");
   const [experience, setExperience] = useState<CourseInquiryExperience | "">("");
   const [message, setMessage] = useState("");
-  const [copied, setCopied] = useState(false);
+  const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "failed">("idle");
   const [experienceMissing, setExperienceMissing] = useState(false);
 
   // Optional, like every other contact field: blank is a real answer, not
@@ -127,17 +129,11 @@ export function CourseInquiry({
   }
 
   async function copyMessage() {
-    try {
-      await navigator.clipboard.writeText(`${subject}\n\n${body}`);
-      setCopied(true);
-      // Long enough to read, short enough that the button is ready again
-      // before a diver who mis-copied reaches for it.
-      setTimeout(() => setCopied(false), 4000);
-    } catch {
-      // A denied clipboard permission is not worth an error state: the mail
-      // button beside it does the same job, and the message is on screen.
-      setCopied(false);
-    }
+    const ok = await copyToClipboard(`${subject}\n\n${body}`);
+    setCopyStatus(ok ? "copied" : "failed");
+    // Long enough to read, short enough that the button is ready again
+    // before a diver who mis-copied reaches for it.
+    setTimeout(() => setCopyStatus("idle"), 4000);
   }
 
   function sendInquiry() {
@@ -340,7 +336,13 @@ export function CourseInquiry({
               }}
               className={buttonClass({ variant: "secondary", className: "text-foreground" })}
             >
-              <span aria-live="polite">{copied ? copy.copied : copy.copyMessage}</span>
+              <span aria-live="polite">
+                {copyStatus === "copied"
+                  ? copy.copied
+                  : copyStatus === "failed"
+                    ? copy.copyFailed
+                    : copy.copyMessage}
+              </span>
             </button>
           </div>
           <p className="mt-4 text-sm text-muted">

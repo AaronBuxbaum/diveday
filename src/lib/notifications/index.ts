@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { DIVER_LOCALES } from "@/i18n/settings";
+import { DIVER_LOCALES, type DiverLocale, isDiverLocale, toDiverLocale } from "@/i18n/settings";
 import { nowMs } from "@/lib/clock";
 import { COURSE_INQUIRY_EXPERIENCE } from "@/lib/course-inquiry";
 import { REMINDER_ACTION_CODES } from "@/lib/readiness-summary";
@@ -26,13 +26,36 @@ import {
 const emailAddressSchema = z.email().max(200);
 
 /**
- * The recipient shop's own locale — no per-person preference is stored, so
- * this is the only signal available at send time (docs ADR
+ * The language this message is written in: the recipient's own recorded locale
+ * when DiveDay has one, otherwise the shop's `default_locale` (docs ADR
+ * 20260731-per-person-notification-locale, superseding
  * 20260731-notification-locale). Every `Notification` kind carries one except
  * `new_account_alert`, which lands in the founder's own inbox rather than a
- * shop's or diver's.
+ * shop's or diver's. Callers pick the value with {@link recipientLocale}.
  */
 const localeSchema = z.enum(DIVER_LOCALES);
+
+/**
+ * Which language to write to this recipient in.
+ *
+ * `people.locale` is a first-hand signal — captured from a request the diver
+ * themselves made (src/db/people.ts, `recordDiverOwnLocale`) — so it outranks
+ * the shop's declared default, which is a guess about everyone at once. Null,
+ * or a stored value DiveDay no longer carries a bundle for, falls straight back
+ * to the shop's locale, which is exactly the behaviour every notification had
+ * before per-person capture existed.
+ *
+ * Pass the **recipient's** locale, not "a person in the story". A night-before
+ * brief addressed to the crew, a staff invite, or a lead notification landing
+ * in the shop's own inbox are all about a diver but not *to* one — those stay
+ * on the shop's locale, so they pass `null` here or don't call this at all.
+ */
+export function recipientLocale(
+  personLocale: string | null | undefined,
+  shopDefaultLocale: string | null | undefined,
+): DiverLocale {
+  return isDiverLocale(personLocale) ? personLocale : toDiverLocale(shopDefaultLocale);
+}
 
 const reminderActionCodeSchema = z.enum(REMINDER_ACTION_CODES);
 

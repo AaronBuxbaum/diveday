@@ -21,6 +21,7 @@ import {
 } from "@/lib/calendar";
 import { nowDate } from "@/lib/clock";
 import { formatShortDate } from "@/lib/format";
+import { toShopCurrency } from "@/lib/money";
 import { formatPercent, formatReportMoney, summarizeMonth, tripFillRate } from "@/lib/reporting";
 import { requireStaffSession } from "@/lib/session";
 import { utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
@@ -145,6 +146,10 @@ export default async function ReportsPage({
   const locale = await requestLocale(shop?.defaultLocale);
   if (!shop) return null;
   const t = staffTranslator(locale);
+  // Revenue is this shop's own money — a Bali shop's month reads in rupiah
+  // (docs ADR 20260731-shop-currency). Note the fill/waiver percentages below
+  // are ratios, not money, and stay currency-free.
+  const currency = toShopCurrency(shop.currency);
 
   // Checked against the database, not the JWT, so a revoked manager loses
   // revenue access immediately (see canPersonViewShopReports).
@@ -331,7 +336,7 @@ export default async function ReportsPage({
           >
             <Metric
               label={t("reports.metrics.revenueLabel")}
-              value={formatReportMoney(report.revenueCents)}
+              value={formatReportMoney(report.revenueCents, currency, locale)}
               detail={t("reports.metrics.revenueDetail")}
               linkHref={revenueOrdersHref}
               linkLabel={t("reports.metrics.revenueViewOrders")}

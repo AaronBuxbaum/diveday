@@ -1,8 +1,13 @@
 import { and, desc, eq, gt, inArray, lte, ne, sql } from "drizzle-orm";
 import { diverTranslator } from "@/i18n/messages";
-import { toDiverLocale } from "@/i18n/settings";
 import { nowDate } from "@/lib/clock";
-import { type Notification, type NotificationProvider, publicAppUrl } from "@/lib/notifications";
+import { type ShopCurrency, toShopCurrency } from "@/lib/money";
+import {
+  type Notification,
+  type NotificationProvider,
+  publicAppUrl,
+  recipientLocale,
+} from "@/lib/notifications";
 import {
   notifySms,
   type SmsProvider,
@@ -73,8 +78,14 @@ export type RecapPageData = {
   photos: RecapPhotoView[];
   /** True when the shop's own Stripe account can take a tip charge right now. */
   canTip: boolean;
-  /** The shop's connected Stripe account currency (e.g. "usd"), for the tip presets' label/symbol (task 60). */
-  currency: string;
+  /**
+   * The shop's own currency (`shops.currency`, e.g. "usd"), for the tip
+   * presets' label/symbol. Task 60 read the connected Stripe account's
+   * `default_currency` here; task 35 moved it to the shop setting so the tip
+   * is quoted in the same currency as the trip the diver just paid for
+   * (docs ADR 20260731-shop-currency).
+   */
+  currency: ShopCurrency;
   /** The most recent tip attempt for this booking, if any — drives the tip panel's state. */
   tip: {
     status: "pending" | "paid" | "expired";
@@ -118,6 +129,7 @@ export async function getRecapPageData(
       contactEmail: shops.contactEmail,
       contactPhone: shops.contactPhone,
       reviewUrl: shops.reviewUrl,
+      currency: shops.currency,
     })
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
@@ -193,7 +205,7 @@ export async function getRecapPageData(
     // customer email; offering the form anyway would fail on every
     // submission (Codex finding).
     canTip: Boolean(row.diverEmail) && canAcceptPayments(stripeAccount),
-    currency: stripeAccount?.defaultCurrency ?? "usd",
+    currency: toShopCurrency(row.currency),
     tip: tip
       ? {
           status: tip.status,
@@ -497,9 +509,12 @@ export async function sendDueRecaps(
     const recapUrl = origin ? new URL(recapLinkPath(booking.id), `${origin}/`).toString() : null;
     const phone = smsRecipient(person.phone);
     const sites = siteNamesByTrip.get(trip.id) ?? [];
-    // No request to negotiate Accept-Language from at a cron fire — the shop's
-    // own stored locale is the signal (docs ADR 20260731-notification-locale).
-    const locale = toDiverLocale(shop.defaultLocale);
+    // No request to negotiate Accept-Language from at a cron fire — but this
+    // diver may have told us first-hand on a request of their own, and that
+    // outranks the shop's default (docs ADR
+    // 20260731-per-person-notification-locale). Null falls back to the shop
+    // locale, exactly as before the column existed.
+    const locale = recipientLocale(person.locale, shop.defaultLocale);
     const t = diverTranslator(locale);
     const smsBody = recapUrl
       ? t("notifications.sms.recap", { shopName: shop.name, tripTitle: trip.title, recapUrl })

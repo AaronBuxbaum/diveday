@@ -126,7 +126,17 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
   // `shop_id` is the same value on every row of a single-shop bundle.
   shops: ["jurisdiction", "is_demo"], // DiveDay-side config, not shop records
   staff_shifts: ["shop_id"],
-  people: ["shop_id"],
+  people: [
+    "shop_id",
+    // The language a diver reads, as observed from their own request's
+    // Accept-Language (docs ADR 20260731-per-person-notification-locale). An
+    // inferred first-hand signal, not a fact the shop entered — a CSV can't
+    // vouch for one, and accepting an imported value would be exactly the
+    // "stale header from an unrelated past request" that ADR narrows against.
+    // Null on import falls back to the shop's locale, which is the same mail a
+    // shop got before the column existed, so nothing is silently lost.
+    "locale",
+  ],
   certifications: ["shop_id"],
   specialty_certifications: ["shop_id"],
   nitrox_certifications: ["shop_id"],

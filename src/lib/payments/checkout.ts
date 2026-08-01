@@ -8,6 +8,19 @@ import { z } from "zod";
  * ever comes from Stripe's own responses/webhooks, never from a return URL.
  */
 
+/**
+ * Stripe's `product_data[name]` limit. A description over it fails the whole
+ * session creation, which on this path means a diver can't pay at all — so the
+ * caller's composed label (a message-bundle string plus a shop-authored trip or
+ * course title) is clamped rather than gambled on.
+ */
+export const MAX_LINE_DESCRIPTION_LENGTH = 250;
+
+/** A caller-composed line label, trimmed and clamped to what Stripe will accept. */
+export function stripeLineDescription(value: string): string {
+  return value.trim().slice(0, MAX_LINE_DESCRIPTION_LENGTH);
+}
+
 export type CreateCheckoutSessionRequest = {
   stripeAccountId: string;
   currency: string;

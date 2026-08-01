@@ -1,12 +1,13 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import {
   IDLE_INVOICE_RESEND_STATE,
   type InvoiceResendState,
 } from "@/app/actions/invoice-resend-types";
 import { resendInvoiceAction } from "@/app/actions/invoices";
+import { Copyable } from "@/components/Copyable";
 import { buttonClass } from "@/components/ui/button";
 
 export type PaymentActionCopy = {
@@ -31,32 +32,15 @@ function CopyLinkButton({
   hostedInvoiceUrl: string;
   copy: PaymentActionCopy;
 }) {
-  const [state, setState] = useState<"idle" | "copied" | "failed">("idle");
-
-  async function copyLink() {
-    try {
-      await navigator.clipboard.writeText(hostedInvoiceUrl);
-      setState("copied");
-      setTimeout(() => setState("idle"), 4000);
-    } catch {
-      setState("failed");
-    }
-  }
-
   return (
-    <button
-      type="button"
-      onClick={copyLink}
-      className={buttonClass({ variant: "secondary", size: "sm", className: "shrink-0" })}
-    >
-      <span aria-live="polite">
-        {state === "copied"
-          ? copy.linkCopied
-          : state === "failed"
-            ? copy.copyFailed
-            : copy.copyLink}
-      </span>
-    </button>
+    <Copyable
+      layout="inline"
+      className="shrink-0"
+      value={hostedInvoiceUrl}
+      copyLabel={copy.copyLink}
+      copiedLabel={copy.linkCopied}
+      failedLabel={copy.copyFailed}
+    />
   );
 }
 

@@ -412,6 +412,10 @@ export async function loadShopExportBundleInput(
             "slug",
             "timezone",
             "default_locale",
+            // Without this the whole export is ambiguous: every other file's
+            // `*_cents` column is a count of *this* currency's minor unit, and
+            // a bare 13000 is $130.00 or ¥13,000 depending on it.
+            "currency",
             "medical_jurisdiction",
             "depth_unit",
             "contact_email",
@@ -429,6 +433,7 @@ export async function loadShopExportBundleInput(
               shop.slug,
               shop.timezone,
               shop.defaultLocale,
+              shop.currency,
               shop.jurisdiction,
               shop.depthUnit,
               shop.contactEmail,

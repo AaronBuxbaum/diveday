@@ -159,6 +159,7 @@ const NOT_INCLUDED = [
   "DiveDay's shared dive-site catalog templates (the shop's own copies export in dive_sites.csv).",
   "A pasted image URL a CSV references that was never stored through DiveDay (an external link, or a bundled template asset) — only files DiveDay's own storage actually holds can be bundled as bytes.",
   "Login accounts, password hashes, email-verification/password-reset tokens, and staff calendar-subscription links — credentials are never exported.",
+  "The reading language DiveDay observed for a diver from their own booking or waiver link — something we inferred about them, not a record you entered, and not one a CSV could vouch for on the way back in. Every diver's language is re-learned the first time they use one of their own links again; until then their mail follows your shop's language, exactly as it did before.",
 ];
 
 export type ExportBundleInput = {

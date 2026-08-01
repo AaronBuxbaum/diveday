@@ -28,38 +28,6 @@ implementation, and the persisted-birthdate path needs a `security-reviewer` pas
 
 ---
 
-## Ingrid (persona 5) — localize money end-to-end
-
-**Origin:** archive task 35. **Status:** deferred, not started.
-
-**Left to do:** add `currency` to `shops` (schema-change skill), thread it through
-`formatMoneyCents` (`src/lib/format.ts` defaults `"usd"`), checkout creation
-(`src/db/checkouts.ts`), tip presets, and course fee display. Stripe owns conversion arithmetic.
-Prerequisite for any non-US shop. Needs its own ADR and careful payments-path test coverage — large
-enough to warrant a dedicated change, not a follow-on to a copy pass.
-
-## Ingrid (persona 5) — move Stripe line descriptions out of the domain layer
-
-**Origin:** archive task 36. **Status:** deferred, blocked on the item above.
-
-**Left to do:** `` `Deposit — ${title}` `` (`src/db/checkouts.ts`) and
-`` `${course.title} — instruction` `` (`src/lib/courses.ts`) are English sentences composed in
-`src/db`/`src/lib`. Return structured parts and compose the localized label at the call boundary —
-natural to do together with the currency work above, since both touch the same Stripe line-item
-composition point.
-
-## Ingrid (persona 5) — per-recipient notification language
-
-**Origin:** archive task 128. **Status:** deliberately deferred by standing architecture decision,
-not a live gap.
-
-**Left to do:** nothing right now. `src/lib/notifications/index.ts` picks the shop's locale for
-every email; a diver whose own negotiated locale differs gets the shop's language instead. ADR
-20260731-notification-locale scopes this to future work on purpose — revisit only alongside a
-fresh review of that ADR, not as a standalone fix.
-
----
-
 ## Leo (persona 15) — self-serve email unsubscribe
 
 **Origin:** archive task 122. **Status:** partial — the email document wrapper, brand-token swap,
@@ -100,48 +68,3 @@ touching e2e specs, sitemap, and canonical metadata — don't fold it into an un
 **Left to do:** `/waivers` now has Template and Signatures tabs, closing the loop between the
 template editor, signature chasing, and the signed-record evidence — but this touches waiver
 records (security-sensitive per AGENTS.md) and the `security-reviewer` pass hasn't happened yet.
-
----
-
-## Cross-cutting — empty states consistency
-
-**Origin:** archive, Appendix A cross-cutting inconsistencies list. **Status:** not started — the
-only item in that list that never got a completion marker at all.
-
-**Left to do:** the app currently mixes a shared dashed `EmptyState` component, bespoke emoji
-panels, and bare `<p>` tags for empty states with no documented rule for which pattern applies
-where. Pick the warm bespoke pattern for terminal/whole-page empty states and the compact
-`EmptyState` for empty sections within a populated page, then document the split in
-`docs/design/principles.md` so it stops drifting.
-
-## Cross-cutting — unify the two confirm-dialog components
-
-**Origin:** archive, Appendix A. **Status:** partial — both shipped independently, not
-consolidated.
-
-**Left to do:** `src/components/ui/InlineConfirm.tsx` (cancel/reschedule, task 50) and
-`src/components/InlineConfirmButton.tsx` (sign-out, task 81) were built by concurrent batches and
-do the same job slightly differently. Consolidate on one, then sweep the remaining native
-`window.confirm` sites this review didn't touch (review-hide's confirm now uses the browser
-dialog via `SubmitButton`'s `confirmMessage`, waiver resend/rotation, etc.) onto it.
-
-## Cross-cutting — finish the copy-to-clipboard sweep
-
-**Origin:** archive, Appendix A. **Status:** partial — `Copyable.tsx` exists and is used on promo
-codes; the other original call sites aren't migrated.
-
-**Left to do:** sweep the remaining hand-rolled copy-to-clipboard implementations (public schedule
-URL, payment links, and whatever else predates `Copyable.tsx`) onto the shared component so reset
-delays and failure handling stop drifting per-site.
-
-## Cross-cutting — decide on `UndoToast` vs. confirm-before-acting
-
-**Origin:** archive, Appendix A. **Status:** resolved-leaning, but explicitly flagged in the
-archive as "a real, unresolved inconsistency" rather than a settled decision.
-
-**Left to do:** tasks 50/81/85 all shipped with confirm-before-acting instead of adopting
-`UndoToast` (an irreversible effect — a refund, a signed-out session — favors confirming first).
-`UndoToast` still has exactly one call site elsewhere in the app. Either write down that
-confirm-before wins for destructive/hard-to-reverse actions and `UndoToast` is reserved for
-cleanly-reversible ones (and note that in `docs/design/principles.md`), or make the case for
-adopting it more broadly. Low priority — pick this up opportunistically, not as a dedicated pass.

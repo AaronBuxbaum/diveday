@@ -6,6 +6,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { InlineConfirm } from "@/components/ui/InlineConfirm";
 
 /** One departure as the board hands it to the builder, already shop-local. */
 export type BuilderTrip = {
@@ -85,6 +86,8 @@ export type BuilderCopy = {
   remove: string;
   removeAria: string;
   removeConfirm: string;
+  removeConfirmButton: string;
+  removeCancel: string;
   removePending: string;
   whatIsIt: string;
   titlePlaceholder: string;
@@ -407,14 +410,15 @@ export function ScheduleBuilder({
                           </button>
                           <form action={actions.remove}>
                             <input type="hidden" name="tripId" value={trip.id} />
-                            <SubmitButton
+                            <InlineConfirm
+                              triggerLabel={copy.remove}
+                              triggerClassName={buttonClass({ variant: "danger", size: "sm" })}
+                              message={fill(copy.removeConfirm, { title: trip.title })}
+                              confirmLabel={copy.removeConfirmButton}
+                              cancelLabel={copy.removeCancel}
                               pendingLabel={copy.removePending}
                               ariaLabel={fill(copy.removeAria, { ref })}
-                              confirmMessage={fill(copy.removeConfirm, { title: trip.title })}
-                              className={buttonClass({ variant: "danger", size: "sm" })}
-                            >
-                              {copy.remove}
-                            </SubmitButton>
+                            />
                           </form>
                         </div>
                       ) : null}

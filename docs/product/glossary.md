@@ -352,6 +352,19 @@ new domain concept, define it here in the same PR.
   (or manual refresh) brings the paid/void result back into the order and, when the order is linked
   to a booking, into that booking's payment gate the same way a staff mark does. A paid invoice can
   be fully refunded from the diver's payment workspace when Stripe exposes its payment intent.
+- **Shop currency** — the one currency a shop displays prices in and charges its divers in
+  (`shops.currency`, lowercase ISO 4217, chosen in settings). Changing it **re-denominates rather
+  than converts**: a 130 trip stays the number 130, now meaning 130 of the new currency, so a shop
+  that switches re-checks its own price list. Amounts that already settled (orders, checkouts,
+  payments, refunds) carry their own currency and are never reinterpreted. What Stripe *reports*
+  for the connected account (`shop_stripe_accounts.default_currency`) is advisory — a disagreement
+  is surfaced, not silently resolved. See
+  [20260731-shop-currency](../architecture/decisions/20260731-shop-currency.md).
+- **Minor unit** — the indivisible unit of a currency, and what every `*_cents` column counts. The
+  name is historical: it is 1/100 of a dollar or euro, but a *whole yen* for JPY, which has no
+  sub-unit at all. So the divisor between a stored amount and a displayed one comes from the
+  currency (`src/lib/money.ts`), never from a literal 100 — a bare `/ 100` prints a ¥13,000 trip
+  as ¥130.
 - **Booking checkout** — the pay-at-booking path: right after a public booking (or party) commits,
   the diver is handed one hosted Stripe Checkout session on the shop's connected account for the
   per-diver price × party size. Paid state comes only from Stripe's webhook or a direct API read —

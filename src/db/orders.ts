@@ -1,5 +1,6 @@
 import { and, asc, desc, eq, gte, ilike, inArray, lt } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
+import { majorToMinor } from "@/lib/money";
 import { type InvoicingProvider, invoicingProviderFromEnvironment } from "@/lib/payments/invoicing";
 import type { AppDb, DbExecutor } from "./client";
 import {
@@ -19,12 +20,25 @@ import {
   people,
   trips,
 } from "./schema";
-import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
+import { canAcceptPayments, getShopCurrency, getShopStripeAccount } from "./stripe-accounts";
 
 export type NewOrderLineItem = {
   kind: OrderLineItemKind;
+  /**
+   * The words that go on the invoice, composed by the caller from its own
+   * message bundle (docs ADR 20260731-domain-layer-copy-leaks) — this layer
+   * never writes a sentence.
+   *
+   * Persisted verbatim into `order_line_items.description` and sent to Stripe.
+   * That is deliberate and permanent: once the invoice is finalized, Stripe's
+   * hosted page and PDF carry this exact wording forever, so the stored string
+   * is a **frozen record of what was billed**, not a label to re-translate
+   * later. Re-rendering it in a different language after the fact would make
+   * DiveDay's copy of the invoice disagree with the diver's.
+   */
   description: string;
   quantity: number;
+  /** An integer count of the shop currency's minor unit — never a major-unit float. */
   unitAmountCents: number;
 };
 
@@ -46,12 +60,23 @@ export type CreateOrderOutcome =
 // form (a direct createOrder call, a future admin tool) can't persist an
 // out-of-bounds line item either.
 const MAX_LINE_ITEM_QUANTITY = 100;
-const MAX_LINE_ITEM_UNIT_AMOUNT_CENTS = 100_000 * 100;
+/** In *major* units, so the ceiling means the same thing in every currency. */
+export const MAX_LINE_ITEM_UNIT_AMOUNT_MAJOR = 100_000;
 const MAX_LINE_ITEM_DESCRIPTION_LENGTH = 200;
 const MAX_LINE_ITEMS_PER_ORDER = 20;
 const orderLineItemKindValues = new Set<string>(orderLineItemKind.enumValues);
 
-function lineItemIsValid(item: NewOrderLineItem): boolean {
+/**
+ * The line-item ceiling in the shop currency's own minor units. Derived from a
+ * major-unit constant rather than a literal `100_000 * 100`, so a zero-decimal
+ * currency gets the same ¥100,000 ceiling a two-decimal one gets at $100,000
+ * — not a hundred times looser (docs ADR 20260731-shop-currency).
+ */
+export function maxLineItemUnitAmountCents(currency: string): number {
+  return majorToMinor(MAX_LINE_ITEM_UNIT_AMOUNT_MAJOR, currency);
+}
+
+function lineItemIsValid(item: NewOrderLineItem, maxUnitAmountCents: number): boolean {
   return (
     orderLineItemKindValues.has(item.kind) &&
     Number.isInteger(item.quantity) &&
@@ -59,7 +84,7 @@ function lineItemIsValid(item: NewOrderLineItem): boolean {
     item.quantity <= MAX_LINE_ITEM_QUANTITY &&
     Number.isInteger(item.unitAmountCents) &&
     item.unitAmountCents >= 0 &&
-    item.unitAmountCents <= MAX_LINE_ITEM_UNIT_AMOUNT_CENTS &&
+    item.unitAmountCents <= maxUnitAmountCents &&
     item.description.trim().length > 0 &&
     item.description.length <= MAX_LINE_ITEM_DESCRIPTION_LENGTH
   );
@@ -86,7 +111,16 @@ export async function createOrder(
   if (input.lineItems.length === 0 || input.lineItems.length > MAX_LINE_ITEMS_PER_ORDER) {
     return { ok: false, reason: "invalid" };
   }
-  if (!input.lineItems.every(lineItemIsValid)) return { ok: false, reason: "invalid" };
+  // The shop's declared currency (docs ADR 20260731-shop-currency), not the
+  // connected account's and not a hardcoded "usd". Read once and used for the
+  // amount bounds, the Stripe invoice, and the local order row, so the three
+  // can never disagree — and snapshotted onto the order, which is evidence of
+  // what was billed and must survive a later change to the shop setting.
+  const currency = await getShopCurrency(db, input.shopId);
+  const maxUnitAmountCents = maxLineItemUnitAmountCents(currency);
+  if (!input.lineItems.every((item) => lineItemIsValid(item, maxUnitAmountCents))) {
+    return { ok: false, reason: "invalid" };
+  }
 
   const account = await getShopStripeAccount(db, input.shopId);
   if (!canAcceptPayments(account)) return { ok: false, reason: "not_connected" };
@@ -107,8 +141,6 @@ export async function createOrder(
       .limit(1);
     if (!booking) return { ok: false, reason: "invalid" };
   }
-
-  const currency = "usd";
 
   // Durable evidence this attempt exists, written and committed before
   // Stripe is ever called (CR-005) — a crash mid-attempt (e.g. after

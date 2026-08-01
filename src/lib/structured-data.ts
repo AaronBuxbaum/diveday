@@ -1,3 +1,4 @@
+import { currencyFractionDigits, minorToMajor } from "./money";
 import type { ReviewAggregate } from "./reviews";
 import { MAX_REVIEW_RATING, MIN_REVIEW_RATING } from "./reviews";
 
@@ -52,7 +53,23 @@ export type ShopForStructuredData = {
   slug: string;
   contactEmail: string | null;
   contactPhone: string | null;
+  /**
+   * The shop's own currency, for every `Offer` in the graph. Search engines
+   * take `priceCurrency` at face value, so a hardcoded "USD" doesn't just look
+   * wrong on a Cozumel shop's listing — it publishes a price in the wrong
+   * currency to the one audience that can't ask a follow-up question.
+   */
+  currency: string;
 };
+
+/**
+ * A stored minor-unit amount as schema.org's decimal price string, with the
+ * currency's own number of decimal places — "130.00" for USD, "5000" for JPY.
+ * A fixed `.toFixed(2)` would publish a ¥5,000 course as "50.00".
+ */
+function offerPrice(cents: number, currency: string): string {
+  return minorToMajor(cents, currency).toFixed(currencyFractionDigits(currency));
+}
 
 /**
  * The shop's own `aggregateRating`, or nothing at all when it has no published
@@ -147,8 +164,8 @@ export function tripJsonLd(
         ? undefined
         : {
             "@type": "Offer",
-            price: (trip.priceCents / 100).toFixed(2),
-            priceCurrency: "USD",
+            price: offerPrice(trip.priceCents, shop.currency),
+            priceCurrency: shop.currency.toUpperCase(),
             availability: available,
             url,
           },
@@ -228,8 +245,8 @@ export function coursePageJsonLd(
         ? undefined
         : {
             "@type": "Offer",
-            price: (course.priceCents / 100).toFixed(2),
-            priceCurrency: "USD",
+            price: offerPrice(course.priceCents, shop.currency),
+            priceCurrency: shop.currency.toUpperCase(),
             availability: "https://schema.org/InStock",
             url,
           },

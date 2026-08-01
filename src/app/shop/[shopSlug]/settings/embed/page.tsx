@@ -75,6 +75,7 @@ export default async function EmbedSettingsPage() {
             snippet={iframeSnippet}
             copyLabel={t("settings.embed.snippetField.copy")}
             copiedLabel={t("settings.embed.snippetField.copied")}
+            failedLabel={t("settings.embed.snippetField.failed")}
           />
         </div>
       </section>
@@ -89,6 +90,7 @@ export default async function EmbedSettingsPage() {
             snippet={buttonSnippet}
             copyLabel={t("settings.embed.snippetField.copy")}
             copiedLabel={t("settings.embed.snippetField.copied")}
+            failedLabel={t("settings.embed.snippetField.failed")}
           />
         </div>
       </section>

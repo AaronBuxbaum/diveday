@@ -9,10 +9,10 @@ describe("searchShop", () => {
   it("finds a diver by a case-insensitive substring of their name, email, or phone", async () => {
     const { db, shop } = await seededShopContext();
 
-    const byName = await searchShop(db, shop.id, "priya", "America/New_York");
+    const byName = await searchShop(db, shop.id, "priya", "America/New_York", "en-US");
     expect(byName.divers.map((d) => d.fullName)).toContain("Priya Sharma");
 
-    const byNameSubstring = await searchShop(db, shop.id, "SHARMA", "America/New_York");
+    const byNameSubstring = await searchShop(db, shop.id, "SHARMA", "America/New_York", "en-US");
     expect(byNameSubstring.divers.map((d) => d.fullName)).toContain("Priya Sharma");
   });
 
@@ -30,7 +30,7 @@ describe("searchShop", () => {
       .limit(1);
     if (!trip) throw new Error("seed trip missing");
 
-    const result = await searchShop(db, shop.id, "Spiegel Grove", "America/New_York");
+    const result = await searchShop(db, shop.id, "Spiegel Grove", "America/New_York", "en-US");
     expect(result.trips.map((t) => t.id)).toContain(trip.id);
   });
 
@@ -47,16 +47,22 @@ describe("searchShop", () => {
       .returning();
     if (!otherPriya) throw new Error("insert failed");
 
-    const resultForShop = await searchShop(db, shop.id, "priya", "America/New_York");
+    const resultForShop = await searchShop(db, shop.id, "priya", "America/New_York", "en-US");
     expect(resultForShop.divers.map((d) => d.id)).not.toContain(otherPriya.id);
 
-    const resultForOtherShop = await searchShop(db, otherShop.id, "priya", "America/New_York");
+    const resultForOtherShop = await searchShop(
+      db,
+      otherShop.id,
+      "priya",
+      "America/New_York",
+      "en-US",
+    );
     expect(resultForOtherShop.divers.map((d) => d.id)).toEqual([otherPriya.id]);
   });
 
   it("returns nothing for a below-minimum-length query", async () => {
     const { db, shop } = await seededShopContext();
-    const result = await searchShop(db, shop.id, "p", "America/New_York");
+    const result = await searchShop(db, shop.id, "p", "America/New_York", "en-US");
     expect(result).toEqual({ divers: [], trips: [], diveSites: [], courses: [], orders: [] });
   });
 
@@ -69,7 +75,7 @@ describe("searchShop", () => {
       .limit(1);
     if (!site) throw new Error("seed dive site missing");
 
-    const result = await searchShop(db, shop.id, "Spiegel Grove", "America/New_York");
+    const result = await searchShop(db, shop.id, "Spiegel Grove", "America/New_York", "en-US");
     expect(result.diveSites.map((s) => s.id)).toContain(site.id);
   });
 
@@ -78,7 +84,7 @@ describe("searchShop", () => {
     const [course] = await db.select().from(courses).where(eq(courses.shopId, shop.id)).limit(1);
     if (!course) throw new Error("seed course missing");
 
-    const result = await searchShop(db, shop.id, course.title, "America/New_York");
+    const result = await searchShop(db, shop.id, course.title, "America/New_York", "en-US");
     expect(result.courses.map((c) => c.id)).toContain(course.id);
   });
 
@@ -93,7 +99,7 @@ describe("searchShop", () => {
     const [buyer] = await db.select().from(people).where(eq(people.id, order.personId)).limit(1);
     if (!buyer) throw new Error("seed order's buyer missing");
 
-    const result = await searchShop(db, shop.id, buyer.fullName, "America/New_York");
+    const result = await searchShop(db, shop.id, buyer.fullName, "America/New_York", "en-US");
     expect(result.orders.map((o) => o.id)).toContain(order.id);
   });
 
@@ -110,7 +116,7 @@ describe("searchShop", () => {
       .returning();
     if (!otherSite) throw new Error("insert failed");
 
-    const result = await searchShop(db, shop.id, "Priya's Point", "America/New_York");
+    const result = await searchShop(db, shop.id, "Priya's Point", "America/New_York", "en-US");
     expect(result.diveSites.map((s) => s.id)).not.toContain(otherSite.id);
   });
 });

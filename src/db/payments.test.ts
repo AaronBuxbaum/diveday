@@ -38,6 +38,7 @@ describe("booking payments", () => {
       shopId: shop.id,
       bookingId: entry.booking.id,
       status: "deposit_paid",
+      currency: "usd",
       amountCents: 6000,
     });
     expect(await getBookingReadiness(db, shop.id, entry.booking.id)).toEqual({
@@ -50,6 +51,7 @@ describe("booking payments", () => {
       shopId: shop.id,
       bookingId: entry.booking.id,
       status: "refunded",
+      currency: "usd",
     });
     expect((await getBookingReadiness(db, shop.id, entry.booking.id))?.blockers).toContainEqual(
       expect.objectContaining({ code: "payment_refunded" }),
@@ -62,12 +64,14 @@ describe("booking payments", () => {
       shopId: shop.id,
       bookingId: entry.booking.id,
       status: "paid",
+      currency: "usd",
       amountCents: 18000,
     });
     await setBookingPayment(db, {
       shopId: shop.id,
       bookingId: entry.booking.id,
       status: "waived",
+      currency: "usd",
     });
     const payment = await getBookingPayment(db, shop.id, entry.booking.id);
     expect(payment?.status).toBe("waived");
@@ -77,6 +81,7 @@ describe("booking payments", () => {
         shopId: "00000000-0000-4000-8000-000000000000",
         bookingId: entry.booking.id,
         status: "paid",
+        currency: "usd",
       }),
     ).toBeNull();
   });
@@ -89,6 +94,7 @@ describe("setBookingPaymentIfNotFinal", () => {
       shopId: shop.id,
       bookingId: entry.booking.id,
       status: "refunded",
+      currency: "usd",
       providerRef: "re_original",
     });
 
@@ -97,6 +103,7 @@ describe("setBookingPaymentIfNotFinal", () => {
         shopId: shop.id,
         bookingId: entry.booking.id,
         status: "paid",
+        currency: "usd",
         providerRef: "cs_replay",
       }),
     );
@@ -113,6 +120,7 @@ describe("setBookingPaymentIfNotFinal", () => {
         shopId: shop.id,
         bookingId: entry.booking.id,
         status: "deposit_paid",
+        currency: "usd",
         amountCents: 6000,
       }),
     );
@@ -123,6 +131,7 @@ describe("setBookingPaymentIfNotFinal", () => {
         shopId: shop.id,
         bookingId: entry.booking.id,
         status: "paid",
+        currency: "usd",
         amountCents: 18000,
       }),
     );
@@ -135,6 +144,7 @@ describe("setBookingPaymentIfNotFinal", () => {
       shopId: shop.id,
       bookingId: entry.booking.id,
       status: "paid",
+      currency: "usd",
       amountCents: 18000,
     });
 
@@ -143,6 +153,7 @@ describe("setBookingPaymentIfNotFinal", () => {
         shopId: shop.id,
         bookingId: entry.booking.id,
         status: "refunded",
+        currency: "usd",
         amountCents: 0,
       }),
     );
@@ -171,6 +182,7 @@ describe("setBookingPaymentIfNotFinal", () => {
       shopId: shop.id,
       bookingId: entry.booking.id,
       status: "waived",
+      currency: "usd",
     });
 
     const result = await db.transaction((tx) =>
@@ -178,6 +190,7 @@ describe("setBookingPaymentIfNotFinal", () => {
         shopId: shop.id,
         bookingId: entry.booking.id,
         status: "paid",
+        currency: "usd",
         providerRef: "cs_late_webhook",
       }),
     );
@@ -203,6 +216,7 @@ describe("setBookingPaymentIfNotFinal", () => {
         shopId: shop.id,
         bookingId: entry.booking.id,
         status: "paid",
+        currency: "usd",
         providerRef: "cs_after_cancel",
       }),
     );

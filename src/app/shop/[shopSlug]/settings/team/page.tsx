@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
+import { UndoToast } from "@/components/UndoToast";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
@@ -21,6 +23,7 @@ import {
   inviteStaffAction,
   removeStaffAction,
   resendInviteAction,
+  restoreStaffAction,
   saveAllStaffRolesAction,
   setStaffStatusAction,
 } from "./actions";
@@ -44,6 +47,8 @@ function noticeMessages(
     reactivated: { tone: "success", text: t("settings.team.notice.reactivated") },
     disabled: { tone: "success", text: t("settings.team.notice.disabled") },
     removed: { tone: "success", text: t("settings.team.notice.removed") },
+    restored: { tone: "success", text: t("settings.team.notice.restored") },
+    restore_failed: { tone: "danger", text: t("settings.team.notice.restoreFailed") },
     invite_invalid: { tone: "danger", text: t("settings.team.notice.inviteInvalid") },
     roles_invalid: { tone: "danger", text: t("settings.team.notice.rolesInvalid") },
     invite_already_on_team: {
@@ -190,12 +195,14 @@ function StaffRow({ member, t }: { member: StaffMember; t: StaffTranslator }) {
               <form action={removeStaffAction}>
                 <input type="hidden" name="personId" value={member.personId} />
                 <input type="hidden" name="userAccountId" value={member.userAccountId} />
+                <input type="hidden" name="fullName" value={member.fullName} />
+                {/* Land-then-undo, not a blocking confirm: stripping roles and
+                    disabling sign-in is a purely reversible edit (principle 7,
+                    docs/design/principles.md) — the toast on the next render
+                    carries what's needed to hand back to setStaffRoles. */}
                 <SubmitButton
                   pendingLabel={t("settings.team.staffRow.deleting")}
                   ariaLabel={t("settings.team.staffRow.deleteAriaLabel", {
-                    name: member.fullName,
-                  })}
-                  confirmMessage={t("settings.team.staffRow.deleteConfirm", {
                     name: member.fullName,
                   })}
                   className={buttonClass({ variant: "danger", size: "sm" })}
@@ -216,11 +223,17 @@ export default async function TeamSettingsPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{ notice?: string }>;
+  searchParams: Promise<{
+    notice?: string;
+    undoPersonId?: string;
+    undoUserAccountId?: string;
+    undoRoles?: string;
+    undoName?: string;
+  }>;
 }) {
   const session = await requireStaffSession();
   const { shopSlug } = await params;
-  const { notice } = await searchParams;
+  const { notice, undoPersonId, undoUserAccountId, undoRoles, undoName } = await searchParams;
   const db = await getDb();
 
   const canManage = await canPersonManageStaffAccounts(
@@ -237,7 +250,9 @@ export default async function TeamSettingsPage({
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
-      <FlashParams params={["notice"]} />
+      <FlashParams
+        params={["notice", "undoPersonId", "undoUserAccountId", "undoRoles", "undoName"]}
+      />
       <ShopPageHeader
         eyebrow={t("settings.team.eyebrow")}
         title={t("settings.team.title")}
@@ -252,7 +267,21 @@ export default async function TeamSettingsPage({
         }
       />
 
-      {banner ? <StaffNoticeBanner tone={banner.tone}>{banner.text}</StaffNoticeBanner> : null}
+      {notice === "removed" && undoPersonId && undoUserAccountId && undoRoles ? (
+        <UndoToast
+          message={t("settings.team.staffRow.removedToast", { name: undoName ?? "" })}
+          action={restoreStaffAction}
+          fields={{
+            personId: undoPersonId,
+            userAccountId: undoUserAccountId,
+            roles: undoRoles,
+          }}
+          pendingLabel={t("shared.undoToast.pendingLabel")}
+          undoLabel={t("shared.undoToast.undo")}
+        />
+      ) : banner ? (
+        <StaffNoticeBanner tone={banner.tone}>{banner.text}</StaffNoticeBanner>
+      ) : null}
 
       <section className="rounded-lg border border-border bg-surface p-6">
         <h2 className="font-medium">{t("settings.team.invite.heading")}</h2>
@@ -296,7 +325,9 @@ export default async function TeamSettingsPage({
         <h2 className="font-medium">{t("settings.team.current.heading")}</h2>
         <p className="mt-1 text-sm text-muted">{t("settings.team.current.description")}</p>
         {staff.length === 0 ? (
-          <p className="mt-2 text-sm text-muted">{t("settings.team.current.empty")}</p>
+          <EmptyState className="mt-2">
+            <p className="text-sm text-muted">{t("settings.team.current.empty")}</p>
+          </EmptyState>
         ) : (
           <>
             <ul className="mt-3 flex flex-col gap-3">

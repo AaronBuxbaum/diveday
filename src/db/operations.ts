@@ -51,14 +51,29 @@ export async function addInternalNote(
   });
 }
 
+/**
+ * Return-what-you-deleted, same convention as `deleteRecapPhoto`
+ * (`DeleteRecapPhotoResult`): the caller needs the booking + text back to
+ * offer a one-tap undo that recreates the note (docs/design/principles.md
+ * §7) — a purely reversible edit, unlike the money-moving actions on this
+ * page that keep a blocking confirm.
+ */
+export type DeleteInternalNoteResult =
+  | { deleted: true; bookingId: string; body: string }
+  | { deleted: false };
+
 export async function deleteInternalNote(
   db: AppDb,
   input: { shopId: string; noteId: string; actorPersonId: string },
-) {
+): Promise<DeleteInternalNoteResult> {
   return db.transaction(async (tx) => {
     const [note] = await tx
       .select({
-        bookingId: internalNotes.bookingId,
+        // `bookings.id`, not the nullable `internalNotes.bookingId` column —
+        // the inner join below already guarantees a match, so this is the
+        // non-null value `DeleteInternalNoteResult` promises callers.
+        bookingId: bookings.id,
+        body: internalNotes.body,
         tripId: bookings.tripId,
         diverName: people.fullName,
       })
@@ -67,13 +82,13 @@ export async function deleteInternalNote(
       .innerJoin(people, eq(people.id, internalNotes.personId))
       .where(and(eq(internalNotes.id, input.noteId), eq(internalNotes.shopId, input.shopId)))
       .limit(1);
-    if (!note) return false;
+    if (!note) return { deleted: false };
     const [actor] = await tx
       .select({ name: people.fullName })
       .from(people)
       .where(and(eq(people.id, input.actorPersonId), eq(people.shopId, input.shopId)))
       .limit(1);
-    if (!actor) return false;
+    if (!actor) return { deleted: false };
     await tx
       .delete(internalNotes)
       .where(and(eq(internalNotes.id, input.noteId), eq(internalNotes.shopId, input.shopId)));
@@ -85,7 +100,7 @@ export async function deleteInternalNote(
       message: `${actor.name} deleted a private note about ${note.diverName}`,
       occurredAt: nowDate(),
     });
-    return true;
+    return { deleted: true, bookingId: note.bookingId, body: note.body };
   });
 }
 

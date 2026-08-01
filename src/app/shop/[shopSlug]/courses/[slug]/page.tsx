@@ -15,6 +15,7 @@ import { requestTranslator } from "@/i18n/request";
 import { auth } from "@/lib/auth";
 import { isStaff } from "@/lib/authz";
 import { courseTotalCents } from "@/lib/courses";
+import { toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
 import { coursePageJsonLd } from "@/lib/structured-data";
 import { CourseInquiry } from "./_components/CourseInquiry";
@@ -151,6 +152,7 @@ export default async function CoursePage({
         totalCents={courseTotalCents(course)}
         bookHref={sessions.length > 0 ? "#dates" : null}
         inquiryHref={inquiryHref}
+        currency={toShopCurrency(shop.currency)}
         locale={locale}
         t={t}
       />
@@ -232,6 +234,7 @@ export default async function CoursePage({
               openInEmailApp: t("inquiry.openInEmailApp"),
               copyMessage: t("inquiry.copy"),
               copied: t("inquiry.copied"),
+              copyFailed: t("inquiry.copyFailed"),
               orWriteTo: t("inquiry.orWriteTo"),
               callLabel: t("inquiry.callLabel"),
               send: t("inquiry.send"),

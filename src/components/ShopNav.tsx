@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { InlineConfirmButton } from "@/components/InlineConfirmButton";
 import { KeyboardShortcuts, type KeyboardShortcutsCopy } from "@/components/KeyboardShortcuts";
 import { LogoMark } from "@/components/Logo";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -12,6 +11,7 @@ import {
 } from "./ShopNavLinks";
 import { CommandPalette } from "./search/CommandPalette";
 import { buttonClass } from "./ui/button";
+import { InlineConfirm } from "./ui/InlineConfirm";
 
 async function signOutAction() {
   "use server";
@@ -127,17 +127,27 @@ export function ShopNav({
           <KeyboardShortcuts shopSlug={shopSlug} copy={keyboardShortcutsCopy} />
           <form action={signOutAction} className="shrink-0" data-scroll-reset="true">
             {/* Two-tap mis-tap protection (task 81): sits right beside Search,
-                so one stray tap used to log the whole crew out mid-shift. */}
-            <InlineConfirmButton
-              idleLabel={t("shared.shopNav.signOut")}
+                so one stray tap used to log the whole crew out mid-shift.
+                Compact mode (no `message`) — an undo banner isn't safe here:
+                the grace window it needs would keep the session (or a
+                passwordless resume) alive briefly, and on a shared boat or
+                front-desk device that's a window for whoever touches the
+                device next to reclaim the previous login (principle 7). */}
+            <InlineConfirm
+              triggerLabel={t("shared.shopNav.signOut")}
               confirmLabel={t("shared.shopNav.signOutConfirm")}
               pendingLabel={t("shared.shopNav.signOutPending")}
-              idleClassName={buttonClass({ variant: "ghost", size: "sm", className: "rounded-xl" })}
+              triggerClassName={buttonClass({
+                variant: "ghost",
+                size: "sm",
+                className: "rounded-xl",
+              })}
               confirmClassName={buttonClass({
                 variant: "danger",
                 size: "sm",
                 className: "rounded-xl",
               })}
+              autoResetMs={4000}
             />
           </form>
         </div>

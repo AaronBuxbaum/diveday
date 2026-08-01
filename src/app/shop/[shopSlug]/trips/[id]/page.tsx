@@ -25,6 +25,7 @@ import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { courseCrewGap } from "@/lib/course-ratios";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
+import { toShopCurrency } from "@/lib/money";
 import { recurrenceSummary } from "@/lib/recurrence";
 import { requireStaffSession } from "@/lib/session";
 import { capacityLabel, isFull } from "@/lib/trips";
@@ -157,6 +158,7 @@ export default async function ManageTripPage({
               path={`/shop/${shopSlug}/schedule/${tripId}`}
               label={t("trips.detail.copyBookingLink")}
               copiedLabel={t("trips.detail.linkCopied")}
+              failedLabel={t("trips.detail.linkCopyFailed")}
             />
           </>
         }
@@ -256,6 +258,7 @@ export default async function ManageTripPage({
           startWall={startWall}
           endWall={endWall}
           locale={locale}
+          currency={toShopCurrency(shop.currency)}
         />
       ) : null}
 

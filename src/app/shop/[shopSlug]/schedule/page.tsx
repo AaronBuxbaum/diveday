@@ -40,7 +40,8 @@ import {
   weekStartsOn,
 } from "@/lib/calendar";
 import { nowDate } from "@/lib/clock";
-import { formatShortDate, formatTime, formatTimeRange } from "@/lib/format";
+import { formatMoneyCents, formatShortDate, formatTime, formatTimeRange } from "@/lib/format";
+import { toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
 import {
   decodeCursorStack,
@@ -170,7 +171,7 @@ export default async function TripsPage({
   // diver-facing page (see route map): its copy comes from the staff bundle,
   // never the diver `t` above, even though both share the same negotiated locale.
   const st = staffTranslator(locale);
-  const money = new Intl.NumberFormat(locale, { style: "currency", currency: "USD" });
+  const currency = toShopCurrency(shop.currency);
   const now = nowDate();
 
   // Shop-local month boundaries, in UTC, for a given calendar month.
@@ -298,6 +299,8 @@ export default async function TripsPage({
     remove: st("schedule.builder.remove"),
     removeAria: st("schedule.builder.removeAria"),
     removeConfirm: st("schedule.builder.removeConfirm"),
+    removeConfirmButton: st("schedule.builder.removeConfirmButton"),
+    removeCancel: st("schedule.builder.removeCancel"),
     removePending: st("schedule.builder.removePending"),
     whatIsIt: st("schedule.builder.whatIsIt"),
     titlePlaceholder: st("schedule.builder.titlePlaceholder"),
@@ -572,11 +575,13 @@ export default async function TripsPage({
           )}
         </EmptyState>
       ) : staffView ? null : upcoming.length === 0 ? (
-        <p className="text-sm text-muted">
-          {hasSpaceFilter || tripTypeFilter
-            ? t("schedule.filters.noMatches")
-            : t("schedule.noTripsMonth")}
-        </p>
+        <EmptyState>
+          <p className="text-sm text-muted">
+            {hasSpaceFilter || tripTypeFilter
+              ? t("schedule.filters.noMatches")
+              : t("schedule.noTripsMonth")}
+          </p>
+        </EmptyState>
       ) : (
         <ul className="flex flex-col gap-3" aria-label={t("schedule.tripListLabel")}>
           {(() => {
@@ -644,7 +649,7 @@ export default async function TripsPage({
                       ) : null}
                       {trip.priceCents !== null ? (
                         <p className="mt-2 text-sm font-semibold tabular-nums">
-                          {money.format(trip.priceCents / 100)}{" "}
+                          {formatMoneyCents(trip.priceCents, currency, locale)}{" "}
                           <span className="font-normal text-muted">{t("common.perDiver")}</span>
                         </p>
                       ) : null}

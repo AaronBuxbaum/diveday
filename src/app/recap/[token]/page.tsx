@@ -11,9 +11,11 @@ import { controlClass } from "@/components/ui/form";
 import { getDb } from "@/db/client";
 import { getRecapPageData, MAX_RECAP_PHOTOS_PER_BOOKING, type RecapSite } from "@/db/recap";
 import { getReviewForBooking } from "@/db/reviews";
+import { tipPresetsMajor } from "@/db/tips";
 import { type DiverMessageKey, diverTranslator } from "@/i18n/messages";
 import { requestLocale, requestTranslator } from "@/i18n/request";
 import { formatShortDate } from "@/lib/format";
+import { currencySymbol, minorToMajor } from "@/lib/money";
 import { verifyRecapToken } from "@/lib/recap-links";
 import { MAX_REVIEW_COMMENT_LENGTH, REVIEW_RATINGS } from "@/lib/reviews";
 import { MAX_IMAGE_MB } from "@/lib/storage/limits";
@@ -43,9 +45,6 @@ const TIP_NOTICES: Record<string, { tone: "success" | "danger"; key: DiverMessag
   invalid: { tone: "danger", key: "recap.tipRange" },
   error: { tone: "danger", key: "recap.tipFailed" },
 };
-
-/** Tip amounts in the shop's own currency's minor-unit-free numbers (e.g. 5 = $5 or 5). */
-const TIP_PRESETS = [5, 10, 20];
 
 export async function generateMetadata({
   params,
@@ -203,18 +202,16 @@ export default async function DiveRecapPage({
   const firstName = diverName.trim().split(/\s+/)[0] || t("recap.namelessFallback");
   const when = formatShortDate(trip.startsAt, locale, shop.timezone);
   const where = sitesSentence(sites, locale);
-  // The shop's own connected-account currency (task 60) — "usd" until one is
-  // connected/refreshed. Narrow symbol only ("$", "€"), not the full
-  // "US$"-style display next.js's Intl otherwise defaults to for en-US.
-  const currencySymbol =
-    new Intl.NumberFormat(locale, {
-      style: "currency",
-      currency: currency.toUpperCase(),
-      currencyDisplay: "narrowSymbol",
-      maximumFractionDigits: 0,
-    })
-      .formatToParts(0)
-      .find((part) => part.type === "currency")?.value ?? currency.toUpperCase();
+  // The shop's declared currency (ADR 20260731-shop-currency) — no longer the
+  // connected account's settlement currency that task 60 read, so the tip a
+  // diver leaves is denominated the same way the trip they paid for was.
+  // Narrow symbol only ("$", "€"), not the full "US$"-style display Intl
+  // otherwise defaults to; src/lib/money.ts is the one place that glyph is
+  // derived.
+  const symbol = currencySymbol(currency, locale);
+  // Scaled by the same table as the tip bounds, so a preset can never sit
+  // below the minimum the action enforces (src/db/tips.ts).
+  const tipPresets = tipPresetsMajor(currency);
   const conditions = [
     trip.waterTemperatureC !== null
       ? { label: t("recap.waterTemp"), value: `${trip.waterTemperatureC}°C` }
@@ -242,6 +239,7 @@ export default async function DiveRecapPage({
             label={t("recap.shareRecap")}
             copiedLabel={t("recap.linkCopied")}
             copiedAnnouncement={t("recap.linkCopiedAnnouncement")}
+            failedLabel={t("recap.linkCopyFailed")}
           />
         </div>
       </header>
@@ -410,11 +408,13 @@ export default async function DiveRecapPage({
               </p>
               <a href={tip.checkoutUrl} className={buttonClass({ size: "cta", className: "mt-4" })}>
                 {t("recap.tipFinish", {
+                  // `minorToMajor`, never a literal 100 — a ¥3,000 tip is
+                  // whole yen and dividing it would offer to pay ¥30.
                   amount: new Intl.NumberFormat(locale, {
                     style: "currency",
                     currency: currency.toUpperCase(),
                     maximumFractionDigits: 0,
-                  }).format(tip.amountCents / 100),
+                  }).format(minorToMajor(tip.amountCents, currency)),
                 })}
               </a>
             </>
@@ -425,9 +425,9 @@ export default async function DiveRecapPage({
               </p>
               <form action={startTipAction.bind(null, token)} className="mt-4 flex flex-col gap-3">
                 <TipAmountPicker
-                  presets={TIP_PRESETS}
-                  defaultPreset={TIP_PRESETS[1]}
-                  currencySymbol={currencySymbol}
+                  presets={tipPresets}
+                  defaultPreset={tipPresets[1]}
+                  currencySymbol={symbol}
                   legend={t("recap.tipAmountLegend")}
                   otherPlaceholder={t("recap.otherTipPlaceholder")}
                   otherAriaLabel={t("recap.otherTipAriaLabel")}

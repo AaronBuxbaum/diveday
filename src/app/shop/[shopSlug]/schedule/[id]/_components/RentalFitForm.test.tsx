@@ -55,6 +55,7 @@ describe("RentalFitForm Gear-Status Light-up Indicator", () => {
         nitroxCardVerified={false}
         plannedDives={2}
         saved={false}
+        currency="usd"
       />,
     );
 
@@ -74,6 +75,7 @@ describe("RentalFitForm Gear-Status Light-up Indicator", () => {
         nitroxCardVerified={false}
         plannedDives={2}
         saved={false}
+        currency="usd"
       />,
     );
 
@@ -93,6 +95,7 @@ describe("RentalFitForm Gear-Status Light-up Indicator", () => {
         nitroxCardVerified={false}
         plannedDives={2}
         saved={false}
+        currency="usd"
       />,
     );
 
@@ -111,6 +114,7 @@ describe("RentalFitForm Gear-Status Light-up Indicator", () => {
         nitroxCardVerified={false}
         plannedDives={2}
         saved={false}
+        currency="usd"
       />,
     );
 
@@ -146,6 +150,7 @@ describe("RentalFitForm Gear-Status Light-up Indicator", () => {
         nitroxCardVerified={false}
         plannedDives={2}
         saved={false}
+        currency="usd"
       />,
     );
 
@@ -173,6 +178,7 @@ describe("RentalFitForm Gear-Status Light-up Indicator", () => {
         nitroxCardVerified={false}
         plannedDives={2}
         saved={false}
+        currency="usd"
       />,
     );
 
@@ -192,6 +198,7 @@ describe("RentalFitForm Gear-Status Light-up Indicator", () => {
         nitroxCardVerified={false}
         plannedDives={2}
         saved={false}
+        currency="usd"
       />,
     );
 
@@ -204,5 +211,66 @@ describe("RentalFitForm Gear-Status Light-up Indicator", () => {
 
     // Should be confirmed even though fin size is not provided
     expect(indicator).toHaveTextContent("Gear matched and pre-packed.");
+  });
+});
+
+describe("RentalFitForm currency (task 35)", () => {
+  it("prices the rental list in the shop's currency, not dollars", () => {
+    renderDiver(
+      <RentalFitForm
+        action={mockAction}
+        rentalFit={emptyFit}
+        rentalItems={["bcd", "mask_fins"]}
+        pricing={defaultPricing}
+        wantsNitrox={false}
+        nitroxCardVerified={false}
+        plannedDives={2}
+        saved={false}
+        currency="mxn"
+      />,
+    );
+
+    // 1500 minor units of MXN is $15.00 in pesos — the glyph and the grouping
+    // both come from the currency, never a hardcoded USD formatter.
+    expect(screen.getByText("MX$15.00")).toBeInTheDocument();
+    expect(screen.queryByText("$15.00")).not.toBeInTheDocument();
+  });
+
+  it("does not divide a zero-decimal currency by a hundred", () => {
+    renderDiver(
+      <RentalFitForm
+        action={mockAction}
+        rentalFit={emptyFit}
+        rentalItems={["bcd"]}
+        pricing={defaultPricing}
+        wantsNitrox={false}
+        nitroxCardVerified={false}
+        plannedDives={2}
+        saved={false}
+        currency="jpy"
+      />,
+    );
+
+    // JPY stores whole yen, so 1500 is ¥1,500 — a literal `/ 100` would
+    // quote the BCD at ¥15.
+    expect(screen.getByText("¥1,500")).toBeInTheDocument();
+  });
+
+  it("still reads as dollars for a usd shop", () => {
+    renderDiver(
+      <RentalFitForm
+        action={mockAction}
+        rentalFit={emptyFit}
+        rentalItems={["bcd"]}
+        pricing={defaultPricing}
+        wantsNitrox={false}
+        nitroxCardVerified={false}
+        plannedDives={2}
+        saved={false}
+        currency="usd"
+      />,
+    );
+
+    expect(screen.getByText("$15.00")).toBeInTheDocument();
   });
 });

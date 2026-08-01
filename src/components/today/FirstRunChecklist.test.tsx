@@ -26,6 +26,7 @@ const COPY: FirstRunChecklistCopy = {
   scheduleBody: "The page divers actually book from.",
   scheduleCopy: "Copy link",
   scheduleCopied: "Copied",
+  scheduleCopyFailed: "Couldn’t copy",
   stripeTitle: "Connect Stripe (optional)",
   stripeBody: "Take payment online.",
   stripeAction: "Connect Stripe",

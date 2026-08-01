@@ -39,6 +39,7 @@ import {
   hasCrewPrediction,
   shouldShowAutomatedForecast,
 } from "@/lib/marine-forecast";
+import { type ShopCurrency, toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
 import { tripPageJsonLd } from "@/lib/structured-data";
 import { isFull, spotsRemaining } from "@/lib/trips";
@@ -121,6 +122,10 @@ export default async function TripDetailPage({
   // What this visitor's device asked for, falling back to the shop's own
   // default — DiveDay never asks (docs ADR 20260729-diver-copy-localization).
   const locale = await requestLocale(shop.defaultLocale);
+  // Every list price on this page is in the shop's own currency — a Cozumel
+  // shop quotes pesos. Amounts a diver has already *paid* keep the currency
+  // stored on their payment row instead (docs ADR 20260731-shop-currency).
+  const shopCurrency = toShopCurrency(shop.currency);
   const t = diverTranslator(locale);
   const session = await auth();
   // The staff-management redirect only makes sense outside embed mode — that
@@ -220,7 +225,14 @@ export default async function TripDetailPage({
     heldLevel,
   ] = confirmed
     ? await Promise.all([
-        resolvePaymentPanel(db, shop.id, confirmed.booking.id, payAtBooking, perDiverPriceCents),
+        resolvePaymentPanel(
+          db,
+          shop.id,
+          confirmed.booking.id,
+          payAtBooking,
+          perDiverPriceCents,
+          shopCurrency,
+        ),
         getBookingReadiness(db, shop.id, confirmed.booking.id),
         getTripRequirements(db, shop.id, tripId),
         // Projected: this page is public and the form is a client
@@ -391,6 +403,7 @@ export default async function TripDetailPage({
             errorMessage={errorMessage}
             payAtBooking={payAtBooking}
             perDiverPriceCents={perDiverPriceCents}
+            currency={shopCurrency}
             locale={locale}
             contactEmail={shop.contactEmail}
             contactPhone={shop.contactPhone}
@@ -436,6 +449,13 @@ async function resolvePaymentPanel(
   bookingId: string,
   payAtBooking: boolean,
   fullPriceCents: number | null,
+  /**
+   * What to show when a settled payment predates the currency column and has
+   * none of its own. A settled amount that *does* carry a currency keeps it —
+   * it is evidence of what was charged, and today's shop setting must never
+   * reinterpret it.
+   */
+  shopCurrency: ShopCurrency,
 ): Promise<PaymentPanel> {
   const paidPanel = (
     settled: Awaited<ReturnType<typeof getBookingPayment>>,
@@ -448,7 +468,7 @@ async function resolvePaymentPanel(
     return {
       state: "paid",
       amountCents: settled?.amountCents ?? null,
-      currency: settled?.currency ?? "usd",
+      currency: settled?.currency ?? shopCurrency,
       isDeposit,
       balanceDueCents,
     };

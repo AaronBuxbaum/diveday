@@ -28,6 +28,7 @@ const copy: CourseInquiryCopy = {
   openInEmailApp: "Open in your email app",
   copyMessage: "Copy message",
   copied: "Copied",
+  copyFailed: "Couldn't copy — the mail button beside it does the same job",
   orWriteTo: "Or write to",
   callLabel: "call",
   send: "Send inquiry",

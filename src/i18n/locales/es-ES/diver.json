@@ -69,6 +69,7 @@
     "shareWithBuddy": "Compartir con tu compañero",
     "linkCopied": "Enlace copiado",
     "linkCopiedAnnouncement": "Enlace de la salida copiado al portapapeles.",
+    "linkCopyFailed": "No se pudo copiar — cópialo desde la barra de direcciones.",
     "shareText": "Bucea conmigo — aquí tienes los detalles de la salida.",
     "packTitle": "Prepara tu equipaje con confianza",
     "packBring": "Trae",
@@ -409,6 +410,7 @@
     "shareRecapText": "Aquí tienes mi resumen de inmersión de {shop} — échale un vistazo.",
     "linkCopied": "Enlace copiado",
     "linkCopiedAnnouncement": "Enlace del resumen copiado al portapapeles.",
+    "linkCopyFailed": "No se pudo copiar — cópialo desde la barra de direcciones.",
     "mapAriaLabel": "Mapa estilizado del resumen de navegación de tus puntos de buceo",
     "charterPath": "RUTA DE LA SALIDA",
     "boatTrack": "Trayecto del barco",
@@ -556,6 +558,11 @@
     "needHelpPlain": "¿Necesitas ayuda? Contacta directamente con {shop}.",
     "englishOnlyNotice": "Por ahora, esta exención y el cuestionario médico solo están disponibles en inglés. Si no te sientes cómodo/a leyendo texto legal o médico en inglés, trae a alguien que pueda ayudarte a leerlo con atención, o consulta con el centro antes de tu salida — no firmes nada que no entiendas."
   },
+  "checkoutLine": {
+    "deposit": "Depósito — {tripTitle}",
+    "full": "{tripTitle}",
+    "tip": "Propina para la tripulación"
+  },
   "capability": {
     "waiverReceived": "Exención recibida",
     "waiverDone": "Papeleo terminado ✓",
@@ -675,6 +682,7 @@
     "anythingElse": "Algo más",
     "copy": "Copiar mensaje",
     "copied": "Copiado",
+    "copyFailed": "No se pudo copiar — el botón de correo de al lado hace lo mismo.",
     "getInTouch": "Ponte en contacto",
     "noDateBody": "¿Ninguna fecha te viene bien, o tienes una pregunta primero? Responde lo que puedas y escribiremos el correo por ti — se envía desde tu propia aplicación de correo, así que nuestra respuesta llega donde la esperas.",
     "namePlaceholder": "Priya Sharma",
