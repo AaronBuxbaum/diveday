@@ -1,5 +1,13 @@
 import { diverTranslator } from "@/i18n/messages";
-import { requestLocale } from "@/i18n/request";
+import type { DiverLocale } from "@/i18n/settings";
+
+/**
+ * Each fallback takes `locale` as a plain prop rather than reading
+ * `requestLocale()` itself: these render inside the marketing pages'
+ * `"use cache"` bodies (`src/app/page.tsx`, `src/app/product/page.tsx`), and
+ * cached scopes cannot call `headers()`-backed functions themselves — see
+ * AGENTS.md's `cacheComponents` notes.
+ */
 
 function AppBar({ label }: { label: string }) {
   return (
@@ -11,8 +19,8 @@ function AppBar({ label }: { label: string }) {
   );
 }
 
-export async function CaptainRollCallFallback() {
-  const t = diverTranslator(await requestLocale());
+export function CaptainRollCallFallback({ locale }: { locale: DiverLocale }) {
+  const t = diverTranslator(locale);
   return (
     <div className="bg-background">
       <AppBar label={t("fallback.offlineCopy")} />
@@ -64,8 +72,8 @@ export async function CaptainRollCallFallback() {
   );
 }
 
-export async function FrontDeskReadinessFallback() {
-  const t = diverTranslator(await requestLocale());
+export function FrontDeskReadinessFallback({ locale }: { locale: DiverLocale }) {
+  const t = diverTranslator(locale);
   const rows = [
     { name: "Priya Sharma", status: t("fallback.waiverNeedsAttention"), tone: "text-danger" },
     { name: "Lena Fischer", status: t("fallback.readyToBoard"), tone: "text-success" },
@@ -96,8 +104,8 @@ export async function FrontDeskReadinessFallback() {
   );
 }
 
-export async function DiverBookingFallback() {
-  const t = diverTranslator(await requestLocale());
+export function DiverBookingFallback({ locale }: { locale: DiverLocale }) {
+  const t = diverTranslator(locale);
   const trips = [
     { title: t("fallback.tripName"), time: t("fallback.tomorrowTime"), spots: 3 },
     { title: t("fallback.nightDive"), time: t("fallback.fridayTime"), spots: 5 },

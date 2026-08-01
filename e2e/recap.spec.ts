@@ -1,7 +1,7 @@
 import sharp from "sharp";
 import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed";
 import { signRecapToken } from "../src/lib/recap-links";
-import { expect, test } from "./fixtures";
+import { expect, makeActivitySafe, test } from "./fixtures";
 import { signInAsOwner, signOut } from "./helpers";
 
 // The recap page (`/recap/[token]`) is a public, signed-token diver surface, the
@@ -23,7 +23,7 @@ test("an oversize recap photo is rejected client-side before it ever reaches the
   // Assert stylized recap map is rendered (delight feature)
   await expect(page.getByLabel("Stylized recap navigation map of your dive sites")).toBeVisible();
 
-  const photoInput = page.locator('input[name="photo"]');
+  const photoInput = page.locator('input[name="photo"]').filter({ visible: true });
   await photoInput.setInputFiles({
     name: "recap.jpg",
     mimeType: "image/jpeg",
@@ -110,7 +110,7 @@ test("a booking cancelled after the recap page loaded gets an honest notice, not
   // has no idea yet, the exact race the code comments call out.
   const staffContext = await page.context().browser()?.newContext();
   if (!staffContext) throw new Error("could not open a second browser context");
-  const staffPage = await staffContext.newPage();
+  const staffPage = makeActivitySafe(await staffContext.newPage());
   await signInAsOwner(staffPage);
   // The seed schedules several other trips under this same title (task 56's
   // fixture isn't the only "Two-Tank Reef — Molasses & French" departure),
@@ -152,7 +152,7 @@ test("a whole pick of photos submits in one request, not one page reload per pho
   page,
 }) => {
   await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
-  const photoInput = page.locator('input[name="photo"]');
+  const photoInput = page.locator('input[name="photo"]').filter({ visible: true });
   await expect(photoInput).toHaveAttribute("multiple", "");
 
   // Real, decodable JPEGs — the server validates content, not just the

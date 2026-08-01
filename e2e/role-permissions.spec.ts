@@ -15,7 +15,11 @@ const SHOP = DEMO_SHOP_SLUG;
 
 async function firstDiverDetailHref(page: import("@playwright/test").Page): Promise<string> {
   await page.goto(`/shop/${SHOP}/divers`);
-  const href = await page.locator(`a[href^="/shop/${SHOP}/divers/"]`).first().getAttribute("href");
+  const href = await page
+    .locator(`a[href^="/shop/${SHOP}/divers/"]`)
+    .filter({ visible: true })
+    .first()
+    .getAttribute("href");
   if (!href) throw new Error("no diver detail link found");
   return href;
 }
@@ -26,6 +30,7 @@ async function firstTripManageHref(page: import("@playwright/test").Page): Promi
   await page.goto(`/shop/${SHOP}/schedule/board`);
   const href = await page
     .locator(`a[href^="/shop/${SHOP}/trips/"]:not([href="/shop/${SHOP}/trips/new"])`)
+    .filter({ visible: true })
     .first()
     .getAttribute("href");
   if (!href) throw new Error("no trip management link found");
@@ -42,7 +47,7 @@ test.describe("H-14 role permissions", () => {
     // surface doesn't exist for them: bounced to Today, not shown read-only.
     await page.goto(`/shop/${SHOP}/waivers`);
     await expect(page).toHaveURL(`/shop/${SHOP}`);
-    await expect(page.locator('textarea[name="body"]')).toHaveCount(0);
+    await expect(page.locator('textarea[name="body"]').filter({ visible: true })).toHaveCount(0);
 
     // Its Signatures tab (task 155) — read access to signed medical/waiver
     // records — takes the exact same gate, never a looser one just because
@@ -88,7 +93,7 @@ test.describe("H-14 role permissions", () => {
     // its Signatures tab.
     await page.goto(`/shop/${SHOP}/waivers`);
     await expect(page).toHaveURL(`/shop/${SHOP}`);
-    await expect(page.locator('textarea[name="body"]')).toHaveCount(0);
+    await expect(page.locator('textarea[name="body"]').filter({ visible: true })).toHaveCount(0);
 
     await page.goto(`/shop/${SHOP}/waivers/signatures`);
     await expect(page).toHaveURL(`/shop/${SHOP}`);
@@ -102,7 +107,7 @@ test.describe("H-14 role permissions", () => {
     await signInAs(page, DEV_STAFF_LOGINS.owner);
 
     await page.goto(`/shop/${SHOP}/waivers`);
-    await expect(page.locator('textarea[name="body"]')).toBeVisible();
+    await expect(page.locator('textarea[name="body"]').filter({ visible: true })).toBeVisible();
 
     await page.goto(`/shop/${SHOP}/waivers/signatures`);
     await expect(page.getByRole("heading", { level: 1, name: "Signatures" })).toBeVisible();

@@ -11,7 +11,11 @@ test("the one-tap waiver send on the blockers queue reports success inline", asy
   // waiver"), so a locator keyed on it would stop matching this row right
   // after the click that's being tested. Priya is blocked on two departures
   // ("fix once" — the same tap clears both), so narrow to the first row.
-  const row = page.locator("li").filter({ hasText: "Priya Sharma" }).first();
+  const row = page
+    .locator("li")
+    .filter({ hasText: "Priya Sharma" })
+    .filter({ visible: true })
+    .first();
   await row.getByRole("button", { name: "Send waiver", exact: true }).click();
 
   // The tap posts the shared server action in place — the outcome renders

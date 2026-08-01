@@ -4,6 +4,10 @@ import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { WaiversSubNav, type WaiversSubNavCopy } from "./_components/WaiversSubNav";
 
+// TODO: Cache Components adoption. Refactor this route so this opt-out can be removed.
+// See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
+export const instant = false;
+
 /**
  * One shell for both waiver surfaces — Template and Signatures (task 155).
  * Owning the container width and the sub-nav here, rather than repeating them

@@ -1,4 +1,7 @@
+"use cache";
+
 import type { MetadataRoute } from "next";
+import { cacheLife } from "next/cache";
 import { getDb } from "@/db/client";
 import { listActiveCoursesForSitemap } from "@/db/courses";
 import { listShopsForSitemap } from "@/db/shops";
@@ -21,14 +24,14 @@ import { publicAppUrl } from "@/lib/notifications";
  * for a shop or course readily available without an extra query, and
  * fabricating one would be worse than omitting it.
  *
- * This route has no request-time API (no `headers()`, no session), so Next
- * caches it statically at build time by default — a shop that signs up
- * between deploys would otherwise stay out of the sitemap until the next
- * one ships. `revalidate` puts a ceiling on that staleness instead.
+ * This route has no request-time API (no `headers()`, no session), so it's
+ * eligible for `"use cache"` in full — a shop that signs up between deploys
+ * would otherwise stay out of the sitemap until the next one ships, so
+ * `cacheLife("hours")` puts a ceiling on that staleness instead (matches the
+ * previous `revalidate = 3600`, pre-cacheComponents).
  */
-export const revalidate = 3600;
-
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  cacheLife("hours");
   const origin = publicAppUrl() ?? "http://localhost:3000";
   const entries: Array<{ path: string; priority: number }> = [
     { path: "/", priority: 1 },

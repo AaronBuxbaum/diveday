@@ -39,23 +39,41 @@ fail) when source under `src/` looks newer than the build; rebuild if a failure 
 - Reuse the per-worker owner session with `signedInAsOwner()` for staff flows; keep auth lifecycle coverage on the live sign-in form.
 - Keep safety-critical failure paths (capacity, waiver/medical state, cert/nitrox gating, and manifest/roll call) explicit.
 
-## Locator visibility: prefer getByRole/getByLabel over getByText
+## Locator visibility: the page fixture handles it, but know why
 
-`getByRole`, `getByLabel`, and `getByPlaceholder` query the accessibility tree, which already
-excludes anything a hidden `display:none` ancestor removes from accessibility — a collapsed
-`<details>`, a tab panel, and (should this app re-enable `cacheComponents`; see
-ADR 20260801-cache-components-e2e-activity-migration, currently Proposed) a React
-`<Activity mode="hidden">` boundary from client-side navigation. `getByText` and a raw `.locator()`
-used as a final matcher do **not** filter by visibility — they match hidden elements too, so a
-strict-mode call can throw "resolved to N elements" the moment two matching elements exist
-anywhere in the DOM, visible or not, not just when both are actually on screen.
+`cacheComponents` is on (ADR 20260801-cache-components-e2e-activity-migration, landed), which
+means React `<Activity mode="hidden">` keeps a previous route's DOM around (`display:none`) for
+instant back-navigation instead of unmounting it. Next's own docs
+(`node_modules/next/dist/docs/01-app/02-guides/preserving-ui-state.md`'s Testing section) say
+`getByRole`, `getByLabel`, and `getByPlaceholder` are already visibility-safe because they query
+the accessibility tree — **that claim did not hold up against this app.** Phase 2 of the migration
+found real, reproducible strict-mode failures from `getByRole`/`getByLabel` matching a hidden
+Activity route's leftover content (a stale `<input>` from a previous page's form, a stale
+`role="alert"`), not just `getByText`.
 
-Default to `getByRole`/`getByLabel` for anything with an accessible role or label; reach for
-`getByText` only when there's no role/label to query (plain prose, a status message). If a spec's
-`getByText` genuinely needs to be visibility-safe, chain `.filter({ visible: true })` — the
-pattern `node_modules/next/dist/docs/01-app/02-guides/preserving-ui-state.md`'s Testing section
-itself recommends. Read that file directly before relying on more than this paragraph — it's a
-provider doc, not something to treat as this repo's own contract.
+The fix lives at the one choke point every spec already imports through: `e2e/fixtures.ts`'s
+`page` fixture patches `getByText`, `getByRole`, `getByLabel`, and `getByPlaceholder` to
+`.filter({ visible: true })` automatically. **You do not need to add the filter yourself on
+`page.<query>(...)` calls** — write specs normally, default to `getByRole`/`getByLabel` for
+anything with an accessible role or label, and reach for `getByText` only when there's no role/
+label to query (plain prose, a status message).
+
+What you *do* need to handle yourself:
+
+- **A second actor's page.** `browser.newContext()`/`context.newPage()` creates a `Page` instance
+  the fixture never touches. Wrap it: `const staffPage = makeActivitySafe(await
+  staffContext.newPage());` (also exported from `./fixtures`). `pnpm check:e2e-fixtures` flags an
+  unwrapped `.newPage()` call.
+- **A raw `.locator()`** (CSS/text selector, or an XPath escape hatch like `xpath=..`) used as a
+  final matcher — a direct `.click()`, `.fill()`, a count/visibility assertion — needs its own
+  `.filter({ visible: true })`. One that only scopes a subsequent `.getByRole()`/`.getByLabel()`/
+  `.getByText()` chain is safe by inheritance and needs nothing.
+- **Elements with no layout box** (`<script>`, `<meta>`, a closed `<select>`'s `<option>`
+  children) are never "visible" to Playwright even when genuinely present — `.filter({ visible:
+  true })` on one of these always zero-matches and hangs or fails. Leave these unfiltered; a
+  one-line comment at the call site explaining why is enough.
+- **An intentional hidden-element assertion** (`toBeHidden()`, an `aria-hidden` backdrop) should
+  bypass the fixture's default with `page.locator(...)` rather than lose the check.
 
 ## Capture full-size; bound the page in code
 

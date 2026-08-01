@@ -53,7 +53,7 @@ test("an owner sees the shop's codes with their scope, window, and redemption co
   await page.goto("/shop/blue-mantis/promos");
   await expect(page.getByRole("heading", { name: "Discounts a diver can type" })).toBeVisible();
 
-  const standing = page.locator("li").filter({ hasText: "REEF10" });
+  const standing = page.locator("li").filter({ hasText: "REEF10" }).filter({ visible: true });
   await expect(standing.getByText("10% off")).toBeVisible();
   await expect(standing.getByText("Trips and courses")).toBeVisible();
   // The success-tone Badge prepends a decorative aria-hidden glyph
@@ -63,7 +63,7 @@ test("an owner sees the shop's codes with their scope, window, and redemption co
   await expect(standing.getByText("✓ Live")).toBeVisible();
 
   // An expired code is honestly not live, rather than quietly still offered.
-  const expired = page.locator("li").filter({ hasText: "OPENWATER25" });
+  const expired = page.locator("li").filter({ hasText: "OPENWATER25" }).filter({ visible: true });
   await expect(expired.getByText("Not live right now")).toBeVisible();
 });
 
@@ -81,7 +81,7 @@ test("a code Stripe never minted is kept as failed evidence, and cannot be switc
   await page.getByRole("button", { name: "Create code" }).click();
   await expect(page.getByText(/Stripe didn't create that code/)).toBeVisible();
 
-  const failed = page.locator("li").filter({ hasText: "E2ETEST" });
+  const failed = page.locator("li").filter({ hasText: "E2ETEST" }).filter({ visible: true });
   await expect(failed.getByText("Failed at Stripe")).toBeVisible();
   // No switch-on/off affordance: enabling it would validate locally then
   // fail at checkout, which is worse than staying visibly broken. "Copy
@@ -101,14 +101,16 @@ test("deleting a failed code can be undone from the toast, which re-runs Stripe 
   await page.getByLabel("Discount").fill("15");
   await page.getByRole("button", { name: "Create code" }).click();
   await expect(page.getByText(/Stripe didn't create that code/)).toBeVisible();
-  const failed = page.locator("li").filter({ hasText: "E2EUNDO" });
+  const failed = page.locator("li").filter({ hasText: "E2EUNDO" }).filter({ visible: true });
   await expect(failed.getByText("Failed at Stripe")).toBeVisible();
 
   // A code that never went live needs no confirm dialog to delete (docs/design/principles.md
   // #7): it's gone immediately, with a toast offering Undo instead of a
   // blocking "are you sure?".
   await failed.getByRole("button", { name: "Delete" }).click();
-  await expect(page.locator("li").filter({ hasText: "E2EUNDO" })).toHaveCount(0);
+  await expect(
+    page.locator("li").filter({ hasText: "E2EUNDO" }).filter({ visible: true }),
+  ).toHaveCount(0);
   const toast = page.getByRole("status");
   await expect(toast.getByText("Code deleted.")).toBeVisible();
 
@@ -118,7 +120,11 @@ test("deleting a failed code can be undone from the toast, which re-runs Stripe 
   await toast.getByRole("button", { name: "Undo" }).click();
   await expect(page.getByText(/Couldn't restore that code/)).toBeVisible();
   await expect(
-    page.locator("li").filter({ hasText: "E2EUNDO" }).getByText("Failed at Stripe"),
+    page
+      .locator("li")
+      .filter({ hasText: "E2EUNDO" })
+      .filter({ visible: true })
+      .getByText("Failed at Stripe"),
   ).toBeVisible();
 });
 
@@ -129,7 +135,11 @@ test("a code the shop switched off stops being live", async ({ page }) => {
   await standing.getByRole("button", { name: "Switch off" }).click();
   await expect(page.getByText(/Code switched off/)).toBeVisible();
   await expect(
-    page.locator("li").filter({ hasText: "REEF10" }).getByText("Switched off"),
+    page
+      .locator("li")
+      .filter({ hasText: "REEF10" })
+      .filter({ visible: true })
+      .getByText("Switched off"),
   ).toBeVisible();
 });
 

@@ -9,8 +9,6 @@ import { nowDate } from "@/lib/clock";
 import { type LogContext, log } from "@/lib/log";
 import { verifyStripeWebhook } from "@/lib/payments/webhook";
 
-export const runtime = "nodejs";
-
 const invoiceObjectSchema = z.object({
   id: z.string().min(1),
   amount_paid: z.number().int().optional(),

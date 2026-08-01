@@ -89,36 +89,42 @@ export function CrewSection({
   const onShift = new Set(onShiftIds);
   const hasUnassignedStaff = localCrew.length < availableStaff.length;
 
+  // Confirm-then-render, not optimistic-then-rollback: a staffer (or a test)
+  // who sees "Unassign X" and immediately relies on the crew being staffed —
+  // switching to Guests to add a course diver, which re-checks the
+  // instructor requirement server-side — must never be able to outrun the
+  // actual write. An optimistic update here raced exactly that: the local
+  // state (and the "Unassign" button) updated before `updateCrewAction`'s
+  // server round trip had committed, a window narrow enough to be
+  // practically invisible under pre-cacheComponents dynamic rendering but
+  // wide enough to be hit reliably once Partial Prerendering made the
+  // following navigation faster (caught by e2e/gear-fit-and-age.spec.ts).
   const handleAssign = async (personId: string) => {
     const person = availableStaff.find((entry) => entry.id === personId);
     if (!person || localCrew.some((entry) => entry.id === personId)) return;
-    const previous = localCrew;
-    setLocalCrew([...localCrew, person]);
     setAssignError(false);
     try {
       const res = await updateCrewAction(tripId, { personId, operation: "assign" });
-      if (!res.ok) {
-        setLocalCrew(previous);
+      if (res.ok) {
+        setLocalCrew([...localCrew, person]);
+      } else {
         setAssignError(true);
       }
     } catch {
-      setLocalCrew(previous);
       setAssignError(true);
     }
   };
 
   const handleUnassign = async (personId: string) => {
-    const previous = localCrew;
-    setLocalCrew(localCrew.filter((entry) => entry.id !== personId));
     setAssignError(false);
     try {
       const res = await updateCrewAction(tripId, { personId, operation: "unassign" });
-      if (!res.ok) {
-        setLocalCrew(previous);
+      if (res.ok) {
+        setLocalCrew(localCrew.filter((entry) => entry.id !== personId));
+      } else {
         setAssignError(true);
       }
     } catch {
-      setLocalCrew(previous);
       setAssignError(true);
     }
   };

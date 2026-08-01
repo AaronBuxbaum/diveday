@@ -15,11 +15,17 @@ async function onboardFreshOwner(page: Page, slug: string) {
   const unique = `${slug}-${Date.now()}`;
   const email = `${unique}@example.com`;
   await page.goto("/onboard");
-  await page.locator('input[name="shopName"]').fill("Account Lifecycle E2E");
-  await page.locator('input[name="shopSlug"]').fill(unique);
-  await page.locator('input[name="ownerName"]').fill("Riva Okonkwo");
-  await page.locator('input[name="ownerEmail"]').fill(email);
-  await page.locator('input[name="ownerPassword"]').fill("trial-pass-123");
+  await page
+    .locator('input[name="shopName"]')
+    .filter({ visible: true })
+    .fill("Account Lifecycle E2E");
+  await page.locator('input[name="shopSlug"]').filter({ visible: true }).fill(unique);
+  await page.locator('input[name="ownerName"]').filter({ visible: true }).fill("Riva Okonkwo");
+  await page.locator('input[name="ownerEmail"]').filter({ visible: true }).fill(email);
+  await page
+    .locator('input[name="ownerPassword"]')
+    .filter({ visible: true })
+    .fill("trial-pass-123");
   await page.getByRole("button", { name: "Create shop & start trial" }).click();
   await expect(page).toHaveURL(/\/shop\//);
   return email;

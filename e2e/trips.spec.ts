@@ -39,7 +39,9 @@ test("the public schedule lists seeded trips with capacity states, a calendar, a
   // Each dive is a link into its schedule detail (labelled by start time so it
   // doesn't collide with the titled cards in the list below).
   await expect(calendar.getByRole("link", { name: /\bdive\b/ }).first()).toBeVisible();
-  await expect(calendar.locator('a[href*="/schedule/"]').first()).toBeVisible();
+  await expect(
+    calendar.locator('a[href*="/schedule/"]').filter({ visible: true }).first(),
+  ).toBeVisible();
 
   // A multi-dive trip's public page presents every dive briefing.
   await page

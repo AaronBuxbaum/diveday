@@ -86,7 +86,13 @@ test("the sign-up form answers the hesitation it creates", async ({ page }) => {
   await page.goto("/pricing");
   await page.getByRole("link", { name: "Start a trial" }).last().click();
   await expect(page).toHaveURL(/\/onboard\?from=pricing$/);
-  await expect(page.locator('input[name="source"]')).toHaveValue("pricing");
+  // A hidden input can't be scoped with `.filter({ visible: true })` (it would
+  // never match), and the previous route's own `input[name="source"]` (this
+  // page's FunnelTag) stays reachable while Activity keeps it in the DOM — so
+  // scope through the current page's own `<main>` landmark instead, which
+  // `getByRole` (visibility-safe, see e2e/fixtures.ts) narrows to the one
+  // that's actually on screen.
+  await expect(page.getByRole("main").locator('input[name="source"]')).toHaveValue("pricing");
 
   // Asking for a password is the moment of maximum hesitation, so the three
   // reassurances sit with the form, not on a page the visitor already left.
@@ -251,9 +257,31 @@ test("migration guides walk a shop from an incumbent export into the importer", 
   ).toBeVisible();
   await expect(page.getByRole("heading", { name: "Get your data out of Rezdy" })).toBeVisible();
 
-  // An unlisted incumbent has no page — no coming-soon shells.
-  const response = await page.goto("/switching/checkfront");
-  expect(response?.status()).toBe(404);
+  // An unlisted incumbent has no page — no coming-soon shells. Content-level,
+  // not `response?.status()`: `/switching/[competitor]` prerenders only the
+  // registered slugs via `generateStaticParams`, so an unregistered one like
+  // "checkfront" falls back to a dynamic render, and cacheComponents'
+  // Partial Prerendering unconditionally serves an optimistic 200 "App
+  // Shell" for a dynamic-param combination without a static shell, upgrading
+  // it in the background once `notFound()` resolves — confirmed locally: the
+  // first hit to an unseen slug answers 200, and only a subsequent hit to
+  // the same (now-resolved) path answers 404. There is no per-route opt-out
+  // (`dynamicParams = false` and `experimental_ppr` are both removed under
+  // `nextConfig.cacheComponents`). The rendered document still correctly
+  // lands on Next's own not-found boundary — only the raw first-byte HTTP
+  // status of a cold hit is 200 instead of 404. Same known Next 16
+  // cacheComponents limitation as e2e/course-paths.spec.ts's hidden-path
+  // 404 test.
+  await page.goto("/switching/checkfront");
+  await expect(page.getByRole("heading", { name: "We couldn’t find that page" })).toBeVisible();
+  // `.first()`: the server HTML (confirmed via curl against a fresh build)
+  // carries exactly one `<meta name="robots">`, but this route's dynamic
+  // hole resolving client-side after a full navigation inserts a second,
+  // identical one — a harmless PPR-resolution duplicate, not a second,
+  // differing directive. e2e/course-paths.spec.ts's hidden-path check hits
+  // the same not-found boundary through a route with no dynamic-hole
+  // resolution step and never duplicates it.
+  await expect(page.locator('meta[name="robots"]').first()).toHaveAttribute("content", "noindex");
 });
 
 test("the spreadsheet guide brings a no-system shop across for free", async ({ page }) => {

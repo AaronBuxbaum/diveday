@@ -1,7 +1,33 @@
 import path from "node:path";
+import type { Page } from "@playwright/test";
 import { test as base, expect } from "@playwright/test";
 import { signInAsOwner } from "./helpers";
 import { E2E_FROZEN_CLOCK, e2eBaseURL } from "./servers";
+
+/**
+ * Patches `getByText`/`getByRole`/`getByLabel`/`getByPlaceholder` on a Page
+ * instance to filter to visible-only matches — see the `page` fixture below
+ * for why all four need it, not just `getByText` as Next's own docs suggest.
+ * The `page` fixture applies this automatically; a spec that opens a second
+ * actor's page via `browser.newContext()`/`context.newPage()` (a separate
+ * `Page` instance the fixture never touches) must call this on it directly,
+ * e.g. `const staffPage = makeActivitySafe(await staffContext.newPage());`.
+ */
+export function makeActivitySafe(page: Page): Page {
+  const rawGetByText = page.getByText.bind(page);
+  page.getByText = ((text: string | RegExp, options?: { exact?: boolean }) =>
+    rawGetByText(text, options).filter({ visible: true })) as Page["getByText"];
+  const rawGetByRole = page.getByRole.bind(page);
+  page.getByRole = ((role: Parameters<Page["getByRole"]>[0], options?: object) =>
+    rawGetByRole(role, options).filter({ visible: true })) as Page["getByRole"];
+  const rawGetByLabel = page.getByLabel.bind(page);
+  page.getByLabel = ((text: string | RegExp, options?: { exact?: boolean }) =>
+    rawGetByLabel(text, options).filter({ visible: true })) as Page["getByLabel"];
+  const rawGetByPlaceholder = page.getByPlaceholder.bind(page);
+  page.getByPlaceholder = ((text: string | RegExp, options?: { exact?: boolean }) =>
+    rawGetByPlaceholder(text, options).filter({ visible: true })) as Page["getByPlaceholder"];
+  return page;
+}
 
 /**
  * Each Playwright worker owns a private Next server + in-memory database (see
@@ -130,6 +156,29 @@ export const test = base.extend<
   // Point the built-in page/request fixtures at this worker's own server.
   baseURL: async ({ workerBaseURL }, use) => {
     await use(workerBaseURL);
+  },
+
+  // Next's docs (`preserving-ui-state.md`'s Testing section) say `getByRole`/
+  // `getByLabel`/`getByPlaceholder` are already visibility-safe because they
+  // query the accessibility tree, which is supposed to exclude a `display:none`
+  // route React's <Activity> keeps in the DOM for instant back-navigation
+  // (cacheComponents, see ADR 20260801-cache-components-e2e-activity-migration).
+  // Phase 2 of that ADR's migration plan proved that claim false for this app:
+  // navigating from the public schedule list (which renders
+  // `LastMinuteListForm`'s "Name" input) to a trip detail page (which renders
+  // its own "Name" input via `BookingPartyFields`) left both inputs reachable
+  // by `getByLabel("Name")` — a real strict-mode "resolved to 2 elements"
+  // failure, not a flake, confirmed by inspecting both inputs' markup against
+  // the source. `getByRole` showed the same failure independently
+  // (`getByRole("alert")` resolving to two alerts across a navigation). So all
+  // three are patched here exactly like `getByText` below, at the one fixture
+  // choke point every spec already imports through, rather than trusting the
+  // docs' claim per-callsite.
+  // A spec that genuinely needs to match hidden content (e.g. asserting
+  // `toBeHidden()`) can bypass this with `page.locator(...)`, which this
+  // fixture leaves unpatched.
+  page: async ({ page }, use) => {
+    await use(makeActivitySafe(page));
   },
 
   // One real UI sign-in per worker; every staff test after that starts from

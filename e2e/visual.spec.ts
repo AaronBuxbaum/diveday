@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
 import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed";
 import { signRecapToken } from "../src/lib/recap-links";
-import { expect, signedInAsOwner, test } from "./fixtures";
+import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import { openTripFromBoard } from "./helpers";
 
 /**
@@ -364,7 +364,18 @@ for (const scheme of ["light", "dark"] as const) {
       // page.goto with no dependency on this test's setup, so — same reasoning
       // as the "about page" split further down — there is no reason to spend
       // this test's budget on them too.
-      test.setTimeout(45_000);
+      //
+      // Raised from 45s to 90s (matching this file's other heavy multi-capture
+      // tests below) once cacheComponents landed: the capture count here is
+      // unchanged, but CI's shared runners started consistently blowing the
+      // 45s ceiling on the very last capture (`recap`) after successfully
+      // completing all 14 before it — 3/3 CI runs, always the identical
+      // assertion, never a genuine hang (this same sequence completes in
+      // ~30s locally with 15s to spare). Partial Prerendering's per-request
+      // render cost accumulating across 15 sequential captures is a real,
+      // if hard-to-attribute-to-one-line, aggregate cost increase — not a
+      // stuck assertion this override would be masking.
+      test.setTimeout(90_000);
       await page.goto("/");
       await capture(page, "landing", scheme);
 
@@ -457,13 +468,13 @@ for (const scheme of ["light", "dark"] as const) {
       // 20260726-post-trip-review-request — without signing the public
       // `page` itself in.
       const reviewSettingsContext = await browser.newContext({ storageState: ownerStorageState });
-      const reviewSettingsPage = await reviewSettingsContext.newPage();
+      const reviewSettingsPage = makeActivitySafe(await reviewSettingsContext.newPage());
       await reviewSettingsPage.goto("/shop/blue-mantis/settings");
       await reviewSettingsPage
         .getByLabel("Review link")
         .fill("https://g.page/r/blue-mantis/review");
       await reviewSettingsPage.getByRole("button", { name: "Save review link" }).click();
-      await reviewSettingsPage.getByText("Review link saved.").waitFor();
+      await reviewSettingsPage.getByText("Review link saved.").filter({ visible: true }).waitFor();
       await reviewSettingsContext.close();
 
       // The post-trip recap: a signed-token diver page minted for the pinned
@@ -489,7 +500,7 @@ for (const scheme of ["light", "dark"] as const) {
       // sign-in — so `page` itself stays the same unauthenticated visitor
       // throughout, exactly as a real diver reaches these links.
       const staffContext = await browser.newContext({ storageState: ownerStorageState });
-      const staffPage = await staffContext.newPage();
+      const staffPage = makeActivitySafe(await staffContext.newPage());
       await staffPage.goto("/shop/blue-mantis/schedule/board");
       await staffPage
         .locator("li")
@@ -662,6 +673,7 @@ for (const scheme of ["light", "dark"] as const) {
           .getByRole("row")
           .filter({ hasText: "Priya Sharma" })
           .getByText("PS", { exact: true })
+          .filter({ visible: true })
           .click();
         await page.getByRole("heading", { level: 1, name: "Priya Sharma" }).waitFor();
         await capture(page, "diver-profile", scheme);
@@ -674,6 +686,7 @@ for (const scheme of ["light", "dark"] as const) {
           .getByRole("row")
           .filter({ hasText: "Yusuf Demir" })
           .getByText("YD", { exact: true })
+          .filter({ visible: true })
           .click();
         await page.getByRole("heading", { level: 1, name: "Yusuf Demir" }).waitFor();
         await capture(page, "diver-profile-expired", scheme);
@@ -691,6 +704,7 @@ for (const scheme of ["light", "dark"] as const) {
           .getByRole("row")
           .filter({ hasText: "Hana Kobayashi" })
           .getByText("HK", { exact: true })
+          .filter({ visible: true })
           .click();
         await page.getByRole("heading", { level: 1, name: "Hana Kobayashi" }).waitFor();
         await capture(page, "diver-profile-imported", scheme);
@@ -721,6 +735,7 @@ for (const scheme of ["light", "dark"] as const) {
           .getByRole("row")
           .filter({ hasText: "Talia Rosen" })
           .getByText("TR", { exact: true })
+          .filter({ visible: true })
           .click();
         await page.getByRole("heading", { level: 1, name: "Talia Rosen" }).waitFor();
         await page.getByRole("heading", { name: "Payments" }).waitFor();
@@ -818,12 +833,16 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { level: 1, name: "Orders" }).waitFor();
         // The money column itself, not just the heading — the table streams in
         // and a capture taken on the header alone can bank an empty tbody.
-        await page.locator("tbody tr").first().waitFor();
+        await page.locator("tbody tr").filter({ visible: true }).first().waitFor();
         await capture(page, "orders", scheme);
 
         // One order in full: the total, and the per-line-item amounts that a
         // literal `$` and a hardcoded `/ 100` used to compose by hand.
-        await page.locator('tbody tr a[href*="/orders/"]').first().click();
+        await page
+          .locator('tbody tr a[href*="/orders/"]')
+          .filter({ visible: true })
+          .first()
+          .click();
         // Not "Front desk": the orders list this just navigated from carries
         // the identical eyebrow text, already on screen, so waiting on it
         // resolves instantly against the *old* page instead of the new one —
@@ -1054,15 +1073,21 @@ for (const scheme of ["light", "dark"] as const) {
           .getByRole("link", { name: "Guests" })
           .click();
         await page.waitForURL(/\/guests/);
-        const row = page.locator("#roster li").first();
-        await row.getByText(/Private staff notes/).click();
+        const row = page.locator("#roster li").filter({ visible: true }).first();
+        await row
+          .getByText(/Private staff notes/)
+          .filter({ visible: true })
+          .click();
         await row
           .getByLabel("Add a note only staff can see")
           .fill("Visual regression seed note for the undo toast.");
         await row.getByRole("button", { name: "Add private note" }).click();
         await page.getByText("Private staff note added.").waitFor();
 
-        await row.getByText(/Private staff notes/).click();
+        await row
+          .getByText(/Private staff notes/)
+          .filter({ visible: true })
+          .click();
         await row.getByRole("button", { name: "Delete" }).click();
         await page.getByText("Private note deleted.").waitFor();
         await capture(page, "trip-guests-note-undo", scheme);
@@ -1086,11 +1111,17 @@ for (const scheme of ["light", "dark"] as const) {
       // and the suite has no retries (playwright.config.ts).
       const unique = `today-empty-${scheme}`;
       await page.goto("/onboard");
-      await page.locator('input[name="shopName"]').fill("Fresh Shop E2E");
-      await page.locator('input[name="shopSlug"]').fill(unique);
-      await page.locator('input[name="ownerName"]').fill("Nour Haddad");
-      await page.locator('input[name="ownerEmail"]').fill(`${unique}@example.com`);
-      await page.locator('input[name="ownerPassword"]').fill("trial-pass-123");
+      await page.locator('input[name="shopName"]').filter({ visible: true }).fill("Fresh Shop E2E");
+      await page.locator('input[name="shopSlug"]').filter({ visible: true }).fill(unique);
+      await page.locator('input[name="ownerName"]').filter({ visible: true }).fill("Nour Haddad");
+      await page
+        .locator('input[name="ownerEmail"]')
+        .filter({ visible: true })
+        .fill(`${unique}@example.com`);
+      await page
+        .locator('input[name="ownerPassword"]')
+        .filter({ visible: true })
+        .fill("trial-pass-123");
       await page.getByRole("button", { name: "Create shop & start trial" }).click();
       await page.waitForURL(new RegExp(`/shop/${unique}$`));
       await page.getByRole("heading", { name: "Get your shop ready" }).waitFor();

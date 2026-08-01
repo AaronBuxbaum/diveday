@@ -21,7 +21,8 @@ const MY_DEPARTURES = "My departures";
 function panelFor(page: Page, heading: string): Locator {
   return page
     .locator("section")
-    .filter({ has: page.getByRole("heading", { name: heading, exact: true }) });
+    .filter({ has: page.getByRole("heading", { name: heading, exact: true }) })
+    .filter({ visible: true });
 }
 
 /** The fetchable URL of the just-minted link — the second of the panel's two
@@ -63,7 +64,8 @@ test.describe("staff calendar subscriptions", () => {
     await page.goto("/shop/blue-mantis/settings");
     const card = page
       .locator("section")
-      .filter({ has: page.getByRole("heading", { name: "Calendar subscriptions" }) });
+      .filter({ has: page.getByRole("heading", { name: "Calendar subscriptions" }) })
+      .filter({ visible: true });
     await expect(card).toBeVisible();
     // The card's own short teaser, not the full page's read-only explainer —
     // that longer sentence belongs to the destination page alone.

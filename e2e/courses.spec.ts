@@ -198,7 +198,7 @@ test.describe("staff", () => {
     await row.getByRole("link", { name: "Edit" }).click();
     await expect(page).toHaveURL(/\/courses\/discover-scuba-diving\/edit/);
 
-    const heroInput = page.locator('input[name="heroImageFile"]');
+    const heroInput = page.locator('input[name="heroImageFile"]').filter({ visible: true });
     await heroInput.setInputFiles({
       name: "hero.jpg",
       mimeType: "image/jpeg",
@@ -210,7 +210,7 @@ test.describe("staff", () => {
     // The gallery accepts new photos in small batches (next.config.ts's Server
     // Actions body limit is sized for that batch, not an unbounded multi-file
     // body) — picking more than the batch cap at once is rejected the same way.
-    const galleryInput = page.locator('input[name="galleryImageFiles"]');
+    const galleryInput = page.locator('input[name="galleryImageFiles"]').filter({ visible: true });
     await galleryInput.setInputFiles([
       { name: "one.jpg", mimeType: "image/jpeg", buffer: Buffer.alloc(1024) },
       { name: "two.jpg", mimeType: "image/jpeg", buffer: Buffer.alloc(1024) },

@@ -8,11 +8,17 @@ test("a freshly onboarded shop sees a first-run checklist on Today, and a step c
 }) => {
   const unique = `first-run-${Date.now()}`;
   await page.goto("/onboard");
-  await page.locator('input[name="shopName"]').fill("First Run E2E");
-  await page.locator('input[name="shopSlug"]').fill(unique);
-  await page.locator('input[name="ownerName"]').fill("Nour Haddad");
-  await page.locator('input[name="ownerEmail"]').fill(`${unique}@example.com`);
-  await page.locator('input[name="ownerPassword"]').fill("trial-pass-123");
+  await page.locator('input[name="shopName"]').filter({ visible: true }).fill("First Run E2E");
+  await page.locator('input[name="shopSlug"]').filter({ visible: true }).fill(unique);
+  await page.locator('input[name="ownerName"]').filter({ visible: true }).fill("Nour Haddad");
+  await page
+    .locator('input[name="ownerEmail"]')
+    .filter({ visible: true })
+    .fill(`${unique}@example.com`);
+  await page
+    .locator('input[name="ownerPassword"]')
+    .filter({ visible: true })
+    .fill("trial-pass-123");
   await page.getByRole("button", { name: "Create shop & start trial" }).click();
   await expect(page).toHaveURL(new RegExp(`/shop/${unique}$`));
 

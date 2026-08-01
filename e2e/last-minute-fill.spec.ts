@@ -23,7 +23,7 @@ test("diver opts in, Today nudges staff, and the trip page reflects the send att
   await page.getByLabel("Name").fill("Nora Quinn");
   await page.getByLabel("Email").fill("nora.e2e@example.com");
   // No upper bound — "around from" 2020 covers today's frozen-clock departure.
-  await page.locator('input[name="availableFrom"]').fill("2020-01-01");
+  await page.locator('input[name="availableFrom"]').filter({ visible: true }).fill("2020-01-01");
   await page.getByRole("button", { name: "Notify me" }).click();
   await expect(page.getByRole("heading", { name: "You’re on the list." })).toBeVisible();
 
@@ -31,7 +31,8 @@ test("diver opts in, Today nudges staff, and the trip page reflects the send att
   await page.goto("/shop/blue-mantis");
   const nudge = page
     .locator("li")
-    .filter({ hasText: "3 seats open with no last-minute deal sent yet." });
+    .filter({ hasText: "3 seats open with no last-minute deal sent yet." })
+    .filter({ visible: true });
   await expect(nudge).toBeVisible();
 
   // "Open trip" (not the departure card's generic "Open guests") links to
@@ -76,7 +77,8 @@ test("a failed send attempt does not silence the Today nudge — nothing actuall
   await page.goto("/shop/blue-mantis");
   const nudge = page
     .locator("li")
-    .filter({ hasText: "3 seats open with no last-minute deal sent yet." });
+    .filter({ hasText: "3 seats open with no last-minute deal sent yet." })
+    .filter({ visible: true });
   await expect(nudge).toBeVisible();
   // "Open trip" (not the departure card's generic "Open guests") links to
   // this trip's own #last-minute-deal anchor, which is what auto-opens the

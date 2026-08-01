@@ -34,6 +34,10 @@ import { requireStaffSession } from "@/lib/session";
 import { getTimeOfDayGreeting, leadWithCrewed, roleLensFor, summarizeDay } from "@/lib/today";
 import { inviteWaitlistAction, updateTripCrewAction } from "./trips/[id]/actions";
 
+// TODO: Cache Components adoption. Refactor this route so this opt-out can be removed.
+// See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
+export const instant = false;
+
 // A notice query param maps to a message key, never to a sentence — the words
 // come from the staff bundle at render time (docs ADR 20260730-staff-copy-localization).
 // These are the explanatory landings for authorization refusals elsewhere in

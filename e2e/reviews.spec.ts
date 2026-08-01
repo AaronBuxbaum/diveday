@@ -65,7 +65,7 @@ test("a review carrying words waits for staff, and publishing it puts it on the 
 
   await signInAsOwner(page);
   await page.goto("/shop/blue-mantis/reviews");
-  const card = page.locator("li").filter({ hasText: comment });
+  const card = page.locator("li").filter({ hasText: comment }).filter({ visible: true });
   await expect(card.getByText("Waiting on you")).toBeVisible();
   await card.getByRole("button", { name: "Publish" }).click();
   await expect(page.getByText("Review published to your schedule page.")).toBeVisible();
@@ -86,7 +86,7 @@ test("a published review can be taken back down, and leaves the public page with
   // would make the "gone from the public page" assertion below vacuous, since
   // bare ratings are never listed there in the first place.
   const comment = "Vis was unreal and the crew found us a turtle on the second tank.";
-  const published = page.locator("li").filter({ hasText: comment });
+  const published = page.locator("li").filter({ hasText: comment }).filter({ visible: true });
   await expect(published.getByText("Published")).toBeVisible();
   // Hiding is one of DiveDay's land-then-undo actions (docs/design/principles.md
   // #7, a reversible toggle): no confirm dialog — it hides immediately and
@@ -105,7 +105,7 @@ test("hiding a review can be undone from the toast", async ({ page }) => {
   await page.goto("/shop/blue-mantis/reviews");
 
   const comment = "Vis was unreal and the crew found us a turtle on the second tank.";
-  const published = page.locator("li").filter({ hasText: comment });
+  const published = page.locator("li").filter({ hasText: comment }).filter({ visible: true });
   await published.getByRole("button", { name: "Hide" }).click();
   const toast = page.getByRole("status");
   await expect(toast.getByText("Review hidden.")).toBeVisible();
@@ -121,6 +121,9 @@ test("hiding a review can be undone from the toast", async ({ page }) => {
 
 test("the public schedule publishes the shop's rating as structured data", async ({ page }) => {
   await page.goto("/shop/blue-mantis/schedule");
+  // No `.filter({ visible: true })`: a <script> tag has no rendered box and is
+  // never "visible" per Playwright's definition, so the filter would match
+  // zero elements and break this assertion outright.
   const graph = await page.locator('script[type="application/ld+json"]').first().textContent();
   const parsed = JSON.parse(graph ?? "{}");
   const first = parsed.itemListElement?.[0]?.item;
@@ -133,6 +136,8 @@ test("the public schedule publishes the shop's rating as structured data", async
 
 test("the public schedule publishes its published reviews as Review objects", async ({ page }) => {
   await page.goto("/shop/blue-mantis/schedule");
+  // No `.filter({ visible: true })`: see the same-selector comment above — a
+  // <script> tag is never "visible", so the filter would zero out the match.
   const graph = await page.locator('script[type="application/ld+json"]').first().textContent();
   const parsed = JSON.parse(graph ?? "{}");
   const reviews = parsed.review;
@@ -155,5 +160,8 @@ test("the embed widget emits no structured data — the standalone page is canon
   page,
 }) => {
   await page.goto("/shop/blue-mantis/schedule?embed=1");
+  // No `.filter({ visible: true })`: a <script> tag is never "visible" per
+  // Playwright's definition, so the filter would always report count 0 —
+  // asserting the wrong thing for the right-looking reason.
   await expect(page.locator('script[type="application/ld+json"]')).toHaveCount(0);
 });

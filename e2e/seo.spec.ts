@@ -68,6 +68,12 @@ test("sitemap.xml lists the marketing pages, excludes the demo shop, and never l
 test("the schedule page's canonical stays on the standalone URL in both standalone and embed views, and JSON-LD only renders standalone", async ({
   page,
 }) => {
+  // The `.locator()` calls in this file all target `<head>` elements
+  // (link/meta/script) that never have a layout box, so
+  // `.filter({ visible: true })` would zero out every match regardless of
+  // whether the element is actually present — intentionally left unfiltered
+  // throughout this file. Each assertion also follows a fresh `page.goto`,
+  // so there's no prior client-side-navigated route to leak from anyway.
   await page.goto(`/shop/${DEMO_SHOP_SLUG}/schedule`);
   const standaloneCanonical = await page.locator('link[rel="canonical"]').getAttribute("href");
   // Resolved against publicAppUrl()'s configured origin (never the worker's

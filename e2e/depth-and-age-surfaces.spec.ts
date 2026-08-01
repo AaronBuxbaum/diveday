@@ -12,6 +12,7 @@ async function tripPathByTitle(page: import("@playwright/test").Page, title: str
   const href = await page
     .locator(`a[href^="/shop/${SHOP}/trips/"]:not([href$="/trips/new"])`)
     .filter({ hasText: title })
+    .filter({ visible: true })
     .first()
     .getAttribute("href");
   if (!href) throw new Error(`no trip card found for ${title}`);
@@ -39,6 +40,7 @@ async function setSiteDepth(
   const href = await page
     .locator(`a[href^="/shop/${SHOP}/dive-sites/"]:not([href$="/dive-sites/new"])`)
     .filter({ hasText: siteName })
+    .filter({ visible: true })
     .first()
     .getAttribute("href");
   if (!href) throw new Error(`no dive-site link for ${siteName}`);
@@ -76,7 +78,10 @@ test.describe("staff", () => {
 
     // The whole point: being a minor is a fact the crew is told, never a gate.
     // The row that carries the badge must not have gained a blocker for it.
-    const minorRow = page.locator("li", { has: page.getByText("▲ Minor") }).last();
+    const minorRow = page
+      .locator("li", { has: page.getByText("▲ Minor") })
+      .filter({ visible: true })
+      .last();
     await expect(minorRow).not.toContainText(/under 18|too young|not permitted/i);
   });
 

@@ -1,5 +1,5 @@
 import { DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
-import { expect, signedInAsOwner, test } from "./fixtures";
+import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import { signInAs } from "./helpers";
 
 signedInAsOwner();
@@ -73,7 +73,8 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
 
   const diverSection = page
     .locator("section")
-    .filter({ has: page.getByRole("heading", { name: /^Divers/ }) });
+    .filter({ has: page.getByRole("heading", { name: /^Divers/ }) })
+    .filter({ visible: true });
   // The whole waiver is a single button; for an unsent diver it reads "Send
   // waiver". Exact, so it targets the per-diver control and not the roster's
   // "Send waivers to selected" bulk button. e2e has no email provider
@@ -127,7 +128,7 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
 
   // The first question's affirmative answer must not disappear into a generic
   // success state; it becomes an explicit staff follow-up item.
-  const firstFieldset = page.locator("fieldset").first();
+  const firstFieldset = page.locator("fieldset").filter({ visible: true }).first();
   await firstFieldset.getByRole("radio", { name: "Yes" }).check();
   // Task 41: the reassurance line reveals right under that question the
   // moment "Yes" is picked — repeated at the point of anxiety, not just once
@@ -193,7 +194,7 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
   await expect(
     page.getByRole("heading", { level: 2, name: "Signed record", exact: true }),
   ).toBeVisible();
-  const recordRow = page.locator(`li[id^="waiver-record-"]`).first();
+  const recordRow = page.locator(`li[id^="waiver-record-"]`).filter({ visible: true }).first();
   await expect(recordRow.getByText("Priya Sharma")).toBeVisible();
   await expect(recordRow.getByText("Medical follow-up flagged")).toBeVisible();
   // The list itself never shows the flagged prompt text — it sits behind the
@@ -324,13 +325,14 @@ test("a non-English visitor sees a notice that the waiver text itself stays in E
   // not the shop.
   const visitorContext = await page.context().browser()?.newContext({ locale: "es-ES" });
   if (!visitorContext) throw new Error("expected a browser to create a second context from");
-  const visitorPage = await visitorContext.newPage();
+  const visitorPage = makeActivitySafe(await visitorContext.newPage());
   await visitorPage.goto(`${new URL(page.url()).origin}${waiverHref}`);
   await expect(
-    visitorPage.getByText(
-      "esta exención y el cuestionario médico solo están disponibles en inglés",
-      { exact: false },
-    ),
+    visitorPage
+      .getByText("esta exención y el cuestionario médico solo están disponibles en inglés", {
+        exact: false,
+      })
+      .filter({ visible: true }),
   ).toBeVisible();
   await visitorContext.close();
 });
@@ -390,7 +392,8 @@ test("staff edit the single shop waiver and each edit is kept as a version", asy
 
   const release = page
     .locator("section")
-    .filter({ has: page.getByRole("heading", { name: "Release text" }) });
+    .filter({ has: page.getByRole("heading", { name: "Release text" }) })
+    .filter({ visible: true });
 
   // The current version is shown, and the release text is directly editable.
   await expect(release.getByText("Version 1")).toBeVisible();

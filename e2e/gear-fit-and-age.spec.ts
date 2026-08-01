@@ -33,6 +33,7 @@ async function goToDiver(page: import("@playwright/test").Page, name: string) {
   const href = await page
     .locator(`a[href^="/shop/${SHOP}/divers/"]`)
     .filter({ hasText: name })
+    .filter({ visible: true })
     .first()
     .getAttribute("href");
   if (!href) throw new Error(`no diver link for ${name}`);

@@ -50,7 +50,7 @@ test("live manifest retains blocked divers and records an explicit not-boarded r
   await expect(priyaRow.getByRole("button", { name: "Mark boarded" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Mark boarded" }).first()).toBeVisible();
 
-  await page.locator("#roll-call-list").scrollIntoViewIfNeeded();
+  await page.locator("#roll-call-list").filter({ visible: true }).scrollIntoViewIfNeeded();
   const checkpointScroll = await page.evaluate(() => window.scrollY);
   await page
     .getByRole("link", { name: "After dive 1" })
@@ -373,11 +373,11 @@ test("displays missing diver face-grid on manifest page", async ({ page }) => {
     .click();
 
   // Validate the face grid is visible and has missing divers
-  await expect(page.locator("#missing-divers-grid")).toBeVisible();
+  await expect(page.locator("#missing-divers-grid").filter({ visible: true })).toBeVisible();
   await expect(page.getByText(/Missing divers/)).toBeVisible();
 
   // Clicking an avatar scrolls to the corresponding diver row
-  const firstAvatar = page.locator("#missing-divers-grid button").first();
+  const firstAvatar = page.locator("#missing-divers-grid button").filter({ visible: true }).first();
   await expect(firstAvatar).toBeVisible();
   await firstAvatar.click();
 });

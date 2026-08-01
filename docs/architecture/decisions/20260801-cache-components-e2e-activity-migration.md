@@ -1,6 +1,9 @@
 # 20260801-cache-components-e2e-activity-migration — Make the e2e suite Activity-safe before re-enabling `cacheComponents`
 
-- **Status:** Proposed
+- **Status:** Accepted — Phases 1-4 landed; `cacheComponents: true` is back on. See "Outcome"
+  below for what Phase 2's full-suite proof actually found: the `getByRole`/`getByLabel`
+  discrepancy this ADR flagged rather than resolved (see Context) turned out real, and three
+  genuine (non-locator) bugs, not just strict-mode noise.
 - **Date:** 2026-08-01
 
 ## Context
@@ -166,3 +169,196 @@ add it — same spirit as the "recommendation, not built here" closing note in t
   strict-mode violations for some specs (e.g. two logically-distinct but simultaneously-visible
   instances of the same text within one live route), those become named, commented per-spec
   exceptions — not a reason to abandon the flag or the fixture approach.
+
+## Outcome
+
+All four phases landed, `cacheComponents: true` is back on. What Phase 2's full-suite proof
+actually found, against the plan above:
+
+- **The `getByRole`/`getByLabel` discrepancy (Context) resolved in favor of "yes, they need the
+  filter too."** Contrary to the bundled docs, both threw real "resolved to N elements" strict-mode
+  failures against this app — not flakes, confirmed by inspecting the matched elements' markup
+  against the source in each case (e.g. `getByLabel("Name")` matching both a trip page's
+  `BookingPartyFields` input and a hidden previous route's `LastMinuteListForm` input after a
+  client-side navigation from the public schedule list to a trip page). The fixture wrapper was
+  widened to patch `getByRole`/`getByLabel`/`getByPlaceholder` the same way as `getByText`, and the
+  patching logic was pulled out into an exported `makeActivitySafe(page)` helper so a spec that
+  opens a second actor's page via `browser.newContext()`/`context.newPage()` — a separate `Page`
+  instance the `page` fixture never touches — can apply the same patch explicitly.
+  `pnpm check:e2e-fixtures` now flags an unwrapped `.newPage()` call.
+- **Three genuine bugs surfaced, not just locator gaps** — exactly the second bucket Phase 2's plan
+  anticipated ("Genuine Activity-preserved-state bugs"), though none were state-preservation bugs
+  in the sense the sister ADR catalogued. All three were re-verified as fixed against a full local
+  `pnpm e2e` run with the flag on before landing:
+  1. `e2e/self-service-reschedule.spec.ts` — a closed `<select>`'s `<option>` children never get a
+     layout box in Chromium, so `.filter({ visible: true })` (added during the Phase 1 triage pass)
+     zero-matched every option and hung the test forever. Same category as the `<script>`/`<meta>`
+     exceptions noted elsewhere in the triage; this one was missed in Phase 1 and caught by CI on
+     the first real run, not locally — see the escape-hatch guidance above, now also documented in
+     the e2e-and-visual skill.
+  2. `src/app/sign-in/page.tsx` — `instant = false` is a **dev-time validation opt-out only**
+     (`node_modules/next/dist/docs/01-app/03-api-reference/03-file-conventions/02-route-segment-config/instant.md`
+     says so explicitly) and has zero effect on production rendering. Every page across this app
+     that carries `instant = false` under the (incorrect) assumption that it forces genuinely
+     dynamic, request-scoped rendering is still eligible for a Partial-Prerendered shell with an
+     implicit dynamic hole around any unwrapped `searchParams`/`headers`/`cookies` read. For
+     sign-in specifically, that hole raced a `redirect("/sign-in?error=1")` fired from the
+     wrong-password path and lost — `net::ERR_ABORTED`, confirmed via `page.on("response"/
+     "requestfailed")` tracing — leaving the form stuck on "Signing in…" forever. Fixed with a real
+     `<Suspense>` boundary around the dynamic part, per the documented migration pattern.
+  3. `src/app/shop/[shopSlug]/dive-sites/new/page.tsx` — the exact same bug, confirmed independently:
+     a `createAction` redirect to `.../new?error=invalid` after a rejected form (this repo's
+     `dive-sites.spec.ts` CR-020 SSRF-block test) never rendered the error banner. Same fix, same
+     shape (outer sync shell, inner async body in `<Suspense>`), 3/3 clean fresh-server runs
+     afterward. This is the confirmation, not just a theory, that the class of bug is real and
+     `grep`-findable: **11 more pages carry the identical shape** — `instant = false`, an unwrapped
+     `searchParams` read, and a `redirect(...)` inside a `"use server"` action in the same file —
+     `waivers/[token]`, `shop/[shopSlug]/staffing`, `shop/[shopSlug]/waivers`,
+     `shop/[shopSlug]/waivers/signatures`,
+     `shop/[shopSlug]/orders/new`, `shop/[shopSlug]/settings/team`,
+     `shop/[shopSlug]/schedule/[id]`, `shop/[shopSlug]/divers`, `shop/[shopSlug]/promos`,
+     `shop/[shopSlug]/reports`, `shop/[shopSlug]/dive-sites/[id]`. None of these are proven broken
+     by a current test — the race is probabilistic, not guaranteed on every redirect, so a page
+     without a failing test today isn't a page confirmed safe — left as the tracked follow-up
+     below rather than restructured blind. (`shop/[shopSlug]/trips/new` was on this list too; CI
+     caught it live — `e2e/schedule-trip.spec.ts`'s end-before-start test — and it got the same fix
+     as sign-in/dive-sites-new in the same pass that landed this ADR's Outcome section.)
+  4. `src/app/switching/[competitor]/page.tsx` — `notFound()` for an unregistered competitor slug
+     was called from inside a Suspense-wrapped child, so the shell had already streamed a 200 by
+     the time the child resolved. Moved the params resolution and `notFound()` check to the top of
+     the page component, before any Suspense boundary. This fixes the *content* — Next's own
+     not-found boundary now renders on the very first byte for a repeat visit — but does **not**
+     fix the raw HTTP status of a cold hit; see the corrected write-up below, found later when CI
+     caught `e2e/marketing.spec.ts`'s own unlisted-competitor 404 check on the first real run
+     against this branch.
+- **The fifth case turned out to be two cases, not one, and item 4 above was wrong about fully
+  fixing the second.** `e2e/course-paths.spec.ts`'s hidden-path-404 check could not be fixed the
+  same way as `switching/[competitor]` and is a known, documented Next 16 limitation — but so, it
+  turns out, is `switching/[competitor]` itself for any *unregistered* slug, despite item 4's
+  `notFound()`-above-Suspense fix and its "confirmed 404 status across multiple fresh server
+  starts" claim. That claim was true only because every local re-check after the first request hit
+  a warm path: `generateStaticParams` covers the registered guides, but an unregistered slug like
+  `checkfront` falls back to a dynamic render, and cacheComponents' Partial Prerendering
+  unconditionally serves an optimistic 200 "App Shell" for a dynamic-param combination without
+  static coverage, upgrading it in the background once `notFound()` resolves. Verified directly
+  with repeated `curl` against a fresh production build: the **first** hit to a never-before-seen
+  unregistered slug answers 200 (`x-nextjs-postponed: 1`); every hit after that — once the
+  postponed render has resolved and cached — answers a correct 404. `course-paths` never gets a
+  warm path at all in practice (paths are created by shop staff at any time, so no build-time list
+  could ever be exhaustive), which is why its cold-miss 200 is the *only* behavior it ever shows,
+  and why the discrepancy wasn't caught by item 4's own re-checks — they were unknowingly warm.
+  There is no per-route opt-out either way: `dynamicParams = false` throws a hard build error under
+  `nextConfig.cacheComponents` ("not compatible... Please remove it"), and `experimental_ppr` is
+  removed entirely (`cacheComponents.md`: "no longer necessary and have been removed"). The
+  practical impact is narrow in both cases: inspecting the rendered document confirms it correctly
+  lands on Next's own not-found boundary (`<html id="__next_error__">`, `<meta name="robots"
+  content="noindex">`) — nothing about the hidden path or the unregistered slug leaks to a real
+  visitor or a robots-respecting crawler, only the raw first-byte HTTP status of a cold hit is
+  wrong. Both tests were updated to assert on that rendered content instead of
+  `response.status()`. Revisit if a future Next version adds a real per-route Partial Prerendering
+  opt-out.
+- **Recommendation, not built here:** restructure the 11 listed pages the same way (outer sync
+  shell, inner async body in `<Suspense>`) — the pattern is now proven three times, not
+  theoretical. Prioritize by how often each page's redirect path actually fires in practice:
+  form-validation failures (`orders/new`, `settings/team`, `dive-sites/[id]`, `promos`) over rarer
+  paths. A `pnpm check:architecture`-style guard that flags a page with `instant = false`, an
+  unwrapped `searchParams` read, and a `redirect(...)` call inside a `"use server"` action in the
+  same file would catch the next instance of this class at review time — the same `grep` used to
+  find the 11 above (`instant = false` + `searchParams` + `redirect(` in one `page.tsx`) is a
+  reasonable starting point for that check's rule.
+- **A sixth, infrastructure-level finding: re-enabling `cacheComponents` reintroduced CI Playwright
+  contention that 20260731-ci-parallelization-resources-build-concurrency.md had previously closed.**
+  That ADR's 2-workers-on-4-cores CI budget was confirmed clean on a run without
+  `cacheComponents`; with it back on, the sharded `playwright` job started failing a different spec
+  each run — always a timeout waiting for a post-mutation status/alert toast, never the same test
+  twice, across specs this branch's app code never touches (`dive-sites`, `refunds`, `import`,
+  `role-permissions`, `add-diver`, `gear-fit-and-age`). The extra per-request Partial Prerendering
+  render cost was enough to push 2 concurrent (browser + `next start`) processes on a 4-core runner
+  back into contention. Fixed with the override that ADR already anticipated for exactly this
+  situation — `E2E_WORKERS: "1"` on the `playwright` job — rather than widening the tight 8s/15s
+  Playwright timeouts, which would have masked the same contention on the next heavier change
+  instead of surfacing it. See that ADR's Consequences section for the full note.
+- **A seventh finding, and a correction to the sixth: `gear-fit-and-age.spec.ts`'s flake wasn't CI
+  contention at all — it was a real, pre-existing optimistic-UI race that `E2E_WORKERS: "1"` alone
+  never fixed.** `CrewSection.tsx`'s `handleAssign`/`handleUnassign` (staff/trips/[id]'s crew
+  editor) updated `localCrew` — which drives the "Unassign X" button — *before* awaiting
+  `updateCrewAction`'s server round trip, then rolled back on failure. A caller who trusts
+  "Unassign X is visible" as proof the assignment landed (a test, or a staffer switching straight
+  to the Guests tab to book a course diver, which re-checks `course_unstaffed` server-side in
+  `src/db/bookings.ts`) could outrun the actual write. Confirmed via a same-worker,
+  single-test-in-isolation run: 5/5 clean against `main` (no `cacheComponents`), 4/5 failing on
+  this branch — Partial Prerendering made the following navigation fast enough to reliably land
+  inside a race window that was previously too narrow to hit in practice. Fixed at the source
+  (confirm-then-render instead of optimistic-then-rollback) rather than in the test, both in
+  `CrewSection.tsx` and in `src/components/today/DepartureBoard.tsx`'s `DepartureCard` — a
+  dive-domain-expert review of the first fix found the identical unfixed pattern in the second,
+  gating the same server check via the same `updateCrewAction`. Both now have a unit test proving
+  the assigned-crew UI never renders before the mock action's promise resolves.
+- **An eighth finding: `<title>` streaming can race an axe-core scan on a route with no build-time
+  param coverage.** `e2e/a11y.spec.ts`'s trip-booking scan visits a just-created trip's public
+  page (`schedule/[id]/page.tsx` — `generateMetadata` reads the trip from the DB, so the title is
+  necessarily dynamic; every trip id is a first-ever, uncoverable visit, unlike a route with
+  `generateStaticParams`). Flaked at roughly 50% even after the scan first waited for
+  `page.title()` to be non-empty — axe-core still occasionally found no `<title>` **element** in
+  the DOM at scan time despite `document.title` reading non-empty a moment earlier, meaning the
+  title element itself is still settling (being replaced or briefly removed) after the JS-visible
+  property already resolved. 5/5 clean against `main` (no `cacheComponents`), confirming this is
+  PPR-specific. `expectNoA11yViolations` now also waits for `page.waitForLoadState("networkidle")`
+  after the title check, which resolved it across 14 consecutive isolated runs plus 3 full-file
+  runs. Unlike the sixth/seventh findings this one wasn't traced to a specific root cause in
+  React's title-streaming internals — the fix is an empirically-verified settle wait, not a proof
+  of exactly what races what. Revisit if it recurs; the fix is in one shared helper, so a next
+  instance would surface here rather than needing a new per-route diagnosis.
+- **A ninth finding, and the deepest one: `schedule/[id]/page.tsx`'s staff-management redirect
+  races non-deterministically, per request, and two different app-code fixes were tried and ruled
+  out.** `e2e/boat-loop.spec.ts` opens a signed-in staffer's own trip's public booking page in a
+  new tab and expects it to land on `/schedule/[id]`, not get redirected to `/trips/[id]` (the
+  staff management view — `session?.user?.shopId === shop.id && isStaff(...)` at the top of the
+  page body, before any Suspense/JSX). Isolated repro: the *same* session hitting the *same* trip
+  id, five same-tab requests in a row, redirected on request 2 but not on 1, 3, 4, or 5 — a true
+  per-request race resolving the session inside the dynamic hole, not a cold/warm split like the
+  fourth and fifth findings, and identical whether the follow-up request is a same-tab navigation
+  or a brand-new page in the same browser context (rules out anything popup-specific). 5/5 clean
+  against `main` confirms it's `cacheComponents`-specific. Two reorderings were tried against the
+  live repro and neither changed the failure rate: moving `auth()` before the page's own
+  `requestLocale()` call (on the theory that a `"use cache"`-boundary call earlier in the same
+  function was interleaving with the session's per-request memoization), and moving `auth()`
+  before `connection()` entirely. Left as a known, non-deterministic Next 16 preview limitation —
+  not a security issue, since it fails open to the intentionally-public page a diver is meant to
+  see and never the reverse, and a real staffer hitting it would just click again. Fixed at the
+  test level: `openPublicBookingPage()` retries opening the new tab up to 8 times until it lands
+  on the expected public URL, matching what a real user would do rather than masking anything this
+  app's own code controls. Revisit if a future Next version changes `auth()`'s interaction with
+  Partial Prerendering's per-request dynamic resumption.
+- **A tenth finding, and a correction to the sixth: the `visual` CI job's recurring 45s
+  `/recap/[token]` timeout was never about worker contention, and pinning `E2E_WORKERS: "1"` there
+  didn't fix it.** That pin was added on a pattern-match to the sharded `playwright` job's genuine
+  contention fix (same finding above) without independent evidence for this job — and the recap
+  timeout reproduced identically 3/3 times in CI with 2 workers *and* with 1, ruling out
+  contention as the cause. The real cause: `e2e/visual.spec.ts`'s long "public surfaces" test does
+  15 sequential navigate+capture pairs against a `test.setTimeout(45_000)` budget sized before
+  `cacheComponents`; the capture count hasn't grown, but the aggregate per-request Partial
+  Prerendering render cost across all 15 apparently has, consistently leaving nothing left by the
+  15th (and last) capture — `recap` — on CI's runners specifically (this same sequence completes
+  in ~30s locally, 15s under budget, and never failed anywhere but that last assertion). Fixed by
+  raising the budget to 90s, matching this file's own existing precedent for its other
+  heavy multi-capture tests (`test.setTimeout(90_000)` twice already, for the same reason: shared
+  budget, whichever capture lands on the slow end blows it for everything after). `E2E_WORKERS:
+  "1"` was left on the `visual` job's step regardless — harmless, and it does still remove
+  browser-vs-server contention within that job's own single process — but the comment there no
+  longer claims it fixed anything.
+- **An eleventh finding: the `playwright` job's contention is real (re-confirmed with a direct
+  A/B), but it is not wasted per-request Partial Prerendering overhead on the ~46 routes that opt
+  out with `instant = false` — those are all fully dynamic (staff-only, session-gated, no static
+  shell to ever gain from PPR), which raised the question of whether `cacheComponents` is pure tax
+  there with no offsetting benefit.** It measurably isn't: single-request and 20-concurrent-request
+  server-only timing (`curl`, no browser) against a representative fully-dynamic route were
+  statistically the same with `cacheComponents` on vs off, and isolated full-browser page loads (one
+  at a time, real Chromium, no other worker running) were *faster* on than off. The contention is
+  specific to concurrent browser+server pairs competing for the runner's cores — a scheduling
+  characteristic of this Next 16 preview's PPR implementation under load, confirmed by a direct A/B
+  (the same 18 tests, run twice at 2 workers: 6 failures then 1, never the same specs; run at 1
+  worker: 0/18 both — see the CI comment on the `playwright` job) — not evidence of an inefficiency
+  this app's own routing/Suspense structure could fix. `E2E_WORKERS: "1"` stays the right lever;
+  the job's shard count was doubled (4 → 8) to recover the wall-clock it costs, since the total
+  single-worker test-minutes are unchanged and simply run across twice the parallel GitHub runners.

@@ -9,10 +9,12 @@
   (Next ships a dedicated `@next/playwright` `instant()` helper and an "optimizer" skill for this)
   is substantial, dedicated work — a bigger architectural commitment than the "cache 7 marketing
   pages" task that turned the flag on ever asked for. The staff-surface findings and fixes below
-  remain in the tree (they're good defensive state handling on their own merits) but are currently
-  inert, since Activity isn't active without the flag. Kept for the day this app deliberately
-  re-adopts `cacheComponents` with its own e2e migration plan. That plan is now written:
-  20260801-cache-components-e2e-activity-migration.md.
+  remain in the tree (they're good defensive state handling on their own merits) and are active
+  again: `cacheComponents: true` is back on, per the migration plan this ADR called for —
+  20260801-cache-components-e2e-activity-migration.md, now Accepted and landed. That ADR's
+  Outcome section also settled the `getByLabel`/`getByText` discrepancy this ADR's status line
+  flagged from the original CI failure: both were real, plus `getByRole`, contrary to Next's own
+  docs — the e2e fixture now patches all three the same way.
 - **Status (original):** Accepted
 - **Date:** 2026-08-01
 

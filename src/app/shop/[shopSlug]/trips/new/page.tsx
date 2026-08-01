@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 import { z } from "zod";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { TripDiveFields } from "@/components/TripDiveFields";
@@ -194,7 +195,32 @@ const ERROR_KEYS: Record<string, StaffMessageKey> = {
   "not-authorized": "trips.new.errorNotAuthorized",
 };
 
-export default async function NewTripPage({
+// Not `instant = false`, which (per
+// node_modules/next/dist/docs/.../instant.md) is a dev-time validation
+// opt-out only and has no effect on production rendering. Without a real
+// Suspense boundary, this route still gets a Partial-Prerendered static
+// shell with an implicit dynamic hole around the unwrapped
+// `searchParams`/session reads — and a `redirect(...?error=...)` fired from
+// the form's own submission raced that hole's own pending fetch (same class
+// of bug fixed on /sign-in and /shop/[shopSlug]/dive-sites/new). An explicit
+// boundary here makes the dynamic part exactly what streams in on redirect.
+export default function NewTripPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ shopSlug: string }>;
+  searchParams: Promise<{ error?: string; course?: string }>;
+}) {
+  return (
+    <Suspense
+      fallback={<main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10" />}
+    >
+      <NewTripBody params={params} searchParams={searchParams} />
+    </Suspense>
+  );
+}
+
+async function NewTripBody({
   params,
   searchParams,
 }: {

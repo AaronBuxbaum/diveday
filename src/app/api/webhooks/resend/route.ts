@@ -5,8 +5,6 @@ import { log } from "@/lib/log";
 import { parseResendEmailEvent } from "@/lib/notifications/events";
 import { verifyResendWebhook } from "@/lib/notifications/webhook";
 
-export const runtime = "nodejs";
-
 /**
  * The Resend webhook: what happened to mail we sent — delivered, bounced,
  * marked as spam (docs ADR 20260726-hosted-mailboxes-for-platform-mail). Fails

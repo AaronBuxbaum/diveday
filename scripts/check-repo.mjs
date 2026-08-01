@@ -24,6 +24,7 @@ const checks = [
   ["adrs", "check-adrs.mjs"],
   ["docs", "check-doc-links.mjs"],
   ["agents", "check-agents.mjs"],
+  ["e2e-fixtures", "check-e2e-fixtures.mjs"],
   ["text", "check-source-text.mjs"],
   ["locale", "check-locale.mjs"],
   ["copy", "check-copy.mjs"],

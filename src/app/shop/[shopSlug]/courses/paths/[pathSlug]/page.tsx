@@ -20,6 +20,10 @@ import { MAX_PATH_STEPS } from "@/lib/courses";
 import { PathBuilder } from "../_components/PathBuilder";
 import { savePathAction } from "../actions";
 
+// TODO: Cache Components adoption. Refactor this route so this opt-out can be removed.
+// See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
+export const instant = false;
+
 /** Title, description, and canonical URL for the public path page. */
 export async function generateMetadata({
   params,

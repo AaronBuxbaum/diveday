@@ -46,7 +46,7 @@ test.describe("demo billing history", () => {
     await page.goto("/shop/blue-mantis/orders");
     await page.getByRole("heading", { level: 1, name: "Orders" }).waitFor();
 
-    const rows = page.locator("tbody tr");
+    const rows = page.locator("tbody tr").filter({ visible: true });
     await expect(rows.first()).toBeVisible();
     const firstPageCount = await rows.count();
     expect(firstPageCount).toBeLessThanOrEqual(50);
@@ -85,7 +85,11 @@ test.describe("demo billing history", () => {
     await pager.getByRole("link", { name: "Next" }).click();
     await page.waitForURL(/status=paid/);
     await expect(page).toHaveURL(/page=2/);
-    for (const badge of await page.locator("tbody tr").getByText("Paid").all()) {
+    for (const badge of await page
+      .locator("tbody tr")
+      .getByText("Paid")
+      .filter({ visible: true })
+      .all()) {
       await expect(badge).toBeVisible();
     }
   });

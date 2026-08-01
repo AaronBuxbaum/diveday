@@ -82,3 +82,49 @@ describe("CrewSection assignError reset on revisit", () => {
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 });
+
+describe("CrewSection confirm-then-render", () => {
+  it("doesn't show a newly assigned crew member until the server confirms the write", async () => {
+    let resolveAction: (result: { ok: boolean }) => void = () => {};
+    const pending = vi.fn(
+      () =>
+        new Promise<{ ok: boolean }>((resolve) => {
+          resolveAction = resolve;
+        }),
+    );
+    const staff: StaffList = [
+      staffMember("staff-1", "Dana Reyes"),
+      staffMember("staff-2", "Marcus Webb"),
+    ];
+
+    render(
+      <CrewSection
+        tripId="trip-a"
+        staff={staff}
+        crewIds={["staff-1"]}
+        onShiftIds={["staff-1"]}
+        crewGapCode="none"
+        shopSlug="blue-mantis"
+        updateCrewAction={pending}
+        copy={COPY}
+      />,
+    );
+
+    await userEvent.selectOptions(screen.getByLabelText("Assign crew"), "staff-2");
+
+    // A real user (or an e2e spec) reading the DOM right after clicking must
+    // never see "assigned" before the write that makes it true has actually
+    // landed — a caller relying on that signal (e.g. switching to a page
+    // that re-checks the same requirement server-side) could otherwise
+    // outrun the mutation. See the handleAssign/handleUnassign comment.
+    expect(screen.queryByRole("button", { name: "Remove Marcus Webb from crew" })).toBeNull();
+    expect(pending).toHaveBeenCalledWith("trip-a", { personId: "staff-2", operation: "assign" });
+
+    resolveAction({ ok: true });
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: "Remove Marcus Webb from crew" }),
+      ).toBeInTheDocument();
+    });
+  });
+});

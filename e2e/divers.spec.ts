@@ -16,6 +16,7 @@ async function tripPathByTitle(page: import("@playwright/test").Page, title: str
   const href = await page
     .locator(`a[href^="/shop/${SHOP}/trips/"]:not([href$="/trips/new"])`)
     .filter({ hasText: title })
+    .filter({ visible: true })
     .first()
     .getAttribute("href");
   if (!href) throw new Error(`no trip card found for ${title}`);
@@ -37,9 +38,9 @@ test("staff opens a diver from their avatar and can reach them from the header",
   await expect(page.getByRole("heading", { level: 1, name: "Priya Sharma" })).toBeVisible();
 
   // Contact details are one tap from the front desk: mail the diver or call them.
-  const header = page.locator("header").last();
-  await expect(header.locator('a[href^="mailto:"]')).toBeVisible();
-  await expect(header.locator('a[href^="tel:"]')).toBeVisible();
+  const header = page.locator("header").filter({ visible: true }).last();
+  await expect(header.locator('a[href^="mailto:"]').filter({ visible: true })).toBeVisible();
+  await expect(header.locator('a[href^="tel:"]').filter({ visible: true })).toBeVisible();
 });
 
 test("a diver's record shows their still-scheduled trips, linked straight to the manifest", async ({
@@ -87,28 +88,30 @@ test("staff record and correct a diver's emergency contact from the roster and t
   await expect(page.getByRole("status")).toContainText("Diver added to the trip");
 
   const card = page.locator("li").filter({ hasText: diverName });
-  await expect(card.getByText("Not on file")).toBeVisible();
+  await expect(card.getByText("Not on file").filter({ visible: true })).toBeVisible();
 
   // Failure path: a name with no phone is not a reachable contact — the
   // save must say so, not silently claim success or a generic error.
-  await card.getByText("Add emergency contact").click();
+  await card.getByText("Add emergency contact").filter({ visible: true }).click();
   await card.getByLabel("Contact name").fill("Robin Diver");
   await card.getByRole("button", { name: "Save contact" }).click();
   await expect(
     page.getByRole("status").filter({ hasText: /name and a phone number/ }),
   ).toBeVisible();
   // Still reads as missing — a half-entered contact is not "on file".
-  await expect(card.getByText("Not on file")).toBeVisible();
+  await expect(card.getByText("Not on file").filter({ visible: true })).toBeVisible();
 
   // Complete it.
-  await card.getByText("Add emergency contact").click();
+  await card.getByText("Add emergency contact").filter({ visible: true }).click();
   await card.getByLabel("Contact name").fill("Robin Diver");
   await card.getByLabel("Contact phone").fill("+1 305 555 0166");
   await card.getByRole("button", { name: "Save contact" }).click();
   await expect(
     page.getByRole("status").filter({ hasText: "Emergency contact saved" }),
   ).toBeVisible();
-  await expect(card.getByText("Robin Diver · +1 305 555 0166")).toBeVisible();
+  await expect(
+    card.getByText("Robin Diver · +1 305 555 0166").filter({ visible: true }),
+  ).toBeVisible();
 
   // The diver's own record reads the same value straight through
   // `updateDiver`/`saveBookingEmergencyContact` sharing the same columns —
