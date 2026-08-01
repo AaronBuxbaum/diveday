@@ -26,9 +26,9 @@ export type BadgeTone = keyof typeof toneClass;
  * not a status to disambiguate.
  */
 const toneGlyph: Partial<Record<BadgeTone, string>> = {
-  success: "✓",
-  warning: "▲",
-  danger: "✕",
+  success: "✓ ",
+  warning: "▲ ",
+  danger: "✕ ",
 };
 
 const sizeClass = {
