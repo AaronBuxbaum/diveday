@@ -1,6 +1,13 @@
 import { DEMO_SHOP_SLUG, DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { acceptAgeAttestation, daysFromNow, e2eNow, signInAs, signOut } from "./helpers";
+import {
+  acceptAgeAttestation,
+  daysFromNow,
+  e2eNow,
+  findTripOnBoard,
+  signInAs,
+  signOut,
+} from "./helpers";
 
 const SHOP = DEMO_SHOP_SLUG;
 
@@ -10,12 +17,8 @@ const SHOP = DEMO_SHOP_SLUG;
  * re-rendering, and the URL read lands on the wrong route.
  */
 async function tripPathByTitle(page: import("@playwright/test").Page, title: string | RegExp) {
-  await page.goto(`/shop/${SHOP}/schedule/board`);
-  const href = await page
-    .locator(`a[href^="/shop/${SHOP}/trips/"]:not([href$="/trips/new"])`)
-    .filter({ hasText: title })
-    .first()
-    .getAttribute("href");
+  const link = await findTripOnBoard(page, SHOP, title);
+  const href = await link.getAttribute("href");
   if (!href) throw new Error(`no trip card found for ${title}`);
   return href;
 }

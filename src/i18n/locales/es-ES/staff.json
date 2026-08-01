@@ -956,7 +956,7 @@
     "overviewLabel": "Resumen de valoraciones",
     "publicRating": "Valoración pública",
     "noneYet": "Nada publicado todavía",
-    "acrossCount": "En {count, plural, one {# reseña publicada} other {# reseñas publicadas}}",
+    "fromPublished": "De tus reseñas publicadas",
     "published": "Publicado",
     "publishedDetail": "Se muestra en tu página de calendario",
     "waitingOnYou": "Esperando tu revisión",
@@ -977,7 +977,7 @@
     "filterLabel": "Filtrar reseñas",
     "filter": {
       "all": "Todas las reseñas",
-      "waiting": "Esperando tu revisión ({count})"
+      "waiting": "Esperando tu revisión"
     }
   },
   "schedule": {
@@ -2041,7 +2041,7 @@
     "diverCount": "{count, plural, one {# buceador} other {# buceadores}}",
     "emptyTitle": "Nadie coincide con ese escaneo",
     "emptyDescription": "Prueba con el nombre, el correo o el ID de reserva completo del buceador.",
-    "clearedTitle": "Todos a bordo por hoy 🎉 — {count, plural, one {# buceador registrado} other {# buceadores registrados}}.",
+    "clearedTitle": "Todos a bordo por hoy 🎉 — todos registrados.",
     "checkedInBadge": "Registrado",
     "boardedBadge": "Embarcado",
     "readyBadge": "Listo",

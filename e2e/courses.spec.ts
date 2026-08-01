@@ -1,5 +1,5 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { acceptAgeAttestation, daysFromNow, e2eNow } from "./helpers";
+import { acceptAgeAttestation, daysFromNow, e2eNow, findTripOnBoard } from "./helpers";
 
 test("an uncertified visitor can enroll in an instructor-staffed Discover Scuba session and save rental preferences", async ({
   page,
@@ -240,11 +240,10 @@ test.describe("staff", () => {
 
     // A course session refuses bookings until an instructor is on its crew — the
     // rule that makes this flow safe, and the reason the seeded session works.
-    await page.goto("/shop/blue-mantis/schedule/board");
     // Anchored to the full accessible name: an unpriced trip's card also
     // carries a "Set a price for {title}, ..." link whose name contains the
     // session title as a substring, so an unanchored pattern matches both.
-    await page.getByRole("link", { name: new RegExp(`^${sessionTitle}$`) }).click();
+    await (await findTripOnBoard(page, "blue-mantis", new RegExp(`^${sessionTitle}$`))).click();
     await expect(
       page.getByText("cannot take bookings until one assigned crew member has the instructor role"),
     ).toBeVisible();
@@ -292,11 +291,10 @@ test.describe("staff", () => {
     await page.getByRole("button", { name: "Put it on the board" }).click();
     await expect(page.getByRole("status")).toBeVisible();
 
-    await page.goto("/shop/blue-mantis/schedule/board");
     // Anchored to the full accessible name: an unpriced trip's card also
     // carries a "Set a price for {title}, ..." link whose name contains the
     // session title as a substring, so an unanchored pattern matches both.
-    await page.getByRole("link", { name: new RegExp(`^${sessionTitle}$`) }).click();
+    await (await findTripOnBoard(page, "blue-mantis", new RegExp(`^${sessionTitle}$`))).click();
     await page.getByLabel("Assign crew").selectOption({ label: "Marcus Webb" }); // the seeded instructor
     await expect(page.getByRole("button", { name: "Unassign Marcus Webb" })).toBeVisible();
     const tripUrl = page.url();
