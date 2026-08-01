@@ -257,9 +257,24 @@ test("migration guides walk a shop from an incumbent export into the importer", 
   ).toBeVisible();
   await expect(page.getByRole("heading", { name: "Get your data out of Rezdy" })).toBeVisible();
 
-  // An unlisted incumbent has no page — no coming-soon shells.
-  const response = await page.goto("/switching/checkfront");
-  expect(response?.status()).toBe(404);
+  // An unlisted incumbent has no page — no coming-soon shells. Content-level,
+  // not `response?.status()`: `/switching/[competitor]` prerenders only the
+  // registered slugs via `generateStaticParams`, so an unregistered one like
+  // "checkfront" falls back to a dynamic render, and cacheComponents'
+  // Partial Prerendering unconditionally serves an optimistic 200 "App
+  // Shell" for a dynamic-param combination without a static shell, upgrading
+  // it in the background once `notFound()` resolves — confirmed locally: the
+  // first hit to an unseen slug answers 200, and only a subsequent hit to
+  // the same (now-resolved) path answers 404. There is no per-route opt-out
+  // (`dynamicParams = false` and `experimental_ppr` are both removed under
+  // `nextConfig.cacheComponents`). The rendered document still correctly
+  // lands on Next's own not-found boundary — only the raw first-byte HTTP
+  // status of a cold hit is 200 instead of 404. Same known Next 16
+  // cacheComponents limitation as e2e/course-paths.spec.ts's hidden-path
+  // 404 test.
+  await page.goto("/switching/checkfront");
+  await expect(page.getByRole("heading", { name: "We couldn’t find that page" })).toBeVisible();
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", "noindex");
 });
 
 test("the spreadsheet guide brings a no-system shop across for free", async ({ page }) => {

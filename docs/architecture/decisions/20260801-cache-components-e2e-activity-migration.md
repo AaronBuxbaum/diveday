@@ -211,45 +211,58 @@ actually found, against the plan above:
      `dive-sites.spec.ts` CR-020 SSRF-block test) never rendered the error banner. Same fix, same
      shape (outer sync shell, inner async body in `<Suspense>`), 3/3 clean fresh-server runs
      afterward. This is the confirmation, not just a theory, that the class of bug is real and
-     `grep`-findable: **12 more pages carry the identical shape** — `instant = false`, an unwrapped
+     `grep`-findable: **11 more pages carry the identical shape** — `instant = false`, an unwrapped
      `searchParams` read, and a `redirect(...)` inside a `"use server"` action in the same file —
      `waivers/[token]`, `shop/[shopSlug]/staffing`, `shop/[shopSlug]/waivers`,
-     `shop/[shopSlug]/waivers/signatures`, `shop/[shopSlug]/trips/new`,
+     `shop/[shopSlug]/waivers/signatures`,
      `shop/[shopSlug]/orders/new`, `shop/[shopSlug]/settings/team`,
      `shop/[shopSlug]/schedule/[id]`, `shop/[shopSlug]/divers`, `shop/[shopSlug]/promos`,
      `shop/[shopSlug]/reports`, `shop/[shopSlug]/dive-sites/[id]`. None of these are proven broken
      by a current test — the race is probabilistic, not guaranteed on every redirect, so a page
      without a failing test today isn't a page confirmed safe — left as the tracked follow-up
-     below rather than restructured blind.
+     below rather than restructured blind. (`shop/[shopSlug]/trips/new` was on this list too; CI
+     caught it live — `e2e/schedule-trip.spec.ts`'s end-before-start test — and it got the same fix
+     as sign-in/dive-sites-new in the same pass that landed this ADR's Outcome section.)
   4. `src/app/switching/[competitor]/page.tsx` — `notFound()` for an unregistered competitor slug
      was called from inside a Suspense-wrapped child, so the shell had already streamed a 200 by
      the time the child resolved. Moved the params resolution and `notFound()` check to the top of
-     the page component, before any Suspense boundary — confirmed 404 status across multiple fresh
-     server starts afterward.
-- **A fifth case, `e2e/course-paths.spec.ts`'s hidden-path-404 check, could not be fixed the same
-  way and is left as a known, documented Next 16 limitation.** That route (unlike
-  `switching/[competitor]`) has no `generateStaticParams` coverage at all — paths are created by
-  shop staff at any time, so no build-time list could ever be exhaustive — and cacheComponents'
-  Partial Prerendering unconditionally serves an optimistic 200 "App Shell" for any dynamic-param
-  combination without static coverage, upgrading it in the background once `notFound()` resolves.
-  Verified there is no per-route opt-out: `dynamicParams = false` throws a hard build error under
+     the page component, before any Suspense boundary. This fixes the *content* — Next's own
+     not-found boundary now renders on the very first byte for a repeat visit — but does **not**
+     fix the raw HTTP status of a cold hit; see the corrected write-up below, found later when CI
+     caught `e2e/marketing.spec.ts`'s own unlisted-competitor 404 check on the first real run
+     against this branch.
+- **The fifth case turned out to be two cases, not one, and item 4 above was wrong about fully
+  fixing the second.** `e2e/course-paths.spec.ts`'s hidden-path-404 check could not be fixed the
+  same way as `switching/[competitor]` and is a known, documented Next 16 limitation — but so, it
+  turns out, is `switching/[competitor]` itself for any *unregistered* slug, despite item 4's
+  `notFound()`-above-Suspense fix and its "confirmed 404 status across multiple fresh server
+  starts" claim. That claim was true only because every local re-check after the first request hit
+  a warm path: `generateStaticParams` covers the registered guides, but an unregistered slug like
+  `checkfront` falls back to a dynamic render, and cacheComponents' Partial Prerendering
+  unconditionally serves an optimistic 200 "App Shell" for a dynamic-param combination without
+  static coverage, upgrading it in the background once `notFound()` resolves. Verified directly
+  with repeated `curl` against a fresh production build: the **first** hit to a never-before-seen
+  unregistered slug answers 200 (`x-nextjs-postponed: 1`); every hit after that — once the
+  postponed render has resolved and cached — answers a correct 404. `course-paths` never gets a
+  warm path at all in practice (paths are created by shop staff at any time, so no build-time list
+  could ever be exhaustive), which is why its cold-miss 200 is the *only* behavior it ever shows,
+  and why the discrepancy wasn't caught by item 4's own re-checks — they were unknowingly warm.
+  There is no per-route opt-out either way: `dynamicParams = false` throws a hard build error under
   `nextConfig.cacheComponents` ("not compatible... Please remove it"), and `experimental_ppr` is
-  removed entirely (`cacheComponents.md`: "no longer necessary and have been removed"). Moving
-  `notFound()` above the Suspense boundary (the fix that worked for `switching/[competitor]`) made
-  no difference here — confirmed via `x-nextjs-postponed: 1` response headers present in both the
-  passing and failing cases, and 3/3 consistent failures across fresh server starts either way. The
-  practical impact is narrow: inspecting the rendered document confirmed it correctly lands on
-  Next's own not-found boundary (`<html id="__next_error__">`, `<meta name="robots"
-  content="noindex">`) — nothing about the hidden path leaks to a real visitor or a
-  robots-respecting crawler, only the raw first-byte HTTP status is wrong. The test was updated to
-  assert on that rendered content instead of `response.status()`. Revisit if a future Next version
-  adds a real per-route Partial Prerendering opt-out.
-- **Recommendation, not built here:** restructure the 12 listed pages the same way (outer sync
-  shell, inner async body in `<Suspense>`) — the pattern is now proven twice, not theoretical.
-  Prioritize by how often each page's redirect path actually fires in practice: form-validation
-  failures (`trips/new`, `orders/new`, `settings/team`, `dive-sites/[id]`, `promos`) over rarer
+  removed entirely (`cacheComponents.md`: "no longer necessary and have been removed"). The
+  practical impact is narrow in both cases: inspecting the rendered document confirms it correctly
+  lands on Next's own not-found boundary (`<html id="__next_error__">`, `<meta name="robots"
+  content="noindex">`) — nothing about the hidden path or the unregistered slug leaks to a real
+  visitor or a robots-respecting crawler, only the raw first-byte HTTP status of a cold hit is
+  wrong. Both tests were updated to assert on that rendered content instead of
+  `response.status()`. Revisit if a future Next version adds a real per-route Partial Prerendering
+  opt-out.
+- **Recommendation, not built here:** restructure the 11 listed pages the same way (outer sync
+  shell, inner async body in `<Suspense>`) — the pattern is now proven three times, not
+  theoretical. Prioritize by how often each page's redirect path actually fires in practice:
+  form-validation failures (`orders/new`, `settings/team`, `dive-sites/[id]`, `promos`) over rarer
   paths. A `pnpm check:architecture`-style guard that flags a page with `instant = false`, an
   unwrapped `searchParams` read, and a `redirect(...)` call inside a `"use server"` action in the
   same file would catch the next instance of this class at review time — the same `grep` used to
-  find the 12 above (`instant = false` + `searchParams` + `redirect(` in one `page.tsx`) is a
+  find the 11 above (`instant = false` + `searchParams` + `redirect(` in one `page.tsx`) is a
   reasonable starting point for that check's rule.
