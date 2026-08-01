@@ -6,6 +6,38 @@
 import { minorToMajor } from "./money";
 
 /**
+ * Every `Intl.*Format` constructor here is called on essentially every
+ * render (AGENTS.md requires locale-negotiated formatting for every date,
+ * time, and money figure app-wide), and constructing one is meaningfully
+ * more expensive than reusing an existing instance's `.format()` — the
+ * constructor does locale-data lookup and pattern compilation, work a
+ * stateless formatter never needs to repeat. Caching by (constructor,
+ * locale, options) is the standard fix. The cache is unbounded, but its key
+ * space isn't: it's bounded by the shop locales and timezones this app
+ * actually sees, not by render count.
+ */
+const formatterCache = new Map<
+  string,
+  Intl.DateTimeFormat | Intl.NumberFormat | Intl.RelativeTimeFormat
+>();
+
+function cachedFormatter<
+  T extends Intl.DateTimeFormat | Intl.NumberFormat | Intl.RelativeTimeFormat,
+>(
+  tag: string,
+  Ctor: new (locale: string | undefined, options?: object) => T,
+  locale: string | undefined,
+  options?: object,
+): T {
+  const key = `${tag}|${locale}|${JSON.stringify(options)}`;
+  const cached = formatterCache.get(key);
+  if (cached) return cached as T;
+  const formatter = new Ctor(locale, options);
+  formatterCache.set(key, formatter);
+  return formatter;
+}
+
+/**
  * True for a real IANA timezone name — the only thing an app-wide "store UTC
  * + IANA timezone" invariant (AGENTS.md) can trust. `Intl.DateTimeFormat`
  * throws a `RangeError` for anything else, including a well-formed but
@@ -13,7 +45,7 @@ import { minorToMajor } from "./money";
  */
 export function isValidTimeZone(timeZone: string): boolean {
   try {
-    new Intl.DateTimeFormat(undefined, { timeZone });
+    cachedFormatter("dt", Intl.DateTimeFormat, undefined, { timeZone });
     return true;
   } catch {
     return false;
@@ -31,14 +63,14 @@ export function isValidTimeZone(timeZone: string): boolean {
  * hand should always pass `shop.currency`.
  */
 export function formatMoneyCents(cents: number, currency = "usd", locale = "en-US"): string {
-  return new Intl.NumberFormat(locale, {
+  return cachedFormatter("num", Intl.NumberFormat, locale, {
     style: "currency",
     currency: currency.toUpperCase(),
   }).format(minorToMajor(cents, currency));
 }
 
 export function formatShortDate(date: Date, locale = "en-US", timeZone?: string): string {
-  return new Intl.DateTimeFormat(locale, {
+  return cachedFormatter("dt", Intl.DateTimeFormat, locale, {
     weekday: "short",
     month: "short",
     day: "numeric",
@@ -47,7 +79,7 @@ export function formatShortDate(date: Date, locale = "en-US", timeZone?: string)
 }
 
 export function formatTime(date: Date, locale = "en-US", timeZone?: string): string {
-  return new Intl.DateTimeFormat(locale, {
+  return cachedFormatter("dt", Intl.DateTimeFormat, locale, {
     hour: "numeric",
     minute: "2-digit",
     timeZone,
@@ -56,7 +88,7 @@ export function formatTime(date: Date, locale = "en-US", timeZone?: string): str
 
 /** Operational timestamp with an explicit timezone — use for signed evidence and safety events. */
 export function formatDateTimeTz(date: Date, locale = "en-US", timeZone?: string): string {
-  return new Intl.DateTimeFormat(locale, {
+  return cachedFormatter("dt", Intl.DateTimeFormat, locale, {
     month: "short",
     day: "numeric",
     hour: "numeric",
@@ -87,7 +119,7 @@ export function formatTimeRangeTz(
   locale = "en-US",
   timeZone?: string,
 ): string {
-  const endWithZone = new Intl.DateTimeFormat(locale, {
+  const endWithZone = cachedFormatter("dt", Intl.DateTimeFormat, locale, {
     hour: "numeric",
     minute: "2-digit",
     timeZoneName: "short",
@@ -98,7 +130,7 @@ export function formatTimeRangeTz(
 
 /** The calendar day a date falls on in a given timezone, as a UTC-midnight instant — for day-granularity diffs, never for display. */
 function calendarDayMs(date: Date, timeZone?: string): number {
-  const iso = new Intl.DateTimeFormat("en-CA", {
+  const iso = cachedFormatter("dt", Intl.DateTimeFormat, "en-CA", {
     timeZone,
     year: "numeric",
     month: "2-digit",
@@ -125,5 +157,8 @@ export function formatRelativeDay(
   const diffDays = Math.round(
     (calendarDayMs(date, timeZone) - calendarDayMs(now, timeZone)) / 86_400_000,
   );
-  return new Intl.RelativeTimeFormat(locale, { numeric: "auto" }).format(diffDays, "day");
+  return cachedFormatter("rel", Intl.RelativeTimeFormat, locale, { numeric: "auto" }).format(
+    diffDays,
+    "day",
+  );
 }

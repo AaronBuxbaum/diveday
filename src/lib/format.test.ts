@@ -95,3 +95,18 @@ describe("formatRelativeDay", () => {
     );
   });
 });
+
+describe("formatter caching", () => {
+  // Every Intl.*Format constructor here is memoized (keyed on constructor +
+  // locale + options) rather than rebuilt per call — repeated, rapid,
+  // interleaved calls with different locales/timezones must never bleed
+  // into each other's cached instance.
+  it("never cross-contaminates results across interleaved locales and timezones", () => {
+    for (let i = 0; i < 3; i++) {
+      expect(formatTime(morning, "en-US", "UTC")).toBe("7:30 AM");
+      expect(formatTime(morning, "en-US", "America/New_York")).toBe("3:30 AM");
+      expect(formatShortDate(morning, "en-US", "UTC")).toBe("Fri, Jul 17");
+      expect(formatShortDate(morning, "en-US", "Pacific/Honolulu")).toBe("Thu, Jul 16");
+    }
+  });
+});
