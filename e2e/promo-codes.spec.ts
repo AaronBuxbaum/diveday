@@ -34,8 +34,12 @@ test("a non-owner is bounced to Settings with the promo-specific refusal, not th
   // gated" paragraph, unconditionally shown to any non-owner regardless of
   // which page redirected them here, and it happens to share a leading
   // clause with the rentals notAuthorized message — a page-wide substring
-  // search can't tell the two apart, but the alert region can.
-  const flash = page.getByRole("alert");
+  // search can't tell the two apart, but the alert region can. Also filtered
+  // by text: Next's own always-present `#__next-route-announcer__` carries
+  // `role="alert"` too, so an unfiltered query is ambiguous the moment
+  // FlashParams' `history.replaceState` call above makes the router treat
+  // this as a navigation and mount it.
+  const flash = page.getByRole("alert").filter({ hasText: "Promo codes discount real money" });
   await expect(flash).toContainText(
     "Promo codes discount real money, so they're limited to owners and managers.",
   );
