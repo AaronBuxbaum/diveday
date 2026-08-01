@@ -21,6 +21,7 @@ import { entryLevelCourseCapacity } from "@/lib/course-ratios";
 import { reviewManifestChange } from "@/lib/manifest-change-review";
 import { maxRecordedDiveNumber } from "@/lib/manifests";
 import type { TripRecurrenceFrequency } from "@/lib/recurrence";
+import { calendarDayDelta, shiftInstantByCalendarDays, utcToWallTime } from "@/lib/zoned";
 import type { AppDb, AppTransaction, DbExecutor } from "./client";
 import { decodeCursor, encodeCursor } from "./cursor";
 import type { Course, Trip } from "./schema";
@@ -31,6 +32,7 @@ import {
   people,
   personRoles,
   rollCallEvents,
+  shops,
   tripAssignments,
   tripDives,
   tripLastMinutePromos,
@@ -40,6 +42,23 @@ import {
   trips,
   tripWaitlistEntries,
 } from "./schema";
+
+/**
+ * Calendar-day delta between an existing instant and a new one, computed in
+ * the shop's own timezone rather than as a raw millisecond difference — the
+ * DST-safe way to move a multi-day trip. `moveTrip`/`duplicateTrip` use this
+ * so day 2, day 3, and `endsAt` shift by the same number of *wall-clock* days
+ * as the start, keeping each one's own published hour intact even when the
+ * span crosses a DST transition (see docs/product/assessments/
+ * specialist-optimization-audit-20260731.md §7).
+ */
+function tripShiftPlan(existingStartsAt: Date, newStartsAt: Date, timeZone: string) {
+  const days = calendarDayDelta(
+    utcToWallTime(existingStartsAt, timeZone),
+    utcToWallTime(newStartsAt, timeZone),
+  );
+  return (date: Date) => shiftInstantByCalendarDays(date, days, timeZone);
+}
 
 export type NewTrip = {
   shopId: string;
@@ -750,8 +769,11 @@ export type MoveTripOutcome =
  * Slides a whole departure to a new instant, keeping its shape.
  *
  * Only the *start* moves; the end and every schedule day shift by the same
- * delta, so a two-tank morning stays three and a half hours long and a
- * three-day course stays three days with its second and third mornings intact.
+ * number of calendar days in the shop's own timezone, so a two-tank morning
+ * stays three and a half hours long and a three-day course stays three days
+ * with its second and third mornings intact — at the *same wall-clock hour*
+ * even when the move crosses a DST transition (a fixed millisecond shift
+ * would drift day 2/3 by the DST offset change; see `tripShiftPlan`).
  * Editing the individual windows is still the trip page's job — this is the
  * schedule builder's "drag it to Thursday", nothing more.
  *
@@ -783,9 +805,15 @@ export async function moveTrip(
       .where(eq(rollCallEvents.tripId, tripId));
     if (events > 0) return { ok: false, reason: "already_sailed" };
 
-    const deltaMs = startsAt.getTime() - existing.startsAt.getTime();
-    if (deltaMs === 0) return { ok: true, trip: existing };
-    const shift = (date: Date) => new Date(date.getTime() + deltaMs);
+    if (startsAt.getTime() === existing.startsAt.getTime()) return { ok: true, trip: existing };
+
+    const [shop] = await tx
+      .select({ timezone: shops.timezone })
+      .from(shops)
+      .where(eq(shops.id, shopId))
+      .limit(1);
+    if (!shop) return { ok: false, reason: "not_found" };
+    const shift = tripShiftPlan(existing.startsAt, startsAt, shop.timezone);
 
     const [trip] = await tx
       .update(trips)
@@ -877,10 +905,12 @@ export async function deleteTrip(
  *
  * Copies what defines the dive: title, description, course, capacity, planned
  * dives and their sites, prices, and the cancellation window, with every
- * schedule day shifted by the same delta so a multi-day course keeps its shape.
- * Copies nothing about the *day*: no roster, no wait list, no crew, no
- * conditions, no series membership. A duplicate is a fresh departure that looks
- * like the old one, never a second view of it.
+ * schedule day shifted by the same number of calendar days (in the shop's own
+ * timezone, DST-safe — see `tripShiftPlan`) so a multi-day course keeps its
+ * shape and its published wall-clock hours. Copies nothing about the *day*: no
+ * roster, no wait list, no crew, no conditions, no series membership. A
+ * duplicate is a fresh departure that looks like the old one, never a second
+ * view of it.
  */
 export async function duplicateTrip(
   db: AppDb,
@@ -897,8 +927,13 @@ export async function duplicateTrip(
       .limit(1);
     if (!source) return null;
 
-    const deltaMs = startsAt.getTime() - source.startsAt.getTime();
-    const shift = (date: Date) => new Date(date.getTime() + deltaMs);
+    const [shop] = await tx
+      .select({ timezone: shops.timezone })
+      .from(shops)
+      .where(eq(shops.id, shopId))
+      .limit(1);
+    if (!shop) return null;
+    const shift = tripShiftPlan(source.startsAt, startsAt, shop.timezone);
     const [dives, days] = await Promise.all([
       tx
         .select()
