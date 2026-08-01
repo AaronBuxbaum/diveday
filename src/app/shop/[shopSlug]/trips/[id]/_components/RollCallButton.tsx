@@ -42,12 +42,14 @@ export type RollCallButtonCopy = {
  * `result` lives in `useActionState`, which exposes no external setter to
  * clear it on demand. The checkpoint switcher (manifest/page.tsx's
  * `?checkpoint=` links, `scroll={false}`) reuses the same route/key across
- * checkpoints, so under `cacheComponents: true` a stale refusal from one
- * checkpoint could otherwise survive and misattribute to another (docs ADR
- * 20260801-cache-components-activity-state). The caller must render this
- * with `key={checkpoint}` (or a key that includes it) so switching
- * checkpoints fully remounts the button — and its `useActionState` — rather
- * than carrying a prior checkpoint's `result` forward.
+ * checkpoints, so if `cacheComponents: true`'s Activity-based navigation is
+ * ever re-enabled, a stale refusal from one checkpoint could otherwise
+ * survive and misattribute to another (docs ADR
+ * 20260801-cache-components-activity-state, currently reverted, commit
+ * 100fcf8). The caller must render this with `key={checkpoint}` (or a key
+ * that includes it) so switching checkpoints fully remounts the button —
+ * and its `useActionState` — rather than carrying a prior checkpoint's
+ * `result` forward.
  */
 export function RollCallButton({
   action,

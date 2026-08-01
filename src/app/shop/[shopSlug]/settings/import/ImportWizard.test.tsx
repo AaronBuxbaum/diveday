@@ -11,8 +11,9 @@ import { ImportWizard } from "./ImportWizard";
 // a navigate-away-and-back could get committed for a file the staffer no
 // longer has open. `usePathname()` is what ImportWizard keys that reset on
 // (see the component's own doc comment). `setMockPathname` simulates a
-// navigation event — including an Activity-preserved show/hide cycle under
-// `cacheComponents: true` — without a real Next.js router.
+// navigation event — including an Activity-preserved show/hide cycle,
+// should `cacheComponents: true` be re-enabled — without a real Next.js
+// router.
 const { usePathname, setMockPathname } = vi.hoisted(() => {
   let current = "/shop/blue-mantis/settings/import";
   return {
@@ -170,9 +171,10 @@ describe("ImportWizard reset on revisit", () => {
     expect(screen.getByText("contacts.csv")).toBeInTheDocument();
 
     // Simulate a navigate-away-and-back: the pathname changes and this
-    // instance's effects re-run (cacheComponents' Activity re-show behaves
-    // like a fresh mount for effects, even though state survived) — the
-    // import route has no dynamic id to key a fresh instance by otherwise.
+    // instance's effects re-run (an Activity re-show, should cacheComponents
+    // be re-enabled, behaves like a fresh mount for effects, even though
+    // state survived) — the import route has no dynamic id to key a fresh
+    // instance by otherwise.
     setMockPathname("/shop/blue-mantis/settings/import?foo=bar");
     rerender(
       <ImportWizard

@@ -7,9 +7,9 @@ import { InlineConfirm } from "./InlineConfirm";
 // A stand-in for Next's real router context: `usePathname()` is what
 // InlineConfirm keys its disarm-on-revisit effect on (see the component's
 // own doc comment). `setMockPathname` lets a test simulate a navigation
-// event — including an Activity-preserved show/hide cycle under
-// `cacheComponents: true`, which re-fires effects the same way — without a
-// real Next.js router.
+// event — including an Activity-preserved show/hide cycle, should
+// `cacheComponents: true` be re-enabled (it re-fires effects the same way) —
+// without a real Next.js router.
 const { usePathname, setMockPathname } = vi.hoisted(() => {
   let current = "/shop/blue-mantis/trips/trip-1/guests";
   return {
@@ -97,8 +97,9 @@ describe("InlineConfirm", () => {
     expect(screen.getByText(/free-cancellation window/)).toBeInTheDocument();
 
     // Simulate a navigate-away-and-back: the pathname changes and this
-    // instance's effects re-run (cacheComponents' Activity re-show behaves
-    // like a fresh mount for effects, even though state survived).
+    // instance's effects re-run (an Activity re-show, should cacheComponents
+    // be re-enabled, behaves like a fresh mount for effects, even though
+    // state survived).
     setMockPathname("/shop/blue-mantis/trips/trip-1/manifest");
     rerender(
       <form

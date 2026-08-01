@@ -734,11 +734,12 @@ export default async function TripManifestPage({
           (MilestoneHaptics) or `prevComplete` (SubSurfaceRipple) ref that
           assumes a monotonic same-trip-same-checkpoint lifecycle. Rendered
           once per manifest page, this route/key is otherwise identical
-          across a trip or checkpoint switch, so under `cacheComponents:
-          true` an un-keyed instance could survive one and fire a false
-          completion ripple/haptic buzz off the old numbers with no real
-          remount to reset it (docs ADR 20260801-cache-components-activity-state).
-          The `key` forces a full remount — and fresh refs — on either
+          across a trip or checkpoint switch, so if `cacheComponents: true`'s
+          Activity-based navigation is ever re-enabled, an un-keyed instance
+          could survive one and fire a false completion ripple/haptic buzz
+          off the old numbers with no real remount to reset it (docs ADR
+          20260801-cache-components-activity-state, currently reverted,
+          commit 100fcf8). The `key` forces a full remount — and fresh refs — on either
           change. */}
       <MilestoneHaptics
         key={`${tripId}-${checkpoint}`}

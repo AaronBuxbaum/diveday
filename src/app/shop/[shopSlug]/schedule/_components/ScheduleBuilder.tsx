@@ -297,11 +297,13 @@ export function ScheduleBuilder({
   const [open, setOpen] = useState<string | null>(null);
   const toggle = (panel: string) => setOpen((current) => (current === panel ? null : panel));
 
-  // The schedule route has no dynamic id, so under `cacheComponents: true`
-  // this instance can otherwise be preserved across a navigate-away-and-back
-  // with a panel left expanded and its defaults stale (docs ADR
-  // 20260801-cache-components-activity-state). Reset on the leading edge of
-  // any (re)navigation, same pattern as InlineConfirm.
+  // The schedule route has no dynamic id, so if `cacheComponents: true`'s
+  // Activity-based navigation is ever re-enabled, this instance could
+  // otherwise be preserved across a navigate-away-and-back with a panel left
+  // expanded and its defaults stale (docs ADR
+  // 20260801-cache-components-activity-state, currently reverted, commit
+  // 100fcf8). Reset on the leading edge of any (re)navigation, same pattern
+  // as InlineConfirm.
   const pathname = usePathname();
   // biome-ignore lint/correctness/useExhaustiveDependencies: `pathname` is a trigger, not a value the effect body reads — any change closes the panel, which is the point.
   useEffect(() => {

@@ -61,10 +61,11 @@ describe("CrewSection assignError reset on revisit", () => {
 
     // Trip A -> Trip B: the server sends fresh crewIds/staff for the new
     // trip. This route has no dynamic key of its own for the crew section,
-    // so under `cacheComponents: true` the stale banner from Trip A could
-    // otherwise survive into Trip B's render (docs ADR
-    // 20260801-cache-components-activity-state) — the same effect that
-    // resyncs `localCrew` from the server must also drop it.
+    // so if `cacheComponents: true`'s Activity-based navigation is ever
+    // re-enabled, the stale banner from Trip A could otherwise survive into
+    // Trip B's render (docs ADR 20260801-cache-components-activity-state,
+    // currently reverted, commit 100fcf8) — the same effect that resyncs
+    // `localCrew` from the server must also drop it.
     rerender(
       <CrewSection
         tripId="trip-b"

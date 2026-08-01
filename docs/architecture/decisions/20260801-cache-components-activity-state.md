@@ -1,6 +1,18 @@
 # 20260801-cache-components-activity-state — Audit `/shop/**` staff surfaces for `cacheComponents`'s `<Activity>` state preservation
 
-- **Status:** Accepted
+- **Status:** Superseded (commit 100fcf8, 2026-08-01) — `cacheComponents: true` was reverted the
+  same day. CI on PR #286 failed 22+ pre-existing e2e specs across unrelated surfaces (sign-in,
+  divers, dive-sites, export, manifest, booking, courses, waivers): Activity's `display:none`
+  route retention (below) is real and matches this ADR's analysis, but Playwright's
+  `getByLabel`/`getByText` locators don't reliably filter it out, so the *existing* e2e suite —
+  written before Activity existed — breaks broadly. Migrating that suite to be Activity-aware
+  (Next ships a dedicated `@next/playwright` `instant()` helper and an "optimizer" skill for this)
+  is substantial, dedicated work — a bigger architectural commitment than the "cache 7 marketing
+  pages" task that turned the flag on ever asked for. The staff-surface findings and fixes below
+  remain in the tree (they're good defensive state handling on their own merits) but are currently
+  inert, since Activity isn't active without the flag. Kept for the day this app deliberately
+  re-adopts `cacheComponents` with its own e2e migration plan.
+- **Status (original):** Accepted
 - **Date:** 2026-08-01
 
 ## Context

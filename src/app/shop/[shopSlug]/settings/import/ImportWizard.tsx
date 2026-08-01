@@ -158,11 +158,13 @@ export function ImportWizard({
   useEffect(() => setHydrated(true), []);
 
   // Import/export is security- and data-sensitive (AGENTS.md). This route has
-  // no dynamic id, so under `cacheComponents: true` a stale parsed preview —
-  // and the hidden `csvText` a submit would commit — can otherwise survive a
-  // navigate-away-and-back for a file the staffer no longer has open (docs
-  // ADR 20260801-cache-components-activity-state). Clear the whole preview on
-  // the leading edge of any (re)navigation, same pattern as InlineConfirm.
+  // no dynamic id, so if `cacheComponents: true`'s Activity-based navigation
+  // is ever re-enabled, a stale parsed preview — and the hidden `csvText` a
+  // submit would commit — could otherwise survive a navigate-away-and-back
+  // for a file the staffer no longer has open (docs ADR
+  // 20260801-cache-components-activity-state, currently reverted, commit
+  // 100fcf8). Clear the whole preview on the leading edge of any
+  // (re)navigation, same pattern as InlineConfirm.
   const pathname = usePathname();
   // biome-ignore lint/correctness/useExhaustiveDependencies: `pathname` is a trigger, not a value the effect body reads — any change clears the preview, which is the point.
   useEffect(() => {
