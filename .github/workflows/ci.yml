@@ -87,12 +87,21 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # No restore-keys fallback: a prefix match would happily hand this branch
+      # another branch's `.next/cache` whenever the exact key misses (e.g. main
+      # has since diverged), and Turbopack's persistent cache does not always
+      # invalidate a compiled query string when a Drizzle table's column list
+      # changes underneath it — confirmed live on this PR, where the shared
+      # build silently generated a `gear_cents` insert that doesn't exist in
+      # this branch's schema.ts, because the fallback restored a cache entry
+      # built from a since-merged sibling PR that added that column. A clean
+      # build on a cache miss costs a few seconds; a schema-stale compiled
+      # bundle produces confusing, hard-to-diagnose failures far from their
+      # actual cause.
       - uses: actions/cache@v6
         with:
           path: .next/cache
           key: ${{ runner.os }}-nextjs-e2e-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('src/**', 'next.config.ts') }}
-          restore-keys: |
-            ${{ runner.os }}-nextjs-e2e-${{ hashFiles('pnpm-lock.yaml') }}-
       # This is the only `next build` CI runs. Its output serves perf:budget below,
       # the sharded `playwright` job, and the `visual` job — all three used to pay
       # for their own separate `next build`, which cost several redundant minutes
