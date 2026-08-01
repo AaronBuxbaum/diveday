@@ -73,7 +73,7 @@ test("a full boat refuses a counter walk-in with the wait-list nudge", async ({ 
   await page.getByRole("button", { name: "Put it on the board" }).click();
   await expect(page.getByRole("status")).toContainText(title);
 
-  await page.goto("/shop/blue-mantis/schedule");
+  await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, title);
   const tripId = page.url().match(/\/trips\/([^/?]+)/)?.[1];
   if (!tripId) throw new Error("could not read the trip id from the URL");

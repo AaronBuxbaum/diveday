@@ -14,6 +14,28 @@ describe("isPublicShopRoute", () => {
     expect(isPublicShopRoute("/shop/blue-mantis/courses/open-water-diver/")).toBe(true);
   });
 
+  it("keeps the staff operations board gated, even though it sits under the public schedule", () => {
+    expect(isPublicShopRoute("/shop/blue-mantis/schedule/board")).toBe(false);
+    expect(isPublicShopRoute("/shop/blue-mantis/schedule/board/")).toBe(false);
+    expect(isPublicShopRoute("/shop/blue-mantis/schedule/board/anything")).toBe(false);
+  });
+
+  // Pins RESERVED_SCHEDULE_SEGMENTS to exact-match membership rather than a
+  // prefix/substring check — a security-reviewer pass on the schedule-route
+  // split flagged that without this, a future edit widening the match
+  // wouldn't be caught by the test above alone. Real trip ids are
+  // server-generated UUIDs (schema.ts), so they can never collide with the
+  // literal string "board" in production; these cases only guard the regex
+  // itself, not a reachable real-world trip id.
+  it("only treats the exact literal 'board' segment as the reserved staff route", () => {
+    expect(isPublicShopRoute("/shop/blue-mantis/schedule/boarding")).toBe(true);
+    expect(isPublicShopRoute("/shop/blue-mantis/schedule/board-extra")).toBe(true);
+    // Uppercase never matches the lowercase-only trip-id pattern at all, so
+    // this fails closed (staff-gated) rather than open — not exploitable,
+    // but pinned so the behavior is explicit rather than incidental.
+    expect(isPublicShopRoute("/shop/blue-mantis/schedule/Board")).toBe(false);
+  });
+
   it("opens the course catalog index and certification paths to a signed-out diver", () => {
     expect(isPublicShopRoute("/shop/blue-mantis/courses")).toBe(true);
     expect(isPublicShopRoute("/shop/blue-mantis/courses/")).toBe(true);
@@ -56,6 +78,8 @@ describe("isEmbeddableShopRoute", () => {
   it("allows the schedule and trip pages a shop would embed", () => {
     expect(isEmbeddableShopRoute("/shop/blue-mantis/schedule")).toBe(true);
     expect(isEmbeddableShopRoute("/shop/blue-mantis/schedule/abc-123")).toBe(true);
+    expect(isEmbeddableShopRoute("/shop/blue-mantis/schedule/boarding")).toBe(true);
+    expect(isEmbeddableShopRoute("/shop/blue-mantis/schedule/board-extra")).toBe(true);
   });
 
   it("refuses everything else, including other public routes", () => {
@@ -67,6 +91,9 @@ describe("isEmbeddableShopRoute", () => {
       "/shop/blue-mantis/courses/paths/open-water-to-rescue",
       "/shop/blue-mantis/settings",
       "/shop/blue-mantis/trips/abc-123",
+      "/shop/blue-mantis/schedule/board",
+      "/shop/blue-mantis/schedule/board/anything",
+      "/shop/blue-mantis/schedule/Board",
       "/sign-in",
     ]) {
       expect(isEmbeddableShopRoute(path)).toBe(false);

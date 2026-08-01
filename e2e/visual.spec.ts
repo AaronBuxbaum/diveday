@@ -405,7 +405,7 @@ for (const scheme of ["light", "dark"] as const) {
       // throughout, exactly as a real diver reaches these links.
       const staffContext = await browser.newContext({ storageState: ownerStorageState });
       const staffPage = await staffContext.newPage();
-      await staffPage.goto("/shop/blue-mantis/schedule");
+      await staffPage.goto("/shop/blue-mantis/schedule/board");
       await staffPage
         .locator("li")
         .filter({ hasText: "Two-Tank Reef — Molasses & French" })
@@ -556,7 +556,7 @@ for (const scheme of ["light", "dark"] as const) {
 
         // The staff schedule as a builder: departures grouped by day, each row
         // carrying its own move/copy/remove controls and its crew.
-        await page.goto("/shop/blue-mantis/schedule");
+        await page.goto("/shop/blue-mantis/schedule/board");
         await page.getByRole("heading", { name: "The board" }).waitFor();
         await capture(page, "schedule-builder", scheme);
 
@@ -643,7 +643,7 @@ for (const scheme of ["light", "dark"] as const) {
 
         // The seeded reef trip: schedule card → Overview (what the dive is) →
         // Guests (who is attending) → Manifest (the day-of boarding + roll call).
-        await page.goto("/shop/blue-mantis/schedule");
+        await page.goto("/shop/blue-mantis/schedule/board");
         await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
         // The four trip surfaces share a layout that streams a skeleton while the
         // page's data loads, so every capture waits for real content — never the
@@ -861,7 +861,7 @@ for (const scheme of ["light", "dark"] as const) {
       // person on file shows the fail-closed "Confirm identity" affordance and
       // blocker until staff vouch for it — a safety-critical state worth a baseline.
       test(`the roster identity gate renders true to the design (${scheme})`, async ({ page }) => {
-        await page.goto("/shop/blue-mantis/schedule");
+        await page.goto("/shop/blue-mantis/schedule/board");
         await openTripFromBoard(page, "Night Dive — City of Washington");
         await page
           .getByRole("navigation", { name: "Trip" })
@@ -886,7 +886,7 @@ for (const scheme of ["light", "dark"] as const) {
           await page.getByRole("button", { name: "Save rental catalog" }).click();
           await page.getByText("Rental catalog saved.").waitFor();
 
-          await page.goto("/shop/blue-mantis/schedule");
+          await page.goto("/shop/blue-mantis/schedule/board");
           await page
             .locator("li")
             .filter({ hasText: "Two-Tank Reef — Molasses & French" })
@@ -931,7 +931,7 @@ for (const scheme of ["light", "dark"] as const) {
         };
         try {
           await setDepth("32");
-          await page.goto("/shop/blue-mantis/schedule");
+          await page.goto("/shop/blue-mantis/schedule/board");
           await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
           await page
             .getByRole("navigation", { name: "Trip" })
@@ -956,7 +956,7 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the roster's note-delete undo toast renders true to the design (${scheme})`, async ({
         page,
       }) => {
-        await page.goto("/shop/blue-mantis/schedule");
+        await page.goto("/shop/blue-mantis/schedule/board");
         await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
         await page
           .getByRole("navigation", { name: "Trip" })
@@ -1026,7 +1026,7 @@ test.describe("print", () => {
   test("dock print surfaces render monochrome and padded", async ({ page }) => {
     // Reach the seeded reef trip the way staff do, then print its two dock
     // surfaces. Navigating by link keeps this off any hard-coded trip id.
-    await page.goto("/shop/blue-mantis/schedule");
+    await page.goto("/shop/blue-mantis/schedule/board");
     await page
       .locator("li")
       .filter({ hasText: "Two-Tank Reef — Molasses & French" })

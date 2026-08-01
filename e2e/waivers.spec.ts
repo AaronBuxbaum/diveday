@@ -27,12 +27,36 @@ test.describe("signed out", () => {
       page.getByText("Editing the waiver is limited to owners and managers."),
     ).toBeVisible();
   });
+
+  // Task 155's mandated security-reviewer pass found the Signatures tab —
+  // staff read access to signed, medical-adjacent evidence — had no direct
+  // adversarial coverage of its own, only the Template tab's. The gate is
+  // the same `canPersonManageWaiverTemplates` check either way, but the
+  // route is reached independently (deep link, bookmark), so it needs its
+  // own tests rather than inheriting confidence from the template page's.
+  test("an anonymous visitor is sent to sign in from the signed-waiver audit", async ({ page }) => {
+    await page.goto("/shop/blue-mantis/waivers/signatures");
+    await expect(page).toHaveURL(/\/sign-in/);
+  });
+
+  test("staff outside owner/manager can't reach the signed-waiver audit either", async ({
+    page,
+  }) => {
+    await signInAs(page, DEV_STAFF_LOGINS.captain);
+    await page.goto("/shop/blue-mantis/waivers/signatures");
+    await expect(page).toHaveURL(/\/shop\/blue-mantis(\?.*)?$/);
+    await expect(
+      page.getByText("Editing the waiver is limited to owners and managers."),
+    ).toBeVisible();
+    // No signed-record evidence ever reaches the page for a refused role.
+    await expect(page.getByText("Medical follow-up flagged")).toHaveCount(0);
+  });
 });
 
 test("one waiver button sends a resumable link and a medical yes surfaces follow-up", async ({
   page,
 }) => {
-  await page.goto("/shop/blue-mantis/schedule");
+  await page.goto("/shop/blue-mantis/schedule/board");
   await page
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Molasses & French" })
@@ -181,7 +205,7 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
 test("the medical questionnaire refuses to complete with an unanswered question, even past client validation", async ({
   page,
 }) => {
-  await page.goto("/shop/blue-mantis/schedule");
+  await page.goto("/shop/blue-mantis/schedule/board");
   await page
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Molasses & French" })
@@ -227,7 +251,7 @@ test("the medical questionnaire refuses to complete with an unanswered question,
 test("a non-English visitor sees a notice that the waiver text itself stays in English", async ({
   page,
 }) => {
-  await page.goto("/shop/blue-mantis/schedule");
+  await page.goto("/shop/blue-mantis/schedule/board");
   await page
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Molasses & French" })
@@ -268,7 +292,7 @@ test("a non-English visitor sees a notice that the waiver text itself stays in E
 test("saving a draft also refuses an unanswered question, even past client validation", async ({
   page,
 }) => {
-  await page.goto("/shop/blue-mantis/schedule");
+  await page.goto("/shop/blue-mantis/schedule/board");
   await page
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Molasses & French" })

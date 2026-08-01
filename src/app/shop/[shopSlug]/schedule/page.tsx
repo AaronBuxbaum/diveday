@@ -5,31 +5,22 @@ import { connection } from "next/server";
 import { EmptyState } from "@/components/EmptyState";
 import { JsonLd } from "@/components/JsonLd";
 import { type CalendarTrip, ScheduleCalendar } from "@/components/ScheduleCalendar";
-import { ShopNotice, ShopPageHeader, ShopStat } from "@/components/ShopPageHeader";
+import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { ShopReviews } from "@/components/ShopReviews";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
-import { canPersonConfigureTrips } from "@/db/authz";
 import { getDb } from "@/db/client";
-import { listActiveCourses } from "@/db/courses";
-import { listDiveSites } from "@/db/dive-sites";
 import { getShopReviewAggregate, listPublishedShopReviews } from "@/db/reviews";
 import { getShopBySlug } from "@/db/shops";
 import {
   pagedUpcomingTripsWithCounts,
-  tripCrewByTrip,
-  tripScheduleDayCounts,
   upcomingScheduleRange,
-  upcomingScheduleStats,
   upcomingTripsForCalendar,
 } from "@/db/trips";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { requestTranslator } from "@/i18n/request";
-import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
-import { auth } from "@/lib/auth";
-import { isStaff } from "@/lib/authz";
 import {
   addMonths,
   buildCalendarWeeks,
@@ -49,18 +40,10 @@ import {
   popCursor,
   pushCursor,
 } from "@/lib/schedule-pagination";
-import { noticeFromParam } from "@/lib/staff-notices";
 import { scheduleJsonLd } from "@/lib/structured-data";
 import { capacityLabel, isFull } from "@/lib/trips";
-import { toDateInputValue, toTimeInputValue, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
+import { toDateInputValue, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { LastMinuteListForm } from "./_components/LastMinuteListForm";
-import { type BuilderCopy, type BuilderDay, ScheduleBuilder } from "./_components/ScheduleBuilder";
-import {
-  addDepartureAction,
-  duplicateDepartureAction,
-  moveDepartureAction,
-  removeDepartureAction,
-} from "./actions";
 
 /**
  * Per-shop title, description, and canonical URL. The embed surface points its
@@ -91,32 +74,15 @@ export async function generateMetadata({
 }
 
 /**
- * What the board says after a builder action, keyed by the `outcome.reason`
- * code the mutation returns (see `moveTrip`/`duplicateTrip`/`deleteTrip` in
- * src/db/trips.ts). Every outcome gets a sentence — including the refusals,
- * which are the interesting ones: a departure that won't move or won't delete
- * is protecting a roster or a head count, and the staff member needs to know
- * which, not just that nothing happened. The message itself is a lookup into
- * the staff bundle, never English baked into this map (docs `i18n-copy` skill).
+ * The public, canonical, embeddable dive schedule — calendar, trip list,
+ * reviews, and the last-minute-deal signup. Every visitor sees this exact
+ * page, signed in or not: the staff operations board (KPI tiles, add/move/
+ * copy/remove) lives at `/schedule/board` instead (Lens 17 — this route used
+ * to be four products crammed onto one, including a staff branch that could
+ * never coexist with the diver-facing content it shared a component tree
+ * with; see docs/product/story-backlog.md and the archive it supersedes).
  */
-const BUILDER_NOTICE_KEYS: Record<
-  string,
-  { tone: "success" | "danger" | "warning"; key: StaffMessageKey }
-> = {
-  added: { tone: "success", key: "schedule.notices.added" },
-  moved: { tone: "success", key: "schedule.notices.moved" },
-  copied: { tone: "success", key: "schedule.notices.copied" },
-  removed: { tone: "success", key: "schedule.notices.removed" },
-  invalid: { tone: "danger", key: "schedule.notices.invalid" },
-  "end-before-start": { tone: "danger", key: "schedule.notices.endBeforeStart" },
-  "not-authorized": { tone: "danger", key: "schedule.notices.notAuthorized" },
-  "not-found": { tone: "danger", key: "schedule.notices.notFound" },
-  "not-scheduled": { tone: "warning", key: "schedule.notices.notScheduled" },
-  "already-sailed": { tone: "warning", key: "schedule.notices.alreadySailed" },
-  "has-roster": { tone: "warning", key: "schedule.notices.hasRoster" },
-};
-
-export default async function TripsPage({
+export default async function SchedulePage({
   params,
   searchParams,
 }: {
@@ -129,48 +95,30 @@ export default async function TripsPage({
      * keyset query. See src/lib/schedule-pagination.ts. */
     back?: string;
     embed?: string;
-    builder?: string;
-    preview?: string;
     hasSpace?: string;
     tripType?: string;
   }>;
 }) {
   await connection(); // schedule is live data — render per request, not at build
   const { shopSlug } = await params;
-  const { month, after, back, embed, builder, preview, hasSpace, tripType } = await searchParams;
+  const { month, after, back, embed, hasSpace, tripType } = await searchParams;
   const hasSpaceFilter = hasSpace === "1";
   const tripTypeFilter = tripType === "fun_dive" || tripType === "course" ? tripType : undefined;
   // Embed mode is the compact, chrome-light surface a shop pastes into its own
   // website (docs ADR 20260726-schedule-embed) — never for staff, who always
   // arrive signed in and never via a third-party iframe.
   const isEmbed = embed === "1";
-  // A signed-in staff member deliberately asking to see what a diver sees —
-  // e.g. the "View public page" link on /reviews — gets the full diver-facing
-  // page, reviews included, rather than the staff board embed mode also
-  // suppresses reviews on (see below). Never reachable by accident: it takes
-  // the exact query param, not a default.
-  const isPreview = preview === "1";
   const db = await getDb();
   const shop = await getShopBySlug(db, shopSlug);
   if (!shop) {
     notFound();
   }
-  const session = await auth();
-  // Embed mode always renders the diver-facing surface, even for a signed-in
-  // staff member previewing the page — an iframe on the shop's own website
-  // must never expose the staff board.
-  const staffView =
-    !isEmbed && !isPreview && session?.user?.shopId === shop.id && isStaff(session.user.roles);
 
-  // The board is served in pages: the list is one keyset page, the stat tiles
-  // and calendar come from bounded queries — nothing loads every trip at once,
-  // so a shop with hundreds of departures on the books stays quick.
+  // The page is served in pieces: the list is one keyset page, the calendar
+  // comes from a bounded month query — nothing loads every trip at once, so a
+  // shop with hundreds of departures on the books stays quick.
   const tz = shop.timezone;
   const { locale, t } = await requestTranslator(shop.defaultLocale);
-  // The staff board is the only staff-only content on this otherwise
-  // diver-facing page (see route map): its copy comes from the staff bundle,
-  // never the diver `t` above, even though both share the same negotiated locale.
-  const st = staffTranslator(locale);
   const currency = toShopCurrency(shop.currency);
   const now = nowDate();
 
@@ -191,26 +139,22 @@ export default async function TripsPage({
   // When the diver has explicitly paged the calendar to a month, bound the
   // trip list below it to that same month so the two surfaces can't disagree
   // — the previous behavior kept the list on "next N trips from now"
-  // regardless of which month the calendar had paged to. The default view
-  // (no explicit `?month=`) stays that unbounded list; staff never navigate
-  // by month, so their builder list is never bounded by it either.
-  const explicitMonth = !staffView ? parseMonthKey(month) : null;
+  // regardless of which month the calendar had paged to.
+  const explicitMonth = parseMonthKey(month);
   const listMonthBounds = explicitMonth ? monthBoundsUtc(explicitMonth) : null;
 
-  const [range, stats, { trips: upcoming, nextCursor }, reviewAggregate, reviews] =
-    await Promise.all([
-      upcomingScheduleRange(db, shop.id, now),
-      staffView ? upcomingScheduleStats(db, shop.id, now) : null,
-      pagedUpcomingTripsWithCounts(db, shop.id, {
-        cursor: after,
-        now,
-        ...listMonthBounds,
-        hasSpace: !staffView && hasSpaceFilter ? true : undefined,
-        tripType: !staffView ? tripTypeFilter : undefined,
-      }),
-      getShopReviewAggregate(db, shop.id),
-      listPublishedShopReviews(db, shop.id),
-    ]);
+  const [range, { trips: upcoming, nextCursor }, reviewAggregate, reviews] = await Promise.all([
+    upcomingScheduleRange(db, shop.id, now),
+    pagedUpcomingTripsWithCounts(db, shop.id, {
+      cursor: after,
+      now,
+      ...listMonthBounds,
+      hasSpace: hasSpaceFilter ? true : undefined,
+      tripType: tripTypeFilter,
+    }),
+    getShopReviewAggregate(db, shop.id),
+    listPublishedShopReviews(db, shop.id),
+  ]);
   const hasUpcoming = range.first !== null;
 
   // A prominent quick link to the soonest departure with room, so a returning
@@ -218,8 +162,7 @@ export default async function TripsPage({
   // Only on the default (unbounded) view — once a diver has paged the
   // calendar to a specific month, `upcoming` is bounded to it and its first
   // trip is no longer necessarily the shop's actual next departure.
-  const nextDeparture =
-    !staffView && !explicitMonth ? (upcoming.find((trip) => !isFull(trip)) ?? null) : null;
+  const nextDeparture = !explicitMonth ? (upcoming.find((trip) => !isFull(trip)) ?? null) : null;
 
   // Diver-facing month calendar: place the month's dives on their shop-local
   // day (storage is UTC; the diver thinks in the shop's wall clock), and page
@@ -242,119 +185,8 @@ export default async function TripsPage({
   const nextMonthKey =
     lastTripMonth && ordinal(next) <= ordinal(lastTripMonth) ? monthKey(next) : null;
 
-  // The builder works off the same keyset page the list below it renders, so a
-  // shop with hundreds of departures still loads one page of rows — the board is
-  // a working surface for the next few weeks, not an archive.
-  const [canConfigure, dayCounts, crewByTrip, builderCourses, builderDiveSites] = staffView
-    ? await Promise.all([
-        canPersonConfigureTrips(db, shop.id, session?.user?.personId ?? ""),
-        tripScheduleDayCounts(
-          db,
-          upcoming.map((trip) => trip.id),
-        ),
-        tripCrewByTrip(
-          db,
-          shop.id,
-          upcoming.map((trip) => trip.id),
-        ),
-        listActiveCourses(db, shop.id).then((rows) =>
-          rows.map((row) => ({ id: row.id, title: row.title })),
-        ),
-        listDiveSites(db, shop.id).then((rows) =>
-          rows.map((row) => ({ id: row.id, title: row.name })),
-        ),
-      ])
-    : [
-        false,
-        // i18n-exempt: generic-type literal, not copy — scanner false positive.
-        new Map<string, number>(),
-        new Map<string, Array<{ id: string; name: string }>>(),
-        [],
-        [],
-      ];
-
-  const builderNoticeEntry = noticeFromParam(builder, BUILDER_NOTICE_KEYS);
-  const builderNotice = builderNoticeEntry
-    ? { tone: builderNoticeEntry.tone, message: st(builderNoticeEntry.key) }
-    : undefined;
-  const builderCopy: BuilderCopy = {
-    heading: st("schedule.builder.heading"),
-    description: st("schedule.builder.description"),
-    ariaLabel: st("schedule.builder.ariaLabel"),
-    addDeparture: st("schedule.builder.addDeparture"),
-    addDepartureOnDay: st("schedule.builder.addDepartureOnDay"),
-    add: st("schedule.builder.add"),
-    cancel: st("schedule.builder.cancel"),
-    noSiteSetYet: st("schedule.builder.noSiteSetYet"),
-    courseLabel: st("schedule.builder.courseLabel"),
-    dayCountLabel: st("schedule.builder.dayCountLabel"),
-    crewLabel: st("schedule.builder.crewLabel"),
-    crewNobodyYet: st("schedule.builder.crewNobodyYet"),
-    noPriceSet: st("schedule.builder.noPriceSet"),
-    noPriceSetAria: st("schedule.builder.noPriceSetAria"),
-    move: st("schedule.builder.move"),
-    moveAria: st("schedule.builder.moveAria"),
-    copy: st("schedule.builder.copy"),
-    copyAria: st("schedule.builder.copyAria"),
-    remove: st("schedule.builder.remove"),
-    removeAria: st("schedule.builder.removeAria"),
-    removeConfirm: st("schedule.builder.removeConfirm"),
-    removeConfirmButton: st("schedule.builder.removeConfirmButton"),
-    removeCancel: st("schedule.builder.removeCancel"),
-    removePending: st("schedule.builder.removePending"),
-    whatIsIt: st("schedule.builder.whatIsIt"),
-    titlePlaceholder: st("schedule.builder.titlePlaceholder"),
-    date: st("schedule.builder.date"),
-    departs: st("schedule.builder.departs"),
-    returns: st("schedule.builder.returns"),
-    seats: st("schedule.builder.seats"),
-    dives: st("schedule.builder.dives"),
-    course: st("schedule.builder.course"),
-    optional: st("schedule.builder.optional"),
-    diveSite: st("schedule.builder.diveSite"),
-    ordinaryTrip: st("schedule.builder.ordinaryTrip"),
-    decideLater: st("schedule.builder.decideLater"),
-    adding: st("schedule.builder.adding"),
-    putOnBoard: st("schedule.builder.putOnBoard"),
-    newDate: st("schedule.builder.newDate"),
-    multiDayNote: st("schedule.builder.multiDayNote"),
-    newDepartureTime: st("schedule.builder.newDepartureTime"),
-    moving: st("schedule.builder.moving"),
-    moveIt: st("schedule.builder.moveIt"),
-    copyTo: st("schedule.builder.copyTo"),
-    copyDescription: st("schedule.builder.copyDescription"),
-    departureTime: st("schedule.builder.departureTime"),
-    copying: st("schedule.builder.copying"),
-    copyIt: st("schedule.builder.copyIt"),
-  };
-
-  const builderDays: BuilderDay[] = [];
-  for (const trip of staffView ? upcoming : []) {
-    const wall = utcToWallTime(trip.startsAt, tz);
-    const dateIso = toDateInputValue(wall);
-    let day = builderDays.at(-1);
-    if (day?.dateIso !== dateIso) {
-      day = { dateIso, label: formatShortDate(trip.startsAt, locale, tz), trips: [] };
-      builderDays.push(day);
-    }
-    day.trips.push({
-      id: trip.id,
-      title: trip.title,
-      dateIso,
-      startTime: toTimeInputValue(wall),
-      timeRange: formatTimeRange(trip.startsAt, trip.endsAt, locale, tz),
-      capacity: trip.capacity,
-      booked: trip.booked,
-      courseTitle: trip.course?.title ?? null,
-      diveSiteName: trip.diveSite?.name ?? null,
-      dayCount: dayCounts.get(trip.id) ?? 1,
-      crew: (crewByTrip.get(trip.id) ?? []).map((member) => member.name),
-      priceCents: trip.priceCents,
-    });
-  }
-
   const tripsByDay = new Map<string, CalendarTrip[]>();
-  if (!staffView && hasUpcoming) {
+  if (hasUpcoming) {
     const { monthStart, monthEnd } = listMonthBounds ?? monthBoundsUtc(currentMonth);
     const monthTrips = await upcomingTripsForCalendar(db, shop.id, monthStart, monthEnd, now);
     for (const trip of monthTrips) {
@@ -371,28 +203,26 @@ export default async function TripsPage({
   }
 
   // Structured data describes the canonical standalone page only — see
-  // generateMetadata above. Staff see their own board, which is not a public
-  // document and has no business carrying an Event graph.
-  const structuredData =
-    isEmbed || staffView
-      ? null
-      : scheduleJsonLd(
-          shop,
-          upcoming.map((trip) => ({
-            id: trip.id,
-            title: trip.title,
-            description: trip.description,
-            startsAt: trip.startsAt,
-            endsAt: trip.endsAt,
-            capacity: trip.capacity,
-            booked: trip.booked,
-            priceCents: trip.priceCents,
-            diveSiteName: trip.diveSite?.name ?? null,
-            conditionsHold: trip.conditionsHold,
-          })),
-          publicAppUrl(),
-          reviewAggregate,
-        );
+  // generateMetadata above.
+  const structuredData = isEmbed
+    ? null
+    : scheduleJsonLd(
+        shop,
+        upcoming.map((trip) => ({
+          id: trip.id,
+          title: trip.title,
+          description: trip.description,
+          startsAt: trip.startsAt,
+          endsAt: trip.endsAt,
+          capacity: trip.capacity,
+          booked: trip.booked,
+          priceCents: trip.priceCents,
+          diveSiteName: trip.diveSite?.name ?? null,
+          conditionsHold: trip.conditionsHold,
+        })),
+        publicAppUrl(),
+        reviewAggregate,
+      );
 
   return (
     <main
@@ -407,17 +237,7 @@ export default async function TripsPage({
         <ShopPageHeader
           eyebrow={t("schedule.eyebrow")}
           title={t("schedule.title")}
-          description={staffView ? t("schedule.staffDescription") : t("schedule.diverDescription")}
-          actions={
-            staffView ? (
-              <Link
-                href={`/shop/${shopSlug}/trips/new`}
-                className={buttonClass({ className: "rounded-xl" })}
-              >
-                {st("schedule.fullTripForm")}
-              </Link>
-            ) : undefined
-          }
+          description={t("schedule.diverDescription")}
         />
       )}
 
@@ -448,80 +268,20 @@ export default async function TripsPage({
         </Link>
       ) : null}
 
-      {staffView && stats ? (
-        <section
-          aria-label={st("schedule.overview.ariaLabel")}
-          className="mb-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
-        >
-          <ShopStat
-            label={st("schedule.overview.departures")}
-            value={stats.departures}
-            detail={st("schedule.overview.departuresDetail")}
-            tone="primary"
-          />
-          <ShopStat
-            label={st("schedule.overview.booked")}
-            value={stats.booked}
-            detail={st("schedule.overview.bookedDetail")}
-          />
-          <ShopStat
-            label={st("schedule.overview.openSeats")}
-            value={stats.openSeats}
-            detail={st("schedule.overview.openSeatsDetail")}
-            tone="success"
-          />
-          <ShopStat
-            label={st("schedule.overview.atCapacity")}
-            value={stats.atCapacity}
-            detail={st("schedule.overview.atCapacityDetail")}
-          />
-        </section>
-      ) : null}
+      <ScheduleCalendar
+        shopSlug={shopSlug}
+        label={monthLabel(currentMonth)}
+        weeks={buildCalendarWeeks(currentMonth, weekStartsOn(locale))}
+        todayIso={todayIso}
+        tripsByDay={tripsByDay}
+        locale={locale}
+        t={t}
+        prevMonthKey={prevMonthKey}
+        nextMonthKey={nextMonthKey}
+        embed={isEmbed}
+      />
 
-      {staffView && builderNotice ? (
-        <ShopNotice
-          tone={builderNotice.tone}
-          role={builderNotice.tone === "danger" ? "alert" : "status"}
-          className="mb-6"
-        >
-          {builderNotice.message}
-        </ShopNotice>
-      ) : null}
-
-      {staffView ? (
-        <ScheduleBuilder
-          shopSlug={shopSlug}
-          days={builderDays}
-          courses={builderCourses}
-          diveSites={builderDiveSites}
-          defaultDateIso={builderDays[0]?.dateIso ?? todayIso}
-          canConfigure={canConfigure}
-          copy={builderCopy}
-          actions={{
-            add: addDepartureAction.bind(null, shopSlug),
-            move: moveDepartureAction.bind(null, shopSlug),
-            duplicate: duplicateDepartureAction.bind(null, shopSlug),
-            remove: removeDepartureAction.bind(null, shopSlug),
-          }}
-        />
-      ) : null}
-
-      {!staffView && hasUpcoming ? (
-        <ScheduleCalendar
-          shopSlug={shopSlug}
-          label={monthLabel(currentMonth)}
-          weeks={buildCalendarWeeks(currentMonth, weekStartsOn(locale))}
-          todayIso={todayIso}
-          tripsByDay={tripsByDay}
-          locale={locale}
-          t={t}
-          prevMonthKey={prevMonthKey}
-          nextMonthKey={nextMonthKey}
-          embed={isEmbed}
-        />
-      ) : null}
-
-      {!staffView && hasUpcoming ? (
+      {hasUpcoming ? (
         // Server-fed, same house pattern as the roster search in
         // AddDiverSection.tsx: a GET reload carries the filters and the list
         // below re-renders filtered. No client state, so the list stays
@@ -560,21 +320,9 @@ export default async function TripsPage({
       {!hasUpcoming ? (
         <EmptyState>
           <h2 className="font-medium">{t("schedule.noTrips")}</h2>
-          {staffView ? (
-            <>
-              <p className="mt-1 text-sm text-muted">{t("schedule.noTripsStaff")}</p>
-              <Link
-                href={`/shop/${shopSlug}/trips/new`}
-                className={buttonClass({ className: "mt-4 rounded-xl" })}
-              >
-                {st("schedule.scheduleTrip")}
-              </Link>
-            </>
-          ) : (
-            <p className="mt-1 text-sm text-muted">{t("schedule.noTripsPublic")}</p>
-          )}
+          <p className="mt-1 text-sm text-muted">{t("schedule.noTripsPublic")}</p>
         </EmptyState>
-      ) : staffView ? null : upcoming.length === 0 ? (
+      ) : upcoming.length === 0 ? (
         <EmptyState>
           <p className="text-sm text-muted">
             {hasSpaceFilter || tripTypeFilter
@@ -599,12 +347,7 @@ export default async function TripsPage({
                   : t("fallback.spotsLeft", { count: capacityLabelValue.remaining });
               const showTwoTankHint = trip.plannedDives === 2 && !twoTankHintShown;
               if (showTwoTankHint) twoTankHintShown = true;
-              // Staff manage a trip on /trips/[id]; anonymous and diver
-              // visitors book on /schedule/[id]. Linking staff straight to the
-              // management view removes the /schedule/[id] redirect hop.
-              const tripHref = staffView
-                ? `/shop/${shopSlug}/trips/${trip.id}`
-                : `/shop/${shopSlug}/schedule/${trip.id}${isEmbed ? "?embed=1" : ""}`;
+              const tripHref = `/shop/${shopSlug}/schedule/${trip.id}${isEmbed ? "?embed=1" : ""}`;
               return (
                 <li key={trip.id}>
                   {/* A "stretched link" card: the whole row navigates to the
@@ -737,7 +480,7 @@ export default async function TripsPage({
       {/* Reviews are a full-page, diver-facing signal: the embed stays a
           compact booking widget (docs ADR 20260726-schedule-embed), and staff
           moderate from /shop/[shopSlug]/reviews rather than reading them here. */}
-      {!isEmbed && !staffView ? (
+      {!isEmbed ? (
         <ShopReviews
           aggregate={reviewAggregate}
           reviews={reviews}
@@ -749,7 +492,7 @@ export default async function TripsPage({
       {/* The only Client Component on this page that reads copy, so the
           provider wraps it alone rather than the whole tree — the diver bundle
           then crosses to the browser once, on the one surface that needs it. */}
-      {!isEmbed && !staffView ? (
+      {!isEmbed ? (
         <DiverIntlProvider locale={locale} timeZone={tz}>
           <LastMinuteListForm shopSlug={shopSlug} />
         </DiverIntlProvider>

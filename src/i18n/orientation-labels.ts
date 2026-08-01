@@ -60,7 +60,7 @@ export function orientationTourHref(
 ): string {
   switch (role) {
     case "owner":
-      return `/shop/${shopSlug}/schedule`;
+      return `/shop/${shopSlug}/schedule/board`;
     case "manager":
       return `/shop/${shopSlug}/reviews`;
     case "instructor":
@@ -68,10 +68,10 @@ export function orientationTourHref(
     case "divemaster":
       return `/shop/${shopSlug}/blockers`;
     case "captain":
-      // Falls back to the schedule when no boat is out today — the manifest
-      // route needs a real trip id, and there is no "today's manifest" page
-      // without one.
-      return boatBoardingHref ?? `/shop/${shopSlug}/schedule`;
+      // Falls back to the operations board when no boat is out today — the
+      // manifest route needs a real trip id, and there is no "today's
+      // manifest" page without one.
+      return boatBoardingHref ?? `/shop/${shopSlug}/schedule/board`;
     case "crew":
       return `/shop/${shopSlug}/check-in`;
   }

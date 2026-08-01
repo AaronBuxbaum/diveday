@@ -60,8 +60,6 @@ const NOTICE_KEYS: Record<
   "waiver-in-person": { tone: "success", key: "trips.notices.waiverInPerson" },
   "waiver-medical-attestation": { tone: "danger", key: "trips.notices.waiverMedicalAttestation" },
   "waiver-error": { tone: "danger", key: "trips.notices.waiverError" },
-  "bulk-waiver": { tone: "success", key: "trips.notices.bulkWaiver" },
-  "bulk-waiver-none": { tone: "danger", key: "trips.notices.bulkWaiverNone" },
   "series-applied": { tone: "success", key: "trips.notices.seriesApplied" },
   "series-applied-partial": { tone: "success", key: "trips.notices.seriesAppliedPartial" },
   "series-cancelled": { tone: "danger", key: "trips.notices.seriesCancelled" },

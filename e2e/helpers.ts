@@ -66,7 +66,7 @@ export async function signInAs(page: Page, login: { email: string; password: str
 /**
  * Open a departure from the staff schedule board.
  *
- * The board is the schedule builder (src/app/shop/[shopSlug]/schedule/_components),
+ * The board is the schedule builder (src/app/shop/[shopSlug]/schedule/board/_components),
  * where a row carries its own Move/Copy/Remove controls and only the title is a
  * link — so clicking the row itself lands on padding and navigates nowhere.
  * Every spec that starts "from the board, open trip X" goes through here rather

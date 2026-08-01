@@ -64,7 +64,7 @@ test.describe("staff", () => {
     // from the schedule (staff cards link straight to the management view). This
     // leg re-walks the real sign-in form on purpose: the loop is the point.
     await signInAsOwner(page);
-    await page.goto("/shop/blue-mantis/schedule");
+    await page.goto("/shop/blue-mantis/schedule/board");
     await page.locator("li").filter({ hasText: title }).getByRole("link").click();
     await expect(page.getByRole("heading", { name: title })).toBeVisible();
     // The roster lives on the Guests tab now.
@@ -105,7 +105,7 @@ test.describe("staff", () => {
     await page.getByLabel("Capacity").fill("6");
     await page.getByRole("button", { name: "Put it on the board" }).click();
     await expect(page.getByRole("status")).toBeVisible(); // created banner (param is one-shot)
-    await page.goto("/shop/blue-mantis/schedule");
+    await page.goto("/shop/blue-mantis/schedule/board");
     const manageLink = page
       .locator('a[href^="/shop/blue-mantis/trips/"]')
       .filter({ hasText: title })
@@ -147,7 +147,7 @@ test.describe("staff", () => {
 
     // Edit the title from the manage page (opened from the schedule). Staff are
     // routed to the editable trip view, never the public booking form.
-    await page.goto("/shop/blue-mantis/schedule");
+    await page.goto("/shop/blue-mantis/schedule/board");
     await page
       .locator("li")
       .filter({ hasText: title })
@@ -171,13 +171,13 @@ test.describe("staff", () => {
     // the public schedule." alert on the same page (getByText is
     // case-insensitive substring by default).
     await expect(page.getByText("✕ Cancelled")).toBeVisible();
-    await page.goto("/shop/blue-mantis/schedule");
+    await page.goto("/shop/blue-mantis/schedule/board");
     await expect(page.locator("li").filter({ hasText: renamed })).toHaveCount(0);
 
     await page.goto(manageUrl);
     await page.getByRole("button", { name: "Reinstate trip" }).click();
     await expect(page.getByRole("status")).toContainText("Back on");
-    await page.goto("/shop/blue-mantis/schedule");
+    await page.goto("/shop/blue-mantis/schedule/board");
     await expect(page.locator("li").filter({ hasText: renamed })).toBeVisible();
   });
 });
@@ -212,7 +212,7 @@ test("a full boat lets a diver join the wait list without taking a seat", async 
   await expect(page.getByRole("heading", { name: /You’re on the wait list, Nora/ })).toBeVisible();
 
   await signInAsOwner(page);
-  await page.goto("/shop/blue-mantis/schedule");
+  await page.goto("/shop/blue-mantis/schedule/board");
   await page
     .locator("li")
     .filter({ hasText: "Wreck Trip — Spiegel Grove" })
@@ -283,7 +283,7 @@ test("a shared-inbox booking under a different name is held for staff identity c
 
   // Staff open trip B's roster: the diver is held on identity, not ready.
   await signInAsOwner(page);
-  await page.goto("/shop/blue-mantis/schedule");
+  await page.goto("/shop/blue-mantis/schedule/board");
   await page
     .locator("li")
     .filter({ hasText: tripB })

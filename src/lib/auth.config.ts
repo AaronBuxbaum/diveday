@@ -17,11 +17,19 @@ export const authSecret =
 
 const STAFF_PREFIX = "/shop";
 
-const PUBLIC_SCHEDULE = /^\/shop\/[a-z0-9-]+\/schedule(\/.*)?$/;
+const SCHEDULE_ROOT = /^\/shop\/[a-z0-9-]+\/schedule\/?$/;
+const SCHEDULE_TRIP_PAGE = /^\/shop\/[a-z0-9-]+\/schedule\/([a-z0-9-]+)(\/.*)?$/;
+// The staff operations board (Lens 17, docs/product/story-backlog.md) sits
+// one segment below the public schedule, in the same path space a trip's own
+// id occupies — carved out the same way COURSE_PAGE below refuses staff
+// segments a course slug could otherwise impersonate. Trip ids are UUIDs, so
+// a real trip can never literally collide with this reserved word.
+const RESERVED_SCHEDULE_SEGMENTS = new Set(["board"]);
 const COURSE_PAGE = /^\/shop\/([a-z0-9-]+)\/courses\/([a-z0-9-]+)\/?$/;
 // $-anchored to exactly "/courses" (or "/courses/") — never the open-ended
-// `(\/.*)?` tail PUBLIC_SCHEDULE uses, because that tail would also swallow
-// the staff editor living one segment further down this same path space.
+// `(\/.*)?` tail SCHEDULE_TRIP_PAGE uses, because that tail would also
+// swallow the staff editor living one segment further down this same path
+// space.
 const COURSES_INDEX = /^\/shop\/[a-z0-9-]+\/courses\/?$/;
 const COURSE_PATHS_INDEX = /^\/shop\/[a-z0-9-]+\/courses\/paths\/?$/;
 const COURSE_PATH_PAGE = /^\/shop\/[a-z0-9-]+\/courses\/paths\/[a-z0-9-]+\/?$/;
@@ -45,7 +53,9 @@ const COURSE_PATH_PAGE = /^\/shop\/[a-z0-9-]+\/courses\/paths\/[a-z0-9-]+\/?$/;
  * treats as a slug.
  */
 export function isPublicShopRoute(pathname: string): boolean {
-  if (PUBLIC_SCHEDULE.test(pathname)) return true;
+  if (SCHEDULE_ROOT.test(pathname)) return true;
+  const schedule = SCHEDULE_TRIP_PAGE.exec(pathname);
+  if (schedule && !RESERVED_SCHEDULE_SEGMENTS.has(schedule[1])) return true;
   if (COURSES_INDEX.test(pathname)) return true;
   if (COURSE_PATHS_INDEX.test(pathname)) return true;
   if (COURSE_PATH_PAGE.test(pathname)) return true;
@@ -61,7 +71,9 @@ export function isPublicShopRoute(pathname: string): boolean {
  * page can never frame them for a clickjacking attempt.
  */
 export function isEmbeddableShopRoute(pathname: string): boolean {
-  return PUBLIC_SCHEDULE.test(pathname);
+  if (SCHEDULE_ROOT.test(pathname)) return true;
+  const schedule = SCHEDULE_TRIP_PAGE.exec(pathname);
+  return Boolean(schedule && !RESERVED_SCHEDULE_SEGMENTS.has(schedule[1]));
 }
 
 /**

@@ -50,6 +50,8 @@ type WaitlistInviteEmailInput = {
   timezone: string;
   /** The public trip page where the freed seat can be claimed. */
   bookingUrl: string;
+  /** Self-serve opt-out of `waitlist_invite`/`trip_recap` courtesy email. */
+  unsubscribeUrl: string;
 };
 
 type LastMinuteDealEmailInput = {
@@ -328,11 +330,13 @@ export function waitlistInviteEmail(input: WaitlistInviteEmailInput): Notificati
   });
   const claim = t("notifications.waitlistInvite.claim");
   const footer = t("notifications.waitlistInvite.footer");
+  const unsubscribe = t("notifications.common.courtesyUnsubscribe", { shopName: input.shopName });
+  const unsubscribeUrl = escapeHtml(input.unsubscribeUrl);
 
   return {
     subject: t("notifications.waitlistInvite.subject", { tripTitle: input.tripTitle }),
-    text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n\n${date}\n${time}\n\n${claim}:\n${input.bookingUrl}\n\n${footer}\n`,
-    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p><p><a href="${url}">${t("notifications.waitlistInvite.claimLink")}</a></p><p>${footer}</p>`,
+    text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n\n${date}\n${time}\n\n${claim}:\n${input.bookingUrl}\n\n${footer}\n\n${unsubscribe}:\n${input.unsubscribeUrl}\n`,
+    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p><p><a href="${url}">${t("notifications.waitlistInvite.claimLink")}</a></p><p>${footer}</p><p><a href="${unsubscribeUrl}">${escapeHtml(unsubscribe)}</a></p>`,
   };
 }
 
@@ -481,6 +485,8 @@ type TripRecapEmailInput = {
   sites?: string[];
   /** The diver's shareable recap page. */
   recapUrl: string;
+  /** Self-serve opt-out of `waitlist_invite`/`trip_recap` courtesy email. */
+  unsubscribeUrl: string;
 };
 
 export function tripRecapEmail(input: TripRecapEmailInput): NotificationEmail {
@@ -513,14 +519,16 @@ export function tripRecapEmail(input: TripRecapEmailInput): NotificationEmail {
   });
   const seeRecap = t("notifications.tripRecap.seeRecap");
   const footer = t("notifications.tripRecap.footer");
+  const unsubscribe = t("notifications.common.courtesyUnsubscribe", { shopName: input.shopName });
+  const unsubscribeUrl = escapeHtml(input.unsubscribeUrl);
 
   return {
     subject: t("notifications.tripRecap.subject", {
       shopName: input.shopName,
       tripTitle: input.tripTitle,
     }),
-    text: `${t("notifications.common.greeting", { firstName })}\n\n${thanks}${where}\n\n${seeRecap}:\n${input.recapUrl}\n\n${footer}\n`,
-    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${thanksHtml}${whereHtml}</p><p><a href="${url}">${seeRecap}</a>.</p><p>${footer}</p>`,
+    text: `${t("notifications.common.greeting", { firstName })}\n\n${thanks}${where}\n\n${seeRecap}:\n${input.recapUrl}\n\n${footer}\n\n${unsubscribe}:\n${input.unsubscribeUrl}\n`,
+    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${thanksHtml}${whereHtml}</p><p><a href="${url}">${seeRecap}</a>.</p><p>${footer}</p><p><a href="${unsubscribeUrl}">${escapeHtml(unsubscribe)}</a></p>`,
   };
 }
 

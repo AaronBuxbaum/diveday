@@ -139,7 +139,7 @@ test.describe("contact import — specialty cards", () => {
     await page.getByRole("button", { name: "Put it on the board" }).click();
     await expect(page.getByRole("status")).toContainText(title);
 
-    await page.goto("/shop/blue-mantis/schedule");
+    await page.goto("/shop/blue-mantis/schedule/board");
     await openTripFromBoard(page, title);
     await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
     await page.getByRole("checkbox", { name: "Deep" }).check();
@@ -184,7 +184,7 @@ test.describe("contact import — specialty cards", () => {
     await deepCard.getByRole("checkbox", { name: /I've seen this diver's card/ }).check();
     await deepCard.getByRole("button", { name: "Confirm card" }).click();
 
-    await page.goto("/shop/blue-mantis/schedule");
+    await page.goto("/shop/blue-mantis/schedule/board");
     await openTripFromBoard(page, title);
     await page
       .getByRole("navigation", { name: "Trip" })

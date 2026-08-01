@@ -153,7 +153,7 @@ export default async function WaiverSignaturesPage({
     session.user.shopId,
     session.user.personId,
   );
-  if (!canManage) redirect(`/shop/${shopSlug}`);
+  if (!canManage) redirect(`/shop/${shopSlug}?notice=waivers_not_authorized`);
 
   const highlighted = record ? await getSignedWaiverRecordForShop(db, shop.id, record) : null;
   const { entries, nextCursor } = await listWaiverIntegrityAudit(db, shop.id, { cursor: after });

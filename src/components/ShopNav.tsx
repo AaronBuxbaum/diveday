@@ -40,7 +40,7 @@ export function ShopNav({
   const t = staffTranslator(locale);
   const baseNavShortcuts = [
     { key: "t", suffix: "", page: t("shared.commandPalette.goToToday") },
-    { key: "s", suffix: "/schedule", page: t("shared.commandPalette.goToSchedule") },
+    { key: "s", suffix: "/schedule/board", page: t("shared.commandPalette.goToSchedule") },
     { key: "d", suffix: "/divers", page: t("shared.commandPalette.goToDivers") },
     { key: "b", suffix: "/blockers", page: t("shared.commandPalette.goToBlockers") },
     ...(navGates.waivers

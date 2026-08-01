@@ -513,6 +513,66 @@ describe("sendDueRecaps", () => {
     expect(rows[0]?.status).toBe("not_configured");
   });
 
+  it("carries a working per-send unsubscribe link (Leo — self-serve email unsubscribe)", async () => {
+    const { db, bookingId, afterTrip } = await recapContext();
+    const email = fakeEmail();
+    await sendDueRecaps(db, {
+      now: afterTrip,
+      emailProvider: email.provider,
+      smsProvider: fakeSms().provider,
+      appOrigin: ORIGIN,
+    });
+    const mine = email.sent.find((n) => n.kind === "trip_recap" && n.bookingId === bookingId);
+    if (mine?.kind !== "trip_recap") throw new Error("recap notification missing");
+    expect(mine.unsubscribeUrl).toContain(`${ORIGIN}/unsubscribe/`);
+  });
+
+  it("skips the email (falling back to SMS) for a diver who opted out of courtesy email", async () => {
+    const { db, bookingId, afterTrip } = await recapContext();
+    const [person] = await db
+      .select()
+      .from(people)
+      .where(eq(people.email, "recap-rae@example.com"));
+    await db
+      .update(people)
+      .set({ courtesyEmailOptOutAt: new Date("2026-07-20T00:00:00.000Z"), phone: "+13055557777" })
+      .where(eq(people.id, person.id));
+    const email = fakeEmail();
+    const sms = fakeSms({ status: "sent", providerMessageId: "SM_recap_optout" });
+    const summary = await sendDueRecaps(db, {
+      now: afterTrip,
+      emailProvider: email.provider,
+      smsProvider: sms.provider,
+      appOrigin: ORIGIN,
+    });
+    expect(email.sent.filter((n) => "bookingId" in n && n.bookingId === bookingId)).toHaveLength(0);
+    expect(sms.sent.filter((m) => m.to === "+13055557777")).toHaveLength(1);
+    expect(summary.optedOut).toBe(0);
+  });
+
+  it("counts, but does not record a failure, for an opted-out diver with no phone to fall back to", async () => {
+    const { db, bookingId, afterTrip } = await recapContext();
+    const [person] = await db
+      .select()
+      .from(people)
+      .where(eq(people.email, "recap-rae@example.com"));
+    await db
+      .update(people)
+      .set({ courtesyEmailOptOutAt: new Date("2026-07-20T00:00:00.000Z") })
+      .where(eq(people.id, person.id));
+    const email = fakeEmail();
+    const summary = await sendDueRecaps(db, {
+      now: afterTrip,
+      emailProvider: email.provider,
+      smsProvider: fakeSms().provider,
+      appOrigin: ORIGIN,
+    });
+    expect(email.sent.filter((n) => "bookingId" in n && n.bookingId === bookingId)).toHaveLength(0);
+    expect(summary.optedOut).toBe(1);
+    expect(summary.failed).toBe(0);
+    expect(await rowsFor(db, bookingId)).toHaveLength(0);
+  });
+
   it("texts a phone-only diver the recap link", async () => {
     const { db, bookingId, afterTrip } = await recapContext();
     const [person] = await db

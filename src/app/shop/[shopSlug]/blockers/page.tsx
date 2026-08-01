@@ -177,7 +177,10 @@ export default async function BlockersPage({ params }: { params: Promise<{ shopS
           </div>
           <h2 className="mt-4 text-lg font-semibold">{t("blockers.emptyTitle")}</h2>
           <p className="mx-auto mt-1 max-w-md text-muted">{t("blockers.emptyDescription")}</p>
-          <Link href={`/shop/${shopSlug}/schedule`} className={buttonClass({ className: "mt-5" })}>
+          <Link
+            href={`/shop/${shopSlug}/schedule/board`}
+            className={buttonClass({ className: "mt-5" })}
+          >
             {t("blockers.viewSchedule")}
           </Link>
         </section>
@@ -198,7 +201,7 @@ export default async function BlockersPage({ params }: { params: Promise<{ shopS
               {t.rich("blockers.truncated", {
                 link: (chunks) => (
                   <Link
-                    href={`/shop/${shopSlug}/schedule`}
+                    href={`/shop/${shopSlug}/schedule/board`}
                     className="font-medium text-primary hover:underline"
                   >
                     {chunks}

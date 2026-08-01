@@ -231,7 +231,7 @@ test.describe("staff", () => {
 
     // A course session refuses bookings until an instructor is on its crew — the
     // rule that makes this flow safe, and the reason the seeded session works.
-    await page.goto("/shop/blue-mantis/schedule");
+    await page.goto("/shop/blue-mantis/schedule/board");
     // Anchored to the full accessible name: an unpriced trip's card also
     // carries a "Set a price for {title}, ..." link whose name contains the
     // session title as a substring, so an unanchored pattern matches both.
@@ -283,7 +283,7 @@ test.describe("staff", () => {
     await page.getByRole("button", { name: "Put it on the board" }).click();
     await expect(page.getByRole("status")).toBeVisible();
 
-    await page.goto("/shop/blue-mantis/schedule");
+    await page.goto("/shop/blue-mantis/schedule/board");
     // Anchored to the full accessible name: an unpriced trip's card also
     // carries a "Set a price for {title}, ..." link whose name contains the
     // session title as a substring, so an unanchored pattern matches both.

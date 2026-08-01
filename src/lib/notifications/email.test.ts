@@ -142,6 +142,7 @@ describe("tripRecapEmail", () => {
     startsAt: new Date("2026-08-01T13:00:00.000Z"),
     timezone: "America/New_York",
     recapUrl: "https://diveday.test/recap/abc.def",
+    unsubscribeUrl: "https://diveday.test/unsubscribe/xyz",
   };
 
   it("names the sites dived and links the recap", () => {
@@ -150,6 +151,8 @@ describe("tripRecapEmail", () => {
     expect(email.text).toContain("https://diveday.test/recap/abc.def");
     expect(email.html).toContain('href="https://diveday.test/recap/abc.def"');
     expect(email.text).toContain("bring a buddy");
+    expect(email.text).toContain("https://diveday.test/unsubscribe/xyz");
+    expect(email.html).toContain('href="https://diveday.test/unsubscribe/xyz"');
   });
 
   it("still reads well when the sites are unknown", () => {

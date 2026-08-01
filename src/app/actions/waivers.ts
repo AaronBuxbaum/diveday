@@ -47,6 +47,10 @@ export async function sendWaiversAction(
     links: [],
     alreadyDone: [],
     errors: [],
+    // Only the roster's bulk control (checkbox-sourced selection) can ever
+    // submit with zero ids — every other surface's bookingIds prop is fixed
+    // and non-empty, so this can't misfire there.
+    emptySelection: bookingIds.length === 0,
   };
 
   for (const bookingId of bookingIds) {

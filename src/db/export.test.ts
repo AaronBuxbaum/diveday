@@ -115,6 +115,7 @@ const EXCLUDED_TABLES = [
   "calendar_feeds", // bearer credentials for a staff calendar subscription, never exported
   "course_inquiries", // a marketing lead, not a shop operational record — same reasoning as activity_events
   "last_minute_list_unsubscribe_tokens", // bearer credentials, never exported — same reasoning as booking_capabilities
+  "person_courtesy_email_unsubscribe_tokens", // bearer credentials, never exported — same reasoning as booking_capabilities
 ];
 
 /**

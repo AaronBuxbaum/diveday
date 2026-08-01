@@ -263,6 +263,16 @@
       "unavailableText": "Puede ser de un centro que ya no está activo. Si sigues recibiendo correos que no quieres, responde a uno y pregúntale directamente al centro."
     }
   },
+  "courtesyEmailUnsubscribe": {
+    "title": "¿Dejar de recibir estos correos?",
+    "description": "Estás en la lista de {shopName} para avisos de lista de espera y resúmenes tras la inmersión. Toca abajo y dejaremos de enviártelos — seguirás recibiendo correos sobre tus propias reservas, exenciones y actualizaciones de viaje.",
+    "submit": "Dejar de recibir estos correos",
+    "submitting": "Cancelando…",
+    "confirmedTitle": "Te has dado de baja",
+    "confirmedText": "Ya no recibirás correos de lista de espera ni de resúmenes de {shopName}. Seguirás recibiendo correos sobre tus propias reservas, exenciones y actualizaciones de viaje.",
+    "unavailableTitle": "Este enlace no está disponible",
+    "unavailableText": "Puede ser de un centro que ya no está activo. Si sigues recibiendo correos que no quieres, responde a uno y pregúntale directamente al centro."
+  },
   "course": {
     "hidden": "Oculto — los buceadores no ven esta página.",
     "backToEditing": "Volver a la edición",
@@ -1364,7 +1374,8 @@
       "trackWhatsLeft": "Sigue lo que te falta antes de salir",
       "seeWhatsLeft": "Consulta lo que te falta antes de salir",
       "outstandingHeading": "Aún por resolver antes de embarcar:",
-      "medicalReviewNote": "Comprueba si una respuesta médica necesita el visto bueno de un médico antes de viajar"
+      "medicalReviewNote": "Comprueba si una respuesta médica necesita el visto bueno de un médico antes de viajar",
+      "courtesyUnsubscribe": "Dejar de recibir correos de lista de espera y resúmenes de {shopName}"
     },
     "tripConditionsHold": {
       "subject": "Salida en espera por condiciones — {tripTitle}",
