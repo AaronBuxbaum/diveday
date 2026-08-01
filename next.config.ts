@@ -58,17 +58,36 @@ export default withSentryConfig(nextConfig, {
   // side errors will fail.
   tunnelRoute: "/monitoring",
 
+  // Bundle-size treeshaking: strips the Sentry SDK's debug/tracing/replay
+  // code, which we never use (`tracesSampleRate: 0`, no `replayIntegration`
+  // call — see instrumentation-client.ts). Set for when it applies, but
+  // verify before crediting it with any KB: as of @sentry/nextjs 10.69.0 this
+  // (and the older `webpack.treeshake` option) is wired only for webpack
+  // builds via `webpack.DefinePlugin` — Sentry's own docs say so explicitly
+  // ("this guide... does not apply to Turbopack builds"), and this repo's
+  // `next build` uses Turbopack (Next 16 default), whose
+  // `constructTurbopackConfig`/`generateValueInjectionRules` in this SDK
+  // version inject build values for the tunnel route and Vercel Crons but
+  // nothing for bundle-size excludes. Measured here: adding this block plus
+  // dropping `enableLogs` below did not move the shared first-load number
+  // (259.9 KB gzip, unchanged) — confirmed by also diagnostically deleting
+  // the whole `Sentry.init` call, which dropped it to 167.5 KB, so Sentry's
+  // true footprint (~92 KB) is real but not reachable through this option
+  // today. Leaving it set anyway: harmless now, and it should start working
+  // for free if/when Sentry ships Turbopack parity for this feature.
+  bundleSizeOptimizations: {
+    excludeDebugStatements: true,
+    excludeTracing: true,
+    excludeReplayIframe: true,
+    excludeReplayShadowDom: true,
+    excludeReplayWorker: true,
+  },
+
   webpack: {
     // Enables automatic instrumentation of Vercel Cron Monitors. (Does not yet work with App Router route handlers.)
     // See the following for more information:
     // https://docs.sentry.io/product/crons/
     // https://vercel.com/docs/cron-jobs
     automaticVercelMonitors: true,
-
-    // Tree-shaking options for reducing bundle size
-    treeshake: {
-      // Automatically tree-shake Sentry logger statements to reduce bundle size
-      removeDebugLogging: true,
-    },
   },
 });
