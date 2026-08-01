@@ -297,7 +297,8 @@
       "noTripAttached": " · no trip attached",
       "refund": "Refund",
       "refunding": "Refunding…",
-      "demoRefundHint": "Demo orders aren't backed by a live Stripe invoice, so refunds are disabled here."
+      "demoRefundHint": "Demo orders aren't backed by a live Stripe invoice, so refunds are disabled here.",
+      "showOlderPayments": "{count, plural, one {Show # older payment} other {Show # older payments}}"
     },
     "remove": {
       "heading": "Remove from active divers",
