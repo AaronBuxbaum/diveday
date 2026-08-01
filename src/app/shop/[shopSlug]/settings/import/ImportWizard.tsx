@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { ShopNotice } from "@/components/ShopPageHeader";
@@ -155,6 +156,21 @@ export function ImportWizard({
   // party fields).
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => setHydrated(true), []);
+
+  // Import/export is security- and data-sensitive (AGENTS.md). This route has
+  // no dynamic id, so under `cacheComponents: true` a stale parsed preview —
+  // and the hidden `csvText` a submit would commit — can otherwise survive a
+  // navigate-away-and-back for a file the staffer no longer has open (docs
+  // ADR 20260801-cache-components-activity-state). Clear the whole preview on
+  // the leading edge of any (re)navigation, same pattern as InlineConfirm.
+  const pathname = usePathname();
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `pathname` is a trigger, not a value the effect body reads — any change clears the preview, which is the point.
+  useEffect(() => {
+    setFileName(null);
+    setCsvText("");
+    setPrepared(null);
+    if (inputRef.current) inputRef.current.value = "";
+  }, [pathname]);
 
   async function onFile(file: File | undefined) {
     if (!file) return;

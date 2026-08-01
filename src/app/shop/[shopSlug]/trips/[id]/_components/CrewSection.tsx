@@ -71,9 +71,18 @@ export function CrewSection({
   const [localCrew, setLocalCrew] = useState(crewFromProps);
   const [assignError, setAssignError] = useState(false);
 
+  // Resyncs from the server's crewIds/staff, not from crewFromProps (a new
+  // array every render). `assignError` rides along on the same dependency
+  // array: this section is rendered once per trip id with no dynamic key of
+  // its own, so under `cacheComponents: true` a stale error banner from Trip
+  // A's crew section could otherwise survive a navigate-away-and-back into
+  // Trip B's (docs ADR 20260801-cache-components-activity-state) — clearing
+  // it whenever the server's own crew data changes keeps it scoped to the
+  // trip it was raised for.
   // biome-ignore lint/correctness/useExhaustiveDependencies: resyncs from the server's crewIds/staff, not from crewFromProps (a new array every render).
   useEffect(() => {
     setLocalCrew(availableStaff.filter((entry) => crewIds.includes(entry.id)));
+    setAssignError(false);
   }, [crewIds, staff]);
 
   const onShift = new Set(onShiftIds);

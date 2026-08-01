@@ -1,7 +1,24 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { type BuilderCopy, type BuilderDay, ScheduleBuilder } from "./ScheduleBuilder";
+
+// The schedule route has no dynamic id, so `usePathname()` is what
+// ScheduleBuilder keys its disarm-on-revisit effect on (see the component's
+// own doc comment). `setMockPathname` simulates a navigation event —
+// including an Activity-preserved show/hide cycle under
+// `cacheComponents: true` — without a real Next.js router.
+const { usePathname, setMockPathname } = vi.hoisted(() => {
+  let current = "/shop/blue-mantis/schedule";
+  return {
+    usePathname: vi.fn(() => current),
+    setMockPathname: (next: string) => {
+      current = next;
+    },
+  };
+});
+vi.mock("next/navigation", () => ({ usePathname }));
 
 const COPY: BuilderCopy = {
   heading: "The board",
@@ -77,6 +94,7 @@ const actions = { add: noop, move: noop, duplicate: noop, remove: noop };
 
 afterEach(() => {
   cleanup();
+  setMockPathname("/shop/blue-mantis/schedule");
 });
 
 describe("ScheduleBuilder unpriced-trip flag (task 150)", () => {
@@ -181,5 +199,48 @@ describe("ScheduleBuilder full-boat badge tone (appendix item)", () => {
 
     const capacityBadge = container.querySelector("span.tabular-nums");
     expect(capacityBadge?.className).toContain("bg-primary/10");
+  });
+});
+
+describe("ScheduleBuilder open-panel reset on revisit", () => {
+  it("closes an expanded add/move/copy panel on a pathname change, instead of resurfacing it with stale defaults", async () => {
+    const days: BuilderDay[] = [
+      { dateIso: "2026-08-01", label: "Sat, Aug 1", trips: [baseTrip()] },
+    ];
+    const { rerender } = render(
+      <ScheduleBuilder
+        shopSlug="blue-mantis"
+        days={days}
+        courses={[]}
+        diveSites={[]}
+        actions={actions}
+        defaultDateIso="2026-08-01"
+        canConfigure={true}
+        copy={COPY}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Add a departure" }));
+    expect(screen.getByPlaceholderText(COPY.titlePlaceholder)).toBeInTheDocument();
+
+    // Simulate a navigate-away-and-back: the pathname changes and this
+    // instance's effects re-run (cacheComponents' Activity re-show behaves
+    // like a fresh mount for effects, even though state survived) — the
+    // schedule route has no dynamic id to key a fresh instance by otherwise.
+    setMockPathname("/shop/blue-mantis/schedule?foo=bar");
+    rerender(
+      <ScheduleBuilder
+        shopSlug="blue-mantis"
+        days={days}
+        courses={[]}
+        diveSites={[]}
+        actions={actions}
+        defaultDateIso="2026-08-01"
+        canConfigure={true}
+        copy={COPY}
+      />,
+    );
+
+    expect(screen.queryByPlaceholderText(COPY.titlePlaceholder)).not.toBeInTheDocument();
   });
 });

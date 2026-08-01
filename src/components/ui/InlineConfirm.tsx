@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -45,6 +46,15 @@ export type InlineConfirmProps = MessageModeProps | CompactModeProps;
  * browser/OS happens to be set to — and (b) can only show a fixed string,
  * never a value computed server-side (a refund preview, say).
  *
+ * `armed` resets on every (re)navigation, keyed off `usePathname()`. With
+ * `cacheComponents: true` (docs ADR 20260801-cache-components-activity-state),
+ * Next can preserve a client component's local state across a
+ * navigate-away-and-back instead of remounting it — an armed confirm sitting
+ * at the same route/key could otherwise resurface still armed, one tap from
+ * firing, with no fresh confirming gesture from the person looking at it.
+ * This effect re-fires on the leading edge of that show/re-show cycle exactly
+ * like it does on a normal navigation, so it always lands unarmed.
+ *
  * Must be rendered inside the `<form action={...}>` whose submit it guards.
  * Unarmed, it's always a plain `type="button"` that never submits anything;
  * no request is sent until a deliberate second tap, and none is sent by
@@ -77,6 +87,16 @@ export function InlineConfirm(props: InlineConfirmProps) {
   const [armed, setArmed] = useState(false);
   const { pending } = useFormStatus();
   const resetTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const pathname = usePathname();
+
+  // Disarms on the leading edge of any (re)navigation to this component's
+  // route — including an Activity-preserved show/hide cycle under
+  // `cacheComponents: true`, whose effects re-run on re-show the same as a
+  // fresh mount even though local state survives. Never trust a prior arm.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `pathname` is a trigger, not a value the effect body reads — any change re-arms the disarm, which is the point.
+  useEffect(() => {
+    setArmed(false);
+  }, [pathname]);
 
   useEffect(() => {
     if (!armed || !autoResetMs) return;

@@ -646,6 +646,11 @@ export default async function TripManifestPage({
                   <div className="flex w-full shrink-0 flex-col gap-2 print:hidden sm:w-56">
                     {ready || !isDeparture ? (
                       <RollCallButton
+                        // Forces a remount — and a fresh `useActionState`
+                        // `result` — on every checkpoint switch (see the
+                        // component's own doc comment); this route/key is
+                        // otherwise identical across checkpoints.
+                        key={`board-${checkpoint}`}
                         action={rollCallAction}
                         bookingId={diver.bookingId}
                         status={boarded ? "cleared" : "boarded"}
@@ -666,6 +671,9 @@ export default async function TripManifestPage({
                       />
                     ) : null}
                     <RollCallButton
+                      // Same remount-on-checkpoint reasoning as the board
+                      // button above.
+                      key={`not-boarded-${checkpoint}`}
                       action={rollCallAction}
                       bookingId={diver.bookingId}
                       status={explicitNotBoarded ? "cleared" : "not_boarded"}
@@ -726,8 +734,23 @@ export default async function TripManifestPage({
           holdToUnlock: t("shared.waterLocker.holdToUnlock"),
         }}
       />
-      <MilestoneHaptics total={manifest.summary.totalDivers} boarded={manifest.summary.boarded} />
+      {/* Keyed by trip id + checkpoint: each holds a `prevPct`/`isInitial`
+          (MilestoneHaptics) or `prevComplete` (SubSurfaceRipple) ref that
+          assumes a monotonic same-trip-same-checkpoint lifecycle. Rendered
+          once per manifest page, this route/key is otherwise identical
+          across a trip or checkpoint switch, so under `cacheComponents:
+          true` an un-keyed instance could survive one and fire a false
+          completion ripple/haptic buzz off the old numbers with no real
+          remount to reset it (docs ADR 20260801-cache-components-activity-state).
+          The `key` forces a full remount — and fresh refs — on either
+          change. */}
+      <MilestoneHaptics
+        key={`${tripId}-${checkpoint}`}
+        total={manifest.summary.totalDivers}
+        boarded={manifest.summary.boarded}
+      />
       <SubSurfaceRipple
+        key={`${tripId}-${checkpoint}`}
         complete={rollCallComplete}
         copy={{
           iconTitle: t("shared.subSurfaceRipple.iconTitle"),

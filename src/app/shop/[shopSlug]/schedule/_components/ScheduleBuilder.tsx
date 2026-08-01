@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
@@ -295,6 +296,17 @@ export function ScheduleBuilder({
   // One of `add:<dateIso>`, `move:<tripId>`, `copy:<tripId>`, or null.
   const [open, setOpen] = useState<string | null>(null);
   const toggle = (panel: string) => setOpen((current) => (current === panel ? null : panel));
+
+  // The schedule route has no dynamic id, so under `cacheComponents: true`
+  // this instance can otherwise be preserved across a navigate-away-and-back
+  // with a panel left expanded and its defaults stale (docs ADR
+  // 20260801-cache-components-activity-state). Reset on the leading edge of
+  // any (re)navigation, same pattern as InlineConfirm.
+  const pathname = usePathname();
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `pathname` is a trigger, not a value the effect body reads — any change closes the panel, which is the point.
+  useEffect(() => {
+    setOpen(null);
+  }, [pathname]);
 
   return (
     <section aria-label={copy.ariaLabel} className="mb-8">
