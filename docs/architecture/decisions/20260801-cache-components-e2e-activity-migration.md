@@ -309,3 +309,24 @@ actually found, against the plan above:
   React's title-streaming internals — the fix is an empirically-verified settle wait, not a proof
   of exactly what races what. Revisit if it recurs; the fix is in one shared helper, so a next
   instance would surface here rather than needing a new per-route diagnosis.
+- **A ninth finding, and the deepest one: `schedule/[id]/page.tsx`'s staff-management redirect
+  races non-deterministically, per request, and two different app-code fixes were tried and ruled
+  out.** `e2e/boat-loop.spec.ts` opens a signed-in staffer's own trip's public booking page in a
+  new tab and expects it to land on `/schedule/[id]`, not get redirected to `/trips/[id]` (the
+  staff management view — `session?.user?.shopId === shop.id && isStaff(...)` at the top of the
+  page body, before any Suspense/JSX). Isolated repro: the *same* session hitting the *same* trip
+  id, five same-tab requests in a row, redirected on request 2 but not on 1, 3, 4, or 5 — a true
+  per-request race resolving the session inside the dynamic hole, not a cold/warm split like the
+  fourth and fifth findings, and identical whether the follow-up request is a same-tab navigation
+  or a brand-new page in the same browser context (rules out anything popup-specific). 5/5 clean
+  against `main` confirms it's `cacheComponents`-specific. Two reorderings were tried against the
+  live repro and neither changed the failure rate: moving `auth()` before the page's own
+  `requestLocale()` call (on the theory that a `"use cache"`-boundary call earlier in the same
+  function was interleaving with the session's per-request memoization), and moving `auth()`
+  before `connection()` entirely. Left as a known, non-deterministic Next 16 preview limitation —
+  not a security issue, since it fails open to the intentionally-public page a diver is meant to
+  see and never the reverse, and a real staffer hitting it would just click again. Fixed at the
+  test level: `openPublicBookingPage()` retries opening the new tab up to 8 times until it lands
+  on the expected public URL, matching what a real user would do rather than masking anything this
+  app's own code controls. Revisit if a future Next version changes `auth()`'s interaction with
+  Partial Prerendering's per-request dynamic resumption.
