@@ -94,6 +94,40 @@ function aggregateRatingOf(aggregate: ReviewAggregate | null): JsonLdObject | un
   };
 }
 
+export type ReviewForStructuredData = {
+  /** First name and last initial — the same already-public byline `ShopReviews` renders. */
+  reviewer: string;
+  rating: number;
+  comment: string;
+  /** The dive itself, not when the review was published — what a reader actually wants dated. */
+  divedAt: Date;
+};
+
+/**
+ * Published reviews as schema.org `Review` objects, or nothing at all for an
+ * empty list — the same "omit rather than emit noise" rule `aggregateRatingOf`
+ * already follows. Carries only what `ShopReviews` already renders to an
+ * anonymous visitor: the reviewer's public display name, their own words, the
+ * star rating, and the dive date — no email, no person id, no booking id.
+ */
+export function reviewsJsonLd(
+  reviews: readonly ReviewForStructuredData[],
+): JsonLdObject[] | undefined {
+  if (reviews.length === 0) return undefined;
+  return reviews.map((review) => ({
+    "@type": "Review",
+    author: { "@type": "Person", name: review.reviewer },
+    reviewRating: {
+      "@type": "Rating",
+      ratingValue: review.rating,
+      bestRating: MAX_REVIEW_RATING,
+      worstRating: MIN_REVIEW_RATING,
+    },
+    reviewBody: review.comment,
+    datePublished: review.divedAt.toISOString(),
+  }));
+}
+
 /**
  * The shop's `PostalAddress`, or nothing when no field is set. A shop that has
  * filled in even one field (say, just a country) has told us something real
@@ -130,6 +164,7 @@ export function shopJsonLd(
   shop: ShopForStructuredData,
   origin: string | null,
   aggregate: ReviewAggregate | null = null,
+  reviews: readonly ReviewForStructuredData[] = [],
 ): JsonLdObject {
   return {
     "@type": "SportsActivityLocation",
@@ -139,6 +174,7 @@ export function shopJsonLd(
     telephone: shop.contactPhone,
     address: shopAddressOf(shop),
     aggregateRating: aggregateRatingOf(aggregate),
+    review: reviewsJsonLd(reviews),
   };
 }
 
@@ -221,15 +257,24 @@ export function tripPageJsonLd(
  * `ItemList` of `Event`s. An empty schedule emits the shop alone rather than an
  * empty list — "this operator exists, with nothing on the books" is true; "here
  * is a list of zero trips" is noise.
+ *
+ * `reviews` is the schedule page's own top-level review list — the same rows
+ * `<ShopReviews>` renders directly beneath it — and rides at the top of
+ * whichever shape this returns (the bare shop node when there are no trips, the
+ * `ItemList` itself when there are). It never flows into a per-trip `Event`'s
+ * `organizer`: that graph describes one departure, not the shop's full review
+ * list, so `tripJsonLd` below is called without it, same as every other
+ * `shopJsonLd` call site outside this page's own top-level call.
  */
 export function scheduleJsonLd(
   shop: ShopForStructuredData,
   trips: readonly TripForStructuredData[],
   origin: string | null,
   aggregate: ReviewAggregate | null = null,
+  reviews: readonly ReviewForStructuredData[] = [],
 ): JsonLdObject {
   if (trips.length === 0) {
-    return { "@context": SCHEMA_CONTEXT, ...shopJsonLd(shop, origin, aggregate) };
+    return { "@context": SCHEMA_CONTEXT, ...shopJsonLd(shop, origin, aggregate, reviews) };
   }
   return {
     "@context": SCHEMA_CONTEXT,
@@ -241,6 +286,7 @@ export function scheduleJsonLd(
       position: index + 1,
       item: tripJsonLd(shop, trip, origin, aggregate),
     })),
+    review: reviewsJsonLd(reviews),
   };
 }
 

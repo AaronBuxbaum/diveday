@@ -6,6 +6,8 @@ import {
   coursePageJsonLd,
   type JsonLdObject,
   pruneJsonLd,
+  type ReviewForStructuredData,
+  reviewsJsonLd,
   type ShopForStructuredData,
   scheduleJsonLd,
   shopAddressOf,
@@ -40,6 +42,13 @@ const trip: TripForStructuredData = {
   priceCents: 18_000,
   diveSiteName: "Molasses Reef",
   conditionsHold: false,
+};
+
+const review: ReviewForStructuredData = {
+  reviewer: "Marta R.",
+  rating: 5,
+  comment: "Great reef dive, the crew was fantastic.",
+  divedAt: new Date("2026-07-15T10:00:00.000Z"),
 };
 
 /** Reach into a graph the way a consumer would, without fighting the index type. */
@@ -117,6 +126,28 @@ describe("shopAddressOf", () => {
   });
 });
 
+describe("reviewsJsonLd", () => {
+  it("maps a published review to a schema.org Review", () => {
+    const [graph] = reviewsJsonLd([review]) ?? [];
+    expect(graph).toEqual({
+      "@type": "Review",
+      author: { "@type": "Person", name: "Marta R." },
+      reviewRating: {
+        "@type": "Rating",
+        ratingValue: 5,
+        bestRating: 5,
+        worstRating: 1,
+      },
+      reviewBody: "Great reef dive, the crew was fantastic.",
+      datePublished: "2026-07-15T10:00:00.000Z",
+    });
+  });
+
+  it("returns undefined for an empty list, never an empty array", () => {
+    expect(reviewsJsonLd([])).toBeUndefined();
+  });
+});
+
 describe("shopJsonLd", () => {
   it("types a dive shop as a SportsActivityLocation with its public contact details", () => {
     const graph = shopJsonLd(shop, ORIGIN);
@@ -165,6 +196,24 @@ describe("shopJsonLd", () => {
       bestRating: 5,
       worstRating: 1,
     });
+  });
+
+  it("omits review entirely when the caller passes none", () => {
+    expect(shopJsonLd(shop, ORIGIN).review).toBeUndefined();
+    expect(shopJsonLd(shop, ORIGIN, null, []).review).toBeUndefined();
+  });
+
+  it("publishes a review array only when reviews are passed", () => {
+    const graph = shopJsonLd(shop, ORIGIN, null, [review]);
+    expect(graph.review).toEqual([
+      {
+        "@type": "Review",
+        author: { "@type": "Person", name: "Marta R." },
+        reviewRating: { "@type": "Rating", ratingValue: 5, bestRating: 5, worstRating: 1 },
+        reviewBody: "Great reef dive, the crew was fantastic.",
+        datePublished: "2026-07-15T10:00:00.000Z",
+      },
+    ]);
   });
 });
 
@@ -245,6 +294,45 @@ describe("scheduleJsonLd", () => {
     const graph = scheduleJsonLd(shop, [], ORIGIN);
     expect(graph["@type"]).toBe("SportsActivityLocation");
     expect(graph.itemListElement).toBeUndefined();
+  });
+
+  it("omits review when the page passes none", () => {
+    expect(scheduleJsonLd(shop, [trip], ORIGIN).review).toBeUndefined();
+    expect(scheduleJsonLd(shop, [], ORIGIN).review).toBeUndefined();
+  });
+
+  it("publishes the page's reviews on the ItemList when there are upcoming trips", () => {
+    const graph = scheduleJsonLd(shop, [trip], ORIGIN, null, [review]);
+    expect(graph["@type"]).toBe("ItemList");
+    expect(graph.review).toEqual([
+      {
+        "@type": "Review",
+        author: { "@type": "Person", name: "Marta R." },
+        reviewRating: { "@type": "Rating", ratingValue: 5, bestRating: 5, worstRating: 1 },
+        reviewBody: "Great reef dive, the crew was fantastic.",
+        datePublished: "2026-07-15T10:00:00.000Z",
+      },
+    ]);
+  });
+
+  it("publishes the page's reviews on the bare shop node when there are no upcoming trips", () => {
+    const graph = scheduleJsonLd(shop, [], ORIGIN, null, [review]);
+    expect(graph["@type"]).toBe("SportsActivityLocation");
+    expect(graph.review).toEqual([
+      {
+        "@type": "Review",
+        author: { "@type": "Person", name: "Marta R." },
+        reviewRating: { "@type": "Rating", ratingValue: 5, bestRating: 5, worstRating: 1 },
+        reviewBody: "Great reef dive, the crew was fantastic.",
+        datePublished: "2026-07-15T10:00:00.000Z",
+      },
+    ]);
+  });
+
+  it("never threads reviews into a per-trip Event's organizer", () => {
+    const graph = scheduleJsonLd(shop, [trip], ORIGIN, null, [review]);
+    const items = graph.itemListElement as JsonLdObject[];
+    expect(at(items[0], "item.organizer.review")).toBeUndefined();
   });
 });
 

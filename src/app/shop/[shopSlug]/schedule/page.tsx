@@ -203,7 +203,9 @@ export default async function SchedulePage({
   }
 
   // Structured data describes the canonical standalone page only — see
-  // generateMetadata above.
+  // generateMetadata above. Reviews only ever come from this page's own
+  // top-level call: they're the same rows `<ShopReviews>` renders directly
+  // below, never threaded into a per-trip Event's organizer.
   const structuredData = isEmbed
     ? null
     : scheduleJsonLd(
@@ -222,6 +224,18 @@ export default async function SchedulePage({
         })),
         publicAppUrl(),
         reviewAggregate,
+        reviews.flatMap((review) =>
+          review.comment
+            ? [
+                {
+                  reviewer: review.reviewer,
+                  rating: review.rating,
+                  comment: review.comment,
+                  divedAt: review.divedAt,
+                },
+              ]
+            : [],
+        ),
       );
 
   return (

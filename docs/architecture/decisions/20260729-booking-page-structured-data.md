@@ -41,7 +41,9 @@ document.
 
 **Only what the page already shows an anonymous visitor.** No diver names, no emails, no booking or
 person ids — the open-seat count and the price are figures the page renders anyway. A test asserts the
-serialized graph contains none of those.
+serialized graph contains none of those. (The one deliberate exception is the schedule page's own
+`Review` objects, added later — see "Alternatives considered" below — whose `author.name` is the same
+first-name-and-last-initial byline `<ShopReviews>` already renders, never a diver's full name.)
 
 **Honest claims, or none.** An unpriced charter emits no `offers` rather than a price of `0`, which
 every consumer would read as free. A full trip *or* one on a conditions hold is `SoldOut`, because
@@ -58,9 +60,16 @@ would be strange to fix the machine-readable half and leave every departure titl
 - **A `Product` + `Offer` graph instead of `Event`** — rejected. A dive departure is a
   scheduled, capacity-bounded thing that happens at a time and place; `Event` carries `startDate`,
   `remainingAttendeeCapacity`, and `eventAttendanceMode`, all of which are the actual facts.
-- **`Review` objects in the graph alongside `aggregateRating`** — deferred. It would publish diver
-  comments into search results, which is a bigger consent question than showing them on the shop's own
-  page, and the aggregate is what earns the rich result. Revisit if a shop asks.
+- **`Review` objects in the graph alongside `aggregateRating`** — originally deferred: it would
+  publish diver comments into search results, a bigger consent question than showing them on the
+  shop's own page, and the aggregate alone was what earned the rich result. *(Update: revisited and
+  reversed — `reviewsJsonLd` now emits `Review` objects on the standalone schedule page's own
+  top-level graph, alongside `<ShopReviews>` which renders that exact reviewer name, star rating,
+  comment, and dive date to any anonymous visitor of that same page. The consent question is
+  satisfied because nothing new is exposed: schema.org is describing words already public on the
+  page, not surfacing them for the first time. Scoped narrowly — the per-trip `Event`'s `organizer`,
+  the course page's `provider`, and every other `shopJsonLd` call site still omit `review`, since
+  those graphs describe one trip or course, not the shop's full review list.)*
 - **Emitting structured data in embed mode too** — rejected above; two URLs describing one Event is
   the failure mode.
 - **A sitemap** — out of scope here, and genuinely useful; it belongs with the read-API/webhooks work
