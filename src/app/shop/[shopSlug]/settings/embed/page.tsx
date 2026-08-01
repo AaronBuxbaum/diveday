@@ -47,7 +47,24 @@ export default async function EmbedSettingsPage() {
   const embedUrl = `${scheduleUrl}?embed=1`;
   const shopNameAttr = escapeHtml(shop.name);
   const bookButtonText = t("settings.embed.bookButton.buttonText");
-  const iframeSnippet = `<iframe src="${embedUrl}" title="${shopNameAttr} — ${escapeHtml(bookButtonText)}" style="width:100%;max-width:720px;height:900px;border:0;border-radius:12px" loading="lazy"></iframe>`;
+  const attributionLinkText = t("settings.embed.calendarEmbed.attributionLinkText");
+  // A crawlable backlink: `<a>` in the shop's *own* page HTML, outside the
+  // iframe's document, so a search engine attributes it to the shop's page —
+  // an equivalent link placed inside the iframe's own document would not
+  // count, since crawlers don't fold iframe content into the parent page's
+  // link graph (docs ADR 20260726-schedule-embed).
+  const attributionParams = new URLSearchParams({
+    utm_source: "embed",
+    utm_medium: "widget",
+    utm_campaign: shop.slug,
+  });
+  const attributionUrl = `${origin}/?${attributionParams.toString()}`;
+  // #5b6f77 is the light-mode `--muted` token value (src/app/globals.css) —
+  // same reasoning as the button snippet below: this renders on the shop's
+  // own site, outside DiveDay's CSS, so it inlines the real color rather than
+  // referencing the custom property. Kept small and unobtrusive on purpose.
+  const iframeSnippet = `<iframe src="${embedUrl}" title="${shopNameAttr} — ${escapeHtml(bookButtonText)}" style="width:100%;max-width:720px;height:900px;border:0;border-radius:12px" loading="lazy"></iframe>
+<a href="${attributionUrl}" target="_blank" rel="noopener" style="display:block;margin-top:6px;font:12px/1.4 system-ui,sans-serif;color:#5b6f77;text-decoration:none">${escapeHtml(attributionLinkText)}</a>`;
   // Deliberately the plain schedule URL, not the embed one: this is a link a
   // browser navigates to directly, never a frame, so it should land on the
   // full page — including for a shop that takes online payment, where a
@@ -68,10 +85,13 @@ export default async function EmbedSettingsPage() {
       <section className="rounded-lg border border-border bg-surface p-6">
         <h2 className="font-medium">{t("settings.embed.calendarEmbed.heading")}</h2>
         <p className="mt-1 text-sm text-muted">{t("settings.embed.calendarEmbed.description")}</p>
+        <p className="mt-1 text-sm text-muted">
+          {t("settings.embed.calendarEmbed.attributionNote")}
+        </p>
         <div className="mt-4">
           <SnippetField
             label={t("settings.embed.calendarEmbed.fieldLabel")}
-            rows={3}
+            rows={4}
             snippet={iframeSnippet}
             copyLabel={t("settings.embed.snippetField.copy")}
             copiedLabel={t("settings.embed.snippetField.copied")}

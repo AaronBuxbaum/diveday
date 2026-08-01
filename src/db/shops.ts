@@ -10,6 +10,17 @@ export async function getShopBySlug(db: AppDb, slug: string) {
   return shop ?? null;
 }
 
+/**
+ * Every publicly-indexable shop, for the sitemap. Demo shops are excluded —
+ * including the canonical `blue-mantis` fixture the e2e/visual fleet seeds
+ * (docs ADR 20260724-per-visitor-demo-shops) — because a demo is a test
+ * fixture a visitor spins up, not a real shop, and has no business in search
+ * results.
+ */
+export async function listShopsForSitemap(db: AppDb): Promise<{ slug: string }[]> {
+  return db.select({ slug: shops.slug }).from(shops).where(eq(shops.isDemo, false));
+}
+
 export async function getShopById(db: AppDb, id: string) {
   const [shop] = await db.select().from(shops).where(eq(shops.id, id)).limit(1);
   return shop ?? null;

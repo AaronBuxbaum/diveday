@@ -53,7 +53,8 @@
     "nextDeparture": {
       "eyebrow": "Next boat out",
       "title": "{when} — {trip}"
-    }
+    },
+    "poweredByDiveDay": "Powered by DiveDay"
   },
   "trip": {
     "courseSession": "Course session",

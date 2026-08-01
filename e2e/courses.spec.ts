@@ -13,6 +13,15 @@ test("an uncertified visitor can enroll in an instructor-staffed Discover Scuba 
   // retried, so that race fails the test outright instead of settling.
   await expect(page).toHaveURL(/\/schedule\/[0-9a-f-]{36}/);
   await expect(page.getByText("Course session · Discover Scuba Diving")).toBeVisible();
+  // The course session line links out to the course page (a crawlable
+  // inbound link for SEO), mirroring the link the schedule list already
+  // carries — never just a bare name.
+  const courseLink = page.getByRole("link", { name: "Discover Scuba Diving" });
+  await expect(courseLink).toHaveAttribute("href", /\/courses\//);
+  await expect(courseLink).toHaveAttribute(
+    "href",
+    "/shop/blue-mantis/courses/discover-scuba-diving",
+  );
   await expect(page.getByText("Giving this dive as a gift?")).toBeVisible();
   await expect(page.getByRole("link", { name: "Add to calendar" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Share with a buddy" })).toBeVisible();

@@ -1979,7 +1979,9 @@
       "calendarEmbed": {
         "heading": "Widget de calendario",
         "description": "Un calendario de reservas completo, ajustado al tamaño donde lo coloques en tu página. Ideal para una página dedicada de \"Reservar ahora\" en tu web.",
-        "fieldLabel": "Código del widget"
+        "attributionNote": "Incluye un pequeño enlace de crédito \"Con la tecnología de DiveDay\" debajo del calendario, en tu propia página — no dentro del widget.",
+        "fieldLabel": "Código del widget",
+        "attributionLinkText": "Con la tecnología de DiveDay"
       },
       "bookButton": {
         "heading": "Botón \"Reservar inmersión\"",

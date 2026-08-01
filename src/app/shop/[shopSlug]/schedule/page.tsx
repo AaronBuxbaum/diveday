@@ -497,6 +497,27 @@ export default async function SchedulePage({
           <LastMinuteListForm shopSlug={shopSlug} />
         </DiverIntlProvider>
       ) : null}
+      {/* Human-discovery footer, embed mode only — a single small line, not a
+          banner, so the widget stays compact and booking-focused (docs ADR
+          20260726-schedule-embed). A relative href resolves against the
+          iframe's own document (this page's origin), not the parent page, so
+          it reaches the DiveDay homepage regardless of what site framed it. */}
+      {isEmbed ? (
+        <p className="mt-4 text-center text-xs text-muted">
+          <Link
+            href={`/?${new URLSearchParams({
+              utm_source: "embed",
+              utm_medium: "widget",
+              utm_campaign: shopSlug,
+            }).toString()}`}
+            target="_blank"
+            rel="noopener"
+            className="hover:underline"
+          >
+            {t("schedule.poweredByDiveDay")}
+          </Link>
+        </p>
+      ) : null}
     </main>
   );
 }

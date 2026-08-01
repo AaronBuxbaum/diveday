@@ -76,6 +76,33 @@ test("booking through the embed keeps embed mode through the confirmation", asyn
   await expect(backLink).toHaveAttribute("href", /embed=1/);
 });
 
+test("the embed widget carries a discreet Powered-by-DiveDay attribution link with UTM params", async ({
+  page,
+}) => {
+  // Human-discovery footer (task: embed attribution) — small, at the bottom,
+  // and still zero JSON-LD (docs ADR 20260726-schedule-embed / the embed
+  // canonicalizes to the standalone page, see reviews.spec.ts's parallel
+  // assertion on the base case).
+  await page.goto("/shop/blue-mantis/schedule?embed=1");
+  const attribution = page.getByRole("link", { name: "Powered by DiveDay" });
+  await expect(attribution).toBeVisible();
+  const href = await attribution.getAttribute("href");
+  expect(href).toContain("utm_source=embed");
+  expect(href).toContain("utm_medium=widget");
+  expect(href).toContain("utm_campaign=blue-mantis");
+  await expect(page.locator('script[type="application/ld+json"]')).toHaveCount(0);
+});
+
+test("the non-embed schedule page carries no Powered-by-DiveDay attribution link", async ({
+  page,
+}) => {
+  // The footer is embed-only — the standalone page already carries DiveDay
+  // branding via its own chrome, and this link exists purely for a diver who
+  // discovers the widget on a shop's own site.
+  await page.goto("/shop/blue-mantis/schedule");
+  await expect(page.getByRole("link", { name: "Powered by DiveDay" })).toHaveCount(0);
+});
+
 // The e2e fleet runs `next start` (production mode) against a loopback
 // origin with no APP_HOST set, and publicAppUrl() refuses a loopback origin
 // in production (src/lib/notifications/index.ts checkPublicHost) — so this

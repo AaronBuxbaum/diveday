@@ -1979,7 +1979,9 @@
       "calendarEmbed": {
         "heading": "Calendar embed",
         "description": "A full booking calendar, sized to fit wherever you place it on your page. Best for a dedicated \"Book now\" page on your site.",
-        "fieldLabel": "Embed code"
+        "attributionNote": "Includes a small \"Powered by DiveDay\" credit link under the calendar, on your own page — not inside the widget.",
+        "fieldLabel": "Embed code",
+        "attributionLinkText": "Powered by DiveDay"
       },
       "bookButton": {
         "heading": "\"Book a dive\" button",
