@@ -249,8 +249,49 @@ test("the medical questionnaire refuses to complete with an unanswered question,
   await page.getByRole("button", { name: "Sign waiver" }).click();
   // The server redirects with an error notice — the completed state never
   // renders, and no default answer was silently accepted for the diver.
-  await expect(page.getByText("Please answer every question")).toBeVisible();
+  await expect(
+    page.getByText("Please answer every question in the medical questionnaire"),
+  ).toBeVisible();
+  // The notice also links back to the questionnaire it names as incomplete.
+  await expect(page.getByRole("link", { name: "Jump to that field" })).toHaveAttribute(
+    "href",
+    "#medical-questionnaire",
+  );
   await expect(page.getByRole("heading", { name: "Waiver received", level: 1 })).not.toBeVisible();
+});
+
+test("an incomplete sign submit is blocked client-side and focuses the missing field", async ({
+  page,
+}) => {
+  await page.goto("/shop/blue-mantis/schedule/board");
+  await page
+    .locator("li")
+    .filter({ hasText: "Two-Tank Reef — Molasses & French" })
+    .getByRole("link", { name: "Two-Tank Reef — Molasses & French", exact: true })
+    .click();
+  await page.waitForURL(/\/shop\/blue-mantis\/trips\//);
+  await page
+    .getByRole("navigation", { name: "Trip" })
+    .getByRole("link", { name: "Guests" })
+    .click();
+  await page.waitForURL(/\/guests/);
+  const diverSection = page
+    .locator("section")
+    .filter({ has: page.getByRole("heading", { name: /^Divers/ }) });
+  await diverSection.getByRole("button", { name: "Send waiver", exact: true }).first().click();
+  const waiverHref = await diverSection.getByRole("status").getByRole("link").getAttribute("href");
+
+  await page.goto(waiverHref ?? "/");
+  // Answer every medical question and check the agreement box, but leave the
+  // signature name blank — the browser's own `required`/`minLength`
+  // validation should block the submit before it ever reaches the server.
+  await page.getByLabel("I have read this waiver, understand it, and agree to it.").check();
+  for (const radio of await page.getByRole("radio", { name: "No" }).all()) {
+    await radio.check();
+  }
+  await page.getByRole("button", { name: "Sign waiver" }).click();
+  await expect(page).toHaveURL(/\/waivers\/[^?]+$/);
+  await expect(page.getByLabel("Type your full name")).toBeFocused();
 });
 
 test("a non-English visitor sees a notice that the waiver text itself stays in English", async ({
@@ -317,23 +358,26 @@ test("saving a draft also refuses an unanswered question, even past client valid
 
   await page.goto(waiverHref ?? "/");
   await page.getByLabel("Type your full name").fill("Adversarial Draft Diver");
-  // Answer every question except the last one, then strip `required` the same
-  // way the sign-waiver adversarial test does — this is a separate code path
-  // (`saveDraftAction`, not `completeAction`) with its own
-  // `readMedicalAnswers()` call, so it needs its own regression coverage
-  // rather than assuming the two stay symmetric.
+  // Answer every question except the last one. "Save and finish later" carries
+  // `formNoValidate` (drafts intentionally accept partial answers), so the
+  // browser's own required/minLength validation never blocks this submit —
+  // this test is really about the *server's* `readMedicalAnswers()` still
+  // refusing an incomplete questionnaire, a separate code path from
+  // `completeAction` that needs its own regression coverage rather than
+  // assuming the two stay symmetric.
   const noRadios = page.getByRole("radio", { name: "No" });
   const questionCount = await noRadios.count();
   for (let i = 0; i < questionCount - 1; i++) {
     await noRadios.nth(i).check();
   }
-  await page.evaluate(() => {
-    for (const el of document.querySelectorAll('input[type="radio"]')) {
-      el.removeAttribute("required");
-    }
-  });
   await page.getByRole("button", { name: "Save and finish later" }).click();
-  await expect(page.getByText("Please answer every question")).toBeVisible();
+  await expect(
+    page.getByText("Please answer every question in the medical questionnaire"),
+  ).toBeVisible();
+  await expect(page.getByRole("link", { name: "Jump to that field" })).toHaveAttribute(
+    "href",
+    "#medical-questionnaire",
+  );
   // Nothing was saved — reloading shows no "progress is saved" status and the
   // name field is back to empty, not a half-recorded draft. Scoped by text
   // (not just role) because the sticky questionnaire-progress bar is also

@@ -245,3 +245,55 @@ describe("ScheduleBuilder open-panel reset on revisit", () => {
     expect(screen.queryByPlaceholderText(COPY.titlePlaceholder)).not.toBeInTheDocument();
   });
 });
+
+describe("ScheduleBuilder panel focus management (accessibility audit §3)", () => {
+  it("moves focus into the add panel's first field on open, and back to the toggle on cancel", async () => {
+    const days: BuilderDay[] = [{ dateIso: "2026-08-01", label: "Sat, Aug 1", trips: [] }];
+    render(
+      <ScheduleBuilder
+        shopSlug="blue-mantis"
+        days={days}
+        courses={[]}
+        diveSites={[]}
+        actions={actions}
+        defaultDateIso="2026-08-01"
+        canConfigure={true}
+        copy={COPY}
+      />,
+    );
+
+    const toggle = screen.getByRole("button", { name: "Add a departure" });
+    await userEvent.click(toggle);
+    expect(screen.getByPlaceholderText(COPY.titlePlaceholder)).toHaveFocus();
+
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByPlaceholderText(COPY.titlePlaceholder)).not.toBeInTheDocument();
+    expect(toggle).toHaveFocus();
+  });
+
+  it("moves focus into the move panel's date field on open, and back to the Move toggle on cancel", async () => {
+    const days: BuilderDay[] = [
+      { dateIso: "2026-08-01", label: "Sat, Aug 1", trips: [baseTrip()] },
+    ];
+    render(
+      <ScheduleBuilder
+        shopSlug="blue-mantis"
+        days={days}
+        courses={[]}
+        diveSites={[]}
+        actions={actions}
+        defaultDateIso="2026-08-01"
+        canConfigure={true}
+        copy={COPY}
+      />,
+    );
+
+    const moveToggle = screen.getByRole("button", { name: /^Move Two-Tank Reef/ });
+    await userEvent.click(moveToggle);
+    expect(screen.getByLabelText(COPY.newDate)).toHaveFocus();
+
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByLabelText(COPY.newDate)).not.toBeInTheDocument();
+    expect(moveToggle).toHaveFocus();
+  });
+});
