@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { connection } from "next/server";
 import { EarnedMoment } from "@/components/EarnedMoment";
@@ -476,13 +477,17 @@ export default async function DiveRecapPage({
           <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
             {photos.map((image) => (
               <li key={image.id} className="overflow-hidden rounded-lg border border-border">
-                {/* biome-ignore lint/performance/noImgElement: diver photos come from the blob store, which no build-time image allowlist can enumerate. */}
-                <img
-                  src={image.imageUrl}
-                  alt={image.caption ?? t("recap.photoAlt", { trip: trip.title })}
-                  loading="lazy"
-                  className="aspect-square w-full object-cover"
-                />
+                <div className="relative aspect-square w-full">
+                  {/* Diver photos always come from the blob store (storeRecapImage), so the
+                      remotePatterns entry in next.config.ts covers every url here. */}
+                  <Image
+                    src={image.imageUrl}
+                    alt={image.caption ?? t("recap.photoAlt", { trip: trip.title })}
+                    fill
+                    sizes="(min-width: 640px) 33vw, 50vw"
+                    className="object-cover"
+                  />
+                </div>
                 {image.caption ? (
                   <p className="px-2 py-1.5 text-xs text-muted">{image.caption}</p>
                 ) : null}

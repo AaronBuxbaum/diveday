@@ -10,6 +10,23 @@ const nextConfig: NextConfig = {
   // keep it external too rather than have the bundler try to resolve them.
   serverExternalPackages: ["@electric-sql/pglite", "pg", "sharp"],
   cacheComponents: true,
+  images: {
+    // Every photo this app stores (certification cards, course media, recap
+    // photos, dive-site briefings) lands in Vercel Blob behind a per-store
+    // subdomain of this suffix (`BLOB_PUBLIC_HOSTNAME_SUFFIX`,
+    // src/lib/storage/blob-host.ts) — `*` matches exactly that one subdomain
+    // segment. Anything else (a shop-pasted third-party URL that predates
+    // upload-based media, or a legacy Commons URL a dive-site row still
+    // carries) is rendered unoptimized or as a plain `<img>` rather than
+    // widened to a blanket pattern here.
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "*.public.blob.vercel-storage.com",
+        pathname: "/**",
+      },
+    ],
+  },
   // TypeScript 7 is the native (Go) compiler and no longer exposes the JS
   // compiler API Next used for its in-build type check. Next drives it through
   // the TS CLI instead (tsgo), which this flag enables.
