@@ -266,3 +266,31 @@ actually found, against the plan above:
   same file would catch the next instance of this class at review time — the same `grep` used to
   find the 11 above (`instant = false` + `searchParams` + `redirect(` in one `page.tsx`) is a
   reasonable starting point for that check's rule.
+- **A sixth, infrastructure-level finding: re-enabling `cacheComponents` reintroduced CI Playwright
+  contention that 20260731-ci-parallelization-resources-build-concurrency.md had previously closed.**
+  That ADR's 2-workers-on-4-cores CI budget was confirmed clean on a run without
+  `cacheComponents`; with it back on, the sharded `playwright` job started failing a different spec
+  each run — always a timeout waiting for a post-mutation status/alert toast, never the same test
+  twice, across specs this branch's app code never touches (`dive-sites`, `refunds`, `import`,
+  `role-permissions`, `add-diver`, `gear-fit-and-age`). The extra per-request Partial Prerendering
+  render cost was enough to push 2 concurrent (browser + `next start`) processes on a 4-core runner
+  back into contention. Fixed with the override that ADR already anticipated for exactly this
+  situation — `E2E_WORKERS: "1"` on the `playwright` job — rather than widening the tight 8s/15s
+  Playwright timeouts, which would have masked the same contention on the next heavier change
+  instead of surfacing it. See that ADR's Consequences section for the full note.
+- **A seventh finding, and a correction to the sixth: `gear-fit-and-age.spec.ts`'s flake wasn't CI
+  contention at all — it was a real, pre-existing optimistic-UI race that `E2E_WORKERS: "1"` alone
+  never fixed.** `CrewSection.tsx`'s `handleAssign`/`handleUnassign` (staff/trips/[id]'s crew
+  editor) updated `localCrew` — which drives the "Unassign X" button — *before* awaiting
+  `updateCrewAction`'s server round trip, then rolled back on failure. A caller who trusts
+  "Unassign X is visible" as proof the assignment landed (a test, or a staffer switching straight
+  to the Guests tab to book a course diver, which re-checks `course_unstaffed` server-side in
+  `src/db/bookings.ts`) could outrun the actual write. Confirmed via a same-worker,
+  single-test-in-isolation run: 5/5 clean against `main` (no `cacheComponents`), 4/5 failing on
+  this branch — Partial Prerendering made the following navigation fast enough to reliably land
+  inside a race window that was previously too narrow to hit in practice. Fixed at the source
+  (confirm-then-render instead of optimistic-then-rollback) rather than in the test, both in
+  `CrewSection.tsx` and in `src/components/today/DepartureBoard.tsx`'s `DepartureCard` — a
+  dive-domain-expert review of the first fix found the identical unfixed pattern in the second,
+  gating the same server check via the same `updateCrewAction`. Both now have a unit test proving
+  the assigned-crew UI never renders before the mock action's promise resolves.

@@ -80,7 +80,7 @@ describe("DepartureBoard Drag and Drop Crew Assign", () => {
     expect(screen.getByText(COPY.assignCrewLabel)).toBeVisible();
   });
 
-  it("optimistically adds crew on drop and calls updateCrewAction", async () => {
+  it("adds crew on drop once the server confirms, and calls updateCrewAction", async () => {
     const updateCrewAction = vi.fn().mockResolvedValue({ ok: true });
     render(
       <DepartureBoard
@@ -271,7 +271,7 @@ describe("DepartureBoard Drag and Drop Crew Assign", () => {
     expect(screen.getByRole("alert")).toHaveTextContent(COPY.assignFailed);
   });
 
-  it("optimistically removes crew on unassign button click and calls updateCrewAction", async () => {
+  it("removes crew on unassign once the server confirms, and calls updateCrewAction", async () => {
     const updateCrewAction = vi.fn().mockResolvedValue({ ok: true });
     render(
       <DepartureBoard
@@ -296,5 +296,50 @@ describe("DepartureBoard Drag and Drop Crew Assign", () => {
       personId: "staff-1",
       operation: "unassign",
     });
+  });
+
+  it("doesn't show a newly assigned crew member until the server confirms the write", async () => {
+    let resolveAction: (result: { ok: boolean }) => void = () => {};
+    const updateCrewAction = vi.fn(
+      () =>
+        new Promise<{ ok: boolean }>((resolve) => {
+          resolveAction = resolve;
+        }),
+    );
+    render(
+      <DepartureBoard
+        departures={departures}
+        shopSlug="blue-mantis"
+        timeZone="America/New_York"
+        locale="en-US"
+        availableStaff={availableStaff}
+        updateCrewAction={updateCrewAction}
+        copy={COPY}
+      />,
+    );
+
+    const dropZone = screen.getByText(/Drag staff here to assign/i).closest("section");
+    if (!dropZone) throw new Error("Drop zone not found");
+    const dropEvent = {
+      preventDefault: vi.fn(),
+      dataTransfer: { getData: vi.fn().mockReturnValue("staff-2") },
+    };
+
+    await act(async () => {
+      fireEvent.drop(dropZone, dropEvent);
+    });
+
+    // A staffer reading the board right after the drop (or tapping "Open
+    // guests" on this same card) must never see the crew as assigned before
+    // the write that makes it true has actually landed — same reasoning as
+    // CrewSection.tsx's confirm-then-render fix, for the identical
+    // updateCrewAction/course_unstaffed gate.
+    expect(screen.queryByRole("button", { name: /unassign sal moretti/i })).toBeNull();
+
+    await act(async () => {
+      resolveAction({ ok: true });
+    });
+
+    expect(screen.getByRole("button", { name: /unassign sal moretti/i })).toBeInTheDocument();
   });
 });

@@ -99,14 +99,17 @@ function DepartureCard({
     setLocalCrew(departure.crew || []);
   }, [departure.crew]);
 
+  // Confirm-then-render, not optimistic-then-rollback — same reasoning as
+  // CrewSection.tsx's handleAssign/handleUnassign (this drop zone drives the
+  // identical `updateCrewAction`/`course_unstaffed` server gate a staffer
+  // can immediately hit by tapping "Open Guests" on this same card). An
+  // optimistic update here would show a departure as crewed before the
+  // write actually committed.
   const handleAssign = async (staffId: string) => {
     const staff = availableStaff.find((s) => s.id === staffId);
     if (!staff) return;
     if (localCrew.some((c) => c.id === staffId)) return;
 
-    const updated = [...localCrew, staff];
-    setLocalCrew(updated);
-    setJustAddedId(staffId);
     setAssignError(false);
 
     try {
@@ -114,19 +117,18 @@ function DepartureCard({
         personId: staffId,
         operation: "assign",
       });
-      if (!res.ok) {
-        setLocalCrew(departure.crew || []);
+      if (res.ok) {
+        setLocalCrew([...localCrew, staff]);
+        setJustAddedId(staffId);
+      } else {
         setAssignError(true);
       }
     } catch {
-      setLocalCrew(departure.crew || []);
       setAssignError(true);
     }
   };
 
   const handleUnassign = async (staffId: string) => {
-    const updated = localCrew.filter((c) => c.id !== staffId);
-    setLocalCrew(updated);
     setAssignError(false);
 
     try {
@@ -134,12 +136,12 @@ function DepartureCard({
         personId: staffId,
         operation: "unassign",
       });
-      if (!res.ok) {
-        setLocalCrew(departure.crew || []);
+      if (res.ok) {
+        setLocalCrew(localCrew.filter((c) => c.id !== staffId));
+      } else {
         setAssignError(true);
       }
     } catch {
-      setLocalCrew(departure.crew || []);
       setAssignError(true);
     }
   };

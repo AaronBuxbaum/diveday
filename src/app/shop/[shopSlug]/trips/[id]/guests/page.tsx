@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
@@ -49,35 +50,59 @@ import {
   undoRemoveBookingAction,
 } from "../actions";
 
-// TODO: Cache Components adoption. Refactor this route so this opt-out can be removed.
-// See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
-export const instant = false;
-
 export const metadata: Metadata = {
   title: "Trip guests — DiveDay",
 };
+
+type TripGuestsSearchParams = Promise<{
+  notice?: string;
+  bid?: string;
+  diverq?: string;
+  count?: string;
+  rf?: string;
+  /** The deleted note's booking + text, carried by the land-then-undo redirect (§7). */
+  noteBookingId?: string;
+  noteBody?: string;
+}>;
 
 /**
  * Who is attending — the one place the roster, wait list, and every per-diver
  * action (waiver, payment, rental fit, remove) live. What the dive *is* stays on
  * Overview; the day-of boarding and roll call live on the Manifest. Splitting
  * "who" from "what" is why every roster action has exactly one home.
+ *
+ * Not `instant = false`, which (per
+ * node_modules/next/dist/docs/.../instant.md) is a dev-time validation
+ * opt-out only and has no effect on production rendering. Without a real
+ * Suspense boundary, this route still gets a Partial-Prerendered static
+ * shell with an implicit dynamic hole around the unwrapped
+ * `searchParams`/session reads — and `addBookingAction`'s
+ * `revalidateAndRedirect(...?notice=diver-added...)` (../actions.ts) raced
+ * that hole's own pending fetch, matching the class of bug fixed on
+ * /sign-in, dive-sites/new, and trips/new. This action lives in a sibling
+ * `actions.ts` rather than this file, which is also why the earlier grep for
+ * this bug class (co-located `redirect(` in the same `page.tsx`) missed it.
  */
-export default async function TripGuestsPage({
+export default function TripGuestsPage({
   params,
   searchParams,
 }: {
   params: Promise<{ shopSlug: string; id: string }>;
-  searchParams: Promise<{
-    notice?: string;
-    bid?: string;
-    diverq?: string;
-    count?: string;
-    rf?: string;
-    /** The deleted note's booking + text, carried by the land-then-undo redirect (§7). */
-    noteBookingId?: string;
-    noteBody?: string;
-  }>;
+  searchParams: TripGuestsSearchParams;
+}) {
+  return (
+    <Suspense fallback={null}>
+      <TripGuestsBody params={params} searchParams={searchParams} />
+    </Suspense>
+  );
+}
+
+async function TripGuestsBody({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ shopSlug: string; id: string }>;
+  searchParams: TripGuestsSearchParams;
 }) {
   const session = await requireStaffSession();
   const { shopSlug, id: tripId } = await params;

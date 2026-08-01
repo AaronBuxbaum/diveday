@@ -139,6 +139,27 @@ jobs:
             fi
           done
           pnpm exec playwright test "${spec_files[@]}" --shard=${{ matrix.shard }}/4
+        env:
+          # e2e/servers.ts's default (cpus/2, 2 workers on this runner's 4
+          # cores) was calibrated pre-cacheComponents
+          # (20260731-ci-parallelization-resources-build-concurrency.md:
+          # "2 workers on a 4-core CI runner ... blew assertion timeouts
+          # under contention", later judged fixed on today's 4-core/16GB
+          # runners — but that check predates cacheComponents' extra
+          # per-request Partial Prerendering render cost. Re-enabling
+          # cacheComponents (this branch) reintroduced the same
+          # contention signature: 8000/15000ms timeouts waiting for a
+          # post-mutation status/alert toast, a different spec each run,
+          # never the same failure twice — spread across
+          # dive-sites/refunds/import/role-permissions/add-diver/
+          # gear-fit-and-age.spec.ts, none of which this branch's app-code
+          # changes touch. Pinning to 1 worker per shard is the override
+          # that comment already anticipated ("If a future runner change
+          # reintroduces timeout-driven contention, E2E_WORKERS still
+          # overrides the default without editing code") — trades this
+          # job's wall-clock for reliability rather than widening a
+          # per-assertion timeout to paper over it.
+          E2E_WORKERS: "1"
       - uses: actions/upload-artifact@v7
         if: failure()
         with:

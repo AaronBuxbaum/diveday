@@ -85,3 +85,11 @@ get the correct worker count on today's runners.
   machines now run 2 e2e worker servers by default instead of 1, roughly halving wall-clock for
   that suite. If a future runner change reintroduces timeout-driven contention, `E2E_WORKERS`
   still overrides the default without editing code.
+- **That override was exercised**, not just theorized: re-enabling `cacheComponents`
+  (20260801-cache-components-e2e-activity-migration.md) added enough per-request Partial
+  Prerendering render cost that the sharded `playwright` CI job's 2-workers-on-4-cores budget
+  went from clean to contended again — assertion timeouts on a different spec each run, the same
+  signature this ADR describes. The `playwright` job now sets `E2E_WORKERS: "1"` for its test
+  step; the `visual` job (a single spec file, screenshot-dominated rather than
+  interaction-dominated) showed no contention and was left at the default. Revisit this pin if a
+  future `cacheComponents`-adjacent change shifts the render cost again, in either direction.
