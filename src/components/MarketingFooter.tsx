@@ -2,32 +2,10 @@ import Link from "next/link";
 import { LogoMark } from "@/components/Logo";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
-import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
 import { FOUNDER_EMAIL } from "@/lib/platform-mail";
 
-/**
- * Reads the negotiated locale (`headers()`-backed, per-request) — stays a
- * plain dynamic Server Component. A marketing page that hoists its own body
- * into a `"use cache"` function wraps this in its own `<Suspense>` with
- * {@link MarketingFooterFallback} instead of nesting it inside the cached
- * scope — see the marketing pages under `src/app`.
- */
 export async function MarketingFooter() {
-  const locale = await requestLocale();
-  return <MarketingFooterView locale={locale} />;
-}
-
-/**
- * The static shell's stand-in for {@link MarketingFooter} while the
- * negotiated-locale version streams in — the default locale, same content
- * shape, zero streaming delay for the majority of visitors.
- */
-export function MarketingFooterFallback() {
-  return <MarketingFooterView locale={DEFAULT_DIVER_LOCALE} />;
-}
-
-function MarketingFooterView({ locale }: { locale: DiverLocale }) {
-  const t = diverTranslator(locale);
+  const t = diverTranslator(await requestLocale());
   return (
     <footer className="border-t border-border">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-6 py-8 text-sm text-muted sm:flex-row sm:items-center sm:justify-between">

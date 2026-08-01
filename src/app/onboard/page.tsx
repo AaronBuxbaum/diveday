@@ -12,13 +12,6 @@ import { eventSource } from "@/lib/funnel";
 import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH, type OnboardErrorCode } from "@/lib/onboarding";
 import { onboardAction } from "./actions";
 
-// Reads `searchParams` and `requestLocale()` (`headers()`-backed) unguarded,
-// same as every other account-lifecycle page — genuinely request-scoped, not
-// a marketing page in scope for the "use cache" hoist. See the shop layout's
-// `instant = false` comment (src/app/shop/[shopSlug]/layout.tsx) for what
-// this does and doesn't do.
-export const instant = false;
-
 /**
  * Every code `onboardAction`'s `backToForm` can hand back, resolved to a
  * diver-bundle message right here — never earlier. `onboardSchema`'s

@@ -20,13 +20,6 @@ export const metadata: Metadata = {
  * submit is what mutates. State is always read fresh from the DB, never from
  * a query flag, so there is nothing here for a forged param to fake.
  */
-// Bearer-token page (the URL is the capability, docs/engineering/
-// capability-telemetry-runbook.md) — reads `params`/`requestLocale()`
-// unguarded, genuinely request-scoped, not in scope for the "use cache"
-// hoist. See the shop layout's `instant = false` comment
-// (src/app/shop/[shopSlug]/layout.tsx) for what this does and doesn't do.
-export const instant = false;
-
 export default async function UnsubscribeLastMinuteDealPage({
   params,
 }: {

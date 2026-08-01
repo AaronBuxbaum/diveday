@@ -3,7 +3,6 @@ import { LogoMark } from "@/components/Logo";
 import { buttonClass } from "@/components/ui/button";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
-import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
 import { auth, signOut } from "@/lib/auth";
 import { trialHref } from "@/lib/funnel";
 
@@ -15,33 +14,9 @@ async function signOutToSignInAction() {
   await signOut({ redirectTo: "/sign-in" });
 }
 
-/**
- * Reads the session (`auth()`, cookie-backed) and the negotiated locale
- * (`headers()`-backed) — both genuinely per-request and never cacheable, so
- * this stays a plain dynamic Server Component. A marketing page that hoists
- * its own body into a `"use cache"` function (per-locale, no session) wraps
- * this in its own `<Suspense>` with {@link MarketingNavFallback} instead of
- * nesting it inside the cached scope — see the marketing pages under
- * `src/app`.
- */
 export async function MarketingNav() {
   const session = await auth();
-  const locale = await requestLocale();
-  return <MarketingNavView signedIn={Boolean(session)} locale={locale} />;
-}
-
-/**
- * The static shell's stand-in for {@link MarketingNav} while the real,
- * session-aware nav streams in: the default locale, signed out — correct for
- * the overwhelming majority of marketing-page visitors (anonymous, no
- * session), and what actually renders for them with zero streaming delay.
- */
-export function MarketingNavFallback() {
-  return <MarketingNavView signedIn={false} locale={DEFAULT_DIVER_LOCALE} />;
-}
-
-function MarketingNavView({ signedIn, locale }: { signedIn: boolean; locale: DiverLocale }) {
-  const t = diverTranslator(locale);
+  const t = diverTranslator(await requestLocale());
   const links = [
     { href: "/product", label: t("nav.product") },
     { href: "/pricing", label: t("nav.pricing") },
@@ -71,7 +46,7 @@ function MarketingNavView({ signedIn, locale }: { signedIn: boolean; locale: Div
               {link.label}
             </Link>
           ))}
-          {signedIn ? (
+          {session ? (
             <form action={signOutToSignInAction}>
               <button type="submit" className={navLinkClassName}>
                 {t("nav.signOut")}

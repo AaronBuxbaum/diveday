@@ -13,12 +13,6 @@ import { requestLocale } from "@/i18n/request";
 import { signIn } from "@/lib/auth";
 import { trialHref } from "@/lib/funnel";
 
-// Reads `searchParams`, `requestLocale()`, and `signIn`'s cookie-backed auth
-// state unguarded — genuinely request-scoped, not a marketing page in scope
-// for the "use cache" hoist. See the shop layout's `instant = false` comment
-// (src/app/shop/[shopSlug]/layout.tsx) for what this does and doesn't do.
-export const instant = false;
-
 export async function generateMetadata(): Promise<Metadata> {
   const t = diverTranslator(await requestLocale());
   return { title: t("account.signIn.metaTitle") };

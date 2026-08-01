@@ -59,10 +59,6 @@ import { TripActions } from "./_components/TripActions";
 import { TripHeader } from "./_components/TripHeader";
 import { ERROR_MESSAGE_KEYS, isErrorCode, type PaymentPanel } from "./_components/types";
 
-// TODO: Cache Components adoption. Refactor this route so this opt-out can be removed.
-// See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
-export const instant = false;
-
 /**
  * The departure's own title, description, and canonical URL. Embed mode points
  * its canonical at this standalone page (docs ADR

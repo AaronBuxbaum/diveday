@@ -9,7 +9,6 @@ const nextConfig: NextConfig = {
   // dynamically requires optional native/cloud drivers it doesn't use here;
   // keep it external too rather than have the bundler try to resolve them.
   serverExternalPackages: ["@electric-sql/pglite", "pg", "sharp"],
-  cacheComponents: true,
   images: {
     // Every photo this app stores (certification cards, course media, recap
     // photos, dive-site briefings) lands in Vercel Blob behind a per-store

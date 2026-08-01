@@ -14,12 +14,6 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-// Reads `searchParams` and `requestLocale()` (`headers()`-backed) unguarded —
-// genuinely request-scoped, not a marketing page in scope for the "use
-// cache" hoist. See the shop layout's `instant = false` comment
-// (src/app/shop/[shopSlug]/layout.tsx) for what this does and doesn't do.
-export const instant = false;
-
 export default async function ForgotPasswordPage({
   searchParams,
 }: {

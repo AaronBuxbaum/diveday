@@ -1,16 +1,13 @@
 import type { Metadata } from "next";
-import { cacheLife } from "next/cache";
 import Link from "next/link";
-import { Suspense } from "react";
 import { enterDemoAction } from "@/app/actions/demo";
 import { FunnelTag } from "@/components/FunnelTag";
-import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
-import { MarketingNav, MarketingNavFallback } from "@/components/MarketingNav";
+import { MarketingFooter } from "@/components/MarketingFooter";
+import { MarketingNav } from "@/components/MarketingNav";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
-import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
 import { trialHref } from "@/lib/funnel";
 import { fullShopExport } from "@/lib/marketing";
 import { FOUNDER_EMAIL } from "@/lib/platform-mail";
@@ -28,32 +25,8 @@ export const metadata: Metadata = {
   },
 };
 
-export default function AboutPage() {
-  return (
-    <div className="flex flex-1 flex-col">
-      <Suspense fallback={<MarketingNavFallback />}>
-        <MarketingNav />
-      </Suspense>
-      <Suspense fallback={<AboutBody locale={DEFAULT_DIVER_LOCALE} />}>
-        <LocalizedAboutBody />
-      </Suspense>
-      <Suspense fallback={<MarketingFooterFallback />}>
-        <MarketingFooter />
-      </Suspense>
-    </div>
-  );
-}
-
-async function LocalizedAboutBody() {
-  const locale = await requestLocale();
-  return <AboutBody locale={locale} />;
-}
-
-/** Cached per negotiated locale (DIVER_LOCALES — two entries) — no session-scoped content. */
-async function AboutBody({ locale }: { locale: DiverLocale }) {
-  "use cache";
-  cacheLife("max");
-  const t = diverTranslator(locale);
+export default async function AboutPage() {
+  const t = diverTranslator(await requestLocale());
 
   /**
    * The honest-no block, in the register docs/product/marketing.md asks for:
@@ -103,219 +76,223 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
   ] as const;
 
   return (
-    <main className="flex-1">
-      <section className="border-b border-border">
-        <div className="mx-auto w-full max-w-7xl px-6 py-16 lg:py-24">
-          <div className="max-w-3xl">
-            <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-              {t("marketing.about.eyebrow")}
-            </p>
-            <h1 className="mt-5 text-4xl font-semibold tracking-[-0.045em] text-balance sm:text-5xl lg:text-6xl">
-              {t("marketing.about.heroTitle")}
-            </h1>
-            <p className="mt-6 max-w-2xl text-lg leading-8 text-muted sm:text-xl">
-              {t("marketing.about.heroDescription")}
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <section className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-24">
-        <div className="grid gap-10 lg:grid-cols-[0.9fr_1fr] lg:items-start">
-          <div>
-            <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-              {t("marketing.about.founderEyebrow")}
-            </p>
-            <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
-              {t("marketing.about.founderTitle")}
-            </h2>
-          </div>
-          <div className="max-w-2xl space-y-5 text-lg leading-8 text-muted">
-            <p>{t("marketing.about.founderP1")}</p>
-            <p>{t("marketing.about.founderP2")}</p>
-            <p>{t("marketing.about.founderP3")}</p>
-          </div>
-        </div>
-      </section>
-
-      <section className="border-y border-border bg-surface">
-        <div className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-24">
-          <div className="max-w-3xl">
-            <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-              {t("marketing.about.runEyebrow")}
-            </p>
-            <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
-              {t("marketing.about.runTitle")}
-            </h2>
-            <p className="mt-5 text-lg leading-8 text-muted">{t("marketing.about.runP1")}</p>
-            <p className="mt-4 text-lg leading-8 text-muted">{t("marketing.about.runP2")}</p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <a
-                href={`mailto:${FOUNDER_EMAIL}`}
-                className={buttonClass({ className: "cursor-pointer" })}
-              >
-                {t("marketing.about.emailCta", { email: FOUNDER_EMAIL })}
-              </a>
-              <Link
-                href="/pricing"
-                className={buttonClass({
-                  variant: "secondary",
-                  className: "border-border-strong",
-                })}
-              >
-                {t("marketing.about.seeCost")}
-              </Link>
-              <Link href="/product" className={buttonClass({ variant: "link" })}>
-                {t("marketing.about.seeProduct")}
-              </Link>
+    <div className="flex flex-1 flex-col">
+      <MarketingNav />
+      <main className="flex-1">
+        <section className="border-b border-border">
+          <div className="mx-auto w-full max-w-7xl px-6 py-16 lg:py-24">
+            <div className="max-w-3xl">
+              <p className="text-sm font-semibold tracking-widest text-primary uppercase">
+                {t("marketing.about.eyebrow")}
+              </p>
+              <h1 className="mt-5 text-4xl font-semibold tracking-[-0.045em] text-balance sm:text-5xl lg:text-6xl">
+                {t("marketing.about.heroTitle")}
+              </h1>
+              <p className="mt-6 max-w-2xl text-lg leading-8 text-muted sm:text-xl">
+                {t("marketing.about.heroDescription")}
+              </p>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-24">
-        <div className="max-w-2xl">
-          <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-            {t("marketing.about.rulesEyebrow")}
-          </p>
-          <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
-            {t("marketing.about.rulesTitle")}
-          </h2>
-          <p className="mt-4 text-lg leading-8 text-muted">
-            {t("marketing.about.rulesDescription")}
-          </p>
-        </div>
-        <div className="mt-12 grid gap-5 sm:grid-cols-2">
-          {operatingRules.map((rule) => (
-            <article
-              key={rule.title}
-              className="rounded-2xl border border-border bg-surface p-6 sm:p-8"
-            >
-              <h3 className="text-xl font-semibold tracking-tight">{rule.title}</h3>
-              <p className="mt-3 leading-7 text-muted">{rule.body}</p>
-              <p className="mt-3 text-sm leading-6 text-muted">
-                <span className="font-semibold text-primary">
-                  {t("marketing.common.checkItLabel")}
-                </span>
-                {rule.check}
+        <section className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-24">
+          <div className="grid gap-10 lg:grid-cols-[0.9fr_1fr] lg:items-start">
+            <div>
+              <p className="text-sm font-semibold tracking-widest text-primary uppercase">
+                {t("marketing.about.founderEyebrow")}
               </p>
-            </article>
-          ))}
-        </div>
-      </section>
+              <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
+                {t("marketing.about.founderTitle")}
+              </h2>
+            </div>
+            <div className="max-w-2xl space-y-5 text-lg leading-8 text-muted">
+              <p>{t("marketing.about.founderP1")}</p>
+              <p>{t("marketing.about.founderP2")}</p>
+              <p>{t("marketing.about.founderP3")}</p>
+            </div>
+          </div>
+        </section>
 
-      <section className="border-y border-border bg-surface">
-        <div className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-24">
+        <section className="border-y border-border bg-surface">
+          <div className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-24">
+            <div className="max-w-3xl">
+              <p className="text-sm font-semibold tracking-widest text-primary uppercase">
+                {t("marketing.about.runEyebrow")}
+              </p>
+              <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
+                {t("marketing.about.runTitle")}
+              </h2>
+              <p className="mt-5 text-lg leading-8 text-muted">{t("marketing.about.runP1")}</p>
+              <p className="mt-4 text-lg leading-8 text-muted">{t("marketing.about.runP2")}</p>
+              <div className="mt-8 flex flex-wrap gap-3">
+                <a
+                  href={`mailto:${FOUNDER_EMAIL}`}
+                  className={buttonClass({ className: "cursor-pointer" })}
+                >
+                  {t("marketing.about.emailCta", { email: FOUNDER_EMAIL })}
+                </a>
+                <Link
+                  href="/pricing"
+                  className={buttonClass({
+                    variant: "secondary",
+                    className: "border-border-strong",
+                  })}
+                >
+                  {t("marketing.about.seeCost")}
+                </Link>
+                <Link href="/product" className={buttonClass({ variant: "link" })}>
+                  {t("marketing.about.seeProduct")}
+                </Link>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-24">
           <div className="max-w-2xl">
             <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-              {t("marketing.about.plainlyEyebrow")}
+              {t("marketing.about.rulesEyebrow")}
             </p>
             <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
-              {t("marketing.about.plainlyTitle")}
+              {t("marketing.about.rulesTitle")}
             </h2>
             <p className="mt-4 text-lg leading-8 text-muted">
-              {t("marketing.about.plainlyDescription")}
+              {t("marketing.about.rulesDescription")}
             </p>
           </div>
-          <div className="mt-12 grid gap-5 md:grid-cols-3">
-            {plainTruths.map((truth) => (
+          <div className="mt-12 grid gap-5 sm:grid-cols-2">
+            {operatingRules.map((rule) => (
               <article
-                key={truth.title}
+                key={rule.title}
                 className="rounded-2xl border border-border bg-surface p-6 sm:p-8"
               >
-                <h3 className="text-xl font-semibold tracking-tight">{truth.title}</h3>
-                <p className="mt-3 leading-7 text-muted">{truth.body}</p>
+                <h3 className="text-xl font-semibold tracking-tight">{rule.title}</h3>
+                <p className="mt-3 leading-7 text-muted">{rule.body}</p>
+                <p className="mt-3 text-sm leading-6 text-muted">
+                  <span className="font-semibold text-primary">
+                    {t("marketing.common.checkItLabel")}
+                  </span>
+                  {rule.check}
+                </p>
               </article>
             ))}
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-24">
-        <div>
-          <div className="grid gap-10 lg:grid-cols-[1fr_0.9fr] lg:items-center">
+        <section className="border-y border-border bg-surface">
+          <div className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-24">
             <div className="max-w-2xl">
               <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-                {t("marketing.about.leaveEyebrow")}
+                {t("marketing.about.plainlyEyebrow")}
               </p>
               <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
-                {t("marketing.about.leaveTitle")}
+                {t("marketing.about.plainlyTitle")}
               </h2>
-              <p className="mt-5 text-lg leading-8 text-muted">{t("marketing.about.leaveP1")}</p>
               <p className="mt-4 text-lg leading-8 text-muted">
-                {t("marketing.about.leaveP2", { terms: fullShopExport.terms })}
+                {t("marketing.about.plainlyDescription")}
               </p>
-              <Link
-                href="/switching"
-                className={buttonClass({ variant: "link", className: "mt-4 text-left" })}
-              >
-                {t("marketing.about.switchingLink")}
-              </Link>
             </div>
-            <dl className="divide-y divide-border rounded-2xl border border-border bg-background">
-              <div className="p-6">
-                <dt className="text-xs font-semibold tracking-widest text-primary uppercase">
-                  {t("marketing.about.whoBuildsLabel")}
-                </dt>
-                <dd className="mt-2 leading-7">{t("marketing.about.whoBuildsValue")}</dd>
-              </div>
-              <div className="p-6">
-                <dt className="text-xs font-semibold tracking-widest text-primary uppercase">
-                  {t("marketing.about.whereLiveLabel")}
-                </dt>
-                <dd className="mt-2 leading-7">{t("marketing.about.whereLiveValue")}</dd>
-              </div>
-              <div className="p-6">
-                <dt className="text-xs font-semibold tracking-widest text-primary uppercase">
-                  {t("marketing.about.committingLabel")}
-                </dt>
-                <dd className="mt-2 leading-7">{t("marketing.about.committingValue")}</dd>
-              </div>
-              <div className="p-6">
-                <dt className="text-xs font-semibold tracking-widest text-primary uppercase">
-                  {t("marketing.about.whoAnswersLabel")}
-                </dt>
-                <dd className="mt-2 leading-7">{t("marketing.about.whoAnswersValue")}</dd>
-              </div>
-            </dl>
+            <div className="mt-12 grid gap-5 md:grid-cols-3">
+              {plainTruths.map((truth) => (
+                <article
+                  key={truth.title}
+                  className="rounded-2xl border border-border bg-surface p-6 sm:p-8"
+                >
+                  <h3 className="text-xl font-semibold tracking-tight">{truth.title}</h3>
+                  <p className="mt-3 leading-7 text-muted">{truth.body}</p>
+                </article>
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section className="mx-auto w-full max-w-7xl px-6 py-20 text-center lg:py-28">
-        <h2 className="mx-auto max-w-3xl text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
-          {t("marketing.about.closingTitle")}
-        </h2>
-        <p className="mx-auto mt-5 max-w-2xl text-lg leading-8 text-muted">
-          {t("marketing.about.closingDescription")}
-        </p>
-        <div className="mt-8 flex flex-col items-center gap-3">
-          <div className="flex flex-col justify-center gap-3 sm:flex-row">
-            <form action={enterDemoAction}>
-              <FunnelTag source="about-closing" />
-              <SubmitButton
-                pendingLabel={t("marketing.common.gettingReady")}
+        <section className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-24">
+          <div>
+            <div className="grid gap-10 lg:grid-cols-[1fr_0.9fr] lg:items-center">
+              <div className="max-w-2xl">
+                <p className="text-sm font-semibold tracking-widest text-primary uppercase">
+                  {t("marketing.about.leaveEyebrow")}
+                </p>
+                <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
+                  {t("marketing.about.leaveTitle")}
+                </h2>
+                <p className="mt-5 text-lg leading-8 text-muted">{t("marketing.about.leaveP1")}</p>
+                <p className="mt-4 text-lg leading-8 text-muted">
+                  {t("marketing.about.leaveP2", { terms: fullShopExport.terms })}
+                </p>
+                <Link
+                  href="/switching"
+                  className={buttonClass({ variant: "link", className: "mt-4 text-left" })}
+                >
+                  {t("marketing.about.switchingLink")}
+                </Link>
+              </div>
+              <dl className="divide-y divide-border rounded-2xl border border-border bg-background">
+                <div className="p-6">
+                  <dt className="text-xs font-semibold tracking-widest text-primary uppercase">
+                    {t("marketing.about.whoBuildsLabel")}
+                  </dt>
+                  <dd className="mt-2 leading-7">{t("marketing.about.whoBuildsValue")}</dd>
+                </div>
+                <div className="p-6">
+                  <dt className="text-xs font-semibold tracking-widest text-primary uppercase">
+                    {t("marketing.about.whereLiveLabel")}
+                  </dt>
+                  <dd className="mt-2 leading-7">{t("marketing.about.whereLiveValue")}</dd>
+                </div>
+                <div className="p-6">
+                  <dt className="text-xs font-semibold tracking-widest text-primary uppercase">
+                    {t("marketing.about.committingLabel")}
+                  </dt>
+                  <dd className="mt-2 leading-7">{t("marketing.about.committingValue")}</dd>
+                </div>
+                <div className="p-6">
+                  <dt className="text-xs font-semibold tracking-widest text-primary uppercase">
+                    {t("marketing.about.whoAnswersLabel")}
+                  </dt>
+                  <dd className="mt-2 leading-7">{t("marketing.about.whoAnswersValue")}</dd>
+                </div>
+              </dl>
+            </div>
+          </div>
+        </section>
+
+        <section className="mx-auto w-full max-w-7xl px-6 py-20 text-center lg:py-28">
+          <h2 className="mx-auto max-w-3xl text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
+            {t("marketing.about.closingTitle")}
+          </h2>
+          <p className="mx-auto mt-5 max-w-2xl text-lg leading-8 text-muted">
+            {t("marketing.about.closingDescription")}
+          </p>
+          <div className="mt-8 flex flex-col items-center gap-3">
+            <div className="flex flex-col justify-center gap-3 sm:flex-row">
+              <form action={enterDemoAction}>
+                <FunnelTag source="about-closing" />
+                <SubmitButton
+                  pendingLabel={t("marketing.common.gettingReady")}
+                  className={buttonClass({
+                    size: "cta",
+                    className: "cursor-pointer disabled:opacity-70",
+                  })}
+                >
+                  {t("marketing.common.tryDemo")}
+                </SubmitButton>
+              </form>
+              <Link
+                href={trialHref("about-closing")}
                 className={buttonClass({
+                  variant: "secondary",
                   size: "cta",
-                  className: "cursor-pointer disabled:opacity-70",
+                  className: "border-border-strong",
                 })}
               >
-                {t("marketing.common.tryDemo")}
-              </SubmitButton>
-            </form>
-            <Link
-              href={trialHref("about-closing")}
-              className={buttonClass({
-                variant: "secondary",
-                size: "cta",
-                className: "border-border-strong",
-              })}
-            >
-              {t("marketing.common.startTrial")}
-            </Link>
+                {t("marketing.common.startTrial")}
+              </Link>
+            </div>
           </div>
-        </div>
-      </section>
-    </main>
+        </section>
+      </main>
+      <MarketingFooter />
+    </div>
   );
 }

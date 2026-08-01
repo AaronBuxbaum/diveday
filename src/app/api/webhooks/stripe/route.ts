@@ -6,6 +6,8 @@ import { disconnectShopStripeAccount, setShopStripeAccountStatus } from "@/db/st
 import { markTipExpiredBySessionId, markTipPaidBySessionId } from "@/db/tips";
 import { verifyStripeWebhook } from "@/lib/payments/webhook";
 
+export const runtime = "nodejs";
+
 const invoiceObjectSchema = z.object({
   id: z.string().min(1),
   amount_paid: z.number().int().optional(),

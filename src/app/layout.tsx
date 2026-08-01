@@ -1,12 +1,9 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Noto_Sans_Symbols_2 } from "next/font/google";
-import { Suspense } from "react";
 import "./globals.css";
 import { SkipLink } from "@/components/SkipLink";
-import { localeCorrectionScript } from "@/i18n/lang-script";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
-import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
 import { publicAppUrl } from "@/lib/notifications";
 import { Observability } from "./observability-client";
 
@@ -57,43 +54,20 @@ export const metadata: Metadata = {
   },
 };
 
-/**
- * The skip link's label needs the negotiated locale (`requestLocale`, backed
- * by `headers()`), same as every other diver-facing surface. Isolated in its
- * own component and wrapped in `<Suspense>` below so only this small piece
- * streams in at request time — the rest of the shell (including `<html>`,
- * fixed by the inline script instead; see lang-script.ts) stays static.
- */
-async function LocalizedSkipLink() {
-  const locale = await requestLocale();
-  const t = diverTranslator(locale);
-  return <SkipLink href="#main-content" label={t("nav.skipToContent")} />;
-}
-
-const defaultSkipLinkLabel = diverTranslator(DEFAULT_DIVER_LOCALE)("nav.skipToContent");
-
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const locale = await requestLocale();
+  const t = diverTranslator(locale);
   return (
     <html
-      lang={DEFAULT_DIVER_LOCALE}
-      suppressHydrationWarning
+      lang={locale}
       className={`${geistSans.variable} ${geistMono.variable} ${notoSymbols.variable} h-full antialiased`}
     >
-      <head>
-        <script
-          suppressHydrationWarning
-          // biome-ignore lint/security/noDangerouslySetInnerHtml: static, locally-generated script (no user input) that corrects `lang` before first paint — see lang-script.ts
-          dangerouslySetInnerHTML={{ __html: localeCorrectionScript() }}
-        />
-      </head>
       <body className="min-h-full flex flex-col">
-        <Suspense fallback={<SkipLink href="#main-content" label={defaultSkipLinkLabel} />}>
-          <LocalizedSkipLink />
-        </Suspense>
+        <SkipLink href="#main-content" label={t("nav.skipToContent")} />
         {/*
          * Every page under `src/app` already renders its own top-level
          * `flex flex-1 flex-col` wrapper (or a `<main>` with the same

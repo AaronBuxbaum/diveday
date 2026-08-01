@@ -1,17 +1,14 @@
 import type { Metadata } from "next";
-import { cacheLife } from "next/cache";
 import Link from "next/link";
-import { Suspense } from "react";
 import { enterDemoAction } from "@/app/actions/demo";
 import { FunnelTag } from "@/components/FunnelTag";
-import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
-import { MarketingNav, MarketingNavFallback } from "@/components/MarketingNav";
+import { MarketingFooter } from "@/components/MarketingFooter";
+import { MarketingNav } from "@/components/MarketingNav";
 import { FeatureGroupsGrid } from "@/components/MarketingSections";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
-import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
 import { trialHref } from "@/lib/funnel";
 import { earlyAccessPrice, fullShopExport } from "@/lib/marketing";
 import { MIGRATION_GUIDES } from "@/lib/migration-guides";
@@ -30,31 +27,8 @@ export const metadata: Metadata = {
   },
 };
 
-export default function PricingPage() {
-  return (
-    <div className="flex flex-1 flex-col">
-      <Suspense fallback={<MarketingNavFallback />}>
-        <MarketingNav />
-      </Suspense>
-      <Suspense fallback={<PricingBody locale={DEFAULT_DIVER_LOCALE} />}>
-        <LocalizedPricingBody />
-      </Suspense>
-      <Suspense fallback={<MarketingFooterFallback />}>
-        <MarketingFooter />
-      </Suspense>
-    </div>
-  );
-}
-
-async function LocalizedPricingBody() {
+export default async function PricingPage() {
   const locale = await requestLocale();
-  return <PricingBody locale={locale} />;
-}
-
-/** Cached per negotiated locale (DIVER_LOCALES — two entries) — no session-scoped content. */
-async function PricingBody({ locale }: { locale: DiverLocale }) {
-  "use cache";
-  cacheLife("max");
   const t = diverTranslator(locale);
   // Generated from the migration-guides registry, never hand-listed, so a new
   // guide can't be silently omitted from this answer.
@@ -123,7 +97,7 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
   };
 
   return (
-    <>
+    <div className="flex flex-1 flex-col">
       <script
         type="application/ld+json"
         // biome-ignore lint/security/noDangerouslySetInnerHtml: JSON-LD structured data built from our own constants above and `<`-escaped below.
@@ -131,6 +105,7 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
           __html: JSON.stringify(faqJsonLd).replace(/</g, "\\u003c"),
         }}
       />
+      <MarketingNav />
       <main className="flex-1">
         <section className="border-b border-border">
           <div className="mx-auto max-w-4xl px-6 py-20 text-center lg:py-28">
@@ -248,6 +223,7 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
           </div>
         </section>
       </main>
-    </>
+      <MarketingFooter />
+    </div>
   );
 }

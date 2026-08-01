@@ -23,10 +23,6 @@ import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { ingestDiveSiteMedia } from "@/lib/storage/ingest-dive-site-media";
 
-// TODO: Cache Components adoption. Refactor this route so this opt-out can be removed.
-// See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
-export const instant = false;
-
 export const metadata: Metadata = { title: "Create dive site — DiveDay" };
 
 const optionalUrl = z.union([z.literal(""), z.url().max(2_000)]);
