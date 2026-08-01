@@ -14,6 +14,11 @@ describe("isPublicShopRoute", () => {
     expect(isPublicShopRoute("/shop/blue-mantis/courses/open-water-diver/")).toBe(true);
   });
 
+  it("keeps the staff operations board gated, even though it sits under the public schedule", () => {
+    expect(isPublicShopRoute("/shop/blue-mantis/schedule/board")).toBe(false);
+    expect(isPublicShopRoute("/shop/blue-mantis/schedule/board/")).toBe(false);
+  });
+
   it("opens the course catalog index and certification paths to a signed-out diver", () => {
     expect(isPublicShopRoute("/shop/blue-mantis/courses")).toBe(true);
     expect(isPublicShopRoute("/shop/blue-mantis/courses/")).toBe(true);
@@ -67,6 +72,7 @@ describe("isEmbeddableShopRoute", () => {
       "/shop/blue-mantis/courses/paths/open-water-to-rescue",
       "/shop/blue-mantis/settings",
       "/shop/blue-mantis/trips/abc-123",
+      "/shop/blue-mantis/schedule/board",
       "/sign-in",
     ]) {
       expect(isEmbeddableShopRoute(path)).toBe(false);

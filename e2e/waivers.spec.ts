@@ -32,7 +32,7 @@ test.describe("signed out", () => {
 test("one waiver button sends a resumable link and a medical yes surfaces follow-up", async ({
   page,
 }) => {
-  await page.goto("/shop/blue-mantis/schedule");
+  await page.goto("/shop/blue-mantis/schedule/board");
   await page
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Molasses & French" })
@@ -181,7 +181,7 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
 test("the medical questionnaire refuses to complete with an unanswered question, even past client validation", async ({
   page,
 }) => {
-  await page.goto("/shop/blue-mantis/schedule");
+  await page.goto("/shop/blue-mantis/schedule/board");
   await page
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Molasses & French" })
@@ -227,7 +227,7 @@ test("the medical questionnaire refuses to complete with an unanswered question,
 test("a non-English visitor sees a notice that the waiver text itself stays in English", async ({
   page,
 }) => {
-  await page.goto("/shop/blue-mantis/schedule");
+  await page.goto("/shop/blue-mantis/schedule/board");
   await page
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Molasses & French" })
@@ -268,7 +268,7 @@ test("a non-English visitor sees a notice that the waiver text itself stays in E
 test("saving a draft also refuses an unanswered question, even past client validation", async ({
   page,
 }) => {
-  await page.goto("/shop/blue-mantis/schedule");
+  await page.goto("/shop/blue-mantis/schedule/board");
   await page
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Molasses & French" })

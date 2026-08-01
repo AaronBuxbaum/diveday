@@ -55,8 +55,10 @@ function primaryLinks(
     { label: copy.blockers, suffix: "/blockers", count: "blockers" },
     { label: copy.divers, suffix: "/divers" },
     // Staff work a trip on /trips/[id], which is the Schedule surface's detail
-    // view — keep the Schedule tab lit so they don't lose their place.
-    { label: copy.schedule, suffix: "/schedule", alsoMatch: "/trips" },
+    // view — keep the Schedule tab lit so they don't lose their place. The
+    // operations board is a segment below the public page it's split from
+    // (Lens 17); staff land on the board, not the diver-facing page.
+    { label: copy.schedule, suffix: "/schedule/board", alsoMatch: "/trips" },
   ];
 }
 

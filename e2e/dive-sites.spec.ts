@@ -36,7 +36,7 @@ test.describe("staff", () => {
     await page.getByLabel("Returns").fill("12:00");
     await page.getByRole("button", { name: "Put it on the board" }).click();
     await expect(page.getByRole("status")).toBeVisible(); // created banner ⇒ the redirect settled
-    await page.goto("/shop/blue-mantis/schedule");
+    await page.goto("/shop/blue-mantis/schedule/board");
     await page
       .locator("li")
       .filter({ hasText: tripTitle })

@@ -143,7 +143,7 @@ export function CommandPalette({
       { label: copy.goToWalkIn, suffix: "/check-in/walk-in" },
       { label: copy.goToBlockers, suffix: "/blockers" },
       { label: copy.goToCheckIn, suffix: "/check-in" },
-      { label: copy.goToSchedule, suffix: "/schedule" },
+      { label: copy.goToSchedule, suffix: "/schedule/board" },
       { label: copy.goToDivers, suffix: "/divers" },
       { label: copy.goToStaffing, suffix: "/staffing" },
       { label: copy.goToDiveSites, suffix: "/dive-sites" },

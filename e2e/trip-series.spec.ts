@@ -21,7 +21,7 @@ test("a repeating series is scheduled, then rolled forward and cancelled as one"
   await expect(page.getByRole("status")).toContainText(title);
 
   // Open the first instance and confirm the series controls are present.
-  await page.goto("/shop/blue-mantis/schedule");
+  await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, title);
   await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
   const tripUrl = page.url();

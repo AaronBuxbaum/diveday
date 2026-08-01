@@ -29,7 +29,7 @@ test.describe("refunds", () => {
 
     // Open the trip and turn on "requires payment" so the roster shows a
     // payment control at all (off by default — most trips never charge).
-    await page.goto("/shop/blue-mantis/schedule");
+    await page.goto("/shop/blue-mantis/schedule/board");
     await page.locator("li").filter({ hasText: options.title }).getByRole("link").click();
     await expect(page.getByRole("heading", { name: options.title })).toBeVisible();
     await page.getByLabel("Require payment to board").check();
@@ -66,7 +66,7 @@ test.describe("refunds", () => {
     await expect(page.getByRole("heading", { name: /You’re on the boat, Nora/ })).toBeVisible();
 
     await signInAsOwner(page);
-    await page.goto("/shop/blue-mantis/schedule");
+    await page.goto("/shop/blue-mantis/schedule/board");
     await page.locator("li").filter({ hasText: title }).getByRole("link").click();
     await page
       .getByRole("navigation", { name: "Trip" })

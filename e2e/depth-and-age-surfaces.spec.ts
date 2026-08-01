@@ -8,7 +8,7 @@ const SHOP = DEMO_SHOP_SLUG;
  * then reading `page.url()` races the streaming list.
  */
 async function tripPathByTitle(page: import("@playwright/test").Page, title: string | RegExp) {
-  await page.goto(`/shop/${SHOP}/schedule`);
+  await page.goto(`/shop/${SHOP}/schedule/board`);
   const href = await page
     .locator(`a[href^="/shop/${SHOP}/trips/"]:not([href$="/trips/new"])`)
     .filter({ hasText: title })

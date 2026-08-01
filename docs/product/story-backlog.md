@@ -13,6 +13,17 @@ found while evaluating work against `personas.md` belong here too, not back in t
 
 ---
 
+## Leo (persona 15) — self-serve email unsubscribe
+
+**Origin:** archive task 122. **Status:** implementation shipped (2026-08-01) — the general,
+person-level mechanism now covers the two remaining courtesy kinds named in task 122
+(`waitlist_invite`, `trip_recap`), on top of `last_minute_deal`'s existing per-entry unsubscribe.
+
+**Left to do:** mandated `security-reviewer` pass outstanding before merge — this touches a new
+bearer-token flow and a new `people` column carrying diver preference state, per AGENTS.md.
+
+---
+
 ## Priya (persona 3) — enforce course minimum age for public bookings
 
 **Origin:** archive task 23. **Status:** partial — the safe subset shipped (a self-declared
@@ -28,38 +39,34 @@ implementation, and the persisted-birthdate path needs a `security-reviewer` pas
 
 ---
 
-## Leo (persona 15) — self-serve email unsubscribe
-
-**Origin:** archive task 122. **Status:** partial — the email document wrapper, brand-token swap,
-and shop-name header shipped; the unsubscribe link is the deferred half.
-
-**Left to do:** there's no self-serve unsubscribe token/route today, only a staff-side
-`unsubscribeLastMinuteListEntry`. Building a diver-facing one is a real feature (a new token type,
-a route, a `security-reviewer` pass) — scope it as its own change, not a follow-on to the wrapper
-work.
-
----
-
 ## Lens 17 (redundancy/coupling) — unify the two waiver-send controls
 
-**Origin:** archive task 140. **Status:** partial — the roster now mounts the optimistic
-`WaiverSendControl`, but the roster's checkbox-driven bulk sender (`bulkSendWaiversAction`) is a
-separate, untouched path.
+**Origin:** archive task 140. **Status:** implementation shipped (2026-08-01) — decided to unify
+rather than keep the bulk sender a distinct affordance: `bulkSendWaiversAction` and
+`issueWaiversForBookings` are deleted, and the roster's bulk "tick divers, then send" now drives
+the same `sendWaiversAction`/`WaiverSendControl` every other surface uses, via a small
+`BulkWaiverSelectionProvider` (client-side selection state — a plain HTML cross-form `form="…"`
+checkbox association was tried first but ticking one diver was observed to silently uncheck
+another; see that file's doc comment).
 
-**Left to do:** decide whether the bulk sender should route through the same control/action or
-stay a deliberately distinct bulk affordance, and document the decision either way.
+**Left to do:** mandated `security-reviewer` pass outstanding before merge — this changes how
+waiver-send requests reach `issueAndDeliverWaiver`, a security-sensitive path per AGENTS.md.
 
 ## Lens 17 (redundancy/coupling) — split the schedule route
 
-**Origin:** archive task 153. **Status:** deferred — explicitly called out as the single
-highest-risk item in the original review.
+**Origin:** archive task 153. **Status:** implementation shipped (2026-08-01) — `/schedule` is
+now the public, canonical, embeddable page only (booking list, calendar, reviews, last-minute
+signup); the dead `staffView` ternary and the staff KPI/builder surface are gone from it. Staff
+trip scheduling moved to its own gated `/schedule/board` (`src/app/shop/[shopSlug]/schedule/board/`),
+scoped by `session.user.shopId` like every other staff surface, never the URL `shopSlug`.
+`isPublicShopRoute`/`isEmbeddableShopRoute` in `src/lib/auth.config.ts` gained a reserved-segment
+carve-out (`RESERVED_SCHEDULE_SEGMENTS`, mirroring the existing course-page pattern) so `/board`
+stays staff-only even though it sits under the otherwise-public `/schedule` prefix. The anonymous
+`joinLastMinuteListAction` stayed on the public route's own `actions.ts`, separate from the staff
+board's mutations.
 
-**Left to do:** `/schedule` is still four products on one route (staff KPIs + builder, public
-calendar + booking list, reviews, last-minute signup, plus embed mode), including a provably-dead
-`staffView` ternary in the not-staff branch and the anonymous `joinLastMinuteListAction` living in
-the auth-gated builder's action module. The plan (public/canonical/embeddable page at `/schedule`,
-staff builder moves to `/schedule/board`) is written in the archive; it needs a dedicated change
-touching e2e specs, sitemap, and canonical metadata — don't fold it into an unrelated PR.
+**Left to do:** mandated `security-reviewer` pass outstanding before merge — this changes
+`src/lib/auth.config.ts`'s public-route allowlist, a security-sensitive file per AGENTS.md.
 
 ## Lens 17 (redundancy/coupling) — security-reviewer pass on the waivers Template/Signatures split
 

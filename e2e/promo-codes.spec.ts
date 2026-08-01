@@ -137,7 +137,7 @@ test("a diver can type a promo code on a payable trip's booking form", async ({
   // actually take a charge.
   await request.post("/api/test/seed-stripe-account");
   await signInAsOwner(page);
-  await page.goto("/shop/blue-mantis/schedule");
+  await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
   // The board links staff at trip *management*; the booking form a diver sees
   // is the public page for the same departure.

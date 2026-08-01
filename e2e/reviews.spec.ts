@@ -32,17 +32,18 @@ test("a diver's bare rating publishes straight away and reaches the public page"
 });
 
 test("staff previewing the public page from Reviews actually see the reviews", async ({ page }) => {
-  // Signed-in staff visiting /schedule directly land on the staff board, which
-  // hides reviews on purpose (staff moderate from /reviews, not by reading the
-  // public page). The "View public page" link has to force the diver-facing
-  // view instead, or a shop owner clicking it never sees what they came to check.
+  // /schedule is the public, canonical page regardless of session (Lens 17,
+  // docs/product/story-backlog.md — the staff operations board lives at its
+  // own /schedule/board instead), so the "View public page" link on Reviews
+  // needs no special flag: signed-in staff land on exactly what a diver sees,
+  // reviews included.
   await signInAsOwner(page);
   await page.goto("/shop/blue-mantis/reviews");
   const previewPage = await Promise.all([
     page.waitForEvent("popup"),
     page.getByRole("link", { name: "View public page" }).click(),
   ]).then(([popup]) => popup);
-  await expect(previewPage).toHaveURL(/\/schedule\?preview=1$/);
+  await expect(previewPage).toHaveURL(/\/schedule$/);
   await expect(previewPage.getByRole("heading", { name: "What divers say" })).toBeVisible();
 });
 

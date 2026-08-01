@@ -3,7 +3,7 @@ import { expect, signedInAsOwner, test } from "./fixtures";
 import { e2eNow } from "./helpers";
 
 async function openWreckTrip(page: Page) {
-  await page.goto("/shop/blue-mantis/schedule");
+  await page.goto("/shop/blue-mantis/schedule/board");
   await page
     .locator("li")
     .filter({ hasText: "Wreck Trip — Spiegel Grove" })
@@ -147,7 +147,7 @@ test.describe("staff", () => {
       // wreck charter above), so with the catalog off there is no live data
       // to keep the tile alive: Total and Air are the same number with
       // nothing left to distinguish, and the tile grid collapses to one.
-      await page.goto("/shop/blue-mantis/schedule");
+      await page.goto("/shop/blue-mantis/schedule/board");
       await page
         .locator("li")
         .filter({ hasText: "Two-Tank Reef — Molasses & French" })
