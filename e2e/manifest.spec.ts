@@ -145,6 +145,17 @@ test("a captain who lost the saved copy to storage eviction still lands on a pag
   page,
   context,
 }) => {
+  // Observed twice in CI (never reproduced locally, including under
+  // artificial contention): the URL assertion below the offline reload
+  // always lands on time, but the text that follows it — gated only on this
+  // page's own client-side hydration completing, no further network wait —
+  // occasionally missed the default 8s. The reload's redirect chain runs
+  // through the service worker twice (the live manifest route fails offline
+  // and 302s to the offline shell, which itself fails offline and serves
+  // from Cache Storage) before the client bundle even starts hydrating, more
+  // hops than a typical assertion's budget assumes. Extra room here rather
+  // than a blanket bump.
+  test.setTimeout(25_000);
   await page.goto("/shop/blue-mantis/schedule/board");
   await page
     .locator("li")
@@ -203,7 +214,7 @@ test("a captain who lost the saved copy to storage eviction still lands on a pag
   // letting the reload fail outright — the shell says so plainly instead of
   // fabricating a roster.
   await expect(page).toHaveURL(/\/offline-manifest\?trip=.*checkpoint=after_dive_1/);
-  await expect(page.getByText("Nothing saved on this phone yet")).toBeVisible();
+  await expect(page.getByText("Nothing saved on this phone yet")).toBeVisible({ timeout: 15_000 });
 
   await context.setOffline(false);
 });

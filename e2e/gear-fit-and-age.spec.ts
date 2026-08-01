@@ -148,25 +148,37 @@ test.describe("deck crew", () => {
 test.describe("minimum age (H-08, fail open)", () => {
   signedInAsOwner();
 
-  test("admits a diver with no date of birth and refuses one who is under age", async ({
-    page,
-  }) => {
-    const stamp = e2eNow().getTime();
+  /**
+   * Both scenarios below need the same course session; extracted so each test
+   * pays this setup once instead of chaining both flows into one test. The
+   * combined version reliably blew the 15s per-test budget end to end — even
+   * with zero CI contention, a local `pnpm e2e` run timed out mid-navigation
+   * on this exact spec before ever reaching the second flow's assertions —
+   * because it packed a trip creation, two full add-to-trip round trips, and
+   * a whole second diver's create-then-edit detour into one test. Splitting
+   * gives each scenario the full budget a single flow is sized for.
+   */
+  async function createAgeGateSession(page: import("@playwright/test").Page, title: string) {
     // Open Water Diver states a minimum age of 10 in the seeded catalog.
-    const sessionTitle = `Age gate session ${stamp}`;
     await page.goto(`/shop/${SHOP}/trips/new`);
     await page.getByLabel("Course").selectOption({ label: "Open Water Diver" });
-    await page.getByLabel("Title").fill(sessionTitle);
+    await page.getByLabel("Title").fill(title);
     await page.getByLabel("Date").fill(daysFromNow(24));
     await page.getByLabel("Departs").fill("08:00");
     await page.getByLabel("Returns").fill("17:00");
     await page.getByRole("button", { name: "Put it on the board" }).click();
     await expect(page.getByRole("status")).toBeVisible();
 
-    const tripPath = await tripPathByTitle(page, sessionTitle);
+    const tripPath = await tripPathByTitle(page, title);
     await page.goto(tripPath);
     await page.getByLabel("Assign crew").selectOption({ label: "Marcus Webb" });
     await expect(page.getByRole("button", { name: "Unassign Marcus Webb" })).toBeVisible();
+    return tripPath;
+  }
+
+  test("admits a diver with no date of birth on file (fail open)", async ({ page }) => {
+    const stamp = e2eNow().getTime();
+    const tripPath = await createAgeGateSession(page, `Age gate session ${stamp}`);
 
     // Fail open: a walk-in has no date on file — the same state every diver in
     // a live shop starts from — and books exactly as before.
@@ -175,8 +187,24 @@ test.describe("minimum age (H-08, fail open)", () => {
     await page.getByLabel("Email", { exact: true }).fill(`ageless-${stamp}@example.com`);
     await page.getByRole("button", { name: "Add to trip" }).click();
     await expect(page.getByRole("status")).toContainText("Diver added to the trip");
+  });
 
-    // Now a diver who *does* have a date on file, aged 8 on the course date.
+  test("refuses a diver once a date of birth on file makes them under age", async ({ page }) => {
+    // Measured locally with zero CI contention: trip creation + a second
+    // diver's create-then-edit-DOB detour + the guests-page round trip
+    // already cost ~13s on their own, before this test's own add-attempt
+    // assertion (which needs a real server-action round trip under a
+    // FOR-UPDATE trip lock, plus a full re-render of the guests page — one of
+    // the heaviest pages in the app) gets to run inside what budget is left.
+    // The default 15s (playwright.config.ts) is sized for one flow; this test
+    // is legitimately two (a diver's full create-and-edit lifecycle, then a
+    // booking attempt), so it gets a proportionally larger budget instead of
+    // routinely racing its own setup.
+    test.setTimeout(30_000);
+    const stamp = e2eNow().getTime();
+    const tripPath = await createAgeGateSession(page, `Age gate session ${stamp}`);
+
+    // A diver who *does* have a date on file, aged 8 on the course date.
     await page.goto(`/shop/${SHOP}/divers`);
     await page.getByText("Add a diver").click(); // the form lives in a collapsed <details>
     await page.getByLabel("Full name").fill(`Young Diver ${stamp}`);
@@ -196,7 +224,7 @@ test.describe("minimum age (H-08, fail open)", () => {
     await addDiver.getByLabel("Find a returning diver").fill(`Young Diver ${stamp}`);
     await addDiver.getByRole("button", { name: "Search" }).click();
     // The picker's button is labelled per diver ("Add <name> to the trip"),
-    // unlike the by-hand form's plain "Add to trip" used above.
+    // unlike the by-hand form's plain "Add to trip" used by the fail-open test.
     const addYoungDiverButton = addDiver.getByRole("button", {
       name: `Add Young Diver ${stamp} to the trip`,
     });
@@ -212,16 +240,26 @@ test.describe("minimum age (H-08, fail open)", () => {
     // this page also carries several prefetched `<Link>`s back to that same
     // now-clean URL — asserting on the flash races a client-side refresh
     // unrelated to this test (confirmed on an unmodified checkout too). The
-    // durable, meaningful fact is that the booking itself was refused: the
-    // roster count never moves past the one diver already added, and the
-    // refused diver never appears in it.
-    await expect(page.getByRole("heading", { name: /^Divers 1 of/ })).toBeVisible();
+    // durable, meaningful fact is that the booking itself was refused: nobody
+    // is on this trip's roster (this test never adds the fail-open walk-in),
+    // and the refused diver never appears in it.
+    await expect(page.getByRole("heading", { name: /^Divers 0 of/ })).toBeVisible();
     await expect(page.getByText(`Young Diver ${stamp}`)).toHaveCount(0);
   });
 
   test("names the real reason on the diver's own checklist once a date on file makes them under age (H-22)", async ({
     page,
   }) => {
+    // This is one continuous journey across two actors on purpose — the
+    // public booking has to happen before staff records the date of birth,
+    // proving the blocker catches a diver who was "unknown age" at booking
+    // time, not just one whose date was on file up front — so it can't be
+    // split the way the two tests above were. It reliably exceeds the
+    // default 15s (playwright.config.ts, sized for one flow) even with no
+    // CI contention: trip creation, a sign-out/sign-in round trip, a full
+    // public booking form, and a second diver detour to edit a date of birth
+    // all have to land before the final assertion.
+    test.setTimeout(30_000);
     const stamp = e2eNow().getTime();
     const sessionTitle = `Age disclosure session ${stamp}`;
     await page.goto(`/shop/${SHOP}/trips/new`);
