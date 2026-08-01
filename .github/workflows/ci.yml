@@ -90,9 +90,22 @@ jobs:
       - uses: actions/cache@v6
         with:
           path: .next/cache
+          # No restore-keys fallback, deliberately: the key hashes the exact
+          # source tree, so a miss means the source changed since any prior
+          # cache. A prefix-only restore-keys fallback would seed Turbopack's
+          # incremental cache from a *different* source tree on every such
+          # miss — which is effectively every commit, since `src/**` rarely
+          # goes untouched between pushes — trusting Turbopack's incremental
+          # reconciliation to correctly patch an arbitrary stale starting
+          # point back to correctness. It doesn't always: this bit a PR that
+          # made unusually large, repeated next.config.ts changes within one
+          # branch (enabling then reverting cacheComponents) with a build that
+          # compiled and passed typecheck/lint but produced a broken
+          # authorize() path only reproducible against the CI-built artifact,
+          # never a from-scratch local build. A cold Turbopack compile here
+          # measures ~20-30s regardless, so the fallback wasn't buying
+          # meaningful speed for the correctness risk it carries.
           key: ${{ runner.os }}-nextjs-e2e-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('src/**', 'next.config.ts') }}
-          restore-keys: |
-            ${{ runner.os }}-nextjs-e2e-${{ hashFiles('pnpm-lock.yaml') }}-
       # This is the only `next build` CI runs. Its output serves perf:budget below,
       # the sharded `playwright` job, and the `visual` job — all three used to pay
       # for their own separate `next build`, which cost several redundant minutes
