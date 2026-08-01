@@ -297,7 +297,8 @@
       "noTripAttached": " · sin salida asociada",
       "refund": "Reembolsar",
       "refunding": "Reembolsando…",
-      "demoRefundHint": "Los pedidos de demostración no están respaldados por una factura real de Stripe, así que los reembolsos están deshabilitados aquí."
+      "demoRefundHint": "Los pedidos de demostración no están respaldados por una factura real de Stripe, así que los reembolsos están deshabilitados aquí.",
+      "showOlderPayments": "{count, plural, one {Mostrar # pago anterior} other {Mostrar # pagos anteriores}}"
     },
     "remove": {
       "heading": "Eliminar de buceadores activos",

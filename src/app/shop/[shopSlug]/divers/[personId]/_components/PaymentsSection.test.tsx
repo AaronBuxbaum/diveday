@@ -48,6 +48,37 @@ function renderSection(totalCents: number, currency: string) {
   );
 }
 
+/** `count` bookings, newest first by `trip.startsAt`, one day apart — no payments or orders attached. */
+function diverWithBookings(count: number): DiverProfile {
+  return {
+    bookings: Array.from({ length: count }, (_, index) => ({
+      booking: { id: `booking-${index}`, status: "checked_in" },
+      trip: {
+        id: `trip-${index}`,
+        title: `Trip ${index}`,
+        startsAt: new Date(2026, 0, count - index),
+        endsAt: new Date(2026, 0, count - index),
+      },
+      course: null,
+    })),
+    bookingPayments: [],
+    orders: [],
+  } as unknown as DiverProfile;
+}
+
+function renderBookings(count: number) {
+  return render(
+    <PaymentsSection
+      diver={diverWithBookings(count)}
+      shop={shop}
+      locale="en-US"
+      shopSlug="reef-shop"
+      personId="person-1"
+      canRefund={false}
+    />,
+  );
+}
+
 afterEach(cleanup);
 
 describe("PaymentsSection order currency (task 35)", () => {
@@ -65,5 +96,30 @@ describe("PaymentsSection order currency (task 35)", () => {
   it("still reads as dollars for a usd order", () => {
     renderSection(13_000, "usd");
     expect(screen.getByText(/\$130\.00/)).toBeInTheDocument();
+  });
+});
+
+describe("PaymentsSection history length", () => {
+  it("renders every row with no disclosure when at or under the preview count", () => {
+    renderBookings(8);
+    expect(screen.getByText("Trip 0")).toBeInTheDocument();
+    expect(screen.getByText("Trip 7")).toBeInTheDocument();
+    expect(screen.queryByText(/Show \d+ older payment/)).not.toBeInTheDocument();
+  });
+
+  it("previews the newest rows and tucks the rest behind a disclosure", () => {
+    // A long-tenured diver's full booking history otherwise renders one row
+    // per trip they've ever taken, with no ceiling (same class of bug the
+    // shop-wide orders index had before it was paginated).
+    renderBookings(10);
+    expect(screen.getByText("Show 2 older payments")).toBeInTheDocument();
+    // The newest 8 (by trip.startsAt) are the immediate list...
+    for (let i = 0; i < 8; i++) {
+      expect(screen.getByText(`Trip ${i}`)).toBeInTheDocument();
+    }
+    // ...and the two oldest are still reachable, not dropped, inside the
+    // disclosure the same way `ShopHistory`'s "older entries" panel works.
+    expect(screen.getByText("Trip 8")).toBeInTheDocument();
+    expect(screen.getByText("Trip 9")).toBeInTheDocument();
   });
 });
