@@ -20,33 +20,39 @@ const openWater = {
 };
 
 describe("courseCharges", () => {
-  it("invoices instruction and e-learning as separate lines", () => {
+  it("invoices instruction and e-learning as separate lines, as parts not sentences", () => {
+    // The course title is a shop-authored proper noun; the words around it
+    // ("— instruction") belong to the caller's message bundle, so nothing here
+    // returns English (docs ADR 20260731-domain-layer-copy-leaks).
     expect(courseCharges(openWater)).toEqual([
       {
         kind: "course_fee",
-        description: "Open Water Diver — instruction",
+        courseTitle: "Open Water Diver",
         amountCents: 49900,
       },
       {
         kind: "e_learning_fee",
-        description: "Open Water Diver — e-learning",
+        courseTitle: "Open Water Diver",
         amountCents: 21000,
       },
     ]);
+    for (const charge of courseCharges(openWater)) {
+      expect(charge).not.toHaveProperty("description");
+    }
   });
 
   it("omits an unpriced item rather than invoicing a zero line", () => {
     expect(courseCharges({ ...openWater, eLearningPriceCents: null })).toEqual([
       {
         kind: "course_fee",
-        description: "Open Water Diver — instruction",
+        courseTitle: "Open Water Diver",
         amountCents: 49900,
       },
     ]);
     expect(courseCharges({ ...openWater, priceCents: null })).toEqual([
       {
         kind: "e_learning_fee",
-        description: "Open Water Diver — e-learning",
+        courseTitle: "Open Water Diver",
         amountCents: 21000,
       },
     ]);
@@ -62,21 +68,21 @@ describe("bookingInvoiceLines", () => {
 
   it("starts a course order at two lines so either can be cleared", () => {
     expect(bookingInvoiceLines({ trip, course: openWater })).toEqual([
-      { kind: "course_fee", description: "Open Water Diver — instruction", amountCents: 49900 },
-      { kind: "e_learning_fee", description: "Open Water Diver — e-learning", amountCents: 21000 },
+      { kind: "course_fee", courseTitle: "Open Water Diver", amountCents: 49900 },
+      { kind: "e_learning_fee", courseTitle: "Open Water Diver", amountCents: 21000 },
     ]);
   });
 
   it("falls back to the session's own price when the catalog entry is unpriced", () => {
     expect(bookingInvoiceLines({ trip, course: { ...openWater, priceCents: null } })).toEqual([
-      { kind: "course_fee", description: "Open Water Diver — instruction", amountCents: 30000 },
-      { kind: "e_learning_fee", description: "Open Water Diver — e-learning", amountCents: 21000 },
+      { kind: "course_fee", courseTitle: "Open Water Diver", amountCents: 30000 },
+      { kind: "e_learning_fee", courseTitle: "Open Water Diver", amountCents: 21000 },
     ]);
   });
 
   it("bills an ordinary charter as one trip fee", () => {
     expect(bookingInvoiceLines({ trip, course: null })).toEqual([
-      { kind: "trip_fee", description: "Open Water — July weekend", amountCents: 30000 },
+      { kind: "trip_fee", tripTitle: "Open Water — July weekend", amountCents: 30000 },
     ]);
   });
 
@@ -86,7 +92,25 @@ describe("bookingInvoiceLines", () => {
         trip: { title: "Shore dive", priceCents: null },
         course: { title: "Open Water Diver", priceCents: null, eLearningPriceCents: null },
       }),
-    ).toEqual([{ kind: "trip_fee", description: "Shore dive", amountCents: null }]);
+    ).toEqual([{ kind: "trip_fee", tripTitle: "Shore dive", amountCents: null }]);
+  });
+
+  it("composes at the boundary: kind + title become the line staff see", () => {
+    // What the order form does with the parts — the words come from the staff
+    // bundle (`orderLine.*`), the title from the shop's own catalog.
+    const words = {
+      course_fee: (title: string) => `${title} — instruction`,
+      e_learning_fee: (title: string) => `${title} — e-learning`,
+    };
+    const composed = bookingInvoiceLines({ trip, course: openWater }).map((line) =>
+      line.kind === "trip_fee" ? line.tripTitle : words[line.kind](line.courseTitle),
+    );
+    expect(composed).toEqual(["Open Water Diver — instruction", "Open Water Diver — e-learning"]);
+    expect(
+      bookingInvoiceLines({ trip, course: null }).map((line) =>
+        line.kind === "trip_fee" ? line.tripTitle : "unreachable",
+      ),
+    ).toEqual(["Open Water — July weekend"]);
   });
 });
 

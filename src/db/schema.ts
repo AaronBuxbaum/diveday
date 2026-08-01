@@ -41,6 +41,19 @@ export const shops = pgTable(
     timezone: text("timezone").notNull(),
     /** BCP 47 locale for public and capability-page copy/formatting. */
     defaultLocale: text("default_locale").notNull().default("en-US"),
+    /**
+     * ISO 4217 currency (lowercase, Stripe's spelling) for every amount this
+     * shop displays or charges — the single source of truth, chosen in
+     * settings (docs ADR 20260731-shop-currency). All `*_cents` columns hold
+     * this currency's **minor unit**, which is not always 1/100: a zero-decimal
+     * currency like JPY stores whole yen, so display divides by the currency's
+     * own exponent rather than a hardcoded 100 (`src/lib/money.ts`).
+     *
+     * `shop_stripe_accounts.default_currency` is what Stripe *reports* for the
+     * connected account and stays advisory: settings surfaces a mismatch
+     * rather than silently overriding what the shop declared here.
+     */
+    currency: text("currency").notNull().default("usd"),
     /** Which medical questionnaire the shop's waivers use; RSTC is the default. */
     jurisdiction: medicalJurisdiction("jurisdiction").notNull().default("rstc"),
     /**
@@ -151,6 +164,19 @@ export const people = pgTable(
      * (docs/product/glossary.md — "DAN").
      */
     diveInsurance: text("dive_insurance"),
+    /**
+     * The language this diver reads, captured from the `Accept-Language` of a
+     * request they made themselves (a public booking, a waiver signature) and
+     * preferred over the shop's `default_locale` when DiveDay emails or texts
+     * them (docs ADR 20260731-per-person-notification-locale, superseding
+     * 20260731-notification-locale).
+     *
+     * Null means "no first-hand signal" — the shop's locale is used, exactly as
+     * before. Only ever written from a request the diver themselves made:
+     * staff-triggered actions carry the *staff* member's header, which says
+     * nothing about what the diver reads.
+     */
+    locale: text("locale"),
     /** Keeps history intact while removing a person from active shop workspaces. */
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

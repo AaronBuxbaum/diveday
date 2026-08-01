@@ -261,7 +261,14 @@ export function splitCourseImageUrls(value: string): string[] {
  */
 export type CourseCharge = {
   kind: Extract<OrderLineItemKind, "course_fee" | "e_learning_fee">;
-  description: string;
+  /**
+   * The course's own title — a shop-authored proper noun, not copy. The words
+   * *around* it ("— instruction", "— e-learning") are copy and belong to the
+   * caller's message bundle, which is why this returns the parts rather than a
+   * composed sentence (docs ADR 20260731-domain-layer-copy-leaks).
+   */
+  courseTitle: string;
+  /** An integer count of the shop currency's minor unit (docs ADR 20260731-shop-currency). */
   amountCents: number;
 };
 
@@ -271,25 +278,49 @@ export type CoursePricing = {
   eLearningPriceCents: number | null;
 };
 
-/** The invoice lines for enrolling one student; priced items only. */
+/**
+ * The invoice lines for enrolling one student; priced items only.
+ *
+ * Returns the *parts* of each line — a kind and the course title — never the
+ * finished label. The order form composes the words from the staff bundle
+ * (`orderLine.*`) and hands the composed string to `createOrder`.
+ */
 export function courseCharges(course: CoursePricing): CourseCharge[] {
   const charges: CourseCharge[] = [];
   if (course.priceCents !== null) {
     charges.push({
       kind: "course_fee",
-      description: `${course.title} — instruction`,
+      courseTitle: course.title,
       amountCents: course.priceCents,
     });
   }
   if (course.eLearningPriceCents !== null) {
     charges.push({
       kind: "e_learning_fee",
-      description: `${course.title} — e-learning`,
+      courseTitle: course.title,
       amountCents: course.eLearningPriceCents,
     });
   }
   return charges;
 }
+
+/**
+ * One prefilled line on the new-order form, as parts rather than as a
+ * sentence. A course line names the course; a trip line names the trip. The
+ * form turns the pair into the description staff see (and can edit) before it
+ * is frozen onto the invoice.
+ */
+export type BookingInvoiceLine =
+  | {
+      kind: Extract<OrderLineItemKind, "course_fee" | "e_learning_fee">;
+      courseTitle: string;
+      amountCents: number | null;
+    }
+  | {
+      kind: Extract<OrderLineItemKind, "trip_fee">;
+      tripTitle: string;
+      amountCents: number | null;
+    };
 
 /**
  * The lines an order form should start from for one booking. A course session
@@ -299,7 +330,7 @@ export function courseCharges(course: CoursePricing): CourseCharge[] {
 export function bookingInvoiceLines(booking: {
   trip: { title: string; priceCents: number | null };
   course: CoursePricing | null;
-}): Array<{ kind: OrderLineItemKind; description: string; amountCents: number | null }> {
+}): BookingInvoiceLine[] {
   if (booking.course) {
     // The trip's own price stands in when the catalog entry is unpriced, so a
     // shop that prices per session is not forced through the catalog first.
@@ -310,7 +341,7 @@ export function bookingInvoiceLines(booking: {
     if (charges.length > 0) return charges;
   }
   return [
-    { kind: "trip_fee", description: booking.trip.title, amountCents: booking.trip.priceCents },
+    { kind: "trip_fee", tripTitle: booking.trip.title, amountCents: booking.trip.priceCents },
   ];
 }
 

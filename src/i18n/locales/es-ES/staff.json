@@ -776,6 +776,10 @@
       }
     }
   },
+  "orderLine": {
+    "instruction": "{courseTitle} — instrucción",
+    "eLearning": "{courseTitle} — formación en línea"
+  },
   "promos": {
     "eyebrow": "Códigos promocionales",
     "title": "Descuentos que un buceador puede escribir",
@@ -1594,7 +1598,9 @@
         "notConfigured": "Los pagos en línea aún no están activados en esta instalación de DiveDay. Quien administre tu alojamiento de DiveDay debe terminar la configuración de Stripe primero.",
         "disconnected": "Cuenta de Stripe desconectada.",
         "refreshed": "Estado de pagos actualizado desde Stripe.",
-        "notAuthorized": "El catálogo de alquiler, los precios de alquiler y la conexión con Stripe son ajustes de pago, limitados a propietarios y gerentes."
+        "notAuthorized": "El catálogo de alquiler, los precios de alquiler y la conexión con Stripe son ajustes de pago, limitados a propietarios y gerentes.",
+        "currencySaved": "Moneda guardada. Los precios existentes conservan sus cifras — comprueba que tu lista de precios siga siendo correcta.",
+        "currencyInvalid": "Elige una moneda de la lista."
       },
       "contact": {
         "heading": "Datos de contacto públicos",
@@ -1706,7 +1712,15 @@
         "description": "Todas las facturas y pagos que ha enviado la tienda: filtra por estado, fecha o buceador.",
         "cta": "Ver pedidos"
       },
-      "backToSettings": "Volver a configuración"
+      "backToSettings": "Volver a configuración",
+      "currency": {
+        "heading": "Moneda",
+        "description": "La moneda en la que se muestran tus precios y se cobra a tus buceadores. Cambiarla no convierte nada: una salida de 130 sigue siendo 130, solo que ahora son 130 de la nueva moneda. Los pedidos y pagos ya liquidados conservan la moneda con la que se cobraron.",
+        "label": "Cobrar y mostrar en",
+        "submit": "Guardar moneda",
+        "submitting": "Guardando…",
+        "mismatch": "Cobras en {shopCurrency}, pero Stripe liquida esta cuenta conectada en {accountCurrency}. Stripe rechazará un pago en una moneda que esta cuenta no puede liquidar — elige {accountCurrency} aquí o conecta una cuenta que liquide en {shopCurrency}."
+      }
     },
     "team": {
       "eyebrow": "Ajustes",

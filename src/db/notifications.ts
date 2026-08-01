@@ -1,5 +1,4 @@
 import { and, asc, count, desc, eq, gte, inArray, isNull, lt, lte, ne, or, sql } from "drizzle-orm";
-import { toDiverLocale } from "@/i18n/settings";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
 import {
@@ -10,6 +9,7 @@ import {
   notificationProviderFromEnvironment,
   notify,
   publicAppUrl,
+  recipientLocale,
 } from "@/lib/notifications";
 import { ACTIONABLE_PROVIDER_STATUSES, type ProviderEmailStatus } from "@/lib/notifications/events";
 import { issueBookingCapability } from "./booking-capabilities";
@@ -409,11 +409,11 @@ export async function recordNotificationDelivery(
 export async function sendAndRecordNotification(
   db: AppDb,
   input: TrackedNotification,
-  options: { isRetry?: boolean } = {},
+  options: { isRetry?: boolean; provider?: NotificationProvider } = {},
 ) {
   let delivery: NotificationDelivery;
   try {
-    delivery = await sendNotification(db, input);
+    delivery = await sendNotification(db, input, options.provider);
   } catch {
     delivery = { status: "failed" };
   }
@@ -440,7 +440,12 @@ export async function sendAndRecordNotification(
  * confirmations are retryable: a waiver link's one-time token is never stored,
  * so re-sending a waiver means issuing a fresh link, not a retry.
  */
-export async function retryBookingConfirmation(db: AppDb, shopId: string, bookingId: string) {
+export async function retryBookingConfirmation(
+  db: AppDb,
+  shopId: string,
+  bookingId: string,
+  provider?: NotificationProvider,
+) {
   const [row] = await db
     .select({ booking: bookings, person: people, trip: trips, shop: shops })
     .from(bookings)
@@ -471,7 +476,10 @@ export async function retryBookingConfirmation(db: AppDb, shopId: string, bookin
       bookingId: row.booking.id,
       shopId,
       to: row.person.email,
-      locale: toDiverLocale(row.shop.defaultLocale),
+      // Staff press the button, but the diver reads the mail — so this is the
+      // diver's own recorded locale, never the staff member's request
+      // (docs ADR 20260731-per-person-notification-locale).
+      locale: recipientLocale(row.person.locale, row.shop.defaultLocale),
       diverName: row.person.fullName,
       shopName: row.shop.name,
       tripTitle: row.trip.title,
@@ -486,7 +494,7 @@ export async function retryBookingConfirmation(db: AppDb, shopId: string, bookin
       // original booking confirmation's provider idempotency key.
       confirmedAt: nowDate(),
     },
-    { isRetry: true },
+    { isRetry: true, provider },
   );
 }
 

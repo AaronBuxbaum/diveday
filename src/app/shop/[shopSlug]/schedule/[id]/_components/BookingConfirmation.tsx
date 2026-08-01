@@ -4,7 +4,8 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { diverTranslator } from "@/i18n/messages";
 import { checklistCategoryText, checklistDetailText } from "@/i18n/readiness-summary-labels";
-import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
+import { formatMoneyCents, formatShortDate, formatTimeRangeTz } from "@/lib/format";
+import { toShopCurrency } from "@/lib/money";
 import { buildDiverChecklist, nextDiverStep } from "@/lib/readiness-summary";
 import { payForBooking, type RentalFitRef, saveRentalFitRequest } from "../actions";
 import { RememberBooker } from "./RememberBooker";
@@ -19,15 +20,6 @@ import type {
   Trip,
 } from "./types";
 
-/**
- * Money on the confirmation panel. The shop's locale decides grouping and
- * symbol placement (docs ADR 20260729-diver-copy-localization); the currency
- * stays USD until multi-currency is a real requirement.
- */
-function moneyFormatter(locale: string) {
-  return new Intl.NumberFormat(locale, { style: "currency", currency: "USD" });
-}
-
 function PaymentSection({
   payment,
   payCancelled,
@@ -40,21 +32,27 @@ function PaymentSection({
   locale: string;
 }) {
   if (!payment) return null;
-  const usd = moneyFormatter(locale);
   const t = diverTranslator(locale);
 
   if (payment.state === "paid") {
     const depositWithBalance = payment.isDeposit && payment.balanceDueCents > 0;
+    // The currency comes off the settled payment row, not today's shop
+    // setting: a receipt is evidence of what was charged, and a shop that
+    // switches currency next season must not restate last season's amount
+    // (docs ADR 20260731-shop-currency). The balance is the remainder of that
+    // same charge, so it is quoted in the same currency. `formatMoneyCents`
+    // divides by *that* currency's minor unit — a ¥9,000 deposit is not ¥90.
+    const money = (cents: number) => formatMoneyCents(cents, payment.currency, locale);
     return (
       <div className="mt-4 rounded-lg border border-success/40 bg-success/10 p-4 text-left">
         <h3 className="font-semibold text-success">
           {depositWithBalance ? t("booking.paymentDepositReceived") : t("booking.paymentReceived")}
-          {payment.amountCents !== null ? ` — ${usd.format(payment.amountCents / 100)}` : ""} ✓
+          {payment.amountCents !== null ? ` — ${money(payment.amountCents)}` : ""} ✓
         </h3>
         <p className="mt-1 text-sm text-muted">
           {depositWithBalance
             ? t("booking.paymentDepositBalance", {
-                balance: usd.format(payment.balanceDueCents / 100),
+                balance: money(payment.balanceDueCents),
               })
             : t("booking.paymentSquare")}
         </p>
@@ -232,6 +230,7 @@ export function BookingConfirmation({
         nitroxCardVerified={nitroxCardVerified}
         plannedDives={trip.plannedDives}
         saved={fitSaved}
+        currency={toShopCurrency(shop.currency)}
       />
       <Link
         href={`/shop/${shopSlug}/schedule${fitRef.embed ? "?embed=1" : ""}`}

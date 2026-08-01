@@ -41,6 +41,12 @@ export async function searchShop(
   shopId: string,
   rawQuery: string,
   timeZone: string,
+  /**
+   * The reader's negotiated locale, for the dates and amounts in each result's
+   * detail line. Passed in rather than defaulted: this module formats for a
+   * person, and a hard-coded default here is invisible from the palette.
+   */
+  locale: string,
 ): Promise<SearchResults> {
   const query = rawQuery.trim();
   if (query.length < MIN_QUERY) return EMPTY_RESULTS;
@@ -96,6 +102,7 @@ export async function searchShop(
         personName: people.fullName,
         description: orders.description,
         totalCents: orders.totalCents,
+        currency: orders.currency,
         createdAt: orders.createdAt,
       })
       .from(orders)
@@ -117,7 +124,7 @@ export async function searchShop(
       detail: row.email ?? row.phone ?? null,
     })),
     trips: tripRows.map((row) => {
-      const date = formatShortDate(row.startsAt, "en-US", timeZone);
+      const date = formatShortDate(row.startsAt, locale, timeZone);
       return {
         id: row.id,
         title: row.title,
@@ -129,7 +136,9 @@ export async function searchShop(
     orders: orderRows.map((row) => ({
       id: row.id,
       personName: row.personName,
-      detail: `${formatMoneyCents(row.totalCents)} · ${formatShortDate(row.createdAt, "en-US", timeZone)}`,
+      // The order row's own currency, not the shop's current setting — a
+      // settled amount is evidence and is never re-denominated.
+      detail: `${formatMoneyCents(row.totalCents, row.currency, locale)} · ${formatShortDate(row.createdAt, locale, timeZone)}`,
     })),
   };
 }

@@ -23,6 +23,7 @@ import { requestLocale } from "@/i18n/request";
 import { nowDate } from "@/lib/clock";
 import { telHref } from "@/lib/course-inquiry";
 import { formatRelativeDay, formatShortDate, formatTime, formatTimeRangeTz } from "@/lib/format";
+import { toShopCurrency } from "@/lib/money";
 import {
   buildDiverChecklist,
   type ChecklistState,
@@ -481,6 +482,7 @@ export default async function DiverReadinessPage({
             rentalFit={data.rentalFit}
             rentalItems={data.shop.rentalItems}
             pricing={data.shop.rentalPricing}
+            currency={toShopCurrency(data.shop.currency)}
             wantsNitrox={data.wantsNitrox}
             nitroxCardVerified={data.nitroxCardVerified}
             plannedDives={data.trip.plannedDives}

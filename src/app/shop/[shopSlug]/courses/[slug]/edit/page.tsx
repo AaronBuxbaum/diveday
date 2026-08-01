@@ -14,6 +14,7 @@ import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatFaqs } from "@/lib/courses";
+import { toShopCurrency } from "@/lib/money";
 import { requireStaffSession } from "@/lib/session";
 import { MAX_IMAGE_MB, MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION } from "@/lib/storage/limits";
 import { DayByDayEditor } from "./_components/DayByDayEditor";
@@ -46,7 +47,9 @@ export default async function EditCoursePage({
   ]);
   if (!course || !shop) notFound();
   const back = `/shop/${shopSlug}/courses`;
-  const t = staffTranslator(await requestLocale(shop.defaultLocale));
+  const locale = await requestLocale(shop.defaultLocale);
+  const currency = toShopCurrency(shop.currency);
+  const t = staffTranslator(locale);
 
   const saveAction = saveCourseContentAction.bind(null, shopSlug, slug);
   const visibilityAction = setCourseVisibilityAction.bind(null, shopSlug, slug);
@@ -164,6 +167,8 @@ export default async function EditCoursePage({
                 name="price"
                 label={t("courses.edit.instructionFeeLabel")}
                 cents={course.priceCents}
+                currency={currency}
+                locale={locale}
               />
               <PriceField
                 id="eLearningPrice"
@@ -171,6 +176,8 @@ export default async function EditCoursePage({
                 label={t("courses.edit.eLearningFeeLabel")}
                 hint={t("courses.edit.eLearningFeeHint")}
                 cents={course.eLearningPriceCents}
+                currency={currency}
+                locale={locale}
               />
             </FieldGrid>
           </fieldset>

@@ -11,9 +11,13 @@ export type AccountContact = {
   shopSlug: string;
   shopName: string;
   timezone: string;
-  /** The shop's own locale — the only signal for an account-lifecycle email's
-   * language, since no per-person preference is stored (docs ADR
-   * 20260731-notification-locale). */
+  /**
+   * The shop's own locale — deliberately the shop's and not the joined
+   * person's. `people.locale` records what a *diver* told us from their own
+   * public booking or waiver link; account-lifecycle mail goes to a staff
+   * member, and nothing in the staff surfaces ever writes that column (docs
+   * ADR 20260731-per-person-notification-locale).
+   */
   defaultLocale: string;
 };
 

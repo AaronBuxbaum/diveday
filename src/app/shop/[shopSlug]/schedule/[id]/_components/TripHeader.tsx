@@ -3,11 +3,15 @@ import { diverTranslator } from "@/i18n/messages";
 import { courseCharges, perDiverBookingPriceCents } from "@/lib/courses";
 import { cancellationDeadline, checkoutCharge } from "@/lib/deposits";
 import { formatDateTimeTz, formatMoneyCents, formatShortDate, formatTimeRange } from "@/lib/format";
+import { toShopCurrency } from "@/lib/money";
 import type { Shop, Trip } from "./types";
 
 export function TripHeader({ shop, trip, locale }: { shop: Shop; trip: Trip; locale: string }) {
   const charge = checkoutCharge(trip, trip.course);
   const deadline = cancellationDeadline(trip);
+  // Every figure in the hero is a list price, so it follows the shop's own
+  // currency (docs ADR 20260731-shop-currency) — never a hardcoded "usd".
+  const currency = toShopCurrency(shop.currency);
   const t = diverTranslator(locale);
   // The same total the booking section actually charges — course fee and
   // e-learning included — not the bare trip row (task 15). Before this fix a
@@ -54,23 +58,23 @@ export function TripHeader({ shop, trip, locale }: { shop: Shop; trip: Trip; loc
             {trip.description ? <p className="mt-3 text-muted">{trip.description}</p> : null}
             {perDiverPriceCents !== null ? (
               <p className="mt-3 text-lg font-semibold tabular-nums">
-                {formatMoneyCents(perDiverPriceCents, "usd", locale)}{" "}
+                {formatMoneyCents(perDiverPriceCents, currency, locale)}{" "}
                 <span className="text-sm font-normal text-muted">{t("common.perDiver")}</span>
               </p>
             ) : null}
             {courseFeeCents !== null && eLearningFeeCents !== null ? (
               <p className="mt-1 text-sm text-muted tabular-nums">
                 {t("trip.courseFeeBreakdown", {
-                  course: formatMoneyCents(courseFeeCents, "usd", locale),
-                  eLearning: formatMoneyCents(eLearningFeeCents, "usd", locale),
+                  course: formatMoneyCents(courseFeeCents, currency, locale),
+                  eLearning: formatMoneyCents(eLearningFeeCents, currency, locale),
                 })}
               </p>
             ) : null}
             {charge?.isDeposit ? (
               <p className="mt-1 text-sm text-muted tabular-nums">
                 {t("trip.depositLine", {
-                  deposit: formatMoneyCents(charge.amountCents, "usd", locale),
-                  balance: formatMoneyCents(charge.balanceDueCents, "usd", locale),
+                  deposit: formatMoneyCents(charge.amountCents, currency, locale),
+                  balance: formatMoneyCents(charge.balanceDueCents, currency, locale),
                 })}
               </p>
             ) : null}

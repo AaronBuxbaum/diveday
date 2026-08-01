@@ -1,7 +1,6 @@
 import { and, count, eq, ne } from "drizzle-orm";
-import { toDiverLocale } from "@/i18n/settings";
 import { nowDate } from "@/lib/clock";
-import { publicAppUrl } from "@/lib/notifications";
+import { publicAppUrl, recipientLocale } from "@/lib/notifications";
 import type { AppDb } from "./client";
 import { sendNotification } from "./notifications";
 import { findOrCreatePerson } from "./people";
@@ -84,7 +83,7 @@ export async function inviteWaitlistDiver(
       waitlistEntryId: ctx.entry.id,
       shopId: input.shopId,
       to: ctx.person.email,
-      locale: toDiverLocale(ctx.shop.defaultLocale),
+      locale: recipientLocale(ctx.person.locale, ctx.shop.defaultLocale),
       diverName: ctx.person.fullName,
       shopName: ctx.shop.name,
       tripTitle: ctx.trip.title,

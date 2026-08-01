@@ -21,6 +21,7 @@ import { deleteRecapPhoto, setTripRecapShoutout } from "@/db/recap";
 import { type CancellationRefundOutcome, refundBookingOnCancellation } from "@/db/refunds";
 import { people } from "@/db/schema";
 import { getShopById } from "@/db/shops";
+import { getShopCurrency } from "@/db/stripe-accounts";
 import { sendLastMinuteDealBlast } from "@/db/trip-promos";
 import {
   applyDetailsToFutureSeries,
@@ -44,6 +45,7 @@ import { trackEvent } from "@/lib/analytics";
 import { nowDate } from "@/lib/clock";
 import { emergencyContactSchema } from "@/lib/contact";
 import { isValidLastMinuteDiscountPercent } from "@/lib/last-minute-list";
+import { MAX_PRICE_MINOR_UNITS, majorToMinor, toShopCurrency } from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { notify, publicAppUrl } from "@/lib/notifications";
 import { MAX_SERIES_OCCURRENCES, weeklyOccurrencesAfter } from "@/lib/recurrence";
@@ -186,6 +188,23 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
   const startsAt = wallTimeToUtc(sw, shopNow.timezone);
   const endsAt = wallTimeToUtc(ew, shopNow.timezone);
   if (endsAt <= startsAt) redirect(`${back}?notice=end-before-start`);
+  // What the numbers in the price boxes mean — the shop's own currency.
+  const tripCurrency = toShopCurrency(shopNow.currency);
+  const priceCents = priceDollars === undefined ? null : majorToMinor(priceDollars, tripCurrency);
+  const depositCents =
+    depositDollars === undefined ? null : majorToMinor(depositDollars, tripCurrency);
+  // The ceiling every other price validator applies (course fees, rental
+  // pricing, order line items). These two were the odd ones out with no
+  // `.max()` at all, so a forged submit could store a ten-million-dollar trip
+  // or overflow the integer column outright (security-reviewer finding).
+  // Checked on the converted minor units, not the typed number, because the
+  // schemas are module-level and parse before the shop's currency is known.
+  if (
+    (priceCents !== null && priceCents > MAX_PRICE_MINOR_UNITS) ||
+    (depositCents !== null && depositCents > MAX_PRICE_MINOR_UNITS)
+  ) {
+    redirect(`${back}?notice=invalid`);
+  }
   const outcome = await updateTrip(dbi, s.user.shopId, tripId, {
     title,
     description: description || undefined,
@@ -193,8 +212,8 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
     endsAt,
     capacity,
     plannedDives,
-    priceCents: priceDollars === undefined ? null : Math.round(priceDollars * 100),
-    depositCents: depositDollars === undefined ? null : Math.round(depositDollars * 100),
+    priceCents: priceDollars === undefined ? null : majorToMinor(priceDollars, tripCurrency),
+    depositCents: depositDollars === undefined ? null : majorToMinor(depositDollars, tripCurrency),
     cancellationWindowHours: cancellationWindowHours ?? null,
     diveSiteId: tripDiveDraftsFromForm(formData, plannedDives)[0]?.diveSiteId ?? null,
     dives: tripDiveDraftsFromForm(formData, plannedDives),
@@ -797,12 +816,17 @@ export async function markPaymentAction(shopSlug: string, tripId: string, formDa
   const s = await requireStaffSession();
   const bookingId = String(formData.get("bookingId") ?? "");
   const status = paymentStatusSchema.safeParse(formData.get("status"));
+  const db = await getDb();
   const saved =
     bookingId && status.success
-      ? await setBookingPayment(await getDb(), {
+      ? await setBookingPayment(db, {
           shopId: s.user.shopId,
           bookingId,
           status: status.data,
+          // Counter cash is still money the shop took in its own currency —
+          // stamping this row `usd` by default told a Mexican shop's diver
+          // their balance was in dollars.
+          currency: await getShopCurrency(db, s.user.shopId),
         })
       : null;
   revalidateAndRedirect(back, `${back}?notice=${saved ? "payment" : "invalid"}`);

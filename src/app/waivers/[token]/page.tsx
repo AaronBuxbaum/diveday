@@ -12,6 +12,7 @@ import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { issueBookingCapability } from "@/db/booking-capabilities";
 import { getDb } from "@/db/client";
+import { recordDiverOwnLocale } from "@/db/people";
 import { bookings, type MedicalAnswers, type Shop, trips } from "@/db/schema";
 import { getShopById } from "@/db/shops";
 import { getTripDiveSitesPeek } from "@/db/trips";
@@ -24,7 +25,7 @@ import {
   saveWaiverDraft,
 } from "@/db/waivers";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
-import { requestLocale } from "@/i18n/request";
+import { requestFirstHandLocale, requestLocale } from "@/i18n/request";
 import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
 import { trackEvent } from "@/lib/analytics";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
@@ -311,6 +312,16 @@ export default async function WaiverPage({
     const answers = readMedicalAnswers(formData, questionnaire);
     if (!parsed.success || !answers) redirect(`/waivers/${token}?error=invalid`);
     const db = await getDb();
+    // A form the diver themselves just submitted through their own bearer
+    // link — first-hand evidence of the language they read (docs ADR
+    // 20260731-per-person-notification-locale). Captured on submit and not on
+    // the page render above, because a chat app unfurling this URL for a link
+    // preview also GETs the page, and that bot's `Accept-Language` is nobody's.
+    await recordDiverOwnLocale(db, {
+      shopId: record.shopId,
+      personId: record.personId,
+      locale: await requestFirstHandLocale(),
+    });
     const savedDraft = await saveWaiverDraft(db, token, {
       signerName: parsed.data.signerName,
       acknowledged: parsed.data.acknowledged === "on",
@@ -343,6 +354,14 @@ export default async function WaiverPage({
     const answers = readMedicalAnswers(formData, questionnaire);
     if (!parsed.success || !answers) redirect(`/waivers/${token}?error=invalid`);
     const contact = emergencyContactSchema.safeParse(Object.fromEntries(formData));
+    // Same first-hand signal as the draft save above (docs ADR
+    // 20260731-per-person-notification-locale) — signing is the strongest
+    // version of it, since the diver read and agreed to the whole page.
+    await recordDiverOwnLocale(await getDb(), {
+      shopId: record.shopId,
+      personId: record.personId,
+      locale: await requestFirstHandLocale(),
+    });
     const outcome = await completeWaiver(await getDb(), token, {
       signerName: parsed.data.signerName,
       agreed: true,

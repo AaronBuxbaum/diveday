@@ -12,11 +12,12 @@ import { getDb } from "@/db/client";
 import { createOrder, getBookingContext, listOrderableCustomers } from "@/db/orders";
 import { orderLineItemKind } from "@/db/schema";
 import { getShopById } from "@/db/shops";
-import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
+import { canAcceptPayments, getShopCurrency, getShopStripeAccount } from "@/db/stripe-accounts";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { bookingInvoiceLines } from "@/lib/courses";
 import { formatShortDate } from "@/lib/format";
+import { currencyFractionDigits, majorToMinor, minorToMajor, toShopCurrency } from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { noticeFromParam } from "@/lib/staff-notices";
@@ -55,6 +56,14 @@ async function createOrderAction(formData: FormData) {
   const bookingId = String(formData.get("bookingId") ?? "").trim() || null;
   const description = String(formData.get("description") ?? "").trim() || null;
 
+  const db = await getDb();
+  // Staff type a major-unit price ("129.00"); the invoice is billed in an
+  // integer count of the shop currency's minor unit. The multiplier is the
+  // currency's own, never a literal 100 — ¥5000 typed is 5000 stored, not
+  // 500000 (docs ADR 20260731-shop-currency). `createOrder` reads the same
+  // shop setting for the invoice itself, so the two can't disagree.
+  const currency = await getShopCurrency(db, session.user.shopId);
+
   const lineItems: {
     kind: LineItemKind;
     description: string;
@@ -78,7 +87,7 @@ async function createOrderAction(formData: FormData) {
       kind: kind.data,
       description: itemDescription.data,
       quantity: quantity.data,
-      unitAmountCents: Math.round(dollars.data * 100),
+      unitAmountCents: majorToMinor(dollars.data, currency),
     });
   }
 
@@ -86,7 +95,6 @@ async function createOrderAction(formData: FormData) {
     redirect(`/shop/${session.user.shopSlug}/orders/new?notice=invalid`);
   }
 
-  const db = await getDb();
   const result = await createOrder(db, {
     shopId: session.user.shopId,
     personId,
@@ -147,10 +155,29 @@ export default async function NewOrderPage({
   // session fills two lines — instruction and e-learning — because a student
   // who already did the e-learning gets that line cleared rather than the
   // total re-worked by hand. Everything else is one trip fee.
+  //
+  // `bookingInvoiceLines` hands back the *parts* of each line, never a
+  // sentence (docs ADR 20260731-domain-layer-copy-leaks): the course/trip title
+  // is a shop-authored proper noun, and the words around it come from the staff
+  // bundle here. Whatever this composes is what staff can edit and what
+  // `createOrder` then freezes onto the invoice.
+  const currency = toShopCurrency(shop?.currency);
+  // A zero-decimal currency has no ¥1.50 to type — `step="0.01"` invited one,
+  // and `majorToMinor` would have rounded it to 2.
+  const unitAmountDigits = currencyFractionDigits(currency);
+  const unitAmountStep = unitAmountDigits === 0 ? "1" : `0.${"0".repeat(unitAmountDigits - 1)}1`;
   const lineDefaults = (bookingContext ? bookingInvoiceLines(bookingContext) : []).map((line) => ({
     kind: line.kind as LineItemKind,
-    description: line.description,
-    unitAmount: line.amountCents === null ? "" : (line.amountCents / 100).toFixed(2),
+    description:
+      line.kind === "trip_fee"
+        ? line.tripTitle
+        : t(line.kind === "course_fee" ? "orderLine.instruction" : "orderLine.eLearning", {
+            courseTitle: line.courseTitle,
+          }),
+    unitAmount:
+      line.amountCents === null
+        ? ""
+        : minorToMajor(line.amountCents, currency).toFixed(currencyFractionDigits(currency)),
   }));
   const isCourseOrder = lineDefaults.some((line) => line.kind === "e_learning_fee");
 
@@ -270,7 +297,7 @@ export default async function NewOrderPage({
                 <input
                   type="number"
                   name={`unitAmount-${i}`}
-                  step="0.01"
+                  step={unitAmountStep}
                   min={0}
                   defaultValue={rowDefault?.unitAmount}
                   aria-label={t("orders.new.unitPriceLabel")}

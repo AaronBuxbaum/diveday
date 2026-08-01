@@ -13,6 +13,8 @@
  * amounts that gate boarding). See docs ADR 20260723-owner-reporting.
  */
 
+import { minorToMajor } from "./money";
+
 /** One trip's contribution to a month, as the db layer hands it up. */
 export type ReportTrip = {
   tripId: string;
@@ -85,17 +87,22 @@ export function formatPercent(ratio: number | null): string {
 }
 
 /**
- * A monthly revenue headline reads as whole dollars — "$5,789", not
- * "$5,789.00". The trailing cents are noise on a KPI and monthly totals are
- * whole dollars anyway. Falls back to `formatMoneyCents` shape (grouping,
+ * A monthly revenue headline reads in whole major units — "$5,789", not
+ * "$5,789.00". The trailing minor units are noise on a KPI and monthly totals
+ * are whole units anyway. Falls back to `formatMoneyCents` shape (grouping,
  * symbol), just without the fraction.
+ *
+ * The currency is a parameter and never a lookup: this is `src/lib`, so the
+ * caller — which has the shop row — decides (docs ADR 20260731-shop-currency).
+ * The divisor comes from that currency via `minorToMajor`, not a literal 100,
+ * or a ¥580,000 month would headline as ¥5,800.
  */
 export function formatReportMoney(cents: number, currency = "usd", locale = "en-US"): string {
   return new Intl.NumberFormat(locale, {
     style: "currency",
     currency: currency.toUpperCase(),
     maximumFractionDigits: 0,
-  }).format(cents / 100);
+  }).format(minorToMajor(cents, currency));
 }
 
 /**

@@ -312,6 +312,7 @@ describe("redemption recording", () => {
         customerEmail: "promo@example.com",
         successUrl: "https://diveday.example/ok",
         cancelUrl: "https://diveday.example/no",
+        describeLine: ({ tripTitle }) => tripTitle,
         promotionCode: created.promo.stripePromotionCodeId ?? undefined,
         shopPromo: { id: created.promo.id, code: created.promo.code },
       },
@@ -363,6 +364,7 @@ describe("redemption recording", () => {
         customerEmail: "full@example.com",
         successUrl: "https://diveday.example/ok",
         cancelUrl: "https://diveday.example/no",
+        describeLine: ({ tripTitle }) => tripTitle,
       },
       fakeCheckout(),
     );

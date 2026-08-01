@@ -1,12 +1,17 @@
 import { and, eq, gt, inArray, lt, lte, ne } from "drizzle-orm";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { reminderActionText } from "@/i18n/reminder-labels";
-import { type DiverLocale, toDiverLocale } from "@/i18n/settings";
+import type { DiverLocale } from "@/i18n/settings";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { firstTimerReassuranceText, forecastText } from "@/lib/night-before-brief";
-import { type Notification, type NotificationProvider, publicAppUrl } from "@/lib/notifications";
+import {
+  type Notification,
+  type NotificationProvider,
+  publicAppUrl,
+  recipientLocale,
+} from "@/lib/notifications";
 import {
   notifySms,
   type SmsProvider,
@@ -84,10 +89,11 @@ export type SendDueRemindersOptions = {
  * A short text; the email carries the full detail and the link. The night-before
  * (day) lead adds the plain-language conditions line and who to text, the SMS
  * half of the confidence arc — kept compact so it stays a single readable text.
- * Resolved against the recipient shop's locale, the same as the email
- * (docs ADR 20260731-notification-locale) — no downstream renderer picks
- * words for a sent text, so this composes its own via `t()` rather than
- * returning a code.
+ * Resolved against the recipient's own locale, the same as the email that
+ * accompanies it (docs ADR 20260731-per-person-notification-locale) — no
+ * downstream renderer picks words for a sent text, so this composes its own
+ * via `t()` rather than returning a code (docs ADR
+ * 20260731-notification-locale, whose terminal-renderer exception stands).
  */
 function reminderSmsBody(
   t: DiverTranslator,
@@ -229,10 +235,14 @@ export async function sendDueReminders(
     }
 
     const lead = cadence.kind === "trip_reminder_7d" ? "week" : "day";
-    // No request to negotiate Accept-Language from at a cron fire — the shop's
-    // own stored locale is the signal, same as the calendar feed (docs ADR
-    // 20260731-notification-locale).
-    const locale = toDiverLocale(shop.defaultLocale);
+    // There is no request to negotiate `Accept-Language` from at a cron fire,
+    // so this reads whatever the diver's own past requests already recorded,
+    // and falls back to the shop's stored locale when there is nothing — same
+    // fallback the calendar feed uses, for the same reason (docs ADR
+    // 20260731-per-person-notification-locale). Both the email and the SMS
+    // below take this one value, so a diver never gets the two channels in
+    // different languages.
+    const locale = recipientLocale(person.locale, shop.defaultLocale);
     const t = diverTranslator(locale);
     const readinessCapability = origin
       ? await issueBookingCapability(db, {

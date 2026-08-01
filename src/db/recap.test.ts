@@ -1,11 +1,13 @@
 // @vitest-environment node
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { toDiverLocale } from "@/i18n/settings";
 import type { Notification, NotificationDelivery, NotificationProvider } from "@/lib/notifications";
 import type { SmsDelivery, SmsMessage, SmsProvider } from "@/lib/notifications/sms";
 import type { CheckoutProvider, CreateCheckoutSessionResult } from "@/lib/payments/checkout";
 import { seededShopContext } from "@/test/db";
 import { createBookingParty } from "./bookings";
+import { recordDiverOwnLocale } from "./people";
 import {
   addRecapPhoto,
   canAddRecapPhoto,
@@ -18,7 +20,7 @@ import {
   setTripRecapShoutout,
 } from "./recap";
 import { bookings, notificationDeliveries, people } from "./schema";
-import { setShopReviewUrl } from "./shops";
+import { setShopCurrency, setShopReviewUrl } from "./shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { startTipCheckout } from "./tips";
 import { upcomingTripsWithCounts } from "./trips";
@@ -130,20 +132,31 @@ describe("getRecapPageData", () => {
     expect(data?.canTip).toBe(false);
   });
 
-  it("defaults currency to usd with no connected Stripe account, and reads a connected one's own currency (task 60)", async () => {
+  it("reads the shop's own currency, not the connected account's (task 35, superseding task 60)", async () => {
     const { db, shop, bookingId } = await recapContext();
-    const before = await getRecapPageData(db, bookingId);
-    expect(before?.currency).toBe("usd");
+    // No Stripe account at all: the shop's column default still answers, so
+    // the tip presets have a currency before any money is connected.
+    expect((await getRecapPageData(db, bookingId))?.currency).toBe("usd");
 
-    await upsertShopStripeAccount(db, shop.id, "acct_eur");
-    await setShopStripeAccountStatus(db, "acct_eur", {
+    await setShopCurrency(db, shop.id, "eur");
+    expect((await getRecapPageData(db, bookingId))?.currency).toBe("eur");
+
+    // Stripe reporting something else for the connected account is advisory
+    // (`stripeCurrencyMismatch` surfaces it in settings) and never overrides
+    // what the shop declared — task 60 read `default_currency` here, which
+    // let one booking be quoted in two currencies across its own pages.
+    await upsertShopStripeAccount(db, shop.id, "acct_usd");
+    await setShopStripeAccountStatus(db, "acct_usd", {
       chargesEnabled: true,
       payoutsEnabled: true,
       detailsSubmitted: true,
-      defaultCurrency: "eur",
+      defaultCurrency: "usd",
     });
-    const after = await getRecapPageData(db, bookingId);
-    expect(after?.currency).toBe("eur");
+    expect((await getRecapPageData(db, bookingId))?.currency).toBe("eur");
+
+    // A zero-decimal currency reaches the page as itself, undivided.
+    await setShopCurrency(db, shop.id, "jpy");
+    expect((await getRecapPageData(db, bookingId))?.currency).toBe("jpy");
   });
 });
 
@@ -185,6 +198,7 @@ async function pendingTipContext() {
       amountCents: 1000,
       successUrl: "https://diveday.example/recap/tok?tip=paid",
       cancelUrl: "https://diveday.example/recap/tok?tip=cancelled",
+      lineDescription: "CALLER_TIP_LABEL",
     },
     fakeCheckout(),
   );
@@ -386,6 +400,51 @@ describe("recap photos and crew shout-out", () => {
 });
 
 describe("sendDueRecaps", () => {
+  /**
+   * The cron has no request to negotiate from, but the diver may have told us
+   * first-hand on a request of their own — and their language outranks the
+   * shop's default (docs ADR 20260731-per-person-notification-locale). This is
+   * Ingrid's case exactly: a German diver at a Spanish-speaking shop.
+   */
+  it("sends the recap in the diver's own recorded language, not the shop's", async () => {
+    const { db, shop, bookingId, afterTrip } = await recapContext();
+    const opts = () => ({
+      now: afterTrip,
+      emailProvider: fakeEmail().provider,
+      smsProvider: fakeSms().provider,
+      appOrigin: ORIGIN,
+    });
+
+    // With nothing recorded, the shop's locale answers exactly as before.
+    const shopOnly = fakeEmail();
+    await sendDueRecaps(db, { ...opts(), emailProvider: shopOnly.provider });
+    const beforeMine = shopOnly.sent.filter(
+      (n) => n.kind === "trip_recap" && n.bookingId === bookingId,
+    );
+    expect(beforeMine).toHaveLength(1);
+    expect(beforeMine[0]).toMatchObject({ locale: toDiverLocale(shop.defaultLocale) });
+
+    // Now the diver has told us, first-hand, that they read Spanish.
+    await db.delete(notificationDeliveries).where(eq(notificationDeliveries.bookingId, bookingId));
+    const [person] = await db
+      .select({ personId: bookings.personId })
+      .from(bookings)
+      .where(eq(bookings.id, bookingId))
+      .limit(1);
+    if (!person) throw new Error("booking has no person");
+    await recordDiverOwnLocale(db, {
+      shopId: shop.id,
+      personId: person.personId,
+      locale: "es-ES",
+    });
+
+    const own = fakeEmail();
+    await sendDueRecaps(db, { ...opts(), emailProvider: own.provider });
+    const mine = own.sent.filter((n) => n.kind === "trip_recap" && n.bookingId === bookingId);
+    expect(mine).toHaveLength(1);
+    expect(mine[0]).toMatchObject({ locale: "es-ES" });
+  });
+
   it("sends the recap once after departure, records it, and is a no-op on a second run", async () => {
     const { db, bookingId, afterTrip } = await recapContext();
     const email = fakeEmail();

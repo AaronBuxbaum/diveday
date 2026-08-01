@@ -220,3 +220,70 @@ describe("sendDueReminders", () => {
     expect(rows[0].status).toBe("not_configured");
   });
 });
+
+describe("sendDueReminders locale (docs ADR 20260731-per-person-notification-locale)", () => {
+  it("uses the shop's locale when the diver has never told us what they read", async () => {
+    const { db, shop, bookingId, personId, inWeekBucket } = await reminderContext();
+    await db.update(shops).set({ defaultLocale: "es-ES" }).where(eq(shops.id, shop.id));
+    await db.update(people).set({ phone: PHONE, locale: null }).where(eq(people.id, personId));
+    const email = fakeEmail();
+    const sms = fakeSms();
+    await sendDueReminders(db, {
+      now: inWeekBucket,
+      emailProvider: email.provider,
+      smsProvider: sms.provider,
+      appOrigin: null,
+    });
+    expect(emailsFor(email, bookingId)[0]).toMatchObject({ locale: "es-ES" });
+  });
+
+  it("prefers the diver's own recorded language over the shop's default", async () => {
+    // Ingrid at a Cozumel shop: the shop speaks Spanish, she does not, and a
+    // booking she made herself recorded that. The reminder follows her, not
+    // the shop.
+    const { db, shop, bookingId, personId, inWeekBucket } = await reminderContext();
+    await db.update(shops).set({ defaultLocale: "es-ES" }).where(eq(shops.id, shop.id));
+    await db.update(people).set({ phone: PHONE, locale: "en-US" }).where(eq(people.id, personId));
+    const email = fakeEmail();
+    const sms = fakeSms();
+    await sendDueReminders(db, {
+      now: inWeekBucket,
+      emailProvider: email.provider,
+      smsProvider: sms.provider,
+      appOrigin: null,
+    });
+    expect(emailsFor(email, bookingId)[0]).toMatchObject({ locale: "en-US" });
+  });
+
+  it("keeps both channels in one language — the SMS never diverges from the email", async () => {
+    const { db, shop, personId, inWeekBucket } = await reminderContext();
+    await db.update(shops).set({ defaultLocale: "en-US" }).where(eq(shops.id, shop.id));
+    await db.update(people).set({ phone: PHONE, locale: "es-ES" }).where(eq(people.id, personId));
+    const sms = fakeSms();
+    await sendDueReminders(db, {
+      now: inWeekBucket,
+      emailProvider: fakeEmail().provider,
+      smsProvider: sms.provider,
+      appOrigin: null,
+    });
+    const mine = sms.sent.filter((m) => m.to === PHONE);
+    expect(mine).toHaveLength(1);
+    // Spanish body, from an English shop, because Spanish is what she reads.
+    expect(mine[0].body).toContain("Preséntate en el muelle");
+    expect(mine[0].body).not.toContain("Please be at the dock");
+  });
+
+  it("ignores a stored value DiveDay carries no bundle for", async () => {
+    const { db, shop, bookingId, personId, inWeekBucket } = await reminderContext();
+    await db.update(shops).set({ defaultLocale: "es-ES" }).where(eq(shops.id, shop.id));
+    await db.update(people).set({ locale: "de-DE" }).where(eq(people.id, personId));
+    const email = fakeEmail();
+    await sendDueReminders(db, {
+      now: inWeekBucket,
+      emailProvider: email.provider,
+      smsProvider: fakeSms().provider,
+      appOrigin: null,
+    });
+    expect(emailsFor(email, bookingId)[0]).toMatchObject({ locale: "es-ES" });
+  });
+});
