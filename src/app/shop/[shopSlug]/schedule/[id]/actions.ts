@@ -13,6 +13,7 @@ import { recordDiverOwnLocaleForBooking } from "@/db/people";
 import { saveRentalFit } from "@/db/rental-fit";
 import { getRedeemableShopPromo } from "@/db/shop-promos";
 import { getShopById, getShopBySlug } from "@/db/shops";
+import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { getActiveTripPromoByCode } from "@/db/trip-promos";
 import { getTripWithBooked } from "@/db/trips";
 import { joinTripWaitlist } from "@/db/waitlist";
@@ -21,6 +22,7 @@ import { diverTranslator } from "@/i18n/messages";
 import { requestFirstHandLocale, requestLocale } from "@/i18n/request";
 import { trackEvent } from "@/lib/analytics";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
+import { perDiverBookingPriceCents } from "@/lib/courses";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl, recipientLocale } from "@/lib/notifications";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
@@ -220,17 +222,29 @@ export async function bookSpot(
 
   // Gear selection ahead of the first checkout (docs ADR
   // 20260801-checkout-upsells-rental-gear): only when the shop has actually
-  // priced rental gear online — a shop that hasn't keeps today's book-first,
-  // fit-later flow with no gear step at all. `BookingGearFields` is the only
-  // caller of the `gear-${index}-*`/`nitrox-${index}` field names parsed here.
-  const offersGearAtCheckout = hasAnyRentalPricing(shopNow.rentalPricing);
+  // priced rental gear online *and* checkout is actually going to run — a
+  // shop that hasn't, or a trip/account that isn't payable, keeps today's
+  // book-first, fit-later flow with no gear step at all. This must mirror
+  // page.tsx's own `payAtBooking` computation exactly: `BookingGearFields`
+  // only renders (and only submits `gear-${index}-*`/`nitrox-${index}` fields)
+  // under that same condition, so parsing them under a looser one here would
+  // read every checkbox as unchecked and silently zero out the diver's fit.
+  const tripForGear = await getTripWithBooked(dbi, shopNow.id, tripId);
+  const perDiverPriceForGear = tripForGear
+    ? perDiverBookingPriceCents(tripForGear, tripForGear.course)
+    : null;
+  const stripeAccountForGear = perDiverPriceForGear
+    ? await getShopStripeAccount(dbi, shopNow.id)
+    : null;
+  const payAtBookingForGear = Boolean(
+    perDiverPriceForGear && canAcceptPayments(stripeAccountForGear) && publicAppUrl(),
+  );
+  const offersGearAtCheckout = payAtBookingForGear && hasAnyRentalPricing(shopNow.rentalPricing);
   const offeredGearItems = offeredRentableItems(shopNow.rentalItems);
   const nitroxOfferedAtCheckout = shopOffersNitrox(shopNow.rentalItems);
   const gearSelections: Array<{ rentedKinds: RentableItemKind[]; wantsNitrox: boolean }> = [];
-  let plannedDives = 2;
+  const plannedDives = tripForGear?.plannedDives ?? 2;
   if (offersGearAtCheckout && (offeredGearItems.length > 0 || nitroxOfferedAtCheckout)) {
-    const tripForGear = await getTripWithBooked(dbi, shopNow.id, tripId);
-    plannedDives = tripForGear?.plannedDives ?? 2;
     for (let index = 0; index < partySize.data; index++) {
       gearSelections.push({
         rentedKinds: offeredGearItems
