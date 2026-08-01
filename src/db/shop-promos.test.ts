@@ -91,7 +91,8 @@ async function promoNamed(
   shopId: string,
   code: string,
 ) {
-  const found = (await listShopPromoCodes(db, shopId)).find((promo) => promo.code === code);
+  const { promos } = await listShopPromoCodes(db, shopId);
+  const found = promos.find((promo) => promo.code === code);
   if (!found) throw new Error(`promo ${code} not found`);
   return found;
 }
@@ -145,7 +146,7 @@ describe("createShopPromoCode", () => {
       ok: false,
       reason: "not_connected",
     });
-    expect((await listShopPromoCodes(db, shop.id)).map((promo) => promo.code)).not.toContain(
+    expect((await listShopPromoCodes(db, shop.id)).promos.map((promo) => promo.code)).not.toContain(
       "REEF20",
     );
   });
@@ -177,8 +178,44 @@ describe("createShopPromoCode", () => {
       await createShopPromoCode(db, promoInput(shop.id, { code: " ReEf 20 " }), fakePromotions()),
     ).toEqual({ ok: false, reason: "duplicate" });
     expect(
-      (await listShopPromoCodes(db, shop.id)).filter((promo) => promo.code === "REEF20"),
+      (await listShopPromoCodes(db, shop.id)).promos.filter((promo) => promo.code === "REEF20"),
     ).toHaveLength(1);
+  });
+});
+
+describe("listShopPromoCodes pagination", () => {
+  it("pages with a keyset cursor and never repeats or skips a code", async () => {
+    const { db, shop } = await promoContext();
+    for (const code of ["REEFA", "REEFB", "REEFC"]) {
+      await createShopPromoCode(db, promoInput(shop.id, { code }), fakePromotions());
+    }
+
+    const all = await listShopPromoCodes(db, shop.id);
+    expect(all.nextCursor).toBeNull();
+    expect(all.promos.length).toBeGreaterThanOrEqual(3);
+
+    const seen: string[] = [];
+    let cursor: string | undefined;
+    const maxHops = all.promos.length + 1;
+    for (let hops = 0; hops < maxHops; hops++) {
+      const page = await listShopPromoCodes(db, shop.id, { cursor, limit: 1 });
+      expect(page.promos.length).toBeLessThanOrEqual(1);
+      seen.push(...page.promos.map((promo) => promo.id));
+      if (!page.nextCursor) break;
+      cursor = page.nextCursor;
+    }
+    expect(seen).toEqual(all.promos.map((promo) => promo.id));
+    expect(new Set(seen).size).toBe(seen.length);
+  });
+
+  it("treats a mangled cursor as the first page", async () => {
+    const { db, shop } = await promoContext();
+    await createShopPromoCode(db, promoInput(shop.id, { code: "REEFA" }), fakePromotions());
+    await createShopPromoCode(db, promoInput(shop.id, { code: "REEFB" }), fakePromotions());
+
+    const all = await listShopPromoCodes(db, shop.id);
+    const mangled = await listShopPromoCodes(db, shop.id, { cursor: "not-a-real-cursor" });
+    expect(mangled.promos.map((promo) => promo.id)).toEqual(all.promos.map((promo) => promo.id));
   });
 });
 

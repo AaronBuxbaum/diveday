@@ -11,6 +11,8 @@ import {
   getCourseBySlug,
   listActiveCourses,
   listActiveCoursesForSitemap,
+  listCourses,
+  pagedCourses,
   setCourseVisibility,
   updateCourse,
   updateCourseContent,
@@ -551,6 +553,37 @@ const emptyContent = {
   faqs: [],
   isIntroCourse: false,
 };
+
+describe("pagedCourses pagination (in-memory PGlite)", () => {
+  it("pages with a keyset cursor and never repeats or skips a course", async () => {
+    const { db, shop } = await seededShopContext();
+
+    const all = await listCourses(db, shop.id);
+    expect(all.length).toBeGreaterThan(0);
+
+    const seen: string[] = [];
+    let cursor: string | undefined;
+    const maxHops = all.length + 1;
+    for (let hops = 0; hops < maxHops; hops++) {
+      const page = await pagedCourses(db, shop.id, { cursor, limit: 3 });
+      expect(page.courses.length).toBeLessThanOrEqual(3);
+      seen.push(...page.courses.map((course) => course.id));
+      if (!page.nextCursor) break;
+      cursor = page.nextCursor;
+    }
+    expect(seen).toEqual(all.map((course) => course.id));
+    expect(new Set(seen).size).toBe(seen.length);
+  });
+
+  it("treats a mangled cursor as the first page", async () => {
+    const { db, shop } = await seededShopContext();
+    const all = await pagedCourses(db, shop.id);
+    const mangled = await pagedCourses(db, shop.id, { cursor: "not-a-real-cursor" });
+    expect(mangled.courses.map((course) => course.id)).toEqual(
+      all.courses.map((course) => course.id),
+    );
+  });
+});
 
 describe("course content and public pages (in-memory PGlite)", () => {
   it("saves the marketing page without touching pricing, the cert gate, or the agency age", async () => {

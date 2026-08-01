@@ -8,7 +8,7 @@ import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
-import { listActiveCourses, listCourses, setCourseVisibility } from "@/db/courses";
+import { listActiveCourses, pagedCourses, setCourseVisibility } from "@/db/courses";
 import { getShopBySlug } from "@/db/shops";
 import { CERTIFICATION_LEVEL_KEYS, DIVER_CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestTranslator } from "@/i18n/request";
@@ -110,9 +110,16 @@ export async function generateMetadata({
  * The shop always resolves from the URL slug, never the session, so a
  * signed-in staff member from a different shop still gets the public view.
  */
-export default async function CoursesPage({ params }: { params: Promise<{ shopSlug: string }> }) {
+export default async function CoursesPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ shopSlug: string }>;
+  searchParams: Promise<{ after?: string }>;
+}) {
   await connection(); // visibility can change between requests — render per request
   const { shopSlug } = await params;
+  const { after } = await searchParams;
   const db = await getDb();
   const shop = await getShopBySlug(db, shopSlug);
   if (!shop) notFound();
@@ -136,7 +143,7 @@ export default async function CoursesPage({ params }: { params: Promise<{ shopSl
 
   if (staffView) {
     const st = staffTranslator(locale);
-    const courseList = await listCourses(db, shop.id);
+    const { courses: courseList, nextCursor } = await pagedCourses(db, shop.id, { cursor: after });
     return (
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
         <ShopPageHeader
@@ -217,6 +224,26 @@ export default async function CoursesPage({ params }: { params: Promise<{ shopSl
             </li>
           ))}
         </ul>
+        {nextCursor || after ? (
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            {nextCursor ? (
+              <Link
+                href={`/shop/${shopSlug}/courses?after=${nextCursor}`}
+                className={buttonClass({ variant: "secondary" })}
+              >
+                {st("courses.list.showMore")}
+              </Link>
+            ) : null}
+            {after ? (
+              <Link
+                href={`/shop/${shopSlug}/courses`}
+                className="text-sm font-medium text-primary hover:underline"
+              >
+                {st("courses.list.backToTop")}
+              </Link>
+            ) : null}
+          </div>
+        ) : null}
       </main>
     );
   }

@@ -7,7 +7,11 @@ import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { listPendingMediaDeletions } from "@/db/media-deletions";
 import { listStuckPaymentOperations } from "@/db/payment-operations";
-import { canPersonViewShopReports, getMonthlyReport } from "@/db/reporting";
+import {
+  canPersonViewShopReports,
+  getMonthlyReport,
+  pagedMonthlyReportTrips,
+} from "@/db/reporting";
 import { getShopById } from "@/db/shops";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
@@ -134,11 +138,11 @@ export default async function ReportsPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{ month?: string }>;
+  searchParams: Promise<{ month?: string; after?: string }>;
 }) {
   const session = await requireStaffSession();
   const { shopSlug } = await params;
-  const { month } = await searchParams;
+  const { month, after } = await searchParams;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   // Staff read dates in the language their own device asks for, same
@@ -181,9 +185,15 @@ export default async function ReportsPage({
   const stuckPaymentOperations = await listStuckPaymentOperations(db, shop.id);
   const pendingMediaDeletions = await listPendingMediaDeletions(db, shop.id);
   const retryMediaDeletion = retryMediaDeletionAction.bind(null, shopSlug);
-  const input = await getMonthlyReport(db, shop.id, monthStart, monthEnd);
+  // Totals see every trip in the month (summarizeMonth's fill rate and waiver
+  // completion would quietly go wrong if this were page-limited); the table
+  // below gets its own bounded, cursor-paginated slice.
+  const [input, tripPage] = await Promise.all([
+    getMonthlyReport(db, shop.id, monthStart, monthEnd),
+    pagedMonthlyReportTrips(db, shop.id, monthStart, monthEnd, { cursor: after }),
+  ]);
   const report = summarizeMonth(input);
-  const trips = [...input.trips].sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
+  const { trips, nextCursor } = tripPage;
 
   const isThisMonth = current.year === thisMonth.year && current.month === thisMonth.month;
   const isFuture =
@@ -440,6 +450,26 @@ export default async function ReportsPage({
                 </tbody>
               </table>
             </div>
+            {nextCursor || after ? (
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                {nextCursor ? (
+                  <Link
+                    href={`/shop/${shopSlug}/reports?month=${monthKey(current)}&after=${nextCursor}`}
+                    className={buttonClass({ variant: "secondary" })}
+                  >
+                    {t("reports.showMoreTrips")}
+                  </Link>
+                ) : null}
+                {after ? (
+                  <Link
+                    href={`/shop/${shopSlug}/reports?month=${monthKey(current)}`}
+                    className="text-sm font-medium text-primary hover:underline"
+                  >
+                    {t("reports.backToTop")}
+                  </Link>
+                ) : null}
+              </div>
+            ) : null}
           </section>
         </>
       )}
