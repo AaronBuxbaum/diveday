@@ -23,7 +23,8 @@ static titles (`"Trip — DiveDay"` for every departure), and there was no shop 
 **A builder module, not per-page literals.** `src/lib/structured-data.ts` is framework-free and
 tested: `scheduleJsonLd` (an `ItemList` of `Event`s), `tripPageJsonLd` (one `Event`),
 `coursePageJsonLd` (a `Course`), and `shopJsonLd` (a `SportsActivityLocation`, which is what a dive
-operator is, and the type that carries an address if one is ever modeled). Pages pass rows in and
+operator is, and the type that carries an address — `shopAddressOf` builds a `PostalAddress` from
+the shop's own address fields once a shop has filled any of them in). Pages pass rows in and
 render the result; nothing about schema.org lives in a route file.
 
 **One component writes the script tag.** `<JsonLd>` serializes with `JSON.stringify` and escapes `<`,

@@ -1611,6 +1611,8 @@
         "rentalPricesInvalid": "Introduce cada precio como una cantidad en dólares (o deja el campo vacío), entre $0 y $100.000.",
         "contactSaved": "Datos de contacto guardados.",
         "contactInvalid": "Usa una dirección de correo completa, o vacía el campo para quitarla de tus páginas públicas.",
+        "addressSaved": "Dirección del centro guardada.",
+        "addressInvalid": "Usa un código de país de dos letras, o vacía el campo para dejarlo sin definir.",
         "reviewUrlSaved": "Enlace de reseñas guardado.",
         "reviewUrlInvalid": "Introduce un enlace https:// completo, o vacía el campo para dejar de pedir reseñas.",
         "connected": "Cuenta de Stripe conectada.",
@@ -1629,6 +1631,23 @@
         "phoneLabel": "Teléfono de contacto",
         "phoneHint": "(opcional)",
         "submit": "Guardar datos de contacto",
+        "submitting": "Guardando…"
+      },
+      "address": {
+        "heading": "Dirección del centro",
+        "description": "Donde un buceador realmente se encuentra con el barco o entra en el local — la dirección física de tu centro, no la personal de un miembro del equipo. Se publica para que los buscadores puedan ubicar tu centro como un lugar real. Todos los campos son opcionales y se vacían de forma independiente.",
+        "streetLabel": "Dirección",
+        "streetPlaceholder": "100 Ocean Drive",
+        "localityLabel": "Ciudad / localidad",
+        "localityPlaceholder": "Key Largo",
+        "regionLabel": "Provincia / región",
+        "regionPlaceholder": "FL",
+        "postalCodeLabel": "Código postal",
+        "postalCodePlaceholder": "33037",
+        "countryLabel": "Código de país",
+        "countryHint": "Dos letras, p. ej. US, MX",
+        "countryPlaceholder": "US",
+        "submit": "Guardar dirección del centro",
         "submitting": "Guardando…"
       },
       "reviewLink": {

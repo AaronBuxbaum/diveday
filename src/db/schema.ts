@@ -80,6 +80,19 @@ export const shops = pgTable(
      * 20260726-post-trip-review-request).
      */
     reviewUrl: text("review_url"),
+    /**
+     * The shop's physical business address — where a diver actually meets the
+     * boat or walks into the storefront, not a staff member's personal one.
+     * Every field is nullable independently because a shop that has not
+     * filled in its address must not have one guessed on its behalf; a shop
+     * can be fully set up with no street on file. `addressCountry` is an ISO
+     * 3166-1 alpha-2 code ("US", "MX", …), not a free-text country name.
+     */
+    addressStreet: text("address_street"),
+    addressLocality: text("address_locality"),
+    addressRegion: text("address_region"),
+    addressPostalCode: text("address_postal_code"),
+    addressCountry: text("address_country"),
     /** Diver-facing suggestions shown on every trip; owners configure these once per shop. */
     packingList: jsonb("packing_list")
       .$type<string[]>()

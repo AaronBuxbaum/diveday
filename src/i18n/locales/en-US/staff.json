@@ -1611,6 +1611,8 @@
         "rentalPricesInvalid": "Enter each price as a dollar amount (or leave it blank), between $0 and $100,000.",
         "contactSaved": "Contact details saved.",
         "contactInvalid": "Use a complete email address, or empty the box to take it off your public pages.",
+        "addressSaved": "Shop address saved.",
+        "addressInvalid": "Use a two-letter country code, or empty the box to leave it unset.",
         "reviewUrlSaved": "Review link saved.",
         "reviewUrlInvalid": "Enter a full https:// link, or empty the box to stop asking for reviews.",
         "connected": "Stripe account connected.",
@@ -1629,6 +1631,23 @@
         "phoneLabel": "Contact phone",
         "phoneHint": "(optional)",
         "submit": "Save contact details",
+        "submitting": "Saving…"
+      },
+      "address": {
+        "heading": "Shop address",
+        "description": "Where a diver actually meets the boat or walks into the storefront — your shop's physical business address, not a staff member's personal one. Published so search engines can place your shop as a real venue. Every field is optional, and empties independently.",
+        "streetLabel": "Street address",
+        "streetPlaceholder": "100 Ocean Drive",
+        "localityLabel": "City / town",
+        "localityPlaceholder": "Key Largo",
+        "regionLabel": "State / region",
+        "regionPlaceholder": "FL",
+        "postalCodeLabel": "Postal code",
+        "postalCodePlaceholder": "33037",
+        "countryLabel": "Country code",
+        "countryHint": "Two letters, e.g. US, MX",
+        "countryPlaceholder": "US",
+        "submit": "Save shop address",
         "submitting": "Saving…"
       },
       "reviewLink": {

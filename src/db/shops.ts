@@ -168,6 +168,39 @@ export async function setShopContact(
 }
 
 /**
+ * Sets the shop's physical business address, published in structured data so
+ * search engines can place the shop as a real venue. Each field clears
+ * independently on an empty string, so a shop can walk an address back to
+ * nothing (or fill in only what it knows, like locality and country) rather
+ * than being forced to supply all five at once.
+ */
+export async function setShopAddress(
+  db: AppDb,
+  shopId: string,
+  address: {
+    addressStreet?: string | null;
+    addressLocality?: string | null;
+    addressRegion?: string | null;
+    addressPostalCode?: string | null;
+    addressCountry?: string | null;
+  },
+) {
+  const clean = (value: string | null | undefined) => value?.trim() || null;
+  const [shop] = await db
+    .update(shops)
+    .set({
+      addressStreet: clean(address.addressStreet),
+      addressLocality: clean(address.addressLocality),
+      addressRegion: clean(address.addressRegion),
+      addressPostalCode: clean(address.addressPostalCode),
+      addressCountry: clean(address.addressCountry),
+    })
+    .where(eq(shops.id, shopId))
+    .returning();
+  return shop ?? null;
+}
+
+/**
  * Where a post-trip review request sends a diver. An empty string clears it —
  * with none set, the recap flow skips the review ask entirely rather than
  * guessing a platform (docs ADR 20260726-post-trip-review-request).

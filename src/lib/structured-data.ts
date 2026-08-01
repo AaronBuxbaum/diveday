@@ -60,6 +60,12 @@ export type ShopForStructuredData = {
    * currency to the one audience that can't ask a follow-up question.
    */
   currency: string;
+  /** Physical business address fields — see `shopAddressOf` for how they combine. */
+  addressStreet: string | null;
+  addressLocality: string | null;
+  addressRegion: string | null;
+  addressPostalCode: string | null;
+  addressCountry: string | null;
 };
 
 /**
@@ -89,9 +95,36 @@ function aggregateRatingOf(aggregate: ReviewAggregate | null): JsonLdObject | un
 }
 
 /**
+ * The shop's `PostalAddress`, or nothing when no field is set. A shop that has
+ * filled in even one field (say, just a country) has told us something real
+ * about where it operates, and a partial address is still worth publishing —
+ * schema.org has no concept of "half an address" to reject, and Google's
+ * validator only asks for the sub-fields that are present. The only claim
+ * DiveDay refuses to make is an address out of nothing at all: an unfilled
+ * shop gets no `address` key rather than one made of five nulls.
+ * `pruneJsonLd` (already run over the final graph) strips whichever
+ * sub-fields stayed null, so this only needs to decide whether to emit the
+ * object at all.
+ */
+export function shopAddressOf(shop: ShopForStructuredData): JsonLdObject | undefined {
+  const { addressStreet, addressLocality, addressRegion, addressPostalCode, addressCountry } = shop;
+  if (!addressStreet && !addressLocality && !addressRegion && !addressPostalCode && !addressCountry)
+    return undefined;
+  return {
+    "@type": "PostalAddress",
+    streetAddress: addressStreet,
+    addressLocality,
+    addressRegion,
+    postalCode: addressPostalCode,
+    addressCountry,
+  };
+}
+
+/**
  * The shop as a dive operator. `SportsActivityLocation` rather than a bare
  * `Organization` because that is what a dive shop is to a search engine, and it
- * is the type that carries an address and opening hours if those ever exist.
+ * is the type that carries an address and opening hours — the address is
+ * modeled (`shopAddressOf`); opening hours are not yet.
  */
 export function shopJsonLd(
   shop: ShopForStructuredData,
@@ -104,6 +137,7 @@ export function shopJsonLd(
     url: absoluteUrl(origin, `/shop/${shop.slug}/schedule`),
     email: shop.contactEmail,
     telephone: shop.contactPhone,
+    address: shopAddressOf(shop),
     aggregateRating: aggregateRatingOf(aggregate),
   };
 }

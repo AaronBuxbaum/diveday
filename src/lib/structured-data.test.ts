@@ -8,6 +8,7 @@ import {
   pruneJsonLd,
   type ShopForStructuredData,
   scheduleJsonLd,
+  shopAddressOf,
   shopJsonLd,
   type TripForStructuredData,
   tripPageJsonLd,
@@ -21,6 +22,11 @@ const shop: ShopForStructuredData = {
   contactEmail: "hello@bluemantis.example",
   contactPhone: "+1 305 555 0134",
   currency: "usd",
+  addressStreet: null,
+  addressLocality: null,
+  addressRegion: null,
+  addressPostalCode: null,
+  addressCountry: null,
 };
 
 const trip: TripForStructuredData = {
@@ -74,12 +80,75 @@ describe("pruneJsonLd", () => {
   });
 });
 
+describe("shopAddressOf", () => {
+  it("builds a PostalAddress when every field is set", () => {
+    const address = shopAddressOf({
+      ...shop,
+      addressStreet: "99 Coral Way",
+      addressLocality: "Cozumel",
+      addressRegion: "Quintana Roo",
+      addressPostalCode: "77600",
+      addressCountry: "MX",
+    });
+    expect(address).toEqual({
+      "@type": "PostalAddress",
+      streetAddress: "99 Coral Way",
+      addressLocality: "Cozumel",
+      addressRegion: "Quintana Roo",
+      postalCode: "77600",
+      addressCountry: "MX",
+    });
+  });
+
+  it("emits nothing when no address field is set at all", () => {
+    expect(shopAddressOf(shop)).toBeUndefined();
+  });
+
+  it("still builds a partial PostalAddress when only some fields are set", () => {
+    const address = shopAddressOf({ ...shop, addressCountry: "MX" });
+    expect(address).toEqual({
+      "@type": "PostalAddress",
+      streetAddress: null,
+      addressLocality: null,
+      addressRegion: null,
+      postalCode: null,
+      addressCountry: "MX",
+    });
+  });
+});
+
 describe("shopJsonLd", () => {
   it("types a dive shop as a SportsActivityLocation with its public contact details", () => {
     const graph = shopJsonLd(shop, ORIGIN);
     expect(graph["@type"]).toBe("SportsActivityLocation");
     expect(graph.name).toBe("Blue Mantis Divers");
     expect(graph.url).toBe("https://diveday.example/shop/blue-mantis/schedule");
+  });
+
+  it("omits the address key entirely when the shop has none on file", () => {
+    expect(shopJsonLd(shop, ORIGIN).address).toBeUndefined();
+  });
+
+  it("publishes a full PostalAddress once the shop has one on file", () => {
+    const graph = shopJsonLd(
+      {
+        ...shop,
+        addressStreet: "99 Coral Way",
+        addressLocality: "Cozumel",
+        addressRegion: "Quintana Roo",
+        addressPostalCode: "77600",
+        addressCountry: "MX",
+      },
+      ORIGIN,
+    );
+    expect(graph.address).toEqual({
+      "@type": "PostalAddress",
+      streetAddress: "99 Coral Way",
+      addressLocality: "Cozumel",
+      addressRegion: "Quintana Roo",
+      postalCode: "77600",
+      addressCountry: "MX",
+    });
   });
 
   it("omits aggregateRating entirely when nothing is published — never 'rated by nobody'", () => {
