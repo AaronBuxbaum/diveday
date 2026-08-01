@@ -116,6 +116,69 @@ describe("DepartureBoard Drag and Drop Crew Assign", () => {
     });
   });
 
+  it("highlights the drop zone on dragenter and clears it on dragleave/drop", async () => {
+    const updateCrewAction = vi.fn().mockResolvedValue({ ok: true });
+    render(
+      <DepartureBoard
+        departures={departures}
+        shopSlug="blue-mantis"
+        timeZone="America/New_York"
+        locale="en-US"
+        availableStaff={availableStaff}
+        updateCrewAction={updateCrewAction}
+        copy={COPY}
+      />,
+    );
+
+    const dropZone = screen.getByText(/Drag staff here to assign/i).closest("section");
+    if (!dropZone) throw new Error("Drop zone not found");
+
+    // Checked as a class-list token, not a substring, since the zone's
+    // always-on hover affordance is "hover:border-primary/40".
+    expect(dropZone.classList.contains("border-primary")).toBe(false);
+
+    await act(async () => {
+      fireEvent.dragEnter(dropZone);
+    });
+    expect(dropZone.classList.contains("border-primary")).toBe(true);
+    expect(dropZone.classList.contains("bg-primary/5")).toBe(true);
+
+    // A child firing its own dragenter/dragleave as the pointer crosses it
+    // must not drop the highlight — only the depth counter hitting 0 does.
+    // Real drag events enter the new (child) target before leaving the old
+    // (parent) one, so simulate that order: enter child, then leave parent.
+    const heading = screen.getByText(COPY.assignedCrewHeading);
+    await act(async () => {
+      fireEvent.dragEnter(heading);
+    });
+    await act(async () => {
+      fireEvent.dragLeave(dropZone);
+    });
+    expect(dropZone.classList.contains("border-primary")).toBe(true);
+
+    // Now the pointer actually leaves the zone via the child.
+    await act(async () => {
+      fireEvent.dragLeave(heading);
+    });
+    expect(dropZone.classList.contains("border-primary")).toBe(false);
+
+    await act(async () => {
+      fireEvent.dragEnter(dropZone);
+    });
+    expect(dropZone.classList.contains("border-primary")).toBe(true);
+
+    const dropEvent = {
+      preventDefault: vi.fn(),
+      dataTransfer: {
+        getData: vi.fn().mockReturnValue("staff-2"),
+      },
+    };
+    await act(async () => {
+      fireEvent.drop(dropZone, dropEvent);
+    });
+    expect(dropZone.classList.contains("border-primary")).toBe(false);
+  });
+
   it("offers a keyboard-accessible assignment control", async () => {
     const updateCrewAction = vi.fn().mockResolvedValue({ ok: true });
     render(

@@ -159,7 +159,7 @@ function AddPanel({
       as="form"
       action={onAdd}
       columns={1}
-      className="mt-3 rounded-xl border border-border bg-surface-sunken/50 p-4 gap-y-4"
+      className="mt-3 rounded-xl border border-border bg-surface-sunken/50 p-4 gap-y-4 animate-scale-in"
     >
       <Field label={copy.whatIsIt}>
         <input
@@ -476,7 +476,7 @@ export function ScheduleBuilder({
                         as="form"
                         action={actions.move}
                         columns={2}
-                        className="mt-3 rounded-xl border border-border bg-surface-sunken/50 p-4 gap-y-4"
+                        className="mt-3 rounded-xl border border-border bg-surface-sunken/50 p-4 gap-y-4 animate-scale-in"
                       >
                         <input type="hidden" name="tripId" value={trip.id} />
                         <Field
@@ -524,7 +524,7 @@ export function ScheduleBuilder({
                         as="form"
                         action={actions.duplicate}
                         columns={2}
-                        className="mt-3 rounded-xl border border-border bg-surface-sunken/50 p-4 gap-y-4"
+                        className="mt-3 rounded-xl border border-border bg-surface-sunken/50 p-4 gap-y-4 animate-scale-in"
                       >
                         <input type="hidden" name="tripId" value={trip.id} />
                         <Field label={copy.copyTo} description={copy.copyDescription}>

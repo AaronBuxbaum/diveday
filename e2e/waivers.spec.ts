@@ -115,7 +115,12 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
     await noRadios.nth(i).check();
   }
   await page.getByRole("button", { name: "Save and finish later" }).click();
-  await expect(page.getByRole("status")).toContainText("progress is saved");
+  // Scoped by text, not just role: the sticky questionnaire-progress bar
+  // (QuestionnaireProgress) is also `role="status"` on this page now, so a
+  // bare role query is ambiguous — same `.filter({ hasText })` pattern used
+  // elsewhere in the e2e suite (e.g. manifest.spec.ts, divers.spec.ts) when
+  // more than one status region can be on screen at once.
+  await expect(page.getByRole("status").filter({ hasText: "progress is saved" })).toBeVisible();
   await expect(page.getByLabel("Type your full name")).toHaveValue("Priya Sharma");
   // The draft's saved answers prefill on reload — nothing reverts to unanswered.
   await expect(noRadios.first()).toBeChecked();
@@ -330,8 +335,10 @@ test("saving a draft also refuses an unanswered question, even past client valid
   await page.getByRole("button", { name: "Save and finish later" }).click();
   await expect(page.getByText("Please answer every question")).toBeVisible();
   // Nothing was saved — reloading shows no "progress is saved" status and the
-  // name field is back to empty, not a half-recorded draft.
-  await expect(page.getByRole("status")).not.toBeVisible();
+  // name field is back to empty, not a half-recorded draft. Scoped by text
+  // (not just role) because the sticky questionnaire-progress bar is also
+  // `role="status"` on this page and stays visible regardless.
+  await expect(page.getByRole("status").filter({ hasText: "progress is saved" })).not.toBeVisible();
 });
 
 test("staff edit the single shop waiver and each edit is kept as a version", async ({ page }) => {

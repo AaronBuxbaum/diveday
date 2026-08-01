@@ -337,10 +337,18 @@ export default async function SchedulePage({
             return upcoming.map((trip) => {
               const full = isFull(trip);
               const capacityLabelValue = capacityLabel(trip);
+              // Low inventory (1-2 spots) gets its own worded badge, matching
+              // the urgency the booking form itself already switches to
+              // ("Book the last spot") — never color alone (WCAG 1.4.1).
+              const remaining =
+                capacityLabelValue.kind === "left" ? capacityLabelValue.remaining : 0;
+              const lowInventory = capacityLabelValue.kind === "left" && remaining <= 2;
               const capacityText =
                 capacityLabelValue.kind === "full"
                   ? t("fallback.full")
-                  : t("fallback.spotsLeft", { count: capacityLabelValue.remaining });
+                  : lowInventory
+                    ? t("schedule.spotsLeftUrgent", { count: remaining })
+                    : t("fallback.spotsLeft", { count: remaining });
               const showTwoTankHint = trip.plannedDives === 2 && !twoTankHintShown;
               if (showTwoTankHint) twoTankHintShown = true;
               const tripHref = `/shop/${shopSlug}/schedule/${trip.id}${isEmbed ? "?embed=1" : ""}`;
@@ -413,7 +421,10 @@ export default async function SchedulePage({
                       </p>
                     </div>
                     <div className="shrink-0">
-                      <Badge tone={full ? "neutral" : "primary"} tabularNums>
+                      <Badge
+                        tone={full ? "neutral" : lowInventory ? "warning" : "primary"}
+                        tabularNums
+                      >
                         {capacityText}
                       </Badge>
                     </div>

@@ -346,6 +346,25 @@ summary {
   animation: rise-in 200ms var(--ease-out-soft) both;
 }
 
+/* Toast exit — the inverse of rise-in, for a toast fading/settling down
+   before it unmounts (UndoToast). Reduced-motion kill-switch below covers it;
+   the unmount itself is still driven by a timer, not this animation ending,
+   since the kill-switch only shortens the animation rather than skipping it. */
+@keyframes toast-dismiss {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+.toast-dismiss {
+  animation: toast-dismiss 200ms var(--ease-out-soft) both;
+}
+
 /*
  * Motion language as brand (principles.md: motion has a job, 150-250ms, ease-out, transform/opacity)
  * Reusable animation keyframes and standard classes.
