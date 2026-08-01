@@ -17,6 +17,7 @@ const TOKEN_ROUTE_PREFIXES = [
   "/reset-password/",
   "/invite/",
   "/calendar/",
+  "/unsubscribe/",
 ];
 
 describe("robots", () => {

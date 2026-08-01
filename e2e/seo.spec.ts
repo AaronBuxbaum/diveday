@@ -27,6 +27,7 @@ test("robots.txt disallows every token-route prefix and points at the sitemap", 
     "/reset-password/",
     "/invite/",
     "/calendar/",
+    "/unsubscribe/",
   ]) {
     expect(body).toContain(`Disallow: ${prefix}`);
   }
