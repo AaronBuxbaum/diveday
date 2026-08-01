@@ -2649,7 +2649,9 @@
           "expiredCannotRecord": "Esta copia guardada ha caducado — abre el manifiesto en vivo para registrar el pase de lista.",
           "expiredRecordOnLive": "Caducado — regístralo en el manifiesto en vivo",
           "saved": "Guardado en este teléfono — se enviará en cuanto recuperes la conexión.",
-          "genericError": "Ese cambio no se pudo guardar en este dispositivo — inténtalo de nuevo."
+          "genericError": "Ese cambio no se pudo guardar en este dispositivo — inténtalo de nuevo.",
+          "notAllowed": "Este buceador aún no puede embarcar — resuelve lo pendiente en el manifiesto en vivo primero.",
+          "unavailable": "Esta copia guardada ya no está disponible — abre el manifiesto en vivo para registrar el pase de lista."
         }
       },
       "shellVersion": {

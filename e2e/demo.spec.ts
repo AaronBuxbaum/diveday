@@ -2,7 +2,7 @@ import { expect, test } from "./fixtures";
 
 test("landing demo CTA drops a visitor into the staff shop", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Try the live demo" }).first().click();
+  await page.getByRole("button", { name: "Try the staff app" }).first().click();
 
   await expect(page).toHaveURL(/\/shop/);
   await expect(
@@ -19,7 +19,7 @@ test("landing demo CTA drops a visitor into the staff shop", async ({ page }) =>
 
 test("demo role switcher moves from owner to instructor and back", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Try the live demo" }).first().click();
+  await page.getByRole("button", { name: "Try the staff app" }).first().click();
   await expect(page.getByText("Demo shop")).toBeVisible();
   await expect(page.getByText(/Viewing as/)).toContainText("Admin / Owner");
 
@@ -37,8 +37,11 @@ test("the homepage's role picker previews before committing to a role", async ({
   await page.goto("/");
 
   // Under the primary CTA, not replacing it — the picker is a second door,
-  // not a rename of "Try the staff app" (UX persona review #103).
-  await expect(page.getByRole("button", { name: "Try the staff app" })).toBeVisible();
+  // not a rename of "Try the staff app" (UX persona review #103). The same
+  // label also appears on the page's closing-band CTA (deliberately
+  // consistent with the hero, conversion-reviewer finding) — `.first()`
+  // targets the hero.
+  await expect(page.getByRole("button", { name: "Try the staff app" }).first()).toBeVisible();
   const captainOption = page.getByRole("button", { name: "Try the demo as Captain" });
   await expect(captainOption).toBeVisible();
 

@@ -8,8 +8,10 @@ test("the homepage hero distinguishes trying the staff app from previewing a div
 
   // "Try the staff app" mints a fresh demo shop and drops the visitor into it
   // — a different door than the schedule preview below, so the two must read
-  // as distinct rather than both promising "a live demo".
-  await expect(page.getByRole("button", { name: "Try the staff app" })).toBeVisible();
+  // as distinct rather than both promising "a live demo". The same label
+  // also appears on the page's closing-band CTA (deliberately consistent
+  // with the hero, conversion-reviewer finding) — `.first()` targets the hero.
+  await expect(page.getByRole("button", { name: "Try the staff app" }).first()).toBeVisible();
 
   const scheduleLink = page.getByRole("link", { name: "See a diver's booking page →" });
   const href = await scheduleLink.getAttribute("href");

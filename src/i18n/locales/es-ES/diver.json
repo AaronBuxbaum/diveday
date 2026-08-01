@@ -243,7 +243,17 @@
     "submit": "Avísame",
     "submitting": "Apuntándote…",
     "joinedHeading": "Estás en la lista.",
-    "joinedBody": "Te escribiremos si sale una plaza de última hora con descuento en tus fechas."
+    "joinedBody": "Te escribiremos si sale una plaza de última hora con descuento en tus fechas.",
+    "unsubscribe": {
+      "title": "¿Dejar de recibir ofertas de última hora?",
+      "description": "Estás en la lista de {shopName} para ofertas de última hora. Toca abajo y dejaremos de enviártelas.",
+      "submit": "Dejar de recibir estos correos",
+      "submitting": "Cancelando…",
+      "confirmedTitle": "Te has dado de baja",
+      "confirmedText": "Ya no recibirás correos de ofertas de última hora de {shopName}. Puedes volver a apuntarte cuando quieras desde su página de horarios.",
+      "unavailableTitle": "Este enlace no está disponible",
+      "unavailableText": "Puede ser de un centro que ya no está activo. Si sigues recibiendo correos que no quieres, responde a uno y pregúntale directamente al centro."
+    }
   },
   "course": {
     "hidden": "Oculto — los buceadores no ven esta página.",
@@ -870,7 +880,7 @@
       "forExportPrefix": "Para una exportación de {competitor}:",
       "runTheDay": "Lleva el día de buceo que {competitor} no puede.",
       "readyToMove": "¿Listo para dejar {competitor}?",
-      "walkDemoFirst": "Recorre primero la demo en vivo como propietario, capitán o buceador — luego empieza una tienda de prueba, trae tu exportación y mira tu plantel llegar a DiveDay con la columna de seguridad intacta.",
+      "walkDemoFirst": "Recorre primero la demo en vivo como propietario, capitán o buceador — luego empieza una tienda de prueba, trae tu exportación y mira tu plantel llegar a DiveDay con las verificaciones de certificación, las exenciones y el pase de lista ya en marcha.",
       "gettingDemoReady": "Preparando la demo…",
       "otherGuides": "Otras guías de cambio →",
       "sources": "Fuentes"
@@ -1032,7 +1042,7 @@
       },
       "instructor": {
         "title": "Instructor",
-        "desc": "Asignado a impartir cursos. Se centra en el control de seguridad de la certificación de los estudiantes.",
+        "desc": "Asignado a impartir cursos, y se asegura de que cada estudiante esté realmente certificado para lo que va a bucear a continuación.",
         "tryThis": "Abre un viaje de curso Discover Scuba para ver las asignaciones de personal."
       },
       "divemaster": {
@@ -1098,7 +1108,6 @@
       "tryTitle": "Mira cómo se siente cuando toda la tienda está en la misma página.",
       "tryDescription": "DiveDay es reciente, y las primeras tiendas lo moldean. Las tiendas fundadoras tienen una línea directa con el fundador y respuestas el mismo día — lo que tu equipo encuentra esta temporada es lo próximo en recibir atención.",
       "gettingReady": "Preparando tu tienda…",
-      "tryDemo": "Probar la demo en vivo",
       "startTrial": "Empezar una prueba",
       "viewPricing": "Ver precios"
     },
@@ -1364,7 +1373,8 @@
       "body": "{shopName} acaba de abrir un {discountPercent}% de descuento en {tripTitle}.",
       "useCode": "Usa el código {code} al reservar:",
       "bookLink": "Reservar {tripTitle}",
-      "expiry": "El código caduca el {expires} (salida) o cuando se agoten las plazas, lo que ocurra antes."
+      "expiry": "El código caduca el {expires} (salida) o cuando se agoten las plazas, lo que ocurra antes.",
+      "unsubscribe": "Dejar de recibir ofertas de última hora de {shopName}"
     },
     "checkoutRecovery": {
       "subject": "¿Terminar la reserva de {tripTitle}?",

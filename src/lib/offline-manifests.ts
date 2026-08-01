@@ -244,20 +244,24 @@ export function latestOfflineRollCall(
 ):
   | { state: "boarded" | "not_boarded"; occurredAt: string; pending: boolean; implied: boolean }
   | undefined {
-  const local = events
-    .filter(
-      (event) =>
-        event.bookingId === bookingId &&
-        event.checkpoint === checkpoint &&
-        event.syncStatus !== "rejected",
-    )
+  // The single latest attempt for this booking+checkpoint, across every sync
+  // status — not "the latest non-rejected one." A rejection means the server
+  // has authoritative information this device doesn't (another device's write
+  // landed first, the booking became unavailable, readiness changed): falling
+  // through to an *older*, superseded local event on rejection would silently
+  // re-assert exactly the stale optimism reconciliation exists to overrule —
+  // e.g. a correction from "boarded" to "not_boarded" gets rejected, and the
+  // diver keeps reading "Boarded" on the captain's screen. See the regression
+  // test in offline-manifests.test.ts.
+  const latestAttempt = events
+    .filter((event) => event.bookingId === bookingId && event.checkpoint === checkpoint)
     .sort((a, b) => b.occurredAt.localeCompare(a.occurredAt))[0];
-  if (local) {
+  if (latestAttempt && latestAttempt.syncStatus !== "rejected") {
     // A result recorded on this device at this checkpoint is always explicit.
     return {
-      state: local.status,
-      occurredAt: local.occurredAt,
-      pending: local.syncStatus === "pending",
+      state: latestAttempt.status,
+      occurredAt: latestAttempt.occurredAt,
+      pending: latestAttempt.syncStatus === "pending",
       implied: false,
     };
   }

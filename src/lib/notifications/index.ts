@@ -114,6 +114,7 @@ const lastMinuteDealSchema = z.object({
   code: z.string().trim().min(1).max(40),
   bookingUrl: z.url().max(2_000),
   expiresAt: z.date(),
+  unsubscribeUrl: z.url().max(2_000),
 });
 
 // A pay-at-booking checkout the diver never finished (docs ADR
