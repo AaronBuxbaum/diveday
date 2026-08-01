@@ -5,17 +5,18 @@ import { expect, signedInAsOwner, test } from "./fixtures";
 import { openTripFromBoard } from "./helpers";
 
 /**
- * Visual regression coverage. Forty-eight key surfaces × light/dark, each
- * captured at a phone and a desktop viewport — 192 screenshots per run (see
+ * Visual regression coverage. Fifty-nine key surfaces × light/dark, each
+ * captured at a phone and a desktop viewport — 236 screenshots per run (see
  * ADR 20260729-reg-suit-visual-regression). Keep this count in sync when
  * adding a surface; each `capture()` call costs 4 screenshots per CI run.
- * `grep -c 'await capture(page' e2e/visual.spec.ts` is the number.
+ * `grep -c 'await capture(page' e2e/visual.spec.ts` is the number — it read 48
+ * here while the grep said 56, so trust the grep and correct the prose.
  *
  * Two more come from the `print` block at the bottom: the manifest and prep
  * pages as they render for the printer. Print is its own concern, not a
  * light/dark one — the `@media print` token override collapses both schemes to
  * one black-and-white palette — so each is captured once, at a US-Letter width,
- * via `capturePrint()`. That brings the run to 194 screenshots.
+ * via `capturePrint()`. That brings the run to 238 screenshots.
  *
  * Nothing here asserts. `capture()` writes raw `page.screenshot()` PNGs into
  * `e2e/screenshots/` (gitignored); `reg-suit` diffs them against the baseline
@@ -523,18 +524,24 @@ for (const scheme of ["light", "dark"] as const) {
     test.describe("staff", () => {
       signedInAsOwner();
 
+      /**
+       * The staff tour is **two** tests, not one. It reached 35 surfaces (140
+       * screenshots) and started blowing a 140s budget on CI — and the answer
+       * to that is not another bigger number. The file's own rule is that this
+       * timeout is not a knob to widen; a tour that outgrows its budget wants
+       * splitting, which also lets the two halves run on separate workers
+       * instead of one worker serially shooting 140 PNGs.
+       *
+       * The split is at a safe seam: everything up to here is read-only
+       * navigation, and the halves share no state. Each gets its own
+       * `demoReset` from the fixtures, so the second is *more* isolated than it
+       * was as one long test, not less.
+       */
       test(`staff surfaces render true to the design (${scheme})`, async ({ page }) => {
-        // 28 navigate+capture surfaces (112 screenshots) in one test — same
-        // reasoning as the public-surfaces override above: the suite's 15s
-        // default is sized for a single real flow, not a full site tour.
-        // The budget is sized to the surface count *and* to what each capture
-        // now costs — `paintWholeDocument` scrolls the whole document before
-        // every shot, so a tall page is materially slower than it was. This is
-        // not a knob to widen when a capture goes flaky; that is a wait bug.
-        // It moved from 120s with the three money surfaces added below
-        // (orders, order-detail, diver-profile-payments) — a bigger tour, not
-        // a slower one, which is the only reason this number may go up.
-        test.setTimeout(140_000);
+        // 17 navigate+capture surfaces (68 screenshots) — the suite's 15s
+        // default is sized for a single real flow, not a site tour, and each
+        // capture now costs a full `paintWholeDocument` scroll.
+        test.setTimeout(90_000);
         await page.goto("/shop/blue-mantis");
         await page
           .getByRole("heading", { name: /Good (morning|afternoon|evening|night), Dana/ })
@@ -734,7 +741,14 @@ for (const scheme of ["light", "dark"] as const) {
         await page.locator('tbody tr a[href*="/orders/"]').first().click();
         await page.getByText("Front desk").first().waitFor();
         await capture(page, "order-detail", scheme);
+      });
 
+      test(`staff settings, catalog and roster surfaces render true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        // The back half of the tour: 18 surfaces (72 screenshots). Same budget
+        // reasoning as the first half — see the comment above it.
+        test.setTimeout(90_000);
         // The data-export surface: the "your data is yours" promise, concrete.
         await page.goto("/shop/blue-mantis/settings/export");
         await page.getByRole("heading", { name: "Data export" }).waitFor();
