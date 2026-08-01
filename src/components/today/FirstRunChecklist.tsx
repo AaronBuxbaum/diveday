@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { Copyable } from "@/components/Copyable";
 import { buttonClass } from "@/components/ui/button";
 
 export type FirstRunChecklistCopy = {
@@ -22,6 +22,7 @@ export type FirstRunChecklistCopy = {
   scheduleBody: string;
   scheduleCopy: string;
   scheduleCopied: string;
+  scheduleCopyFailed: string;
   stripeTitle: string;
   stripeBody: string;
   stripeAction: string;
@@ -75,33 +76,21 @@ function CopyScheduleLinkButton({
   url,
   copy,
   copied,
+  failed,
 }: {
   url: string;
   copy: string;
   copied: string;
+  failed: string;
 }) {
-  const [done, setDone] = useState(false);
-
-  async function copyUrl() {
-    try {
-      await navigator.clipboard.writeText(url);
-      setDone(true);
-      setTimeout(() => setDone(false), 4000);
-    } catch {
-      // Clipboard access can be denied outright; the URL still opens fine
-      // from the link below, so a failed copy must not look like a failure.
-      setDone(false);
-    }
-  }
-
   return (
-    <button
-      type="button"
-      onClick={copyUrl}
-      className={buttonClass({ variant: "secondary", size: "sm" })}
-    >
-      <span aria-live="polite">{done ? copied : copy}</span>
-    </button>
+    <Copyable
+      layout="inline"
+      value={url}
+      copyLabel={copy}
+      copiedLabel={copied}
+      failedLabel={failed}
+    />
   );
 }
 
@@ -196,6 +185,7 @@ export function FirstRunChecklist({
               url={scheduleUrl}
               copy={copy.scheduleCopy}
               copied={copy.scheduleCopied}
+              failed={copy.scheduleCopyFailed}
             />
           </div>
         </li>

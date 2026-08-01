@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { useState } from "react";
+import { copyToClipboard } from "@/components/Copyable";
 import { buttonClass } from "@/components/ui/button";
 
 export function TripActions({
@@ -12,7 +13,7 @@ export function TripActions({
   directionsUrl: string | null;
 }) {
   const t = useTranslations("trip");
-  const [copied, setCopied] = useState(false);
+  const [status, setStatus] = useState<"idle" | "copied" | "failed">("idle");
 
   async function shareTrip() {
     const data = {
@@ -26,9 +27,28 @@ export function TripActions({
       });
       return;
     }
-    await navigator.clipboard.writeText(window.location.href);
-    setCopied(true);
+    // Reuses Copyable's own clipboard write (src/components/Copyable.tsx) —
+    // this button isn't Copyable-shaped (it shares a `buttonClass` row with
+    // "Add to calendar"/"Get directions" and only falls back to a copy when
+    // the Web Share API is unavailable), but the write itself is never
+    // hand-rolled here.
+    const ok = await copyToClipboard(window.location.href);
+    setStatus(ok ? "copied" : "failed");
+    setTimeout(() => setStatus("idle"), 4000);
   }
+
+  const label =
+    status === "copied"
+      ? t("linkCopied")
+      : status === "failed"
+        ? t("linkCopyFailed")
+        : t("shareWithBuddy");
+  const announcement =
+    status === "copied"
+      ? t("linkCopiedAnnouncement")
+      : status === "failed"
+        ? t("linkCopyFailed")
+        : "";
 
   return (
     <fieldset className="mt-5 flex flex-wrap gap-2">
@@ -51,10 +71,10 @@ export function TripActions({
         onClick={shareTrip}
         className={buttonClass({ variant: "secondary", size: "sm" })}
       >
-        {copied ? t("linkCopied") : t("shareWithBuddy")}
+        {label}
       </button>
       <span className="sr-only" aria-live="polite">
-        {copied ? t("linkCopiedAnnouncement") : ""}
+        {announcement}
       </span>
     </fieldset>
   );

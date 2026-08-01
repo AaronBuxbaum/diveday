@@ -6,6 +6,7 @@ import { getDb } from "@/db/client";
 import {
   createShopPromoCode,
   deleteShopPromoCode,
+  getShopPromoCodeById,
   retryShopPromoCode,
   setShopPromoEnabled,
 } from "@/db/shop-promos";
@@ -99,13 +100,74 @@ export async function retryPromoAction(formData: FormData) {
   );
 }
 
-/** Remove a code that never went live — `pending` or `failed` only. */
+/**
+ * Remove a code that never went live — `pending` or `failed` only. No confirm
+ * dialog: this is one of the two reversible actions in
+ * docs/design/principles.md #7, so it lands immediately and the page renders
+ * a land-then-undo `<UndoToast>` instead. `deleteShopPromoCode` has no
+ * restore of its own (its doc comment), so the row's fields are read here
+ * *before* the delete and carried through the redirect — Undo re-runs
+ * `restorePromoAction`, which calls `createShopPromoCode` again with them,
+ * same as an ordinary "add a promo".
+ */
 export async function deletePromoAction(formData: FormData) {
   const { session, allowed, promos } = await requirePromoManager();
   if (!allowed) revalidateAndRedirect(promos, `${promos}?notice=not_authorized`);
 
   const promoId = String(formData.get("promoId") ?? "");
   if (!promoId) revalidateAndRedirect(promos, `${promos}?notice=invalid`);
-  const deleted = await deleteShopPromoCode(await getDb(), session.user.shopId, promoId);
-  revalidateAndRedirect(promos, `${promos}?notice=${deleted ? "deleted" : "invalid"}`);
+  const db = await getDb();
+  const existing = await getShopPromoCodeById(db, session.user.shopId, promoId);
+  const deleted = await deleteShopPromoCode(db, session.user.shopId, promoId);
+  if (!deleted || !existing) {
+    revalidateAndRedirect(promos, `${promos}?notice=${deleted ? "deleted" : "invalid"}`);
+  }
+
+  const undoParams = new URLSearchParams({
+    notice: "deleted",
+    undoCode: existing.code,
+    undoDiscountPercent: String(existing.discountPercent),
+    undoScope: existing.scope,
+  });
+  if (existing.description) undoParams.set("undoDescription", existing.description);
+  if (existing.startsAt) undoParams.set("undoStartsAt", existing.startsAt.toISOString());
+  if (existing.expiresAt) undoParams.set("undoExpiresAt", existing.expiresAt.toISOString());
+  if (existing.maxRedemptions !== null) {
+    undoParams.set("undoMaxRedemptions", String(existing.maxRedemptions));
+  }
+  revalidateAndRedirect(promos, `${promos}?${undoParams.toString()}`);
+}
+
+/**
+ * Undo a promo delete from the land-then-undo toast. There is no raw-row
+ * restore (`deleteShopPromoCode`'s doc comment: neither `pending` nor
+ * `failed` codes ever carry a Stripe promotion-code id, so nothing to
+ * reinsert would be redeemable) — this genuinely re-runs Stripe creation with
+ * the exact fields the toast carried through the redirect, the same path an
+ * ordinary "create a promo" takes.
+ */
+export async function restorePromoAction(formData: FormData) {
+  const { session, allowed, promos } = await requirePromoManager();
+  if (!allowed) revalidateAndRedirect(promos, `${promos}?notice=not_authorized`);
+
+  const parsed = promoFormSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) revalidateAndRedirect(promos, `${promos}?notice=restore_failed`);
+  const startsAt = parseInstant(formData.get("startsAt"));
+  const expiresAt = parseInstant(formData.get("expiresAt"));
+  if (startsAt === undefined || expiresAt === undefined) {
+    revalidateAndRedirect(promos, `${promos}?notice=restore_failed`);
+  }
+
+  const outcome = await createShopPromoCode(await getDb(), {
+    shopId: session.user.shopId,
+    code: parsed.data.code,
+    description: parsed.data.description,
+    discountPercent: parsed.data.discountPercent,
+    scope: parsed.data.scope,
+    startsAt,
+    expiresAt,
+    maxRedemptions: parsed.data.maxRedemptions === "" ? null : parsed.data.maxRedemptions,
+    createdByPersonId: session.user.personId,
+  });
+  revalidateAndRedirect(promos, `${promos}?notice=${outcome.ok ? "restored" : "restore_failed"}`);
 }

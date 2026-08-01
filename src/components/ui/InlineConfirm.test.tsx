@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { InlineConfirm } from "./InlineConfirm";
@@ -69,5 +69,90 @@ describe("InlineConfirm", () => {
     expect(screen.getByRole("button", { name: "Cancel my spot" })).toBeInTheDocument();
     expect(screen.queryByText(/free-cancellation window/)).not.toBeInTheDocument();
     expect(onSubmit).not.toHaveBeenCalled();
+  });
+});
+
+/** Renders inside a real <form> — the compact mode's confirm tap is a real submit, guarded by this. */
+function renderCompactInForm(onSubmit: () => void) {
+  render(
+    <form
+      onSubmit={(event) => {
+        event.preventDefault();
+        onSubmit();
+      }}
+    >
+      <InlineConfirm
+        triggerLabel="Sign out"
+        confirmLabel="Sign out? Confirm"
+        pendingLabel="Signing out…"
+        triggerClassName="idle"
+        confirmClassName="confirm"
+        autoResetMs={4000}
+      />
+    </form>,
+  );
+}
+
+describe("InlineConfirm (compact mode — no message)", () => {
+  it("starts unarmed and the first tap only arms it, without submitting", async () => {
+    const onSubmit = vi.fn();
+    renderCompactInForm(onSubmit);
+
+    const button = screen.getByRole("button", { name: "Sign out" });
+    await userEvent.click(button);
+
+    expect(screen.getByRole("button", { name: "Sign out? Confirm" })).toBeInTheDocument();
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("a second tap while armed submits", async () => {
+    const onSubmit = vi.fn();
+    renderCompactInForm(onSubmit);
+
+    await userEvent.click(screen.getByRole("button", { name: "Sign out" }));
+    await userEvent.click(screen.getByRole("button", { name: "Sign out? Confirm" }));
+
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+  });
+
+  it("Escape disarms back to idle without submitting", async () => {
+    const onSubmit = vi.fn();
+    renderCompactInForm(onSubmit);
+
+    await userEvent.click(screen.getByRole("button", { name: "Sign out" }));
+    await userEvent.keyboard("{Escape}");
+
+    expect(screen.getByRole("button", { name: "Sign out" })).toBeInTheDocument();
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("losing focus disarms back to idle", async () => {
+    const onSubmit = vi.fn();
+    renderCompactInForm(onSubmit);
+
+    await userEvent.click(screen.getByRole("button", { name: "Sign out" }));
+    fireEvent.blur(screen.getByRole("button", { name: "Sign out? Confirm" }));
+
+    expect(screen.getByRole("button", { name: "Sign out" })).toBeInTheDocument();
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("auto-resets to idle after inactivity", () => {
+    vi.useFakeTimers();
+    try {
+      const onSubmit = vi.fn();
+      renderCompactInForm(onSubmit);
+
+      fireEvent.click(screen.getByRole("button", { name: "Sign out" }));
+      expect(screen.getByRole("button", { name: "Sign out? Confirm" })).toBeInTheDocument();
+
+      act(() => {
+        vi.advanceTimersByTime(4000);
+      });
+
+      expect(screen.getByRole("button", { name: "Sign out" })).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

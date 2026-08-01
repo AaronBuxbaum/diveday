@@ -1,7 +1,20 @@
+import type { Page } from "@playwright/test";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { daysFromNow, e2eNow, openTripFromBoard } from "./helpers";
 
 signedInAsOwner();
+
+/**
+ * The private-notes `<details>` is uncontrolled — its `open` state is native
+ * DOM state React doesn't touch — so whether a server-action redirect leaves
+ * it open or resets it closed isn't a stable contract to click blindly
+ * against. Check before toggling instead of guessing.
+ */
+async function openPrivateNotes(page: Page) {
+  const details = page.locator("details").filter({ hasText: "Private staff notes" });
+  const isOpen = await details.evaluate((el) => (el as HTMLDetailsElement).open);
+  if (!isOpen) await details.locator("summary").click();
+}
 
 test("staff adds a walk-in diver, then wait-lists one once the trip is full", async ({ page }) => {
   // Unique title so assertions target this spec's own trip, never a seeded
@@ -46,21 +59,33 @@ test("staff adds a walk-in diver, then wait-lists one once the trip is full", as
   // unrelated "full" elsewhere on the page.
   await expect(page.getByText("✓ Full")).toBeVisible();
 
-  await page.getByText("Private staff notes (0)").click();
+  await openPrivateNotes(page);
   await page.getByLabel("Add a note only staff can see").fill("Needs a small wetsuit staged.");
   await page.getByRole("button", { name: "Add private note" }).click();
   await expect(page.getByRole("status")).toContainText("Private staff note added.");
-  await page.getByText("Private staff notes (1)").click();
+  await openPrivateNotes(page);
   await expect(page.getByText("Needs a small wetsuit staged.")).toBeVisible();
   await expect(page.getByText(/added a private note about Walk-in Wanda/)).toBeVisible();
 
-  // Deleting is confirm-gated and staff-only; the note and its trace disappear.
-  page.once("dialog", (dialog) => void dialog.accept());
+  // Deleting a note is a purely reversible edit (docs/design/principles.md
+  // §7): no confirm dialog — the delete lands immediately and a toast offers
+  // a one-tap undo instead.
   await page.getByRole("button", { name: "Delete" }).click();
-  await expect(page.getByRole("status")).toContainText("Private staff note deleted.");
+  await expect(page.getByRole("status").filter({ hasText: "Private note deleted." })).toBeVisible();
   await expect(page.getByText("Private staff notes (0)")).toBeVisible();
   await expect(page.getByText("Needs a small wetsuit staged.")).toHaveCount(0);
   await expect(page.getByText(/deleted a private note about Walk-in Wanda/)).toBeVisible();
+
+  // Undo recreates a fresh note carrying the same text, staff-attributed.
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect(page.getByRole("status")).toContainText("Private staff note added.");
+  await openPrivateNotes(page);
+  await expect(page.getByText("Needs a small wetsuit staged.")).toBeVisible();
+
+  // Delete again — the rest of this test doesn't care about the note, only
+  // about the trip filling up.
+  await page.getByRole("button", { name: "Delete" }).click();
+  await expect(page.getByText("Private staff notes (0)")).toBeVisible();
 
   // Trip is now full — the same section switches to wait-listing.
   await expect(addDiver.getByRole("button", { name: "Add to wait list" })).toBeVisible();

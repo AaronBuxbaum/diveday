@@ -298,6 +298,8 @@ export default async function TripsPage({
     remove: st("schedule.builder.remove"),
     removeAria: st("schedule.builder.removeAria"),
     removeConfirm: st("schedule.builder.removeConfirm"),
+    removeConfirmButton: st("schedule.builder.removeConfirmButton"),
+    removeCancel: st("schedule.builder.removeCancel"),
     removePending: st("schedule.builder.removePending"),
     whatIsIt: st("schedule.builder.whatIsIt"),
     titlePlaceholder: st("schedule.builder.titlePlaceholder"),
@@ -572,11 +574,13 @@ export default async function TripsPage({
           )}
         </EmptyState>
       ) : staffView ? null : upcoming.length === 0 ? (
-        <p className="text-sm text-muted">
-          {hasSpaceFilter || tripTypeFilter
-            ? t("schedule.filters.noMatches")
-            : t("schedule.noTripsMonth")}
-        </p>
+        <EmptyState>
+          <p className="text-sm text-muted">
+            {hasSpaceFilter || tripTypeFilter
+              ? t("schedule.filters.noMatches")
+              : t("schedule.noTripsMonth")}
+          </p>
+        </EmptyState>
       ) : (
         <ul className="flex flex-col gap-3" aria-label={t("schedule.tripListLabel")}>
           {(() => {

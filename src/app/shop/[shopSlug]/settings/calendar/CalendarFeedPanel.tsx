@@ -5,6 +5,7 @@ import { useFormStatus } from "react-dom";
 import { Copyable } from "@/components/Copyable";
 import { ShopNotice } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
+import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { calendarFeedAction } from "./actions";
 import {
   type CalendarFeedCopy,
@@ -17,12 +18,10 @@ function ActionButton({
   label,
   pendingLabel,
   variant,
-  confirmMessage,
 }: {
   label: string;
   pendingLabel: string;
   variant: "primary" | "secondary" | "ghost";
-  confirmMessage?: string;
 }) {
   const { pending } = useFormStatus();
   return (
@@ -31,9 +30,6 @@ function ActionButton({
       disabled={pending}
       aria-busy={pending}
       className={buttonClass({ variant, size: "sm" })}
-      onClick={(event) => {
-        if (confirmMessage && !window.confirm(confirmMessage)) event.preventDefault();
-      }}
     >
       {pending ? pendingLabel : label}
     </button>
@@ -86,22 +82,30 @@ export function CalendarFeedPanel({
             <input type="hidden" name="intent" value="issue" />
             <input type="hidden" name="scope" value={view.scope} />
             <input type="hidden" name="rotating" value={live ? "true" : "false"} />
-            <ActionButton
-              label={live ? copy.rotate : copy.create}
-              pendingLabel={live ? copy.rotating : copy.creating}
-              variant={live ? "secondary" : "primary"}
-              confirmMessage={live ? copy.confirmRotate : undefined}
-            />
+            {live ? (
+              <InlineConfirm
+                triggerLabel={copy.rotate}
+                triggerClassName={buttonClass({ variant: "secondary", size: "sm" })}
+                message={copy.confirmRotate}
+                confirmLabel={copy.confirmRotateButton}
+                cancelLabel={copy.cancel}
+                pendingLabel={copy.rotating}
+              />
+            ) : (
+              <ActionButton label={copy.create} pendingLabel={copy.creating} variant="primary" />
+            )}
           </form>
           {live ? (
             <form action={formAction}>
               <input type="hidden" name="intent" value="revoke" />
               <input type="hidden" name="scope" value={view.scope} />
-              <ActionButton
-                label={copy.turnOff}
+              <InlineConfirm
+                triggerLabel={copy.turnOff}
+                triggerClassName={buttonClass({ variant: "ghost", size: "sm" })}
+                message={copy.confirmTurnOff}
+                confirmLabel={copy.confirmTurnOffButton}
+                cancelLabel={copy.cancel}
                 pendingLabel={copy.turningOff}
-                variant="ghost"
-                confirmMessage={copy.confirmTurnOff}
               />
             </form>
           ) : null}

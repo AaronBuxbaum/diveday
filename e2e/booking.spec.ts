@@ -79,16 +79,15 @@ test.describe("staff", () => {
 
     // Removing a booking confirms first — it can fire an automatic refund that
     // undo can't claw back, so a misclick shouldn't be one tap from done.
+    // Two-tap InlineConfirm, not a native dialog: the first tap only arms it.
     const noraRow = page.locator("li").filter({ hasText: "Nora Quinn" });
-    page.once("dialog", (dialog) => {
-      expect(dialog.message()).toContain("Nora Quinn");
-      void dialog.dismiss();
-    });
     await noraRow.getByRole("button", { name: "Remove booking" }).click();
+    await expect(noraRow).toContainText("Remove Nora Quinn from this trip?");
+    await noraRow.getByRole("button", { name: "Never mind" }).click();
     await expect(page.getByText("Nora Quinn").first()).toBeVisible();
 
-    page.once("dialog", (dialog) => void dialog.accept());
     await noraRow.getByRole("button", { name: "Remove booking" }).click();
+    await noraRow.getByRole("button", { name: "Yes, remove booking" }).click();
     await expect(page.getByRole("status")).toContainText("Booking cancelled");
     await expect(page.getByText("Nora Quinn")).toHaveCount(0);
     await expect(page.getByText("Sam Quinn").first()).toBeVisible();
@@ -301,9 +300,10 @@ test("a shared-inbox booking under a different name is held for staff identity c
   const row = page.locator("li").filter({ hasText: "Nora Quinn" });
   await expect(row).toContainText("Identity unconfirmed");
 
-  // Confirming identity clears the blocker.
-  page.once("dialog", (dialog) => void dialog.accept());
+  // Confirming identity clears the blocker — two-tap InlineConfirm, not a
+  // native dialog: the first tap only arms it.
   await row.getByRole("button", { name: /^Confirm this is/ }).click();
+  await row.getByRole("button", { name: "Yes, this is them" }).click();
   await expect(page.getByRole("status")).toContainText("Identity confirmed");
   await expect(page.locator("li").filter({ hasText: "Nora Quinn" })).not.toContainText(
     "Identity unconfirmed",

@@ -873,6 +873,57 @@ for (const scheme of ["light", "dark"] as const) {
           await setDepth("12");
         }
       });
+
+      // Land-then-undo (docs/design/principles.md §7): deleting a private
+      // staff note is a purely reversible edit, so it lands immediately
+      // behind a toast instead of a blocking confirm. Its own test so the
+      // roster note this adds and removes doesn't leak into another
+      // surface's capture.
+      test(`the roster's note-delete undo toast renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/shop/blue-mantis/schedule");
+        await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
+        await page
+          .getByRole("navigation", { name: "Trip" })
+          .getByRole("link", { name: "Guests" })
+          .click();
+        await page.waitForURL(/\/guests/);
+        const row = page.locator("#roster li").first();
+        await row.getByText(/Private staff notes/).click();
+        await row
+          .getByLabel("Add a note only staff can see")
+          .fill("Visual regression seed note for the undo toast.");
+        await row.getByRole("button", { name: "Add private note" }).click();
+        await page.getByText("Private staff note added.").waitFor();
+
+        await row.getByText(/Private staff notes/).click();
+        await row.getByRole("button", { name: "Delete" }).click();
+        await page.getByText("Private note deleted.").waitFor();
+        await capture(page, "trip-guests-note-undo", scheme);
+      });
+    });
+
+    // The seeded demo shop's Today queue never runs dry, so the shared
+    // `EmptyState` card TodayQueue now renders when nothing needs attention
+    // (docs/design/principles.md, terminal-vs-section empty states) has no
+    // other baseline. A freshly onboarded shop is the real "empty queue"
+    // scenario — same flow as e2e/onboard.spec.ts's first-run checklist test.
+    test(`a freshly onboarded shop's Today tab renders true to the design (${scheme})`, async ({
+      page,
+    }) => {
+      const unique = `today-empty-${Date.now()}`;
+      await page.goto("/onboard");
+      await page.locator('input[name="shopName"]').fill("Fresh Shop E2E");
+      await page.locator('input[name="shopSlug"]').fill(unique);
+      await page.locator('input[name="ownerName"]').fill("Nour Haddad");
+      await page.locator('input[name="ownerEmail"]').fill(`${unique}@example.com`);
+      await page.locator('input[name="ownerPassword"]').fill("trial-pass-123");
+      await page.getByRole("button", { name: "Create shop & start trial" }).click();
+      await page.waitForURL(new RegExp(`/shop/${unique}$`));
+      await page.getByRole("heading", { name: "Get your shop ready" }).waitFor();
+      await page.getByRole("heading", { name: "Nothing is waiting on you" }).waitFor();
+      await capture(page, "today-empty", scheme);
     });
   });
 }

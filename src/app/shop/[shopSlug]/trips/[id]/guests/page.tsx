@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { UndoToast } from "@/components/UndoToast";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
@@ -43,6 +44,7 @@ import {
   markPaymentAction,
   markWaiverInPersonAction,
   removeBookingAction,
+  restoreInternalNoteAction,
   saveRosterEmergencyContactAction,
   sendLastMinuteDealAction,
   undoRemoveBookingAction,
@@ -69,11 +71,14 @@ export default async function TripGuestsPage({
     diverq?: string;
     count?: string;
     rf?: string;
+    /** The deleted note's booking + text, carried by the land-then-undo redirect (§7). */
+    noteBookingId?: string;
+    noteBody?: string;
   }>;
 }) {
   const session = await requireStaffSession();
   const { shopSlug, id: tripId } = await params;
-  const { notice, bid, diverq, count, rf } = await searchParams;
+  const { notice, bid, diverq, count, rf, noteBookingId, noteBody } = await searchParams;
   const rosterFilter = isRosterFilter(rf) ? rf : "all";
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
@@ -161,7 +166,7 @@ export default async function TripGuestsPage({
 
   return (
     <>
-      <FlashParams params={["notice", "bid"]} />
+      <FlashParams params={["notice", "bid", "noteBookingId", "noteBody"]} />
       <ShopPageHeader
         eyebrow={t("trips.guests.eyebrow")}
         title={trip.title}
@@ -192,13 +197,27 @@ export default async function TripGuestsPage({
         }
       />
 
-      <TripNoticeBanner
-        notice={notice}
-        count={count}
-        locale={locale}
-        undoBookingId={undoBookingId}
-        undoAction={undoRemoveBookingAction.bind(null, shopSlug, tripId)}
-      />
+      {/* A deleted private note is a purely reversible edit, so it gets a
+          land-then-undo toast instead of the plain success banner
+          (docs/design/principles.md §7) — same either/or as
+          divers/[personId]/page.tsx's card-delete undo. */}
+      {notice === "note-deleted" && noteBookingId && noteBody ? (
+        <UndoToast
+          message={t("trips.roster.noteDeletedToast")}
+          action={restoreInternalNoteAction.bind(null, shopSlug, tripId)}
+          fields={{ bookingId: noteBookingId, body: noteBody }}
+          pendingLabel={t("shared.undoToast.pendingLabel")}
+          undoLabel={t("shared.undoToast.undo")}
+        />
+      ) : (
+        <TripNoticeBanner
+          notice={notice}
+          count={count}
+          locale={locale}
+          undoBookingId={undoBookingId}
+          undoAction={undoRemoveBookingAction.bind(null, shopSlug, tripId)}
+        />
+      )}
 
       <WaitlistSection
         waitlist={waitlist}

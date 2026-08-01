@@ -4,6 +4,7 @@ import {
   WaitlistInvite,
   type WaitlistInviteCopy,
 } from "@/app/shop/[shopSlug]/trips/[id]/_components/WaitlistInvite";
+import { EmptyState } from "@/components/EmptyState";
 import { buttonClass } from "@/components/ui/button";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { ACTION_KIND_KEYS, seasonalBriefingText, URGENCY_KEYS } from "@/i18n/today-labels";
@@ -157,6 +158,7 @@ export function TodayQueue({
     emailAnInvite: t("trips.waitlist.emailAnInvite"),
     copied: t("trips.waitlist.copied"),
     copyInviteMessage: t("trips.waitlist.copyInviteMessage"),
+    copyFailed: t("trips.waitlist.copyFailed"),
     justNow: t("trips.waitlist.justNow"),
     minutesAgo: t("trips.waitlist.minutesAgo"),
     hoursAgo: t("trips.waitlist.hoursAgo"),
@@ -181,23 +183,16 @@ export function TodayQueue({
 
   if (groups.length === 0) {
     return (
-      <section
-        aria-labelledby="queue-heading"
-        className="rounded-3xl border border-accent/30 bg-accent/5 p-8 text-center sm:p-10"
-      >
-        <div
-          className="mx-auto grid size-12 place-items-center rounded-2xl bg-accent/15 text-2xl"
-          aria-hidden="true"
-        >
-          🤙
-        </div>
-        <h2 id="queue-heading" className="mt-4 text-lg font-semibold">
-          {t("shared.today.todayQueue.emptyHeading")}
-        </h2>
-        <p className="mx-auto mt-1 max-w-md text-muted">
-          {t("shared.today.todayQueue.emptyBody")}{" "}
-          {seasonalBriefingText(t, getSeasonalBriefing(nowDate()), shopName)}
-        </p>
+      <section aria-labelledby="queue-heading">
+        <EmptyState>
+          <h2 id="queue-heading" className="font-medium">
+            {t("shared.today.todayQueue.emptyHeading")}
+          </h2>
+          <p className="mt-1 text-sm text-muted">
+            {t("shared.today.todayQueue.emptyBody")}{" "}
+            {seasonalBriefingText(t, getSeasonalBriefing(nowDate()), shopName)}
+          </p>
+        </EmptyState>
       </section>
     );
   }

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { EmptyState } from "@/components/EmptyState";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
@@ -167,9 +168,11 @@ export default async function OrdersIndexPage({
       ) : null}
 
       {rows.length === 0 ? (
-        <p className="mt-8 rounded-lg border border-border bg-surface p-6 text-center text-sm text-muted">
-          {hasFilters ? t("orders.index.emptyFiltered") : t("orders.index.emptyAll")}
-        </p>
+        <EmptyState className="mt-8">
+          <p className="text-sm text-muted">
+            {hasFilters ? t("orders.index.emptyFiltered") : t("orders.index.emptyAll")}
+          </p>
+        </EmptyState>
       ) : (
         <div className="mt-6 overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
           <table className="w-full text-sm">

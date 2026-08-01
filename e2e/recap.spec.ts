@@ -130,8 +130,9 @@ test("a booking cancelled after the recap page loaded gets an honest notice, not
   // The roster lives on the Guests tab now, not the trip overview.
   await staffPage.goto(`/shop/blue-mantis/trips/${tripId}/guests`);
   const diverRow = staffPage.locator("li").filter({ hasText: "Priya Sharma" });
-  staffPage.once("dialog", (dialog) => void dialog.accept());
+  // Two-tap InlineConfirm, not a native dialog: the first tap only arms it.
   await diverRow.getByRole("button", { name: "Remove booking" }).click();
+  await diverRow.getByRole("button", { name: "Yes, remove booking" }).click();
   await expect(staffPage.getByRole("status")).toContainText("Booking cancelled");
   await staffContext.close();
 

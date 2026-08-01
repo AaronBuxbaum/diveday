@@ -129,6 +129,25 @@ export async function createShopPromoCode(
   return active ? { ok: true, promo: active } : { ok: false, reason: "stripe_failed" };
 }
 
+/**
+ * One code by id, shop-scoped. Used to capture a `pending`/`failed` code's
+ * fields immediately before `deleteShopPromoCode` removes it, so the
+ * land-then-undo toast can carry them through the redirect and hand them to
+ * `createShopPromoCode` again if the shop taps Undo.
+ */
+export async function getShopPromoCodeById(
+  db: DbExecutor,
+  shopId: string,
+  promoId: string,
+): Promise<ShopPromoCode | null> {
+  const [row] = await db
+    .select()
+    .from(shopPromoCodes)
+    .where(and(eq(shopPromoCodes.id, promoId), eq(shopPromoCodes.shopId, shopId)))
+    .limit(1);
+  return row ?? null;
+}
+
 /** One code by its exact normalized text, shop-scoped. Null when this shop has no such code. */
 export async function getShopPromoByCode(
   db: DbExecutor,

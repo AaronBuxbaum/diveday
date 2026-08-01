@@ -210,6 +210,30 @@ export async function inviteStaffMember(
   }
 }
 
+/**
+ * The live `STAFF_ROLES` subset a person currently holds — a snapshot taken
+ * before `removeStaffMember` strips them, so a land-then-undo toast has what
+ * it needs to hand back to `setStaffRoles` on restore.
+ */
+export async function getStaffRoles(
+  db: DbExecutor,
+  shopId: string,
+  personId: string,
+): Promise<Role[]> {
+  const rows = await db
+    .select({ role: personRoles.role })
+    .from(personRoles)
+    .innerJoin(people, eq(people.id, personRoles.personId))
+    .where(
+      and(
+        eq(personRoles.personId, personId),
+        eq(people.shopId, shopId),
+        inArray(personRoles.role, [...STAFF_ROLES]),
+      ),
+    );
+  return rows.map((row) => row.role as Role);
+}
+
 export type StaffMutationResult = { ok: true } | { ok: false; reason: "last_owner" | "not_found" };
 
 /**

@@ -5,6 +5,7 @@ import { WaiverSendControl } from "@/components/today/WaiverSendControl";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import type { listBookingNotes } from "@/db/operations";
 import { birthdayText } from "@/i18n/birthday-labels";
 import { depthWarningText } from "@/i18n/depth-labels";
@@ -423,15 +424,20 @@ export function RosterSection({
                 {identityUnconfirmed ? (
                   <form action={confirmIdentityAction} className="mt-2">
                     <input type="hidden" name="bookingId" value={booking.id} />
-                    <SubmitButton
-                      pendingLabel={t("trips.roster.confirming")}
-                      confirmMessage={t("trips.roster.confirmIdentityMessage", {
+                    {/* Blocking confirm, not an undo banner: this attestation clears
+                        the identity_unconfirmed blocker on someone else's evidence
+                        (H-13) — worth the staffer re-reading before it lands
+                        (docs/design/principles.md §7). */}
+                    <InlineConfirm
+                      triggerLabel={t("trips.roster.confirmThisIs", { name: person.fullName })}
+                      message={t("trips.roster.confirmIdentityMessage", {
                         name: person.fullName,
                       })}
-                      className={buttonClass({ variant: "secondary", size: "sm" })}
-                    >
-                      {t("trips.roster.confirmThisIs", { name: person.fullName })}
-                    </SubmitButton>
+                      confirmLabel={t("trips.roster.identityConfirmButton")}
+                      cancelLabel={t("trips.roster.neverMind")}
+                      pendingLabel={t("trips.roster.confirming")}
+                      triggerClassName={buttonClass({ variant: "secondary", size: "sm" })}
+                    />
                   </form>
                 ) : null}
 
@@ -682,15 +688,17 @@ export function RosterSection({
                       blocking confirm too (docs/design/principles.md §7). */}
                   <form action={removeBookingAction} className="sm:ml-auto">
                     <input type="hidden" name="bookingId" value={booking.id} />
-                    <SubmitButton
-                      pendingLabel={t("trips.roster.removing")}
-                      confirmMessage={t("trips.roster.confirmRemoveBooking", {
+                    <InlineConfirm
+                      triggerLabel={t("trips.roster.removeBooking")}
+                      message={t("trips.roster.confirmRemoveBooking", {
                         name: person.fullName,
                       })}
-                      className="inline-flex min-h-11 items-center justify-center rounded-lg px-3 text-sm font-medium text-muted transition-colors duration-200 hover:bg-danger/10 hover:text-danger focus-visible:text-danger"
-                    >
-                      {t("trips.roster.removeBooking")}
-                    </SubmitButton>
+                      confirmLabel={t("trips.roster.removeBookingConfirmButton")}
+                      cancelLabel={t("trips.roster.neverMind")}
+                      pendingLabel={t("trips.roster.removing")}
+                      triggerClassName="inline-flex min-h-11 items-center justify-center rounded-lg px-3 text-sm font-medium text-muted transition-colors duration-200 hover:bg-danger/10 hover:text-danger focus-visible:text-danger"
+                      confirmClassName={buttonClass({ variant: "danger", size: "sm" })}
+                    />
                   </form>
                 </div>
                 <details className="mt-4 border-t border-border pt-4">
@@ -713,9 +721,11 @@ export function RosterSection({
                         </div>
                         <form action={deleteNoteAction} className="shrink-0">
                           <input type="hidden" name="noteId" value={note.id} />
+                          {/* No confirm dialog: the delete lands and a toast offers
+                              a one-tap undo (recreates the note) — a purely
+                              reversible edit, not a real send (principle 7). */}
                           <SubmitButton
                             pendingLabel={t("trips.roster.deletingEllipsis")}
-                            confirmMessage={t("trips.roster.confirmDeleteNote")}
                             className="rounded-md px-2 py-1 text-xs font-medium text-danger hover:bg-danger/10"
                           >
                             {t("trips.roster.delete")}

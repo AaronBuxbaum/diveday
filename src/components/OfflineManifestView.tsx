@@ -337,7 +337,17 @@ export function OfflineManifestView() {
             })}
           </ul>
         ) : (
-          <p className="mt-2 text-muted">{t("shared.offlineManifest.list.emptyHint")}</p>
+          <div className="mt-6 rounded-3xl border border-border bg-surface-sunken p-8 text-center sm:p-10">
+            <div
+              className="mx-auto grid size-12 place-items-center rounded-2xl bg-surface text-2xl"
+              aria-hidden="true"
+            >
+              📋
+            </div>
+            <p className="mx-auto mt-4 max-w-md text-muted">
+              {t("shared.offlineManifest.list.emptyHint")}
+            </p>
+          </div>
         )}
       </main>
     );
@@ -350,14 +360,22 @@ export function OfflineManifestView() {
           eyebrow={t("shared.offlineManifest.single.eyebrow")}
           title={t("shared.offlineManifest.single.emptyHeading")}
           meta={
-            <>
-              <p className="text-muted" role="status">
-                {message}
-              </p>
-              <p className="mt-2 text-muted">{t("shared.offlineManifest.single.emptyHint")}</p>
-            </>
+            <p className="text-muted" role="status">
+              {message}
+            </p>
           }
         />
+        <div className="mt-6 rounded-3xl border border-border bg-surface-sunken p-8 text-center sm:p-10">
+          <div
+            className="mx-auto grid size-12 place-items-center rounded-2xl bg-surface text-2xl"
+            aria-hidden="true"
+          >
+            ⛵
+          </div>
+          <p className="mx-auto mt-4 max-w-md text-muted">
+            {t("shared.offlineManifest.single.emptyHint")}
+          </p>
+        </div>
       </main>
     );
   }

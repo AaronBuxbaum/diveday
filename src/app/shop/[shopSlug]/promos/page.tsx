@@ -7,6 +7,7 @@ import { FlashParams } from "@/components/FlashParams";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
+import { UndoToast } from "@/components/UndoToast";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
@@ -26,6 +27,7 @@ import { noticeFromParam } from "@/lib/staff-notices";
 import {
   createPromoAction,
   deletePromoAction,
+  restorePromoAction,
   retryPromoAction,
   setPromoEnabledAction,
 } from "./actions";
@@ -49,6 +51,8 @@ const NOTICES: Record<string, { tone: "success" | "danger" | "warning"; key: Sta
   not_connected: { tone: "warning", key: "promos.notice.notConnected" },
   stripe_failed: { tone: "danger", key: "promos.notice.stripeFailed" },
   not_authorized: { tone: "danger", key: "promos.notice.notAuthorized" },
+  restored: { tone: "success", key: "promos.notice.restored" },
+  restore_failed: { tone: "danger", key: "promos.notice.restoreFailed" },
 };
 
 const SCOPE_KEYS: Record<"all" | "trips" | "courses", StaffMessageKey> = {
@@ -62,11 +66,29 @@ export default async function PromosPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{ notice?: string }>;
+  searchParams: Promise<{
+    notice?: string;
+    undoCode?: string;
+    undoDescription?: string;
+    undoDiscountPercent?: string;
+    undoScope?: string;
+    undoStartsAt?: string;
+    undoExpiresAt?: string;
+    undoMaxRedemptions?: string;
+  }>;
 }) {
   const session = await requireStaffSession();
   const { shopSlug } = await params;
-  const { notice } = await searchParams;
+  const {
+    notice,
+    undoCode,
+    undoDescription,
+    undoDiscountPercent,
+    undoScope,
+    undoStartsAt,
+    undoExpiresAt,
+    undoMaxRedemptions,
+  } = await searchParams;
   const db = await getDb();
   const allowed = await canPersonManagePaymentSettings(
     db,
@@ -97,14 +119,41 @@ export default async function PromosPage({
 
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
-      <FlashParams params={["notice"]} />
+      <FlashParams
+        params={[
+          "notice",
+          "undoCode",
+          "undoDescription",
+          "undoDiscountPercent",
+          "undoScope",
+          "undoStartsAt",
+          "undoExpiresAt",
+          "undoMaxRedemptions",
+        ]}
+      />
       <ShopPageHeader
         eyebrow={t("promos.eyebrow")}
         title={t("promos.title")}
         description={t("promos.description")}
       />
 
-      {banner ? (
+      {notice === "deleted" && undoCode && undoDiscountPercent && undoScope ? (
+        <UndoToast
+          message={t("promos.notice.deletedToast")}
+          action={restorePromoAction}
+          fields={{
+            code: undoCode,
+            discountPercent: undoDiscountPercent,
+            scope: undoScope,
+            description: undoDescription ?? "",
+            maxRedemptions: undoMaxRedemptions ?? "",
+            ...(undoStartsAt ? { startsAt: undoStartsAt } : {}),
+            ...(undoExpiresAt ? { expiresAt: undoExpiresAt } : {}),
+          }}
+          pendingLabel={t("shared.undoToast.pendingLabel")}
+          undoLabel={t("shared.undoToast.undo")}
+        />
+      ) : banner ? (
         <StaffNoticeBanner tone={banner.tone}>
           {banner.key === "promos.notice.invalidDiscount"
             ? t(banner.key, { min: PROMO_DISCOUNT_MIN, max: PROMO_DISCOUNT_MAX })
@@ -306,7 +355,6 @@ export default async function PromosPage({
                       <input type="hidden" name="promoId" value={promo.id} />
                       <SubmitButton
                         pendingLabel={t("promos.deleting")}
-                        confirmMessage={t("promos.deleteConfirm", { code: promo.code })}
                         className={buttonClass({ variant: "danger" })}
                       >
                         {t("promos.delete")}

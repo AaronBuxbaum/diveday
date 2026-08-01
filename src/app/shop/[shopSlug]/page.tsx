@@ -362,6 +362,7 @@ async function TodayBody({
             scheduleBody: t("shopHome.firstRun.scheduleBody"),
             scheduleCopy: t("shopHome.firstRun.scheduleCopy"),
             scheduleCopied: t("shopHome.firstRun.scheduleCopied"),
+            scheduleCopyFailed: t("shopHome.firstRun.scheduleCopyFailed"),
             stripeTitle: t("shopHome.firstRun.stripeTitle"),
             stripeBody: t("shopHome.firstRun.stripeBody"),
             stripeAction: t("shopHome.firstRun.stripeAction"),

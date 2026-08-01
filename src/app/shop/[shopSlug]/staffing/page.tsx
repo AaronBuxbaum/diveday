@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -191,7 +192,9 @@ export default async function StaffingPage({
                   {t("staffing.working.crewingHeading")}
                 </p>
                 {member.crewingTrips.length === 0 ? (
-                  <p className="mt-1 text-sm text-muted">{t("staffing.working.crewingEmpty")}</p>
+                  <EmptyState className="mt-1">
+                    <p className="text-sm text-muted">{t("staffing.working.crewingEmpty")}</p>
+                  </EmptyState>
                 ) : (
                   <ul className="mt-1 space-y-1 text-sm">
                     {member.crewingTrips.map((trip) => (

@@ -242,6 +242,7 @@ export default async function DiveRecapPage({
             label={t("recap.shareRecap")}
             copiedLabel={t("recap.linkCopied")}
             copiedAnnouncement={t("recap.linkCopiedAnnouncement")}
+            failedLabel={t("recap.linkCopyFailed")}
           />
         </div>
       </header>

@@ -420,6 +420,13 @@ export async function addInternalNoteAction(shopSlug: string, tripId: string, fo
   revalidateAndRedirect(back, `${back}?notice=${saved ? "note-added" : "invalid"}`);
 }
 
+/**
+ * Land-then-undo (docs/design/principles.md §7): the note is a purely
+ * reversible edit — recreating it is exactly what a text note supports — so
+ * this lands immediately instead of holding for a blocking confirm. The
+ * deleted booking + text ride along in the redirect so the toast on the next
+ * render can offer a one-tap restore.
+ */
 export async function deleteInternalNoteAction(
   shopSlug: string,
   tripId: string,
@@ -428,12 +435,46 @@ export async function deleteInternalNoteAction(
   const back = guestsPath(shopSlug, tripId);
   const s = await requireStaffSession();
   const noteId = String(formData.get("noteId") ?? "");
-  const deleted = await deleteInternalNote(await getDb(), {
+  const result = await deleteInternalNote(await getDb(), {
     shopId: s.user.shopId,
     actorPersonId: s.user.personId,
     noteId,
   });
-  revalidateAndRedirect(back, `${back}?notice=${deleted ? "note-deleted" : "invalid"}`);
+  revalidateAndRedirect(
+    back,
+    result.deleted
+      ? `${back}?notice=note-deleted&noteBookingId=${result.bookingId}&noteBody=${encodeURIComponent(result.body)}`
+      : `${back}?notice=invalid`,
+  );
+}
+
+/**
+ * Undo a note delete from the land-then-undo toast. Recreates a *new* note
+ * with the same booking and text through the same `addInternalNote`
+ * insert-and-log path a fresh note takes — the deleted row's id is gone and
+ * isn't needed for that, since this doesn't resurrect the old row.
+ */
+export async function restoreInternalNoteAction(
+  shopSlug: string,
+  tripId: string,
+  formData: FormData,
+) {
+  const back = guestsPath(shopSlug, tripId);
+  const s = await requireStaffSession();
+  const bookingId = String(formData.get("bookingId") ?? "");
+  const body = String(formData.get("body") ?? "");
+  const restored = bookingId
+    ? await addInternalNote(await getDb(), {
+        shopId: s.user.shopId,
+        actorPersonId: s.user.personId,
+        bookingId,
+        body,
+      })
+    : null;
+  // Reuses the "note-added" notice: a restore is, from the banner's
+  // perspective, indistinguishable from adding a fresh note with the same
+  // text — no dedicated "note-restored" code needed.
+  revalidateAndRedirect(back, `${back}?notice=${restored ? "note-added" : "invalid"}`);
 }
 
 /** Staff-entered booking for walk-ins or divers tracked in another system. */

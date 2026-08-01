@@ -35,7 +35,10 @@ export type CalendarFeedCopy = {
   copied: string;
   copyFailed: string;
   confirmRotate: string;
+  confirmRotateButton: string;
   confirmTurnOff: string;
+  confirmTurnOffButton: string;
+  cancel: string;
   newLinkHeading: string;
   shownOnce: string;
   webcalLabel: string;

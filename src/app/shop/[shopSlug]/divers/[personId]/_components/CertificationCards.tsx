@@ -1,4 +1,5 @@
 import { DigitalCardFlip } from "@/components/DigitalCardFlip";
+import { EmptyState } from "@/components/EmptyState";
 import { ImageFileInput } from "@/components/ImageFileInput";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
@@ -125,11 +126,13 @@ export async function CertificationCards({
           </FieldGrid>
         </details>
       </div>
-      <ul className="mt-4 divide-y divide-border rounded-lg border border-border bg-surface">
-        {diver.certifications.length === 0 ? (
-          <li className="px-4 py-5 text-sm text-muted">{t("divers.certifications.empty")}</li>
-        ) : (
-          diver.certifications.map((card) => {
+      {diver.certifications.length === 0 ? (
+        <EmptyState className="mt-4">
+          <p className="text-sm text-muted">{t("divers.certifications.empty")}</p>
+        </EmptyState>
+      ) : (
+        <ul className="mt-4 divide-y divide-border rounded-lg border border-border bg-surface">
+          {diver.certifications.map((card) => {
             const display = cardDisplayStatus(card, todayLocal);
             const expired = display === "expired";
             return (
@@ -224,9 +227,9 @@ export async function CertificationCards({
                 </div>
               </li>
             );
-          })
-        )}
-      </ul>
+          })}
+        </ul>
+      )}
     </section>
   );
 }

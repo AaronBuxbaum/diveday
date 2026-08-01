@@ -1,3 +1,4 @@
+import { EmptyState } from "@/components/EmptyState";
 import { ImageFileInput } from "@/components/ImageFileInput";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
@@ -109,168 +110,168 @@ export function SpecialtyCards({
           </FieldGrid>
         </details>
       </div>
-      <ul className="mt-4 divide-y divide-border rounded-lg border border-border bg-surface">
-        {diver.specialtyCertifications.length === 0 && diver.nitroxCertifications.length === 0 ? (
-          <li className="px-4 py-5 text-sm text-muted">{t("divers.specialty.emptyState")}</li>
-        ) : (
-          <>
-            {diver.specialtyCertifications.map((card) => {
-              const display = heldCardDisplayStatus(card, todayLocal);
-              const expired = display === "expired";
-              return (
-                <li key={card.id} className="px-4 py-4">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <p className="font-medium">
-                        {t(AGENCY_KEYS[card.agency])} · {t(SPECIALTY_KEYS[card.specialty])}
-                      </p>
-                      <p className="mt-1 break-all text-sm text-muted">
-                        {card.identifier}
-                        {card.expiresAt ? (
-                          <span className={expired ? "font-medium text-danger" : undefined}>
-                            {expired
-                              ? t("divers.certifications.refresherOverdue", {
-                                  date: formatCalendarDate(card.expiresAt),
-                                })
-                              : t("divers.certifications.refresherDueOn", {
-                                  date: formatCalendarDate(card.expiresAt),
-                                })}
-                          </span>
-                        ) : null}
-                      </p>
-                      {card.cardImageUrl ? (
-                        <a
-                          href={card.cardImageUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="mt-1 inline-block text-sm font-medium text-primary hover:underline"
-                        >
-                          {t("divers.specialty.viewCardPhoto")}
-                        </a>
-                      ) : null}
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Badge tone={heldCardStatusTone(display)}>
-                        {t(HELD_CARD_STATUS_KEYS[display])}
-                      </Badge>
-                      {isImportedCard(card) ? (
-                        <Badge tone="neutral">
-                          {card.importedFromLabel
-                            ? t("divers.certifications.importedWithSource", {
-                                source: card.importedFromLabel,
+      {diver.specialtyCertifications.length === 0 && diver.nitroxCertifications.length === 0 ? (
+        <EmptyState className="mt-4">
+          <p className="text-sm text-muted">{t("divers.specialty.emptyState")}</p>
+        </EmptyState>
+      ) : (
+        <ul className="mt-4 divide-y divide-border rounded-lg border border-border bg-surface">
+          {diver.specialtyCertifications.map((card) => {
+            const display = heldCardDisplayStatus(card, todayLocal);
+            const expired = display === "expired";
+            return (
+              <li key={card.id} className="px-4 py-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="font-medium">
+                      {t(AGENCY_KEYS[card.agency])} · {t(SPECIALTY_KEYS[card.specialty])}
+                    </p>
+                    <p className="mt-1 break-all text-sm text-muted">
+                      {card.identifier}
+                      {card.expiresAt ? (
+                        <span className={expired ? "font-medium text-danger" : undefined}>
+                          {expired
+                            ? t("divers.certifications.refresherOverdue", {
+                                date: formatCalendarDate(card.expiresAt),
                               })
-                            : t("divers.certifications.importedLabel")}
-                        </Badge>
+                            : t("divers.certifications.refresherDueOn", {
+                                date: formatCalendarDate(card.expiresAt),
+                              })}
+                        </span>
                       ) : null}
-                      {card.status === "pending" && !needsImportConfirm(card) ? (
-                        <form action={reviewSpecialtyAction.bind(null, shopSlug, personId)}>
-                          <input type="hidden" name="certificationId" value={card.id} />
-                          <SubmitButton
-                            pendingLabel={t("divers.certifications.markingCertified")}
-                            className={buttonClass({ variant: "secondary", size: "sm" })}
-                          >
-                            {t("divers.certifications.markCertified")}
-                          </SubmitButton>
-                        </form>
-                      ) : null}
-                      <form action={deleteSpecialtyAction.bind(null, shopSlug, personId)}>
+                    </p>
+                    {card.cardImageUrl ? (
+                      <a
+                        href={card.cardImageUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-1 inline-block text-sm font-medium text-primary hover:underline"
+                      >
+                        {t("divers.specialty.viewCardPhoto")}
+                      </a>
+                    ) : null}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge tone={heldCardStatusTone(display)}>
+                      {t(HELD_CARD_STATUS_KEYS[display])}
+                    </Badge>
+                    {isImportedCard(card) ? (
+                      <Badge tone="neutral">
+                        {card.importedFromLabel
+                          ? t("divers.certifications.importedWithSource", {
+                              source: card.importedFromLabel,
+                            })
+                          : t("divers.certifications.importedLabel")}
+                      </Badge>
+                    ) : null}
+                    {card.status === "pending" && !needsImportConfirm(card) ? (
+                      <form action={reviewSpecialtyAction.bind(null, shopSlug, personId)}>
                         <input type="hidden" name="certificationId" value={card.id} />
-                        {/* No confirm dialog: the delete lands and a toast offers a one-tap undo. */}
                         <SubmitButton
-                          pendingLabel={t("divers.certifications.deleting")}
-                          className={buttonClass({ variant: "danger", size: "sm" })}
+                          pendingLabel={t("divers.certifications.markingCertified")}
+                          className={buttonClass({ variant: "secondary", size: "sm" })}
                         >
-                          {t("divers.certifications.delete")}
+                          {t("divers.certifications.markCertified")}
                         </SubmitButton>
                       </form>
-                    </div>
+                    ) : null}
+                    <form action={deleteSpecialtyAction.bind(null, shopSlug, personId)}>
+                      <input type="hidden" name="certificationId" value={card.id} />
+                      {/* No confirm dialog: the delete lands and a toast offers a one-tap undo. */}
+                      <SubmitButton
+                        pendingLabel={t("divers.certifications.deleting")}
+                        className={buttonClass({ variant: "danger", size: "sm" })}
+                      >
+                        {t("divers.certifications.delete")}
+                      </SubmitButton>
+                    </form>
                   </div>
-                  {/* Below the row, not inside the badge group: the panel is a
+                </div>
+                {/* Below the row, not inside the badge group: the panel is a
                       paragraph of text, and expanding it must not shove the
                       card's own title around. */}
-                  {needsImportConfirm(card) ? (
-                    <ConfirmImportedCard
-                      action={reviewSpecialtyAction.bind(null, shopSlug, personId)}
-                      certificationId={card.id}
-                      confirmationText={t("divers.specialty.confirmDisclosure", {
-                        what: t("divers.specialty.whatSpecialtyDive", {
-                          specialty: t(SPECIALTY_KEYS[card.specialty]),
-                        }),
+                {needsImportConfirm(card) ? (
+                  <ConfirmImportedCard
+                    action={reviewSpecialtyAction.bind(null, shopSlug, personId)}
+                    certificationId={card.id}
+                    confirmationText={t("divers.specialty.confirmDisclosure", {
+                      what: t("divers.specialty.whatSpecialtyDive", {
+                        specialty: t(SPECIALTY_KEYS[card.specialty]),
+                      }),
+                    })}
+                    t={t}
+                  />
+                ) : null}
+              </li>
+            );
+          })}
+          {diver.nitroxCertifications.map((card) => {
+            const display = heldCardDisplayStatus(card, todayLocal);
+            return (
+              <li key={card.id} className="px-4 py-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="font-medium">
+                      {t("divers.specialty.nitroxAgencyLine", {
+                        agency: t(AGENCY_KEYS[card.agency]),
                       })}
-                      t={t}
-                    />
-                  ) : null}
-                </li>
-              );
-            })}
-            {diver.nitroxCertifications.map((card) => {
-              const display = heldCardDisplayStatus(card, todayLocal);
-              return (
-                <li key={card.id} className="px-4 py-4">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <p className="font-medium">
-                        {t("divers.specialty.nitroxAgencyLine", {
-                          agency: t(AGENCY_KEYS[card.agency]),
-                        })}
-                      </p>
-                      <p className="mt-1 break-all text-sm text-muted">{card.identifier}</p>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Badge tone={heldCardStatusTone(display)}>
-                        {t(HELD_CARD_STATUS_KEYS[display])}
+                    </p>
+                    <p className="mt-1 break-all text-sm text-muted">{card.identifier}</p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge tone={heldCardStatusTone(display)}>
+                      {t(HELD_CARD_STATUS_KEYS[display])}
+                    </Badge>
+                    {isImportedCard(card) ? (
+                      <Badge tone="neutral">
+                        {card.importedFromLabel
+                          ? t("divers.certifications.importedWithSource", {
+                              source: card.importedFromLabel,
+                            })
+                          : t("divers.certifications.importedLabel")}
                       </Badge>
-                      {isImportedCard(card) ? (
-                        <Badge tone="neutral">
-                          {card.importedFromLabel
-                            ? t("divers.certifications.importedWithSource", {
-                                source: card.importedFromLabel,
-                              })
-                            : t("divers.certifications.importedLabel")}
-                        </Badge>
-                      ) : null}
-                      {card.status === "pending" && !needsImportConfirm(card) ? (
-                        <form action={reviewSpecialtyAction.bind(null, shopSlug, personId)}>
-                          <input type="hidden" name="certificationId" value={card.id} />
-                          <input type="hidden" name="cardType" value="nitrox" />
-                          <SubmitButton
-                            pendingLabel={t("divers.certifications.markingCertified")}
-                            className={buttonClass({ variant: "secondary", size: "sm" })}
-                          >
-                            {t("divers.certifications.markCertified")}
-                          </SubmitButton>
-                        </form>
-                      ) : null}
-                      <form action={deleteSpecialtyAction.bind(null, shopSlug, personId)}>
+                    ) : null}
+                    {card.status === "pending" && !needsImportConfirm(card) ? (
+                      <form action={reviewSpecialtyAction.bind(null, shopSlug, personId)}>
                         <input type="hidden" name="certificationId" value={card.id} />
                         <input type="hidden" name="cardType" value="nitrox" />
-                        {/* No confirm dialog: the delete lands and a toast offers a one-tap undo. */}
                         <SubmitButton
-                          pendingLabel={t("divers.certifications.deleting")}
-                          className={buttonClass({ variant: "danger", size: "sm" })}
+                          pendingLabel={t("divers.certifications.markingCertified")}
+                          className={buttonClass({ variant: "secondary", size: "sm" })}
                         >
-                          {t("divers.certifications.delete")}
+                          {t("divers.certifications.markCertified")}
                         </SubmitButton>
                       </form>
-                    </div>
+                    ) : null}
+                    <form action={deleteSpecialtyAction.bind(null, shopSlug, personId)}>
+                      <input type="hidden" name="certificationId" value={card.id} />
+                      <input type="hidden" name="cardType" value="nitrox" />
+                      {/* No confirm dialog: the delete lands and a toast offers a one-tap undo. */}
+                      <SubmitButton
+                        pendingLabel={t("divers.certifications.deleting")}
+                        className={buttonClass({ variant: "danger", size: "sm" })}
+                      >
+                        {t("divers.certifications.delete")}
+                      </SubmitButton>
+                    </form>
                   </div>
-                  {needsImportConfirm(card) ? (
-                    <ConfirmImportedCard
-                      action={reviewSpecialtyAction.bind(null, shopSlug, personId)}
-                      certificationId={card.id}
-                      cardType="nitrox"
-                      confirmationText={t("divers.specialty.confirmDisclosure", {
-                        what: t("divers.specialty.whatNitroxFill"),
-                      })}
-                      t={t}
-                    />
-                  ) : null}
-                </li>
-              );
-            })}
-          </>
-        )}
-      </ul>
+                </div>
+                {needsImportConfirm(card) ? (
+                  <ConfirmImportedCard
+                    action={reviewSpecialtyAction.bind(null, shopSlug, personId)}
+                    certificationId={card.id}
+                    cardType="nitrox"
+                    confirmationText={t("divers.specialty.confirmDisclosure", {
+                      what: t("divers.specialty.whatNitroxFill"),
+                    })}
+                    t={t}
+                  />
+                ) : null}
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </section>
   );
 }
