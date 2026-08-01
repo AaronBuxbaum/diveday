@@ -38,9 +38,10 @@ it marked done in the roadmap. If code and this list disagree, one of them is wr
   feature, not a migration order
   ([feature-module-contracts](../architecture/decisions/20260730-feature-module-contracts.md)).
 - **The copy ratchet** — a staff message bundle (`staff.json`, server-side only) plus
-  `pnpm check:copy`, which blocks *new* hard-coded copy outright and lets the ~1,000 strings of
-  existing debt only ever shrink: a count that rises fails, and a count that falls must be banked in
-  the same change. Domain layers now return codes rather than sentences. The staffing page and the
+  `pnpm check:copy`, which blocked *new* hard-coded copy outright and let the existing debt only
+  ever shrink: a count that rose failed, and a count that fell had to be banked in the same
+  change. That debt is now fully paid down — the baseline is empty and the ratchet behaves as a
+  full gate. Domain layers now return codes rather than sentences. The staffing page and the
   whole calendar-subscriptions surface ship fully translated into `es-ES`
   ([staff-copy-localization](../architecture/decisions/20260730-staff-copy-localization.md)).
 

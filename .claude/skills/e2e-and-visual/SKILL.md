@@ -25,6 +25,13 @@ The tests run a production Next server backed by in-memory PGlite. The browser c
 
 Do not mask clock-derived content or moving UI. Freeze the clock at the harness boundary instead. If a capture is unstable, identify and remove the source of nondeterminism: use the seeded Blue Mantis data, stable labels, deterministic ordering, and explicit readiness waits. Use `DIVEDAY_CLOCK=2026-07-21T13:30:00.000Z` for the committed baseline instant.
 
+## Fast iteration
+
+`pnpm e2e` always rebuilds first. While iterating on one spec, build once with `pnpm e2e:build`,
+then rerun with `pnpm e2e:run <spec> --reporter=line` — it reuses the existing `.next` build and
+skips straight to Playwright, finishing in seconds instead of minutes. It warns (but does not
+fail) when source under `src/` looks newer than the build; rebuild if a failure looks confusing.
+
 ## Functional E2E rules
 
 - Import `test` and `expect` from `e2e/fixtures`, not directly from `@playwright/test`, so tests get per-worker server routing and reset isolation.

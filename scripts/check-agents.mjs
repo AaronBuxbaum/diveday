@@ -95,6 +95,26 @@ for (const [areaName, area] of Object.entries(areas)) {
   }
 }
 
+// 5. AGENTS.md's route map is the primary navigation surface every session reads first — a
+// renamed or deleted path there silently misroutes all future sessions. Extract every
+// backtick-wrapped token that looks like a repo path (starts with src/, scripts/, docs/, e2e/, or
+// .claude/) and assert it exists on disk. Skip glob-ish or placeholder tokens (`**`, `<feature>`)
+// — those are prose, not a literal path — but treat bracketed dynamic segments like `[shopSlug]`
+// literally, since Next.js directories are named exactly that.
+const routePathPattern = /`((?:src|scripts|docs|e2e|\.claude)\/[^`]*)`/g;
+const routePathTokens = new Set(
+  [...agentsMd.matchAll(routePathPattern)]
+    .map((m) => m[1])
+    .filter((token) => !token.includes("*") && !token.includes("<")),
+);
+for (const token of routePathTokens) {
+  try {
+    await access(path.join(ROOT, token));
+  } catch {
+    problems.push(`AGENTS.md: route-map path "${token}" does not exist`);
+  }
+}
+
 if (problems.length > 0) {
   console.error(`Agent-layer drift:\n${problems.map((item) => `- ${item}`).join("\n")}`);
   console.error(
@@ -104,5 +124,5 @@ if (problems.length > 0) {
 }
 
 console.log(
-  `agents: ${skillDirs.length} skills, ${agentFiles.length} reviewer agents, ${Object.keys(areas).length} task-context areas in sync`,
+  `agents: ${skillDirs.length} skills, ${agentFiles.length} reviewer agents, ${Object.keys(areas).length} task-context areas, ${routePathTokens.size} AGENTS.md route-map paths in sync`,
 );
