@@ -204,7 +204,7 @@ export default async function CoursePage({
         // The subject/body preview recomposes on every keystroke, so it needs
         // its own translator on the client — DiverIntlProvider is what makes
         // useTranslations() inside CourseInquiry work rather than throw.
-        <DiverIntlProvider locale={locale} timeZone={shop.timezone}>
+        <DiverIntlProvider locale={locale} timeZone={shop.timezone} namespaces={["inquiry"]}>
           <CourseInquiry
             submitInquiry={submitCourseInquiryAction.bind(null, shopSlug, slug)}
             courseTitle={course.title}

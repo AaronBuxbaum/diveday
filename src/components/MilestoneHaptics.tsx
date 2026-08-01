@@ -2,6 +2,15 @@
 
 import { useEffect, useRef } from "react";
 
+/**
+ * Fires a milestone haptic buzz as roll-call progress crosses 25/50/75/100%.
+ * `prevPct`/`isInitial` assume a monotonic same-trip, same-checkpoint
+ * lifecycle — they only know "went up from last render", not which trip or
+ * checkpoint that was. The caller (manifest/page.tsx) must render this with
+ * `key={`${tripId}-${checkpoint}`}` so a trip or checkpoint switch fully
+ * remounts it instead of comparing today's numbers against a different
+ * trip's carried-forward refs (docs ADR 20260801-cache-components-activity-state).
+ */
 export function MilestoneHaptics({ total, boarded }: { total: number; boarded: number }) {
   const isInitial = useRef(true);
   const prevPct = useRef(0);

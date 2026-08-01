@@ -1,6 +1,8 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
+import { isManagedBlobUrl } from "@/lib/storage/blob-host";
 
 /**
  * Every value here is a plain, already-composed string — never a function.
@@ -105,11 +107,16 @@ export function DigitalCardFlip({
               }}
             >
               {cardImageUrl ? (
-                // biome-ignore lint/performance/noImgElement: raw img tag is preferred for external dynamic uploads
-                <img
+                // Card photos are uploaded through storeCardImage (blob storage) today, but
+                // this column has always been a provider-neutral URL (src/db/schema.ts), so
+                // an unrecognized host still renders — just without next/image's optimization.
+                <Image
                   src={cardImageUrl}
                   alt={copy.uploadedAlt}
-                  className="h-full w-full object-contain"
+                  fill
+                  sizes="320px"
+                  unoptimized={!isManagedBlobUrl(cardImageUrl)}
+                  className="object-contain"
                 />
               ) : (
                 <div className="flex flex-col items-center justify-between h-full w-full p-5 text-muted">

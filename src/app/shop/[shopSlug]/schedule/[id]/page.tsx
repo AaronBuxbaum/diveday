@@ -147,7 +147,7 @@ export default async function TripDetailPage({
   // any of that is fetched.
   if (trip.status === "cancelled") {
     return (
-      <DiverIntlProvider locale={locale} timeZone={shop.timezone}>
+      <DiverIntlProvider locale={locale} timeZone={shop.timezone} namespaces={["booking"]}>
         <main
           className={
             isEmbed ? "w-full flex-1 px-3 py-4" : "mx-auto w-full max-w-2xl flex-1 px-6 py-16"
@@ -291,8 +291,16 @@ export default async function TripDetailPage({
   return (
     // The booking form and its sibling notices are Client Components, so the
     // shop's locale and messages have to cross the boundary explicitly — see
-    // src/i18n/settings.ts for why the locale isn't in the URL.
-    <DiverIntlProvider locale={locale} timeZone={shop.timezone}>
+    // src/i18n/settings.ts for why the locale isn't in the URL. The namespace
+    // list is the union of every Client Component this subtree can render
+    // (TripActions, BookingSections' several outcome sections + the
+    // BookingPartyFields it shares with the wait list, RentalFitForm reached
+    // through BookingConfirmation) — see each's `useTranslations(...)` call.
+    <DiverIntlProvider
+      locale={locale}
+      timeZone={shop.timezone}
+      namespaces={["booking", "common", "fallback", "party", "rental", "trip"]}
+    >
       <main
         className={
           isEmbed ? "w-full flex-1 px-3 py-4" : "mx-auto w-full max-w-2xl flex-1 px-6 py-16"
