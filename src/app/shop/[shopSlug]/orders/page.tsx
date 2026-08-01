@@ -70,11 +70,12 @@ export default async function OrdersIndexPage({
     personQuery?: string;
     from?: string;
     to?: string;
+    page?: string;
   }>;
 }) {
   const session = await requireStaffSession();
   const { shopSlug } = await params;
-  const { status, personId, personQuery, from, to } = await searchParams;
+  const { status, personId, personQuery, from, to, page } = await searchParams;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) return null;
@@ -88,16 +89,37 @@ export default async function OrdersIndexPage({
     : undefined;
   const trimmedQuery = personQuery?.trim() || undefined;
 
-  const rows = await listShopOrders(db, shop.id, {
-    status: statusFilter,
-    personId: personId || undefined,
-    // A `personId` link (roster, diver record) is exact and takes priority
-    // over a typed name — the two never combine, so the filter box always
-    // reflects what it can actually change.
-    personQuery: personId ? undefined : trimmedQuery,
-    from: dayBoundary(from, shop.timezone, 0),
-    to: dayBoundary(to, shop.timezone, 1),
-  });
+  // A non-numeric or missing `?page=` reads as page 1 rather than NaN.
+  const requestedPage = Number.parseInt(page ?? "", 10);
+  const orderPage = await listShopOrders(
+    db,
+    shop.id,
+    {
+      status: statusFilter,
+      personId: personId || undefined,
+      // A `personId` link (roster, diver record) is exact and takes priority
+      // over a typed name — the two never combine, so the filter box always
+      // reflects what it can actually change.
+      personQuery: personId ? undefined : trimmedQuery,
+      from: dayBoundary(from, shop.timezone, 0),
+      to: dayBoundary(to, shop.timezone, 1),
+    },
+    { page: Number.isFinite(requestedPage) ? requestedPage : 1 },
+  );
+  const rows = orderPage.rows;
+
+  /** This page's URL with the filters kept and only `page` swapped. */
+  const pageHref = (target: number) => {
+    const query = new URLSearchParams();
+    if (status) query.set("status", status);
+    if (personId) query.set("personId", personId);
+    if (personQuery) query.set("personQuery", personQuery);
+    if (from) query.set("from", from);
+    if (to) query.set("to", to);
+    if (target > 1) query.set("page", String(target));
+    const search = query.toString();
+    return search ? `/shop/${shopSlug}/orders?${search}` : `/shop/${shopSlug}/orders`;
+  };
 
   const filteredPersonName = personId ? rows[0]?.person.fullName : null;
   const hasFilters = Boolean(statusFilter || personId || trimmedQuery || from || to);
@@ -231,6 +253,43 @@ export default async function OrdersIndexPage({
           </table>
         </div>
       )}
+
+      {/* Only when there is somewhere to go — a shop with one screenful of
+        invoices should not be told it is on "page 1 of 1". */}
+      {orderPage.pageCount > 1 ? (
+        <nav
+          aria-label={t("orders.index.pagination.label")}
+          className="mt-4 flex items-center justify-between gap-3"
+        >
+          {orderPage.page > 1 ? (
+            <Link
+              href={pageHref(orderPage.page - 1)}
+              className={buttonClass({ variant: "secondary", size: "sm" })}
+            >
+              {t("orders.index.pagination.previous")}
+            </Link>
+          ) : (
+            <span />
+          )}
+          <p className="text-sm text-muted">
+            {t("orders.index.pagination.position", {
+              page: orderPage.page,
+              pageCount: orderPage.pageCount,
+              total: orderPage.total,
+            })}
+          </p>
+          {orderPage.page < orderPage.pageCount ? (
+            <Link
+              href={pageHref(orderPage.page + 1)}
+              className={buttonClass({ variant: "secondary", size: "sm" })}
+            >
+              {t("orders.index.pagination.next")}
+            </Link>
+          ) : (
+            <span />
+          )}
+        </nav>
+      ) : null}
     </main>
   );
 }

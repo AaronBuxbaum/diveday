@@ -776,6 +776,12 @@
         "status": "Estado",
         "date": "Fecha",
         "amount": "Importe"
+      },
+      "pagination": {
+        "label": "Páginas de pedidos",
+        "previous": "Anterior",
+        "next": "Siguiente",
+        "position": "Página {page} de {pageCount} · {total} pedidos"
       }
     }
   },

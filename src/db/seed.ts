@@ -28,6 +28,7 @@ import {
   globalDiveSites,
   globalDiveSiteVersions,
   lastMinuteListEntries,
+  lastMinuteListUnsubscribeTokens,
   mediaDeletionAttempts,
   nitroxCertifications,
   notificationDeliveries,
@@ -4125,6 +4126,14 @@ export async function resetDemoSchedule(
   // 20260727-last-minute-fill-promos; same class of bug the tripWaitlistEntries
   // comment above already walks).
   await db.delete(tripLastMinutePromos).where(eq(tripLastMinutePromos.shopId, shopId));
+  // Before the entries they point at. Added with Leo's self-serve unsubscribe
+  // (docs ADR 20260731-self-serve-unsubscribe) but not to this ordering, which
+  // made every `/api/test/reset` throw 23503 mid-run and leave the demo shop
+  // half-reset — the e2e fleet then failed in whichever spec happened to read
+  // the wreckage next, which is why the flake moved around between runs.
+  await db
+    .delete(lastMinuteListUnsubscribeTokens)
+    .where(eq(lastMinuteListUnsubscribeTokens.shopId, shopId));
   await db.delete(lastMinuteListEntries).where(eq(lastMinuteListEntries.shopId, shopId));
   await db.delete(bookings).where(eq(bookings.shopId, shopId));
   await db.delete(tripRequirements).where(eq(tripRequirements.shopId, shopId));
@@ -4247,8 +4256,16 @@ export const DEFAULT_DEMO_TTL_MS = 7 * DAY_MS;
  * every table that references bookings, trips, orders, checkouts, dive sites, or
  * people is cleared before those parents, and the shop row goes last. The
  * **global** dive-site catalog (`globalDiveSites`) is shared across shops and is
- * deliberately never touched. `reap-demos.test.ts` mints a demo, deletes it, and
- * asserts every table is empty — that test is the guard on this ordering.
+ * deliberately never touched.
+ *
+ * The guard on this ordering is `reap-demos.test.ts`, but read it before trusting
+ * it: it is a set of hand-written per-table cases (a tip, an account token, a
+ * last-minute unsubscribe token), **not** a sweep that proves every table is
+ * empty. A new table with a shop-scoped FK is therefore invisible to it until
+ * someone adds a case — which is exactly how
+ * `last_minute_list_unsubscribe_tokens` slipped through and started aborting
+ * every `/api/test/reset` mid-run. Adding a table here means adding its case
+ * there in the same change.
  *
  * Never call this on the canonical blue-mantis demo or any real shop; the reaper
  * below only ever passes it a minted demo (`isDemo`, non-canonical slug).
@@ -4285,8 +4302,12 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(notificationSendQueue).where(eq(notificationSendQueue.shopId, shopId));
   await db.delete(notificationDeliveries).where(eq(notificationDeliveries.shopId, shopId));
   await db.delete(tripWaitlistEntries).where(eq(tripWaitlistEntries.shopId, shopId));
-  // Same reasoning as resetDemoSchedule above (docs ADR 20260727-last-minute-fill-promos).
+  // Same reasoning as resetDemoSchedule above (docs ADR 20260727-last-minute-fill-promos),
+  // including the unsubscribe tokens that reference the entries.
   await db.delete(tripLastMinutePromos).where(eq(tripLastMinutePromos.shopId, shopId));
+  await db
+    .delete(lastMinuteListUnsubscribeTokens)
+    .where(eq(lastMinuteListUnsubscribeTokens.shopId, shopId));
   await db.delete(lastMinuteListEntries).where(eq(lastMinuteListEntries.shopId, shopId));
   if (tripIds.length > 0) {
     await db.delete(tripAssignments).where(inArray(tripAssignments.tripId, tripIds));

@@ -133,6 +133,12 @@ docs, tests, or code, the skill is stale and must be fixed in the same change.
   "approving" an intentional change means saying in the PR *why* the pixels moved and merging;
   the merge is what becomes the next baseline. See the **visual-triage** skill. Never end the
   session leaving a visual diff or failure unexplained.
+- **Screenshots are full-size and unfiltered; bound the *page*, not the capture.** A surface that
+  screenshots enormous is telling you the page is unbounded, and the fix is pagination (or a
+  default range) in the product, where a real shop benefits from it — never a `?filter=` in the
+  spec that shrinks the picture and leaves users scrolling 17,000px. Narrowing a capture to make
+  it cheap also silently narrows what it can catch. The orders index was found this way: 323
+  seeded orders, no pager, no baseline at all.
 - **Semantic tokens only** in components — no raw hex, no palette-scale classes (ADR-0004).
 - **Forms and buttons go through the wrappers** — stacked fields via `<Field>`/`<FieldGrid>`,
   button-shaped things via `buttonClass()`, controls via `controlClass`. Hand-rolled class strings

@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, ilike, inArray, lt } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, ilike, inArray, lt } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { majorToMinor } from "@/lib/money";
 import { type InvoicingProvider, invoicingProviderFromEnvironment } from "@/lib/payments/invoicing";
@@ -335,21 +335,76 @@ export type ShopOrderFilter = {
  * (Reports revenue rows, the roster's payment cells, and the command palette
  * all link here) never had before.
  */
-export async function listShopOrders(db: DbExecutor, shopId: string, filter: ShopOrderFilter = {}) {
+export const ORDER_PAGE_SIZE = 50;
+
+/**
+ * One page of the order index, newest first, plus the unfiltered-by-page total.
+ *
+ * Bounded for the same reason the diver roster is (`DIVER_PAGE_SIZE`): a shop
+ * that has been trading for a season has thousands of invoices, and rendering
+ * every one of them costs the whole table on every visit. The demo shop alone
+ * seeds 323, which made this page ~17,700px tall — nobody scrolls that, and it
+ * is the same query cost whether they do or not.
+ *
+ * Offset rather than keyset, deliberately, unlike the roster. The sort key here
+ * is `created_at`, which is not unique — the seed writes several orders in the
+ * same second — so a keyset cursor on it would skip or repeat rows at every page
+ * boundary. A tie-broken keyset would work, but this list is filtered and
+ * date-ranged far more than it is paged past the first screen, and offset keeps
+ * "page 4 of 7" honest. Revisit if a shop's index ever gets deep enough for the
+ * offset scan to matter.
+ */
+export async function listShopOrders(
+  db: DbExecutor,
+  shopId: string,
+  filter: ShopOrderFilter = {},
+  page: { page?: number; pageSize?: number } = {},
+) {
   const conditions = [eq(orders.shopId, shopId)];
   if (filter.status) conditions.push(eq(orders.status, filter.status));
   if (filter.personId) conditions.push(eq(orders.personId, filter.personId));
   if (filter.personQuery) conditions.push(ilike(people.fullName, `%${filter.personQuery}%`));
   if (filter.from) conditions.push(gte(orders.createdAt, filter.from));
   if (filter.to) conditions.push(lt(orders.createdAt, filter.to));
-  return db
-    .select({ order: orders, person: people, trip: trips })
-    .from(orders)
-    .innerJoin(people, eq(people.id, orders.personId))
-    .leftJoin(bookings, eq(bookings.id, orders.bookingId))
-    .leftJoin(trips, eq(trips.id, bookings.tripId))
-    .where(and(...conditions))
-    .orderBy(desc(orders.createdAt));
+  const where = and(...conditions);
+  const pageSize = Math.max(1, page.pageSize ?? ORDER_PAGE_SIZE);
+  // A hand-typed `?page=0` or `?page=-3` reads as the first page rather than
+  // producing a negative offset the driver would reject. NaN is checked
+  // separately because `Math.max(1, NaN)` is NaN, not 1 — clamping alone would
+  // pass `offset NaN` straight to the driver. The route guards this too; this
+  // is the layer that must not depend on it having done so.
+  const requested = Math.floor(page.page ?? 1);
+  const current = Number.isFinite(requested) ? Math.max(1, requested) : 1;
+
+  const [rows, [counted]] = await Promise.all([
+    db
+      .select({ order: orders, person: people, trip: trips })
+      .from(orders)
+      .innerJoin(people, eq(people.id, orders.personId))
+      .leftJoin(bookings, eq(bookings.id, orders.bookingId))
+      .leftJoin(trips, eq(trips.id, bookings.tripId))
+      .where(where)
+      // `orders.id` breaks ties on the non-unique timestamp, so a row can never
+      // land on two pages (or on none) just because it shares a second with
+      // its neighbour.
+      .orderBy(desc(orders.createdAt), desc(orders.id))
+      .limit(pageSize)
+      .offset((current - 1) * pageSize),
+    db
+      .select({ total: count() })
+      .from(orders)
+      .innerJoin(people, eq(people.id, orders.personId))
+      .where(where),
+  ]);
+
+  const total = counted?.total ?? 0;
+  return {
+    rows,
+    total,
+    page: current,
+    pageSize,
+    pageCount: Math.max(1, Math.ceil(total / pageSize)),
+  };
 }
 
 /** Payment records for one diver, used by the person-first diver workspace. */

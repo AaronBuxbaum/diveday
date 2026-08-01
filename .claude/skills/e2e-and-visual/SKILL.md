@@ -32,9 +32,45 @@ Do not mask clock-derived content or moving UI. Freeze the clock at the harness 
 - Reuse the per-worker owner session with `signedInAsOwner()` for staff flows; keep auth lifecycle coverage on the live sign-in form.
 - Keep safety-critical failure paths (capacity, waiver/medical state, cert/nitrox gating, and manifest/roll call) explicit.
 
+## Capture full-size; bound the page in code
+
+Captures are `fullPage` and unfiltered. If a surface screenshots enormous, that is a finding about
+the *page*, not a problem with the screenshot: fix it with pagination or a sensible default range
+in the product, where a real shop gets the benefit too. Do not add a filter to the spec to shrink
+the picture — it hides the unbounded page and quietly narrows what the baseline can catch.
+
+The orders index is the worked example: 323 seeded orders, no pager, ~17,700px and 2.5MB per
+scheme per viewport, and no baseline at all. The answer was `ORDER_PAGE_SIZE`, not `?personQuery=`.
+
+## A capture only covers the state it captures
+
+A surface having a baseline is not the same as your change having one. Check that the captured
+*state* actually renders the thing you changed, and treat "no diff appeared" as a question rather
+than an answer.
+
+The shop-currency change (ADR 20260731-shop-currency) rewrote how the diver payments row formats an
+amount. `diver-profile` was already captured, the suite went green, and it proved nothing: none of
+the three captured divers has a single order, so that section had only ever been photographed empty.
+The orders list and order detail — the densest money screens in the product — had no capture at all.
+Three surfaces' worth of blind spot, behind a passing check.
+
+So when a change lands on a surface that renders rows, money, badges, or any other state-dependent
+content:
+
+- Confirm against the seed which fixture the capture actually lands on, rather than assuming a
+  populated page. `pnpm test` with a throwaway probe against `seededShopContext({ history: true })`
+  settles it in a minute — note that `history` defaults to **false** in tests and **true** in the
+  e2e/dev seed, so a test-db probe with the default finds an empty world.
+- Prefer adding a capture in the populated state to repointing an existing one; the existing
+  capture is usually the baseline for some *other* state, and moving it trades one blind spot for
+  another.
+- If a change you expected to move pixels moves none, find out why before shipping. Say so in the
+  PR if it stays unexplained — a silent pass is not evidence.
+
 ## Definition of done
 
 - New/changed behavior has a Playwright flow spec or an explicit reason not to add one.
 - New/changed important surfaces have screenshot captures in `e2e/visual.spec.ts` and both schemes where applicable.
+- Each capture lands on a state that actually exercises the change (see above), not merely on the right route.
 - `pnpm visual` runs successfully, and any visual differences are expected and reviewed via `pnpm visual:report` (or the reg-suit HTML report, for a human).
 - `pnpm check` passes; run `pnpm e2e` when functional flows changed.
