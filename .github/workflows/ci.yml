@@ -225,14 +225,19 @@ jobs:
           REG_SUIT_AWS_ACCESS_KEY_ID: ${{ secrets.REG_SUIT_AWS_ACCESS_KEY_ID }}
           REG_SUIT_AWS_SECRET_ACCESS_KEY: ${{ secrets.REG_SUIT_AWS_SECRET_ACCESS_KEY }}
           REG_SUIT_GITHUB_CLIENT_ID: ${{ secrets.REG_SUIT_GITHUB_CLIENT_ID }}
-          # Same E2E_WORKERS override as the playwright job above, extended
-          # here after this job hit the identical contention signature: a
-          # 45s timeout on a late capture (/recap/[token], itself "use
-          # cache"-cached) in visual.spec.ts's long public-surfaces test,
-          # after two earlier runs of this same job had passed clean. Two
-          # concurrent (browser + next start) worker processes on this
-          # runner's 4 cores is the same budget the playwright job's fix
-          # addressed — see 20260731-ci-parallelization-resources-build-concurrency.md.
+          # Same E2E_WORKERS override as the playwright job above — this job
+          # runs a single spec file, so it isn't sharded across separate
+          # runners the way playwright is, but pinning to 1 keeps this job's
+          # own browser+server pair from competing with itself for the
+          # runner's 4 cores. NOT the fix for the recurring 45s timeout on
+          # the /recap/[token] capture in visual.spec.ts's long
+          # public-surfaces test, though it was tried as one first: that
+          # timeout reproduced identically with 2 workers and with 1 (3/3 CI
+          # runs, always the same assertion), ruling out worker contention
+          # as the cause. The actual fix is the test's own raised
+          # `test.setTimeout` (see the comment there) — cacheComponents'
+          # aggregate render cost across that test's 15 sequential captures,
+          # not something this env var addresses.
           E2E_WORKERS: "1"
       # This was the only Playwright job that kept no report, which is why a
       # hang inside `paintWholeDocument` had to be read off a stack trace

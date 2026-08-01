@@ -330,3 +330,20 @@ actually found, against the plan above:
   on the expected public URL, matching what a real user would do rather than masking anything this
   app's own code controls. Revisit if a future Next version changes `auth()`'s interaction with
   Partial Prerendering's per-request dynamic resumption.
+- **A tenth finding, and a correction to the sixth: the `visual` CI job's recurring 45s
+  `/recap/[token]` timeout was never about worker contention, and pinning `E2E_WORKERS: "1"` there
+  didn't fix it.** That pin was added on a pattern-match to the sharded `playwright` job's genuine
+  contention fix (same finding above) without independent evidence for this job — and the recap
+  timeout reproduced identically 3/3 times in CI with 2 workers *and* with 1, ruling out
+  contention as the cause. The real cause: `e2e/visual.spec.ts`'s long "public surfaces" test does
+  15 sequential navigate+capture pairs against a `test.setTimeout(45_000)` budget sized before
+  `cacheComponents`; the capture count hasn't grown, but the aggregate per-request Partial
+  Prerendering render cost across all 15 apparently has, consistently leaving nothing left by the
+  15th (and last) capture — `recap` — on CI's runners specifically (this same sequence completes
+  in ~30s locally, 15s under budget, and never failed anywhere but that last assertion). Fixed by
+  raising the budget to 90s, matching this file's own existing precedent for its other
+  heavy multi-capture tests (`test.setTimeout(90_000)` twice already, for the same reason: shared
+  budget, whichever capture lands on the slow end blows it for everything after). `E2E_WORKERS:
+  "1"` was left on the `visual` job's step regardless — harmless, and it does still remove
+  browser-vs-server contention within that job's own single process — but the comment there no
+  longer claims it fixed anything.

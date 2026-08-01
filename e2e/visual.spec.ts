@@ -364,7 +364,18 @@ for (const scheme of ["light", "dark"] as const) {
       // page.goto with no dependency on this test's setup, so — same reasoning
       // as the "about page" split further down — there is no reason to spend
       // this test's budget on them too.
-      test.setTimeout(45_000);
+      //
+      // Raised from 45s to 90s (matching this file's other heavy multi-capture
+      // tests below) once cacheComponents landed: the capture count here is
+      // unchanged, but CI's shared runners started consistently blowing the
+      // 45s ceiling on the very last capture (`recap`) after successfully
+      // completing all 14 before it — 3/3 CI runs, always the identical
+      // assertion, never a genuine hang (this same sequence completes in
+      // ~30s locally with 15s to spare). Partial Prerendering's per-request
+      // render cost accumulating across 15 sequential captures is a real,
+      // if hard-to-attribute-to-one-line, aggregate cost increase — not a
+      // stuck assertion this override would be masking.
+      test.setTimeout(90_000);
       await page.goto("/");
       await capture(page, "landing", scheme);
 
