@@ -4,6 +4,12 @@ How DiveDay sends mail to divers, how it learns what happened to it, and how Div
 addresses (`aaron@`, `legal@`) work. Decision and rationale:
 [20260726-hosted-mailboxes-for-platform-mail](../architecture/decisions/20260726-hosted-mailboxes-for-platform-mail.md).
 
+Resend's free tier caps at 1,000 emails/month. If that becomes a real ceiling rather than a
+hypothetical one, dormant AWS-side groundwork for an SES swap already exists — see
+[ADR 20260802-ses-email-transition-prep](../architecture/decisions/20260802-ses-email-transition-prep.md)
+and [§7 of the infrastructure runbook](infrastructure-runbook.md#7-ses-email-provider-prep-dormant).
+Nothing described below changes until that cutover actually happens.
+
 Two separate systems, deliberately:
 
 | | Mail DiveDay sends to divers | Mail people send to DiveDay |
