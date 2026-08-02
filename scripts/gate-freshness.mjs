@@ -171,7 +171,8 @@ export function reconcileThirtyDays(items, rowsById) {
     const known = ids.filter((id) => rowsById.has(id)).map((id) => rowsById.get(id));
     const closed = known.filter((row) => row.state === "closed");
     const newest = known.reduce(
-      (best, row) => (row.movement.on && (!best || row.movement.on > best) ? row.movement.on : best),
+      (best, row) =>
+        row.movement.on && (!best || row.movement.on > best) ? row.movement.on : best,
       null,
     );
     return {
@@ -192,7 +193,11 @@ export function reconcileThirtyDays(items, rowsById) {
 // ---------------------------------------------------------------------------
 
 function git(args) {
-  const result = spawnSync("git", args, { cwd: ROOT, encoding: "utf8", maxBuffer: 32 * 1024 * 1024 });
+  const result = spawnSync("git", args, {
+    cwd: ROOT,
+    encoding: "utf8",
+    maxBuffer: 32 * 1024 * 1024,
+  });
   return result.status === 0 ? result.stdout : null;
 }
 
@@ -202,7 +207,12 @@ function graftedShas() {
   if (!shallowPath) return new Set();
   try {
     const absolute = path.isAbsolute(shallowPath) ? shallowPath : path.join(ROOT, shallowPath);
-    return new Set(readFileSync(absolute, "utf8").split("\n").map((s) => s.trim()).filter(Boolean));
+    return new Set(
+      readFileSync(absolute, "utf8")
+        .split("\n")
+        .map((s) => s.trim())
+        .filter(Boolean),
+    );
   } catch {
     return new Set();
   }

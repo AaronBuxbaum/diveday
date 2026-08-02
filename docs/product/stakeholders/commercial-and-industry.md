@@ -39,6 +39,12 @@ What to have prepared per conversation:
   to named problems with specifics; never broadcast. These threads are where the
   [competitive research](../assessments/competitive-strategy.md) mined incumbent complaints —
   the credibility only works if replies stay in that register.
+- **The [pilot-recruiting kit](../pilot-kit/README.md)** carries the rest of the paper for these
+  conversations: the [Florida call-list template](../pilot-kit/florida-call-list.md) (criteria,
+  columns, and the public directories to source from — the rows are researched by hand, never
+  invented) and the [first-call script](../pilot-kit/first-call-script.md), which is discovery
+  written to disconfirm rather than to sell. Call one exists to find out whether the buyer DiveDay
+  was designed against is real; every persona to date is synthetic.
 
 ### Pilot shops' front-desk staff and captains (Phase 1, week 0)
 

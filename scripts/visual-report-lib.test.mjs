@@ -144,7 +144,7 @@ describe("formatPrComment", () => {
     const body = comment(outJson({ added: items("about", 234), expected: [] }));
     expect(body).toContain("NOTHING WAS COMPARED");
     expect(body).toContain("0 baseline images");
-    expect(body).toContain("never as \"no visual changes\"");
+    expect(body).toContain('never as "no visual changes"');
     // The zero is still shown in the table, but the prose disowns it.
     expect(body).toContain("| 0 | 234 | 0 |");
     expect(body).not.toContain("no differences");

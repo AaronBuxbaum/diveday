@@ -65,13 +65,15 @@ here either.
 ## Triage loop
 
 1. Read the code and route/state changes before opening images.
-2. Get the report — `pnpm visual:report` against the commit under review (see above), or run the
+2. On a PR, read the sticky visual summary comment first — if it says nothing was compared, stop and
+   fix that; a zero there is not evidence.
+3. Get the report — `pnpm visual:report` against the commit under review (see above), or run the
    full local comparison on Linux:
    ```bash
    pnpm visual
    ```
-3. Read `.reg-report/<commit>/REPORT.md` and view the expected/actual/diff PNGs it lists.
-4. Put each difference in one bucket:
+4. Read `.reg-report/<commit>/REPORT.md` and view the expected/actual/diff PNGs it lists.
+5. Put each difference in one bucket:
    - **Expected:** the code change explains it. Merge the branch to update S3 references for subsequent builds.
    - **Regression:** the image reveals an unintended layout/content/state change. Fix the source, rerun comparison, and verify the diff is gone.
    - **Unclear:** do not merge and ask for a decision.

@@ -90,7 +90,15 @@ describe("parseGateRows", () => {
   const rows = parseGateRows(REGISTER_FIXTURE);
 
   it("reads both tables and skips the header/separator rows", () => {
-    expect(rows.map((row) => row.id)).toEqual(["H-01", "H-02", "H-03", "H-04", "H-05", "V-01", "V-02"]);
+    expect(rows.map((row) => row.id)).toEqual([
+      "H-01",
+      "H-02",
+      "H-03",
+      "H-04",
+      "H-05",
+      "V-01",
+      "V-02",
+    ]);
   });
 
   it("carries status, lifecycle state, and the newest dated outcome per row", () => {
@@ -164,14 +172,14 @@ describe("movementFor", () => {
   const undated = { datedOutcome: null };
 
   it("prefers a dated outcome and reports it exactly", () => {
-    expect(movementFor(dated, { at: new Date("2026-07-30T00:00:00Z"), bounded: true }, NOW)).toEqual(
-      {
-        on: "2026-07-24",
-        days: 9,
-        atLeast: false,
-        evidence: "dated outcome in the row",
-      },
-    );
+    expect(
+      movementFor(dated, { at: new Date("2026-07-30T00:00:00Z"), bounded: true }, NOW),
+    ).toEqual({
+      on: "2026-07-24",
+      days: 9,
+      atLeast: false,
+      evidence: "dated outcome in the row",
+    });
   });
 
   it("falls back to git blame for an undated row", () => {
@@ -181,7 +189,11 @@ describe("movementFor", () => {
   });
 
   it("marks a grafted blame attribution as a lower bound, not a number", () => {
-    const result = movementFor(undated, { at: new Date("2026-07-30T00:00:00Z"), bounded: true }, NOW);
+    const result = movementFor(
+      undated,
+      { at: new Date("2026-07-30T00:00:00Z"), bounded: true },
+      NOW,
+    );
     expect(result).toMatchObject({ on: "2026-07-30", days: 3, atLeast: true });
     expect(result.evidence).toContain("history truncated");
   });

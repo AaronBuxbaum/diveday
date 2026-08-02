@@ -118,15 +118,26 @@ new domain concept, define it here in the same PR.
   — the same card, two independent gates (see Operations, below).
 - **DSD (Discover Scuba Diving)** — a supervised *experience* for uncertified people. Not a
   cert. Minimum age 10; maximum depth 6 m/20 ft confined water, 12 m/40 ft open water. Always
-  dives with an instructor, at the same in-water ratio as Open Water training (below).
-- **Entry-level in-water ratio** — PADI's published maximum for a no-card-required session (DSD,
-  Open Water training dives): **8 students per instructor**, extendable by **2 per certified
-  assistant** (a Divemaster, in DiveDay's role model) to a ceiling of **12 per instructor**.
-  Enforced as a booking gate (`src/lib/course-ratios.ts`, H-08) on any course session whose course
-  carries no `minimum_certification_level` — the same "no pre-existing C-card gate" bucket the
-  baseline already uses for DSD/OW. Continuing-education courses (AOW, Rescue, specialty) already
-  gate on a verified card and PADI does not publish a comparably strict numeric ratio for them, so
-  they are not ratio-capped.
+  dives with an instructor, at the **intro-session ratio** (below) — tighter than Open Water
+  training, because a DSD participant has had no prior water time at all.
+- **Intro-session in-water ratio** — the cap on a no-certification-required taster session
+  (DSD/Try Scuba — `courses.is_intro_course`): **4 students per instructor, with no assistant
+  bonus**. A certified assistant aboard buys an intro session no extra seats.
+  **This 4:1 number is interim and unverified** — a deliberately conservative placeholder, not a
+  cited standard. The previously-enforced 8→12:1 figure came from a blog and was never a DSD
+  number; applying it to DSD meant the gate certified an overloaded session as compliant.
+  **HD-6** (obtain the PADI Instructor Manual's actual DSD ratio from a PADI professional) is the
+  decision that unblocks replacing it. See `src/lib/course-ratios.ts` and
+  [20260724-course-admission-standards](../architecture/decisions/20260724-course-admission-standards.md).
+- **Entry-level in-water ratio** — PADI's published maximum for **Open Water Diver training
+  dives**: **8 students per instructor**, extendable by **2 per certified assistant** (a
+  Divemaster, in DiveDay's role model) to a ceiling of **12 per instructor**. Enforced as a
+  booking gate (`src/lib/course-ratios.ts`, H-08) on a PADI course session that carries no
+  `minimum_certification_level` **and is not an intro course** — intro sessions take the tighter
+  4:1 rule above. Continuing-education courses (AOW, Rescue, specialty) already gate on a verified
+  card and PADI does not publish a comparably strict numeric ratio for them, so they are not
+  ratio-capped. `courses.agency` is shop-set free text, so the PADI check is case- and
+  whitespace-insensitive: a course typed `"PADI"` is gated exactly like `"padi"`.
 - **Refresher / ReActivate** — short course for certified divers returning after inactivity.
 
 ## Operations
@@ -371,6 +382,14 @@ new domain concept, define it here in the same PR.
   never from the return URL — and cascades into the booking's payment gate like any other payment.
   An abandoned checkout costs nothing: the booking simply stays unpaid, exactly as if the shop had
   no checkout. See [20260721-checkout-at-booking](../architecture/decisions/20260721-checkout-at-booking.md).
+- **Settled total** — what a completed checkout *actually collected*, as Stripe itself reported it
+  (`booking_checkouts.settled_total_cents`, copied from the session's `amount_total`), as opposed to
+  the **asked total** (`total_cents`) DiveDay quoted. The two differ whenever Stripe applied a promo
+  code. Only the settled figure is money the shop received, so it is what a refund returns and what
+  a revenue report counts; it is split back across a party's bookings in proportion to what each
+  diver was asked for (trip fee plus their own gear), in whole minor units that sum to the total
+  exactly. Null on a historical row or a completion Stripe reported no total for — callers then fall
+  back to the asked amounts rather than reading null as "collected nothing."
 - **Deposit** — an optional per-diver amount (`trips.deposit_cents`) a shop may take at booking
   checkout instead of the full fare. Charged now and labelled a deposit on the Stripe page; the
   booking becomes **deposit paid** (which clears the readiness payment gate) with the balance still

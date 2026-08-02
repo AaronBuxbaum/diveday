@@ -3,6 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
 import type { CreateTripPromotionResult, PromotionProvider } from "@/lib/payments/promotions";
+import { nowMs } from "@/lib/clock";
 import { groupActions } from "@/lib/today";
 import { seededShopContext } from "@/test/db";
 import { cancelBooking } from "./bookings";
@@ -623,7 +624,10 @@ describe("unfinished after-dive roll call (DOM-H3)", () => {
     shopId: string,
     options: { endedHoursAgo: number; divers: number; plannedDives?: number; title?: string },
   ) {
-    const endsAt = new Date(Date.now() - options.endedHoursAgo * HOUR);
+    // The unit-test clock is frozen (vitest.config.ts's DIVEDAY_CLOCK) and the
+    // demo seed is anchored to it, so every fixture instant is measured from
+    // `nowMs()` — a real `Date.now()` here would land days away from the seed.
+    const endsAt = new Date(nowMs() - options.endedHoursAgo * HOUR);
     const [trip] = await db
       .insert(tripsTable)
       .values({
@@ -760,7 +764,7 @@ describe("unfinished after-dive roll call (DOM-H3)", () => {
       recordedByPersonId: staffId,
       status: "cleared",
       checkpoint: "after_dive_1",
-      occurredAt: new Date(Date.now() + 1000),
+      occurredAt: new Date(nowMs() + 1000),
     });
 
     const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);

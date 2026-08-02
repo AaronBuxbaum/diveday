@@ -35,6 +35,16 @@ export type BuilderTrip = {
    * page.
    */
   priceCents: number | null;
+  /**
+   * Set only on a departure that is already back at the dock with an after-dive
+   * head count still open (DOM-H3) — the number that says whether everybody
+   * came out of the water. Those rows are the one thing on this board that
+   * looks backwards: a returned trip is otherwise never listed here, and it is
+   * carried in for exactly as long as the count stays open. `diveNumber` is
+   * the earliest dive still unclosed, `uncounted` how many divers on that
+   * boat's list have no result recorded at it.
+   */
+  rollCallOpen: { diveNumber: number; uncounted: number } | null;
 };
 
 export type BuilderDay = {
@@ -80,6 +90,9 @@ export type BuilderCopy = {
   crewNobodyYet: string;
   noPriceSet: string;
   noPriceSetAria: string;
+  rollCallOpen: string;
+  rollCallOpenAria: string;
+  rollCallOpenNote: string;
   move: string;
   moveAria: string;
   copy: string;
@@ -444,6 +457,16 @@ export function ScheduleBuilder({
                             <span className="font-medium text-warning">{copy.crewNobodyYet}</span>
                           )}
                         </p>
+                        {/* A returned departure is otherwise the only row here
+                            that isn't upcoming, so it says why it is still on
+                            the board rather than looking like a stale entry. */}
+                        {trip.rollCallOpen ? (
+                          <p className="mt-1 text-sm font-medium text-danger">
+                            {fill(copy.rollCallOpenNote, {
+                              dive: trip.rollCallOpen.diveNumber,
+                            })}
+                          </p>
+                        ) : null}
                       </div>
                       {/* A sold-out boat is a win worth noticing, not a quiet
                           state (design/principles.md #3) — "success" stands

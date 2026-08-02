@@ -30,8 +30,11 @@ policy), and verification rows **V-01, V-02, V-04, V-05**.
 ## V-02 — the boat day (run the script, record everything)
 
 The full script lives in the
-[human verification queue](../human-decisions.md#human-verification-queue) (V-02 row). What to
-have prepared so the day isn't wasted:
+[human verification queue](../human-decisions.md#human-verification-queue) (V-02 row); the
+[printable run sheet](../pilot-kit/v-02-field-test-run-sheet.md) turns it into a sheet a person
+carries on the boat — expected observations from the shipped manifest surfaces, blanks for what
+actually happens, and the spray-guard false-trigger measurement (DOM-L3). What to have prepared so
+the day isn't wasted:
 
 - **Device matrix:** at least the founder's phone plus one cheap/older phone; note exact
   device/browser/OS versions in the evidence.

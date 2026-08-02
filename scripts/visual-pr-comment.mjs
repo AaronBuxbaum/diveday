@@ -81,13 +81,13 @@ async function api(path, { token, method = "GET", body }) {
 }
 
 async function findStickyComment(repo, pr, token) {
-  // Newest first: the sticky comment is near the end of a long thread, and one
-  // page is plenty for any realistic PR.
+  // GitHub returns issue comments oldest-first, and ours is created on the
+  // first push, so page 1 finds it on any realistic PR. Three pages of headroom
+  // and then we give up and post a fresh one rather than paginate forever.
   for (let page = 1; page <= 3; page++) {
-    const comments = await api(
-      `/repos/${repo}/issues/${pr}/comments?per_page=100&page=${page}`,
-      { token },
-    );
+    const comments = await api(`/repos/${repo}/issues/${pr}/comments?per_page=100&page=${page}`, {
+      token,
+    });
     const match = comments.find((comment) => comment.body?.includes(COMMENT_MARKER));
     if (match) return match;
     if (comments.length < 100) return null;
