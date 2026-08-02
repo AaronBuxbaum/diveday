@@ -499,13 +499,7 @@ describe("roll-call gap ranking (DOM-H3)", () => {
     ]);
     // The two after-dive kinds lead, then the diver blocker, and the two
     // dock-count kinds — paperwork on a boat that is already home — ride last.
-    expect(sorted.map((entry) => entry.id)).toEqual([
-      "missing",
-      "open",
-      "med",
-      "dock",
-      "none",
-    ]);
+    expect(sorted.map((entry) => entry.id)).toEqual(["missing", "open", "med", "dock", "none"]);
   });
 
   it("pins the after-dive gaps to the top band and drops the dock counts a band", () => {

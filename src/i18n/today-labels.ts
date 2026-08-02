@@ -206,9 +206,7 @@ export function rollCallGapDetailText(
   switch (gap.reason) {
     case "missing_diver":
       return t(
-        gap.stale
-          ? "shared.today.detail.missingDiverStale"
-          : "shared.today.detail.missingDiver",
+        gap.stale ? "shared.today.detail.missingDiverStale" : "shared.today.detail.missingDiver",
         { dive, uncounted, total },
       );
     case "after_dive_uncounted":

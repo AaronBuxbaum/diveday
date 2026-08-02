@@ -6,8 +6,8 @@ import { seededShopContext } from "@/test/db";
 import { issueBookingCapability } from "./booking-capabilities";
 import { createBooking } from "./bookings";
 import { createTestDb } from "./client";
-import { verifiedNitroxPersonIds } from "./nitrox";
 import { getTripManifest } from "./manifests";
+import { verifiedNitroxPersonIds } from "./nitrox";
 import { getBookingReadiness } from "./readiness";
 import {
   bookingCapabilities,
@@ -663,10 +663,12 @@ describe("seeded history manifests", () => {
     expect(offenders).toEqual([]);
   });
 
-  it("keeps the unsigned-waiver story on the divers who never got on the boat", async () => {
-    // The demo still needs a blocked diver to look at — it just must not be one
-    // the crew boarded. A no-show whose release was never signed is true, common,
-    // and the right thing to show beside their "Not boarded".
+  it("carries a no-show's absence forward through every after-dive checkpoint", async () => {
+    // "Off the boat stays off the boat": the seed records one explicit
+    // `not_boarded` at departure for a no-show and nothing after it, so the
+    // carried-forward default is what every later checkpoint shows. It is the
+    // only place in the demo (and therefore in the visual fleet) where that
+    // state is exercised at all.
     const { db, shop } = await seededShopContext();
     await resetDemoSchedule(db, shop.id, { history: true });
 
@@ -675,14 +677,14 @@ describe("seeded history manifests", () => {
       .from(tripsTable)
       .where(and(eq(tripsTable.shopId, shop.id), eq(tripsTable.description, HISTORY_DESCRIPTION)));
 
-    let blockedAshore = 0;
+    let carried = 0;
     for (const trip of history) {
-      const manifest = await getTripManifest(db, shop.id, trip.id);
-      if (!manifest) continue;
-      blockedAshore += manifest.divers.filter(
-        (diver) => diver.rollCall?.state !== "boarded" && diver.readiness.status === "blocked",
+      const afterDive = await getTripManifest(db, shop.id, trip.id, "after_dive_1");
+      if (!afterDive) continue;
+      carried += afterDive.divers.filter(
+        (diver) => diver.rollCall?.state === "not_boarded" && diver.rollCall.implied === true,
       ).length;
     }
-    expect(blockedAshore).toBeGreaterThan(0);
+    expect(carried).toBeGreaterThan(0);
   });
 });

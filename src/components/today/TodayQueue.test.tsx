@@ -169,6 +169,41 @@ describe("TodayQueue unfinished roll-call rows (DOM-H3)", () => {
     );
     expect(screen.queryByText("Today's boats are all clear 🤙")).toBeNull();
   });
+
+  it("gives a diver who did not come back its own chip, and the dock count a quieter one", () => {
+    // The two must never share a chip or a tone. "Not back aboard after dive
+    // one" and "two people were never tapped at the dock" are different events,
+    // and wording them the same is how the red row becomes wallpaper.
+    render(
+      <TodayQueue
+        actions={[
+          action({
+            id: "roll-call:t1:missing_diver:after_dive_1",
+            kind: "roll_call_missing_diver",
+            urgency: "imminent",
+          }),
+          action({
+            id: "roll-call:t2:departure_uncounted:departure",
+            kind: "roll_call_departure_open",
+            urgency: "now",
+          }),
+          action({
+            id: "roll-call:t3:no_roll_call:departure",
+            kind: "roll_call_not_started",
+            urgency: "now",
+          }),
+        ]}
+        shopSlug="blue-mantis"
+        shopName="Blue Mantis"
+        inviteAction={inviteAction}
+        locale="en-US"
+      />,
+    );
+
+    expect(screen.getByText("Missing diver").className).toContain("text-danger");
+    expect(screen.getByText("Dock count").className).toContain("text-warning");
+    expect(screen.getByText("No roll call").className).toContain("text-warning");
+  });
 });
 
 describe("TodayQueue payment rows", () => {

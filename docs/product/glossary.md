@@ -259,11 +259,28 @@ new domain concept, define it here in the same PR.
   crew), with emergency contacts. A legal/safety document — in US waters, coast guard
   regulations apply. **Roll call** happens before departure and *after every dive*; a diver
   left behind is the industry's nightmare scenario. Manifests must work offline and print
-  cleanly. An after-dive roll call that is still open once the boat is past its end time is an
-  **unfinished head count** — at least one diver on the manifest has no result recorded at that
-  checkpoint (a `cleared` undo counts as no result; an explicit "not boarded" carries forward and
-  does not). It is chased, not merely displayed: Today raises it as its top-severity row and the
-  schedule board badges the returned departure, both for 48 hours after the trip ends.
+  cleanly. An after-dive head count that is not closed is chased, not merely displayed: Today
+  raises it and the schedule board badges the departure. It comes in four distinct kinds, which are
+  deliberately never worded or ranked alike — see **unaccounted for** below.
+- **Unaccounted for** — the four ways a head count can be open, in descending severity. A diver is
+  accounted for at an after-dive checkpoint **only if their latest live result there is
+  "boarded"**; nothing else closes that count.
+  1. **Missing diver** — a crew member explicitly marked someone *not back aboard* at an after-dive
+     checkpoint. A human said a diver did not return to the boat: the loudest row the app has.
+  2. **Unfinished head count** — a diver who boarded at departure has no result at an after-dive
+     checkpoint (a `cleared` undo counts as no result). Nobody said they are missing; nobody said
+     they are aboard.
+  3. **Unfinished dock count** — the departure count was never finished. The boat is home and nobody
+     was ever unaccounted for in the water: this is paperwork, and it is toned and ranked as such.
+  4. **No roll call** — the trip has no roll-call events at all. A shop not using the feature, not a
+     lost diver — but never read as an all-clear either.
+  Kinds 1 and 2 are the ones that can mean a person is still in the water, so they also raise on a
+  trip *still underway* whose checkpoint was started and abandoned (at least one result and at least
+  one diver awaiting), and they never age to nothing: past the 48-hour dock-work window they drop a
+  band and say plainly that the count was never closed. Kinds 3 and 4 are chased for 48 hours only.
+  The population an after-dive count is counting is **who boarded**, never who bought a seat — a
+  diver who never showed and was never tapped is an unfinished *dock* count, not somebody left in
+  the water.
 - **Emergency contact** — a name *and* a reachable phone number the crew can call for a diver in
   an incident. It is captured from the diver (the waiver flow, and the `/ready` page), never
   invented, and it is **only "on file" when both the name and the phone are present** — a name with
@@ -292,8 +309,12 @@ new domain concept, define it here in the same PR.
   there isn't one.
 - **Roll-call checkpoint** — one independent head count: before departure or after a numbered dive.
   A two-tank charter has three checkpoints. Each checkpoint is re-verified against the bodies on the
-  boat; a **boarded** result never carries into the next. The one deliberate exception is
-  **not boarded**: once a diver is marked not boarded, later checkpoints default to not boarded
+  boat; a **boarded** result never carries into the next. **"Not boarded" means two opposite
+  things depending on where it is recorded**, and they must never be treated — or worded — alike:
+  at **departure** it means *never left the dock*, which is benign and genuinely accounted for; at
+  an **after-dive** checkpoint it means *did not return to the boat*, which is the missing-diver
+  event itself and opens the count rather than closing it. Only the departure meaning carries
+  forward: once a diver is marked not boarded at the dock, later checkpoints default to not boarded
   (shown as "carried forward") until staff explicitly re-board them — a diver who left the boat is
   presumed still ashore rather than resetting to awaiting. The default is always flagged as carried,
   can never imply "present," and staff can override it at any checkpoint. A checkpoint is

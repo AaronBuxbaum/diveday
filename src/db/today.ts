@@ -458,7 +458,9 @@ export async function listRollCallGaps(
     // this boat wherever it sits, so it is searched across all dives first — a
     // per-dive "first problem wins" scan would hide a dive-two missing diver
     // behind a dive-one clerical gap.
-    const missingDive = checkpoints.findIndex((_, dive) => dive >= 1 && (notBackAboard[dive] ?? 0) > 0);
+    const missingDive = checkpoints.findIndex(
+      (_, dive) => dive >= 1 && (notBackAboard[dive] ?? 0) > 0,
+    );
     // Index 0 is `departure`; the after-dive checkpoints start at 1 and their
     // index *is* their dive number.
     const openDive = checkpoints.findIndex(

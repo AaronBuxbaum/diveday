@@ -710,8 +710,7 @@ describe("unclosed roll call (DOM-H3)", () => {
     reason: string,
   ) => work.actions.find((action) => action.id.startsWith(`roll-call:${tripId}:${reason}:`));
   const afterDiveRow = (work: Awaited<ReturnType<typeof getTodayWork>>, tripId: string) =>
-    rollCallRow(work, tripId, "missing_diver") ??
-    rollCallRow(work, tripId, "after_dive_uncounted");
+    rollCallRow(work, tripId, "missing_diver") ?? rollCallRow(work, tripId, "after_dive_uncounted");
 
   describe("a diver who did not come back", () => {
     /**
@@ -957,7 +956,9 @@ describe("unclosed roll call (DOM-H3)", () => {
       const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
       const row = rollCallRow(work, trip.id, "after_dive_uncounted");
       // Reported at the earliest dive still open, and pointed straight at it.
-      expect(row?.href).toBe(`/shop/${shop.slug}/trips/${trip.id}/manifest?checkpoint=after_dive_2`);
+      expect(row?.href).toBe(
+        `/shop/${shop.slug}/trips/${trip.id}/manifest?checkpoint=after_dive_2`,
+      );
       expect(row?.detail).toContain("dive 2");
     });
 
@@ -1297,9 +1298,7 @@ describe("unclosed roll call (DOM-H3)", () => {
       );
 
       expect(rollCallRows(otherWork, trip.id)).toEqual([]);
-      expect(
-        otherWork.actions.every((action) => !action.kind.startsWith("roll_call_")),
-      ).toBe(true);
+      expect(otherWork.actions.every((action) => !action.kind.startsWith("roll_call_"))).toBe(true);
     });
 
     it("points the row inside this shop and leads the whole queue", async () => {
