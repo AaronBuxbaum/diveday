@@ -1,6 +1,6 @@
 # 20260802-sms-delivery-receipts — Route SNS SMS delivery receipts through CloudWatch, a forwarder, and an SNS topic
 
-- **Status:** Accepted
+- **Status:** Superseded by 20260802-sms-delivery-receipts-in-cloudformation
 - **Date:** 2026-08-02
 
 ## Context

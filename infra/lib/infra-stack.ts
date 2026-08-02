@@ -8,6 +8,7 @@ import * as destinations from "aws-cdk-lib/aws-logs-destinations";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import * as ses from "aws-cdk-lib/aws-ses";
 import * as sns from "aws-cdk-lib/aws-sns";
+import * as cr from "aws-cdk-lib/custom-resources";
 import type { Construct } from "constructs";
 
 export class InfraStack extends cdk.Stack {
@@ -345,10 +346,7 @@ export class InfraStack extends cdk.Stack {
       topicName: "diveday-sms-delivery-receipts",
     });
 
-    // SNS assumes this to write delivery receipts. It is handed to SNS by the
-    // account-level `set-sms-attributes` call in the runbook, which has no
-    // CloudFormation resource — SMS delivery-status logging for direct publish
-    // is account-wide state, not a property of any topic.
+    // SNS assumes this to write delivery receipts.
     const smsDeliveryStatusRole = new iam.Role(this, "SnsSmsDeliveryStatusRole", {
       roleName: "diveday-sns-sms-delivery-status",
       assumedBy: new iam.ServicePrincipal("sns.amazonaws.com"),
@@ -430,10 +428,70 @@ exports.handler = async (event) => {
         "SNS topic carrying SMS delivery receipts. Set as SMS_SNS_TOPIC_ARN in the app, and subscribe /api/webhooks/sms to it.",
     });
 
-    new cdk.CfnOutput(this, "SnsSmsDeliveryStatusInstructions", {
-      value: `aws sns set-sms-attributes --attributes DeliveryStatusIAMRole=${smsDeliveryStatusRole.roleArn},DeliveryStatusSuccessSamplingRate=100`,
-      description:
-        "Account-level and not expressible in CloudFormation: switches on SMS delivery-status logging. Sampling 100 logs every send; set 0 to log failures only.",
-    });
+    // Switch delivery-status logging on. There is no native resource for this:
+    // `AWS::SNS::Topic.DeliveryStatusLogging` covers only the http/sqs/lambda/
+    // firehose/application protocols and is scoped to a topic, whereas a
+    // direct-to-phone `Publish` uses no topic and is configured by the
+    // account-level `SetSMSAttributes` API.
+    //
+    // No native resource is not the same as not expressible, though, and this
+    // is exactly what `AwsCustomResource` is for. Leaving it as a runbook step
+    // would make the one thing nothing else can detect — every downstream hop
+    // sits idle and healthy-looking without it — also the one thing a human has
+    // to remember. `SetSMSAttributes` merges the attributes it is given rather
+    // than replacing the set, so this touches neither the spend limit nor the
+    // default SMS type.
+    const smsDeliveryStatusAttributes = new cr.AwsCustomResource(
+      this,
+      "SnsSmsDeliveryStatusAttributes",
+      {
+        onCreate: {
+          service: "SNS",
+          action: "setSMSAttributes",
+          parameters: {
+            attributes: {
+              DeliveryStatusIAMRole: smsDeliveryStatusRole.roleArn,
+              // Every send is logged. Set to "0" to record only failures, which
+              // is the cheaper posture if volume ever makes the CloudWatch line
+              // per message worth counting.
+              DeliveryStatusSuccessSamplingRate: "100",
+            },
+          },
+          physicalResourceId: cr.PhysicalResourceId.of("sns-sms-delivery-status"),
+        },
+        // Same call on update, so changing the role or the sampling rate is a
+        // stack deploy rather than a second thing to remember.
+        onUpdate: {
+          service: "SNS",
+          action: "setSMSAttributes",
+          parameters: {
+            attributes: {
+              DeliveryStatusIAMRole: smsDeliveryStatusRole.roleArn,
+              DeliveryStatusSuccessSamplingRate: "100",
+            },
+          },
+          physicalResourceId: cr.PhysicalResourceId.of("sns-sms-delivery-status"),
+        },
+        // Cleared on delete: the role goes with the stack, and an account left
+        // pointing at a deleted role logs nothing while looking configured.
+        onDelete: {
+          service: "SNS",
+          action: "setSMSAttributes",
+          parameters: { attributes: { DeliveryStatusIAMRole: "" } },
+        },
+        policy: cr.AwsCustomResourcePolicy.fromStatements([
+          // SetSMSAttributes takes no resource ARN — it is account-level state.
+          new iam.PolicyStatement({ actions: ["sns:SetSMSAttributes"], resources: ["*"] }),
+          // Handing SNS a role to assume is a PassRole, scoped to that one role.
+          new iam.PolicyStatement({
+            actions: ["iam:PassRole"],
+            resources: [smsDeliveryStatusRole.roleArn],
+          }),
+        ]),
+        installLatestAwsSdk: false,
+      },
+    );
+    // The attributes name the role, so it has to exist first.
+    smsDeliveryStatusAttributes.node.addDependency(smsDeliveryStatusRole);
   }
 }

@@ -2,7 +2,8 @@
 
 How DiveDay learns what happened to an SMS after SNS accepted it, how to switch it on, and what to
 check when receipts stop arriving. The decision and its trade-offs are in ADR
-[20260802-sms-delivery-receipts](../architecture/decisions/20260802-sms-delivery-receipts.md).
+[20260802-sms-delivery-receipts-in-cloudformation](../architecture/decisions/20260802-sms-delivery-receipts-in-cloudformation.md)
+and the record it supersedes.
 
 ## Why this is a pipeline and not a webhook
 
@@ -23,23 +24,19 @@ already verifies, rather than inventing a fourth inbound auth scheme for one cal
 ## Switching it on
 
 1. **Deploy the stack.** `infra/lib/infra-stack.ts` section 10 creates the topic, the IAM role, both
-   log groups (two-week retention), the forwarder, and the subscription filters.
+   log groups (two-week retention), the forwarder, the subscription filters, **and switches
+   delivery-status logging on**.
 
-2. **Turn on delivery-status logging.** Account-level state with no CloudFormation resource, so it is
-   a one-time CLI call. The stack emits it verbatim as `SnsSmsDeliveryStatusInstructions`:
+   That last part is a custom resource calling `SetSMSAttributes`, because there is no native one:
+   `AWS::SNS::Topic.DeliveryStatusLogging` covers only the http/sqs/lambda/firehose/application
+   protocols and is scoped to a topic, while a direct-to-phone `Publish` uses no topic. Nothing to
+   run by hand. To log only failures — the cheaper posture once volume matters — change
+   `DeliveryStatusSuccessSamplingRate` to `"0"` in the stack and redeploy.
 
-   ```sh
-   aws sns set-sms-attributes --attributes \
-     DeliveryStatusIAMRole=<SnsSmsDeliveryStatusRole ARN>,DeliveryStatusSuccessSamplingRate=100
-   ```
-
-   `DeliveryStatusSuccessSamplingRate=100` logs every send. Set it to `0` to log failures only, which
-   is the cheaper posture once volume matters — failures are the ones a shop needs to chase.
-
-3. **Point the app at the topic.** Set `SMS_SNS_TOPIC_ARN` from the `SmsDeliveryReceiptsTopicArn`
+2. **Point the app at the topic.** Set `SMS_SNS_TOPIC_ARN` from the `SmsDeliveryReceiptsTopicArn`
    output. Unset, `/api/webhooks/sms` answers 503 and sending is unaffected.
 
-4. **Subscribe the endpoint.** Add an HTTPS subscription on `diveday-sms-delivery-receipts` pointing
+3. **Subscribe the endpoint.** Add an HTTPS subscription on `diveday-sms-delivery-receipts` pointing
    at `https://<app-host>/api/webhooks/sms`. The route answers SNS's `SubscriptionConfirmation`
    handshake automatically — it re-validates the `SubscribeURL` host before fetching it.
 
@@ -69,9 +66,11 @@ Work the pipeline backwards — each hop has its own failure mode:
 - **Answering 400** — the message failed SNS signature verification, or arrived for a different
   topic ARN than the one configured.
 - **Nothing arriving at all** — check the SNS subscription is *confirmed* (a pending subscription
-  silently delivers nothing), then the Lambda's own CloudWatch logs, then whether
-  `set-sms-attributes` was ever run. Step 2 is the one that gets forgotten: without it SNS writes no
-  receipts, so every downstream hop is idle and healthy-looking.
+  silently delivers nothing), then the forwarder Lambda's own CloudWatch logs, then that the
+  `SnsSmsDeliveryStatusAttributes` custom resource actually applied (`aws sns get-sms-attributes`
+  should show the role ARN). Without delivery-status logging SNS writes no receipts at all, so every
+  downstream hop is idle and healthy-looking — which is why it is set by the stack rather than by
+  hand.
 - **Receipts arriving but no row updating** — expected for email-tracked bookings (see above). If it
   is happening for a phone-only diver, compare the receipt's `notification.messageId` against the
   delivery row's `provider_message_id`; they should be the same value SNS `Publish` returned.
