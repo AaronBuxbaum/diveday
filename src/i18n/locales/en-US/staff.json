@@ -2717,6 +2717,7 @@
         "stale": "Stale copy"
       },
       "loadingMessage": "Opening the manifest saved on this device…",
+      "openingHeading": "Opening this device's saved copy",
       "reconcile": {
         "reachError": "Couldn't reach DiveDay just now — your changes are still saved on this phone and will try to send again on the next change or reconnect.",
         "pendingRejectedSingle": "{count, plural, one {# change needs a look — open the live manifest to sort it out.} other {# changes need a look — open the live manifest to sort it out.}}",

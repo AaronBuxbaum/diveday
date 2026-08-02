@@ -148,16 +148,14 @@ test("a captain who lost the saved copy to storage eviction still lands on a pag
   page,
   context,
 }) => {
-  // Observed twice in CI (never reproduced locally, including under
-  // artificial contention): the URL assertion below the offline reload
-  // always lands on time, but the text that follows it — gated only on this
-  // page's own client-side hydration completing, no further network wait —
-  // occasionally missed the default 8s. The reload's redirect chain runs
-  // through the service worker twice (the live manifest route fails offline
-  // and 302s to the offline shell, which itself fails offline and serves
-  // from Cache Storage) before the client bundle even starts hydrating, more
-  // hops than a typical assertion's budget assumes. Extra room here rather
-  // than a blanket bump.
+  // 25s covers this test's own shape, not a slow assertion: the eviction loop
+  // below owns a 10s budget by itself, on top of four navigations and the
+  // service-worker priming poll. Measured on an idle machine the offline
+  // reload's empty state lands 35-450ms after the reload returns, and it still
+  // lands at 20x CPU throttling — so nothing here is waiting on a slow render,
+  // and the per-assertion override this test used to carry (15s on the empty
+  // state) was budgeting for a diagnosis that measurement does not support. It
+  // is gone; the assertion runs on the suite's ordinary 8s.
   test.setTimeout(25_000);
   await page.goto("/shop/blue-mantis/schedule/board");
   await page
@@ -238,7 +236,17 @@ test("a captain who lost the saved copy to storage eviction still lands on a pag
   // letting the reload fail outright — the shell says so plainly instead of
   // fabricating a roster.
   await expect(page).toHaveURL(/\/offline-manifest\?trip=.*checkpoint=after_dive_1/);
-  await expect(page.getByText("Nothing saved on this phone yet")).toBeVisible({ timeout: 15_000 });
+  // Asserted against the whole shell rather than a bare text locator so a
+  // failure prints what the captain would actually have been looking at. The
+  // three ways this can legitimately not-be-the-empty-state read identically
+  // through `getByText(...).toBeVisible()` ("element(s) not found") and are
+  // what sent two previous passes at this test chasing timeouts: still on the
+  // "Opening this device's saved copy" state (the store hasn't been read), a
+  // roster (the record survived the eviction after all), or the shop's own
+  // error boundary. `toContainText` names which one.
+  await expect(page.locator("main").filter({ visible: true })).toContainText(
+    "Nothing saved on this phone yet",
+  );
 
   await context.setOffline(false);
 });

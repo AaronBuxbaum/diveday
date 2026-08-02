@@ -108,6 +108,31 @@ export function OfflineManifestView() {
       : "departure";
   });
   const [message, setMessage] = useState(t("shared.offlineManifest.loadingMessage"));
+  // False until this device's storage has actually been read. Two things ride
+  // on it, and both are load-bearing on the one surface that exists for having
+  // no signal:
+  //
+  // 1. **It stops the shell asserting what it hasn't checked.** `envelope` and
+  //    `list` both start `null`, which means "not looked yet", but every branch
+  //    below read that as "nothing there" and rendered "Nothing saved on this
+  //    phone yet" — a definitive claim about a safety artifact, made before the
+  //    store was opened, directly contradicting the "Opening the manifest saved
+  //    on this device…" status line printed underneath it.
+  //
+  // 2. **It makes the server render URL-agnostic, which is what the cached
+  //    offline shell actually is.** `manifest-sw.js` caches one document under
+  //    the key `/offline-manifest` and replays it for *every* offline reload,
+  //    whatever `?trip=`/`?checkpoint=` the captain was on. That document was
+  //    rendered by the server for whichever URL happened to fetch it — normally
+  //    the bare path, so its markup is the *list* branch. The reloaded page
+  //    therefore used to paint a different page than the one requested, and only
+  //    became correct via React's hydration-mismatch recovery (a recoverable
+  //    hydration error fired on every single offline reload, measured). Gating
+  //    on a state the server can never have true means the server always emits
+  //    this one neutral view, the client hydrates against a match, and the real
+  //    branch is chosen by an ordinary client render instead of by error
+  //    recovery.
+  const [storeRead, setStoreRead] = useState(false);
   const [busyBooking, setBusyBooking] = useState<string | null>(null);
   const [noteByBooking, setNoteByBooking] = useState<Record<string, string>>({});
   const tripId = useMemo(() => searchParams.get("trip") ?? "", [searchParams]);
@@ -234,7 +259,11 @@ export function OfflineManifestView() {
             );
             void reconcileList(saved);
           })
-          .catch(() => setMessage(t("shared.offlineManifest.reconcile.listLoadError")));
+          .catch(() => setMessage(t("shared.offlineManifest.reconcile.listLoadError")))
+          // Settled either way: a device whose storage can't be opened at all
+          // has still been *looked at*, and the error message it lands on says
+          // more than an "opening…" state that never ends.
+          .finally(() => setStoreRead(true));
       void refreshList();
       window.addEventListener("online", refreshList);
       return () => window.removeEventListener("online", refreshList);
@@ -261,10 +290,32 @@ export function OfflineManifestView() {
         );
         if (saved && navigator.onLine) void reconcile();
       })
-      .catch(() => setMessage(t("shared.offlineManifest.reconcile.singleLoadError")));
+      .catch(() => setMessage(t("shared.offlineManifest.reconcile.singleLoadError")))
+      .finally(() => setStoreRead(true));
     window.addEventListener("online", reconcile);
     return () => window.removeEventListener("online", reconcile);
   }, [reconcile, reconcileList, tripId, t]);
+
+  // Before the store has been read — which includes every server render, since
+  // the effect above only runs in the browser — say what is actually true and
+  // nothing more. See `storeRead` above for why this branch sits ahead of the
+  // `tripId` split rather than inside either side of it: it must not depend on
+  // the URL, because the cached shell is one document replayed for all of them.
+  if (!storeRead) {
+    return (
+      <main className="boat-mode mx-auto w-full max-w-3xl flex-1 px-6 py-16">
+        <ShopPageHeader
+          eyebrow={t("shared.offlineManifest.single.eyebrow")}
+          title={t("shared.offlineManifest.openingHeading")}
+          meta={
+            <p className="text-muted" role="status" aria-live="polite">
+              {message}
+            </p>
+          }
+        />
+      </main>
+    );
+  }
 
   if (!tripId) {
     const savedTrips = list ?? [];

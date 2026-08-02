@@ -459,6 +459,56 @@ describe("OfflineManifestView — list mode (no ?trip=)", () => {
   });
 });
 
+describe("OfflineManifestView — never claims what it hasn't read", () => {
+  // The shell is the surface a captain reaches with no signal, so "nothing is
+  // saved on this phone" has to mean the store was opened and found empty —
+  // not that the read hasn't come back yet. It is also what makes the server
+  // render URL-agnostic, which matters because manifest-sw.js caches one
+  // document and replays it for every offline reload whatever `?trip=` was
+  // asked for (see the `storeRead` comment in OfflineManifestView.tsx).
+  it("says it is opening the copy, not that there isn't one, until the store answers", async () => {
+    searchParams = new URLSearchParams({ trip: "trip-1" });
+    let resolveLoad: (value: OfflineManifestEnvelope | null) => void = () => {};
+    vi.mocked(loadOfflineManifest).mockReturnValue(
+      new Promise((resolve) => {
+        resolveLoad = resolve;
+      }),
+    );
+
+    render(<OfflineManifestView />);
+
+    expect(screen.getByText("Opening this device's saved copy")).toBeInTheDocument();
+    expect(screen.queryByText("Nothing saved on this phone yet")).not.toBeInTheDocument();
+
+    await act(async () => {
+      resolveLoad(null);
+    });
+
+    expect(await screen.findByText("Nothing saved on this phone yet")).toBeInTheDocument();
+  });
+
+  it("does the same for the device-wide list", async () => {
+    searchParams = new URLSearchParams();
+    let resolveList: (value: OfflineManifestEnvelope[]) => void = () => {};
+    vi.mocked(listOfflineManifests).mockReturnValue(
+      new Promise((resolve) => {
+        resolveList = resolve;
+      }),
+    );
+
+    render(<OfflineManifestView />);
+
+    expect(screen.getByText("Opening this device's saved copy")).toBeInTheDocument();
+    expect(screen.queryByText("Nothing saved on this device yet")).not.toBeInTheDocument();
+
+    await act(async () => {
+      resolveList([]);
+    });
+
+    expect(await screen.findByText("Nothing saved on this device yet")).toBeInTheDocument();
+  });
+});
+
 describe("OfflineManifestView — single-trip mode (?trip=)", () => {
   it("still opens a specific trip's roll call unchanged", async () => {
     searchParams = new URLSearchParams({ trip: "trip-1" });

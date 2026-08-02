@@ -2717,6 +2717,7 @@
         "stale": "Copia caducada"
       },
       "loadingMessage": "Abriendo el manifiesto guardado en este dispositivo…",
+      "openingHeading": "Abriendo la copia guardada en este dispositivo",
       "reconcile": {
         "reachError": "No se pudo contactar con DiveDay en este momento — tus cambios siguen guardados en este teléfono e intentarán enviarse de nuevo en el próximo cambio o al reconectar.",
         "pendingRejectedSingle": "{count, plural, one {# cambio necesita revisión — abre el manifiesto en vivo para resolverlo.} other {# cambios necesitan revisión — abre el manifiesto en vivo para resolverlo.}}",
