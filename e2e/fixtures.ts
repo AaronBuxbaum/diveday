@@ -108,7 +108,14 @@ export const test = base.extend<
     context.setOffline = async (offline: boolean) => {
       const pages = context.pages();
       let url = pages[0]?.url() || workerBaseURL;
-      if (url.startsWith("about:")) {
+      // A page can legitimately be sitting on a non-http(s) URL here — most
+      // often a Chrome error interstitial (chrome-error://chromewebdata/)
+      // left behind by a *previous* setOffline(true) + a reload that was
+      // expected to fail outright (e.g. a route with no offline fallback).
+      // addCookies rejects a url in any scheme but http(s) with "Invalid
+      // cookie fields", so anything other than a real http(s) origin falls
+      // back to the worker's own base URL instead.
+      if (!url.startsWith("http://") && !url.startsWith("https://")) {
         url = workerBaseURL;
       }
       await context.addCookies([
