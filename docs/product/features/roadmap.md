@@ -247,8 +247,11 @@ These block real operations regardless of code completeness; owners and evidence
   Until it passes, the safety differentiator is unproven and unclaimable.
 - **Pricing posture** — the public price is **approved for now** (`src/lib/marketing.ts`,
   early-access and still moving; H-12, 2026-07-24). H-12 also closed the founding-cohort terms —
-  a **two-year price lock** and **founder-direct, same-day support** — both now published on the
-  pricing and home pages. Billing cadence, taxes/fees, and the contract flow remain open. See
+  a **two-year price lock** and **founder-direct support** — both now published on the
+  pricing and home pages. H-26 (2026-08-02) confirms the posture behind these terms is
+  deliberately lifestyle-scale, not venture-scale (see [vision.md](../vision.md#what-kind-of-business-this-is)),
+  and dropped the explicit same-day response-time SLA pending a real support-hour-capacity answer.
+  Billing cadence, taxes/fees, and the contract flow remain open. See
   [competitive-analysis.md](../assessments/competitive-analysis.md#pricing-posture).
 - **Legal / policy sign-off** for waivers, medical, retention, course rules, nitrox parameters, and
   notification consent — H-01…H-11.

@@ -77,22 +77,23 @@ describe("course catalog and sessions (in-memory PGlite)", () => {
     ).resolves.toEqual({ ok: false, reason: "course_unstaffed" });
   });
 
-  // PADI's published entry-level in-water ratio (H-08, src/lib/course-ratios.ts):
-  // 8 students per solo instructor, no certified assistant.
-  it("caps an entry-level session's bookings at the instructor ratio, independent of trip capacity", async () => {
+  // PADI's published Open Water training-dive in-water ratio
+  // (H-08, src/lib/course-ratios.ts): 8 students per solo instructor, no
+  // certified assistant.
+  it("caps an Open Water session's bookings at the instructor ratio, independent of trip capacity", async () => {
     const { db, shop } = await courseContext();
-    const [discoverCourse] = await db
+    const [openWaterCourse] = await db
       .select()
       .from(courses)
-      .where(and(eq(courses.shopId, shop.id), eq(courses.title, "Discover Scuba Diving")));
-    if (!discoverCourse) throw new Error("Discover Scuba Diving course missing");
+      .where(and(eq(courses.shopId, shop.id), eq(courses.title, "Open Water Diver")));
+    if (!openWaterCourse) throw new Error("Open Water Diver course missing");
     const staff = await listStaff(db, shop.id);
     const instructor = staff.find((entry) => entry.roles.includes("instructor"));
     if (!instructor) throw new Error("seeded instructor missing");
 
     const trip = await createTrip(db, {
       shopId: shop.id,
-      courseId: discoverCourse.id,
+      courseId: openWaterCourse.id,
       title: "Ratio test session",
       startsAt: new Date(Date.now() + OPEN_TEST_SESSION_OFFSET_MS),
       endsAt: new Date(Date.now() + OPEN_TEST_SESSION_OFFSET_MS + 4 * 60 * 60 * 1000),
@@ -123,6 +124,59 @@ describe("course catalog and sessions (in-memory PGlite)", () => {
         tripId: trip.id,
         fullName: "Ratio Diver 9",
         email: "ratio-diver-9@example.com",
+      }),
+    ).resolves.toEqual({ ok: false, reason: "course_ratio_full" });
+  });
+
+  // PADI's published Discover Scuba Diving open-water ratio (HD-6, H-08,
+  // src/lib/course-ratios.ts): 2 students per solo instructor, no
+  // assistant-bonus credit — tighter than, and previously conflated with, the
+  // Open Water training figure above.
+  it("caps a DSD session's bookings at the tighter DSD ratio, not the Open Water figure", async () => {
+    const { db, shop } = await courseContext();
+    const [discoverCourse] = await db
+      .select()
+      .from(courses)
+      .where(and(eq(courses.shopId, shop.id), eq(courses.title, "Discover Scuba Diving")));
+    if (!discoverCourse) throw new Error("Discover Scuba Diving course missing");
+    const staff = await listStaff(db, shop.id);
+    const instructor = staff.find((entry) => entry.roles.includes("instructor"));
+    if (!instructor) throw new Error("seeded instructor missing");
+
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      courseId: discoverCourse.id,
+      title: "DSD ratio test session",
+      startsAt: new Date(Date.now() + OPEN_TEST_SESSION_OFFSET_MS),
+      endsAt: new Date(Date.now() + OPEN_TEST_SESSION_OFFSET_MS + 4 * 60 * 60 * 1000),
+      capacity: 20, // well above the 2-seat ratio cap, so capacity never binds first
+      plannedDives: 1,
+    });
+    if (!trip) throw new Error("failed to create DSD ratio test trip");
+    const staffed = await setTripCrew(db, shop.id, trip.id, [instructor.person.id]);
+    if (!staffed) throw new Error("failed to assign instructor");
+
+    for (let i = 0; i < 2; i++) {
+      const outcome = await createBooking(db, {
+        actor: "staff",
+        shopId: shop.id,
+        tripId: trip.id,
+        fullName: `DSD Ratio Diver ${i}`,
+        email: `dsd-ratio-diver-${i}@example.com`,
+      });
+      expect(outcome).toMatchObject({ ok: true });
+    }
+
+    // The 3rd booking exceeds the solo instructor's 2-seat DSD ratio, even
+    // though the trip's own capacity (20) still has room and a solo
+    // instructor would seat 8 under the Open Water figure.
+    await expect(
+      createBooking(db, {
+        actor: "staff",
+        shopId: shop.id,
+        tripId: trip.id,
+        fullName: "DSD Ratio Diver 3",
+        email: "dsd-ratio-diver-3@example.com",
       }),
     ).resolves.toEqual({ ok: false, reason: "course_ratio_full" });
   });

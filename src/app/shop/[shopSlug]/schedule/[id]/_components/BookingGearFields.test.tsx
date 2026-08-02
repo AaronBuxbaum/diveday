@@ -103,16 +103,17 @@ describe("BookingGearFields", () => {
     expect(screen.getByText("Gear for this diver: $45.00")).toBeInTheDocument();
     expect(onSubtotalChange).toHaveBeenLastCalledWith(0, 4_500);
 
-    // Dropping one core item breaks the set; the remaining pieces price
-    // individually — $45 of core minus the weights piece, priced per-item
-    // instead: bcd+regulator+wetsuit+mask_fins+dive_computer = 1500+1500+1200+800+1000 = 6000.
+    // Dropping one core item still quotes the $45 set price: the remaining
+    // five pieces priced individually (bcd+regulator+wetsuit+mask_fins+
+    // dive_computer = 1500+1500+1200+800+1000 = 6000) cost more than the set,
+    // so skipping a piece is never charged more than the full set (H-06, HD-9).
     fireEvent.click(screen.getByLabelText(/^Weights/));
-    expect(screen.getByText("Gear for this diver: $60.00")).toBeInTheDocument();
+    expect(screen.getByText("Gear for this diver: $45.00")).toBeInTheDocument();
 
     fireEvent.click(screen.getByLabelText(/Reserve nitrox-compatible tanks/));
-    // Nitrox is $12/dive × 2 planned dives = $24, added on top of the $60 gear.
-    expect(screen.getByText("Gear for this diver: $84.00")).toBeInTheDocument();
-    expect(onSubtotalChange).toHaveBeenLastCalledWith(0, 8_400);
+    // Nitrox is $12/dive × 2 planned dives = $24, added on top of the $45 set.
+    expect(screen.getByText("Gear for this diver: $69.00")).toBeInTheDocument();
+    expect(onSubtotalChange).toHaveBeenLastCalledWith(0, 6_900);
   });
 
   it("renders nothing when the shop has priced no rental gear online", () => {
