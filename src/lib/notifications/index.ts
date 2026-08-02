@@ -1,3 +1,4 @@
+import { SESv2Client, SendEmailCommand } from "@aws-sdk/client-sesv2";
 import { z } from "zod";
 import { DIVER_LOCALES, type DiverLocale, isDiverLocale, toDiverLocale } from "@/i18n/settings";
 import { nowMs } from "@/lib/clock";
@@ -799,6 +800,118 @@ const disabledNotificationProvider: NotificationProvider = {
   },
 };
 
+type SesConfig = {
+  region: string;
+  from: string;
+  accessKeyId: string;
+  secretAccessKey: string;
+};
+
+/**
+ * The exact slice of `SESv2Client` this adapter calls, so a test can fake it
+ * with a plain object instead of standing up (or mocking) the real SDK client.
+ */
+export interface SesEmailClient {
+  send(command: SendEmailCommand): Promise<{ MessageId?: string }>;
+}
+
+export type SesProviderOptions = {
+  client?: SesEmailClient;
+};
+
+const sesConfigSchema = z.object({
+  region: z.string().trim().min(1),
+  from: z.string().trim().min(3).max(320),
+  accessKeyId: z.string().trim().min(1),
+  secretAccessKey: z.string().trim().min(1),
+});
+
+/**
+ * Every SES SDK error extends `SESv2ServiceException`, which carries `$metadata.httpStatusCode`
+ * and a `.name` matching the specific AWS error type. A response that never reached AWS at all
+ * (a network failure) has no `$metadata` and is treated as retryable, mirroring the Resend
+ * adapter's `network_error` catch-all.
+ */
+function sesErrorInfo(error: unknown): {
+  retryable: boolean;
+  httpStatus?: number;
+  errorCode?: string;
+  detail?: string;
+} {
+  const isAwsException = typeof error === "object" && error !== null && "$metadata" in error;
+  const httpStatus = isAwsException
+    ? (error as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode
+    : undefined;
+  // "Error" (every plain JS error's default .name) is not a useful code; only
+  // a modeled AWS exception's specific name is worth surfacing, matching how
+  // the Resend adapter reserves "network_error" for a request that never got
+  // a response at all.
+  const errorCode = isAwsException && error instanceof Error ? error.name : "network_error";
+  const detail = error instanceof Error ? error.message.slice(0, 500) : undefined;
+  const retryable =
+    !isAwsException ||
+    httpStatus === undefined ||
+    httpStatus === 429 ||
+    httpStatus >= 500 ||
+    errorCode === "TooManyRequestsException";
+  return { retryable, httpStatus, errorCode, detail };
+}
+
+/**
+ * SES sending via the AWS SDK (ADR 20260802-ses-adapter-and-webhook — the SDK
+ * handles SigV4 signing and its own retry/backoff for throttling and 5xx, so
+ * unlike the Resend adapter this needs no hand-rolled request loop). Dormant
+ * until `EMAIL_PROVIDER=ses` is set; see `notificationProviderFromEnvironment`.
+ *
+ * SES has no request-level idempotency token, unlike Resend's
+ * `Idempotency-Key` header — a client-side timeout racing a server-side
+ * success can double-send here in a way Resend's 24h dedup would have
+ * caught. Accepted for now; see the ADR's Consequences.
+ */
+export function sesNotificationProvider(
+  config: SesConfig,
+  options: SesProviderOptions = {},
+): NotificationProvider {
+  const client: SesEmailClient =
+    options.client ??
+    new SESv2Client({
+      region: config.region,
+      credentials: { accessKeyId: config.accessKeyId, secretAccessKey: config.secretAccessKey },
+    });
+  return {
+    async send(notification) {
+      const invalidRecipient = reservedTestRecipientDelivery(notification.to);
+      if (invalidRecipient) return invalidRecipient;
+      const message = messageFor(notification);
+      try {
+        const result = await client.send(
+          new SendEmailCommand({
+            FromEmailAddress: config.from,
+            Destination: { ToAddresses: [notification.to] },
+            Content: {
+              Simple: {
+                Subject: { Data: message.subject, Charset: "UTF-8" },
+                Body: {
+                  Html: { Data: message.html, Charset: "UTF-8" },
+                  Text: { Data: message.text, Charset: "UTF-8" },
+                },
+              },
+            },
+          }),
+        );
+        if (!result.MessageId) {
+          return { status: "failed", retryable: true, errorCode: "invalid_response" };
+        }
+        return { status: "sent", providerMessageId: result.MessageId };
+      } catch (error) {
+        const info = sesErrorInfo(error);
+        log("notification.ses_send_failed", "warn", info);
+        return { status: "failed", ...info };
+      }
+    },
+  };
+}
+
 /**
  * The only application entry point for an outbound notification. Provider
  * details stay here so booking and waiver flows remain testable without email
@@ -812,11 +925,29 @@ export async function notify(
   return provider.send(notification);
 }
 
+/**
+ * Resend is the default and only implicit provider — SES is never picked up
+ * just because its credentials happen to be present. A cutover is the
+ * explicit `EMAIL_PROVIDER=ses` flag, never a side effect of environment
+ * configuration left over from testing (ADR 20260802-ses-adapter-and-webhook).
+ */
 export function notificationProviderFromEnvironment(
   env: NotificationEnvironment = process.env,
   fetchImpl: Fetch = fetch,
   providerOptions: ResendProviderOptions = {},
+  sesProviderOptions: SesProviderOptions = {},
 ): NotificationProvider {
+  if (env.EMAIL_PROVIDER === "ses") {
+    const sesConfig = sesConfigSchema.safeParse({
+      region: env.SES_AWS_REGION,
+      from: env.SES_FROM_EMAIL ? formatSender(env.SES_FROM_EMAIL) : undefined,
+      accessKeyId: env.SES_AWS_ACCESS_KEY_ID,
+      secretAccessKey: env.SES_AWS_SECRET_ACCESS_KEY,
+    });
+    return sesConfig.success
+      ? sesNotificationProvider(sesConfig.data, sesProviderOptions)
+      : disabledNotificationProvider;
+  }
   const config = resendConfigSchema.safeParse({
     apiKey: env.RESEND_API_KEY,
     from: env.RESEND_FROM_EMAIL ? formatSender(env.RESEND_FROM_EMAIL) : undefined,

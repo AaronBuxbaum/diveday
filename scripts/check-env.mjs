@@ -55,6 +55,12 @@ async function run() {
     if (key.startsWith("TWILIO_")) {
       continue;
     }
+    // SES is dormant prep (ADR 20260802-ses-email-transition-prep) — no real
+    // credentials exist anywhere yet. Remove once EMAIL_PROVIDER=ses is a real
+    // cutover, not a future option.
+    if (key === "EMAIL_PROVIDER" || key.startsWith("SES_")) {
+      continue;
+    }
     if (!localKeys.has(key)) {
       missingKeys.push(key);
     }

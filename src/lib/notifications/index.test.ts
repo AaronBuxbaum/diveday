@@ -1,3 +1,4 @@
+import type { SendEmailCommand } from "@aws-sdk/client-sesv2";
 import { describe, expect, it, vi } from "vitest";
 import { bookingConfirmationEmail, waitlistInviteEmail, waiverRequestEmail } from "./email";
 import {
@@ -7,6 +8,7 @@ import {
   publicAppUrl,
   recipientLocale,
   resendNotificationProvider,
+  sesNotificationProvider,
 } from "./index";
 
 const booking = {
@@ -475,6 +477,176 @@ describe("notify", () => {
         }),
       }),
     );
+  });
+});
+
+describe("sesNotificationProvider (ADR 20260802-ses-adapter-and-webhook)", () => {
+  const sesConfig = {
+    region: "us-east-1",
+    from: "Blue Mantis <bookings@ses.dive.day>",
+    accessKeyId: "AKIA_TEST",
+    secretAccessKey: "test-secret",
+  };
+
+  it("sends through the injected SES client and returns its message id", async () => {
+    const client = { send: vi.fn().mockResolvedValue({ MessageId: "ses-message-id" }) };
+    const provider = sesNotificationProvider(sesConfig, { client });
+
+    await expect(notify(booking, provider)).resolves.toEqual({
+      status: "sent",
+      providerMessageId: "ses-message-id",
+    });
+    expect(client.send).toHaveBeenCalledTimes(1);
+    const command = client.send.mock.calls[0]?.[0] as SendEmailCommand;
+    expect(command.input).toMatchObject({
+      FromEmailAddress: "Blue Mantis <bookings@ses.dive.day>",
+      Destination: { ToAddresses: ["delivered+booking@resend.dev"] },
+      Content: {
+        Simple: {
+          Subject: { Data: "You're on the boat — Two-Tank Reef", Charset: "UTF-8" },
+        },
+      },
+    });
+  });
+
+  it("never calls SES for a reserved test recipient", async () => {
+    const client = { send: vi.fn() };
+    const provider = sesNotificationProvider(sesConfig, { client });
+
+    await expect(notify({ ...booking, to: "diver@example.com" }, provider)).resolves.toMatchObject({
+      status: "failed",
+      retryable: false,
+      errorCode: "invalid_test_recipient",
+    });
+    expect(client.send).not.toHaveBeenCalled();
+  });
+
+  it("treats a response with no MessageId as a retryable failure", async () => {
+    const client = { send: vi.fn().mockResolvedValue({}) };
+    const provider = sesNotificationProvider(sesConfig, { client });
+
+    await expect(notify(booking, provider)).resolves.toEqual({
+      status: "failed",
+      retryable: true,
+      errorCode: "invalid_response",
+    });
+  });
+
+  it("marks a thrown 4xx SES error as non-retryable and surfaces its code", async () => {
+    const error = Object.assign(new Error("Email address is not verified"), {
+      name: "MessageRejected",
+      $metadata: { httpStatusCode: 400 },
+    });
+    const client = { send: vi.fn().mockRejectedValue(error) };
+    const provider = sesNotificationProvider(sesConfig, { client });
+
+    await expect(notify(booking, provider)).resolves.toEqual({
+      status: "failed",
+      retryable: false,
+      httpStatus: 400,
+      errorCode: "MessageRejected",
+      detail: "Email address is not verified",
+    });
+  });
+
+  it("marks a thrown throttling error as retryable", async () => {
+    const error = Object.assign(new Error("Rate exceeded"), {
+      name: "TooManyRequestsException",
+      $metadata: { httpStatusCode: 429 },
+    });
+    const client = { send: vi.fn().mockRejectedValue(error) };
+    const provider = sesNotificationProvider(sesConfig, { client });
+
+    await expect(notify(booking, provider)).resolves.toMatchObject({
+      status: "failed",
+      retryable: true,
+      httpStatus: 429,
+    });
+  });
+
+  it("marks a thrown 5xx SES error as retryable", async () => {
+    const error = Object.assign(new Error("Internal error"), {
+      name: "InternalServiceErrorException",
+      $metadata: { httpStatusCode: 500 },
+    });
+    const client = { send: vi.fn().mockRejectedValue(error) };
+    const provider = sesNotificationProvider(sesConfig, { client });
+
+    await expect(notify(booking, provider)).resolves.toMatchObject({
+      status: "failed",
+      retryable: true,
+      httpStatus: 500,
+    });
+  });
+
+  it("treats a network-level failure with no $metadata as retryable", async () => {
+    const client = { send: vi.fn().mockRejectedValue(new Error("fetch failed")) };
+    const provider = sesNotificationProvider(sesConfig, { client });
+
+    await expect(notify(booking, provider)).resolves.toEqual({
+      status: "failed",
+      retryable: true,
+      errorCode: "network_error",
+      detail: "fetch failed",
+    });
+  });
+});
+
+describe("notificationProviderFromEnvironment provider selection", () => {
+  it("stays on Resend when EMAIL_PROVIDER is unset, even if SES vars are also present", async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValue(new Response(JSON.stringify({ id: "resend-id" }), { status: 200 }));
+    const sesClient = { send: vi.fn() };
+    const provider = notificationProviderFromEnvironment(
+      {
+        RESEND_API_KEY: "re_test",
+        RESEND_FROM_EMAIL: "notifications@demo.invalid",
+        SES_AWS_REGION: "us-east-1",
+        SES_AWS_ACCESS_KEY_ID: "AKIA_TEST",
+        SES_AWS_SECRET_ACCESS_KEY: "test-secret",
+        SES_FROM_EMAIL: "bookings@ses.dive.day",
+      },
+      fetchImpl,
+      {},
+      { client: sesClient },
+    );
+
+    await notify(booking, provider);
+
+    expect(fetchImpl).toHaveBeenCalled();
+    expect(sesClient.send).not.toHaveBeenCalled();
+  });
+
+  it("switches to SES only when EMAIL_PROVIDER=ses is explicit", async () => {
+    const fetchImpl = vi.fn();
+    const sesClient = { send: vi.fn().mockResolvedValue({ MessageId: "ses-id" }) };
+    const provider = notificationProviderFromEnvironment(
+      {
+        EMAIL_PROVIDER: "ses",
+        RESEND_API_KEY: "re_test",
+        RESEND_FROM_EMAIL: "notifications@demo.invalid",
+        SES_AWS_REGION: "us-east-1",
+        SES_AWS_ACCESS_KEY_ID: "AKIA_TEST",
+        SES_AWS_SECRET_ACCESS_KEY: "test-secret",
+        SES_FROM_EMAIL: "bookings@ses.dive.day",
+      },
+      fetchImpl,
+      {},
+      { client: sesClient },
+    );
+
+    await expect(notify(booking, provider)).resolves.toEqual({
+      status: "sent",
+      providerMessageId: "ses-id",
+    });
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it("is disabled when EMAIL_PROVIDER=ses but SES config is incomplete", async () => {
+    const provider = notificationProviderFromEnvironment({ EMAIL_PROVIDER: "ses" }, vi.fn());
+
+    await expect(notify(booking, provider)).resolves.toEqual({ status: "not_configured" });
   });
 });
 

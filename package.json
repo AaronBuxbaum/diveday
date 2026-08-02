@@ -44,6 +44,7 @@
     "db:reset": "rm -rf .pglite && echo 'Dev database cleared; next `pnpm dev` re-migrates and re-seeds.'"
   },
   "dependencies": {
+    "@aws-sdk/client-sesv2": "^3.1101.0",
     "@electric-sql/pglite": "^0.5.4",
     "@sentry/nextjs": "^10.69.0",
     "@vercel/analytics": "^2.0.1",
