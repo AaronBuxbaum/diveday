@@ -991,11 +991,12 @@ export async function getTodayWork(
         context: when,
         detail:
           crewGap.code === "over_ratio"
-            ? // An intro session's cap is 4 per instructor and an assistant
-              // does not raise it, so the entry-level wording — which cites
-              // PADI's 8-plus-2 and tells staff to add an assistant — would
-              // both misquote a standard and prescribe a fix that changes
-              // nothing. Each rule gets its own sentence.
+            ? // An intro session's cap is PADI's Discover Scuba open-water
+              // figure (2 per instructor, HD-6) and an assistant does not raise
+              // it, so the entry-level wording — which cites the Open Water
+              // 8-plus-2 and tells staff to add an assistant — would both
+              // misquote a standard and prescribe a fix that changes nothing.
+              // Each rule gets its own sentence.
               crewGap.ratio === "intro"
               ? overRatioIntroDetailText(t, crewGap.booked, crewGap.capacity)
               : overRatioDetailText(t, crewGap.booked, crewGap.capacity)

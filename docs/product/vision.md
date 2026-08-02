@@ -46,6 +46,21 @@ concretely here.
 - Not a general POS/retail system (gear *rental*, not merchandise sales).
 - Not a dive-log social network.
 
+## What kind of business this is
+
+**DiveDay is a deliberately bounded, founder-run lifestyle business — not a venture-scale
+trajectory.** No outside capital, no aggressive multi-shop growth target. Decided explicitly
+2026-08-02 (H-26, `docs/product/human-decisions.md`), because the commercial terms already in
+place only make sense under this reading and nothing had said so out loud: the **$99 flat
+price**, **no platform fee**, the **25-shop founding cohort cap**, and the **two-year price lock**
+(H-12) are all consistent with a small, bounded customer base one person can actually run —
+they are not a placeholder pending a pricing rework for scale. If that changes — outside capital,
+a real plan to grow past a founder-sized support load — revisit this statement and the commercial
+terms together, before any new cohort lock binds. The published support promise stays a
+founder-direct line (a real person, not a ticket queue) without a stated response-time SLA, since
+what one person can sustainably commit to at the founding cohort's eventual size is still an open
+question.
+
 ## Success signal
 
 Staff at a busy shop choose to run the whole day from it — unprompted — and a diver compliments

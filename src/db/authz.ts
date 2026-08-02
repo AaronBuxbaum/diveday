@@ -3,6 +3,7 @@ import {
   canConfigureTrips,
   canDeleteDiver,
   canErasePersonalData,
+  canManageMessagingSettings,
   canManagePaymentSettings,
   canManageStaffAccounts,
   canManageWaiverTemplates,
@@ -61,6 +62,12 @@ async function canPerson(
 /** Live DB-checked companions of the H-14 predicates (src/lib/authz.ts). */
 export const canPersonManagePaymentSettings = (db: DbExecutor, shopId: string, personId: string) =>
   canPerson(db, shopId, personId, canManagePaymentSettings);
+
+export const canPersonManageMessagingSettings = (
+  db: DbExecutor,
+  shopId: string,
+  personId: string,
+) => canPerson(db, shopId, personId, canManageMessagingSettings);
 
 export const canPersonRefund = (db: DbExecutor, shopId: string, personId: string) =>
   canPerson(db, shopId, personId, canRefund);

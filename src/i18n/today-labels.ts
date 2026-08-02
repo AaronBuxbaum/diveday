@@ -1,3 +1,4 @@
+import { DSD_RATIO } from "@/lib/course-ratios";
 import type { ReadinessBlockerCode } from "@/lib/readiness";
 import type {
   DaySummary,
@@ -157,24 +158,37 @@ export function instructorMissingDetailText(t: StaffTranslator): string {
  * instructor is on the crew, but not enough for the booked count.
  *
  * Two functions, because the two ratios need different words: the entry-level
- * cap is PADI's published figure and a certified assistant raises it, while the
- * intro (DSD/Try Scuba) cap is the shop's own interim 4 per instructor that an
- * assistant does not move at all. Pick with the gap's `ratio` field — one
- * generic sentence told a manager looking at a cap of 4 that PADI publishes "8
- * per instructor, +2 per certified assistant", and prescribed a fix (add a
- * divemaster) that cannot move an intro cap at all.
+ * cap is PADI's published Open Water training figure and a certified assistant
+ * raises it, while the intro (DSD/Try Scuba) cap is PADI's tighter published
+ * Discover Scuba open-water figure that an assistant does not move at all. Pick
+ * with the gap's `ratio` field — one generic sentence told a manager looking at
+ * a cap of 2 that PADI publishes "8 per instructor, +2 per certified
+ * assistant", and prescribed a fix (add a divemaster) that cannot move an intro
+ * cap at all.
  */
 export function overRatioDetailText(t: StaffTranslator, booked: number, capacity: number): string {
   return t("shared.today.detail.overRatio", { booked, capacity });
 }
 
-/** The intro-session (`ratio: "intro"`) wording of the same gap. See `overRatioDetailText`. */
+/**
+ * The intro-session (`ratio: "intro"`) wording of the same gap. See
+ * `overRatioDetailText`.
+ *
+ * The per-instructor figure is interpolated from `DSD_RATIO` rather than written
+ * into the message bundle, so the sourced number (HD-6) lives in exactly one
+ * place and the copy cannot drift away from the cap the gate enforces — which is
+ * how the previous string ended up citing a figure the code no longer used.
+ */
 export function overRatioIntroDetailText(
   t: StaffTranslator,
   booked: number,
   capacity: number,
 ): string {
-  return t("shared.today.detail.overRatioIntro", { booked, capacity });
+  return t("shared.today.detail.overRatioIntro", {
+    booked,
+    capacity,
+    perInstructor: DSD_RATIO.openWaterStudentsPerInstructor,
+  });
 }
 
 /**

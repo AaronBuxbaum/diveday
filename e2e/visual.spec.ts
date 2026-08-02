@@ -173,6 +173,27 @@ async function paintWholeDocument(page: Page) {
             finish();
           }, frameWaitMs);
         });
+      // Commit every image to a source before anything else.
+      //
+      // `next/image` is lazy by default, so an image below the fold has
+      // `currentSrc === ""` until its intersection observer fires — and the
+      // pending check below deliberately skips those, because an image that
+      // never intersects would otherwise burn the whole settle budget. Those
+      // two facts combine into a race: the scroll-through can sweep past a tile
+      // *without* tripping its observer in time, the loop then sees nothing
+      // pending and breaks, and the image finishes loading somewhere either side
+      // of the shutter. That is what made `trip-manage-dark-vw-390` alternate
+      // between a sharp and a half-decoded diver photo run to run, on a page
+      // nobody had touched.
+      //
+      // Promoting to `eager` here makes every image commit to a source
+      // immediately, which puts it under the pending check where it belongs.
+      // It does not add work: the scroll below visits the entire document, so
+      // these images were always going to load — the only thing that changes is
+      // that they are now guaranteed to have loaded *before* the screenshot
+      // rather than racing it.
+      for (const image of Array.from(document.images)) image.loading = "eager";
+
       // Real timers, not the frozen clock: e2e/fixtures.ts pins only argless
       // `new Date()` / `Date.now()`, and `performance.now()` is untouched.
       const deadline = performance.now() + scrollBudgetMs;
@@ -229,13 +250,18 @@ async function paintWholeDocument(page: Page) {
         //   so a broken `src` is settled-and-stable, not pending — it renders
         //   identically every run.
         // - An empty `currentSrc` means the browser has not selected a source at
-        //   all. A `loading="lazy"` image the scroll swept past without tripping
-        //   its intersection sits here indefinitely: `complete` false, nothing
-        //   in flight, nothing coming. Waiting on those spent the entire budget
-        //   on every capture of the trip-detail pages (14 of them there) and
-        //   blew the test's own timeout, while the thing we actually need to
-        //   wait for — a `srcset` swap, which sets `currentSrc` as it starts —
-        //   was already covered.
+        //   all, which after the eager promotion above means there is nothing to
+        //   select: no `src`, or one it has already given up on. Waiting on
+        //   those spent the entire budget on every capture of the trip-detail
+        //   pages and blew the test's own timeout.
+        //
+        //   This exclusion used to be load-bearing for *lazy* images too, and
+        //   that is exactly what made it unsafe — a tile the scroll swept past
+        //   without tripping its observer was skipped here and then loaded into
+        //   the shutter. The promotion at the top of this function is what makes
+        //   the exclusion honest: every image with a real source now commits to
+        //   it before the scroll, so anything still empty here genuinely has
+        //   nothing coming.
         const pending = Array.from(document.images).filter(
           (image) => !image.complete && image.currentSrc !== "",
         );
@@ -822,6 +848,14 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/settings");
         await page.getByRole("heading", { name: "Rental prices" }).waitFor();
         await capture(page, "settings-payments", scheme);
+
+        // Where a shop connects its own WhatsApp Business number (ADR
+        // 20260802-whatsapp-embedded-signup). The fleet configures no META_*
+        // credentials, so this captures the coming-soon state — which is what
+        // every shop sees today, and where all of this surface's copy lives.
+        await page.goto("/shop/blue-mantis/settings/whatsapp");
+        await page.getByRole("heading", { name: "How connecting works" }).waitFor();
+        await capture(page, "settings-whatsapp", scheme);
 
         // The two orders surfaces — the densest money screens in the app, and
         // until now the only ones with no baseline at all. That gap was found

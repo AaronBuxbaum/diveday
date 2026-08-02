@@ -23,7 +23,7 @@ import {
 } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { courseCrewGap } from "@/lib/course-ratios";
+import { courseCrewGap, DSD_RATIO } from "@/lib/course-ratios";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { recurrenceSummary } from "@/lib/recurrence";
@@ -138,11 +138,13 @@ export default async function ManageTripPage({
     ).length,
     booked: trip.booked,
   });
-  // Two rules, two sentences: the entry-level cap is PADI's published figure
-  // and a certified assistant raises it; the intro cap is this shop's own
-  // interim 4-per-instructor figure that an assistant does not move. One
-  // generic string told a DSD manager to add a divemaster, which cannot work,
-  // and cited PADI for a number PADI never published.
+  // Two rules, two sentences: the entry-level cap is PADI's published Open
+  // Water training figure and a certified assistant raises it; the intro cap is
+  // PADI's tighter published Discover Scuba open-water figure (HD-6) that an
+  // assistant does not move. One generic string told a DSD manager to add a
+  // divemaster, which cannot work, and cited the wrong PADI number at them. The
+  // per-instructor figure is interpolated from `DSD_RATIO` so the sentence
+  // cannot drift away from the cap the gate actually enforces.
   const overRatioWarning =
     crewGap.code !== "over_ratio"
       ? null
@@ -150,6 +152,7 @@ export default async function ManageTripPage({
         ? t("trips.detail.overRatioWarningIntro", {
             booked: crewGap.booked,
             cap: crewGap.capacity,
+            perInstructor: DSD_RATIO.openWaterStudentsPerInstructor,
           })
         : t("trips.detail.overRatioWarning", { booked: crewGap.booked, cap: crewGap.capacity });
   // The other half of the shift ↔ crew cross-link (Lens 17 task 165): whether

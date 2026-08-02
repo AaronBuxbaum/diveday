@@ -210,7 +210,7 @@ pnpm infra:deploy --context sesEmailDomain=ses.example.com
 
 ## 8. Backup bucket
 
-`DatabaseBackupBucket` (§9 in the stack file) is the destination for the scheduled logical export of
+`DatabaseBackupBucket` (§11 in the stack file) is the destination for the scheduled logical export of
 production data. See
 [ADR 20260802-backup-and-restore-posture](../architecture/decisions/20260802-backup-and-restore-posture.md)
 for why it exists and

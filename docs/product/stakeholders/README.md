@@ -27,7 +27,7 @@ keeps the three documents from drifting.
 | Legal & liability | [legal.md](legal.md) | The owner's existing generalist attorney (engaged); a scuba-liability specialist (FL, not yet found); CPA (entity input). Tier split for who does what: [legal-engagement-scope.md](legal-engagement-scope.md) | Phase 0, **book this week** — longest lead | H-01, H-02, H-03, H-17, H-18, V-03 |
 | Insurance | [insurance.md](insurance.md) | Startup commercial broker (DiveDay's own E&O/cyber); dive-industry brokers + DAN (shop-side underwriting answer) | Phase 0, parallel with legal | H-19; the underwriting one-pager sales asset |
 | Finance, payments & tax | [finance-and-tax.md](finance-and-tax.md) | Stripe (Connect platform review), CPA, bank/bookkeeper | Phase 0 — **submit Stripe application immediately** | H-07 (remaining policy), H-12 (remaining terms) |
-| Privacy & communications | [privacy-and-communications.md](privacy-and-communications.md) | Privacy counsel, Twilio (A2P 10DLC), Resend (sender domain) | Phase 0 — **submit A2P immediately** (days-to-weeks) | H-02, H-04 (incident response), H-09 |
+| Privacy & communications | [privacy-and-communications.md](privacy-and-communications.md) | Privacy counsel, AWS SNS (SMS carrier compliance), Resend (sender domain) | Phase 0 — **submit SMS compliance registration immediately** (days-to-weeks) | H-02, H-04 (incident response), H-09 |
 | Dive operations & safety | [dive-operations.md](dive-operations.md) | Dive operations lead, friendly charter captain, gas-blending authority, `dive-domain-expert` reviewer | Phase 0 → first pilot boat day | H-05, H-06, H-08, H-11, V-01, V-02, V-04, V-05 |
 | Commercial & industry | [commercial-and-industry.md](commercial-and-industry.md) | Design-partner shops (3 profiles), DEMA, Scubanomics, dive media, Capterra | Recruit now; DEMA decision by early Sept; media Phase 2–3 | V-04, H-12 (contract flow), phase exits |
 
@@ -45,7 +45,7 @@ Four clocks start ticking on contact, not on need — start all four in the same
    [the scope memo](legal-engagement-scope.md)) and a scuba-liability specialist still to find.
 2. **The Stripe Connect platform application** ([finance-and-tax.md](finance-and-tax.md)) —
    Stripe reviews platforms on their own schedule; it also needs the entity answer (H-18).
-3. **Twilio A2P 10DLC registration** ([privacy-and-communications.md](privacy-and-communications.md))
+3. **AWS SNS SMS carrier compliance registration** ([privacy-and-communications.md](privacy-and-communications.md))
    — US carrier registration takes days to weeks; no legal SMS sending without it.
 4. **A boat day for V-02** ([dive-operations.md](dive-operations.md)) — needs weather, a captain,
    and a hull; the offline-manifest claim stays off every surface until it passes.
@@ -69,7 +69,7 @@ this is the same work cut by discipline so each playbook can be executed indepen
   via the referral paths and send the specialist engagement request with the briefing packet.
 - **Finance:** submit the Stripe Connect platform application; book the CPA conversation
   (entity structure input, SaaS sales-tax posture).
-- **Privacy & comms:** submit Twilio A2P registration; verify the Resend production sender;
+- **Privacy & comms:** submit AWS SNS SMS carrier compliance registration; verify the Resend production sender;
   draft the H-09 consent policy for counsel review.
 - **Insurance:** request tech E&O + cyber quotes (needs the H-18 direction); open the
   underwriting conversation with one dive-industry broker.

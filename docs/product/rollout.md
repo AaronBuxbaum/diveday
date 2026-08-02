@@ -89,8 +89,9 @@ it down) for each of:
 - **Resend:** verify the production sending domain, set `RESEND_FROM_EMAIL` on a real shop-facing
   identity (e.g. `bookings@…`), and write the two-paragraph consent/copy policy H-09 asks for
   (transactional-only today; reminders are courtesy; no marketing sends without explicit opt-in).
-- **Twilio:** register the SMS sender (US A2P 10DLC registration takes days-to-weeks — start
-  early), and name the `CRON_SECRET`/`TWILIO_*` owner. Note: when Twilio is configured, remove the `TWILIO_` prefix bypass in `scripts/check-env.mjs`.
+- **AWS SNS:** complete US carrier SMS-sending compliance registration (days-to-weeks — start
+  early), and name the `CRON_SECRET`/`SNS_AWS_*` owner. Note: once SNS is configured, remove the
+  `SNS_` prefix bypass in `scripts/check-env.mjs`.
 
 ### 0.3 Field validation (V-01, V-02, V-04 rehearsal)
 
@@ -117,6 +118,10 @@ it down) for each of:
   that costs nothing now: **price locked for two years for the founding cohort.** Define the
   support promise as part of the same decision (recommend: founder-direct support, same-day
   response, for the founding cohort — it's honest, differentiating, and matches a capped cohort).
+  **H-26 (2026-08-02) confirms this pricing posture is deliberately lifestyle-scale, not
+  venture-scale, and drops the explicit same-day SLA from the support promise** — see
+  [vision.md](vision.md#what-kind-of-business-this-is) and
+  [human-decisions.md](human-decisions.md#decision-register).
 - **H-13 (email-identity reuse) needs a ruling before a real shop's data is live.** The
   domain-expert review flagged silent person-reuse on shared inboxes as unsafe; decide the
   safeguard (the light "is this you?" confirmation is the smallest honest fix) or explicitly
@@ -245,7 +250,7 @@ when/why snapshot; the playbooks carry the prep.
 | Recreational-liability attorney (scuba experience, launch jurisdiction) | Waiver/medical/retention/e-sign sufficiency | Phase 0, first call this week — longest lead | H-01–H-03, V-03 |
 | Dive-industry insurance broker (e.g. the agency-endorsed brokers; DAN risk-mitigation as referrer) | "Does DiveDay satisfy underwriting?" answer for shops | Phase 0 | Sales asset |
 | Stripe (Connect platform review) | Live platform application + webhooks | Phase 0, submit immediately | H-07 |
-| Twilio (A2P 10DLC registration) | Legal SMS sending in the US | Phase 0, submit immediately | H-09 |
+| AWS SNS (SMS carrier compliance registration) | Legal SMS sending in the US | Phase 0, submit immediately | H-09 |
 | Dive operations lead + a friendly charter captain | V-02 field test on a real boat | Phase 0/first pilot boat day | V-02, H-05, H-06, H-11 |
 | 2–3 design-partner shop owners (profiles above) | Pilot | Recruit now, run Phase 1 | V-04 |
 | Pilot shops' front-desk staff and captains | The actual daily users; training + feedback | Phase 1 week 0 | — |
@@ -288,7 +293,7 @@ serves it.
 
 ## The next 30 days, in order
 
-1. Book the attorney (H-01–H-03) and submit Stripe Connect + Twilio A2P applications — the three
+1. Book the attorney (H-01–H-03) and submit Stripe Connect + AWS SNS SMS-compliance applications — the three
    long-lead clocks start today. Take the corporate-footing question (H-18) and DiveDay's own
    E&O/cyber quotes (H-19) into the same week: the entity name goes on everything else. Playbooks:
    [stakeholders/](stakeholders/README.md).

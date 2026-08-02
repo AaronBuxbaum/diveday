@@ -1,0 +1,122 @@
+# 20260802-whatsapp-embedded-signup — Onboard WhatsApp through Meta Embedded Signup, and take the delivery webhook with it
+
+- **Status:** Accepted
+- **Date:** 2026-08-02
+- **Supersedes:** [20260802-whatsapp-cloud-api-per-shop](20260802-whatsapp-cloud-api-per-shop.md)
+
+## Context
+
+[20260802-whatsapp-cloud-api-per-shop](20260802-whatsapp-cloud-api-per-shop.md) added WhatsApp as a
+courtesy channel using each shop's own WhatsApp Business account, with the shop pasting a Meta access
+token, a phone number id, and the name of a template they had gotten approved themselves. That record
+listed Embedded Signup as the better onboarding story and rejected it *for now* on one ground: it
+requires Meta app review and business verification, a multi-week external dependency that would have
+blocked the feature entirely.
+
+The product owner's decision is to take that dependency: build Embedded Signup and mark the surface
+"coming soon" until Meta approves, rather than ship a paste-credentials flow nobody should have to
+use. Two things make that the right trade in hindsight, and the second was not fully weighed the
+first time.
+
+**Setup cost was the whole risk of the feature.** The old flow asked a dive shop — whose expertise is
+boats, not Business Manager — to create a system user, mint a permanent token, author a message
+template with the right variable count, and shepherd it through Meta's review. Every one of those is
+a step where a shop stops and never comes back, and DiveDay's own runbook needed four numbered
+prerequisites before a shop could press a button.
+
+**The delivery webhook was collateral damage.** The superseded record deferred delivery statuses,
+correctly, because Meta signs webhooks with the App Secret of the Meta app a number is subscribed to
+— under paste-your-own-credentials that is the *shop's* app, so no single platform secret could
+verify them. That framing treated the webhook as a separate feature to fund later. It is not: it was
+a *consequence* of the onboarding choice. Embedded Signup subscribes every shop's WhatsApp Business
+Account to **DiveDay's** app, so all delivery events arrive at one endpoint under one secret, and
+the webhook becomes ordinary work.
+
+## Decision
+
+- **Embedded Signup is the only connect path.** The shop presses one button; Meta's own hosted popup
+  handles sign-in, WABA and phone-number selection, and terms. The paste-credentials form is removed,
+  not kept as a fallback — keeping it would preserve exactly the abandonment risk this record exists
+  to remove, and a shop that connects the hard way would be one DiveDay could not have provisioned a
+  template for.
+
+- **Four server-to-server steps after the popup closes** (`src/lib/notifications/whatsapp-signup.ts`),
+  in a fixed order because each depends on the last: exchange the one-time code for the shop's
+  business token, register the phone number for Cloud API use, subscribe DiveDay's app to the WABA,
+  and create the courtesy template on the shop's WABA. Not transactional and cannot be — these are
+  four calls to someone else's API — so the order is chosen so a partial failure leaves the least-bad
+  state, and the failing step is named in the result so the UI can say something act-on-able.
+
+- **DiveDay provisions the template on the shop's behalf.** This is the single biggest reason the app
+  review is worth paying for: the shop never authors or submits a template. The body comes from the
+  **diver** message bundle (`notifications.whatsappTemplate`), because that text is what a diver
+  eventually reads — the same rule every other diver-facing string follows
+  ([20260731-domain-layer-copy-leaks](20260731-domain-layer-copy-leaks.md)) — and is submitted in the
+  shop's own default locale.
+
+- **A "coming soon" notice at the top of the settings page whenever the flow cannot run**, which
+  today is everywhere: `META_APP_ID` / `META_APP_SECRET` / `META_WHATSAPP_SIGNUP_CONFIG_ID` are
+  unset until Meta approves DiveDay's app. The connect button renders disabled rather than absent, so
+  a shop can see what is coming, and the notice says plainly that reminders keep going out as SMS
+  meanwhile. Stating the truth beats a button that opens a popup Meta would reject.
+
+- **The delivery-status webhook ships with it** (`src/app/api/webhooks/whatsapp`), which the previous
+  record could not have. `GET` answers Meta's subscription handshake, comparing the verify token in
+  constant time; `POST` verifies `X-Hub-Signature-256` against DiveDay's app secret over the **raw
+  request body** before any parse, because re-serializing a parsed object changes the bytes Meta
+  signed. Statuses map onto the `notification_provider_status` enum email already uses, so a
+  WhatsApp outcome lands on the same delivery row through the same `applyProviderEmailEvent` seam.
+  `read` is deliberately dropped: DiveDay does not record opens on any channel.
+
+- **The registration PIN is generated by DiveDay and sealed** alongside the access token
+  (`shop_whatsapp_accounts.registration_pin_sealed`). The shop never sees it, but Meta demands the
+  same PIN for any later re-registration, and a shop that cannot re-register is a shop locked out of
+  its own number.
+
+- **Everything downstream of onboarding is unchanged**: the send adapter, the sealed-token store, the
+  WhatsApp-or-SMS routing rule, and the reminder/recap call sites are all exactly as the superseded
+  record left them. Only how a token is *obtained* changed.
+
+## Alternatives considered
+
+- **Keep the paste-credentials flow alongside Embedded Signup** so shops can connect today rather
+  than waiting on Meta. Rejected: it doubles the onboarding surface, and the shops most likely to
+  use it are the ones least equipped to (a shop with a Meta system user already probably has a
+  developer). It also splits the fleet into shops DiveDay provisioned a template for and shops it
+  did not, which is the kind of two-codepath state that quietly rots.
+
+- **Ship nothing until Meta approves.** Rejected as the worse of two waits: the code review, the
+  webhook, and the settings surface can all be built, reviewed, and merged now, so approval becomes
+  a configuration change rather than the start of a project.
+
+- **Hide the WhatsApp settings page entirely until approval.** Rejected — a shop asking "can I use
+  my own WhatsApp?" deserves an answer in the product, and "coming soon, reminders go out as SMS
+  meanwhile" is that answer. A missing page says nothing.
+
+- **A per-shop app secret so the webhook works under paste-credentials.** This was the design the
+  superseded record sketched. It dies with the flow it existed to support, and is recorded here only
+  so nobody rediscovers it as an option.
+
+- **Record WhatsApp `read` receipts.** Rejected for consistency: DiveDay does not track email opens,
+  and a read receipt is not something a shop needs to chase.
+
+## Consequences
+
+- **The channel is dormant until Meta approves DiveDay's app** — business verification plus app
+  review, with `whatsapp_business_management` and `whatsapp_business_messaging` permissions and a
+  Tech Provider configuration. That is now on the critical path for the feature, and it is external
+  work no amount of code changes.
+- **The browser flow is unverified against a live Meta app.** Everything server-side is unit-tested
+  against an injected fetch, but the popup, its `postMessage`, and the shape of what the SDK returns
+  cannot be exercised without approval. Expect one round of fixes when the app clears review; the
+  launcher is deliberately small for that reason.
+- **The Facebook JS SDK is loaded from `connect.facebook.net`**, and only on this one page, only when
+  the app is configured. It is the only third-party script in the app; there is no supported way to
+  run Embedded Signup without it.
+- **`shop_whatsapp_accounts` gains `registration_pin_sealed`** in its own migration rather than a
+  rewrite of the first, since that one is already pushed.
+- **SMS still has no delivery statuses.** SNS does not send delivery webhooks for direct-to-phone
+  publishes at all — receipts go to CloudWatch Logs — so bringing SMS to parity means an AWS-side
+  pipeline (a Logs subscription filter, or a move to AWS End User Messaging, which publishes events
+  to SNS or Kinesis). Deliberately out of scope here and worth its own record; this one only makes
+  WhatsApp's possible.

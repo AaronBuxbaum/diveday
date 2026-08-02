@@ -1151,7 +1151,7 @@ export async function setTripCrew(
       // over its ratio is **recorded**, not refused: the manifest is a safety
       // document and must say who is actually aboard. Refusing meant an
       // instructor who called in sick stayed on the printed crew list — and at
-      // the 4:1 intro ratio that was the ordinary case, not an edge one. The
+      // the 2:1 intro ratio that is the ordinary case, not an edge one. The
       // resulting gap surfaces loudly as `over_ratio` (courseCrewGap, consumed
       // by the trip page, the staffing coverage list, and Today), and new
       // bookings are still refused at the tightened cap in `createBookingRecord`.

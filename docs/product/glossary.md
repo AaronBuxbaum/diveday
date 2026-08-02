@@ -121,23 +121,29 @@ new domain concept, define it here in the same PR.
   dives with an instructor, at the **intro-session ratio** (below) — tighter than Open Water
   training, because a DSD participant has had no prior water time at all.
 - **Intro-session in-water ratio** — the cap on a no-certification-required taster session
-  (DSD/Try Scuba — `courses.is_intro_course`): **4 students per instructor, with no assistant
-  bonus**. A certified assistant aboard buys an intro session no extra seats; only another
-  instructor does. Applies to **every agency** — unlike the entry-level ratio below, this is
-  DiveDay's own figure rather than a cited PADI one, and its reason (participants with no prior
-  water time) does not depend on whose logo is on the course.
-  **This 4:1 number is interim and unverified** — a deliberately conservative placeholder, not a
-  cited standard. The previously-enforced 8→12:1 figure came from a blog and was never a DSD
-  number; applying it to DSD meant the gate certified an overloaded session as compliant.
-  **HD-6** (obtain the PADI Instructor Manual's actual DSD ratio from a PADI professional) is the
-  decision that unblocks replacing it. See `src/lib/course-ratios.ts` and
-  [20260724-course-admission-standards](../architecture/decisions/20260724-course-admission-standards.md).
+  (DSD/Try Scuba — `courses.is_intro_course`): PADI's published **Discover Scuba** figure from the
+  Instructor Manual (HD-6, sourced 2026-08-02) — **4 students per instructor in confined/pool
+  water, tightening to 2 students per instructor for the open-water dive**, with **no assistant
+  bonus** (PADI publishes none for DSD). DiveDay's trip model has no confined-water session type —
+  a trip is one dated open-water outing — so **only the tighter 2:1 open-water figure is enforced**
+  as a booking gate (`INTRO_COURSE_RATIO` in `src/lib/course-ratios.ts`, derived from `DSD_RATIO`);
+  the confined-water 4:1 number is recorded for reference, unenforced. A certified assistant aboard
+  buys an intro session no extra seats; only another instructor does.
+  Applies to **every agency** — unlike the entry-level ratio below, the *reason* this figure is
+  tighter (participants with no prior water time) does not depend on whose logo is on the course, so
+  an SSI Try Scuba and a NAUI intro session take the same cap. An intro session stays gated **even
+  if a `minimum_certification_level` was typed onto its course row**: nobody on a DSD holds a card,
+  so a stray value must not switch the tightest cap in the product off.
+  See `src/lib/course-ratios.ts`,
+  [20260802-dsd-instructor-manual-ratio](../architecture/decisions/20260802-dsd-instructor-manual-ratio.md),
+  and [20260724-course-admission-standards](../architecture/decisions/20260724-course-admission-standards.md).
+  Before HD-6 resolved, DSD was mistakenly held to the looser 8→12:1 Open Water figure.
 - **Entry-level in-water ratio** — PADI's published maximum for **Open Water Diver training
   dives**: **8 students per instructor**, extendable by **2 per certified assistant** (a
   Divemaster, in DiveDay's role model) to a ceiling of **12 per instructor**. Enforced as a
   booking gate (`src/lib/course-ratios.ts`, H-08) on a **PADI** course session that carries no
   `minimum_certification_level` **and is not an intro course** — intro sessions take the tighter,
-  agency-independent 4:1 rule above. The PADI scoping belongs to this figure only: 8/+2/12 is
+  agency-independent DSD rule above. The PADI scoping belongs to this figure only: 8/+2/12 is
   PADI's published number, and applying it to an SSI or NAUI course would be a
   wrong-but-confident safety control. Continuing-education courses (AOW, Rescue, specialty) already gate on a verified
   card and PADI does not publish a comparably strict numeric ratio for them, so they are not
@@ -485,11 +491,37 @@ new domain concept, define it here in the same PR.
   `pending` → `paid`/`expired`, reconciled against Stripe the same way a booking checkout is — never
   trusted from a return-URL param alone. See
   [20260726-post-trip-tipping](../architecture/decisions/20260726-post-trip-tipping.md).
-- **SMS / WhatsApp channel** — an optional text channel for notifications, delivered through a
-  fetch-based Twilio seam (`notifySms()`). A number is texted only if it is already E.164, and a
-  channel with no configured sender degrades to `not_configured`, exactly like the email seam. Used
-  today as a courtesy channel alongside reminder email. See
-  [20260721-sms-whatsapp-notifications](../architecture/decisions/20260721-sms-whatsapp-notifications.md).
+- **Courtesy message** — the short text that rides alongside a trip reminder or post-trip recap, and
+  the *only* channel for a diver who gave a phone number but no email. It goes out over exactly one
+  of two channels, never both, chosen per shop by `sendCourtesyMessage()`
+  (`src/lib/notifications/courtesy.ts`): the shop's **WhatsApp sender** when it has connected one,
+  and the **SMS channel** otherwise. Any WhatsApp failure — most often a diver who simply isn't on
+  WhatsApp — falls back to SMS immediately rather than being retried, because a reminder that lands
+  after the boat leaves is worth nothing.
+- **SMS channel** — an optional text channel for notifications, delivered through an AWS SNS seam
+  (`notifySms()`). A number is texted only if it is already E.164, and the channel degrades to
+  `not_configured` with no SNS credentials configured, exactly like the email seam. The platform-wide
+  fallback half of a **courtesy message**. What happened to a sent text arrives later as a **delivery
+  receipt**. See [20260802-sns-sms-adapter](../architecture/decisions/20260802-sns-sms-adapter.md).
+- **Delivery receipt** — a provider's after-the-fact report of what became of a message DiveDay sent:
+  delivered, failed, bounced. Applied to the `notification_deliveries` row by provider message id,
+  guarded so a stale event never overwrites a newer outcome. Every channel reports them differently —
+  email by webhook from Resend or SES, WhatsApp by webhook from Meta, and SMS *not* by webhook at all,
+  since SNS writes receipts to CloudWatch Logs and an AWS-side forwarder republishes them onto a topic
+  the app can verify
+  ([20260802-sms-delivery-receipts](../architecture/decisions/20260802-sms-delivery-receipts.md)).
+  A receipt matching no row is routine, not a fault: only a **tracked channel** has one, so a courtesy
+  text sent alongside an email has nothing to update.
+- **WhatsApp sender** — a shop's *own* WhatsApp Business number, connected in Settings → WhatsApp
+  through **Meta Embedded Signup**: the shop presses one button and completes Meta's own hosted
+  popup, and DiveDay registers the number, subscribes to its delivery events, and submits the
+  message template for approval on the shop's behalf. DiveDay is not the sender; the dive shop is, so
+  divers see the shop they booked with and a reply reaches that shop's own inbox. WhatsApp requires
+  business-initiated messages to use an approved **template**, so the template's name and language
+  are stored per shop alongside its access token, which is encrypted at rest and never readable back
+  out. Dormant until Meta approves DiveDay's app — the settings page says so, and courtesy messages
+  go out as SMS meanwhile. See
+  [20260802-whatsapp-embedded-signup](../architecture/decisions/20260802-whatsapp-embedded-signup.md).
 - **Demo mode** — a shop flagged `isDemo` gets the Demo Playground banner, its role switcher, and a
   "Reset demo data" affordance scoped to that one tenant. "Try the live demo" **mints a fresh
   `isDemo` shop per visitor** with a generated name/slug, seeded with the full sample schedule; a
@@ -538,8 +570,11 @@ new domain concept, define it here in the same PR.
 - **Rental set** — typically: **BCD** (jacket, sized), **regulator** ("reg", with octopus and
   SPG), **wetsuit** (sized, thickness in mm) with **boots**, mask/fins, **weights**, a **dive
   computer**, and a **tank/cylinder** (e.g. AL80 aluminum 80 cu ft). The dive computer is default-on
-  for every diver but is priced on its own line, not folded into the discounted set; the **GoPro** is
-  the one off-by-default add-on.
+  for every diver **and** part of the priced core set (H-06, reconfirmed 2026-08-02 — HD-9); the
+  **GoPro** is the one off-by-default add-on, always priced separately. A diver who skips a core
+  piece (brings their own dive computer, say) is quoted whichever is cheaper — the set price or the
+  sum of the pieces they actually take — so skipping one never costs more than the full set would
+  have (`quoteRentalFit`, `src/lib/rentals.ts`).
 - **Rental catalog** — the shop-level list of gear and services a shop actually offers
   (`shops.rental_items`, `src/lib/rentals.ts`). It gates the rental-fit forms: a diver is only
   offered — and only sees size fields for — gear the shop stocks, so a shop that doesn't rent

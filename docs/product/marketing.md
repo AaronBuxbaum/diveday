@@ -97,11 +97,15 @@ chosen battlegrounds — and re-read it before changing the spine.
   `marketing.ts` as today's price. H-12 also closed two commercial terms, now published as
   founding-shop claims (pricing card + FAQ in `src/app/pricing/page.tsx`, closing band in
   `src/app/page.tsx`, both sourced from `earlyAccessPrice` in `marketing.ts`): **price locked for
-  two years for the founding cohort** and **founder-direct, same-day-response support** for the
-  founding cohort. Billing cadence, taxes/fees, and the contract flow remain undecided
+  two years for the founding cohort** and **founder-direct support** for the founding cohort.
+  **H-26 (2026-08-02) confirmed DiveDay's posture is deliberately lifestyle-scale, not
+  venture-scale** (see [vision.md](vision.md#what-kind-of-business-this-is)) and dropped the
+  earlier "same-day response" wording from the support claim — keep the support commitment worded
+  as a founder-direct line, without a stated response-time SLA, until support-hour capacity is
+  scoped for real. Billing cadence, taxes/fees, and the contract flow remain undecided
   ([human-decisions.md](human-decisions.md)); do not publish billing terms through any new channel
-  without that decision. The two-year price lock and the same-day support promise are **binding
-  commercial commitments** and taxes/fees are jurisdiction-dependent — both carry an open
+  without that decision. The two-year price lock and the founder-direct support promise are
+  **binding commercial commitments** and taxes/fees are jurisdiction-dependent — both carry an open
   legal/tax-review dependency (H-12); do not treat the closed *price* as clearing them.
 - **Offline claims stay precise and human**: the device keeps its own copy current automatically
   while online, with a manual "Refresh now" for right before losing signal; it never transfers

@@ -12,8 +12,8 @@ import {
   publicAppUrl,
   recipientLocale,
 } from "@/lib/notifications";
+import { type CourtesyProvider, sendCourtesyMessage } from "@/lib/notifications/courtesy";
 import {
-  notifySms,
   type SmsProvider,
   smsProviderFromEnvironment,
   smsRecipient,
@@ -38,6 +38,7 @@ import {
 } from "./notifications";
 import { getBookingReadinessDetail } from "./readiness";
 import { bookings, notificationDeliveries, people, shops, trips } from "./schema";
+import { whatsAppProvidersForShops } from "./whatsapp-accounts";
 
 const REMINDER_KINDS: ReminderKind[] = TRIP_REMINDER_CADENCES.map((c) => c.kind);
 const HOUR_MS = 60 * 60 * 1000;
@@ -81,6 +82,12 @@ export type SendDueRemindersOptions = {
   now?: Date;
   emailProvider?: NotificationProvider;
   smsProvider?: SmsProvider;
+  /**
+   * Per-shop WhatsApp senders, keyed by shop id; defaults to whatever the
+   * scanned shops have connected. A shop present here gets the courtesy text on
+   * WhatsApp instead of SMS (docs ADR 20260802-whatsapp-cloud-api-per-shop).
+   */
+  whatsAppProviders?: Map<string, CourtesyProvider>;
   /** Origin for readiness links; defaults to the configured public app URL. */
   appOrigin?: string | null;
 };
@@ -147,9 +154,13 @@ function reminderSmsBody(
  * `notification_deliveries` row keyed on (booking, cadence kind), so re-running
  * only sends cadences not yet delivered (`src/lib/reminders.ts`). Email is the
  * tracked channel when the diver has one; a phone-only diver is tracked from
- * the SMS result instead. When email is the tracked channel, a textable phone
- * also gets a courtesy SMS on success — the reminder's dedup row then suppresses
- * both channels next run.
+ * the courtesy-text result instead. When email is the tracked channel, a
+ * textable phone also gets a courtesy text on success — the reminder's dedup row
+ * then suppresses both channels next run.
+ *
+ * That courtesy text goes out over the shop's own WhatsApp when it has connected
+ * one, and over platform SMS otherwise — one message either way, never both
+ * (`src/lib/notifications/courtesy.ts`).
  *
  * There is no timer in the app: a cron caller drives `now`
  * (docs ADR 20260721-scheduled-reminder-cadence). Fully degradable — with no
@@ -184,6 +195,16 @@ export async function sendDueReminders(
   const summary: ReminderRunSummary = { scanned: rows.length, sent: 0, skipped: 0, failed: 0 };
   if (rows.length === 0) return summary;
 
+  // Resolved once for every shop in this scan rather than per booking — the
+  // cron sweeps all shops at once, so a per-booking lookup would be an N+1
+  // against a table that fits in a single query.
+  const whatsAppProviders =
+    options.whatsAppProviders ??
+    (await whatsAppProvidersForShops(
+      db,
+      rows.map((row) => row.shop.id),
+    ));
+
   // Which reminder cadences have already landed for these bookings.
   const bookingIds = rows.map((r) => r.booking.id);
   const delivered = await db
@@ -210,6 +231,7 @@ export async function sendDueReminders(
   const emailWork: Array<{
     bookingId: string;
     shopId: string;
+    shopName: string;
     kind: ReminderKind;
     phone: string | null;
     smsBody: string;
@@ -218,6 +240,7 @@ export async function sendDueReminders(
   const smsWork: Array<{
     bookingId: string;
     shopId: string;
+    shopName: string;
     kind: ReminderKind;
     phone: string;
     smsBody: string;
@@ -304,6 +327,7 @@ export async function sendDueReminders(
       emailWork.push({
         bookingId: booking.id,
         shopId: shop.id,
+        shopName: shop.name,
         kind: cadence.kind,
         phone,
         smsBody,
@@ -330,6 +354,7 @@ export async function sendDueReminders(
       smsWork.push({
         bookingId: booking.id,
         shopId: shop.id,
+        shopName: shop.name,
         kind: cadence.kind,
         phone,
         smsBody,
@@ -354,10 +379,15 @@ export async function sendDueReminders(
   for (let index = 0; index < emailWork.length; index += 1) {
     const work = emailWork[index];
     const delivery = emailDeliveries[index] ?? { status: "failed" as const, retryable: true };
-    // A textable phone gets a courtesy SMS only when the email actually sent,
-    // so the once-per-booking dedup row keeps it from re-firing next run.
+    // A textable phone gets a courtesy text only when the email actually sent,
+    // so the once-per-booking dedup row keeps it from re-firing next run. Its
+    // outcome is deliberately not recorded: email is the tracked channel here,
+    // and a courtesy text that failed must not overwrite a delivered email.
     if (delivery.status === "sent" && work.phone) {
-      await notifySms({ channel: "sms", to: work.phone, body: work.smsBody }, smsProvider);
+      await sendCourtesyMessage(
+        { to: work.phone, body: work.smsBody, shopName: work.shopName },
+        { sms: smsProvider, whatsapp: whatsAppProviders.get(work.shopId) ?? null },
+      );
     }
     await recordNotificationDelivery(db, {
       shopId: work.shopId,
@@ -370,11 +400,12 @@ export async function sendDueReminders(
   }
 
   for (const work of smsWork) {
-    // Phone-only diver: SMS is the tracked channel. SmsDelivery is the same
-    // shape as NotificationDelivery, so it records through the same seam.
-    const delivery = await notifySms(
-      { channel: "sms", to: work.phone, body: work.smsBody },
-      smsProvider,
+    // Phone-only diver: the courtesy text is the tracked channel, whichever of
+    // WhatsApp or SMS carried it. CourtesyDelivery is the same shape as
+    // NotificationDelivery, so it records through the same seam.
+    const { delivery } = await sendCourtesyMessage(
+      { to: work.phone, body: work.smsBody, shopName: work.shopName },
+      { sms: smsProvider, whatsapp: whatsAppProviders.get(work.shopId) ?? null },
     );
     await recordNotificationDelivery(db, {
       shopId: work.shopId,

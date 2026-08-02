@@ -1437,6 +1437,58 @@ export const shopStripeAccounts = pgTable(
   (table) => [uniqueIndex("shop_stripe_accounts_stripe_account_unique").on(table.stripeAccountId)],
 );
 
+/**
+ * A shop's own WhatsApp Business sender, connected through Meta's Cloud API
+ * (docs ADR 20260802-whatsapp-cloud-api-per-shop). The courtesy text that rides
+ * with a trip reminder or recap goes out from *this* number when a row exists,
+ * so the diver sees the dive shop they booked with instead of an unfamiliar
+ * short code; with no row, the channel falls back to platform SMS.
+ *
+ * One row per shop, and disconnecting **deletes** it rather than tombstoning
+ * like `shop_stripe_accounts.disconnected_at` does. The difference is what the
+ * row holds: a Stripe account id is a public identifier worth keeping for
+ * history, while the access token here is a live credential that can send as
+ * the business. Once a shop says "disconnect", the safest thing to hold is
+ * nothing.
+ */
+export const shopWhatsappAccounts = pgTable("shop_whatsapp_accounts", {
+  shopId: uuid("shop_id")
+    .primaryKey()
+    .references(() => shops.id),
+  /** Meta's id for the sending number — the path segment of the Cloud API send endpoint. */
+  phoneNumberId: text("phone_number_id").notNull(),
+  /** The human-readable number Meta reports for it, shown back to staff for confirmation. */
+  displayPhoneNumber: text("display_phone_number"),
+  /** The WhatsApp Business Account the number belongs to; recorded for support, never sent. */
+  wabaId: text("waba_id"),
+  /**
+   * The shop's Meta access token, sealed with AES-256-GCM (`src/lib/secret-box.ts`)
+   * — never plaintext. This column is the reason `SECRET_ENCRYPTION_KEY` exists:
+   * a token here can send messages as the shop's business, so a database dump
+   * must not be enough to use it.
+   */
+  accessTokenSealed: text("access_token_sealed").notNull(),
+  /**
+   * The six-digit PIN this number was registered with during Embedded Signup,
+   * sealed like the token. DiveDay generates it — the shop never types it — but
+   * Meta demands the same PIN for any later re-registration, and a shop that
+   * cannot re-register is a shop locked out of its own number.
+   */
+  registrationPinSealed: text("registration_pin_sealed"),
+  /**
+   * The approved template courtesy messages are sent through, and its Meta
+   * language code. Stored per shop rather than hard-coded: WhatsApp requires
+   * business-initiated messages to use a template the *shop* got approved, and
+   * a shop whose review went through under a different name must still work.
+   */
+  templateName: text("template_name").notNull(),
+  templateLanguage: text("template_language").notNull(),
+  connectedAt: timestamp("connected_at", { withTimezone: true }).notNull().defaultNow(),
+  /** Set by the settings page's test send, so staff can see the connection was proven, not just saved. */
+  verifiedAt: timestamp("verified_at", { withTimezone: true }),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const orderStatus = pgEnum("order_status", [
   "open",
   "paid",
@@ -2770,6 +2822,7 @@ export type RentalFitProfile = typeof rentalFitProfiles.$inferSelect;
 export type RollCallEvent = typeof rollCallEvents.$inferSelect;
 export type NitroxCertification = typeof nitroxCertifications.$inferSelect;
 export type ShopStripeAccount = typeof shopStripeAccounts.$inferSelect;
+export type ShopWhatsappAccount = typeof shopWhatsappAccounts.$inferSelect;
 export type Order = typeof orders.$inferSelect;
 export type OrderStatus = (typeof orderStatus.enumValues)[number];
 export type OrderLineItem = typeof orderLineItems.$inferSelect;

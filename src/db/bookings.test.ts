@@ -451,9 +451,10 @@ describe("restoreBooking (undo of a roster removal)", () => {
 
   /**
    * Undo is a seat-granting write, so it answers to the course ratio as well as
-   * the boat's capacity (DOM-H2). A four-seat intro session with a walk-up in
-   * the freed seat is one tap from five uncertified first-timers on one
-   * instructor — and the trip's own capacity (12) never notices.
+   * the boat's capacity (DOM-H2). A two-seat intro session (PADI's Instructor
+   * Manual DSD open-water figure, HD-6) with a walk-up in the freed seat is one
+   * tap from three uncertified first-timers on one instructor — and the trip's
+   * own capacity (12) never notices.
    *
    * 180 days out for the same reason as `src/db/courses.test.ts`: clear of the
    * seeded instructor's calendar, whatever hour the suite runs at.
@@ -475,7 +476,7 @@ describe("restoreBooking (undo of a roster removal)", () => {
       title: "Discover Scuba — restore test",
       startsAt: new Date(Date.now() + INTRO_SESSION_OFFSET_MS),
       endsAt: new Date(Date.now() + INTRO_SESSION_OFFSET_MS + 4 * 60 * 60 * 1000),
-      // Capacity 12 is well clear of the 4:1 ratio cap, so nothing but the
+      // Capacity 12 is well clear of the 2:1 ratio cap, so nothing but the
       // ratio can refuse anything here.
       capacity: 12,
       plannedDives: 2,
@@ -487,11 +488,11 @@ describe("restoreBooking (undo of a roster removal)", () => {
     return trip;
   }
 
-  it("refuses an undo that would put a fifth diver on a four-seat intro session", async () => {
+  it("refuses an undo that would put a third diver on a two-seat intro session", async () => {
     const { db, shop } = await seededContext();
     const trip = await introSession(db, shop.id);
     const seated = [];
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 2; i++) {
       const outcome = await createBooking(db, {
         actor: "staff",
         shopId: shop.id,
@@ -506,7 +507,7 @@ describe("restoreBooking (undo of a roster removal)", () => {
     if (!removed) throw new Error("no booking to remove");
     await cancelBooking(db, shop.id, removed);
 
-    // A walk-up takes the freed seat — legitimately, the session is back at 4.
+    // A walk-up takes the freed seat — legitimately, the session is back at 2.
     const walkUp = await createBooking(db, {
       actor: "staff",
       shopId: shop.id,
@@ -518,7 +519,7 @@ describe("restoreBooking (undo of a roster removal)", () => {
 
     expect(await restoreBooking(db, shop.id, removed)).toBe("course_ratio_full");
     const roster = await getTripRoster(db, shop.id, trip.id);
-    expect(roster).toHaveLength(4);
+    expect(roster).toHaveLength(2);
     expect(roster.map((r) => r.person.fullName)).not.toContain("DSD Restore Diver 0");
   });
 

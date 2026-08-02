@@ -862,7 +862,7 @@ describe("trip crew (CR-007: cross-tenant write path)", () => {
       title: "Discover Scuba — crew change test",
       startsAt: new Date(Date.now() + CREW_TEST_OFFSET_MS),
       endsAt: new Date(Date.now() + CREW_TEST_OFFSET_MS + 4 * 60 * 60 * 1000),
-      // Well above the 8 seats two instructors support at 4:1, so only the
+      // Well above the 4 seats two instructors support at 2:1, so only the
       // ratio is ever in play.
       capacity: 12,
       plannedDives: 2,
@@ -871,8 +871,8 @@ describe("trip crew (CR-007: cross-tenant write path)", () => {
     if (!(await setTripCrew(db, shopId, trip.id, [seededInstructor.person.id, second.id]))) {
       throw new Error("failed to assign two instructors");
     }
-    // Six divers: legal at 4:1 with two instructors, over ratio with one.
-    for (let i = 0; i < 6; i++) {
+    // Four divers: legal at 2:1 with two instructors, over ratio with one.
+    for (let i = 0; i < 4; i++) {
       const outcome = await createBooking(db, {
         actor: "staff",
         shopId,
@@ -917,20 +917,20 @@ describe("trip crew (CR-007: cross-tenant write path)", () => {
     // Loudly, not silently: the same gap the trip page and Today surface.
     expect(await crewGapFor(db, shop.id, trip.id, course)).toEqual({
       code: "over_ratio",
-      booked: 6,
-      capacity: 4,
+      booked: 4,
+      capacity: 2,
       ratio: "intro",
     });
 
-    // And the seats already sold are still refused a seventh — the booking gate
+    // And the seats already sold are still refused a fifth — the booking gate
     // is where the ratio blocks, and it reads the tightened crew.
     await expect(
       createBooking(db, {
         actor: "staff",
         shopId: shop.id,
         tripId: trip.id,
-        fullName: "Crew Change Diver 6",
-        email: "crew-change-diver-6@example.com",
+        fullName: "Crew Change Diver 4",
+        email: "crew-change-diver-4@example.com",
       }),
     ).resolves.toEqual({ ok: false, reason: "course_ratio_full" });
   });
@@ -943,8 +943,8 @@ describe("trip crew (CR-007: cross-tenant write path)", () => {
     expect(await getTripCrewIds(db, shop.id, trip.id)).toEqual([staying]);
     expect(await crewGapFor(db, shop.id, trip.id, course)).toEqual({
       code: "over_ratio",
-      booked: 6,
-      capacity: 4,
+      booked: 4,
+      capacity: 2,
       ratio: "intro",
     });
   });

@@ -6,7 +6,7 @@ point-in-time recovery over the Postgres project provisioned by Vercel's Marketp
 a scheduled logical export built on the existing per-shop export seam
 (`loadShopExportBundleInput` in `src/db/export.ts` → `buildExportBundle` → `zipExportBundle` in
 `src/lib/export.ts`) written to the private, versioned `DatabaseBackupBucket` in
-`infra/lib/infra-stack.ts` §9. The reasoning for both is
+`infra/lib/infra-stack.ts` §11. The reasoning for both is
 [ADR 20260802-backup-and-restore-posture](../architecture/decisions/20260802-backup-and-restore-posture.md).
 
 This exists because the highest-value rows are the ones we can least re-create.
@@ -114,7 +114,7 @@ decide — that belongs to whoever owns `src/lib/export.ts` next, and it is wort
 
 | Thing | Value |
 | --- | --- |
-| Bucket | `DatabaseBackupBucket` (`infra/lib/infra-stack.ts` §9), default name `diveday-backups`, override with `--context backupBucketName=...` |
+| Bucket | `DatabaseBackupBucket` (`infra/lib/infra-stack.ts` §11), default name `diveday-backups`, override with `--context backupBucketName=...` |
 | Properties | Versioned, `BlockPublicAccess.BLOCK_ALL`, SSE-S3, `enforceSSL`, `RemovalPolicy.RETAIN` |
 | Lifecycle | Current versions never expire (H-02 retention is a legal call, not a lifecycle rule); Infrequent Access at 30 days, Glacier **Instant** Retrieval at 90; non-current versions expire at 90 days; incomplete multipart uploads abort at 7 days |
 | Uploader | IAM user `diveday-backup-uploader`, `s3:PutObject` + `s3:AbortMultipartUpload` only — no read, no delete, no list |
@@ -207,7 +207,7 @@ log below. It should take under an hour.
 - **Stripe, Resend, and Twilio hold their own records** and are not backed up here. Stripe is
   authoritative for money in a restore conflict, and that is deliberate.
 - **Retention itself is undecided.** H-02 has a working default of "indefinite" and no legal answer.
-  The lifecycle rule in §9 was written to never be the thing that deletes evidence; when H-02 lands,
+  The lifecycle rule in §11 was written to never be the thing that deletes evidence; when H-02 lands,
   both the rule and this runbook need revisiting.
 
 ## When a restore goes wrong

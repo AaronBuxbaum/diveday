@@ -5,6 +5,7 @@ import {
   courseRatioKind,
   courseRatioRule,
   courseSeatCapacity,
+  DSD_RATIO,
   ENTRY_LEVEL_COURSE_RATIO,
   entryLevelCourseCapacity,
   hasCourseCrewGap,
@@ -42,6 +43,7 @@ const ssiIntro: CourseCrewGapCourse = {
 describe("entryLevelCourseCapacity", () => {
   it("seats nobody with no instructor, regardless of assistants", () => {
     expect(entryLevelCourseCapacity(0, 3)).toBe(0);
+    expect(entryLevelCourseCapacity(0, 3, true)).toBe(0);
   });
 
   it("is 8 per solo instructor with no certified assistant (PADI base ratio)", () => {
@@ -63,16 +65,26 @@ describe("entryLevelCourseCapacity", () => {
   it("never exceeds the per-instructor ceiling even with excess assistants", () => {
     expect(entryLevelCourseCapacity(2, 10)).toBe(24); // 2 * 12
   });
+
+  it("is the tighter 2-per-instructor DSD open-water ratio, uncredited by assistants", () => {
+    expect(entryLevelCourseCapacity(1, 0, true)).toBe(2);
+    expect(entryLevelCourseCapacity(1, 5, true)).toBe(2); // no published DSD assistant bonus
+    expect(entryLevelCourseCapacity(2, 0, true)).toBe(4);
+  });
 });
 
 describe("courseRatioRule", () => {
-  it("gates an intro (DSD) session at 4:1 with no assistant bonus", () => {
+  it("gates an intro (DSD) session at the 2:1 open-water figure, no assistant bonus", () => {
     expect(courseRatioRule(padiIntro)).toEqual(INTRO_COURSE_RATIO);
     expect(INTRO_COURSE_RATIO).toEqual({
-      baseStudentsPerInstructor: 4,
+      baseStudentsPerInstructor: 2,
       assistantBonusPerInstructor: 0,
-      maxStudentsPerInstructor: 4,
+      maxStudentsPerInstructor: 2,
     });
+    // The rule is derived from the one sourced figure, so the two cannot drift.
+    expect(INTRO_COURSE_RATIO.baseStudentsPerInstructor).toBe(
+      DSD_RATIO.openWaterStudentsPerInstructor,
+    );
   });
 
   it("gates a non-intro entry-level session at the 8/12 Open Water ratio", () => {
@@ -85,11 +97,11 @@ describe("courseRatioRule", () => {
     expect(courseRatioRule(null)).toBeNull();
   });
 
-  // 4:1 is DiveDay's own conservative figure, not a cited PADI one, so the
-  // reason for it — participants with zero water time — holds whatever agency
-  // the shop typed. Scoping it to PADI left an SSI/NAUI Try Scuba capped only
-  // by the boat's capacity: worse than the 8/12 rule it replaced.
-  it("gates an intro session at 4:1 for EVERY agency, not just PADI", () => {
+  // The DSD figure is cited to PADI's Instructor Manual, but its *rationale* —
+  // participants with zero prior water time — holds whatever agency the shop
+  // typed. Scoping it to PADI left an SSI/NAUI Try Scuba capped only by the
+  // boat's capacity: worse than the 8/12 rule it replaced.
+  it("gates an intro session at 2:1 for EVERY agency, not just PADI", () => {
     expect(courseRatioRule(ssiIntro)).toEqual(INTRO_COURSE_RATIO);
     expect(courseRatioRule({ ...ssiIntro, agency: "NAUI" })).toEqual(INTRO_COURSE_RATIO);
     expect(courseRatioRule({ ...ssiIntro, agency: "" })).toEqual(INTRO_COURSE_RATIO);
@@ -127,17 +139,17 @@ describe("courseRatioRule", () => {
 });
 
 describe("courseSeatCapacity", () => {
-  it("caps an intro session at 4 per instructor and never credits assistants", () => {
-    expect(courseSeatCapacity(padiIntro, 1, 0)).toBe(4);
-    expect(courseSeatCapacity(padiIntro, 1, 3)).toBe(4);
-    expect(courseSeatCapacity(padiIntro, 2, 2)).toBe(8);
+  it("caps an intro session at 2 per instructor and never credits assistants", () => {
+    expect(courseSeatCapacity(padiIntro, 1, 0)).toBe(2);
+    expect(courseSeatCapacity(padiIntro, 1, 3)).toBe(2);
+    expect(courseSeatCapacity(padiIntro, 2, 2)).toBe(4);
     expect(courseSeatCapacity(padiIntro, 0, 5)).toBe(0);
   });
 
-  it("caps a non-PADI intro session at the same 4 per instructor", () => {
-    expect(courseSeatCapacity(ssiIntro, 1, 0)).toBe(4);
-    expect(courseSeatCapacity(ssiIntro, 1, 3)).toBe(4);
-    expect(courseSeatCapacity(ssiIntro, 2, 0)).toBe(8);
+  it("caps a non-PADI intro session at the same 2 per instructor", () => {
+    expect(courseSeatCapacity(ssiIntro, 1, 0)).toBe(2);
+    expect(courseSeatCapacity(ssiIntro, 1, 3)).toBe(2);
+    expect(courseSeatCapacity(ssiIntro, 2, 0)).toBe(4);
   });
 
   it("is null when the session carries no ratio at all", () => {
@@ -200,34 +212,34 @@ describe("courseCrewGap", () => {
     ).toEqual({ code: "over_ratio", booked: 11, capacity: 10, ratio: "entry_level" });
   });
 
-  it("is over_ratio for an intro (DSD) session past 4 per instructor", () => {
+  it("is over_ratio for an intro (DSD) session past 2 per instructor", () => {
     expect(
-      courseCrewGap({ course: padiIntro, instructorCount: 1, assistantCount: 0, booked: 4 }),
+      courseCrewGap({ course: padiIntro, instructorCount: 1, assistantCount: 0, booked: 2 }),
     ).toEqual({ code: "none" });
     expect(
-      courseCrewGap({ course: padiIntro, instructorCount: 1, assistantCount: 0, booked: 5 }),
-    ).toEqual({ code: "over_ratio", booked: 5, capacity: 4, ratio: "intro" });
+      courseCrewGap({ course: padiIntro, instructorCount: 1, assistantCount: 0, booked: 3 }),
+    ).toEqual({ code: "over_ratio", booked: 3, capacity: 2, ratio: "intro" });
   });
 
-  // Which rule the gap was measured against, so the warning can say "4 per
+  // Which rule the gap was measured against, so the warning can say "2 per
   // instructor, an assistant does not raise it" on a taster session instead of
-  // citing PADI's 8/+2 figure at someone looking at a cap of 4.
+  // citing PADI's Open Water 8/+2 figure at someone looking at a cap of 2.
   it("reports which ratio an over_ratio gap was measured against", () => {
     const intro = courseCrewGap({
       course: ssiIntro,
       instructorCount: 1,
       assistantCount: 2,
-      booked: 5,
+      booked: 3,
     });
-    expect(intro).toEqual({ code: "over_ratio", booked: 5, capacity: 4, ratio: "intro" });
+    expect(intro).toEqual({ code: "over_ratio", booked: 3, capacity: 2, ratio: "intro" });
   });
 
   it("never lets an assistant raise an intro session's cap", () => {
     // The whole DOM-H2 finding in one assertion: the 8/12 numbers used to
-    // certify a 5-student DSD with a divemaster aboard as compliant.
+    // certify a 3-student DSD with a divemaster aboard as compliant.
     expect(
-      courseCrewGap({ course: padiIntro, instructorCount: 1, assistantCount: 3, booked: 5 }),
-    ).toEqual({ code: "over_ratio", booked: 5, capacity: 4, ratio: "intro" });
+      courseCrewGap({ course: padiIntro, instructorCount: 1, assistantCount: 3, booked: 3 }),
+    ).toEqual({ code: "over_ratio", booked: 3, capacity: 2, ratio: "intro" });
   });
 
   it("gates a non-PADI intro session exactly like a PADI one", () => {
@@ -235,14 +247,14 @@ describe("courseCrewGap", () => {
     // boat's capacity (12, 20) was the only thing standing between one
     // instructor and a dozen first-time divers.
     expect(
-      courseCrewGap({ course: ssiIntro, instructorCount: 1, assistantCount: 0, booked: 4 }),
+      courseCrewGap({ course: ssiIntro, instructorCount: 1, assistantCount: 0, booked: 2 }),
     ).toEqual({ code: "none" });
     expect(
-      courseCrewGap({ course: ssiIntro, instructorCount: 1, assistantCount: 0, booked: 5 }),
-    ).toEqual({ code: "over_ratio", booked: 5, capacity: 4, ratio: "intro" });
+      courseCrewGap({ course: ssiIntro, instructorCount: 1, assistantCount: 0, booked: 3 }),
+    ).toEqual({ code: "over_ratio", booked: 3, capacity: 2, ratio: "intro" });
     expect(
       courseCrewGap({ course: ssiIntro, instructorCount: 1, assistantCount: 4, booked: 12 }),
-    ).toEqual({ code: "over_ratio", booked: 12, capacity: 4, ratio: "intro" });
+    ).toEqual({ code: "over_ratio", booked: 12, capacity: 2, ratio: "intro" });
   });
 
   it("still gates an intro session whose agency was typed 'PADI' (DATA-L2)", () => {
@@ -251,9 +263,26 @@ describe("courseCrewGap", () => {
         course: { ...padiIntro, agency: "PADI" },
         instructorCount: 1,
         assistantCount: 0,
-        booked: 5,
+        booked: 3,
       }),
-    ).toEqual({ code: "over_ratio", booked: 5, capacity: 4, ratio: "intro" });
+    ).toEqual({ code: "over_ratio", booked: 3, capacity: 2, ratio: "intro" });
+  });
+
+  it("holds a DSD session to the tighter 2:1 open-water ratio, not the OW 8:1 figure", () => {
+    // HD-6: a solo instructor would seat 8 under the Open Water figure the gate
+    // used to apply to DSD; the Instructor Manual's open-water DSD figure is 2.
+    expect(
+      courseCrewGap({ course: padiIntro, instructorCount: 1, assistantCount: 0, booked: 2 }),
+    ).toEqual({ code: "none" });
+    expect(
+      courseCrewGap({ course: padiIntro, instructorCount: 1, assistantCount: 0, booked: 3 }),
+    ).toEqual({ code: "over_ratio", booked: 3, capacity: 2, ratio: "intro" });
+  });
+
+  it("does not credit assistants toward a DSD session's ratio (no published bonus)", () => {
+    expect(
+      courseCrewGap({ course: padiIntro, instructorCount: 1, assistantCount: 3, booked: 3 }),
+    ).toEqual({ code: "over_ratio", booked: 3, capacity: 2, ratio: "intro" });
   });
 });
 

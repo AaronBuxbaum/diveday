@@ -523,6 +523,17 @@ export async function applyProviderEmailEvent(
     status: ProviderEmailStatus;
     detail: string | null;
     occurredAt: Date;
+    /**
+     * Restrict the update to one shop's rows.
+     *
+     * Optional because the email providers have nothing to scope by — a Resend
+     * or SES event names a message id and nothing else, and those ids come from
+     * DiveDay's own single account. A provider whose events *do* carry a tenant
+     * (WhatsApp names the WhatsApp Business Account) passes it, so a delivery
+     * outcome can never land on another shop's row even if a provider message
+     * id were ever guessable or reused.
+     */
+    shopId?: string;
   },
 ): Promise<ApplyProviderEmailEventResult> {
   const [updated] = await db
@@ -535,6 +546,7 @@ export async function applyProviderEmailEvent(
     .where(
       and(
         eq(notificationDeliveries.providerMessageId, input.providerMessageId),
+        ...(input.shopId ? [eq(notificationDeliveries.shopId, input.shopId)] : []),
         or(
           isNull(notificationDeliveries.providerStatusAt),
           lte(notificationDeliveries.providerStatusAt, input.occurredAt),

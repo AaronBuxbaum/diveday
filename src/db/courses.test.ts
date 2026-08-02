@@ -156,42 +156,46 @@ describe("course catalog and sessions (in-memory PGlite)", () => {
     ).resolves.toEqual({ ok: false, reason: "course_ratio_full" });
   });
 
-  // DOM-H2: a Discover Scuba session is uncertified people breathing compressed
-  // gas for the first time. It gates at 4:1 (interim, pending HD-6), not at the
-  // Open Water 8/12 numbers the gate used to certify it as compliant under.
-  it("caps an intro (Discover Scuba) session at four students per instructor", async () => {
+  // DOM-H2 + HD-6: a Discover Scuba session is uncertified people breathing
+  // compressed gas for the first time. It gates at PADI's Instructor Manual
+  // open-water DSD figure — 2 students per instructor — not at the Open Water
+  // 8/12 numbers the gate used to certify it as compliant under.
+  it("caps an intro (Discover Scuba) session at two students per instructor", async () => {
     const { db, shop } = await courseContext();
+    // capacity 20 is well above the 2-seat ratio cap, so capacity never binds
+    // first, and a solo instructor would seat 8 under the Open Water figure.
     const trip = await ratioSession(db, shop.id, "Discover Scuba Diving", { capacity: 20 });
-    await fillSeats(db, shop.id, trip.id, 4, "DSD");
+    await fillSeats(db, shop.id, trip.id, 2, "DSD");
 
     await expect(
       createBooking(db, {
         actor: "staff",
         shopId: shop.id,
         tripId: trip.id,
-        fullName: "DSD Diver 5",
-        email: "dsd-diver-5@example.com",
+        fullName: "DSD Diver 3",
+        email: "dsd-diver-3@example.com",
       }),
     ).resolves.toEqual({ ok: false, reason: "course_ratio_full" });
   });
 
-  it("never lets a certified assistant buy an intro session a fifth seat", async () => {
+  it("never lets a certified assistant buy an intro session a third seat", async () => {
     const { db, shop } = await courseContext();
     // A divemaster aboard raises an Open Water session to 10; on a DSD it buys
-    // nothing at all. This is the exact overload the old gate waved through.
+    // nothing at all — PADI publishes no DSD assistant bonus. This is the exact
+    // overload the old gate waved through.
     const trip = await ratioSession(db, shop.id, "Discover Scuba Diving", {
       capacity: 20,
       withAssistant: true,
     });
-    await fillSeats(db, shop.id, trip.id, 4, "DSD Assisted");
+    await fillSeats(db, shop.id, trip.id, 2, "DSD Assisted");
 
     await expect(
       createBooking(db, {
         actor: "staff",
         shopId: shop.id,
         tripId: trip.id,
-        fullName: "DSD Assisted Diver 5",
-        email: "dsd-assisted-diver-5@example.com",
+        fullName: "DSD Assisted Diver 3",
+        email: "dsd-assisted-diver-3@example.com",
       }),
     ).resolves.toEqual({ ok: false, reason: "course_ratio_full" });
   });
@@ -205,15 +209,15 @@ describe("course catalog and sessions (in-memory PGlite)", () => {
       .set({ agency: "PADI" })
       .where(and(eq(courses.shopId, shop.id), eq(courses.title, "Discover Scuba Diving")));
     const trip = await ratioSession(db, shop.id, "Discover Scuba Diving", { capacity: 20 });
-    await fillSeats(db, shop.id, trip.id, 4, "Cased");
+    await fillSeats(db, shop.id, trip.id, 2, "Cased");
 
     await expect(
       createBooking(db, {
         actor: "staff",
         shopId: shop.id,
         tripId: trip.id,
-        fullName: "Cased Diver 5",
-        email: "cased-diver-5@example.com",
+        fullName: "Cased Diver 3",
+        email: "cased-diver-3@example.com",
       }),
     ).resolves.toEqual({ ok: false, reason: "course_ratio_full" });
   });
@@ -519,12 +523,12 @@ describe("course catalog and sessions (in-memory PGlite)", () => {
     ).resolves.toEqual({ ok: false, reason: "trip_full" });
   });
 
-  // The other half of that scoping (DOM-H2): 4:1 is *not* a PADI figure. It is
-  // DiveDay's own conservative number for people with zero water time, so it
-  // applies to an SSI Try Scuba exactly as it does to a PADI DSD. Scoped to
-  // PADI, this session had no ratio at all and the boat's capacity was the only
-  // thing between one instructor and a dozen first-timers.
-  it("ratio-gates a non-PADI intro course at the same 4 per instructor", async () => {
+  // The other half of that scoping (DOM-H2): the DSD figure's *rationale* —
+  // people with zero prior water time — is agency-independent, so it applies to
+  // an SSI Try Scuba exactly as it does to a PADI DSD. Scoped to PADI, this
+  // session had no ratio at all and the boat's capacity was the only thing
+  // between one instructor and a dozen first-timers.
+  it("ratio-gates a non-PADI intro course at the same 2 per instructor", async () => {
     const { db, shop } = await courseContext();
     const [ssiIntro] = await db
       .insert(courses)
@@ -548,21 +552,21 @@ describe("course catalog and sessions (in-memory PGlite)", () => {
       title: "SSI Try Scuba ratio test session",
       startsAt: new Date(Date.now() + OPEN_TEST_SESSION_OFFSET_MS),
       endsAt: new Date(Date.now() + OPEN_TEST_SESSION_OFFSET_MS + 4 * 60 * 60 * 1000),
-      capacity: 12, // three times the ratio cap, so only the ratio can bind
+      capacity: 12, // six times the ratio cap, so only the ratio can bind
       plannedDives: 2,
     });
     if (!trip) throw new Error("failed to create SSI intro ratio test trip");
     const staffed = await setTripCrew(db, shop.id, trip.id, [instructor.person.id]);
     if (!staffed) throw new Error("failed to assign instructor");
-    await fillSeats(db, shop.id, trip.id, 4, "SSI Intro");
+    await fillSeats(db, shop.id, trip.id, 2, "SSI Intro");
 
     await expect(
       createBooking(db, {
         actor: "staff",
         shopId: shop.id,
         tripId: trip.id,
-        fullName: "SSI Intro Diver 5",
-        email: "ssi-intro-diver-5@example.com",
+        fullName: "SSI Intro Diver 3",
+        email: "ssi-intro-diver-3@example.com",
       }),
     ).resolves.toEqual({ ok: false, reason: "course_ratio_full" });
   });

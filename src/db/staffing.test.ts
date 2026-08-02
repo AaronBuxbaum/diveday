@@ -148,10 +148,11 @@ describe("staffing view", () => {
     expect(entry?.gaps).toContain("course_needs_instructor");
   });
 
-  it("flags an over-ratio intro (Discover Scuba) session at its far tighter 4:1 cap", async () => {
-    // The same advisory at the DSD ratio (DOM-H2): 4 through the gate, the 5th
-    // inserted directly. Under the old 8/12 numbers this trip read as covered.
-    const entry = await overRatioSessionEntry("Discover Scuba Diving", 4, "dsd");
+  it("flags an over-ratio intro (Discover Scuba) session at its far tighter 2:1 cap", async () => {
+    // The same advisory at the Instructor Manual DSD ratio (DOM-H2, HD-6): 2
+    // through the gate, the 3rd inserted directly. Under the old 8/12 numbers
+    // this trip read as covered.
+    const entry = await overRatioSessionEntry("Discover Scuba Diving", 2, "dsd");
     expect(entry?.gaps).toContain("course_needs_instructor");
   });
 

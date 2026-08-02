@@ -2,9 +2,13 @@ import * as cdk from "aws-cdk-lib";
 import * as budgets from "aws-cdk-lib/aws-budgets";
 import * as ce from "aws-cdk-lib/aws-ce";
 import * as iam from "aws-cdk-lib/aws-iam";
+import * as lambda from "aws-cdk-lib/aws-lambda";
+import * as logs from "aws-cdk-lib/aws-logs";
+import * as destinations from "aws-cdk-lib/aws-logs-destinations";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import * as ses from "aws-cdk-lib/aws-ses";
 import * as sns from "aws-cdk-lib/aws-sns";
+import * as cr from "aws-cdk-lib/custom-resources";
 import type { Construct } from "constructs";
 
 export class InfraStack extends cdk.Stack {
@@ -299,7 +303,198 @@ export class InfraStack extends cdk.Stack {
         "SNS topic for SES bounce/complaint/delivery events. No subscriber yet — a webhook endpoint mirroring /api/webhooks/resend must subscribe before this is useful.",
     });
 
-    // 9. Backup destination for the scheduled logical export.
+    // 9. SNS direct-to-phone SMS sending — see ADR 20260802-sns-sms-adapter.
+    // This is a distinct SNS use from SesEmailEventNotifications above (that
+    // topic carries *inbound* SES event notifications the app subscribes to;
+    // this IAM user only ever calls sns:Publish outbound, no topic involved).
+    // A least-privilege IAM user, scoped to publishing only — never full SNS
+    // access, and never able to create/manage topics or subscriptions.
+    const snsSmsSenderUser = new iam.User(this, "SnsSmsSenderUser", {
+      userName: "diveday-sns-sms-sender",
+    });
+    snsSmsSenderUser.addToPolicy(
+      new iam.PolicyStatement({
+        actions: ["sns:Publish"],
+        // A direct-to-phone-number Publish (no TopicArn) has no ARN to scope
+        // to — AWS requires "*" for this call shape. The action list is the
+        // actual boundary: this user can publish and nothing else (no
+        // topic/subscription management, no read access to any topic).
+        resources: ["*"],
+      }),
+    );
+
+    new cdk.CfnOutput(this, "SnsSmsSenderAccessKeyInstructions", {
+      value: `aws iam create-access-key --user-name ${snsSmsSenderUser.userName}`,
+      description:
+        "Run only once SMS sending is enabled, to mint SNS-publishing credentials. Store the output in the app's SNS_* env vars — never in the repo.",
+    });
+
+    // 10. SMS delivery receipts — see ADR 20260802-sms-delivery-receipts.
+    //
+    // The awkward part, and the reason this is a pipeline rather than a topic
+    // subscription: **SNS has no delivery webhook for a direct-to-phone
+    // `Publish`.** Email gets one from SES, WhatsApp gets one from Meta, but an
+    // SMS receipt is written to CloudWatch Logs and nowhere else. A CloudWatch
+    // subscription filter can only target Lambda, Kinesis, or Firehose — not
+    // SNS — so reaching the app takes a forwarder.
+    //
+    // Logs → filter → Lambda → SNS topic → /api/webhooks/sms. The extra SNS hop
+    // buys the thing that makes it worth having: the receipt arrives over the
+    // same signed SNS envelope the SES webhook already verifies, so the app
+    // needs no new authentication path for a third provider.
+    const smsDeliveryReceipts = new sns.Topic(this, "SmsDeliveryReceipts", {
+      topicName: "diveday-sms-delivery-receipts",
+    });
+
+    // SNS assumes this to write delivery receipts.
+    const smsDeliveryStatusRole = new iam.Role(this, "SnsSmsDeliveryStatusRole", {
+      roleName: "diveday-sns-sms-delivery-status",
+      assumedBy: new iam.ServicePrincipal("sns.amazonaws.com"),
+      description: "Lets SNS write SMS delivery receipts to CloudWatch Logs.",
+    });
+    smsDeliveryStatusRole.addToPolicy(
+      new iam.PolicyStatement({
+        actions: [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents",
+          "logs:PutMetricFilter",
+          "logs:PutRetentionPolicy",
+        ],
+        resources: ["*"],
+      }),
+    );
+
+    // SNS writes to these exact names, and creates them itself on first send if
+    // they are absent. They are declared here so retention is bounded rather
+    // than "never expire" — these records name a diver's phone number, so
+    // keeping them forever is a liability, and the app has already copied the
+    // outcome it needs onto the delivery row.
+    const smsLogGroupPrefix = `sns/${this.region}/${this.account}/DirectPublishToPhoneNumber`;
+    const smsSuccessLogs = new logs.LogGroup(this, "SnsSmsDeliveryLogs", {
+      logGroupName: smsLogGroupPrefix,
+      retention: logs.RetentionDays.TWO_WEEKS,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+    const smsFailureLogs = new logs.LogGroup(this, "SnsSmsDeliveryFailureLogs", {
+      logGroupName: `${smsLogGroupPrefix}/Failure`,
+      retention: logs.RetentionDays.TWO_WEEKS,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+
+    // Republishes each receipt verbatim so the app parses the same bytes
+    // CloudWatch wrote. Inline rather than a bundled asset: it is a dozen lines
+    // with no dependencies beyond the SDK the runtime already ships, and a
+    // build step for that would be more moving parts than the function.
+    const smsReceiptForwarder = new lambda.Function(this, "SmsReceiptForwarder", {
+      functionName: "diveday-sms-receipt-forwarder",
+      runtime: lambda.Runtime.NODEJS_22_X,
+      handler: "index.handler",
+      timeout: cdk.Duration.seconds(30),
+      environment: { TOPIC_ARN: smsDeliveryReceipts.topicArn },
+      code: lambda.Code.fromInline(`
+const { gunzipSync } = require("node:zlib");
+const { SNSClient, PublishCommand } = require("@aws-sdk/client-sns");
+const sns = new SNSClient({});
+
+exports.handler = async (event) => {
+  const payload = JSON.parse(gunzipSync(Buffer.from(event.awslogs.data, "base64")).toString("utf8"));
+  // CONTROL_MESSAGE is CloudWatch checking the destination is reachable.
+  if (payload.messageType !== "DATA_MESSAGE") return;
+  for (const logEvent of payload.logEvents ?? []) {
+    await sns.send(new PublishCommand({ TopicArn: process.env.TOPIC_ARN, Message: logEvent.message }));
+  }
+};
+`),
+    });
+    smsDeliveryReceipts.grantPublish(smsReceiptForwarder);
+
+    for (const [id, group] of [
+      ["SnsSmsDeliveryLogsToTopic", smsSuccessLogs],
+      ["SnsSmsDeliveryFailureLogsToTopic", smsFailureLogs],
+    ] as const) {
+      new logs.SubscriptionFilter(this, id, {
+        logGroup: group,
+        destination: new destinations.LambdaDestination(smsReceiptForwarder),
+        // Every record, unfiltered: the app decides what it models, and a
+        // filter pattern here would silently drop receipt shapes AWS adds later.
+        filterPattern: logs.FilterPattern.allEvents(),
+      });
+    }
+
+    new cdk.CfnOutput(this, "SmsDeliveryReceiptsTopicArn", {
+      value: smsDeliveryReceipts.topicArn,
+      description:
+        "SNS topic carrying SMS delivery receipts. Set as SMS_SNS_TOPIC_ARN in the app, and subscribe /api/webhooks/sms to it.",
+    });
+
+    // Switch delivery-status logging on. There is no native resource for this:
+    // `AWS::SNS::Topic.DeliveryStatusLogging` covers only the http/sqs/lambda/
+    // firehose/application protocols and is scoped to a topic, whereas a
+    // direct-to-phone `Publish` uses no topic and is configured by the
+    // account-level `SetSMSAttributes` API.
+    //
+    // No native resource is not the same as not expressible, though, and this
+    // is exactly what `AwsCustomResource` is for. Leaving it as a runbook step
+    // would make the one thing nothing else can detect — every downstream hop
+    // sits idle and healthy-looking without it — also the one thing a human has
+    // to remember. `SetSMSAttributes` merges the attributes it is given rather
+    // than replacing the set, so this touches neither the spend limit nor the
+    // default SMS type.
+    const smsDeliveryStatusAttributes = new cr.AwsCustomResource(
+      this,
+      "SnsSmsDeliveryStatusAttributes",
+      {
+        onCreate: {
+          service: "SNS",
+          action: "setSMSAttributes",
+          parameters: {
+            attributes: {
+              DeliveryStatusIAMRole: smsDeliveryStatusRole.roleArn,
+              // Every send is logged. Set to "0" to record only failures, which
+              // is the cheaper posture if volume ever makes the CloudWatch line
+              // per message worth counting.
+              DeliveryStatusSuccessSamplingRate: "100",
+            },
+          },
+          physicalResourceId: cr.PhysicalResourceId.of("sns-sms-delivery-status"),
+        },
+        // Same call on update, so changing the role or the sampling rate is a
+        // stack deploy rather than a second thing to remember.
+        onUpdate: {
+          service: "SNS",
+          action: "setSMSAttributes",
+          parameters: {
+            attributes: {
+              DeliveryStatusIAMRole: smsDeliveryStatusRole.roleArn,
+              DeliveryStatusSuccessSamplingRate: "100",
+            },
+          },
+          physicalResourceId: cr.PhysicalResourceId.of("sns-sms-delivery-status"),
+        },
+        // Cleared on delete: the role goes with the stack, and an account left
+        // pointing at a deleted role logs nothing while looking configured.
+        onDelete: {
+          service: "SNS",
+          action: "setSMSAttributes",
+          parameters: { attributes: { DeliveryStatusIAMRole: "" } },
+        },
+        policy: cr.AwsCustomResourcePolicy.fromStatements([
+          // SetSMSAttributes takes no resource ARN — it is account-level state.
+          new iam.PolicyStatement({ actions: ["sns:SetSMSAttributes"], resources: ["*"] }),
+          // Handing SNS a role to assume is a PassRole, scoped to that one role.
+          new iam.PolicyStatement({
+            actions: ["iam:PassRole"],
+            resources: [smsDeliveryStatusRole.roleArn],
+          }),
+        ]),
+        installLatestAwsSdk: false,
+      },
+    );
+    // The attributes name the role, so it has to exist first.
+    smsDeliveryStatusAttributes.node.addDependency(smsDeliveryStatusRole);
+
+    // 11. Backup destination for the scheduled logical export.
     // See ADR 20260802-backup-and-restore-posture for why an S3 bucket rather
     // than a second Neon branch, and docs/engineering/backup-and-restore-runbook.md
     // for the procedure that writes to and restores from it.

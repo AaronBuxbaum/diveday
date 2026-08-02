@@ -53,6 +53,12 @@ const serverEnv = {
   // out of the browser suite makes it deterministic without mocking our own
   // server or database.
   DIVEDAY_DISABLE_EXTERNAL_HTTP: "1",
+  // Lets the WhatsApp settings page actually store a (fake) shop credential,
+  // which is what the connect flow is about (ADR
+  // 20260802-whatsapp-cloud-api-per-shop). A fixed value, not a secret: these
+  // servers hold only seeded demo data. Without it the page correctly refuses
+  // to save, and the flow has nothing to exercise.
+  SECRET_ENCRYPTION_KEY: "ZGl2ZWRheS1lMmUtZW5jcnlwdGlvbi1rZXktMzJieXQ=",
   NEXT_TELEMETRY_DISABLED: "1",
 };
 

@@ -11,16 +11,20 @@ export type CourseRatioRule = {
 /**
  * PADI's published in-water ratio for Open Water Diver open-water training
  * dives: up to 8 students per instructor, extendable by 2 per certified
- * assistant (a Divemaster aboard, in DiveDay's role model) to a hard ceiling of
- * 12 — see H-08 (docs/product/human-decisions.md) and
+ * assistant (a Divemaster aboard, in DiveDay's role model) to a hard ceiling
+ * of 12 — see H-08 (docs/product/human-decisions.md) and
  * docs/architecture/decisions/20260724-course-admission-standards.md for the
  * PADI/SSI sourcing. Continuing-education courses (Advanced Open Water,
  * Rescue, specialties) are not modeled here — they already require a verified
  * card at booking (`courses.minimumCertificationLevel`) and PADI does not
  * publish a comparably strict numeric ratio for them.
  *
- * This is *not* the DSD number. Discover Scuba Diving is a stricter, separate
- * standard — see `INTRO_COURSE_RATIO`.
+ * Discover Scuba Diving (DSD) is a *different, tighter* PADI ratio — see
+ * {@link DSD_RATIO} — because DSD participants have had zero prior water
+ * time, unlike an Open Water student who has already completed confined
+ * dives. The two were previously conflated (this constant applied to both),
+ * which overstated DSD capacity; HD-6 (docs/product/human-decisions.md, H-08
+ * reopened) obtained the real PADI Instructor Manual figures and split them.
  */
 export const ENTRY_LEVEL_COURSE_RATIO: CourseRatioRule = {
   baseStudentsPerInstructor: 8,
@@ -29,29 +33,44 @@ export const ENTRY_LEVEL_COURSE_RATIO: CourseRatioRule = {
 };
 
 /**
+ * PADI's published Discover Scuba Diving ratio, from the Instructor Manual
+ * (HD-6, sourced 2026-08-02): 4 students per instructor in confined/pool
+ * water, tightening to 2 students per instructor for the open-water dive.
+ * DiveDay's trip model has no confined-water session type — a trip is one
+ * dated open-water outing (see
+ * docs/architecture/decisions/20260724-course-admission-standards.md,
+ * "Alternatives considered") — so only the tighter open-water figure is
+ * enforced against a booked DSD session (via {@link INTRO_COURSE_RATIO}); the
+ * confined-water number is recorded here for completeness, unenforced.
+ * No published assistant bonus for DSD, so none is credited here.
+ */
+export const DSD_RATIO = {
+  confinedWaterStudentsPerInstructor: 4,
+  openWaterStudentsPerInstructor: 2,
+} as const;
+
+/**
  * The ratio for a no-certification-required taster session (Discover Scuba
- * Diving, Try Scuba — `courses.is_intro_course`): **4 students per instructor,
- * with no assistant bonus at all**. These are uncertified people breathing
- * compressed gas for the first time, so the crew cannot buy extra seats.
+ * Diving, Try Scuba — `courses.is_intro_course`): the Instructor Manual's
+ * **open-water DSD figure, with no assistant bonus at all**. These are
+ * uncertified people breathing compressed gas for the first time, so the crew
+ * cannot buy extra seats.
  *
- * **This 4:1 figure is INTERIM and UNVERIFIED.** It is a deliberately
- * conservative placeholder, not a sourced standard: the 8/12 numbers above came
- * from a blog rather than an agency manual, and applying them to DSD was
- * certifying an overloaded session as compliant. HD-6 (obtain the current PADI
- * Instructor Manual DSD ratio from a PADI professional — see
- * docs/product/human-decisions.md, H-08) is the decision that unblocks
- * replacing this with a cited number. Until then the gate errs tight; do not
- * describe it as verified, and do not loosen it without that source.
+ * Derived from {@link DSD_RATIO} rather than restating the number, so the one
+ * sourced figure (HD-6) cannot drift out of step with the rule that enforces
+ * it. Expressed as a {@link CourseRatioRule} so intro and entry-level sessions
+ * flow through the same `courseRatioCapacity` arithmetic.
  *
- * Because it is DiveDay's own figure rather than a cited agency one, it is
- * **agency-independent**: an SSI Try Scuba and a NAUI intro session are the same
- * hazard as a PADI DSD — people with zero water time — so they take the same
- * cap. Only the sourced 8/+2/12 number below is PADI-scoped.
+ * The DSD *rationale* — participants who have had zero prior water time — does
+ * not depend on whose logo is on the course, so this cap is
+ * **agency-independent**: an SSI Try Scuba and a NAUI intro session take it
+ * exactly as a PADI DSD does. Only the sourced 8/+2/12 entry-level figure above
+ * is PADI-scoped, because that one is a cited PADI number.
  */
 export const INTRO_COURSE_RATIO: CourseRatioRule = {
-  baseStudentsPerInstructor: 4,
+  baseStudentsPerInstructor: DSD_RATIO.openWaterStudentsPerInstructor,
   assistantBonusPerInstructor: 0,
-  maxStudentsPerInstructor: 4,
+  maxStudentsPerInstructor: DSD_RATIO.openWaterStudentsPerInstructor,
 };
 
 /**
@@ -73,9 +92,26 @@ export function courseRatioCapacity(
   return Math.min(uncapped, instructorCount * rule.maxStudentsPerInstructor);
 }
 
-/** Seats an Open Water training session may take. Shorthand for `ENTRY_LEVEL_COURSE_RATIO`. */
-export function entryLevelCourseCapacity(instructorCount: number, assistantCount: number): number {
-  return courseRatioCapacity(ENTRY_LEVEL_COURSE_RATIO, instructorCount, assistantCount);
+/**
+ * How many students an entry-level (DSD/Open Water) session may seat given the
+ * instructors and certified assistants (Divemasters) actually assigned as crew.
+ * `isIntroCourse` (DSD) uses the tighter {@link INTRO_COURSE_RATIO} — the
+ * Instructor Manual's open-water DSD figure — with no assistant bonus; every
+ * other entry-level course uses {@link ENTRY_LEVEL_COURSE_RATIO}.
+ *
+ * Prefer `courseSeatCapacity`, which reads the course row and decides *whether*
+ * a ratio applies at all. This is the arithmetic underneath it.
+ */
+export function entryLevelCourseCapacity(
+  instructorCount: number,
+  assistantCount: number,
+  isIntroCourse = false,
+): number {
+  return courseRatioCapacity(
+    isIntroCourse ? INTRO_COURSE_RATIO : ENTRY_LEVEL_COURSE_RATIO,
+    instructorCount,
+    assistantCount,
+  );
 }
 
 /**
@@ -112,12 +148,11 @@ export type CourseRatioKind = "intro" | "entry_level";
  * - An **intro session** (`is_intro_course`) is gated at `INTRO_COURSE_RATIO`
  *   whatever else the row says: nobody on it holds a card, so a
  *   `minimum_certification_level` typed onto it by mistake must not be able to
- *   switch the cap off. **Every agency, not just PADI** — 4:1 is DiveDay's own
- *   conservative interim figure, chosen because intro participants have had
- *   zero water time, and that rationale does not depend on whose logo is on the
- *   course. Scoping it to PADI would leave an SSI/NAUI Try Scuba capped by
- *   nothing but the boat's capacity, which is worse than the 8/12 rule this
- *   replaced.
+ *   switch the cap off. **Every agency, not just PADI** — the reason the DSD
+ *   figure is tighter is that intro participants have had zero water time, and
+ *   that rationale does not depend on whose logo is on the course. Scoping it
+ *   to PADI would leave an SSI/NAUI Try Scuba capped by nothing but the boat's
+ *   capacity, which is worse than the 8/12 rule it replaced.
  * - A **non-intro entry-level** session (no `minimum_certification_level` — the
  *   Open Water training dives) is gated at `ENTRY_LEVEL_COURSE_RATIO`, and
  *   **only for PADI**: 8/+2/12 is a cited PADI figure, `courses.agency` is free
@@ -177,10 +212,11 @@ export function courseSeatCapacity(
  * - `none`: adequately crewed, or not a ratio-gated session.
  *
  * `over_ratio` carries the `ratio` it was measured against, because the two
- * rules need different words: the entry-level cap is PADI's published figure and
- * a certified assistant raises it, while the intro cap is DiveDay's own interim
- * 4-per-instructor figure that an assistant does not move at all. Telling a
- * manager to add a divemaster to a DSD session is advice that cannot work.
+ * rules need different words: the entry-level cap is PADI's published Open
+ * Water training figure and a certified assistant raises it, while the intro
+ * cap is PADI's tighter published DSD open-water figure that an assistant does
+ * not move at all. Telling a manager to add a divemaster to a DSD session is
+ * advice that cannot work.
  */
 export type CourseCrewGap =
   | { code: "none" }

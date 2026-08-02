@@ -1,34 +1,37 @@
+import { PublishCommand, SNSClient } from "@aws-sdk/client-sns";
 import { z } from "zod";
+import { log } from "@/lib/log";
+import type { CourtesyDelivery } from "./courtesy";
 
 /**
- * SMS and WhatsApp delivery through Twilio, fetch-based with no SDK — the same
- * seam shape as the Resend email provider (`./index.ts`) and the Stripe
- * providers under `../payments`. Every send degrades to `not_configured` when
- * the channel's credentials or sender are absent, so booking and reminder flows
- * stay testable and shippable without a texting account (docs ADR
- * 20260721-sms-whatsapp-notifications).
+ * SMS delivery through AWS SNS's direct-to-phone-number `Publish` API — the
+ * same seam shape as the SES email provider (`./index.ts`): the SDK handles
+ * SigV4 signing and its own retry/backoff, so unlike a fetch-based adapter this
+ * needs no hand-rolled request loop (ADR 20260802-sns-sms-adapter). Every send
+ * degrades to `not_configured` when the channel's credentials are absent, so
+ * booking and reminder flows stay testable and shippable without a texting
+ * account configured.
+ *
+ * SNS has no WhatsApp delivery path of its own. WhatsApp is a separate adapter
+ * against Meta's Cloud API (`./whatsapp.ts`) using each shop's own business
+ * account, and `./courtesy.ts` owns the rule that picks between the two — this
+ * file stays SMS-only (ADR 20260802-whatsapp-cloud-api-per-shop).
  */
 
-export type SmsChannel = "sms" | "whatsapp";
-
 export type SmsMessage = {
-  channel: SmsChannel;
-  /** Recipient in E.164 form, e.g. +13055551234 (no `whatsapp:` prefix). */
+  /** Recipient in E.164 form, e.g. +13055551234. */
   to: string;
   /** Plain-text body; keep it short — one SMS segment where possible. */
   body: string;
 };
 
-export type SmsDelivery =
-  | { status: "sent"; providerMessageId: string }
-  | { status: "not_configured" }
-  | { status: "failed" };
+/** Shared with the WhatsApp adapter so either can be recorded through the same seam. */
+export type SmsDelivery = CourtesyDelivery;
 
 export interface SmsProvider {
   send(message: SmsMessage): Promise<SmsDelivery>;
 }
 
-type Fetch = typeof fetch;
 type SmsEnvironment = Readonly<Record<string, string | undefined>>;
 
 const E164 = /^\+[1-9]\d{6,14}$/;
@@ -45,52 +48,97 @@ export function smsRecipient(phone: string | null | undefined): string | null {
   return E164.test(cleaned) ? cleaned : null;
 }
 
-const twilioConfigSchema = z.object({
-  accountSid: z.string().trim().min(1),
-  authToken: z.string().trim().min(1),
-  smsFrom: z.string().trim().min(1).optional(),
-  whatsappFrom: z.string().trim().min(1).optional(),
+type SnsConfig = {
+  region: string;
+  accessKeyId: string;
+  secretAccessKey: string;
+  /** Alphanumeric sender label — not supported in every country (notably the US); optional. */
+  senderId?: string;
+};
+
+/**
+ * The exact slice of `SNSClient` this adapter calls, so a test can fake it
+ * with a plain object instead of standing up (or mocking) the real SDK client.
+ */
+export interface SnsPublishClient {
+  send(command: PublishCommand): Promise<{ MessageId?: string }>;
+}
+
+export type SnsProviderOptions = {
+  client?: SnsPublishClient;
+};
+
+const snsConfigSchema = z.object({
+  region: z.string().trim().min(1),
+  accessKeyId: z.string().trim().min(1),
+  secretAccessKey: z.string().trim().min(1),
+  senderId: z.string().trim().min(1).optional(),
 });
 
-type TwilioConfig = z.infer<typeof twilioConfigSchema>;
+/**
+ * Every SNS SDK error extends `SNSServiceException`, which carries
+ * `$metadata.httpStatusCode` and a `.name` matching the specific AWS error
+ * type — the same shape `sesErrorInfo` (`./index.ts`) classifies, reused here
+ * rather than duplicated since both adapters read the identical AWS SDK
+ * exception contract.
+ */
+function snsErrorInfo(error: unknown): {
+  retryable: boolean;
+  httpStatus?: number;
+  errorCode?: string;
+  detail?: string;
+} {
+  const isAwsException = typeof error === "object" && error !== null && "$metadata" in error;
+  const httpStatus = isAwsException
+    ? (error as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode
+    : undefined;
+  const errorCode = isAwsException && error instanceof Error ? error.name : "network_error";
+  const detail = error instanceof Error ? error.message.slice(0, 500) : undefined;
+  const retryable =
+    !isAwsException ||
+    httpStatus === undefined ||
+    httpStatus === 429 ||
+    httpStatus >= 500 ||
+    errorCode === "ThrottledException";
+  return { retryable, httpStatus, errorCode, detail };
+}
 
-const twilioResponseSchema = z.object({ sid: z.string().min(1) });
-
-export function twilioSmsProvider(config: TwilioConfig, fetchImpl: Fetch): SmsProvider {
+/**
+ * SMS sending via AWS SNS (ADR 20260802-sns-sms-adapter). Dormant until its
+ * credentials are set; see `smsProviderFromEnvironment`.
+ */
+export function snsSmsProvider(config: SnsConfig, options: SnsProviderOptions = {}): SmsProvider {
+  const client: SnsPublishClient =
+    options.client ??
+    new SNSClient({
+      region: config.region,
+      credentials: { accessKeyId: config.accessKeyId, secretAccessKey: config.secretAccessKey },
+    });
   return {
     async send(message) {
-      // A channel is only live when its sender is set: a shop may have SMS but
-      // not WhatsApp, or the reverse. Missing sender → not_configured, never a
-      // send to a blank From.
-      const sender = message.channel === "whatsapp" ? config.whatsappFrom : config.smsFrom;
-      if (!sender) return { status: "not_configured" };
-      const prefix = message.channel === "whatsapp" ? "whatsapp:" : "";
-      const auth = Buffer.from(`${config.accountSid}:${config.authToken}`).toString("base64");
       try {
-        const response = await fetchImpl(
-          `https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(
-            config.accountSid,
-          )}/Messages.json`,
-          {
-            method: "POST",
-            headers: {
-              Authorization: `Basic ${auth}`,
-              "Content-Type": "application/x-www-form-urlencoded",
+        const result = await client.send(
+          new PublishCommand({
+            PhoneNumber: message.to,
+            Message: message.body,
+            MessageAttributes: {
+              "AWS.SNS.SMS.SMSType": { DataType: "String", StringValue: "Transactional" },
+              ...(config.senderId
+                ? {
+                    "AWS.SNS.SMS.SenderID": { DataType: "String", StringValue: config.senderId },
+                  }
+                : {}),
             },
-            body: new URLSearchParams({
-              To: `${prefix}${message.to}`,
-              From: `${prefix}${sender}`,
-              Body: message.body,
-            }).toString(),
-          },
+          }),
         );
-        if (!response.ok) return { status: "failed" };
-        const body = twilioResponseSchema.safeParse(await response.json());
-        return body.success
-          ? { status: "sent", providerMessageId: body.data.sid }
-          : { status: "failed" };
-      } catch {
-        return { status: "failed" };
+        if (!result.MessageId) {
+          return { status: "failed", retryable: true, errorCode: "invalid_response" };
+        }
+        return { status: "sent", providerMessageId: result.MessageId };
+      } catch (error) {
+        const info = snsErrorInfo(error);
+        log("notification.sns_sms_send_failed", "warn", info);
+        return { status: "failed", ...info };
       }
     },
   };
@@ -112,13 +160,13 @@ export async function notifySms(
 
 export function smsProviderFromEnvironment(
   env: SmsEnvironment = process.env,
-  fetchImpl: Fetch = fetch,
+  options: SnsProviderOptions = {},
 ): SmsProvider {
-  const config = twilioConfigSchema.safeParse({
-    accountSid: env.TWILIO_ACCOUNT_SID,
-    authToken: env.TWILIO_AUTH_TOKEN,
-    smsFrom: env.TWILIO_SMS_FROM,
-    whatsappFrom: env.TWILIO_WHATSAPP_FROM,
+  const config = snsConfigSchema.safeParse({
+    region: env.SNS_AWS_REGION,
+    accessKeyId: env.SNS_AWS_ACCESS_KEY_ID,
+    secretAccessKey: env.SNS_AWS_SECRET_ACCESS_KEY,
+    senderId: env.SNS_SENDER_ID,
   });
-  return config.success ? twilioSmsProvider(config.data, fetchImpl) : disabledSmsProvider;
+  return config.success ? snsSmsProvider(config.data, options) : disabledSmsProvider;
 }

@@ -37,7 +37,7 @@ Two layers, both documented in
    up in the Neon console, not one to assert here.
 2. **A scheduled logical export is the secondary, vendor-independent copy.** It reuses the existing
    export seam per shop, iterating every shop, and writes the resulting zips to a **new, dedicated,
-   versioned, private S3 bucket** — `DatabaseBackupBucket` in `infra/lib/infra-stack.ts` §9, with
+   versioned, private S3 bucket** — `DatabaseBackupBucket` in `infra/lib/infra-stack.ts` §11, with
    `RemovalPolicy.RETAIN`, `BlockPublicAccess.BLOCK_ALL`, SSE-S3, `enforceSSL`, and a lifecycle rule
    that only ever moves objects to colder storage (IA at 30 days, Glacier Instant Retrieval at 90)
    and never expires a current version. Uploads use a dedicated write-only IAM user
