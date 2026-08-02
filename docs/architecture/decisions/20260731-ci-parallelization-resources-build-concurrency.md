@@ -96,19 +96,10 @@ get the correct worker count on today's runners.
 - **Revisited**: part of that contention's root cause was fixable, not just a scheduling cost to
   absorb. `src/lib/format.ts` constructed a fresh `Intl.DateTimeFormat`/`Intl.NumberFormat`/
   `Intl.RelativeTimeFormat` on every call instead of reusing one, and nearly every render touches
-  at least one of them; memoizing them (#305) cut a local 18-test contended set from a repeatable
-  6/18 failures down to 0/18, 2/18, and 1/18 across three reruns at 2 workers on a local sandbox —
-  real headroom recovered. A second, unrelated bug was found the same pass: `resetDemoSchedule`
-  never reset `shops.depth_unit`, so a local suite rerun against a reused dev server could poison
-  its own next run — a real fix, but not a CI-flake cause, since CI always boots a fresh server per
-  job.
-- **Tried and reverted**: with both of the above fixed, the `playwright` job was switched to
-  `e2e/servers.ts`'s default worker count (2) and half the shards (4). On fresh, single-shot CI
-  runners — the only signal not confounded by local server reuse — 2 of 4 shards still failed, with
-  `Protocol error (Runtime.callFunctionOn): Internal server error, session closed` as the dominant
-  signature: Chromium itself becoming unstable under two full browser+server pairs sharing 4 cores,
-  not a slow request queuing behind other work. That's a resource-capacity mismatch, not an
-  app-code inefficiency — no further profiling pass is expected to remove it by cutting per-request
-  cost alone. The `playwright` job stays at `E2E_WORKERS: "1"` / 8 shards, the last configuration
-  confirmed clean. Revisit only alongside a runner with more than 4 cores, or if a future
-  `cacheComponents`-adjacent change measurably lowers per-request render cost again.
+  at least one of them; memoizing them (#305) cut the same 18-test contended set used above from a
+  repeatable 6/18 failures down to 0/18, 2/18, and 1/18 across three reruns at 2 workers — real
+  headroom recovered, though not fully back to clean (a residual ~5-10% per-test flake risk under
+  contention). The `playwright` job now reverts to `e2e/servers.ts`'s default worker count (2) and
+  halves the shard matrix back to 4 (`playwright shard N/4`), trading that residual flake risk for
+  half the runner minutes; `fail-fast: false` keeps one shard's flake from failing the whole run.
+  `E2E_WORKERS` is still available as a per-step override if contention resurfaces.
