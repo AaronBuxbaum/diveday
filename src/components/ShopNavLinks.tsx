@@ -186,10 +186,23 @@ export function ShopNavLinks({
   }, [moreOpen, closeMore]);
 
   return (
-    <div className={`flex min-w-0 items-center gap-2 ${className}`}>
+    // `items-start` so "More" sits on the first row when the links wrap to two
+    // on a phone, rather than floating in the gutter between them. Identical to
+    // `items-center` from `sm` up, where the strip is a single row.
+    <div className={`flex min-w-0 items-start gap-2 ${className}`}>
+      {/*
+       * Wraps rather than scrolls. The five primary labels need ~400px and a
+       * phone gives this strip ~285, so as a one-line scroller it always hid
+       * two of them: the right edge guillotined "Divers" mid-word against the
+       * More button, and on the schedule board the *active* tab sat entirely
+       * off-screen, so nothing on the page read as current. Wrapping costs one
+       * header row on a phone and shows every destination, with the label
+       * itself kept whole by `whitespace-nowrap` in `linkClass`. It never wraps
+       * from `sm` up, where the row has room.
+       */}
       <nav
         aria-label={copy.primaryNavAriaLabel}
-        className="flex min-w-0 flex-1 snap-x items-center gap-0.5 overflow-x-auto scroll-px-1 pr-2 sm:gap-1 sm:pr-3"
+        className="flex min-w-0 flex-1 flex-wrap items-center gap-x-0.5 gap-y-1 pr-2 sm:gap-x-1 sm:pr-3"
       >
         {primaryLinks(copy).map(({ label, suffix, alsoMatch, count }) => {
           const href = `${root}${suffix}`;
@@ -200,7 +213,7 @@ export function ShopNavLinks({
             <Link
               key={href}
               href={href}
-              className={`${navClass(active)} flex-1 justify-center snap-start sm:flex-none sm:justify-start`}
+              className={navClass(active)}
               aria-current={active ? "page" : undefined}
               onClick={closeMore}
             >

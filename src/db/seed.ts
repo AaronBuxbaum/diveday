@@ -90,11 +90,24 @@ function commonsImage(filename: string): string {
   return `/dive-sites/${encodeURIComponent(filename)}`;
 }
 
-/** n days from now at the given local-ish hour/minute (UTC-anchored; demo data). */
+const DEMO_SHOP_TIMEZONE = "America/New_York";
+
+/**
+ * n days from now at the given hour/minute **in the demo shop's own timezone**.
+ *
+ * This used to set UTC hours, which is not what any caller meant: the shop is
+ * in America/New_York, so `at(1, 7)` — written to mean an early boat — sailed
+ * at 3:00 AM on every screen that renders it, and the "Sunset Two-Tank" left at
+ * noon. Anchoring to the shop's wall clock makes the hour a caller writes the
+ * hour a diver reads.
+ *
+ * The day is the shop's calendar day `daysFromNow` out, resolved before the
+ * hour is applied, so a departure lands on the day its caller counted to even
+ * when the hour sits either side of UTC midnight.
+ */
 function at(daysFromNow: number, hour: number, minute = 0): Date {
-  const d = new Date(nowMs() + daysFromNow * DAY_MS);
-  d.setUTCHours(hour, minute, 0, 0);
-  return d;
+  const day = utcToWallTime(new Date(nowMs() + daysFromNow * DAY_MS), DEMO_SHOP_TIMEZONE);
+  return wallTimeToUtc({ ...day, hour, minute }, DEMO_SHOP_TIMEZONE);
 }
 
 /**
@@ -148,8 +161,6 @@ function hoursFromNow(hours: number, from = nowDate()): Date {
   const step = 30 * 60 * 1000;
   return new Date(Math.ceil(d.getTime() / step) * step);
 }
-
-const DEMO_SHOP_TIMEZONE = "America/New_York";
 
 /**
  * Start of the seeded departure that must sail *today in the shop's timezone*.
@@ -1645,8 +1656,8 @@ export async function seedDemoSchedule(
         // A twilight double: depart ~7:30 PM Eastern, dive 1 at dusk (matching
         // its "Wreck site at dusk" plan), dive 2 in full dark, 3.5 h dock to
         // dock — two night dives plus a surface interval don't fit in less.
-        startsAt: at(2, 23, 30),
-        endsAt: at(3, 3, 0),
+        startsAt: at(2, 19, 30),
+        endsAt: at(2, 23, 0),
         capacity: 8,
       },
       {
@@ -1685,8 +1696,8 @@ export async function seedDemoSchedule(
               courseId: openWaterCourse.id,
               title: "Open Water Diver — three-day course",
               description: "Certification course over three days. No experience required.",
-              startsAt: at(9, 12, 0),
-              endsAt: at(11, 21, 0),
+              startsAt: at(9, 8, 0),
+              endsAt: at(11, 17, 0),
               // 5 students to one instructor: a realistic class, and it keeps
               // this session's "N spots left" distinct from every other seeded
               // trip's, which e2e assertions match on by text.
@@ -1713,37 +1724,37 @@ export async function seedDemoSchedule(
         diveSiteId: french?.id,
         title: "Afternoon Two-Tank — French Reef",
         description: "Swim-throughs and ledges, with the light coming in low on the second tank.",
-        startsAt: at(6, 17, 0),
-        endsAt: at(6, 21, 0),
+        startsAt: at(6, 13, 0),
+        endsAt: at(6, 17, 0),
         capacity: 10,
       },
       ...courseSession("Nitrox Diver", {
         title: "Nitrox Diver — classroom & two dives",
         description: "Analyze your own cylinder, then use the procedures on two reef dives.",
-        startsAt: at(8, 12, 0),
-        endsAt: at(8, 20, 0),
+        startsAt: at(8, 8, 0),
+        endsAt: at(8, 16, 0),
         capacity: 6,
       }),
       ...courseSession("Peak Performance Buoyancy", {
         title: "Peak Performance Buoyancy — one day",
         description: "A real weight check, then two dives spent hovering.",
-        startsAt: at(13, 12, 0),
-        endsAt: at(13, 19, 0),
+        startsAt: at(13, 8, 0),
+        endsAt: at(13, 15, 0),
         capacity: 4,
       }),
       ...courseSession("Night Diver", {
         title: "Night Diver — three evenings",
         description: "Dusk, dark, and navigation, over three consecutive evenings.",
-        startsAt: at(15, 21, 0),
-        endsAt: at(18, 1, 30),
+        startsAt: at(15, 17, 0),
+        endsAt: at(17, 21, 30),
         capacity: 6,
         plannedDives: 3,
       }),
       ...courseSession("Deep Diver", {
         title: "Deep Diver — Spiegel Grove & the wall",
         description: "Four dives building to 40 meters, with gas planning that keeps up.",
-        startsAt: at(20, 12, 0),
-        endsAt: at(21, 20, 0),
+        startsAt: at(20, 8, 0),
+        endsAt: at(21, 16, 0),
         capacity: 6,
         plannedDives: 4,
       }),
@@ -1754,9 +1765,9 @@ export async function seedDemoSchedule(
     tripRows.flatMap((trip) => {
       if (trip.courseId === openWaterCourse?.id) {
         return [
-          { tripId: trip.id, dayNumber: 1, startsAt: at(9, 12), endsAt: at(9, 18) },
-          { tripId: trip.id, dayNumber: 2, startsAt: at(10, 10), endsAt: at(10, 18) },
-          { tripId: trip.id, dayNumber: 3, startsAt: at(11, 13), endsAt: at(11, 21) },
+          { tripId: trip.id, dayNumber: 1, startsAt: at(9, 8), endsAt: at(9, 14) },
+          { tripId: trip.id, dayNumber: 2, startsAt: at(10, 8), endsAt: at(10, 16) },
+          { tripId: trip.id, dayNumber: 3, startsAt: at(11, 9), endsAt: at(11, 17) },
         ];
       }
       return [{ tripId: trip.id, dayNumber: 1, startsAt: trip.startsAt, endsAt: trip.endsAt }];
@@ -2403,6 +2414,8 @@ async function seedHistory(
 
   // Trips that already sailed. daysAgo is measured from the frozen clock, so the
   // spread lands in this month (month-to-date), last month, and the one before.
+  // `hour` is the shop's own clock (see `at`) and the trip runs four hours, so
+  // 8 is a morning charter back by noon and 19 is a night dive back by 23:00.
   const tripPlan: Array<{
     daysAgo: number;
     hour: number;
@@ -2413,7 +2426,7 @@ async function seedHistory(
   }> = [
     {
       daysAgo: 1,
-      hour: 12,
+      hour: 8,
       title: "Two-Tank Reef — Molasses & French",
       capacity: 12,
       priceCents: 13000,
@@ -2421,7 +2434,7 @@ async function seedHistory(
     },
     {
       daysAgo: 4,
-      hour: 12,
+      hour: 8,
       title: "Wreck Trip — Duane",
       capacity: 10,
       priceCents: 18000,
@@ -2429,7 +2442,7 @@ async function seedHistory(
     },
     {
       daysAgo: 8,
-      hour: 12,
+      hour: 8,
       title: "Two-Tank Reef — Benwood & Elbow",
       capacity: 12,
       priceCents: 13000,
@@ -2437,7 +2450,7 @@ async function seedHistory(
     },
     {
       daysAgo: 12,
-      hour: 23,
+      hour: 19,
       title: "Night Dive — Molasses",
       capacity: 8,
       priceCents: 14000,
@@ -2445,7 +2458,7 @@ async function seedHistory(
     },
     {
       daysAgo: 16,
-      hour: 12,
+      hour: 8,
       title: "Reef Refresh — Christ of the Abyss",
       capacity: 12,
       priceCents: 12500,
@@ -2453,7 +2466,7 @@ async function seedHistory(
     },
     {
       daysAgo: 19,
-      hour: 12,
+      hour: 8,
       title: "Two-Tank Reef — French & Pickles",
       capacity: 10,
       priceCents: 13000,
@@ -2461,7 +2474,7 @@ async function seedHistory(
     },
     {
       daysAgo: 25,
-      hour: 12,
+      hour: 8,
       title: "Wreck Trip — Spiegel Grove",
       capacity: 10,
       priceCents: 18000,
@@ -2469,7 +2482,7 @@ async function seedHistory(
     },
     {
       daysAgo: 29,
-      hour: 12,
+      hour: 8,
       title: "Two-Tank Reef — Molasses",
       capacity: 12,
       priceCents: 13000,
@@ -2477,7 +2490,7 @@ async function seedHistory(
     },
     {
       daysAgo: 33,
-      hour: 16,
+      hour: 12,
       title: "Afternoon Two-Tank — French Reef",
       capacity: 10,
       priceCents: 13000,
@@ -2485,7 +2498,7 @@ async function seedHistory(
     },
     {
       daysAgo: 38,
-      hour: 23,
+      hour: 19,
       title: "Night Dive — City of Washington",
       capacity: 8,
       priceCents: 14000,
@@ -2493,7 +2506,7 @@ async function seedHistory(
     },
     {
       daysAgo: 43,
-      hour: 12,
+      hour: 8,
       title: "Two-Tank Reef — Benwood",
       capacity: 12,
       priceCents: 13000,
@@ -2501,7 +2514,7 @@ async function seedHistory(
     },
     {
       daysAgo: 48,
-      hour: 12,
+      hour: 8,
       title: "Reef Day — Elbow",
       capacity: 12,
       priceCents: 12500,
@@ -2509,7 +2522,7 @@ async function seedHistory(
     },
     {
       daysAgo: 53,
-      hour: 12,
+      hour: 8,
       title: "Wreck Trip — Bibb",
       capacity: 10,
       priceCents: 18000,
@@ -2517,7 +2530,7 @@ async function seedHistory(
     },
     {
       daysAgo: 58,
-      hour: 12,
+      hour: 8,
       title: "Two-Tank Reef — Molasses & French",
       capacity: 12,
       priceCents: 13000,
@@ -2525,7 +2538,7 @@ async function seedHistory(
     },
     {
       daysAgo: 64,
-      hour: 12,
+      hour: 8,
       title: "Two-Tank Reef — Pickles",
       capacity: 10,
       priceCents: 13000,
@@ -2533,7 +2546,7 @@ async function seedHistory(
     },
     {
       daysAgo: 70,
-      hour: 23,
+      hour: 19,
       title: "Night Dive — Benwood",
       capacity: 8,
       priceCents: 14000,
@@ -2541,7 +2554,7 @@ async function seedHistory(
     },
     {
       daysAgo: 76,
-      hour: 12,
+      hour: 8,
       title: "Reef Day — Christ of the Abyss",
       capacity: 12,
       priceCents: 12500,
@@ -2552,7 +2565,7 @@ async function seedHistory(
     // has real trips and real names behind every number.
     {
       daysAgo: 82,
-      hour: 12,
+      hour: 8,
       title: "Two-Tank Reef — Molasses",
       capacity: 12,
       priceCents: 13000,
@@ -2560,7 +2573,7 @@ async function seedHistory(
     },
     {
       daysAgo: 87,
-      hour: 23,
+      hour: 19,
       title: "Night Dive — French Reef",
       capacity: 8,
       priceCents: 14000,
@@ -2568,7 +2581,7 @@ async function seedHistory(
     },
     {
       daysAgo: 92,
-      hour: 12,
+      hour: 8,
       title: "Wreck Trip — USCGC Duane",
       capacity: 10,
       priceCents: 18500,
@@ -2576,7 +2589,7 @@ async function seedHistory(
     },
     {
       daysAgo: 97,
-      hour: 12,
+      hour: 8,
       title: "Two-Tank Reef — Pickles Reef",
       capacity: 12,
       priceCents: 13000,
@@ -2584,7 +2597,7 @@ async function seedHistory(
     },
     {
       daysAgo: 103,
-      hour: 16,
+      hour: 12,
       title: "Afternoon Two-Tank — French Reef",
       capacity: 10,
       priceCents: 13000,
@@ -2592,7 +2605,7 @@ async function seedHistory(
     },
     {
       daysAgo: 109,
-      hour: 12,
+      hour: 8,
       title: "Reef Day — Molasses & French",
       capacity: 12,
       priceCents: 13000,
@@ -2600,7 +2613,7 @@ async function seedHistory(
     },
     {
       daysAgo: 115,
-      hour: 12,
+      hour: 8,
       title: "Wreck Trip — Spiegel Grove",
       capacity: 10,
       priceCents: 18000,
@@ -2608,7 +2621,7 @@ async function seedHistory(
     },
     {
       daysAgo: 121,
-      hour: 12,
+      hour: 8,
       title: "Two-Tank Reef — Benwood",
       capacity: 12,
       priceCents: 13000,
@@ -2616,7 +2629,7 @@ async function seedHistory(
     },
     {
       daysAgo: 127,
-      hour: 23,
+      hour: 19,
       title: "Night Dive — City of Washington",
       capacity: 8,
       priceCents: 14000,
@@ -2624,7 +2637,7 @@ async function seedHistory(
     },
     {
       daysAgo: 133,
-      hour: 12,
+      hour: 8,
       title: "Reef Day — Christ of the Abyss",
       capacity: 12,
       priceCents: 12500,
@@ -2632,7 +2645,7 @@ async function seedHistory(
     },
     {
       daysAgo: 139,
-      hour: 12,
+      hour: 8,
       title: "Two-Tank Reef — Elbow",
       capacity: 12,
       priceCents: 13000,
@@ -2640,7 +2653,7 @@ async function seedHistory(
     },
     {
       daysAgo: 146,
-      hour: 12,
+      hour: 8,
       title: "Wreck Trip — Bibb",
       capacity: 10,
       priceCents: 18000,
@@ -2648,7 +2661,7 @@ async function seedHistory(
     },
     {
       daysAgo: 153,
-      hour: 12,
+      hour: 8,
       title: "Two-Tank Reef — Molasses & French",
       capacity: 12,
       priceCents: 13000,
@@ -2656,7 +2669,7 @@ async function seedHistory(
     },
     {
       daysAgo: 160,
-      hour: 16,
+      hour: 12,
       title: "Afternoon Two-Tank — Pickles Reef",
       capacity: 10,
       priceCents: 13000,
@@ -2664,7 +2677,7 @@ async function seedHistory(
     },
     {
       daysAgo: 167,
-      hour: 12,
+      hour: 8,
       title: "Reef Day — French Reef",
       capacity: 12,
       priceCents: 12500,
@@ -2672,7 +2685,7 @@ async function seedHistory(
     },
     {
       daysAgo: 174,
-      hour: 23,
+      hour: 19,
       title: "Night Dive — Molasses Reef",
       capacity: 8,
       priceCents: 14000,
@@ -2680,7 +2693,7 @@ async function seedHistory(
     },
     {
       daysAgo: 181,
-      hour: 12,
+      hour: 8,
       title: "Wreck Trip — Duane",
       capacity: 10,
       priceCents: 18000,
@@ -2688,7 +2701,7 @@ async function seedHistory(
     },
     {
       daysAgo: 188,
-      hour: 12,
+      hour: 8,
       title: "Two-Tank Reef — Christ of the Abyss",
       capacity: 12,
       priceCents: 13000,
@@ -2696,7 +2709,7 @@ async function seedHistory(
     },
     {
       daysAgo: 196,
-      hour: 12,
+      hour: 8,
       title: "Reef Day — Benwood & Elbow",
       capacity: 12,
       priceCents: 12500,
@@ -2704,7 +2717,7 @@ async function seedHistory(
     },
     {
       daysAgo: 204,
-      hour: 12,
+      hour: 8,
       title: "Wreck Trip — Spiegel Grove",
       capacity: 10,
       priceCents: 18000,
@@ -2712,7 +2725,7 @@ async function seedHistory(
     },
     {
       daysAgo: 212,
-      hour: 16,
+      hour: 12,
       title: "Afternoon Two-Tank — Molasses",
       capacity: 10,
       priceCents: 13000,
@@ -2720,7 +2733,7 @@ async function seedHistory(
     },
     {
       daysAgo: 221,
-      hour: 12,
+      hour: 8,
       title: "Two-Tank Reef — French & Christ",
       capacity: 12,
       priceCents: 13000,
@@ -2728,7 +2741,7 @@ async function seedHistory(
     },
     {
       daysAgo: 230,
-      hour: 23,
+      hour: 19,
       title: "Night Dive — Benwood Wreck",
       capacity: 8,
       priceCents: 14000,
@@ -2736,7 +2749,7 @@ async function seedHistory(
     },
     {
       daysAgo: 239,
-      hour: 12,
+      hour: 8,
       title: "Wreck Trip — Bibb",
       capacity: 10,
       priceCents: 18000,
@@ -2744,7 +2757,7 @@ async function seedHistory(
     },
     {
       daysAgo: 249,
-      hour: 12,
+      hour: 8,
       title: "Reef Day — Pickles Reef",
       capacity: 12,
       priceCents: 12500,
@@ -2752,7 +2765,7 @@ async function seedHistory(
     },
     {
       daysAgo: 259,
-      hour: 12,
+      hour: 8,
       title: "Two-Tank Reef — Molasses & French",
       capacity: 12,
       priceCents: 13000,
@@ -2760,7 +2773,7 @@ async function seedHistory(
     },
     {
       daysAgo: 270,
-      hour: 12,
+      hour: 8,
       title: "Wreck Trip — USCGC Duane",
       capacity: 10,
       priceCents: 18500,
@@ -3534,8 +3547,8 @@ async function seedMoreTrips(
     {
       title: "Night Dive — French Reef",
       description: "Torches, tarpon, and bioluminescence. Night specialty required.",
-      startsAt: at(25, 23, 0),
-      endsAt: at(26, 2, 30),
+      startsAt: at(25, 19, 0),
+      endsAt: at(25, 22, 30),
       capacity: 8,
       isNight: true,
       roster: [24, 25, 29],
@@ -3652,8 +3665,8 @@ async function seedMoreTrips(
     {
       title: "Night Dive — Benwood Wreck",
       description: "A shallower night charter — good for a diver's first dive after dark.",
-      startsAt: at(50, 22, 30),
-      endsAt: at(51, 2, 0),
+      startsAt: at(50, 18, 30),
+      endsAt: at(50, 22, 0),
       capacity: 8,
       isNight: true,
       roster: draw(4),
