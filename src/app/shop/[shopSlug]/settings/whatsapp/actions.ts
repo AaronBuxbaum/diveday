@@ -123,7 +123,15 @@ export async function completeWhatsAppSignupAction(formData: FormData): Promise<
   const templateLocale = toDiverLocale(shop?.defaultLocale);
   const templateLanguage = metaLanguageCode(templateLocale);
   const diverT = diverTranslator(templateLocale);
-  const registrationPin = generateRegistrationPin();
+
+  // Register only a number DiveDay has not registered before. A stored row for
+  // this same phone number id means registration already succeeded once, and
+  // Meta binds a number to its first PIN — so re-registering with a fresh one
+  // fails with a PIN mismatch and walks the number toward a guess lockout. Null
+  // tells the signup flow to skip that step and leave the stored PIN alone.
+  const existing = await getShopWhatsAppAccount(db, shopId);
+  const alreadyRegistered = existing?.phoneNumberId === parsed.data.phoneNumberId;
+  const registrationPin = alreadyRegistered ? null : generateRegistrationPin();
 
   const result = await completeEmbeddedSignup(
     {
@@ -183,13 +191,18 @@ export async function testWhatsAppAction(formData: FormData): Promise<void> {
   if (!provider) done(path, "encryption_key_unset");
 
   const shop = await getShopById(db, shopId);
+  // A real diver would read this if it were a live send, so like the template
+  // body it comes from the diver bundle rather than being written here.
+  const testBody = diverTranslator(toDiverLocale(shop?.defaultLocale))(
+    "notifications.whatsappTemplate.testMessage",
+  );
   const delivery = await provider.send({
     to: parsed.data.testPhone,
     shopName: shop?.name ?? "DiveDay",
     // Deliberately shaped like a real courtesy message rather than the word
     // "test": it proves the same template, the same two variables, and the same
     // parameter sanitising that a live reminder will use.
-    body: "This is a test message from DiveDay. Your WhatsApp connection is working.",
+    body: testBody,
   });
   if (delivery.status !== "sent") done(path, "test_failed");
 

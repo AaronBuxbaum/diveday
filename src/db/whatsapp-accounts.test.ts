@@ -9,6 +9,7 @@ import {
   disconnectShopWhatsAppAccount,
   getShopWhatsAppAccount,
   markShopWhatsAppVerified,
+  shopIdForWhatsAppWaba,
   whatsAppProviderForAccount,
   whatsAppProviderForShop,
   whatsAppProvidersForShops,
@@ -49,14 +50,6 @@ describe("connectShopWhatsAppAccount", () => {
     expect(openSecret(account?.accessTokenSealed ?? "", key)).toBe("EAAG-shop-access-token");
   });
 
-  it("keeps a hint so staff can tell which token is stored", async () => {
-    const { db, shop } = await seededShopContext();
-    await connectShopWhatsAppAccount(db, connectInput(shop.id), { key });
-
-    const account = await getShopWhatsAppAccount(db, shop.id);
-    expect(account?.accessTokenHint).toBe("oken");
-  });
-
   it("refuses to store anything when no encryption key is configured", async () => {
     const { db, shop } = await seededShopContext();
     const result = await connectShopWhatsAppAccount(db, connectInput(shop.id), { key: null });
@@ -76,7 +69,6 @@ describe("connectShopWhatsAppAccount", () => {
 
     const account = await getShopWhatsAppAccount(db, shop.id);
     expect(openSecret(account?.accessTokenSealed ?? "", key)).toBe("EAAG-rotated-token-9999");
-    expect(account?.accessTokenHint).toBe("9999");
   });
 
   it("keeps the original connection date but clears verification on a re-connect", async () => {
@@ -95,6 +87,29 @@ describe("connectShopWhatsAppAccount", () => {
     expect(account?.connectedAt).toEqual(first);
     // New credentials are unproven until a fresh test send proves them.
     expect(account?.verifiedAt).toBeNull();
+  });
+
+  it("preserves the stored registration PIN when a reconnect supplies none", async () => {
+    // The bug this guards: a reconnect used to generate a fresh PIN, fail
+    // registration with a 133005 mismatch, have that failure swallowed, and
+    // then overwrite the column — destroying the only copy of the PIN the
+    // number is actually bound to and locking the shop out of re-registering.
+    const { db, shop } = await seededShopContext();
+    await connectShopWhatsAppAccount(db, connectInput(shop.id, { registrationPin: "424242" }), {
+      key,
+    });
+    const first = await getShopWhatsAppAccount(db, shop.id);
+    expect(openSecret(first?.registrationPinSealed ?? "", key)).toBe("424242");
+
+    await connectShopWhatsAppAccount(
+      db,
+      connectInput(shop.id, { accessToken: "EAAG-rotated", registrationPin: null }),
+      { key },
+    );
+
+    const after = await getShopWhatsAppAccount(db, shop.id);
+    expect(openSecret(after?.registrationPinSealed ?? "", key)).toBe("424242");
+    expect(openSecret(after?.accessTokenSealed ?? "", key)).toBe("EAAG-rotated");
   });
 
   it("trims the pasted values a staff form inevitably carries", async () => {
@@ -175,6 +190,22 @@ describe("whatsAppProviderForShop", () => {
 
     const account = await getShopWhatsAppAccount(db, shop.id);
     expect(JSON.stringify(account)).not.toContain("EAAG-shop-access-token");
+  });
+});
+
+describe("shopIdForWhatsAppWaba", () => {
+  it("resolves the WABA a delivery event names to its own shop", async () => {
+    const { db, shop } = await seededShopContext();
+    await connectShopWhatsAppAccount(db, connectInput(shop.id, { wabaId: "waba_abc" }), { key });
+
+    expect(await shopIdForWhatsAppWaba(db, "waba_abc")).toBe(shop.id);
+  });
+
+  it("returns null for a WABA no shop has connected, so nothing is applied unscoped", async () => {
+    const { db, shop } = await seededShopContext();
+    await connectShopWhatsAppAccount(db, connectInput(shop.id, { wabaId: "waba_abc" }), { key });
+
+    expect(await shopIdForWhatsAppWaba(db, "waba_someone_else")).toBeNull();
   });
 });
 

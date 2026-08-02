@@ -1,12 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import {
-  openSecret,
-  sealSecret,
-  secretHint,
-  secretKeyFromEnvironment,
-  secretsEqual,
-} from "./secret-box";
+import { openSecret, sealSecret, secretKeyFromEnvironment } from "./secret-box";
 
 const key = randomBytes(32);
 const base64Key = key.toString("base64");
@@ -91,24 +85,5 @@ describe("secretKeyFromEnvironment", () => {
       status: "invalid",
       reason: "not_base64",
     });
-  });
-});
-
-describe("secretsEqual", () => {
-  it("matches identical secrets and rejects everything else", () => {
-    expect(secretsEqual("token", "token")).toBe(true);
-    expect(secretsEqual("token", "token2")).toBe(false);
-    expect(secretsEqual("token", "toke")).toBe(false);
-  });
-});
-
-describe("secretHint", () => {
-  it("shows only the last four characters", () => {
-    expect(secretHint("EAAGabcdefgh1234")).toBe("1234");
-  });
-
-  it("shows nothing for a secret too short to hint at safely", () => {
-    expect(secretHint("abc")).toBe("");
-    expect(secretHint("")).toBe("");
   });
 });

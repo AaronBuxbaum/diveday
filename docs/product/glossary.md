@@ -442,8 +442,17 @@ new domain concept, define it here in the same PR.
 - **SMS channel** — an optional text channel for notifications, delivered through an AWS SNS seam
   (`notifySms()`). A number is texted only if it is already E.164, and the channel degrades to
   `not_configured` with no SNS credentials configured, exactly like the email seam. The platform-wide
-  fallback half of a **courtesy message**. See
-  [20260802-sns-sms-adapter](../architecture/decisions/20260802-sns-sms-adapter.md).
+  fallback half of a **courtesy message**. What happened to a sent text arrives later as a **delivery
+  receipt**. See [20260802-sns-sms-adapter](../architecture/decisions/20260802-sns-sms-adapter.md).
+- **Delivery receipt** — a provider's after-the-fact report of what became of a message DiveDay sent:
+  delivered, failed, bounced. Applied to the `notification_deliveries` row by provider message id,
+  guarded so a stale event never overwrites a newer outcome. Every channel reports them differently —
+  email by webhook from Resend or SES, WhatsApp by webhook from Meta, and SMS *not* by webhook at all,
+  since SNS writes receipts to CloudWatch Logs and an AWS-side forwarder republishes them onto a topic
+  the app can verify
+  ([20260802-sms-delivery-receipts](../architecture/decisions/20260802-sms-delivery-receipts.md)).
+  A receipt matching no row is routine, not a fault: only a **tracked channel** has one, so a courtesy
+  text sent alongside an email has nothing to update.
 - **WhatsApp sender** — a shop's *own* WhatsApp Business number, connected in Settings → WhatsApp
   through **Meta Embedded Signup**: the shop presses one button and completes Meta's own hosted
   popup, and DiveDay registers the number, subscribes to its delivery events, and submits the

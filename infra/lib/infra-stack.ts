@@ -2,6 +2,9 @@ import * as cdk from "aws-cdk-lib";
 import * as budgets from "aws-cdk-lib/aws-budgets";
 import * as ce from "aws-cdk-lib/aws-ce";
 import * as iam from "aws-cdk-lib/aws-iam";
+import * as lambda from "aws-cdk-lib/aws-lambda";
+import * as logs from "aws-cdk-lib/aws-logs";
+import * as destinations from "aws-cdk-lib/aws-logs-destinations";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import * as ses from "aws-cdk-lib/aws-ses";
 import * as sns from "aws-cdk-lib/aws-sns";
@@ -323,6 +326,114 @@ export class InfraStack extends cdk.Stack {
       value: `aws iam create-access-key --user-name ${snsSmsSenderUser.userName}`,
       description:
         "Run only once SMS sending is enabled, to mint SNS-publishing credentials. Store the output in the app's SNS_* env vars — never in the repo.",
+    });
+
+    // 10. SMS delivery receipts — see ADR 20260802-sms-delivery-receipts.
+    //
+    // The awkward part, and the reason this is a pipeline rather than a topic
+    // subscription: **SNS has no delivery webhook for a direct-to-phone
+    // `Publish`.** Email gets one from SES, WhatsApp gets one from Meta, but an
+    // SMS receipt is written to CloudWatch Logs and nowhere else. A CloudWatch
+    // subscription filter can only target Lambda, Kinesis, or Firehose — not
+    // SNS — so reaching the app takes a forwarder.
+    //
+    // Logs → filter → Lambda → SNS topic → /api/webhooks/sms. The extra SNS hop
+    // buys the thing that makes it worth having: the receipt arrives over the
+    // same signed SNS envelope the SES webhook already verifies, so the app
+    // needs no new authentication path for a third provider.
+    const smsDeliveryReceipts = new sns.Topic(this, "SmsDeliveryReceipts", {
+      topicName: "diveday-sms-delivery-receipts",
+    });
+
+    // SNS assumes this to write delivery receipts. It is handed to SNS by the
+    // account-level `set-sms-attributes` call in the runbook, which has no
+    // CloudFormation resource — SMS delivery-status logging for direct publish
+    // is account-wide state, not a property of any topic.
+    const smsDeliveryStatusRole = new iam.Role(this, "SnsSmsDeliveryStatusRole", {
+      roleName: "diveday-sns-sms-delivery-status",
+      assumedBy: new iam.ServicePrincipal("sns.amazonaws.com"),
+      description: "Lets SNS write SMS delivery receipts to CloudWatch Logs.",
+    });
+    smsDeliveryStatusRole.addToPolicy(
+      new iam.PolicyStatement({
+        actions: [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents",
+          "logs:PutMetricFilter",
+          "logs:PutRetentionPolicy",
+        ],
+        resources: ["*"],
+      }),
+    );
+
+    // SNS writes to these exact names, and creates them itself on first send if
+    // they are absent. They are declared here so retention is bounded rather
+    // than "never expire" — these records name a diver's phone number, so
+    // keeping them forever is a liability, and the app has already copied the
+    // outcome it needs onto the delivery row.
+    const smsLogGroupPrefix = `sns/${this.region}/${this.account}/DirectPublishToPhoneNumber`;
+    const smsSuccessLogs = new logs.LogGroup(this, "SnsSmsDeliveryLogs", {
+      logGroupName: smsLogGroupPrefix,
+      retention: logs.RetentionDays.TWO_WEEKS,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+    const smsFailureLogs = new logs.LogGroup(this, "SnsSmsDeliveryFailureLogs", {
+      logGroupName: `${smsLogGroupPrefix}/Failure`,
+      retention: logs.RetentionDays.TWO_WEEKS,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+
+    // Republishes each receipt verbatim so the app parses the same bytes
+    // CloudWatch wrote. Inline rather than a bundled asset: it is a dozen lines
+    // with no dependencies beyond the SDK the runtime already ships, and a
+    // build step for that would be more moving parts than the function.
+    const smsReceiptForwarder = new lambda.Function(this, "SmsReceiptForwarder", {
+      functionName: "diveday-sms-receipt-forwarder",
+      runtime: lambda.Runtime.NODEJS_22_X,
+      handler: "index.handler",
+      timeout: cdk.Duration.seconds(30),
+      environment: { TOPIC_ARN: smsDeliveryReceipts.topicArn },
+      code: lambda.Code.fromInline(`
+const { gunzipSync } = require("node:zlib");
+const { SNSClient, PublishCommand } = require("@aws-sdk/client-sns");
+const sns = new SNSClient({});
+
+exports.handler = async (event) => {
+  const payload = JSON.parse(gunzipSync(Buffer.from(event.awslogs.data, "base64")).toString("utf8"));
+  // CONTROL_MESSAGE is CloudWatch checking the destination is reachable.
+  if (payload.messageType !== "DATA_MESSAGE") return;
+  for (const logEvent of payload.logEvents ?? []) {
+    await sns.send(new PublishCommand({ TopicArn: process.env.TOPIC_ARN, Message: logEvent.message }));
+  }
+};
+`),
+    });
+    smsDeliveryReceipts.grantPublish(smsReceiptForwarder);
+
+    for (const [id, group] of [
+      ["SnsSmsDeliveryLogsToTopic", smsSuccessLogs],
+      ["SnsSmsDeliveryFailureLogsToTopic", smsFailureLogs],
+    ] as const) {
+      new logs.SubscriptionFilter(this, id, {
+        logGroup: group,
+        destination: new destinations.LambdaDestination(smsReceiptForwarder),
+        // Every record, unfiltered: the app decides what it models, and a
+        // filter pattern here would silently drop receipt shapes AWS adds later.
+        filterPattern: logs.FilterPattern.allEvents(),
+      });
+    }
+
+    new cdk.CfnOutput(this, "SmsDeliveryReceiptsTopicArn", {
+      value: smsDeliveryReceipts.topicArn,
+      description:
+        "SNS topic carrying SMS delivery receipts. Set as SMS_SNS_TOPIC_ARN in the app, and subscribe /api/webhooks/sms to it.",
+    });
+
+    new cdk.CfnOutput(this, "SnsSmsDeliveryStatusInstructions", {
+      value: `aws sns set-sms-attributes --attributes DeliveryStatusIAMRole=${smsDeliveryStatusRole.roleArn},DeliveryStatusSuccessSamplingRate=100`,
+      description:
+        "Account-level and not expressible in CloudFormation: switches on SMS delivery-status logging. Sampling 100 logs every send; set 0 to log failures only.",
     });
   }
 }

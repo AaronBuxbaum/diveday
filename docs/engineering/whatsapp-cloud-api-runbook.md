@@ -89,11 +89,14 @@ Signup failures name the step that failed (`signup_failed_exchange`, `_register`
 `_template`) and log as `notification.whatsapp_signup_failed`:
 
 - **exchange** — the one-time code was already used or expired. Press Connect again.
-- **register** — the number is probably still active in the consumer WhatsApp or WhatsApp Business
-  *app*; it has to be removed there first.
-- **subscribe** / **template** — connected but incomplete. Pressing Connect again re-runs the whole
-  flow, which is safe: an already-registered number and an existing template are both treated as a
-  reconnect rather than an error.
+- **register** — only ever attempted for a number DiveDay has not registered before. The number is
+  probably still active in the consumer WhatsApp or WhatsApp Business *app* and has to be removed
+  there first. A `133005` here means the number is bound to a **different two-step PIN** than the one
+  just generated — someone set one outside DiveDay — and it is reported rather than retried, because
+  repeated wrong guesses walk the number toward a Meta-side lockout (`133008`).
+- **subscribe** / **template** — connected but incomplete. Pressing Connect again is safe: a
+  reconnect skips registration entirely (the number is already registered, and Meta binds it to its
+  first PIN forever) and an existing template is treated as success rather than an error.
 
 ## Rotating `SECRET_ENCRYPTION_KEY`
 
@@ -113,7 +116,5 @@ and ignores everything else.
 
 **Read receipts.** DiveDay does not record opens on any channel, so `read` statuses are dropped.
 
-**SMS delivery statuses.** SNS does not send delivery webhooks for direct-to-phone-number publishes;
-receipts go to CloudWatch Logs. Bringing SMS to parity needs an AWS-side pipeline (a Logs
-subscription filter, or a move to AWS End User Messaging, which publishes events to SNS or Kinesis) —
-its own piece of work, not a sibling of this route.
+**SMS delivery statuses** are now built, but as their own pipeline rather than a sibling route — see
+[sms-delivery-receipts-runbook.md](sms-delivery-receipts-runbook.md).

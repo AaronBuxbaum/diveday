@@ -59,7 +59,7 @@ async function run() {
     }
     // SNS SMS is dormant prep (ADR 20260802-sns-sms-adapter) — no real
     // credentials exist anywhere yet. Remove once a shop actually needs it.
-    if (key.startsWith("SNS_")) {
+    if (key.startsWith("SNS_") || key === "SMS_SNS_TOPIC_ARN") {
       continue;
     }
     // WhatsApp is per-shop: the credentials live in shop_whatsapp_accounts, not

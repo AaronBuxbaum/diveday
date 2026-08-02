@@ -1,4 +1,4 @@
-import { createCipheriv, createDecipheriv, randomBytes, timingSafeEqual } from "node:crypto";
+import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
 
 /**
  * Authenticated encryption for third-party credentials DiveDay stores on a
@@ -112,27 +112,6 @@ export function openSecret(sealed: string, key: SecretKey): string | null {
   } catch {
     return null;
   }
-}
-
-/**
- * Whether two secrets match, without leaking *where* they diverge through
- * timing. Used to tell "the shop re-pasted the same token" from a genuine
- * rotation, so an unchanged credential isn't needlessly re-sealed.
- */
-export function secretsEqual(left: string, right: string): boolean {
-  const a = Buffer.from(left, "utf8");
-  const b = Buffer.from(right, "utf8");
-  return a.length === b.length && timingSafeEqual(a, b);
-}
-
-/**
- * The last four characters of a credential, for a settings page that must show
- * the shop *which* token is stored without ever showing the token. Short or
- * empty input yields an empty hint rather than most of the secret.
- */
-export function secretHint(plaintext: string): string {
-  const trimmed = plaintext.trim();
-  return trimmed.length >= 8 ? trimmed.slice(-4) : "";
 }
 
 function base64url(value: Buffer): string {

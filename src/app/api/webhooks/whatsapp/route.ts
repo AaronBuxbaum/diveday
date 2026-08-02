@@ -1,5 +1,6 @@
 import { getDb } from "@/db/client";
 import { applyProviderEmailEvent } from "@/db/notifications";
+import { shopIdForWhatsAppWaba } from "@/db/whatsapp-accounts";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 import {
@@ -55,12 +56,31 @@ export async function POST(request: Request) {
   if (events.length === 0) return new Response(null, { status: 200 });
 
   const db = await getDb();
+  // Resolved once per batch: every event in one delivery names the same WABA,
+  // and this is the tenant key the update is scoped to.
+  const shopIdByWaba = new Map<string, string | null>();
   for (const event of events) {
+    let shopId: string | null = null;
+    if (event.wabaId) {
+      if (!shopIdByWaba.has(event.wabaId)) {
+        shopIdByWaba.set(event.wabaId, await shopIdForWhatsAppWaba(db, event.wabaId));
+      }
+      shopId = shopIdByWaba.get(event.wabaId) ?? null;
+      // A signed event for a WABA no shop has connected — a disconnect that
+      // raced an in-flight message, or a subscription Meta has not dropped yet.
+      // Nothing to apply, and scoping to "no shop" would silently widen the
+      // update instead, so skip rather than fall through unscoped.
+      if (!shopId) {
+        log("whatsapp_webhook.unknown_waba", "warn", { status: event.status });
+        continue;
+      }
+    }
     const result = await applyProviderEmailEvent(db, {
       providerMessageId: event.providerMessageId,
       status: event.status,
       detail: event.detail,
       occurredAt: event.occurredAt,
+      ...(shopId ? { shopId } : {}),
     });
     // `unknown_message` is routine rather than a fault: a courtesy text sent
     // alongside an email is not the tracked channel, so it has no delivery row
