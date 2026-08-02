@@ -1461,6 +1461,7 @@
       "progressAriaLabel": "Progreso del pase de lista",
       "allAccountedFor": "Todos contabilizados — buceadores y tripulación. Listo para el siguiente control.",
       "stillToCall": "{count, plural, one {Queda # buceador por pasar lista.} other {Quedan # buceadores por pasar lista.}}",
+      "notBackAboardOpen": "{count, plural, one {# buceador no ha regresado a bordo.} other {# buceadores no han regresado a bordo.}} Este control sigue abierto hasta contabilizarlos.",
       "crewNotAttestedYet": "Todos los buceadores están contabilizados. Confirma cuánta tripulación está a bordo para cerrar este control.",
       "crewShort": "{aboard} de {assigned} tripulantes confirmados a bordo. Este control sigue abierto hasta contabilizar a toda la tripulación.",
       "readinessNeedsAttention": "La preparación necesita atención",
@@ -1501,7 +1502,6 @@
       "addNoteSummary": "Añadir una nota a este registro del pase de lista",
       "rollCallRecordedByPlain": "{label} {date} por {name}",
       "rollCallRecordedByWithNote": "{label} {date} por {name} · {note}",
-      "carriedForward": "Arrastrado — no embarcado en un punto de control anterior. Márcalo como embarcado para volver a incluirlo.",
       "carriedForwardFromDock": "Arrastrado — este buceador nunca salió del muelle. Márcalo como embarcado para volver a incluirlo.",
       "boardedCheck": "Embarcado ✓",
       "markBoarded": "Marcar embarcado",
@@ -1513,7 +1513,8 @@
       "markNotBackAboard": "Marcar sin regresar a bordo",
       "notBackAboardDescription": "Tras una inmersión, «sin regresar a bordo» significa que este buceador no ha vuelto al barco. Mantiene el recuento abierto; nunca lo cierra.",
       "saving": "Guardando…",
-      "tapToUndo": "Toca de nuevo el estado ✓ para deshacer."
+      "tapToUndo": "Toca de nuevo el estado ✓ para deshacer.",
+      "tapToUndoNotBackAboard": "Toca de nuevo «Sin regresar a bordo» para deshacer."
     },
     "offlineManifestManager": {
       "checkingDevice": "Comprobando este dispositivo…",
@@ -2756,10 +2757,6 @@
         "crewShort": "{aboard} de {assigned} tripulantes confirmados a bordo — este control sigue abierto hasta contar al resto en el manifiesto en vivo.",
         "readyBadge": "Listo cuando se guardó",
         "blockedBadge": "Bloqueado cuando se guardó",
-        "stateBoarded": "Embarcado",
-        "stateNotBoardedCarried": "No embarcado · arrastrado",
-        "stateNotBoarded": "No embarcado",
-        "stateAwaiting": "Pendiente de pase de lista",
         "statePendingSuffix": "· esperando para enviarse",
         "emergencyContact": "Contacto de emergencia",
         "notOnFile": "Sin datos registrados",
@@ -2774,6 +2771,8 @@
         "markBoarded": "Marcar embarcado",
         "notBoardedDone": "No embarcado ✓",
         "markNotBoarded": "Marcar no embarcado",
+        "notBackAboardActive": "Sin regresar a bordo",
+        "markNotBackAboard": "Marcar sin regresar a bordo",
         "openLiveManifest": "Abrir manifiesto en vivo",
         "record": {
           "expiredCannotRecord": "Esta copia guardada ha caducado — abre el manifiesto en vivo para registrar el pase de lista.",
@@ -2822,6 +2821,13 @@
     "rollCallCheckpoint": {
       "departure": "Antes de zarpar",
       "afterDive": "Después de la inmersión {n}"
+    },
+    "rollCallState": {
+      "awaiting": "Pendiente de pase de lista",
+      "boarded": "Embarcado",
+      "notBoarded": "No embarcado",
+      "notBoardedCarried": "No embarcado · arrastrado",
+      "notBackAboard": "Sin regresar a bordo"
     }
   }
 }

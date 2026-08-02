@@ -40,8 +40,15 @@ export const OFFLINE_MANIFEST_RECORD_VERSION = 4 as const;
  * `offline-manifest-store.ts`) to warn a crew member holding a copy of the
  * shell from an older deploy (task 124 / persona 15, Leo) rather than
  * silently serving it with no signal anything's stale.
+ *
+ * v2 precaches the chunks the bundler's runtime loads lazily, which the shell
+ * HTML never names (see `lazyChunkEntries` in `public/manifest-sw.js`). A v1
+ * shell is genuinely broken offline — hydration can ask for a chunk nothing
+ * cached and the captain gets the error boundary instead of the roll call —
+ * so unlike the snapshot version above, this bump is *worth* the purge: there
+ * is no queued roll call inside an app shell to lose, only stale bundles.
  */
-export const OFFLINE_MANIFEST_SHELL_VERSION = "v1";
+export const OFFLINE_MANIFEST_SHELL_VERSION = "v2";
 
 export const OFFLINE_MANIFEST_CURRENT_MS = 15 * 60 * 1000;
 export const OFFLINE_MANIFEST_AGING_MS = 4 * 60 * 60 * 1000;

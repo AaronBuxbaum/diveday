@@ -1461,6 +1461,7 @@
       "progressAriaLabel": "Roll-call progress",
       "allAccountedFor": "Everyone’s accounted for — divers and crew. Ready for the next check.",
       "stillToCall": "{count, plural, one {# diver still to call.} other {# divers still to call.}}",
+      "notBackAboardOpen": "{count, plural, one {# diver is not back aboard.} other {# divers are not back aboard.}} This checkpoint stays open until they’re counted.",
       "crewNotAttestedYet": "Every diver is counted. Confirm how many crew are aboard to close this checkpoint.",
       "crewShort": "{aboard} of {assigned} crew confirmed aboard. This checkpoint stays open until every crew member is accounted for.",
       "readinessNeedsAttention": "Readiness needs attention",
@@ -1501,7 +1502,6 @@
       "addNoteSummary": "Add a note to this roll-call record",
       "rollCallRecordedByPlain": "{label} {date} by {name}",
       "rollCallRecordedByWithNote": "{label} {date} by {name} · {note}",
-      "carriedForward": "Carried forward — not boarded on an earlier checkpoint. Mark boarded to bring them back on.",
       "carriedForwardFromDock": "Carried forward — this diver never left the dock. Mark boarded to bring them back on.",
       "boardedCheck": "Boarded ✓",
       "markBoarded": "Mark boarded",
@@ -1513,7 +1513,8 @@
       "markNotBackAboard": "Mark not back aboard",
       "notBackAboardDescription": "After a dive, “not back aboard” means this diver has not returned to the boat. It keeps the count open — it never closes it.",
       "saving": "Saving…",
-      "tapToUndo": "Tap the ✓ status again to undo."
+      "tapToUndo": "Tap the ✓ status again to undo.",
+      "tapToUndoNotBackAboard": "Tap “Not back aboard” again to undo."
     },
     "offlineManifestManager": {
       "checkingDevice": "Checking this device…",
@@ -2756,10 +2757,6 @@
         "crewShort": "{aboard} of {assigned} crew confirmed aboard — this checkpoint stays open until the rest are counted on the live manifest.",
         "readyBadge": "Ready when saved",
         "blockedBadge": "Blocked when saved",
-        "stateBoarded": "Boarded",
-        "stateNotBoardedCarried": "Not boarded · carried",
-        "stateNotBoarded": "Not boarded",
-        "stateAwaiting": "Awaiting roll call",
         "statePendingSuffix": "· waiting to send",
         "emergencyContact": "Emergency contact",
         "notOnFile": "Not on file",
@@ -2774,6 +2771,8 @@
         "markBoarded": "Mark boarded",
         "notBoardedDone": "Not boarded ✓",
         "markNotBoarded": "Mark not boarded",
+        "notBackAboardActive": "Not back aboard",
+        "markNotBackAboard": "Mark not back aboard",
         "openLiveManifest": "Open live manifest",
         "record": {
           "expiredCannotRecord": "This saved copy has expired — open the live manifest to record roll call.",
@@ -2822,6 +2821,13 @@
     "rollCallCheckpoint": {
       "departure": "Before departure",
       "afterDive": "After dive {n}"
+    },
+    "rollCallState": {
+      "awaiting": "Awaiting roll call",
+      "boarded": "Boarded",
+      "notBoarded": "Not boarded",
+      "notBoardedCarried": "Not boarded · carried",
+      "notBackAboard": "Not back aboard"
     }
   }
 }

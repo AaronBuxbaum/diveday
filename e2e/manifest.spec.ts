@@ -13,7 +13,7 @@ async function waitForShellPrimed(page: Page) {
     .poll(() =>
       page.evaluate(async () => {
         const registration = await navigator.serviceWorker.getRegistration("/manifest-sw.js");
-        const cache = await caches.open("diveday-offline-manifest-shell-v1");
+        const cache = await caches.open("diveday-offline-manifest-shell-v2");
         return (
           !!navigator.serviceWorker.controller &&
           !!registration?.active &&
@@ -130,7 +130,10 @@ test("captain saves the full checkpoint manifest, reloads it offline, and reconc
   // "Fresh copy".
   await expect(page.getByText("Fresh copy")).toBeVisible();
   await page.getByRole("button", { name: "After dive 1" }).click();
-  await page.getByRole("button", { name: "Mark not boarded" }).first().click();
+  // After a dive the offline copy words this control the same way the live
+  // manifest does — "not back aboard", never a settled "Not boarded ✓" (DOM-H3).
+  await expect(page.getByRole("button", { name: "Mark not boarded" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Mark not back aboard" }).first().click();
   // Two live regions exist here (the action message and the connectivity
   // badge); scope to the one carrying the sync message.
   await expect(
@@ -200,14 +203,35 @@ test("a captain who lost the saved copy to storage eviction still lands on a pag
   // was cleared on the boat has no way to refetch either.
   await context.setOffline(true);
   await context.route("**/api/offline-manifests/upcoming*", (route) => route.abort());
-  await page.evaluate(
-    () =>
-      new Promise<void>((resolve, reject) => {
-        const request = indexedDB.deleteDatabase("diveday-offline-manifests");
-        request.onsuccess = () => resolve();
-        request.onerror = () => reject(request.error ?? new Error("failed to clear IndexedDB"));
-      }),
-  );
+  // Deleting once is not enough, and this is the third distinct way this test
+  // has been raced. `setOffline` stops a save *round* from starting, but a
+  // round that began just before it already holds its payload in memory and
+  // writes to IndexedDB with no network at all — so the record can reappear
+  // between the delete and the reload, and the page then correctly renders a
+  // manifest while the assertion below waits for the empty state.
+  //
+  // So: delete, look again a beat later, and delete again until it stays gone.
+  // Nothing can legitimately re-create it once it has — the network is down
+  // and `/upcoming` is refused — which is what makes this converge rather than
+  // merely wait longer. `onblocked` resolves rather than hanging: a still-open
+  // connection means "not deleted", which this loop is already the answer to.
+  await expect
+    .poll(
+      () =>
+        page.evaluate(async () => {
+          await new Promise<void>((resolve, reject) => {
+            const request = indexedDB.deleteDatabase("diveday-offline-manifests");
+            request.onsuccess = () => resolve();
+            request.onblocked = () => resolve();
+            request.onerror = () => reject(request.error ?? new Error("failed to clear IndexedDB"));
+          });
+          await new Promise((resolve) => setTimeout(resolve, 250));
+          const databases = await indexedDB.databases();
+          return databases.every((database) => database.name !== "diveday-offline-manifests");
+        }),
+      { timeout: 10_000 },
+    )
+    .toBe(true);
 
   await page.reload();
   // No snapshot survives, so the worker still redirects here rather than
@@ -456,4 +480,22 @@ test("a checkpoint with every diver counted stays open until the crew are counte
   await page.getByRole("button", { name: "Confirm crew count" }).click();
   await expect(page.getByText(/2 of 2 crew aboard/)).toBeVisible();
   await expect(page.getByRole("heading", { name: "Roll call complete ✦" })).toBeVisible();
+
+  // DOM-H3. Now a diver does not come back from dive one. After a dive, the
+  // control that isn't "Boarded" says so in those words and never settles into
+  // a green-checked "Not boarded ✓", and the closed checkpoint re-opens —
+  // which is what the Today queue is simultaneously alarming about.
+  await expect(page.getByRole("button", { name: "Mark not boarded" })).toHaveCount(0);
+  const markNotBack = page.getByRole("button", { name: "Mark not back aboard" }).first();
+  await markNotBack.evaluate((button) => button.scrollIntoView({ block: "center" }));
+  await markNotBack.click();
+  // `exact` matters: without it the substring match resolves against the
+  // *other* rows' still-unpressed "Mark not back aboard" buttons and settles
+  // instantly, so the assertion never waits for this write at all.
+  await expect(
+    page.getByRole("button", { name: "Not back aboard", exact: true }).first(),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Not boarded ✓" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Roll call complete ✦" })).toHaveCount(0);
+  await expect(page.getByText(/1 diver is not back aboard/)).toBeVisible();
 });

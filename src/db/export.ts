@@ -37,6 +37,7 @@ import {
   priorVisits,
   recapPhotos,
   rentalFitProfiles,
+  rollCallCrewAttestations,
   rollCallEvents,
   shopPromoCodes,
   shops,
@@ -321,6 +322,15 @@ export async function loadShopExportBundleInput(
         .from(rollCallEvents)
         .where(eq(rollCallEvents.shopId, shopId))
         .orderBy(asc(rollCallEvents.occurredAt), asc(rollCallEvents.id));
+
+      // The crew half of the same head count. Same ordering rule as the events
+      // above (oldest first), so a reader replaying the file in order ends on
+      // the count that stood.
+      const crewAttestationRows = await tx
+        .select()
+        .from(rollCallCrewAttestations)
+        .where(eq(rollCallCrewAttestations.shopId, shopId))
+        .orderBy(asc(rollCallCrewAttestations.occurredAt), asc(rollCallCrewAttestations.id));
 
       const certificationRows = await tx
         .select()
@@ -1009,6 +1019,38 @@ export async function loadShopExportBundleInput(
           note: EXPORT_FILE_NOTES["roll_call_events.csv"],
         },
         {
+          file: "roll_call_crew_attestations.csv",
+          header: [
+            "id",
+            "trip_id",
+            "trip_title",
+            "trip_starts_at",
+            "checkpoint",
+            "crew_aboard",
+            "crew_assigned",
+            "attested_by_person_id",
+            "attested_by_name",
+            "note",
+            "occurred_at",
+            "created_at",
+          ],
+          rows: crewAttestationRows.map((row) => [
+            row.id,
+            row.tripId,
+            tripTitle.get(row.tripId),
+            tripStartsAt.get(row.tripId),
+            row.checkpoint,
+            row.crewAboard,
+            row.crewAssigned,
+            row.attestedByPersonId,
+            personName.get(row.attestedByPersonId),
+            row.note,
+            row.occurredAt,
+            row.createdAt,
+          ]),
+          note: EXPORT_FILE_NOTES["roll_call_crew_attestations.csv"],
+        },
+        {
           file: "waiver_templates.csv",
           header: ["id", "title", "version", "archived_at", "created_at", "body"],
           rows: templateRows.map((row) => [
@@ -1633,6 +1675,12 @@ export async function loadShopExportCounts(
     ),
     "roll_call_events.csv": await countOf(
       db.select({ n: count() }).from(rollCallEvents).where(eq(rollCallEvents.shopId, shopId)),
+    ),
+    "roll_call_crew_attestations.csv": await countOf(
+      db
+        .select({ n: count() })
+        .from(rollCallCrewAttestations)
+        .where(eq(rollCallCrewAttestations.shopId, shopId)),
     ),
     "waiver_templates.csv": await countOf(
       db.select({ n: count() }).from(waiverTemplates).where(eq(waiverTemplates.shopId, shopId)),

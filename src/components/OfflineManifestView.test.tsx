@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   appendOfflineRollCall,
@@ -52,7 +52,9 @@ function payload(tripId: string, title: string, totalDivers = 2): OfflineManifes
           blocked: 0,
           boarded: 0,
           notBoarded: 0,
+          notBackAboard: 0,
           awaiting: totalDivers,
+          unaccountedFor: totalDivers,
         },
       },
     ],
@@ -185,7 +187,9 @@ function richPayload(
           blocked: divers.filter((d) => d.readiness.status === "blocked").length,
           boarded: 0,
           notBoarded: 0,
+          notBackAboard: 0,
           awaiting: divers.length,
+          unaccountedFor: divers.length,
         },
       },
       {
@@ -200,7 +204,11 @@ function richPayload(
           blocked: diversAfterDive.filter((d) => d.readiness.status === "blocked").length,
           boarded: 0,
           notBoarded: opts.withCarriedNotBoarded ? 1 : 0,
+          notBackAboard: 0,
           awaiting: opts.withCarriedNotBoarded
+            ? diversAfterDive.length - 1
+            : diversAfterDive.length,
+          unaccountedFor: opts.withCarriedNotBoarded
             ? diversAfterDive.length - 1
             : diversAfterDive.length,
         },
@@ -566,16 +574,16 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
     expect(screen.queryByTestId("sub-surface-ripple")).not.toBeInTheDocument();
   });
 
-  it("invariant 4: a live transition to awaiting===0 via carried-forward not-boarded (nobody actually boarded) never celebrates", async () => {
+  it("invariant 4 / DOM-H3: recording a diver as not back aboard after a dive neither closes the checkpoint nor celebrates", async () => {
     // SubSurfaceRipple only ever fires on a false→true *transition* of its
     // `complete` prop (see its own component) — a manifest that is already
     // "complete" on the very first render can never exercise the gate this
     // test is for, so this drives a real transition: mount not-complete
-    // (Priya still awaiting), then record Priya as *not boarded* too. Both
-    // divers now have a result (awaiting hits zero — Marcus was already
-    // carried not-boarded from departure) but *nobody* is aboard. If the
-    // celebration were gated on `rollCallComplete` (awaiting === 0) instead
-    // of the true boarded count, this transition would incorrectly fire it.
+    // (Priya still awaiting), then record Priya at an *after-dive* checkpoint
+    // with the only control that isn't "Boarded". Every diver now has a result
+    // — `awaiting` hits zero, Marcus was already carried not-boarded from the
+    // dock — and neither the celebration nor "complete" may follow from that:
+    // Priya has not come back from dive one.
     searchParams = new URLSearchParams({ trip: "trip-1", checkpoint: "after_dive_1" });
     const saved = richEnvelope("trip-1", { withCarriedNotBoarded: true, crewAttested: true });
     vi.mocked(loadOfflineManifest).mockResolvedValue(saved);
@@ -604,14 +612,25 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
     // Not complete yet — Priya is still awaiting.
     expect(screen.queryByTestId("sub-surface-ripple")).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Mark not boarded" }));
+    // After a dive the control is worded for what it means here, and never
+    // settles into a green-checked "Not boarded ✓" beside a diver in the water.
+    expect(screen.queryByRole("button", { name: "Mark not boarded" })).not.toBeInTheDocument();
+    const priyaRow = () => {
+      const row = document.getElementById("offline-roll-call-diver-priya");
+      if (!row) throw new Error("Priya's row missing");
+      return within(row);
+    };
+    fireEvent.click(priyaRow().getByRole("button", { name: "Mark not back aboard" }));
     await waitFor(() => expect(appendOfflineRollCall).toHaveBeenCalled());
 
-    // Roll call now reads complete (both divers have a result) — the
-    // existing "someNotBoarded" wording says so correctly, never "everyone's
-    // aboard".
-    expect(await screen.findByText(/Roll call complete/)).toBeInTheDocument();
-    expect(screen.getByText(/marked not boarded/)).toBeInTheDocument();
+    // Every diver has a result, but one of them did not come back: the
+    // checkpoint stays open, exactly as the live manifest reports it.
+    await waitFor(() =>
+      expect(priyaRow().getByRole("button", { name: "Not back aboard" })).toBeInTheDocument(),
+    );
+    expect(screen.queryByText(/Not boarded ✓/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Roll call complete/)).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "After dive 1 roll call" })).toBeInTheDocument();
     expect(screen.queryByText(/everyone's aboard/)).not.toBeInTheDocument();
 
     // SubSurfaceRipple mounts the celebration markup one render *after* its
@@ -796,6 +815,88 @@ describe("OfflineManifestView — crew are part of the head count offline too", 
     fireEvent.click(screen.getAllByRole("button", { name: "Mark boarded" })[0] as HTMLElement);
     await waitFor(() => expect(appendOfflineRollCall).toHaveBeenCalled());
 
+    expect(await screen.findByText(/Roll call complete/)).toBeInTheDocument();
+  });
+});
+
+/**
+ * DOM-H3. The dock copy and the live manifest read the same rows through the
+ * same predicate and the same word list (`isNotBackAboard` / `rollCallLabel` in
+ * src/lib/manifests.ts, `rollCallLabelText` in src/i18n/manifest-labels.ts), so
+ * neither can describe a diver in the water as settled while the other alarms.
+ */
+describe("OfflineManifestView — the two meanings of not_boarded, worded the same as online", () => {
+  function envelopeWithServerResult(
+    checkpoint: "departure" | "after_dive_1",
+    rollCall: NonNullable<
+      OfflineManifestPayload["manifests"][number]["divers"][number]["rollCall"]
+    >,
+  ) {
+    const base = richEnvelope("trip-1", { crewAttested: true });
+    return {
+      ...base,
+      snapshot: {
+        ...base.snapshot,
+        manifests: base.snapshot.manifests.map((manifest) =>
+          manifest.checkpoint === checkpoint
+            ? {
+                ...manifest,
+                divers: manifest.divers.map((diver) =>
+                  diver.bookingId === "diver-priya" ? { ...diver, rollCall } : diver,
+                ),
+              }
+            : manifest,
+        ),
+      },
+    };
+  }
+
+  it("says “not back aboard” after a dive, and keeps the checkpoint open", async () => {
+    searchParams = new URLSearchParams({ trip: "trip-1", checkpoint: "after_dive_1" });
+    vi.mocked(loadOfflineManifest).mockResolvedValue(
+      envelopeWithServerResult("after_dive_1", {
+        state: "not_boarded",
+        occurredAt: new Date(FROZEN_MS).toISOString(),
+        recordedByName: "Dana Divemaster",
+        note: "Not on the ladder",
+      }),
+    );
+    vi.mocked(syncOfflineManifest).mockResolvedValue(null);
+
+    render(<OfflineManifestView />);
+    await screen.findByRole("heading", { name: "Two-Tank Reef" });
+
+    const priya = within(document.getElementById("offline-roll-call-diver-priya") as HTMLElement);
+    // Both the state pill beside her name and the control below it.
+    expect(priya.getAllByText("Not back aboard")).toHaveLength(2);
+    expect(priya.queryByText("Not boarded")).not.toBeInTheDocument();
+    expect(priya.queryByText("Not boarded ✓")).not.toBeInTheDocument();
+    // The whole roster has a result and the crew were counted — and it still
+    // does not read complete, because one diver has not come back.
+    expect(screen.queryByText(/Roll call complete/)).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "After dive 1 roll call" })).toBeInTheDocument();
+  });
+
+  it("keeps the dock's own wording — and its done-check — at departure", async () => {
+    searchParams = new URLSearchParams({ trip: "trip-1", checkpoint: "departure" });
+    vi.mocked(loadOfflineManifest).mockResolvedValue(
+      envelopeWithServerResult("departure", {
+        state: "not_boarded",
+        occurredAt: new Date(FROZEN_MS).toISOString(),
+        recordedByName: "Dana Divemaster",
+        note: "Never made the dock",
+      }),
+    );
+    vi.mocked(syncOfflineManifest).mockResolvedValue(null);
+
+    render(<OfflineManifestView />);
+    await screen.findByRole("heading", { name: "Two-Tank Reef" });
+
+    const priya = within(document.getElementById("offline-roll-call-diver-priya") as HTMLElement);
+    expect(priya.getByText("Not boarded")).toBeInTheDocument();
+    // Left ashore is a diver accounted for, so this one *is* a settled result.
+    expect(priya.getByRole("button", { name: "Not boarded ✓" })).toBeInTheDocument();
+    expect(screen.queryByText("Not back aboard")).not.toBeInTheDocument();
     expect(await screen.findByText(/Roll call complete/)).toBeInTheDocument();
   });
 });

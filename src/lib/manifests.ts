@@ -181,10 +181,59 @@ export type CrewAttestation = {
 };
 
 /**
+ * `not_boarded` means two opposite things depending on where it was recorded,
+ * and conflating them is what let the manifest print "Roll call complete ✦" on
+ * a boat the Today queue was raising a missing-diver alarm about (DOM-H3):
+ *
+ * - at `departure` it means **never left the dock**. Benign, genuinely
+ *   accounted for, and correctly true of every later checkpoint too — which is
+ *   what `carryForwardNotBoarded` below fills in (`implied: true`).
+ * - explicitly at an `after_dive_n` checkpoint it means **did not return to the
+ *   boat**. That *is* the missing-diver event: the crew member who taps the
+ *   only control that isn't "Boarded" is saying "not back yet, check again",
+ *   and the checkpoint must stay open.
+ *
+ * This predicate is the single place that split lives on the manifest side.
+ * `src/db/today.ts` states the same rule for the work queue (see
+ * `isAccountedForAfterDive` there); the two are asserted against each other on
+ * one trip in src/db/today.test.ts so they can never drift apart again.
+ */
+export function isNotBackAboard(
+  checkpoint: RollCallCheckpoint,
+  rollCall: Pick<RollCallRecord, "state" | "implied"> | undefined,
+): boolean {
+  if (checkpoint === "departure") return false;
+  if (rollCall?.state !== "not_boarded") return false;
+  // Carried forward from the dock (see `carryForwardNotBoarded`): a diver who
+  // never left is accounted for at every later checkpoint, not missing from it.
+  return rollCall.implied !== true;
+}
+
+/**
+ * Is this diver counted at this checkpoint? The one rule every head count on
+ * the manifest asks, so "complete", the summary tiles, and the diver's own pill
+ * cannot answer it differently.
+ *
+ * No result at all is *not* accounted for (nobody has said), and neither is a
+ * diver a human recorded as not back aboard after a dive.
+ */
+export function isRollCallAccountedFor(
+  checkpoint: RollCallCheckpoint,
+  rollCall: Pick<RollCallRecord, "state" | "implied"> | undefined,
+): boolean {
+  if (!rollCall) return false;
+  return !isNotBackAboard(checkpoint, rollCall);
+}
+
+/**
  * Why a checkpoint is not closed yet. Codes, not sentences — the UI picks the
  * words from each locale's `staff.json`.
  *
  * - `no_divers` — nothing to count; an empty roster never reads complete.
+ * - `divers_not_back_aboard` — a human recorded at least one diver as not back
+ *   aboard after a dive. Ranked above `divers_awaiting` for the same reason
+ *   `listRollCallGaps` ranks `missing_diver` above `after_dive_uncounted`: a
+ *   stated "they didn't come back" outranks a clerical gap on the same boat.
  * - `divers_awaiting` — at least one booked diver has no result here.
  * - `crew_not_attested` — every diver is counted, but nobody has said how many
  *   crew are aboard. Includes a trip with *zero* assigned crew: "0 of 0" is
@@ -193,6 +242,7 @@ export type CrewAttestation = {
  */
 export type RollCallIncompleteReason =
   | "no_divers"
+  | "divers_not_back_aboard"
   | "divers_awaiting"
   | "crew_not_attested"
   | "crew_short";
@@ -214,8 +264,14 @@ export type RollCallCompleteness = {
  *
  * Rules, in order:
  *
- * 1. Divers first, unchanged: an empty roster is never complete, and every
- *    booked diver needs a result at this checkpoint.
+ * 1. Divers first: an empty roster is never complete, and every booked diver
+ *    must be *accounted for* at this checkpoint — which is not the same as
+ *    "has a result". A diver a human recorded as not back aboard after a dive
+ *    has a result and is precisely the person who is missing, so `awaiting`
+ *    alone can never be the diver half of this (`isNotBackAboard` above;
+ *    DOM-H3). That is why this takes both counts rather than one `awaiting`:
+ *    the *closing* rule is `unaccountedFor === 0`, and the split only decides
+ *    which reason to name.
  * 2. Then crew: an attestation must exist, and it must account for at least as
  *    many crew as the trip has assigned **right now** — not the denominator
  *    stored on the attestation. Assigning another crew member after the fact
@@ -234,24 +290,35 @@ export type RollCallCompleteness = {
  */
 export function rollCallCompleteness(input: {
   totalDivers: number;
+  /** Booked divers with no result at all at this checkpoint. */
   awaiting: number;
+  /**
+   * Divers a human explicitly recorded as not back aboard *after a dive*
+   * (`isNotBackAboard`). Defaults to 0 so a departure-only caller reads the
+   * same as it always did — at departure this is structurally always 0.
+   */
+  notBackAboard?: number;
   /** Assigned crew *now* — `manifest.crew.length`, not the attested denominator. */
   crewAssigned: number;
   crewAttestation?: CrewAttestation | null;
 }): RollCallCompleteness {
-  const diversAccountedFor = input.totalDivers > 0 && input.awaiting === 0;
+  const notBackAboard = input.notBackAboard ?? 0;
+  const unaccountedFor = input.awaiting + notBackAboard;
+  const diversAccountedFor = input.totalDivers > 0 && unaccountedFor === 0;
   const attestation = input.crewAttestation ?? null;
   const crewAccountedFor = attestation !== null && attestation.crewAboard >= input.crewAssigned;
   const reason: RollCallIncompleteReason | null =
     input.totalDivers === 0
       ? "no_divers"
-      : input.awaiting > 0
-        ? "divers_awaiting"
-        : attestation === null
-          ? "crew_not_attested"
-          : crewAccountedFor
-            ? null
-            : "crew_short";
+      : notBackAboard > 0
+        ? "divers_not_back_aboard"
+        : input.awaiting > 0
+          ? "divers_awaiting"
+          : attestation === null
+            ? "crew_not_attested"
+            : crewAccountedFor
+              ? null
+              : "crew_short";
   return {
     complete: diversAccountedFor && crewAccountedFor,
     diversAccountedFor,
@@ -290,7 +357,18 @@ export type TripManifest = {
     boarded: number;
     /** Divers deliberately left ashore, including carried-forward defaults. */
     notBoarded: number;
+    /**
+     * Divers a human recorded as **not back aboard** after a dive — the
+     * missing-diver count. Always 0 at `departure`, where `not_boarded` means
+     * "never left the dock" instead (`isNotBackAboard`).
+     */
+    notBackAboard: number;
     awaiting: number;
+    /**
+     * `awaiting + notBackAboard`. The number that decides whether this
+     * checkpoint's diver half is closed — never `awaiting` on its own.
+     */
+    unaccountedFor: number;
   };
 };
 
@@ -306,28 +384,36 @@ export function buildTripManifest(input: {
   crewAttestation?: CrewAttestation | null;
   divers: ManifestDiverInput[];
 }): TripManifest {
+  const checkpoint = input.checkpoint ?? "departure";
   const divers = input.divers.map((diver) => ({
     ...diver,
     readiness: diver.readiness ?? unavailableReadiness(),
     rollCall: diver.rollCall,
   }));
+  const awaiting = divers.filter((diver) => !diver.rollCall).length;
+  const notBackAboard = divers.filter((diver) =>
+    isNotBackAboard(checkpoint, diver.rollCall),
+  ).length;
   const summary = {
     totalDivers: divers.length,
     ready: divers.filter((diver) => diver.readiness.status === "ready").length,
     blocked: divers.filter((diver) => diver.readiness.status === "blocked").length,
     boarded: divers.filter((diver) => diver.rollCall?.state === "boarded").length,
     notBoarded: divers.filter((diver) => diver.rollCall?.state === "not_boarded").length,
-    awaiting: divers.filter((diver) => !diver.rollCall).length,
+    notBackAboard,
+    awaiting,
+    unaccountedFor: awaiting + notBackAboard,
   };
   const crewAttestation = input.crewAttestation ?? null;
   return {
     trip: input.trip,
-    checkpoint: input.checkpoint ?? "departure",
+    checkpoint,
     crew: input.crew,
     crewAttestation,
     completeness: rollCallCompleteness({
       totalDivers: summary.totalDivers,
       awaiting: summary.awaiting,
+      notBackAboard: summary.notBackAboard,
       crewAssigned: input.crew.length,
       crewAttestation,
     }),
@@ -336,33 +422,66 @@ export function buildTripManifest(input: {
   };
 }
 
-export function rollCallLabel(rollCall: ManifestDiverInput["rollCall"]): string {
-  if (!rollCall) return "Awaiting roll call";
-  if (rollCall.state === "boarded") return "Boarded";
-  return rollCall.implied ? "Not boarded · carried" : "Not boarded";
+/**
+ * What a diver's roll-call pill says at this checkpoint — as a **code**, not a
+ * sentence: `src/lib` hands back the state and the UI picks the words
+ * (`rollCallLabelText`, src/i18n/manifest-labels.ts). This used to return
+ * hard-coded English and take no checkpoint at all, which is why an after-dive
+ * "did not return to the boat" rendered as "Not boarded" — and, on the button
+ * beside it, as a green-checked "Not boarded ✓" — on both the live and the
+ * offline manifest.
+ */
+export type RollCallLabel =
+  | "awaiting"
+  | "boarded"
+  | "not_boarded"
+  | "not_boarded_carried"
+  | "not_back_aboard";
+
+export function rollCallLabel(
+  checkpoint: RollCallCheckpoint,
+  // Only the state and the carried-forward flag decide the word, so the offline
+  // copy — whose `occurredAt` is an ISO string, not a Date — resolves through
+  // this same function rather than keeping a second word list of its own.
+  rollCall: Pick<RollCallRecord, "state" | "implied"> | undefined,
+): RollCallLabel {
+  if (!rollCall) return "awaiting";
+  if (rollCall.state === "boarded") return "boarded";
+  if (isNotBackAboard(checkpoint, rollCall)) return "not_back_aboard";
+  return rollCall.implied ? "not_boarded_carried" : "not_boarded";
 }
 
 /**
- * Fills the "off the boat stays off the boat" default across one diver's
- * ordered checkpoints. Once a diver is explicitly not boarded, every later
- * checkpoint with no result of its own defaults to not boarded (flagged
- * `implied`) until an explicit boarded result breaks the chain. Carry-forward
- * never fabricates a "boarded": the default can only ever read absent.
+ * Fills the "never left the dock, so still ashore" default across one diver's
+ * ordered checkpoints. A diver marked not boarded **at departure** defaults to
+ * not boarded at every later checkpoint with no result of its own (flagged
+ * `implied`) until an explicit result breaks the chain. Carry-forward never
+ * fabricates a "boarded": the default can only ever read absent.
+ *
+ * **Only index 0 — `departure` — is ever a source, and this is the whole point
+ * (DOM-H3).** A `not_boarded` at an after-dive checkpoint does not mean "left
+ * ashore", it means **did not return to the boat** (`isNotBackAboard` above).
+ * Carrying that forward as an accounted-for record is what closed every
+ * subsequent checkpoint on exactly the boat that had a diver in the water — the
+ * manifest printed "Roll call complete ✦" while the Today queue was raising a
+ * top-severity missing-diver row about the same trip. A missing diver must
+ * never satisfy a later count; the crew have to state, per checkpoint, whether
+ * that person came back.
  *
  * A `cleared` undo has already been collapsed to "no result" upstream
  * (listLatestRollCallByBooking), so it is not seen here as a breaker. Clearing
- * the *originating* not-boarded removes the source and the whole chain reverts
- * to awaiting; clearing a later re-board reverts that checkpoint to the carried
- * default. Pure and order-sensitive: pass the checkpoints in departure→last
- * order.
+ * the originating departure not-boarded removes the source and the whole chain
+ * reverts to awaiting; clearing a later re-board reverts that checkpoint to the
+ * carried default. Pure and order-sensitive: pass the checkpoints in
+ * departure→last order.
  */
 export function carryForwardNotBoarded(
   perCheckpoint: readonly (RollCallRecord | undefined)[],
 ): (RollCallRecord | undefined)[] {
   let carried: RollCallRecord | undefined;
-  return perCheckpoint.map((result) => {
+  return perCheckpoint.map((result, index) => {
     if (result) {
-      carried = result.state === "not_boarded" ? result : undefined;
+      carried = index === 0 && result.state === "not_boarded" ? result : undefined;
       return result;
     }
     return carried ? { ...carried, implied: true } : undefined;

@@ -5,7 +5,11 @@ import { describe, expect, it } from "vitest";
 import { ageOnDate, birthdayCallout } from "@/lib/age";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate, nowMs } from "@/lib/clock";
-import { type RollCallCheckpoint, rollCallCompleteness } from "@/lib/manifests";
+import {
+  isRollCallAccountedFor,
+  type RollCallCheckpoint,
+  rollCallCompleteness,
+} from "@/lib/manifests";
 import { serializeManifests } from "@/lib/offline-manifests";
 import { isWaiverCode } from "@/lib/today";
 import { createWaiverToken, hashWaiverToken } from "@/lib/waivers";
@@ -27,6 +31,7 @@ import {
   tripAssignments,
   waiverRecords,
 } from "./schema";
+import { listRollCallGaps } from "./today";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 import { completeWaiver, getCurrentWaiverTemplate, issueWaiverRequest } from "./waivers";
 
@@ -925,5 +930,153 @@ describe("crew aboard attestation (in-memory PGlite)", () => {
       manifests.find((entry) => entry.checkpoint === "after_dive_1")?.completeness.complete ??
         false,
     );
+  });
+});
+
+/**
+ * DOM-H3. The manifest and the Today work queue read the same roll-call rows
+ * and used to reach opposite conclusions from them: Today raised a
+ * top-severity `roll_call_missing_diver` row while the manifest printed "Roll
+ * call complete ✦" for the same boat, because `carryForwardNotBoarded` treated
+ * an after-dive `not_boarded` as an accounted-for record.
+ *
+ * Two safety surfaces disagreeing about whether everyone is out of the water is
+ * worse than either being wrong alone, so this asserts the agreement directly
+ * rather than each side's rule in isolation.
+ */
+describe("the manifest and Today agree about who is still in the water (DOM-H3)", () => {
+  async function afterDiveContext() {
+    const context = await manifestContext();
+    const { db, shop, reef, staff } = context;
+    const roster = await getTripRoster(db, shop.id, reef.id);
+    expect(roster.length).toBeGreaterThan(1);
+    // Board everyone after dive one — a head count, so readiness never refuses
+    // — and leave exactly one diver marked as not back aboard.
+    for (const entry of roster) {
+      const outcome = await recordRollCall(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        bookingId: entry.booking.id,
+        recordedByPersonId: staff.id,
+        status: "boarded",
+        checkpoint: "after_dive_1",
+      });
+      if (!outcome.ok) throw new Error(`could not board a diver: ${outcome.reason}`);
+    }
+    // The crew half is satisfied first, so the *only* thing that can hold this
+    // checkpoint open below is the diver who has not come back.
+    const crewAssigned = (await getTripManifest(db, shop.id, reef.id, "after_dive_1"))?.crew.length;
+    await recordCrewAttestation(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      attestedByPersonId: staff.id,
+      crewAboard: crewAssigned ?? 0,
+      checkpoint: "after_dive_1",
+    });
+    // Just after the boat ties up: home, and well inside the dock-work window.
+    const now = new Date(reef.endsAt.getTime() + 60_000);
+    return { ...context, missing: roster[0], now };
+  }
+
+  it("holds the checkpoint open and raises the missing-diver row for the same trip", async () => {
+    const { db, shop, reef, staff, missing, now } = await afterDiveContext();
+    if (!missing) throw new Error("roster missing");
+
+    // Everything closed before anyone says otherwise.
+    const closed = await getTripManifest(db, shop.id, reef.id, "after_dive_1");
+    expect(closed?.completeness).toMatchObject({ complete: true, reason: null });
+    expect(
+      (await listRollCallGaps(db, shop.id, now)).some(
+        (gap) => gap.tripId === reef.id && gap.reason === "missing_diver",
+      ),
+    ).toBe(false);
+
+    // One diver did not come back from dive one.
+    await expect(
+      recordRollCall(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        bookingId: missing.booking.id,
+        recordedByPersonId: staff.id,
+        status: "not_boarded",
+        checkpoint: "after_dive_1",
+      }),
+    ).resolves.toMatchObject({ ok: true });
+
+    const manifest = await getTripManifest(db, shop.id, reef.id, "after_dive_1");
+    // Every diver has a result, so the old `awaiting === 0` rule called this
+    // complete — which is exactly the screen that contradicted Today.
+    expect(manifest?.summary.awaiting).toBe(0);
+    expect(manifest?.summary.notBackAboard).toBe(1);
+    expect(manifest?.summary.unaccountedFor).toBe(1);
+    expect(manifest?.completeness).toMatchObject({
+      complete: false,
+      diversAccountedFor: false,
+      crewAccountedFor: true,
+      reason: "divers_not_back_aboard",
+    });
+
+    const gap = (await listRollCallGaps(db, shop.id, now)).find(
+      (entry) => entry.tripId === reef.id && entry.reason === "missing_diver",
+    );
+    expect(gap).toBeDefined();
+    expect(gap?.diveNumber).toBe(1);
+    expect(gap?.uncounted).toBe(1);
+    // The agreement itself, stated as one assertion: the manifest cannot read
+    // closed while Today is alarming about the same boat.
+    expect(manifest?.completeness.complete).toBe(gap === undefined);
+  });
+
+  it("does not let the missing diver's result close dive two either", async () => {
+    const { db, shop, reef, staff, missing, now } = await afterDiveContext();
+    if (!missing) throw new Error("roster missing");
+    await recordRollCall(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      bookingId: missing.booking.id,
+      recordedByPersonId: staff.id,
+      status: "not_boarded",
+      checkpoint: "after_dive_1",
+    });
+
+    // Nothing carries forward from an after-dive result: dive two has to ask
+    // again rather than inheriting "not boarded" as a settled answer.
+    const diveTwo = await getTripManifest(db, shop.id, reef.id, "after_dive_2");
+    const diverAtDiveTwo = diveTwo?.divers.find((entry) => entry.bookingId === missing.booking.id);
+    expect(diverAtDiveTwo?.rollCall).toBeUndefined();
+    expect(diveTwo?.completeness).toMatchObject({ reason: "divers_awaiting" });
+    expect(diveTwo?.completeness.complete).toBe(false);
+    // And Today still has the boat.
+    expect((await listRollCallGaps(db, shop.id, now)).some((gap) => gap.tripId === reef.id)).toBe(
+      true,
+    );
+  });
+
+  it("still carries a departure not-boarded forward as a diver who is accounted for", async () => {
+    const { db, shop, reef, staff } = await manifestContext();
+    const roster = await getTripRoster(db, shop.id, reef.id);
+    const ashore = roster[0];
+    if (!ashore) throw new Error("roster missing");
+    await expect(
+      recordRollCall(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        bookingId: ashore.booking.id,
+        recordedByPersonId: staff.id,
+        status: "not_boarded",
+        checkpoint: "departure",
+      }),
+    ).resolves.toMatchObject({ ok: true });
+
+    // "Never left the dock" is benign and correctly true of every later
+    // checkpoint — this half of carry-forward is unchanged.
+    for (const checkpoint of ["after_dive_1", "after_dive_2"] as const) {
+      const manifest = await getTripManifest(db, shop.id, reef.id, checkpoint);
+      const diver = manifest?.divers.find((entry) => entry.bookingId === ashore.booking.id);
+      expect(diver?.rollCall).toMatchObject({ state: "not_boarded", implied: true });
+      // Carried, so not a missing diver and not an awaiting one either.
+      expect(manifest?.summary.notBackAboard).toBe(0);
+      expect(isRollCallAccountedFor(checkpoint, diver?.rollCall)).toBe(true);
+    }
   });
 });

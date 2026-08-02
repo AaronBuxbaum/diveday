@@ -7,8 +7,17 @@ import { seededShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
 import { createDiver, deleteDiver } from "./divers";
 import { canPersonExportShopData, loadShopExportBundleInput, loadShopExportCounts } from "./export";
+import { recordCrewAttestation } from "./manifests";
 import * as schema from "./schema";
-import { certifications, people, personRoles, shops, userAccounts, waiverRecords } from "./schema";
+import {
+  certifications,
+  people,
+  personRoles,
+  shops,
+  trips,
+  userAccounts,
+  waiverRecords,
+} from "./schema";
 import { getCurrentWaiverTemplate, issueWaiverRequest } from "./waivers";
 
 const EXPECTED_FILES = [
@@ -30,6 +39,7 @@ const EXPECTED_FILES = [
   "last_minute_list.csv",
   "trip_last_minute_promos.csv",
   "roll_call_events.csv",
+  "roll_call_crew_attestations.csv",
   "waiver_templates.csv",
   "waiver_records.csv",
   "rental_fit.csv",
@@ -67,6 +77,7 @@ const EXPORTED_TABLES = [
   "last_minute_list_entries",
   "trip_last_minute_promos",
   "roll_call_events",
+  "roll_call_crew_attestations",
   "waiver_templates",
   "waiver_records",
   "rental_fit_profiles",
@@ -162,6 +173,7 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "stripe_promotion_code_id",
   ],
   roll_call_events: ["shop_id"],
+  roll_call_crew_attestations: ["shop_id"],
   waiver_templates: ["shop_id"],
   waiver_records: [
     "shop_id",
@@ -352,6 +364,69 @@ describe("full-shop export dataset", () => {
     // incident review would correlate against.
     expect(rollCall.header).toContain("client_event_id");
     expect(rollCall.header).toContain("offline_snapshot_saved_at");
+  });
+
+  /**
+   * A crew attestation is part of the trip's safety record — the half of the
+   * head count that says whether the divemaster came back — so it leaves with
+   * the shop like every other roll-call row (DOM-H1/DOM-H3). It arrived with the
+   * crew-attestation change and had no export decision at all, which the schema
+   * coverage guard above caught.
+   */
+  it("exports the crew half of the head count, with who counted and what the denominator was", async () => {
+    const { db, shop } = await seededShopContext();
+    const [trip] = await db
+      .select({ id: trips.id, title: trips.title })
+      .from(trips)
+      .where(and(eq(trips.shopId, shop.id), eq(trips.status, "scheduled")))
+      .limit(1);
+    if (!trip) throw new Error("seeded shop has no scheduled trip");
+    const [staff] = await db
+      .select({ id: people.id, fullName: people.fullName })
+      .from(people)
+      .innerJoin(personRoles, eq(personRoles.personId, people.id))
+      .where(and(eq(people.shopId, shop.id), eq(personRoles.role, "owner")))
+      .limit(1);
+    if (!staff) throw new Error("seeded shop has no owner");
+
+    const recorded = await recordCrewAttestation(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      attestedByPersonId: staff.id,
+      crewAboard: 2,
+      checkpoint: "after_dive_1",
+      note: "Both DMs back on the ladder",
+      occurredAt: new Date("2026-07-23T15:30:00.000Z"),
+    });
+    expect(recorded.ok).toBe(true);
+
+    const input = await loadShopExportBundleInput(db, shop.id);
+    if (!input) throw new Error("seeded shop failed to load");
+    const attestations = table(input, "roll_call_crew_attestations.csv");
+    const cell = (row: (typeof attestations.rows)[number], header: string) =>
+      row[attestations.header.indexOf(header)];
+    const row = attestations.rows.find((entry) => cell(entry, "trip_id") === trip.id);
+    expect(row).toBeDefined();
+    if (!row) return;
+    // Denormalized the same way roll_call_events.csv is, so an incident review
+    // reads the file without joining by hand.
+    expect(cell(row, "trip_title")).toBe(trip.title);
+    expect(cell(row, "checkpoint")).toBe("after_dive_1");
+    expect(cell(row, "crew_aboard")).toBe(2);
+    // Evidence of what the assignment list said at the time, not a claim about
+    // now — the server, never the caller, supplied it.
+    expect(cell(row, "crew_assigned")).toBe(recorded.ok ? recorded.crewAssigned : Number.NaN);
+    // A head count is never anonymous.
+    expect(cell(row, "attested_by_person_id")).toBe(staff.id);
+    expect(cell(row, "attested_by_name")).toBe(staff.fullName);
+    expect(cell(row, "note")).toBe("Both DMs back on the ladder");
+    expect(cell(row, "occurred_at")).toEqual(new Date("2026-07-23T15:30:00.000Z"));
+
+    // The settings page's count comes off the same table, so the two can't drift.
+    const counts = await loadShopExportCounts(db, shop.id);
+    expect(counts?.find((entry) => entry.file === "roll_call_crew_attestations.csv")?.count).toBe(
+      attestations.rows.length,
+    );
   });
 
   it("flattens each person into an import-ready contacts row", async () => {

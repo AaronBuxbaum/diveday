@@ -3,6 +3,8 @@ import {
   buildTripManifest,
   type CrewAttestation,
   carryForwardNotBoarded,
+  isNotBackAboard,
+  isRollCallAccountedFor,
   isRollCallCheckpoint,
   maxRecordedDiveNumber,
   type RollCallRecord,
@@ -84,7 +86,9 @@ describe("buildTripManifest", () => {
       blocked: 1,
       boarded: 1,
       notBoarded: 0,
+      notBackAboard: 0,
       awaiting: 1,
+      unaccountedFor: 1,
     });
     // Counter check-in and boat roll call are different questions (task 149):
     // a diver can be checked in at the counter without being boarded, or
@@ -94,20 +98,121 @@ describe("buildTripManifest", () => {
     expect(manifest.divers.find((d) => d.bookingId === "booking-unknown")?.checkedIn).toBe(false);
   });
 
-  it("uses explicit words for every roll-call state", () => {
-    expect(rollCallLabel(undefined)).toBe("Awaiting roll call");
-    expect(rollCallLabel(notBoardedAt("Stayed ashore"))).toBe("Not boarded");
-    expect(rollCallLabel(boardedAt())).toBe("Boarded");
-    expect(rollCallLabel({ ...notBoardedAt(), implied: true })).toBe("Not boarded · carried");
+  /**
+   * DOM-H3, at the level the manifest page actually reads. The summary is what
+   * feeds the tiles, the progress line, and `completeness` — so the split has to
+   * survive all the way through `buildTripManifest`, not just live in a
+   * predicate nobody calls.
+   */
+  it("leaves an after-dive checkpoint incomplete when a diver has not come back", () => {
+    const build = (checkpoint: "departure" | "after_dive_1") =>
+      buildTripManifest({
+        trip,
+        checkpoint,
+        crew: [{ id: "crew-1", fullName: "Dana Reyes", roles: ["captain"] }],
+        crewAttestation: {
+          crewAboard: 1,
+          crewAssigned: 1,
+          attestedByName: "Dana Reyes",
+          occurredAt: new Date("2026-07-20T13:45:00.000Z"),
+          note: null,
+        },
+        divers: [
+          {
+            bookingId: "booking-aboard",
+            fullName: "Priya Sharma",
+            email: null,
+            emergencyContactName: null,
+            emergencyContactPhone: null,
+            readiness: { status: "ready", blockers: [] },
+            rentalFit: { state: "own_kit" as const },
+            nitroxRequested: false,
+            checkedIn: true,
+            rollCall: boardedAt(),
+          },
+          {
+            bookingId: "booking-missing",
+            fullName: "Omar Haddad",
+            email: null,
+            emergencyContactName: null,
+            emergencyContactPhone: null,
+            readiness: { status: "ready", blockers: [] },
+            rentalFit: { state: "own_kit" as const },
+            nitroxRequested: false,
+            checkedIn: true,
+            rollCall: notBoardedAt("Not on the ladder"),
+          },
+        ],
+      });
+
+    // After a dive the same record means "did not return to the boat": every
+    // diver has a result, so `awaiting` is 0 — and the checkpoint is still open.
+    const afterDive = build("after_dive_1");
+    expect(afterDive.summary.awaiting).toBe(0);
+    expect(afterDive.summary.notBackAboard).toBe(1);
+    expect(afterDive.summary.unaccountedFor).toBe(1);
+    expect(afterDive.completeness).toMatchObject({
+      complete: false,
+      diversAccountedFor: false,
+      crewAccountedFor: true,
+      reason: "divers_not_back_aboard",
+    });
+
+    // At the dock the identical record means "never left", which is a diver
+    // accounted for — that half of the behaviour is unchanged.
+    const departure = build("departure");
+    expect(departure.summary.notBackAboard).toBe(0);
+    expect(departure.summary.unaccountedFor).toBe(0);
+    expect(departure.completeness).toMatchObject({ complete: true, reason: null });
   });
 
-  it("carries a not-boarded result forward until a later result breaks the chain", () => {
+  it("returns a code for every roll-call state, and the after-dive one is its own state", () => {
+    // Codes, never sentences: `src/lib` hands back the state and the staff
+    // bundle picks the words (`rollCallLabelText`, src/i18n/manifest-labels.ts).
+    expect(rollCallLabel("departure", undefined)).toBe("awaiting");
+    expect(rollCallLabel("departure", notBoardedAt("Stayed ashore"))).toBe("not_boarded");
+    expect(rollCallLabel("departure", boardedAt())).toBe("boarded");
+    expect(rollCallLabel("after_dive_1", { ...notBoardedAt(), implied: true })).toBe(
+      "not_boarded_carried",
+    );
+    // The one that used to render as "Not boarded" (and, on the button beside
+    // it, "Not boarded ✓") for a diver who had not come back from dive one.
+    expect(rollCallLabel("after_dive_1", notBoardedAt("Not on the ladder"))).toBe(
+      "not_back_aboard",
+    );
+    expect(rollCallLabel("after_dive_2", boardedAt())).toBe("boarded");
+  });
+
+  it("carries a departure not-boarded forward until a later result breaks the chain", () => {
     // Not boarded at departure → every later checkpoint defaults to not boarded.
-    const carried = carryForwardNotBoarded([notBoardedAt("Left the boat"), undefined, undefined]);
-    expect(carried[0]).toMatchObject({ state: "not_boarded", note: "Left the boat" });
+    const carried = carryForwardNotBoarded([
+      notBoardedAt("Never left the dock"),
+      undefined,
+      undefined,
+    ]);
+    expect(carried[0]).toMatchObject({ state: "not_boarded", note: "Never left the dock" });
     expect(carried[0]?.implied).toBeUndefined();
     expect(carried[1]).toMatchObject({ state: "not_boarded", implied: true });
     expect(carried[2]).toMatchObject({ state: "not_boarded", implied: true });
+  });
+
+  /**
+   * DOM-H3, the defect this whole file exists to stop coming back. A
+   * `not_boarded` recorded *after a dive* is the missing-diver event — "did not
+   * return to the boat" — and carrying it forward as an accounted-for record is
+   * what let a later checkpoint close on a diver still in the water.
+   */
+  it("never carries an after-dive not-boarded forward — a missing diver cannot satisfy a later count", () => {
+    const carried = carryForwardNotBoarded([
+      boardedAt(),
+      notBoardedAt("Not on the ladder"),
+      undefined,
+      undefined,
+    ]);
+    expect(carried[1]).toMatchObject({ state: "not_boarded", note: "Not on the ladder" });
+    // Dives two and three must ask again rather than inheriting an answer.
+    expect(carried[2]).toBeUndefined();
+    expect(carried[3]).toBeUndefined();
   });
 
   it("does not carry a boarded result forward, and an explicit later result wins", () => {
@@ -121,6 +226,22 @@ describe("buildTripManifest", () => {
     const explicitLater = carryForwardNotBoarded([notBoardedAt(), notBoardedAt("Own decision")]);
     expect(explicitLater[1]).toMatchObject({ note: "Own decision" });
     expect(explicitLater[1]?.implied).toBeUndefined();
+  });
+
+  it("splits the two meanings of not_boarded by checkpoint, once, for every reader", () => {
+    // Departure: never left the dock. Benign, and accounted for.
+    expect(isNotBackAboard("departure", notBoardedAt())).toBe(false);
+    expect(isRollCallAccountedFor("departure", notBoardedAt())).toBe(true);
+    // After a dive: did not return to the boat.
+    expect(isNotBackAboard("after_dive_1", notBoardedAt())).toBe(true);
+    expect(isRollCallAccountedFor("after_dive_1", notBoardedAt())).toBe(false);
+    // ...unless it was carried forward from the dock, where it still means
+    // "never left" and the diver is still accounted for.
+    expect(isNotBackAboard("after_dive_1", { ...notBoardedAt(), implied: true })).toBe(false);
+    expect(isRollCallAccountedFor("after_dive_1", { ...notBoardedAt(), implied: true })).toBe(true);
+    // Boarded is accounted for anywhere; no result at all never is.
+    expect(isRollCallAccountedFor("after_dive_1", boardedAt())).toBe(true);
+    expect(isRollCallAccountedFor("departure", undefined)).toBe(false);
   });
 
   it("builds bounded departure and after-dive checkpoints", () => {
@@ -334,6 +455,45 @@ describe("rollCallCompleteness — the crew half of the head count (DOM-H1)", ()
         crewAttestation: attested(3, 2),
       }),
     ).toMatchObject({ complete: true, reason: null });
+  });
+
+  /**
+   * DOM-H3. `awaiting` counts divers with *no result*, so before this a diver a
+   * human had recorded as not back aboard read as accounted for and the whole
+   * checkpoint closed. There is still exactly one closing rule —
+   * `unaccountedFor === 0` — and the awaiting/not-back-aboard split only picks
+   * which reason to name.
+   */
+  it("does not let a diver recorded as not back aboard close the checkpoint", () => {
+    expect(
+      rollCallCompleteness({
+        totalDivers: 6,
+        awaiting: 0,
+        notBackAboard: 1,
+        crewAssigned: 2,
+        crewAttestation: attested(2),
+      }),
+    ).toEqual({
+      complete: false,
+      diversAccountedFor: false,
+      crewAccountedFor: true,
+      reason: "divers_not_back_aboard",
+    });
+  });
+
+  it("names the missing diver ahead of a clerical gap on the same boat", () => {
+    // Same precedence `listRollCallGaps` uses (`missing_diver` outranks
+    // `after_dive_uncounted`): a stated "they didn't come back" is not allowed
+    // to hide behind "three still to call".
+    expect(
+      rollCallCompleteness({
+        totalDivers: 6,
+        awaiting: 3,
+        notBackAboard: 1,
+        crewAssigned: 0,
+        crewAttestation: null,
+      }),
+    ).toMatchObject({ complete: false, reason: "divers_not_back_aboard" });
   });
 
   it("is the definition buildTripManifest derives, so no surface can invent its own", () => {

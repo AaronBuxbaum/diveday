@@ -29,7 +29,16 @@ function snapshot(): OfflineManifestSnapshot {
         },
         checkpoint: "departure",
         crew: [],
-        summary: { totalDivers: 2, ready: 1, blocked: 1, boarded: 0, notBoarded: 0, awaiting: 2 },
+        summary: {
+          totalDivers: 2,
+          ready: 1,
+          blocked: 1,
+          boarded: 0,
+          notBoarded: 0,
+          notBackAboard: 0,
+          awaiting: 2,
+          unaccountedFor: 2,
+        },
         divers: [
           {
             bookingId: "ready",
@@ -286,7 +295,16 @@ describe("offline manifest policy", () => {
           },
         },
       ],
-      summary: { totalDivers: 1, ready: 1, blocked: 0, boarded: 0, notBoarded: 1, awaiting: 0 },
+      summary: {
+        totalDivers: 1,
+        ready: 1,
+        blocked: 0,
+        boarded: 0,
+        notBoarded: 1,
+        notBackAboard: 0,
+        awaiting: 0,
+        unaccountedFor: 0,
+      },
     };
 
     const payload = serializeManifests(
@@ -345,7 +363,16 @@ describe("offline manifest policy", () => {
           rollCall: undefined,
         },
       ],
-      summary: { totalDivers: 1, ready: 1, blocked: 0, boarded: 0, notBoarded: 0, awaiting: 1 },
+      summary: {
+        totalDivers: 1,
+        ready: 1,
+        blocked: 0,
+        boarded: 0,
+        notBoarded: 0,
+        notBackAboard: 0,
+        awaiting: 1,
+        unaccountedFor: 1,
+      },
     };
 
     const payload = serializeManifests(

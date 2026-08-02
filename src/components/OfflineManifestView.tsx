@@ -13,16 +13,18 @@ import { SubSurfaceRipple } from "@/components/SubSurfaceRipple";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass } from "@/components/ui/form";
 import { WaterLocker, WaterLockerToggle } from "@/components/WaterLocker";
-import { rollCallCheckpointText } from "@/i18n/manifest-labels";
+import { rollCallCheckpointText, rollCallLabelText } from "@/i18n/manifest-labels";
 import { matchLocale } from "@/i18n/negotiate";
 import { rentalFitLineText } from "@/i18n/rental-labels";
 import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
 import { staffTranslator } from "@/i18n/staff-messages";
 import {
+  isNotBackAboard,
   isRollCallCheckpoint,
   type RollCallCheckpoint,
   rollCallCheckpoints,
   rollCallCompleteness,
+  rollCallLabel,
 } from "@/lib/manifests";
 import {
   appendOfflineRollCall,
@@ -402,6 +404,12 @@ export function OfflineManifestView() {
   );
   const boarded = localStates.filter((state) => state?.state === "boarded").length;
   const awaiting = localStates.filter((state) => !state).length;
+  // The dock copy splits `not_boarded` exactly the way the live manifest does
+  // (`isNotBackAboard`, src/lib/manifests.ts): at departure it means the diver
+  // never left, after a dive it means they have not come back. Offline and
+  // online disagreeing about whether everyone is out of the water is worse than
+  // either being wrong on its own, so both read the same predicate (DOM-H3).
+  const notBackAboard = localStates.filter((state) => isNotBackAboard(checkpoint, state)).length;
   // The same definition the live manifest uses — divers *and* crew (DOM-H1,
   // ADR 20260802-crew-roll-call-attestation). Recomputed here rather than read
   // off the snapshot because `awaiting` comes from events on this device, not
@@ -416,6 +424,7 @@ export function OfflineManifestView() {
   const completeness = rollCallCompleteness({
     totalDivers: manifest.summary.totalDivers,
     awaiting,
+    notBackAboard,
     crewAssigned,
     crewAttestation: savedCrewAttestation
       ? {
@@ -662,16 +671,23 @@ export function OfflineManifestView() {
               checkpoint,
             );
             const ready = diver.readiness.status === "ready";
+            // Recorded here at this checkpoint, either way round — a
+            // carried-forward dock result is not undoable and gets the
+            // "Mark…" wording, same as the live manifest.
+            const recordedNotBoarded = state?.state === "not_boarded" && state.implied !== true;
+            const missing = isNotBackAboard(checkpoint, state);
             return (
               <li
                 key={diver.bookingId}
                 id={`offline-roll-call-${diver.bookingId}`}
                 className={
-                  ready
-                    ? state
-                      ? "border-l-4 border-success p-4 sm:p-5"
-                      : "border-l-4 border-warning bg-warning/10 p-4 ring-1 ring-inset ring-warning/30 sm:p-5"
-                    : "scroll-mt-24 border-l-4 border-danger bg-danger/5 p-4 sm:p-5"
+                  missing
+                    ? "scroll-mt-24 border-l-4 border-danger bg-danger/10 p-4 ring-1 ring-inset ring-danger/40 sm:p-5"
+                    : ready
+                      ? state
+                        ? "border-l-4 border-success p-4 sm:p-5"
+                        : "border-l-4 border-warning bg-warning/10 p-4 ring-1 ring-inset ring-warning/30 sm:p-5"
+                      : "scroll-mt-24 border-l-4 border-danger bg-danger/5 p-4 sm:p-5"
                 }
               >
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -692,14 +708,18 @@ export function OfflineManifestView() {
                           ? t("shared.offlineManifest.single.readyBadge")
                           : t("shared.offlineManifest.single.blockedBadge")}
                       </span>
-                      <span className="rounded-full bg-surface-sunken px-3 py-1 text-sm font-semibold">
-                        {state
-                          ? state.state === "boarded"
-                            ? t("shared.offlineManifest.single.stateBoarded")
-                            : state.implied
-                              ? t("shared.offlineManifest.single.stateNotBoardedCarried")
-                              : t("shared.offlineManifest.single.stateNotBoarded")
-                          : t("shared.offlineManifest.single.stateAwaiting")}
+                      {/* Same resolver the live manifest renders (DOM-H3):
+                          one word list, so a diver who has not come back from
+                          dive one cannot read "Not boarded" here and "Not back
+                          aboard" on the captain's screen. */}
+                      <span
+                        className={
+                          missing
+                            ? "rounded-full bg-danger/15 px-3 py-1 text-sm font-bold text-danger"
+                            : "rounded-full bg-surface-sunken px-3 py-1 text-sm font-semibold"
+                        }
+                      >
+                        {rollCallLabelText(t, rollCallLabel(checkpoint, state))}
                         {state?.pending
                           ? ` ${t("shared.offlineManifest.single.statePendingSuffix")}`
                           : ""}
@@ -796,13 +816,24 @@ export function OfflineManifestView() {
                             record(diver.bookingId, "not_boarded", noteByBooking[diver.bookingId])
                           }
                           aria-busy={busyBooking === diver.bookingId}
-                          className="flex min-h-14 w-full touch-manipulation items-center justify-center rounded-lg border border-border-strong px-5 text-base font-semibold transition-[transform,opacity] active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:w-auto"
+                          className={
+                            missing
+                              ? "flex min-h-14 w-full touch-manipulation items-center justify-center rounded-lg border border-danger bg-danger/15 px-5 text-base font-semibold text-danger transition-[transform,opacity] active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:w-auto"
+                              : "flex min-h-14 w-full touch-manipulation items-center justify-center rounded-lg border border-border-strong px-5 text-base font-semibold transition-[transform,opacity] active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:w-auto"
+                          }
                         >
+                          {/* No done-check after a dive: "Not boarded ✓" beside a
+                              diver still in the water is the string this whole
+                              change exists to delete (DOM-H3). */}
                           {busyBooking === diver.bookingId
                             ? t("shared.offlineManifest.single.saving")
-                            : state?.state === "not_boarded"
-                              ? t("shared.offlineManifest.single.notBoardedDone")
-                              : t("shared.offlineManifest.single.markNotBoarded")}
+                            : recordedNotBoarded
+                              ? isDeparture
+                                ? t("shared.offlineManifest.single.notBoardedDone")
+                                : t("shared.offlineManifest.single.notBackAboardActive")
+                              : isDeparture
+                                ? t("shared.offlineManifest.single.markNotBoarded")
+                                : t("shared.offlineManifest.single.markNotBackAboard")}
                         </button>
                       </>
                     )}
