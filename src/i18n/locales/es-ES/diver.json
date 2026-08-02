@@ -1489,6 +1489,11 @@
       "contact": "¿Preguntas? Escríbenos al {phone}.",
       "medicalReviewNote": "Comprueba si una respuesta médica necesita el visto bueno de un médico",
       "recap": "{shopName}: ¡gracias por bucear {tripTitle}! Tu resumen: {recapUrl}"
+    },
+    "whatsappTemplate": {
+      "body": "¡Hola! Un aviso de {{1}}: {{2}}",
+      "exampleShopName": "Blue Mantis Divers",
+      "exampleMessage": "Reef Runner zarpa el sábado a las 8:00. Presentaos en el muelle 30 minutos antes."
     }
   }
 }

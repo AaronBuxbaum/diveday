@@ -62,6 +62,13 @@ async function run() {
     if (key.startsWith("SNS_")) {
       continue;
     }
+    // WhatsApp is per-shop: the credentials live in shop_whatsapp_accounts, not
+    // here. Only the sealing key is environment configuration, and an instance
+    // with no shop using WhatsApp legitimately has none
+    // (ADR 20260802-whatsapp-cloud-api-per-shop).
+    if (key === "SECRET_ENCRYPTION_KEY" || key.startsWith("META_")) {
+      continue;
+    }
     if (!localKeys.has(key)) {
       missingKeys.push(key);
     }

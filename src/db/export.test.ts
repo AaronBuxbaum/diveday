@@ -117,6 +117,11 @@ const EXCLUDED_TABLES = [
   "course_inquiries", // a marketing lead, not a shop operational record — same reasoning as activity_events
   "last_minute_list_unsubscribe_tokens", // bearer credentials, never exported — same reasoning as booking_capabilities
   "person_courtesy_email_unsubscribe_tokens", // bearer credentials, never exported — same reasoning as booking_capabilities
+  // The shop's own Meta access token (sealed) plus the provider linkage around
+  // it. Never exported, for both reasons already on this list: it is a live
+  // credential like user_accounts, and a phone number id is provider linkage
+  // useless outside that Meta account, like shop_stripe_accounts.
+  "shop_whatsapp_accounts",
 ];
 
 /**

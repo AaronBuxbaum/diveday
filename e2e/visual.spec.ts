@@ -823,6 +823,14 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { name: "Rental prices" }).waitFor();
         await capture(page, "settings-payments", scheme);
 
+        // Where a shop connects its own WhatsApp Business number (ADR
+        // 20260802-whatsapp-embedded-signup). The fleet configures no META_*
+        // credentials, so this captures the coming-soon state — which is what
+        // every shop sees today, and where all of this surface's copy lives.
+        await page.goto("/shop/blue-mantis/settings/whatsapp");
+        await page.getByRole("heading", { name: "How connecting works" }).waitFor();
+        await capture(page, "settings-whatsapp", scheme);
+
         // The two orders surfaces — the densest money screens in the app, and
         // until now the only ones with no baseline at all. That gap was found
         // the honest way: the shop-currency change (ADR 20260731-shop-currency)

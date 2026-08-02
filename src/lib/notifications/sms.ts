@@ -1,6 +1,7 @@
 import { PublishCommand, SNSClient } from "@aws-sdk/client-sns";
 import { z } from "zod";
 import { log } from "@/lib/log";
+import type { CourtesyDelivery } from "./courtesy";
 
 /**
  * SMS delivery through AWS SNS's direct-to-phone-number `Publish` API — the
@@ -11,10 +12,10 @@ import { log } from "@/lib/log";
  * booking and reminder flows stay testable and shippable without a texting
  * account configured.
  *
- * SNS has no WhatsApp delivery path (that's a distinct Meta Business API
- * integration Twilio happened to front) — this channel is SMS-only. Add a
- * WhatsApp adapter alongside this one, behind the same `SmsProvider`
- * interface, if that's ever explicitly requested.
+ * SNS has no WhatsApp delivery path of its own. WhatsApp is a separate adapter
+ * against Meta's Cloud API (`./whatsapp.ts`) using each shop's own business
+ * account, and `./courtesy.ts` owns the rule that picks between the two — this
+ * file stays SMS-only (ADR 20260802-whatsapp-cloud-api-per-shop).
  */
 
 export type SmsMessage = {
@@ -24,16 +25,8 @@ export type SmsMessage = {
   body: string;
 };
 
-export type SmsDelivery =
-  | { status: "sent"; providerMessageId: string }
-  | { status: "not_configured" }
-  | {
-      status: "failed";
-      retryable?: boolean;
-      httpStatus?: number;
-      errorCode?: string;
-      detail?: string;
-    };
+/** Shared with the WhatsApp adapter so either can be recorded through the same seam. */
+export type SmsDelivery = CourtesyDelivery;
 
 export interface SmsProvider {
   send(message: SmsMessage): Promise<SmsDelivery>;

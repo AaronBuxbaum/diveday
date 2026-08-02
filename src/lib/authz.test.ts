@@ -5,6 +5,7 @@ import {
   canDeleteDiver,
   canExportShopData,
   canImportShopData,
+  canManageMessagingSettings,
   canManagePaymentSettings,
   canManageStaffAccounts,
   canManageWaiverTemplates,
@@ -42,6 +43,8 @@ describe("accountable-role gates (export/import/reports)", () => {
     ["canDeleteDiver", canDeleteDiver],
     // 20260726-staff-invite-accounts: invite/edit-roles/disable/remove share the same gate.
     ["canManageStaffAccounts", canManageStaffAccounts],
+    // 20260802-whatsapp-cloud-api-per-shop: a credential that sends as the business.
+    ["canManageMessagingSettings", canManageMessagingSettings],
   ] as const;
 
   for (const [name, gate] of gates) {

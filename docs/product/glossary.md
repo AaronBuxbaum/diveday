@@ -432,11 +432,28 @@ new domain concept, define it here in the same PR.
   `pending` → `paid`/`expired`, reconciled against Stripe the same way a booking checkout is — never
   trusted from a return-URL param alone. See
   [20260726-post-trip-tipping](../architecture/decisions/20260726-post-trip-tipping.md).
+- **Courtesy message** — the short text that rides alongside a trip reminder or post-trip recap, and
+  the *only* channel for a diver who gave a phone number but no email. It goes out over exactly one
+  of two channels, never both, chosen per shop by `sendCourtesyMessage()`
+  (`src/lib/notifications/courtesy.ts`): the shop's **WhatsApp sender** when it has connected one,
+  and the **SMS channel** otherwise. Any WhatsApp failure — most often a diver who simply isn't on
+  WhatsApp — falls back to SMS immediately rather than being retried, because a reminder that lands
+  after the boat leaves is worth nothing.
 - **SMS channel** — an optional text channel for notifications, delivered through an AWS SNS seam
   (`notifySms()`). A number is texted only if it is already E.164, and the channel degrades to
-  `not_configured` with no SNS credentials configured, exactly like the email seam. Used today as a
-  courtesy channel alongside reminder email; no WhatsApp path exists (SNS has none). See
+  `not_configured` with no SNS credentials configured, exactly like the email seam. The platform-wide
+  fallback half of a **courtesy message**. See
   [20260802-sns-sms-adapter](../architecture/decisions/20260802-sns-sms-adapter.md).
+- **WhatsApp sender** — a shop's *own* WhatsApp Business number, connected in Settings → WhatsApp
+  through **Meta Embedded Signup**: the shop presses one button and completes Meta's own hosted
+  popup, and DiveDay registers the number, subscribes to its delivery events, and submits the
+  message template for approval on the shop's behalf. DiveDay is not the sender; the dive shop is, so
+  divers see the shop they booked with and a reply reaches that shop's own inbox. WhatsApp requires
+  business-initiated messages to use an approved **template**, so the template's name and language
+  are stored per shop alongside its access token, which is encrypted at rest and never readable back
+  out. Dormant until Meta approves DiveDay's app — the settings page says so, and courtesy messages
+  go out as SMS meanwhile. See
+  [20260802-whatsapp-embedded-signup](../architecture/decisions/20260802-whatsapp-embedded-signup.md).
 - **Demo mode** — a shop flagged `isDemo` gets the Demo Playground banner, its role switcher, and a
   "Reset demo data" affordance scoped to that one tenant. "Try the live demo" **mints a fresh
   `isDemo` shop per visitor** with a generated name/slug, seeded with the full sample schedule; a

@@ -1763,6 +1763,11 @@
         "submit": "Guardar moneda",
         "submitting": "Guardando…",
         "mismatch": "Cobras en {shopCurrency}, pero Stripe liquida esta cuenta conectada en {accountCurrency}. Stripe rechazará un pago en una moneda que esta cuenta no puede liquidar — elige {accountCurrency} aquí o conecta una cuenta que liquide en {shopCurrency}."
+      },
+      "whatsapp": {
+        "heading": "WhatsApp",
+        "description": "Envía recordatorios y resúmenes desde el número de WhatsApp de tu tienda en lugar de un número SMS de la plataforma.",
+        "cta": "Configurar WhatsApp"
       }
     },
     "team": {
@@ -1846,7 +1851,7 @@
       "rowCount": "{count, plural, one {# fila} other {# filas}}",
       "notIncluded": {
         "label": "No incluido, a propósito:",
-        "text": "copias de manifiestos sin conexión, notas del personal, registros de notificaciones, intentos de pago de Stripe (los resultados están en reservas y pedidos), y URLs de imágenes pegadas que nunca se guardaron. Las fotos propias de DiveDay se exportan como archivos reales en <mono>photos/</mono>. Las credenciales y los enlaces de calendario nunca se exportan — consulta el README."
+        "text": "copias de manifiestos sin conexión, notas del personal, registros de notificaciones, intentos de pago de Stripe (los resultados están en reservas y pedidos), y URLs de imágenes pegadas que nunca se guardaron. Las fotos propias de DiveDay se exportan como archivos reales en <mono>photos/</mono>. Las credenciales, los enlaces de calendario y tu cuenta de WhatsApp conectada nunca se exportan — consulta el README."
       }
     },
     "import": {
@@ -2759,6 +2764,69 @@
     "rollCallCheckpoint": {
       "departure": "Antes de zarpar",
       "afterDive": "Después de la inmersión {n}"
+    }
+  },
+  "whatsapp": {
+    "eyebrow": "Ajustes",
+    "title": "WhatsApp",
+    "description": "Envía recordatorios y resúmenes de salidas desde el número de WhatsApp de tu tienda, para que los buceadores reconozcan quién les escribe. Sin esto, esos mensajes de cortesía salen por SMS desde un número de la plataforma.",
+    "status": {
+      "connectedHeading": "WhatsApp conectado",
+      "notConnectedHeading": "No hay número de WhatsApp conectado",
+      "notConnectedDescription": "Los recordatorios y resúmenes de cortesía salen por SMS. Conecta tu número de WhatsApp Business abajo para enviarlos desde tu tienda.",
+      "verified": "Mensaje de prueba entregado",
+      "untested": "Sin probar todavía",
+      "number": "Número emisor",
+      "template": "Plantilla de mensaje",
+      "connectedAt": "Conectado"
+    },
+    "setup": {
+      "heading": "Cómo funciona la conexión",
+      "description": "No tendrás que crear nada en las herramientas de Meta ni copiar ninguna clave. Todo ocurre en la ventana de Meta y DiveDay se encarga del resto.",
+      "step1": "Pulsa Conectar. Meta abre su propia ventana, donde inicias sesión con la cuenta de Facebook que gestiona tu tienda.",
+      "step2": "Elige el número de teléfono desde el que quieres que los buceadores reciban los mensajes, o añade uno nuevo, y acepta las condiciones de Meta.",
+      "step3": "Ya está. DiveDay registra el número y envía tu plantilla de mensaje a revisión en tu nombre."
+    },
+    "test": {
+      "heading": "Envía un mensaje de prueba",
+      "description": "Guardar las credenciales no prueba que funcionen. Envíate un mensaje real para confirmar que el token, la plantilla y el idioma encajan antes de que un buceador dependa de ello.",
+      "phone": "Tu número de WhatsApp",
+      "submit": "Enviar mensaje de prueba",
+      "submitting": "Enviando…",
+      "phoneDescription": "En formato internacional completo, empezando por el código de país."
+    },
+    "disconnect": {
+      "heading": "Desconectar",
+      "description": "Elimina el token guardado y devuelve los mensajes de cortesía a SMS. Tu cuenta de WhatsApp y tus plantillas no se tocan.",
+      "submit": "Desconectar WhatsApp",
+      "submitting": "Desconectando…"
+    },
+    "notice": {
+      "connected": "WhatsApp conectado. Envía un mensaje de prueba para confirmar que funciona.",
+      "disconnected": "WhatsApp desconectado. Los mensajes de cortesía saldrán por SMS.",
+      "tested": "Mensaje de prueba entregado. Tu conexión de WhatsApp funciona.",
+      "test_failed": "WhatsApp rechazó el mensaje de prueba. Comprueba que tu token siga siendo válido y que tu plantilla esté aprobada en el idioma indicado arriba.",
+      "invalid": "Revisa los datos e inténtalo de nuevo.",
+      "not_authorized": "Solo un propietario o gerente puede cambiar los ajustes de WhatsApp.",
+      "no_account": "Todavía no hay ningún número de WhatsApp conectado.",
+      "encryption_key_unset": "Esta instancia de DiveDay aún no está preparada para guardar credenciales de forma segura, así que no se guardó nada.",
+      "encryption_key_invalid": "La clave de cifrado de esta instancia de DiveDay está mal configurada, así que no se guardó nada.",
+      "signup_unavailable": "La conexión con WhatsApp aún no está activada en esta instancia de DiveDay.",
+      "signup_failed_exchange": "Meta no aceptó la conexión. Pulsa Conectar para empezar de nuevo: el enlace del intento anterior solo se puede usar una vez.",
+      "signup_failed_register": "Meta no pudo activar ese número para enviar mensajes. Puede que ya se esté usando en la app de WhatsApp; elimínalo allí primero e inténtalo de nuevo.",
+      "signup_failed_subscribe": "Tu número se conectó, pero DiveDay no pudo suscribirse a sus actualizaciones de entrega. Pulsa Conectar para intentarlo de nuevo.",
+      "signup_failed_template": "Tu número se conectó, pero no se pudo enviar la plantilla de mensaje a revisión. Pulsa Conectar para intentarlo de nuevo."
+    },
+    "comingSoon": {
+      "heading": "Próximamente",
+      "body": "Conectar tu número de WhatsApp depende de la aprobación de DiveDay por parte de Meta, que está en curso. No hay nada que hacer todavía: lo activaremos aquí en cuanto se apruebe, y mientras tanto tus recordatorios seguirán saliendo por SMS."
+    },
+    "signup": {
+      "connect": "Conectar WhatsApp",
+      "reconnect": "Reconectar WhatsApp",
+      "connecting": "Conectando…",
+      "cancelled": "Conexión cancelada; no se cambió nada. Pulsa Conectar para intentarlo de nuevo.",
+      "blocked": "No se pudo abrir la ventana de Meta. Comprueba que tu navegador no bloquee las ventanas emergentes e inténtalo de nuevo."
     }
   }
 }
