@@ -2,7 +2,12 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { FlashParams } from "@/components/FlashParams";
 import { UndoToast } from "@/components/UndoToast";
-import { canPersonDeleteDiver, canPersonOverrideGearRequest, canPersonRefund } from "@/db/authz";
+import {
+  canPersonDeleteDiver,
+  canPersonErasePersonalData,
+  canPersonOverrideGearRequest,
+  canPersonRefund,
+} from "@/db/authz";
 import { getDb } from "@/db/client";
 import { getDiverProfile } from "@/db/divers";
 import { getShopById } from "@/db/shops";
@@ -13,6 +18,7 @@ import { requireStaffSession } from "@/lib/session";
 import { BookActivity } from "./_components/BookActivity";
 import { CertificationCards } from "./_components/CertificationCards";
 import { DiverHeader } from "./_components/DiverHeader";
+import { ErasePersonalData } from "./_components/ErasePersonalData";
 import { NoticeBanner } from "./_components/NoticeBanner";
 import { PaymentsSection } from "./_components/PaymentsSection";
 import { RemoveDiver } from "./_components/RemoveDiver";
@@ -57,10 +63,13 @@ export default async function DiverDetailPage({
   // server actions re-check regardless — hiding is a courtesy, not the gate.
   // Rewriting a diver's stated rental fit is instructor/divemaster/manager work
   // (H-06); flagging them for hands-on fitting stays open to all staff.
-  const [canRefund, canDelete, canOverrideFit] = await Promise.all([
+  // Erasing a diver's personal and medical data is stricter still — owner only,
+  // one way, and never offered to anyone else (ADR 20260802-diver-data-erasure).
+  const [canRefund, canDelete, canOverrideFit, canErase] = await Promise.all([
     canPersonRefund(db, shop.id, session.user.personId),
     canPersonDeleteDiver(db, shop.id, session.user.personId),
     canPersonOverrideGearRequest(db, shop.id, session.user.personId),
+    canPersonErasePersonalData(db, shop.id, session.user.personId),
   ]);
   const { trips: scannedTrips } = await pagedUpcomingTripsWithCounts(db, shop.id, {
     limit: BOOK_ACTIVITY_TRIP_SCAN_LIMIT,
@@ -124,6 +133,9 @@ export default async function DiverDetailPage({
       <ShopHistory locale={locale} diver={diver} shop={shop} shopSlug={shopSlug} />
       {canDelete ? (
         <RemoveDiver diver={diver} shopSlug={shopSlug} personId={personId} locale={locale} />
+      ) : null}
+      {canErase ? (
+        <ErasePersonalData diver={diver} shopSlug={shopSlug} personId={personId} locale={locale} />
       ) : null}
     </main>
   );

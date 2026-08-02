@@ -540,6 +540,13 @@ export async function loadShopExportBundleInput(
             "emergency_contact_phone",
             "courtesy_email_opt_out_at",
             "deleted_at",
+            // Erasure travels with the bundle (ADR 20260802-diver-data-erasure).
+            // Every identifying column above is already blank for such a row, so
+            // without these two the destination system cannot tell a diver who
+            // was erased from one whose details were simply never collected —
+            // and would happily prompt staff to "complete" the record.
+            "anonymized_at",
+            "anonymized_by_person_id",
             "created_at",
           ],
           rows: peopleRows.map((row) => [
@@ -554,6 +561,8 @@ export async function loadShopExportBundleInput(
             row.emergencyContactPhone,
             row.courtesyEmailOptOutAt,
             row.deletedAt,
+            row.anonymizedAt,
+            row.anonymizedByPersonId,
             row.createdAt,
           ]),
           note: EXPORT_FILE_NOTES["people.csv"],
@@ -1040,6 +1049,12 @@ export async function loadShopExportBundleInput(
             "imported_from_label",
             "import_source_document_url",
             "import_source_medical_document_url",
+            // Which seal the row's `integrity_hash` is over: version 2 means
+            // this release was stripped when its diver was erased, and the
+            // signature and medical answers above are blank by decision rather
+            // than by omission (ADR 20260802-diver-data-erasure).
+            "anonymized_at",
+            "anonymized_by_person_id",
             "created_at",
           ],
           rows: waiverRows.map((row) => [
@@ -1068,6 +1083,8 @@ export async function loadShopExportBundleInput(
             row.importedFromLabel,
             row.importSourceDocumentUrl,
             row.importSourceMedicalDocumentUrl,
+            row.anonymizedAt,
+            row.anonymizedByPersonId,
             row.createdAt,
           ]),
           note: EXPORT_FILE_NOTES["waiver_records.csv"],

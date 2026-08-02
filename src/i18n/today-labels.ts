@@ -224,6 +224,10 @@ const STUCK_OPERATION_KIND_KEYS: Record<string, StaffMessageKey> = {
 const MEDIA_DELETION_KIND_KEYS: Record<string, StaffMessageKey> = {
   course_photo: "shared.today.opsAlert.mediaKind.coursePhoto",
   recap_photo: "shared.today.opsAlert.mediaKind.recapPhoto",
+  // Queued by diver erasure (ADR 20260802-diver-data-erasure) — see the same
+  // note on Reports' `MEDIA_KIND_KEYS`: a missing entry renders the raw enum.
+  certification_card: "shared.today.opsAlert.mediaKind.certificationCard",
+  waiver_document: "shared.today.opsAlert.mediaKind.waiverDocument",
 };
 
 /** A stuck operation's kind word, standalone — `src/db/today.ts` uses this for the row's `subject`. */

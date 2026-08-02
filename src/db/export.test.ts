@@ -2,7 +2,9 @@
 import { and, eq, getTableColumns, getTableName } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { DEV_STAFF_LOGINS } from "@/db/dev-credentials";
+import { ANONYMIZED_PERSON_NAME } from "@/lib/anonymization";
 import { seededShopContext } from "@/test/db";
+import { anonymizeDiver } from "./anonymize";
 import { createDiver, deleteDiver } from "./divers";
 import { canPersonExportShopData, loadShopExportBundleInput, loadShopExportCounts } from "./export";
 import * as schema from "./schema";
@@ -600,6 +602,55 @@ describe("full-shop export dataset", () => {
     );
     expect(row).toBeDefined();
     expect(row?.[peopleTable.header.indexOf("deleted_at")]).toBeInstanceOf(Date);
+  });
+
+  it("carries an erased diver out as erased, not as their original details", async () => {
+    const { db, shop } = await seededShopContext();
+    const [owner] = await db
+      .select({ id: people.id })
+      .from(people)
+      .where(and(eq(people.shopId, shop.id), eq(people.fullName, "Dana Reyes")));
+    if (!owner) throw new Error("seed owner missing");
+    const diver = await createDiver(db, {
+      shopId: shop.id,
+      fullName: "Erased Erica",
+      email: "erica@example.com",
+      phone: "+1 305 555 0155",
+    });
+    if (!diver) throw new Error("diver insert failed");
+    await db
+      .update(people)
+      .set({ dateOfBirth: "1988-02-02", diveInsurance: "DAN #55", emergencyContactName: "Kit" })
+      .where(eq(people.id, diver.id));
+
+    const erased = await anonymizeDiver(db, {
+      shopId: shop.id,
+      personId: diver.id,
+      actorPersonId: owner.id,
+    });
+    if (!erased.ok) throw new Error(`erasure refused: ${erased.reason}`);
+
+    const input = await loadShopExportBundleInput(db, shop.id);
+    if (!input) throw new Error("shop failed to load");
+
+    // The full-shop export is migration-grade history and deliberately carries
+    // archived people out with every column — so an erasure that stopped at the
+    // roster read boundary would hand the diver's details straight back over in
+    // the bundle. It must be erased at the row, and this is where that shows.
+    for (const file of ["people.csv", "contacts.csv"] as const) {
+      const exported = table(input, file);
+      const cells = exported.rows.filter((candidate) =>
+        candidate.some((cell) => cell === ANONYMIZED_PERSON_NAME),
+      );
+      expect(cells).toHaveLength(1);
+      const serialized = JSON.stringify(cells[0]);
+      for (const secret of ["Erased Erica", "erica@example.com", "0155", "1988-02-02", "DAN #55"]) {
+        expect(serialized).not.toContain(secret);
+      }
+    }
+    expect(JSON.stringify(input.tables.flatMap((exported) => exported.rows))).not.toContain(
+      "erica@example.com",
+    );
   });
 
   it("never leaks another shop's rows into the bundle", async () => {

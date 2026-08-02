@@ -207,6 +207,7 @@
       "noticeDuplicate": "A diver with that email is already in this shop.",
       "noticeDeleted": "Diver removed from active shop work. Their bookings and cards are preserved.",
       "noticeRestored": "Diver restored to active shop work.",
+      "noticeErased": "Personal data erased. The signed release, the trips, and the payments stay on file with the diver's details gone — this cannot be undone.",
       "noticeNotAuthorized": "Removing or restoring a diver is limited to owners and managers.",
       "noticeInvalid": "Check the diver's name, email, and phone number.",
       "restoring": "Restoring…",
@@ -298,11 +299,23 @@
     },
     "remove": {
       "heading": "Remove from active divers",
-      "description": "They come off your active lists; bookings, cards, and sizes stay on file.",
+      "description": "They come off your active lists; bookings, cards, and sizes stay on file. Nothing is destroyed, and you can undo it.",
       "removePersonSummary": "Remove {name}",
       "addAgainNote": "You can add them again later as a new active record.",
       "removing": "Removing…",
       "removeDiver": "Remove diver"
+    },
+    "erase": {
+      "heading": "Erase personal data",
+      "description": "For a diver who asks you to delete what you hold about them. This is not the same as removing them — it destroys their details for good.",
+      "summary": "Erase {name}'s personal data",
+      "destroyedNote": "Destroyed: their name, email, phone, date of birth, emergency contact, insurance, card numbers and card photos, medical answers, rental sizes, notes about them, review comments, and any photos they shared.",
+      "keptNote": "Kept: that they signed your release, which version they signed, and when — plus the trips they were on and what was paid, with their name gone from all of it. Your signed releases stay verifiable.",
+      "noUndoNote": "There is no undo, and no way to get any of it back. Removing them first is the reversible option.",
+      "confirmLabel": "Type {name} to confirm",
+      "confirmHint": "Must match exactly.",
+      "erasing": "Erasing…",
+      "eraseDiver": "Erase personal data"
     },
     "rentalFit": {
       "heading": "Rental fit",
@@ -395,6 +408,9 @@
       "deleted": "Diver removed from active shop work. Their bookings and cards are preserved.",
       "notAuthorizedRefund": "Refunds are limited to owners and managers — ask one of them to issue this refund.",
       "notAuthorizedDelete": "Removing a diver is limited to owners and managers — ask one of them to do it.",
+      "notAuthorizedErase": "Erasing a diver's personal data is limited to the shop owner — ask them to do it.",
+      "eraseNameMismatch": "The name you typed doesn't match this diver's, so nothing was erased. Type it exactly as it appears above.",
+      "eraseRefused": "This record can't be erased. Staff records keep the shop's own accountability trail, and you can't erase your own.",
       "notAuthorizedFit": "Changing a diver's stated rental fit is limited to owners, managers, instructors, and divemasters. You can still flag them for hands-on fitting at check-in.",
       "cardSightingRequired": "Confirming an imported card needs the checkbox: it opens the dive or the fill that card allows, so a staffer has to say they've actually seen it or checked the number with the agency.",
       "invalid": "Check the details and try again.",
@@ -891,7 +907,9 @@
     },
     "mediaKind": {
       "course_photo": "Course photo",
-      "recap_photo": "Recap photo"
+      "recap_photo": "Recap photo",
+      "certification_card": "Card photo",
+      "waiver_document": "Waiver document"
     },
     "eyebrow": "Owner",
     "title": "How's your month",
@@ -2618,7 +2636,9 @@
         },
         "mediaKind": {
           "coursePhoto": "Course photo",
-          "recapPhoto": "Recap photo"
+          "recapPhoto": "Recap photo",
+          "certificationCard": "Card photo",
+          "waiverDocument": "Waiver document"
         },
         "stuckDetail": {
           "withId": "{kind} stuck since {when} — Stripe: {id}. Check it against the Stripe dashboard.",

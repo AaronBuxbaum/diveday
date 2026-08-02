@@ -127,6 +127,23 @@ export function canDeleteDiver(roles: readonly Role[] | undefined): boolean {
 }
 
 /**
+ * Erase a diver: destroy their identifying and medical data across the shop and
+ * re-seal their signed releases as evidence skeletons
+ * (ADR 20260802-diver-data-erasure). Deliberately **stricter** than
+ * `canDeleteDiver` — owner only, not owner-or-manager.
+ *
+ * Removal is reversible and loses nothing; erasure is one-way and permanently
+ * reduces what the shop can prove about a release it holds. That is a decision
+ * about the business's own legal position, not a roster-hygiene chore, so it
+ * sits with the one role that answers for it. A manager who needs a diver gone
+ * from the active lists already has "Remove"; only the owner can make the data
+ * unrecoverable.
+ */
+export function canErasePersonalData(roles: readonly Role[] | undefined): boolean {
+  return (roles ?? []).some((role) => role === "owner");
+}
+
+/**
  * Create, edit, cancel a trip, or set its requirements/crew — defining what the
  * dive *is* and who it admits. Opens to instructors as well, since course
  * sessions and their admission rules are instructor-owned, but stays closed to

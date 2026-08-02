@@ -207,6 +207,7 @@
       "noticeDuplicate": "Ya hay un buceador con ese correo en esta tienda.",
       "noticeDeleted": "Buceador eliminado del trabajo activo de la tienda. Sus reservas y tarjetas se conservan.",
       "noticeRestored": "Buceador restaurado al trabajo activo de la tienda.",
+      "noticeErased": "Datos personales borrados. La exención firmada, los viajes y los pagos quedan registrados sin los datos del buceador — esto no se puede deshacer.",
       "noticeNotAuthorized": "Eliminar o restaurar un buceador está limitado a propietarios y gerentes.",
       "noticeInvalid": "Revisa el nombre, correo y teléfono del buceador.",
       "restoring": "Restaurando…",
@@ -298,11 +299,23 @@
     },
     "remove": {
       "heading": "Eliminar de buceadores activos",
-      "description": "Sale de tus listas activas; las reservas, tarjetas y tallas quedan registradas.",
+      "description": "Sale de tus listas activas; las reservas, tarjetas y tallas quedan registradas. No se destruye nada y puedes deshacerlo.",
       "removePersonSummary": "Eliminar a {name}",
       "addAgainNote": "Puedes añadirlos de nuevo más tarde como un nuevo registro activo.",
       "removing": "Eliminando…",
       "removeDiver": "Eliminar buceador"
+    },
+    "erase": {
+      "heading": "Borrar datos personales",
+      "description": "Para un buceador que te pide que elimines lo que guardas sobre él. No es lo mismo que eliminarlo — esto destruye sus datos para siempre.",
+      "summary": "Borrar los datos personales de {name}",
+      "destroyedNote": "Se destruye: su nombre, correo, teléfono, fecha de nacimiento, contacto de emergencia, seguro, números y fotos de sus tarjetas, respuestas médicas, tallas de alquiler, notas sobre él, comentarios de reseñas y las fotos que haya compartido.",
+      "keptNote": "Se conserva: que firmó tu exención, qué versión firmó y cuándo — además de los viajes en los que estuvo y lo que se pagó, con su nombre eliminado de todo ello. Tus exenciones firmadas siguen siendo verificables.",
+      "noUndoNote": "No hay forma de deshacerlo ni de recuperar nada. Eliminarlo primero es la opción reversible.",
+      "confirmLabel": "Escribe {name} para confirmar",
+      "confirmHint": "Debe coincidir exactamente.",
+      "erasing": "Borrando…",
+      "eraseDiver": "Borrar datos personales"
     },
     "rentalFit": {
       "heading": "Ajuste de alquiler",
@@ -395,6 +408,9 @@
       "deleted": "Buceador eliminado del trabajo activo de la tienda. Sus reservas y tarjetas se conservan.",
       "notAuthorizedRefund": "Los reembolsos están limitados a propietarios y gerentes — pide a uno de ellos que emita este reembolso.",
       "notAuthorizedDelete": "Eliminar un buceador está limitado a propietarios y gerentes — pide a uno de ellos que lo haga.",
+      "notAuthorizedErase": "Borrar los datos personales de un buceador está limitado al propietario de la tienda — pídeselo a esa persona.",
+      "eraseNameMismatch": "El nombre que escribiste no coincide con el de este buceador, así que no se borró nada. Escríbelo exactamente como aparece arriba.",
+      "eraseRefused": "Este registro no se puede borrar. Los registros del personal conservan el rastro de responsabilidad de la tienda, y no puedes borrar el tuyo propio.",
       "notAuthorizedFit": "Cambiar el ajuste de alquiler indicado de un buceador está limitado a propietarios, gerentes, instructores y divemasters. Aún puedes marcarlos para ajuste manual en el check-in.",
       "cardSightingRequired": "Confirmar una tarjeta importada requiere la casilla: abre la inmersión o la carga que esa tarjeta permite, así que un miembro del personal debe declarar que realmente la ha visto o ha verificado el número con la agencia.",
       "invalid": "Revisa los datos e inténtalo de nuevo.",
@@ -891,7 +907,9 @@
     },
     "mediaKind": {
       "course_photo": "Foto del curso",
-      "recap_photo": "Foto del resumen"
+      "recap_photo": "Foto del resumen",
+      "certification_card": "Foto de la tarjeta",
+      "waiver_document": "Documento de exención"
     },
     "eyebrow": "Propietario",
     "title": "Cómo va tu mes",
@@ -2618,7 +2636,9 @@
         },
         "mediaKind": {
           "coursePhoto": "Foto del curso",
-          "recapPhoto": "Foto del resumen"
+          "recapPhoto": "Foto del resumen",
+          "certificationCard": "Foto de la tarjeta",
+          "waiverDocument": "Documento de exención"
         },
         "stuckDetail": {
           "withId": "{kind} atascado desde {when} — Stripe: {id}. Revísalo en el panel de Stripe.",

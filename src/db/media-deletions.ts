@@ -32,7 +32,7 @@ export type QueueMediaDeletionInput = {
  * Enforced here, once, so no future caller can reintroduce it.
  */
 export async function queueMediaDeletion(
-  db: AppDb,
+  db: DbExecutor,
   input: QueueMediaDeletionInput,
 ): Promise<MediaDeletionAttempt | null> {
   if (!isManagedBlobUrl(input.url)) return null;

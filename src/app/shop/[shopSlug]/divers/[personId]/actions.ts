@@ -2,8 +2,10 @@
 
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { anonymizeDiver } from "@/db/anonymize";
 import {
   canPersonDeleteDiver,
+  canPersonErasePersonalData,
   canPersonOverrideGearRequest,
   canPersonRefund,
   loadActiveStaffRoles,
@@ -490,5 +492,42 @@ export async function deletePersonAction(shopSlug: string, personId: string, _fo
     deleted
       ? `/shop/${staff.user.shopSlug}/divers?notice=deleted&deleted=${encodeURIComponent(personId)}`
       : base,
+  );
+}
+
+/**
+ * Erase a diver's personal and medical data (ADR 20260802-diver-data-erasure).
+ *
+ * Unlike removal, this cannot be undone and there is no notice offering to undo
+ * it. Three things stand between a mis-click and an irreversible write: the gate
+ * is owner-only and re-read from the database, `anonymizeDiver` re-checks it
+ * again for itself, and the staffer must type the diver's name to confirm —
+ * the confirmation is verified here against the stored record, not trusted from
+ * a hidden field the form could have carried unchanged.
+ */
+export async function erasePersonAction(shopSlug: string, personId: string, formData: FormData) {
+  const base = `/shop/${shopSlug}/divers/${personId}`;
+  const staff = await requireStaffSession();
+  const db = await getDb();
+  if (!(await canPersonErasePersonalData(db, staff.user.shopId, staff.user.personId))) {
+    revalidateAndRedirect(base, `${base}?notice=not-authorized-erase`);
+    return;
+  }
+  const profile = await getDiverProfile(db, staff.user.shopId, personId);
+  const typed = String(formData.get("confirmName") ?? "").trim();
+  if (!profile || typed.toLowerCase() !== profile.person.fullName.trim().toLowerCase()) {
+    revalidateAndRedirect(base, `${base}?notice=erase-name-mismatch`);
+    return;
+  }
+  const result = await anonymizeDiver(db, {
+    shopId: staff.user.shopId,
+    personId,
+    actorPersonId: staff.user.personId,
+  });
+  revalidateAndRedirect(
+    `/shop/${staff.user.shopSlug}/divers`,
+    result.ok
+      ? `/shop/${staff.user.shopSlug}/divers?notice=erased`
+      : `${base}?notice=erase-refused`,
   );
 }

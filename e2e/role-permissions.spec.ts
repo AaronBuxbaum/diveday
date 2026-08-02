@@ -86,9 +86,11 @@ test.describe("H-14 role permissions", () => {
       await expect(page.getByText("limited to owners, managers, and instructors")).toBeVisible();
       await expect(page.getByRole("button", { name: "Put it on the board" })).toHaveCount(0);
 
-      // Diver deletion is hidden.
+      // Diver deletion is hidden — and so is the strictly stricter erasure
+      // control below it, which is owner-only (ADR 20260802-diver-data-erasure).
       await page.goto(await firstDiverDetailHref(page));
       await expect(page.getByRole("heading", { name: "Remove from active divers" })).toHaveCount(0);
+      await expect(page.getByRole("heading", { name: "Erase personal data" })).toHaveCount(0);
 
       // On a trip's Overview, trip *definition* is hidden, but the day-of operating
       // actions the glossary assigns to crew — conditions, crew, weather cancel —
@@ -146,6 +148,8 @@ test.describe("H-14 role permissions", () => {
 
       await page.goto(await firstDiverDetailHref(page));
       await expect(page.getByRole("heading", { name: "Remove from active divers" })).toBeVisible();
+      // Erasure is the one control past removal, and only the owner has it.
+      await expect(page.getByRole("heading", { name: "Erase personal data" })).toBeVisible();
 
       // Trip definition is available to the owner.
       await page.goto(await firstTripManageHref(page));

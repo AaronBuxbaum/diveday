@@ -227,9 +227,7 @@ export const people = pgTable(
      * `rental_fit_profiles.needs_staff_fit_by` and
      * `roll_call_events.recorded_by_person_id` record who called a safety flag.
      */
-    anonymizedByPersonId: uuid("anonymized_by_person_id").references(
-      (): AnyPgColumn => people.id,
-    ),
+    anonymizedByPersonId: uuid("anonymized_by_person_id").references((): AnyPgColumn => people.id),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [

@@ -623,6 +623,25 @@ new domain concept, define it here in the same PR.
   soft-delete window is accepted as-is; it fails closed to a blank record). See H-13 in
   [human-decisions.md](human-decisions.md) and
   [20260723-person-email-uniqueness](../architecture/decisions/20260723-person-email-uniqueness.md).
+- **Remove vs. erase (a diver)** — two different operations, deliberately not the same button.
+  **Removing** a diver is the reversible archive action every entity has
+  ([20260719-crud-archive-semantics](../architecture/decisions/20260719-crud-archive-semantics.md)):
+  `people.deleted_at` is set, they drop off the active lists, and *nothing about the record is
+  destroyed* — an owner or manager can undo it. **Erasing** a diver is the one-way answer to "delete
+  what you hold about me": their name, contact details, date of birth, emergency contact, card
+  numbers and card photographs, medical answers, sizes, notes, review comments, and shared photos
+  are destroyed across every table, and `people.anonymized_at` is stamped. What survives is the
+  **evidence skeleton** below. Erasure is owner-only, requires typing the diver's name, cannot be
+  undone (a database check constraint keeps an erased record removed), and always removes them too.
+  See [20260802-diver-data-erasure](../architecture/decisions/20260802-diver-data-erasure.md).
+- **Evidence skeleton** — what is deliberately left of a signed release after its diver is erased:
+  that a release was signed, against which template title/version/body, at what moment, by what
+  signature method, on which booking and trip, and which staff member attested it if any. The
+  signer's name and their medical questionnaire are gone. The skeleton is re-sealed under
+  **waiver integrity version 2** so it verifies as *erased* rather than reading as *tampered*;
+  version 1 is the seal over an intact signed release, which covers the signer's name and medical
+  answers and therefore cannot survive erasure. The seal proves the skeleton has not drifted since
+  erasure — it says nothing about what was erased, which no one can verify afterwards.
 - **Buddy-group preference** — an optional, non-sensitive note a diver adds while booking about
   pace, photography, or friends they hope to stay with. It helps the crew plan groups but is never
   a promise and never carries medical or safety-clearance information.
