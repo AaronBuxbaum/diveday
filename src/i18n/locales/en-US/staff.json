@@ -85,7 +85,7 @@
       "starts": "Starts",
       "ends": "Ends",
       "note": "Note",
-      "noteHint": "Optional",
+      "noteHint": "(optional)",
       "notePlaceholder": "Dock, classroom, boat 2",
       "submit": "Add shift",
       "saving": "Saving…"
@@ -857,7 +857,7 @@
     },
     "discountOff": "{percent}% off",
     "fromDate": "from {date}",
-    "liveNow": "live now",
+    "noStartDate": "no start date",
     "untilDate": "until {date}",
     "noEndDate": "no end date",
     "redeemedWithCap": "{count, plural, one {Redeemed # time of {max}} other {Redeemed # times of {max}}}",
@@ -2106,7 +2106,7 @@
       "nameLabel": "Full name",
       "emailLabel": "Email",
       "phoneLabel": "Phone",
-      "optionalHint": "Optional"
+      "optionalHint": "(optional)"
     }
   },
   "waiversStaff": {

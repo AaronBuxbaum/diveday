@@ -182,7 +182,11 @@ function scopeChip(
     },
     "stays-behind": {
       label: t("settings.import.scopeChip.staysBehind"),
-      className: "bg-surface-sunken text-muted",
+      // `bg-surface`, not the `bg-surface-sunken` the /switching guides use for
+      // this same chip: the rows here are themselves sunken, so a sunken chip
+      // was drawn in the exact colour of the row behind it and every
+      // "Stays behind" pill read as bare grey text next to a filled green one.
+      className: "bg-surface text-muted",
     },
   };
 }

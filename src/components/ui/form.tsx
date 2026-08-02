@@ -167,7 +167,7 @@ export function Field({
         className={`row-span-2 grid grid-rows-subgrid gap-y-1 text-sm font-medium ${className}`}
       >
         <span className="self-end">{captionContent}</span>
-        <span className="grid gap-1">
+        <span className="grid content-start gap-1">
           {children}
           {descriptionSpan}
         </span>
@@ -187,7 +187,13 @@ export function Field({
         <label htmlFor={controlId}>{captionContent}</label>
         {requiredMarker}
       </span>
-      <span className="grid gap-1">
+      {/* `content-start`: the control row is a subgrid track shared with every
+          other field on this row, so it is as tall as the *longest* neighbour's
+          description. Without it the spare height stretches the control itself,
+          and a field whose neighbour has a three-line description renders a
+          52px box next to its 44px sibling. Keep the control at its own height
+          and let the slack fall below the description. */}
+      <span className="grid content-start gap-1">
         {control}
         {descriptionSpan}
       </span>

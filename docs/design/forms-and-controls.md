@@ -36,6 +36,12 @@ import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/fo
   under the control, referenced via `aria-describedby` rather than folded into the control's
   accessible name (below).
 - `columns` is 1–4; per-field spans and widths go on `<Field className>`.
+- **Every direct child of a `FieldGrid` spans two rows.** A `Field` does that for you; anything else
+  you drop in — a spacer that skips a column, say — has to say so itself (`sm:row-span-2`), or it
+  knocks each later field half a row out of step and the grid renders as a staircase.
+- A control keeps its own height. The control row is one subgrid track shared across the row, so it
+  is as tall as the longest neighbouring field's `description`; `Field` pins the control to the top
+  of that track (`content-start`) so a 44px input never renders as a 52px box beside its sibling.
 - `FieldActions` spans every column, so the submit button never becomes a lopsided extra field.
 - Horizontal checkbox/radio rows are not stacked fields — leave them as plain labels.
 

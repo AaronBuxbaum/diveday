@@ -52,10 +52,22 @@
   /* Shape & motion */
   --radius: 0.75rem;
   --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /*
+   * Tell the browser which way our palette runs, so the parts of a form we do
+   * not draw ourselves follow it: the calendar glyph inside `<input type=
+   * "date">`, the date/time picker panels, native select popups, autofill,
+   * and scrollbars. Without it those stay in the browser's light default —
+   * on the dark theme the date picker's near-black calendar icon sat on a
+   * near-black field and effectively disappeared.
+   */
+  color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
+    color-scheme: dark;
+
     /* Surfaces */
     --background: #071720; /* open ocean at depth */
     --surface: #0d222d;

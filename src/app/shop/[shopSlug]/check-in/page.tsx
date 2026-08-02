@@ -247,11 +247,19 @@ export default async function CheckInPage({
                       {fix ? (
                         <div className="mt-3">
                           {fix.sendsWaiver ? (
+                            // The control's default alignment is `sm:text-right`
+                            // (the Today queue's right-hand column). Here it is
+                            // the same bottom-of-card fix action as the `Link`
+                            // below it, so it has to start on the same left edge
+                            // — otherwise one diver's fix button sits left and
+                            // the next one's floats right in the same list.
                             <WaiverSendControl
                               shopSlug={shopSlug}
                               surface="check_in"
                               bookingIds={[fix.bookingId]}
                               label={fix.label}
+                              className={buttonClass({ variant: "secondary", size: "sm" })}
+                              wrapperClassName=""
                               copy={waiverSendCopy(t)}
                             />
                           ) : (

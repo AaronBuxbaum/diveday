@@ -5,8 +5,12 @@ import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 
+// `whitespace-nowrap`: the primary row is `flex-1` per link inside a
+// horizontally scrolling, snapping strip. Without it a narrow phone shrinks
+// each link below its label and breaks the word instead of scrolling —
+// "Check-in" rendered as "Check-" / "in" and "Not ready" as "Not" / "ready".
 const linkClass =
-  "inline-flex min-h-11 items-center rounded-xl px-2 py-2 text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken hover:text-foreground sm:px-3";
+  "inline-flex min-h-11 items-center rounded-xl px-2 py-2 text-sm font-medium whitespace-nowrap transition-colors duration-200 hover:bg-surface-sunken hover:text-foreground sm:px-3";
 
 /** Owner/manager surfaces (H-14) carry a gate key; everyone else always sees the link. */
 export type ShopNavGates = {
@@ -182,10 +186,23 @@ export function ShopNavLinks({
   }, [moreOpen, closeMore]);
 
   return (
-    <div className={`flex min-w-0 items-center gap-2 ${className}`}>
+    // `items-start` so "More" sits on the first row when the links wrap to two
+    // on a phone, rather than floating in the gutter between them. Identical to
+    // `items-center` from `sm` up, where the strip is a single row.
+    <div className={`flex min-w-0 items-start gap-2 ${className}`}>
+      {/*
+       * Wraps rather than scrolls. The five primary labels need ~400px and a
+       * phone gives this strip ~285, so as a one-line scroller it always hid
+       * two of them: the right edge guillotined "Divers" mid-word against the
+       * More button, and on the schedule board the *active* tab sat entirely
+       * off-screen, so nothing on the page read as current. Wrapping costs one
+       * header row on a phone and shows every destination, with the label
+       * itself kept whole by `whitespace-nowrap` in `linkClass`. It never wraps
+       * from `sm` up, where the row has room.
+       */}
       <nav
         aria-label={copy.primaryNavAriaLabel}
-        className="flex min-w-0 flex-1 snap-x items-center gap-0.5 overflow-x-auto scroll-px-1 pr-2 sm:gap-1 sm:pr-3"
+        className="flex min-w-0 flex-1 flex-wrap items-center gap-x-0.5 gap-y-1 pr-2 sm:gap-x-1 sm:pr-3"
       >
         {primaryLinks(copy).map(({ label, suffix, alsoMatch, count }) => {
           const href = `${root}${suffix}`;
@@ -196,7 +213,7 @@ export function ShopNavLinks({
             <Link
               key={href}
               href={href}
-              className={`${navClass(active)} flex-1 justify-center snap-start sm:flex-none sm:justify-start`}
+              className={navClass(active)}
               aria-current={active ? "page" : undefined}
               onClick={closeMore}
             >

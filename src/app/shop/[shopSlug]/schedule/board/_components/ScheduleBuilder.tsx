@@ -413,10 +413,21 @@ export function ScheduleBuilder({
                     className="rounded-2xl border border-border bg-surface p-4 shadow-sm"
                   >
                     <div className="flex flex-wrap items-start gap-x-4 gap-y-2">
-                      <div className="w-28 shrink-0 text-sm tabular-nums text-muted">
+                      {/* `whitespace-nowrap`: a formatted range puts an
+                          ordinary space before AM/PM, so a column too narrow
+                          for it breaks there and strands "PM" on its own line
+                          ("6:30 PM – 10:00" / "PM"). The column is wide enough
+                          for the longest range at this type size; on a phone it
+                          takes the full row instead of squeezing the title into
+                          a three-line stack. */}
+                      <div className="w-full shrink-0 text-sm tabular-nums whitespace-nowrap text-muted sm:w-36">
                         {trip.timeRange}
                       </div>
-                      <div className="min-w-0 flex-1">
+                      {/* Full width on a phone so the title gets the row to
+                          itself and the badges wrap below it, rather than
+                          sharing ~340px with them and stacking three lines
+                          deep. */}
+                      <div className="w-full min-w-0 sm:w-auto sm:flex-1">
                         <Link
                           href={`/shop/${shopSlug}/trips/${trip.id}`}
                           className="font-medium hover:text-primary"

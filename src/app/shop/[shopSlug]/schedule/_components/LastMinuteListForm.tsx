@@ -78,7 +78,12 @@ export function LastMinuteListForm({ shopSlug }: { shopSlug: string }) {
               className={controlClass}
             />
           </Field>
-          <div />
+          {/* Keeps the two date fields together on their own row. It must span
+              the same two subgrid rows a `Field` does — a one-row spacer knocks
+              every later field half a row out of step, which is what turned
+              this grid into a staircase — and it only exists in the two-column
+              layout, or it would add a blank gap on a phone. */}
+          <div aria-hidden="true" className="hidden sm:block sm:row-span-2" />
           <Field label={t("lastMinute.availableFrom")} hint={t("common.optional")}>
             <input name="availableFrom" type="date" className={controlClass} />
           </Field>
