@@ -1,4 +1,6 @@
 import * as cdk from "aws-cdk-lib";
+import * as budgets from "aws-cdk-lib/aws-budgets";
+import * as ce from "aws-cdk-lib/aws-ce";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import type { Construct } from "constructs";
@@ -162,6 +164,79 @@ export class InfraStack extends cdk.Stack {
       value: `aws iam create-access-key --user-name ${mcpReadOnlyCloudUser.userName}`,
       description:
         "Run to mint AWS MCP server credentials for Claude Code's cloud environment. Store the output in that environment's secret/env-var settings — never in the repo.",
+    });
+
+    // 7. Cost guardrails — alert-only, never auto-disable anything.
+    // See ADR 20260802-aws-cost-guardrails for why these two mechanisms and
+    // these thresholds specifically.
+    const alertEmail = this.node.tryGetContext("alertEmail") || "aaronbuxbaum@gmail.com";
+    const monthlyBudgetLimit = Number(this.node.tryGetContext("monthlyBudgetLimit") ?? 5);
+
+    const emailSubscriber = (address: string): budgets.CfnBudget.SubscriberProperty => ({
+      subscriptionType: "EMAIL",
+      address,
+    });
+
+    const budgetNotification = (
+      notificationType: "ACTUAL" | "FORECASTED",
+      threshold: number,
+    ): budgets.CfnBudget.NotificationWithSubscribersProperty => ({
+      notification: {
+        notificationType,
+        comparisonOperator: "GREATER_THAN",
+        threshold,
+        thresholdType: "PERCENTAGE",
+      },
+      subscribers: [emailSubscriber(alertEmail)],
+    });
+
+    new budgets.CfnBudget(this, "MonthlyCostGuardrail", {
+      budget: {
+        budgetName: "diveday-monthly-cost-guardrail",
+        budgetType: "COST",
+        timeUnit: "MONTHLY",
+        budgetLimit: {
+          amount: monthlyBudgetLimit,
+          unit: "USD",
+        },
+      },
+      notificationsWithSubscribers: [
+        budgetNotification("ACTUAL", 50),
+        budgetNotification("ACTUAL", 80),
+        budgetNotification("FORECASTED", 100),
+        budgetNotification("ACTUAL", 100),
+        // Outside-normal-bands siren: still just an email, nothing stops running.
+        budgetNotification("ACTUAL", 200),
+      ],
+    });
+
+    // AWS-managed Cost Anomaly Detection catches an unexpectedly fast rate of
+    // increase in any one service — the thing the fixed budget thresholds
+    // above can't see while spend is still comfortably under the cap.
+    const anomalyMonitor = new ce.CfnAnomalyMonitor(this, "ServiceCostAnomalyMonitor", {
+      monitorName: "diveday-service-cost-anomalies",
+      monitorType: "DIMENSIONAL",
+      monitorDimension: "SERVICE",
+    });
+
+    new ce.CfnAnomalySubscription(this, "ServiceCostAnomalySubscription", {
+      subscriptionName: "diveday-service-cost-anomaly-alerts",
+      frequency: "DAILY",
+      monitorArnList: [anomalyMonitor.attrMonitorArn],
+      subscribers: [{ type: "EMAIL", address: alertEmail }],
+      thresholdExpression: JSON.stringify({
+        Dimensions: {
+          Key: "ANOMALY_TOTAL_IMPACT_ABSOLUTE",
+          MatchOptions: ["GREATER_THAN_OR_EQUAL"],
+          Values: ["1"],
+        },
+      }),
+    });
+
+    new cdk.CfnOutput(this, "CostAlertEmail", {
+      value: alertEmail,
+      description:
+        "Where budget threshold and cost-anomaly alerts are sent. Override with --context alertEmail=...",
     });
   }
 }
