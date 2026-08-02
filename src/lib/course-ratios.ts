@@ -1,14 +1,20 @@
 /**
- * PADI's published in-water ratio for an entry-level, no-card-required session
- * (Discover Scuba Diving, Open Water Diver open-water training dives): up to 8
- * students per instructor, extendable by 2 per certified assistant (a
- * Divemaster aboard, in DiveDay's role model) to a hard ceiling of 12 — see
- * H-08 (docs/product/human-decisions.md) and
+ * PADI's published in-water ratio for Open Water Diver open-water training
+ * dives: up to 8 students per instructor, extendable by 2 per certified
+ * assistant (a Divemaster aboard, in DiveDay's role model) to a hard ceiling
+ * of 12 — see H-08 (docs/product/human-decisions.md) and
  * docs/architecture/decisions/20260724-course-admission-standards.md for the
  * PADI/SSI sourcing. Continuing-education courses (Advanced Open Water,
  * Rescue, specialties) are not modeled here — they already require a verified
  * card at booking (`courses.minimumCertificationLevel`) and PADI does not
  * publish a comparably strict numeric ratio for them.
+ *
+ * Discover Scuba Diving (DSD) is a *different, tighter* PADI ratio — see
+ * {@link DSD_RATIO} — because DSD participants have had zero prior water
+ * time, unlike an Open Water student who has already completed confined
+ * dives. The two were previously conflated (this constant applied to both),
+ * which overstated DSD capacity; HD-6 (docs/product/human-decisions.md, H-08
+ * reopened) obtained the real PADI Instructor Manual figures and split them.
  */
 export const ENTRY_LEVEL_COURSE_RATIO = {
   baseStudentsPerInstructor: 8,
@@ -17,14 +23,41 @@ export const ENTRY_LEVEL_COURSE_RATIO = {
 } as const;
 
 /**
- * How many students an entry-level (DSD/Open Water) session may seat given the
- * instructors and certified assistants (Divemasters) actually assigned as
- * crew. Deliberately conservative: caps at the per-instructor ceiling
- * regardless of assistant count, and a session with no instructor seats
- * nobody — that's the existing `course_unstaffed` gate's job, not this one's.
+ * PADI's published Discover Scuba Diving ratio, from the Instructor Manual
+ * (HD-6, sourced 2026-08-02): 4 students per instructor in confined/pool
+ * water, tightening to 2 students per instructor for the open-water dive.
+ * DiveDay's trip model has no confined-water session type — a trip is one
+ * dated open-water outing (see
+ * docs/architecture/decisions/20260724-course-admission-standards.md,
+ * "Alternatives considered") — so `entryLevelCourseCapacity` enforces only
+ * the tighter open-water figure against a booked DSD session; the
+ * confined-water number is recorded here for completeness, unenforced.
+ * No published assistant bonus for DSD, so none is credited here.
  */
-export function entryLevelCourseCapacity(instructorCount: number, assistantCount: number): number {
+export const DSD_RATIO = {
+  confinedWaterStudentsPerInstructor: 4,
+  openWaterStudentsPerInstructor: 2,
+} as const;
+
+/**
+ * How many students an entry-level (DSD/Open Water) session may seat given
+ * the instructors and certified assistants (Divemasters) actually assigned
+ * as crew. `isIntroCourse` (DSD) uses the tighter {@link DSD_RATIO} with no
+ * assistant bonus; every other entry-level course uses
+ * {@link ENTRY_LEVEL_COURSE_RATIO}. Deliberately conservative: caps at the
+ * per-instructor ceiling regardless of assistant count, and a session with no
+ * instructor seats nobody — that's the existing `course_unstaffed` gate's
+ * job, not this one's.
+ */
+export function entryLevelCourseCapacity(
+  instructorCount: number,
+  assistantCount: number,
+  isIntroCourse = false,
+): number {
   if (instructorCount <= 0) return 0;
+  if (isIntroCourse) {
+    return instructorCount * DSD_RATIO.openWaterStudentsPerInstructor;
+  }
   const { baseStudentsPerInstructor, assistantBonusPerInstructor, maxStudentsPerInstructor } =
     ENTRY_LEVEL_COURSE_RATIO;
   const uncapped =
@@ -40,6 +73,7 @@ export function entryLevelCourseCapacity(instructorCount: number, assistantCount
 export type CourseCrewGapCourse = {
   agency: string;
   minimumCertificationLevel: string | null;
+  isIntroCourse: boolean;
 } | null;
 
 /**
@@ -81,7 +115,11 @@ export function courseCrewGap(input: {
   const isEntryLevelGated =
     input.course.agency === "padi" && !input.course.minimumCertificationLevel;
   if (!isEntryLevelGated) return { code: "none" };
-  const capacity = entryLevelCourseCapacity(input.instructorCount, input.assistantCount);
+  const capacity = entryLevelCourseCapacity(
+    input.instructorCount,
+    input.assistantCount,
+    input.course.isIntroCourse,
+  );
   if (input.booked > capacity) return { code: "over_ratio", booked: input.booked, capacity };
   return { code: "none" };
 }

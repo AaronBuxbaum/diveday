@@ -81,18 +81,21 @@ describe("staffing view", () => {
   // that state, which is exactly the case staff need the warning for.
   it("flags course_needs_instructor for a ratio-over-capacity trip even though it has an instructor", async () => {
     const { db, shop } = await seededShopContext();
-    const [discoverCourse] = await db
+    // Open Water Diver, not DSD: its 8:1 ratio (vs. DSD's tighter 2:1, HD-6)
+    // leaves room to book 8 through the normal gate before the 9th is forced
+    // in directly below to simulate the ratio falling after booking.
+    const [openWaterCourse] = await db
       .select()
       .from(courses)
-      .where(and(eq(courses.shopId, shop.id), eq(courses.title, "Discover Scuba Diving")));
-    if (!discoverCourse) throw new Error("Discover Scuba Diving course missing");
+      .where(and(eq(courses.shopId, shop.id), eq(courses.title, "Open Water Diver")));
+    if (!openWaterCourse) throw new Error("Open Water Diver course missing");
     const staff = await listStaff(db, shop.id);
     const instructor = staff.find((entry) => entry.roles.includes("instructor"));
     if (!instructor) throw new Error("seeded instructor missing");
 
     const trip = await createTrip(db, {
       shopId: shop.id,
-      courseId: discoverCourse.id,
+      courseId: openWaterCourse.id,
       title: "Ratio-over-capacity session",
       startsAt: new Date(Date.now() + OPEN_TEST_SESSION_OFFSET_MS),
       endsAt: new Date(Date.now() + OPEN_TEST_SESSION_OFFSET_MS + 4 * 60 * 60 * 1000),

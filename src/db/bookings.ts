@@ -196,7 +196,11 @@ async function createBookingRecord(db: AppDb, req: BookingRequest): Promise<Book
           .filter((row) => row.role === "divemaster" && !instructorIds.has(row.personId))
           .map((row) => row.personId),
       ).size;
-      entryLevelSeatCap = entryLevelCourseCapacity(instructorIds.size, assistantCount);
+      entryLevelSeatCap = entryLevelCourseCapacity(
+        instructorIds.size,
+        assistantCount,
+        course.isIntroCourse,
+      );
     }
   }
 
