@@ -64,6 +64,16 @@ CPU load widens the window a hydration race can lose in, which is exactly why "w
 workers" and "not actually caused by scarce CPU" are both true at once. Don't let the correlation
 stand in for the mechanism.
 
+**"Once hydration has settled" can itself be more than one wave.** `cacheComponents` was observed
+(e2e/add-diver.spec.ts's bulk-waiver-send test) remounting a Client Component a second time, up to
+~1s after its first mount already looked interactive and had already accepted one click — silently
+discarding that click's state. A single successful interaction, or a fixed delay picked by trial and
+error, doesn't prove no further remount is coming; only a poll for actual quiescence does. Where a
+component's own identity is at risk (not just its interactivity), expose a fresh id per mount as a
+data attribute and wait for that id to stop changing (`e2e/helpers.ts`'s `waitForStableAttribute`)
+rather than a boolean "hydrated" flag, which only proves *a* mount happened, not that it's the last
+one.
+
 A `Protocol error (Runtime.callFunctionOn): Internal server error, session closed` in the same
 failure block as `Test timeout of Nms exceeded` is usually a **downstream artifact** of that same
 timeout — Playwright tears down the page to abort whatever's hanging, and an in-flight locator

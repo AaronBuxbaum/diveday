@@ -54,6 +54,31 @@ export function daysFromNow(days: number): string {
   return new Date(e2eNow().getTime() + days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 }
 
+/**
+ * Wait until `locator`'s `attr` value stops changing, polling every
+ * `intervalMs` until it reads the same value twice in a row (or `timeoutMs`
+ * elapses). For a value that only settles after an uncertain number of
+ * `cacheComponents` re-renders — a route's dynamic content can get a second,
+ * fresher render shortly after first paint, remounting a Client Component
+ * (and any local state with it) even after it already looked interactive,
+ * see the debug skill's "more than one wave" note — this is the concrete,
+ * timing-independent alternative to guessing a fixed delay: it waits exactly
+ * as long as this run takes to settle, no more.
+ */
+export async function waitForStableAttribute(
+  locator: Locator,
+  attr: string,
+  { intervalMs = 2_000, timeoutMs = 15_000 }: { intervalMs?: number; timeoutMs?: number } = {},
+) {
+  await expect(async () => {
+    const before = await locator.getAttribute(attr);
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+    const after = await locator.getAttribute(attr);
+    expect(before).not.toBeNull();
+    expect(before).toBe(after);
+  }).toPass({ timeout: timeoutMs });
+}
+
 /** Sign in through the dev credential form as any seeded staff login. */
 export async function signInAs(page: Page, login: { email: string; password: string }) {
   await page.goto("/sign-in");
