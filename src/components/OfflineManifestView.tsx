@@ -22,6 +22,7 @@ import {
   isRollCallCheckpoint,
   type RollCallCheckpoint,
   rollCallCheckpoints,
+  rollCallCompleteness,
 } from "@/lib/manifests";
 import {
   appendOfflineRollCall,
@@ -401,7 +402,32 @@ export function OfflineManifestView() {
   );
   const boarded = localStates.filter((state) => state?.state === "boarded").length;
   const awaiting = localStates.filter((state) => !state).length;
-  const rollCallComplete = manifest.summary.totalDivers > 0 && awaiting === 0;
+  // The same definition the live manifest uses — divers *and* crew (DOM-H1,
+  // ADR 20260802-crew-roll-call-attestation). Recomputed here rather than read
+  // off the snapshot because `awaiting` comes from events on this device, not
+  // from what the server knew at save time. The crew half does not: crew
+  // attestation is deliberately not recordable offline in this slice, so the
+  // snapshot's saved attestation is the only crew evidence a dock copy has. A
+  // checkpoint with every diver counted and no crew attested therefore reads
+  // *open* here exactly as it does online — never "complete" offline and "not
+  // complete" online, which would be worse than the bug this closes.
+  const crewAssigned = manifest.crew.length;
+  const savedCrewAttestation = manifest.crewAttestation;
+  const completeness = rollCallCompleteness({
+    totalDivers: manifest.summary.totalDivers,
+    awaiting,
+    crewAssigned,
+    crewAttestation: savedCrewAttestation
+      ? {
+          crewAboard: savedCrewAttestation.crewAboard,
+          crewAssigned: savedCrewAttestation.crewAssigned,
+          attestedByName: savedCrewAttestation.attestedByName,
+          occurredAt: new Date(savedCrewAttestation.occurredAt),
+          note: savedCrewAttestation.note,
+        }
+      : null,
+  });
+  const rollCallComplete = completeness.complete;
   // The actual roster rendered on this device, not the (possibly stale,
   // save-time) `manifest.summary.totalDivers`. Feeds MilestoneHaptics and the
   // roll-call-complete celebration below.
@@ -594,6 +620,35 @@ export function OfflineManifestView() {
                 })}
           </p>
         ) : null}
+        {/*
+         * The crew half of the head count, read-only on the dock (DOM-H1).
+         * Divers can be counted with the radio off; crew cannot, in this
+         * slice — so this states plainly why the checkpoint is still open
+         * rather than letting the device call it done.
+         */}
+        <div
+          className={
+            completeness.crewAccountedFor
+              ? "mt-3 rounded-xl border border-success/40 bg-success/10 p-3"
+              : "mt-3 rounded-xl border border-warning/50 bg-warning/10 p-3"
+          }
+        >
+          <p className="text-sm font-bold">{t("shared.offlineManifest.single.crewHeading")}</p>
+          <p className="mt-1 text-sm">
+            {savedCrewAttestation && completeness.crewAccountedFor
+              ? t("shared.offlineManifest.single.crewAttested", {
+                  aboard: savedCrewAttestation.crewAboard,
+                  assigned: crewAssigned,
+                  name: savedCrewAttestation.attestedByName,
+                })
+              : savedCrewAttestation
+                ? t("shared.offlineManifest.single.crewShort", {
+                    aboard: savedCrewAttestation.crewAboard,
+                    assigned: crewAssigned,
+                  })
+                : t("shared.offlineManifest.single.crewNotAttested", { assigned: crewAssigned })}
+          </p>
+        </div>
         <ul
           id="offline-roll-call"
           tabIndex={-1}

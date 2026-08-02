@@ -6,8 +6,8 @@ import { nowDate } from "@/lib/clock";
 import { rentalFitLine } from "@/lib/dive-prep";
 import {
   buildTripManifest,
-  carryForwardNotBoarded,
   type CrewAttestation,
+  carryForwardNotBoarded,
   isRollCallCheckpoint,
   type ManifestCrewMember,
   type RollCallCheckpoint,
@@ -15,7 +15,7 @@ import {
   type TripManifest,
 } from "@/lib/manifests";
 import { medicalWaiverMark } from "@/lib/waivers";
-import type { AppDb } from "./client";
+import type { AppDb, DbExecutor } from "./client";
 import { publishManifestEvent } from "./manifest-events";
 import { verifiedNitroxPersonIds } from "./nitrox";
 import { getBookingReadiness, listTripReadiness } from "./readiness";
@@ -32,7 +32,7 @@ import {
 import { getShopById } from "./shops";
 import { getTripRoster, getTripWithBooked } from "./trips";
 
-async function listTripCrew(db: AppDb, shopId: string, tripId: string) {
+async function listTripCrew(db: DbExecutor, shopId: string, tripId: string) {
   const rows = await db
     .select({ person: people, role: personRoles.role })
     .from(tripAssignments)
@@ -82,10 +82,7 @@ async function listLatestCrewAttestations(
     .from(rollCallCrewAttestations)
     .innerJoin(people, eq(people.id, rollCallCrewAttestations.attestedByPersonId))
     .where(
-      and(
-        eq(rollCallCrewAttestations.shopId, shopId),
-        eq(rollCallCrewAttestations.tripId, tripId),
-      ),
+      and(eq(rollCallCrewAttestations.shopId, shopId), eq(rollCallCrewAttestations.tripId, tripId)),
     )
     .orderBy(desc(rollCallCrewAttestations.occurredAt), desc(rollCallCrewAttestations.createdAt));
   const latest = new Map<string, CrewAttestation>();
@@ -520,7 +517,11 @@ export async function recordCrewAttestation(
       .select({ id: trips.id, plannedDives: trips.plannedDives })
       .from(trips)
       .where(
-        and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId), eq(trips.status, "scheduled")),
+        and(
+          eq(trips.id, input.tripId),
+          eq(trips.shopId, input.shopId),
+          eq(trips.status, "scheduled"),
+        ),
       )
       .limit(1);
     if (!trip) return { ok: false, reason: "trip_unavailable" };

@@ -259,6 +259,13 @@ describe("offline manifest policy", () => {
       },
       checkpoint: "after_dive_1",
       crew: [],
+      crewAttestation: null,
+      completeness: {
+        complete: false,
+        diversAccountedFor: true,
+        crewAccountedFor: false,
+        reason: "crew_not_attested",
+      },
       divers: [
         {
           bookingId: "carried",
@@ -314,6 +321,13 @@ describe("offline manifest policy", () => {
       },
       checkpoint: "departure",
       crew: [],
+      crewAttestation: null,
+      completeness: {
+        complete: false,
+        diversAccountedFor: false,
+        crewAccountedFor: false,
+        reason: "divers_awaiting",
+      },
       divers: [
         {
           bookingId: "booking-1",

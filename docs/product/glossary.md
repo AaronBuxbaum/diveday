@@ -274,13 +274,26 @@ new domain concept, define it here in the same PR.
   being typed is also mirrored to the crew's own device and cleared once it syncs, so a dropped
   connection never loses it; that device draft is transient and unencrypted — separate from, and not
   protected like, the encrypted **offline manifest snapshot**.
+- **Crew attestation** — a named staff member's statement of how many crew are aboard at one
+  roll-call checkpoint, out of how many the trip has assigned ("crew aboard: 2 of 2"). Crew hold no
+  booking, so they cannot be roll-call *subjects* — a roll-call event's only subject is a booking —
+  and before this existed a checkpoint could read "roll call complete" with a divemaster still in
+  the water. Append-only like a roll-call event: a later count supersedes an earlier one, never
+  rewrites it. It is an interim count, not a per-person crew roll call, which needs a per-trip crew
+  role first (see [ADR 20260802-crew-roll-call-attestation](../architecture/decisions/20260802-crew-roll-call-attestation.md)).
+  A trip with **no crew assigned is not exempt**: "0 of 0" is still something a human says, because
+  an empty assignment list is a scheduling gap, not evidence nobody else was aboard. Recorded on the
+  live manifest only; the offline copy reads the saved count and keeps the checkpoint open when
+  there isn't one.
 - **Roll-call checkpoint** — one independent head count: before departure or after a numbered dive.
   A two-tank charter has three checkpoints. Each checkpoint is re-verified against the bodies on the
   boat; a **boarded** result never carries into the next. The one deliberate exception is
   **not boarded**: once a diver is marked not boarded, later checkpoints default to not boarded
   (shown as "carried forward") until staff explicitly re-board them — a diver who left the boat is
   presumed still ashore rather than resetting to awaiting. The default is always flagged as carried,
-  can never imply "present," and staff can override it at any checkpoint.
+  can never imply "present," and staff can override it at any checkpoint. A checkpoint is
+  **complete** only when every booked diver has a result *and* the **crew attestation** covers every
+  assigned crew member — divers alone were never the whole boat.
 - **Offline manifest snapshot** — a time-stamped, encrypted device copy of the complete derived
   manifest and every checkpoint, saved and refreshed automatically while the device has signal
   (staff can also force an immediate "Refresh now"). It is safety evidence as saved, never an

@@ -105,8 +105,30 @@ function richPayload(
     readiness?: "ready" | "blocked";
     /** Second diver, present at departure and carried not-boarded after dive 1. */
     withCarriedNotBoarded?: boolean;
+    /**
+     * Crew were counted at both checkpoints before the snapshot was saved.
+     * Divers alone no longer close a checkpoint (DOM-H1, ADR
+     * 20260802-crew-roll-call-attestation), so anything asserting "roll call
+     * complete" needs this; anything asserting it *stays open* leaves it off.
+     */
+    crewAttested?: boolean;
   } = {},
 ): OfflineManifestPayload {
+  // Every charter is crewed, so both cases carry the same two people; the
+  // difference under test is whether anyone counted them.
+  const crew = [
+    { fullName: "Dana Divemaster", roles: ["divemaster"] },
+    { fullName: "Sal Ortiz", roles: ["captain"] },
+  ];
+  const crewAttestation = opts.crewAttested
+    ? {
+        crewAboard: 2,
+        crewAssigned: 2,
+        attestedByName: "Dana Divemaster",
+        occurredAt: "2026-08-01T12:55:00.000Z",
+        note: null,
+      }
+    : undefined;
   const trip = {
     id: tripId,
     title: "Two-Tank Reef",
@@ -154,7 +176,8 @@ function richPayload(
       {
         trip,
         checkpoint: "departure",
-        crew: [],
+        crew,
+        crewAttestation,
         divers,
         summary: {
           totalDivers: divers.length,
@@ -168,7 +191,8 @@ function richPayload(
       {
         trip,
         checkpoint: "after_dive_1",
-        crew: [],
+        crew,
+        crewAttestation,
         divers: diversAfterDive,
         summary: {
           totalDivers: diversAfterDive.length,
@@ -553,7 +577,7 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
     // celebration were gated on `rollCallComplete` (awaiting === 0) instead
     // of the true boarded count, this transition would incorrectly fire it.
     searchParams = new URLSearchParams({ trip: "trip-1", checkpoint: "after_dive_1" });
-    const saved = richEnvelope("trip-1", { withCarriedNotBoarded: true });
+    const saved = richEnvelope("trip-1", { withCarriedNotBoarded: true, crewAttested: true });
     vi.mocked(loadOfflineManifest).mockResolvedValue(saved);
     vi.mocked(syncOfflineManifest).mockResolvedValue(null);
     const afterNotBoard: OfflineManifestEnvelope = {
@@ -689,5 +713,89 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
     expect(
       await screen.findByRole("checkbox", { name: "Disable spray guard on this device" }),
     ).toBeInTheDocument();
+  });
+});
+
+/**
+ * DOM-H1. "Complete" is one definition (`rollCallCompleteness`,
+ * src/lib/manifests.ts), consumed by the live manifest and by this view. It
+ * used to be written inline in both places as divers-only, so a checkpoint
+ * with every booked diver counted read complete with the crew unaccounted
+ * for. Crew attestation is not recordable offline in this slice — so the one
+ * thing that must never happen is the dock copy reading "complete" while the
+ * live page says the checkpoint is still open.
+ */
+describe("OfflineManifestView — crew are part of the head count offline too", () => {
+  it("does not read complete when every diver has a result but no crew count was saved", async () => {
+    searchParams = new URLSearchParams({ trip: "trip-1", checkpoint: "after_dive_1" });
+    // No `crewAttested` — a snapshot saved before anyone counted the crew.
+    const saved = richEnvelope("trip-1", { withCarriedNotBoarded: true });
+    vi.mocked(loadOfflineManifest).mockResolvedValue(saved);
+    vi.mocked(syncOfflineManifest).mockResolvedValue(null);
+    vi.mocked(appendOfflineRollCall).mockResolvedValue({
+      ...saved,
+      events: [
+        {
+          clientEventId: "evt-1",
+          snapshotId: saved.snapshot.snapshotId,
+          snapshotSavedAt: saved.snapshot.savedAt,
+          tripId: "trip-1",
+          bookingId: "diver-priya",
+          checkpoint: "after_dive_1",
+          status: "boarded",
+          note: null,
+          occurredAt: new Date(FROZEN_MS).toISOString(),
+          syncStatus: "pending",
+        },
+      ],
+    });
+
+    render(<OfflineManifestView />);
+    await screen.findByRole("heading", { name: "Two-Tank Reef" });
+    // Priya is the only diver still awaiting (Marcus is carried not-boarded).
+    fireEvent.click(screen.getAllByRole("button", { name: "Mark boarded" })[0] as HTMLElement);
+    await waitFor(() => expect(appendOfflineRollCall).toHaveBeenCalled());
+
+    // Both divers now have a result — the old divers-only rule called this
+    // complete, on both surfaces.
+    expect(await screen.findByText(/Saved on this phone/)).toBeInTheDocument();
+    expect(screen.queryByText(/Roll call complete/)).not.toBeInTheDocument();
+    // And it says why, rather than going quiet: the crew count lives on the
+    // live manifest, so this checkpoint stays open until there's signal.
+    expect(screen.getByText(/2 crew members are assigned to this trip/)).toBeInTheDocument();
+    expect(screen.getByText(/confirmed on the live manifest/)).toBeInTheDocument();
+  });
+
+  it("reads complete once the saved snapshot carries a crew count that covers the assigned crew", async () => {
+    searchParams = new URLSearchParams({ trip: "trip-1", checkpoint: "after_dive_1" });
+    const saved = richEnvelope("trip-1", { withCarriedNotBoarded: true, crewAttested: true });
+    vi.mocked(loadOfflineManifest).mockResolvedValue(saved);
+    vi.mocked(syncOfflineManifest).mockResolvedValue(null);
+    vi.mocked(appendOfflineRollCall).mockResolvedValue({
+      ...saved,
+      events: [
+        {
+          clientEventId: "evt-1",
+          snapshotId: saved.snapshot.snapshotId,
+          snapshotSavedAt: saved.snapshot.savedAt,
+          tripId: "trip-1",
+          bookingId: "diver-priya",
+          checkpoint: "after_dive_1",
+          status: "boarded",
+          note: null,
+          occurredAt: new Date(FROZEN_MS).toISOString(),
+          syncStatus: "pending",
+        },
+      ],
+    });
+
+    render(<OfflineManifestView />);
+    await screen.findByRole("heading", { name: "Two-Tank Reef" });
+    // The saved count is shown, attributed — a head count is never anonymous.
+    expect(screen.getByText(/2 of 2 crew confirmed aboard · Dana Divemaster/)).toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole("button", { name: "Mark boarded" })[0] as HTMLElement);
+    await waitFor(() => expect(appendOfflineRollCall).toHaveBeenCalled());
+
+    expect(await screen.findByText(/Roll call complete/)).toBeInTheDocument();
   });
 });

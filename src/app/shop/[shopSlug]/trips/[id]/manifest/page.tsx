@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { revalidatePath } from "next/cache";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 import {
   RollCallButton,
@@ -20,9 +20,15 @@ import { SkipLink } from "@/components/SkipLink";
 import { SubSurfaceRipple } from "@/components/SubSurfaceRipple";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
+import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { WaterLocker, WaterLockerToggle } from "@/components/WaterLocker";
 import { getDb } from "@/db/client";
-import { getTripManifests, recordRollCall, updateLatestRollCallNote } from "@/db/manifests";
+import {
+  getTripManifests,
+  recordCrewAttestation,
+  recordRollCall,
+  updateLatestRollCallNote,
+} from "@/db/manifests";
 import { getShopById } from "@/db/shops";
 import { birthdayText } from "@/i18n/birthday-labels";
 import { depthWarningText } from "@/i18n/depth-labels";
@@ -69,16 +75,24 @@ const noteSchema = z.object({
   note: z.string().max(300),
 });
 
+// The count is the only number staff supply; the denominator is read server-side
+// from the trip's assignments inside `recordCrewAttestation`. `99` mirrors the
+// domain layer's own ceiling — this is a duplicate guard, not the authority.
+const crewAttestationSchema = z.object({
+  crewAboard: z.coerce.number().int().min(0).max(99),
+  note: z.string().trim().max(300).optional(),
+});
+
 export default async function TripManifestPage({
   params,
   searchParams,
 }: {
   params: Promise<{ shopSlug: string; id: string }>;
-  searchParams: Promise<{ checkpoint?: string }>;
+  searchParams: Promise<{ checkpoint?: string; crewError?: string }>;
 }) {
   const session = await requireStaffSession();
   const { shopSlug, id: tripId } = await params;
-  const { checkpoint: requestedCheckpoint } = await searchParams;
+  const { checkpoint: requestedCheckpoint, crewError } = await searchParams;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   // Staff read dates in the language their own device asks for, same
@@ -98,7 +112,15 @@ export default async function TripManifestPage({
       : "departure";
   const manifest = completeManifests.find((entry) => entry.checkpoint === checkpoint);
   if (!manifest) notFound();
-  const rollCallComplete = manifest.summary.totalDivers > 0 && manifest.summary.awaiting === 0;
+  // One definition, shared with the offline copy: divers *and* crew (DOM-H1,
+  // ADR 20260802-crew-roll-call-attestation). This used to be written inline
+  // here and again in OfflineManifestView as `totalDivers > 0 && awaiting === 0`,
+  // which counted booked divers only — so a checkpoint could read complete with
+  // a divemaster still in the water.
+  const completeness = manifest.completeness;
+  const rollCallComplete = completeness.complete;
+  const crewAssigned = manifest.crew.length;
+  const crewAttestation = manifest.crewAttestation;
   // Readiness gates boarding at departure only. After a dive, roll call is a
   // physical head count — a diver who is aboard is recorded present regardless
   // of a paperwork state that changed after the boat left.
@@ -161,6 +183,31 @@ export default async function TripManifestPage({
     });
     if (saved) revalidatePath(back.split("?")[0]);
     return { ok: true, saved };
+  }
+
+  /**
+   * Record how many crew are aboard at this checkpoint. A plain form post, not
+   * an optimistic client control: this is the number that closes a head count,
+   * so it settles only once the server has written the row.
+   */
+  async function attestCrewAction(formData: FormData) {
+    "use server";
+    const staff = await requireStaffSession();
+    const parsed = crewAttestationSchema.safeParse(Object.fromEntries(formData));
+    if (!parsed.success) {
+      redirect(`${back}&crewError=1`);
+    }
+    const outcome = await recordCrewAttestation(await getDb(), {
+      shopId: staff.user.shopId,
+      tripId,
+      attestedByPersonId: staff.user.personId,
+      crewAboard: parsed.data.crewAboard,
+      checkpoint,
+      note: parsed.data.note,
+    });
+    if (!outcome.ok) redirect(`${back}&crewError=1`);
+    revalidatePath(back.split("?")[0]);
+    redirect(back);
   }
 
   const errorRefusal = t("trips.rollCall.errorRefusal");
@@ -399,10 +446,20 @@ export default async function TripManifestPage({
             }}
           />
         </div>
+        {/* The one line that says whether this checkpoint is closed. It used to
+            go quiet at `awaiting === 0` — every diver counted, nothing said
+            about the crew. Now it names what is still open. */}
         <p className="mt-2 text-sm font-semibold text-muted" aria-live="polite">
-          {manifest.summary.awaiting === 0
-            ? t("trips.manifest.allAccountedFor")
-            : t("trips.manifest.stillToCall", { count: manifest.summary.awaiting })}
+          {completeness.reason === "divers_awaiting"
+            ? t("trips.manifest.stillToCall", { count: manifest.summary.awaiting })
+            : completeness.reason === "crew_not_attested"
+              ? t("trips.manifest.crewNotAttestedYet")
+              : completeness.reason === "crew_short" && crewAttestation
+                ? t("trips.manifest.crewShort", {
+                    aboard: crewAttestation.crewAboard,
+                    assigned: crewAssigned,
+                  })
+                : t("trips.manifest.allAccountedFor")}
         </p>
       </section>
 
@@ -421,20 +478,106 @@ export default async function TripManifestPage({
 
       <section className="mt-9">
         <h2 className="text-lg font-semibold">{t("trips.manifest.crewHeading")}</h2>
-        {manifest.crew.length === 0 ? (
+        {crewAssigned === 0 ? (
           <p className="mt-3 text-sm text-muted">{t("trips.manifest.noCrew")}</p>
         ) : (
           <ul className="mt-3 flex flex-wrap gap-2">
             {manifest.crew.map((member) => (
-              <li
-                key={member.fullName}
-                className="rounded-full bg-surface-sunken px-3 py-2 text-sm"
-              >
+              <li key={member.id} className="rounded-full bg-surface-sunken px-3 py-2 text-sm">
                 <strong>{member.fullName}</strong> · {member.roles.join(", ")}
               </li>
             ))}
           </ul>
         )}
+
+        {/*
+         * The crew half of the head count (DOM-H1). Crew hold no booking, so
+         * they cannot be roll-call subjects — this is an attested count, not a
+         * per-person call, and the checkpoint does not read complete without
+         * it. A trip with zero assigned crew is not exempt: "0 of 0" is still
+         * something a named human says, because an empty assignment list is a
+         * scheduling gap, not evidence that nobody else was aboard.
+         */}
+        <div
+          className={
+            completeness.crewAccountedFor
+              ? "mt-4 rounded-2xl border border-success/40 bg-success/10 p-4 print:hidden"
+              : "mt-4 rounded-2xl border border-warning/50 bg-warning/10 p-4 print:hidden"
+          }
+        >
+          <h3 className="text-base font-bold">
+            {t("trips.manifest.crewAboardHeading", {
+              checkpoint: rollCallCheckpointText(t, checkpoint),
+            })}
+          </h3>
+          <p className="mt-1 max-w-prose text-sm text-muted">
+            {t("trips.manifest.crewAboardDescription")}
+          </p>
+          <p className="mt-3 text-base font-semibold">
+            {crewAttestation
+              ? t("trips.manifest.crewAttestedSummary", {
+                  aboard: crewAttestation.crewAboard,
+                  assigned: crewAttestation.crewAssigned,
+                  name: crewAttestation.attestedByName,
+                  date: formatDateTimeTz(crewAttestation.occurredAt, locale, shop.timezone),
+                })
+              : t("trips.manifest.crewAttestationMissing")}
+          </p>
+          {crewAttestation?.note ? (
+            <p className="mt-1 text-sm text-muted">
+              {t("trips.manifest.crewAttestedNote", { note: crewAttestation.note })}
+            </p>
+          ) : null}
+          {/* The stored denominator is evidence of what was true then;
+              completeness compares against the assignment list *now*, so
+              adding a crew member re-opens the checkpoint rather than riding
+              on a stale count. Say so rather than silently reverting. */}
+          {crewAttestation && crewAttestation.crewAssigned !== crewAssigned ? (
+            <p className="mt-1 text-sm font-semibold text-warning">
+              {t("trips.manifest.crewAttestationStaleAssigned", { assigned: crewAssigned })}
+            </p>
+          ) : null}
+          {crewError ? (
+            <p className="mt-2 text-sm font-semibold text-danger" role="status">
+              {t("trips.manifest.crewAttestError")}
+            </p>
+          ) : null}
+          <FieldGrid as="form" action={attestCrewAction} columns={2} className="mt-4">
+            <Field
+              label={t("trips.manifest.crewAboardLabel")}
+              hint={t("trips.manifest.crewAboardHint", { assigned: crewAssigned })}
+              description={t("trips.manifest.crewAboardFieldDescription")}
+            >
+              <input
+                name="crewAboard"
+                type="number"
+                inputMode="numeric"
+                min={0}
+                max={99}
+                step={1}
+                required
+                defaultValue={crewAttestation?.crewAboard ?? crewAssigned}
+                className={`${controlClass} min-h-14 text-lg tabular-nums`}
+              />
+            </Field>
+            <Field
+              label={t("trips.manifest.crewAttestNoteLabel")}
+              hint={t("trips.manifest.crewAttestNoteHint")}
+            >
+              <input
+                name="note"
+                maxLength={300}
+                placeholder={t("trips.manifest.crewAttestNotePlaceholder")}
+                className={`${controlClass} min-h-14`}
+              />
+            </Field>
+            <FieldActions>
+              <button type="submit" className={buttonClass({ size: "boat" })}>
+                {t("trips.manifest.crewAttestSubmit")}
+              </button>
+            </FieldActions>
+          </FieldGrid>
+        </div>
       </section>
 
       <section id="roll-call-list" tabIndex={-1} className="mt-9 outline-none">

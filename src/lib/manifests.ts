@@ -182,7 +182,7 @@ export type CrewAttestation = {
 
 /**
  * Why a checkpoint is not closed yet. Codes, not sentences — the UI picks the
- * words (`src/i18n/locales/*/staff.json`).
+ * words from each locale's `staff.json`.
  *
  * - `no_divers` — nothing to count; an empty roster never reads complete.
  * - `divers_awaiting` — at least one booked diver has no result here.

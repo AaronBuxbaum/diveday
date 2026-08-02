@@ -381,3 +381,61 @@ test("displays missing diver face-grid on manifest page", async ({ page }) => {
   await expect(firstAvatar).toBeVisible();
   await firstAvatar.click();
 });
+
+test("a checkpoint with every diver counted stays open until the crew are counted too", async ({
+  page,
+}) => {
+  // DOM-H1. Crew are the people most reliably in the water and were not part
+  // of the head count at all, so a boat could read "roll call complete" with a
+  // divemaster still down.
+  await page.goto("/shop/blue-mantis/schedule/board");
+  await page
+    .locator("li")
+    .filter({ hasText: "Two-Tank Reef — Molasses & French" })
+    .getByRole("link", { name: "Two-Tank Reef — Molasses & French", exact: true })
+    .click();
+  await page
+    .getByRole("navigation", { name: "Trip" })
+    .getByRole("link", { name: "Manifest" })
+    .click();
+
+  // Nothing counted yet.
+  await expect(page.getByText("No crew count recorded at this checkpoint yet.")).toBeVisible();
+
+  // After a dive, roll call is a head count, so every diver — blocked or not —
+  // can be recorded present. That is what makes "all divers counted" reachable.
+  await page
+    .getByRole("link", { name: "After dive 1" })
+    .evaluate((link: HTMLElement) => link.click());
+  await expect(page).toHaveURL(/checkpoint=after_dive_1/);
+
+  for (;;) {
+    const next = page.getByRole("button", { name: "Mark boarded" }).first();
+    if ((await next.count()) === 0) break;
+    await next.evaluate((button) => button.scrollIntoView({ block: "center" }));
+    await next.click();
+    await expect(next).toHaveText(/Boarded/);
+  }
+
+  // Every diver has a result — and the checkpoint is still open, naming why.
+  await expect(page.getByText(/0 divers still to call/)).toHaveCount(0);
+  await expect(
+    page.getByText("Every diver is counted. Confirm how many crew are aboard to close this"),
+  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Roll call complete ✦" })).toHaveCount(0);
+
+  // A short count does not close it either: the seeded charter carries a
+  // captain and a divemaster, so one aboard leaves someone unaccounted for.
+  const crewAboard = page.getByLabel("Crew aboard");
+  await crewAboard.fill("1");
+  await page.getByRole("button", { name: "Confirm crew count" }).click();
+  await expect(page.getByText(/1 of 2 crew aboard/)).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Roll call complete ✦" })).toHaveCount(0);
+
+  // Counting the rest is what closes it — and the attestation is append-only,
+  // so this supersedes the short count rather than editing it.
+  await crewAboard.fill("2");
+  await page.getByRole("button", { name: "Confirm crew count" }).click();
+  await expect(page.getByText(/2 of 2 crew aboard/)).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Roll call complete ✦" })).toBeVisible();
+});
