@@ -3,7 +3,11 @@ import { applyProviderEmailEvent } from "@/db/notifications";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 import { parseSesEmailEvent } from "@/lib/notifications/ses-events";
-import { confirmSnsSubscription, verifySnsMessage } from "@/lib/notifications/sns";
+import {
+  confirmSnsSubscription,
+  readWebhookPayload,
+  verifySnsMessage,
+} from "@/lib/notifications/sns";
 
 /**
  * The SES delivery-outcome webhook, dormant until the app is cut over from
@@ -19,7 +23,9 @@ import { confirmSnsSubscription, verifySnsMessage } from "@/lib/notifications/sn
  * redelivery loop and nothing else.
  */
 export async function POST(request: Request) {
-  const payload = await request.text();
+  const payload = await readWebhookPayload(request);
+  if (payload === null) return new Response(null, { status: 400 });
+
   const verification = await verifySnsMessage(payload, process.env.SES_SNS_TOPIC_ARN);
 
   if (verification.status === "not_configured") return new Response(null, { status: 503 });

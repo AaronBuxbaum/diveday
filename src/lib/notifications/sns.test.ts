@@ -1,6 +1,11 @@
 import { createSign, generateKeyPairSync } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
-import { confirmSnsSubscription, type SnsMessage, verifySnsMessage } from "./sns";
+import {
+  confirmSnsSubscription,
+  readWebhookPayload,
+  type SnsMessage,
+  verifySnsMessage,
+} from "./sns";
 
 const { privateKey, publicKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
 const certificatePem = publicKey.export({ type: "spki", format: "pem" }) as string;
@@ -73,7 +78,29 @@ describe("verifySnsMessage", () => {
     const fetchImpl = certFetch();
     const result = await verifySnsMessage(JSON.stringify(message), topicArn, fetchImpl);
     expect(result.status).toBe("verified");
-    expect(fetchImpl).toHaveBeenCalledWith(trustedCertUrl);
+    expect(fetchImpl).toHaveBeenCalledWith(trustedCertUrl, { redirect: "manual" });
+  });
+
+  it("never follows a redirect from the certificate host", async () => {
+    // redirect: "manual" makes a 3xx response's .ok false without dereferencing
+    // Location — this test locks that contract in so it can't regress silently.
+    const message = signedNotification();
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValue(
+        new Response(null, { status: 302, headers: { Location: "https://evil.example.com/" } }),
+      );
+    const result = await verifySnsMessage(JSON.stringify(message), topicArn, fetchImpl);
+    expect(result).toEqual({ status: "invalid_signature" });
+  });
+
+  it("verifies a signed message with a large body (the size cap lives in readWebhookPayload, not here)", async () => {
+    const largeMessage = signedNotification({
+      messageBody: JSON.stringify({ note: "x".repeat(50_000) }),
+    });
+    const fetchImpl = certFetch();
+    const result = await verifySnsMessage(JSON.stringify(largeMessage), topicArn, fetchImpl);
+    expect(result.status).toBe("verified");
   });
 
   it("verifies SignatureVersion 2 (SHA-256) too", async () => {
@@ -160,7 +187,7 @@ describe("confirmSnsSubscription", () => {
   it("fetches SubscribeURL and reports success", async () => {
     const fetchImpl = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
     await expect(confirmSnsSubscription(trustedSubscribeUrl, fetchImpl)).resolves.toBe(true);
-    expect(fetchImpl).toHaveBeenCalledWith(trustedSubscribeUrl);
+    expect(fetchImpl).toHaveBeenCalledWith(trustedSubscribeUrl, { redirect: "manual" });
   });
 
   it("never fetches a SubscribeURL outside the trusted SNS host pattern", async () => {
@@ -174,5 +201,29 @@ describe("confirmSnsSubscription", () => {
   it("reports failure when the confirmation request itself fails", async () => {
     const fetchImpl = vi.fn().mockResolvedValue(new Response(null, { status: 500 }));
     await expect(confirmSnsSubscription(trustedSubscribeUrl, fetchImpl)).resolves.toBe(false);
+  });
+
+  it("never follows a redirect", async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValue(
+        new Response(null, { status: 302, headers: { Location: "https://evil.example.com/" } }),
+      );
+    await expect(confirmSnsSubscription(trustedSubscribeUrl, fetchImpl)).resolves.toBe(false);
+  });
+});
+
+describe("readWebhookPayload", () => {
+  function requestWithBody(text: string): Request {
+    return new Request("http://localhost/api/webhooks/ses", { method: "POST", body: text });
+  }
+
+  it("returns the body when under the size cap", async () => {
+    await expect(readWebhookPayload(requestWithBody("{}"))).resolves.toBe("{}");
+  });
+
+  it("returns null for a body over the size cap, without throwing", async () => {
+    const oversized = "x".repeat(300_000);
+    await expect(readWebhookPayload(requestWithBody(oversized))).resolves.toBeNull();
   });
 });

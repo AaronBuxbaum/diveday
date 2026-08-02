@@ -5,10 +5,10 @@ vi.mock("@/db/client", async (importOriginal) => {
   return { ...actual, getDb: vi.fn() };
 });
 vi.mock("@/db/notifications", () => ({ applyProviderEmailEvent: vi.fn() }));
-vi.mock("@/lib/notifications/sns", () => ({
-  verifySnsMessage: vi.fn(),
-  confirmSnsSubscription: vi.fn(),
-}));
+vi.mock("@/lib/notifications/sns", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/notifications/sns")>();
+  return { ...actual, verifySnsMessage: vi.fn(), confirmSnsSubscription: vi.fn() };
+});
 
 const { getDb } = await import("@/db/client");
 const { applyProviderEmailEvent } = await import("@/db/notifications");
@@ -35,6 +35,12 @@ describe("ses webhook route — verification gate", () => {
     const response = await POST(webhookRequest("{}"));
     expect(response.status).toBe(503);
     expect(applyProviderEmailEvent).not.toHaveBeenCalled();
+  });
+
+  it("rejects an oversized payload before ever calling verifySnsMessage", async () => {
+    const response = await POST(webhookRequest("x".repeat(300_000)));
+    expect(response.status).toBe(400);
+    expect(verifySnsMessage).not.toHaveBeenCalled();
   });
 
   it("rejects a malformed payload", async () => {

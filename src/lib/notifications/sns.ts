@@ -21,6 +21,45 @@ import { z } from "zod";
 
 type Fetch = typeof fetch;
 
+/**
+ * This endpoint is deliberately unauthenticated (a webhook has to be), so an
+ * unbounded body read is a cheap way to pressure server memory before any
+ * validation has even run. Real SNS/SES payloads are a few KB; a signing
+ * certificate is smaller still. Both are read through this cap rather than a
+ * bare `.text()`.
+ */
+const MAX_BODY_BYTES = 262_144; // 256 KiB
+
+async function readTextWithLimit(
+  body: ReadableStream<Uint8Array> | null,
+  limitBytes: number,
+): Promise<string | null> {
+  if (!body) return "";
+  const reader = body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > limitBytes) {
+        await reader.cancel();
+        return null;
+      }
+      chunks.push(value);
+    }
+  } catch {
+    return null;
+  }
+  return Buffer.concat(chunks.map((chunk) => Buffer.from(chunk))).toString("utf8");
+}
+
+/** Reads a `Request` body through the same size cap the SNS/SES machinery uses. */
+export async function readWebhookPayload(request: Request): Promise<string | null> {
+  return readTextWithLimit(request.body, MAX_BODY_BYTES);
+}
+
 const snsMessageSchema = z.object({
   Type: z.enum(["Notification", "SubscriptionConfirmation", "UnsubscribeConfirmation"]),
   MessageId: z.string().min(1),
@@ -114,10 +153,13 @@ function verifyRsaSignature(
 async function fetchSigningCertificate(url: string, fetchImpl: Fetch): Promise<string | null> {
   if (!isTrustedSnsUrl(url)) return null;
   try {
-    const response = await fetchImpl(url);
+    // `redirect: "manual"` so a 3xx is never silently followed to a host this
+    // module never validated — `isTrustedSnsUrl` only ever checked the URL
+    // handed to it, not wherever a redirect might point next.
+    const response = await fetchImpl(url, { redirect: "manual" });
     if (!response.ok) return null;
-    const body = await response.text();
-    return body.trim().length > 0 ? body : null;
+    const body = await readTextWithLimit(response.body, MAX_BODY_BYTES);
+    return body?.trim() ? body : null;
   } catch {
     return null;
   }
@@ -166,7 +208,10 @@ export async function verifySnsMessage(
  * message is only ever acted on after `verifySnsMessage` has already verified
  * it, and `SubscribeURL` is independently re-checked against the same trusted
  * host pattern before being fetched — belt and suspenders around the one place
- * this module makes an outbound request based on message content.
+ * this module makes an outbound request based on message content. Unlike the
+ * `Notification` path, nothing here writes to this app's own database — the
+ * only effect of replaying an old, genuinely-signed confirmation message is a
+ * redundant subscribe/unsubscribe call against AWS's own endpoint.
  */
 export async function confirmSnsSubscription(
   subscribeUrl: string,
@@ -174,7 +219,8 @@ export async function confirmSnsSubscription(
 ): Promise<boolean> {
   if (!isTrustedSnsUrl(subscribeUrl)) return false;
   try {
-    const response = await fetchImpl(subscribeUrl);
+    // See fetchSigningCertificate: never follow a redirect to an unvalidated host.
+    const response = await fetchImpl(subscribeUrl, { redirect: "manual" });
     return response.ok;
   } catch {
     return false;
