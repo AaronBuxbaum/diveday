@@ -3,6 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
 import type { CreateTripPromotionResult, PromotionProvider } from "@/lib/payments/promotions";
+import { groupActions } from "@/lib/today";
 import { seededShopContext } from "@/test/db";
 import { cancelBooking } from "./bookings";
 import { joinLastMinuteList } from "./last-minute-list";
@@ -12,7 +13,13 @@ import { setBookingNitrox } from "./nitrox";
 import { recordNotificationDelivery } from "./notifications";
 import { startPaymentOperation } from "./payment-operations";
 import { saveRentalFit } from "./rental-fit";
-import { nitroxCertifications, people, tripWaitlistEntries } from "./schema";
+import {
+  bookings as bookingsTable,
+  nitroxCertifications,
+  people,
+  tripWaitlistEntries,
+  trips as tripsTable,
+} from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { getTodayWork } from "./today";
 import { sendLastMinuteDealBlast } from "./trip-promos";
@@ -593,5 +600,312 @@ describe("role lens raw material", () => {
         otherWork.actions.find((a) => a.id === `stuck-payment-op:${intent.id}`),
       ).toBeUndefined();
     });
+  });
+});
+
+/**
+ * DOM-H3 — nothing used to chase an after-dive head count that never closed.
+ * These cases are deliberately adversarial: the alarm has to survive an empty
+ * checkpoint, a half-recorded one, an undo, a second dive, another tenant, and
+ * — the one that matters most — a boat that already went home.
+ */
+describe("unfinished after-dive roll call (DOM-H3)", () => {
+  const HOUR = 60 * 60 * 1000;
+
+  /**
+   * A departure that already tied up, with `divers` bookings on it. Inserted
+   * directly rather than through `createBooking`: the booking path (rightly)
+   * refuses to sell a seat on a boat that has already sailed, and this fixture
+   * is about what the log looks like afterwards.
+   */
+  async function returnedTrip(
+    db: Awaited<ReturnType<typeof seededShopContext>>["db"],
+    shopId: string,
+    options: { endedHoursAgo: number; divers: number; plannedDives?: number; title?: string },
+  ) {
+    const endsAt = new Date(Date.now() - options.endedHoursAgo * HOUR);
+    const [trip] = await db
+      .insert(tripsTable)
+      .values({
+        shopId,
+        title: options.title ?? "Returned Two-Tank — Molasses",
+        startsAt: new Date(endsAt.getTime() - 4 * HOUR),
+        endsAt,
+        capacity: 12,
+        plannedDives: options.plannedDives ?? 1,
+        priceCents: 13000,
+      })
+      .returning();
+    if (!trip) throw new Error("fixture trip insert returned no row");
+    const divers = await db
+      .select({ id: people.id })
+      .from(people)
+      .where(eq(people.shopId, shopId))
+      .limit(options.divers);
+    if (divers.length < options.divers) throw new Error("seed has too few people for this fixture");
+    const rows = await db
+      .insert(bookingsTable)
+      .values(
+        divers.map((diver) => ({
+          shopId,
+          tripId: trip.id,
+          personId: diver.id,
+          status: "checked_in" as const,
+        })),
+      )
+      .returning();
+    const [staff] = await listStaff(db, shopId);
+    if (!staff) throw new Error("seed staff missing");
+    return { trip, bookingIds: rows.map((row) => row.id), staffId: staff.person.id };
+  }
+
+  const rollCallRow = (work: Awaited<ReturnType<typeof getTodayWork>>, tripId: string) =>
+    work.actions.find((action) => action.id.startsWith(`roll-call:${tripId}:`));
+
+  it("alarms on a returned trip with no after-dive roll call at all", async () => {
+    const { db, shop } = await seededShopContext();
+    const { trip } = await returnedTrip(db, shop.id, { endedHoursAgo: 2, divers: 3 });
+
+    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const row = rollCallRow(work, trip.id);
+
+    expect(row).toBeDefined();
+    expect(row?.kind).toBe("roll_call_unfinished");
+    // Pinned to the top band and dated at the moment it tied up, so it sorts
+    // ahead of every departure still ahead of the shop.
+    expect(row?.urgency).toBe("imminent");
+    expect(row?.dueAt?.getTime()).toBe(trip.endsAt.getTime());
+    expect(row?.href).toBe(
+      `/shop/${shop.slug}/trips/${trip.id}/manifest?checkpoint=after_dive_1`,
+    );
+    expect(row?.detail).toContain("3 of 3 divers");
+    // The boat is gone from every forward-looking surface — which is precisely
+    // why this row had to come from its own backwards query.
+    expect(work.departures.some((departure) => departure.tripId === trip.id)).toBe(false);
+  });
+
+  it("still alarms on a partially recorded checkpoint, counting only who is missing", async () => {
+    const { db, shop } = await seededShopContext();
+    const { trip, bookingIds, staffId } = await returnedTrip(db, shop.id, {
+      endedHoursAgo: 2,
+      divers: 3,
+    });
+    for (const bookingId of bookingIds.slice(0, 2)) {
+      const outcome = await recordRollCall(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        bookingId,
+        recordedByPersonId: staffId,
+        status: "boarded",
+        checkpoint: "after_dive_1",
+      });
+      expect(outcome.ok).toBe(true);
+    }
+
+    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    expect(rollCallRow(work, trip.id)?.detail).toContain("1 of 3 divers");
+  });
+
+  it("goes quiet once every diver has a result at the checkpoint", async () => {
+    const { db, shop } = await seededShopContext();
+    const { trip, bookingIds, staffId } = await returnedTrip(db, shop.id, {
+      endedHoursAgo: 2,
+      divers: 3,
+    });
+    // A head count is "everyone accounted for", not "everyone aboard": one
+    // diver who stayed on the boat still closes the count.
+    for (const [index, bookingId] of bookingIds.entries()) {
+      await recordRollCall(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        bookingId,
+        recordedByPersonId: staffId,
+        status: index === 0 ? "not_boarded" : "boarded",
+        checkpoint: "after_dive_1",
+      });
+    }
+
+    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    expect(rollCallRow(work, trip.id)).toBeUndefined();
+  });
+
+  it("re-alarms when a diver is cleared back to awaiting", async () => {
+    const { db, shop } = await seededShopContext();
+    const { trip, bookingIds, staffId } = await returnedTrip(db, shop.id, {
+      endedHoursAgo: 2,
+      divers: 2,
+    });
+    for (const bookingId of bookingIds) {
+      await recordRollCall(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        bookingId,
+        recordedByPersonId: staffId,
+        status: "boarded",
+        checkpoint: "after_dive_1",
+      });
+    }
+    expect(rollCallRow(await getTodayWork(db, shop.id, shop.slug, shop.timezone), trip.id))
+      .toBeUndefined();
+
+    // A `cleared` event is an undo — the diver reads as awaiting again on the
+    // manifest, so the count is open again here too. Roll-call history is
+    // append-only, so the older `boarded` row is still in the table.
+    const [undone] = bookingIds;
+    if (!undone) throw new Error("fixture booking missing");
+    await recordRollCall(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      bookingId: undone,
+      recordedByPersonId: staffId,
+      status: "cleared",
+      checkpoint: "after_dive_1",
+      occurredAt: new Date(Date.now() + 1000),
+    });
+
+    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    expect(rollCallRow(work, trip.id)?.detail).toContain("1 of 2 divers");
+  });
+
+  it("alarms on the second dive of a two-dive trip whose first dive is complete", async () => {
+    const { db, shop } = await seededShopContext();
+    const { trip, bookingIds, staffId } = await returnedTrip(db, shop.id, {
+      endedHoursAgo: 3,
+      divers: 2,
+      plannedDives: 2,
+    });
+    for (const bookingId of bookingIds) {
+      await recordRollCall(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        bookingId,
+        recordedByPersonId: staffId,
+        status: "boarded",
+        checkpoint: "after_dive_1",
+      });
+    }
+
+    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const row = rollCallRow(work, trip.id);
+    // Reported at the earliest dive still open, and pointed straight at it.
+    expect(row?.href).toBe(`/shop/${shop.slug}/trips/${trip.id}/manifest?checkpoint=after_dive_2`);
+    expect(row?.detail).toContain("dive 2");
+  });
+
+  it("does not count a diver who was explicitly left ashore", async () => {
+    const { db, shop } = await seededShopContext();
+    const { trip, bookingIds, staffId } = await returnedTrip(db, shop.id, {
+      endedHoursAgo: 2,
+      divers: 2,
+      plannedDives: 2,
+    });
+    const [ashore, aboard] = bookingIds;
+    if (!ashore || !aboard) throw new Error("fixture bookings missing");
+    // Recorded not-boarded at departure and never seen again: "off the boat
+    // stays off the boat" carries that forward, so neither after-dive
+    // checkpoint is waiting on them.
+    await recordRollCall(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      bookingId: ashore,
+      recordedByPersonId: staffId,
+      status: "not_boarded",
+      checkpoint: "departure",
+    });
+    for (const checkpoint of ["after_dive_1", "after_dive_2"] as const) {
+      await recordRollCall(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        bookingId: aboard,
+        recordedByPersonId: staffId,
+        status: "boarded",
+        checkpoint,
+      });
+    }
+
+    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    expect(rollCallRow(work, trip.id)).toBeUndefined();
+  });
+
+  it("keeps alarming for a boat that came back yesterday", async () => {
+    const { db, shop } = await seededShopContext();
+    // 30 hours back is a different calendar day in every timezone, so this can
+    // never be reached by the shop's own "today" filter — the exact case the
+    // forward window drops on the floor.
+    const { trip } = await returnedTrip(db, shop.id, { endedHoursAgo: 30, divers: 4 });
+
+    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    expect(rollCallRow(work, trip.id)?.detail).toContain("4 of 4 divers");
+  });
+
+  it("stops chasing once the trip is older than the lookback", async () => {
+    const { db, shop } = await seededShopContext();
+    const { trip } = await returnedTrip(db, shop.id, { endedHoursAgo: 24 * 5, divers: 3 });
+
+    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    expect(rollCallRow(work, trip.id)).toBeUndefined();
+  });
+
+  it("says nothing about a boat that is still out", async () => {
+    const { db, shop } = await seededShopContext();
+    // Ends two hours from now: the roll call is not unfinished, it is unstarted
+    // because the dive has not happened yet.
+    const { trip } = await returnedTrip(db, shop.id, { endedHoursAgo: -2, divers: 3 });
+
+    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    expect(rollCallRow(work, trip.id)).toBeUndefined();
+  });
+
+  it("drops a cancelled booking from the count instead of alarming forever", async () => {
+    const { db, shop } = await seededShopContext();
+    const { trip, bookingIds, staffId } = await returnedTrip(db, shop.id, {
+      endedHoursAgo: 2,
+      divers: 2,
+    });
+    const [counted, pulled] = bookingIds;
+    if (!counted || !pulled) throw new Error("fixture bookings missing");
+    await recordRollCall(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      bookingId: counted,
+      recordedByPersonId: staffId,
+      status: "boarded",
+      checkpoint: "after_dive_1",
+    });
+    expect(rollCallRow(await getTodayWork(db, shop.id, shop.slug, shop.timezone), trip.id))
+      .toBeDefined();
+
+    // The remaining diver's seat was cancelled — they are off the manifest's
+    // roster, so there is nobody left uncounted.
+    await cancelBooking(db, shop.id, pulled);
+
+    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    expect(rollCallRow(work, trip.id)).toBeUndefined();
+  });
+
+  it("is tenant-safe: another shop's queue never sees this boat", async () => {
+    const { db, shop } = await seededShopContext();
+    const { trip } = await returnedTrip(db, shop.id, { endedHoursAgo: 2, divers: 3 });
+
+    const otherWork = await getTodayWork(
+      db,
+      "00000000-0000-4000-8000-000000000000",
+      "other-shop",
+      shop.timezone,
+    );
+
+    expect(rollCallRow(otherWork, trip.id)).toBeUndefined();
+    expect(otherWork.actions.every((action) => action.kind !== "roll_call_unfinished")).toBe(true);
+  });
+
+  it("points the row inside this shop and leads the whole queue", async () => {
+    const { db, shop } = await seededShopContext();
+    const { trip } = await returnedTrip(db, shop.id, { endedHoursAgo: 2, divers: 3 });
+
+    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const [first] = groupActions(work.actions)[0]?.actions ?? [];
+
+    expect(first?.id).toBe(`roll-call:${trip.id}:after_dive_1`);
+    expect(first?.href.startsWith(`/shop/${shop.slug}/`)).toBe(true);
   });
 });

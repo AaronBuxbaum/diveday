@@ -222,6 +222,15 @@ jobs:
     needs: visual
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # The only job in this workflow that writes anything back to GitHub: the
+    # sticky visual-summary comment in the last step. Scoped here rather than at
+    # workflow level so no other job's third-party actions inherit write access.
+    # Note that naming *any* permission drops every unnamed scope to `none` for
+    # this job — `contents: read` is spelled out because the checkout below
+    # needs it, not as decoration.
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       # reg-keygen-git-hash-plugin derives both keys from git: the actual one
       # from HEAD, the expected one by walking back to this commit's parent and
@@ -274,3 +283,39 @@ jobs:
           REG_SUIT_AWS_ACCESS_KEY_ID: ${{ secrets.REG_SUIT_AWS_ACCESS_KEY_ID }}
           REG_SUIT_AWS_SECRET_ACCESS_KEY: ${{ secrets.REG_SUIT_AWS_SECRET_ACCESS_KEY }}
           REG_SUIT_GITHUB_CLIENT_ID: ${{ secrets.REG_SUIT_GITHUB_CLIENT_ID }}
+      # "Account for every changed pixel" is AGENTS.md's strongest hard rule and
+      # had the pipeline's weakest signal: a diff was only discoverable by a
+      # human opening the S3-hosted SPA report. This step reads the same
+      # `out.json` reg-suit just published and restates it on the PR as one
+      # sticky comment, updated in place on each push. It warns; it never blocks
+      # (ADR 20260802-visual-diff-pr-comment).
+      #
+      # reg-suit's own GitHub App still posts its counts comment and the `reg`
+      # commit status, and this does not replace either. It says the two things
+      # that payload structurally cannot: which surfaces moved, and whether a
+      # baseline resolved at all — the documented failure where every screenshot
+      # reports as `new` and the changed count is a reassuring zero while
+      # nothing was compared (ADR 20260729-reg-suit-visual-regression). It also
+      # speaks when reg-suit is silent: the App posts nothing when
+      # `reg-suit run` throws, which is exactly when a reviewer most needs to
+      # know that no pixel was checked.
+      #
+      # `!cancelled()` rather than `success()`: the compare step stumbling is a
+      # reportable outcome, not a reason to go quiet. `continue-on-error` on top
+      # of the script's own catch-all — a fork PR's read-only token, an S3 blip,
+      # or a GitHub API hiccup must never be the thing that reddens CI. Invoked
+      # with bare `node`, not `pnpm`, so it still reports when the install or
+      # the compare is what broke; the script imports node builtins only.
+      - name: Summarize the visual result on the pull request
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        run: node scripts/visual-pr-comment.mjs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Absent on a push to main; the script then writes the summary to the
+          # job summary only, instead of erroring on a PR that doesn't exist.
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          # Falls back to the bucket name baked into the script when the secret
+          # is missing (every fork PR), so it can still look for a report and
+          # explain the miss rather than crash.
+          REG_SUIT_S3_BUCKET_NAME: ${{ secrets.REG_SUIT_S3_BUCKET_NAME }}
