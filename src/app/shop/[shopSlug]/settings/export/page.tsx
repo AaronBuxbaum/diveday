@@ -69,7 +69,12 @@ export default async function DataExportPage() {
         <p className="mt-1 max-w-2xl text-sm text-muted">
           {t("settings.export.bundle.description")}
         </p>
-        <ul className="mt-4 grid gap-2 sm:grid-cols-2">
+        {/* `items-start`: these notes range from one line to fifteen, and grid's
+            default stretch made every short card as tall as the essay beside it
+            — `shop.csv`, a single sentence, rendered as a 300px box of empty
+            grey. Let each card be its own height and put the slack between the
+            rows instead. */}
+        <ul className="mt-4 grid items-start gap-2 sm:grid-cols-2">
           {families.map((family) => (
             <li
               key={family.file}

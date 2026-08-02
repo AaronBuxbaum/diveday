@@ -5,8 +5,12 @@ import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 
+// `whitespace-nowrap`: the primary row is `flex-1` per link inside a
+// horizontally scrolling, snapping strip. Without it a narrow phone shrinks
+// each link below its label and breaks the word instead of scrolling —
+// "Check-in" rendered as "Check-" / "in" and "Not ready" as "Not" / "ready".
 const linkClass =
-  "inline-flex min-h-11 items-center rounded-xl px-2 py-2 text-sm font-medium transition-colors duration-200 hover:bg-surface-sunken hover:text-foreground sm:px-3";
+  "inline-flex min-h-11 items-center rounded-xl px-2 py-2 text-sm font-medium whitespace-nowrap transition-colors duration-200 hover:bg-surface-sunken hover:text-foreground sm:px-3";
 
 /** Owner/manager surfaces (H-14) carry a gate key; everyone else always sees the link. */
 export type ShopNavGates = {

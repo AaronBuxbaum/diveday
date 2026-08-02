@@ -322,13 +322,18 @@ export default async function PromosPage({
                   {promo.description ? (
                     <p className="mt-1 text-sm text-muted">{promo.description}</p>
                   ) : null}
+                  {/* This line describes the code's *window*, so the "no start
+                      date" half has to stay a statement about the window, not
+                      about whether the code is live — it used to read "live
+                      now", which an expired code rendered directly under a
+                      "Not live right now" badge as "live now · until Aug 1". */}
                   <p className="mt-2 text-sm text-muted">
                     {t(SCOPE_KEYS[promo.scope])} ·{" "}
                     {promo.startsAt
                       ? t("promos.fromDate", {
                           date: formatDateTimeTz(promo.startsAt, locale, timezone),
                         })
-                      : t("promos.liveNow")}{" "}
+                      : t("promos.noStartDate")}{" "}
                     ·{" "}
                     {promo.expiresAt
                       ? t("promos.untilDate", {

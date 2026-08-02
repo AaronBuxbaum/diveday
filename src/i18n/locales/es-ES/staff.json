@@ -85,7 +85,7 @@
       "starts": "Empieza",
       "ends": "Termina",
       "note": "Nota",
-      "noteHint": "Opcional",
+      "noteHint": "(opcional)",
       "notePlaceholder": "Muelle, aula, barco 2",
       "submit": "Añadir turno",
       "saving": "Guardando…"
@@ -857,7 +857,7 @@
     },
     "discountOff": "{percent}% de descuento",
     "fromDate": "desde {date}",
-    "liveNow": "activo ya",
+    "noStartDate": "sin fecha de inicio",
     "untilDate": "hasta {date}",
     "noEndDate": "sin fecha de fin",
     "redeemedWithCap": "{count, plural, one {Canjeado # vez de {max}} other {Canjeado # veces de {max}}}",
@@ -2101,7 +2101,7 @@
       "nameLabel": "Nombre completo",
       "emailLabel": "Correo",
       "phoneLabel": "Teléfono",
-      "optionalHint": "Opcional"
+      "optionalHint": "(opcional)"
     }
   },
   "waiversStaff": {

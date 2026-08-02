@@ -374,11 +374,14 @@ export default async function SchedulePage({
                         capacity: capacityText,
                       })}
                     />
-                    <div className="shrink-0 sm:w-32">
+                    {/* Wide enough for a formatted range, and `whitespace-nowrap`
+                        so it never breaks at the ordinary space before AM/PM and
+                        strands "PM" on its own line. */}
+                    <div className="shrink-0 sm:w-36">
                       <p className="font-medium">
                         {formatShortDate(trip.startsAt, locale, shop.timezone)}
                       </p>
-                      <p className="text-sm text-muted">
+                      <p className="text-sm whitespace-nowrap text-muted">
                         {formatTimeRange(trip.startsAt, trip.endsAt, locale, shop.timezone)}
                       </p>
                     </div>

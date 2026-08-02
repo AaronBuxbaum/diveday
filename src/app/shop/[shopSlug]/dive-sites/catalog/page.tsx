@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
@@ -10,6 +11,11 @@ import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
+
+// Without this the tab falls all the way back to the root layout's marketing
+// title ("DiveDay — a calmer way to run a dive day"), which is what every other
+// staff page sets its own title to avoid.
+export const metadata: Metadata = { title: "Common dive sites — DiveDay" };
 
 // TODO: Cache Components adoption. Refactor this route so this opt-out can be removed.
 // See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
