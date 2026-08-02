@@ -66,6 +66,12 @@ test("removing a staff member lands immediately with an Undo banner, no confirm 
   page,
   request,
 }) => {
+  // Invites a new member, signs in as them, then removes and undoes it —
+  // several full navigations and status-toast waits chained in one test. Same
+  // aggregate-cost reasoning as visual.spec.ts's `test.setTimeout`: a traced
+  // CI failure measured the total sequential cost at 17.7s against the
+  // default 15s test timeout, every individual step resolving successfully.
+  test.setTimeout(30_000);
   await signInAsOwner(page);
   await page.goto(`/shop/${SHOP}/settings/team`);
 

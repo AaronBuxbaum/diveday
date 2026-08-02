@@ -84,6 +84,15 @@ test.describe("refunds", () => {
   test("cancelling a paid counter booking inside the free-cancellation window flags a manual refund", async ({
     page,
   }) => {
+    // `createPaymentRequiredTrip` + `bookAndMarkPaid` alone chain several full
+    // page navigations and status-toast waits before this test's own body
+    // even starts. A traced CI failure measured the total sequential cost at
+    // 18.2s against the default 15s test timeout — every individual step
+    // resolved successfully (none were stuck), the outer clock just ran out
+    // first. Same reasoning as visual.spec.ts's `test.setTimeout` on its
+    // heaviest capture sequence: aggregate per-step cost across many
+    // sequential steps in one test, not a hang this override would mask.
+    test.setTimeout(30_000);
     const title = `Refund Window Trip ${e2eNow().getTime()}`;
     await createPaymentRequiredTrip(page, {
       title,
@@ -104,6 +113,10 @@ test.describe("refunds", () => {
   test("cancelling a paid booking past the cancellation deadline forfeits the refund", async ({
     page,
   }) => {
+    // Same aggregate-cost reasoning as the free-cancellation-window test
+    // above — this test chains the same `createPaymentRequiredTrip` +
+    // `bookAndMarkPaid` setup.
+    test.setTimeout(30_000);
     const title = `Forfeit Window Trip ${e2eNow().getTime()}`;
     // A window far longer than the time left before departure puts the
     // deadline in the past the instant the trip is created.

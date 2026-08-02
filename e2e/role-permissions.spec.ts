@@ -41,6 +41,18 @@ test.describe("H-14 role permissions", () => {
   test("the daily crew (captain) is denied money, legal, deletion, and trip config", async ({
     page,
   }) => {
+    // This test does the most sequential full-page navigation of the three
+    // in this file — 5 denied-surface checks (2 of them redirects) before
+    // ever reaching the shared trip-manage assertions, against 3 for the
+    // other two. A traced CI failure measured every `page.goto()` here at
+    // roughly 1-1.3s and each redirect's `toHaveURL` settling at 1.6-2.3s —
+    // not stuck, just each one genuinely taking that long under 2-worker
+    // load — and those 8 navigations alone summed past the default 15s
+    // budget before the test's actual assertions ever ran. Same reasoning as
+    // visual.spec.ts's `test.setTimeout` on its heaviest capture sequence:
+    // aggregate per-navigation cost accumulating across many sequential
+    // steps in one test, not a hang this override would be masking.
+    test.setTimeout(30_000);
     await signInAs(page, DEV_STAFF_LOGINS.captain);
 
     // Waiver — the legal instrument — has no use for the daily crew, so the

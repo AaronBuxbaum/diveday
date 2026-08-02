@@ -20,6 +20,14 @@ async function openPrivateNotes(page: Page) {
 }
 
 test("staff adds a walk-in diver, then wait-lists one once the trip is full", async ({ page }) => {
+  // Longest sequential flow in this file: create a trip, add a diver, add a
+  // private note, delete it, undo, delete again, then wait-list a second
+  // diver — each its own status-toast wait. Same aggregate-cost reasoning as
+  // visual.spec.ts's `test.setTimeout`: a traced CI failure showed every
+  // individual step resolving successfully, just past the default 15s
+  // budget in total — not a hang this override would mask.
+  test.setTimeout(30_000);
+
   // Unique title so assertions target this spec's own trip, never a seeded
   // one. (Isolation across tests comes from the per-test demo reset in
   // fixtures.ts, not from this suffix.)

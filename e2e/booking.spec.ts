@@ -238,6 +238,13 @@ test("a full boat lets a diver join the wait list without taking a seat", async 
 test("a shared-inbox booking under a different name is held for staff identity confirmation", async ({
   page,
 }) => {
+  // Signs in as staff, creates a trip, signs out, books as a diver, signs
+  // back in as staff, and confirms identity — several full sign-in/navigation
+  // cycles chained in one test. Same aggregate-cost reasoning as
+  // visual.spec.ts's `test.setTimeout`: a traced CI failure measured the
+  // total sequential cost at 19s against the default 15s test timeout, every
+  // individual step resolving successfully.
+  test.setTimeout(30_000);
   const email = `shared-${e2eNow().getTime()}@example.com`;
   const tripB = `H13 Shared Inbox ${e2eNow().getTime()}`;
 
