@@ -4192,10 +4192,7 @@ export async function resetDemoSchedule(
   // starts already on "feet" and the test's own `/Maximum depth \(metres\)/`
   // locator then never matches, hanging for the full test timeout rather
   // than failing fast.
-  await db
-    .update(shops)
-    .set({ reviewUrl: null, depthUnit: "meters" })
-    .where(eq(shops.id, shopId));
+  await db.update(shops).set({ reviewUrl: null, depthUnit: "meters" }).where(eq(shops.id, shopId));
   await db.delete(shopStripeAccounts).where(eq(shopStripeAccounts.shopId, shopId));
 
   // The waiver is the same class of fixture. Editing the release text saves a
