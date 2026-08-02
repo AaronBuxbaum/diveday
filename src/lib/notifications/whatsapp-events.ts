@@ -112,6 +112,8 @@ const payloadSchema = z.object({
   entry: z
     .array(
       z.object({
+        /** The WhatsApp Business Account the events belong to — the tenant key. */
+        id: z.string().min(1).optional(),
         changes: z
           .array(
             z.object({
@@ -125,6 +127,16 @@ const payloadSchema = z.object({
 });
 
 export type WhatsAppDeliveryEvent = {
+  /**
+   * The WABA that produced this event, or null when Meta did not name one.
+   *
+   * Carried so the caller can resolve it to a shop and scope the update to that
+   * tenant. Without it, a delivery outcome is applied by provider message id
+   * alone across a multi-tenant table, and the only thing keeping one shop's
+   * webhook off another shop's row is "Meta ids are globally unique" — an
+   * upstream property, not one this codebase enforces.
+   */
+  wabaId: string | null;
   providerMessageId: string;
   status: ProviderEmailStatus;
   /** Meta's own explanation for a failure, when it gave one. */
@@ -158,6 +170,7 @@ export function parseWhatsAppDeliveryEvents(payload: string, now: Date): WhatsAp
         const mapped = PROVIDER_STATUS_BY_WHATSAPP_STATUS[status.status];
         if (!mapped) continue;
         events.push({
+          wabaId: entry.id ?? null,
           providerMessageId: status.id,
           status: mapped,
           detail: failureDetail(status.errors),

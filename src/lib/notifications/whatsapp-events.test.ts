@@ -117,6 +117,18 @@ describe("parseWhatsAppDeliveryEvents", () => {
     expect(events[0].occurredAt).toEqual(new Date(1785672000 * 1000));
   });
 
+  it("carries the WABA id so the caller can scope the update to one shop", () => {
+    const payload = statusPayload([{ id: "wamid.1", status: "delivered" }]);
+    expect(parseWhatsAppDeliveryEvents(payload, NOW)[0].wabaId).toBe("waba-1");
+  });
+
+  it("reports a null WABA when Meta named none, rather than inventing one", () => {
+    const payload = JSON.stringify({
+      entry: [{ changes: [{ value: { statuses: [{ id: "wamid.1", status: "sent" }] } }] }],
+    });
+    expect(parseWhatsAppDeliveryEvents(payload, NOW)[0].wabaId).toBeNull();
+  });
+
   it("ignores read receipts — DiveDay does not record opens on any channel", () => {
     const payload = statusPayload([{ id: "wamid.1", status: "read", timestamp: "1785672000" }]);
     expect(parseWhatsAppDeliveryEvents(payload, NOW)).toEqual([]);

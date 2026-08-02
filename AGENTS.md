@@ -61,6 +61,7 @@ ignored and the full suite runs instead. Pass args directly: `pnpm test <file> -
 | Certification paths (the catalog's progressions) | `src/db/course-paths.ts` + `src/app/shop/[shopSlug]/courses/paths/**`. Guidance, never a gate — admission stays on each course's `minimum_certification_level` |
 | The staff schedule builder (add / move / copy / remove a departure) | `src/app/shop/[shopSlug]/schedule/board/_components/ScheduleBuilder.tsx` + `schedule/board/actions.ts`; the mutations and their refusals live in `src/db/trips.ts` (`moveTrip`, `duplicateTrip`, `deleteTrip`) |
 | Staff surfaces (all `/shop/**`, auth-gated) | `src/app/shop/` |
+| SMS delivery receipts | `src/lib/notifications/sms-events.ts` + `src/app/api/webhooks/sms/`; the AWS-side pipeline is section 10 of `infra/lib/infra-stack.ts`; setup in [docs/engineering/sms-delivery-receipts-runbook.md](docs/engineering/sms-delivery-receipts-runbook.md) |
 | Email: sending and delivery outcomes | `src/lib/notifications/` + `src/app/api/webhooks/resend/`; setup in [docs/engineering/resend-email-runbook.md](docs/engineering/resend-email-runbook.md). Mail *to* DiveDay is hosted mailboxes, not code |
 | The Today work queue (ranking rules / assembly) | `src/lib/today.ts` / `src/db/today.ts` |
 | DB schema (source of truth — never read `drizzle/`) | `src/db/schema.ts` |

@@ -62,10 +62,16 @@ describe("whatsAppSignupConfigFromEnvironment", () => {
 });
 
 describe("generateRegistrationPin", () => {
-  it("is always six digits, including for a small random draw", () => {
+  it("is always six digits, including for a small draw", () => {
     expect(generateRegistrationPin(() => 0)).toBe("000000");
-    expect(generateRegistrationPin(() => 0.000001)).toHaveLength(6);
-    expect(generateRegistrationPin(() => 0.999999)).toMatch(/^\d{6}$/);
+    expect(generateRegistrationPin(() => 7)).toBe("000007");
+    expect(generateRegistrationPin(() => 999_999)).toBe("999999");
+  });
+
+  it("draws from the crypto RNG by default, across the whole six-digit range", () => {
+    const pins = new Set(Array.from({ length: 200 }, () => generateRegistrationPin()));
+    expect(pins.size).toBeGreaterThan(150);
+    for (const pin of pins) expect(pin).toMatch(/^\d{6}$/);
   });
 });
 
@@ -158,14 +164,48 @@ describe("completeEmbeddedSignup", () => {
     expect(fetchImpl).toHaveBeenCalledTimes(2);
   });
 
-  it("treats an already-registered number as a reconnect and carries on", async () => {
+  it("fails on a PIN mismatch instead of swallowing it — 133005 is not a reconnect", async () => {
+    // 133005 means the number is bound to a *different* PIN, which is exactly
+    // what staff need told about. Swallowing it also used to overwrite the
+    // stored PIN with one Meta had never accepted.
     const fetchImpl = fetchSequence({
-      1: json(400, { error: { message: "already registered", code: 133005 } }),
+      1: json(400, { error: { message: "PIN mismatch", code: 133005 } }),
     });
     const result = await completeEmbeddedSignup(input, config, fetchImpl);
 
+    expect(result).toMatchObject({ status: "failed", step: "register", errorCode: "133005" });
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+  });
+
+  it("skips registration entirely on a reconnect, never re-sending a PIN", async () => {
+    // Meta binds a number to the PIN it was first registered with, so a second
+    // register with a fresh PIN cannot succeed — and each attempt counts toward
+    // a guess lockout. A null pin means "already registered, leave it alone".
+    const fetchImpl = fetchSequence({
+      // Only three calls now, so the template response moves up one slot.
+      2: json(200, { id: "template-1", status: "PENDING" }),
+    });
+    const result = await completeEmbeddedSignup(
+      { ...input, registrationPin: null },
+      config,
+      fetchImpl,
+    );
+
     expect(result.status).toBe("completed");
-    expect(fetchImpl).toHaveBeenCalledTimes(4);
+    const urls = fetchImpl.mock.calls.map((call: unknown[]) => String(call[0]));
+    expect(urls.some((url) => url.includes("/register"))).toBe(false);
+    expect(urls[1]).toContain("/subscribed_apps");
+  });
+
+  it("does not treat a code merely containing 2388023 as an existing template", async () => {
+    // `includes("2388023")` also matched 12388023; this decides whether a
+    // failure is swallowed, so it compares the subcode as a number.
+    const fetchImpl = fetchSequence({
+      3: json(400, { error: { message: "nope", code: 100, error_subcode: 12_388_023 } }),
+    });
+    const result = await completeEmbeddedSignup(input, config, fetchImpl);
+
+    expect(result).toMatchObject({ status: "failed", step: "template" });
   });
 
   it("treats an existing template as a reconnect, not a failure", async () => {

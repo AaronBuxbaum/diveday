@@ -1438,8 +1438,6 @@ export const shopWhatsappAccounts = pgTable("shop_whatsapp_accounts", {
    * must not be enough to use it.
    */
   accessTokenSealed: text("access_token_sealed").notNull(),
-  /** Last four characters of the token, so staff can tell *which* token is stored without revealing it. */
-  accessTokenHint: text("access_token_hint").notNull().default(""),
   /**
    * The six-digit PIN this number was registered with during Embedded Signup,
    * sealed like the token. DiveDay generates it — the shop never types it — but

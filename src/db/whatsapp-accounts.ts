@@ -6,13 +6,7 @@ import {
   type WhatsAppProviderOptions,
   whatsAppProvider,
 } from "@/lib/notifications/whatsapp";
-import {
-  openSecret,
-  type SecretKey,
-  sealSecret,
-  secretHint,
-  secretKeyFromEnvironment,
-} from "@/lib/secret-box";
+import { openSecret, type SecretKey, sealSecret, secretKeyFromEnvironment } from "@/lib/secret-box";
 import type { DbExecutor } from "./client";
 import type { ShopWhatsappAccount } from "./schema";
 import { shopWhatsappAccounts } from "./schema";
@@ -43,7 +37,11 @@ export type ConnectWhatsAppInput = {
   templateLanguage: string;
   displayPhoneNumber?: string | null;
   wabaId?: string | null;
-  /** Sealed alongside the token; needed only to re-register the number with Meta. */
+  /**
+   * Sealed alongside the token; needed only to re-register the number with Meta.
+   * Omit (or null) on a reconnect — the stored PIN is then left exactly as it
+   * was, because it is the only copy of the value the number is bound to.
+   */
   registrationPin?: string | null;
   now?: Date;
 };
@@ -86,6 +84,26 @@ export async function getShopWhatsAppAccount(
 }
 
 /**
+ * The shop a WhatsApp Business Account belongs to, or null when none does.
+ *
+ * This is the tenant key for inbound delivery events: Meta names the WABA in
+ * `entry[].id`, and scoping the update to the shop it resolves to is what stops
+ * a delivery outcome being applied across a multi-tenant table on a provider
+ * message id alone.
+ */
+export async function shopIdForWhatsAppWaba(
+  db: DbExecutor,
+  wabaId: string,
+): Promise<string | null> {
+  const [row] = await db
+    .select({ shopId: shopWhatsappAccounts.shopId })
+    .from(shopWhatsappAccounts)
+    .where(eq(shopWhatsappAccounts.wabaId, wabaId))
+    .limit(1);
+  return row?.shopId ?? null;
+}
+
+/**
  * Connect (or re-connect) a shop's WhatsApp sender. Upsert rather than
  * insert-or-fail: rotating a token or fixing a mistyped template name is the
  * same gesture as connecting for the first time, and forcing a disconnect in
@@ -106,24 +124,27 @@ export async function connectShopWhatsAppAccount(
     displayPhoneNumber: input.displayPhoneNumber?.trim() || null,
     wabaId: input.wabaId?.trim() || null,
     accessTokenSealed: sealSecret(input.accessToken.trim(), key),
-    accessTokenHint: secretHint(input.accessToken),
-    registrationPinSealed: input.registrationPin
-      ? sealSecret(input.registrationPin.trim(), key)
-      : null,
     templateName: input.templateName.trim(),
     templateLanguage: input.templateLanguage.trim(),
     updatedAt: now,
   };
+  // Written only when there is a PIN to write. A reconnect skips registration
+  // and passes none, and overwriting the column then would replace the number's
+  // real PIN with one Meta has never seen — destroying the only copy of the
+  // value the column exists to preserve.
+  const pin = input.registrationPin?.trim()
+    ? { registrationPinSealed: sealSecret(input.registrationPin.trim(), key) }
+    : {};
   const [account] = await db
     .insert(shopWhatsappAccounts)
-    .values({ ...values, connectedAt: now })
+    .values({ ...values, ...pin, connectedAt: now })
     .onConflictDoUpdate({
       target: shopWhatsappAccounts.shopId,
       // `connectedAt` deliberately survives a re-connect — it is when this shop
       // first switched WhatsApp on, not when it last rotated a token.
       // `verifiedAt` deliberately does not: new credentials are unproven until
       // a fresh test send proves them.
-      set: { ...values, verifiedAt: null },
+      set: { ...values, ...pin, verifiedAt: null },
     })
     .returning();
   return { status: "connected", account };

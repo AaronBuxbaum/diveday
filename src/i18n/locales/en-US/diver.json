@@ -1493,7 +1493,8 @@
     "whatsappTemplate": {
       "body": "Hi! An update from {{1}}: {{2}}",
       "exampleShopName": "Blue Mantis Divers",
-      "exampleMessage": "Reef Runner departs Saturday at 8:00 AM. Dock call 30 minutes early."
+      "exampleMessage": "Reef Runner departs Saturday at 8:00 AM. Dock call 30 minutes early.",
+      "testMessage": "This is a test message from DiveDay. Your WhatsApp connection is working."
     }
   }
 }

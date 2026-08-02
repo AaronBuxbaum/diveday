@@ -1493,7 +1493,8 @@
     "whatsappTemplate": {
       "body": "¡Hola! Un aviso de {{1}}: {{2}}",
       "exampleShopName": "Blue Mantis Divers",
-      "exampleMessage": "Reef Runner zarpa el sábado a las 8:00. Presentaos en el muelle 30 minutos antes."
+      "exampleMessage": "Reef Runner zarpa el sábado a las 8:00. Presentaos en el muelle 30 minutos antes.",
+      "testMessage": "Este es un mensaje de prueba de DiveDay. Tu conexión de WhatsApp funciona."
     }
   }
 }
