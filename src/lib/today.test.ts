@@ -9,6 +9,7 @@ import {
   leadWithCrewed,
   primaryBlocker,
   roleLensFor,
+  rollCallGapUrgency,
   sortActions,
   summarizeDay,
   type TodayAction,
@@ -480,5 +481,47 @@ describe("getTimeOfDayGreeting", () => {
   it("returns night for 11 PM local time", () => {
     const dateNight = new Date("2026-11-16T04:00:00Z"); // 04:00 UTC -> 11:00 PM America/New_York
     expect(getTimeOfDayGreeting(dateNight, "America/New_York")).toBe("night");
+  });
+});
+
+describe("roll-call gap ranking (DOM-H3)", () => {
+  it("ranks a diver who did not come back above every other row on the boat", () => {
+    // Severity is what breaks the tie once two rows share a `dueAt`. A crew
+    // member said a diver is not back aboard; nothing on this queue outranks
+    // that, and the unfinished-count row is the strongest thing it has to beat.
+    const at = hoursFromNow(-1);
+    const sorted = sortActions([
+      action({ id: "dock", kind: "roll_call_departure_open", urgency: "imminent", dueAt: at }),
+      action({ id: "none", kind: "roll_call_not_started", urgency: "imminent", dueAt: at }),
+      action({ id: "open", kind: "roll_call_unfinished", urgency: "imminent", dueAt: at }),
+      action({ id: "missing", kind: "roll_call_missing_diver", urgency: "imminent", dueAt: at }),
+      action({ id: "med", kind: "medical_review", urgency: "imminent", dueAt: at }),
+    ]);
+    // The two after-dive kinds lead, then the diver blocker, and the two
+    // dock-count kinds — paperwork on a boat that is already home — ride last.
+    expect(sorted.map((entry) => entry.id)).toEqual([
+      "missing",
+      "open",
+      "med",
+      "dock",
+      "none",
+    ]);
+  });
+
+  it("pins the after-dive gaps to the top band and drops the dock counts a band", () => {
+    // An unfinished dock count is real work, but it is not "a person may be in
+    // the water" — putting both in the same band is what turns the red row into
+    // wallpaper.
+    expect(rollCallGapUrgency("missing_diver", false)).toBe("imminent");
+    expect(rollCallGapUrgency("after_dive_uncounted", false)).toBe("imminent");
+    expect(rollCallGapUrgency("departure_uncounted", false)).toBe("now");
+    expect(rollCallGapUrgency("no_roll_call", false)).toBe("now");
+  });
+
+  it("ages an unclosed after-dive count down a band instead of to nothing", () => {
+    // Past the dock-work window the row used to vanish outright, with nothing
+    // anywhere recording that a count had never closed. It degrades instead.
+    expect(rollCallGapUrgency("missing_diver", true)).toBe("soon");
+    expect(rollCallGapUrgency("after_dive_uncounted", true)).toBe("soon");
   });
 });

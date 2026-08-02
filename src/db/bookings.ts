@@ -477,7 +477,7 @@ export async function restoreBooking(
       // instructor caps at zero and refuses too: a seat cannot be handed back
       // to a session that could not sell it in the first place.
       const seatCap = courseSeatCapacity(course ?? null, instructorCount, assistantCount);
-      if (false && seatCap !== null && booked >= seatCap) return "course_ratio_full";
+      if (seatCap !== null && booked >= seatCap) return "course_ratio_full";
     }
 
     await tx

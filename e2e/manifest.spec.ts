@@ -388,11 +388,21 @@ test("a checkpoint with every diver counted stays open until the crew are counte
   // DOM-H1. Crew are the people most reliably in the water and were not part
   // of the head count at all, so a boat could read "roll call complete" with a
   // divemaster still down.
+  //
+  // Deliberately *not* the "Molasses & French" boat every other spec drives:
+  // this test boards its whole roster, and under `fullyParallel` that would
+  // pull the shared trip's roll-call state out from under the tests above.
+  // This charter carries three divers and two crew and belongs to no other spec.
+  const TRIP = "Afternoon Two-Tank — French Reef";
+  // Three sequential roll-call writes plus two crew counts, each a full server
+  // action round trip — more than the default per-test budget allows for.
+  test.setTimeout(60_000);
+
   await page.goto("/shop/blue-mantis/schedule/board");
   await page
     .locator("li")
-    .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-    .getByRole("link", { name: "Two-Tank Reef — Molasses & French", exact: true })
+    .filter({ hasText: TRIP })
+    .getByRole("link", { name: TRIP, exact: true })
     .click();
   await page
     .getByRole("navigation", { name: "Trip" })
@@ -410,17 +420,22 @@ test("a checkpoint with every diver counted stays open until the crew are counte
   await expect(page).toHaveURL(/checkpoint=after_dive_1/);
 
   const boardButtons = page.getByRole("button", { name: "Mark boarded" });
-  // Bounded rather than `while (true)`: a refusal that left the button in
-  // place would otherwise spin here instead of failing.
-  for (let guard = 0; guard < 40; guard += 1) {
+  // Wait for the *settled* label, not merely "no longer says Mark boarded" —
+  // the pending label ("Boarding…") also fails that weaker test, so a count-based
+  // loop fires every click before the first write has landed and the page ends
+  // up with nine disabled spinners and nothing recorded.
+  for (let guard = 0; guard < 20; guard += 1) {
     const remaining = await boardButtons.count();
     if (remaining === 0) break;
+    const settled = page.getByRole("button", { name: "Boarded ✓" });
+    const settledBefore = await settled.count();
     const next = boardButtons.first();
     await next.evaluate((button) => button.scrollIntoView({ block: "center" }));
     await next.click();
-    await expect(boardButtons).toHaveCount(remaining - 1);
+    await expect(settled).toHaveCount(settledBefore + 1);
   }
   await expect(boardButtons).toHaveCount(0);
+  await expect(page.getByText(/still to call/)).toHaveCount(0);
 
   // Every diver has a result — and the checkpoint is still open, naming why.
   await expect(
@@ -428,17 +443,16 @@ test("a checkpoint with every diver counted stays open until the crew are counte
   ).toBeVisible();
   await expect(page.getByRole("heading", { name: "Roll call complete ✦" })).toHaveCount(0);
 
-  // A short count does not close it either: the seeded charter carries a
-  // captain and a divemaster, so one aboard leaves someone unaccounted for.
-  const crewAboard = page.getByLabel("Crew aboard");
-  await crewAboard.fill("1");
+  // A short count does not close it either: this charter carries a captain and
+  // a divemaster, so one aboard leaves someone unaccounted for.
+  await page.getByLabel("Crew aboard").fill("1");
   await page.getByRole("button", { name: "Confirm crew count" }).click();
   await expect(page.getByText(/1 of 2 crew aboard/)).toBeVisible();
   await expect(page.getByRole("heading", { name: "Roll call complete ✦" })).toHaveCount(0);
 
   // Counting the rest is what closes it — and the attestation is append-only,
   // so this supersedes the short count rather than editing it.
-  await crewAboard.fill("2");
+  await page.getByLabel("Crew aboard").fill("2");
   await page.getByRole("button", { name: "Confirm crew count" }).click();
   await expect(page.getByText(/2 of 2 crew aboard/)).toBeVisible();
   await expect(page.getByRole("heading", { name: "Roll call complete ✦" })).toBeVisible();
