@@ -3,6 +3,8 @@ import * as budgets from "aws-cdk-lib/aws-budgets";
 import * as ce from "aws-cdk-lib/aws-ce";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as s3 from "aws-cdk-lib/aws-s3";
+import * as ses from "aws-cdk-lib/aws-ses";
+import * as sns from "aws-cdk-lib/aws-sns";
 import type { Construct } from "constructs";
 
 export class InfraStack extends cdk.Stack {
@@ -237,6 +239,64 @@ export class InfraStack extends cdk.Stack {
       value: alertEmail,
       description:
         "Where budget threshold and cost-anomaly alerts are sent. Override with --context alertEmail=...",
+    });
+
+    // 8. SES email-provider prep — dormant until the app cuts over from Resend.
+    // See ADR 20260802-ses-email-transition-prep for why this exists now, what
+    // it does and doesn't do, and what's still manual before flipping the
+    // switch. The app's notify() seam (src/lib/notifications/) still points
+    // at Resend; nothing here changes production sending.
+    const sesEmailDomain = this.node.tryGetContext("sesEmailDomain") || "ses.dive.day";
+
+    const sesEventNotifications = new sns.Topic(this, "SesEmailEventNotifications", {
+      topicName: "diveday-ses-email-events",
+    });
+
+    const sesConfigurationSet = new ses.ConfigurationSet(this, "SesConfigurationSet", {
+      configurationSetName: "diveday-transactional-email",
+    });
+
+    new ses.ConfigurationSetEventDestination(this, "SesEmailEventDestination", {
+      configurationSet: sesConfigurationSet,
+      destination: ses.EventDestination.snsTopic(sesEventNotifications),
+      // Mirrors the event set the Resend webhook tracks (resend-email-runbook.md):
+      // bounces, complaints, and delivery outcomes. OPEN/CLICK are deliberately
+      // excluded — the same privacy stance already documented there.
+      events: [
+        ses.EmailSendingEvent.BOUNCE,
+        ses.EmailSendingEvent.COMPLAINT,
+        ses.EmailSendingEvent.DELIVERY,
+        ses.EmailSendingEvent.DELIVERY_DELAY,
+        ses.EmailSendingEvent.REJECT,
+        ses.EmailSendingEvent.RENDERING_FAILURE,
+      ],
+    });
+
+    const sesEmailIdentity = new ses.EmailIdentity(this, "SesEmailIdentity", {
+      identity: ses.Identity.domain(sesEmailDomain),
+      configurationSet: sesConfigurationSet,
+    });
+
+    const sesSenderUser = new iam.User(this, "SesSenderUser", {
+      userName: "diveday-ses-sender",
+    });
+    sesEmailIdentity.grantSendEmail(sesSenderUser);
+
+    new cdk.CfnOutput(this, "SesSenderAccessKeyInstructions", {
+      value: `aws iam create-access-key --user-name ${sesSenderUser.userName}`,
+      description:
+        "Run only once cutover begins, to mint SES-sending credentials. Store the output in the app's SES_* env vars — never in the repo.",
+    });
+
+    new cdk.CfnOutput(this, "SesDkimRecords", {
+      value: cdk.Stack.of(this).toJsonString(sesEmailIdentity.dkimRecords),
+      description: `DNS CNAME records to add for ${sesEmailDomain} to complete DKIM verification (three name/value pairs).`,
+    });
+
+    new cdk.CfnOutput(this, "SesEventNotificationsTopicArn", {
+      value: sesEventNotifications.topicArn,
+      description:
+        "SNS topic for SES bounce/complaint/delivery events. No subscriber yet — a webhook endpoint mirroring /api/webhooks/resend must subscribe before this is useful.",
     });
   }
 }

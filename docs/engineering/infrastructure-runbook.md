@@ -14,6 +14,7 @@ We use AWS CDK to model, deploy, and update our cloud resources. Currently, the 
 - A dedicated `cdk-deployer` IAM user with `AdministratorAccess` intended to manage all future CDK deployments.
 - Read-only IAM users for the AWS MCP server (local dev and Claude Code's cloud environment).
 - Cost guardrails: an `AWS::Budgets::Budget` and AWS Cost Anomaly Detection — see [§6](#6-cost-guardrails) below.
+- Dormant SES/SNS infra preparing a possible future swap off Resend — see [§7](#7-ses-email-provider-prep-dormant) below. Nothing here is live; the app still sends through Resend.
 
 ---
 
@@ -137,3 +138,59 @@ pnpm infra:deploy --context alertEmail=you@example.com --context monthlyBudgetLi
 No manual account-level setup is required — unlike a CloudWatch billing alarm on
 `EstimatedCharges`, Budgets and Cost Anomaly Detection don't need the "Receive Billing Alerts"
 console toggle enabled first.
+
+---
+
+## 7. SES email-provider prep (dormant)
+
+The stack also provisions the AWS-side groundwork for a possible future move off Resend, entirely
+inert until the app is reconfigured to use it. See
+[ADR 20260802-ses-email-transition-prep](../architecture/decisions/20260802-ses-email-transition-prep.md)
+and [ADR 20260802-ses-adapter-and-webhook](../architecture/decisions/20260802-ses-adapter-and-webhook.md)
+for the full reasoning — this section is the "how to actually use it later" reference.
+
+**What's provisioned now (AWS side):**
+- An `ses.EmailIdentity` for `sesEmailDomain` (context value, default `ses.dive.day` — a subdomain
+  distinct from Resend's `send.dive.day` on purpose, so DKIM/SPF and sending reputation for the two
+  providers never collide while both exist).
+- Easy DKIM signing (SES's default) — the `SesDkimRecords` output has the three CNAME records to add
+  to DNS.
+- An `ses.ConfigurationSet` wired to a new SNS topic (`SesEventNotificationsTopicArn` output) for
+  bounce/complaint/delivery events — same event set the Resend webhook tracks.
+- A `diveday-ses-sender` IAM user, scoped to `ses:SendEmail`/`ses:SendRawEmail` on just this identity.
+  Mint its access key only once cutover actually begins:
+  ```bash
+  aws iam create-access-key --user-name diveday-ses-sender
+  ```
+  (the exact command is also in the `SesSenderAccessKeyInstructions` output) — never store the result
+  in the repo.
+
+**What's written now (app side):** an SES adapter (`sesNotificationProvider` /
+`notificationProviderFromEnvironment` in `src/lib/notifications/index.ts`, using
+`@aws-sdk/client-sesv2`) and `/api/webhooks/ses` (verifying SNS message signatures by hand in
+`src/lib/notifications/sns.ts`, translating SES events in `src/lib/notifications/ses-events.ts`).
+Both are dormant — Resend stays the live provider unless `EMAIL_PROVIDER=ses` is explicitly set.
+Relevant env vars, none of which do anything unless that flag is on:
+
+| Variable | Purpose |
+| --- | --- |
+| `EMAIL_PROVIDER` | Set to `ses` to switch the live provider. Anything else (including unset) stays on Resend. |
+| `SES_AWS_REGION` / `SES_AWS_ACCESS_KEY_ID` / `SES_AWS_SECRET_ACCESS_KEY` | The `diveday-ses-sender` IAM user's own credentials — never the `cdk-deployer` or `reg-suit-bot` ones. |
+| `SES_FROM_EMAIL` | The sender address on `sesEmailDomain`. |
+| `SES_SNS_TOPIC_ARN` | `SesEventNotificationsTopicArn`'s value — `/api/webhooks/ses` answers 503 without it, and rejects a correctly-signed message from any other topic. |
+
+**What's still manual before this becomes the live provider** (deliberately not automated):
+1. Add the `SesDkimRecords` CNAME records to `ses.dive.day`'s DNS and wait for verification.
+2. Request SES **production access** (an AWS Support case — CDK cannot do this) once ready to send
+   beyond the sandbox's verified-recipients-only limit.
+3. Mint the `diveday-ses-sender` access key and set the env vars above in the real deploy
+   environment (never the repo).
+4. Subscribe `/api/webhooks/ses` to `SesEventNotificationsTopicArn` in the SNS console (or via a
+   future CDK subscription) — the route auto-confirms the handshake once SNS calls it, but something
+   has to point SNS at the URL first.
+5. Set `EMAIL_PROVIDER=ses` deliberately, only after 1-4 are done.
+
+Override the domain the same way as other context values:
+```bash
+pnpm infra:deploy --context sesEmailDomain=ses.example.com
+```
