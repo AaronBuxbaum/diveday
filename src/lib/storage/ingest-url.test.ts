@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { ingestImageUrl } from "./ingest-url";
 
 const PUBLIC_ADDR = [{ address: "93.184.216.34", family: 4 }];
@@ -169,5 +169,59 @@ describe("ingestImageUrl — success", () => {
       fetchImpl,
     });
     expect(result).toEqual({ status: "not_configured" });
+  });
+});
+
+describe("ingestImageUrl — DIVEDAY_DISABLE_EXTERNAL_HTTP", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("fails immediately for a real hostname, never attempting DNS or a fetch", async () => {
+    vi.stubEnv("DIVEDAY_DISABLE_EXTERNAL_HTTP", "1");
+    const fetchImpl = vi.fn();
+    const result = await ingestImageUrl("https://commons.wikimedia.org/reef.jpg", storeStub, {
+      fetchImpl,
+    });
+    expect(result).toEqual({ status: "failed" });
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it("still runs the real SSRF check for a literal IP, which never touches the network (CR-020)", async () => {
+    vi.stubEnv("DIVEDAY_DISABLE_EXTERNAL_HTTP", "1");
+    const result = await ingestImageUrl("http://127.0.0.1:1/reef.jpg", storeStub, {});
+    expect(result).toEqual({ status: "blocked" });
+  });
+
+  it("leaves an explicitly injected lookup/fetch alone — only the real defaults are gated", async () => {
+    vi.stubEnv("DIVEDAY_DISABLE_EXTERNAL_HTTP", "1");
+    const fetchImpl = vi.fn(async () => okResponse(TINY_JPEG));
+    const result = await ingestImageUrl("https://cdn.example/reef.jpg", storeStub, {
+      lookup: lookupPublic,
+      fetchImpl,
+    });
+    expect(result.status).toBe("stored");
+  });
+});
+
+describe("ingestImageUrl — DNS lookup timeout", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.doUnmock("node:dns/promises");
+    vi.resetModules();
+  });
+
+  it("fails cleanly instead of hanging forever when the real dns.lookup never resolves", async () => {
+    vi.doMock("node:dns/promises", () => ({ lookup: () => new Promise(() => {}) }));
+    vi.resetModules();
+    const { ingestImageUrl: ingestImageUrlWithHangingDns } = await import("./ingest-url");
+    vi.useFakeTimers();
+    const resultPromise = ingestImageUrlWithHangingDns(
+      "https://nowhere.example/reef.jpg",
+      storeStub,
+      {},
+    );
+    await vi.advanceTimersByTimeAsync(5_000);
+    await expect(resultPromise).resolves.toEqual({ status: "failed" });
   });
 });

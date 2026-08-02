@@ -1,4 +1,5 @@
 import { lookup as dnsLookup } from "node:dns/promises";
+import { isIP } from "node:net";
 import { type ImageUpload, isManagedBlobUrl, type StoredImage } from "./index";
 import { MAX_IMAGE_BYTES } from "./limits";
 
@@ -25,9 +26,22 @@ type DnsAddress = { address: string; family: number };
 export type DnsLookup = (hostname: string) => Promise<DnsAddress[]>;
 type Fetch = typeof fetch;
 
+/**
+ * `dns.lookup()` takes no `AbortSignal` and, against a hostname the resolver
+ * can't reach, can hang far longer than the fetch step's own
+ * `FETCH_TIMEOUT_MS` — that budget never starts if this step never finishes.
+ * A staff-pasted URL to a briefly-unreachable host would otherwise stall the
+ * whole save indefinitely instead of failing the ingest cleanly.
+ */
+const DNS_LOOKUP_TIMEOUT_MS = 5_000;
+
 async function defaultLookup(hostname: string): Promise<DnsAddress[]> {
-  const result = await dnsLookup(hostname, { all: true });
-  return result;
+  return Promise.race([
+    dnsLookup(hostname, { all: true }),
+    new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error("DNS lookup timed out")), DNS_LOOKUP_TIMEOUT_MS);
+    }),
+  ]);
 }
 
 /** IPv4 loopback, private, link-local (incl. cloud metadata 169.254.169.254), CGNAT, and reserved/test/multicast ranges. */
@@ -110,7 +124,23 @@ export async function ingestImageUrl(
   }
   if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return { status: "blocked" };
 
+  // Browser tests exercise our full Next/database stack, but must not wait on or depend on a
+  // live third-party host — this is the same guard marine-forecast.ts and analytics.ts already
+  // check, extended here so a staff-pasted image URL can't make the e2e fleet perform a real DNS
+  // lookup (previously ungated: DIVEDAY_DISABLE_EXTERNAL_HTTP was set in every e2e worker's env
+  // but nothing here read it). A literal IP is exempt: `dns.lookup()` resolves those synchronously
+  // with no network round-trip regardless, which is exactly why the CR-020 SSRF e2e test
+  // (dive-sites.spec.ts) uses a loopback literal — it wants the *real* isUnsafeIPv4/6 check to
+  // run, not a stubbed-out one. Passing an explicit `lookup` still exercises the real code path
+  // in unit tests.
   const lookup = options.lookup ?? defaultLookup;
+  if (
+    process.env.DIVEDAY_DISABLE_EXTERNAL_HTTP === "1" &&
+    lookup === defaultLookup &&
+    !isIP(parsed.hostname)
+  ) {
+    return { status: "failed" };
+  }
   let addresses: DnsAddress[];
   try {
     addresses = await lookup(parsed.hostname);
