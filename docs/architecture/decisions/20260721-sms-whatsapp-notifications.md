@@ -1,6 +1,6 @@
 # 20260721-sms-whatsapp-notifications — SMS and WhatsApp as notification channels
 
-- **Status:** Accepted
+- **Status:** Superseded by [20260802-sns-sms-adapter](20260802-sns-sms-adapter.md)
 - **Date:** 2026-07-21
 
 ## Context

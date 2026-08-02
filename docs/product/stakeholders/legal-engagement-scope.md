@@ -33,7 +33,7 @@ specialist when the impact of getting it wrong is genuinely dive-specific, not j
      $99/location/month, a **two-year price lock** for the founding cohort, and **founder-direct,
      same-day support**
    - Privacy policy — what's collected (contact info, medical questionnaire answers, cert card
-     photos, payment references via Stripe), who processes it (Stripe, Resend for email, Twilio for
+     photos, payment references via Stripe), who processes it (Stripe, Resend for email, AWS SNS for
      SMS, Neon/Vercel for hosting), breach-notification duties, no data resale
    - A clause making explicit that DiveDay provides waiver *templates and infrastructure* — each
      shop is responsible for using approved, jurisdiction-appropriate release language, not DiveDay

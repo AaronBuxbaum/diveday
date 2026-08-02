@@ -423,11 +423,11 @@ new domain concept, define it here in the same PR.
   `pending` → `paid`/`expired`, reconciled against Stripe the same way a booking checkout is — never
   trusted from a return-URL param alone. See
   [20260726-post-trip-tipping](../architecture/decisions/20260726-post-trip-tipping.md).
-- **SMS / WhatsApp channel** — an optional text channel for notifications, delivered through a
-  fetch-based Twilio seam (`notifySms()`). A number is texted only if it is already E.164, and a
-  channel with no configured sender degrades to `not_configured`, exactly like the email seam. Used
-  today as a courtesy channel alongside reminder email. See
-  [20260721-sms-whatsapp-notifications](../architecture/decisions/20260721-sms-whatsapp-notifications.md).
+- **SMS channel** — an optional text channel for notifications, delivered through an AWS SNS seam
+  (`notifySms()`). A number is texted only if it is already E.164, and the channel degrades to
+  `not_configured` with no SNS credentials configured, exactly like the email seam. Used today as a
+  courtesy channel alongside reminder email; no WhatsApp path exists (SNS has none). See
+  [20260802-sns-sms-adapter](../architecture/decisions/20260802-sns-sms-adapter.md).
 - **Demo mode** — a shop flagged `isDemo` gets the Demo Playground banner, its role switcher, and a
   "Reset demo data" affordance scoped to that one tenant. "Try the live demo" **mints a fresh
   `isDemo` shop per visitor** with a generated name/slug, seeded with the full sample schedule; a

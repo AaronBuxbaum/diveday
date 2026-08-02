@@ -123,7 +123,6 @@ describe("sendDueReminders", () => {
     });
     const mine = sms.sent.filter((m) => m.to === PHONE);
     expect(mine).toHaveLength(1);
-    expect(mine[0].channel).toBe("sms");
   });
 
   it("tracks a phone-only diver from the SMS result, not email", async () => {

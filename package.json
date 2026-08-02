@@ -47,6 +47,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-sesv2": "^3.1101.0",
+    "@aws-sdk/client-sns": "^3.1101.0",
     "@electric-sql/pglite": "^0.5.4",
     "@sentry/nextjs": "^10.69.0",
     "@vercel/analytics": "^2.0.1",

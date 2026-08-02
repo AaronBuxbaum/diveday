@@ -357,7 +357,7 @@ export async function sendDueReminders(
     // A textable phone gets a courtesy SMS only when the email actually sent,
     // so the once-per-booking dedup row keeps it from re-firing next run.
     if (delivery.status === "sent" && work.phone) {
-      await notifySms({ channel: "sms", to: work.phone, body: work.smsBody }, smsProvider);
+      await notifySms({ to: work.phone, body: work.smsBody }, smsProvider);
     }
     await recordNotificationDelivery(db, {
       shopId: work.shopId,
@@ -372,10 +372,7 @@ export async function sendDueReminders(
   for (const work of smsWork) {
     // Phone-only diver: SMS is the tracked channel. SmsDelivery is the same
     // shape as NotificationDelivery, so it records through the same seam.
-    const delivery = await notifySms(
-      { channel: "sms", to: work.phone, body: work.smsBody },
-      smsProvider,
-    );
+    const delivery = await notifySms({ to: work.phone, body: work.smsBody }, smsProvider);
     await recordNotificationDelivery(db, {
       shopId: work.shopId,
       bookingId: work.bookingId,

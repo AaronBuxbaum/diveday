@@ -587,7 +587,7 @@ export async function sendDueRecaps(
     const work = emailWork[index];
     const delivery = emailDeliveries[index] ?? { status: "failed" as const, retryable: true };
     if (delivery.status === "sent" && work.phone) {
-      await notifySms({ channel: "sms", to: work.phone, body: work.smsBody }, smsProvider);
+      await notifySms({ to: work.phone, body: work.smsBody }, smsProvider);
     }
     await recordNotificationDelivery(db, {
       shopId: work.shopId,
@@ -600,10 +600,7 @@ export async function sendDueRecaps(
   }
 
   for (const work of smsWork) {
-    const delivery = await notifySms(
-      { channel: "sms", to: work.phone, body: work.smsBody },
-      smsProvider,
-    );
+    const delivery = await notifySms({ to: work.phone, body: work.smsBody }, smsProvider);
     await recordNotificationDelivery(db, {
       shopId: work.shopId,
       bookingId: work.bookingId,
