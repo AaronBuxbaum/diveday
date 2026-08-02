@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { daysFromNow, e2eNow, openTripFromBoard } from "./helpers";
+import { daysFromNow, e2eNow, openTripFromBoard, waitForStableAttribute } from "./helpers";
 
 signedInAsOwner();
 
@@ -122,6 +122,12 @@ test("staff adds a walk-in diver, then wait-lists one once the trip is full", as
 });
 
 test("staff adds a returning diver by picking them, no re-entry", async ({ page }) => {
+  // Trip creation, a board navigation, a returning-diver search-and-add, and
+  // a second search to confirm the pick is no longer offered — each its own
+  // status-toast or navigation wait. Same aggregate-cost reasoning as the
+  // walk-in test above: a traced CI failure showed every individual step
+  // resolving successfully, just past the default 15s budget in total.
+  test.setTimeout(30_000);
   const title = `Returning Diver Trip ${e2eNow().getTime()}`;
 
   await page.goto("/shop/blue-mantis/trips/new");
@@ -170,6 +176,10 @@ test("staff adds a returning diver by picking them, no re-entry", async ({ page 
 });
 
 test("staff sends waivers to a multi-selected roster in one action", async ({ page }) => {
+  // Trip creation, a board navigation, two sequential add-diver redirects,
+  // two checkbox ticks, and a bulk send — each its own status-toast or
+  // hydration wait. Same aggregate-cost reasoning as the walk-in test above.
+  test.setTimeout(30_000);
   const title = `Bulk Waiver Trip ${e2eNow().getTime()}`;
   const stamp = e2eNow().getTime();
 
@@ -201,15 +211,17 @@ test("staff sends waivers to a multi-selected roster in one action", async ({ pa
     await addDiver.getByRole("button", { name: "Add to trip" }).click();
     await expect(page.getByRole("status")).toContainText("Diver added to the trip.");
   }
-  // Each add is its own server-action redirect; the "Diver added" toast
-  // renders from the *new* page immediately, but the router still settles
-  // in the background for a moment after that — ticking a checkbox before
-  // it does can catch the bulk selection's Client Component
-  // (BulkWaiverSelectionProvider) mid-remount and silently drop the tick.
-  // `networkidle` doesn't cover this (nothing here is a pending network
-  // request); a short explicit wait is the pragmatic fix until there's a
-  // concrete signal to await instead.
-  await page.waitForTimeout(1500);
+  // Each add is its own server-action redirect. Under `cacheComponents`, this
+  // route's dynamic content was observed getting a second, fresher render up
+  // to ~1s after the first paint already looked interactive — remounting the
+  // bulk selection's Client Component (BulkWaiverSelectionProvider) and
+  // silently dropping any tick made in that window. `networkidle` doesn't
+  // catch it (confirmed: the remount still happens after the network is
+  // idle), and neither does a single successful click (see the debug skill's
+  // "more than one wave" note) — wait for the provider's per-mount id to stop
+  // changing instead of guessing how many remounts this run happens to get.
+  const beaCheckbox = page.getByRole("checkbox", { name: "Select Bulk Bea to send a waiver" });
+  await waitForStableAttribute(beaCheckbox, "data-mount-id");
 
   // The checkbox's real hit area is the label wrapping it, not just the 16px
   // input — .check() below clicks the input directly regardless of markup,
@@ -217,7 +229,6 @@ test("staff sends waivers to a multi-selected roster in one action", async ({ pa
   // <span> in place of a <label> would reintroduce). Click near a corner of
   // the label's 44px box, well outside the centered input, to prove the tap
   // target itself — not just the input — toggles the checkbox.
-  const beaCheckbox = page.getByRole("checkbox", { name: "Select Bulk Bea to send a waiver" });
   await beaCheckbox.locator("xpath=..").click({ position: { x: 4, y: 4 } });
   await expect(beaCheckbox).toBeChecked();
 
