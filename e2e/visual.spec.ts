@@ -350,7 +350,7 @@ for (const scheme of ["light", "dark"] as const) {
     test(`public surfaces render true to the design (${scheme})`, async ({
       page,
       browser,
-      ownerStorageState,
+      staffStorageState,
       request,
     }) => {
       // 15 navigate+capture surfaces (30 screenshots) plus a real send-waiver
@@ -467,7 +467,9 @@ for (const scheme of ["light", "dark"] as const) {
       // "Leave a review" section — a new surface from docs ADR
       // 20260726-post-trip-review-request — without signing the public
       // `page` itself in.
-      const reviewSettingsContext = await browser.newContext({ storageState: ownerStorageState });
+      const reviewSettingsContext = await browser.newContext({
+        storageState: await staffStorageState("owner"),
+      });
       const reviewSettingsPage = makeActivitySafe(await reviewSettingsContext.newPage());
       await reviewSettingsPage.goto("/shop/blue-mantis/settings");
       await reviewSettingsPage
@@ -499,7 +501,9 @@ for (const scheme of ["light", "dark"] as const) {
       // uses a disposable staff context — a saved session, not a live
       // sign-in — so `page` itself stays the same unauthenticated visitor
       // throughout, exactly as a real diver reaches these links.
-      const staffContext = await browser.newContext({ storageState: ownerStorageState });
+      const staffContext = await browser.newContext({
+        storageState: await staffStorageState("owner"),
+      });
       const staffPage = makeActivitySafe(await staffContext.newPage());
       await staffPage.goto("/shop/blue-mantis/schedule/board");
       await staffPage

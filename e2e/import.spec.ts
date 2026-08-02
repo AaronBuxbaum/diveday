@@ -1,6 +1,5 @@
-import { DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
-import { expect, signedInAsOwner, test } from "./fixtures";
-import { daysFromNow, e2eNow, openTripFromBoard, signInAs } from "./helpers";
+import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
+import { daysFromNow, e2eNow, openTripFromBoard } from "./helpers";
 
 /**
  * The contact importer (ADR 20260723-contact-importer, ADR
@@ -110,6 +109,12 @@ test.describe("contact import — specialty cards", () => {
   test("an imported specialty card holds its dive until a staffer confirms it, then clears", async ({
     page,
   }) => {
+    // Six full-page navigations plus a trip/roster setup and a confirm-card
+    // flow — same aggregate-cost reasoning as visual.spec.ts's
+    // `test.setTimeout` and role-permissions.spec.ts's captain test: many
+    // real, sequential steps under 2-worker load add up past the default 15s
+    // budget even though no individual step is stuck.
+    test.setTimeout(30_000);
     await page.goto("/shop/blue-mantis/settings/import");
     // The honesty table now says specialty cards come across.
     await expect(page.getByText("Specialty cards (deep, wreck, night, drysuit)")).toBeVisible();
@@ -340,12 +345,15 @@ test.describe("import ↔ switching guides", () => {
   });
 });
 
-test("import is refused for staff below owner/manager", async ({ page }) => {
-  // A captain is staff everywhere else, but the importer writes the whole
-  // roster, so the surface doesn't exist for them — bounced to Today rather
-  // than shown a read-only/explained page.
-  await signInAs(page, DEV_STAFF_LOGINS.captain);
-  await page.goto("/shop/blue-mantis/settings/import");
-  await expect(page).toHaveURL(/\/shop\/blue-mantis$/);
-  await expect(page.locator('input[type="file"]').filter({ visible: true })).toHaveCount(0);
+test.describe("as captain", () => {
+  signedInAs("captain");
+
+  test("import is refused for staff below owner/manager", async ({ page }) => {
+    // A captain is staff everywhere else, but the importer writes the whole
+    // roster, so the surface doesn't exist for them — bounced to Today rather
+    // than shown a read-only/explained page.
+    await page.goto("/shop/blue-mantis/settings/import");
+    await expect(page).toHaveURL(/\/shop\/blue-mantis$/);
+    await expect(page.locator('input[type="file"]').filter({ visible: true })).toHaveCount(0);
+  });
 });

@@ -22,6 +22,14 @@ test.describe("staff", () => {
   signedInAsOwner();
 
   test("staff reuses a dive-site briefing on a trip that divers can explore", async ({ page }) => {
+    // Longest single test in this file: create a site, copy it, wire a trip
+    // to it, and exercise the crew-prediction flow — each step its own
+    // navigation or status-toast wait. Same aggregate-cost reasoning as
+    // visual.spec.ts's `test.setTimeout` and role-permissions.spec.ts's
+    // captain test: many sequential steps at realistic per-step cost under
+    // 2-worker load add up past the default 15s budget even though no
+    // individual step is stuck.
+    test.setTimeout(30_000);
     const siteName = `Turtle Garden ${e2eNow().getTime()}`;
     const tripTitle = `Turtle Garden charter ${e2eNow().getTime()}`;
 

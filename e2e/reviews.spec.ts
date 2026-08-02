@@ -1,6 +1,6 @@
 import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed";
 import { signRecapToken } from "../src/lib/recap-links";
-import { expect, test } from "./fixtures";
+import { expect, signedInAsOwner, test } from "./fixtures";
 import { signInAsOwner } from "./helpers";
 
 /**
@@ -31,20 +31,25 @@ test("a diver's bare rating publishes straight away and reaches the public page"
   ).toBeVisible();
 });
 
-test("staff previewing the public page from Reviews actually see the reviews", async ({ page }) => {
-  // /schedule is the public, canonical page regardless of session (Lens 17,
-  // docs/product/features/story-backlog.md — the staff operations board lives at its
-  // own /schedule/board instead), so the "View public page" link on Reviews
-  // needs no special flag: signed-in staff land on exactly what a diver sees,
-  // reviews included.
-  await signInAsOwner(page);
-  await page.goto("/shop/blue-mantis/reviews");
-  const previewPage = await Promise.all([
-    page.waitForEvent("popup"),
-    page.getByRole("link", { name: "View public page" }).click(),
-  ]).then(([popup]) => popup);
-  await expect(previewPage).toHaveURL(/\/schedule$/);
-  await expect(previewPage.getByRole("heading", { name: "What divers say" })).toBeVisible();
+test.describe("as owner", () => {
+  signedInAsOwner();
+
+  test("staff previewing the public page from Reviews actually see the reviews", async ({
+    page,
+  }) => {
+    // /schedule is the public, canonical page regardless of session (Lens 17,
+    // docs/product/features/story-backlog.md — the staff operations board lives at its
+    // own /schedule/board instead), so the "View public page" link on Reviews
+    // needs no special flag: signed-in staff land on exactly what a diver sees,
+    // reviews included.
+    await page.goto("/shop/blue-mantis/reviews");
+    const previewPage = await Promise.all([
+      page.waitForEvent("popup"),
+      page.getByRole("link", { name: "View public page" }).click(),
+    ]).then(([popup]) => popup);
+    await expect(previewPage).toHaveURL(/\/schedule$/);
+    await expect(previewPage.getByRole("heading", { name: "What divers say" })).toBeVisible();
+  });
 });
 
 test("a review carrying words waits for staff, and publishing it puts it on the public page", async ({
@@ -76,47 +81,49 @@ test("a review carrying words waits for staff, and publishing it puts it on the 
   await expect(page.getByText(comment)).toBeVisible();
 });
 
-test("a published review can be taken back down, and leaves the public page with it", async ({
-  page,
-}) => {
-  await signInAsOwner(page);
-  await page.goto("/shop/blue-mantis/reviews");
+test.describe("as owner, reviews list", () => {
+  signedInAsOwner();
 
-  // Target a *written* published review specifically: hiding a bare rating
-  // would make the "gone from the public page" assertion below vacuous, since
-  // bare ratings are never listed there in the first place.
-  const comment = "Vis was unreal and the crew found us a turtle on the second tank.";
-  const published = page.locator("li").filter({ hasText: comment }).filter({ visible: true });
-  await expect(published.getByText("Published")).toBeVisible();
-  // Hiding is one of DiveDay's land-then-undo actions (docs/design/principles.md
-  // #7, a reversible toggle): no confirm dialog — it hides immediately and
-  // offers Undo from a toast instead.
-  await published.getByRole("button", { name: "Hide" }).click();
-  await expect(page.getByRole("status").getByText("Review hidden.")).toBeVisible();
-  await expect(published.getByText("Waiting on you")).toBeVisible();
+  test("a published review can be taken back down, and leaves the public page with it", async ({
+    page,
+  }) => {
+    await page.goto("/shop/blue-mantis/reviews");
 
-  await page.context().clearCookies();
-  await page.goto("/shop/blue-mantis/schedule");
-  await expect(page.getByText(comment)).toHaveCount(0);
-});
+    // Target a *written* published review specifically: hiding a bare rating
+    // would make the "gone from the public page" assertion below vacuous, since
+    // bare ratings are never listed there in the first place.
+    const comment = "Vis was unreal and the crew found us a turtle on the second tank.";
+    const published = page.locator("li").filter({ hasText: comment }).filter({ visible: true });
+    await expect(published.getByText("Published")).toBeVisible();
+    // Hiding is one of DiveDay's land-then-undo actions (docs/design/principles.md
+    // #7, a reversible toggle): no confirm dialog — it hides immediately and
+    // offers Undo from a toast instead.
+    await published.getByRole("button", { name: "Hide" }).click();
+    await expect(page.getByRole("status").getByText("Review hidden.")).toBeVisible();
+    await expect(published.getByText("Waiting on you")).toBeVisible();
 
-test("hiding a review can be undone from the toast", async ({ page }) => {
-  await signInAsOwner(page);
-  await page.goto("/shop/blue-mantis/reviews");
+    await page.context().clearCookies();
+    await page.goto("/shop/blue-mantis/schedule");
+    await expect(page.getByText(comment)).toHaveCount(0);
+  });
 
-  const comment = "Vis was unreal and the crew found us a turtle on the second tank.";
-  const published = page.locator("li").filter({ hasText: comment }).filter({ visible: true });
-  await published.getByRole("button", { name: "Hide" }).click();
-  const toast = page.getByRole("status");
-  await expect(toast.getByText("Review hidden.")).toBeVisible();
+  test("hiding a review can be undone from the toast", async ({ page }) => {
+    await page.goto("/shop/blue-mantis/reviews");
 
-  await toast.getByRole("button", { name: "Undo" }).click();
-  await expect(page.getByText("Review published to your schedule page.")).toBeVisible();
-  await expect(published.getByText("Published")).toBeVisible();
+    const comment = "Vis was unreal and the crew found us a turtle on the second tank.";
+    const published = page.locator("li").filter({ hasText: comment }).filter({ visible: true });
+    await published.getByRole("button", { name: "Hide" }).click();
+    const toast = page.getByRole("status");
+    await expect(toast.getByText("Review hidden.")).toBeVisible();
 
-  await page.context().clearCookies();
-  await page.goto("/shop/blue-mantis/schedule");
-  await expect(page.getByText(comment)).toBeVisible();
+    await toast.getByRole("button", { name: "Undo" }).click();
+    await expect(page.getByText("Review published to your schedule page.")).toBeVisible();
+    await expect(published.getByText("Published")).toBeVisible();
+
+    await page.context().clearCookies();
+    await page.goto("/shop/blue-mantis/schedule");
+    await expect(page.getByText(comment)).toBeVisible();
+  });
 });
 
 test("the public schedule publishes the shop's rating as structured data", async ({ page }) => {

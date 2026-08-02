@@ -93,3 +93,13 @@ get the correct worker count on today's runners.
   step; the `visual` job (a single spec file, screenshot-dominated rather than
   interaction-dominated) showed no contention and was left at the default. Revisit this pin if a
   future `cacheComponents`-adjacent change shifts the render cost again, in either direction.
+- **Revisited**: part of that contention's root cause was fixable, not just a scheduling cost to
+  absorb. `src/lib/format.ts` constructed a fresh `Intl.DateTimeFormat`/`Intl.NumberFormat`/
+  `Intl.RelativeTimeFormat` on every call instead of reusing one, and nearly every render touches
+  at least one of them; memoizing them (#305) cut the same 18-test contended set used above from a
+  repeatable 6/18 failures down to 0/18, 2/18, and 1/18 across three reruns at 2 workers — real
+  headroom recovered, though not fully back to clean (a residual ~5-10% per-test flake risk under
+  contention). The `playwright` job now reverts to `e2e/servers.ts`'s default worker count (2) and
+  halves the shard matrix back to 4 (`playwright shard N/4`), trading that residual flake risk for
+  half the runner minutes; `fail-fast: false` keeps one shard's flake from failing the whole run.
+  `E2E_WORKERS` is still available as a per-step override if contention resurfaces.

@@ -24,11 +24,18 @@ const REEF_TRIP = "Two-Tank Reef — Molasses & French";
 /**
  * Open a seeded dive site's edit form and set its maximum depth.
  *
- * Clears the site-photo box first: the seeded briefings carry image URLs, and
- * saving re-runs them through `ingestDiveSiteMedia`, which can't reach an image
- * host from the e2e sandbox and bounces the whole form to `?error=images`.
- * That's unrelated to depth — dropping the photos is the narrowest way to get a
+ * Clears the site-photo box: the seeded briefings carry image URLs, and saving
+ * re-runs them through `ingestDiveSiteMedia`, which can't reach an image host
+ * from the e2e sandbox and bounces the whole form to `?error=images`. That's
+ * unrelated to depth — dropping the photos is the narrowest way to get a
  * clean save.
+ *
+ * Filled *after* the depth field, not before: this page is a fresh
+ * navigation's first interaction, and the very first fill right after
+ * `page.goto()` can race the page's own hydration and get silently
+ * overwritten by the time the click actually submits — the depth field,
+ * touched a moment later once hydration has settled, never loses that race.
+ * Same fields, reordered so the vulnerable one goes last.
  */
 async function setSiteDepth(
   page: import("@playwright/test").Page,
@@ -45,8 +52,8 @@ async function setSiteDepth(
     .getAttribute("href");
   if (!href) throw new Error(`no dive-site link for ${siteName}`);
   await page.goto(href);
-  await page.getByLabel(/Site photo URLs/).fill("");
   await page.getByLabel(unitLabel).fill(depth);
+  await page.getByLabel(/Site photo URLs/).fill("");
   await page.getByRole("button", { name: "Save briefing" }).click();
   await expect(page.getByText("Site briefing saved.")).toBeVisible();
   return href;

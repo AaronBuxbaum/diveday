@@ -1,5 +1,5 @@
 import { DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
-import { expect, signedInAsOwner, test } from "./fixtures";
+import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
 import { e2eNow, signInAs } from "./helpers";
 
 signedInAsOwner();
@@ -11,6 +11,11 @@ test.describe("certification paths", () => {
   test("staff build a path out of the catalog and divers see it on the course page", async ({
     page,
   }) => {
+    // Chains several sequential navigations and status-toast waits — same
+    // aggregate-cost reasoning as visual.spec.ts's test.setTimeout:
+    // legitimate per-step cost under 2-worker CI load can sum past the
+    // default 15s test budget even when no individual step is stuck.
+    test.setTimeout(30_000);
     const title = `Night Owl Path ${e2eNow().getTime()}`;
 
     await page.goto(`/shop/${SHOP}/courses`);
@@ -92,6 +97,9 @@ test.describe("certification paths", () => {
   test("hiding a rung's course drops it from the public path listing and detail page, without hiding the path", async ({
     page,
   }) => {
+    // Same aggregate sequential-navigation cost as this file's other heavy
+    // test above.
+    test.setTimeout(30_000);
     // Advanced Open Water Diver is the second rung on the seeded "From first
     // breath to Rescue Diver" path — hide the course, not the path.
     await page.goto(`/shop/${SHOP}/courses`);
@@ -164,13 +172,10 @@ test.describe("certification paths", () => {
 });
 
 test.describe("certification paths, as the daily crew", () => {
-  // Signs in fresh, so it must start from no session at all — `signedInAsOwner()`
-  // above would otherwise bounce /sign-in straight to the shop.
-  test.use({ storageState: { cookies: [], origins: [] } });
+  signedInAs("captain");
 
   test("a captain can read the catalog's paths but not shape them", async ({ page }) => {
     // Shaping the catalog is owner/manager/instructor work (H-14).
-    await signInAs(page, DEV_STAFF_LOGINS.captain);
     await page.goto(PATHS);
     await expect(
       page.getByRole("heading", { level: 1, name: "Certification paths" }),

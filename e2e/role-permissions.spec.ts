@@ -1,6 +1,5 @@
-import { DEMO_SHOP_SLUG, DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
-import { expect, test } from "./fixtures";
-import { signInAs } from "./helpers";
+import { DEMO_SHOP_SLUG } from "../src/db/dev-credentials";
+import { expect, signedInAs, test } from "./fixtures";
 
 /**
  * H-14 (ADR 20260724-role-authorization) draws real boundaries on five staff
@@ -9,7 +8,10 @@ import { signInAs } from "./helpers";
  * diver deletion, and trip configuration; an instructor may configure trips but
  * not money or legal; the owner reaches everything. The server actions re-check
  * regardless — these assertions cover the UI-hiding courtesy the ADR also asks
- * for. Each test signs in fresh rather than reusing the per-worker owner session.
+ * for. Each role's sign-in comes from its own cached per-worker session
+ * (`signedInAs`, e2e/fixtures.ts) rather than walking the sign-in form live in
+ * every test — a traced CI failure on the captain test found that live sign-in
+ * plus this test's own 8 navigations summed past the default 15s test budget.
  */
 const SHOP = DEMO_SHOP_SLUG;
 
@@ -38,91 +40,116 @@ async function firstTripManageHref(page: import("@playwright/test").Page): Promi
 }
 
 test.describe("H-14 role permissions", () => {
-  test("the daily crew (captain) is denied money, legal, deletion, and trip config", async ({
-    page,
-  }) => {
-    await signInAs(page, DEV_STAFF_LOGINS.captain);
+  test.describe("captain", () => {
+    signedInAs("captain");
 
-    // Waiver — the legal instrument — has no use for the daily crew, so the
-    // surface doesn't exist for them: bounced to Today, not shown read-only.
-    await page.goto(`/shop/${SHOP}/waivers`);
-    await expect(page).toHaveURL(`/shop/${SHOP}`);
-    await expect(page.locator('textarea[name="body"]').filter({ visible: true })).toHaveCount(0);
+    test("the daily crew (captain) is denied money, legal, deletion, and trip config", async ({
+      page,
+    }) => {
+      // This test does the most sequential full-page navigation of the three
+      // in this file — 5 denied-surface checks (2 of them redirects) before
+      // ever reaching the shared trip-manage assertions, against 3 for the
+      // other two. A traced CI failure measured every `page.goto()` here at
+      // roughly 1-1.3s and each redirect's `toHaveURL` settling at 1.6-2.3s —
+      // not stuck, just each one genuinely taking that long under 2-worker
+      // load — and those 8 navigations alone summed past the default 15s
+      // budget before the test's actual assertions ever ran, even after
+      // moving sign-in to the cached per-role session above (`signedInAs`)
+      // removed the live sign-in's own ~2s. Same reasoning as
+      // visual.spec.ts's `test.setTimeout` on its heaviest capture sequence:
+      // aggregate per-navigation cost accumulating across many sequential
+      // steps in one test, not a hang this override would be masking.
+      test.setTimeout(30_000);
 
-    // Its Signatures tab (task 155) — read access to signed medical/waiver
-    // records — takes the exact same gate, never a looser one just because
-    // it's a sub-route.
-    await page.goto(`/shop/${SHOP}/waivers/signatures`);
-    await expect(page).toHaveURL(`/shop/${SHOP}`);
-    await expect(page.getByRole("heading", { level: 1, name: "Signatures" })).toHaveCount(0);
+      // Waiver — the legal instrument — has no use for the daily crew, so the
+      // surface doesn't exist for them: bounced to Today, not shown read-only.
+      await page.goto(`/shop/${SHOP}/waivers`);
+      await expect(page).toHaveURL(`/shop/${SHOP}`);
+      await expect(page.locator('textarea[name="body"]').filter({ visible: true })).toHaveCount(0);
 
-    // Payment settings — Stripe + rental catalog/prices — are hidden.
-    await page.goto(`/shop/${SHOP}/settings`);
-    await expect(page.getByText("payment settings, limited to owners and managers")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Save rental catalog" })).toHaveCount(0);
+      // Its Signatures tab (task 155) — read access to signed medical/waiver
+      // records — takes the exact same gate, never a looser one just because
+      // it's a sub-route.
+      await page.goto(`/shop/${SHOP}/waivers/signatures`);
+      await expect(page).toHaveURL(`/shop/${SHOP}`);
+      await expect(page.getByRole("heading", { level: 1, name: "Signatures" })).toHaveCount(0);
 
-    // Trip creation is hidden.
-    await page.goto(`/shop/${SHOP}/trips/new`);
-    await expect(page.getByText("limited to owners, managers, and instructors")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Put it on the board" })).toHaveCount(0);
+      // Payment settings — Stripe + rental catalog/prices — are hidden.
+      await page.goto(`/shop/${SHOP}/settings`);
+      await expect(
+        page.getByText("payment settings, limited to owners and managers"),
+      ).toBeVisible();
+      await expect(page.getByRole("button", { name: "Save rental catalog" })).toHaveCount(0);
 
-    // Diver deletion is hidden.
-    await page.goto(await firstDiverDetailHref(page));
-    await expect(page.getByRole("heading", { name: "Remove from active divers" })).toHaveCount(0);
+      // Trip creation is hidden.
+      await page.goto(`/shop/${SHOP}/trips/new`);
+      await expect(page.getByText("limited to owners, managers, and instructors")).toBeVisible();
+      await expect(page.getByRole("button", { name: "Put it on the board" })).toHaveCount(0);
 
-    // On a trip's Overview, trip *definition* is hidden, but the day-of operating
-    // actions the glossary assigns to crew — conditions, crew, weather cancel —
-    // stay available.
-    await page.goto(await firstTripManageHref(page));
-    await expect(page.getByRole("button", { name: "Save changes" })).toHaveCount(0);
-    await expect(page.getByRole("button", { name: "Publish crew prediction" })).toBeVisible();
-    // Crew editing is unconditional (no config-gated form around it), so its
-    // presence for a captain is the heading itself, not a submit button.
-    await expect(page.getByRole("heading", { name: "Crew", exact: true })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Cancel trip" })).toBeVisible();
+      // Diver deletion is hidden.
+      await page.goto(await firstDiverDetailHref(page));
+      await expect(page.getByRole("heading", { name: "Remove from active divers" })).toHaveCount(0);
+
+      // On a trip's Overview, trip *definition* is hidden, but the day-of operating
+      // actions the glossary assigns to crew — conditions, crew, weather cancel —
+      // stay available.
+      await page.goto(await firstTripManageHref(page));
+      await expect(page.getByRole("button", { name: "Save changes" })).toHaveCount(0);
+      await expect(page.getByRole("button", { name: "Publish crew prediction" })).toBeVisible();
+      // Crew editing is unconditional (no config-gated form around it), so its
+      // presence for a captain is the heading itself, not a submit button.
+      await expect(page.getByRole("heading", { name: "Crew", exact: true })).toBeVisible();
+      await expect(page.getByRole("button", { name: "Cancel trip" })).toBeVisible();
+    });
   });
 
-  test("an instructor may configure trips but not money or legal", async ({ page }) => {
-    await signInAs(page, DEV_STAFF_LOGINS.instructor);
+  test.describe("instructor", () => {
+    signedInAs("instructor");
 
-    // Trip configuration is instructor work — the form is present.
-    await page.goto(`/shop/${SHOP}/trips/new`);
-    await expect(page.getByRole("button", { name: "Put it on the board" })).toBeVisible();
+    test("an instructor may configure trips but not money or legal", async ({ page }) => {
+      // Trip configuration is instructor work — the form is present.
+      await page.goto(`/shop/${SHOP}/trips/new`);
+      await expect(page.getByRole("button", { name: "Put it on the board" })).toBeVisible();
 
-    // Money and the legal waiver are still owner/manager only — including
-    // its Signatures tab.
-    await page.goto(`/shop/${SHOP}/waivers`);
-    await expect(page).toHaveURL(`/shop/${SHOP}`);
-    await expect(page.locator('textarea[name="body"]').filter({ visible: true })).toHaveCount(0);
+      // Money and the legal waiver are still owner/manager only — including
+      // its Signatures tab.
+      await page.goto(`/shop/${SHOP}/waivers`);
+      await expect(page).toHaveURL(`/shop/${SHOP}`);
+      await expect(page.locator('textarea[name="body"]').filter({ visible: true })).toHaveCount(0);
 
-    await page.goto(`/shop/${SHOP}/waivers/signatures`);
-    await expect(page).toHaveURL(`/shop/${SHOP}`);
-    await expect(page.getByRole("heading", { level: 1, name: "Signatures" })).toHaveCount(0);
+      await page.goto(`/shop/${SHOP}/waivers/signatures`);
+      await expect(page).toHaveURL(`/shop/${SHOP}`);
+      await expect(page.getByRole("heading", { level: 1, name: "Signatures" })).toHaveCount(0);
 
-    await page.goto(`/shop/${SHOP}/settings`);
-    await expect(page.getByText("payment settings, limited to owners and managers")).toBeVisible();
+      await page.goto(`/shop/${SHOP}/settings`);
+      await expect(
+        page.getByText("payment settings, limited to owners and managers"),
+      ).toBeVisible();
+    });
   });
 
-  test("the owner reaches every gated surface", async ({ page }) => {
-    await signInAs(page, DEV_STAFF_LOGINS.owner);
+  test.describe("owner", () => {
+    signedInAs("owner");
 
-    await page.goto(`/shop/${SHOP}/waivers`);
-    await expect(page.locator('textarea[name="body"]').filter({ visible: true })).toBeVisible();
+    test("the owner reaches every gated surface", async ({ page }) => {
+      await page.goto(`/shop/${SHOP}/waivers`);
+      await expect(page.locator('textarea[name="body"]').filter({ visible: true })).toBeVisible();
 
-    await page.goto(`/shop/${SHOP}/waivers/signatures`);
-    await expect(page.getByRole("heading", { level: 1, name: "Signatures" })).toBeVisible();
+      await page.goto(`/shop/${SHOP}/waivers/signatures`);
+      await expect(page.getByRole("heading", { level: 1, name: "Signatures" })).toBeVisible();
 
-    await page.goto(`/shop/${SHOP}/settings`);
-    await expect(page.getByRole("button", { name: "Save rental catalog" })).toBeVisible();
+      await page.goto(`/shop/${SHOP}/settings`);
+      await expect(page.getByRole("button", { name: "Save rental catalog" })).toBeVisible();
 
-    await page.goto(`/shop/${SHOP}/trips/new`);
-    await expect(page.getByRole("button", { name: "Put it on the board" })).toBeVisible();
+      await page.goto(`/shop/${SHOP}/trips/new`);
+      await expect(page.getByRole("button", { name: "Put it on the board" })).toBeVisible();
 
-    await page.goto(await firstDiverDetailHref(page));
-    await expect(page.getByRole("heading", { name: "Remove from active divers" })).toBeVisible();
+      await page.goto(await firstDiverDetailHref(page));
+      await expect(page.getByRole("heading", { name: "Remove from active divers" })).toBeVisible();
 
-    // Trip definition is available to the owner.
-    await page.goto(await firstTripManageHref(page));
-    await expect(page.getByRole("button", { name: "Save changes" })).toBeVisible();
+      // Trip definition is available to the owner.
+      await page.goto(await firstTripManageHref(page));
+      await expect(page.getByRole("button", { name: "Save changes" })).toBeVisible();
+    });
   });
 });

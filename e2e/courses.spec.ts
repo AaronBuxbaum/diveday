@@ -131,6 +131,11 @@ test.describe("staff", () => {
   test("staff edit a seeded course page, toggle it live, and a signed-out diver reads it", async ({
     page,
   }) => {
+    // Chains several sequential navigations and status-toast waits — same
+    // aggregate-cost reasoning as visual.spec.ts's test.setTimeout:
+    // legitimate per-step cost under 2-worker CI load can sum past the
+    // default 15s test budget even when no individual step is stuck.
+    test.setTimeout(30_000);
     await page.goto("/shop/blue-mantis/courses");
     // Every course ships pre-filled and visible — there is no catalog to import
     // from. Open Rescue Diver straight from the roster. Match the title exactly:
@@ -280,6 +285,12 @@ test.describe("staff", () => {
   test("a solo-instructor course session refuses a booking past the 8-seat ratio", async ({
     page,
   }) => {
+    // Two full booking rounds (6 divers, then 2 more) plus the session setup
+    // and a third ratio-refused attempt — same aggregate-cost reasoning as
+    // visual.spec.ts's test.setTimeout: many real, sequential steps under
+    // 2-worker load add up past the default 15s budget even though no
+    // individual step is stuck.
+    test.setTimeout(30_000);
     const sessionTitle = `Ratio test session ${e2eNow().getTime()}`;
     await page.goto("/shop/blue-mantis/trips/new");
     await page.getByLabel("Course").selectOption({ label: "Open Water Diver" });

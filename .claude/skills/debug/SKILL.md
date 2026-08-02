@@ -29,6 +29,59 @@ thread instead of pushing a second, competing fix.
    out, then re-question the diagnosis. A fourth variation of the same guess is how sessions
    burn hours.
 
+## A flake that looks like slowness usually isn't — falsify that first
+
+"It's probably contention" is the easiest explanation to reach for and the hardest to be wrong
+about without checking, because it's rarely *fully* wrong — some genuine scheduling cost is
+almost always present, which makes it feel confirmed by a first pass of evidence. It is also
+frequently not the actual, fixable cause. Don't stop at "plausible and hard to disprove." Run the
+one experiment that actually distinguishes them:
+
+**Double the relevant timeout (`playwright.config.ts`'s `expect`/`timeout`, temporarily, never
+committed) and rerun on a freshly-started server — not a reused one; see the reused-server trap
+below.** A genuinely slow request resolves given enough time. If the same assertion still fails at
+2-4x the budget, the underlying operation is not slow, it is **stuck or already wrong**, and no
+amount of waiting will ever make it pass:
+
+- **Stuck**: an awaited call with no timeout of its own — a raw `dns.lookup()`/`fetch()` outside
+  any `AbortController`, a DB call outside a statement timeout. `DIVEDAY_DISABLE_EXTERNAL_HTTP`
+  and similar env-gated stubs only cover the call sites someone remembered to check the flag —
+  grep for the underlying primitive (`dns.lookup`, a bare `fetch(`) across `src/lib`/`src/db`
+  directly; a new call site added later is silently ungated until someone greps again.
+- **Already wrong**: the assertion is polling for a value that was already lost or corrupted
+  *before* it started — most commonly a Playwright interaction racing the page's own hydration.
+  The **first** `.fill()`/`.click()` right after `page.goto()` (or a client-side `<Link>`
+  transition) can succeed against the DOM, then get silently overwritten when hydration finishes
+  reconciling a moment later — a later interaction on the same page, once hydration has settled,
+  does not lose this race. `test-results/<spec>/error-context.md`'s DOM snapshot proves it: a
+  field that should read empty/edited but still shows its original server-rendered value means the
+  edit was lost, not merely slow. The fix is almost never "wait longer" (there's nothing to wait
+  for) — reorder so the vulnerable interaction happens *last*, immediately before the action that
+  submits it, once other interactions have proven the page is settled.
+
+Contention still matters as an **amplifier**, not necessarily the cause: slower hydration under
+CPU load widens the window a hydration race can lose in, which is exactly why "worse under 2
+workers" and "not actually caused by scarce CPU" are both true at once. Don't let the correlation
+stand in for the mechanism.
+
+A `Protocol error (Runtime.callFunctionOn): Internal server error, session closed` in the same
+failure block as `Test timeout of Nms exceeded` is usually a **downstream artifact** of that same
+timeout — Playwright tears down the page to abort whatever's hanging, and an in-flight locator
+poll surfaces that teardown as a session-closed error. It is easy to misread as an independent
+Chromium crash / resource-exhaustion signature. It isn't, on its own — find and read the *primary*
+error in the same block before concluding the browser itself is unstable.
+
+**The reused-server trap**: iterating with `pnpm exec playwright test <file>` run repeatedly
+against the same long-lived `next start` (`reuseExistingServer: true` locally) reruns the demo
+reset before every test, but the reset only restores what `resetDemoSchedule` explicitly touches —
+a shop-settings column or other non-schedule state a test mutates and never restores stays mutated
+for every subsequent invocation against that same process, real CI never hits this (fresh servers
+every job), so a failure that reproduces locally on rerun #2+ but not #1 is diagnostic of a missing
+reset line, not of the bug under investigation. Kill and restart the server between diagnostic runs
+whenever a failure's reproducibility looks reuse-dependent, and check `resetDemoSchedule` for
+what's actually being reset before trusting a "same test fails every time" pattern as evidence
+against timeout-based experiments above.
+
 ## Where evidence lives
 
 | Symptom | Look at |

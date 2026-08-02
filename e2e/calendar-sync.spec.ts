@@ -1,7 +1,5 @@
 import type { Locator, Page } from "@playwright/test";
-import { DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
-import { expect, test } from "./fixtures";
-import { signInAs, signInAsOwner } from "./helpers";
+import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
 
 const CALENDAR_SETTINGS = "/shop/blue-mantis/settings/calendar";
 const MY_DEPARTURES = "My departures";
@@ -57,10 +55,11 @@ async function mintLink(panel: Locator): Promise<string> {
 }
 
 test.describe("staff calendar subscriptions", () => {
+  signedInAsOwner();
+
   test("the Settings card teases the calendar page instead of repeating its full title and description", async ({
     page,
   }) => {
-    await signInAsOwner(page);
     await page.goto("/shop/blue-mantis/settings");
     const card = page
       .locator("section")
@@ -88,7 +87,6 @@ test.describe("staff calendar subscriptions", () => {
     page,
     request,
   }) => {
-    await signInAsOwner(page);
     await page.goto(CALENDAR_SETTINGS);
     await expect(
       page.getByRole("heading", { level: 1, name: "Calendar subscriptions" }),
@@ -118,7 +116,6 @@ test.describe("staff calendar subscriptions", () => {
   });
 
   test("rotating a link kills the old URL immediately", async ({ page, request }) => {
-    await signInAsOwner(page);
     await page.goto(CALENDAR_SETTINGS);
     const panel = panelFor(page, MY_DEPARTURES);
     await clearSubscription(panel);
@@ -137,7 +134,6 @@ test.describe("staff calendar subscriptions", () => {
   });
 
   test("turning a subscription off stops the feed", async ({ page, request }) => {
-    await signInAsOwner(page);
     await page.goto(CALENDAR_SETTINGS);
     const panel = panelFor(page, MY_DEPARTURES);
     await clearSubscription(panel);
@@ -161,9 +157,12 @@ test.describe("staff calendar subscriptions", () => {
       expect((await request.get(path, { headers: { cookie: "" } })).status()).toBe(404);
     }
   });
+});
+
+test.describe("staff calendar subscriptions, as captain", () => {
+  signedInAs("captain");
 
   test("a captain gets their own departures but not the whole shop's", async ({ page }) => {
-    await signInAs(page, DEV_STAFF_LOGINS.captain);
     await page.goto(CALENDAR_SETTINGS);
 
     await expect(

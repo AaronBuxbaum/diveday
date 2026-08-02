@@ -1,5 +1,5 @@
 import { DEMO_SHOP_SLUG, DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
-import { expect, signedInAsOwner, test } from "./fixtures";
+import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
 import {
   acceptAgeAttestation,
   daysFromNow,
@@ -101,9 +101,9 @@ test.describe("staff", () => {
  * the one that matters — hiding a button is not authorization.
  */
 test.describe("deck crew", () => {
-  test("a captain may raise the fit flag but not rewrite sizes or clear it", async ({ page }) => {
-    await signInAs(page, DEV_STAFF_LOGINS.captain);
+  signedInAs("captain");
 
+  test("a captain may raise the fit flag but not rewrite sizes or clear it", async ({ page }) => {
     // A diver with a fit on file but no flag: the stated sizes are read-only,
     // and the safe fallback the captain actually needs at the dock is right
     // there — a flag is an escalation, not an override.
@@ -123,7 +123,6 @@ test.describe("deck crew", () => {
   test("the server refuses a captain's clear even when the button is bypassed", async ({
     page,
   }) => {
-    await signInAs(page, DEV_STAFF_LOGINS.captain);
     await goToDiver(page, DIVER_WITH_FIT);
     const flaggedHeading = page.getByRole("heading", { name: "Flagged for hands-on fitting" });
     await expect(flaggedHeading).toBeVisible();

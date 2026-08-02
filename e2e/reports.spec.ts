@@ -1,6 +1,4 @@
-import { DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
-import { expect, signedInAsOwner, test } from "./fixtures";
-import { signInAs } from "./helpers";
+import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
 
 // Owner reporting (ADR 20260723-owner-reporting): "how's my month" over data the
 // shop already has — bookings, revenue, seat fill, waiver completion — anchored
@@ -35,11 +33,14 @@ test.describe("owner", () => {
   });
 });
 
-test("reports are gated to the owner or manager, not the daily crew", async ({ page }) => {
-  await signInAs(page, DEV_STAFF_LOGINS.captain);
-  await page.goto("/shop/blue-mantis/reports");
-  // The captain has no use for revenue, so the surface doesn't exist for
-  // them — bounced to Today rather than shown a read-only/explained page.
-  await expect(page).toHaveURL(/\/shop\/blue-mantis$/);
-  await expect(page.getByRole("region", { name: "This month's numbers" })).toHaveCount(0);
+test.describe("as captain", () => {
+  signedInAs("captain");
+
+  test("reports are gated to the owner or manager, not the daily crew", async ({ page }) => {
+    await page.goto("/shop/blue-mantis/reports");
+    // The captain has no use for revenue, so the surface doesn't exist for
+    // them — bounced to Today rather than shown a read-only/explained page.
+    await expect(page).toHaveURL(/\/shop\/blue-mantis$/);
+    await expect(page.getByRole("region", { name: "This month's numbers" })).toHaveCount(0);
+  });
 });

@@ -4184,7 +4184,15 @@ export async function resetDemoSchedule(
   // making its assertions order-dependent (e2e/recap.spec.ts's own "review
   // link starts absent" check, for one). The canonical seed never sets
   // either, so restoring to that state is just deleting/nulling them.
-  await db.update(shops).set({ reviewUrl: null }).where(eq(shops.id, shopId));
+  // `shops.depth_unit` is the same class of leak: it's the only
+  // shop-settings column e2e/depth-and-age-surfaces.spec.ts's "read back in
+  // the shop's own unit" test mutates (metres → feet, mid-test), and nothing
+  // ever flips it back — a second run against the same server (e.g. a local
+  // `pnpm exec playwright test` rerun without restarting `next start`)
+  // starts already on "feet" and the test's own `/Maximum depth \(metres\)/`
+  // locator then never matches, hanging for the full test timeout rather
+  // than failing fast.
+  await db.update(shops).set({ reviewUrl: null, depthUnit: "meters" }).where(eq(shops.id, shopId));
   await db.delete(shopStripeAccounts).where(eq(shopStripeAccounts.shopId, shopId));
 
   // The waiver is the same class of fixture. Editing the release text saves a

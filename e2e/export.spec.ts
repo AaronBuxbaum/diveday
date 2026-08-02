@@ -1,7 +1,5 @@
 import { strFromU8, unzipSync } from "fflate";
-import { DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
-import { expect, signedInAsOwner, test } from "./fixtures";
-import { signInAs } from "./helpers";
+import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
 
 /**
  * The full-shop export flow (ADR 20260722-full-shop-export): the promise that
@@ -75,25 +73,28 @@ test("the export never leaves without a staff session", async ({ request }) => {
   expect(response.headers().location).toContain("/sign-in");
 });
 
-test("staff outside owner/manager can't reach export", async ({ page, request }) => {
-  // The bundle carries the whole roster's medical evidence, so a captain —
-  // staff everywhere else in the app — has no use for this surface. Bounced
-  // to Today with an explanation, not teleported there silently (task 82,
-  // UX persona 11 "Kai").
-  await signInAs(page, DEV_STAFF_LOGINS.captain);
-  await page.goto("/shop/blue-mantis/settings/export");
-  // Not a URL assertion: FlashParams strips `?notice=export_not_authorized`
-  // via history.replaceState shortly after mount — the rendered banner is
-  // the stable signal.
-  await expect(page).toHaveURL(/\/shop\/blue-mantis(\?.*)?$/);
-  await expect(page.getByText("Data export is limited to owners and managers.")).toBeVisible();
-  await expect(page.getByRole("link", { name: "Download export" })).toHaveCount(0);
+test.describe("as captain", () => {
+  signedInAs("captain");
 
-  const cookies = await page.context().cookies();
-  const response = await request.get("/shop/blue-mantis/settings/export/download", {
-    headers: {
-      cookie: cookies.map((cookie) => `${cookie.name}=${cookie.value}`).join("; "),
-    },
+  test("staff outside owner/manager can't reach export", async ({ page, request }) => {
+    // The bundle carries the whole roster's medical evidence, so a captain —
+    // staff everywhere else in the app — has no use for this surface. Bounced
+    // to Today with an explanation, not teleported there silently (task 82,
+    // UX persona 11 "Kai").
+    await page.goto("/shop/blue-mantis/settings/export");
+    // Not a URL assertion: FlashParams strips `?notice=export_not_authorized`
+    // via history.replaceState shortly after mount — the rendered banner is
+    // the stable signal.
+    await expect(page).toHaveURL(/\/shop\/blue-mantis(\?.*)?$/);
+    await expect(page.getByText("Data export is limited to owners and managers.")).toBeVisible();
+    await expect(page.getByRole("link", { name: "Download export" })).toHaveCount(0);
+
+    const cookies = await page.context().cookies();
+    const response = await request.get("/shop/blue-mantis/settings/export/download", {
+      headers: {
+        cookie: cookies.map((cookie) => `${cookie.name}=${cookie.value}`).join("; "),
+      },
+    });
+    expect(response.status()).toBe(403);
   });
-  expect(response.status()).toBe(403);
 });

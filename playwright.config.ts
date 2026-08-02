@@ -95,7 +95,15 @@ export default defineConfig({
     // Real base URL is assigned per worker in e2e/fixtures.ts; this is only a
     // sensible default for any context created outside a worker fixture.
     baseURL: e2eBaseURL(0),
-    trace: "on-first-retry",
+    // Both used to be no-ops: `trace: "on-first-retry"` never fires with
+    // `retries: 0` (see the comment on that setting below), so CI has been
+    // capturing zero visual/trace evidence on failure this whole
+    // investigation — every failing-test diagnosis so far came from a local
+    // repro, never the actual CI run that failed. "only-on-failure" and
+    // "retain-on-failure" cost nothing on a passing run and upload alongside
+    // the existing playwright-report-<shard> artifact on a failing one.
+    screenshot: "only-on-failure",
+    trace: "retain-on-failure",
     // Which Chromium, and the flags that make it rasterize reproducibly — see
     // e2e/browser.ts for why each one is there and what it costs.
     launchOptions: chromiumLaunchOptions(),

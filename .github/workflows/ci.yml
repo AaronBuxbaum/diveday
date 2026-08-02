@@ -114,14 +114,14 @@ jobs:
           retention-days: 1
 
   playwright:
-    name: Playwright shard ${{ matrix.shard }}/8
+    name: Playwright shard ${{ matrix.shard }}/4
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4, 5, 6, 7, 8]
+        shard: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
@@ -138,43 +138,25 @@ jobs:
               spec_files+=("$spec")
             fi
           done
-          pnpm exec playwright test "${spec_files[@]}" --shard=${{ matrix.shard }}/8
-        env:
-          # e2e/servers.ts's default (cpus/2, 2 workers on this runner's 4
-          # cores) was calibrated pre-cacheComponents
-          # (20260731-ci-parallelization-resources-build-concurrency.md:
-          # "2 workers on a 4-core CI runner ... blew assertion timeouts
-          # under contention", later judged fixed on today's 4-core/16GB
-          # runners — but that check predates cacheComponents' extra
-          # per-request Partial Prerendering render cost. Re-enabling
-          # cacheComponents (this branch) reintroduced the same
-          # contention signature: 8000/15000ms timeouts waiting for a
-          # post-mutation status/alert toast, a different spec each run,
-          # never the same failure twice — spread across
-          # dive-sites/refunds/import/role-permissions/add-diver/
-          # gear-fit-and-age.spec.ts, none of which this branch's app-code
-          # changes touch. Confirmed with a direct A/B (18 shared tests,
-          # repeated): 2 workers failed 6/18 then 1/18 across two runs, 1
-          # worker passed 18/18 both times — genuine, reproducible
-          # contention, not a one-off. Also checked whether this is
-          # *wasted* PPR overhead on the ~46 routes that opt out with
-          # `instant = false` (all of them fully dynamic, no static shell
-          # to gain from Partial Prerendering) — it isn't: single-request
-          # and 20-concurrent-request server timing, and isolated
-          # full-browser page loads, were all statistically the same or
-          # faster with cacheComponents on. The contention is specific to
-          # *concurrent* browser+server pairs, a scheduling characteristic
-          # of this Next 16 preview's PPR implementation under load, not
-          # a fixable inefficiency in these routes. Pinning to 1 worker
-          # per shard is the override e2e/servers.ts's own comment already
-          # anticipated ("If a future runner change reintroduces
-          # timeout-driven contention, E2E_WORKERS still overrides the
-          # default without editing code") — and doubling the shard count
-          # (4 → 8) recovers the wall-clock that pin costs: same total
-          # single-worker test-minutes, spread across twice the parallel
-          # runners, so the critical path is back to roughly what 4
-          # shards × 2 workers used to take.
-          E2E_WORKERS: "1"
+          pnpm exec playwright test "${spec_files[@]}" --shard=${{ matrix.shard }}/4
+        # e2e/servers.ts's default (cpus/2, 2 workers on this runner's 4
+        # cores) was pinned to E2E_WORKERS=1 with double the shards
+        # (20260731-ci-parallelization-resources-build-concurrency.md)
+        # after re-enabling cacheComponents reintroduced timeout-driven
+        # contention between concurrent browser+server pairs. That pin's
+        # own root cause turned out to be partly fixable: `src/lib/format.ts`
+        # rebuilt an `Intl.DateTimeFormat`/`Intl.NumberFormat`/
+        # `Intl.RelativeTimeFormat` instance on every call instead of
+        # reusing one, and every render touches at least one of them
+        # (`#305`). Memoizing those cut the same 18-test contended set's
+        # failure rate from 6/18 (repeatable) down to 0/18, 2/18, 1/18
+        # across three reruns on 2 workers — real headroom recovered, not
+        # fully back to clean. Reverting to the default worker count and
+        # halving the shard count back to 4 trades that residual ~5-10%
+        # per-test flake risk for half the runner minutes; `fail-fast:
+        # false` means a shard flaking here fails only its own shard, not
+        # the run, and E2E_WORKERS is still available as an env override
+        # on this step if contention resurfaces.
       - uses: actions/upload-artifact@v7
         if: failure()
         with:

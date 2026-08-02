@@ -1,10 +1,16 @@
-import { expect, signedInAsOwner, test } from "./fixtures";
+import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
 import { daysFromNow, e2eNow, signInAsOwner, signOut } from "./helpers";
 
 test.describe("staff", () => {
   signedInAsOwner();
 
   test("full loop: staff schedules, visitor books, staff sees the roster", async ({ page }) => {
+    // Chains several sequential navigations and status-toast waits — same
+    // aggregate-cost reasoning as visual.spec.ts's test.setTimeout and the
+    // sibling fix on this file's identity-confirmation test: legitimate
+    // per-step cost under 2-worker CI load can sum past the default 15s
+    // test budget even when no individual step is stuck.
+    test.setTimeout(30_000);
     const title = `Eagle Ray Run ${e2eNow().getTime()}`;
 
     // Staff puts a trip on the board.
@@ -135,6 +141,9 @@ test.describe("staff", () => {
   test("staff edits a trip and cancelling removes it from the public schedule", async ({
     page,
   }) => {
+    // Same aggregate sequential-navigation cost as this file's other heavy
+    // tests — see the comment on "full loop" above.
+    test.setTimeout(30_000);
     const title = `Drift Dive ${e2eNow().getTime()}`;
     const renamed = `${title} (PM)`;
 
@@ -188,6 +197,9 @@ test.describe("staff", () => {
 });
 
 test("a full boat lets a diver join the wait list without taking a seat", async ({ page }) => {
+  // Same aggregate sequential-navigation cost as this file's other heavy
+  // tests — see the comment on "full loop" above.
+  test.setTimeout(30_000);
   await page.goto("/shop/blue-mantis/schedule");
   // Seeded wreck trip ships full (10 of 10).
   await page
@@ -235,84 +247,96 @@ test("a full boat lets a diver join the wait list without taking a seat", async 
 // genuinely different name (a shared inbox — a spouse, a minor under a parent's
 // email) must not silently inherit that diver's certs/waiver. It is held with an
 // identity blocker until staff confirm it is the same person.
-test("a shared-inbox booking under a different name is held for staff identity confirmation", async ({
-  page,
-}) => {
-  const email = `shared-${e2eNow().getTime()}@example.com`;
-  const tripB = `H13 Shared Inbox ${e2eNow().getTime()}`;
+test.describe("as owner", () => {
+  signedInAs("owner");
 
-  // Staff put a second bookable trip on the board, then sign out.
-  await signInAsOwner(page);
-  await page.goto("/shop/blue-mantis/trips/new");
-  await page.getByLabel("Title").fill(tripB);
-  await page.getByLabel("Date").fill(daysFromNow(7));
-  await page.getByLabel("Departs").fill("19:00");
-  await page.getByLabel("Returns").fill("21:00");
-  await page.getByRole("button", { name: "Put it on the board" }).click();
-  await expect(page.getByRole("status")).toBeVisible();
-  // Waits for the sign-out redirect to land before booking as the public — a
-  // signed-in staffer opening a trip gets the manage view, not the booking form.
-  await signOut(page);
+  test("a shared-inbox booking under a different name is held for staff identity confirmation", async ({
+    page,
+  }) => {
+    // Signs in as staff (cached — see `signedInAs` above), creates a trip,
+    // signs out, books as a diver, signs back in as staff, and confirms
+    // identity — several full navigation cycles plus one genuine live
+    // re-authentication (the sign-out/sign-back-in) chained in one test.
+    // Same aggregate-cost reasoning as visual.spec.ts's `test.setTimeout`: a
+    // traced CI failure measured the total sequential cost at 19s against
+    // the default 15s test timeout, every individual step resolving
+    // successfully.
+    test.setTimeout(30_000);
+    const email = `shared-${e2eNow().getTime()}@example.com`;
+    const tripB = `H13 Shared Inbox ${e2eNow().getTime()}`;
 
-  // Nora books the seeded reef trip under her email.
-  await page.goto("/shop/blue-mantis/schedule");
-  await page
-    .locator("li")
-    .filter({ hasText: "Two-Tank Reef — Christ of the Abyss" })
-    .getByRole("link", { name: "Two-Tank Reef — Christ of the Abyss" })
-    .click();
-  // The booking form is controlled, so wait for hydration before typing.
-  await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
-  await page.getByLabel("Name", { exact: true }).fill("Nora Quinn");
-  await page.getByLabel("Email", { exact: true }).fill(email);
-  await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
-  await expect(page.getByRole("heading", { name: /You’re on the boat, Nora/ })).toBeVisible();
+    // Staff put a second bookable trip on the board, then sign out.
+    await page.goto("/shop/blue-mantis/trips/new");
+    await page.getByLabel("Title").fill(tripB);
+    await page.getByLabel("Date").fill(daysFromNow(7));
+    await page.getByLabel("Departs").fill("19:00");
+    await page.getByLabel("Returns").fill("21:00");
+    await page.getByRole("button", { name: "Put it on the board" }).click();
+    await expect(page.getByRole("status")).toBeVisible();
+    // Waits for the sign-out redirect to land before booking as the public — a
+    // signed-in staffer opening a trip gets the manage view, not the booking form.
+    await signOut(page);
 
-  // A different name on the same inbox books trip B — reuses Nora's record.
-  await page.goto("/shop/blue-mantis/schedule");
-  // Scoped to the trip list itself: a day with more than one departure also
-  // renders a same-titled <li> in the month calendar
-  // (src/components/ScheduleCalendar.tsx), and an unscoped locator can
-  // resolve to both.
-  await page
-    .getByRole("list", { name: "Upcoming trips" })
-    .locator("li")
-    .filter({ hasText: tripB })
-    .getByRole("link")
-    .click();
-  await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
-  await page.getByLabel("Name", { exact: true }).fill("Ben Quinn");
-  await page.getByLabel("Email", { exact: true }).fill(email);
-  await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
-  await expect(page.getByRole("heading", { name: /You’re on the boat/ })).toBeVisible();
+    // Nora books the seeded reef trip under her email.
+    await page.goto("/shop/blue-mantis/schedule");
+    await page
+      .locator("li")
+      .filter({ hasText: "Two-Tank Reef — Christ of the Abyss" })
+      .getByRole("link", { name: "Two-Tank Reef — Christ of the Abyss" })
+      .click();
+    // The booking form is controlled, so wait for hydration before typing.
+    await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+    await page.getByLabel("Name", { exact: true }).fill("Nora Quinn");
+    await page.getByLabel("Email", { exact: true }).fill(email);
+    await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
+    await expect(page.getByRole("heading", { name: /You’re on the boat, Nora/ })).toBeVisible();
 
-  // Staff open trip B's roster: the diver is held on identity, not ready.
-  await signInAsOwner(page);
-  await page.goto("/shop/blue-mantis/schedule/board");
-  await page
-    .locator("li")
-    .filter({ hasText: tripB })
-    // Exact match: an unpriced trip's card also carries a "Set a price for
-    // {title}, ..." link whose accessible name contains the trip title as a
-    // substring.
-    .getByRole("link", { name: tripB, exact: true })
-    .click();
-  await page
-    .getByRole("navigation", { name: "Trip" })
-    .getByRole("link", { name: "Guests" })
-    .click();
+    // A different name on the same inbox books trip B — reuses Nora's record.
+    await page.goto("/shop/blue-mantis/schedule");
+    // Scoped to the trip list itself: a day with more than one departure also
+    // renders a same-titled <li> in the month calendar
+    // (src/components/ScheduleCalendar.tsx), and an unscoped locator can
+    // resolve to both.
+    await page
+      .getByRole("list", { name: "Upcoming trips" })
+      .locator("li")
+      .filter({ hasText: tripB })
+      .getByRole("link")
+      .click();
+    await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+    await page.getByLabel("Name", { exact: true }).fill("Ben Quinn");
+    await page.getByLabel("Email", { exact: true }).fill(email);
+    await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
+    await expect(page.getByRole("heading", { name: /You’re on the boat/ })).toBeVisible();
 
-  const row = page.locator("li").filter({ hasText: "Nora Quinn" }).filter({ visible: true });
-  await expect(row).toContainText("Identity unconfirmed");
+    // Staff open trip B's roster: the diver is held on identity, not ready.
+    await signInAsOwner(page);
+    await page.goto("/shop/blue-mantis/schedule/board");
+    await page
+      .locator("li")
+      .filter({ hasText: tripB })
+      // Exact match: an unpriced trip's card also carries a "Set a price for
+      // {title}, ..." link whose accessible name contains the trip title as a
+      // substring.
+      .getByRole("link", { name: tripB, exact: true })
+      .click();
+    await page
+      .getByRole("navigation", { name: "Trip" })
+      .getByRole("link", { name: "Guests" })
+      .click();
 
-  // Confirming identity clears the blocker — two-tap InlineConfirm, not a
-  // native dialog: the first tap only arms it.
-  await row.getByRole("button", { name: /^Confirm this is/ }).click();
-  await row.getByRole("button", { name: "Yes, this is them" }).click();
-  await expect(page.getByRole("status")).toContainText("Identity confirmed");
-  await expect(
-    page.locator("li").filter({ hasText: "Nora Quinn" }).filter({ visible: true }),
-  ).not.toContainText("Identity unconfirmed");
+    const row = page.locator("li").filter({ hasText: "Nora Quinn" }).filter({ visible: true });
+    await expect(row).toContainText("Identity unconfirmed");
+
+    // Confirming identity clears the blocker — two-tap InlineConfirm, not a
+    // native dialog: the first tap only arms it.
+    await row.getByRole("button", { name: /^Confirm this is/ }).click();
+    await row.getByRole("button", { name: "Yes, this is them" }).click();
+    await expect(page.getByRole("status")).toContainText("Identity confirmed");
+    await expect(
+      page.locator("li").filter({ hasText: "Nora Quinn" }).filter({ visible: true }),
+    ).not.toContainText("Identity unconfirmed");
+  });
 });
 
 // CR-003: the confirmation panel is authorized by a signed `confirm`
