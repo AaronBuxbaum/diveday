@@ -2040,7 +2040,13 @@
     "emptyTitle": "Todos los barcos listos para embarcar",
     "emptyDescription": "Ningún próximo buceador está esperando un descargo, una tarjeta o un pago. Las nuevas reservas aparecerán aquí en cuanto necesiten una mano.",
     "viewSchedule": "Ver el calendario",
-    "truncated": "Mostrando las 40 salidas más próximas. Lo que quede más lejos está en el <link>calendario</link>."
+    "truncated": "Mostrando las 40 salidas más próximas. Lo que quede más lejos está en el <link>calendario</link>.",
+    "pagination": {
+      "label": "Páginas de bloqueos",
+      "previous": "Anterior",
+      "next": "Siguiente",
+      "position": "Página {page} de {pageCount} · {total} salidas"
+    }
   },
   "checkIn": {
     "eyebrow": "Modo mostrador",

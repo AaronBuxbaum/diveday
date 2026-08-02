@@ -2040,7 +2040,13 @@
     "emptyTitle": "Every boat is boarding-ready",
     "emptyDescription": "No upcoming diver is waiting on a waiver, a card, or a payment. New bookings show up here the moment something needs a hand.",
     "viewSchedule": "View the schedule",
-    "truncated": "Showing the nearest 40 departures. Anything further out lives on the <link>schedule</link>."
+    "truncated": "Showing the nearest 40 departures. Anything further out lives on the <link>schedule</link>.",
+    "pagination": {
+      "label": "Blocker pages",
+      "previous": "Previous",
+      "next": "Next",
+      "position": "Page {page} of {pageCount} · {total} departures"
+    }
   },
   "checkIn": {
     "eyebrow": "Counter mode",

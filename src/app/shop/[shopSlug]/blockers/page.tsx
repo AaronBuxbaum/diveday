@@ -136,14 +136,34 @@ function TripGroup({
 }
 
 /**
+ * Trip groups per page. `getBlockerQueue` already bounds its own work to the
+ * nearest 40 upcoming departures (`MAX_TRIPS`) — this bounds what renders,
+ * which is the separate problem a busy shop actually hits: 26 departures with
+ * blocked divers on the demo shop alone rendered a ~10,700px page (one flat
+ * unbroken scroll, no baseline possible for it — the same shape the orders
+ * index was found in before it got a pager). `annotateAlsoOn` still runs over
+ * every inspected trip before this slices the result, so a diver blocked on
+ * both trip 3 and trip 15 still reads "also blocked on" the other correctly
+ * regardless of which page either one lands on.
+ */
+const BLOCKERS_PAGE_SIZE = 10;
+
+/**
  * The blocker queue: every diver who can't board yet, across all upcoming
  * departures, each with the one tap that clears them. Today answers "what needs
  * me before today's boats"; this answers "who isn't ready on any boat" so the
  * front desk can work the whole week ahead in one place.
  */
-export default async function BlockersPage({ params }: { params: Promise<{ shopSlug: string }> }) {
+export default async function BlockersPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ shopSlug: string }>;
+  searchParams: Promise<{ page?: string }>;
+}) {
   const session = await requireStaffSession();
   const { shopSlug } = await params;
+  const { page: pageParam } = await searchParams;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   // Staff read dates in the language their own device asks for, same
@@ -154,6 +174,20 @@ export default async function BlockersPage({ params }: { params: Promise<{ shopS
   const t = staffTranslator(locale);
   const { trips, truncated } = await getBlockerQueue(db, shop.id, shopSlug, nowDate(), t);
   const blocked = distinctBlockedDivers(trips);
+
+  const pageCount = Math.max(1, Math.ceil(trips.length / BLOCKERS_PAGE_SIZE));
+  // A hand-typed `?page=0`, `?page=-3`, or non-numeric value reads as page 1;
+  // anything past the last page clamps to it rather than rendering an empty
+  // list while blockers still exist elsewhere in the queue.
+  const requestedPage = Number.parseInt(pageParam ?? "", 10);
+  const page = Math.min(pageCount, Math.max(1, Number.isFinite(requestedPage) ? requestedPage : 1));
+  const visibleTrips = trips.slice((page - 1) * BLOCKERS_PAGE_SIZE, page * BLOCKERS_PAGE_SIZE);
+  const pageHref = (target: number) => {
+    const query = new URLSearchParams();
+    if (target > 1) query.set("page", String(target));
+    const search = query.toString();
+    return search ? `/shop/${shopSlug}/blockers?${search}` : `/shop/${shopSlug}/blockers`;
+  };
 
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
@@ -190,7 +224,7 @@ export default async function BlockersPage({ params }: { params: Promise<{ shopS
         </section>
       ) : (
         <div className="flex flex-col gap-5">
-          {trips.map((trip) => (
+          {visibleTrips.map((trip) => (
             <TripGroup
               key={trip.tripId}
               trip={trip}
@@ -200,6 +234,38 @@ export default async function BlockersPage({ params }: { params: Promise<{ shopS
               t={t}
             />
           ))}
+          {/* Only when there is somewhere to go — a shop with one screenful of
+              blocked departures should not be told it is on "page 1 of 1". */}
+          {pageCount > 1 ? (
+            <nav
+              aria-label={t("blockers.pagination.label")}
+              className="flex items-center justify-between gap-3"
+            >
+              {page > 1 ? (
+                <Link
+                  href={pageHref(page - 1)}
+                  className={buttonClass({ variant: "secondary", size: "sm" })}
+                >
+                  {t("blockers.pagination.previous")}
+                </Link>
+              ) : (
+                <span />
+              )}
+              <p className="text-sm text-muted">
+                {t("blockers.pagination.position", { page, pageCount, total: trips.length })}
+              </p>
+              {page < pageCount ? (
+                <Link
+                  href={pageHref(page + 1)}
+                  className={buttonClass({ variant: "secondary", size: "sm" })}
+                >
+                  {t("blockers.pagination.next")}
+                </Link>
+              ) : (
+                <span />
+              )}
+            </nav>
+          ) : null}
           {truncated ? (
             <p className="text-center text-sm text-muted">
               {t.rich("blockers.truncated", {

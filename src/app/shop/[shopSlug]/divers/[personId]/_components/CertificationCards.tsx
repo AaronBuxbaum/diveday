@@ -68,10 +68,15 @@ export async function CertificationCards({
           <summary className="flex min-h-11 cursor-pointer items-center rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground">
             {t("divers.certifications.addCard")}
           </summary>
+          {/* No `encType`: a function `action` is a server action, not a
+              native form post — React builds the `FormData` (files intact)
+              and ships it over its own transport, so the browser never reads
+              this attribute. Setting it anyway just trips a dev warning
+              ("Cannot specify a encType or method for a form that specifies a
+              function as the action"). */}
           <FieldGrid
             as="form"
             action={addCertificationAction.bind(null, shopSlug, personId)}
-            encType="multipart/form-data"
             columns={2}
             className="mt-3 gap-y-3 rounded-lg border border-border bg-surface p-4 sm:w-[32rem]"
           >
