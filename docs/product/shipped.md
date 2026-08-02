@@ -20,7 +20,7 @@ evaluation frame is [personas.md](personas.md), and what's still open is in
   reported `default_currency` is kept but advisory, and the settings page warns when the two
   disagree. Zero-decimal currencies like JPY are handled at display time
   ([shop-currency](../architecture/decisions/20260731-shop-currency.md)).
-- **Notifications go out in the language the diver reads** — outbound email localizes
+- **Notifications go out in the language the diver reads** — outbound email and SMS localize
   ([notification-locale](../architecture/decisions/20260731-notification-locale.md)), and
   `people.locale` records a diver's own language when *they* made the request (a public booking as
   lead booker, or any action on their own waiver/ready/recap link), outranking the shop default. A
@@ -441,12 +441,12 @@ archived.
 - **Automated marine outlook** — a 10-day Open-Meteo water-temp/sea-state fallback until the crew
   publishes its own; visibility stays crew-entered
   ([automated-marine-outlook](../architecture/decisions/20260718-automated-marine-outlook.md)).
-- **Notifications** — booking confirmation, waiver link, wait-list invite, and the scheduled
-  7-day/24-hour pre-trip reminders through one `notify()` email seam; degrades to `not_configured`
-  until its env is set
-  ([scheduled-reminder-cadence](../architecture/decisions/20260721-scheduled-reminder-cadence.md)).
-  An SMS/WhatsApp channel was built and later removed entirely, unused
-  ([remove-sms-whatsapp-channel](../architecture/decisions/20260802-remove-sms-whatsapp-channel.md)).
+- **Notifications** — booking confirmation, waiver link, and wait-list invite through one `notify()`
+  (email) seam; a Twilio `notifySms()` seam adds SMS, used today by the scheduled 7-day/24-hour
+  pre-trip reminders (the WhatsApp channel exists at the seam but no flow requests it yet). All
+  degrade to `not_configured` until their env is set
+  ([sms-whatsapp-notifications](../architecture/decisions/20260721-sms-whatsapp-notifications.md),
+  [scheduled-reminder-cadence](../architecture/decisions/20260721-scheduled-reminder-cadence.md)).
 - **Full-shop data export** — Settings → Data export downloads one ZIP of documented CSVs (leading
   with an import-ready `contacts.csv`) plus a README manifest; the "leave anytime" half of the
   data-portability wedge ([full-shop-export](../architecture/decisions/20260722-full-shop-export.md)).

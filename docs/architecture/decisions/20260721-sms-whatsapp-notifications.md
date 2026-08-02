@@ -1,6 +1,6 @@
 # 20260721-sms-whatsapp-notifications — SMS and WhatsApp as notification channels
 
-- **Status:** Superseded by 20260802-remove-sms-whatsapp-channel
+- **Status:** Accepted
 - **Date:** 2026-07-21
 
 ## Context

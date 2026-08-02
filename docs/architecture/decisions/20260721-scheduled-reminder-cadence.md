@@ -25,11 +25,12 @@ cadence rules and the missing scheduling mechanism.
   `notification_deliveries` unique index makes each cadence send at most once with no new dedup
   machinery. Reminders route through the same `notify()` seam and delivery recording as every other
   email.
-- **Sending is idempotent.** `sendDueReminders(db, { now })` (`src/db/reminders.ts`) scans active
-  bookings on scheduled trips inside the widest cadence lead, computes the due reminder per booking
-  from what has already been delivered, and sends it by email, the tracked channel. Re-running only
-  sends what is newly due. (An earlier revision also sent a courtesy SMS; that channel was removed
-  entirely — [20260802-remove-sms-whatsapp-channel](20260802-remove-sms-whatsapp-channel.md).)
+- **Sending is idempotent and multi-channel.** `sendDueReminders(db, { now })` (`src/db/reminders.ts`)
+  scans active bookings on scheduled trips inside the widest cadence lead, computes the due reminder
+  per booking from what has already been delivered, and sends it — email as the tracked channel, a
+  courtesy SMS on top when the diver has a textable phone
+  ([20260721-sms-whatsapp-notifications](20260721-sms-whatsapp-notifications.md)), or SMS as the
+  tracked channel for a phone-only diver. Re-running only sends what is newly due.
 - **An external scheduler drives the clock; the app still holds no timer.** `GET /api/cron/reminders`
   is the entry point, guarded by a required `CRON_SECRET` bearer token (503 when unset, so a
   deployment that forgot the secret can't be triggered). Vercel Cron (`vercel.json`) calls it once a
@@ -56,7 +57,7 @@ cadence rules and the missing scheduling mechanism.
   scheduled-cadence half of H-09; the manual one-tap sends remain for anything off-cadence.
 - The reminder scan is safe to over-call: the delivery-row dedup means an extra cron tick (or a
   manual hit of the endpoint) never double-sends.
-- With no email provider configured every reminder records `not_configured` and surfaces on
+- With no email or SMS provider configured every reminder records `not_configured` and surfaces on
   the staff notification dashboard, exactly like every other channel — the feature degrades instead
   of failing.
 - The repo now depends on an external scheduler for reminders to fire; that dependency is explicit in

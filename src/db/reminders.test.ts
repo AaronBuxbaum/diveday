@@ -2,6 +2,7 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import type { Notification, NotificationDelivery, NotificationProvider } from "@/lib/notifications";
+import type { SmsDelivery, SmsMessage, SmsProvider } from "@/lib/notifications/sms";
 import { seededShopContext } from "@/test/db";
 import { createBookingParty } from "./bookings";
 import { sendDueReminders } from "./reminders";
@@ -11,7 +12,7 @@ import { upcomingTripsWithCounts, updateTripConditions } from "./trips";
 
 // The seeded shop already has bookings on several future trips, so
 // sendDueReminders (a global cron) touches more than the one under test. Every
-// assertion here filters to this test's booking or delivery rows.
+// assertion here filters to this test's booking, phone, or delivery rows.
 
 function fakeEmail(result: NotificationDelivery = { status: "sent", providerMessageId: "em_1" }) {
   const sent: Notification[] = [];
@@ -23,6 +24,19 @@ function fakeEmail(result: NotificationDelivery = { status: "sent", providerMess
   };
   return { sent, provider };
 }
+
+function fakeSms(result: SmsDelivery = { status: "sent", providerMessageId: "SM_1" }) {
+  const sent: SmsMessage[] = [];
+  const provider: SmsProvider = {
+    async send(message) {
+      sent.push(message);
+      return result;
+    },
+  };
+  return { sent, provider };
+}
+
+const PHONE = "+13055559999";
 
 async function reminderContext() {
   const { db, shop } = await seededShopContext();
@@ -63,9 +77,11 @@ describe("sendDueReminders", () => {
   it("emails the due 7-day reminder, records it, and is a no-op on a second run", async () => {
     const { db, bookingId, inWeekBucket } = await reminderContext();
     const email = fakeEmail();
+    const sms = fakeSms();
     const opts = {
       now: inWeekBucket,
       emailProvider: email.provider,
+      smsProvider: sms.provider,
       appOrigin: null,
     };
 
@@ -88,10 +104,43 @@ describe("sendDueReminders", () => {
     await sendDueReminders(db, {
       now: new Date(reef.startsAt.getTime() - 300 * 60 * 60 * 1000),
       emailProvider: email.provider,
+      smsProvider: fakeSms().provider,
       appOrigin: null,
     });
     expect(emailsFor(email, bookingId)).toHaveLength(0);
     expect(await rowsFor(db, bookingId)).toHaveLength(0);
+  });
+
+  it("adds a courtesy SMS when the diver has a textable phone and email sent", async () => {
+    const { db, personId, inWeekBucket } = await reminderContext();
+    await db.update(people).set({ phone: PHONE }).where(eq(people.id, personId));
+    const sms = fakeSms();
+    await sendDueReminders(db, {
+      now: inWeekBucket,
+      emailProvider: fakeEmail().provider,
+      smsProvider: sms.provider,
+      appOrigin: null,
+    });
+    const mine = sms.sent.filter((m) => m.to === PHONE);
+    expect(mine).toHaveLength(1);
+    expect(mine[0].channel).toBe("sms");
+  });
+
+  it("tracks a phone-only diver from the SMS result, not email", async () => {
+    const { db, bookingId, personId, inWeekBucket } = await reminderContext();
+    await db.update(people).set({ email: null, phone: PHONE }).where(eq(people.id, personId));
+    const email = fakeEmail();
+    const sms = fakeSms({ status: "sent", providerMessageId: "SM_only" });
+
+    await sendDueReminders(db, {
+      now: inWeekBucket,
+      emailProvider: email.provider,
+      smsProvider: sms.provider,
+      appOrigin: null,
+    });
+    expect(emailsFor(email, bookingId)).toHaveLength(0);
+    const rows = await rowsFor(db, bookingId);
+    expect(rows[0]).toMatchObject({ status: "sent", providerMessageId: "SM_only" });
   });
 
   it("carries the shop's dock call time and readiness fields into the reminder", async () => {
@@ -101,6 +150,7 @@ describe("sendDueReminders", () => {
     await sendDueReminders(db, {
       now: inWeekBucket,
       emailProvider: email.provider,
+      smsProvider: fakeSms().provider,
       appOrigin: null,
     });
     const [reminder] = emailsFor(email, bookingId);
@@ -128,6 +178,7 @@ describe("sendDueReminders", () => {
     await sendDueReminders(db, {
       now: dayNow,
       emailProvider: email.provider,
+      smsProvider: fakeSms().provider,
       appOrigin: null,
     });
 
@@ -148,6 +199,7 @@ describe("sendDueReminders", () => {
     await sendDueReminders(db, {
       now: inWeekBucket,
       emailProvider: email.provider,
+      smsProvider: fakeSms().provider,
       appOrigin: null,
     });
     const [reminder] = emailsFor(email, bookingId);
@@ -161,6 +213,7 @@ describe("sendDueReminders", () => {
     await sendDueReminders(db, {
       now: inWeekBucket,
       emailProvider: fakeEmail({ status: "not_configured" }).provider,
+      smsProvider: fakeSms({ status: "not_configured" }).provider,
       appOrigin: null,
     });
     const rows = await rowsFor(db, bookingId);
@@ -172,11 +225,13 @@ describe("sendDueReminders locale (docs ADR 20260731-per-person-notification-loc
   it("uses the shop's locale when the diver has never told us what they read", async () => {
     const { db, shop, bookingId, personId, inWeekBucket } = await reminderContext();
     await db.update(shops).set({ defaultLocale: "es-ES" }).where(eq(shops.id, shop.id));
-    await db.update(people).set({ locale: null }).where(eq(people.id, personId));
+    await db.update(people).set({ phone: PHONE, locale: null }).where(eq(people.id, personId));
     const email = fakeEmail();
+    const sms = fakeSms();
     await sendDueReminders(db, {
       now: inWeekBucket,
       emailProvider: email.provider,
+      smsProvider: sms.provider,
       appOrigin: null,
     });
     expect(emailsFor(email, bookingId)[0]).toMatchObject({ locale: "es-ES" });
@@ -188,14 +243,34 @@ describe("sendDueReminders locale (docs ADR 20260731-per-person-notification-loc
     // the shop.
     const { db, shop, bookingId, personId, inWeekBucket } = await reminderContext();
     await db.update(shops).set({ defaultLocale: "es-ES" }).where(eq(shops.id, shop.id));
-    await db.update(people).set({ locale: "en-US" }).where(eq(people.id, personId));
+    await db.update(people).set({ phone: PHONE, locale: "en-US" }).where(eq(people.id, personId));
     const email = fakeEmail();
+    const sms = fakeSms();
     await sendDueReminders(db, {
       now: inWeekBucket,
       emailProvider: email.provider,
+      smsProvider: sms.provider,
       appOrigin: null,
     });
     expect(emailsFor(email, bookingId)[0]).toMatchObject({ locale: "en-US" });
+  });
+
+  it("keeps both channels in one language — the SMS never diverges from the email", async () => {
+    const { db, shop, personId, inWeekBucket } = await reminderContext();
+    await db.update(shops).set({ defaultLocale: "en-US" }).where(eq(shops.id, shop.id));
+    await db.update(people).set({ phone: PHONE, locale: "es-ES" }).where(eq(people.id, personId));
+    const sms = fakeSms();
+    await sendDueReminders(db, {
+      now: inWeekBucket,
+      emailProvider: fakeEmail().provider,
+      smsProvider: sms.provider,
+      appOrigin: null,
+    });
+    const mine = sms.sent.filter((m) => m.to === PHONE);
+    expect(mine).toHaveLength(1);
+    // Spanish body, from an English shop, because Spanish is what she reads.
+    expect(mine[0].body).toContain("Preséntate en el muelle");
+    expect(mine[0].body).not.toContain("Please be at the dock");
   });
 
   it("ignores a stored value DiveDay carries no bundle for", async () => {
@@ -206,6 +281,7 @@ describe("sendDueReminders locale (docs ADR 20260731-per-person-notification-loc
     await sendDueReminders(db, {
       now: inWeekBucket,
       emailProvider: email.provider,
+      smsProvider: fakeSms().provider,
       appOrigin: null,
     });
     expect(emailsFor(email, bookingId)[0]).toMatchObject({ locale: "es-ES" });

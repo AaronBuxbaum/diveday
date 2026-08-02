@@ -12,8 +12,8 @@
 import { buttonClass } from "@/components/ui/button";
 
 /**
- * A backstop for the waiver-signing page — the surface a diver opens from an
- * email link the night before a trip. A render error here should offer one
+ * A backstop for the waiver-signing page — the surface a diver opens from a
+ * text message the night before a trip. A render error here should offer one
  * clear "Try again," not a raw stack trace on a page they can't get back to
  * easily.
  */

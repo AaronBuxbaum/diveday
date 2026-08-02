@@ -44,7 +44,7 @@ The recap must not introduce a second scheduler or a new dedup mechanism.
 ## Consequences
 
 - Divers get an automatic, shareable recap that drives rebooking and referrals, with no new scheduler,
-  dedup table, or dependency. With no email provider (or no app origin) configured, every recap
+  dedup table, or dependency. With no email/SMS provider (or no app origin) configured, every recap
   records `not_configured` and surfaces on the staff dashboard, exactly like every other channel.
 - The recap page shows what the shop already knows (sites, conditions, dive count); a crew-authored
   post-trip shout-out is intentionally out of scope for this slice — it needs a trip column and a staff

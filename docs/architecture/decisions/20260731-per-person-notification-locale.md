@@ -80,7 +80,7 @@ overwrites an earlier one. A null never overwrites anything.
 `src/lib/notifications/index.ts`: the person's value if DiveDay still carries a bundle for it,
 otherwise the shop's. Every notification *addressed to a diver* passes the recipient's locale —
 booking confirmation (fresh, rescheduled, and staff-resent), waiver request, wait-list invite,
-last-minute deal, and both trip-reminder cadences. Notifications
+last-minute deal, both trip-reminder cadences and the SMS that accompanies them. Notifications
 addressed to **staff or to the shop's own inbox** — the staff invite, the course-lead notification,
 and every account-lifecycle email (`welcome`, `email_verification`, `password_reset_request`,
 `password_changed`) — keep the shop's locale and never read `people.locale`, even where their query

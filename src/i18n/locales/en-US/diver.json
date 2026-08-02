@@ -1481,6 +1481,14 @@
       "completeText": "Complete it here",
       "completeLink": "Complete your waiver",
       "expiry": "This private link expires {expiresAt}."
+    },
+    "sms": {
+      "whenWeek": "this week",
+      "whenDay": "tomorrow",
+      "body": "{shopName}: {tripTitle} sails {when} — {date}, {time}. Please be at the dock {minutes} min early.",
+      "contact": "Questions? Text us at {phone}.",
+      "medicalReviewNote": "Check if a medical answer needs a doctor's sign-off",
+      "recap": "{shopName}: thanks for diving {tripTitle}! Your recap: {recapUrl}"
     }
   }
 }
