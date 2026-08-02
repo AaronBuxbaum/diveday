@@ -103,12 +103,15 @@ describe("buildCalendarWeeks", () => {
 
 describe("weekStartsOn", () => {
   it("falls back to Sunday where the runtime's ICU build has no week info", () => {
-    // This suite's Node build has no Intl.Locale.prototype.getWeekInfo yet
-    // (the feature `weekStartsOn` is written to degrade gracefully around);
-    // asserting it here pins down the fallback this test file exercises.
-    expect(typeof Intl.Locale.prototype.getWeekInfo).toBe("undefined");
-    expect(weekStartsOn("es-ES")).toBe(0);
-    expect(weekStartsOn("en-US")).toBe(0);
+    const proto = Intl.Locale.prototype as { getWeekInfo?: () => Intl.WeekInfo };
+    const original = proto.getWeekInfo;
+    delete proto.getWeekInfo;
+    try {
+      expect(weekStartsOn("es-ES")).toBe(0);
+      expect(weekStartsOn("en-US")).toBe(0);
+    } finally {
+      proto.getWeekInfo = original;
+    }
   });
 
   it("converts ISO 8601 firstDay (1 = Monday … 7 = Sunday) to 0-Sunday indexing", () => {

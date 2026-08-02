@@ -1,9 +1,10 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "21ea336d-c5a1-422c-94a6-acbac9deb2bf",
+  "id": "78deeb09-5fad-45ec-9b88-65c7cb88b6dc",
   "prevIds": [
-    "953297bd-0311-4f38-b1b2-634403ffd9b9"
+    "bda9a003-1604-4d89-a7f4-b291a4c9e0a0",
+    "fd4394a6-b99b-4db2-a8da-3976a90e91e5"
   ],
   "ddl": [
     {
@@ -610,6 +611,12 @@
     {
       "isRlsEnabled": false,
       "name": "shop_stripe_accounts",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "shop_whatsapp_accounts",
       "entityType": "tables",
       "schema": "public"
     },
@@ -6291,6 +6298,149 @@
       "entityType": "columns",
       "schema": "public",
       "table": "shop_stripe_accounts"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "shop_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "shop_whatsapp_accounts"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "phone_number_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "shop_whatsapp_accounts"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "display_phone_number",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "shop_whatsapp_accounts"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "waba_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "shop_whatsapp_accounts"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "access_token_sealed",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "shop_whatsapp_accounts"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "registration_pin_sealed",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "shop_whatsapp_accounts"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "template_name",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "shop_whatsapp_accounts"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "template_language",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "shop_whatsapp_accounts"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "connected_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "shop_whatsapp_accounts"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "verified_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "shop_whatsapp_accounts"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "shop_whatsapp_accounts"
     },
     {
       "type": "uuid",
@@ -13227,6 +13377,23 @@
       ],
       "onUpdate": "NO ACTION",
       "onDelete": "NO ACTION",
+      "name": "shop_whatsapp_accounts_shop_id_shops_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "shop_whatsapp_accounts"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "shop_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "shops",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
       "name": "specialty_certifications_shop_id_shops_id_fkey",
       "entityType": "fks",
       "schema": "public",
@@ -14264,6 +14431,16 @@
       "name": "shop_stripe_accounts_pkey",
       "schema": "public",
       "table": "shop_stripe_accounts",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "shop_id"
+      ],
+      "nameExplicit": false,
+      "name": "shop_whatsapp_accounts_pkey",
+      "schema": "public",
+      "table": "shop_whatsapp_accounts",
       "entityType": "pks"
     },
     {
