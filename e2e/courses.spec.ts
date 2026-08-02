@@ -131,6 +131,11 @@ test.describe("staff", () => {
   test("staff edit a seeded course page, toggle it live, and a signed-out diver reads it", async ({
     page,
   }) => {
+    // Chains several sequential navigations and status-toast waits — same
+    // aggregate-cost reasoning as visual.spec.ts's test.setTimeout:
+    // legitimate per-step cost under 2-worker CI load can sum past the
+    // default 15s test budget even when no individual step is stuck.
+    test.setTimeout(30_000);
     await page.goto("/shop/blue-mantis/courses");
     // Every course ships pre-filled and visible — there is no catalog to import
     // from. Open Rescue Diver straight from the roster. Match the title exactly:

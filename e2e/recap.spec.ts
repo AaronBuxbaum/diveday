@@ -1,8 +1,8 @@
 import sharp from "sharp";
 import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed";
 import { signRecapToken } from "../src/lib/recap-links";
-import { expect, makeActivitySafe, test } from "./fixtures";
-import { signInAsOwner, signOut } from "./helpers";
+import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
+import { signOut } from "./helpers";
 
 // The recap page (`/recap/[token]`) is a public, signed-token diver surface, the
 // same shape as the readiness page: it must fail closed on a bad or forged
@@ -35,42 +35,45 @@ test("an oversize recap photo is rejected client-side before it ever reaches the
   await expect(photoInput).toHaveValue("");
 });
 
-test("the external review ask only appears once, right after a strong on-page rating (task 57)", async ({
-  page,
-}) => {
-  await signInAsOwner(page);
-  await page.goto("/shop/blue-mantis/settings");
-  await page.getByLabel("Review link").fill("https://g.page/r/blue-mantis/review");
-  await page.getByRole("button", { name: "Save review link" }).click();
-  await expect(page.getByText("Review link saved.")).toBeVisible();
-  await signOut(page);
+test.describe("as owner", () => {
+  signedInAsOwner();
 
-  // A review link is configured, but nothing was just submitted — no second
-  // ask stacked underneath the on-page form.
-  await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
-  await expect(page.getByRole("heading", { name: /Nice diving/ })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Leave a public review" })).toHaveCount(0);
+  test("the external review ask only appears once, right after a strong on-page rating (task 57)", async ({
+    page,
+  }) => {
+    await page.goto("/shop/blue-mantis/settings");
+    await page.getByLabel("Review link").fill("https://g.page/r/blue-mantis/review");
+    await page.getByRole("button", { name: "Save review link" }).click();
+    await expect(page.getByText("Review link saved.")).toBeVisible();
+    await signOut(page);
 
-  // A 3-star rating isn't "strong" — still no merged ask.
-  await page.getByRole("radio", { name: "3 out of 5 stars" }).check();
-  await page.getByRole("button", { name: "Leave my review" }).click();
-  await expect(page.getByText("Thanks — your rating is up.")).toBeVisible();
-  await expect(page.getByRole("link", { name: "Leave a public review" })).toHaveCount(0);
+    // A review link is configured, but nothing was just submitted — no second
+    // ask stacked underneath the on-page form.
+    await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
+    await expect(page.getByRole("heading", { name: /Nice diving/ })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Leave a public review" })).toHaveCount(0);
 
-  // A 5-star rating earns the one merged ask, folded into the success state.
-  await page.getByRole("radio", { name: "5 out of 5 stars" }).check();
-  await page.getByRole("button", { name: "Leave my review" }).click();
-  await expect(page.getByText("Thanks — your rating is up.")).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Share it on Google too" })).toBeVisible();
-  const reviewLink = page.getByRole("link", { name: "Leave a public review" });
-  await expect(reviewLink).toBeVisible();
-  await expect(reviewLink).toHaveAttribute("href", "https://g.page/r/blue-mantis/review");
-  await expect(reviewLink).toHaveAttribute("target", "_blank");
+    // A 3-star rating isn't "strong" — still no merged ask.
+    await page.getByRole("radio", { name: "3 out of 5 stars" }).check();
+    await page.getByRole("button", { name: "Leave my review" }).click();
+    await expect(page.getByText("Thanks — your rating is up.")).toBeVisible();
+    await expect(page.getByRole("link", { name: "Leave a public review" })).toHaveCount(0);
 
-  // Reloading the page (nothing "just submitted" on this request) drops the
-  // ask again — it is a one-time follow-up, not a durable section.
-  await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
-  await expect(page.getByRole("link", { name: "Leave a public review" })).toHaveCount(0);
+    // A 5-star rating earns the one merged ask, folded into the success state.
+    await page.getByRole("radio", { name: "5 out of 5 stars" }).check();
+    await page.getByRole("button", { name: "Leave my review" }).click();
+    await expect(page.getByText("Thanks — your rating is up.")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Share it on Google too" })).toBeVisible();
+    const reviewLink = page.getByRole("link", { name: "Leave a public review" });
+    await expect(reviewLink).toBeVisible();
+    await expect(reviewLink).toHaveAttribute("href", "https://g.page/r/blue-mantis/review");
+    await expect(reviewLink).toHaveAttribute("target", "_blank");
+
+    // Reloading the page (nothing "just submitted" on this request) drops the
+    // ask again — it is a one-time follow-up, not a durable section.
+    await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
+    await expect(page.getByRole("link", { name: "Leave a public review" })).toHaveCount(0);
+  });
 });
 
 test("the recap link itself has a share affordance, and its unfurl card reveals nothing for a bad token (task 59)", async ({
@@ -99,6 +102,7 @@ test("comment moderation is disclosed before submitting, not discovered only aft
 
 test("a booking cancelled after the recap page loaded gets an honest notice, not a lie about a bad rating or a bad file (task 56)", async ({
   page,
+  staffStorageState,
 }) => {
   // The diver's page loads while the booking is still active — the review
   // and photo forms render normally.
@@ -108,10 +112,12 @@ test("a booking cancelled after the recap page loaded gets an honest notice, not
   // Staff cancel the booking from a second, separately-authenticated
   // context — the diver's already-open tab (and its bound server actions)
   // has no idea yet, the exact race the code comments call out.
-  const staffContext = await page.context().browser()?.newContext();
+  const staffContext = await page
+    .context()
+    .browser()
+    ?.newContext({ storageState: await staffStorageState("owner") });
   if (!staffContext) throw new Error("could not open a second browser context");
   const staffPage = makeActivitySafe(await staffContext.newPage());
-  await signInAsOwner(staffPage);
   // The seed schedules several other trips under this same title (task 56's
   // fixture isn't the only "Two-Tank Reef — Molasses & French" departure),
   // so finding it by title on the schedule board is ambiguous. Priya

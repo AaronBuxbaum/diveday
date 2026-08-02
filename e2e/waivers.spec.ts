@@ -1,32 +1,14 @@
-import { DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
-import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
-import { signInAs } from "./helpers";
+import { expect, makeActivitySafe, signedInAs, signedInAsOwner, test } from "./fixtures";
 
 signedInAsOwner();
 
 test.describe("signed out", () => {
   // The file-wide owner session (signedInAsOwner() above) would otherwise
-  // bounce /sign-in straight to the shop before the captain can sign in
-  // (auth.config.ts's authorized() callback redirects an already-staff
-  // session away from /sign-in) — same pattern as course-paths.spec.ts and
-  // schedule-builder.spec.ts's captain tests.
+  // bounce /sign-in straight to the shop, so only the genuinely-anonymous
+  // case lives here now — the captain cases below get their own real
+  // session via `signedInAs("captain")` instead of overriding this one to
+  // empty and then signing in live.
   test.use({ storageState: { cookies: [], origins: [] } });
-
-  test("staff outside owner/manager can't reach the waiver editor", async ({ page }) => {
-    // Editing the waiver (and the medical jurisdiction it presents) is
-    // owner/manager work; a captain — signed in fresh, overriding the
-    // file-wide owner session — is bounced to Today with an explanation
-    // rather than teleported there silently (task 82, UX persona 11 "Kai").
-    await signInAs(page, DEV_STAFF_LOGINS.captain);
-    await page.goto("/shop/blue-mantis/waivers");
-    // Not a URL assertion: FlashParams strips `?notice=waivers_not_authorized`
-    // via history.replaceState shortly after mount — the rendered banner is
-    // the stable signal.
-    await expect(page).toHaveURL(/\/shop\/blue-mantis(\?.*)?$/);
-    await expect(
-      page.getByText("Editing the waiver is limited to owners and managers."),
-    ).toBeVisible();
-  });
 
   // Task 155's mandated security-reviewer pass found the Signatures tab —
   // staff read access to signed, medical-adjacent evidence — had no direct
@@ -38,11 +20,28 @@ test.describe("signed out", () => {
     await page.goto("/shop/blue-mantis/waivers/signatures");
     await expect(page).toHaveURL(/\/sign-in/);
   });
+});
+
+test.describe("as captain", () => {
+  signedInAs("captain");
+
+  test("staff outside owner/manager can't reach the waiver editor", async ({ page }) => {
+    // Editing the waiver (and the medical jurisdiction it presents) is
+    // owner/manager work; a captain is bounced to Today with an explanation
+    // rather than teleported there silently (task 82, UX persona 11 "Kai").
+    await page.goto("/shop/blue-mantis/waivers");
+    // Not a URL assertion: FlashParams strips `?notice=waivers_not_authorized`
+    // via history.replaceState shortly after mount — the rendered banner is
+    // the stable signal.
+    await expect(page).toHaveURL(/\/shop\/blue-mantis(\?.*)?$/);
+    await expect(
+      page.getByText("Editing the waiver is limited to owners and managers."),
+    ).toBeVisible();
+  });
 
   test("staff outside owner/manager can't reach the signed-waiver audit either", async ({
     page,
   }) => {
-    await signInAs(page, DEV_STAFF_LOGINS.captain);
     await page.goto("/shop/blue-mantis/waivers/signatures");
     await expect(page).toHaveURL(/\/shop\/blue-mantis(\?.*)?$/);
     await expect(
@@ -56,6 +55,11 @@ test.describe("signed out", () => {
 test("one waiver button sends a resumable link and a medical yes surfaces follow-up", async ({
   page,
 }) => {
+  // Chains several sequential navigations and status-toast waits — same
+  // aggregate-cost reasoning as visual.spec.ts's test.setTimeout: legitimate
+  // per-step cost under 2-worker CI load can sum past the default 15s test
+  // budget even when no individual step is stuck.
+  test.setTimeout(30_000);
   await page.goto("/shop/blue-mantis/schedule/board");
   await page
     .locator("li")

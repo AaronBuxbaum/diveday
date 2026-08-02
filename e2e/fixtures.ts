@@ -1,8 +1,11 @@
 import path from "node:path";
 import type { Page } from "@playwright/test";
 import { test as base, expect } from "@playwright/test";
-import { signInAsOwner } from "./helpers";
+import { DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
+import { signInAs } from "./helpers";
 import { E2E_FROZEN_CLOCK, e2eBaseURL } from "./servers";
+
+type StaffRole = keyof typeof DEV_STAFF_LOGINS;
 
 /**
  * Patches `getByText`/`getByRole`/`getByLabel`/`getByPlaceholder` on a Page
@@ -38,7 +41,7 @@ export function makeActivitySafe(page: Page): Page {
  */
 export const test = base.extend<
   { demoReset: undefined },
-  { workerBaseURL: string; ownerStorageState: string }
+  { workerBaseURL: string; staffStorageState: (role: StaffRole) => Promise<string> }
 >({
   // Reset this worker's demo shop to the seeded fixture before every test so
   // each starts from the same baseline regardless of order. This is an `auto`
@@ -181,22 +184,36 @@ export const test = base.extend<
     await use(makeActivitySafe(page));
   },
 
-  // One real UI sign-in per worker; every staff test after that starts from
-  // the saved session instead of walking the sign-in form again (which was
-  // the single largest cost in the suite — ~27 sign-ins at ~2s each).
-  // auth.spec.ts still exercises the live sign-in/sign-out flow.
-  ownerStorageState: [
+  // One real UI sign-in per (worker, role) pair — lazy and memoized, so a
+  // worker that only ever needs "owner" still only pays for "owner". This
+  // was the single largest cost in the suite before the owner case alone was
+  // cached (~27 sign-ins at ~2s each); role-permissions.spec.ts's three
+  // tests each doing their own live sign-in for a different role was the
+  // same cost multiplied across roles instead of just tests. auth.spec.ts
+  // still exercises the live sign-in/sign-out flow.
+  staffStorageState: [
     async ({ workerBaseURL, browser }, use, workerInfo) => {
-      const statePath = path.join(
-        workerInfo.project.outputDir,
-        `.owner-session-${workerInfo.parallelIndex}.json`,
-      );
-      const context = await browser.newContext({ baseURL: workerBaseURL });
-      const page = await context.newPage();
-      await signInAsOwner(page);
-      await context.storageState({ path: statePath });
-      await context.close();
-      await use(statePath);
+      const cache = new Map<StaffRole, Promise<string>>();
+      const resolve = (role: StaffRole): Promise<string> => {
+        let cached = cache.get(role);
+        if (!cached) {
+          cached = (async () => {
+            const statePath = path.join(
+              workerInfo.project.outputDir,
+              `.${role}-session-${workerInfo.parallelIndex}.json`,
+            );
+            const context = await browser.newContext({ baseURL: workerBaseURL });
+            const page = await context.newPage();
+            await signInAs(page, DEV_STAFF_LOGINS[role]);
+            await context.storageState({ path: statePath });
+            await context.close();
+            return statePath;
+          })();
+          cache.set(role, cached);
+        }
+        return cached;
+      };
+      await use(resolve);
     },
     { scope: "worker" },
   ],
@@ -204,15 +221,21 @@ export const test = base.extend<
 
 /**
  * Start every test in the calling scope (file or describe block) signed in as
- * the seeded owner, via the per-worker saved session. Tests that must begin
- * signed out (public flows, auth itself) simply don't call this.
+ * the given seeded staff role, via a per-worker saved session cached the
+ * first time that role is requested. Tests that must begin signed out
+ * (public flows, auth itself, or a flow that specifically exercises signing
+ * in) simply don't call this.
  */
-export function signedInAsOwner() {
+export function signedInAs(role: StaffRole) {
   test.use({
-    storageState: async ({ ownerStorageState }, use) => {
-      await use(ownerStorageState);
+    storageState: async ({ staffStorageState }, use) => {
+      await use(await staffStorageState(role));
     },
   });
+}
+
+export function signedInAsOwner() {
+  signedInAs("owner");
 }
 
 export { expect };

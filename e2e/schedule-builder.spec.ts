@@ -1,6 +1,5 @@
-import { DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
-import { expect, signedInAsOwner, test } from "./fixtures";
-import { daysFromNow, e2eNow, signInAs } from "./helpers";
+import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
+import { daysFromNow, e2eNow } from "./helpers";
 
 signedInAsOwner();
 
@@ -117,15 +116,11 @@ test.describe("schedule builder", () => {
 });
 
 test.describe("schedule builder, as the daily crew", () => {
-  // Signs in fresh rather than reusing the per-worker owner session, so it must
-  // start from no session at all — `signedInAsOwner()` above would otherwise
-  // bounce /sign-in straight to the shop.
-  test.use({ storageState: { cookies: [], origins: [] } });
+  signedInAs("captain");
 
   test("a captain sees the board but none of its controls", async ({ page }) => {
     // Trip definition is owner/manager/instructor work (H-14); the crew runs the
     // day from each trip's own page.
-    await signInAs(page, DEV_STAFF_LOGINS.captain);
     await page.goto(BOARD);
     await expect(page.getByRole("heading", { name: "The board" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Add a departure", exact: true })).toHaveCount(0);
