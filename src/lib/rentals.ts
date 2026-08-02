@@ -140,10 +140,14 @@ export function shopOffersNitrox(rentalItems: readonly string[]): boolean {
 }
 
 /**
- * The core kit that makes up a "set". A shop usually prices these six as one
- * cheaper bundle; a diver who takes all of them is quoted the set, and anyone
- * taking a partial set pays per piece. The `gopro` add-on and nitrox are always
- * priced on their own, never folded into the set.
+ * The core kit that makes up a "set", including the dive computer (H-06,
+ * reconfirmed 2026-08-02 — HD-9). A shop usually prices these six as one
+ * cheaper bundle; a diver who takes all of them is quoted the set. A diver
+ * taking a partial set (bringing their own dive computer, say) is quoted
+ * whichever is cheaper — the set price or the sum of the pieces they
+ * actually take — so skipping a piece never costs more than the full set
+ * would have; see {@link quoteRentalFit}. The `gopro` add-on and nitrox are
+ * always priced on their own, never folded into the set.
  */
 export const CORE_RENTAL_KINDS = [
   "bcd",
@@ -204,9 +208,14 @@ export type RentalQuote = {
 };
 
 /**
- * What a diver is quoted for the gear they picked. Taking every core item the
- * shop offers is billed at the set price when the shop has one (cheaper than the
- * pieces, by design); a partial set is billed per piece. The GoPro add-on and
+ * What a diver is quoted for the gear they picked. Any core items taken are
+ * billed at whichever is cheaper: the shop's discounted set price, or the sum
+ * of just those pieces' per-item prices — so a diver who skips one core piece
+ * (bringing their own dive computer, say) is never charged more than the full
+ * set would have cost, and still keeps the set discount on the rest (H-06,
+ * HD-9). That comparison only runs when every rented core piece has a
+ * per-item price; otherwise the shop hasn't priced enough of the pick to
+ * compare, and each priced piece is billed on its own. The GoPro add-on and
  * nitrox are always separate. Items the shop hasn't priced are left off the
  * total and reported in `unpricedKinds`, so a quote is never silently short.
  * `plannedDives` scales the per-dive nitrox surcharge.
@@ -233,14 +242,28 @@ export function quoteRentalFit(
 
   const offeredCore = CORE_RENTAL_KINDS.filter((kind) => offered.has(kind));
   const rentedCore = offeredCore.filter((kind) => rented.has(kind));
-  const takesFullSet = offeredCore.length > 0 && rentedCore.length === offeredCore.length;
-  if (takesFullSet && pricing.setCents !== null) {
-    lines.push({ kind: "set", cents: pricing.setCents });
-  } else {
+  if (rentedCore.length > 0) {
+    const perPieceLines: RentalQuoteLine[] = [];
+    let perPieceTotal = 0;
+    let everyRentedCorePiecePriced = true;
     for (const kind of rentedCore) {
       const cents = pricing.perItemCents[kind];
-      if (cents === undefined) unpricedKinds.push(kind);
-      else lines.push({ kind, cents });
+      if (cents === undefined) {
+        everyRentedCorePiecePriced = false;
+        unpricedKinds.push(kind);
+      } else {
+        perPieceLines.push({ kind, cents });
+        perPieceTotal += cents;
+      }
+    }
+    if (
+      everyRentedCorePiecePriced &&
+      pricing.setCents !== null &&
+      pricing.setCents <= perPieceTotal
+    ) {
+      lines.push({ kind: "set", cents: pricing.setCents });
+    } else {
+      lines.push(...perPieceLines);
     }
   }
 

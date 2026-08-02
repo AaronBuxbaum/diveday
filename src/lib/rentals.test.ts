@@ -115,22 +115,30 @@ describe("rental pricing", () => {
     expect(quote.unpricedKinds).toEqual([]);
   });
 
-  it("loses the full-set discount when the diver skips the offered computer", () => {
+  it("keeps the set discount when the diver skips the offered computer, since it's cheaper", () => {
     const quote = quoteRentalFit(PRICING, {
       rentedKinds: ["bcd", "regulator", "wetsuit", "mask_fins", "weights"],
       offeredKinds: ALL_OFFERED,
       wantsNitrox: false,
       plannedDives: 2,
     });
-    // The computer is part of the set, so a diver bringing their own is a partial set, billed per piece.
-    expect(quote.lines.map((line) => line.kind)).toEqual([
-      "bcd",
-      "regulator",
-      "wetsuit",
-      "mask_fins",
-      "weights",
-    ]);
-    expect(quote.subtotalCents).toBe(1500 + 1500 + 1200 + 800 + 500);
+    // Five core pieces individually (1500+1500+1200+800+500=5500) cost more than
+    // the 4500 set price, so a diver bringing their own computer is quoted the
+    // cheaper set price rather than losing the discount (H-06, HD-9).
+    expect(quote.lines).toEqual([{ kind: "set", cents: 4500 }]);
+    expect(quote.subtotalCents).toBe(4500);
+  });
+
+  it("bills per piece when the partial pick is already cheaper than the set", () => {
+    const quote = quoteRentalFit(PRICING, {
+      rentedKinds: ["bcd", "wetsuit"],
+      offeredKinds: ALL_OFFERED,
+      wantsNitrox: false,
+      plannedDives: 2,
+    });
+    // 1500 + 1200 = 2700, cheaper than the 4500 set, so per-piece wins outright.
+    expect(quote.lines.map((line) => line.kind)).toEqual(["bcd", "wetsuit"]);
+    expect(quote.subtotalCents).toBe(1500 + 1200);
   });
 
   it("still reaches the set with five core items when the shop doesn't stock a computer", () => {
@@ -143,17 +151,6 @@ describe("rental pricing", () => {
     });
     expect(quote.lines).toEqual([{ kind: "set", cents: 4500 }]);
     expect(quote.subtotalCents).toBe(4500);
-  });
-
-  it("bills a partial kit per piece, never the set", () => {
-    const quote = quoteRentalFit(PRICING, {
-      rentedKinds: ["bcd", "wetsuit"],
-      offeredKinds: ALL_OFFERED,
-      wantsNitrox: false,
-      plannedDives: 2,
-    });
-    expect(quote.lines.map((line) => line.kind)).toEqual(["bcd", "wetsuit"]);
-    expect(quote.subtotalCents).toBe(1500 + 1200);
   });
 
   it("adds add-ons and per-dive nitrox on top of the set", () => {

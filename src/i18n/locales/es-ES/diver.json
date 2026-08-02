@@ -851,7 +851,7 @@
         },
         "founderLine": {
           "lead": "Tienes una línea directa con el fundador.",
-          "body": "Las tiendas fundadoras escriben y reciben respuesta el mismo día, y lo que tu equipo encuentra da forma a lo que se construye después."
+          "body": "Las tiendas fundadoras escriben y reciben respuesta directamente del fundador, y lo que tu equipo encuentra da forma a lo que se construye después."
         }
       },
       "exploreNote": "Tu tienda empieza vacía y lista para tus propios viajes y buceadores. ¿Quieres explorar primero una tienda ya llena de viajes de muestra?",
@@ -1142,7 +1142,7 @@
       "exportItem4": "Un README que explica cada archivo — sin proyecto de descifrado después",
       "tryEyebrow": "Fácil de probar",
       "tryTitle": "Mira cómo se siente cuando toda la tienda está en la misma página.",
-      "tryDescription": "DiveDay es reciente, y las primeras tiendas lo moldean. Las tiendas fundadoras tienen una línea directa con el fundador y respuestas el mismo día — lo que tu equipo encuentra esta temporada es lo próximo en recibir atención.",
+      "tryDescription": "DiveDay es reciente, y las primeras tiendas lo moldean. Las tiendas fundadoras tienen una línea directa con el fundador — lo que tu equipo encuentra esta temporada es lo próximo en recibir atención.",
       "gettingReady": "Preparando tu tienda…",
       "startTrial": "Empezar una prueba",
       "viewPricing": "Ver precios"
@@ -1339,7 +1339,7 @@
         },
         "whyFounding": {
           "question": "¿Por qué ser una tienda fundadora?",
-          "answer": "Porque las tiendas tempranas orientan — lo que tu equipo encuentra da forma a lo que se construye después. Las tiendas fundadoras también fijan el precio de hoy durante dos años y tienen una línea directa con el fundador con respuestas el mismo día; cada función nueva llega al único plan que hay, sin niveles superiores a los que moverla."
+          "answer": "Porque las tiendas tempranas orientan — lo que tu equipo encuentra da forma a lo que se construye después. Las tiendas fundadoras también fijan el precio de hoy durante dos años y tienen una línea directa con el fundador; cada función nueva llega al único plan que hay, sin niveles superiores a los que moverla."
         },
         "multipleLocations": {
           "question": "¿Qué pasa con varias ubicaciones?",

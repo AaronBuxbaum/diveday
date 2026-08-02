@@ -1161,7 +1161,8 @@ export async function setTripCrew(
         const assistants = assigned.filter(
           (member) => member.roles.includes("divemaster") && !member.roles.includes("instructor"),
         ).length;
-        if (bookedCount > entryLevelCourseCapacity(instructors, assistants)) return false;
+        if (bookedCount > entryLevelCourseCapacity(instructors, assistants, course.isIntroCourse))
+          return false;
       }
     }
     const days = await tx
@@ -1285,7 +1286,11 @@ export async function changeTripCrew(
           .select({ bookedCount: count() })
           .from(bookings)
           .where(and(eq(bookings.tripId, tripId), ne(bookings.status, "cancelled")));
-        if (bookedCount > entryLevelCourseCapacity(instructors.size, assistants.size)) return false;
+        if (
+          bookedCount >
+          entryLevelCourseCapacity(instructors.size, assistants.size, course.isIntroCourse)
+        )
+          return false;
       }
     }
 

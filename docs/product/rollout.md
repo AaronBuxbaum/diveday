@@ -118,6 +118,10 @@ it down) for each of:
   that costs nothing now: **price locked for two years for the founding cohort.** Define the
   support promise as part of the same decision (recommend: founder-direct support, same-day
   response, for the founding cohort — it's honest, differentiating, and matches a capped cohort).
+  **H-26 (2026-08-02) confirms this pricing posture is deliberately lifestyle-scale, not
+  venture-scale, and drops the explicit same-day SLA from the support promise** — see
+  [vision.md](vision.md#what-kind-of-business-this-is) and
+  [human-decisions.md](human-decisions.md#decision-register).
 - **H-13 (email-identity reuse) needs a ruling before a real shop's data is live.** The
   domain-expert review flagged silent person-reuse on shared inboxes as unsafe; decide the
   safeguard (the light "is this you?" confirmation is the smallest honest fix) or explicitly
