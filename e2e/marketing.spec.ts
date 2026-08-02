@@ -370,7 +370,9 @@ test("the spreadsheet guide brings a no-system shop across for free", async ({ p
   );
 });
 
-test("a signed-out visitor reaches the demo from the top of a switching guide", async ({ page }) => {
+test("a signed-out visitor reaches the demo from the top of a switching guide", async ({
+  page,
+}) => {
   // The whole point of the hero CTA: no session, no export, no form — the
   // highest-intent page in the funnel opens the working shop in one click.
   await page.goto("/switching/eve");

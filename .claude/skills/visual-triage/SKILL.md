@@ -17,6 +17,27 @@ that blocks browser downloads falls back to its own pre-installed build, which r
 differently (ADR 20260730-pinned-browser-visual-determinism). `pnpm e2e:browser-check` prints which
 browser it resolved — if it says "falling back", your local diff is not comparable to the baseline.
 
+## Start at the PR comment
+
+On a pull request the `visual-report` job posts one sticky comment (marker `diveday:visual-summary`,
+edited in place on each push) with the counts, the names of the changed/new/deleted surfaces, and
+the exact `pnpm visual:report` command for that commit. Read it before anything else — it usually
+tells you whether the diff is confined to the surfaces you touched. It never fails the build; the
+enforcement is you (ADR 20260802-visual-diff-pr-comment).
+
+Two things it says that reg-suit's own `reg-suit[bot]` comment and `reg` status cannot, because
+their payload is counts only:
+
+- **Which surfaces moved**, so triage can start without opening a browser.
+- **Whether anything was compared at all.** A headline of `NOTHING WAS COMPARED` means reg-suit
+  downloaded zero baseline images and reported every screenshot as *new* rather than diffed — the
+  changed count is then a meaningless zero (ADR 20260729-reg-suit-visual-regression). Treat that run
+  as *unknown*, never as clean, and fix the baseline resolution before reading anything into it.
+  A run that really did compare says "no differences across N compared surface(s)" instead.
+
+If the comment says no report was published, `reg-suit run` never got far enough to publish one —
+read the `visual-report` job log rather than assuming the pixels held still.
+
 ## Fetching the report as an agent
 
 `reg-suit` prints an `index.html` report link, but that page is a client-rendered SPA — its body is

@@ -2739,10 +2739,10 @@
       "contrastLabel": "Contrast",
       "labelAuto": "Auto",
       "labelStandard": "Standard",
-      "labelFullAaa": "Full AAA",
+      "labelFullAaa": "Maximum contrast",
       "modeAuto": "Auto ☀",
       "modeStandard": "Standard",
-      "modeFullAaa": "Full AAA ☀"
+      "modeFullAaa": "Maximum contrast ☀"
     },
     "rentalFit": {
       "itemLabels": {
