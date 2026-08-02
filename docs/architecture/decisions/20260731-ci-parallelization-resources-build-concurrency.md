@@ -90,9 +90,9 @@ get the correct worker count on today's runners.
   Prerendering render cost that the sharded `playwright` CI job's 2-workers-on-4-cores budget
   went from clean to contended again — assertion timeouts on a different spec each run, the same
   signature this ADR describes. The `playwright` job now sets `E2E_WORKERS: "1"` for its test
-  step; the `visual` job (a single spec file, screenshot-dominated rather than
-  interaction-dominated) showed no contention and was left at the default. Revisit this pin if a
-  future `cacheComponents`-adjacent change shifts the render cost again, in either direction.
+  step; the `visual` job got the same pin, for the same single-runner contention reason. Revisit
+  this pin if a future `cacheComponents`-adjacent change shifts the render cost again, in either
+  direction.
 - **Revisited**: part of that contention's root cause was fixable, not just a scheduling cost to
   absorb. `src/lib/format.ts` constructed a fresh `Intl.DateTimeFormat`/`Intl.NumberFormat`/
   `Intl.RelativeTimeFormat` on every call instead of reusing one, and nearly every render touches
@@ -103,3 +103,9 @@ get the correct worker count on today's runners.
   halves the shard matrix back to 4 (`playwright shard N/4`), trading that residual flake risk for
   half the runner minutes; `fail-fast: false` keeps one shard's flake from failing the whole run.
   `E2E_WORKERS` is still available as a per-step override if contention resurfaces.
+- **The `visual` job was later split the same way** the `playwright` job already was — a 4-way
+  `--shard` matrix that only captures screenshots, feeding a separate `visual-report` job that
+  merges them and runs `reg-suit run` once. See
+  `20260802-shard-visual-regression-ci.md` for why, and note the git-history checkout and
+  reg-suit baseline anchoring described below under "the visual job" now live in `visual-report`,
+  not `visual`.
