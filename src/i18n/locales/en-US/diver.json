@@ -1489,6 +1489,11 @@
       "contact": "Questions? Text us at {phone}.",
       "medicalReviewNote": "Check if a medical answer needs a doctor's sign-off",
       "recap": "{shopName}: thanks for diving {tripTitle}! Your recap: {recapUrl}"
+    },
+    "whatsappTemplate": {
+      "body": "Hi! An update from {{1}}: {{2}}",
+      "exampleShopName": "Blue Mantis Divers",
+      "exampleMessage": "Reef Runner departs Saturday at 8:00 AM. Dock call 30 minutes early."
     }
   }
 }

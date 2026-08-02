@@ -1,95 +1,53 @@
-import type { Page } from "@playwright/test";
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
 
 const WHATSAPP_SETTINGS = "/shop/blue-mantis/settings/whatsapp";
 
 /**
- * Connecting a shop's own WhatsApp Business number (docs ADR
- * 20260802-whatsapp-cloud-api-per-shop).
+ * The WhatsApp settings surface (docs ADR 20260802-whatsapp-embedded-signup).
  *
- * The suite runs `fullyParallel` with one server and one in-memory database per
- * worker, so two of these landing on the same worker share a shop — and a
- * connection is shop state that survives between them. Every test therefore
- * normalises the connection first rather than assuming a clean slate, the same
- * way the calendar-subscription spec does.
+ * Connecting runs through Meta's own hosted Embedded Signup popup, which needs
+ * Meta to have approved DiveDay's app — so on the e2e fleet, which configures no
+ * `META_*` credentials, the page is in its coming-soon state. That is exactly
+ * the state every shop sees today, and it is what these tests cover: the notice
+ * is present, the button is inert, and the surface is still owner/manager work.
  *
- * The test-send button is deliberately not exercised here: it makes a real call
- * to Meta, which the e2e fleet blocks on purpose
- * (`DIVEDAY_DISABLE_EXTERNAL_HTTP`). That path is covered by unit tests against
- * an injected fetch instead.
+ * The signup exchange itself is covered by unit tests against an injected fetch
+ * (`src/lib/notifications/whatsapp-signup.test.ts`); it cannot be exercised here
+ * without a live Meta app, and the fleet blocks external HTTP on purpose.
  */
-
-const CREDENTIALS = {
-  phoneNumberId: "109876543210987",
-  accessToken: "EAAGtesttoken0000000000000wxyz",
-  displayPhoneNumber: "+1 305-555-0142",
-};
-
-async function disconnectIfConnected(page: Page) {
-  await page.goto(WHATSAPP_SETTINGS);
-  const disconnect = page.getByRole("button", { name: "Disconnect WhatsApp" });
-  if (await disconnect.isVisible().catch(() => false)) {
-    await disconnect.click();
-    await page.getByRole("heading", { name: "No WhatsApp number connected" }).waitFor();
-  }
-}
-
-async function connect(page: Page) {
-  await page.goto(WHATSAPP_SETTINGS);
-  await page.getByLabel("Phone number ID").fill(CREDENTIALS.phoneNumberId);
-  await page.getByLabel("Access token", { exact: true }).fill(CREDENTIALS.accessToken);
-  await page.getByLabel("Display number (optional)").fill(CREDENTIALS.displayPhoneNumber);
-  await page.getByRole("button", { name: /Connect WhatsApp|Save changes/ }).click();
-  await page.getByRole("heading", { name: "WhatsApp connected" }).waitFor();
-}
 
 test.describe("WhatsApp settings", () => {
   signedInAsOwner();
 
-  test("an owner connects the shop's own WhatsApp number", async ({ page }) => {
-    await disconnectIfConnected(page);
-
-    await expect(page.getByRole("heading", { name: "No WhatsApp number connected" })).toBeVisible();
-
-    await connect(page);
-
-    await expect(page.getByText(CREDENTIALS.displayPhoneNumber)).toBeVisible();
-    // Saved is not the same as working — until a test message lands, the page
-    // must not imply the connection is proven.
-    await expect(page.getByText("Not tested yet")).toBeVisible();
-  });
-
-  test("the stored access token is never rendered back, only its last four", async ({ page }) => {
-    await disconnectIfConnected(page);
-    await connect(page);
-
-    await expect(page.getByText("Ending in wxyz")).toBeVisible();
-    // The whole point of sealing it: nothing on this page, in any form value or
-    // attribute, can carry the credential back out.
-    expect(await page.content()).not.toContain(CREDENTIALS.accessToken);
-    await expect(page.getByLabel("Access token", { exact: true })).toHaveValue("");
-  });
-
-  test("disconnecting returns the courtesy channel to SMS", async ({ page }) => {
-    await disconnectIfConnected(page);
-    await connect(page);
-
-    await page.getByRole("button", { name: "Disconnect WhatsApp" }).click();
-
-    await expect(page.getByText("Courtesy messages will go out as SMS.")).toBeVisible();
-    await expect(page.getByRole("heading", { name: "No WhatsApp number connected" })).toBeVisible();
-  });
-
-  test("rejects the phone number pasted where the phone number ID belongs", async ({ page }) => {
-    await disconnectIfConnected(page);
-
+  test("tells a shop the connection is coming rather than offering a dead button", async ({
+    page,
+  }) => {
     await page.goto(WHATSAPP_SETTINGS);
-    await page.getByLabel("Phone number ID").fill("+1 305-555-0142");
-    await page.getByLabel("Access token", { exact: true }).fill(CREDENTIALS.accessToken);
-    await page.getByRole("button", { name: "Connect WhatsApp" }).click();
 
-    await expect(page.getByText("Check the details and try again.")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Coming soon" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "No WhatsApp number connected" })).toBeVisible();
+    // Present but inert: the shop can see what is coming, and cannot start a
+    // flow that Meta would reject.
+    await expect(page.getByRole("button", { name: "Connect WhatsApp" })).toBeDisabled();
+  });
+
+  test("says courtesy messages keep going out as SMS meanwhile", async ({ page }) => {
+    await page.goto(WHATSAPP_SETTINGS);
+
+    await expect(page.getByText("keep going out as SMS", { exact: false })).toBeVisible();
+    await expect(
+      page.getByText("Courtesy reminders and recaps are going out as SMS.", { exact: false }),
+    ).toBeVisible();
+  });
+
+  test("explains the flow without asking the shop for any credential", async ({ page }) => {
+    await page.goto(WHATSAPP_SETTINGS);
+
+    await expect(page.getByRole("heading", { name: "How connecting works" })).toBeVisible();
+    // The whole point of Embedded Signup over the previous flow: no token, no
+    // phone number id, nothing to copy across from Meta's tools.
+    await expect(page.getByLabel("Access token")).toHaveCount(0);
+    await expect(page.getByLabel("Phone number ID")).toHaveCount(0);
   });
 });
 
@@ -100,9 +58,13 @@ test.describe("WhatsApp settings authorization", () => {
   test("a captain cannot reach WhatsApp settings", async ({ page }) => {
     await page.goto(WHATSAPP_SETTINGS);
 
-    // Bounced to the settings index with the shared not-authorized notice.
-    await expect(page).toHaveURL(/\/settings\?notice=not_authorized$/);
-    await expect(page.getByRole("heading", { name: "WhatsApp connected" })).toHaveCount(0);
+    // Asserted on the notice rather than the URL: the settings page clears its
+    // own `?notice=` param client-side once shown, so a URL assertion races that
+    // cleanup. The words are what the captain actually gets either way.
+    await expect(
+      page.getByText("Only an owner or manager can change WhatsApp settings."),
+    ).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Coming soon" })).toHaveCount(0);
   });
 
   test("and is not offered the link from the settings index", async ({ page }) => {

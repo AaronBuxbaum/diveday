@@ -29,8 +29,8 @@ import type { CourtesyDelivery, CourtesyMessage, CourtesyProvider } from "./cour
  * behaviour between versions, so an upgrade should be a visible diff with the
  * runbook's compatibility note next to it, not something that happens on its own.
  */
-const GRAPH_API_VERSION = "v23.0";
-const GRAPH_API_ORIGIN = "https://graph.facebook.com";
+export const GRAPH_API_VERSION = "v23.0";
+export const GRAPH_API_ORIGIN = "https://graph.facebook.com";
 
 /** WhatsApp's own cap on a single template body parameter. */
 const MAX_PARAMETER_LENGTH = 1024;

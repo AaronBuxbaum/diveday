@@ -1,6 +1,6 @@
 # 20260802-whatsapp-cloud-api-per-shop — Add WhatsApp via Meta's Cloud API, with each shop's own account
 
-- **Status:** Accepted
+- **Status:** Superseded by 20260802-whatsapp-embedded-signup
 - **Date:** 2026-08-02
 
 ## Context

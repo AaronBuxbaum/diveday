@@ -435,13 +435,16 @@ new domain concept, define it here in the same PR.
   `not_configured` with no SNS credentials configured, exactly like the email seam. The platform-wide
   fallback half of a **courtesy message**. See
   [20260802-sns-sms-adapter](../architecture/decisions/20260802-sns-sms-adapter.md).
-- **WhatsApp sender** — a shop's *own* WhatsApp Business number, connected through Meta's Cloud API
-  in Settings → WhatsApp and stored per shop in `shop_whatsapp_accounts`. DiveDay is not the sender;
-  the dive shop is, so divers see the shop they booked with and a reply reaches that shop's own
-  inbox. WhatsApp requires business-initiated messages to use a **template** the shop got approved,
-  so the shop's approved template name and language are stored alongside its access token, which is
-  encrypted at rest and never readable back out. See
-  [20260802-whatsapp-cloud-api-per-shop](../architecture/decisions/20260802-whatsapp-cloud-api-per-shop.md).
+- **WhatsApp sender** — a shop's *own* WhatsApp Business number, connected in Settings → WhatsApp
+  through **Meta Embedded Signup**: the shop presses one button and completes Meta's own hosted
+  popup, and DiveDay registers the number, subscribes to its delivery events, and submits the
+  message template for approval on the shop's behalf. DiveDay is not the sender; the dive shop is, so
+  divers see the shop they booked with and a reply reaches that shop's own inbox. WhatsApp requires
+  business-initiated messages to use an approved **template**, so the template's name and language
+  are stored per shop alongside its access token, which is encrypted at rest and never readable back
+  out. Dormant until Meta approves DiveDay's app — the settings page says so, and courtesy messages
+  go out as SMS meanwhile. See
+  [20260802-whatsapp-embedded-signup](../architecture/decisions/20260802-whatsapp-embedded-signup.md).
 - **Demo mode** — a shop flagged `isDemo` gets the Demo Playground banner, its role switcher, and a
   "Reset demo data" affordance scoped to that one tenant. "Try the live demo" **mints a fresh
   `isDemo` shop per visitor** with a generated name/slug, seeded with the full sample schedule; a

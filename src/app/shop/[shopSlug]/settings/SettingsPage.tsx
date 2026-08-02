@@ -92,6 +92,10 @@ function noticeMessages(
     // so it shows the promo-specific explanation rather than the rentals
     // one (task 82, UX persona 11 "Kai").
     promos_not_authorized: { tone: "danger", text: t("promos.notice.notAuthorized") },
+    // Same shape and the same reason: the WhatsApp page's own gate bounces a
+    // non-owner/manager here, and the payment-settings wording above would
+    // explain the wrong surface.
+    whatsapp_not_authorized: { tone: "danger", text: t("whatsapp.notice.not_authorized") },
   };
 }
 

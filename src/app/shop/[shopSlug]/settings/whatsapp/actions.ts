@@ -13,8 +13,19 @@ import {
   markShopWhatsAppVerified,
   whatsAppProviderForAccount,
 } from "@/db/whatsapp-accounts";
+import { diverTranslator } from "@/i18n/messages";
+import { toDiverLocale } from "@/i18n/settings";
 import { nowDate } from "@/lib/clock";
-import { whatsAppRecipient } from "@/lib/notifications/whatsapp";
+import {
+  DEFAULT_WHATSAPP_TEMPLATE_NAME,
+  metaLanguageCode,
+  whatsAppRecipient,
+} from "@/lib/notifications/whatsapp";
+import {
+  completeEmbeddedSignup,
+  generateRegistrationPin,
+  whatsAppSignupConfigFromEnvironment,
+} from "@/lib/notifications/whatsapp-signup";
 import { requireStaffSession } from "@/lib/session";
 
 /**
@@ -31,6 +42,11 @@ import { requireStaffSession } from "@/lib/session";
 /** Notices are codes; `page.tsx` picks the words (ADR 20260731-domain-layer-copy-leaks). */
 type Notice =
   | "connected"
+  | "signup_unavailable"
+  | "signup_failed_exchange"
+  | "signup_failed_register"
+  | "signup_failed_subscribe"
+  | "signup_failed_template"
   | "disconnected"
   | "tested"
   | "test_failed"
@@ -40,25 +56,21 @@ type Notice =
   | "encryption_key_unset"
   | "encryption_key_invalid";
 
-const connectSchema = z.object({
-  // Meta's phone number id is a numeric string; anything else is a paste of the
-  // wrong field (the display number, or the WABA id) and is worth catching here
-  // rather than as a puzzling 400 from Graph later.
+/**
+ * What Meta's Embedded Signup popup hands back. All three are opaque ids from
+ * Meta, not shop input — validated only for shape, because a value that is not
+ * one of these will simply fail the exchange a moment later.
+ */
+const signupSchema = z.object({
+  code: z.string().trim().min(10).max(2_000),
+  wabaId: z
+    .string()
+    .trim()
+    .regex(/^\d{5,32}$/),
   phoneNumberId: z
     .string()
     .trim()
     .regex(/^\d{5,32}$/),
-  accessToken: z.string().trim().min(20).max(1_000),
-  templateName: z
-    .string()
-    .trim()
-    .regex(/^[a-z0-9_]{1,512}$/),
-  templateLanguage: z
-    .string()
-    .trim()
-    .regex(/^[a-z]{2}(_[A-Z]{2})?$/),
-  displayPhoneNumber: z.string().trim().max(40).optional(),
-  wabaId: z.string().trim().max(64).optional(),
 });
 
 const testSchema = z.object({
@@ -79,25 +91,66 @@ function done(path: string, notice: Notice): never {
   redirect(`${path}?notice=${notice}`);
 }
 
-export async function connectWhatsAppAction(formData: FormData): Promise<void> {
+/**
+ * Finish an Embedded Signup: exchange Meta's one-time code for the shop's
+ * business token, register and subscribe the number, provision the courtesy
+ * template, and store the result sealed.
+ *
+ * The shop never sees or types a credential — that is the whole point of moving
+ * off the paste-your-own-token flow. The code is single-use and short-lived, so
+ * a replayed submission fails at Meta rather than minting a second connection.
+ */
+export async function completeWhatsAppSignupAction(formData: FormData): Promise<void> {
   const { shopId, personId, path } = await settingsPath();
   const db = await getDb();
   if (!(await canPersonManageMessagingSettings(db, shopId, personId))) {
     done(path, "not_authorized");
   }
 
-  const parsed = connectSchema.safeParse({
+  const config = whatsAppSignupConfigFromEnvironment();
+  if (!config) done(path, "signup_unavailable");
+
+  const parsed = signupSchema.safeParse({
+    code: formData.get("code") ?? "",
+    wabaId: formData.get("wabaId") ?? "",
     phoneNumberId: formData.get("phoneNumberId") ?? "",
-    accessToken: formData.get("accessToken") ?? "",
-    templateName: formData.get("templateName") ?? "",
-    templateLanguage: formData.get("templateLanguage") ?? "",
-    displayPhoneNumber: formData.get("displayPhoneNumber") ?? undefined,
-    wabaId: formData.get("wabaId") ?? undefined,
   });
   if (!parsed.success) done(path, "invalid");
 
-  const result = await connectShopWhatsAppAccount(db, { shopId, ...parsed.data });
-  if (result.status === "refused") done(path, result.reason);
+  const shop = await getShopById(db, shopId);
+  // The template is submitted in the shop's own diver-facing language, with its
+  // words coming from the diver bundle — a diver is who eventually reads them.
+  const templateLocale = toDiverLocale(shop?.defaultLocale);
+  const templateLanguage = metaLanguageCode(templateLocale);
+  const diverT = diverTranslator(templateLocale);
+  const registrationPin = generateRegistrationPin();
+
+  const result = await completeEmbeddedSignup(
+    {
+      ...parsed.data,
+      templateName: DEFAULT_WHATSAPP_TEMPLATE_NAME,
+      templateLanguage,
+      templateCopy: {
+        body: diverT("notifications.whatsappTemplate.body"),
+        exampleShopName: diverT("notifications.whatsappTemplate.exampleShopName"),
+        exampleMessage: diverT("notifications.whatsappTemplate.exampleMessage"),
+      },
+      registrationPin,
+    },
+    config,
+  );
+  if (result.status === "failed") done(path, `signup_failed_${result.step}` as Notice);
+
+  const stored = await connectShopWhatsAppAccount(db, {
+    shopId,
+    phoneNumberId: parsed.data.phoneNumberId,
+    wabaId: parsed.data.wabaId,
+    accessToken: result.accessToken,
+    templateName: DEFAULT_WHATSAPP_TEMPLATE_NAME,
+    templateLanguage,
+    registrationPin,
+  });
+  if (stored.status === "refused") done(path, stored.reason);
   done(path, "connected");
 }
 

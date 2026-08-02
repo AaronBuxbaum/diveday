@@ -11,17 +11,17 @@ import { getDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
 import { getShopWhatsAppAccount } from "@/db/whatsapp-accounts";
 import { requestLocale } from "@/i18n/request";
-import { toDiverLocale } from "@/i18n/settings";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz } from "@/lib/format";
-import {
-  DEFAULT_WHATSAPP_TEMPLATE_NAME,
-  META_TEMPLATE_LANGUAGES,
-  metaLanguageCode,
-} from "@/lib/notifications/whatsapp";
+import { whatsAppSignupConfigFromEnvironment } from "@/lib/notifications/whatsapp-signup";
 import { secretKeyFromEnvironment } from "@/lib/secret-box";
 import { requireStaffSession } from "@/lib/session";
-import { connectWhatsAppAction, disconnectWhatsAppAction, testWhatsAppAction } from "./actions";
+import {
+  completeWhatsAppSignupAction,
+  disconnectWhatsAppAction,
+  testWhatsAppAction,
+} from "./actions";
+import { EmbeddedSignupButton } from "./EmbeddedSignupButton";
 
 // TODO: Cache Components adoption. Refactor this route so this opt-out can be removed.
 // See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
@@ -40,6 +40,11 @@ const NOTICE_TONE = {
   no_account: "danger",
   encryption_key_unset: "danger",
   encryption_key_invalid: "danger",
+  signup_unavailable: "danger",
+  signup_failed_exchange: "danger",
+  signup_failed_register: "danger",
+  signup_failed_subscribe: "danger",
+  signup_failed_template: "danger",
 } as const;
 
 type NoticeCode = keyof typeof NOTICE_TONE;
@@ -49,11 +54,16 @@ function noticeFrom(value: string | undefined): NoticeCode | null {
 }
 
 /**
- * Where a shop plugs in its own WhatsApp Business number (docs ADR
- * 20260802-whatsapp-cloud-api-per-shop). With one connected, the courtesy text
- * that rides along with a trip reminder or recap comes from the shop's own
- * number instead of a platform short code — which is the entire point: a diver
- * who gets a message the night before a dive should recognise who it's from.
+ * Where a shop connects its own WhatsApp Business number (docs ADR
+ * 20260802-whatsapp-embedded-signup). With one connected, the courtesy text
+ * riding along with a trip reminder or recap comes from the shop's own number
+ * instead of a platform short code — which is the point: a diver who gets a
+ * message the night before a dive should recognise who it is from.
+ *
+ * Connecting happens entirely inside Meta's own hosted Embedded Signup popup;
+ * DiveDay never asks a shop to paste a credential. That flow requires Meta to
+ * approve DiveDay's app first, so until `META_*` is configured the page states
+ * plainly that it is coming rather than offering a button that cannot work.
  */
 export default async function WhatsAppSettingsPage({
   searchParams,
@@ -71,21 +81,21 @@ export default async function WhatsAppSettingsPage({
   const banner = noticeFrom(notice);
 
   // Re-checked against live roles, exactly like the payment settings this sits
-  // beside — the credential here can send as the business.
+  // beside — the connection it creates can send as the business.
   const allowed = await canPersonManageMessagingSettings(
     db,
     session.user.shopId,
     session.user.personId,
   );
   if (!allowed) {
-    redirect(`/shop/${session.user.shopSlug}/settings?notice=not_authorized`);
+    redirect(`/shop/${session.user.shopSlug}/settings?notice=whatsapp_not_authorized`);
   }
 
   const account = await getShopWhatsAppAccount(db, session.user.shopId);
-  // Surfaced rather than discovered on first send: with no sealing key there is
-  // nowhere safe to put a token, and the shop should learn that before typing one.
-  const keyReady = secretKeyFromEnvironment().status === "ok";
-  const suggestedLanguage = metaLanguageCode(toDiverLocale(shop.defaultLocale));
+  const signupConfig = whatsAppSignupConfigFromEnvironment();
+  // Both must hold before a shop can connect: Meta's approval of DiveDay's app,
+  // and somewhere safe to seal the token that comes back.
+  const canConnect = signupConfig !== null && secretKeyFromEnvironment().status === "ok";
 
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
@@ -103,6 +113,15 @@ export default async function WhatsAppSettingsPage({
         }
       />
 
+      {/* Top of the page, before anything else: a shop should learn this is not
+          yet switchable on before reading how it works. */}
+      {!canConnect ? (
+        <section className="mb-6 rounded-lg border border-warning/40 bg-warning/10 p-4">
+          <h2 className="font-medium">{t("whatsapp.comingSoon.heading")}</h2>
+          <p className="mt-1 text-sm">{t("whatsapp.comingSoon.body")}</p>
+        </section>
+      ) : null}
+
       {banner ? (
         <p
           className={`mb-6 rounded-lg border p-3 text-sm ${
@@ -113,12 +132,6 @@ export default async function WhatsAppSettingsPage({
           role="status"
         >
           {t(`whatsapp.notice.${banner}`)}
-        </p>
-      ) : null}
-
-      {!keyReady ? (
-        <p className="mb-6 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
-          {t("whatsapp.notice.encryptionUnavailable")}
         </p>
       ) : null}
 
@@ -149,12 +162,6 @@ export default async function WhatsAppSettingsPage({
               </dd>
             </div>
             <div>
-              <dt className="text-muted">{t("whatsapp.status.token")}</dt>
-              {/* The hint, never the token — a settings page that could show it
-                  would put it in a screenshot the first time someone asked for help. */}
-              <dd>{t("whatsapp.status.tokenEnding", { last4: account.accessTokenHint })}</dd>
-            </div>
-            <div>
               <dt className="text-muted">{t("whatsapp.status.connectedAt")}</dt>
               <dd>{formatDateTimeTz(account.connectedAt, locale, shop.timezone)}</dd>
             </div>
@@ -172,92 +179,26 @@ export default async function WhatsAppSettingsPage({
           <li>{t("whatsapp.setup.step2")}</li>
           <li>{t("whatsapp.setup.step3")}</li>
         </ol>
-        <p className="mt-3 rounded-lg border border-border bg-surface-sunken p-3 font-mono text-xs">
-          {t("whatsapp.setup.templateBody")}
-        </p>
-      </section>
 
-      <section className="mt-6 rounded-lg border border-border bg-surface p-6">
-        <h3 className="font-medium">
-          {account ? t("whatsapp.connect.updateHeading") : t("whatsapp.connect.heading")}
-        </h3>
-        <p className="mt-1 text-sm text-muted">{t("whatsapp.connect.description")}</p>
-        <FieldGrid as="form" action={connectWhatsAppAction} columns={2} className="mt-4">
-          <Field
-            label={t("whatsapp.connect.phoneNumberId")}
-            description={t("whatsapp.connect.phoneNumberIdDescription")}
-          >
-            <input
-              name="phoneNumberId"
-              className={controlClass}
-              defaultValue={account?.phoneNumberId ?? ""}
-              inputMode="numeric"
-              required
+        <div className="mt-5">
+          {canConnect && signupConfig ? (
+            <EmbeddedSignupButton
+              appId={signupConfig.appId}
+              configId={signupConfig.configId}
+              action={completeWhatsAppSignupAction}
+              copy={{
+                connect: account ? t("whatsapp.signup.reconnect") : t("whatsapp.signup.connect"),
+                connecting: t("whatsapp.signup.connecting"),
+                cancelled: t("whatsapp.signup.cancelled"),
+                blocked: t("whatsapp.signup.blocked"),
+              }}
             />
-          </Field>
-          <Field
-            label={t("whatsapp.connect.displayPhoneNumber")}
-            hint={t("whatsapp.connect.optionalHint")}
-            description={t("whatsapp.connect.displayPhoneNumberDescription")}
-          >
-            <input
-              name="displayPhoneNumber"
-              className={controlClass}
-              defaultValue={account?.displayPhoneNumber ?? ""}
-            />
-          </Field>
-          <Field
-            label={t("whatsapp.connect.accessToken")}
-            description={
-              account
-                ? t("whatsapp.connect.accessTokenReplaceDescription")
-                : t("whatsapp.connect.accessTokenDescription")
-            }
-          >
-            {/* Never pre-filled: the stored token is sealed and deliberately
-                unreadable, so a re-connect always re-states it. */}
-            <input name="accessToken" type="password" className={controlClass} required />
-          </Field>
-          <Field
-            label={t("whatsapp.connect.wabaId")}
-            hint={t("whatsapp.connect.optionalHint")}
-            description={t("whatsapp.connect.wabaIdDescription")}
-          >
-            <input name="wabaId" className={controlClass} defaultValue={account?.wabaId ?? ""} />
-          </Field>
-          <Field
-            label={t("whatsapp.connect.templateName")}
-            description={t("whatsapp.connect.templateNameDescription")}
-          >
-            <input
-              name="templateName"
-              className={controlClass}
-              defaultValue={account?.templateName ?? DEFAULT_WHATSAPP_TEMPLATE_NAME}
-              required
-            />
-          </Field>
-          <Field
-            label={t("whatsapp.connect.templateLanguage")}
-            description={t("whatsapp.connect.templateLanguageDescription")}
-          >
-            <select
-              name="templateLanguage"
-              className={controlClass}
-              defaultValue={account?.templateLanguage ?? suggestedLanguage}
-            >
-              {META_TEMPLATE_LANGUAGES.map((code) => (
-                <option key={code} value={code}>
-                  {code}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <FieldActions className="sm:col-span-2">
-            <SubmitButton pendingLabel={t("whatsapp.connect.submitting")} className={buttonClass()}>
-              {account ? t("whatsapp.connect.update") : t("whatsapp.connect.submit")}
-            </SubmitButton>
-          </FieldActions>
-        </FieldGrid>
+          ) : (
+            <button type="button" disabled className={buttonClass()}>
+              {t("whatsapp.signup.connect")}
+            </button>
+          )}
+        </div>
       </section>
 
       {account ? (

@@ -1441,6 +1441,13 @@ export const shopWhatsappAccounts = pgTable("shop_whatsapp_accounts", {
   /** Last four characters of the token, so staff can tell *which* token is stored without revealing it. */
   accessTokenHint: text("access_token_hint").notNull().default(""),
   /**
+   * The six-digit PIN this number was registered with during Embedded Signup,
+   * sealed like the token. DiveDay generates it — the shop never types it — but
+   * Meta demands the same PIN for any later re-registration, and a shop that
+   * cannot re-register is a shop locked out of its own number.
+   */
+  registrationPinSealed: text("registration_pin_sealed"),
+  /**
    * The approved template courtesy messages are sent through, and its Meta
    * language code. Stored per shop rather than hard-coded: WhatsApp requires
    * business-initiated messages to use a template the *shop* got approved, and

@@ -2778,39 +2778,14 @@
       "untested": "Not tested yet",
       "number": "Sending number",
       "template": "Message template",
-      "token": "Access token",
-      "tokenEnding": "Ending in {last4}",
       "connectedAt": "Connected"
     },
     "setup": {
-      "heading": "Before you connect",
-      "description": "WhatsApp requires business-initiated messages to use a template you have had approved. Set this up once in Meta's WhatsApp Manager, then paste the details below.",
-      "step1": "In Meta Business Manager, add your dive shop's phone number to a WhatsApp Business account and copy its phone number ID.",
-      "step2": "Create a system user with permission to send messages, and generate a permanent access token for it.",
-      "step3": "Create and submit a message template with exactly two body variables, in this shape:",
-      "templateBody": "Hi! An update from {{1}}: {{2}}"
-    },
-    "connect": {
-      "heading": "Connect your WhatsApp number",
-      "updateHeading": "Update your connection",
-      "description": "DiveDay stores your access token encrypted and never shows it again. Sending a message uses it; nothing else can read it back.",
-      "phoneNumberId": "Phone number ID",
-      "displayPhoneNumber": "Display number",
-      "accessToken": "Access token",
-      "wabaId": "WhatsApp Business account ID",
-      "templateName": "Template name",
-      "templateLanguage": "Template language",
-      "submit": "Connect WhatsApp",
-      "update": "Save changes",
-      "submitting": "Saving…",
-      "phoneNumberIdDescription": "The numeric ID from WhatsApp Manager — not the phone number itself.",
-      "displayPhoneNumberDescription": "Shown here so you can tell at a glance which number is connected.",
-      "accessTokenDescription": "The permanent token for your system user.",
-      "accessTokenReplaceDescription": "Paste the token again to save changes, or a new one to rotate it.",
-      "wabaIdDescription": "Recorded for support. DiveDay never sends it anywhere.",
-      "templateNameDescription": "Exactly as approved — lowercase letters, numbers, and underscores.",
-      "templateLanguageDescription": "The language your template was approved in. Every message uses this one.",
-      "optionalHint": "(optional)"
+      "heading": "How connecting works",
+      "description": "You won't need to create anything in Meta's tools or copy any keys across. Everything happens in Meta's own window, and DiveDay handles the rest.",
+      "step1": "Press Connect. Meta opens its own window, where you sign in with the Facebook account that manages your shop.",
+      "step2": "Choose the phone number you want divers to hear from, or add a new one, and accept Meta's terms.",
+      "step3": "That's it. DiveDay registers the number and submits your message template for approval on your behalf."
     },
     "test": {
       "heading": "Send a test message",
@@ -2836,7 +2811,22 @@
       "no_account": "No WhatsApp number is connected yet.",
       "encryption_key_unset": "This DiveDay instance is not set up to store credentials securely yet, so nothing was saved.",
       "encryption_key_invalid": "This DiveDay instance's encryption key is misconfigured, so nothing was saved.",
-      "encryptionUnavailable": "Credential storage is not configured on this DiveDay instance, so WhatsApp cannot be connected yet."
+      "signup_unavailable": "WhatsApp connecting isn't switched on for this DiveDay instance yet.",
+      "signup_failed_exchange": "Meta didn't accept the connection. Press Connect to start again — the link from the last attempt can only be used once.",
+      "signup_failed_register": "Meta couldn't activate that phone number for sending. It may already be in use with the WhatsApp app — remove it there first, then try again.",
+      "signup_failed_subscribe": "Your number connected, but DiveDay couldn't subscribe to its delivery updates. Press Connect to try again.",
+      "signup_failed_template": "Your number connected, but the message template couldn't be submitted for approval. Press Connect to try again."
+    },
+    "comingSoon": {
+      "heading": "Coming soon",
+      "body": "Connecting your WhatsApp number goes through Meta's own approval of DiveDay, which is in progress. Nothing to do yet — we'll switch this on here the moment it clears, and your trip reminders keep going out as SMS until then."
+    },
+    "signup": {
+      "connect": "Connect WhatsApp",
+      "reconnect": "Reconnect WhatsApp",
+      "connecting": "Connecting…",
+      "cancelled": "Connection cancelled — nothing was changed. Press Connect to try again.",
+      "blocked": "Meta's window could not open. Check that your browser isn't blocking pop-ups, then try again."
     }
   }
 }

@@ -43,6 +43,8 @@ export type ConnectWhatsAppInput = {
   templateLanguage: string;
   displayPhoneNumber?: string | null;
   wabaId?: string | null;
+  /** Sealed alongside the token; needed only to re-register the number with Meta. */
+  registrationPin?: string | null;
   now?: Date;
 };
 
@@ -105,6 +107,9 @@ export async function connectShopWhatsAppAccount(
     wabaId: input.wabaId?.trim() || null,
     accessTokenSealed: sealSecret(input.accessToken.trim(), key),
     accessTokenHint: secretHint(input.accessToken),
+    registrationPinSealed: input.registrationPin
+      ? sealSecret(input.registrationPin.trim(), key)
+      : null,
     templateName: input.templateName.trim(),
     templateLanguage: input.templateLanguage.trim(),
     updatedAt: now,
