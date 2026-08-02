@@ -214,7 +214,7 @@ export function nextDiverStep(items: readonly DiverChecklistItem[]): DiverCheckl
  * Only the codes a diver can act on before the dock — a "waiting" blocker
  * (verification, medical review) is the shop's to finish, so it never appears
  * here as a to-do the diver can't complete. A code, never a phrase: the
- * caller (`src/db/reminders.ts`'s SMS/email composition) resolves each one
+ * caller (`src/db/reminders.ts`'s email composition) resolves each one
  * through `src/i18n/reminder-labels.ts` against the recipient shop's locale
  * (docs ADR 20260731-notification-locale).
  *

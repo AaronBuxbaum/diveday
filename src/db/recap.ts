@@ -1,5 +1,4 @@
 import { and, desc, eq, gt, inArray, lte, ne, sql } from "drizzle-orm";
-import { diverTranslator } from "@/i18n/messages";
 import { nowDate } from "@/lib/clock";
 import { type ShopCurrency, toShopCurrency } from "@/lib/money";
 import {
@@ -8,12 +7,6 @@ import {
   publicAppUrl,
   recipientLocale,
 } from "@/lib/notifications";
-import {
-  notifySms,
-  type SmsProvider,
-  smsProviderFromEnvironment,
-  smsRecipient,
-} from "@/lib/notifications/sms";
 import type { CheckoutProvider } from "@/lib/payments/checkout";
 import { recapLinkPath } from "@/lib/recap-links";
 import type { AppDb } from "./client";
@@ -201,10 +194,9 @@ export async function getRecapPageData(
     bookingId,
     shoutout: trip.recapShoutout,
     photos,
-    // A phone-only diver (a supported case — their recap can go out by SMS
-    // instead) has nothing `startTipCheckout` can hand to Stripe as a
-    // customer email; offering the form anyway would fail on every
-    // submission (Codex finding).
+    // A diver with no email on file has nothing `startTipCheckout` can hand
+    // to Stripe as a customer email; offering the form anyway would fail on
+    // every submission (Codex finding).
     canTip: Boolean(row.diverEmail) && canAcceptPayments(stripeAccount),
     currency: toShopCurrency(row.currency),
     tip: tip
@@ -416,7 +408,6 @@ export type RecapRunSummary = {
 export type SendDueRecapsOptions = {
   now?: Date;
   emailProvider?: NotificationProvider;
-  smsProvider?: SmsProvider;
   /** Origin for the recap link; defaults to the configured public app URL. */
   appOrigin?: string | null;
 };
@@ -427,8 +418,7 @@ export type SendDueRecapsOptions = {
  * one-row-per-(booking, kind) delivery dedup as the pre-trip reminders. The
  * recap link is the whole point, so a run with no resolvable app origin records
  * `not_configured` (surfaced on the staff dashboard) rather than sending a
- * dead-end email. Email is the tracked channel; a textable phone gets a
- * courtesy SMS on top.
+ * dead-end email. Email is the only channel.
  */
 export async function sendDueRecaps(
   db: AppDb,
@@ -436,7 +426,6 @@ export async function sendDueRecaps(
 ): Promise<RecapRunSummary> {
   const now = options.now ?? nowDate();
   const emailProvider = notificationProviderForDb(db, options.emailProvider);
-  const smsProvider = options.smsProvider ?? smsProviderFromEnvironment();
   const origin = options.appOrigin === undefined ? publicAppUrl() : options.appOrigin;
   const since = new Date(now.getTime() - RECAP_LOOKBACK_HOURS * HOUR_MS);
 
@@ -498,15 +487,7 @@ export async function sendDueRecaps(
   const emailWork: Array<{
     bookingId: string;
     shopId: string;
-    phone: string | null;
-    smsBody: string;
     notification: Notification;
-  }> = [];
-  const smsWork: Array<{
-    bookingId: string;
-    shopId: string;
-    phone: string;
-    smsBody: string;
   }> = [];
 
   for (const { booking, person, trip, shop } of rows) {
@@ -516,7 +497,6 @@ export async function sendDueRecaps(
     }
 
     const recapUrl = origin ? new URL(recapLinkPath(booking.id), `${origin}/`).toString() : null;
-    const phone = smsRecipient(person.phone);
     const sites = siteNamesByTrip.get(trip.id) ?? [];
     // No request to negotiate Accept-Language from at a cron fire — but this
     // diver may have told us first-hand on a request of their own, and that
@@ -524,10 +504,6 @@ export async function sendDueRecaps(
     // 20260731-per-person-notification-locale). Null falls back to the shop
     // locale, exactly as before the column existed.
     const locale = recipientLocale(person.locale, shop.defaultLocale);
-    const t = diverTranslator(locale);
-    const smsBody = recapUrl
-      ? t("notifications.sms.recap", { shopName: shop.name, tripTitle: trip.title, recapUrl })
-      : "";
 
     if (recapUrl && person.email && !person.courtesyEmailOptOutAt) {
       const unsubscribeToken = await issuePersonCourtesyEmailUnsubscribeToken(db, {
@@ -537,8 +513,6 @@ export async function sendDueRecaps(
       emailWork.push({
         bookingId: booking.id,
         shopId: shop.id,
-        phone,
-        smsBody,
         notification: {
           kind: "trip_recap",
           bookingId: booking.id,
@@ -555,19 +529,12 @@ export async function sendDueRecaps(
           unsubscribeUrl: new URL(`/unsubscribe/${unsubscribeToken}`, `${origin}/`).toString(),
         },
       });
-    } else if (recapUrl && phone) {
-      smsWork.push({
-        bookingId: booking.id,
-        shopId: shop.id,
-        phone,
-        smsBody,
-      });
     } else if (recapUrl && person.email && person.courtesyEmailOptOutAt) {
-      // Opted out of courtesy email and no phone to fall back to — not a
-      // delivery problem, so no `not_configured` row; just don't send.
+      // Opted out of courtesy email — not a delivery problem, so no
+      // `not_configured` row; just don't send.
       summary.optedOut += 1;
     } else {
-      // No app origin (no link to send) or no reachable channel — record the gap.
+      // No app origin (no link to send) or no email on file — record the gap.
       await recordNotificationDelivery(db, {
         shopId: shop.id,
         bookingId: booking.id,
@@ -586,24 +553,6 @@ export async function sendDueRecaps(
   for (let index = 0; index < emailWork.length; index += 1) {
     const work = emailWork[index];
     const delivery = emailDeliveries[index] ?? { status: "failed" as const, retryable: true };
-    if (delivery.status === "sent" && work.phone) {
-      await notifySms({ channel: "sms", to: work.phone, body: work.smsBody }, smsProvider);
-    }
-    await recordNotificationDelivery(db, {
-      shopId: work.shopId,
-      bookingId: work.bookingId,
-      kind: "trip_recap",
-      delivery,
-    });
-    if (delivery.status === "sent") summary.sent += 1;
-    else summary.failed += 1;
-  }
-
-  for (const work of smsWork) {
-    const delivery = await notifySms(
-      { channel: "sms", to: work.phone, body: work.smsBody },
-      smsProvider,
-    );
     await recordNotificationDelivery(db, {
       shopId: work.shopId,
       bookingId: work.bookingId,

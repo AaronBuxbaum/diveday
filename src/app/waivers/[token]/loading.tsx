@@ -1,7 +1,7 @@
 /**
  * Body-shaped skeleton for /waivers (design principle 1) — the token lookup,
  * booking, and shop context have no loading state to show meanwhile, and
- * this is the page a diver opens from a text message the night before.
+ * this is the page a diver opens from an email link the night before.
  */
 export default function WaiverLoading() {
   return (

@@ -3,7 +3,6 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { toDiverLocale } from "@/i18n/settings";
 import type { Notification, NotificationDelivery, NotificationProvider } from "@/lib/notifications";
-import type { SmsDelivery, SmsMessage, SmsProvider } from "@/lib/notifications/sms";
 import type { CheckoutProvider, CreateCheckoutSessionResult } from "@/lib/payments/checkout";
 import { seededShopContext } from "@/test/db";
 import { createBookingParty } from "./bookings";
@@ -30,17 +29,6 @@ function fakeEmail(result: NotificationDelivery = { status: "sent", providerMess
   const provider: NotificationProvider = {
     async send(notification) {
       sent.push(notification);
-      return result;
-    },
-  };
-  return { sent, provider };
-}
-
-function fakeSms(result: SmsDelivery = { status: "sent", providerMessageId: "SM_1" }) {
-  const sent: SmsMessage[] = [];
-  const provider: SmsProvider = {
-    async send(message) {
-      sent.push(message);
       return result;
     },
   };
@@ -116,7 +104,7 @@ describe("getRecapPageData", () => {
     expect(await getRecapPageData(db, bookingId)).toBeNull();
   });
 
-  it("hides tipping for a phone-only diver — startTipCheckout has no email to hand Stripe (Codex finding)", async () => {
+  it("hides tipping for a diver with no email on file — startTipCheckout has nothing to hand Stripe (Codex finding)", async () => {
     const { db, shop, bookingId } = await recapContext();
     await upsertShopStripeAccount(db, shop.id, "acct_test");
     await setShopStripeAccountStatus(db, "acct_test", {
@@ -414,7 +402,6 @@ describe("sendDueRecaps", () => {
     const opts = () => ({
       now: afterTrip,
       emailProvider: fakeEmail().provider,
-      smsProvider: fakeSms().provider,
       appOrigin: ORIGIN,
     });
 
@@ -454,7 +441,6 @@ describe("sendDueRecaps", () => {
     const opts = {
       now: afterTrip,
       emailProvider: email.provider,
-      smsProvider: fakeSms().provider,
       appOrigin: ORIGIN,
     };
 
@@ -480,7 +466,6 @@ describe("sendDueRecaps", () => {
     await sendDueRecaps(db, {
       now: new Date(reef.endsAt.getTime() - 60 * 60 * 1000),
       emailProvider: email.provider,
-      smsProvider: fakeSms().provider,
       appOrigin: ORIGIN,
     });
     expect(email.sent.filter((n) => "bookingId" in n && n.bookingId === bookingId)).toHaveLength(0);
@@ -494,7 +479,6 @@ describe("sendDueRecaps", () => {
     await sendDueRecaps(db, {
       now: afterTrip,
       emailProvider: email.provider,
-      smsProvider: fakeSms().provider,
       appOrigin: ORIGIN,
     });
     expect(email.sent.filter((n) => "bookingId" in n && n.bookingId === bookingId)).toHaveLength(0);
@@ -506,9 +490,26 @@ describe("sendDueRecaps", () => {
     await sendDueRecaps(db, {
       now: afterTrip,
       emailProvider: fakeEmail().provider,
-      smsProvider: fakeSms().provider,
       appOrigin: null,
     });
+    const rows = await rowsFor(db, bookingId);
+    expect(rows[0]?.status).toBe("not_configured");
+  });
+
+  it("records not_configured for a diver with no email on file", async () => {
+    const { db, bookingId, afterTrip } = await recapContext();
+    const [person] = await db
+      .select()
+      .from(people)
+      .where(eq(people.email, "recap-rae@example.com"));
+    await db.update(people).set({ email: null }).where(eq(people.id, person.id));
+    const email = fakeEmail();
+    await sendDueRecaps(db, {
+      now: afterTrip,
+      emailProvider: email.provider,
+      appOrigin: ORIGIN,
+    });
+    expect(email.sent.filter((n) => "bookingId" in n && n.bookingId === bookingId)).toHaveLength(0);
     const rows = await rowsFor(db, bookingId);
     expect(rows[0]?.status).toBe("not_configured");
   });
@@ -519,7 +520,6 @@ describe("sendDueRecaps", () => {
     await sendDueRecaps(db, {
       now: afterTrip,
       emailProvider: email.provider,
-      smsProvider: fakeSms().provider,
       appOrigin: ORIGIN,
     });
     const mine = email.sent.find((n) => n.kind === "trip_recap" && n.bookingId === bookingId);
@@ -527,30 +527,7 @@ describe("sendDueRecaps", () => {
     expect(mine.unsubscribeUrl).toContain(`${ORIGIN}/unsubscribe/`);
   });
 
-  it("skips the email (falling back to SMS) for a diver who opted out of courtesy email", async () => {
-    const { db, bookingId, afterTrip } = await recapContext();
-    const [person] = await db
-      .select()
-      .from(people)
-      .where(eq(people.email, "recap-rae@example.com"));
-    await db
-      .update(people)
-      .set({ courtesyEmailOptOutAt: new Date("2026-07-20T00:00:00.000Z"), phone: "+13055557777" })
-      .where(eq(people.id, person.id));
-    const email = fakeEmail();
-    const sms = fakeSms({ status: "sent", providerMessageId: "SM_recap_optout" });
-    const summary = await sendDueRecaps(db, {
-      now: afterTrip,
-      emailProvider: email.provider,
-      smsProvider: sms.provider,
-      appOrigin: ORIGIN,
-    });
-    expect(email.sent.filter((n) => "bookingId" in n && n.bookingId === bookingId)).toHaveLength(0);
-    expect(sms.sent.filter((m) => m.to === "+13055557777")).toHaveLength(1);
-    expect(summary.optedOut).toBe(0);
-  });
-
-  it("counts, but does not record a failure, for an opted-out diver with no phone to fall back to", async () => {
+  it("counts, but does not record a failure, for a diver opted out of courtesy email", async () => {
     const { db, bookingId, afterTrip } = await recapContext();
     const [person] = await db
       .select()
@@ -564,36 +541,11 @@ describe("sendDueRecaps", () => {
     const summary = await sendDueRecaps(db, {
       now: afterTrip,
       emailProvider: email.provider,
-      smsProvider: fakeSms().provider,
       appOrigin: ORIGIN,
     });
     expect(email.sent.filter((n) => "bookingId" in n && n.bookingId === bookingId)).toHaveLength(0);
     expect(summary.optedOut).toBe(1);
     expect(summary.failed).toBe(0);
     expect(await rowsFor(db, bookingId)).toHaveLength(0);
-  });
-
-  it("texts a phone-only diver the recap link", async () => {
-    const { db, bookingId, afterTrip } = await recapContext();
-    const [person] = await db
-      .select()
-      .from(people)
-      .where(eq(people.email, "recap-rae@example.com"));
-    await db
-      .update(people)
-      .set({ email: null, phone: "+13055557777" })
-      .where(eq(people.id, person.id));
-    const sms = fakeSms({ status: "sent", providerMessageId: "SM_recap" });
-    await sendDueRecaps(db, {
-      now: afterTrip,
-      emailProvider: fakeEmail().provider,
-      smsProvider: sms.provider,
-      appOrigin: ORIGIN,
-    });
-    const mine = sms.sent.filter((m) => m.to === "+13055557777");
-    expect(mine).toHaveLength(1);
-    expect(mine[0].body).toContain(`${ORIGIN}/recap/`);
-    const rows = await rowsFor(db, bookingId);
-    expect(rows[0]).toMatchObject({ status: "sent", providerMessageId: "SM_recap" });
   });
 });

@@ -1,4 +1,4 @@
-// i18n-exempt-file: shared text layout for the terminal email/SMS renderers
+// i18n-exempt-file: shared text layout for the terminal email renderer
 // (src/lib/notifications/email.ts, src/db/reminders.ts) — resolves its own
 // words via diverTranslator rather than handing back a code (docs ADR
 // 20260731-notification-locale).
@@ -6,8 +6,8 @@ import type { DiverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
 
 /**
- * The night-before brief, shared by both channels (`src/lib/notifications/email.ts`
- * and `src/db/reminders.ts`'s SMS composer). The evening-before reminder
+ * The night-before brief, rendered into the reminder email
+ * (`src/lib/notifications/email.ts`). The evening-before reminder
  * (`trip_reminder_24h`) is the single cheapest cancellation-prevention tool a
  * shop has: most day-of no-shows are anxiety plus logistics confusion, not lost
  * interest. These helpers turn what the shop already knows — the crew's read on

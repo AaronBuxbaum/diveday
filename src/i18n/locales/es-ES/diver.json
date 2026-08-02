@@ -1481,14 +1481,6 @@
       "completeText": "Complétalo aquí",
       "completeLink": "Completar tu waiver",
       "expiry": "Este enlace privado caduca el {expiresAt}."
-    },
-    "sms": {
-      "whenWeek": "esta semana",
-      "whenDay": "mañana",
-      "body": "{shopName}: {tripTitle} sale {when} — {date}, {time}. Preséntate en el muelle {minutes} min antes.",
-      "contact": "¿Preguntas? Escríbenos al {phone}.",
-      "medicalReviewNote": "Comprueba si una respuesta médica necesita el visto bueno de un médico",
-      "recap": "{shopName}: ¡gracias por bucear {tripTitle}! Tu resumen: {recapUrl}"
     }
   }
 }

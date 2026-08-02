@@ -1,10 +1,7 @@
 import { and, eq, gt, inArray, lt, lte, ne } from "drizzle-orm";
-import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
-import { reminderActionText } from "@/i18n/reminder-labels";
-import type { DiverLocale } from "@/i18n/settings";
+import { diverTranslator } from "@/i18n/messages";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
-import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { firstTimerReassuranceText, forecastText } from "@/lib/night-before-brief";
 import {
   type Notification,
@@ -12,17 +9,7 @@ import {
   publicAppUrl,
   recipientLocale,
 } from "@/lib/notifications";
-import {
-  notifySms,
-  type SmsProvider,
-  smsProviderFromEnvironment,
-  smsRecipient,
-} from "@/lib/notifications/sms";
-import {
-  buildDiverChecklist,
-  type ReminderActionCode,
-  reminderReadiness,
-} from "@/lib/readiness-summary";
+import { buildDiverChecklist, reminderReadiness } from "@/lib/readiness-summary";
 import {
   dueReminder,
   MAX_REMINDER_LEAD_HOURS,
@@ -80,81 +67,22 @@ export type SendDueRemindersOptions = {
   /** Injectable clock; defaults to now. */
   now?: Date;
   emailProvider?: NotificationProvider;
-  smsProvider?: SmsProvider;
   /** Origin for readiness links; defaults to the configured public app URL. */
   appOrigin?: string | null;
 };
-
-/**
- * A short text; the email carries the full detail and the link. The night-before
- * (day) lead adds the plain-language conditions line and who to text, the SMS
- * half of the confidence arc — kept compact so it stays a single readable text.
- * Resolved against the recipient's own locale, the same as the email that
- * accompanies it (docs ADR 20260731-per-person-notification-locale) — no
- * downstream renderer picks words for a sent text, so this composes its own
- * via `t()` rather than returning a code (docs ADR
- * 20260731-notification-locale, whose terminal-renderer exception stands).
- */
-function reminderSmsBody(
-  t: DiverTranslator,
-  locale: DiverLocale,
-  input: {
-    shopName: string;
-    tripTitle: string;
-    startsAt: Date;
-    endsAt: Date;
-    timezone: string;
-    lead: "week" | "day";
-    dockCallMinutes: number;
-    outstanding: ReminderActionCode[];
-    medicalReview: boolean;
-    forecast?: string | null;
-    whoToText?: string | null;
-  },
-): string {
-  const when =
-    input.lead === "week" ? t("notifications.sms.whenWeek") : t("notifications.sms.whenDay");
-  const date = formatShortDate(input.startsAt, locale, input.timezone);
-  const time = formatTimeRangeTz(input.startsAt, input.endsAt, locale, input.timezone);
-  const conditions =
-    input.lead === "day" && input.forecast
-      ? ` ${t("notifications.brief.conditionsLabel")} ${input.forecast}`
-      : "";
-  // Name the diver's own outstanding items rather than a generic nudge.
-  const todo = input.outstanding.map((code) => reminderActionText(t, code));
-  if (input.medicalReview) todo.push(t("notifications.sms.medicalReviewNote"));
-  const todoText = todo.length
-    ? ` ${t("notifications.common.outstandingHeading")} ${todo.join("; ")}.`
-    : "";
-  const contact =
-    input.lead === "day" && input.whoToText
-      ? ` ${t("notifications.sms.contact", { phone: input.whoToText })}`
-      : "";
-  const body = t("notifications.sms.body", {
-    shopName: input.shopName,
-    tripTitle: input.tripTitle,
-    when,
-    date,
-    time,
-    minutes: input.dockCallMinutes,
-  });
-  return `${body}${conditions}${todoText}${contact}`;
-}
 
 /**
  * Send every pre-trip reminder that has come due since the last run, across all
  * shops. Idempotent by construction: a booking's reminder is deduped by a
  * `notification_deliveries` row keyed on (booking, cadence kind), so re-running
  * only sends cadences not yet delivered (`src/lib/reminders.ts`). Email is the
- * tracked channel when the diver has one; a phone-only diver is tracked from
- * the SMS result instead. When email is the tracked channel, a textable phone
- * also gets a courtesy SMS on success — the reminder's dedup row then suppresses
- * both channels next run.
+ * only tracked channel; a diver with no email address on file gets no reminder
+ * at all and the gap is recorded as `not_configured` so staff can see it.
  *
  * There is no timer in the app: a cron caller drives `now`
  * (docs ADR 20260721-scheduled-reminder-cadence). Fully degradable — with no
- * email or SMS provider configured every send records `not_configured` and the
- * staff notification dashboard surfaces it, exactly like every other channel.
+ * email provider configured every send records `not_configured` and the staff
+ * notification dashboard surfaces it, exactly like every other channel.
  */
 export async function sendDueReminders(
   db: AppDb,
@@ -162,7 +90,6 @@ export async function sendDueReminders(
 ): Promise<ReminderRunSummary> {
   const now = options.now ?? nowDate();
   const emailProvider = notificationProviderForDb(db, options.emailProvider);
-  const smsProvider = options.smsProvider ?? smsProviderFromEnvironment();
   const origin = options.appOrigin === undefined ? publicAppUrl() : options.appOrigin;
   const horizon = new Date(now.getTime() + MAX_REMINDER_LEAD_HOURS * HOUR_MS);
 
@@ -211,16 +138,7 @@ export async function sendDueReminders(
     bookingId: string;
     shopId: string;
     kind: ReminderKind;
-    phone: string | null;
-    smsBody: string;
     notification: Notification;
-  }> = [];
-  const smsWork: Array<{
-    bookingId: string;
-    shopId: string;
-    kind: ReminderKind;
-    phone: string;
-    smsBody: string;
   }> = [];
 
   for (const { booking, person, trip, shop } of rows) {
@@ -234,14 +152,11 @@ export async function sendDueReminders(
       continue;
     }
 
-    const lead = cadence.kind === "trip_reminder_7d" ? "week" : "day";
     // There is no request to negotiate `Accept-Language` from at a cron fire,
     // so this reads whatever the diver's own past requests already recorded,
     // and falls back to the shop's stored locale when there is nothing — same
     // fallback the calendar feed uses, for the same reason (docs ADR
-    // 20260731-per-person-notification-locale). Both the email and the SMS
-    // below take this one value, so a diver never gets the two channels in
-    // different languages.
+    // 20260731-per-person-notification-locale).
     const locale = recipientLocale(person.locale, shop.defaultLocale);
     const t = diverTranslator(locale);
     const readinessCapability = origin
@@ -255,7 +170,6 @@ export async function sendDueReminders(
     const readinessUrl = readinessCapability
       ? new URL(readinessLinkPath(readinessCapability.token), `${origin}/`).toString()
       : undefined;
-    const phone = smsRecipient(person.phone);
 
     // Name the diver's own outstanding items from the same checklist the diver
     // page shows, so the reminder never diverges from the readiness engine.
@@ -286,27 +200,11 @@ export async function sendDueReminders(
         }
       : undefined;
 
-    const smsBody = reminderSmsBody(t, locale, {
-      shopName: shop.name,
-      tripTitle: trip.title,
-      startsAt: trip.startsAt,
-      endsAt: trip.endsAt,
-      timezone: shop.timezone,
-      lead,
-      dockCallMinutes: shop.dockCallMinutes,
-      outstanding,
-      medicalReview,
-      forecast,
-      whoToText,
-    });
-
     if (person.email) {
       emailWork.push({
         bookingId: booking.id,
         shopId: shop.id,
         kind: cadence.kind,
-        phone,
-        smsBody,
         notification: {
           kind: cadence.kind,
           bookingId: booking.id,
@@ -325,14 +223,6 @@ export async function sendDueReminders(
           readinessUrl,
           ...(brief ? { brief } : {}),
         },
-      });
-    } else if (phone) {
-      smsWork.push({
-        bookingId: booking.id,
-        shopId: shop.id,
-        kind: cadence.kind,
-        phone,
-        smsBody,
       });
     } else {
       // No reachable channel — record it so staff can see the gap.
@@ -354,28 +244,6 @@ export async function sendDueReminders(
   for (let index = 0; index < emailWork.length; index += 1) {
     const work = emailWork[index];
     const delivery = emailDeliveries[index] ?? { status: "failed" as const, retryable: true };
-    // A textable phone gets a courtesy SMS only when the email actually sent,
-    // so the once-per-booking dedup row keeps it from re-firing next run.
-    if (delivery.status === "sent" && work.phone) {
-      await notifySms({ channel: "sms", to: work.phone, body: work.smsBody }, smsProvider);
-    }
-    await recordNotificationDelivery(db, {
-      shopId: work.shopId,
-      bookingId: work.bookingId,
-      kind: work.kind,
-      delivery,
-    });
-    if (delivery.status === "sent") summary.sent += 1;
-    else summary.failed += 1;
-  }
-
-  for (const work of smsWork) {
-    // Phone-only diver: SMS is the tracked channel. SmsDelivery is the same
-    // shape as NotificationDelivery, so it records through the same seam.
-    const delivery = await notifySms(
-      { channel: "sms", to: work.phone, body: work.smsBody },
-      smsProvider,
-    );
     await recordNotificationDelivery(db, {
       shopId: work.shopId,
       bookingId: work.bookingId,

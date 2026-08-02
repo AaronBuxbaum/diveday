@@ -10,7 +10,7 @@ import { nowMs } from "./clock";
  * continuously — no "everyone retries exactly at the window edge" thundering
  * herd.
  *
- * Provider-seam shaped like email/payments/SMS (docs/architecture/
+ * Provider-seam shaped like email/payments (docs/architecture/
  * overview.md): `RateLimitStore` is the swappable interface, `checkRateLimit`
  * is the only call sites should use, and a store is never allowed to turn
  * into an outage for legitimate traffic — see the fail-open policy below.
