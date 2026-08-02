@@ -58,6 +58,10 @@ renders images directly, which is the actual point: raw pixels beat any text des
 This works from a fresh checkout without ever running Playwright locally, as long as CI has already
 published a report for that commit.
 
+`REPORT.md` leads with the same verdict headline as the PR comment, above the counts, and prints how
+many baseline images were downloaded — so a run that compared nothing cannot read as a clean one
+here either.
+
 ## Triage loop
 
 1. Read the code and route/state changes before opening images.
@@ -87,9 +91,10 @@ Read the *shape* of a no-code-change diff before assuming a baseline moved:
 - **Anything reflows** — a real layout change. Read it as a finding even if it arrived inside a
   larger rebaseline.
 
-`regconfig.json` already discounts antialiasing (`enableAntialias`) and sub-perceptual per-pixel
-noise (`matchingThreshold: 0.05`), so a diff that survives to the report is not "just antialiasing".
-Widening those knobs is not triage — if a diff is noise, the renderer is the thing to fix.
+`regconfig.json` sets `enableAntialias`, so a diff that survives to the report is not "just
+antialiasing". It deliberately does **not** set `matchingThreshold` — the comparison runs at
+reg-cli's default of `0`, meaning any per-pixel difference counts. Loosening that is not triage: if
+a diff is noise, the renderer is the thing to fix.
 
 ## Handoff
 
