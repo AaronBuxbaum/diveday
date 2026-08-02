@@ -41,7 +41,9 @@ Use `reg-suit` with the `reg-publish-s3-plugin` and `reg-keygen-git-hash-plugin`
   `fetch-depth: 1` leaves no parent to reach. The failure is loud but misleading:
   every screenshot reports as *new* rather than compared (so the diff count is a
   reassuring zero) and the job then dies on "Fail to detect the current branch"
-  without having looked at a pixel. The `visual` job therefore checks out
+  without having looked at a pixel. The `visual-report` job (the merge/compare stage that
+  runs `reg-suit run` after the sharded `visual` capture jobs finish — see
+  `20260802-shard-visual-regression-ci.md`) therefore checks out
   `${{ github.head_ref || github.ref_name }}` at `fetch-depth: 0`. If this job ever
   goes red with zero changed items and a git error, this is why — read the log
   before assuming the baseline moved.
@@ -58,12 +60,13 @@ Use `reg-suit` with the `reg-publish-s3-plugin` and `reg-keygen-git-hash-plugin`
 - **A direct push to main needs a git branch reg-suit doesn't otherwise have.** `reg-keygen-git-hash-plugin`'s
   expected-key detection (`getBaseCommitHash()`) only works by computing a merge-base against *other* local
   branches — it has no "just diff against the previous commit" mode, because it's designed for a topic-branch-vs-trunk
-  PR flow. The `visual` job's checkout puts only `main` in the working copy for a push event, so there is no other
-  branch to triangulate against: the key generator returns null, and every screenshot on every push to main used to
-  report as brand new — "Failed to detect the previous snapshot key" / "New items: N" / "Passed items: 0" in the CI
-  log, every time, without ever actually comparing a pixel. The `visual` job now adds a branch ref at `HEAD^` before
-  running `pnpm visual` (only on `push`, not `pull_request`, where the existing branch-vs-main triangulation already
-  works) — that gives the plugin the second branch its algorithm needs, so it resolves the previous commit's
+  PR flow. The `visual-report` job's checkout puts only `main` in the working copy for a push event, so there is no
+  other branch to triangulate against: the key generator returns null, and every screenshot on every push to main
+  used to report as brand new — "Failed to detect the previous snapshot key" / "New items: N" / "Passed items: 0" in
+  the CI log, every time, without ever actually comparing a pixel. The `visual-report` job now adds a branch ref at
+  `HEAD^` before running `pnpm visual:compare` (only on `push`, not `pull_request`, where the existing
+  branch-vs-main triangulation already works) — that gives the plugin the second branch its algorithm needs, so it
+  resolves the previous commit's
   published S3 snapshot as the baseline and only reports a diff when the pixels actually changed. If that previous
   snapshot was never published, the S3 fetch just comes back empty and the run degrades to the old all-new behavior
   for that one push, rather than a hard failure.
