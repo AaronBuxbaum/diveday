@@ -43,6 +43,18 @@ async function reportedRevenueDigits(page: Page, symbol: string): Promise<number
 }
 
 test.describe("shop currency", () => {
+  // Every test here drives the currency through settings and reads it back on
+  // reports, so one test is up to five full page loads plus three server-action
+  // writes, each with its own status-toast wait. Measured idle at one worker:
+  // 7.8s, 9.2s, 5.9s — the middle one already spends 61% of the default 15s
+  // budget with no contention at all, leaving under six seconds of headroom for
+  // a shared two-worker CI runner. A traced CI failure showed exactly that:
+  // every step resolving, the "Currency saved" toast simply not reached in
+  // time. Same aggregate-cost reasoning as add-diver.spec.ts and
+  // visual.spec.ts — this override cannot mask a hang, because a hang fails the
+  // 8s expect timeout inside it either way.
+  test.setTimeout(30_000);
+
   signedInAsOwner();
 
   test("money follows the shop's currency instead of assuming dollars", async ({ page }) => {
