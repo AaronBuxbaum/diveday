@@ -2549,6 +2549,65 @@ export const rollCallEvents = pgTable(
 );
 
 /**
+ * The crew half of a checkpoint's head count: how many crew a staff member
+ * says are aboard, out of how many the trip has assigned. Append-only, exactly
+ * like `rollCallEvents` — a later attestation supersedes an earlier one without
+ * rewriting it, so what the boat believed at each point stays readable.
+ *
+ * Its own table rather than a widened `rollCallEvents` deliberately (ADR
+ * 20260802-crew-roll-call-attestation). `rollCallEvents.bookingId` is
+ * `notNull` and is the only subject column there; crew hold no booking, so
+ * carrying them would have meant making that column nullable — weakening a NOT
+ * NULL invariant on the safety spine so that a *diver* event could also be
+ * written with no subject at all. The subject shapes differ (one booking vs. a
+ * count over a trip's assignments), so they are separate rows.
+ *
+ * This is an interim slice, not the eventual model. A per-person crew roll call
+ * needs `trip_assignments` to carry a per-trip role (there is none today — roles
+ * are shop-wide on `person_roles`) and a subject model that is not `bookingId`.
+ * Until then a count attested by a named human is what stops a checkpoint from
+ * reading complete with a divemaster still in the water.
+ */
+export const rollCallCrewAttestations = pgTable(
+  "roll_call_crew_attestations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    tripId: uuid("trip_id")
+      .notNull()
+      .references(() => trips.id),
+    /** `departure` or `after_dive_N`; validated against the trip's planned dive count. */
+    checkpoint: text("checkpoint").notNull(),
+    /** Bodies counted on the boat. Typed by a human, never derived from the assignment list. */
+    crewAboard: integer("crew_aboard").notNull(),
+    /**
+     * How many crew the trip had assigned when this was attested — evidence of
+     * what the denominator was at the time. Completeness compares against the
+     * *current* assignment count, so assigning another crew member re-opens the
+     * checkpoint rather than riding on a stale attestation.
+     */
+    crewAssigned: integer("crew_assigned").notNull(),
+    /** Who counted. A head count is never anonymous, same as a roll-call event. */
+    attestedByPersonId: uuid("attested_by_person_id")
+      .notNull()
+      .references(() => people.id),
+    note: text("note"),
+    occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("roll_call_crew_attestations_shop_trip_checkpoint_occurred_idx").on(
+      table.shopId,
+      table.tripId,
+      table.checkpoint,
+      table.occurredAt,
+    ),
+  ],
+);
+
+/**
  * A photo a diver attaches to their own post-trip recap page. The recap link is
  * a per-booking signed token (public, noindex), so an upload is scoped to that
  * booking and a diver only ever sees the shots on their own page. Staff see a

@@ -150,9 +150,115 @@ export type RollCallRecord = {
 };
 
 export type ManifestCrewMember = {
+  /**
+   * The crew member's `people.id`. Carried even though nothing addresses a crew
+   * member individually yet: dropping it is what foreclosed a per-person crew
+   * roll call, since no id ever reached a surface that could have named one
+   * (ADR 20260802-crew-roll-call-attestation). It is also the stable list key —
+   * two crew can share a full name.
+   */
+  id: string;
   fullName: string;
   roles: string[];
 };
+
+/**
+ * A staff member's statement of how many crew are aboard at one checkpoint,
+ * out of how many the trip has assigned. The crew half of the head count:
+ * crew hold no booking, so they are not roll-call subjects, and before this
+ * existed a checkpoint could read "complete" with a divemaster still down.
+ *
+ * Interim by design — a count, not a per-person roll call. See the ADR.
+ */
+export type CrewAttestation = {
+  /** Bodies counted by a human. Never derived from the assignment list. */
+  crewAboard: number;
+  /** What the assignment count was when it was attested (evidence, not the gate). */
+  crewAssigned: number;
+  attestedByName: string;
+  occurredAt: Date;
+  note: string | null;
+};
+
+/**
+ * Why a checkpoint is not closed yet. Codes, not sentences — the UI picks the
+ * words (`src/i18n/locales/*/staff.json`).
+ *
+ * - `no_divers` — nothing to count; an empty roster never reads complete.
+ * - `divers_awaiting` — at least one booked diver has no result here.
+ * - `crew_not_attested` — every diver is counted, but nobody has said how many
+ *   crew are aboard. Includes a trip with *zero* assigned crew: "0 of 0" is
+ *   still a human statement, never an automatic pass (see below).
+ * - `crew_short` — fewer crew were counted aboard than the trip has assigned.
+ */
+export type RollCallIncompleteReason =
+  | "no_divers"
+  | "divers_awaiting"
+  | "crew_not_attested"
+  | "crew_short";
+
+export type RollCallCompleteness = {
+  complete: boolean;
+  diversAccountedFor: boolean;
+  crewAccountedFor: boolean;
+  reason: RollCallIncompleteReason | null;
+};
+
+/**
+ * The single definition of "this checkpoint is closed", shared by the live
+ * manifest and the offline copy. It used to be written twice, inline, at the UI
+ * layer (`manifest/page.tsx` and `OfflineManifestView.tsx`), as
+ * `totalDivers > 0 && awaiting === 0` — divers only. Crew are the people most
+ * reliably in the water and were not part of it, so a boat could read "roll call
+ * complete" with a divemaster still down.
+ *
+ * Rules, in order:
+ *
+ * 1. Divers first, unchanged: an empty roster is never complete, and every
+ *    booked diver needs a result at this checkpoint.
+ * 2. Then crew: an attestation must exist, and it must account for at least as
+ *    many crew as the trip has assigned **right now** — not the denominator
+ *    stored on the attestation. Assigning another crew member after the fact
+ *    re-opens the checkpoint instead of riding on a stale count.
+ *
+ * **Zero assigned crew does not auto-complete.** A trip with no crew assigned is
+ * a scheduling gap (the app already nags about it as a coverage gap), not
+ * evidence that nobody else was aboard, so "0 of 0" still has to be said out
+ * loud by a named human. The alternative — treating an empty assignment list as
+ * satisfied — would hand back exactly the silent pass this whole check exists to
+ * remove, and would do it on precisely the trips whose crew data is worst.
+ *
+ * Counting *more* crew aboard than are assigned is fine and reads complete: an
+ * extra deckhand is a person accounted for, not a person missing. The stored
+ * denominator keeps the discrepancy visible.
+ */
+export function rollCallCompleteness(input: {
+  totalDivers: number;
+  awaiting: number;
+  /** Assigned crew *now* — `manifest.crew.length`, not the attested denominator. */
+  crewAssigned: number;
+  crewAttestation?: CrewAttestation | null;
+}): RollCallCompleteness {
+  const diversAccountedFor = input.totalDivers > 0 && input.awaiting === 0;
+  const attestation = input.crewAttestation ?? null;
+  const crewAccountedFor = attestation !== null && attestation.crewAboard >= input.crewAssigned;
+  const reason: RollCallIncompleteReason | null =
+    input.totalDivers === 0
+      ? "no_divers"
+      : input.awaiting > 0
+        ? "divers_awaiting"
+        : attestation === null
+          ? "crew_not_attested"
+          : crewAccountedFor
+            ? null
+            : "crew_short";
+  return {
+    complete: diversAccountedFor && crewAccountedFor,
+    diversAccountedFor,
+    crewAccountedFor,
+    reason,
+  };
+}
 
 export type TripManifest = {
   trip: {
@@ -164,6 +270,15 @@ export type TripManifest = {
   };
   checkpoint: RollCallCheckpoint;
   crew: ManifestCrewMember[];
+  /** The latest crew count attested at this checkpoint, if any. */
+  crewAttestation: CrewAttestation | null;
+  /**
+   * Whether this checkpoint is closed — divers *and* crew. Derived here so the
+   * live page and the offline copy cannot drift apart; the offline view
+   * recomputes it with `rollCallCompleteness` because its `awaiting` count comes
+   * from events on the device, not from this snapshot.
+   */
+  completeness: RollCallCompleteness;
   divers: (ManifestDiverInput & {
     readiness: ReadinessResult;
     rollCall: ManifestDiverInput["rollCall"];
@@ -188,6 +303,7 @@ export function buildTripManifest(input: {
   trip: TripManifest["trip"];
   checkpoint?: RollCallCheckpoint;
   crew: ManifestCrewMember[];
+  crewAttestation?: CrewAttestation | null;
   divers: ManifestDiverInput[];
 }): TripManifest {
   const divers = input.divers.map((diver) => ({
@@ -195,19 +311,28 @@ export function buildTripManifest(input: {
     readiness: diver.readiness ?? unavailableReadiness(),
     rollCall: diver.rollCall,
   }));
+  const summary = {
+    totalDivers: divers.length,
+    ready: divers.filter((diver) => diver.readiness.status === "ready").length,
+    blocked: divers.filter((diver) => diver.readiness.status === "blocked").length,
+    boarded: divers.filter((diver) => diver.rollCall?.state === "boarded").length,
+    notBoarded: divers.filter((diver) => diver.rollCall?.state === "not_boarded").length,
+    awaiting: divers.filter((diver) => !diver.rollCall).length,
+  };
+  const crewAttestation = input.crewAttestation ?? null;
   return {
     trip: input.trip,
     checkpoint: input.checkpoint ?? "departure",
     crew: input.crew,
+    crewAttestation,
+    completeness: rollCallCompleteness({
+      totalDivers: summary.totalDivers,
+      awaiting: summary.awaiting,
+      crewAssigned: input.crew.length,
+      crewAttestation,
+    }),
     divers,
-    summary: {
-      totalDivers: divers.length,
-      ready: divers.filter((diver) => diver.readiness.status === "ready").length,
-      blocked: divers.filter((diver) => diver.readiness.status === "blocked").length,
-      boarded: divers.filter((diver) => diver.rollCall?.state === "boarded").length,
-      notBoarded: divers.filter((diver) => diver.rollCall?.state === "not_boarded").length,
-      awaiting: divers.filter((diver) => !diver.rollCall).length,
-    },
+    summary,
   };
 }
 
