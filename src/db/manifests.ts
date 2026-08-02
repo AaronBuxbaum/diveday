@@ -6,23 +6,33 @@ import { nowDate } from "@/lib/clock";
 import { rentalFitLine } from "@/lib/dive-prep";
 import {
   buildTripManifest,
+  type CrewAttestation,
   carryForwardNotBoarded,
   isRollCallCheckpoint,
+  type ManifestCrewMember,
   type RollCallCheckpoint,
   rollCallCheckpoints,
   type TripManifest,
 } from "@/lib/manifests";
 import { medicalWaiverMark } from "@/lib/waivers";
-import type { AppDb } from "./client";
+import type { AppDb, DbExecutor } from "./client";
 import { publishManifestEvent } from "./manifest-events";
 import { verifiedNitroxPersonIds } from "./nitrox";
 import { getBookingReadiness, listTripReadiness } from "./readiness";
 import { rentalFitByBooking } from "./rental-fit";
-import { bookings, people, personRoles, rollCallEvents, tripAssignments, trips } from "./schema";
+import {
+  bookings,
+  people,
+  personRoles,
+  rollCallCrewAttestations,
+  rollCallEvents,
+  tripAssignments,
+  trips,
+} from "./schema";
 import { getShopById } from "./shops";
 import { getTripRoster, getTripWithBooked } from "./trips";
 
-async function listTripCrew(db: AppDb, shopId: string, tripId: string) {
+async function listTripCrew(db: DbExecutor, shopId: string, tripId: string) {
   const rows = await db
     .select({ person: people, role: personRoles.role })
     .from(tripAssignments)
@@ -42,13 +52,51 @@ async function listTripCrew(db: AppDb, shopId: string, tripId: string) {
       ),
     )
     .orderBy(asc(people.fullName));
-  const byId = new Map<string, { fullName: string; roles: string[] }>();
+  // The person id is carried through, not dropped. It used to be, which is what
+  // made a per-person crew roll call unreachable: no surface downstream could
+  // address a crew member even if the write path had allowed it (ADR
+  // 20260802-crew-roll-call-attestation). Tenancy is proven by the joins above,
+  // through `trips`, because `trip_assignments` has no `shop_id` of its own.
+  const byId = new Map<string, ManifestCrewMember>();
   for (const { person, role } of rows) {
-    const crew = byId.get(person.id) ?? { fullName: person.fullName, roles: [] };
+    const crew = byId.get(person.id) ?? { id: person.id, fullName: person.fullName, roles: [] };
     crew.roles.push(role);
     byId.set(person.id, crew);
   }
   return [...byId.values()];
+}
+
+/**
+ * The latest crew attestation per checkpoint for one trip. Append-only, so
+ * "latest" is newest `occurredAt` (then `createdAt` to break a tie), exactly
+ * like `listLatestRollCallByBooking` — an earlier count is superseded, never
+ * rewritten.
+ */
+async function listLatestCrewAttestations(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+): Promise<Map<string, CrewAttestation>> {
+  const rows = await db
+    .select({ attestation: rollCallCrewAttestations, attester: people })
+    .from(rollCallCrewAttestations)
+    .innerJoin(people, eq(people.id, rollCallCrewAttestations.attestedByPersonId))
+    .where(
+      and(eq(rollCallCrewAttestations.shopId, shopId), eq(rollCallCrewAttestations.tripId, tripId)),
+    )
+    .orderBy(desc(rollCallCrewAttestations.occurredAt), desc(rollCallCrewAttestations.createdAt));
+  const latest = new Map<string, CrewAttestation>();
+  for (const { attestation, attester } of rows) {
+    if (latest.has(attestation.checkpoint)) continue;
+    latest.set(attestation.checkpoint, {
+      crewAboard: attestation.crewAboard,
+      crewAssigned: attestation.crewAssigned,
+      attestedByName: attester.fullName,
+      occurredAt: attestation.occurredAt,
+      note: attestation.note,
+    });
+  }
+  return latest;
 }
 
 async function listLatestRollCallByBooking(
@@ -146,18 +194,25 @@ export async function getTripManifests(
   const trip = await getTripWithBooked(db, shopId, tripId);
   if (!trip) return null;
   const checkpoints = rollCallCheckpoints(trip.plannedDives);
-  const [shop, roster, readinessRows, certified, fitByBooking, crew, ...rollCalls] =
-    await Promise.all([
-      getShopById(db, shopId),
-      getTripRoster(db, shopId, tripId),
-      listTripReadiness(db, shopId, tripId),
-      verifiedNitroxPersonIds(db, shopId),
-      rentalFitByBooking(db, shopId, tripId),
-      listTripCrew(db, shopId, tripId),
-      ...checkpoints.map((checkpoint) =>
-        listLatestRollCallByBooking(db, shopId, tripId, checkpoint),
-      ),
-    ]);
+  const [
+    shop,
+    roster,
+    readinessRows,
+    certified,
+    fitByBooking,
+    crew,
+    crewAttestations,
+    ...rollCalls
+  ] = await Promise.all([
+    getShopById(db, shopId),
+    getTripRoster(db, shopId, tripId),
+    listTripReadiness(db, shopId, tripId),
+    verifiedNitroxPersonIds(db, shopId),
+    rentalFitByBooking(db, shopId, tripId),
+    listTripCrew(db, shopId, tripId),
+    listLatestCrewAttestations(db, shopId, tripId),
+    ...checkpoints.map((checkpoint) => listLatestRollCallByBooking(db, shopId, tripId, checkpoint)),
+  ]);
   if (!shop) return null;
   const readinessByBooking = new Map(
     readinessRows.map((row) => [row.booking.id, row.readiness] as const),
@@ -216,6 +271,7 @@ export async function getTripManifests(
       trip: tripInput,
       checkpoint,
       crew,
+      crewAttestation: crewAttestations.get(checkpoint) ?? null,
       divers: diverInputs.map((diver) => ({
         ...diver,
         rollCall: effectiveByBooking.get(diver.bookingId)?.[index],
@@ -387,6 +443,118 @@ export async function recordRollCall(
   if (outcome.ok && !outcome.duplicate) {
     await publishManifestEvent(db, input.shopId, input.tripId);
   }
+  return outcome;
+}
+
+export type RecordCrewAttestationOutcome =
+  | { ok: true; attestationId: string; crewAboard: number; crewAssigned: number }
+  | {
+      ok: false;
+      reason: "trip_unavailable" | "staff_not_found" | "invalid_checkpoint" | "invalid_count";
+    };
+
+/**
+ * The largest crew count this accepts. Nothing DiveDay serves floats a boat
+ * with more than a couple of dozen crew, and an unbounded integer typed with wet
+ * hands is how a checkpoint gets "closed" by a fat-fingered 999 that nobody
+ * reads as wrong.
+ */
+const MAX_CREW_ABOARD = 99;
+
+/**
+ * Record how many crew are aboard at one checkpoint. Append-only: every call
+ * inserts a row, and the newest one is the current answer, mirroring
+ * `recordRollCall`. There is no update path and no "crew ok" boolean — a head
+ * count is a statement someone made at a time, not a flag.
+ *
+ * The **denominator is never taken from the caller**. `crewAssigned` is read
+ * server-side from the trip's own assignments inside the transaction, so a
+ * client cannot close a checkpoint by claiming the boat only had one crew
+ * member. `crewAboard` is the only number staff supply, because it is the only
+ * one that comes from looking at people.
+ */
+export async function recordCrewAttestation(
+  db: AppDb,
+  input: {
+    shopId: string;
+    tripId: string;
+    attestedByPersonId: string;
+    crewAboard: number;
+    checkpoint?: RollCallCheckpoint;
+    note?: string;
+    occurredAt?: Date;
+  },
+): Promise<RecordCrewAttestationOutcome> {
+  const outcome = await db.transaction(async (tx): Promise<RecordCrewAttestationOutcome> => {
+    const checkpoint = input.checkpoint ?? "departure";
+    const occurredAt = input.occurredAt ?? nowDate();
+    if (
+      !Number.isInteger(input.crewAboard) ||
+      input.crewAboard < 0 ||
+      input.crewAboard > MAX_CREW_ABOARD
+    ) {
+      return { ok: false, reason: "invalid_count" };
+    }
+
+    const [staff] = await tx
+      .select({ id: people.id })
+      .from(people)
+      .innerJoin(personRoles, eq(personRoles.personId, people.id))
+      .where(
+        and(
+          eq(people.id, input.attestedByPersonId),
+          eq(people.shopId, input.shopId),
+          inArray(personRoles.role, [...STAFF_ROLES]),
+        ),
+      )
+      .limit(1);
+    if (!staff) return { ok: false, reason: "staff_not_found" };
+
+    // Same tenancy and trip-status gate `recordRollCall` applies before writing
+    // a diver event: a trip belonging to another shop, or one already cancelled,
+    // takes no head count.
+    const [trip] = await tx
+      .select({ id: trips.id, plannedDives: trips.plannedDives })
+      .from(trips)
+      .where(
+        and(
+          eq(trips.id, input.tripId),
+          eq(trips.shopId, input.shopId),
+          eq(trips.status, "scheduled"),
+        ),
+      )
+      .limit(1);
+    if (!trip) return { ok: false, reason: "trip_unavailable" };
+    if (!isRollCallCheckpoint(checkpoint, trip.plannedDives)) {
+      return { ok: false, reason: "invalid_checkpoint" };
+    }
+
+    const crew = await listTripCrew(tx, input.shopId, input.tripId);
+
+    const [attestation] = await tx
+      .insert(rollCallCrewAttestations)
+      .values({
+        shopId: input.shopId,
+        tripId: input.tripId,
+        checkpoint,
+        crewAboard: input.crewAboard,
+        crewAssigned: crew.length,
+        attestedByPersonId: staff.id,
+        note: input.note?.trim() || null,
+        occurredAt,
+      })
+      .returning({ id: rollCallCrewAttestations.id });
+    if (!attestation) throw new Error("recordCrewAttestation: insert returned no row");
+    return {
+      ok: true,
+      attestationId: attestation.id,
+      crewAboard: input.crewAboard,
+      crewAssigned: crew.length,
+    };
+  });
+  // Same push signal a roll-call write raises — a crew count changes whether
+  // the checkpoint reads complete on every device holding this manifest open.
+  if (outcome.ok) await publishManifestEvent(db, input.shopId, input.tripId);
   return outcome;
 }
 

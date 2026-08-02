@@ -1,5 +1,5 @@
-import type { RollCallCheckpoint } from "@/lib/manifests";
-import type { StaffTranslator } from "./staff-messages";
+import type { RollCallCheckpoint, RollCallLabel } from "@/lib/manifests";
+import type { StaffMessageKey, StaffTranslator } from "./staff-messages";
 
 /**
  * A roll-call checkpoint's staff-facing word ("Before departure" / "After
@@ -14,4 +14,23 @@ export function rollCallCheckpointText(t: StaffTranslator, checkpoint: RollCallC
   if (checkpoint === "departure") return t("shared.rollCallCheckpoint.departure");
   const n = Number(checkpoint.slice("after_dive_".length));
   return t("shared.rollCallCheckpoint.afterDive", { n });
+}
+
+const ROLL_CALL_STATE_KEYS: Record<RollCallLabel, StaffMessageKey> = {
+  awaiting: "shared.rollCallState.awaiting",
+  boarded: "shared.rollCallState.boarded",
+  not_boarded: "shared.rollCallState.notBoarded",
+  not_boarded_carried: "shared.rollCallState.notBoardedCarried",
+  not_back_aboard: "shared.rollCallState.notBackAboard",
+};
+
+/**
+ * The words beside a diver's name for their roll-call state at a checkpoint.
+ * `rollCallLabel` (src/lib/manifests.ts) resolves the code — including the
+ * `not_back_aboard` case an after-dive checkpoint carries — and this is the one
+ * resolver both the live manifest and the offline copy render it through, so
+ * the two surfaces cannot describe the same diver differently.
+ */
+export function rollCallLabelText(t: StaffTranslator, label: RollCallLabel): string {
+  return t(ROLL_CALL_STATE_KEYS[label]);
 }

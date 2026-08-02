@@ -273,10 +273,12 @@ describe("POST /api/webhooks/stripe — event dispatch", () => {
     const response = await post({
       id: "evt_1",
       type: "checkout.session.completed",
-      data: { object: { id: "cs_123", payment_status: "paid" } },
+      data: { object: { id: "cs_123", payment_status: "paid", amount_total: 36_000 } },
     });
     expect(response.status).toBe(200);
-    expect(markCheckoutPaidBySessionId).toHaveBeenCalledWith(FAKE_DB, "cs_123", undefined);
+    // Stripe's own settled total travels with the event and is handed to the
+    // completion, which splits it across the bookings it paid for (PAY-H1/H2).
+    expect(markCheckoutPaidBySessionId).toHaveBeenCalledWith(FAKE_DB, "cs_123", undefined, 36_000);
     // A session id belongs to at most one of booking_checkouts or tips —
     // the booking-checkout path found a match, so the tip fallback never runs.
     expect(markTipPaidBySessionId).not.toHaveBeenCalled();
@@ -310,7 +312,14 @@ describe("POST /api/webhooks/stripe — event dispatch", () => {
       data: { object: { id: "cs_123" } },
     });
     expect(response.status).toBe(200);
-    expect(markCheckoutPaidBySessionId).toHaveBeenCalledWith(FAKE_DB, "cs_123", undefined);
+    // No amount_total on this payload: none is invented, and the completion
+    // falls back to the amounts DiveDay asked for.
+    expect(markCheckoutPaidBySessionId).toHaveBeenCalledWith(
+      FAKE_DB,
+      "cs_123",
+      undefined,
+      undefined,
+    );
     expect(markTipPaidBySessionId).not.toHaveBeenCalled();
   });
 

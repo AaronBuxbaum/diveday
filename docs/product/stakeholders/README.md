@@ -31,6 +31,11 @@ keeps the three documents from drifting.
 | Dive operations & safety | [dive-operations.md](dive-operations.md) | Dive operations lead, friendly charter captain, gas-blending authority, `dive-domain-expert` reviewer | Phase 0 → first pilot boat day | H-05, H-06, H-08, H-11, V-01, V-02, V-04, V-05 |
 | Commercial & industry | [commercial-and-industry.md](commercial-and-industry.md) | Design-partner shops (3 profiles), DEMA, Scubanomics, dive media, Capterra | Recruit now; DEMA decision by early Sept; media Phase 2–3 | V-04, H-12 (contract flow), phase exits |
 
+The paper these conversations are run *from* — the design-partner one-pager, the Florida call-list
+template, the first-call script, and the printable V-02 run sheet — is collected in the
+[pilot-recruiting kit](../pilot-kit/README.md). Same rule as the playbooks: it carries prep, never
+status.
+
 ## The critical path
 
 Four clocks start ticking on contact, not on need — start all four in the same week:

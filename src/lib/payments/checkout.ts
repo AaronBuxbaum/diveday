@@ -66,7 +66,14 @@ export type CheckoutSessionSnapshot = {
   /** Stripe's payment state: paid, unpaid, or no_payment_required. */
   paymentStatus: string;
   checkoutUrl: string | null;
-  amountTotalCents: number;
+  /**
+   * Stripe's own `amount_total` — what the session actually settled for, after
+   * any discount it applied. Null when Stripe reports no total at all (an
+   * unfinished session, an unusual payload): "no figure", never "zero money",
+   * so a caller can fall back to the amounts it asked for instead of recording
+   * a settlement that didn't happen.
+   */
+  amountTotalCents: number | null;
   expiresAt: Date | null;
 };
 
@@ -98,10 +105,18 @@ export interface CheckoutProvider {
    * refunds that much (a partial refund); omitted refunds the full charge.
    * `not_refundable` means the session never captured a payment intent — there
    * is nothing to reverse, so staff owe the diver nothing through Stripe.
+   *
+   * `idempotencyKey` — see CreateCheckoutSessionRequest; a retry of the *same*
+   * refund attempt converges on one Stripe refund. It is the caller's, not
+   * derived here from the payment intent: one payment intent covers a whole
+   * party, so two party members each cancelling for the same amount are two
+   * distinct refunds that a derived key would silently collapse into one,
+   * paying only the first diver back (PAY-C1).
    */
   refundCheckoutSession(
     stripeAccountId: string,
     stripeSessionId: string,
+    idempotencyKey: string,
     amountCents?: number,
   ): Promise<RefundCheckoutResult>;
 }
@@ -138,7 +153,7 @@ function toSnapshot(body: z.infer<typeof sessionResponseSchema>): CheckoutSessio
     stripeStatus: body.status,
     paymentStatus: body.payment_status,
     checkoutUrl: body.url ?? null,
-    amountTotalCents: body.amount_total ?? 0,
+    amountTotalCents: body.amount_total ?? null,
     expiresAt: body.expires_at ? new Date(body.expires_at * 1000) : null,
   };
 }
@@ -206,7 +221,7 @@ export function stripeCheckoutProvider(
       }
     },
 
-    async refundCheckoutSession(stripeAccountId, stripeSessionId, amountCents) {
+    async refundCheckoutSession(stripeAccountId, stripeSessionId, idempotencyKey, amountCents) {
       try {
         // The session id alone can't be refunded — the money lives on its
         // payment intent, so expand it, then reverse that. Same shape as
@@ -225,14 +240,18 @@ export function stripeCheckoutProvider(
 
         const form = new URLSearchParams({ payment_intent: paymentIntentId });
         if (amountCents !== undefined) form.set("amount", String(amountCents));
-        // Deterministic key so a retry after a lost response — or a later manual
-        // re-issue through this same path — collapses to one Stripe refund
-        // rather than paying the diver twice.
+        // The caller's per-attempt key, passed through untouched: a retry of
+        // one attempt converges on the refund Stripe already issued, while two
+        // *different* refunds against the same payment intent (a party where
+        // two divers each cancel for the same amount) stay two refunds. A key
+        // derived here from the payment intent and amount could not tell those
+        // apart — Stripe would replay the first refund and both local rows
+        // would claim money that moved once (PAY-C1).
         const response = await fetchImpl("https://api.stripe.com/v1/refunds", {
           method: "POST",
           headers: {
             ...headersFor(config.secretKey, stripeAccountId),
-            "Idempotency-Key": `refund:${paymentIntentId}:${amountCents ?? "full"}`,
+            "Idempotency-Key": idempotencyKey,
           },
           body: form.toString(),
         });

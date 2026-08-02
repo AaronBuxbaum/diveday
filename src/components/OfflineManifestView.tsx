@@ -13,15 +13,18 @@ import { SubSurfaceRipple } from "@/components/SubSurfaceRipple";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass } from "@/components/ui/form";
 import { WaterLocker, WaterLockerToggle } from "@/components/WaterLocker";
-import { rollCallCheckpointText } from "@/i18n/manifest-labels";
+import { rollCallCheckpointText, rollCallLabelText } from "@/i18n/manifest-labels";
 import { matchLocale } from "@/i18n/negotiate";
 import { rentalFitLineText } from "@/i18n/rental-labels";
 import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
 import { staffTranslator } from "@/i18n/staff-messages";
 import {
+  isNotBackAboard,
   isRollCallCheckpoint,
   type RollCallCheckpoint,
   rollCallCheckpoints,
+  rollCallCompleteness,
+  rollCallLabel,
 } from "@/lib/manifests";
 import {
   appendOfflineRollCall,
@@ -105,6 +108,31 @@ export function OfflineManifestView() {
       : "departure";
   });
   const [message, setMessage] = useState(t("shared.offlineManifest.loadingMessage"));
+  // False until this device's storage has actually been read. Two things ride
+  // on it, and both are load-bearing on the one surface that exists for having
+  // no signal:
+  //
+  // 1. **It stops the shell asserting what it hasn't checked.** `envelope` and
+  //    `list` both start `null`, which means "not looked yet", but every branch
+  //    below read that as "nothing there" and rendered "Nothing saved on this
+  //    phone yet" — a definitive claim about a safety artifact, made before the
+  //    store was opened, directly contradicting the "Opening the manifest saved
+  //    on this device…" status line printed underneath it.
+  //
+  // 2. **It makes the server render URL-agnostic, which is what the cached
+  //    offline shell actually is.** `manifest-sw.js` caches one document under
+  //    the key `/offline-manifest` and replays it for *every* offline reload,
+  //    whatever `?trip=`/`?checkpoint=` the captain was on. That document was
+  //    rendered by the server for whichever URL happened to fetch it — normally
+  //    the bare path, so its markup is the *list* branch. The reloaded page
+  //    therefore used to paint a different page than the one requested, and only
+  //    became correct via React's hydration-mismatch recovery (a recoverable
+  //    hydration error fired on every single offline reload, measured). Gating
+  //    on a state the server can never have true means the server always emits
+  //    this one neutral view, the client hydrates against a match, and the real
+  //    branch is chosen by an ordinary client render instead of by error
+  //    recovery.
+  const [storeRead, setStoreRead] = useState(false);
   const [busyBooking, setBusyBooking] = useState<string | null>(null);
   const [noteByBooking, setNoteByBooking] = useState<Record<string, string>>({});
   const tripId = useMemo(() => searchParams.get("trip") ?? "", [searchParams]);
@@ -231,7 +259,11 @@ export function OfflineManifestView() {
             );
             void reconcileList(saved);
           })
-          .catch(() => setMessage(t("shared.offlineManifest.reconcile.listLoadError")));
+          .catch(() => setMessage(t("shared.offlineManifest.reconcile.listLoadError")))
+          // Settled either way: a device whose storage can't be opened at all
+          // has still been *looked at*, and the error message it lands on says
+          // more than an "opening…" state that never ends.
+          .finally(() => setStoreRead(true));
       void refreshList();
       window.addEventListener("online", refreshList);
       return () => window.removeEventListener("online", refreshList);
@@ -258,10 +290,32 @@ export function OfflineManifestView() {
         );
         if (saved && navigator.onLine) void reconcile();
       })
-      .catch(() => setMessage(t("shared.offlineManifest.reconcile.singleLoadError")));
+      .catch(() => setMessage(t("shared.offlineManifest.reconcile.singleLoadError")))
+      .finally(() => setStoreRead(true));
     window.addEventListener("online", reconcile);
     return () => window.removeEventListener("online", reconcile);
   }, [reconcile, reconcileList, tripId, t]);
+
+  // Before the store has been read — which includes every server render, since
+  // the effect above only runs in the browser — say what is actually true and
+  // nothing more. See `storeRead` above for why this branch sits ahead of the
+  // `tripId` split rather than inside either side of it: it must not depend on
+  // the URL, because the cached shell is one document replayed for all of them.
+  if (!storeRead) {
+    return (
+      <main className="boat-mode mx-auto w-full max-w-3xl flex-1 px-6 py-16">
+        <ShopPageHeader
+          eyebrow={t("shared.offlineManifest.single.eyebrow")}
+          title={t("shared.offlineManifest.openingHeading")}
+          meta={
+            <p className="text-muted" role="status" aria-live="polite">
+              {message}
+            </p>
+          }
+        />
+      </main>
+    );
+  }
 
   if (!tripId) {
     const savedTrips = list ?? [];
@@ -401,7 +455,39 @@ export function OfflineManifestView() {
   );
   const boarded = localStates.filter((state) => state?.state === "boarded").length;
   const awaiting = localStates.filter((state) => !state).length;
-  const rollCallComplete = manifest.summary.totalDivers > 0 && awaiting === 0;
+  // The dock copy splits `not_boarded` exactly the way the live manifest does
+  // (`isNotBackAboard`, src/lib/manifests.ts): at departure it means the diver
+  // never left, after a dive it means they have not come back. Offline and
+  // online disagreeing about whether everyone is out of the water is worse than
+  // either being wrong on its own, so both read the same predicate (DOM-H3).
+  const notBackAboard = localStates.filter((state) => isNotBackAboard(checkpoint, state)).length;
+  // The same definition the live manifest uses — divers *and* crew (DOM-H1,
+  // ADR 20260802-crew-roll-call-attestation). Recomputed here rather than read
+  // off the snapshot because `awaiting` comes from events on this device, not
+  // from what the server knew at save time. The crew half does not: crew
+  // attestation is deliberately not recordable offline in this slice, so the
+  // snapshot's saved attestation is the only crew evidence a dock copy has. A
+  // checkpoint with every diver counted and no crew attested therefore reads
+  // *open* here exactly as it does online — never "complete" offline and "not
+  // complete" online, which would be worse than the bug this closes.
+  const crewAssigned = manifest.crew.length;
+  const savedCrewAttestation = manifest.crewAttestation;
+  const completeness = rollCallCompleteness({
+    totalDivers: manifest.summary.totalDivers,
+    awaiting,
+    notBackAboard,
+    crewAssigned,
+    crewAttestation: savedCrewAttestation
+      ? {
+          crewAboard: savedCrewAttestation.crewAboard,
+          crewAssigned: savedCrewAttestation.crewAssigned,
+          attestedByName: savedCrewAttestation.attestedByName,
+          occurredAt: new Date(savedCrewAttestation.occurredAt),
+          note: savedCrewAttestation.note,
+        }
+      : null,
+  });
+  const rollCallComplete = completeness.complete;
   // The actual roster rendered on this device, not the (possibly stale,
   // save-time) `manifest.summary.totalDivers`. Feeds MilestoneHaptics and the
   // roll-call-complete celebration below.
@@ -594,6 +680,35 @@ export function OfflineManifestView() {
                 })}
           </p>
         ) : null}
+        {/*
+         * The crew half of the head count, read-only on the dock (DOM-H1).
+         * Divers can be counted with the radio off; crew cannot, in this
+         * slice — so this states plainly why the checkpoint is still open
+         * rather than letting the device call it done.
+         */}
+        <div
+          className={
+            completeness.crewAccountedFor
+              ? "mt-3 rounded-xl border border-success/40 bg-success/10 p-3"
+              : "mt-3 rounded-xl border border-warning/50 bg-warning/10 p-3"
+          }
+        >
+          <p className="text-sm font-bold">{t("shared.offlineManifest.single.crewHeading")}</p>
+          <p className="mt-1 text-sm">
+            {savedCrewAttestation && completeness.crewAccountedFor
+              ? t("shared.offlineManifest.single.crewAttested", {
+                  aboard: savedCrewAttestation.crewAboard,
+                  assigned: crewAssigned,
+                  name: savedCrewAttestation.attestedByName,
+                })
+              : savedCrewAttestation
+                ? t("shared.offlineManifest.single.crewShort", {
+                    aboard: savedCrewAttestation.crewAboard,
+                    assigned: crewAssigned,
+                  })
+                : t("shared.offlineManifest.single.crewNotAttested", { assigned: crewAssigned })}
+          </p>
+        </div>
         <ul
           id="offline-roll-call"
           tabIndex={-1}
@@ -607,16 +722,23 @@ export function OfflineManifestView() {
               checkpoint,
             );
             const ready = diver.readiness.status === "ready";
+            // Recorded here at this checkpoint, either way round — a
+            // carried-forward dock result is not undoable and gets the
+            // "Mark…" wording, same as the live manifest.
+            const recordedNotBoarded = state?.state === "not_boarded" && state.implied !== true;
+            const missing = isNotBackAboard(checkpoint, state);
             return (
               <li
                 key={diver.bookingId}
                 id={`offline-roll-call-${diver.bookingId}`}
                 className={
-                  ready
-                    ? state
-                      ? "border-l-4 border-success p-4 sm:p-5"
-                      : "border-l-4 border-warning bg-warning/10 p-4 ring-1 ring-inset ring-warning/30 sm:p-5"
-                    : "scroll-mt-24 border-l-4 border-danger bg-danger/5 p-4 sm:p-5"
+                  missing
+                    ? "scroll-mt-24 border-l-4 border-danger bg-danger/10 p-4 ring-1 ring-inset ring-danger/40 sm:p-5"
+                    : ready
+                      ? state
+                        ? "border-l-4 border-success p-4 sm:p-5"
+                        : "border-l-4 border-warning bg-warning/10 p-4 ring-1 ring-inset ring-warning/30 sm:p-5"
+                      : "scroll-mt-24 border-l-4 border-danger bg-danger/5 p-4 sm:p-5"
                 }
               >
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -637,14 +759,18 @@ export function OfflineManifestView() {
                           ? t("shared.offlineManifest.single.readyBadge")
                           : t("shared.offlineManifest.single.blockedBadge")}
                       </span>
-                      <span className="rounded-full bg-surface-sunken px-3 py-1 text-sm font-semibold">
-                        {state
-                          ? state.state === "boarded"
-                            ? t("shared.offlineManifest.single.stateBoarded")
-                            : state.implied
-                              ? t("shared.offlineManifest.single.stateNotBoardedCarried")
-                              : t("shared.offlineManifest.single.stateNotBoarded")
-                          : t("shared.offlineManifest.single.stateAwaiting")}
+                      {/* Same resolver the live manifest renders (DOM-H3):
+                          one word list, so a diver who has not come back from
+                          dive one cannot read "Not boarded" here and "Not back
+                          aboard" on the captain's screen. */}
+                      <span
+                        className={
+                          missing
+                            ? "rounded-full bg-danger/15 px-3 py-1 text-sm font-bold text-danger"
+                            : "rounded-full bg-surface-sunken px-3 py-1 text-sm font-semibold"
+                        }
+                      >
+                        {rollCallLabelText(t, rollCallLabel(checkpoint, state))}
                         {state?.pending
                           ? ` ${t("shared.offlineManifest.single.statePendingSuffix")}`
                           : ""}
@@ -741,13 +867,24 @@ export function OfflineManifestView() {
                             record(diver.bookingId, "not_boarded", noteByBooking[diver.bookingId])
                           }
                           aria-busy={busyBooking === diver.bookingId}
-                          className="flex min-h-14 w-full touch-manipulation items-center justify-center rounded-lg border border-border-strong px-5 text-base font-semibold transition-[transform,opacity] active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:w-auto"
+                          className={
+                            missing
+                              ? "flex min-h-14 w-full touch-manipulation items-center justify-center rounded-lg border border-danger bg-danger/15 px-5 text-base font-semibold text-danger transition-[transform,opacity] active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:w-auto"
+                              : "flex min-h-14 w-full touch-manipulation items-center justify-center rounded-lg border border-border-strong px-5 text-base font-semibold transition-[transform,opacity] active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 sm:w-auto"
+                          }
                         >
+                          {/* No done-check after a dive: "Not boarded ✓" beside a
+                              diver still in the water is the string this whole
+                              change exists to delete (DOM-H3). */}
                           {busyBooking === diver.bookingId
                             ? t("shared.offlineManifest.single.saving")
-                            : state?.state === "not_boarded"
-                              ? t("shared.offlineManifest.single.notBoardedDone")
-                              : t("shared.offlineManifest.single.markNotBoarded")}
+                            : recordedNotBoarded
+                              ? isDeparture
+                                ? t("shared.offlineManifest.single.notBoardedDone")
+                                : t("shared.offlineManifest.single.notBackAboardActive")
+                              : isDeparture
+                                ? t("shared.offlineManifest.single.markNotBoarded")
+                                : t("shared.offlineManifest.single.markNotBackAboard")}
                         </button>
                       </>
                     )}

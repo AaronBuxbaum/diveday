@@ -22,6 +22,18 @@ describe("redactCapabilityUrl", () => {
     expect(redactCapabilityUrl("/reset-password/abc123.def456")).toBe("/reset-password/[token]");
   });
 
+  it("redacts a staff-invite token path", () => {
+    expect(redactCapabilityUrl("/invite/abc123.def456")).toBe("/invite/[token]");
+  });
+
+  it("redacts a staff calendar-feed token path", () => {
+    expect(redactCapabilityUrl("/calendar/abc123.def456")).toBe("/calendar/[token]");
+  });
+
+  it("redacts a calendar-feed token even with the .ics segment suffix a client subscribes to", () => {
+    expect(redactCapabilityUrl("/calendar/abc123.def456.ics")).toBe("/calendar/[token]");
+  });
+
   it("redacts even with query string and hash", () => {
     expect(redactCapabilityUrl("/ready/abc123.def456?photo=error#section")).toBe("/ready/[token]");
   });

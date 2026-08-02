@@ -186,6 +186,24 @@ test("migration guides walk a shop from an incumbent export into the importer", 
   // Same guard as the spreadsheet guide: no shop session, no deep-link CTA.
   await expect(page.getByRole("link", { name: "Open Import in your shop" })).toBeHidden();
 
+  // A buyer can act from the hero, not only from the closing block seven
+  // sections down: the demo form and the trial link sit in the same section as
+  // the h1, and the trial link carries this guide's funnel tag. This is the
+  // *buyer's* CTA — distinct from the deep-link above, which is for an owner
+  // who already has a shop and is correct to stay hidden here.
+  const heroSection = page.getByRole("main").locator("section").first();
+  await expect(heroSection.getByRole("heading", { level: 1 })).toBeVisible();
+  await expect(heroSection.getByRole("button", { name: "Try the live demo" })).toBeEnabled();
+  await expect(heroSection.getByRole("link", { name: "Start a trial" })).toHaveAttribute(
+    "href",
+    "/onboard?from=switching-eve",
+  );
+  // Three doors out: the hero, the repeat under the scope table, and the close.
+  await expect(page.getByRole("button", { name: "Try the live demo" })).toHaveCount(3);
+  await expect(
+    page.getByRole("heading", { name: "Rather see it than read about it?" }),
+  ).toBeVisible();
+
   // The scope table is the importer's honesty table — a claimed waiver
   // acceptance is trusted, medical clearance included, and marked imported.
   await expect(page.getByText("Signed waivers & medical clearance", { exact: true })).toBeVisible();
@@ -213,7 +231,7 @@ test("migration guides walk a shop from an incumbent export into the importer", 
   }
 
   // Demo-before-trial funnel and cited competitor claims both land on the guide.
-  await expect(page.getByRole("button", { name: "Try the live demo" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Try the live demo" }).first()).toBeVisible();
   await expect(page.getByRole("heading", { name: "Sources" })).toBeVisible();
   await expect(page.getByRole("link", { name: /DiveShop360 acquires EVE Diving/ })).toBeVisible();
 
@@ -341,6 +359,30 @@ test("the spreadsheet guide brings a no-system shop across for free", async ({ p
     /^mailto:switch@dive\.day/,
   );
 
-  // Demo-before-trial funnel, same as every guide.
-  await expect(page.getByRole("button", { name: "Try the live demo" })).toBeVisible();
+  // Demo-before-trial funnel, same as every guide — and, same as every guide,
+  // the first of those doors is in the hero rather than nine sections down.
+  await expect(page.getByRole("button", { name: "Try the live demo" })).toHaveCount(3);
+  const spreadsheetHero = page.getByRole("main").locator("section").first();
+  await expect(spreadsheetHero.getByRole("button", { name: "Try the live demo" })).toBeEnabled();
+  await expect(spreadsheetHero.getByRole("link", { name: "Start a trial" })).toHaveAttribute(
+    "href",
+    "/onboard?from=switching-spreadsheet",
+  );
+});
+
+test("a signed-out visitor reaches the demo from the top of a switching guide", async ({
+  page,
+}) => {
+  // The whole point of the hero CTA: no session, no export, no form — the
+  // highest-intent page in the funnel opens the working shop in one click.
+  await page.goto("/switching/eve");
+  await page
+    .getByRole("main")
+    .locator("section")
+    .first()
+    .getByRole("button", { name: "Try the live demo" })
+    .click();
+
+  await expect(page).toHaveURL(/\/shop\//);
+  await expect(page.getByText("Demo shop")).toBeVisible();
 });

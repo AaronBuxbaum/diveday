@@ -59,6 +59,8 @@ export const EXPORT_FILE_NOTES = {
     "Discount blasts sent on under-capacity trips: the discount percent, the code, when it expires, and how many divers it went to. Stripe coupon/promotion-code ids are excluded — provider linkage, useless outside this Stripe account.",
   "roll_call_events.csv":
     "The boarding and roll-call ledger — every head-count event, with who recorded it. Read it append-only and in checkpoint order (departure, then after each dive): within one checkpoint the newest event per booking wins, and a 'cleared' event erases that checkpoint's result. Then carry forward: an explicit 'not_boarded' fills every later checkpoint that has no explicit result of its own until an explicit 'boarded' breaks the chain — off the boat stays off the boat; a checkpoint with no result and nothing carried means awaiting. Never count 'boarded' rows naively; corrections would inflate the head count.",
+  "roll_call_crew_attestations.csv":
+    "The crew half of each head count: how many crew a named staff member counted aboard at a checkpoint, out of how many the trip had assigned at that moment. Crew hold no booking, so they are not rows in roll_call_events.csv — this is an attested count, not a per-person roll call, and a checkpoint was not treated as closed without one. Newest row per trip and checkpoint wins; earlier rows are re-counts kept as evidence. crew_assigned is what the assignment list said when the count was taken, so it can differ from trip_assignments.csv today.",
   "waiver_templates.csv":
     "Every waiver template version, full text included — signed records reference these.",
   "waiver_records.csv":

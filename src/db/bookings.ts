@@ -2,11 +2,11 @@ import { and, count, eq, inArray, isNotNull, isNull, ne } from "drizzle-orm";
 import { checkMinimumAge } from "@/lib/age";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
-import { entryLevelCourseCapacity } from "@/lib/course-ratios";
+import { courseSeatCapacity } from "@/lib/course-ratios";
 import { personNamesMatch } from "@/lib/person-name";
 import { hasVerifiedCertificationAtLeast } from "@/lib/readiness";
 import { revokeBookingCapabilities } from "./booking-capabilities";
-import type { AppDb } from "./client";
+import type { AppDb, DbExecutor } from "./client";
 import { getBookingPayment } from "./payments";
 import { findOrCreatePerson } from "./people";
 import {
@@ -139,6 +139,37 @@ class PartyBookingError extends Error {
   }
 }
 
+/**
+ * The instructors and certified assistants currently assigned to a trip, as the
+ * ratio rules count them: a person holding both roles is the instructor, not
+ * their own assistant. One query for every seat-granting path, so the undo of a
+ * roster removal can never read a looser crew than the booking that preceded it.
+ */
+async function tripCourseCrewCounts(
+  tx: DbExecutor,
+  tripId: string,
+): Promise<{ instructorCount: number; assistantCount: number }> {
+  const crew = await tx
+    .select({ personId: tripAssignments.personId, role: personRoles.role })
+    .from(tripAssignments)
+    .innerJoin(personRoles, eq(personRoles.personId, tripAssignments.personId))
+    .where(
+      and(
+        eq(tripAssignments.tripId, tripId),
+        inArray(personRoles.role, ["instructor", "divemaster"]),
+      ),
+    );
+  const instructorIds = new Set(
+    crew.filter((row) => row.role === "instructor").map((row) => row.personId),
+  );
+  const assistantIds = new Set(
+    crew
+      .filter((row) => row.role === "divemaster" && !instructorIds.has(row.personId))
+      .map((row) => row.personId),
+  );
+  return { instructorCount: instructorIds.size, assistantCount: assistantIds.size };
+}
+
 async function createBookingRecord(db: AppDb, req: BookingRequest): Promise<BookingOutcome> {
   const tx = db;
   // FOR UPDATE serializes concurrent bookings on the same trip: under READ
@@ -166,42 +197,14 @@ async function createBookingRecord(db: AppDb, req: BookingRequest): Promise<Book
   // the session. This is a booking gate, not a cosmetic staff warning.
   let entryLevelSeatCap: number | null = null;
   if (course) {
-    const crew = await tx
-      .select({ personId: tripAssignments.personId, role: personRoles.role })
-      .from(tripAssignments)
-      .innerJoin(personRoles, eq(personRoles.personId, tripAssignments.personId))
-      .where(
-        and(
-          eq(tripAssignments.tripId, trip.id),
-          inArray(personRoles.role, ["instructor", "divemaster"]),
-        ),
-      );
-    const instructorIds = new Set(
-      crew.filter((row) => row.role === "instructor").map((row) => row.personId),
-    );
-    if (instructorIds.size === 0) return { ok: false, reason: "course_unstaffed" };
-    // Entry-level (no-card-required) sessions carry PADI's published in-water
-    // ratio — see src/lib/course-ratios.ts for the sourcing. Scoped to PADI
-    // specifically: the sourced ratio is a PADI figure, and `courses.agency`
-    // is shop-set free text (an SSI, NAUI, etc. course is a real, unremarkable
-    // row) — applying a PADI number to another agency's course would be a
-    // wrong-but-confident safety control, so those fall back to the trip's
-    // own stated capacity only, same as before this gate existed. Continuing-ed
-    // courses (minimumCertificationLevel set) already gate on a verified card
-    // and PADI does not publish a comparable numeric ratio for them.
-    if (course.agency === "padi" && !course.minimumCertificationLevel) {
-      // A person holding both roles is the instructor, not their own assistant.
-      const assistantCount = new Set(
-        crew
-          .filter((row) => row.role === "divemaster" && !instructorIds.has(row.personId))
-          .map((row) => row.personId),
-      ).size;
-      entryLevelSeatCap = entryLevelCourseCapacity(
-        instructorIds.size,
-        assistantCount,
-        course.isIntroCourse,
-      );
-    }
+    const { instructorCount, assistantCount } = await tripCourseCrewCounts(tx, trip.id);
+    if (instructorCount === 0) return { ok: false, reason: "course_unstaffed" };
+    // Which in-water ratio (if any) this session carries is decided in one
+    // place — `courseRatioKind` in src/lib/course-ratios.ts — so a DSD taster
+    // can't be gated at the Open Water number here and something else there.
+    // Null means the session carries no ratio cap and falls back to the trip's
+    // own stated capacity, same as before this gate existed.
+    entryLevelSeatCap = courseSeatCapacity(course, instructorCount, assistantCount);
   }
 
   // Resolve the diver. A returning diver picked by identity reuses that exact
@@ -409,13 +412,26 @@ export async function getBookingForTrip(db: AppDb, tripId: string, bookingId: st
   return row ?? null;
 }
 
-export type RestoreBookingOutcome = "restored" | "already_active" | "trip_full" | "not_found";
+export type RestoreBookingOutcome =
+  | "restored"
+  | "already_active"
+  | "trip_full"
+  | "course_ratio_full"
+  | "not_found";
 
 /**
  * Undo of a roster removal. Only a currently-cancelled booking is restorable,
  * and only if the seat is still free — a waitlisted diver may have taken it
  * between the remove and the undo, and silently exceeding capacity would put
  * more divers on the manifest than the boat holds.
+ *
+ * "Free" means free under **both** limits the booking path applies: the trip's
+ * own capacity and, on a ratio-gated course session, the crew's seat cap
+ * (`courseSeatCapacity`). Undo is a seat-granting write like any other, and
+ * checking capacity alone left the tightest control in the product one misclick
+ * from being exceeded — remove a diver from a four-seat DSD, let a walk-up book
+ * the freed seat, then tap Undo and a fifth uncertified first-timer joins one
+ * instructor with no refusal at all.
  */
 export async function restoreBooking(
   db: AppDb,
@@ -446,7 +462,23 @@ export async function restoreBooking(
       .select({ booked: count(bookings.id) })
       .from(bookings)
       .where(and(eq(bookings.tripId, trip.id), ne(bookings.status, "cancelled")));
-    if ((row?.booked ?? 0) >= trip.capacity) return "trip_full";
+    const booked = row?.booked ?? 0;
+    if (booked >= trip.capacity) return "trip_full";
+
+    if (trip.courseId) {
+      const [course] = await tx
+        .select()
+        .from(courses)
+        .where(and(eq(courses.id, trip.courseId), eq(courses.shopId, shopId)))
+        .limit(1);
+      const { instructorCount, assistantCount } = await tripCourseCrewCounts(tx, trip.id);
+      // Null means the session carries no ratio at all, so capacity alone binds
+      // — exactly as before. A gated session that has since lost its last
+      // instructor caps at zero and refuses too: a seat cannot be handed back
+      // to a session that could not sell it in the first place.
+      const seatCap = courseSeatCapacity(course ?? null, instructorCount, assistantCount);
+      if (seatCap !== null && booked >= seatCap) return "course_ratio_full";
+    }
 
     await tx
       .update(bookings)

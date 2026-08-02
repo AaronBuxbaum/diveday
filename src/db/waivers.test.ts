@@ -1,8 +1,10 @@
 // @vitest-environment node
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { ANONYMIZED_PERSON_NAME } from "@/lib/anonymization";
 import { verifyWaiverIntegrity } from "@/lib/waiver-integrity";
 import { seededShopContext } from "@/test/db";
+import { anonymizeDiver } from "./anonymize";
 import { getBookingReadiness } from "./readiness";
 import { people, shops, waiverRecords, waiverTemplates } from "./schema";
 import { getTripRoster, listStaff, setTripStatus, upcomingTripsWithCounts } from "./trips";
@@ -13,6 +15,7 @@ import {
   getSignedWaiverRecordForShop,
   getWaiverForToken,
   issueWaiverRequest,
+  listSignedWaiversByPerson,
   listTripWaiverActivity,
   listWaiverIntegrityAudit,
   listWaiverTemplateHistory,
@@ -700,5 +703,133 @@ describe("saveBookingEmergencyContact (staff-facing write path, task 144)", () =
       name: "Kept Contact",
       phone: "555-0099",
     });
+  });
+});
+
+/**
+ * Erasure (ADR 20260802-diver-data-erasure) is the one operation that reaches
+ * into completed evidence and changes it. These tests are the waiver side of
+ * that bargain: what the audit still shows, and what a bearer token can still
+ * do, once a diver has been erased.
+ */
+describe("signed waivers after a diver is erased", () => {
+  async function erasedContext(options: { completeIt: boolean }) {
+    const { db, shop, trip, booking, template } = await waiverContext();
+    const [owner] = await db
+      .select({ id: people.id })
+      .from(people)
+      .where(and(eq(people.shopId, shop.id), eq(people.fullName, "Dana Reyes")));
+    if (!owner) throw new Error("seed owner missing");
+
+    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
+    if (!issued.ok) throw new Error(`issue failed: ${issued.reason}`);
+    if (options.completeIt) {
+      const done = await completeWaiver(db, issued.token, {
+        signerName: "Nora Quinn",
+        agreed: true,
+        medicalAnswers: clearAnswers,
+        now,
+      });
+      if (!done.ok) throw new Error("completion failed");
+    }
+
+    const erased = await anonymizeDiver(db, {
+      shopId: shop.id,
+      personId: booking.personId,
+      actorPersonId: owner.id,
+    });
+    if (!erased.ok) throw new Error(`erasure refused: ${erased.reason}`);
+    return { db, shop, trip, booking, template, issued, personId: booking.personId };
+  }
+
+  it("keeps the record in the integrity audit, reading as valid rather than tampered", async () => {
+    const { db, shop, issued } = await erasedContext({ completeIt: true });
+
+    const entry = await getSignedWaiverRecordForShop(db, shop.id, issued.recordId);
+    expect(entry).toMatchObject({ id: issued.recordId, status: "completed", integrity: "valid" });
+    // The diver's name is gone from the audit too — it is read from `people`.
+    expect(entry?.personName).toBe(ANONYMIZED_PERSON_NAME);
+
+    // And the Signatures tab it feeds shows no tampered row anywhere — the
+    // failure this would look like without version 2 is every erased record
+    // lighting up as altered evidence.
+    const audited: Awaited<ReturnType<typeof listWaiverIntegrityAudit>>["entries"] = [];
+    let cursor: string | undefined;
+    for (let page = 0; page < 50; page++) {
+      const result = await listWaiverIntegrityAudit(db, shop.id, { cursor });
+      audited.push(...result.entries);
+      if (!result.nextCursor) break;
+      cursor = result.nextCursor;
+    }
+    // (Seeded history predates sealing and reads `unsealed`; what must not
+    // appear anywhere is `invalid`.)
+    expect(audited.filter((row) => row.integrity === "invalid")).toEqual([]);
+    expect(audited.find((row) => row.id === issued.recordId)).toMatchObject({
+      integrity: "valid",
+    });
+  });
+
+  it("strips the signature and the medical questionnaire from the stored record", async () => {
+    const { db, issued } = await erasedContext({ completeIt: true });
+    const [record] = await db
+      .select()
+      .from(waiverRecords)
+      .where(eq(waiverRecords.id, issued.recordId));
+    expect(record).toMatchObject({
+      signedName: null,
+      medicalAnswers: null,
+      draftSignerName: null,
+      draftMedicalAnswers: null,
+    });
+    // But the release itself — what was agreed to, and when — is still there.
+    expect(record?.templateBody).toBeTruthy();
+    expect(record?.signedAt).toBeInstanceOf(Date);
+    expect(record?.completedAt).toBeInstanceOf(Date);
+  });
+
+  it("kills a still-pending link so its bearer can never sign against an erased diver", async () => {
+    const { db, issued } = await erasedContext({ completeIt: false });
+
+    // The token was never revealed to anyone but the fixture, and it is now
+    // dead: the stored hash no longer matches it, and the record is expired
+    // and superseded besides.
+    expect(await getWaiverForToken(db, issued.token, now)).toEqual({ state: "unavailable" });
+    const [record] = await db
+      .select()
+      .from(waiverRecords)
+      .where(eq(waiverRecords.id, issued.recordId));
+    expect(record?.status).toBe("pending");
+    expect(record?.supersededAt).toBeInstanceOf(Date);
+    // A never-signed link is left unsealed rather than given a seal it never
+    // earned — erasure must not manufacture assurance.
+    expect(record?.integrityHash).toBeNull();
+    expect(record ? verifyWaiverIntegrity(record) : null).toBe("unsealed");
+  });
+
+  it("cannot complete an erased diver's waiver even with the original token", async () => {
+    const { db, issued } = await erasedContext({ completeIt: false });
+    const attempt = await completeWaiver(db, issued.token, {
+      signerName: "Nora Quinn",
+      agreed: true,
+      medicalAnswers: clearAnswers,
+      now,
+    });
+    expect(attempt).toEqual({ ok: false, reason: "unavailable" });
+    const [record] = await db
+      .select()
+      .from(waiverRecords)
+      .where(eq(waiverRecords.id, issued.recordId));
+    expect(record).toMatchObject({ signedName: null, medicalAnswers: null, status: "pending" });
+  });
+
+  it("stops an erased diver's signature carrying any booking (sign-once no longer applies)", async () => {
+    const { db, shop, personId } = await erasedContext({ completeIt: true });
+    // The person is soft-deleted by erasure, so nothing new can be booked for
+    // them and no readiness read reaches them — but the evidence they signed
+    // is still on the shop's books, which is the whole point of anonymize-and-keep.
+    const signed = await listSignedWaiversByPerson(db, shop.id, [personId]);
+    const records = signed.get(personId) ?? [];
+    expect(records).toHaveLength(1);
+    expect(records[0]).toMatchObject({ signedName: null, medicalAnswers: null });
   });
 });

@@ -6,6 +6,7 @@ import type { CertificationLevel, SiteCertRequirement } from "@/lib/readiness";
 import {
   BLOCKER_CATEGORY,
   calculateReadiness,
+  combineSiteRequirements,
   higherCertificationLevel,
   unavailableReadiness,
   validVerifiedCertification,
@@ -82,33 +83,56 @@ export async function upsertTripRequirements(
 }
 
 /**
- * The inherent cert gate of a trip's primary dive site, or null when the trip
- * has no site or the site demands nothing. Composed with the trip's own
- * requirement by the readiness service — never a standalone gate.
+ * Every site a trip visits, for the cert gate — its primary site *and* every
+ * site on its ordered dives. `trip_dives.dive_site_id` is nullable (a planned
+ * dive with no site chosen yet is legal), and the `in (…)` simply never matches
+ * those rows.
+ *
+ * Like `getTripMaxDepthMeters` this deliberately does not filter
+ * `dive_sites.deleted_at`: an archived briefing still governs the historical
+ * trip it is attached to. The choice is inherited from the depth advisory
+ * rather than decided here — change both together or neither.
+ */
+function tripVisitedSites(db: DbExecutor, shopId: string, tripId: string) {
+  return (
+    db
+      .select({
+        tripId: trips.id,
+        minimumCertificationLevel: diveSites.minimumCertificationLevel,
+        requiredSpecialties: diveSites.requiredSpecialties,
+        requiresNitrox: diveSites.requiresNitrox,
+      })
+      .from(trips)
+      .innerJoin(
+        diveSites,
+        sql`${diveSites.id} = ${trips.diveSiteId} or ${diveSites.id} in (
+          select ${tripDives.diveSiteId} from ${tripDives} where ${tripDives.tripId} = ${trips.id}
+        )`,
+      )
+      // `dive_sites.shop_id` as well as the trip's: the join above reaches sites
+      // through two paths, so shop ownership is proven on the query rather than
+      // assumed from the trip's pointer (the CR-007 house rule).
+      .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), eq(diveSites.shopId, shopId)))
+  );
+}
+
+/**
+ * The inherent cert gate of every dive site a trip visits, folded into one
+ * requirement (strictest level, union of specialties, OR of nitrox), or null
+ * when the trip has no site or no visited site demands anything. Composed with
+ * the trip's own requirement by the readiness service — never a standalone gate.
+ *
+ * Reading only the primary site is how a deep second-dive site never reached
+ * the gate: the depth advisory already spanned the whole itinerary, and the
+ * cert/specialty/nitrox gate now matches it.
  */
 export async function getTripSiteRequirement(
   db: DbExecutor,
   shopId: string,
   tripId: string,
 ): Promise<SiteCertRequirement | null> {
-  const [row] = await db
-    .select({
-      minimumCertificationLevel: diveSites.minimumCertificationLevel,
-      requiredSpecialties: diveSites.requiredSpecialties,
-      requiresNitrox: diveSites.requiresNitrox,
-    })
-    .from(trips)
-    .innerJoin(diveSites, eq(diveSites.id, trips.diveSiteId))
-    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
-    .limit(1);
-  if (!row) return null;
-  if (!row.minimumCertificationLevel && row.requiredSpecialties.length === 0 && !row.requiresNitrox)
-    return null;
-  return {
-    minimumCertificationLevel: row.minimumCertificationLevel,
-    requiredSpecialties: row.requiredSpecialties,
-    requiresNitrox: row.requiresNitrox,
-  };
+  const rows = await tripVisitedSites(db, shopId, tripId);
+  return combineSiteRequirements(rows);
 }
 
 /**
@@ -778,6 +802,9 @@ export async function listTripsReadiness(
         .select()
         .from(tripRequirements)
         .where(and(eq(tripRequirements.shopId, shopId), inArray(tripRequirements.tripId, tripIds))),
+      // Every site every trip visits — see `tripVisitedSites` for why the join
+      // reaches through `trip_dives` too, and why `dive_sites.shop_id` is
+      // re-proven here.
       db
         .select({
           tripId: trips.id,
@@ -786,8 +813,15 @@ export async function listTripsReadiness(
           requiresNitrox: diveSites.requiresNitrox,
         })
         .from(trips)
-        .innerJoin(diveSites, eq(diveSites.id, trips.diveSiteId))
-        .where(and(inArray(trips.id, tripIds), eq(trips.shopId, shopId))),
+        .innerJoin(
+          diveSites,
+          sql`${diveSites.id} = ${trips.diveSiteId} or ${diveSites.id} in (
+            select ${tripDives.diveSiteId} from ${tripDives} where ${tripDives.tripId} = ${trips.id}
+          )`,
+        )
+        .where(
+          and(inArray(trips.id, tripIds), eq(trips.shopId, shopId), eq(diveSites.shopId, shopId)),
+        ),
       listTripsWaiverStatuses(db, shopId, tripIds),
       getCurrentWaiverTemplate(db, shopId),
       db.select({ timezone: shops.timezone }).from(shops).where(eq(shops.id, shopId)).limit(1),
@@ -803,15 +837,21 @@ export async function listTripsReadiness(
   const timezone = shop.timezone;
 
   const requirementsByTrip = new Map(requirements.map((r) => [r.tripId, r]));
-  const siteRequirementsByTrip = new Map(
-    siteRequirements.map((sr) => [
-      sr.tripId,
-      {
-        minimumCertificationLevel: sr.minimumCertificationLevel,
-        requiredSpecialties: sr.requiredSpecialties,
-        requiresNitrox: sr.requiresNitrox,
-      },
-    ]),
+  // A fold, not `new Map(rows.map(...))`: the join returns one row per site a
+  // trip visits, so building the map by construction would be last-write-wins
+  // and would silently drop every site but one.
+  const siteRowsByTrip = new Map<string, SiteCertRequirement[]>();
+  for (const sr of siteRequirements) {
+    const current = siteRowsByTrip.get(sr.tripId) ?? [];
+    current.push({
+      minimumCertificationLevel: sr.minimumCertificationLevel,
+      requiredSpecialties: sr.requiredSpecialties,
+      requiresNitrox: sr.requiresNitrox,
+    });
+    siteRowsByTrip.set(sr.tripId, current);
+  }
+  const siteRequirementsByTrip = new Map<string, SiteCertRequirement | null>(
+    [...siteRowsByTrip].map(([tripId, sites]) => [tripId, combineSiteRequirements(sites)]),
   );
   const courseByTrip = new Map(courseRows.map((c) => [c.id, c]));
 

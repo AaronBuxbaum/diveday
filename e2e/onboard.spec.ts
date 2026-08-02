@@ -47,3 +47,43 @@ test("a freshly onboarded shop sees a first-run checklist on Today, and a step c
   await expect(page.getByText(`/shop/${unique}/schedule`)).toBeVisible();
   await expect(page.getByRole("button", { name: "Copy link" })).toBeVisible();
 });
+
+// Sign-up used to offer sixteen hand-listed zones, so a shop in Raja Ampat,
+// Bonaire, or the Maldives hit a hard stop at the last step of signing up —
+// the field is required and their zone was not in it. The server never had
+// that restriction (`onboardSchema` accepts any zone `isValidTimeZone`
+// recognizes), so this drives the offering side: pick a zone that was never on
+// the old list, and check the shop is really keeping time there.
+test("a shop outside the curated dive regions can pick its own timezone", async ({ page }) => {
+  const unique = `raja-ampat-${Date.now()}`;
+  await page.goto("/onboard");
+
+  // Both tiers are on offer: the pinned dive-region shortcuts, and every other
+  // zone the runtime knows.
+  const timezone = page.locator('select[name="timezone"]').filter({ visible: true });
+  await expect(timezone).toHaveValue("America/New_York");
+  await expect(timezone.locator('optgroup[label="Caribbean & Mexico"]')).toBeAttached();
+  await expect(timezone.locator('optgroup[label="All timezones"]')).toBeAttached();
+  await timezone.selectOption("Asia/Jayapura");
+  await expect(timezone).toHaveValue("Asia/Jayapura");
+
+  await page.locator('input[name="shopName"]').filter({ visible: true }).fill("Raja Ampat E2E");
+  await page.locator('input[name="shopSlug"]').filter({ visible: true }).fill(unique);
+  await page.locator('input[name="ownerName"]').filter({ visible: true }).fill("Sari Wibowo");
+  await page
+    .locator('input[name="ownerEmail"]')
+    .filter({ visible: true })
+    .fill(`${unique}@example.com`);
+  await page
+    .locator('input[name="ownerPassword"]')
+    .filter({ visible: true })
+    .fill("trial-pass-123");
+  await page.getByRole("button", { name: "Create shop & start trial" }).click();
+
+  // The zone was accepted (an invalid one bounces back to the form with an
+  // error) and it is what the new shop reads the clock in: the frozen harness
+  // instant is mid-morning in New York and late evening in Papua, so the
+  // greeting proves the stored zone rather than the default.
+  await expect(page).toHaveURL(new RegExp(`/shop/${unique}$`));
+  await expect(page.getByRole("heading", { name: /Good night, Sari/ })).toBeVisible();
+});

@@ -44,6 +44,11 @@ const OPERATION_KIND_KEYS: Record<string, StaffMessageKey> = {
 const MEDIA_KIND_KEYS: Record<string, StaffMessageKey> = {
   course_photo: "reports.mediaKind.course_photo",
   recap_photo: "reports.mediaKind.recap_photo",
+  // Queued by diver erasure (ADR 20260802-diver-data-erasure). Without an entry
+  // here the lookup falls through to the raw enum value, so a stuck deletion
+  // would read "certification_card" on the owner's reports panel.
+  certification_card: "reports.mediaKind.certification_card",
+  waiver_document: "reports.mediaKind.waiver_document",
 };
 
 export const metadata: Metadata = {

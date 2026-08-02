@@ -177,9 +177,24 @@ describe("stripe checkout provider", () => {
     expect(fetchImpl.mock.calls[0][1].headers["Stripe-Account"]).toBe("acct_123");
   });
 
+  it("reports a missing amount_total as no settled figure, never as zero money", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(
+      ok({
+        id: "cs_1",
+        status: "complete",
+        payment_status: "paid",
+        url: null,
+        amount_total: null,
+      }),
+    );
+    const provider = providerWith({ STRIPE_SECRET_KEY: "sk_test" }, fetchImpl);
+    const result = await provider.retrieveCheckoutSession("acct_123", "cs_1");
+    expect(result.status === "ok" && result.session.amountTotalCents).toBeNull();
+  });
+
   it("is not_configured to refund without a Stripe key", async () => {
     const provider = providerWith({}, vi.fn());
-    expect(await provider.refundCheckoutSession("acct_123", "cs_1", 5_000)).toEqual({
+    expect(await provider.refundCheckoutSession("acct_123", "cs_1", "intent-9", 5_000)).toEqual({
       status: "not_configured",
     });
   });
@@ -198,7 +213,7 @@ describe("stripe checkout provider", () => {
       )
       .mockResolvedValueOnce(ok({ id: "re_1" }));
     const provider = providerWith({ STRIPE_SECRET_KEY: "sk_test" }, fetchImpl);
-    const result = await provider.refundCheckoutSession("acct_123", "cs_1", 5_000);
+    const result = await provider.refundCheckoutSession("acct_123", "cs_1", "intent-9", 5_000);
     expect(result).toEqual({ status: "refunded", refundId: "re_1" });
 
     const [sessionUrl] = fetchImpl.mock.calls[0];
@@ -207,13 +222,13 @@ describe("stripe checkout provider", () => {
     );
     const [refundUrl, refundInit] = fetchImpl.mock.calls[1];
     expect(refundUrl).toBe("https://api.stripe.com/v1/refunds");
-    expect(refundInit.headers["Idempotency-Key"]).toBe("refund:pi_9:5000");
+    expect(refundInit.headers["Idempotency-Key"]).toBe("intent-9");
     const form = new URLSearchParams(refundInit.body);
     expect(form.get("payment_intent")).toBe("pi_9");
     expect(form.get("amount")).toBe("5000");
   });
 
-  it("keys a full refund distinctly and omits the amount", async () => {
+  it("passes the caller's key through for a full refund and omits the amount", async () => {
     const fetchImpl = vi
       .fn()
       .mockResolvedValueOnce(
@@ -227,9 +242,9 @@ describe("stripe checkout provider", () => {
       )
       .mockResolvedValueOnce(ok({ id: "re_2" }));
     const provider = providerWith({ STRIPE_SECRET_KEY: "sk_test" }, fetchImpl);
-    await provider.refundCheckoutSession("acct_123", "cs_1");
+    await provider.refundCheckoutSession("acct_123", "cs_1", "intent-10");
     const refundInit = fetchImpl.mock.calls[1][1];
-    expect(refundInit.headers["Idempotency-Key"]).toBe("refund:pi_full:full");
+    expect(refundInit.headers["Idempotency-Key"]).toBe("intent-10");
     expect(new URLSearchParams(refundInit.body).get("amount")).toBeNull();
   });
 
@@ -244,7 +259,7 @@ describe("stripe checkout provider", () => {
       }),
     );
     const provider = providerWith({ STRIPE_SECRET_KEY: "sk_test" }, fetchImpl);
-    expect(await provider.refundCheckoutSession("acct_123", "cs_1")).toEqual({
+    expect(await provider.refundCheckoutSession("acct_123", "cs_1", "intent-11")).toEqual({
       status: "not_refundable",
     });
     // Never posted a refund.
@@ -265,6 +280,8 @@ describe("stripe checkout provider", () => {
       )
       .mockResolvedValueOnce({ ok: false, json: async () => ({}) });
     const provider = providerWith({ STRIPE_SECRET_KEY: "sk_test" }, fetchImpl);
-    expect(await provider.refundCheckoutSession("acct_123", "cs_1")).toEqual({ status: "failed" });
+    expect(await provider.refundCheckoutSession("acct_123", "cs_1", "intent-12")).toEqual({
+      status: "failed",
+    });
   });
 });

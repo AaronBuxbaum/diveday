@@ -54,10 +54,13 @@ The production build that matters for this is Vercel's own (`scripts/vercel-buil
 | Client-side uncaught exceptions / unhandled promise rejections | Sentry's default `GlobalHandlers` integration, initialized in `src/instrumentation-client.ts` |
 | A root-layout render crash | `src/app/global-error.tsx`, the one path `onRequestError` can't see (it's client-side, post-hydration) |
 | `src/proxy.ts` (the Auth.js edge middleware) | **Not covered.** A third runtime's worth of Sentry init was judged not worth it for this file's current size — see the ADR's consequences |
+| The daily cron tick (`/api/cron/reminders`) | Per-scan `Sentry.captureException` tagged `cron_scan`, plus a Sentry **Cron Monitor** check-in (`diveday-daily-tick`) that alerts when the tick never runs at all |
+| The app being unreachable, or a deployment that never boots | **Not covered by Sentry** — there is no running app to report it. That is what the external uptime monitor over `/api/health` and the public schedule is for; see [incident-response-runbook.md](incident-response-runbook.md) |
 
 ### Capability-URL redaction
 
-Waiver/readiness/recap/verify/reset-password links carry a bearer token in the URL itself. Sentry
+Waiver/readiness/recap/verify/reset-password/invite links, and the staff calendar-feed URL, all
+carry a bearer token in the URL itself. Sentry
 must never receive one unredacted, same rule as Analytics/Speed Insights
 (`docs/engineering/capability-telemetry-runbook.md`). `observability.ts`'s `beforeSend` and
 `beforeBreadcrumb` hooks reuse the same `redactCapabilityUrl` those SDKs use, applied to the
@@ -72,5 +75,5 @@ from that one place.
 | --- | --- |
 | No errors ever show up in Sentry | `NEXT_PUBLIC_SENTRY_DSN` unset, or set on the server but not exposed to the client build — it must be the exact env var name (the `NEXT_PUBLIC_` prefix is what makes Next inline it into the browser bundle) |
 | Server errors appear but client ones don't (or vice versa) | Confirm both `src/instrumentation.ts` and `src/instrumentation-client.ts` are present at the `src/` root — Next silently no-ops a misplaced instrumentation file rather than erroring |
-| A waiver/ready/recap URL shows up unredacted in a Sentry event | A gap in `CAPABILITY_ROUTE_PREFIXES`/`CAPABILITY_QUERY_PARAMS` (`src/app/observability.ts`) — fix there, then treat the exposure per `capability-telemetry-runbook.md`'s rotation table |
+| A waiver/ready/recap/invite/calendar URL shows up unredacted in a Sentry event | A gap in `CAPABILITY_ROUTE_PREFIXES`/`CAPABILITY_QUERY_PARAMS` (`src/app/observability.ts`) — fix there, then treat the exposure per `capability-telemetry-runbook.md`'s rotation table |
 | No new-account alert email | Same checklist as any other notification — see "When mail doesn't arrive" in `resend-email-runbook.md` — then confirm `alerts@dive.day` actually exists as a mailbox |

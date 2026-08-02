@@ -68,11 +68,25 @@ export function higherCertificationLevel(
   return levelRank[a] >= levelRank[b] ? a : b;
 }
 
-/** A dive site's inherent cert gate, composed into every trip that visits it. */
-export type SiteCertRequirement = {
+/**
+ * Anything that can demand cards of a diver: a trip's own requirement row, a
+ * dive site's inherent gate, or the running total of several of them folded
+ * together. One shape is what lets a single fold compose them all.
+ */
+export type CertRequirementSource = {
   minimumCertificationLevel: CertificationLevel | null;
   requiredSpecialties: readonly DiveSpecialty[];
   requiresNitrox: boolean;
+};
+
+/** A dive site's inherent cert gate, composed into every trip that visits it. */
+export type SiteCertRequirement = CertRequirementSource;
+
+/** The identity element of the fold: demands nothing of anybody. */
+const NO_CERT_REQUIREMENT: CertRequirementSource = {
+  minimumCertificationLevel: null,
+  requiredSpecialties: [],
+  requiresNitrox: false,
 };
 
 /**
@@ -81,7 +95,7 @@ export type SiteCertRequirement = {
  * demands it.
  */
 export function combineCertRequirements(
-  requirement: TripRequirement,
+  requirement: CertRequirementSource,
   site: SiteCertRequirement | null | undefined,
 ): {
   minimumCertificationLevel: CertificationLevel | null;
@@ -98,6 +112,32 @@ export function combineCertRequirements(
     requiredSpecialties: [...specialties],
     requiresNitrox: Boolean(requirement.requiresNitrox) || Boolean(site?.requiresNitrox),
   };
+}
+
+/**
+ * The single gate a trip's *whole* itinerary imposes: every site it visits
+ * folded into one requirement — the strictest level, the union of specialties,
+ * nitrox if any one of them wants it. The naive version reads only the primary
+ * site, which goes quiet on exactly the two-tank day where dive two is the one
+ * that needs the card (the same failure `getTripMaxDepthMeters` already fixed
+ * for the depth advisory).
+ *
+ * Null when no visited site demands anything, so callers keep treating "no site
+ * requirement" as absent rather than as an empty gate.
+ */
+export function combineSiteRequirements(
+  sites: readonly SiteCertRequirement[],
+): SiteCertRequirement | null {
+  let combined: CertRequirementSource = NO_CERT_REQUIREMENT;
+  for (const site of sites) combined = combineCertRequirements(combined, site);
+  if (
+    !combined.minimumCertificationLevel &&
+    combined.requiredSpecialties.length === 0 &&
+    !combined.requiresNitrox
+  ) {
+    return null;
+  }
+  return combined;
 }
 
 export type ReadinessBlockerCode =

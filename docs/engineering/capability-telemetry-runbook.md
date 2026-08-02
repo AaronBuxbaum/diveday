@@ -1,8 +1,9 @@
 # Capability telemetry runbook
 
-`/waivers/[token]`, `/ready/[token]`, `/recap/[token]`, `/verify/[token]`, and
-`/reset-password/[token]` carry a bearer capability in the path itself —
-anyone holding the URL has the access it grants. A sixth capability, the
+`/waivers/[token]`, `/ready/[token]`, `/recap/[token]`, `/verify/[token]`,
+`/reset-password/[token]`, `/invite/[token]`, and `/calendar/[token]` carry a
+bearer capability in the path itself — anyone holding the URL has the access it
+grants. An eighth capability, the
 schedule-confirmation `confirm` purpose (`purpose = 'confirm'` in
 `booking_capabilities`), travels as a *query parameter* instead —
 `/shop/[shopSlug]/schedule/[id]?booking=<token>` — not a path segment,
@@ -25,14 +26,18 @@ may still contain raw tokens. To check:
 
 1. Open the project in the Vercel dashboard → **Analytics** → **Pages**, and
    separately **Speed Insights** → **Pages**.
-2. Filter/search for `waivers/`, `ready/`, `recap/`, `verify/`, and
-   `reset-password/` path prefixes, **and separately** for `schedule/` paths
-   carrying a `?booking=` query parameter — the redaction covers both
-   shapes, but they don't share one filter.
+2. Filter/search for `waivers/`, `ready/`, `recap/`, `verify/`,
+   `reset-password/`, `invite/`, and `calendar/` path prefixes, **and
+   separately** for `schedule/` paths carrying a `?booking=` query parameter —
+   the redaction covers both shapes, but they don't share one filter.
+   (`/calendar/[token]` is fetched by calendar clients rather than browsers, so
+   it rarely appears in Analytics at all — check it anyway; a staff member who
+   opens their own feed URL in a browser once puts it there.)
 3. Any row showing a path *longer* than `/waivers/[token]`, `/ready/[token]`,
-   `/recap/[token]`, `/verify/[token]`, or `/reset-password/[token]` (i.e. an
-   actual token string), or a `/shop/*/schedule/*` row whose `booking`
-   parameter isn't the literal string `[token]`, is a historical leak.
+   `/recap/[token]`, `/verify/[token]`, `/reset-password/[token]`,
+   `/invite/[token]`, or `/calendar/[token]` (i.e. an actual token string), or a
+   `/shop/*/schedule/*` row whose `booking` parameter isn't the literal string
+   `[token]`, is a historical leak.
    Export or note the affected paths, then rotate/revoke per capability type
    below.
 4. Vercel raw analytics data has a fixed retention window; once it rolls
@@ -48,6 +53,8 @@ may still contain raw tokens. To check:
 | Recap link (`/recap/[token]`) | Stateless signed token, no stored row (`src/lib/recap-links.ts`) | Not yet — the token is valid for the life of the booking id and `AUTH_SECRET`. No ticket has moved this onto `booking_capabilities` yet; until it does, an exposed recap link cannot be individually revoked. |
 | Verify-email link (`/verify/[token]`) | Hashed, expiring, one-time row in `account_tokens` (`purpose = 'email_verification'`; see `src/db/account-tokens.ts`, [ADR 20260725-account-lifecycle-emails](../architecture/decisions/20260725-account-lifecycle-emails.md)) | Low stakes if exposed (it only confirms an address). Reissuing (a fresh onboarding send) supersedes the old token; it also simply expires after 3 days. |
 | Password-reset link (`/reset-password/[token]`) | Hashed, expiring, one-time row in `account_tokens` (`purpose = 'password_reset'`; same table/module) | Yes — issuing a new reset request for the same account supersedes any outstanding one, and a used or expired (1 hour) token stops verifying immediately either way. |
+| Staff-invite link (`/invite/[token]`) | Hashed, expiring, one-time row in `account_tokens` (`purpose = 'invite'`; same table/module, [ADR 20260726-staff-invite-accounts](../architecture/decisions/20260726-staff-invite-accounts.md)) | Yes — and treat it as high stakes: an unconsumed invite token creates a *staff* account, so an exposed one is an account-takeover-equivalent path, not a low-stakes confirmation like email verification. Reissuing the invite supersedes the outstanding token; it also expires after 7 days (`INVITE_TTL_MS`, `src/lib/account-tokens.ts`). |
+| Staff calendar feed (`/calendar/[token]`) | Hashed, **non-expiring**, revocable row in `calendar_feeds` (`src/features/calendar-sync/feed-store.ts`, [ADR 20260730-calendar-feed-subscriptions](../architecture/decisions/20260730-calendar-feed-subscriptions.md)) | Yes — call `revokeCalendarFeeds` (sets `revoked_at`), or rotate from the staff UI at `shop/[shopSlug]/settings/calendar`, which revokes the old row and issues a new one in the same step. `verifyCalendarFeed` re-derives access on **every** poll — an unknown token, a revoked row, and a person who has since lost their staff role all return the same 404, and `revokeFeedsForFormerStaff` closes outstanding feeds when a role is removed. This is the longest-lived credential of the set by design: no expiry, because a feed that died after 60 days would silently stop updating a captain's calendar. Rotation is the mitigation, so rotate rather than wait it out. |
 
 For a leaked recap link, the only current mitigation is confirming the
 redaction above stops further leakage and, for a credible active-abuse

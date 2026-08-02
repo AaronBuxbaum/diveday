@@ -6,7 +6,7 @@ import type { CreateTripPromotionResult, PromotionProvider } from "@/lib/payment
 import { seededShopContext } from "@/test/db";
 import { createBookingParty } from "./bookings";
 import { markCheckoutPaidBySessionId, startBookingCheckout } from "./checkouts";
-import { shopPromoCodes } from "./schema";
+import { shopPromoCodes, shopPromoRedemptions } from "./schema";
 import {
   createShopPromoCode,
   deleteShopPromoCode,
@@ -363,12 +363,70 @@ describe("redemption recording", () => {
     expect(started.checkout.promoCode).toBe("REEF20");
     expect((await promoNamed(db, shop.id, "REEF20")).timesRedeemed).toBe(0);
 
-    await markCheckoutPaidBySessionId(db, started.checkout.stripeSessionId);
+    // 20% off $180 — Stripe reports the $144 it actually collected.
+    await markCheckoutPaidBySessionId(db, started.checkout.stripeSessionId, undefined, 14_400);
     expect((await promoNamed(db, shop.id, "REEF20")).timesRedeemed).toBe(1);
+    // The redemption records what the shop received with this code applied,
+    // copied from Stripe's own total — not the $180 that was asked (PAY-H2).
+    const [redemption] = await db.select().from(shopPromoRedemptions);
+    expect(redemption?.amountChargedCents).toBe(14_400);
 
     // Stripe retries deliveries; a second one must not inflate the count.
-    await markCheckoutPaidBySessionId(db, started.checkout.stripeSessionId);
+    await markCheckoutPaidBySessionId(db, started.checkout.stripeSessionId, undefined, 14_400);
     expect((await promoNamed(db, shop.id, "REEF20")).timesRedeemed).toBe(1);
+    expect((await db.select().from(shopPromoRedemptions)).length).toBe(1);
+  });
+
+  it("falls back to the quoted total when Stripe reported no settled figure", async () => {
+    const { db, shop } = await promoContext();
+    await upsertShopStripeAccount(db, shop.id, "acct_test");
+    const created = await createShopPromoCode(db, promoInput(shop.id), fakePromotions());
+    if (!created.ok) throw new Error("expected promo");
+
+    const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
+    const reef = trips.find((t) => t.title.startsWith("Two-Tank Reef — Molasses"));
+    if (!reef) throw new Error("demo reef trip missing");
+    await updateTrip(db, shop.id, reef.id, {
+      title: reef.title,
+      startsAt: reef.startsAt,
+      endsAt: reef.endsAt,
+      capacity: reef.capacity,
+      plannedDives: reef.plannedDives,
+      priceCents: 18_000,
+    });
+    const party = await createBookingParty(db, [
+      {
+        actor: "staff",
+        shopId: shop.id,
+        tripId: reef.id,
+        fullName: "Promo Diver",
+        email: "promo@example.com",
+      },
+    ]);
+    if (!party.ok) throw new Error("booking failed");
+
+    const started = await startBookingCheckout(
+      db,
+      {
+        shopId: shop.id,
+        tripId: reef.id,
+        bookingIds: party.bookings.map((b) => b.bookingId),
+        customerEmail: "promo@example.com",
+        successUrl: "https://diveday.example/ok",
+        cancelUrl: "https://diveday.example/no",
+        describeLine: ({ tripTitle }) => tripTitle,
+        promotionCode: created.promo.stripePromotionCodeId ?? undefined,
+        shopPromo: { id: created.promo.id, code: created.promo.code },
+      },
+      fakeCheckout(),
+    );
+    if (!started.ok) throw new Error(`checkout failed: ${started.reason}`);
+
+    await markCheckoutPaidBySessionId(db, started.checkout.stripeSessionId);
+    const [redemption] = await db.select().from(shopPromoRedemptions);
+    // No settled figure exists; the order this code was spent against is still
+    // recorded, at what it was quoted.
+    expect(redemption?.amountChargedCents).toBe(18_000);
   });
 
   it("records nothing for an undiscounted checkout", async () => {

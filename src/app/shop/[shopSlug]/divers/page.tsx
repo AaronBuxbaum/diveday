@@ -100,11 +100,13 @@ export default async function DiversPage({
         ? t("divers.page.noticeDeleted")
         : notice === "restored"
           ? t("divers.page.noticeRestored")
-          : notice === "not-authorized"
-            ? t("divers.page.noticeNotAuthorized")
-            : notice === "invalid"
-              ? t("divers.page.noticeInvalid")
-              : null;
+          : notice === "erased"
+            ? t("divers.page.noticeErased")
+            : notice === "not-authorized"
+              ? t("divers.page.noticeNotAuthorized")
+              : notice === "invalid"
+                ? t("divers.page.noticeInvalid")
+                : null;
   const noticeIsError =
     notice === "duplicate" || notice === "invalid" || notice === "not-authorized";
 

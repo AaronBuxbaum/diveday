@@ -7,6 +7,7 @@ import {
   checkoutProviderFromEnvironment,
   stripeLineDescription,
 } from "@/lib/payments/checkout";
+import { allocateSettledTotal } from "@/lib/payments/settlement";
 import type { AppDb, DbExecutor } from "./client";
 import {
   claimBookingsForCheckout,
@@ -332,6 +333,15 @@ export async function markCheckoutPaidBySessionId(
   db: AppDb,
   stripeSessionId: string,
   expectedAccountId?: string,
+  /**
+   * Stripe's own `amount_total` for the completed session — what actually
+   * settled, after any discount Stripe applied. Recorded on the checkout and
+   * split across the covered bookings below. Undefined/null means Stripe
+   * reported no total (or the caller has none to offer, e.g. an internal
+   * repair run): the covered bookings fall back to the amounts they were
+   * asked for rather than being recorded as paying nothing.
+   */
+  settledTotalCents?: number | null,
 ): Promise<BookingCheckout | null> {
   return db.transaction(async (tx) => {
     const [checkout] = await tx
@@ -382,22 +392,91 @@ export async function markCheckoutPaidBySessionId(
       return null;
     }
 
+    // Stripe's reported total, kept only when it is a usable figure. An
+    // already-recorded settled total is never overwritten — the first
+    // completion's evidence stands; a later delivery may only fill in a null.
+    const reportedSettledCents =
+      settledTotalCents !== undefined &&
+      settledTotalCents !== null &&
+      Number.isInteger(settledTotalCents) &&
+      settledTotalCents >= 0
+        ? settledTotalCents
+        : null;
+    // …and never above what this session actually asked for. Above that
+    // ceiling `allocateSettledTotal` scales *every* share up past its own ask
+    // (its proportional split has no way to decide whose the surplus is), and
+    // the inflated `booking_payments.amountCents` that results is the figure a
+    // later refund reverses. No path reaches this today — the session is built
+    // from fixed `price_data` lines with no tax, no adjustable quantity, no
+    // tipping — and the figure is authenticated before it is trusted, so a
+    // mismatch means a Stripe-side assumption has changed (`automatic_tax`, a
+    // tipping toggle) rather than an attack. Clamped so that change surfaces as
+    // a log line instead of as money, and clamped *before* the store so the
+    // per-booking rows still sum to exactly the recorded settled total; the
+    // figure Stripe reported stays recoverable from the log.
+    if (reportedSettledCents !== null && reportedSettledCents > checkout.totalCents) {
+      log("checkout.settled_total_over_asked", "error", {
+        shopId: checkout.shopId,
+        checkoutId: checkout.id,
+        stripeSessionId: checkout.stripeSessionId,
+        reportedCents: reportedSettledCents,
+        askedCents: checkout.totalCents,
+      });
+    }
+    const usableSettledCents =
+      reportedSettledCents === null ? null : Math.min(reportedSettledCents, checkout.totalCents);
+    const settledCents = checkout.settledTotalCents ?? usableSettledCents;
+
     const updated =
       checkout.status === "completed"
-        ? checkout
+        ? // A replay over an already-completed checkout still backfills a
+          // settled total the original completion never had (an older webhook
+          // payload, an internal repair run), so the repaired payment rows
+          // below are written from Stripe's figure rather than the asked one.
+          checkout.settledTotalCents === null && settledCents !== null
+          ? ((
+              await tx
+                .update(bookingCheckouts)
+                .set({ settledTotalCents: settledCents })
+                .where(eq(bookingCheckouts.id, checkout.id))
+                .returning()
+            )[0] ?? null)
+          : checkout
         : ((
             await tx
               .update(bookingCheckouts)
-              .set({ status: "completed", completedAt: nowDate() })
+              .set({
+                status: "completed",
+                completedAt: nowDate(),
+                settledTotalCents: settledCents,
+              })
               .where(eq(bookingCheckouts.id, checkout.id))
               .returning()
           )[0] ?? null);
     if (!updated) return null;
 
     const linked = await tx
-      .select({ bookingId: bookingCheckoutBookings.bookingId })
+      .select({
+        bookingId: bookingCheckoutBookings.bookingId,
+        gearCents: bookingCheckoutBookings.gearCents,
+      })
       .from(bookingCheckoutBookings)
       .where(eq(bookingCheckoutBookings.checkoutId, checkout.id));
+
+    // What each diver actually paid, not what they were quoted. The session's
+    // asked total is the sum of these per-booking asks (trip fee + that
+    // diver's own gear) — by construction the same figure as `totalCents` —
+    // and Stripe's settled total is split back across them in proportion, so a
+    // promo discount lands on everyone it discounted and gear money is
+    // attributed to the diver who rented it (PAY-H1/H2).
+    const askedCentsFor = (gearCents: number) => checkout.amountPerDiverCents + gearCents;
+    const allocation =
+      settledCents === null
+        ? null
+        : allocateSettledTotal(
+            linked.map((row) => ({ key: row.bookingId, askedCents: askedCentsFor(row.gearCents) })),
+            settledCents,
+          );
     // A diver's own self-service cancel/reschedule (docs ADR
     // 20260727-diver-self-service-cancel) can leave this exact session still
     // open and payable in another tab; if they complete it after cancelling,
@@ -419,18 +498,41 @@ export async function markCheckoutPaidBySessionId(
         shopId: updated.shopId,
         promoCodeId: updated.promoCodeId,
         checkoutId: updated.id,
-        amountChargedCents: updated.totalCents,
+        // What the shop actually received with this code applied, straight
+        // from Stripe; the quoted total only when no settled figure exists.
+        amountChargedCents: updated.settledTotalCents ?? updated.totalCents,
       });
     }
 
-    for (const { bookingId } of linked) {
+    for (const { bookingId, gearCents } of linked) {
       await setBookingPaymentIfNotFinal(tx, {
         shopId: checkout.shopId,
         bookingId,
         // A deposit checkout clears the readiness gate as deposit_paid; the
         // balance is collected later (staff order or a full checkout).
         status: checkout.isDeposit ? "deposit_paid" : "paid",
-        amountCents: checkout.amountPerDiverCents,
+        // No settled figure to split (a historical row, or Stripe reported no
+        // total): fall back to what this diver was asked for — the per-diver
+        // charge plus their own gear. Pre-discount, so possibly generous on a
+        // promo checkout, but never a completion refused or recorded as zero.
+        //
+        // KNOWN RESIDUAL, open, reachable only on this branch (no
+        // `amount_total`) and only for a **party** checkout on a **discounted**
+        // session. One Stripe payment intent covers N bookings, and each is
+        // recorded here at its quoted, pre-discount amount, so the recorded
+        // amounts sum above what the intent actually captured.
+        // `refundBookingOnCancellation` (src/db/refunds.ts) then asks Stripe to
+        // reverse one diver's inflated share out of the shared pot; Stripe
+        // bounds the *total* reversed against that intent, not the per-diver
+        // share, so the first party member to cancel can be over-refunded and a
+        // later one left under-funded — Stripe refusing their refund for money
+        // that has already gone to someone else. This is recorded rather than
+        // fixed: the fix is to stop recording an unsettled party at quoted
+        // amounts at all (prorate against `totalCents`, or refuse to attribute
+        // per-booking money without a settled figure), which changes what a
+        // completion means and needs its own decision. Do not read the fallback
+        // as closed.
+        amountCents: allocation?.get(bookingId) ?? askedCentsFor(gearCents),
         currency: checkout.currency,
         provider: "stripe",
         providerRef: checkout.stripeSessionId,
@@ -488,7 +590,15 @@ export async function refreshCheckoutFromStripe(
   const result = await checkout.retrieveCheckoutSession(row.stripeAccountId, row.stripeSessionId);
   if (result.status !== "ok") return row;
   if (result.session.paymentStatus === "paid") {
-    return markCheckoutPaidBySessionId(db, row.stripeSessionId);
+    // The snapshot already carries Stripe's own settled total; pass it through
+    // rather than dropping it, so this fallback path records the same money
+    // the webhook path would have (PAY-H1/H2).
+    return markCheckoutPaidBySessionId(
+      db,
+      row.stripeSessionId,
+      undefined,
+      result.session.amountTotalCents,
+    );
   }
   if (result.session.stripeStatus === "expired") {
     return markCheckoutExpiredBySessionId(db, row.stripeSessionId);

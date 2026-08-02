@@ -207,6 +207,7 @@
       "noticeDuplicate": "A diver with that email is already in this shop.",
       "noticeDeleted": "Diver removed from active shop work. Their bookings and cards are preserved.",
       "noticeRestored": "Diver restored to active shop work.",
+      "noticeErased": "Personal data erased. The signed release, the trips, and the payments stay on file with the diver's details gone — this cannot be undone.",
       "noticeNotAuthorized": "Removing or restoring a diver is limited to owners and managers.",
       "noticeInvalid": "Check the diver's name, email, and phone number.",
       "restoring": "Restoring…",
@@ -298,11 +299,23 @@
     },
     "remove": {
       "heading": "Remove from active divers",
-      "description": "They come off your active lists; bookings, cards, and sizes stay on file.",
+      "description": "They come off your active lists; bookings, cards, and sizes stay on file. Nothing is destroyed, and you can undo it.",
       "removePersonSummary": "Remove {name}",
       "addAgainNote": "You can add them again later as a new active record.",
       "removing": "Removing…",
       "removeDiver": "Remove diver"
+    },
+    "erase": {
+      "heading": "Erase personal data",
+      "description": "For a diver who asks you to delete what you hold about them. This is not the same as removing them — it destroys their details for good.",
+      "summary": "Erase {name}'s personal data",
+      "destroyedNote": "Destroyed: their name, email, phone, date of birth, emergency contact, insurance, card numbers and card photos, medical answers, rental sizes, notes about them, review comments, and any photos they shared.",
+      "keptNote": "Kept: that they signed your release, which version they signed, and when — plus the trips they were on and what was paid, with their name gone from all of it. Your signed releases stay verifiable.",
+      "noUndoNote": "There is no undo, and no way to get any of it back. Removing them first is the reversible option.",
+      "confirmLabel": "Type {name} to confirm",
+      "confirmHint": "Must match exactly.",
+      "erasing": "Erasing…",
+      "eraseDiver": "Erase personal data"
     },
     "rentalFit": {
       "heading": "Rental fit",
@@ -386,7 +399,7 @@
       "alreadyBooked": "This diver is already booked on that activity.",
       "courseUnstaffed": "Assign an instructor before booking this course.",
       "coursePrerequisite": "Mark the required certification as certified before booking this course.",
-      "courseRatioFull": "This session is at its instructor-to-student ratio limit. Assign another instructor or certified assistant, or choose another activity.",
+      "courseRatioFull": "This session is at its instructor-to-student ratio limit. Assign another instructor, or choose another activity.",
       "courseMinAge": "This diver is under that course's minimum age on the day it runs, going by the date of birth on file. Correct the date of birth if it's wrong.",
       "tripUnavailable": "Add an email and choose an available activity.",
       "bookingInvalid": "Add an email and choose an available activity.",
@@ -395,6 +408,9 @@
       "deleted": "Diver removed from active shop work. Their bookings and cards are preserved.",
       "notAuthorizedRefund": "Refunds are limited to owners and managers — ask one of them to issue this refund.",
       "notAuthorizedDelete": "Removing a diver is limited to owners and managers — ask one of them to do it.",
+      "notAuthorizedErase": "Erasing a diver's personal data is limited to the shop owner — ask them to do it.",
+      "eraseNameMismatch": "The name you typed doesn't match this diver's, so nothing was erased. Type it exactly as it appears above.",
+      "eraseRefused": "This record can't be erased. Staff records keep the shop's own accountability trail, and you can't erase your own.",
       "notAuthorizedFit": "Changing a diver's stated rental fit is limited to owners, managers, instructors, and divemasters. You can still flag them for hands-on fitting at check-in.",
       "cardSightingRequired": "Confirming an imported card needs the checkbox: it opens the dive or the fill that card allows, so a staffer has to say they've actually seen it or checked the number with the agency.",
       "invalid": "Check the details and try again.",
@@ -891,7 +907,9 @@
     },
     "mediaKind": {
       "course_photo": "Course photo",
-      "recap_photo": "Recap photo"
+      "recap_photo": "Recap photo",
+      "certification_card": "Card photo",
+      "waiver_document": "Waiver document"
     },
     "eyebrow": "Owner",
     "title": "How's your month",
@@ -1031,6 +1049,9 @@
       "crewNobodyYet": "nobody yet",
       "noPriceSet": "No price set",
       "noPriceSetAria": "Set a price for {ref}",
+      "rollCallOpen": "Roll call · {count} not counted",
+      "rollCallOpenAria": "Finish the dive {dive} roll call for {ref}",
+      "rollCallOpenNote": "Back at the dock with the dive {dive} roll call still open.",
       "move": "Move",
       "moveAria": "Move {ref}",
       "copy": "Copy",
@@ -1092,6 +1113,7 @@
       "bookingRemovedRefundOwner": "Booking cancelled and the spot is open. This booking was paid, so a refund may be owed — an owner or manager needs to issue it from the diver's payments.",
       "bookingRestored": "Back on the roster.",
       "bookingRestoreFull": "Couldn't undo — the freed spot has been taken and the trip is full again. Add them to the wait list instead.",
+      "bookingRestoreRatio": "Couldn't undo — the freed seat has been taken and this course session is now at its instructor-to-student ratio limit. Assign another instructor, or add them to the wait list instead.",
       "diverAdded": "Diver added to the trip.",
       "diverWaitlisted": "Diver added to the wait list.",
       "identityConfirmed": "Identity confirmed — this diver can be cleared to board.",
@@ -1103,7 +1125,7 @@
       "diverAlready": "That diver already has a booking on this trip.",
       "diverCourseUnstaffed": "This course session needs an instructor assigned before you can add divers.",
       "diverCoursePrerequisite": "That diver doesn't have a verified certification on file for this course's prerequisite.",
-      "diverCourseRatioFull": "This session is at its instructor-to-student ratio limit — assign another instructor or a certified assistant, or add them to the wait list.",
+      "diverCourseRatioFull": "This session is at its instructor-to-student ratio limit — assign another instructor, or add them to the wait list.",
       "diverCourseMinAge": "That diver is under this course's minimum age on the day it runs, going by the date of birth on their profile. Correct the date if it's wrong.",
       "diverUnavailable": "This trip can't accept new divers right now.",
       "waiverComplete": "That diver already has a completed waiver.",
@@ -1153,6 +1175,7 @@
       "seriesPart": "Part of a repeating series · {summary}. Changes here apply to this date only; {count} still on the schedule.",
       "viewOnlyNotice": "You're viewing this trip. Its setup — the details, admission requirements, and recurring schedule — is edited by owners, managers, and instructors. Recording conditions, adjusting who's on crew, and cancelling today's trip for weather stay open to you, as do the roster, check-in, manifest, and roll call.",
       "overRatioWarning": "{booked} divers are booked, but the current crew only covers {cap} under PADI's published entry-level ratio (8 per instructor, +2 per certified assistant). Assign another instructor or a certified assistant before this session sails — existing bookings are unaffected either way.",
+      "overRatioWarningIntro": "{booked} divers are booked on this intro session, but the current crew only covers {cap} — {perInstructor} per instructor for the open-water dive, and a certified assistant does not raise it. That is PADI's published Discover Scuba ratio from the Instructor Manual, tighter than the entry-level course figure because nobody on this session has been in the water before. Only another instructor adds seats. Assign one before this session sails — existing bookings are unaffected either way.",
       "reinstate": "Reinstate trip",
       "reinstating": "Reinstating…",
       "cancelledNotice": "This trip is cancelled. Putting it back on the schedule is limited to owners, managers, and instructors.",
@@ -1428,6 +1451,7 @@
       "summaryBlocked": "Blocked",
       "summaryBoarded": "Boarded",
       "summaryNotBoarded": "Not boarded",
+      "summaryNotBackAboard": "Not back aboard",
       "summaryAwaiting": "Awaiting",
       "moreStatsSummary": "More stats",
       "checkpointNavAriaLabel": "Roll-call checkpoint",
@@ -1435,13 +1459,30 @@
       "rollCallComplete": "Roll call complete ✦",
       "recordedOfTotal": "{recorded} of {total} recorded",
       "progressAriaLabel": "Roll-call progress",
-      "allAccountedFor": "Everyone’s accounted for — ready for the next check.",
+      "allAccountedFor": "Everyone’s accounted for — divers and crew. Ready for the next check.",
       "stillToCall": "{count, plural, one {# diver still to call.} other {# divers still to call.}}",
+      "notBackAboardOpen": "{count, plural, one {# diver is not back aboard.} other {# divers are not back aboard.}} This checkpoint stays open until they’re counted.",
+      "crewNotAttestedYet": "Every diver is counted. Confirm how many crew are aboard to close this checkpoint.",
+      "crewShort": "{aboard} of {assigned} crew confirmed aboard. This checkpoint stays open until every crew member is accounted for.",
       "readinessNeedsAttention": "Readiness needs attention",
       "blockedDeparture": "{count, plural, one {# diver is blocked. They remain on this manifest and cannot board until their readiness check clears.} other {# divers are blocked. They remain on this manifest and cannot board until their readiness check clears.}}",
       "blockedAfterDive": "{count, plural, one {# diver already sailed — record them anyway; readiness follow-up happens ashore, not here.} other {# divers already sailed — record them anyway; readiness follow-up happens ashore, not here.}}",
       "crewHeading": "Crew",
       "noCrew": "No crew on this trip yet — assign instructors and crew from the trip page.",
+      "crewAboardHeading": "Crew aboard at {checkpoint}",
+      "crewAboardDescription": "Divers aren’t the whole head count. Count the crew on the boat — instructors, divemasters, the captain — and say how many are aboard. This checkpoint doesn’t close until you do.",
+      "crewAboardLabel": "Crew aboard",
+      "crewAboardHint": "of {assigned} assigned",
+      "crewAboardFieldDescription": "Count people, not the list above.",
+      "crewAttestNoteLabel": "Note",
+      "crewAttestNoteHint": "(optional)",
+      "crewAttestNotePlaceholder": "e.g. DM stayed on the mooring line",
+      "crewAttestSubmit": "Confirm crew count",
+      "crewAttestedSummary": "{aboard} of {assigned} crew aboard · {name} · {date}",
+      "crewAttestedNote": "Note: {note}",
+      "crewAttestationMissing": "No crew count recorded at this checkpoint yet.",
+      "crewAttestationStaleAssigned": "{assigned, plural, one {# crew is assigned now} other {# crew are assigned now}} — confirm the count again.",
+      "crewAttestError": "That crew count wasn’t recorded. Check the number and try again.",
       "checkpointRollCallHeading": "{checkpoint} roll call",
       "checkEachDiverDescription": "Check each diver at this checkpoint. Every change is time-stamped with the staff member who made it.",
       "shopTimeLabel": "Shop time: {timezone}",
@@ -1461,15 +1502,19 @@
       "addNoteSummary": "Add a note to this roll-call record",
       "rollCallRecordedByPlain": "{label} {date} by {name}",
       "rollCallRecordedByWithNote": "{label} {date} by {name} · {note}",
-      "carriedForward": "Carried forward — not boarded on an earlier checkpoint. Mark boarded to bring them back on.",
+      "carriedForwardFromDock": "Carried forward — this diver never left the dock. Mark boarded to bring them back on.",
       "boardedCheck": "Boarded ✓",
       "markBoarded": "Mark boarded",
       "undoing": "Undoing…",
       "boarding": "Boarding…",
       "notBoardedCheck": "Not boarded ✓",
       "markNotBoarded": "Mark not boarded",
+      "notBackAboardActive": "Not back aboard",
+      "markNotBackAboard": "Mark not back aboard",
+      "notBackAboardDescription": "After a dive, “not back aboard” means this diver has not returned to the boat. It keeps the count open — it never closes it.",
       "saving": "Saving…",
-      "tapToUndo": "Tap the ✓ status again to undo."
+      "tapToUndo": "Tap the ✓ status again to undo.",
+      "tapToUndoNotBackAboard": "Tap “Not back aboard” again to undo."
     },
     "offlineManifestManager": {
       "checkingDevice": "Checking this device…",
@@ -2505,6 +2550,10 @@
         "later": "This week"
       },
       "actionKind": {
+        "rollCallMissingDiver": "Missing diver",
+        "rollCallUnfinished": "Roll call",
+        "rollCallDepartureOpen": "Dock count",
+        "rollCallNotStarted": "No roll call",
         "medicalReview": "Medical",
         "readinessUnavailable": "Readiness",
         "identity": "Identity",
@@ -2572,10 +2621,18 @@
         "group": "{detail} {names}."
       },
       "detail": {
+        "missingDiver": "Somebody on this boat was marked not back aboard after dive {dive} — {uncounted, plural, one {# of {total} divers who went in} other {# of {total} divers who went in}} has not been counted back since. Find them first, then close the count.",
+        "missingDiverStale": "This trip's dive {dive} count was never closed: {uncounted, plural, one {# of {total} divers was} other {# of {total} divers were}} marked not back aboard and never accounted for afterwards. Too old to settle on the dock — reconstruct it from the trip's manifest and write down what happened.",
+        "openRollCall": "This boat is back and the dive {dive} roll call was never finished — {uncounted, plural, one {# of {total} divers has} other {# of {total} divers have}} no result recorded. Account for everyone before you leave the dock.",
+        "openRollCallUnderway": "This boat is still out and the dive {dive} count was started and left half-done — {uncounted, plural, one {# of {total} divers has} other {# of {total} divers have}} no result. Reach the crew now, while the boat is still on the site.",
+        "openRollCallStale": "This trip's dive {dive} roll call was never closed — {uncounted, plural, one {# of {total} divers still has} other {# of {total} divers still have}} no result. Too old to settle on the dock — reconstruct it from the trip's manifest.",
+        "departureCountOpen": "The dock count on this boat was never finished — {uncounted, plural, one {# of {total} divers has} other {# of {total} divers have}} no result at departure. Missing paperwork, not a diver in the water: settle it so the next boat's count starts from a real list.",
+        "noRollCall": "No roll call was run on this trip at all — {total, plural, one {# diver} other {# divers}} sailed with nothing recorded. Nobody was reported missing; the record is simply empty.",
         "missingFit": "{count, plural, one {# diver has} other {# divers have}} no rental fit on file, so the prep list is incomplete.",
         "ungatedNitrox": "{count, plural, one {# diver wants} other {# divers want}} Nitrox without a verified card — those tanks are planned as air.",
         "instructorMissing": "This course session has no instructor assigned and cannot take enrolments.",
         "overRatio": "{booked} booked, but the assigned crew only covers {capacity} at PADI's published entry-level ratio.",
+        "overRatioIntro": "{booked} booked on this intro session, but the assigned crew only covers {capacity} — PADI's published Discover Scuba ratio of {perInstructor} per instructor for the open-water dive, which a certified assistant does not raise. Only another instructor adds seats.",
         "missingContact": "{count, plural, one {# diver has} other {# divers have}} no emergency contact on file — ask at the counter; it prints on the manifest.",
         "lastMinuteFill": "{seats, plural, one {# seat} other {# seats}} open with no last-minute deal sent yet.",
         "waitlistSeat": "{seats, plural, one {# seat} other {# seats}} opened up and {waiting, plural, one {# person is} other {# people are}} on the wait list.",
@@ -2589,6 +2646,7 @@
         }
       },
       "actionLabel": {
+        "openRollCall": "Open roll call",
         "openPrepList": "Open prep list",
         "openTrip": "Open trip",
         "openGuests": "Open guests",
@@ -2623,7 +2681,9 @@
         },
         "mediaKind": {
           "coursePhoto": "Course photo",
-          "recapPhoto": "Recap photo"
+          "recapPhoto": "Recap photo",
+          "certificationCard": "Card photo",
+          "waiverDocument": "Waiver document"
         },
         "stuckDetail": {
           "withId": "{kind} stuck since {when} — Stripe: {id}. Check it against the Stripe dashboard.",
@@ -2663,6 +2723,7 @@
         "stale": "Stale copy"
       },
       "loadingMessage": "Opening the manifest saved on this device…",
+      "openingHeading": "Opening this device's saved copy",
       "reconcile": {
         "reachError": "Couldn't reach DiveDay just now — your changes are still saved on this phone and will try to send again on the next change or reconnect.",
         "pendingRejectedSingle": "{count, plural, one {# change needs a look — open the live manifest to sort it out.} other {# changes need a look — open the live manifest to sort it out.}}",
@@ -2702,12 +2763,12 @@
         "checkpointRollCallHeading": "{checkpoint} roll call",
         "allAboard": "Every diver has a result — everyone's aboard.",
         "someNotBoarded": "Every diver has a result — {count} marked not boarded. Confirm they're accounted for before moving on.",
+        "crewHeading": "Crew aboard",
+        "crewAttested": "{aboard} of {assigned} crew confirmed aboard · {name}",
+        "crewNotAttested": "{assigned, plural, =0 {No crew are assigned to this trip.} one {# crew member is assigned to this trip.} other {# crew members are assigned to this trip.}} The crew count is confirmed on the live manifest, so this checkpoint stays open until you're back in service.",
+        "crewShort": "{aboard} of {assigned} crew confirmed aboard — this checkpoint stays open until the rest are counted on the live manifest.",
         "readyBadge": "Ready when saved",
         "blockedBadge": "Blocked when saved",
-        "stateBoarded": "Boarded",
-        "stateNotBoardedCarried": "Not boarded · carried",
-        "stateNotBoarded": "Not boarded",
-        "stateAwaiting": "Awaiting roll call",
         "statePendingSuffix": "· waiting to send",
         "emergencyContact": "Emergency contact",
         "notOnFile": "Not on file",
@@ -2722,6 +2783,8 @@
         "markBoarded": "Mark boarded",
         "notBoardedDone": "Not boarded ✓",
         "markNotBoarded": "Mark not boarded",
+        "notBackAboardActive": "Not back aboard",
+        "markNotBackAboard": "Mark not back aboard",
         "openLiveManifest": "Open live manifest",
         "record": {
           "expiredCannotRecord": "This saved copy has expired — open the live manifest to record roll call.",
@@ -2744,10 +2807,10 @@
       "contrastLabel": "Contrast",
       "labelAuto": "Auto",
       "labelStandard": "Standard",
-      "labelFullAaa": "Full AAA",
+      "labelFullAaa": "Maximum contrast",
       "modeAuto": "Auto ☀",
       "modeStandard": "Standard",
-      "modeFullAaa": "Full AAA ☀"
+      "modeFullAaa": "Maximum contrast ☀"
     },
     "rentalFit": {
       "itemLabels": {
@@ -2770,6 +2833,13 @@
     "rollCallCheckpoint": {
       "departure": "Before departure",
       "afterDive": "After dive {n}"
+    },
+    "rollCallState": {
+      "awaiting": "Awaiting roll call",
+      "boarded": "Boarded",
+      "notBoarded": "Not boarded",
+      "notBoardedCarried": "Not boarded · carried",
+      "notBackAboard": "Not back aboard"
     }
   },
   "whatsapp": {

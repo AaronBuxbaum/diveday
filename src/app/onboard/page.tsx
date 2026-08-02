@@ -6,10 +6,17 @@ import { ShopNotice } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
-import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
+import { type DiverMessageKey, type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { eventSource } from "@/lib/funnel";
 import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH, type OnboardErrorCode } from "@/lib/onboarding";
+import {
+  type CuratedTimeZone,
+  type CuratedTimezoneGroupKey,
+  DEFAULT_TIMEZONE,
+  timeZoneOptionText,
+  timezoneOptionGroups,
+} from "@/lib/timezones";
 import { onboardAction } from "./actions";
 
 // Reads `searchParams` and `requestLocale()` (`headers()`-backed) unguarded,
@@ -56,6 +63,53 @@ function onboardErrorMessage(t: DiverTranslator, error: string): string {
     ? ONBOARD_ERROR_MESSAGES[error as keyof typeof ONBOARD_ERROR_MESSAGES](t)
     : decodeURIComponent(error);
 }
+
+/**
+ * The words for the timezone picker's structure. `src/lib/timezones.ts` hands
+ * back zone ids and group keys — data with no language in it — and this is
+ * where those become headings and labels, the same division every other
+ * domain-layer code in this file goes through.
+ */
+const TIMEZONE_GROUP_KEYS: Record<CuratedTimezoneGroupKey | "allZones", DiverMessageKey> = {
+  americas: "account.onboard.timezoneGroup.americas",
+  caribbean: "account.onboard.timezoneGroup.caribbean",
+  europeRedSea: "account.onboard.timezoneGroup.europeRedSea",
+  asiaPacific: "account.onboard.timezoneGroup.asiaPacific",
+  allZones: "account.onboard.timezoneGroup.allZones",
+};
+
+/**
+ * A curated zone's label — how a shop owner names the place rather than how
+ * IANA does ("Cancún / Cozumel", not "America/Cancun"). Only the pinned
+ * shortcuts get one; every other zone in the full list reads as its own id,
+ * which needs no translation and can't drift from what gets stored.
+ */
+const CURATED_TIMEZONE_KEYS: Record<CuratedTimeZone, DiverMessageKey> = {
+  "America/New_York": "account.onboard.timezone.eastern",
+  "America/Chicago": "account.onboard.timezone.central",
+  "America/Denver": "account.onboard.timezone.mountain",
+  "America/Los_Angeles": "account.onboard.timezone.pacific",
+  "Pacific/Honolulu": "account.onboard.timezone.hawaii",
+  "America/Cancun": "account.onboard.timezone.cancun",
+  "America/Belize": "account.onboard.timezone.belize",
+  "America/Tegucigalpa": "account.onboard.timezone.roatan",
+  "America/Cayman": "account.onboard.timezone.cayman",
+  "America/Nassau": "account.onboard.timezone.nassau",
+  "America/Puerto_Rico": "account.onboard.timezone.puertoRico",
+  "America/Curacao": "account.onboard.timezone.bonaire",
+  "Europe/London": "account.onboard.timezone.london",
+  "Africa/Cairo": "account.onboard.timezone.cairo",
+  "Indian/Maldives": "account.onboard.timezone.maldives",
+  "Asia/Bangkok": "account.onboard.timezone.bangkok",
+  "Asia/Jakarta": "account.onboard.timezone.jakarta",
+  "Asia/Singapore": "account.onboard.timezone.singapore",
+  "Asia/Makassar": "account.onboard.timezone.bali",
+  "Asia/Manila": "account.onboard.timezone.manila",
+  "Pacific/Palau": "account.onboard.timezone.palau",
+  "Pacific/Fiji": "account.onboard.timezone.fiji",
+  "Australia/Sydney": "account.onboard.timezone.sydney",
+  "Pacific/Auckland": "account.onboard.timezone.auckland",
+};
 
 export const metadata: Metadata = {
   title: "Start a dive shop trial — DiveDay",
@@ -164,54 +218,30 @@ export default async function OnboardPage({
               </FieldGrid>
               <FieldGrid columns={1}>
                 <Field label={t("account.onboard.timezoneLabel")}>
+                  {/* `required` is load-bearing twice over: the browser gate,
+                      and `Field`'s required asterisk, which it reads off this
+                      child's own props. */}
                   <select
                     name="timezone"
                     required
-                    defaultValue={timezone || "America/New_York"}
+                    defaultValue={timezone || DEFAULT_TIMEZONE}
                     className={controlClass}
                   >
-                    <optgroup label={t("account.onboard.timezoneGroup.americas")}>
-                      <option value="America/New_York">
-                        {t("account.onboard.timezone.eastern")}
-                      </option>
-                      <option value="America/Chicago">
-                        {t("account.onboard.timezone.central")}
-                      </option>
-                      <option value="America/Denver">
-                        {t("account.onboard.timezone.mountain")}
-                      </option>
-                      <option value="America/Los_Angeles">
-                        {t("account.onboard.timezone.pacific")}
-                      </option>
-                      <option value="Pacific/Honolulu">
-                        {t("account.onboard.timezone.hawaii")}
-                      </option>
-                    </optgroup>
-                    <optgroup label={t("account.onboard.timezoneGroup.caribbean")}>
-                      <option value="America/Cancun">{t("account.onboard.timezone.cancun")}</option>
-                      <option value="America/Puerto_Rico">
-                        {t("account.onboard.timezone.puertoRico")}
-                      </option>
-                      <option value="America/Nassau">{t("account.onboard.timezone.nassau")}</option>
-                    </optgroup>
-                    <optgroup label={t("account.onboard.timezoneGroup.europeRedSea")}>
-                      <option value="Europe/London">{t("account.onboard.timezone.london")}</option>
-                      <option value="Africa/Cairo">{t("account.onboard.timezone.cairo")}</option>
-                    </optgroup>
-                    <optgroup label={t("account.onboard.timezoneGroup.asiaPacific")}>
-                      <option value="Asia/Singapore">
-                        {t("account.onboard.timezone.singapore")}
-                      </option>
-                      <option value="Asia/Bangkok">{t("account.onboard.timezone.bangkok")}</option>
-                      <option value="Asia/Manila">{t("account.onboard.timezone.manila")}</option>
-                      <option value="Australia/Sydney">
-                        {t("account.onboard.timezone.sydney")}
-                      </option>
-                      <option value="Pacific/Auckland">
-                        {t("account.onboard.timezone.auckland")}
-                      </option>
-                      <option value="Pacific/Palau">{t("account.onboard.timezone.palau")}</option>
-                    </optgroup>
+                    {timezoneOptionGroups().map((group) => (
+                      <optgroup key={group.group} label={t(TIMEZONE_GROUP_KEYS[group.group])}>
+                        {group.group === "allZones"
+                          ? group.zones.map((zone) => (
+                              <option key={zone} value={zone}>
+                                {timeZoneOptionText(zone)}
+                              </option>
+                            ))
+                          : group.zones.map((zone) => (
+                              <option key={zone} value={zone}>
+                                {t(CURATED_TIMEZONE_KEYS[zone])}
+                              </option>
+                            ))}
+                      </optgroup>
+                    ))}
                   </select>
                 </Field>
               </FieldGrid>

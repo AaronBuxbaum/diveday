@@ -77,15 +77,22 @@ async function pay(
   await db.insert(bookingPayments).values({ shopId, bookingId, status, amountCents });
 }
 
-/** A completed deposit checkout covering one booking — the deposit a later balance overwrites. */
+/**
+ * A completed deposit checkout covering one booking — the deposit a later
+ * balance overwrites. `gearCents` is that diver's rental gear, charged on the
+ * same session; `settledTotalCents` is what Stripe actually collected for it
+ * (null = no settled figure, as on any row predating that column).
+ */
 async function makeDepositCheckout(
   db: AppDb,
   shopId: string,
   tripId: string,
   bookingId: string,
   perDiverCents: number,
+  options: { gearCents?: number; settledTotalCents?: number } = {},
 ): Promise<void> {
   seq += 1;
+  const gearCents = options.gearCents ?? 0;
   const [checkout] = await db
     .insert(bookingCheckouts)
     .values({
@@ -96,11 +103,14 @@ async function makeDepositCheckout(
       stripeAccountId: "acct_test",
       stripeSessionId: `cs_${seq}`,
       amountPerDiverCents: perDiverCents,
-      totalCents: perDiverCents,
+      totalCents: perDiverCents + gearCents,
+      settledTotalCents: options.settledTotalCents ?? null,
     })
     .returning();
   if (!checkout) throw new Error("failed to insert checkout");
-  await db.insert(bookingCheckoutBookings).values({ shopId, checkoutId: checkout.id, bookingId });
+  await db
+    .insert(bookingCheckoutBookings)
+    .values({ shopId, checkoutId: checkout.id, bookingId, gearCents });
 }
 
 async function completeWaiverFor(
@@ -166,13 +176,18 @@ describe("getMonthlyReport", () => {
     );
     const d0 = await makeBooking(db, shop.id, d, divers[4]);
 
-    // Money. a0: paid 18000. a1: a 6000 deposit checkout topped up by a 12000
-    // balance, so the current row reads paid/12000 and the deposit must be
-    // recovered → 18000. a2: a staff manual mark of 5000 (no order/checkout).
-    // B's seat: paid 20000. C (May) and D (cancelled) each carry a payment that
-    // must be excluded.
+    // Money. a0: paid 18000. a1: a deposit checkout — 6000 deposit + 1000 of
+    // rental gear asked, 6300 actually collected by Stripe (a 10% code) —
+    // later topped up by a 12000 balance, so the current row reads paid/12000
+    // and the *settled* deposit must be recovered → 6300, not the 6000 list
+    // deposit and not a gear-less figure (PAY-H1/H2). a2: a staff manual mark
+    // of 5000 (no order/checkout). B's seat: paid 20000. C (May) and D
+    // (cancelled) each carry a payment that must be excluded.
     await pay(db, shop.id, a0, "paid", 18_000);
-    await makeDepositCheckout(db, shop.id, a, a1, 6_000);
+    await makeDepositCheckout(db, shop.id, a, a1, 6_000, {
+      gearCents: 1_000,
+      settledTotalCents: 6_300,
+    });
     await pay(db, shop.id, a1, "paid", 12_000);
     await pay(db, shop.id, a2, "paid", 5_000);
     await pay(db, shop.id, bBookings[0], "paid", 20_000);
@@ -192,15 +207,32 @@ describe("getMonthlyReport", () => {
       activeBookings: 6,
     });
 
-    // base 18000 + 12000 + 5000 + 20000 = 55000, plus the recovered 6000 deposit;
+    // base 18000 + 12000 + 5000 + 20000 = 55000, plus the recovered deposit at
+    // what it settled for — 6300, this diver's whole share of a 7000 ask
+    // Stripe collected 6300 against — not the 6000 pre-discount list deposit;
     // May and cancelled excluded.
-    expect(report.revenueCents).toBe(61_000);
+    expect(report.revenueCents).toBe(61_300);
 
     const summary = summarizeMonth(report);
     expect(summary.tripCount).toBe(2);
     expect(summary.seatsOffered).toBe(16);
     expect(summary.seatsBooked).toBe(9);
     expect(summary.atCapacityTrips).toBe(1);
+  });
+
+  it("recovers a historical deposit at its asked amount when no settled figure was ever recorded", async () => {
+    // Rows predating `settled_total_cents` carry no Stripe figure. They must
+    // still contribute exactly what they always did — the deposit asked for —
+    // rather than dropping out of revenue or reading as zero collected.
+    const { db, shop } = await seededShopContext();
+    const diver = await makePerson(db, shop.id, "Historical Hana");
+    const trip = await makeTrip(db, shop.id, new Date("2026-06-10T12:00:00Z"), 10, "Reef");
+    const booking = await makeBooking(db, shop.id, trip, diver);
+    await makeDepositCheckout(db, shop.id, trip, booking, 6_000);
+    await pay(db, shop.id, booking, "paid", 12_000);
+
+    const report = await getMonthlyReport(db, shop.id, JUNE_START, JULY_START);
+    expect(report.revenueCents).toBe(12_000 + 6_000);
   });
 
   it("counts a waiver signed once as covering that diver's every booking (sign-once)", async () => {

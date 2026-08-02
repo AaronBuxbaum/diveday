@@ -30,7 +30,16 @@ function payloadFor(tripId: string): OfflineManifestPayload {
         checkpoint: "departure",
         crew: [],
         divers: [],
-        summary: { totalDivers: 0, ready: 0, blocked: 0, boarded: 0, notBoarded: 0, awaiting: 0 },
+        summary: {
+          totalDivers: 0,
+          ready: 0,
+          blocked: 0,
+          boarded: 0,
+          notBoarded: 0,
+          notBackAboard: 0,
+          awaiting: 0,
+          unaccountedFor: 0,
+        },
       },
     ],
   };

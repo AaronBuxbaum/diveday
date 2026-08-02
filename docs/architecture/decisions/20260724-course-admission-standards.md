@@ -1,6 +1,6 @@
 # 20260724-course-admission-standards — PADI-sourced entry-level ratio gate
 
-- **Status:** Accepted
+- **Status:** Accepted, **amended 2026-08-02** (see [Amendment](#amendment-2026-08-02--intro-session-ratio-scope-undo-and-crew-changes))
 - **Date:** 2026-07-24
 
 ## Context
@@ -27,7 +27,9 @@ Alternatives/Consequences for why, and what would be needed to add them.
 - **Confined water training:** maximum 10 students per instructor, +1 certified assistant per 4
   additional students.
 - **Discover Scuba Diving (DSD):** minimum age 10; maximum depth 6 m/20 ft confined water, 12
-  m/40 ft open water; open-water ratio matches the Open Water training figure (8:1).
+  m/40 ft open water; open-water ratio was recorded here as matching the Open Water training figure
+  (8:1). **That last claim is the one this ADR's 2026-08-02 amendment withdraws** — see the
+  confidence note immediately below, which turned out to be the finding, not a caveat.
   ([PADI Discover Scuba Diving FAQs](https://blog.padi.com/discover-scuba-diving-faqs/);
   [Discover Scuba Diving Program Age and Depth Limits](https://www.private-scuba.com/courses/discover-scuba-diving-program-limitations.html).)
   **Confidence note (resolved 2026-08-02):** these two DSD sources were a PADI marketing blog and a
@@ -55,6 +57,14 @@ Alternatives/Consequences for why, and what would be needed to add them.
   ([How to Upgrade a PADI Junior Open Water Diver Certification](https://blog.padi.com/how-to-upgrade-a-padi-junior-open-water-diver-certification/).)
 
 ## Decision
+
+> **Amended 2026-08-02.** The paragraph below describes the original single-ratio gate. Intro
+> (DSD) sessions no longer take the 8/12 figure — they take PADI's real Instructor Manual DSD
+> figure ([20260802-dsd-instructor-manual-ratio](20260802-dsd-instructor-manual-ratio.md), HD-6) —
+> and the "scoped to PADI" clause below now applies only to the entry-level figure. See the
+> [Amendment](#amendment-2026-08-02--intro-session-ratio-scope-undo-and-crew-changes) at the end of
+> this ADR for what actually ships now. The rest of this ADR (crew re-read, continuing-ed
+> exclusion, reference data) stands unchanged.
 
 **Enforce the entry-level in-water ratio as a real booking gate, scoped to PADI courses only.**
 `src/lib/course-ratios.ts` encodes `entryLevelCourseCapacity(instructorCount, assistantCount)`: 8
@@ -155,3 +165,112 @@ enforcement mechanism, informed by the numbers recorded here.
   open pending their own sourcing.
 - Safety-critical surface (course/cert gating) — carries a `dive-domain-expert` review before
   merge per AGENTS.md.
+
+## Amendment 2026-08-02 — intro-session ratio: scope, undo, and crew changes
+
+**What changed.** The `dive-domain-expert` confidence note above — that DSD participants have had
+zero prior water time and that the 8:1 figure was sourced from a PADI marketing blog rather than
+the Instructor Manual — was recorded as a caveat and then not acted on. A review
+([comprehensive-review-20260802](../../product/assessments/comprehensive-review-20260802.md),
+finding DOM-H2) found the consequence: the gate did not merely fail to protect a DSD session, it
+**certified an overloaded one as compliant**. A single instructor with two Divemasters aboard could
+take twelve first-time, uncertified people into open water and the booking gate would say yes.
+
+**The number is now sourced.** HD-6 is resolved: the product owner supplied PADI's Instructor
+Manual DSD figures — **4 students per instructor in confined/pool water, 2 students per instructor
+for the open-water dive, with no assistant bonus** — and
+[20260802-dsd-instructor-manual-ratio](20260802-dsd-instructor-manual-ratio.md) records them.
+DiveDay's trip model has no confined-water session type, so **only the 2:1 open-water figure is
+enforced**; the 4:1 confined figure is reference data in `DSD_RATIO`. This amendment covers the
+scope and machinery around that figure, not the figure itself.
+
+**What ships now.**
+
+- A course session whose course row has **`courses.is_intro_course`** set (DSD, Try Scuba) is
+  gated at the DSD open-water figure — **2 students per instructor with no assistant bonus** —
+  encoded as `INTRO_COURSE_RATIO` in `src/lib/course-ratios.ts`, *derived from* `DSD_RATIO` so the
+  one sourced number and the rule that enforces it cannot drift apart. A certified assistant buys
+  an intro session nothing.
+- **The intro cap applies to every agency**, unlike the entry-level figure. The DSD number is
+  PADI's, but the *reason* it is tighter — intro participants have had zero prior water time — is
+  agency-independent, and PADI's own framing of the standard says exactly that. Scoping it to PADI
+  (as the gate first shipped) left an SSI or NAUI Try Scuba with **no ratio at all** — worse than
+  the 8/12 rule this amendment was written to remove, because the trip's capacity (12, 20) became
+  the only limit. The PADI check stays on the entry-level branch, where the cited 8/+2/12 figure
+  actually lives.
+- A **non-intro** PADI course session with no `minimum_certification_level` (the Open Water
+  training dives) keeps the original **8 base / +2 per assistant / 12 ceiling** figure, unchanged.
+- Continuing-education courses stay unratioed, unchanged.
+- Which ratio (if any) a session carries is decided in exactly one place — `courseRatioKind()`,
+  with `courseRatioRule()`/`courseSeatCapacity()` on top of it — consumed by every enforcing and
+  advisory caller (`src/db/bookings.ts` for both `createBookingRecord` and `restoreBooking`, and
+  `courseCrewGap`'s consumers in `src/db/staffing.ts`, `src/db/today.ts`, and the trip Overview
+  page). The predicate was previously written inline in three of those, which is how it would
+  drift again.
+- **Every seat-granting write answers to the cap, including undo.** `restoreBooking` (the undo of a
+  roster removal) checked the trip's capacity only, so on a two-seat intro session a manager could
+  remove a diver, let a walk-up take the freed seat, tap Undo, and put a third uncertified
+  first-timer on one instructor with no refusal at all. It now applies the same
+  `courseSeatCapacity` check and returns a `course_ratio_full` outcome, with its own staff notice.
+- **A crew change is always recorded, never refused.** `setTripCrew` and `changeTripCrew` used to
+  return a bare failure when the proposed crew's capacity fell below the booked count. At a
+  two-seat intro ratio that is the ordinary morning — an instructor calls in sick on a session
+  booked legally under the previous rule — and refusing meant the system insisted she was aboard and
+  the printed manifest listed crew who were not on the boat. The change is written; the resulting
+  gap surfaces as the non-blocking `over_ratio` advisory; new bookings are still refused at the
+  tightened cap in `createBookingRecord`. Removing a course session's **last instructor** still
+  blocks, unchanged — that is the separate `course_unstaffed` rule.
+- **The over-ratio warning no longer quotes the wrong standard.** One generic string served both
+  rules, so a DSD session read "2 divers booked, crew covers 2 under PADI's published entry-level
+  ratio (8 per instructor, +2 per certified assistant)" — arithmetic that visibly does not work,
+  citing the Open Water figure at a session governed by the DSD one, and prescribing the one remedy
+  (assign a divemaster) that cannot move an intro cap. `courseCrewGap`'s `over_ratio` now carries
+  which `ratio` it was measured against, and the intro wording cites PADI's Discover Scuba
+  open-water figure, says an assistant does not raise it, and interpolates the per-instructor number
+  from `DSD_RATIO` rather than spelling it into the message bundle — so the copy cannot drift away
+  from the cap the gate enforces, which is precisely how the previous string went stale.
+- An intro session stays gated **even if a `minimum_certification_level` was typed onto it**:
+  nobody on a DSD holds a card, so a stray value must not be able to switch the tightest cap in the
+  product off.
+- `courses.agency` comparisons are now normalized (trimmed, lowercased) at the single comparison
+  site (review finding DATA-L2). The column is plain shop-set text, so a shop that typed `"PADI"`
+  silently lost the ratio cap entirely — the safety control was one capital letter from off.
+- No new refusal code: an over-ratio intro booking returns the existing `course_ratio_full`
+  reason with the tighter capacity, so no new analytics enum value or locale surface.
+
+**Consequences of the amendment.**
+
+- A shop whose DSD sessions routinely ran 6–8 participants per instructor will start hitting
+  `course_ratio_full` at the third booking. That refusal is the sourced standard, not a
+  DiveDay-invented margin.
+- Trips already booked over the new cap are **not** retroactively cancelled — same posture as the
+  original gate. They surface as the non-blocking `over_ratio` crew gap on the trip page, the
+  staffing coverage list, and the Today queue.
+- The 8/12 entry-level figure's own sourcing (a blog, not a manual) is unchanged and still
+  unverified. This amendment narrows *where* it is applied; it does not verify it.
+- An SSI/NAUI shop that runs taster sessions is now gated where it previously was not.
+- Because crew changes are recorded rather than refused, a session can now sit over ratio because of
+  a *deliberate* staff action, not only a data import. That state is visible in three places and
+  cannot grow — no further seat is sold — but nothing forces it to be resolved before the boat
+  sails. Making `over_ratio` block departure would need a "session is ready to sail" concept the
+  trip model does not have; the roll-call/manifest work is where that would belong.
+- Still open under HD-6: the Rescue Diver scenario-supervision figure. Rescue and other
+  continuing-ed courses remain unratioed pending that number.
+
+### Recorded, not fixed: the cap counts seats, not students
+
+The ratio is applied to the **trip's booked count**, because the course lives on the trip
+(`trips.course_id`), not on the booking (`src/db/bookings.ts` counts every non-cancelled booking on
+the trip). Two consequences follow, both pre-existing and both sharpened by the tighter 2:1 figure:
+
+- **A mixed boat over-refuses.** A departure carrying 2 DSD participants and 8 certified fun divers
+  is one trip with one `course_id`, so the third booking of *any* kind is refused and a certified
+  diver is shown `course_ratio_full` — a ratio that has nothing to do with them.
+- **The common way a small shop sells DSD is invisible to the gate.** Two DSD participants riding
+  along on an ordinary two-tank trip that carries no `course_id` are capped by nothing at all. The
+  tightest safety control in the product does not see them.
+
+Fixing either needs the course (or at least "this seat is an intro participant") to be a property of
+the **booking**, so the cap can count students rather than seats and a mixed boat can be counted
+correctly in both directions. That is a data-model change with its own migration and UI, out of
+scope for this amendment; recorded here so the limitation is not mistaken for coverage.

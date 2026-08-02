@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  type AnyPgColumn,
   boolean,
   check,
   date,
@@ -205,10 +206,36 @@ export const people = pgTable(
     courtesyEmailOptOutAt: timestamp("courtesy_email_opt_out_at", { withTimezone: true }),
     /** Keeps history intact while removing a person from active shop workspaces. */
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    /**
+     * Set when this person's identifying and medical data was destructively
+     * erased across the shop's tables (ADR 20260802-diver-data-erasure).
+     *
+     * Deliberately **not** the same column as `deleted_at`. Removal is
+     * reversible and preserves the record (ADR 20260719-crud-archive-semantics);
+     * erasure destroys it and cannot be undone, so the two are separate
+     * operations with separate markers and separate authorization. The check
+     * constraint below is what makes "one way" structural rather than a
+     * convention: an erased row must stay removed, so `restoreDiver`'s
+     * `deleted_at = null` write can never resurrect a half-erased person into
+     * the active roster — the database refuses it even if a future caller
+     * forgets to look.
+     */
+    anonymizedAt: timestamp("anonymized_at", { withTimezone: true }),
+    /**
+     * The shop owner who ordered the erasure. A one-way, evidence-reducing
+     * action is never anonymous — the same reasoning
+     * `rental_fit_profiles.needs_staff_fit_by` and
+     * `roll_call_events.recorded_by_person_id` record who called a safety flag.
+     */
+    anonymizedByPersonId: uuid("anonymized_by_person_id").references((): AnyPgColumn => people.id),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
     index("people_shop_idx").on(table.shopId),
+    check(
+      "people_anonymized_stays_removed",
+      sql`${table.anonymizedAt} is null or ${table.deletedAt} is not null`,
+    ),
     // Case-insensitive so "Nora@x.com" and "nora@x.com" can never split one
     // diver's cert/waiver/rental history into two rows (CR-008). Partial on
     // the live rows only, matching the archive-not-delete pattern elsewhere:
@@ -1155,11 +1182,14 @@ export const shopPromoRedemptions = pgTable(
       .notNull()
       .references(() => bookingCheckouts.id),
     /**
-     * The checkout's quoted total *before* Stripe applied the discount — i.e.
-     * what DiveDay asked for, not what settled. The discount is Stripe's
-     * arithmetic and lives on its own objects, so recording a post-discount
-     * figure here would be DiveDay re-deriving a number it does not own. Read
-     * it as "the order this code was spent against."
+     * What the checkout this code was spent on actually settled for, as Stripe
+     * reported it (`booking_checkouts.settled_total_cents`) — the money the
+     * shop received with this code applied. Recording it is not DiveDay
+     * re-deriving a discount it does not own: the number is copied verbatim
+     * from Stripe's own `amount_total`, which is why this column may hold it.
+     * Falls back to the checkout's quoted (pre-discount) total when no settled
+     * figure exists — a historical row, or a completion Stripe reported no
+     * total for.
      */
     amountChargedCents: integer("amount_charged_cents").notNull(),
     redeemedAt: timestamp("redeemed_at", { withTimezone: true }).notNull().defaultNow(),
@@ -1612,6 +1642,17 @@ export const bookingCheckouts = pgTable(
     amountPerDiverCents: integer("amount_per_diver_cents").notNull(),
     totalCents: integer("total_cents").notNull(),
     /**
+     * What actually *settled*, as Stripe itself reported it on the completed
+     * session (`amount_total`) — the counterpart to `totalCents` above, which
+     * is what DiveDay *asked* for. The two differ whenever Stripe applied a
+     * discount, so this is the only figure a refund or a revenue report may
+     * treat as money the shop received. Null means no settled figure exists:
+     * a row predating this column, a checkout that never completed, or a
+     * completion where Stripe reported no total — callers fall back to the
+     * asked amounts rather than treating null as zero.
+     */
+    settledTotalCents: integer("settled_total_cents"),
+    /**
      * True when the amount charged is a deposit (a balance is still due), so a
      * completed session settles the covered bookings to `deposit_paid` rather
      * than `paid`. False (the default) is the full-fare checkout.
@@ -1627,6 +1668,10 @@ export const bookingCheckouts = pgTable(
     index("booking_checkouts_shop_trip_idx").on(table.shopId, table.tripId),
     check("booking_checkouts_amount_per_diver_nonnegative", sql`${table.amountPerDiverCents} >= 0`),
     check("booking_checkouts_total_nonnegative", sql`${table.totalCents} >= 0`),
+    check(
+      "booking_checkouts_settled_total_nonnegative",
+      sql`${table.settledTotalCents} is null or ${table.settledTotalCents} >= 0`,
+    ),
     // The abandoned-checkout-recovery scan's exact predicate (pending, not yet
     // recovered), so the daily cron doesn't force a sequential scan of the
     // whole table's history as it grows (docs ADR
@@ -2027,6 +2072,20 @@ export const waiverRecords = pgTable(
     importedFromLabel: text("imported_from_label"),
     importSourceDocumentUrl: text("import_source_document_url"),
     importSourceMedicalDocumentUrl: text("import_source_medical_document_url"),
+    /**
+     * Set when this record was stripped of the signer's name, medical answers,
+     * and source documents as part of erasing the diver
+     * (ADR 20260802-diver-data-erasure), and re-sealed under integrity
+     * **version 2** — the HMAC over exactly the fields that survive erasure.
+     * A v1 seal covers `signed_name` and `medical_answers`, so a stripped
+     * record can never verify against it; without the re-seal every erased
+     * release would read as *tampered* rather than as *erased*. Stamped in the
+     * same statement as the strip, and part of the v2 metadata itself, so the
+     * erasure is inside the seal rather than an unsealed annotation beside it.
+     */
+    anonymizedAt: timestamp("anonymized_at", { withTimezone: true }),
+    /** The shop owner who ordered the erasure — see `people.anonymized_by_person_id`. */
+    anonymizedByPersonId: uuid("anonymized_by_person_id").references(() => people.id),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -2542,6 +2601,65 @@ export const rollCallEvents = pgTable(
 );
 
 /**
+ * The crew half of a checkpoint's head count: how many crew a staff member
+ * says are aboard, out of how many the trip has assigned. Append-only, exactly
+ * like `rollCallEvents` — a later attestation supersedes an earlier one without
+ * rewriting it, so what the boat believed at each point stays readable.
+ *
+ * Its own table rather than a widened `rollCallEvents` deliberately (ADR
+ * 20260802-crew-roll-call-attestation). `rollCallEvents.bookingId` is
+ * `notNull` and is the only subject column there; crew hold no booking, so
+ * carrying them would have meant making that column nullable — weakening a NOT
+ * NULL invariant on the safety spine so that a *diver* event could also be
+ * written with no subject at all. The subject shapes differ (one booking vs. a
+ * count over a trip's assignments), so they are separate rows.
+ *
+ * This is an interim slice, not the eventual model. A per-person crew roll call
+ * needs `trip_assignments` to carry a per-trip role (there is none today — roles
+ * are shop-wide on `person_roles`) and a subject model that is not `bookingId`.
+ * Until then a count attested by a named human is what stops a checkpoint from
+ * reading complete with a divemaster still in the water.
+ */
+export const rollCallCrewAttestations = pgTable(
+  "roll_call_crew_attestations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    tripId: uuid("trip_id")
+      .notNull()
+      .references(() => trips.id),
+    /** `departure` or `after_dive_N`; validated against the trip's planned dive count. */
+    checkpoint: text("checkpoint").notNull(),
+    /** Bodies counted on the boat. Typed by a human, never derived from the assignment list. */
+    crewAboard: integer("crew_aboard").notNull(),
+    /**
+     * How many crew the trip had assigned when this was attested — evidence of
+     * what the denominator was at the time. Completeness compares against the
+     * *current* assignment count, so assigning another crew member re-opens the
+     * checkpoint rather than riding on a stale attestation.
+     */
+    crewAssigned: integer("crew_assigned").notNull(),
+    /** Who counted. A head count is never anonymous, same as a roll-call event. */
+    attestedByPersonId: uuid("attested_by_person_id")
+      .notNull()
+      .references(() => people.id),
+    note: text("note"),
+    occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("roll_call_crew_attestations_shop_trip_checkpoint_occurred_idx").on(
+      table.shopId,
+      table.tripId,
+      table.checkpoint,
+      table.occurredAt,
+    ),
+  ],
+);
+
+/**
  * A photo a diver attaches to their own post-trip recap page. The recap link is
  * a per-booking signed token (public, noindex), so an upload is scoped to that
  * booking and a diver only ever sees the shots on their own page. Staff see a
@@ -2623,7 +2741,20 @@ export const tripReviews = pgTable(
   ],
 );
 
-export const mediaDeletionKind = pgEnum("media_deletion_kind", ["course_photo", "recap_photo"]);
+/**
+ * `certification_card` (a photograph of a diver's C-card) and `waiver_document`
+ * (a scanned paper release or medical form brought in by the importer) are the
+ * blob kinds diver erasure owes a delete for
+ * (ADR 20260802-diver-data-erasure) — the row's URL column is nulled locally
+ * and the object itself is retired through this same ledger rather than a
+ * second, parallel mechanism.
+ */
+export const mediaDeletionKind = pgEnum("media_deletion_kind", [
+  "course_photo",
+  "recap_photo",
+  "certification_card",
+  "waiver_document",
+]);
 
 export const mediaDeletionStatus = pgEnum("media_deletion_status", [
   "pending",

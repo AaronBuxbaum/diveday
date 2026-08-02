@@ -11,10 +11,16 @@ All infrastructure is defined as code under the [infra/](../../infra/) directory
 We use AWS CDK to model, deploy, and update our cloud resources. Currently, the infrastructure consists of the `DiveDay` stack, which provisions:
 - An S3 bucket for storing visual regression testing (VRT) baselines and HTML reports.
 - A `reg-suit-bot` IAM user with specific S3 read/write permissions.
-- A dedicated `cdk-deployer` IAM user with `AdministratorAccess` intended to manage all future CDK deployments.
+- A dedicated `cdk-deployer` IAM user that holds **no direct AWS permissions of its own** — only
+  `sts:AssumeRole` on the four `cdk bootstrap` roles (deploy / file-publishing / image-publishing /
+  lookup) plus read access to stack status and the bootstrap version parameter. Deliberately *not*
+  `AdministratorAccess`: the bootstrap roles are already scoped to what CDK deploys need, so a
+  leaked deployer credential stays bounded by them. The stack comments at
+  [infra/lib/infra-stack.ts](../../infra/lib/infra-stack.ts) §5 carry the full reasoning.
 - Read-only IAM users for the AWS MCP server (local dev and Claude Code's cloud environment).
 - Cost guardrails: an `AWS::Budgets::Budget` and AWS Cost Anomaly Detection — see [§6](#6-cost-guardrails) below.
 - Dormant SES/SNS infra preparing a possible future swap off Resend — see [§7](#7-ses-email-provider-prep-dormant) below. Nothing here is live; the app still sends through Resend.
+- A versioned, private, retained S3 bucket as the destination for scheduled database export bundles — see [§8](#8-backup-bucket) below.
 
 ---
 
@@ -103,8 +109,13 @@ pnpm infra:deploy --context bucketName=my-custom-prod-bucket --context userName=
 
 Upon successful deployment, the CDK CLI outputs key resources and credentials. Map these to your `.env.local` to allow the application or CI runner to communicate with AWS:
 
-- **CDK Deployer User (`cdk-deployer`):** Use the outputted credentials (`CdkDeployerAccessKeyId`/`CdkDeployerSecretAccessKey`) for subsequent CI/CD deployments to avoid using root credentials.
+- **CDK Deployer User (`cdk-deployer`):** mint its access key out of band with the command the
+  `CdkDeployerAccessKeyInstructions` output prints (`aws iam create-access-key --user-name
+  cdk-deployer`) and use it for subsequent CI/CD deployments instead of root credentials. No secret
+  for this user is emitted as a stack output, so nothing lands in the CloudFormation template or
+  state.
 - **S3 Bucket Details:** Use `S3BucketName` and `IAMUserAccessKey` / `IAMUserSecretKey` for S3 upload plugins.
+- **Backup Bucket:** `BackupBucketName` and the `BackupUploaderAccessKeyInstructions` command — see [§8](#8-backup-bucket).
 
 ---
 
@@ -194,3 +205,46 @@ Override the domain the same way as other context values:
 ```bash
 pnpm infra:deploy --context sesEmailDomain=ses.example.com
 ```
+
+---
+
+## 8. Backup bucket
+
+`DatabaseBackupBucket` (§11 in the stack file) is the destination for the scheduled logical export of
+production data. See
+[ADR 20260802-backup-and-restore-posture](../architecture/decisions/20260802-backup-and-restore-posture.md)
+for why it exists and
+[backup-and-restore-runbook.md](backup-and-restore-runbook.md) for how it is written to and restored
+from. This section is the infrastructure reference only.
+
+**It is a separate bucket from `VisualRegressionBucket`, and must stay one.** That bucket is
+`publicReadAccess: true`, `RemovalPolicy.DESTROY`, and expires objects after 7 days — every single
+property is wrong for a backup. Do not consolidate them.
+
+| Property | Value | Why |
+| --- | --- | --- |
+| Name | `backupBucketName` context value, default `diveday-backups` | Same override pattern as `bucketName`/`userName` |
+| Versioning | On | An overwrite by a bad export never destroys the good one underneath |
+| Public access | `BlockPublicAccess.BLOCK_ALL` | Bundles contain waiver and medical records |
+| Encryption | SSE-S3, plus `enforceSSL` (a bucket policy denying non-TLS requests) | At rest and in transit |
+| Removal policy | `RETAIN` | The one resource in this stack that must survive `cdk destroy`. Deleting production backups should require a deliberate manual act |
+| Lifecycle | Infrequent Access at 30 days; Glacier **Instant** Retrieval at 90; non-current versions expire at 90 days; incomplete multipart uploads abort at 7 days. **Current versions never expire.** | Cost is managed by getting colder, not by deleting. Waiver retention is "indefinite" pending [H-02](../product/human-decisions.md), so a lifecycle rule must never be what decides evidence has outlived its usefulness. Glacier *Instant*, not Flexible or Deep, because a restore happens during an incident and a multi-hour thaw would make the backup useless exactly when it is needed |
+| Uploader | IAM user `diveday-backup-uploader`, `s3:PutObject` + `s3:AbortMultipartUpload` on `arnForObjects("*")` and nothing else | Write-only, same least-privilege posture as `cdk-deployer` in §5. A leaked uploader credential can neither read a shop's exported waivers back out nor destroy an existing backup |
+
+Mint the uploader's key only when wiring up whatever runs the export, and store it in that runner's
+secret settings — never the repo:
+
+```bash
+aws iam create-access-key --user-name diveday-backup-uploader
+```
+
+Override the bucket name the same way as other context values:
+```bash
+pnpm infra:deploy --context backupBucketName=my-backup-bucket
+```
+
+> [!IMPORTANT]
+> Because of `RemovalPolicy.RETAIN`, a `cdk destroy` leaves this bucket (and its contents) behind and
+> a later `cdk deploy` will fail if it tries to re-create a bucket whose name is already taken. That
+> is the intended trade: re-adopt the existing bucket by name rather than deleting it to make a
+> deploy go green.

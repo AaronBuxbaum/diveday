@@ -5,8 +5,8 @@ import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import { openTripFromBoard } from "./helpers";
 
 /**
- * Visual regression coverage. Fifty-nine key surfaces × light/dark, each
- * captured at a phone and a desktop viewport — 236 screenshots per run (see
+ * Visual regression coverage. Sixty key surfaces × light/dark, each
+ * captured at a phone and a desktop viewport — 240 screenshots per run (see
  * ADR 20260729-reg-suit-visual-regression). Keep this count in sync when
  * adding a surface; each `capture()` call costs 4 screenshots per CI run.
  * `grep -c 'await capture(page' e2e/visual.spec.ts` is the number — it read 48
@@ -16,7 +16,7 @@ import { openTripFromBoard } from "./helpers";
  * pages as they render for the printer. Print is its own concern, not a
  * light/dark one — the `@media print` token override collapses both schemes to
  * one black-and-white palette — so each is captured once, at a US-Letter width,
- * via `capturePrint()`. That brings the run to 238 screenshots.
+ * via `capturePrint()`. That brings the run to 242 screenshots.
  *
  * Nothing here asserts. `capture()` writes raw `page.screenshot()` PNGs into
  * `e2e/screenshots/` (gitignored); `reg-suit` diffs them against the baseline
@@ -1063,6 +1063,43 @@ for (const scheme of ["light", "dark"] as const) {
           await page.getByRole("button", { name: "Save rental catalog" }).click();
           await page.getByText("Rental catalog saved.").waitFor();
         }
+      });
+
+      /**
+       * DOM-H3. After a dive, the only control that isn't "Boarded" means
+       * **did not return to the boat** — a different state from the dock's
+       * "never left", with its own wording, its own danger-toned row, and a
+       * checkpoint that stays open. Nothing in the seed reaches it, and the
+       * departure capture above cannot show it, so it gets its own baseline:
+       * this is the screen a captain reads when someone is still in the water,
+       * and it used to be pixel-identical to a settled "Not boarded ✓" row.
+       * Its own test so the roll-call write is contained — the per-test DB
+       * reset (e2e/fixtures.ts) puts it back.
+       */
+      test(`the manifest's after-dive missing-diver state renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/shop/blue-mantis/schedule/board");
+        await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
+        await page
+          .getByRole("navigation", { name: "Trip" })
+          .getByRole("link", { name: "Manifest" })
+          .click();
+        await page.waitForURL(/\/manifest/);
+        // Same background-save settle the departure capture waits on, so this
+        // isn't racing that async write either.
+        await page.getByRole("link", { name: "Open offline roll call" }).waitFor();
+        await page
+          .getByRole("link", { name: "After dive 1" })
+          .evaluate((link: HTMLElement) => link.click());
+        await page.waitForURL(/checkpoint=after_dive_1/);
+        const markNotBack = page.getByRole("button", { name: "Mark not back aboard" }).first();
+        await markNotBack.evaluate((button) => button.scrollIntoView({ block: "center" }));
+        await markNotBack.click();
+        await expect(
+          page.getByRole("button", { name: "Not back aboard", exact: true }).first(),
+        ).toBeVisible();
+        await capture(page, "manifest-not-back-aboard", scheme);
       });
 
       // H-08: a site deeper than a diver's certification trains for. Warning

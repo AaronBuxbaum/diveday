@@ -60,6 +60,13 @@ Everything in `marketing-page`'s claims policy applies here, plus:
 | Design-partner one-pager (the offer, in leave-behind form) | `docs/product/stakeholders/design-partner-one-pager.md` | Phase 1 recruiting conversations |
 | Case-study interview questions | `docs/product/stakeholders/case-study-interview-template.md` | Phase 1 exit criterion, Phase 2 founding-shop references |
 | Per-stakeholder prep (DEMA, dive media, Capterra) | `docs/product/stakeholders/commercial-and-industry.md` | Phase 2–3 conversations |
+| Pilot-recruiting kit index (what the founder carries into Phase 1) | `docs/product/pilot-kit/README.md` | Phase 1 recruiting |
+| Ten-shop Florida call list — **template only**, rows researched by hand | `docs/product/pilot-kit/florida-call-list.md` | Phase 1 recruiting |
+| First-call script (discovery written to disconfirm, not to sell) | `docs/product/pilot-kit/first-call-script.md` | Phase 1 recruiting; persona reality-check |
+
+**Never invent a prospect.** A call list, a target-media list, or a DEMA meeting list may carry
+research criteria, columns, and the public directories to source from — never a fabricated shop
+name, owner, phone number, or address. A plausible-looking row gets dialled.
 
 A new recurring outreach need (a cold-email template for the EVE pool, a DEMA meeting-request
 note, an ad-copy draft for the switching funnel) gets its own file here, added to this table and

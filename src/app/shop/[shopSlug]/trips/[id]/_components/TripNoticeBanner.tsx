@@ -42,6 +42,7 @@ const NOTICE_KEYS: Record<
   },
   "booking-restored": { tone: "success", key: "trips.notices.bookingRestored" },
   "booking-restore-full": { tone: "danger", key: "trips.notices.bookingRestoreFull" },
+  "booking-restore-ratio": { tone: "danger", key: "trips.notices.bookingRestoreRatio" },
   "diver-added": { tone: "success", key: "trips.notices.diverAdded" },
   "diver-waitlisted": { tone: "success", key: "trips.notices.diverWaitlisted" },
   "identity-confirmed": { tone: "success", key: "trips.notices.identityConfirmed" },

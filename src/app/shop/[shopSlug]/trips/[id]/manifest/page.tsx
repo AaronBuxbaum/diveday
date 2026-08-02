@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { revalidatePath } from "next/cache";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 import {
   RollCallButton,
@@ -20,13 +20,19 @@ import { SkipLink } from "@/components/SkipLink";
 import { SubSurfaceRipple } from "@/components/SubSurfaceRipple";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
+import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { WaterLocker, WaterLockerToggle } from "@/components/WaterLocker";
 import { getDb } from "@/db/client";
-import { getTripManifests, recordRollCall, updateLatestRollCallNote } from "@/db/manifests";
+import {
+  getTripManifests,
+  recordCrewAttestation,
+  recordRollCall,
+  updateLatestRollCallNote,
+} from "@/db/manifests";
 import { getShopById } from "@/db/shops";
 import { birthdayText } from "@/i18n/birthday-labels";
 import { depthWarningText } from "@/i18n/depth-labels";
-import { rollCallCheckpointText } from "@/i18n/manifest-labels";
+import { rollCallCheckpointText, rollCallLabelText } from "@/i18n/manifest-labels";
 import { readinessBlockerText } from "@/i18n/readiness-labels";
 import { rentalFitLineText } from "@/i18n/rental-labels";
 import { requestLocale } from "@/i18n/request";
@@ -34,6 +40,7 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { trackEvent } from "@/lib/analytics";
 import { formatDateTimeTz, formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import {
+  isNotBackAboard,
   isRollCallCheckpoint,
   type RollCallCheckpoint,
   rollCallCheckpoints,
@@ -69,16 +76,24 @@ const noteSchema = z.object({
   note: z.string().max(300),
 });
 
+// The count is the only number staff supply; the denominator is read server-side
+// from the trip's assignments inside `recordCrewAttestation`. `99` mirrors the
+// domain layer's own ceiling — this is a duplicate guard, not the authority.
+const crewAttestationSchema = z.object({
+  crewAboard: z.coerce.number().int().min(0).max(99),
+  note: z.string().trim().max(300).optional(),
+});
+
 export default async function TripManifestPage({
   params,
   searchParams,
 }: {
   params: Promise<{ shopSlug: string; id: string }>;
-  searchParams: Promise<{ checkpoint?: string }>;
+  searchParams: Promise<{ checkpoint?: string; crewError?: string }>;
 }) {
   const session = await requireStaffSession();
   const { shopSlug, id: tripId } = await params;
-  const { checkpoint: requestedCheckpoint } = await searchParams;
+  const { checkpoint: requestedCheckpoint, crewError } = await searchParams;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   // Staff read dates in the language their own device asks for, same
@@ -98,11 +113,30 @@ export default async function TripManifestPage({
       : "departure";
   const manifest = completeManifests.find((entry) => entry.checkpoint === checkpoint);
   if (!manifest) notFound();
-  const rollCallComplete = manifest.summary.totalDivers > 0 && manifest.summary.awaiting === 0;
+  // One definition, shared with the offline copy: divers *and* crew (DOM-H1,
+  // ADR 20260802-crew-roll-call-attestation). This used to be written inline
+  // here and again in OfflineManifestView as `totalDivers > 0 && awaiting === 0`,
+  // which counted booked divers only — so a checkpoint could read complete with
+  // a divemaster still in the water.
+  const completeness = manifest.completeness;
+  const rollCallComplete = completeness.complete;
+  const crewAssigned = manifest.crew.length;
+  const crewAttestation = manifest.crewAttestation;
   // Readiness gates boarding at departure only. After a dive, roll call is a
   // physical head count — a diver who is aboard is recorded present regardless
   // of a paperwork state that changed after the boat left.
   const isDeparture = checkpoint === "departure";
+  // "Not boarded" is the dock's word for *never left*; after a dive the same
+  // control means *did not return to the boat* (DOM-H3, `isNotBackAboard` in
+  // src/lib/manifests.ts). One checkpoint-dependent word set for the tile, the
+  // pill, and the button, so no surface can put a settled green check beside a
+  // diver who is unaccounted for in the water.
+  const notBoardedTileLabel = isDeparture
+    ? t("trips.manifest.summaryNotBoarded")
+    : t("trips.manifest.summaryNotBackAboard");
+  const notBoardedTileValue = isDeparture
+    ? manifest.summary.notBoarded
+    : manifest.summary.notBackAboard;
   const back = `/shop/${shopSlug}/trips/${tripId}/manifest?checkpoint=${checkpoint}`;
 
   async function rollCallAction(
@@ -161,6 +195,31 @@ export default async function TripManifestPage({
     });
     if (saved) revalidatePath(back.split("?")[0]);
     return { ok: true, saved };
+  }
+
+  /**
+   * Record how many crew are aboard at this checkpoint. A plain form post, not
+   * an optimistic client control: this is the number that closes a head count,
+   * so it settles only once the server has written the row.
+   */
+  async function attestCrewAction(formData: FormData) {
+    "use server";
+    const staff = await requireStaffSession();
+    const parsed = crewAttestationSchema.safeParse(Object.fromEntries(formData));
+    if (!parsed.success) {
+      redirect(`${back}&crewError=1`);
+    }
+    const outcome = await recordCrewAttestation(await getDb(), {
+      shopId: staff.user.shopId,
+      tripId,
+      attestedByPersonId: staff.user.personId,
+      crewAboard: parsed.data.crewAboard,
+      checkpoint,
+      note: parsed.data.note,
+    });
+    if (!outcome.ok) redirect(`${back}&crewError=1`);
+    revalidatePath(back.split("?")[0]);
+    redirect(back);
   }
 
   const errorRefusal = t("trips.rollCall.errorRefusal");
@@ -296,7 +355,7 @@ export default async function TripManifestPage({
               [t("trips.manifest.summaryDivers"), manifest.summary.totalDivers],
               [t("trips.manifest.summaryReady"), manifest.summary.ready],
               [t("trips.manifest.summaryBlocked"), manifest.summary.blocked],
-              [t("trips.manifest.summaryNotBoarded"), manifest.summary.notBoarded],
+              [notBoardedTileLabel, notBoardedTileValue],
             ].map(([label, value]) => (
               <div
                 key={String(label)}
@@ -314,7 +373,7 @@ export default async function TripManifestPage({
             [t("trips.manifest.summaryReady"), manifest.summary.ready],
             [t("trips.manifest.summaryBlocked"), manifest.summary.blocked],
             [t("trips.manifest.summaryBoarded"), manifest.summary.boarded],
-            [t("trips.manifest.summaryNotBoarded"), manifest.summary.notBoarded],
+            [notBoardedTileLabel, notBoardedTileValue],
             [t("trips.manifest.summaryAwaiting"), manifest.summary.awaiting],
           ].map(([label, value]) => (
             <div
@@ -399,10 +458,29 @@ export default async function TripManifestPage({
             }}
           />
         </div>
-        <p className="mt-2 text-sm font-semibold text-muted" aria-live="polite">
-          {manifest.summary.awaiting === 0
-            ? t("trips.manifest.allAccountedFor")
-            : t("trips.manifest.stillToCall", { count: manifest.summary.awaiting })}
+        {/* The one line that says whether this checkpoint is closed. It used to
+            go quiet at `awaiting === 0` — every diver counted, nothing said
+            about the crew. Now it names what is still open. */}
+        <p
+          className={
+            completeness.reason === "divers_not_back_aboard"
+              ? "mt-2 text-sm font-bold text-danger"
+              : "mt-2 text-sm font-semibold text-muted"
+          }
+          aria-live="polite"
+        >
+          {completeness.reason === "divers_not_back_aboard"
+            ? t("trips.manifest.notBackAboardOpen", { count: manifest.summary.notBackAboard })
+            : completeness.reason === "divers_awaiting"
+              ? t("trips.manifest.stillToCall", { count: manifest.summary.awaiting })
+              : completeness.reason === "crew_not_attested"
+                ? t("trips.manifest.crewNotAttestedYet")
+                : completeness.reason === "crew_short" && crewAttestation
+                  ? t("trips.manifest.crewShort", {
+                      aboard: crewAttestation.crewAboard,
+                      assigned: crewAssigned,
+                    })
+                  : t("trips.manifest.allAccountedFor")}
         </p>
       </section>
 
@@ -421,20 +499,116 @@ export default async function TripManifestPage({
 
       <section className="mt-9">
         <h2 className="text-lg font-semibold">{t("trips.manifest.crewHeading")}</h2>
-        {manifest.crew.length === 0 ? (
+        {crewAssigned === 0 ? (
           <p className="mt-3 text-sm text-muted">{t("trips.manifest.noCrew")}</p>
         ) : (
           <ul className="mt-3 flex flex-wrap gap-2">
             {manifest.crew.map((member) => (
-              <li
-                key={member.fullName}
-                className="rounded-full bg-surface-sunken px-3 py-2 text-sm"
-              >
+              <li key={member.id} className="rounded-full bg-surface-sunken px-3 py-2 text-sm">
                 <strong>{member.fullName}</strong> · {member.roles.join(", ")}
               </li>
             ))}
           </ul>
         )}
+
+        {/*
+         * The crew half of the head count (DOM-H1). Crew hold no booking, so
+         * they cannot be roll-call subjects — this is an attested count, not a
+         * per-person call, and the checkpoint does not read complete without
+         * it. A trip with zero assigned crew is not exempt: "0 of 0" is still
+         * something a named human says, because an empty assignment list is a
+         * scheduling gap, not evidence that nobody else was aboard.
+         */}
+        <div
+          className={
+            completeness.crewAccountedFor
+              ? "mt-4 rounded-2xl border border-success/40 bg-success/10 p-4 print:hidden"
+              : "mt-4 rounded-2xl border border-warning/50 bg-warning/10 p-4 print:hidden"
+          }
+        >
+          <h3 className="text-base font-bold">
+            {t("trips.manifest.crewAboardHeading", {
+              checkpoint: rollCallCheckpointText(t, checkpoint),
+            })}
+          </h3>
+          <p className="mt-1 max-w-prose text-sm text-muted">
+            {t("trips.manifest.crewAboardDescription")}
+          </p>
+          <p className="mt-3 text-base font-semibold">
+            {crewAttestation
+              ? t("trips.manifest.crewAttestedSummary", {
+                  aboard: crewAttestation.crewAboard,
+                  assigned: crewAttestation.crewAssigned,
+                  name: crewAttestation.attestedByName,
+                  date: formatDateTimeTz(crewAttestation.occurredAt, locale, shop.timezone),
+                })
+              : t("trips.manifest.crewAttestationMissing")}
+          </p>
+          {crewAttestation?.note ? (
+            <p className="mt-1 text-sm text-muted">
+              {t("trips.manifest.crewAttestedNote", { note: crewAttestation.note })}
+            </p>
+          ) : null}
+          {/* The stored denominator is evidence of what was true then;
+              completeness compares against the assignment list *now*, so
+              adding a crew member re-opens the checkpoint rather than riding
+              on a stale count. Say so rather than silently reverting. */}
+          {crewAttestation && crewAttestation.crewAssigned !== crewAssigned ? (
+            <p className="mt-1 text-sm font-semibold text-warning">
+              {t("trips.manifest.crewAttestationStaleAssigned", { assigned: crewAssigned })}
+            </p>
+          ) : null}
+          {crewError ? (
+            <p className="mt-2 text-sm font-semibold text-danger" role="status">
+              {t("trips.manifest.crewAttestError")}
+            </p>
+          ) : null}
+          <FieldGrid as="form" action={attestCrewAction} columns={2} className="mt-4">
+            <Field
+              label={t("trips.manifest.crewAboardLabel")}
+              hint={t("trips.manifest.crewAboardHint", { assigned: crewAssigned })}
+              description={t("trips.manifest.crewAboardFieldDescription")}
+            >
+              <input
+                name="crewAboard"
+                type="number"
+                inputMode="numeric"
+                min={0}
+                max={99}
+                step={1}
+                required
+                // Empty until someone has counted, never pre-filled with the
+                // assigned total: a head count whose default answer closes the
+                // checkpoint is a rubber stamp, which is the failure mode this
+                // whole control exists to remove. A re-count starts from the
+                // last attested number so a correction is one edit.
+                defaultValue={crewAttestation?.crewAboard ?? ""}
+                // Just `controlClass` — its own `min-h-11` is the 44px touch
+                // floor, and a second `min-h-*` appended here would resolve by
+                // stylesheet order rather than class order (see the note in
+                // components/ui/button.ts). Same pattern the offline roll-call
+                // note input uses on this surface.
+                className={`${controlClass} text-lg tabular-nums`}
+              />
+            </Field>
+            <Field
+              label={t("trips.manifest.crewAttestNoteLabel")}
+              hint={t("trips.manifest.crewAttestNoteHint")}
+            >
+              <input
+                name="note"
+                maxLength={300}
+                placeholder={t("trips.manifest.crewAttestNotePlaceholder")}
+                className={controlClass}
+              />
+            </Field>
+            <FieldActions>
+              <button type="submit" className={buttonClass({ size: "boat" })}>
+                {t("trips.manifest.crewAttestSubmit")}
+              </button>
+            </FieldActions>
+          </FieldGrid>
+        </div>
       </section>
 
       <section id="roll-call-list" tabIndex={-1} className="mt-9 outline-none">
@@ -448,6 +622,14 @@ export default async function TripManifestPage({
             <p className="mt-1 text-sm text-muted">
               {t("trips.manifest.checkEachDiverDescription")}
             </p>
+            {/* The control that isn't "Boarded" means something different once
+                the boat is out, and the crew tapping it in the dark should be
+                told which one they are looking at (DOM-H3). */}
+            {isDeparture ? null : (
+              <p className="mt-1 max-w-prose text-sm font-semibold text-warning">
+                {t("trips.manifest.notBackAboardDescription")}
+              </p>
+            )}
           </div>
           <p className="text-sm text-muted">
             {t("trips.manifest.shopTimeLabel", { timezone: shop.timezone })}
@@ -458,31 +640,42 @@ export default async function TripManifestPage({
             const ready = diver.readiness.status === "ready";
             const rc = diver.rollCall;
             const boarded = rc?.state === "boarded";
-            // "actioned" == a result staff recorded at *this* checkpoint. An
-            // implied not-boarded is carried forward, so it is not yet actioned.
-            const explicitNotBoarded = rc?.state === "not_boarded" && !rc.implied;
+            // A result staff recorded at *this* checkpoint, either way round. An
+            // implied not-boarded is carried forward from the dock, so it is not
+            // one — nothing here is undoable and no note attaches to it.
+            const recordedNotBoarded = rc?.state === "not_boarded" && rc.implied !== true;
+            // ...and after a dive that same record means "did not return to the
+            // boat" (DOM-H3). It is the missing-diver row, not a settled one.
+            const notBackAboard = isNotBackAboard(checkpoint, rc);
+            const explicitNotBoarded = recordedNotBoarded && !notBackAboard;
             const impliedNotBoarded = rc?.state === "not_boarded" && rc.implied === true;
             // Each roll-call state gets its own fill so staff can tell at a glance
             // who has been handled: boarded (green) and not boarded (slate) read as
-            // done; awaiting (amber) and blocked (red) still need them.
-            const rowClass = boarded
-              ? "border-l-4 border-success bg-success/10 px-4 py-5 sm:px-5"
-              : explicitNotBoarded
-                ? "border-l-4 border-border-strong bg-surface-sunken px-4 py-5 sm:px-5"
-                : impliedNotBoarded
-                  ? "border-l-4 border-dashed border-border-strong bg-surface-sunken/50 px-4 py-5 sm:px-5"
-                  : ready
-                    ? "border-l-4 border-warning bg-warning/10 px-4 py-5 ring-1 ring-warning/30 sm:px-5"
-                    : "scroll-mt-32 border-l-4 border-danger bg-danger/5 px-4 py-5 sm:px-5";
+            // done; awaiting (amber), not back aboard, and blocked (red) still need
+            // them. Not back aboard is the loudest state on the page on purpose —
+            // it used to render in the same "handled" slate as a diver left ashore.
+            const rowClass = notBackAboard
+              ? "scroll-mt-32 border-l-4 border-danger bg-danger/10 px-4 py-5 ring-1 ring-danger/40 sm:px-5"
+              : boarded
+                ? "border-l-4 border-success bg-success/10 px-4 py-5 sm:px-5"
+                : explicitNotBoarded
+                  ? "border-l-4 border-border-strong bg-surface-sunken px-4 py-5 sm:px-5"
+                  : impliedNotBoarded
+                    ? "border-l-4 border-dashed border-border-strong bg-surface-sunken/50 px-4 py-5 sm:px-5"
+                    : ready
+                      ? "border-l-4 border-warning bg-warning/10 px-4 py-5 ring-1 ring-warning/30 sm:px-5"
+                      : "scroll-mt-32 border-l-4 border-danger bg-danger/5 px-4 py-5 sm:px-5";
             // Not a Badge: the "explicitly not boarded" state needs a stronger,
             // higher-contrast fill than "still awaiting" so staff can tell at a
             // glance which rows have been actioned — a distinction the app's
             // five standard Badge tones don't carry.
-            const rollCallPillClass = boarded
-              ? "rounded-full bg-success/10 px-3 py-1 text-sm font-medium text-success"
-              : explicitNotBoarded
-                ? "rounded-full bg-foreground/10 px-3 py-1 text-sm font-medium text-foreground"
-                : "rounded-full bg-surface-sunken px-3 py-1 text-sm font-medium text-muted";
+            const rollCallPillClass = notBackAboard
+              ? "rounded-full bg-danger/15 px-3 py-1 text-sm font-bold text-danger"
+              : boarded
+                ? "rounded-full bg-success/10 px-3 py-1 text-sm font-medium text-success"
+                : explicitNotBoarded
+                  ? "rounded-full bg-foreground/10 px-3 py-1 text-sm font-medium text-foreground"
+                  : "rounded-full bg-surface-sunken px-3 py-1 text-sm font-medium text-muted";
             return (
               <li
                 key={diver.bookingId}
@@ -527,7 +720,9 @@ export default async function TripManifestPage({
                           <span className="ms-1">{birthdayText(t, diver.birthday)}</span>
                         </Badge>
                       ) : null}
-                      <span className={rollCallPillClass}>{rollCallLabel(rc)}</span>
+                      <span className={rollCallPillClass}>
+                        {rollCallLabelText(t, rollCallLabel(checkpoint, rc))}
+                      </span>
                     </div>
                     {/* The plan for dive two is made here, on the boat, during
                         the surface interval — so the depth advisory has to be
@@ -624,22 +819,23 @@ export default async function TripManifestPage({
                       <p className="mt-3 text-sm text-muted">
                         {rc.note
                           ? t("trips.manifest.rollCallRecordedByWithNote", {
-                              label: rollCallLabel(rc),
+                              label: rollCallLabelText(t, rollCallLabel(checkpoint, rc)),
                               date: formatDateTimeTz(rc.occurredAt, locale, shop.timezone),
                               name: rc.recordedByName,
                               note: rc.note,
                             })
                           : t("trips.manifest.rollCallRecordedByPlain", {
-                              label: rollCallLabel(rc),
+                              label: rollCallLabelText(t, rollCallLabel(checkpoint, rc)),
                               date: formatDateTimeTz(rc.occurredAt, locale, shop.timezone),
                               name: rc.recordedByName,
                             })}
                       </p>
                     ) : impliedNotBoarded ? (
-                      // Carried-forward not-boarded only happens after a dive, where
-                      // boarding is a head count — so it never depends on readiness.
+                      // The only thing that carries forward is a departure result:
+                      // this diver never left the dock (DOM-H3). Boarding after a
+                      // dive is a head count, so it never depends on readiness.
                       <p className="mt-3 text-sm text-muted">
-                        {t("trips.manifest.carriedForward")}
+                        {t("trips.manifest.carriedForwardFromDock")}
                       </p>
                     ) : null}
                   </div>
@@ -676,23 +872,40 @@ export default async function TripManifestPage({
                       key={`not-boarded-${checkpoint}`}
                       action={rollCallAction}
                       bookingId={diver.bookingId}
-                      status={explicitNotBoarded ? "cleared" : "not_boarded"}
+                      status={recordedNotBoarded ? "cleared" : "not_boarded"}
+                      // The worst string in the change was a green-checked "Not
+                      // boarded ✓" beside a diver who had not come back from dive
+                      // one. After a dive this control is "not back aboard" and
+                      // its recorded state never carries a done-check (DOM-H3).
                       label={
-                        explicitNotBoarded
-                          ? t("trips.manifest.notBoardedCheck")
-                          : t("trips.manifest.markNotBoarded")
+                        recordedNotBoarded
+                          ? isDeparture
+                            ? t("trips.manifest.notBoardedCheck")
+                            : t("trips.manifest.notBackAboardActive")
+                          : isDeparture
+                            ? t("trips.manifest.markNotBoarded")
+                            : t("trips.manifest.markNotBackAboard")
                       }
                       pendingLabel={t("trips.manifest.saving")}
                       formId={`not-boarded-${diver.bookingId}`}
                       className={`${BOAT_TARGET_CLASS} ${
-                        explicitNotBoarded
-                          ? "border border-border-strong bg-surface-sunken"
-                          : "border border-border hover:bg-surface-sunken"
+                        notBackAboard
+                          ? "border border-danger bg-danger/15 text-danger"
+                          : explicitNotBoarded
+                            ? "border border-border-strong bg-surface-sunken"
+                            : "border border-border hover:bg-surface-sunken"
                       }`}
                       copy={rollCallButtonCopy(diver.bookingId)}
                     />
                     {rc && !rc.implied ? (
-                      <p className="text-xs text-muted">{t("trips.manifest.tapToUndo")}</p>
+                      // The undo hint names the control it means. A not-back-aboard
+                      // result deliberately carries no done-check, so the generic
+                      // "tap the ✓ status again" would point at nothing on screen.
+                      <p className="text-xs text-muted">
+                        {notBackAboard
+                          ? t("trips.manifest.tapToUndoNotBackAboard")
+                          : t("trips.manifest.tapToUndo")}
+                      </p>
                     ) : null}
                   </div>
                 </div>

@@ -207,6 +207,7 @@
       "noticeDuplicate": "Ya hay un buceador con ese correo en esta tienda.",
       "noticeDeleted": "Buceador eliminado del trabajo activo de la tienda. Sus reservas y tarjetas se conservan.",
       "noticeRestored": "Buceador restaurado al trabajo activo de la tienda.",
+      "noticeErased": "Datos personales borrados. La exención firmada, los viajes y los pagos quedan registrados sin los datos del buceador — esto no se puede deshacer.",
       "noticeNotAuthorized": "Eliminar o restaurar un buceador está limitado a propietarios y gerentes.",
       "noticeInvalid": "Revisa el nombre, correo y teléfono del buceador.",
       "restoring": "Restaurando…",
@@ -298,11 +299,23 @@
     },
     "remove": {
       "heading": "Eliminar de buceadores activos",
-      "description": "Sale de tus listas activas; las reservas, tarjetas y tallas quedan registradas.",
+      "description": "Sale de tus listas activas; las reservas, tarjetas y tallas quedan registradas. No se destruye nada y puedes deshacerlo.",
       "removePersonSummary": "Eliminar a {name}",
       "addAgainNote": "Puedes añadirlos de nuevo más tarde como un nuevo registro activo.",
       "removing": "Eliminando…",
       "removeDiver": "Eliminar buceador"
+    },
+    "erase": {
+      "heading": "Borrar datos personales",
+      "description": "Para un buceador que te pide que elimines lo que guardas sobre él. No es lo mismo que eliminarlo — esto destruye sus datos para siempre.",
+      "summary": "Borrar los datos personales de {name}",
+      "destroyedNote": "Se destruye: su nombre, correo, teléfono, fecha de nacimiento, contacto de emergencia, seguro, números y fotos de sus tarjetas, respuestas médicas, tallas de alquiler, notas sobre él, comentarios de reseñas y las fotos que haya compartido.",
+      "keptNote": "Se conserva: que firmó tu exención, qué versión firmó y cuándo — además de los viajes en los que estuvo y lo que se pagó, con su nombre eliminado de todo ello. Tus exenciones firmadas siguen siendo verificables.",
+      "noUndoNote": "No hay forma de deshacerlo ni de recuperar nada. Eliminarlo primero es la opción reversible.",
+      "confirmLabel": "Escribe {name} para confirmar",
+      "confirmHint": "Debe coincidir exactamente.",
+      "erasing": "Borrando…",
+      "eraseDiver": "Borrar datos personales"
     },
     "rentalFit": {
       "heading": "Ajuste de alquiler",
@@ -386,7 +399,7 @@
       "alreadyBooked": "Este buceador ya está reservado en esa actividad.",
       "courseUnstaffed": "Asigna un instructor antes de reservar este curso.",
       "coursePrerequisite": "Marca la certificación requerida como certificada antes de reservar este curso.",
-      "courseRatioFull": "Esta sesión está en su límite de proporción instructor-estudiante. Asigna otro instructor o asistente certificado, o elige otra actividad.",
+      "courseRatioFull": "Esta sesión está en su límite de proporción instructor-estudiante. Asigna otro instructor, o elige otra actividad.",
       "courseMinAge": "Este buceador está por debajo de la edad mínima del curso el día que se imparte, según la fecha de nacimiento registrada. Corrige la fecha de nacimiento si es incorrecta.",
       "tripUnavailable": "Añade un correo electrónico y elige una actividad disponible.",
       "bookingInvalid": "Añade un correo electrónico y elige una actividad disponible.",
@@ -395,6 +408,9 @@
       "deleted": "Buceador eliminado del trabajo activo de la tienda. Sus reservas y tarjetas se conservan.",
       "notAuthorizedRefund": "Los reembolsos están limitados a propietarios y gerentes — pide a uno de ellos que emita este reembolso.",
       "notAuthorizedDelete": "Eliminar un buceador está limitado a propietarios y gerentes — pide a uno de ellos que lo haga.",
+      "notAuthorizedErase": "Borrar los datos personales de un buceador está limitado al propietario de la tienda — pídeselo a esa persona.",
+      "eraseNameMismatch": "El nombre que escribiste no coincide con el de este buceador, así que no se borró nada. Escríbelo exactamente como aparece arriba.",
+      "eraseRefused": "Este registro no se puede borrar. Los registros del personal conservan el rastro de responsabilidad de la tienda, y no puedes borrar el tuyo propio.",
       "notAuthorizedFit": "Cambiar el ajuste de alquiler indicado de un buceador está limitado a propietarios, gerentes, instructores y divemasters. Aún puedes marcarlos para ajuste manual en el check-in.",
       "cardSightingRequired": "Confirmar una tarjeta importada requiere la casilla: abre la inmersión o la carga que esa tarjeta permite, así que un miembro del personal debe declarar que realmente la ha visto o ha verificado el número con la agencia.",
       "invalid": "Revisa los datos e inténtalo de nuevo.",
@@ -891,7 +907,9 @@
     },
     "mediaKind": {
       "course_photo": "Foto del curso",
-      "recap_photo": "Foto del resumen"
+      "recap_photo": "Foto del resumen",
+      "certification_card": "Foto de la tarjeta",
+      "waiver_document": "Documento de exención"
     },
     "eyebrow": "Propietario",
     "title": "Cómo va tu mes",
@@ -1031,6 +1049,9 @@
       "crewNobodyYet": "nadie todavía",
       "noPriceSet": "Sin precio definido",
       "noPriceSetAria": "Definir un precio para {ref}",
+      "rollCallOpen": "Recuento · {count} sin contar",
+      "rollCallOpenAria": "Completar el recuento tras la inmersión {dive} de {ref}",
+      "rollCallOpenNote": "De vuelta en el muelle con el recuento tras la inmersión {dive} sin cerrar.",
       "move": "Mover",
       "moveAria": "Mover {ref}",
       "copy": "Copiar",
@@ -1092,6 +1113,7 @@
       "bookingRemovedRefundOwner": "Reserva cancelada y la plaza está disponible. Esta reserva estaba pagada, así que puede deberse un reembolso — un propietario o gerente debe emitirlo desde los pagos del buceador.",
       "bookingRestored": "De vuelta en el listado.",
       "bookingRestoreFull": "No se pudo deshacer — la plaza liberada ya se ocupó y la salida está llena de nuevo. Añádelo a la lista de espera en su lugar.",
+      "bookingRestoreRatio": "No se pudo deshacer — la plaza liberada ya se ocupó y esta sesión del curso está en su límite de ratio instructor-alumno. Asigna otro instructor, o añádelo a la lista de espera en su lugar.",
       "diverAdded": "Buceador añadido a la salida.",
       "diverWaitlisted": "Buceador añadido a la lista de espera.",
       "identityConfirmed": "Identidad confirmada — este buceador puede autorizarse a embarcar.",
@@ -1103,7 +1125,7 @@
       "diverAlready": "Ese buceador ya tiene una reserva en esta salida.",
       "diverCourseUnstaffed": "Esta sesión del curso necesita un instructor asignado antes de poder añadir buceadores.",
       "diverCoursePrerequisite": "Ese buceador no tiene una certificación verificada registrada para el requisito previo de este curso.",
-      "diverCourseRatioFull": "Esta sesión está en su límite de ratio instructor-alumno — asigna otro instructor o un asistente certificado, o añádelo a la lista de espera.",
+      "diverCourseRatioFull": "Esta sesión está en su límite de ratio instructor-alumno — asigna otro instructor, o añádelo a la lista de espera.",
       "diverCourseMinAge": "Ese buceador está por debajo de la edad mínima de este curso el día que se imparte, según la fecha de nacimiento de su perfil. Corrige la fecha si es incorrecta.",
       "diverUnavailable": "Esta salida no puede aceptar nuevos buceadores ahora mismo.",
       "waiverComplete": "Ese buceador ya tiene una exención de responsabilidad completada.",
@@ -1153,6 +1175,7 @@
       "seriesPart": "Parte de una serie repetida · {summary}. Los cambios aquí solo se aplican a esta fecha; quedan {count} en el calendario.",
       "viewOnlyNotice": "Estás viendo esta salida. Su configuración — los detalles, los requisitos de admisión y el calendario recurrente — la editan propietarios, gerentes e instructores. Registrar las condiciones, ajustar quién está en la tripulación y cancelar la salida de hoy por el clima siguen abiertos para ti, igual que el listado, el check-in, el manifiesto y el pase de lista.",
       "overRatioWarning": "Hay {booked} buceadores reservados, pero la tripulación actual solo cubre {cap} según la ratio de nivel inicial publicada por PADI (8 por instructor, +2 por asistente certificado). Asigna otro instructor o un asistente certificado antes de que zarpe esta sesión — las reservas existentes no se ven afectadas de cualquier manera.",
+      "overRatioWarningIntro": "Hay {booked} buceadores reservados en esta sesión de iniciación, pero la tripulación actual solo cubre {cap} — {perInstructor} por instructor para la inmersión en aguas abiertas, y un asistente certificado no lo aumenta. Esa es la ratio de Discover Scuba publicada por PADI en su Manual del Instructor, más estricta que la cifra de los cursos de nivel inicial porque nadie en esta sesión ha estado antes en el agua. Solo otro instructor añade plazas. Asigna uno antes de que zarpe esta sesión — las reservas existentes no se ven afectadas de cualquier manera.",
       "reinstate": "Reactivar salida",
       "reinstating": "Reactivando…",
       "cancelledNotice": "Esta salida está cancelada. Volver a ponerla en el calendario está limitado a propietarios, gerentes e instructores.",
@@ -1428,6 +1451,7 @@
       "summaryBlocked": "Bloqueados",
       "summaryBoarded": "Embarcados",
       "summaryNotBoarded": "No embarcados",
+      "summaryNotBackAboard": "Sin regresar a bordo",
       "summaryAwaiting": "Pendientes",
       "moreStatsSummary": "Más estadísticas",
       "checkpointNavAriaLabel": "Punto de control del pase de lista",
@@ -1435,13 +1459,30 @@
       "rollCallComplete": "Pase de lista completo ✦",
       "recordedOfTotal": "{recorded} de {total} registrados",
       "progressAriaLabel": "Progreso del pase de lista",
-      "allAccountedFor": "Todos contabilizados — listo para el siguiente control.",
+      "allAccountedFor": "Todos contabilizados — buceadores y tripulación. Listo para el siguiente control.",
       "stillToCall": "{count, plural, one {Queda # buceador por pasar lista.} other {Quedan # buceadores por pasar lista.}}",
+      "notBackAboardOpen": "{count, plural, one {# buceador no ha regresado a bordo.} other {# buceadores no han regresado a bordo.}} Este control sigue abierto hasta contabilizarlos.",
+      "crewNotAttestedYet": "Todos los buceadores están contabilizados. Confirma cuánta tripulación está a bordo para cerrar este control.",
+      "crewShort": "{aboard} de {assigned} tripulantes confirmados a bordo. Este control sigue abierto hasta contabilizar a toda la tripulación.",
       "readinessNeedsAttention": "La preparación necesita atención",
       "blockedDeparture": "{count, plural, one {Hay # buceador bloqueado. Permanece en este manifiesto y no puede embarcar hasta que se despeje su control de preparación.} other {Hay # buceadores bloqueados. Permanecen en este manifiesto y no pueden embarcar hasta que se despeje su control de preparación.}}",
       "blockedAfterDive": "{count, plural, one {# buceador ya zarpó — regístralo igual; el seguimiento de su preparación se resuelve en tierra, no aquí.} other {# buceadores ya zarparon — regístralos igual; el seguimiento de su preparación se resuelve en tierra, no aquí.}}",
       "crewHeading": "Tripulación",
       "noCrew": "Todavía no hay tripulación en esta salida — asigna instructores y tripulación desde la página de la salida.",
+      "crewAboardHeading": "Tripulación a bordo en {checkpoint}",
+      "crewAboardDescription": "Los buceadores no son todo el recuento. Cuenta a la tripulación que está en el barco — instructores, divemasters, el patrón — e indica cuántos hay a bordo. Este control no se cierra hasta que lo hagas.",
+      "crewAboardLabel": "Tripulación a bordo",
+      "crewAboardHint": "de {assigned} asignados",
+      "crewAboardFieldDescription": "Cuenta personas, no la lista de arriba.",
+      "crewAttestNoteLabel": "Nota",
+      "crewAttestNoteHint": "(opcional)",
+      "crewAttestNotePlaceholder": "p. ej. el divemaster se quedó en el cabo del muerto",
+      "crewAttestSubmit": "Confirmar recuento de tripulación",
+      "crewAttestedSummary": "{aboard} de {assigned} tripulantes a bordo · {name} · {date}",
+      "crewAttestedNote": "Nota: {note}",
+      "crewAttestationMissing": "Todavía no hay recuento de tripulación en este control.",
+      "crewAttestationStaleAssigned": "{assigned, plural, one {Ahora hay # tripulante asignado} other {Ahora hay # tripulantes asignados}} — vuelve a confirmar el recuento.",
+      "crewAttestError": "No se registró ese recuento de tripulación. Revisa el número e inténtalo de nuevo.",
       "checkpointRollCallHeading": "Pase de lista · {checkpoint}",
       "checkEachDiverDescription": "Marca cada buceador en este punto de control. Cada cambio queda con la marca de tiempo del miembro del personal que lo hizo.",
       "shopTimeLabel": "Hora del centro: {timezone}",
@@ -1461,15 +1502,19 @@
       "addNoteSummary": "Añadir una nota a este registro del pase de lista",
       "rollCallRecordedByPlain": "{label} {date} por {name}",
       "rollCallRecordedByWithNote": "{label} {date} por {name} · {note}",
-      "carriedForward": "Arrastrado — no embarcado en un punto de control anterior. Márcalo como embarcado para volver a incluirlo.",
+      "carriedForwardFromDock": "Arrastrado — este buceador nunca salió del muelle. Márcalo como embarcado para volver a incluirlo.",
       "boardedCheck": "Embarcado ✓",
       "markBoarded": "Marcar embarcado",
       "undoing": "Deshaciendo…",
       "boarding": "Embarcando…",
       "notBoardedCheck": "No embarcado ✓",
       "markNotBoarded": "Marcar no embarcado",
+      "notBackAboardActive": "Sin regresar a bordo",
+      "markNotBackAboard": "Marcar sin regresar a bordo",
+      "notBackAboardDescription": "Tras una inmersión, «sin regresar a bordo» significa que este buceador no ha vuelto al barco. Mantiene el recuento abierto; nunca lo cierra.",
       "saving": "Guardando…",
-      "tapToUndo": "Toca de nuevo el estado ✓ para deshacer."
+      "tapToUndo": "Toca de nuevo el estado ✓ para deshacer.",
+      "tapToUndoNotBackAboard": "Toca de nuevo «Sin regresar a bordo» para deshacer."
     },
     "offlineManifestManager": {
       "checkingDevice": "Comprobando este dispositivo…",
@@ -2505,6 +2550,10 @@
         "later": "Esta semana"
       },
       "actionKind": {
+        "rollCallMissingDiver": "Buceador sin localizar",
+        "rollCallUnfinished": "Recuento",
+        "rollCallDepartureOpen": "Recuento en muelle",
+        "rollCallNotStarted": "Sin recuento",
         "medicalReview": "Médico",
         "readinessUnavailable": "Disponibilidad",
         "identity": "Identidad",
@@ -2572,10 +2621,18 @@
         "group": "{detail} {names}."
       },
       "detail": {
+        "missingDiver": "Alguien de este barco quedó marcado como no regresado a bordo tras la inmersión {dive}: {uncounted, plural, one {# de {total} buceadores que entraron al agua} other {# de {total} buceadores que entraron al agua}} sigue sin contarse desde entonces. Localizadlos primero y cerrad después el recuento.",
+        "missingDiverStale": "El recuento tras la inmersión {dive} de esta salida nunca se cerró: {uncounted, plural, one {# de {total} buceadores quedó} other {# de {total} buceadores quedaron}} marcados como no regresados a bordo y nunca se localizaron. Ya no se resuelve en el muelle: reconstruidlo desde la lista de la salida y dejad escrito qué pasó.",
+        "openRollCall": "Este barco ya volvió y el recuento tras la inmersión {dive} nunca se completó: {uncounted, plural, one {# de {total} buceadores no tiene} other {# de {total} buceadores no tienen}} resultado registrado. Contad a todo el mundo antes de salir del muelle.",
+        "openRollCallUnderway": "Este barco sigue fuera y el recuento tras la inmersión {dive} se empezó y quedó a medias: {uncounted, plural, one {# de {total} buceadores no tiene} other {# de {total} buceadores no tienen}} resultado. Contactad con la tripulación ahora, mientras el barco sigue en el punto de inmersión.",
+        "openRollCallStale": "El recuento tras la inmersión {dive} de esta salida nunca se cerró: {uncounted, plural, one {# de {total} buceadores sigue sin} other {# de {total} buceadores siguen sin}} resultado. Ya no se resuelve en el muelle: reconstruidlo desde la lista de la salida.",
+        "departureCountOpen": "El recuento en el muelle de este barco nunca se completó: {uncounted, plural, one {# de {total} buceadores no tiene} other {# de {total} buceadores no tienen}} resultado en la salida. Es papeleo pendiente, no un buceador en el agua: resolvedlo para que el próximo recuento parta de una lista real.",
+        "noRollCall": "En esta salida no se hizo ningún recuento: {total, plural, one {# buceador zarpó} other {# buceadores zarparon}} sin nada registrado. Nadie fue dado por desaparecido; sencillamente no hay registro.",
         "missingFit": "{count, plural, one {# buceador no tiene} other {# buceadores no tienen}} equipo asignado, así que la lista de preparación está incompleta.",
         "ungatedNitrox": "{count, plural, one {# buceador pidió} other {# buceadores pidieron}} nitrox sin una tarjeta verificada — esos tanques están planeados con aire.",
         "instructorMissing": "Esta sesión de curso no tiene instructor asignado y no puede aceptar inscripciones.",
         "overRatio": "{booked} reservados, pero la tripulación asignada solo cubre {capacity} según la ratio de nivel inicial publicada por PADI.",
+        "overRatioIntro": "{booked} reservados en esta sesión de iniciación, pero la tripulación asignada solo cubre {capacity} — la ratio de Discover Scuba publicada por PADI, de {perInstructor} por instructor para la inmersión en aguas abiertas, que un asistente certificado no aumenta. Solo otro instructor añade plazas.",
         "missingContact": "{count, plural, one {# buceador no tiene} other {# buceadores no tienen}} contacto de emergencia registrado — pregunta en el mostrador; se imprime en el manifiesto.",
         "lastMinuteFill": "{seats, plural, one {# plaza libre} other {# plazas libres}} sin oferta de última hora enviada todavía.",
         "waitlistSeat": "{seats, plural, one {se liberó # plaza} other {se liberaron # plazas}} y {waiting, plural, one {# persona está} other {# personas están}} en la lista de espera.",
@@ -2589,6 +2646,7 @@
         }
       },
       "actionLabel": {
+        "openRollCall": "Abrir recuento",
         "openPrepList": "Abrir lista de preparación",
         "openTrip": "Abrir salida",
         "openGuests": "Abrir invitados",
@@ -2623,7 +2681,9 @@
         },
         "mediaKind": {
           "coursePhoto": "Foto del curso",
-          "recapPhoto": "Foto del resumen"
+          "recapPhoto": "Foto del resumen",
+          "certificationCard": "Foto de la tarjeta",
+          "waiverDocument": "Documento de exención"
         },
         "stuckDetail": {
           "withId": "{kind} atascado desde {when} — Stripe: {id}. Revísalo en el panel de Stripe.",
@@ -2663,6 +2723,7 @@
         "stale": "Copia caducada"
       },
       "loadingMessage": "Abriendo el manifiesto guardado en este dispositivo…",
+      "openingHeading": "Abriendo la copia guardada en este dispositivo",
       "reconcile": {
         "reachError": "No se pudo contactar con DiveDay en este momento — tus cambios siguen guardados en este teléfono e intentarán enviarse de nuevo en el próximo cambio o al reconectar.",
         "pendingRejectedSingle": "{count, plural, one {# cambio necesita revisión — abre el manifiesto en vivo para resolverlo.} other {# cambios necesitan revisión — abre el manifiesto en vivo para resolverlo.}}",
@@ -2702,12 +2763,12 @@
         "checkpointRollCallHeading": "Pase de lista de {checkpoint}",
         "allAboard": "Todos tienen un resultado — todos a bordo.",
         "someNotBoarded": "Todos tienen un resultado — {count} marcados como no embarcados. Confirma que están localizados antes de continuar.",
+        "crewHeading": "Tripulación a bordo",
+        "crewAttested": "{aboard} de {assigned} tripulantes confirmados a bordo · {name}",
+        "crewNotAttested": "{assigned, plural, =0 {No hay tripulación asignada a esta salida.} one {Hay # tripulante asignado a esta salida.} other {Hay # tripulantes asignados a esta salida.}} El recuento de tripulación se confirma en el manifiesto en vivo, así que este control sigue abierto hasta que vuelvas a tener cobertura.",
+        "crewShort": "{aboard} de {assigned} tripulantes confirmados a bordo — este control sigue abierto hasta contar al resto en el manifiesto en vivo.",
         "readyBadge": "Listo cuando se guardó",
         "blockedBadge": "Bloqueado cuando se guardó",
-        "stateBoarded": "Embarcado",
-        "stateNotBoardedCarried": "No embarcado · arrastrado",
-        "stateNotBoarded": "No embarcado",
-        "stateAwaiting": "Pendiente de pase de lista",
         "statePendingSuffix": "· esperando para enviarse",
         "emergencyContact": "Contacto de emergencia",
         "notOnFile": "Sin datos registrados",
@@ -2722,6 +2783,8 @@
         "markBoarded": "Marcar embarcado",
         "notBoardedDone": "No embarcado ✓",
         "markNotBoarded": "Marcar no embarcado",
+        "notBackAboardActive": "Sin regresar a bordo",
+        "markNotBackAboard": "Marcar sin regresar a bordo",
         "openLiveManifest": "Abrir manifiesto en vivo",
         "record": {
           "expiredCannotRecord": "Esta copia guardada ha caducado — abre el manifiesto en vivo para registrar el pase de lista.",
@@ -2744,10 +2807,10 @@
       "contrastLabel": "Contraste",
       "labelAuto": "Automático",
       "labelStandard": "Estándar",
-      "labelFullAaa": "AAA completo",
+      "labelFullAaa": "Máximo contraste",
       "modeAuto": "Automático ☀",
       "modeStandard": "Estándar",
-      "modeFullAaa": "AAA completo ☀"
+      "modeFullAaa": "Máximo contraste ☀"
     },
     "rentalFit": {
       "itemLabels": {
@@ -2770,6 +2833,13 @@
     "rollCallCheckpoint": {
       "departure": "Antes de zarpar",
       "afterDive": "Después de la inmersión {n}"
+    },
+    "rollCallState": {
+      "awaiting": "Pendiente de pase de lista",
+      "boarded": "Embarcado",
+      "notBoarded": "No embarcado",
+      "notBoardedCarried": "No embarcado · arrastrado",
+      "notBackAboard": "Sin regresar a bordo"
     }
   },
   "whatsapp": {

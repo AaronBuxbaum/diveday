@@ -13,7 +13,11 @@ export default defineConfig({
     setupFiles: ["./src/test/setup.ts"],
     // Builds the shared PGlite template snapshot the db tests hydrate from.
     globalSetup: ["./src/test/global-setup.ts"],
-    include: ["src/**/*.test.{ts,tsx}"],
+    // `scripts/` is in scope too: a few repo scripts carry real parsing and
+    // formatting logic that nothing else would exercise (scripts/visual-report-lib.mjs
+    // decides whether a reg-suit run compared anything at all), and they belong
+    // in the same `pnpm check` gate as the app.
+    include: ["src/**/*.test.{ts,tsx}", "scripts/**/*.test.mjs"],
     // PGlite-backed integration tests hydrate an embedded Postgres per test;
     // generous ceiling so slow CI runners don't flake.
     testTimeout: 20_000,

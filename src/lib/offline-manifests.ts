@@ -16,6 +16,15 @@ import type { ReadinessBlocker, ReadinessBlockerCode } from "./readiness";
  * payload (see the note on `divers` below), and only a version change purges
  * the copies already written to crew devices — they fail to decrypt and are
  * discarded rather than lingering to their natural 14-day expiry.
+ *
+ * Deliberately **not** bumped for `crewAttestation` (ADR
+ * 20260802-crew-roll-call-attestation). A bump is a purge, and a purge is not
+ * free: a v4 record that fails to decrypt is overwritten with `events: []` by
+ * `saveOfflineManifest`, throwing away any roll call a crew member queued
+ * offline and has not synced. The new field is additive and optional, and its
+ * absence on an older snapshot reads as "no crew attested" — which is exactly
+ * the fail-closed answer (the checkpoint stays open). There is nothing here to
+ * purge and a real safety cost to purging, so the version stands.
  */
 export const OFFLINE_MANIFEST_RECORD_VERSION = 4 as const;
 
@@ -31,8 +40,15 @@ export const OFFLINE_MANIFEST_RECORD_VERSION = 4 as const;
  * `offline-manifest-store.ts`) to warn a crew member holding a copy of the
  * shell from an older deploy (task 124 / persona 15, Leo) rather than
  * silently serving it with no signal anything's stale.
+ *
+ * v2 precaches the chunks the bundler's runtime loads lazily, which the shell
+ * HTML never names (see `lazyChunkEntries` in `public/manifest-sw.js`). A v1
+ * shell is genuinely broken offline — hydration can ask for a chunk nothing
+ * cached and the captain gets the error boundary instead of the roll call —
+ * so unlike the snapshot version above, this bump is *worth* the purge: there
+ * is no queued roll call inside an app shell to lose, only stale bundles.
  */
-export const OFFLINE_MANIFEST_SHELL_VERSION = "v1";
+export const OFFLINE_MANIFEST_SHELL_VERSION = "v2";
 
 export const OFFLINE_MANIFEST_CURRENT_MS = 15 * 60 * 1000;
 export const OFFLINE_MANIFEST_AGING_MS = 4 * 60 * 60 * 1000;
@@ -47,11 +63,36 @@ export type OfflineManifestFreshness = "current" | "aging" | "stale";
 export type OfflineManifestPayload = {
   shop: { slug: string; name: string; timezone: string };
   manifests: Array<
-    Omit<TripManifest, "trip" | "divers"> & {
+    Omit<TripManifest, "trip" | "divers" | "crew" | "crewAttestation" | "completeness"> & {
       trip: Omit<TripManifest["trip"], "startsAt" | "endsAt"> & {
         startsAt: string;
         endsAt: string;
       };
+      /**
+       * Names and roles, no person ids: the live manifest carries crew ids to
+       * keep a per-person crew roll call reachable (ADR
+       * 20260802-crew-roll-call-attestation), but the dock copy only needs to
+       * show who is crewing and how many there are.
+       */
+      crew: Array<Pick<TripManifest["crew"][number], "fullName" | "roles">>;
+      /**
+       * The crew count attested at this checkpoint when the snapshot was saved.
+       * Absent means nobody has attested — which reads as *not complete*, the
+       * same as it does online. Crew attestation is not recordable offline in
+       * this slice, so this is read-only on the device.
+       */
+      crewAttestation?: {
+        crewAboard: number;
+        crewAssigned: number;
+        attestedByName: string;
+        occurredAt: string;
+        note: string | null;
+      };
+      // `completeness` is deliberately *not* carried. It is derived, and the
+      // device's own `awaiting` count comes from local events rather than this
+      // snapshot, so the offline view recomputes it with `rollCallCompleteness`
+      // instead of reading a save-time answer that is stale the moment a crew
+      // member taps anything.
       /**
        * An explicit **allow-list**, not `Omit<...>`. It used to be a deny-list,
        * which meant every field later added to a manifest diver silently
@@ -131,13 +172,26 @@ export function serializeManifests(
 ): OfflineManifestPayload {
   return {
     shop,
-    manifests: manifests.map((manifest) => ({
+    manifests: manifests.map(({ completeness: _completeness, ...manifest }) => ({
       ...manifest,
       trip: {
         ...manifest.trip,
         startsAt: manifest.trip.startsAt.toISOString(),
         endsAt: manifest.trip.endsAt.toISOString(),
       },
+      crew: manifest.crew.map((member) => ({
+        fullName: member.fullName,
+        roles: member.roles,
+      })),
+      crewAttestation: manifest.crewAttestation
+        ? {
+            crewAboard: manifest.crewAttestation.crewAboard,
+            crewAssigned: manifest.crewAttestation.crewAssigned,
+            attestedByName: manifest.crewAttestation.attestedByName,
+            occurredAt: manifest.crewAttestation.occurredAt.toISOString(),
+            note: manifest.crewAttestation.note,
+          }
+        : undefined,
       // Built field-by-field rather than spread, matching the allow-list type
       // above: what the dock needs, and nothing else. Age, minor status, and
       // birthdays (H-21) are deliberately absent — they are staff-screen facts,

@@ -117,6 +117,95 @@ describe("TodayQueue urgency groups", () => {
   });
 });
 
+describe("TodayQueue unfinished roll-call rows (DOM-H3)", () => {
+  it("chips the row as a roll call in the danger tone and points at the open checkpoint", () => {
+    const { container } = render(
+      <TodayQueue
+        actions={[
+          action({
+            id: "roll-call:t1:after_dive_2",
+            kind: "roll_call_unfinished",
+            urgency: "imminent",
+            subject: "Two-Tank Reef",
+            detail: "This boat is back and the dive 2 roll call was never finished…",
+            actionLabel: "Open roll call",
+            href: "/shop/blue-mantis/trips/t1/manifest?checkpoint=after_dive_2",
+          }),
+        ]}
+        shopSlug="blue-mantis"
+        shopName="Blue Mantis"
+        inviteAction={inviteAction}
+        locale="en-US"
+      />,
+    );
+
+    const chip = screen.getByText("Roll call");
+    expect(chip.className).toContain("text-danger");
+    // Never an in-place control: closing a head count happens on the manifest,
+    // one tap away, not from a button on the queue.
+    expect(screen.getByRole("link", { name: "Open roll call" })).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/trips/t1/manifest?checkpoint=after_dive_2",
+    );
+    expect(container.querySelector("form")).toBeNull();
+  });
+
+  it("keeps the row inside the imminent group, so it can never be celebrated away", () => {
+    render(
+      <TodayQueue
+        actions={[
+          action({
+            id: "roll-call:t1:after_dive_1",
+            kind: "roll_call_unfinished",
+            urgency: "imminent",
+          }),
+          action({ id: "later", urgency: "later" }),
+        ]}
+        shopSlug="blue-mantis"
+        shopName="Blue Mantis"
+        inviteAction={inviteAction}
+        locale="en-US"
+      />,
+    );
+    expect(screen.queryByText("Today's boats are all clear 🤙")).toBeNull();
+  });
+
+  it("gives a diver who did not come back its own chip, and the dock count a quieter one", () => {
+    // The two must never share a chip or a tone. "Not back aboard after dive
+    // one" and "two people were never tapped at the dock" are different events,
+    // and wording them the same is how the red row becomes wallpaper.
+    render(
+      <TodayQueue
+        actions={[
+          action({
+            id: "roll-call:t1:missing_diver:after_dive_1",
+            kind: "roll_call_missing_diver",
+            urgency: "imminent",
+          }),
+          action({
+            id: "roll-call:t2:departure_uncounted:departure",
+            kind: "roll_call_departure_open",
+            urgency: "now",
+          }),
+          action({
+            id: "roll-call:t3:no_roll_call:departure",
+            kind: "roll_call_not_started",
+            urgency: "now",
+          }),
+        ]}
+        shopSlug="blue-mantis"
+        shopName="Blue Mantis"
+        inviteAction={inviteAction}
+        locale="en-US"
+      />,
+    );
+
+    expect(screen.getByText("Missing diver").className).toContain("text-danger");
+    expect(screen.getByText("Dock count").className).toContain("text-warning");
+    expect(screen.getByText("No roll call").className).toContain("text-warning");
+  });
+});
+
 describe("TodayQueue payment rows", () => {
   it("renders the inline payment control only once a booking is known to be invoiced", () => {
     render(

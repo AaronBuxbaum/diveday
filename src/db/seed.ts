@@ -4,6 +4,7 @@ import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate, nowMs } from "@/lib/clock";
 import { courseSlug } from "@/lib/courses";
 import { generateDemoShopIdentity } from "@/lib/demo-identity";
+import { rollCallCheckpoints } from "@/lib/manifests";
 import { DEFAULT_WAIVER_BODY, DEFAULT_WAIVER_TITLE } from "@/lib/waivers";
 import { toDateInputValue, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import type { AppDb, DbExecutor } from "./client";
@@ -43,6 +44,7 @@ import {
   priorVisits,
   recapPhotos,
   rentalFitProfiles,
+  rollCallCrewAttestations,
   rollCallEvents,
   shopPromoCodes,
   shopPromoRedemptions,
@@ -2796,6 +2798,26 @@ async function seedHistory(
     )
     .returning();
 
+  // A boat that sailed had requirements. Without this row every history booking
+  // reads `requirements_not_configured` — blocked — while the roll call below
+  // says "Boarded", so a demo history manifest showed a green boarding pill
+  // beside a red "Requirements not configured" on the same line. That is the
+  // exact pairing the boarding gate exists to prevent (`recordRollCall` refuses
+  // to create it, src/db/manifests.ts), so the demo was teaching the opposite of
+  // the product. Plain reef-trip gates: a signed release and an Open Water card,
+  // both of which every diver in the history cohort holds.
+  await db.insert(tripRequirements).values(
+    histTrips.map((trip) => ({
+      tripId: trip.id,
+      shopId,
+      requiresWaiver: true,
+      minimumCertificationLevel: "open_water" as const,
+      requiredSpecialties: [] as DiveSpecialty[],
+      requiresNitrox: false,
+      requiresPayment: false,
+    })),
+  );
+
   // Deterministic per-booking plan. `k` is a global booking index; every "is
   // this one a no-show / a deposit / missing its waiver" decision is a fixed
   // function of it, so the whole back-fill is reproducible byte for byte.
@@ -2837,7 +2859,13 @@ async function seedHistory(
         status,
         price: plan.priceCents,
         payment,
-        waiver: !cancelled && k % 9 !== 0,
+        // Anyone who *boarded* has a signed release, because the app will not
+        // board anyone who doesn't: readiness gates `boarded` at departure
+        // (`recordRollCall`). The missing-waiver variety the demo wants stays
+        // on the divers who never got on the boat — a no-show with an unsigned
+        // release is a true and common story, and it is the story the manifest
+        // should tell beside their "Not boarded".
+        waiver: status === "checked_in" ? true : !cancelled && k % 9 !== 0,
         order: payment === "paid" || payment === "deposit_paid",
         createdAt: new Date(trip.startsAt.getTime() - (seat + 1) * 60 * 1000),
       });
@@ -2915,6 +2943,48 @@ async function seedHistory(
     })
     .filter((row): row is NonNullable<typeof row> => row !== null);
   if (waiverRows.length > 0) await db.insert(waiverRecords).values(waiverRows);
+
+  // Every one of these boats sailed and tied up again, so each carries a
+  // finished head count: departure plus one after-dive count per planned dive.
+  // Without it the returned-trip alarm (`roll_call_unfinished` in today.ts)
+  // fires forever on the most recent history trip — correct behaviour read
+  // against fabricated data, which is not what a demo should teach.
+  //
+  // A no-show gets one explicit `not_boarded` at departure and nothing after.
+  // Carry-forward propagates that absence on its own, and it may never be
+  // handed a fabricated `boarded` — "off the boat stays off the boat".
+  const rollCallRows = plans.flatMap((plan, i): (typeof rollCallEvents.$inferInsert)[] => {
+    const booking = bookingRows[i];
+    if (!booking || plan.status === "cancelled") return [];
+    const trip = histTrips.find((row) => row.id === plan.tripId);
+    if (!trip) return [];
+    const base = {
+      shopId,
+      tripId: plan.tripId,
+      bookingId: booking.id,
+      recordedByPersonId: createdByPersonId,
+      source: "live" as const,
+    };
+    if (plan.status === "no_show") {
+      return [
+        {
+          ...base,
+          status: "not_boarded" as const,
+          checkpoint: "departure",
+          occurredAt: trip.startsAt,
+        },
+      ];
+    }
+    // Departure at the dock, then a count surfacing from each dive, spaced so
+    // the ordering is stable and every event lands inside the trip's window.
+    return rollCallCheckpoints(trip.plannedDives).map((checkpoint, index) => ({
+      ...base,
+      status: "boarded" as const,
+      checkpoint,
+      occurredAt: new Date(trip.startsAt.getTime() + index * 90 * 60 * 1000),
+    }));
+  });
+  if (rollCallRows.length > 0) await db.insert(rollCallEvents).values(rollCallRows);
 
   // Paid invoices, so a diver's profile shows a real billing history. The Stripe
   // ids are fabricated — the demo never connects an account — which is why the
@@ -4050,6 +4120,7 @@ export async function resetDemoSchedule(
   // child here surfaces as an FK-violation mid-run — e.g. a waitlist entry or
   // order left behind blocks the trips/bookings delete and dirties the next
   // test's fixture (regression tests live in seed.test.ts).
+  await db.delete(rollCallCrewAttestations).where(eq(rollCallCrewAttestations.shopId, shopId));
   await db.delete(rollCallEvents).where(eq(rollCallEvents.shopId, shopId));
   await db.delete(rentalFitProfiles).where(eq(rentalFitProfiles.shopId, shopId));
   // References people, so it clears before them like any other people-scoped row.
@@ -4278,6 +4349,7 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(bookingPayments).where(eq(bookingPayments.shopId, shopId));
   await db.delete(tips).where(eq(tips.shopId, shopId));
   await db.delete(bookingCapabilities).where(eq(bookingCapabilities.shopId, shopId));
+  await db.delete(rollCallCrewAttestations).where(eq(rollCallCrewAttestations.shopId, shopId));
   await db.delete(rollCallEvents).where(eq(rollCallEvents.shopId, shopId));
   await db.delete(recapPhotos).where(eq(recapPhotos.shopId, shopId));
   await db.delete(tripReviews).where(eq(tripReviews.shopId, shopId));

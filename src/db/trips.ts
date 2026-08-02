@@ -17,7 +17,6 @@ import {
 } from "drizzle-orm";
 import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
-import { entryLevelCourseCapacity } from "@/lib/course-ratios";
 import { reviewManifestChange } from "@/lib/manifest-change-review";
 import { maxRecordedDiveNumber } from "@/lib/manifests";
 import type { TripRecurrenceFrequency } from "@/lib/recurrence";
@@ -1140,15 +1139,6 @@ export async function setTripCrew(
       .for("update");
     if (!trip) return false;
     if (trip.courseId) {
-      const [course] = await tx
-        .select()
-        .from(courses)
-        .where(and(eq(courses.id, trip.courseId), eq(courses.shopId, shopId)))
-        .limit(1);
-      const [{ bookedCount }] = await tx
-        .select({ bookedCount: count() })
-        .from(bookings)
-        .where(and(eq(bookings.tripId, tripId), ne(bookings.status, "cancelled")));
       const assigned = staff.filter((member) => valid.includes(member.person.id));
       const review = reviewManifestChange({
         courseRequiresInstructor: true,
@@ -1157,13 +1147,14 @@ export async function setTripCrew(
       if (review.blocking) return false;
       const instructors = assigned.filter((member) => member.roles.includes("instructor")).length;
       if (instructors === 0) return false;
-      if (course?.agency === "padi" && !course.minimumCertificationLevel) {
-        const assistants = assigned.filter(
-          (member) => member.roles.includes("divemaster") && !member.roles.includes("instructor"),
-        ).length;
-        if (bookedCount > entryLevelCourseCapacity(instructors, assistants, course.isIntroCourse))
-          return false;
-      }
+      // Deliberately no ratio check here. A crew change that leaves the session
+      // over its ratio is **recorded**, not refused: the manifest is a safety
+      // document and must say who is actually aboard. Refusing meant an
+      // instructor who called in sick stayed on the printed crew list — and at
+      // the 2:1 intro ratio that is the ordinary case, not an edge one. The
+      // resulting gap surfaces loudly as `over_ratio` (courseCrewGap, consumed
+      // by the trip page, the staffing coverage list, and Today), and new
+      // bookings are still refused at the tightened cap in `createBookingRecord`.
     }
     const days = await tx
       .select({ startsAt: tripScheduleDays.startsAt, endsAt: tripScheduleDays.endsAt })
@@ -1271,27 +1262,10 @@ export async function changeTripCrew(
         roles.filter((row) => row.role === "instructor").map((row) => row.personId),
       );
       if (instructors.size === 0) return false;
-      const [course] = await tx
-        .select()
-        .from(courses)
-        .where(and(eq(courses.id, targetTrip.courseId), eq(courses.shopId, shopId)))
-        .limit(1);
-      if (course?.agency === "padi" && !course.minimumCertificationLevel) {
-        const assistants = new Set(
-          roles
-            .filter((row) => row.role === "divemaster" && !instructors.has(row.personId))
-            .map((row) => row.personId),
-        );
-        const [{ bookedCount }] = await tx
-          .select({ bookedCount: count() })
-          .from(bookings)
-          .where(and(eq(bookings.tripId, tripId), ne(bookings.status, "cancelled")));
-        if (
-          bookedCount >
-          entryLevelCourseCapacity(instructors.size, assistants.size, course.isIntroCourse)
-        )
-          return false;
-      }
+      // No ratio check — same reason as `setTripCrew` above: pulling a crew
+      // member who is not on the boat must always be recordable, even when it
+      // leaves the session over ratio. The `over_ratio` advisory is the nudge;
+      // the booking gate still holds the line on new seats.
     }
 
     if (change.operation === "assign") {

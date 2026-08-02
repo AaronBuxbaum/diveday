@@ -23,7 +23,7 @@ import {
 } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { courseCrewGap } from "@/lib/course-ratios";
+import { courseCrewGap, DSD_RATIO } from "@/lib/course-ratios";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { recurrenceSummary } from "@/lib/recurrence";
@@ -127,9 +127,9 @@ export default async function ManageTripPage({
   // (src/lib/course-ratios.ts) is the one computation of "does this course
   // session have enough crew", also consumed by the staffing coverage list
   // and the Today queue (docs/product/archive/ux-personas-20260730-findings.md,
-  // Lens 17 task 151) — over_ratio is the visible nudge to fix an entry-level
-  // (PADI, ungated) session before sailing, never a retroactive block on the
-  // bookings already taken.
+  // Lens 17 task 151) — over_ratio is the visible nudge to fix a ratio-gated
+  // session before sailing, never a retroactive block on the bookings already
+  // taken.
   const crewGap = courseCrewGap({
     course: trip.course,
     instructorCount: assignedCrew.filter((entry) => entry.roles.includes("instructor")).length,
@@ -138,6 +138,23 @@ export default async function ManageTripPage({
     ).length,
     booked: trip.booked,
   });
+  // Two rules, two sentences: the entry-level cap is PADI's published Open
+  // Water training figure and a certified assistant raises it; the intro cap is
+  // PADI's tighter published Discover Scuba open-water figure (HD-6) that an
+  // assistant does not move. One generic string told a DSD manager to add a
+  // divemaster, which cannot work, and cited the wrong PADI number at them. The
+  // per-instructor figure is interpolated from `DSD_RATIO` so the sentence
+  // cannot drift away from the cap the gate actually enforces.
+  const overRatioWarning =
+    crewGap.code !== "over_ratio"
+      ? null
+      : crewGap.ratio === "intro"
+        ? t("trips.detail.overRatioWarningIntro", {
+            booked: crewGap.booked,
+            cap: crewGap.capacity,
+            perInstructor: DSD_RATIO.openWaterStudentsPerInstructor,
+          })
+        : t("trips.detail.overRatioWarning", { booked: crewGap.booked, cap: crewGap.capacity });
   // The other half of the shift ↔ crew cross-link (Lens 17 task 165): whether
   // each assigned crew member actually has a working shift covering this
   // sailing, read straight from CrewSection instead of a separate trip to
@@ -342,13 +359,7 @@ export default async function ManageTripPage({
           heading: t("trips.crew.heading"),
           description: t("trips.crew.description"),
           courseNeedsInstructor: t("trips.crew.courseNeedsInstructor"),
-          overRatioWarning:
-            crewGap.code === "over_ratio"
-              ? t("trips.detail.overRatioWarning", {
-                  booked: crewGap.booked,
-                  cap: crewGap.capacity,
-                })
-              : null,
+          overRatioWarning,
           noStaff: t("trips.crew.noCrew"),
           notAssignedYet: t("trips.crew.notAssignedYet"),
           assignLabel: t("shared.today.departureBoard.assignCrewLabel"),

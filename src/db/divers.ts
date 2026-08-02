@@ -157,7 +157,13 @@ export async function updateDiver(
   }
 }
 
-/** Soft-delete a diver. Bookings, cards, and rental fit stay available to operations. */
+/**
+ * Soft-delete a diver. Bookings, cards, and rental fit stay available to
+ * operations, and the record itself is untouched — this is removal from the
+ * active lists, not erasure. Erasing a diver's identity and medical data is a
+ * separate, one-way, owner-only operation (`anonymizeDiver`,
+ * `src/db/anonymize.ts`, ADR 20260802-diver-data-erasure).
+ */
 export async function deleteDiver(db: AppDb, shopId: string, personId: string) {
   const [person] = await db
     .update(people)
@@ -172,13 +178,27 @@ export async function deleteDiver(db: AppDb, shopId: string, personId: string) {
  * shop now holds the same email — the partial unique index would reject it
  * anyway (people_shop_email_unique, CR-008), and a diver who re-registered
  * while this one was deleted must not be silently clobbered by the undo.
+ *
+ * Also refuses an **erased** record. There is no undo for erasure: restoring
+ * one would put a half-blank person back on the active roster with a sentinel
+ * for a name and no way to recover what was destroyed. The `isNull` below is
+ * the polite refusal; `people_anonymized_stays_removed` is the structural one,
+ * so a future caller that forgets this clause is refused by the database
+ * instead of quietly succeeding.
  */
 export async function restoreDiver(db: AppDb, shopId: string, personId: string) {
   try {
     const [person] = await db
       .update(people)
       .set({ deletedAt: null })
-      .where(and(eq(people.id, personId), eq(people.shopId, shopId), isNotNull(people.deletedAt)))
+      .where(
+        and(
+          eq(people.id, personId),
+          eq(people.shopId, shopId),
+          isNotNull(people.deletedAt),
+          isNull(people.anonymizedAt),
+        ),
+      )
       .returning({ id: people.id });
     return Boolean(person);
   } catch (error) {

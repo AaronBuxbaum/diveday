@@ -1,7 +1,10 @@
 // @vitest-environment node
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { ANONYMIZED_PERSON_NAME, REDACTED_TEXT } from "@/lib/anonymization";
+import { computeWaiverIntegrityHash, verifyWaiverIntegrity } from "@/lib/waiver-integrity";
 import { seededShopContext } from "@/test/db";
+import { anonymizeDiver } from "./anonymize";
 import { createBooking } from "./bookings";
 import type { AppDb } from "./client";
 import {
@@ -14,8 +17,42 @@ import {
   updateDiver,
 } from "./divers";
 import { saveRentalFit } from "./rental-fit";
-import { people, shops } from "./schema";
+import {
+  activityEvents,
+  bookingCapabilities,
+  bookingCheckoutBookings,
+  bookingCheckouts,
+  bookingPayments,
+  bookings,
+  calendarFeeds,
+  certifications,
+  courseInquiries,
+  courses,
+  internalNotes,
+  lastMinuteListEntries,
+  lastMinuteListUnsubscribeTokens,
+  mediaDeletionAttempts,
+  nitroxCertifications,
+  notificationDeliveries,
+  notificationDeliveryAttempts,
+  notificationSendQueue,
+  orders,
+  people,
+  personCourtesyEmailUnsubscribeTokens,
+  personRoles,
+  priorVisits,
+  recapPhotos,
+  rentalFitProfiles,
+  rollCallEvents,
+  shops,
+  specialtyCertifications,
+  tripReviews,
+  tripWaitlistEntries,
+  userAccounts,
+  waiverRecords,
+} from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
+import { completeWaiver, issueWaiverRequest } from "./waivers";
 
 describe("person-first diver records", () => {
   it("composes cards, fit, and history from one diver record", async () => {
@@ -385,5 +422,1044 @@ describe("listBookableDivers (returning-diver picker)", () => {
     if (!diver) throw new Error("diver setup failed");
     await deleteDiver(db, shop.id, diver.id);
     expect(await listBookableDivers(db, shop.id, trip.id, { query: "gary" })).toEqual([]);
+  });
+});
+
+/**
+ * Diver erasure (ADR 20260802-diver-data-erasure) — the destructive
+ * counterpart to `deleteDiver`'s reversible removal, which the tests above
+ * deliberately keep asserting unchanged.
+ *
+ * The failure mode this suite exists to catch is a **miss**: one table left
+ * un-scrubbed, still holding a name, a number, or a medical answer. So every
+ * table the sweep claims is asserted on its own, from a fixture that populates
+ * all of them, rather than spot-checked through a read helper that might filter
+ * the leak out of view.
+ */
+describe("diver erasure", () => {
+  const BLOB = "https://abc123.public.blob.vercel-storage.com";
+  const erasureNow = new Date("2026-07-18T12:00:00.000Z");
+
+  async function personIdByName(db: AppDb, shopId: string, fullName: string) {
+    const [row] = await db
+      .select({ id: people.id })
+      .from(people)
+      .where(and(eq(people.shopId, shopId), eq(people.fullName, fullName)));
+    if (!row) throw new Error(`seed person missing: ${fullName}`);
+    return row.id;
+  }
+
+  /** A diver with a row in every table the sweep touches. */
+  async function erasableDiver() {
+    const { db, shop } = await seededShopContext();
+    const ownerId = await personIdByName(db, shop.id, "Dana Reyes");
+    const captainId = await personIdByName(db, shop.id, "Sal Moretti");
+
+    const diver = await createDiver(db, {
+      shopId: shop.id,
+      fullName: "Erasure Elena",
+      email: "elena@example.com",
+      phone: "+1 305 555 0142",
+    });
+    if (!diver) throw new Error("diver insert failed");
+    await updateDiver(db, {
+      shopId: shop.id,
+      personId: diver.id,
+      fullName: "Erasure Elena",
+      email: "elena@example.com",
+      phone: "+1 305 555 0142",
+      diveInsurance: "DAN #90210",
+      dateOfBirth: "1990-04-01",
+      emergencyContactName: "Robin Elena",
+      emergencyContactPhone: "+1 305 555 0143",
+    });
+    await db.update(people).set({ locale: "es-ES" }).where(eq(people.id, diver.id));
+
+    const [trip] = (await upcomingTripsWithCounts(db, shop.id)).filter(
+      (t) => t.booked < t.capacity,
+    );
+    if (!trip) throw new Error("no open seeded trip");
+    const booked = await createBooking(db, {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: trip.id,
+      personId: diver.id,
+    });
+    if (!booked.ok) throw new Error(`booking failed: ${booked.reason}`);
+    const bookingId = booked.bookingId;
+    await db
+      .update(bookings)
+      .set({ groupPreference: "likes to buddy with Marta" })
+      .where(eq(bookings.id, bookingId));
+
+    const issued = await issueWaiverRequest(db, {
+      shopId: shop.id,
+      bookingId,
+      now: erasureNow,
+    });
+    if (!issued.ok) throw new Error(`waiver issue failed: ${issued.reason}`);
+    const completed = await completeWaiver(db, issued.token, {
+      signerName: "Erasure Elena",
+      agreed: true,
+      medicalAnswers: {
+        questionnaireId: "rstc",
+        questionnaireVersion: 1,
+        responses: { q1: false },
+      },
+      now: erasureNow,
+    });
+    if (!completed.ok) throw new Error("waiver completion failed");
+    await db
+      .update(waiverRecords)
+      .set({
+        importedFromLabel: "Old Shop CRM",
+        importSourceDocumentUrl: `${BLOB}/waivers/elena-release.pdf`,
+        importSourceMedicalDocumentUrl: `${BLOB}/waivers/elena-medical.pdf`,
+      })
+      .where(eq(waiverRecords.id, issued.recordId));
+    // Re-seal so the fixture's own edits above leave a genuinely valid v1 record
+    // — otherwise the "still verifies after erasure" assertion would be reading
+    // a record that was already invalid before the sweep ran.
+    const [beforeSeal] = await db
+      .select()
+      .from(waiverRecords)
+      .where(eq(waiverRecords.id, issued.recordId));
+    if (!beforeSeal) throw new Error("waiver record missing");
+    await db
+      .update(waiverRecords)
+      .set({ integrityHash: computeWaiverIntegrityHash(beforeSeal), integrityVersion: 1 })
+      .where(eq(waiverRecords.id, issued.recordId));
+
+    await db.insert(certifications).values({
+      shopId: shop.id,
+      personId: diver.id,
+      agency: "padi",
+      level: "open_water",
+      identifier: "PADI-ELENA-1",
+      cardImageUrl: `${BLOB}/cards/elena-ow.jpg`,
+      reviewNote: "Checked against Elena's PADI portal record",
+      importedFromLabel: "Old Shop CRM",
+      status: "verified",
+    });
+    await db.insert(specialtyCertifications).values({
+      shopId: shop.id,
+      personId: diver.id,
+      agency: "padi",
+      specialty: "deep",
+      identifier: "PADI-ELENA-1",
+      cardImageUrl: `${BLOB}/cards/elena-deep.jpg`,
+      reviewNote: "Elena brought the physical card",
+      status: "verified",
+    });
+    await db.insert(nitroxCertifications).values({
+      shopId: shop.id,
+      personId: diver.id,
+      agency: "padi",
+      identifier: "PADI-ELENA-N1",
+      reviewNote: "Elena's nitrox ticket sighted",
+      status: "verified",
+    });
+
+    await saveRentalFit(db, {
+      shopId: shop.id,
+      personId: diver.id,
+      rentsBcd: true,
+      rentsRegulator: true,
+      rentsWetsuit: true,
+      rentsMaskFins: true,
+      rentsWeights: true,
+      rentsDiveComputer: false,
+      rentsGopro: false,
+      bcdSize: "M",
+      wetsuitSize: "3 mm / M",
+      bootSize: "9",
+      finSize: "L",
+      weightPreference: "12 lb",
+      note: "Elena prefers a longer hose",
+    });
+
+    await db.insert(internalNotes).values({
+      shopId: shop.id,
+      personId: diver.id,
+      bookingId,
+      body: "Elena mentioned a shoulder injury at the counter",
+      createdByPersonId: ownerId,
+    });
+    await db.insert(activityEvents).values([
+      {
+        shopId: shop.id,
+        tripId: trip.id,
+        bookingId,
+        actorPersonId: captainId,
+        message: "Sal checked Erasure Elena in at the dock",
+        occurredAt: erasureNow,
+      },
+      // A note attached to the *diver* rather than a booking writes an event
+      // with a null booking_id (src/db/operations.ts) — the case a purely
+      // booking-scoped sweep silently misses.
+      {
+        shopId: shop.id,
+        tripId: trip.id,
+        bookingId: null,
+        actorPersonId: ownerId,
+        message: "Dana Reyes added a private note about Erasure Elena",
+        occurredAt: erasureNow,
+      },
+    ]);
+    await db.insert(rollCallEvents).values({
+      shopId: shop.id,
+      tripId: trip.id,
+      bookingId,
+      recordedByPersonId: captainId,
+      status: "boarded",
+      note: "Elena boarded last, said she felt fine",
+      occurredAt: erasureNow,
+    });
+    await db.insert(bookingPayments).values({
+      shopId: shop.id,
+      bookingId,
+      status: "paid",
+      amountCents: 13000,
+      note: "Elena paid cash at the counter",
+    });
+    await db.insert(priorVisits).values({
+      shopId: shop.id,
+      personId: diver.id,
+      visitedOn: "2024-06-01",
+      title: "Elena — two-tank Molasses Reef",
+      statusLabel: "Completed",
+      amountLabel: "$180.00",
+      sourceLabel: "Old Shop CRM",
+      sourceReference: "ORD-ELENA-77",
+      dedupeKey: "ORD-ELENA-77",
+      importedAt: erasureNow,
+    });
+    await db.insert(tripReviews).values({
+      shopId: shop.id,
+      bookingId,
+      tripId: trip.id,
+      personId: diver.id,
+      rating: 5,
+      comment: "Elena here — Sal was wonderful, ask for him by name!",
+      isPublished: true,
+      publishedAt: erasureNow,
+    });
+    await db.insert(orders).values({
+      shopId: shop.id,
+      bookingId,
+      personId: diver.id,
+      createdByPersonId: ownerId,
+      status: "paid",
+      totalCents: 13000,
+      stripeAccountId: "acct_test",
+      stripeCustomerId: "cus_elena",
+      stripeInvoiceId: "in_elena",
+      hostedInvoiceUrl: "https://invoice.stripe.com/i/acct_test/elena",
+      invoicePdfUrl: "https://invoice.stripe.com/i/acct_test/elena.pdf",
+    });
+    await db.insert(recapPhotos).values({
+      shopId: shop.id,
+      bookingId,
+      tripId: trip.id,
+      imageUrl: `${BLOB}/recap/elena-1.jpg`,
+      caption: "Elena and a turtle",
+    });
+    await db.insert(notificationDeliveries).values({
+      shopId: shop.id,
+      bookingId,
+      kind: "waiver_request",
+      status: "failed",
+      providerDetail: "550 5.1.1 elena@example.com: recipient rejected",
+      sendError: "bounce for elena@example.com",
+      attemptedAt: erasureNow,
+    });
+    // The append-only twin, written from the same `delivery.detail` in the
+    // same call (`sendNotification`, src/db/notifications.ts) — so it quotes
+    // the same address the row above does.
+    await db.insert(notificationDeliveryAttempts).values({
+      shopId: shop.id,
+      bookingId,
+      kind: "waiver_request",
+      status: "failed",
+      sendErrorCode: "bounced",
+      sendError: "bounce for elena@example.com",
+      attemptedAt: erasureNow,
+    });
+    await db.insert(notificationSendQueue).values([
+      {
+        shopId: shop.id,
+        idempotencyKey: "erasure-elena-by-address",
+        payload: {
+          kind: "trip_recap",
+          bookingId: "00000000-0000-4000-8000-0000000000aa",
+          shopId: shop.id,
+          to: "Elena@example.com",
+          locale: "en-US",
+          diverName: "Erasure Elena",
+        } as never,
+        nextAttemptAt: erasureNow,
+      },
+      {
+        shopId: shop.id,
+        idempotencyKey: "erasure-elena-by-booking",
+        payload: {
+          kind: "waiver_request",
+          bookingId,
+          shopId: shop.id,
+          to: "someone-else@example.com",
+          diverName: "Erasure Elena",
+        } as never,
+        nextAttemptAt: erasureNow,
+      },
+    ]);
+    await db.insert(calendarFeeds).values({
+      shopId: shop.id,
+      personId: diver.id,
+      scope: "assignments",
+      tokenHash: "elena-feed-hash",
+    });
+    await db.insert(bookingCapabilities).values({
+      shopId: shop.id,
+      bookingId,
+      purpose: "readiness",
+      tokenHash: "elena-readiness-hash",
+      expiresAt: new Date(erasureNow.getTime() + 86_400_000),
+    });
+    await db.insert(tripWaitlistEntries).values({
+      shopId: shop.id,
+      tripId: trip.id,
+      personId: diver.id,
+    });
+    const [listEntry] = await db
+      .insert(lastMinuteListEntries)
+      .values({ shopId: shop.id, personId: diver.id })
+      .returning();
+    if (!listEntry) throw new Error("last-minute list insert failed");
+    await db.insert(lastMinuteListUnsubscribeTokens).values({
+      shopId: shop.id,
+      entryId: listEntry.id,
+      tokenHash: "elena-unsub-hash",
+    });
+    await db.insert(personCourtesyEmailUnsubscribeTokens).values({
+      shopId: shop.id,
+      personId: diver.id,
+      tokenHash: "elena-courtesy-hash",
+    });
+    const [course] = await db.select().from(courses).where(eq(courses.shopId, shop.id)).limit(1);
+    if (!course) throw new Error("seed course missing");
+    await db.insert(courseInquiries).values({
+      shopId: shop.id,
+      courseId: course.id,
+      name: "Erasure Elena",
+      email: "ELENA@example.com",
+      phone: "+1 305 555 0142",
+      experienceLevel: "certified",
+      timing: "any weekend in September",
+      message: "Elena here — is the advanced course running?",
+    });
+
+    return { db, shop, diver, ownerId, captainId, bookingId, trip, waiverId: issued.recordId };
+  }
+
+  it("scrubs every table that holds the diver's identity or medical data", async () => {
+    const { db, shop, diver, ownerId, bookingId, waiverId } = await erasableDiver();
+
+    const result = await anonymizeDiver(db, {
+      shopId: shop.id,
+      personId: diver.id,
+      actorPersonId: ownerId,
+    });
+    expect(result).toMatchObject({ ok: true, alreadyAnonymized: false });
+
+    const [person] = await db.select().from(people).where(eq(people.id, diver.id));
+    expect(person).toMatchObject({
+      fullName: ANONYMIZED_PERSON_NAME,
+      email: null,
+      phone: null,
+      emergencyContactName: null,
+      emergencyContactPhone: null,
+      dateOfBirth: null,
+      diveInsurance: null,
+      locale: null,
+      courtesyEmailOptOutAt: null,
+      anonymizedByPersonId: ownerId,
+    });
+    expect(person?.anonymizedAt).toBeInstanceOf(Date);
+    // Erasure removes them from the active roster in the same breath — the
+    // check constraint requires it, and a live person with no name is nonsense.
+    expect(person?.deletedAt).toBeInstanceOf(Date);
+    expect(
+      await db.select().from(personRoles).where(eq(personRoles.personId, diver.id)),
+    ).toHaveLength(0);
+
+    const [waiver] = await db.select().from(waiverRecords).where(eq(waiverRecords.id, waiverId));
+    expect(waiver).toMatchObject({
+      signedName: null,
+      medicalAnswers: null,
+      draftSignerName: null,
+      draftMedicalAnswers: null,
+      draftAcknowledged: false,
+      importedFromLabel: null,
+      importSourceDocumentUrl: null,
+      importSourceMedicalDocumentUrl: null,
+      startedAt: null,
+    });
+
+    const [levelCard] = await db
+      .select()
+      .from(certifications)
+      .where(eq(certifications.personId, diver.id));
+    expect(levelCard?.identifier).not.toContain("ELENA");
+    expect(levelCard).toMatchObject({
+      cardImageUrl: null,
+      reviewNote: null,
+      importedFromLabel: null,
+      // The sighting survives: agency, level, and status are what the shop
+      // checked, not who it belonged to.
+      agency: "padi",
+      level: "open_water",
+      status: "verified",
+    });
+    expect(levelCard?.deletedAt).toBeInstanceOf(Date);
+
+    const [specialtyCard] = await db
+      .select()
+      .from(specialtyCertifications)
+      .where(eq(specialtyCertifications.personId, diver.id));
+    expect(specialtyCard?.identifier).not.toContain("ELENA");
+    expect(specialtyCard).toMatchObject({ cardImageUrl: null, reviewNote: null });
+
+    const [nitroxCard] = await db
+      .select()
+      .from(nitroxCertifications)
+      .where(eq(nitroxCertifications.personId, diver.id));
+    expect(nitroxCard?.identifier).not.toContain("ELENA");
+    expect(nitroxCard).toMatchObject({ reviewNote: null, importedFromLabel: null });
+
+    expect(
+      await db.select().from(rentalFitProfiles).where(eq(rentalFitProfiles.personId, diver.id)),
+    ).toHaveLength(0);
+    expect(
+      await db.select().from(internalNotes).where(eq(internalNotes.personId, diver.id)),
+    ).toHaveLength(0);
+    expect(
+      await db.select().from(tripWaitlistEntries).where(eq(tripWaitlistEntries.personId, diver.id)),
+    ).toHaveLength(0);
+    expect(
+      await db
+        .select()
+        .from(lastMinuteListEntries)
+        .where(eq(lastMinuteListEntries.personId, diver.id)),
+    ).toHaveLength(0);
+    expect(await db.select().from(lastMinuteListUnsubscribeTokens)).toHaveLength(0);
+    expect(
+      await db
+        .select()
+        .from(personCourtesyEmailUnsubscribeTokens)
+        .where(eq(personCourtesyEmailUnsubscribeTokens.personId, diver.id)),
+    ).toHaveLength(0);
+    expect(
+      await db.select().from(recapPhotos).where(eq(recapPhotos.bookingId, bookingId)),
+    ).toHaveLength(0);
+
+    const [booking] = await db.select().from(bookings).where(eq(bookings.id, bookingId));
+    expect(booking?.groupPreference).toBeNull();
+
+    // Both the booking-scoped event and the diver-scoped one with a null
+    // booking_id — the latter is only reachable by matching the stored name.
+    const events = await db.select().from(activityEvents).where(eq(activityEvents.shopId, shop.id));
+    expect(events.filter((row) => row.message === REDACTED_TEXT)).toHaveLength(2);
+    expect(events.filter((row) => row.message.includes("Erasure Elena"))).toEqual([]);
+
+    const [rollCall] = await db
+      .select()
+      .from(rollCallEvents)
+      .where(eq(rollCallEvents.bookingId, bookingId));
+    expect(rollCall?.note).toBeNull();
+    expect(rollCall?.status).toBe("boarded");
+
+    const [payment] = await db
+      .select()
+      .from(bookingPayments)
+      .where(eq(bookingPayments.bookingId, bookingId));
+    expect(payment).toMatchObject({ note: null, status: "paid", amountCents: 13000 });
+
+    const [visit] = await db.select().from(priorVisits).where(eq(priorVisits.personId, diver.id));
+    expect(visit).toMatchObject({
+      title: null,
+      statusLabel: null,
+      amountLabel: null,
+      sourceLabel: null,
+      sourceReference: null,
+    });
+    expect(visit?.dedupeKey).not.toContain("ELENA");
+    expect(visit?.visitedOn).toBe("2024-06-01");
+
+    const [review] = await db.select().from(tripReviews).where(eq(tripReviews.personId, diver.id));
+    expect(review).toMatchObject({ comment: null, isPublished: false, publishedAt: null });
+
+    const [order] = await db.select().from(orders).where(eq(orders.personId, diver.id));
+    expect(order).toMatchObject({ hostedInvoiceUrl: null, invoicePdfUrl: null });
+    // Documented residual: Stripe's own pointers are NOT NULL and cannot be
+    // rewritten from here — see ADR 20260802-diver-data-erasure.
+    expect(order?.stripeCustomerId).toBe("cus_elena");
+
+    const [delivery] = await db
+      .select()
+      .from(notificationDeliveries)
+      .where(eq(notificationDeliveries.bookingId, bookingId));
+    expect(delivery).toMatchObject({ providerDetail: null, sendError: null });
+
+    // The history behind that latest state carries the same quoted address and
+    // is scrubbed with it; the provider's status *code* is not prose and stays.
+    const [attempt] = await db
+      .select()
+      .from(notificationDeliveryAttempts)
+      .where(eq(notificationDeliveryAttempts.bookingId, bookingId));
+    expect(attempt).toMatchObject({ sendError: null, sendErrorCode: "bounced" });
+
+    // The un-normalized PII blob: matched both by recipient address (case
+    // insensitively) and by the booking it names.
+    expect(
+      await db
+        .select()
+        .from(notificationSendQueue)
+        .where(eq(notificationSendQueue.shopId, shop.id)),
+    ).toHaveLength(0);
+
+    const [feed] = await db
+      .select()
+      .from(calendarFeeds)
+      .where(eq(calendarFeeds.personId, diver.id));
+    expect(feed?.revokedAt).toBeInstanceOf(Date);
+
+    const [capability] = await db
+      .select()
+      .from(bookingCapabilities)
+      .where(eq(bookingCapabilities.bookingId, bookingId));
+    expect(capability?.revokedAt).toBeInstanceOf(Date);
+
+    // `course_inquiries` carries no person_id at all, so it is swept on the
+    // contact details the diver themselves supplied — the only link there is.
+    const inquiries = await db
+      .select()
+      .from(courseInquiries)
+      .where(eq(courseInquiries.shopId, shop.id));
+    expect(inquiries).not.toHaveLength(0);
+    expect(
+      inquiries.filter(
+        (row) => row.email !== null || row.phone !== null || row.name !== null || row.message,
+      ),
+    ).toEqual([]);
+  });
+
+  it("erases a diver who has nothing but a name", async () => {
+    const { db, shop } = await seededShopContext();
+    const ownerId = await personIdByName(db, shop.id, "Dana Reyes");
+    const diver = await createDiver(db, { shopId: shop.id, fullName: "Bare Bernard" });
+    if (!diver) throw new Error("diver insert failed");
+
+    expect(
+      await anonymizeDiver(db, { shopId: shop.id, personId: diver.id, actorPersonId: ownerId }),
+    ).toEqual({ ok: true, alreadyAnonymized: false, queuedMediaDeletions: 0 });
+    const [person] = await db.select().from(people).where(eq(people.id, diver.id));
+    expect(person).toMatchObject({ fullName: ANONYMIZED_PERSON_NAME, email: null });
+    expect(person?.anonymizedAt).toBeInstanceOf(Date);
+  });
+
+  it("retires every blob it drops a URL for through the media-deletion ledger", async () => {
+    const { db, shop, diver, ownerId } = await erasableDiver();
+    const result = await anonymizeDiver(db, {
+      shopId: shop.id,
+      personId: diver.id,
+      actorPersonId: ownerId,
+    });
+    if (!result.ok) throw new Error(`erasure refused: ${result.reason}`);
+
+    const queued = await db
+      .select()
+      .from(mediaDeletionAttempts)
+      .where(eq(mediaDeletionAttempts.shopId, shop.id));
+    expect(queued.map((row) => row.url).sort()).toEqual(
+      [
+        `${BLOB}/cards/elena-deep.jpg`,
+        `${BLOB}/cards/elena-ow.jpg`,
+        `${BLOB}/recap/elena-1.jpg`,
+        `${BLOB}/waivers/elena-medical.pdf`,
+        `${BLOB}/waivers/elena-release.pdf`,
+      ].sort(),
+    );
+    expect(new Set(queued.map((row) => row.kind))).toEqual(
+      new Set(["certification_card", "recap_photo", "waiver_document"]),
+    );
+    expect(queued.every((row) => row.status === "pending")).toBe(true);
+    expect(result.queuedMediaDeletions).toBe(queued.length);
+  });
+
+  it("keeps the signed evidence skeleton byte-for-byte and re-seals it as valid under v2", async () => {
+    const { db, shop, diver, ownerId, waiverId } = await erasableDiver();
+    const [before] = await db.select().from(waiverRecords).where(eq(waiverRecords.id, waiverId));
+    if (!before) throw new Error("waiver record missing");
+    expect(verifyWaiverIntegrity(before)).toBe("valid");
+
+    const result = await anonymizeDiver(db, {
+      shopId: shop.id,
+      personId: diver.id,
+      actorPersonId: ownerId,
+    });
+    if (!result.ok) throw new Error(`erasure refused: ${result.reason}`);
+
+    const [after] = await db.select().from(waiverRecords).where(eq(waiverRecords.id, waiverId));
+    if (!after) throw new Error("waiver record vanished");
+
+    // The skeleton the ADR promises survives, unchanged.
+    expect(after.id).toBe(before.id);
+    expect(after.shopId).toBe(before.shopId);
+    expect(after.bookingId).toBe(before.bookingId);
+    expect(after.personId).toBe(before.personId);
+    expect(after.templateId).toBe(before.templateId);
+    expect(after.templateTitle).toBe(before.templateTitle);
+    expect(after.templateVersion).toBe(before.templateVersion);
+    expect(after.templateBody).toBe(before.templateBody);
+    expect(after.status).toBe(before.status);
+    expect(after.signatureMethod).toBe(before.signatureMethod);
+    expect(after.recordedByPersonId).toBe(before.recordedByPersonId);
+    expect(after.consentedAt?.getTime()).toBe(before.consentedAt?.getTime());
+    expect(after.signedAt?.getTime()).toBe(before.signedAt?.getTime());
+    expect(after.completedAt?.getTime()).toBe(before.completedAt?.getTime());
+    expect(after.createdAt.getTime()).toBe(before.createdAt.getTime());
+
+    // And it verifies — as erased, not as tampered.
+    expect(after.integrityVersion).toBe(2);
+    expect(after.integrityHash).not.toBe(before.integrityHash);
+    expect(verifyWaiverIntegrity(after)).toBe("valid");
+    expect(after.anonymizedByPersonId).toBe(ownerId);
+    expect(after.anonymizedAt).toBeInstanceOf(Date);
+
+    // The link is dead: the hash no longer matches any issued token, and the
+    // record has expired.
+    expect(after.tokenHash).not.toBe(before.tokenHash);
+    expect(after.expiresAt.getTime()).toBeLessThanOrEqual(Date.now());
+  });
+
+  it("is idempotent — a replayed call changes nothing", async () => {
+    const { db, shop, diver, ownerId, waiverId } = await erasableDiver();
+    const first = await anonymizeDiver(db, {
+      shopId: shop.id,
+      personId: diver.id,
+      actorPersonId: ownerId,
+    });
+    if (!first.ok) throw new Error("first erasure refused");
+    const [afterFirst] = await db
+      .select()
+      .from(waiverRecords)
+      .where(eq(waiverRecords.id, waiverId));
+    const [personAfterFirst] = await db.select().from(people).where(eq(people.id, diver.id));
+
+    const second = await anonymizeDiver(db, {
+      shopId: shop.id,
+      personId: diver.id,
+      actorPersonId: ownerId,
+    });
+    expect(second).toEqual({ ok: true, alreadyAnonymized: true, queuedMediaDeletions: 0 });
+
+    const [afterSecond] = await db
+      .select()
+      .from(waiverRecords)
+      .where(eq(waiverRecords.id, waiverId));
+    const [personAfterSecond] = await db.select().from(people).where(eq(people.id, diver.id));
+    expect(afterSecond).toEqual(afterFirst);
+    expect(personAfterSecond).toEqual(personAfterFirst);
+    // No second round of blob deletions was queued.
+    expect(
+      await db
+        .select()
+        .from(mediaDeletionAttempts)
+        .where(eq(mediaDeletionAttempts.shopId, shop.id)),
+    ).toHaveLength(first.queuedMediaDeletions);
+  });
+
+  it("cannot be restored, by the caller or by the database", async () => {
+    const { db, shop, diver, ownerId } = await erasableDiver();
+    const result = await anonymizeDiver(db, {
+      shopId: shop.id,
+      personId: diver.id,
+      actorPersonId: ownerId,
+    });
+    if (!result.ok) throw new Error("erasure refused");
+
+    expect(await restoreDiver(db, shop.id, diver.id)).toBe(false);
+    // Structural, not conventional: the roster's undo affordance calls
+    // restoreDiver, but a future caller that skips it is refused anyway.
+    await expect(
+      db.update(people).set({ deletedAt: null }).where(eq(people.id, diver.id)),
+    ).rejects.toThrow();
+    const [person] = await db.select().from(people).where(eq(people.id, diver.id));
+    expect(person?.deletedAt).toBeInstanceOf(Date);
+  });
+
+  it("refuses anyone who is not a live owner of this shop", async () => {
+    const { db, shop, diver } = await erasableDiver();
+    // A manager may remove a diver; only an owner may erase one.
+    const managerOnly = await createDiver(db, { shopId: shop.id, fullName: "Manager Mo" });
+    if (!managerOnly) throw new Error("staff insert failed");
+    await db.insert(personRoles).values({ personId: managerOnly.id, role: "manager" });
+    await db
+      .insert(userAccounts)
+      .values({ personId: managerOnly.id, email: "mo@example.com", hashedPassword: "x" });
+    expect(
+      await anonymizeDiver(db, {
+        shopId: shop.id,
+        personId: diver.id,
+        actorPersonId: managerOnly.id,
+      }),
+    ).toEqual({ ok: false, reason: "not_authorized" });
+
+    // The captain is staff, but not an owner.
+    const captainId = await personIdByName(db, shop.id, "Sal Moretti");
+    expect(
+      await anonymizeDiver(db, { shopId: shop.id, personId: diver.id, actorPersonId: captainId }),
+    ).toEqual({ ok: false, reason: "not_authorized" });
+
+    const [untouched] = await db.select().from(people).where(eq(people.id, diver.id));
+    expect(untouched?.fullName).toBe("Erasure Elena");
+    expect(untouched?.anonymizedAt).toBeNull();
+  });
+
+  it("refuses to erase a staff member or the acting owner themselves", async () => {
+    const { db, shop, ownerId, captainId } = await erasableDiver();
+    expect(
+      await anonymizeDiver(db, { shopId: shop.id, personId: captainId, actorPersonId: ownerId }),
+    ).toEqual({ ok: false, reason: "staff_member" });
+    expect(
+      await anonymizeDiver(db, { shopId: shop.id, personId: ownerId, actorPersonId: ownerId }),
+    ).toEqual({ ok: false, reason: "self" });
+  });
+
+  it("is tenant-scoped and cannot reach another shop's diver", async () => {
+    const { db, shop, ownerId } = await erasableDiver();
+    const [rival] = await db
+      .insert(shops)
+      .values({ name: "Rival Reef", slug: "rival-reef-erasure", timezone: "UTC" })
+      .returning();
+    if (!rival) throw new Error("rival shop insert failed");
+    const rivalDiver = await createDiver(db, { shopId: rival.id, fullName: "Rival Rae" });
+    if (!rivalDiver) throw new Error("rival diver insert failed");
+
+    // The owner's own shop id is what scopes the write — the person id alone
+    // never is.
+    expect(
+      await anonymizeDiver(db, {
+        shopId: shop.id,
+        personId: rivalDiver.id,
+        actorPersonId: ownerId,
+      }),
+    ).toEqual({ ok: false, reason: "not_found" });
+    // And naming the rival's shop does not lend the owner authority there.
+    expect(
+      await anonymizeDiver(db, {
+        shopId: rival.id,
+        personId: rivalDiver.id,
+        actorPersonId: ownerId,
+      }),
+    ).toEqual({ ok: false, reason: "not_authorized" });
+
+    const [rae] = await db.select().from(people).where(eq(people.id, rivalDiver.id));
+    expect(rae?.fullName).toBe("Rival Rae");
+    expect(rae?.anonymizedAt).toBeNull();
+  });
+
+  it("leaves the shop's other divers entirely alone", async () => {
+    const { db, shop, diver, ownerId } = await erasableDiver();
+    const bystander = await createDiver(db, {
+      shopId: shop.id,
+      fullName: "Bystander Bea",
+      email: "bea@example.com",
+      phone: "+1 305 555 0199",
+    });
+    if (!bystander) throw new Error("bystander insert failed");
+    await db.insert(certifications).values({
+      shopId: shop.id,
+      personId: bystander.id,
+      agency: "padi",
+      level: "open_water",
+      identifier: "PADI-BEA-1",
+    });
+
+    const result = await anonymizeDiver(db, {
+      shopId: shop.id,
+      personId: diver.id,
+      actorPersonId: ownerId,
+    });
+    if (!result.ok) throw new Error("erasure refused");
+
+    const [bea] = await db.select().from(people).where(eq(people.id, bystander.id));
+    expect(bea).toMatchObject({ fullName: "Bystander Bea", email: "bea@example.com" });
+    const [beaCard] = await db
+      .select()
+      .from(certifications)
+      .where(eq(certifications.personId, bystander.id));
+    expect(beaCard).toMatchObject({ identifier: "PADI-BEA-1", deletedAt: null });
+  });
+
+  /**
+   * `booking_checkouts.customer_email` is un-normalized PII with no person_id,
+   * and erasure cancels no booking and settles no payment — so a checkout left
+   * holding the address stays a live candidate for `sendDueCheckoutRecoveries`
+   * and the next cron tick mails the address the shop said it destroyed
+   * (asserted end to end in src/db/checkout-recovery.test.ts).
+   *
+   * The column holds the *submitter's* address, so the party case has two
+   * directions and both are pinned here.
+   */
+  describe("the checkout's copy of the address", () => {
+    async function insertCheckout(
+      db: AppDb,
+      input: {
+        shopId: string;
+        tripId: string;
+        sessionId: string;
+        customerEmail: string;
+        bookingIds: string[];
+      },
+    ) {
+      const [row] = await db
+        .insert(bookingCheckouts)
+        .values({
+          shopId: input.shopId,
+          tripId: input.tripId,
+          stripeAccountId: "acct_test",
+          stripeSessionId: input.sessionId,
+          checkoutUrl: `https://checkout.stripe.com/c/pay/${input.sessionId}`,
+          customerEmail: input.customerEmail,
+          amountPerDiverCents: 18_000,
+          totalCents: 18_000 * Math.max(input.bookingIds.length, 1),
+        })
+        .returning();
+      if (!row) throw new Error("checkout insert failed");
+      if (input.bookingIds.length > 0) {
+        await db.insert(bookingCheckoutBookings).values(
+          input.bookingIds.map((bookingId) => ({
+            shopId: input.shopId,
+            checkoutId: row.id,
+            bookingId,
+          })),
+        );
+      }
+      return row;
+    }
+
+    /** Elena, plus a second diver holding their own seat on the same trip. */
+    async function withCompanion() {
+      const context = await erasableDiver();
+      const companion = await createDiver(context.db, {
+        shopId: context.shop.id,
+        fullName: "Companion Cass",
+        email: "cass@example.com",
+      });
+      if (!companion) throw new Error("companion insert failed");
+      const booked = await createBooking(context.db, {
+        actor: "staff",
+        shopId: context.shop.id,
+        tripId: context.trip.id,
+        personId: companion.id,
+      });
+      if (!booked.ok) throw new Error(`companion booking failed: ${booked.reason}`);
+      return { ...context, companion, companionBookingId: booked.bookingId };
+    }
+
+    async function emailOn(db: AppDb, checkoutId: string) {
+      const [row] = await db
+        .select()
+        .from(bookingCheckouts)
+        .where(eq(bookingCheckouts.id, checkoutId));
+      return row?.customerEmail ?? null;
+    }
+
+    it("wipes the erased diver's own address, including off a party they hold no seat on", async () => {
+      const { db, shop, diver, ownerId, trip, bookingId, companionBookingId } =
+        await withCompanion();
+
+      const solo = await insertCheckout(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        sessionId: "cs_elena_solo",
+        customerEmail: "elena@example.com",
+        bookingIds: [bookingId],
+      });
+      // Elena paid for a friend and took no seat herself: no booking of hers is
+      // on this checkout at all, so a booking-join sweep cannot see it — the
+      // address on it is still hers.
+      const paidForAFriend = await insertCheckout(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        sessionId: "cs_elena_for_cass",
+        // Stored case-insensitively, as `startBookingCheckout` received it.
+        customerEmail: "ELENA@example.com",
+        bookingIds: [companionBookingId],
+      });
+
+      const result = await anonymizeDiver(db, {
+        shopId: shop.id,
+        personId: diver.id,
+        actorPersonId: ownerId,
+      });
+      if (!result.ok) throw new Error(`erasure refused: ${result.reason}`);
+
+      expect(await emailOn(db, solo.id)).toBeNull();
+      expect(await emailOn(db, paidForAFriend.id)).toBeNull();
+    });
+
+    it("wipes an address that is no longer on the person row when the checkout is theirs alone", async () => {
+      const { db, shop, diver, ownerId, trip, bookingId } = await erasableDiver();
+      // Elena checked out under an older address and changed it afterwards, so
+      // the address sweep cannot match it. The checkout covers nothing but her
+      // own seat, so nobody else's address can be the one sitting here and
+      // nobody else's payment link is lost with it.
+      const stale = await insertCheckout(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        sessionId: "cs_elena_stale",
+        customerEmail: "elena-old-address@example.com",
+        bookingIds: [bookingId],
+      });
+
+      const result = await anonymizeDiver(db, {
+        shopId: shop.id,
+        personId: diver.id,
+        actorPersonId: ownerId,
+      });
+      if (!result.ok) throw new Error(`erasure refused: ${result.reason}`);
+
+      expect(await emailOn(db, stale.id)).toBeNull();
+    });
+
+    it("leaves a party lead's own address on a checkout covering divers who were not erased", async () => {
+      const { db, shop, diver, ownerId, trip, bookingId, companionBookingId } =
+        await withCompanion();
+      // Cass led this party and Elena was one of the seats on it. The address
+      // is Cass's — a live third party who never asked to be forgotten — and
+      // blanking it would destroy her contact detail and take the rest of the
+      // party's payment link with it.
+      const ledByCompanion = await insertCheckout(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        sessionId: "cs_cass_party",
+        customerEmail: "cass@example.com",
+        bookingIds: [bookingId, companionBookingId],
+      });
+
+      const result = await anonymizeDiver(db, {
+        shopId: shop.id,
+        personId: diver.id,
+        actorPersonId: ownerId,
+      });
+      if (!result.ok) throw new Error(`erasure refused: ${result.reason}`);
+
+      expect(await emailOn(db, ledByCompanion.id)).toBe("cass@example.com");
+    });
+
+    it("wipes the erased diver's address off a party they led, even one covering others", async () => {
+      const { db, shop, diver, ownerId, trip, bookingId, companionBookingId } =
+        await withCompanion();
+      // The mirror of the case above: the address is Elena's, so it goes even
+      // though Cass loses the hosted link — the shop can quote her a fresh one.
+      const ledByElena = await insertCheckout(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        sessionId: "cs_elena_party",
+        customerEmail: "elena@example.com",
+        bookingIds: [bookingId, companionBookingId],
+      });
+
+      const result = await anonymizeDiver(db, {
+        shopId: shop.id,
+        personId: diver.id,
+        actorPersonId: ownerId,
+      });
+      if (!result.ok) throw new Error(`erasure refused: ${result.reason}`);
+
+      expect(await emailOn(db, ledByElena.id)).toBeNull();
+    });
+  });
+
+  /**
+   * The name sweep matches against every message in the shop, so its bound is
+   * the whole safety property. A substring match built from a two-character
+   * name (`personSchema.fullName` allows one) reaches inside `Dana`,
+   * `manifest` and `changed` — and this runs inside the erasure transaction,
+   * with no way back.
+   */
+  describe("the activity-log name match", () => {
+    async function shopWithHistory(fullName: string, messages: string[]) {
+      const { db, shop } = await seededShopContext();
+      const ownerId = await personIdByName(db, shop.id, "Dana Reyes");
+      const captainId = await personIdByName(db, shop.id, "Sal Moretti");
+      const diver = await createDiver(db, { shopId: shop.id, fullName });
+      if (!diver) throw new Error("diver insert failed");
+      await db.insert(activityEvents).values(
+        messages.map((message) => ({
+          shopId: shop.id,
+          bookingId: null,
+          // Attributed to staff, never to the erased diver — the actor sweep is
+          // exact and would redact these for reasons that have nothing to do
+          // with the name match under test.
+          actorPersonId: captainId,
+          message,
+          occurredAt: erasureNow,
+        })),
+      );
+      return { db, shop, diver, ownerId };
+    }
+
+    async function messagesIn(db: AppDb, shopId: string) {
+      const rows = await db
+        .select({ message: activityEvents.message })
+        .from(activityEvents)
+        .where(eq(activityEvents.shopId, shopId));
+      return rows.map((row) => row.message);
+    }
+
+    it("does not let a two-character name redact the shop's unrelated history", async () => {
+      const history = [
+        "Dana Reyes moved the manifest for the Alligator Reef charter",
+        "Sal Moretti changed the roll call and credited a deposit",
+        "Priya Sharma boarded early",
+      ];
+      const { db, shop, diver, ownerId } = await shopWithHistory("Al", history);
+
+      const result = await anonymizeDiver(db, {
+        shopId: shop.id,
+        personId: diver.id,
+        actorPersonId: ownerId,
+      });
+      if (!result.ok) throw new Error(`erasure refused: ${result.reason}`);
+
+      // Every one of these contains `al` as a substring. Not one is touched.
+      const after = await messagesIn(db, shop.id);
+      for (const message of history) expect(after).toContain(message);
+      expect(after).not.toContain(REDACTED_TEXT);
+    });
+
+    it("matches a name at whole-word boundaries only", async () => {
+      const { db, shop, diver, ownerId } = await shopWithHistory("Ana", [
+        "Dana Reyes updated the manifest",
+        "Sal Moretti added a private note about Ana",
+      ]);
+
+      const result = await anonymizeDiver(db, {
+        shopId: shop.id,
+        personId: diver.id,
+        actorPersonId: ownerId,
+      });
+      if (!result.ok) throw new Error(`erasure refused: ${result.reason}`);
+
+      const after = await messagesIn(db, shop.id);
+      // The diver-scoped note (null booking_id, no person link) is reached…
+      expect(after).toContain(REDACTED_TEXT);
+      expect(after.some((message) => message.includes("about Ana"))).toBe(false);
+      // …and `Dana` is not `Ana`.
+      expect(after).toContain("Dana Reyes updated the manifest");
+    });
   });
 });

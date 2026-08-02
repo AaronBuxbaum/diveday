@@ -118,24 +118,37 @@ new domain concept, define it here in the same PR.
   — the same card, two independent gates (see Operations, below).
 - **DSD (Discover Scuba Diving)** — a supervised *experience* for uncertified people. Not a
   cert. Minimum age 10; maximum depth 6 m/20 ft confined water, 12 m/40 ft open water. Always
-  dives with an instructor, at its own, tighter in-water ratio (see **DSD in-water ratio**, not the
-  Open Water training figure below — the two were conflated until HD-6, 2026-08-02).
-- **Entry-level in-water ratio** — PADI's published maximum for Open Water Diver training dives:
-  **8 students per instructor**, extendable by **2 per certified assistant** (a Divemaster, in
-  DiveDay's role model) to a ceiling of **12 per instructor**. Enforced as a booking gate
-  (`src/lib/course-ratios.ts`, H-08) on any Open Water training session whose course carries no
-  `minimum_certification_level`. Continuing-education courses (AOW, Rescue, specialty) already gate
-  on a verified card and PADI does not publish a comparably strict numeric ratio for them, so they
-  are not ratio-capped.
-- **DSD in-water ratio** — PADI's published maximum for a Discover Scuba Diving session, from the
-  Instructor Manual (HD-6, sourced 2026-08-02): **4 students per instructor in confined/pool
-  water**, tightening to **2 students per instructor for the open-water dive**. No published
-  assistant-bonus credit, unlike the Open Water figure above. DiveDay's trip model has no
-  confined-water session type, so only the tighter open-water figure (2:1) is enforced as a booking
-  gate (`src/lib/course-ratios.ts`'s `entryLevelCourseCapacity(…, isIntroCourse)`, scoped by
-  `courses.isIntroCourse`); the confined-water figure is recorded here as reference. See
-  [20260802-dsd-instructor-manual-ratio](../architecture/decisions/20260802-dsd-instructor-manual-ratio.md).
-  Before this, DSD was mistakenly held to the looser 8→12:1 Open Water figure.
+  dives with an instructor, at the **intro-session ratio** (below) — tighter than Open Water
+  training, because a DSD participant has had no prior water time at all.
+- **Intro-session in-water ratio** — the cap on a no-certification-required taster session
+  (DSD/Try Scuba — `courses.is_intro_course`): PADI's published **Discover Scuba** figure from the
+  Instructor Manual (HD-6, sourced 2026-08-02) — **4 students per instructor in confined/pool
+  water, tightening to 2 students per instructor for the open-water dive**, with **no assistant
+  bonus** (PADI publishes none for DSD). DiveDay's trip model has no confined-water session type —
+  a trip is one dated open-water outing — so **only the tighter 2:1 open-water figure is enforced**
+  as a booking gate (`INTRO_COURSE_RATIO` in `src/lib/course-ratios.ts`, derived from `DSD_RATIO`);
+  the confined-water 4:1 number is recorded for reference, unenforced. A certified assistant aboard
+  buys an intro session no extra seats; only another instructor does.
+  Applies to **every agency** — unlike the entry-level ratio below, the *reason* this figure is
+  tighter (participants with no prior water time) does not depend on whose logo is on the course, so
+  an SSI Try Scuba and a NAUI intro session take the same cap. An intro session stays gated **even
+  if a `minimum_certification_level` was typed onto its course row**: nobody on a DSD holds a card,
+  so a stray value must not switch the tightest cap in the product off.
+  See `src/lib/course-ratios.ts`,
+  [20260802-dsd-instructor-manual-ratio](../architecture/decisions/20260802-dsd-instructor-manual-ratio.md),
+  and [20260724-course-admission-standards](../architecture/decisions/20260724-course-admission-standards.md).
+  Before HD-6 resolved, DSD was mistakenly held to the looser 8→12:1 Open Water figure.
+- **Entry-level in-water ratio** — PADI's published maximum for **Open Water Diver training
+  dives**: **8 students per instructor**, extendable by **2 per certified assistant** (a
+  Divemaster, in DiveDay's role model) to a ceiling of **12 per instructor**. Enforced as a
+  booking gate (`src/lib/course-ratios.ts`, H-08) on a **PADI** course session that carries no
+  `minimum_certification_level` **and is not an intro course** — intro sessions take the tighter,
+  agency-independent DSD rule above. The PADI scoping belongs to this figure only: 8/+2/12 is
+  PADI's published number, and applying it to an SSI or NAUI course would be a
+  wrong-but-confident safety control. Continuing-education courses (AOW, Rescue, specialty) already gate on a verified
+  card and PADI does not publish a comparably strict numeric ratio for them, so they are not
+  ratio-capped. `courses.agency` is shop-set free text, so the PADI check is case- and
+  whitespace-insensitive: a course typed `"PADI"` is gated exactly like `"padi"`.
 - **Refresher / ReActivate** — short course for certified divers returning after inactivity.
 
 ## Operations
@@ -252,7 +265,28 @@ new domain concept, define it here in the same PR.
   crew), with emergency contacts. A legal/safety document — in US waters, coast guard
   regulations apply. **Roll call** happens before departure and *after every dive*; a diver
   left behind is the industry's nightmare scenario. Manifests must work offline and print
-  cleanly.
+  cleanly. An after-dive head count that is not closed is chased, not merely displayed: Today
+  raises it and the schedule board badges the departure. It comes in four distinct kinds, which are
+  deliberately never worded or ranked alike — see **unaccounted for** below.
+- **Unaccounted for** — the four ways a head count can be open, in descending severity. A diver is
+  accounted for at an after-dive checkpoint **only if their latest live result there is
+  "boarded"**; nothing else closes that count.
+  1. **Missing diver** — a crew member explicitly marked someone *not back aboard* at an after-dive
+     checkpoint. A human said a diver did not return to the boat: the loudest row the app has.
+  2. **Unfinished head count** — a diver who boarded at departure has no result at an after-dive
+     checkpoint (a `cleared` undo counts as no result). Nobody said they are missing; nobody said
+     they are aboard.
+  3. **Unfinished dock count** — the departure count was never finished. The boat is home and nobody
+     was ever unaccounted for in the water: this is paperwork, and it is toned and ranked as such.
+  4. **No roll call** — the trip has no roll-call events at all. A shop not using the feature, not a
+     lost diver — but never read as an all-clear either.
+  Kinds 1 and 2 are the ones that can mean a person is still in the water, so they also raise on a
+  trip *still underway* whose checkpoint was started and abandoned (at least one result and at least
+  one diver awaiting), and they never age to nothing: past the 48-hour dock-work window they drop a
+  band and say plainly that the count was never closed. Kinds 3 and 4 are chased for 48 hours only.
+  The population an after-dive count is counting is **who boarded**, never who bought a seat — a
+  diver who never showed and was never tapped is an unfinished *dock* count, not somebody left in
+  the water.
 - **Emergency contact** — a name *and* a reachable phone number the crew can call for a diver in
   an incident. It is captured from the diver (the waiver flow, and the `/ready` page), never
   invented, and it is **only "on file" when both the name and the phone are present** — a name with
@@ -268,13 +302,30 @@ new domain concept, define it here in the same PR.
   being typed is also mirrored to the crew's own device and cleared once it syncs, so a dropped
   connection never loses it; that device draft is transient and unencrypted — separate from, and not
   protected like, the encrypted **offline manifest snapshot**.
+- **Crew attestation** — a named staff member's statement of how many crew are aboard at one
+  roll-call checkpoint, out of how many the trip has assigned ("crew aboard: 2 of 2"). Crew hold no
+  booking, so they cannot be roll-call *subjects* — a roll-call event's only subject is a booking —
+  and before this existed a checkpoint could read "roll call complete" with a divemaster still in
+  the water. Append-only like a roll-call event: a later count supersedes an earlier one, never
+  rewrites it. It is an interim count, not a per-person crew roll call, which needs a per-trip crew
+  role first (see [ADR 20260802-crew-roll-call-attestation](../architecture/decisions/20260802-crew-roll-call-attestation.md)).
+  A trip with **no crew assigned is not exempt**: "0 of 0" is still something a human says, because
+  an empty assignment list is a scheduling gap, not evidence nobody else was aboard. Recorded on the
+  live manifest only; the offline copy reads the saved count and keeps the checkpoint open when
+  there isn't one.
 - **Roll-call checkpoint** — one independent head count: before departure or after a numbered dive.
   A two-tank charter has three checkpoints. Each checkpoint is re-verified against the bodies on the
-  boat; a **boarded** result never carries into the next. The one deliberate exception is
-  **not boarded**: once a diver is marked not boarded, later checkpoints default to not boarded
+  boat; a **boarded** result never carries into the next. **"Not boarded" means two opposite
+  things depending on where it is recorded**, and they must never be treated — or worded — alike:
+  at **departure** it means *never left the dock*, which is benign and genuinely accounted for; at
+  an **after-dive** checkpoint it means *did not return to the boat*, which is the missing-diver
+  event itself and opens the count rather than closing it. Only the departure meaning carries
+  forward: once a diver is marked not boarded at the dock, later checkpoints default to not boarded
   (shown as "carried forward") until staff explicitly re-board them — a diver who left the boat is
   presumed still ashore rather than resetting to awaiting. The default is always flagged as carried,
-  can never imply "present," and staff can override it at any checkpoint.
+  can never imply "present," and staff can override it at any checkpoint. A checkpoint is
+  **complete** only when every booked diver has a result *and* the **crew attestation** covers every
+  assigned crew member — divers alone were never the whole boat.
 - **Offline manifest snapshot** — a time-stamped, encrypted device copy of the complete derived
   manifest and every checkpoint, saved and refreshed automatically while the device has signal
   (staff can also force an immediate "Refresh now"). It is safety evidence as saved, never an
@@ -380,6 +431,14 @@ new domain concept, define it here in the same PR.
   never from the return URL — and cascades into the booking's payment gate like any other payment.
   An abandoned checkout costs nothing: the booking simply stays unpaid, exactly as if the shop had
   no checkout. See [20260721-checkout-at-booking](../architecture/decisions/20260721-checkout-at-booking.md).
+- **Settled total** — what a completed checkout *actually collected*, as Stripe itself reported it
+  (`booking_checkouts.settled_total_cents`, copied from the session's `amount_total`), as opposed to
+  the **asked total** (`total_cents`) DiveDay quoted. The two differ whenever Stripe applied a promo
+  code. Only the settled figure is money the shop received, so it is what a refund returns and what
+  a revenue report counts; it is split back across a party's bookings in proportion to what each
+  diver was asked for (trip fee plus their own gear), in whole minor units that sum to the total
+  exactly. Null on a historical row or a completion Stripe reported no total for — callers then fall
+  back to the asked amounts rather than reading null as "collected nothing."
 - **Deposit** — an optional per-diver amount (`trips.deposit_cents`) a shop may take at booking
   checkout instead of the full fare. Charged now and labelled a deposit on the Stripe page; the
   booking becomes **deposit paid** (which clears the readiness payment gate) with the balance still
@@ -479,8 +538,10 @@ new domain concept, define it here in the same PR.
   [20260723-owner-reporting](../architecture/decisions/20260723-owner-reporting.md).
 - **Fill rate** — seats booked ÷ seats offered. On a report it is the month's active bookings over
   the sum of its trips' capacities; on one trip it is that trip's active bookings over its capacity,
-  capped at fully booked. "Active" excludes cancellations and no-shows — the same set that appears on
-  a manifest.
+  capped at fully booked. "Active" excludes cancellations and no-shows. That is **not** the manifest
+  roster: the manifest lists every non-cancelled booking, no-shows included, because a no-show is a
+  name the crew has to account for at roll call (`getTripRoster`, `src/db/trips.ts`). Fill rate is a
+  commercial measure of seats that earned; the manifest is a head count of who was expected aboard.
 - **Waiver completion** — the share of a month's active bookings that carry a signed
   (completed, non-superseded) **waiver record**. The reporting counterpart of the per-trip roster's
   waiver gate.
@@ -638,6 +699,25 @@ new domain concept, define it here in the same PR.
   soft-delete window is accepted as-is; it fails closed to a blank record). See H-13 in
   [human-decisions.md](human-decisions.md) and
   [20260723-person-email-uniqueness](../architecture/decisions/20260723-person-email-uniqueness.md).
+- **Remove vs. erase (a diver)** — two different operations, deliberately not the same button.
+  **Removing** a diver is the reversible archive action every entity has
+  ([20260719-crud-archive-semantics](../architecture/decisions/20260719-crud-archive-semantics.md)):
+  `people.deleted_at` is set, they drop off the active lists, and *nothing about the record is
+  destroyed* — an owner or manager can undo it. **Erasing** a diver is the one-way answer to "delete
+  what you hold about me": their name, contact details, date of birth, emergency contact, card
+  numbers and card photographs, medical answers, sizes, notes, review comments, and shared photos
+  are destroyed across every table, and `people.anonymized_at` is stamped. What survives is the
+  **evidence skeleton** below. Erasure is owner-only, requires typing the diver's name, cannot be
+  undone (a database check constraint keeps an erased record removed), and always removes them too.
+  See [20260802-diver-data-erasure](../architecture/decisions/20260802-diver-data-erasure.md).
+- **Evidence skeleton** — what is deliberately left of a signed release after its diver is erased:
+  that a release was signed, against which template title/version/body, at what moment, by what
+  signature method, on which booking and trip, and which staff member attested it if any. The
+  signer's name and their medical questionnaire are gone. The skeleton is re-sealed under
+  **waiver integrity version 2** so it verifies as *erased* rather than reading as *tampered*;
+  version 1 is the seal over an intact signed release, which covers the signer's name and medical
+  answers and therefore cannot survive erasure. The seal proves the skeleton has not drifted since
+  erasure — it says nothing about what was erased, which no one can verify afterwards.
 - **Buddy-group preference** — an optional, non-sensitive note a diver adds while booking about
   pace, photography, or friends they hope to stay with. It helps the crew plan groups but is never
   a promise and never carries medical or safety-clearance information.

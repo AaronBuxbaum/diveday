@@ -43,7 +43,16 @@ const payload: OfflineManifestPayload = {
           rollCall: undefined,
         },
       ],
-      summary: { totalDivers: 1, ready: 1, blocked: 0, boarded: 0, notBoarded: 0, awaiting: 1 },
+      summary: {
+        totalDivers: 1,
+        ready: 1,
+        blocked: 0,
+        boarded: 0,
+        notBoarded: 0,
+        notBackAboard: 0,
+        awaiting: 1,
+        unaccountedFor: 1,
+      },
     },
   ],
 };

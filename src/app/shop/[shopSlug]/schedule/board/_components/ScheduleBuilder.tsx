@@ -35,6 +35,16 @@ export type BuilderTrip = {
    * page.
    */
   priceCents: number | null;
+  /**
+   * Set only on a departure that is already back at the dock with an after-dive
+   * head count still open (DOM-H3) — the number that says whether everybody
+   * came out of the water. Those rows are the one thing on this board that
+   * looks backwards: a returned trip is otherwise never listed here, and it is
+   * carried in for exactly as long as the count stays open. `diveNumber` is
+   * the earliest dive still unclosed, `uncounted` how many divers on that
+   * boat's list have no result recorded at it.
+   */
+  rollCallOpen: { diveNumber: number; uncounted: number } | null;
 };
 
 export type BuilderDay = {
@@ -80,6 +90,9 @@ export type BuilderCopy = {
   crewNobodyYet: string;
   noPriceSet: string;
   noPriceSetAria: string;
+  rollCallOpen: string;
+  rollCallOpenAria: string;
+  rollCallOpenNote: string;
   move: string;
   moveAria: string;
   copy: string;
@@ -455,6 +468,16 @@ export function ScheduleBuilder({
                             <span className="font-medium text-warning">{copy.crewNobodyYet}</span>
                           )}
                         </p>
+                        {/* A returned departure is otherwise the only row here
+                            that isn't upcoming, so it says why it is still on
+                            the board rather than looking like a stale entry. */}
+                        {trip.rollCallOpen ? (
+                          <p className="mt-1 text-sm font-medium text-danger">
+                            {fill(copy.rollCallOpenNote, {
+                              dive: trip.rollCallOpen.diveNumber,
+                            })}
+                          </p>
+                        ) : null}
                       </div>
                       {/* A sold-out boat is a win worth noticing, not a quiet
                           state (design/principles.md #3) — "success" stands
@@ -465,6 +488,24 @@ export function ScheduleBuilder({
                       <Badge tone={full ? "success" : "primary"} tabularNums>
                         {trip.booked}/{trip.capacity}
                       </Badge>
+                      {/* The loudest thing this board can say (DOM-H3): the
+                          boat is back and somebody on its list was never
+                          counted. "danger" carries an aria-hidden ✕ of its
+                          own, so hue is never the only signal, and the whole
+                          badge is a link straight to the open checkpoint. */}
+                      {trip.rollCallOpen ? (
+                        <Link
+                          href={`/shop/${shopSlug}/trips/${trip.id}/manifest?checkpoint=after_dive_${trip.rollCallOpen.diveNumber}`}
+                          aria-label={fill(copy.rollCallOpenAria, {
+                            ref,
+                            dive: trip.rollCallOpen.diveNumber,
+                          })}
+                        >
+                          <Badge tone="danger">
+                            {fill(copy.rollCallOpen, { count: trip.rollCallOpen.uncounted })}
+                          </Badge>
+                        </Link>
+                      ) : null}
                       {trip.priceCents === null ? (
                         <Link
                           href={`/shop/${shopSlug}/trips/${trip.id}#details`}
@@ -473,7 +514,12 @@ export function ScheduleBuilder({
                           <Badge tone="warning">{copy.noPriceSet}</Badge>
                         </Link>
                       ) : null}
-                      {canConfigure ? (
+                      {/* Move/copy/remove are all refused by `src/db/trips.ts`
+                          for a departure that has already sailed, and a
+                          returned row is only here to have its head count
+                          closed — so it gets the badge and nothing that would
+                          bounce. */}
+                      {canConfigure && !trip.rollCallOpen ? (
                         <div className="flex shrink-0 flex-wrap items-center gap-1">
                           <button
                             type="button"

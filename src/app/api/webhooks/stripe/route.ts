@@ -17,6 +17,11 @@ const invoiceObjectSchema = z.object({
 const checkoutSessionObjectSchema = z.object({
   id: z.string().min(1),
   payment_status: z.string().optional(),
+  // What the session actually settled for, after any discount Stripe applied.
+  // Optional/nullable so a fixture or an unusual payload without it still
+  // parses — the completion then falls back to the amounts DiveDay asked for
+  // rather than recording nothing collected.
+  amount_total: z.number().int().nullable().optional(),
 });
 
 const accountObjectSchema = z.object({
@@ -158,7 +163,12 @@ export async function POST(request: Request) {
         // live in separate tables (docs ADR 20260726-post-trip-tipping); a
         // session id belongs to at most one, so try the booking-payment path
         // first and only fall back to tips when it finds nothing to mark.
-        const checkout = await markCheckoutPaidBySessionId(db, session.data.id, event.account);
+        const checkout = await markCheckoutPaidBySessionId(
+          db,
+          session.data.id,
+          event.account,
+          session.data.amount_total,
+        );
         if (checkout) {
           logOutcome("checkout_paid");
         } else {
@@ -175,7 +185,12 @@ export async function POST(request: Request) {
     case "checkout.session.async_payment_succeeded": {
       const session = checkoutSessionObjectSchema.safeParse(event.data.object);
       if (session.success) {
-        const checkout = await markCheckoutPaidBySessionId(db, session.data.id, event.account);
+        const checkout = await markCheckoutPaidBySessionId(
+          db,
+          session.data.id,
+          event.account,
+          session.data.amount_total,
+        );
         if (checkout) {
           logOutcome("checkout_paid");
         } else {

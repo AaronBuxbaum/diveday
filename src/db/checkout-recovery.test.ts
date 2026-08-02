@@ -1,15 +1,16 @@
 // @vitest-environment node
 
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import type { Notification, NotificationDelivery, NotificationProvider } from "@/lib/notifications";
 import type { CheckoutProvider, CreateCheckoutSessionResult } from "@/lib/payments/checkout";
 import { seededShopContext } from "@/test/db";
+import { anonymizeDiver } from "./anonymize";
 import { cancelBooking, createBookingParty } from "./bookings";
 import { sendDueCheckoutRecoveries } from "./checkout-recovery";
 import { startBookingCheckout } from "./checkouts";
 import { setBookingPayment } from "./payments";
-import { bookingCheckouts, bookings, trips } from "./schema";
+import { bookingCheckouts, bookings, people, trips } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { upcomingTripsWithCounts, updateTrip } from "./trips";
 
@@ -458,5 +459,52 @@ describe("sendDueCheckoutRecoveries", () => {
       .where(eq(bookingCheckouts.id, checkoutId));
     expect(row?.abandonedRecoverySentAt).toBeNull();
     expect(row?.status).toBe("expired");
+  });
+
+  /**
+   * Erasure (ADR 20260802-diver-data-erasure) cancels no booking and settles
+   * no payment, so an erased diver with an open, unexpired checkout on a
+   * future trip trips none of the disqualifiers above. Before
+   * `booking_checkouts.customer_email` was part of the scrub, the next daily
+   * tick mailed the address the shop had just told them it destroyed.
+   */
+  it("never emails a diver whose record has been erased", async () => {
+    const { db, shop, checkoutId } = await pendingCheckoutContext(3);
+    const [owner] = await db
+      .select({ id: people.id })
+      .from(people)
+      .where(and(eq(people.shopId, shop.id), eq(people.fullName, "Dana Reyes")));
+    const [casey] = await db
+      .select({ id: people.id })
+      .from(people)
+      .where(and(eq(people.shopId, shop.id), eq(people.fullName, "Casey Cart")));
+    if (!owner || !casey) throw new Error("fixture people missing");
+
+    const erased = await anonymizeDiver(db, {
+      shopId: shop.id,
+      personId: casey.id,
+      actorPersonId: owner.id,
+    });
+    if (!erased.ok) throw new Error(`erasure refused: ${erased.reason}`);
+
+    const email = fakeEmail();
+    const summary = await sendDueCheckoutRecoveries(db, {
+      now: NOW,
+      emailProvider: email.provider,
+      checkoutProvider: fakeCheckoutProvider(stillOpen),
+    });
+
+    // The checkout is still a live candidate — the scan finds it, reconciles
+    // it with Stripe, and has nowhere to send it.
+    expect(summary.scanned).toBe(1);
+    expect(summary.sent).toBe(0);
+    expect(email.sent).toHaveLength(0);
+
+    const [row] = await db
+      .select()
+      .from(bookingCheckouts)
+      .where(eq(bookingCheckouts.id, checkoutId));
+    expect(row?.customerEmail).toBeNull();
+    expect(row?.abandonedRecoverySentAt).toBeNull();
   });
 });

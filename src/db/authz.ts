@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm";
 import {
   canConfigureTrips,
   canDeleteDiver,
+  canErasePersonalData,
   canManageMessagingSettings,
   canManagePaymentSettings,
   canManageStaffAccounts,
@@ -76,6 +77,15 @@ export const canPersonManageWaiverTemplates = (db: DbExecutor, shopId: string, p
 
 export const canPersonDeleteDiver = (db: DbExecutor, shopId: string, personId: string) =>
   canPerson(db, shopId, personId, canDeleteDiver);
+
+/**
+ * Live DB-checked companion of the owner-only erasure gate
+ * (ADR 20260802-diver-data-erasure). `anonymizeDiver` calls this itself rather
+ * than trusting its caller: the action is one-way, so "the route forgot to
+ * check" has no remedy after the fact.
+ */
+export const canPersonErasePersonalData = (db: DbExecutor, shopId: string, personId: string) =>
+  canPerson(db, shopId, personId, canErasePersonalData);
 
 export const canPersonConfigureTrips = (db: DbExecutor, shopId: string, personId: string) =>
   canPerson(db, shopId, personId, canConfigureTrips);

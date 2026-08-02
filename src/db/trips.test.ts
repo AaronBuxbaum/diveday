@@ -1,10 +1,22 @@
 // @vitest-environment node
-import { eq } from "drizzle-orm";
+import { and, count, eq, ne } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
+import { courseCrewGap } from "@/lib/course-ratios";
 import { utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { seededShopContext } from "@/test/db";
-import { bookings, people, rollCallEvents, shops, tripRequirements } from "./schema";
+import { createBooking } from "./bookings";
+import type { AppDb } from "./client";
+import type { Course } from "./schema";
+import {
+  bookings,
+  courses,
+  people,
+  personRoles,
+  rollCallEvents,
+  shops,
+  tripRequirements,
+} from "./schema";
 import {
   applyDetailsToFutureSeries,
   cancelFutureSeriesTrips,
@@ -812,6 +824,145 @@ describe("trip crew (CR-007: cross-tenant write path)", () => {
       }),
     ).toBe(true);
     expect(await getTripCrewIds(db, shop.id, trip.id)).toEqual([second.person.id]);
+  });
+
+  /**
+   * A crew change is a record of who is actually aboard, and a boat that sails
+   * a crew member short is exactly when that record matters most (DOM-H2). The
+   * ratio gap it opens is loud (`over_ratio`) and blocks the *next* booking, but
+   * it never blocks writing down reality — refusing left the sick instructor on
+   * the printed manifest.
+   *
+   * 180 days out keeps the synthetic session clear of the seeded instructor
+   * calendar, as in `src/db/courses.test.ts`.
+   */
+  const CREW_TEST_OFFSET_MS = 180 * 24 * 60 * 60 * 1000;
+
+  async function twoInstructorIntroSession(db: AppDb, shopId: string) {
+    const [course] = await db
+      .select()
+      .from(courses)
+      .where(and(eq(courses.shopId, shopId), eq(courses.title, "Discover Scuba Diving")));
+    if (!course) throw new Error("Discover Scuba Diving course missing");
+    const staff = await listStaff(db, shopId);
+    const seededInstructor = staff.find((entry) => entry.roles.includes("instructor"));
+    if (!seededInstructor) throw new Error("seeded instructor missing");
+    // The seed carries one instructor; this session needs two so the ratio has
+    // somewhere to fall from when one of them calls in sick.
+    const [second] = await db
+      .insert(people)
+      .values({ shopId, fullName: "Ana Silva", email: "ana-silva@example.com" })
+      .returning();
+    if (!second) throw new Error("failed to insert second instructor");
+    await db.insert(personRoles).values({ personId: second.id, role: "instructor" });
+
+    const trip = await createTrip(db, {
+      shopId,
+      courseId: course.id,
+      title: "Discover Scuba — crew change test",
+      startsAt: new Date(Date.now() + CREW_TEST_OFFSET_MS),
+      endsAt: new Date(Date.now() + CREW_TEST_OFFSET_MS + 4 * 60 * 60 * 1000),
+      // Well above the 4 seats two instructors support at 2:1, so only the
+      // ratio is ever in play.
+      capacity: 12,
+      plannedDives: 2,
+    });
+    if (!trip) throw new Error("failed to create crew change test trip");
+    if (!(await setTripCrew(db, shopId, trip.id, [seededInstructor.person.id, second.id]))) {
+      throw new Error("failed to assign two instructors");
+    }
+    // Four divers: legal at 2:1 with two instructors, over ratio with one.
+    for (let i = 0; i < 4; i++) {
+      const outcome = await createBooking(db, {
+        actor: "staff",
+        shopId,
+        tripId: trip.id,
+        fullName: `Crew Change Diver ${i}`,
+        email: `crew-change-diver-${i}@example.com`,
+      });
+      if (!outcome.ok) throw new Error("setup booking failed");
+    }
+    return { trip, course, staying: seededInstructor.person.id, leaving: second.id };
+  }
+
+  /** The gap the trip page, the staffing list, and Today all read. */
+  async function crewGapFor(db: AppDb, shopId: string, tripId: string, course: Course) {
+    const crewIds = await getTripCrewIds(db, shopId, tripId);
+    const staff = await listStaff(db, shopId);
+    const assigned = staff.filter((entry) => crewIds.includes(entry.person.id));
+    const [row] = await db
+      .select({ booked: count() })
+      .from(bookings)
+      .where(and(eq(bookings.tripId, tripId), ne(bookings.status, "cancelled")));
+    return courseCrewGap({
+      course,
+      instructorCount: assigned.filter((entry) => entry.roles.includes("instructor")).length,
+      assistantCount: assigned.filter(
+        (entry) => entry.roles.includes("divemaster") && !entry.roles.includes("instructor"),
+      ).length,
+      booked: row?.booked ?? 0,
+    });
+  }
+
+  it("records a crew change that leaves a session over ratio, and raises over_ratio", async () => {
+    const { db, shop } = await seededShopContext();
+    const { trip, course, staying, leaving } = await twoInstructorIntroSession(db, shop.id);
+
+    // 6:45am, one of the two instructors calls in sick. The change is recorded.
+    expect(
+      await changeTripCrew(db, shop.id, trip.id, { personId: leaving, operation: "unassign" }),
+    ).toBe(true);
+    expect(await getTripCrewIds(db, shop.id, trip.id)).toEqual([staying]);
+
+    // Loudly, not silently: the same gap the trip page and Today surface.
+    expect(await crewGapFor(db, shop.id, trip.id, course)).toEqual({
+      code: "over_ratio",
+      booked: 4,
+      capacity: 2,
+      ratio: "intro",
+    });
+
+    // And the seats already sold are still refused a fifth — the booking gate
+    // is where the ratio blocks, and it reads the tightened crew.
+    await expect(
+      createBooking(db, {
+        actor: "staff",
+        shopId: shop.id,
+        tripId: trip.id,
+        fullName: "Crew Change Diver 4",
+        email: "crew-change-diver-4@example.com",
+      }),
+    ).resolves.toEqual({ ok: false, reason: "course_ratio_full" });
+  });
+
+  it("records the same reduction through a whole-crew replace", async () => {
+    const { db, shop } = await seededShopContext();
+    const { trip, course, staying } = await twoInstructorIntroSession(db, shop.id);
+
+    expect(await setTripCrew(db, shop.id, trip.id, [staying])).toBe(true);
+    expect(await getTripCrewIds(db, shop.id, trip.id)).toEqual([staying]);
+    expect(await crewGapFor(db, shop.id, trip.id, course)).toEqual({
+      code: "over_ratio",
+      booked: 4,
+      capacity: 2,
+      ratio: "intro",
+    });
+  });
+
+  it("still refuses a crew change that would leave a course session with no instructor", async () => {
+    const { db, shop } = await seededShopContext();
+    const { trip, staying, leaving } = await twoInstructorIntroSession(db, shop.id);
+    expect(
+      await changeTripCrew(db, shop.id, trip.id, { personId: leaving, operation: "unassign" }),
+    ).toBe(true);
+    // Unstaffing the session entirely is a different rule and still blocks: a
+    // course session with nobody qualified to teach it cannot be a recorded
+    // state, and it is `setTripStatus`/cancellation, not a crew edit, that
+    // takes a session off the water.
+    expect(
+      await changeTripCrew(db, shop.id, trip.id, { personId: staying, operation: "unassign" }),
+    ).toBe(false);
+    expect(await getTripCrewIds(db, shop.id, trip.id)).toEqual([staying]);
   });
 
   it("refuses to write or read crew for a trip id that isn't this shop's", async () => {

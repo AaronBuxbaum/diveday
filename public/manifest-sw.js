@@ -5,7 +5,7 @@
 // (`getActiveOfflineShellVersion`) to tell a crew member holding a copy of
 // this worker from an older deploy, rather than serving it with no signal
 // anything's stale (task 124 / persona 15, Leo).
-const CACHE_NAME = "diveday-offline-manifest-shell-v1";
+const CACHE_NAME = "diveday-offline-manifest-shell-v2";
 const SHELL_VERSION = CACHE_NAME.slice(CACHE_NAME.lastIndexOf("-v") + 1);
 const OFFLINE_SHELL = "/offline-manifest";
 // Matches the live, authenticated roll-call page this shell backs up —
@@ -13,6 +13,51 @@ const OFFLINE_SHELL = "/offline-manifest";
 // no signal lands on their saved device copy instead of the browser's own
 // offline error, without this worker reaching beyond the manifest.
 const LIVE_MANIFEST_PATTERN = /^\/shop\/[^/]+\/trips\/([^/]+)\/manifest(?:\/.*)?$/;
+
+/**
+ * Chunks the bundler's runtime loads *lazily*, which the shell HTML therefore
+ * never names in a `src`/`href`. They are listed inside the chunks the HTML
+ * does name, so one extra pass over those bodies finds them.
+ *
+ * Without this the offline shell could reload into the error boundary —
+ * "Something went sideways" instead of the roll call — because hydration
+ * asked for a chunk nothing had cached and the network was gone. It only
+ * *sometimes* happened, since the browser's own HTTP cache often still had
+ * the file; the flake in e2e/manifest.spec.ts's storage-eviction test is that
+ * coin toss, and on a boat it is the same coin toss with a manifest on it.
+ *
+ * Deliberately **one level, not transitive closure**: at the time of writing
+ * that is 3 extra chunks (~340 KB on top of ~1.8 MB) and it covers the case,
+ * whereas following references recursively walks toward the whole app's chunk
+ * graph on a crew member's phone. And deliberately **best-effort**, unlike the
+ * HTML-referenced set below: these paths come from a regex over minified
+ * JavaScript, so a false positive is possible and must not be able to fail a
+ * shell save that is otherwise complete.
+ */
+async function lazyChunkEntries(assetEntries) {
+  const referenced = new Set();
+  await Promise.all(
+    assetEntries.map(async ([asset, assetResponse]) => {
+      if (!asset.endsWith(".js")) return;
+      const body = await assetResponse.clone().text();
+      for (const match of body.matchAll(/static\/chunks\/[A-Za-z0-9_\-.]+\.(?:js|css)/g)) {
+        referenced.add(`/_next/${match[0]}`);
+      }
+    }),
+  );
+  for (const [asset] of assetEntries) referenced.delete(asset);
+  const found = await Promise.all(
+    [...referenced].map(async (asset) => {
+      try {
+        const assetResponse = await fetch(asset);
+        return assetResponse.ok ? [asset, assetResponse] : null;
+      } catch {
+        return null;
+      }
+    }),
+  );
+  return found.filter((entry) => entry !== null);
+}
 
 async function cacheOfflineShell() {
   const response = await fetch(OFFLINE_SHELL, { credentials: "same-origin" });
@@ -36,6 +81,7 @@ async function cacheOfflineShell() {
       return [asset, assetResponse];
     }),
   );
+  assetEntries.push(...(await lazyChunkEntries(assetEntries)));
   const cache = await caches.open(CACHE_NAME);
   // Assets before the shell that references them: a cache write can still
   // fail on its own (storage quota, eviction) even after every fetch

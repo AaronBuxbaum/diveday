@@ -1,6 +1,7 @@
 # 20260719-crud-archive-semantics — Safe deletion for shop entities
 
-- **Status:** Accepted for the current staff web app
+- **Status:** Accepted for the current staff web app — the diver bullet is superseded in part by
+  [20260802-diver-data-erasure](20260802-diver-data-erasure.md)
 - **Date:** 2026-07-19
 
 ## Context

@@ -23,7 +23,7 @@ report.)
   — every lens shipped or moved out by 2026-08-01: ML & data into [ai-ml.md](ai-ml.md), security &
   privacy into [../shipped.md](../shipped.md), and its three still-open accessibility contrast
   fixes into this file's own [Accessibility contrast fixes](#accessibility-contrast-fixes-blocked-on-a-color-guide-decision)
-  section below.
+  section below (one of the three has since shipped; two remain).
 - Open UX tickets carried out of the persona review live in [story-backlog.md](story-backlog.md);
   raw, unfiltered ideas live in [brainstorm.md](brainstorm.md) (AI-required ideas in
   [ai-ml.md](ai-ml.md)) and are not commitments.
@@ -147,22 +147,23 @@ These are per-feature rough edges on shipped work, not future subsystems. They a
 
 ## Accessibility contrast fixes (blocked on a color-guide decision)
 
-Carried over verbatim from the archived [2026-07-31 specialist optimization
+Carried over from the archived [2026-07-31 specialist optimization
 audit](../archive/specialist-optimization-audit-20260731.md#3-accessibility-contrast-tasks-moved)
-§3 — re-verified against the running `src/app/globals.css` as of that audit's last update
-(2026-08-01) and still failing. **Deliberately not built**: the product owner ruled out touching
-contrast values in the same pass that delivered the rest of the accessibility lens, because it
-would fight the current color guide. Pick these up once that guide decision is made, not before —
-re-verify the computed ratios against `globals.css` first, since token values may have drifted.
-`e2e/a11y.spec.ts`'s axe scan excludes the `color-contrast` rule for exactly this reason; re-include
-it once this section is cleared.
+§3. **One of the three shipped (2026-08-02); the other two remain deliberately not built**:
+the product owner ruled out touching the success/warning and placeholder color values, because it
+would fight the current color guide. Pick those two up once that guide decision is made, not
+before — re-verify the computed ratios against `globals.css` first, since token values may have
+drifted. `e2e/a11y.spec.ts`'s axe scan **still excludes** the `color-contrast` rule, and stays that
+way until both remaining items land: the rule fires app-wide on exactly these token values, so
+turning it on now would just paint CI red. Re-include it once this section is cleared.
 
-### Fix the global focus indicator's contrast in light mode
+Until then, nothing in the repo may claim WCAG AA conformance — see
+[design/principles.md](../../design/principles.md#tokens-the-mechanics) for the wording that is
+actually true, and keep any new claim in sync with this section.
 
-- **Priority**: high
-- **Effort**: S
-- **Prompt**: In `src/app/globals.css`, the app-wide keyboard focus indicator is `outline: 3px solid color-mix(in srgb, var(--primary) 55%, transparent)` (in the `:where(a, button, input, select, textarea, summary):focus-visible` rule). In the light palette that computes to ~2.3:1 against `--background` (#faf9f6) and `--surface` (#ffffff), failing WCAG 1.4.11's 3:1 minimum for focus indicators — keyboard staff users can lose the focus ring entirely in sunlight. Introduce a dedicated semantic token (e.g. `--focus-ring`) defined per scheme in the `:root` and dark blocks — full-strength `--primary` in light mode is 5.36:1 on white and passes — and use it in the `:focus-visible` rule instead of the 55% mix. Keep the token semantic per ADR-0004 and also define it in the `.boat-mode` and `.glare-mode` blocks so those palettes keep a passing ring. Do not weaken the dark-mode ring (currently ~3.8:1, passing).
-- **Verification**: Recompute ratios with the same formula (a small node script against the hex values) confirming ≥3:1 for light, dark, boat, and glare palettes; keyboard-Tab through `/sign-in` and the schedule in light mode and screenshot to confirm the ring is clearly visible; `pnpm check` green (the token change must not trip the semantic-token safeguard).
+The focus-indicator item that used to head this section **shipped on 2026-08-02** and has moved to
+[../shipped.md](../shipped.md) with its measured before/after ratios; `--focus-ring` now clears
+WCAG 1.4.11's 3:1 in all six light/dark palettes. The two items below are what remains.
 
 ### Raise tinted status-banner text above 4.5:1
 

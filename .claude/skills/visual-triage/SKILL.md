@@ -17,6 +17,27 @@ that blocks browser downloads falls back to its own pre-installed build, which r
 differently (ADR 20260730-pinned-browser-visual-determinism). `pnpm e2e:browser-check` prints which
 browser it resolved — if it says "falling back", your local diff is not comparable to the baseline.
 
+## Start at the PR comment
+
+On a pull request the `visual-report` job posts one sticky comment (marker `diveday:visual-summary`,
+edited in place on each push) with the counts, the names of the changed/new/deleted surfaces, and
+the exact `pnpm visual:report` command for that commit. Read it before anything else — it usually
+tells you whether the diff is confined to the surfaces you touched. It never fails the build; the
+enforcement is you (ADR 20260802-visual-diff-pr-comment).
+
+Two things it says that reg-suit's own `reg-suit[bot]` comment and `reg` status cannot, because
+their payload is counts only:
+
+- **Which surfaces moved**, so triage can start without opening a browser.
+- **Whether anything was compared at all.** A headline of `NOTHING WAS COMPARED` means reg-suit
+  downloaded zero baseline images and reported every screenshot as *new* rather than diffed — the
+  changed count is then a meaningless zero (ADR 20260729-reg-suit-visual-regression). Treat that run
+  as *unknown*, never as clean, and fix the baseline resolution before reading anything into it.
+  A run that really did compare says "no differences across N compared surface(s)" instead.
+
+If the comment says no report was published, `reg-suit run` never got far enough to publish one —
+read the `visual-report` job log rather than assuming the pixels held still.
+
 ## Fetching the report as an agent
 
 `reg-suit` prints an `index.html` report link, but that page is a client-rendered SPA — its body is
@@ -37,16 +58,22 @@ renders images directly, which is the actual point: raw pixels beat any text des
 This works from a fresh checkout without ever running Playwright locally, as long as CI has already
 published a report for that commit.
 
+`REPORT.md` leads with the same verdict headline as the PR comment, above the counts, and prints how
+many baseline images were downloaded — so a run that compared nothing cannot read as a clean one
+here either.
+
 ## Triage loop
 
 1. Read the code and route/state changes before opening images.
-2. Get the report — `pnpm visual:report` against the commit under review (see above), or run the
+2. On a PR, read the sticky visual summary comment first — if it says nothing was compared, stop and
+   fix that; a zero there is not evidence.
+3. Get the report — `pnpm visual:report` against the commit under review (see above), or run the
    full local comparison on Linux:
    ```bash
    pnpm visual
    ```
-3. Read `.reg-report/<commit>/REPORT.md` and view the expected/actual/diff PNGs it lists.
-4. Put each difference in one bucket:
+4. Read `.reg-report/<commit>/REPORT.md` and view the expected/actual/diff PNGs it lists.
+5. Put each difference in one bucket:
    - **Expected:** the code change explains it. Merge the branch to update S3 references for subsequent builds.
    - **Regression:** the image reveals an unintended layout/content/state change. Fix the source, rerun comparison, and verify the diff is gone.
    - **Unclear:** do not merge and ask for a decision.
@@ -66,9 +93,10 @@ Read the *shape* of a no-code-change diff before assuming a baseline moved:
 - **Anything reflows** — a real layout change. Read it as a finding even if it arrived inside a
   larger rebaseline.
 
-`regconfig.json` already discounts antialiasing (`enableAntialias`) and sub-perceptual per-pixel
-noise (`matchingThreshold: 0.05`), so a diff that survives to the report is not "just antialiasing".
-Widening those knobs is not triage — if a diff is noise, the renderer is the thing to fix.
+`regconfig.json` sets `enableAntialias`, so a diff that survives to the report is not "just
+antialiasing". It deliberately does **not** set `matchingThreshold` — the comparison runs at
+reg-cli's default of `0`, meaning any per-pixel difference counts. Loosening that is not triage: if
+a diff is noise, the renderer is the thing to fix.
 
 ## Handoff
 
