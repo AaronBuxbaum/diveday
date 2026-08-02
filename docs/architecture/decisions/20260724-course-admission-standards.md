@@ -1,6 +1,6 @@
 # 20260724-course-admission-standards — PADI-sourced entry-level ratio gate
 
-- **Status:** Accepted
+- **Status:** Accepted, **amended 2026-08-02** (see [Amendment](#amendment-2026-08-02--intro-sessions-gate-at-41-interim))
 - **Date:** 2026-07-24
 
 ## Context
@@ -27,7 +27,9 @@ Alternatives/Consequences for why, and what would be needed to add them.
 - **Confined water training:** maximum 10 students per instructor, +1 certified assistant per 4
   additional students.
 - **Discover Scuba Diving (DSD):** minimum age 10; maximum depth 6 m/20 ft confined water, 12
-  m/40 ft open water; open-water ratio matches the Open Water training figure (8:1).
+  m/40 ft open water; open-water ratio was recorded here as matching the Open Water training figure
+  (8:1). **That last claim is the one this ADR's 2026-08-02 amendment withdraws** — see the
+  confidence note immediately below, which turned out to be the finding, not a caveat.
   ([PADI Discover Scuba Diving FAQs](https://blog.padi.com/discover-scuba-diving-faqs/);
   [Discover Scuba Diving Program Age and Depth Limits](https://www.private-scuba.com/courses/discover-scuba-diving-program-limitations.html).)
   **Confidence note:** these two DSD sources are a PADI marketing blog and a third-party dive-shop
@@ -52,6 +54,12 @@ Alternatives/Consequences for why, and what would be needed to add them.
   ([How to Upgrade a PADI Junior Open Water Diver Certification](https://blog.padi.com/how-to-upgrade-a-padi-junior-open-water-diver-certification/).)
 
 ## Decision
+
+> **Amended 2026-08-02.** The paragraph below describes the original single-ratio gate. Intro
+> (DSD) sessions no longer take the 8/12 figure — see the
+> [Amendment](#amendment-2026-08-02--intro-sessions-gate-at-41-interim) at the end of this ADR for
+> what actually ships now. The rest of this ADR (agency scoping, crew re-read, continuing-ed
+> exclusion, reference data) stands unchanged.
 
 **Enforce the entry-level in-water ratio as a real booking gate, scoped to PADI courses only.**
 `src/lib/course-ratios.ts` encodes `entryLevelCourseCapacity(instructorCount, assistantCount)`: 8
@@ -148,3 +156,55 @@ enforcement mechanism, informed by the numbers recorded here.
   open pending their own sourcing.
 - Safety-critical surface (course/cert gating) — carries a `dive-domain-expert` review before
   merge per AGENTS.md.
+
+## Amendment 2026-08-02 — intro sessions gate at 4:1 (interim)
+
+**What changed.** The `dive-domain-expert` confidence note above — that DSD participants have had
+zero prior water time and that the 8:1 figure was sourced from a PADI marketing blog rather than
+the Instructor Manual — was recorded as a caveat and then not acted on. A review
+([comprehensive-review-20260802](../../product/assessments/comprehensive-review-20260802.md),
+finding DOM-H2) found the consequence: the gate did not merely fail to protect a DSD session, it
+**certified an overloaded one as compliant**. A single instructor with two Divemasters aboard could
+take twelve first-time, uncertified people into open water and the booking gate would say yes.
+
+**What ships now.**
+
+- A course session whose course row has **`courses.is_intro_course`** set (DSD, Try Scuba) is
+  gated at **4 students per instructor with no assistant bonus** — `INTRO_COURSE_RATIO` in
+  `src/lib/course-ratios.ts`. A certified assistant buys an intro session nothing.
+- A **non-intro** PADI course session with no `minimum_certification_level` (the Open Water
+  training dives) keeps the original **8 base / +2 per assistant / 12 ceiling** figure, unchanged.
+- Continuing-education courses stay unratioed, unchanged.
+- Which ratio (if any) a session carries is decided in exactly one place — `courseRatioRule()` —
+  consumed by every enforcing and advisory caller (`src/db/bookings.ts`, `setTripCrew` and the
+  assign/unassign path in `src/db/trips.ts`, and `courseCrewGap`'s consumers in
+  `src/db/staffing.ts`, `src/db/today.ts`, and the trip Overview page). The predicate was
+  previously written inline in three of those, which is how it would drift again.
+- An intro session stays gated at 4:1 **even if a `minimum_certification_level` was typed onto it**:
+  nobody on a DSD holds a card, so a stray value must not be able to switch the tightest cap in the
+  product off.
+- `courses.agency` comparisons are now normalized (trimmed, lowercased) at every site
+  (review finding DATA-L2). The column is plain shop-set text, so a shop that typed `"PADI"`
+  silently lost the ratio cap entirely — the safety control was one capital letter from off.
+- No new refusal code: an over-ratio intro booking returns the existing `course_ratio_full`
+  reason with the tighter capacity, so no new copy, analytics enum value, or locale surface.
+
+**4:1 is interim and unverified — do not describe it otherwise.** It is a conservative placeholder
+chosen because it is tighter than the figure it replaces and because "no assistant bonus" is the
+prudent reading of a session where every participant is a first-time diver. It is **not** cited to
+PADI's Instructor Manual, because DiveDay does not have that document. **HD-6** — obtain the actual
+PADI Instructor Manual DSD ratio (and the Rescue scenario-supervision figure) from a PADI
+professional — is the decision that unblocks replacing it with a sourced number. Until HD-6
+answers, the number in the code is the number in this ADR and the glossary, and nothing should be
+loosened on the strength of a web source.
+
+**Consequences of the amendment.**
+
+- A shop whose DSD sessions routinely ran 6–8 participants per instructor will start hitting
+  `course_ratio_full` at the fifth booking. That refusal is the point; if HD-6 comes back with a
+  looser published figure, raising `INTRO_COURSE_RATIO` is a one-line change.
+- Trips already booked over the new cap are **not** retroactively cancelled — same posture as the
+  original gate. They surface as the non-blocking `over_ratio` crew gap on the trip page, the
+  staffing coverage list, and the Today queue.
+- The 8/12 figure's own sourcing (a blog, not a manual) is unchanged and still open under HD-6.
+  This amendment narrows *where* it is applied; it does not verify it.

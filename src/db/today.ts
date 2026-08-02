@@ -25,11 +25,7 @@ import {
 import { nowDate } from "@/lib/clock";
 import { courseCrewGap } from "@/lib/course-ratios";
 import { formatDateTimeTz, formatShortDate, formatTime } from "@/lib/format";
-import {
-  carryForwardNotBoarded,
-  type RollCallRecord,
-  rollCallCheckpoints,
-} from "@/lib/manifests";
+import { carryForwardNotBoarded, type RollCallRecord, rollCallCheckpoints } from "@/lib/manifests";
 import { collapseDiverActions, TODAY_HORIZON_MS, type TodayAction, urgencyFor } from "@/lib/today";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import type { AppDb } from "./client";
@@ -322,7 +318,7 @@ export async function openAfterDiveRollCalls(
   // Ordered oldest-first, so the last write per booking *and checkpoint* wins.
   const latestByBookingCheckpoint = new Map<string, (typeof events)[number]>();
   for (const event of events) {
-    latestByBookingCheckpoint.set(`${event.bookingId} ${event.checkpoint}`, event);
+    latestByBookingCheckpoint.set(`${event.bookingId}\0${event.checkpoint}`, event);
   }
 
   const open: OpenRollCall[] = [];
@@ -336,7 +332,7 @@ export async function openAfterDiveRollCalls(
     for (const bookingId of bookingIds) {
       const effective = carryForwardNotBoarded(
         checkpoints.map((checkpoint) => {
-          const event = latestByBookingCheckpoint.get(`${bookingId} ${checkpoint}`);
+          const event = latestByBookingCheckpoint.get(`${bookingId}\0${checkpoint}`);
           // A latest `cleared` is staff undoing a mistake: the diver reads as
           // awaiting again, so it must re-alarm rather than stay resolved.
           if (!event || event.status === "cleared") return undefined;

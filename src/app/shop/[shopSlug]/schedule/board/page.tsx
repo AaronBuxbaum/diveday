@@ -10,6 +10,7 @@ import { getDb } from "@/db/client";
 import { listActiveCourses } from "@/db/courses";
 import { listDiveSites } from "@/db/dive-sites";
 import { getShopById } from "@/db/shops";
+import { openAfterDiveRollCalls } from "@/db/today";
 import {
   pagedUpcomingTripsWithCounts,
   tripCrewByTrip,
@@ -113,32 +114,38 @@ export default async function ScheduleBoardPage({
   // The board works off one keyset page of departures, same as the public
   // list — a shop with hundreds of upcoming departures still loads one page,
   // not the whole future.
-  const [range, stats, { trips: upcoming, nextCursor }, canConfigure, courses, diveSites] =
-    await Promise.all([
-      upcomingScheduleRange(db, shop.id, now),
-      upcomingScheduleStats(db, shop.id, now),
-      pagedUpcomingTripsWithCounts(db, shop.id, { cursor: after, now }),
-      canPersonConfigureTrips(db, shop.id, session.user.personId),
-      listActiveCourses(db, shop.id).then((rows) =>
-        rows.map((row) => ({ id: row.id, title: row.title })),
-      ),
-      listDiveSites(db, shop.id).then((rows) =>
-        rows.map((row) => ({ id: row.id, title: row.name })),
-      ),
-    ]);
+  const [
+    range,
+    stats,
+    { trips: upcoming, nextCursor },
+    canConfigure,
+    courses,
+    diveSites,
+    openRollCalls,
+  ] = await Promise.all([
+    upcomingScheduleRange(db, shop.id, now),
+    upcomingScheduleStats(db, shop.id, now),
+    pagedUpcomingTripsWithCounts(db, shop.id, { cursor: after, now }),
+    canPersonConfigureTrips(db, shop.id, session.user.personId),
+    listActiveCourses(db, shop.id).then((rows) =>
+      rows.map((row) => ({ id: row.id, title: row.title })),
+    ),
+    listDiveSites(db, shop.id).then((rows) => rows.map((row) => ({ id: row.id, title: row.name }))),
+    // Departures that already came back with a head count still open (DOM-H3).
+    // `pagedUpcomingTripsWithCounts` cannot reach them — it only returns trips
+    // whose `startsAt` is still ahead of `now` — so this is its own backwards
+    // query, and one batched query for every such boat rather than a per-trip
+    // roll-call lookup. Only on the first page: they belong at the front of
+    // the board, not repeated on top of every later cursor page.
+    after ? [] : openAfterDiveRollCalls(db, shop.id, now),
+  ]);
   const hasUpcoming = range.first !== null;
   // Depends on the trip ids above, so it runs as a second wave rather than
   // inside the batch that produces `upcoming`.
+  const boardTripIds = [...openRollCalls.map((open) => open.tripId), ...upcoming.map((t) => t.id)];
   const [dayCounts, crewByTrip] = await Promise.all([
-    tripScheduleDayCounts(
-      db,
-      upcoming.map((trip) => trip.id),
-    ),
-    tripCrewByTrip(
-      db,
-      shop.id,
-      upcoming.map((trip) => trip.id),
-    ),
+    tripScheduleDayCounts(db, boardTripIds),
+    tripCrewByTrip(db, shop.id, boardTripIds),
   ]);
 
   const builderNoticeEntry = noticeFromParam(builder, BUILDER_NOTICE_KEYS);
@@ -160,6 +167,9 @@ export default async function ScheduleBoardPage({
     crewNobodyYet: st("schedule.builder.crewNobodyYet"),
     noPriceSet: st("schedule.builder.noPriceSet"),
     noPriceSetAria: st("schedule.builder.noPriceSetAria"),
+    rollCallOpen: st("schedule.builder.rollCallOpen"),
+    rollCallOpenAria: st("schedule.builder.rollCallOpenAria"),
+    rollCallOpenNote: st("schedule.builder.rollCallOpenNote"),
     move: st("schedule.builder.move"),
     moveAria: st("schedule.builder.moveAria"),
     copy: st("schedule.builder.copy"),
@@ -198,7 +208,21 @@ export default async function ScheduleBoardPage({
 
   const todayIso = toDateInputValue(utcToWallTime(now, tz));
   const builderDays: BuilderDay[] = [];
-  for (const trip of upcoming) {
+  /** Appends one departure to the board, opening a new day header when the day turns. */
+  function pushBuilderTrip(
+    trip: {
+      id: string;
+      title: string;
+      startsAt: Date;
+      endsAt: Date;
+      capacity: number;
+      priceCents: number | null;
+      booked: number;
+      courseTitle: string | null;
+      diveSiteName: string | null;
+    },
+    rollCallOpen: { diveNumber: number; uncounted: number } | null,
+  ) {
     const wall = utcToWallTime(trip.startsAt, tz);
     const dateIso = toDateInputValue(wall);
     let day = builderDays.at(-1);
@@ -214,12 +238,56 @@ export default async function ScheduleBoardPage({
       timeRange: formatTimeRange(trip.startsAt, trip.endsAt, locale, tz),
       capacity: trip.capacity,
       booked: trip.booked,
-      courseTitle: trip.course?.title ?? null,
-      diveSiteName: trip.diveSite?.name ?? null,
+      courseTitle: trip.courseTitle,
+      diveSiteName: trip.diveSiteName,
       dayCount: dayCounts.get(trip.id) ?? 1,
       crew: (crewByTrip.get(trip.id) ?? []).map((member) => member.name),
       priceCents: trip.priceCents,
+      rollCallOpen,
     });
+  }
+
+  // Returned-with-an-open-head-count boats lead the board (DOM-H3). They are
+  // the only backwards-looking rows here, and they go first because every one
+  // of them already ended before `now` — so pushing them ahead of `upcoming`
+  // keeps the whole board in one chronological run and lets a boat that
+  // sailed this morning share its own day header with the afternoon's.
+  for (const open of openRollCalls) {
+    pushBuilderTrip(
+      {
+        id: open.tripId,
+        title: open.title,
+        startsAt: open.startsAt,
+        endsAt: open.endsAt,
+        capacity: open.capacity,
+        priceCents: open.priceCents,
+        booked: open.totalDivers,
+        courseTitle: null,
+        diveSiteName: null,
+      },
+      { diveNumber: open.diveNumber, uncounted: open.uncounted },
+    );
+  }
+  // The soonest day a new departure would sensibly be added to — never a
+  // returned boat's day, which is in the past and would pre-date the form.
+  const firstUpcomingDateIso = upcoming[0]
+    ? toDateInputValue(utcToWallTime(upcoming[0].startsAt, tz))
+    : null;
+  for (const trip of upcoming) {
+    pushBuilderTrip(
+      {
+        id: trip.id,
+        title: trip.title,
+        startsAt: trip.startsAt,
+        endsAt: trip.endsAt,
+        capacity: trip.capacity,
+        priceCents: trip.priceCents,
+        booked: trip.booked,
+        courseTitle: trip.course?.title ?? null,
+        diveSiteName: trip.diveSite?.name ?? null,
+      },
+      null,
+    );
   }
 
   return (
@@ -302,7 +370,7 @@ export default async function ScheduleBoardPage({
         days={builderDays}
         courses={courses}
         diveSites={diveSites}
-        defaultDateIso={builderDays[0]?.dateIso ?? todayIso}
+        defaultDateIso={firstUpcomingDateIso ?? todayIso}
         canConfigure={canConfigure}
         copy={builderCopy}
         actions={{

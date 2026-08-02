@@ -477,6 +477,24 @@ export function ScheduleBuilder({
                       <Badge tone={full ? "success" : "primary"} tabularNums>
                         {trip.booked}/{trip.capacity}
                       </Badge>
+                      {/* The loudest thing this board can say (DOM-H3): the
+                          boat is back and somebody on its list was never
+                          counted. "danger" carries an aria-hidden ✕ of its
+                          own, so hue is never the only signal, and the whole
+                          badge is a link straight to the open checkpoint. */}
+                      {trip.rollCallOpen ? (
+                        <Link
+                          href={`/shop/${shopSlug}/trips/${trip.id}/manifest?checkpoint=after_dive_${trip.rollCallOpen.diveNumber}`}
+                          aria-label={fill(copy.rollCallOpenAria, {
+                            ref,
+                            dive: trip.rollCallOpen.diveNumber,
+                          })}
+                        >
+                          <Badge tone="danger">
+                            {fill(copy.rollCallOpen, { count: trip.rollCallOpen.uncounted })}
+                          </Badge>
+                        </Link>
+                      ) : null}
                       {trip.priceCents === null ? (
                         <Link
                           href={`/shop/${shopSlug}/trips/${trip.id}#details`}
@@ -485,7 +503,12 @@ export function ScheduleBuilder({
                           <Badge tone="warning">{copy.noPriceSet}</Badge>
                         </Link>
                       ) : null}
-                      {canConfigure ? (
+                      {/* Move/copy/remove are all refused by `src/db/trips.ts`
+                          for a departure that has already sailed, and a
+                          returned row is only here to have its head count
+                          closed — so it gets the badge and nothing that would
+                          bounce. */}
+                      {canConfigure && !trip.rollCallOpen ? (
                         <div className="flex shrink-0 flex-wrap items-center gap-1">
                           <button
                             type="button"

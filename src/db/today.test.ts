@@ -2,8 +2,8 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
-import type { CreateTripPromotionResult, PromotionProvider } from "@/lib/payments/promotions";
 import { nowMs } from "@/lib/clock";
+import type { CreateTripPromotionResult, PromotionProvider } from "@/lib/payments/promotions";
 import { groupActions } from "@/lib/today";
 import { seededShopContext } from "@/test/db";
 import { cancelBooking } from "./bookings";
@@ -18,8 +18,8 @@ import {
   bookings as bookingsTable,
   nitroxCertifications,
   people,
-  tripWaitlistEntries,
   trips as tripsTable,
+  tripWaitlistEntries,
 } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { getTodayWork } from "./today";
@@ -679,9 +679,7 @@ describe("unfinished after-dive roll call (DOM-H3)", () => {
     // ahead of every departure still ahead of the shop.
     expect(row?.urgency).toBe("imminent");
     expect(row?.dueAt?.getTime()).toBe(trip.endsAt.getTime());
-    expect(row?.href).toBe(
-      `/shop/${shop.slug}/trips/${trip.id}/manifest?checkpoint=after_dive_1`,
-    );
+    expect(row?.href).toBe(`/shop/${shop.slug}/trips/${trip.id}/manifest?checkpoint=after_dive_1`);
     expect(row?.detail).toContain("3 of 3 divers");
     // The boat is gone from every forward-looking surface — which is precisely
     // why this row had to come from its own backwards query.
@@ -749,8 +747,9 @@ describe("unfinished after-dive roll call (DOM-H3)", () => {
         checkpoint: "after_dive_1",
       });
     }
-    expect(rollCallRow(await getTodayWork(db, shop.id, shop.slug, shop.timezone), trip.id))
-      .toBeUndefined();
+    expect(
+      rollCallRow(await getTodayWork(db, shop.id, shop.slug, shop.timezone), trip.id),
+    ).toBeUndefined();
 
     // A `cleared` event is an undo — the diver reads as awaiting again on the
     // manifest, so the count is open again here too. Roll-call history is
@@ -876,8 +875,9 @@ describe("unfinished after-dive roll call (DOM-H3)", () => {
       status: "boarded",
       checkpoint: "after_dive_1",
     });
-    expect(rollCallRow(await getTodayWork(db, shop.id, shop.slug, shop.timezone), trip.id))
-      .toBeDefined();
+    expect(
+      rollCallRow(await getTodayWork(db, shop.id, shop.slug, shop.timezone), trip.id),
+    ).toBeDefined();
 
     // The remaining diver's seat was cancelled — they are off the manifest's
     // roster, so there is nobody left uncounted.

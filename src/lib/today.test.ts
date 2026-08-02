@@ -299,7 +299,12 @@ describe("sortActions", () => {
     // `dueAt` — and a medical review on the very next boat is the strongest
     // thing it has to beat.
     const sorted = sortActions([
-      action({ id: "medical", kind: "medical_review", urgency: "imminent", dueAt: hoursFromNow(1) }),
+      action({
+        id: "medical",
+        kind: "medical_review",
+        urgency: "imminent",
+        dueAt: hoursFromNow(1),
+      }),
       action({ id: "waiver", kind: "waiver", urgency: "imminent", dueAt: hoursFromNow(0.5) }),
       action({
         id: "roll-call",

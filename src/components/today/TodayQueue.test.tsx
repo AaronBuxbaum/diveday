@@ -117,6 +117,60 @@ describe("TodayQueue urgency groups", () => {
   });
 });
 
+describe("TodayQueue unfinished roll-call rows (DOM-H3)", () => {
+  it("chips the row as a roll call in the danger tone and points at the open checkpoint", () => {
+    const { container } = render(
+      <TodayQueue
+        actions={[
+          action({
+            id: "roll-call:t1:after_dive_2",
+            kind: "roll_call_unfinished",
+            urgency: "imminent",
+            subject: "Two-Tank Reef",
+            detail: "This boat is back and the dive 2 roll call was never finished…",
+            actionLabel: "Open roll call",
+            href: "/shop/blue-mantis/trips/t1/manifest?checkpoint=after_dive_2",
+          }),
+        ]}
+        shopSlug="blue-mantis"
+        shopName="Blue Mantis"
+        inviteAction={inviteAction}
+        locale="en-US"
+      />,
+    );
+
+    const chip = screen.getByText("Roll call");
+    expect(chip.className).toContain("text-danger");
+    // Never an in-place control: closing a head count happens on the manifest,
+    // one tap away, not from a button on the queue.
+    expect(screen.getByRole("link", { name: "Open roll call" })).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/trips/t1/manifest?checkpoint=after_dive_2",
+    );
+    expect(container.querySelector("form")).toBeNull();
+  });
+
+  it("keeps the row inside the imminent group, so it can never be celebrated away", () => {
+    render(
+      <TodayQueue
+        actions={[
+          action({
+            id: "roll-call:t1:after_dive_1",
+            kind: "roll_call_unfinished",
+            urgency: "imminent",
+          }),
+          action({ id: "later", urgency: "later" }),
+        ]}
+        shopSlug="blue-mantis"
+        shopName="Blue Mantis"
+        inviteAction={inviteAction}
+        locale="en-US"
+      />,
+    );
+    expect(screen.queryByText("Today's boats are all clear 🤙")).toBeNull();
+  });
+});
+
 describe("TodayQueue payment rows", () => {
   it("renders the inline payment control only once a booking is known to be invoiced", () => {
     render(

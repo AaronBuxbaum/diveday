@@ -35,6 +35,9 @@ const COPY: BuilderCopy = {
   crewNobodyYet: "nobody yet",
   noPriceSet: "No price set",
   noPriceSetAria: "Set a price for {ref}",
+  rollCallOpen: "Roll call · {count} not counted",
+  rollCallOpenAria: "Finish the dive {dive} roll call for {ref}",
+  rollCallOpenNote: "Back at the dock with the dive {dive} roll call still open.",
   move: "Move",
   moveAria: "Move {ref}",
   copy: "Copy",
@@ -85,6 +88,7 @@ function baseTrip(overrides: Partial<BuilderDay["trips"][number]> = {}) {
     dayCount: 1,
     crew: ["Dana Reyes"],
     priceCents: 8500,
+    rollCallOpen: null,
     ...overrides,
   };
 }
@@ -295,5 +299,73 @@ describe("ScheduleBuilder panel focus management (accessibility audit §3)", () 
     await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
     expect(screen.queryByLabelText(COPY.newDate)).not.toBeInTheDocument();
     expect(moveToggle).toHaveFocus();
+  });
+});
+
+describe("ScheduleBuilder unfinished after-dive roll call (DOM-H3)", () => {
+  const returnedDay = (
+    rollCallOpen: { diveNumber: number; uncounted: number } | null,
+  ): BuilderDay[] => [
+    {
+      dateIso: "2026-07-31",
+      label: "Fri, Jul 31",
+      trips: [baseTrip({ id: "trip-returned", rollCallOpen })],
+    },
+  ];
+
+  function renderBoard(days: BuilderDay[]) {
+    return render(
+      <ScheduleBuilder
+        shopSlug="blue-mantis"
+        days={days}
+        courses={[]}
+        diveSites={[]}
+        actions={actions}
+        defaultDateIso="2026-08-01"
+        canConfigure={true}
+        copy={COPY}
+      />,
+    );
+  }
+
+  it("flags a returned departure whose head count is still open, linking to that checkpoint", () => {
+    renderBoard(returnedDay({ diveNumber: 2, uncounted: 3 }));
+
+    const flag = screen.getByRole("link", { name: /finish the dive 2 roll call for/i });
+    expect(flag).toHaveTextContent("Roll call · 3 not counted");
+    // Straight to the open checkpoint, not the manifest's default departure tab.
+    expect(flag).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/trips/trip-returned/manifest?checkpoint=after_dive_2",
+    );
+    // Says why a boat that already sailed is still sitting on the board.
+    expect(
+      screen.getByText("Back at the dock with the dive 2 roll call still open."),
+    ).toBeInTheDocument();
+  });
+
+  it("never carries the danger tone on hue alone", () => {
+    const { container } = renderBoard(returnedDay({ diveNumber: 1, uncounted: 1 }));
+
+    // Badge's own aria-hidden glyph for the three status tones — a colorblind
+    // scan gets the mark before it gets to the words (design/principles.md #6).
+    const badge = container.querySelector("a span.bg-danger\\/10");
+    expect(badge?.textContent).toContain("✕");
+  });
+
+  it("hides move/copy/remove on a returned row, which those mutations all refuse", () => {
+    renderBoard(returnedDay({ diveNumber: 1, uncounted: 2 }));
+
+    expect(screen.queryByRole("button", { name: /^Move / })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Copy / })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Remove / })).toBeNull();
+  });
+
+  it("says nothing on an ordinary upcoming departure", () => {
+    renderBoard(returnedDay(null));
+
+    expect(screen.queryByText(/not counted/)).toBeNull();
+    expect(screen.queryByText(/roll call still open/)).toBeNull();
+    expect(screen.getByRole("button", { name: /^Move Two-Tank Reef/ })).toBeInTheDocument();
   });
 });
