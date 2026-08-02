@@ -1763,6 +1763,11 @@
         "submit": "Save currency",
         "submitting": "Saving…",
         "mismatch": "You charge in {shopCurrency}, but Stripe settles this connected account in {accountCurrency}. Stripe will refuse a payment in a currency this account can't settle — either pick {accountCurrency} here, or connect an account that settles in {shopCurrency}."
+      },
+      "whatsapp": {
+        "heading": "WhatsApp",
+        "description": "Send trip reminders and recaps from your shop's own WhatsApp number instead of a platform SMS number.",
+        "cta": "Set up WhatsApp"
       }
     },
     "team": {
@@ -1846,7 +1851,7 @@
       "rowCount": "{count, plural, one {# row} other {# rows}}",
       "notIncluded": {
         "label": "Not included, on purpose:",
-        "text": "offline manifest copies, staff notes, notification logs, Stripe checkout attempts (see bookings and orders for outcomes), and unstored pasted image URLs. DiveDay's own photos export as real files in <mono>photos/</mono>. Sign-in credentials and calendar-subscription links never export — see the README."
+        "text": "offline manifest copies, staff notes, notification logs, Stripe checkout attempts (see bookings and orders for outcomes), and unstored pasted image URLs. DiveDay's own photos export as real files in <mono>photos/</mono>. Sign-in credentials, calendar-subscription links, and your connected WhatsApp account never export — see the README."
       }
     },
     "import": {
@@ -2759,6 +2764,79 @@
     "rollCallCheckpoint": {
       "departure": "Before departure",
       "afterDive": "After dive {n}"
+    }
+  },
+  "whatsapp": {
+    "eyebrow": "Settings",
+    "title": "WhatsApp",
+    "description": "Send trip reminders and recaps from your shop's own WhatsApp number, so divers recognise who is messaging them. Without this, those courtesy texts go out as SMS from a platform number.",
+    "status": {
+      "connectedHeading": "WhatsApp connected",
+      "notConnectedHeading": "No WhatsApp number connected",
+      "notConnectedDescription": "Courtesy reminders and recaps are going out as SMS. Connect your WhatsApp Business number below to send them from your shop instead.",
+      "verified": "Test message delivered",
+      "untested": "Not tested yet",
+      "number": "Sending number",
+      "template": "Message template",
+      "token": "Access token",
+      "tokenEnding": "Ending in {last4}",
+      "connectedAt": "Connected"
+    },
+    "setup": {
+      "heading": "Before you connect",
+      "description": "WhatsApp requires business-initiated messages to use a template you have had approved. Set this up once in Meta's WhatsApp Manager, then paste the details below.",
+      "step1": "In Meta Business Manager, add your dive shop's phone number to a WhatsApp Business account and copy its phone number ID.",
+      "step2": "Create a system user with permission to send messages, and generate a permanent access token for it.",
+      "step3": "Create and submit a message template with exactly two body variables, in this shape:",
+      "templateBody": "Hi! An update from {{1}}: {{2}}"
+    },
+    "connect": {
+      "heading": "Connect your WhatsApp number",
+      "updateHeading": "Update your connection",
+      "description": "DiveDay stores your access token encrypted and never shows it again. Sending a message uses it; nothing else can read it back.",
+      "phoneNumberId": "Phone number ID",
+      "displayPhoneNumber": "Display number",
+      "accessToken": "Access token",
+      "wabaId": "WhatsApp Business account ID",
+      "templateName": "Template name",
+      "templateLanguage": "Template language",
+      "submit": "Connect WhatsApp",
+      "update": "Save changes",
+      "submitting": "Saving…",
+      "phoneNumberIdDescription": "The numeric ID from WhatsApp Manager — not the phone number itself.",
+      "displayPhoneNumberDescription": "Shown here so you can tell at a glance which number is connected.",
+      "accessTokenDescription": "The permanent token for your system user.",
+      "accessTokenReplaceDescription": "Paste the token again to save changes, or a new one to rotate it.",
+      "wabaIdDescription": "Recorded for support. DiveDay never sends it anywhere.",
+      "templateNameDescription": "Exactly as approved — lowercase letters, numbers, and underscores.",
+      "templateLanguageDescription": "The language your template was approved in. Every message uses this one.",
+      "optionalHint": "(optional)"
+    },
+    "test": {
+      "heading": "Send a test message",
+      "description": "Saving credentials does not prove they work. Send yourself a real message to confirm the token, the template, and the language all line up before a diver depends on it.",
+      "phone": "Your WhatsApp number",
+      "submit": "Send test message",
+      "submitting": "Sending…",
+      "phoneDescription": "In full international form, starting with the country code."
+    },
+    "disconnect": {
+      "heading": "Disconnect",
+      "description": "Removes your stored token and returns courtesy messages to SMS. Your WhatsApp account and templates are untouched.",
+      "submit": "Disconnect WhatsApp",
+      "submitting": "Disconnecting…"
+    },
+    "notice": {
+      "connected": "WhatsApp connected. Send a test message to confirm it works.",
+      "disconnected": "WhatsApp disconnected. Courtesy messages will go out as SMS.",
+      "tested": "Test message delivered. Your WhatsApp connection is working.",
+      "test_failed": "WhatsApp rejected the test message. Check that your token is still valid and your template is approved in the language shown above.",
+      "invalid": "Check the details and try again.",
+      "not_authorized": "Only an owner or manager can change WhatsApp settings.",
+      "no_account": "No WhatsApp number is connected yet.",
+      "encryption_key_unset": "This DiveDay instance is not set up to store credentials securely yet, so nothing was saved.",
+      "encryption_key_invalid": "This DiveDay instance's encryption key is misconfigured, so nothing was saved.",
+      "encryptionUnavailable": "Credential storage is not configured on this DiveDay instance, so WhatsApp cannot be connected yet."
     }
   }
 }

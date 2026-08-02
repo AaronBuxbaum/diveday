@@ -823,6 +823,27 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { name: "Rental prices" }).waitFor();
         await capture(page, "settings-payments", scheme);
 
+        // Where a shop plugs in its own WhatsApp Business number (ADR
+        // 20260802-whatsapp-cloud-api-per-shop). Captured in the not-connected
+        // state on purpose: that is what every shop sees first, and it carries
+        // the whole setup explanation — the part most likely to be quietly
+        // broken by a copy or layout change.
+        //
+        // Normalised first, not just navigated to. A connection is shop state,
+        // and whatsapp-settings.spec.ts can land on this same worker (one
+        // server, one database per worker) and leave one behind — which would
+        // bank a *connected* page as the baseline for a scenario named
+        // "disconnected". Waiting on a heading both states share would not
+        // catch that, so the state is made true rather than assumed.
+        await page.goto("/shop/blue-mantis/settings/whatsapp");
+        const disconnectWhatsApp = page.getByRole("button", { name: "Disconnect WhatsApp" });
+        if (await disconnectWhatsApp.isVisible().catch(() => false)) {
+          await disconnectWhatsApp.click();
+        }
+        await page.getByRole("heading", { name: "No WhatsApp number connected" }).waitFor();
+        await page.getByRole("heading", { name: "Before you connect" }).waitFor();
+        await capture(page, "settings-whatsapp", scheme);
+
         // The two orders surfaces — the densest money screens in the app, and
         // until now the only ones with no baseline at all. That gap was found
         // the honest way: the shop-currency change (ADR 20260731-shop-currency)

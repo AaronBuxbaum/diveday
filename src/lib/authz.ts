@@ -98,6 +98,16 @@ export function canManagePaymentSettings(roles: readonly Role[] | undefined): bo
 }
 
 /**
+ * Connect or disconnect the shop's own WhatsApp Business sender. Owner/manager
+ * work for the same reason payment settings are: the credential it stores can
+ * send messages *as the business*, and the number it names is what divers will
+ * reply to (ADR 20260802-whatsapp-cloud-api-per-shop).
+ */
+export function canManageMessagingSettings(roles: readonly Role[] | undefined): boolean {
+  return isOwnerOrManager(roles);
+}
+
+/**
  * Invite a staff member, edit their roles, resend an invite, or
  * disable/remove their access — the same accountability weight as payment
  * settings and refunds: it grants logins and role authority over the rest of

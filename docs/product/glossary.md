@@ -423,11 +423,25 @@ new domain concept, define it here in the same PR.
   `pending` → `paid`/`expired`, reconciled against Stripe the same way a booking checkout is — never
   trusted from a return-URL param alone. See
   [20260726-post-trip-tipping](../architecture/decisions/20260726-post-trip-tipping.md).
+- **Courtesy message** — the short text that rides alongside a trip reminder or post-trip recap, and
+  the *only* channel for a diver who gave a phone number but no email. It goes out over exactly one
+  of two channels, never both, chosen per shop by `sendCourtesyMessage()`
+  (`src/lib/notifications/courtesy.ts`): the shop's **WhatsApp sender** when it has connected one,
+  and the **SMS channel** otherwise. Any WhatsApp failure — most often a diver who simply isn't on
+  WhatsApp — falls back to SMS immediately rather than being retried, because a reminder that lands
+  after the boat leaves is worth nothing.
 - **SMS channel** — an optional text channel for notifications, delivered through an AWS SNS seam
   (`notifySms()`). A number is texted only if it is already E.164, and the channel degrades to
-  `not_configured` with no SNS credentials configured, exactly like the email seam. Used today as a
-  courtesy channel alongside reminder email; no WhatsApp path exists (SNS has none). See
+  `not_configured` with no SNS credentials configured, exactly like the email seam. The platform-wide
+  fallback half of a **courtesy message**. See
   [20260802-sns-sms-adapter](../architecture/decisions/20260802-sns-sms-adapter.md).
+- **WhatsApp sender** — a shop's *own* WhatsApp Business number, connected through Meta's Cloud API
+  in Settings → WhatsApp and stored per shop in `shop_whatsapp_accounts`. DiveDay is not the sender;
+  the dive shop is, so divers see the shop they booked with and a reply reaches that shop's own
+  inbox. WhatsApp requires business-initiated messages to use a **template** the shop got approved,
+  so the shop's approved template name and language are stored alongside its access token, which is
+  encrypted at rest and never readable back out. See
+  [20260802-whatsapp-cloud-api-per-shop](../architecture/decisions/20260802-whatsapp-cloud-api-per-shop.md).
 - **Demo mode** — a shop flagged `isDemo` gets the Demo Playground banner, its role switcher, and a
   "Reset demo data" affordance scoped to that one tenant. "Try the live demo" **mints a fresh
   `isDemo` shop per visitor** with a generated name/slug, seeded with the full sample schedule; a
