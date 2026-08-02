@@ -1,6 +1,7 @@
 import type { ReadinessBlockerCode } from "@/lib/readiness";
 import type {
   DaySummary,
+  RollCallGapReason,
   TodayActionKind,
   TodayGreetingBand,
   TodaySeason,
@@ -19,7 +20,10 @@ export const URGENCY_KEYS: Record<TodayUrgency, StaffMessageKey> = {
 
 /** Every `TodayActionKind` chip, to its label key. Tone stays in `src/lib/today.ts` (not copy). */
 export const ACTION_KIND_KEYS: Record<TodayActionKind, StaffMessageKey> = {
+  roll_call_missing_diver: "shared.today.actionKind.rollCallMissingDiver",
   roll_call_unfinished: "shared.today.actionKind.rollCallUnfinished",
+  roll_call_departure_open: "shared.today.actionKind.rollCallDepartureOpen",
+  roll_call_not_started: "shared.today.actionKind.rollCallNotStarted",
   medical_review: "shared.today.actionKind.medicalReview",
   readiness_unavailable: "shared.today.actionKind.readinessUnavailable",
   identity: "shared.today.actionKind.identity",
@@ -148,26 +152,82 @@ export function instructorMissingDetailText(t: StaffTranslator): string {
   return t("shared.today.detail.instructorMissing");
 }
 
-/** The `over_ratio` half of `courseCrewGap` (src/lib/course-ratios.ts) — an instructor is on the crew, but not enough for the booked count. */
+/**
+ * The `over_ratio` half of `courseCrewGap` (src/lib/course-ratios.ts) — an
+ * instructor is on the crew, but not enough for the booked count.
+ *
+ * Two functions, because the two ratios need different words: the entry-level
+ * cap is PADI's published figure and a certified assistant raises it, while the
+ * intro (DSD/Try Scuba) cap is the shop's own interim 4 per instructor that an
+ * assistant does not move at all. Pick with the gap's `ratio` field — one
+ * generic sentence told a manager looking at a cap of 4 that PADI publishes "8
+ * per instructor, +2 per certified assistant", and prescribed a fix (add a
+ * divemaster) that cannot move an intro cap at all.
+ */
 export function overRatioDetailText(t: StaffTranslator, booked: number, capacity: number): string {
   return t("shared.today.detail.overRatio", { booked, capacity });
 }
 
-/**
- * The unfinished after-dive head count (DOM-H3). One whole ICU message, not a
- * stitched sentence: which dive's roll call is still open, and how many of the
- * boat's divers have no result recorded at it.
- */
-export function openRollCallDetailText(
+/** The intro-session (`ratio: "intro"`) wording of the same gap. See `overRatioDetailText`. */
+export function overRatioIntroDetailText(
   t: StaffTranslator,
-  dive: number,
-  uncounted: number,
-  total: number,
+  booked: number,
+  capacity: number,
 ): string {
-  return t("shared.today.detail.openRollCall", { dive, uncounted, total });
+  return t("shared.today.detail.overRatioIntro", { booked, capacity });
 }
 
-/** The unfinished-roll-call row's action label — it opens that dive's roll call. */
+/**
+ * The unclosed head count (DOM-H3), one whole ICU message per case rather than
+ * a sentence stitched from fragments (task 34's rule).
+ *
+ * There is deliberately **no shared string** across the four reasons. A diver
+ * marked not back aboard after dive one and a dock count nobody finished are
+ * different events, and wording them the same is what turns the row into
+ * wallpaper — at which point the one that means "a person may be in the water"
+ * stops being read at all.
+ */
+export function rollCallGapDetailText(
+  t: StaffTranslator,
+  gap: {
+    reason: RollCallGapReason;
+    diveNumber: number;
+    uncounted: number;
+    totalDivers: number;
+    underway: boolean;
+    stale: boolean;
+  },
+): string {
+  const { dive, uncounted, total } = {
+    dive: gap.diveNumber,
+    uncounted: gap.uncounted,
+    total: gap.totalDivers,
+  };
+  switch (gap.reason) {
+    case "missing_diver":
+      return t(
+        gap.stale
+          ? "shared.today.detail.missingDiverStale"
+          : "shared.today.detail.missingDiver",
+        { dive, uncounted, total },
+      );
+    case "after_dive_uncounted":
+      return t(
+        gap.stale
+          ? "shared.today.detail.openRollCallStale"
+          : gap.underway
+            ? "shared.today.detail.openRollCallUnderway"
+            : "shared.today.detail.openRollCall",
+        { dive, uncounted, total },
+      );
+    case "departure_uncounted":
+      return t("shared.today.detail.departureCountOpen", { uncounted, total });
+    case "no_roll_call":
+      return t("shared.today.detail.noRollCall", { total });
+  }
+}
+
+/** The unclosed-roll-call row's action label — it opens the checkpoint that is open. */
 export function openRollCallActionText(t: StaffTranslator): string {
   return t("shared.today.actionLabel.openRollCall");
 }

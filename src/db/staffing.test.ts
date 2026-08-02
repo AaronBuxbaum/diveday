@@ -74,11 +74,12 @@ describe("staffing view", () => {
   // The one "course crew gap" computation (Lens 17 task 151): an entry-level
   // PADI session with an instructor but no assistant, booked past the 8-seat
   // solo-instructor ratio, is *still* a coverage gap — the old boolean
-  // "has an instructor?" check would have called this trip covered. Both
-  // `createBooking` and the crew-change writes already refuse to *create* an
-  // over-ratio trip going forward, so the 9th seat here is inserted directly
-  // — standing in for a trip a data import or a since-tightened rule left in
-  // that state, which is exactly the case staff need the warning for.
+  // "has an instructor?" check would have called this trip covered.
+  // `createBooking` refuses to *sell* a seat past the ratio, so the 9th seat
+  // here is inserted directly — standing in for a trip a data import, a
+  // since-tightened rule, or a crew member calling in sick left in that state
+  // (crew changes are always recorded, never refused), which is exactly the
+  // case staff need the warning for.
   /**
    * Stands up an instructor-crewed session on `courseTitle`, seats `withinRatio`
    * divers through the booking gate, then inserts one more seat *directly* to

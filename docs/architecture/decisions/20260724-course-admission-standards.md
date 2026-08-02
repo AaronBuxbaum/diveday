@@ -172,14 +172,41 @@ take twelve first-time, uncertified people into open water and the booking gate 
 - A course session whose course row has **`courses.is_intro_course`** set (DSD, Try Scuba) is
   gated at **4 students per instructor with no assistant bonus** — `INTRO_COURSE_RATIO` in
   `src/lib/course-ratios.ts`. A certified assistant buys an intro session nothing.
+- **The intro cap applies to every agency**, unlike the entry-level figure. 4:1 is not a PADI
+  number — it is DiveDay's own conservative placeholder, chosen because intro participants have had
+  zero water time, and that rationale is agency-independent. Scoping it to PADI (as this amendment
+  first shipped) left an SSI or NAUI Try Scuba with **no ratio at all** — worse than the 8/12 rule
+  the amendment was written to remove, because the trip's capacity (12, 20) became the only limit.
+  The PADI check stays on the entry-level branch, where the cited figure actually lives.
 - A **non-intro** PADI course session with no `minimum_certification_level` (the Open Water
   training dives) keeps the original **8 base / +2 per assistant / 12 ceiling** figure, unchanged.
 - Continuing-education courses stay unratioed, unchanged.
-- Which ratio (if any) a session carries is decided in exactly one place — `courseRatioRule()` —
-  consumed by every enforcing and advisory caller (`src/db/bookings.ts`, `setTripCrew` and the
-  assign/unassign path in `src/db/trips.ts`, and `courseCrewGap`'s consumers in
-  `src/db/staffing.ts`, `src/db/today.ts`, and the trip Overview page). The predicate was
-  previously written inline in three of those, which is how it would drift again.
+- Which ratio (if any) a session carries is decided in exactly one place — `courseRatioKind()`,
+  with `courseRatioRule()`/`courseSeatCapacity()` on top of it — consumed by every enforcing and
+  advisory caller (`src/db/bookings.ts` for both `createBookingRecord` and `restoreBooking`, and
+  `courseCrewGap`'s consumers in `src/db/staffing.ts`, `src/db/today.ts`, and the trip Overview
+  page). The predicate was previously written inline in three of those, which is how it would
+  drift again.
+- **Every seat-granting write answers to the cap, including undo.** `restoreBooking` (the undo of a
+  roster removal) checked the trip's capacity only, so on a four-seat intro session a manager could
+  remove a diver, let a walk-up take the freed seat, tap Undo, and put a fifth uncertified
+  first-timer on one instructor with no refusal at all. It now applies the same
+  `courseSeatCapacity` check and returns a `course_ratio_full` outcome, with its own staff notice.
+- **A crew change is always recorded, never refused.** `setTripCrew` and `changeTripCrew` used to
+  return a bare failure when the proposed crew's capacity fell below the booked count. On a
+  four-seat intro ratio that is the ordinary morning — an instructor calls in sick on a session
+  booked legally under the previous rule — and refusing meant the system insisted she was aboard and
+  the printed manifest listed crew who were not on the boat. The change is written; the resulting
+  gap surfaces as the non-blocking `over_ratio` advisory; new bookings are still refused at the
+  tightened cap in `createBookingRecord`. Removing a course session's **last instructor** still
+  blocks, unchanged — that is the separate `course_unstaffed` rule.
+- **The over-ratio warning no longer makes a compliance claim DiveDay cannot back.** One generic
+  string served both rules, so a DSD session read "4 divers booked, crew covers 4 under PADI's
+  published entry-level ratio (8 per instructor, +2 per certified assistant)" — arithmetic that
+  visibly does not work, citing PADI for a number PADI never published, and prescribing the one
+  remedy (assign a divemaster) that cannot move an intro cap. `courseCrewGap`'s `over_ratio` now
+  carries which `ratio` it was measured against, and the intro wording says 4 per instructor, that
+  an assistant does not raise it, and that the figure is the shop's own conservative interim one.
 - An intro session stays gated at 4:1 **even if a `minimum_certification_level` was typed onto it**:
   nobody on a DSD holds a card, so a stray value must not be able to switch the tightest cap in the
   product off.
@@ -208,3 +235,29 @@ loosened on the strength of a web source.
   staffing coverage list, and the Today queue.
 - The 8/12 figure's own sourcing (a blog, not a manual) is unchanged and still open under HD-6.
   This amendment narrows *where* it is applied; it does not verify it.
+- An SSI/NAUI shop that runs taster sessions is now gated where it previously was not. This is the
+  intended reading of "conservative placeholder": DiveDay would rather refuse a fifth seat on a
+  session it cannot cite a standard for than sell it.
+- Because crew changes are recorded rather than refused, a session can now sit over ratio because of
+  a *deliberate* staff action, not only a data import. That state is visible in three places and
+  cannot grow — no further seat is sold — but nothing forces it to be resolved before the boat
+  sails. Making `over_ratio` block departure would need a "session is ready to sail" concept the
+  trip model does not have; the roll-call/manifest work is where that would belong.
+
+### Recorded, not fixed: the cap counts seats, not students
+
+The ratio is applied to the **trip's booked count**, because the course lives on the trip
+(`trips.course_id`), not on the booking (`src/db/bookings.ts` counts every non-cancelled booking on
+the trip). Two consequences follow, both pre-existing and both sharpened by the tighter 4:1 figure:
+
+- **A mixed boat over-refuses.** A departure carrying 3 DSD participants and 8 certified fun divers
+  is one trip with one `course_id`, so the fifth booking of *any* kind is refused and a certified
+  diver is shown `course_ratio_full` — a ratio that has nothing to do with them.
+- **The common way a small shop sells DSD is invisible to the gate.** Two DSD participants riding
+  along on an ordinary two-tank trip that carries no `course_id` are capped by nothing at all. The
+  tightest safety control in the product does not see them.
+
+Fixing either needs the course (or at least "this seat is an intro participant") to be a property of
+the **booking**, so the cap can count students rather than seats and a mixed boat can be counted
+correctly in both directions. That is a data-model change with its own migration and UI, out of
+scope for this amendment; recorded here so the limitation is not mistaken for coverage.

@@ -103,7 +103,7 @@ deleted; rows that are evidence are kept and their personal fields scrubbed.**
 | `rental_fit_profiles` | row deleted (body measurement) |
 | `trip_waitlist_entries`, `last_minute_list_entries` (+ its unsubscribe tokens), `person_courtesy_email_unsubscribe_tokens` | rows deleted |
 | `internal_notes` | rows deleted — `body` is NOT NULL with a non-blank check, so there is nothing to redact it *to*, and staff prose about a person is personal data end to end |
-| `activity_events` | `message` → `[redacted]` (NOT NULL + non-blank check); the row, its actor, and its timestamp stay. Swept three ways — by booking, by actor, and by **matching the stored name**, because a note attached to the diver rather than a booking writes an event with a null `booking_id` and no person link at all. The name match can over-reach onto a same-named staff member's event; that is the right way round. |
+| `activity_events` | `message` → `[redacted]` (NOT NULL + non-blank check); the row, its actor, and its timestamp stay. Swept three ways — by booking, by actor, and by **matching the stored name on word boundaries** (`~*` with `\y`, case-insensitive), because a note attached to the diver rather than a booking writes an event with a null `booking_id` and no person link at all. See "Bounding the name match" below: the match is anchored and has a minimum length, and its match count is logged. |
 | `roll_call_events` | `note` → null; the boarding fact stays |
 | `bookings` | `group_preference` → null; the seat stays |
 | `booking_payments` | `note` → null |
@@ -115,8 +115,85 @@ deleted; rows that are evidence are kept and their personal fields scrubbed.**
 | `orders` | `hosted_invoice_url`, `invoice_pdf_url` → null — publicly reachable Stripe pages rendering the customer's name and email |
 | `recap_photos` | rows deleted + blob queued (photographs of the diver) |
 | `notification_deliveries` | `provider_detail`, `send_error` → null (bounce text quotes the address) |
+| `notification_delivery_attempts` | `send_error` → null. The append-only twin of the row above, written from the same `delivery.detail` in the same call, so it quotes the same address; scrubbing only the denormalized latest state would leave the address in the history behind it. `send_error_code` is a provider code, not prose, and stays. |
+| `booking_checkouts` | `customer_email` → null. Two asymmetric sweeps — see "The checkout's copy of the address" below. |
 | `notification_send_queue` | rows deleted, matched on `payload->>'to'` (case-insensitive) and `payload->>'bookingId'`. The one un-normalized PII blob; a work queue, not evidence. |
 | `course_inquiries` | `name`, `email`, `phone`, `timing`, `message` → null, matched on the diver's email or phone — see residuals |
+
+### The checkout's copy of the address
+
+`booking_checkouts.customer_email` is the same class of un-normalized PII as the send queue — a
+durable address with no `person_id` — and it is more than a stale column. Erasure cancels no booking
+and settles no payment, so an erased diver with an open, unexpired checkout on a **future** trip
+remains a live candidate for `sendDueCheckoutRecoveries`: none of its disqualifiers (cancelled trip,
+cancelled booking, settled payment, departed trip) fires, and the next daily cron tick would email
+the address the shop has just told the diver it destroyed.
+
+The column holds the **submitter's** address, and `booking_checkout_bookings` carries no lead marker,
+so the purchaser cannot be re-derived from the join. The party case therefore cuts both ways and the
+two sweeps are deliberately asymmetric:
+
+1. **By address** (`lower(customer_email) = ` the diver's, shop-scoped). Both callers of
+   `startBookingCheckout` pass a `people.email`, so a stored address equal to this diver's is theirs
+   whoever the checkout covers — including a party they paid for but hold no seat on, which the
+   booking join cannot see at all. Nulled unconditionally. Co-travellers on that party lose the
+   hosted link and the recovery nudge and must be quoted a fresh checkout; that is a cost of
+   erasure, not a reason to leave the address standing.
+2. **By booking, only where the checkout covers nothing but this diver's own seats.** This reaches an
+   address that is theirs but no longer on their person row — changed after checking out — for which
+   the join is the only handle. It deliberately stops at a mixed party: an address that survived
+   sweep 1 on a checkout covering other divers is, as far as the row can tell, a live third party's,
+   and blanking it would destroy a bystander's contact detail and take the rest of the party's
+   payment link with it, to erase an address that is probably not the erased diver's.
+
+The checkouts are **blanked, not expired.** Marking a row locally `expired` while Stripe's hosted
+session is still open would make `markCheckoutPaidBySessionId` refuse a completion that genuinely
+captured money (its `paid_disqualified` branch), which is a worse failure than an unpaid row that
+lingers. With no address the recovery scan cannot send, and the row leaves the candidate pool on its
+own once the session expires or the trip departs.
+
+### Bounding the name match
+
+The `activity_events` name sweep matches the stored name against **every message in the shop**, so
+its bound is load-bearing. `personSchema.fullName` requires only two characters, and the sweep was
+originally a substring (`ILIKE '%name%'`) match: erasing a diver named `Al`, `An` or `Ed` would have
+run `%an%` across the shop's whole operational history and irreversibly replaced most of it with
+`[redacted]`, inside the erasure transaction. The blast radius of that over-reach was not "a line of
+history" — it was the log.
+
+Two bounds, both in `src/db/anonymize.ts`:
+
+- **Word-boundary match.** `~*` with a `\y`-anchored, regex-escaped pattern, so `An` matches the word
+  `An` and nothing inside `Dana`, `manifest` or `changed`. The anchors are applied only where the
+  name's own first/last character is a word character — `\y` between two non-word characters is
+  never a boundary.
+- **A minimum of three word characters** (`MIN_NAME_MATCH_CHARS`). Below it the name sweep is skipped
+  entirely: at two characters the name is simultaneously the weakest identifier on the record and the
+  most indiscriminate matcher available, and a one-character name would match the bare `x` in
+  "3 x tanks". The booking-scoped and actor-scoped sweeps still run.
+
+What survives is the intended over-reach and only that: an event naming a *different person with the
+same name* loses its wording. That trade is still the right way round — a line of history against a
+name someone asked to have forgotten — but it is a line, not the log.
+
+### Fuzzy predicates are logged
+
+Four sweeps match on something other than a foreign key and can therefore reach a third party's row
+in the same shop. None is cross-tenant and all are owner-gated, so this is a visibility problem, not
+a containment one: each logs `anonymize.fuzzy_match` with its predicate name and the number of rows
+it reached (ids and counts only — never the matched name, address or number), and each runs *after*
+the exact sweep it sits beside so the count is the over-reach in isolation.
+
+| Predicate | What it can reach that isn't the diver's |
+| --- | --- |
+| `activity_event_name` | an event about a different person with the same name |
+| `course_inquiry_phone` | a partner's or child's lead on a shared household number |
+| `send_queue_recipient` | a live person's queued mail, when a soft-deleted duplicate shares their address — `people_shop_email_unique` is partial on *live* rows, so the duplicate is legitimate |
+| `booking_checkout_sole_occupant` | the address of someone who booked a seat purely on the erased diver's behalf |
+
+`course_inquiry_phone` is deliberately **not** tightened to "…and the inquiry carries no email":
+that would drop the real case it exists for, a diver who used a different address on the public lead
+form than the one on their record.
 
 Blob objects (card photographs, recap photos, imported waiver documents) are retired through the
 existing `media_deletion_attempts` ledger
@@ -140,6 +217,18 @@ still in `waiver_records` — is the worst outcome available.
   phone the diver themselves supplied, which is the only link there is. **An inquiry that carries
   neither a matching email nor a matching phone is not reached.** That is a stated gap, not an
   oversight: the alternative is fuzzy name matching, which would scrub other people's leads.
+- **A checkout address that is the diver's but no longer on their person row, on a party that also
+  covers other divers, is not reached.** Sweep 1 misses it (the addresses differ), and sweep 2 stops
+  at a mixed party on purpose (see above). Reaching it would mean blanking whatever address a
+  mixed-party checkout carries, which destroys a bystander's contact detail in every case where the
+  submitter was in fact someone else. Narrow today: both callers write the column straight from a
+  `people.email`, so this needs the diver to have changed their address between checking out and
+  being erased.
+- **A diver whose full name has fewer than three word characters keeps the wording of a
+  diver-scoped activity event.** The name sweep is skipped below that length (see "Bounding the name
+  match"); the booking- and actor-scoped sweeps still run, so only an event with a null `booking_id`
+  written about them by someone else — a private note — retains a one- or two-character name. That
+  is a far smaller leak than what the unbounded match cost.
 - **Backups and log aggregation** are outside the database and outside this ADR
   ([20260802-backup-and-restore-posture](20260802-backup-and-restore-posture.md) owns retention
   there). A restore from a pre-erasure backup reinstates the erased data.

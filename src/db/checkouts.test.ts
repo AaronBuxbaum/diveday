@@ -1,7 +1,7 @@
 // @vitest-environment node
 
 import { and, eq } from "drizzle-orm";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type {
   CheckoutProvider,
   CheckoutSessionLookupResult,
@@ -592,6 +592,42 @@ describe("checkout completion", () => {
     );
     expect(amounts.reduce((total, cents) => total + cents, 0)).toBe(33_333);
     expect([...amounts].sort()).toEqual([16_666, 16_667]);
+  });
+
+  // A settled figure above what the session asked for would scale *every*
+  // share past its own ask (`allocateSettledTotal` splits proportionally and
+  // has no basis for deciding whose the surplus is), and the inflated
+  // `booking_payments.amountCents` is what a later refund reverses. No Stripe
+  // path reaches it today — fixed `price_data` lines, no tax, no adjustable
+  // quantity, no tipping — so a figure that arrives over the ask means an
+  // assumption has changed, and it must surface as a log line, not as money.
+  it("clamps a settled total reported above what the session asked for", async () => {
+    const { db, shop, reef, bookingIds } = await checkoutContext();
+    const start = await startBookingCheckout(
+      db,
+      startInput(shop.id, reef.id, bookingIds),
+      fakeCheckout(),
+    );
+    if (!start.ok) throw new Error("checkout start failed");
+    expect(start.checkout.totalCents).toBe(REEF_PRICE_CENTS * 2);
+
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    const completed = await markCheckoutPaidBySessionId(
+      db,
+      start.checkout.stripeSessionId,
+      undefined,
+      REEF_PRICE_CENTS * 2 + 50_000,
+    );
+    expect(logged).toHaveBeenCalledTimes(1);
+    expect(String(logged.mock.calls[0]?.[0])).toContain("checkout.settled_total_over_asked");
+    logged.mockRestore();
+
+    // Clamped before it is stored, so the per-booking rows still sum to
+    // exactly the recorded settled total.
+    expect(completed?.settledTotalCents).toBe(REEF_PRICE_CENTS * 2);
+    for (const bookingId of bookingIds) {
+      expect((await getBookingPayment(db, shop.id, bookingId))?.amountCents).toBe(REEF_PRICE_CENTS);
+    }
   });
 
   it("falls back to the asked amounts when Stripe reported no settled total", async () => {

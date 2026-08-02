@@ -21,11 +21,18 @@ import {
   bookingCheckoutBookings,
   bookingCheckouts,
   bookings,
+  courses,
   people,
   personRoles,
   trips,
 } from "./schema";
-import { getTripRoster, upcomingTripsWithCounts } from "./trips";
+import {
+  createTrip,
+  getTripRoster,
+  listStaff,
+  setTripCrew,
+  upcomingTripsWithCounts,
+} from "./trips";
 
 async function seededContext() {
   const { db, shop } = await seededShopContext();
@@ -440,6 +447,97 @@ describe("restoreBooking (undo of a roster removal)", () => {
     expect(await restoreBooking(db, shop.id, "00000000-0000-4000-8000-000000000000")).toBe(
       "not_found",
     );
+  });
+
+  /**
+   * Undo is a seat-granting write, so it answers to the course ratio as well as
+   * the boat's capacity (DOM-H2). A four-seat intro session with a walk-up in
+   * the freed seat is one tap from five uncertified first-timers on one
+   * instructor — and the trip's own capacity (12) never notices.
+   *
+   * 180 days out for the same reason as `src/db/courses.test.ts`: clear of the
+   * seeded instructor's calendar, whatever hour the suite runs at.
+   */
+  const INTRO_SESSION_OFFSET_MS = 180 * 24 * 60 * 60 * 1000;
+
+  async function introSession(db: AppDb, shopId: string) {
+    const [course] = await db
+      .select()
+      .from(courses)
+      .where(and(eq(courses.shopId, shopId), eq(courses.title, "Discover Scuba Diving")));
+    if (!course) throw new Error("Discover Scuba Diving course missing");
+    const staff = await listStaff(db, shopId);
+    const instructor = staff.find((entry) => entry.roles.includes("instructor"));
+    if (!instructor) throw new Error("seeded instructor missing");
+    const trip = await createTrip(db, {
+      shopId,
+      courseId: course.id,
+      title: "Discover Scuba — restore test",
+      startsAt: new Date(Date.now() + INTRO_SESSION_OFFSET_MS),
+      endsAt: new Date(Date.now() + INTRO_SESSION_OFFSET_MS + 4 * 60 * 60 * 1000),
+      // Capacity 12 is well clear of the 4:1 ratio cap, so nothing but the
+      // ratio can refuse anything here.
+      capacity: 12,
+      plannedDives: 2,
+    });
+    if (!trip) throw new Error("failed to create intro test trip");
+    if (!(await setTripCrew(db, shopId, trip.id, [instructor.person.id]))) {
+      throw new Error("failed to assign instructor");
+    }
+    return trip;
+  }
+
+  it("refuses an undo that would put a fifth diver on a four-seat intro session", async () => {
+    const { db, shop } = await seededContext();
+    const trip = await introSession(db, shop.id);
+    const seated = [];
+    for (let i = 0; i < 4; i++) {
+      const outcome = await createBooking(db, {
+        actor: "staff",
+        shopId: shop.id,
+        tripId: trip.id,
+        fullName: `DSD Restore Diver ${i}`,
+        email: `dsd-restore-${i}@example.com`,
+      });
+      if (!outcome.ok) throw new Error("setup booking failed");
+      seated.push(outcome.bookingId);
+    }
+    const removed = seated[0];
+    if (!removed) throw new Error("no booking to remove");
+    await cancelBooking(db, shop.id, removed);
+
+    // A walk-up takes the freed seat — legitimately, the session is back at 4.
+    const walkUp = await createBooking(db, {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: trip.id,
+      fullName: "DSD Walk Up",
+      email: "dsd-walk-up@example.com",
+    });
+    expect(walkUp).toMatchObject({ ok: true });
+
+    expect(await restoreBooking(db, shop.id, removed)).toBe("course_ratio_full");
+    const roster = await getTripRoster(db, shop.id, trip.id);
+    expect(roster).toHaveLength(4);
+    expect(roster.map((r) => r.person.fullName)).not.toContain("DSD Restore Diver 0");
+  });
+
+  it("still restores onto an intro session while the seat is genuinely free", async () => {
+    const { db, shop } = await seededContext();
+    const trip = await introSession(db, shop.id);
+    const booked = await createBooking(db, {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: trip.id,
+      fullName: "DSD Undo Diver",
+      email: "dsd-undo@example.com",
+    });
+    if (!booked.ok) throw new Error("setup booking failed");
+    await cancelBooking(db, shop.id, booked.bookingId);
+
+    expect(await restoreBooking(db, shop.id, booked.bookingId)).toBe("restored");
+    const roster = await getTripRoster(db, shop.id, trip.id);
+    expect(roster.map((r) => r.person.fullName)).toContain("DSD Undo Diver");
   });
 });
 

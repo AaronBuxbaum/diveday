@@ -73,6 +73,24 @@ describe("allocateSettledTotal", () => {
     expect(sum(allocation)).toBe(37_200);
   });
 
+  // The precondition in the docstring, pinned so a reader can see exactly what
+  // is and is not promised above it. A total larger than the sum of the asks
+  // scales every share up together — the split has no basis for deciding whose
+  // the surplus is — and it still sums exactly, because dropping the surplus
+  // here would break the guarantee the per-booking ledger depends on. Clamping
+  // is the caller's job: `markCheckoutPaidBySessionId` (src/db/checkouts.ts)
+  // clamps to the checkout's own asked total and logs the mismatch.
+  it("documents its precondition: above the asked total, every share inflates", () => {
+    const shares: SettlementShare[] = [
+      { key: "a", askedCents: 18_000 },
+      { key: "b", askedCents: 18_000 },
+    ];
+    const allocation = allocateSettledTotal(shares, 100_000);
+    expect(allocation.get("a")).toBeGreaterThan(18_000);
+    expect(allocation.get("b")).toBeGreaterThan(18_000);
+    expect(sum(allocation)).toBe(100_000);
+  });
+
   it("handles the degenerate cases without throwing or inventing money", () => {
     expect(allocateSettledTotal([], 5_000).size).toBe(0);
     // A fully comped party: nothing was asked, so an even split is all that's left.

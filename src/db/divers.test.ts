@@ -20,6 +20,8 @@ import { saveRentalFit } from "./rental-fit";
 import {
   activityEvents,
   bookingCapabilities,
+  bookingCheckoutBookings,
+  bookingCheckouts,
   bookingPayments,
   bookings,
   calendarFeeds,
@@ -32,6 +34,7 @@ import {
   mediaDeletionAttempts,
   nitroxCertifications,
   notificationDeliveries,
+  notificationDeliveryAttempts,
   notificationSendQueue,
   orders,
   people,
@@ -670,6 +673,18 @@ describe("diver erasure", () => {
       sendError: "bounce for elena@example.com",
       attemptedAt: erasureNow,
     });
+    // The append-only twin, written from the same `delivery.detail` in the
+    // same call (`sendNotification`, src/db/notifications.ts) — so it quotes
+    // the same address the row above does.
+    await db.insert(notificationDeliveryAttempts).values({
+      shopId: shop.id,
+      bookingId,
+      kind: "waiver_request",
+      status: "failed",
+      sendErrorCode: "bounced",
+      sendError: "bounce for elena@example.com",
+      attemptedAt: erasureNow,
+    });
     await db.insert(notificationSendQueue).values([
       {
         shopId: shop.id,
@@ -894,6 +909,14 @@ describe("diver erasure", () => {
       .from(notificationDeliveries)
       .where(eq(notificationDeliveries.bookingId, bookingId));
     expect(delivery).toMatchObject({ providerDetail: null, sendError: null });
+
+    // The history behind that latest state carries the same quoted address and
+    // is scrubbed with it; the provider's status *code* is not prose and stays.
+    const [attempt] = await db
+      .select()
+      .from(notificationDeliveryAttempts)
+      .where(eq(notificationDeliveryAttempts.bookingId, bookingId));
+    expect(attempt).toMatchObject({ sendError: null, sendErrorCode: "bounced" });
 
     // The un-normalized PII blob: matched both by recipient address (case
     // insensitively) and by the booking it names.
@@ -1177,5 +1200,266 @@ describe("diver erasure", () => {
       .from(certifications)
       .where(eq(certifications.personId, bystander.id));
     expect(beaCard).toMatchObject({ identifier: "PADI-BEA-1", deletedAt: null });
+  });
+
+  /**
+   * `booking_checkouts.customer_email` is un-normalized PII with no person_id,
+   * and erasure cancels no booking and settles no payment — so a checkout left
+   * holding the address stays a live candidate for `sendDueCheckoutRecoveries`
+   * and the next cron tick mails the address the shop said it destroyed
+   * (asserted end to end in src/db/checkout-recovery.test.ts).
+   *
+   * The column holds the *submitter's* address, so the party case has two
+   * directions and both are pinned here.
+   */
+  describe("the checkout's copy of the address", () => {
+    async function insertCheckout(
+      db: AppDb,
+      input: {
+        shopId: string;
+        tripId: string;
+        sessionId: string;
+        customerEmail: string;
+        bookingIds: string[];
+      },
+    ) {
+      const [row] = await db
+        .insert(bookingCheckouts)
+        .values({
+          shopId: input.shopId,
+          tripId: input.tripId,
+          stripeAccountId: "acct_test",
+          stripeSessionId: input.sessionId,
+          checkoutUrl: `https://checkout.stripe.com/c/pay/${input.sessionId}`,
+          customerEmail: input.customerEmail,
+          amountPerDiverCents: 18_000,
+          totalCents: 18_000 * Math.max(input.bookingIds.length, 1),
+        })
+        .returning();
+      if (!row) throw new Error("checkout insert failed");
+      if (input.bookingIds.length > 0) {
+        await db.insert(bookingCheckoutBookings).values(
+          input.bookingIds.map((bookingId) => ({
+            shopId: input.shopId,
+            checkoutId: row.id,
+            bookingId,
+          })),
+        );
+      }
+      return row;
+    }
+
+    /** Elena, plus a second diver holding their own seat on the same trip. */
+    async function withCompanion() {
+      const context = await erasableDiver();
+      const companion = await createDiver(context.db, {
+        shopId: context.shop.id,
+        fullName: "Companion Cass",
+        email: "cass@example.com",
+      });
+      if (!companion) throw new Error("companion insert failed");
+      const booked = await createBooking(context.db, {
+        actor: "staff",
+        shopId: context.shop.id,
+        tripId: context.trip.id,
+        personId: companion.id,
+      });
+      if (!booked.ok) throw new Error(`companion booking failed: ${booked.reason}`);
+      return { ...context, companion, companionBookingId: booked.bookingId };
+    }
+
+    async function emailOn(db: AppDb, checkoutId: string) {
+      const [row] = await db
+        .select()
+        .from(bookingCheckouts)
+        .where(eq(bookingCheckouts.id, checkoutId));
+      return row?.customerEmail ?? null;
+    }
+
+    it("wipes the erased diver's own address, including off a party they hold no seat on", async () => {
+      const { db, shop, diver, ownerId, trip, bookingId, companionBookingId } =
+        await withCompanion();
+
+      const solo = await insertCheckout(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        sessionId: "cs_elena_solo",
+        customerEmail: "elena@example.com",
+        bookingIds: [bookingId],
+      });
+      // Elena paid for a friend and took no seat herself: no booking of hers is
+      // on this checkout at all, so a booking-join sweep cannot see it — the
+      // address on it is still hers.
+      const paidForAFriend = await insertCheckout(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        sessionId: "cs_elena_for_cass",
+        // Stored case-insensitively, as `startBookingCheckout` received it.
+        customerEmail: "ELENA@example.com",
+        bookingIds: [companionBookingId],
+      });
+
+      const result = await anonymizeDiver(db, {
+        shopId: shop.id,
+        personId: diver.id,
+        actorPersonId: ownerId,
+      });
+      if (!result.ok) throw new Error(`erasure refused: ${result.reason}`);
+
+      expect(await emailOn(db, solo.id)).toBeNull();
+      expect(await emailOn(db, paidForAFriend.id)).toBeNull();
+    });
+
+    it("wipes an address that is no longer on the person row when the checkout is theirs alone", async () => {
+      const { db, shop, diver, ownerId, trip, bookingId } = await erasableDiver();
+      // Elena checked out under an older address and changed it afterwards, so
+      // the address sweep cannot match it. The checkout covers nothing but her
+      // own seat, so nobody else's address can be the one sitting here and
+      // nobody else's payment link is lost with it.
+      const stale = await insertCheckout(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        sessionId: "cs_elena_stale",
+        customerEmail: "elena-old-address@example.com",
+        bookingIds: [bookingId],
+      });
+
+      const result = await anonymizeDiver(db, {
+        shopId: shop.id,
+        personId: diver.id,
+        actorPersonId: ownerId,
+      });
+      if (!result.ok) throw new Error(`erasure refused: ${result.reason}`);
+
+      expect(await emailOn(db, stale.id)).toBeNull();
+    });
+
+    it("leaves a party lead's own address on a checkout covering divers who were not erased", async () => {
+      const { db, shop, diver, ownerId, trip, bookingId, companionBookingId } =
+        await withCompanion();
+      // Cass led this party and Elena was one of the seats on it. The address
+      // is Cass's — a live third party who never asked to be forgotten — and
+      // blanking it would destroy her contact detail and take the rest of the
+      // party's payment link with it.
+      const ledByCompanion = await insertCheckout(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        sessionId: "cs_cass_party",
+        customerEmail: "cass@example.com",
+        bookingIds: [bookingId, companionBookingId],
+      });
+
+      const result = await anonymizeDiver(db, {
+        shopId: shop.id,
+        personId: diver.id,
+        actorPersonId: ownerId,
+      });
+      if (!result.ok) throw new Error(`erasure refused: ${result.reason}`);
+
+      expect(await emailOn(db, ledByCompanion.id)).toBe("cass@example.com");
+    });
+
+    it("wipes the erased diver's address off a party they led, even one covering others", async () => {
+      const { db, shop, diver, ownerId, trip, bookingId, companionBookingId } =
+        await withCompanion();
+      // The mirror of the case above: the address is Elena's, so it goes even
+      // though Cass loses the hosted link — the shop can quote her a fresh one.
+      const ledByElena = await insertCheckout(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        sessionId: "cs_elena_party",
+        customerEmail: "elena@example.com",
+        bookingIds: [bookingId, companionBookingId],
+      });
+
+      const result = await anonymizeDiver(db, {
+        shopId: shop.id,
+        personId: diver.id,
+        actorPersonId: ownerId,
+      });
+      if (!result.ok) throw new Error(`erasure refused: ${result.reason}`);
+
+      expect(await emailOn(db, ledByElena.id)).toBeNull();
+    });
+  });
+
+  /**
+   * The name sweep matches against every message in the shop, so its bound is
+   * the whole safety property. A substring match built from a two-character
+   * name (`personSchema.fullName` allows one) reaches inside `Dana`,
+   * `manifest` and `changed` — and this runs inside the erasure transaction,
+   * with no way back.
+   */
+  describe("the activity-log name match", () => {
+    async function shopWithHistory(fullName: string, messages: string[]) {
+      const { db, shop } = await seededShopContext();
+      const ownerId = await personIdByName(db, shop.id, "Dana Reyes");
+      const captainId = await personIdByName(db, shop.id, "Sal Moretti");
+      const diver = await createDiver(db, { shopId: shop.id, fullName });
+      if (!diver) throw new Error("diver insert failed");
+      await db.insert(activityEvents).values(
+        messages.map((message) => ({
+          shopId: shop.id,
+          bookingId: null,
+          // Attributed to staff, never to the erased diver — the actor sweep is
+          // exact and would redact these for reasons that have nothing to do
+          // with the name match under test.
+          actorPersonId: captainId,
+          message,
+          occurredAt: erasureNow,
+        })),
+      );
+      return { db, shop, diver, ownerId };
+    }
+
+    async function messagesIn(db: AppDb, shopId: string) {
+      const rows = await db
+        .select({ message: activityEvents.message })
+        .from(activityEvents)
+        .where(eq(activityEvents.shopId, shopId));
+      return rows.map((row) => row.message);
+    }
+
+    it("does not let a two-character name redact the shop's unrelated history", async () => {
+      const history = [
+        "Dana Reyes moved the manifest for the Alligator Reef charter",
+        "Sal Moretti changed the roll call and credited a deposit",
+        "Priya Sharma boarded early",
+      ];
+      const { db, shop, diver, ownerId } = await shopWithHistory("Al", history);
+
+      const result = await anonymizeDiver(db, {
+        shopId: shop.id,
+        personId: diver.id,
+        actorPersonId: ownerId,
+      });
+      if (!result.ok) throw new Error(`erasure refused: ${result.reason}`);
+
+      // Every one of these contains `al` as a substring. Not one is touched.
+      const after = await messagesIn(db, shop.id);
+      for (const message of history) expect(after).toContain(message);
+      expect(after).not.toContain(REDACTED_TEXT);
+    });
+
+    it("matches a name at whole-word boundaries only", async () => {
+      const { db, shop, diver, ownerId } = await shopWithHistory("Ana", [
+        "Dana Reyes updated the manifest",
+        "Sal Moretti added a private note about Ana",
+      ]);
+
+      const result = await anonymizeDiver(db, {
+        shopId: shop.id,
+        personId: diver.id,
+        actorPersonId: ownerId,
+      });
+      if (!result.ok) throw new Error(`erasure refused: ${result.reason}`);
+
+      const after = await messagesIn(db, shop.id);
+      // The diver-scoped note (null booking_id, no person link) is reached…
+      expect(after).toContain(REDACTED_TEXT);
+      expect(after.some((message) => message.includes("about Ana"))).toBe(false);
+      // …and `Dana` is not `Ana`.
+      expect(after).toContain("Dana Reyes updated the manifest");
+    });
   });
 });

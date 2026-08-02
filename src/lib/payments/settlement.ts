@@ -30,10 +30,20 @@ function sanitize(cents: number): number {
  * Split `settledTotalCents` across `shares` in proportion to what each was
  * asked for, by the largest-remainder method: every share gets the floor of
  * its exact proportion, then the leftover cents go one each to the largest
- * remainders (ties broken by `key`, ascending). The result therefore sums to
- * *exactly* the settled total — no cent is invented and none is dropped — and
- * no share is rounded above what it was asked for, so a discount can never
- * hand one party member more than they paid.
+ * remainders (ties broken by `key`, ascending). The result sums to *exactly*
+ * the settled total — no cent is invented and none is dropped.
+ *
+ * **Precondition: `settledTotalCents <= Σ askedCents`.** Within it, no share is
+ * ever allocated above its own `askedCents`, so a discount can never hand one
+ * party member more than they paid. Above it that guarantee does not hold and
+ * cannot: every share is scaled up together, because a proportional split has
+ * no basis for deciding which booking a surplus belongs to. The precondition is
+ * stated rather than enforced here — clamping inside this function would break
+ * the "sums to exactly the settled total" guarantee above, which the
+ * per-booking ledger depends on. Clamping is the **caller's** job:
+ * `markCheckoutPaidBySessionId` (src/db/checkouts.ts) clamps Stripe's reported
+ * total to the checkout's own asked total and logs the mismatch, so an
+ * over-total figure can never inflate what a refund later reverses.
  *
  * Degenerate inputs stay safe rather than throwing: no shares allocates
  * nothing; a zero asked total (a fully comped party) splits the settled amount

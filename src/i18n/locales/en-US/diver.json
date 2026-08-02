@@ -219,7 +219,7 @@
       "unavailable": "This trip isn't taking bookings right now. Get in touch and the shop can help you find the right fit.",
       "unavailableWithContact": "This trip isn't taking bookings right now. Email {contact} and the shop can help you find the right fit.",
       "courseUnavailable": "This course still needs an assigned instructor before it can take bookings.",
-      "courseRatioFull": "This session is at its instructor-to-student ratio limit — call the shop, they may be able to add another instructor or certified assistant.",
+      "courseRatioFull": "This session is at its instructor-to-student ratio limit — call the shop, they may be able to add another instructor.",
       "fit": "We couldn't save that rental fit. Please check the details and try again.",
       "pay": "We couldn't open the payment page just now. Your spot is safe — try again in a moment, or pay at the shop.",
       "checkFields": "Check the highlighted fields and try again."

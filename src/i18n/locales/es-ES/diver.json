@@ -219,7 +219,7 @@
       "unavailable": "Esta salida no acepta reservas ahora mismo. Ponte en contacto y el centro te ayudará a encontrar la opción adecuada.",
       "unavailableWithContact": "Esta salida no acepta reservas ahora mismo. Escribe a {contact} y el centro te ayudará a encontrar la opción adecuada.",
       "courseUnavailable": "Este curso todavía necesita un instructor asignado antes de poder aceptar reservas.",
-      "courseRatioFull": "Esta sesión alcanzó su límite de proporción instructor-alumno — llama al centro, puede que puedan añadir otro instructor o ayudante certificado.",
+      "courseRatioFull": "Esta sesión alcanzó su límite de proporción instructor-alumno — llama al centro, puede que puedan añadir otro instructor.",
       "fit": "No hemos podido guardar ese ajuste de equipo. Revisa los detalles e inténtalo de nuevo.",
       "pay": "No hemos podido abrir la página de pago en este momento. Tu plaza está segura — inténtalo de nuevo en un momento, o paga en el centro.",
       "checkFields": "Revisa los campos resaltados e inténtalo de nuevo."

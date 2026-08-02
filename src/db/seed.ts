@@ -2784,6 +2784,26 @@ async function seedHistory(
     )
     .returning();
 
+  // A boat that sailed had requirements. Without this row every history booking
+  // reads `requirements_not_configured` — blocked — while the roll call below
+  // says "Boarded", so a demo history manifest showed a green boarding pill
+  // beside a red "Requirements not configured" on the same line. That is the
+  // exact pairing the boarding gate exists to prevent (`recordRollCall` refuses
+  // to create it, src/db/manifests.ts), so the demo was teaching the opposite of
+  // the product. Plain reef-trip gates: a signed release and an Open Water card,
+  // both of which every diver in the history cohort holds.
+  await db.insert(tripRequirements).values(
+    histTrips.map((trip) => ({
+      tripId: trip.id,
+      shopId,
+      requiresWaiver: true,
+      minimumCertificationLevel: "open_water" as const,
+      requiredSpecialties: [] as DiveSpecialty[],
+      requiresNitrox: false,
+      requiresPayment: false,
+    })),
+  );
+
   // Deterministic per-booking plan. `k` is a global booking index; every "is
   // this one a no-show / a deposit / missing its waiver" decision is a fixed
   // function of it, so the whole back-fill is reproducible byte for byte.
@@ -2825,7 +2845,13 @@ async function seedHistory(
         status,
         price: plan.priceCents,
         payment,
-        waiver: !cancelled && k % 9 !== 0,
+        // Anyone who *boarded* has a signed release, because the app will not
+        // board anyone who doesn't: readiness gates `boarded` at departure
+        // (`recordRollCall`). The missing-waiver variety the demo wants stays
+        // on the divers who never got on the boat — a no-show with an unsigned
+        // release is a true and common story, and it is the story the manifest
+        // should tell beside their "Not boarded".
+        waiver: status === "checked_in" ? true : !cancelled && k % 9 !== 0,
         order: payment === "paid" || payment === "deposit_paid",
         createdAt: new Date(trip.startsAt.getTime() - (seat + 1) * 60 * 1000),
       });

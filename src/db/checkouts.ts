@@ -402,7 +402,30 @@ export async function markCheckoutPaidBySessionId(
       settledTotalCents >= 0
         ? settledTotalCents
         : null;
-    const settledCents = checkout.settledTotalCents ?? reportedSettledCents;
+    // …and never above what this session actually asked for. Above that
+    // ceiling `allocateSettledTotal` scales *every* share up past its own ask
+    // (its proportional split has no way to decide whose the surplus is), and
+    // the inflated `booking_payments.amountCents` that results is the figure a
+    // later refund reverses. No path reaches this today — the session is built
+    // from fixed `price_data` lines with no tax, no adjustable quantity, no
+    // tipping — and the figure is authenticated before it is trusted, so a
+    // mismatch means a Stripe-side assumption has changed (`automatic_tax`, a
+    // tipping toggle) rather than an attack. Clamped so that change surfaces as
+    // a log line instead of as money, and clamped *before* the store so the
+    // per-booking rows still sum to exactly the recorded settled total; the
+    // figure Stripe reported stays recoverable from the log.
+    if (reportedSettledCents !== null && reportedSettledCents > checkout.totalCents) {
+      log("checkout.settled_total_over_asked", "error", {
+        shopId: checkout.shopId,
+        checkoutId: checkout.id,
+        stripeSessionId: checkout.stripeSessionId,
+        reportedCents: reportedSettledCents,
+        askedCents: checkout.totalCents,
+      });
+    }
+    const usableSettledCents =
+      reportedSettledCents === null ? null : Math.min(reportedSettledCents, checkout.totalCents);
+    const settledCents = checkout.settledTotalCents ?? usableSettledCents;
 
     const updated =
       checkout.status === "completed"
@@ -492,6 +515,23 @@ export async function markCheckoutPaidBySessionId(
         // total): fall back to what this diver was asked for — the per-diver
         // charge plus their own gear. Pre-discount, so possibly generous on a
         // promo checkout, but never a completion refused or recorded as zero.
+        //
+        // KNOWN RESIDUAL, open, reachable only on this branch (no
+        // `amount_total`) and only for a **party** checkout on a **discounted**
+        // session. One Stripe payment intent covers N bookings, and each is
+        // recorded here at its quoted, pre-discount amount, so the recorded
+        // amounts sum above what the intent actually captured.
+        // `refundBookingOnCancellation` (src/db/refunds.ts) then asks Stripe to
+        // reverse one diver's inflated share out of the shared pot; Stripe
+        // bounds the *total* reversed against that intent, not the per-diver
+        // share, so the first party member to cancel can be over-refunded and a
+        // later one left under-funded — Stripe refusing their refund for money
+        // that has already gone to someone else. This is recorded rather than
+        // fixed: the fix is to stop recording an unsettled party at quoted
+        // amounts at all (prorate against `totalCents`, or refuse to attribute
+        // per-booking money without a settled figure), which changes what a
+        // completion means and needs its own decision. Do not read the fallback
+        // as closed.
         amountCents: allocation?.get(bookingId) ?? askedCentsFor(gearCents),
         currency: checkout.currency,
         provider: "stripe",

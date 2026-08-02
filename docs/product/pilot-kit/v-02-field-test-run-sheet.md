@@ -178,7 +178,13 @@ This is the step most likely to surface something. Do not skip it.
       on readiness — confirm a diver blocked at departure can still be counted aboard. Y / N
 - [ ] A diver marked not boarded at departure should carry forward as *Not boarded · carried*.
       Y / N
-- [ ] Roll call complete: does the screen say so unmistakably ("Roll call complete")? Y / N
+- [ ] With every diver counted and **no crew count entered**, the checkpoint must *not* read
+      complete — the screen should ask for the crew count instead. Y / N
+- [ ] Enter a crew count that is one short of the assigned crew. Still not complete? Y / N
+- [ ] Enter the full count. Roll call complete: does the screen say so unmistakably
+      ("Roll call complete")? Y / N
+- [ ] Ask the captain, cold: "who counts as crew here, and who counted them?" Does the screen's
+      attribution match their answer? Notes: ______________
 - [ ] Second dive: repeat on **after dive 2** if the trip has one. Notes: ______________
 
 ### 10 — The stale / expired / missing copy

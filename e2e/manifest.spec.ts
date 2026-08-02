@@ -409,16 +409,20 @@ test("a checkpoint with every diver counted stays open until the crew are counte
     .evaluate((link: HTMLElement) => link.click());
   await expect(page).toHaveURL(/checkpoint=after_dive_1/);
 
-  for (;;) {
-    const next = page.getByRole("button", { name: "Mark boarded" }).first();
-    if ((await next.count()) === 0) break;
+  const boardButtons = page.getByRole("button", { name: "Mark boarded" });
+  // Bounded rather than `while (true)`: a refusal that left the button in
+  // place would otherwise spin here instead of failing.
+  for (let guard = 0; guard < 40; guard += 1) {
+    const remaining = await boardButtons.count();
+    if (remaining === 0) break;
+    const next = boardButtons.first();
     await next.evaluate((button) => button.scrollIntoView({ block: "center" }));
     await next.click();
-    await expect(next).toHaveText(/Boarded/);
+    await expect(boardButtons).toHaveCount(remaining - 1);
   }
+  await expect(boardButtons).toHaveCount(0);
 
   // Every diver has a result — and the checkpoint is still open, naming why.
-  await expect(page.getByText(/0 divers still to call/)).toHaveCount(0);
   await expect(
     page.getByText("Every diver is counted. Confirm how many crew are aboard to close this"),
   ).toBeVisible();

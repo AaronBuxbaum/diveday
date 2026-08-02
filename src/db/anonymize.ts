@@ -36,10 +36,11 @@
  * outcome available, so it either all lands or none of it does.
  */
 
-import { and, eq, ilike, inArray, isNotNull, isNull, or, sql } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull, ne, or, sql } from "drizzle-orm";
 import { ANONYMIZED_PERSON_NAME, REDACTED_TEXT, redactedUniqueValue } from "@/lib/anonymization";
 import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
+import { log } from "@/lib/log";
 import {
   computeWaiverIntegrityHash,
   WAIVER_INTEGRITY_VERSION_ERASED,
@@ -52,6 +53,8 @@ import {
   accountTokens,
   activityEvents,
   bookingCapabilities,
+  bookingCheckoutBookings,
+  bookingCheckouts,
   bookingPayments,
   bookings,
   calendarFeeds,
@@ -62,6 +65,7 @@ import {
   lastMinuteListUnsubscribeTokens,
   nitroxCertifications,
   notificationDeliveries,
+  notificationDeliveryAttempts,
   notificationSendQueue,
   orders,
   people,
@@ -121,6 +125,82 @@ const ERASED_PERSON_COLUMNS = {
   locale: null,
   courtesyEmailOptOutAt: null,
 } as const;
+
+/**
+ * A name with fewer letters/digits than this is never used as a search handle
+ * against the shop's activity log.
+ *
+ * `personSchema.fullName` requires only two characters, and the sweep below
+ * matches the stored name against every `activity_events.message` in the shop.
+ * At two characters the name is simultaneously the weakest identifier on the
+ * record and the most indiscriminate matcher available — erasing a diver named
+ * `Al` must not be able to reach into unrelated operational history, and a
+ * single-character name would match a bare `x` in "3 x tanks". Below the
+ * threshold the booking-scoped and actor-scoped sweeps still run; only the
+ * name-scoped one is skipped, which is a stated residual in the ADR rather
+ * than a licence to redact the log.
+ */
+const MIN_NAME_MATCH_CHARS = 3;
+
+/** Letters, digits and `_` — what Postgres's `\y` treats as inside a word. */
+const WORD_CHAR = /[\p{L}\p{N}_]/u;
+/** POSIX ARE metacharacters, escaped so a name can never act as a pattern. */
+const REGEX_METACHARACTERS = /[\\^$.|?*+()[\]{}]/g;
+
+/**
+ * A **word-boundary**, case-insensitive match of the stored name against an
+ * activity message, or `undefined` when the name is too short to be used as a
+ * handle at all (see {@link MIN_NAME_MATCH_CHARS}).
+ *
+ * Deliberately not a substring (`ILIKE '%name%'`) match: a substring pattern
+ * built from a two-character name — `Al`, `An`, `Ed` — matches inside `Dana`,
+ * `manifest`, `changed`, `credited`, and would irreversibly replace most of a
+ * shop's operational history with `[redacted]` inside the erasure transaction.
+ * `\y` anchors both ends of the name to a word boundary, so `An` matches the
+ * word `An` and nothing else. The anchors are applied only where the name's
+ * own first/last character is a word character — `\y` between two non-word
+ * characters is never a boundary, so anchoring a name like `Ana.` at the
+ * trailing `.` would match nothing at all.
+ */
+function activityMessageNameMatch(fullName: string) {
+  const trimmed = fullName.trim();
+  const wordChars = [...trimmed].filter((char) => WORD_CHAR.test(char)).length;
+  if (wordChars < MIN_NAME_MATCH_CHARS) return undefined;
+  const escaped = trimmed.replace(REGEX_METACHARACTERS, "\\$&");
+  const first = trimmed[0] ?? "";
+  const last = trimmed[trimmed.length - 1] ?? "";
+  const pattern = `${WORD_CHAR.test(first) ? "\\y" : ""}${escaped}${WORD_CHAR.test(last) ? "\\y" : ""}`;
+  return sql`${activityEvents.message} ~* ${pattern}`;
+}
+
+/**
+ * Record that a predicate which cannot be tied to a `person_id` matched rows.
+ *
+ * Four of the sweeps below are matched on something other than a foreign key —
+ * the name match above, a shared household phone number on a course inquiry, an
+ * address in the send queue that a soft-deleted duplicate person can
+ * legitimately share with a live one, and the address on a checkout that covers
+ * only this diver's seats but may have been submitted by whoever booked them.
+ * Each can therefore reach a third party's row in the same shop. None of them is
+ * cross-tenant and all of them are owner-gated, so this is about visibility,
+ * not containment: an owner who erases a diver and later finds a bystander's
+ * lead blanked deserves a line saying it happened and how much it touched.
+ * Ids and counts only — never the name, address or number that was matched
+ * (AGENTS.md hard rule on PII in logs).
+ */
+function logFuzzyMatch(
+  ctx: Pick<ScrubContext, "shopId" | "personId">,
+  predicate: string,
+  matched: number,
+): void {
+  if (matched === 0) return;
+  log("anonymize.fuzzy_match", "info", {
+    shopId: ctx.shopId,
+    personId: ctx.personId,
+    predicate,
+    matched,
+  });
+}
 
 /**
  * Erase one diver. Idempotent: a second call on an already-erased record
@@ -450,6 +530,23 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<number> {
         ),
       );
 
+    // The append-only twin of the row above. `sendNotification`
+    // (src/db/notifications.ts) writes both from the same `delivery.detail` in
+    // the same call, so this `send_error` carries the same quoted address —
+    // scrubbing only the denormalized latest state would leave the address
+    // sitting in the history table behind it. The provider's own status code
+    // (`send_error_code`) is a code, not prose, and stays, exactly as it does
+    // on the delivery row.
+    await tx
+      .update(notificationDeliveryAttempts)
+      .set({ sendError: null })
+      .where(
+        and(
+          eq(notificationDeliveryAttempts.shopId, shopId),
+          inArray(notificationDeliveryAttempts.bookingId, bookingIds),
+        ),
+      );
+
     // A photograph of the diver. There is no skeleton worth keeping once the
     // image is gone, so the row goes with it.
     const photos = await tx
@@ -473,19 +570,26 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<number> {
   // names people and goes. `message` carries a non-blank check, so it is
   // redacted rather than cleared.
   //
-  // Two sweeps, because one is not enough. The booking-scoped one catches
-  // everything attached to a seat. The name-scoped one catches what it cannot:
+  // Two statements, because the exact handles are not enough on their own. The
+  // first sweeps by booking and by actor: everything attached to a seat, and
+  // everything this person did themselves. The name-scoped one after it catches
+  // what neither can:
   // an internal note attached to the *diver* rather than a booking writes an
   // event with a null `booking_id` and a message that names the diver outright
   // ("… added a private note about Nora Quinn", src/db/operations.ts), and
   // `activity_events` carries no person link to sweep on. Matching the stored
   // name is the only handle that exists.
   //
-  // It can over-reach — a staff member who shares a name with the erased diver
-  // loses the wording of an unrelated event. That is the right way round: an
-  // event redacted too eagerly costs a line of history, while a missed one
-  // leaves the name of someone who asked to be forgotten in the shop's log.
-  const namePattern = `%${ctx.fullName.replace(/[\\%_]/g, "\\$&")}%`;
+  // The name match is bounded to whole words (`activityMessageNameMatch`) and
+  // is skipped entirely below MIN_NAME_MATCH_CHARS. A substring match is not
+  // "the right way round" at short names — it is unbounded: `Al`, `An` or `Ed`
+  // as `%name%` matches inside `Dana`, `manifest` and `changed`, so erasing one
+  // two-character name would replace most of the shop's operational history
+  // with `[redacted]`, irreversibly, inside this transaction. At a word
+  // boundary the residual over-reach is the intended one and is bounded to it:
+  // an event naming a *different person with the same name* loses its wording.
+  // That trade is still the right way round — a line of history against a name
+  // someone asked to have forgotten — but it is a line, not the log.
   await tx
     .update(activityEvents)
     .set({ message: REDACTED_TEXT })
@@ -495,10 +599,28 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<number> {
         or(
           owned ? inArray(activityEvents.bookingId, bookingIds) : undefined,
           eq(activityEvents.actorPersonId, personId),
-          ilike(activityEvents.message, namePattern),
         ),
       ),
     );
+
+  // Run second and counted separately, so the number logged is exactly the
+  // rows the fuzzy handle reached *beyond* the two exact ones above — the
+  // figure an owner needs to judge whether the name match over-reached.
+  const nameMatch = activityMessageNameMatch(ctx.fullName);
+  if (nameMatch) {
+    const byName = await tx
+      .update(activityEvents)
+      .set({ message: REDACTED_TEXT })
+      .where(
+        and(
+          eq(activityEvents.shopId, shopId),
+          nameMatch,
+          ne(activityEvents.message, REDACTED_TEXT),
+        ),
+      )
+      .returning({ id: activityEvents.id });
+    logFuzzyMatch(ctx, "activity_event_name", byName.length);
+  }
 
   // --- reviews -------------------------------------------------------------
   // A published review is a public statement attributed to a named diver. The
@@ -545,20 +667,125 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<number> {
     .set({ hostedInvoiceUrl: null, invoicePdfUrl: null })
     .where(and(eq(orders.shopId, shopId), eq(orders.personId, personId)));
 
+  // --- the checkout's own copy of the diver's address ----------------------
+  // `booking_checkouts.customer_email` is the same class of un-normalized PII
+  // as the send queue below — a durable address with no `person_id` to sweep
+  // on — and it is worse than a stale column. Erasure cancels no booking and
+  // settles no payment, so an erased diver with an open, unexpired checkout on
+  // a future trip is still a live candidate for `sendDueCheckoutRecoveries`
+  // (src/db/checkout-recovery.ts): none of its disqualifiers — cancelled trip,
+  // cancelled booking, settled payment, departed trip — fires, and the next
+  // daily cron tick would email the address the shop has just told the diver
+  // it destroyed.
+  //
+  // The column holds the *submitter's* address (the schema notes that there is
+  // no lead marker on `booking_checkout_bookings`, so the purchaser cannot be
+  // re-derived from the join). The party case therefore cuts both ways, and
+  // the two sweeps are deliberately asymmetric:
+  //
+  //   1. **By address.** Both callers of `startBookingCheckout` pass a
+  //      `people.email`, so a stored address equal to this diver's is theirs,
+  //      whoever the checkout covers — including a party they paid for but
+  //      hold no seat on, which the booking join cannot see at all. Nulled
+  //      unconditionally. Co-travellers on that party lose the hosted link and
+  //      the recovery nudge; staff can quote them a fresh checkout. That is a
+  //      cost of erasure, not a reason to leave the address standing.
+  //
+  //   2. **By booking, but only when the checkout covers nothing but this
+  //      diver's own seats.** This reaches an address that is theirs yet no
+  //      longer on their person row — they changed it after checking out — for
+  //      which the join is the only handle. It stops at a mixed party on
+  //      purpose: an address that survived sweep 1 on a checkout covering
+  //      other divers is, as far as this row can tell, some live third party's,
+  //      and blanking it would destroy a bystander's contact detail and take
+  //      the rest of the party's payment link with it to erase an address that
+  //      is very likely not the erased diver's at all.
+  //
+  // Not expired, only blanked. Marking a locally-`expired` row while Stripe's
+  // hosted session is still open would make `markCheckoutPaidBySessionId`
+  // refuse a completion that genuinely captured money (see its
+  // `paid_disqualified` branch), which is a worse failure than an unpaid row
+  // that lingers. With no address the recovery scan cannot send at all, and
+  // the row leaves the candidate pool on its own once the session expires or
+  // the trip departs.
+  if (ctx.email) {
+    const byAddress = await tx
+      .update(bookingCheckouts)
+      .set({ customerEmail: null })
+      .where(
+        and(
+          eq(bookingCheckouts.shopId, shopId),
+          sql`lower(${bookingCheckouts.customerEmail}) = ${ctx.email.toLowerCase()}`,
+        ),
+      )
+      .returning({ id: bookingCheckouts.id });
+    logFuzzyMatch(ctx, "booking_checkout_customer_email", byAddress.length);
+  }
+  if (owned) {
+    const bookingIdSet = new Set(bookingIds);
+    const covering = await tx
+      .selectDistinct({ checkoutId: bookingCheckoutBookings.checkoutId })
+      .from(bookingCheckoutBookings)
+      .where(
+        and(
+          eq(bookingCheckoutBookings.shopId, shopId),
+          inArray(bookingCheckoutBookings.bookingId, bookingIds),
+        ),
+      );
+    if (covering.length > 0) {
+      const coveringIds = covering.map((row) => row.checkoutId);
+      const allLinks = await tx
+        .select({
+          checkoutId: bookingCheckoutBookings.checkoutId,
+          bookingId: bookingCheckoutBookings.bookingId,
+        })
+        .from(bookingCheckoutBookings)
+        .where(inArray(bookingCheckoutBookings.checkoutId, coveringIds));
+      const soleOccupant = coveringIds.filter((checkoutId) =>
+        allLinks
+          .filter((link) => link.checkoutId === checkoutId)
+          .every((link) => bookingIdSet.has(link.bookingId)),
+      );
+      if (soleOccupant.length > 0) {
+        const byBooking = await tx
+          .update(bookingCheckouts)
+          .set({ customerEmail: null })
+          .where(
+            and(
+              eq(bookingCheckouts.shopId, shopId),
+              inArray(bookingCheckouts.id, soleOccupant),
+              isNotNull(bookingCheckouts.customerEmail),
+            ),
+          )
+          .returning({ id: bookingCheckouts.id });
+        logFuzzyMatch(ctx, "booking_checkout_sole_occupant", byBooking.length);
+      }
+    }
+  }
+
   // --- the un-normalized PII blob -----------------------------------------
   // `notification_send_queue.payload` is a rendered outbound message carrying
   // the recipient's name and address, with no person_id to sweep on. It is a
   // work queue, not evidence (that lives in notification_deliveries), so the
   // rows go — including already-sent ones, whose payload is the same blob.
+  //
+  // The address match is fuzzy in one direction that is worth seeing:
+  // `people_shop_email_unique` is partial on *live* rows, so a soft-deleted
+  // duplicate person can legitimately hold the same address as a live one, and
+  // erasing the deleted record drops the live person's queued mail. There is
+  // no tighter predicate — the payload carries no `person_id` — so the match
+  // stays and the count is logged.
   if (ctx.email) {
-    await tx
+    const dropped = await tx
       .delete(notificationSendQueue)
       .where(
         and(
           eq(notificationSendQueue.shopId, shopId),
           sql`lower(${notificationSendQueue.payload} ->> 'to') = ${ctx.email.toLowerCase()}`,
         ),
-      );
+      )
+      .returning({ id: notificationSendQueue.id });
+    logFuzzyMatch(ctx, "send_queue_recipient", dropped.length);
   }
   if (owned) {
     await tx
@@ -578,15 +805,36 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<number> {
   // link that exists. An inquiry left with neither a matching email nor phone
   // is *not* reached by this; that gap is stated in the ADR rather than papered
   // over here.
-  const inquiryByEmail = ctx.email
-    ? sql`lower(${courseInquiries.email}) = ${ctx.email.toLowerCase()}`
-    : undefined;
-  const inquiryByPhone = ctx.phone ? eq(courseInquiries.phone, ctx.phone) : undefined;
-  if (inquiryByEmail || inquiryByPhone) {
+  //
+  // Split into two statements so the phone predicate can be counted on its
+  // own. It is the fuzzier of the two by a distance: a household or family
+  // number is genuinely shared, so this can blank a partner's or a child's
+  // lead — name, message and all — and there is no way to tell from the row.
+  // It is not tightened (to "…and the inquiry carries no email", say) because
+  // that would drop the real case it exists for: the diver who used a
+  // different address on the public lead form than the one on their record.
+  // The over-reach is accepted, owner-gated, and logged.
+  const blankInquiry = { name: null, email: null, phone: null, timing: null, message: null };
+  if (ctx.email) {
     await tx
       .update(courseInquiries)
-      .set({ name: null, email: null, phone: null, timing: null, message: null })
-      .where(and(eq(courseInquiries.shopId, shopId), or(inquiryByEmail, inquiryByPhone)));
+      .set(blankInquiry)
+      .where(
+        and(
+          eq(courseInquiries.shopId, shopId),
+          sql`lower(${courseInquiries.email}) = ${ctx.email.toLowerCase()}`,
+        ),
+      );
+  }
+  if (ctx.phone) {
+    // Runs after the address sweep, so the count is the rows the number
+    // reached that the address did not — the over-reach, isolated.
+    const byPhone = await tx
+      .update(courseInquiries)
+      .set(blankInquiry)
+      .where(and(eq(courseInquiries.shopId, shopId), eq(courseInquiries.phone, ctx.phone)))
+      .returning({ id: courseInquiries.id });
+    logFuzzyMatch(ctx, "course_inquiry_phone", byPhone.length);
   }
 
   return queued;

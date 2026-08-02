@@ -519,6 +519,54 @@ describe("course catalog and sessions (in-memory PGlite)", () => {
     ).resolves.toEqual({ ok: false, reason: "trip_full" });
   });
 
+  // The other half of that scoping (DOM-H2): 4:1 is *not* a PADI figure. It is
+  // DiveDay's own conservative number for people with zero water time, so it
+  // applies to an SSI Try Scuba exactly as it does to a PADI DSD. Scoped to
+  // PADI, this session had no ratio at all and the boat's capacity was the only
+  // thing between one instructor and a dozen first-timers.
+  it("ratio-gates a non-PADI intro course at the same 4 per instructor", async () => {
+    const { db, shop } = await courseContext();
+    const [ssiIntro] = await db
+      .insert(courses)
+      .values({
+        shopId: shop.id,
+        title: "SSI Try Scuba — ratio test",
+        slug: "ssi-try-scuba-ratio-test",
+        agency: "ssi",
+        isIntroCourse: true,
+        minimumCertificationLevel: null,
+      })
+      .returning();
+    if (!ssiIntro) throw new Error("failed to create SSI intro test course");
+    const staff = await listStaff(db, shop.id);
+    const instructor = staff.find((entry) => entry.roles.includes("instructor"));
+    if (!instructor) throw new Error("seeded instructor missing");
+
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      courseId: ssiIntro.id,
+      title: "SSI Try Scuba ratio test session",
+      startsAt: new Date(Date.now() + OPEN_TEST_SESSION_OFFSET_MS),
+      endsAt: new Date(Date.now() + OPEN_TEST_SESSION_OFFSET_MS + 4 * 60 * 60 * 1000),
+      capacity: 12, // three times the ratio cap, so only the ratio can bind
+      plannedDives: 2,
+    });
+    if (!trip) throw new Error("failed to create SSI intro ratio test trip");
+    const staffed = await setTripCrew(db, shop.id, trip.id, [instructor.person.id]);
+    if (!staffed) throw new Error("failed to assign instructor");
+    await fillSeats(db, shop.id, trip.id, 4, "SSI Intro");
+
+    await expect(
+      createBooking(db, {
+        actor: "staff",
+        shopId: shop.id,
+        tripId: trip.id,
+        fullName: "SSI Intro Diver 5",
+        email: "ssi-intro-diver-5@example.com",
+      }),
+    ).resolves.toEqual({ ok: false, reason: "course_ratio_full" });
+  });
+
   it("inherits an Advanced course baseline and requires a verified Open Water card at enrollment", async () => {
     const { db, shop } = await courseContext();
     const course = await createCourse(db, {

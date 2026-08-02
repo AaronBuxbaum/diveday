@@ -122,7 +122,10 @@ new domain concept, define it here in the same PR.
   training, because a DSD participant has had no prior water time at all.
 - **Intro-session in-water ratio** — the cap on a no-certification-required taster session
   (DSD/Try Scuba — `courses.is_intro_course`): **4 students per instructor, with no assistant
-  bonus**. A certified assistant aboard buys an intro session no extra seats.
+  bonus**. A certified assistant aboard buys an intro session no extra seats; only another
+  instructor does. Applies to **every agency** — unlike the entry-level ratio below, this is
+  DiveDay's own figure rather than a cited PADI one, and its reason (participants with no prior
+  water time) does not depend on whose logo is on the course.
   **This 4:1 number is interim and unverified** — a deliberately conservative placeholder, not a
   cited standard. The previously-enforced 8→12:1 figure came from a blog and was never a DSD
   number; applying it to DSD meant the gate certified an overloaded session as compliant.
@@ -132,9 +135,11 @@ new domain concept, define it here in the same PR.
 - **Entry-level in-water ratio** — PADI's published maximum for **Open Water Diver training
   dives**: **8 students per instructor**, extendable by **2 per certified assistant** (a
   Divemaster, in DiveDay's role model) to a ceiling of **12 per instructor**. Enforced as a
-  booking gate (`src/lib/course-ratios.ts`, H-08) on a PADI course session that carries no
-  `minimum_certification_level` **and is not an intro course** — intro sessions take the tighter
-  4:1 rule above. Continuing-education courses (AOW, Rescue, specialty) already gate on a verified
+  booking gate (`src/lib/course-ratios.ts`, H-08) on a **PADI** course session that carries no
+  `minimum_certification_level` **and is not an intro course** — intro sessions take the tighter,
+  agency-independent 4:1 rule above. The PADI scoping belongs to this figure only: 8/+2/12 is
+  PADI's published number, and applying it to an SSI or NAUI course would be a
+  wrong-but-confident safety control. Continuing-education courses (AOW, Rescue, specialty) already gate on a verified
   card and PADI does not publish a comparably strict numeric ratio for them, so they are not
   ratio-capped. `courses.agency` is shop-set free text, so the PADI check is case- and
   whitespace-insensitive: a course typed `"PADI"` is gated exactly like `"padi"`.
@@ -480,8 +485,10 @@ new domain concept, define it here in the same PR.
   [20260723-owner-reporting](../architecture/decisions/20260723-owner-reporting.md).
 - **Fill rate** — seats booked ÷ seats offered. On a report it is the month's active bookings over
   the sum of its trips' capacities; on one trip it is that trip's active bookings over its capacity,
-  capped at fully booked. "Active" excludes cancellations and no-shows — the same set that appears on
-  a manifest.
+  capped at fully booked. "Active" excludes cancellations and no-shows. That is **not** the manifest
+  roster: the manifest lists every non-cancelled booking, no-shows included, because a no-show is a
+  name the crew has to account for at roll call (`getTripRoster`, `src/db/trips.ts`). Fill rate is a
+  commercial measure of seats that earned; the manifest is a head count of who was expected aboard.
 - **Waiver completion** — the share of a month's active bookings that carry a signed
   (completed, non-superseded) **waiver record**. The reporting counterpart of the per-trip roster's
   waiver gate.

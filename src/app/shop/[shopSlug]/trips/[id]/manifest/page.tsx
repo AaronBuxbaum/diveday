@@ -556,8 +556,18 @@ export default async function TripManifestPage({
                 max={99}
                 step={1}
                 required
-                defaultValue={crewAttestation?.crewAboard ?? crewAssigned}
-                className={`${controlClass} min-h-14 text-lg tabular-nums`}
+                // Empty until someone has counted, never pre-filled with the
+                // assigned total: a head count whose default answer closes the
+                // checkpoint is a rubber stamp, which is the failure mode this
+                // whole control exists to remove. A re-count starts from the
+                // last attested number so a correction is one edit.
+                defaultValue={crewAttestation?.crewAboard ?? ""}
+                // Just `controlClass` — its own `min-h-11` is the 44px touch
+                // floor, and a second `min-h-*` appended here would resolve by
+                // stylesheet order rather than class order (see the note in
+                // components/ui/button.ts). Same pattern the offline roll-call
+                // note input uses on this surface.
+                className={`${controlClass} text-lg tabular-nums`}
               />
             </Field>
             <Field
@@ -568,7 +578,7 @@ export default async function TripManifestPage({
                 name="note"
                 maxLength={300}
                 placeholder={t("trips.manifest.crewAttestNotePlaceholder")}
-                className={`${controlClass} min-h-14`}
+                className={controlClass}
               />
             </Field>
             <FieldActions>

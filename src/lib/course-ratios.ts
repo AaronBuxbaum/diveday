@@ -42,6 +42,11 @@ export const ENTRY_LEVEL_COURSE_RATIO: CourseRatioRule = {
  * docs/product/human-decisions.md, H-08) is the decision that unblocks
  * replacing this with a cited number. Until then the gate errs tight; do not
  * describe it as verified, and do not loosen it without that source.
+ *
+ * Because it is DiveDay's own figure rather than a cited agency one, it is
+ * **agency-independent**: an SSI Try Scuba and a NAUI intro session are the same
+ * hazard as a PADI DSD — people with zero water time — so they take the same
+ * cap. Only the sourced 8/+2/12 number below is PADI-scoped.
  */
 export const INTRO_COURSE_RATIO: CourseRatioRule = {
   baseStudentsPerInstructor: 4,
@@ -94,32 +99,50 @@ function normalizeAgency(agency: string): string {
   return agency.trim().toLowerCase();
 }
 
+/** Which of the two ratios a session carries, for callers that must word it differently. */
+export type CourseRatioKind = "intro" | "entry_level";
+
 /**
- * The one definition of "is this session ratio-gated, and at what ratio" —
+ * The one definition of "is this session ratio-gated, and under which rule" —
  * null when it isn't gated at all. Every enforcing and advisory caller reads
- * this rather than re-deriving the predicate, because three inline copies of it
- * is exactly how the DSD case drifted out of the gate in the first place.
+ * this (or `courseRatioRule`/`courseSeatCapacity` on top of it) rather than
+ * re-deriving the predicate, because three inline copies of it is exactly how
+ * the DSD case drifted out of the gate in the first place.
  *
  * - An **intro session** (`is_intro_course`) is gated at `INTRO_COURSE_RATIO`
  *   whatever else the row says: nobody on it holds a card, so a
  *   `minimum_certification_level` typed onto it by mistake must not be able to
- *   switch the cap off.
+ *   switch the cap off. **Every agency, not just PADI** — 4:1 is DiveDay's own
+ *   conservative interim figure, chosen because intro participants have had
+ *   zero water time, and that rationale does not depend on whose logo is on the
+ *   course. Scoping it to PADI would leave an SSI/NAUI Try Scuba capped by
+ *   nothing but the boat's capacity, which is worse than the 8/12 rule this
+ *   replaced.
  * - A **non-intro entry-level** session (no `minimum_certification_level` — the
- *   Open Water training dives) is gated at `ENTRY_LEVEL_COURSE_RATIO`.
+ *   Open Water training dives) is gated at `ENTRY_LEVEL_COURSE_RATIO`, and
+ *   **only for PADI**: 8/+2/12 is a cited PADI figure, `courses.agency` is free
+ *   text an SSI/NAUI course legitimately fills in, and applying a PADI number to
+ *   another agency's course would be a wrong-but-confident safety control.
  * - Everything else is ungated: continuing-education courses already require a
  *   verified card at booking and PADI publishes no comparable numeric ratio.
- *
- * Scoped to PADI throughout, because the sourced figures are PADI's and
- * `courses.agency` is free text an SSI/NAUI course legitimately fills in —
- * applying a PADI number to another agency's course would be a
- * wrong-but-confident safety control.
  */
-export function courseRatioRule(course: CourseCrewGapCourse): CourseRatioRule | null {
+export function courseRatioKind(course: CourseCrewGapCourse): CourseRatioKind | null {
   if (!course) return null;
+  if (course.isIntroCourse) return "intro";
   if (normalizeAgency(course.agency) !== "padi") return null;
-  if (course.isIntroCourse) return INTRO_COURSE_RATIO;
   if (course.minimumCertificationLevel) return null;
-  return ENTRY_LEVEL_COURSE_RATIO;
+  return "entry_level";
+}
+
+const RATIO_BY_KIND: Record<CourseRatioKind, CourseRatioRule> = {
+  intro: INTRO_COURSE_RATIO,
+  entry_level: ENTRY_LEVEL_COURSE_RATIO,
+};
+
+/** The rule `courseRatioKind` selected, or null when the session carries none. */
+export function courseRatioRule(course: CourseCrewGapCourse): CourseRatioRule | null {
+  const kind = courseRatioKind(course);
+  return kind === null ? null : RATIO_BY_KIND[kind];
 }
 
 /**
@@ -144,17 +167,25 @@ export function courseSeatCapacity(
  *
  * - `no_instructor`: the session has zero instructors assigned. Blocks
  *   enrolment outright (`reviewManifestChange`) — every agency, not just PADI.
- * - `over_ratio`: a ratio-gated session (see `courseRatioRule`) has at least
+ * - `over_ratio`: a ratio-gated session (see `courseRatioKind`) has at least
  *   one instructor, but the crew's ratio capacity has fallen below the trip's
  *   booked count — day-of crew changes are unblocked (H-14), so this can drift
  *   after booking. A nudge to fix before sailing, never a retroactive block on
- *   the bookings already taken.
+ *   the bookings already taken, and never a reason to refuse to *record* a crew
+ *   change: an unrecorded change means the manifest lists crew who are not on
+ *   the boat.
  * - `none`: adequately crewed, or not a ratio-gated session.
+ *
+ * `over_ratio` carries the `ratio` it was measured against, because the two
+ * rules need different words: the entry-level cap is PADI's published figure and
+ * a certified assistant raises it, while the intro cap is DiveDay's own interim
+ * 4-per-instructor figure that an assistant does not move at all. Telling a
+ * manager to add a divemaster to a DSD session is advice that cannot work.
  */
 export type CourseCrewGap =
   | { code: "none" }
   | { code: "no_instructor" }
-  | { code: "over_ratio"; booked: number; capacity: number };
+  | { code: "over_ratio"; booked: number; capacity: number; ratio: CourseRatioKind };
 
 /**
  * The one computation of "does this course session have enough crew",
@@ -170,9 +201,16 @@ export function courseCrewGap(input: {
 }): CourseCrewGap {
   if (!input.course) return { code: "none" };
   if (input.instructorCount <= 0) return { code: "no_instructor" };
-  const capacity = courseSeatCapacity(input.course, input.instructorCount, input.assistantCount);
-  if (capacity === null) return { code: "none" };
-  if (input.booked > capacity) return { code: "over_ratio", booked: input.booked, capacity };
+  const kind = courseRatioKind(input.course);
+  if (kind === null) return { code: "none" };
+  const capacity = courseRatioCapacity(
+    RATIO_BY_KIND[kind],
+    input.instructorCount,
+    input.assistantCount,
+  );
+  if (input.booked > capacity) {
+    return { code: "over_ratio", booked: input.booked, capacity, ratio: kind };
+  }
   return { code: "none" };
 }
 
