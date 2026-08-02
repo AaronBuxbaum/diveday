@@ -1031,6 +1031,9 @@
       "crewNobodyYet": "nobody yet",
       "noPriceSet": "No price set",
       "noPriceSetAria": "Set a price for {ref}",
+      "rollCallOpen": "Roll call · {count} not counted",
+      "rollCallOpenAria": "Finish the dive {dive} roll call for {ref}",
+      "rollCallOpenNote": "Back at the dock with the dive {dive} roll call still open.",
       "move": "Move",
       "moveAria": "Move {ref}",
       "copy": "Copy",
@@ -2494,6 +2497,7 @@
         "later": "This week"
       },
       "actionKind": {
+        "rollCallUnfinished": "Roll call",
         "medicalReview": "Medical",
         "readinessUnavailable": "Readiness",
         "identity": "Identity",
@@ -2561,6 +2565,7 @@
         "group": "{detail} {names}."
       },
       "detail": {
+        "openRollCall": "This boat is back and the dive {dive} roll call was never finished — {uncounted, plural, one {# of {total} divers has} other {# of {total} divers have}} no result recorded. Account for everyone before you leave the dock.",
         "missingFit": "{count, plural, one {# diver has} other {# divers have}} no rental fit on file, so the prep list is incomplete.",
         "ungatedNitrox": "{count, plural, one {# diver wants} other {# divers want}} Nitrox without a verified card — those tanks are planned as air.",
         "instructorMissing": "This course session has no instructor assigned and cannot take enrolments.",
@@ -2578,6 +2583,7 @@
         }
       },
       "actionLabel": {
+        "openRollCall": "Open roll call",
         "openPrepList": "Open prep list",
         "openTrip": "Open trip",
         "openGuests": "Open guests",

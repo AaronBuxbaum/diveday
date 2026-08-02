@@ -7,6 +7,23 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## The keyboard focus ring passes WCAG 1.4.11 in every palette (2026-08-02)
+
+The first of the three deferred accessibility contrast tasks. `src/app/globals.css` gained a
+semantic `--focus-ring` token — full-strength `var(--primary)`, derived the same lazy way as
+`--primary-sunken` so each skin's ring follows its own action color — replacing the
+`color-mix(… 55%, transparent)` blend in the app-wide `:focus-visible` rule. Worst-case contrast
+against the surfaces the ring sits on went from 2.21:1 → 4.66:1 (light), 2.57:1 → 6.69:1
+(`boat-mode` light) and 2.59:1 → 6.87:1 (`glare-mode` light), all three previously **below** the
+3:1 minimum; the dark palettes were already passing and only improved (3.69:1 → 9.05:1 and up). The
+audit had flagged only the light palette — boat and glare light were failing too.
+
+The other two contrast tasks (tinted status-banner text, placeholder text) are **still deferred**
+pending the color-guide decision, so the axe scan's `color-contrast` exclusion stays in place and
+**the app still may not be described as WCAG AA conformant**. See
+[features/roadmap.md](features/roadmap.md#accessibility-contrast-fixes-blocked-on-a-color-guide-decision)
+and [../design/principles.md](../design/principles.md#tokens-the-mechanics).
+
 ## UX persona review — fifteen personas delivered (2026-07-30 → 07-31)
 
 The 165-task persona walkthrough closed out; the vast majority shipped across PRs #268–#280. The

@@ -815,7 +815,8 @@
         "americas": "América",
         "caribbean": "Caribe y México",
         "europeRedSea": "Europa y mar Rojo",
-        "asiaPacific": "Asia-Pacífico"
+        "asiaPacific": "Asia-Pacífico",
+        "allZones": "Todas las zonas horarias"
       },
       "timezone": {
         "eastern": "Hora del Este (Nueva York)",
@@ -824,16 +825,24 @@
         "pacific": "Hora del Pacífico (Los Ángeles)",
         "hawaii": "Hawái (Honolulu)",
         "cancun": "Cancún / Cozumel",
+        "belize": "Belice",
+        "roatan": "Roatán / Honduras",
+        "cayman": "Islas Caimán",
         "puertoRico": "Puerto Rico / Caribe oriental",
         "nassau": "Nasáu, Bahamas",
+        "bonaire": "Bonaire / Curazao",
         "london": "Londres",
         "cairo": "El Cairo / mar Rojo",
+        "maldives": "Maldivas",
         "singapore": "Singapur",
         "bangkok": "Bangkok",
+        "jakarta": "Yakarta / Indonesia occidental",
+        "bali": "Bali / Komodo (Indonesia central)",
         "manila": "Manila",
         "sydney": "Sídney",
         "auckland": "Auckland",
-        "palau": "Palaos"
+        "palau": "Palaos",
+        "fiji": "Fiyi"
       },
       "youSectionTitle": "Tú",
       "fullNameLabel": "Nombre completo",
@@ -876,6 +885,11 @@
     }
   },
   "switching": {
+    "common": {
+      "heroCtaNote": "La demo es una tienda que funciona de verdad — sin registro, sin nada que importar y sin nada que deshacer.",
+      "midCtaTitle": "¿Prefieres verlo a leerlo?",
+      "midCtaBody": "Recorre la demo en vivo como propietario, capitán o buceador — con las mismas verificaciones de certificación, exenciones y pase de lista donde aterriza tu exportación."
+    },
     "concierge": {
       "eyebrow": "Una persona, no un asistente automático",
       "title": "Te ayudamos a cambiarte — y a salir — nosotros mismos.",

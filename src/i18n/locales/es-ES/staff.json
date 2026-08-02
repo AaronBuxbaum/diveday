@@ -1031,6 +1031,9 @@
       "crewNobodyYet": "nadie todavía",
       "noPriceSet": "Sin precio definido",
       "noPriceSetAria": "Definir un precio para {ref}",
+      "rollCallOpen": "Recuento · {count} sin contar",
+      "rollCallOpenAria": "Completar el recuento tras la inmersión {dive} de {ref}",
+      "rollCallOpenNote": "De vuelta en el muelle con el recuento tras la inmersión {dive} sin cerrar.",
       "move": "Mover",
       "moveAria": "Mover {ref}",
       "copy": "Copiar",
@@ -2494,6 +2497,7 @@
         "later": "Esta semana"
       },
       "actionKind": {
+        "rollCallUnfinished": "Recuento",
         "medicalReview": "Médico",
         "readinessUnavailable": "Disponibilidad",
         "identity": "Identidad",
@@ -2561,6 +2565,7 @@
         "group": "{detail} {names}."
       },
       "detail": {
+        "openRollCall": "Este barco ya volvió y el recuento tras la inmersión {dive} nunca se completó: {uncounted, plural, one {# de {total} buceadores no tiene} other {# de {total} buceadores no tienen}} resultado registrado. Contad a todo el mundo antes de salir del muelle.",
         "missingFit": "{count, plural, one {# buceador no tiene} other {# buceadores no tienen}} equipo asignado, así que la lista de preparación está incompleta.",
         "ungatedNitrox": "{count, plural, one {# buceador pidió} other {# buceadores pidieron}} nitrox sin una tarjeta verificada — esos tanques están planeados con aire.",
         "instructorMissing": "Esta sesión de curso no tiene instructor asignado y no puede aceptar inscripciones.",
@@ -2578,6 +2583,7 @@
         }
       },
       "actionLabel": {
+        "openRollCall": "Abrir recuento",
         "openPrepList": "Abrir lista de preparación",
         "openTrip": "Abrir salida",
         "openGuests": "Abrir invitados",

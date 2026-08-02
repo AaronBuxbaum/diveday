@@ -29,6 +29,20 @@
      in scope (default/dark/boat-mode/glare-mode), same lazy-substitution
      behavior the color-mix()s elsewhere in this file rely on. */
   --primary-sunken: color-mix(in srgb, var(--primary) 65%, black);
+  /*
+   * Keyboard focus indicator. Full-strength --primary, derived the same lazy
+   * way as --primary-sunken so every skin gets its own ring for free — a skin
+   * that retunes --primary retunes its ring with it, which a redeclared hex in
+   * each block would silently stop doing.
+   *
+   * Was `color-mix(in srgb, var(--primary) 55%, transparent)`, which composited
+   * to 2.21–2.32:1 against the light surfaces and 2.57–2.69:1 in boat/glare
+   * light — under WCAG 1.4.11's 3:1 for a focus indicator, i.e. a ring a
+   * keyboard user could lose entirely in sun. Undiluted, the worst case across
+   * every skin and surface is 4.66:1 (light on --surface-sunken); light 4.66–
+   * 5.36, dark 9.05–10.57, boat 6.69–11.38, glare 6.87–12.59.
+   */
+  --focus-ring: var(--primary);
 
   /* Accent — coral, used sparingly for moments of delight */
   --accent: #ff6f61;
@@ -139,9 +153,12 @@ body {
  * light by day so the manifest reads in full sun, dark for a night dive when a
  * white screen would blind the deck. What boat-mode adds on top of the app
  * palette is *contrast*: it darkens ink, borders, and the action color in light
- * and lifts them in dark, so the roll call always clears the AAA bar the rest
- * of the app only meets at AA. Big touch targets live in the components. Keep
- * this semantic so the roll-call screens can opt in without changing the app.
+ * and lifts them in dark, so the roll call reads well above the rest of the
+ * app — every boat-mode ink/action token clears 6.2:1 against its own surfaces
+ * in both schemes, where the app palette's worst token sits at 4.4:1. That is
+ * comfortably past AA and short of AAA's 7:1 for normal text; don't describe it
+ * as AAA. Big touch targets live in the components. Keep this semantic so the
+ * roll-call screens can opt in without changing the app.
  */
 .boat-mode {
   --surface-sunken: #edf2f1;
@@ -236,9 +253,14 @@ summary {
   user-select: none;
 }
 
-/* Give every interactive surface a dependable keyboard landing point. */
+/*
+ * Give every interactive surface a dependable keyboard landing point.
+ * `outline-offset` keeps the ring off the control's own fill, so the color it
+ * has to beat is the surface behind it — which is what --focus-ring is measured
+ * against (see its definition for the per-skin ratios).
+ */
 :where(a, button, input, select, textarea, summary):focus-visible {
-  outline: 3px solid color-mix(in srgb, var(--primary) 55%, transparent);
+  outline: 3px solid var(--focus-ring);
   outline-offset: 2px;
 }
 
@@ -420,8 +442,14 @@ summary {
 }
 
 /*
- * Glare Mode: AAA contrast, ≥16px text, ≥44px targets everywhere.
- * Enabled automatically in direct sun/glare.
+ * Glare Mode: the app's highest-contrast palette, ≥16px text, ≥44px targets
+ * everywhere. Enabled automatically in direct sun/glare.
+ *
+ * Ink and surfaces are AAA by a wide margin (pure black/white on white/black,
+ * 13:1 and up). The feedback colors are the floor and are not AAA: 4.56:1
+ * worst case in light, 6.48:1 in dark. So this is "AA everywhere, AAA wherever
+ * the palette allows", not blanket AAA — the remaining gap is tracked in
+ * docs/product/features/roadmap.md under the accessibility contrast fixes.
  */
 .glare-mode {
   /* Enforce AAA contrast colors on both schemes */

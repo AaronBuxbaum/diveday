@@ -9,10 +9,15 @@
 import { execFileSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { gunzipSync } from "node:zlib";
 
-const DEFAULT_BUCKET = "diveday-vrt";
-const GZIP_MAGIC = Buffer.from([0x1f, 0x8b]);
+import {
+  countsLine,
+  DEFAULT_BUCKET,
+  fetchFromBucket,
+  hostedReportUrl,
+  summarizeReport,
+  verdictHeadline,
+} from "./visual-report-lib.mjs";
 
 function parseArgs(argv) {
   const args = { out: ".reg-report", all: false };
@@ -37,21 +42,6 @@ function currentCommit() {
   return execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
 }
 
-// S3 serves these objects with `Content-Encoding: gzip`, but some fetch
-// clients (Node's global fetch among them) already transparently decode that
-// before returning the body, while others (plain `curl`, `https.get`) hand
-// back the raw gzip bytes. Trust the magic number, not the header.
-async function fetchFromBucket(bucket, key) {
-  const url = `https://${bucket}.s3.amazonaws.com/${key}`;
-  const res = await fetch(url);
-  if (!res.ok) {
-    return { ok: false, status: res.status, url };
-  }
-  const buf = Buffer.from(await res.arrayBuffer());
-  const body = buf.subarray(0, 2).equals(GZIP_MAGIC) ? gunzipSync(buf) : buf;
-  return { ok: true, body, url };
-}
-
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const bucket = args.bucket || process.env.REG_SUIT_S3_BUCKET_NAME || DEFAULT_BUCKET;
@@ -71,6 +61,7 @@ async function main() {
   }
 
   const report = JSON.parse(manifest.body.toString("utf8"));
+  const summary = summarizeReport(report);
   const dirs = { actual: report.actualDir, expected: report.expectedDir, diff: report.diffDir };
   const outDir = path.resolve(args.out, commit);
 
@@ -110,12 +101,19 @@ async function main() {
   const lines = [
     `# reg-suit report — ${commit}`,
     "",
-    `Changed: ${report.failedItems.length} · New: ${report.newItems.length} · ` +
-      `Deleted: ${report.deletedItems.length} · Passed: ${report.passedItems.length}`,
+    // The headline before the counts, deliberately: a run where baseline
+    // resolution failed reports zero changed items while having compared
+    // nothing, and the counts line alone reads as a clean pass.
+    verdictHeadline(summary),
     "",
-    `Hosted report (needs a browser, not agent-fetchable): https://${bucket}.s3.amazonaws.com/${commit}/index.html`,
+    countsLine(summary),
+    `Baseline images downloaded: ${summary.baselineCount} · Captured: ${summary.capturedCount}`,
+    "",
+    `Hosted report (needs a browser, not agent-fetchable): ${hostedReportUrl(bucket, commit)}`,
     "",
   ];
+
+  for (const warning of summary.warnings) lines.push(`> ${warning}`, "");
 
   for (const item of items) {
     lines.push(`## ${item.name} (${item.kind})`);
@@ -150,6 +148,13 @@ async function main() {
   if (skipped.length) {
     console.warn(
       `${skipped.length} object(s) failed to download — see "Skipped downloads" in REPORT.md`,
+    );
+  }
+  if (summary.verdict === "no-baseline" || summary.verdict === "nothing-captured") {
+    console.warn(
+      `\n${verdictHeadline(summary)}\nThis run compared nothing. Do not read its zero changed ` +
+        "items as evidence that the pixels held still — see ADR " +
+        "20260729-reg-suit-visual-regression.",
     );
   }
 }

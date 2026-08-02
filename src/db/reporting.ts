@@ -13,6 +13,7 @@ import {
   ne,
   not,
   or,
+  sql,
   sum,
 } from "drizzle-orm";
 import { canViewShopReports, type Role } from "@/lib/authz";
@@ -177,12 +178,26 @@ export async function getMonthlyReport(
 
   // The one thing that current-state row loses: when a deposit is later topped
   // up by a balance payment, `setBookingPayment` overwrites the deposit amount
-  // with the balance, so the base above drops the deposit. Add it back — the
-  // per-diver amount of every completed *deposit* checkout whose booking has
+  // with the balance, so the base above drops the deposit. Add it back — this
+  // diver's share of every completed *deposit* checkout whose booking has
   // since gone fully `paid`. A booking still `deposit_paid` keeps its deposit in
   // the base and is excluded here, so nothing is double-counted.
+  //
+  // The share is the money that *settled*, on the same basis as the per-booking
+  // payment rows the base sums: this diver's asked amount (deposit + their own
+  // gear) scaled by what Stripe actually collected against what was asked
+  // (PAY-H1/H2). With no settled figure the checkout's own total stands in, so
+  // a historical row still contributes exactly what it did before. Rounded per
+  // row rather than largest-remainder — a report tolerates a sub-cent of drift
+  // where the payment ledger cannot, and `nullif` keeps a zero-total checkout
+  // (nothing to recover) out of the sum instead of dividing by zero.
+  const recoveredDepositCents = sql<string>`coalesce(sum(round(
+    (${bookingCheckouts.amountPerDiverCents} + ${bookingCheckoutBookings.gearCents})
+      * coalesce(${bookingCheckouts.settledTotalCents}, ${bookingCheckouts.totalCents})::numeric
+      / nullif(${bookingCheckouts.totalCents}, 0)
+  )), 0)`;
   const [recoveredDeposits] = await db
-    .select({ total: sum(bookingCheckouts.amountPerDiverCents) })
+    .select({ total: recoveredDepositCents })
     .from(bookingCheckouts)
     .innerJoin(
       bookingCheckoutBookings,

@@ -19,12 +19,14 @@ import {
   listShopCertifications,
   listShopSpecialtyCertifications,
   listTripReadiness,
+  listTripsReadiness,
   restoreCertification,
   restoreSpecialtyCertification,
   reviewCertification,
   reviewSpecialtyCertification,
   upsertTripRequirements,
 } from "./readiness";
+import type { DiveSpecialty } from "./schema";
 import { diveSites, specialtyCertifications } from "./schema";
 import { getTripRoster, listTripDives, upcomingTripsWithCounts } from "./trips";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
@@ -659,5 +661,160 @@ describe("depth advisory (H-08 — a warning, never a gate)", () => {
     const rows = await listTripReadiness(db, shop.id, reef.id);
     const diver = rows.find((row) => row.booking.id === rosterEntry.booking.id);
     expect(diver?.depthAdvisory).toMatchObject({ status: "exceeds", siteDepth: 35 });
+  });
+});
+
+describe("site cert gate across the whole itinerary (DOM-C1)", () => {
+  /**
+   * Isolates the site gate on the seeded two-tank trip: the trip's own
+   * requirement demands nothing, every site the shop owns demands nothing, and
+   * then only the site of *dive two* is given a requirement. Anything the
+   * readiness engine then reports came from a site that is not the trip's
+   * primary one — which is exactly the site the gate used to never read.
+   */
+  async function withSecondSiteRequirement(requirement: {
+    minimumCertificationLevel?: "advanced_open_water" | "rescue";
+    requiredSpecialties?: DiveSpecialty[];
+    requiresNitrox?: boolean;
+  }) {
+    const { db, shop, reef, rosterEntry } = await readinessContext();
+    await upsertTripRequirements(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      requiresWaiver: false,
+      minimumCertificationLevel: null,
+      requiredSpecialties: [],
+      requiresNitrox: false,
+      requiresPayment: false,
+    });
+    await db
+      .update(diveSites)
+      .set({ minimumCertificationLevel: null, requiredSpecialties: [], requiresNitrox: false })
+      .where(eq(diveSites.shopId, shop.id));
+
+    const dives = await listTripDives(db, shop.id, reef.id);
+    const secondSiteId = dives
+      .map(({ dive }) => dive.diveSiteId)
+      .find((id) => id && id !== reef.diveSiteId);
+    if (!secondSiteId) throw new Error("seeded two-tank trip should visit a second site");
+    if (Object.keys(requirement).length > 0) {
+      await db
+        .update(diveSites)
+        .set(requirement)
+        .where(and(eq(diveSites.shopId, shop.id), eq(diveSites.id, secondSiteId)));
+    }
+    return { db, shop, reef, rosterEntry, secondSiteId };
+  }
+
+  /** A verified Open Water card, so a raised level reads "insufficient", not "missing". */
+  async function verifiedOpenWaterCard(
+    db: Awaited<ReturnType<typeof readinessContext>>["db"],
+    shopId: string,
+    personId: string,
+  ) {
+    const card = await createCertification(db, {
+      shopId,
+      personId,
+      agency: "padi",
+      level: "open_water",
+      identifier: `PADI-SITE-GATE-${personId.slice(0, 8)}`,
+    });
+    if (!card) throw new Error("expected certification to insert");
+    await reviewCertification(db, { shopId, certificationId: card.id, status: "verified" });
+  }
+
+  it("blocks an Open Water diver when dive two's site needs Advanced, not just dive one's", async () => {
+    const { db, shop, reef, rosterEntry } = await withSecondSiteRequirement({
+      minimumCertificationLevel: "advanced_open_water",
+    });
+    await verifiedOpenWaterCard(db, shop.id, rosterEntry.person.id);
+
+    const readiness = await getBookingReadiness(db, shop.id, rosterEntry.booking.id);
+    expect(readiness?.blockers).toContainEqual(
+      expect.objectContaining({ code: "certification_insufficient" }),
+    );
+    // And the batch path agrees — it built its own primary-only query.
+    const [batch] = (await listTripsReadiness(db, shop.id, [reef.id])).filter(
+      (row) => row.booking.id === rosterEntry.booking.id,
+    );
+    expect(batch?.readiness.blockers).toContainEqual(
+      expect.objectContaining({ code: "certification_insufficient" }),
+    );
+  });
+
+  it("demands a specialty that only dive two's site asks for", async () => {
+    const { db, shop, reef, rosterEntry } = await withSecondSiteRequirement({
+      requiredSpecialties: ["deep"],
+    });
+
+    expect(
+      (await getBookingReadiness(db, shop.id, rosterEntry.booking.id))?.blockers,
+    ).toContainEqual(expect.objectContaining({ code: "specialty_missing" }));
+    const [batch] = (await listTripsReadiness(db, shop.id, [reef.id])).filter(
+      (row) => row.booking.id === rosterEntry.booking.id,
+    );
+    expect(batch?.readiness.blockers).toContainEqual(
+      expect.objectContaining({ code: "specialty_missing" }),
+    );
+  });
+
+  it("demands nitrox when only dive two's site runs on it", async () => {
+    const { db, shop, reef } = await withSecondSiteRequirement({ requiresNitrox: true });
+    // A booked diver with no nitrox card on file, so the blocker is unambiguous.
+    const roster = await getTripRoster(db, shop.id, reef.id);
+    const nitroxHolders = new Set(
+      (await listShopNitroxCertifications(db, shop.id)).map((r) => r.certification.personId),
+    );
+    const entry = roster.find((r) => !nitroxHolders.has(r.person.id));
+    if (!entry) throw new Error("expected a booked diver without a nitrox card");
+
+    expect((await getBookingReadiness(db, shop.id, entry.booking.id))?.blockers).toContainEqual(
+      expect.objectContaining({ code: "nitrox_missing" }),
+    );
+    const [batch] = (await listTripsReadiness(db, shop.id, [reef.id])).filter(
+      (row) => row.booking.id === entry.booking.id,
+    );
+    expect(batch?.readiness.blockers).toContainEqual(
+      expect.objectContaining({ code: "nitrox_missing" }),
+    );
+  });
+
+  it("unions the sites rather than letting one of them win", async () => {
+    // The batch path built its map with `new Map(rows.map(...))`, which is
+    // last-write-wins per trip: with a requirement on each site, whichever row
+    // arrived last silently erased the other.
+    const { db, shop, reef, rosterEntry } = await withSecondSiteRequirement({
+      requiredSpecialties: ["deep"],
+    });
+    if (!reef.diveSiteId) throw new Error("seeded two-tank trip should have a primary site");
+    await db
+      .update(diveSites)
+      .set({ requiredSpecialties: ["wreck"] })
+      .where(and(eq(diveSites.shopId, shop.id), eq(diveSites.id, reef.diveSiteId)));
+
+    const expected = [
+      expect.objectContaining({ code: "specialty_missing", params: { specialty: "deep" } }),
+      expect.objectContaining({ code: "specialty_missing", params: { specialty: "wreck" } }),
+    ];
+    const readiness = await getBookingReadiness(db, shop.id, rosterEntry.booking.id);
+    expect(readiness?.blockers).toEqual(expect.arrayContaining(expected));
+    const [batch] = (await listTripsReadiness(db, shop.id, [reef.id])).filter(
+      (row) => row.booking.id === rosterEntry.booking.id,
+    );
+    expect(batch?.readiness.blockers).toEqual(expect.arrayContaining(expected));
+  });
+
+  it("still reads a requirement on the primary site when no other site has one", async () => {
+    const { db, shop, reef, rosterEntry } = await withSecondSiteRequirement({});
+    if (!reef.diveSiteId) throw new Error("seeded two-tank trip should have a primary site");
+    await db
+      .update(diveSites)
+      .set({ minimumCertificationLevel: "rescue" })
+      .where(and(eq(diveSites.shopId, shop.id), eq(diveSites.id, reef.diveSiteId)));
+    await verifiedOpenWaterCard(db, shop.id, rosterEntry.person.id);
+
+    expect(
+      (await getBookingReadiness(db, shop.id, rosterEntry.booking.id))?.blockers,
+    ).toContainEqual(expect.objectContaining({ code: "certification_insufficient" }));
   });
 });

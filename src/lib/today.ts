@@ -48,6 +48,7 @@ const SOON_WINDOW_MS = 72 * HOUR;
 export const TODAY_HORIZON_MS = 7 * 24 * HOUR;
 
 export type TodayActionKind =
+  | "roll_call_unfinished"
   | "medical_review"
   | "identity"
   | "certification"
@@ -71,29 +72,34 @@ export type TodayActionKind =
  * diver or a physician outranks anything staff can settle at the dock.
  */
 const KIND_SEVERITY: Record<TodayActionKind, number> = {
-  medical_review: 0,
-  readiness_unavailable: 1,
+  // An after-dive head count that never closed outranks everything, because it
+  // is the only row here that can mean a person is still in the water. Every
+  // other kind describes someone who cannot board; this one describes someone
+  // nobody counted back onto the boat (DOM-H3).
+  roll_call_unfinished: 0,
+  medical_review: 1,
+  readiness_unavailable: 2,
   // An unconfirmed identity can hide a missing medical/cert for a different
   // human, so it ranks with the other hard safety gates, above card/waiver work.
-  identity: 2,
-  certification: 3,
-  requirements: 4,
-  waiver: 5,
-  instructor_missing: 6,
-  nitrox_gate: 7,
-  dive_prep: 8,
-  payment: 9,
-  email_delivery: 10,
-  waitlist_seat: 11,
+  identity: 3,
+  certification: 4,
+  requirements: 5,
+  waiver: 6,
+  instructor_missing: 7,
+  nitrox_gate: 8,
+  dive_prep: 9,
+  payment: 10,
+  email_delivery: 11,
+  waitlist_seat: 12,
   // A revenue opportunity, not anything blocking or dock-settleable — ranks
   // with the other purely-commercial rows.
-  last_minute_fill: 12,
+  last_minute_fill: 13,
   // Dock-settleable and never a boarding blocker, so it rides at the bottom.
-  emergency_contact: 13,
+  emergency_contact: 14,
   // Platform-health chores (task 157) — never a departure blocker, so they
   // sink below every per-diver row when severity is what breaks a tie.
-  stuck_payment_operation: 14,
-  failed_photo_deletion: 15,
+  stuck_payment_operation: 15,
+  failed_photo_deletion: 16,
 };
 
 /**
@@ -103,6 +109,7 @@ const KIND_SEVERITY: Record<TodayActionKind, number> = {
  * through `t()`.
  */
 export const ACTION_KIND_META = {
+  roll_call_unfinished: { tone: "danger" },
   medical_review: { tone: "danger" },
   readiness_unavailable: { tone: "danger" },
   identity: { tone: "danger" },

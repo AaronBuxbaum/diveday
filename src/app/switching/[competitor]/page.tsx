@@ -148,6 +148,38 @@ async function GuideBody({
             {guide.heroTitle}
           </h1>
           <p className="mt-6 max-w-2xl text-lg leading-8 text-muted">{guide.heroLede}</p>
+
+          {/* The buyer's first door out of the page, before six sections of
+              export click-path and scope table. Deliberately NOT the
+              `importCta` slot: that one deep-links a signed-in owner into
+              their own shop's importer and is correct to disappear for the
+              signed-out shopper this section is written for. Nothing here
+              reads the session, so it stays inside the cached body. */}
+          <div className="mt-8 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
+            <form action={enterDemoAction} className="contents">
+              <FunnelTag source={guideSource(guide.slug)} />
+              <SubmitButton
+                pendingLabel={t("switching.competitor.gettingDemoReady")}
+                className={buttonClass({
+                  size: "cta",
+                  className: "cursor-pointer disabled:opacity-70",
+                })}
+              >
+                {t("marketing.common.tryDemo")}
+              </SubmitButton>
+            </form>
+            <Link
+              href={trialHref(guideSource(guide.slug))}
+              className={buttonClass({
+                variant: "secondary",
+                size: "cta",
+                className: "border-border-strong",
+              })}
+            >
+              {t("marketing.common.startTrial")}
+            </Link>
+          </div>
+          <p className="mt-3 text-sm text-muted">{t("switching.common.heroCtaNote")}</p>
         </div>
       </section>
 
@@ -267,6 +299,41 @@ async function GuideBody({
             </li>
           ))}
         </ul>
+
+        {/* The scope table is where a reader decides the move is real — and it
+            was the furthest point they could reach without a way to act. */}
+        <div className="mt-10 flex flex-col gap-6 rounded-2xl border border-border bg-surface p-6 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h3 className="text-xl font-semibold tracking-tight">
+              {t("switching.common.midCtaTitle")}
+            </h3>
+            <p className="mt-2 max-w-xl leading-7 text-muted">{t("switching.common.midCtaBody")}</p>
+          </div>
+          <div className="flex flex-col items-stretch gap-3 sm:shrink-0 sm:flex-row sm:items-center">
+            <form action={enterDemoAction} className="contents">
+              <FunnelTag source={guideSource(guide.slug)} />
+              <SubmitButton
+                pendingLabel={t("switching.competitor.gettingDemoReady")}
+                className={buttonClass({
+                  size: "cta",
+                  className: "cursor-pointer disabled:opacity-70",
+                })}
+              >
+                {t("marketing.common.tryDemo")}
+              </SubmitButton>
+            </form>
+            <Link
+              href={trialHref(guideSource(guide.slug))}
+              className={buttonClass({
+                variant: "secondary",
+                size: "cta",
+                className: "border-border-strong",
+              })}
+            >
+              {t("marketing.common.startTrial")}
+            </Link>
+          </div>
+        </div>
       </section>
 
       {/* Step 3: bring the file into DiveDay. */}

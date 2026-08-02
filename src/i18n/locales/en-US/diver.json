@@ -815,7 +815,8 @@
         "americas": "Americas",
         "caribbean": "Caribbean & Mexico",
         "europeRedSea": "Europe & Red Sea",
-        "asiaPacific": "Asia-Pacific"
+        "asiaPacific": "Asia-Pacific",
+        "allZones": "All timezones"
       },
       "timezone": {
         "eastern": "Eastern Time (New York)",
@@ -824,16 +825,24 @@
         "pacific": "Pacific Time (Los Angeles)",
         "hawaii": "Hawaii (Honolulu)",
         "cancun": "Cancún / Cozumel",
+        "belize": "Belize",
+        "roatan": "Roatán / Honduras",
+        "cayman": "Cayman Islands",
         "puertoRico": "Puerto Rico / Eastern Caribbean",
         "nassau": "Nassau, Bahamas",
+        "bonaire": "Bonaire / Curaçao",
         "london": "London",
         "cairo": "Cairo / Red Sea",
+        "maldives": "Maldives",
         "singapore": "Singapore",
         "bangkok": "Bangkok",
+        "jakarta": "Jakarta / western Indonesia",
+        "bali": "Bali / Komodo (central Indonesia)",
         "manila": "Manila",
         "sydney": "Sydney",
         "auckland": "Auckland",
-        "palau": "Palau"
+        "palau": "Palau",
+        "fiji": "Fiji"
       },
       "youSectionTitle": "You",
       "fullNameLabel": "Full name",
@@ -876,6 +885,11 @@
     }
   },
   "switching": {
+    "common": {
+      "heroCtaNote": "The demo is a working shop — no sign-up, nothing to import, nothing to undo.",
+      "midCtaTitle": "Rather see it than read about it?",
+      "midCtaBody": "Walk the live demo as the owner, the captain, or a diver — the same cert checks, waivers, and roll call your export lands into."
+    },
     "concierge": {
       "eyebrow": "A person, not a wizard",
       "title": "We'll switch you on — and off — ourselves.",

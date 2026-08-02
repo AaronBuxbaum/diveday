@@ -7,6 +7,7 @@ import {
   checkoutProviderFromEnvironment,
   stripeLineDescription,
 } from "@/lib/payments/checkout";
+import { allocateSettledTotal } from "@/lib/payments/settlement";
 import type { AppDb, DbExecutor } from "./client";
 import {
   claimBookingsForCheckout,
@@ -474,18 +475,24 @@ export async function markCheckoutPaidBySessionId(
         shopId: updated.shopId,
         promoCodeId: updated.promoCodeId,
         checkoutId: updated.id,
-        amountChargedCents: updated.totalCents,
+        // What the shop actually received with this code applied, straight
+        // from Stripe; the quoted total only when no settled figure exists.
+        amountChargedCents: updated.settledTotalCents ?? updated.totalCents,
       });
     }
 
-    for (const { bookingId } of linked) {
+    for (const { bookingId, gearCents } of linked) {
       await setBookingPaymentIfNotFinal(tx, {
         shopId: checkout.shopId,
         bookingId,
         // A deposit checkout clears the readiness gate as deposit_paid; the
         // balance is collected later (staff order or a full checkout).
         status: checkout.isDeposit ? "deposit_paid" : "paid",
-        amountCents: checkout.amountPerDiverCents,
+        // No settled figure to split (a historical row, or Stripe reported no
+        // total): fall back to what this diver was asked for — the per-diver
+        // charge plus their own gear. Pre-discount, so possibly generous on a
+        // promo checkout, but never a completion refused or recorded as zero.
+        amountCents: allocation?.get(bookingId) ?? askedCentsFor(gearCents),
         currency: checkout.currency,
         provider: "stripe",
         providerRef: checkout.stripeSessionId,
@@ -543,7 +550,15 @@ export async function refreshCheckoutFromStripe(
   const result = await checkout.retrieveCheckoutSession(row.stripeAccountId, row.stripeSessionId);
   if (result.status !== "ok") return row;
   if (result.session.paymentStatus === "paid") {
-    return markCheckoutPaidBySessionId(db, row.stripeSessionId);
+    // The snapshot already carries Stripe's own settled total; pass it through
+    // rather than dropping it, so this fallback path records the same money
+    // the webhook path would have (PAY-H1/H2).
+    return markCheckoutPaidBySessionId(
+      db,
+      row.stripeSessionId,
+      undefined,
+      result.session.amountTotalCents,
+    );
   }
   if (result.session.stripeStatus === "expired") {
     return markCheckoutExpiredBySessionId(db, row.stripeSessionId);

@@ -6,7 +6,12 @@ import type {
   TripRequirement,
   WaiverRecord,
 } from "@/db/schema";
-import { calculateReadiness, combineCertRequirements, higherCertificationLevel } from "./readiness";
+import {
+  calculateReadiness,
+  combineCertRequirements,
+  combineSiteRequirements,
+  higherCertificationLevel,
+} from "./readiness";
 
 const now = new Date("2026-07-18T12:00:00.000Z");
 const requirement = {
@@ -491,5 +496,58 @@ describe("combineCertRequirements", () => {
     expect(combined.minimumCertificationLevel).toBe("advanced_open_water");
     expect([...combined.requiredSpecialties].sort()).toEqual(["deep", "wreck"]);
     expect(combined.requiresNitrox).toBe(true);
+  });
+});
+
+describe("combineSiteRequirements", () => {
+  it("is null when the trip visits nothing, or nothing it visits demands anything", () => {
+    expect(combineSiteRequirements([])).toBeNull();
+    expect(
+      combineSiteRequirements([
+        { minimumCertificationLevel: null, requiredSpecialties: [], requiresNitrox: false },
+        { minimumCertificationLevel: null, requiredSpecialties: [], requiresNitrox: false },
+      ]),
+    ).toBeNull();
+  });
+
+  it("folds every site the trip visits — strictest level, union, OR of nitrox", () => {
+    // The two-tank case: dive one is the shallow reef, dive two is the deep
+    // wreck. Reading only the first goes quiet on exactly the dive that needed
+    // the card.
+    const combined = combineSiteRequirements([
+      {
+        minimumCertificationLevel: "open_water",
+        requiredSpecialties: ["deep"],
+        requiresNitrox: false,
+      },
+      {
+        minimumCertificationLevel: "advanced_open_water",
+        requiredSpecialties: ["wreck"],
+        requiresNitrox: true,
+      },
+    ]);
+    expect(combined?.minimumCertificationLevel).toBe("advanced_open_water");
+    expect([...(combined?.requiredSpecialties ?? [])].sort()).toEqual(["deep", "wreck"]);
+    expect(combined?.requiresNitrox).toBe(true);
+  });
+
+  it("does not care which order the sites arrive in", () => {
+    const a = {
+      minimumCertificationLevel: "rescue",
+      requiredSpecialties: ["deep"],
+      requiresNitrox: true,
+    } as const;
+    const b = {
+      minimumCertificationLevel: "open_water",
+      requiredSpecialties: ["wreck"],
+      requiresNitrox: false,
+    } as const;
+    const forward = combineSiteRequirements([a, b]);
+    const backward = combineSiteRequirements([b, a]);
+    expect(forward?.minimumCertificationLevel).toBe(backward?.minimumCertificationLevel);
+    expect([...(forward?.requiredSpecialties ?? [])].sort()).toEqual(
+      [...(backward?.requiredSpecialties ?? [])].sort(),
+    );
+    expect(forward?.requiresNitrox).toBe(backward?.requiresNitrox);
   });
 });

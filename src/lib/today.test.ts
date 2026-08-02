@@ -292,6 +292,36 @@ describe("sortActions", () => {
     expect(sorted[0]?.id).toBe("today");
   });
 
+  it("leads the whole queue with an unfinished after-dive roll call (DOM-H3)", () => {
+    // The boat is back; `dueAt` is when it tied up, so it is always earlier
+    // than any departure still ahead of the shop. Both halves of the sort have
+    // to agree for this to lead — the top urgency band, then the earliest
+    // `dueAt` — and a medical review on the very next boat is the strongest
+    // thing it has to beat.
+    const sorted = sortActions([
+      action({ id: "medical", kind: "medical_review", urgency: "imminent", dueAt: hoursFromNow(1) }),
+      action({ id: "waiver", kind: "waiver", urgency: "imminent", dueAt: hoursFromNow(0.5) }),
+      action({
+        id: "roll-call",
+        kind: "roll_call_unfinished",
+        urgency: "imminent",
+        dueAt: hoursFromNow(-2),
+      }),
+    ]);
+    expect(sorted.map((entry) => entry.id)).toEqual(["roll-call", "waiver", "medical"]);
+  });
+
+  it("puts an unfinished roll call ahead of a medical review on the same boat", () => {
+    // Severity is what breaks the tie once two rows share a `dueAt`, and
+    // nothing outranks the count that says whether everyone came back.
+    const at = hoursFromNow(-1);
+    const sorted = sortActions([
+      action({ id: "med", kind: "medical_review", urgency: "imminent", dueAt: at }),
+      action({ id: "roll", kind: "roll_call_unfinished", urgency: "imminent", dueAt: at }),
+    ]);
+    expect(sorted.map((entry) => entry.id)).toEqual(["roll", "med"]);
+  });
+
   it("sorts undated work last within its group", () => {
     const sorted = sortActions([
       action({ id: "undated", urgency: "now", dueAt: null }),

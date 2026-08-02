@@ -19,6 +19,7 @@ export const URGENCY_KEYS: Record<TodayUrgency, StaffMessageKey> = {
 
 /** Every `TodayActionKind` chip, to its label key. Tone stays in `src/lib/today.ts` (not copy). */
 export const ACTION_KIND_KEYS: Record<TodayActionKind, StaffMessageKey> = {
+  roll_call_unfinished: "shared.today.actionKind.rollCallUnfinished",
   medical_review: "shared.today.actionKind.medicalReview",
   readiness_unavailable: "shared.today.actionKind.readinessUnavailable",
   identity: "shared.today.actionKind.identity",
@@ -150,6 +151,25 @@ export function instructorMissingDetailText(t: StaffTranslator): string {
 /** The `over_ratio` half of `courseCrewGap` (src/lib/course-ratios.ts) — an instructor is on the crew, but not enough for the booked count. */
 export function overRatioDetailText(t: StaffTranslator, booked: number, capacity: number): string {
   return t("shared.today.detail.overRatio", { booked, capacity });
+}
+
+/**
+ * The unfinished after-dive head count (DOM-H3). One whole ICU message, not a
+ * stitched sentence: which dive's roll call is still open, and how many of the
+ * boat's divers have no result recorded at it.
+ */
+export function openRollCallDetailText(
+  t: StaffTranslator,
+  dive: number,
+  uncounted: number,
+  total: number,
+): string {
+  return t("shared.today.detail.openRollCall", { dive, uncounted, total });
+}
+
+/** The unfinished-roll-call row's action label — it opens that dive's roll call. */
+export function openRollCallActionText(t: StaffTranslator): string {
+  return t("shared.today.actionLabel.openRollCall");
 }
 
 export function missingContactDetailText(t: StaffTranslator, count: number): string {

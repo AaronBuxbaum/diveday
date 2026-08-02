@@ -79,21 +79,31 @@ describe("staffing view", () => {
   // over-ratio trip going forward, so the 9th seat here is inserted directly
   // — standing in for a trip a data import or a since-tightened rule left in
   // that state, which is exactly the case staff need the warning for.
-  it("flags course_needs_instructor for a ratio-over-capacity trip even though it has an instructor", async () => {
+  /**
+   * Stands up an instructor-crewed session on `courseTitle`, seats `withinRatio`
+   * divers through the booking gate, then inserts one more seat *directly* to
+   * push it over — see the note above for why the extra seat bypasses
+   * `createBooking`. Returns the trip's staffing-view entry.
+   */
+  async function overRatioSessionEntry(
+    courseTitle: string,
+    withinRatio: number,
+    tag: string,
+  ): Promise<{ gaps: string[] } | undefined> {
     const { db, shop } = await seededShopContext();
-    const [discoverCourse] = await db
+    const [course] = await db
       .select()
       .from(courses)
-      .where(and(eq(courses.shopId, shop.id), eq(courses.title, "Discover Scuba Diving")));
-    if (!discoverCourse) throw new Error("Discover Scuba Diving course missing");
+      .where(and(eq(courses.shopId, shop.id), eq(courses.title, courseTitle)));
+    if (!course) throw new Error(`${courseTitle} course missing`);
     const staff = await listStaff(db, shop.id);
     const instructor = staff.find((entry) => entry.roles.includes("instructor"));
     if (!instructor) throw new Error("seeded instructor missing");
 
     const trip = await createTrip(db, {
       shopId: shop.id,
-      courseId: discoverCourse.id,
-      title: "Ratio-over-capacity session",
+      courseId: course.id,
+      title: `Ratio-over-capacity session (${tag})`,
       startsAt: new Date(Date.now() + OPEN_TEST_SESSION_OFFSET_MS),
       endsAt: new Date(Date.now() + OPEN_TEST_SESSION_OFFSET_MS + 4 * 60 * 60 * 1000),
       capacity: 20,
@@ -101,13 +111,13 @@ describe("staffing view", () => {
     });
     if (!trip) throw new Error("failed to create ratio test trip");
     expect(await setTripCrew(db, shop.id, trip.id, [instructor.person.id])).toBe(true);
-    for (let i = 0; i < 8; i++) {
+    for (let i = 0; i < withinRatio; i++) {
       const outcome = await createBooking(db, {
         actor: "staff",
         shopId: shop.id,
         tripId: trip.id,
         fullName: `Ratio Diver ${i}`,
-        email: `staffing-ratio-diver-${i}@example.com`,
+        email: `staffing-${tag}-diver-${i}@example.com`,
       });
       expect(outcome).toMatchObject({ ok: true });
     }
@@ -115,8 +125,8 @@ describe("staffing view", () => {
       .insert(people)
       .values({
         shopId: shop.id,
-        fullName: "Ratio Diver 8",
-        email: "staffing-ratio-diver-8@example.com",
+        fullName: `Ratio Diver ${withinRatio}`,
+        email: `staffing-${tag}-diver-${withinRatio}@example.com`,
       })
       .returning();
     if (!extraDiver) throw new Error("failed to insert extra diver");
@@ -128,7 +138,19 @@ describe("staffing view", () => {
       new Date(trip.startsAt.getTime() - 60 * 60 * 1000),
       new Date(trip.endsAt.getTime() + 60 * 60 * 1000),
     );
-    const entry = view.trips.find((row) => row.trip.id === trip.id);
+    return view.trips.find((row) => row.trip.id === trip.id);
+  }
+
+  it("flags course_needs_instructor for a ratio-over-capacity trip even though it has an instructor", async () => {
+    // Open Water training dives: 8 through the gate, the 9th inserted directly.
+    const entry = await overRatioSessionEntry("Open Water Diver", 8, "ow");
+    expect(entry?.gaps).toContain("course_needs_instructor");
+  });
+
+  it("flags an over-ratio intro (Discover Scuba) session at its far tighter 4:1 cap", async () => {
+    // The same advisory at the DSD ratio (DOM-H2): 4 through the gate, the 5th
+    // inserted directly. Under the old 8/12 numbers this trip read as covered.
+    const entry = await overRatioSessionEntry("Discover Scuba Diving", 4, "dsd");
     expect(entry?.gaps).toContain("course_needs_instructor");
   });
 

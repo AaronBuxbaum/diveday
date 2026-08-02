@@ -228,7 +228,15 @@ export async function sendDueCheckoutRecoveries(
       continue;
     }
     if (lookup.session.paymentStatus === "paid") {
-      await markCheckoutPaidBySessionId(db, checkout.stripeSessionId);
+      // Stripe's own settled total travels with the lookup — pass it through so
+      // a checkout resolved by this scan records what settled, exactly as the
+      // webhook path does (PAY-H1/H2).
+      await markCheckoutPaidBySessionId(
+        db,
+        checkout.stripeSessionId,
+        undefined,
+        lookup.session.amountTotalCents,
+      );
       summary.resolved += 1;
       continue;
     }

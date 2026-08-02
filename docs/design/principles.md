@@ -12,7 +12,8 @@ If an interaction needs a spinner for more than a beat, redesign the interaction
 ## 2. Pass the dock test
 
 Primary flows work one-handed on a phone, in glare, with wet fingers: touch targets ≥ 44 px,
-critical text ≥ 16 px, strong contrast (AA minimum, AAA for manifest/roll-call surfaces),
+critical text ≥ 16 px, strong contrast (AA — 4.5:1 text, 3:1 focus rings and control borders — is
+the bar every new surface must clear, and manifest/roll-call surfaces aim higher),
 forgiving inputs (autocomplete, sensible defaults, no precision gestures). A 44 px target must
 center its own label, and fields in a row must share one baseline no matter how their captions
 wrap — both come free from the primitives in
@@ -20,9 +21,10 @@ wrap — both come free from the primitives in
 most extreme version of this. Live and offline boat surfaces run in `boat-mode`, which follows the
 device's own light/dark preference — bright by day so the manifest reads in full sun, dark for a
 night dive when a white screen would blind the deck — while boosting ink, border, and action
-contrast past the app's AA baseline to AAA in both schemes. Visible connectivity/freshness states,
-a sticky progress cue, and an accessible skip link keep any operational state from hiding behind
-deck glare.
+contrast well past the app palette in both schemes: every boat-mode ink and action token clears
+6.2:1 against its own surfaces, where the app palette's weakest token sits at 4.4:1. Visible
+connectivity/freshness states, a sticky progress cue, and an accessible skip link keep any
+operational state from hiding behind deck glare.
 
 ## 3. Calm surfaces, earned moments of joy
 
@@ -152,11 +154,23 @@ sand (light) / open ocean at depth (dark); **lagoon** (`--primary`) is the actio
 **coral** (`--accent`) is rationed for earned moments; feedback colors (`--success`,
 `--warning`, `--danger`) never carry meaning alone.
 
+**Where the palette actually stands.** AA is the bar, and the light palette does not clear it
+everywhere yet — so do not describe the app as WCAG AA conformant, in docs, in a page, or in a
+PR description. Two known light-mode gaps are open and deliberately deferred pending a color-guide
+decision: `--success`/`--warning` text on their own 10% tinted fills (4.38:1 and 4.39:1, against
+AA's 4.5:1) and input placeholders (3.07:1 on `--surface-sunken`). Both are tracked in
+[product/features/roadmap.md](../product/features/roadmap.md#accessibility-contrast-fixes-blocked-on-a-color-guide-decision),
+and until they land the axe scan in `e2e/a11y.spec.ts` keeps its `color-contrast` rule excluded —
+so CI will not catch a new contrast regression for you. Everything else measured clears AA, and
+`--focus-ring` clears WCAG 1.4.11's 3:1 in all four palettes (worst case 4.66:1). New surfaces are
+still held to the full bar; the exceptions are a documented backlog, not a lowered standard.
+
 ## Review checklist
 
 - [ ] Semantic tokens only (no raw hex / palette-scale classes)
 - [ ] Light **and** dark verified (screenshots)
-- [ ] Dock test: targets ≥ 44 px, text ≥ 16 px, AA contrast
+- [ ] Dock test: targets ≥ 44 px, text ≥ 16 px, AA contrast (4.5:1 text, 3:1 focus ring/control
+      border) — measured, not eyeballed; the axe scan does not check contrast today
 - [ ] Buttons and button-shaped links via `buttonClass()`; labels centered in the target
 - [ ] Stacked form fields via `<Field>`/`<FieldGrid>`; controls aligned across columns
 - [ ] Loading = content-shaped skeletons; no layout shift

@@ -39,6 +39,7 @@
     "check:env": "node scripts/check-env.mjs",
     "check:repo": "node scripts/check-repo.mjs",
     "check": "pnpm check:repo && pnpm lint && pnpm typecheck && pnpm test",
+    "gates": "node scripts/gate-freshness.mjs",
     "perf:budget": "node scripts/perf-budget.mjs",
     "task:context": "node scripts/task-context.mjs",
     "db:generate": "drizzle-kit generate",

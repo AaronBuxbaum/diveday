@@ -13,6 +13,8 @@ import {
   openGuestsActionText,
   openPrepListActionText,
   openReportsActionText,
+  openRollCallActionText,
+  openRollCallDetailText,
   openTripActionText,
   overRatioDetailText,
   stuckOperationKindText,
@@ -22,7 +24,12 @@ import {
 } from "@/i18n/today-labels";
 import { nowDate } from "@/lib/clock";
 import { courseCrewGap } from "@/lib/course-ratios";
-import { formatShortDate, formatTime } from "@/lib/format";
+import { formatDateTimeTz, formatShortDate, formatTime } from "@/lib/format";
+import {
+  carryForwardNotBoarded,
+  type RollCallRecord,
+  rollCallCheckpoints,
+} from "@/lib/manifests";
 import { collapseDiverActions, TODAY_HORIZON_MS, type TodayAction, urgencyFor } from "@/lib/today";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import type { AppDb } from "./client";
@@ -181,6 +188,194 @@ async function boardedCountsByTrip(db: AppDb, shopId: string, tripIds: string[])
     if (status === "boarded") counts.set(tripId, (counts.get(tripId) ?? 0) + 1);
   }
   return counts;
+}
+
+/**
+ * How far back Today chases an after-dive head count that never closed
+ * (DOM-H3). Two days: long enough that a boat which tied up late last night is
+ * still chased through the next morning's shift — the case that matters — and
+ * short enough that the queue stays a list of work someone can still do, not
+ * an audit log. Older than this and the answer is not on the dock any more; it
+ * is an incident, and the trip's own manifest is where it gets reconstructed.
+ */
+export const RETURNED_ROLL_CALL_LOOKBACK_MS = 48 * HOUR_MS;
+
+/** Bounds the backwards pass the same way MAX_TRIPS bounds the forward one. */
+const MAX_RETURNED_TRIPS = 20;
+
+/**
+ * A departure that is back at the dock with an after-dive roll call still
+ * open. Codes and numbers only — `src/i18n/today-labels.ts` picks the words.
+ */
+export type OpenRollCall = {
+  tripId: string;
+  title: string;
+  startsAt: Date;
+  endsAt: Date;
+  capacity: number;
+  priceCents: number | null;
+  /** 1-based dive number of the *earliest* after-dive checkpoint still open. */
+  diveNumber: number;
+  /** Divers with no roll-call result recorded at that checkpoint. */
+  uncounted: number;
+  /** Everyone the manifest lists for that checkpoint (cancelled bookings aside). */
+  totalDivers: number;
+};
+
+/**
+ * Departures that already came back with a head count still open — the number
+ * that says whether anybody is still in the water (DOM-H3).
+ *
+ * **This is the one reader here that looks backwards, on purpose.** Every other
+ * signal on this page hangs off `pagedUpcomingTripsWithCounts`, which only ever
+ * returns trips whose `startsAt` is still ahead of `now`; a boat that sailed at
+ * 07:00 has already fallen out of it by 07:01, and one that tied up late last
+ * night was never in it at all. Filtering the forward window harder could not
+ * reach either. So this runs its own bounded query over `endsAt` instead.
+ *
+ * "Unfinished" is defined exactly as the manifest defines it, so Today can
+ * never call a boat closed that the manifest still shows open:
+ *
+ * - the roster is the manifest's roster — every booking that is not cancelled,
+ *   `no_show` included (it is on the manifest, so it is in this count);
+ * - a diver's result at a checkpoint is their *latest* event there, and a
+ *   latest `cleared` is an undo that returns them to awaiting
+ *   (`listLatestRollCallByBooking`, src/db/manifests.ts);
+ * - an explicit `not_boarded` carries forward to later checkpoints
+ *   (`carryForwardNotBoarded`, src/lib/manifests.ts) — someone deliberately
+ *   left ashore is accounted for, and carry-forward never fabricates a
+ *   `boarded`, so "awaiting" still means nobody counted this person;
+ * - a checkpoint with no events at all is therefore entirely uncounted, which
+ *   is the loudest case and must alarm rather than read as "nothing to do".
+ *
+ * Only the after-dive checkpoints raise it. Departure boarding is already
+ * chased by every readiness row on the queue; this is the count on the way
+ * back. Reported per trip at the *earliest* open dive — where the chain broke.
+ */
+export async function openAfterDiveRollCalls(
+  db: AppDb,
+  shopId: string,
+  now: Date = nowDate(),
+): Promise<OpenRollCall[]> {
+  const returned = await db
+    .select({
+      id: trips.id,
+      title: trips.title,
+      startsAt: trips.startsAt,
+      endsAt: trips.endsAt,
+      capacity: trips.capacity,
+      priceCents: trips.priceCents,
+      plannedDives: trips.plannedDives,
+    })
+    .from(trips)
+    .where(
+      and(
+        eq(trips.shopId, shopId),
+        // A cancelled trip never sailed, so it has nobody to count back.
+        eq(trips.status, "scheduled"),
+        lte(trips.endsAt, now),
+        gte(trips.endsAt, new Date(now.getTime() - RETURNED_ROLL_CALL_LOOKBACK_MS)),
+      ),
+    )
+    .orderBy(asc(trips.endsAt))
+    .limit(MAX_RETURNED_TRIPS);
+  if (returned.length === 0) return [];
+  const tripIds = returned.map((trip) => trip.id);
+
+  const [roster, events] = await Promise.all([
+    db
+      .select({ tripId: bookings.tripId, bookingId: bookings.id })
+      .from(bookings)
+      .where(
+        and(
+          eq(bookings.shopId, shopId),
+          inArray(bookings.tripId, tripIds),
+          ne(bookings.status, "cancelled"),
+        ),
+      ),
+    db
+      .select({
+        bookingId: rollCallEvents.bookingId,
+        checkpoint: rollCallEvents.checkpoint,
+        status: rollCallEvents.status,
+        occurredAt: rollCallEvents.occurredAt,
+      })
+      .from(rollCallEvents)
+      // Same guard `boardedCountsByTrip` applies: a booking cancelled after the
+      // boat left keeps its event rows, and they must not answer for a roster
+      // it is no longer on.
+      .innerJoin(
+        bookings,
+        and(eq(bookings.id, rollCallEvents.bookingId), ne(bookings.status, "cancelled")),
+      )
+      .where(and(eq(rollCallEvents.shopId, shopId), inArray(rollCallEvents.tripId, tripIds)))
+      .orderBy(asc(rollCallEvents.occurredAt), asc(rollCallEvents.createdAt)),
+  ]);
+
+  const rosterByTrip = new Map<string, string[]>();
+  for (const row of roster) {
+    const list = rosterByTrip.get(row.tripId) ?? [];
+    list.push(row.bookingId);
+    rosterByTrip.set(row.tripId, list);
+  }
+
+  // Ordered oldest-first, so the last write per booking *and checkpoint* wins.
+  const latestByBookingCheckpoint = new Map<string, (typeof events)[number]>();
+  for (const event of events) {
+    latestByBookingCheckpoint.set(`${event.bookingId} ${event.checkpoint}`, event);
+  }
+
+  const open: OpenRollCall[] = [];
+  for (const trip of returned) {
+    const bookingIds = rosterByTrip.get(trip.id) ?? [];
+    // An empty boat has nobody to count, exactly as the manifest's own
+    // "complete" rule requires a `totalDivers > 0` before it says so.
+    if (bookingIds.length === 0) continue;
+    const checkpoints = rollCallCheckpoints(trip.plannedDives);
+    const uncounted = checkpoints.map(() => 0);
+    for (const bookingId of bookingIds) {
+      const effective = carryForwardNotBoarded(
+        checkpoints.map((checkpoint) => {
+          const event = latestByBookingCheckpoint.get(`${bookingId} ${checkpoint}`);
+          // A latest `cleared` is staff undoing a mistake: the diver reads as
+          // awaiting again, so it must re-alarm rather than stay resolved.
+          if (!event || event.status === "cleared") return undefined;
+          // Only `state` decides a head count. The recorder's name and note are
+          // the manifest's display fields, so they are deliberately not queried.
+          return {
+            state: event.status,
+            occurredAt: event.occurredAt,
+            recordedByName: "",
+            note: null,
+          } satisfies RollCallRecord;
+        }),
+      );
+      effective.forEach((record, index) => {
+        if (!record) uncounted[index] = (uncounted[index] ?? 0) + 1;
+      });
+    }
+    // Index 0 is `departure`; the after-dive checkpoints start at 1 and their
+    // index *is* their dive number.
+    for (let dive = 1; dive < checkpoints.length; dive++) {
+      const count = uncounted[dive] ?? 0;
+      if (count === 0) continue;
+      open.push({
+        tripId: trip.id,
+        title: trip.title,
+        startsAt: trip.startsAt,
+        endsAt: trip.endsAt,
+        capacity: trip.capacity,
+        priceCents: trip.priceCents,
+        diveNumber: dive,
+        uncounted: count,
+        totalDivers: bookingIds.length,
+      });
+      // One row per boat, at the earliest dive still open — that is where the
+      // count broke, and closing it is what the crew does next.
+      break;
+    }
+  }
+  return open;
 }
 
 /**
@@ -473,6 +668,7 @@ export async function getTodayWork(
     courseCrewCounts,
     deliveryIssues,
     neverSentLastMinuteDeal,
+    openRollCalls,
   ] = await Promise.all([
     boardedCountsByTrip(
       db,
@@ -498,6 +694,9 @@ export async function getTodayWork(
       shopId,
       inWindow.map((trip) => trip.id),
     ),
+    // Deliberately not derived from `inWindow`/`todayTrips`: those look only
+    // forward, and a boat that already came back is exactly what this chases.
+    openAfterDiveRollCalls(db, shopId, now),
   ]);
 
   const rawStaff = await listStaff(db, shopId);
@@ -538,6 +737,33 @@ export async function getTodayWork(
   }
 
   const actions: TodayAction[] = [];
+
+  // The boat is already at the dock and somebody on its list was never counted
+  // back (DOM-H3). Nothing else on this queue can mean a diver is still in the
+  // water, so it leads: top `KIND_SEVERITY`, pinned to the top urgency band,
+  // and dated at the moment the trip tied up — always in the past, so it also
+  // sorts ahead of every still-upcoming row inside that band. Urgency is set
+  // rather than derived because there is no "before it sails" left to derive
+  // from; the departure it would hang off has already happened.
+  for (const open of openRollCalls) {
+    const checkpoint = `after_dive_${open.diveNumber}`;
+    actions.push({
+      id: `roll-call:${open.tripId}:${checkpoint}`,
+      kind: "roll_call_unfinished",
+      urgency: "imminent",
+      subject: open.title,
+      // The safety-event timestamp format, with its timezone spelled out: a
+      // bare time would read as "this morning" for a boat that returned last
+      // night, which is the case this row exists for.
+      context: formatDateTimeTz(open.endsAt, locale, timeZone),
+      detail: openRollCallDetailText(t, open.diveNumber, open.uncounted, open.totalDivers),
+      actionLabel: openRollCallActionText(t),
+      // Straight to the checkpoint that is open, not the manifest's default
+      // departure tab — one tap from the queue to the count that closes it.
+      href: `/shop/${shopSlug}/trips/${open.tripId}/manifest?checkpoint=${checkpoint}`,
+      dueAt: open.endsAt,
+    });
+  }
 
   for (const trip of inWindow) {
     const tripHref = `/shop/${shopSlug}/trips/${trip.id}`;

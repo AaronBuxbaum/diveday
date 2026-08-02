@@ -59,7 +59,8 @@ function retrieved(session: Partial<CheckoutSessionSnapshot>): CheckoutSessionLo
       stripeStatus: "open",
       paymentStatus: "unpaid",
       checkoutUrl: null,
-      amountTotalCents: 0,
+      // Null by default: "Stripe reported no total", not "collected nothing".
+      amountTotalCents: null,
       expiresAt: null,
       ...session,
     },
@@ -536,6 +537,109 @@ describe("checkout completion", () => {
     }
   });
 
+  // PAY-H1/H2: `totalCents` is what DiveDay asked for; Stripe's `amount_total`
+  // is what settled. The per-booking ledger — which is what a refund later
+  // returns — must record the second, split across the party in proportion to
+  // what each diver was asked for.
+  it("records each diver's share of Stripe's settled total, gear included", async () => {
+    const { db, shop, reef, bookingIds } = await checkoutContext();
+    const start = await startBookingCheckout(
+      db,
+      {
+        ...startInput(shop.id, reef.id, bookingIds),
+        gearLines: [
+          { bookingId: bookingIds[0], description: "Rental gear — Pat", amountCents: 6_000 },
+        ],
+      },
+      fakeCheckout(),
+    );
+    if (!start.ok) throw new Error("checkout start failed");
+    // Asked: 18000 + 18000 + 6000 gear = 42000. Stripe collected 10% less.
+    expect(start.checkout.totalCents).toBe(42_000);
+
+    const completed = await markCheckoutPaidBySessionId(
+      db,
+      start.checkout.stripeSessionId,
+      undefined,
+      37_800,
+    );
+    expect(completed?.settledTotalCents).toBe(37_800);
+
+    // 24000/42000 and 18000/42000 of 37800 — and the two sum to exactly what
+    // Stripe collected, with no orphan cent left unattributed.
+    const gearPayment = await getBookingPayment(db, shop.id, bookingIds[0]);
+    const plainPayment = await getBookingPayment(db, shop.id, bookingIds[1]);
+    expect(gearPayment?.amountCents).toBe(21_600);
+    expect(plainPayment?.amountCents).toBe(16_200);
+    expect((gearPayment?.amountCents ?? 0) + (plainPayment?.amountCents ?? 0)).toBe(37_800);
+  });
+
+  it("splits a settled total that does not divide evenly without losing or inventing a cent", async () => {
+    const { db, shop, reef, bookingIds } = await checkoutContext();
+    const start = await startBookingCheckout(
+      db,
+      startInput(shop.id, reef.id, bookingIds),
+      fakeCheckout(),
+    );
+    if (!start.ok) throw new Error("checkout start failed");
+
+    // An odd settled total across two equal shares: someone gets the extra cent.
+    await markCheckoutPaidBySessionId(db, start.checkout.stripeSessionId, undefined, 33_333);
+    const amounts = await Promise.all(
+      bookingIds.map(
+        async (bookingId) => (await getBookingPayment(db, shop.id, bookingId))?.amountCents ?? 0,
+      ),
+    );
+    expect(amounts.reduce((total, cents) => total + cents, 0)).toBe(33_333);
+    expect([...amounts].sort()).toEqual([16_666, 16_667]);
+  });
+
+  it("falls back to the asked amounts when Stripe reported no settled total", async () => {
+    const { db, shop, reef, bookingIds } = await checkoutContext();
+    const start = await startBookingCheckout(
+      db,
+      {
+        ...startInput(shop.id, reef.id, bookingIds),
+        gearLines: [
+          { bookingId: bookingIds[0], description: "Rental gear — Pat", amountCents: 6_000 },
+        ],
+      },
+      fakeCheckout(),
+    );
+    if (!start.ok) throw new Error("checkout start failed");
+
+    const completed = await markCheckoutPaidBySessionId(db, start.checkout.stripeSessionId);
+    // No settled figure exists, and none is invented — a completion is never
+    // refused or recorded as zero over a missing total.
+    expect(completed?.settledTotalCents).toBeNull();
+    expect((await getBookingPayment(db, shop.id, bookingIds[0]))?.amountCents).toBe(24_000);
+    expect((await getBookingPayment(db, shop.id, bookingIds[1]))?.amountCents).toBe(
+      REEF_PRICE_CENTS,
+    );
+  });
+
+  it("splits a zero-decimal currency's settled total in whole minor units", async () => {
+    const { db, shop, reef, bookingIds } = await checkoutContext();
+    await setShopCurrency(db, shop.id, "jpy");
+    const start = await startBookingCheckout(
+      db,
+      startInput(shop.id, reef.id, bookingIds),
+      fakeCheckout(),
+    );
+    if (!start.ok) throw new Error("checkout start failed");
+
+    // ¥36,000 asked, ¥32,401 settled — the odd yen goes to exactly one diver;
+    // there is no sub-unit to hide it in (docs ADR 20260731-shop-currency).
+    await markCheckoutPaidBySessionId(db, start.checkout.stripeSessionId, undefined, 32_401);
+    const amounts = await Promise.all(
+      bookingIds.map(
+        async (bookingId) => (await getBookingPayment(db, shop.id, bookingId))?.amountCents ?? 0,
+      ),
+    );
+    expect([...amounts].sort()).toEqual([16_200, 16_201]);
+    expect(amounts.every(Number.isInteger)).toBe(true);
+  });
+
   it("never marks a cancelled booking paid from a checkout completed after the cancel (security review finding)", async () => {
     // A diver can cancel/reschedule their own booking (docs ADR
     // 20260727-diver-self-service-cancel) while a Stripe Checkout for that
@@ -681,6 +785,45 @@ describe("checkout completion", () => {
     }
   });
 
+  it("backfills a settled total a first completion never carried, and never rewrites one it did", async () => {
+    const { db, shop, reef, bookingIds } = await checkoutContext();
+    const start = await startBookingCheckout(
+      db,
+      startInput(shop.id, reef.id, bookingIds),
+      fakeCheckout(),
+    );
+    if (!start.ok) throw new Error("checkout start failed");
+
+    // A first delivery with no total at all (an odd payload, an internal
+    // repair run) settles the bookings at the asked price…
+    await markCheckoutPaidBySessionId(db, start.checkout.stripeSessionId);
+    expect((await getBookingPayment(db, shop.id, bookingIds[0]))?.amountCents).toBe(
+      REEF_PRICE_CENTS,
+    );
+
+    // …and a later one carrying Stripe's figure repairs both the checkout and
+    // the per-booking amounts.
+    const repaired = await markCheckoutPaidBySessionId(
+      db,
+      start.checkout.stripeSessionId,
+      undefined,
+      30_000,
+    );
+    expect(repaired?.settledTotalCents).toBe(30_000);
+    expect((await getBookingPayment(db, shop.id, bookingIds[0]))?.amountCents).toBe(15_000);
+
+    // A third delivery claiming something else never overwrites the recorded
+    // evidence — the first settled figure stands.
+    const replayed = await markCheckoutPaidBySessionId(
+      db,
+      start.checkout.stripeSessionId,
+      undefined,
+      1,
+    );
+    expect(replayed?.settledTotalCents).toBe(30_000);
+    expect((await getBookingPayment(db, shop.id, bookingIds[0]))?.amountCents).toBe(15_000);
+  });
+
   // CR-004: a duplicate or out-of-order webhook must never regress a booking
   // a human already refunded back to "paid".
   it("does not regress an already-refunded booking back to paid on a duplicate webhook", async () => {
@@ -740,6 +883,27 @@ describe("refreshCheckoutFromStripe", () => {
     );
     expect(refreshed?.status).toBe("completed");
     expect((await getBookingPayment(db, shop.id, bookingIds[0]))?.status).toBe("paid");
+  });
+
+  it("records the settled total the direct API read already carries", async () => {
+    const { db, shop, bookingIds, checkout } = await pendingCheckout();
+    const refreshed = await refreshCheckoutFromStripe(
+      db,
+      shop.id,
+      checkout.id,
+      fakeCheckout({
+        async retrieveCheckoutSession() {
+          return retrieved({
+            stripeStatus: "complete",
+            paymentStatus: "paid",
+            amountTotalCents: 30_000,
+          });
+        },
+      }),
+    );
+    // The webhook-less fallback must land on the same money the webhook would.
+    expect(refreshed?.settledTotalCents).toBe(30_000);
+    expect((await getBookingPayment(db, shop.id, bookingIds[0]))?.amountCents).toBe(15_000);
   });
 
   it("leaves a still-open unpaid session pending", async () => {

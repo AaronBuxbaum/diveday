@@ -1,0 +1,223 @@
+# Backup and restore runbook
+
+How DiveDay's production data is protected and how it comes back. Two layers: Neon's own
+point-in-time recovery over the Postgres project provisioned by Vercel's Marketplace integration
+([ADR 20260718-vercel-neon-hosting](../architecture/decisions/20260718-vercel-neon-hosting.md)), and
+a scheduled logical export built on the existing per-shop export seam
+(`loadShopExportBundleInput` in `src/db/export.ts` → `buildExportBundle` → `zipExportBundle` in
+`src/lib/export.ts`) written to the private, versioned `DatabaseBackupBucket` in
+`infra/lib/infra-stack.ts` §9. The reasoning for both is
+[ADR 20260802-backup-and-restore-posture](../architecture/decisions/20260802-backup-and-restore-posture.md).
+
+This exists because the highest-value rows are the ones we can least re-create.
+`waiver_records` is legal evidence and its working retention default is "indefinite"
+([H-02](../product/human-decisions.md)) — a database we cannot restore is a shop's liability
+history we cannot produce.
+
+## What holds production state
+
+| Store | What's in it | Primary recovery | Secondary copy |
+| --- | --- | --- | --- |
+| Neon Postgres (`aws-us-east-1`) | Everything in `src/db/schema.ts` — bookings, waivers, medical answers, orders, accounts | Neon PITR (branch from timestamp) | Scheduled export bundles in S3, per shop |
+| Vercel Blob (`*.public.blob.vercel-storage.com`) | Certification card photos, recap photos, course/dive-site media, imported waiver source documents | None built in — Vercel Blob has no PITR and no versioning | The `photos/` directory inside each export bundle (see the gap below) |
+| Vercel project env vars | `DATABASE_URL`, `AUTH_SECRET`, `CRON_SECRET`, `BLOB_READ_WRITE_TOKEN`, Stripe/Resend/Twilio keys | Not backed up by design — secrets never enter the repo | Owner's password manager (`TODO(owner)`, below) |
+
+## 1. Neon point-in-time recovery
+
+> `TODO(owner)` — **Look up and record the actual PITR retention window for this Neon project.**
+> Neon console → the DiveDay project → **Settings → Storage** (labelled *History retention* /
+> *Restore window*). Write the number of days here, next to the plan name, and the date you checked
+> it. **Do not guess this number** — every procedure below is scoped by it, and a wrong value in a
+> runbook is worse than an absent one because it will be trusted during an incident.
+
+The plausible values and what each one means for the procedures below:
+
+| If the window is | What it means operationally |
+| --- | --- |
+| ~6 hours to 1 day (typical free-tier default) | Only same-shift mistakes are recoverable from Neon. Anything noticed the next morning must come from the export bundles, which means accepting the export's known gaps. The quarterly restore test below becomes the primary evidence that recovery works at all, and increasing the window (a plan or setting change) should be raised as a cost/risk decision. |
+| ~7 days (common paid-plan default) | Covers "we noticed on Monday what broke on Friday", which is the realistic detection latency for a solo-operator product. Export bundles become genuinely secondary. |
+| 30 days or more | Comfortable. The export's role narrows to vendor-independence — surviving loss of the Neon account itself — rather than day-to-day recovery. |
+
+Also record, in the same place: whether history retention is configured **per branch** and whether
+the production branch actually has the project-level value applied. A project-wide setting that a
+branch overrides is a trap.
+
+### Restore procedure — branch from a timestamp
+
+Neon restores by **branching**, not by rewinding in place. This is the property that makes it safe
+to use during an incident: the live database is untouched until you deliberately repoint at the new
+branch.
+
+1. **Pick the target instant.** The last moment you believe the data was good — from the Sentry
+   event, the deploy time, or the `cron_reminders.scan_complete` log line. Err earlier; you can
+   branch again at a later instant, but you cannot un-write over good data.
+2. **Create the branch.** Neon console → **Branches → New branch** → parent = the production
+   branch, **Include data up to** = that timestamp. Name it for the incident
+   (`restore-20260802-orders`), never `main-copy`.
+3. **Verify before you cut over.** Connect to the branch's own connection string and check the rows
+   the incident is about — count the table that lost rows, read back a specific `waiver_records`
+   row's `integrity_hash`, confirm `SELECT max(created_at)` sits before the bad event. A branch that
+   was cut a minute too late looks identical from the outside.
+4. **Cut over** by updating `DATABASE_URL` and `DATABASE_URL_UNPOOLED` in the Vercel project
+   (Production scope) to the restored branch's pooled/direct strings, then redeploy. `src/db/client.ts`
+   picks the connection up at boot; there is no in-app switch.
+5. **Reconcile what happened after the target instant.** Everything written between the branch point
+   and the cutover is on the old branch only — bookings taken, waivers signed, Stripe webhooks
+   received. Stripe is authoritative for money and can be replayed; waivers cannot. Read the old
+   branch (it still exists) and re-enter by hand what matters.
+6. **Keep the old branch** until the incident is closed and written up. It is the only record of the
+   window you just discarded.
+
+Partial restore — pulling three rows back without moving the whole database — is the same first
+three steps, then `INSERT ... SELECT` across a connection to the restore branch. Prefer this
+whenever the damage is scoped, because it costs no reconciliation.
+
+## 2. Scheduled logical export
+
+The second copy, in storage DiveDay controls under credentials Neon does not hold. It reuses the
+export seam that already powers the staff CSV download, so it is code that is exercised and tested
+rather than a backup-only path that rots.
+
+**Be honest about its shape — these are the facts that decide how you use it:**
+
+| Property | Reality |
+| --- | --- |
+| Scope | **Per shop, not full-database.** Every query in `src/db/export.ts` is `where(eq(<table>.shopId, shopId))`. A platform backup is a loop over shops, one bundle each; there is no single "dump everything" call. |
+| Consistency | Each bundle is produced in one `read only` / `repeatable read` transaction (`src/db/export.ts`, the transaction options at the end of `loadShopExportBundleInput`), so a booking that commits mid-export can never appear in `bookings.csv` while its person is missing from `people.csv`. Bundles for *different* shops are separate transactions and are not consistent with each other. |
+| Coverage | 34 CSVs, including `waiver_records.csv` (26 columns — carrying `integrity_hash`, `integrity_version`, and `medical_answers`) and `waiver_templates.csv` (**including the full `body`**, so a restored waiver can be reconstructed against the text that was actually signed rather than against whatever the current template says). |
+| Photos | Every DiveDay-stored image or document URL referenced by any CSV is fetched and bundled byte-identically under `photos/<url pathname>` — including `import_source_document_url` and `import_source_medical_document_url` on waiver records. |
+| Format | A zip, built in memory by `zipExportBundle` (fflate). Large shops produce large bundles; this is a memory-bound operation, not a stream. |
+
+### The two gaps, stated plainly
+
+**Credentials are deliberately excluded.** `NOT_INCLUDED` in `src/lib/export.ts` says it outright:
+login accounts, password hashes, email-verification/password-reset/invite tokens, and staff
+calendar-subscription links are never exported. That is *correct* for a portability export — a shop
+walking away should not receive password hashes — and it is a **genuine hole for disaster
+recovery**. Restoring a platform from bundles alone gives you every shop record and nobody who can
+sign in. Recovery from bundles therefore includes re-inviting staff and forcing a password reset for
+every account; plan for it rather than discovering it.
+
+**A photo that fails to fetch is silently dropped.** `fetchExportPhotos` in `src/lib/export.ts`
+returns `null` for any URL that times out (10s), returns non-OK, or throws, and those nulls are
+filtered out. Nothing is logged, nothing is counted, and the bundle succeeds. For a portability
+export that is a reasonable "never fail the whole download for one image". **For a backup it is a
+landmine**: a bundle can be missing a waiver's source document with no signal at all, and you will
+find out during a restore, which is the worst possible time.
+
+Mitigation until that is fixed: after each run, compare the number of files under `photos/` against
+the count of distinct managed-blob URLs across the CSVs, and treat any shortfall as a failed backup
+for that shop. The durable fix is for `fetchExportPhotos` to report its failures so a caller can
+decide — that belongs to whoever owns `src/lib/export.ts` next, and it is worth doing.
+
+### Destination and credentials
+
+| Thing | Value |
+| --- | --- |
+| Bucket | `DatabaseBackupBucket` (`infra/lib/infra-stack.ts` §9), default name `diveday-backups`, override with `--context backupBucketName=...` |
+| Properties | Versioned, `BlockPublicAccess.BLOCK_ALL`, SSE-S3, `enforceSSL`, `RemovalPolicy.RETAIN` |
+| Lifecycle | Current versions never expire (H-02 retention is a legal call, not a lifecycle rule); Infrequent Access at 30 days, Glacier **Instant** Retrieval at 90; non-current versions expire at 90 days; incomplete multipart uploads abort at 7 days |
+| Uploader | IAM user `diveday-backup-uploader`, `s3:PutObject` + `s3:AbortMultipartUpload` only — no read, no delete, no list |
+| Key convention | `exports/<YYYY-MM-DD>/<shop-slug>.zip` — date first so a whole run is one prefix |
+
+Mint the uploader's access key once, out of band, and store it in the scheduler's secret settings —
+never the repo:
+
+```bash
+aws iam create-access-key --user-name diveday-backup-uploader
+```
+
+The `BackupUploaderAccessKeyInstructions` stack output prints this same command.
+
+> `TODO(owner)` — **Decide what runs the export on a schedule and wire it up.** The seam and the
+> destination exist; nothing calls one from the other yet. The two candidates are a new authenticated
+> route on the existing daily Vercel Cron tick (`vercel.json`'s `crons` already drives
+> `/api/cron/reminders`), or a GitHub Actions scheduled workflow holding the uploader credentials.
+> Record the choice here with its cadence. Until this is done, the second layer is a documented
+> capability, not a running backup — say so honestly in any status report.
+
+> `TODO(owner)` — **Record where production secrets are backed up.** `AUTH_SECRET`, `CRON_SECRET`,
+> `BLOB_READ_WRITE_TOKEN`, and the Stripe/Resend/Twilio keys exist only in Vercel's project settings.
+> Losing the Vercel account loses them, and `AUTH_SECRET` in particular is not regenerable without
+> invalidating every outstanding session and every `recap-links.ts`-signed token. Name the password
+> manager or vault holding them, and the date last verified.
+
+### Adding a `pg_dump` layer (the obvious next increment)
+
+The per-shop export cannot cover `user_accounts`, `account_tokens`, or `calendar_feeds` by design. A
+plain `pg_dump` against `DATABASE_URL_UNPOOLED` (the direct connection — a transaction-mode pooler is
+unreliable for this, same reason migrations use it) covers all of them and is a strictly larger
+backup. It is not shipped because it needs a host to run on and somewhere to hold the direct
+connection string. When it lands, it belongs in this section, and the per-shop export goes back to
+being purely the portability feature it was built as.
+
+## 3. Vercel Blob posture
+
+Vercel Blob is where every uploaded image and imported waiver document lives, written through the
+seam in `src/lib/storage/` and recognised by `isManagedBlobUrl` (`src/lib/storage/blob-host.ts`).
+
+**There is no provider-side backup.** Vercel Blob offers no point-in-time recovery and no object
+versioning. A deleted or overwritten object is gone. The only copy DiveDay holds is the `photos/`
+directory inside each export bundle — which is exactly why the silent-drop gap above matters more
+than it looks.
+
+The app already does the *deletion* side carefully: orphan-media cleanup is queued and retried
+through `retryPendingMediaDeletions` on the daily cron rather than deleted inline, so a transient
+provider failure does not lose track of an object. That is a consistency mechanism, not a backup.
+
+## 4. Quarterly restore test
+
+A backup nobody has restored is a hypothesis. Run this once a quarter and record the result in the
+log below. It should take under an hour.
+
+1. **Pick a target** — a timestamp roughly 24 hours ago, and one shop's most recent export bundle.
+2. **Branch the database.** Neon console → new branch from the production branch at that timestamp.
+   Note how long the branch takes to become available; that number is your real RTO.
+3. **Connect and verify.** Point a local `DATABASE_URL`/`DATABASE_URL_UNPOOLED` at the branch and
+   run `pnpm dev`. Sign in as a staff user. Open a trip's manifest and a signed waiver. The waiver
+   is the test that matters: it must render, and its `integrity_hash` must still verify.
+4. **Restore from the bundle, independently.** Download the shop's zip from `s3://<backup
+   bucket>/exports/<date>/<shop-slug>.zip`. Confirm: `waiver_records.csv` opens and has the expected
+   row count; `waiver_templates.csv` contains a full `body`, not a truncated one; the file count
+   under `photos/` matches the distinct managed-blob URLs in the CSVs (this is the silent-drop
+   check — a mismatch is a failed test, not a curiosity).
+5. **Exercise the import path** for at least one CSV through
+   `src/app/shop/[shopSlug]/settings/import/` into a scratch shop, so the round trip is proven and
+   not assumed.
+6. **Tear down** — delete the Neon branch and the scratch shop. Leaving a restore branch alive costs
+   storage and, worse, invites someone to connect to it later thinking it is production.
+7. **Record the run below**, including anything that surprised you. "Everything fine" with no notes
+   is the least useful possible entry.
+
+### Restore test log
+
+| Date run | Who | Neon window at the time | Branch-available time (RTO) | Bundle verified | Findings |
+| --- | --- | --- | --- | --- | --- |
+| _never_ | — | — | — | — | `TODO(owner)` — no restore has ever been tested. The first run is also the first evidence any of this works. |
+
+## What this runbook does not cover
+
+- **The scheduled export is not running yet.** Bucket, IAM, and seam exist; the scheduler does not
+  (see the `TODO(owner)` above). Do not describe DiveDay as having offsite backups until it does.
+- **No cross-region or cross-account copy.** Backups sit in the same AWS account as everything else
+  in `infra/lib/infra-stack.ts`. Losing that account loses them. Versioning plus `RETAIN` plus a
+  write-only uploader is the mitigation, and it is a partial one.
+- **No restore-time objective is promised.** Nobody has measured one; step 2 of the quarterly test is
+  what will produce the first real number.
+- **Stripe, Resend, and Twilio hold their own records** and are not backed up here. Stripe is
+  authoritative for money in a restore conflict, and that is deliberate.
+- **Retention itself is undecided.** H-02 has a working default of "indefinite" and no legal answer.
+  The lifecycle rule in §9 was written to never be the thing that deletes evidence; when H-02 lands,
+  both the rule and this runbook need revisiting.
+
+## When a restore goes wrong
+
+| Symptom | Look at |
+| --- | --- |
+| The branch you need is older than Neon will go | The PITR window at the top of this file — if it is unrecorded, that is the finding. Fall back to the newest export bundle in S3 and accept its gaps (no credentials, possibly missing photos) |
+| Restored app boots but nobody can sign in | Expected when restoring from export bundles: `user_accounts`/`account_tokens` are never exported (`NOT_INCLUDED`, `src/lib/export.ts`). Re-invite staff and force password resets |
+| A waiver renders but its integrity hash does not verify | Compare `waiver_templates.csv`'s `body` for that `template_version` against what the app is rendering — a restore that mixed a current template with an old record is the usual cause |
+| `photos/` is short of what the CSVs reference | `fetchExportPhotos` dropped them silently (`src/lib/export.ts`). Check whether the blob objects still exist; if they do, re-run the export for that shop, if they do not, the document is gone and the incident is a data-loss incident |
+| Export bundle is missing a table you expected | The table was never added to `src/db/export.ts`. Confirm against `EXPORT_FILE_NOTES` in `src/lib/export.ts` — a table absent there is absent from every historical bundle too |
+| App still points at the old database after a cutover | `DATABASE_URL`/`DATABASE_URL_UNPOOLED` are read at boot in `src/db/client.ts`; changing them in Vercel requires a redeploy, not just a save |
+| `cdk destroy` ran and you need the backups | They are still there — `RemovalPolicy.RETAIN` leaves `DatabaseBackupBucket` behind on purpose. Re-adopt it by name or read it directly from the console |
