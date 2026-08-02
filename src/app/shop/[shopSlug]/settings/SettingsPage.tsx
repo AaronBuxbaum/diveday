@@ -35,7 +35,7 @@ import { currencyOptions } from "@/i18n/currency-labels";
 import { catalogItemLabel, rentableItemLabel } from "@/i18n/rental-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
-import { canExportShopData, canImportShopData } from "@/lib/authz";
+import { canExportShopData, canImportShopData, canManageMessagingSettings } from "@/lib/authz";
 import { isShopCurrency, majorToMinor, maxPriceMajor, toShopCurrency } from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { connectProviderFromEnvironment } from "@/lib/payments/connect";
@@ -92,6 +92,10 @@ function noticeMessages(
     // so it shows the promo-specific explanation rather than the rentals
     // one (task 82, UX persona 11 "Kai").
     promos_not_authorized: { tone: "danger", text: t("promos.notice.notAuthorized") },
+    // Same shape and the same reason: the WhatsApp page's own gate bounces a
+    // non-owner/manager here, and the payment-settings wording above would
+    // explain the wrong surface.
+    whatsapp_not_authorized: { tone: "danger", text: t("whatsapp.notice.not_authorized") },
   };
 }
 
@@ -510,6 +514,8 @@ export default async function SettingsPage({
     process.env.STRIPE_SECRET_KEY && process.env.STRIPE_CONNECT_CLIENT_ID && process.env.APP_HOST,
   );
   const canImport = canImportShopData(session.user.roles);
+  // Hiding the link is convenience; the page itself re-checks against live roles.
+  const canManageMessaging = canManageMessagingSettings(session.user.roles);
   const canExport = canExportShopData(session.user.roles);
   const locale = await requestLocale(shop.defaultLocale);
   const shopCurrency = toShopCurrency(shop.currency);
@@ -1029,6 +1035,23 @@ export default async function SettingsPage({
             </Link>
           </div>
         </section>
+
+        {/* Owner/manager only, like the payment section above: the credential it
+            stores can send messages as the business. */}
+        {canManageMessaging ? (
+          <section className="mt-6 rounded-lg border border-border bg-surface p-6">
+            <h3 className="font-medium">{t("settings.main.whatsapp.heading")}</h3>
+            <p className="mt-1 text-sm text-muted">{t("settings.main.whatsapp.description")}</p>
+            <div className="mt-4">
+              <Link
+                href={`/shop/${shopSlug}/settings/whatsapp`}
+                className={buttonClass({ variant: "secondary", className: "text-foreground" })}
+              >
+                {t("settings.main.whatsapp.cta")}
+              </Link>
+            </div>
+          </section>
+        ) : null}
 
         {canImport || canExport ? (
           <section className="mt-6 rounded-lg border border-border bg-surface p-6">

@@ -66,9 +66,9 @@ In rough order of how often it would kill the deal:
    ([ADR](../../architecture/decisions/20260721-automated-cancellation-refund.md)).
 2. **Messages** (H-09). Booking confirmation, the waiver link, and the wait-list freed-seat invite go
    through one `notify()` seam and send for real once Resend is configured — degrading to a
-   copyable/mailto composer when it isn't. The remaining channel/cadence scope is now built: SMS and
-   WhatsApp through a Twilio `notifySms()` seam
-   ([ADR](../../architecture/decisions/20260721-sms-whatsapp-notifications.md)) and scheduled 7-day/
+   copyable/mailto composer when it isn't. The remaining channel/cadence scope is now built: courtesy
+   SMS through an AWS SNS `notifySms()` seam
+   ([ADR](../../architecture/decisions/20260802-sns-sms-adapter.md)) and scheduled 7-day/
    24-hour pre-trip reminders via an idempotent cron endpoint
    ([ADR](../../architecture/decisions/20260721-scheduled-reminder-cadence.md)), both off until their
    env is set. Still open: the H-09 consent/copy/sender ownership policy.
@@ -125,7 +125,7 @@ H-12.
 | Trip scheduling + manifest | Universal (as printouts) | ✅ Far beyond market | Critical — done, and a differentiator |
 | Customer records (certs, sizes, history) | Universal | ✅ Person-spine is stronger than market | Critical — done |
 | Rental equipment tracking | Universal | ❌ Sizes only, no inventory/service | Critical — gap |
-| Notifications (email min., SMS/WhatsApp rising) | Universal | ✅ Email everywhere via one seam (confirmation, waiver, wait-list invite); scheduled 7-day/24-hour reminders add courtesy SMS. A Twilio SMS/WhatsApp seam exists but only reminders use it — no flow requests WhatsApp yet | Critical — email + reminder SMS done; WhatsApp unwired, consent/copy (H-09) open |
+| Notifications (email min., SMS/WhatsApp rising) | Universal | ✅ Email everywhere via one seam (confirmation, waiver, wait-list invite); scheduled 7-day/24-hour reminders add courtesy SMS via AWS SNS. No WhatsApp path — SNS has none, and nothing has asked for it | Critical — email + reminder SMS done; consent/copy (H-09) open |
 | Owner reporting | Expected | ✅ "How's your month" dashboard ([shipped 2026-07-23](../../architecture/decisions/20260723-owner-reporting.md)) | Critical-lite — done |
 | Cloud + phone-first at the dock | Now disqualifying to lack | ✅ | Critical — done |
 | Fail-closed readiness engine | **No one has it** | ✅ | **Differentiator #1** |
@@ -150,9 +150,9 @@ with one material re-ranking from the buyer's chair:
    automate, and live Connect platform credentials (H-07).
 2. ✅ **Real notifications (H-09)** — the wait-list freed-seat invite sends through the same
    `notify()` seam as booking confirmations and waiver links, and the remaining channel/cadence scope
-   is now built too: SMS/WhatsApp via a Twilio `notifySms()` seam and scheduled 7-day/24-hour pre-trip
-   reminders via an idempotent cron endpoint (both off until their env is set). Remaining is policy,
-   not mechanism: the H-09 consent/copy/sender ownership decision.
+   is now built too: courtesy SMS via an AWS SNS `notifySms()` seam and scheduled 7-day/24-hour
+   pre-trip reminders via an idempotent cron endpoint (both off until their env is set). Remaining is
+   policy, not mechanism: the H-09 consent/copy/sender ownership decision.
 3. Field-validate the manifest (V-02) before marketing leans on safety.
 4. ✅ **Pricing posture decided (H-12, 2026-07-24)** — $99 flat per location/month, published on the
    pricing and home pages; see [Pricing posture](#pricing-posture).

@@ -28,12 +28,17 @@ specialist when the impact of getting it wrong is genuinely dive-specific, not j
 
 2. **The SaaS contract set:**
    - Design-partner pilot agreement (free trial period, case-study/quote rights, no-warranty
-     posture, data handling and return-on-exit terms)
+     posture, data handling and return-on-exit terms) — **plus a signed risk-acknowledgment
+     clause** (H-25, 2026-08-02): the waiver/medical flow a pilot shop uses is a provisional,
+     PADI-shaped baseline, not yet reviewed by counsel, and H-01–H-03's legal review is running in
+     parallel, not finished. Pilots proceed on that basis rather than waiting for H-01–H-03 to
+     close first — the acknowledgment is what makes that basis explicit to the pilot shop.
    - Founding-shop subscription terms — must encode three already-published commitments:
-     $99/location/month, a **two-year price lock** for the founding cohort, and **founder-direct,
-     same-day support**
+     $99/location/month, a **two-year price lock** for the founding cohort, and **founder-direct
+     support** (H-26, 2026-08-02: intentionally no same-day or other explicit response-time SLA
+     until support-hour capacity is scoped for real — draft the clause without one)
    - Privacy policy — what's collected (contact info, medical questionnaire answers, cert card
-     photos, payment references via Stripe), who processes it (Stripe, Resend for email, Twilio for
+     photos, payment references via Stripe), who processes it (Stripe, Resend for email, AWS SNS for
      SMS, Neon/Vercel for hosting), breach-notification duties, no data resale
    - A clause making explicit that DiveDay provides waiver *templates and infrastructure* — each
      shop is responsible for using approved, jurisdiction-appropriate release language, not DiveDay

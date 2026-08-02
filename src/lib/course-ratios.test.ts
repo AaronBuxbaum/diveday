@@ -6,16 +6,31 @@ import {
   hasCourseCrewGap,
 } from "./course-ratios";
 
-const padiEntryLevel: CourseCrewGapCourse = { agency: "padi", minimumCertificationLevel: null };
+const padiEntryLevel: CourseCrewGapCourse = {
+  agency: "padi",
+  minimumCertificationLevel: null,
+  isIntroCourse: false,
+};
 const padiAdvanced: CourseCrewGapCourse = {
   agency: "padi",
   minimumCertificationLevel: "open_water",
+  isIntroCourse: false,
 };
-const ssiEntryLevel: CourseCrewGapCourse = { agency: "ssi", minimumCertificationLevel: null };
+const ssiEntryLevel: CourseCrewGapCourse = {
+  agency: "ssi",
+  minimumCertificationLevel: null,
+  isIntroCourse: false,
+};
+const padiDsd: CourseCrewGapCourse = {
+  agency: "padi",
+  minimumCertificationLevel: null,
+  isIntroCourse: true,
+};
 
 describe("entryLevelCourseCapacity", () => {
   it("seats nobody with no instructor, regardless of assistants", () => {
     expect(entryLevelCourseCapacity(0, 3)).toBe(0);
+    expect(entryLevelCourseCapacity(0, 3, true)).toBe(0);
   });
 
   it("is 8 per solo instructor with no certified assistant (PADI base ratio)", () => {
@@ -36,6 +51,12 @@ describe("entryLevelCourseCapacity", () => {
 
   it("never exceeds the per-instructor ceiling even with excess assistants", () => {
     expect(entryLevelCourseCapacity(2, 10)).toBe(24); // 2 * 12
+  });
+
+  it("is the tighter 2-per-instructor DSD open-water ratio, uncredited by assistants", () => {
+    expect(entryLevelCourseCapacity(1, 0, true)).toBe(2);
+    expect(entryLevelCourseCapacity(1, 5, true)).toBe(2); // no published DSD assistant bonus
+    expect(entryLevelCourseCapacity(2, 0, true)).toBe(4);
   });
 });
 
@@ -90,6 +111,21 @@ describe("courseCrewGap", () => {
     expect(
       courseCrewGap({ course: padiEntryLevel, instructorCount: 1, assistantCount: 1, booked: 11 }),
     ).toEqual({ code: "over_ratio", booked: 11, capacity: 10 });
+  });
+
+  it("holds a DSD session to the tighter 2:1 open-water ratio, not the OW 8:1 figure", () => {
+    expect(
+      courseCrewGap({ course: padiDsd, instructorCount: 1, assistantCount: 0, booked: 2 }),
+    ).toEqual({ code: "none" });
+    expect(
+      courseCrewGap({ course: padiDsd, instructorCount: 1, assistantCount: 0, booked: 3 }),
+    ).toEqual({ code: "over_ratio", booked: 3, capacity: 2 });
+  });
+
+  it("does not credit assistants toward a DSD session's ratio (no published bonus)", () => {
+    expect(
+      courseCrewGap({ course: padiDsd, instructorCount: 1, assistantCount: 3, booked: 3 }),
+    ).toEqual({ code: "over_ratio", booked: 3, capacity: 2 });
   });
 });
 

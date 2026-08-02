@@ -28,8 +28,11 @@ are scoped to her Tier 3 work plus the Tier 2 items she signs off on, not the wh
   — PADI-*shaped*, not counsel-approved. A pilot shop sending a real release on unapproved
   language converts the differentiator into the founder's personal liability.
 - Phase 1 cannot start without a pilot agreement to sign, and no agreement can be signed without
-  knowing which entity signs it (H-18).
-- The published founding-cohort claims (two-year price lock, same-day support) are binding
+  knowing which entity signs it (H-18). **Pilot-before-counsel policy decided 2026-08-02 (H-25):**
+  pilots run on the provisional waiver flow with a signed risk-acknowledgment clause in the pilot
+  agreement, rather than waiting for H-01–H-03 to close — see
+  [legal-engagement-scope.md](legal-engagement-scope.md#tier-1--generalist-no-specialist-needed).
+- The published founding-cohort claims (two-year price lock, founder-direct support) are binding
   commercial commitments that need contract language behind them (H-12's open contract flow).
 
 ## Who to talk to
@@ -92,7 +95,7 @@ Everything already exists; the packet is links and screenshots, not new writing:
 - Screenshots or a live walkthrough of the signing flow (`/waivers/[token]`), the medical-flag
   blocker a staff member sees, and the export bundle (records leave with the shop —
   [full-shop export ADR](../../architecture/decisions/20260722-full-shop-export.md)).
-- The published claims that carry legal weight: two-year price lock, same-day support,
+- The published claims that carry legal weight: two-year price lock, founder-direct support,
   "cancel anytime with the export button" (see [marketing.md](../marketing.md)'s claims policy).
 
 ## Question list for the liability specialist

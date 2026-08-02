@@ -851,7 +851,7 @@
         },
         "founderLine": {
           "lead": "You get a founder-direct line.",
-          "body": "Founding shops write in and hear back the same day, and what your crew runs into shapes what ships next."
+          "body": "Founding shops write in and hear back from the founder directly, and what your crew runs into shapes what ships next."
         }
       },
       "exploreNote": "Your shop starts empty and ready for your own trips and divers. Want to explore a shop that's already full of sample trips first?",
@@ -1142,7 +1142,7 @@
       "exportItem4": "A README that explains every file — no decoding project later",
       "tryEyebrow": "Easy to try",
       "tryTitle": "See how it feels when the whole shop is on the same page.",
-      "tryDescription": "DiveDay is early, and the first shops shape it. Founding shops get a founder-direct line with same-day responses — what your crew runs into this season is what gets attention next.",
+      "tryDescription": "DiveDay is early, and the first shops shape it. Founding shops get a founder-direct line — what your crew runs into this season is what gets attention next.",
       "gettingReady": "Getting your shop ready…",
       "startTrial": "Start a trial",
       "viewPricing": "View pricing"
@@ -1339,7 +1339,7 @@
         },
         "whyFounding": {
           "question": "Why be a founding shop?",
-          "answer": "Because early shops steer — what your crew runs into shapes what ships next. Founding shops also lock in today's price for two years and get a founder-direct line with same-day responses; every new feature lands in the one plan there is, with no higher tiers to move things into."
+          "answer": "Because early shops steer — what your crew runs into shapes what ships next. Founding shops also lock in today's price for two years and get a founder-direct line; every new feature lands in the one plan there is, with no higher tiers to move things into."
         },
         "multipleLocations": {
           "question": "What about multiple locations?",
@@ -1489,6 +1489,11 @@
       "contact": "Questions? Text us at {phone}.",
       "medicalReviewNote": "Check if a medical answer needs a doctor's sign-off",
       "recap": "{shopName}: thanks for diving {tripTitle}! Your recap: {recapUrl}"
+    },
+    "whatsappTemplate": {
+      "body": "Hi! An update from {{1}}: {{2}}",
+      "exampleShopName": "Blue Mantis Divers",
+      "exampleMessage": "Reef Runner departs Saturday at 8:00 AM. Dock call 30 minutes early."
     }
   }
 }

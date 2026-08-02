@@ -36,10 +36,11 @@ test("a diver sees rental prices and an estimate on the booking confirmation", a
   // Target the checkbox specifically: "BCD" also substring-matches the "BCD size"
   // select's label, which would make a bare getByLabel("BCD") ambiguous.
   await fit.getByRole("checkbox", { name: /BCD/ }).uncheck();
-  // Dropping the BCD ($15) breaks the set: the remaining five core pieces each
-  // bill per piece (regulator $15 + wetsuit $12 + mask & fins $8 + weights $5 +
-  // dive computer $10).
-  await expect(fit.getByText(/Estimated rental: \$50\.00 per person/)).toBeVisible();
+  // Dropping the BCD still quotes the $45 set price: the remaining five core
+  // pieces billed individually (regulator $15 + wetsuit $12 + mask & fins $8 +
+  // weights $5 + dive computer $10 = $50) would cost more than the set, and a
+  // diver skipping one piece is never charged more than the full set (H-06, HD-9).
+  await expect(fit.getByText(/Estimated rental: \$45\.00 per person/)).toBeVisible();
   // Nitrox carries its per-dive surcharge in the label.
   await expect(fit.getByText(/\$12\.00 per dive/)).toBeVisible();
 });

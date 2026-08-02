@@ -27,6 +27,7 @@ writing code, and update them **in the same PR** as the change that invalidates 
 | [engineering/testing.md](engineering/testing.md) | Testing strategy per layer, conventions | testing approach changes |
 | [engineering/capability-telemetry-runbook.md](engineering/capability-telemetry-runbook.md) | How bearer-capability URLs (waivers/ready/recap tokens) are kept out of Analytics/Speed Insights, and how to audit/rotate an exposed one | the redaction logic changes or a capability type's revocation story changes |
 | [engineering/resend-email-runbook.md](engineering/resend-email-runbook.md) | Setting up sending and the delivery-outcome webhook; how DiveDay's own hosted addresses and DMARC are configured; what to check when mail doesn't arrive | the email envelope, webhook events, or the sending domain changes |
+| [engineering/whatsapp-cloud-api-runbook.md](engineering/whatsapp-cloud-api-runbook.md) | Connecting a shop's own WhatsApp Business number through Meta Embedded Signup: the app review DiveDay needs, environment and webhook setup, what a shop does, Meta error codes, and rotating the credential-sealing key | the adapter, the signup flow, the webhook, or the template contract changes |
 | [engineering/monitoring-runbook.md](engineering/monitoring-runbook.md) | New-account alerts and Sentry error monitoring: setup, what's covered, capability-URL redaction, troubleshooting | the alert recipient, the Sentry wiring, or what's covered changes |
 | [engineering/infrastructure-runbook.md](engineering/infrastructure-runbook.md) | Provisioning AWS S3, users, and resources using AWS CDK: login, bootstrapping, synthesis, and deployment | CDK stack, context, or credentials changes |
 
@@ -41,6 +42,7 @@ context. When an assessment's recommendations ship, delete them from it and reco
 | [assessments/competitive-strategy.md](product/assessments/competitive-strategy.md) | The battle plan against DiveAdmin and DiveShop360 and the data-portability wedge |
 | [assessments/fareharbor-positioning.md](product/assessments/fareharbor-positioning.md) | 2026-07-24 coexist-vs-compete strategy against FareHarbor as a booking channel, not a records system |
 | [assessments/switching-guide-landscape.md](product/assessments/switching-guide-landscape.md) | Survey of switching-guide candidates beyond the four shipped, ranked by dive adoption and verified export path |
+| [assessments/comprehensive-review-20260802.md](product/assessments/comprehensive-review-20260802.md) | 2026-08-02 ten-lens whole-app review (product, architecture, security, dive-domain safety, data model, payments, testing, i18n/UX/a11y, marketing, operations): ranked findings, consolidated action queue, human-decision register |
 
 **Archive** ([product/archive/](product/archive/)) — delivered or superseded snapshots, kept for
 rationale. Not open work; do not plan from them.

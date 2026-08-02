@@ -2,6 +2,7 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import type { Notification, NotificationDelivery, NotificationProvider } from "@/lib/notifications";
+import type { CourtesyMessage, CourtesyProvider } from "@/lib/notifications/courtesy";
 import type { SmsDelivery, SmsMessage, SmsProvider } from "@/lib/notifications/sms";
 import { seededShopContext } from "@/test/db";
 import { createBookingParty } from "./bookings";
@@ -28,6 +29,17 @@ function fakeEmail(result: NotificationDelivery = { status: "sent", providerMess
 function fakeSms(result: SmsDelivery = { status: "sent", providerMessageId: "SM_1" }) {
   const sent: SmsMessage[] = [];
   const provider: SmsProvider = {
+    async send(message) {
+      sent.push(message);
+      return result;
+    },
+  };
+  return { sent, provider };
+}
+
+function fakeWhatsApp(result: SmsDelivery = { status: "sent", providerMessageId: "wamid.1" }) {
+  const sent: CourtesyMessage[] = [];
+  const provider: CourtesyProvider = {
     async send(message) {
       sent.push(message);
       return result;
@@ -123,7 +135,67 @@ describe("sendDueReminders", () => {
     });
     const mine = sms.sent.filter((m) => m.to === PHONE);
     expect(mine).toHaveLength(1);
-    expect(mine[0].channel).toBe("sms");
+  });
+
+  it("sends the courtesy text over the shop's WhatsApp when it has connected one", async () => {
+    const { db, shop, personId, inWeekBucket } = await reminderContext();
+    await db.update(people).set({ phone: PHONE }).where(eq(people.id, personId));
+    const sms = fakeSms();
+    const whatsapp = fakeWhatsApp();
+
+    await sendDueReminders(db, {
+      now: inWeekBucket,
+      emailProvider: fakeEmail().provider,
+      smsProvider: sms.provider,
+      whatsAppProviders: new Map([[shop.id, whatsapp.provider]]),
+      appOrigin: null,
+    });
+
+    const viaWhatsApp = whatsapp.sent.filter((m) => m.to === PHONE);
+    expect(viaWhatsApp).toHaveLength(1);
+    // The shop name rides along because WhatsApp needs it as a template variable.
+    expect(viaWhatsApp[0].shopName).toBeTruthy();
+    // Never both — one courtesy message per diver, per reminder.
+    expect(sms.sent.filter((m) => m.to === PHONE)).toHaveLength(0);
+  });
+
+  it("falls back to SMS when the shop's WhatsApp rejects the diver's number", async () => {
+    const { db, shop, personId, inWeekBucket } = await reminderContext();
+    await db.update(people).set({ phone: PHONE }).where(eq(people.id, personId));
+    const sms = fakeSms();
+    // 131026: the diver simply is not on WhatsApp — the common real-world case.
+    const whatsapp = fakeWhatsApp({ status: "failed", retryable: false, errorCode: "131026" });
+
+    await sendDueReminders(db, {
+      now: inWeekBucket,
+      emailProvider: fakeEmail().provider,
+      smsProvider: sms.provider,
+      whatsAppProviders: new Map([[shop.id, whatsapp.provider]]),
+      appOrigin: null,
+    });
+
+    expect(sms.sent.filter((m) => m.to === PHONE)).toHaveLength(1);
+  });
+
+  it("tracks a phone-only diver from a WhatsApp send when that is the channel used", async () => {
+    const { db, shop, bookingId, personId, inWeekBucket } = await reminderContext();
+    await db.update(people).set({ email: null, phone: PHONE }).where(eq(people.id, personId));
+    const whatsapp = fakeWhatsApp({ status: "sent", providerMessageId: "wamid.only" });
+
+    await sendDueReminders(db, {
+      now: inWeekBucket,
+      emailProvider: fakeEmail().provider,
+      smsProvider: fakeSms({ status: "not_configured" }).provider,
+      whatsAppProviders: new Map([[shop.id, whatsapp.provider]]),
+      appOrigin: null,
+    });
+
+    const [row] = await db
+      .select()
+      .from(notificationDeliveries)
+      .where(eq(notificationDeliveries.bookingId, bookingId));
+    expect(row.status).toBe("sent");
+    expect(row.providerMessageId).toBe("wamid.only");
   });
 
   it("tracks a phone-only diver from the SMS result, not email", async () => {

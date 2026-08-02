@@ -30,13 +30,16 @@ Alternatives/Consequences for why, and what would be needed to add them.
   m/40 ft open water; open-water ratio matches the Open Water training figure (8:1).
   ([PADI Discover Scuba Diving FAQs](https://blog.padi.com/discover-scuba-diving-faqs/);
   [Discover Scuba Diving Program Age and Depth Limits](https://www.private-scuba.com/courses/discover-scuba-diving-program-limitations.html).)
-  **Confidence note:** these two DSD sources are a PADI marketing blog and a third-party dive-shop
-  page, not PADI's Instructor Manual / General Standards and Procedures (member-only). A
-  `dive-domain-expert` review of this ADR flagged that DSD participants have had zero prior water
-  time (unlike OW students, who complete confined dives first), and some operators run DSD tighter
-  than the certification-course ratio as a matter of prudence — this ratio number is the single
-  line item in this ADR worth a direct PADI/manual check before leaning on it operationally, even
-  though it's within the product owner's "trust public sources" instruction.
+  **Confidence note (resolved 2026-08-02):** these two DSD sources were a PADI marketing blog and a
+  third-party dive-shop page, not PADI's Instructor Manual / General Standards and Procedures
+  (member-only). A `dive-domain-expert` review of this ADR flagged that DSD participants have had
+  zero prior water time (unlike OW students, who complete confined dives first), and some operators
+  run DSD tighter than the certification-course ratio as a matter of prudence — this ratio number
+  was the single line item in this ADR worth a direct PADI/manual check before leaning on it
+  operationally. The product owner has since supplied the real Instructor Manual figures — 4:1
+  confined water, 2:1 open water, both tighter than the 8→12:1 figure this ADR had been applying to
+  DSD — and the gate now enforces them separately from the Open Water figure; see
+  [20260802-dsd-instructor-manual-ratio](20260802-dsd-instructor-manual-ratio.md) (HD-6).
 - **Open Water Diver:** minimum age 15 (10 for Junior Open Water); depth ceiling 18 m/60 ft.
   ([PADI Certification Rules and Requirements](https://blog.padi.com/padi-certification-rules/);
   [How Old Do You Have To Be to Scuba Dive?](https://blog.padi.com/how-old-do-you-have-to-be-to-scuba-dive/).)
@@ -56,7 +59,11 @@ Alternatives/Consequences for why, and what would be needed to add them.
 **Enforce the entry-level in-water ratio as a real booking gate, scoped to PADI courses only.**
 `src/lib/course-ratios.ts` encodes `entryLevelCourseCapacity(instructorCount, assistantCount)`: 8
 students per instructor, +2 per certified assistant (a Divemaster assigned as trip crew, in
-DiveDay's role model), capped at 12 per instructor. `src/db/bookings.ts`'s `createBookingRecord`
+DiveDay's role model), capped at 12 per instructor. **As of
+[20260802-dsd-instructor-manual-ratio](20260802-dsd-instructor-manual-ratio.md), this 8→12:1 figure
+governs Open Water training dives only — a DSD session (`courses.isIntroCourse`) now enforces its
+own, tighter, real Instructor Manual ratio (2:1 open water) instead.** `src/db/bookings.ts`'s
+`createBookingRecord`
 applies it to a course session only when **both** `courses.agency === "padi"` **and** the course
 carries no `minimum_certification_level` — the existing "DSD/OW, no pre-existing C-card gate"
 bucket the accepted baseline already established — alongside (not instead of) the trip's own

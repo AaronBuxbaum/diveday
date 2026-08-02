@@ -8,8 +8,8 @@ import {
   publicAppUrl,
   recipientLocale,
 } from "@/lib/notifications";
+import { type CourtesyProvider, sendCourtesyMessage } from "@/lib/notifications/courtesy";
 import {
-  notifySms,
   type SmsProvider,
   smsProviderFromEnvironment,
   smsRecipient,
@@ -27,6 +27,7 @@ import { bookings, notificationDeliveries, people, recapPhotos, shops, trips } f
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 import { getLatestTipForBooking, refreshTipFromStripe } from "./tips";
 import { getTripWithBooked, listTripDives } from "./trips";
+import { whatsAppProvidersForShops } from "./whatsapp-accounts";
 
 /** A diver's own recap photo, as the recap page renders it. */
 export type RecapPhotoView = { id: string; imageUrl: string; caption: string | null };
@@ -417,6 +418,11 @@ export type SendDueRecapsOptions = {
   now?: Date;
   emailProvider?: NotificationProvider;
   smsProvider?: SmsProvider;
+  /**
+   * Per-shop WhatsApp senders, keyed by shop id; defaults to whatever the
+   * scanned shops have connected (docs ADR 20260802-whatsapp-cloud-api-per-shop).
+   */
+  whatsAppProviders?: Map<string, CourtesyProvider>;
   /** Origin for the recap link; defaults to the configured public app URL. */
   appOrigin?: string | null;
 };
@@ -428,7 +434,8 @@ export type SendDueRecapsOptions = {
  * recap link is the whole point, so a run with no resolvable app origin records
  * `not_configured` (surfaced on the staff dashboard) rather than sending a
  * dead-end email. Email is the tracked channel; a textable phone gets a
- * courtesy SMS on top.
+ * courtesy text on top — over the shop's own WhatsApp when it has connected
+ * one, over platform SMS otherwise (`src/lib/notifications/courtesy.ts`).
  */
 export async function sendDueRecaps(
   db: AppDb,
@@ -468,6 +475,14 @@ export async function sendDueRecaps(
   };
   if (rows.length === 0) return summary;
 
+  // One query for the whole scan rather than a lookup per booking.
+  const whatsAppProviders =
+    options.whatsAppProviders ??
+    (await whatsAppProvidersForShops(
+      db,
+      rows.map((row) => row.shop.id),
+    ));
+
   const bookingIds = rows.map((r) => r.booking.id);
   const delivered = await db
     .select({ bookingId: notificationDeliveries.bookingId })
@@ -498,6 +513,7 @@ export async function sendDueRecaps(
   const emailWork: Array<{
     bookingId: string;
     shopId: string;
+    shopName: string;
     phone: string | null;
     smsBody: string;
     notification: Notification;
@@ -505,6 +521,7 @@ export async function sendDueRecaps(
   const smsWork: Array<{
     bookingId: string;
     shopId: string;
+    shopName: string;
     phone: string;
     smsBody: string;
   }> = [];
@@ -537,6 +554,7 @@ export async function sendDueRecaps(
       emailWork.push({
         bookingId: booking.id,
         shopId: shop.id,
+        shopName: shop.name,
         phone,
         smsBody,
         notification: {
@@ -559,6 +577,7 @@ export async function sendDueRecaps(
       smsWork.push({
         bookingId: booking.id,
         shopId: shop.id,
+        shopName: shop.name,
         phone,
         smsBody,
       });
@@ -586,8 +605,13 @@ export async function sendDueRecaps(
   for (let index = 0; index < emailWork.length; index += 1) {
     const work = emailWork[index];
     const delivery = emailDeliveries[index] ?? { status: "failed" as const, retryable: true };
+    // Not recorded: email is the tracked channel here, and a courtesy text
+    // that failed must not overwrite a delivered email.
     if (delivery.status === "sent" && work.phone) {
-      await notifySms({ channel: "sms", to: work.phone, body: work.smsBody }, smsProvider);
+      await sendCourtesyMessage(
+        { to: work.phone, body: work.smsBody, shopName: work.shopName },
+        { sms: smsProvider, whatsapp: whatsAppProviders.get(work.shopId) ?? null },
+      );
     }
     await recordNotificationDelivery(db, {
       shopId: work.shopId,
@@ -600,9 +624,11 @@ export async function sendDueRecaps(
   }
 
   for (const work of smsWork) {
-    const delivery = await notifySms(
-      { channel: "sms", to: work.phone, body: work.smsBody },
-      smsProvider,
+    // Phone-only diver: the courtesy text is the tracked channel, whichever of
+    // WhatsApp or SMS carried it.
+    const { delivery } = await sendCourtesyMessage(
+      { to: work.phone, body: work.smsBody, shopName: work.shopName },
+      { sms: smsProvider, whatsapp: whatsAppProviders.get(work.shopId) ?? null },
     );
     await recordNotificationDelivery(db, {
       shopId: work.shopId,

@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { toDiverLocale } from "@/i18n/settings";
 import type { Notification, NotificationDelivery, NotificationProvider } from "@/lib/notifications";
+import type { CourtesyMessage, CourtesyProvider } from "@/lib/notifications/courtesy";
 import type { SmsDelivery, SmsMessage, SmsProvider } from "@/lib/notifications/sms";
 import type { CheckoutProvider, CreateCheckoutSessionResult } from "@/lib/payments/checkout";
 import { seededShopContext } from "@/test/db";
@@ -595,5 +596,41 @@ describe("sendDueRecaps", () => {
     expect(mine[0].body).toContain(`${ORIGIN}/recap/`);
     const rows = await rowsFor(db, bookingId);
     expect(rows[0]).toMatchObject({ status: "sent", providerMessageId: "SM_recap" });
+  });
+
+  it("sends the recap over the shop's own WhatsApp when it has connected one", async () => {
+    const { db, shop, bookingId, afterTrip } = await recapContext();
+    const [person] = await db
+      .select()
+      .from(people)
+      .where(eq(people.email, "recap-rae@example.com"));
+    await db
+      .update(people)
+      .set({ email: null, phone: "+13055557777" })
+      .where(eq(people.id, person.id));
+
+    const sms = fakeSms();
+    const sent: CourtesyMessage[] = [];
+    const whatsapp: CourtesyProvider = {
+      async send(message) {
+        sent.push(message);
+        return { status: "sent", providerMessageId: "wamid.recap" };
+      },
+    };
+
+    await sendDueRecaps(db, {
+      now: afterTrip,
+      emailProvider: fakeEmail().provider,
+      smsProvider: sms.provider,
+      whatsAppProviders: new Map([[shop.id, whatsapp]]),
+      appOrigin: ORIGIN,
+    });
+
+    const mine = sent.filter((m) => m.to === "+13055557777");
+    expect(mine).toHaveLength(1);
+    expect(mine[0].body).toContain(`${ORIGIN}/recap/`);
+    expect(sms.sent.filter((m) => m.to === "+13055557777")).toHaveLength(0);
+    const rows = await rowsFor(db, bookingId);
+    expect(rows[0]).toMatchObject({ status: "sent", providerMessageId: "wamid.recap" });
   });
 });

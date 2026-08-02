@@ -298,5 +298,31 @@ export class InfraStack extends cdk.Stack {
       description:
         "SNS topic for SES bounce/complaint/delivery events. No subscriber yet — a webhook endpoint mirroring /api/webhooks/resend must subscribe before this is useful.",
     });
+
+    // 9. SNS direct-to-phone SMS sending — see ADR 20260802-sns-sms-adapter.
+    // This is a distinct SNS use from SesEmailEventNotifications above (that
+    // topic carries *inbound* SES event notifications the app subscribes to;
+    // this IAM user only ever calls sns:Publish outbound, no topic involved).
+    // A least-privilege IAM user, scoped to publishing only — never full SNS
+    // access, and never able to create/manage topics or subscriptions.
+    const snsSmsSenderUser = new iam.User(this, "SnsSmsSenderUser", {
+      userName: "diveday-sns-sms-sender",
+    });
+    snsSmsSenderUser.addToPolicy(
+      new iam.PolicyStatement({
+        actions: ["sns:Publish"],
+        // A direct-to-phone-number Publish (no TopicArn) has no ARN to scope
+        // to — AWS requires "*" for this call shape. The action list is the
+        // actual boundary: this user can publish and nothing else (no
+        // topic/subscription management, no read access to any topic).
+        resources: ["*"],
+      }),
+    );
+
+    new cdk.CfnOutput(this, "SnsSmsSenderAccessKeyInstructions", {
+      value: `aws iam create-access-key --user-name ${snsSmsSenderUser.userName}`,
+      description:
+        "Run only once SMS sending is enabled, to mint SNS-publishing credentials. Store the output in the app's SNS_* env vars — never in the repo.",
+    });
   }
 }
