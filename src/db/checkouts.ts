@@ -332,6 +332,15 @@ export async function markCheckoutPaidBySessionId(
   db: AppDb,
   stripeSessionId: string,
   expectedAccountId?: string,
+  /**
+   * Stripe's own `amount_total` for the completed session — what actually
+   * settled, after any discount Stripe applied. Recorded on the checkout and
+   * split across the covered bookings below. Undefined/null means Stripe
+   * reported no total (or the caller has none to offer, e.g. an internal
+   * repair run): the covered bookings fall back to the amounts they were
+   * asked for rather than being recorded as paying nothing.
+   */
+  settledTotalCents?: number | null,
 ): Promise<BookingCheckout | null> {
   return db.transaction(async (tx) => {
     const [checkout] = await tx
@@ -382,22 +391,68 @@ export async function markCheckoutPaidBySessionId(
       return null;
     }
 
+    // Stripe's reported total, kept only when it is a usable figure. An
+    // already-recorded settled total is never overwritten — the first
+    // completion's evidence stands; a later delivery may only fill in a null.
+    const reportedSettledCents =
+      settledTotalCents !== undefined &&
+      settledTotalCents !== null &&
+      Number.isInteger(settledTotalCents) &&
+      settledTotalCents >= 0
+        ? settledTotalCents
+        : null;
+    const settledCents = checkout.settledTotalCents ?? reportedSettledCents;
+
     const updated =
       checkout.status === "completed"
-        ? checkout
+        ? // A replay over an already-completed checkout still backfills a
+          // settled total the original completion never had (an older webhook
+          // payload, an internal repair run), so the repaired payment rows
+          // below are written from Stripe's figure rather than the asked one.
+          checkout.settledTotalCents === null && settledCents !== null
+          ? ((
+              await tx
+                .update(bookingCheckouts)
+                .set({ settledTotalCents: settledCents })
+                .where(eq(bookingCheckouts.id, checkout.id))
+                .returning()
+            )[0] ?? null)
+          : checkout
         : ((
             await tx
               .update(bookingCheckouts)
-              .set({ status: "completed", completedAt: nowDate() })
+              .set({
+                status: "completed",
+                completedAt: nowDate(),
+                settledTotalCents: settledCents,
+              })
               .where(eq(bookingCheckouts.id, checkout.id))
               .returning()
           )[0] ?? null);
     if (!updated) return null;
 
     const linked = await tx
-      .select({ bookingId: bookingCheckoutBookings.bookingId })
+      .select({
+        bookingId: bookingCheckoutBookings.bookingId,
+        gearCents: bookingCheckoutBookings.gearCents,
+      })
       .from(bookingCheckoutBookings)
       .where(eq(bookingCheckoutBookings.checkoutId, checkout.id));
+
+    // What each diver actually paid, not what they were quoted. The session's
+    // asked total is the sum of these per-booking asks (trip fee + that
+    // diver's own gear) — by construction the same figure as `totalCents` —
+    // and Stripe's settled total is split back across them in proportion, so a
+    // promo discount lands on everyone it discounted and gear money is
+    // attributed to the diver who rented it (PAY-H1/H2).
+    const askedCentsFor = (gearCents: number) => checkout.amountPerDiverCents + gearCents;
+    const allocation =
+      settledCents === null
+        ? null
+        : allocateSettledTotal(
+            linked.map((row) => ({ key: row.bookingId, askedCents: askedCentsFor(row.gearCents) })),
+            settledCents,
+          );
     // A diver's own self-service cancel/reschedule (docs ADR
     // 20260727-diver-self-service-cancel) can leave this exact session still
     // open and payable in another tab; if they complete it after cancelling,

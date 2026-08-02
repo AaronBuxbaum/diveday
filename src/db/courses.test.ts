@@ -77,42 +77,71 @@ describe("course catalog and sessions (in-memory PGlite)", () => {
     ).resolves.toEqual({ ok: false, reason: "course_unstaffed" });
   });
 
-  // PADI's published entry-level in-water ratio (H-08, src/lib/course-ratios.ts):
-  // 8 students per solo instructor, no certified assistant.
-  it("caps an entry-level session's bookings at the instructor ratio, independent of trip capacity", async () => {
-    const { db, shop } = await courseContext();
-    const [discoverCourse] = await db
+  /**
+   * Stands up a solo-instructor session on `courseTitle` with capacity well
+   * above any ratio cap, so the only thing that can ever refuse a booking is
+   * the ratio itself. `crew` defaults to one instructor.
+   */
+  async function ratioSession(
+    db: AppDb,
+    shopId: string,
+    courseTitle: string,
+    options: { capacity: number; withAssistant?: boolean; slug?: string },
+  ) {
+    const [course] = await db
       .select()
       .from(courses)
-      .where(and(eq(courses.shopId, shop.id), eq(courses.title, "Discover Scuba Diving")));
-    if (!discoverCourse) throw new Error("Discover Scuba Diving course missing");
-    const staff = await listStaff(db, shop.id);
+      .where(and(eq(courses.shopId, shopId), eq(courses.title, courseTitle)));
+    if (!course) throw new Error(`${courseTitle} course missing`);
+    const staff = await listStaff(db, shopId);
     const instructor = staff.find((entry) => entry.roles.includes("instructor"));
     if (!instructor) throw new Error("seeded instructor missing");
+    const assistant = staff.find(
+      (entry) => entry.roles.includes("divemaster") && !entry.roles.includes("instructor"),
+    );
+    if (options.withAssistant && !assistant) throw new Error("seeded divemaster missing");
 
     const trip = await createTrip(db, {
-      shopId: shop.id,
-      courseId: discoverCourse.id,
-      title: "Ratio test session",
+      shopId,
+      courseId: course.id,
+      title: `${courseTitle} — ratio test session`,
       startsAt: new Date(Date.now() + OPEN_TEST_SESSION_OFFSET_MS),
       endsAt: new Date(Date.now() + OPEN_TEST_SESSION_OFFSET_MS + 4 * 60 * 60 * 1000),
-      capacity: 20, // well above the 8-seat ratio cap, so capacity never binds first
+      capacity: options.capacity,
       plannedDives: 2,
     });
     if (!trip) throw new Error("failed to create ratio test trip");
-    const staffed = await setTripCrew(db, shop.id, trip.id, [instructor.person.id]);
-    if (!staffed) throw new Error("failed to assign instructor");
+    const crew = [
+      instructor.person.id,
+      ...(options.withAssistant && assistant ? [assistant.person.id] : []),
+    ];
+    const staffed = await setTripCrew(db, shopId, trip.id, crew);
+    if (!staffed) throw new Error("failed to assign crew");
+    return trip;
+  }
 
-    for (let i = 0; i < 8; i++) {
+  /** Books `count` divers onto `tripId`, asserting every one is accepted. */
+  async function fillSeats(db: AppDb, shopId: string, tripId: string, count: number, tag: string) {
+    for (let i = 0; i < count; i++) {
       const outcome = await createBooking(db, {
         actor: "staff",
-        shopId: shop.id,
-        tripId: trip.id,
-        fullName: `Ratio Diver ${i}`,
-        email: `ratio-diver-${i}@example.com`,
+        shopId,
+        tripId,
+        fullName: `${tag} Diver ${i}`,
+        email: `${tag.toLowerCase().replace(/\s+/g, "-")}-diver-${i}@example.com`,
       });
       expect(outcome).toMatchObject({ ok: true });
     }
+  }
+
+  // PADI's published entry-level in-water ratio (H-08, src/lib/course-ratios.ts):
+  // 8 students per solo instructor, no certified assistant. Open Water training
+  // dives, *not* DSD — see the intro-session test below for that stricter cap.
+  it("caps an entry-level session's bookings at the instructor ratio, independent of trip capacity", async () => {
+    const { db, shop } = await courseContext();
+    // capacity 20 is well above the 8-seat ratio cap, so capacity never binds first
+    const trip = await ratioSession(db, shop.id, "Open Water Diver", { capacity: 20 });
+    await fillSeats(db, shop.id, trip.id, 8, "Ratio");
 
     // The 9th booking exceeds the solo instructor's 8-seat ratio, even though
     // the trip's own capacity (20) still has room.
@@ -123,6 +152,68 @@ describe("course catalog and sessions (in-memory PGlite)", () => {
         tripId: trip.id,
         fullName: "Ratio Diver 9",
         email: "ratio-diver-9@example.com",
+      }),
+    ).resolves.toEqual({ ok: false, reason: "course_ratio_full" });
+  });
+
+  // DOM-H2: a Discover Scuba session is uncertified people breathing compressed
+  // gas for the first time. It gates at 4:1 (interim, pending HD-6), not at the
+  // Open Water 8/12 numbers the gate used to certify it as compliant under.
+  it("caps an intro (Discover Scuba) session at four students per instructor", async () => {
+    const { db, shop } = await courseContext();
+    const trip = await ratioSession(db, shop.id, "Discover Scuba Diving", { capacity: 20 });
+    await fillSeats(db, shop.id, trip.id, 4, "DSD");
+
+    await expect(
+      createBooking(db, {
+        actor: "staff",
+        shopId: shop.id,
+        tripId: trip.id,
+        fullName: "DSD Diver 5",
+        email: "dsd-diver-5@example.com",
+      }),
+    ).resolves.toEqual({ ok: false, reason: "course_ratio_full" });
+  });
+
+  it("never lets a certified assistant buy an intro session a fifth seat", async () => {
+    const { db, shop } = await courseContext();
+    // A divemaster aboard raises an Open Water session to 10; on a DSD it buys
+    // nothing at all. This is the exact overload the old gate waved through.
+    const trip = await ratioSession(db, shop.id, "Discover Scuba Diving", {
+      capacity: 20,
+      withAssistant: true,
+    });
+    await fillSeats(db, shop.id, trip.id, 4, "DSD Assisted");
+
+    await expect(
+      createBooking(db, {
+        actor: "staff",
+        shopId: shop.id,
+        tripId: trip.id,
+        fullName: "DSD Assisted Diver 5",
+        email: "dsd-assisted-diver-5@example.com",
+      }),
+    ).resolves.toEqual({ ok: false, reason: "course_ratio_full" });
+  });
+
+  // DATA-L2: `courses.agency` is plain text, so a shop that types "PADI" must
+  // not silently lose the ratio cap the lowercase spelling gets.
+  it("still ratio-gates a session whose agency was typed 'PADI'", async () => {
+    const { db, shop } = await courseContext();
+    await db
+      .update(courses)
+      .set({ agency: "PADI" })
+      .where(and(eq(courses.shopId, shop.id), eq(courses.title, "Discover Scuba Diving")));
+    const trip = await ratioSession(db, shop.id, "Discover Scuba Diving", { capacity: 20 });
+    await fillSeats(db, shop.id, trip.id, 4, "Cased");
+
+    await expect(
+      createBooking(db, {
+        actor: "staff",
+        shopId: shop.id,
+        tripId: trip.id,
+        fullName: "Cased Diver 5",
+        email: "cased-diver-5@example.com",
       }),
     ).resolves.toEqual({ ok: false, reason: "course_ratio_full" });
   });

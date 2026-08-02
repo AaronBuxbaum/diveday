@@ -4,6 +4,7 @@ import { refundOnCancellation } from "@/lib/deposits";
 import { type CheckoutProvider, checkoutProviderFromEnvironment } from "@/lib/payments/checkout";
 import type { AppDb } from "./client";
 import {
+  idempotencyKeyFor,
   recordPaymentOperationStripeObject,
   resolvePaymentOperation,
   startPaymentOperation,
@@ -94,10 +95,12 @@ export async function refundBookingOnCancellation(
   if (!canAcceptPayments(account)) return { status: "manual", reason: "not_connected" };
   const stripeAccountId = (account as NonNullable<typeof account>).stripeAccountId;
 
-  // Durable evidence before calling Stripe (CR-005) — refundCheckoutSession
-  // already derives its own deterministic Idempotency-Key from the payment
-  // intent + amount, so a retry converges on the same Stripe refund either
-  // way; this intent row is what makes an unresolved attempt reconcilable.
+  // Durable evidence before calling Stripe (CR-005), and the source of this
+  // refund's Idempotency-Key: each cancellation mints its own intent row with
+  // a fresh id, so a retry of *this* attempt converges on the one Stripe
+  // refund it already issued, while a second party member cancelling for the
+  // same amount off the same payment intent is a second, distinct refund
+  // rather than a replay of the first (PAY-C1). Same shape as `refundOrder`.
   const intent = await startPaymentOperation(db, {
     shopId: input.shopId,
     kind: "refund",
@@ -107,6 +110,7 @@ export async function refundBookingOnCancellation(
   const result = await checkout.refundCheckoutSession(
     stripeAccountId,
     payment.providerRef,
+    idempotencyKeyFor(intent.id),
     decision.refundCents,
   );
   if (result.status === "refunded") {

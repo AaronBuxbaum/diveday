@@ -1155,11 +1155,14 @@ export const shopPromoRedemptions = pgTable(
       .notNull()
       .references(() => bookingCheckouts.id),
     /**
-     * The checkout's quoted total *before* Stripe applied the discount — i.e.
-     * what DiveDay asked for, not what settled. The discount is Stripe's
-     * arithmetic and lives on its own objects, so recording a post-discount
-     * figure here would be DiveDay re-deriving a number it does not own. Read
-     * it as "the order this code was spent against."
+     * What the checkout this code was spent on actually settled for, as Stripe
+     * reported it (`booking_checkouts.settled_total_cents`) — the money the
+     * shop received with this code applied. Recording it is not DiveDay
+     * re-deriving a discount it does not own: the number is copied verbatim
+     * from Stripe's own `amount_total`, which is why this column may hold it.
+     * Falls back to the checkout's quoted (pre-discount) total when no settled
+     * figure exists — a historical row, or a completion Stripe reported no
+     * total for.
      */
     amountChargedCents: integer("amount_charged_cents").notNull(),
     redeemedAt: timestamp("redeemed_at", { withTimezone: true }).notNull().defaultNow(),
@@ -1560,6 +1563,17 @@ export const bookingCheckouts = pgTable(
     amountPerDiverCents: integer("amount_per_diver_cents").notNull(),
     totalCents: integer("total_cents").notNull(),
     /**
+     * What actually *settled*, as Stripe itself reported it on the completed
+     * session (`amount_total`) — the counterpart to `totalCents` above, which
+     * is what DiveDay *asked* for. The two differ whenever Stripe applied a
+     * discount, so this is the only figure a refund or a revenue report may
+     * treat as money the shop received. Null means no settled figure exists:
+     * a row predating this column, a checkout that never completed, or a
+     * completion where Stripe reported no total — callers fall back to the
+     * asked amounts rather than treating null as zero.
+     */
+    settledTotalCents: integer("settled_total_cents"),
+    /**
      * True when the amount charged is a deposit (a balance is still due), so a
      * completed session settles the covered bookings to `deposit_paid` rather
      * than `paid`. False (the default) is the full-fare checkout.
@@ -1575,6 +1589,10 @@ export const bookingCheckouts = pgTable(
     index("booking_checkouts_shop_trip_idx").on(table.shopId, table.tripId),
     check("booking_checkouts_amount_per_diver_nonnegative", sql`${table.amountPerDiverCents} >= 0`),
     check("booking_checkouts_total_nonnegative", sql`${table.totalCents} >= 0`),
+    check(
+      "booking_checkouts_settled_total_nonnegative",
+      sql`${table.settledTotalCents} is null or ${table.settledTotalCents} >= 0`,
+    ),
     // The abandoned-checkout-recovery scan's exact predicate (pending, not yet
     // recovered), so the daily cron doesn't force a sequential scan of the
     // whole table's history as it grows (docs ADR

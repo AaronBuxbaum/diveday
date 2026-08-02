@@ -298,5 +298,88 @@ export class InfraStack extends cdk.Stack {
       description:
         "SNS topic for SES bounce/complaint/delivery events. No subscriber yet — a webhook endpoint mirroring /api/webhooks/resend must subscribe before this is useful.",
     });
+
+    // 9. Backup destination for the scheduled logical export.
+    // See ADR 20260802-backup-and-restore-posture for why an S3 bucket rather
+    // than a second Neon branch, and docs/engineering/backup-and-restore-runbook.md
+    // for the procedure that writes to and restores from it.
+    //
+    // Deliberately NOT the VisualRegressionBucket above: that one is
+    // publicReadAccess, RemovalPolicy.DESTROY, and expires everything after 7
+    // days — the exact opposite of every property a backup needs. This bucket
+    // is the one resource in the stack that must survive a `cdk destroy`, so it
+    // carries RETAIN; deleting production backups should require someone to go
+    // do it deliberately, by hand, in the console.
+    const backupBucketName = this.node.tryGetContext("backupBucketName") || "diveday-backups";
+
+    const backupBucket = new s3.Bucket(this, "DatabaseBackupBucket", {
+      bucketName: backupBucketName,
+      versioned: true,
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      encryption: s3.BucketEncryption.S3_MANAGED,
+      enforceSSL: true,
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
+      lifecycleRules: [
+        {
+          id: "age-backups-into-colder-storage",
+          enabled: true,
+          // Current versions are never expired. Waiver records are legal
+          // evidence and their retention is "indefinite" pending H-02, so a
+          // lifecycle rule must never be the thing that decides a bundle has
+          // outlived its usefulness — that is a legal call, not a cost one.
+          // Cost is managed by getting colder instead of by deleting:
+          transitions: [
+            {
+              storageClass: s3.StorageClass.INFREQUENT_ACCESS,
+              transitionAfter: cdk.Duration.days(30),
+            },
+            // Glacier *Instant* Retrieval, not Flexible/Deep: a restore happens
+            // during an incident, and a multi-hour retrieval thaw would make
+            // the backup useless exactly when it is needed.
+            {
+              storageClass: s3.StorageClass.GLACIER_INSTANT_RETRIEVAL,
+              transitionAfter: cdk.Duration.days(90),
+            },
+          ],
+          // Non-current versions exist only to survive an overwrite of a good
+          // bundle by a bad one; 90 days is far longer than that mistake takes
+          // to surface, and keeping them forever would double storage for no
+          // recovery value.
+          noncurrentVersionExpiration: cdk.Duration.days(90),
+          // A multipart upload interrupted mid-flight bills for its parts
+          // indefinitely and is not a usable backup.
+          abortIncompleteMultipartUploadAfter: cdk.Duration.days(7),
+        },
+      ],
+    });
+
+    // Least-privilege uploader, same posture as §5's cdk-deployer: write-only.
+    // It can create a new bundle and nothing else — no GetObject, no
+    // DeleteObject, no ListBucket. A leaked uploader credential therefore
+    // cannot read a shop's exported waivers back out, and cannot destroy an
+    // existing backup (versioning plus RETAIN cover the rest).
+    const backupUploaderUser = new iam.User(this, "BackupUploaderUser", {
+      userName: "diveday-backup-uploader",
+    });
+
+    backupUploaderUser.addToPolicy(
+      new iam.PolicyStatement({
+        sid: "WriteBackupBundlesOnly",
+        actions: ["s3:PutObject", "s3:AbortMultipartUpload"],
+        resources: [backupBucket.arnForObjects("*")],
+      }),
+    );
+
+    new cdk.CfnOutput(this, "BackupBucketName", {
+      value: backupBucket.bucketName,
+      description:
+        "Destination bucket for scheduled logical export bundles. Versioned, private, RETAIN — see docs/engineering/backup-and-restore-runbook.md.",
+    });
+
+    new cdk.CfnOutput(this, "BackupUploaderAccessKeyInstructions", {
+      value: `aws iam create-access-key --user-name ${backupUploaderUser.userName}`,
+      description:
+        "Run to mint credentials for whatever runs the scheduled export. Store them in that runner's secret settings — never in the repo.",
+    });
   }
 }

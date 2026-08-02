@@ -1,0 +1,2 @@
+ALTER TABLE "booking_checkouts" ADD COLUMN "settled_total_cents" integer;--> statement-breakpoint
+ALTER TABLE "booking_checkouts" ADD CONSTRAINT "booking_checkouts_settled_total_nonnegative" CHECK ("settled_total_cents" is null or "settled_total_cents" >= 0);

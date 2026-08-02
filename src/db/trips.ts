@@ -17,7 +17,7 @@ import {
 } from "drizzle-orm";
 import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
-import { entryLevelCourseCapacity } from "@/lib/course-ratios";
+import { courseSeatCapacity } from "@/lib/course-ratios";
 import { reviewManifestChange } from "@/lib/manifest-change-review";
 import { maxRecordedDiveNumber } from "@/lib/manifests";
 import type { TripRecurrenceFrequency } from "@/lib/recurrence";
@@ -1157,12 +1157,13 @@ export async function setTripCrew(
       if (review.blocking) return false;
       const instructors = assigned.filter((member) => member.roles.includes("instructor")).length;
       if (instructors === 0) return false;
-      if (course?.agency === "padi" && !course.minimumCertificationLevel) {
-        const assistants = assigned.filter(
-          (member) => member.roles.includes("divemaster") && !member.roles.includes("instructor"),
-        ).length;
-        if (bookedCount > entryLevelCourseCapacity(instructors, assistants)) return false;
-      }
+      const assistants = assigned.filter(
+        (member) => member.roles.includes("divemaster") && !member.roles.includes("instructor"),
+      ).length;
+      // One definition of "which ratio does this session carry" (src/lib/course-ratios.ts)
+      // — null means it carries none.
+      const seatCap = courseSeatCapacity(course ?? null, instructors, assistants);
+      if (seatCap !== null && bookedCount > seatCap) return false;
     }
     const days = await tx
       .select({ startsAt: tripScheduleDays.startsAt, endsAt: tripScheduleDays.endsAt })
@@ -1275,17 +1276,20 @@ export async function changeTripCrew(
         .from(courses)
         .where(and(eq(courses.id, targetTrip.courseId), eq(courses.shopId, shopId)))
         .limit(1);
-      if (course?.agency === "padi" && !course.minimumCertificationLevel) {
-        const assistants = new Set(
-          roles
-            .filter((row) => row.role === "divemaster" && !instructors.has(row.personId))
-            .map((row) => row.personId),
-        );
+      const assistants = new Set(
+        roles
+          .filter((row) => row.role === "divemaster" && !instructors.has(row.personId))
+          .map((row) => row.personId),
+      );
+      // One definition of "which ratio does this session carry" (src/lib/course-ratios.ts)
+      // — null means it carries none.
+      const seatCap = courseSeatCapacity(course ?? null, instructors.size, assistants.size);
+      if (seatCap !== null) {
         const [{ bookedCount }] = await tx
           .select({ bookedCount: count() })
           .from(bookings)
           .where(and(eq(bookings.tripId, tripId), ne(bookings.status, "cancelled")));
-        if (bookedCount > entryLevelCourseCapacity(instructors.size, assistants.size)) return false;
+        if (bookedCount > seatCap) return false;
       }
     }
 

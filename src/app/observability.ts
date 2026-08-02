@@ -14,6 +14,14 @@ const CAPABILITY_ROUTE_PREFIXES = [
   "reset-password",
   // Staff-invite acceptance token (20260726-staff-invite-accounts).
   "invite",
+  // Staff calendar-subscription feed token (ADR
+  // 20260730-calendar-feed-subscriptions, owned by src/features/calendar-sync).
+  // `/calendar/[token]` sits outside `/shop` so no session gate applies and the
+  // URL *is* the capability — its own route handler says so verbatim. It is the
+  // longest-lived credential of the set: a calendar client re-fetches the same
+  // URL unattended for as long as the subscription exists, so one leaked copy
+  // in telemetry replays the whole shop's schedule indefinitely.
+  "calendar",
 ] as const;
 
 /**
@@ -40,8 +48,10 @@ function decodeSegment(segment: string): string {
 }
 
 /**
- * Rewrites `/waivers/<token>`, `/ready/<token>`, and `/recap/<token>` (and
- * any URL-encoded variant of those prefixes) to their template form, and
+ * Rewrites any `CAPABILITY_ROUTE_PREFIXES` path — `/waivers/<token>`,
+ * `/ready/<token>`, `/recap/<token>`, `/verify/<token>`,
+ * `/reset-password/<token>`, `/invite/<token>`, `/calendar/<token>` (and any
+ * URL-encoded variant of those prefixes) — to its template form, and
  * redacts any `CAPABILITY_QUERY_PARAMS` value on *any* path, so
  * Analytics/Speed Insights never receive a raw capability regardless of
  * whether it travels as a path segment or a query parameter. Fails closed on

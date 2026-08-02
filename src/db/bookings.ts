@@ -2,7 +2,7 @@ import { and, count, eq, inArray, isNotNull, isNull, ne } from "drizzle-orm";
 import { checkMinimumAge } from "@/lib/age";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
-import { entryLevelCourseCapacity } from "@/lib/course-ratios";
+import { courseSeatCapacity } from "@/lib/course-ratios";
 import { personNamesMatch } from "@/lib/person-name";
 import { hasVerifiedCertificationAtLeast } from "@/lib/readiness";
 import { revokeBookingCapabilities } from "./booking-capabilities";
@@ -180,24 +180,18 @@ async function createBookingRecord(db: AppDb, req: BookingRequest): Promise<Book
       crew.filter((row) => row.role === "instructor").map((row) => row.personId),
     );
     if (instructorIds.size === 0) return { ok: false, reason: "course_unstaffed" };
-    // Entry-level (no-card-required) sessions carry PADI's published in-water
-    // ratio — see src/lib/course-ratios.ts for the sourcing. Scoped to PADI
-    // specifically: the sourced ratio is a PADI figure, and `courses.agency`
-    // is shop-set free text (an SSI, NAUI, etc. course is a real, unremarkable
-    // row) — applying a PADI number to another agency's course would be a
-    // wrong-but-confident safety control, so those fall back to the trip's
-    // own stated capacity only, same as before this gate existed. Continuing-ed
-    // courses (minimumCertificationLevel set) already gate on a verified card
-    // and PADI does not publish a comparable numeric ratio for them.
-    if (course.agency === "padi" && !course.minimumCertificationLevel) {
-      // A person holding both roles is the instructor, not their own assistant.
-      const assistantCount = new Set(
-        crew
-          .filter((row) => row.role === "divemaster" && !instructorIds.has(row.personId))
-          .map((row) => row.personId),
-      ).size;
-      entryLevelSeatCap = entryLevelCourseCapacity(instructorIds.size, assistantCount);
-    }
+    // Which in-water ratio (if any) this session carries is decided in one
+    // place — `courseRatioRule` in src/lib/course-ratios.ts — so a DSD taster
+    // can't be gated at the Open Water number here and something else there.
+    // Null means the session carries no ratio cap and falls back to the trip's
+    // own stated capacity, same as before this gate existed.
+    // A person holding both roles is the instructor, not their own assistant.
+    const assistantCount = new Set(
+      crew
+        .filter((row) => row.role === "divemaster" && !instructorIds.has(row.personId))
+        .map((row) => row.personId),
+    ).size;
+    entryLevelSeatCap = courseSeatCapacity(course, instructorIds.size, assistantCount);
   }
 
   // Resolve the diver. A returning diver picked by identity reuses that exact
