@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { daysFromNow, e2eNow, openTripFromBoard, waitForStableAttribute } from "./helpers";
+import { daysFromNow, e2eNow, openTripFromBoard } from "./helpers";
 
 signedInAsOwner();
 
@@ -177,9 +177,12 @@ test("staff adds a returning diver by picking them, no re-entry", async ({ page 
 
 test("staff sends waivers to a multi-selected roster in one action", async ({ page }) => {
   // Trip creation, a board navigation, two sequential add-diver redirects,
-  // two checkbox ticks, and a bulk send — each its own status-toast or
-  // hydration wait. Same aggregate-cost reasoning as the walk-in test above.
-  test.setTimeout(30_000);
+  // two checkbox ticks, and a bulk send: measured 12.5-14.6s under 2-worker
+  // contention after the BulkWaiverSelectionProvider remount fix (previously
+  // this test also carried an artificial wait for that remount and routinely
+  // hit the default budget). Too close to 15s to leave at the default, but
+  // no longer needs the flat 30s this file's cost-bound tests use elsewhere.
+  test.setTimeout(20_000);
   const title = `Bulk Waiver Trip ${e2eNow().getTime()}`;
   const stamp = e2eNow().getTime();
 
@@ -211,17 +214,14 @@ test("staff sends waivers to a multi-selected roster in one action", async ({ pa
     await addDiver.getByRole("button", { name: "Add to trip" }).click();
     await expect(page.getByRole("status")).toContainText("Diver added to the trip.");
   }
-  // Each add is its own server-action redirect. Under `cacheComponents`, this
-  // route's dynamic content was observed getting a second, fresher render up
-  // to ~1s after the first paint already looked interactive — remounting the
-  // bulk selection's Client Component (BulkWaiverSelectionProvider) and
-  // silently dropping any tick made in that window. `networkidle` doesn't
-  // catch it (confirmed: the remount still happens after the network is
-  // idle), and neither does a single successful click (see the debug skill's
-  // "more than one wave" note) — wait for the provider's per-mount id to stop
-  // changing instead of guessing how many remounts this run happens to get.
+  // The bulk selection's Client Component (BulkWaiverSelectionProvider) lives
+  // in TripLayout, above this page's own re-renders, so a diver-add redirect
+  // can no longer remount it out from under a tick mid-selection (see that
+  // component's docstring for the failure mode this used to hit). A freshly
+  // added diver's checkbox is still a brand-new DOM node, though, so wait for
+  // its own hydration before the first interaction.
   const beaCheckbox = page.getByRole("checkbox", { name: "Select Bulk Bea to send a waiver" });
-  await waitForStableAttribute(beaCheckbox, "data-mount-id");
+  await expect(beaCheckbox).toHaveAttribute("data-hydrated", "true");
 
   // The checkbox's real hit area is the label wrapping it, not just the 16px
   // input — .check() below clicks the input directly regardless of markup,

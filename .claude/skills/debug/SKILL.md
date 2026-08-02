@@ -64,15 +64,29 @@ CPU load widens the window a hydration race can lose in, which is exactly why "w
 workers" and "not actually caused by scarce CPU" are both true at once. Don't let the correlation
 stand in for the mechanism.
 
-**"Once hydration has settled" can itself be more than one wave.** `cacheComponents` was observed
-(e2e/add-diver.spec.ts's bulk-waiver-send test) remounting a Client Component a second time, up to
-~1s after its first mount already looked interactive and had already accepted one click — silently
-discarding that click's state. A single successful interaction, or a fixed delay picked by trial and
-error, doesn't prove no further remount is coming; only a poll for actual quiescence does. Where a
-component's own identity is at risk (not just its interactivity), expose a fresh id per mount as a
-data attribute and wait for that id to stop changing (`e2e/helpers.ts`'s `waitForStableAttribute`)
-rather than a boolean "hydrated" flag, which only proves *a* mount happened, not that it's the last
-one.
+**"Once hydration has settled" can itself be more than one wave — and the fix belongs in the app,
+not the test.** `cacheComponents` was observed (`RosterBulkWaiverSelection.tsx`'s bulk-waiver
+selection) remounting a page's dynamic content a second time, up to ~1s after the first paint
+already looked interactive, silently discarding whichever checkbox had just been ticked. A single
+successful interaction, or a fixed delay picked by trial and error, doesn't prove no further
+remount is coming — logging each mount's timestamp (a `console.log` in the component's own
+mount/unmount effect, read back via `page.on("console", ...)` in the test) is what actually proved
+it, ruling out `networkidle` (the remount still happened after the network went idle) before
+looking for a fix.
+
+The concrete fix wasn't a smarter e2e wait; it was moving the state out of the part of the tree
+that re-renders. Any page under `cacheComponents` can get a second, fresher render of its own
+dynamic content below its `<Suspense>` boundary — a route's own layout (`layout.tsx`), by contrast,
+stays mounted across that same-route re-render (that's the whole reason `trips/[id]/layout.tsx`
+hoists the sub-nav there instead of repeating it per page). State that must survive a same-route
+mutate-then-redirect belongs in that layout, not the page body — with a `usePathname()`-keyed reset
+effect so it still clears on a *real* navigation (the same idiom ADR
+20260801-cache-components-activity-state already uses for `InlineConfirm`/`ScheduleBuilder`, just
+applied in the opposite direction: there it stops state from *surviving* too long, here it lets
+state survive at all). Once the state was moved, the e2e test needed nothing more than the same
+`data-hydrated` boolean every other controlled field already uses — no stability poll, no per-mount
+id. If a fixed wait or a stability poll is the best fix you can find for a remount-losing-state bug,
+you likely haven't found the actual boundary that's re-rendering yet.
 
 A `Protocol error (Runtime.callFunctionOn): Internal server error, session closed` in the same
 failure block as `Test timeout of Nms exceeded` is usually a **downstream artifact** of that same

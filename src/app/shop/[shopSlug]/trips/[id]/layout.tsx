@@ -2,6 +2,7 @@ import { getDb } from "@/db/client";
 import { getShopBySlug } from "@/db/shops";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
+import { BulkWaiverSelectionProvider } from "./_components/RosterBulkWaiverSelection";
 import { TripSubNav, type TripSubNavCopy } from "./_components/TripSubNav";
 
 // TODO: Cache Components adoption. Refactor this route so this opt-out can be removed.
@@ -15,6 +16,13 @@ export const instant = false;
  * nav mounted across navigations so switching surfaces never re-renders or
  * re-fetches the spine — only the page body below swaps. The `<main>` landmark
  * lives here; pages render their content directly.
+ *
+ * Also owns `BulkWaiverSelectionProvider` (Guests' "tick a few divers, then
+ * send" state) for the same reason: it must survive the Guests page body's
+ * own re-renders across a diver-add redirect, which this layout — staying
+ * mounted while only `{children}` swaps — does for free. See that
+ * component's docstring for the failure mode this avoids. Wrapping it here
+ * costs nothing on Overview/Manifest/Prep: nothing there reads the context.
  */
 export default async function TripLayout({
   children,
@@ -40,7 +48,7 @@ export default async function TripLayout({
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-6 py-10 print:max-w-none print:px-10 print:py-8">
       <TripSubNav shopSlug={shopSlug} tripId={id} copy={subNavCopy} className="mb-6" />
-      {children}
+      <BulkWaiverSelectionProvider>{children}</BulkWaiverSelectionProvider>
     </main>
   );
 }

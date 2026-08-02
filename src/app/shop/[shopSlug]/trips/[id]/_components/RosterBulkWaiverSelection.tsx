@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { createContext, useContext, useEffect, useState } from "react";
 import type { WaiverSendCopy } from "@/app/actions/waiver-send-types";
 import { WaiverSendControl } from "@/components/today/WaiverSendControl";
@@ -13,30 +14,31 @@ import { WaiverSendControl } from "@/components/today/WaiverSendControl";
  * already ticked. Provider state sidesteps any such ambiguity entirely: each
  * checkbox is a normal controlled input, and nothing depends on same-name
  * form association.
+ *
+ * Rendered from `TripLayout` (../layout.tsx), not from the Guests page body,
+ * deliberately: the page body sits below that page's own `<Suspense>`
+ * boundary and was observed (under `cacheComponents`) getting a second,
+ * fresher render up to ~1s after the first paint already looked interactive
+ * — remounting anything rendered inside it and silently discarding whichever
+ * checkbox had just been ticked. `TripLayout` sits above that boundary and
+ * stays mounted across a same-route re-render (that's the whole point of
+ * hoisting the sub-nav there — see its own docstring), so state living here
+ * survives it. The trade-off: this component must reset its own selection on
+ * every real navigation itself (the `usePathname()` effect below), since it
+ * no longer unmounts for free between trips or when leaving Guests for
+ * another tab — the same pattern ADR 20260801-cache-components-activity-state
+ * uses for `InlineConfirm`/`ScheduleBuilder`.
  */
 const SelectionContext = createContext<{
   selected: Set<string>;
   toggle: (bookingId: string) => void;
-  /** Null until mounted (matches server output, avoiding a hydration
-   * mismatch); a fresh random id after that, set only from an effect so it
-   * never re-runs mid-lifetime. Exposed on the checkboxes below as
-   * `data-mount-id` — the same `data-hydrated`-style signal
-   * BookingPartyFields uses, but identifying *which* mount, not just
-   * whether one happened. This route's dynamic content was observed (under
-   * `cacheComponents`) getting a second, fresher render up to ~1s after the
-   * first paint already looked interactive, discarding this provider's
-   * `selected` set along with it — a different failure mode than the
-   * un-keyed-state-*surviving* class ADR 20260801-cache-components-activity-state
-   * audited, so treat this as a separate, still-open observation rather than
-   * that ADR's fix pattern applying here. e2e polls this id until it stops
-   * changing rather than trusting the first mount to be the last one. */
-  mountId: string | null;
 } | null>(null);
 
 export function BulkWaiverSelectionProvider({ children }: { children: React.ReactNode }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [mountId, setMountId] = useState<string | null>(null);
-  useEffect(() => setMountId(Math.random().toString(36).slice(2)), []);
+  const pathname = usePathname();
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `pathname` is a trigger, not a value the effect body reads — any change clears the selection, which is the point.
+  useEffect(() => setSelected(new Set()), [pathname]);
   const toggle = (bookingId: string) => {
     setSelected((prev) => {
       const next = new Set(prev);
@@ -46,9 +48,7 @@ export function BulkWaiverSelectionProvider({ children }: { children: React.Reac
     });
   };
   return (
-    <SelectionContext.Provider value={{ selected, toggle, mountId }}>
-      {children}
-    </SelectionContext.Provider>
+    <SelectionContext.Provider value={{ selected, toggle }}>{children}</SelectionContext.Provider>
   );
 }
 
@@ -75,7 +75,15 @@ export function BulkWaiverCheckbox({
   labelClassName?: string;
   className?: string;
 }) {
-  const { selected, toggle, mountId } = useSelection();
+  const { selected, toggle } = useSelection();
+  // Matches BookingPartyFields's pattern: false on both server and first
+  // client render (no hydration mismatch), true once this checkbox's own
+  // effect has run — a freshly-added diver's checkbox is a new DOM node the
+  // moment it appears, so it still needs its own "is this one interactive
+  // yet" signal even though the shared selection state above no longer
+  // resets out from under it.
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => setHydrated(true), []);
   return (
     <label className={labelClassName}>
       <input
@@ -83,8 +91,7 @@ export function BulkWaiverCheckbox({
         checked={selected.has(bookingId)}
         onChange={() => toggle(bookingId)}
         aria-label={ariaLabel}
-        data-hydrated={mountId ? "true" : "false"}
-        data-mount-id={mountId ?? ""}
+        data-hydrated={hydrated ? "true" : "false"}
         className={className}
       />
     </label>
