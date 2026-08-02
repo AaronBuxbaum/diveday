@@ -12,6 +12,8 @@ We use AWS CDK to model, deploy, and update our cloud resources. Currently, the 
 - An S3 bucket for storing visual regression testing (VRT) baselines and HTML reports.
 - A `reg-suit-bot` IAM user with specific S3 read/write permissions.
 - A dedicated `cdk-deployer` IAM user with `AdministratorAccess` intended to manage all future CDK deployments.
+- Read-only IAM users for the AWS MCP server (local dev and Claude Code's cloud environment).
+- Cost guardrails: an `AWS::Budgets::Budget` and AWS Cost Anomaly Detection — see [§6](#6-cost-guardrails) below.
 
 ---
 
@@ -102,3 +104,36 @@ Upon successful deployment, the CDK CLI outputs key resources and credentials. M
 
 - **CDK Deployer User (`cdk-deployer`):** Use the outputted credentials (`CdkDeployerAccessKeyId`/`CdkDeployerSecretAccessKey`) for subsequent CI/CD deployments to avoid using root credentials.
 - **S3 Bucket Details:** Use `S3BucketName` and `IAMUserAccessKey` / `IAMUserSecretKey` for S3 upload plugins.
+
+---
+
+## 6. Cost guardrails
+
+The stack provisions two **alert-only** mechanisms — see
+[ADR 20260802-aws-cost-guardrails](../architecture/decisions/20260802-aws-cost-guardrails.md) for
+the full reasoning. Neither one ever disables or throttles a resource; both only send email.
+
+- **`AWS::Budgets::Budget`** (`diveday-monthly-cost-guardrail`) — a monthly `COST` budget, default
+  $5, with five graduated email notifications: 50% and 80% of actual spend, 100% of *forecasted*
+  spend (an early warning before the month even ends), 100% of actual spend, and 200% of actual
+  spend as the "this is outside normal bands" siren.
+- **AWS Cost Anomaly Detection** (`diveday-service-cost-anomalies` monitor +
+  `diveday-service-cost-anomaly-alerts` subscription) — an AWS-managed, ML-based monitor over
+  per-service spend, checked daily, that emails when any single service's cost moves in an
+  unexpected way (rate of increase, not just an absolute dollar threshold) with at least $1 of
+  impact. This is what catches "spend is accelerating" even while comfortably under the budget cap
+  above.
+
+Both use CDK context values, overridable the same way as `bucketName`/`userName`:
+
+```bash
+pnpm infra:deploy --context alertEmail=you@example.com --context monthlyBudgetLimit=10
+```
+
+- `alertEmail` — where every alert goes (default `aaronbuxbaum@gmail.com`).
+- `monthlyBudgetLimit` — the monthly USD cap the percentage thresholds above are computed against
+  (default `5`).
+
+No manual account-level setup is required — unlike a CloudWatch billing alarm on
+`EstimatedCharges`, Budgets and Cost Anomaly Detection don't need the "Receive Billing Alerts"
+console toggle enabled first.
