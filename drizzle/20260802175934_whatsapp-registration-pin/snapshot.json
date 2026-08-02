@@ -1,10 +1,9 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "78deeb09-5fad-45ec-9b88-65c7cb88b6dc",
+  "id": "2fb18cba-33a2-4c14-9c54-dedf6870e18c",
   "prevIds": [
-    "bda9a003-1604-4d89-a7f4-b291a4c9e0a0",
-    "fd4394a6-b99b-4db2-a8da-3976a90e91e5"
+    "a91b6e66-a551-410d-bff1-ffc47338f43f"
   ],
   "ddl": [
     {
@@ -134,9 +133,7 @@
     {
       "values": [
         "course_photo",
-        "recap_photo",
-        "certification_card",
-        "waiver_document"
+        "recap_photo"
       ],
       "name": "media_deletion_kind",
       "entityType": "enums",
@@ -581,12 +578,6 @@
     {
       "isRlsEnabled": false,
       "name": "rental_fit_profiles",
-      "entityType": "tables",
-      "schema": "public"
-    },
-    {
-      "isRlsEnabled": false,
-      "name": "roll_call_crew_attestations",
       "entityType": "tables",
       "schema": "public"
     },
@@ -1277,19 +1268,6 @@
       "generated": null,
       "identity": null,
       "name": "total_cents",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "booking_checkouts"
-    },
-    {
-      "type": "integer",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "settled_total_cents",
       "entityType": "columns",
       "schema": "public",
       "table": "booking_checkouts"
@@ -4976,32 +4954,6 @@
     {
       "type": "timestamp with time zone",
       "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "anonymized_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "people"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "anonymized_by_person_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "people"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
       "default": "now()",
@@ -5634,136 +5586,6 @@
       "name": "id",
       "entityType": "columns",
       "schema": "public",
-      "table": "roll_call_crew_attestations"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "shop_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "roll_call_crew_attestations"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "trip_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "roll_call_crew_attestations"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "checkpoint",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "roll_call_crew_attestations"
-    },
-    {
-      "type": "integer",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "crew_aboard",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "roll_call_crew_attestations"
-    },
-    {
-      "type": "integer",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "crew_assigned",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "roll_call_crew_attestations"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "attested_by_person_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "roll_call_crew_attestations"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "note",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "roll_call_crew_attestations"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "occurred_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "roll_call_crew_attestations"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "now()",
-      "generated": null,
-      "identity": null,
-      "name": "created_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "roll_call_crew_attestations"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "gen_random_uuid()",
-      "generated": null,
-      "identity": null,
-      "name": "id",
-      "entityType": "columns",
-      "schema": "public",
       "table": "roll_call_events"
     },
     {
@@ -6360,6 +6182,19 @@
       "generated": null,
       "identity": null,
       "name": "access_token_sealed",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "shop_whatsapp_accounts"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "''",
+      "generated": null,
+      "identity": null,
+      "name": "access_token_hint",
       "entityType": "columns",
       "schema": "public",
       "table": "shop_whatsapp_accounts"
@@ -8798,32 +8633,6 @@
     {
       "type": "timestamp with time zone",
       "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "anonymized_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "waiver_records"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "anonymized_by_person_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "waiver_records"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
       "default": "now()",
@@ -10821,48 +10630,6 @@
       "entityType": "indexes",
       "schema": "public",
       "table": "rental_fit_profiles"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "shop_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "trip_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "checkpoint",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "occurred_at",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "roll_call_crew_attestations_shop_trip_checkpoint_occurred_idx",
-      "entityType": "indexes",
-      "schema": "public",
-      "table": "roll_call_crew_attestations"
     },
     {
       "nameExplicit": true,
@@ -12943,23 +12710,6 @@
     {
       "nameExplicit": false,
       "columns": [
-        "anonymized_by_person_id"
-      ],
-      "schemaTo": "public",
-      "tableTo": "people",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "NO ACTION",
-      "name": "people_anonymized_by_person_id_people_id_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "people"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
         "shop_id"
       ],
       "schemaTo": "public",
@@ -13143,57 +12893,6 @@
       "entityType": "fks",
       "schema": "public",
       "table": "rental_fit_profiles"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "shop_id"
-      ],
-      "schemaTo": "public",
-      "tableTo": "shops",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "NO ACTION",
-      "name": "roll_call_crew_attestations_shop_id_shops_id_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "roll_call_crew_attestations"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "trip_id"
-      ],
-      "schemaTo": "public",
-      "tableTo": "trips",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "NO ACTION",
-      "name": "roll_call_crew_attestations_trip_id_trips_id_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "roll_call_crew_attestations"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "attested_by_person_id"
-      ],
-      "schemaTo": "public",
-      "tableTo": "people",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "NO ACTION",
-      "name": "roll_call_crew_attestations_8HpD6wd6GQjn_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "roll_call_crew_attestations"
     },
     {
       "nameExplicit": false,
@@ -13980,23 +13679,6 @@
     {
       "nameExplicit": false,
       "columns": [
-        "anonymized_by_person_id"
-      ],
-      "schemaTo": "public",
-      "tableTo": "people",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "NO ACTION",
-      "name": "waiver_records_anonymized_by_person_id_people_id_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "waiver_records"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
         "shop_id"
       ],
       "schemaTo": "public",
@@ -14388,16 +14070,6 @@
         "id"
       ],
       "nameExplicit": false,
-      "name": "roll_call_crew_attestations_pkey",
-      "schema": "public",
-      "table": "roll_call_crew_attestations",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
       "name": "roll_call_events_pkey",
       "schema": "public",
       "table": "roll_call_events",
@@ -14731,13 +14403,6 @@
       "table": "booking_checkouts"
     },
     {
-      "value": "\"settled_total_cents\" is null or \"settled_total_cents\" >= 0",
-      "name": "booking_checkouts_settled_total_nonnegative",
-      "entityType": "checks",
-      "schema": "public",
-      "table": "booking_checkouts"
-    },
-    {
       "value": "\"amount_cents\" is null or \"amount_cents\" >= 0",
       "name": "booking_payments_amount_nonnegative",
       "entityType": "checks",
@@ -14785,13 +14450,6 @@
       "entityType": "checks",
       "schema": "public",
       "table": "orders"
-    },
-    {
-      "value": "\"anonymized_at\" is null or \"deleted_at\" is not null",
-      "name": "people_anonymized_stays_removed",
-      "entityType": "checks",
-      "schema": "public",
-      "table": "people"
     },
     {
       "value": "\"discount_percent\" between 1 and 100",
