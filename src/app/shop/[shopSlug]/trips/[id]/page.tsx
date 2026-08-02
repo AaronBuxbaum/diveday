@@ -273,8 +273,27 @@ export default async function ManageTripPage({
         />
       ) : null}
 
-      {/* Conditions are crew-entered (glossary) — open to all staff. */}
+      {/* Conditions are crew-entered (glossary) — open to all staff. Its
+          fields are uncontrolled (`defaultValue`, not `value`), so a save or
+          clear that lands via a same-route re-render rather than a fresh
+          mount leaves the old value on screen — the same
+          cacheComponents-can-skip-a-remount class ADR
+          20260802-cache-components-cross-render-state and ADR
+          20260801-cache-components-activity-state both hit, just in the
+          opposite direction (unresettable state that needs a forced remount,
+          not state that needs to survive one). Keying on the fields
+          themselves (not `conditionsUpdatedAt`, which the e2e harness's
+          frozen clock would hold identical across a save-then-clear in the
+          same test) forces the remount `defaultValue` needs on any actual
+          change to what these inputs show, republish-with-different-values
+          included — not just the set/cleared transition this bug was found on. */}
       <ConditionsSection
+        key={[
+          trip.waterTemperatureC,
+          trip.visibilityMeters,
+          trip.surfaceConditions,
+          trip.conditionsSummary,
+        ].join("|")}
         saveAction={saveConditionsAction.bind(null, shopSlug, tripId)}
         clearAction={clearConditionsAction.bind(null, shopSlug, tripId)}
         trip={trip}
