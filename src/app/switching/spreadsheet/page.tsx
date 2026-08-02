@@ -81,6 +81,11 @@ async function LocalizedSpreadsheetBody() {
  * pass-through slot per Next's `"use cache"` interleaving rules: it is never
  * read or invoked here, only rendered where it belongs in the tree, so its
  * per-visitor content never enters the cache entry.
+ *
+ * Its render site wraps `{importCta}` in its own `<Suspense>` — see the same
+ * fix on the `[competitor]` guide's `GuideBody` for why: without it, this
+ * preview's Cache Components runtime replayed a spurious "unique key"
+ * warning on every request.
  */
 async function SpreadsheetBody({
   locale,
@@ -333,7 +338,7 @@ async function SpreadsheetBody({
             </li>
           </ol>
 
-          {importCta}
+          <Suspense fallback={null}>{importCta}</Suspense>
         </div>
       </section>
 

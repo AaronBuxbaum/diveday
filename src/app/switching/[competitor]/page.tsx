@@ -106,6 +106,15 @@ async function LocalizedGuideBody({ guide }: { guide: MigrationGuide }) {
  * reads `auth()`) as a pass-through slot per Next's interleaving rules: never
  * read or invoked here, only rendered where it belongs, so its per-visitor
  * content never enters the cache entry.
+ *
+ * Its own render site wraps `{importCta}` in a `<Suspense>` (see below) —
+ * without one, this preview's Cache Components runtime replayed a spurious
+ * "unique key" warning on every request that reached this cached body,
+ * because the dynamic child was streaming into a cache boundary with no
+ * boundary of its own to resolve against. Isolating the dynamic read behind
+ * its own `<Suspense>`, per the Next migrating-to-cache-components guide, is
+ * what stopped it — confirmed by removing `importCta` entirely (warning
+ * gone) and then restoring it wrapped (still gone, button still renders).
  */
 async function GuideBody({
   locale,
@@ -332,7 +341,7 @@ async function GuideBody({
             </p>
           )}
 
-          {importCta}
+          <Suspense fallback={null}>{importCta}</Suspense>
         </div>
       </section>
 

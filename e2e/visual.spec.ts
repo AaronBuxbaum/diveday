@@ -664,7 +664,7 @@ for (const scheme of ["light", "dark"] as const) {
        * was as one long test, not less.
        */
       test(`staff surfaces render true to the design (${scheme})`, async ({ page }) => {
-        // 17 navigate+capture surfaces (68 screenshots) — the suite's 15s
+        // 18 navigate+capture surfaces (72 screenshots) — the suite's 15s
         // default is sized for a single real flow, not a site tour, and each
         // capture now costs a full `paintWholeDocument` scroll.
         test.setTimeout(90_000);
@@ -673,6 +673,15 @@ for (const scheme of ["light", "dark"] as const) {
           .getByRole("heading", { name: /Good (morning|afternoon|evening|night), Dana/ })
           .waitFor();
         await capture(page, "today", scheme);
+
+        // The blocker queue — until now the one staff surface with no baseline
+        // at all, because a flat unpaginated list of every blocked diver across
+        // every upcoming departure rendered a ~10,700px page nothing could
+        // capture sanely (the same shape the orders index was found in). Now
+        // paginated ten departures at a time, so this is finally capturable.
+        await page.goto("/shop/blue-mantis/blockers");
+        await page.getByRole("heading", { name: "Not ready", level: 1 }).waitFor();
+        await capture(page, "blockers", scheme);
 
         // The fast walk-in flow: pick today's boat, then search or hand-enter
         // a diver — no trip page detour, no required email at the counter.
