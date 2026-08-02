@@ -254,7 +254,11 @@ new domain concept, define it here in the same PR.
   crew), with emergency contacts. A legal/safety document — in US waters, coast guard
   regulations apply. **Roll call** happens before departure and *after every dive*; a diver
   left behind is the industry's nightmare scenario. Manifests must work offline and print
-  cleanly.
+  cleanly. An after-dive roll call that is still open once the boat is past its end time is an
+  **unfinished head count** — at least one diver on the manifest has no result recorded at that
+  checkpoint (a `cleared` undo counts as no result; an explicit "not boarded" carries forward and
+  does not). It is chased, not merely displayed: Today raises it as its top-severity row and the
+  schedule board badges the returned departure, both for 48 hours after the trip ends.
 - **Emergency contact** — a name *and* a reachable phone number the crew can call for a diver in
   an incident. It is captured from the diver (the waiver flow, and the `/ready` page), never
   invented, and it is **only "on file" when both the name and the phone are present** — a name with
