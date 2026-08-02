@@ -33,6 +33,26 @@ export function RecapPhotoGallery({
             <div className="relative aspect-square w-full">
               {/* Diver photos always come from the blob store (storeRecapImage), so the
                   remotePatterns entry in next.config.ts covers every url here. */}
+              {/* A fixed `sizes`, not a viewport-relative one, for two reasons.
+
+                  It is more accurate: these tiles render 163px at a 390 phone
+                  and cap at 273px on desktop, where the container's max width
+                  stops them growing. The old `(min-width: 640px) 33vw, 50vw`
+                  claimed 422px at 1280 — over half again what is ever drawn —
+                  so the browser fetched a candidate wider than any screen uses.
+
+                  And it is deterministic, which is what actually forced the
+                  change. A viewport-relative `sizes` is evaluated whenever the
+                  browser gets around to selecting a candidate, and the visual
+                  suite resizes the page immediately before each capture — so
+                  the same tile could resolve to a 128px source in one run and a
+                  256px one in the next, and `trip-manage-dark-vw-390`
+                  alternated between a soft and a sharp thumbnail on unrelated
+                  PRs. A length with no viewport term cannot race a resize.
+
+                  288px covers the widest this ever draws (~290px just below the
+                  `sm` breakpoint, where the grid is still two columns) without
+                  upscaling at any breakpoint. */}
               <Image
                 src={photo.imageUrl}
                 alt={
@@ -40,7 +60,7 @@ export function RecapPhotoGallery({
                   t("trips.recapPhotos.photoFromAlt", { diverName: photo.diverName })
                 }
                 fill
-                sizes="(min-width: 640px) 33vw, 50vw"
+                sizes="288px"
                 className="object-cover"
               />
             </div>

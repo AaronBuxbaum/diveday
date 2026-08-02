@@ -409,7 +409,7 @@ export const areas = {
       "docs/architecture/decisions/20260720-notification-attempt-history.md",
       "docs/architecture/decisions/20260731-per-person-notification-locale.md",
       "docs/architecture/decisions/20260802-whatsapp-embedded-signup.md",
-      "docs/architecture/decisions/20260802-sms-delivery-receipts.md",
+      "docs/architecture/decisions/20260802-sms-delivery-receipts-in-cloudformation.md",
     ],
     code: [
       "src/lib/notifications/index.ts",
