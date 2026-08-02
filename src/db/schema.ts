@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  type AnyPgColumn,
   boolean,
   check,
   date,
@@ -205,10 +206,38 @@ export const people = pgTable(
     courtesyEmailOptOutAt: timestamp("courtesy_email_opt_out_at", { withTimezone: true }),
     /** Keeps history intact while removing a person from active shop workspaces. */
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    /**
+     * Set when this person's identifying and medical data was destructively
+     * erased across the shop's tables (ADR 20260802-diver-data-erasure).
+     *
+     * Deliberately **not** the same column as `deleted_at`. Removal is
+     * reversible and preserves the record (ADR 20260719-crud-archive-semantics);
+     * erasure destroys it and cannot be undone, so the two are separate
+     * operations with separate markers and separate authorization. The check
+     * constraint below is what makes "one way" structural rather than a
+     * convention: an erased row must stay removed, so `restoreDiver`'s
+     * `deleted_at = null` write can never resurrect a half-erased person into
+     * the active roster — the database refuses it even if a future caller
+     * forgets to look.
+     */
+    anonymizedAt: timestamp("anonymized_at", { withTimezone: true }),
+    /**
+     * The shop owner who ordered the erasure. A one-way, evidence-reducing
+     * action is never anonymous — the same reasoning
+     * `rental_fit_profiles.needs_staff_fit_by` and
+     * `roll_call_events.recorded_by_person_id` record who called a safety flag.
+     */
+    anonymizedByPersonId: uuid("anonymized_by_person_id").references(
+      (): AnyPgColumn => people.id,
+    ),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
     index("people_shop_idx").on(table.shopId),
+    check(
+      "people_anonymized_stays_removed",
+      sql`${table.anonymizedAt} is null or ${table.deletedAt} is not null`,
+    ),
     // Case-insensitive so "Nora@x.com" and "nora@x.com" can never split one
     // diver's cert/waiver/rental history into two rows (CR-008). Partial on
     // the live rows only, matching the archive-not-delete pattern elsewhere:
@@ -1993,6 +2022,20 @@ export const waiverRecords = pgTable(
     importedFromLabel: text("imported_from_label"),
     importSourceDocumentUrl: text("import_source_document_url"),
     importSourceMedicalDocumentUrl: text("import_source_medical_document_url"),
+    /**
+     * Set when this record was stripped of the signer's name, medical answers,
+     * and source documents as part of erasing the diver
+     * (ADR 20260802-diver-data-erasure), and re-sealed under integrity
+     * **version 2** — the HMAC over exactly the fields that survive erasure.
+     * A v1 seal covers `signed_name` and `medical_answers`, so a stripped
+     * record can never verify against it; without the re-seal every erased
+     * release would read as *tampered* rather than as *erased*. Stamped in the
+     * same statement as the strip, and part of the v2 metadata itself, so the
+     * erasure is inside the seal rather than an unsealed annotation beside it.
+     */
+    anonymizedAt: timestamp("anonymized_at", { withTimezone: true }),
+    /** The shop owner who ordered the erasure — see `people.anonymized_by_person_id`. */
+    anonymizedByPersonId: uuid("anonymized_by_person_id").references(() => people.id),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -2589,7 +2632,20 @@ export const tripReviews = pgTable(
   ],
 );
 
-export const mediaDeletionKind = pgEnum("media_deletion_kind", ["course_photo", "recap_photo"]);
+/**
+ * `certification_card` (a photograph of a diver's C-card) and `waiver_document`
+ * (a scanned paper release or medical form brought in by the importer) are the
+ * blob kinds diver erasure owes a delete for
+ * (ADR 20260802-diver-data-erasure) — the row's URL column is nulled locally
+ * and the object itself is retired through this same ledger rather than a
+ * second, parallel mechanism.
+ */
+export const mediaDeletionKind = pgEnum("media_deletion_kind", [
+  "course_photo",
+  "recap_photo",
+  "certification_card",
+  "waiver_document",
+]);
 
 export const mediaDeletionStatus = pgEnum("media_deletion_status", [
   "pending",
