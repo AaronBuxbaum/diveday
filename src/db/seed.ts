@@ -44,6 +44,7 @@ import {
   priorVisits,
   recapPhotos,
   rentalFitProfiles,
+  rollCallCrewAttestations,
   rollCallEvents,
   shopPromoCodes,
   shopPromoRedemptions,
@@ -4106,6 +4107,7 @@ export async function resetDemoSchedule(
   // child here surfaces as an FK-violation mid-run — e.g. a waitlist entry or
   // order left behind blocks the trips/bookings delete and dirties the next
   // test's fixture (regression tests live in seed.test.ts).
+  await db.delete(rollCallCrewAttestations).where(eq(rollCallCrewAttestations.shopId, shopId));
   await db.delete(rollCallEvents).where(eq(rollCallEvents.shopId, shopId));
   await db.delete(rentalFitProfiles).where(eq(rentalFitProfiles.shopId, shopId));
   // References people, so it clears before them like any other people-scoped row.
@@ -4334,6 +4336,7 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(bookingPayments).where(eq(bookingPayments.shopId, shopId));
   await db.delete(tips).where(eq(tips.shopId, shopId));
   await db.delete(bookingCapabilities).where(eq(bookingCapabilities.shopId, shopId));
+  await db.delete(rollCallCrewAttestations).where(eq(rollCallCrewAttestations.shopId, shopId));
   await db.delete(rollCallEvents).where(eq(rollCallEvents.shopId, shopId));
   await db.delete(recapPhotos).where(eq(recapPhotos.shopId, shopId));
   await db.delete(tripReviews).where(eq(tripReviews.shopId, shopId));
