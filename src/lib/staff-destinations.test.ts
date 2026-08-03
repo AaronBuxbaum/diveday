@@ -149,6 +149,18 @@ describe("what each consumer derives", () => {
     expect(palette).toContain("promoCodes");
   });
 
+  it("keeps the header honest for a destination that left it", () => {
+    // Promo codes is reached *from* Settings now, so Settings claims `/promos`
+    // as a second "you are here" prefix. Without it the promos page is the one
+    // staff surface where nothing in the header reads as current at all —
+    // which is exactly what the visual baseline caught. Team needs no entry:
+    // `/settings/team` already sits below `/settings`.
+    expect(staffDestination("settings").alsoMatch).toBe("/promos");
+    expect(staffDestination("team").suffix.startsWith(staffDestination("settings").suffix)).toBe(
+      true,
+    );
+  });
+
   it("puts Settings last in the whole registry, so no consumer can list it mid-menu", () => {
     expect(STAFF_DESTINATIONS.at(-1)?.id).toBe("settings");
     expect(staffPaletteDestinations(owner).at(-1)?.id).toBe("settings");

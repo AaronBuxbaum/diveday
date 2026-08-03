@@ -196,8 +196,18 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
   { id: "team", suffix: "/settings/team", navGroup: null, inPalette: true, gate: "team" },
   // Last, always: Settings is where a shop goes when nothing else on the menu
   // was the answer, and it is the one destination the whole "Set up" group
-  // now holds.
-  { id: "settings", suffix: "/settings", navGroup: "setup", inPalette: true },
+  // now holds. `alsoMatch` keeps the header honest for the destination that
+  // left it: Promo codes is reached *from* this page, and without this the
+  // promos page is the one staff surface where nothing in the header reads as
+  // current at all. Team needs no entry — `/settings/team` is already below
+  // `/settings`.
+  {
+    id: "settings",
+    suffix: "/settings",
+    navGroup: "setup",
+    inPalette: true,
+    alsoMatch: "/promos",
+  },
 ];
 
 /** The `/shop/<shopSlug>` prefix every destination hangs off. */

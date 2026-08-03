@@ -60,6 +60,21 @@ function isCurrent(pathname: string, href: string, root: string) {
   return href === root ? pathname === root : pathname === href || pathname.startsWith(`${href}/`);
 }
 
+/**
+ * Whether this destination is the page being looked at — its own path, or the
+ * `alsoMatch` prefix it claims (the board claims `/trips`, Settings claims
+ * `/promos`). Shared by the primary tabs, the "More" rows, and the "More"
+ * button's own state: those three used to answer the question three ways, and
+ * only the first knew about `alsoMatch`, so a destination reached *from* a
+ * "More" page left the whole header with nothing reading as current.
+ */
+function isDestinationCurrent(pathname: string, root: string, destination: StaffDestination) {
+  return (
+    isCurrent(pathname, staffDestinationHref(root, destination), root) ||
+    (destination.alsoMatch ? isCurrent(pathname, `${root}${destination.alsoMatch}`, root) : false)
+  );
+}
+
 function navClass(active: boolean) {
   return `${linkClass} ${active ? "bg-primary/10 text-primary" : "text-muted"}`;
 }
@@ -112,7 +127,7 @@ function MoreLink({
   onNavigate: () => void;
 }) {
   const href = staffDestinationHref(root, destination);
-  const active = isCurrent(pathname, href, root);
+  const active = isDestinationCurrent(pathname, root, destination);
   return (
     <li className="flex">
       <Link
@@ -181,7 +196,7 @@ export function ShopNavLinks({
   const daily = staffNavDestinations("daily", gates);
   const setup = staffNavDestinations("setup", gates);
   const moreIsActive = [...daily, ...setup].some((destination) =>
-    isCurrent(pathname, staffDestinationHref(root, destination), root),
+    isDestinationCurrent(pathname, root, destination),
   );
   // Stable across renders (empty deps — it only touches a ref), so effects
   // below can list it as a dependency without re-subscribing every render.
@@ -262,11 +277,7 @@ export function ShopNavLinks({
       >
         {primary.map((destination) => {
           const href = staffDestinationHref(root, destination);
-          const active =
-            isCurrent(pathname, href, root) ||
-            (destination.alsoMatch
-              ? isCurrent(pathname, `${root}${destination.alsoMatch}`, root)
-              : false);
+          const active = isDestinationCurrent(pathname, root, destination);
           return (
             <Link
               key={destination.id}

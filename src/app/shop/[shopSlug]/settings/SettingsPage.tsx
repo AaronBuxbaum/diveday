@@ -740,6 +740,7 @@ export default async function SettingsPage({
                 className={controlClass}
               >
                 <TimezoneOptions
+                  selected={shop.timezone || DEFAULT_TIMEZONE}
                   groupLabels={{
                     americas: t(TIMEZONE_GROUP_KEYS.americas),
                     caribbean: t(TIMEZONE_GROUP_KEYS.caribbean),

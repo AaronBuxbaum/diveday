@@ -253,6 +253,7 @@ export default async function OnboardPage({
                     className={controlClass}
                   >
                     <TimezoneOptions
+                      selected={timezone || DEFAULT_TIMEZONE}
                       groupLabels={{
                         americas: t(TIMEZONE_GROUP_KEYS.americas),
                         caribbean: t(TIMEZONE_GROUP_KEYS.caribbean),
