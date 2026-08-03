@@ -16,7 +16,10 @@ describe("demo seed + schedule queries (in-memory PGlite)", () => {
     const { db, shop } = await seededShopContext();
 
     const upcoming = await upcomingTripsWithCounts(db, shop.id);
-    expect(upcoming).toHaveLength(42);
+    // 42 before `seed-cert-gates.ts` added the four departures whose cert gates
+    // each refuse for exactly one reason (the AOW course session, the
+    // Advanced-only drift, the Duane deep sailing, and the nitrox charter).
+    expect(upcoming).toHaveLength(46);
 
     const starts = upcoming.map((t) => t.startsAt.getTime());
     expect(starts).toEqual([...starts].sort((a, b) => a - b));

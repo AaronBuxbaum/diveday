@@ -59,6 +59,7 @@ import {
 } from "./schema";
 import { seedBookings } from "./seed-bookings";
 import { seedCatalog } from "./seed-catalog";
+import { seedCertGates } from "./seed-cert-gates";
 import { at, DEMO_SHOP_TIMEZONE, demoTodayDepartureStart } from "./seed-clock";
 import { enforceMintedDemoCap } from "./seed-demo-lifecycle";
 import { seedDiveSites } from "./seed-dive-sites";
@@ -94,6 +95,7 @@ import { seedTrips } from "./seed-trips";
  * | `./seed-rental-fit.ts` | divers' saved sizes, so the gear locker has something to pull |
  * | `./seed-front-desk.ts` | the desk's own day: walk-ins, wait lists, inquiries, tips |
  * | `./seed-history.ts` | the trailing quarter that gives owner reporting something to report |
+ * | `./seed-cert-gates.ts` | the boats a card can be refused on, one gate each, and the course carve-out |
  * | `./seed-demo-lifecycle.ts` | minting, reaping, and capping throwaway demo shops |
  *
  * The public surface is unchanged: `@/db/seed` still exports everything it
@@ -476,6 +478,23 @@ export async function seedDemoSchedule(
   if (opts.history !== false) {
     await seedHistory(db, shopId, instructor.id);
   }
+
+  // Last on purpose, unlike every other step above. This one only *adds* — four
+  // departures whose cert gates each refuse for exactly one reason, and the
+  // Advanced Open Water session that proves the course carve-out — and running
+  // it after everything else means no row seeded before it moves, right down to
+  // its `nextCreatedAt()` stamp (the counter is shared across scenarios). It
+  // reads the divers, the sites, the catalog, and the crew, and nothing reads
+  // it back.
+  await seedCertGates(db, shopId, {
+    customers,
+    siteByName,
+    courseRows,
+    instructorId: instructor.id,
+    captainId,
+    divemasterId,
+    waiverTemplate,
+  });
 }
 
 /**
