@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { EmptyState } from "@/components/EmptyState";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
@@ -29,6 +31,7 @@ const STATUS_KEYS: Record<TripLastMinutePromo["status"], StaffMessageKey> = {
  * commercial choice.
  */
 export function LastMinuteDealSection({
+  shopSlug,
   eligibleCount,
   openSeats,
   cancelled,
@@ -37,6 +40,8 @@ export function LastMinuteDealSection({
   locale,
   sendAction,
 }: {
+  /** Only used by the cancelled empty state's way out, back to the board. */
+  shopSlug: string;
   eligibleCount: number;
   openSeats: number;
   cancelled: boolean;
@@ -83,13 +88,43 @@ export function LastMinuteDealSection({
           </SubmitButton>
         </form>
       ) : (
-        <p className="mt-4 rounded-lg border border-border bg-surface px-4 py-6 text-center text-sm text-muted">
-          {cancelled
-            ? t("trips.lastMinute.cancelledNotice")
-            : openSeats <= 0
-              ? t("trips.lastMinute.fullNotice")
-              : t("trips.lastMinute.noneAroundNotice")}
-        </p>
+        // Three different reasons there is no send button, each with the one
+        // door that helps from here: a cancelled boat sends you back to the
+        // schedule, a full boat to the wait list this trip already keeps, and
+        // an empty last-minute list to seating someone by hand.
+        <EmptyState className="mt-4">
+          <h3 className="font-medium">
+            {cancelled
+              ? t("trips.lastMinute.cancelledHeading")
+              : openSeats <= 0
+                ? t("trips.lastMinute.fullHeading")
+                : t("trips.lastMinute.noneAroundHeading")}
+          </h3>
+          <p className="mx-auto mt-1 max-w-md text-sm text-muted">
+            {cancelled
+              ? t("trips.lastMinute.cancelledNotice")
+              : openSeats <= 0
+                ? t("trips.lastMinute.fullNotice")
+                : t("trips.lastMinute.noneAroundNotice")}
+          </p>
+          {cancelled ? (
+            <Link
+              href={`/shop/${shopSlug}/schedule/board`}
+              className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
+            >
+              {t("trips.lastMinute.cancelledAction")}
+            </Link>
+          ) : (
+            <a
+              href={openSeats <= 0 ? "#waitlist" : "#add-diver"}
+              className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
+            >
+              {openSeats <= 0
+                ? t("trips.lastMinute.fullAction")
+                : t("trips.lastMinute.noneAroundAction")}
+            </a>
+          )}
+        </EmptyState>
       )}
 
       {promos.length > 0 ? (

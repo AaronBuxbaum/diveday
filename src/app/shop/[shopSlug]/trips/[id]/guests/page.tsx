@@ -309,6 +309,7 @@ async function TripGuestsBody({
         capacity={trip.capacity}
         roster={roster}
         rosterFilter={rosterFilter}
+        canAddDivers={!cancelled}
         readinessByBooking={readinessByBooking}
         waiverByBooking={waiverByBooking}
         rentalFitByBooking={rentalFitByBooking}
@@ -381,6 +382,7 @@ async function TripGuestsBody({
         </summary>
         <div className="border-t border-border px-4">
           <LastMinuteDealSection
+            shopSlug={shopSlug}
             locale={locale}
             eligibleCount={lastMinuteEligibleCount}
             openSeats={spotsRemaining({ capacity: trip.capacity, booked: trip.booked })}

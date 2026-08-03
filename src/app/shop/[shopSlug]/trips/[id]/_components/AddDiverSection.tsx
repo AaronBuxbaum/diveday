@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { EmptyState } from "@/components/EmptyState";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
@@ -125,15 +126,35 @@ export function AddDiverSection({
                 })}
               </ul>
             ) : (
-              <p className="mt-4 rounded-lg border border-border bg-surface px-4 py-4 text-center text-sm text-muted">
-                {t("trips.addDiver.noMatches", { query })}
-              </p>
+              // The shared empty state, and the sentence's "below" made into a
+              // real door: the hand-entry form is also force-opened for this
+              // case (see `open=` on the <details> below), so the anchor always
+              // lands on a form a staffer can type into.
+              <EmptyState className="mt-4">
+                <h3 className="font-medium">{t("trips.addDiver.noMatchesHeading")}</h3>
+                <p className="mx-auto mt-1 max-w-md text-sm text-muted">
+                  {t("trips.addDiver.noMatches", { query })}
+                </p>
+                <a
+                  href="#hand-entry"
+                  className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
+                >
+                  {t("trips.addDiver.noMatchesAction")}
+                </a>
+              </EmptyState>
             )
           ) : null}
         </>
       )}
 
-      <details className="group mt-4" open={full || !searched}>
+      {/* Open when there is nothing else to act on: no search yet, a full boat
+          (wait-listing is the only path), or a search that found nobody — the
+          case the empty state above sends a staffer straight here for. */}
+      <details
+        id="hand-entry"
+        className="group mt-4 scroll-mt-24"
+        open={full || !searched || candidates.length === 0}
+      >
         {!full ? (
           <summary className="inline-flex min-h-11 cursor-pointer list-none items-center text-sm font-medium text-primary hover:underline [&::-webkit-details-marker]:hidden">
             {t("trips.addDiver.handEntrySummary")}
