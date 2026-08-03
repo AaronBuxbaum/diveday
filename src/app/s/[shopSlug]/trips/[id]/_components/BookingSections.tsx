@@ -211,6 +211,8 @@ export function BookSpotSection({
   tripRef,
   remaining,
   errorMessage,
+  requirementHeading,
+  requirementNote,
   payAtBooking,
   perDiverPriceCents,
   currency,
@@ -224,6 +226,18 @@ export function BookSpotSection({
   tripRef: TripRef;
   remaining: number;
   errorMessage?: string;
+  /**
+   * What the trip asks of anybody, already composed and translated by the page
+   * (`tripRequirementList`) — a property of the *trip*, never of the reader, so
+   * it is safe on an anonymous page. Undefined when the trip demands nothing.
+   *
+   * It is stated here, above the form, because it used to be stated nowhere
+   * until after the seat was bought: a diver who could not clear the gate read
+   * "4 spots left", paid, and met the requirement for the first time at the
+   * dock (DOM-M6).
+   */
+  requirementHeading?: string;
+  requirementNote?: string;
   payAtBooking: boolean;
   perDiverPriceCents: number | null;
   /** The shop's currency — this is a list price, so it follows the shop, not a payment row. */
@@ -284,6 +298,14 @@ export function BookSpotSection({
         <p className="mt-1 text-sm text-muted">
           {t("paidSecurely", { price: money(perDiverPriceCents) })}
         </p>
+      ) : null}
+      {requirementNote ? (
+        <div className="mt-3 rounded-lg border border-border bg-surface-sunken p-3 text-sm">
+          {requirementHeading ? (
+            <h3 className="font-semibold text-foreground">{requirementHeading}</h3>
+          ) : null}
+          <p className="mt-1 text-muted">{requirementNote}</p>
+        </div>
       ) : null}
       <ErrorNotice message={state.error ?? errorMessage} />
       {trip.course?.isIntroCourse ? (

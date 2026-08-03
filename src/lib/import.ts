@@ -845,6 +845,20 @@ export function specialtiesNamed(raw: string | null | undefined): DiveSpecialty[
   if (/\bdry.?suit\b/.test(value)) found.push("drysuit");
   if (/\bwreck\b/.test(value)) found.push("wreck");
   if (/\bnight\b/.test(value)) found.push("night");
+  // **Known over-match, deliberately left alone.** PADI's **Deep Adventure
+  // Dive** is one of the three adventure dives inside Advanced Open Water — not
+  // the Deep *specialty*, which is four dives and a separate card — and it
+  // lands here as a Deep specialty card. Since the booking-time trip admission
+  // gate clears on a specialty card in *any* state, that mis-read now buys a
+  // seat on a Deep-gated charter.
+  //
+  // It is a warning rather than a fix because the dock still holds: an imported
+  // specialty card is `verified` but does not clear its gate until a staffer
+  // makes the card-sighting attestation (H-23/H-24), so the diver is blocked on
+  // the manifest and the staffer is asked to look at the actual card — which is
+  // exactly where "Deep Adventure Dive" is caught. Narrowing the pattern here
+  // would instead drop real Deep specialty cells whose wording we cannot
+  // enumerate. Revisit if admission ever tightens to require a confirmed card.
   if (/\bdeep\b/.test(value)) found.push("deep");
   return found;
 }

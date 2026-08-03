@@ -50,11 +50,11 @@ export default async function DiverDetailPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string; personId: string }>;
-  searchParams: Promise<{ notice?: string; undo?: string; cardType?: string }>;
+  searchParams: Promise<{ notice?: string; undo?: string; cardType?: string; gate?: string }>;
 }) {
   const session = await requireStaffSession();
   const { shopSlug, personId } = await params;
-  const { notice, undo, cardType } = await searchParams;
+  const { notice, undo, cardType, gate } = await searchParams;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   const locale = await requestLocale(shop?.defaultLocale);
@@ -101,7 +101,7 @@ export default async function DiverDetailPage({
           undoLabel={t("shared.undoToast.undo")}
         />
       ) : (
-        <NoticeBanner notice={notice} locale={locale} shopSlug={shopSlug} />
+        <NoticeBanner notice={notice} gate={gate} locale={locale} shopSlug={shopSlug} />
       )}
       {/* Above the stat cards, not below them: on a 390px phone those three
           cards stack, and a row sitting under them lands ~1,150px down — a spine

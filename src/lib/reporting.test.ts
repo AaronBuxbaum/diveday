@@ -21,7 +21,7 @@ function trip(overrides: Partial<ReportTrip> = {}): ReportTrip {
 }
 
 function input(overrides: Partial<MonthlyReportInput> = {}): MonthlyReportInput {
-  return { trips: [trip()], revenueCents: 0, ...overrides };
+  return { trips: [trip()], revenueCents: 0, tipsCents: 0, tipCount: 0, ...overrides };
 }
 
 describe("summarizeMonth", () => {
@@ -82,6 +82,23 @@ describe("summarizeMonth", () => {
 
   it("passes revenue through untouched", () => {
     expect(summarizeMonth(input({ revenueCents: 184_500 })).revenueCents).toBe(184_500);
+  });
+
+  it("carries tips as their own figure and never folds them into revenue (PAY-M2)", () => {
+    // A tip is 100% the shop's, charged on its own Stripe session, and never
+    // part of the booking payment gate — so "Revenue collected" has to keep
+    // meaning payments and deposits, with tips reported beside it. Summing
+    // them here is what would make the revenue card stop reconciling.
+    const report = summarizeMonth(input({ revenueCents: 184_500, tipsCents: 7_400, tipCount: 3 }));
+    expect(report.revenueCents).toBe(184_500);
+    expect(report.tipsCents).toBe(7_400);
+    expect(report.tipCount).toBe(3);
+  });
+
+  it("reports a tipless month as zero rather than leaving the figure absent", () => {
+    const report = summarizeMonth(input({ trips: [], revenueCents: 0 }));
+    expect(report.tipsCents).toBe(0);
+    expect(report.tipCount).toBe(0);
   });
 
   it("returns null rates for an empty month instead of dividing by zero", () => {

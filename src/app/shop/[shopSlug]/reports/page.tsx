@@ -381,7 +381,7 @@ export default async function ReportsPage({
         <>
           <section
             aria-label={t("reports.numbersLabel")}
-            className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
+            className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
           >
             <Metric
               label={t("reports.metrics.revenueLabel")}
@@ -389,6 +389,18 @@ export default async function ReportsPage({
               detail={t("reports.metrics.revenueDetail")}
               linkHref={revenueOrdersHref}
               linkLabel={t("reports.metrics.revenueViewOrders")}
+            />
+            {/*
+              Tips sit beside revenue rather than inside it (PAY-M2): they are
+              their own Stripe charge, 100% to the shop, and never part of the
+              booking payment gate — so the two numbers together are what makes
+              the month reconcile against the shop's Stripe dashboard, while
+              "Revenue collected" keeps meaning what its detail line says.
+            */}
+            <Metric
+              label={t("reports.metrics.tipsLabel")}
+              value={formatReportMoney(report.tipsCents, currency, locale)}
+              detail={t("reports.metrics.tipsDetail", { count: report.tipCount })}
             />
             <Metric
               label={t("reports.metrics.bookingsLabel")}

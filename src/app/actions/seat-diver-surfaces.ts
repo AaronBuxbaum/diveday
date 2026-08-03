@@ -76,6 +76,10 @@ const TRIP_REFUSAL_NOTICE: Record<SeatDiverRefusal, string> = {
   course_prerequisite: "diver-course-prerequisite",
   course_ratio_full: "diver-course-ratio-full",
   course_min_age: "diver-course-min-age",
+  // The boat's own cert/specialty/nitrox gate, distinct from a *course's*
+  // admission rule above: this diver's cards can't reach what the trip and its
+  // sites demand, and the staffer's next move is a different one (DOM-M6).
+  trip_prerequisite: "diver-trip-prerequisite",
   trip_unavailable: "diver-unavailable",
   person_not_found: "diver-unavailable",
   unavailable: "diver-unavailable",
@@ -117,6 +121,7 @@ export const SEAT_SURFACES: Record<SeatSurfaceId, SeatSurface> = {
       course_prerequisite: "walkin_unavailable",
       course_ratio_full: "walkin_unavailable",
       course_min_age: "walkin_unavailable",
+      trip_prerequisite: "walkin_unavailable",
       trip_unavailable: "walkin_unavailable",
       person_not_found: "walkin_unavailable",
       unavailable: "walkin_unavailable",
@@ -143,6 +148,7 @@ export const SEAT_SURFACES: Record<SeatSurfaceId, SeatSurface> = {
       course_prerequisite: "course_prerequisite",
       course_ratio_full: "course_ratio_full",
       course_min_age: "course_min_age",
+      trip_prerequisite: "trip_prerequisite",
       trip_unavailable: "trip_unavailable",
       person_not_found: "booking-invalid",
       unavailable: "trip_unavailable",

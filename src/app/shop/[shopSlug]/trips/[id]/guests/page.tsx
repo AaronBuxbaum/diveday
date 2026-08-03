@@ -59,6 +59,8 @@ type TripGuestsSearchParams = Promise<{
   bid?: string;
   diverq?: string;
   count?: string;
+  /** The encoded trip-admission refusal behind a `diver-trip-prerequisite` notice. */
+  gate?: string;
   rf?: string;
   /** The deleted note's booking + text, carried by the land-then-undo redirect (§7). */
   noteBookingId?: string;
@@ -109,7 +111,7 @@ async function TripGuestsBody({
 }) {
   const session = await requireStaffSession();
   const { shopSlug, id: tripId } = await params;
-  const { notice, bid, diverq, count, rf, noteBookingId, noteBody } = await searchParams;
+  const { notice, bid, diverq, count, gate, rf, noteBookingId, noteBody } = await searchParams;
   const rosterFilter = isRosterFilter(rf) ? rf : "all";
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
@@ -249,6 +251,7 @@ async function TripGuestsBody({
         <TripNoticeBanner
           notice={notice}
           count={count}
+          gate={gate}
           locale={locale}
           undoBookingId={undoBookingId}
           undoAction={undoRemoveBookingAction.bind(null, shopSlug, tripId)}

@@ -15,7 +15,7 @@ import { getDb } from "@/db/client";
 import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
 import { addInternalNote, deleteInternalNote, recordTripActivity } from "@/db/operations";
 import { getBookingPayment, setBookingPayment } from "@/db/payments";
-import { upsertTripRequirements } from "@/db/readiness";
+import { listTripReadiness, upsertTripRequirements } from "@/db/readiness";
 import { deleteRecapPhoto, setTripRecapShoutout } from "@/db/recap";
 import { type CancellationRefundOutcome, refundBookingOnCancellation } from "@/db/refunds";
 import { people } from "@/db/schema";
@@ -48,6 +48,7 @@ import { MAX_PRICE_MINOR_UNITS, majorToMinor, toShopCurrency } from "@/lib/money
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { notify, publicAppUrl } from "@/lib/notifications";
 import { publicTripPath } from "@/lib/public-routes";
+import { BLOCKER_CATEGORY } from "@/lib/readiness";
 import { MAX_SERIES_OCCURRENCES, weeklyOccurrencesAfter } from "@/lib/recurrence";
 import { requireStaffSession } from "@/lib/session";
 import {
@@ -873,7 +874,26 @@ export async function saveRequirementsAction(shopSlug: string, tripId: string, f
     requiresNitrox: formData.get("requiresNitrox") === "on",
     requiresPayment: formData.get("requiresPayment") === "on",
   });
-  revalidateAndRedirect(back, `${back}?notice=${saved ? "requirements" : "invalid"}`);
+  if (!saved) redirect(`${back}?notice=invalid`);
+  // **Who this just blocked.** Readiness is computed live from the trip's
+  // current requirement row and the sites it visits, so a tightened gate
+  // already reaches every booked diver the moment it is saved — they turn up
+  // blocked on Today, the schedule board, the roster, and the manifest without
+  // anything here re-checking them. What was missing is that the staffer who
+  // tightened it walked away not knowing, and found out when a diver did.
+  //
+  // So this is a notice, not a gate: it never refuses the save (a shop may
+  // legitimately tighten a gate and then work the roster), it just counts the
+  // booked divers the new rule leaves with a certification blocker.
+  const blocked = (await listTripReadiness(db, s.user.shopId, tripId)).filter((row) =>
+    row.readiness.blockers.some((blocker) => BLOCKER_CATEGORY[blocker.code] === "certification"),
+  ).length;
+  revalidateAndRedirect(
+    back,
+    blocked > 0
+      ? `${back}?notice=requirements-blocking&count=${blocked}`
+      : `${back}?notice=requirements`,
+  );
 }
 
 export async function updateTripCrewAction(

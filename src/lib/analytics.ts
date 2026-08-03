@@ -81,6 +81,7 @@ export type AnalyticsEvent =
         | "person_not_found"
         | "course_prerequisite"
         | "course_min_age"
+        | "trip_prerequisite"
         | "trip_full"
         | "course_ratio_full"
         | "already_booked";

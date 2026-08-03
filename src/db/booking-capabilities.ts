@@ -235,7 +235,7 @@ export async function resolveRevokedBookingCapability(
  * staff-facing "revoke this link" action would call.
  */
 export async function revokeBookingCapabilities(
-  db: AppDb,
+  db: DbExecutor,
   input: { shopId: string; bookingId: string; purpose?: CapabilityPurpose; now?: Date },
 ): Promise<void> {
   const now = input.now ?? nowDate();

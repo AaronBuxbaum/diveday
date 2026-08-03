@@ -2,6 +2,7 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import { nowDate, nowMs } from "@/lib/clock";
+import type { CertificationLevel } from "@/lib/readiness";
 import { seededShopContext } from "@/test/db";
 import * as bookingCapabilitiesModule from "./booking-capabilities";
 import {
@@ -16,16 +17,21 @@ import {
 import type { AppDb } from "./client";
 import { createDiver } from "./divers";
 import { setBookingPayment } from "./payments";
+import * as readinessModule from "./readiness";
 import {
   bookingCapabilities,
   bookingCheckoutBookings,
   bookingCheckouts,
   bookings,
+  certifications,
   courses,
+  diveSites,
   people,
   personRoles,
   shops,
   tripAssignments,
+  tripDives,
+  tripRequirements,
   trips,
 } from "./schema";
 import {
@@ -1370,6 +1376,7 @@ describe("rescheduleBooking (diver self-service, docs ADR 20260727-diver-self-se
       .insert(bookingCheckouts)
       .values({
         shopId: shop.id,
+        currency: "usd",
         tripId: night.id,
         status: "pending",
         stripeAccountId: "acct_test",
@@ -1511,5 +1518,464 @@ describe("cancelBooking (staff cancellation runs status update + capability revo
       .from(bookingCapabilities)
       .where(eq(bookingCapabilities.bookingId, booked.bookingId));
     expect(capability?.revokedAt).toBeNull();
+  });
+});
+
+/**
+ * The trip's own certification/specialty/nitrox gate at booking time (DOM-M6,
+ * docs ADR 20260803-trip-admission-at-booking). Every door reaches it through
+ * `createBookingRecord`, so these exercise it through the public form, the
+ * party form, and a self-service reschedule; `seat-diver.test.ts` covers the
+ * staff doors.
+ */
+describe("createBooking trip admission (the boat's own cert gate, DOM-M6)", () => {
+  /** A verified card on file — evidence this shop has actually adjudicated. */
+  async function card(
+    db: AppDb,
+    shopId: string,
+    personId: string,
+    overrides: Partial<typeof certifications.$inferInsert> = {},
+  ) {
+    await db.insert(certifications).values({
+      shopId,
+      personId,
+      agency: "padi",
+      level: "open_water",
+      identifier: `C-${Math.random().toString(36).slice(2, 10)}`,
+      status: "verified",
+      ...overrides,
+    });
+  }
+
+  /** This trip now demands exactly this level and nothing else of its own. */
+  async function demandOf(
+    db: AppDb,
+    shopId: string,
+    tripId: string,
+    level: CertificationLevel | null,
+  ) {
+    await db
+      .update(tripRequirements)
+      .set({
+        minimumCertificationLevel: level,
+        requiredSpecialties: [],
+        requiresNitrox: false,
+      })
+      .where(and(eq(tripRequirements.tripId, tripId), eq(tripRequirements.shopId, shopId)));
+  }
+
+  async function diver(db: AppDb, shopId: string, email: string) {
+    const person = await createDiver(db, { shopId, fullName: "Cass Marlin", email });
+    if (!person) throw new Error("diver setup failed");
+    return person;
+  }
+
+  it("refuses the carded diver whose level cannot reach the trip's, naming the gap", async () => {
+    const { db, shop, open } = await seededContext();
+    const person = await diver(db, shop.id, "cass@example.com");
+    await card(db, shop.id, person.id, { level: "open_water" });
+    await demandOf(db, shop.id, open.id, "advanced_open_water");
+
+    const outcome = await createBooking(db, {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: open.id,
+      personId: person.id,
+    });
+    expect(outcome).toEqual({
+      ok: false,
+      reason: "trip_prerequisite",
+      refusal: {
+        requiredLevel: "advanced_open_water",
+        missingSpecialties: [],
+        nitroxRequired: false,
+        heldLevel: "open_water",
+      },
+    });
+    // Refused means refused: no seat, and nothing half-written.
+    const rows = await db
+      .select()
+      .from(bookings)
+      .where(and(eq(bookings.tripId, open.id), eq(bookings.personId, person.id)));
+    expect(rows).toHaveLength(0);
+  });
+
+  it("admits the same diver once a card that reaches the bar is on file", async () => {
+    const { db, shop, open } = await seededContext();
+    const person = await diver(db, shop.id, "cass@example.com");
+    await card(db, shop.id, person.id, { level: "advanced_open_water" });
+    await demandOf(db, shop.id, open.id, "advanced_open_water");
+
+    await expect(
+      createBooking(db, { actor: "staff", shopId: shop.id, tripId: open.id, personId: person.id }),
+    ).resolves.toMatchObject({ ok: true });
+  });
+
+  it("never refuses a diver this shop has no verified card for — the new customer still books", async () => {
+    // The deliberate limit of this gate (H-08's settled trade-off, repeated in
+    // the ADR): absence of evidence is not a refusal, or every first-time
+    // diver would be locked out of a shop whose trips all state a level.
+    const { db, shop, open } = await seededContext();
+    await demandOf(db, shop.id, open.id, "advanced_open_water");
+
+    await expect(bookVisitor(db, shop.id, open.id)).resolves.toMatchObject({ ok: true });
+  });
+
+  it("refuses on a specialty a dive site demands even though the trip itself demands none", async () => {
+    // The itinerary's own gate: the Spiegel Grove site row carries AOW + Deep,
+    // and reading only the trip's requirement row would miss it entirely.
+    const { db, shop, open } = await seededContext();
+    const [site] = await db
+      .select()
+      .from(diveSites)
+      .where(and(eq(diveSites.shopId, shop.id), eq(diveSites.name, "Spiegel Grove")))
+      .limit(1);
+    if (!site) throw new Error("seeded Spiegel Grove site missing");
+    await db.update(trips).set({ diveSiteId: site.id }).where(eq(trips.id, open.id));
+    await demandOf(db, shop.id, open.id, null);
+
+    const person = await diver(db, shop.id, "cass@example.com");
+    await card(db, shop.id, person.id, { level: "instructor" });
+
+    expect(
+      await createBooking(db, {
+        actor: "staff",
+        shopId: shop.id,
+        tripId: open.id,
+        personId: person.id,
+      }),
+    ).toMatchObject({
+      ok: false,
+      reason: "trip_prerequisite",
+      refusal: { missingSpecialties: ["deep"] },
+    });
+  });
+
+  it("reads every site the itinerary visits, not only the first — a diver fit for dive one but not dive two is refused", async () => {
+    const { db, shop, open } = await seededContext();
+    const [deepSite] = await db
+      .select()
+      .from(diveSites)
+      .where(and(eq(diveSites.shopId, shop.id), eq(diveSites.name, "USCGC Duane")))
+      .limit(1);
+    if (!deepSite) throw new Error("seeded USCGC Duane site missing");
+    // Dive two is the deep wreck; dive one (the trip's own shallow primary
+    // site) is a reef any certified diver can dive.
+    // `trip_dives` has no `shop_id` of its own — ownership is proven through
+    // the trip it hangs off, and `getTripSiteRequirement`'s join asserts the
+    // *site's* shop separately (the CR-007 house rule).
+    await db.insert(tripDives).values({
+      tripId: open.id,
+      diveNumber: 9,
+      diveSiteId: deepSite.id,
+    });
+    await demandOf(db, shop.id, open.id, null);
+
+    const person = await diver(db, shop.id, "cass@example.com");
+    await card(db, shop.id, person.id, { level: "open_water" });
+
+    expect(
+      await createBooking(db, {
+        actor: "staff",
+        shopId: shop.id,
+        tripId: open.id,
+        personId: person.id,
+      }),
+    ).toMatchObject({
+      ok: false,
+      reason: "trip_prerequisite",
+      refusal: {
+        requiredLevel: "advanced_open_water",
+        missingSpecialties: ["deep"],
+        heldLevel: "open_water",
+      },
+    });
+  });
+
+  it("gates the anonymous public form too, and never seats the party it refuses", async () => {
+    const { db, shop, open } = await seededContext();
+    const person = await diver(db, shop.id, "cass@example.com");
+    await card(db, shop.id, person.id, { level: "open_water" });
+    await demandOf(db, shop.id, open.id, "rescue");
+
+    const outcome = await createBookingParty(db, [
+      {
+        actor: "public",
+        shopId: shop.id,
+        tripId: open.id,
+        fullName: "Nora Quinn",
+        email: visitor.email,
+      },
+      {
+        actor: "public",
+        shopId: shop.id,
+        tripId: open.id,
+        fullName: "Cass Marlin",
+        email: "cass@example.com",
+      },
+    ]);
+    expect(outcome).toMatchObject({
+      ok: false,
+      reason: "trip_prerequisite",
+      failedIndex: 1,
+      refusal: { requiredLevel: "rescue", heldLevel: "open_water" },
+    });
+    // All-or-nothing: the first diver's seat rolls back with the second's refusal.
+    const roster = await getTripRoster(db, shop.id, open.id);
+    expect(roster.map((r) => r.person.fullName)).not.toContain("Nora Quinn");
+  });
+
+  it("refuses a reschedule onto a trip this diver cannot qualify for, leaving the original seat alone", async () => {
+    const { db, shop, open } = await seededContext();
+    const trips_ = await upcomingTripsWithCounts(db, shop.id);
+    const night = trips_.find((t) => t.title.startsWith("Night Dive"));
+    if (!night) throw new Error("night trip missing");
+    const person = await diver(db, shop.id, "cass@example.com");
+    await card(db, shop.id, person.id, { level: "open_water" });
+    await demandOf(db, shop.id, night.id, null);
+    const booked = await createBooking(db, {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: night.id,
+      personId: person.id,
+    });
+    if (!booked.ok) throw new Error("setup booking failed");
+    await demandOf(db, shop.id, open.id, "divemaster");
+
+    expect(
+      await rescheduleBooking(db, {
+        shopId: shop.id,
+        bookingId: booked.bookingId,
+        newTripId: open.id,
+      }),
+    ).toMatchObject({ ok: false, reason: "trip_prerequisite" });
+    const [original] = await db.select().from(bookings).where(eq(bookings.id, booked.bookingId));
+    expect(original?.status).toBe("booked");
+  });
+
+  it("answers a full boat as full, never as a statement about the diver's cards", async () => {
+    // Capacity is checked first on purpose: it is the cheaper answer and it
+    // discloses nothing about the person behind a guessed email.
+    const { db, shop, fullTrip } = await seededContext();
+    const person = await diver(db, shop.id, "cass@example.com");
+    await card(db, shop.id, person.id, { level: "open_water" });
+    await demandOf(db, shop.id, fullTrip.id, "instructor");
+
+    expect(
+      await createBooking(db, {
+        actor: "staff",
+        shopId: shop.id,
+        tripId: fullTrip.id,
+        personId: person.id,
+      }),
+    ).toEqual({ ok: false, reason: "trip_full" });
+  });
+
+  it("does not judge a diver whose booking identity is unconfirmed by the matched record's cards", async () => {
+    // H-13: the submitted name disagreed with the person already on that
+    // email, so those cards may belong to somebody else entirely. Readiness
+    // fails closed on the flag; admission simply declines to read the record.
+    const { db, shop, open } = await seededContext();
+    const person = await diver(db, shop.id, "shared@example.com");
+    await card(db, shop.id, person.id, { level: "open_water" });
+    await demandOf(db, shop.id, open.id, "divemaster");
+
+    const outcome = await createBooking(db, {
+      actor: "public",
+      shopId: shop.id,
+      tripId: open.id,
+      fullName: "Someone Else Entirely",
+      email: "shared@example.com",
+    });
+    expect(outcome).toMatchObject({ ok: true });
+    const [row] = await db
+      .select()
+      .from(bookings)
+      .where(and(eq(bookings.tripId, open.id), eq(bookings.personId, person.id)));
+    expect(row?.identityUnconfirmedAt).not.toBeNull();
+  });
+
+  it("still admits when the card that would clear the bar is only awaiting verification", async () => {
+    const { db, shop, open } = await seededContext();
+    const person = await diver(db, shop.id, "cass@example.com");
+    await card(db, shop.id, person.id, { level: "open_water" });
+    await card(db, shop.id, person.id, { level: "advanced_open_water", status: "pending" });
+    await demandOf(db, shop.id, open.id, "advanced_open_water");
+
+    await expect(
+      createBooking(db, { actor: "staff", shopId: shop.id, tripId: open.id, personId: person.id }),
+    ).resolves.toMatchObject({ ok: true });
+  });
+
+  it("ignores a card staff have archived — a deleted row is not evidence of anything", async () => {
+    const { db, shop, open } = await seededContext();
+    const person = await diver(db, shop.id, "cass@example.com");
+    await card(db, shop.id, person.id, { level: "instructor", deletedAt: nowDate() });
+    await card(db, shop.id, person.id, { level: "open_water" });
+    await demandOf(db, shop.id, open.id, "rescue");
+
+    expect(
+      await createBooking(db, {
+        actor: "staff",
+        shopId: shop.id,
+        tripId: open.id,
+        personId: person.id,
+      }),
+    ).toMatchObject({
+      ok: false,
+      reason: "trip_prerequisite",
+      refusal: { requiredLevel: "rescue", heldLevel: "open_water" },
+    });
+  });
+
+  it("never reads another shop's cards as this shop's evidence", async () => {
+    const { db, shop, open } = await seededContext();
+    const [other] = await db
+      .insert(shops)
+      .values({ name: "Other Shop", slug: "other-shop-trip-admission-test", timezone: "UTC" })
+      .returning();
+    if (!other) throw new Error("second shop setup failed");
+    const person = await diver(db, shop.id, "cass@example.com");
+    await card(db, shop.id, person.id, { level: "open_water" });
+    // An instructor card belonging to a different tenant must not clear this
+    // shop's gate (CR-007: prove ownership on the query).
+    await card(db, other.id, person.id, { level: "instructor" });
+    await demandOf(db, shop.id, open.id, "rescue");
+
+    expect(
+      await createBooking(db, {
+        actor: "staff",
+        shopId: shop.id,
+        tripId: open.id,
+        personId: person.id,
+      }),
+    ).toMatchObject({
+      ok: false,
+      reason: "trip_prerequisite",
+      refusal: { heldLevel: "open_water" },
+    });
+  });
+
+  it("refuses a nitrox-gated trip for a carded diver holding no enriched-air card", async () => {
+    const { db, shop, open } = await seededContext();
+    const person = await diver(db, shop.id, "cass@example.com");
+    await card(db, shop.id, person.id, { level: "instructor" });
+    await db
+      .update(tripRequirements)
+      .set({ minimumCertificationLevel: null, requiresNitrox: true })
+      .where(and(eq(tripRequirements.tripId, open.id), eq(tripRequirements.shopId, shop.id)));
+
+    expect(
+      await createBooking(db, {
+        actor: "staff",
+        shopId: shop.id,
+        tripId: open.id,
+        personId: person.id,
+      }),
+    ).toMatchObject({
+      ok: false,
+      reason: "trip_prerequisite",
+      refusal: { nitroxRequired: true },
+    });
+  });
+
+  /**
+   * **Continuing education dives at the sites it certifies people for.**
+   *
+   * An AOW course's deep adventure dive happens at a site marked
+   * `advanced_open_water`; a Deep specialty course at one that demands the Deep
+   * card it is about to issue. Reading the itinerary's gate at enrolment
+   * refused the students the course exists to create — and did it invisibly
+   * (the trip page renders no site note on a course session) and unfixably
+   * (`saveRequirementsAction` refuses to edit a course session's requirements
+   * at all). On a course session the course's own `minimum_certification_level`
+   * is the admission rule; readiness still shows the site's gate to the
+   * instructor.
+   */
+  it("enrols an Open Water diver in the AOW course whose dive site demands AOW", async () => {
+    const { db, shop } = await seededContext();
+    const [advancedSite] = await db
+      .insert(diveSites)
+      .values({
+        shopId: shop.id,
+        name: "Adventure Dive Wall",
+        minimumCertificationLevel: "advanced_open_water",
+        requiredSpecialties: ["deep"],
+      })
+      .returning();
+    if (!advancedSite) throw new Error("gated site setup failed");
+    const [course] = await db
+      .insert(courses)
+      .values({
+        shopId: shop.id,
+        title: "Advanced Open Water — admission test",
+        slug: "aow-admission-test",
+        agency: "padi",
+        // The card this course *requires*, one rung below the card it issues —
+        // and one rung below what its own dive site demands.
+        minimumCertificationLevel: "open_water",
+      })
+      .returning();
+    if (!course) throw new Error("course setup failed");
+    const staff = await listStaff(db, shop.id);
+    const instructor = staff.find((entry) => entry.roles.includes("instructor"));
+    if (!instructor) throw new Error("seeded instructor missing");
+    // 200 days out so the seeded instructor's calendar is clear whatever hour
+    // the suite runs at — same reasoning as `introSession` above.
+    const startsAt = new Date(nowMs() + 200 * 24 * 60 * 60 * 1000);
+    const session = await createTrip(db, {
+      shopId: shop.id,
+      courseId: course.id,
+      diveSiteId: advancedSite.id,
+      title: "AOW course — deep adventure dive",
+      startsAt,
+      endsAt: new Date(startsAt.getTime() + 5 * 60 * 60 * 1000),
+      capacity: 6,
+      plannedDives: 2,
+    });
+    if (!session) throw new Error("course session setup failed");
+    if (!(await setTripCrew(db, shop.id, session.id, [instructor.person.id]))) {
+      throw new Error("instructor assignment failed");
+    }
+
+    const person = await diver(db, shop.id, "student@example.com");
+    await card(db, shop.id, person.id, { level: "open_water" });
+
+    expect(
+      await createBooking(db, {
+        actor: "staff",
+        shopId: shop.id,
+        tripId: session.id,
+        personId: person.id,
+      }),
+    ).toMatchObject({ ok: true });
+  });
+
+  it("fails closed when the requirement lookup itself throws — no seat is written", async () => {
+    // Whatever goes wrong reading the gate, the booking transaction aborts
+    // rather than committing a seat nobody checked.
+    const { db, shop, open } = await seededContext();
+    const person = await diver(db, shop.id, "cass@example.com");
+    await card(db, shop.id, person.id, { level: "open_water" });
+    const spy = vi
+      .spyOn(readinessModule, "getTripSiteRequirement")
+      .mockRejectedValueOnce(new Error("simulated requirement lookup failure"));
+    try {
+      await expect(
+        createBooking(db, {
+          actor: "staff",
+          shopId: shop.id,
+          tripId: open.id,
+          personId: person.id,
+        }),
+      ).rejects.toThrow("simulated requirement lookup failure");
+    } finally {
+      spy.mockRestore();
+    }
+    const rows = await db
+      .select()
+      .from(bookings)
+      .where(and(eq(bookings.tripId, open.id), eq(bookings.personId, person.id)));
+    expect(rows).toHaveLength(0);
   });
 });

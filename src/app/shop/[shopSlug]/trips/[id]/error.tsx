@@ -1,13 +1,14 @@
 "use client";
 
-// i18n-exempt-file: error.tsx is a Next.js file convention with a fixed
-// {error, reset} prop signature — the framework instantiates it directly, so
-// no Server Component ancestor can pass it a `copy` prop the way every other
-// staff Client Component receives its words (src/i18n/staff-messages.ts).
-// Bridging server-resolved copy across an error boundary would need new
-// context-provider plumbing threaded through the layout for three short,
-// rare-path strings; flagged for a follow-up decision rather than invented
-// unilaterally during a text-extraction pass.
+// i18n-exempt-file: the "follow-up decision" this file used to flag is made —
+// ADR 20260803-error-boundary-copy-bridge. Boundary copy is resolved in the
+// layout above the boundary, not inside it. Diver routes take that through
+// DiverIntlProvider with a single `errorBoundary` namespace; staff routes
+// cannot, because staff copy never crosses to the client as a bundle
+// (src/i18n/staff-messages.ts), so their version is a `copy`-prop context fed
+// by `staffTranslator` from shop/[shopSlug]/layout.tsx. That is the change
+// this file is waiting on — see shop/[shopSlug]/error.tsx, which carries the
+// same three strings and gets converted in the same pass.
 import { buttonClass } from "@/components/ui/button";
 
 /**

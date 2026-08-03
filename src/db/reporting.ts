@@ -27,6 +27,7 @@ import {
   orders,
   people,
   personRoles,
+  tips,
   trips,
   userAccounts,
   waiverRecords,
@@ -255,6 +256,30 @@ export async function getMonthlyReport(
       ),
     );
 
+  // Post-trip tips settled on this month's trips (PAY-M2). Anchored to the
+  // trip's departure like every other figure here, not to when the diver
+  // happened to tap the recap link, so a tip left the morning after a June
+  // charter belongs to June's boat.
+  //
+  // Only `paid`: a pending Stripe session is money nobody has, and an expired
+  // one is money nobody will get. Tips are a separate flow from the booking
+  // payment gate — their own table, their own Stripe session, 100% to the shop
+  // (docs ADR 20260726-post-trip-tipping) — so this can never double-count
+  // against the revenue sums above, and it is returned as its own figure
+  // rather than added into them.
+  //
+  // Summed without a currency filter, exactly as `booking_payments` is two
+  // queries above. `tips.currency` is per-row and a shop can change currency
+  // (docs ADR 20260731-shop-currency), so this report is single-currency by
+  // assumption throughout — a pre-existing limitation of the whole page, not
+  // one tips introduce.
+  const [tipTotals] = await db
+    .select({ total: sum(tips.amountCents), tipCount: count(tips.id) })
+    .from(tips)
+    .innerJoin(bookings, and(eq(bookings.id, tips.bookingId), eq(bookings.shopId, shopId)))
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .where(and(inWindow, eq(tips.shopId, shopId), eq(tips.status, "paid")));
+
   const waiverByTrip = new Map(waiverRows.map((row) => [row.tripId, Number(row.waiverComplete)]));
 
   const reportTrips: ReportTrip[] = tripRows.map((row) => ({
@@ -272,6 +297,8 @@ export async function getMonthlyReport(
       Number(baseRevenue?.total ?? 0) +
       Number(recoveredDeposits?.total ?? 0) +
       Number(invoiceRevenue?.total ?? 0),
+    tipsCents: Number(tipTotals?.total ?? 0),
+    tipCount: Number(tipTotals?.tipCount ?? 0),
   };
 }
 

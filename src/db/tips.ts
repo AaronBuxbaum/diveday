@@ -247,7 +247,7 @@ export async function startTipCheckout(
       return { ok: true, checkoutUrl: existing.checkoutUrl };
     }
 
-    const intent = await startPaymentOperation(tx as unknown as AppDb, {
+    const intent = await startPaymentOperation(tx, {
       shopId: row.shopId,
       kind: "checkout_session",
       bookingId: input.bookingId,
@@ -269,17 +269,13 @@ export async function startTipCheckout(
       idempotencyKey: idempotencyKeyFor(intent.id),
     });
     if (session.status !== "created") {
-      await resolvePaymentOperation(tx as unknown as AppDb, intent.id, {
+      await resolvePaymentOperation(tx, intent.id, {
         status: "failed",
         errorMessage: session.status,
       });
       return { ok: false, reason: "checkout_unavailable" };
     }
-    await recordPaymentOperationStripeObject(
-      tx as unknown as AppDb,
-      intent.id,
-      session.stripeSessionId,
-    );
+    await recordPaymentOperationStripeObject(tx, intent.id, session.stripeSessionId);
 
     const [created] = await tx
       .insert(tips)
@@ -294,7 +290,7 @@ export async function startTipCheckout(
         expiresAt: session.expiresAt,
       })
       .returning();
-    await resolvePaymentOperation(tx as unknown as AppDb, intent.id, { status: "succeeded" });
+    await resolvePaymentOperation(tx, intent.id, { status: "succeeded" });
     if (!created?.checkoutUrl) {
       return { ok: false, reason: "checkout_unavailable" };
     }

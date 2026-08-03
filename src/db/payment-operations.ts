@@ -28,7 +28,7 @@ export type StartPaymentOperationInput = {
  * later write is not durable against a crash between the two (CR-005).
  */
 export async function startPaymentOperation(
-  db: AppDb,
+  db: DbExecutor,
   input: StartPaymentOperationInput,
 ): Promise<PaymentOperationIntent> {
   const [intent] = await db

@@ -5,6 +5,7 @@ import { getDb } from "@/db/client";
 import { type SeatDiverPerson, seatDiver } from "@/db/seat-diver";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
+import { encodeTripAdmissionRefusal, type TripAdmissionRefusal } from "@/lib/trip-admission";
 import {
   SEAT_SURFACES,
   type SeatLanding,
@@ -70,9 +71,22 @@ function withNotice(path: string, notice: string, bookingId?: string): string {
  * happens when it doesn't. Revalidating does not rescue that case — the trip
  * moving into the path is what does.
  */
-function refuse(surface: SeatSurface, landing: SeatLanding, notice: string): never {
+function refuse(
+  surface: SeatSurface,
+  landing: SeatLanding,
+  notice: string,
+  /**
+   * The `trip_prerequisite` refusal's structured detail, flattened into the one
+   * `gate=` param (`encodeTripAdmissionRefusal`). Codes only, and only on a
+   * staff URL — the banner turns it into the sentence that says *which*
+   * requirement failed and what the diver holds, instead of the one static
+   * line that used to point every refusal at the certifications form.
+   */
+  gate?: TripAdmissionRefusal,
+): never {
   const back = surface.refusedPath(landing);
-  return revalidateAndRedirect(back, withNotice(back, notice));
+  const detail = gate ? `&gate=${encodeURIComponent(encodeTripAdmissionRefusal(gate))}` : "";
+  return revalidateAndRedirect(back, `${withNotice(back, notice)}${detail}`);
 }
 
 /** Everything after "who and which trip" — identical for every door. */
@@ -90,7 +104,7 @@ async function seat(
     entry: surface.entry,
     refusals: surface.refusals,
   });
-  if (!result.ok) refuse(surface, landing, surface.refusalNotice[result.reason]);
+  if (!result.ok) refuse(surface, landing, surface.refusalNotice[result.reason], result.refusal);
   const settled: SeatLanding = { ...landing, personId: result.personId };
   const path = surface.seatedPath(settled);
   // The seat happened either way; what differs is whether the staffer can walk

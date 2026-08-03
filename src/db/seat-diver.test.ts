@@ -2,6 +2,7 @@
 import { and, eq, inArray, ne } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { nowDate } from "@/lib/clock";
+import type { CertificationLevel } from "@/lib/readiness";
 import { seededShopContext } from "@/test/db";
 import type { AppDb } from "./client";
 
@@ -19,6 +20,7 @@ vi.mock("@aws-sdk/client-sesv2", async (importOriginal) => {
 import {
   activityEvents,
   bookings,
+  certifications,
   people,
   personRoles,
   tripRequirements,
@@ -444,5 +446,114 @@ describe("seatDiver refusal granularity (the per-surface parameter)", () => {
 
     expect(again).toEqual({ ok: false, reason: "already_booked" });
     expect(onFullBoat).toEqual({ ok: false, reason: "trip_full" });
+  });
+});
+
+/**
+ * The staff doors and the boat's own cert gate (DOM-M6). `seatDiver` never
+ * re-implements it — it inherits it from `createBooking` — so what these
+ * assert is that all four doors really do reach it and that the counter's
+ * deliberate collapse still applies to it.
+ */
+describe("seatDiver trip admission (the boat's own cert gate reaches every staff door)", () => {
+  /** Put one verified card on file, so the shop has actually adjudicated this diver. */
+  async function card(db: AppDb, shopId: string, personId: string, level: CertificationLevel) {
+    await db.insert(certifications).values({
+      shopId,
+      personId,
+      agency: "padi",
+      level,
+      identifier: `C-${Math.random().toString(36).slice(2, 10)}`,
+      status: "verified",
+    });
+  }
+
+  async function demandOf(
+    db: AppDb,
+    shopId: string,
+    tripId: string,
+    level: CertificationLevel | null,
+  ) {
+    await db
+      .update(tripRequirements)
+      .set({ minimumCertificationLevel: level, requiredSpecialties: [], requiresNitrox: false })
+      .where(and(eq(tripRequirements.tripId, tripId), eq(tripRequirements.shopId, shopId)));
+  }
+
+  it("refuses a staff seating for a diver whose cards cannot reach the trip's requirement", async () => {
+    const { db, shop, open, actorPersonId } = await context();
+    const diver = await bookableDiver(db, shop.id, open.id);
+    await card(db, shop.id, diver.id, "open_water");
+    await demandOf(db, shop.id, open.id, "divemaster");
+
+    const result = await seatDiver(db, {
+      shopId: shop.id,
+      tripId: open.id,
+      actorPersonId,
+      diver: { personId: diver.id },
+      entry: "roster",
+      refusals: "specific",
+    });
+
+    // The structured detail rides along, because the staff surface's sentence
+    // depends on it: "they are not a Divemaster" and "their Deep card isn't on
+    // file" call for opposite advice, and only one of them is fixed by adding a
+    // card (src/i18n/readiness-labels.ts `tripAdmissionRefusalText`).
+    expect(result).toEqual({
+      ok: false,
+      reason: "trip_prerequisite",
+      refusal: {
+        requiredLevel: "divemaster",
+        heldLevel: "open_water",
+        missingSpecialties: [],
+        nitroxRequired: false,
+      },
+    });
+    // Refused seatings owe no consequences at all — no seat, no waiver, no trail.
+    const seats = await db
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(and(eq(bookings.tripId, open.id), eq(bookings.personId, diver.id)));
+    expect(seats).toHaveLength(0);
+    expect(await activityMessages(db, open.id)).toEqual([]);
+  });
+
+  it("collapses the same refusal to the counter's one blunt code", async () => {
+    const { db, shop, open, actorPersonId } = await context();
+    const diver = await bookableDiver(db, shop.id, open.id);
+    await card(db, shop.id, diver.id, "open_water");
+    await demandOf(db, shop.id, open.id, "divemaster");
+
+    await expect(
+      seatDiver(db, {
+        shopId: shop.id,
+        tripId: open.id,
+        actorPersonId,
+        diver: { personId: diver.id },
+        entry: "walk_in",
+        refusals: "coarse",
+      }),
+      // `toEqual`, not `toMatchObject`: the collapse must also drop the
+      // structured detail, or the counter's deliberately blunt one-code
+      // vocabulary would grow a specific reason through the back door.
+    ).resolves.toEqual({ ok: false, reason: "unavailable" });
+  });
+
+  it("still seats the hand-entered walk-in the shop has never carded", async () => {
+    // The counter's normal case, and the gate's documented limit: an unknown
+    // diver is admitted here and stopped by readiness at the dock instead.
+    const { db, shop, open, actorPersonId } = await context();
+    await demandOf(db, shop.id, open.id, "divemaster");
+
+    await expect(
+      seatDiver(db, {
+        shopId: shop.id,
+        tripId: open.id,
+        actorPersonId,
+        diver: { fullName: "Counter Cass" },
+        entry: "walk_in",
+        refusals: "coarse",
+      }),
+    ).resolves.toMatchObject({ ok: true, personName: "Counter Cass" });
   });
 });

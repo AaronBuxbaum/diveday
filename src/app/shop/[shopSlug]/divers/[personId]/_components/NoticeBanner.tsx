@@ -1,6 +1,8 @@
 import Link from "next/link";
+import { tripAdmissionRefusalText } from "@/i18n/readiness-labels";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { noticeFromParam } from "@/lib/staff-notices";
+import { decodeTripAdmissionRefusal } from "@/lib/trip-admission";
 
 /**
  * One entry per notice, carrying its own tone and message key. Previously
@@ -56,6 +58,7 @@ const NOTICE_KEYS: Record<string, { tone: NoticeTone; key: StaffMessageKey; link
   course_prerequisite: { tone: "danger", key: "divers.notices.coursePrerequisite" },
   course_ratio_full: { tone: "danger", key: "divers.notices.courseRatioFull" },
   course_min_age: { tone: "danger", key: "divers.notices.courseMinAge" },
+  trip_prerequisite: { tone: "danger", key: "divers.notices.tripPrerequisite" },
   trip_unavailable: { tone: "danger", key: "divers.notices.tripUnavailable" },
   "booking-invalid": { tone: "danger", key: "divers.notices.bookingInvalid" },
   "refund-failed": { tone: "danger", key: "divers.notices.refundFailed" },
@@ -85,23 +88,33 @@ const NOTICE_KEYS: Record<string, { tone: NoticeTone; key: StaffMessageKey; link
 
 export function NoticeBanner({
   notice,
+  gate,
   locale,
   shopSlug,
 }: {
   notice?: string;
+  /**
+   * The encoded `TripAdmissionRefusal` behind `trip_prerequisite` — the trip's
+   * unmet cert requirement and the diver's highest card
+   * (src/lib/trip-admission.ts). This is the surface the old copy sent staff to
+   * ("Add the missing card above"), so it is the one that most needed to stop
+   * saying that on a refusal no card can fix.
+   */
+  gate?: string;
   locale: string;
   shopSlug: string;
 }) {
   const banner = noticeFromParam(notice, NOTICE_KEYS);
   if (!banner) return null;
   const t = staffTranslator(locale);
+  const refusal = notice === "trip_prerequisite" ? decodeTripAdmissionRefusal(gate) : null;
 
   return (
     <p
       role="status"
       className={`mt-6 rounded-lg px-4 py-3 text-sm font-medium ${TONE_CLASS[banner.tone]}`}
     >
-      {t(banner.key)}
+      {refusal ? tripAdmissionRefusalText(t, refusal, locale) : t(banner.key)}
       {banner.link ? (
         <>
           {" "}

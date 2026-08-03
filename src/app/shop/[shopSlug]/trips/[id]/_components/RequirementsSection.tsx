@@ -36,6 +36,28 @@ export function RequirementsSection({
     style: "long",
     type: "conjunction",
   }).format(siteRequirementParts);
+  const hasSiteRequirement = siteRequirementParts.length > 0;
+  /**
+   * The itinerary's own gate, said out loud.
+   *
+   * It used to render only in the editable (non-course) branch, which is
+   * exactly backwards for the case that hurts: a course session's requirements
+   * are frozen — `saveRequirementsAction` refuses to edit them — so on the one
+   * surface where staff have no control over the gate, the gate was also
+   * invisible. An AOW course dives a site marked `advanced_open_water` by
+   * design, and staff could see nothing saying so.
+   */
+  const siteNote = (
+    key: "trips.requirements.siteAlsoRequires" | "trips.requirements.siteAlsoRequiresCourse",
+  ) => (
+    <p className="mt-4 rounded-lg bg-surface-sunken px-3 py-2 text-sm text-muted">
+      {t.rich(key, {
+        site: trip.diveSite?.name ?? t("trips.requirements.thisSite"),
+        list: siteRequirementList,
+        strong: (chunks) => <strong className="font-medium text-foreground">{chunks}</strong>,
+      })}
+    </p>
+  );
   return (
     <section className="mt-10">
       <h2 className="text-lg font-semibold">{t("trips.requirements.heading")}</h2>
@@ -60,6 +82,7 @@ export function RequirementsSection({
                 })
               : t("trips.requirements.notRequiredForEnrollment")}
           </p>
+          {hasSiteRequirement ? siteNote("trips.requirements.siteAlsoRequiresCourse") : null}
         </div>
       ) : (
         <form action={action} className="mt-4 rounded-lg border border-border bg-surface p-5">
@@ -132,20 +155,7 @@ export function RequirementsSection({
               </label>
             </div>
           </fieldset>
-          {siteRequirement &&
-          (siteRequirement.minimumCertificationLevel ||
-            siteRequirement.requiredSpecialties.length > 0 ||
-            siteRequirement.requiresNitrox) ? (
-            <p className="mt-4 rounded-lg bg-surface-sunken px-3 py-2 text-sm text-muted">
-              {t.rich("trips.requirements.siteAlsoRequires", {
-                site: trip.diveSite?.name ?? t("trips.requirements.thisSite"),
-                list: siteRequirementList,
-                strong: (chunks) => (
-                  <strong className="font-medium text-foreground">{chunks}</strong>
-                ),
-              })}
-            </p>
-          ) : null}
+          {hasSiteRequirement ? siteNote("trips.requirements.siteAlsoRequires") : null}
           <SubmitButton
             pendingLabel={t("trips.requirements.saving")}
             className={buttonClass({

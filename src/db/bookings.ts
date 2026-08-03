@@ -6,19 +6,28 @@ import { courseSeatCapacity } from "@/lib/course-ratios";
 import { countInWaterCrew, groupCrewAssignments } from "@/lib/crew-roles";
 import { personNamesMatch } from "@/lib/person-name";
 import { hasVerifiedCertificationAtLeast } from "@/lib/readiness";
+import {
+  decideTripAdmission,
+  type TripAdmission,
+  type TripAdmissionEvidence,
+  type TripAdmissionRefusal,
+} from "@/lib/trip-admission";
 import { revokeBookingCapabilities } from "./booking-capabilities";
 import type { AppDb, DbExecutor } from "./client";
 import { getBookingPayment } from "./payments";
 import { findOrCreatePerson } from "./people";
+import { getTripRequirements, getTripSiteRequirement } from "./readiness";
 import {
   bookingCheckoutBookings,
   bookingCheckouts,
   bookings,
   certifications,
   courses,
+  nitroxCertifications,
   people,
   personRoles,
   shops,
+  specialtyCertifications,
   tripAssignments,
   trips,
 } from "./schema";
@@ -66,8 +75,17 @@ export type BookingRequest = {
   groupPreference?: string;
 } & BookingPerson;
 
-export type BookingOutcome =
-  | { ok: true; bookingId: string; personId: string; personName: string }
+/**
+ * Every way a booking can be refused. Codes, never sentences — each surface
+ * looks them up in its own message bundle.
+ *
+ * `trip_prerequisite` is the trip's *own* cert/specialty/nitrox gate (DOM-M6),
+ * and carries structured detail because a staffer's next move depends on which
+ * requirement failed and what the diver holds. It is a sibling of
+ * `course_prerequisite`, not a replacement: that one is a course's admission
+ * rule, this one is the boat's.
+ */
+export type BookingRefusal =
   | {
       ok: false;
       reason:
@@ -79,11 +97,16 @@ export type BookingOutcome =
         | "course_ratio_full"
         | "course_min_age"
         | "person_not_found";
-    };
+    }
+  | { ok: false; reason: "trip_prerequisite"; refusal: TripAdmissionRefusal };
+
+export type BookingOutcome =
+  | { ok: true; bookingId: string; personId: string; personName: string }
+  | BookingRefusal;
 
 export type BookingPartyOutcome =
   | { ok: true; bookings: Array<{ bookingId: string; personId: string; personName: string }> }
-  | (Exclude<BookingOutcome, { ok: true }> & {
+  | (BookingRefusal & {
       /**
        * Which request in the submitted array the rollback happened on
        * (task 25) — a caller can then point a per-member error at the right
@@ -104,7 +127,7 @@ export type BookingPartyOutcome =
  * the one-booking-per-person constraint.
  */
 export async function createBooking(db: AppDb, req: BookingRequest): Promise<BookingOutcome> {
-  return db.transaction((tx) => createBookingRecord(tx as unknown as AppDb, req));
+  return db.transaction((tx) => createBookingRecord(tx, req));
 }
 
 /** Books every named diver as one all-or-nothing party reservation. */
@@ -117,15 +140,21 @@ export async function createBookingParty(
     .transaction(async (tx) => {
       const created: Array<{ bookingId: string; personId: string; personName: string }> = [];
       for (const [index, request] of requests.entries()) {
-        const outcome = await createBookingRecord(tx as unknown as AppDb, request);
-        if (!outcome.ok) throw new PartyBookingError(outcome.reason, index);
+        const outcome = await createBookingRecord(tx, request);
+        if (!outcome.ok) throw new PartyBookingError(outcome, index);
         created.push(outcome);
       }
       return { ok: true as const, bookings: created };
     })
-    .catch((error: unknown) => {
+    .catch((error: unknown): BookingPartyOutcome => {
       if (error instanceof PartyBookingError) {
-        return { ok: false as const, reason: error.reason, failedIndex: error.index };
+        const refusal = error.refusal;
+        // Narrowed rather than spread blind: the `trip_prerequisite` arm
+        // carries a `refusal` payload the others don't, and both arms have to
+        // land as their own member of `BookingPartyOutcome`.
+        return refusal.reason === "trip_prerequisite"
+          ? { ...refusal, failedIndex: error.index }
+          : { ...refusal, failedIndex: error.index };
       }
       throw error;
     });
@@ -133,10 +162,11 @@ export async function createBookingParty(
 
 class PartyBookingError extends Error {
   constructor(
-    public readonly reason: Exclude<BookingOutcome, { ok: true }>["reason"],
+    /** The whole refusal, not just its code — `trip_prerequisite` carries detail. */
+    public readonly refusal: BookingRefusal,
     public readonly index: number,
   ) {
-    super(reason);
+    super(refusal.reason);
   }
 }
 
@@ -166,7 +196,112 @@ async function tripCourseCrewCounts(
   return countInWaterCrew(groupCrewAssignments(crew));
 }
 
-async function createBookingRecord(db: AppDb, req: BookingRequest): Promise<BookingOutcome> {
+/**
+ * The trip's *own* certification/specialty/nitrox gate, read for one diver
+ * (DOM-M6). Composes the trip's requirement row with every dive site the
+ * itinerary visits, exactly as readiness does, then asks
+ * `decideTripAdmission` (src/lib/trip-admission.ts) whether the seat is
+ * possible at all — see that module for why "possible at all" is a narrower
+ * question than "cleared to board".
+ *
+ * Fails closed on an unreadable requirement: both lookups run inside the
+ * booking transaction, so a query that throws aborts the whole thing and no
+ * seat is written. A refusal is never silent — it comes back as
+ * `trip_prerequisite` with the unmet requirement attached.
+ *
+ * `person` is undefined for a walk-in whose row hasn't been written yet; that
+ * diver has no evidence at this shop by construction, which is precisely the
+ * unknown-diver case admission admits.
+ *
+ * `courseSession` short-circuits the whole thing, reads included: on a training
+ * session the course's own gate above is the admission rule, so there is
+ * nothing here to read (see `TripAdmissionInput.courseSession`).
+ */
+async function tripAdmissionFor(
+  tx: DbExecutor,
+  shopId: string,
+  tripId: string,
+  person: { id: string } | undefined,
+  identityUnconfirmed: boolean,
+  courseSession: boolean,
+): Promise<TripAdmission> {
+  if (courseSession) {
+    return decideTripAdmission({
+      requirement: null,
+      siteRequirement: null,
+      evidence: NO_EVIDENCE,
+      courseSession: true,
+    });
+  }
+  const [requirement, siteRequirement] = await Promise.all([
+    getTripRequirements(tx, shopId, tripId),
+    getTripSiteRequirement(tx, shopId, tripId),
+  ]);
+  const demandsSomething = Boolean(
+    requirement?.minimumCertificationLevel ||
+      requirement?.requiredSpecialties.length ||
+      requirement?.requiresNitrox ||
+      siteRequirement,
+  );
+  // The three evidence reads are skipped entirely when the trip demands
+  // nothing or the diver is unknown to it — neither case can produce a
+  // refusal, and every booking in the product would otherwise pay for them.
+  const evidence: TripAdmissionEvidence =
+    person && !identityUnconfirmed && demandsSomething
+      ? await readCertificationEvidence(tx, shopId, person.id)
+      : NO_EVIDENCE;
+  return decideTripAdmission({ requirement, siteRequirement, evidence, identityUnconfirmed });
+}
+
+/** What a diver this shop knows nothing about has on file — and what an unread evidence lookup stands in for. */
+const NO_EVIDENCE: TripAdmissionEvidence = {
+  certifications: [],
+  specialtyCertifications: [],
+  nitroxCertifications: [],
+};
+
+/** One diver's live cert evidence at this shop — the same rows readiness reads. */
+async function readCertificationEvidence(tx: DbExecutor, shopId: string, personId: string) {
+  const [certificationRows, specialtyRows, nitroxRows] = await Promise.all([
+    tx
+      .select()
+      .from(certifications)
+      .where(
+        and(
+          eq(certifications.shopId, shopId),
+          eq(certifications.personId, personId),
+          isNull(certifications.deletedAt),
+        ),
+      ),
+    tx
+      .select()
+      .from(specialtyCertifications)
+      .where(
+        and(
+          eq(specialtyCertifications.shopId, shopId),
+          eq(specialtyCertifications.personId, personId),
+          isNull(specialtyCertifications.deletedAt),
+        ),
+      ),
+    tx
+      .select()
+      .from(nitroxCertifications)
+      .where(
+        and(
+          eq(nitroxCertifications.shopId, shopId),
+          eq(nitroxCertifications.personId, personId),
+          isNull(nitroxCertifications.deletedAt),
+        ),
+      ),
+  ]);
+  return {
+    certifications: certificationRows,
+    specialtyCertifications: specialtyRows,
+    nitroxCertifications: nitroxRows,
+  };
+}
+
+async function createBookingRecord(db: DbExecutor, req: BookingRequest): Promise<BookingOutcome> {
   const tx = db;
   // FOR UPDATE serializes concurrent bookings on the same trip: under READ
   // COMMITTED two transactions could otherwise both read `booked = capacity-1`
@@ -315,6 +450,32 @@ async function createBookingRecord(db: AppDb, req: BookingRequest): Promise<Book
   }
   if (entryLevelSeatCap !== null && booked >= entryLevelSeatCap) {
     return { ok: false, reason: "course_ratio_full" };
+  }
+
+  // The trip's own cert/specialty/nitrox gate (DOM-M6). Every door that sells a
+  // seat lands here — the public schedule form, `seatDiver`'s four staff doors,
+  // the global add-booking flow, and a self-service reschedule — because they
+  // all go through this one function; no call site re-implements it.
+  //
+  // Deliberately after capacity and the course gates, and before the walk-in's
+  // person row is written: a full boat is refused as full rather than as a
+  // prerequisite failure (a cheaper answer that says nothing about the diver),
+  // and a refused walk-in leaves no orphan person behind.
+  //
+  // On a course session the course gate above *is* the admission rule and this
+  // one stands down — continuing education dives at the sites it certifies
+  // people for, so the itinerary's own gate would refuse the students the
+  // course exists to create (`TripAdmissionInput.courseSession`).
+  const admission = await tripAdmissionFor(
+    tx,
+    req.shopId,
+    trip.id,
+    person,
+    identityUnconfirmed,
+    Boolean(trip.courseId),
+  );
+  if (!admission.admitted) {
+    return { ok: false, reason: "trip_prerequisite", refusal: admission.refusal };
   }
 
   if (!person && pendingInsert) {
@@ -548,7 +709,7 @@ export async function cancelBooking(db: AppDb, shopId: string, bookingId: string
     // writes share this transaction so a revoke failure rolls the status
     // change back too, instead of leaving a cancelled booking whose
     // capabilities are still live.
-    await revokeBookingCapabilities(tx as unknown as AppDb, { shopId, bookingId });
+    await revokeBookingCapabilities(tx, { shopId, bookingId });
     return booking;
   });
 }
@@ -623,7 +784,7 @@ export async function selfCancelBooking(
       .returning({ id: bookings.id });
     if (!cancelled) return { ok: false, reason: "not_cancellable" };
     // Same belt-and-suspenders revoke `cancelBooking` does for the staff path.
-    await revokeBookingCapabilities(tx as unknown as AppDb, {
+    await revokeBookingCapabilities(tx, {
       shopId: input.shopId,
       bookingId: input.bookingId,
     });
@@ -751,7 +912,7 @@ export async function rescheduleBooking(
       // is the token-verified diver's own identity, not a free-typed guess —
       // so the real minimum-age check applies, same as any staff-entered
       // booking.
-      const outcome = await createBookingRecord(tx as unknown as AppDb, {
+      const outcome = await createBookingRecord(tx, {
         shopId: input.shopId,
         tripId: input.newTripId,
         personId: row.personId,
@@ -851,7 +1012,7 @@ export async function rescheduleBooking(
         )
         .returning({ id: bookings.id });
       if (!cancelled) return { ok: false, reason: "not_cancellable" };
-      await revokeBookingCapabilities(tx as unknown as AppDb, {
+      await revokeBookingCapabilities(tx, {
         shopId: input.shopId,
         bookingId: input.bookingId,
       });
