@@ -2,6 +2,7 @@ import { DEMO_SHOP_SLUG, DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
 import {
   acceptAgeAttestation,
+  createTrip,
   daysFromNow,
   e2eNow,
   findTripOnBoard,
@@ -163,14 +164,14 @@ test.describe("minimum age (H-08, fail open)", () => {
    */
   async function createAgeGateSession(page: import("@playwright/test").Page, title: string) {
     // Open Water Diver states a minimum age of 10 in the seeded catalog.
-    await page.goto(`/shop/${SHOP}/trips/new`);
-    await page.getByLabel("Course").selectOption({ label: "Open Water Diver" });
-    await page.getByLabel("Title").fill(title);
-    await page.getByLabel("Date").fill(daysFromNow(24));
-    await page.getByLabel("Departs").fill("08:00");
-    await page.getByLabel("Returns").fill("17:00");
-    await page.getByRole("button", { name: "Put it on the board" }).click();
-    await expect(page.getByRole("status")).toBeVisible();
+    await createTrip(page, {
+      shopSlug: SHOP,
+      course: "Open Water Diver",
+      title,
+      date: daysFromNow(24),
+      departsAt: "08:00",
+      returnsAt: "17:00",
+    });
 
     const tripPath = await tripPathByTitle(page, title);
     await page.goto(tripPath);
@@ -268,14 +269,14 @@ test.describe("minimum age (H-08, fail open)", () => {
     test.setTimeout(30_000);
     const stamp = e2eNow().getTime();
     const sessionTitle = `Age disclosure session ${stamp}`;
-    await page.goto(`/shop/${SHOP}/trips/new`);
-    await page.getByLabel("Course").selectOption({ label: "Open Water Diver" });
-    await page.getByLabel("Title").fill(sessionTitle);
-    await page.getByLabel("Date").fill(daysFromNow(24));
-    await page.getByLabel("Departs").fill("08:00");
-    await page.getByLabel("Returns").fill("17:00");
-    await page.getByRole("button", { name: "Put it on the board" }).click();
-    await expect(page.getByRole("status")).toBeVisible();
+    await createTrip(page, {
+      shopSlug: SHOP,
+      course: "Open Water Diver",
+      title: sessionTitle,
+      date: daysFromNow(24),
+      departsAt: "08:00",
+      returnsAt: "17:00",
+    });
 
     const tripPath = await tripPathByTitle(page, sessionTitle);
     await page.goto(tripPath);

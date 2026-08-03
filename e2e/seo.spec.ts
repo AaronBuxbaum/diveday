@@ -1,5 +1,6 @@
 import { DEMO_SHOP_SLUG } from "../src/db/dev-credentials";
-import { expect, test } from "./fixtures";
+// Every test in this file only reads — no writes, so it opts out of the per-test demo reset.
+import { expect, readOnlyTest as test } from "./fixtures";
 
 /**
  * A consolidated smoke pass over the SEO surface this batch touched:

@@ -1,4 +1,5 @@
-import { expect, test } from "./fixtures";
+// Every test in this file only reads — no writes, so it opts out of the per-test demo reset.
+import { expect, readOnlyTest as test } from "./fixtures";
 
 test("the schedule page leads with a quick link to the next departure with room", async ({
   page,

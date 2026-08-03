@@ -1,5 +1,5 @@
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
-import { daysFromNow, e2eNow, signInAsOwner, signOut } from "./helpers";
+import { createTrip, daysFromNow, e2eNow, signInAsOwner, signOut } from "./helpers";
 
 test.describe("staff", () => {
   signedInAsOwner();
@@ -14,15 +14,14 @@ test.describe("staff", () => {
     const title = `Eagle Ray Run ${e2eNow().getTime()}`;
 
     // Staff puts a trip on the board.
-    await page.goto("/shop/blue-mantis/trips/new");
-    await page.getByLabel("Title").fill(title);
-    await page.getByLabel("Date").fill(daysFromNow(5));
-    await page.getByLabel("Departs").fill("08:00");
-    await page.getByLabel("Returns").fill("11:30");
-    await page.getByLabel("Capacity").fill("6");
-    await page.getByLabel(/Price per diver/).fill("120");
-    await page.getByRole("button", { name: "Put it on the board" }).click();
-    await expect(page.getByRole("status")).toBeVisible(); // created banner (param is one-shot)
+    await createTrip(page, {
+      title,
+      date: daysFromNow(5),
+      departsAt: "08:00",
+      returnsAt: "11:30",
+      capacity: 6,
+      price: 120,
+    });
     await signOut(page);
 
     // A visitor books it from the public schedule — no account.
@@ -116,14 +115,13 @@ test.describe("staff", () => {
     page,
   }) => {
     const title = `Weather Watch ${e2eNow().getTime()}`;
-    await page.goto("/shop/blue-mantis/trips/new");
-    await page.getByLabel("Title").fill(title);
-    await page.getByLabel("Date").fill(daysFromNow(4));
-    await page.getByLabel("Departs").fill("08:00");
-    await page.getByLabel("Returns").fill("11:00");
-    await page.getByLabel("Capacity").fill("6");
-    await page.getByRole("button", { name: "Put it on the board" }).click();
-    await expect(page.getByRole("status")).toBeVisible(); // created banner (param is one-shot)
+    await createTrip(page, {
+      title,
+      date: daysFromNow(4),
+      departsAt: "08:00",
+      returnsAt: "11:00",
+      capacity: 6,
+    });
     await page.goto("/shop/blue-mantis/schedule/board");
     const manageLink = page
       .locator('a[href^="/shop/blue-mantis/trips/"]')
@@ -160,13 +158,12 @@ test.describe("staff", () => {
     const title = `Drift Dive ${e2eNow().getTime()}`;
     const renamed = `${title} (PM)`;
 
-    await page.goto("/shop/blue-mantis/trips/new");
-    await page.getByLabel("Title").fill(title);
-    await page.getByLabel("Date").fill(daysFromNow(6));
-    await page.getByLabel("Departs").fill("13:00");
-    await page.getByLabel("Returns").fill("16:00");
-    await page.getByRole("button", { name: "Put it on the board" }).click();
-    await expect(page.getByRole("status")).toBeVisible(); // created banner (param is one-shot)
+    await createTrip(page, {
+      title,
+      date: daysFromNow(6),
+      departsAt: "13:00",
+      returnsAt: "16:00",
+    });
 
     // Edit the title from the manage page (opened from the schedule). Staff are
     // routed to the editable trip view, never the public booking form.
@@ -279,13 +276,12 @@ test.describe("as owner", () => {
     const tripB = `H13 Shared Inbox ${e2eNow().getTime()}`;
 
     // Staff put a second bookable trip on the board, then sign out.
-    await page.goto("/shop/blue-mantis/trips/new");
-    await page.getByLabel("Title").fill(tripB);
-    await page.getByLabel("Date").fill(daysFromNow(7));
-    await page.getByLabel("Departs").fill("19:00");
-    await page.getByLabel("Returns").fill("21:00");
-    await page.getByRole("button", { name: "Put it on the board" }).click();
-    await expect(page.getByRole("status")).toBeVisible();
+    await createTrip(page, {
+      title: tripB,
+      date: daysFromNow(7),
+      departsAt: "19:00",
+      returnsAt: "21:00",
+    });
     // Waits for the sign-out redirect to land before booking as the public — a
     // signed-in staffer opening a trip gets the manage view, not the booking form.
     await signOut(page);

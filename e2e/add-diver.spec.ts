@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { daysFromNow, e2eNow, findTripOnBoard, openTripFromBoard } from "./helpers";
+import { createTrip, daysFromNow, e2eNow, findTripOnBoard, openTripFromBoard } from "./helpers";
 
 signedInAsOwner();
 
@@ -33,14 +33,13 @@ test("staff adds a walk-in diver, then wait-lists one once the trip is full", as
   // fixtures.ts, not from this suffix.)
   const title = `Walk-in Test Trip ${e2eNow().getTime()}`;
 
-  await page.goto("/shop/blue-mantis/trips/new");
-  await page.getByLabel("Title").fill(title);
-  await page.getByLabel("Date").fill(daysFromNow(3));
-  await page.getByLabel("Departs").fill("09:00");
-  await page.getByLabel("Returns").fill("11:00");
-  await page.getByLabel("Capacity").fill("1");
-  await page.getByRole("button", { name: "Put it on the board" }).click();
-  await expect(page.getByRole("status")).toContainText(title);
+  await createTrip(page, {
+    title,
+    date: daysFromNow(3),
+    departsAt: "09:00",
+    returnsAt: "11:00",
+    capacity: 1,
+  });
 
   // Staff view of a trip card redirects straight into the manage-trip editor.
   await page.goto("/shop/blue-mantis/schedule/board");
@@ -132,14 +131,13 @@ test("staff adds a returning diver by picking them, no re-entry", async ({ page 
   test.setTimeout(30_000);
   const title = `Returning Diver Trip ${e2eNow().getTime()}`;
 
-  await page.goto("/shop/blue-mantis/trips/new");
-  await page.getByLabel("Title").fill(title);
-  await page.getByLabel("Date").fill(daysFromNow(4));
-  await page.getByLabel("Departs").fill("09:00");
-  await page.getByLabel("Returns").fill("11:00");
-  await page.getByLabel("Capacity").fill("6");
-  await page.getByRole("button", { name: "Put it on the board" }).click();
-  await expect(page.getByRole("status")).toContainText(title);
+  await createTrip(page, {
+    title,
+    date: daysFromNow(4),
+    departsAt: "09:00",
+    returnsAt: "11:00",
+    capacity: 6,
+  });
 
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, title);
@@ -190,14 +188,13 @@ test("staff sends waivers to a multi-selected roster in one action", async ({ pa
   const title = `Bulk Waiver Trip ${e2eNow().getTime()}`;
   const stamp = e2eNow().getTime();
 
-  await page.goto("/shop/blue-mantis/trips/new");
-  await page.getByLabel("Title").fill(title);
-  await page.getByLabel("Date").fill(daysFromNow(6));
-  await page.getByLabel("Departs").fill("09:00");
-  await page.getByLabel("Returns").fill("11:00");
-  await page.getByLabel("Capacity").fill("4");
-  await page.getByRole("button", { name: "Put it on the board" }).click();
-  await expect(page.getByRole("status")).toContainText(title);
+  await createTrip(page, {
+    title,
+    date: daysFromNow(6),
+    departsAt: "09:00",
+    returnsAt: "11:00",
+    capacity: 4,
+  });
 
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, title);
@@ -256,14 +253,13 @@ test("the bulk waiver send nudges rather than silently no-ops with nothing ticke
 }) => {
   const title = `Bulk Waiver Empty ${e2eNow().getTime()}`;
 
-  await page.goto("/shop/blue-mantis/trips/new");
-  await page.getByLabel("Title").fill(title);
-  await page.getByLabel("Date").fill(daysFromNow(6));
-  await page.getByLabel("Departs").fill("09:00");
-  await page.getByLabel("Returns").fill("11:00");
-  await page.getByLabel("Capacity").fill("4");
-  await page.getByRole("button", { name: "Put it on the board" }).click();
-  await expect(page.getByRole("status")).toContainText(title);
+  await createTrip(page, {
+    title,
+    date: daysFromNow(6),
+    departsAt: "09:00",
+    returnsAt: "11:00",
+    capacity: 4,
+  });
 
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, title);
@@ -295,14 +291,13 @@ test("the bulk waiver send nudges rather than silently no-ops with nothing ticke
  * by a seeded trip another test also touches.
  */
 async function scheduleTrip(page: Page, title: string, inDays: number, capacity = 4) {
-  await page.goto("/shop/blue-mantis/trips/new");
-  await page.getByLabel("Title").fill(title);
-  await page.getByLabel("Date").fill(daysFromNow(inDays));
-  await page.getByLabel("Departs").fill("09:00");
-  await page.getByLabel("Returns").fill("11:00");
-  await page.getByLabel("Capacity").fill(String(capacity));
-  await page.getByRole("button", { name: "Put it on the board" }).click();
-  await expect(page.getByRole("status")).toContainText(title);
+  await createTrip(page, {
+    title,
+    date: daysFromNow(inDays),
+    departsAt: "09:00",
+    returnsAt: "11:00",
+    capacity,
+  });
   // Creating a departure settles on the board, not on the new trip — so the id
   // is read from the board card's own href (`findTripOnBoard` pages to it),
   // never from `page.url()`.

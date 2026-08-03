@@ -1,5 +1,5 @@
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
-import { daysFromNow, e2eNow, findTripOnBoard } from "./helpers";
+import { createTrip, daysFromNow, e2eNow, findTripOnBoard } from "./helpers";
 
 test("the public schedule lists seeded trips with capacity states, a calendar, and per-dive briefings", async ({
   page,
@@ -76,13 +76,12 @@ test.describe("per-trip crew role", () => {
     // Its own departure, so a crew edit here can never pull a seeded charter's
     // crew count out from under the manifest spec running in parallel.
     const title = `Crew role charter ${e2eNow().getTime()}`;
-    await page.goto("/shop/blue-mantis/trips/new");
-    await page.getByLabel("Title").fill(title);
-    await page.getByLabel("Date").fill(daysFromNow(21));
-    await page.getByLabel("Departs").fill("08:00");
-    await page.getByLabel("Returns").fill("12:00");
-    await page.getByRole("button", { name: "Put it on the board" }).click();
-    await expect(page.getByRole("status")).toBeVisible();
+    await createTrip(page, {
+      title,
+      date: daysFromNow(21),
+      departsAt: "08:00",
+      returnsAt: "12:00",
+    });
     // Read the card's href rather than clicking it: the board streams in, so
     // reading `page.url()` after a click races that render.
     const link = await findTripOnBoard(page, "blue-mantis", title);
@@ -145,14 +144,13 @@ test.describe("undoing a removal after the trip is cancelled", () => {
     const title = `Undo refusal charter ${e2eNow().getTime()}`;
     const diver = "Ursula Vance";
 
-    await page.goto("/shop/blue-mantis/trips/new");
-    await page.getByLabel("Title").fill(title);
-    await page.getByLabel("Date").fill(daysFromNow(6));
-    await page.getByLabel("Departs").fill("09:00");
-    await page.getByLabel("Returns").fill("13:00");
-    await page.getByLabel("Capacity").fill("6");
-    await page.getByRole("button", { name: "Put it on the board" }).click();
-    await expect(page.getByRole("status")).toBeVisible();
+    await createTrip(page, {
+      title,
+      date: daysFromNow(6),
+      departsAt: "09:00",
+      returnsAt: "13:00",
+      capacity: 6,
+    });
 
     // Read the card's href rather than clicking it: the board streams in, so
     // reading `page.url()` after a click races that render.

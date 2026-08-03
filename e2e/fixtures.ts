@@ -227,6 +227,34 @@ export const test = base.extend<
 });
 
 /**
+ * `test` with the per-test demo reset turned off, for a spec file whose every
+ * test only *reads*.
+ *
+ * The reset above exists because a test that mutates the demo shop would
+ * otherwise leak its trips and bookings into every later spec's fixture (see
+ * that fixture's comment for the flake it was introduced to kill). A file
+ * that never writes cannot cause that leak, so it can skip the round trip —
+ * which is a wipe-and-reseed of the whole demo shop, paid once per test.
+ *
+ * This is opt-in per file, and stays that way on purpose: it is an assertion
+ * by the author that *every* test in that file is read-only, and there is no
+ * check that can prove it. Importing this is the claim; a single form submit,
+ * server action, or demo-shop mint added later invalidates it and the file
+ * must go back to `test`. Read-only here means "writes nothing", not "signs
+ * in nothing" — a `signedInAs*` session is fine, since the sign-in fixture
+ * mints its state in its own context.
+ */
+export const readOnlyTest = test.extend({
+  // Overriding an existing fixture inherits its options, so this stays `auto`
+  // (and Playwright's types reject restating `auto` on an override) — it just
+  // resolves to the same `undefined` without the POST.
+  // biome-ignore lint/correctness/noEmptyPattern: Playwright requires the destructuring pattern.
+  demoReset: async ({}, use) => {
+    await use(undefined);
+  },
+});
+
+/**
  * Start every test in the calling scope (file or describe block) signed in as
  * the given seeded staff role, via a per-worker saved session cached the
  * first time that role is requested. Tests that must begin signed out

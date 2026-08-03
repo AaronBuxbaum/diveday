@@ -1,5 +1,5 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { daysFromNow, e2eNow, openTripFromBoard } from "./helpers";
+import { createTrip, daysFromNow, e2eNow, openTripFromBoard } from "./helpers";
 
 signedInAsOwner();
 
@@ -76,14 +76,13 @@ test("a full boat refuses a counter walk-in with the wait-list nudge", async ({ 
   // A same-day, one-seat trip so it's both offered by the walk-in picker
   // (today's/tomorrow's departures) and trivially fillable in one step.
   const title = `Walk-in Full Trip ${e2eNow().getTime()}`;
-  await page.goto("/shop/blue-mantis/trips/new");
-  await page.getByLabel("Title").fill(title);
-  await page.getByLabel("Date").fill(daysFromNow(0));
-  await page.getByLabel("Departs").fill("20:00");
-  await page.getByLabel("Returns").fill("22:00");
-  await page.getByLabel("Capacity").fill("1");
-  await page.getByRole("button", { name: "Put it on the board" }).click();
-  await expect(page.getByRole("status")).toContainText(title);
+  await createTrip(page, {
+    title,
+    date: daysFromNow(0),
+    departsAt: "20:00",
+    returnsAt: "22:00",
+    capacity: 1,
+  });
 
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, title);

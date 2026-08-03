@@ -1,4 +1,8 @@
 import { expect, makeActivitySafe, signedInAs, signedInAsOwner, test } from "./fixtures";
+import { openTripFromBoard, openTripTab, sendWaiverForFirstDiver } from "./helpers";
+
+/** The seeded charter every waiver flow in this file starts from. */
+const TRIP = "Two-Tank Reef — Molasses & French";
 
 signedInAsOwner();
 
@@ -61,20 +65,14 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
   // budget even when no individual step is stuck.
   test.setTimeout(30_000);
   await page.goto("/shop/blue-mantis/schedule/board");
-  await page
-    .locator("li")
-    .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-    .getByRole("link", { name: "Two-Tank Reef — Molasses & French", exact: true })
-    .click();
-  await page.waitForURL(/\/shop\/blue-mantis\/trips\//);
+  await openTripFromBoard(page, TRIP);
   // The roster and its waiver control live on the Guests tab.
-  await page
-    .getByRole("navigation", { name: "Trip" })
-    .getByRole("link", { name: "Guests" })
-    .click();
-  await page.waitForURL(/\/guests/);
+  await openTripTab(page, "Guests");
   const staffTripUrl = page.url();
 
+  // Not `sendWaiverForFirstDiver()` like the tests below: this one asserts the
+  // no-provider notice copy itself and keeps `diverSection` for the follow-up
+  // assertions further down, so the send stays spelled out here.
   const diverSection = page
     .locator("section")
     .filter({ has: page.getByRole("heading", { name: /^Divers/ }) })
@@ -216,22 +214,9 @@ test("the medical questionnaire refuses to complete with an unanswered question,
   page,
 }) => {
   await page.goto("/shop/blue-mantis/schedule/board");
-  await page
-    .locator("li")
-    .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-    .getByRole("link", { name: "Two-Tank Reef — Molasses & French", exact: true })
-    .click();
-  await page.waitForURL(/\/shop\/blue-mantis\/trips\//);
-  await page
-    .getByRole("navigation", { name: "Trip" })
-    .getByRole("link", { name: "Guests" })
-    .click();
-  await page.waitForURL(/\/guests/);
-  const diverSection = page
-    .locator("section")
-    .filter({ has: page.getByRole("heading", { name: /^Divers/ }) });
-  await diverSection.getByRole("button", { name: "Send waiver", exact: true }).first().click();
-  const waiverHref = await diverSection.getByRole("status").getByRole("link").getAttribute("href");
+  await openTripFromBoard(page, TRIP);
+  await openTripTab(page, "Guests");
+  const waiverHref = await sendWaiverForFirstDiver(page);
 
   await page.goto(waiverHref ?? "/");
   await page.getByLabel("Type your full name").fill("Adversarial Diver");
@@ -269,22 +254,9 @@ test("an incomplete sign submit is blocked client-side and focuses the missing f
   page,
 }) => {
   await page.goto("/shop/blue-mantis/schedule/board");
-  await page
-    .locator("li")
-    .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-    .getByRole("link", { name: "Two-Tank Reef — Molasses & French", exact: true })
-    .click();
-  await page.waitForURL(/\/shop\/blue-mantis\/trips\//);
-  await page
-    .getByRole("navigation", { name: "Trip" })
-    .getByRole("link", { name: "Guests" })
-    .click();
-  await page.waitForURL(/\/guests/);
-  const diverSection = page
-    .locator("section")
-    .filter({ has: page.getByRole("heading", { name: /^Divers/ }) });
-  await diverSection.getByRole("button", { name: "Send waiver", exact: true }).first().click();
-  const waiverHref = await diverSection.getByRole("status").getByRole("link").getAttribute("href");
+  await openTripFromBoard(page, TRIP);
+  await openTripTab(page, "Guests");
+  const waiverHref = await sendWaiverForFirstDiver(page);
 
   await page.goto(waiverHref ?? "/");
   // Answer every medical question and check the agreement box, but leave the
@@ -303,22 +275,9 @@ test("a non-English visitor sees a notice that the waiver text itself stays in E
   page,
 }) => {
   await page.goto("/shop/blue-mantis/schedule/board");
-  await page
-    .locator("li")
-    .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-    .getByRole("link", { name: "Two-Tank Reef — Molasses & French", exact: true })
-    .click();
-  await page.waitForURL(/\/shop\/blue-mantis\/trips\//);
-  await page
-    .getByRole("navigation", { name: "Trip" })
-    .getByRole("link", { name: "Guests" })
-    .click();
-  await page.waitForURL(/\/guests/);
-  const diverSection = page
-    .locator("section")
-    .filter({ has: page.getByRole("heading", { name: /^Divers/ }) });
-  await diverSection.getByRole("button", { name: "Send waiver", exact: true }).first().click();
-  const waiverHref = await diverSection.getByRole("status").getByRole("link").getAttribute("href");
+  await openTripFromBoard(page, TRIP);
+  await openTripTab(page, "Guests");
+  const waiverHref = await sendWaiverForFirstDiver(page);
 
   // The waiver link is a bearer-token page a diver opens on their own device,
   // unauthenticated and with their own device's locale — a fresh context with
@@ -345,22 +304,9 @@ test("saving a draft also refuses an unanswered question, even past client valid
   page,
 }) => {
   await page.goto("/shop/blue-mantis/schedule/board");
-  await page
-    .locator("li")
-    .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-    .getByRole("link", { name: "Two-Tank Reef — Molasses & French", exact: true })
-    .click();
-  await page.waitForURL(/\/shop\/blue-mantis\/trips\//);
-  await page
-    .getByRole("navigation", { name: "Trip" })
-    .getByRole("link", { name: "Guests" })
-    .click();
-  await page.waitForURL(/\/guests/);
-  const diverSection = page
-    .locator("section")
-    .filter({ has: page.getByRole("heading", { name: /^Divers/ }) });
-  await diverSection.getByRole("button", { name: "Send waiver", exact: true }).first().click();
-  const waiverHref = await diverSection.getByRole("status").getByRole("link").getAttribute("href");
+  await openTripFromBoard(page, TRIP);
+  await openTripTab(page, "Guests");
+  const waiverHref = await sendWaiverForFirstDiver(page);
 
   await page.goto(waiverHref ?? "/");
   await page.getByLabel("Type your full name").fill("Adversarial Draft Diver");

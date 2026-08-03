@@ -1,6 +1,6 @@
 import { DEMO_SHOP_SLUG } from "../src/db/dev-credentials";
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { daysFromNow, e2eNow } from "./helpers";
+import { createTrip, daysFromNow, e2eNow } from "./helpers";
 
 const SHOP = DEMO_SHOP_SLUG;
 
@@ -72,13 +72,13 @@ test("staff record and correct a diver's emergency contact from the roster and t
   const title = `Contact Capture Run ${stamp}`;
   const diverName = `Contact Diver ${stamp}`;
 
-  await page.goto(`/shop/${SHOP}/trips/new`);
-  await page.getByLabel("Title").fill(title);
-  await page.getByLabel("Date").fill(daysFromNow(5));
-  await page.getByLabel("Departs").fill("09:00");
-  await page.getByLabel("Returns").fill("12:00");
-  await page.getByRole("button", { name: "Put it on the board" }).click();
-  await expect(page.getByRole("status")).toBeVisible();
+  await createTrip(page, {
+    shopSlug: SHOP,
+    title,
+    date: daysFromNow(5),
+    departsAt: "09:00",
+    returnsAt: "12:00",
+  });
 
   const tripPath = await tripPathByTitle(page, title);
   await page.goto(`${tripPath}/guests`);

@@ -1,5 +1,5 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { daysFromNow, e2eNow, signOut } from "./helpers";
+import { createTrip, daysFromNow, e2eNow, signOut } from "./helpers";
 
 test.describe("staff-prepared trip", () => {
   signedInAsOwner();
@@ -14,14 +14,13 @@ test.describe("staff-prepared trip", () => {
     const title = `Readiness Run ${e2eNow().getTime()}`;
 
     // Staff puts a trip on the board.
-    await page.goto("/shop/blue-mantis/trips/new");
-    await page.getByLabel("Title").fill(title);
-    await page.getByLabel("Date").fill(daysFromNow(4));
-    await page.getByLabel("Departs").fill("08:00");
-    await page.getByLabel("Returns").fill("11:00");
-    await page.getByLabel("Capacity").fill("6");
-    await page.getByRole("button", { name: "Put it on the board" }).click();
-    await expect(page.getByRole("status")).toBeVisible();
+    await createTrip(page, {
+      title,
+      date: daysFromNow(4),
+      departsAt: "08:00",
+      returnsAt: "11:00",
+      capacity: 6,
+    });
     await signOut(page);
 
     // A visitor books it.
