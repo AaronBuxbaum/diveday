@@ -652,10 +652,7 @@
       "manyRequiredSpecialties": "{count} required specialties",
       "addBriefingFallback": "Add the briefing your divers will see.",
       "pagination": {
-        "label": "Dive-site pages",
-        "previous": "Previous",
-        "next": "Next",
-        "position": "Page {page} of {pageCount} · {total} sites"
+        "total": "{count, plural, one {# site} other {# sites}}"
       }
     },
     "catalog": {

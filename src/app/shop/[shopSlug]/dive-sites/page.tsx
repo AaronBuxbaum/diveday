@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
+import { Pager } from "@/components/Pager";
 import { ShopNotice, ShopPageHeader, ShopStat } from "@/components/ShopPageHeader";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
@@ -180,16 +181,10 @@ export default async function DiveSitesPage({
           <p className="mx-auto mt-1 max-w-md text-sm text-muted">
             {query ? t("diveSites.list.noMatchBody") : t("diveSites.list.emptyBody")}
           </p>
-          {query ? (
-            <div className="mt-4 flex flex-wrap justify-center gap-3">
-              <Link
-                href={`/shop/${shopSlug}/dive-sites`}
-                className={buttonClass({ variant: "secondary", className: "text-foreground" })}
-              >
-                {t("diveSites.list.searchClear")}
-              </Link>
-            </div>
-          ) : (
+          {/* No second "Clear search" here: the search band right above this
+              card already carries one whenever a query is active, and two
+              identical controls is exactly what principle 8 forbids. */}
+          {query ? null : (
             // Both header actions again, inside the card: on an empty library
             // the header is the only place they exist, and a shop reading
             // "start with a site your crew knows well" should be able to start
@@ -275,42 +270,14 @@ export default async function DiveSitesPage({
         </ul>
       )}
 
-      {/* Only when there is somewhere to go — a shop with one screenful of
-        sites should not be told it is on "page 1 of 1". */}
-      {sitePage.pageCount > 1 ? (
-        <nav
-          aria-label={t("diveSites.list.pagination.label")}
-          className="mt-4 flex items-center justify-between gap-3"
-        >
-          {sitePage.page > 1 ? (
-            <Link
-              href={pageHref(sitePage.page - 1)}
-              className={buttonClass({ variant: "secondary", size: "sm" })}
-            >
-              {t("diveSites.list.pagination.previous")}
-            </Link>
-          ) : (
-            <span />
-          )}
-          <p className="text-sm text-muted">
-            {t("diveSites.list.pagination.position", {
-              page: sitePage.page,
-              pageCount: sitePage.pageCount,
-              total: sitePage.total,
-            })}
-          </p>
-          {sitePage.page < sitePage.pageCount ? (
-            <Link
-              href={pageHref(sitePage.page + 1)}
-              className={buttonClass({ variant: "secondary", size: "sm" })}
-            >
-              {t("diveSites.list.pagination.next")}
-            </Link>
-          ) : (
-            <span />
-          )}
-        </nav>
-      ) : null}
+      <Pager
+        page={sitePage.page}
+        pageCount={sitePage.pageCount}
+        href={pageHref}
+        total={t("diveSites.list.pagination.total", { count: sitePage.total })}
+        t={t}
+        className="mt-4"
+      />
     </main>
   );
 }

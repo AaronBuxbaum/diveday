@@ -652,10 +652,7 @@
       "manyRequiredSpecialties": "{count} especialidades requeridas",
       "addBriefingFallback": "Añade la ficha que verán tus buceadores.",
       "pagination": {
-        "label": "Páginas de sitios de buceo",
-        "previous": "Anterior",
-        "next": "Siguiente",
-        "position": "Página {page} de {pageCount} · {total} sitios"
+        "total": "{count, plural, one {# sitio} other {# sitios}}"
       }
     },
     "catalog": {
