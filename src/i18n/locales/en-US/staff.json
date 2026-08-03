@@ -121,6 +121,14 @@
     "day": "Day {number}"
   },
   "divers": {
+    "subNav": {
+      "ariaLabel": "Diver record",
+      "cards": "Cards",
+      "fit": "Fit",
+      "payments": "Payments",
+      "trips": "Trips",
+      "history": "History"
+    },
     "upcoming": {
       "heading": "Upcoming trips"
     },

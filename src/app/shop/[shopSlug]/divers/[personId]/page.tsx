@@ -19,6 +19,7 @@ import { requireStaffSession } from "@/lib/session";
 import { BookActivity } from "./_components/BookActivity";
 import { CertificationCards } from "./_components/CertificationCards";
 import { DiverHeader } from "./_components/DiverHeader";
+import { DIVER_SECTIONS, DiverSection, DiverSubNav } from "./_components/DiverSubNav";
 import { ErasePersonalData } from "./_components/ErasePersonalData";
 import { NoticeBanner } from "./_components/NoticeBanner";
 import { PaymentsSection } from "./_components/PaymentsSection";
@@ -101,42 +102,64 @@ export default async function DiverDetailPage({
       ) : (
         <NoticeBanner notice={notice} locale={locale} shopSlug={shopSlug} />
       )}
+      {/* Above the stat cards, not below them: on a 390px phone those three
+          cards stack, and a bar sitting under them lands ~1,150px down — a spine
+          you have to scroll to find is not a spine. */}
+      <DiverSubNav
+        ariaLabel={t("divers.subNav.ariaLabel")}
+        labels={DIVER_SECTIONS.map((section) => t(section.labelKey))}
+        className="mt-8"
+      />
       <StatsSummary diver={diver} locale={locale} />
-      <CertificationCards diver={diver} shopSlug={shopSlug} personId={personId} shop={shop} />
-      <SpecialtyCards
-        diver={diver}
-        shopSlug={shopSlug}
-        personId={personId}
-        shop={shop}
-        locale={locale}
-      />
-      <RentalFit
-        diver={diver}
-        shopSlug={shopSlug}
-        personId={personId}
-        rentalItems={shop.rentalItems}
-        canOverride={canOverrideFit}
-        locale={locale}
-      />
-      <BookActivity
-        locale={locale}
-        diver={diver}
-        shop={shop}
-        upcoming={upcoming}
-        shopSlug={shopSlug}
-        personId={personId}
-      />
-      <PaymentsSection
-        locale={locale}
-        diver={diver}
-        shop={shop}
-        shopSlug={shopSlug}
-        personId={personId}
-        canRefund={canRefund}
-        paymentsConnected={paymentsConnected}
-      />
-      <UpcomingTripsSection diver={diver} shop={shop} shopSlug={shopSlug} locale={locale} />
-      <ShopHistory locale={locale} diver={diver} shop={shop} shopSlug={shopSlug} />
+      <DiverSection id="cards">
+        <CertificationCards diver={diver} shopSlug={shopSlug} personId={personId} shop={shop} />
+        <SpecialtyCards
+          diver={diver}
+          shopSlug={shopSlug}
+          personId={personId}
+          shop={shop}
+          locale={locale}
+        />
+      </DiverSection>
+      <DiverSection id="fit">
+        <RentalFit
+          diver={diver}
+          shopSlug={shopSlug}
+          personId={personId}
+          rentalItems={shop.rentalItems}
+          canOverride={canOverrideFit}
+          locale={locale}
+        />
+      </DiverSection>
+      {/* Above "Book an activity" deliberately: the errand that brings staff to
+          this page in a hurry is a diver standing at the counter with a bill,
+          not one browsing next week's boats. Both used to sit below the fold;
+          only one of them has somebody waiting. */}
+      <DiverSection id="payments">
+        <PaymentsSection
+          locale={locale}
+          diver={diver}
+          shop={shop}
+          shopSlug={shopSlug}
+          personId={personId}
+          canRefund={canRefund}
+          paymentsConnected={paymentsConnected}
+        />
+      </DiverSection>
+      <DiverSection id="trips">
+        <BookActivity
+          locale={locale}
+          diver={diver}
+          shop={shop}
+          upcoming={upcoming}
+          shopSlug={shopSlug}
+          personId={personId}
+        />
+        <UpcomingTripsSection diver={diver} shop={shop} shopSlug={shopSlug} locale={locale} />
+      </DiverSection>
+      <DiverSection id="history">
+        <ShopHistory locale={locale} diver={diver} shop={shop} shopSlug={shopSlug} />
+      </DiverSection>
       {canDelete ? (
         <RemoveDiver diver={diver} shopSlug={shopSlug} personId={personId} locale={locale} />
       ) : null}
