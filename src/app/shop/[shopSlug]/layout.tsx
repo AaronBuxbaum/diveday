@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { headers } from "next/headers";
+import { notFound } from "next/navigation";
 import { DemoBanner } from "@/components/DemoBanner";
 import { OfflineManifestAutoSave } from "@/components/OfflineManifestAutoSave";
 import { PreserveFormScroll } from "@/components/PreserveFormScroll";
@@ -17,7 +18,7 @@ import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { auth } from "@/lib/auth";
-import { EMBED_REQUEST_HEADER } from "@/lib/auth.config";
+import { EMBED_REQUEST_HEADER, isPublicShopRoute, REQUEST_PATH_HEADER } from "@/lib/auth.config";
 import {
   canManageStaffAccounts,
   canManageWaiverTemplates,
@@ -69,7 +70,15 @@ export default async function ShopLayout({
   // "this render is going into someone else's iframe." Forces every bit of
   // staff chrome off, even for a signed-in staff member previewing their own
   // embed (docs ADR 20260726-schedule-embed).
-  const isEmbed = (await headers()).get(EMBED_REQUEST_HEADER) === "1";
+  const requestHeaders = await headers();
+  const isEmbed = requestHeaders.get(EMBED_REQUEST_HEADER) === "1";
+  // Also proxy-set (src/proxy.ts) and, like the embed header above, always
+  // overwritten there so a client can never supply it. A layout is handed no
+  // URL at all, and this shell wraps both the shop's public pages and its
+  // staff console, so telling the two apart is the only way the tenant check
+  // below can 404 a cross-shop staff visit without also 404ing this shop's
+  // public schedule for the very same person.
+  const requestPath = requestHeaders.get(REQUEST_PATH_HEADER) ?? "";
   const db = await getDb();
   const shop = await getShopBySlug(db, shopSlug);
   const showBanner = !isEmbed && (shop?.isDemo ?? false);
@@ -126,7 +135,28 @@ export default async function ShopLayout({
   const demoT = showBanner ? diverTranslator(await requestLocale(shop?.defaultLocale)) : undefined;
   const staffT = staffTranslator(locale);
 
-  const showNav = !isEmbed && Boolean(session?.user) && Boolean(shop);
+  // INVARIANT: staff chrome and counts are scoped to the session's own shop —
+  // a mismatched slug renders nothing of the other tenant.
+  //
+  // This layout resolves the shop from the URL slug, but every staff *page*
+  // below it reads its data from `session.user.shopId`. Without this check the
+  // two disagree the moment someone signed into shop A opens
+  // /shop/shop-b/anything: the page shows A's rows while the shell around it
+  // shows B's name, B's next departure, and B's pending-work counts (reviews
+  // awaiting moderation, blocked divers — which include medical review). Those
+  // counts are another tenant's operational data, and no page-level gate can
+  // catch them because they are read here, in the shell.
+  const ownShop = Boolean(session?.user && shop && session.user.shopId === shop.id);
+  // A shop's schedule and course pages are public (isPublicShopRoute is the
+  // canonical allowlist, and the edge gate in src/lib/auth.config.ts already
+  // lets a signed-out visitor read them), so staff of another shop stay
+  // welcome there — they simply get the public chrome below, exactly like any
+  // other visitor. Everywhere else under /shop is staff-only, and a
+  // cross-tenant visit is refused outright rather than rendered as a mix of
+  // two shops. Fails closed: an absent path header is not a public route.
+  if (session?.user && shop && !ownShop && !isPublicShopRoute(requestPath)) notFound();
+
+  const showNav = !isEmbed && ownShop;
   // Small "pending work" counts for the Reviews/Blockers nav badges (task 83,
   // UX persona 11 "Kai"/12 "Maren") — both queries the shop's own pages
   // already run on every visit, gated the same way the nav itself is so a
@@ -200,8 +230,11 @@ export default async function ShopLayout({
       {/* The signed-out counterpart to ShopNav above — an anonymous or
           non-staff visitor gets the shop's own identity instead of staff
           chrome (task 9). Mutually exclusive with ShopNav by construction:
-          exactly one of the two conditions is ever true. */}
-      {!isEmbed && !(session?.user && shop) && shop ? <PublicShopHeader shop={shop} /> : null}
+          exactly one of the two conditions is ever true. Keyed on `ownShop`,
+          not merely on "is anyone signed in", so staff of a *different* shop
+          reading this one's public schedule get the visitor treatment rather
+          than a headerless page. */}
+      {!isEmbed && !ownShop && shop ? <PublicShopHeader shop={shop} /> : null}
       {/* Keeps every trip in the shop's near-term board saved offline, not just
           a trip whose live manifest someone opened — see ADR
           20260726-shopwide-offline-manifest-priming. Gated to staff actually
@@ -210,19 +243,17 @@ export default async function ShopLayout({
           visitor, a diver account, or staff of a *different* shop browsing
           this one's public page must never mount it — the first two would
           just poll a 401 every five minutes, and the third would silently
-          save their own shop's roster while the visible page is this one. */}
-      {!isEmbed &&
-      session?.user &&
-      shop &&
-      isStaff(session.user.roles) &&
-      session.user.shopId === shop.id ? (
+          save their own shop's roster while the visible page is this one.
+          `ownShop` is that same-shop test, now shared with the staff chrome
+          above. */}
+      {!isEmbed && ownShop && session?.user && isStaff(session.user.roles) ? (
         <OfflineManifestAutoSave />
       ) : null}
       <PreserveFormScroll />
       <div id="shop-main-content" tabIndex={-1} className="flex-1 outline-none">
         {children}
       </div>
-      {!isEmbed && !(session?.user && shop) && shop ? (
+      {!isEmbed && !ownShop && shop ? (
         <PublicShopFooter shop={shop} t={diverTranslator(locale)} />
       ) : null}
     </>

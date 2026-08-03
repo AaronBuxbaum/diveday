@@ -88,6 +88,18 @@ export function isEmbeddableShopRoute(pathname: string): boolean {
  */
 export const EMBED_REQUEST_HEADER = "x-diveday-embed";
 
+/**
+ * The request's own pathname, stamped onto the request by `src/proxy.ts` for
+ * the same reason `EMBED_REQUEST_HEADER` exists: a layout is never handed the
+ * URL (no `searchParams`, no pathname — only its own `params`), and
+ * `ShopLayout` has to tell a *public* shop route (schedule, courses — readable
+ * by anyone, including staff of a different shop) apart from a staff one
+ * before it decides whether a cross-tenant visit is a 404. Overwritten on
+ * every request in the proxy, exactly like the embed header, so a
+ * client-supplied value can never survive to reach a reader downstream.
+ */
+export const REQUEST_PATH_HEADER = "x-diveday-path";
+
 export const authConfig = {
   secret: authSecret,
   session: { strategy: "jwt" },
