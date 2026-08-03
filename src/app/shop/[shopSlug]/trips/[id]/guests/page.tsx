@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import { seatExistingDiverAction, seatNewDiverAction } from "@/app/actions/seat-diver";
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
@@ -34,8 +35,6 @@ import { isRosterFilter, RosterSection } from "../_components/RosterSection";
 import { TripNoticeBanner } from "../_components/TripNoticeBanner";
 import { WaitlistSection } from "../_components/WaitlistSection";
 import {
-  addBookingAction,
-  addExistingDiverAction,
   addInternalNoteAction,
   addToWaitlistAction,
   confirmDiverIdentityAction,
@@ -77,11 +76,14 @@ type TripGuestsSearchParams = Promise<{
  * Suspense boundary, this route still gets a Partial-Prerendered static
  * shell with an implicit dynamic hole around the unwrapped
  * `searchParams`/session reads — and `addBookingAction`'s
- * `revalidateAndRedirect(...?notice=diver-added...)` (../actions.ts) raced
+ * `revalidateAndRedirect(...?notice=diver-added...)` (the shared
+ * src/app/actions/seat-diver.ts) raced
  * that hole's own pending fetch, matching the class of bug fixed on
  * /sign-in, dive-sites/new, and trips/new. This action lives in a sibling
  * `actions.ts` rather than this file, which is also why the earlier grep for
  * this bug class (co-located `redirect(` in the same `page.tsx`) missed it.
+ * (`addBookingAction` is now the shared `seatNewDiverAction`; the hazard and
+ * the reason for the Suspense boundary are unchanged.)
  */
 export default function TripGuestsPage({
   params,
@@ -280,9 +282,10 @@ async function TripGuestsBody({
           full={isFull(trip)}
           query={diverQuery}
           candidates={diverCandidates}
-          addBookingAction={addBookingAction.bind(null, shopSlug, tripId)}
+          tripId={tripId}
+          addBookingAction={seatNewDiverAction.bind(null, "trip-guests", shopSlug)}
           addToWaitlistAction={addToWaitlistAction.bind(null, shopSlug, tripId)}
-          addExistingDiverAction={addExistingDiverAction.bind(null, shopSlug, tripId)}
+          addExistingDiverAction={seatExistingDiverAction.bind(null, "trip-guests", shopSlug)}
           locale={locale}
         />
       )}

@@ -716,6 +716,23 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { name: "Walk-in", level: 1 }).waitFor();
         await capture(page, "check-in-walk-in", scheme);
 
+        // The global Add-booking door, both halves: the departure picker with
+        // seats-left on every row, and the diver step once a boat is chosen
+        // (returning-diver search + hand entry). Deliberately two captures —
+        // the picker and the diver form never share a screen, so one shot
+        // would leave half the surface with no baseline at all.
+        await page.goto("/shop/blue-mantis/bookings/new");
+        await page.getByRole("heading", { name: "Add a booking", level: 1 }).waitFor();
+        await capture(page, "booking-new", scheme);
+
+        await page
+          .getByRole("link", { name: /seats? left/ })
+          .first()
+          .click();
+        await page.waitForURL(/\/bookings\/new\/[^/?]+$/);
+        await page.getByRole("heading", { name: "New diver" }).waitFor();
+        await capture(page, "booking-new-diver", scheme);
+
         // The staff schedule as a builder: departures grouped by day, each row
         // carrying its own move/copy/remove controls and its crew.
         await page.goto("/shop/blue-mantis/schedule/board");
