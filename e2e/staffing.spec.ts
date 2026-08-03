@@ -1,5 +1,5 @@
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
-import { daysFromNow, e2eNow } from "./helpers";
+import { createTrip, daysFromNow, e2eNow } from "./helpers";
 
 /**
  * The staffing board (`/shop/[shopSlug]/staffing`): who is working in a window,
@@ -106,13 +106,12 @@ test.describe("staffing", () => {
     const tripDay = daysFromNow(3);
     const title = `Unstaffed charter ${e2eNow().getTime()}`;
 
-    await page.goto("/shop/blue-mantis/trips/new");
-    await page.getByLabel("Title").fill(title);
-    await page.getByLabel("Date").fill(tripDay);
-    await page.getByLabel("Departs").fill("08:00");
-    await page.getByLabel("Returns").fill("12:00");
-    await page.getByRole("button", { name: "Put it on the board" }).click();
-    await expect(page.getByRole("status")).toBeVisible();
+    await createTrip(page, {
+      title,
+      date: tripDay,
+      departsAt: "08:00",
+      returnsAt: "12:00",
+    });
 
     await page.goto(STAFFING);
     await page.getByLabel("From").fill(tripDay);

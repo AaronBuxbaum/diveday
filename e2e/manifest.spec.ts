@@ -1,5 +1,6 @@
 import type { Page } from "@playwright/test";
 import { expect, signedInAsOwner, test } from "./fixtures";
+import { openTripFromBoard, openTripTab } from "./helpers";
 
 signedInAsOwner();
 
@@ -37,15 +38,8 @@ test("live manifest retains blocked divers and records an explicit not-boarded r
   // the budget bounds a *stuck* test, and this one is simply long.
   test.setTimeout(45_000);
   await page.goto("/shop/blue-mantis/schedule/board");
-  await page
-    .locator("li")
-    .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-    .getByRole("link", { name: "Two-Tank Reef — Molasses & French", exact: true })
-    .click();
-  await page
-    .getByRole("navigation", { name: "Trip" })
-    .getByRole("link", { name: "Manifest" })
-    .click();
+  await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
+  await openTripTab(page, "Manifest");
 
   await expect(page.getByRole("heading", { name: "Roll call" })).toBeVisible();
   // "Blocked divers", not "Readiness needs attention": the shop has one
@@ -114,15 +108,8 @@ test("captain saves the full checkpoint manifest, reloads it offline, and reconc
   context,
 }) => {
   await page.goto("/shop/blue-mantis/schedule/board");
-  await page
-    .locator("li")
-    .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-    .getByRole("link", { name: "Two-Tank Reef — Molasses & French", exact: true })
-    .click();
-  await page
-    .getByRole("navigation", { name: "Trip" })
-    .getByRole("link", { name: "Manifest" })
-    .click();
+  await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
+  await openTripTab(page, "Manifest");
 
   // The device copy now saves itself automatically once the page has signal —
   // no tap required. Wait for that to land (the offline link only appears
@@ -170,15 +157,8 @@ test("a captain who lost the saved copy to storage eviction still lands on a pag
   // is gone; the assertion runs on the suite's ordinary 8s.
   test.setTimeout(25_000);
   await page.goto("/shop/blue-mantis/schedule/board");
-  await page
-    .locator("li")
-    .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-    .getByRole("link", { name: "Two-Tank Reef — Molasses & French", exact: true })
-    .click();
-  await page
-    .getByRole("navigation", { name: "Trip" })
-    .getByRole("link", { name: "Manifest" })
-    .click();
+  await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
+  await openTripTab(page, "Manifest");
   // Switch checkpoints before losing signal — the redirect should carry this
   // through so a captain mid roll call doesn't land back on "Before departure".
   await page
@@ -265,23 +245,13 @@ test("a captain who lost the saved copy to storage eviction still lands on a pag
 
 test("the offline fallback never reaches beyond the manifest route", async ({ page, context }) => {
   await page.goto("/shop/blue-mantis/schedule/board");
-  await page
-    .locator("li")
-    .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-    .getByRole("link", { name: "Two-Tank Reef — Molasses & French", exact: true })
-    .click();
-  await page
-    .getByRole("navigation", { name: "Trip" })
-    .getByRole("link", { name: "Manifest" })
-    .click();
+  await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
+  await openTripTab(page, "Manifest");
   await waitForShellPrimed(page);
 
   // Move to a *different* trip surface — the worker's live-manifest pattern
   // is scoped to the manifest route alone and must not swallow this one too.
-  await page
-    .getByRole("navigation", { name: "Trip" })
-    .getByRole("link", { name: "Guests" })
-    .click();
+  await openTripTab(page, "Guests");
   await expect(page).toHaveURL(/\/guests$/);
 
   await context.setOffline(true);
@@ -301,15 +271,8 @@ test("the offline fallback never reaches beyond the manifest route", async ({ pa
 
 test("the live manifest response never enters Cache Storage", async ({ page }) => {
   await page.goto("/shop/blue-mantis/schedule/board");
-  await page
-    .locator("li")
-    .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-    .getByRole("link", { name: "Two-Tank Reef — Molasses & French", exact: true })
-    .click();
-  await page
-    .getByRole("navigation", { name: "Trip" })
-    .getByRole("link", { name: "Manifest" })
-    .click();
+  await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
+  await openTripTab(page, "Manifest");
   await waitForShellPrimed(page);
 
   // The worker is network-first for the live manifest and only ever caches
@@ -333,15 +296,8 @@ test("an out-of-range checkpoint in the offline URL falls back to departure, not
   page,
 }) => {
   await page.goto("/shop/blue-mantis/schedule/board");
-  await page
-    .locator("li")
-    .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-    .getByRole("link", { name: "Two-Tank Reef — Molasses & French", exact: true })
-    .click();
-  await page
-    .getByRole("navigation", { name: "Trip" })
-    .getByRole("link", { name: "Manifest" })
-    .click();
+  await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
+  await openTripTab(page, "Manifest");
   await expect(page.getByRole("link", { name: "Open offline roll call" })).toBeVisible();
 
   const tripId = new URL(page.url()).pathname.match(/\/trips\/([^/]+)\//)?.[1];
@@ -406,15 +362,8 @@ test("visiting any shop page auto-saves the near-term board without opening a ma
 
 test("displays missing diver face-grid on manifest page", async ({ page }) => {
   await page.goto("/shop/blue-mantis/schedule/board");
-  await page
-    .locator("li")
-    .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-    .getByRole("link", { name: "Two-Tank Reef — Molasses & French", exact: true })
-    .click();
-  await page
-    .getByRole("navigation", { name: "Trip" })
-    .getByRole("link", { name: "Manifest" })
-    .click();
+  await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
+  await openTripTab(page, "Manifest");
 
   // Validate the face grid is visible and has missing divers
   await expect(page.locator("#missing-divers-grid").filter({ visible: true })).toBeVisible();
@@ -443,15 +392,8 @@ test("a checkpoint with every diver counted stays open until the crew are counte
   test.setTimeout(60_000);
 
   await page.goto("/shop/blue-mantis/schedule/board");
-  await page
-    .locator("li")
-    .filter({ hasText: TRIP })
-    .getByRole("link", { name: TRIP, exact: true })
-    .click();
-  await page
-    .getByRole("navigation", { name: "Trip" })
-    .getByRole("link", { name: "Manifest" })
-    .click();
+  await openTripFromBoard(page, TRIP);
+  await openTripTab(page, "Manifest");
 
   // Nothing counted yet.
   await expect(page.getByText("No crew count recorded at this checkpoint yet.")).toBeVisible();

@@ -1,5 +1,5 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { daysFromNow, e2eNow, signInAsOwner, signOut } from "./helpers";
+import { createTrip, daysFromNow, e2eNow, signInAsOwner, signOut } from "./helpers";
 
 /**
  * Refunds are staff-run (docs H-07): cancelling a paid booking never moves
@@ -16,16 +16,15 @@ test.describe("refunds", () => {
     page: import("@playwright/test").Page,
     options: { title: string; date: string; cancellationWindowHours: number },
   ) {
-    await page.goto("/shop/blue-mantis/trips/new");
-    await page.getByLabel("Title").fill(options.title);
-    await page.getByLabel("Date").fill(options.date);
-    await page.getByLabel("Departs").fill("08:00");
-    await page.getByLabel("Returns").fill("11:30");
-    await page.getByLabel("Capacity").fill("6");
-    await page.getByLabel(/Price per diver/).fill("120");
-    await page.getByLabel("Free cancellation window").fill(String(options.cancellationWindowHours));
-    await page.getByRole("button", { name: "Put it on the board" }).click();
-    await expect(page.getByRole("status")).toBeVisible();
+    await createTrip(page, {
+      title: options.title,
+      date: options.date,
+      departsAt: "08:00",
+      returnsAt: "11:30",
+      capacity: 6,
+      price: 120,
+      cancellationWindowHours: options.cancellationWindowHours,
+    });
 
     // Open the trip and turn on "requires payment" so the roster shows a
     // payment control at all (off by default — most trips never charge).

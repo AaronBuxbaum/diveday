@@ -1,5 +1,5 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { daysFromNow, e2eNow, signOut } from "./helpers";
+import { createTrip, daysFromNow, e2eNow, signOut } from "./helpers";
 
 /**
  * Diver self-service cancel/reschedule from their own readiness page
@@ -19,14 +19,13 @@ test.describe("staff-prepared trips", () => {
     const originalTitle = `Move-From Run ${suffix}`;
 
     // Staff puts a trip on the board for the diver to book.
-    await page.goto("/shop/blue-mantis/trips/new");
-    await page.getByLabel("Title").fill(originalTitle);
-    await page.getByLabel("Date").fill(daysFromNow(4));
-    await page.getByLabel("Departs").fill("08:00");
-    await page.getByLabel("Returns").fill("11:00");
-    await page.getByLabel("Capacity").fill("6");
-    await page.getByRole("button", { name: "Put it on the board" }).click();
-    await expect(page.getByRole("status")).toBeVisible();
+    await createTrip(page, {
+      title: originalTitle,
+      date: daysFromNow(4),
+      departsAt: "08:00",
+      returnsAt: "11:00",
+      capacity: 6,
+    });
 
     await signOut(page);
 
@@ -95,14 +94,13 @@ test.describe("staff-prepared trips", () => {
     const suffix = e2eNow().getTime();
     const title = `Cancel-Me Run ${suffix}`;
 
-    await page.goto("/shop/blue-mantis/trips/new");
-    await page.getByLabel("Title").fill(title);
-    await page.getByLabel("Date").fill(daysFromNow(4));
-    await page.getByLabel("Departs").fill("08:00");
-    await page.getByLabel("Returns").fill("11:00");
-    await page.getByLabel("Capacity").fill("6");
-    await page.getByRole("button", { name: "Put it on the board" }).click();
-    await expect(page.getByRole("status")).toBeVisible();
+    await createTrip(page, {
+      title,
+      date: daysFromNow(4),
+      departsAt: "08:00",
+      returnsAt: "11:00",
+      capacity: 6,
+    });
     await signOut(page);
 
     await page.goto("/s/blue-mantis", { waitUntil: "domcontentloaded" });

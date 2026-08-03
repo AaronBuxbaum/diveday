@@ -1,5 +1,5 @@
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
-import { daysFromNow, e2eNow, openTripFromBoard } from "./helpers";
+import { createTrip, daysFromNow, e2eNow, openTripFromBoard } from "./helpers";
 
 /**
  * The contact importer (ADR 20260723-contact-importer, ADR
@@ -141,14 +141,13 @@ test.describe("contact import — specialty cards", () => {
 
     // A trip that requires the deep specialty, and the imported diver on it.
     const title = `Deep Import Run ${e2eNow().getTime()}`;
-    await page.goto("/shop/blue-mantis/trips/new");
-    await page.getByLabel("Title").fill(title);
-    await page.getByLabel("Date").fill(daysFromNow(5));
-    await page.getByLabel("Departs").fill("08:00");
-    await page.getByLabel("Returns").fill("12:00");
-    await page.getByLabel("Capacity").fill("4");
-    await page.getByRole("button", { name: "Put it on the board" }).click();
-    await expect(page.getByRole("status")).toContainText(title);
+    await createTrip(page, {
+      title,
+      date: daysFromNow(5),
+      departsAt: "08:00",
+      returnsAt: "12:00",
+      capacity: 4,
+    });
 
     await page.goto("/shop/blue-mantis/schedule/board");
     await openTripFromBoard(page, title);

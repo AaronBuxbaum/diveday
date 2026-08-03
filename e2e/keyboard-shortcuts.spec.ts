@@ -1,4 +1,5 @@
-import { expect, signedInAsOwner, test } from "./fixtures";
+// Every test in this file only reads — no writes, so it opts out of the per-test demo reset.
+import { expect, signedInAsOwner, readOnlyTest as test } from "./fixtures";
 
 signedInAsOwner();
 

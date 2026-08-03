@@ -1,6 +1,7 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
 import {
   acceptAgeAttestation,
+  createTrip,
   daysFromNow,
   e2eNow,
   findTripOnBoard,
@@ -245,16 +246,15 @@ test.describe("staff", () => {
     // database persists across runs, so a test that books the demo session works
     // exactly six times and then fails as "full".
     const sessionTitle = `Open Water Diver — session ${e2eNow().getTime()}`;
-    await page.goto("/shop/blue-mantis/trips/new");
-    await page.getByLabel("Course").selectOption({ label: "Open Water Diver" });
-    await page.getByLabel("Title").fill(sessionTitle);
-    // Keep the test-created class clear of the seeded Deep Diver session,
-    // which spans into day 21 and intentionally exercises crew overlap rules.
-    await page.getByLabel("Date").fill(daysFromNow(24));
-    await page.getByLabel("Departs").fill("08:00");
-    await page.getByLabel("Returns").fill("17:00");
-    await page.getByRole("button", { name: "Put it on the board" }).click();
-    await expect(page.getByRole("status")).toBeVisible(); // created banner ⇒ the redirect settled
+    await createTrip(page, {
+      course: "Open Water Diver",
+      title: sessionTitle,
+      // Keep the test-created class clear of the seeded Deep Diver session,
+      // which spans into day 21 and intentionally exercises crew overlap rules.
+      date: daysFromNow(24),
+      departsAt: "08:00",
+      returnsAt: "17:00",
+    });
 
     // A course session refuses bookings until an instructor is on its crew — the
     // rule that makes this flow safe, and the reason the seeded session works.
@@ -308,15 +308,14 @@ test.describe("staff", () => {
     // individual step is stuck.
     test.setTimeout(30_000);
     const sessionTitle = `Ratio test session ${e2eNow().getTime()}`;
-    await page.goto("/shop/blue-mantis/trips/new");
-    await page.getByLabel("Course").selectOption({ label: "Open Water Diver" });
-    await page.getByLabel("Title").fill(sessionTitle);
-    await page.getByLabel("Date").fill(daysFromNow(22));
-    await page.getByLabel("Departs").fill("08:00");
-    await page.getByLabel("Returns").fill("17:00");
-    await page.getByLabel("Capacity").fill("12");
-    await page.getByRole("button", { name: "Put it on the board" }).click();
-    await expect(page.getByRole("status")).toBeVisible();
+    await createTrip(page, {
+      course: "Open Water Diver",
+      title: sessionTitle,
+      date: daysFromNow(22),
+      departsAt: "08:00",
+      returnsAt: "17:00",
+      capacity: 12,
+    });
 
     // Anchored to the full accessible name: an unpriced trip's card also
     // carries a "Set a price for {title}, ..." link whose name contains the

@@ -97,6 +97,100 @@ export async function openTripFromBoard(page: Page, title: string) {
 }
 
 /**
+ * Move between a trip record's surfaces (`TripSubNav` — Overview, Guests,
+ * Manifest, Prep). The nav is labelled "Trip" and its links are plain
+ * `<Link>`s, so the click resolves client-side: waiting on the tab's own path
+ * segment here is what keeps a caller's first assertion from racing the
+ * in-flight transition. The active tab renders as an inert `<span>`, so
+ * calling this for the tab you are already on would hang — navigate, don't
+ * re-select.
+ */
+export async function openTripTab(page: Page, tab: "Guests" | "Manifest" | "Prep") {
+  await page.getByRole("navigation", { name: "Trip" }).getByRole("link", { name: tab }).click();
+  await page.waitForURL(new RegExp(`/${tab.toLowerCase()}(\\?|$)`));
+}
+
+/**
+ * Put a departure on the board through the real staff form
+ * (`/shop/<slug>/trips/new`), the way ~30 specs need one of their own rather
+ * than sharing a seeded charter another worker may be mutating.
+ *
+ * Only the four fields the form actually requires are positional-ish; the
+ * rest are opt-in because the form defaults them (capacity, price, and the
+ * free-cancellation window are all optional on the page too). `course` is
+ * applied *first* on purpose: picking a course re-renders the form around the
+ * selection, so a title filled before it would be thrown away.
+ *
+ * Settling on the created banner rather than the URL is deliberate — creating
+ * a trip redirects to the shop home with `?created=<title>`, which
+ * `FlashParams` strips again shortly after mount, so the banner (which names
+ * the trip) is the stable signal that the write landed.
+ */
+export async function createTrip(
+  page: Page,
+  options: {
+    title: string;
+    date: string;
+    departsAt: string;
+    returnsAt: string;
+    shopSlug?: string;
+    course?: string;
+    capacity?: number;
+    price?: number;
+    cancellationWindowHours?: number;
+  },
+): Promise<void> {
+  await page.goto(`/shop/${options.shopSlug ?? "blue-mantis"}/trips/new`);
+  if (options.course !== undefined) {
+    await page.getByLabel("Course").selectOption({ label: options.course });
+  }
+  await page.getByLabel("Title").fill(options.title);
+  await page.getByLabel("Date").fill(options.date);
+  await page.getByLabel("Departs").fill(options.departsAt);
+  await page.getByLabel("Returns").fill(options.returnsAt);
+  if (options.capacity !== undefined) {
+    await page.getByLabel("Capacity").fill(String(options.capacity));
+  }
+  if (options.price !== undefined) {
+    await page.getByLabel(/Price per diver/).fill(String(options.price));
+  }
+  if (options.cancellationWindowHours !== undefined) {
+    await page.getByLabel("Free cancellation window").fill(String(options.cancellationWindowHours));
+  }
+  await page.getByRole("button", { name: "Put it on the board" }).click();
+  await expect(page.getByRole("status")).toContainText(options.title);
+}
+
+/**
+ * Send the waiver to the first diver on the open trip's Guests roster and
+ * return the bearer link it hands back — a relative `/waivers/<token>` path.
+ *
+ * The e2e fleet configures no email provider, so the shared
+ * `WaiverSendControl` always falls to its private-link affordance instead of
+ * "Waiver sent to …", and that inline `role="status"` result is where the
+ * link lives. The button label is matched exactly so it targets the per-diver
+ * control rather than the roster's "Send waivers to selected" bulk button,
+ * and the whole thing is scoped to the Divers section so it can't pick up a
+ * crew or wait-list control with a similar name.
+ *
+ * Caller must already be on the trip's Guests tab (`openTripTab(page,
+ * "Guests")`); this deliberately does not navigate, because several specs
+ * need the staff URL they were on to return to afterwards.
+ */
+export async function sendWaiverForFirstDiver(page: Page): Promise<string> {
+  const diverSection = page
+    .locator("section")
+    .filter({ has: page.getByRole("heading", { name: /^Divers/ }) })
+    .filter({ visible: true });
+  await diverSection.getByRole("button", { name: "Send waiver", exact: true }).first().click();
+  const href = await diverSection.getByRole("status").getByRole("link").getAttribute("href");
+  if (!href?.startsWith("/waivers/")) {
+    throw new Error(`expected a /waivers/ bearer link from the send control, got ${href}`);
+  }
+  return href;
+}
+
+/**
  * The schedule board pages a fixed number of departures at a time and has no
  * text search — a trip scheduled far enough out (or created earlier in the
  * same test) can land past the first page. Pages through "Show later
