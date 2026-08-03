@@ -56,6 +56,7 @@ import {
   temperatureToCelsius,
   temperatureUnitFor,
 } from "@/lib/temperature-units";
+import { MAX_TRIP_DAYS, MIN_TRIP_DAYS, tripMeetingDays } from "@/lib/trip-days";
 import { tripDiveDraftsFromForm } from "@/lib/trip-dives";
 import { parseWallTime, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 
@@ -67,6 +68,13 @@ const detailsSchema = z.object({
   endTime: z.string(),
   capacity: z.coerce.number().int().min(1).max(60),
   plannedDives: z.coerce.number().int().min(1).max(4),
+  // How many consecutive days this departure meets on (src/lib/trip-days.ts).
+  // Absent from an older cached form is one day, the shape every trip had
+  // before multi-day existed.
+  dayCount: z.preprocess(
+    (value) => (value === "" || value === undefined ? MIN_TRIP_DAYS : value),
+    z.coerce.number().int().min(MIN_TRIP_DAYS).max(MAX_TRIP_DAYS),
+  ),
   priceDollars: z.preprocess(
     (value) => (value === "" ? undefined : value),
     z.coerce.number().nonnegative().finite().optional(),
@@ -175,6 +183,7 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
     endTime,
     capacity,
     plannedDives,
+    dayCount,
     priceDollars,
     depositDollars,
     cancellationWindowHours,
@@ -188,6 +197,18 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
   const startsAt = wallTimeToUtc(sw, shopNow.timezone);
   const endsAt = wallTimeToUtc(ew, shopNow.timezone);
   if (endsAt <= startsAt) redirect(`${back}?notice=end-before-start`);
+  // Day one's window, repeated across however many days the departure runs.
+  // Each day is converted on its own date so a trip that straddles a DST
+  // change keeps the wall-clock time the shop actually promised.
+  const meetingDays = tripMeetingDays({ start: sw, end: ew }, dayCount);
+  if (!meetingDays) redirect(`${back}?notice=invalid`);
+  const scheduleDays = meetingDays.map((day, index) => ({
+    dayNumber: index + 1,
+    startsAt: wallTimeToUtc(day.start, shopNow.timezone),
+    endsAt: wallTimeToUtc(day.end, shopNow.timezone),
+  }));
+  const lastDay = scheduleDays.at(-1);
+  if (!lastDay) redirect(`${back}?notice=invalid`);
   // What the numbers in the price boxes mean — the shop's own currency.
   const tripCurrency = toShopCurrency(shopNow.currency);
   const priceCents = priceDollars === undefined ? null : majorToMinor(priceDollars, tripCurrency);
@@ -209,7 +230,9 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
     title,
     description: description || undefined,
     startsAt,
-    endsAt,
+    // The whole departure, first day's departure to last day's return.
+    endsAt: lastDay.endsAt,
+    scheduleDays,
     capacity,
     plannedDives,
     priceCents: priceDollars === undefined ? null : majorToMinor(priceDollars, tripCurrency),

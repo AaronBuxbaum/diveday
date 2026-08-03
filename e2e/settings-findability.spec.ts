@@ -42,13 +42,34 @@ test.describe("as owner", () => {
     await expect(page).toHaveURL(`/shop/${SHOP}/settings/team`);
     await expect(page.getByRole("heading", { level: 1, name: "Team" })).toBeVisible();
 
-    // Promo codes: beside Orders in Money, where the shop's other money is.
+    // Promo codes: in Money, where the shop's other money is. Settings is now
+    // the *only* door to both of these — the header dropped their rows.
     await page.goto(`/shop/${SHOP}/settings`);
     await page.getByRole("link", { name: "Manage promo codes" }).click();
     await expect(page).toHaveURL(`/shop/${SHOP}/promos`);
     await expect(
       page.getByRole("heading", { level: 1, name: "Discounts a diver can type" }),
     ).toBeVisible();
+  });
+
+  test("a shop can change the zone its whole schedule is read in", async ({ page }) => {
+    // Sign-up asked for a timezone once and nothing could change it
+    // afterwards, so a shop that clicked past the picker read every departure
+    // time, day header, and "sailing today" in US Eastern with no way out.
+    await page.goto(`/shop/${SHOP}/settings`);
+    const zone = page.getByLabel("Timezone");
+    await expect(zone).toHaveValue("America/New_York");
+
+    await zone.selectOption("America/Cancun");
+    await page.getByRole("button", { name: "Save timezone" }).click();
+    await expect(page.getByRole("status").filter({ hasText: "Timezone saved." })).toBeVisible();
+    await expect(page.getByLabel("Timezone")).toHaveValue("America/Cancun");
+
+    // Put it back so the rest of this worker's run reads the seeded clock the
+    // way every other spec expects.
+    await page.getByLabel("Timezone").selectOption("America/New_York");
+    await page.getByRole("button", { name: "Save timezone" }).click();
+    await expect(page.getByRole("status").filter({ hasText: "Timezone saved." })).toBeVisible();
   });
 });
 

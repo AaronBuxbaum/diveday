@@ -55,7 +55,7 @@ test.describe("staff", () => {
 
     await page.goto("/shop/blue-mantis/trips/new");
     await page.getByLabel("Title").fill(tripTitle);
-    await page.getByLabel("Dive briefing").first().selectOption({ label: siteName });
+    await page.getByLabel("Dive site").first().selectOption({ label: siteName });
     await page.getByLabel("Date").fill(daysFromNow(5));
     await page.getByLabel("Departs").fill("09:00");
     await page.getByLabel("Returns").fill("12:00");

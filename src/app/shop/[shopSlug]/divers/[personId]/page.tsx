@@ -50,11 +50,11 @@ export default async function DiverDetailPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string; personId: string }>;
-  searchParams: Promise<{ notice?: string; undo?: string; cardType?: string }>;
+  searchParams: Promise<{ notice?: string; undo?: string; cardType?: string; edit?: string }>;
 }) {
   const session = await requireStaffSession();
   const { shopSlug, personId } = await params;
-  const { notice, undo, cardType } = await searchParams;
+  const { notice, undo, cardType, edit } = await searchParams;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   const locale = await requestLocale(shop?.defaultLocale);
@@ -90,8 +90,18 @@ export default async function DiverDetailPage({
 
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
-      <FlashParams params={["notice", "undo", "cardType"]} />
-      <DiverHeader diver={diver} shopSlug={shopSlug} personId={personId} locale={locale} />
+      <FlashParams params={["notice", "undo", "cardType", "edit"]} />
+      <DiverHeader
+        diver={diver}
+        shopSlug={shopSlug}
+        personId={personId}
+        locale={locale}
+        // Only ever set by the roster's "Add a diver" form, which lands here
+        // with a name and little else. `FlashParams` strips it from the URL
+        // straight away, so a reload or a shared link is the ordinary
+        // collapsed page.
+        editOpen={edit === "1"}
+      />
       {notice === "card-deleted" && undo && cardType ? (
         <UndoToast
           message={staffTranslator(locale)("divers.notices.cardRemovedToast")}

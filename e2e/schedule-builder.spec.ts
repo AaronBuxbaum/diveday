@@ -61,8 +61,8 @@ test.describe("schedule builder", () => {
     await expect(page.getByRole("status")).toContainText("Copied");
     await expect(page.getByRole("listitem").filter({ hasText: title })).toHaveCount(2);
 
-    // Remove — a two-step in-page confirm (InlineConfirm), both copies come
-    // back off the board.
+    // Remove — a two-step confirm in a panel below the row, the same shape
+    // Move and Copy use; both copies come back off the board.
     for (let remaining = 2; remaining > 0; remaining -= 1) {
       const row = page.getByRole("listitem").filter({ hasText: title }).first();
       await control(page, "Remove", title).first().click();

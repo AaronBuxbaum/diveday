@@ -132,12 +132,18 @@ describe("settings findability", () => {
     expect(anchors).toEqual(SETTINGS_GROUPS.map((group) => `#${group.id}`));
   });
 
-  it("gives an owner a door to Team and to Promo codes", async () => {
+  it("gives an owner a door to Team and to Promo codes, and only one door each", async () => {
     // Both surfaces existed only in the nav registry and ⌘K: an owner who
     // opened Settings to add a colleague or a discount code found no card.
+    // They are now *only* here — the header dropped both rows, because one
+    // destination behind two menus is the duplicate control principle 8 rules
+    // out (src/lib/staff-destinations.ts).
     const hrefs = hrefsIn(await renderSettings("owner"));
     expect(hrefs).toContain(`/shop/${SHOP_SLUG}/settings/team`);
     expect(hrefs).toContain(`/shop/${SHOP_SLUG}/promos`);
+    // The trade the other way: Orders is money a shop reads every day, so it
+    // keeps its header row and this page carries no second door to it.
+    expect(hrefs).not.toContain(`/shop/${SHOP_SLUG}/orders`);
   });
 
   it("shows a divemaster neither door, because both would bounce them", async () => {
@@ -148,6 +154,6 @@ describe("settings findability", () => {
     expect(hrefs).not.toContain(`/shop/${SHOP_SLUG}/promos`);
     // The ungated cards in the same groups are still there — this is a gate,
     // not a blank page.
-    expect(hrefs).toContain(`/shop/${SHOP_SLUG}/orders`);
+    expect(hrefs).toContain(`/shop/${SHOP_SLUG}/settings/embed`);
   });
 });

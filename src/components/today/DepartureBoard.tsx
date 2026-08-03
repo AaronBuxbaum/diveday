@@ -399,8 +399,13 @@ export function DepartureBoard({
       </h2>
       <p className="mt-1 text-sm text-muted">{copy.sailingTodaySubtitle}</p>
 
+      {/* Desktop only, and deliberately so: dragging a pill is a mouse
+          gesture the HTML drag-and-drop API never fires from a touch, so on a
+          phone this strip was an instruction to do something impossible.
+          `hidden sm:flex` drops the whole affordance — the crew dropdown on
+          each card is the control that works on every device. */}
       {availableStaff && availableStaff.length > 0 ? (
-        <div className="mt-4 flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface p-3 shadow-sm">
+        <div className="mt-4 hidden flex-wrap items-center gap-2 rounded-xl border border-border bg-surface p-3 shadow-sm sm:flex">
           <span className="text-xs font-bold text-muted uppercase tracking-wider">
             {copy.dragStaffLabel}
           </span>

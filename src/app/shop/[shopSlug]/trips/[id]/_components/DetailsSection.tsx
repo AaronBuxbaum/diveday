@@ -5,6 +5,7 @@ import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatMoneyCents } from "@/lib/format";
 import { currencyFractionDigits, maxPriceMajor, minorToMajor } from "@/lib/money";
+import { MAX_TRIP_DAYS, MIN_TRIP_DAYS } from "@/lib/trip-days";
 import { toDateInputValue, toTimeInputValue, type WallTime } from "@/lib/zoned";
 import type { DiveSiteList, Trip, TripDiveList } from "./types";
 
@@ -15,6 +16,7 @@ export function DetailsSection({
   tripDiveList,
   startWall,
   endWall,
+  dayCount,
   locale,
   currency,
 }: {
@@ -24,6 +26,8 @@ export function DetailsSection({
   tripDiveList: TripDiveList;
   startWall: WallTime;
   endWall: WallTime;
+  /** How many consecutive days this departure meets on — its `trip_schedule_days` count. */
+  dayCount: number;
   locale: string;
   /** The shop's currency — what the numbers in these price boxes mean. */
   currency: string;
@@ -84,14 +88,14 @@ export function DetailsSection({
             optionalHint: t("shared.tripDiveFields.optionalHint"),
             namePlaceholderFirst: t("shared.tripDiveFields.namePlaceholderFirst"),
             namePlaceholderOther: t("shared.tripDiveFields.namePlaceholderOther"),
-            diveBriefingLabel: t("shared.tripDiveFields.diveBriefingLabel"),
-            noSavedBriefing: t("shared.tripDiveFields.noSavedBriefing"),
+            diveSiteLabel: t("shared.tripDiveFields.diveSiteLabel"),
+            noSiteChosen: t("shared.tripDiveFields.noSiteChosen"),
             diverFacingDetailsLabel: t("shared.tripDiveFields.diverFacingDetailsLabel"),
             detailsPlaceholder: t("shared.tripDiveFields.detailsPlaceholder"),
             footerNote: t("shared.tripDiveFields.footerNote"),
           }}
         />
-        <FieldGrid columns={1} className="gap-x-5 gap-y-5 sm:grid-cols-5">
+        <FieldGrid columns={1} className="gap-x-5 gap-y-5 sm:grid-cols-6">
           <Field label={t("trips.details.dateLabel")}>
             <input
               name="date"
@@ -127,6 +131,21 @@ export function DetailsSection({
               min={1}
               max={60}
               defaultValue={trip.capacity}
+              className={`${controlClass} tabular-nums`}
+            />
+          </Field>
+          {/* The date/departs/returns boxes describe day one; this says how
+              many consecutive days repeat it. Saving rebuilds the whole
+              meeting-day list, so a departure can grow or shrink here rather
+              than being deleted and rebuilt as separate trips. */}
+          <Field label={t("trips.details.dayCountLabel")}>
+            <input
+              name="dayCount"
+              type="number"
+              required
+              min={MIN_TRIP_DAYS}
+              max={MAX_TRIP_DAYS}
+              defaultValue={dayCount}
               className={`${controlClass} tabular-nums`}
             />
           </Field>

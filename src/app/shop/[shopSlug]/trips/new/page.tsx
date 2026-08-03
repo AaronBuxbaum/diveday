@@ -31,8 +31,10 @@ import {
   weeklyOccurrences,
 } from "@/lib/recurrence";
 import { requireStaffSession } from "@/lib/session";
+import { MAX_TRIP_DAYS, MIN_TRIP_DAYS, tripMeetingDays } from "@/lib/trip-days";
 import { tripDiveDraftsFromForm } from "@/lib/trip-dives";
-import { parseWallTime, wallTimeToUtc } from "@/lib/zoned";
+import { parseWallTime, type WallTime, wallTimeToUtc } from "@/lib/zoned";
+import { RepeatFields } from "./_components/RepeatFields";
 
 export const metadata: Metadata = {
   title: "Schedule a trip — DiveDay",
@@ -46,6 +48,12 @@ const formSchema = z.object({
   endTime: z.string(),
   capacity: z.coerce.number().int().min(1).max(60),
   plannedDives: z.coerce.number().int().min(1).max(4),
+  // A departure that meets on consecutive days is one trip, not a week of
+  // look-alikes: one roster, one set of waivers, one crew (src/lib/trip-days.ts).
+  dayCount: z.preprocess(
+    (value) => (value === "" || value === undefined ? MIN_TRIP_DAYS : value),
+    z.coerce.number().int().min(MIN_TRIP_DAYS).max(MAX_TRIP_DAYS),
+  ),
   priceDollars: z.preprocess(
     (value) => (value === "" ? undefined : value),
     z.coerce.number().nonnegative().finite().optional(),
@@ -96,6 +104,7 @@ async function scheduleTrip(formData: FormData) {
     endTime,
     capacity,
     plannedDives,
+    dayCount,
     priceDollars,
     depositDollars,
     cancellationWindowHours,
@@ -112,12 +121,36 @@ async function scheduleTrip(formData: FormData) {
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) redirect(`/shop/${session.user.shopSlug}/trips/new?error=invalid`);
 
-  // The times must be a coherent single day before we shift them across weeks;
-  // every occurrence inherits this same wall-clock start/end.
+  // The times must be a coherent single day before we shift them across days
+  // or weeks; every meeting day and every occurrence inherits this same
+  // wall-clock start/end.
   const startsAt = wallTimeToUtc(startWall, shop.timezone);
   const endsAt = wallTimeToUtc(endWall, shop.timezone);
   if (endsAt <= startsAt)
     redirect(`/shop/${session.user.shopSlug}/trips/new?error=end-before-start`);
+
+  /**
+   * One departure's meeting days, converted day by day through the shop's own
+   * zone. Day-by-day rather than a single offset because a multi-day trip can
+   * straddle a DST change, and what a shop promises is the wall-clock time —
+   * "back at the dock at 12:30" on both days.
+   */
+  const meetingDaysFrom = (day: { start: WallTime; end: WallTime }) => {
+    const days = tripMeetingDays(day, dayCount);
+    if (!days) return null;
+    return days.map((meeting, index) => ({
+      dayNumber: index + 1,
+      startsAt: wallTimeToUtc(meeting.start, shop.timezone),
+      endsAt: wallTimeToUtc(meeting.end, shop.timezone),
+    }));
+  };
+  const scheduleDays = meetingDaysFrom({ start: startWall, end: endWall });
+  if (!scheduleDays) redirect(`/shop/${session.user.shopSlug}/trips/new?error=invalid`);
+  // The trip itself spans its first day's departure to its last day's return,
+  // so every "is it over?" question in the app — sailed guards, the board's
+  // upcoming window, calendar feeds — sees the whole departure.
+  const lastDay = scheduleDays[scheduleDays.length - 1];
+  if (!lastDay) redirect(`/shop/${session.user.shopSlug}/trips/new?error=invalid`);
 
   const dives = tripDiveDraftsFromForm(formData, plannedDives);
   // The shop's currency decides the multiplier: 5000 in a JPY shop's price
@@ -137,12 +170,18 @@ async function scheduleTrip(formData: FormData) {
   const shopHref = `/shop/${session.user.shopSlug}`;
 
   if (repeatIntervalWeeks > 0) {
+    // No fallback count: the form asks for one and requires it the moment a
+    // cadence is picked, so an absent count here is a malformed submission,
+    // not a shop that meant "eight".
+    if (repeatCount === undefined) {
+      redirect(`/shop/${session.user.shopSlug}/trips/new?error=invalid`);
+    }
     const occurrenceWalls = weeklyOccurrences(
       { start: startWall, end: endWall },
       {
         frequency: "weekly",
         intervalWeeks: repeatIntervalWeeks,
-        occurrenceCount: repeatCount ?? 8,
+        occurrenceCount: repeatCount,
       },
     );
     if (!occurrenceWalls) redirect(`/shop/${session.user.shopSlug}/trips/new?error=invalid`);
@@ -159,10 +198,15 @@ async function scheduleTrip(formData: FormData) {
       cancellationWindowHours: cancellationWindowHoursValue,
       frequency: "weekly",
       intervalWeeks: repeatIntervalWeeks,
-      occurrences: occurrenceWalls.map((occurrence) => ({
-        startsAt: wallTimeToUtc(occurrence.start, shop.timezone),
-        endsAt: wallTimeToUtc(occurrence.end, shop.timezone),
-      })),
+      occurrences: occurrenceWalls.map((occurrence) => {
+        const days = meetingDaysFrom(occurrence);
+        const last = days?.at(-1);
+        return {
+          startsAt: wallTimeToUtc(occurrence.start, shop.timezone),
+          endsAt: last ? last.endsAt : wallTimeToUtc(occurrence.end, shop.timezone),
+          scheduleDays: days ?? undefined,
+        };
+      }),
     });
     if (!series) redirect(`/shop/${session.user.shopSlug}/trips/new?error=invalid`);
     revalidateAndRedirect(
@@ -177,13 +221,14 @@ async function scheduleTrip(formData: FormData) {
     title,
     description: description || undefined,
     startsAt,
-    endsAt,
+    endsAt: lastDay.endsAt,
     capacity,
     plannedDives,
     dives,
     priceCents,
     depositCents,
     cancellationWindowHours: cancellationWindowHoursValue,
+    scheduleDays,
   });
   if (!created) redirect(`/shop/${session.user.shopSlug}/trips/new?error=invalid`);
   revalidateAndRedirect(shopHref, `${shopHref}?created=${encodeURIComponent(title)}`);
@@ -334,8 +379,8 @@ async function NewTripBody({
               optionalHint: t("shared.tripDiveFields.optionalHint"),
               namePlaceholderFirst: t("shared.tripDiveFields.namePlaceholderFirst"),
               namePlaceholderOther: t("shared.tripDiveFields.namePlaceholderOther"),
-              diveBriefingLabel: t("shared.tripDiveFields.diveBriefingLabel"),
-              noSavedBriefing: t("shared.tripDiveFields.noSavedBriefing"),
+              diveSiteLabel: t("shared.tripDiveFields.diveSiteLabel"),
+              noSiteChosen: t("shared.tripDiveFields.noSiteChosen"),
               diverFacingDetailsLabel: t("shared.tripDiveFields.diverFacingDetailsLabel"),
               detailsPlaceholder: t("shared.tripDiveFields.detailsPlaceholder"),
               footerNote: t("shared.tripDiveFields.footerNote"),
@@ -363,7 +408,7 @@ async function NewTripBody({
               <input name="endTime" type="time" required className={controlClass} />
             </Field>
           </FieldGrid>
-          <FieldGrid columns={1} className="sm:w-40">
+          <FieldGrid columns={2} className="gap-x-5 gap-y-5">
             <Field label={t("trips.new.capacityLabel")}>
               <input
                 name="capacity"
@@ -372,7 +417,25 @@ async function NewTripBody({
                 min={1}
                 max={60}
                 defaultValue={12}
-                className={`${controlClass} tabular-nums`}
+                className={`${controlClass} tabular-nums sm:w-40`}
+              />
+            </Field>
+            {/* A course weekend or a liveaboard is one departure that meets on
+                consecutive days — one roster, one set of waivers, one crew —
+                and until this box existed the only way to put one on the board
+                was several unrelated trips sharing a title. */}
+            <Field
+              label={t("trips.new.dayCountLabel")}
+              description={t("trips.new.dayCountDescription")}
+            >
+              <input
+                name="dayCount"
+                type="number"
+                required
+                min={MIN_TRIP_DAYS}
+                max={MAX_TRIP_DAYS}
+                defaultValue={MIN_TRIP_DAYS}
+                className={`${controlClass} tabular-nums sm:w-40`}
               />
             </Field>
           </FieldGrid>
@@ -402,6 +465,7 @@ async function NewTripBody({
             <FieldGrid columns={2} className="mt-4 gap-x-5 gap-y-5">
               <Field
                 label={t("trips.new.depositLabel")}
+                hint={t("trips.new.optionalHint")}
                 description={t("trips.new.depositDescription")}
               >
                 <input
@@ -417,6 +481,7 @@ async function NewTripBody({
               </Field>
               <Field
                 label={t("trips.new.cancellationWindowLabel")}
+                hint={t("trips.new.optionalHint")}
                 description={t("trips.new.cancellationWindowDescription")}
               >
                 <div className="flex items-center gap-2">
@@ -437,31 +502,22 @@ async function NewTripBody({
           <fieldset className="rounded-lg border border-border bg-surface p-5">
             <legend className="px-1 text-sm font-medium">{t("trips.new.repeatLegend")}</legend>
             <p className="text-sm text-muted">{t("trips.new.repeatDescription")}</p>
-            <FieldGrid columns={2} className="mt-4 gap-y-5">
-              <Field label={t("trips.new.howOftenLabel")}>
-                <select name="repeatIntervalWeeks" defaultValue="0" className={controlClass}>
-                  <option value="0">{t("trips.new.doesntRepeat")}</option>
-                  <option value="1">{t("trips.new.everyWeek")}</option>
-                  <option value="2">{t("trips.new.every2Weeks")}</option>
-                  <option value="4">{t("trips.new.every4Weeks")}</option>
-                </select>
-              </Field>
-              <Field
-                label={t("trips.new.numberOfTripsLabel")}
-                description={t("trips.new.numberOfTripsDescription", {
+            <RepeatFields
+              minOccurrences={MIN_SERIES_OCCURRENCES}
+              maxOccurrences={MAX_SERIES_OCCURRENCES}
+              copy={{
+                howOftenLabel: t("trips.new.howOftenLabel"),
+                doesntRepeat: t("trips.new.doesntRepeat"),
+                everyWeek: t("trips.new.everyWeek"),
+                every2Weeks: t("trips.new.every2Weeks"),
+                every4Weeks: t("trips.new.every4Weeks"),
+                numberOfTripsLabel: t("trips.new.numberOfTripsLabel"),
+                numberOfTripsDescription: t("trips.new.numberOfTripsDescription", {
                   max: MAX_SERIES_OCCURRENCES,
-                })}
-              >
-                <input
-                  name="repeatCount"
-                  type="number"
-                  min={MIN_SERIES_OCCURRENCES}
-                  max={MAX_SERIES_OCCURRENCES}
-                  defaultValue={8}
-                  className={`${controlClass} tabular-nums`}
-                />
-              </Field>
-            </FieldGrid>
+                }),
+                numberOfTripsPlaceholder: t("trips.new.numberOfTripsPlaceholder"),
+              }}
+            />
           </fieldset>
           <div className="mt-2 flex items-center gap-3">
             <button

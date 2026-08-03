@@ -67,6 +67,9 @@ test("a shop outside the curated dive regions can pick its own timezone", async 
   // Both tiers are on offer: the pinned dive-region shortcuts, and every other
   // zone the runtime knows.
   const timezone = page.locator('select[name="timezone"]').filter({ visible: true });
+  // The fleet's browser zone is pinned to New York (playwright.config.ts), so
+  // this is both the picker's default and what detection would land on — the
+  // test below is the one that tells the two apart.
   await expect(timezone).toHaveValue("America/New_York");
   await expect(timezone.locator('optgroup[label="Caribbean & Mexico"]')).toBeAttached();
   await expect(timezone.locator('optgroup[label="All timezones"]')).toBeAttached();
@@ -149,4 +152,25 @@ test("a freshly onboarded shop finds a way forward on its empty Divers and Order
   await expect(connect).toHaveCount(2);
   await connect.last().click();
   await expect(page).toHaveURL(new RegExp(`/shop/${unique}/settings#money$`));
+});
+
+/**
+ * Every date and time a shop reads on any DiveDay surface is rendered in
+ * `shops.timezone`, and this picker opened on US Eastern for everyone — so a
+ * shop that clicked past it read its own schedule in someone else's zone and
+ * had no way to change it afterwards. The device already knows the answer.
+ */
+test.describe("a shop signing up from the Caribbean", () => {
+  test.use({ timezoneId: "America/Cancun" });
+
+  test("finds its own zone already picked, and can still change it", async ({ page }) => {
+    await page.goto("/onboard");
+    const timezone = page.locator('select[name="timezone"]').filter({ visible: true });
+    await expect(timezone).toHaveValue("America/Cancun");
+
+    // Detection is a starting point, never a decision: the shop across the
+    // channel still picks its own.
+    await timezone.selectOption("America/Cayman");
+    await expect(timezone).toHaveValue("America/Cayman");
+  });
 });

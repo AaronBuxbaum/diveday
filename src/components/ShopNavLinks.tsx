@@ -329,10 +329,21 @@ export function ShopNavLinks({
               {daily.map(moreLink)}
             </MoreGroup>
           ) : null}
-          {setup.length > 0 ? (
+          {/* A visible heading over a single row is noise, so the configure-once
+              half wears one only once it is a genuine group. It keeps the same
+              accessible name either way — a screen reader still hears which
+              half of the menu it is in. */}
+          {setup.length > 1 ? (
             <MoreGroup id={`${groupId}-setup`} heading={copy.groupSetup} className="mt-2">
               {setup.map(moreLink)}
             </MoreGroup>
+          ) : setup.length === 1 ? (
+            <ul
+              aria-label={copy.groupSetup}
+              className="mt-2 flex flex-col gap-0.5 border-t border-border pt-2"
+            >
+              {setup.map(moreLink)}
+            </ul>
           ) : null}
         </div>
       </details>

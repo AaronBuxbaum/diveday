@@ -218,9 +218,11 @@ test.describe("minimum age (H-08, fail open)", () => {
     await page.getByLabel("Full name").fill(`Young Diver ${stamp}`);
     await page.getByLabel("Email").fill(`young-${stamp}@example.com`);
     await page.getByRole("button", { name: "Add diver" }).click();
-    await expect(page).toHaveURL(/\/divers\/[0-9a-f-]+$/);
+    await expect(page).toHaveURL(/\/divers\/[0-9a-f-]+(\?edit=1)?$/);
 
-    await page.getByText("Edit details").click();
+    // Adding a diver lands with the details form already expanded — the
+    // three-field roster form doesn't ask for a date of birth, and the front
+    // desk shouldn't have to know to open a disclosure to supply one.
     await page.getByLabel("Date of birth").fill(daysFromNow(-365 * 8));
     await page.getByRole("button", { name: "Save details" }).click();
     await expect(page.getByRole("status")).toContainText("Diver details updated");
@@ -287,9 +289,9 @@ test.describe("minimum age (H-08, fail open)", () => {
     await page.getByLabel("Assign crew").selectOption({ label: "Marcus Webb" });
     await expect(page.getByRole("button", { name: "Unassign Marcus Webb" })).toBeVisible();
 
-    // Staff must step aside for the public flow: /s/<slug>/trips/[id] redirects a
-    // signed-in staff member of this shop straight to the trip's own staff
-    // page, so "Book this date" would never reach the public booking form.
+    // Staff must step aside for the public flow: this exercises the booking
+    // form a diver fills in, and `bookSpot`'s actor is decided by the session
+    // on the request, not by the URL.
     await signOut(page);
 
     // The PUBLIC form — actor: "public" in bookSpot — never refuses on age.
