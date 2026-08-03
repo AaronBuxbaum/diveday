@@ -276,6 +276,28 @@ export async function getMonthlyReport(
   };
 }
 
+/**
+ * The departure time of this shop's oldest reportable trip, or null when the
+ * shop has never scheduled one. The reports page uses it as the floor of its
+ * month picker: a shop that opened in March should not be handed a control
+ * offering to walk back to 1970, and it is the same bound the page clamps a
+ * hand-typed `?month=` against. Cancelled trips are excluded for the reason
+ * every other aggregate here excludes them — a cancelled boat sailed nothing,
+ * so its month is not a month with data.
+ */
+export async function earliestReportedTripStart(
+  db: DbExecutor,
+  shopId: string,
+): Promise<Date | null> {
+  const [row] = await db
+    .select({ startsAt: trips.startsAt })
+    .from(trips)
+    .where(and(eq(trips.shopId, shopId), ne(trips.status, "cancelled")))
+    .orderBy(asc(trips.startsAt))
+    .limit(1);
+  return row?.startsAt ?? null;
+}
+
 /** How many trips the "Trips this month" table shows per page before "Show more". */
 export const REPORT_TRIPS_PAGE_SIZE = 20;
 

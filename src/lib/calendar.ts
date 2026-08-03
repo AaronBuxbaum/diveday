@@ -51,6 +51,23 @@ export function addMonths(ref: MonthRef, delta: number): MonthRef {
   return { year, month: month + 1 };
 }
 
+/** Chronological order of two months: negative, zero, or positive. */
+export function compareMonths(a: MonthRef, b: MonthRef): number {
+  return a.year !== b.year ? a.year - b.year : a.month - b.month;
+}
+
+/**
+ * Pull a month back inside `[min, max]`. Either bound may be omitted, which
+ * leaves that side unbounded. This is what stops a hand-typed or
+ * bookmark-carried `?month=0001-01` from rendering a report for a month the
+ * shop could not possibly have data for: the page clamps first, then queries.
+ */
+export function clampMonth(ref: MonthRef, min?: MonthRef | null, max?: MonthRef | null): MonthRef {
+  if (min && compareMonths(ref, min) < 0) return min;
+  if (max && compareMonths(ref, max) > 0) return max;
+  return ref;
+}
+
 /** "July 2026" for the calendar heading. */
 export function monthLabel(ref: MonthRef, locale = "en-US"): string {
   return new Intl.DateTimeFormat(locale, {

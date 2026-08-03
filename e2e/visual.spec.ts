@@ -1068,9 +1068,13 @@ for (const scheme of ["light", "dark"] as const) {
 
         // The moderation queue: published reviews, and the "waiting on you"
         // card a written review sits in until staff release it
-        // (docs ADR 20260729-verified-diver-reviews).
+        // (docs ADR 20260729-verified-diver-reviews). Waiting on the bulk
+        // control specifically, not just the heading: "Publish selected" and
+        // the per-row tick boxes come from a client provider, and a capture
+        // taken before it mounts photographs a list with no checkboxes in it.
         await page.goto("/shop/blue-mantis/reviews");
         await page.getByRole("heading", { level: 1, name: "What divers said" }).waitFor();
+        await page.getByRole("button", { name: "Publish selected" }).waitFor();
         await capture(page, "staff-reviews", scheme);
 
         // Shop-wide discount codes: the create form plus the seeded codes with

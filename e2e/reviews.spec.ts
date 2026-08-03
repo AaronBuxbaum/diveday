@@ -126,6 +126,63 @@ test.describe("as owner, reviews list", () => {
   });
 });
 
+test("a weekend's held reviews can be cleared in one pass, not one button at a time", async ({
+  page,
+}) => {
+  // Two reviews waiting: the seeded one, plus one this diver leaves now.
+  const comment = "Second tank was the best dive of the trip.";
+  await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
+  await page.getByRole("radio", { name: "5 out of 5 stars" }).check();
+  await page.getByLabel("Anything you’d tell another diver?").fill(comment);
+  await page.getByRole("button", { name: "Leave my review" }).click();
+
+  await signInAsOwner(page);
+  await page.goto("/shop/blue-mantis/reviews?filter=waiting");
+  const waiting = page.getByRole("checkbox", { name: /Select .+'s review to publish/ });
+  await expect(waiting.first()).toBeVisible();
+  const count = await waiting.count();
+  expect(count).toBeGreaterThanOrEqual(2);
+  for (const box of await waiting.all()) await box.check();
+
+  await page.getByRole("button", { name: "Publish selected" }).click();
+  await expect(page.getByText(`${count} reviews published to your schedule page.`)).toBeVisible();
+  // It lands back on the whole list — so you see what you just released — and
+  // nothing on it is still waiting: no row carries a tick box any more.
+  await expect(page.getByRole("checkbox", { name: /review to publish/ })).toHaveCount(0);
+
+  await page.context().clearCookies();
+  await page.goto("/s/blue-mantis");
+  await expect(page.getByText(comment)).toBeVisible();
+});
+
+test.describe("as owner, bulk publish", () => {
+  signedInAsOwner();
+
+  test("publishing with nothing ticked says so rather than pretending to work", async ({
+    page,
+  }) => {
+    await page.goto("/shop/blue-mantis/reviews?filter=waiting");
+    await page.getByRole("button", { name: "Publish selected" }).click();
+    await expect(page.getByText("Tick the reviews you want to publish first.")).toBeVisible();
+    // Nothing moved: the held review is still held.
+    await expect(
+      page.getByRole("checkbox", { name: /Select .+'s review to publish/ }).first(),
+    ).toBeVisible();
+  });
+
+  test("a published review carries no tick box — the bulk control only publishes", async ({
+    page,
+  }) => {
+    await page.goto("/shop/blue-mantis/reviews");
+    const published = page
+      .locator("li")
+      .filter({ hasText: "Vis was unreal and the crew found us a turtle on the second tank." })
+      .filter({ visible: true });
+    await expect(published.getByRole("checkbox")).toHaveCount(0);
+    await expect(published.getByRole("button", { name: "Hide" })).toBeVisible();
+  });
+});
+
 test("the public schedule publishes the shop's rating as structured data", async ({ page }) => {
   await page.goto("/s/blue-mantis");
   // No `.filter({ visible: true })`: a <script> tag has no rendered box and is

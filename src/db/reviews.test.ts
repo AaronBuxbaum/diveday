@@ -9,6 +9,7 @@ import {
   listPublishedShopReviews,
   listShopReviewsForStaff,
   setReviewPublished,
+  setReviewsPublished,
   submitTripReview,
 } from "./reviews";
 import { bookings } from "./schema";
@@ -221,6 +222,53 @@ describe("setReviewPublished", () => {
     expect(await getShopReviewAggregate(db, shop.id)).toEqual({ count: 0, average: null });
     expect(await listPublishedShopReviews(db, shop.id)).toEqual([]);
     expect(await countReviewsAwaitingModeration(db, shop.id)).toBe(1);
+  });
+});
+
+describe("setReviewsPublished", () => {
+  it("releases every held review in one call and counts what actually changed", async () => {
+    const { db, shop, bookingIds } = await reviewContext(["Diver One", "Diver Two", "Diver Three"]);
+    for (const [index, bookingId] of bookingIds.entries()) {
+      await submitTripReview(db, { bookingId, rating: 4, comment: `Words ${index}` });
+    }
+    const waiting = (await listShopReviewsForStaff(db, shop.id, { onlyWaiting: true })).reviews;
+    expect(waiting).toHaveLength(3);
+
+    expect(
+      await setReviewsPublished(
+        db,
+        shop.id,
+        waiting.map((review) => review.id),
+      ),
+    ).toBe(3);
+    expect(await countReviewsAwaitingModeration(db, shop.id)).toBe(0);
+    expect(await getShopReviewAggregate(db, shop.id)).toEqual({ count: 3, average: 4 });
+
+    // Repeating the same selection changes nothing — already-published rows are
+    // excluded, so a double submit cannot re-date the public list.
+    expect(
+      await setReviewsPublished(
+        db,
+        shop.id,
+        waiting.map((review) => review.id),
+      ),
+    ).toBe(0);
+  });
+
+  it("refuses another shop's ids, an empty selection, and anything not uuid-shaped", async () => {
+    const { db, shop, bookingIds } = await reviewContext();
+    await submitTripReview(db, { bookingId: bookingIds[0], rating: 2, comment: "Held" });
+    const [review] = (await listShopReviewsForStaff(db, shop.id, { onlyWaiting: true })).reviews;
+
+    expect(await setReviewsPublished(db, OTHER_SHOP_ID, [review.id])).toBe(0);
+    expect(await setReviewsPublished(db, shop.id, [])).toBe(0);
+    // A hand-crafted form post: a non-uuid is dropped before Postgres sees it,
+    // so this is "nothing matched" rather than a 500.
+    expect(await setReviewsPublished(db, shop.id, ["not-a-uuid", "'; drop table x"])).toBe(0);
+    expect(await countReviewsAwaitingModeration(db, shop.id)).toBe(1);
+
+    // …and the shop's own id still works, so none of the above was a false pass.
+    expect(await setReviewsPublished(db, shop.id, [review.id, review.id])).toBe(1);
   });
 });
 

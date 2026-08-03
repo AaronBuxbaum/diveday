@@ -1,4 +1,4 @@
-import { and, count, desc, eq, gte, isNotNull, lt, or, sql } from "drizzle-orm";
+import { and, count, desc, eq, gte, inArray, isNotNull, lt, or, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import {
   EMPTY_REVIEW_AGGREGATE,
@@ -313,6 +313,57 @@ export async function setReviewPublished(
     .where(and(eq(tripReviews.id, reviewId), eq(tripReviews.shopId, shopId)))
     .returning({ id: tripReviews.id });
   return Boolean(updated);
+}
+
+/**
+ * The most reviews one "Publish selected" may release. A moderation page shows
+ * a bounded page of reviews, so a submission carrying more ids than this did
+ * not come from the page — the excess is dropped rather than trusted.
+ */
+export const MAX_BULK_PUBLISH = 100;
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Publish several reviews at once — the moderation queue's "tick a few, then
+ * publish". Shop-scoped and publish-only by design: releasing is additive and
+ * safely repeated, while *hiding* takes a shop's own words off its public page
+ * and stays a deliberate, per-review act with its own undo.
+ *
+ * `publishedAt` is set only where it is still null, so re-publishing a review
+ * that is already live never re-dates it and never reorders the public list.
+ * Returns how many rows actually changed, which is what lets the caller tell
+ * "published four" from "that selection matched nothing here".
+ */
+export async function setReviewsPublished(
+  db: AppDb,
+  shopId: string,
+  reviewIds: readonly string[],
+): Promise<number> {
+  // Ids arrive from a submitted form, so anything not shaped like a uuid is
+  // dropped here rather than handed to Postgres, where it is a type error and
+  // a 500 rather than the "nothing matched" this returns.
+  const ids = [...new Set(reviewIds)]
+    .filter((id) => UUID_PATTERN.test(id))
+    .slice(0, MAX_BULK_PUBLISH);
+  if (ids.length === 0) return 0;
+  const now = nowDate();
+  const updated = await db
+    .update(tripReviews)
+    .set({
+      isPublished: true,
+      publishedAt: sql`coalesce(${tripReviews.publishedAt}, ${now})`,
+      updatedAt: now,
+    })
+    .where(
+      and(
+        eq(tripReviews.shopId, shopId),
+        inArray(tripReviews.id, ids),
+        eq(tripReviews.isPublished, false),
+      ),
+    )
+    .returning({ id: tripReviews.id });
+  return updated.length;
 }
 
 /** How many reviews are waiting on staff — the badge on the moderation nav entry. */
