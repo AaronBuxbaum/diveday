@@ -146,6 +146,13 @@ test.describe("as captain", () => {
 
   test("a captain (not owner/manager) is redirected away from team settings", async ({ page }) => {
     await page.goto(`/shop/${SHOP}/settings/team`);
-    await expect(page).toHaveURL(`/shop/${SHOP}`);
+    // The refusal lands on Settings and says why, instead of teleporting
+    // silently to Today — the same explained-landing rule promos and
+    // WhatsApp already followed. FlashParams strips the query, so assert
+    // the banner text rather than the URL param.
+    await expect(page).toHaveURL(`/shop/${SHOP}/settings`);
+    await expect(
+      page.getByText("Team management is limited to owners and managers."),
+    ).toBeVisible();
   });
 });

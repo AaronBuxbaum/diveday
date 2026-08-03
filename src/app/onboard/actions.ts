@@ -43,10 +43,9 @@ export async function onboardAction(formData: FormData) {
 
   const ip = await clientIp();
   if (!(await checkRateLimit(rateLimitKey("onboard", ip), RATE_LIMITS.onboard)).allowed) {
-    // A code, like every other `backToForm` call below that names a specific
-    // field problem — OnboardPage resolves it through ONBOARD_ERROR_MESSAGES
-    // (falling back to rendering the string as-is for the handful of
-    // business-rule messages here that aren't yet extracted).
+    // A code, like every other `backToForm` call below — OnboardPage resolves
+    // every code through ONBOARD_ERROR_MESSAGES into the visitor's own
+    // language. No sentence leaves this action in any path.
     backToForm(RATE_LIMIT_MESSAGE);
   }
 
@@ -75,7 +74,7 @@ export async function onboardAction(formData: FormData) {
       const [existingShop] = await tx.select().from(shops).where(eq(shops.slug, shopSlug)).limit(1);
 
       if (existingShop) {
-        onboardingError = `The shop link "${shopSlug}" is already taken.`;
+        onboardingError = "shop_slug_taken";
         tx.rollback();
         return;
       }
@@ -88,7 +87,7 @@ export async function onboardAction(formData: FormData) {
         .limit(1);
 
       if (existingAccount) {
-        onboardingError = "This email is already registered.";
+        onboardingError = "email_taken";
         tx.rollback();
         return;
       }
@@ -173,7 +172,7 @@ export async function onboardAction(formData: FormData) {
     // cause goes to the server log, where the shop's technical owner can see
     // it; the visitor gets a generic, actionable message (CR-014).
     console.error("onboardAction: failed to create shop", err);
-    backToForm("Something went wrong creating your shop. Please try again.");
+    backToForm("create_failed");
   }
 
   // 2. Welcome + verify-email are best-effort — no working link exists
@@ -253,7 +252,7 @@ export async function onboardAction(formData: FormData) {
     });
   } catch (error) {
     if (error instanceof AuthError) {
-      backToForm("Your shop was created, but signing you in failed. Try signing in below.");
+      backToForm("signin_failed");
     }
     throw error; // Propagate NEXT_REDIRECT
   }

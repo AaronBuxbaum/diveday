@@ -72,7 +72,10 @@ and `src/components` choose words. An English string returned from a query is co
 never sees — it reaches a page through a variable reference (`{blocker.message}`), not a string
 literal — and `pnpm check:domain-strings` is what catches it instead
 (`node scripts/check-domain-strings.mjs --report src/lib` to see what it sees, same workflow as
-`check-copy.mjs`). This was a real, previously-silent gap — see ADR
+`check-copy.mjs`). A data module whose *job* is feeding words to pages doesn't get codes — it gets
+message-bundle **keys** (`DiverMessageKey`-typed, the `src/lib/marketing.ts` pattern) and a place
+in the script's `proseFreeFiles` list, which fails on any prose literal outright rather than
+ratcheting. This was a real, previously-silent gap — see ADR
 [20260731-domain-layer-copy-leaks](../../../docs/architecture/decisions/20260731-domain-layer-copy-leaks.md)
 for the fourteen files it found on first run.
 
@@ -120,8 +123,18 @@ convention and needing no marker:
   not an engineering one.
 
 Not exempt: marketing pages under `src/app`/`src/components`. They go through `diver.json` like
-everything else on those routes. `src/lib/migration-guides.ts`'s long-form guide content is
-different — it's data, not JSX, and is file-exempt for that reason (see above).
+everything else on those routes. Also not exempt: **data modules that feed the UI.**
+`src/lib/marketing.ts`, `src/lib/migration-guides.ts`, and `src/lib/demo-roles.ts` are
+key registries — they hold `DiverMessageKey` values and structure (slugs, ordering, URLs,
+the price figure), and the words live in the bundles under `marketing.features/price/export/
+capabilities/guides.*`. These files are listed in `check-domain-strings.mjs`'s `proseFreeFiles`
+and hard-fail on any prose literal without an `// i18n-exempt: reason` marker (reserved for
+genuine non-language: proper names, cited document titles, currency figures). When a new data
+module starts feeding words to a page, add it to `proseFreeFiles` in the same change.
+
+**Adding any user-visible sentence means adding it to every locale's bundle at once** — there is
+no English-first workflow; a key present in one locale and missing in another fails
+`pnpm check:locale`.
 
 ## When `pnpm check:copy` or `pnpm check:domain-strings` fails
 

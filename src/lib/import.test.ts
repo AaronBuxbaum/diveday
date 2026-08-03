@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { certificationAgency, certificationLevel } from "@/db/schema";
+import { diverTranslator } from "@/i18n/messages";
 import { INTERNAL_VOCABULARY } from "@/test/copy";
 import {
   IMPORT_AGENCIES,
   IMPORT_FIELDS,
   IMPORT_HONESTY_TABLE,
   IMPORT_LEVELS,
+  type ImportScopeRowId,
   isTechnicalCertName,
   MAX_IMPORT_BYTES,
   MAX_IMPORT_CELL_LENGTH,
@@ -16,6 +18,7 @@ import {
   prepareContactImport,
   priorVisitDedupeKey,
 } from "./import";
+import { IMPORT_SCOPE_ROW_KEYS } from "./migration-guides";
 
 describe("parseCsv (RFC-4180)", () => {
   it("reads quoted fields, embedded commas, doubled quotes, and CRLF", () => {
@@ -697,19 +700,41 @@ describe("priorVisitDedupeKey", () => {
 });
 
 describe("IMPORT_HONESTY_TABLE", () => {
+  // The table itself holds codes; the words live in the bundles. These
+  // assertions read the published English through the diver-bundle map the
+  // switching pages render from, so they still pin the copy a shop owner sees.
+  const en = diverTranslator("en-US");
+  const row = (id: ImportScopeRowId) => {
+    const entry = IMPORT_HONESTY_TABLE.find((r) => r.id === id);
+    expect(entry, `${id} row`).toBeDefined();
+    return {
+      scope: entry?.scope,
+      what: en(IMPORT_SCOPE_ROW_KEYS[id].what),
+      detail: en(IMPORT_SCOPE_ROW_KEYS[id].detail),
+    };
+  };
+
   it("uses only the two calm scope buckets — no alarm-red partial/never chips", () => {
-    for (const row of IMPORT_HONESTY_TABLE) {
-      expect(["included", "stays-behind"]).toContain(row.scope);
+    for (const entry of IMPORT_HONESTY_TABLE) {
+      expect(["included", "stays-behind"]).toContain(entry.scope);
+    }
+  });
+
+  it("has diver-bundle words for every row — no row can render as a bare key", () => {
+    for (const entry of IMPORT_HONESTY_TABLE) {
+      const keys = IMPORT_SCOPE_ROW_KEYS[entry.id];
+      expect(en(keys.what), `${entry.id} what`).not.toBe(keys.what);
+      expect(en(keys.detail), `${entry.id} detail`).not.toBe(keys.detail);
     }
   });
 
   it("keeps payment and service history behind, with an honest reason", () => {
-    const behind = IMPORT_HONESTY_TABLE.filter((row) => row.scope === "stays-behind").map(
-      (r) => r.what,
+    const behind = IMPORT_HONESTY_TABLE.filter((entry) => entry.scope === "stays-behind").map(
+      (entry) => entry.id,
     );
-    expect(behind).toEqual(
-      expect.arrayContaining(["Card on file / payment", "Receipts & service history"]),
-    );
+    expect(behind).toEqual(expect.arrayContaining(["cardOnFile", "receiptsService"]));
+    expect(row("cardOnFile").what).toBe("Card on file / payment");
+    expect(row("receiptsService").what).toBe("Receipts & service history");
   });
 
   // The row that replaced "Booking, trip & service history" must not read as a
@@ -717,60 +742,66 @@ describe("IMPORT_HONESTY_TABLE", () => {
   // cancellations, and the whole safety of this feature is that a booking record
   // never gets counted as a dive (ADR 20260725-import-prior-visits).
   it("states past visits as booking records that never become trips", () => {
-    const visits = IMPORT_HONESTY_TABLE.find((r) => r.what.startsWith("Past visits"));
-    expect(visits?.scope).toBe("included");
-    expect(visits?.detail).toMatch(/not a dive/i);
-    expect(visits?.detail).toMatch(/never appears on your schedule/i);
-    expect(visits?.detail).toMatch(/capacity/i);
+    const visits = row("pastVisits");
+    expect(visits.what).toMatch(/^Past visits/);
+    expect(visits.scope).toBe("included");
+    expect(visits.detail).toMatch(/not a dive/i);
+    expect(visits.detail).toMatch(/never appears on your schedule/i);
+    expect(visits.detail).toMatch(/capacity/i);
   });
 
   it("states waiver/medical acceptance as trusted and marked imported", () => {
-    const waiver = IMPORT_HONESTY_TABLE.find(
-      (r) => r.what === "Signed waivers & medical clearance",
-    );
-    expect(waiver?.scope).toBe("included");
-    expect(waiver?.detail).toMatch(/trust/i);
-    expect(waiver?.detail).toMatch(/imported/i);
+    const waiver = row("signedWaivers");
+    expect(waiver.what).toBe("Signed waivers & medical clearance");
+    expect(waiver.scope).toBe("included");
+    expect(waiver.detail).toMatch(/trust/i);
+    expect(waiver.detail).toMatch(/imported/i);
   });
 
   it("marks certifications and nitrox as coming across verified and flagged imported", () => {
-    const cert = IMPORT_HONESTY_TABLE.find((r) => r.what === "Certification card");
-    expect(cert?.scope).toBe("included");
-    expect(cert?.detail).toMatch(/verified/i);
-    expect(cert?.detail).toMatch(/imported/i);
+    const cert = row("certificationCard");
+    expect(cert.what).toBe("Certification card");
+    expect(cert.scope).toBe("included");
+    expect(cert.detail).toMatch(/verified/i);
+    expect(cert.detail).toMatch(/imported/i);
 
-    const nitrox = IMPORT_HONESTY_TABLE.find((r) => r.what === "Nitrox");
-    expect(nitrox?.scope).toBe("included");
-    expect(nitrox?.detail).toMatch(/verified/i);
+    const nitrox = row("nitrox");
+    expect(nitrox.what).toBe("Nitrox");
+    expect(nitrox.scope).toBe("included");
+    expect(nitrox.detail).toMatch(/verified/i);
   });
 
   it("says waiver/medical documents accept both images and PDFs", () => {
-    const docs = IMPORT_HONESTY_TABLE.find((r) => r.what === "Waiver / medical documents");
-    expect(docs?.detail).toMatch(/pdf/i);
+    const docs = row("waiverDocuments");
+    expect(docs.what).toBe("Waiver / medical documents");
+    expect(docs.detail).toMatch(/pdf/i);
   });
 
   it("brings specialty cards across, and says the dive waits on the staff confirm", () => {
-    const specialty = IMPORT_HONESTY_TABLE.find((r) => r.what?.startsWith("Specialty cards"));
-    expect(specialty?.scope).toBe("included");
-    expect(specialty?.detail).toMatch(/verified/i);
+    const specialty = row("specialtyCards");
+    expect(specialty.what).toMatch(/^Specialty cards/);
+    expect(specialty.scope).toBe("included");
+    expect(specialty.detail).toMatch(/verified/i);
     // The gate rule is the whole reason this row can be honest — it must be
     // stated on the row itself, not buried in a page's surrounding prose.
-    expect(specialty?.detail).toMatch(/confirm/i);
+    expect(specialty.detail).toMatch(/confirm/i);
   });
 
   it("brings dive insurance across without implying it is a gate", () => {
-    const insurance = IMPORT_HONESTY_TABLE.find((r) => r.what === "Dive insurance (DAN)");
-    expect(insurance?.scope).toBe("included");
-    expect(insurance?.detail).toMatch(/never a gate/i);
+    const insurance = row("diveInsurance");
+    expect(insurance.what).toBe("Dive insurance (DAN)");
+    expect(insurance.scope).toBe("included");
+    expect(insurance.detail).toMatch(/never a gate/i);
   });
 
   it("never leaks internal vocabulary into a table three surfaces render verbatim", () => {
     // This table is rendered on both switching pages and in the import wizard.
     // An ADR id or a decision-register id here reaches a shop owner as a dead
     // end — say the thing the reference points at instead.
-    for (const row of IMPORT_HONESTY_TABLE) {
-      expect(row.what, `${row.what} — what`).not.toMatch(INTERNAL_VOCABULARY);
-      expect(row.detail, `${row.what} — detail`).not.toMatch(INTERNAL_VOCABULARY);
+    for (const entry of IMPORT_HONESTY_TABLE) {
+      const resolved = row(entry.id);
+      expect(resolved.what, `${entry.id} — what`).not.toMatch(INTERNAL_VOCABULARY);
+      expect(resolved.detail, `${entry.id} — detail`).not.toMatch(INTERNAL_VOCABULARY);
     }
   });
 });
