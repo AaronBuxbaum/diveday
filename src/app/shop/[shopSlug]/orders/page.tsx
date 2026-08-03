@@ -73,7 +73,7 @@ function dayBoundary(
 }
 
 /**
- * Every invoice the shop has ever sent, filterable by status, diver, and
+ * Every order the shop has ever sent, filterable by status, diver, and
  * date — the index Orders never had (task 158, UX persona lens 17): before
  * this, an order was reachable only through the diver it belonged to.
  * Reports' revenue rows, the roster's payment cells, the command palette, and

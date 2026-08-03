@@ -26,10 +26,12 @@ const COPY: PaymentActionCopy = {
   resending: "Resending…",
   invoiceResent: "Invoice resent.",
   errors: {
-    notFound: "That invoice could not be found — open the trip to check it.",
-    notOpen: "This invoice is no longer open — open the trip to check its status.",
+    // The record is an "order" wherever it is named; "invoice" survives only
+    // for the Stripe artifact itself (the resend action, the hosted page).
+    notFound: "That order could not be found — open the trip to check it.",
+    notOpen: "This order is no longer open — open the trip to check its status.",
     notConfigured: "Payments aren’t connected for this shop yet.",
-    failed: "Still couldn’t resend it — open the trip to check the invoice.",
+    failed: "Still couldn’t resend it — open the trip to check the order.",
   },
 };
 

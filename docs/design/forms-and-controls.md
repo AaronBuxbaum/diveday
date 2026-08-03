@@ -101,7 +101,7 @@ structural rather than remembered.
 ```tsx
 import { buttonClass } from "@/components/ui/button";
 
-<Link href={href} className={buttonClass({ variant: "secondary", size: "sm" })}>Create invoice</Link>
+<Link href={href} className={buttonClass({ variant: "secondary", size: "sm" })}>Create order</Link>
 <button type="submit" className={buttonClass({ variant: "danger" })}>Refund</button>
 ```
 

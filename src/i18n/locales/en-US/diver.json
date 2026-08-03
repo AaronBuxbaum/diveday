@@ -1305,7 +1305,7 @@
         "item1": "Card payments at booking through the shop's own Stripe account",
         "item2": "Deposits with the balance owed at the dock",
         "item3": "A free-cancellation window, with the automated refund when a diver cancels inside it",
-        "item4": "Staff-issued orders and invoices with trip, course, rental, nitrox, and retail lines",
+        "item4": "Staff-issued orders with trip, course, rental, nitrox, and retail lines",
         "item5": "Crew tips a diver starts from their own recap page",
         "item6": "Payment state folded into whether a diver is ready to board"
       },

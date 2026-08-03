@@ -128,33 +128,34 @@ describe("PaymentsSection history length", () => {
 
 /**
  * `orders/new` refuses to open at all until the shop can accept payments, so a
- * day-one shop's "New payment"/"Create invoice" buttons went nowhere and said
+ * day-one shop's "New payment"/"Create order" buttons went nowhere and said
  * nothing. Hiding them is a courtesy — the page still re-checks — but the
  * courtesy is what stops a button from reading as broken.
  */
 describe("PaymentsSection with no connected payment account", () => {
-  it("offers to connect payments instead of linking at the invoice door", () => {
+  it("offers to connect payments instead of linking at the order door", () => {
     renderBookings(1, false);
 
     const connect = screen.getAllByRole("link", { name: "Connect payments" });
     // Both entry points: the section's own header button and the per-booking
-    // row's "Create invoice".
+    // row's "Create order" (named for the record it raises — "invoice" is
+    // reserved for the Stripe artifact that record is sent as).
     expect(connect.length).toBeGreaterThanOrEqual(2);
     for (const link of connect) {
       expect(link).toHaveAttribute("href", "/shop/reef-shop/settings#money");
     }
     expect(screen.queryByRole("link", { name: "New payment" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Create invoice" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Create order" })).not.toBeInTheDocument();
   });
 
-  it("keeps the invoice buttons when payments are connected", () => {
+  it("keeps the order buttons when payments are connected", () => {
     renderBookings(1, true);
 
     expect(screen.getByRole("link", { name: "New payment" })).toHaveAttribute(
       "href",
       "/shop/reef-shop/orders/new?personId=person-1",
     );
-    expect(screen.getByRole("link", { name: "Create invoice" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Create order" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Connect payments" })).not.toBeInTheDocument();
   });
 });
