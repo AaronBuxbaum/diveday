@@ -117,6 +117,95 @@ test.describe("staff", () => {
     await expect(page.getByRole("button", { name: "Reinstate trip" })).toBeVisible();
   });
 
+  test("staff find a site by name or location instead of scrolling the whole library", async ({
+    page,
+  }) => {
+    // Three searches, a clear, and a past-the-end bookmark are five server
+    // round-trips with their own settles — the same aggregate-cost reasoning
+    // as the tour above, not one slow step.
+    test.setTimeout(30_000);
+    const library = page.getByRole("list", { name: "Saved dive sites" });
+    const cards = library.locator("li");
+    const search = page.getByLabel("Find a site");
+    // Scoped to the band itself: the staff chrome's ⌘K trigger is also a
+    // button named "Search", so an unscoped locator resolves to both.
+    const submit = page
+      .getByRole("form", { name: "Search the dive-site library" })
+      .getByRole("button", { name: "Search" });
+
+    await page.goto("/shop/blue-mantis/dive-sites");
+    const seededCount = await cards.count();
+    expect(seededCount).toBeGreaterThan(1);
+
+    // A name search narrows the grid to the one card and says so in the URL,
+    // so a found site is a link a staffer can send to a colleague.
+    await search.fill("spiegel");
+    await submit.click();
+    await expect(page).toHaveURL(/\?q=spiegel/);
+    await expect(cards).toHaveCount(1);
+    await expect(
+      library.getByRole("heading", { level: 2, name: "Spiegel Grove", exact: true }),
+    ).toBeVisible();
+    // The site's cert gate reads as the word staff use everywhere else in the
+    // app — not the raw `advanced_open_water` enum with its underscores swapped
+    // for spaces, which is what this badge rendered before. `exact: true` is
+    // what makes this a regression test rather than a tautology: it is
+    // case-sensitive and whole-string, so the old lower-case "advanced open
+    // water" fails it. (A bare `getByText` would not — Playwright's default is
+    // a case-insensitive substring match, and the old rendering passes that.)
+    await expect(library.getByText("Advanced Open Water", { exact: true })).toBeVisible();
+
+    // Location is searchable too: "Pennekamp" appears in no site's *name*.
+    await search.fill("pennekamp");
+    await submit.click();
+    await expect(cards).toHaveCount(1);
+    await expect(
+      library.getByRole("heading", { level: 2, name: "Christ of the Abyss", exact: true }),
+    ).toBeVisible();
+
+    // A search that matches nothing says so rather than showing the library's
+    // "start your first site" pitch to a shop that already has seven.
+    await search.fill("nowhere in particular");
+    await submit.click();
+    await expect(page.getByText("No sites match that search")).toBeVisible();
+    await expect(page.getByText("Start with a site your crew knows well")).toHaveCount(0);
+
+    // And there is always a way back to the whole library.
+    await page.getByRole("link", { name: "Clear search" }).click();
+    await expect(page).toHaveURL(/\/shop\/blue-mantis\/dive-sites$/);
+    await expect(cards).toHaveCount(seededCount);
+
+    // One screenful of sites is never told it is on "page 1 of 1"; the pager
+    // only exists when there is somewhere to go. (`src/db/dive-sites.test.ts`
+    // pins the paging arithmetic at real volume — seeding 25 sites into the
+    // demo shop to make a pager appear here would distort every other surface
+    // that reads the library.)
+    await expect(page.getByRole("navigation", { name: "Dive-site pages" })).toHaveCount(0);
+    // A stale bookmark past the end is an empty page, not a 500.
+    await page.goto("/shop/blue-mantis/dive-sites?page=99");
+    await expect(page.getByRole("heading", { level: 1, name: "Dive-site library" })).toBeVisible();
+    await expect(cards).toHaveCount(0);
+  });
+
+  test("a site with no location yet says so instead of leaving the line blank", async ({
+    page,
+  }) => {
+    // `{site.locationName ?? "Location to add"}` was the one hard-coded English
+    // string left on this page — the key existed in both bundles and was simply
+    // never wired up, so a Spanish-locale shop read one English line among the
+    // translated cards.
+    const siteName = `Unplaced Ledge ${e2eNow().getTime()}`;
+    await page.goto("/shop/blue-mantis/dive-sites/new");
+    await page.getByLabel("Name").fill(siteName);
+    await page.getByRole("button", { name: "Save site briefing" }).click();
+    await expect(page.getByRole("heading", { name: siteName })).toBeVisible();
+
+    await page.goto(`/shop/blue-mantis/dive-sites?q=${encodeURIComponent(siteName)}`);
+    const card = page.getByRole("list", { name: "Saved dive sites" }).locator("li");
+    await expect(card).toHaveCount(1);
+    await expect(card.getByText("Location to add")).toBeVisible();
+  });
+
   test("staff import a DiveDay catalog site and it lands in the shop's own library", async ({
     page,
   }) => {

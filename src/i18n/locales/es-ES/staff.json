@@ -618,6 +618,7 @@
       "createSite": "Crear un sitio",
       "browseTemplates": "Explorar plantillas",
       "overviewAriaLabel": "Resumen de sitios de buceo",
+      "gridAriaLabel": "Sitios de buceo guardados",
       "savedSites": "Sitios guardados",
       "savedSitesDetail": "Fichas reutilizables para la tripulación",
       "withForecastPoints": "Con punto de pronóstico",
@@ -628,12 +629,25 @@
       "emptyHeading": "Empieza con un sitio que tu tripulación ya conoce",
       "emptyBody": "Añade una ubicación, una imagen de mapa o ruta, y la vida marina que verán los buceadores.",
       "locationToAdd": "Ubicación por añadir",
+      "searchAriaLabel": "Buscar en la biblioteca de sitios de buceo",
+      "searchLabel": "Encuentra un sitio",
+      "searchPlaceholder": "Nombre o ubicación",
+      "searchApply": "Buscar",
+      "searchClear": "Borrar la búsqueda",
+      "noMatchHeading": "Ningún sitio coincide con esa búsqueda",
+      "noMatchBody": "Prueba con otro nombre o ubicación, o borra la búsqueda para ver toda la biblioteca.",
       "templateUpdateReady": "Actualización de plantilla v{version} disponible — tus cambios están a salvo.",
       "diveDayTemplateVersion": "Plantilla de DiveDay v{version}",
       "nitroxBadge": "Nitrox",
       "oneRequiredSpecialty": "1 especialidad requerida",
       "manyRequiredSpecialties": "{count} especialidades requeridas",
-      "addBriefingFallback": "Añade la ficha que verán tus buceadores."
+      "addBriefingFallback": "Añade la ficha que verán tus buceadores.",
+      "pagination": {
+        "label": "Páginas de sitios de buceo",
+        "previous": "Anterior",
+        "next": "Siguiente",
+        "position": "Página {page} de {pageCount} · {total} sitios"
+      }
     },
     "catalog": {
       "title": "Sitios de buceo comunes de DiveDay",

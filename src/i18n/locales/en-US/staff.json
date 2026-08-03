@@ -618,6 +618,7 @@
       "createSite": "Create a site",
       "browseTemplates": "Browse templates",
       "overviewAriaLabel": "Dive-site overview",
+      "gridAriaLabel": "Saved dive sites",
       "savedSites": "Saved sites",
       "savedSitesDetail": "Reusable crew briefings",
       "withForecastPoints": "With forecast points",
@@ -628,12 +629,25 @@
       "emptyHeading": "Start with a site your crew knows well",
       "emptyBody": "Add a location, a map or route image, and the life divers may encounter.",
       "locationToAdd": "Location to add",
+      "searchAriaLabel": "Search the dive-site library",
+      "searchLabel": "Find a site",
+      "searchPlaceholder": "Name or location",
+      "searchApply": "Search",
+      "searchClear": "Clear search",
+      "noMatchHeading": "No sites match that search",
+      "noMatchBody": "Try another name or location, or clear the search to see the whole library.",
       "templateUpdateReady": "Template update v{version} ready — your edits are safe.",
       "diveDayTemplateVersion": "DiveDay template v{version}",
       "nitroxBadge": "Nitrox",
       "oneRequiredSpecialty": "1 required specialty",
       "manyRequiredSpecialties": "{count} required specialties",
-      "addBriefingFallback": "Add the briefing your divers will see."
+      "addBriefingFallback": "Add the briefing your divers will see.",
+      "pagination": {
+        "label": "Dive-site pages",
+        "previous": "Previous",
+        "next": "Next",
+        "position": "Page {page} of {pageCount} · {total} sites"
+      }
     },
     "catalog": {
       "title": "DiveDay common dive sites",

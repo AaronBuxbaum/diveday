@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, inArray, isNull, ne } from "drizzle-orm";
+import { and, asc, count, eq, gte, ilike, inArray, isNull, ne, or, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import type { CertificationLevel } from "@/lib/readiness";
 import type { AppDb } from "./client";
@@ -44,6 +44,95 @@ export async function listDiveSites(db: AppDb, shopId: string) {
     .from(diveSites)
     .where(and(eq(diveSites.shopId, shopId), isNull(diveSites.deletedAt)))
     .orderBy(asc(diveSites.name));
+}
+
+/** Three rows of cards on the widest grid the library page uses. */
+export const DIVE_SITE_PAGE_SIZE = 24;
+
+export type DiveSiteListFilter = {
+  /** Matched against the site name *and* its location — staff recall either. */
+  query?: string;
+};
+
+/**
+ * One screenful of the library, searchable. A shop that has been running for
+ * years holds far more sites than fit on a page, and the library rendered every
+ * one of them as a card with no way to find anything except scrolling.
+ *
+ * The library page reads through here; every other caller keeps using
+ * `listDiveSites`, which deliberately still returns the lot because the trip
+ * editor's `<select>` of sites cannot page.
+ *
+ * The name half of the search rides `dive_sites_name_trgm_idx` (the GIN
+ * trigram index the command palette added); the location half is a scan
+ * within one shop's rows, which is the right trade at a library's scale —
+ * a second trigram index would cost every write to buy nothing measurable.
+ */
+export async function listDiveSitesPage(
+  db: AppDb,
+  shopId: string,
+  filter: DiveSiteListFilter = {},
+  page: { page?: number; pageSize?: number } = {},
+) {
+  const like = filter.query?.trim() ? `%${filter.query.trim()}%` : undefined;
+  const where = and(
+    eq(diveSites.shopId, shopId),
+    isNull(diveSites.deletedAt),
+    // A null `locationName` simply never matches — `ilike` on NULL is NULL,
+    // which `or` treats as "not this branch" rather than excluding the row.
+    like ? or(ilike(diveSites.name, like), ilike(diveSites.locationName, like)) : undefined,
+  );
+  const pageSize = Math.max(1, page.pageSize ?? DIVE_SITE_PAGE_SIZE);
+  // A hand-typed `?page=0`, `?page=-3`, or `?page=abc` reads as the first page
+  // rather than reaching the driver as a negative or NaN offset. The route
+  // guards this too; this is the layer that must not depend on it having done so.
+  const requested = Math.floor(page.page ?? 1);
+  const current = Number.isFinite(requested) ? Math.max(1, requested) : 1;
+
+  const [rows, [counted]] = await Promise.all([
+    db
+      .select()
+      .from(diveSites)
+      .where(where)
+      // `dive_sites_shop_name_unique` already makes the name a total order
+      // within a shop, so no row can land on two pages or on none; `id` is the
+      // belt-and-braces tiebreak that keeps that true if the index is ever
+      // relaxed (e.g. to let an archived site free its name).
+      .orderBy(asc(diveSites.name), asc(diveSites.id))
+      .limit(pageSize)
+      .offset((current - 1) * pageSize),
+    db.select({ total: count() }).from(diveSites).where(where),
+  ]);
+
+  const total = counted?.total ?? 0;
+  return {
+    rows,
+    total,
+    page: current,
+    pageSize,
+    pageCount: Math.max(1, Math.ceil(total / pageSize)),
+  };
+}
+
+/**
+ * The three library counters, over the whole shop rather than the page being
+ * shown — "Saved sites: 24" on page 1 of 4 would be a lie, and these numbers
+ * are the reason the header exists.
+ */
+export async function diveSiteLibraryStats(db: AppDb, shopId: string) {
+  const [row] = await db
+    .select({
+      total: count(),
+      withForecastPoints: sql<number>`count(*) filter (where ${diveSites.forecastLatitude} is not null and ${diveSites.forecastLongitude} is not null)::int`,
+      fromTemplates: sql<number>`count(*) filter (where ${diveSites.sourceTemplateId} is not null)::int`,
+    })
+    .from(diveSites)
+    .where(and(eq(diveSites.shopId, shopId), isNull(diveSites.deletedAt)));
+  return {
+    total: row?.total ?? 0,
+    withForecastPoints: row?.withForecastPoints ?? 0,
+    fromTemplates: row?.fromTemplates ?? 0,
+  };
 }
 
 export async function getDiveSite(db: AppDb, shopId: string, siteId: string) {
