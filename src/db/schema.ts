@@ -507,6 +507,24 @@ export const courseInquiries = pgTable(
     courseId: uuid("course_id")
       .notNull()
       .references(() => courses.id),
+    /**
+     * The shop's diver this lead belongs to, when that was knowable *at capture
+     * time* — resolved by `recordCourseInquiry` from an exact, case-insensitive
+     * match of the supplied email against a live person of this shop
+     * (`people_shop_email_unique` makes that at most one row, so the link is
+     * deterministic, never a guess). Null whenever the writer left no email, or
+     * left one no diver of this shop holds — a lead genuinely is written before
+     * any person exists, which is why the column is nullable and why nothing
+     * downstream may treat null as "nobody".
+     *
+     * It exists for erasure (ADR 20260802-diver-data-erasure): the sweep's only
+     * other handles are the email and phone still sitting on this row, so a
+     * diver who later changes their address takes their own lead out of reach.
+     * Snapshotting the link at the moment the two addresses did agree is what
+     * survives that. Never back-filled by a matching job: a link written later
+     * from fuzzier evidence would erase a bystander's lead.
+     */
+    personId: uuid("person_id").references(() => people.id),
     name: text("name"),
     email: text("email"),
     phone: text("phone"),
@@ -757,6 +775,22 @@ export const trips = pgTable(
   (table) => [
     index("trips_shop_starts_idx").on(table.shopId, table.startsAt),
     index("trips_series_starts_idx").on(table.seriesId, table.startsAt),
+    // The daily cron's two cross-shop window scans (DATA-M2). Both sweep every
+    // shop at once, so `trips_shop_starts_idx` above cannot serve either — its
+    // leading column is the one column these two do not constrain.
+    //
+    // `status` leads because both queries pin it to a single value
+    // (`= 'scheduled'`) and then take a *range* on the timestamp, which is the
+    // only column order Postgres can walk as one index scan; a bare
+    // `(starts_at)` index would have to read every trip in the window across
+    // every shop and re-check `status` per row.
+    //
+    // `sendDueReminders` (src/db/reminders.ts): scheduled trips departing
+    // between now and the reminder horizon.
+    index("trips_status_starts_idx").on(table.status, table.startsAt),
+    // `sendDueRecaps` (src/db/recap.ts): scheduled trips that came home inside
+    // the recap lookback — the same shape one column over, on `ends_at`.
+    index("trips_status_ends_idx").on(table.status, table.endsAt),
     // Backs the command-palette leading-wildcard ILIKE search (src/db/search.ts, CR-018).
     index("trips_title_trgm_idx").using("gin", sql`${table.title} gin_trgm_ops`),
     check("trips_capacity_range", sql`${table.capacity} between 1 and 60`),
@@ -1563,16 +1597,28 @@ export const orders = pgTable(
 );
 
 /**
- * A ledger of every Stripe webhook event this app has claimed, keyed by
- * Stripe's own globally-unique event id — belt-and-suspenders on top of each
- * handler's own idempotent state machine (docs ADR 20260719-stripe-connect-orders).
- * `POST /api/webhooks/stripe` claims an event here (an `onConflictDoNothing`
- * insert) before doing anything else, so a redelivered event is a no-op
- * before it ever reaches a handler. `occurred_at` is Stripe's own
- * event-creation time (not when we received it), which lets the
- * `account.updated` handler — otherwise pure last-write-wins — refuse to
- * apply an event that is chronologically older than one already applied for
- * the same connected account.
+ * A ledger of every Stripe webhook event this app has ever accepted, keyed by
+ * Stripe's own globally-unique event id. The row does **two separate jobs**,
+ * and they are deliberately carried by two different columns:
+ *
+ *  1. **The dedup claim** — `claimed_at`. `POST /api/webhooks/stripe` claims an
+ *     event here before doing anything else, so a redelivered event is a no-op
+ *     before it ever reaches a handler; belt-and-suspenders on top of each
+ *     handler's own idempotent state machine (docs ADR
+ *     20260719-stripe-connect-orders). A handler that throws *releases* the
+ *     claim (`claimed_at` back to null) so Stripe's own retry genuinely
+ *     re-reaches the handler (PAY-M1).
+ *  2. **Chronological evidence** — `occurred_at`, Stripe's own event-creation
+ *     time (not when we received it), which lets the `account.updated` handler
+ *     — otherwise pure last-write-wins — refuse to apply an event that is
+ *     chronologically older than one already delivered for the same connected
+ *     account (`hasNewerAccountUpdate`).
+ *
+ * The row is therefore **never deleted**: releasing a claim nulls `claimed_at`
+ * and leaves the evidence standing. Deleting it instead would erase job 2 to
+ * do job 1, and a *different*, older `account.updated` would then read as
+ * fresh and regress `charges_enabled` — fail-open on the flag that gates order
+ * and checkout creation.
  */
 export const stripeWebhookEvents = pgTable(
   "stripe_webhook_events",
@@ -1583,6 +1629,19 @@ export const stripeWebhookEvents = pgTable(
     account: text("account"),
     occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
     receivedAt: timestamp("received_at", { withTimezone: true }).notNull().defaultNow(),
+    /**
+     * When this event's handling was claimed. Non-null means "claimed, and
+     * treat every redelivery as a duplicate"; null means the delivery was
+     * attempted, the handler failed, and the claim was given back so a
+     * redelivery re-runs it. The row itself survives either way — it is still
+     * the evidence that an event with this `occurred_at` was delivered.
+     *
+     * Defaulted rather than left bare so the column's arrival backfills every
+     * pre-existing row as claimed (Postgres applies an `ADD COLUMN` default to
+     * existing rows): those events were all handled successfully under the
+     * old model, and a migration must not silently re-open them to redelivery.
+     */
+    claimedAt: timestamp("claimed_at", { withTimezone: true }).defaultNow(),
   },
   (table) => [
     index("stripe_webhook_events_account_type_idx").on(table.account, table.type, table.occurredAt),
@@ -1628,15 +1687,52 @@ export const bookingCheckouts = pgTable(
     /** Set once a recovery email has gone out, so a re-run of the recovery scan never double-sends. */
     abandonedRecoverySentAt: timestamp("abandoned_recovery_sent_at", { withTimezone: true }),
     /**
-     * The shop-wide promo code handed to Stripe on this attempt, if any. The id
-     * is what a completed checkout records a redemption against; the text is a
-     * snapshot so a later edit or delete of the code can't rewrite what the
-     * diver was actually quoted (docs ADR 20260729-shop-promo-codes). Both stay
-     * null for an undiscounted checkout and for a trip-scoped last-minute promo,
-     * which is Stripe's object end to end and has its own row.
+     * The shop-wide promo code handed to Stripe on this attempt, if any. This
+     * is what a completed checkout records a redemption against (docs ADR
+     * 20260729-shop-promo-codes). Null for an undiscounted checkout and for a
+     * trip-scoped last-minute deal, which has its own row and lands on
+     * `trip_promo_id` below instead.
      */
     promoCodeId: uuid("promo_code_id").references(() => shopPromoCodes.id),
+    /**
+     * The trip-scoped last-minute deal handed to Stripe on this attempt, if any
+     * (docs ADR 20260727-last-minute-fill-promos). The counterpart to
+     * `promo_code_id`: at most one of the two is ever set, because the caller
+     * resolves a trip deal *or* a shop-wide code, never both — a check
+     * constraint below holds that. Null on every row written before this column
+     * existed, including ones that did apply a trip deal; see
+     * `applied_discount_percent`.
+     */
+    tripPromoId: uuid("trip_promo_id").references(() => tripLastMinutePromos.id),
+    /**
+     * The code text the diver actually typed, from whichever of the two sources
+     * above it resolved against. A snapshot, so a later edit or delete of the
+     * code can't rewrite what this diver was quoted.
+     */
     promoCode: text("promo_code"),
+    /**
+     * Percent off, as applied to *this* session at the moment it was created —
+     * the one figure that makes the discount reconstructible later without
+     * asking Stripe anything (PAY-M3). Both promotion flavors are percent-only
+     * by house rule (`trip_last_minute_promos_discount_range` 5..90,
+     * `shop_promo_codes_discount_range` 1..100) and neither restricts the
+     * coupon to particular line items, so a single percent describes the whole
+     * discount on the whole session, gear lines included.
+     *
+     * Written only when a promotion code was genuinely handed to Stripe, never
+     * merely because one was available, and never re-derived afterwards from
+     * whatever promo happens to be live on the trip — that would discount
+     * full-price divers on a promoted trip and under-refund people who owe
+     * nothing.
+     *
+     * Null means "no discount snapshot exists": an undiscounted checkout, or a
+     * row written before this column existed. Those older rows keep the
+     * conservative pre-column behaviour — a shop-wide code is still
+     * reconstructible from `promo_code_id`, and anything else falls back to the
+     * asked total (`attributableTotalCents`, src/db/checkouts.ts). A completion
+     * is never refused and never recorded as zero for want of this figure.
+     */
+    appliedDiscountPercent: integer("applied_discount_percent"),
     currency: text("currency").notNull().default("usd"),
     /** Price snapshot at checkout time, so a later trip re-price never rewrites what was asked. */
     amountPerDiverCents: integer("amount_per_diver_cents").notNull(),
@@ -1671,6 +1767,23 @@ export const bookingCheckouts = pgTable(
     check(
       "booking_checkouts_settled_total_nonnegative",
       sql`${table.settledTotalCents} is null or ${table.settledTotalCents} >= 0`,
+    ),
+    // The snapshot of what Stripe was told to take off this session. Bounded to
+    // a real percentage so a corrupt value can never reconstruct a *larger*
+    // attributable total than was asked for — 1..100 spans both flavors'
+    // own ranges (trip deals 5..90, shop-wide codes 1..100).
+    check(
+      "booking_checkouts_applied_discount_range",
+      sql`${table.appliedDiscountPercent} is null or ${table.appliedDiscountPercent} between 1 and 100`,
+    ),
+    // A checkout applies a trip-scoped deal *or* a shop-wide code, never both:
+    // the caller resolves them in that order and stops at the first hit, and
+    // Stripe Checkout accepts one promotion code per session anyway. Held here
+    // so no future caller can quietly record two and leave the reconstruction
+    // guessing which percent was the one Stripe applied.
+    check(
+      "booking_checkouts_single_promo_source",
+      sql`${table.promoCodeId} is null or ${table.tripPromoId} is null`,
     ),
     // The abandoned-checkout-recovery scan's exact predicate (pending, not yet
     // recovered), so the daily cron doesn't force a sequential scan of the
@@ -1836,10 +1949,41 @@ export const paymentOperationIntents = pgTable(
     startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
     resolvedAt: timestamp("resolved_at", { withTimezone: true }),
   },
-  (table) => [index("payment_operation_intents_shop_status_idx").on(table.shopId, table.status)],
+  (table) => [
+    index("payment_operation_intents_shop_status_idx").on(table.shopId, table.status),
+    // `claimBookingsForCheckout`'s stale-intent sweep (src/db/payment-operations.ts,
+    // DATA-M1) runs on every checkout click and is deliberately cross-shop, so
+    // the `(shop_id, status)` index above cannot serve it at all. Partial on
+    // `status = 'started'` because that is the only status the sweep ever looks
+    // at and it is a vanishing slice of the table — every intent resolves within
+    // one Stripe round trip, so the index stays a handful of rows wide however
+    // large the resolved history grows.
+    //
+    // `kind` leads the key: the sweep pins it (`= 'checkout_session'`) and then
+    // takes a range on `started_at`, so equality-before-range is the order a
+    // single index scan can walk. (The review that raised DATA-M1 prescribed a
+    // bare `(started_at)`; the query also filters `kind`, and including it costs
+    // nothing on an index this small.)
+    index("payment_operation_intents_stale_scan_idx")
+      .on(table.kind, table.startedAt)
+      .where(sql`${table.status} = 'started'`),
+  ],
 );
 
 /** Staff crewing a trip (captain, DM, instructor…). Roles live on person_roles. */
+/**
+ * What a person is rostered to do on **one trip**. A deliberate subset of
+ * `person_role` — `owner`, `manager`, and `diver` are standing facts about a
+ * person, never a job on a boat. Keep aligned with `TRIP_CREW_ROLES` in
+ * src/lib/crew-roles.ts.
+ */
+export const tripAssignmentRole = pgEnum("trip_assignment_role", [
+  "instructor",
+  "divemaster",
+  "captain",
+  "crew",
+]);
+
 export const tripAssignments = pgTable(
   "trip_assignments",
   {
@@ -1849,6 +1993,23 @@ export const tripAssignments = pgTable(
     personId: uuid("person_id")
       .notNull()
       .references(() => people.id),
+    /**
+     * The job this person is doing on this sailing, or null for **not
+     * specified** (DOM-M3, ADR 20260803-per-trip-crew-role).
+     *
+     * Null is the status quo, not a safety claim. Roles are otherwise
+     * shop-wide (`person_roles`), so a divemaster rostered as this trip's boat
+     * captain still counted as an in-water certified assistant and raised the
+     * supervision-ratio capacity by two per head. Every row written before
+     * this column existed is null and must keep counting exactly as it did —
+     * by shop-wide inference (`inWaterCrewRole`, src/lib/crew-roles.ts).
+     *
+     * The role can only ever *narrow* what a person is worth to the ratio: it
+     * says which job they are doing, while `person_roles` stays the evidence
+     * of what they are qualified to do. A roster is a scheduling document and
+     * must never be able to mint a credential.
+     */
+    tripRole: tripAssignmentRole("trip_role"),
   },
   (table) => [primaryKey({ columns: [table.tripId, table.personId] })],
 );
@@ -2614,11 +2775,13 @@ export const rollCallEvents = pgTable(
  * written with no subject at all. The subject shapes differ (one booking vs. a
  * count over a trip's assignments), so they are separate rows.
  *
- * This is an interim slice, not the eventual model. A per-person crew roll call
- * needs `trip_assignments` to carry a per-trip role (there is none today — roles
- * are shop-wide on `person_roles`) and a subject model that is not `bookingId`.
- * Until then a count attested by a named human is what stops a checkpoint from
- * reading complete with a divemaster still in the water.
+ * It stays the **count-level** record now that `rollCallCrewEvents` below adds
+ * the per-person one (ADR 20260803-per-person-crew-roll-call, the follow-on
+ * 20260802 anticipated). The two answer different questions and a checkpoint
+ * needs both: the events say every *named* crew member is accounted for, and
+ * the attestation is the only thing that can speak for a hand nobody rostered
+ * — or for a trip with an empty assignment list, where "0 of 0" is still a
+ * sentence a human has to say out loud.
  */
 export const rollCallCrewAttestations = pgTable(
   "roll_call_crew_attestations",
@@ -2654,6 +2817,71 @@ export const rollCallCrewAttestations = pgTable(
       table.shopId,
       table.tripId,
       table.checkpoint,
+      table.occurredAt,
+    ),
+  ],
+);
+
+/**
+ * The per-person half of the crew head count: one staff member said one
+ * **assigned crew member** is aboard, not aboard, or cleared, at one
+ * checkpoint. Append-only history, exactly like `rollCallEvents` — the newest
+ * row per person per checkpoint is the current answer and nothing is rewritten
+ * (ADR 20260803-per-person-crew-roll-call).
+ *
+ * Its own table rather than a widened `rollCallEvents`, for the same reason
+ * `rollCallCrewAttestations` is (ADR 20260802): carrying crew there would have
+ * meant making `booking_id` nullable, weakening a NOT NULL invariant on the
+ * safety spine so a *diver* event could be written with no subject at all. The
+ * subjects genuinely differ — a booking is a paid seat, an assignment is a
+ * roster line — so they are separate rows, and each table's subject column
+ * stays `notNull`.
+ *
+ * `person_id` is the subject; `recorded_by_person_id` is who said so. They are
+ * routinely the same human (a divemaster boarding herself) and that is fine —
+ * the point is that the count names somebody, not that a second person
+ * witnesses it.
+ *
+ * No `source`/`client_event_id`: crew roll call is **not recordable offline**
+ * in this slice, so there is no device-generated event to deduplicate. The
+ * offline snapshot carries these results read-only and fails closed when they
+ * are absent (see `OFFLINE_MANIFEST_RECORD_VERSION`, src/lib/offline-manifests.ts).
+ *
+ * Tenancy: `shop_id` is carried here (unlike `trip_assignments`, CR-007) so a
+ * read never has to reach through `trips` to know whose row it is — the same
+ * shape `roll_call_events` already has. Writers still prove the *subject* is
+ * assigned to the trip, joining through `trips`.
+ */
+export const rollCallCrewEvents = pgTable(
+  "roll_call_crew_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    tripId: uuid("trip_id")
+      .notNull()
+      .references(() => trips.id),
+    /** The crew member this is about — a `trip_assignments` row's person. */
+    personId: uuid("person_id")
+      .notNull()
+      .references(() => people.id),
+    recordedByPersonId: uuid("recorded_by_person_id")
+      .notNull()
+      .references(() => people.id),
+    status: rollCallStatus("status").notNull(),
+    /** `departure` or `after_dive_N`; validated against the trip's planned dive count. */
+    checkpoint: text("checkpoint").notNull(),
+    note: text("note"),
+    occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("roll_call_crew_events_shop_trip_checkpoint_person_occurred_idx").on(
+      table.shopId,
+      table.tripId,
+      table.checkpoint,
+      table.personId,
       table.occurredAt,
     ),
   ],
@@ -2792,6 +3020,115 @@ export const mediaDeletionAttempts = pgTable(
   (table) => [index("media_deletion_attempts_shop_status_idx").on(table.shopId, table.status)],
 );
 
+/**
+ * What an erasure obligation is owed *against*, which also decides who can
+ * discharge it (ADR 20260803-processor-erasure-obligations):
+ *
+ * - `stripe_customer` — a `cus_…` object DiveDay deletes itself through
+ *   `DELETE /v1/customers/{id}` on the shop's connected account. Retryable and
+ *   self-discharging: the row exists so a failed or never-attempted delete is
+ *   durable and gets tried again, exactly like `mediaDeletionAttempts`.
+ * - `stripe_invoice_snapshot` — an `in_…` finalized invoice. Stripe copies
+ *   `customer_name`/`customer_email` onto the invoice when it is finalized, and
+ *   deleting the customer does **not** rewrite that copy; Stripe handles
+ *   Invoice/PaymentIntent/Charge separately in its own data-deletion flow. No
+ *   API call clears it, so this kind is a genuinely manual step and is
+ *   discharged only by a human attesting they filed that request.
+ */
+export const processorErasureTarget = pgEnum("processor_erasure_target", [
+  "stripe_customer",
+  "stripe_invoice_snapshot",
+]);
+
+export const processorErasureStatus = pgEnum("processor_erasure_status", ["owed", "discharged"]);
+
+/**
+ * One row per "a processor still holds this erased diver's identity" — the
+ * durable counterpart to `mediaDeletionAttempts` for records DiveDay does not
+ * store itself (ADR 20260803-processor-erasure-obligations).
+ *
+ * Raised by `anonymizeDiver` (src/db/anonymize.ts) from the erased diver's
+ * orders: one `stripe_customer` row per distinct `orders.stripe_customer_id`,
+ * one `stripe_invoice_snapshot` row per distinct `orders.stripe_invoice_id`.
+ * Both of those columns are `NOT NULL` pointers into the shop's own Stripe
+ * account and the local scrub cannot rewrite either.
+ *
+ * The table does two jobs, and the `target` above says which applies:
+ *
+ *   1. **A retry ledger for work DiveDay does perform.** The customer delete is
+ *      attempted *after* the erasure transaction commits — never inside it, and
+ *      never as a condition of it. A Stripe outage, a revoked Connect token or
+ *      a dead network must not roll back an erasure the diver asked for, so the
+ *      row commits first and the attempt happens after; `attempts`/`lastError`
+ *      are why a failure is visible rather than merely retried forever.
+ *   2. **A record of what no API can reach.** The invoice-snapshot rows are not
+ *      retryable at all. They exist so nothing in the product implies erasure
+ *      finished when a copy of the name and email is still sitting on a
+ *      finalized invoice.
+ *
+ * `external_id` is a `cus_…`/`in_…` handle, not personal data: it is the
+ * pointer, and the row deliberately keeps no name, address or amount.
+ */
+export const processorErasureObligations = pgTable(
+  "processor_erasure_obligations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    /**
+     * The erasure that raised this. The row it points at is already anonymized,
+     * so this is provenance ("which erasure still owes work"), never a way back
+     * to who the diver was.
+     */
+    personId: uuid("person_id")
+      .notNull()
+      .references(() => people.id),
+    target: processorErasureTarget("target").notNull(),
+    externalId: text("external_id").notNull(),
+    /**
+     * The connected account the object lives on, snapshotted from
+     * `orders.stripe_account_id` rather than re-derived from the shop at retry
+     * time — the same discipline `refundOrder` uses (src/db/orders.ts). A shop
+     * that disconnects and reconnects gets a *different* account id, and a
+     * delete aimed at the current one would 404 forever against an object that
+     * is still sitting on the old one.
+     */
+    stripeAccountId: text("stripe_account_id").notNull(),
+    status: processorErasureStatus("status").notNull().default("owed"),
+    /** Delete attempts made so far. Always 0 for a target no API can discharge. */
+    attempts: integer("attempts").notNull().default(0),
+    /** Why the last attempt failed, so an owner sees *why* and not merely *that*. */
+    lastError: text("last_error"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    dischargedAt: timestamp("discharged_at", { withTimezone: true }),
+    /**
+     * Who attested the processor-side work was done. Null while still owed —
+     * and also null on a `stripe_customer` row discharged by a successful API
+     * delete, which is DiveDay's own act rather than anyone's attestation.
+     */
+    dischargedByPersonId: uuid("discharged_by_person_id").references(() => people.id),
+  },
+  (table) => [
+    // One obligation per processor record per shop, ever. A second erasure that
+    // reaches the same Stripe customer (two people sharing one customer object
+    // — itself a data problem, but possible) is folded into the existing row
+    // rather than raising a duplicate: the work owed is the same single delete,
+    // and `personId` names whichever erasure got there first.
+    uniqueIndex("processor_erasure_obligations_shop_target_external_unique").on(
+      table.shopId,
+      table.target,
+      table.externalId,
+    ),
+    // The reports-page panel's read: this shop's still-owed obligations.
+    index("processor_erasure_obligations_shop_status_idx").on(table.shopId, table.status),
+    check(
+      "processor_erasure_obligations_discharged_consistent",
+      sql`(${table.status} = 'discharged') = (${table.dischargedAt} is not null)`,
+    ),
+  ],
+);
+
 export type Shop = typeof shops.$inferSelect;
 export type Person = typeof people.$inferSelect;
 export type Trip = typeof trips.$inferSelect;
@@ -2820,6 +3157,8 @@ export type DiveSite = typeof diveSites.$inferSelect;
 export type TripRequirement = typeof tripRequirements.$inferSelect;
 export type RentalFitProfile = typeof rentalFitProfiles.$inferSelect;
 export type RollCallEvent = typeof rollCallEvents.$inferSelect;
+export type RollCallCrewEvent = typeof rollCallCrewEvents.$inferSelect;
+export type TripAssignmentRole = (typeof tripAssignmentRole.enumValues)[number];
 export type NitroxCertification = typeof nitroxCertifications.$inferSelect;
 export type ShopStripeAccount = typeof shopStripeAccounts.$inferSelect;
 export type ShopWhatsappAccount = typeof shopWhatsappAccounts.$inferSelect;
@@ -2840,6 +3179,8 @@ export type ShopPromoStatus = (typeof shopPromoStatus.enumValues)[number];
 export type ShopPromoRedemption = typeof shopPromoRedemptions.$inferSelect;
 export type PaymentOperationIntent = typeof paymentOperationIntents.$inferSelect;
 export type MediaDeletionAttempt = typeof mediaDeletionAttempts.$inferSelect;
+export type ProcessorErasureObligation = typeof processorErasureObligations.$inferSelect;
 export type MediaDeletionKind = (typeof mediaDeletionKind.enumValues)[number];
+export type ProcessorErasureTarget = (typeof processorErasureTarget.enumValues)[number];
 export type PaymentOperationKind = (typeof paymentOperationKind.enumValues)[number];
 export type PaymentOperationStatus = (typeof paymentOperationStatus.enumValues)[number];

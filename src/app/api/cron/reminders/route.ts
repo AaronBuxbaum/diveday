@@ -4,6 +4,7 @@ import { sendDueCheckoutRecoveries } from "@/db/checkout-recovery";
 import { getDb } from "@/db/client";
 import { retryPendingMediaDeletions } from "@/db/media-deletions";
 import { drainNotificationRetries } from "@/db/notifications";
+import { retryPendingProcessorErasures } from "@/db/processor-erasure";
 import { sendDueRecaps } from "@/db/recap";
 import { sendDueReminders } from "@/db/reminders";
 import { reapExpiredDemoShops } from "@/db/seed";
@@ -12,7 +13,7 @@ import { log } from "@/lib/log";
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
- * Six scans run one after another, each of which can send email/SMS through a
+ * Seven scans run one after another, several of which can send email/SMS through a
  * third-party provider one recipient at a time. The platform default is a
  * moving target set by the hosting plan, not by what this endpoint actually
  * needs, so state it here: 300s is Vercel Pro's default function ceiling, an
@@ -72,7 +73,7 @@ function demoShopMaxAgeMs(): number | undefined {
 type ScanOutcome<T> = { status: "ok"; result: T } | { status: "error" };
 
 /**
- * Runs one scan in isolation. Before this, the six scans were bare sequential
+ * Runs one scan in isolation. Before this, the scans were bare sequential
  * awaits with no try/catch anywhere: the first throw aborted the request, so
  * every later scan silently never ran that day and the one summary log line
  * never fired either — a single bad row in the earliest scan could stop
@@ -171,6 +172,14 @@ export async function GET(request: Request) {
       sendDueCheckoutRecoveries(db),
     );
     const mediaDeletions = await runScan("mediaDeletions", () => retryPendingMediaDeletions(db));
+    // The same bounded-retry shape one processor over: a Stripe customer delete
+    // that erasure could not land (an outage, a dropped connection) gets tried
+    // again here rather than waiting for an owner to notice the reports panel
+    // (ADR 20260803-processor-erasure-obligations). Invoice-snapshot obligations
+    // are never touched by this — no API reaches them.
+    const processorErasures = await runScan("processorErasures", () =>
+      retryPendingProcessorErasures(db),
+    );
     // Clear disposable demo shops past their TTL so per-visitor minting doesn't
     // grow the database without bound (ADR 20260724-per-visitor-demo-shops).
     const maxAgeMs = demoShopMaxAgeMs();
@@ -184,6 +193,7 @@ export async function GET(request: Request) {
       recaps,
       checkoutRecoveries,
       mediaDeletions,
+      processorErasures,
       demoShops,
     };
     const failedScans = Object.entries(scans)
@@ -195,6 +205,7 @@ export async function GET(request: Request) {
     const recapsCounts = resultOf(recaps);
     const checkoutRecoveriesCounts = resultOf(checkoutRecoveries);
     const mediaDeletionsCounts = resultOf(mediaDeletions);
+    const processorErasuresCounts = resultOf(processorErasures);
     const demoShopsCounts = resultOf(demoShops);
 
     // The per-tick observability line: one entry per scan's own summary counts,
@@ -218,6 +229,8 @@ export async function GET(request: Request) {
       checkoutRecoveriesSent: checkoutRecoveriesCounts?.sent,
       mediaDeletionsAttempted: mediaDeletionsCounts?.attempted,
       mediaDeletionsSucceeded: mediaDeletionsCounts?.succeeded,
+      processorErasuresAttempted: processorErasuresCounts?.attempted,
+      processorErasuresDischarged: processorErasuresCounts?.discharged,
       demoShopsDeleted: demoShopsCounts?.deleted,
     });
 

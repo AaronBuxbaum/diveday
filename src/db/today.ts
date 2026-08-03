@@ -25,6 +25,7 @@ import {
 } from "@/i18n/today-labels";
 import { nowDate } from "@/lib/clock";
 import { courseCrewGap } from "@/lib/course-ratios";
+import { countInWaterCrew, effectiveCrewRoles, groupCrewAssignments } from "@/lib/crew-roles";
 import { formatDateTimeTz, formatShortDate, formatTime } from "@/lib/format";
 import { rollCallCheckpoints } from "@/lib/manifests";
 import {
@@ -50,6 +51,7 @@ import {
   people,
   personRoles,
   rentalFitProfiles,
+  rollCallCrewEvents,
   rollCallEvents,
   tripAssignments,
   trips,
@@ -241,10 +243,22 @@ export type OpenRollCall = {
    * the gap is at departure (`departure_uncounted`) or trip-wide (`no_roll_call`).
    */
   diveNumber: number;
-  /** Divers not accounted for at that checkpoint — awaiting *or* not back aboard. */
+  /**
+   * People not accounted for at that checkpoint — awaiting *or* not back
+   * aboard. Divers for a diver reason, crew for a crew one (`reason` says
+   * which); the two are never summed into one row, because "2 unaccounted for"
+   * that could mean either is exactly the wording that stops being read.
+   */
   uncounted: number;
-  /** How many divers that checkpoint was counting (see `afterDivePopulation` below). */
-  totalDivers: number;
+  /** How many people that checkpoint was counting (see `inAfterDivePopulation`). */
+  total: number;
+  /**
+   * The trip's non-cancelled booking count, whatever this gap is about. The
+   * schedule board renders a returned-with-an-open-count boat as an ordinary
+   * departure card, and that card's "booked" figure is a fact about the trip —
+   * not about whichever half of the head count happens to be open.
+   */
+  rosterSize: number;
   /** The boat is still out: `startsAt <= now < endsAt`. */
   underway: boolean;
   /** Older than the dock-work window — kept as residue rather than vanishing. */
@@ -314,6 +328,22 @@ function inAfterDivePopulation(states: readonly ("boarded" | "not_boarded" | und
  * silent one. `desc(endsAt)` on top of that, so the freshest boat is examined
  * first whatever else changes.
  *
+ * **Crew are counted here too** (ADR 20260803-per-person-crew-roll-call). The
+ * per-person crew half used to reach this function not at all: a crew member
+ * tapped "not back aboard" against a divemaster, the manifest went red with
+ * `crew_not_back_aboard` — "the loudest thing on this list" — and Today showed
+ * nothing, the board badged nothing, and none of the 48-hour dock-work chase or
+ * the 30-day residue a *diver* gets applied to the people most reliably in the
+ * water (review 20260803, D1). Crew rows are built by the same rules, in the
+ * same pass, and age on the same schedule; only the words differ.
+ *
+ * The count-level `crew attestation` deliberately does **not** raise a row of
+ * its own. It is a per-checkpoint form on the live manifest that most shops
+ * have never filled in, so it would fire on essentially every trip ever run,
+ * and a danger-toned row that fires on every trip is what stops the row that
+ * means a person is in the water from being read. The manifest states it; Today
+ * chases only what somebody actually recorded.
+ *
  * "Not closed" is defined the same way the manifest defines it, except for the
  * `not_boarded` split above:
  *
@@ -359,7 +389,7 @@ export async function listRollCallGaps(
   if (sailed.length === 0) return [];
   const tripIds = sailed.map((trip) => trip.id);
 
-  const [roster, events] = await Promise.all([
+  const [roster, events, crewEvents] = await Promise.all([
     db
       .select({ tripId: bookings.tripId, bookingId: bookings.id })
       .from(bookings)
@@ -387,6 +417,31 @@ export async function listRollCallGaps(
       )
       .where(and(eq(rollCallEvents.shopId, shopId), inArray(rollCallEvents.tripId, tripIds)))
       .orderBy(asc(rollCallEvents.occurredAt), asc(rollCallEvents.createdAt)),
+    db
+      .select({
+        tripId: rollCallCrewEvents.tripId,
+        personId: rollCallCrewEvents.personId,
+        checkpoint: rollCallCrewEvents.checkpoint,
+        status: rollCallCrewEvents.status,
+        occurredAt: rollCallCrewEvents.occurredAt,
+      })
+      .from(rollCallCrewEvents)
+      // The crew counterpart of the cancelled-booking guard above: a person
+      // taken off the roster keeps their event rows, and they must not answer
+      // for a crew list they are no longer on. (`changeTripCrew` refuses to
+      // remove somebody who has roll-call history, so this is belt-and-braces
+      // — but a head count is where belt-and-braces belongs.)
+      .innerJoin(
+        tripAssignments,
+        and(
+          eq(tripAssignments.tripId, rollCallCrewEvents.tripId),
+          eq(tripAssignments.personId, rollCallCrewEvents.personId),
+        ),
+      )
+      .where(
+        and(eq(rollCallCrewEvents.shopId, shopId), inArray(rollCallCrewEvents.tripId, tripIds)),
+      )
+      .orderBy(asc(rollCallCrewEvents.occurredAt), asc(rollCallCrewEvents.createdAt)),
   ]);
 
   const rosterByTrip = new Map<string, string[]>();
@@ -402,12 +457,29 @@ export async function listRollCallGaps(
     latestByBookingCheckpoint.set(`${event.bookingId}\0${event.checkpoint}`, event);
   }
 
+  // The crew half, keyed the same way and superseded by the same rule. The
+  // crew "roster" for a trip is whoever has a result on it: a shop that has
+  // never tapped a crew roll call has no crew subjects here, so it raises no
+  // crew rows at all rather than a red row on every trip it ever ran.
+  const crewByTripId = new Map<string, Set<string>>();
+  const latestByCrewCheckpoint = new Map<string, (typeof crewEvents)[number]>();
+  for (const event of crewEvents) {
+    latestByCrewCheckpoint.set(`${event.tripId}\0${event.personId}\0${event.checkpoint}`, event);
+    const people = crewByTripId.get(event.tripId) ?? new Set<string>();
+    people.add(event.personId);
+    crewByTripId.set(event.tripId, people);
+  }
+
   const gaps: OpenRollCall[] = [];
   for (const trip of sailed) {
     const bookingIds = rosterByTrip.get(trip.id) ?? [];
+    const crewIds = [...(crewByTripId.get(trip.id) ?? [])];
     // An empty boat has nobody to count, exactly as the manifest's own
-    // "complete" rule requires a `totalDivers > 0` before it says so.
-    if (bookingIds.length === 0) continue;
+    // "complete" rule requires a `totalDivers > 0` before it says so — but a
+    // crew member somebody recorded as not back aboard is a person to count
+    // whether or not anybody bought a seat, so a crewed trip with no divers
+    // still reaches the crew scan below.
+    if (bookingIds.length === 0 && crewIds.length === 0) continue;
     const checkpoints = rollCallCheckpoints(trip.plannedDives);
     const home = trip.endsAt <= now;
     const underway = !home;
@@ -418,6 +490,13 @@ export async function listRollCallGaps(
     const recorded = checkpoints.map(() => 0);
     const unaccounted = checkpoints.map(() => 0);
     const notBackAboard = checkpoints.map(() => 0);
+    // The crew half, scanned into its own arrays by the identical rules — one
+    // pass, one set of predicates, so the two can never drift into disagreeing
+    // about what "accounted for after a dive" means.
+    const crewPopulation = checkpoints.map(() => 0);
+    const crewRecorded = checkpoints.map(() => 0);
+    const crewUnaccounted = checkpoints.map(() => 0);
+    const crewNotBackAboard = checkpoints.map(() => 0);
     let departureAwaiting = 0;
     let anyEvent = false;
 
@@ -444,6 +523,26 @@ export async function listRollCallGaps(
       }
     }
 
+    for (const personId of crewIds) {
+      const states = checkpoints.map((checkpoint) => {
+        const event = latestByCrewCheckpoint.get(`${trip.id}\0${personId}\0${checkpoint}`);
+        if (!event || event.status === "cleared") return undefined;
+        return event.status;
+      });
+      // A crew result is a roll call. A trip whose only head count is of its
+      // crew has started one, so it is not a `no_roll_call` trip.
+      if (states.some((state) => state !== undefined)) anyEvent = true;
+      if (!inAfterDivePopulation(states)) continue;
+      for (let dive = 1; dive < checkpoints.length; dive++) {
+        const state = states[dive];
+        crewPopulation[dive] = (crewPopulation[dive] ?? 0) + 1;
+        if (state !== undefined) crewRecorded[dive] = (crewRecorded[dive] ?? 0) + 1;
+        if (isAccountedForAfterDive(state)) continue;
+        crewUnaccounted[dive] = (crewUnaccounted[dive] ?? 0) + 1;
+        if (state === "not_boarded") crewNotBackAboard[dive] = (crewNotBackAboard[dive] ?? 0) + 1;
+      }
+    }
+
     const base = {
       tripId: trip.id,
       title: trip.title,
@@ -451,6 +550,7 @@ export async function listRollCallGaps(
       endsAt: trip.endsAt,
       capacity: trip.capacity,
       priceCents: trip.priceCents,
+      rosterSize: bookingIds.length,
       underway,
       stale,
     };
@@ -477,7 +577,7 @@ export async function listRollCallGaps(
         reason: "missing_diver",
         diveNumber: missingDive,
         uncounted: notBackAboard[missingDive] ?? 0,
-        totalDivers: population[missingDive] ?? 0,
+        total: population[missingDive] ?? 0,
       });
     } else if (openDive >= 1) {
       gaps.push({
@@ -485,21 +585,51 @@ export async function listRollCallGaps(
         reason: "after_dive_uncounted",
         diveNumber: openDive,
         uncounted: unaccounted[openDive] ?? 0,
-        totalDivers: population[openDive] ?? 0,
+        total: population[openDive] ?? 0,
+      });
+    }
+
+    // The crew rows, scanned identically and pushed **beside** the diver row
+    // rather than instead of it. A boat can be missing a diver and a divemaster
+    // at once, and collapsing that into one row loses the name of one of them.
+    const crewMissingDive = checkpoints.findIndex(
+      (_, dive) => dive >= 1 && (crewNotBackAboard[dive] ?? 0) > 0,
+    );
+    const crewOpenDive = checkpoints.findIndex(
+      (_, dive) =>
+        dive >= 1 && (crewUnaccounted[dive] ?? 0) > 0 && (home || (crewRecorded[dive] ?? 0) > 0),
+    );
+    if (crewMissingDive >= 1) {
+      gaps.push({
+        ...base,
+        reason: "missing_crew",
+        diveNumber: crewMissingDive,
+        uncounted: crewNotBackAboard[crewMissingDive] ?? 0,
+        total: crewPopulation[crewMissingDive] ?? 0,
+      });
+    } else if (crewOpenDive >= 1) {
+      gaps.push({
+        ...base,
+        reason: "crew_uncounted",
+        diveNumber: crewOpenDive,
+        uncounted: crewUnaccounted[crewOpenDive] ?? 0,
+        total: crewPopulation[crewOpenDive] ?? 0,
       });
     }
 
     // The dock count. Never while the boat is out (nobody can settle it from
     // ashore) and never once the trip is only residue — it is paperwork, and
-    // carrying a month of it would bury the rows above.
-    if (home && !stale) {
+    // carrying a month of it would bury the rows above. Divers only: a
+    // dock-side crew gap on a shop that has not adopted crew roll call is every
+    // trip it has ever run.
+    if (home && !stale && bookingIds.length > 0) {
       if (!anyEvent) {
         gaps.push({
           ...base,
           reason: "no_roll_call",
           diveNumber: 0,
           uncounted: bookingIds.length,
-          totalDivers: bookingIds.length,
+          total: bookingIds.length,
         });
       } else if (departureAwaiting > 0) {
         gaps.push({
@@ -507,7 +637,7 @@ export async function listRollCallGaps(
           reason: "departure_uncounted",
           diveNumber: 0,
           uncounted: departureAwaiting,
-          totalDivers: bookingIds.length,
+          total: bookingIds.length,
         });
       }
     }
@@ -692,7 +822,11 @@ async function waitlistFrontByTrip(db: AppDb, shopId: string, tripIds: string[])
   return fronts;
 }
 
-/** How many instructors and certified assistants (divemasters) each course trip's crew has. */
+/**
+ * How many instructors and certified assistants (divemasters) each course
+ * trip's crew has, counted by the one definition every ratio gate shares
+ * (`countInWaterCrew`, src/lib/crew-roles.ts).
+ */
 async function courseCrewCountsByTrip(
   db: AppDb,
   shopId: string,
@@ -704,6 +838,7 @@ async function courseCrewCountsByTrip(
     .select({
       tripId: tripAssignments.tripId,
       personId: tripAssignments.personId,
+      tripRole: tripAssignments.tripRole,
       role: personRoles.role,
     })
     .from(tripAssignments)
@@ -715,33 +850,25 @@ async function courseCrewCountsByTrip(
     // helper itself shouldn't depend on that discipline.
     .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
     .innerJoin(people, eq(people.id, tripAssignments.personId))
-    .innerJoin(personRoles, eq(personRoles.personId, people.id))
+    // A `left join`, and no role filter: the per-trip role lives on the
+    // assignment row, so a rostered captain has to reach the rule that decides
+    // they count for nothing rather than being filtered out of the query.
+    .leftJoin(personRoles, eq(personRoles.personId, people.id))
     .where(
       and(
         eq(trips.shopId, shopId),
         eq(people.shopId, shopId),
-        inArray(personRoles.role, ["instructor", "divemaster"]),
         inArray(tripAssignments.tripId, tripIds),
       ),
     );
-  const rolesByTrip = new Map<string, Map<string, Set<string>>>();
+  const rowsByTrip = new Map<string, typeof rows>();
   for (const row of rows) {
-    const rolesByPerson = rolesByTrip.get(row.tripId) ?? new Map<string, Set<string>>();
-    const roles = rolesByPerson.get(row.personId) ?? new Set<string>();
-    roles.add(row.role);
-    rolesByPerson.set(row.personId, roles);
-    rolesByTrip.set(row.tripId, rolesByPerson);
+    const list = rowsByTrip.get(row.tripId) ?? [];
+    list.push(row);
+    rowsByTrip.set(row.tripId, list);
   }
   for (const tripId of tripIds) {
-    const rolesByPerson = rolesByTrip.get(tripId) ?? new Map<string, Set<string>>();
-    let instructorCount = 0;
-    let assistantCount = 0;
-    for (const roles of rolesByPerson.values()) {
-      if (roles.has("instructor")) instructorCount += 1;
-      // A person holding both roles is the instructor, not their own assistant.
-      else if (roles.has("divemaster")) assistantCount += 1;
-    }
-    counts.set(tripId, { instructorCount, assistantCount });
+    counts.set(tripId, countInWaterCrew(groupCrewAssignments(rowsByTrip.get(tripId) ?? [])));
   }
   return counts;
 }
@@ -867,26 +994,38 @@ export async function getTodayWork(
             tripId: tripAssignments.tripId,
             personId: people.id,
             fullName: people.fullName,
+            tripRole: tripAssignments.tripRole,
             role: personRoles.role,
           })
           .from(tripAssignments)
           .innerJoin(people, eq(people.id, tripAssignments.personId))
-          .innerJoin(personRoles, eq(personRoles.personId, people.id))
+          .leftJoin(personRoles, eq(personRoles.personId, people.id))
           .where(inArray(tripAssignments.tripId, tripIds))
       : [];
 
-  const crewByTrip = new Map<string, { id: string; fullName: string; roles: string[] }[]>();
+  // What each person is doing on *this* boat when the roster says so, otherwise
+  // their standing roles — `effectiveCrewRoles` (src/lib/crew-roles.ts), the one
+  // definition. This used to be re-implemented inline right here, a sixth copy
+  // of a rule that already had a home (review 20260803, D8); the standing role
+  // list is true and misleading at once on a board whose whole question is "who
+  // is doing what today", so it is worth exactly one implementation.
+  const namesByPerson = new Map(assignments.map((row) => [row.personId, row.fullName] as const));
+  const rowsByTrip = new Map<string, typeof assignments>();
   for (const row of assignments) {
-    const list = crewByTrip.get(row.tripId) ?? [];
-    let entry = list.find((c) => c.id === row.personId);
-    if (!entry) {
-      entry = { id: row.personId, fullName: row.fullName, roles: [] };
-      list.push(entry);
-    }
-    if (!entry.roles.includes(row.role)) {
-      entry.roles.push(row.role);
-    }
-    crewByTrip.set(row.tripId, list);
+    const list = rowsByTrip.get(row.tripId) ?? [];
+    list.push(row);
+    rowsByTrip.set(row.tripId, list);
+  }
+  const crewByTrip = new Map<string, { id: string; fullName: string; roles: string[] }[]>();
+  for (const [tripId, rows] of rowsByTrip) {
+    crewByTrip.set(
+      tripId,
+      groupCrewAssignments(rows).map((member) => ({
+        id: member.personId,
+        fullName: namesByPerson.get(member.personId) ?? "",
+        roles: effectiveCrewRoles(member),
+      })),
+    );
   }
 
   const actions: TodayAction[] = [];

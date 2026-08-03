@@ -1,10 +1,14 @@
 // @vitest-environment node
 
+import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import type { CourseInquiryExperience } from "@/lib/course-inquiry";
 import { seededShopContext } from "@/test/db";
+import type { AppDb } from "./client";
 import { listCourseInquiriesForShop, recordCourseInquiry } from "./course-inquiries";
 import { getCourseBySlug } from "./courses";
+import { createDiver } from "./divers";
+import { courseInquiries, people, shops } from "./schema";
 
 const OTHER_SHOP_ID = "00000000-0000-0000-0000-000000000000";
 
@@ -97,6 +101,106 @@ describe("recordCourseInquiry", () => {
         experienceLevel: "curious" as CourseInquiryExperience,
       }),
     ).rejects.toThrow();
+  });
+
+  /**
+   * The `person_id` snapshot exists for erasure: once a diver changes their
+   * email, the address on this row is the sweep's only other handle and it no
+   * longer matches (ADR 20260802-diver-data-erasure). Every assertion here is
+   * about *not* over-linking — a wrong link erases a bystander's lead.
+   */
+  describe("the person link", () => {
+    async function inquiryRow(db: AppDb, shopId: string, id: string) {
+      const [row] = await db
+        .select()
+        .from(courseInquiries)
+        .where(and(eq(courseInquiries.shopId, shopId), eq(courseInquiries.id, id)));
+      return row;
+    }
+
+    it("links a lead to the live diver holding that exact address, case-insensitively", async () => {
+      const { db, shop, course } = await inquiryContext();
+      const diver = await createDiver(db, {
+        shopId: shop.id,
+        fullName: "Linked Lina",
+        email: "lina@example.com",
+      });
+      if (!diver) throw new Error("diver insert failed");
+
+      const record = await recordCourseInquiry(db, {
+        shopId: shop.id,
+        courseId: course.id,
+        email: "  LINA@Example.com ",
+        experienceLevel: "certified",
+      });
+      expect((await inquiryRow(db, shop.id, record.id))?.personId).toBe(diver.id);
+    });
+
+    it("leaves the link null when the address belongs to nobody here", async () => {
+      const { db, shop, course } = await inquiryContext();
+      const record = await recordCourseInquiry(db, {
+        shopId: shop.id,
+        courseId: course.id,
+        email: "stranger@example.com",
+        experienceLevel: "never",
+      });
+      expect((await inquiryRow(db, shop.id, record.id))?.personId).toBeNull();
+    });
+
+    it("leaves the link null when the writer gave no address at all", async () => {
+      const { db, shop, course } = await inquiryContext();
+      const record = await recordCourseInquiry(db, {
+        shopId: shop.id,
+        courseId: course.id,
+        phone: "+1 305 555 0134",
+        experienceLevel: "tried",
+      });
+      // A phone number is never a link: a household number is genuinely shared,
+      // and linking on one would aim a future erasure at a partner's lead.
+      expect((await inquiryRow(db, shop.id, record.id))?.personId).toBeNull();
+    });
+
+    it("never links to a removed diver, even when their address still matches", async () => {
+      const { db, shop, course } = await inquiryContext();
+      const diver = await createDiver(db, {
+        shopId: shop.id,
+        fullName: "Removed Rhea",
+        email: "rhea@example.com",
+      });
+      if (!diver) throw new Error("diver insert failed");
+      await db.update(people).set({ deletedAt: new Date() }).where(eq(people.id, diver.id));
+
+      const record = await recordCourseInquiry(db, {
+        shopId: shop.id,
+        courseId: course.id,
+        email: "rhea@example.com",
+        experienceLevel: "lapsed",
+      });
+      expect((await inquiryRow(db, shop.id, record.id))?.personId).toBeNull();
+    });
+
+    it("never links across shops", async () => {
+      const { db, shop, course } = await inquiryContext();
+      const [rival] = await db
+        .insert(shops)
+        .values({ name: "Rival Reef", slug: "rival-reef-inquiry-capture", timezone: "UTC" })
+        .returning();
+      if (!rival) throw new Error("rival shop insert failed");
+      const theirDiver = await createDiver(db, {
+        shopId: rival.id,
+        fullName: "Rival Rae",
+        email: "rae@example.com",
+      });
+      if (!theirDiver) throw new Error("rival diver insert failed");
+
+      const record = await recordCourseInquiry(db, {
+        shopId: shop.id,
+        courseId: course.id,
+        email: "rae@example.com",
+        experienceLevel: "certified",
+      });
+      expect((await inquiryRow(db, shop.id, record.id))?.personId).toBeNull();
+    });
   });
 });
 

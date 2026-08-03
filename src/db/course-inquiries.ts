@@ -1,7 +1,7 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import type { CourseInquiryExperience } from "@/lib/course-inquiry";
 import type { AppDb, DbExecutor } from "./client";
-import { courseInquiries } from "./schema";
+import { courseInquiries, people } from "./schema";
 
 /**
  * The lead recorded from the public course page's "get in touch" composer
@@ -33,18 +33,67 @@ function normalizeOptional(value: string | null | undefined): string | null {
   return trimmed ? trimmed : null;
 }
 
-/** Records one inquiry. Insert-only — there is no edit or withdraw path (a diver just asks again). */
+/**
+ * The shop's live diver holding exactly this address, or null.
+ *
+ * Exact and case-insensitive, never fuzzy, and never on the phone number: a
+ * household number is genuinely shared, and a link written from one would point
+ * a future erasure at a partner's or a child's lead. `people_shop_email_unique`
+ * is a partial unique index on `lower(email)` over this shop's live rows, so
+ * there is at most one candidate and the resolution is deterministic — no
+ * "first match wins" ordering to reason about.
+ *
+ * Deleted and erased records are excluded on purpose. An erased person's email
+ * is null, so they can never match anyway; a soft-deleted duplicate is outside
+ * the unique index, which is exactly where a second row holding the same
+ * address could hide, and linking to the removed one would send a later erasure
+ * at the wrong record.
+ */
+async function livePersonIdForEmail(
+  db: DbExecutor,
+  shopId: string,
+  email: string,
+): Promise<string | null> {
+  const [match] = await db
+    .select({ id: people.id })
+    .from(people)
+    .where(
+      and(
+        eq(people.shopId, shopId),
+        isNull(people.deletedAt),
+        sql`lower(${people.email}) = ${email}`,
+      ),
+    )
+    .limit(1);
+  return match?.id ?? null;
+}
+
+/**
+ * Records one inquiry. Insert-only — there is no edit or withdraw path (a diver
+ * just asks again).
+ *
+ * When the writer left an email that a live diver of this shop already holds,
+ * the resulting `person_id` link is snapshotted onto the row. That is not a
+ * convenience: it is the only handle diver erasure will have once the diver
+ * changes their address (`anonymizeDiver`, src/db/anonymize.ts, and
+ * ADR 20260802-diver-data-erasure). A lead with no email, or with an address
+ * nobody here holds, is stored unlinked — the honest answer, and the reason the
+ * column is nullable.
+ */
 export async function recordCourseInquiry(
   db: AppDb,
   input: RecordCourseInquiryInput,
 ): Promise<CourseInquiryRecord> {
+  const email = normalizeOptional(input.email)?.toLowerCase() ?? null;
+  const personId = email ? await livePersonIdForEmail(db, input.shopId, email) : null;
   const [inserted] = await db
     .insert(courseInquiries)
     .values({
       shopId: input.shopId,
       courseId: input.courseId,
+      personId,
       name: normalizeOptional(input.name),
-      email: normalizeOptional(input.email)?.toLowerCase() ?? null,
+      email,
       phone: normalizeOptional(input.phone),
       experienceLevel: input.experienceLevel,
       timing: normalizeOptional(input.timing),

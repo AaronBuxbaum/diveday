@@ -25,6 +25,14 @@ import type { ReadinessBlocker, ReadinessBlockerCode } from "./readiness";
  * absence on an older snapshot reads as "no crew attested" — which is exactly
  * the fail-closed answer (the checkpoint stays open). There is nothing here to
  * purge and a real safety cost to purging, so the version stands.
+ *
+ * Not bumped for per-person crew results either (ADR
+ * 20260803-per-person-crew-roll-call), for the same reason and with the same
+ * property: `crew[].rollCall` is additive and optional, and its absence means
+ * "nobody has said", so a v4 snapshot saved before crew had results of their
+ * own reads *every* crew member as awaiting and the checkpoint stays open. The
+ * dangerous direction — offline "done" while online says otherwise — is the one
+ * that cannot happen.
  */
 export const OFFLINE_MANIFEST_RECORD_VERSION = 4 as const;
 
@@ -69,12 +77,28 @@ export type OfflineManifestPayload = {
         endsAt: string;
       };
       /**
-       * Names and roles, no person ids: the live manifest carries crew ids to
-       * keep a per-person crew roll call reachable (ADR
-       * 20260802-crew-roll-call-attestation), but the dock copy only needs to
-       * show who is crewing and how many there are.
+       * Names, roles, and each crew member's saved result — **no person ids**.
+       * The live manifest carries ids because they are the subject of a crew
+       * roll-call write (ADR 20260803-per-person-crew-roll-call); the dock copy
+       * cannot record one, so it needs only what it shows.
+       *
+       * `rollCall` absent means nobody had said, and that is what makes this
+       * fail closed: an older snapshot carries no crew results at all, so every
+       * crew member on it reads as awaiting and the checkpoint stays open here
+       * exactly as it does online. Never the reverse.
        */
-      crew: Array<Pick<TripManifest["crew"][number], "fullName" | "roles">>;
+      crew: Array<
+        Pick<TripManifest["crew"][number], "fullName" | "roles"> & {
+          rollCall?: {
+            state: "boarded" | "not_boarded";
+            occurredAt: string;
+            recordedByName: string;
+            note: string | null;
+            /** Carried forward from an earlier checkpoint, not recorded here. */
+            implied?: boolean;
+          };
+        }
+      >;
       /**
        * The crew count attested at this checkpoint when the snapshot was saved.
        * Absent means nobody has attested — which reads as *not complete*, the
@@ -182,6 +206,15 @@ export function serializeManifests(
       crew: manifest.crew.map((member) => ({
         fullName: member.fullName,
         roles: member.roles,
+        rollCall: member.rollCall
+          ? {
+              state: member.rollCall.state,
+              occurredAt: member.rollCall.occurredAt.toISOString(),
+              recordedByName: member.rollCall.recordedByName,
+              note: member.rollCall.note,
+              implied: member.rollCall.implied ?? false,
+            }
+          : undefined,
       })),
       crewAttestation: manifest.crewAttestation
         ? {

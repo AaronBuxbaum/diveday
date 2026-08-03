@@ -1,3 +1,5 @@
+import { inWaterCrewRole, type TripCrewAssignment } from "./crew-roles";
+
 /**
  * The preflight checklist for a material manifest-affecting change. It is
  * deliberately pure so a UI, an API, and a future offline editor can all run
@@ -23,7 +25,16 @@ export function reviewManifestChange(input: {
   recordedDiveCount?: number;
   proposedDiveCount?: number;
   courseRequiresInstructor?: boolean;
-  proposedCrew?: readonly { roles: readonly string[] }[];
+  /**
+   * The crew the change would leave on the trip — each with the job they are
+   * rostered to do here and the roles they hold shop-wide. "Has an instructor"
+   * is decided by `inWaterCrewRole` (src/lib/crew-roles.ts), the one definition
+   * (ADR 20260803-per-trip-crew-role), never by scanning `person_roles` here:
+   * a shop-wide instructor rostered as this session's captain is driving the
+   * boat, and a course session whose only instructor is on the helm has no
+   * instructor (review 20260803, D8).
+   */
+  proposedCrew?: readonly TripCrewAssignment[];
   boardingGateChanged?: boolean;
 }): ManifestChangeReview {
   const risks: ManifestChangeReview["risks"] = [];
@@ -60,7 +71,7 @@ export function reviewManifestChange(input: {
   }
   if (
     input.courseRequiresInstructor &&
-    !(input.proposedCrew ?? []).some((member) => member.roles.includes("instructor"))
+    !(input.proposedCrew ?? []).some((member) => inWaterCrewRole(member) === "instructor")
   ) {
     risks.push({
       code: "course_without_instructor",

@@ -7,7 +7,7 @@ import {
   checkoutProviderFromEnvironment,
   stripeLineDescription,
 } from "@/lib/payments/checkout";
-import { allocateSettledTotal } from "@/lib/payments/settlement";
+import { allocateSettledTotal, netOfPercentDiscount } from "@/lib/payments/settlement";
 import type { AppDb, DbExecutor } from "./client";
 import {
   claimBookingsForCheckout,
@@ -20,7 +20,7 @@ import {
 import { setBookingPaymentIfNotFinal } from "./payments";
 import type { BookingCheckout } from "./schema";
 import { bookingCheckoutBookings, bookingCheckouts, bookings, courses, trips } from "./schema";
-import { recordShopPromoRedemption } from "./shop-promos";
+import { getShopPromoCodeById, recordShopPromoRedemption } from "./shop-promos";
 import { canAcceptPayments, getShopCurrency, getShopStripeAccount } from "./stripe-accounts";
 
 export type StartCheckoutInput = {
@@ -52,9 +52,24 @@ export type StartCheckoutInput = {
    * The shop-wide promo row behind `promotionCode`, when that's where it came
    * from. Snapshotted onto the checkout so a completed session can record its
    * redemption, and so a later edit to the code can't rewrite what this diver
-   * was quoted. Absent for a trip-scoped last-minute code, which has its own row.
+   * was quoted. Absent for a trip-scoped last-minute code, which arrives on
+   * `tripPromo` below instead.
    */
-  shopPromo?: { id: string; code: string };
+  shopPromo?: { id: string; code: string; discountPercent: number };
+  /**
+   * The trip-scoped last-minute deal behind `promotionCode`, when *that's*
+   * where it came from (`getActiveTripPromoByCode`, src/db/trip-promos.ts).
+   * The counterpart to `shopPromo`; the caller resolves one or the other, never
+   * both.
+   *
+   * Snapshotted for the same reason `shopPromo` is, plus one this flavor made
+   * unavoidable: a trip deal is Stripe's object end to end, so before this it
+   * left no local trace on the checkout at all and a completion carrying no
+   * `amount_total` could not tell a discounted session from an undiscounted
+   * one — and recorded the party at pre-discount amounts, above what the one
+   * shared payment intent had actually captured (PAY-M3).
+   */
+  tripPromo?: { id: string; code: string; discountPercent: number };
   /**
    * The words for the single line on the hosted Stripe page. Supplied by the
    * caller because this layer returns codes, not sentences (docs ADR
@@ -141,12 +156,27 @@ export async function startBookingCheckout(
   const gearCentsByBooking = new Map(gearLines.map((line) => [line.bookingId, line.amountCents]));
   const gearTotalCents = gearLines.reduce((sum, line) => sum + line.amountCents, 0);
 
+  // The promotion this attempt is actually *applying* — snapshotted onto the
+  // row below so the discount stays reconstructible later without a network
+  // call (PAY-M3). Gated on `promotionCode`, the thing Stripe is genuinely
+  // told about: a promo the caller merely resolved but never handed over
+  // discounts nothing, and recording it would understate what this session
+  // captured. Trip deal first, mirroring the caller's own resolution order;
+  // the two are mutually exclusive (a check constraint on the table holds it).
+  const appliedPromo = input.promotionCode
+    ? input.tripPromo
+      ? ({ source: "trip", ...input.tripPromo } as const)
+      : input.shopPromo
+        ? ({ source: "shop", ...input.shopPromo } as const)
+        : null
+    : null;
+
   const existing = await latestCheckoutForBookingIds(db, input.shopId, input.bookingIds);
   if (
     existing?.status === "pending" &&
     existing.checkoutUrl &&
     (!existing.expiresAt || existing.expiresAt > nowDate()) &&
-    (await checkoutCoversExactly(db, existing.id, input.bookingIds))
+    (await checkoutCoversExactly(db, input.shopId, existing.id, input.bookingIds))
   ) {
     return { ok: true, checkout: existing, reused: true };
   }
@@ -241,8 +271,14 @@ export async function startBookingCheckout(
           totalCents: amountPerDiverCents * input.bookingIds.length + gearTotalCents,
           isDeposit: charge.isDeposit,
           expiresAt: session.expiresAt,
-          promoCodeId: input.shopPromo?.id ?? null,
-          promoCode: input.shopPromo?.code ?? null,
+          // At most one source is ever recorded (the table's
+          // `single_promo_source` check holds it): if a trip deal is what
+          // Stripe applied, the shop-wide code was not spent and has no
+          // redemption to record against it.
+          promoCodeId: appliedPromo?.source === "trip" ? null : (input.shopPromo?.id ?? null),
+          tripPromoId: appliedPromo?.source === "trip" ? appliedPromo.id : null,
+          promoCode: appliedPromo?.code ?? input.shopPromo?.code ?? null,
+          appliedDiscountPercent: appliedPromo?.discountPercent ?? null,
         })
         .returning();
       if (!row) throw new Error("startBookingCheckout: insert returned no row");
@@ -277,13 +313,22 @@ export async function startBookingCheckout(
  */
 async function checkoutCoversExactly(
   db: DbExecutor,
+  shopId: string,
   checkoutId: string,
   bookingIds: string[],
 ): Promise<boolean> {
   const linked = await db
     .select({ bookingId: bookingCheckoutBookings.bookingId })
     .from(bookingCheckoutBookings)
-    .where(eq(bookingCheckoutBookings.checkoutId, checkoutId));
+    // Shop-scoped like every other read in this file. The checkout was resolved
+    // under the shop scope and its links are same-shop by construction, so no
+    // result moves — the predicate is here so the rule holds by inspection.
+    .where(
+      and(
+        eq(bookingCheckoutBookings.shopId, shopId),
+        eq(bookingCheckoutBookings.checkoutId, checkoutId),
+      ),
+    );
   if (linked.length !== bookingIds.length) return false;
   const requested = new Set(bookingIds);
   return linked.every((row) => requested.has(row.bookingId));
@@ -316,6 +361,48 @@ export async function getLatestCheckoutForBooking(
   bookingId: string,
 ): Promise<BookingCheckout | null> {
   return latestCheckoutForBookingIds(db, shopId, [bookingId]);
+}
+
+/**
+ * The most this checkout can have captured, for the branch where Stripe
+ * reported no `amount_total` of its own (PAY-M3).
+ *
+ * `totalCents` is what DiveDay asked for and equals the sum of the per-booking
+ * asks, so prorating against it just hands every booking its own ask back —
+ * fine for an undiscounted session, wrong for a discounted one, where those
+ * shares sum above what the single shared payment intent actually captured and
+ * the first party member to cancel can drain more than their share of it.
+ *
+ * `applied_discount_percent` is the whole answer whenever it is set: the
+ * percent Stripe was actually told to take off *this* session, snapshotted at
+ * session-creation time from whichever promotion the caller applied. Both
+ * flavors are percent-only and neither restricts the coupon to particular line
+ * items, so one percent describes the whole discount, gear included.
+ *
+ * Rows written before that column existed have no snapshot. They keep the
+ * conservative behaviour they were completed under: a shop-wide code is still
+ * reconstructible from its own row (`shop_promo_codes.discount_percent` is NOT
+ * NULL and constrained to 1..100), and anything else — an undiscounted session,
+ * or an old trip-scoped last-minute deal, which left no local trace at all —
+ * falls back to the asked total. Both answers are a figure, never a refusal and
+ * never zero.
+ *
+ * Deliberately never re-derived from whatever deal happens to be live on the
+ * trip: that would discount full-price divers on a promoted trip and
+ * under-refund people who owe nothing. This checkout's own snapshot, or nothing.
+ *
+ * Reads only rows, never Stripe: this runs inside the completion transaction.
+ */
+async function attributableTotalCents(db: DbExecutor, checkout: BookingCheckout): Promise<number> {
+  if (checkout.appliedDiscountPercent !== null) {
+    return netOfPercentDiscount(checkout.totalCents, checkout.appliedDiscountPercent);
+  }
+  if (!checkout.promoCodeId) return checkout.totalCents;
+  const promo = await getShopPromoCodeById(db, checkout.shopId, checkout.promoCodeId);
+  // A code deleted since (or belonging to another shop) leaves nothing to
+  // reconstruct from; the asked total is the only defensible figure left.
+  if (!promo) return checkout.totalCents;
+  return netOfPercentDiscount(checkout.totalCents, promo.discountPercent);
 }
 
 /**
@@ -466,17 +553,21 @@ export async function markCheckoutPaidBySessionId(
     // What each diver actually paid, not what they were quoted. The session's
     // asked total is the sum of these per-booking asks (trip fee + that
     // diver's own gear) — by construction the same figure as `totalCents` —
-    // and Stripe's settled total is split back across them in proportion, so a
+    // and the settled total is split back across them in proportion, so a
     // promo discount lands on everyone it discounted and gear money is
     // attributed to the diver who rented it (PAY-H1/H2).
     const askedCentsFor = (gearCents: number) => checkout.amountPerDiverCents + gearCents;
-    const allocation =
-      settledCents === null
-        ? null
-        : allocateSettledTotal(
-            linked.map((row) => ({ key: row.bookingId, askedCents: askedCentsFor(row.gearCents) })),
-            settledCents,
-          );
+    // The one figure every per-booking amount is derived from. Stripe's own
+    // settled total whenever there is one; otherwise the most this session can
+    // have captured, worked out locally (PAY-M3, `attributableTotalCents`).
+    // Always a number, so a completion is never refused and never recorded as
+    // zero for want of a settled figure.
+    const attributableCents =
+      updated.settledTotalCents ?? (await attributableTotalCents(tx, updated));
+    const allocation = allocateSettledTotal(
+      linked.map((row) => ({ key: row.bookingId, askedCents: askedCentsFor(row.gearCents) })),
+      attributableCents,
+    );
     // A diver's own self-service cancel/reschedule (docs ADR
     // 20260727-diver-self-service-cancel) can leave this exact session still
     // open and payable in another tab; if they complete it after cancelling,
@@ -499,8 +590,11 @@ export async function markCheckoutPaidBySessionId(
         promoCodeId: updated.promoCodeId,
         checkoutId: updated.id,
         // What the shop actually received with this code applied, straight
-        // from Stripe; the quoted total only when no settled figure exists.
-        amountChargedCents: updated.settledTotalCents ?? updated.totalCents,
+        // from Stripe; with no settled figure, the total net of this code's
+        // own discount — never the pre-discount amount the diver was quoted,
+        // which would overstate every un-settled redemption in the history
+        // this page reports on (PAY-M3).
+        amountChargedCents: attributableCents,
       });
     }
 
@@ -511,28 +605,21 @@ export async function markCheckoutPaidBySessionId(
         // A deposit checkout clears the readiness gate as deposit_paid; the
         // balance is collected later (staff order or a full checkout).
         status: checkout.isDeposit ? "deposit_paid" : "paid",
-        // No settled figure to split (a historical row, or Stripe reported no
-        // total): fall back to what this diver was asked for — the per-diver
-        // charge plus their own gear. Pre-discount, so possibly generous on a
-        // promo checkout, but never a completion refused or recorded as zero.
+        // This diver's share of `attributableCents` above. With no discount
+        // that is exactly what they were asked for (the split of a total equal
+        // to the sum of the asks returns each ask unchanged); with a discount
+        // it is their share of what the session can actually have captured,
+        // which is what a later refund may reverse.
         //
-        // KNOWN RESIDUAL, open, reachable only on this branch (no
-        // `amount_total`) and only for a **party** checkout on a **discounted**
-        // session. One Stripe payment intent covers N bookings, and each is
-        // recorded here at its quoted, pre-discount amount, so the recorded
-        // amounts sum above what the intent actually captured.
-        // `refundBookingOnCancellation` (src/db/refunds.ts) then asks Stripe to
-        // reverse one diver's inflated share out of the shared pot; Stripe
-        // bounds the *total* reversed against that intent, not the per-diver
-        // share, so the first party member to cancel can be over-refunded and a
-        // later one left under-funded — Stripe refusing their refund for money
-        // that has already gone to someone else. This is recorded rather than
-        // fixed: the fix is to stop recording an unsettled party at quoted
-        // amounts at all (prorate against `totalCents`, or refuse to attribute
-        // per-booking money without a settled figure), which changes what a
-        // completion means and needs its own decision. Do not read the fallback
-        // as closed.
-        amountCents: allocation?.get(bookingId) ?? askedCentsFor(gearCents),
+        // Every discount flavor is now covered on the no-`amount_total` branch:
+        // a shop-wide code and a trip-scoped last-minute deal both snapshot the
+        // percent they applied onto the checkout row at session-creation time
+        // (`applied_discount_percent`), so neither can be mistaken for an
+        // undiscounted session. The one remaining class is a row written before
+        // that column existed and completed only now — no snapshot exists to
+        // read, so it keeps the conservative pre-column answer rather than a
+        // guessed one; see `attributableTotalCents`.
+        amountCents: allocation.get(bookingId) ?? askedCentsFor(gearCents),
         currency: checkout.currency,
         provider: "stripe",
         providerRef: checkout.stripeSessionId,

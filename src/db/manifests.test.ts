@@ -19,6 +19,7 @@ import {
   getTripManifest,
   getTripManifests,
   recordCrewAttestation,
+  recordCrewRollCall,
   recordRollCall,
   updateLatestRollCallNote,
 } from "./manifests";
@@ -26,6 +27,7 @@ import {
   bookings,
   people,
   rollCallCrewAttestations,
+  rollCallCrewEvents,
   rollCallEvents,
   shops,
   tripAssignments,
@@ -605,6 +607,31 @@ describe("age and birthdays are measured on the day of the dive", () => {
  * 20260802-crew-roll-call-attestation.
  */
 describe("crew aboard attestation (in-memory PGlite)", () => {
+  // Since ADR 20260803-per-person-crew-roll-call the attested count is one of
+  // two crew halves: every crew member the trip *names* also needs a result of
+  // their own. Tests below that assert a checkpoint closes say both halves out
+  // loud; the ones asserting it stays open are untouched.
+  async function accountForEveryCrewMember(
+    db: Awaited<ReturnType<typeof manifestContext>>["db"],
+    shopId: string,
+    tripId: string,
+    staffId: string,
+    checkpoint: RollCallCheckpoint,
+  ) {
+    const manifest = await getTripManifest(db, shopId, tripId, checkpoint);
+    for (const member of manifest?.crew ?? []) {
+      const outcome = await recordCrewRollCall(db, {
+        shopId,
+        tripId,
+        personId: member.id,
+        recordedByPersonId: staffId,
+        status: "boarded",
+        checkpoint,
+      });
+      if (!outcome.ok) throw new Error(`could not account for crew: ${outcome.reason}`);
+    }
+  }
+
   async function boardEveryDiver(
     db: Awaited<ReturnType<typeof manifestContext>>["db"],
     shopId: string,
@@ -669,7 +696,9 @@ describe("crew aboard attestation (in-memory PGlite)", () => {
     expect(short?.crewAttestation).toMatchObject({ crewAboard: assigned - 1 });
     expect(short?.completeness).toMatchObject({ complete: false, reason: "crew_short" });
 
-    // Counting the last one aboard is what closes it.
+    // Counting the last one aboard, plus a result for each named crew member,
+    // is what closes it.
+    await accountForEveryCrewMember(db, shop.id, reef.id, staff.id, "after_dive_1");
     await expect(
       recordCrewAttestation(db, {
         shopId: shop.id,
@@ -680,7 +709,7 @@ describe("crew aboard attestation (in-memory PGlite)", () => {
       }),
     ).resolves.toMatchObject({ ok: true });
     const closed = await getTripManifest(db, shop.id, reef.id, "after_dive_1");
-    expect(closed?.completeness).toEqual({
+    expect(closed?.completeness).toMatchObject({
       complete: true,
       diversAccountedFor: true,
       crewAccountedFor: true,
@@ -749,6 +778,7 @@ describe("crew aboard attestation (in-memory PGlite)", () => {
     await boardEveryDiver(db, shop.id, reef.id, staff.id, "after_dive_1");
     const assigned =
       (await getTripManifest(db, shop.id, reef.id, "after_dive_1"))?.crew.length ?? 0;
+    await accountForEveryCrewMember(db, shop.id, reef.id, staff.id, "after_dive_1");
     await recordCrewAttestation(db, {
       shopId: shop.id,
       tripId: reef.id,
@@ -840,6 +870,293 @@ describe("crew aboard attestation (in-memory PGlite)", () => {
     expect(rows).toEqual([]);
   });
 
+  /**
+   * DOM-H1, the per-person half (ADR 20260803-per-person-crew-roll-call). The
+   * attested count names nobody: "3 of 3 aboard" cannot tell the boat that the
+   * third body is the deckhand rather than the divemaster who has not
+   * surfaced. Each assigned crew member is now a roll-call subject of their
+   * own — a `people.id`, never a booking, so `roll_call_events.booking_id`
+   * stays `notNull` and the safety spine's invariant is untouched.
+   */
+  describe("per-person crew roll call", () => {
+    it("keeps the checkpoint open while a named crew member is unaccounted for", async () => {
+      const { db, shop, reef, staff } = await manifestContext();
+      await boardEveryDiver(db, shop.id, reef.id, staff.id, "after_dive_1");
+      const crew = (await getTripManifest(db, shop.id, reef.id, "after_dive_1"))?.crew ?? [];
+      expect(crew.length).toBeGreaterThan(1);
+      await recordCrewAttestation(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        attestedByPersonId: staff.id,
+        crewAboard: crew.length,
+        checkpoint: "after_dive_1",
+      });
+
+      // The count says everyone is aboard. It still names nobody, so the
+      // checkpoint stays open until each of them does.
+      const [first, ...rest] = crew;
+      if (!first) throw new Error("crew missing");
+      expect(
+        (await getTripManifest(db, shop.id, reef.id, "after_dive_1"))?.completeness,
+      ).toMatchObject({ complete: false, crewAccountedFor: false, reason: "crew_awaiting" });
+
+      await expect(
+        recordCrewRollCall(db, {
+          shopId: shop.id,
+          tripId: reef.id,
+          personId: first.id,
+          recordedByPersonId: staff.id,
+          status: "boarded",
+          checkpoint: "after_dive_1",
+        }),
+      ).resolves.toMatchObject({ ok: true });
+      const partial = await getTripManifest(db, shop.id, reef.id, "after_dive_1");
+      expect(partial?.crew.find((member) => member.id === first.id)?.rollCall).toMatchObject({
+        state: "boarded",
+        recordedByName: staff.fullName,
+      });
+      expect(partial?.completeness).toMatchObject({ complete: false, reason: "crew_awaiting" });
+
+      for (const member of rest) {
+        await recordCrewRollCall(db, {
+          shopId: shop.id,
+          tripId: reef.id,
+          personId: member.id,
+          recordedByPersonId: staff.id,
+          status: "boarded",
+          checkpoint: "after_dive_1",
+        });
+      }
+      expect(
+        (await getTripManifest(db, shop.id, reef.id, "after_dive_1"))?.completeness,
+      ).toMatchObject({ complete: true, crewAccountedFor: true, reason: null });
+    });
+
+    it("re-opens the checkpoint when a crew member does not come back from a dive", async () => {
+      const { db, shop, reef, staff } = await manifestContext();
+      await boardEveryDiver(db, shop.id, reef.id, staff.id, "after_dive_1");
+      await accountForEveryCrewMember(db, shop.id, reef.id, staff.id, "after_dive_1");
+      const crew = (await getTripManifest(db, shop.id, reef.id, "after_dive_1"))?.crew ?? [];
+      await recordCrewAttestation(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        attestedByPersonId: staff.id,
+        crewAboard: crew.length,
+        checkpoint: "after_dive_1",
+      });
+      expect(
+        (await getTripManifest(db, shop.id, reef.id, "after_dive_1"))?.completeness.complete,
+      ).toBe(true);
+
+      const missing = crew[0];
+      if (!missing) throw new Error("crew missing");
+      // A later event supersedes the earlier one without rewriting it — the
+      // divemaster who surfaced then went back down for a lost weight belt.
+      await expect(
+        recordCrewRollCall(db, {
+          shopId: shop.id,
+          tripId: reef.id,
+          personId: missing.id,
+          recordedByPersonId: staff.id,
+          status: "not_boarded",
+          checkpoint: "after_dive_1",
+          occurredAt: new Date(nowMs() + 60_000),
+        }),
+      ).resolves.toMatchObject({ ok: true });
+
+      const reopened = await getTripManifest(db, shop.id, reef.id, "after_dive_1");
+      // Loudest reason on the boat: a human has said somebody in the water has
+      // not come back, and the satisfied count does not soften it.
+      expect(reopened?.completeness).toMatchObject({
+        complete: false,
+        crewAccountedFor: false,
+        reason: "crew_not_back_aboard",
+      });
+      // Both rows survive; nothing was edited in place.
+      expect(
+        await db
+          .select()
+          .from(rollCallCrewEvents)
+          .where(eq(rollCallCrewEvents.personId, missing.id)),
+      ).toHaveLength(2);
+    });
+
+    it("undoes a mis-tap with a cleared event, returning the crew member to awaiting", async () => {
+      const { db, shop, reef, staff } = await manifestContext();
+      const crew = (await getTripManifest(db, shop.id, reef.id))?.crew ?? [];
+      const member = crew[0];
+      if (!member) throw new Error("crew missing");
+      await recordCrewRollCall(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        personId: member.id,
+        recordedByPersonId: staff.id,
+        status: "boarded",
+      });
+      await recordCrewRollCall(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        personId: member.id,
+        recordedByPersonId: staff.id,
+        status: "cleared",
+        occurredAt: new Date(nowMs() + 60_000),
+      });
+      const manifest = await getTripManifest(db, shop.id, reef.id);
+      expect(manifest?.crew.find((entry) => entry.id === member.id)?.rollCall).toBeUndefined();
+    });
+
+    it("carries a dock-side absence forward, and never carries an after-dive one", async () => {
+      const { db, shop, reef, staff } = await manifestContext();
+      const crew = (await getTripManifest(db, shop.id, reef.id))?.crew ?? [];
+      const ashore = crew[0];
+      if (!ashore) throw new Error("crew missing");
+      // Called in sick: never left the dock, which is true of every later
+      // checkpoint too — the same rule a diver's result follows (DOM-H3).
+      await recordCrewRollCall(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        personId: ashore.id,
+        recordedByPersonId: staff.id,
+        status: "not_boarded",
+        checkpoint: "departure",
+      });
+      const manifests = await getTripManifests(db, shop.id, reef.id);
+      const afterDive = manifests?.find((entry) => entry.checkpoint === "after_dive_1");
+      const carried = afterDive?.crew.find((entry) => entry.id === ashore.id)?.rollCall;
+      expect(carried).toMatchObject({ state: "not_boarded", implied: true });
+      // Carried forward is *accounted for* — they are ashore, not in the water.
+      expect(afterDive?.completeness.reason).not.toBe("crew_not_back_aboard");
+    });
+
+    it("refuses a subject who is not this trip's crew, another shop's trip, or a bad checkpoint", async () => {
+      const { db, shop, reef, staff, booking } = await manifestContext();
+      const [otherShop] = await db
+        .insert(shops)
+        .values({ name: "Other Shop", slug: "other-shop-crew-roll-call", timezone: "UTC" })
+        .returning();
+      if (!otherShop) throw new Error("second shop insert failed");
+      const crew = (await getTripManifest(db, shop.id, reef.id))?.crew ?? [];
+      const subject = crew[0];
+      if (!subject) throw new Error("crew missing");
+
+      // Tenant scoping, both ways round: another shop's id against this trip,
+      // and this shop against a subject who was never rostered here.
+      await expect(
+        recordCrewRollCall(db, {
+          shopId: otherShop.id,
+          tripId: reef.id,
+          personId: subject.id,
+          recordedByPersonId: staff.id,
+          status: "boarded",
+        }),
+      ).resolves.toEqual({ ok: false, reason: "staff_not_found" });
+
+      // A booked diver is not crew — being a person in this shop is not enough
+      // to be a subject, because the rule is about the crew this trip *has*.
+      await expect(
+        recordCrewRollCall(db, {
+          shopId: shop.id,
+          tripId: reef.id,
+          personId: booking.person.id,
+          recordedByPersonId: staff.id,
+          status: "boarded",
+        }),
+      ).resolves.toEqual({ ok: false, reason: "crew_not_assigned" });
+
+      // ...and a diver cannot record one either.
+      await expect(
+        recordCrewRollCall(db, {
+          shopId: shop.id,
+          tripId: reef.id,
+          personId: subject.id,
+          recordedByPersonId: booking.person.id,
+          status: "boarded",
+        }),
+      ).resolves.toEqual({ ok: false, reason: "staff_not_found" });
+
+      await expect(
+        recordCrewRollCall(db, {
+          shopId: shop.id,
+          tripId: reef.id,
+          personId: subject.id,
+          recordedByPersonId: staff.id,
+          status: "boarded",
+          checkpoint: "after_dive_9",
+        }),
+      ).resolves.toEqual({ ok: false, reason: "invalid_checkpoint" });
+
+      // Nothing was written by any of the refusals above.
+      expect(
+        await db.select().from(rollCallCrewEvents).where(eq(rollCallCrewEvents.tripId, reef.id)),
+      ).toEqual([]);
+    });
+
+    /**
+     * Review 20260803, D11. The subject check proved only "assigned to this
+     * trip", while `listTripCrew` reads the crew list through a `person_roles`
+     * join filtered to `STAFF_ROLES`. A person who was assigned but held no
+     * staff role could therefore carry roll-call events and appear in neither
+     * the crew list nor the denominator — a result about somebody the head
+     * count could not see. One definition of "on this trip's crew", or the two
+     * halves answer differently.
+     */
+    it("refuses a subject who is assigned but holds no staff role, as the crew list does", async () => {
+      const { db, shop, reef, staff, booking } = await manifestContext();
+      // A booked diver, rostered onto the trip by a direct insert: assigned,
+      // but not staff.
+      await db.insert(tripAssignments).values({ tripId: reef.id, personId: booking.person.id });
+      expect(
+        (await getTripManifest(db, shop.id, reef.id))?.crew.some(
+          (member) => member.id === booking.person.id,
+        ),
+      ).toBe(false);
+      await expect(
+        recordCrewRollCall(db, {
+          shopId: shop.id,
+          tripId: reef.id,
+          personId: booking.person.id,
+          recordedByPersonId: staff.id,
+          status: "boarded",
+        }),
+      ).resolves.toEqual({ ok: false, reason: "crew_not_assigned" });
+      expect(
+        await db.select().from(rollCallCrewEvents).where(eq(rollCallCrewEvents.tripId, reef.id)),
+      ).toEqual([]);
+    });
+
+    it("carries each crew member's result into the offline snapshot, without their id", async () => {
+      const { db, shop, reef, staff } = await manifestContext();
+      const crew = (await getTripManifest(db, shop.id, reef.id))?.crew ?? [];
+      const member = crew[0];
+      if (!member) throw new Error("crew missing");
+      await recordCrewRollCall(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        personId: member.id,
+        recordedByPersonId: staff.id,
+        status: "boarded",
+      });
+      const manifests = await getTripManifests(db, shop.id, reef.id);
+      if (!manifests) throw new Error("manifests missing");
+      const payload = serializeManifests(
+        manifests,
+        { slug: shop.slug, name: shop.name, timezone: shop.timezone },
+        (blocker) => blocker.code,
+      );
+      const departure = payload.manifests.find((entry) => entry.checkpoint === "departure");
+      const saved = departure?.crew.find((entry) => entry.fullName === member.fullName);
+      expect(saved?.rollCall).toMatchObject({ state: "boarded", recordedByName: staff.fullName });
+      // ISO string, not a Date — the snapshot is JSON before it is encrypted.
+      expect(typeof saved?.rollCall?.occurredAt).toBe("string");
+      // Read-only on the dock, so no id ever needs to reach a crew phone.
+      expect(departure?.crew.every((entry) => !("id" in entry))).toBe(true);
+      // And the crew member nobody counted reads as awaiting there, which is
+      // what makes the offline copy fail closed.
+      const uncounted = departure?.crew.find((entry) => entry.fullName !== member.fullName);
+      expect(uncounted?.rollCall).toBeUndefined();
+    });
+  });
+
   it("never takes the denominator from the caller — it is read from the trip's own assignments", async () => {
     const { db, shop, reef, staff } = await manifestContext();
     const assigned = (await getTripManifest(db, shop.id, reef.id))?.crew.length ?? 0;
@@ -880,14 +1197,21 @@ describe("crew aboard attestation (in-memory PGlite)", () => {
     expect(unattestedAfterDive?.crewAttestation).toBeUndefined();
     expect(
       rollCallCompleteness({
+        checkpoint: "after_dive_1",
         totalDivers: unattestedAfterDive?.summary.totalDivers ?? 0,
         awaiting: 0,
-        crewAssigned: unattestedAfterDive?.crew.length ?? 0,
+        notBackAboard: 0,
+        // The dock copy derives the crew half from the snapshot's own crew
+        // list, exactly as OfflineManifestView does — which is what makes an
+        // older snapshot with no crew results read every crew member as
+        // awaiting rather than as accounted for.
+        crew: unattestedAfterDive?.crew ?? [],
         crewAttestation: null,
       }),
     ).toMatchObject({ complete: false, reason: "crew_not_attested" });
 
     const assigned = beforeAttesting[0]?.crew.length ?? 0;
+    await accountForEveryCrewMember(db, shop.id, reef.id, staff.id, "after_dive_1");
     await recordCrewAttestation(db, {
       shopId: shop.id,
       tripId: reef.id,
@@ -916,9 +1240,11 @@ describe("crew aboard attestation (in-memory PGlite)", () => {
     // Same function the offline view calls, same answer as the live page.
     expect(
       rollCallCompleteness({
+        checkpoint: "after_dive_1",
         totalDivers: afterDive?.summary.totalDivers ?? 0,
         awaiting: 0,
-        crewAssigned: afterDive?.crew.length ?? 0,
+        notBackAboard: 0,
+        crew: afterDive?.crew ?? [],
         crewAttestation: afterDive?.crewAttestation
           ? {
               ...afterDive.crewAttestation,
@@ -966,6 +1292,18 @@ describe("the manifest and Today agree about who is still in the water (DOM-H3)"
     // The crew half is satisfied first, so the *only* thing that can hold this
     // checkpoint open below is the diver who has not come back.
     const crewAssigned = (await getTripManifest(db, shop.id, reef.id, "after_dive_1"))?.crew.length;
+    for (const member of (await getTripManifest(db, shop.id, reef.id, "after_dive_1"))?.crew ??
+      []) {
+      const crewOutcome = await recordCrewRollCall(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        personId: member.id,
+        recordedByPersonId: staff.id,
+        status: "boarded",
+        checkpoint: "after_dive_1",
+      });
+      if (!crewOutcome.ok) throw new Error(`could not account for crew: ${crewOutcome.reason}`);
+    }
     await recordCrewAttestation(db, {
       shopId: shop.id,
       tripId: reef.id,

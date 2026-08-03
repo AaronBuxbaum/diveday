@@ -1,6 +1,7 @@
 import { and, asc, count, eq, gt, inArray, isNull, lt, ne } from "drizzle-orm";
 import { STAFF_ROLES } from "@/lib/authz";
 import { courseCrewGap, hasCourseCrewGap } from "@/lib/course-ratios";
+import { countInWaterCrew, type TripCrewRole } from "@/lib/crew-roles";
 import type { AppDb } from "./client";
 import {
   bookings,
@@ -111,6 +112,7 @@ export async function getStaffingView(
         tripId: tripAssignments.tripId,
         personId: people.id,
         personName: people.fullName,
+        tripRole: tripAssignments.tripRole,
         role: personRoles.role,
       })
       .from(tripAssignments)
@@ -140,7 +142,14 @@ export async function getStaffingView(
     courseTitle: string | null;
     course: typeof courses.$inferSelect | null;
     booked: number;
-    crew: { personId: string; name: string; roles: string[] }[];
+    crew: {
+      personId: string;
+      name: string;
+      /** Shop-wide roles; what the ratio reads together with `tripRole`. */
+      roles: string[];
+      /** The job this person is rostered to do on this trip, or null. */
+      tripRole: TripCrewRole | null;
+    }[];
   };
   const tripMap = new Map<string, TripEntry>();
   for (const row of tripCourseRows) {
@@ -157,7 +166,12 @@ export async function getStaffingView(
     if (!entry) continue;
     let crew = entry.crew.find((member) => member.personId === row.personId);
     if (!crew) {
-      crew = { personId: row.personId, name: row.personName, roles: [] };
+      crew = {
+        personId: row.personId,
+        name: row.personName,
+        roles: [],
+        tripRole: row.tripRole,
+      };
       entry.crew.push(crew);
     }
     if (row.role && !crew.roles.includes(row.role)) crew.roles.push(row.role);
@@ -188,12 +202,13 @@ export async function getStaffingView(
   }));
 
   const tripsView = [...tripMap.values()].map((entry) => {
-    const instructorCount = entry.crew.filter((member) =>
-      member.roles.includes("instructor"),
-    ).length;
-    const assistantCount = entry.crew.filter(
-      (member) => member.roles.includes("divemaster") && !member.roles.includes("instructor"),
-    ).length;
+    // One definition of who is an in-water instructor or certified assistant
+    // (`countInWaterCrew`, src/lib/crew-roles.ts), shared with the booking
+    // gate, Today, and the trip page — a divemaster rostered as this trip's
+    // captain is not their own assistant here either.
+    const { instructorCount, assistantCount } = countInWaterCrew(
+      entry.crew.map((member) => ({ tripRole: member.tripRole, shopRoles: member.roles })),
+    );
     // The one "course crew gap" computation (Lens 17 task 151) — also
     // consumed by the trip page and the Today queue — so a course this
     // window calls "needs an instructor" isn't secretly fine on Today.

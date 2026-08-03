@@ -27,6 +27,34 @@ function sanitize(cents: number): number {
 }
 
 /**
+ * What a percent-off code can have left for the shop to collect: the asked
+ * total, less that percentage, with the **discount rounded up** so the answer
+ * is a floor on what Stripe can have captured rather than a ceiling.
+ *
+ * Used only when Stripe reported no `amount_total` at all (PAY-M3). Recording
+ * a discounted party at its quoted, pre-discount amounts makes the per-booking
+ * ledger sum above what the one shared payment intent actually captured, and
+ * `booking_payments.amountCents` is exactly the figure a later cancellation
+ * asks Stripe to reverse — so the first party member to cancel drains more
+ * than their share and a later one is refused money already paid out. Erring
+ * *low* is the safe direction: a share below the true proportional one can
+ * only ever under-refund by a cent, never overdraw the pot.
+ *
+ * Rounding is not bit-exact against Stripe. Stripe applies a percent-off
+ * coupon per line item and rounds each, so its total discount can differ from
+ * `ceil(total × percent / 100)` by up to about half a cent per line — with
+ * three or more lines this figure can sit a cent or two *above* what Stripe
+ * kept. A one- or two-cent overstatement cannot produce the failure above: it
+ * surfaces as Stripe refusing the last few cents of the final refund, which
+ * the caller already reports as `manual` for staff, not as money moving twice.
+ */
+export function netOfPercentDiscount(totalCents: number, discountPercent: number): number {
+  const total = sanitize(totalCents);
+  const percent = Math.min(100, sanitize(discountPercent));
+  return Math.max(0, total - Math.ceil((total * percent) / 100));
+}
+
+/**
  * Split `settledTotalCents` across `shares` in proportion to what each was
  * asked for, by the largest-remainder method: every share gets the floor of
  * its exact proportion, then the leftover cents go one each to the largest

@@ -20,7 +20,7 @@ function setup(action: RollCallAction, copy: RollCallButtonCopy = DEFAULT_COPY) 
   render(
     <RollCallButton
       action={action}
-      bookingId="00000000-0000-4000-8000-000000000001"
+      subject={{ field: "bookingId", id: "00000000-0000-4000-8000-000000000001" }}
       status="boarded"
       label="Board"
       pendingLabel="Boarding…"
@@ -106,7 +106,7 @@ describe("RollCallButton", () => {
         <RollCallButton
           key={checkpoint}
           action={action}
-          bookingId="00000000-0000-4000-8000-000000000001"
+          subject={{ field: "bookingId", id: "00000000-0000-4000-8000-000000000001" }}
           status="boarded"
           label="Board"
           pendingLabel="Boarding…"

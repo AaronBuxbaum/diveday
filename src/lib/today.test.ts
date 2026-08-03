@@ -495,11 +495,22 @@ describe("roll-call gap ranking (DOM-H3)", () => {
       action({ id: "none", kind: "roll_call_not_started", urgency: "imminent", dueAt: at }),
       action({ id: "open", kind: "roll_call_unfinished", urgency: "imminent", dueAt: at }),
       action({ id: "missing", kind: "roll_call_missing_diver", urgency: "imminent", dueAt: at }),
+      action({ id: "crewOpen", kind: "roll_call_crew_unfinished", urgency: "imminent", dueAt: at }),
+      action({ id: "crewMissing", kind: "roll_call_missing_crew", urgency: "imminent", dueAt: at }),
       action({ id: "med", kind: "medical_review", urgency: "imminent", dueAt: at }),
     ]);
-    // The two after-dive kinds lead, then the diver blocker, and the two
-    // dock-count kinds — paperwork on a boat that is already home — ride last.
-    expect(sorted.map((entry) => entry.id)).toEqual(["missing", "open", "med", "dock", "none"]);
+    // The four after-dive kinds lead — a crew member who did not come back sits
+    // beside the diver row, not below the clerical ones (review 20260803, D1) —
+    // then the diver blocker, and the two dock-count kinds ride last.
+    expect(sorted.map((entry) => entry.id)).toEqual([
+      "missing",
+      "crewMissing",
+      "open",
+      "crewOpen",
+      "med",
+      "dock",
+      "none",
+    ]);
   });
 
   it("pins the after-dive gaps to the top band and drops the dock counts a band", () => {
@@ -508,6 +519,10 @@ describe("roll-call gap ranking (DOM-H3)", () => {
     // wallpaper.
     expect(rollCallGapUrgency("missing_diver", false)).toBe("imminent");
     expect(rollCallGapUrgency("after_dive_uncounted", false)).toBe("imminent");
+    // Crew ride the identical schedule: a crew member is not less findable
+    // than a customer (review 20260803, D1).
+    expect(rollCallGapUrgency("missing_crew", false)).toBe("imminent");
+    expect(rollCallGapUrgency("crew_uncounted", false)).toBe("imminent");
     expect(rollCallGapUrgency("departure_uncounted", false)).toBe("now");
     expect(rollCallGapUrgency("no_roll_call", false)).toBe("now");
   });
@@ -517,5 +532,7 @@ describe("roll-call gap ranking (DOM-H3)", () => {
     // anywhere recording that a count had never closed. It degrades instead.
     expect(rollCallGapUrgency("missing_diver", true)).toBe("soon");
     expect(rollCallGapUrgency("after_dive_uncounted", true)).toBe("soon");
+    expect(rollCallGapUrgency("missing_crew", true)).toBe("soon");
+    expect(rollCallGapUrgency("crew_uncounted", true)).toBe("soon");
   });
 });

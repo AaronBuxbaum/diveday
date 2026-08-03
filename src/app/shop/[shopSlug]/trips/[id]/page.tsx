@@ -14,7 +14,7 @@ import { listRecapPhotosForTrip } from "@/db/recap";
 import { getShopById } from "@/db/shops";
 import { crewShiftCoverage } from "@/db/staffing";
 import {
-  getTripCrewIds,
+  getTripCrewAssignments,
   getTripSeriesSummary,
   getTripWithBooked,
   listStaff,
@@ -24,6 +24,7 @@ import {
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { courseCrewGap, DSD_RATIO } from "@/lib/course-ratios";
+import { countInWaterCrew } from "@/lib/crew-roles";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { recurrenceSummary } from "@/lib/recurrence";
@@ -97,7 +98,7 @@ export default async function ManageTripPage({
   if (!trip) notFound();
   const [
     staff,
-    crewIds,
+    crewAssignments,
     requirement,
     diveSiteList,
     tripDiveList,
@@ -108,7 +109,7 @@ export default async function ManageTripPage({
     recapPhotos,
   ] = await Promise.all([
     listStaff(db, shop.id),
-    getTripCrewIds(db, shop.id, tripId),
+    getTripCrewAssignments(db, shop.id, tripId),
     getTripRequirements(db, shop.id, tripId),
     listDiveSites(db, shop.id),
     listTripDives(db, shop.id, tripId),
@@ -121,6 +122,10 @@ export default async function ManageTripPage({
   const startWall = utcToWallTime(trip.startsAt, shop.timezone);
   const endWall = utcToWallTime(trip.endsAt, shop.timezone);
   const cancelled = trip.status === "cancelled";
+  const crewIds = crewAssignments.map((entry) => entry.personId);
+  const tripRoleByPerson = new Map(
+    crewAssignments.map((entry) => [entry.personId, entry.tripRole] as const),
+  );
   const assignedCrew = staff.filter((entry) => crewIds.includes(entry.person.id));
   // Staff can freely change crew after divers are already booked (H-14 lets
   // any staff member do this — it's day-of operating work). `courseCrewGap`
@@ -130,12 +135,20 @@ export default async function ManageTripPage({
   // Lens 17 task 151) — over_ratio is the visible nudge to fix a ratio-gated
   // session before sailing, never a retroactive block on the bookings already
   // taken.
+  //
+  // Who counts as an instructor or an in-water certified assistant is
+  // `countInWaterCrew` (src/lib/crew-roles.ts) — one definition shared with the
+  // booking gate, the staffing window, and Today, so a divemaster rostered as
+  // this trip's captain stops buying two students' worth of capacity here too
+  // (DOM-M3).
   const crewGap = courseCrewGap({
     course: trip.course,
-    instructorCount: assignedCrew.filter((entry) => entry.roles.includes("instructor")).length,
-    assistantCount: assignedCrew.filter(
-      (entry) => entry.roles.includes("divemaster") && !entry.roles.includes("instructor"),
-    ).length,
+    ...countInWaterCrew(
+      assignedCrew.map((entry) => ({
+        tripRole: tripRoleByPerson.get(entry.person.id) ?? null,
+        shopRoles: entry.roles,
+      })),
+    ),
     booked: trip.booked,
   });
   // Two rules, two sentences: the entry-level cap is PADI's published Open
@@ -352,6 +365,7 @@ export default async function ManageTripPage({
         tripId={tripId}
         staff={staff}
         crewIds={crewIds}
+        crewRoles={Object.fromEntries(tripRoleByPerson)}
         onShiftIds={onShiftIds}
         crewGapCode={crewGap.code}
         updateCrewAction={updateTripCrewAction.bind(null, shopSlug)}
@@ -366,6 +380,14 @@ export default async function ManageTripPage({
           assignOption: t("shared.today.departureBoard.assignCrewOption"),
           unassignAria: t("shared.today.departureBoard.unassignAria"),
           assignFailed: t("shared.today.departureBoard.assignFailed"),
+          roleAria: t("trips.crew.roleAria"),
+          roleUnspecified: t("trips.crew.roleUnspecified"),
+          roleOptions: {
+            instructor: t("trips.crew.roleInstructor"),
+            divemaster: t("trips.crew.roleDivemaster"),
+            captain: t("trips.crew.roleCaptain"),
+            crew: t("trips.crew.roleCrew"),
+          },
           onShift: t("trips.crew.onShift"),
           notOnShift: t("trips.crew.notOnShift"),
           manageShifts: t("trips.crew.manageShifts"),

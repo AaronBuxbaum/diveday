@@ -22,7 +22,9 @@ export const URGENCY_KEYS: Record<TodayUrgency, StaffMessageKey> = {
 /** Every `TodayActionKind` chip, to its label key. Tone stays in `src/lib/today.ts` (not copy). */
 export const ACTION_KIND_KEYS: Record<TodayActionKind, StaffMessageKey> = {
   roll_call_missing_diver: "shared.today.actionKind.rollCallMissingDiver",
+  roll_call_missing_crew: "shared.today.actionKind.rollCallMissingCrew",
   roll_call_unfinished: "shared.today.actionKind.rollCallUnfinished",
+  roll_call_crew_unfinished: "shared.today.actionKind.rollCallCrewUnfinished",
   roll_call_departure_open: "shared.today.actionKind.rollCallDepartureOpen",
   roll_call_not_started: "shared.today.actionKind.rollCallNotStarted",
   medical_review: "shared.today.actionKind.medicalReview",
@@ -195,11 +197,13 @@ export function overRatioIntroDetailText(
  * The unclosed head count (DOM-H3), one whole ICU message per case rather than
  * a sentence stitched from fragments (task 34's rule).
  *
- * There is deliberately **no shared string** across the four reasons. A diver
- * marked not back aboard after dive one and a dock count nobody finished are
- * different events, and wording them the same is what turns the row into
+ * There is deliberately **no shared string** across the reasons — including
+ * between a diver's and a crew member's. A diver marked not back aboard after
+ * dive one, a divemaster who has not surfaced, and a dock count nobody finished
+ * are different events, and wording them the same is what turns the row into
  * wallpaper — at which point the one that means "a person may be in the water"
- * stops being read at all.
+ * stops being read at all. The crew sentences say *crew*, because the first
+ * thing the person reading it has to know is who to go looking for.
  */
 export function rollCallGapDetailText(
   t: StaffTranslator,
@@ -207,7 +211,7 @@ export function rollCallGapDetailText(
     reason: RollCallGapReason;
     diveNumber: number;
     uncounted: number;
-    totalDivers: number;
+    total: number;
     underway: boolean;
     stale: boolean;
   },
@@ -215,12 +219,17 @@ export function rollCallGapDetailText(
   const { dive, uncounted, total } = {
     dive: gap.diveNumber,
     uncounted: gap.uncounted,
-    total: gap.totalDivers,
+    total: gap.total,
   };
   switch (gap.reason) {
     case "missing_diver":
       return t(
         gap.stale ? "shared.today.detail.missingDiverStale" : "shared.today.detail.missingDiver",
+        { dive, uncounted, total },
+      );
+    case "missing_crew":
+      return t(
+        gap.stale ? "shared.today.detail.missingCrewStale" : "shared.today.detail.missingCrew",
         { dive, uncounted, total },
       );
     case "after_dive_uncounted":
@@ -230,6 +239,15 @@ export function rollCallGapDetailText(
           : gap.underway
             ? "shared.today.detail.openRollCallUnderway"
             : "shared.today.detail.openRollCall",
+        { dive, uncounted, total },
+      );
+    case "crew_uncounted":
+      return t(
+        gap.stale
+          ? "shared.today.detail.openCrewRollCallStale"
+          : gap.underway
+            ? "shared.today.detail.openCrewRollCallUnderway"
+            : "shared.today.detail.openCrewRollCall",
         { dive, uncounted, total },
       );
     case "departure_uncounted":

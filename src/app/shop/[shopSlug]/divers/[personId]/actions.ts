@@ -524,10 +524,16 @@ export async function erasePersonAction(shopSlug: string, personId: string, form
     personId,
     actorPersonId: staff.user.personId,
   });
+  // "Erased" and "erased, but Stripe still owes something" are different facts,
+  // and a compliance action must not report the weaker one as the stronger
+  // (ADR 20260803-processor-erasure-obligations). The outstanding work is on the
+  // reports page; this notice is what sends someone to look.
+  const erasedNotice =
+    result.ok && result.owedProcessorErasures > 0 ? "erased-processor-owed" : "erased";
   revalidateAndRedirect(
     `/shop/${staff.user.shopSlug}/divers`,
     result.ok
-      ? `/shop/${staff.user.shopSlug}/divers?notice=erased`
+      ? `/shop/${staff.user.shopSlug}/divers?notice=${erasedNotice}`
       : `${base}?notice=erase-refused`,
   );
 }

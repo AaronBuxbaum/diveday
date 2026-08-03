@@ -53,7 +53,7 @@ export type RollCallButtonCopy = {
  */
 export function RollCallButton({
   action,
-  bookingId,
+  subject,
   status,
   label,
   pendingLabel,
@@ -62,7 +62,22 @@ export function RollCallButton({
   copy,
 }: {
   action: RollCallAction;
-  bookingId: string;
+  /**
+   * Who this result is about, as the hidden field the server action parses.
+   * A booked diver is `bookingId`; an assigned crew member is `personId` —
+   * two genuinely different subjects (a paid seat vs. a roster line), each
+   * with its own `notNull` subject column and its own server action (ADR
+   * 20260803-per-person-crew-roll-call).
+   *
+   * The subject is the *only* thing that differs, which is why this is one
+   * generalized control rather than a near-copy: the instant pending label,
+   * the confirm/refuse haptics, the `role="alert"` refusal, the no-JS form
+   * post, and the remount-key contract below are all safety behaviour, and a
+   * sibling component would be a second place for them to drift. The union
+   * (rather than a bare field name) is what stops a caller typing
+   * `"bookingid"` and posting a crew id into a diver action.
+   */
+  subject: { field: "bookingId"; id: string } | { field: "personId"; id: string };
   status: string;
   label: string;
   pendingLabel: string;
@@ -94,7 +109,7 @@ export function RollCallButton({
   return (
     <>
       <form action={formAction} id={formId}>
-        <input type="hidden" name="bookingId" value={bookingId} />
+        <input type="hidden" name={subject.field} value={subject.id} />
         <input type="hidden" name="status" value={status} />
         <button type="submit" disabled={isPending} aria-busy={isPending} className={className}>
           {isPending ? pendingLabel : label}

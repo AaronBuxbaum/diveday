@@ -354,7 +354,11 @@ describe("redemption recording", () => {
         cancelUrl: "https://diveday.example/no",
         describeLine: ({ tripTitle }) => tripTitle,
         promotionCode: created.promo.stripePromotionCodeId ?? undefined,
-        shopPromo: { id: created.promo.id, code: created.promo.code },
+        shopPromo: {
+          id: created.promo.id,
+          code: created.promo.code,
+          discountPercent: created.promo.discountPercent,
+        },
       },
       fakeCheckout(),
     );
@@ -377,7 +381,7 @@ describe("redemption recording", () => {
     expect((await db.select().from(shopPromoRedemptions)).length).toBe(1);
   });
 
-  it("falls back to the quoted total when Stripe reported no settled figure", async () => {
+  it("records the total net of this code's own discount when Stripe reported no settled figure", async () => {
     const { db, shop } = await promoContext();
     await upsertShopStripeAccount(db, shop.id, "acct_test");
     const created = await createShopPromoCode(db, promoInput(shop.id), fakePromotions());
@@ -416,7 +420,11 @@ describe("redemption recording", () => {
         cancelUrl: "https://diveday.example/no",
         describeLine: ({ tripTitle }) => tripTitle,
         promotionCode: created.promo.stripePromotionCodeId ?? undefined,
-        shopPromo: { id: created.promo.id, code: created.promo.code },
+        shopPromo: {
+          id: created.promo.id,
+          code: created.promo.code,
+          discountPercent: created.promo.discountPercent,
+        },
       },
       fakeCheckout(),
     );
@@ -424,9 +432,11 @@ describe("redemption recording", () => {
 
     await markCheckoutPaidBySessionId(db, started.checkout.stripeSessionId);
     const [redemption] = await db.select().from(shopPromoRedemptions);
-    // No settled figure exists; the order this code was spent against is still
-    // recorded, at what it was quoted.
-    expect(redemption?.amountChargedCents).toBe(18_000);
+    // No settled figure exists, so the redemption is recorded at $180 less
+    // this code's own 20% — never the pre-discount $180 the diver was quoted,
+    // which would overstate every unsettled redemption in this history
+    // (PAY-M3).
+    expect(redemption?.amountChargedCents).toBe(14_400);
   });
 
   it("records nothing for an undiscounted checkout", async () => {
