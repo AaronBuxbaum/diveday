@@ -105,6 +105,12 @@ function noticeMessages(
     // non-owner/manager here, and the payment-settings wording above would
     // explain the wrong surface.
     whatsapp_not_authorized: { tone: "danger", text: t("whatsapp.notice.not_authorized") },
+    // Team and Import are the last two Settings sub-pages whose gate used to
+    // teleport a refused staffer to Today saying nothing at all. Same rule as
+    // the four above: bounce to the nearest parent surface with a code it
+    // handles (task 82).
+    team_not_authorized: { tone: "danger", text: t("settings.team.notice.notAuthorized") },
+    import_not_authorized: { tone: "danger", text: t("settings.import.notice.notAuthorized") },
   };
 }
 

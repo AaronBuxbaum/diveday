@@ -17,6 +17,7 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { MAX_PATH_STEPS } from "@/lib/courses";
 import { publicCoursePathPath } from "@/lib/public-routes";
 import { requireStaffSession } from "@/lib/session";
+import { noticeFromParam } from "@/lib/staff-notices";
 import { PathBuilder } from "../_components/PathBuilder";
 import { savePathAction } from "../actions";
 
@@ -63,7 +64,9 @@ export default async function CoursePathEditPage({
     "not-authorized": st("courses.pathEdit.errorNotAuthorized"),
   };
 
-  const message = error ? ERROR_MESSAGES[error] : undefined;
+  // `Object.hasOwn`, not `ERROR_MESSAGES[error]` — `error` is attacker-supplied
+  // and a bare lookup walks the prototype (src/lib/staff-notices.ts).
+  const message = noticeFromParam(error, ERROR_MESSAGES);
   const save = savePathAction.bind(null, shopSlug, pathSlug);
   const hiddenSteps = path.steps.filter((step) => !step.course.isActive);
 

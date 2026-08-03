@@ -38,6 +38,7 @@ import { questionnaireForJurisdiction } from "@/lib/medical";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
+import { noticeFromParam } from "@/lib/staff-notices";
 import { emailFreshWaiverLinkAction } from "./actions";
 import { QuestionnaireProgress } from "./QuestionnaireProgress";
 
@@ -739,7 +740,9 @@ function ExpiredLink({
   t: DiverTranslator;
   sent?: string;
 }) {
-  const notice = sent ? RESCUE_NOTICES[sent] : undefined;
+  // `Object.hasOwn`, not `RESCUE_NOTICES[sent]` — `sent` is attacker-supplied
+  // and a bare lookup walks the prototype (src/lib/staff-notices.ts).
+  const notice = noticeFromParam(sent, RESCUE_NOTICES);
   return (
     <Unavailable
       title={t("waiver.expiredHeading")}

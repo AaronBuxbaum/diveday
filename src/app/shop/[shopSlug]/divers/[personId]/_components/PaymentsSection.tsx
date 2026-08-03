@@ -89,6 +89,7 @@ function PaymentRow({
   shopSlug,
   personId,
   canRefund,
+  paymentsConnected,
   t,
 }: {
   item: PaymentRowItem;
@@ -98,6 +99,7 @@ function PaymentRow({
   shopSlug: string;
   personId: string;
   canRefund: boolean;
+  paymentsConnected: boolean;
   t: StaffTranslator;
 }) {
   if (item.kind === "booking") {
@@ -133,12 +135,22 @@ function PaymentRow({
             >
               {t("divers.payments.openPayment")}
             </Link>
-          ) : (
+          ) : paymentsConnected ? (
             <Link
               href={`/shop/${shopSlug}/orders/new?personId=${personId}&bookingId=${booking.id}`}
               className={buttonClass({ variant: "secondary", size: "sm" })}
             >
               {t("divers.payments.createInvoice")}
+            </Link>
+          ) : (
+            // No connected account means `orders/new` would refuse and bounce
+            // straight back here. Offer the thing that unblocks it instead of
+            // the button that can't work yet.
+            <Link
+              href={`/shop/${shopSlug}/settings#money`}
+              className={buttonClass({ variant: "secondary", size: "sm" })}
+            >
+              {t("shared.payments.connect")}
             </Link>
           )}
           {canRefund && orderRow?.order.status === "paid" ? (
@@ -209,6 +221,7 @@ export function PaymentsSection({
   shopSlug,
   personId,
   canRefund,
+  paymentsConnected,
 }: {
   diver: DiverProfile;
   shop: Shop;
@@ -217,6 +230,13 @@ export function PaymentsSection({
   personId: string;
   /** Only owners/managers issue refunds (H-14); others don't see the control. */
   canRefund: boolean;
+  /**
+   * Whether the shop has a Stripe account that can actually take money. False
+   * on every day-one shop, and `orders/new` refuses outright when it is — so
+   * the invoice buttons here become a "Connect payments" link rather than a
+   * click that bounces back with a notice.
+   */
+  paymentsConnected: boolean;
 }) {
   const t = staffTranslator(locale);
   const rows: PaymentRowItem[] = [
@@ -232,7 +252,7 @@ export function PaymentsSection({
   // opened this page for (same reasoning as `ShopHistory` just below it).
   const visible = rows.slice(0, PAYMENTS_PREVIEW_COUNT);
   const rest = rows.slice(PAYMENTS_PREVIEW_COUNT);
-  const rowProps = { diver, shop, locale, shopSlug, personId, canRefund, t };
+  const rowProps = { diver, shop, locale, shopSlug, personId, canRefund, paymentsConnected, t };
 
   return (
     <section className="mt-10 border-t border-border pt-8" aria-labelledby="payments-heading">
@@ -243,9 +263,18 @@ export function PaymentsSection({
           </h2>
           <p className="mt-1 text-sm text-muted">{t("divers.payments.description")}</p>
         </div>
-        <Link href={`/shop/${shopSlug}/orders/new?personId=${personId}`} className={buttonClass()}>
-          {t("divers.payments.newPayment")}
-        </Link>
+        {paymentsConnected ? (
+          <Link
+            href={`/shop/${shopSlug}/orders/new?personId=${personId}`}
+            className={buttonClass()}
+          >
+            {t("divers.payments.newPayment")}
+          </Link>
+        ) : (
+          <Link href={`/shop/${shopSlug}/settings#money`} className={buttonClass()}>
+            {t("shared.payments.connect")}
+          </Link>
+        )}
       </div>
 
       {rows.length === 0 ? (

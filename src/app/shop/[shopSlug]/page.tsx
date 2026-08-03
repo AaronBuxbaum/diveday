@@ -36,6 +36,7 @@ import { publicAppUrl } from "@/lib/notifications";
 import { OPERATIONAL_HORIZON_DAYS } from "@/lib/operational-window";
 import { publicSchedulePath } from "@/lib/public-routes";
 import { requireStaffSession } from "@/lib/session";
+import { noticeFromParam } from "@/lib/staff-notices";
 import { getTimeOfDayGreeting, leadWithCrewed, roleLensFor, summarizeDay } from "@/lib/today";
 import { BlockerGroups } from "./_components/BlockerGroups";
 import { isQueueView, type QueueView, QueueViewSwitch } from "./_components/QueueViewSwitch";
@@ -53,6 +54,7 @@ export const instant = false;
 const AUTH_NOTICES: Record<string, StaffMessageKey> = {
   waivers_not_authorized: "shopHome.notice.waiversNotAuthorized",
   export_not_authorized: "shopHome.notice.exportNotAuthorized",
+  reports_not_authorized: "shopHome.notice.reportsNotAuthorized",
 };
 
 export const metadata: Metadata = {
@@ -149,6 +151,10 @@ async function TodayBody({
   const locale = await requestLocale(shop?.defaultLocale);
   if (!shop) return null;
   const t = staffTranslator(locale);
+  // `Object.hasOwn`, not `AUTH_NOTICES[notice]`: `notice` is an attacker-supplied
+  // query param, and a bare lookup resolves `?notice=constructor` off the
+  // prototype (src/lib/staff-notices.ts).
+  const authNoticeKey = noticeFromParam(notice, AUTH_NOTICES);
 
   const now = nowDate();
   // The lens (20260721-role-aware-landing): a captain or divemaster's Today
@@ -287,10 +293,10 @@ async function TodayBody({
           </ShopNotice>
         </div>
       ) : null}
-      {notice && AUTH_NOTICES[notice] ? (
+      {authNoticeKey ? (
         <div className="mb-6">
           <ShopNotice tone="warning" role="status">
-            {t(AUTH_NOTICES[notice])}
+            {t(authNoticeKey)}
           </ShopNotice>
         </div>
       ) : null}

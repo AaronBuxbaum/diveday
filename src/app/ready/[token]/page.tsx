@@ -30,6 +30,7 @@ import {
   type DiverChecklistItem,
   nextDiverStep,
 } from "@/lib/readiness-summary";
+import { noticeFromParam } from "@/lib/staff-notices";
 import {
   cancelMyBookingAction,
   payFromReady,
@@ -403,8 +404,17 @@ export default async function DiverReadinessPage({
   const checklistTotal = items.length + 1;
   const checklistDone =
     items.filter((item) => item.state === "done").length + (hasEmergencyContact ? 1 : 0);
-  const noticeKey = saved ? `saved-${saved}` : error ? `error-${error}` : pay ? `pay-${pay}` : null;
-  const notice = noticeKey ? READY_NOTICES[noticeKey] : undefined;
+  const noticeKey = saved
+    ? `saved-${saved}`
+    : error
+      ? `error-${error}`
+      : pay
+        ? `pay-${pay}`
+        : undefined;
+  // `Object.hasOwn`, not `READY_NOTICES[noticeKey]` — the param is
+  // attacker-supplied and a bare lookup walks the prototype
+  // (src/lib/staff-notices.ts).
+  const notice = noticeFromParam(noticeKey, READY_NOTICES);
 
   return (
     // The whole page under the provider, not just the one Client Component that

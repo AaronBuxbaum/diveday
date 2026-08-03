@@ -409,6 +409,7 @@
       "refundFailed": "Ese pago no se pudo reembolsar. Puede que no esté pagado, o que Stripe necesite atención.",
       "demoDisabled": "Este es un pedido de demostración — no está respaldado por una factura real de Stripe, así que no se puede reembolsar.",
       "deleted": "Buceador eliminado del trabajo activo de la tienda. Sus reservas y tarjetas se conservan.",
+      "paymentNotConnected": "Los pagos aún no están conectados, así que no hay ninguna cuenta desde la que facturar — conecta una para cobrar a este buceador.",
       "notAuthorizedRefund": "Los reembolsos están limitados a propietarios y gerentes — pide a uno de ellos que emita este reembolso.",
       "notAuthorizedDelete": "Eliminar un buceador está limitado a propietarios y gerentes — pide a uno de ellos que lo haga.",
       "notAuthorizedErase": "Borrar los datos personales de un buceador está limitado al propietario de la tienda — pídeselo a esa persona.",
@@ -777,6 +778,9 @@
       "title": "Pedidos",
       "description": "Todas las facturas que ha enviado la tienda, de todos los buceadores y salidas.",
       "newOrder": "Nuevo pedido",
+      "notice": {
+        "paymentNotConnected": "Los pagos aún no están conectados, así que no hay ninguna cuenta desde la que facturar — conecta una para empezar a cobrar a los buceadores."
+      },
       "filters": {
         "statusLabel": "Estado",
         "statusAll": "Todos los estados",
@@ -1957,6 +1961,9 @@
       "title": "Importar contactos",
       "description": "Trae tus buceadores, tarjetas, tallas de alquiler y aceptación previa de waiver desde un CSV — de tu antiguo sistema o de la propia exportación de DiveDay. Consulta abajo exactamente qué se importa.",
       "comingFrom": "¿Vienes de <eve>EVE</eve>, <diveshop360>DiveShop360</diveshop360>, o de <spreadsheet>una hoja de cálculo</spreadsheet>? Consulta la guía correspondiente y vuelve aquí para importar.",
+      "notice": {
+        "notAuthorized": "La importación escribe datos personales y médicos de los buceadores, así que está limitada a propietarios y gerentes."
+      },
       "comesAcross": {
         "heading": "Qué se importa",
         "description": "Los detalles, fila por fila:"
@@ -2269,7 +2276,8 @@
     "scheduleTrip": "Programar una salida",
     "notice": {
       "waiversNotAuthorized": "Editar el waiver está limitado a propietarios y gerentes.",
-      "exportNotAuthorized": "La exportación de datos está limitada a propietarios y gerentes."
+      "exportNotAuthorized": "La exportación de datos está limitada a propietarios y gerentes.",
+      "reportsNotAuthorized": "Los informes muestran los ingresos del centro, así que están limitados a propietarios y gerentes."
     },
     "orientation": {
       "heading": "¿Recién llegado? Algunas pistas para tu puesto.",
@@ -2919,6 +2927,9 @@
       "notBoarded": "No embarcado",
       "notBoardedCarried": "No embarcado · arrastrado",
       "notBackAboard": "Sin regresar a bordo"
+    },
+    "payments": {
+      "connect": "Conectar pagos"
     }
   },
   "whatsapp": {

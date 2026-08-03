@@ -11,6 +11,7 @@ import {
 import { getDb } from "@/db/client";
 import { getDiverProfile } from "@/db/divers";
 import { getShopById } from "@/db/shops";
+import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { pagedUpcomingTripsWithCounts } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -65,12 +66,16 @@ export default async function DiverDetailPage({
   // (H-06); flagging them for hands-on fitting stays open to all staff.
   // Erasing a diver's personal and medical data is stricter still — owner only,
   // one way, and never offered to anyone else (ADR 20260802-diver-data-erasure).
-  const [canRefund, canDelete, canOverrideFit, canErase] = await Promise.all([
+  const [canRefund, canDelete, canOverrideFit, canErase, stripeAccount] = await Promise.all([
     canPersonRefund(db, shop.id, session.user.personId),
     canPersonDeleteDiver(db, shop.id, session.user.personId),
     canPersonOverrideGearRequest(db, shop.id, session.user.personId),
     canPersonErasePersonalData(db, shop.id, session.user.personId),
+    getShopStripeAccount(db, shop.id),
   ]);
+  // `orders/new` refuses outright without a payable account, so the Payments
+  // section offers "Connect payments" rather than invoice buttons that bounce.
+  const paymentsConnected = canAcceptPayments(stripeAccount);
   const { trips: scannedTrips } = await pagedUpcomingTripsWithCounts(db, shop.id, {
     limit: BOOK_ACTIVITY_TRIP_SCAN_LIMIT,
   });
@@ -94,7 +99,7 @@ export default async function DiverDetailPage({
           undoLabel={t("shared.undoToast.undo")}
         />
       ) : (
-        <NoticeBanner notice={notice} locale={locale} />
+        <NoticeBanner notice={notice} locale={locale} shopSlug={shopSlug} />
       )}
       <StatsSummary diver={diver} locale={locale} />
       <CertificationCards diver={diver} shopSlug={shopSlug} personId={personId} shop={shop} />
@@ -128,6 +133,7 @@ export default async function DiverDetailPage({
         shopSlug={shopSlug}
         personId={personId}
         canRefund={canRefund}
+        paymentsConnected={paymentsConnected}
       />
       <UpcomingTripsSection diver={diver} shop={shop} shopSlug={shopSlug} locale={locale} />
       <ShopHistory locale={locale} diver={diver} shop={shop} shopSlug={shopSlug} />

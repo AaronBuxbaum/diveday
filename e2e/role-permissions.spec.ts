@@ -103,6 +103,41 @@ test.describe("H-14 role permissions", () => {
       await expect(page.getByRole("heading", { name: "Crew", exact: true })).toBeVisible();
       await expect(page.getByRole("button", { name: "Cancel trip" })).toBeVisible();
     });
+
+    /**
+     * Every gated surface bounces a refused staffer to the nearest parent
+     * *with a notice code that parent handles*. Reports, Team, and Import used
+     * to redirect to Today with nothing at all — indistinguishable from a dead
+     * link, and the reason task 82 named "silent teleport". Its own test
+     * rather than more steps in the one above, which already runs 8 sequential
+     * navigations against a 30s budget.
+     *
+     * Not URL assertions: `FlashParams` strips `?notice=` on mount, so the
+     * banner text is the durable evidence that the code arrived and was
+     * recognized — a code the destination does not handle renders nothing and
+     * fails here.
+     */
+    test("a refused surface lands somewhere that says why", async ({ page }) => {
+      test.setTimeout(30_000);
+
+      // Revenue is owner/manager work — Today explains, rather than dumping
+      // the captain on a page that looks like they simply mis-clicked.
+      await page.goto(`/shop/${SHOP}/reports`);
+      await expect(page).toHaveURL(new RegExp(`/shop/${SHOP}(\\?|$)`));
+      await expect(page.getByText(/Reports read the shop's revenue/i)).toBeVisible();
+
+      // Team and Import are Settings sub-pages, so their parent is Settings —
+      // the same landing the promos and WhatsApp gates already used.
+      await page.goto(`/shop/${SHOP}/settings/team`);
+      await expect(page).toHaveURL(new RegExp(`/shop/${SHOP}/settings(\\?|$)`));
+      await expect(page.getByText(/Team management is limited to owners/i)).toBeVisible();
+
+      await page.goto(`/shop/${SHOP}/settings/import`);
+      await expect(page).toHaveURL(new RegExp(`/shop/${SHOP}/settings(\\?|$)`));
+      await expect(
+        page.getByText(/Importing writes divers' personal and medical records/i),
+      ).toBeVisible();
+    });
   });
 
   test.describe("instructor", () => {
@@ -154,6 +189,18 @@ test.describe("H-14 role permissions", () => {
       // Trip definition is available to the owner.
       await page.goto(await firstTripManageHref(page));
       await expect(page.getByRole("button", { name: "Save changes" })).toBeVisible();
+    });
+
+    /** The other half of the refusal test above: the owner is never bounced. */
+    test("the owner reaches reports, team, and import without a refusal", async ({ page }) => {
+      await page.goto(`/shop/${SHOP}/reports`);
+      await expect(page).toHaveURL(new RegExp(`/shop/${SHOP}/reports`));
+
+      await page.goto(`/shop/${SHOP}/settings/team`);
+      await expect(page).toHaveURL(new RegExp(`/shop/${SHOP}/settings/team`));
+
+      await page.goto(`/shop/${SHOP}/settings/import`);
+      await expect(page).toHaveURL(new RegExp(`/shop/${SHOP}/settings/import`));
     });
   });
 });

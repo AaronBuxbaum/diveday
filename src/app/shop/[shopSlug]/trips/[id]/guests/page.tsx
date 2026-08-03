@@ -16,6 +16,7 @@ import { listBookingNotes, listTripActivity } from "@/db/operations";
 import { getTripRequirements, listTripReadiness } from "@/db/readiness";
 import { listTripPrepDivers } from "@/db/rental-fit";
 import { getShopById } from "@/db/shops";
+import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { listTripLastMinutePromos } from "@/db/trip-promos";
 import { getTripRoster, getTripWaitlist, getTripWithBooked } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
@@ -136,6 +137,7 @@ async function TripGuestsBody({
     lastMinutePromos,
     bookingNotes,
     activity,
+    stripeAccount,
   ] = await Promise.all([
     getTripRoster(db, shop.id, tripId),
     getTripRequirements(db, shop.id, tripId),
@@ -146,7 +148,11 @@ async function TripGuestsBody({
     listTripLastMinutePromos(db, shop.id, tripId),
     listBookingNotes(db, shop.id, tripId),
     listTripActivity(db, shop.id, tripId),
+    getShopStripeAccount(db, shop.id),
   ]);
+  // `orders/new` refuses without a payable account, so each seat's "Create
+  // order" link points at connecting one instead of at a door that bounces.
+  const paymentsConnected = canAcceptPayments(stripeAccount);
   const demand = demandRecommendation({
     capacity: trip.capacity,
     booked: trip.booked,
@@ -308,6 +314,7 @@ async function TripGuestsBody({
         rentalFitByBooking={rentalFitByBooking}
         nitroxByBooking={nitroxByBooking}
         requiresPayment={Boolean(requirement?.requiresPayment)}
+        paymentsConnected={paymentsConnected}
         cancellationDeadline={cancellationDeadline(trip)}
         markWaiverInPersonAction={markWaiverInPersonAction.bind(null, shopSlug, tripId)}
         markPaymentAction={markPaymentAction.bind(null, shopSlug, tripId)}

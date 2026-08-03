@@ -15,6 +15,7 @@ import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { publicCoursePathsPath } from "@/lib/public-routes";
 import { requireStaffSession } from "@/lib/session";
+import { noticeFromParam } from "@/lib/staff-notices";
 import { createPathAction, deletePathAction, setPathVisibilityAction } from "./actions";
 
 // TODO: Cache Components adoption. Refactor this route so this opt-out can be removed.
@@ -60,7 +61,9 @@ export default async function CoursePathsPage({
     duplicate: st("courses.pathsList.errorDuplicate"),
     "not-authorized": st("courses.pathsList.errorNotAuthorized"),
   };
-  const message = error ? ERROR_MESSAGES[error] : undefined;
+  // `Object.hasOwn`, not `ERROR_MESSAGES[error]` — `error` is attacker-supplied
+  // and a bare lookup walks the prototype (src/lib/staff-notices.ts).
+  const message = noticeFromParam(error, ERROR_MESSAGES);
 
   const create = createPathAction.bind(null, shopSlug);
   const toggle = setPathVisibilityAction.bind(null, shopSlug);
