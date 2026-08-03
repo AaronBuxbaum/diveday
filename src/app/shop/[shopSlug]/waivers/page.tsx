@@ -139,7 +139,10 @@ export default async function WaiverTemplatesPage({
             // serves the old URL: an in-app link should land in one hop.
             <Link
               href={`/shop/${shopSlug}?view=departures`}
-              className="text-primary hover:underline"
+              // Underlined at rest, not only on hover: inside a block of prose
+              // colour alone is the only thing distinguishing the link, which
+              // no one perceiving colour differently can see (WCAG 1.4.1).
+              className="text-primary underline underline-offset-2"
             >
               {chunks}
             </Link>

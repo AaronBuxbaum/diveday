@@ -197,8 +197,12 @@ export type ShopPromoPage = {
 /**
  * Every code the shop has, newest first, each with its own redemption count —
  * one keyset page at a time (ordered by creation, then id for a stable
- * tiebreak), same idiom as `listShopReviewsForStaff` so a shop with years of
- * codes costs one page, not the whole table.
+ * tiebreak), so a shop with years of codes costs one page, not the whole table.
+ *
+ * Still forward-only, and it should not stay that way: ADR
+ * 20260803-one-pagination-model moved the roster, reports, and the moderation
+ * queue onto `offsetPage` + the shared `Pager`, and this list is the same job.
+ * It is one of the three stragglers named there.
  */
 export async function listShopPromoCodes(
   db: DbExecutor,

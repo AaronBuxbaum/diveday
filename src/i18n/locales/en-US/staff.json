@@ -69,7 +69,11 @@
       "remove": "Remove",
       "removing": "Removing…",
       "crewingHeading": "Crewing",
-      "crewingEmpty": "Not on any trip's crew in this window."
+      "crewingEmpty": "Not on any trip's crew in this window.",
+      "rosterEmptyHeading": "No crew on the books yet",
+      "rosterEmptyManagerBody": "Invite the instructors and divemasters who run your boats, then give them shifts here.",
+      "rosterEmptyBody": "An owner or manager adds crew from Team settings — ask one of them to get you started.",
+      "rosterEmptyAction": "Invite your crew"
     },
     "capability": {
       "teach": "Can teach",
@@ -239,6 +243,9 @@
       "namePromptText": "Name this view",
       "removeSavedViewAriaLabel": "Remove saved view {name}",
       "saveThisView": "+ Save this view",
+      "saveViewConfirm": "Save view",
+      "saveViewCancel": "Never mind",
+      "savedOnThisDevice": "Saved on this device",
       "peopleHeading": "People",
       "searchHintText": "Search by name, email, or phone.",
       "searchDiversLabel": "Search divers",
@@ -247,6 +254,10 @@
       "noDiversOnFile": "No divers on file yet.",
       "tryDifferentSearch": "Try a different search or view, or add a new diver above.",
       "addOneHere": "Add one here or accept a booking to create their person record.",
+      "emptyAddAction": "Add your first diver",
+      "emptyShowAll": "Show all divers",
+      "emptyImportBody": "Coming from a spreadsheet or another system? Bring the whole roster over in one go.",
+      "emptyImportAction": "Import your roster",
       "noContactDetails": "No contact details yet",
       "cardCountOne": "{count} card",
       "cardCountOther": "{count} cards",
@@ -256,8 +267,9 @@
       "tableHeaderPerson": "Person",
       "tableHeaderCards": "Cards",
       "tableHeaderAttention": "Attention",
-      "showMoreDivers": "Show more divers",
-      "backToTop": "← Back to the top of the list"
+      "pagination": {
+        "total": "{count, plural, one {# diver} other {# divers}}"
+      }
     },
     "header": {
       "backToAllDivers": "← All divers",
@@ -618,6 +630,7 @@
       "createSite": "Create a site",
       "browseTemplates": "Browse templates",
       "overviewAriaLabel": "Dive-site overview",
+      "gridAriaLabel": "Saved dive sites",
       "savedSites": "Saved sites",
       "savedSitesDetail": "Reusable crew briefings",
       "withForecastPoints": "With forecast points",
@@ -628,12 +641,22 @@
       "emptyHeading": "Start with a site your crew knows well",
       "emptyBody": "Add a location, a map or route image, and the life divers may encounter.",
       "locationToAdd": "Location to add",
+      "searchAriaLabel": "Search the dive-site library",
+      "searchLabel": "Find a site",
+      "searchPlaceholder": "Name or location",
+      "searchApply": "Search",
+      "searchClear": "Clear search",
+      "noMatchHeading": "No sites match that search",
+      "noMatchBody": "Try another name or location, or clear the search to see the whole library.",
       "templateUpdateReady": "Template update v{version} ready — your edits are safe.",
       "diveDayTemplateVersion": "DiveDay template v{version}",
       "nitroxBadge": "Nitrox",
       "oneRequiredSpecialty": "1 required specialty",
       "manyRequiredSpecialties": "{count} required specialties",
-      "addBriefingFallback": "Add the briefing your divers will see."
+      "addBriefingFallback": "Add the briefing your divers will see.",
+      "pagination": {
+        "total": "{count, plural, one {# site} other {# sites}}"
+      }
     },
     "catalog": {
       "title": "DiveDay common dive sites",
@@ -724,6 +747,7 @@
       "noteHint": "(optional)",
       "notePlaceholder": "e.g. Two-tank reef trip + rental set",
       "lineItemsLegend": "Line items",
+      "lineItemKindAria": "Line item {number} kind",
       "lineItemDescriptionPlaceholder": "Description",
       "quantityLabel": "Quantity",
       "unitPriceLabel": "Unit price (USD)",
@@ -806,6 +830,7 @@
       "filteredByDiver": "Showing orders for {name}.",
       "emptyAll": "No orders yet — they show up here as soon as the front desk sends one.",
       "emptyFiltered": "No orders match these filters.",
+      "emptyNoPayments": "No orders yet — connect payments and the front desk can send its first invoice from here.",
       "table": {
         "diver": "Diver",
         "trip": "Trip",
@@ -814,10 +839,13 @@
         "amount": "Amount"
       },
       "pagination": {
-        "label": "Order pages",
-        "previous": "Previous",
-        "next": "Next",
-        "position": "Page {page} of {pageCount} · {total} orders"
+        "total": "{count, plural, one {# order} other {# orders}}"
+      },
+      "range": {
+        "recentNote": "Showing the last {days} days. Older invoices are still here.",
+        "showAll": "Show every order",
+        "allNote": "Showing every order the shop has ever raised.",
+        "showRecent": "Back to the last {days} days"
       }
     }
   },
@@ -883,7 +911,8 @@
     "backToTop": "← Back to the top of the list",
     "empty": {
       "heading": "No codes yet",
-      "detail": "Create one above, or send a one-trip deal from a departure's page when a boat needs filling."
+      "detail": "Create one above, or send a one-trip deal from a departure's page when a boat needs filling.",
+      "action": "Create your first code"
     },
     "status": {
       "failed": "Failed at Stripe",
@@ -913,6 +942,7 @@
       "heading": "Trip deals",
       "description": "One-trip discounts sent from a departure's page — the other half of every live code, gathered here so nothing is only visible from the trip it was sent on.",
       "empty": "No trip deals are outstanding right now. Send one from a departure's page when a boat needs filling.",
+      "emptyAction": "Open the schedule",
       "recipients": "{count, plural, one {Sent to # diver} other {Sent to # divers}}",
       "expiresAt": "Expires {date}",
       "rangeNote": "Trip deals top out at 90% off — the boat is sailing either way, so a deal always leaves something on the table. Shop-wide codes above can go to 100% because staff also use them for comps and loyalty, not only for filling seats.",
@@ -1005,8 +1035,9 @@
     "seatsMobile": "{booked}/{capacity} seats",
     "fillLabel": "{booked} of {capacity} seats booked",
     "waiversRowLabel": "{complete} of {total} waivers signed",
-    "showMoreTrips": "Show more trips",
-    "backToTop": "← Back to the top of the list"
+    "pagination": {
+      "total": "{count, plural, one {# trip} other {# trips}}"
+    }
   },
   "reviews": {
     "eyebrow": "Reviews",
@@ -1035,6 +1066,8 @@
     "emptyDetail": "Divers are asked for one on their recap page after a trip sails. The first ones will land here.",
     "emptyWaitingHeading": "Nothing waiting on you",
     "emptyWaitingDetail": "Every review with words has been read. New ones land here as soon as a diver leaves one.",
+    "emptyReviewLinkBody": "There is nothing to switch on here — a review arrives when a diver opens their recap. What is yours to set is where a happy one goes next.",
+    "emptyReviewLinkAction": "Set your review link",
     "ratingOnly": "Rating only — no words to review.",
     "reviewMeta": "<diver>{diverName}</diver> · <trip>{tripTitle}</trip> · {date}",
     "hide": "Hide",
@@ -1043,12 +1076,13 @@
     "tickThenPublish": "Tick the ones to publish, then",
     "selectToPublishAriaLabel": "Select {name}'s review to publish",
     "saving": "Saving…",
-    "showMoreReviews": "Show more reviews",
-    "backToTop": "← Back to the top of the list",
     "filterLabel": "Filter reviews",
     "filter": {
       "all": "All reviews",
       "waiting": "Waiting on you"
+    },
+    "pagination": {
+      "total": "{count, plural, one {# review} other {# reviews}}"
     }
   },
   "schedule": {
@@ -1780,6 +1814,7 @@
       "packing": {
         "heading": "Trip packing checklist",
         "description": "One item per line. Divers see this same concise list on every trip.",
+        "label": "Checklist items",
         "submit": "Save packing checklist",
         "submitting": "Saving…"
       },
@@ -1955,6 +1990,7 @@
         "heading": "Current team",
         "description": "Enable, disable, and delete take effect immediately. Role changes below wait for Save changes.",
         "empty": "No staff invited yet.",
+        "emptyAction": "Invite a teammate",
         "save": "Save changes",
         "saving": "Saving…"
       },
@@ -2132,6 +2168,7 @@
           "waiverAcceptedImported": "accepted · imported",
           "emptyValue": "—"
         },
+        "previewSwipeHint": "Swipe the table to see every column →",
         "hiddenRowsNotice": "Showing the first {limit} rows. All {total} are imported on confirm.",
         "submit": "{count, plural, one {Import 1 contact} other {Import # contacts}}",
         "submitting": "Importing…",
@@ -2235,10 +2272,7 @@
     "viewSchedule": "View the schedule",
     "truncated": "This window holds more departures than one queue should carry — the rest are on the <link>schedule</link>.",
     "pagination": {
-      "label": "Blocker pages",
-      "previous": "Previous",
-      "next": "Next",
-      "position": "Page {page} of {pageCount} · {total} departures"
+      "total": "{count, plural, one {# departure} other {# departures}}"
     }
   },
   "checkIn": {
@@ -2252,6 +2286,13 @@
     "diverCount": "{count, plural, one {# diver} other {# divers}}",
     "emptyTitle": "No one matches that scan",
     "emptyDescription": "Try the diver’s name, email, or full booking ID.",
+    "emptyClearSearch": "Show everyone arriving",
+    "emptyQuietTitle": "Nobody at the counter yet",
+    "emptyQuietDescription": "Divers appear here around their departure time. Nothing is in that window right now — the schedule has the rest of the week.",
+    "emptyViewSchedule": "View the schedule",
+    "emptyNoTripsTitle": "No departures on the board",
+    "emptyNoTripsDescription": "The counter fills itself from your schedule. Put a boat on the board and everyone booked on it turns up here.",
+    "emptyScheduleDeparture": "Schedule a trip",
     "clearedTitle": "Everyone’s aboard the day 🎉 — all checked in.",
     "checkedInBadge": "Checked in",
     "boardedBadge": "Boarded",
@@ -2286,6 +2327,7 @@
       "backToQueue": "Back to check-in",
       "tripLabel": "Which boat?",
       "tripEmpty": "No boats sail in the next day and a half — check the schedule instead.",
+      "tripEmptyAction": "View the schedule",
       "tripSummary": "{title} · {date} · {time} · {booked}/{capacity} booked",
       "changeTrip": "Not this one? Pick a different boat.",
       "findHeading": "Find a returning diver",
@@ -2665,6 +2707,7 @@
       "todayQueue": {
         "emptyHeading": "Nothing is waiting on you",
         "emptyBody": "Every diver booked in the next week has their waiver, cards, and payment in order.",
+        "emptyAction": "View the schedule",
         "needsYouHeading": "Needs you",
         "needsYouSubtitle": "Sorted by the boat each one holds up. Clearing a row takes you straight to the fix.",
         "boatsClear": "Today's boats are all clear 🤙",
@@ -3019,6 +3062,12 @@
     },
     "payments": {
       "connect": "Connect payments"
+    },
+    "pager": {
+      "label": "Pages",
+      "previous": "Previous",
+      "next": "Next",
+      "position": "Page {page} of {pageCount}"
     }
   },
   "whatsapp": {
@@ -3093,6 +3142,7 @@
       "tripHeading": "Which departure?",
       "fullExcluded": "Full departures are left out of this list. Change a boat's seats, or put another departure on that day, from the board.",
       "tripEmpty": "Nothing upcoming has a seat left. Put a departure on the board first.",
+      "tripEmptyAction": "Open the schedule",
       "tripSummary": "{title} · {date} · {time} · {booked}/{capacity} booked",
       "seatsLeft": "{count, plural, one {# seat left} other {# seats left}}",
       "changeTrip": "Not this one? Pick a different departure.",

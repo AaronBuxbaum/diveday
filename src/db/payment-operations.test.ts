@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { seededShopContext } from "@/test/db";
+import { dbNowPlus, seededShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
 import {
   claimBookingsForCheckout,
@@ -186,9 +186,10 @@ describe("claimBookingsForCheckout / releaseBookingCheckoutClaim", () => {
     const claimed = await claimBookingsForCheckout(db, {
       bookingIds: [bookingId],
       intentId: rescuer.id,
-      // Treat the abandoned intent as stale even though it just started, so
-      // the test doesn't depend on real wall-clock time passing.
-      staleBefore: new Date(Date.now() + 1000),
+      // Treat the abandoned intent as stale even though it just started. The
+      // bound is read off the database's own clock, the one that stamped
+      // `started_at` — see `dbNow` in src/test/db.ts.
+      staleBefore: await dbNowPlus(db, 1000),
     });
     expect(claimed).toBe(true);
     const [row] = await db.select().from(bookings).where(eq(bookings.id, bookingId));
@@ -208,7 +209,7 @@ describe("listStuckPaymentOperations", () => {
     // Not yet old enough to count as stuck.
     expect(await listStuckPaymentOperations(db, shop.id, new Date(0))).toEqual([]);
 
-    const stuck = await listStuckPaymentOperations(db, shop.id, new Date(Date.now() + 1000));
+    const stuck = await listStuckPaymentOperations(db, shop.id, await dbNowPlus(db, 1000));
     expect(stuck).toHaveLength(1);
     expect(stuck[0]?.intent.id).toBe(intent.id);
     expect(stuck[0]?.tripTitle).toBe(reef.title);
@@ -223,7 +224,7 @@ describe("listStuckPaymentOperations", () => {
     });
     await recordPaymentOperationStripeObject(db, intent.id, "in_stuck_1");
 
-    const stuck = await listStuckPaymentOperations(db, shop.id, new Date(Date.now() + 1000));
+    const stuck = await listStuckPaymentOperations(db, shop.id, await dbNowPlus(db, 1000));
     expect(stuck).toHaveLength(1);
     expect(stuck[0]?.intent.stripeObjectId).toBe("in_stuck_1");
     expect(stuck[0]?.tripId).toBe(reef.id);
@@ -235,7 +236,7 @@ describe("listStuckPaymentOperations", () => {
     const { db, shop } = await bookedContext();
     const intent = await startPaymentOperation(db, { shopId: shop.id, kind: "invoice" });
     await resolvePaymentOperation(db, intent.id, { status: "succeeded" });
-    const stuck = await listStuckPaymentOperations(db, shop.id, new Date(Date.now() + 1000));
+    const stuck = await listStuckPaymentOperations(db, shop.id, await dbNowPlus(db, 1000));
     expect(stuck).toEqual([]);
   });
 
@@ -247,7 +248,7 @@ describe("listStuckPaymentOperations", () => {
       .returning();
     if (!otherShop) throw new Error("second shop insert failed");
     await startPaymentOperation(db, { shopId: otherShop.id, kind: "invoice" });
-    const stuck = await listStuckPaymentOperations(db, shop.id, new Date(Date.now() + 1000));
+    const stuck = await listStuckPaymentOperations(db, shop.id, await dbNowPlus(db, 1000));
     expect(stuck).toEqual([]);
   });
 });

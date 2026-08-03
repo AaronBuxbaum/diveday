@@ -281,6 +281,11 @@ export default async function NewOrderPage({
                 <select
                   name={`kind-${i}`}
                   defaultValue={rowDefault?.kind ?? "other"}
+                  // The `<legend>` names the fieldset, not this row's control,
+                  // so each picker states which line it belongs to — four
+                  // identically-labelled "Kind" selects would be no more use to
+                  // a screen reader than none at all (WCAG 4.1.2).
+                  aria-label={t("orders.new.lineItemKindAria", { number: i + 1 })}
                   className={controlClass}
                 >
                   {LINE_ITEM_KINDS.map((kind) => (

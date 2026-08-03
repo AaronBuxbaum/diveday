@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { nowDate } from "@/lib/clock";
 import {
   annotateAlsoOn,
   type BlockerQueueTrip,
@@ -55,7 +56,7 @@ describe("totalBlockedDivers", () => {
         {
           tripId: "a",
           title: "",
-          startsAt: new Date(),
+          startsAt: nowDate(),
           courseTitle: null,
           booked: 3,
           ready: 1,
@@ -64,7 +65,7 @@ describe("totalBlockedDivers", () => {
         {
           tripId: "b",
           title: "",
-          startsAt: new Date(),
+          startsAt: nowDate(),
           courseTitle: null,
           booked: 2,
           ready: 2,
@@ -79,7 +80,7 @@ describe("totalBlockedDivers", () => {
       {
         tripId: "a",
         title: "",
-        startsAt: new Date(),
+        startsAt: nowDate(),
         courseTitle: null,
         booked: 2,
         ready: 0,
@@ -88,7 +89,7 @@ describe("totalBlockedDivers", () => {
       {
         tripId: "b",
         title: "",
-        startsAt: new Date(),
+        startsAt: nowDate(),
         courseTitle: null,
         booked: 1,
         ready: 0,
@@ -104,7 +105,7 @@ describe("annotateAlsoOn", () => {
   const trip = (tripId: string, title: string, personIds: string[]): BlockerQueueTrip => ({
     tripId,
     title,
-    startsAt: new Date(),
+    startsAt: nowDate(),
     courseTitle: null,
     booked: personIds.length,
     ready: 0,

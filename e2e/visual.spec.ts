@@ -5,19 +5,19 @@ import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import { openTripFromBoard } from "./helpers";
 
 /**
- * Visual regression coverage. Seventy-one key surfaces × light/dark, each
- * captured at a phone and a desktop viewport — 284 screenshots per run (see
+ * Visual regression coverage. Seventy-six key surfaces × light/dark, each
+ * captured at a phone and a desktop viewport — 304 screenshots per run (see
  * ADR 20260729-reg-suit-visual-regression). Keep this count in sync when
  * adding a surface; each `capture()` call costs 4 screenshots per CI run.
  * `grep -c 'await capture(page' e2e/visual.spec.ts` is the number — the prose
- * has drifted from it before (it read 48 while the grep said 56), so trust the
- * grep and correct the prose.
+ * has drifted from it before (it read 48 while the grep said 56, and 71 while
+ * the grep said 72), so trust the grep and correct the prose.
  *
  * Two more come from the `print` block at the bottom: the manifest and prep
  * pages as they render for the printer. Print is its own concern, not a
  * light/dark one — the `@media print` token override collapses both schemes to
  * one black-and-white palette — so each is captured once, at a US-Letter width,
- * via `capturePrint()`. That brings the run to 286 screenshots.
+ * via `capturePrint()`. That brings the run to 306 screenshots.
  *
  * Nothing here asserts. `capture()` writes raw `page.screenshot()` PNGs into
  * `e2e/screenshots/` (gitignored); `reg-suit` diffs them against the baseline
@@ -380,7 +380,7 @@ for (const scheme of ["light", "dark"] as const) {
       staffStorageState,
       request,
     }) => {
-      // 15 navigate+capture surfaces (30 screenshots) plus a real send-waiver
+      // 16 navigate+capture surfaces (64 screenshots) plus a real send-waiver
       // action and a real booking, all in one test — comfortably past the
       // suite's 15s default, which is sized for a single real flow, not a
       // full site tour. Without this override the run was flaky: whichever
@@ -592,6 +592,14 @@ for (const scheme of ["light", "dark"] as const) {
         .fill(`visual-regression-${scheme}@example.com`);
       await page.getByRole("button", { name: /^Book/ }).click();
       await page.getByRole("heading", { name: /You’re on the boat/ }).waitFor();
+      // The moment the whole public funnel exists for, and until now the one
+      // step of it with no baseline: the schedule, the trip page, and the
+      // readiness checklist either side of it were all captured, but the
+      // confirmation a diver actually celebrates on was not. Captured here
+      // rather than in a flow of its own — this test already stands on it, and
+      // a second real booking would move the seat counts every capture above
+      // depends on (CR-019).
+      await capture(page, "booking-confirmed", scheme);
       const readinessHref = await page
         .getByRole("link", { name: /readiness page/ })
         .getAttribute("href");
@@ -1294,14 +1302,22 @@ for (const scheme of ["light", "dark"] as const) {
        * this one marks the demo shop Stripe-connected, which the tours must not
        * inherit — a connected shop changes what several of their surfaces render.
        */
-      test(`invoicing and the dive-site catalog render true to the design (${scheme})`, async ({
+      test(`invoicing and the dive-site library render true to the design (${scheme})`, async ({
         page,
         request,
       }) => {
-        // Two navigate+capture surfaces (8 screenshots), each with its own
+        // Three navigate+capture surfaces (12 screenshots), each with its own
         // `paintWholeDocument` scroll. (Staffing is captured on the staff tour
         // above — it gained its baseline in the over_ratio parity fix.)
-        test.setTimeout(45_000);
+        test.setTimeout(60_000);
+
+        // The shop's own dive-site library, which had no baseline at all until
+        // it gained a search band and a pager. Captured before the Stripe seed
+        // below purely so its state is unambiguous — it renders no payment
+        // information either way.
+        await page.goto("/shop/blue-mantis/dive-sites");
+        await page.getByRole("heading", { level: 1, name: "Dive-site library" }).waitFor();
+        await capture(page, "dive-sites-library", scheme);
 
         // The front desk's invoice builder. It redirects to Divers for a shop
         // that can't take money, so mark the demo shop connected first:
@@ -1318,6 +1334,69 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/dive-sites/catalog");
         await page.getByRole("heading", { level: 1, name: "DiveDay common dive sites" }).waitFor();
         await capture(page, "dive-sites-catalog", scheme);
+      });
+
+      /**
+       * The two staff overlays and the app's not-found backstop — three
+       * surfaces that are *states*, not routes, and so had no baseline at all.
+       *
+       * Both overlays are hosted on `/settings/calendar` rather than Today.
+       * They are `position: fixed`, and a `fullPage` shot renders a fixed
+       * element once, at the top, above however much page happens to sit
+       * underneath — so hosting them on the tall dashboard would bank a
+       * baseline that re-diffs every time Today's queue changes, for a change
+       * that has nothing to do with the overlay. The calendar settings page is
+       * the shortest read-only staff surface there is (two panels, no seeded
+       * rows, nothing minted until a button is pressed), so almost all of each
+       * of these images is the overlay itself. Same reasoning as
+       * `nav-more-menu`, which is captured over a freshly onboarded shop.
+       *
+       * Its own test rather than a stop on either 18-surface tour: those are
+       * both already sized at 90s for exactly what they do, and an overlay
+       * left open would leak into the next capture in a sequential test.
+       */
+      test(`the staff overlays and the not-found page render true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        // 3 navigate+capture surfaces (12 screenshots), each with its own
+        // `paintWholeDocument` scroll.
+        test.setTimeout(45_000);
+        await page.goto("/shop/blue-mantis/settings/calendar");
+        // The panels are Client Components; wait for a control one of them only
+        // renders once mounted, not for the server-rendered <h1> above them —
+        // the same wait `settings-calendar` makes.
+        await page.getByRole("button", { name: "Create subscription link" }).first().waitFor();
+
+        // The cheat sheet `?` opens (e2e/keyboard-shortcuts.spec.ts): every
+        // `g`-sequence this viewer's role can reach, read off the one
+        // destination registry the nav and the palette also read.
+        await page.keyboard.press("?");
+        const sheet = page.getByRole("dialog", { name: "Keyboard shortcuts" });
+        await sheet.waitFor();
+        await capture(page, "shortcut-sheet", scheme);
+        await page.keyboard.press("Escape");
+        await expect(sheet).toBeHidden();
+
+        // The command palette on open, with no query typed: a Client Component,
+        // so wait for the control it only renders once mounted *and* focused
+        // rather than for anything the server rendered. An empty query lists
+        // every "Go to" destination the registry offers this role — no search
+        // request, nothing debounced, nothing that could land differently
+        // between runs.
+        await page.keyboard.press("ControlOrMeta+k");
+        const box = page.getByRole("combobox", { name: /Search divers/ });
+        await expect(box).toBeFocused();
+        await capture(page, "command-palette", scheme);
+        await page.keyboard.press("Escape");
+        await expect(box).toBeHidden();
+
+        // The app-wide `notFound()` backstop (src/app/not-found.tsx) — a stale
+        // email link or a typo'd URL. Captured under a staff session because
+        // that is who reaches it on a `/shop` URL; signed out the same address
+        // is an auth redirect, never this page.
+        await page.goto("/shop/blue-mantis/no-such-page");
+        await page.getByRole("heading", { level: 1, name: "We couldn’t find that page" }).waitFor();
+        await capture(page, "not-found", scheme);
       });
     });
 

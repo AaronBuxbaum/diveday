@@ -1,6 +1,6 @@
 import { and, count, eq, ne } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { nowDate } from "@/lib/clock";
+import { nowDate, nowMs } from "@/lib/clock";
 import { courseCrewGap } from "@/lib/course-ratios";
 import { utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { seededShopContext } from "@/test/db";
@@ -1141,8 +1141,8 @@ describe("trip crew (CR-007: cross-tenant write path)", () => {
       shopId,
       courseId: course.id,
       title: "Discover Scuba — crew change test",
-      startsAt: new Date(Date.now() + CREW_TEST_OFFSET_MS),
-      endsAt: new Date(Date.now() + CREW_TEST_OFFSET_MS + 4 * 60 * 60 * 1000),
+      startsAt: new Date(nowMs() + CREW_TEST_OFFSET_MS),
+      endsAt: new Date(nowMs() + CREW_TEST_OFFSET_MS + 4 * 60 * 60 * 1000),
       // Well above the 4 seats two instructors support at 2:1, so only the
       // ratio is ever in play.
       capacity: 12,

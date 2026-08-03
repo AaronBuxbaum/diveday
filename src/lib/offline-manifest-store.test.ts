@@ -4,6 +4,7 @@ import "fake-indexeddb/auto";
 import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import { nowMs } from "@/lib/clock";
 import { TEST_FROZEN_CLOCK } from "@/test/frozen-clock";
 import {
   appendOfflineRollCall,
@@ -183,7 +184,7 @@ describe("saveOfflineManifest", () => {
         const transaction = db.transaction("manifests", "readwrite");
         transaction.objectStore("manifests").put({
           tripId,
-          expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+          expiresAt: new Date(nowMs() + 60 * 60 * 1000).toISOString(),
           iv: new Uint8Array(12).buffer,
           ciphertext: new Uint8Array([1, 2, 3, 4]).buffer,
         });

@@ -109,7 +109,7 @@
       "self-service-reschedule.spec.ts",
       "schedule-embed.spec.ts"
     ],
-    "visual": ["site-briefing"]
+    "visual": ["booking-confirmed", "site-briefing"]
   },
   "/shop/[shopSlug]": {
     "e2e": [
@@ -163,7 +163,7 @@
   },
   "/shop/[shopSlug]/dive-sites": {
     "e2e": ["depth-and-age-surfaces.spec.ts", "dive-sites.spec.ts"],
-    "visual": []
+    "visual": ["dive-sites-library"]
   },
   "/shop/[shopSlug]/dive-sites/[id]": {
     "e2e": ["dive-sites.spec.ts"],

@@ -62,6 +62,25 @@ export default async function TripPrepPage({
     )
     .map((entry) => entry.person.fullName);
   const checklist = buildDivePrepChecklist({ divers, plannedDives: trip.plannedDives, divingCrew });
+  /**
+   * The size a staffer pulls, or the honest reason there isn't one. Shared by
+   * the phone cards and the table so the two can never drift into telling the
+   * boat different things about the same line.
+   */
+  const sizeCell = (line: (typeof checklist.lines)[number]) => {
+    // The count is real; the size deliberately isn't.
+    if (line.fitAtCheckIn) {
+      return <span className="font-medium text-warning">{t("trips.prep.fitAtCheckIn")}</span>;
+    }
+    if (line.size) return line.size;
+    // An item with no size to record reads as a dash; one that should have had
+    // a size and doesn't says so, because those are different problems.
+    return UNSIZED_ITEM_KINDS.includes(line.kind) ? (
+      <span className="text-muted">—</span>
+    ) : (
+      <span className="text-muted">{t("trips.prep.notRecorded")}</span>
+    );
+  };
   // A shop that has never offered nitrox can never have live nitrox data here
   // (setBookingNitrox fails closed), so this is purely cosmetic for that
   // common case — but a shop that *disabled* nitrox after a diver requested
@@ -260,55 +279,82 @@ export default async function TripPrepPage({
                   : t("trips.prep.nothingToPullOwnKit")}
               </p>
             ) : (
-              <div className="mt-3">
-                <table className="w-full border-collapse text-left text-sm">
-                  <thead>
-                    <tr className="border-b border-border">
-                      <th scope="col" className="px-3 py-3 font-semibold sm:px-4">
-                        {t("trips.prep.itemColumn")}
-                      </th>
-                      <th scope="col" className="px-3 py-3 font-semibold sm:px-4">
-                        {t("trips.prep.sizeColumn")}
-                      </th>
-                      <th scope="col" className="px-3 py-3 font-semibold sm:px-4">
-                        {t("trips.prep.qtyColumn")}
-                      </th>
-                      <th scope="col" className="px-3 py-3 font-semibold sm:px-4">
-                        {t("trips.prep.forColumn")}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {checklist.lines.map((line) => (
-                      <tr
-                        key={`${line.kind}:${line.fitAtCheckIn ? " fit" : (line.size ?? "")}`}
-                        className="border-b border-border last:border-0"
-                      >
-                        <td className="px-3 py-3 font-medium sm:px-4">
-                          {rentalItemLabel(t, line.kind)}
-                        </td>
-                        <td className="px-3 py-3 sm:px-4">
-                          {line.fitAtCheckIn ? (
-                            // The count is real; the size deliberately isn't.
-                            <span className="font-medium text-warning">
-                              {t("trips.prep.fitAtCheckIn")}
-                            </span>
-                          ) : (
-                            (line.size ??
-                            (UNSIZED_ITEM_KINDS.includes(line.kind) ? (
-                              <span className="text-muted">—</span>
-                            ) : (
-                              <span className="text-muted">{t("trips.prep.notRecorded")}</span>
-                            )))
-                          )}
-                        </td>
-                        <td className="px-3 py-3 tabular-nums sm:px-4">{line.count}</td>
-                        <td className="px-3 py-3 text-muted sm:px-4">{line.divers.join(", ")}</td>
+              <>
+                {/* Phone: stacked cards. Four columns at 390px put a
+                    comma-joined diver list against three other columns and the
+                    names win — the item, size, and count a staffer is actually
+                    pulling gear by get squeezed to a character or two. Same
+                    split as the roster (`DiverList`): cards under `sm`, the
+                    table above. `print:` pins each half explicitly so the
+                    printed packing list is the table at any paper width, not a
+                    breakpoint coincidence. */}
+                <ul className="mt-3 flex flex-col gap-3 sm:hidden print:hidden">
+                  {checklist.lines.map((line) => (
+                    <li
+                      key={`${line.kind}:${line.fitAtCheckIn ? " fit" : (line.size ?? "")}`}
+                      className="rounded-lg border border-border bg-surface p-4"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <p className="font-semibold">{rentalItemLabel(t, line.kind)}</p>
+                        <p className="shrink-0 text-2xl font-semibold tabular-nums">
+                          <span className="sr-only">{t("trips.prep.qtyColumn")} </span>
+                          {line.count}
+                        </p>
+                      </div>
+                      <dl className="mt-2 flex flex-col gap-1 text-sm">
+                        <div className="flex flex-wrap gap-x-2">
+                          <dt className="text-muted">{t("trips.prep.sizeColumn")}</dt>
+                          <dd>{sizeCell(line)}</dd>
+                        </div>
+                        <div className="flex flex-wrap gap-x-2">
+                          <dt className="text-muted">{t("trips.prep.forColumn")}</dt>
+                          <dd className="text-muted">{line.divers.join(", ")}</dd>
+                        </div>
+                      </dl>
+                    </li>
+                  ))}
+                </ul>
+                {/* `print:min-w-0`/`print:overflow-visible` keep paper out of
+                    the scroll rule entirely: an A4 sheet is narrower than the
+                    720px floor, and a clipped column on a packing list is a
+                    silent one. On screen the floor is what stops the four
+                    columns collapsing between 640px and a real tablet. */}
+                <div className="mt-3 hidden overflow-x-auto sm:block print:block print:overflow-visible">
+                  <table className="w-full min-w-180 border-collapse text-left text-sm print:min-w-0">
+                    <thead>
+                      <tr className="border-b border-border">
+                        <th scope="col" className="px-3 py-3 font-semibold sm:px-4">
+                          {t("trips.prep.itemColumn")}
+                        </th>
+                        <th scope="col" className="px-3 py-3 font-semibold sm:px-4">
+                          {t("trips.prep.sizeColumn")}
+                        </th>
+                        <th scope="col" className="px-3 py-3 font-semibold sm:px-4">
+                          {t("trips.prep.qtyColumn")}
+                        </th>
+                        <th scope="col" className="px-3 py-3 font-semibold sm:px-4">
+                          {t("trips.prep.forColumn")}
+                        </th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {checklist.lines.map((line) => (
+                        <tr
+                          key={`${line.kind}:${line.fitAtCheckIn ? " fit" : (line.size ?? "")}`}
+                          className="border-b border-border last:border-0"
+                        >
+                          <td className="px-3 py-3 font-medium sm:px-4">
+                            {rentalItemLabel(t, line.kind)}
+                          </td>
+                          <td className="px-3 py-3 sm:px-4">{sizeCell(line)}</td>
+                          <td className="px-3 py-3 tabular-nums sm:px-4">{line.count}</td>
+                          <td className="px-3 py-3 text-muted sm:px-4">{line.divers.join(", ")}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
           </section>
         </>

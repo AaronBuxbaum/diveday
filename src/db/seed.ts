@@ -2355,9 +2355,12 @@ export async function seedDemoSchedule(
         createdAt: at(-45, 9),
       },
     ])
-    // Codes are shop config, not schedule data, so `resetDemoSchedule` leaves
-    // them in place — re-seeding a reset shop must not collide on the
-    // (shop, code) unique index.
+    // `resetDemoSchedule` clears the shop's codes just before calling back in
+    // here, so this normally inserts into an empty table and restores both to
+    // their seeded state (status included — a spec that switched REEF10 off
+    // must not hand that off to the next spec; issue #330). The conflict clause
+    // stays as a belt-and-braces guard for any caller that re-seeds a shop
+    // whose codes are still present: the (shop, code) index is unique.
     .onConflictDoNothing();
 
   await seedNitrox(db, shopId, customers, wreck, bookingRows_);
@@ -4419,6 +4422,22 @@ export async function resetDemoSchedule(
     body: DEFAULT_WAIVER_BODY,
     createdAt: nowDate(),
   });
+
+  // Shop-wide discount codes, for the same reason and by the same means.
+  //
+  // These were deliberately left in place for a long time on the grounds that a
+  // code is shop config rather than schedule data — but "config" is exactly what
+  // makes a mutation leak. `setShopPromoEnabled` flips the seeded REEF10 between
+  // `active` and `disabled` from the staff page, so a spec that switches it off
+  // (or on) hands the next spec in the same worker a shop whose promo box
+  // behaves differently, and the diver-facing "code accepted" assertions become
+  // order-dependent (issue #330). The redemptions and the checkouts that spent
+  // them were cleared at the top of this reset, and `booking_checkouts` — the
+  // only other table with an FK to a code — went with them, so the codes can be
+  // replaced outright the way the waiver templates just were. `seedDemoSchedule`
+  // re-inserts REEF10 and OPENWATER25 in their seeded state below; a code some
+  // test minted is not seeded state and correctly does not come back.
+  await db.delete(shopPromoCodes).where(eq(shopPromoCodes.shopId, shopId));
 
   await seedDemoSchedule(db, shopId, { history: opts.history === true });
 }

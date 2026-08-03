@@ -147,87 +147,112 @@ export default async function StaffingPage({
           </div>
           {canManage ? <Badge tone="neutral">{t("staffing.working.managerOnly")}</Badge> : null}
         </div>
-        <div className="mt-4 grid gap-4 md:grid-cols-2">
-          {view.staff.map((member) => (
-            <article
-              key={member.person.id}
-              className="rounded-xl border border-border bg-surface p-4"
-            >
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <h3 className="font-semibold">{member.person.fullName}</h3>
-                  <p className="mt-1 text-sm text-muted">{member.roles.join(" · ")}</p>
+        {/* Nobody on the roster used to render as an empty grid — a heading, a
+            date range, and then nothing at all, which reads as a page that
+            failed to load. Who can fix it decides what it says: a manager gets
+            the door to Team, everyone else gets the honest "ask an owner". */}
+        {view.staff.length === 0 ? (
+          <EmptyState className="mt-4">
+            <h3 className="font-medium">{t("staffing.working.rosterEmptyHeading")}</h3>
+            <p className="mx-auto mt-1 max-w-md text-sm text-muted">
+              {canManage
+                ? t("staffing.working.rosterEmptyManagerBody")
+                : t("staffing.working.rosterEmptyBody")}
+            </p>
+            {canManage ? (
+              <Link
+                href={`/shop/${shopSlug}/settings/team`}
+                className={buttonClass({ className: "mt-4" })}
+              >
+                {t("staffing.working.rosterEmptyAction")}
+              </Link>
+            ) : null}
+          </EmptyState>
+        ) : (
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
+            {view.staff.map((member) => (
+              <article
+                key={member.person.id}
+                className="rounded-xl border border-border bg-surface p-4"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h3 className="font-semibold">{member.person.fullName}</h3>
+                    <p className="mt-1 text-sm text-muted">{member.roles.join(" · ")}</p>
+                  </div>
+                  <div className="flex flex-wrap justify-end gap-1.5">
+                    {member.capabilities.map((capability) => (
+                      <Badge key={capability} tone="primary">
+                        {t(`staffing.capability.${capability}`)}
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
-                <div className="flex flex-wrap justify-end gap-1.5">
-                  {member.capabilities.map((capability) => (
-                    <Badge key={capability} tone="primary">
-                      {t(`staffing.capability.${capability}`)}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-              {member.shifts.length === 0 ? (
-                <p className="mt-4 text-sm text-warning">{t("staffing.working.notScheduled")}</p>
-              ) : (
-                <ul className="mt-4 space-y-2 text-sm">
-                  {member.shifts.map((shift) => (
-                    <li
-                      key={shift.id}
-                      className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-surface-sunken px-3 py-2"
-                    >
-                      <span>
-                        <span className="font-medium">
-                          {formatTimeRangeTz(shift.startsAt, shift.endsAt, locale, shop.timezone)}
-                        </span>
-                        {shift.note ? <span className="ml-2 text-muted">{shift.note}</span> : null}
-                      </span>
-                      {canManage ? (
-                        <form action={deleteShiftAction}>
-                          <input type="hidden" name="shiftId" value={shift.id} />
-                          <SubmitButton
-                            pendingLabel={t("staffing.working.removing")}
-                            className={buttonClass({ variant: "ghost", size: "sm" })}
-                          >
-                            {t("staffing.working.remove")}
-                          </SubmitButton>
-                        </form>
-                      ) : null}
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {/* The other half of the shift ↔ crew cross-link (task 165): a
-                  shift alone doesn't say which boat, if any, this person is
-                  actually on — this is where that becomes visible. */}
-              <div className="mt-3 border-t border-border pt-3">
-                <p className="text-xs font-bold tracking-wide text-muted uppercase">
-                  {t("staffing.working.crewingHeading")}
-                </p>
-                {member.crewingTrips.length === 0 ? (
-                  <EmptyState className="mt-1">
-                    <p className="text-sm text-muted">{t("staffing.working.crewingEmpty")}</p>
-                  </EmptyState>
+                {member.shifts.length === 0 ? (
+                  <p className="mt-4 text-sm text-warning">{t("staffing.working.notScheduled")}</p>
                 ) : (
-                  <ul className="mt-1 space-y-1 text-sm">
-                    {member.crewingTrips.map((trip) => (
-                      <li key={trip.tripId}>
-                        <Link
-                          href={`/shop/${shopSlug}/trips/${trip.tripId}#crew`}
-                          className="font-medium text-primary hover:underline"
-                        >
-                          {trip.title}
-                        </Link>{" "}
-                        <span className="text-muted">
-                          {formatTimeRangeTz(trip.startsAt, trip.endsAt, locale, shop.timezone)}
+                  <ul className="mt-4 space-y-2 text-sm">
+                    {member.shifts.map((shift) => (
+                      <li
+                        key={shift.id}
+                        className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-surface-sunken px-3 py-2"
+                      >
+                        <span>
+                          <span className="font-medium">
+                            {formatTimeRangeTz(shift.startsAt, shift.endsAt, locale, shop.timezone)}
+                          </span>
+                          {shift.note ? (
+                            <span className="ml-2 text-muted">{shift.note}</span>
+                          ) : null}
                         </span>
+                        {canManage ? (
+                          <form action={deleteShiftAction}>
+                            <input type="hidden" name="shiftId" value={shift.id} />
+                            <SubmitButton
+                              pendingLabel={t("staffing.working.removing")}
+                              className={buttonClass({ variant: "ghost", size: "sm" })}
+                            >
+                              {t("staffing.working.remove")}
+                            </SubmitButton>
+                          </form>
+                        ) : null}
                       </li>
                     ))}
                   </ul>
                 )}
-              </div>
-            </article>
-          ))}
-        </div>
+                {/* The other half of the shift ↔ crew cross-link (task 165): a
+                  shift alone doesn't say which boat, if any, this person is
+                  actually on — this is where that becomes visible. */}
+                <div className="mt-3 border-t border-border pt-3">
+                  <p className="text-xs font-bold tracking-wide text-muted uppercase">
+                    {t("staffing.working.crewingHeading")}
+                  </p>
+                  {member.crewingTrips.length === 0 ? (
+                    <EmptyState className="mt-1">
+                      <p className="text-sm text-muted">{t("staffing.working.crewingEmpty")}</p>
+                    </EmptyState>
+                  ) : (
+                    <ul className="mt-1 space-y-1 text-sm">
+                      {member.crewingTrips.map((trip) => (
+                        <li key={trip.tripId}>
+                          <Link
+                            href={`/shop/${shopSlug}/trips/${trip.tripId}#crew`}
+                            className="font-medium text-primary hover:underline"
+                          >
+                            {trip.title}
+                          </Link>{" "}
+                          <span className="text-muted">
+                            {formatTimeRangeTz(trip.startsAt, trip.endsAt, locale, shop.timezone)}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
       </section>
 
       {canManage ? (

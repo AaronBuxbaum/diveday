@@ -3,12 +3,19 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
+import { Pager } from "@/components/Pager";
 import { ShopNotice, ShopPageHeader, ShopStat } from "@/components/ShopPageHeader";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
+import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { getDb } from "@/db/client";
-import { listDiveSites, listGlobalDiveSiteTemplates } from "@/db/dive-sites";
+import {
+  diveSiteLibraryStats,
+  listDiveSitesPage,
+  listGlobalDiveSiteTemplates,
+} from "@/db/dive-sites";
 import { getShopById } from "@/db/shops";
+import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { requireStaffSession } from "@/lib/session";
@@ -24,22 +31,43 @@ export default async function DiveSitesPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{ notice?: string }>;
+  searchParams: Promise<{ notice?: string; q?: string; page?: string }>;
 }) {
   const session = await requireStaffSession();
   const { shopSlug } = await params;
-  const { notice } = await searchParams;
+  const { notice, q, page } = await searchParams;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) notFound();
   const t = staffTranslator(await requestLocale(shop.defaultLocale));
-  const [sites, templates] = await Promise.all([
-    listDiveSites(db, shop.id),
+  const query = q?.trim() ?? "";
+  // A non-numeric or missing `?page=` reads as page 1 rather than NaN.
+  const requestedPage = Number.parseInt(page ?? "", 10);
+  const [sitePage, stats, templates] = await Promise.all([
+    listDiveSitesPage(
+      db,
+      shop.id,
+      { query: query || undefined },
+      { page: Number.isFinite(requestedPage) ? requestedPage : 1 },
+    ),
+    // Shop-wide, never page-scoped: the counters describe the library, and a
+    // search must not make a shop look like it lost half its sites.
+    diveSiteLibraryStats(db, shop.id),
     listGlobalDiveSiteTemplates(db),
   ]);
+  const sites = sitePage.rows;
   const currentTemplateVersion = new Map(
     templates.map(({ template, version }) => [template.id, version.version]),
   );
+
+  /** This page's URL with the search kept and only `page` swapped. */
+  const pageHref = (target: number) => {
+    const search = new URLSearchParams();
+    if (query) search.set("q", query);
+    if (target > 1) search.set("page", String(target));
+    const encoded = search.toString();
+    return encoded ? `/shop/${shopSlug}/dive-sites?${encoded}` : `/shop/${shopSlug}/dive-sites`;
+  };
 
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
@@ -66,32 +94,78 @@ export default async function DiveSitesPage({
         }
       />
 
-      <section
-        aria-label={t("diveSites.list.overviewAriaLabel")}
-        className="mb-8 grid gap-3 sm:grid-cols-3"
-      >
-        <ShopStat
-          label={t("diveSites.list.savedSites")}
-          value={sites.length}
-          detail={t("diveSites.list.savedSitesDetail")}
-          tone="primary"
-        />
-        <ShopStat
-          label={t("diveSites.list.withForecastPoints")}
-          value={
-            sites.filter(
-              (site) => site.forecastLatitude !== null && site.forecastLongitude !== null,
-            ).length
-          }
-          detail={t("diveSites.list.withForecastPointsDetail")}
-          tone="success"
-        />
-        <ShopStat
-          label={t("diveSites.list.fromTemplates")}
-          value={sites.filter((site) => site.sourceTemplateId).length}
-          detail={t("diveSites.list.fromTemplatesDetail")}
-        />
-      </section>
+      {/* Three tiles reading 0 / 0 / 0 teach a day-one shop nothing it doesn't
+          already know from the empty list below, and they push the one thing
+          that helps — the way to add a site — below the fold. The overview
+          returns the moment there is anything to count — and counts the whole
+          library (shop-wide stats), never the current page or search, so a
+          narrow search can't read as the shop losing sites. */}
+      {stats.total === 0 ? null : (
+        <section
+          aria-label={t("diveSites.list.overviewAriaLabel")}
+          className="mb-8 grid gap-3 sm:grid-cols-3"
+        >
+          <ShopStat
+            label={t("diveSites.list.savedSites")}
+            value={stats.total}
+            detail={t("diveSites.list.savedSitesDetail")}
+            tone="primary"
+          />
+          <ShopStat
+            label={t("diveSites.list.withForecastPoints")}
+            value={stats.withForecastPoints}
+            detail={t("diveSites.list.withForecastPointsDetail")}
+            tone="success"
+          />
+          <ShopStat
+            label={t("diveSites.list.fromTemplates")}
+            value={stats.fromTemplates}
+            detail={t("diveSites.list.fromTemplatesDetail")}
+          />
+        </section>
+      )}
+
+      {/* Unconditional once there is anything to search: a library that hid
+        its search box below some size would teach staff to scroll, and the
+        one shop that grows past a screenful is exactly the one that never
+        learned the box exists. Hidden only when the library is empty, where
+        the empty state has the single thing to do. */}
+      {stats.total > 0 ? (
+        <FieldGrid
+          as="form"
+          aria-label={t("diveSites.list.searchAriaLabel")}
+          columns={2}
+          className="mb-6 rounded-lg border border-border bg-surface p-4"
+        >
+          <Field label={t("diveSites.list.searchLabel")}>
+            <input
+              type="search"
+              name="q"
+              defaultValue={query}
+              placeholder={t("diveSites.list.searchPlaceholder")}
+              maxLength={120}
+              className={controlClass}
+            />
+          </Field>
+          <FieldActions>
+            <button type="submit" className={buttonClass({ size: "sm" })}>
+              {t("diveSites.list.searchApply")}
+            </button>
+            {query ? (
+              <Link
+                href={`/shop/${shopSlug}/dive-sites`}
+                className={buttonClass({
+                  variant: "secondary",
+                  size: "sm",
+                  className: "text-foreground",
+                })}
+              >
+                {t("diveSites.list.searchClear")}
+              </Link>
+            ) : null}
+          </FieldActions>
+        </FieldGrid>
+      ) : null}
 
       {notice === "archived" ? (
         <div className="mt-4">
@@ -101,11 +175,41 @@ export default async function DiveSitesPage({
 
       {sites.length === 0 ? (
         <EmptyState className="mt-4">
-          <h2 className="font-semibold">{t("diveSites.list.emptyHeading")}</h2>
-          <p className="mt-1 text-sm text-muted">{t("diveSites.list.emptyBody")}</p>
+          <h2 className="font-semibold">
+            {query ? t("diveSites.list.noMatchHeading") : t("diveSites.list.emptyHeading")}
+          </h2>
+          <p className="mx-auto mt-1 max-w-md text-sm text-muted">
+            {query ? t("diveSites.list.noMatchBody") : t("diveSites.list.emptyBody")}
+          </p>
+          {/* No second "Clear search" here: the search band right above this
+              card already carries one whenever a query is active, and two
+              identical controls is exactly what principle 8 forbids. */}
+          {query ? null : (
+            // Both header actions again, inside the card: on an empty library
+            // the header is the only place they exist, and a shop reading
+            // "start with a site your crew knows well" should be able to start
+            // from that sentence.
+            <div className="mt-4 flex flex-wrap justify-center gap-3">
+              <Link
+                href={`/shop/${shopSlug}/dive-sites/new`}
+                className={buttonClass({ className: "rounded-xl" })}
+              >
+                <span aria-hidden="true">+</span> {t("diveSites.list.createSite")}
+              </Link>
+              <Link
+                href={`/shop/${shopSlug}/dive-sites/catalog`}
+                className={buttonClass({ variant: "secondary", className: "rounded-xl" })}
+              >
+                {t("diveSites.list.browseTemplates")}
+              </Link>
+            </div>
+          )}
         </EmptyState>
       ) : (
-        <ul className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <ul
+          aria-label={t("diveSites.list.gridAriaLabel")}
+          className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
+        >
           {sites.map((site) => (
             <li key={site.id}>
               <Link
@@ -121,7 +225,9 @@ export default async function DiveSitesPage({
                     →
                   </span>
                 </div>
-                <p className="mt-1 text-sm text-muted">{site.locationName ?? "Location to add"}</p>
+                <p className="mt-1 text-sm text-muted">
+                  {site.locationName || t("diveSites.list.locationToAdd")}
+                </p>
                 {site.sourceTemplateVersion ? (
                   <p className="mt-2 text-xs font-medium text-primary">
                     {(currentTemplateVersion.get(site.sourceTemplateId ?? "") ?? 0) >
@@ -137,7 +243,7 @@ export default async function DiveSitesPage({
                 <div className="mt-3 flex flex-wrap gap-2">
                   {site.minimumCertificationLevel ? (
                     <Badge tone="primary" size="sm">
-                      {site.minimumCertificationLevel.replaceAll("_", " ")}
+                      {t(CERTIFICATION_LEVEL_KEYS[site.minimumCertificationLevel])}
                     </Badge>
                   ) : null}
                   {site.requiresNitrox ? (
@@ -163,6 +269,15 @@ export default async function DiveSitesPage({
           ))}
         </ul>
       )}
+
+      <Pager
+        page={sitePage.page}
+        pageCount={sitePage.pageCount}
+        href={pageHref}
+        total={t("diveSites.list.pagination.total", { count: sitePage.total })}
+        t={t}
+        className="mt-4"
+      />
     </main>
   );
 }

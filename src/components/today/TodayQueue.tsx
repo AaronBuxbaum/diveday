@@ -188,10 +188,18 @@ export function TodayQueue({
           <h2 id="queue-heading" className="font-medium">
             {t("shared.today.todayQueue.emptyHeading")}
           </h2>
-          <p className="mt-1 text-sm text-muted">
+          <p className="mx-auto mt-1 max-w-md text-sm text-muted">
             {t("shared.today.todayQueue.emptyBody")}{" "}
             {seasonalBriefingText(t, getSeasonalBriefing(nowDate()), shopName)}
           </p>
+          {/* The by-departure view's empty state offers exactly this link, and
+              the two views are meant to rest alike (BlockerGroups). */}
+          <Link
+            href={`/shop/${shopSlug}/schedule/board`}
+            className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
+          >
+            {t("shared.today.todayQueue.emptyAction")}
+          </Link>
         </EmptyState>
       </section>
     );

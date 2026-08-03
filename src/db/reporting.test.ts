@@ -351,7 +351,7 @@ describe("getMonthlyReport", () => {
 });
 
 describe("pagedMonthlyReportTrips", () => {
-  it("pages with a keyset cursor and never repeats or skips a trip", async () => {
+  it("pages by number and never repeats or skips a trip", async () => {
     const { db, shop } = await seededShopContext();
     for (let day = 1; day <= 5; day++) {
       await makeTrip(db, shop.id, new Date(`2026-06-0${day}T10:00:00Z`), 4, `Trip ${day}`);
@@ -364,21 +364,44 @@ describe("pagedMonthlyReportTrips", () => {
       .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime())
       .map((trip) => trip.tripId);
 
+    const first = await pagedMonthlyReportTrips(db, shop.id, JUNE_START, JULY_START, { limit: 2 });
+    // The count is the month's trips, not the page's — it is what the pager
+    // says out loud.
+    expect(first.total).toBe(all.trips.length);
+    expect(first.pageCount).toBe(Math.ceil(all.trips.length / 2));
+
     const seen: string[] = [];
-    let cursor: string | undefined;
-    const maxHops = all.trips.length + 1;
-    for (let hops = 0; hops < maxHops; hops++) {
-      const page = await pagedMonthlyReportTrips(db, shop.id, JUNE_START, JULY_START, {
-        cursor,
+    for (let page = 1; page <= first.pageCount; page++) {
+      const chunk = await pagedMonthlyReportTrips(db, shop.id, JUNE_START, JULY_START, {
+        page,
         limit: 2,
       });
-      expect(page.trips.length).toBeLessThanOrEqual(2);
-      seen.push(...page.trips.map((trip) => trip.tripId));
-      if (!page.nextCursor) break;
-      cursor = page.nextCursor;
+      expect(chunk.page).toBe(page);
+      expect(chunk.trips.length).toBeLessThanOrEqual(2);
+      seen.push(...chunk.trips.map((trip) => trip.tripId));
     }
     expect(seen).toEqual(sortedIds);
     expect(new Set(seen).size).toBe(seen.length);
+  });
+
+  it("goes back a page as well as forward", async () => {
+    const { db, shop } = await seededShopContext();
+    for (let day = 1; day <= 4; day++) {
+      await makeTrip(db, shop.id, new Date(`2026-06-0${day}T10:00:00Z`), 4, `Trip ${day}`);
+    }
+    const second = await pagedMonthlyReportTrips(db, shop.id, JUNE_START, JULY_START, {
+      page: 2,
+      limit: 2,
+    });
+    const back = await pagedMonthlyReportTrips(db, shop.id, JUNE_START, JULY_START, {
+      page: second.page - 1,
+      limit: 2,
+    });
+    const first = await pagedMonthlyReportTrips(db, shop.id, JUNE_START, JULY_START, {
+      page: 1,
+      limit: 2,
+    });
+    expect(back.trips.map((trip) => trip.tripId)).toEqual(first.trips.map((trip) => trip.tripId));
   });
 
   it("never truncates summarizeMonth's totals, even when the table page is tiny", async () => {
@@ -402,7 +425,7 @@ describe("pagedMonthlyReportTrips", () => {
       limit: 1,
     });
     expect(tinyPage.trips).toHaveLength(1);
-    expect(tinyPage.nextCursor).not.toBeNull();
+    expect(tinyPage.pageCount).toBeGreaterThan(1);
 
     const totals = summarizeMonth(await getMonthlyReport(db, shop.id, JUNE_START, JULY_START));
     expect(totals.tripCount).toBeGreaterThanOrEqual(4);
@@ -412,16 +435,30 @@ describe("pagedMonthlyReportTrips", () => {
     expect(totals.revenueCents).toBeGreaterThanOrEqual(40_000);
   });
 
-  it("treats a mangled cursor as the first page", async () => {
+  it("treats a nonsensical page as the first and one past the end as the last", async () => {
     const { db, shop } = await seededShopContext();
     await makeTrip(db, shop.id, new Date("2026-06-02T10:00:00Z"), 4, "Trip A");
     await makeTrip(db, shop.id, new Date("2026-06-03T10:00:00Z"), 4, "Trip B");
 
     const all = await pagedMonthlyReportTrips(db, shop.id, JUNE_START, JULY_START);
-    const mangled = await pagedMonthlyReportTrips(db, shop.id, JUNE_START, JULY_START, {
-      cursor: "not-a-real-cursor",
+    for (const requested of [0, -3, Number.NaN]) {
+      const clamped = await pagedMonthlyReportTrips(db, shop.id, JUNE_START, JULY_START, {
+        page: requested,
+      });
+      expect(clamped.page).toBe(1);
+      expect(clamped.trips.map((trip) => trip.tripId)).toEqual(
+        all.trips.map((trip) => trip.tripId),
+      );
+    }
+
+    // A `?page=` bookmarked on a busier month, carried onto a quieter one by
+    // the month arrows: the last real page, not an empty table.
+    const past = await pagedMonthlyReportTrips(db, shop.id, JUNE_START, JULY_START, {
+      page: 9,
+      limit: 1,
     });
-    expect(mangled.trips.map((trip) => trip.tripId)).toEqual(all.trips.map((trip) => trip.tripId));
+    expect(past.page).toBe(past.pageCount);
+    expect(past.trips).toHaveLength(1);
   });
 });
 
@@ -441,7 +478,9 @@ describe("earliestReportedTripStart", () => {
     const { db, shop } = await seededShopContext();
     const [other] = await db
       .insert(shops)
-      .values({ name: "Empty Shop", slug: `empty-${Date.now()}`, timezone: "UTC" })
+      // A unique suffix, not a time read: `shops.slug` is unique and this
+      // test inserts a second shop alongside the seeded one.
+      .values({ name: "Empty Shop", slug: `empty-${crypto.randomUUID()}`, timezone: "UTC" })
       .returning();
     if (!other) throw new Error("failed to insert shop");
 

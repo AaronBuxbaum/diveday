@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import { ANONYMIZED_PERSON_NAME, REDACTED_TEXT } from "@/lib/anonymization";
+import { nowMs } from "@/lib/clock";
 import type { DeleteCustomerResult } from "@/lib/payments/customers";
 import { computeWaiverIntegrityHash, verifyWaiverIntegrity } from "@/lib/waiver-integrity";
 import { seededShopContext } from "@/test/db";
@@ -269,7 +270,9 @@ describe("roster search and pagination", () => {
     const nobody = await listDiverSummaries(db, shop.id, { query: "zzz-no-such-diver" });
     expect(nobody.divers).toHaveLength(0);
     expect(nobody.total).toBe(0);
-    expect(nobody.nextCursor).toBeNull();
+    // One empty page, not zero pages — the pager renders nothing at all here.
+    expect(nobody.pageCount).toBe(1);
+    expect(nobody.page).toBe(1);
   });
 
   it("filters the roster by saved-view facet (missing contact, insured)", async () => {
@@ -312,36 +315,54 @@ describe("roster search and pagination", () => {
     expect(missing.total).toBe(baselineMissing - 1);
   });
 
-  it("pages with a keyset cursor and never repeats or skips a diver", async () => {
+  it("pages by number and never repeats or skips a diver", async () => {
     const { db, shop } = await seededShopContext();
 
     // The extended roster is well past DIVER_PAGE_SIZE, so fetch a limit large
     // enough to get every diver back in one page as ground truth.
     const all = await listDiverSummaries(db, shop.id, { limit: 1000 });
-    expect(all.nextCursor).toBeNull();
+    expect(all.pageCount).toBe(1);
     expect(all.total).toBe(all.divers.length);
 
     const seen: string[] = [];
-    let cursor: string | undefined;
-    const maxHops = Math.ceil(all.divers.length / 3) + 1;
-    for (let hops = 0; hops < maxHops; hops++) {
-      const page = await listDiverSummaries(db, shop.id, { cursor, limit: 3 });
-      expect(page.divers.length).toBeLessThanOrEqual(3);
-      seen.push(...page.divers.map((row) => row.person.id));
-      if (!page.nextCursor) break;
-      cursor = page.nextCursor;
+    const first = await listDiverSummaries(db, shop.id, { limit: 3 });
+    expect(first.pageCount).toBe(Math.ceil(all.total / 3));
+    for (let page = 1; page <= first.pageCount; page++) {
+      const chunk = await listDiverSummaries(db, shop.id, { page, limit: 3 });
+      expect(chunk.page).toBe(page);
+      expect(chunk.divers.length).toBeLessThanOrEqual(3);
+      seen.push(...chunk.divers.map((row) => row.person.id));
     }
     expect(seen).toEqual(all.divers.map((row) => row.person.id));
     expect(new Set(seen).size).toBe(seen.length);
   });
 
-  it("treats a mangled cursor as the first page", async () => {
+  it("goes back a page as well as forward — the whole point of dropping the cursor", async () => {
     const { db, shop } = await seededShopContext();
-    const all = await listDiverSummaries(db, shop.id);
-    const mangled = await listDiverSummaries(db, shop.id, { cursor: "not-a-real-cursor" });
-    expect(mangled.divers.map((row) => row.person.id)).toEqual(
-      all.divers.map((row) => row.person.id),
+    const second = await listDiverSummaries(db, shop.id, { page: 2, limit: 3 });
+    const backAgain = await listDiverSummaries(db, shop.id, { page: second.page - 1, limit: 3 });
+    const first = await listDiverSummaries(db, shop.id, { page: 1, limit: 3 });
+    expect(backAgain.divers.map((row) => row.person.id)).toEqual(
+      first.divers.map((row) => row.person.id),
     );
+  });
+
+  it("treats a nonsensical page as the first page and one past the end as the last", async () => {
+    const { db, shop } = await seededShopContext();
+    const first = await listDiverSummaries(db, shop.id, { page: 1, limit: 3 });
+    for (const requested of [0, -3, Number.NaN]) {
+      const clamped = await listDiverSummaries(db, shop.id, { page: requested, limit: 3 });
+      expect(clamped.page).toBe(1);
+      expect(clamped.divers.map((row) => row.person.id)).toEqual(
+        first.divers.map((row) => row.person.id),
+      );
+    }
+
+    // A bookmarked page from a longer roster lands on the last real page with
+    // rows on it, never an empty table under an impossible "Page 999 of 8".
+    const last = await listDiverSummaries(db, shop.id, { page: 999, limit: 3 });
+    expect(last.page).toBe(last.pageCount);
+    expect(last.divers.length).toBeGreaterThan(0);
   });
 });
 
@@ -1053,7 +1074,7 @@ describe("diver erasure", () => {
     // The link is dead: the hash no longer matches any issued token, and the
     // record has expired.
     expect(after.tokenHash).not.toBe(before.tokenHash);
-    expect(after.expiresAt.getTime()).toBeLessThanOrEqual(Date.now());
+    expect(after.expiresAt.getTime()).toBeLessThanOrEqual(nowMs());
   });
 
   it("is idempotent — a replayed call changes nothing", async () => {

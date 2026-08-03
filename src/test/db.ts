@@ -1,5 +1,6 @@
 import { PGlite } from "@electric-sql/pglite";
 import { pg_trgm } from "@electric-sql/pglite/contrib/pg_trgm";
+import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { onTestFinished } from "vitest";
 import { type AppDb, createTestDb } from "@/db/client";
@@ -91,4 +92,34 @@ export async function seededShopContext(options: { history?: boolean } = {}) {
   const shop = await getShopBySlug(db, "blue-mantis");
   if (!shop) throw new Error('seeded demo shop "blue-mantis" missing');
   return { db, shop };
+}
+
+/**
+ * "Now" as *Postgres* sees it.
+ *
+ * Columns declared `defaultNow()` are stamped by the database's own clock,
+ * which `DIVEDAY_CLOCK` does not reach — `src/lib/clock.ts` only freezes the
+ * application. So a test that bounds one of those columns ("has this row sat
+ * unresolved long enough to count as stuck?") cannot express the bound with
+ * `nowMs()`: that compares a frozen instant against a live one, and the row is
+ * selected only while the two happen to fall in the right order. It works
+ * today because the frozen instant is behind the wall clock, and inverts the
+ * day it isn't.
+ *
+ * Ask the database instead. `dbNow(db) ± window` is the same sentence the test
+ * always meant, measured against the clock that actually wrote the column.
+ */
+export async function dbNow(db: AppDb): Promise<Date> {
+  const result = await db.execute<{ now: Date | string }>(sql`select now() as now`);
+  const rows = (Array.isArray(result) ? result : (result.rows ?? [])) as {
+    now: Date | string;
+  }[];
+  const value = rows[0]?.now;
+  if (!value) throw new Error("dbNow: database returned no now()");
+  return value instanceof Date ? value : new Date(value);
+}
+
+/** {@link dbNow} shifted by `offsetMs` — the shape these bounds are always written in. */
+export async function dbNowPlus(db: AppDb, offsetMs: number): Promise<Date> {
+  return new Date((await dbNow(db)).getTime() + offsetMs);
 }

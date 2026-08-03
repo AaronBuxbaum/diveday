@@ -110,8 +110,13 @@ function toSignedWaiverEntry(row: WaiverAuditJoinRow) {
  * booking), and intentionally excludes bearer tokens and the raw medical
  * questionnaire (see `toSignedWaiverEntry`). One keyset page at a time
  * (ordered by signature, then id for a stable tiebreak), same idiom as
- * `pagedUpcomingTripsWithCounts` and `listDiverSummaries` so a shop with years
- * of signed waivers costs one page, not the whole table.
+ * `pagedUpcomingTripsWithCounts` so a shop with years of signed waivers costs
+ * one page, not the whole table.
+ *
+ * Still forward-only, and it should not stay that way: ADR
+ * 20260803-one-pagination-model moved the roster, reports, and the moderation
+ * queue onto `offsetPage` + the shared `Pager`, and this log is the same job.
+ * It is one of the three stragglers named there.
  */
 export async function listWaiverIntegrityAudit(
   db: DbExecutor,

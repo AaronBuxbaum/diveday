@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { and, eq, inArray, ne } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { nowDate } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
 import type { AppDb } from "./client";
 
@@ -337,7 +338,7 @@ describe("seatDiver waiver reporting (what a door is allowed to claim)", () => {
     deliverableEmailEnv();
     await db
       .update(waiverTemplates)
-      .set({ archivedAt: new Date() })
+      .set({ archivedAt: nowDate() })
       .where(eq(waiverTemplates.shopId, shop.id));
 
     const result = await seatDiver(db, {

@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
-import { nowDate } from "@/lib/clock";
+import { nowDate, nowMs } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
 import * as bookingCapabilitiesModule from "./booking-capabilities";
 import {
@@ -583,8 +583,8 @@ describe("restoreBooking (undo of a roster removal)", () => {
       shopId,
       courseId: course.id,
       title: "Discover Scuba — restore test",
-      startsAt: new Date(Date.now() + INTRO_SESSION_OFFSET_MS),
-      endsAt: new Date(Date.now() + INTRO_SESSION_OFFSET_MS + 4 * 60 * 60 * 1000),
+      startsAt: new Date(nowMs() + INTRO_SESSION_OFFSET_MS),
+      endsAt: new Date(nowMs() + INTRO_SESSION_OFFSET_MS + 4 * 60 * 60 * 1000),
       // Capacity 12 is well clear of the 2:1 ratio cap, so nothing but the
       // ratio can refuse anything here.
       capacity: 12,
@@ -730,8 +730,8 @@ describe("restoreBooking (undo of a roster removal)", () => {
         shopId: shop.id,
         courseId: course.id,
         title: "Open Water — per-trip role test",
-        startsAt: new Date(Date.now() + INTRO_SESSION_OFFSET_MS + 60 * 60 * 1000),
-        endsAt: new Date(Date.now() + INTRO_SESSION_OFFSET_MS + 5 * 60 * 60 * 1000),
+        startsAt: new Date(nowMs() + INTRO_SESSION_OFFSET_MS + 60 * 60 * 1000),
+        endsAt: new Date(nowMs() + INTRO_SESSION_OFFSET_MS + 5 * 60 * 60 * 1000),
         capacity: 12,
         plannedDives: 2,
       });

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
-import type { CheckoutProvider, CreateCheckoutSessionResult } from "@/lib/payments/checkout";
 import { seededShopContext } from "@/test/db";
+import { fakeCheckout } from "@/test/fakes";
 import { createBookingParty } from "./bookings";
 import { markCheckoutPaidBySessionId, startBookingCheckout } from "./checkouts";
 import { getBookingPayment, setBookingPayment } from "./payments";
@@ -14,33 +14,6 @@ import {
 } from "./webhook-events";
 
 const REEF_PRICE_CENTS = 18_000;
-
-function fakeCheckout(): CheckoutProvider {
-  let counter = 0;
-  return {
-    async createCheckoutSession(request): Promise<CreateCheckoutSessionResult> {
-      counter += 1;
-      return {
-        status: "created",
-        stripeSessionId: `cs_${counter}`,
-        stripeStatus: "open",
-        paymentStatus: "unpaid",
-        checkoutUrl: `https://checkout.stripe.com/c/pay/cs_${counter}`,
-        amountTotalCents: request.lineItems.reduce(
-          (sum, line) => sum + line.unitAmountCents * line.quantity,
-          0,
-        ),
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-      };
-    },
-    async retrieveCheckoutSession() {
-      return { status: "failed" };
-    },
-    async refundCheckoutSession() {
-      return { status: "refunded", refundId: "re_test" };
-    },
-  };
-}
 
 /** A connected, charges-enabled shop with a priced future trip and a paid checkout for one diver. */
 async function paidCheckoutContext() {

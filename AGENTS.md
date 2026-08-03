@@ -91,6 +91,7 @@ ignored and the full suite runs instead. Pass args directly: `pnpm test <file> -
 | Dev/e2e staff logins | `src/db/dev-credentials.ts` |
 | Design tokens | `src/app/globals.css` (semantic only, ADR-0004) |
 | Form/button/control wrappers | `src/components/ui/` — `form.tsx` (`Field`, `FieldGrid`, `controlClass`), `button.ts` (`buttonClass`) |
+| Paging a staff list (prev / "Page 3 of 7" / next) | one component, `src/components/Pager.tsx`, words from the one `shared.pager.*` key set; one query shape, `offsetPage` in `src/db/paging.ts`. Orders, the by-departure view, Divers, Reports, and Reviews wear it (ADR 20260803-one-pagination-model); a new paged list uses it from the start. Keyset cursors (`src/db/cursor.ts`) are the earned exception — the schedule board pages a stream with no end to count. Courses, promos, and waiver signatures are the un-converted stragglers |
 | "What should this code do?" | Read `foo.test.ts` before `foo.ts` — tests are the contract |
 
 ## Skills and providers

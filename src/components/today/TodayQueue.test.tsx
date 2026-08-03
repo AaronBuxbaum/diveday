@@ -98,6 +98,22 @@ describe("TodayQueue urgency groups", () => {
     expect(screen.getByText("Nothing is waiting on you")).toBeInTheDocument();
   });
 
+  it("offers the schedule as a way on from the empty queue, like the by-departure view", () => {
+    render(
+      <TodayQueue
+        actions={[]}
+        shopSlug="blue-mantis"
+        shopName="Blue Mantis"
+        inviteAction={inviteAction}
+        locale="en-US"
+      />,
+    );
+    expect(screen.getByRole("link", { name: "View the schedule" })).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/schedule/board",
+    );
+  });
+
   it("shows a worded item count on each group header, not a bare number", () => {
     render(
       <TodayQueue

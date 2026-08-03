@@ -1,10 +1,10 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { nowMs } from "@/lib/clock";
-import type { CreateTripPromotionResult, PromotionProvider } from "@/lib/payments/promotions";
+import { nowDate, nowMs } from "@/lib/clock";
 import { groupActions } from "@/lib/today";
-import { seededShopContext } from "@/test/db";
+import { dbNowPlus, seededShopContext } from "@/test/db";
+import { fakePromotions } from "@/test/fakes";
 import { cancelBooking } from "./bookings";
 import { joinLastMinuteList } from "./last-minute-list";
 import { getTripManifest, recordCrewRollCall, recordRollCall } from "./manifests";
@@ -30,17 +30,6 @@ import { getTodayWork } from "./today";
 import { sendLastMinuteDealBlast } from "./trip-promos";
 import { createTrip, getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
-
-function fakePromotions(): PromotionProvider {
-  return {
-    async createTripPromotion(): Promise<CreateTripPromotionResult> {
-      return { status: "created", stripeCouponId: "coupon_1", stripePromotionCodeId: "promo_1" };
-    },
-    async createShopPromotion(): Promise<CreateTripPromotionResult> {
-      return { status: "created", stripeCouponId: "coupon_1", stripePromotionCodeId: "promo_1" };
-    },
-  };
-}
 
 const clearAnswers = { questionnaireId: "rstc", questionnaireVersion: 1, responses: {} };
 
@@ -382,7 +371,7 @@ describe("today's work queue (in-memory PGlite)", () => {
     // The card is pulled (archived) after the request was already accepted.
     await db
       .update(nitroxCertifications)
-      .set({ deletedAt: new Date() })
+      .set({ deletedAt: nowDate() })
       .where(
         and(
           eq(nitroxCertifications.shopId, shop.id),
@@ -442,7 +431,7 @@ describe("today's work queue (in-memory PGlite)", () => {
     const { db, shop } = await seededShopContext();
 
     const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
-    const horizon = Date.now() + 7 * 24 * 60 * 60 * 1000;
+    const horizon = nowMs() + 7 * 24 * 60 * 60 * 1000;
 
     for (const action of work.actions) {
       expect(action.dueAt?.getTime() ?? 0).toBeLessThanOrEqual(horizon);
@@ -596,9 +585,11 @@ describe("role lens raw material", () => {
       const { db, shop } = await seededShopContext();
       const intent = await startPaymentOperation(db, { shopId: shop.id, kind: "invoice" });
       // No wall-clock trickery needed on the write side: reading the queue from
-      // ten minutes in its own future is what makes the just-started intent
-      // read as stuck (same trick `listStuckPaymentOperations`' own tests use).
-      const future = new Date(Date.now() + 10 * 60 * 1000);
+      // ten minutes in the *database's* future is what makes the just-started
+      // intent read as stuck (same trick `listStuckPaymentOperations`' own
+      // tests use; `started_at` is a `defaultNow()` column, so Postgres' clock
+      // is the one that has to move — see `dbNow` in src/test/db.ts).
+      const future = await dbNowPlus(db, 10 * 60 * 1000);
       const t = staffTranslator("en-US");
 
       const withoutFlag = await getTodayWork(
@@ -674,7 +665,7 @@ describe("role lens raw material", () => {
     it("is tenant-safe: another shop's queue never surfaces this shop's ops alerts", async () => {
       const { db, shop } = await seededShopContext();
       const intent = await startPaymentOperation(db, { shopId: shop.id, kind: "invoice" });
-      const future = new Date(Date.now() + 10 * 60 * 1000);
+      const future = await dbNowPlus(db, 10 * 60 * 1000);
 
       const otherShopId = "00000000-0000-4000-8000-000000000000";
       const otherWork = await getTodayWork(
@@ -726,7 +717,7 @@ describe("unclosed roll call (DOM-H3)", () => {
   ) {
     // The unit-test clock is frozen (vitest.config.ts's DIVEDAY_CLOCK) and the
     // demo seed is anchored to it, so every fixture instant is measured from
-    // `nowMs()` — a real `Date.now()` here would land days away from the seed.
+    // `nowMs()` — a real `nowMs()` here would land days away from the seed.
     const endsAt = new Date(nowMs() - options.endedHoursAgo * HOUR);
     const [trip] = await db
       .insert(tripsTable)
