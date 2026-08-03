@@ -222,7 +222,7 @@
     "visual": []
   },
   "/shop/[shopSlug]/promos": {
-    "e2e": ["promo-codes.spec.ts"],
+    "e2e": ["promo-codes.spec.ts", "settings-findability.spec.ts"],
     "visual": ["staff-promos"]
   },
   "/shop/[shopSlug]/reports": {
@@ -264,6 +264,7 @@
       "nitrox.spec.ts",
       "recap.spec.ts",
       "role-permissions.spec.ts",
+      "settings-findability.spec.ts",
       "whatsapp-settings.spec.ts"
     ],
     "visual": ["settings-payments"]
@@ -285,7 +286,7 @@
     "visual": ["settings-import"]
   },
   "/shop/[shopSlug]/settings/team": {
-    "e2e": ["staff-invite.spec.ts"],
+    "e2e": ["settings-findability.spec.ts", "staff-invite.spec.ts"],
     "visual": ["settings-team"]
   },
   "/shop/[shopSlug]/settings/whatsapp": {

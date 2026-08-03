@@ -82,7 +82,7 @@ export default async function DiverDetailPage({
   );
 
   return (
-    <main className="mx-auto w-full max-w-4xl flex-1 px-6 py-16">
+    <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <FlashParams params={["notice", "undo", "cardType"]} />
       <DiverHeader diver={diver} shopSlug={shopSlug} personId={personId} locale={locale} />
       {notice === "card-deleted" && undo && cardType ? (

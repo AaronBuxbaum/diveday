@@ -1863,6 +1863,19 @@
         "heading": "WhatsApp",
         "description": "Send trip reminders and recaps from your shop's own WhatsApp number instead of a platform SMS number.",
         "cta": "Set up WhatsApp"
+      },
+      "jump": {
+        "label": "Jump to a section"
+      },
+      "team": {
+        "heading": "Team",
+        "description": "Who works here, what each person is allowed to reach, and where your invitations stand.",
+        "cta": "Manage team"
+      },
+      "promos": {
+        "heading": "Promo codes",
+        "description": "Shop-wide discount codes a diver types at checkout, each with its own dates and limits.",
+        "cta": "Manage promo codes"
       }
     },
     "team": {
