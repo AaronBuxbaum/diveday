@@ -234,18 +234,10 @@ export function BlockerGroups({
               t={t}
             />
           ))}
-          {/* This view pages an already-loaded array (`pageOf`) rather than a
-              query, because the whole operational window is what the queue is
-              ranked over — but what staff see is the one pager every other
-              paged list wears (ADR 20260803-one-pagination-model). */}
-          <Pager
-            page={page}
-            pageCount={pageCount}
-            href={pageHref}
-            total={t("blockers.pagination.total", { count: trips.length })}
-            t={t}
-          />
-
+          {/* Above the pager, not below it. This says "the queue itself stops
+              short of your week" — a fact about the whole list — and under
+              "Page 2 of 4" it read as a footnote to the page you happen to be
+              on, which is the one place it is not true. */}
           {truncated ? (
             <p className="text-center text-sm text-muted">
               {t.rich("blockers.truncated", {
@@ -260,6 +252,18 @@ export function BlockerGroups({
               })}
             </p>
           ) : null}
+
+          {/* This view pages an already-loaded array (`pageOf`) rather than a
+              query, because the whole operational window is what the queue is
+              ranked over — but what staff see is the one pager every other
+              paged list wears (ADR 20260803-one-pagination-model). */}
+          <Pager
+            page={page}
+            pageCount={pageCount}
+            href={pageHref}
+            total={t("blockers.pagination.total", { count: trips.length })}
+            t={t}
+          />
         </div>
       )}
     </section>
