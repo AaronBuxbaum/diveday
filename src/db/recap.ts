@@ -456,7 +456,7 @@ export async function sendDueRecaps(
   options: SendDueRecapsOptions = {},
 ): Promise<RecapRunSummary> {
   const now = options.now ?? nowDate();
-  const emailProvider = notificationProviderForDb(db, options.emailProvider);
+  const emailProvider = notificationProviderForDb(options.emailProvider);
   const smsProvider = options.smsProvider ?? smsProviderFromEnvironment();
   const origin = options.appOrigin === undefined ? publicAppUrl() : options.appOrigin;
   const since = new Date(now.getTime() - RECAP_LOOKBACK_HOURS * HOUR_MS);

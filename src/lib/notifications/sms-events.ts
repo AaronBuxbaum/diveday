@@ -99,7 +99,7 @@ export function parseSmsDeliveryEvent(record: string, now: Date): SmsDeliveryEve
 
 /**
  * CloudWatch writes an ISO-8601 stamp; anything unparseable falls back to now
- * so a row always has a time, matching `parseResendEmailEvent`.
+ * so a row always has a time, matching `parseSesEmailEvent`.
  */
 function timestampFrom(timestamp: string | undefined, fallback: Date): Date {
   if (!timestamp) return fallback;

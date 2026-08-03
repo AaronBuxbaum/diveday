@@ -114,7 +114,7 @@ describe("sendLastMinuteDealBlast (in-memory PGlite)", () => {
       { shopId: shop.id, shopSlug: "blue-mantis", tripId: openTrip.id, discountPercent: 50 },
       provider,
     );
-    // The test environment sets neither APP_HOST nor RESEND_*, so no email
+    // The test environment sets neither APP_HOST nor SES_*, so no email
     // actually goes out (same degrade as inviteWaitlistDiver's own test) —
     // this still proves Stripe succeeded, the row landed `sent`, and the
     // matching logic found both entries, independent of email delivery.

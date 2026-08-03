@@ -101,7 +101,7 @@ export async function sendDueCheckoutRecoveries(
   options: SendDueCheckoutRecoveriesOptions = {},
 ): Promise<CheckoutRecoveryRunSummary> {
   const now = options.now ?? nowDate();
-  const emailProvider = notificationProviderForDb(db, options.emailProvider);
+  const emailProvider = notificationProviderForDb(options.emailProvider);
   const checkoutProvider = options.checkoutProvider ?? checkoutProviderFromEnvironment();
   const staleBefore = new Date(now.getTime() - RECOVERY_DELAY_HOURS * HOUR_MS);
 

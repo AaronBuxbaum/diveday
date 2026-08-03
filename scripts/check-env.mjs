@@ -51,12 +51,6 @@ async function run() {
   const missingKeys = [];
 
   for (const key of exampleKeys) {
-    // SES is dormant prep (ADR 20260802-ses-email-transition-prep) — no real
-    // credentials exist anywhere yet. Remove once EMAIL_PROVIDER=ses is a real
-    // cutover, not a future option.
-    if (key === "EMAIL_PROVIDER" || key.startsWith("SES_")) {
-      continue;
-    }
     // SNS SMS is dormant prep (ADR 20260802-sns-sms-adapter) — no real
     // credentials exist anywhere yet. Remove once a shop actually needs it.
     if (key.startsWith("SNS_") || key === "SMS_SNS_TOPIC_ARN") {

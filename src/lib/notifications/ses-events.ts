@@ -3,13 +3,14 @@ import type { ProviderEmailStatus } from "./events";
 
 /**
  * Turns a verified SES event (the JSON carried inside an SNS `Notification`
- * message's `Message` field) into the same delivery-outcome shape
- * `parseResendEmailEvent` produces, so `/api/webhooks/ses` can hand both off
- * to the identical `applyProviderEmailEvent` — the dashboard/issue-surfacing
- * code downstream needs no changes to support a second provider. `Open` and
- * `Click` are handled by a separate engagement-tracking path, not this
- * delivery-status one; `Subscription` and anything unmodeled reduce to
- * `ignored`.
+ * message's `Message` field) into the shared `ProviderEmailStatus` delivery
+ * outcome, so `/api/webhooks/ses` can hand it off to `applyProviderEmailEvent`
+ * — the same downstream dashboard/issue-surfacing code every provider's event
+ * mapping (SMS, WhatsApp) uses. `Open` and `Click` are handled by a separate
+ * engagement-tracking path, not this delivery-status one (and are never
+ * enabled — see the no-opens/no-clicks privacy stance in
+ * docs/engineering/ses-email-runbook.md); `Subscription` and anything
+ * unmodeled reduce to `ignored`.
  */
 const PROVIDER_STATUS_BY_SES_EVENT_TYPE = {
   Send: "sent",

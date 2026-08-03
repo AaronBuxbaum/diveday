@@ -245,11 +245,13 @@ export class InfraStack extends cdk.Stack {
         "Where budget threshold and cost-anomaly alerts are sent. Override with --context alertEmail=...",
     });
 
-    // 8. SES email-provider prep — dormant until the app cuts over from Resend.
-    // See ADR 20260802-ses-email-transition-prep for why this exists now, what
-    // it does and doesn't do, and what's still manual before flipping the
-    // switch. The app's notify() seam (src/lib/notifications/) still points
-    // at Resend; nothing here changes production sending.
+    // 8. SES email-provider infra. SES is the app's sole provider in code
+    // (ADR 20260803-ses-sole-email-provider, superseding 20260802-ses-adapter-
+    // and-webhook's opt-in flag and 20260802-ses-email-transition-prep's
+    // original "prep ahead of a possible Resend swap" framing) — but the
+    // AWS-side production access request, DKIM DNS verification, credential
+    // minting, and SNS subscription below are still manual steps, so this
+    // stays inert until those are done.
     const sesEmailDomain = this.node.tryGetContext("sesEmailDomain") || "ses.dive.day";
 
     const sesEventNotifications = new sns.Topic(this, "SesEmailEventNotifications", {
@@ -258,14 +260,15 @@ export class InfraStack extends cdk.Stack {
 
     const sesConfigurationSet = new ses.ConfigurationSet(this, "SesConfigurationSet", {
       configurationSetName: "diveday-transactional-email",
+      vdmOptions: { optimizedSharedDelivery: true },
     });
 
     new ses.ConfigurationSetEventDestination(this, "SesEmailEventDestination", {
       configurationSet: sesConfigurationSet,
       destination: ses.EventDestination.snsTopic(sesEventNotifications),
-      // Mirrors the event set the Resend webhook tracks (resend-email-runbook.md):
-      // bounces, complaints, and delivery outcomes. OPEN/CLICK are deliberately
-      // excluded — the same privacy stance already documented there.
+      // Bounces, complaints, and delivery outcomes. OPEN/CLICK are deliberately
+      // excluded — the same no-opens/no-clicks privacy stance documented in
+      // docs/engineering/ses-email-runbook.md.
       events: [
         ses.EmailSendingEvent.BOUNCE,
         ses.EmailSendingEvent.COMPLAINT,
@@ -300,7 +303,7 @@ export class InfraStack extends cdk.Stack {
     new cdk.CfnOutput(this, "SesEventNotificationsTopicArn", {
       value: sesEventNotifications.topicArn,
       description:
-        "SNS topic for SES bounce/complaint/delivery events. No subscriber yet — a webhook endpoint mirroring /api/webhooks/resend must subscribe before this is useful.",
+        "SNS topic for SES bounce/complaint/delivery events. No subscriber yet — /api/webhooks/ses must be subscribed to this topic (SNS console or `aws sns subscribe`) before this is useful.",
     });
 
     // 9. SNS direct-to-phone SMS sending — see ADR 20260802-sns-sms-adapter.

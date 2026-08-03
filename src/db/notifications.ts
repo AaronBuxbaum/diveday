@@ -18,59 +18,18 @@ import {
   bookings,
   notificationDeliveries,
   notificationDeliveryAttempts,
-  notificationRateLimitState,
   notificationSendQueue,
   people,
   shops,
   trips,
 } from "./schema";
 
-const RESEND_REQUEST_INTERVAL_MS = 125;
 const RETRY_QUEUE_LIMIT = 100;
 const RETRY_QUEUE_MAX_ATTEMPTS = 8;
 
-function wait(milliseconds: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, milliseconds));
-}
-
-/**
- * Reserve one request slot for the whole Resend team. The row lock makes this
- * safe when Vercel has several instances draining or sending at once.
- */
-export async function reserveResendRequest(db: AppDb): Promise<void> {
-  const now = nowDate();
-  const scheduledAt = await db.transaction(async (tx) => {
-    await tx
-      .insert(notificationRateLimitState)
-      .values({ key: "resend", nextAllowedAt: now })
-      .onConflictDoNothing();
-    const [state] = await tx
-      .select()
-      .from(notificationRateLimitState)
-      .where(eq(notificationRateLimitState.key, "resend"))
-      .for("update");
-    const nextAllowedAt = Math.max(now.getTime(), state?.nextAllowedAt.getTime() ?? now.getTime());
-    await tx
-      .update(notificationRateLimitState)
-      .set({ nextAllowedAt: new Date(nextAllowedAt + RESEND_REQUEST_INTERVAL_MS) })
-      .where(eq(notificationRateLimitState.key, "resend"));
-    return nextAllowedAt;
-  });
-  const delay = scheduledAt - now.getTime();
-  if (delay > 0) await wait(delay);
-}
-
-/** Use the durable team permit for the default provider; tests may inject a fake. */
-export function notificationProviderForDb(
-  db: AppDb,
-  provider?: NotificationProvider,
-): NotificationProvider {
-  return (
-    provider ??
-    notificationProviderFromEnvironment(process.env, fetch, {
-      beforeRequest: () => reserveResendRequest(db),
-    })
-  );
+/** Use the environment-configured SES provider by default; tests may inject a fake. */
+export function notificationProviderForDb(provider?: NotificationProvider): NotificationProvider {
+  return provider ?? notificationProviderFromEnvironment();
 }
 
 function retryDueAt(
@@ -110,7 +69,7 @@ export async function sendNotification(
 ): Promise<NotificationDelivery> {
   let delivery: NotificationDelivery;
   try {
-    delivery = await notify(input, notificationProviderForDb(db, provider));
+    delivery = await notify(input, notificationProviderForDb(provider));
   } catch (error) {
     delivery = {
       status: "failed",
@@ -133,15 +92,17 @@ export async function sendNotification(
 }
 
 /**
- * Send a known fan-out through Resend's batch endpoint when available. Batches
- * are capped at 100 by Resend; each returned id remains aligned to its input.
+ * Send a known fan-out through the provider's batch endpoint when it has one
+ * (`NotificationProvider.sendBatch` is optional; SES has none, so this falls
+ * back to sending each notification individually). Batches are capped at 100
+ * per request; each returned id remains aligned to its input.
  */
 export async function sendNotificationBatch(
   db: AppDb,
   inputs: Notification[],
   provider?: NotificationProvider,
 ): Promise<NotificationDelivery[]> {
-  const resolved = notificationProviderForDb(db, provider);
+  const resolved = notificationProviderForDb(provider);
   const deliveries: NotificationDelivery[] = [];
   for (let offset = 0; offset < inputs.length; offset += 100) {
     const batch = inputs.slice(offset, offset + 100);
@@ -221,7 +182,7 @@ export async function drainNotificationRetries(
     failed: 0,
   };
   if (candidates.length === 0) return summary;
-  const provider = notificationProviderForDb(db, options.provider);
+  const provider = notificationProviderForDb(options.provider);
 
   for (const candidate of candidates) {
     const lockedUntil = new Date(now.getTime() + 10 * 60 * 1_000);
@@ -508,13 +469,13 @@ export type ApplyProviderEmailEventResult = "applied" | "stale" | "unknown_messa
  * at-least-once and unordered, so an older event arriving after a newer one is
  * normal and is dropped as `stale` rather than allowed to overwrite. And a
  * message id we don't recognise — a waitlist invite, which keeps no delivery
- * row, or mail sent from the Resend dashboard — is `unknown_message`, not an
- * error: the endpoint has no business failing over an event about a message it
- * never tracked.
+ * row, or mail sent directly from the AWS SES console — is `unknown_message`,
+ * not an error: the endpoint has no business failing over an event about a
+ * message it never tracked.
  *
  * Not tenant-scoped by argument, because a webhook carries no tenant: the
- * provider message id, minted by Resend per send, *is* the scope. It reaches
- * exactly the row that recorded that send.
+ * provider message id, minted by the provider per send, *is* the scope. It
+ * reaches exactly the row that recorded that send.
  */
 export async function applyProviderEmailEvent(
   db: AppDb,
@@ -526,9 +487,9 @@ export async function applyProviderEmailEvent(
     /**
      * Restrict the update to one shop's rows.
      *
-     * Optional because the email providers have nothing to scope by — a Resend
-     * or SES event names a message id and nothing else, and those ids come from
-     * DiveDay's own single account. A provider whose events *do* carry a tenant
+     * Optional because SES has nothing to scope by — its event names a message
+     * id and nothing else, and those ids come from DiveDay's own single
+     * account. A provider whose events *do* carry a tenant
      * (WhatsApp names the WhatsApp Business Account) passes it, so a delivery
      * outcome can never land on another shop's row even if a provider message
      * id were ever guessable or reused.

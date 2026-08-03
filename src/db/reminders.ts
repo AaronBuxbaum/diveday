@@ -173,7 +173,7 @@ export async function sendDueReminders(
   options: SendDueRemindersOptions = {},
 ): Promise<ReminderRunSummary> {
   const now = options.now ?? nowDate();
-  const emailProvider = notificationProviderForDb(db, options.emailProvider);
+  const emailProvider = notificationProviderForDb(options.emailProvider);
   const smsProvider = options.smsProvider ?? smsProviderFromEnvironment();
   const origin = options.appOrigin === undefined ? publicAppUrl() : options.appOrigin;
   const horizon = new Date(now.getTime() + MAX_REMINDER_LEAD_HOURS * HOUR_MS);

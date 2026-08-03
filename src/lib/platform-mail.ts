@@ -1,5 +1,5 @@
 /**
- * DiveDay's own hosted mailboxes (docs/engineering/resend-email-runbook.md,
+ * DiveDay's own hosted mailboxes (docs/engineering/ses-email-runbook.md,
  * ADR 20260726-hosted-mailboxes-for-platform-mail). Not sent by the app —
  * real mailboxes set up with the mail provider — so these are just the
  * addresses, shared here so every surface that offers one renders the same

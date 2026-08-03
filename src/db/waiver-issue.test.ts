@@ -1,3 +1,4 @@
+import type { SendEmailCommand } from "@aws-sdk/client-sesv2";
 import { eq } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { seededShopContext } from "@/test/db";
@@ -8,7 +9,18 @@ import { upcomingTripsWithCounts } from "./trips";
 import { emailFreshWaiverLink, issueAndDeliverWaiver, issueWaiverOnJoin } from "./waiver-issue";
 import { completeWaiver, getWaiverForToken, issueWaiverRequest, saveWaiverDraft } from "./waivers";
 
-async function seededBooking(email: string | null = "delivered@resend.dev") {
+const { sesSend } = vi.hoisted(() => ({ sesSend: vi.fn() }));
+vi.mock("@aws-sdk/client-sesv2", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@aws-sdk/client-sesv2")>();
+  return {
+    ...actual,
+    SESv2Client: vi.fn().mockImplementation(function SESv2Client() {
+      return { send: sesSend };
+    }),
+  };
+});
+
+async function seededBooking(email: string | null = "delivered@dive.day") {
   const { db, shop } = await seededShopContext();
   const [trip] = await upcomingTripsWithCounts(db, shop.id);
   if (!trip) throw new Error("demo trip missing");
@@ -17,7 +29,7 @@ async function seededBooking(email: string | null = "delivered@resend.dev") {
     shopId: shop.id,
     tripId: trip.id,
     fullName: "Nora Quinn",
-    email: email ?? "delivered@resend.dev",
+    email: email ?? "delivered@dive.day",
   });
   if (!outcome.ok) throw new Error(`booking failed: ${outcome.reason}`);
   if (email === null) {
@@ -33,24 +45,23 @@ async function seededBooking(email: string | null = "delivered@resend.dev") {
 
 afterEach(() => {
   vi.unstubAllEnvs();
-  vi.unstubAllGlobals();
+  sesSend.mockReset();
 });
 
 describe("issueAndDeliverWaiver", () => {
   it("emails the link and reports it sent when delivery is configured", async () => {
     vi.stubEnv("APP_HOST", "https://diveday.example");
-    vi.stubEnv("RESEND_API_KEY", "re_test");
-    vi.stubEnv("RESEND_FROM_EMAIL", "shop@diveday.example");
-    const fetchImpl = vi
-      .fn()
-      .mockResolvedValue(new Response(JSON.stringify({ id: "resend-id" }), { status: 200 }));
-    vi.stubGlobal("fetch", fetchImpl);
+    vi.stubEnv("SES_AWS_REGION", "us-east-1");
+    vi.stubEnv("SES_AWS_ACCESS_KEY_ID", "AKIA_TEST");
+    vi.stubEnv("SES_AWS_SECRET_ACCESS_KEY", "test-secret");
+    vi.stubEnv("SES_FROM_EMAIL", "shop@diveday.example");
+    sesSend.mockResolvedValue({ MessageId: "ses-id" });
 
     const { db, shop, bookingId } = await seededBooking();
     const result = await issueAndDeliverWaiver(db, shop.id, bookingId);
 
     expect(result).toMatchObject({ ok: true, delivery: "sent", diverName: "Nora Quinn" });
-    expect(fetchImpl).toHaveBeenCalledOnce();
+    expect(sesSend).toHaveBeenCalledOnce();
     const [delivery] = await db
       .select()
       .from(notificationDeliveries)
@@ -60,8 +71,8 @@ describe("issueAndDeliverWaiver", () => {
 
   it("surfaces the private link when email is not configured", async () => {
     vi.stubEnv("APP_HOST", "https://diveday.example");
-    vi.stubEnv("RESEND_API_KEY", "");
-    vi.stubEnv("RESEND_FROM_EMAIL", "");
+    vi.stubEnv("SES_AWS_REGION", "");
+    vi.stubEnv("SES_FROM_EMAIL", "");
 
     const { db, shop, bookingId } = await seededBooking();
     const result = await issueAndDeliverWaiver(db, shop.id, bookingId);
@@ -70,18 +81,18 @@ describe("issueAndDeliverWaiver", () => {
     if (result.ok) expect(result.token).toBeTruthy();
   });
 
-  it("surfaces reserved test recipients without calling Resend", async () => {
+  it("surfaces reserved test recipients without calling SES", async () => {
     vi.stubEnv("APP_HOST", "https://diveday.example");
-    vi.stubEnv("RESEND_API_KEY", "re_test");
-    vi.stubEnv("RESEND_FROM_EMAIL", "shop@diveday.example");
-    const fetchImpl = vi.fn();
-    vi.stubGlobal("fetch", fetchImpl);
+    vi.stubEnv("SES_AWS_REGION", "us-east-1");
+    vi.stubEnv("SES_AWS_ACCESS_KEY_ID", "AKIA_TEST");
+    vi.stubEnv("SES_AWS_SECRET_ACCESS_KEY", "test-secret");
+    vi.stubEnv("SES_FROM_EMAIL", "shop@diveday.example");
 
     const { db, shop, bookingId } = await seededBooking("nora@example.com");
     const result = await issueAndDeliverWaiver(db, shop.id, bookingId);
 
     expect(result).toMatchObject({ ok: true, delivery: "test_recipient" });
-    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(sesSend).not.toHaveBeenCalled();
     const [delivery] = await db
       .select()
       .from(notificationDeliveries)
@@ -93,14 +104,16 @@ describe("issueAndDeliverWaiver", () => {
 
   it("surfaces a provider failure distinctly from missing configuration", async () => {
     vi.stubEnv("APP_HOST", "https://diveday.example");
-    vi.stubEnv("RESEND_API_KEY", "re_test");
-    vi.stubEnv("RESEND_FROM_EMAIL", "shop@diveday.example");
-    const fetchImpl = vi
-      .fn()
-      .mockResolvedValue(
-        new Response(JSON.stringify({ message: "invalid sender" }), { status: 403 }),
-      );
-    vi.stubGlobal("fetch", fetchImpl);
+    vi.stubEnv("SES_AWS_REGION", "us-east-1");
+    vi.stubEnv("SES_AWS_ACCESS_KEY_ID", "AKIA_TEST");
+    vi.stubEnv("SES_AWS_SECRET_ACCESS_KEY", "test-secret");
+    vi.stubEnv("SES_FROM_EMAIL", "shop@diveday.example");
+    sesSend.mockRejectedValue(
+      Object.assign(new Error("invalid sender"), {
+        name: "MessageRejected",
+        $metadata: { httpStatusCode: 403 },
+      }),
+    );
 
     const { db, shop, bookingId } = await seededBooking();
     const result = await issueAndDeliverWaiver(db, shop.id, bookingId);
@@ -140,7 +153,7 @@ describe("issueAndDeliverWaiver", () => {
 
 describe("emailFreshWaiverLink", () => {
   /** An issued link, and the instant it is already dead. */
-  async function expiredLink(email: string | null = "delivered@resend.dev") {
+  async function expiredLink(email: string | null = "delivered@dive.day") {
     const context = await seededBooking(email);
     const issued = await issueWaiverRequest(context.db, {
       shopId: context.shop.id,
@@ -152,32 +165,27 @@ describe("emailFreshWaiverLink", () => {
 
   function configureEmail() {
     vi.stubEnv("APP_HOST", "https://diveday.example");
-    vi.stubEnv("RESEND_API_KEY", "re_test");
-    vi.stubEnv("RESEND_FROM_EMAIL", "shop@diveday.example");
-    // A fresh Response per call: a body can only be read once, so a shared one
-    // would make the *second* send in the repeat-tap test look like a network
-    // failure rather than exercising what it means to.
-    const fetchImpl = vi
-      .fn()
-      .mockImplementation(
-        async () => new Response(JSON.stringify({ id: "resend-id" }), { status: 200 }),
-      );
-    vi.stubGlobal("fetch", fetchImpl);
-    return fetchImpl;
+    vi.stubEnv("SES_AWS_REGION", "us-east-1");
+    vi.stubEnv("SES_AWS_ACCESS_KEY_ID", "AKIA_TEST");
+    vi.stubEnv("SES_AWS_SECRET_ACCESS_KEY", "test-secret");
+    vi.stubEnv("SES_FROM_EMAIL", "shop@diveday.example");
+    sesSend.mockResolvedValue({ MessageId: "ses-id" });
+    return sesSend;
   }
 
   it("mails a replacement to the address on file and never hands one back", async () => {
-    const fetchImpl = configureEmail();
+    const send = configureEmail();
     const { db, token, after } = await expiredLink();
 
     await expect(emailFreshWaiverLink(db, token, after)).resolves.toBe("sent");
-    expect(fetchImpl).toHaveBeenCalledOnce();
+    expect(send).toHaveBeenCalledOnce();
     // The whole point of the flow: a stale bearer URL triggers a delivery to
     // its owner and nothing more. Anything token-shaped in the return value
     // would hand fresh access to whoever is holding the dead link.
-    const body = JSON.parse(String(vi.mocked(fetchImpl).mock.calls[0]?.[1]?.body));
-    expect(String(body.html)).toContain("/waivers/");
-    expect(String(body.html)).not.toContain(token);
+    const command = send.mock.calls[0]?.[0] as SendEmailCommand;
+    const html = command.input.Content?.Simple?.Body?.Html?.Data;
+    expect(String(html)).toContain("/waivers/");
+    expect(String(html)).not.toContain(token);
   });
 
   it("stays usable from the same dead URL after the first send", async () => {
@@ -204,7 +212,7 @@ describe("emailFreshWaiverLink", () => {
     // whoever holds the dead link could reissue at will — killing the link the
     // diver is actually working in and taking their half-filled medical
     // answers with it. A remote wipe button, triggerable by a forwarded email.
-    const fetchImpl = configureEmail();
+    const send = configureEmail();
     const { db, shop, bookingId, token, after } = await expiredLink();
     // Issued at the instant the first link dies, so at `after` the diver's own
     // link is comfortably live while the one in the attacker's hands is not.
@@ -226,7 +234,7 @@ describe("emailFreshWaiverLink", () => {
     await expect(emailFreshWaiverLink(db, token, after)).resolves.toBe("current_link_live");
 
     // Nothing was issued and nothing was mailed…
-    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(send).not.toHaveBeenCalled();
     const records = await db
       .select({ id: waiverRecords.id })
       .from(waiverRecords)
@@ -270,8 +278,8 @@ describe("emailFreshWaiverLink", () => {
 
   it("never claims mail is on its way when nothing left the building", async () => {
     vi.stubEnv("APP_HOST", "https://diveday.example");
-    vi.stubEnv("RESEND_API_KEY", "");
-    vi.stubEnv("RESEND_FROM_EMAIL", "");
+    vi.stubEnv("SES_AWS_REGION", "");
+    vi.stubEnv("SES_FROM_EMAIL", "");
     const { db, token, after } = await expiredLink();
 
     await expect(emailFreshWaiverLink(db, token, after)).resolves.toBe("failed");

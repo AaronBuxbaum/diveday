@@ -1,7 +1,12 @@
 # 20260802-ses-adapter-and-webhook — Write the SES adapter with the AWS SDK, and its SNS webhook
 
-- **Status:** Accepted
+- **Status:** Superseded by [20260803-ses-sole-email-provider](20260803-ses-sole-email-provider.md)
 - **Date:** 2026-08-02
+
+> The SES adapter, its SNS webhook, and the SigV4/SDK/hand-rolled-verification reasoning below all
+> still stand as written. What's superseded is narrower: the opt-in `EMAIL_PROVIDER=ses` flag and
+> "defaults to Resend" design — SES is now the sole, unconditional provider and Resend has been
+> removed entirely.
 
 ## Context
 

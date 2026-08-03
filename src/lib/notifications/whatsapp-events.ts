@@ -14,9 +14,9 @@ import type { ProviderEmailStatus } from "./events";
  * **DiveDay's** app, so all of it arrives here under one secret.
  *
  * Hand-verified against Meta's `X-Hub-Signature-256` scheme rather than through
- * an SDK, the same call already made for Resend (`./webhook.ts`) and Stripe
- * (`src/lib/payments/webhook.ts`). Fails closed: an invalid signature, or a
- * missing secret, never reaches event handling.
+ * an SDK, the same call already made for SNS message signing (`./sns.ts`) and
+ * Stripe (`src/lib/payments/webhook.ts`). Fails closed: an invalid signature,
+ * or a missing secret, never reaches event handling.
  */
 
 export type WhatsAppWebhookVerification =

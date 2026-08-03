@@ -1,6 +1,5 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { nowDate } from "@/lib/clock";
 import type { Notification, NotificationDelivery, NotificationProvider } from "@/lib/notifications";
 import { seededShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
@@ -10,17 +9,10 @@ import {
   listDeliveryAttempts,
   listNotificationDeliveryIssues,
   recordNotificationDelivery,
-  reserveResendRequest,
   retryBookingConfirmation,
   sendNotification,
 } from "./notifications";
-import {
-  notificationDeliveries,
-  notificationRateLimitState,
-  notificationSendQueue,
-  people,
-  shops,
-} from "./schema";
+import { notificationDeliveries, notificationSendQueue, people, shops } from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
 
 async function seededBooking() {
@@ -39,15 +31,6 @@ async function seededBooking() {
 }
 
 describe("notification delivery status", () => {
-  it("reserves team-wide Resend permits across concurrent workers", async () => {
-    const { db } = await seededBooking();
-    const before = nowDate().getTime();
-    await Promise.all([reserveResendRequest(db), reserveResendRequest(db)]);
-    const [state] = await db.select().from(notificationRateLimitState);
-    expect(state?.key).toBe("resend");
-    expect(state?.nextAllowedAt.getTime()).toBeGreaterThan(before + 150);
-  });
-
   it("queues a retryable provider failure and drains it later", async () => {
     const { db, shop, booking } = await seededBooking();
     const notification: Notification = {
@@ -293,7 +276,7 @@ describe("provider-reported delivery events", () => {
     expect(delivery?.providerStatus).toBe("delivered");
   });
 
-  it("reports an unknown message id without failing, so Resend stops retrying", async () => {
+  it("reports an unknown message id without failing, so the webhook caller stops retrying", async () => {
     const { db } = await sentConfirmation();
     await expect(
       applyProviderEmailEvent(db, {

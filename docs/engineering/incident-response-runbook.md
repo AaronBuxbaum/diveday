@@ -18,7 +18,7 @@ consulting anyone.
 > Sentry issue alerts, Sentry Cron Monitor missed check-ins, the uptime monitor below, and the app's
 > own new-account alert (`ALERT_EMAIL` in `src/lib/platform-mail.ts` already targets it). Set it up
 > the same way `aaron@dive.day` and `legal@dive.day` were — see "DiveDay's own addresses" in
-> [resend-email-runbook.md](resend-email-runbook.md). Until it exists, **every alert in this
+> [ses-email-runbook.md](ses-email-runbook.md). Until it exists, **every alert in this
 > document goes nowhere.**
 
 > `TODO(owner)` — **Repoint the AWS cost alerts too.** `infra/lib/infra-stack.ts` §7 defaults
@@ -224,7 +224,7 @@ down once will let you down again.
   medical data, or Stripe credentials needs a disclosure decision that is a legal question
   ([H-02](../product/human-decisions.md)), not an engineering one, and that path is not written down
   yet.
-- **Third-party outages (Vercel, Neon, Stripe, Resend, Twilio) have no documented degradation
+- **Third-party outages (Vercel, Neon, Stripe, AWS SES, Twilio) have no documented degradation
   playbook.** Check the provider's status page first; the app degrades to `not_configured` for
   notifications, but there is no rehearsed response for a Stripe or Neon outage.
 
