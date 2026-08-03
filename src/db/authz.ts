@@ -4,6 +4,7 @@ import {
   canDeleteDiver,
   canErasePersonalData,
   canManageMessagingSettings,
+  canManageOrders,
   canManagePaymentSettings,
   canManageStaffAccounts,
   canManageWaiverTemplates,
@@ -71,6 +72,15 @@ export const canPersonManageMessagingSettings = (
 
 export const canPersonRefund = (db: DbExecutor, shopId: string, personId: string) =>
   canPerson(db, shopId, personId, canRefund);
+
+/**
+ * Live DB-checked companion of the invoicing gate (src/lib/authz.ts).
+ * `createOrder` calls this itself as well as the route/action above it: an
+ * invoice is a bill sent to a real customer on the shop's own Stripe account,
+ * so "the caller forgot to check" is not something a later apology undoes.
+ */
+export const canPersonManageOrders = (db: DbExecutor, shopId: string, personId: string) =>
+  canPerson(db, shopId, personId, canManageOrders);
 
 export const canPersonManageWaiverTemplates = (db: DbExecutor, shopId: string, personId: string) =>
   canPerson(db, shopId, personId, canManageWaiverTemplates);

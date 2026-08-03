@@ -2,6 +2,7 @@ import { and, asc, count, desc, eq, gte, ilike, inArray, lt } from "drizzle-orm"
 import { nowDate } from "@/lib/clock";
 import { majorToMinor } from "@/lib/money";
 import { type InvoicingProvider, invoicingProviderFromEnvironment } from "@/lib/payments/invoicing";
+import { canPersonManageOrders } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
 import { offsetPage } from "./paging";
 import {
@@ -46,6 +47,10 @@ export type NewOrderLineItem = {
 export type NewOrderInput = {
   shopId: string;
   personId: string;
+  /**
+   * The staff member raising this invoice — provenance on the order row *and*
+   * the actor `createOrder` authorizes, so it is never a stand-in id.
+   */
   createdByPersonId: string;
   bookingId?: string | null;
   description?: string | null;
@@ -54,10 +59,10 @@ export type NewOrderInput = {
 
 export type CreateOrderOutcome =
   | { ok: true; order: Order }
-  | { ok: false; reason: "not_connected" | "invalid" | "stripe_failed" };
+  | { ok: false; reason: "not_authorized" | "not_connected" | "invalid" | "stripe_failed" };
 
 // Defense-in-depth bounds (CR-016) matching the action-layer zod schema in
-// src/app/shop/[shopSlug]/orders/new/page.tsx, so a caller that bypasses that
+// src/app/shop/[shopSlug]/orders/new/actions.ts, so a caller that bypasses that
 // form (a direct createOrder call, a future admin tool) can't persist an
 // out-of-bounds line item either.
 const MAX_LINE_ITEM_QUANTITY = 100;
@@ -65,6 +70,9 @@ const MAX_LINE_ITEM_QUANTITY = 100;
 export const MAX_LINE_ITEM_UNIT_AMOUNT_MAJOR = 100_000;
 const MAX_LINE_ITEM_DESCRIPTION_LENGTH = 200;
 const MAX_LINE_ITEMS_PER_ORDER = 20;
+// Same bound the action's zod schema enforces; the two layers must agree
+// (CR-016 pattern, like the per-line description bound below).
+const MAX_ORDER_DESCRIPTION_LENGTH = 200;
 const orderLineItemKindValues = new Set<string>(orderLineItemKind.enumValues);
 
 /**
@@ -100,16 +108,29 @@ function mapStripeStatus(stripeStatus: string): OrderStatus {
 
 /**
  * Build and send an order/invoice on the shop's connected Stripe account,
- * then persist the local order + line items. Fails closed: no connected,
- * charges-enabled account, no valid customer, or a Stripe error all stop
- * before any row is written (docs ADR 20260719-stripe-connect-orders).
+ * then persist the local order + line items. Fails closed: an unauthorized
+ * creator, no connected charges-enabled account, no valid customer, or a Stripe
+ * error all stop before any row is written (docs ADR 20260719-stripe-connect-orders).
  */
 export async function createOrder(
   db: AppDb,
   input: NewOrderInput,
   invoicing: InvoicingProvider = invoicingProviderFromEnvironment(),
 ): Promise<CreateOrderOutcome> {
+  // Answered before anything else, and re-read from `person_roles` rather than
+  // taken from the caller: billing a diver is owner/manager work (H-14, ADR
+  // 20260724-role-authorization), and an invoice that has left for a real
+  // customer on the shop's own Stripe account is not something a later apology
+  // recalls. Same fail-closed second layer `anonymizeDiver` keeps under the
+  // erasure gate — the route above is expected to check too, but "the route
+  // forgot" must not be enough.
+  if (!(await canPersonManageOrders(db, input.shopId, input.createdByPersonId))) {
+    return { ok: false, reason: "not_authorized" };
+  }
   if (input.lineItems.length === 0 || input.lineItems.length > MAX_LINE_ITEMS_PER_ORDER) {
+    return { ok: false, reason: "invalid" };
+  }
+  if ((input.description?.length ?? 0) > MAX_ORDER_DESCRIPTION_LENGTH) {
     return { ok: false, reason: "invalid" };
   }
   // The shop's declared currency (docs ADR 20260731-shop-currency), not the
@@ -135,10 +156,20 @@ export async function createOrder(
   if (!customer?.email) return { ok: false, reason: "invalid" };
 
   if (input.bookingId) {
+    // Bound to the invoiced person, not just the shop: when Stripe later
+    // reports the invoice paid, setBookingPaymentIfNotFinal marks THIS
+    // booking paid — linking diver A's order to diver B's booking would mark
+    // B's seat paid off A's money.
     const [booking] = await db
       .select({ id: bookings.id })
       .from(bookings)
-      .where(and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId)))
+      .where(
+        and(
+          eq(bookings.id, input.bookingId),
+          eq(bookings.shopId, input.shopId),
+          eq(bookings.personId, input.personId),
+        ),
+      )
       .limit(1);
     if (!booking) return { ok: false, reason: "invalid" };
   }

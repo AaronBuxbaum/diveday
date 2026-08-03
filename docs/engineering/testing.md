@@ -37,9 +37,9 @@ real, and a written `exempt` reason for any route that has neither.
 It exists because a page with no test is silent by construction: it produces no failure for anyone
 to notice. A 2026-08-03 evaluation of the test system found three staff pages that had shipped with
 neither an e2e spec nor a visual capture — `/shop/[shopSlug]/orders/new`,
-`/shop/[shopSlug]/dive-sites/catalog`, and `/shop/[shopSlug]/staffing`. They are the ledger's three
-exemptions today, and closing one means writing the spec and deleting the exemption in the same
-change.
+`/shop/[shopSlug]/dive-sites/catalog`, and `/shop/[shopSlug]/staffing`. All three have since been
+covered and the ledger holds no exemptions; closing a future one means writing the spec and
+deleting the exemption in the same change.
 
 The coverage lists are hand-maintained, deliberately. A spec usually reaches a route by *clicking*
 — `e2e/waivers.spec.ts` gets to `/waivers/[token]` by pressing "Send waiver" and following the link

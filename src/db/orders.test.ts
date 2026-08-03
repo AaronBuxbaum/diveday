@@ -11,6 +11,11 @@ import type {
   VoidInvoiceResult,
 } from "@/lib/payments/invoicing";
 import { dbNow, seededShopContext } from "@/test/db";
+import {
+  SEEDED_CAPTAIN_EMAIL,
+  SEEDED_OWNER_EMAIL,
+  seededStaffPersonId,
+} from "@/test/staff-session";
 import { createBooking } from "./bookings";
 import { updateCourse } from "./courses";
 import {
@@ -87,7 +92,11 @@ async function orderContext() {
   if (!reef) throw new Error("demo reef trip missing");
   const [entry] = await getTripRoster(db, shop.id, reef.id);
   if (!entry) throw new Error("demo booking missing");
-  return { db, shop, reef, entry };
+  // Whoever raises the invoice has to pass `createOrder`'s own owner/manager
+  // check (H-14), so the fixture's creator is the seeded owner — not the diver
+  // being billed, which is what these tests used before the gate existed.
+  const staff = await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL);
+  return { db, shop, reef, entry, staff };
 }
 
 const lineItems = [
@@ -121,14 +130,44 @@ async function connectedShop(
 }
 
 describe("orders", () => {
-  it("refuses to create an order when the shop has no payment-ready Stripe account", async () => {
+  it("refuses a captain outright — billing a diver is owner/manager work", async () => {
+    // The second line of defense under `createOrderAction`'s gate (H-14, ADR
+    // 20260724-role-authorization): a caller that never checked still cannot
+    // put an invoice in front of a customer. Asserted on a shop that *can*
+    // take money and with a working invoicing fake, so the refusal is the role
+    // and nothing else — and checked before the roster row, so nothing was
+    // written and Stripe was never asked.
     const { db, shop, entry } = await orderContext();
+    await connectedShop(db, shop.id);
+    const captain = await seededStaffPersonId(db, shop.id, SEEDED_CAPTAIN_EMAIL);
+    const invoicing = fakeInvoicing();
+    const createInvoice = vi.spyOn(invoicing, "createInvoice");
+    const before = (await db.select({ id: orders.id }).from(orders)).length;
+
     const result = await createOrder(
       db,
       {
         shopId: shop.id,
         personId: entry.person.id,
-        createdByPersonId: entry.person.id,
+        createdByPersonId: captain,
+        lineItems,
+      },
+      invoicing,
+    );
+
+    expect(result).toEqual({ ok: false, reason: "not_authorized" });
+    expect(createInvoice).not.toHaveBeenCalled();
+    expect((await db.select({ id: orders.id }).from(orders)).length).toBe(before);
+  });
+
+  it("refuses to create an order when the shop has no payment-ready Stripe account", async () => {
+    const { db, shop, entry, staff } = await orderContext();
+    const result = await createOrder(
+      db,
+      {
+        shopId: shop.id,
+        personId: entry.person.id,
+        createdByPersonId: staff,
         lineItems,
       },
       fakeInvoicing(),
@@ -137,7 +176,7 @@ describe("orders", () => {
   });
 
   it("rejects an order with no line items or an unknown customer", async () => {
-    const { db, shop, entry } = await orderContext();
+    const { db, shop, entry, staff } = await orderContext();
     await upsertShopStripeAccount(db, shop.id, "acct_123");
     await setShopStripeAccountStatus(db, "acct_123", {
       chargesEnabled: true,
@@ -151,7 +190,7 @@ describe("orders", () => {
         {
           shopId: shop.id,
           personId: entry.person.id,
-          createdByPersonId: entry.person.id,
+          createdByPersonId: staff,
           lineItems: [],
         },
         fakeInvoicing(),
@@ -164,7 +203,7 @@ describe("orders", () => {
         {
           shopId: shop.id,
           personId: "00000000-0000-4000-8000-000000000000",
-          createdByPersonId: entry.person.id,
+          createdByPersonId: staff,
           lineItems,
         },
         fakeInvoicing(),
@@ -173,14 +212,14 @@ describe("orders", () => {
   });
 
   it("rejects a line item outside its numeric or enum bounds (CR-016)", async () => {
-    const { db, shop, entry } = await orderContext();
+    const { db, shop, entry, staff } = await orderContext();
     await upsertShopStripeAccount(db, shop.id, "acct_123");
     await setShopStripeAccountStatus(db, "acct_123", {
       chargesEnabled: true,
       payoutsEnabled: true,
       detailsSubmitted: true,
     });
-    const base = { shopId: shop.id, personId: entry.person.id, createdByPersonId: entry.person.id };
+    const base = { shopId: shop.id, personId: entry.person.id, createdByPersonId: staff };
     const goodItem = lineItems[0];
     if (!goodItem) throw new Error("fixture missing");
 
@@ -210,7 +249,7 @@ describe("orders", () => {
   });
 
   it("creates an order, invoices the connected account, and lists/fetches it", async () => {
-    const { db, shop, entry } = await orderContext();
+    const { db, shop, entry, staff } = await orderContext();
     await upsertShopStripeAccount(db, shop.id, "acct_123");
     await setShopStripeAccountStatus(db, "acct_123", {
       chargesEnabled: true,
@@ -223,7 +262,7 @@ describe("orders", () => {
       {
         shopId: shop.id,
         personId: entry.person.id,
-        createdByPersonId: entry.person.id,
+        createdByPersonId: staff,
         bookingId: entry.booking.id,
         lineItems,
       },
@@ -238,11 +277,12 @@ describe("orders", () => {
     const fetched = await getOrder(db, shop.id, result.order.id);
     expect(fetched?.lineItems).toHaveLength(2);
     expect(fetched?.person.id).toBe(entry.person.id);
-    // Who raised it, for the detail page's "Raised {date} by {name}" line.
-    expect(fetched?.createdBy).toEqual({ id: entry.person.id, fullName: entry.person.fullName });
+    // Who raised it, for the detail page's "Raised {date} by {name}" line — the
+    // staff member who billed the diver, never the diver being billed.
+    expect(fetched?.createdBy).toEqual({ id: staff, fullName: "Dana Reyes" });
     // …and it stays inside the tenant: a lookup scoped to another shop finds no
     // order at all, so nothing about its creator leaks either.
-    expect(fetched?.order.createdByPersonId).toBe(entry.person.id);
+    expect(fetched?.order.createdByPersonId).toBe(staff);
 
     const list = await listOrders(db, shop.id);
     expect(list.map((row) => row.order.id)).toContain(result.order.id);
@@ -252,7 +292,7 @@ describe("orders", () => {
   });
 
   it("invoices in the shop's currency, not a hardcoded usd", async () => {
-    const { db, shop, entry } = await orderContext();
+    const { db, shop, entry, staff } = await orderContext();
     await connectedShop(db, shop.id);
     await setShopCurrency(db, shop.id, "eur");
     // Stripe reports a different settlement currency for the connected
@@ -270,7 +310,7 @@ describe("orders", () => {
       {
         shopId: shop.id,
         personId: entry.person.id,
-        createdByPersonId: entry.person.id,
+        createdByPersonId: staff,
         lineItems,
       },
       fakeInvoicing({
@@ -287,13 +327,13 @@ describe("orders", () => {
   });
 
   it("never divides a zero-decimal currency by 100, and bounds it in major units", async () => {
-    const { db, shop, entry } = await orderContext();
+    const { db, shop, entry, staff } = await orderContext();
     await connectedShop(db, shop.id);
     await setShopCurrency(db, shop.id, "jpy");
     const base = {
       shopId: shop.id,
       personId: entry.person.id,
-      createdByPersonId: entry.person.id,
+      createdByPersonId: staff,
     };
 
     // ¥18,000 stays 18000 minor units end to end.
@@ -325,7 +365,7 @@ describe("orders", () => {
   });
 
   it("keeps a settled order's own currency after the shop switches", async () => {
-    const { db, shop, entry } = await orderContext();
+    const { db, shop, entry, staff } = await orderContext();
     await connectedShop(db, shop.id);
     await setShopCurrency(db, shop.id, "eur");
     const result = await createOrder(
@@ -333,7 +373,7 @@ describe("orders", () => {
       {
         shopId: shop.id,
         personId: entry.person.id,
-        createdByPersonId: entry.person.id,
+        createdByPersonId: staff,
         bookingId: entry.booking.id,
         lineItems,
       },
@@ -351,7 +391,7 @@ describe("orders", () => {
   });
 
   it("is tenant-safe: another shop cannot see or act on the order", async () => {
-    const { db, shop, entry } = await orderContext();
+    const { db, shop, entry, staff } = await orderContext();
     await upsertShopStripeAccount(db, shop.id, "acct_123");
     await setShopStripeAccountStatus(db, "acct_123", {
       chargesEnabled: true,
@@ -360,7 +400,7 @@ describe("orders", () => {
     });
     const result = await createOrder(
       db,
-      { shopId: shop.id, personId: entry.person.id, createdByPersonId: entry.person.id, lineItems },
+      { shopId: shop.id, personId: entry.person.id, createdByPersonId: staff, lineItems },
       fakeInvoicing(),
     );
     if (!result.ok) throw new Error("expected order creation to succeed");
@@ -371,7 +411,7 @@ describe("orders", () => {
   });
 
   it("voids an open order via the connected account", async () => {
-    const { db, shop, entry } = await orderContext();
+    const { db, shop, entry, staff } = await orderContext();
     await upsertShopStripeAccount(db, shop.id, "acct_123");
     await setShopStripeAccountStatus(db, "acct_123", {
       chargesEnabled: true,
@@ -380,7 +420,7 @@ describe("orders", () => {
     });
     const result = await createOrder(
       db,
-      { shopId: shop.id, personId: entry.person.id, createdByPersonId: entry.person.id, lineItems },
+      { shopId: shop.id, personId: entry.person.id, createdByPersonId: staff, lineItems },
       fakeInvoicing(),
     );
     if (!result.ok) throw new Error("expected order creation to succeed");
@@ -394,7 +434,7 @@ describe("orders", () => {
   });
 
   it("refreshes status from Stripe as a fallback when the webhook isn't configured", async () => {
-    const { db, shop, entry } = await orderContext();
+    const { db, shop, entry, staff } = await orderContext();
     await upsertShopStripeAccount(db, shop.id, "acct_123");
     await setShopStripeAccountStatus(db, "acct_123", {
       chargesEnabled: true,
@@ -406,7 +446,7 @@ describe("orders", () => {
       {
         shopId: shop.id,
         personId: entry.person.id,
-        createdByPersonId: entry.person.id,
+        createdByPersonId: staff,
         bookingId: entry.booking.id,
         lineItems,
       },
@@ -423,7 +463,7 @@ describe("orders", () => {
   });
 
   it("refunds a paid order and reopens the linked booking payment gate", async () => {
-    const { db, shop, entry } = await orderContext();
+    const { db, shop, entry, staff } = await orderContext();
     await upsertShopStripeAccount(db, shop.id, "acct_123");
     await setShopStripeAccountStatus(db, "acct_123", {
       chargesEnabled: true,
@@ -435,7 +475,7 @@ describe("orders", () => {
       {
         shopId: shop.id,
         personId: entry.person.id,
-        createdByPersonId: entry.person.id,
+        createdByPersonId: staff,
         bookingId: entry.booking.id,
         lineItems,
       },
@@ -477,7 +517,7 @@ describe("orders", () => {
   // second call returns null — never that Stripe was left alone. One provider
   // across both calls is what actually holds "the diver's money moves once".
   it("asks Stripe for the refund once, however many times refundOrder is called", async () => {
-    const { db, shop, entry } = await orderContext();
+    const { db, shop, entry, staff } = await orderContext();
     await connectedShop(db, shop.id);
     let refundInvoiceCalls = 0;
     const invoicing = fakeInvoicing({
@@ -491,7 +531,7 @@ describe("orders", () => {
       {
         shopId: shop.id,
         personId: entry.person.id,
-        createdByPersonId: entry.person.id,
+        createdByPersonId: staff,
         bookingId: entry.booking.id,
         lineItems,
       },
@@ -512,7 +552,7 @@ describe("orders", () => {
   });
 
   it("marks an order paid from a webhook invoice.paid event and cascades to its booking", async () => {
-    const { db, shop, entry } = await orderContext();
+    const { db, shop, entry, staff } = await orderContext();
     await upsertShopStripeAccount(db, shop.id, "acct_123");
     await setShopStripeAccountStatus(db, "acct_123", {
       chargesEnabled: true,
@@ -524,7 +564,7 @@ describe("orders", () => {
       {
         shopId: shop.id,
         personId: entry.person.id,
-        createdByPersonId: entry.person.id,
+        createdByPersonId: staff,
         bookingId: entry.booking.id,
         lineItems,
       },
@@ -553,7 +593,7 @@ describe("orders", () => {
   // webhook-driven mark functions had no equivalent guard.
   describe("applyOrderUpdate transition guard", () => {
     it("markOrderVoidedByInvoiceId on a paid order leaves it paid", async () => {
-      const { db, shop, entry } = await orderContext();
+      const { db, shop, entry, staff } = await orderContext();
       await upsertShopStripeAccount(db, shop.id, "acct_123");
       await setShopStripeAccountStatus(db, "acct_123", {
         chargesEnabled: true,
@@ -565,7 +605,7 @@ describe("orders", () => {
         {
           shopId: shop.id,
           personId: entry.person.id,
-          createdByPersonId: entry.person.id,
+          createdByPersonId: staff,
           bookingId: entry.booking.id,
           lineItems,
         },
@@ -587,7 +627,7 @@ describe("orders", () => {
     });
 
     it("markOrderPaidByInvoiceId replayed after refundOrder leaves status refunded", async () => {
-      const { db, shop, entry } = await orderContext();
+      const { db, shop, entry, staff } = await orderContext();
       await upsertShopStripeAccount(db, shop.id, "acct_123");
       await setShopStripeAccountStatus(db, "acct_123", {
         chargesEnabled: true,
@@ -599,7 +639,7 @@ describe("orders", () => {
         {
           shopId: shop.id,
           personId: entry.person.id,
-          createdByPersonId: entry.person.id,
+          createdByPersonId: staff,
           bookingId: entry.booking.id,
           lineItems,
         },
@@ -636,7 +676,7 @@ describe("orders", () => {
     });
 
     it("a replayed invoice.paid on an already-paid order is a no-op success", async () => {
-      const { db, shop, entry } = await orderContext();
+      const { db, shop, entry, staff } = await orderContext();
       await upsertShopStripeAccount(db, shop.id, "acct_123");
       await setShopStripeAccountStatus(db, "acct_123", {
         chargesEnabled: true,
@@ -648,7 +688,7 @@ describe("orders", () => {
         {
           shopId: shop.id,
           personId: entry.person.id,
-          createdByPersonId: entry.person.id,
+          createdByPersonId: staff,
           bookingId: entry.booking.id,
           lineItems,
         },
@@ -670,7 +710,7 @@ describe("orders", () => {
     // top-level `account` disagrees with the order's own connected account
     // is refused even though the invoice id alone already matched a row.
     it("refuses to mark an order paid or voided when the expected account doesn't match", async () => {
-      const { db, shop, entry } = await orderContext();
+      const { db, shop, entry, staff } = await orderContext();
       await upsertShopStripeAccount(db, shop.id, "acct_123");
       await setShopStripeAccountStatus(db, "acct_123", {
         chargesEnabled: true,
@@ -682,7 +722,7 @@ describe("orders", () => {
         {
           shopId: shop.id,
           personId: entry.person.id,
-          createdByPersonId: entry.person.id,
+          createdByPersonId: staff,
           bookingId: entry.booking.id,
           lineItems,
         },
@@ -713,7 +753,7 @@ describe("orders", () => {
   // writing the booking payment, then prove a replay of the same webhook
   // self-heals rather than short-circuiting on "already paid".
   it("replay repairs a booking payment left unwritten by a prior partial run", async () => {
-    const { db, shop, entry } = await orderContext();
+    const { db, shop, entry, staff } = await orderContext();
     await upsertShopStripeAccount(db, shop.id, "acct_123");
     await setShopStripeAccountStatus(db, "acct_123", {
       chargesEnabled: true,
@@ -725,7 +765,7 @@ describe("orders", () => {
       {
         shopId: shop.id,
         personId: entry.person.id,
-        createdByPersonId: entry.person.id,
+        createdByPersonId: staff,
         bookingId: entry.booking.id,
         lineItems,
       },
@@ -762,7 +802,7 @@ describe("orders", () => {
   // CR-004: a duplicate or out-of-order webhook must never regress a booking
   // a human already refunded back to "paid".
   it("does not regress an already-refunded booking back to paid on a duplicate webhook", async () => {
-    const { db, shop, entry } = await orderContext();
+    const { db, shop, entry, staff } = await orderContext();
     await upsertShopStripeAccount(db, shop.id, "acct_123");
     await setShopStripeAccountStatus(db, "acct_123", {
       chargesEnabled: true,
@@ -774,7 +814,7 @@ describe("orders", () => {
       {
         shopId: shop.id,
         personId: entry.person.id,
-        createdByPersonId: entry.person.id,
+        createdByPersonId: staff,
         bookingId: entry.booking.id,
         lineItems,
       },
@@ -855,7 +895,7 @@ describe("orders", () => {
 
   describe("listShopOrders", () => {
     it("filters by status, diver, and date range — the /orders index's three filters", async () => {
-      const { db, shop, reef, entry } = await orderContext();
+      const { db, shop, reef, entry, staff } = await orderContext();
       await upsertShopStripeAccount(db, shop.id, "acct_123");
       await setShopStripeAccountStatus(db, "acct_123", {
         chargesEnabled: true,
@@ -871,7 +911,7 @@ describe("orders", () => {
         {
           shopId: shop.id,
           personId: entry.person.id,
-          createdByPersonId: entry.person.id,
+          createdByPersonId: staff,
           lineItems,
         },
         fakeInvoicing(),
@@ -883,7 +923,7 @@ describe("orders", () => {
         {
           shopId: shop.id,
           personId: other.person.id,
-          createdByPersonId: entry.person.id,
+          createdByPersonId: staff,
           lineItems,
         },
         fakeInvoicing({
@@ -1003,7 +1043,7 @@ describe("orders", () => {
     });
 
     it("is tenant-safe: another shop's filter sees none of this shop's orders", async () => {
-      const { db, shop, entry } = await orderContext();
+      const { db, shop, entry, staff } = await orderContext();
       await upsertShopStripeAccount(db, shop.id, "acct_123");
       await setShopStripeAccountStatus(db, "acct_123", {
         chargesEnabled: true,
@@ -1015,7 +1055,7 @@ describe("orders", () => {
         {
           shopId: shop.id,
           personId: entry.person.id,
-          createdByPersonId: entry.person.id,
+          createdByPersonId: staff,
           lineItems,
         },
         fakeInvoicing(),
@@ -1031,7 +1071,7 @@ describe("orders", () => {
 
 /** Connects Stripe and creates an open, invoiced order for the fixture booking — the Today payment row's happy path. */
 async function invoicedOrderContext() {
-  const { db, shop, entry } = await orderContext();
+  const { db, shop, entry, staff } = await orderContext();
   await upsertShopStripeAccount(db, shop.id, "acct_today");
   await setShopStripeAccountStatus(db, "acct_today", {
     chargesEnabled: true,
@@ -1043,7 +1083,7 @@ async function invoicedOrderContext() {
     {
       shopId: shop.id,
       personId: entry.person.id,
-      createdByPersonId: entry.person.id,
+      createdByPersonId: staff,
       bookingId: entry.booking.id,
       lineItems,
     },

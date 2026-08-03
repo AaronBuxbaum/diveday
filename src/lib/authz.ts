@@ -122,6 +122,21 @@ export function canRefund(roles: readonly Role[] | undefined): boolean {
   return isOwnerOrManager(roles);
 }
 
+/**
+ * Raise an invoice against a diver — an order billed on the shop's own
+ * connected Stripe account, which reaches the customer with the shop's name on
+ * it and lands in the shop's books. Money *in* is the same accountable work as
+ * money out (`canRefund`) and as the pricing that decides what money there is
+ * (`canManagePaymentSettings`, which gates discount codes): the daily crew run
+ * the water, the shop bills for it. Raising an order only: voiding one and the
+ * Today queue's re-send of an existing invoice stay open to any staff member,
+ * since neither puts a new bill in front of anyone
+ * (ADR 20260803-invoicing-role-gate).
+ */
+export function canManageOrders(roles: readonly Role[] | undefined): boolean {
+  return isOwnerOrManager(roles);
+}
+
 /** Create or edit the shop's waiver template — the legal instrument itself. */
 export function canManageWaiverTemplates(roles: readonly Role[] | undefined): boolean {
   return isOwnerOrManager(roles);
