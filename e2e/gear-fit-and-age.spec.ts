@@ -338,3 +338,38 @@ test.describe("minimum age (H-08, fail open)", () => {
     await expect(page.getByText(/minimum age that the date of birth on file/)).toBeVisible();
   });
 });
+
+/**
+ * The packing list on a phone. It is a dock surface — a staffer works down it
+ * with a tank in the other hand — and its fourth column is a comma-joined list
+ * of diver names, which at 390px crushes the item, size, and count the packer
+ * actually pulls by. Below `sm` the table gives way to stacked cards, the same
+ * split the diver roster uses.
+ */
+test.describe("the prep list on a phone", () => {
+  signedInAsOwner();
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test("stacks the packing lines into cards instead of a four-column table", async ({ page }) => {
+    const tripPath = await tripPathByTitle(page, "Two-Tank Reef — Molasses & French");
+    await page.goto(`${tripPath}/prep`);
+    await expect(page.getByRole("heading", { name: "Tanks" })).toBeVisible();
+
+    // No sideways scroll to discover: the table is gone at this width.
+    await expect(page.getByRole("table")).toBeHidden();
+
+    const kit = page.getByRole("region", { name: "Rental kit" });
+    const bcdCard = kit.getByRole("listitem").filter({ hasText: "BCD" }).first();
+    await expect(bcdCard).toBeVisible();
+    // Every column the table carried is still on the card, each behind its own
+    // label rather than positionally — the count is the number the packer
+    // loads from, so it must never be the thing that gets truncated.
+    await expect(bcdCard.getByRole("term").filter({ hasText: "Size" })).toBeVisible();
+    await expect(bcdCard.getByRole("term").filter({ hasText: "For" })).toBeVisible();
+
+    // The flagged diver still reads as "fit at check-in" here, not as a
+    // substitute size — same refusal the table makes (see above).
+    await expect(kit).toContainText("Fit at check-in");
+    await expect(kit).not.toContainText("XL");
+  });
+});

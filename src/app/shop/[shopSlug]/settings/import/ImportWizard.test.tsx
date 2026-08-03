@@ -116,6 +116,7 @@ const COPY = {
     waiverAcceptedImported: "Accepted (imported)",
     emptyValue: "—",
   },
+  previewSwipeHint: "Swipe the table to see every column",
   hiddenRowsNotice: "Showing {limit} of {total} rows",
   submit: "Import {count} divers",
   submitting: "Importing…",

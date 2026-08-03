@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { DiverFilter, listDiverSummaries } from "@/db/divers";
 import { staffTranslator } from "@/i18n/staff-messages";
 
@@ -30,6 +31,9 @@ const copy = {
   namePromptText: t("divers.list.namePromptText"),
   removeSavedViewAriaLabel: t("divers.list.removeSavedViewAriaLabel"),
   saveThisView: t("divers.list.saveThisView"),
+  saveViewConfirm: t("divers.list.saveViewConfirm"),
+  saveViewCancel: t("divers.list.saveViewCancel"),
+  savedOnThisDevice: t("divers.list.savedOnThisDevice"),
   peopleHeading: t("divers.list.peopleHeading"),
   searchHintText: t("divers.list.searchHintText"),
   searchDiversLabel: t("divers.list.searchDiversLabel"),
@@ -125,5 +129,124 @@ describe("DiverList empty state", () => {
     renderList({ filter: "insured" });
     expect(screen.getByText("No divers match this view.")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Show all divers" })).toBeInTheDocument();
+  });
+});
+
+/**
+ * Naming a saved view. This used to be `window.prompt`, which blocks the tab,
+ * renders in whatever language the browser chrome is set to rather than the
+ * shop's, and on the shared counter tablet arrives as a system sheet over the
+ * roster. The replacement is a form in the page — so the assertions below are
+ * about a real input and a real submit, and the first one is the regression
+ * guard that no native dialog is reached for at all.
+ */
+describe("DiverList saved views", () => {
+  const VIEWS_KEY = "diveday:diver-views:blue-mantis";
+
+  beforeEach(() => window.localStorage.clear());
+  afterEach(() => window.localStorage.clear());
+
+  it("names a view in the page, never through a native prompt", async () => {
+    const prompt = vi.spyOn(window, "prompt");
+    renderList();
+
+    await userEvent.click(screen.getByRole("button", { name: "+ Save this view" }));
+    expect(prompt).not.toHaveBeenCalled();
+    expect(screen.getByRole("textbox", { name: "Name this view" })).toHaveFocus();
+    prompt.mockRestore();
+  });
+
+  it("pins the named view as a chip carrying the search and filter it was saved from", async () => {
+    renderList({ query: "nitrox", filter: "missing_contact" });
+
+    await userEvent.click(screen.getByRole("button", { name: "+ Save this view" }));
+    await userEvent.type(screen.getByRole("textbox", { name: "Name this view" }), "Sunday boat");
+    await userEvent.click(screen.getByRole("button", { name: "Save view" }));
+
+    expect(JSON.parse(window.localStorage.getItem(VIEWS_KEY) ?? "[]")).toEqual([
+      { name: "Sunday boat", query: "nitrox", filter: "missing_contact" },
+    ]);
+    // Both halves of the view survive the round trip into the chip's href —
+    // dropping the filter is exactly the bug that would leave a staffer
+    // looking at the whole roster under their own view's name.
+    expect(screen.getByRole("link", { name: "Sunday boat" })).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/divers?q=nitrox&filter=missing_contact",
+    );
+    // The form closes behind the save rather than sitting open with the name
+    // still in it, ready to pin a duplicate on a stray second tap.
+    expect(screen.queryByRole("textbox", { name: "Name this view" })).toBeNull();
+  });
+
+  it("re-saving a name replaces that view instead of pinning a second chip", async () => {
+    window.localStorage.setItem(
+      VIEWS_KEY,
+      JSON.stringify([{ name: "Sunday boat", query: "old", filter: "all" }]),
+    );
+    renderList({ query: "nitrox", filter: "insured" });
+
+    await userEvent.click(screen.getByRole("button", { name: "+ Save this view" }));
+    await userEvent.type(screen.getByRole("textbox", { name: "Name this view" }), "Sunday boat");
+    await userEvent.click(screen.getByRole("button", { name: "Save view" }));
+
+    expect(JSON.parse(window.localStorage.getItem(VIEWS_KEY) ?? "[]")).toEqual([
+      { name: "Sunday boat", query: "nitrox", filter: "insured" },
+    ]);
+    expect(screen.getAllByRole("link", { name: "Sunday boat" })).toHaveLength(1);
+  });
+
+  it("refuses to pin a view with no name on it", async () => {
+    renderList();
+
+    await userEvent.click(screen.getByRole("button", { name: "+ Save this view" }));
+    expect(screen.getByRole("button", { name: "Save view" })).toBeDisabled();
+    // Whitespace is not a name either — a chip labelled with a space is
+    // unclickable-looking and unremovable-looking.
+    await userEvent.type(screen.getByRole("textbox", { name: "Name this view" }), "   ");
+    expect(screen.getByRole("button", { name: "Save view" })).toBeDisabled();
+    expect(window.localStorage.getItem(VIEWS_KEY)).toBeNull();
+  });
+
+  it("backs out on Escape and on Never mind, saving nothing either way", async () => {
+    renderList();
+
+    await userEvent.click(screen.getByRole("button", { name: "+ Save this view" }));
+    await userEvent.type(screen.getByRole("textbox", { name: "Name this view" }), "Half typed");
+    await userEvent.keyboard("{Escape}");
+    expect(screen.queryByRole("textbox", { name: "Name this view" })).toBeNull();
+    expect(window.localStorage.getItem(VIEWS_KEY)).toBeNull();
+
+    await userEvent.click(screen.getByRole("button", { name: "+ Save this view" }));
+    // Reopening starts clean rather than resurrecting the abandoned name.
+    expect(screen.getByRole("textbox", { name: "Name this view" })).toHaveValue("");
+    await userEvent.click(screen.getByRole("button", { name: "Never mind" }));
+    expect(screen.queryByRole("textbox", { name: "Name this view" })).toBeNull();
+    expect(window.localStorage.getItem(VIEWS_KEY)).toBeNull();
+  });
+
+  it("says where the views actually live, and only once there are some", async () => {
+    renderList();
+    // Nothing pinned yet: a note about storage with nothing stored is noise.
+    expect(screen.queryByText("Saved on this device")).toBeNull();
+
+    await userEvent.click(screen.getByRole("button", { name: "+ Save this view" }));
+    await userEvent.type(screen.getByRole("textbox", { name: "Name this view" }), "Sunday boat");
+    await userEvent.click(screen.getByRole("button", { name: "Save view" }));
+
+    // The counter tablet's views are that tablet's. Saying so is the honest
+    // version of a per-browser store there is no per-account home for yet.
+    expect(screen.getByText("Saved on this device")).toBeInTheDocument();
+  });
+
+  it("unpins a saved view from the chip's own remove control", async () => {
+    window.localStorage.setItem(
+      VIEWS_KEY,
+      JSON.stringify([{ name: "Sunday boat", query: "", filter: "all" }]),
+    );
+    renderList();
+
+    await userEvent.click(screen.getByRole("button", { name: "Remove saved view Sunday boat" }));
+    expect(JSON.parse(window.localStorage.getItem(VIEWS_KEY) ?? "[]")).toEqual([]);
+    expect(screen.queryByRole("link", { name: "Sunday boat" })).toBeNull();
   });
 });
