@@ -1,4 +1,3 @@
-// @vitest-environment node
 import { describe, expect, it } from "vitest";
 import type { CheckoutProvider, RefundCheckoutResult } from "@/lib/payments/checkout";
 import type { CreateTripPromotionResult, PromotionProvider } from "@/lib/payments/promotions";
@@ -9,6 +8,7 @@ import { joinLastMinuteList } from "./last-minute-list";
 import { getBookingPayment, setBookingPayment } from "./payments";
 import { refundBookingOnCancellation } from "./refunds";
 import { createShopPromoCode } from "./shop-promos";
+import { setShopCurrency } from "./shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { getActiveTripPromoByCode, sendLastMinuteDealBlast } from "./trip-promos";
 import { upcomingTripsWithCounts, updateTrip } from "./trips";
@@ -527,6 +527,71 @@ describe("refundBookingOnCancellation", () => {
     for (const bookingId of bookingIds) {
       expect((await getBookingPayment(db, shop.id, bookingId))?.status).toBe("refunded");
     }
+  });
+
+  // The cancel action is one tap on a roster row, and taps get repeated: a
+  // double-click, a retried server action, a staffer refreshing the page they
+  // weren't sure had gone through. Each of those re-enters here on a booking
+  // whose payment already reads `refunded`, and the only acceptable answer is
+  // that Stripe is not asked for anything a second time. The refunded status
+  // is what holds it — not the idempotency key, which is minted fresh per
+  // attempt on purpose (PAY-C1) and would happily issue a second real refund.
+  it("moves no money the second time a cancelled booking is refunded", async () => {
+    const { db, shop, bookingId, insideWindow } = await paidBookingContext(48);
+    const refundCalls: RefundCall[] = [];
+    const provider = fakeCheckout({ status: "refunded", refundId: "re_once" }, refundCalls);
+
+    expect(
+      await refundBookingOnCancellation(
+        db,
+        { shopId: shop.id, bookingId, now: insideWindow },
+        provider,
+      ),
+    ).toEqual({ status: "refunded", amountCents: REEF_PRICE_CENTS });
+    expect(refundCalls).toHaveLength(1);
+
+    // `unpaid` is the honest word for it: there is nothing captured left to
+    // return. The diver is not refunded twice, and the row is not rewritten.
+    expect(
+      await refundBookingOnCancellation(
+        db,
+        { shopId: shop.id, bookingId, now: insideWindow },
+        provider,
+      ),
+    ).toEqual({ status: "unpaid" });
+    expect(refundCalls).toHaveLength(1);
+    const payment = await getBookingPayment(db, shop.id, bookingId);
+    expect(payment).toMatchObject({
+      status: "refunded",
+      amountCents: REEF_PRICE_CENTS,
+      providerRef: "re_once",
+    });
+  });
+
+  // ADR 20260731-shop-currency: a payment row is evidence of what was actually
+  // taken, so the reversal is denominated by the captured payment, never by
+  // whatever the shop's settings say today. A shop that switches to euros
+  // between the charge and the cancellation must not have a dollar refund
+  // written down — and read back — as euros.
+  it("refunds in the currency the money was captured in, not the shop's current one", async () => {
+    const { db, shop, bookingId, insideWindow } = await paidBookingContext(48);
+    expect((await getBookingPayment(db, shop.id, bookingId))?.currency).toBe("usd");
+
+    await setShopCurrency(db, shop.id, "eur");
+
+    const outcome = await refundBookingOnCancellation(
+      db,
+      { shopId: shop.id, bookingId, now: insideWindow },
+      fakeCheckout({ status: "refunded", refundId: "re_currency" }),
+    );
+    expect(outcome).toEqual({ status: "refunded", amountCents: REEF_PRICE_CENTS });
+    // Same currency and same minor-unit amount as the capture: the figure is
+    // not reinterpreted against a currency it was never in.
+    expect(await getBookingPayment(db, shop.id, bookingId)).toMatchObject({
+      status: "refunded",
+      currency: "usd",
+      amountCents: REEF_PRICE_CENTS,
+    });
   });
 
   it("is tenant-scoped: another shop cannot refund this booking", async () => {

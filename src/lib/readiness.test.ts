@@ -10,6 +10,7 @@ import {
   calculateReadiness,
   combineCertRequirements,
   combineSiteRequirements,
+  hasVerifiedCertificationAtLeast,
   higherCertificationLevel,
 } from "./readiness";
 
@@ -466,6 +467,93 @@ describe("calculateReadiness", () => {
         timezone: "UTC",
       }),
     ).toEqual({ status: "ready", blockers: [] });
+  });
+});
+
+/**
+ * The shared clearance predicate: course admission (`createBookingRecord`,
+ * src/db/bookings.ts) and final trip readiness both ask this one question, so
+ * a shop can never enrol a diver its own manifest would later block. Tested
+ * directly here rather than only through those two callers, because both of
+ * them can refuse for half a dozen other reasons — a gate that quietly stopped
+ * checking `status` would still look like it was working from the outside.
+ *
+ * Three things have to hold at once: verified, unexpired, and at or above the
+ * required rung. Anything less is evidence, not clearance.
+ */
+describe("hasVerifiedCertificationAtLeast", () => {
+  /** The shop's local calendar date the caller measures expiry against (CR-009). */
+  const todayLocal = "2026-07-18";
+
+  it("admits a card on the exact rung the trip demands, and any rung above it", () => {
+    expect(
+      hasVerifiedCertificationAtLeast(
+        [certification({ level: "advanced_open_water" })],
+        "advanced_open_water",
+        todayLocal,
+      ),
+    ).toBe(true);
+    expect(
+      hasVerifiedCertificationAtLeast(
+        [certification({ level: "instructor" })],
+        "open_water",
+        todayLocal,
+      ),
+    ).toBe(true);
+  });
+
+  it("refuses a card below the required rung — the ladder only counts upward", () => {
+    expect(
+      hasVerifiedCertificationAtLeast(
+        [certification({ level: "open_water" })],
+        "advanced_open_water",
+        todayLocal,
+      ),
+    ).toBe(false);
+  });
+
+  it("refuses a pending card however senior it is — nobody has checked it yet", () => {
+    expect(
+      hasVerifiedCertificationAtLeast(
+        [certification({ level: "instructor", status: "pending" })],
+        "open_water",
+        todayLocal,
+      ),
+    ).toBe(false);
+  });
+
+  it("refuses a verified card that lapsed before today, and keeps one expiring today", () => {
+    expect(
+      hasVerifiedCertificationAtLeast(
+        [certification({ expiresAt: "2026-07-17" })],
+        "advanced_open_water",
+        todayLocal,
+      ),
+    ).toBe(false);
+    // Valid through the end of its own local day — never hours early because
+    // the shop sits in a negative UTC offset.
+    expect(
+      hasVerifiedCertificationAtLeast(
+        [certification({ expiresAt: todayLocal })],
+        "advanced_open_water",
+        todayLocal,
+      ),
+    ).toBe(true);
+  });
+
+  it("refuses a diver with no cards at all, rather than reading an empty list as nothing to check", () => {
+    expect(hasVerifiedCertificationAtLeast([], "open_water", todayLocal)).toBe(false);
+  });
+
+  it("takes the best card on file when a diver holds several", () => {
+    // A lapsed AOW and a live Open Water is a real record shape; each card is
+    // judged on its own, so neither one drags the other down or props it up.
+    const cards = [
+      certification({ level: "advanced_open_water", expiresAt: "2026-07-17" }),
+      certification({ level: "open_water" }),
+    ];
+    expect(hasVerifiedCertificationAtLeast(cards, "open_water", todayLocal)).toBe(true);
+    expect(hasVerifiedCertificationAtLeast(cards, "advanced_open_water", todayLocal)).toBe(false);
   });
 });
 

@@ -24,6 +24,7 @@ import {
   courses,
   people,
   personRoles,
+  shops,
   tripAssignments,
   trips,
 } from "./schema";
@@ -33,6 +34,7 @@ import {
   getTripRoster,
   listStaff,
   setTripCrew,
+  setTripStatus,
   upcomingTripsWithCounts,
 } from "./trips";
 
@@ -302,6 +304,111 @@ describe("createBooking (in-memory PGlite)", () => {
     await setTripStatus(db, shop.id, open.id, "cancelled");
     const onCancelled = await bookVisitor(db, shop.id, open.id);
     expect(onCancelled).toEqual({ ok: false, reason: "trip_unavailable" });
+  });
+
+  it("rejects a trip that has already departed", async () => {
+    // A stale schedule tab, a slow form post, a bookmarked booking URL — the
+    // seat has to be refused once the boat has left, and refused with the same
+    // word as every other "this trip isn't selling seats" state, so no caller
+    // has to distinguish sailed from cancelled to say something honest.
+    const { db, shop, open } = await seededContext();
+    const departed = new Date(nowDate().getTime() - 2 * 60 * 60 * 1000);
+    await db
+      .update(trips)
+      .set({ startsAt: departed, endsAt: new Date(departed.getTime() + 60 * 60 * 1000) })
+      .where(eq(trips.id, open.id));
+
+    expect(await bookVisitor(db, shop.id, open.id)).toEqual({
+      ok: false,
+      reason: "trip_unavailable",
+    });
+    expect(await getTripRoster(db, shop.id, open.id)).not.toContainEqual(
+      expect.objectContaining({ person: expect.objectContaining({ fullName: visitor.fullName }) }),
+    );
+  });
+
+  /**
+   * Cross-tenant: the shop id and the trip id arrive from different places (a
+   * session and a URL), so a copied or guessed trip id from a *real* rival
+   * shop is the adversarial case — a nonexistent id proves nothing, because
+   * the row simply isn't there. `createBookingRecord` matches on both columns
+   * at once, so the rival's genuinely-bookable departure reads as no trip at
+   * all from this shop, and the refusal never says "wrong shop" either: a
+   * distinguishable answer would confirm the trip exists somewhere.
+   */
+  async function rivalShopWithOpenTrip(db: AppDb) {
+    const [rival] = await db
+      .insert(shops)
+      .values({ name: "Rival Reef", slug: "rival-reef-bookings", timezone: "America/New_York" })
+      .returning();
+    if (!rival) throw new Error("rival shop insert failed");
+    const startsAt = new Date(nowDate().getTime() + 30 * 24 * 60 * 60 * 1000);
+    const trip = await createTrip(db, {
+      shopId: rival.id,
+      title: "Rival Reef — two-tank",
+      startsAt,
+      endsAt: new Date(startsAt.getTime() + 4 * 60 * 60 * 1000),
+      capacity: 8,
+      plannedDives: 2,
+    });
+    if (!trip) throw new Error("rival trip insert failed");
+    return { rival, trip };
+  }
+
+  it("never books one shop's diver into another shop's real, open trip", async () => {
+    const { db, shop } = await seededContext();
+    const { rival, trip } = await rivalShopWithOpenTrip(db);
+    const before = await db.select({ id: bookings.id }).from(bookings);
+
+    expect(await bookVisitor(db, shop.id, trip.id)).toEqual({
+      ok: false,
+      reason: "trip_unavailable",
+    });
+
+    // Nothing landed anywhere — not on the rival's roster under this shop's
+    // id, and not on this shop's books either.
+    const after = await db.select({ id: bookings.id }).from(bookings);
+    expect(after).toHaveLength(before.length);
+    expect(await getTripRoster(db, rival.id, trip.id)).toHaveLength(0);
+  });
+
+  it("rolls a party booking back whole when a later member names another shop's trip", async () => {
+    const { db, shop, open } = await seededContext();
+    const { rival, trip } = await rivalShopWithOpenTrip(db);
+    const beforeBookings = await db.select({ id: bookings.id }).from(bookings);
+    const beforePeople = await db.select({ id: people.id }).from(people);
+
+    // The first member is a perfectly good booking on this shop's own trip —
+    // so there is real written work for the rollback to undo when the second
+    // member's trip id turns out to belong to someone else. failedIndex 1
+    // points at the fieldset that actually broke.
+    expect(
+      await createBookingParty(db, [
+        {
+          actor: "public",
+          shopId: shop.id,
+          tripId: open.id,
+          fullName: "Nora Quinn",
+          email: "nora@example.com",
+        },
+        {
+          actor: "public",
+          shopId: shop.id,
+          tripId: trip.id,
+          fullName: "Sam Quinn",
+          email: "sam@example.com",
+        },
+      ]),
+    ).toEqual({ ok: false, reason: "trip_unavailable", failedIndex: 1 });
+
+    // All of it, or none of it: the first member's booking *and* the person
+    // row minted for them are gone, and the rival's roster never saw anyone.
+    expect(await db.select({ id: bookings.id }).from(bookings)).toHaveLength(beforeBookings.length);
+    expect(await db.select({ id: people.id }).from(people)).toHaveLength(beforePeople.length);
+    expect((await getTripRoster(db, shop.id, open.id)).map((r) => r.person.fullName)).not.toContain(
+      "Nora Quinn",
+    );
+    expect(await getTripRoster(db, rival.id, trip.id)).toHaveLength(0);
   });
 });
 
@@ -723,6 +830,71 @@ describe("restoreBooking (undo of a roster removal)", () => {
     expect(await restoreBooking(db, shop.id, booked.bookingId)).toBe("restored");
     const roster = await getTripRoster(db, shop.id, trip.id);
     expect(roster.map((r) => r.person.fullName)).toContain("DSD Undo Diver");
+  });
+
+  /**
+   * Undo only ever puts a diver back onto a departure that could still sell
+   * them the seat. `createBookingRecord` refuses a fresh booking on exactly
+   * three trip states — cancelled (or otherwise not `scheduled`), a conditions
+   * hold, and a departure time that has already passed — and undo is the same
+   * seat-granting write, so it answers to the same three. Checking only
+   * capacity and ratio left the roster one tap from gaining a diver the
+   * booking form would have turned away: a name added back to the manifest of
+   * a boat that has already left, or to a trip the crew has stood down.
+   *
+   * The three cases below each assert the booking row is *still cancelled*
+   * afterwards, not merely that the outcome reads as a refusal — a refusal
+   * that had already written the status would be the same bug wearing a
+   * better return value.
+   */
+  it("refuses to restore onto a trip the crew has since cancelled", async () => {
+    const { db, shop, open } = await seededContext();
+    const booked = await bookVisitor(db, shop.id, open.id);
+    if (!booked.ok) throw new Error("setup booking failed");
+    await cancelBooking(db, shop.id, booked.bookingId);
+    await setTripStatus(db, shop.id, open.id, "cancelled");
+
+    expect(await restoreBooking(db, shop.id, booked.bookingId)).toBe("trip_unavailable");
+    const [row] = await db.select().from(bookings).where(eq(bookings.id, booked.bookingId));
+    expect(row?.status).toBe("cancelled");
+    const roster = await getTripRoster(db, shop.id, open.id);
+    expect(roster.map((r) => r.person.fullName)).not.toContain(visitor.fullName);
+  });
+
+  it("refuses to restore while the crew has a conditions hold in place", async () => {
+    const { db, shop, open } = await seededContext();
+    const booked = await bookVisitor(db, shop.id, open.id);
+    if (!booked.ok) throw new Error("setup booking failed");
+    await cancelBooking(db, shop.id, booked.bookingId);
+    // The same hold that stops `createBooking` selling a seat here (see
+    // "rejects new bookings while the crew has a conditions hold in place") —
+    // a hold is the crew saying the water isn't taking anyone today.
+    await db.update(trips).set({ conditionsHold: true }).where(eq(trips.id, open.id));
+
+    expect(await restoreBooking(db, shop.id, booked.bookingId)).toBe("trip_unavailable");
+    const [row] = await db.select().from(bookings).where(eq(bookings.id, booked.bookingId));
+    expect(row?.status).toBe("cancelled");
+  });
+
+  it("refuses to restore onto a boat that has already left", async () => {
+    const { db, shop, open } = await seededContext();
+    const booked = await bookVisitor(db, shop.id, open.id);
+    if (!booked.ok) throw new Error("setup booking failed");
+    await cancelBooking(db, shop.id, booked.bookingId);
+    // Sail the trip rather than move the clock: `restoreBooking` reads time
+    // through `nowDate()` exactly as `createBookingRecord` does, with no
+    // injectable `now`, so the departure is what moves. Mirrors
+    // selfCancelBooking's "already departed" refusal — a seat handed back on a
+    // boat that has left is a name on a manifest no one can act on.
+    const departed = new Date(nowDate().getTime() - 2 * 60 * 60 * 1000);
+    await db
+      .update(trips)
+      .set({ startsAt: departed, endsAt: new Date(departed.getTime() + 60 * 60 * 1000) })
+      .where(eq(trips.id, open.id));
+
+    expect(await restoreBooking(db, shop.id, booked.bookingId)).toBe("trip_unavailable");
+    const [row] = await db.select().from(bookings).where(eq(bookings.id, booked.bookingId));
+    expect(row?.status).toBe("cancelled");
   });
 });
 

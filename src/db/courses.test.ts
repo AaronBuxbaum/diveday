@@ -1,6 +1,8 @@
 // @vitest-environment node
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
+import { nowDate } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
 import { createBooking, rescheduleBooking } from "./bookings";
 import type { AppDb } from "./client";
@@ -17,7 +19,14 @@ import {
   updateCourse,
   updateCourseContent,
 } from "./courses";
-import { courses, people, shops, tripAssignments, tripRequirements } from "./schema";
+import {
+  certifications,
+  courses,
+  people,
+  shops,
+  tripAssignments,
+  tripRequirements,
+} from "./schema";
 import { listShopsForSitemap } from "./shops";
 import {
   createTrip,
@@ -636,6 +645,157 @@ describe("course catalog and sessions (in-memory PGlite)", () => {
       false,
     );
     expect((await setCourseVisibility(db, shop.id, course.id, true))?.isActive).toBe(true);
+  });
+
+  /**
+   * The prerequisite gate is a **card** check, not a level check: the diver's
+   * card has to be verified, unexpired, and still on the record. Every other
+   * prerequisite test above refuses a diver with no card at all, which only
+   * ever proves the gate notices an empty list — it would pass just as happily
+   * against a gate that admitted any card of the right level whatever its
+   * state. These cases hold the difference, because each of them is a real
+   * desk situation that ends with an under-qualified diver in the water:
+   * someone who typed their own level into the booking form, a card that
+   * lapsed since the shop last saw it, and a record staff deliberately pulled.
+   *
+   * Deliberately fails closed, unlike the minimum-age gate next door (H-08):
+   * staff capture and verify a card, and *then* the same form admits the
+   * diver. Capacity is never reserved on a self-assertion.
+   */
+  describe("course prerequisite reads the card's state, not just its level", () => {
+    /** An Open-Water-gated session with an instructor on it. */
+    async function gatedSession(db: AppDb, shopId: string) {
+      const course = await createCourse(db, {
+        shopId,
+        title: "Advanced Open Water — card states",
+        minimumCertificationLevel: "open_water",
+      });
+      if (!course) throw new Error("course not created");
+      const session = await createTrip(db, {
+        shopId,
+        courseId: course.id,
+        title: "Advanced Open Water — card-state session",
+        startsAt: new Date("2030-07-20T13:00:00.000Z"),
+        endsAt: new Date("2030-07-20T17:00:00.000Z"),
+        capacity: 8,
+      });
+      if (!session) throw new Error("session not created");
+      const staff = await listStaff(db, shopId);
+      const instructor = staff.find((entry) => entry.roles.includes("instructor"));
+      if (!instructor) throw new Error("instructor missing");
+      // Assigned directly, like the Advanced-baseline test above: this session
+      // sits on a fixed 2030 date and the crew-overlap guard is not what these
+      // cases are about.
+      await db
+        .insert(tripAssignments)
+        .values({ tripId: session.id, personId: instructor.person.id });
+      return session;
+    }
+
+    /** A diver already on file, carrying exactly one Open Water card in some state. */
+    async function diverHoldingCard(
+      db: AppDb,
+      shopId: string,
+      slug: string,
+      card: Partial<typeof certifications.$inferInsert> = {},
+    ) {
+      const [person] = await db
+        .insert(people)
+        .values({ shopId, fullName: `Card Diver ${slug}`, email: `card-${slug}@example.com` })
+        .returning();
+      if (!person) throw new Error("failed to insert card-state diver");
+      await db.insert(certifications).values({
+        shopId,
+        personId: person.id,
+        agency: "padi",
+        level: "open_water",
+        identifier: `CARD-${slug.toUpperCase()}`,
+        status: "verified",
+        ...card,
+      });
+      return person;
+    }
+
+    async function enroll(db: AppDb, shopId: string, tripId: string, personId: string) {
+      return createBooking(db, { actor: "staff", shopId, tripId, personId });
+    }
+
+    it("refuses a pending card of a sufficient level — a claim is not a clearance", async () => {
+      const { db, shop } = await courseContext();
+      const session = await gatedSession(db, shop.id);
+      const diver = await diverHoldingCard(db, shop.id, "pending", { status: "pending" });
+
+      // The exact level the course demands, and still refused: nobody has
+      // checked this card yet, and enrollment is where the shop finds out.
+      await expect(enroll(db, shop.id, session.id, diver.id)).resolves.toEqual({
+        ok: false,
+        reason: "course_prerequisite",
+      });
+    });
+
+    it("refuses a verified card that expired yesterday in the shop's own timezone", async () => {
+      const { db, shop } = await courseContext();
+      const session = await gatedSession(db, shop.id);
+      // Expiry is a date, read against the shop's local calendar (CR-009) —
+      // the same `calendarDateInTimezone(nowDate(), shop.timezone)` the gate
+      // itself computes. A card is valid through the end of its own local day,
+      // so "yesterday, locally" is the first day it is genuinely lapsed.
+      const yesterdayLocal = calendarDateInTimezone(
+        new Date(nowDate().getTime() - 24 * 60 * 60 * 1000),
+        shop.timezone,
+      );
+      const diver = await diverHoldingCard(db, shop.id, "expired", { expiresAt: yesterdayLocal });
+
+      await expect(enroll(db, shop.id, session.id, diver.id)).resolves.toEqual({
+        ok: false,
+        reason: "course_prerequisite",
+      });
+    });
+
+    it("refuses a verified card staff have since archived", async () => {
+      const { db, shop } = await courseContext();
+      const session = await gatedSession(db, shop.id);
+      // Removing a card is how staff retract evidence they no longer stand
+      // behind — a wrong diver, a bad scan, a card the agency disowned. A
+      // soft-deleted row is invisible on the diver's record, and it must be
+      // invisible to the gate too, or the retraction did nothing.
+      const diver = await diverHoldingCard(db, shop.id, "archived", { deletedAt: nowDate() });
+
+      await expect(enroll(db, shop.id, session.id, diver.id)).resolves.toEqual({
+        ok: false,
+        reason: "course_prerequisite",
+      });
+    });
+
+    it("admits a verified, unexpired card", async () => {
+      const { db, shop } = await courseContext();
+      const session = await gatedSession(db, shop.id);
+      const tomorrowLocal = calendarDateInTimezone(
+        new Date(nowDate().getTime() + 24 * 60 * 60 * 1000),
+        shop.timezone,
+      );
+      const diver = await diverHoldingCard(db, shop.id, "valid", { expiresAt: tomorrowLocal });
+
+      await expect(enroll(db, shop.id, session.id, diver.id)).resolves.toMatchObject({ ok: true });
+    });
+
+    it("admits an imported ladder card that no staffer has confirmed yet (ADR 20260724-import-verified-cards)", async () => {
+      const { db, shop } = await courseContext();
+      const session = await gatedSession(db, shop.id);
+      // A migrated card lands `verified` with `importedAt` set and
+      // `reviewedAt` still null — "verified, awaiting a quick confirm". That
+      // pending confirm is a nudge, not a gate: the product owner's decision
+      // (H-20) is that what the prior system held was checked there, so the
+      // level ladder clears on `verified` alone and the diver enrolls. The one
+      // gate the confirm really holds is the enriched-air fill, not this.
+      const diver = await diverHoldingCard(db, shop.id, "imported", {
+        importedAt: nowDate(),
+        reviewedAt: null,
+        importedFromLabel: "Prior shop system",
+      });
+
+      await expect(enroll(db, shop.id, session.id, diver.id)).resolves.toMatchObject({ ok: true });
+    });
   });
 
   it("schedules an entry-level course session with no cert gate, and an ordinary trip with one", async () => {

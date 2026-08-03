@@ -737,15 +737,20 @@ export async function undoRemoveBookingAction(
   if (!bookingId) redirect(back);
   const outcome = await restoreBooking(await getDb(), s.user.shopId, bookingId);
   if (outcome === "not_found") redirect(back);
-  // The undo can be refused by either seat limit: the boat's capacity, or a
-  // course session's instructor-to-student ratio (a walk-up may have taken the
-  // freed seat in between). They read differently, so they say different things.
+  // The undo can be refused three ways, and they need different things done
+  // about them: the boat's capacity, a course session's instructor-to-student
+  // ratio (a walk-up may have taken the freed seat in between), or the trip
+  // itself no longer taking anyone — cancelled, on a conditions hold, or
+  // already departed. Nothing about a wait list helps with that last one, so
+  // it gets its own words.
   const restoreNotice =
     outcome === "trip_full"
       ? "booking-restore-full"
       : outcome === "course_ratio_full"
         ? "booking-restore-ratio"
-        : "booking-restored";
+        : outcome === "trip_unavailable"
+          ? "booking-restore-unavailable"
+          : "booking-restored";
   revalidateAndRedirect(back, `${back}?notice=${restoreNotice}`);
 }
 

@@ -410,6 +410,14 @@ export async function getBookingForTrip(db: AppDb, tripId: string, bookingId: st
 
 export type RestoreBookingOutcome =
   | "restored"
+  /**
+   * The departure itself can no longer take anyone — cancelled (or otherwise
+   * not `scheduled`), on a conditions hold, or already sailed. Deliberately
+   * `createBookingRecord`'s own refusal word, because it is the same refusal:
+   * one vocabulary for "this trip is not selling seats", whichever door the
+   * seat came through.
+   */
+  | "trip_unavailable"
   | "already_active"
   | "trip_full"
   | "course_ratio_full"
@@ -428,6 +436,14 @@ export type RestoreBookingOutcome =
  * from being exceeded — remove a diver from a four-seat DSD, let a walk-up book
  * the freed seat, then tap Undo and a fifth uncertified first-timer joins one
  * instructor with no refusal at all.
+ *
+ * The seat also has to exist to be free at all: the trip must still be the
+ * live, future, hold-free departure `createBookingRecord` demands before it
+ * will sell one. Same three conditions, same `trip_unavailable` refusal — an
+ * undo is not a privileged door into a trip that has been cancelled, put on a
+ * conditions hold, or already sailed. Without this check the roster could gain
+ * a diver the booking form would have turned away, on the manifest of a boat
+ * that had already left.
  */
 export async function restoreBooking(
   db: AppDb,
@@ -454,6 +470,12 @@ export async function restoreBooking(
       .limit(1)
       .for("update");
     if (!trip) return "not_found";
+    // Read under the same lock, and against the same three states
+    // `createBookingRecord` checks — a status that isn't `scheduled`, a
+    // conditions hold, or a departure time already past.
+    if (trip.status !== "scheduled" || trip.conditionsHold || trip.startsAt <= nowDate()) {
+      return "trip_unavailable";
+    }
     const [row] = await tx
       .select({ booked: count(bookings.id) })
       .from(bookings)

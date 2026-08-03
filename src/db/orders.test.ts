@@ -1,4 +1,3 @@
-// @vitest-environment node
 import { eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import { courseTotalCents } from "@/lib/courses";
@@ -465,6 +464,46 @@ describe("orders", () => {
       providerRef: result.order.stripeInvoiceId,
     });
     expect(await refundOrder(db, shop.id, result.order.id, fakeInvoicing())).toBeNull();
+  });
+
+  // The same repeated-tap exposure `refundBookingOnCancellation` has (see
+  // src/db/refunds.test.ts): the guard is `status !== "paid"`, and the test
+  // above passes a *fresh* provider to each call, so it can only prove the
+  // second call returns null — never that Stripe was left alone. One provider
+  // across both calls is what actually holds "the diver's money moves once".
+  it("asks Stripe for the refund once, however many times refundOrder is called", async () => {
+    const { db, shop, entry } = await orderContext();
+    await connectedShop(db, shop.id);
+    let refundInvoiceCalls = 0;
+    const invoicing = fakeInvoicing({
+      async refundInvoice(): Promise<RefundInvoiceResult> {
+        refundInvoiceCalls += 1;
+        return { status: "refunded", refundId: "re_once" };
+      },
+    });
+    const result = await createOrder(
+      db,
+      {
+        shopId: shop.id,
+        personId: entry.person.id,
+        createdByPersonId: entry.person.id,
+        bookingId: entry.booking.id,
+        lineItems,
+      },
+      invoicing,
+    );
+    if (!result.ok) throw new Error("expected order creation to succeed");
+    await markOrderPaidByInvoiceId(db, result.order.stripeInvoiceId, result.order.totalCents);
+
+    expect((await refundOrder(db, shop.id, result.order.id, invoicing))?.status).toBe("refunded");
+    expect(refundInvoiceCalls).toBe(1);
+
+    // Second attempt: already refunded, so it never reaches the provider and
+    // the order is left exactly as the first refund settled it.
+    expect(await refundOrder(db, shop.id, result.order.id, invoicing)).toBeNull();
+    expect(refundInvoiceCalls).toBe(1);
+    const [row] = await db.select().from(orders).where(eq(orders.id, result.order.id));
+    expect(row).toMatchObject({ status: "refunded", amountPaidCents: 0 });
   });
 
   it("marks an order paid from a webhook invoice.paid event and cascades to its booking", async () => {
