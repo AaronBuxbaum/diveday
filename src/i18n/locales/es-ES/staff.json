@@ -3186,7 +3186,8 @@
       "moreOnBoard": "Hay más salidas en el tablero",
       "noticeInvalid": "Introduce un nombre para añadir a un buceador — el correo y el teléfono son opcionales aquí.",
       "noMatchesHeading": "Nadie registrado con ese nombre",
-      "noMatchesAction": "Introdúcelo a mano"
+      "noMatchesAction": "Introdúcelo a mano",
+      "backToPicker": "Volver a la lista de salidas"
     }
   }
 }

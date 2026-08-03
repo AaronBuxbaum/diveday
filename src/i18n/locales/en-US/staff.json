@@ -3186,7 +3186,8 @@
       "moreOnBoard": "More departures are on the board",
       "noticeInvalid": "Enter a name to add a diver — email and phone are optional here.",
       "noMatchesHeading": "Nobody on file by that name",
-      "noMatchesAction": "Enter them by hand"
+      "noMatchesAction": "Enter them by hand",
+      "backToPicker": "Back to the departure list"
     }
   }
 }

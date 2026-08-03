@@ -92,11 +92,15 @@ export default async function NewBookingDiverPage({
         title={t("bookings.new.title")}
         description={t("bookings.new.description")}
       />
+      {/* R9: step two used to point back at the board, exactly like step one —
+          so a staffer who picked the wrong departure had to leave the flow and
+          re-enter it. Back, here, means back one step: the departure picker.
+          Step one keeps the board link, because that is what is behind it. */}
       <Link
-        href={`/shop/${shopSlug}/schedule/board`}
+        href={`/shop/${shopSlug}/bookings/new`}
         className="mt-2 inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline"
       >
-        ← {t("bookings.new.backToBoard")}
+        ← {t("bookings.new.backToPicker")}
       </Link>
 
       {banner ? (
