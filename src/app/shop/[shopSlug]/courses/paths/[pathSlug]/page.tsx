@@ -160,6 +160,8 @@ export default async function CoursePathEditPage({
             }))}
             copy={{
               noSteps: st("courses.pathBuilder.noSteps"),
+              noStepsHeading: st("courses.pathBuilder.noStepsHeading"),
+              noStepsAction: st("courses.pathBuilder.noStepsAction"),
               stepLabel: st("courses.pathBuilder.stepLabel"),
               courseGoneFromCatalog: st("courses.pathBuilder.courseGoneFromCatalog"),
               hidden: st("courses.pathBuilder.hidden"),

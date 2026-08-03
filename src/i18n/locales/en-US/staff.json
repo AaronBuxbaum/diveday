@@ -568,7 +568,9 @@
       "allCoursesOnPath": "Every course in your catalog is already on this path.",
       "pathPreviewLabel": "Path preview",
       "whatADiverSees": "What a diver sees",
-      "addACourseToSee": "Add a course to see the progression."
+      "addACourseToSee": "Add a course to see the progression.",
+      "noStepsHeading": "This path has no courses yet",
+      "noStepsAction": "Add the first course"
     },
     "pathEdit": {
       "errorInvalid": "That didn't save — give the path a name and try again.",
@@ -1398,7 +1400,7 @@
       "adding": "Adding…",
       "addPersonAriaLabel": "Add {name} to the trip",
       "addToTrip": "Add to trip",
-      "noMatches": "No returning diver matches “{query}”. Enter them by hand below.",
+      "noMatches": "No returning diver matches “{query}”.",
       "handEntrySummary": "New to the shop? Enter a diver by hand",
       "handEntryDescriptionWaitlist": "For walk-ins or divers tracked in another system — puts them straight on the wait list.",
       "handEntryDescriptionManifest": "For walk-ins or divers tracked in another system — puts them straight on the manifest.",
@@ -1406,7 +1408,9 @@
       "emailLabel": "Email",
       "phoneLabel": "Phone",
       "optionalHint": "(optional)",
-      "addToWaitlist": "Add to wait list"
+      "addToWaitlist": "Add to wait list",
+      "noMatchesHeading": "No returning diver by that name",
+      "noMatchesAction": "Enter them by hand"
     },
     "waitlist": {
       "heading": "Wait list",
@@ -1443,7 +1447,13 @@
         "sent": "Sent",
         "pending": "Never finished",
         "failed": "Failed at Stripe"
-      }
+      },
+      "cancelledHeading": "This departure is cancelled",
+      "cancelledAction": "Open the schedule",
+      "fullHeading": "Every seat is taken",
+      "fullAction": "See the wait list",
+      "noneAroundHeading": "Nobody to send this to yet",
+      "noneAroundAction": "Seat someone yourself"
     },
     "roster": {
       "waiverSend": "Send waiver",
@@ -1523,7 +1533,11 @@
       "emergencyContactPhoneLabel": "Contact phone",
       "savingContact": "Saving…",
       "saveEmergencyContact": "Save contact",
-      "viewOrders": "View orders"
+      "viewOrders": "View orders",
+      "emptyHeading": "No one on this boat yet",
+      "emptyAction": "Add a diver",
+      "filterEmptyHeading": "Nobody matches this filter",
+      "filterEmptyAction": "{count, plural, one {Show the # diver on board} other {Show all # divers on board}}"
     },
     "celebrations": {
       "heading": "Celebrations",
@@ -1685,7 +1699,12 @@
       "qtyColumn": "Qty",
       "forColumn": "For",
       "fitAtCheckIn": "Fit at check-in",
-      "notRecorded": "Not recorded"
+      "notRecorded": "Not recorded",
+      "emptyHeading": "Nothing to pack yet",
+      "emptyAction": "Open the guest list",
+      "rentalKitEmptyOwnKitHeading": "No gear to pull",
+      "rentalKitEmptyNeedsSortingHeading": "No gear to pull — yet",
+      "rentalKitEmptyAction": "Open the guest list"
     },
     "guests": {
       "eyebrow": "Trips",
@@ -2335,7 +2354,7 @@
       "findPlaceholder": "Start typing a name…",
       "search": "Search",
       "searching": "Searching…",
-      "noMatches": "No matches for “{query}” — add them fresh below.",
+      "noMatches": "No matches for “{query}” in the shop's records.",
       "noEmailOnFile": "No email on file",
       "addToBoat": "Add to boat",
       "addPersonAriaLabel": "Add {name} to this boat",
@@ -2345,7 +2364,9 @@
       "nameLabel": "Full name",
       "emailLabel": "Email",
       "phoneLabel": "Phone",
-      "optionalHint": "(optional)"
+      "optionalHint": "(optional)",
+      "noMatchesHeading": "Nobody on file by that name",
+      "noMatchesAction": "Enter them by hand"
     }
   },
   "waiversStaff": {
@@ -3151,7 +3172,7 @@
       "findPlaceholder": "Start typing a name…",
       "search": "Search",
       "searching": "Searching…",
-      "noMatches": "No matches for “{query}” — add them fresh below.",
+      "noMatches": "No matches for “{query}” in the shop's records.",
       "noEmailOnFile": "No email on file",
       "addToTrip": "Add to trip",
       "addPersonAriaLabel": "Add {name} to this departure",
@@ -3163,7 +3184,9 @@
       "phoneLabel": "Phone",
       "optionalHint": "(optional)",
       "moreOnBoard": "More departures are on the board",
-      "noticeInvalid": "Enter a name to add a diver — email and phone are optional here."
+      "noticeInvalid": "Enter a name to add a diver — email and phone are optional here.",
+      "noMatchesHeading": "Nobody on file by that name",
+      "noMatchesAction": "Enter them by hand"
     }
   }
 }

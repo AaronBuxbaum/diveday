@@ -568,7 +568,9 @@
       "allCoursesOnPath": "Todos los cursos de tu catálogo ya están en esta ruta.",
       "pathPreviewLabel": "Vista previa de la ruta",
       "whatADiverSees": "Lo que ve un buceador",
-      "addACourseToSee": "Añade un curso para ver la progresión."
+      "addACourseToSee": "Añade un curso para ver la progresión.",
+      "noStepsHeading": "Esta ruta todavía no tiene cursos",
+      "noStepsAction": "Añadir el primer curso"
     },
     "pathEdit": {
       "errorInvalid": "Eso no se guardó — dale un nombre a la ruta e inténtalo de nuevo.",
@@ -1398,7 +1400,7 @@
       "adding": "Añadiendo…",
       "addPersonAriaLabel": "Añadir a {name} a la salida",
       "addToTrip": "Añadir a la salida",
-      "noMatches": "Ningún buceador habitual coincide con “{query}”. Introdúcelo a mano abajo.",
+      "noMatches": "Ningún buceador habitual coincide con «{query}».",
       "handEntrySummary": "¿Es nuevo en el centro? Introduce un buceador a mano",
       "handEntryDescriptionWaitlist": "Para visitas sin cita o buceadores registrados en otro sistema — los pone directamente en la lista de espera.",
       "handEntryDescriptionManifest": "Para visitas sin cita o buceadores registrados en otro sistema — los pone directamente en el manifiesto.",
@@ -1406,7 +1408,9 @@
       "emailLabel": "Correo",
       "phoneLabel": "Teléfono",
       "optionalHint": "(opcional)",
-      "addToWaitlist": "Añadir a la lista de espera"
+      "addToWaitlist": "Añadir a la lista de espera",
+      "noMatchesHeading": "Ningún buceador habitual con ese nombre",
+      "noMatchesAction": "Introdúcelo a mano"
     },
     "waitlist": {
       "heading": "Lista de espera",
@@ -1443,7 +1447,13 @@
         "sent": "Enviada",
         "pending": "Nunca se terminó",
         "failed": "Falló en Stripe"
-      }
+      },
+      "cancelledHeading": "Esta salida está cancelada",
+      "cancelledAction": "Abrir el calendario",
+      "fullHeading": "Todas las plazas están ocupadas",
+      "fullAction": "Ver la lista de espera",
+      "noneAroundHeading": "Todavía no hay a quién enviárselo",
+      "noneAroundAction": "Añade tú a alguien"
     },
     "roster": {
       "waiverSend": "Enviar exención",
@@ -1523,7 +1533,11 @@
       "emergencyContactPhoneLabel": "Teléfono del contacto",
       "savingContact": "Guardando…",
       "saveEmergencyContact": "Guardar contacto",
-      "viewOrders": "Ver pedidos"
+      "viewOrders": "Ver pedidos",
+      "emptyHeading": "Todavía no hay nadie en este barco",
+      "emptyAction": "Añadir un buceador",
+      "filterEmptyHeading": "Nadie coincide con este filtro",
+      "filterEmptyAction": "{count, plural, one {Ver el # buceador a bordo} other {Ver los # buceadores a bordo}}"
     },
     "celebrations": {
       "heading": "Celebraciones",
@@ -1685,7 +1699,12 @@
       "qtyColumn": "Cant.",
       "forColumn": "Para",
       "fitAtCheckIn": "Ajustar en el check-in",
-      "notRecorded": "No registrado"
+      "notRecorded": "No registrado",
+      "emptyHeading": "Todavía no hay nada que preparar",
+      "emptyAction": "Abrir la lista de buceadores",
+      "rentalKitEmptyOwnKitHeading": "No hay equipo que preparar",
+      "rentalKitEmptyNeedsSortingHeading": "No hay equipo que preparar — todavía",
+      "rentalKitEmptyAction": "Abrir la lista de buceadores"
     },
     "guests": {
       "eyebrow": "Salidas",
@@ -2335,7 +2354,7 @@
       "findPlaceholder": "Empieza a escribir un nombre…",
       "search": "Buscar",
       "searching": "Buscando…",
-      "noMatches": "Sin coincidencias para «{query}» — añádelo de cero abajo.",
+      "noMatches": "Sin coincidencias para «{query}» en los registros de la tienda.",
       "noEmailOnFile": "Sin correo registrado",
       "addToBoat": "Añadir al barco",
       "addPersonAriaLabel": "Añadir a {name} a este barco",
@@ -2345,7 +2364,9 @@
       "nameLabel": "Nombre completo",
       "emailLabel": "Correo",
       "phoneLabel": "Teléfono",
-      "optionalHint": "(opcional)"
+      "optionalHint": "(opcional)",
+      "noMatchesHeading": "Nadie registrado con ese nombre",
+      "noMatchesAction": "Introdúcelo a mano"
     }
   },
   "waiversStaff": {
@@ -3151,7 +3172,7 @@
       "findPlaceholder": "Empieza a escribir un nombre…",
       "search": "Buscar",
       "searching": "Buscando…",
-      "noMatches": "Sin coincidencias para «{query}» — añádelo de cero abajo.",
+      "noMatches": "Sin coincidencias para «{query}» en los registros de la tienda.",
       "noEmailOnFile": "Sin correo registrado",
       "addToTrip": "Añadir a la salida",
       "addPersonAriaLabel": "Añadir a {name} a esta salida",
@@ -3163,7 +3184,9 @@
       "phoneLabel": "Teléfono",
       "optionalHint": "(opcional)",
       "moreOnBoard": "Hay más salidas en el tablero",
-      "noticeInvalid": "Introduce un nombre para añadir a un buceador — el correo y el teléfono son opcionales aquí."
+      "noticeInvalid": "Introduce un nombre para añadir a un buceador — el correo y el teléfono son opcionales aquí.",
+      "noMatchesHeading": "Nadie registrado con ese nombre",
+      "noMatchesAction": "Introdúcelo a mano"
     }
   }
 }

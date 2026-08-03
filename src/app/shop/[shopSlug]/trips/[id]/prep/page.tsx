@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { EmptyState } from "@/components/EmptyState";
 import { PrintButton } from "@/components/PrintButton";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { listTripPrepDivers } from "@/db/rental-fit";
 import { getShopById } from "@/db/shops";
@@ -86,6 +88,10 @@ export default async function TripPrepPage({
   // common case — but a shop that *disabled* nitrox after a diver requested
   // it (with or without a verified card) must not have this trip's already-
   // real tank split or blocker silently disappear out from under the crew.
+  // An empty packing table means one of two different things, and the rental-kit
+  // empty state says which rather than making the crew scroll back up to guess.
+  const needsSorting =
+    checklist.diversWithoutFit.length > 0 || checklist.diversNeedingStaffFit.length > 0;
   const showNitrox =
     shopOffersNitrox(shop.rentalItems) ||
     checklist.tanks.nitrox > 0 ||
@@ -116,9 +122,19 @@ export default async function TripPrepPage({
       />
 
       {checklist.diverCount === 0 && checklist.crewCount === 0 ? (
-        <p className="rounded-lg border border-border bg-surface px-4 py-6 text-center text-sm text-muted">
-          {t("trips.prep.noDivers")}
-        </p>
+        // The whole page's content region, so this one wears an h2 — and the
+        // packing list can only become real once someone is on the boat, which
+        // happens on the Guests tab.
+        <EmptyState>
+          <h2 className="font-medium">{t("trips.prep.emptyHeading")}</h2>
+          <p className="mx-auto mt-1 max-w-md text-sm text-muted">{t("trips.prep.noDivers")}</p>
+          <Link
+            href={`/shop/${shopSlug}/trips/${tripId}/guests`}
+            className={buttonClass({ className: "mt-4" })}
+          >
+            {t("trips.prep.emptyAction")}
+          </Link>
+        </EmptyState>
       ) : (
         <>
           <section aria-labelledby="tanks-heading">
@@ -273,11 +289,32 @@ export default async function TripPrepPage({
               {t("trips.prep.rentalKitHeading")}
             </h2>
             {checklist.lines.length === 0 ? (
-              <p className="mt-3 rounded-lg border border-border bg-surface px-4 py-6 text-center text-sm text-muted">
-                {checklist.diversWithoutFit.length > 0 || checklist.diversNeedingStaffFit.length > 0
-                  ? t("trips.prep.nothingToPullNeedsSorting")
-                  : t("trips.prep.nothingToPullOwnKit")}
-              </p>
+              // A section inside a larger page, so h3. Two honest readings of
+              // the same empty table — a genuine nothing-to-do, or fits that
+              // were never recorded — and the Guests tab is where a fit gets
+              // put on file either way.
+              <EmptyState className="mt-3">
+                <h3 className="font-medium">
+                  {needsSorting
+                    ? t("trips.prep.rentalKitEmptyNeedsSortingHeading")
+                    : t("trips.prep.rentalKitEmptyOwnKitHeading")}
+                </h3>
+                <p className="mx-auto mt-1 max-w-md text-sm text-muted">
+                  {needsSorting
+                    ? t("trips.prep.nothingToPullNeedsSorting")
+                    : t("trips.prep.nothingToPullOwnKit")}
+                </p>
+                <Link
+                  href={`/shop/${shopSlug}/trips/${tripId}/guests`}
+                  className={buttonClass({
+                    variant: "secondary",
+                    size: "sm",
+                    className: "mt-4",
+                  })}
+                >
+                  {t("trips.prep.rentalKitEmptyAction")}
+                </Link>
+              </EmptyState>
             ) : (
               <>
                 {/* Phone: stacked cards. Four columns at 390px put a

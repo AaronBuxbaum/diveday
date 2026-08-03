@@ -193,14 +193,29 @@ export default async function WalkInPage({
                   ))}
                 </ul>
               ) : (
-                <p className="mt-4 rounded-lg border border-border bg-surface px-4 py-4 text-center text-sm text-muted">
-                  {t("checkIn.walkIn.noMatches", { query })}
-                </p>
+                // Same shared box the trip picker above already uses, and the
+                // "below" in the sentence made clickable — the hand-entry
+                // section is a scroll away on a counter phone.
+                <EmptyState className="mt-4">
+                  <h3 className="font-medium">{t("checkIn.walkIn.noMatchesHeading")}</h3>
+                  <p className="mx-auto mt-1 max-w-md text-sm text-muted">
+                    {t("checkIn.walkIn.noMatches", { query })}
+                  </p>
+                  <a
+                    href="#hand-entry"
+                    className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
+                  >
+                    {t("checkIn.walkIn.noMatchesAction")}
+                  </a>
+                </EmptyState>
               )
             ) : null}
           </section>
 
-          <section className="mt-6 rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-6">
+          <section
+            id="hand-entry"
+            className="mt-6 scroll-mt-24 rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-6"
+          >
             <h2 className="text-lg font-semibold">{t("checkIn.walkIn.handEntryHeading")}</h2>
             <p className="mt-1 text-sm text-muted">{t("checkIn.walkIn.handEntryDescription")}</p>
             <form action={seatNewDiverAction.bind(null, "walk-in", shopSlug)} className="mt-4">
