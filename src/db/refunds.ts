@@ -126,6 +126,10 @@ export async function refundBookingOnCancellation(
       provider: "stripe",
       providerRef: result.refundId ?? payment.providerRef,
       note: "Auto-refunded on cancellation within the free window",
+      // The capture this reverses is overwritten in `booking_payments`; the
+      // append-only trail is where it survives (ADR
+      // 20260803-booking-payment-events).
+      operation: "cancellation_refund",
     });
     await resolvePaymentOperation(db, intent.id, { status: "succeeded" });
     return { status: "refunded", amountCents: decision.refundCents };

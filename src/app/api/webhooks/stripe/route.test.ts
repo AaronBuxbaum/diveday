@@ -9,6 +9,7 @@ vi.mock("@/db/client", async (importOriginal) => {
 vi.mock("@/db/checkouts", () => ({
   markCheckoutPaidBySessionId: vi.fn(),
   markCheckoutExpiredBySessionId: vi.fn(),
+  markCheckoutPaymentFailedBySessionId: vi.fn(),
 }));
 vi.mock("@/db/tips", () => ({
   markTipPaidBySessionId: vi.fn(),
@@ -30,9 +31,11 @@ vi.mock("@/db/webhook-events", () => ({
 vi.mock("@sentry/nextjs", () => ({ captureException: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
-const { markCheckoutPaidBySessionId, markCheckoutExpiredBySessionId } = await import(
-  "@/db/checkouts"
-);
+const {
+  markCheckoutPaidBySessionId,
+  markCheckoutExpiredBySessionId,
+  markCheckoutPaymentFailedBySessionId,
+} = await import("@/db/checkouts");
 const { markTipPaidBySessionId, markTipExpiredBySessionId } = await import("@/db/tips");
 const { markOrderPaidByInvoiceId, markOrderVoidedByInvoiceId } = await import("@/db/orders");
 const { setShopStripeAccountStatus, disconnectShopStripeAccount } = await import(
@@ -81,6 +84,9 @@ beforeEach(() => {
     .mockReset()
     .mockResolvedValue(FAKE_CHECKOUT as never);
   vi.mocked(markCheckoutExpiredBySessionId)
+    .mockReset()
+    .mockResolvedValue(FAKE_CHECKOUT as never);
+  vi.mocked(markCheckoutPaymentFailedBySessionId)
     .mockReset()
     .mockResolvedValue(FAKE_CHECKOUT as never);
   vi.mocked(markOrderPaidByInvoiceId).mockReset();
@@ -327,6 +333,65 @@ describe("POST /api/webhooks/stripe — event dispatch", () => {
       undefined,
     );
     expect(markTipPaidBySessionId).not.toHaveBeenCalled();
+  });
+
+  // PAY-L1. Previously this event fell through to `unhandled_event_type`,
+  // leaving a delayed-notification payment's checkout `pending` forever.
+  it("checkout.session.async_payment_failed releases the checkout's pending state", async () => {
+    const response = await post({
+      id: "evt_1",
+      type: "checkout.session.async_payment_failed",
+      account: "acct_shop",
+      data: { object: { id: "cs_123" } },
+    });
+    expect(response.status).toBe(200);
+    expect(markCheckoutPaymentFailedBySessionId).toHaveBeenCalledWith(
+      FAKE_DB,
+      "cs_123",
+      "acct_shop",
+    );
+    // Never a payment-side write, and never the paid path.
+    expect(markCheckoutPaidBySessionId).not.toHaveBeenCalled();
+    expect(markTipExpiredBySessionId).not.toHaveBeenCalled();
+  });
+
+  it("checkout.session.async_payment_failed falls back to the tip table on the shared session-id space", async () => {
+    vi.mocked(markCheckoutPaymentFailedBySessionId).mockResolvedValue(null);
+    const response = await post({
+      id: "evt_1",
+      type: "checkout.session.async_payment_failed",
+      data: { object: { id: "cs_tip_1" } },
+    });
+    expect(response.status).toBe(200);
+    expect(markTipExpiredBySessionId).toHaveBeenCalledWith(FAKE_DB, "cs_tip_1", undefined);
+  });
+
+  // Idempotency at the route level: the db helper returns null for a row that
+  // is no longer `pending` (already failed, already completed, already
+  // expired). The route must answer 200 and change nothing else — a non-2xx
+  // would make Stripe retry a genuinely-handled event forever.
+  it("checkout.session.async_payment_failed is a quiet 200 when nothing is left to release", async () => {
+    vi.mocked(markCheckoutPaymentFailedBySessionId).mockResolvedValue(null);
+    vi.mocked(markTipExpiredBySessionId).mockResolvedValue(null as never);
+    const response = await post({
+      id: "evt_replay",
+      type: "checkout.session.async_payment_failed",
+      data: { object: { id: "cs_already_settled" } },
+    });
+    expect(response.status).toBe(200);
+    expect(markCheckoutPaidBySessionId).not.toHaveBeenCalled();
+    expect(releaseStripeWebhookEventClaim).not.toHaveBeenCalled();
+  });
+
+  it("checkout.session.async_payment_failed ignores a malformed payload", async () => {
+    const response = await post({
+      id: "evt_1",
+      type: "checkout.session.async_payment_failed",
+      data: { object: {} },
+    });
+    expect(response.status).toBe(200);
+    expect(markCheckoutPaymentFailedBySessionId).not.toHaveBeenCalled();
+    expect(markTipExpiredBySessionId).not.toHaveBeenCalled();
   });
 
   it("checkout.session.expired marks the checkout expired", async () => {
@@ -733,6 +798,15 @@ describe("POST /api/webhooks/stripe — a failed handle releases its claim", () 
         data: { object: { id: "cs_1" } },
       },
       arrange: () => vi.mocked(markCheckoutPaidBySessionId).mockRejectedValue(boom),
+    },
+    {
+      name: "checkout.session.async_payment_failed",
+      event: {
+        id: "evt_fail_async_failed",
+        type: "checkout.session.async_payment_failed",
+        data: { object: { id: "cs_1" } },
+      },
+      arrange: () => vi.mocked(markCheckoutPaymentFailedBySessionId).mockRejectedValue(boom),
     },
     {
       name: "checkout.session.expired",

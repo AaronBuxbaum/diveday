@@ -1,6 +1,10 @@
 import * as Sentry from "@sentry/nextjs";
 import { z } from "zod";
-import { markCheckoutExpiredBySessionId, markCheckoutPaidBySessionId } from "@/db/checkouts";
+import {
+  markCheckoutExpiredBySessionId,
+  markCheckoutPaidBySessionId,
+  markCheckoutPaymentFailedBySessionId,
+} from "@/db/checkouts";
 import { getDb } from "@/db/client";
 import { markOrderPaidByInvoiceId, markOrderVoidedByInvoiceId } from "@/db/orders";
 import { disconnectShopStripeAccount, setShopStripeAccountStatus } from "@/db/stripe-accounts";
@@ -218,6 +222,37 @@ export async function POST(request: Request) {
         }
         break;
       }
+      case "checkout.session.async_payment_failed": {
+        const session = checkoutSessionObjectSchema.safeParse(event.data.object);
+        if (session.success) {
+          // The counterpart to `async_payment_succeeded` above, and previously
+          // the gap that left a delayed-notification payment stuck `pending`
+          // forever (PAY-L1): the session had already emitted `completed` with
+          // `payment_status: "unpaid"`, which settles nothing on purpose, and
+          // nothing else ever arrived to close it out.
+          //
+          // Releases the local pending state without ever regressing settled
+          // money: `markCheckoutPaymentFailedBySessionId` only matches a
+          // `pending` row and touches no `booking_payments` row at all, so a
+          // redelivery, or a failure event racing a completion, is a no-op.
+          // Falls back to the tip table on the same session-id space as the
+          // completion/expiry handlers do.
+          const checkout = await markCheckoutPaymentFailedBySessionId(
+            db,
+            session.data.id,
+            event.account,
+          );
+          if (checkout) {
+            logOutcome("checkout_payment_failed");
+          } else {
+            const tip = await markTipExpiredBySessionId(db, session.data.id, event.account);
+            logOutcome(tip ? "tip_expired" : "session_not_found");
+          }
+        } else {
+          logOutcome("malformed_payload");
+        }
+        break;
+      }
       case "checkout.session.expired": {
         const session = checkoutSessionObjectSchema.safeParse(event.data.object);
         if (session.success) {
@@ -279,7 +314,9 @@ export async function POST(request: Request) {
         break;
       }
       default:
-        // invoice.payment_failed and anything else: no local state change today.
+        // invoice.payment_failed and anything else: no local state change
+        // today. (`checkout.session.async_payment_failed` left this branch in
+        // PAY-L1 — it has a handler above.)
         logOutcome("unhandled_event_type");
         break;
     }
@@ -293,7 +330,8 @@ export async function POST(request: Request) {
     // and transition-gated, `markCheckoutPaidBySessionId` never overwrites a
     // recorded settled total and dedupes its promo redemption,
     // `markTipPaidBySessionId` early-returns once paid, both
-    // `*ExpiredBySessionId` only touch a `pending` row,
+    // `*ExpiredBySessionId` and `markCheckoutPaymentFailedBySessionId` only
+    // touch a `pending` row,
     // `setShopStripeAccountStatus` is gated by `hasNewerAccountUpdate`, and
     // `disconnectShopStripeAccount` neither moves `disconnectedAt` on a row
     // that is already disconnected nor touches one reconnected since this

@@ -18,6 +18,7 @@ import { nowDate } from "@/lib/clock";
 import { EXPORT_FILE_NOTES, type ExportBundleInput, type ExportTable } from "@/lib/export";
 import type { AppDb } from "./client";
 import {
+  bookingPaymentEvents,
   bookingPayments,
   bookings,
   certificationLevel,
@@ -317,6 +318,17 @@ export async function loadShopExportBundleInput(
         .from(bookingPayments)
         .where(eq(bookingPayments.shopId, shopId));
       const paymentByBooking = new Map(paymentRows.map((row) => [row.bookingId, row]));
+
+      // The history behind those current rows. `booking_payments` folds into
+      // bookings.csv as one payment_* column set — the state as it stands —
+      // and refunds overwrite it in place, so without this file the bundle
+      // carries a balance and no story. Oldest first, so a reader replaying
+      // the file in order arrives at the folded row.
+      const paymentEventRows = await tx
+        .select()
+        .from(bookingPaymentEvents)
+        .where(eq(bookingPaymentEvents.shopId, shopId))
+        .orderBy(asc(bookingPaymentEvents.occurredAt), asc(bookingPaymentEvents.id));
 
       const rollCallRows = await tx
         .select()
@@ -992,6 +1004,43 @@ export async function loadShopExportBundleInput(
             row.createdAt,
           ]),
           note: EXPORT_FILE_NOTES["trip_last_minute_promos.csv"],
+        },
+        {
+          file: "booking_payment_events.csv",
+          header: [
+            "id",
+            "booking_id",
+            "person_id",
+            "person_name",
+            "status",
+            "previous_status",
+            "amount_cents",
+            "currency",
+            "provider",
+            "provider_ref",
+            "operation",
+            "note",
+            "occurred_at",
+          ],
+          rows: paymentEventRows.map((row) => {
+            const personId = bookingPerson.get(row.bookingId);
+            return [
+              row.id,
+              row.bookingId,
+              personId,
+              personId ? personName.get(personId) : null,
+              row.status,
+              row.previousStatus,
+              row.amountCents,
+              row.currency,
+              row.provider,
+              row.providerRef,
+              row.operation,
+              row.note,
+              row.occurredAt,
+            ];
+          }),
+          note: EXPORT_FILE_NOTES["booking_payment_events.csv"],
         },
         {
           file: "roll_call_events.csv",
@@ -1708,6 +1757,12 @@ export async function loadShopExportCounts(
     ),
     "bookings.csv": await countOf(
       db.select({ n: count() }).from(bookings).where(eq(bookings.shopId, shopId)),
+    ),
+    "booking_payment_events.csv": await countOf(
+      db
+        .select({ n: count() })
+        .from(bookingPaymentEvents)
+        .where(eq(bookingPaymentEvents.shopId, shopId)),
     ),
     "waitlist_entries.csv": await countOf(
       db

@@ -9,6 +9,7 @@ import {
   getLatestCheckoutForBooking,
   markCheckoutExpiredBySessionId,
   markCheckoutPaidBySessionId,
+  markCheckoutPaymentFailedBySessionId,
   refreshCheckoutFromStripe,
   startBookingCheckout,
 } from "./checkouts";
@@ -1265,5 +1266,117 @@ describe("refreshCheckoutFromStripe", () => {
     await markCheckoutPaidBySessionId(db, checkout.stripeSessionId);
     const payment = await getBookingPayment(db, shop.id, bookingIds[0]);
     expect(payment?.status).toBe("paid");
+  });
+});
+
+/**
+ * PAY-L1. `checkout.session.async_payment_failed` was unhandled: a
+ * delayed-notification payment method emits `checkout.session.completed` with
+ * `payment_status: "unpaid"` (which settles nothing on purpose), then, when
+ * the money never arrives, the failure event — which nothing listened for. The
+ * row sat `pending` forever, still offering a dead recovery link.
+ */
+describe("markCheckoutPaymentFailedBySessionId", () => {
+  async function pendingCheckoutFor(bookingCount = 1) {
+    const context = await checkoutContext();
+    const bookingIds = context.bookingIds.slice(0, bookingCount);
+    const start = await startBookingCheckout(
+      context.db,
+      startInput(context.shop.id, context.reef.id, bookingIds),
+      fakeCheckout(),
+    );
+    if (!start.ok) throw new Error("checkout start failed");
+    return { ...context, bookingIds, checkout: start.checkout };
+  }
+
+  async function checkoutRow(
+    db: Awaited<ReturnType<typeof checkoutContext>>["db"],
+    checkoutId: string,
+  ) {
+    const [row] = await db
+      .select()
+      .from(bookingCheckouts)
+      .where(eq(bookingCheckouts.id, checkoutId));
+    return row ?? null;
+  }
+
+  it("releases the pending state and records why, leaving payments untouched", async () => {
+    const { db, shop, bookingIds, checkout } = await pendingCheckoutFor();
+    const failed = await markCheckoutPaymentFailedBySessionId(db, checkout.stripeSessionId);
+    expect(failed?.status).toBe("expired");
+    expect(failed?.asyncPaymentFailedAt).toBeInstanceOf(Date);
+    // Nothing was ever captured, so nothing is released on the payment side —
+    // and writing "unpaid" is the one thing that could regress a booking a
+    // human had since marked paid or waived.
+    expect(await getBookingPayment(db, shop.id, bookingIds[0])).toBeNull();
+  });
+
+  it("is idempotent: a redelivered failure matches nothing the second time", async () => {
+    const { db, checkout } = await pendingCheckoutFor();
+    const first = await markCheckoutPaymentFailedBySessionId(db, checkout.stripeSessionId);
+    const second = await markCheckoutPaymentFailedBySessionId(db, checkout.stripeSessionId);
+    expect(first?.status).toBe("expired");
+    expect(second).toBeNull();
+    // The first failure's timestamp is not rewritten by the replay.
+    const row = await checkoutRow(db, checkout.id);
+    expect(row?.asyncPaymentFailedAt).toEqual(first?.asyncPaymentFailedAt);
+  });
+
+  // The adversarial ordering: Stripe reports the payment settled, then a
+  // stale/duplicate failure event lands. It must never demote settled money.
+  it("never demotes a checkout Stripe already reported paid", async () => {
+    const { db, shop, bookingIds, checkout } = await pendingCheckoutFor();
+    await markCheckoutPaidBySessionId(db, checkout.stripeSessionId);
+
+    expect(await markCheckoutPaymentFailedBySessionId(db, checkout.stripeSessionId)).toBeNull();
+    const row = await checkoutRow(db, checkout.id);
+    expect(row?.status).toBe("completed");
+    expect(row?.asyncPaymentFailedAt).toBeNull();
+    expect((await getBookingPayment(db, shop.id, bookingIds[0]))?.status).toBe("paid");
+  });
+
+  // …and the reverse ordering: a failure arrives first, then a completion. The
+  // existing disqualification check in markCheckoutPaidBySessionId must refuse
+  // to resurrect it, exactly as it does for a locally-expired session.
+  it("a completion arriving after a recorded failure cannot resurrect the checkout", async () => {
+    const { db, shop, bookingIds, checkout } = await pendingCheckoutFor();
+    await markCheckoutPaymentFailedBySessionId(db, checkout.stripeSessionId);
+
+    expect(await markCheckoutPaidBySessionId(db, checkout.stripeSessionId)).toBeNull();
+    const row = await checkoutRow(db, checkout.id);
+    expect(row?.status).toBe("expired");
+    expect(row?.completedAt).toBeNull();
+    expect(await getBookingPayment(db, shop.id, bookingIds[0])).toBeNull();
+  });
+
+  it("refuses a failure whose event belongs to a different connected account", async () => {
+    const { db, checkout } = await pendingCheckoutFor();
+    expect(
+      await markCheckoutPaymentFailedBySessionId(db, checkout.stripeSessionId, "acct_someone_else"),
+    ).toBeNull();
+    expect((await checkoutRow(db, checkout.id))?.status).toBe("pending");
+
+    expect(
+      await markCheckoutPaymentFailedBySessionId(
+        db,
+        checkout.stripeSessionId,
+        checkout.stripeAccountId,
+      ),
+    ).not.toBeNull();
+  });
+
+  it("ignores an unknown session id", async () => {
+    const { db } = await checkoutContext();
+    expect(await markCheckoutPaymentFailedBySessionId(db, "cs_unknown")).toBeNull();
+  });
+
+  // A failed async payment means the party's seats stay unpaid — the whole
+  // party, not just the submitter. Nothing may be attributed to any of them.
+  it("leaves every booking of a party checkout unpaid", async () => {
+    const { db, shop, bookingIds, checkout } = await pendingCheckoutFor(2);
+    await markCheckoutPaymentFailedBySessionId(db, checkout.stripeSessionId);
+    for (const bookingId of bookingIds) {
+      expect(await getBookingPayment(db, shop.id, bookingId)).toBeNull();
+    }
   });
 });
