@@ -140,7 +140,7 @@ function PaymentRow({
               href={`/shop/${shopSlug}/orders/new?personId=${personId}&bookingId=${booking.id}`}
               className={buttonClass({ variant: "secondary", size: "sm" })}
             >
-              {t("divers.payments.createInvoice")}
+              {t("divers.payments.createOrder")}
             </Link>
           ) : (
             // No connected account means `orders/new` would refuse and bounce
@@ -167,7 +167,7 @@ function PaymentRow({
               ? statusLabel(t, ORDER_STATUS_KEYS, orderRow.order.status)
               : bookingPayment
                 ? statusLabel(t, PAYMENT_STATUS_KEYS, bookingPayment.payment.status)
-                : t("divers.payments.noInvoice")}
+                : t("divers.payments.noOrder")}
           </span>
         </div>
       </li>
@@ -233,7 +233,7 @@ export function PaymentsSection({
   /**
    * Whether the shop has a Stripe account that can actually take money. False
    * on every day-one shop, and `orders/new` refuses outright when it is — so
-   * the invoice buttons here become a "Connect payments" link rather than a
+   * the order buttons here become a "Connect payments" link rather than a
    * click that bounces back with a notice.
    */
   paymentsConnected: boolean;

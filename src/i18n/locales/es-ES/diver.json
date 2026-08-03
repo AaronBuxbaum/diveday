@@ -1305,7 +1305,7 @@
         "item1": "Pagos con tarjeta al reservar a través de la cuenta de Stripe de la propia tienda",
         "item2": "Depósitos con el saldo pendiente en el muelle",
         "item3": "Una ventana de cancelación gratuita, con reembolso automático cuando un buceador cancela dentro de ella",
-        "item4": "Pedidos y facturas emitidos por el personal con líneas de salida, curso, alquiler, nitrox y tienda",
+        "item4": "Pedidos emitidos por el personal con líneas de salida, curso, alquiler, nitrox y tienda",
         "item5": "Propinas para la tripulación que el buceador inicia desde su propia página de recuerdo",
         "item6": "El estado del pago integrado en si un buceador está listo para embarcar"
       },

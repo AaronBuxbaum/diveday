@@ -153,7 +153,7 @@
         "refunded": "Reembolsado"
       },
       "orderStatus": {
-        "open": "Factura abierta",
+        "open": "Abierto",
         "paid": "Pagado",
         "void": "Anulado",
         "uncollectible": "Incobrable",
@@ -298,15 +298,15 @@
     },
     "payments": {
       "heading": "Pagos",
-      "description": "El estado de pago, las facturas y los reembolsos se mantienen con el buceador para que la siguiente acción sea fácil de encontrar.",
+      "description": "El estado de pago, los pedidos y los reembolsos se mantienen con el buceador para que la siguiente acción sea fácil de encontrar.",
       "newPayment": "Nuevo pago",
-      "noPaymentsYet": "Aún no hay pagos — aparecerán aquí en cuanto este buceador reserve una salida o envíes una factura.",
+      "noPaymentsYet": "Aún no hay pagos — aparecerán aquí en cuanto este buceador reserve una salida o emitas un pedido.",
       "bookingPaymentSuffix": " · pago de reserva",
       "paymentStatusText": "Pago: {status}",
       "paymentNotRecorded": "Pago: no registrado",
       "openPayment": "Abrir pago",
-      "createInvoice": "Crear factura",
-      "noInvoice": "Sin factura",
+      "createOrder": "Crear pedido",
+      "noOrder": "Sin pedido",
       "shopPaymentFallback": "Pago de tienda",
       "noTripAttached": " · sin salida asociada",
       "refund": "Reembolsar",
@@ -473,10 +473,10 @@
       "overviewLabel": "Resumen",
       "overviewDescription": "Unos párrafos con las palabras del buceador, no las de la agencia.",
       "pricingLegend": "Precio",
-      "pricingDescription": "Dos líneas en una factura: tu cuota de instrucción y la cuota de e-learning de la agencia. El buceador paga el total en un solo pago.",
+      "pricingDescription": "Dos líneas en un pedido: tu cuota de instrucción y la cuota de e-learning de la agencia. El buceador paga el total en un solo pago.",
       "instructionFeeLabel": "Cuota de instrucción",
       "eLearningFeeLabel": "Cuota de e-learning",
-      "eLearningFeeHint": "(su propia línea de factura)",
+      "eLearningFeeHint": "(su propia línea de pedido)",
       "photosLegend": "Fotos",
       "photosDescription": "Sube tus propias fotos. Los archivos nuevos se añaden a la galería; marca una foto para eliminarla.",
       "heroPhotoLabel": "Foto principal",
@@ -697,6 +697,8 @@
       "nitroxCheckbox": "Nitrox",
       "saving": "Guardando…",
       "optionalHint": "(opcional)",
+      "errorCoordinates": "Añade ambas coordenadas del pronóstico, o deja las dos en blanco — un punto de pronóstico necesita latitud y longitud. Todo lo demás que escribiste sigue aquí.",
+      "errorDepth": "Esa profundidad máxima es mayor que la de cualquier sitio de buceo — revisa la cifra y vuelve a guardar.",
       "errorImages": "Uno de esos enlaces de imagen no se pudo usar — usa hasta seis enlaces HTTP(S) completos, uno por línea, cada uno apuntando a una imagen real y accesible.",
       "errorImagesUnconfigured": "El alojamiento de imágenes aún no está configurado para esta tienda — deja los enlaces de imagen en blanco por ahora, o pide al propietario o gerente de tu tienda que lo configure."
     },
@@ -735,7 +737,7 @@
         "fallback": "No se pudo crear ese pedido."
       },
       "linkedTo": "Vinculado a la reserva de {personName} en {tripTitle} ({date}).",
-      "courseNote": "Las líneas de instrucción y e-learning del curso vienen rellenas de tu catálogo. Una factura, dos líneas: borra la línea de e-learning si este alumno ya lo completó por su cuenta.",
+      "courseNote": "Las líneas de instrucción y e-learning del curso vienen rellenas de tu catálogo. Un pedido, dos líneas: borra la línea de e-learning si este alumno ya lo completó por su cuenta.",
       "noPriceNote": "Esta salida no tiene precio, así que la línea de la salida está en blanco — añade uno en la página de la salida para saltarte este paso la próxima vez.",
       "priceNote": "La línea de la salida viene rellena con el precio de esta salida.",
       "customerLabel": "Cliente",
@@ -809,7 +811,7 @@
     "index": {
       "eyebrow": "Recepción",
       "title": "Pedidos",
-      "description": "Todas las facturas que ha enviado la tienda, de todos los buceadores y salidas.",
+      "description": "Todos los pedidos que ha enviado la tienda, de todos los buceadores y salidas.",
       "newOrder": "Nuevo pedido",
       "notice": {
         "paymentNotConnected": "Los pagos aún no están conectados, así que no hay ninguna cuenta desde la que facturar — conecta una para empezar a cobrar a los buceadores.",
@@ -828,7 +830,7 @@
       "filteredByDiver": "Mostrando los pedidos de {name}.",
       "emptyAll": "Todavía no hay pedidos — aparecerán aquí en cuanto recepción envíe uno.",
       "emptyFiltered": "Ningún pedido coincide con estos filtros.",
-      "emptyNoPayments": "Todavía no hay pedidos — conecta los pagos y recepción podrá enviar su primera factura desde aquí.",
+      "emptyNoPayments": "Todavía no hay pedidos — conecta los pagos y recepción podrá enviar su primer pedido desde aquí.",
       "table": {
         "diver": "Buceador",
         "trip": "Salida",
@@ -840,7 +842,7 @@
         "total": "{count, plural, one {# pedido} other {# pedidos}}"
       },
       "range": {
-        "recentNote": "Mostrando los últimos {days} días. Las facturas anteriores siguen aquí.",
+        "recentNote": "Mostrando los últimos {days} días. Los pedidos anteriores siguen aquí.",
         "showAll": "Mostrar todos los pedidos",
         "allNote": "Mostrando todos los pedidos que ha emitido la tienda.",
         "showRecent": "Volver a los últimos {days} días"
@@ -1878,7 +1880,7 @@
       },
       "stripe": {
         "notConnectedHeading": "Ninguna cuenta de Stripe conectada",
-        "notConnectedDescription": "Conecta una cuenta de Stripe de tu propiedad — DiveDay nunca retiene tu dinero, y los pagos de pedidos y facturas van directo a tu propio saldo de Stripe.",
+        "notConnectedDescription": "Conecta una cuenta de Stripe de tu propiedad — DiveDay nunca retiene tu dinero, y los pagos de pedidos van directo a tu propio saldo de Stripe.",
         "connect": "Conectar Stripe",
         "notConfiguredWarning": "Los pagos en línea no están configurados en esta instancia de DiveDay — contacta a {email} para activarlos.",
         "connectedHeading": "Cuenta de Stripe conectada",
@@ -1924,7 +1926,7 @@
       },
       "orders": {
         "heading": "Pedidos",
-        "description": "Todas las facturas y pagos que ha enviado la tienda: filtra por estado, fecha o buceador.",
+        "description": "Todos los pedidos y pagos que ha enviado la tienda: filtra por estado, fecha o buceador.",
         "cta": "Ver pedidos"
       },
       "backToSettings": "Volver a configuración",
@@ -2746,10 +2748,10 @@
         "resending": "Reenviando…",
         "invoiceResent": "Factura reenviada.",
         "errors": {
-          "notFound": "No se encontró esa factura — abre la salida para revisarla.",
-          "notOpen": "Esta factura ya no está abierta — abre la salida para comprobar su estado.",
+          "notFound": "No se encontró ese pedido — abre la salida para revisarlo.",
+          "notOpen": "Este pedido ya no está abierto — abre la salida para comprobar su estado.",
           "notConfigured": "Los pagos todavía no están conectados para este centro.",
-          "failed": "Sigue sin poder reenviarse — abre la salida para revisar la factura."
+          "failed": "Sigue sin poder reenviarse — abre la salida para revisar el pedido."
         }
       },
       "yourSessions": {

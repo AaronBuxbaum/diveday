@@ -10,7 +10,7 @@ test.describe("demo billing history", () => {
   signedInAsOwner();
 
   test("a paid demo order's refund control is disabled with a reason", async ({ page }) => {
-    // A seeded historical diver with a paid invoice on file. The extended
+    // A seeded historical diver with a paid order on file. The extended
     // roster is well past one default page, sorted alphabetically — search
     // for her rather than assume she's on the unfiltered first page.
     await page.goto("/shop/blue-mantis/divers");
@@ -61,11 +61,11 @@ test.describe("demo billing history", () => {
 
   /**
    * The index is paged (`ORDER_PAGE_SIZE`). Before that it rendered every one
-   * of the demo's 323 invoices in a single ~17,700px scroll — the whole table
+   * of the demo's 323 orders in a single ~17,700px scroll — the whole table
    * queried and painted on every visit, for a screen nobody reads past the
    * first few rows of.
    */
-  test("the order index pages instead of rendering every invoice", async ({ page }) => {
+  test("the order index pages instead of rendering every order", async ({ page }) => {
     await page.goto("/shop/blue-mantis/orders");
     await page.getByRole("heading", { level: 1, name: "Orders" }).waitFor();
 
@@ -86,7 +86,7 @@ test.describe("demo billing history", () => {
     await pager.getByRole("link", { name: "Next" }).click();
     await page.waitForURL(/[?&]page=2/);
     await expect(page.getByRole("navigation", { name: "Pages" })).toContainText("Page 2 of");
-    // Different invoices, not the same screen re-rendered.
+    // Different orders, not the same screen re-rendered.
     await expect(page.locator("tbody tr").first().getByRole("link").first()).not.toHaveText(
       firstDiver,
     );
@@ -100,9 +100,9 @@ test.describe("demo billing history", () => {
   });
 
   /**
-   * The index used to load every invoice a shop had ever raised. It opens on a
+   * The index used to load every order a shop had ever raised. It opens on a
    * window now — which is only acceptable because the window is *stated* and
-   * has a door out of it, right where a staffer hunting an older invoice will
+   * has a door out of it, right where a staffer hunting an older order will
    * look for one.
    */
   test("the index opens on a stated window with an explicit way to see everything", async ({
@@ -132,7 +132,7 @@ test.describe("demo billing history", () => {
   });
 
   /**
-   * Applying a status filter while looking at one diver's invoices used to
+   * Applying a status filter while looking at one diver's orders used to
    * throw the staffer back to every diver's: the GET form carried no
    * `personId`, so submitting it dropped the very filter the page was
    * explaining in the line above the table.
@@ -158,7 +158,7 @@ test.describe("demo billing history", () => {
     await page.getByRole("button", { name: "Apply filters" }).click();
     await expect(page).toHaveURL(new RegExp(`personId=${personId}`));
 
-    // Grace has no voided invoices, so this is also the empty-result case: the
+    // Grace has no voided orders, so this is also the empty-result case: the
     // sentence naming whose orders these are used to be read off the first row
     // and therefore vanished exactly here.
     await expect(page.getByText("Showing orders for Grace Halloran.")).toBeVisible();
@@ -171,7 +171,7 @@ test.describe("demo billing history", () => {
     await page.getByRole("heading", { level: 1, name: "Orders" }).waitFor();
     const pager = page.getByRole("navigation", { name: "Pages" });
     // Not "skip if there's nothing to page": the seeded demo carries 323
-    // invoices and the paid slice is far past one page, so a missing pager is
+    // orders and the paid slice is far past one page, so a missing pager is
     // the regression, not a reason to pass. The early return this replaces
     // meant a filter that silently returned one page of results — exactly what
     // a dropped `status` on the count query looks like — ended the test green.
@@ -240,7 +240,7 @@ test.describe("no connected payment account", () => {
     const personId = new URL(page.url()).pathname.split("/").pop() ?? "";
     expect(personId).not.toBe("");
 
-    // The diver record's own invoice buttons are replaced, not dead.
+    // The diver record's own order buttons are replaced, not dead.
     await expect(page.getByRole("link", { name: "New payment" })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Connect payments" }).first()).toHaveAttribute(
       "href",

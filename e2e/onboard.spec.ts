@@ -139,7 +139,9 @@ test("a freshly onboarded shop finds a way forward on its empty Divers and Order
   await page.goto(`/shop/${unique}/orders`);
   await expect(
     page.getByText(
-      "No orders yet — connect payments and the front desk can send its first invoice from here.",
+      // One noun for one object: the record the front desk sends is an
+      // "order" wherever it is named — "invoice" is only the Stripe artifact.
+      "No orders yet — connect payments and the front desk can send its first order from here.",
     ),
   ).toBeVisible();
   // Header and empty state both offer it; the empty state's is the last one.

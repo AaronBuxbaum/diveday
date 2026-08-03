@@ -153,7 +153,7 @@
         "refunded": "Refunded"
       },
       "orderStatus": {
-        "open": "Invoice open",
+        "open": "Open",
         "paid": "Paid",
         "void": "Void",
         "uncollectible": "Uncollectible",
@@ -298,15 +298,15 @@
     },
     "payments": {
       "heading": "Payments",
-      "description": "Payment status, invoices, and refunds stay with the diver so the next action is easy to find.",
+      "description": "Payment status, orders, and refunds stay with the diver so the next action is easy to find.",
       "newPayment": "New payment",
-      "noPaymentsYet": "No payments yet — they'll appear here once this diver books a trip or you send an invoice.",
+      "noPaymentsYet": "No payments yet — they'll appear here once this diver books a trip or you raise an order.",
       "bookingPaymentSuffix": " · booking payment",
       "paymentStatusText": "Payment: {status}",
       "paymentNotRecorded": "Payment: not recorded",
       "openPayment": "Open payment",
-      "createInvoice": "Create invoice",
-      "noInvoice": "No invoice",
+      "createOrder": "Create order",
+      "noOrder": "No order",
       "shopPaymentFallback": "Shop payment",
       "noTripAttached": " · no trip attached",
       "refund": "Refund",
@@ -473,10 +473,10 @@
       "overviewLabel": "Overview",
       "overviewDescription": "A few paragraphs in the diver's words, not the agency's.",
       "pricingLegend": "Pricing",
-      "pricingDescription": "Two lines on one bill: your instruction fee and the agency's e-learning fee. The diver pays the total in a single payment.",
+      "pricingDescription": "Two lines on one order: your instruction fee and the agency's e-learning fee. The diver pays the total in a single payment.",
       "instructionFeeLabel": "Instruction fee",
       "eLearningFeeLabel": "e-Learning fee",
-      "eLearningFeeHint": "(its own invoice line)",
+      "eLearningFeeHint": "(its own order line)",
       "photosLegend": "Photos",
       "photosDescription": "Upload your own photos. New files are added to the gallery; tick a photo to remove it.",
       "heroPhotoLabel": "Hero photo",
@@ -697,6 +697,8 @@
       "nitroxCheckbox": "Nitrox",
       "saving": "Saving…",
       "optionalHint": "(optional)",
+      "errorCoordinates": "Add both forecast coordinates, or leave both blank — a forecast point needs a latitude and a longitude. Everything else you typed is still here.",
+      "errorDepth": "That maximum depth is deeper than any dive site — check the figure, then save again.",
       "errorImages": "One of those image links couldn't be used — use up to six complete HTTP(S) links, one per line, each pointing to a real, reachable image.",
       "errorImagesUnconfigured": "Image hosting isn't set up for this shop yet — leave the image links blank for now, or ask your shop's owner or manager to configure it."
     },
@@ -735,7 +737,7 @@
         "fallback": "That order couldn't be created."
       },
       "linkedTo": "Linked to {personName}'s booking on {tripTitle} ({date}).",
-      "courseNote": "The course's instruction and e-learning lines are pre-filled from your catalog. One invoice, two lines: clear the e-learning line if this student already completed it elsewhere.",
+      "courseNote": "The course's instruction and e-learning lines are pre-filled from your catalog. One order, two lines: clear the e-learning line if this student already completed it elsewhere.",
       "noPriceNote": "This trip has no price set, so the trip fee below is blank — add one on the trip page to skip this step next time.",
       "priceNote": "The trip fee below is pre-filled from this trip's price.",
       "customerLabel": "Customer",
@@ -809,7 +811,7 @@
     "index": {
       "eyebrow": "Front desk",
       "title": "Orders",
-      "description": "Every invoice the shop has sent, across every diver and trip.",
+      "description": "Every order the shop has sent, across every diver and trip.",
       "newOrder": "New order",
       "notice": {
         "paymentNotConnected": "Payments aren't connected yet, so there's no account to invoice from — connect one to start charging divers.",
@@ -828,7 +830,7 @@
       "filteredByDiver": "Showing orders for {name}.",
       "emptyAll": "No orders yet — they show up here as soon as the front desk sends one.",
       "emptyFiltered": "No orders match these filters.",
-      "emptyNoPayments": "No orders yet — connect payments and the front desk can send its first invoice from here.",
+      "emptyNoPayments": "No orders yet — connect payments and the front desk can send its first order from here.",
       "table": {
         "diver": "Diver",
         "trip": "Trip",
@@ -840,7 +842,7 @@
         "total": "{count, plural, one {# order} other {# orders}}"
       },
       "range": {
-        "recentNote": "Showing the last {days} days. Older invoices are still here.",
+        "recentNote": "Showing the last {days} days. Older orders are still here.",
         "showAll": "Show every order",
         "allNote": "Showing every order the shop has ever raised.",
         "showRecent": "Back to the last {days} days"
@@ -1878,7 +1880,7 @@
       },
       "stripe": {
         "notConnectedHeading": "No Stripe account connected",
-        "notConnectedDescription": "Connect a Stripe account you own — DiveDay never holds your money, and payments for orders and invoices go straight into your own Stripe balance.",
+        "notConnectedDescription": "Connect a Stripe account you own — DiveDay never holds your money, and payments for orders go straight into your own Stripe balance.",
         "connect": "Connect Stripe",
         "notConfiguredWarning": "Online payments aren't configured for this DiveDay instance yet — contact {email} to get it set up.",
         "connectedHeading": "Stripe account connected",
@@ -1924,7 +1926,7 @@
       },
       "orders": {
         "heading": "Orders",
-        "description": "Every invoice and payment the shop has sent — filter by status, date, or diver.",
+        "description": "Every order and payment the shop has sent — filter by status, date, or diver.",
         "cta": "View orders"
       },
       "backToSettings": "Back to settings",
@@ -2746,10 +2748,10 @@
         "resending": "Resending…",
         "invoiceResent": "Invoice resent.",
         "errors": {
-          "notFound": "That invoice could not be found — open the trip to check it.",
-          "notOpen": "This invoice is no longer open — open the trip to check its status.",
+          "notFound": "That order could not be found — open the trip to check it.",
+          "notOpen": "This order is no longer open — open the trip to check its status.",
           "notConfigured": "Payments aren’t connected for this shop yet.",
-          "failed": "Still couldn’t resend it — open the trip to check the invoice."
+          "failed": "Still couldn’t resend it — open the trip to check the order."
         }
       },
       "yourSessions": {
