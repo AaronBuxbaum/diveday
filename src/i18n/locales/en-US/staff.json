@@ -770,7 +770,8 @@
         "refunded": "Payment refunded — the trip now shows as unpaid for this diver.",
         "refundFailed": "Couldn't refund this order — it may not have a refundable payment yet.",
         "notAuthorized": "Refunds are limited to owners and managers — ask one of them to issue this refund.",
-        "demoDisabled": "This is a demo order — it isn't backed by a live Stripe invoice, so it can't be changed."
+        "demoDisabled": "This is a demo order — it isn't backed by a live Stripe invoice, so it can't be changed.",
+        "fallback": "Something changed on this order — the details below are current."
       }
     },
     "index": {

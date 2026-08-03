@@ -770,7 +770,8 @@
         "refunded": "Pago reembolsado — la salida ahora aparece como no pagada para este buceador.",
         "refundFailed": "No se pudo reembolsar este pedido — puede que todavía no tenga un pago reembolsable.",
         "notAuthorized": "Los reembolsos están limitados a propietarios y gerentes — pide a uno de ellos que lo tramite.",
-        "demoDisabled": "Este es un pedido de demostración — no está respaldado por una factura real de Stripe, así que no se puede modificar."
+        "demoDisabled": "Este es un pedido de demostración — no está respaldado por una factura real de Stripe, así que no se puede modificar.",
+        "fallback": "Algo cambió en este pedido — los detalles de abajo están al día."
       }
     },
     "index": {

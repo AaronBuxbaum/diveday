@@ -187,8 +187,12 @@ export default async function OrderDetailPage({
       />
 
       {notice ? (
-        <StaffNoticeBanner tone={banner?.tone ?? "success"}>
-          {banner ? t(banner.key) : notice}
+        // An unrecognised code renders the neutral fallback sentence, never the
+        // raw query value: `?notice=` is attacker-craftable, and this is a money
+        // screen — a hostile link must not be able to paint its own words into a
+        // success-green banner (same rule as orders/new's fallback).
+        <StaffNoticeBanner tone={banner?.tone ?? "neutral"}>
+          {banner ? t(banner.key) : t("orders.detail.notice.fallback")}
         </StaffNoticeBanner>
       ) : null}
 
