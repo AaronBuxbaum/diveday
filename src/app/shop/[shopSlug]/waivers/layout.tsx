@@ -4,9 +4,10 @@ import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { WaiversSubNav, type WaiversSubNavCopy } from "./_components/WaiversSubNav";
 
-// TODO: Cache Components adoption. Refactor this route so this opt-out can be removed.
-// See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
-export const instant = false;
+// No `instant` config here. `/shop/[shopSlug]/layout.tsx`'s `instant = false` is
+// the outermost one in every route through this layout, and `isPageAllowedToBlock`
+// stops there — a second one at this depth was never read.
+// See ADR 20260803-instant-opt-out-placement.
 
 /**
  * One shell for both waiver surfaces — Template and Signatures (task 155).

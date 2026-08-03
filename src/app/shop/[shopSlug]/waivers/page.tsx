@@ -18,8 +18,11 @@ import { type NoticeTone, noticeRole } from "@/lib/staff-notices";
 import { DEFAULT_WAIVER_BODY } from "@/lib/waivers";
 import { saveWaiverAction } from "./actions";
 
-// TODO: Cache Components adoption. Refactor this route so this opt-out can be removed.
-// See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
+// Not a TODO. The shop layout above already permits this route's blocking
+// prerender (`isPageAllowedToBlock` reads only the outermost `instant`), so what
+// this line still buys is keeping the page segment out of dev-time instant
+// validation — which nothing above a page segment can do.
+// See ADR 20260803-instant-opt-out-placement.
 export const instant = false;
 
 export const metadata: Metadata = {

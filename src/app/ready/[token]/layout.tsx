@@ -10,11 +10,12 @@ import { requestLocale } from "@/i18n/request";
  * `src/app/waivers/[token]/layout.tsx` for the full reasoning and ADR
  * 20260803-error-boundary-copy-bridge for the decision.
  */
-// Bearer-token page (the URL is the capability, docs/engineering/
-// capability-telemetry-runbook.md) — `requestLocale()` reads `headers()`,
-// which is genuinely request-scoped. Same reasoning as the page's own
-// `instant = false`.
-export const instant = false;
+// No `instant` config here. This layout's `requestLocale()` does block, but
+// `isPageAllowedToBlock` reads only the *outermost* `instant` in a route, and
+// the page below already declares `instant = false` — which covers this route
+// either way, and additionally keeps the page segment out of dev-time instant
+// validation, which a layout config cannot do. Two declarations bought nothing.
+// See ADR 20260803-instant-opt-out-placement.
 
 export default async function ReadyTokenLayout({ children }: { children: ReactNode }) {
   return (
