@@ -2845,39 +2845,53 @@ export const mediaDeletionAttempts = pgTable(
 );
 
 /**
- * Which record at which processor an erasure obligation is still owed against.
- * One value today; the enum exists so a second processor is an additive
- * migration rather than a reshape.
+ * What an erasure obligation is owed *against*, which also decides who can
+ * discharge it (ADR 20260803-processor-erasure-obligations):
+ *
+ * - `stripe_customer` — a `cus_…` object DiveDay deletes itself through
+ *   `DELETE /v1/customers/{id}` on the shop's connected account. Retryable and
+ *   self-discharging: the row exists so a failed or never-attempted delete is
+ *   durable and gets tried again, exactly like `mediaDeletionAttempts`.
+ * - `stripe_invoice_snapshot` — an `in_…` finalized invoice. Stripe copies
+ *   `customer_name`/`customer_email` onto the invoice when it is finalized, and
+ *   deleting the customer does **not** rewrite that copy; Stripe handles
+ *   Invoice/PaymentIntent/Charge separately in its own data-deletion flow. No
+ *   API call clears it, so this kind is a genuinely manual step and is
+ *   discharged only by a human attesting they filed that request.
  */
-export const processorErasureTarget = pgEnum("processor_erasure_target", ["stripe_customer"]);
+export const processorErasureTarget = pgEnum("processor_erasure_target", [
+  "stripe_customer",
+  "stripe_invoice_snapshot",
+]);
 
 export const processorErasureStatus = pgEnum("processor_erasure_status", ["owed", "discharged"]);
 
 /**
- * One row per "a processor still holds this erased diver's identity, and only
- * the shop can go and remove it" — the durable counterpart to
- * `mediaDeletionAttempts` for records DiveDay does not own
- * (ADR 20260803-processor-erasure-obligations).
+ * One row per "a processor still holds this erased diver's identity" — the
+ * durable counterpart to `mediaDeletionAttempts` for records DiveDay does not
+ * store itself (ADR 20260803-processor-erasure-obligations).
  *
- * Raised by `anonymizeDiver` (src/db/anonymize.ts) for every distinct
- * `orders.stripe_customer_id` the erased diver's orders point at. That column
- * is `NOT NULL` and names a customer object living in the shop's *own* Stripe
- * account, carrying the diver's name and email; erasure cannot rewrite it, and
- * DiveDay deliberately does not delete it on the shop's behalf — a Stripe
- * customer deletion is irreversible and takes the shop's tax and chargeback
- * trail with it, which is the shop's call and its regulator's problem, not a
- * side effect of a button in DiveDay.
+ * Raised by `anonymizeDiver` (src/db/anonymize.ts) from the erased diver's
+ * orders: one `stripe_customer` row per distinct `orders.stripe_customer_id`,
+ * one `stripe_invoice_snapshot` row per distinct `orders.stripe_invoice_id`.
+ * Both of those columns are `NOT NULL` pointers into the shop's own Stripe
+ * account and the local scrub cannot rewrite either.
  *
- * So this is a ledger, not a queue: nothing retries it, no cron drains it, and
- * a row is discharged only when a human says they did the work at the
- * processor. Its honest claim is exactly "we know this is still owed and we
- * have not forgotten which record" — an undischarged row is not erasure, and
- * a discharged one is the shop's own attestation, not a verified fact about
- * Stripe.
+ * The table does two jobs, and the `target` above says which applies:
  *
- * `external_id` is a `cus_…` handle, not personal data: it is the pointer the
- * shop pastes into the Stripe dashboard. The row keeps no name, address or
- * amount — the whole point is that the identity is gone from here.
+ *   1. **A retry ledger for work DiveDay does perform.** The customer delete is
+ *      attempted *after* the erasure transaction commits — never inside it, and
+ *      never as a condition of it. A Stripe outage, a revoked Connect token or
+ *      a dead network must not roll back an erasure the diver asked for, so the
+ *      row commits first and the attempt happens after; `attempts`/`lastError`
+ *      are why a failure is visible rather than merely retried forever.
+ *   2. **A record of what no API can reach.** The invoice-snapshot rows are not
+ *      retryable at all. They exist so nothing in the product implies erasure
+ *      finished when a copy of the name and email is still sitting on a
+ *      finalized invoice.
+ *
+ * `external_id` is a `cus_…`/`in_…` handle, not personal data: it is the
+ * pointer, and the row deliberately keeps no name, address or amount.
  */
 export const processorErasureObligations = pgTable(
   "processor_erasure_obligations",
@@ -2896,10 +2910,27 @@ export const processorErasureObligations = pgTable(
       .references(() => people.id),
     target: processorErasureTarget("target").notNull(),
     externalId: text("external_id").notNull(),
+    /**
+     * The connected account the object lives on, snapshotted from
+     * `orders.stripe_account_id` rather than re-derived from the shop at retry
+     * time — the same discipline `refundOrder` uses (src/db/orders.ts). A shop
+     * that disconnects and reconnects gets a *different* account id, and a
+     * delete aimed at the current one would 404 forever against an object that
+     * is still sitting on the old one.
+     */
+    stripeAccountId: text("stripe_account_id").notNull(),
     status: processorErasureStatus("status").notNull().default("owed"),
+    /** Delete attempts made so far. Always 0 for a target no API can discharge. */
+    attempts: integer("attempts").notNull().default(0),
+    /** Why the last attempt failed, so an owner sees *why* and not merely *that*. */
+    lastError: text("last_error"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     dischargedAt: timestamp("discharged_at", { withTimezone: true }),
-    /** Who attested the processor-side work was done. Null while still owed. */
+    /**
+     * Who attested the processor-side work was done. Null while still owed —
+     * and also null on a `stripe_customer` row discharged by a successful API
+     * delete, which is DiveDay's own act rather than anyone's attestation.
+     */
     dischargedByPersonId: uuid("discharged_by_person_id").references(() => people.id),
   },
   (table) => [
@@ -2972,5 +3003,6 @@ export type PaymentOperationIntent = typeof paymentOperationIntents.$inferSelect
 export type MediaDeletionAttempt = typeof mediaDeletionAttempts.$inferSelect;
 export type ProcessorErasureObligation = typeof processorErasureObligations.$inferSelect;
 export type MediaDeletionKind = (typeof mediaDeletionKind.enumValues)[number];
+export type ProcessorErasureTarget = (typeof processorErasureTarget.enumValues)[number];
 export type PaymentOperationKind = (typeof paymentOperationKind.enumValues)[number];
 export type PaymentOperationStatus = (typeof paymentOperationStatus.enumValues)[number];

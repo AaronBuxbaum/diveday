@@ -1,63 +1,108 @@
 /**
- * The "a processor still holds this erased diver, and only the shop can go and
- * remove it" ledger (ADR 20260803-processor-erasure-obligations).
+ * The processor half of diver erasure (ADR 20260803-processor-erasure-obligations).
  *
- * `anonymizeDiver` (src/db/anonymize.ts) can empty every column DiveDay owns.
- * It cannot touch `orders.stripe_customer_id`: that column is `NOT NULL`, the
- * shop needs it for tax and chargeback, and it names a customer object in the
- * shop's own Stripe account carrying the diver's name and email. Before this
- * module, "erasure at the processor" was a sentence in an ADR and nothing in
- * the product — an obligation with no record, owed by nobody in particular.
+ * `anonymizeDiver` (src/db/anonymize.ts) empties every column DiveDay owns. Two
+ * `NOT NULL` pointers on `orders` name records that live at Stripe instead, and
+ * this module is what happens to them:
  *
- * Deliberately a ledger and not a queue. Nothing here calls Stripe: deleting a
- * Stripe customer is irreversible and takes the shop's own invoice trail with
- * it, so the decision belongs to the shop, and a discharged row is the shop's
- * attestation that it did the work — not a fact DiveDay verified. That honesty
- * is the whole design; see the ADR's "What this does not do".
+ *   - **`stripe_customer_id` → deleted.** `DELETE /v1/customers/{id}` on the
+ *     shop's connected account removes the customer's sensitive data and leaves
+ *     charges, invoices, refunds and disputes standing, so the shop's tax and
+ *     chargeback trail survives it. DiveDay creates no subscriptions on
+ *     connected accounts, so the cancel-subscriptions side effect does not
+ *     apply here. (The intuitive objection — "deleting the customer destroys the
+ *     shop's financial records" — is wrong, and the ADR records why so nobody
+ *     re-litigates it from memory.)
+ *   - **`stripe_invoice_id` → recorded, not deleted.** Stripe snapshots
+ *     `customer_name`/`customer_email` onto an invoice at finalization, and no
+ *     API call rewrites that copy; Stripe handles Invoice/PaymentIntent/Charge
+ *     through its own data-deletion request flow. That is a genuinely manual
+ *     step, so it is recorded as one rather than quietly implied to be done.
+ *
+ * **The delete never runs inside the erasure transaction, and never gates it.**
+ * The obligation row commits with the scrub; the Stripe call happens after. A
+ * dead network, a Stripe outage or a revoked Connect token must not roll back an
+ * erasure a diver asked for — it must leave a visible, retryable `owed` row,
+ * which is exactly the `mediaDeletionAttempts` shape (CR-012) one processor
+ * over.
  */
 
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
+import {
+  type CustomerProvider,
+  customerProviderFromEnvironment,
+} from "@/lib/payments/customers";
 import type { AppDb, DbExecutor } from "./client";
-import { type ProcessorErasureObligation, processorErasureObligations } from "./schema";
+import { idempotencyKeyFor } from "./payment-operations";
+import {
+  type ProcessorErasureObligation,
+  type ProcessorErasureTarget,
+  processorErasureObligations,
+} from "./schema";
+
+/**
+ * How many delete attempts a `stripe_customer` obligation gets from the
+ * automatic retry before it stops being retried on a schedule. It stays `owed`
+ * and owner-visible forever after that — the point of a cap is that a
+ * permanently broken delete (a revoked Connect token, a deleted account) stops
+ * burning a Stripe call every night and starts being a human's problem, not
+ * that DiveDay forgets it.
+ */
+export const MAX_AUTOMATIC_DELETE_ATTEMPTS = 5;
+
+export type ProcessorErasureTargetInput = {
+  target: ProcessorErasureTarget;
+  externalId: string;
+  stripeAccountId: string;
+};
 
 export type RecordProcessorErasureObligationsInput = {
   shopId: string;
   /** The erasure that raised these — already anonymized by the time this runs. */
   personId: string;
-  /** Distinct Stripe customer ids the erased diver's orders point at. */
-  stripeCustomerIds: string[];
+  targets: ProcessorErasureTargetInput[];
 };
 
 /**
- * Raise one obligation per processor record the erasure could not reach.
+ * Raise one obligation per processor record the local scrub could not reach.
  * Written inside the erasure transaction on purpose: an obligation that only
  * commits if some later step also succeeds is exactly the "we forgot we owed
- * this" failure the ledger exists to prevent, and unlike a provider call there
- * is no network here to keep out of the transaction.
+ * this" failure the ledger exists to prevent, and unlike the delete call itself
+ * there is no network here to keep out of the transaction.
  *
- * Idempotent by `(shop_id, target, external_id)`. A replayed erasure, or a
- * second diver whose orders point at the same customer object, folds into the
- * existing row rather than raising a duplicate for work that is a single
- * delete either way. Returns how many rows this call actually created, so the
- * caller can report "n obligations raised" without counting the folds.
+ * Idempotent on `(shop_id, target, external_id)`. A replayed erasure, or a
+ * second diver whose orders point at the same customer object, folds onto the
+ * existing row rather than raising a duplicate for work that is one delete
+ * either way.
+ *
+ * Returns the rows this call created, so the caller can attempt exactly those
+ * deletes once the transaction has committed.
  */
 export async function recordProcessorErasureObligations(
   db: DbExecutor,
   input: RecordProcessorErasureObligationsInput,
-): Promise<number> {
-  const ids = [...new Set(input.stripeCustomerIds.filter((id) => id.trim().length > 0))];
-  if (ids.length === 0) return 0;
-  const inserted = await db
+): Promise<ProcessorErasureObligation[]> {
+  const seen = new Set<string>();
+  const values = input.targets
+    .filter((entry) => entry.externalId.trim().length > 0 && entry.stripeAccountId.trim().length > 0)
+    .filter((entry) => {
+      const key = `${entry.target}:${entry.externalId}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .map((entry) => ({
+      shopId: input.shopId,
+      personId: input.personId,
+      target: entry.target,
+      externalId: entry.externalId,
+      stripeAccountId: entry.stripeAccountId,
+    }));
+  if (values.length === 0) return [];
+  return db
     .insert(processorErasureObligations)
-    .values(
-      ids.map((externalId) => ({
-        shopId: input.shopId,
-        personId: input.personId,
-        target: "stripe_customer" as const,
-        externalId,
-      })),
-    )
+    .values(values)
     .onConflictDoNothing({
       target: [
         processorErasureObligations.shopId,
@@ -65,15 +110,14 @@ export async function recordProcessorErasureObligations(
         processorErasureObligations.externalId,
       ],
     })
-    .returning({ id: processorErasureObligations.id });
-  return inserted.length;
+    .returning();
 }
 
 /**
  * This shop's still-owed obligations, oldest first — the reports-page panel.
  * Shop-scoped in the query, never filtered in the caller: an obligation names a
- * processor record in one shop's Stripe account and has no business being
- * readable from another's.
+ * record in one shop's Stripe account and has no business being readable from
+ * another's.
  */
 export async function listOwedProcessorErasures(
   db: AppDb,
@@ -91,16 +135,166 @@ export async function listOwedProcessorErasures(
     .orderBy(asc(processorErasureObligations.createdAt));
 }
 
+export type AttemptProcessorErasureOutcome =
+  /** The customer is gone from Stripe (this call did it, or it already was). */
+  | { status: "discharged" }
+  /** The call was made or could not be made; the row stays `owed` and visible. */
+  | { status: "failed"; error: string }
+  /** Not a target any API can discharge — an invoice snapshot needs a human. */
+  | { status: "manual" };
+
+/**
+ * Attempt the one obligation that has an API behind it, and record the outcome.
+ *
+ * Deliberately takes an already-loaded row rather than an id: the caller is
+ * `anonymizeDiver`, immediately after its transaction commits, and it holds the
+ * rows it just wrote. Nothing here re-reads or re-authorizes — the erasure that
+ * raised the row was owner-gated, and this is that decision being carried out.
+ */
+export async function attemptProcessorErasure(
+  db: DbExecutor,
+  obligation: ProcessorErasureObligation,
+  provider: CustomerProvider,
+): Promise<AttemptProcessorErasureOutcome> {
+  if (obligation.target !== "stripe_customer") return { status: "manual" };
+  if (obligation.status === "discharged") return { status: "discharged" };
+
+  const result = await provider.deleteCustomer(
+    obligation.stripeAccountId,
+    obligation.externalId,
+    idempotencyKeyFor(obligation.id, "customer-delete"),
+  );
+
+  if (result.status === "deleted" || result.status === "already_deleted") {
+    await db
+      .update(processorErasureObligations)
+      .set({
+        status: "discharged",
+        dischargedAt: nowDate(),
+        attempts: obligation.attempts + 1,
+        lastError: null,
+      })
+      .where(eq(processorErasureObligations.id, obligation.id));
+    return { status: "discharged" };
+  }
+
+  // `not_configured` is a failure like any other here, and deliberately so: a
+  // deployment with no Stripe key has not erased anything at the processor, and
+  // a ledger that quietly discharged the row would be claiming otherwise.
+  const error = result.status === "not_configured" ? "stripe not configured" : result.error;
+  await db
+    .update(processorErasureObligations)
+    .set({ attempts: obligation.attempts + 1, lastError: error })
+    .where(eq(processorErasureObligations.id, obligation.id));
+  return { status: "failed", error };
+}
+
+/**
+ * Attempt every obligation a just-committed erasure raised. Failures are
+ * swallowed by design — the local erasure has already happened and is not
+ * reversible, so the only thing a throw here could accomplish is to make a
+ * completed erasure look like it failed. The count of what is still owed is the
+ * honest signal, and it is what the caller returns.
+ */
+export async function attemptProcessorErasures(
+  db: DbExecutor,
+  obligations: ProcessorErasureObligation[],
+  provider: CustomerProvider,
+): Promise<{ discharged: number; stillOwed: number }> {
+  let discharged = 0;
+  let stillOwed = 0;
+  for (const obligation of obligations) {
+    const outcome = await attemptProcessorErasure(db, obligation, provider);
+    if (outcome.status === "discharged") discharged += 1;
+    else stillOwed += 1;
+  }
+  return { discharged, stillOwed };
+}
+
+export type RetryProcessorErasureResult =
+  | { ok: true; outcome: AttemptProcessorErasureOutcome }
+  /** No owed obligation with this id at this shop — wrong shop, or already discharged. */
+  | { ok: false; reason: "not_found" };
+
+/**
+ * The owner-visible "Retry" for one obligation, scoped to the shop. Mirrors
+ * `retryMediaDeletion` (src/db/media-deletions.ts): re-read the row *under the
+ * shop scope* before doing anything with it, so an id from another tenant
+ * resolves to nothing rather than to a delete on somebody else's account.
+ */
+export async function retryProcessorErasure(
+  db: AppDb,
+  shopId: string,
+  obligationId: string,
+  provider: CustomerProvider = customerProviderFromEnvironment(),
+): Promise<RetryProcessorErasureResult> {
+  const [obligation] = await db
+    .select()
+    .from(processorErasureObligations)
+    .where(
+      and(
+        eq(processorErasureObligations.id, obligationId),
+        eq(processorErasureObligations.shopId, shopId),
+        eq(processorErasureObligations.status, "owed"),
+      ),
+    );
+  if (!obligation) return { ok: false, reason: "not_found" };
+  return { ok: true, outcome: await attemptProcessorErasure(db, obligation, provider) };
+}
+
+/**
+ * Bounded cross-shop retry for the nightly tick, mirroring
+ * `retryPendingMediaDeletions`: a transient Stripe outage must not require an
+ * owner to notice the reports panel and click Retry by hand. Only
+ * `stripe_customer` rows under the attempt cap are eligible — an invoice
+ * snapshot has no API to retry, and a row past the cap is a standing human
+ * problem rather than a nightly Stripe call.
+ */
+export async function retryPendingProcessorErasures(
+  db: AppDb,
+  options: { limit?: number; provider?: CustomerProvider } = {},
+): Promise<{ attempted: number; discharged: number }> {
+  const limit = options.limit ?? 25;
+  const provider = options.provider ?? customerProviderFromEnvironment();
+  const rows = await db
+    .select()
+    .from(processorErasureObligations)
+    .where(
+      and(
+        eq(processorErasureObligations.status, "owed"),
+        eq(processorErasureObligations.target, "stripe_customer"),
+      ),
+    )
+    .orderBy(asc(processorErasureObligations.createdAt))
+    .limit(limit * 4);
+  const eligible = rows
+    .filter((row) => row.attempts < MAX_AUTOMATIC_DELETE_ATTEMPTS)
+    .slice(0, limit);
+
+  let discharged = 0;
+  for (const obligation of eligible) {
+    const outcome = await attemptProcessorErasure(db, obligation, provider);
+    if (outcome.status === "discharged") discharged += 1;
+  }
+  return { attempted: eligible.length, discharged };
+}
+
 export type DischargeProcessorErasureResult =
   | { ok: true }
   /** No owed obligation with this id at this shop — wrong shop, or already discharged. */
   | { ok: false; reason: "not_found" };
 
 /**
- * Mark one obligation done, on the word of the staff member who did the work
- * at the processor. `status` and `dischargedAt` move together (the table's
- * check constraint enforces it), and the `status = 'owed'` predicate makes a
- * double-submit a no-op rather than a rewritten attestation.
+ * Mark one obligation done on a human's word. This is the *only* way a
+ * `stripe_invoice_snapshot` row ever closes — nothing automated can reach a
+ * finalized invoice's name/email snapshot, so an owner attests they filed
+ * Stripe's data-deletion request. It also stays available for a
+ * `stripe_customer` row whose delete cannot be made to work (an account that no
+ * longer exists, say) and which the owner has resolved by other means.
+ *
+ * `status` and `dischargedAt` move together (the table's check constraint
+ * enforces it), and the `status = 'owed'` predicate makes a double-submit a
+ * no-op rather than a rewritten attestation.
  */
 export async function dischargeProcessorErasure(
   db: AppDb,
@@ -122,4 +316,23 @@ export async function dischargeProcessorErasure(
     )
     .returning({ id: processorErasureObligations.id });
   return discharged.length > 0 ? { ok: true } : { ok: false, reason: "not_found" };
+}
+
+/** Test/seed helper: the obligations raised by one erasure, in creation order. */
+export async function listProcessorErasuresForPerson(
+  db: AppDb,
+  shopId: string,
+  personIds: string[],
+): Promise<ProcessorErasureObligation[]> {
+  if (personIds.length === 0) return [];
+  return db
+    .select()
+    .from(processorErasureObligations)
+    .where(
+      and(
+        eq(processorErasureObligations.shopId, shopId),
+        inArray(processorErasureObligations.personId, personIds),
+      ),
+    )
+    .orderBy(asc(processorErasureObligations.createdAt));
 }
