@@ -1,4 +1,4 @@
-import { and, count, desc, eq, gte, inArray, isNotNull, lt, or, sql } from "drizzle-orm";
+import { and, count, desc, eq, gte, inArray, isNotNull, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import {
   EMPTY_REVIEW_AGGREGATE,
@@ -9,7 +9,7 @@ import {
   reviewerDisplayName,
 } from "@/lib/reviews";
 import type { AppDb, DbExecutor } from "./client";
-import { decodeCursor, encodeCursor } from "./cursor";
+import { offsetPage } from "./paging";
 import { bookings, people, tripReviews, trips } from "./schema";
 
 /**
@@ -214,80 +214,78 @@ export type StaffReview = {
   createdAt: Date;
 };
 
-/** How many reviews the moderation queue shows per page before "Show more". */
+/** How many reviews the moderation queue shows per page. */
 export const STAFF_REVIEW_PAGE_SIZE = 20;
 
 export type StaffReviewPage = {
   reviews: StaffReview[];
-  nextCursor: string | null;
+  page: number;
+  pageCount: number;
+  pageSize: number;
   total: number;
 };
 
 /**
  * The moderation queue: this shop's reviews, newest first, held ones
- * included — one keyset page at a time (ordered by creation, then id for a
- * stable tiebreak), same idiom as `pagedUpcomingTripsWithCounts` and
- * `listDiverSummaries` so a shop with years of trips costs one page, not the
- * whole table.
+ * included — one page at a time (ordered by creation, then id for a stable
+ * tiebreak) so a shop with years of trips costs one page, not the whole table.
+ *
+ * Offset-paged, like the roster and the orders index. It was a forward-only
+ * keyset cursor, which meant a staffer three pages into the queue had "Show
+ * more" and "Back to top" and nothing in between — no way back one page, and
+ * no way to see how much queue was left (ADR 20260803-one-pagination-model).
  *
  * `onlyWaiting` narrows the same query to unpublished rows only — the
  * "Waiting on you" tab. It stays a plain extra `where` clause rather than a
- * different sort order, so the keyset cursor (creation time, then id) keeps
- * meaning the same thing in both tabs.
+ * different sort order, applied to the count as well as the page, so "page 2
+ * of 4" means the same thing in both tabs.
  */
 export async function listShopReviewsForStaff(
   db: DbExecutor,
   shopId: string,
-  options: { cursor?: string; limit?: number; onlyWaiting?: boolean } = {},
+  options: { page?: number; limit?: number; onlyWaiting?: boolean } = {},
 ): Promise<StaffReviewPage> {
-  const limit = options.limit ?? STAFF_REVIEW_PAGE_SIZE;
-  const after = decodeCursor(options.cursor);
-  const afterDate = after ? new Date(after[0]) : null;
   const scope = and(
     eq(tripReviews.shopId, shopId),
     options.onlyWaiting ? eq(tripReviews.isPublished, false) : undefined,
   );
 
-  const [rows, [counted]] = await Promise.all([
-    db
-      .select({
-        id: tripReviews.id,
-        rating: tripReviews.rating,
-        comment: tripReviews.comment,
-        isPublished: tripReviews.isPublished,
-        diverName: people.fullName,
-        personId: tripReviews.personId,
-        tripId: tripReviews.tripId,
-        tripTitle: trips.title,
-        divedAt: trips.startsAt,
-        createdAt: tripReviews.createdAt,
-      })
-      .from(tripReviews)
-      .innerJoin(people, eq(people.id, tripReviews.personId))
-      .innerJoin(trips, eq(trips.id, tripReviews.tripId))
-      .where(
-        and(
-          scope,
-          afterDate && after && !Number.isNaN(afterDate.getTime())
-            ? or(
-                lt(tripReviews.createdAt, afterDate),
-                and(eq(tripReviews.createdAt, afterDate), lt(tripReviews.id, after[1])),
-              )
-            : undefined,
-        ),
-      )
-      .orderBy(desc(tripReviews.createdAt), desc(tripReviews.id))
-      .limit(limit + 1),
-    db.select({ total: count() }).from(tripReviews).where(scope),
-  ]);
+  const paged = await offsetPage({
+    page: options.page,
+    pageSize: options.limit ?? STAFF_REVIEW_PAGE_SIZE,
+    countRows: async () => {
+      const [counted] = await db.select({ total: count() }).from(tripReviews).where(scope);
+      return counted?.total ?? 0;
+    },
+    fetchRows: async (offset, limit) =>
+      db
+        .select({
+          id: tripReviews.id,
+          rating: tripReviews.rating,
+          comment: tripReviews.comment,
+          isPublished: tripReviews.isPublished,
+          diverName: people.fullName,
+          personId: tripReviews.personId,
+          tripId: tripReviews.tripId,
+          tripTitle: trips.title,
+          divedAt: trips.startsAt,
+          createdAt: tripReviews.createdAt,
+        })
+        .from(tripReviews)
+        .innerJoin(people, eq(people.id, tripReviews.personId))
+        .innerJoin(trips, eq(trips.id, tripReviews.tripId))
+        .where(scope)
+        .orderBy(desc(tripReviews.createdAt), desc(tripReviews.id))
+        .limit(limit)
+        .offset(offset),
+  });
 
-  const pageRows = rows.slice(0, limit);
-  const last = pageRows.at(-1);
   return {
-    reviews: pageRows,
-    nextCursor:
-      rows.length > limit && last ? encodeCursor(last.createdAt.toISOString(), last.id) : null,
-    total: counted?.total ?? 0,
+    reviews: paged.rows,
+    page: paged.page,
+    pageCount: paged.pageCount,
+    pageSize: paged.pageSize,
+    total: paged.total,
   };
 }
 

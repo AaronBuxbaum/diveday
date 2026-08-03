@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { FlashParams } from "@/components/FlashParams";
+import { Pager } from "@/components/Pager";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
@@ -61,13 +62,13 @@ export default async function DiversPage({
     notice?: string;
     deleted?: string;
     q?: string;
-    after?: string;
+    page?: string;
     filter?: string;
   }>;
 }) {
   const session = await requireStaffSession();
   const { shopSlug } = await params;
-  const { notice, deleted, q, after, filter: filterParam } = await searchParams;
+  const { notice, deleted, q, page, filter: filterParam } = await searchParams;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) return null;
@@ -75,12 +76,28 @@ export default async function DiversPage({
   const t = staffTranslator(locale);
   const query = q?.trim() ?? "";
   const filter = isDiverFilter(filterParam) ? filterParam : "all";
-  const diverPage = await listDiverSummaries(db, shop.id, { query, cursor: after, filter });
+  // A non-numeric or missing `?page=` reads as page 1; the query clamps it into
+  // range, so a search that narrows the roster never strands the reader on a
+  // page the new result set does not have.
+  const diverPage = await listDiverSummaries(db, shop.id, {
+    query,
+    page: Number.parseInt(page ?? "", 10),
+    filter,
+  });
   // The roster's empty state offers a bulk import beside the one-diver form,
   // for the shop arriving with a spreadsheet. Same gate the import page itself
   // enforces (`canPersonImportShopData`), so the door is only shown to whoever
   // may walk through it (ADR 20260724-role-gated-surfaces-hide-not-explain).
   const canImport = await canPersonImportShopData(db, shop.id, session.user.personId);
+
+  /** The roster's URL with the search and view kept and only `page` swapped. */
+  const pageHref = (target: number) => {
+    const search = new URLSearchParams();
+    if (query) search.set("q", query);
+    if (filter !== "all") search.set("filter", filter);
+    if (target > 1) search.set("page", String(target));
+    return search.size ? `/shop/${shopSlug}/divers?${search}` : `/shop/${shopSlug}/divers`;
+  };
 
   async function addDiverAction(formData: FormData) {
     "use server";
@@ -212,9 +229,18 @@ export default async function DiversPage({
         shopSlug={shopSlug}
         query={query}
         filter={filter}
-        cursorActive={Boolean(after)}
         locale={locale}
         importHref={canImport ? `/shop/${shopSlug}/settings/import` : null}
+        pager={
+          <Pager
+            page={diverPage.page}
+            pageCount={diverPage.pageCount}
+            href={pageHref}
+            total={t("divers.list.pagination.total", { count: diverPage.total })}
+            t={t}
+            className="mt-4"
+          />
+        }
         copy={{
           viewAllDivers: t("divers.list.viewAllDivers"),
           viewMissingContact: t("divers.list.viewMissingContact"),
@@ -244,8 +270,6 @@ export default async function DiversPage({
           tableHeaderPerson: t("divers.list.tableHeaderPerson"),
           tableHeaderCards: t("divers.list.tableHeaderCards"),
           tableHeaderAttention: t("divers.list.tableHeaderAttention"),
-          showMoreDivers: t("divers.list.showMoreDivers"),
-          backToTop: t("divers.list.backToTop"),
         }}
       />
     </main>

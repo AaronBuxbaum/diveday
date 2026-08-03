@@ -264,8 +264,9 @@
       "tableHeaderPerson": "Person",
       "tableHeaderCards": "Cards",
       "tableHeaderAttention": "Attention",
-      "showMoreDivers": "Show more divers",
-      "backToTop": "← Back to the top of the list"
+      "pagination": {
+        "total": "{count, plural, one {# diver} other {# divers}}"
+      }
     },
     "header": {
       "backToAllDivers": "← All divers",
@@ -837,10 +838,13 @@
         "amount": "Amount"
       },
       "pagination": {
-        "label": "Order pages",
-        "previous": "Previous",
-        "next": "Next",
-        "position": "Page {page} of {pageCount} · {total} orders"
+        "total": "{count, plural, one {# order} other {# orders}}"
+      },
+      "range": {
+        "recentNote": "Showing the last {days} days. Older invoices are still here.",
+        "showAll": "Show every order",
+        "allNote": "Showing every order the shop has ever raised.",
+        "showRecent": "Back to the last {days} days"
       }
     }
   },
@@ -1030,8 +1034,9 @@
     "seatsMobile": "{booked}/{capacity} seats",
     "fillLabel": "{booked} of {capacity} seats booked",
     "waiversRowLabel": "{complete} of {total} waivers signed",
-    "showMoreTrips": "Show more trips",
-    "backToTop": "← Back to the top of the list"
+    "pagination": {
+      "total": "{count, plural, one {# trip} other {# trips}}"
+    }
   },
   "reviews": {
     "eyebrow": "Reviews",
@@ -1070,12 +1075,13 @@
     "tickThenPublish": "Tick the ones to publish, then",
     "selectToPublishAriaLabel": "Select {name}'s review to publish",
     "saving": "Saving…",
-    "showMoreReviews": "Show more reviews",
-    "backToTop": "← Back to the top of the list",
     "filterLabel": "Filter reviews",
     "filter": {
       "all": "All reviews",
       "waiting": "Waiting on you"
+    },
+    "pagination": {
+      "total": "{count, plural, one {# review} other {# reviews}}"
     }
   },
   "schedule": {
@@ -2263,10 +2269,7 @@
     "viewSchedule": "View the schedule",
     "truncated": "This window holds more departures than one queue should carry — the rest are on the <link>schedule</link>.",
     "pagination": {
-      "label": "Blocker pages",
-      "previous": "Previous",
-      "next": "Next",
-      "position": "Page {page} of {pageCount} · {total} departures"
+      "total": "{count, plural, one {# departure} other {# departures}}"
     }
   },
   "checkIn": {
@@ -3056,6 +3059,12 @@
     },
     "payments": {
       "connect": "Connect payments"
+    },
+    "pager": {
+      "label": "Pages",
+      "previous": "Previous",
+      "next": "Next",
+      "position": "Page {page} of {pageCount}"
     }
   },
   "whatsapp": {

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Pager } from "@/components/Pager";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
@@ -167,11 +168,11 @@ export default async function ReportsPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{ month?: string; after?: string }>;
+  searchParams: Promise<{ month?: string; page?: string }>;
 }) {
   const session = await requireStaffSession();
   const { shopSlug } = await params;
-  const { month, after } = await searchParams;
+  const { month, page } = await searchParams;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   // Staff read dates in the language their own device asks for, same
@@ -250,10 +251,15 @@ export default async function ReportsPage({
   // below gets its own bounded, cursor-paginated slice.
   const [input, tripPage] = await Promise.all([
     getMonthlyReport(db, shop.id, monthStart, monthEnd),
-    pagedMonthlyReportTrips(db, shop.id, monthStart, monthEnd, { cursor: after }),
+    // A non-numeric or missing `?page=` reads as page 1; the query clamps it
+    // into range, so switching to a shorter month never strands the reader on
+    // a page that month does not have.
+    pagedMonthlyReportTrips(db, shop.id, monthStart, monthEnd, {
+      page: Number.parseInt(page ?? "", 10),
+    }),
   ]);
   const report = summarizeMonth(input);
-  const { trips, nextCursor } = tripPage;
+  const { trips } = tripPage;
 
   const isThisMonth = current.year === thisMonth.year && current.month === thisMonth.month;
   const isFuture =
@@ -483,26 +489,18 @@ export default async function ReportsPage({
                 </tbody>
               </table>
             </div>
-            {nextCursor || after ? (
-              <div className="mt-4 flex flex-wrap items-center gap-3">
-                {nextCursor ? (
-                  <Link
-                    href={`/shop/${shopSlug}/reports?month=${monthKey(current)}&after=${nextCursor}`}
-                    className={buttonClass({ variant: "secondary" })}
-                  >
-                    {t("reports.showMoreTrips")}
-                  </Link>
-                ) : null}
-                {after ? (
-                  <Link
-                    href={`/shop/${shopSlug}/reports?month=${monthKey(current)}`}
-                    className="text-sm font-medium text-primary hover:underline"
-                  >
-                    {t("reports.backToTop")}
-                  </Link>
-                ) : null}
-              </div>
-            ) : null}
+            <Pager
+              page={tripPage.page}
+              pageCount={tripPage.pageCount}
+              href={(target) =>
+                `/shop/${shopSlug}/reports?month=${monthKey(current)}${
+                  target > 1 ? `&page=${target}` : ""
+                }`
+              }
+              total={t("reports.pagination.total", { count: tripPage.total })}
+              t={t}
+              className="mt-4"
+            />
           </section>
         </>
       )}
