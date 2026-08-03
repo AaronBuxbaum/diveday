@@ -4,9 +4,12 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { canPersonConfigureTrips } from "@/db/authz";
 import { getDb } from "@/db/client";
+import { listActiveCourses } from "@/db/courses";
+import { listDiveSites } from "@/db/dive-sites";
 import { getShopById } from "@/db/shops";
 import { createTrip, deleteTrip, duplicateTrip, moveTrip } from "@/db/trips";
 import { trackEvent } from "@/lib/analytics";
+import { MAX_PRICE_MINOR_UNITS, majorToMinor, toShopCurrency } from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { parseWallTime, wallTimeToUtc } from "@/lib/zoned";
@@ -43,6 +46,34 @@ async function requireBoardAuthor(shopSlug: string) {
   return { session, db, shop };
 }
 
+/**
+ * The two option lists the add-a-departure panel's selects offer, fetched when
+ * a staff member opens the panel rather than serialized into the builder's
+ * client props on every board render. The board used to ship every active
+ * course and every dive site with each render — for two selects inside a panel
+ * that is closed by default — so this moves both the payload and the two
+ * queries onto the path that actually uses them.
+ *
+ * Scoped by the session's own shop, never a slug, and empty for anyone who
+ * cannot define trips (H-14) — the panel they would fill in isn't rendered for
+ * them either.
+ */
+export async function loadBuilderOptionsAction() {
+  const session = await requireStaffSession();
+  const db = await getDb();
+  const shopId = session.user.shopId;
+  if (!(await canPersonConfigureTrips(db, shopId, session.user.personId))) {
+    return { courses: [], diveSites: [] };
+  }
+  const [courses, diveSites] = await Promise.all([
+    listActiveCourses(db, shopId).then((rows) =>
+      rows.map((row) => ({ id: row.id, title: row.title })),
+    ),
+    listDiveSites(db, shopId).then((rows) => rows.map((row) => ({ id: row.id, title: row.name }))),
+  ]);
+  return { courses, diveSites };
+}
+
 const addSchema = z.object({
   title: z.string().trim().min(1).max(120),
   date: z.string(),
@@ -50,6 +81,14 @@ const addSchema = z.object({
   endTime: z.string(),
   capacity: z.coerce.number().int().min(1).max(60),
   plannedDives: z.coerce.number().int().min(1).max(4),
+  // Optional, and optional in the honest sense: an empty box still puts the
+  // departure on the board, and the row wears the "No price set" badge until
+  // somebody prices it. Same preprocess as every other price box in the app —
+  // an empty string is "not answered", not zero.
+  priceDollars: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.coerce.number().nonnegative().finite().optional(),
+  ),
   courseId: z.preprocess((value) => value || undefined, z.uuid().optional()),
   diveSiteId: z.preprocess((value) => value || undefined, z.uuid().optional()),
 });
@@ -62,8 +101,17 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
     await trackEvent({ name: "schedule_builder_action", action: "add", outcome: "invalid" });
     redirect(`${back}?builder=invalid`);
   }
-  const { title, date, startTime, endTime, capacity, plannedDives, courseId, diveSiteId } =
-    parsed.data;
+  const {
+    title,
+    date,
+    startTime,
+    endTime,
+    capacity,
+    plannedDives,
+    priceDollars,
+    courseId,
+    diveSiteId,
+  } = parsed.data;
 
   const startWall = parseWallTime(date, startTime);
   const endWall = parseWallTime(date, endTime);
@@ -82,6 +130,16 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
     redirect(`${back}?builder=end-before-start`);
   }
 
+  // The shop's currency decides the multiplier: 5000 in a JPY shop's price box
+  // is ¥5,000 and stores 5000, not a hundredfold ¥500,000. Same ceiling every
+  // other price validator applies (trips/new, trips/[id]/actions.ts).
+  const priceCents =
+    priceDollars === undefined ? null : majorToMinor(priceDollars, toShopCurrency(shop.currency));
+  if (priceCents !== null && priceCents > MAX_PRICE_MINOR_UNITS) {
+    await trackEvent({ name: "schedule_builder_action", action: "add", outcome: "invalid" });
+    redirect(`${back}?builder=invalid`);
+  }
+
   const created = await createTrip(db, {
     shopId: shop.id,
     courseId,
@@ -91,6 +149,7 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
     endsAt,
     capacity,
     plannedDives,
+    priceCents,
   });
   if (!created) {
     await trackEvent({ name: "schedule_builder_action", action: "add", outcome: "invalid" });

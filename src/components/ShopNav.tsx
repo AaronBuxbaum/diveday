@@ -39,6 +39,7 @@ function destinationLabelsFor(t: (key: StaffMessageKey) => string): StaffDestina
     blockers: t("shared.shopNavLinks.blockers"),
     divers: t("shared.shopNavLinks.divers"),
     board: t("shared.shopNavLinks.board"),
+    addBooking: t("shared.shopNavLinks.addBooking"),
     staffing: t("shared.shopNavLinks.staffing"),
     diveSites: t("shared.shopNavLinks.diveSites"),
     courses: t("shared.shopNavLinks.courses"),
@@ -138,7 +139,6 @@ export function ShopNav({
               groupGoTo: t("shared.commandPalette.groupGoTo"),
               destinationLabels,
               goToBoarding: t("shared.commandPalette.goToBoarding"),
-              goToAddBooking: t("shared.commandPalette.goToAddBooking"),
               goToOfflineRollCall: t("shared.commandPalette.goToOfflineRollCall"),
             }}
           />

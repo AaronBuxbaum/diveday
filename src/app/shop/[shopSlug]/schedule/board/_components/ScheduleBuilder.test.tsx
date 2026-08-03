@@ -2,7 +2,12 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { type BuilderCopy, type BuilderDay, ScheduleBuilder } from "./ScheduleBuilder";
+import {
+  type BuilderCopy,
+  type BuilderDay,
+  type BuilderPriceInput,
+  ScheduleBuilder,
+} from "./ScheduleBuilder";
 
 // The board route has no dynamic id, so `usePathname()` is what
 // ScheduleBuilder keys its disarm-on-revisit effect on (see the component's
@@ -55,11 +60,14 @@ const COPY: BuilderCopy = {
   returns: "Returns",
   seats: "Seats",
   dives: "Dives",
+  price: "Price per diver",
+  priceDescription: "Divers see this on the public page.",
   course: "Course",
   optional: "(optional)",
   diveSite: "Dive site",
   ordinaryTrip: "Ordinary trip",
   decideLater: "Decide later",
+  optionsLoading: "Loading…",
   adding: "Adding…",
   putOnBoard: "Put it on the board",
   newDate: "New date",
@@ -96,8 +104,22 @@ function baseTrip(overrides: Partial<BuilderDay["trips"][number]> = {}) {
 const noop = vi.fn();
 const actions = { add: noop, move: noop, duplicate: noop, remove: noop };
 
+/** Already resolved server-side from the shop's currency and the reader's locale. */
+const PRICE: BuilderPriceInput = { step: "0.01", max: 100_000, placeholder: "$0.00" };
+
+/**
+ * The board no longer ships the catalogue with every render: the add panel
+ * asks for its two option lists when it opens. Every test here gets the same
+ * stub, and the one that cares asserts it is not called until then.
+ */
+const loadOptions = vi.fn(async () => ({
+  courses: [{ id: "course-1", title: "Open Water Diver" }],
+  diveSites: [{ id: "site-1", title: "Molasses Reef" }],
+}));
+
 afterEach(() => {
   cleanup();
+  loadOptions.mockClear();
   setMockPathname("/shop/blue-mantis/schedule/board");
 });
 
@@ -114,8 +136,8 @@ describe("ScheduleBuilder unpriced-trip flag (task 150)", () => {
       <ScheduleBuilder
         shopSlug="blue-mantis"
         days={days}
-        courses={[]}
-        diveSites={[]}
+        loadOptions={loadOptions}
+        price={PRICE}
         actions={actions}
         defaultDateIso="2026-08-01"
         canConfigure={true}
@@ -140,8 +162,8 @@ describe("ScheduleBuilder unpriced-trip flag (task 150)", () => {
       <ScheduleBuilder
         shopSlug="blue-mantis"
         days={days}
-        courses={[]}
-        diveSites={[]}
+        loadOptions={loadOptions}
+        price={PRICE}
         actions={actions}
         defaultDateIso="2026-08-01"
         canConfigure={true}
@@ -150,6 +172,56 @@ describe("ScheduleBuilder unpriced-trip flag (task 150)", () => {
     );
 
     expect(screen.queryByText("No price set")).toBeNull();
+  });
+});
+
+describe("ScheduleBuilder add panel: price, and options fetched on open", () => {
+  const days: BuilderDay[] = [{ dateIso: "2026-08-01", label: "Sat, Aug 1", trips: [] }];
+
+  function renderBuilder() {
+    return render(
+      <ScheduleBuilder
+        shopSlug="blue-mantis"
+        days={days}
+        loadOptions={loadOptions}
+        price={PRICE}
+        actions={actions}
+        defaultDateIso="2026-08-01"
+        canConfigure={true}
+        copy={COPY}
+      />,
+    );
+  }
+
+  it("offers an optional price box, currency-shaped by the server", async () => {
+    renderBuilder();
+    await userEvent.click(screen.getByRole("button", { name: "Add a departure" }));
+
+    const price = screen.getByLabelText(/Price per diver/);
+    expect(price).toHaveAttribute("name", "priceDollars");
+    // Optional in the honest sense: empty is a valid submission, and the row
+    // then wears the "No price set" badge until somebody prices it.
+    expect(price).not.toBeRequired();
+    expect(price).toHaveValue(null);
+    expect(price).toHaveAttribute("step", "0.01");
+    expect(price).toHaveAttribute("placeholder", "$0.00");
+  });
+
+  it("asks for the course and dive-site lists only once a panel is open", async () => {
+    renderBuilder();
+    // Closed panel, no catalogue: the whole point of the change.
+    expect(loadOptions).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getByRole("button", { name: "Add a departure" }));
+    expect(loadOptions).toHaveBeenCalledTimes(1);
+    expect(await screen.findByRole("option", { name: "Open Water Diver" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Molasses Reef" })).toBeInTheDocument();
+
+    // Reopening reuses what it already has — the catalogue does not change
+    // while somebody schedules a week.
+    await userEvent.click(screen.getByRole("button", { name: "Add a departure" }));
+    await userEvent.click(screen.getByRole("button", { name: "Add a departure" }));
+    expect(loadOptions).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -166,8 +238,8 @@ describe("ScheduleBuilder full-boat badge tone (appendix item)", () => {
       <ScheduleBuilder
         shopSlug="blue-mantis"
         days={days}
-        courses={[]}
-        diveSites={[]}
+        loadOptions={loadOptions}
+        price={PRICE}
         actions={actions}
         defaultDateIso="2026-08-01"
         canConfigure={true}
@@ -192,8 +264,8 @@ describe("ScheduleBuilder full-boat badge tone (appendix item)", () => {
       <ScheduleBuilder
         shopSlug="blue-mantis"
         days={days}
-        courses={[]}
-        diveSites={[]}
+        loadOptions={loadOptions}
+        price={PRICE}
         actions={actions}
         defaultDateIso="2026-08-01"
         canConfigure={true}
@@ -215,8 +287,8 @@ describe("ScheduleBuilder open-panel reset on revisit", () => {
       <ScheduleBuilder
         shopSlug="blue-mantis"
         days={days}
-        courses={[]}
-        diveSites={[]}
+        loadOptions={loadOptions}
+        price={PRICE}
         actions={actions}
         defaultDateIso="2026-08-01"
         canConfigure={true}
@@ -237,8 +309,8 @@ describe("ScheduleBuilder open-panel reset on revisit", () => {
       <ScheduleBuilder
         shopSlug="blue-mantis"
         days={days}
-        courses={[]}
-        diveSites={[]}
+        loadOptions={loadOptions}
+        price={PRICE}
         actions={actions}
         defaultDateIso="2026-08-01"
         canConfigure={true}
@@ -257,8 +329,8 @@ describe("ScheduleBuilder panel focus management (accessibility audit §3)", () 
       <ScheduleBuilder
         shopSlug="blue-mantis"
         days={days}
-        courses={[]}
-        diveSites={[]}
+        loadOptions={loadOptions}
+        price={PRICE}
         actions={actions}
         defaultDateIso="2026-08-01"
         canConfigure={true}
@@ -283,8 +355,8 @@ describe("ScheduleBuilder panel focus management (accessibility audit §3)", () 
       <ScheduleBuilder
         shopSlug="blue-mantis"
         days={days}
-        courses={[]}
-        diveSites={[]}
+        loadOptions={loadOptions}
+        price={PRICE}
         actions={actions}
         defaultDateIso="2026-08-01"
         canConfigure={true}
@@ -318,8 +390,8 @@ describe("ScheduleBuilder unfinished after-dive roll call (DOM-H3)", () => {
       <ScheduleBuilder
         shopSlug="blue-mantis"
         days={days}
-        courses={[]}
-        diveSites={[]}
+        loadOptions={loadOptions}
+        price={PRICE}
         actions={actions}
         defaultDateIso="2026-08-01"
         canConfigure={true}

@@ -38,11 +38,6 @@ export type CommandPaletteCopy = {
   destinationLabels: StaffDestinationLabels;
   /** Today's departure — a live href, not a fixed destination. */
   goToBoarding: string;
-  /**
-   * The global seat-a-diver door. An action, not a place the nav lists, which
-   * is why it is a special item here rather than a destination in the registry.
-   */
-  goToAddBooking: string;
   /** The per-device offline snapshot, which is not shop-scoped. */
   goToOfflineRollCall: string;
 };
@@ -139,15 +134,6 @@ export function CommandPalette({
     const goto: PaletteItem[] = [];
     if (boatBoardingHref && ("boarding".includes(q) || "boat".includes(q) || q === "")) {
       goto.push({ key: "goto:boarding", label: copy.goToBoarding, href: boatBoardingHref });
-    }
-    // "add", "book", "booking" — whichever word the staffer reaches for while
-    // a diver is on the phone.
-    if (q === "" || "add booking".includes(q) || "booking".includes(q) || "seat".includes(q)) {
-      goto.push({
-        key: "goto:add-booking",
-        label: copy.goToAddBooking,
-        href: `${root}/bookings/new`,
-      });
     }
     // Not shop-scoped (the offline snapshot lives per-device, not per-shop
     // route) so this doesn't need a `boatBoardingHref`-style prop — it's

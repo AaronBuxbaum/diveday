@@ -254,7 +254,7 @@
       "trip-series.spec.ts",
       "waivers.spec.ts"
     ],
-    "visual": ["schedule-builder"]
+    "visual": ["schedule-builder", "schedule-builder-add"]
   },
   "/shop/[shopSlug]/settings": {
     "e2e": [

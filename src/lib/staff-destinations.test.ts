@@ -150,15 +150,40 @@ describe("what each consumer derives", () => {
     }
   });
 
-  it("gives the shortcut sheet the five sequences, waivers only when permitted", () => {
+  it("gives the shortcut sheet its sequences, waivers only when permitted", () => {
     expect(staffShortcutDestinations(owner).map((d) => `g ${d.shortcut}`)).toEqual([
       "g t",
       "g b",
       "g d",
       "g s",
+      "g a",
       "g w",
     ]);
-    expect(staffShortcutDestinations(crew).map((d) => d.shortcut)).toEqual(["t", "b", "d", "s"]);
+    expect(staffShortcutDestinations(crew).map((d) => d.shortcut)).toEqual([
+      "t",
+      "b",
+      "d",
+      "s",
+      "a",
+    ]);
+  });
+
+  it("declares the global Add-a-booking door here rather than in the palette", () => {
+    // It used to be a hand-written item inside CommandPalette.tsx — a
+    // destination living in one consumer and nowhere else, which is the drift
+    // this registry exists to end. Palette-only on purpose: it is an action,
+    // and the board keeps its own button for it.
+    const addBooking = STAFF_DESTINATIONS.find((d) => d.id === "addBooking");
+    if (!addBooking) throw new Error("registry lost the add-booking door");
+    expect(addBooking.suffix).toBe("/bookings/new");
+    expect(addBooking.navGroup).toBeNull();
+    expect(addBooking.inPalette).toBe(true);
+    expect(addBooking.gate).toBeUndefined();
+    expect(staffDestinationHref(staffShopRoot("blue-mantis"), addBooking)).toBe(
+      "/shop/blue-mantis/bookings/new",
+    );
+    // Seating a diver is front-desk work, not owner work, so the crew keeps it.
+    expect(staffPaletteDestinations(crew).map((d) => d.id)).toContain("addBooking");
   });
 
   it("keeps a trip's detail page lit on the board tab", () => {

@@ -753,6 +753,17 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { name: "The board" }).waitFor();
         await capture(page, "schedule-builder", scheme);
 
+        // The whole add-a-departure form, which the board above only ever
+        // shows as a button — every field a departure is born with, price
+        // included, and the surface with no baseline at all until now.
+        await page.getByRole("button", { name: "Add a departure", exact: true }).click();
+        // Its two selects fetch their options when the panel opens; wait for
+        // the placeholder option to go, so the shot is never of "Loading…".
+        await page
+          .locator('select[name="courseId"] option[disabled]')
+          .waitFor({ state: "detached" });
+        await capture(page, "schedule-builder-add", scheme);
+
         // The roster, then one diver's full profile (certs, specialty cards,
         // contact) — the front desk's densest everyday surfaces.
         // Wait for the roster itself, not the skeleton: same race as the public
