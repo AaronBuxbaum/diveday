@@ -1,6 +1,7 @@
 import type { Session } from "next-auth";
 import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
+import { JumpNav } from "@/components/JumpNav";
 import type { AppDb } from "@/db/client";
 import { getShopBySlug } from "@/db/shops";
 import { listShopStaff } from "@/db/staff-accounts";
@@ -26,7 +27,7 @@ const authModule = (await import("@/lib/auth")) as unknown as {
 const auth = authModule.auth;
 const settingsModule = await import("./SettingsPage");
 const SettingsPage = settingsModule.default;
-const { SETTINGS_GROUPS, SettingsGroup, SettingsJumpNav } = settingsModule;
+const { SETTINGS_GROUPS, SettingsGroup } = settingsModule;
 
 const SHOP_SLUG = "blue-mantis";
 
@@ -117,17 +118,17 @@ describe("settings findability", () => {
       SETTINGS_GROUPS.map((group) => group.id),
     );
 
-    const jumpRow = findElements<{ label: string; groupLabels: string[] }>(
+    const jumpRow = findElements<{ ariaLabel: string; items: { id: string; label: string }[] }>(
       element,
-      SettingsJumpNav,
+      JumpNav,
     );
     expect(jumpRow).toHaveLength(1);
-    const labels = jumpRow[0]?.props.groupLabels ?? [];
-    expect(labels).toHaveLength(SETTINGS_GROUPS.length);
+    const items = jumpRow[0]?.props.items ?? [];
+    expect(items).toHaveLength(SETTINGS_GROUPS.length);
     // Real words from the staff bundle, not keys leaking through.
-    expect(labels).toContain("Your shop");
+    expect(items.map((item) => item.label)).toContain("Your shop");
 
-    const anchors = hrefsIn(SettingsJumpNav({ label: "Jump to a section", groupLabels: labels }));
+    const anchors = hrefsIn(JumpNav({ ariaLabel: "Jump to a section", items }));
     expect(anchors).toEqual(SETTINGS_GROUPS.map((group) => `#${group.id}`));
   });
 
