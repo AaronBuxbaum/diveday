@@ -29,7 +29,7 @@ import {
   pushCursor,
 } from "@/lib/schedule-pagination";
 import { requireStaffSession } from "@/lib/session";
-import { noticeFromParam } from "@/lib/staff-notices";
+import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
 import { toDateInputValue, toTimeInputValue, utcToWallTime } from "@/lib/zoned";
 import {
   type BuilderCopy,
@@ -371,7 +371,7 @@ export default async function ScheduleBoardPage({
       {builderNotice ? (
         <ShopNotice
           tone={builderNotice.tone}
-          role={builderNotice.tone === "danger" ? "alert" : "status"}
+          role={noticeRole(builderNotice.tone)}
           className="mb-6"
         >
           {builderNotice.message}

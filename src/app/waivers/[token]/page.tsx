@@ -38,7 +38,7 @@ import { questionnaireForJurisdiction } from "@/lib/medical";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
-import { noticeFromParam } from "@/lib/staff-notices";
+import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
 import { emailFreshWaiverLinkAction } from "./actions";
 import { QuestionnaireProgress } from "./QuestionnaireProgress";
 
@@ -753,7 +753,7 @@ function ExpiredLink({
       <FlashParams params={["sent"]} />
       {notice ? (
         <p
-          role={notice.tone === "danger" ? "alert" : "status"}
+          role={noticeRole(notice.tone)}
           className={`mt-4 rounded-lg px-4 py-3 text-sm font-medium ${NOTICE_TONE[notice.tone]}`}
         >
           {t(notice.key)}
