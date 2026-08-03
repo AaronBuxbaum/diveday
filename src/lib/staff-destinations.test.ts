@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   STAFF_DESTINATIONS,
   type StaffDestinationGates,
+  type StaffDestinationId,
+  staffDestination,
   staffDestinationHref,
   staffDestinationSuffix,
   staffNavDestinations,
@@ -126,11 +128,42 @@ describe("what each consumer derives", () => {
       "waivers",
       "reports",
     ]);
-    expect(staffNavDestinations("setup", owner).map((d) => d.id)).toEqual([
-      "promoCodes",
-      "settings",
-      "team",
-    ]);
+    // Settings is the whole "Set up" group and therefore the last row in the
+    // menu. Team and Promo codes left the header entirely: both already have a
+    // card on the Settings page, and two doors to one destination is the
+    // duplicate control principle 8 rules out.
+    expect(staffNavDestinations("setup", owner).map((d) => d.id)).toEqual(["settings"]);
+  });
+
+  it("keeps a header destination out of the Settings page's own card list, and back", () => {
+    const inHeader = (id: StaffDestinationId) => staffDestination(id).navGroup !== null;
+    // Reachable from Settings' cards → not a header row.
+    expect(inHeader("team")).toBe(false);
+    expect(inHeader("promoCodes")).toBe(false);
+    // Read every day → a header row, and no Settings card.
+    expect(inHeader("orders")).toBe(true);
+    // Both still answer by name in ⌘K, which is where a destination that is
+    // not in the header has to remain reachable.
+    const palette = staffPaletteDestinations(owner).map((destination) => destination.id);
+    expect(palette).toContain("team");
+    expect(palette).toContain("promoCodes");
+  });
+
+  it("keeps the header honest for a destination that left it", () => {
+    // Promo codes is reached *from* Settings now, so Settings claims `/promos`
+    // as a second "you are here" prefix. Without it the promos page is the one
+    // staff surface where nothing in the header reads as current at all —
+    // which is exactly what the visual baseline caught. Team needs no entry:
+    // `/settings/team` already sits below `/settings`.
+    expect(staffDestination("settings").alsoMatch).toBe("/promos");
+    expect(staffDestination("team").suffix.startsWith(staffDestination("settings").suffix)).toBe(
+      true,
+    );
+  });
+
+  it("puts Settings last in the whole registry, so no consumer can list it mid-menu", () => {
+    expect(STAFF_DESTINATIONS.at(-1)?.id).toBe("settings");
+    expect(staffPaletteDestinations(owner).at(-1)?.id).toBe("settings");
   });
 
   it("puts Orders in the nav, where a daily money surface belongs", () => {

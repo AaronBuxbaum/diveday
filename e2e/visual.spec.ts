@@ -1435,9 +1435,11 @@ for (const scheme of ["light", "dark"] as const) {
       await page.getByRole("heading", { name: "Nothing is waiting on you" }).waitFor();
       await capture(page, "today-empty", scheme);
 
-      // The "More" menu open — the only way to see its two named groups ("Run
-      // the shop" / "Set up") and the destinations they hold, since the panel
-      // used to separate them with one unlabelled rule. Captured here rather
+      // The "More" menu open — the only way to see its named groups ("Run the
+      // shop", and Settings under "Set up") and the destinations they hold,
+      // since the panel used to separate them with one unlabelled rule. Team
+      // and Promo codes left this menu when Settings became their only door.
+      // Captured here rather
       // than over the seeded Today: the nav is identical (a fresh owner passes
       // every gate) and this page is short, so the baseline is the menu rather
       // than a second copy of a very tall dashboard whose every content change

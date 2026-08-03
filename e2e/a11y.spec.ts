@@ -65,10 +65,9 @@ test.describe("automated accessibility scans (specialist optimization audit §3)
     await page.getByRole("button", { name: "Put it on the board" }).click();
     await expect(page).not.toHaveURL(/\/trips\/new/);
 
-    // Staff viewing their own shop's booking page get redirected to the trip's
-    // management view instead (src/app/s/[shopSlug]/trips/[id]/page.tsx)
-    // — a diver never carries a staff session, so scan the page the way a real
-    // visitor sees it.
+    // A staff session adds a preview banner to the booking page
+    // (src/app/s/[shopSlug]/trips/[id]/page.tsx) that no diver ever sees, so
+    // sign out and scan the page exactly as a real visitor gets it.
     await signOut(page);
     await page.goto("/s/blue-mantis", { waitUntil: "domcontentloaded" });
     await page

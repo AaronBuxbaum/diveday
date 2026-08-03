@@ -124,6 +124,13 @@ export default defineConfig({
     // site; it's a harmless extra header on ordinary page navigations, which
     // the app never reads outside these test-only routes.
     extraHTTPHeaders: { authorization: `Bearer ${E2E_TEST_ROUTE_SECRET}` },
+    // The browser's own zone, pinned for the same reason the clock is frozen:
+    // sign-up's picker now preselects whatever `Intl.DateTimeFormat()` reports
+    // (src/components/DetectTimezone.tsx), so an unpinned runner would hand a
+    // CI container and a developer's laptop two different shops. Pinned to the
+    // seeded demo shop's own zone, so the fleet's default is a no-op; the spec
+    // that actually exercises detection overrides it per test.
+    timezoneId: "America/New_York",
   },
   projects: [
     {

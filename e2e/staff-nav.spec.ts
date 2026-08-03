@@ -9,15 +9,16 @@ function moreMenu(page: Page) {
 /**
  * The header nav, the command palette, and the keyboard shortcuts all read one
  * destination registry (src/lib/staff-destinations.ts). This spec covers what
- * the nav owes that registry: the "More" menu names its two groups, Orders is
- * in the nav at all, and a role-gated destination is absent rather than
- * disabled (ADR 20260724-role-gated-surfaces-hide-not-explain).
+ * the nav owes that registry: the "More" menu names its groups, each
+ * destination has exactly one door (Orders in the header, Team and Promo codes
+ * on the Settings page), Settings comes last, and a role-gated destination is
+ * absent rather than disabled (ADR 20260724-role-gated-surfaces-hide-not-explain).
  */
 
 test.describe("owner", () => {
   signedInAsOwner();
 
-  test("the More menu names its two groups and carries Orders", async ({ page }) => {
+  test("the More menu names its groups, carries Orders, and ends at Settings", async ({ page }) => {
     await page.goto("/shop/blue-mantis");
 
     // "Board", not "Schedule": the public schedule is a different page at a
@@ -31,8 +32,16 @@ test.describe("owner", () => {
     await expect(setup).toBeVisible();
 
     // Money the shop reads daily — it used to be reachable only from Settings,
-    // the palette, or a deep link.
+    // the palette, or a deep link. Now it is here and *only* here: the Settings
+    // page no longer carries a second Orders card.
     await expect(setup.getByRole("link", { name: "Orders" })).toHaveCount(0);
+
+    // The reverse duplicate: Team and Promo codes both have a Settings card, so
+    // the header stops offering them too. Settings is the last row in the menu.
+    await expect(page.getByRole("link", { name: "Team" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Promo codes" })).toHaveCount(0);
+    await expect(setup.getByRole("link")).toHaveText(["Settings"]);
+
     await daily.getByRole("link", { name: "Orders" }).click();
     await expect(page).toHaveURL(/\/orders$/);
 

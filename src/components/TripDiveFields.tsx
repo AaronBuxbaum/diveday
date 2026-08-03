@@ -23,8 +23,8 @@ export type TripDiveFieldsCopy = {
   optionalHint: string;
   namePlaceholderFirst: string;
   namePlaceholderOther: string;
-  diveBriefingLabel: string;
-  noSavedBriefing: string;
+  diveSiteLabel: string;
+  noSiteChosen: string;
   diverFacingDetailsLabel: string;
   detailsPlaceholder: string;
   footerNote: string;
@@ -101,13 +101,13 @@ export function TripDiveFields({
                     className={controlClass}
                   />
                 </Field>
-                <Field label={copy.diveBriefingLabel} hint={copy.optionalHint}>
+                <Field label={copy.diveSiteLabel} hint={copy.optionalHint}>
                   <select
                     name={`dive-${number}-siteId`}
                     defaultValue={initial?.diveSiteId ?? ""}
                     className={controlClass}
                   >
-                    <option value="">{copy.noSavedBriefing}</option>
+                    <option value="">{copy.noSiteChosen}</option>
                     {diveSites.map((site) => (
                       <option key={site.id} value={site.id}>
                         {site.name}

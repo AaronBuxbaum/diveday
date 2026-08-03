@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { DetectTimezone } from "@/components/DetectTimezone";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { MarketingNav } from "@/components/MarketingNav";
 import { ShopNotice } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
+import { TimezoneOptions, type TimezoneZoneLabels } from "@/components/TimezoneOptions";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { type DiverMessageKey, type DiverTranslator, diverTranslator } from "@/i18n/messages";
@@ -14,8 +16,6 @@ import {
   type CuratedTimeZone,
   type CuratedTimezoneGroupKey,
   DEFAULT_TIMEZONE,
-  timeZoneOptionText,
-  timezoneOptionGroups,
 } from "@/lib/timezones";
 import { onboardAction } from "./actions";
 
@@ -246,28 +246,39 @@ export default async function OnboardPage({
                       and `Field`'s required asterisk, which it reads off this
                       child's own props. */}
                   <select
+                    id="shop-timezone"
                     name="timezone"
                     required
                     defaultValue={timezone || DEFAULT_TIMEZONE}
                     className={controlClass}
                   >
-                    {timezoneOptionGroups().map((group) => (
-                      <optgroup key={group.group} label={t(TIMEZONE_GROUP_KEYS[group.group])}>
-                        {group.group === "allZones"
-                          ? group.zones.map((zone) => (
-                              <option key={zone} value={zone}>
-                                {timeZoneOptionText(zone)}
-                              </option>
-                            ))
-                          : group.zones.map((zone) => (
-                              <option key={zone} value={zone}>
-                                {t(CURATED_TIMEZONE_KEYS[zone])}
-                              </option>
-                            ))}
-                      </optgroup>
-                    ))}
+                    <TimezoneOptions
+                      selected={timezone || DEFAULT_TIMEZONE}
+                      groupLabels={{
+                        americas: t(TIMEZONE_GROUP_KEYS.americas),
+                        caribbean: t(TIMEZONE_GROUP_KEYS.caribbean),
+                        europeRedSea: t(TIMEZONE_GROUP_KEYS.europeRedSea),
+                        asiaPacific: t(TIMEZONE_GROUP_KEYS.asiaPacific),
+                        allZones: t(TIMEZONE_GROUP_KEYS.allZones),
+                      }}
+                      zoneLabels={
+                        Object.fromEntries(
+                          Object.entries(CURATED_TIMEZONE_KEYS).map(([zone, key]) => [
+                            zone,
+                            t(key),
+                          ]),
+                        ) as TimezoneZoneLabels
+                      }
+                    />
                   </select>
                 </Field>
+                {/* Outside the Field, and rendering nothing: Field wires the
+                    label and the required marker by cloning a *single* native
+                    control child, so a sibling in that slot would silently
+                    cost this picker both. Preselects the device's own zone
+                    when the shop hasn't chosen one — a bounce back to this
+                    form carries `?timezone=`, and that answer always wins. */}
+                <DetectTimezone selectId="shop-timezone" detect={!timezone} />
               </FieldGrid>
             </section>
 

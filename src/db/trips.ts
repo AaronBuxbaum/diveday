@@ -265,11 +265,17 @@ export async function createTrip(db: AppDb, input: NewTrip) {
   });
 }
 
-export type NewTripSeries = Omit<NewTrip, "startsAt" | "endsAt"> & {
+export type NewTripSeries = Omit<NewTrip, "startsAt" | "endsAt" | "scheduleDays"> & {
   frequency: TripRecurrenceFrequency;
   intervalWeeks: number;
-  /** Pre-computed occurrences (shop-local wall time already converted to UTC). */
-  occurrences: Array<{ startsAt: Date; endsAt: Date }>;
+  /**
+   * Pre-computed occurrences (shop-local wall time already converted to UTC).
+   * `scheduleDays` is per occurrence rather than shared: a multi-day departure
+   * repeated weekly has a different set of dates every week, and each week's
+   * days have to be resolved through the shop's zone on their own dates so a
+   * DST boundary between two occurrences lands on the right instant.
+   */
+  occurrences: Array<{ startsAt: Date; endsAt: Date; scheduleDays?: TripScheduleDayInput[] }>;
 };
 
 /**
@@ -322,6 +328,7 @@ export async function createTripSeries(db: AppDb, input: NewTripSeries) {
           depositCents: input.depositCents,
           cancellationWindowHours: input.cancellationWindowHours,
           drafts,
+          scheduleDays: occurrence.scheduleDays,
         }),
       );
     }
@@ -681,6 +688,13 @@ export type TripPatch = {
   priceCents?: number | null;
   depositCents?: number | null;
   cancellationWindowHours?: number | null;
+  /**
+   * The trip's meeting days, replaced wholesale. Omit to leave the existing
+   * rows alone; pass them whenever `startsAt`/`endsAt` move, because a day row
+   * that still points at last week's dates is what the manifest, the crew
+   * double-booking check, and the trip page's meeting-day list all read.
+   */
+  scheduleDays?: TripScheduleDayInput[];
 };
 
 export type UpdateTripOutcome =
@@ -764,6 +778,12 @@ export async function updateTrip(
       .returning();
     if (!trip) return { ok: false, reason: "not_found" };
     if (drafts) await replaceTripDives(tx, tripId, drafts);
+    if (patch.scheduleDays) {
+      await tx.delete(tripScheduleDays).where(eq(tripScheduleDays.tripId, tripId));
+      await tx
+        .insert(tripScheduleDays)
+        .values(patch.scheduleDays.map((day, index) => ({ tripId, ...day, dayNumber: index + 1 })));
+    }
     return { ok: true, trip };
   });
 }

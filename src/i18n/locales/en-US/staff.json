@@ -227,7 +227,7 @@
       "restoring": "Restoring…",
       "undoRemove": "Undo remove",
       "addDiverSummary": "Add a diver",
-      "addDiverBody": "Add a returning diver before they book, then fill in the details you already have.",
+      "addDiverBody": "Put a diver on the roster before they book — a name is enough to start. Their cards, waivers, and bookings all hang off this record.",
       "fullNameLabel": "Full name",
       "emailLabel": "Email",
       "optionalHint": "(optional)",
@@ -279,7 +279,7 @@
       "optionalHint": "(optional)",
       "dateOfBirthDescription": "Used to check a course's minimum age on the day it runs. Leave it blank and courses book as they always have.",
       "diveInsuranceFieldLabel": "Dive insurance",
-      "diveInsuranceHint": "(DAN or other, optional)",
+      "diveInsuranceDescription": "DAN or any other dive-accident cover the diver carries.",
       "diveInsurancePlaceholder": "DAN #12345",
       "emergencyContactNameLabel": "Emergency contact name",
       "emergencyContactPhoneLabel": "Emergency contact phone",
@@ -1280,6 +1280,7 @@
       "departsLabel": "Departs",
       "returnsLabel": "Returns",
       "capacityLabel": "Capacity",
+      "dayCountLabel": "Days",
       "priceLabel": "Price per diver",
       "payAtBookingLegend": "Pay at booking",
       "payAtBookingDescription": "Optional. Leave the deposit blank to charge the full fare when a diver books online.",
@@ -1737,6 +1738,8 @@
       "departsLabel": "Departs",
       "returnsLabel": "Returns",
       "capacityLabel": "Capacity",
+      "dayCountLabel": "How many days",
+      "dayCountDescription": "Most departures are one day. A course weekend or a liveaboard that meets the same hours on consecutive days is a single trip — one roster, one set of waivers, one crew.",
       "priceLabel": "Price per diver",
       "priceDescription": "Pre-fills the trip fee when staff invoice a diver from this trip's roster.",
       "payAtBookingLegend": "Pay at booking",
@@ -1755,9 +1758,14 @@
       "every2Weeks": "Every 2 weeks",
       "every4Weeks": "Every 4 weeks",
       "numberOfTripsLabel": "Number of trips",
-      "numberOfTripsDescription": "Up to {max}, counting the first. Ignored when it doesn't repeat.",
+      "numberOfTripsDescription": "Counting the first, up to {max}.",
+      "numberOfTripsPlaceholder": "e.g. 8",
       "putOnBoard": "Put it on the board",
       "cancel": "Cancel"
+    },
+    "publicPreview": {
+      "banner": "You’re looking at the diver’s view of this departure.",
+      "manage": "Manage this trip"
     }
   },
   "settings": {
@@ -1790,7 +1798,49 @@
         "refreshed": "Payment status refreshed from Stripe.",
         "notAuthorized": "The rental catalog, rental prices, and Stripe connection are payment settings, limited to owners and managers.",
         "currencySaved": "Currency saved. Existing prices keep their numbers — check your price list still reads right.",
-        "currencyInvalid": "Choose a currency from the list."
+        "currencyInvalid": "Choose a currency from the list.",
+        "timezoneSaved": "Timezone saved.",
+        "timezoneInvalid": "That isn’t a timezone we recognize — pick one from the list."
+      },
+      "timezone": {
+        "heading": "Timezone",
+        "description": "Every date and time in DiveDay is read and written in this zone — the board, the manifest, and the times divers see on your booking pages. Changing it re-reads your existing departures at their new local times; it does not move them.",
+        "label": "Timezone",
+        "submitting": "Saving…",
+        "submit": "Save timezone",
+        "groups": {
+          "americas": "Americas",
+          "caribbean": "Caribbean & Mexico",
+          "europeRedSea": "Europe & Red Sea",
+          "asiaPacific": "Asia-Pacific",
+          "allZones": "All timezones"
+        },
+        "zones": {
+          "eastern": "Eastern Time (New York)",
+          "central": "Central Time (Chicago)",
+          "mountain": "Mountain Time (Denver)",
+          "pacific": "Pacific Time (Los Angeles)",
+          "hawaii": "Hawaii (Honolulu)",
+          "cancun": "Cancún / Cozumel",
+          "belize": "Belize",
+          "roatan": "Roatán / Honduras",
+          "cayman": "Cayman Islands",
+          "puertoRico": "Puerto Rico / Eastern Caribbean",
+          "nassau": "Nassau, Bahamas",
+          "bonaire": "Bonaire / Curaçao",
+          "london": "London",
+          "cairo": "Cairo / Red Sea",
+          "maldives": "Maldives",
+          "singapore": "Singapore",
+          "bangkok": "Bangkok",
+          "jakarta": "Jakarta / western Indonesia",
+          "bali": "Bali / Komodo (central Indonesia)",
+          "manila": "Manila",
+          "sydney": "Sydney",
+          "auckland": "Auckland",
+          "palau": "Palau",
+          "fiji": "Fiji"
+        }
       },
       "contact": {
         "heading": "Public contact details",
@@ -1923,11 +1973,6 @@
         "yourShop": "Your shop",
         "money": "Money",
         "dataIntegrations": "Data & integrations"
-      },
-      "orders": {
-        "heading": "Orders",
-        "description": "Every order and payment the shop has sent — filter by status, date, or diver.",
-        "cta": "View orders"
       },
       "backToSettings": "Back to settings",
       "currency": {
@@ -2705,12 +2750,12 @@
         "openGuests": "Open guests",
         "crewDropZoneAria": "Crew assignments drop zone",
         "assignCrewMemberAria": "Assign crew member to {title}",
-        "assignedCrewHeading": "Assigned Crew (drag staff here to assign)",
+        "assignedCrewHeading": "Assigned crew",
         "assignCrewOption": "Assign crew…",
         "assignCrewLabel": "Assign crew",
         "assignFailed": "That didn’t save — recheck your connection or try again.",
         "unassignAria": "Unassign {name}",
-        "noCrewAssigned": "No crew assigned. Drag staff from above here.",
+        "noCrewAssigned": "No crew assigned yet.",
         "countBoarded": "Boarded",
         "blockedWarningOne": "{count} diver cannot board yet — they are in the list below.",
         "blockedWarningOther": "{count} divers cannot board yet — they are in the list below.",
@@ -2719,7 +2764,7 @@
         "clearToBoard": "Everyone booked on this trip is clear to board.",
         "sailingToday": "Sailing today",
         "sailingTodaySubtitle": "Check divers in at the counter or run roll call from the manifest — readiness is rechecked the moment you board someone.",
-        "dragStaffLabel": "Or drag to assign (desktop):"
+        "dragStaffLabel": "Or drag a name onto a boat:"
       },
       "todayQueue": {
         "emptyHeading": "Nothing is waiting on you",
@@ -2938,11 +2983,11 @@
       "optionalHint": "(optional)",
       "namePlaceholderFirst": "Molasses Reef",
       "namePlaceholderOther": "Second tank · site TBD",
-      "diveBriefingLabel": "Dive briefing",
-      "noSavedBriefing": "No saved dive briefing",
+      "diveSiteLabel": "Dive site",
+      "noSiteChosen": "No site chosen yet",
       "diverFacingDetailsLabel": "Diver-facing details",
       "detailsPlaceholder": "What divers should know about this part of the trip.",
-      "footerNote": "Dive briefings add the saved map and field guide. The trip description and conditions below remain shared across the whole boat day."
+      "footerNote": "Choosing a site brings its saved briefing — map, landmarks, and field guide — onto that dive. The trip description and conditions below stay shared across the whole boat day."
     },
     "offlineManifest": {
       "freshnessCopy": {
