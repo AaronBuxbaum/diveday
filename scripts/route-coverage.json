@@ -111,7 +111,7 @@
       "self-service-reschedule.spec.ts",
       "trip-admission.spec.ts"
     ],
-    "visual": ["booking-confirmed", "site-briefing"]
+    "visual": ["booking-confirmed", "site-briefing", "site-briefing-requirements"]
   },
   "/shop/[shopSlug]": {
     "e2e": [
@@ -318,7 +318,7 @@
       "trip-series.spec.ts",
       "trips.spec.ts"
     ],
-    "visual": ["trip-manage"]
+    "visual": ["trip-manage", "trip-manage-course-requirements"]
   },
   "/shop/[shopSlug]/trips/[id]/guests": {
     "e2e": [
@@ -341,7 +341,9 @@
       "trip-guests",
       "trip-guests-depth-warning",
       "trip-guests-identity",
-      "trip-guests-note-undo"
+      "trip-guests-note-undo",
+      "trip-guests-refusal-card",
+      "trip-guests-refusal-level"
     ]
   },
   "/shop/[shopSlug]/trips/[id]/manifest": {
