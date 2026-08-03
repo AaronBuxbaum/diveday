@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { waiverSendCopy } from "@/app/actions/waiver-send-types";
 import { EmptyState } from "@/components/EmptyState";
+import { Pager } from "@/components/Pager";
 import { WaiverSendControl } from "@/components/today/WaiverSendControl";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
@@ -233,38 +234,18 @@ export function BlockerGroups({
               t={t}
             />
           ))}
-          {/* Only when there is somewhere to go — a shop with one screenful of
-              blocked departures should not be told it is on "page 1 of 1". */}
-          {pageCount > 1 ? (
-            <nav
-              aria-label={t("blockers.pagination.label")}
-              className="flex items-center justify-between gap-3"
-            >
-              {page > 1 ? (
-                <Link
-                  href={pageHref(page - 1)}
-                  className={buttonClass({ variant: "secondary", size: "sm" })}
-                >
-                  {t("blockers.pagination.previous")}
-                </Link>
-              ) : (
-                <span />
-              )}
-              <p className="text-sm text-muted">
-                {t("blockers.pagination.position", { page, pageCount, total: trips.length })}
-              </p>
-              {page < pageCount ? (
-                <Link
-                  href={pageHref(page + 1)}
-                  className={buttonClass({ variant: "secondary", size: "sm" })}
-                >
-                  {t("blockers.pagination.next")}
-                </Link>
-              ) : (
-                <span />
-              )}
-            </nav>
-          ) : null}
+          {/* This view pages an already-loaded array (`pageOf`) rather than a
+              query, because the whole operational window is what the queue is
+              ranked over — but what staff see is the one pager every other
+              paged list wears (ADR 20260803-one-pagination-model). */}
+          <Pager
+            page={page}
+            pageCount={pageCount}
+            href={pageHref}
+            total={t("blockers.pagination.total", { count: trips.length })}
+            t={t}
+          />
+
           {truncated ? (
             <p className="text-center text-sm text-muted">
               {t.rich("blockers.truncated", {

@@ -195,6 +195,29 @@ export async function recordDiverOwnLocaleForBooking(
   });
 }
 
+/**
+ * One shop person's display name, or null when the id belongs to no person at
+ * this shop.
+ *
+ * Exists because "showing orders for {name}" was being read off the first row
+ * of the filtered list — so the moment the filter matched nothing (a diver with
+ * no invoices in range, a status that excludes them all) the page dropped the
+ * sentence naming *whose* orders it was showing and looked like an unfiltered
+ * empty index. A filter's own label must not depend on the filter matching.
+ */
+export async function getShopPersonName(
+  db: DbExecutor,
+  shopId: string,
+  personId: string,
+): Promise<string | null> {
+  const [row] = await db
+    .select({ fullName: people.fullName })
+    .from(people)
+    .where(and(eq(people.id, personId), eq(people.shopId, shopId)))
+    .limit(1);
+  return row?.fullName ?? null;
+}
+
 /** Case-insensitive to mirror the `lower(email)` index this is meant to reflect. */
 async function selectActivePersonByEmail(tx: DbExecutor, shopId: string, email: string) {
   const [row] = await tx

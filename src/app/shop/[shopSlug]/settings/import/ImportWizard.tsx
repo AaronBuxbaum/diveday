@@ -65,6 +65,8 @@ type ImportWizardCopy = {
     waiverAcceptedImported: string;
     emptyValue: string;
   };
+  /** Phone-only: the preview's six columns scroll sideways, so say so. */
+  previewSwipeHint: string;
   hiddenRowsNotice: string;
   submit: string;
   submitting: string;
@@ -285,7 +287,13 @@ export function ImportWizard({
             ))}
           </dl>
 
-          <div className="mt-4 overflow-x-auto rounded-xl border border-border">
+          {/* Importing a roster is desk work, but a shop owner who opened the
+              confirmation on a phone gets six columns in a 390px window and no
+              sign that four of them are off to the right. Same one-line hint the
+              public trip page uses over its swipeable briefings — say the
+              gesture rather than redesign the table for a screen it isn't for. */}
+          <p className="mt-4 text-sm font-medium text-muted sm:hidden">{copy.previewSwipeHint}</p>
+          <div className="mt-2 overflow-x-auto rounded-xl border border-border sm:mt-4">
             <table className="w-full min-w-[36rem] text-left text-sm">
               <thead className="bg-surface-sunken text-xs text-muted">
                 <tr>

@@ -87,3 +87,58 @@ test("a shop outside the curated dive regions can pick its own timezone", async 
   await expect(page).toHaveURL(new RegExp(`/shop/${unique}$`));
   await expect(page.getByRole("heading", { name: /Good night, Sari/ })).toBeVisible();
 });
+
+/**
+ * Day one, a shop has nothing anywhere: every list it opens is empty. Those
+ * empty states are the whole product at that moment, so each has to be a door
+ * rather than a paragraph (docs/design/principles.md #4 — empty states teach).
+ * Divers and Orders are the two checked here because they carry the two shapes
+ * the rest follow: an action that opens a form already on the page, and a fork
+ * on whether the shop can take money yet.
+ */
+test("a freshly onboarded shop finds a way forward on its empty Divers and Orders pages", async ({
+  page,
+}) => {
+  const unique = `empty-doors-${Date.now()}`;
+  await page.goto("/onboard");
+  await page.locator('input[name="shopName"]').filter({ visible: true }).fill("Empty Doors E2E");
+  await page.locator('input[name="shopSlug"]').filter({ visible: true }).fill(unique);
+  await page.locator('input[name="ownerName"]').filter({ visible: true }).fill("Nour Haddad");
+  await page
+    .locator('input[name="ownerEmail"]')
+    .filter({ visible: true })
+    .fill(`${unique}@example.com`);
+  await page
+    .locator('input[name="ownerPassword"]')
+    .filter({ visible: true })
+    .fill("trial-pass-123");
+  await page.getByRole("button", { name: "Create shop & start trial" }).click();
+  await expect(page).toHaveURL(new RegExp(`/shop/${unique}$`));
+
+  // Divers: nobody on file. The add form is a collapsed disclosure further up
+  // the page, so the empty state's action has to open it and land the cursor
+  // in it — a bare "add one here" sentence left the shop hunting for the form.
+  await page.goto(`/shop/${unique}/divers`);
+  await expect(page.getByText("No divers on file yet.")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Import your roster" })).toHaveAttribute(
+    "href",
+    `/shop/${unique}/settings/import`,
+  );
+  await page.getByRole("button", { name: "Add your first diver" }).click();
+  await expect(page.getByLabel("Full name")).toBeFocused();
+
+  // Orders: no orders and no connected account, so the one honest door is the
+  // money settings — the same fork the page header already makes, now inside
+  // the card a shop with nothing actually reads.
+  await page.goto(`/shop/${unique}/orders`);
+  await expect(
+    page.getByText(
+      "No orders yet — connect payments and the front desk can send its first invoice from here.",
+    ),
+  ).toBeVisible();
+  // Header and empty state both offer it; the empty state's is the last one.
+  const connect = page.getByRole("link", { name: "Connect payments" });
+  await expect(connect).toHaveCount(2);
+  await connect.last().click();
+  await expect(page).toHaveURL(new RegExp(`/shop/${unique}/settings#money$`));
+});

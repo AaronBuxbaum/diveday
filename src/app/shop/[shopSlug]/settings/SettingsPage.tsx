@@ -775,7 +775,13 @@ export default async function SettingsPage({
           </FieldGrid>
         </section>
 
-        <section className="mt-6 rounded-lg border border-border bg-surface p-6">
+        {/* One of the few cards another surface links straight to: the Reviews
+            page's empty state names this box, so it needs a target of its own
+            rather than dropping a shop at the top of the "Your shop" group. */}
+        <section
+          id="review-link"
+          className="mt-6 scroll-mt-24 rounded-lg border border-border bg-surface p-6"
+        >
           <h3 className="font-medium">{t("settings.main.reviewLink.heading")}</h3>
           <p className="mt-1 text-sm text-muted">{t("settings.main.reviewLink.description")}</p>
           <SectionNotice banner={banner} section="reviewLink" active={activeSection} />

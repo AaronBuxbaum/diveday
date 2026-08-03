@@ -1302,14 +1302,22 @@ for (const scheme of ["light", "dark"] as const) {
        * this one marks the demo shop Stripe-connected, which the tours must not
        * inherit — a connected shop changes what several of their surfaces render.
        */
-      test(`invoicing and the dive-site catalog render true to the design (${scheme})`, async ({
+      test(`invoicing and the dive-site library render true to the design (${scheme})`, async ({
         page,
         request,
       }) => {
-        // Two navigate+capture surfaces (8 screenshots), each with its own
+        // Three navigate+capture surfaces (12 screenshots), each with its own
         // `paintWholeDocument` scroll. (Staffing is captured on the staff tour
         // above — it gained its baseline in the over_ratio parity fix.)
-        test.setTimeout(45_000);
+        test.setTimeout(60_000);
+
+        // The shop's own dive-site library, which had no baseline at all until
+        // it gained a search band and a pager. Captured before the Stripe seed
+        // below purely so its state is unambiguous — it renders no payment
+        // information either way.
+        await page.goto("/shop/blue-mantis/dive-sites");
+        await page.getByRole("heading", { level: 1, name: "Dive-site library" }).waitFor();
+        await capture(page, "dive-sites-library", scheme);
 
         // The front desk's invoice builder. It redirects to Divers for a shop
         // that can't take money, so mark the demo shop connected first:

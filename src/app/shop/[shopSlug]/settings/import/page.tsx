@@ -146,6 +146,7 @@ function importWizardCopy(t: StaffTranslator) {
       waiverAcceptedImported: t("settings.import.wizard.table.waiverAcceptedImported"),
       emptyValue: t("settings.import.wizard.table.emptyValue"),
     },
+    previewSwipeHint: t("settings.import.wizard.previewSwipeHint"),
     hiddenRowsNotice: t("settings.import.wizard.hiddenRowsNotice"),
     submit: t("settings.import.wizard.submit"),
     submitting: t("settings.import.wizard.submitting"),

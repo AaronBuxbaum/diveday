@@ -142,6 +142,11 @@ export type CoursePage = {
  * keyset page at a time. Every other caller of `listCourses`/
  * `listActiveCourses` needs the complete set for a dropdown or picker and
  * must keep calling those, not this.
+ *
+ * Still forward-only, and it should not stay that way: ADR
+ * 20260803-one-pagination-model moved the roster, reports, and the moderation
+ * queue onto `offsetPage` + the shared `Pager`, and this roster is the same
+ * job. It is one of the three stragglers named there.
  */
 export async function pagedCourses(
   db: AppDb,

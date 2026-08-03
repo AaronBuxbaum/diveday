@@ -201,7 +201,12 @@ export default async function PromosPage({
         </div>
       )}
 
-      <section className="rounded-lg border border-border bg-surface p-6">
+      {/* The target the empty state below jumps to — a plain in-page anchor,
+          so nothing re-renders and the form keeps whatever is typed in it. */}
+      <section
+        id="new-code"
+        className="scroll-mt-24 rounded-lg border border-border bg-surface p-6"
+      >
         <h2 className="font-medium">{t("promos.newCode.heading")}</h2>
         <p className="mt-1 text-sm text-muted">{t("promos.newCode.detail")}</p>
         <FieldGrid as="form" action={createPromoAction} columns={2} className="mt-4">
@@ -276,7 +281,11 @@ export default async function PromosPage({
       {promos.length === 0 ? (
         <EmptyState>
           <h3 className="font-medium">{t("promos.empty.heading")}</h3>
-          <p className="mt-1 text-sm text-muted">{t("promos.empty.detail")}</p>
+          <p className="mx-auto mt-1 max-w-md text-sm text-muted">{t("promos.empty.detail")}</p>
+          {/* "Create one above" is a direction, not a door. This is the door. */}
+          <a href="#new-code" className={buttonClass({ className: "mt-4" })}>
+            {t("promos.empty.action")}
+          </a>
         </EmptyState>
       ) : (
         <ul className="mt-3 flex flex-col gap-3">
@@ -419,8 +428,16 @@ export default async function PromosPage({
       <h2 className="mt-10 font-medium">{t("promos.tripDeals.heading")}</h2>
       <p className="mt-1 text-sm text-muted">{t("promos.tripDeals.description")}</p>
       {tripDeals.length === 0 ? (
+        // A trip deal is sent from a departure, never from here, so the door is
+        // the board — the copy above already says so; this is the way there.
         <EmptyState className="mt-3">
-          <p className="text-sm text-muted">{t("promos.tripDeals.empty")}</p>
+          <p className="mx-auto max-w-md text-sm text-muted">{t("promos.tripDeals.empty")}</p>
+          <Link
+            href={`/shop/${shopSlug}/schedule/board`}
+            className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
+          >
+            {t("promos.tripDeals.emptyAction")}
+          </Link>
         </EmptyState>
       ) : (
         <ul className="mt-3 flex flex-col gap-3">

@@ -8,6 +8,7 @@ import {
   getShopReviewAggregate,
   listPublishedShopReviews,
   listShopReviewsForStaff,
+  STAFF_REVIEW_PAGE_SIZE,
   setReviewPublished,
   setReviewsPublished,
   submitTripReview,
@@ -154,7 +155,9 @@ describe("public review reads", () => {
     expect(await listPublishedShopReviews(db, OTHER_SHOP_ID)).toEqual([]);
     expect(await listShopReviewsForStaff(db, OTHER_SHOP_ID)).toEqual({
       reviews: [],
-      nextCursor: null,
+      page: 1,
+      pageCount: 1,
+      pageSize: STAFF_REVIEW_PAGE_SIZE,
       total: 0,
     });
     expect(await countReviewsAwaitingModeration(db, OTHER_SHOP_ID)).toBe(0);
@@ -164,38 +167,54 @@ describe("public review reads", () => {
 });
 
 describe("listShopReviewsForStaff pagination", () => {
-  it("pages with a keyset cursor and never repeats or skips a review", async () => {
+  it("pages by number and never repeats or skips a review", async () => {
     const { db, shop, bookingIds } = await reviewContext(["Diver One", "Diver Two"]);
     await submitTripReview(db, { bookingId: bookingIds[0], rating: 5, comment: "First review" });
     await submitTripReview(db, { bookingId: bookingIds[1], rating: 3, comment: "Second review" });
 
     const all = await listShopReviewsForStaff(db, shop.id);
-    expect(all.nextCursor).toBeNull();
+    expect(all.pageCount).toBe(1);
     expect(all.total).toBe(2);
     expect(all.reviews).toHaveLength(2);
 
     const seen: string[] = [];
-    let cursor: string | undefined;
-    for (let hops = 0; hops < 3; hops++) {
-      const page = await listShopReviewsForStaff(db, shop.id, { cursor, limit: 1 });
-      expect(page.reviews.length).toBeLessThanOrEqual(1);
-      expect(page.total).toBe(2);
-      seen.push(...page.reviews.map((r) => r.id));
-      if (!page.nextCursor) break;
-      cursor = page.nextCursor;
+    for (let page = 1; page <= 2; page++) {
+      const chunk = await listShopReviewsForStaff(db, shop.id, { page, limit: 1 });
+      expect(chunk.page).toBe(page);
+      expect(chunk.pageCount).toBe(2);
+      expect(chunk.total).toBe(2);
+      seen.push(...chunk.reviews.map((r) => r.id));
     }
     expect(seen).toEqual(all.reviews.map((r) => r.id));
     expect(new Set(seen).size).toBe(seen.length);
   });
 
-  it("treats a mangled cursor as the first page", async () => {
+  it("goes back a page as well as forward", async () => {
     const { db, shop, bookingIds } = await reviewContext(["Diver One", "Diver Two"]);
     await submitTripReview(db, { bookingId: bookingIds[0], rating: 5, comment: "First review" });
     await submitTripReview(db, { bookingId: bookingIds[1], rating: 3, comment: "Second review" });
 
-    const all = await listShopReviewsForStaff(db, shop.id);
-    const mangled = await listShopReviewsForStaff(db, shop.id, { cursor: "not-a-real-cursor" });
-    expect(mangled.reviews.map((r) => r.id)).toEqual(all.reviews.map((r) => r.id));
+    const second = await listShopReviewsForStaff(db, shop.id, { page: 2, limit: 1 });
+    const back = await listShopReviewsForStaff(db, shop.id, { page: second.page - 1, limit: 1 });
+    const first = await listShopReviewsForStaff(db, shop.id, { page: 1, limit: 1 });
+    expect(back.reviews.map((r) => r.id)).toEqual(first.reviews.map((r) => r.id));
+  });
+
+  it("clamps a nonsensical or out-of-range page rather than showing an empty queue", async () => {
+    const { db, shop, bookingIds } = await reviewContext(["Diver One", "Diver Two"]);
+    await submitTripReview(db, { bookingId: bookingIds[0], rating: 5, comment: "First review" });
+    await submitTripReview(db, { bookingId: bookingIds[1], rating: 3, comment: "Second review" });
+
+    const first = await listShopReviewsForStaff(db, shop.id, { page: 1, limit: 1 });
+    for (const requested of [0, -3, Number.NaN]) {
+      const clamped = await listShopReviewsForStaff(db, shop.id, { page: requested, limit: 1 });
+      expect(clamped.page).toBe(1);
+      expect(clamped.reviews.map((r) => r.id)).toEqual(first.reviews.map((r) => r.id));
+    }
+
+    const past = await listShopReviewsForStaff(db, shop.id, { page: 99, limit: 1 });
+    expect(past.page).toBe(2);
+    expect(past.reviews).toHaveLength(1);
   });
 });
 
@@ -298,7 +317,13 @@ describe("listShopReviewsForStaff onlyWaiting filter", () => {
     await setReviewPublished(db, shop.id, review.id, true);
 
     const waiting = await listShopReviewsForStaff(db, shop.id, { onlyWaiting: true });
-    expect(waiting).toEqual({ reviews: [], nextCursor: null, total: 0 });
+    expect(waiting).toEqual({
+      reviews: [],
+      page: 1,
+      pageCount: 1,
+      pageSize: STAFF_REVIEW_PAGE_SIZE,
+      total: 0,
+    });
   });
 });
 

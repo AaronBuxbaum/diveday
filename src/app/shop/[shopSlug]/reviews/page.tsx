@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
+import { Pager } from "@/components/Pager";
 import { ShopPageHeader, ShopStat } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { StarRating } from "@/components/StarRating";
@@ -69,14 +70,14 @@ export default async function ReviewsPage({
   searchParams: Promise<{
     notice?: string;
     undo?: string;
-    after?: string;
+    page?: string;
     filter?: string;
     published?: string;
   }>;
 }) {
   const session = await requireStaffSession();
   const { shopSlug } = await params;
-  const { notice, undo, after, filter, published } = await searchParams;
+  const { notice, undo, page, filter, published } = await searchParams;
   const onlyWaiting = filter === "waiting";
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
@@ -90,16 +91,28 @@ export default async function ReviewsPage({
     timezone,
   );
   const [reviewPage, aggregate, monthAggregate, waitingCount] = await Promise.all([
-    listShopReviewsForStaff(db, session.user.shopId, { cursor: after, onlyWaiting }),
+    // A non-numeric or missing `?page=` reads as page 1; the query clamps it
+    // into range so a bookmarked page past the end lands on the last real one.
+    listShopReviewsForStaff(db, session.user.shopId, {
+      page: Number.parseInt(page ?? "", 10),
+      onlyWaiting,
+    }),
     getShopReviewAggregate(db, session.user.shopId),
     getShopReviewAggregate(db, session.user.shopId, { since: monthStart }),
     countReviewsAwaitingModeration(db, session.user.shopId),
   ]);
-  const { reviews, nextCursor, total } = reviewPage;
+  const { reviews, total } = reviewPage;
   const banner = noticeFromParam(notice, NOTICES);
   const t = staffTranslator(locale);
   const base = `/shop/${shopSlug}/reviews`;
-  const filterSuffix = onlyWaiting ? "&filter=waiting" : "";
+  /** This page's URL with the tab kept and only `page` swapped. */
+  const pageHref = (target: number) => {
+    const query = new URLSearchParams();
+    if (onlyWaiting) query.set("filter", "waiting");
+    if (target > 1) query.set("page", String(target));
+    const search = query.toString();
+    return search ? `${base}?${search}` : base;
+  };
   // The bulk control acts on exactly the rows that carry a tick box, so it is
   // counted off the same page of reviews rather than off `waitingCount` (which
   // counts the whole shop, including reviews on a page this one has not
@@ -226,9 +239,28 @@ export default async function ReviewsPage({
             <h2 className="font-medium">
               {onlyWaiting ? t("reviews.emptyWaitingHeading") : t("reviews.emptyHeading")}
             </h2>
-            <p className="mt-1 text-sm text-muted">
+            <p className="mx-auto mt-1 max-w-md text-sm text-muted">
               {onlyWaiting ? t("reviews.emptyWaitingDetail") : t("reviews.emptyDetail")}
             </p>
+            {/* Nothing here yet is not something staff can fix by clicking — a
+                review arrives when a diver opens the recap after a trip sails,
+                and no setting turns that on. What *is* theirs to set is where a
+                happy diver goes next, so that is the door: the review link the
+                recap offers after a strong rating. The "waiting" filter's own
+                empty state already has its way out (the All chip above it). */}
+            {onlyWaiting ? null : (
+              <>
+                <p className="mx-auto mt-4 max-w-md text-sm text-muted">
+                  {t("reviews.emptyReviewLinkBody")}
+                </p>
+                <Link
+                  href={`/shop/${shopSlug}/settings#review-link`}
+                  className={buttonClass({ variant: "secondary", size: "sm", className: "mt-2" })}
+                >
+                  {t("reviews.emptyReviewLinkAction")}
+                </Link>
+              </>
+            )}
           </EmptyState>
         ) : (
           <ul className="flex flex-col gap-3">
@@ -318,26 +350,14 @@ export default async function ReviewsPage({
         )}
       </ReviewSelectionProvider>
 
-      {nextCursor || after ? (
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-          {nextCursor ? (
-            <Link
-              href={`${base}?after=${encodeURIComponent(nextCursor)}${filterSuffix}`}
-              className={buttonClass({ variant: "secondary" })}
-            >
-              {t("reviews.showMoreReviews")}
-            </Link>
-          ) : null}
-          {after ? (
-            <Link
-              href={onlyWaiting ? `${base}?filter=waiting` : base}
-              className="text-sm font-medium text-primary hover:underline"
-            >
-              {t("reviews.backToTop")}
-            </Link>
-          ) : null}
-        </div>
-      ) : null}
+      <Pager
+        page={reviewPage.page}
+        pageCount={reviewPage.pageCount}
+        href={pageHref}
+        total={t("reviews.pagination.total", { count: total })}
+        t={t}
+        className="mt-4"
+      />
     </main>
   );
 }
