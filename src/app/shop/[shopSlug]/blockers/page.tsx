@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { waiverSendCopy } from "@/app/actions/waiver-send-types";
+import { OperationalWindowNote, readinessPivots } from "@/components/OperationalWindowNote";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { WaiverSendControl } from "@/components/today/WaiverSendControl";
 import { buttonClass } from "@/components/ui/button";
@@ -15,6 +16,11 @@ import type { BlockerQueueTrip } from "@/lib/blockers";
 import { distinctBlockedDivers, waiverBookingIds } from "@/lib/blockers";
 import { nowDate } from "@/lib/clock";
 import { formatDateTimeTz } from "@/lib/format";
+import {
+  BLOCKERS_TRIPS_PER_PAGE,
+  OPERATIONAL_HORIZON_DAYS,
+  pageOf,
+} from "@/lib/operational-window";
 import { requireStaffSession } from "@/lib/session";
 
 // TODO: Cache Components adoption. Refactor this route so this opt-out can be removed.
@@ -136,23 +142,18 @@ function TripGroup({
 }
 
 /**
- * Trip groups per page. `getBlockerQueue` already bounds its own work to the
- * nearest 40 upcoming departures (`MAX_TRIPS`) — this bounds what renders,
- * which is the separate problem a busy shop actually hits: 26 departures with
- * blocked divers on the demo shop alone rendered a ~10,700px page (one flat
- * unbroken scroll, no baseline possible for it — the same shape the orders
- * index was found in before it got a pager). `annotateAlsoOn` still runs over
- * every inspected trip before this slices the result, so a diver blocked on
- * both trip 3 and trip 15 still reads "also blocked on" the other correctly
- * regardless of which page either one lands on.
- */
-const BLOCKERS_PAGE_SIZE = 10;
-
-/**
- * The blocker queue: every diver who can't board yet, across all upcoming
- * departures, each with the one tap that clears them. Today answers "what needs
- * me before today's boats"; this answers "who isn't ready on any boat" so the
- * front desk can work the whole week ahead in one place.
+ * Not ready is a lens on the same queue Today ranks, over the same shared
+ * operational horizon (`src/lib/operational-window.ts`): Today answers "what
+ * needs me before today's boats", this answers "who isn't ready on any boat in
+ * the window" so the front desk can work the whole week ahead in one place.
+ *
+ * The horizon decides *which* departures; `BLOCKERS_TRIPS_PER_PAGE` decides how
+ * many render at once, which is the separate problem a busy shop hits: this
+ * list once rendered a ~10,700px unbroken scroll (26 departures, no pager — the
+ * same shape the orders index was found in). A blocker list never truncates, so
+ * the tail is paged, never dropped. `annotateAlsoOn` runs over every inspected
+ * trip before the page is sliced, so a diver blocked on both trip 3 and trip 15
+ * still reads "also blocked on" the other regardless of which page each lands on.
  */
 export default async function BlockersPage({
   params,
@@ -175,13 +176,11 @@ export default async function BlockersPage({
   const { trips, truncated } = await getBlockerQueue(db, shop.id, shopSlug, nowDate(), t);
   const blocked = distinctBlockedDivers(trips);
 
-  const pageCount = Math.max(1, Math.ceil(trips.length / BLOCKERS_PAGE_SIZE));
-  // A hand-typed `?page=0`, `?page=-3`, or non-numeric value reads as page 1;
-  // anything past the last page clamps to it rather than rendering an empty
-  // list while blockers still exist elsewhere in the queue.
-  const requestedPage = Number.parseInt(pageParam ?? "", 10);
-  const page = Math.min(pageCount, Math.max(1, Number.isFinite(requestedPage) ? requestedPage : 1));
-  const visibleTrips = trips.slice((page - 1) * BLOCKERS_PAGE_SIZE, page * BLOCKERS_PAGE_SIZE);
+  const {
+    page,
+    pageCount,
+    items: visibleTrips,
+  } = pageOf(trips, Number.parseInt(pageParam ?? "", 10), BLOCKERS_TRIPS_PER_PAGE);
   const pageHref = (target: number) => {
     const query = new URLSearchParams();
     if (target > 1) query.set("page", String(target));
@@ -199,10 +198,21 @@ export default async function BlockersPage({
             ? t("blockers.description.none")
             : t("blockers.description.some", { blocked, departures: trips.length })
         }
-        // Today, Blockers, and Check-in each slice the same readiness data on
-        // a different, undocumented horizon (task 141, UX persona lens 17) —
-        // a diver "cleared" here can still show on one of the other two.
-        meta={<p className="text-sm text-muted">{t("blockers.windowNote")}</p>}
+        // The same window sentence Today and Check-in print, in the same
+        // place, plus the pivots to them (task 141, UX persona lens 17).
+        meta={
+          <OperationalWindowNote
+            copy={{
+              note: t("shared.operationalWindow.note", { days: OPERATIONAL_HORIZON_DAYS }),
+              pivotsLabel: t("shared.operationalWindow.pivotsLabel"),
+            }}
+            pivots={readinessPivots(shopSlug, "blockers", {
+              today: t("shared.shopNavLinks.today"),
+              blockers: t("shared.shopNavLinks.blockers"),
+              check_in: t("shared.shopNavLinks.checkIn"),
+            })}
+          />
+        }
       />
 
       {trips.length === 0 ? (

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { after } from "next/server";
 import { Suspense } from "react";
 import { FlashParams } from "@/components/FlashParams";
+import { OperationalWindowNote, readinessPivots } from "@/components/OperationalWindowNote";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { DepartureBoard } from "@/components/today/DepartureBoard";
 import { FirstRunChecklist } from "@/components/today/FirstRunChecklist";
@@ -30,6 +31,7 @@ import { nowDate } from "@/lib/clock";
 import { formatShortDate, formatTime } from "@/lib/format";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl } from "@/lib/notifications";
+import { OPERATIONAL_HORIZON_DAYS } from "@/lib/operational-window";
 import { requireStaffSession } from "@/lib/session";
 import { getTimeOfDayGreeting, leadWithCrewed, roleLensFor, summarizeDay } from "@/lib/today";
 import { inviteWaitlistAction, updateTripCrewAction } from "./trips/[id]/actions";
@@ -198,12 +200,22 @@ async function TodayBody({
                   })}`
                 : ""}
             </p>
-            {/* Today, Blockers, and Check-in each slice the same readiness
-                data on a different, undocumented horizon (task 141, UX
-                persona lens 17) — a diver "cleared" here can still show on
-                one of the other two. Name the window so that is never a
-                surprise. */}
-            <p className="mt-1 max-w-2xl text-sm text-muted">{t("shopHome.windowNote")}</p>
+            {/* Today, Not ready, and Check-in all read one shared window
+                (src/lib/operational-window.ts) and say so in the same
+                sentence, in the same place — a diver cleared here is cleared
+                on the other two, and the pivots make the other lenses one tap
+                away instead of a nav hunt (task 141, UX persona lens 17). */}
+            <OperationalWindowNote
+              copy={{
+                note: t("shared.operationalWindow.note", { days: OPERATIONAL_HORIZON_DAYS }),
+                pivotsLabel: t("shared.operationalWindow.pivotsLabel"),
+              }}
+              pivots={readinessPivots(shopSlug, "today", {
+                today: t("shared.shopNavLinks.today"),
+                blockers: t("shared.shopNavLinks.blockers"),
+                check_in: t("shared.shopNavLinks.checkIn"),
+              })}
+            />
           </>
         }
       />

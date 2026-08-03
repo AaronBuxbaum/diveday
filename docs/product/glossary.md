@@ -153,6 +153,16 @@ new domain concept, define it here in the same PR.
 
 ## Operations
 
+- **Operational horizon** — the single forward window every readiness surface reads: now through
+  seven days out. Today ranks the work inside it, **Not ready** lists the people inside it, and the
+  nav's blocked-diver badge counts the same set — so a diver cleared on one is cleared on all of
+  them. Anything past it is Schedule's job, not a triage list's. Defined once in
+  `src/lib/operational-window.ts`; each surface derives its bounds from there rather than declaring
+  its own. Reports is deliberately outside this model — a calendar month is genuinely its job.
+- **Arrivals window** — counter mode's narrower lens on the operational horizon: departures from six
+  hours ago through the next thirty-six. The backwards reach is the one deliberate asymmetry (a
+  diver still walks up to the desk for a boat that already sailed); forwards it never outruns the
+  horizon, so a departure can never reach **check-in** without also appearing on Today and Not ready.
 - **Check-in** — a staff-recorded arrival state for a booked diver. It confirms the live readiness
   result at the counter and changes the booking to `checked_in`; it is not boarding, which remains
   a separate departure-time manifest decision.
