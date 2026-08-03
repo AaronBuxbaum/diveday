@@ -717,6 +717,13 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { name: "Counter check-in", level: 1 }).waitFor();
         await capture(page, "check-in", scheme);
 
+        // Staffing had no baseline at all until the over_ratio parity fix —
+        // the one gap surface whose green "Covered" badge could silently
+        // contradict Today. Captured so a regression there shows as pixels.
+        await page.goto("/shop/blue-mantis/staffing");
+        await page.getByRole("heading", { name: "Staffing", level: 1 }).waitFor();
+        await capture(page, "staffing", scheme);
+
         // The fast walk-in flow: pick today's boat, then search or hand-enter
         // a diver — no trip page detour, no required email at the counter.
         await page.goto("/shop/blue-mantis/check-in/walk-in");
