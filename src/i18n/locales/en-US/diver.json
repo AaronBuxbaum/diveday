@@ -152,6 +152,17 @@
     "siteFitUnknownLabel": "Ask the crew about fit",
     "siteFitUnknownDetail": "The crew adapts the route to the group and the day. The facts below are the useful starting point.",
     "backToAllTrips": "All trips",
+    "specialties": {
+      "deep": "Deep",
+      "wreck": "Wreck",
+      "night": "Night",
+      "drysuit": "Drysuit"
+    },
+    "requirementLevel": "{level} or higher",
+    "requirementSpecialty": "a {specialty} card",
+    "requirementNitrox": "a nitrox card",
+    "requirementHeading": "Who this trip is for",
+    "requirementNote": "This charter is for divers with {list}. Bring your card — the crew checks it at the dock.",
     "conditionsHoldHeading": "This trip is on a conditions hold",
     "conditionsHoldBody": "The crew is watching the weather and will make the final call. Existing seats stay held; new bookings are paused for now.",
     "conditionsChangedHeading": "Conditions changed since you booked",
@@ -225,6 +236,8 @@
       "already": "You're already on this trip's list — no need to book twice.",
       "unavailable": "This trip isn't taking bookings right now. Get in touch and the shop can help you find the right fit.",
       "unavailableWithContact": "This trip isn't taking bookings right now. Email {contact} and the shop can help you find the right fit.",
+      "tripRequirement": "This charter is for divers with {list}, so we couldn't book that spot. Get in touch if you hold that and the shop can add your card.",
+      "tripRequirementWithContact": "This charter is for divers with {list}, so we couldn't book that spot. Email {contact} if you hold that and the shop can add your card.",
       "courseUnavailable": "This course still needs an assigned instructor before it can take bookings.",
       "courseRatioFull": "This session is at its instructor-to-student ratio limit — call the shop, they may be able to add another instructor.",
       "fit": "We couldn't save that rental fit. Please check the details and try again.",
@@ -1716,8 +1729,8 @@
     },
     "about": {
       "eyebrow": "Who we are",
-      "heroTitle": "Built by divers, for divers.",
-      "heroDescription": "DiveDay isn't a side product inside a bigger company, or a roadmap set by a committee that's never seen a boat. It's built by a small team of divers, with one founder accountable for every call it makes.",
+      "heroTitle": "The person who writes the code answers your email.",
+      "heroDescription": "It started with a dive shop owner's ordinary morning — whiteboard, clipboard, a spreadsheet, and a few apps that never talk to each other. Divers build DiveDay; one of them owns it, writes every line of it, and puts his own address on this page. The rest of this page is the uncomfortable half: what we won't pretend, and how you take your records back out.",
       "founderEyebrow": "From the founder",
       "founderTitle": "Why this exists.",
       "founderP1": "A dive shop owner walked me through an ordinary day: a whiteboard, a clipboard, a hand-updated spreadsheet, and a few apps that don't talk to each other. He was paying for it twice — once in software, again in the hours it pulled from his divers. His crew runs a tight operation; the tools just never showed up for this industry.",
@@ -1856,6 +1869,16 @@
       "earlyAccessBadge": "Early access",
       "gettingDemoReady": "Getting the demo ready…",
       "feesNote": "Payment-processing fees stay between you and your payment provider. If a future integration ever costs extra, we'll say so clearly before you turn it on.",
+      "feeAnchor": {
+        "eyebrow": "The other way this gets priced",
+        "title": "A flat price, or a cut of every seat you sell.",
+        "body": "Two of the booking channels a dive shop gets offered charge by the booking instead of by the month. Here is what each of them says about its own price — not what any shop ends up paying, which we have no way to know and are not going to guess.",
+        "rezdy": "{competitor}'s current published pricing is a monthly subscription plus 3% of every online booking. The option with no monthly fee still takes the 3%.",
+        "fareharbor": "{competitor} publishes no rate at all. It charges nothing monthly and takes a fee on every booking, added to your guest's checkout price, for as long as you use it; third parties report that fee at around 6%.",
+        "ours": "DiveDay takes no cut of a booking. Checkout runs through your own Stripe account, and what you pay us is the price on the card above — the same number in a busy August as in a quiet January.",
+        "sourcesNote": "Both descriptions come from the switching guides, where each one is cited to the incumbent's own pages.",
+        "guideLink": "What moving off {competitor} looks like →"
+      },
       "includedEyebrow": "Included now",
       "includedTitle": "Everything needed to run the current DiveDay workflow.",
       "seeFullList": "See everything it does, in detail →",
@@ -1910,6 +1933,13 @@
       "stillQuestion": "Still have a question a FAQ can't answer? Founding shops get a founder-direct line — use it, always welcome.",
       "emailCta": "Email {email}"
     }
+  },
+  "errorBoundary": {
+    "title": "That didn’t go through",
+    "bodySaved": "Something went wrong loading this page. Nothing you already saved was lost — tap to try again.",
+    "bodyDone": "Something went wrong loading this page. Nothing you already did was lost — tap to try again.",
+    "bodyBooked": "Something went wrong loading this page. Nothing was booked — tap to try again.",
+    "tryAgain": "Try again"
   },
   "notFound": {
     "heading": "We couldn’t find that page",

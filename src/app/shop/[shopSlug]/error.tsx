@@ -1,13 +1,17 @@
 "use client";
 
-// i18n-exempt-file: error.tsx is a Next.js file convention with a fixed
-// {error, reset} prop signature — the framework instantiates it directly, so
-// no Server Component ancestor can pass it a `copy` prop the way every other
-// staff Client Component receives its words (src/i18n/staff-messages.ts).
-// Bridging server-resolved copy across an error boundary would need new
-// context-provider plumbing threaded through the layout for three short,
-// rare-path strings; flagged for a follow-up decision rather than invented
-// unilaterally, matching trips/[id]/error.tsx's existing precedent.
+// i18n-exempt-file: English by decision, not by deferral — ADR
+// 20260803-error-boundary-copy-bridge. The general answer it records is that
+// a layout renders *above* error.tsx and can therefore resolve boundary copy
+// server-side; the diver bearer-token routes take that answer through
+// DiverIntlProvider with a single `errorBoundary` namespace. Staff cannot use
+// that mechanism: there is no StaffIntlProvider and staff copy deliberately
+// never crosses to the client as a bundle (src/i18n/staff-messages.ts). The
+// staff-shaped version is a `copy`-prop context — `staffTranslator` resolves
+// three strings in shop/[shopSlug]/layout.tsx, a tiny client provider carries
+// them down — which ships no bundle and is the change to make here. Until
+// then these three strings stay English; the ADR names this as the known
+// remainder rather than an unexamined tradeoff.
 import { buttonClass } from "@/components/ui/button";
 
 /**

@@ -11,6 +11,7 @@ import { hasActiveCourses } from "@/db/courses";
 import { DEMO_SHOP_SLUG } from "@/db/dev-credentials";
 import { people, personRoles } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
+import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -174,7 +175,19 @@ export default async function PublicShopLayout({
       ) : null}
       <PreserveFormScroll />
       <div id="public-shop-main-content" tabIndex={-1} className="flex-1 outline-none">
-        {children}
+        {/* Words for `error.tsx`, which renders below this layout and above the
+            page (ADR 20260803-error-boundary-copy-bridge). A boundary is a
+            file convention with a fixed {error, reset} signature, so it can
+            only read copy out of context — one namespace, four short strings.
+            Unlike the bearer-token layouts this one already knows the shop, so
+            `requestLocale` keeps its default and the timezone is the real one. */}
+        <DiverIntlProvider
+          locale={locale}
+          timeZone={shop?.timezone ?? "UTC"}
+          namespaces={["errorBoundary"]}
+        >
+          {children}
+        </DiverIntlProvider>
       </div>
       {!isEmbed && shop ? <PublicShopFooter shop={shop} t={t} /> : null}
     </>

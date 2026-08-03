@@ -419,6 +419,7 @@
       "coursePrerequisite": "Mark the required certification as certified before booking this course.",
       "courseRatioFull": "This session is at its instructor-to-student ratio limit. Assign another instructor, or choose another activity.",
       "courseMinAge": "This diver is under that course's minimum age on the day it runs, going by the date of birth on file. Correct the date of birth if it's wrong.",
+      "tripPrerequisite": "This diver's cards on file don't reach what that trip and its dive sites require. Open the trip to see what it asks for.",
       "tripUnavailable": "Add an email and choose an available activity.",
       "bookingInvalid": "Add an email and choose an available activity.",
       "refundFailed": "That payment could not be refunded. It may not be paid, or Stripe may need attention.",
@@ -1021,7 +1022,9 @@
       "waiversLabel": "Waivers signed",
       "waiversOutstanding": "{count} still to collect",
       "waiversAllIn": "Everyone's paperwork is in",
-      "revenueViewOrders": "View orders"
+      "revenueViewOrders": "View orders",
+      "tipsLabel": "Tips",
+      "tipsDetail": "{count, plural, =0 {No tips left on this month's trips} one {# tip left on this month's trips} other {# tips left on this month's trips}} · 100% to the shop"
     },
     "noTripsFuture": "Nothing on the books for this month yet — bookings will show up here as they come in.",
     "noTripsPast": "No trips sailed this month. Pick another month to see how it went.",
@@ -1215,6 +1218,7 @@
       "diverCoursePrerequisite": "That diver doesn't have a verified certification on file for this course's prerequisite.",
       "diverCourseRatioFull": "This session is at its instructor-to-student ratio limit — assign another instructor, or add them to the wait list.",
       "diverCourseMinAge": "That diver is under this course's minimum age on the day it runs, going by the date of birth on their profile. Correct the date if it's wrong.",
+      "diverTripPrerequisite": "That diver's cards on file don't reach what this trip and its dive sites require. Check the requirements below against their record.",
       "diverUnavailable": "This trip can't accept new divers right now.",
       "waiverComplete": "That diver already has a completed waiver.",
       "waiverInPerson": "Paper waiver recorded — the diver's release is on file.",
@@ -1228,6 +1232,8 @@
       "recapNote": "Recap note saved — it rides along on every diver's recap once this trip departs.",
       "recapPhotoRemoved": "Photo removed from the recap.",
       "requirements": "Trip readiness requirements updated.",
+      "requirementsBlocking": "Requirements updated. Some divers already booked on this trip no longer meet them — check the roster.",
+      "requirementsBlockingCount": "{count, plural, one {Requirements updated. # diver already booked on this trip no longer meets them — check the roster.} other {Requirements updated. # divers already booked on this trip no longer meet them — check the roster.}}",
       "payment": "Payment status updated.",
       "conditions": "Crew prediction published — divers will see it now.",
       "conditionsCleared": "Crew prediction cleared. Divers will see the automated outlook when it is available.",
@@ -1352,6 +1358,7 @@
       "nitroxCardRequired": "a nitrox card",
       "thisSite": "This site",
       "siteAlsoRequires": "<strong>{site}</strong> also requires {list}. Readiness always enforces the stricter of the site and this trip.",
+      "siteAlsoRequiresCourse": "<strong>{site}</strong> requires {list}. That is the site's own rule for the dive, and continuing education is taught at the sites it certifies people for — so it never blocks enrolment. It still shows on the roster as a readiness blocker for the instructor to work through.",
       "saving": "Saving…",
       "save": "Save requirements"
     },
@@ -2605,6 +2612,13 @@
       "helpLabel": "Show this help",
       "sequenceHint": "Press keys one after another for a sequence — e.g. <kbdG>G</kbdG> then <kbdS>S</kbdS> for the board.",
       "goToLabel": "Go to {page}"
+    },
+    "tripAdmission": {
+      "level": "This charter requires {level}. This diver's highest card on file is {held}. If they hold a {level} card, add it to their record — otherwise book them onto a trip at their level, or into the {level} course.",
+      "levelNoCard": "This charter requires {level}, and nothing on this diver's record reaches it. Add their {level} card if they hold one — otherwise book them onto a trip at their level, or into the {level} course.",
+      "cards": "{count, plural, one {This charter requires a {list} card. There's none on this diver's record.} other {This charter requires {list} cards. None of them are on this diver's record.}}",
+      "nitrox": "Nitrox",
+      "generic": "This diver's cards on file don't reach what this trip and its dive sites require."
     },
     "readiness": {
       "certificationLevels": {

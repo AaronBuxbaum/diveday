@@ -1,6 +1,5 @@
 "use server";
 
-import { hash } from "bcryptjs";
 import { redirect } from "next/navigation";
 import { AuthError } from "next-auth";
 import { consumeAccountToken } from "@/db/account-tokens";
@@ -8,6 +7,7 @@ import { getDb } from "@/db/client";
 import { activateStaffAccount, getAccountContact } from "@/db/user-accounts";
 import { signIn } from "@/lib/auth";
 import { type PasswordConfirmErrorCode, passwordConfirmSchema } from "@/lib/onboarding";
+import { hashPassword } from "@/lib/password-hashing";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
 
@@ -38,7 +38,7 @@ export async function acceptStaffInvite(token: string, formData: FormData) {
   // Hashed before the transaction opens — bcrypt's cost factor is deliberately
   // slow, and there's no reason to hold the transaction (and its row locks)
   // open for it.
-  const hashedPassword = await hash(parsed.data.password, 10);
+  const hashedPassword = await hashPassword(parsed.data.password);
   const claimed = await db.transaction(async (tx) => {
     const claim = await consumeAccountToken(tx, { token, purpose: "invite" });
     if (!claim) return null;
