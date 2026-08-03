@@ -12,6 +12,7 @@ import {
 } from "@/lib/courses";
 import { formatShortDate, formatTime, formatTimeRangeTz } from "@/lib/format";
 import { minorToMajor, type ShopCurrency } from "@/lib/money";
+import { publicCoursePath, publicSchedulePath, publicTripPath } from "@/lib/public-routes";
 import { capacityLabel, isFull } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 
@@ -265,7 +266,7 @@ export function CoursePathTrail({
                       </span>
                     ) : (
                       <Link
-                        href={`/shop/${shopSlug}/courses/${step.slug}`}
+                        href={publicCoursePath(shopSlug, step.slug)}
                         className="hover:underline"
                       >
                         {step.title}
@@ -457,7 +458,7 @@ export function CourseSessions({
         <p className="mt-4 max-w-2xl text-muted">
           {t("course.noDatesLead")}{" "}
           <Link
-            href={`/shop/${shopSlug}/schedule`}
+            href={publicSchedulePath(shopSlug)}
             className="font-medium text-primary hover:underline"
           >
             {t("course.seeFullSchedule")}
@@ -509,7 +510,7 @@ export function CourseSessions({
                   </p>
                 </div>
                 <Link
-                  href={`/shop/${shopSlug}/schedule/${session.id}`}
+                  href={publicTripPath(shopSlug, session.id)}
                   className={buttonClass({
                     variant: full ? "secondary" : "primary",
                     className: full ? "text-foreground" : "",

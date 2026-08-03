@@ -17,6 +17,7 @@ import { isStaff } from "@/lib/authz";
 import { courseTotalCents } from "@/lib/courses";
 import { toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
+import { publicCoursePath } from "@/lib/public-routes";
 import { coursePageJsonLd } from "@/lib/structured-data";
 import { CourseInquiry } from "./_components/CourseInquiry";
 import {
@@ -56,7 +57,7 @@ export async function generateMetadata({
     shop && session?.user?.shopId === shop.id && isStaff(session.user.roles),
   );
   if (!course.isActive && !staffView) return { title: "Course — DiveDay" };
-  const canonical = shop ? `/shop/${shop.slug}/courses/${course.slug}` : undefined;
+  const canonical = shop ? publicCoursePath(shop.slug, course.slug) : undefined;
   const title = `${course.title} — ${shop?.name ?? "DiveDay"}`;
   // `description` is the internal staff-picker blurb (schema comment on
   // `courses.description`), never diver-facing — falling back to it here

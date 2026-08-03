@@ -69,15 +69,18 @@ not a migration order.
 Rulings from the 2026-07-19 simplification audit (executed and closed 2026-07-20). They read like
 obvious cleanup targets and are not — do not re-litigate them without new evidence:
 
-- **`/schedule/[id]` and `/trips/[id]` stay separate pages.** Public booking view and staff ops
-  view have different audiences and different failure modes; merging them into one role-branched
-  page trades a real safety boundary for a smaller file count. Navigation directness was fixed
-  instead — staff trip cards link straight to `/trips/[id]`.
-- **Public shop routes are an allowlist, not a prefix.** `isPublicShopRoute` in
-  `src/lib/auth.config.ts` is the single seam deciding what a signed-out diver may read under
-  `/shop/**`; everything else is staff. It matters most for courses, where the public page sits
-  between the staff catalog above it and the editor below it — the match is anchored to exactly one
-  segment and refuses reserved segments. Add a route there with a test, never by widening a prefix.
+- **The diver's trip page and the staff trip page stay separate pages** (`/s/<slug>/trips/[id]` and
+  `/shop/<slug>/trips/[id]`). Public booking view and staff ops view have different audiences and
+  different failure modes; merging them into one role-branched page trades a real safety boundary
+  for a smaller file count. Navigation directness was fixed instead — staff trip cards link straight
+  to their own `/trips/[id]`.
+- **Public shop routes are a namespace, not an allowlist.** Everything a diver reads lives under
+  `/s/<shopSlug>` and every path string comes from `src/lib/public-routes.ts`; `/shop/**` is staff
+  without exception (ADR
+  [20260803-public-shop-namespace](decisions/20260803-public-shop-namespace.md)). The old
+  `isPublicShopRoute` allowlist — a matcher with reserved-segment carve-outs so a course slug could
+  not impersonate a staff page — is gone with it. Add a diver surface under `/s`, never by opening a
+  hole in `/shop`.
 - **PGlite stays per-test.** Test isolation beats the speed of a shared or template database. A
   migrate-once template db is a plausible perf follow-up, but it needs its own design and ADR.
 - **The `src/lib` dive-site helpers stay split** (`dive-site-media` / `-map` / `-landmarks`) —

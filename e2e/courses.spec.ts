@@ -1,27 +1,30 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { acceptAgeAttestation, daysFromNow, e2eNow, findTripOnBoard } from "./helpers";
+import {
+  acceptAgeAttestation,
+  daysFromNow,
+  e2eNow,
+  findTripOnBoard,
+  publicTripUrl,
+} from "./helpers";
 
 test("an uncertified visitor can enroll in an instructor-staffed Discover Scuba session and save rental preferences", async ({
   page,
 }) => {
-  await page.goto("/shop/blue-mantis/schedule");
+  await page.goto("/s/blue-mantis");
   await page.getByRole("link", { name: /Discover Scuba — Pool & Reef/ }).click();
   // Wait for the navigation before asserting on text. `click()` returns as soon
   // as the click is dispatched, so the next assertion can still run against the
   // schedule — where "Course session · Discover Scuba Diving" appears once per
   // seeded session. A strict-mode violation is thrown immediately rather than
   // retried, so that race fails the test outright instead of settling.
-  await expect(page).toHaveURL(/\/schedule\/[0-9a-f-]{36}/);
+  await expect(page).toHaveURL(/\/s\/blue-mantis\/trips\/[0-9a-f-]{36}/);
   await expect(page.getByText("Course session · Discover Scuba Diving")).toBeVisible();
   // The course session line links out to the course page (a crawlable
   // inbound link for SEO), mirroring the link the schedule list already
   // carries — never just a bare name.
   const courseLink = page.getByRole("link", { name: "Discover Scuba Diving" });
   await expect(courseLink).toHaveAttribute("href", /\/courses\//);
-  await expect(courseLink).toHaveAttribute(
-    "href",
-    "/shop/blue-mantis/courses/discover-scuba-diving",
-  );
+  await expect(courseLink).toHaveAttribute("href", "/s/blue-mantis/courses/discover-scuba-diving");
   await expect(page.getByText("Giving this dive as a gift?")).toBeVisible();
   await expect(page.getByRole("link", { name: "Add to calendar" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Share with a buddy" })).toBeVisible();
@@ -47,20 +50,20 @@ test("an uncertified visitor can enroll in an instructor-staffed Discover Scuba 
 });
 
 test("a regular fun-dive trip does not show the taster-session gift nudge", async ({ page }) => {
-  await page.goto("/shop/blue-mantis/schedule");
+  await page.goto("/s/blue-mantis");
   await page
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Molasses & French" })
     .getByRole("link", { name: "Two-Tank Reef — Molasses & French" })
     .click();
-  await expect(page).toHaveURL(/\/schedule\/[0-9a-f-]{36}/);
+  await expect(page).toHaveURL(/\/s\/blue-mantis\/trips\/[0-9a-f-]{36}/);
   await expect(page.getByText("Giving this dive as a gift?")).not.toBeVisible();
 });
 
 test("a signed-out visitor browses the public course catalog to certification paths, with the editor still gated", async ({
   page,
 }) => {
-  await page.goto("/shop/blue-mantis/courses");
+  await page.goto("/s/blue-mantis/courses");
   await expect(page.getByRole("heading", { level: 1, name: "Courses" })).toBeVisible();
   await expect(
     page.getByRole("heading", { level: 2, name: "Open Water Diver", exact: true }),
@@ -111,7 +114,7 @@ test.describe("staff", () => {
 
     // The two items are billed separately, so the public page states the single
     // payment the diver makes for both.
-    await page.goto("/shop/blue-mantis/courses/discover-scuba-diving");
+    await page.goto("/s/blue-mantis/courses/discover-scuba-diving");
     await expect(page.getByText("$249")).toBeVisible();
 
     // Back on the roster, the eye toggle hides the course from scheduling lists.
@@ -120,7 +123,7 @@ test.describe("staff", () => {
     await page.goto("/shop/blue-mantis/courses");
     await expect(row.getByRole("link", { name: "Preview Discover Scuba Diving" })).toHaveAttribute(
       "href",
-      "/shop/blue-mantis/courses/discover-scuba-diving",
+      "/s/blue-mantis/courses/discover-scuba-diving",
     );
     await row.getByRole("button", { name: "Hide Discover Scuba Diving" }).click();
     const row2 = page.getByRole("listitem").filter({ hasText: "Discover Scuba Diving" });
@@ -170,7 +173,7 @@ test.describe("staff", () => {
 
     // A diver arrives with no session at all.
     await page.context().clearCookies();
-    await page.goto("/shop/blue-mantis/courses/rescue-diver");
+    await page.goto("/s/blue-mantis/courses/rescue-diver");
     await expect(page.getByRole("heading", { name: "Rescue Diver", level: 1 })).toBeVisible();
     // Admission is stated once, in the block that also owns the shop's own
     // prerequisite prose — labelled separately so the two can never be read as
@@ -182,14 +185,17 @@ test.describe("staff", () => {
     await expect(page.getByRole("heading", { name: "Day 4" })).toBeVisible();
     await expect(page.getByText("Do I need my own gear?")).toBeVisible();
 
-    // The editor stays closed to that same visitor. The catalog index above it
-    // is a public page now (task 2) — it renders the catalog rather than
-    // bouncing to sign-in, and carries no edit affordance.
+    // The editor stays closed to that same visitor — and so does the staff
+    // roster, which is now an ordinary /shop page (ADR
+    // 20260803-public-shop-namespace). The diver's catalog index lives in the
+    // public namespace instead, and carries no edit affordance.
     await page.goto("/shop/blue-mantis/courses/rescue-diver/edit");
     await expect(page).toHaveURL(/\/sign-in/);
     await page.goto("/shop/blue-mantis/courses/new");
     await expect(page).toHaveURL(/\/sign-in/);
     await page.goto("/shop/blue-mantis/courses");
+    await expect(page).toHaveURL(/\/sign-in/);
+    await page.goto("/s/blue-mantis/courses");
     await expect(page).not.toHaveURL(/\/sign-in/);
     await expect(page.getByRole("heading", { level: 1, name: "Courses" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Edit" })).toHaveCount(0);
@@ -261,7 +267,7 @@ test.describe("staff", () => {
     ).toBeHidden();
 
     await page.context().clearCookies();
-    await page.goto("/shop/blue-mantis/courses/open-water-diver");
+    await page.goto("/s/blue-mantis/courses/open-water-diver");
     await expect(page.getByRole("heading", { name: "Upcoming dates" })).toBeVisible();
     // Sessions are listed soonest first, so the one just scheduled 21 days out is
     // the last — and the only one this test may consume a seat from.
@@ -313,7 +319,7 @@ test.describe("staff", () => {
     await page.context().clearCookies();
     const stamp = e2eNow().getTime();
     const bookSlots = async (count: number, offset: number) => {
-      await page.goto(tripUrl.replace("/trips/", "/schedule/"));
+      await page.goto(publicTripUrl(tripUrl));
       const partySize = page.getByLabel("Number of divers");
       await expect(partySize).toHaveAttribute("data-hydrated", "true");
       await partySize.selectOption(String(count));
@@ -341,7 +347,7 @@ test.describe("staff", () => {
     await bookSlots(2, 6);
 
     // The 9th diver hits the ratio, not capacity.
-    await page.goto(tripUrl.replace("/trips/", "/schedule/"));
+    await page.goto(publicTripUrl(tripUrl));
     // The booking form is controlled, so wait for hydration before typing.
     await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
     await page.getByLabel("Name", { exact: true }).fill(`Ratio Diver ${stamp}-9`);
@@ -358,7 +364,7 @@ test("a diver with no workable date gets a written email instead of a dead end",
   page,
 }) => {
   // Signed out: this is the composer a prospective diver meets, not staff.
-  await page.goto("/shop/blue-mantis/courses/open-water-diver");
+  await page.goto("/s/blue-mantis/courses/open-water-diver");
 
   const inquiry = page.getByRole("region", { name: "Get in touch" });
   await inquiry.scrollIntoViewIfNeeded();
@@ -394,7 +400,7 @@ test("a diver with no workable date gets a written email instead of a dead end",
 test("a blank inquiry is rejected, not defaulted — experience is required (task 8)", async ({
   page,
 }) => {
-  await page.goto("/shop/blue-mantis/courses/open-water-diver");
+  await page.goto("/s/blue-mantis/courses/open-water-diver");
   const inquiry = page.getByRole("region", { name: "Get in touch" });
   await inquiry.scrollIntoViewIfNeeded();
 
@@ -411,7 +417,7 @@ test("a blank inquiry is rejected, not defaulted — experience is required (tas
 test("a diver's inquiry is recorded server-side and the shop's details stay reachable after sending", async ({
   page,
 }) => {
-  await page.goto("/shop/blue-mantis/courses/open-water-diver");
+  await page.goto("/s/blue-mantis/courses/open-water-diver");
   const inquiry = page.getByRole("region", { name: "Get in touch" });
   await inquiry.scrollIntoViewIfNeeded();
   await page.getByLabel("Your name").fill("Sena Okafor");

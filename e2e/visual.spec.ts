@@ -442,7 +442,7 @@ for (const scheme of ["light", "dark"] as const) {
       // suspense fallback and whichever side of that race each run landed on
       // decided the baseline. Two runs catching *different* skeleton frames is
       // what produced the schedule-dark diffs on builds with no code change.
-      await page.goto("/shop/blue-mantis/schedule");
+      await page.goto("/s/blue-mantis");
       await page
         .locator("li")
         .filter({ hasText: "Two-Tank Reef — Molasses & French" })
@@ -457,7 +457,7 @@ for (const scheme of ["light", "dark"] as const) {
       // reason: with no wait this capture sometimes shot an empty document, so
       // `fullPage` measured the viewport (844px tall) instead of the real page
       // (11802px). A baseline that is a blank viewport asserts nothing.
-      await page.goto("/shop/blue-mantis/schedule?embed=1");
+      await page.goto("/s/blue-mantis?embed=1");
       await page
         .locator("li")
         .filter({ hasText: "Two-Tank Reef — Molasses & French" })
@@ -469,7 +469,7 @@ for (const scheme of ["light", "dark"] as const) {
       // capture below — its links now carry embed=1 forward when the
       // schedule itself was loaded in embed mode, and the "site-briefing"
       // baseline is the standalone trip page, not the compact embed variant.
-      await page.goto("/shop/blue-mantis/schedule");
+      await page.goto("/s/blue-mantis");
 
       // The seeded reef trip's public briefing: satellite map, gentle route,
       // landmarks, and the field guide — DiveDay's flagship "delight" surface.
@@ -484,9 +484,21 @@ for (const scheme of ["light", "dark"] as const) {
       // "Upcoming dates" is the last section the public course page streams, so
       // it is the signal that the whole document has landed — without it this
       // capture also shot a viewport-tall blank page on some runs.
-      await page.goto("/shop/blue-mantis/courses/open-water-diver");
+      await page.goto("/s/blue-mantis/courses/open-water-diver");
       await page.getByRole("heading", { name: "Upcoming dates" }).waitFor();
       await capture(page, "course-page", scheme);
+
+      // The diver's catalog index and the certification-path guidance it leads
+      // to. Both used to be the signed-out half of a staff page inside /shop
+      // and so had no baseline of their own; they are standalone public
+      // surfaces now (ADR 20260803-public-shop-namespace).
+      await page.goto("/s/blue-mantis/courses");
+      await page.getByRole("heading", { level: 1, name: "Courses" }).waitFor();
+      await capture(page, "public-courses", scheme);
+
+      await page.goto("/s/blue-mantis/courses/paths");
+      await page.getByRole("heading", { level: 1, name: "Certification paths" }).waitFor();
+      await capture(page, "public-course-paths", scheme);
 
       // Set a review link on a disposable staff context (same CR-019 pattern
       // as the waiver/booking setup below) so the recap capture shows the
@@ -560,7 +572,7 @@ for (const scheme of ["light", "dark"] as const) {
 
       // A fresh visitor booking the same trip hands back a readiness link —
       // the pre-trip checklist a diver actually uses on the way to the dock.
-      await page.goto("/shop/blue-mantis/schedule");
+      await page.goto("/s/blue-mantis");
       await page
         .locator("li")
         .filter({ hasText: "Two-Tank Reef — Molasses & French" })

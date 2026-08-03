@@ -553,6 +553,7 @@
       "eyebrow": "Catalog",
       "description": "Drop courses in the order a diver would take them. Nothing here decides who may enrol — that stays with each course's own certification requirement.",
       "allPaths": "All paths",
+      "viewPublicPage": "View public page",
       "pathSaved": "Path saved.",
       "oneHiddenStep": "{course} is hidden in your catalog, so divers won't be shown that step.",
       "manyHiddenSteps": "{count} courses on this path are hidden in your catalog, so divers won't be shown those steps.",
@@ -574,6 +575,7 @@
       "title": "Certification paths",
       "description": "The order you'd walk a diver through your courses. A path is guidance, not a gate — it never changes who may enrol in anything.",
       "backToCourses": "Back to courses",
+      "viewPublicPage": "View public page",
       "noPathsHeading": "No paths yet",
       "noPathsBody": "Most shops start with the one every diver asks about: Open Water, then Advanced, then Rescue.",
       "oneCourse": "1 course",
@@ -2287,6 +2289,10 @@
   },
   "shared": {
     "skipToContent": "Skip to main content",
+    "publicPreview": {
+      "youWorkHere": "You work here — this is the page divers see.",
+      "openTheBoard": "Open the board"
+    },
     "imageInput": {
       "tooMany": "{count, plural, one {Choose up to # photo at a time.} other {Choose up to # photos at a time.}}",
       "wrongTypeSuffix": ": use a JPG, PNG, WebP, or HEIC photo.",

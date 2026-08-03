@@ -55,11 +55,12 @@ ignored and the full suite runs instead. Pass args directly: `pnpm test <file> -
 
 | You need | Go to |
 | --- | --- |
-| Public pages (landing, sign-in) | `src/app/` — auth-exempt shop routes are the schedule (`shop/[shopSlug]/schedule`, always public regardless of session — the staff operations board is the separate, gated `shop/[shopSlug]/schedule/board`) and course pages (`shop/[shopSlug]/courses/[slug]`), allowlisted in `isPublicShopRoute`; staff trip management is `src/app/shop/[shopSlug]/trips/**` |
+| Public pages (landing, sign-in) | `src/app/` |
+| A shop's diver-facing pages (schedule, booking, courses) | `src/app/s/[shopSlug]/**` — its own namespace, no auth anywhere in it: `/s/<slug>` is the schedule, `/s/<slug>/trips/<id>` the booking page, `/s/<slug>/courses/**` the catalog. Path strings come from `src/lib/public-routes.ts`, which also holds the 308s from the old `/shop/**` URLs (ADR 20260803-public-shop-namespace). `/shop/**` is staff, without exception |
 | Bearer-token pages (waiver signing, trip-prep "ready", recap, email verify, password reset, staff calendar feed) | `src/app/waivers/[token]`, `src/app/ready/[token]`, `src/app/recap/[token]`, `src/app/verify/[token]`, `src/app/reset-password/[token]`, `src/app/calendar/[token]` — the URL *is* the capability; see [docs/engineering/capability-telemetry-runbook.md](docs/engineering/capability-telemetry-runbook.md) before touching |
 | Account lifecycle (sign-up welcome/verify, forgot/reset password) | `src/app/onboard/`, `src/app/forgot-password/`, `src/app/verify/[token]`, `src/app/reset-password/[token]`; tokens in `src/db/account-tokens.ts` / `src/lib/account-tokens.ts`; account rows in `src/db/user-accounts.ts` |
-| Course pages (public content + editor) | `src/app/shop/[shopSlug]/courses/**`; content shapes and parsers in `src/lib/courses.ts`; DiveDay-published templates in `src/db/course-templates.ts` |
-| Certification paths (the catalog's progressions) | `src/db/course-paths.ts` + `src/app/shop/[shopSlug]/courses/paths/**`. Guidance, never a gate — admission stays on each course's `minimum_certification_level` |
+| Course pages (public content / staff roster + editor) | diver-facing `src/app/s/[shopSlug]/courses/**`; staff roster, path builder, and editor `src/app/shop/[shopSlug]/courses/**`; content shapes and parsers in `src/lib/courses.ts`; DiveDay-published templates in `src/db/course-templates.ts` |
+| Certification paths (the catalog's progressions) | `src/db/course-paths.ts`; diver-facing `src/app/s/[shopSlug]/courses/paths/**`, staff builder `src/app/shop/[shopSlug]/courses/paths/**`. Guidance, never a gate — admission stays on each course's `minimum_certification_level` |
 | The staff schedule builder (add / move / copy / remove a departure) | `src/app/shop/[shopSlug]/schedule/board/_components/ScheduleBuilder.tsx` + `schedule/board/actions.ts`; the mutations and their refusals live in `src/db/trips.ts` (`moveTrip`, `duplicateTrip`, `deleteTrip`) |
 | Staff surfaces (all `/shop/**`, auth-gated) | `src/app/shop/` |
 | SMS delivery receipts | `src/lib/notifications/sms-events.ts` + `src/app/api/webhooks/sms/`; the AWS-side pipeline is section 10 of `infra/lib/infra-stack.ts`; setup in [docs/engineering/sms-delivery-receipts-runbook.md](docs/engineering/sms-delivery-receipts-runbook.md) |
@@ -71,7 +72,7 @@ ignored and the full suite runs instead. Pass args directly: `pnpm test <file> -
 | The booking transaction (capacity enforcement) | `src/db/bookings.ts` — read its tests first |
 | Payments and orders (Stripe Connect) | `src/lib/payments/` (checkout, connect, invoicing, promotions, webhook); order/refund state in `src/db/orders.ts`, `payments.ts`, `checkouts.ts`, `refunds.ts`, `stripe-accounts.ts` |
 | Discount codes | shop-wide in `src/lib/promo-codes.ts` + `src/db/shop-promos.ts` (staff page `shop/[shopSlug]/promos`); one-trip last-minute deals stay in `src/db/trip-promos.ts`. Both resolve in `bookSpot`; Stripe owns the arithmetic |
-| Diver reviews and ratings | `src/lib/reviews.ts` + `src/db/reviews.ts`; written from `/recap/[token]`, moderated at `shop/[shopSlug]/reviews`, displayed on the public schedule |
+| Diver reviews and ratings | `src/lib/reviews.ts` + `src/db/reviews.ts`; written from `/recap/[token]`, moderated at `shop/[shopSlug]/reviews`, displayed on the public schedule (`/s/[shopSlug]`) |
 | Copy and languages | `src/i18n/` — diver messages in `locales/<locale>/diver.json` (`diverTranslator`, `DiverIntlProvider` + `useTranslations()` for Client Components), staff messages in `staff.json` (`staffTranslator`, **server-side only** — staff Client Components take words as props). `requestTranslator()`/`requestLocale()` negotiate from `Accept-Language`, falling back to `shops.default_locale`. No switcher and no `[locale]` route by design. `pnpm check:locale` enforces translation coverage; `pnpm check:copy` blocks new hard-coded copy. **Any diver Client Component that reads copy needs `DiverIntlProvider` above it** — without one it throws during the server render and the whole page silently degrades to a blank client-only 200 |
 | SEO structured data | `src/lib/structured-data.ts` + `src/components/JsonLd.tsx`; never in `?embed=1` mode or on a bearer-token page |
 | Notifications (email/SMS/WhatsApp) | `src/lib/notifications/` (Resend/SES email adapters, SNS SMS adapter, Meta Cloud API WhatsApp adapter); `courtesy.ts` picks WhatsApp-or-SMS; log + resend state in `src/db/notifications.ts` |
@@ -81,7 +82,7 @@ ignored and the full suite runs instead. Pass args directly: `pnpm test <file> -
 | Domain logic (framework-free) | `src/lib/` — capacity in `trips.ts`, dates in `format.ts` |
 | Feature modules | `src/features/<feature>/` — one `index.ts` is the whole public surface, `README.md` states what it owns; deep imports fail `pnpm check:architecture`. First one is `calendar-sync` (ADR 20260730-feature-module-contracts) |
 | Staff calendar subscriptions (iCalendar feeds) | `src/features/calendar-sync/` + `src/app/calendar/[token]/route.ts`; staff UI at `src/app/shop/[shopSlug]/settings/calendar/` |
-| Auth: edge config / providers / gates | `src/lib/auth.config.ts` / `auth.ts` / `authz.ts` + `session.ts`; edge layer in `src/proxy.ts` |
+| Auth: edge config / providers / gates | `src/lib/auth.config.ts` / `auth.ts` / `authz.ts` + `session.ts`; edge layer in `src/proxy.ts`. `/shop/**` is staff-only end to end — there is no public-route allowlist any more |
 | Dev/e2e staff logins | `src/db/dev-credentials.ts` |
 | Design tokens | `src/app/globals.css` (semantic only, ADR-0004) |
 | Form/button/control wrappers | `src/components/ui/` — `form.tsx` (`Field`, `FieldGrid`, `controlClass`), `button.ts` (`buttonClass`) |

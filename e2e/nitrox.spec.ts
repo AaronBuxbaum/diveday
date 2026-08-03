@@ -84,7 +84,7 @@ test.describe("staff", () => {
       storageState: { cookies: [], origins: [] },
     });
     const anon = makeActivitySafe(await anonContext.newPage());
-    await anon.goto("/shop/blue-mantis/schedule");
+    await anon.goto("/s/blue-mantis");
     await anon
       .locator("li")
       .filter({ hasText: "Two-Tank Reef — Christ of the Abyss" })
@@ -103,7 +103,7 @@ test.describe("staff", () => {
     const bookingUrl = anon.url();
     // The trip id rides along in the confirmation URL — reuse it below
     // instead of clicking back through the schedule as staff.
-    const tripId = bookingUrl.match(/\/schedule\/([^/?]+)/)?.[1];
+    const tripId = bookingUrl.match(/\/trips\/([^/?]+)/)?.[1];
     if (!tripId) throw new Error("booking confirmation URL missing a trip id");
 
     try {
@@ -222,7 +222,7 @@ test("a freshly onboarded shop starts without nitrox, and turning it on unlocks 
 test("a diver without a verified card can request nitrox but is flagged, not blocked", async ({
   page,
 }) => {
-  await page.goto("/shop/blue-mantis/schedule");
+  await page.goto("/s/blue-mantis");
   await page
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Christ of the Abyss" })

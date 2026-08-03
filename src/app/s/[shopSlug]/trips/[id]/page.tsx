@@ -41,6 +41,7 @@ import {
 } from "@/lib/marine-forecast";
 import { type ShopCurrency, toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
+import { publicSchedulePath, publicTripCalendarPath, publicTripPath } from "@/lib/public-routes";
 import { tripPageJsonLd } from "@/lib/structured-data";
 import { isFull, spotsRemaining } from "@/lib/trips";
 import { BookingConfirmation } from "./_components/BookingConfirmation";
@@ -83,7 +84,7 @@ export async function generateMetadata({
   const when = formatShortDate(trip.startsAt, locale, shop.timezone);
   const title = `${trip.title} — ${when} · ${shop.name}`;
   const description = trip.description ?? `Book ${trip.title} with ${shop.name} on ${when}.`;
-  const canonical = `/shop/${shop.slug}/schedule/${trip.id}`;
+  const canonical = publicTripPath(shop.slug, trip.id);
   return {
     title,
     description,
@@ -159,7 +160,7 @@ export default async function TripDetailPage({
         >
           {isEmbed ? null : (
             <Link
-              href={`/shop/${shopSlug}/schedule`}
+              href={publicSchedulePath(shopSlug)}
               className="inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline"
             >
               ← {t("trip.backToAllTrips")}
@@ -314,7 +315,7 @@ export default async function TripDetailPage({
         <FlashParams params={["error", "pay"]} />
         {isEmbed ? null : (
           <Link
-            href={`/shop/${shopSlug}/schedule`}
+            href={publicSchedulePath(shopSlug)}
             className="inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline"
           >
             ← {t("trip.backToAllTrips")}
@@ -330,7 +331,7 @@ export default async function TripDetailPage({
         ) : null}
         {!isEmbed ? (
           <TripActions
-            calendarUrl={`/shop/${shopSlug}/schedule/${tripId}/calendar`}
+            calendarUrl={publicTripCalendarPath(shopSlug, tripId)}
             directionsUrl={
               trip.diveSite?.locationName ? googleMapsUrl(trip.diveSite.locationName) : null
             }

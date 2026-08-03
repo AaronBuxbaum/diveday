@@ -10,6 +10,7 @@ import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { formatMoneyCents } from "@/lib/format";
 import type { ShopCurrency } from "@/lib/money";
+import { publicSchedulePath } from "@/lib/public-routes";
 import { hasAnyRentalPricing, type RentalPricing } from "@/lib/rentals";
 import { capacityLabel } from "@/lib/trips";
 import { type BookingFormState, bookSpot, joinWaitlist, type TripRef } from "../actions";
@@ -54,7 +55,7 @@ export function WaitlistConfirmation({
       </h2>
       <p className="mt-2 text-muted">{t("booking.waitlistConfirmedBody")}</p>
       <Link
-        href={`/shop/${shopSlug}/schedule${embed ? "?embed=1" : ""}`}
+        href={`${publicSchedulePath(shopSlug)}${embed ? "?embed=1" : ""}`}
         className="mt-3 inline-flex min-h-11 items-center text-base font-medium text-primary hover:underline"
       >
         {t("common.backToSchedule")}
@@ -70,7 +71,7 @@ export function TripSailedNotice({ shopSlug, embed }: { shopSlug: string; embed?
       <h2 className="font-medium">{t("sailedHeading")}</h2>
       <p className="mt-1 text-sm text-muted">
         <Link
-          href={`/shop/${shopSlug}/schedule${embed ? "?embed=1" : ""}`}
+          href={`${publicSchedulePath(shopSlug)}${embed ? "?embed=1" : ""}`}
           className="font-medium text-primary hover:underline"
         >
           {t("sailedCheckSchedule")}
@@ -102,7 +103,7 @@ export function CancelledTripNotice({
       <h2 className="font-medium">{t("cancelledHeading")}</h2>
       <p className="mt-1 text-sm text-muted">
         <Link
-          href={`/shop/${shopSlug}/schedule${embed ? "?embed=1" : ""}`}
+          href={`${publicSchedulePath(shopSlug)}${embed ? "?embed=1" : ""}`}
           className="font-medium text-primary hover:underline"
         >
           {t("sailedCheckSchedule")}
@@ -148,7 +149,7 @@ export function TripFullSection({
   const t = useTranslations("booking");
   return (
     // Same `#book` anchor as `BookSpotSection` below — the sticky mobile CTA
-    // (schedule/[id]/page.tsx) targets it whether or not the trip is full
+    // (trips/[id]/page.tsx) targets it whether or not the trip is full
     // (task 12), so a full boat still lands the diver on a real next step
     // (the wait list) instead of nowhere.
     <section id="book" className="mt-10 rounded-lg border border-border bg-surface p-6">
@@ -156,7 +157,7 @@ export function TripFullSection({
       <p className="mt-1 text-sm text-muted">
         {t("fullBody", { capacity: trip.capacity })}{" "}
         <Link
-          href={`/shop/${shopSlug}/schedule${tripRef.embed ? "?embed=1" : ""}`}
+          href={`${publicSchedulePath(shopSlug)}${tripRef.embed ? "?embed=1" : ""}`}
           className="font-medium text-primary hover:underline"
         >
           {t("findAnotherTrip")}
@@ -190,7 +191,7 @@ export function TripFullSection({
       <p className="mt-4 text-sm text-muted">
         {t("wantAnyTripAlertsInstead")}{" "}
         <Link
-          href={`/shop/${shopSlug}/schedule${tripRef.embed ? "?embed=1" : ""}#last-minute-list`}
+          href={`${publicSchedulePath(shopSlug)}${tripRef.embed ? "?embed=1" : ""}#last-minute-list`}
           className="font-medium text-primary hover:underline"
         >
           {t("joinLastMinuteDealAlerts")}

@@ -55,7 +55,7 @@ function homeCTAElement() {
   return (
     <HomeCTA
       enterDemoAction={vi.fn()}
-      scheduleHref="/shop/blue-mantis/schedule"
+      scheduleHref="/s/blue-mantis"
       roleOptions={roleOptions}
       copy={copy}
     />

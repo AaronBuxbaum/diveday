@@ -26,6 +26,7 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { courseCrewGap, DSD_RATIO } from "@/lib/course-ratios";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
+import { publicTripPath } from "@/lib/public-routes";
 import { recurrenceSummary } from "@/lib/recurrence";
 import { requireStaffSession } from "@/lib/session";
 import { capacityLabel, isFull } from "@/lib/trips";
@@ -175,7 +176,7 @@ export default async function ManageTripPage({
         actions={
           <>
             <Link
-              href={`/shop/${shopSlug}/schedule/${tripId}`}
+              href={publicTripPath(shopSlug, tripId)}
               target="_blank"
               rel="noreferrer"
               className={buttonClass({ variant: "secondary", size: "sm" })}
@@ -183,7 +184,7 @@ export default async function ManageTripPage({
               {t("trips.detail.viewBookingPage")}
             </Link>
             <CopyLinkButton
-              path={`/shop/${shopSlug}/schedule/${tripId}`}
+              path={publicTripPath(shopSlug, tripId)}
               label={t("trips.detail.copyBookingLink")}
               copiedLabel={t("trips.detail.linkCopied")}
               failedLabel={t("trips.detail.linkCopyFailed")}

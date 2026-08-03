@@ -1,15 +1,16 @@
 import Link from "next/link";
 import type { DiverTranslator } from "@/i18n/messages";
+import { publicSchedulePath } from "@/lib/public-routes";
 
 /**
- * The public shop's own identity, shown to anonymous visitors on every
- * `/shop/[shopSlug]` page (task 9, docs/product/archive/ux-personas-20260730-findings.md).
- * Before this, the schedule's `<h1>` read "Schedule" with no shop name, logo,
- * or contact anywhere — nothing told a diver comparing two shops in another
- * tab which one they were looking at. Staff get `ShopNav` instead
- * (src/app/shop/[shopSlug]/layout.tsx); this is the signed-out counterpart,
- * and never renders in `?embed=1` mode, which already carries its own
- * framing on the page that embeds it.
+ * The public shop's own identity, shown on every `/s/[shopSlug]` page (task 9,
+ * docs/product/archive/ux-personas-20260730-findings.md). Before this, the
+ * schedule's `<h1>` read "Schedule" with no shop name, logo, or contact
+ * anywhere — nothing told a diver comparing two shops in another tab which one
+ * they were looking at. Staff get `ShopNav` on their own namespace instead
+ * (src/app/shop/[shopSlug]/layout.tsx); this is the diver-side counterpart, and
+ * never renders in `?embed=1` mode, which already carries its own framing on
+ * the page that embeds it.
  */
 export function PublicShopHeader({
   shop,
@@ -20,7 +21,7 @@ export function PublicShopHeader({
   return (
     <header className="border-b border-border bg-surface">
       <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-3 sm:px-6">
-        <Link href={`/shop/${shop.slug}/schedule`} className="text-lg font-semibold tracking-tight">
+        <Link href={publicSchedulePath(shop.slug)} className="text-lg font-semibold tracking-tight">
           {shop.name}
         </Link>
         {hasContact ? (

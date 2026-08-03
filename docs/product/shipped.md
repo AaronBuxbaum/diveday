@@ -761,9 +761,8 @@ The roadmap's §7 smaller follow-ons and the whole open Delight backlog shipped:
 
 ## Simplification rulings (2026-07-19 → 20 audit)
 
-The cleanup audit executed in full; its durable "don't re-litigate this" rulings — separate
-`/schedule` and `/trips` pages, public-route allowlist, per-test PGlite, split dive-site helpers,
-retained superseded ADRs — live in
+The cleanup audit executed in full; its durable "don't re-litigate this" rulings — separate diver
+and staff trip pages, per-test PGlite, split dive-site helpers, retained superseded ADRs — live in
 [architecture/overview.md](../architecture/overview.md#settled-shape-decisions). Navigation
 unification, one notice system, the `reports`/`shop` cuts, the trial/demo split, honest marketing,
 and the decomposition of the four monster pages all shipped.

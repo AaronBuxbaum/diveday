@@ -5,7 +5,7 @@ import { e2eNow } from "./helpers";
 // prices, and a per-dive nitrox surcharge. A diver setting their rental fit should
 // see those prices and a running estimate, not a bare "ask the shop" line.
 test("a diver sees rental prices and an estimate on the booking confirmation", async ({ page }) => {
-  await page.goto("/shop/blue-mantis/schedule");
+  await page.goto("/s/blue-mantis");
   await page
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Christ of the Abyss" })

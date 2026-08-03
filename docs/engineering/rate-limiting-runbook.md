@@ -12,11 +12,11 @@ capability token (readiness, waiver, schedule-confirmation).
 | Onboarding (account + shop creation) | `src/app/onboard/actions.ts` | IP | `RATE_LIMITS.onboard` — 5/hour |
 | Sign-in | `src/lib/auth.ts` `authorize()` | IP **and** attempted email | `RATE_LIMITS.signInByIp` (20/15min) + `RATE_LIMITS.signInByEmail` (8/15min) |
 | Recap photo upload | `src/app/recap/[token]/actions.ts` | IP **and** booking (post-verification) | `RATE_LIMITS.recapUploadByIp` (30/hour) + `RATE_LIMITS.recapUploadByToken` (10/hour) |
-| Wait-list join | `src/app/shop/[shopSlug]/schedule/[id]/actions.ts` `joinWaitlist` | IP | `RATE_LIMITS.waitlistJoin` — 10/hour |
+| Wait-list join | `src/app/s/[shopSlug]/trips/[id]/actions.ts` `joinWaitlist` | IP | `RATE_LIMITS.waitlistJoin` — 10/hour |
 | Booking | same file, `bookSpot` | IP | `RATE_LIMITS.booking` — 10/hour |
 | Readiness actions | `src/app/ready/[token]/actions.ts` `contextFor` | IP, checked before token verification | `RATE_LIMITS.capabilityAction` — 30/hour |
 | Waiver draft/complete | `src/app/waivers/[token]/page.tsx` | IP | `RATE_LIMITS.capabilityAction` — 30/hour |
-| Schedule-confirmation actions (rental fit, pay) | same schedule actions file, `confirmContextFor` | IP, checked before token verification | `RATE_LIMITS.capabilityAction` — 30/hour |
+| Booking-confirmation actions (rental fit, pay) | same trip actions file, `confirmContextFor` | IP, checked before token verification | `RATE_LIMITS.capabilityAction` — 30/hour |
 
 Every capability-token action funnels through one file-local chokepoint
 (`contextFor` / `confirmContextFor`), so a single rate-limit check there

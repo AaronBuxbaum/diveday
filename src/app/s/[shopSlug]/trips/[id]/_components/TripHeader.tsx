@@ -5,6 +5,7 @@ import { courseCharges, perDiverBookingPriceCents } from "@/lib/courses";
 import { cancellationDeadline, checkoutCharge } from "@/lib/deposits";
 import { formatDateTimeTz, formatMoneyCents, formatShortDate, formatTimeRange } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
+import { publicCoursePath } from "@/lib/public-routes";
 import type { Shop, Trip } from "./types";
 
 export function TripHeader({ shop, trip, locale }: { shop: Shop; trip: Trip; locale: string }) {
@@ -45,7 +46,7 @@ export function TripHeader({ shop, trip, locale }: { shop: Shop; trip: Trip; loc
               <p className="mt-2 text-sm font-medium text-primary">
                 {t("trip.courseSession")} ·{" "}
                 <Link
-                  href={`/shop/${shop.slug}/courses/${trip.course.slug}`}
+                  href={publicCoursePath(shop.slug, trip.course.slug)}
                   className="underline-offset-2 hover:underline focus-visible:underline"
                 >
                   {trip.course.title}

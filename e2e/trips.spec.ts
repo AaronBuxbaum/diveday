@@ -4,7 +4,7 @@ import { e2eNow } from "./helpers";
 test("the public schedule lists seeded trips with capacity states, a calendar, and per-dive briefings", async ({
   page,
 }) => {
-  await page.goto("/shop/blue-mantis/schedule");
+  await page.goto("/s/blue-mantis");
   await expect(page.getByRole("heading", { level: 1, name: "Schedule" })).toBeVisible();
   // Scoped to the departure's own card heading: the reviews section below the
   // list quotes trip titles too, so a bare text match finds two things.
@@ -36,11 +36,11 @@ test("the public schedule lists seeded trips with capacity states, a calendar, a
   await expect(
     calendar.getByRole("heading", { name: new RegExp(`\\b${currentYear}\\b`) }),
   ).toBeVisible();
-  // Each dive is a link into its schedule detail (labelled by start time so it
+  // Each dive is a link into its trip page (labelled by start time so it
   // doesn't collide with the titled cards in the list below).
   await expect(calendar.getByRole("link", { name: /\bdive\b/ }).first()).toBeVisible();
   await expect(
-    calendar.locator('a[href*="/schedule/"]').filter({ visible: true }).first(),
+    calendar.locator('a[href*="/trips/"]').filter({ visible: true }).first(),
   ).toBeVisible();
 
   // A multi-dive trip's public page presents every dive briefing.

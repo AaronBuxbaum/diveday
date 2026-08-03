@@ -27,6 +27,7 @@ import { nowDate } from "@/lib/clock";
 import { courseCrewGap } from "@/lib/course-ratios";
 import { formatDateTimeTz, formatShortDate, formatTime } from "@/lib/format";
 import { rollCallCheckpoints } from "@/lib/manifests";
+import { publicTripPath } from "@/lib/public-routes";
 import {
   collapseDiverActions,
   ROLL_CALL_GAP_KINDS,
@@ -1073,7 +1074,7 @@ export async function getTodayWork(
           personName: front.personName,
           personEmail: front.personEmail,
           invitedAt: front.invitedAt,
-          bookingPath: `/shop/${shopSlug}/schedule/${trip.id}`,
+          bookingPath: publicTripPath(shopSlug, trip.id),
           tripTitle: trip.title,
           tripWhen: when,
         },

@@ -84,7 +84,7 @@ test.describe("staff", () => {
     // Staff are routed to the trip editor; view the public diver briefing signed
     // out, then sign back in to finish the staff-side edits below.
     await page.context().clearCookies();
-    await page.goto("/shop/blue-mantis/schedule");
+    await page.goto("/s/blue-mantis");
     // Scoped to the trip list itself: a day with more than one departure
     // also renders a same-titled <li> in the month calendar
     // (src/components/ScheduleCalendar.tsx), and an unscoped locator can
@@ -141,7 +141,7 @@ test("the seeded reef briefing shows a satellite map, a gentle route, landmarks,
   // item rather than a bare role query: this trip is also the schedule's
   // soonest departure with room, so its title appears a second time in the
   // "Next boat out" quick-link card above the list.
-  await page.goto("/shop/blue-mantis/schedule");
+  await page.goto("/s/blue-mantis");
   await page
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Molasses & French" })

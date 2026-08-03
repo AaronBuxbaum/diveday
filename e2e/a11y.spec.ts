@@ -46,7 +46,7 @@ signedInAsOwner();
 
 test.describe("automated accessibility scans (specialist optimization audit §3)", () => {
   test("the public schedule has no automated a11y violations", async ({ page }) => {
-    await page.goto("/shop/blue-mantis/schedule", { waitUntil: "domcontentloaded" });
+    await page.goto("/s/blue-mantis", { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("list", { name: "Upcoming trips" })).toBeVisible();
     await expectNoA11yViolations(page);
   });
@@ -66,11 +66,11 @@ test.describe("automated accessibility scans (specialist optimization audit §3)
     await expect(page).not.toHaveURL(/\/trips\/new/);
 
     // Staff viewing their own shop's booking page get redirected to the trip's
-    // management view instead (src/app/shop/[shopSlug]/schedule/[id]/page.tsx)
+    // management view instead (src/app/s/[shopSlug]/trips/[id]/page.tsx)
     // — a diver never carries a staff session, so scan the page the way a real
     // visitor sees it.
     await signOut(page);
-    await page.goto("/shop/blue-mantis/schedule", { waitUntil: "domcontentloaded" });
+    await page.goto("/s/blue-mantis", { waitUntil: "domcontentloaded" });
     await page
       .getByRole("list", { name: "Upcoming trips" })
       .locator("li")

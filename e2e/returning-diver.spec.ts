@@ -5,7 +5,7 @@ test("a device that just booked prefills the next booking form, with a one-tap w
   page,
 }) => {
   // Book once as Marco Reyes on one trip.
-  await page.goto("/shop/blue-mantis/schedule");
+  await page.goto("/s/blue-mantis");
   await page
     .locator("li")
     .filter({ hasText: "Discover Scuba — Pool & Reef" })
@@ -20,7 +20,7 @@ test("a device that just booked prefills the next booking form, with a one-tap w
 
   // A second, unrelated trip's booking form now prefills the lead diver from
   // this device — no re-typing a name and email it already has.
-  await page.goto("/shop/blue-mantis/schedule");
+  await page.goto("/s/blue-mantis");
   await page
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Molasses & French" })
@@ -39,7 +39,7 @@ test("a device that just booked prefills the next booking form, with a one-tap w
 });
 
 test("the embed widget never prefills or remembers a booker", async ({ page }) => {
-  await page.goto("/shop/blue-mantis/schedule?embed=1");
+  await page.goto("/s/blue-mantis?embed=1");
   await page
     .locator("li")
     .filter({ hasText: "Discover Scuba — Pool & Reef" })

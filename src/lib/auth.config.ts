@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextAuthConfig } from "next-auth";
 import { isStaff } from "@/lib/authz";
-import { RESERVED_COURSE_SEGMENTS } from "@/lib/courses";
 
 /**
  * Edge-safe Auth.js config: no database, no bcrypt. src/proxy.ts builds a
@@ -17,74 +16,30 @@ export const authSecret =
 
 const STAFF_PREFIX = "/shop";
 
-const SCHEDULE_ROOT = /^\/shop\/[a-z0-9-]+\/schedule\/?$/;
-const SCHEDULE_TRIP_PAGE = /^\/shop\/[a-z0-9-]+\/schedule\/([a-z0-9-]+)(\/.*)?$/;
-// The staff operations board (Lens 17, docs/product/features/story-backlog.md) sits
-// one segment below the public schedule, in the same path space a trip's own
-// id occupies — carved out the same way COURSE_PAGE below refuses staff
-// segments a course slug could otherwise impersonate. Trip ids are UUIDs, so
-// a real trip can never literally collide with this reserved word.
-const RESERVED_SCHEDULE_SEGMENTS = new Set(["board"]);
-const COURSE_PAGE = /^\/shop\/([a-z0-9-]+)\/courses\/([a-z0-9-]+)\/?$/;
-// $-anchored to exactly "/courses" (or "/courses/") — never the open-ended
-// `(\/.*)?` tail SCHEDULE_TRIP_PAGE uses, because that tail would also
-// swallow the staff editor living one segment further down this same path
-// space.
-const COURSES_INDEX = /^\/shop\/[a-z0-9-]+\/courses\/?$/;
-const COURSE_PATHS_INDEX = /^\/shop\/[a-z0-9-]+\/courses\/paths\/?$/;
-const COURSE_PATH_PAGE = /^\/shop\/[a-z0-9-]+\/courses\/paths\/[a-z0-9-]+\/?$/;
-
 /**
- * Which /shop routes a signed-out diver may read. Everything else under /shop
- * is staff.
- *
- * Courses are the delicate one: the catalog index and the editor sit above and
- * below a public course page in the same path space. The match is anchored to
- * exactly one segment after /courses/ — so /courses/<slug>/edit and
- * /courses/new stay gated — and refuses the staff segments that would
- * otherwise look like a slug. Course slugs are minted through `courseSlug`,
- * which refuses them too, so the two halves cannot drift apart.
- *
- * The catalog index (/courses) and certification paths (/courses/paths,
- * /courses/paths/<slug>) are public guidance surfaces, not gates — see the
- * route map note in AGENTS.md. Each is matched by its own `$`-anchored,
- * single-segment pattern rather than folded into COURSE_PAGE's reserved-word
- * carve-out, so none of these additions can accidentally widen what COURSE_PAGE
- * treats as a slug.
+ * The two diver surfaces a shop is meant to frame on its own website: the
+ * public schedule (`/s/<shopSlug>`) and one departure's booking page
+ * (`/s/<shopSlug>/trips/<tripId>`). Deliberately not every public route —
+ * a course page is public but is not a supported widget, and everything else,
+ * including this same shop's staff and sign-in pages, keeps the site's default
+ * deny (src/proxy.ts) so a third-party page can never frame them for a
+ * clickjacking attempt (ADR 20260726-schedule-embed).
  */
-export function isPublicShopRoute(pathname: string): boolean {
-  if (SCHEDULE_ROOT.test(pathname)) return true;
-  const schedule = SCHEDULE_TRIP_PAGE.exec(pathname);
-  if (schedule && !RESERVED_SCHEDULE_SEGMENTS.has(schedule[1])) return true;
-  if (COURSES_INDEX.test(pathname)) return true;
-  if (COURSE_PATHS_INDEX.test(pathname)) return true;
-  if (COURSE_PATH_PAGE.test(pathname)) return true;
-  const course = COURSE_PAGE.exec(pathname);
-  return Boolean(course && !RESERVED_COURSE_SEGMENTS.has(course[2]));
-}
+const EMBEDDABLE_SCHEDULE = /^\/s\/[a-z0-9-]+\/?$/;
+const EMBEDDABLE_TRIP_PAGE = /^\/s\/[a-z0-9-]+\/trips\/[^/]+\/?$/;
 
-/**
- * The one surface meant to be framed by a shop's own external website (the
- * booking-widget embed). Deliberately the schedule/trip pages only, not every
- * public shop route — everything else, including this same shop's staff and
- * sign-in pages, keeps the site's default deny (src/proxy.ts) so a third-party
- * page can never frame them for a clickjacking attempt.
- */
 export function isEmbeddableShopRoute(pathname: string): boolean {
-  if (SCHEDULE_ROOT.test(pathname)) return true;
-  const schedule = SCHEDULE_TRIP_PAGE.exec(pathname);
-  return Boolean(schedule && !RESERVED_SCHEDULE_SEGMENTS.has(schedule[1]));
+  return EMBEDDABLE_SCHEDULE.test(pathname) || EMBEDDABLE_TRIP_PAGE.test(pathname);
 }
 
 /**
  * Set on the request (never trusted from the response side) by `src/proxy.ts`
  * when — and only when — the current request is a genuine embed request
- * (`isEmbeddableShopRoute` route + `?embed=1`). `ShopLayout` reads it to
- * suppress staff chrome for a signed-in staff member previewing their own
- * embed, since a layout (unlike a page) is never handed `searchParams`
- * directly. Every request's incoming copy of this header is explicitly
- * overwritten in the proxy (set or deleted), so a client-supplied value can
- * never survive to reach a reader downstream.
+ * (`isEmbeddableShopRoute` route + `?embed=1`). The public shop layout reads it
+ * to suppress chrome, since a layout (unlike a page) is never handed
+ * `searchParams` directly. Every request's incoming copy of this header is
+ * explicitly overwritten in the proxy (set or deleted), so a client-supplied
+ * value can never survive to reach a reader downstream.
  */
 export const EMBED_REQUEST_HEADER = "x-diveday-embed";
 
@@ -113,7 +68,6 @@ export const authConfig = {
     authorized({ auth, request }) {
       const { pathname } = request.nextUrl;
       const roles = auth?.user?.roles;
-      const isPublic = isPublicShopRoute(pathname);
 
       if ((pathname === STAFF_PREFIX || pathname === `${STAFF_PREFIX}/`) && isStaff(roles)) {
         const shopSlug = auth?.user?.shopSlug;
@@ -126,7 +80,11 @@ export const authConfig = {
           return NextResponse.redirect(new URL(`/shop/${shopSlug}`, request.nextUrl));
         }
       }
-      if (pathname.startsWith(STAFF_PREFIX) && !isPublic) {
+      // `/shop/**` is staff, without exception — the diver surfaces that used
+      // to be carved out of it by an allowlist now live under `/s/<shopSlug>`
+      // and their old URLs 308 there from `next.config.ts`, before this
+      // callback ever runs (ADR 20260803-public-shop-namespace).
+      if (pathname.startsWith(STAFF_PREFIX)) {
         if (!roles) return false; // Auth.js redirects to pages.signIn
         if (!isStaff(roles)) return NextResponse.redirect(new URL("/", request.nextUrl));
         return true;

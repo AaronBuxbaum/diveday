@@ -124,7 +124,7 @@ Two targets, deliberately different in kind:
 | Target | URL | Checks | Alert on |
 | --- | --- | --- | --- |
 | Liveness probe | `https://dive.day/api/health` | The deployment is up **and** `select 1` round-trips through the same `getDb()` every request path uses. Answers `503` (not `200` with a flag) when the database check fails, so status-code alerting is enough | Two consecutive non-`200`s |
-| Public schedule | A real shop's `https://dive.day/shop/<shopSlug>/schedule` | A full Server Component render against real data — the page a diver actually lands on. It is public by design (`isPublicShopRoute`), so no credential is needed | Two consecutive non-`200`s, or a keyword check failing |
+| Public schedule | A real shop's `https://dive.day/s/<shopSlug>` | A full Server Component render against real data — the page a diver actually lands on. It is public by design (its own namespace, ADR 20260803-public-shop-namespace), so no credential is needed | Two consecutive non-`200`s, or a keyword check failing |
 
 The health probe alone is not enough: it deliberately does almost nothing, so it stays green while a
 rendering bug 500s every real page. The schedule alone is not enough either: it cannot distinguish

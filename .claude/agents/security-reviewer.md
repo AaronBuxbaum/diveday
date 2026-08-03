@@ -19,9 +19,11 @@ Scrutinize, in order of severity:
    query for the shop condition — don't trust the caller to have checked). An export never
    includes another tenant's rows.
 2. **Authorization** — server actions and data functions re-check the session and role
-   themselves, independent of route gating. Any change to `isPublicShopRoute` or the auth-exempt
-   allowlist is guilty until proven deliberate. Staff-only mutations reachable from public pages
-   are findings even if "the UI hides the button."
+   themselves, independent of route gating. `/shop/**` is staff without exception and
+   `/s/<shopSlug>/**` is public without exception (ADR 20260803-public-shop-namespace); anything
+   that moves a route across that line, or reintroduces a public carve-out inside `/shop`, is
+   guilty until proven deliberate. Staff-only mutations reachable from public pages are findings
+   even if "the UI hides the button."
 3. **Token flows** — waiver/invite-style tokens are unguessable, single-purpose, expiring, and
    scoped to one record; possession of a token must not unlock anything beyond its purpose.
 4. **Data exposure** — medical answers, signatures, and contact PII stay out of client

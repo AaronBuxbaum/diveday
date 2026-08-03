@@ -307,7 +307,7 @@ describe("notify", () => {
           startsAt: new Date("2026-08-01T12:00:00.000Z"),
           endsAt: new Date("2026-08-01T15:00:00.000Z"),
           timezone: "America/New_York",
-          bookingUrl: "https://diveday.example/shop/blue-mantis/schedule/trip-1",
+          bookingUrl: "https://diveday.example/s/blue-mantis/trips/trip-1",
           invitedAt: new Date("2026-07-21T10:00:00.000Z"),
           unsubscribeUrl: "https://diveday.example/unsubscribe/tok_abc123",
         },
@@ -660,13 +660,13 @@ describe("waitlistInviteEmail", () => {
       startsAt: new Date("2026-08-01T12:00:00.000Z"),
       endsAt: new Date("2026-08-01T15:00:00.000Z"),
       timezone: "America/New_York",
-      bookingUrl: "https://diveday.example/shop/blue-mantis/schedule/trip-1",
+      bookingUrl: "https://diveday.example/s/blue-mantis/trips/trip-1",
       unsubscribeUrl: "https://diveday.example/unsubscribe/tok_abc123",
     });
 
     expect(email.subject).toContain('<Reef "Special">');
-    expect(email.text).toContain("https://diveday.example/shop/blue-mantis/schedule/trip-1");
-    expect(email.html).toContain('href="https://diveday.example/shop/blue-mantis/schedule/trip-1"');
+    expect(email.text).toContain("https://diveday.example/s/blue-mantis/trips/trip-1");
+    expect(email.html).toContain('href="https://diveday.example/s/blue-mantis/trips/trip-1"');
     expect(email.html).toContain("&lt;Reef &quot;Special&quot;&gt;");
     expect(email.html).toContain("Blue Mantis &amp; Co.");
   });

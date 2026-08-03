@@ -8,6 +8,7 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { escapeHtml } from "@/lib/html";
 import { publicAppUrl } from "@/lib/notifications";
 import { FOUNDER_EMAIL } from "@/lib/platform-mail";
+import { publicSchedulePath } from "@/lib/public-routes";
 import { requireStaffSession } from "@/lib/session";
 import { SnippetField } from "./SnippetField";
 
@@ -35,7 +36,7 @@ export default async function EmbedSettingsPage() {
   const t = staffTranslator(await requestLocale(shop.defaultLocale));
 
   const origin = publicAppUrl();
-  const scheduleUrl = origin ? `${origin}/shop/${shop.slug}/schedule` : null;
+  const scheduleUrl = origin ? `${origin}${publicSchedulePath(shop.slug)}` : null;
 
   if (!scheduleUrl) {
     return (

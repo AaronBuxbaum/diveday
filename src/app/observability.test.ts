@@ -58,7 +58,7 @@ describe("redactCapabilityUrl", () => {
   });
 
   it("leaves ordinary public pages unchanged", () => {
-    expect(redactCapabilityUrl("/shop/blue-hole/schedule")).toBe("/shop/blue-hole/schedule");
+    expect(redactCapabilityUrl("/s/blue-hole")).toBe("/s/blue-hole");
   });
 
   it("leaves ordinary staff pages unchanged", () => {
@@ -81,14 +81,14 @@ describe("redactCapabilityUrl", () => {
   });
 
   it("redacts the schedule-confirmation page's ?booking= token, even though the path itself isn't capability-prefixed (security review finding on CR-001)", () => {
-    expect(redactCapabilityUrl("/shop/blue-hole/schedule/trip-123?booking=abc123.def456")).toBe(
-      "/shop/blue-hole/schedule/trip-123?booking=%5Btoken%5D",
+    expect(redactCapabilityUrl("/s/blue-hole/trips/trip-123?booking=abc123.def456")).toBe(
+      "/s/blue-hole/trips/trip-123?booking=%5Btoken%5D",
     );
   });
 
   it("redacts ?booking= alongside other, non-sensitive query params", () => {
     const redacted = redactCapabilityUrl(
-      "/shop/blue-hole/schedule/trip-123?booking=abc123.def456&error=pay",
+      "/s/blue-hole/trips/trip-123?booking=abc123.def456&error=pay",
     );
     expect(redacted).toContain("booking=%5Btoken%5D");
     expect(redacted).toContain("error=pay");
@@ -98,15 +98,13 @@ describe("redactCapabilityUrl", () => {
   it("redacts ?booking= on an absolute URL, including one returned from a third party (Stripe checkout)", () => {
     expect(
       redactCapabilityUrl(
-        "https://diveday.example/shop/blue-hole/schedule/trip-123?booking=abc123.def456",
+        "https://diveday.example/s/blue-hole/trips/trip-123?booking=abc123.def456",
       ),
-    ).toBe("/shop/blue-hole/schedule/trip-123?booking=%5Btoken%5D");
+    ).toBe("/s/blue-hole/trips/trip-123?booking=%5Btoken%5D");
   });
 
   it("leaves a schedule page with no booking token untouched", () => {
-    expect(redactCapabilityUrl("/shop/blue-hole/schedule/trip-123")).toBe(
-      "/shop/blue-hole/schedule/trip-123",
-    );
+    expect(redactCapabilityUrl("/s/blue-hole/trips/trip-123")).toBe("/s/blue-hole/trips/trip-123");
   });
 });
 
@@ -136,10 +134,10 @@ describe("redactBreadcrumb", () => {
   it("redacts navigation from/to URLs", () => {
     const breadcrumb = redactBreadcrumb({
       category: "navigation",
-      data: { from: "/recap/abc123.def456", to: "/shop/blue-hole/schedule" },
+      data: { from: "/recap/abc123.def456", to: "/s/blue-hole" },
     });
     expect(breadcrumb.data?.from).toBe("/recap/[token]");
-    expect(breadcrumb.data?.to).toBe("/shop/blue-hole/schedule");
+    expect(breadcrumb.data?.to).toBe("/s/blue-hole");
   });
 
   it("redacts an xhr/fetch breadcrumb URL", () => {
