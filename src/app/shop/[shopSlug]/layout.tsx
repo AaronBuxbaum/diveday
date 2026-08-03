@@ -1,9 +1,7 @@
 import { eq } from "drizzle-orm";
-import { headers } from "next/headers";
 import { DemoBanner } from "@/components/DemoBanner";
 import { OfflineManifestAutoSave } from "@/components/OfflineManifestAutoSave";
 import { PreserveFormScroll } from "@/components/PreserveFormScroll";
-import { PublicShopFooter, PublicShopHeader } from "@/components/PublicShopChrome";
 import { ShopNav } from "@/components/ShopNav";
 import { SkipLink } from "@/components/SkipLink";
 import { countBlockedDivers } from "@/db/blockers";
@@ -17,7 +15,6 @@ import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { auth } from "@/lib/auth";
-import { EMBED_REQUEST_HEADER } from "@/lib/auth.config";
 import {
   canManageStaffAccounts,
   canManageWaiverTemplates,
@@ -52,9 +49,15 @@ import { DEMO_ROLE_KEYS, DEMO_ROLE_META } from "@/lib/demo-roles";
 export const instant = false;
 
 /**
- * Staff-surface shell. If the shop is a demo shop, it hangs the demo banner
- * (with its reset) above every /shop page so the "this is a playground" framing
- * is always present (docs ADR 20260718-demo-mode).
+ * Staff-surface shell. Every page below it is staff-only — the diver-facing
+ * schedule, trip, and course pages that used to be carved out of this
+ * namespace by an allowlist now live under `/s/[shopSlug]` with a shell of
+ * their own (ADR 20260803-public-shop-namespace), so this layout no longer has
+ * a signed-out branch or an embed mode to account for.
+ *
+ * If the shop is a demo shop, it hangs the demo banner (with its reset) above
+ * every /shop page so the "this is a playground" framing is always present
+ * (docs ADR 20260718-demo-mode).
  */
 export default async function ShopLayout({
   children,
@@ -64,15 +67,9 @@ export default async function ShopLayout({
   params: Promise<{ shopSlug: string }>;
 }) {
   const { shopSlug } = await params;
-  // Set only by src/proxy.ts on a genuine embed request — a layout is never
-  // handed searchParams directly, so this header is the one way it learns
-  // "this render is going into someone else's iframe." Forces every bit of
-  // staff chrome off, even for a signed-in staff member previewing their own
-  // embed (docs ADR 20260726-schedule-embed).
-  const isEmbed = (await headers()).get(EMBED_REQUEST_HEADER) === "1";
   const db = await getDb();
   const shop = await getShopBySlug(db, shopSlug);
-  const showBanner = !isEmbed && (shop?.isDemo ?? false);
+  const showBanner = shop?.isDemo ?? false;
   // Staff read chrome in the language their own device asks for, same
   // negotiation as every other staff surface.
   const locale = await requestLocale(shop?.defaultLocale);
@@ -126,7 +123,7 @@ export default async function ShopLayout({
   const demoT = showBanner ? diverTranslator(await requestLocale(shop?.defaultLocale)) : undefined;
   const staffT = staffTranslator(locale);
 
-  const showNav = !isEmbed && Boolean(session?.user) && Boolean(shop);
+  const showNav = Boolean(session?.user) && Boolean(shop);
   // Small "pending work" counts for the Reviews/Blockers nav badges (task 83,
   // UX persona 11 "Kai"/12 "Maren") — both queries the shop's own pages
   // already run on every visit, gated the same way the nav itself is so a
@@ -143,9 +140,8 @@ export default async function ShopLayout({
     <>
       {/* Every /shop page fronts ShopNav's 10-15 header tab stops (persona 14,
           ux-personas-20260730-findings.md) — this jumps a keyboard user past it and the
-          demo banner straight to the page's own content. Rendered even on the
-          public schedule/course pages where ShopNav is absent for staff, so
-          the pattern is unconditional like the manifest's own skip link. */}
+          demo banner straight to the page's own content. Unconditional, like
+          the manifest's own skip link. */}
       <SkipLink href="#shop-main-content" label={staffT("shared.skipToContent")} />
       {showBanner && demoT ? (
         <DemoBanner
@@ -197,34 +193,20 @@ export default async function ShopLayout({
           locale={locale}
         />
       ) : null}
-      {/* The signed-out counterpart to ShopNav above — an anonymous or
-          non-staff visitor gets the shop's own identity instead of staff
-          chrome (task 9). Mutually exclusive with ShopNav by construction:
-          exactly one of the two conditions is ever true. */}
-      {!isEmbed && !(session?.user && shop) && shop ? <PublicShopHeader shop={shop} /> : null}
       {/* Keeps every trip in the shop's near-term board saved offline, not just
           a trip whose live manifest someone opened — see ADR
-          20260726-shopwide-offline-manifest-priming. Gated to staff actually
-          signed into *this* routed shop: several /shop/[shopSlug] pages
-          (schedule, courses) are public per isPublicShopRoute, so a signed-out
-          visitor, a diver account, or staff of a *different* shop browsing
-          this one's public page must never mount it — the first two would
-          just poll a 401 every five minutes, and the third would silently
-          save their own shop's roster while the visible page is this one. */}
-      {!isEmbed &&
-      session?.user &&
-      shop &&
-      isStaff(session.user.roles) &&
-      session.user.shopId === shop.id ? (
+          20260726-shopwide-offline-manifest-priming. Still gated to staff
+          actually signed into *this* routed shop even though /shop is now
+          staff-only end to end: staff of a *different* shop browsing this
+          one's URL would otherwise silently save their own shop's roster while
+          the visible page is this one. */}
+      {session?.user && shop && isStaff(session.user.roles) && session.user.shopId === shop.id ? (
         <OfflineManifestAutoSave />
       ) : null}
       <PreserveFormScroll />
       <div id="shop-main-content" tabIndex={-1} className="flex-1 outline-none">
         {children}
       </div>
-      {!isEmbed && !(session?.user && shop) && shop ? (
-        <PublicShopFooter shop={shop} t={diverTranslator(locale)} />
-      ) : null}
     </>
   );
 }

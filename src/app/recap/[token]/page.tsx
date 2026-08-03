@@ -18,6 +18,7 @@ import { requestLocale, requestTranslator } from "@/i18n/request";
 import { depthText, temperatureText } from "@/i18n/unit-labels";
 import { formatShortDate } from "@/lib/format";
 import { currencySymbol, minorToMajor } from "@/lib/money";
+import { publicSchedulePath } from "@/lib/public-routes";
 import { verifyRecapToken } from "@/lib/recap-links";
 import { MAX_REVIEW_COMMENT_LENGTH, REVIEW_RATINGS } from "@/lib/reviews";
 import { MAX_IMAGE_MB } from "@/lib/storage/limits";
@@ -554,7 +555,7 @@ export default async function DiveRecapPage({
         <h2 className="text-lg font-semibold">{t("recap.bringABuddy")}</h2>
         <p className="mt-1 text-base text-muted">{t("recap.buddyBody")}</p>
         <div className="mt-4 flex flex-wrap gap-3">
-          <Link href={`/shop/${shop.slug}/schedule`} className={buttonClass({ size: "cta" })}>
+          <Link href={publicSchedulePath(shop.slug)} className={buttonClass({ size: "cta" })}>
             {t("recap.seeWhatsNext")}
           </Link>
           {shop.contactEmail ? (

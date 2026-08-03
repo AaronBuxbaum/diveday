@@ -17,7 +17,7 @@ test("the homepage hero distinguishes trying the staff app from previewing a div
   const href = await scheduleLink.getAttribute("href");
   // Sourced from DEMO_SHOP_SLUG rather than a hand-typed literal, and tagged
   // for funnel attribution the same way the trial link is.
-  expect(href).toBe(`/shop/${DEMO_SHOP_SLUG}/schedule?from=home-hero`);
+  expect(href).toBe(`/s/${DEMO_SHOP_SLUG}?from=home-hero`);
 
   await scheduleLink.click();
   await expect(page.getByRole("heading", { name: "Schedule", level: 1 })).toBeVisible();

@@ -553,6 +553,7 @@
       "eyebrow": "Catálogo",
       "description": "Coloca los cursos en el orden en que los haría un buceador. Esto no decide quién puede inscribirse — eso sigue dependiendo del requisito de certificación de cada curso.",
       "allPaths": "Todas las rutas",
+      "viewPublicPage": "Ver página pública",
       "pathSaved": "Ruta guardada.",
       "oneHiddenStep": "{course} está oculto en tu catálogo, así que los buceadores no verán ese paso.",
       "manyHiddenSteps": "{count} cursos de esta ruta están ocultos en tu catálogo, así que los buceadores no verán esos pasos.",
@@ -574,6 +575,7 @@
       "title": "Rutas de certificación",
       "description": "El orden en que llevarías a un buceador por tus cursos. Una ruta es orientación, no una barrera — nunca cambia quién puede inscribirse en nada.",
       "backToCourses": "Volver a cursos",
+      "viewPublicPage": "Ver página pública",
       "noPathsHeading": "Aún no hay rutas",
       "noPathsBody": "La mayoría de las tiendas empiezan con la que todo buceador pregunta: Open Water, luego Advanced, luego Rescue.",
       "oneCourse": "1 curso",
@@ -2289,6 +2291,10 @@
       "pivotsLabel": "La misma ventana, vista de otra forma"
     },
     "skipToContent": "Saltar al contenido principal",
+    "publicPreview": {
+      "youWorkHere": "Trabajas aquí: esta es la página que ven los buceadores.",
+      "openTheBoard": "Abrir el panel"
+    },
     "imageInput": {
       "tooMany": "{count, plural, one {Elige hasta # foto por vez.} other {Elige hasta # fotos por vez.}}",
       "wrongTypeSuffix": ": usa una foto JPG, PNG, WebP o HEIC.",

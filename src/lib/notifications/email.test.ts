@@ -60,7 +60,7 @@ describe("tripConditionsHoldEmail", () => {
     const email = tripConditionsHoldEmail({
       ...base,
       conditionsSummary: "The captain is watching a passing squall.",
-      tripUrl: "https://diveday.example/shop/blue-mantis/schedule/trip-1",
+      tripUrl: "https://diveday.example/s/blue-mantis/trips/trip-1",
     });
     expect(email.subject).toContain("Conditions hold");
     expect(email.text).toContain("Your seat is still held");
@@ -270,7 +270,7 @@ describe("lastMinuteDealEmail", () => {
     ...base,
     discountPercent: 25,
     code: "LASTMINUTE25",
-    bookingUrl: "https://diveday.example/shop/blue-mantis/schedule/trip-1",
+    bookingUrl: "https://diveday.example/s/blue-mantis/trips/trip-1",
     expiresAt: new Date("2026-08-01T13:00:00.000Z"),
     unsubscribeUrl: "https://diveday.example/unsubscribe/tok_abc123",
   };

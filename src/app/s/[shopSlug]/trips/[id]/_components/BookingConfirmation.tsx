@@ -6,6 +6,7 @@ import { diverTranslator } from "@/i18n/messages";
 import { checklistCategoryText, checklistDetailText } from "@/i18n/readiness-summary-labels";
 import { formatMoneyCents, formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
+import { publicCoursePath, publicSchedulePath } from "@/lib/public-routes";
 import { buildDiverChecklist, nextDiverStep } from "@/lib/readiness-summary";
 import {
   payForBooking,
@@ -217,7 +218,7 @@ export function BookingConfirmation({
             <p className="mt-1 text-sm text-muted italic">{progression.step.note}</p>
           ) : null}
           <Link
-            href={`/shop/${shopSlug}/courses/${progression.step.course.slug}`}
+            href={publicCoursePath(shopSlug, progression.step.course.slug)}
             className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-primary hover:underline"
           >
             {t("booking.goDeeperCta")}
@@ -283,7 +284,7 @@ export function BookingConfirmation({
         currency={toShopCurrency(shop.currency)}
       />
       <Link
-        href={`/shop/${shopSlug}/schedule${fitRef.embed ? "?embed=1" : ""}`}
+        href={`${publicSchedulePath(shopSlug)}${fitRef.embed ? "?embed=1" : ""}`}
         className="mt-3 inline-flex min-h-11 items-center text-base font-medium text-primary hover:underline"
       >
         {t("common.backToSchedule")}

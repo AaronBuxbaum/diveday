@@ -61,7 +61,7 @@ test("sitemap.xml lists the marketing pages, excludes the demo shop, and never l
     expect(body, `sitemap.xml missing ${url}`).toContain(`<loc>${url}</loc>`);
   }
 
-  expect(body).not.toContain(`/shop/${DEMO_SHOP_SLUG}/schedule`);
+  expect(body).not.toContain(`/s/${DEMO_SHOP_SLUG}`);
   expect(body).not.toContain("/waivers/");
 });
 
@@ -74,16 +74,16 @@ test("the schedule page's canonical stays on the standalone URL in both standalo
   // whether the element is actually present — intentionally left unfiltered
   // throughout this file. Each assertion also follows a fresh `page.goto`,
   // so there's no prior client-side-navigated route to leak from anyway.
-  await page.goto(`/shop/${DEMO_SHOP_SLUG}/schedule`);
+  await page.goto(`/s/${DEMO_SHOP_SLUG}`);
   const standaloneCanonical = await page.locator('link[rel="canonical"]').getAttribute("href");
   // Resolved against publicAppUrl()'s configured origin (never the worker's
   // own loopback baseURL, which is only where the *test* happens to talk to
   // this server) — assert the path shape, not a host this environment
   // doesn't control.
-  expect(standaloneCanonical).toMatch(new RegExp(`/shop/${DEMO_SHOP_SLUG}/schedule$`));
+  expect(standaloneCanonical).toMatch(new RegExp(`/s/${DEMO_SHOP_SLUG}$`));
   await expect(page.locator('script[type="application/ld+json"]').first()).toBeAttached();
 
-  await page.goto(`/shop/${DEMO_SHOP_SLUG}/schedule?embed=1`);
+  await page.goto(`/s/${DEMO_SHOP_SLUG}?embed=1`);
   const embedCanonical = await page.locator('link[rel="canonical"]').getAttribute("href");
   expect(embedCanonical).toBe(standaloneCanonical);
   await expect(page.locator('script[type="application/ld+json"]')).toHaveCount(0);
@@ -97,12 +97,12 @@ test("the homepage carries a resolvable og:image", async ({ page }) => {
 });
 
 test("the shop schedule page carries its own per-shop og:image", async ({ page }) => {
-  await page.goto(`/shop/${DEMO_SHOP_SLUG}/schedule`);
+  await page.goto(`/s/${DEMO_SHOP_SLUG}`);
   const content = await page.locator('meta[property="og:image"]').getAttribute("content");
   expect(content).toBeTruthy();
   expect(content).toMatch(/^https?:\/\//);
   // Next generates a dedicated route for this file-convention image
-  // (src/app/shop/[shopSlug]/schedule/opengraph-image.tsx) rather than
+  // (src/app/s/[shopSlug]/opengraph-image.tsx) rather than
   // falling back to the generic root card — confirm it resolved there.
-  expect(content).toContain(`/shop/${DEMO_SHOP_SLUG}/schedule/opengraph-image`);
+  expect(content).toContain(`/s/${DEMO_SHOP_SLUG}/opengraph-image`);
 });

@@ -32,6 +32,7 @@ import { formatShortDate, formatTime } from "@/lib/format";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl } from "@/lib/notifications";
 import { OPERATIONAL_HORIZON_DAYS } from "@/lib/operational-window";
+import { publicSchedulePath } from "@/lib/public-routes";
 import { requireStaffSession } from "@/lib/session";
 import { getTimeOfDayGreeting, leadWithCrewed, roleLensFor, summarizeDay } from "@/lib/today";
 import { inviteWaitlistAction, updateTripCrewAction } from "./trips/[id]/actions";
@@ -358,8 +359,8 @@ async function TodayBody({
             // no origin to build an absolute URL from — fall back to the path
             // alone rather than crash the whole page on a malformed base URL.
             firstRunOrigin
-              ? new URL(`/shop/${shopSlug}/schedule`, `${firstRunOrigin}/`).toString()
-              : `/shop/${shopSlug}/schedule`
+              ? new URL(publicSchedulePath(shopSlug), `${firstRunOrigin}/`).toString()
+              : publicSchedulePath(shopSlug)
           }
           contactDone={Boolean(shop.contactEmail || shop.contactPhone)}
           diveSiteCount={firstRunDiveSites?.length ?? 0}

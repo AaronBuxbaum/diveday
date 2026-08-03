@@ -26,6 +26,7 @@ import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { perDiverBookingPriceCents } from "@/lib/courses";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl, recipientLocale } from "@/lib/notifications";
+import { publicTripPath } from "@/lib/public-routes";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import {
   hasAnyRentalPricing,
@@ -316,7 +317,7 @@ export async function bookSpot(
   await trackEvent({ name: "booking_completed", source: "diver", partySize: validParty.length });
   const primaryBookingId = outcome.bookings[0]?.bookingId;
   if (!primaryBookingId) {
-    redirect(`/shop/${shopSlug}/schedule/${tripId}?error=unavailable${embedParam(embed, "&")}`);
+    redirect(`${publicTripPath(shopSlug, tripId)}?error=unavailable${embedParam(embed, "&")}`);
   }
   const [confirmedBooking, tripNow] = await Promise.all([
     getBookingForTrip(dbi, tripId, primaryBookingId),
@@ -435,7 +436,7 @@ export async function bookSpot(
   // are already committed above, so any failure here — no connected account,
   // no configured origin, Stripe down — degrades to the ordinary
   // book-now-pay-later confirmation, never to a lost booking.
-  const base = `/shop/${shopSlug}/schedule/${tripId}`;
+  const base = publicTripPath(shopSlug, tripId);
   // `tripPromo`/`shopPromo` were already resolved above, before the party was
   // booked (task 20) — an invalid/expired/wrong-scope code now fails the
   // submit itself with a field error, rather than being silently dropped
@@ -519,7 +520,7 @@ async function startCheckoutUrl(
 ): Promise<string | null> {
   const origin = publicAppUrl();
   if (!origin || !input.customerEmail) return null;
-  const returnBase = `${origin}/shop/${input.shopSlug}/schedule/${input.tripId}?booking=${input.confirmToken}${embedParam(input.embed, "&")}`;
+  const returnBase = `${origin}${publicTripPath(input.shopSlug, input.tripId)}?booking=${input.confirmToken}${embedParam(input.embed, "&")}`;
   // The hosted Stripe line's words come from the diver's bundle, not from
   // `src/db` (docs ADR 20260731-domain-layer-copy-leaks). Both callers of this
   // helper are diver-initiated requests, so the negotiated request locale is
@@ -549,7 +550,7 @@ export async function payForBooking(
   { shopSlug, tripId, token, embed }: RentalFitRef,
   _formData: FormData,
 ) {
-  const base = `/shop/${shopSlug}/schedule/${tripId}`;
+  const base = publicTripPath(shopSlug, tripId);
   const ctx = await confirmContextFor(tripId, token);
   const checkoutUrl = ctx?.confirmed.person.email
     ? await startCheckoutUrl(ctx.db, {
@@ -600,7 +601,7 @@ export async function signWaiverFromConfirmation(
 export async function joinWaitlist({ shopSlug, tripId, embed }: TripRef, formData: FormData) {
   const ip = await clientIp();
   if (!(await checkRateLimit(rateLimitKey("waitlist", ip), RATE_LIMITS.waitlistJoin)).allowed) {
-    redirect(`/shop/${shopSlug}/schedule/${tripId}?error=unavailable${embedParam(embed, "&")}`);
+    redirect(`${publicTripPath(shopSlug, tripId)}?error=unavailable${embedParam(embed, "&")}`);
   }
   const parsed = bookSchema.safeParse({
     fullName: formData.get("fullName-0"),
@@ -608,12 +609,12 @@ export async function joinWaitlist({ shopSlug, tripId, embed }: TripRef, formDat
     phone: formData.get("phone") || undefined,
   });
   if (!parsed.success) {
-    redirect(`/shop/${shopSlug}/schedule/${tripId}?error=invalid${embedParam(embed, "&")}`);
+    redirect(`${publicTripPath(shopSlug, tripId)}?error=invalid${embedParam(embed, "&")}`);
   }
   const dbi = await getDb();
   const shopNow = await getShopBySlug(dbi, shopSlug);
   if (!shopNow) {
-    redirect(`/shop/${shopSlug}/schedule/${tripId}?error=unavailable${embedParam(embed, "&")}`);
+    redirect(`${publicTripPath(shopSlug, tripId)}?error=unavailable${embedParam(embed, "&")}`);
   }
   const outcome = await joinTripWaitlist(dbi, {
     shopId: shopNow.id,
@@ -625,8 +626,8 @@ export async function joinWaitlist({ shopSlug, tripId, embed }: TripRef, formDat
   if (outcome.ok || outcome.reason === "already_waitlisted") {
     await trackEvent({ name: "waitlist_joined", source: "diver" });
     revalidateAndRedirect(
-      `/shop/${shopSlug}/schedule/${tripId}`,
-      `/shop/${shopSlug}/schedule/${tripId}?waitlist=${outcome.entryId}${embedParam(embed, "&")}`,
+      publicTripPath(shopSlug, tripId),
+      `${publicTripPath(shopSlug, tripId)}?waitlist=${outcome.entryId}${embedParam(embed, "&")}`,
     );
   }
   const code =
@@ -635,7 +636,7 @@ export async function joinWaitlist({ shopSlug, tripId, embed }: TripRef, formDat
       : outcome.reason === "already_booked"
         ? "already"
         : "unavailable";
-  redirect(`/shop/${shopSlug}/schedule/${tripId}?error=${code}${embedParam(embed, "&")}`);
+  redirect(`${publicTripPath(shopSlug, tripId)}?error=${code}${embedParam(embed, "&")}`);
 }
 
 /**
@@ -649,7 +650,7 @@ export async function saveRentalFitRequest(
   { shopSlug, tripId, token, embed }: RentalFitRef,
   formData: FormData,
 ) {
-  const base = `/shop/${shopSlug}/schedule/${tripId}`;
+  const base = publicTripPath(shopSlug, tripId);
   const ctx = await confirmContextFor(tripId, token);
   if (!ctx) redirect(`${base}?booking=${token}&error=fit${embedParam(embed, "&")}`);
   const parsed = rentalFitSchema.safeParse(Object.fromEntries(formData));

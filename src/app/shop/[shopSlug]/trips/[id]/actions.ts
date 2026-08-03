@@ -48,6 +48,7 @@ import { isValidLastMinuteDiscountPercent } from "@/lib/last-minute-list";
 import { MAX_PRICE_MINOR_UNITS, majorToMinor, toShopCurrency } from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { notify, publicAppUrl } from "@/lib/notifications";
+import { publicTripPath } from "@/lib/public-routes";
 import { MAX_SERIES_OCCURRENCES, weeklyOccurrencesAfter } from "@/lib/recurrence";
 import { requireStaffSession } from "@/lib/session";
 import { tripDiveDraftsFromForm } from "@/lib/trip-dives";
@@ -270,7 +271,7 @@ export async function saveConditionsAction(shopSlug: string, tripId: string, for
                   startsAt: saved.startsAt,
                   timezone: shop.timezone,
                   conditionsSummary: saved.conditionsSummary,
-                  tripUrl: new URL(`/shop/${shopSlug}/schedule/${tripId}`, `${origin}/`).toString(),
+                  tripUrl: new URL(publicTripPath(shopSlug, tripId), `${origin}/`).toString(),
                   publishedAt,
                 }),
               ]

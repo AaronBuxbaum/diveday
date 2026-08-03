@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
-import { RentalFitForm } from "@/app/shop/[shopSlug]/schedule/[id]/_components/RentalFitForm";
+import { RentalFitForm } from "@/app/s/[shopSlug]/trips/[id]/_components/RentalFitForm";
 import { DiveSitesPeek } from "@/components/DiveSitesPeek";
 import { EarnedMoment } from "@/components/EarnedMoment";
 import { FlashParams } from "@/components/FlashParams";

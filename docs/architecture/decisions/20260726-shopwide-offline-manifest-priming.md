@@ -55,7 +55,7 @@ trip. The component calls the existing `saveOfflineManifest` for each one, uncha
 encryption from the single-trip path. Priming the service worker (`primeOfflineManifestShell()`) also
 moves here, so visiting *any* shop page — not specifically a trip's manifest — registers the worker and
 caches the shell. Mounting itself is gated to a signed-in staff member viewing *their own* shop (several
-`/shop/[shopSlug]` pages, like the public schedule, are unauthenticated per `isPublicShopRoute`, and are
+`/shop/[shopSlug]` pages were once partly unauthenticated (the public schedule and course pages, held open by an allowlist); those surfaces moved to `/s/[shopSlug]` (ADR 20260803-public-shop-namespace), and this layout is
 reachable by a signed-out visitor, a diver account, or staff signed into a different shop entirely);
 without that gate the component would still mount and poll a 401 every five minutes for anyone else who
 lands on those pages, or — for staff of a different shop — save their own shop's roster in the

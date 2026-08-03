@@ -160,7 +160,7 @@ test.describe("as owner", () => {
     const tripId = new URL(page.url()).pathname.split("/").pop();
 
     await page.context().clearCookies();
-    await page.goto(`/shop/blue-mantis/schedule/${tripId}`);
+    await page.goto(`/s/blue-mantis/trips/${tripId}`);
     const promoField = page.getByLabel("Promo code");
     // One box for both kinds of code — a diver has no idea whether they were
     // handed a shop-wide code or a one-trip deal, and the server resolves both.

@@ -37,6 +37,7 @@ import { nowDate } from "@/lib/clock";
 import { formatMoneyCents, formatShortDate, formatTime, formatTimeRange } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
+import { publicCoursePath, publicSchedulePath, publicTripPath } from "@/lib/public-routes";
 import {
   decodeCursorStack,
   encodeCursorStack,
@@ -71,23 +72,28 @@ export async function generateMetadata({
   return {
     title: `Dive schedule — ${shop.name}`,
     description,
-    alternates: { canonical: `/shop/${shop.slug}/schedule` },
+    alternates: { canonical: publicSchedulePath(shop.slug) },
     openGraph: {
       title: `Dive schedule — ${shop.name}`,
       description,
-      url: `/shop/${shop.slug}/schedule`,
+      url: publicSchedulePath(shop.slug),
     },
   };
 }
 
 /**
  * The public, canonical, embeddable dive schedule — calendar, trip list,
- * reviews, and the last-minute-deal signup. Every visitor sees this exact
- * page, signed in or not: the staff operations board (KPI tiles, add/move/
- * copy/remove) lives at `/schedule/board` instead (Lens 17 — this route used
- * to be four products crammed onto one, including a staff branch that could
- * never coexist with the diver-facing content it shared a component tree
- * with; see docs/product/features/story-backlog.md and the archive it supersedes).
+ * reviews, and the last-minute-deal signup, and the root of a shop's diver
+ * namespace. Every visitor sees this exact page, signed in or not: the staff
+ * operations board (KPI tiles, add/move/copy/remove) lives at
+ * `/shop/[shopSlug]/schedule/board` instead (Lens 17 — this route used to be
+ * four products crammed onto one, including a staff branch that could never
+ * coexist with the diver-facing content it shared a component tree with; see
+ * docs/product/features/story-backlog.md and the archive it supersedes).
+ *
+ * It used to live at `/shop/[shopSlug]/schedule`, a public page inside the
+ * staff namespace held open by an allowlist; that URL now 308s here (ADR
+ * 20260803-public-shop-namespace).
  */
 export default async function SchedulePage({
   params,
@@ -230,7 +236,7 @@ export default async function SchedulePage({
 
       {nextDeparture ? (
         <Link
-          href={`/shop/${shopSlug}/schedule/${nextDeparture.id}${isEmbed ? "?embed=1" : ""}#book`}
+          href={`${publicTripPath(shopSlug, nextDeparture.id)}${isEmbed ? "?embed=1" : ""}#book`}
           className="card-scale-hint mb-8 flex items-center justify-between gap-4 rounded-2xl border border-primary/30 bg-primary/5 p-5 shadow-sm transition-all duration-200 hover:border-primary/50"
         >
           <div className="min-w-0">
@@ -355,7 +361,7 @@ export default async function SchedulePage({
                     : t("fallback.spotsLeft", { count: remaining });
               const showTwoTankHint = trip.plannedDives === 2 && !twoTankHintShown;
               if (showTwoTankHint) twoTankHintShown = true;
-              const tripHref = `/shop/${shopSlug}/schedule/${trip.id}${isEmbed ? "?embed=1" : ""}`;
+              const tripHref = `${publicTripPath(shopSlug, trip.id)}${isEmbed ? "?embed=1" : ""}`;
               return (
                 <li key={trip.id}>
                   {/* A "stretched link" card: the whole row navigates to the
@@ -391,7 +397,7 @@ export default async function SchedulePage({
                         <p className="mt-0.5 text-sm font-medium text-primary">
                           {t("schedule.courseSession")} ·{" "}
                           <Link
-                            href={`/shop/${shopSlug}/courses/${trip.course.slug}`}
+                            href={publicCoursePath(shopSlug, trip.course.slug)}
                             className="relative z-10 underline-offset-2 hover:underline focus-visible:underline"
                           >
                             {trip.course.title}
@@ -456,7 +462,7 @@ export default async function SchedulePage({
             const query = params.toString();
             return (
               <Link
-                href={`/shop/${shopSlug}/schedule${query ? `?${query}` : ""}`}
+                href={`${publicSchedulePath(shopSlug)}${query ? `?${query}` : ""}`}
                 className={buttonClass({ variant: "secondary" })}
               >
                 {t("schedule.showEarlier")}
@@ -472,7 +478,7 @@ export default async function SchedulePage({
                 if (nextStack.length > 0) params.set("back", encodeCursorStack(nextStack));
                 if (month) params.set("month", month);
                 if (isEmbed) params.set("embed", "1");
-                return `/shop/${shopSlug}/schedule?${params.toString()}`;
+                return `${publicSchedulePath(shopSlug)}?${params.toString()}`;
               })()}
               className={buttonClass({ variant: "secondary" })}
             >
@@ -481,7 +487,7 @@ export default async function SchedulePage({
           ) : null}
           {after ? (
             <Link
-              href={`/shop/${shopSlug}/schedule${month ? `?month=${month}` : ""}${isEmbed ? `${month ? "&" : "?"}embed=1` : ""}`}
+              href={`${publicSchedulePath(shopSlug)}${month ? `?month=${month}` : ""}${isEmbed ? `${month ? "&" : "?"}embed=1` : ""}`}
               className="text-sm font-medium text-primary hover:underline"
             >
               {t("schedule.backToNext")}

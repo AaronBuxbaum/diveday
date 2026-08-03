@@ -26,7 +26,7 @@ test.describe("staff", () => {
     await signOut(page);
 
     // A visitor books it from the public schedule — no account.
-    await page.goto("/shop/blue-mantis/schedule", { waitUntil: "domcontentloaded" });
+    await page.goto("/s/blue-mantis", { waitUntil: "domcontentloaded" });
     // Scoped to the trip list itself: a day with more than one departure
     // also renders a same-titled <li> in the month calendar
     // (src/components/ScheduleCalendar.tsx), and an unscoped locator can
@@ -71,7 +71,7 @@ test.describe("staff", () => {
     expect(confirmationBox?.y ?? 0).toBeLessThan(packBox?.y ?? Number.POSITIVE_INFINITY);
 
     // Both named spots are held atomically.
-    await page.goto("/shop/blue-mantis/schedule");
+    await page.goto("/s/blue-mantis");
     const card = page.locator("li").filter({ hasText: title });
     await expect(card.getByText("4 spots left").filter({ visible: true })).toBeVisible();
 
@@ -139,7 +139,7 @@ test.describe("staff", () => {
     );
     await signOut(page);
 
-    await page.goto(`/shop/blue-mantis/schedule/${tripId}`);
+    await page.goto(`/s/blue-mantis/trips/${tripId}`);
     await expect(
       page.getByRole("heading", { name: "This trip is on a conditions hold" }),
     ).toBeVisible();
@@ -209,7 +209,7 @@ test("a full boat lets a diver join the wait list without taking a seat", async 
   // Same aggregate sequential-navigation cost as this file's other heavy
   // tests — see the comment on "full loop" above.
   test.setTimeout(30_000);
-  await page.goto("/shop/blue-mantis/schedule");
+  await page.goto("/s/blue-mantis");
   // Seeded wreck trip ships full (10 of 10).
   await page
     .locator("li")
@@ -222,7 +222,7 @@ test("a full boat lets a diver join the wait list without taking a seat", async 
   // diver holding a place on this one trip's wait list can also see the
   // shop-wide last-minute list exists, and following it lands on that form.
   const anyTripLink = page.getByRole("link", { name: "Join the last-minute list" });
-  await expect(anyTripLink).toHaveAttribute("href", "/shop/blue-mantis/schedule#last-minute-list");
+  await expect(anyTripLink).toHaveAttribute("href", "/s/blue-mantis#last-minute-list");
   await anyTripLink.click();
   await expect(
     page.getByRole("heading", { name: "Want a deal on a last-minute spot?" }),
@@ -287,7 +287,7 @@ test.describe("as owner", () => {
     await signOut(page);
 
     // Nora books the seeded reef trip under her email.
-    await page.goto("/shop/blue-mantis/schedule");
+    await page.goto("/s/blue-mantis");
     await page
       .locator("li")
       .filter({ hasText: "Two-Tank Reef — Christ of the Abyss" })
@@ -301,7 +301,7 @@ test.describe("as owner", () => {
     await expect(page.getByRole("heading", { name: /You’re on the boat, Nora/ })).toBeVisible();
 
     // A different name on the same inbox books trip B — reuses Nora's record.
-    await page.goto("/shop/blue-mantis/schedule");
+    await page.goto("/s/blue-mantis");
     // Scoped to the trip list itself: a day with more than one departure also
     // renders a same-titled <li> in the month calendar
     // (src/components/ScheduleCalendar.tsx), and an unscoped locator can
@@ -352,7 +352,7 @@ test.describe("as owner", () => {
 // capability in the `?booking=` param, never by the raw booking id — a
 // tampered or cross-trip token must never surface someone else's booking.
 test("a tampered or cross-trip confirmation token reveals nothing", async ({ page }) => {
-  await page.goto("/shop/blue-mantis/schedule");
+  await page.goto("/s/blue-mantis");
   await page
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Christ of the Abyss" })
@@ -377,7 +377,7 @@ test("a tampered or cross-trip confirmation token reveals nothing", async ({ pag
 
   // A real, valid token — but presented on a different trip — must not
   // authorize that trip's confirmation either.
-  await page.goto("/shop/blue-mantis/schedule", { waitUntil: "domcontentloaded" });
+  await page.goto("/s/blue-mantis", { waitUntil: "domcontentloaded" });
   await page
     .locator("li")
     .filter({ hasText: "Wreck Trip — Spiegel Grove" })

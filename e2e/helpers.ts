@@ -49,6 +49,16 @@ export function e2eNow(): Date {
   return new Date(E2E_FROZEN_CLOCK);
 }
 
+/**
+ * The diver's booking page for a trip a spec reached as staff. The two
+ * namespaces mirror each other on the id — `/shop/<slug>/trips/<id>` is the
+ * staff trip record, `/s/<slug>/trips/<id>` is the page divers buy from (ADR
+ * 20260803-public-shop-namespace).
+ */
+export function publicTripUrl(staffTripUrl: string): string {
+  return staffTripUrl.replace("/shop/", "/s/");
+}
+
 /** An ISO date (YYYY-MM-DD) `days` from the frozen clock, for date inputs. */
 export function daysFromNow(days: number): string {
   return new Date(e2eNow().getTime() + days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);

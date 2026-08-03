@@ -312,7 +312,7 @@ describe("today's work queue (in-memory PGlite)", () => {
     expect(row?.invite?.personName).toBe("Marina Reyes");
     expect(row?.invite?.personEmail).toBe("marina@example.com");
     expect(row?.invite?.tripId).toBe(reef.id);
-    expect(row?.invite?.bookingPath).toBe(`/shop/${shop.slug}/schedule/${reef.id}`);
+    expect(row?.invite?.bookingPath).toBe(`/s/${shop.slug}/trips/${reef.id}`);
   });
 
   it("nudges an under-capacity trip departing soon that has never had a last-minute deal sent", async () => {

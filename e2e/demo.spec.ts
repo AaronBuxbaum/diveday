@@ -61,7 +61,7 @@ test("picking the diver role from the homepage skips straight to the public sche
   await page.goto("/");
   await page.getByRole("button", { name: "Try the demo as Diver" }).click();
 
-  await expect(page).toHaveURL(/\/schedule$/);
+  await expect(page).toHaveURL(/\/s\/[a-z0-9-]+$/);
   await expect(page.getByRole("heading", { name: "Schedule", level: 1 })).toBeVisible();
   // The diver-facing schedule, not a staff console — no sign-in chrome, no
   // session minted for a role that was only ever a preview.

@@ -39,13 +39,13 @@ function overrideRequestHeader(req: NextRequest, res: Response, name: string, va
 
 export async function proxy(req: NextRequest, ctx: unknown): Promise<Response | undefined> {
   // The route pattern alone (isEmbeddableShopRoute) isn't a request — a plain
-  // visit to /shop/x/schedule with no ?embed=1 must stay denied. Only an
+  // visit to /s/x with no ?embed=1 must stay denied. Only an
   // actual embed request gets the exception. `searchParams.get()` silently
   // returns just the *first* value on a repeated `?embed=1&embed=0`, which
   // would grant the framing exception here while every page's own
   // `searchParams.embed` prop receives the same repeated param as an array
-  // (`!== "1"`, so the page renders full staff chrome) — a signed-in staff
-  // dashboard framable by whoever crafted that URL. `getAll()` and requiring
+  // (`!== "1"`, so the page renders its full non-embed chrome) — a page
+  // framable by whoever crafted that URL. `getAll()` and requiring
   // exactly one value keeps this in lockstep with how the page reads it.
   const embedParams = req.nextUrl.searchParams.getAll("embed");
   const isEmbedRequest =
@@ -71,9 +71,9 @@ export async function proxy(req: NextRequest, ctx: unknown): Promise<Response | 
       for (const cookie of kept) res.headers.append("set-cookie", cookie);
     }
   }
-  // Forward embed-mode to the server-component tree — `ShopLayout` can't
-  // read searchParams itself (only page.tsx can), so this header is the one
-  // way it learns "this render is going into someone else's iframe." Always
+  // Forward embed-mode to the server-component tree — the public shop layout
+  // can't read searchParams itself (only page.tsx can), so this header is the
+  // one way it learns "this render is going into someone else's iframe." Always
   // overridden, on the request as it continues, never left at whatever a
   // client happened to send: a spoofed value must never survive.
   overrideRequestHeader(req, res, EMBED_REQUEST_HEADER, isEmbedRequest ? "1" : "");

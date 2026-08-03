@@ -11,6 +11,7 @@ import {
   type PromotionProvider,
   promotionProviderFromEnvironment,
 } from "@/lib/payments/promotions";
+import { publicTripPath } from "@/lib/public-routes";
 import { spotsRemaining } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import type { AppDb, DbExecutor } from "./client";
@@ -122,7 +123,7 @@ export async function sendLastMinuteDealBlast(
 
   const origin = publicAppUrl();
   const bookingUrl = origin
-    ? new URL(`/shop/${input.shopSlug}/schedule/${input.tripId}`, `${origin}/`).toString()
+    ? new URL(publicTripPath(input.shopSlug, input.tripId), `${origin}/`).toString()
     : null;
 
   let sentCount = 0;

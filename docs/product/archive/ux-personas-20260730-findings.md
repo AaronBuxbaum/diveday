@@ -1442,11 +1442,11 @@ direction.
     anonymous `joinLastMinuteListAction` out of the builder's auth-gated action module.
     Big but high-value: it makes task 160 trivial and un-forks the page nobody can see
     whole. Route change → check e2e specs, sitemap, canonical metadata.
-    **Deferred — UXP session, 2026-07-31.** Deliberately not attempted in this pass: it's
-    the single highest-risk item in the doc (a route split touching e2e specs, sitemap,
-    and canonical metadata across a page nearly every other task this session also
-    touched), and task 160 — the thing it was meant to make trivial — already shipped
-    without it. Left for a dedicated follow-up.
+    **Done — 2026-08-03.** The `/schedule` → `/schedule/board` half shipped first; the
+    dedicated follow-up then went further than this task asked and moved every diver
+    surface out of the staff namespace entirely, to `/s/<shopSlug>`, retiring
+    `isPublicShopRoute` and the last of the dual-mode pages with it. See ADR
+    [20260803-public-shop-namespace](../../architecture/decisions/20260803-public-shop-namespace.md).
 154. **[M] Group Settings.** Three labelled groups ("Your shop" / "Money" / "Data &
     integrations") with anchors, sub-page back-links (`settings/team`, `calendar`,
     `import`, `export` currently have no route back), and the founder mailto demoted to a

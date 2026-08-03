@@ -20,6 +20,7 @@
     }
   },
   "shopChrome": {
+    "skipToContent": "Saltar al contenido principal",
     "footerLine": "{shop} · Con la tecnología de DiveDay"
   },
   "schedule": {
