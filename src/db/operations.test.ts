@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
 import {
@@ -29,6 +30,47 @@ describe("staff-only operational context", () => {
     expect(await listBookingNotes(db, shop.id, trip.id)).toHaveLength(1);
     expect((await listTripActivity(db, shop.id, trip.id))[0]?.message).toBe(
       `${actor.person.fullName} added a private note about ${rosterEntry.person.fullName}`,
+    );
+  });
+
+  it("reads a same-instant trail newest-first, whatever order the heap returns", async () => {
+    // Adding then deleting a note writes two events. Under the frozen test
+    // clock they carry the *identical* `occurred_at`, so time alone cannot
+    // order them and Postgres is free to hand back whichever row it reaches
+    // first — which changes the moment anything moves rows on disk. A VACUUM
+    // does exactly that, and it flipped this list in the visual baseline:
+    // "deleted a private note" rendered above the "added" it followed.
+    const { db, shop } = await seededShopContext();
+    const trip = (await upcomingTripsWithCounts(db, shop.id)).find((row) => row.booked > 0);
+    if (!trip) throw new Error("expected a booked trip");
+    const [rosterEntry] = await getTripRoster(db, shop.id, trip.id);
+    const [actor] = await listStaff(db, shop.id);
+    if (!rosterEntry || !actor) throw new Error("expected seeded people");
+
+    const note = await addInternalNote(db, {
+      shopId: shop.id,
+      bookingId: rosterEntry.booking.id,
+      actorPersonId: actor.person.id,
+      body: "Bring the spare mask strap.",
+    });
+    if (!note) throw new Error("expected the note to be created");
+    await deleteInternalNote(db, {
+      shopId: shop.id,
+      noteId: note.id,
+      actorPersonId: actor.person.id,
+    });
+
+    const trail = await listTripActivity(db, shop.id, trip.id);
+    const [newest, next] = trail;
+    // Both share an instant, so this passes only because `seq` breaks the tie.
+    expect(newest?.occurredAt).toEqual(next?.occurredAt);
+    expect(newest?.message).toContain("deleted a private note");
+    expect(next?.message).toContain("added a private note");
+
+    // And it survives the rows physically moving, which is the whole point.
+    await db.execute(sql`vacuum full activity_events`);
+    expect((await listTripActivity(db, shop.id, trip.id)).map((row) => row.message)).toEqual(
+      trail.map((row) => row.message),
     );
   });
 
