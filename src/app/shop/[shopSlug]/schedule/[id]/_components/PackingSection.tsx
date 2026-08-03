@@ -1,7 +1,9 @@
 import type { DiverMessageKey } from "@/i18n/messages";
 import { diverTranslator } from "@/i18n/messages";
+import { temperatureText } from "@/i18n/unit-labels";
 import { dockDayTimeline, type ProvidedItemCode, packingConfidence } from "@/lib/diver-planning";
 import type { RentableItemKind } from "@/lib/rentals";
+import { temperatureUnitFor } from "@/lib/temperature-units";
 import type { RentalFit, Shop, Trip } from "./types";
 
 /**
@@ -50,7 +52,14 @@ export function PackingSection({
       {packing.temperatureTip ? (
         <p className="mt-2 text-sm text-muted">
           {t(TEMPERATURE_TIP_KEYS[packing.temperatureTip.tone], {
-            celsius: packing.temperatureTip.celsius,
+            // The tip and the forecast tile above it are on the same page and
+            // must not disagree about units: both read the shop's own unit
+            // off `depth_unit` (src/lib/temperature-units.ts).
+            temperature: temperatureText(
+              t,
+              packing.temperatureTip.celsius,
+              temperatureUnitFor(shop.depthUnit),
+            ),
           })}
         </p>
       ) : null}

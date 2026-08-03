@@ -195,6 +195,51 @@ function verifiedCancelNotice(paymentStatus: string | null | undefined): DiverMe
   return null;
 }
 
+/**
+ * Why the reschedule picker isn't there, in the diver's own words. `src/db/
+ * ready.ts` states which rule is in force; this is the one place each becomes
+ * a sentence. `booking_closed` has no entry: that case takes the whole
+ * section down to the "call the shop" line below, which says it better than a
+ * paragraph next to a picker that isn't rendered.
+ */
+const RESCHEDULE_BLOCKED_KEYS: Record<
+  Exclude<NonNullable<ReadyPageData["rescheduleBlocked"]>, "booking_closed">,
+  DiverMessageKey
+> = {
+  payment_settled: "ready.moveNeedsShop",
+  no_open_trips: "ready.noOtherTrips",
+};
+
+/**
+ * The shop's own phone and email, as tappable links. Rendered wherever this
+ * page tells a diver to talk to a human, so "the shop can help" is never a
+ * dead end they have to go hunting for a number after reading.
+ */
+function ShopContactLinks({
+  contactPhone,
+  contactEmail,
+}: {
+  contactPhone: string | null;
+  contactEmail: string | null;
+}) {
+  if (!contactPhone && !contactEmail) return null;
+  const linkClass = "font-medium text-primary hover:underline";
+  return (
+    <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-base">
+      {contactPhone ? (
+        <a href={telHref(contactPhone)} className={linkClass}>
+          {contactPhone}
+        </a>
+      ) : null}
+      {contactEmail ? (
+        <a href={`mailto:${contactEmail}`} className={linkClass}>
+          {contactEmail}
+        </a>
+      ) : null}
+    </p>
+  );
+}
+
 /** What cancelling right now would mean for money already paid — shown before the diver commits. */
 const CANCEL_PREVIEW_KEY: Record<ReadyPageData["cancelPreview"], DiverMessageKey | null> = {
   refund: "ready.cancelPreviewRefund",
@@ -293,11 +338,16 @@ export default async function DiverReadinessPage({
   const locale = await requestLocale(shop.defaultLocale);
   const t = diverTranslator(locale);
   const firstName = detail.person.fullName.split(" ")[0] || t("ready.namelessFallback");
-  const when = formatShortDate(detail.trip.startsAt, shop.defaultLocale, detail.shop.timezone);
+  // Every date, time, and relative phrase on this page formats for `locale` —
+  // the *negotiated* one. These four used to pass `shop.defaultLocale`
+  // straight into the formatter, so a diver reading Spanish prose got the
+  // shop's own language for the one thing they most need to read at a glance:
+  // when to show up (AGENTS.md — never hard-code a locale in the UI).
+  const when = formatShortDate(detail.trip.startsAt, locale, detail.shop.timezone);
   const timeRange = formatTimeRangeTz(
     detail.trip.startsAt,
     detail.trip.endsAt,
-    shop.defaultLocale,
+    locale,
     detail.shop.timezone,
   );
   // Task 46: the day-before email already tells a diver when to be at the
@@ -306,7 +356,7 @@ export default async function DiverReadinessPage({
   // find the one number that actually matters that morning.
   const dockCallAt = new Date(detail.trip.startsAt.getTime() - shop.dockCallMinutes * 60_000);
   const dockCallLine = t("ready.dockCallLine", {
-    time: formatTime(dockCallAt, shop.defaultLocale, detail.shop.timezone),
+    time: formatTime(dockCallAt, locale, detail.shop.timezone),
     dock: t("notifications.common.dockCallMinutes", { minutes: shop.dockCallMinutes }),
   });
   // Task 47: "in 2 days" / "tomorrow" / "today" — the page a diver opens the
@@ -316,7 +366,7 @@ export default async function DiverReadinessPage({
   const relativeWhen = formatRelativeDay(
     detail.trip.startsAt,
     nowDate(),
-    shop.defaultLocale,
+    locale,
     detail.shop.timezone,
   );
 
@@ -334,6 +384,10 @@ export default async function DiverReadinessPage({
   }
 
   const cancelPreviewKey = CANCEL_PREVIEW_KEY[data.cancelPreview];
+  const rescheduleBlockedKey =
+    data.rescheduleBlocked && data.rescheduleBlocked !== "booking_closed"
+      ? RESCHEDULE_BLOCKED_KEYS[data.rescheduleBlocked]
+      : null;
   const items = buildDiverChecklist(detail.requirement, detail.readiness);
   const nextStep = nextDiverStep(items);
   const ready = detail.readiness.status === "ready";
@@ -533,7 +587,7 @@ export default async function DiverReadinessPage({
           />
         </section>
 
-        {data.canManageBooking ? (
+        {data.manageState === "closed" ? null : (
           <section
             className="mt-6 rounded-2xl border border-border bg-surface p-5 sm:p-6"
             aria-labelledby="change-plans-heading"
@@ -545,7 +599,23 @@ export default async function DiverReadinessPage({
               {t("ready.changePlans")}
             </h2>
 
-            {data.rescheduleCandidates && data.rescheduleCandidates.length > 0 ? (
+            {/* Trip morning: the seat is past self-service, but this is the
+                moment a diver most needs the shop's number — and the whole
+                section used to render as nothing at all here. The policy is
+                unchanged; the silence isn't. */}
+            {data.manageState === "shop_only" ? (
+              <div className="mt-3">
+                <p className="text-base text-muted">{t("ready.manageShopOnly")}</p>
+                <ShopContactLinks
+                  contactPhone={shop.contactPhone}
+                  contactEmail={shop.contactEmail}
+                />
+              </div>
+            ) : null}
+
+            {data.manageState === "self_serve" &&
+            data.rescheduleCandidates &&
+            data.rescheduleCandidates.length > 0 ? (
               <div className="mt-3">
                 <p className="text-base text-muted">{t("ready.reschedulePitch")}</p>
                 <form
@@ -581,42 +651,51 @@ export default async function DiverReadinessPage({
                   />
                 </form>
               </div>
+            ) : rescheduleBlockedKey ? (
+              // Cancel survives, moving doesn't — say which rule is in force
+              // and hand over the shop's number, rather than letting the
+              // picker quietly disappear the moment a payment settles.
+              <div className="mt-3">
+                <p className="text-base text-muted">{t(rescheduleBlockedKey)}</p>
+                <ShopContactLinks
+                  contactPhone={shop.contactPhone}
+                  contactEmail={shop.contactEmail}
+                />
+              </div>
             ) : null}
 
-            <div
-              className={
-                data.rescheduleCandidates?.length ? "mt-6 border-t border-border pt-5" : "mt-3"
-              }
-            >
-              <p className="text-base text-muted">
-                {t("ready.cancelLead")} {cancelPreviewKey ? t(cancelPreviewKey) : null}
-              </p>
-              <form action={cancelMyBookingAction.bind(null, token)} className="mt-3">
-                {/* Task 50: replaces window.confirm, which could only show a
-                    fixed string — never the refund preview this page already
-                    computed above. Repeating it right at the point of
-                    commitment (task 41's "reassurance at the point of
-                    anxiety" pattern, applied to a warning instead) means the
-                    diver reads it once more, right before the irreversible
-                    submit, not just once further up the page. */}
-                <InlineConfirm
-                  triggerLabel={t("ready.cancelSpot")}
-                  triggerClassName={buttonClass({ variant: "danger", size: "sm" })}
-                  message={[
-                    t("ready.cancelConfirm", { trip: detail.trip.title }),
-                    cancelPreviewKey ? t(cancelPreviewKey) : null,
-                  ]
-                    .filter(Boolean)
-                    .join(" ")}
-                  confirmLabel={t("ready.cancelConfirmButton")}
-                  cancelLabel={t("ready.neverMind")}
-                  pendingLabel={t("ready.cancelling")}
-                  confirmClassName={buttonClass({ variant: "danger", size: "sm" })}
-                />
-              </form>
-            </div>
+            {data.manageState === "self_serve" ? (
+              <div className="mt-6 border-t border-border pt-5">
+                <p className="text-base text-muted">
+                  {t("ready.cancelLead")} {cancelPreviewKey ? t(cancelPreviewKey) : null}
+                </p>
+                <form action={cancelMyBookingAction.bind(null, token)} className="mt-3">
+                  {/* Task 50: replaces window.confirm, which could only show a
+                      fixed string — never the refund preview this page already
+                      computed above. Repeating it right at the point of
+                      commitment (task 41's "reassurance at the point of
+                      anxiety" pattern, applied to a warning instead) means the
+                      diver reads it once more, right before the irreversible
+                      submit, not just once further up the page. */}
+                  <InlineConfirm
+                    triggerLabel={t("ready.cancelSpot")}
+                    triggerClassName={buttonClass({ variant: "danger", size: "sm" })}
+                    message={[
+                      t("ready.cancelConfirm", { trip: detail.trip.title }),
+                      cancelPreviewKey ? t(cancelPreviewKey) : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
+                    confirmLabel={t("ready.cancelConfirmButton")}
+                    cancelLabel={t("ready.neverMind")}
+                    pendingLabel={t("ready.cancelling")}
+                    confirmClassName={buttonClass({ variant: "danger", size: "sm" })}
+                  />
+                </form>
+              </div>
+            ) : null}
           </section>
-        ) : null}
+        )}
 
         <p className="mt-8 text-center text-sm text-muted">
           {(() => {

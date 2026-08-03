@@ -131,11 +131,21 @@ function RadioQuestion({
   question,
   yes,
   reassurance,
+  yesLabel,
+  noLabel,
 }: {
   name: string;
   question: string;
   yes: boolean | undefined;
   reassurance: string;
+  /**
+   * The questionnaire's *questions* stay English pending counsel (H-01/H-03),
+   * but these two words are UI chrome, not legal text — a diver reading
+   * Spanish should not have to answer a translated page in English. The saved
+   * answer stays the `yes`/`no` code either way; only the label moves.
+   */
+  yesLabel: string;
+  noLabel: string;
 }) {
   return (
     <fieldset className="group rounded-lg border border-border bg-surface p-4">
@@ -143,11 +153,11 @@ function RadioQuestion({
       <div className="mt-3 flex gap-3">
         <label className="flex min-h-11 items-center gap-2 rounded-lg border border-border px-4 text-base hover:bg-surface-sunken">
           <input type="radio" name={name} value="yes" defaultChecked={yes === true} required />
-          Yes
+          {yesLabel}
         </label>
         <label className="flex min-h-11 items-center gap-2 rounded-lg border border-border px-4 text-base hover:bg-surface-sunken">
           <input type="radio" name={name} value="no" defaultChecked={yes === false} required />
-          No
+          {noLabel}
         </label>
       </div>
       <p className="mt-3 hidden text-sm text-muted group-has-[input[value=yes]:checked]:block">
@@ -540,6 +550,8 @@ export default async function WaiverPage({
                   yes={draftResponses?.[question.id]}
                   question={question.prompt}
                   reassurance={t("waiver.yesReassurance")}
+                  yesLabel={t("waiver.answerYes")}
+                  noLabel={t("waiver.answerNo")}
                 />
               ))}
             </div>
