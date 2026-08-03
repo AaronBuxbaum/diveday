@@ -2293,7 +2293,7 @@
     "emptyNoTripsTitle": "No departures on the board",
     "emptyNoTripsDescription": "The counter fills itself from your schedule. Put a boat on the board and everyone booked on it turns up here.",
     "emptyScheduleDeparture": "Schedule a trip",
-    "clearedTitle": "Everyone’s aboard the day 🎉 — all checked in.",
+    "clearedTitle": "Everyone’s checked in for the day 🎉 — boarding is confirmed on each manifest.",
     "checkedInBadge": "Checked in",
     "boardedBadge": "Boarded",
     "checkInButton": "Check in",

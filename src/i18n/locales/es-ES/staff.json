@@ -2293,7 +2293,7 @@
     "emptyNoTripsTitle": "No hay salidas en el calendario",
     "emptyNoTripsDescription": "El mostrador se llena solo desde tu calendario. Programa un barco y todos los que reserven en él aparecerán aquí.",
     "emptyScheduleDeparture": "Programar una salida",
-    "clearedTitle": "Todos a bordo por hoy 🎉 — todos registrados.",
+    "clearedTitle": "Todos registrados por hoy 🎉 — el embarque se confirma en cada manifiesto.",
     "checkedInBadge": "Registrado",
     "boardedBadge": "Embarcado",
     "checkInButton": "Registrar",
