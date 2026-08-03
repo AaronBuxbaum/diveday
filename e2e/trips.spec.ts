@@ -90,6 +90,9 @@ test.describe("per-trip crew role", () => {
     if (!href) throw new Error(`no trip card found for ${title}`);
     await page.goto(href);
 
+    // The crew picker is controlled: a pick before hydration silently no-ops
+    // (the DOM changes, no action fires), so wait for the marker first.
+    await expect(page.getByLabel("Assign crew")).toHaveAttribute("data-hydrated", "true");
     await page.getByLabel("Assign crew").selectOption({ label: "Keiko Tanaka" });
     await expect(page.getByRole("button", { name: "Unassign Keiko Tanaka" })).toBeVisible();
 
@@ -165,13 +168,23 @@ test.describe("undoing a removal after the trip is cancelled", () => {
     await addDiver.getByLabel("Name").fill(diver);
     await addDiver.getByLabel("Email").fill(`ursula-${e2eNow().getTime()}@example.com`);
     await addDiver.getByRole("button", { name: "Add to trip" }).click();
-    await expect(page.getByRole("status")).toContainText("Diver added to the trip.");
+    // Prefix match: with no email provider configured the fleet gets the
+    // honest "…but their waiver wasn't emailed" variant of this notice.
+    await expect(page.getByRole("status")).toContainText("Diver added to the trip");
 
     // A cancel inside a refund window moves real money, so the removal keeps
     // its blocking two-tap confirm (InlineConfirm) rather than landing behind
     // an undo toast.
     const row = page.locator("#roster li").filter({ hasText: diver }).filter({ visible: true });
-    await row.getByRole("button", { name: "Remove booking" }).click();
+    // The confirm is a client component: an arm-tap before hydration is a
+    // native click with no handler, so the "Yes" step never appears. Retry the
+    // arm until the confirm actually renders instead of trusting one tap.
+    await expect(async () => {
+      await row.getByRole("button", { name: "Remove booking" }).click();
+      await expect(row.getByRole("button", { name: "Yes, remove booking" })).toBeVisible({
+        timeout: 2_000,
+      });
+    }).toPass();
     await row.getByRole("button", { name: "Yes, remove booking" }).click();
     const removedNotice = page.getByRole("status").filter({ hasText: "Booking cancelled" });
     await expect(removedNotice).toContainText("Booking cancelled — the spot is open again.");
