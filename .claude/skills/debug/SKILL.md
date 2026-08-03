@@ -106,6 +106,23 @@ whenever a failure's reproducibility looks reuse-dependent, and check `resetDemo
 what's actually being reset before trusting a "same test fails every time" pattern as evidence
 against timeout-based experiments above.
 
+**A whole-suite local run that fails only in its tail is the same trap wearing a different
+costume, and it is *the* case that gets misread as contention.** `pnpm e2e` runs one `next start`
+per worker for all 305 tests (~150 each), while every CI job shards onto a fresh server (~76 each)
+— so a per-reset cost that grows with the server's age blows the 15s per-test budget locally and
+never shows up on CI at all. The signature is a cluster of `Test timeout` failures in whatever
+specs happen to sort last (`visual`, `waivers`, `whatsapp-settings`), several of them
+`while setting up "demoReset"`, in specs the diff never touched — and they pass in isolation.
+That looks *exactly* like a loaded machine, which is why it has been written off as one more than
+once. It is not: run resets against a bare server in a loop and time them
+(`curl -w "%{time_total}" -X POST -H "authorization: Bearer $DIVEDAY_E2E_SECRET"
+127.0.0.1:3100/api/test/reset`) — a flat curve exonerates the server and sends you back to the
+test, a rising one is a real defect with a row count behind it. `/api/test/reset` vacuums for this
+reason (PGlite ships no autovacuum, so ~4,400 dead tuples and ~2MB of heap per reset used to
+accumulate forever); `src/app/api/test/reset/reclaim.test.ts` is the guard. Before blaming the
+box, confirm the port you are measuring is not still held by an *earlier* probe's server — a stale
+listener silently answers on the pre-fix build and reports its own bloated curve as the new one.
+
 ## Where evidence lives
 
 | Symptom | Look at |
