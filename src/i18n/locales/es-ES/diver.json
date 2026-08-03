@@ -808,6 +808,7 @@
       "shopNameLabel": "Nombre de la tienda",
       "shopNamePlaceholder": "p. ej. Green Lagoon Divers",
       "shopLinkLabel": "Enlace de la tienda",
+      "shopLinkHint": "La dirección web pública de tu tienda — la página que abren los buceadores para reservar.",
       "shopLinkPlaceholder": "p. ej. green-lagoon",
       "shopLinkTitle": "Letras minúsculas, números y guiones — esto se convierte en la dirección web de tu tienda",
       "timezoneLabel": "Zona horaria",
@@ -1041,9 +1042,8 @@
     "skipToContent": "Saltar al contenido principal",
     "tagline": "Una forma más tranquila de llevar un día de buceo.",
     "sayHello": "Escríbenos — siempre es bienvenido",
-    "seeLiveSchedule": "Ver la página de reservas de un buceador →",
     "gettingReady": "Preparando tu tienda…",
-    "tryDemo": "Probar la app del personal"
+    "tryDemo": "Probar la demo en vivo"
   },
   "fallback": {
     "offlineCopy": "Copia sin conexión · al día",
@@ -1114,16 +1114,13 @@
   },
   "marketing": {
     "home": {
-      "eyebrow": "Operaciones tranquilas. Salidas más seguras.",
+      "eyebrow": "Software para tiendas de buceo",
       "heroTitle": "Lleva todo el día de buceo, desde la reserva hasta el recuento final.",
       "heroDescription": "DiveDay reúne reservas, preparación y el listado del barco en un solo lugar — para que tu equipo dedique menos tiempo al papeleo y más a cuidar de los buceadores.",
-      "exploreNote": "Explora una tienda real en funcionamiento. Cambia entre las vistas de propietario, instructor, divemaster, capitán y buceador.",
-      "enterAsLabel": "O entra como:",
-      "enterAsAria": "Probar la demo como {role}",
       "phoneFrameLabel": "Un capitán marcando buceadores embarcados en la pantalla móvil de pase de lista de DiveDay.",
       "dockEyebrow": "En el muelle",
       "dockDetail": "Botones de pase de lista lo bastante grandes para dedos mojados — con o sin señal.",
-      "momentsEyebrow": "Seguro para llevar el barco",
+      "momentsEyebrow": "Un día, una sola imagen",
       "momentsTitle": "La vista adecuada para quien sostiene el trabajo.",
       "momentsDescription": "Todos trabajan desde el mismo día — lo que la recepción revisa por la mañana es exactamente lo que ve el capitán en el muelle, incluido quién ha embarcado y por qué alguien todavía no puede.",
       "moments": {
@@ -1131,6 +1128,7 @@
           "role": "Para el buceador",
           "title": "Una forma clara de subir al barco",
           "description": "Un horario en vivo, un flujo de reserva tranquilo y un siguiente paso obvio en vez de idas y venidas con la tienda.",
+          "link": "Ver la página de reservas de un buceador →",
           "mockupLabel": "El horario público de Blue Mantis con próximas salidas de buceo y plazas disponibles."
         },
         "frontDesk": {
@@ -1140,31 +1138,38 @@
           "mockupLabel": "La sección de preparación de la salida mostrando claramente los estados de buceador listo y bloqueado."
         }
       },
-      "productEyebrow": "En vez de tres aplicaciones",
-      "productTitle": "Cada pequeño requisito tiene un lugar donde encajar.",
+      "productEyebrow": "Toda la tienda, un solo lugar",
+      "productTitle": "En vez de una pizarra, un portapapeles y tres aplicaciones que no se hablan entre sí.",
       "seeFullProduct": "Ver el producto completo",
-      "exportEyebrow": "Seguro para irse",
+      "exportEyebrow": "Tus registros",
       "exportTitle": "Tus datos se van contigo — cualquier día, sin llamadas.",
-      "exportDescription1": "DiveDay es nuevo, y no deberías tener que confiar a ciegas en un proveedor nuevo. Por eso la salida ya está incluida. {claim} {terms}",
-      "exportDescription2": "¿Llegas en vez de irte? Trae la hoja de cálculo que ya llevas — el importador mapea tus columnas y muestra exactamente qué se traslada, y qué honestamente no, antes de guardar una sola fila. O pásanos la hoja y traemos a tus buceadores contigo, gratis.",
+      "exportDescription1": "DiveDay es nuevo, y no deberías tener que confiar a ciegas en un proveedor nuevo. Por eso la salida ya está incluida: un ZIP con los registros de tu tienda, descargado desde Ajustes el día que tú elijas. {terms}",
+      "exportDescription2": "¿Llegas en vez de irte? El importador mapea la hoja de cálculo que ya llevas y muestra exactamente qué se traslada — y qué honestamente no — antes de guardar una sola fila. O pásanos la hoja y traemos a tus buceadores contigo, gratis.",
       "spreadsheetLink": "¿Llevas el día en una hoja de cálculo? Mira cómo se traslada →",
       "switchingLink": "¿Cambias desde {competitors}? Lee las guías →",
       "inExportEyebrow": "En la exportación",
       "exportItem1": "Un ZIP de archivos CSV documentados, descargado desde Ajustes por ti",
       "exportItem2": "Buceadores, reservas, registros de descargo y historial de pagos",
       "exportItem3": "Un archivo de contactos con el formato del asistente de importación de otro sistema",
-      "exportItem4": "Un README que explica cada archivo — sin proyecto de descifrado después",
-      "tryEyebrow": "Fácil de probar",
+      "exportItem4": "Una guía en lenguaje claro de cada archivo — sin proyecto de descifrado después",
+      "tryEyebrow": "Pruébalo",
       "tryTitle": "Mira cómo se siente cuando toda la tienda está en la misma página.",
       "tryDescription": "DiveDay es reciente, y las primeras tiendas lo moldean. Las tiendas fundadoras tienen una línea directa con el fundador — lo que tu equipo encuentra esta temporada es lo próximo en recibir atención.",
+      "priceLine": "Un precio único — {price} {cadence}, congelado dos años para las tiendas fundadoras.",
+      "seeIncluded": "Ver qué incluye →",
       "gettingReady": "Preparando tu tienda…",
       "startTrial": "Empezar una prueba",
-      "viewPricing": "Ver precios"
+      "contactEyebrow": "Habla con una persona",
+      "contactTitle": "¿Prefieres preguntar primero?",
+      "contactBody": "Escribe al fundador con lo que te ayudaría a decidir — una pregunta, una duda, una mala mañana en el mostrador. Una persona real lo lee y responde; no hay cola de tickets.",
+      "contactCta": "Escribir a {email}"
     },
     "common": {
       "gettingReady": "Preparando tu tienda…",
       "tryDemo": "Probar la demo en vivo",
       "startTrial": "Empezar una prueba",
+      "demoNote": "La demo abre una tienda de muestra en funcionamiento con un clic — sin registro y sin tarjeta.",
+      "midCtaTitle": "¿Prefieres verlo antes que leerlo?",
       "checkItLabel": "Compruébalo: "
     },
     "about": {
@@ -1304,14 +1309,14 @@
     "pricing": {
       "eyebrow": "Precios",
       "heroTitle": "Un precio fijo para toda la tienda.",
-      "heroDescription": "Sin cuota de alta, sin cálculos por plaza, sin niveles de funciones — el flujo de seguridad nunca es un extra que tengas que acordarte de comprar.",
+      "heroDescription": "Sin cuota de alta, sin cálculos por plaza, sin niveles de funciones, sin comisión sobre tus reservas — el flujo de seguridad nunca es un extra que tengas que acordarte de comprar.",
       "completeAccess": "Acceso completo a la tienda",
       "earlyAccessBadge": "Acceso anticipado",
       "gettingDemoReady": "Preparando la demo…",
-      "tryDemoFirst": "Probar primero la demo en vivo",
       "feesNote": "Las comisiones de procesamiento de pagos quedan entre tú y tu proveedor de pagos. Si alguna integración futura tiene coste adicional, lo diremos con claridad antes de activarla.",
       "includedEyebrow": "Incluido ahora",
       "includedTitle": "Todo lo necesario para llevar el flujo de trabajo actual de DiveDay.",
+      "seeFullList": "Ver todo lo que hace, en detalle →",
       "faqEyebrow": "Preguntas, respondidas sin rodeos",
       "faqTitle": "Las preguntas que realmente deciden.",
       "faq": {

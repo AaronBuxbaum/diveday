@@ -180,7 +180,7 @@ function coexistRunsInDiveDay(competitor: string): { title: string; detail: stri
 const CUTOVER_SECTION: CutoverSection = {
   heading: "Cutover without drama",
   intro:
-    "Leaving a system you've run for years doesn't have to mean a weekend of downtime. Here's how shops actually make the switch.",
+    "Leaving a system you've run for years doesn't have to mean a weekend of downtime. Here's the switch, step by step.",
   steps: [
     {
       title: "Run both systems for one trip cycle",
@@ -200,7 +200,7 @@ const CUTOVER_SECTION: CutoverSection = {
     {
       title: "Budget an afternoon, not a week",
       detail:
-        "Exporting from the old system is usually minutes of work; the import preview shows exactly what will land before anything saves, so most shops review, fix a handful of rows, and import for real in one sitting.",
+        "Exporting from the old system is minutes of work, and the import preview shows exactly what will land before anything saves — review it, fix any flagged rows, and import for real when it reads right. One sitting, not a project plan.",
     },
   ],
 };
