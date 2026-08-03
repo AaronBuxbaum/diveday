@@ -3,6 +3,7 @@ import {
   STAFF_DESTINATIONS,
   type StaffDestinationGates,
   staffDestinationHref,
+  staffDestinationSuffix,
   staffNavDestinations,
   staffPaletteDestinations,
   staffShopRoot,
@@ -14,11 +15,28 @@ const owner: StaffDestinationGates = { waivers: true, reports: true, team: true 
 const crew: StaffDestinationGates = { waivers: false, reports: false, team: false };
 
 describe("the staff destination registry", () => {
-  it("gives every destination a unique id and a unique path", () => {
+  it("gives every destination a unique id and a unique URL", () => {
     const ids = STAFF_DESTINATIONS.map((destination) => destination.id);
-    const suffixes = STAFF_DESTINATIONS.map((destination) => destination.suffix);
+    // Suffix *plus* view query: Today and its by-departure view share a path
+    // and are told apart by `?view=`, which is the whole point of a view. Two
+    // destinations resolving to the same full URL would still be a bug.
+    const urls = STAFF_DESTINATIONS.map(staffDestinationSuffix);
     expect(new Set(ids).size).toBe(ids.length);
-    expect(new Set(suffixes).size).toBe(suffixes.length);
+    expect(new Set(urls).size).toBe(urls.length);
+  });
+
+  it("only lets a view — never a page — share another destination's path", () => {
+    for (const destination of STAFF_DESTINATIONS) {
+      const twins = STAFF_DESTINATIONS.filter(
+        (other) => other.suffix === destination.suffix && other.id !== destination.id,
+      );
+      for (const twin of twins) {
+        expect(
+          Boolean(destination.query) || Boolean(twin.query),
+          `${destination.id} and ${twin.id} share a path with no view query`,
+        ).toBe(true);
+      }
+    }
   });
 
   it("never gives two destinations the same keyboard shortcut", () => {
@@ -89,11 +107,13 @@ describe("permission gating", () => {
 });
 
 describe("what each consumer derives", () => {
-  it("lays the header out as five primary tabs, then two labelled More groups", () => {
+  it("lays the header out as four primary tabs, then two labelled More groups", () => {
+    // Not ready lost its tab when it became Today's by-departure view: a tab
+    // beside Today that only re-sorts Today's own queue is the duplicate
+    // control design principle 8 rules out. Its badge moved onto Today.
     expect(staffNavDestinations("primary", owner).map((d) => d.id)).toEqual([
       "today",
       "checkIn",
-      "blockers",
       "divers",
       "board",
     ]);
@@ -119,10 +139,12 @@ describe("what each consumer derives", () => {
     expect(orders?.inPalette).toBe(true);
   });
 
-  it("offers the palette everything except the walk-in-free header", () => {
-    // Walk-in is palette-only; everything in the header is also in the palette.
+  it("offers the palette everything in the header, plus the header-free surfaces", () => {
+    // Walk-in and the by-departure view are palette-only; everything in the
+    // header is also in the palette.
     const palette = staffPaletteDestinations(owner).map((d) => d.id);
     expect(palette).toContain("walkIn");
+    expect(palette).toContain("blockers");
     for (const destination of STAFF_DESTINATIONS) {
       if (destination.navGroup !== null) expect(palette).toContain(destination.id);
     }
@@ -145,11 +167,32 @@ describe("what each consumer derives", () => {
     expect(board?.alsoMatch).toBe("/trips");
   });
 
-  it("badges only the two counted queues", () => {
+  it("badges only the two counted queues, with the blocked count on Today", () => {
     const badged = STAFF_DESTINATIONS.filter((destination) => destination.badge !== undefined);
     expect(badged.map((destination) => [destination.id, destination.badge])).toEqual([
-      ["blockers", "blockers"],
+      ["today", "blockers"],
       ["reviews", "reviews"],
     ]);
+  });
+
+  it("keeps the blocked-diver badge on exactly one destination", () => {
+    // It moved from Not ready to Today when Not ready became Today's view.
+    // Badging both would count the same divers twice in one header.
+    const blocked = STAFF_DESTINATIONS.filter((d) => d.badge === "blockers");
+    expect(blocked.map((d) => d.id)).toEqual(["today"]);
+  });
+
+  it("still reaches the by-departure view by name and by keystroke", () => {
+    // Not ready is off the header, so the palette row and `g b` are the only
+    // ways left to ask for it by name — and both must carry the view query,
+    // or they land on the urgency view and quietly do nothing.
+    const blockers = STAFF_DESTINATIONS.find((destination) => destination.id === "blockers");
+    if (!blockers) throw new Error("registry lost the by-departure view");
+    expect(blockers.navGroup).toBeNull();
+    expect(blockers.inPalette).toBe(true);
+    expect(blockers.shortcut).toBe("b");
+    expect(staffDestinationHref(staffShopRoot("blue-mantis"), blockers)).toBe(
+      "/shop/blue-mantis?view=departures",
+    );
   });
 });

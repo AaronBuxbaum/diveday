@@ -77,6 +77,12 @@ export type StaffDestination = {
   readonly id: StaffDestinationId;
   /** Path below `/shop/<shopSlug>`; `""` is the shop home (Today). */
   readonly suffix: string;
+  /**
+   * A query string (leading `?`) that selects a *view* of `suffix` rather than
+   * a page of its own — the one case where two registry entries share a path.
+   * Only `blockers` uses it; see its entry below for why it is still an entry.
+   */
+  readonly query?: string;
   /** Header placement, or `null` for palette-only. */
   readonly navGroup: StaffNavGroup | null;
   /** Whether the command palette offers it under "Go to". */
@@ -99,14 +105,31 @@ export type StaffDestination = {
  * palette lists "Go to".
  */
 export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
-  { id: "today", suffix: "", navGroup: "primary", inPalette: true, shortcut: "t" },
-  { id: "checkIn", suffix: "/check-in", navGroup: "primary", inPalette: true },
+  // Carries the blocked-diver badge because Today is now where blocked divers
+  // are read — both ways of reading them (ADR 20260803-not-ready-is-a-view).
   {
-    id: "blockers",
-    suffix: "/blockers",
+    id: "today",
+    suffix: "",
     navGroup: "primary",
     inPalette: true,
     badge: "blockers",
+    shortcut: "t",
+  },
+  { id: "checkIn", suffix: "/check-in", navGroup: "primary", inPalette: true },
+  // Not a page any more: Not ready is Today's by-departure *view*, selected by
+  // a query param and served by the shop home. It keeps a registry entry
+  // because it is still somewhere staff go by name — ⌘K "Not ready" and `g b`
+  // both land on that view — and the registry is the only place a destination
+  // may be declared. `navGroup: null` is what takes it out of the header: a
+  // tab beside Today that only re-renders Today's own queue is the duplicate
+  // control principle 8 forbids, and the switch on the page is the honest
+  // control for it.
+  {
+    id: "blockers",
+    suffix: "",
+    query: "?view=departures",
+    navGroup: null,
+    inPalette: true,
     shortcut: "b",
   },
   { id: "divers", suffix: "/divers", navGroup: "primary", inPalette: true, shortcut: "d" },
@@ -151,9 +174,19 @@ export function staffShopRoot(shopSlug: string): string {
   return `/shop/${shopSlug}`;
 }
 
+/**
+ * Everything below `/shop/<shopSlug>` for one destination — its path plus, for
+ * a destination that is a *view* of another page, the query that selects it.
+ * Consumers that build a URL from parts (the keyboard-shortcut sheet) use this
+ * rather than `suffix`, so a view can never be navigated to without its query.
+ */
+export function staffDestinationSuffix(destination: StaffDestination): string {
+  return `${destination.suffix}${destination.query ?? ""}`;
+}
+
 /** A destination's full path for one shop. */
 export function staffDestinationHref(root: string, destination: StaffDestination): string {
-  return `${root}${destination.suffix}`;
+  return `${root}${staffDestinationSuffix(destination)}`;
 }
 
 function passesGate(destination: StaffDestination, gates: StaffDestinationGates): boolean {

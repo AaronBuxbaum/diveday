@@ -145,24 +145,47 @@ async function listLatestRollCallByBooking(
 }
 
 /**
- * Bookings whose latest departure roll-call record is "boarded", across
- * multiple trips at once. This is the manifest's half of the same coupling
- * task 149 closes from the other side (`checkedIn` on `ManifestDiverInput`):
- * `checked_in` used to have exactly one reader in the app, the check-in page,
- * and boarding was invisible there. A later `cleared` event still wins over
- * an older `boarded` one — same "latest event, not latest boarded event"
- * semantics as `listLatestRollCallByBooking` — so an undone board correctly
- * drops out of the returned set.
+ * Who is aboard at departure, per trip — **the one reader of that fact.**
+ *
+ * Two callers ask this question for two different reasons: the counter
+ * check-in queue wants the booking ids (is *this* diver aboard?), and Today's
+ * departure board wants a head count per boat. They used to answer it with two
+ * hand-written copies of the same query, and the copies had already drifted:
+ * one applied the cancelled-booking guard, the other did not. Both now derive
+ * from here, so "boarded" cannot mean two things in the same app.
+ *
+ * The rules, in one place:
+ *
+ * - **Latest event wins, not latest `boarded` event.** A later `cleared` is
+ *   staff undoing a mistake, so it drops the diver back out — the same
+ *   semantics `listLatestRollCallByBooking` applies.
+ * - **A cancelled booking is nobody.** A seat pulled or refunded after the
+ *   count keeps its roll-call row; without the join that stale "boarded" still
+ *   counted, while `booked` (upcomingTripsWithCounts) had already dropped it —
+ *   so the two totals could coincidentally agree with a real diver still
+ *   unboarded. Same guard `recordRollCall` and the manifest's own roster apply.
+ *
+ * Read-only, and a count/roster question only: nothing here decides manifest
+ * completeness, closes a checkpoint, or feeds the roll-call gap taxonomy.
  */
-export async function listDepartureBoardedBookingIds(
+export async function listDepartureBoardedByTrip(
   db: AppDb,
   shopId: string,
   tripIds: string[],
-): Promise<Set<string>> {
-  if (tripIds.length === 0) return new Set();
+): Promise<Map<string, Set<string>>> {
+  const byTrip = new Map<string, Set<string>>();
+  if (tripIds.length === 0) return byTrip;
   const rows = await db
-    .select({ bookingId: rollCallEvents.bookingId, status: rollCallEvents.status })
+    .select({
+      tripId: rollCallEvents.tripId,
+      bookingId: rollCallEvents.bookingId,
+      status: rollCallEvents.status,
+    })
     .from(rollCallEvents)
+    .innerJoin(
+      bookings,
+      and(eq(bookings.id, rollCallEvents.bookingId), ne(bookings.status, "cancelled")),
+    )
     .where(
       and(
         eq(rollCallEvents.shopId, shopId),
@@ -171,13 +194,34 @@ export async function listDepartureBoardedBookingIds(
       ),
     )
     .orderBy(desc(rollCallEvents.occurredAt), desc(rollCallEvents.createdAt));
+  // Newest first, so the first row seen per booking is its latest event.
   const seen = new Set<string>();
-  const boarded = new Set<string>();
   for (const row of rows) {
     if (seen.has(row.bookingId)) continue;
     seen.add(row.bookingId);
-    if (row.status === "boarded") boarded.add(row.bookingId);
+    if (row.status !== "boarded") continue;
+    const aboard = byTrip.get(row.tripId) ?? new Set<string>();
+    aboard.add(row.bookingId);
+    byTrip.set(row.tripId, aboard);
   }
+  return byTrip;
+}
+
+/**
+ * The flat view of {@link listDepartureBoardedByTrip}: every booking aboard
+ * across the given trips. This is the manifest's half of the coupling task 149
+ * closes from the other side (`checkedIn` on `ManifestDiverInput`) —
+ * `checked_in` used to have exactly one reader in the app, the check-in page,
+ * and boarding was invisible there.
+ */
+export async function listDepartureBoardedBookingIds(
+  db: AppDb,
+  shopId: string,
+  tripIds: string[],
+): Promise<Set<string>> {
+  const byTrip = await listDepartureBoardedByTrip(db, shopId, tripIds);
+  const boarded = new Set<string>();
+  for (const aboard of byTrip.values()) for (const id of aboard) boarded.add(id);
   return boarded;
 }
 

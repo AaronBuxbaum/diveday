@@ -135,7 +135,12 @@ export default async function WaiverTemplatesPage({
       <p className="mt-3 text-sm text-muted">
         {t.rich("waiversStaff.chaseUnsigned", {
           link: (chunks) => (
-            <Link href={`/shop/${shopSlug}/blockers`} className="text-primary hover:underline">
+            // Straight to the by-departure view, not the redirect that still
+            // serves the old URL: an in-app link should land in one hop.
+            <Link
+              href={`/shop/${shopSlug}?view=departures`}
+              className="text-primary hover:underline"
+            >
               {chunks}
             </Link>
           ),

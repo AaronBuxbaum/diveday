@@ -39,7 +39,10 @@ test("live manifest retains blocked divers and records an explicit not-boarded r
     .click();
 
   await expect(page.getByRole("heading", { name: "Roll call" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Readiness needs attention" })).toBeVisible();
+  // "Blocked divers", not "Readiness needs attention": the shop has one
+  // readiness vocabulary now (src/i18n/readiness-labels.ts), and this panel
+  // names the same state its diver rows do.
+  await expect(page.getByRole("heading", { name: "Blocked divers" })).toBeVisible();
   await expect(page.getByText("Priya Sharma")).toBeVisible();
 
   // At departure the readiness gate hides boarding for blocked divers only —

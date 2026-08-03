@@ -27,7 +27,10 @@ test("the command palette finds a diver by name and ⌘K jumps to a page shortcu
   await expect(reopened).toBeFocused();
   await reopened.fill("Not ready");
   await page.getByRole("option", { name: "Not ready" }).click();
-  await expect(page).toHaveURL(/\/blockers$/);
+  // Not ready is Today's by-departure *view* since it folded into the shop
+  // home, so the palette row carries the view query rather than a route of its
+  // own — the registry is still the one place that decides where it points.
+  await expect(page).toHaveURL(/\?view=departures$/);
 });
 
 test("the command palette also finds dive sites, courses, and every gated nav destination", async ({

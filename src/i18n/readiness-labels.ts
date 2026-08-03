@@ -1,7 +1,50 @@
 import type { DiveSpecialty } from "@/db/schema";
-import type { CertificationLevel, ReadinessBlocker, ReadinessBlockerCode } from "@/lib/readiness";
+import type {
+  CertificationLevel,
+  ReadinessBlocker,
+  ReadinessBlockerCode,
+  ReadinessStatus,
+} from "@/lib/readiness";
 import type { DiverMessageKey } from "./messages";
 import type { StaffMessageKey, StaffTranslator } from "./staff-messages";
+
+/**
+ * **Blocked / Ready — the shop's one readiness vocabulary.**
+ *
+ * The same `status` boolean used to render as four different things: "Needs
+ * attention" on the roster and the check-in queue, "Blocked" on the manifest
+ * and the departure board, "can't board yet" in the Not ready copy — and in
+ * two different tones, warning at the counter but danger on the roster. A
+ * staffer reading the counter queue and the manifest for the same diver saw two
+ * words and two colours for one fact, and nothing on either screen said they
+ * meant the same thing.
+ *
+ * So the word and the tone both resolve from here. "Blocked" wins because it is
+ * what the manifest — the surface that decides whether a person boards — and
+ * the nav badge already say. Danger wins for the same reason: a diver who
+ * cannot board is not a warning on one screen and an emergency on another.
+ *
+ * "Not ready" survives only as the name of a *view* (the by-departure lens on
+ * Today), never as a row's status.
+ */
+export const READINESS_STATUS_KEYS: Record<ReadinessStatus, StaffMessageKey> = {
+  ready: "shared.readiness.status.ready",
+  blocked: "shared.readiness.status.blocked",
+};
+
+/** The one word a readiness status goes by, in the staff bundle's language. */
+export function readinessStatusText(t: StaffTranslator, status: ReadinessStatus): string {
+  return t(READINESS_STATUS_KEYS[status]);
+}
+
+/**
+ * The one tone a readiness status wears. Colour never carries the meaning on
+ * its own (design/principles.md #6) — it only has to stop contradicting the
+ * word beside it from one screen to the next.
+ */
+export function readinessStatusTone(status: ReadinessStatus): "success" | "danger" {
+  return status === "ready" ? "success" : "danger";
+}
 
 /**
  * `readiness.ts` returns a certification-level or specialty *code*; this maps

@@ -5,6 +5,7 @@ import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { signOut } from "@/lib/auth";
 import {
   type StaffDestinationLabels,
+  staffDestinationSuffix,
   staffShopRoot,
   staffShortcutDestinations,
 } from "@/lib/staff-destinations";
@@ -88,7 +89,9 @@ export function ShopNav({
     // sequences that work — including none for a surface this role can't see.
     navShortcuts: staffShortcutDestinations(navGates).map((destination) => ({
       key: destination.shortcut,
-      suffix: destination.suffix,
+      // Suffix *plus* any view query — `g b` selects Today's by-departure view,
+      // which the bare suffix (the shop root) would silently drop.
+      suffix: staffDestinationSuffix(destination),
       goToLabel: t("shared.keyboardShortcuts.goToLabel", {
         page: destinationLabels[destination.id],
       }),
