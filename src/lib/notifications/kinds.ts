@@ -1,0 +1,412 @@
+import { z } from "zod";
+import { DIVER_LOCALES, type DiverLocale, isDiverLocale, toDiverLocale } from "@/i18n/settings";
+import { COURSE_INQUIRY_EXPERIENCE } from "@/lib/course-inquiry";
+import { REMINDER_ACTION_CODES } from "@/lib/readiness-summary";
+
+/**
+ * Every kind of notification DiveDay sends, as a discriminated union of zod
+ * schemas — the contract between the code that decides to notify somebody and
+ * the adapter that puts it on the wire.
+ *
+ * A kind is validated at the boundary (`notify` parses before sending), so a
+ * caller cannot half-fill a message: a missing diver name or a malformed
+ * address fails where it is built rather than arriving as a blank email. Adding
+ * a kind means a schema here, a row in `notificationSchema`, a case in
+ * `notificationIdempotencyKey`, and a body in `./email.ts` — the type checker
+ * enforces the last two.
+ */
+
+const emailAddressSchema = z.email().max(200);
+
+/**
+ * The language this message is written in: the recipient's own recorded locale
+ * when DiveDay has one, otherwise the shop's `default_locale` (docs ADR
+ * 20260731-per-person-notification-locale, superseding
+ * 20260731-notification-locale). Every `Notification` kind carries one except
+ * `new_account_alert`, which lands in the founder's own inbox rather than a
+ * shop's or diver's. Callers pick the value with {@link recipientLocale}.
+ */
+const localeSchema = z.enum(DIVER_LOCALES);
+
+/**
+ * Which language to write to this recipient in.
+ *
+ * `people.locale` is a first-hand signal — captured from a request the diver
+ * themselves made (src/db/people.ts, `recordDiverOwnLocale`) — so it outranks
+ * the shop's declared default, which is a guess about everyone at once. Null,
+ * or a stored value DiveDay no longer carries a bundle for, falls straight back
+ * to the shop's locale, which is exactly the behaviour every notification had
+ * before per-person capture existed.
+ *
+ * Pass the **recipient's** locale, not "a person in the story". A night-before
+ * brief addressed to the crew, a staff invite, or a lead notification landing
+ * in the shop's own inbox are all about a diver but not *to* one — those stay
+ * on the shop's locale, so they pass `null` here or don't call this at all.
+ */
+export function recipientLocale(
+  personLocale: string | null | undefined,
+  shopDefaultLocale: string | null | undefined,
+): DiverLocale {
+  return isDiverLocale(personLocale) ? personLocale : toDiverLocale(shopDefaultLocale);
+}
+
+const reminderActionCodeSchema = z.enum(REMINDER_ACTION_CODES);
+
+const bookingConfirmationSchema = z.object({
+  kind: z.literal("booking_confirmation"),
+  bookingId: z.uuid(),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  diverName: z.string().trim().min(1).max(120),
+  shopName: z.string().trim().min(1).max(120),
+  tripTitle: z.string().trim().min(1).max(200),
+  startsAt: z.date(),
+  endsAt: z.date(),
+  timezone: z.string().trim().min(1).max(100),
+  dockCallMinutes: z.number().int().min(5).max(180).optional(),
+  readinessUrl: z.url().max(2_000).optional(),
+  packingList: z.array(z.string().trim().min(1).max(100)).max(12).optional(),
+  /**
+   * Set only by a caller sending a *second* confirmation for the same
+   * `bookingId` — a reschedule reactivating a previously-cancelled row, or a
+   * staff-triggered resend — so its idempotency key differs from the
+   * original. Omitted, the key is stable per booking (the normal one-send
+   * case); present, it's this specific send's own timestamp, so a genuine
+   * new confirmation can't be swallowed by the provider replaying its cached
+   * response to the first one (Codex finding).
+   */
+  confirmedAt: z.date().optional(),
+});
+
+const waiverRequestSchema = z.object({
+  kind: z.literal("waiver_request"),
+  waiverRecordId: z.uuid(),
+  bookingId: z.uuid(),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  diverName: z.string().trim().min(1).max(120),
+  shopName: z.string().trim().min(1).max(120),
+  tripTitle: z.string().trim().min(1).max(200),
+  completionUrl: z.url().max(2_000),
+  expiresAt: z.date(),
+  timezone: z.string().trim().min(1).max(100),
+});
+
+const waitlistInviteSchema = z.object({
+  kind: z.literal("waitlist_invite"),
+  waitlistEntryId: z.uuid(),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  diverName: z.string().trim().min(1).max(120),
+  shopName: z.string().trim().min(1).max(120),
+  tripTitle: z.string().trim().min(1).max(200),
+  startsAt: z.date(),
+  endsAt: z.date(),
+  timezone: z.string().trim().min(1).max(100),
+  bookingUrl: z.url().max(2_000),
+  /** The invite timestamp, so each explicit re-invite is a distinct send. */
+  invitedAt: z.date(),
+  unsubscribeUrl: z.url().max(2_000),
+});
+
+// A staff-triggered last-minute-fill blast (docs ADR
+// 20260727-last-minute-fill-promos): no bookingId — it goes to a
+// last-minute-list entry, not a booking — so like waitlist_invite/
+// checkout_recovery this is structurally excluded from TrackedNotification.
+const lastMinuteDealSchema = z.object({
+  kind: z.literal("last_minute_deal"),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  diverName: z.string().trim().min(1).max(120),
+  shopName: z.string().trim().min(1).max(120),
+  tripTitle: z.string().trim().min(1).max(200),
+  startsAt: z.date(),
+  endsAt: z.date(),
+  timezone: z.string().trim().min(1).max(100),
+  discountPercent: z.number().int().min(1).max(100),
+  code: z.string().trim().min(1).max(40),
+  bookingUrl: z.url().max(2_000),
+  expiresAt: z.date(),
+  unsubscribeUrl: z.url().max(2_000),
+});
+
+// A pay-at-booking checkout the diver never finished (docs ADR
+// 20260726-abandoned-checkout-recovery). No bookingId: a party checkout
+// covers several bookings with no reliable "lead" booking to key on
+// (booking_checkout_bookings carries no ordering/lead marker), so this is
+// scoped to the checkout itself and, like welcome/staff_invite above,
+// structurally excluded from TrackedNotification — dedup lives on
+// booking_checkouts.abandonedRecoverySentAt instead of a per-booking row.
+const checkoutRecoverySchema = z.object({
+  kind: z.literal("checkout_recovery"),
+  checkoutId: z.uuid(),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  shopName: z.string().trim().min(1).max(120),
+  tripTitle: z.string().trim().min(1).max(200),
+  startsAt: z.date(),
+  endsAt: z.date(),
+  timezone: z.string().trim().min(1).max(100),
+  checkoutUrl: z.url().max(2_000),
+});
+
+const tripReminderFields = {
+  bookingId: z.uuid(),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  diverName: z.string().trim().min(1).max(120),
+  shopName: z.string().trim().min(1).max(120),
+  tripTitle: z.string().trim().min(1).max(200),
+  startsAt: z.date(),
+  endsAt: z.date(),
+  timezone: z.string().trim().min(1).max(100),
+  dockCallMinutes: z.number().int().min(5).max(180).optional(),
+  outstanding: z.array(reminderActionCodeSchema).max(8).optional(),
+  medicalReview: z.boolean().optional(),
+  readinessUrl: z.url().max(2_000).optional(),
+};
+
+// The night-before brief's extra sections, carried only on the 24h cadence
+// (docs first-principles brainstorm C). Every field optional so the reminder
+// degrades to the plain nudge when the shop has published nothing.
+const nightBeforeBriefSchema = z.object({
+  forecast: z.string().trim().min(1).max(600).nullish(),
+  bring: z.array(z.string().trim().min(1).max(120)).max(20).optional(),
+  whoToText: z.string().trim().min(1).max(40).nullish(),
+  firstTimerNote: z.string().trim().min(1).max(600).nullish(),
+});
+
+// One literal per cadence so the delivery row's `kind` is the cadence itself,
+// which is what dedups a reminder to once-per-booking (src/lib/reminders.ts).
+const tripReminder7dSchema = z.object({
+  kind: z.literal("trip_reminder_7d"),
+  ...tripReminderFields,
+});
+const tripReminder24hSchema = z.object({
+  kind: z.literal("trip_reminder_24h"),
+  ...tripReminderFields,
+  brief: nightBeforeBriefSchema.optional(),
+});
+
+const tripRecapSchema = z.object({
+  kind: z.literal("trip_recap"),
+  bookingId: z.uuid(),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  diverName: z.string().trim().min(1).max(120),
+  shopName: z.string().trim().min(1).max(120),
+  tripTitle: z.string().trim().min(1).max(200),
+  startsAt: z.date(),
+  timezone: z.string().trim().min(1).max(100),
+  sites: z.array(z.string().trim().min(1).max(120)).max(10).optional(),
+  recapUrl: z.url().max(2_000),
+  unsubscribeUrl: z.url().max(2_000),
+});
+
+const tripConditionsHoldSchema = z.object({
+  kind: z.literal("trip_conditions_hold"),
+  tripId: z.uuid(),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  diverName: z.string().trim().min(1).max(120),
+  shopName: z.string().trim().min(1).max(120),
+  tripTitle: z.string().trim().min(1).max(200),
+  startsAt: z.date(),
+  timezone: z.string().trim().min(1).max(100),
+  conditionsSummary: z.string().trim().max(600).nullish(),
+  tripUrl: z.url().max(2_000),
+  publishedAt: z.date(),
+});
+
+// Account-lifecycle mail (20260725-account-lifecycle-emails): no bookingId,
+// so these are structurally excluded from TrackedNotification
+// (src/db/notifications.ts) exactly like waitlist_invite already is —
+// there's no shop-facing delivery issue to surface for an account's own
+// welcome/verify/reset mail.
+const welcomeSchema = z.object({
+  kind: z.literal("welcome"),
+  userAccountId: z.uuid(),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  ownerName: z.string().trim().min(1).max(120),
+  shopName: z.string().trim().min(1).max(120),
+  signInUrl: z.url().max(2_000),
+});
+
+const emailVerificationSchema = z.object({
+  kind: z.literal("email_verification"),
+  userAccountId: z.uuid(),
+  tokenId: z.uuid(),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  ownerName: z.string().trim().min(1).max(120),
+  verifyUrl: z.url().max(2_000),
+  expiresAt: z.date(),
+  timezone: z.string().trim().min(1).max(100),
+});
+
+const passwordResetRequestSchema = z.object({
+  kind: z.literal("password_reset_request"),
+  userAccountId: z.uuid(),
+  tokenId: z.uuid(),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  ownerName: z.string().trim().min(1).max(120),
+  resetUrl: z.url().max(2_000),
+  expiresAt: z.date(),
+  timezone: z.string().trim().min(1).max(100),
+});
+
+// A staff invite (20260726-staff-invite-accounts): no bookingId, account-scoped
+// like welcome/email_verification/password_reset_request above.
+const staffInviteSchema = z.object({
+  kind: z.literal("staff_invite"),
+  userAccountId: z.uuid(),
+  tokenId: z.uuid(),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  inviteeName: z.string().trim().min(1).max(120),
+  shopName: z.string().trim().min(1).max(120),
+  inviterName: z.string().trim().min(1).max(120),
+  roleLabels: z.array(z.string().trim().min(1).max(40)).min(1).max(10),
+  inviteUrl: z.url().max(2_000),
+  expiresAt: z.date(),
+  timezone: z.string().trim().min(1).max(100),
+});
+
+// Internal signal, not account-lifecycle mail (docs ADR 20260727-operational-alerts): fires once
+// per new shop so the founder learns about signups without watching a dashboard. No bookingId,
+// structurally excluded from TrackedNotification exactly like welcome/staff_invite above.
+const newAccountAlertSchema = z.object({
+  kind: z.literal("new_account_alert"),
+  userAccountId: z.uuid(),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  ownerName: z.string().trim().min(1).max(120),
+  ownerEmail: emailAddressSchema,
+  shopName: z.string().trim().min(1).max(120),
+  shopSlug: z.string().trim().min(1).max(120),
+});
+
+// The shop's own inbox learns about a lead the moment the diver submits the
+// public course-page composer (docs/product/archive/ux-personas-20260730-findings.md
+// task 7) — carries the course_inquiries row id so a retried send can't double
+// up, exactly like waiver_request keys off its own row.
+const courseInquirySchema = z.object({
+  kind: z.literal("course_inquiry"),
+  courseInquiryId: z.uuid(),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  shopName: z.string().trim().min(1).max(120),
+  courseTitle: z.string().trim().min(1).max(200),
+  inquirerName: z.string().trim().min(1).max(120).optional(),
+  inquirerEmail: emailAddressSchema.optional(),
+  inquirerPhone: z.string().trim().min(1).max(30).optional(),
+  experience: z.enum(COURSE_INQUIRY_EXPERIENCE),
+  timing: z.string().trim().min(1).max(200).optional(),
+  divers: z.number().int().min(1).max(12).optional(),
+  message: z.string().trim().min(1).max(1500).optional(),
+});
+
+const passwordChangedSchema = z.object({
+  kind: z.literal("password_changed"),
+  userAccountId: z.uuid(),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  ownerName: z.string().trim().min(1).max(120),
+  forgotPasswordUrl: z.url().max(2_000).optional(),
+  /** Distinguishes each change as its own send — a second reset is a fresh event, not a duplicate. */
+  changedAt: z.date(),
+});
+
+export const notificationSchema = z.discriminatedUnion("kind", [
+  bookingConfirmationSchema,
+  waiverRequestSchema,
+  waitlistInviteSchema,
+  tripReminder7dSchema,
+  tripReminder24hSchema,
+  tripRecapSchema,
+  tripConditionsHoldSchema,
+  welcomeSchema,
+  emailVerificationSchema,
+  passwordResetRequestSchema,
+  passwordChangedSchema,
+  staffInviteSchema,
+  checkoutRecoverySchema,
+  lastMinuteDealSchema,
+  newAccountAlertSchema,
+  courseInquirySchema,
+]);
+
+export type Notification = z.infer<typeof notificationSchema>;
+
+export function notificationIdempotencyKey(notification: Notification): string {
+  switch (notification.kind) {
+    case "booking_confirmation":
+      return notification.confirmedAt
+        ? `booking-confirmation/${notification.bookingId}/${notification.confirmedAt.toISOString()}`
+        : `booking-confirmation/${notification.bookingId}`;
+    case "waiver_request":
+      return `waiver-request/${notification.waiverRecordId}`;
+    // Keyed by invite timestamp so a genuine re-invite (a seat opens twice) is a
+    // fresh send, while a double-submit of the same tap still dedups at the
+    // notification_send_queue level.
+    case "waitlist_invite":
+      return `waitlist-invite/${notification.waitlistEntryId}/${notification.invitedAt.toISOString()}`;
+    // One reminder per booking per cadence — the kind alone keys it.
+    case "trip_reminder_7d":
+    case "trip_reminder_24h":
+      return `${notification.kind}/${notification.bookingId}`;
+    // One recap per booking after the trip departs.
+    case "trip_recap":
+      return `trip-recap/${notification.bookingId}`;
+    case "trip_conditions_hold":
+      return `trip-conditions-hold/${notification.tripId}/${notification.publishedAt.toISOString()}/${notification.to}`;
+    // One welcome ever, per account.
+    case "welcome":
+      return `welcome/${notification.userAccountId}`;
+    // Keyed by the token row's own id, not the raw token, so a retried send
+    // never doubles up without this idempotency key ever carrying the bearer
+    // secret itself.
+    case "email_verification":
+      return `email-verification/${notification.tokenId}`;
+    case "password_reset_request":
+      return `password-reset-request/${notification.tokenId}`;
+    case "staff_invite":
+      return `staff-invite/${notification.tokenId}`;
+    // Keyed by the change's own timestamp so a second reset's confirmation
+    // is a fresh send, not deduped against the first.
+    case "password_changed":
+      return `password-changed/${notification.userAccountId}/${notification.changedAt.toISOString()}`;
+    // One recovery send per checkout attempt — the row-level
+    // abandonedRecoverySentAt gate is the real dedup; this only protects a
+    // single call from double-hitting the notification_send_queue.
+    case "checkout_recovery":
+      return `checkout-recovery/${notification.checkoutId}`;
+    // Keyed by the code (unique per blast) and recipient, so a retry of one
+    // send never doubles that diver's email while a fresh blast (new code) on
+    // the same trip is always its own send.
+    case "last_minute_deal":
+      return `last-minute-deal/${notification.code}/${notification.to}`;
+    // One alert per account, ever — same key shape as welcome above.
+    case "new_account_alert":
+      return `new-account-alert/${notification.userAccountId}`;
+    // One notification per submitted inquiry row.
+    case "course_inquiry":
+      return `course-inquiry/${notification.courseInquiryId}`;
+  }
+}

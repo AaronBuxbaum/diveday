@@ -1,0 +1,214 @@
+import { and, eq, inArray, isNull } from "drizzle-orm";
+import type { AppDb, AppTransaction, DbExecutor } from "./client";
+import type { Course } from "./schema";
+import { courses, diveSites, tripDives, tripRequirements, tripScheduleDays, trips } from "./schema";
+
+/**
+ * Materializing a departure.
+ *
+ * `createTrip` is the one-off door; the same primitives below are what
+ * `./trips-series.ts` uses for every instance of a recurring series and what
+ * `./trips-schedule.ts` uses to copy one forward. They are exported for those
+ * siblings only — `@/db/trips` deliberately re-exports just `createTrip` and
+ * its input types, so a caller outside these modules cannot assemble a trip
+ * without the dive, schedule-day, and requirement rows that make it readable
+ * as a safety document.
+ */
+
+export type NewTrip = {
+  shopId: string;
+  courseId?: string;
+  diveSiteId?: string;
+  title: string;
+  description?: string;
+  startsAt: Date;
+  endsAt: Date;
+  capacity: number;
+  plannedDives?: number;
+  dives?: TripDiveDraft[];
+  priceCents?: number | null;
+  depositCents?: number | null;
+  cancellationWindowHours?: number | null;
+  scheduleDays?: TripScheduleDayInput[];
+};
+
+export type TripScheduleDayInput = {
+  dayNumber: number;
+  startsAt: Date;
+  endsAt: Date;
+};
+
+export type TripDiveDraft = {
+  title?: string | null;
+  diveSiteId?: string | null;
+  description?: string | null;
+};
+
+const MAX_TRIP_DIVES = 4;
+
+export function normalizedDiveCount(plannedDives?: number) {
+  const count = plannedDives ?? 2;
+  return Number.isInteger(count) && count >= 1 && count <= MAX_TRIP_DIVES ? count : null;
+}
+
+export function normalizedDiveDrafts(plannedDives: number, drafts: TripDiveDraft[] | undefined) {
+  return Array.from({ length: plannedDives }, (_, index) => {
+    const draft = drafts?.[index];
+    return {
+      diveNumber: index + 1,
+      title: draft?.title?.trim() || null,
+      diveSiteId: draft?.diveSiteId || null,
+      description: draft?.description?.trim() || null,
+    };
+  });
+}
+
+export async function validateDiveSites(
+  db: DbExecutor,
+  shopId: string,
+  drafts: Array<{ diveSiteId: string | null }>,
+) {
+  const siteIds = drafts.map((draft) => draft.diveSiteId).filter((id): id is string => Boolean(id));
+  if (siteIds.length === 0) return true;
+  const sites = await db
+    .select({ id: diveSites.id })
+    .from(diveSites)
+    .where(
+      and(
+        eq(diveSites.shopId, shopId),
+        inArray(diveSites.id, siteIds),
+        isNull(diveSites.deletedAt),
+      ),
+    );
+  return sites.length === new Set(siteIds).size;
+}
+
+export async function replaceTripDives(
+  db: DbExecutor,
+  tripId: string,
+  drafts: ReturnType<typeof normalizedDiveDrafts>,
+) {
+  await db.delete(tripDives).where(eq(tripDives.tripId, tripId));
+  await db.insert(tripDives).values(drafts.map((draft) => ({ tripId, ...draft })));
+}
+
+/** Resolve and validate an optional course reference inside a transaction. */
+export async function resolveCourse(
+  tx: AppTransaction,
+  shopId: string,
+  courseId: string | undefined,
+): Promise<{ ok: boolean; course: Course | null }> {
+  if (!courseId) return { ok: true, course: null };
+  const course = (
+    await tx
+      .select()
+      .from(courses)
+      .where(and(eq(courses.id, courseId), eq(courses.shopId, shopId), eq(courses.isActive, true)))
+      .limit(1)
+  )[0];
+  return course ? { ok: true, course } : { ok: false, course: null };
+}
+
+/**
+ * Insert one trip plus its dives and readiness requirements. The single source
+ * of truth for materializing a trip so a one-off and every instance of a series
+ * share identical dive and requirement wiring — a missing requirement row is a
+ * readiness blocker, never an accidental pass, and a course session snapshots
+ * its catalog baseline against later catalog edits.
+ */
+export async function insertTripInstance(
+  tx: AppTransaction,
+  params: {
+    shopId: string;
+    seriesId?: string;
+    courseId?: string;
+    course: Course | null;
+    title: string;
+    description?: string;
+    startsAt: Date;
+    endsAt: Date;
+    capacity: number;
+    plannedDives: number;
+    priceCents?: number | null;
+    depositCents?: number | null;
+    cancellationWindowHours?: number | null;
+    drafts: ReturnType<typeof normalizedDiveDrafts>;
+    scheduleDays?: TripScheduleDayInput[];
+  },
+) {
+  const [trip] = await tx
+    .insert(trips)
+    .values({
+      shopId: params.shopId,
+      seriesId: params.seriesId,
+      courseId: params.courseId,
+      title: params.title,
+      description: params.description,
+      startsAt: params.startsAt,
+      endsAt: params.endsAt,
+      capacity: params.capacity,
+      priceCents: params.priceCents,
+      depositCents: params.depositCents,
+      cancellationWindowHours: params.cancellationWindowHours,
+      plannedDives: params.plannedDives,
+      diveSiteId: params.drafts[0]?.diveSiteId ?? null,
+    })
+    .returning();
+  if (!trip) throw new Error("insertTripInstance: insert returned no row");
+  await tx.insert(tripDives).values(params.drafts.map((draft) => ({ tripId: trip.id, ...draft })));
+  await tx
+    .insert(tripScheduleDays)
+    .values(
+      (params.scheduleDays?.length
+        ? params.scheduleDays
+        : [{ dayNumber: 1, startsAt: params.startsAt, endsAt: params.endsAt }]
+      ).map((day, index) => ({ tripId: trip.id, ...day, dayNumber: index + 1 })),
+    );
+  await tx.insert(tripRequirements).values({
+    tripId: trip.id,
+    shopId: params.shopId,
+    // Every trip starts waiver-gated; staff can lift it per trip, but nothing
+    // in the catalog schedules an unsigned session by default.
+    requiresWaiver: true,
+    // A course session inherits its catalog baseline verbatim, including a
+    // deliberate null: uncertified students are the whole point of Discover
+    // Scuba and Open Water. `??` cannot tell "no course" from "a course open to
+    // uncertified divers", and collapsing the two put an Open Water gate on
+    // every entry-level class — which staff then clear by blanking the trip's
+    // requirements, taking the waiver gate down with it.
+    minimumCertificationLevel: params.course
+      ? params.course.minimumCertificationLevel
+      : "open_water",
+  });
+  return trip;
+}
+
+export async function createTrip(db: AppDb, input: NewTrip) {
+  return db.transaction(async (tx) => {
+    const plannedDives = normalizedDiveCount(input.plannedDives);
+    if (!plannedDives) return null;
+    const drafts = normalizedDiveDrafts(
+      plannedDives,
+      input.dives ?? (input.diveSiteId ? [{ diveSiteId: input.diveSiteId }] : undefined),
+    );
+    if (!(await validateDiveSites(tx, input.shopId, drafts))) return null;
+    const { ok, course } = await resolveCourse(tx, input.shopId, input.courseId);
+    if (!ok) return null;
+    return insertTripInstance(tx, {
+      shopId: input.shopId,
+      courseId: input.courseId,
+      course,
+      title: input.title,
+      description: input.description,
+      startsAt: input.startsAt,
+      endsAt: input.endsAt,
+      capacity: input.capacity,
+      plannedDives,
+      priceCents: input.priceCents,
+      depositCents: input.depositCents,
+      cancellationWindowHours: input.cancellationWindowHours,
+      drafts,
+      scheduleDays: input.scheduleDays,
+    });
+  });
+}
