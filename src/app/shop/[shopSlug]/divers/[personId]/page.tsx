@@ -11,6 +11,7 @@ import {
 import { getDb } from "@/db/client";
 import { getDiverProfile } from "@/db/divers";
 import { getShopById } from "@/db/shops";
+import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { pagedUpcomingTripsWithCounts } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -18,6 +19,7 @@ import { requireStaffSession } from "@/lib/session";
 import { BookActivity } from "./_components/BookActivity";
 import { CertificationCards } from "./_components/CertificationCards";
 import { DiverHeader } from "./_components/DiverHeader";
+import { DIVER_SECTIONS, DiverSection, DiverSubNav } from "./_components/DiverSubNav";
 import { ErasePersonalData } from "./_components/ErasePersonalData";
 import { NoticeBanner } from "./_components/NoticeBanner";
 import { PaymentsSection } from "./_components/PaymentsSection";
@@ -65,12 +67,16 @@ export default async function DiverDetailPage({
   // (H-06); flagging them for hands-on fitting stays open to all staff.
   // Erasing a diver's personal and medical data is stricter still — owner only,
   // one way, and never offered to anyone else (ADR 20260802-diver-data-erasure).
-  const [canRefund, canDelete, canOverrideFit, canErase] = await Promise.all([
+  const [canRefund, canDelete, canOverrideFit, canErase, stripeAccount] = await Promise.all([
     canPersonRefund(db, shop.id, session.user.personId),
     canPersonDeleteDiver(db, shop.id, session.user.personId),
     canPersonOverrideGearRequest(db, shop.id, session.user.personId),
     canPersonErasePersonalData(db, shop.id, session.user.personId),
+    getShopStripeAccount(db, shop.id),
   ]);
+  // `orders/new` refuses outright without a payable account, so the Payments
+  // section offers "Connect payments" rather than invoice buttons that bounce.
+  const paymentsConnected = canAcceptPayments(stripeAccount);
   const { trips: scannedTrips } = await pagedUpcomingTripsWithCounts(db, shop.id, {
     limit: BOOK_ACTIVITY_TRIP_SCAN_LIMIT,
   });
@@ -82,7 +88,7 @@ export default async function DiverDetailPage({
   );
 
   return (
-    <main className="mx-auto w-full max-w-4xl flex-1 px-6 py-16">
+    <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <FlashParams params={["notice", "undo", "cardType"]} />
       <DiverHeader diver={diver} shopSlug={shopSlug} personId={personId} locale={locale} />
       {notice === "card-deleted" && undo && cardType ? (
@@ -94,43 +100,66 @@ export default async function DiverDetailPage({
           undoLabel={t("shared.undoToast.undo")}
         />
       ) : (
-        <NoticeBanner notice={notice} locale={locale} />
+        <NoticeBanner notice={notice} locale={locale} shopSlug={shopSlug} />
       )}
+      {/* Above the stat cards, not below them: on a 390px phone those three
+          cards stack, and a bar sitting under them lands ~1,150px down — a spine
+          you have to scroll to find is not a spine. */}
+      <DiverSubNav
+        ariaLabel={t("divers.subNav.ariaLabel")}
+        labels={DIVER_SECTIONS.map((section) => t(section.labelKey))}
+        className="mt-8"
+      />
       <StatsSummary diver={diver} locale={locale} />
-      <CertificationCards diver={diver} shopSlug={shopSlug} personId={personId} shop={shop} />
-      <SpecialtyCards
-        diver={diver}
-        shopSlug={shopSlug}
-        personId={personId}
-        shop={shop}
-        locale={locale}
-      />
-      <RentalFit
-        diver={diver}
-        shopSlug={shopSlug}
-        personId={personId}
-        rentalItems={shop.rentalItems}
-        canOverride={canOverrideFit}
-        locale={locale}
-      />
-      <BookActivity
-        locale={locale}
-        diver={diver}
-        shop={shop}
-        upcoming={upcoming}
-        shopSlug={shopSlug}
-        personId={personId}
-      />
-      <PaymentsSection
-        locale={locale}
-        diver={diver}
-        shop={shop}
-        shopSlug={shopSlug}
-        personId={personId}
-        canRefund={canRefund}
-      />
-      <UpcomingTripsSection diver={diver} shop={shop} shopSlug={shopSlug} locale={locale} />
-      <ShopHistory locale={locale} diver={diver} shop={shop} shopSlug={shopSlug} />
+      <DiverSection id="cards">
+        <CertificationCards diver={diver} shopSlug={shopSlug} personId={personId} shop={shop} />
+        <SpecialtyCards
+          diver={diver}
+          shopSlug={shopSlug}
+          personId={personId}
+          shop={shop}
+          locale={locale}
+        />
+      </DiverSection>
+      <DiverSection id="fit">
+        <RentalFit
+          diver={diver}
+          shopSlug={shopSlug}
+          personId={personId}
+          rentalItems={shop.rentalItems}
+          canOverride={canOverrideFit}
+          locale={locale}
+        />
+      </DiverSection>
+      {/* Above "Book an activity" deliberately: the errand that brings staff to
+          this page in a hurry is a diver standing at the counter with a bill,
+          not one browsing next week's boats. Both used to sit below the fold;
+          only one of them has somebody waiting. */}
+      <DiverSection id="payments">
+        <PaymentsSection
+          locale={locale}
+          diver={diver}
+          shop={shop}
+          shopSlug={shopSlug}
+          personId={personId}
+          canRefund={canRefund}
+          paymentsConnected={paymentsConnected}
+        />
+      </DiverSection>
+      <DiverSection id="trips">
+        <BookActivity
+          locale={locale}
+          diver={diver}
+          shop={shop}
+          upcoming={upcoming}
+          shopSlug={shopSlug}
+          personId={personId}
+        />
+        <UpcomingTripsSection diver={diver} shop={shop} shopSlug={shopSlug} locale={locale} />
+      </DiverSection>
+      <DiverSection id="history">
+        <ShopHistory locale={locale} diver={diver} shop={shop} shopSlug={shopSlug} />
+      </DiverSection>
       {canDelete ? (
         <RemoveDiver diver={diver} shopSlug={shopSlug} personId={personId} locale={locale} />
       ) : null}

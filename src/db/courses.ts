@@ -77,6 +77,25 @@ export async function listActiveCourses(db: AppDb, shopId: string) {
 }
 
 /**
+ * Whether this shop's public catalog has anything in it.
+ *
+ * The one fact the diver-facing header needs to decide whether a "Courses" tab
+ * has anywhere worth going, and it runs on every public page render — so it
+ * asks the database for the existence of a row rather than reading the whole
+ * catalog through {@link listActiveCourses} and counting it. Never widen this
+ * into a count: nothing shows a number, and a count cannot stop at the first
+ * row.
+ */
+export async function hasActiveCourses(db: AppDb, shopId: string): Promise<boolean> {
+  const rows = await db
+    .select({ id: courses.id })
+    .from(courses)
+    .where(and(eq(courses.shopId, shopId), eq(courses.isActive, true)))
+    .limit(1);
+  return rows.length > 0;
+}
+
+/**
  * Every publicly-indexable course page, for the sitemap — active courses at
  * non-demo shops, across the whole catalog rather than one shop at a time, so
  * this joins to `shops` for the `isDemo` filter instead of looping

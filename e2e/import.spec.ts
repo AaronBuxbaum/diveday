@@ -352,10 +352,17 @@ test.describe("as captain", () => {
 
   test("import is refused for staff below owner/manager", async ({ page }) => {
     // A captain is staff everywhere else, but the importer writes the whole
-    // roster, so the surface doesn't exist for them — bounced to Today rather
-    // than shown a read-only/explained page.
+    // roster, so the surface doesn't exist for them — bounced to Settings with
+    // the reason said out loud, the same explained-landing rule every other
+    // gate refusal now follows. FlashParams strips the query, so assert the
+    // banner text rather than the URL param.
     await page.goto("/shop/blue-mantis/settings/import");
-    await expect(page).toHaveURL(/\/shop\/blue-mantis$/);
+    await expect(page).toHaveURL(/\/shop\/blue-mantis\/settings$/);
+    await expect(
+      page.getByText(
+        "Importing writes divers' personal and medical records, so it's limited to owners and managers.",
+      ),
+    ).toBeVisible();
     await expect(page.locator('input[type="file"]').filter({ visible: true })).toHaveCount(0);
   });
 });

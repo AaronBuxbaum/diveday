@@ -121,6 +121,14 @@
     "day": "Día {number}"
   },
   "divers": {
+    "subNav": {
+      "ariaLabel": "Ficha del buceador",
+      "cards": "Titulaciones",
+      "fit": "Tallas",
+      "payments": "Pagos",
+      "trips": "Salidas",
+      "history": "Historial"
+    },
     "upcoming": {
       "heading": "Próximas salidas"
     },
@@ -409,6 +417,7 @@
       "refundFailed": "Ese pago no se pudo reembolsar. Puede que no esté pagado, o que Stripe necesite atención.",
       "demoDisabled": "Este es un pedido de demostración — no está respaldado por una factura real de Stripe, así que no se puede reembolsar.",
       "deleted": "Buceador eliminado del trabajo activo de la tienda. Sus reservas y tarjetas se conservan.",
+      "paymentNotConnected": "Los pagos aún no están conectados, así que no hay ninguna cuenta desde la que facturar — conecta una para cobrar a este buceador.",
       "notAuthorizedRefund": "Los reembolsos están limitados a propietarios y gerentes — pide a uno de ellos que emita este reembolso.",
       "notAuthorizedDelete": "Eliminar un buceador está limitado a propietarios y gerentes — pide a uno de ellos que lo haga.",
       "notAuthorizedErase": "Borrar los datos personales de un buceador está limitado al propietario de la tienda — pídeselo a esa persona.",
@@ -736,6 +745,9 @@
       "eyebrow": "Recepción",
       "fallbackDescription": "Pedido",
       "backToDiver": "Volver al buceador",
+      "backToOrders": "Volver a pedidos",
+      "raisedOn": "Emitido el {date}",
+      "createdBy": "por {name}",
       "status": {
         "open": "Abierto — pendiente de pago",
         "paid": "Pagado",
@@ -769,7 +781,8 @@
         "refunded": "Pago reembolsado — la salida ahora aparece como no pagada para este buceador.",
         "refundFailed": "No se pudo reembolsar este pedido — puede que todavía no tenga un pago reembolsable.",
         "notAuthorized": "Los reembolsos están limitados a propietarios y gerentes — pide a uno de ellos que lo tramite.",
-        "demoDisabled": "Este es un pedido de demostración — no está respaldado por una factura real de Stripe, así que no se puede modificar."
+        "demoDisabled": "Este es un pedido de demostración — no está respaldado por una factura real de Stripe, así que no se puede modificar.",
+        "fallback": "Algo cambió en este pedido — los detalles de abajo están al día."
       }
     },
     "index": {
@@ -777,6 +790,9 @@
       "title": "Pedidos",
       "description": "Todas las facturas que ha enviado la tienda, de todos los buceadores y salidas.",
       "newOrder": "Nuevo pedido",
+      "notice": {
+        "paymentNotConnected": "Los pagos aún no están conectados, así que no hay ninguna cuenta desde la que facturar — conecta una para empezar a cobrar a los buceadores."
+      },
       "filters": {
         "statusLabel": "Estado",
         "statusAll": "Todos los estados",
@@ -958,6 +974,11 @@
     "previousMonth": "Mes anterior",
     "nextMonth": "Mes siguiente",
     "currentMonthTitle": "Estás viendo el mes actual",
+    "earliestMonthTitle": "Este es tu primer mes con salidas",
+    "monthPicker": {
+      "label": "Ir a un mes",
+      "go": "Ir"
+    },
     "numbersLabel": "Los números de este mes",
     "metrics": {
       "revenueLabel": "Ingresos cobrados",
@@ -996,6 +1017,8 @@
       "published": "Reseña publicada en tu página de calendario.",
       "hidden": "Reseña oculta — ya no cuenta para tu valoración.",
       "hiddenToast": "Reseña oculta.",
+      "publishedMany": "{count, plural, one {# reseña publicada} other {# reseñas publicadas}} en tu página de calendario.",
+      "noneSelected": "Marca primero las reseñas que quieres publicar.",
       "error": "No se pudo actualizar esa reseña. Inténtalo de nuevo."
     },
     "overviewLabel": "Resumen de valoraciones",
@@ -1016,6 +1039,9 @@
     "reviewMeta": "<diver>{diverName}</diver> · <trip>{tripTitle}</trip> · {date}",
     "hide": "Ocultar",
     "publish": "Publicar",
+    "publishSelected": "Publicar seleccionadas",
+    "tickThenPublish": "Marca las que quieras publicar y luego",
+    "selectToPublishAriaLabel": "Seleccionar la reseña de {name} para publicarla",
     "saving": "Guardando…",
     "showMoreReviews": "Mostrar más reseñas",
     "backToTop": "← Volver al principio de la lista",
@@ -1091,11 +1117,14 @@
       "returns": "Vuelve",
       "seats": "Plazas",
       "dives": "Inmersiones",
+      "price": "Precio por buceador",
+      "priceDescription": "Los buceadores lo ven en cuanto la salida llega a la página pública. Déjalo vacío para ponerle precio más tarde en la salida.",
       "course": "Curso",
       "optional": "(opcional)",
       "diveSite": "Punto de inmersión",
       "ordinaryTrip": "Salida normal",
       "decideLater": "Decidir más tarde",
+      "optionsLoading": "Cargando…",
       "adding": "Añadiendo…",
       "putOnBoard": "Ponerla en el calendario",
       "newDate": "Nueva fecha",
@@ -1863,6 +1892,19 @@
         "heading": "WhatsApp",
         "description": "Envía recordatorios y resúmenes desde el número de WhatsApp de tu tienda en lugar de un número SMS de la plataforma.",
         "cta": "Configurar WhatsApp"
+      },
+      "jump": {
+        "label": "Ir a una sección"
+      },
+      "team": {
+        "heading": "Equipo",
+        "description": "Quién trabaja aquí, a qué puede llegar cada persona y cómo van tus invitaciones.",
+        "cta": "Gestionar equipo"
+      },
+      "promos": {
+        "heading": "Códigos promocionales",
+        "description": "Códigos de descuento para toda la tienda que el buceador escribe al pagar, cada uno con sus fechas y límites.",
+        "cta": "Gestionar códigos promocionales"
       }
     },
     "team": {
@@ -1954,6 +1996,9 @@
       "title": "Importar contactos",
       "description": "Trae tus buceadores, tarjetas, tallas de alquiler y aceptación previa de waiver desde un CSV — de tu antiguo sistema o de la propia exportación de DiveDay. Consulta abajo exactamente qué se importa.",
       "comingFrom": "¿Vienes de <eve>EVE</eve>, <diveshop360>DiveShop360</diveshop360>, o de <spreadsheet>una hoja de cálculo</spreadsheet>? Consulta la guía correspondiente y vuelve aquí para importar.",
+      "notice": {
+        "notAuthorized": "La importación escribe datos personales y médicos de los buceadores, así que está limitada a propietarios y gerentes."
+      },
       "comesAcross": {
         "heading": "Qué se importa",
         "description": "Los detalles, fila por fila:"
@@ -2320,7 +2365,8 @@
     "scheduleTrip": "Programar una salida",
     "notice": {
       "waiversNotAuthorized": "Editar el waiver está limitado a propietarios y gerentes.",
-      "exportNotAuthorized": "La exportación de datos está limitada a propietarios y gerentes."
+      "exportNotAuthorized": "La exportación de datos está limitada a propietarios y gerentes.",
+      "reportsNotAuthorized": "Los informes muestran los ingresos del centro, así que están limitados a propietarios y gerentes."
     },
     "orientation": {
       "heading": "¿Recién llegado? Algunas pistas para tu puesto.",
@@ -2488,8 +2534,7 @@
       "groupOrders": "Pedidos",
       "groupGoTo": "Ir a",
       "goToBoarding": "Embarque — el barco de hoy",
-      "goToOfflineRollCall": "Abrir pase de lista sin conexión",
-      "goToAddBooking": "Añadir una reserva"
+      "goToOfflineRollCall": "Abrir pase de lista sin conexión"
     },
     "keyboardShortcuts": {
       "buttonAriaLabel": "Atajos de teclado",
@@ -2562,6 +2607,7 @@
       "blockers": "No listos",
       "divers": "Buceadores",
       "board": "Tablero",
+      "addBooking": "Añadir una reserva",
       "staffing": "Personal",
       "diveSites": "Sitios de buceo",
       "courses": "Cursos",
@@ -2970,6 +3016,9 @@
       "notBoarded": "No embarcado",
       "notBoardedCarried": "No embarcado · arrastrado",
       "notBackAboard": "Sin regresar a bordo"
+    },
+    "payments": {
+      "connect": "Conectar pagos"
     }
   },
   "whatsapp": {
@@ -3042,6 +3091,7 @@
       "description": "Sienta a un buceador en cualquier salida próxima — elige el barco y luego al buceador.",
       "backToBoard": "Volver al tablero",
       "tripHeading": "¿Qué salida?",
+      "fullExcluded": "Las salidas completas no aparecen en esta lista. Cambia las plazas de un barco, o programa otra salida ese día, desde el tablero.",
       "tripEmpty": "No queda ninguna plaza en las próximas salidas. Programa una salida primero.",
       "tripSummary": "{title} · {date} · {time} · {booked}/{capacity} reservados",
       "seatsLeft": "{count, plural, one {# plaza libre} other {# plazas libres}}",

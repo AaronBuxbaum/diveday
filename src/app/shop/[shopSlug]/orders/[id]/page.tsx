@@ -13,7 +13,7 @@ import { getOrder, refreshOrderStatus, refundOrder, voidOrder } from "@/db/order
 import { getShopById } from "@/db/shops";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
-import { formatMoneyCents } from "@/lib/format";
+import { formatMoneyCents, formatShortDate } from "@/lib/format";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { type NoticeTone, noticeFromParam } from "@/lib/staff-notices";
@@ -160,11 +160,16 @@ export default async function OrderDetailPage({
   const db = await getDb();
   const order = await getOrder(db, session.user.shopId, id);
   if (!order) notFound();
-  const demo = await isDemoShop(db, session.user.shopId);
+  // One shop read for both the demo guard and the timezone the order's date is
+  // written in — a money screen should say "3 Aug" in the shop's own day, not
+  // the server's.
+  const shop = await getShopById(db, session.user.shopId);
+  const demo = shop?.isDemo ?? false;
+  const timezone = shop?.timezone ?? "UTC";
   // Refunds are owner/manager only (H-14, ADR 20260724-role-authorization);
   // hide the control from other staff. refundAction re-checks regardless.
   const canRefund = await canPersonRefund(db, session.user.shopId, session.user.personId);
-  const locale = await requestLocale();
+  const locale = await requestLocale(shop?.defaultLocale);
   const t = staffTranslator(locale);
   const demoActionHint = t("orders.detail.demoActionHint");
   const banner = noticeFromParam(notice, NOTICES);
@@ -176,19 +181,49 @@ export default async function OrderDetailPage({
         eyebrow={t("orders.detail.eyebrow")}
         title={order.person.fullName}
         description={order.order.description || t("orders.detail.fallbackDescription")}
+        meta={
+          // When it was raised, and by whom. Both were missing entirely: the
+          // orders index shows a date column, and losing it on the way into the
+          // one order you opened is exactly the detail a refund argument turns
+          // on. `created_by_person_id` was already stored — nothing new is kept.
+          <p className="text-sm text-muted">
+            {t("orders.detail.raisedOn", {
+              date: formatShortDate(order.order.createdAt, locale, timezone),
+            })}
+            {order.createdBy
+              ? ` · ${t("orders.detail.createdBy", { name: order.createdBy.fullName })}`
+              : ""}
+          </p>
+        }
         actions={
-          <Link
-            href={`/shop/${shopSlug}/divers/${order.person.id}`}
-            className={buttonClass({ variant: "secondary", className: "text-foreground" })}
-          >
-            {t("orders.detail.backToDiver")}
-          </Link>
+          // Two different journeys, so two doors rather than one guess: staff
+          // arrive here from the diver's record *and* from the Orders index,
+          // Reports' revenue card, and the command palette. Whichever way you
+          // came, the other is one click, not browser-back.
+          <>
+            <Link
+              href={`/shop/${shopSlug}/orders`}
+              className={buttonClass({ variant: "secondary", className: "text-foreground" })}
+            >
+              {t("orders.detail.backToOrders")}
+            </Link>
+            <Link
+              href={`/shop/${shopSlug}/divers/${order.person.id}`}
+              className={buttonClass({ variant: "secondary", className: "text-foreground" })}
+            >
+              {t("orders.detail.backToDiver")}
+            </Link>
+          </>
         }
       />
 
       {notice ? (
-        <StaffNoticeBanner tone={banner?.tone ?? "success"}>
-          {banner ? t(banner.key) : notice}
+        // An unrecognised code renders the neutral fallback sentence, never the
+        // raw query value: `?notice=` is attacker-craftable, and this is a money
+        // screen — a hostile link must not be able to paint its own words into a
+        // success-green banner (same rule as orders/new's fallback).
+        <StaffNoticeBanner tone={banner?.tone ?? "neutral"}>
+          {banner ? t(banner.key) : t("orders.detail.notice.fallback")}
         </StaffNoticeBanner>
       ) : null}
 

@@ -245,7 +245,11 @@ export default async function TeamSettingsPage({
     session.user.shopId,
     session.user.personId,
   );
-  if (!canManage) redirect(`/shop/${shopSlug}`);
+  // Settings, not Today: Team is a Settings sub-page, and the nearest parent
+  // surface is where a refusal explains itself best (the same landing the
+  // promos and WhatsApp gates already use). A code the destination handles,
+  // never a silent teleport (task 82).
+  if (!canManage) redirect(`/shop/${shopSlug}/settings?notice=team_not_authorized`);
 
   const staff = await listShopStaff(db, session.user.shopId);
   const shop = await getShopById(db, session.user.shopId);

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
+import { FlashParams } from "@/components/FlashParams";
 import { ImageFileInput } from "@/components/ImageFileInput";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { StoredPhoto } from "@/components/StoredPhoto";
@@ -16,7 +17,9 @@ import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatFaqs } from "@/lib/courses";
 import { toShopCurrency } from "@/lib/money";
+import { publicCoursePath } from "@/lib/public-routes";
 import { requireStaffSession } from "@/lib/session";
+import { noticeFromParam } from "@/lib/staff-notices";
 import { MAX_IMAGE_MB, MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION } from "@/lib/storage/limits";
 import { DayByDayEditor } from "./_components/DayByDayEditor";
 import { FieldErrorFocus } from "./_components/FieldErrorFocus";
@@ -66,6 +69,12 @@ export default async function EditCoursePage({
       max: MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION,
     }),
   };
+  // `Object.hasOwn`, not `messages[notice]` / `errors[error]`: both params are
+  // attacker-supplied, and a bare lookup walks the prototype —
+  // `?notice=constructor` resolved to a *function*, which React then tried to
+  // render as a child (src/lib/staff-notices.ts).
+  const noticeText = noticeFromParam(notice, messages);
+  const errorText = noticeFromParam(error, errors);
 
   const levelAge =
     (course.minimumCertificationLevel
@@ -77,6 +86,12 @@ export default async function EditCoursePage({
 
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+      {/* One-shot, like every other staff notice: without this, `?notice=saved`
+          stayed in the URL and replayed "Saved" on every refresh and every
+          back-navigation, long after the save. `field` rides along because it
+          only ever means "focus this on the render that just failed" — the
+          server already computed both, so stripping them changes no output. */}
+      <FlashParams params={["notice", "error", "field"]} />
       <Link href={back} className="text-sm font-medium text-primary hover:underline">
         {t("courses.edit.backToCourses")}
       </Link>
@@ -90,10 +105,10 @@ export default async function EditCoursePage({
               <p className="text-sm text-muted">
                 {t("courses.edit.liveAt")}{" "}
                 <Link
-                  href={`/shop/${shopSlug}/courses/${slug}`}
+                  href={publicCoursePath(shopSlug, slug)}
                   className="font-medium text-primary hover:underline"
                 >
-                  /shop/{shopSlug}/courses/{slug}
+                  {publicCoursePath(shopSlug, slug)}
                 </Link>
               </p>
             ) : (
@@ -114,10 +129,10 @@ export default async function EditCoursePage({
         />
       </div>
 
-      {notice && messages[notice] ? <ShopNotice>{messages[notice]}</ShopNotice> : null}
-      {error && errors[error] ? (
+      {noticeText ? <ShopNotice>{noticeText}</ShopNotice> : null}
+      {errorText ? (
         <ShopNotice tone="danger" role="alert">
-          {errors[error]}
+          {errorText}
         </ShopNotice>
       ) : null}
       <FieldErrorFocus field={error ? field : undefined} />

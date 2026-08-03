@@ -238,6 +238,11 @@ describe("orders", () => {
     const fetched = await getOrder(db, shop.id, result.order.id);
     expect(fetched?.lineItems).toHaveLength(2);
     expect(fetched?.person.id).toBe(entry.person.id);
+    // Who raised it, for the detail page's "Raised {date} by {name}" line.
+    expect(fetched?.createdBy).toEqual({ id: entry.person.id, fullName: entry.person.fullName });
+    // …and it stays inside the tenant: a lookup scoped to another shop finds no
+    // order at all, so nothing about its creator leaks either.
+    expect(fetched?.order.createdByPersonId).toBe(entry.person.id);
 
     const list = await listOrders(db, shop.id);
     expect(list.map((row) => row.order.id)).toContain(result.order.id);

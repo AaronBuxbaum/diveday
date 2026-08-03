@@ -35,8 +35,14 @@ import {
 import { currencyOptions } from "@/i18n/currency-labels";
 import { catalogItemLabel, rentableItemLabel } from "@/i18n/rental-labels";
 import { requestLocale } from "@/i18n/request";
-import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
-import { canExportShopData, canImportShopData, canManageMessagingSettings } from "@/lib/authz";
+import { type StaffMessageKey, type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
+import {
+  canExportShopData,
+  canImportShopData,
+  canManageMessagingSettings,
+  canManageStaffAccounts,
+  canViewShopReports,
+} from "@/lib/authz";
 import { isShopCurrency, majorToMinor, maxPriceMajor, toShopCurrency } from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { connectProviderFromEnvironment } from "@/lib/payments/connect";
@@ -105,6 +111,12 @@ function noticeMessages(
     // non-owner/manager here, and the payment-settings wording above would
     // explain the wrong surface.
     whatsapp_not_authorized: { tone: "danger", text: t("whatsapp.notice.not_authorized") },
+    // Team and Import are the last two Settings sub-pages whose gate used to
+    // teleport a refused staffer to Today saying nothing at all. Same rule as
+    // the four above: bounce to the nearest parent surface with a code it
+    // handles (task 82).
+    team_not_authorized: { tone: "danger", text: t("settings.team.notice.notAuthorized") },
+    import_not_authorized: { tone: "danger", text: t("settings.import.notice.notAuthorized") },
   };
 }
 
@@ -451,24 +463,69 @@ function StatusRow({
 }
 
 /**
- * A labelled group of settings cards with an anchor `#id` — "Your shop" /
- * "Money" / "Data & integrations" (task 154). Cards keep their own `<h3>`;
- * this is the page's real `<h2>` level, so the heading hierarchy stays
+ * The page's three groups, in render order — "Your shop" / "Money" / "Data &
+ * integrations" (task 154). One list rather than three literals so the jump
+ * row below and the `<h2 id>` it targets cannot disagree: the anchors existed
+ * for a release with nothing linking them, which is how a 7,000px page ends up
+ * with no way down it but the scrollbar.
+ */
+export const SETTINGS_GROUPS = [
+  { id: "your-shop", labelKey: "settings.main.groups.yourShop" },
+  { id: "money", labelKey: "settings.main.groups.money" },
+  { id: "data-integrations", labelKey: "settings.main.groups.dataIntegrations" },
+] as const satisfies readonly { id: string; labelKey: StaffMessageKey }[];
+
+type SettingsGroupSpec = (typeof SETTINGS_GROUPS)[number];
+
+const [YOUR_SHOP_GROUP, MONEY_GROUP, DATA_GROUP] = SETTINGS_GROUPS;
+
+/**
+ * Plain in-page anchors, deliberately: a hash link is a same-document jump the
+ * browser handles itself, so it never re-renders the route and cannot disturb
+ * `PreserveFormScroll`'s save-on-submit / restore-on-return handshake the way a
+ * router navigation or a scroll-scripted button would.
+ */
+export function SettingsJumpNav({ label, groupLabels }: { label: string; groupLabels: string[] }) {
+  return (
+    // The rule sits on the wrapper at content width; the row inside is pulled
+    // left by its own first link's padding, so the first label lines up with
+    // the page title above rather than sitting 12px inside it. The padding
+    // itself stays — with `min-h-11` it is what makes each label a real touch
+    // target on a phone.
+    <div className="-mt-2 mb-8 border-b border-border pb-2">
+      <nav aria-label={label} className="-ml-3 flex flex-wrap items-center gap-x-1">
+        {SETTINGS_GROUPS.map((group, index) => (
+          <a
+            key={group.id}
+            href={`#${group.id}`}
+            className={buttonClass({ variant: "link", size: "sm" })}
+          >
+            {groupLabels[index]}
+          </a>
+        ))}
+      </nav>
+    </div>
+  );
+}
+
+/**
+ * A labelled group of settings cards with an anchor `#id`. Cards keep their own
+ * `<h3>`; this is the page's real `<h2>` level, so the heading hierarchy stays
  * `<h1>` (ShopPageHeader) -> group `<h2>` -> card `<h3>`.
  */
-function SettingsGroup({
-  id,
+export function SettingsGroup({
+  group,
   label,
   children,
 }: {
-  id: string;
+  group: SettingsGroupSpec;
   label: string;
   children: ReactNode;
 }) {
   return (
     <div className="mt-10 first:mt-0">
       <h2
-        id={id}
+        id={group.id}
         className="mb-4 scroll-mt-24 text-xs font-semibold tracking-[0.14em] text-muted uppercase"
       >
         {label}
@@ -548,6 +605,12 @@ export default async function SettingsPage({
   // Hiding the link is convenience; the page itself re-checks against live roles.
   const canManageMessaging = canManageMessagingSettings(session.user.roles);
   const canExport = canExportShopData(session.user.roles);
+  // The same two gates the nav registry hangs Team and Promo codes off
+  // (src/lib/staff-destinations.ts), so a divemaster who has neither is never
+  // shown a door that would bounce them (ADR
+  // 20260724-role-gated-surfaces-hide-not-explain). Both pages re-check.
+  const canManageTeam = canManageStaffAccounts(session.user.roles);
+  const canManagePromos = canViewShopReports(session.user.roles);
   const locale = await requestLocale(shop.defaultLocale);
   const shopCurrency = toShopCurrency(shop.currency);
   const currencyMismatch = stripeCurrencyMismatch(shopCurrency, account);
@@ -569,11 +632,34 @@ export default async function SettingsPage({
         description={t("settings.main.description")}
       />
 
+      <SettingsJumpNav
+        label={t("settings.main.jump.label")}
+        groupLabels={SETTINGS_GROUPS.map((group) => t(group.labelKey))}
+      />
+
       {banner && !activeSection ? (
         <StaffNoticeBanner tone={banner.tone}>{banner.text}</StaffNoticeBanner>
       ) : null}
 
-      <SettingsGroup id="your-shop" label={t("settings.main.groups.yourShop")}>
+      <SettingsGroup group={YOUR_SHOP_GROUP} label={t(YOUR_SHOP_GROUP.labelKey)}>
+        {/* Who works here comes first: an owner opening Settings to add a
+            colleague used to find no door to Team anywhere on this page — only
+            the nav's "Set up" menu and ⌘K knew it existed. */}
+        {canManageTeam ? (
+          <section className="mb-6 rounded-lg border border-border bg-surface p-6">
+            <h3 className="font-medium">{t("settings.main.team.heading")}</h3>
+            <p className="mt-1 text-sm text-muted">{t("settings.main.team.description")}</p>
+            <div className="mt-4">
+              <Link
+                href={`/shop/${shopSlug}/settings/team`}
+                className={buttonClass({ variant: "secondary", className: "text-foreground" })}
+              >
+                {t("settings.main.team.cta")}
+              </Link>
+            </div>
+          </section>
+        ) : null}
+
         <section className="rounded-lg border border-border bg-surface p-6">
           <h3 className="font-medium">{t("settings.main.contact.heading")}</h3>
           <p className="mt-1 text-sm text-muted">{t("settings.main.contact.description")}</p>
@@ -824,7 +910,7 @@ export default async function SettingsPage({
         </section>
       </SettingsGroup>
 
-      <SettingsGroup id="money" label={t("settings.main.groups.money")}>
+      <SettingsGroup group={MONEY_GROUP} label={t(MONEY_GROUP.labelKey)}>
         <section className="rounded-lg border border-border bg-surface p-6">
           <h3 className="font-medium">{t("settings.main.orders.heading")}</h3>
           <p className="mt-1 text-sm text-muted">{t("settings.main.orders.description")}</p>
@@ -837,6 +923,24 @@ export default async function SettingsPage({
             </Link>
           </div>
         </section>
+
+        {/* Beside Orders because both are money a shop reads rather than
+            configures. This page already answers for promos' refusal
+            (`promos_not_authorized` above) — it just had no way in. */}
+        {canManagePromos ? (
+          <section className="mt-6 rounded-lg border border-border bg-surface p-6">
+            <h3 className="font-medium">{t("settings.main.promos.heading")}</h3>
+            <p className="mt-1 text-sm text-muted">{t("settings.main.promos.description")}</p>
+            <div className="mt-4">
+              <Link
+                href={`/shop/${shopSlug}/promos`}
+                className={buttonClass({ variant: "secondary", className: "text-foreground" })}
+              >
+                {t("settings.main.promos.cta")}
+              </Link>
+            </div>
+          </section>
+        ) : null}
 
         {canPayments ? null : (
           <div className="mt-6">
@@ -1072,7 +1176,7 @@ export default async function SettingsPage({
         ) : null}
       </SettingsGroup>
 
-      <SettingsGroup id="data-integrations" label={t("settings.main.groups.dataIntegrations")}>
+      <SettingsGroup group={DATA_GROUP} label={t(DATA_GROUP.labelKey)}>
         <section className="rounded-lg border border-border bg-surface p-6">
           <h3 className="font-medium">{t("settings.main.embed.heading")}</h3>
           <p className="mt-1 text-sm text-muted">{t("settings.main.embed.description")}</p>

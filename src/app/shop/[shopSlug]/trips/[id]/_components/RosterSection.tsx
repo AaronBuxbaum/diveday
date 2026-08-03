@@ -113,6 +113,7 @@ export function RosterSection({
   rentalFitByBooking,
   nitroxByBooking,
   requiresPayment,
+  paymentsConnected,
   cancellationDeadline,
   markWaiverInPersonAction,
   markPaymentAction,
@@ -145,6 +146,12 @@ export function RosterSection({
   rentalFitByBooking: RentalFitByBooking;
   nitroxByBooking: NitroxByBooking;
   requiresPayment: boolean;
+  /**
+   * Whether the shop has a Stripe account that can actually take money.
+   * `orders/new` refuses without one, so the per-seat "Create order" link
+   * becomes "Connect payments" rather than a click that bounces straight back.
+   */
+  paymentsConnected: boolean;
   /** When free cancellation closes, so staff see a refund cue on paid seats; null = no stated window. */
   cancellationDeadline: Date | null;
   markWaiverInPersonAction: (formData: FormData) => void;
@@ -686,10 +693,16 @@ export function RosterSection({
                     />
                   ) : null}
                   <Link
-                    href={`/shop/${shopSlug}/orders/new?personId=${person.id}&bookingId=${booking.id}`}
+                    href={
+                      paymentsConnected
+                        ? `/shop/${shopSlug}/orders/new?personId=${person.id}&bookingId=${booking.id}`
+                        : `/shop/${shopSlug}/settings#money`
+                    }
                     className="inline-flex min-h-11 items-center py-2 text-sm font-medium text-primary hover:underline"
                   >
-                    {t("trips.roster.createOrder")}
+                    {paymentsConnected
+                      ? t("trips.roster.createOrder")
+                      : t("shared.payments.connect")}
                   </Link>
                   <Link
                     href={`/shop/${shopSlug}/orders?personId=${person.id}`}

@@ -754,6 +754,17 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { name: "The board" }).waitFor();
         await capture(page, "schedule-builder", scheme);
 
+        // The whole add-a-departure form, which the board above only ever
+        // shows as a button — every field a departure is born with, price
+        // included, and the surface with no baseline at all until now.
+        await page.getByRole("button", { name: "Add a departure", exact: true }).click();
+        // Its two selects fetch their options when the panel opens; wait for
+        // the placeholder option to go, so the shot is never of "Loading…".
+        await page
+          .locator('select[name="courseId"] option[disabled]')
+          .waitFor({ state: "detached" });
+        await capture(page, "schedule-builder-add", scheme);
+
         // The roster, then one diver's full profile (certs, specialty cards,
         // contact) — the front desk's densest everyday surfaces.
         // Wait for the roster itself, not the skeleton: same race as the public
@@ -774,6 +785,14 @@ for (const scheme of ["light", "dark"] as const) {
           .filter({ visible: true })
           .click();
         await page.getByRole("heading", { level: 1, name: "Priya Sharma" }).waitFor();
+        // Park the pointer before shooting a diver record. The roster row these
+        // four captures click sits, at 390, exactly where the record's sub-nav
+        // bar lands — so the pointer left behind by the click renders one tab in
+        // its hover state, and the phone baselines photographed a "Fit" that
+        // looked selected. Deterministic, so never a flake; just a lie about
+        // state that a reviewer has to re-derive every time. (0,0) is the demo
+        // banner, which has nothing hoverable in the corner.
+        await page.mouse.move(0, 0);
         await capture(page, "diver-profile", scheme);
 
         // A diver holding a card past its shop refresher-due date: the
@@ -787,6 +806,7 @@ for (const scheme of ["light", "dark"] as const) {
           .filter({ visible: true })
           .click();
         await page.getByRole("heading", { level: 1, name: "Yusuf Demir" }).waitFor();
+        await page.mouse.move(0, 0);
         await capture(page, "diver-profile-expired", scheme);
 
         // The migrated diver, and every surface that has to say so. Her level
@@ -805,6 +825,7 @@ for (const scheme of ["light", "dark"] as const) {
           .filter({ visible: true })
           .click();
         await page.getByRole("heading", { level: 1, name: "Hana Kobayashi" }).waitFor();
+        await page.mouse.move(0, 0);
         await capture(page, "diver-profile-imported", scheme);
 
         // A diver who has actually paid for something. None of the three
@@ -836,7 +857,10 @@ for (const scheme of ["light", "dark"] as const) {
           .filter({ visible: true })
           .click();
         await page.getByRole("heading", { level: 1, name: "Talia Rosen" }).waitFor();
+        // Still resolves after the reorder — Payments moved from seventh to
+        // fourth, but the section (and its heading) is the same one.
         await page.getByRole("heading", { name: "Payments" }).waitFor();
+        await page.mouse.move(0, 0);
         await capture(page, "diver-profile-payments", scheme);
 
         // The seeded reef trip: schedule card → Overview (what the dive is) →
@@ -1059,9 +1083,13 @@ for (const scheme of ["light", "dark"] as const) {
 
         // The moderation queue: published reviews, and the "waiting on you"
         // card a written review sits in until staff release it
-        // (docs ADR 20260729-verified-diver-reviews).
+        // (docs ADR 20260729-verified-diver-reviews). Waiting on the bulk
+        // control specifically, not just the heading: "Publish selected" and
+        // the per-row tick boxes come from a client provider, and a capture
+        // taken before it mounts photographs a list with no checkboxes in it.
         await page.goto("/shop/blue-mantis/reviews");
         await page.getByRole("heading", { level: 1, name: "What divers said" }).waitFor();
+        await page.getByRole("button", { name: "Publish selected" }).waitFor();
         await capture(page, "staff-reviews", scheme);
 
         // Shop-wide discount codes: the create form plus the seeded codes with

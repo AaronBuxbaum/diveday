@@ -137,12 +137,19 @@ export default async function NewOrderPage({
   const { notice, personId: prefillPersonId, bookingId: prefillBookingId } = await searchParams;
   const db = await getDb();
 
+  // The gate, not a courtesy: the entry links hide themselves when the shop
+  // can't accept payments, but this page refuses regardless of how it was
+  // reached. Both landings carry a notice code the destination handles — a
+  // refusal that teleports you somewhere silently reads as a broken button
+  // (task 82). With a diver in hand we go back to their record; without one,
+  // the Orders index, which is the surface this door belongs to. Never
+  // `/divers`, which has nothing to say about payments.
   const account = await getShopStripeAccount(db, session.user.shopId);
   if (!canAcceptPayments(account)) {
     redirect(
       prefillPersonId
         ? `/shop/${shopSlug}/divers/${prefillPersonId}?notice=payment-not-connected`
-        : `/shop/${shopSlug}/divers`,
+        : `/shop/${shopSlug}/orders?notice=payment_not_connected`,
     );
   }
 

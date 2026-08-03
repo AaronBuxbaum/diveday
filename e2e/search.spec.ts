@@ -70,6 +70,10 @@ test("the command palette also finds dive sites, courses, and every gated nav de
     // the shared destination registry now, so each is reachable from both.
     ["Orders", /\/orders$/],
     ["Team", /\/settings\/team$/],
+    // The global seat-a-diver door. It was hand-written into the palette
+    // itself until it earned a registry entry of its own, so this row now
+    // proves the same list the nav and the shortcut sheet read.
+    ["Add a booking", /\/bookings\/new$/],
   ] as const) {
     await shortcuts.fill(query);
     await page.getByRole("option", { name: query, exact: true }).click();

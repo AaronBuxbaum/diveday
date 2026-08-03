@@ -77,6 +77,11 @@ export default async function NewBookingPage({
 
       <section className="mt-6 rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-6">
         <h2 className="text-lg font-semibold">{t("bookings.new.tripHeading")}</h2>
+        {/* The list is filtered to departures with a seat left, and a filter
+            nobody announced reads as a missing departure: a sold-out Saturday
+            simply wasn't here, with nothing on screen to say why or what to do
+            about it. Says both, and names the board as the place to do it. */}
+        <p className="mt-1 text-sm text-muted">{t("bookings.new.fullExcluded")}</p>
         {trips.length === 0 ? (
           <EmptyState className="mt-2">
             <p className="text-sm text-muted">{t("bookings.new.tripEmpty")}</p>

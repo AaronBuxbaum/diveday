@@ -21,6 +21,7 @@ import { currencySymbol, minorToMajor } from "@/lib/money";
 import { publicSchedulePath } from "@/lib/public-routes";
 import { verifyRecapToken } from "@/lib/recap-links";
 import { MAX_REVIEW_COMMENT_LENGTH, REVIEW_RATINGS } from "@/lib/reviews";
+import { noticeFromParam } from "@/lib/staff-notices";
 import { MAX_IMAGE_MB } from "@/lib/storage/limits";
 import { temperatureUnitFor } from "@/lib/temperature-units";
 import { startTipAction, submitReviewAction, uploadRecapPhotoAction } from "./actions";
@@ -206,8 +207,11 @@ export default async function DiveRecapPage({
     (reviewParam === "published" || reviewParam === "pending") &&
     ownReview !== null &&
     ownReview.rating >= 4;
-  const photoNotice = photo ? PHOTO_NOTICES[photo] : undefined;
-  const tipNotice = tipParam ? TIP_NOTICES[tipParam] : undefined;
+  // `Object.hasOwn`, not a bare `PHOTO_NOTICES[photo]` — both params are
+  // attacker-supplied and a bare lookup walks the prototype
+  // (src/lib/staff-notices.ts).
+  const photoNotice = noticeFromParam(photo, PHOTO_NOTICES);
+  const tipNotice = noticeFromParam(tipParam, TIP_NOTICES);
   const atPhotoLimit = photos.length >= MAX_RECAP_PHOTOS_PER_BOOKING;
   const remainingPhotoSlots = Math.max(0, MAX_RECAP_PHOTOS_PER_BOOKING - photos.length);
   const firstName = diverName.trim().split(/\s+/)[0] || t("recap.namelessFallback");

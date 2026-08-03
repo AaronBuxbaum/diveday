@@ -36,6 +36,29 @@ test.describe("demo billing history", () => {
     await expect(page.getByText(/backed by a live Stripe invoice/i)).toBeVisible();
   });
 
+  test("an order opened from the index says when it was raised and offers both ways back", async ({
+    page,
+  }) => {
+    // Arriving from the index (not from a diver) used to leave browser-back as
+    // the only exit, and the date the index column showed disappeared on the
+    // way in — on the one screen a refund argument turns on.
+    await page.goto("/shop/blue-mantis/orders");
+    await page.getByRole("heading", { level: 1, name: "Orders" }).waitFor();
+    const firstRow = page.locator("tbody tr").filter({ visible: true }).first();
+    const rowDate = ((await firstRow.locator("td").nth(3).textContent()) ?? "").trim();
+    await firstRow.getByRole("link").first().click();
+    await page.waitForURL(/\/orders\/[0-9a-f-]{36}/);
+
+    // The same day the row showed, plus who raised it.
+    await expect(page.getByText(`Raised ${rowDate}`)).toBeVisible();
+    await expect(page.getByText(/Raised .+ · by .+/)).toBeVisible();
+
+    // Both journeys home, neither of them the browser's back button.
+    await expect(page.getByRole("link", { name: "Back to diver" })).toBeVisible();
+    await page.getByRole("link", { name: "Back to orders" }).click();
+    await expect(page).toHaveURL(/\/shop\/blue-mantis\/orders$/);
+  });
+
   /**
    * The index is paged (`ORDER_PAGE_SIZE`). Before that it rendered every one
    * of the demo's 323 invoices in a single ~17,700px scroll — the whole table
@@ -97,5 +120,71 @@ test.describe("demo billing history", () => {
     for (const row of await rows.all()) {
       await expect(row.getByText("Paid").filter({ visible: true }).first()).toBeVisible();
     }
+  });
+});
+
+/**
+ * The demo never connects a Stripe account, which makes it the day-one shop:
+ * `orders/new` refuses to open at all. It used to refuse by redirecting to a
+ * notice code nothing rendered (with a diver in hand) or to `/divers` with no
+ * message (without one) — so "New order" was a button that visibly did
+ * nothing, on the very first shop anyone sees. The server-side gate is
+ * unchanged; what these cover is that the refusal is now legible and that the
+ * entry links stop leading into it.
+ */
+test.describe("no connected payment account", () => {
+  signedInAsOwner();
+
+  test("the orders index offers connecting payments instead of a dead New order", async ({
+    page,
+  }) => {
+    await page.goto("/shop/blue-mantis/orders");
+    await page.getByRole("heading", { level: 1, name: "Orders" }).waitFor();
+
+    await expect(page.getByRole("link", { name: "New order" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Connect payments" }).first()).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/settings#money",
+    );
+  });
+
+  test("reaching orders/new anyway lands back on Orders with a reason", async ({ page }) => {
+    // Hiding the link is a courtesy; the page itself is the gate. A bookmark,
+    // a deep link, or a shop that disconnected mid-session still gets here.
+    await page.goto("/shop/blue-mantis/orders/new");
+    await page.getByRole("heading", { level: 1, name: "Orders" }).waitFor();
+    // Not a URL assertion: FlashParams strips `?notice=payment_not_connected`
+    // on mount, so the rendered banner is what proves the code was handled —
+    // an unhandled code renders nothing and fails here.
+    await expect(page.getByText(/Payments aren't connected yet/i).first()).toBeVisible();
+  });
+
+  test("reaching it with a diver in hand lands back on that diver with a reason", async ({
+    page,
+  }) => {
+    await page.goto("/shop/blue-mantis/divers");
+    await page.getByRole("searchbox", { name: "Search divers" }).fill("Grace Halloran");
+    await page
+      .getByRole("row")
+      .filter({ hasText: "Grace Halloran" })
+      .getByRole("link")
+      .first()
+      .click();
+    await page.getByRole("heading", { level: 1, name: "Grace Halloran" }).waitFor();
+    const personId = new URL(page.url()).pathname.split("/").pop() ?? "";
+    expect(personId).not.toBe("");
+
+    // The diver record's own invoice buttons are replaced, not dead.
+    await expect(page.getByRole("link", { name: "New payment" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Connect payments" }).first()).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/settings#money",
+    );
+
+    await page.goto(`/shop/blue-mantis/orders/new?personId=${personId}`);
+    await page.getByRole("heading", { level: 1, name: "Grace Halloran" }).waitFor();
+    // This is the code that rendered *nothing* before — the whole bug.
+    await expect(page.getByText(/Payments aren't connected yet/i).first()).toBeVisible();
+    await expect(page.getByRole("link", { name: "Connect payments" }).first()).toBeVisible();
   });
 });

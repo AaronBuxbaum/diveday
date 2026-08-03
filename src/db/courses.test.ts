@@ -11,6 +11,7 @@ import {
   archiveCourse,
   createCourse,
   getCourseBySlug,
+  hasActiveCourses,
   listActiveCourses,
   listActiveCoursesForSitemap,
   listCourses,
@@ -1056,5 +1057,50 @@ describe("sitemap queries (in-memory PGlite)", () => {
     expect(courseRows).not.toContainEqual(
       expect.objectContaining({ shopSlug: "demo-shop-sitemap" }),
     );
+  });
+});
+
+/**
+ * What decides whether the public header shows a "Courses" tab. A tab that
+ * leads to an empty catalog is worse than no tab, and a tab that stays hidden
+ * while the shop has courses makes them unreachable — that was the bug.
+ */
+describe("hasActiveCourses", () => {
+  it("is false for a shop that teaches nothing, and never sees another shop's catalog", async () => {
+    const db = await createTestDb();
+    const [empty] = await db
+      .insert(shops)
+      .values({ name: "Empty Shop", slug: "empty-shop-nav", timezone: "America/New_York" })
+      .returning();
+    const [teaching] = await db
+      .insert(shops)
+      .values({ name: "Teaching Shop", slug: "teaching-shop-nav", timezone: "America/New_York" })
+      .returning();
+    if (!empty || !teaching) throw new Error("setup shop insert failed");
+    await createCourse(db, { shopId: teaching.id, title: "Open Water", slug: "open-water-nav" });
+
+    expect(await hasActiveCourses(db, empty.id)).toBe(false);
+    expect(await hasActiveCourses(db, teaching.id)).toBe(true);
+  });
+
+  it("goes false again when the shop's last course is hidden, and true when it comes back", async () => {
+    const db = await createTestDb();
+    const [shop] = await db
+      .insert(shops)
+      .values({ name: "Toggling Shop", slug: "toggling-shop-nav", timezone: "America/New_York" })
+      .returning();
+    if (!shop) throw new Error("setup shop insert failed");
+    const course = await createCourse(db, {
+      shopId: shop.id,
+      title: "Nitrox",
+      slug: "nitrox-nav",
+    });
+    if (!course) throw new Error("setup course insert failed");
+
+    expect(await hasActiveCourses(db, shop.id)).toBe(true);
+    await setCourseVisibility(db, shop.id, course.id, false);
+    expect(await hasActiveCourses(db, shop.id)).toBe(false);
+    await setCourseVisibility(db, shop.id, course.id, true);
+    expect(await hasActiveCourses(db, shop.id)).toBe(true);
   });
 });

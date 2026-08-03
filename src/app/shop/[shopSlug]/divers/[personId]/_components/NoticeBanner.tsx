@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { noticeFromParam } from "@/lib/staff-notices";
 
@@ -23,7 +24,14 @@ const TONE_CLASS: Record<NoticeTone, string> = {
   warning: "bg-warning/10 text-warning-strong",
 };
 
-const NOTICE_KEYS: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
+/**
+ * A notice that names something the staffer can go and fix carries the link to
+ * it, rather than describing a place and leaving them to find it. Only the
+ * refusals that have somewhere to send someone get one.
+ */
+type NoticeLink = { key: StaffMessageKey; href: (shopSlug: string) => string };
+
+const NOTICE_KEYS: Record<string, { tone: NoticeTone; key: StaffMessageKey; link?: NoticeLink }> = {
   captured: { tone: "success", key: "divers.notices.captured" },
   "captured-no-photo": { tone: "success", key: "divers.notices.capturedNoPhoto" },
   verified: { tone: "success", key: "divers.notices.verified" },
@@ -61,9 +69,29 @@ const NOTICE_KEYS: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = 
   "not-authorized-fit": { tone: "danger", key: "divers.notices.notAuthorizedFit" },
   "card-sighting-required": { tone: "danger", key: "divers.notices.cardSightingRequired" },
   invalid: { tone: "danger", key: "divers.notices.invalid" },
+  // `orders/new` refuses to open at all until the shop can accept payments and
+  // bounces back here. Without an entry this code rendered nothing, so the
+  // "New payment" button read as simply broken — the click went nowhere and
+  // said nothing. The link is the whole point: the fix is one screen away.
+  "payment-not-connected": {
+    tone: "warning",
+    key: "divers.notices.paymentNotConnected",
+    link: {
+      key: "shared.payments.connect",
+      href: (shopSlug) => `/shop/${shopSlug}/settings#money`,
+    },
+  },
 };
 
-export function NoticeBanner({ notice, locale }: { notice?: string; locale: string }) {
+export function NoticeBanner({
+  notice,
+  locale,
+  shopSlug,
+}: {
+  notice?: string;
+  locale: string;
+  shopSlug: string;
+}) {
   const banner = noticeFromParam(notice, NOTICE_KEYS);
   if (!banner) return null;
   const t = staffTranslator(locale);
@@ -74,6 +102,14 @@ export function NoticeBanner({ notice, locale }: { notice?: string; locale: stri
       className={`mt-6 rounded-lg px-4 py-3 text-sm font-medium ${TONE_CLASS[banner.tone]}`}
     >
       {t(banner.key)}
+      {banner.link ? (
+        <>
+          {" "}
+          <Link href={banner.link.href(shopSlug)} className="underline underline-offset-2">
+            {t(banner.link.key)}
+          </Link>
+        </>
+      ) : null}
     </p>
   );
 }

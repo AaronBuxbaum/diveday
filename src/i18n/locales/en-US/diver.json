@@ -21,6 +21,7 @@
   },
   "shopChrome": {
     "skipToContent": "Skip to main content",
+    "navAriaLabel": "Shop pages",
     "footerLine": "{shop} · Powered by DiveDay"
   },
   "schedule": {

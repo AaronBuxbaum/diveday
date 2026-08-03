@@ -37,6 +37,10 @@ test.describe("schedule builder", () => {
     const row = page.getByRole("listitem").filter({ hasText: title });
     await expect(row).toHaveCount(1);
     await expect(row.getByText("0/8")).toBeVisible();
+    // No price was typed, so the board still says so — the badge is the flag
+    // for a departure that reaches the public page unpriced, and adding the
+    // box did not quietly retire it.
+    await expect(row.getByText("No price set")).toBeVisible();
 
     // Move — the departure slides to another day, keeping its length.
     await control(page, "Move", title).click();
@@ -67,6 +71,29 @@ test.describe("schedule builder", () => {
         remaining - 1,
       );
     }
+  });
+
+  test("a departure priced on the board is never flagged unpriced", async ({ page }) => {
+    // The builder used to have no price box at all, so every departure minted
+    // here published to the public schedule unpriced and then got flagged for
+    // it (task 150). Price it in the same breath and there is nothing to flag.
+    const title = `Priced Trip ${e2eNow().getTime()}`;
+    await page.goto(BOARD);
+    await page.getByRole("button", { name: "Add a departure", exact: true }).click();
+    await page.getByLabel("What is it").fill(title);
+    await page.getByLabel("Date").fill(daysFromNow(4));
+    await page.getByLabel("Seats").fill("6");
+    await page.getByLabel(/Price per diver/).fill("129");
+    await page.getByRole("button", { name: "Put it on the board" }).click();
+    await expect(page.getByRole("status")).toContainText("It’s on the board.");
+
+    const row = page.getByRole("listitem").filter({ hasText: title });
+    await expect(row).toHaveCount(1);
+    await expect(row.getByText("No price set")).toHaveCount(0);
+    // And the figure landed on the trip itself, not just off the badge: its
+    // Details form comes back pre-filled with what the board was told.
+    await row.getByRole("link", { name: title }).click();
+    await expect(page.getByLabel(/Price per diver/)).toHaveValue("129");
   });
 
   test("opening and cancelling the add/move panels manages keyboard focus", async ({ page }) => {

@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { EmptyState } from "@/components/EmptyState";
+import { FlashParams } from "@/components/FlashParams";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
@@ -9,10 +11,12 @@ import { getDb } from "@/db/client";
 import { listShopOrders } from "@/db/orders";
 import { orderStatus } from "@/db/schema";
 import { getShopById } from "@/db/shops";
+import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { formatMoneyCents, formatShortDate } from "@/lib/format";
 import { requireStaffSession } from "@/lib/session";
+import { type NoticeTone, noticeFromParam } from "@/lib/staff-notices";
 import { wallTimeToUtc } from "@/lib/zoned";
 
 // TODO: Cache Components adoption. Refactor this route so this opt-out can be removed.
@@ -32,6 +36,15 @@ const STATUS_KEYS: Record<string, StaffMessageKey> = {
 const STATUS_TONES: Record<string, BadgeTone> = {
   paid: "success",
   open: "primary",
+};
+
+/**
+ * Where `orders/new` lands a staffer it turned away for having no connected
+ * account and no diver in hand — this index, the surface that door belongs
+ * to, rather than `/divers`, which has nothing to say about payments.
+ */
+const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
+  payment_not_connected: { tone: "warning", key: "orders.index.notice.paymentNotConnected" },
 };
 
 const DATE_INPUT = /^(\d{4})-(\d{2})-(\d{2})$/;
@@ -75,16 +88,23 @@ export default async function OrdersIndexPage({
     from?: string;
     to?: string;
     page?: string;
+    notice?: string;
   }>;
 }) {
   const session = await requireStaffSession();
   const { shopSlug } = await params;
-  const { status, personId, personQuery, from, to, page } = await searchParams;
+  const { status, personId, personQuery, from, to, page, notice } = await searchParams;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) return null;
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
+  const banner = noticeFromParam(notice, NOTICES);
+  // Hiding the New order button when there's no account to invoice from is a
+  // courtesy — `orders/new` re-checks and refuses regardless. What it buys is
+  // that a day-one shop's Orders index offers the one thing that actually
+  // moves them forward instead of a button that bounces them right back here.
+  const paymentsConnected = canAcceptPayments(await getShopStripeAccount(db, session.user.shopId));
 
   const statusFilter = orderStatus.enumValues.includes(
     status as (typeof orderStatus.enumValues)[number],
@@ -130,16 +150,25 @@ export default async function OrdersIndexPage({
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+      <FlashParams params={["notice"]} />
       <ShopPageHeader
         eyebrow={t("orders.index.eyebrow")}
         title={t("orders.index.title")}
         description={t("orders.index.description")}
         actions={
-          <Link href={`/shop/${shopSlug}/orders/new`} className={buttonClass()}>
-            {t("orders.index.newOrder")}
-          </Link>
+          paymentsConnected ? (
+            <Link href={`/shop/${shopSlug}/orders/new`} className={buttonClass()}>
+              {t("orders.index.newOrder")}
+            </Link>
+          ) : (
+            <Link href={`/shop/${shopSlug}/settings#money`} className={buttonClass()}>
+              {t("shared.payments.connect")}
+            </Link>
+          )
         }
       />
+
+      {banner ? <StaffNoticeBanner tone={banner.tone}>{t(banner.key)}</StaffNoticeBanner> : null}
 
       <FieldGrid as="form" columns={4} className="rounded-lg border border-border bg-surface p-4">
         <Field label={t("orders.index.filters.statusLabel")}>

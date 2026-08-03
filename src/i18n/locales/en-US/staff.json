@@ -121,6 +121,14 @@
     "day": "Day {number}"
   },
   "divers": {
+    "subNav": {
+      "ariaLabel": "Diver record",
+      "cards": "Cards",
+      "fit": "Fit",
+      "payments": "Payments",
+      "trips": "Trips",
+      "history": "History"
+    },
     "upcoming": {
       "heading": "Upcoming trips"
     },
@@ -409,6 +417,7 @@
       "refundFailed": "That payment could not be refunded. It may not be paid, or Stripe may need attention.",
       "demoDisabled": "This is a demo order — it isn't backed by a live Stripe invoice, so it can't be refunded.",
       "deleted": "Diver removed from active shop work. Their bookings and cards are preserved.",
+      "paymentNotConnected": "Payments aren't connected yet, so there's no account to invoice from — connect one to charge this diver.",
       "notAuthorizedRefund": "Refunds are limited to owners and managers — ask one of them to issue this refund.",
       "notAuthorizedDelete": "Removing a diver is limited to owners and managers — ask one of them to do it.",
       "notAuthorizedErase": "Erasing a diver's personal data is limited to the shop owner — ask them to do it.",
@@ -736,6 +745,9 @@
       "eyebrow": "Front desk",
       "fallbackDescription": "Order",
       "backToDiver": "Back to diver",
+      "backToOrders": "Back to orders",
+      "raisedOn": "Raised {date}",
+      "createdBy": "by {name}",
       "status": {
         "open": "Open — awaiting payment",
         "paid": "Paid",
@@ -769,7 +781,8 @@
         "refunded": "Payment refunded — the trip now shows as unpaid for this diver.",
         "refundFailed": "Couldn't refund this order — it may not have a refundable payment yet.",
         "notAuthorized": "Refunds are limited to owners and managers — ask one of them to issue this refund.",
-        "demoDisabled": "This is a demo order — it isn't backed by a live Stripe invoice, so it can't be changed."
+        "demoDisabled": "This is a demo order — it isn't backed by a live Stripe invoice, so it can't be changed.",
+        "fallback": "Something changed on this order — the details below are current."
       }
     },
     "index": {
@@ -777,6 +790,9 @@
       "title": "Orders",
       "description": "Every invoice the shop has sent, across every diver and trip.",
       "newOrder": "New order",
+      "notice": {
+        "paymentNotConnected": "Payments aren't connected yet, so there's no account to invoice from — connect one to start charging divers."
+      },
       "filters": {
         "statusLabel": "Status",
         "statusAll": "All statuses",
@@ -958,6 +974,11 @@
     "previousMonth": "Previous month",
     "nextMonth": "Next month",
     "currentMonthTitle": "You're viewing the current month",
+    "earliestMonthTitle": "This is your first month with departures",
+    "monthPicker": {
+      "label": "Jump to a month",
+      "go": "Go"
+    },
     "numbersLabel": "This month's numbers",
     "metrics": {
       "revenueLabel": "Revenue collected",
@@ -996,6 +1017,8 @@
       "published": "Review published to your schedule page.",
       "hidden": "Review hidden — it no longer counts toward your rating.",
       "hiddenToast": "Review hidden.",
+      "publishedMany": "{count, plural, one {# review published} other {# reviews published}} to your schedule page.",
+      "noneSelected": "Tick the reviews you want to publish first.",
       "error": "That review couldn't be updated. Try again."
     },
     "overviewLabel": "Rating overview",
@@ -1016,6 +1039,9 @@
     "reviewMeta": "<diver>{diverName}</diver> · <trip>{tripTitle}</trip> · {date}",
     "hide": "Hide",
     "publish": "Publish",
+    "publishSelected": "Publish selected",
+    "tickThenPublish": "Tick the ones to publish, then",
+    "selectToPublishAriaLabel": "Select {name}'s review to publish",
     "saving": "Saving…",
     "showMoreReviews": "Show more reviews",
     "backToTop": "← Back to the top of the list",
@@ -1091,11 +1117,14 @@
       "returns": "Returns",
       "seats": "Seats",
       "dives": "Dives",
+      "price": "Price per diver",
+      "priceDescription": "Divers see this the moment the departure reaches the public page. Leave it empty to price it later on the trip.",
       "course": "Course",
       "optional": "(optional)",
       "diveSite": "Dive site",
       "ordinaryTrip": "Ordinary trip",
       "decideLater": "Decide later",
+      "optionsLoading": "Loading…",
       "adding": "Adding…",
       "putOnBoard": "Put it on the board",
       "newDate": "New date",
@@ -1863,6 +1892,19 @@
         "heading": "WhatsApp",
         "description": "Send trip reminders and recaps from your shop's own WhatsApp number instead of a platform SMS number.",
         "cta": "Set up WhatsApp"
+      },
+      "jump": {
+        "label": "Jump to a section"
+      },
+      "team": {
+        "heading": "Team",
+        "description": "Who works here, what each person is allowed to reach, and where your invitations stand.",
+        "cta": "Manage team"
+      },
+      "promos": {
+        "heading": "Promo codes",
+        "description": "Shop-wide discount codes a diver types at checkout, each with its own dates and limits.",
+        "cta": "Manage promo codes"
       }
     },
     "team": {
@@ -1954,6 +1996,9 @@
       "title": "Import contacts",
       "description": "Bring your divers, cards, rental sizes, and prior waiver acceptance in from a CSV — from your old system or from DiveDay's own export. See exactly what comes across below.",
       "comingFrom": "Coming from <eve>EVE</eve>, <diveshop360>DiveShop360</diveshop360>, or <spreadsheet>a spreadsheet</spreadsheet>? See the matching guide, then come back here to bring it in.",
+      "notice": {
+        "notAuthorized": "Importing writes divers' personal and medical records, so it's limited to owners and managers."
+      },
       "comesAcross": {
         "heading": "What comes across",
         "description": "The specifics, row by row:"
@@ -2320,7 +2365,8 @@
     "scheduleTrip": "Schedule a trip",
     "notice": {
       "waiversNotAuthorized": "Editing the waiver is limited to owners and managers.",
-      "exportNotAuthorized": "Data export is limited to owners and managers."
+      "exportNotAuthorized": "Data export is limited to owners and managers.",
+      "reportsNotAuthorized": "Reports read the shop's revenue, so they're limited to owners and managers."
     },
     "orientation": {
       "heading": "New here? A few pointers for your role.",
@@ -2488,8 +2534,7 @@
       "groupOrders": "Orders",
       "groupGoTo": "Go to",
       "goToBoarding": "Boarding — today's boat",
-      "goToOfflineRollCall": "Open offline roll call",
-      "goToAddBooking": "Add a booking"
+      "goToOfflineRollCall": "Open offline roll call"
     },
     "keyboardShortcuts": {
       "buttonAriaLabel": "Keyboard shortcuts",
@@ -2562,6 +2607,7 @@
       "blockers": "Not ready",
       "divers": "Divers",
       "board": "Board",
+      "addBooking": "Add a booking",
       "staffing": "Staffing",
       "diveSites": "Dive sites",
       "courses": "Courses",
@@ -2970,6 +3016,9 @@
       "notBoarded": "Not boarded",
       "notBoardedCarried": "Not boarded · carried",
       "notBackAboard": "Not back aboard"
+    },
+    "payments": {
+      "connect": "Connect payments"
     }
   },
   "whatsapp": {
@@ -3042,6 +3091,7 @@
       "description": "Seat a diver on any upcoming departure — pick the boat, then the diver.",
       "backToBoard": "Back to the board",
       "tripHeading": "Which departure?",
+      "fullExcluded": "Full departures are left out of this list. Change a boat's seats, or put another departure on that day, from the board.",
       "tripEmpty": "Nothing upcoming has a seat left. Put a departure on the board first.",
       "tripSummary": "{title} · {date} · {time} · {booked}/{capacity} booked",
       "seatsLeft": "{count, plural, one {# seat left} other {# seats left}}",
