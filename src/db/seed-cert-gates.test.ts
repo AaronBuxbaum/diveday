@@ -110,7 +110,7 @@ describe("the seeded cert-gate departures", () => {
 
   it("refuses a carded diver with no enriched-air card on the nitrox charter, on nitrox alone", async () => {
     const { db, shop } = await seededShopContext();
-    const trip = await tripByTitle(db, shop.id, "Nitrox Two-Tank — Benwood & Pickles");
+    const trip = await tripByTitle(db, shop.id, "Nitrox Two-Tank — Benwood Wreck");
     const diego = await personByName(db, shop.id, "Diego Alvarez");
 
     expect(

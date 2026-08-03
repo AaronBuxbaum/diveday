@@ -3,8 +3,8 @@ import {
   bookings,
   certifications,
   type courses,
-  type diveSites,
   type DiveSpecialty,
+  type diveSites,
   people,
   personRoles,
   type TripAssignmentRole,
@@ -37,7 +37,7 @@ import { at, nextCreatedAt } from "./seed-clock";
  * | Advanced Open Water Diver — two-day course | the *course's* Open Water baseline | nobody: it dives a site gated `advanced_open_water` + Deep, and the carve-out is that a student is never refused the course that grants the card |
  * | Advanced Drift — French Reef Wall | Advanced Open Water, nothing else | a verified Open Water diver — a **level** refusal, which has no missing card to add |
  * | Deep Adventure — USCGC Duane | the site's Deep specialty (no nitrox, unlike the other Duane sailings) | a diver of *any* rung with no Deep card — a **specialty** refusal, where "add the card" is the right advice |
- * | Nitrox Two-Tank — Benwood & Pickles | an enriched-air card, at Open Water | a carded diver with no EANx card — a **nitrox** refusal |
+ * | Nitrox Two-Tank — Benwood Wreck | an enriched-air card, at Open Water | a carded diver with no EANx card — a **nitrox** refusal |
  *
  * The refusal subjects are already on file and are deliberately *not* booked
  * onto these boats: Diego Alvarez (verified Open Water), the new Odile Marchand
@@ -71,9 +71,9 @@ export async function seedCertGates(
 ): Promise<void> {
   const { customers, siteByName, courseRows, instructorId, captainId, divemasterId } = ctx;
 
+  // The two departures that carry a *site's* own gate need the Duane to exist;
+  // the rest name their site by the same string `siteByName` is keyed on.
   const duane = siteByName.get("USCGC Duane");
-  const french = siteByName.get("French Reef");
-  const benwood = siteByName.get("Benwood Wreck");
   const advancedCourse = courseRows.find((course) => course.title === "Advanced Open Water Diver");
 
   /**
@@ -207,7 +207,7 @@ export async function seedCertGates(
       roster: [18, 19, 20],
     },
     {
-      title: "Nitrox Two-Tank — Benwood & Pickles",
+      title: "Nitrox Two-Tank — Benwood Wreck",
       description: "Long, shallow bottom time on EANx32. Enriched-air card required to board.",
       startsAt: at(32, 8, 30),
       endsAt: at(32, 12, 30),
