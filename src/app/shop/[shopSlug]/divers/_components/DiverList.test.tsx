@@ -1,20 +1,22 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { DiverFilter, listDiverSummaries } from "@/db/divers";
 import { staffTranslator } from "@/i18n/staff-messages";
 
-// The list drives the URL as you type, so it reaches for the app router. Its
-// empty state does not navigate — these stubs are only what makes the module
-// renderable outside a Next request.
+// The list drives the URL as you type, so it reaches for the app router. One
+// shared `replace` spy, so a test can assert what the debounce did (or, for the
+// regression below, that it stayed out of the way).
+const replace = vi.fn();
 vi.mock("next/navigation", () => ({
   usePathname: () => "/shop/blue-mantis/divers",
-  useRouter: () => ({ replace: vi.fn(), push: vi.fn() }),
+  useRouter: () => ({ replace: (...args: unknown[]) => replace(...args), push: vi.fn() }),
 }));
 
 import { DiverList } from "./DiverList";
 
 afterEach(cleanup);
+beforeEach(() => replace.mockClear());
 
 const t = staffTranslator("en-US");
 
@@ -163,6 +165,39 @@ describe("DiverList roster views", () => {
       "href",
       "/shop/blue-mantis/divers?q=nadia&filter=needs_attention",
     );
+  });
+
+  /**
+   * Regression: the search box drives the URL through a 250ms debounce, and the
+   * timer used to capture the filter that was on screen when the key was
+   * pressed. Tapping a view chip inside that window let the late timer replace
+   * the URL with the *previous* view — silently undoing the tap, and then
+   * running the next search under a view the staffer had already left.
+   * Reproduced in e2e/roster-views.spec.ts as an intermittent failure.
+   */
+  it("does not let a pending search undo a view chip tapped inside the debounce window", () => {
+    vi.useFakeTimers();
+    try {
+      renderList({ query: "amara", filter: "diving_today" });
+      const input = screen.getByRole("searchbox", { name: "Search divers" });
+
+      // Clear the box, then tap a chip before the debounce has fired.
+      fireEvent.change(input, { target: { value: "" } });
+      const chip = screen.getByRole("link", { name: "Needs attention" });
+      // The chip carries what is *in the box*, not the last committed query —
+      // otherwise it would re-apply the search the staffer just cleared.
+      expect(chip).toHaveAttribute("href", "/shop/blue-mantis/divers?filter=needs_attention");
+      fireEvent.click(chip);
+
+      // Let the old debounce window elapse. The chip's href owns this
+      // navigation now; nothing may replace the URL behind it.
+      act(() => {
+        vi.advanceTimersByTime(1000);
+      });
+      expect(replace).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("hangs the count off the People heading, with the noun a screen reader needs", () => {

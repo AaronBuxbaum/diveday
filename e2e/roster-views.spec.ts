@@ -85,9 +85,15 @@ test("the roster narrows to today's divers and to whoever needs a staffer", asyn
   await expect(rowFor(DIVING_LATER_DIVER)).toHaveCount(0);
   await expect(page.getByText("No divers match this view.")).toBeVisible();
 
+  // Clearing the box and tapping a chip straight after is the sequence that
+  // used to race: the search drives the URL through a 250ms debounce, and the
+  // pending timer would land after the chip and restore the view just left
+  // (fixed in DiverList's `cancelPendingSearch`). Asserted here without a wait
+  // in between on purpose — a `waitFor` would hide the regression rather than
+  // catch it. The URL check below is what fails if the chip is undone.
   await search.fill("");
   await views.getByRole("link", { name: "Needs attention" }).click();
-  await expect(page).toHaveURL(/filter=needs_attention/);
+  await expect(page).toHaveURL(/\/divers\?filter=needs_attention$/);
   await search.fill(PENDING_CARD_DIVER);
   const flagged = rowFor(PENDING_CARD_DIVER);
   await expect(flagged).toHaveCount(1);
