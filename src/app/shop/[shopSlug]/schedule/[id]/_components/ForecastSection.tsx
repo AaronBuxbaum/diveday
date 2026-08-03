@@ -1,5 +1,7 @@
 import { diverTranslator } from "@/i18n/messages";
+import { depthText, temperatureText } from "@/i18n/unit-labels";
 import { formatShortDate } from "@/lib/format";
+import { temperatureUnitFor } from "@/lib/temperature-units";
 import type { AutomatedForecast, Shop, Trip } from "./types";
 
 export function ForecastSection({
@@ -17,6 +19,14 @@ export function ForecastSection({
 }) {
   if (!crewPrediction && !automatedForecast) return null;
   const t = diverTranslator(locale);
+  // Stored metric, displayed in the shop's own units (src/lib/depth-units.ts,
+  // src/lib/temperature-units.ts): a Florida shop set to feet was still being
+  // shown "24°C" and "12 m" on its own diver-facing trip page.
+  const depthUnit = shop.depthUnit;
+  const temperatureUnit = temperatureUnitFor(depthUnit);
+  const waterTemperatureC = crewPrediction
+    ? trip.waterTemperatureC
+    : (automatedForecast?.waterTemperatureC ?? null);
   return (
     <section className="mt-6 rounded-xl border border-border bg-surface p-5 sm:p-6">
       <p className="text-sm font-medium tracking-widest text-primary uppercase">
@@ -26,19 +36,20 @@ export function ForecastSection({
         <p className="mt-3 text-muted">{trip.conditionsSummary}</p>
       ) : null}
       <dl className="mt-5 grid gap-3 sm:grid-cols-3">
-        {(crewPrediction ? trip.waterTemperatureC : automatedForecast?.waterTemperatureC) !==
-        null ? (
+        {waterTemperatureC !== null ? (
           <div className="rounded-lg bg-surface-sunken p-3">
             <dt className="text-sm text-muted">{t("trip.waterTemperature")}</dt>
             <dd className="mt-1 text-lg font-semibold">
-              {crewPrediction ? trip.waterTemperatureC : automatedForecast?.waterTemperatureC}°C
+              {temperatureText(t, waterTemperatureC, temperatureUnit)}
             </dd>
           </div>
         ) : null}
         {crewPrediction && trip.visibilityMeters !== null ? (
           <div className="rounded-lg bg-surface-sunken p-3">
             <dt className="text-sm text-muted">{t("trip.visibility")}</dt>
-            <dd className="mt-1 text-lg font-semibold">{trip.visibilityMeters} m</dd>
+            <dd className="mt-1 text-lg font-semibold">
+              {depthText(t, trip.visibilityMeters, depthUnit)}
+            </dd>
           </div>
         ) : null}
         {(crewPrediction ? trip.surfaceConditions : automatedForecast?.surfaceConditions) ? (

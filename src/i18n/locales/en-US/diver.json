@@ -11,7 +11,13 @@
     "email": "Email",
     "phone": "Phone",
     "saving": "Saving…",
-    "rateLimited": "Too many attempts. Please wait a few minutes and try again."
+    "rateLimited": "Too many attempts. Please wait a few minutes and try again.",
+    "units": {
+      "meters": "{value} m",
+      "feet": "{value} ft",
+      "celsius": "{value}°C",
+      "fahrenheit": "{value}°F"
+    }
   },
   "shopChrome": {
     "footerLine": "{shop} · Powered by DiveDay"
@@ -92,8 +98,8 @@
       "crewBriefing": "Crew briefing"
     },
     "temperatureTip": {
-      "cold": "Water is expected around {celsius}°C — ask the shop whether you need extra exposure protection.",
-      "mild": "Water is expected around {celsius}°C — use the shop's wetsuit guidance for comfort."
+      "cold": "Water is expected around {temperature} — ask the shop whether you need extra exposure protection.",
+      "mild": "Water is expected around {temperature} — use the shop's wetsuit guidance for comfort."
     },
     "dockDayRhythm": "Your dock-day rhythm",
     "briefingsEyebrow": "Dive briefings",
@@ -519,6 +525,9 @@
     "emergencyOnFile": "On file — {name}.",
     "changePlans": "Need to change your plans?",
     "reschedulePitch": "Pick a different trip and we’ll move you — your current spot only releases once the new one’s confirmed, so you’re never left without one.",
+    "moveNeedsShop": "This booking is already paid, so moving it isn’t something you can do here — the shop can move you and sort out the money side. Cancelling is still yours to do below.",
+    "noOtherTrips": "There’s no other departure with room on the calendar right now, so there’s nowhere to move you to yet. The shop can tell you what’s coming up.",
+    "manageShopOnly": "Plans changed today? Your spot is past changing on your own now — call the shop and they’ll sort it out with you.",
     "pickATrip": "Pick a trip",
     "spotsLeft": "{count, plural, one {# left} other {# left}}",
     "moving": "Moving…",
@@ -585,6 +594,8 @@
     "beforeDockDescription": "This private waiver takes about two minutes. You can save your place and come back on this link before it expires.",
     "tripHeader": "{trip} — {when}, {time}",
     "linkExpiresAt": "This link works until {date}.",
+    "answerYes": "Yes",
+    "answerNo": "No",
     "yesReassurance": "A yes means a doctor should confirm you’re fit to dive — it doesn’t cancel your trip.",
     "questionsAnswered": "{answered} of {total} answered",
     "progressSaved": "Your progress is saved. Finish whenever you're ready.",

@@ -1,6 +1,6 @@
 # 20260723-booking-capabilities — Revocable, expiring capabilities for public booking links
 
-- **Status:** Accepted
+- **Status:** Accepted, **amended 2026-08-03** (expiry window — see the derived-expiry bullet)
 - **Date:** 2026-07-23
 
 ## Context
@@ -32,6 +32,15 @@ CR-002 and CR-003 need the same primitive, so this is one decision, not two.
   `issuedAt + 24h` (`capabilityExpiryFor`, `src/lib/booking-capabilities.ts`). A capability outlives
   the trip by a short grace window for post-trip follow-up (a late payment, a missed waiver) but
   never runs indefinitely, and a same-day booking still gets a usable link.
+
+  > **Amended 2026-08-03.** The `issuedAt + 60d` term was not a ceiling on a pathological case — it
+  > was the binding constraint for any booking made more than two months out. A diver who booked a
+  > season ahead got a confirmation URL, and a readiness link inside their own confirmation email,
+  > that were both dead *before* the trip they were about. The window is now
+  > `min(tripEndsAt + 30d, issuedAt + 2y)`, same `issuedAt + 24h` floor: the grace window carries
+  > the whole post-trip tail the recap surface already assumes, and the issuance term survives only
+  > as a backstop against a mistyped departure date, far past any real booking lead time. Nothing
+  > else about the model moves — still hashed, still expiring, still revocable, still fail-closed.
 - **No supersession on reissue.** Unlike a waiver link, minting a new capability for the same
   booking+purpose does not invalidate an earlier still-valid one. A diver may be holding an earlier
   confirmation email's link and a later reminder email's link at once; both keep working until they

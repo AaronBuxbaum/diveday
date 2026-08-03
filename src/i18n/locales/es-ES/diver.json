@@ -11,7 +11,13 @@
     "email": "Correo electrónico",
     "phone": "Teléfono",
     "saving": "Guardando…",
-    "rateLimited": "Demasiados intentos. Espera unos minutos e inténtalo de nuevo."
+    "rateLimited": "Demasiados intentos. Espera unos minutos e inténtalo de nuevo.",
+    "units": {
+      "meters": "{value} m",
+      "feet": "{value} ft",
+      "celsius": "{value} °C",
+      "fahrenheit": "{value} °F"
+    }
   },
   "shopChrome": {
     "footerLine": "{shop} · Con la tecnología de DiveDay"
@@ -92,8 +98,8 @@
       "crewBriefing": "Briefing de la tripulación"
     },
     "temperatureTip": {
-      "cold": "Se espera una temperatura del agua de unos {celsius} °C — pregunta al centro si necesitas protección térmica adicional.",
-      "mild": "Se espera una temperatura del agua de unos {celsius} °C — sigue la recomendación de traje del centro para tu comodidad."
+      "cold": "Se espera una temperatura del agua de unos {temperature} — pregunta al centro si necesitas protección térmica adicional.",
+      "mild": "Se espera una temperatura del agua de unos {temperature} — sigue la recomendación de traje del centro para tu comodidad."
     },
     "dockDayRhythm": "Cómo será tu día en el muelle",
     "briefingsEyebrow": "Briefings de inmersión",
@@ -519,6 +525,9 @@
     "emergencyOnFile": "Registrado — {name}.",
     "changePlans": "¿Necesitas cambiar tus planes?",
     "reschedulePitch": "Elige otra salida y te movemos — tu plaza actual solo se libera cuando la nueva queda confirmada, así que nunca te quedas sin ninguna.",
+    "moveNeedsShop": "Esta reserva ya está pagada, así que moverla no se puede hacer desde aquí — el centro puede cambiarte de salida y ocuparse del pago. Cancelar sí lo puedes hacer tú, aquí abajo.",
+    "noOtherTrips": "Ahora mismo no hay ninguna otra salida con plazas en el calendario, así que todavía no hay adónde moverte. El centro puede contarte qué viene.",
+    "manageShopOnly": "¿Te han cambiado los planes hoy? Tu plaza ya no se puede cambiar por tu cuenta — llama al centro y lo resuelven contigo.",
     "pickATrip": "Elige una salida",
     "spotsLeft": "{count, plural, one {queda #} other {quedan #}}",
     "moving": "Moviendo…",
@@ -585,6 +594,8 @@
     "beforeDockDescription": "Esta exención privada lleva unos dos minutos. Puedes guardar tu progreso y volver a este enlace antes de que caduque.",
     "tripHeader": "{trip} — {when}, {time}",
     "linkExpiresAt": "Este enlace funciona hasta {date}.",
+    "answerYes": "Sí",
+    "answerNo": "No",
     "yesReassurance": "Un “sí” significa que un médico debería confirmar que estás en condiciones de bucear — no cancela tu salida.",
     "questionsAnswered": "{answered} de {total} respondidas",
     "progressSaved": "Tu progreso está guardado. Termina cuando quieras.",

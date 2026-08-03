@@ -15,11 +15,13 @@ import { getReviewForBooking } from "@/db/reviews";
 import { tipPresetsMajor } from "@/db/tips";
 import { type DiverMessageKey, diverTranslator } from "@/i18n/messages";
 import { requestLocale, requestTranslator } from "@/i18n/request";
+import { depthText, temperatureText } from "@/i18n/unit-labels";
 import { formatShortDate } from "@/lib/format";
 import { currencySymbol, minorToMajor } from "@/lib/money";
 import { verifyRecapToken } from "@/lib/recap-links";
 import { MAX_REVIEW_COMMENT_LENGTH, REVIEW_RATINGS } from "@/lib/reviews";
 import { MAX_IMAGE_MB } from "@/lib/storage/limits";
+import { temperatureUnitFor } from "@/lib/temperature-units";
 import { startTipAction, submitReviewAction, uploadRecapPhotoAction } from "./actions";
 import { RecapShareButton } from "./RecapShareButton";
 import { ShareReviewButton } from "./ShareReviewButton";
@@ -220,12 +222,19 @@ export default async function DiveRecapPage({
   // Scaled by the same table as the tip bounds, so a preset can never sit
   // below the minimum the action enforces (src/db/tips.ts).
   const tipPresets = tipPresetsMajor(currency);
+  // Stored metric, displayed in the shop's own units (src/lib/depth-units.ts,
+  // src/lib/temperature-units.ts) — a shop working in feet was reading its own
+  // divers' recaps in °C and metres.
+  const temperatureUnit = temperatureUnitFor(shop.depthUnit);
   const conditions = [
     trip.waterTemperatureC !== null
-      ? { label: t("recap.waterTemp"), value: `${trip.waterTemperatureC}°C` }
+      ? {
+          label: t("recap.waterTemp"),
+          value: temperatureText(t, trip.waterTemperatureC, temperatureUnit),
+        }
       : null,
     trip.visibilityMeters !== null
-      ? { label: t("trip.visibility"), value: `${trip.visibilityMeters} m` }
+      ? { label: t("trip.visibility"), value: depthText(t, trip.visibilityMeters, shop.depthUnit) }
       : null,
     trip.surfaceConditions ? { label: t("trip.surface"), value: trip.surfaceConditions } : null,
   ].filter((tile): tile is { label: string; value: string } => tile !== null);

@@ -19,9 +19,12 @@ describe("capabilityExpiryFor", () => {
 
   it("floors at now + min when tripEndsAt + grace falls just short of the floor", () => {
     const now = new Date("2026-07-24T00:00:00Z");
-    // 25h in the past: tripBound (= -25h + 48h grace = +23h) lands just under
-    // the 24h floor, distinct from the already-way-in-the-past case below.
-    const tripEndsAt = new Date(now.getTime() - 25 * 60 * 60 * 1000);
+    // One hour under the floor: tripBound (= trip end + grace) lands at
+    // now + 23h, just below the 24h floor — distinct from the
+    // already-way-in-the-past case below.
+    const tripEndsAt = new Date(
+      now.getTime() - CAPABILITY_TRIP_GRACE_MS + CAPABILITY_MIN_TTL_MS - 60 * 60 * 1000,
+    );
     const expiry = capabilityExpiryFor(tripEndsAt, now);
     expect(expiry.getTime()).toBe(now.getTime() + CAPABILITY_MIN_TTL_MS);
   });
@@ -33,18 +36,44 @@ describe("capabilityExpiryFor", () => {
     expect(expiry.getTime()).toBe(tripEndsAt.getTime() + CAPABILITY_TRIP_GRACE_MS);
   });
 
-  it("floors at now + min for a trip that already ended", () => {
+  it("floors at now + min for a trip whose grace window is long gone", () => {
     const now = new Date("2026-07-24T00:00:00Z");
-    const tripEndsAt = new Date("2026-07-01T00:00:00Z");
+    const tripEndsAt = new Date("2026-01-01T00:00:00Z");
     const expiry = capabilityExpiryFor(tripEndsAt, now);
     expect(expiry.getTime()).toBe(now.getTime() + CAPABILITY_MIN_TTL_MS);
   });
 
-  it("caps at now + max for a trip far in the future", () => {
+  it("still covers the recap window for a trip that ended a fortnight ago", () => {
     const now = new Date("2026-07-24T00:00:00Z");
-    const tripEndsAt = new Date("2030-01-01T00:00:00Z");
+    const tripEndsAt = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+    const expiry = capabilityExpiryFor(tripEndsAt, now);
+    expect(expiry.getTime()).toBe(tripEndsAt.getTime() + CAPABILITY_TRIP_GRACE_MS);
+  });
+
+  it("keeps a season-ahead booking's link alive on trip day and through the recap window", () => {
+    // The bug this replaces: a flat 60-day TTL from issuance meant a trip
+    // booked six months out had a dead confirmation URL — and a dead
+    // readiness link in its own confirmation email — before the boat left.
+    const now = new Date("2026-01-10T00:00:00Z");
+    const tripStartsAt = new Date("2026-07-10T08:00:00Z");
+    const tripEndsAt = new Date("2026-07-10T16:00:00Z");
+    const expiry = capabilityExpiryFor(tripEndsAt, now);
+    expect(expiry.getTime()).toBeGreaterThan(tripStartsAt.getTime());
+    expect(expiry.getTime()).toBe(tripEndsAt.getTime() + CAPABILITY_TRIP_GRACE_MS);
+  });
+
+  it("caps at now + max for a nonsense departure date, so it is still bounded", () => {
+    const now = new Date("2026-07-24T00:00:00Z");
+    const tripEndsAt = new Date("2199-01-01T00:00:00Z");
     const expiry = capabilityExpiryFor(tripEndsAt, now);
     expect(expiry.getTime()).toBe(now.getTime() + CAPABILITY_MAX_TTL_MS);
+  });
+
+  it("is never unlimited: even the backstop is a real, enforced expiry", () => {
+    const now = new Date("2026-07-24T00:00:00Z");
+    const expiry = capabilityExpiryFor(new Date("9999-01-01T00:00:00Z"), now);
+    expect(Number.isFinite(expiry.getTime())).toBe(true);
+    expect(expiry.getTime()).toBeLessThanOrEqual(now.getTime() + CAPABILITY_MAX_TTL_MS);
   });
 
   it("never returns an expiry before now + min, even at the exact boundary", () => {
