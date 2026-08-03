@@ -20,7 +20,7 @@ history we cannot produce.
 | --- | --- | --- | --- |
 | Neon Postgres (`aws-us-east-1`) | Everything in `src/db/schema.ts` — bookings, waivers, medical answers, orders, accounts | Neon PITR (branch from timestamp) | Scheduled export bundles in S3, per shop |
 | Vercel Blob (`*.public.blob.vercel-storage.com`) | Certification card photos, recap photos, course/dive-site media, imported waiver source documents | None built in — Vercel Blob has no PITR and no versioning | The `photos/` directory inside each export bundle (see the gap below) |
-| Vercel project env vars | `DATABASE_URL`, `AUTH_SECRET`, `CRON_SECRET`, `BLOB_READ_WRITE_TOKEN`, Stripe/Resend/Twilio keys | Not backed up by design — secrets never enter the repo | Owner's password manager (`TODO(owner)`, below) |
+| Vercel project env vars | `DATABASE_URL`, `AUTH_SECRET`, `CRON_SECRET`, `BLOB_READ_WRITE_TOKEN`, Stripe/AWS SES/Twilio keys | Not backed up by design — secrets never enter the repo | Owner's password manager (`TODO(owner)`, below) |
 
 ## 1. Neon point-in-time recovery
 
@@ -137,7 +137,7 @@ The `BackupUploaderAccessKeyInstructions` stack output prints this same command.
 > capability, not a running backup — say so honestly in any status report.
 
 > `TODO(owner)` — **Record where production secrets are backed up.** `AUTH_SECRET`, `CRON_SECRET`,
-> `BLOB_READ_WRITE_TOKEN`, and the Stripe/Resend/Twilio keys exist only in Vercel's project settings.
+> `BLOB_READ_WRITE_TOKEN`, and the Stripe/AWS SES/Twilio keys exist only in Vercel's project settings.
 > Losing the Vercel account loses them, and `AUTH_SECRET` in particular is not regenerable without
 > invalidating every outstanding session and every `recap-links.ts`-signed token. Name the password
 > manager or vault holding them, and the date last verified.
@@ -204,7 +204,7 @@ log below. It should take under an hour.
   write-only uploader is the mitigation, and it is a partial one.
 - **No restore-time objective is promised.** Nobody has measured one; step 2 of the quarterly test is
   what will produce the first real number.
-- **Stripe, Resend, and Twilio hold their own records** and are not backed up here. Stripe is
+- **Stripe, AWS SES, and Twilio hold their own records** and are not backed up here. Stripe is
   authoritative for money in a restore conflict, and that is deliberate.
 - **Retention itself is undecided.** H-02 has a working default of "indefinite" and no legal answer.
   The lifecycle rule in §11 was written to never be the thing that deletes evidence; when H-02 lands,

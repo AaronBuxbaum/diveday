@@ -1,7 +1,11 @@
 # 20260728-resend-delivery-controls — Use a durable, paced Resend delivery layer
 
-- **Status:** Accepted
+- **Status:** Superseded by [20260803-ses-sole-email-provider](20260803-ses-sole-email-provider.md)
 - **Date:** 2026-07-28
+
+> Resend, and this delivery layer's rate-limiting/retry/batching machinery built specifically for its
+> per-second cap, were removed entirely — not replaced with an SES equivalent. The AWS SDK's own
+> retry/backoff covers SES throttling; see the superseding ADR's Consequences.
 
 ## Context
 

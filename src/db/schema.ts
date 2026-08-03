@@ -1339,9 +1339,10 @@ export const notificationQueueStatus = pgEnum("notification_queue_status", [
 /**
  * What the provider later said happened to a message we already handed over —
  * a different question from `notification_delivery_status`, which only records
- * whether our own send call succeeded. Reported by the Resend webhook
- * (20260726-hosted-mailboxes-for-platform-mail); null until an event arrives, which is
- * the normal steady state when no webhook is configured.
+ * whether our own send call succeeded. Reported by the delivery webhook
+ * (20260726-hosted-mailboxes-for-platform-mail, 20260803-ses-sole-email-provider);
+ * null until an event arrives, which is the normal steady state when no
+ * webhook is configured.
  */
 export const notificationProviderStatus = pgEnum("notification_provider_status", [
   "sent",
@@ -1461,7 +1462,12 @@ export const notificationSendQueue = pgTable(
   ],
 );
 
-/** Singleton team-wide permit clock; Resend rate limits are team-scoped. */
+/**
+ * Singleton team-wide permit clock for a provider needing coordinated
+ * per-second throttling. Currently unused — SES's own SDK retry/backoff
+ * covers that need (20260803-ses-sole-email-provider) — kept as generic,
+ * provider-keyed infrastructure rather than dropped.
+ */
 export const notificationRateLimitState = pgTable("notification_rate_limit_state", {
   key: text("key").primaryKey(),
   nextAllowedAt: timestamp("next_allowed_at", { withTimezone: true }).notNull(),

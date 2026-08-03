@@ -1,6 +1,6 @@
 # 20260718-resend-transactional-email — Use Resend behind a transactional notification seam
 
-- **Status:** Accepted
+- **Status:** Superseded by [20260803-ses-sole-email-provider](20260803-ses-sole-email-provider.md)
 - **Date:** 2026-07-18
 
 ## Context

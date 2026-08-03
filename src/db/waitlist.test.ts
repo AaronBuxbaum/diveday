@@ -101,7 +101,7 @@ describe("recordWaitlistInvite", () => {
 
 describe("inviteWaitlistDiver", () => {
   it("stamps the entry and reports the composer fallback when email isn't configured", async () => {
-    // The test environment sets neither APP_HOST nor RESEND_*, so a real send
+    // The test environment sets neither APP_HOST nor SES_*, so a real send
     // can't happen and the delivery degrades to the fallback — while the invite
     // is still durably recorded.
     const { db, shop, fullTrip } = await seededContext();

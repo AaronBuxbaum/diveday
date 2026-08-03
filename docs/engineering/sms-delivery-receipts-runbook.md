@@ -56,7 +56,7 @@ delivery, which is what `delivered` means for every other provider on the delive
 A courtesy text sent *alongside* an email is not the tracked channel and has no delivery row of its
 own — only a **phone-only diver's** SMS does. So `sms_webhook.delivery_applied` will log
 `unknown_message` for the majority of receipts. That is the shape of the data, not a fault; the same
-is true of the Resend and WhatsApp routes.
+is true of the SES and WhatsApp routes.
 
 ## When receipts stop arriving
 

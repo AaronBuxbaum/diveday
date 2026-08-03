@@ -1,7 +1,12 @@
 # 20260802-ses-email-transition-prep — Provision dormant SES/SNS infra ahead of a possible Resend swap
 
-- **Status:** Accepted
+- **Status:** Superseded by [20260803-ses-sole-email-provider](20260803-ses-sole-email-provider.md)
 - **Date:** 2026-08-02
+
+> The AWS-side infra provisioned here still stands as written. What's superseded is the framing —
+> this was prep "ahead of a possible Resend swap"; the swap happened, Resend is removed, and this
+> infra is no longer dormant groundwork but the live (if not yet fully activated) provider's
+> foundation.
 
 ## Context
 

@@ -86,9 +86,11 @@ it down) for each of:
   approval isn't the pilot's blocker. Decide the platform-fee posture as part of H-12 (recommend:
   **no platform fee at launch** — "the shop keeps its own Stripe account and its own money" is a
   trust argument against FareHarbor-style 6%-of-volume platforms).
-- **Resend:** verify the production sending domain, set `RESEND_FROM_EMAIL` on a real shop-facing
-  identity (e.g. `bookings@…`), and write the two-paragraph consent/copy policy H-09 asks for
-  (transactional-only today; reminders are courtesy; no marketing sends without explicit opt-in).
+- **AWS SES:** request SES production access, verify `ses.dive.day`'s DKIM records, mint the
+  `diveday-ses-sender` credentials, and set `SES_FROM_EMAIL` on a real shop-facing identity (e.g.
+  `bookings@…`). Write the two-paragraph consent/copy policy H-09 asks for (transactional-only
+  today; reminders are courtesy; no marketing sends without explicit opt-in). See
+  [docs/engineering/ses-email-runbook.md](../engineering/ses-email-runbook.md).
 - **AWS SNS:** complete US carrier SMS-sending compliance registration (days-to-weeks — start
   early), and name the `CRON_SECRET`/`SNS_AWS_*` owner. Note: once SNS is configured, remove the
   `SNS_` prefix bypass in `scripts/check-env.mjs`.
@@ -298,7 +300,7 @@ serves it.
    E&O/cyber quotes (H-19) into the same week: the entity name goes on everything else. Playbooks:
    [stakeholders/](stakeholders/README.md).
 2. Name the ops owner, enable and **rehearse** a Neon backup restore (H-04).
-3. Verify the Resend production sender and write the H-09 consent policy.
+3. Verify the SES production sender and write the H-09 consent policy.
 4. Close H-12 at $99/location/month with the two-year founding lock and the founder-direct
    support promise; close H-13 with the "is this you?" safeguard or a written acceptance.
 5. Run V-01 and the V-04 rehearsal on the demo shop; script the V-02 boat day.

@@ -17,7 +17,7 @@ service until something other than the web app needs one ([ADR-0001](decisions/0
 | Hosting | Vercel (Git integration, preview deploys) | [20260718 hosting](decisions/20260718-vercel-hosting.md) |
 | Analytics | Vercel Analytics via `@vercel/analytics` | [20260718 analytics](decisions/20260718-vercel-analytics.md) |
 | Auth | Auth.js v5 credentials, JWT sessions, proxy gating | [0006](decisions/0006-auth.md) |
-| Transactional email | Resend REST API behind `src/lib/notifications/` | [20260718 email](decisions/20260718-resend-transactional-email.md) |
+| Transactional email | AWS SES (`@aws-sdk/client-sesv2`) behind `src/lib/notifications/` | [20260803 SES sole provider](decisions/20260803-ses-sole-email-provider.md) |
 | Offline manifests | Encrypted IndexedDB snapshot + data-free service-worker shell | [20260718 offline manifests](decisions/20260718-offline-manifest-snapshots.md) |
 | Payments | Stripe Connect (Standard) behind `src/lib/payments/`; each shop brings its own account | [20260719 Stripe Connect](decisions/20260719-stripe-connect-orders.md) |
 | Marine outlook | Open-Meteo Marine API behind `src/lib/marine-forecast.ts` | [20260718 marine outlook](decisions/20260718-automated-marine-outlook.md) |

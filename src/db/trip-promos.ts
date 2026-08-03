@@ -156,7 +156,7 @@ export async function sendLastMinuteDealBlast(
           };
         }),
     );
-    const deliveries = await sendNotificationBatch(db, recipients, notificationProviderForDb(db));
+    const deliveries = await sendNotificationBatch(db, recipients, notificationProviderForDb());
     sentCount = deliveries.filter((delivery) => delivery.status === "sent").length;
   }
 

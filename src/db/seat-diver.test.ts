@@ -3,6 +3,18 @@ import { and, eq, inArray, ne } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { seededShopContext } from "@/test/db";
 import type { AppDb } from "./client";
+
+const { sesSend } = vi.hoisted(() => ({ sesSend: vi.fn() }));
+vi.mock("@aws-sdk/client-sesv2", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@aws-sdk/client-sesv2")>();
+  return {
+    ...actual,
+    SESv2Client: vi.fn().mockImplementation(function SESv2Client() {
+      return { send: sesSend };
+    }),
+  };
+});
+
 import {
   activityEvents,
   bookings,
@@ -71,24 +83,22 @@ async function waiverCount(db: AppDb, bookingId: string) {
 
 const UNKNOWN_ID = "00000000-0000-4000-8000-000000000000";
 
-/** Resend's reserved sink address — the one value its adapter treats as real mail. */
-const DELIVERABLE_EMAIL = "delivered@resend.dev";
+/** A non-reserved address the reserved-test-domain guard lets through. */
+const DELIVERABLE_EMAIL = "delivered@dive.day";
 
 /** Stub a shop whose waiver email can actually go out, and capture the send. */
 function deliverableEmailEnv() {
   vi.stubEnv("APP_HOST", "https://diveday.example");
-  vi.stubEnv("RESEND_API_KEY", "re_test");
-  vi.stubEnv("RESEND_FROM_EMAIL", "shop@diveday.example");
-  const fetchImpl = vi
-    .fn()
-    .mockResolvedValue(new Response(JSON.stringify({ id: "resend-id" }), { status: 200 }));
-  vi.stubGlobal("fetch", fetchImpl);
-  return fetchImpl;
+  vi.stubEnv("SES_AWS_REGION", "us-east-1");
+  vi.stubEnv("SES_AWS_ACCESS_KEY_ID", "AKIA_TEST");
+  vi.stubEnv("SES_AWS_SECRET_ACCESS_KEY", "test-secret");
+  vi.stubEnv("SES_FROM_EMAIL", "shop@diveday.example");
+  sesSend.mockReset().mockResolvedValue({ MessageId: "ses-id" });
+  return sesSend;
 }
 
 afterEach(() => {
   vi.unstubAllEnvs();
-  vi.unstubAllGlobals();
 });
 
 describe("seatDiver (the one consequence path behind every staff door)", () => {
@@ -236,7 +246,7 @@ describe("seatDiver (the one consequence path behind every staff door)", () => {
 describe("seatDiver waiver reporting (what a door is allowed to claim)", () => {
   it("reports sent only when the email actually went out", async () => {
     const { db, shop, open, actorPersonId } = await context();
-    const fetchImpl = deliverableEmailEnv();
+    const send = deliverableEmailEnv();
 
     const result = await seatDiver(db, {
       shopId: shop.id,
@@ -248,7 +258,7 @@ describe("seatDiver waiver reporting (what a door is allowed to claim)", () => {
     });
 
     expect(result).toMatchObject({ ok: true, waiver: "sent" });
-    expect(fetchImpl).toHaveBeenCalledOnce();
+    expect(send).toHaveBeenCalledOnce();
   });
 
   /**
@@ -278,8 +288,8 @@ describe("seatDiver waiver reporting (what a door is allowed to claim)", () => {
   it("reports not_delivered when the shop has no email delivery set up", async () => {
     const { db, shop, open, actorPersonId } = await context();
     vi.stubEnv("APP_HOST", "https://diveday.example");
-    vi.stubEnv("RESEND_API_KEY", "");
-    vi.stubEnv("RESEND_FROM_EMAIL", "");
+    vi.stubEnv("SES_AWS_REGION", "");
+    vi.stubEnv("SES_FROM_EMAIL", "");
 
     const result = await seatDiver(db, {
       shopId: shop.id,
