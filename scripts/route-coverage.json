@@ -1,9 +1,9 @@
 {
+  "//": "Every `src/app/**/page.tsx` route and the tests that cover it. `e2e` names spec files under e2e/, `visual` names captures in e2e/visual.spec.ts, `exempt` states why a route has neither. Mechanical facts are written by `node scripts/check-route-coverage.mjs --write`; the coverage lists are hand-maintained on purpose — see scripts/check-route-coverage.mjs.",
   "/": {
     "e2e": ["demo.spec.ts", "manifest.spec.ts", "marketing.spec.ts", "seo.spec.ts"],
     "visual": ["landing"]
   },
-  "//": "Every `src/app/**/page.tsx` route and the tests that cover it. `e2e` names spec files under e2e/, `visual` names captures in e2e/visual.spec.ts, `exempt` states why a route has neither. Mechanical facts are written by `node scripts/check-route-coverage.mjs --write`; the coverage lists are hand-maintained on purpose \u2014 see scripts/check-route-coverage.mjs.",
   "/about": {
     "e2e": ["seo.spec.ts"],
     "visual": ["about"]
@@ -170,9 +170,8 @@
     "visual": []
   },
   "/shop/[shopSlug]/dive-sites/catalog": {
-    "e2e": [],
-    "exempt": "no coverage yet \u2014 found by the 2026-08-03 test-system evaluation; needs a spec",
-    "visual": []
+    "e2e": ["dive-sites.spec.ts"],
+    "visual": ["dive-sites-catalog"]
   },
   "/shop/[shopSlug]/dive-sites/new": {
     "e2e": ["dive-sites.spec.ts"],
@@ -217,8 +216,8 @@
     "visual": ["order-detail"]
   },
   "/shop/[shopSlug]/orders/new": {
-    "e2e": ["orders-demo.spec.ts"],
-    "visual": []
+    "e2e": ["invoicing.spec.ts", "orders-demo.spec.ts"],
+    "visual": ["orders-new"]
   },
   "/shop/[shopSlug]/promos": {
     "e2e": ["promo-codes.spec.ts", "settings-findability.spec.ts"],
@@ -293,9 +292,8 @@
     "visual": ["settings-whatsapp"]
   },
   "/shop/[shopSlug]/staffing": {
-    "e2e": [],
-    "exempt": "no coverage yet \u2014 found by the 2026-08-03 test-system evaluation; needs a spec (e2e/search.spec.ts hops here from the command palette but asserts only the URL, never that the page renders)",
-    "visual": []
+    "e2e": ["staffing.spec.ts"],
+    "visual": ["staffing"]
   },
   "/shop/[shopSlug]/trips/[id]": {
     "e2e": [

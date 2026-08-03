@@ -79,3 +79,33 @@ export const E2E_TEST_ROUTE_SECRET =
  * what CI and the reg-suit reference baselines pin to.
  */
 export const E2E_FROZEN_CLOCK = process.env.DIVEDAY_CLOCK || "2026-07-21T13:30:00.000Z";
+
+/**
+ * The public origin the fleet's servers advertise (`APP_HOST`). `next start`
+ * is a production runtime, and `checkPublicHost`
+ * (src/lib/notifications/index.ts) refuses a loopback origin there, so a
+ * blank or `http://127.0.0.1:…` value leaves `publicAppUrl()` null and pins
+ * every origin-dependent surface — the embed snippets, the first-run share
+ * URL, canonical/OpenGraph links, and above all pay-at-booking, which the
+ * diver-facing promo-code box hangs off — in its "hosting isn't configured"
+ * branch.
+ *
+ * Nothing has to resolve this hostname. The app only ever *prints* it;
+ * outbound HTTP is disabled fleet-wide (DIVEDAY_DISABLE_EXTERNAL_HTTP) and
+ * Stripe checkout stays `disabledCheckoutProvider` with no STRIPE_SECRET_KEY,
+ * so no request is ever made to it. `.example` is reserved (RFC 2606) and can
+ * never be registered by anyone.
+ *
+ * It does not switch payments on by itself either: `payAtBooking` also needs a
+ * priced trip and `canAcceptPayments`, and the demo seed provides neither —
+ * a test opts in by creating a priced trip and POSTing
+ * /api/test/seed-stripe-account.
+ *
+ * **Must match the `APP_HOST` in package.json's `e2e:build`.** Metadata for
+ * prerendered routes (robots.txt, sitemap.xml, the marketing pages' canonical
+ * and og:image) is resolved against `metadataBase` at *build* time, so a build
+ * that disagrees with the running server emits both origins into the same
+ * document. e2e/seo.spec.ts's og:image assertions fail on the duplicate, which
+ * is the guard against the two drifting apart.
+ */
+export const E2E_APP_HOST = process.env.APP_HOST || "https://e2e.diveday.example";

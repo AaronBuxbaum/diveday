@@ -1,4 +1,4 @@
-import { expect, signedInAsOwner, test } from "./fixtures";
+import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import { daysFromNow, e2eNow, findTripOnBoard } from "./helpers";
 
 test("the public schedule lists seeded trips with capacity states, a calendar, and per-dive briefings", async ({
@@ -90,6 +90,9 @@ test.describe("per-trip crew role", () => {
     if (!href) throw new Error(`no trip card found for ${title}`);
     await page.goto(href);
 
+    // The crew picker is controlled: a pick before hydration silently no-ops
+    // (the DOM changes, no action fires), so wait for the marker first.
+    await expect(page.getByLabel("Assign crew")).toHaveAttribute("data-hydrated", "true");
     await page.getByLabel("Assign crew").selectOption({ label: "Keiko Tanaka" });
     await expect(page.getByRole("button", { name: "Unassign Keiko Tanaka" })).toBeVisible();
 
@@ -111,5 +114,101 @@ test.describe("per-trip crew role", () => {
     await expect(page.getByLabel("Job Keiko Tanaka is doing on this trip")).toHaveValue("");
     await page.reload();
     await expect(page.getByLabel("Job Keiko Tanaka is doing on this trip")).toHaveValue("");
+  });
+});
+
+/**
+ * The undo of a roster removal is a *stale* affordance by construction: the
+ * banner is server-rendered from `?notice=booking-removed&bid=…` and then
+ * `FlashParams` strips those params, so the button sits on screen for as long
+ * as staff leave the page open while the world moves on around it. One of the
+ * three ways it can be refused is the trip itself being cancelled out from
+ * under the roster — and unlike a taken seat, no wait list helps, so it gets
+ * its own words: reinstate the trip first.
+ *
+ * `src/db/bookings.test.ts` pins the outcome (`restoreBooking` → "trip_cancelled",
+ * the row stays cancelled, and the undo takes once the trip is reinstated).
+ * What that cannot see is whether staff are *told*, so this drives the real
+ * screen: remove, cancel the trip in another window, then press the undo that
+ * is still sitting there.
+ */
+test.describe("undoing a removal after the trip is cancelled", () => {
+  signedInAsOwner();
+
+  test("the stale undo refuses with the reinstate-first banner instead of re-seating a diver", async ({
+    page,
+  }) => {
+    // Create the departure, page the board to it, add a diver, remove them,
+    // cancel the trip on a second page, then press undo — seven server round
+    // trips, well past the suite's 15s single-flow default.
+    test.setTimeout(60_000);
+    const title = `Undo refusal charter ${e2eNow().getTime()}`;
+    const diver = "Ursula Vance";
+
+    await page.goto("/shop/blue-mantis/trips/new");
+    await page.getByLabel("Title").fill(title);
+    await page.getByLabel("Date").fill(daysFromNow(6));
+    await page.getByLabel("Departs").fill("09:00");
+    await page.getByLabel("Returns").fill("13:00");
+    await page.getByLabel("Capacity").fill("6");
+    await page.getByRole("button", { name: "Put it on the board" }).click();
+    await expect(page.getByRole("status")).toBeVisible();
+
+    // Read the card's href rather than clicking it: the board streams in, so
+    // reading `page.url()` after a click races that render.
+    const link = await findTripOnBoard(page, "blue-mantis", title);
+    const tripPath = await link.getAttribute("href");
+    if (!tripPath) throw new Error(`no trip card found for ${title}`);
+
+    await page.goto(`${tripPath}/guests`);
+    const addDiver = page
+      .locator("section")
+      .filter({ has: page.getByRole("heading", { name: "Add a diver" }) })
+      .filter({ visible: true });
+    await addDiver.getByLabel("Name").fill(diver);
+    await addDiver.getByLabel("Email").fill(`ursula-${e2eNow().getTime()}@example.com`);
+    await addDiver.getByRole("button", { name: "Add to trip" }).click();
+    // Prefix match: with no email provider configured the fleet gets the
+    // honest "…but their waiver wasn't emailed" variant of this notice.
+    await expect(page.getByRole("status")).toContainText("Diver added to the trip");
+
+    // A cancel inside a refund window moves real money, so the removal keeps
+    // its blocking two-tap confirm (InlineConfirm) rather than landing behind
+    // an undo toast.
+    const row = page.locator("#roster li").filter({ hasText: diver }).filter({ visible: true });
+    // The confirm is a client component: an arm-tap before hydration is a
+    // native click with no handler, so the "Yes" step never appears. Retry the
+    // arm until the confirm actually renders instead of trusting one tap.
+    await expect(async () => {
+      await row.getByRole("button", { name: "Remove booking" }).click();
+      await expect(row.getByRole("button", { name: "Yes, remove booking" })).toBeVisible({
+        timeout: 2_000,
+      });
+    }).toPass();
+    await row.getByRole("button", { name: "Yes, remove booking" }).click();
+    const removedNotice = page.getByRole("status").filter({ hasText: "Booking cancelled" });
+    await expect(removedNotice).toContainText("Booking cancelled — the spot is open again.");
+    const undo = removedNotice.getByRole("button", { name: "Undo" });
+    await expect(undo).toBeVisible();
+
+    // Meanwhile, in another window, the crew stands the trip down — the
+    // weather go/no-go call, open to any staff member. This page never
+    // reloads, so its undo button is now pointing at a cancelled departure,
+    // exactly the state a real front desk hits.
+    const other = makeActivitySafe(await page.context().newPage());
+    try {
+      await other.goto(tripPath);
+      await other.getByRole("button", { name: "Cancel trip" }).click();
+      await expect(other.getByRole("button", { name: "Reinstate trip" })).toBeVisible();
+    } finally {
+      await other.close();
+    }
+
+    await undo.click();
+    await expect(page.getByRole("alert").filter({ hasText: "Couldn't undo" })).toContainText(
+      "Couldn't undo — this trip has been cancelled. Reinstate the trip first, then add them back.",
+    );
+    // Refused, not partially applied: the diver is still off the roster.
+    await expect(page.getByRole("link", { name: diver })).toHaveCount(0);
   });
 });

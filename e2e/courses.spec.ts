@@ -267,6 +267,9 @@ test.describe("staff", () => {
     ).toBeVisible();
     // Per-person assign, the same mutation Today's departure board uses
     // (Lens 17 task 139) — not a checkbox roster with a single submit.
+    // The crew picker is controlled: a pick before hydration silently no-ops
+    // (the DOM changes, no action fires), so wait for the marker first.
+    await expect(page.getByLabel("Assign crew")).toHaveAttribute("data-hydrated", "true");
     await page.getByLabel("Assign crew").selectOption({ label: "Marcus Webb" });
     await expect(page.getByRole("button", { name: "Unassign Marcus Webb" })).toBeVisible();
     await expect(
@@ -319,6 +322,9 @@ test.describe("staff", () => {
     // carries a "Set a price for {title}, ..." link whose name contains the
     // session title as a substring, so an unanchored pattern matches both.
     await (await findTripOnBoard(page, "blue-mantis", new RegExp(`^${sessionTitle}$`))).click();
+    // The crew picker is controlled: a pick before hydration silently no-ops
+    // (the DOM changes, no action fires), so wait for the marker first.
+    await expect(page.getByLabel("Assign crew")).toHaveAttribute("data-hydrated", "true");
     await page.getByLabel("Assign crew").selectOption({ label: "Marcus Webb" }); // the seeded instructor
     await expect(page.getByRole("button", { name: "Unassign Marcus Webb" })).toBeVisible();
     const tripUrl = page.url();

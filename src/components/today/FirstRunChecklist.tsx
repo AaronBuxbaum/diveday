@@ -169,12 +169,18 @@ export function FirstRunChecklist({
           }
         />
         <li className="flex flex-col gap-2 rounded-xl border border-border bg-surface p-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-3">
+          {/* `min-w-0` on both levels, or the `truncate` below never fires: a
+              flex item defaults to `min-width:auto`, so these boxes grow to
+              their widest child — the URL — and push the whole page wider than
+              the viewport instead of clipping it. Only visible once the URL is
+              absolute (a configured APP_HOST); with no origin it degrades to a
+              short path and fits by accident. */}
+          <div className="flex min-w-0 items-start gap-3">
             <span
               aria-hidden="true"
               className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full border-2 border-dashed border-border-strong text-xs font-bold"
             />
-            <div>
+            <div className="min-w-0">
               <p className="font-medium">{copy.scheduleTitle}</p>
               <p className="mt-0.5 text-sm text-muted">{copy.scheduleBody}</p>
               <p className="mt-2 max-w-full truncate font-mono text-xs text-muted">{scheduleUrl}</p>

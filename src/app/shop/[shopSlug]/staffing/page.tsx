@@ -20,6 +20,7 @@ import {
   formatCalendarDate,
   isValidCalendarDate,
 } from "@/lib/calendar-date";
+import { nowDate } from "@/lib/clock";
 import { formatTimeRangeTz } from "@/lib/format";
 import { requireStaffSession } from "@/lib/session";
 import { noticeFromParam } from "@/lib/staff-notices";
@@ -77,7 +78,13 @@ export default async function StaffingPage({
   // member reads dates and copy in their own language, not the shop row's.
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
-  const today = calendarDateInTimezone(new Date(), shop.timezone);
+  // Through the clock, not `new Date()`: this default window is what the whole
+  // page renders from, so a raw wall-clock read here left the one staff surface
+  // that ignores DIVEDAY_CLOCK — the seeded shifts sit at the frozen instant
+  // while the window opened on the real today, which is both an unstable visual
+  // baseline and an e2e fixture that drifts out from under itself. In
+  // production `nowDate()` is the native call, unchanged.
+  const today = calendarDateInTimezone(nowDate(), shop.timezone);
   const fromValue = query.from && isValidCalendarDate(query.from) ? query.from : today;
   const toValue = query.to && isValidCalendarDate(query.to) ? query.to : addDays(fromValue, 6);
   const fromWall = parseWallTime(fromValue, "00:00");
