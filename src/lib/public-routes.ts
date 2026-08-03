@@ -50,6 +50,42 @@ export function publicCoursePathPath(shopSlug: string, pathSlug: string): string
 }
 
 /**
+ * A shop slug as the routes spell it: lowercase, digits, inner hyphens. Kept
+ * in step with the embed matchers in src/lib/auth.config.ts.
+ */
+const SHOP_SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+/**
+ * The shop a staff URL names, or `null` when it names none.
+ *
+ * A signed-out visitor who follows a `/shop/<slug>/…` link lands on the staff
+ * sign-in form, and Auth.js carries where they were headed in `?callbackUrl=`.
+ * That parameter is the only evidence of *which* shop they wanted, so the
+ * sign-in page reads it to offer that shop's public schedule instead of
+ * stranding a diver at a password field. Returns `null` rather than a guess
+ * whenever the URL is absent, malformed, points somewhere other than `/shop/`,
+ * or carries a segment that isn't a slug — the caller then shows no link at
+ * all, because a link to the wrong shop is worse than none.
+ *
+ * The result is only ever used to build an internal `/s/<slug>` path, so an
+ * attacker-supplied `callbackUrl` cannot turn this into an open redirect; the
+ * charset check is what keeps it from becoming one anyway.
+ */
+export function shopSlugFromStaffUrl(candidate: string | null | undefined): string | null {
+  if (!candidate) return null;
+  let pathname: string;
+  try {
+    // Absolute (Auth.js sends the full href) or relative — a base makes both parse.
+    pathname = new URL(candidate, "http://localhost").pathname;
+  } catch {
+    return null;
+  }
+  const [prefix, slug] = pathname.split("/").filter(Boolean);
+  if (prefix !== "shop" || !slug || !SHOP_SLUG.test(slug)) return null;
+  return slug;
+}
+
+/**
  * The old `/shop/**` URLs these surfaces used to live at, and where each one
  * now points. Consumed by `next.config.ts` to emit permanent (308) redirects —
  * a QR code on a dive-shop counter, a bookmarked booking link, and an embed

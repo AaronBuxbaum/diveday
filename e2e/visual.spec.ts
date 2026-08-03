@@ -422,6 +422,12 @@ for (const scheme of ["light", "dark"] as const) {
       await page.goto("/sign-in");
       await capture(page, "sign-in", scheme);
 
+      // The same form after a signed-out visitor followed a `/shop/**` link:
+      // Auth.js's `callbackUrl` names the shop, so the page offers that shop's
+      // public schedule instead of leaving a diver at a staff password field.
+      await page.goto("/sign-in?callbackUrl=%2Fshop%2Fblue-mantis%2Fdivers");
+      await capture(page, "sign-in-shop-escape", scheme);
+
       await page.goto("/forgot-password");
       await capture(page, "forgot-password", scheme);
 
@@ -1232,6 +1238,17 @@ for (const scheme of ["light", "dark"] as const) {
       await page.getByRole("heading", { name: "Get your shop ready" }).waitFor();
       await page.getByRole("heading", { name: "Nothing is waiting on you" }).waitFor();
       await capture(page, "today-empty", scheme);
+
+      // The "More" menu open — the only way to see its two named groups ("Run
+      // the shop" / "Set up") and the destinations they hold, since the panel
+      // used to separate them with one unlabelled rule. Captured here rather
+      // than over the seeded Today: the nav is identical (a fresh owner passes
+      // every gate) and this page is short, so the baseline is the menu rather
+      // than a second copy of a very tall dashboard whose every content change
+      // would diff this image too.
+      await page.locator("header summary").filter({ hasText: "More" }).click();
+      await page.getByRole("list", { name: "Run the shop" }).waitFor();
+      await capture(page, "nav-more-menu", scheme);
     });
   });
 }

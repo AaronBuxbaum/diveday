@@ -1,8 +1,13 @@
 import Link from "next/link";
 import { KeyboardShortcuts, type KeyboardShortcutsCopy } from "@/components/KeyboardShortcuts";
 import { LogoMark } from "@/components/Logo";
-import { staffTranslator } from "@/i18n/staff-messages";
+import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { signOut } from "@/lib/auth";
+import {
+  type StaffDestinationLabels,
+  staffShopRoot,
+  staffShortcutDestinations,
+} from "@/lib/staff-destinations";
 import {
   type ShopNavCounts,
   type ShopNavGates,
@@ -16,6 +21,34 @@ import { InlineConfirm } from "./ui/InlineConfirm";
 async function signOutAction() {
   "use server";
   await signOut({ redirectTo: "/" });
+}
+
+/**
+ * The one word each staff destination goes by. The nav tabs, the palette's
+ * "Go to" rows, and the keyboard-shortcut sheet all read this record, so the
+ * three can no longer call the same page different things — or, as before,
+ * know about different pages entirely. Typed against `StaffDestinationId`, so
+ * adding a destination to the registry is a type error here until it has a word.
+ */
+function destinationLabelsFor(t: (key: StaffMessageKey) => string): StaffDestinationLabels {
+  return {
+    today: t("shared.shopNavLinks.today"),
+    checkIn: t("shared.shopNavLinks.checkIn"),
+    walkIn: t("shared.shopNavLinks.walkIn"),
+    blockers: t("shared.shopNavLinks.blockers"),
+    divers: t("shared.shopNavLinks.divers"),
+    board: t("shared.shopNavLinks.board"),
+    staffing: t("shared.shopNavLinks.staffing"),
+    diveSites: t("shared.shopNavLinks.diveSites"),
+    courses: t("shared.shopNavLinks.courses"),
+    reviews: t("shared.shopNavLinks.reviews"),
+    orders: t("shared.shopNavLinks.orders"),
+    waivers: t("shared.shopNavLinks.waivers"),
+    reports: t("shared.shopNavLinks.reports"),
+    promoCodes: t("shared.shopNavLinks.promoCodes"),
+    settings: t("shared.shopNavLinks.settings"),
+    team: t("shared.shopNavLinks.team"),
+  };
 }
 
 export function ShopNav({
@@ -36,17 +69,9 @@ export function ShopNav({
   navCounts?: ShopNavCounts;
   locale: string;
 }) {
-  const root = `/shop/${shopSlug}`;
+  const root = staffShopRoot(shopSlug);
   const t = staffTranslator(locale);
-  const baseNavShortcuts = [
-    { key: "t", suffix: "", page: t("shared.commandPalette.goToToday") },
-    { key: "s", suffix: "/schedule/board", page: t("shared.commandPalette.goToSchedule") },
-    { key: "d", suffix: "/divers", page: t("shared.commandPalette.goToDivers") },
-    { key: "b", suffix: "/blockers", page: t("shared.commandPalette.goToBlockers") },
-    ...(navGates.waivers
-      ? [{ key: "w", suffix: "/waivers", page: t("shared.commandPalette.goToWaivers") }]
-      : []),
-  ];
+  const destinationLabels = destinationLabelsFor(t);
   const keyboardShortcutsCopy: KeyboardShortcutsCopy = {
     buttonAriaLabel: t("shared.keyboardShortcuts.buttonAriaLabel"),
     buttonTitle: t("shared.keyboardShortcuts.buttonTitle"),
@@ -59,10 +84,14 @@ export function ShopNav({
       kbdG: (chunks) => <kbd>{chunks}</kbd>,
       kbdS: (chunks) => <kbd>{chunks}</kbd>,
     }),
-    navShortcuts: baseNavShortcuts.map(({ key, suffix, page }) => ({
-      key,
-      suffix,
-      goToLabel: t("shared.keyboardShortcuts.goToLabel", { page }),
+    // Derived from the destination registry, so the sheet lists exactly the
+    // sequences that work — including none for a surface this role can't see.
+    navShortcuts: staffShortcutDestinations(navGates).map((destination) => ({
+      key: destination.shortcut,
+      suffix: destination.suffix,
+      goToLabel: t("shared.keyboardShortcuts.goToLabel", {
+        page: destinationLabels[destination.id],
+      }),
     })),
   };
   return (
@@ -90,8 +119,7 @@ export function ShopNav({
           <CommandPalette
             shopSlug={shopSlug}
             boatBoardingHref={boatBoardingHref}
-            canManageWaivers={navGates.waivers}
-            canManageReports={navGates.reports}
+            gates={navGates}
             copy={{
               search: t("shared.commandPalette.search"),
               dialogAriaLabel: t("shared.commandPalette.dialogAriaLabel"),
@@ -105,23 +133,9 @@ export function ShopNav({
               groupCourses: t("shared.commandPalette.groupCourses"),
               groupOrders: t("shared.commandPalette.groupOrders"),
               groupGoTo: t("shared.commandPalette.groupGoTo"),
-              goToToday: t("shared.commandPalette.goToToday"),
-              goToBlockers: t("shared.commandPalette.goToBlockers"),
-              goToCheckIn: t("shared.commandPalette.goToCheckIn"),
-              goToStaffing: t("shared.commandPalette.goToStaffing"),
-              goToDiveSites: t("shared.commandPalette.goToDiveSites"),
-              goToCourses: t("shared.commandPalette.goToCourses"),
-              goToReviews: t("shared.commandPalette.goToReviews"),
-              goToReports: t("shared.commandPalette.goToReports"),
-              goToPromos: t("shared.commandPalette.goToPromos"),
-              goToSchedule: t("shared.commandPalette.goToSchedule"),
-              goToDivers: t("shared.commandPalette.goToDivers"),
-              goToSettings: t("shared.commandPalette.goToSettings"),
-              goToWaivers: t("shared.commandPalette.goToWaivers"),
+              destinationLabels,
               goToBoarding: t("shared.commandPalette.goToBoarding"),
-              goToWalkIn: t("shared.commandPalette.goToWalkIn"),
               goToOfflineRollCall: t("shared.commandPalette.goToOfflineRollCall"),
-              goToOrders: t("shared.commandPalette.goToOrders"),
             }}
           />
           <KeyboardShortcuts shopSlug={shopSlug} copy={keyboardShortcutsCopy} />
@@ -159,20 +173,9 @@ export function ShopNav({
             {
               primaryNavAriaLabel: t("shared.shopNavLinks.primaryNavAriaLabel"),
               more: t("shared.shopNavLinks.more"),
-              today: t("shared.shopNavLinks.today"),
-              checkIn: t("shared.shopNavLinks.checkIn"),
-              blockers: t("shared.shopNavLinks.blockers"),
-              divers: t("shared.shopNavLinks.divers"),
-              schedule: t("shared.shopNavLinks.schedule"),
-              staffing: t("shared.shopNavLinks.staffing"),
-              diveSites: t("shared.shopNavLinks.diveSites"),
-              courses: t("shared.shopNavLinks.courses"),
-              reviews: t("shared.shopNavLinks.reviews"),
-              waivers: t("shared.shopNavLinks.waivers"),
-              reports: t("shared.shopNavLinks.reports"),
-              promoCodes: t("shared.shopNavLinks.promoCodes"),
-              settings: t("shared.shopNavLinks.settings"),
-              team: t("shared.shopNavLinks.team"),
+              groupDaily: t("shared.shopNavLinks.groupDaily"),
+              groupSetup: t("shared.shopNavLinks.groupSetup"),
+              labels: destinationLabels,
             } satisfies ShopNavLinksCopy
           }
           className="order-last w-full sm:order-2 sm:w-auto sm:flex-1"

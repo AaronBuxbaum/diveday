@@ -5,6 +5,12 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom";
 import { useFocusTrap } from "@/components/useFocusTrap";
 import type { SearchResults } from "@/db/search";
+import {
+  type StaffDestinationGates,
+  type StaffDestinationLabels,
+  staffDestinationHref,
+  staffPaletteDestinations,
+} from "@/lib/staff-destinations";
 
 type PaletteItem = { key: string; label: string; detail?: string; href: string };
 type PaletteGroup = { heading: string; items: PaletteItem[] };
@@ -24,23 +30,16 @@ export type CommandPaletteCopy = {
   groupCourses: string;
   groupOrders: string;
   groupGoTo: string;
-  goToToday: string;
-  goToBlockers: string;
-  goToCheckIn: string;
-  goToStaffing: string;
-  goToDiveSites: string;
-  goToCourses: string;
-  goToReviews: string;
-  goToReports: string;
-  goToPromos: string;
-  goToSchedule: string;
-  goToDivers: string;
-  goToSettings: string;
-  goToWaivers: string;
+  /**
+   * The same destination labels the nav renders (src/lib/staff-destinations.ts).
+   * One record, so "Go to Board" here and "Board" in the header can never
+   * become two different words for the same page.
+   */
+  destinationLabels: StaffDestinationLabels;
+  /** Today's departure — a live href, not a fixed destination. */
   goToBoarding: string;
-  goToWalkIn: string;
+  /** The per-device offline snapshot, which is not shop-scoped. */
   goToOfflineRollCall: string;
-  goToOrders: string;
 };
 
 /**
@@ -53,15 +52,16 @@ export type CommandPaletteCopy = {
 export function CommandPalette({
   shopSlug,
   boatBoardingHref,
-  canManageWaivers,
-  canManageReports,
+  gates,
   copy,
 }: {
   shopSlug: string;
   boatBoardingHref?: string;
-  canManageWaivers: boolean;
-  /** Owner/manager surfaces (H-14) — Reports and Promo codes, same gate as the nav. */
-  canManageReports: boolean;
+  /**
+   * Owner/manager gates (H-14), the same object the nav gets — a gated
+   * destination is absent from both, never present here and missing there.
+   */
+  gates: StaffDestinationGates;
   copy: CommandPaletteCopy;
 }) {
   const router = useRouter();
@@ -147,36 +147,15 @@ export function CommandPalette({
         href: "/offline-manifest",
       });
     }
-    const baseGoTo: { label: string; suffix: string }[] = [
-      { label: copy.goToToday, suffix: "" },
-      { label: copy.goToWalkIn, suffix: "/check-in/walk-in" },
-      { label: copy.goToBlockers, suffix: "/blockers" },
-      { label: copy.goToCheckIn, suffix: "/check-in" },
-      { label: copy.goToSchedule, suffix: "/schedule/board" },
-      { label: copy.goToDivers, suffix: "/divers" },
-      { label: copy.goToStaffing, suffix: "/staffing" },
-      { label: copy.goToDiveSites, suffix: "/dive-sites" },
-      { label: copy.goToCourses, suffix: "/courses" },
-      { label: copy.goToReviews, suffix: "/reviews" },
-      { label: copy.goToOrders, suffix: "/orders" },
-      { label: copy.goToSettings, suffix: "/settings" },
-    ];
-    const goTo = [
-      ...baseGoTo,
-      ...(canManageWaivers ? [{ label: copy.goToWaivers, suffix: "/waivers" }] : []),
-      ...(canManageReports
-        ? [
-            { label: copy.goToReports, suffix: "/reports" },
-            { label: copy.goToPromos, suffix: "/promos" },
-          ]
-        : []),
-    ];
-    for (const entry of goTo) {
-      if (q === "" || entry.label.toLowerCase().includes(q)) {
+    // One list with the nav and the keyboard shortcuts, already filtered for
+    // this viewer's permissions.
+    for (const destination of staffPaletteDestinations(gates)) {
+      const label = copy.destinationLabels[destination.id];
+      if (q === "" || label.toLowerCase().includes(q)) {
         goto.push({
-          key: `goto:${entry.suffix}`,
-          label: entry.label,
-          href: `${root}${entry.suffix}`,
+          key: `goto:${destination.id}`,
+          label,
+          href: staffDestinationHref(root, destination),
         });
       }
     }
@@ -236,7 +215,7 @@ export function CommandPalette({
     }
     if (goto.length > 0) out.push({ heading: copy.groupGoTo, items: goto });
     return out;
-  }, [results, query, boatBoardingHref, root, canManageWaivers, canManageReports, copy]);
+  }, [results, query, boatBoardingHref, root, gates, copy]);
 
   const flat = useMemo(() => groups.flatMap((group) => group.items), [groups]);
 

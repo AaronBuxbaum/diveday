@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { FlashParams } from "@/components/FlashParams";
@@ -22,7 +23,7 @@ import { DEFAULT_WAIVER_BODY, DEFAULT_WAIVER_TITLE } from "@/lib/waivers";
 export const instant = false;
 
 export const metadata: Metadata = {
-  title: "Waiver template — DiveDay",
+  title: "Waivers — DiveDay",
 };
 
 const templateSchema = z.object({
@@ -127,6 +128,19 @@ export default async function WaiverTemplatesPage({
         title={t("waiversStaff.title")}
         description={t("waiversStaff.description")}
       />
+
+      {/* This tab writes the waiver; nothing here sends or chases one. Not
+          ready is where an unsigned waiver actually gets handled, so the job
+          "someone hasn't signed" has a path out of the page it lands on. */}
+      <p className="mt-3 text-sm text-muted">
+        {t.rich("waiversStaff.chaseUnsigned", {
+          link: (chunks) => (
+            <Link href={`/shop/${shopSlug}/blockers`} className="text-primary hover:underline">
+              {chunks}
+            </Link>
+          ),
+        })}
+      </p>
 
       {banner ? (
         <div className="mt-6">

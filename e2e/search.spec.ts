@@ -63,6 +63,10 @@ test("the command palette also finds dive sites, courses, and every gated nav de
     ["Reviews", /\/reviews$/],
     ["Reports", /\/reports$/],
     ["Promo codes", /\/promos$/],
+    // Both used to exist in only one of the palette/nav pair; they come from
+    // the shared destination registry now, so each is reachable from both.
+    ["Orders", /\/orders$/],
+    ["Team", /\/settings\/team$/],
   ] as const) {
     await shortcuts.fill(query);
     await page.getByRole("option", { name: query, exact: true }).click();

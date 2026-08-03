@@ -1009,6 +1009,9 @@
     }
   },
   "schedule": {
+    "boardEyebrow": "Calendario",
+    "boardTitle": "Tablero",
+    "boardDescription": "Próximas salidas. Abre una para trabajar su lista de buceadores, su preparación y su manifiesto.",
     "viewPublicPage": "Ver la página pública",
     "fullTripForm": "Formulario completo de salida",
     "scheduleTrip": "Programar una salida",
@@ -2164,6 +2167,7 @@
     "eyebrow": "Ajustes",
     "title": "Plantilla de exención",
     "description": "Todos los buceadores firman este mismo descargo. Edítalo para que se ajuste a tu centro.",
+    "chaseUnsigned": "¿Persiguiendo una exención sin firmar? <link>No listos</link> muestra a cada buceador que la tiene pendiente.",
     "banner": {
       "savedNew": "Guardado como nueva versión.",
       "savedFirst": "Tu descargo está guardado. Cada futura edición se conserva como una nueva versión.",
@@ -2229,7 +2233,7 @@
         "owner": {
           "title": "Estás al mando de toda la tienda",
           "desc": "Hoy es tu cola de trabajo — reservas, bloqueos y las salidas de hoy en un solo lugar.",
-          "tryThis": "Abre Calendario para ver las salidas de esta semana."
+          "tryThis": "Abre Tablero para ver las salidas de esta semana."
         },
         "manager": {
           "title": "Manteniendo la tienda en marcha día a día",
@@ -2243,8 +2247,8 @@
         },
         "divemaster": {
           "title": "Preparando a los buceadores para embarcar",
-          "desc": "Bloqueos enumera a todos los que aún no pueden embarcar, con el único toque que resuelve cada caso.",
-          "tryThis": "Abre Bloqueos para ver quién todavía necesita preparación."
+          "desc": "No listos enumera a todos los que aún no pueden embarcar, con el único toque que resuelve cada caso.",
+          "tryThis": "Abre No listos para ver quién todavía necesita preparación."
         },
         "captain": {
           "title": "Dirigiendo el barco",
@@ -2376,23 +2380,8 @@
       "groupCourses": "Cursos",
       "groupOrders": "Pedidos",
       "groupGoTo": "Ir a",
-      "goToToday": "Hoy",
-      "goToBlockers": "No listos",
-      "goToCheckIn": "Registro",
-      "goToStaffing": "Personal",
-      "goToDiveSites": "Sitios de buceo",
-      "goToCourses": "Cursos",
-      "goToReviews": "Reseñas",
-      "goToReports": "Informes",
-      "goToPromos": "Códigos promocionales",
-      "goToSchedule": "Calendario",
-      "goToDivers": "Buceadores",
-      "goToSettings": "Ajustes",
-      "goToWaivers": "Plantilla de exención",
       "goToBoarding": "Embarque — el barco de hoy",
-      "goToWalkIn": "Walk-in",
-      "goToOfflineRollCall": "Abrir pase de lista sin conexión",
-      "goToOrders": "Pedidos"
+      "goToOfflineRollCall": "Abrir pase de lista sin conexión"
     },
     "keyboardShortcuts": {
       "buttonAriaLabel": "Atajos de teclado",
@@ -2402,7 +2391,7 @@
       "heading": "Atajos de teclado",
       "paletteLabel": "Buscar buceadores, salidas y páginas",
       "helpLabel": "Mostrar esta ayuda",
-      "sequenceHint": "Pulsa las teclas una tras otra para una secuencia — por ejemplo, <kbdG>G</kbdG> y luego <kbdS>S</kbdS> para el calendario.",
+      "sequenceHint": "Pulsa las teclas una tras otra para una secuencia — por ejemplo, <kbdG>G</kbdG> y luego <kbdS>S</kbdS> para el tablero.",
       "goToLabel": "Ir a {page}"
     },
     "readiness": {
@@ -2451,16 +2440,20 @@
     "shopNavLinks": {
       "primaryNavAriaLabel": "Principal",
       "more": "Más",
+      "groupDaily": "Llevar la tienda",
+      "groupSetup": "Configurar",
       "today": "Hoy",
       "checkIn": "Registro",
+      "walkIn": "Walk-in",
       "blockers": "No listos",
       "divers": "Buceadores",
-      "schedule": "Calendario",
+      "board": "Tablero",
       "staffing": "Personal",
       "diveSites": "Sitios de buceo",
       "courses": "Cursos",
       "reviews": "Reseñas",
-      "waivers": "Plantilla de exención",
+      "orders": "Pedidos",
+      "waivers": "Exenciones",
       "reports": "Informes",
       "promoCodes": "Códigos promocionales",
       "settings": "Ajustes",

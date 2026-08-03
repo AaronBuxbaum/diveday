@@ -26,7 +26,6 @@
   "schedule": {
     "eyebrow": "Salidas",
     "title": "Calendario",
-    "staffDescription": "Próximas salidas. Abre una para trabajar su lista de buceadores, su preparación y su manifiesto.",
     "diverDescription": "Encuentra tu próximo día en el agua, mira qué esperar y reserva tu plaza.",
     "noTrips": "Todavía no hay salidas programadas",
     "noTripsStaff": "El tablón está vacío. Programa la primera salida y los buceadores podrán reservar.",
@@ -823,7 +822,8 @@
       "signingIn": "Iniciando sesión…",
       "submit": "Iniciar sesión",
       "needShop": "¿Necesitas una tienda?",
-      "createShop": "Crear una tienda"
+      "createShop": "Crear una tienda",
+      "publicSchedule": "¿Buscas el calendario de buceo?"
     },
     "onboard": {
       "eyebrow": "Tienda fundadora",

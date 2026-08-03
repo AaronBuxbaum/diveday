@@ -26,7 +26,6 @@
   "schedule": {
     "eyebrow": "Trips",
     "title": "Schedule",
-    "staffDescription": "Upcoming trips. Open a departure to work through its roster, readiness, prep list, and manifest.",
     "diverDescription": "Find your next day on the water, see what to expect, and reserve your spot.",
     "noTrips": "No trips on the books yet",
     "noTripsStaff": "The board is clear. Schedule your first departure and divers can start booking.",
@@ -823,7 +822,8 @@
       "signingIn": "Signing in…",
       "submit": "Sign in",
       "needShop": "Need a shop?",
-      "createShop": "Create a shop"
+      "createShop": "Create a shop",
+      "publicSchedule": "Looking for the dive schedule?"
     },
     "onboard": {
       "eyebrow": "Founding shop",

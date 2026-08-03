@@ -1009,6 +1009,9 @@
     }
   },
   "schedule": {
+    "boardEyebrow": "Schedule",
+    "boardTitle": "Board",
+    "boardDescription": "Upcoming trips. Open a departure to work through its roster, readiness, prep list, and manifest.",
     "viewPublicPage": "View public page",
     "fullTripForm": "Full trip form",
     "scheduleTrip": "Schedule a trip",
@@ -2164,6 +2167,7 @@
     "eyebrow": "Settings",
     "title": "Waiver template",
     "description": "Every diver signs this one release. Edit it to fit your shop.",
+    "chaseUnsigned": "Chasing an unsigned waiver? <link>Not ready</link> lists every diver still holding one up.",
     "banner": {
       "savedNew": "Saved as a new version.",
       "savedFirst": "Your waiver is saved. Every future edit is kept as a new version.",
@@ -2229,7 +2233,7 @@
         "owner": {
           "title": "You're steering the whole shop",
           "desc": "Today is your work queue — bookings, blockers, and today's departures in one place.",
-          "tryThis": "Open Schedule to see this week's departures."
+          "tryThis": "Open Board to see this week's departures."
         },
         "manager": {
           "title": "Keeping the shop running day to day",
@@ -2243,8 +2247,8 @@
         },
         "divemaster": {
           "title": "Getting divers ready to board",
-          "desc": "Blockers lists everyone who can't board yet, with the one tap that fixes each one.",
-          "tryThis": "Open Blockers to see who still needs prep."
+          "desc": "Not ready lists everyone who can't board yet, with the one tap that fixes each one.",
+          "tryThis": "Open Not ready to see who still needs prep."
         },
         "captain": {
           "title": "Running the boat",
@@ -2376,23 +2380,8 @@
       "groupCourses": "Courses",
       "groupOrders": "Orders",
       "groupGoTo": "Go to",
-      "goToToday": "Today",
-      "goToBlockers": "Not ready",
-      "goToCheckIn": "Check-in",
-      "goToStaffing": "Staffing",
-      "goToDiveSites": "Dive sites",
-      "goToCourses": "Courses",
-      "goToReviews": "Reviews",
-      "goToReports": "Reports",
-      "goToPromos": "Promo codes",
-      "goToSchedule": "Schedule",
-      "goToDivers": "Divers",
-      "goToSettings": "Settings",
-      "goToWaivers": "Waiver template",
       "goToBoarding": "Boarding — today's boat",
-      "goToWalkIn": "Walk-in",
-      "goToOfflineRollCall": "Open offline roll call",
-      "goToOrders": "Orders"
+      "goToOfflineRollCall": "Open offline roll call"
     },
     "keyboardShortcuts": {
       "buttonAriaLabel": "Keyboard shortcuts",
@@ -2402,7 +2391,7 @@
       "heading": "Keyboard shortcuts",
       "paletteLabel": "Search divers, trips, and pages",
       "helpLabel": "Show this help",
-      "sequenceHint": "Press keys one after another for a sequence — e.g. <kbdG>G</kbdG> then <kbdS>S</kbdS> for the schedule.",
+      "sequenceHint": "Press keys one after another for a sequence — e.g. <kbdG>G</kbdG> then <kbdS>S</kbdS> for the board.",
       "goToLabel": "Go to {page}"
     },
     "readiness": {
@@ -2451,16 +2440,20 @@
     "shopNavLinks": {
       "primaryNavAriaLabel": "Primary",
       "more": "More",
+      "groupDaily": "Run the shop",
+      "groupSetup": "Set up",
       "today": "Today",
       "checkIn": "Check-in",
+      "walkIn": "Walk-in",
       "blockers": "Not ready",
       "divers": "Divers",
-      "schedule": "Schedule",
+      "board": "Board",
       "staffing": "Staffing",
       "diveSites": "Dive sites",
       "courses": "Courses",
       "reviews": "Reviews",
-      "waivers": "Waiver template",
+      "orders": "Orders",
+      "waivers": "Waivers",
       "reports": "Reports",
       "promoCodes": "Promo codes",
       "settings": "Settings",

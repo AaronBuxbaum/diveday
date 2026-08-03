@@ -22,6 +22,7 @@ import { requestTranslator } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { formatShortDate, formatTimeRange } from "@/lib/format";
+import { publicSchedulePath } from "@/lib/public-routes";
 import {
   decodeCursorStack,
   encodeCursorStack,
@@ -40,7 +41,7 @@ import {
 } from "./actions";
 
 export const metadata: Metadata = {
-  title: "Schedule board — DiveDay",
+  title: "Board — DiveDay",
   // Staff-only operations surface, never a public document.
   robots: { index: false, follow: false },
 };
@@ -293,13 +294,16 @@ export default async function ScheduleBoardPage({
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <ShopPageHeader
-        eyebrow={t("schedule.eyebrow")}
-        title={t("schedule.title")}
-        description={t("schedule.staffDescription")}
+        // The board's own name, from the staff bundle. It used to borrow the
+        // public schedule's heading, so `/s/<slug>` and this page both said
+        // "Schedule" while the nav tab called it something else again.
+        eyebrow={st("schedule.boardEyebrow")}
+        title={st("schedule.boardTitle")}
+        description={st("schedule.boardDescription")}
         actions={
           <>
             <Link
-              href={`/shop/${shopSlug}/schedule`}
+              href={publicSchedulePath(shopSlug)}
               className={buttonClass({ variant: "secondary", className: "rounded-xl" })}
             >
               {st("schedule.viewPublicPage")}

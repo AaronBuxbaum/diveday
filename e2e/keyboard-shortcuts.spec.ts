@@ -11,7 +11,11 @@ test("the ? help lists shortcuts and a g-sequence jumps between surfaces", async
   await page.keyboard.press("?");
   const dialog = page.getByRole("dialog", { name: "Keyboard shortcuts" });
   await expect(dialog).toBeVisible();
-  await expect(dialog.getByText("Go to Schedule")).toBeVisible();
+  // The sheet, the nav tab, and the palette all read one destination registry
+  // (src/lib/staff-destinations.ts), so they name the board identically.
+  await expect(dialog.getByText("Go to Board")).toBeVisible();
+  // An owner sees every sequence the registry defines, waivers included.
+  await expect(dialog.getByText("Go to Waivers")).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(dialog).toBeHidden();
 

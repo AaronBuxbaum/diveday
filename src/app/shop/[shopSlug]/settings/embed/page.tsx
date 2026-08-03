@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
 import { requestLocale } from "@/i18n/request";
@@ -38,10 +40,27 @@ export default async function EmbedSettingsPage() {
   const origin = publicAppUrl();
   const scheduleUrl = origin ? `${origin}${publicSchedulePath(shop.slug)}` : null;
 
+  // Every other settings sub-page carries this; this one didn't, so the only
+  // way out of it — including out of the not-configured state below, which is
+  // the version a shop without a hosting address ever sees — was the browser's
+  // own Back.
+  const backToSettings = (
+    <Link
+      href={`/shop/${session.user.shopSlug}/settings`}
+      className={buttonClass({ variant: "secondary", className: "text-foreground" })}
+    >
+      {t("settings.main.backToSettings")}
+    </Link>
+  );
+
   if (!scheduleUrl) {
     return (
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
-        <ShopPageHeader eyebrow={t("settings.embed.eyebrow")} title={t("settings.embed.title")} />
+        <ShopPageHeader
+          eyebrow={t("settings.embed.eyebrow")}
+          title={t("settings.embed.title")}
+          actions={backToSettings}
+        />
         <p className="rounded-lg bg-warning/10 px-4 py-3 text-sm font-medium text-warning">
           {t("settings.embed.notConfigured", { email: FOUNDER_EMAIL })}
         </p>
@@ -85,6 +104,7 @@ export default async function EmbedSettingsPage() {
         eyebrow={t("settings.embed.eyebrow")}
         title={t("settings.embed.title")}
         description={t("settings.embed.description")}
+        actions={backToSettings}
       />
 
       <section className="rounded-lg border border-border bg-surface p-6">
