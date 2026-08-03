@@ -90,6 +90,13 @@ the full suite locally with identical pass counts across repeated runs.
   before each test, so mutations in one spec can't change what another asserts on. Iterating on a
   single spec, `playwright test <spec>` reuses the existing build; `next start`'s production runtime
   needs `AUTH_SECRET`/`AUTH_TRUST_HOST` and the `DIVEDAY_E2E` reset opt-in, which the config supplies.
+- **Every `/api/test/*` route is guarded, and that is enforced.** The harness's own endpoints
+  (`reset` plus the `seed-*` routes) reset and seed state and mint real tokens — `seed-account-token`
+  hands back a valid password-reset or invite token for any account by email — so each handler must
+  open with `e2eTestRouteAuthorized(request)` (`src/lib/e2e-test-routes.ts`: env predicate plus a
+  `DIVEDAY_E2E_SECRET` bearer token, failing closed). `pnpm check:e2e-fixtures` fails when a handler
+  under `src/app/api/test/**` doesn't call it, and each route carries auth-gate unit tests asserting
+  the refusal lands before any database work.
 - **Safety-critical logic** (manifest counts, roll-call state, cert gating) merges only with
   tests for the failure paths, not just the happy path.
 - **Visual regression freezes the clock, never masks.** Playwright visual tests in
