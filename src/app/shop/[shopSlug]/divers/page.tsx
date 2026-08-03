@@ -12,9 +12,10 @@ import { getDb } from "@/db/client";
 import { createDiver, isDiverFilter, listDiverSummaries, restoreDiver } from "@/db/divers";
 import { getShopById } from "@/db/shops";
 import { requestLocale } from "@/i18n/request";
-import { staffTranslator } from "@/i18n/staff-messages";
+import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
+import { type NoticeTone, noticeFromParam } from "@/lib/staff-notices";
 import { DiverList } from "./_components/DiverList";
 
 // TODO: Cache Components adoption. Refactor this route so this opt-out can be removed.
@@ -22,6 +23,27 @@ import { DiverList } from "./_components/DiverList";
 export const instant = false;
 
 export const metadata: Metadata = { title: "Divers — DiveDay" };
+
+/**
+ * One entry per notice, carrying its own tone and message key — the shape the
+ * diver record's own banner already uses. This was a seven-deep ternary with a
+ * separate hand-maintained `noticeIsError` disjunction beside it: adding a
+ * refusal to one and not the other rendered a failure in success green, and
+ * both lists had to be read end-to-end to answer "what can this page say?".
+ */
+const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
+  duplicate: { tone: "danger", key: "divers.page.noticeDuplicate" },
+  deleted: { tone: "success", key: "divers.page.noticeDeleted" },
+  restored: { tone: "success", key: "divers.page.noticeRestored" },
+  erased: { tone: "success", key: "divers.page.noticeErased" },
+  // The erasure landed locally and deleted what it could at Stripe, but
+  // something there is still owed — a failed customer delete, or the invoice
+  // snapshot only a data-deletion request clears. Saying plain "erased" here
+  // would overstate what happened (ADR 20260803-processor-erasure-obligations).
+  "erased-processor-owed": { tone: "success", key: "divers.page.noticeErasedProcessorOwed" },
+  "not-authorized": { tone: "danger", key: "divers.page.noticeNotAuthorized" },
+  invalid: { tone: "danger", key: "divers.page.noticeInvalid" },
+};
 
 const diverSchema = z.object({
   fullName: z.string().trim().min(2).max(120),
@@ -93,29 +115,9 @@ export default async function DiversPage({
     );
   }
 
-  const noticeText =
-    notice === "duplicate"
-      ? t("divers.page.noticeDuplicate")
-      : notice === "deleted"
-        ? t("divers.page.noticeDeleted")
-        : notice === "restored"
-          ? t("divers.page.noticeRestored")
-          : notice === "erased"
-            ? t("divers.page.noticeErased")
-            : // The erasure landed locally and deleted what it could at Stripe,
-              // but something there is still owed — a failed customer delete, or
-              // the invoice snapshot only a data-deletion request clears. Saying
-              // plain "erased" here would overstate what happened
-              // (ADR 20260803-processor-erasure-obligations).
-              notice === "erased-processor-owed"
-              ? t("divers.page.noticeErasedProcessorOwed")
-              : notice === "not-authorized"
-                ? t("divers.page.noticeNotAuthorized")
-                : notice === "invalid"
-                  ? t("divers.page.noticeInvalid")
-                  : null;
-  const noticeIsError =
-    notice === "duplicate" || notice === "invalid" || notice === "not-authorized";
+  const banner = noticeFromParam(notice, NOTICES);
+  const noticeText = banner ? t(banner.key) : null;
+  const noticeIsError = banner?.tone === "danger";
 
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10">

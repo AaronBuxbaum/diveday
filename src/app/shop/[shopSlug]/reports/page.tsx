@@ -183,7 +183,13 @@ export default async function ReportsPage({
   // Checked against the database, not the JWT, so a revoked manager loses
   // revenue access immediately (see canPersonViewShopReports).
   if (!(await canPersonViewShopReports(db, session.user.shopId, session.user.personId))) {
-    redirect(`/shop/${shopSlug}`);
+    // The nearest parent surface *with a notice code it handles* — a refusal
+    // that teleports you to Today saying nothing is indistinguishable from a
+    // dead link (task 82). The nav already hides this destination from
+    // non-owners/managers (ADR 20260724-role-gated-surfaces-hide-not-explain);
+    // this landing is for everyone who arrived by bookmark, deep link, or a
+    // role that changed under them.
+    redirect(`/shop/${shopSlug}?notice=reports_not_authorized`);
   }
 
   const tz = shop.timezone;

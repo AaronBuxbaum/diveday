@@ -44,6 +44,7 @@ function renderSection(totalCents: number, currency: string) {
       shopSlug="reef-shop"
       personId="person-1"
       canRefund={false}
+      paymentsConnected
     />,
   );
 }
@@ -66,7 +67,7 @@ function diverWithBookings(count: number): DiverProfile {
   } as unknown as DiverProfile;
 }
 
-function renderBookings(count: number) {
+function renderBookings(count: number, paymentsConnected = true) {
   return render(
     <PaymentsSection
       diver={diverWithBookings(count)}
@@ -75,6 +76,7 @@ function renderBookings(count: number) {
       shopSlug="reef-shop"
       personId="person-1"
       canRefund={false}
+      paymentsConnected={paymentsConnected}
     />,
   );
 }
@@ -121,5 +123,38 @@ describe("PaymentsSection history length", () => {
     // disclosure the same way `ShopHistory`'s "older entries" panel works.
     expect(screen.getByText("Trip 8")).toBeInTheDocument();
     expect(screen.getByText("Trip 9")).toBeInTheDocument();
+  });
+});
+
+/**
+ * `orders/new` refuses to open at all until the shop can accept payments, so a
+ * day-one shop's "New payment"/"Create invoice" buttons went nowhere and said
+ * nothing. Hiding them is a courtesy — the page still re-checks — but the
+ * courtesy is what stops a button from reading as broken.
+ */
+describe("PaymentsSection with no connected payment account", () => {
+  it("offers to connect payments instead of linking at the invoice door", () => {
+    renderBookings(1, false);
+
+    const connect = screen.getAllByRole("link", { name: "Connect payments" });
+    // Both entry points: the section's own header button and the per-booking
+    // row's "Create invoice".
+    expect(connect.length).toBeGreaterThanOrEqual(2);
+    for (const link of connect) {
+      expect(link).toHaveAttribute("href", "/shop/reef-shop/settings#money");
+    }
+    expect(screen.queryByRole("link", { name: "New payment" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Create invoice" })).not.toBeInTheDocument();
+  });
+
+  it("keeps the invoice buttons when payments are connected", () => {
+    renderBookings(1, true);
+
+    expect(screen.getByRole("link", { name: "New payment" })).toHaveAttribute(
+      "href",
+      "/shop/reef-shop/orders/new?personId=person-1",
+    );
+    expect(screen.getByRole("link", { name: "Create invoice" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Connect payments" })).not.toBeInTheDocument();
   });
 });

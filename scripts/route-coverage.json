@@ -217,8 +217,7 @@
     "visual": ["order-detail"]
   },
   "/shop/[shopSlug]/orders/new": {
-    "e2e": [],
-    "exempt": "no coverage yet \u2014 found by the 2026-08-03 test-system evaluation; needs a spec",
+    "e2e": ["orders-demo.spec.ts"],
     "visual": []
   },
   "/shop/[shopSlug]/promos": {

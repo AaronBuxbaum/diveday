@@ -409,6 +409,7 @@
       "refundFailed": "That payment could not be refunded. It may not be paid, or Stripe may need attention.",
       "demoDisabled": "This is a demo order — it isn't backed by a live Stripe invoice, so it can't be refunded.",
       "deleted": "Diver removed from active shop work. Their bookings and cards are preserved.",
+      "paymentNotConnected": "Payments aren't connected yet, so there's no account to invoice from — connect one to charge this diver.",
       "notAuthorizedRefund": "Refunds are limited to owners and managers — ask one of them to issue this refund.",
       "notAuthorizedDelete": "Removing a diver is limited to owners and managers — ask one of them to do it.",
       "notAuthorizedErase": "Erasing a diver's personal data is limited to the shop owner — ask them to do it.",
@@ -777,6 +778,9 @@
       "title": "Orders",
       "description": "Every invoice the shop has sent, across every diver and trip.",
       "newOrder": "New order",
+      "notice": {
+        "paymentNotConnected": "Payments aren't connected yet, so there's no account to invoice from — connect one to start charging divers."
+      },
       "filters": {
         "statusLabel": "Status",
         "statusAll": "All statuses",
@@ -1954,6 +1958,9 @@
       "title": "Import contacts",
       "description": "Bring your divers, cards, rental sizes, and prior waiver acceptance in from a CSV — from your old system or from DiveDay's own export. See exactly what comes across below.",
       "comingFrom": "Coming from <eve>EVE</eve>, <diveshop360>DiveShop360</diveshop360>, or <spreadsheet>a spreadsheet</spreadsheet>? See the matching guide, then come back here to bring it in.",
+      "notice": {
+        "notAuthorized": "Importing writes divers' personal and medical records, so it's limited to owners and managers."
+      },
       "comesAcross": {
         "heading": "What comes across",
         "description": "The specifics, row by row:"
@@ -2266,7 +2273,8 @@
     "scheduleTrip": "Schedule a trip",
     "notice": {
       "waiversNotAuthorized": "Editing the waiver is limited to owners and managers.",
-      "exportNotAuthorized": "Data export is limited to owners and managers."
+      "exportNotAuthorized": "Data export is limited to owners and managers.",
+      "reportsNotAuthorized": "Reports read the shop's revenue, so they're limited to owners and managers."
     },
     "orientation": {
       "heading": "New here? A few pointers for your role.",
@@ -2916,6 +2924,9 @@
       "notBoarded": "Not boarded",
       "notBoardedCarried": "Not boarded · carried",
       "notBackAboard": "Not back aboard"
+    },
+    "payments": {
+      "connect": "Connect payments"
     }
   },
   "whatsapp": {

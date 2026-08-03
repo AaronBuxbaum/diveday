@@ -1,5 +1,5 @@
 /**
- * The `?notice=` → banner plumbing every staff page repeats: a page redirects
+ * The `?notice=` → banner plumbing every page repeats: a page redirects
  * back to itself with a notice code, and the next render looks that code up
  * in its own map to decide a tone and some copy (docs ADR
  * 20260730-staff-copy-localization). ~11 pages hand-rolled the lookup half of
@@ -11,6 +11,12 @@
  * page-specific like a `countKey`), because the codes and copy are genuinely
  * different per surface. Only the "read this code out of that map, safely"
  * step is shared.
+ *
+ * Named for `/shop/**`, where the pattern started, but the lookup is not
+ * staff-specific and the diver-facing bearer-token pages (`/waivers`,
+ * `/ready`, `/recap`) read their own notice params through it too — a hostile
+ * query string is a hostile query string on either side of the auth line.
+ * `NoticeTone`/`noticeRole` below stay tied to the staff `ShopNotice` banner.
  */
 
 /** The tone vocabulary `ShopNotice` accepts — kept here so a notice map never

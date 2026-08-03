@@ -207,7 +207,9 @@ export default async function ImportContactsPage({
   const db = await getDb();
 
   if (!(await canPersonImportShopData(db, session.user.shopId, session.user.personId))) {
-    redirect(`/shop/${shopSlug}`);
+    // Settings, not Today — Import is a Settings sub-page, and its parent is
+    // where the refusal is legible. Same pattern as promos/WhatsApp/team.
+    redirect(`/shop/${shopSlug}/settings?notice=import_not_authorized`);
   }
 
   const shop = await getShopById(db, session.user.shopId);

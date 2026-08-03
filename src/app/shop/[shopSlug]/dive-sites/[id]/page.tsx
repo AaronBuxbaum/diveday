@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
+import { FlashParams } from "@/components/FlashParams";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
@@ -18,7 +19,7 @@ import {
 import { getShopById } from "@/db/shops";
 import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
-import { staffTranslator } from "@/i18n/staff-messages";
+import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import {
   depthInUnit,
   depthToMeters,
@@ -29,6 +30,7 @@ import { splitMediaUrls } from "@/lib/dive-sites";
 import { formatShortDate } from "@/lib/format";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
+import { noticeFromParam } from "@/lib/staff-notices";
 import { ingestDiveSiteMedia } from "@/lib/storage/ingest-dive-site-media";
 
 // TODO: Cache Components adoption. Refactor this route so this opt-out can be removed.
@@ -71,6 +73,20 @@ const siteSchema = z
     "Add both forecast coordinates or leave both blank.",
   );
 
+// A notice/error query param maps to a message key, never to a sentence — the
+// words come from the staff bundle at render time (docs ADR
+// 20260730-staff-copy-localization).
+const NOTICE_KEYS: Record<string, StaffMessageKey> = {
+  saved: "diveSites.edit.savedNotice",
+  copied: "diveSites.edit.copiedNotice",
+};
+
+const ERROR_KEYS: Record<string, StaffMessageKey> = {
+  invalid: "diveSites.edit.errorInvalid",
+  images: "diveSites.form.errorImages",
+  "images-unconfigured": "diveSites.form.errorImagesUnconfigured",
+};
+
 export default async function EditDiveSitePage({
   params,
   searchParams,
@@ -91,6 +107,12 @@ export default async function EditDiveSitePage({
   const locale = await requestLocale(shop?.defaultLocale);
   const t = staffTranslator(locale);
   const depthUnit = shop?.depthUnit ?? "meters";
+  // Both params are attacker-supplied. The ternaries these replace also had a
+  // second problem: their `else` branch meant *any* `?notice=` value at all —
+  // including one this page never emits — rendered "Saved", claiming a save
+  // that never happened. An unrecognized code now renders nothing.
+  const noticeKey = noticeFromParam(notice, NOTICE_KEYS);
+  const errorKey = noticeFromParam(error, ERROR_KEYS);
   const upcomingTrips = await listUpcomingTripsForSite(db, session.user.shopId, id);
 
   async function saveAction(formData: FormData) {
@@ -192,6 +214,10 @@ export default async function EditDiveSitePage({
 
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+      {/* Without this, `?notice=saved` stayed put and replayed "Saved" on every
+          refresh and back-navigation — the same one-shot rule the rest of
+          `/shop/**` follows. */}
+      <FlashParams params={["notice", "error"]} />
       <Link href={back} className="text-sm font-medium text-primary hover:underline">
         {t("diveSites.backToLibrary")}
       </Link>
@@ -231,21 +257,17 @@ export default async function EditDiveSitePage({
           }
         />
       </div>
-      {notice ? (
+      {noticeKey ? (
         <p
           role="status"
           className="mt-6 rounded-lg bg-success/10 px-3 py-2 text-sm font-medium text-success"
         >
-          {notice === "copied" ? t("diveSites.edit.copiedNotice") : t("diveSites.edit.savedNotice")}
+          {t(noticeKey)}
         </p>
       ) : null}
       {error ? (
         <ShopNotice tone="danger" role="alert" className="mt-6">
-          {error === "images"
-            ? t("diveSites.form.errorImages")
-            : error === "images-unconfigured"
-              ? t("diveSites.form.errorImagesUnconfigured")
-              : t("diveSites.edit.errorInvalid")}
+          {t(errorKey ?? "diveSites.edit.errorInvalid")}
         </ShopNotice>
       ) : null}
       {upcomingTrips.length > 0 ? (
