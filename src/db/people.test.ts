@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { isUniqueConstraintViolation } from "@/db/client";
 import { firstHandLocale } from "@/i18n/negotiate";
 import type { DiverLocale } from "@/i18n/settings";
+import { nowDate } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
 import { createBookingParty } from "./bookings";
 import { findOrCreatePerson, recordDiverOwnLocale, recordDiverOwnLocaleForBooking } from "./people";
@@ -140,7 +141,7 @@ describe("people_shop_email_unique (CR-008)", () => {
       .values({ shopId: shop.id, fullName: "Nora Quinn", email: "nora@example.com" })
       .returning();
     if (!original) throw new Error("insert failed");
-    await db.update(people).set({ deletedAt: new Date() }).where(eq(people.id, original.id));
+    await db.update(people).set({ deletedAt: nowDate() }).where(eq(people.id, original.id));
 
     await expect(
       db
@@ -346,7 +347,7 @@ describe("recordDiverOwnLocale (docs ADR 20260731-per-person-notification-locale
   it("leaves a soft-deleted person alone", async () => {
     const { db, shop } = await seededShopContext();
     const person = await newPerson(db, shop.id);
-    await db.update(people).set({ deletedAt: new Date() }).where(eq(people.id, person.id));
+    await db.update(people).set({ deletedAt: nowDate() }).where(eq(people.id, person.id));
     await recordDiverOwnLocale(db, { shopId: shop.id, personId: person.id, locale: "es-ES" });
     expect(await storedLocale(db, person.id)).toBeNull();
   });

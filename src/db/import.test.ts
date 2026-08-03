@@ -1,5 +1,6 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { nowDate } from "@/lib/clock";
 import { prepareContactImport } from "@/lib/import";
 import { isCompletedWaiverCurrent } from "@/lib/waivers";
 import { seededShopContext } from "@/test/db";
@@ -508,13 +509,13 @@ describe("commitContactImport — imported waiver acceptance (ADR 20260724-impor
       templateBody: template.body,
       status: "medical_review",
       tokenHash: `hold-${person.id}`,
-      expiresAt: new Date(),
+      expiresAt: nowDate(),
       signedName: "Held Hana",
       signatureMethod: "typed_consent",
-      consentedAt: new Date(),
-      signedAt: new Date(),
+      consentedAt: nowDate(),
+      signedAt: nowDate(),
       medicalReviewRequired: true,
-      completedAt: new Date(),
+      completedAt: nowDate(),
     });
 
     // A row claiming acceptance, dated *after* the hold, must still be
@@ -545,7 +546,7 @@ describe("commitContactImport — imported waiver acceptance (ADR 20260724-impor
     const importer = await accountPersonId(db, DEV_STAFF_LOGINS.owner.email);
     await db
       .update(waiverTemplates)
-      .set({ archivedAt: new Date() })
+      .set({ archivedAt: nowDate() })
       .where(eq(waiverTemplates.shopId, shop.id));
 
     const csv = [

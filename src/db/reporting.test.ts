@@ -441,7 +441,9 @@ describe("earliestReportedTripStart", () => {
     const { db, shop } = await seededShopContext();
     const [other] = await db
       .insert(shops)
-      .values({ name: "Empty Shop", slug: `empty-${Date.now()}`, timezone: "UTC" })
+      // A unique suffix, not a time read: `shops.slug` is unique and this
+      // test inserts a second shop alongside the seeded one.
+      .values({ name: "Empty Shop", slug: `empty-${crypto.randomUUID()}`, timezone: "UTC" })
       .returning();
     if (!other) throw new Error("failed to insert shop");
 

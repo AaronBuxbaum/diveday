@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import { seededShopContext, unseededTestDb } from "@/test/db";
+import { fakePromotions } from "@/test/fakes";
 import { issueBookingCapability } from "./booking-capabilities";
 import { createBooking } from "./bookings";
 import { getTripManifest } from "./manifests";
@@ -29,6 +30,7 @@ import {
   userAccounts,
 } from "./schema";
 import { demoTodayDepartureStart, resetDemoSchedule, seedIfEmpty } from "./seed";
+import { createShopPromoCode, getShopPromoByCode, setShopPromoEnabled } from "./shop-promos";
 import { inviteStaffMember } from "./staff-accounts";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { listStaff, upcomingTripsWithCounts } from "./trips";
@@ -303,14 +305,63 @@ describe("resetDemoSchedule", () => {
     expect(await listWaiverTemplateHistory(db, shop.id)).toHaveLength(1);
   });
 
-  it("purges a staff member invited mid-test, not just non-staff churn (was the flakiest screenshot in the visual suite: settings/team leaking a test-invited instructor whose email embeds Date.now())", async () => {
+  it("returns the seeded promo code to its live state, so a spec that switched it off doesn't leak that (#330)", async () => {
+    // Codes were exempted from this reset for a long time as "shop config".
+    // But `setShopPromoEnabled` is a one-click staff action, so a spec that
+    // switches REEF10 off leaves the next spec in the same worker with a
+    // diver-facing promo box that refuses the very code the seed promises —
+    // and a code some test minted outlives the test that minted it.
+    const { db, shop } = await seededShopContext();
+    const seeded = await getShopPromoByCode(db, shop.id, "REEF10");
+    if (!seeded) throw new Error("seeded REEF10 promo code missing");
+    expect(seeded.status).toBe("active");
+
+    expect(await setShopPromoEnabled(db, shop.id, seeded.id, false)).toBe(true);
+    expect((await getShopPromoByCode(db, shop.id, "REEF10"))?.status).toBe("disabled");
+
+    // Minting a code needs a connected account (the real staff path mints the
+    // Stripe objects behind it), so connect one — which this reset clears too.
+    const account = await upsertShopStripeAccount(db, shop.id, "acct_promo_reset_test");
+    await setShopStripeAccountStatus(db, account.stripeAccountId, {
+      chargesEnabled: true,
+      payoutsEnabled: true,
+      detailsSubmitted: true,
+    });
+    const minted = await createShopPromoCode(
+      db,
+      {
+        shopId: shop.id,
+        code: "LEAKED20",
+        description: "Minted by a previous spec",
+        discountPercent: 20,
+        scope: "all",
+      },
+      fakePromotions(),
+    );
+    expect(minted.ok).toBe(true);
+
+    await resetDemoSchedule(db, shop.id);
+
+    const after = await getShopPromoByCode(db, shop.id, "REEF10");
+    expect(after?.status).toBe("active");
+    expect(after?.discountPercent).toBe(seeded.discountPercent);
+    expect(after?.scope).toBe(seeded.scope);
+    expect(after?.description).toBe(seeded.description);
+    // The other seeded code comes back too, and the test-minted one does not.
+    expect(await getShopPromoByCode(db, shop.id, "OPENWATER25")).not.toBeNull();
+    expect(await getShopPromoByCode(db, shop.id, "LEAKED20")).toBeNull();
+  });
+
+  it("purges a staff member invited mid-test, not just non-staff churn (was the flakiest screenshot in the visual suite: settings/team leaking a test-invited instructor)", async () => {
     const { db, shop } = await seededShopContext();
     const before = await listStaff(db, shop.id);
 
     const invite = await inviteStaffMember(db, {
       shopId: shop.id,
       fullName: "Priya Nair",
-      email: `new-instructor-${Date.now()}@example.com`,
+      // A unique suffix, not a time read — the clock is frozen, so two of
+      // these in one worker would collide on the email uniqueness constraint.
+      email: `new-instructor-${crypto.randomUUID()}@example.com`,
       roles: ["instructor"],
     });
     expect(invite.ok).toBe(true);

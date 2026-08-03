@@ -724,6 +724,7 @@
       "noteHint": "(optional)",
       "notePlaceholder": "e.g. Two-tank reef trip + rental set",
       "lineItemsLegend": "Line items",
+      "lineItemKindAria": "Line item {number} kind",
       "lineItemDescriptionPlaceholder": "Description",
       "quantityLabel": "Quantity",
       "unitPriceLabel": "Unit price (USD)",
@@ -1780,6 +1781,7 @@
       "packing": {
         "heading": "Trip packing checklist",
         "description": "One item per line. Divers see this same concise list on every trip.",
+        "label": "Checklist items",
         "submit": "Save packing checklist",
         "submitting": "Saving…"
       },

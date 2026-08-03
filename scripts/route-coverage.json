@@ -109,7 +109,7 @@
       "self-service-reschedule.spec.ts",
       "schedule-embed.spec.ts"
     ],
-    "visual": ["site-briefing"]
+    "visual": ["booking-confirmed", "site-briefing"]
   },
   "/shop/[shopSlug]": {
     "e2e": [

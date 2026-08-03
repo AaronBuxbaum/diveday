@@ -808,21 +808,25 @@ export default async function SettingsPage({
           <h3 className="font-medium">{t("settings.main.packing.heading")}</h3>
           <p className="mt-1 text-sm text-muted">{t("settings.main.packing.description")}</p>
           <SectionNotice banner={banner} section="packing" active={activeSection} />
-          <form action={savePackingAction} className="mt-4">
-            <textarea
-              name="packingList"
-              rows={6}
-              maxLength={1212}
-              defaultValue={shop.packingList.join("\n")}
-              className="w-full rounded-lg border border-border-strong bg-surface px-3 py-2 text-base"
-            />
-            <SubmitButton
-              pendingLabel={t("settings.main.packing.submitting")}
-              className={buttonClass({ className: "mt-3" })}
-            >
-              {t("settings.main.packing.submit")}
-            </SubmitButton>
-          </form>
+          <FieldGrid as="form" action={savePackingAction} columns={1} className="mt-4">
+            <Field label={t("settings.main.packing.label")}>
+              <textarea
+                name="packingList"
+                rows={6}
+                maxLength={1212}
+                defaultValue={shop.packingList.join("\n")}
+                className={controlClass}
+              />
+            </Field>
+            <FieldActions>
+              <SubmitButton
+                pendingLabel={t("settings.main.packing.submitting")}
+                className={buttonClass()}
+              >
+                {t("settings.main.packing.submit")}
+              </SubmitButton>
+            </FieldActions>
+          </FieldGrid>
         </section>
 
         <section className="mt-6 rounded-lg border border-border bg-surface p-6">

@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { nowMs } from "@/lib/clock";
 import type { CheckoutProvider, RefundCheckoutResult } from "@/lib/payments/checkout";
-import type { CreateTripPromotionResult, PromotionProvider } from "@/lib/payments/promotions";
 import { seededShopContext } from "@/test/db";
+import { fakePromotions } from "@/test/fakes";
 import { createBookingParty } from "./bookings";
 import { markCheckoutPaidBySessionId, startBookingCheckout } from "./checkouts";
 import { joinLastMinuteList } from "./last-minute-list";
@@ -18,26 +19,14 @@ const REEF_PRICE_CENTS = 18_000;
 /** Every refund POST the provider was asked to make, in order. */
 type RefundCall = { sessionId: string; idempotencyKey: string; amountCents?: number };
 
-function fakePromotions(): PromotionProvider {
-  let counter = 0;
-  const created = (): CreateTripPromotionResult => {
-    counter += 1;
-    return {
-      status: "created",
-      stripeCouponId: `coupon_${counter}`,
-      stripePromotionCodeId: `promo_${counter}`,
-    };
-  };
-  return {
-    async createTripPromotion(): Promise<CreateTripPromotionResult> {
-      return created();
-    },
-    async createShopPromotion(): Promise<CreateTripPromotionResult> {
-      return created();
-    },
-  };
-}
-
+/**
+ * Kept local, deliberately: unlike the shared `fakeCheckout` in
+ * `src/test/fakes.ts` this is a *simulator*, not a stub. It models the ceiling
+ * the real Stripe enforces — a refund is bounded by what the payment intent
+ * captured, and repeat refunds against one session accumulate against that
+ * ceiling — which is the whole subject of these tests (PAY-M3) and has no
+ * meaning in any other file.
+ */
 function fakeCheckout(
   refund: RefundCheckoutResult,
   refundCalls: RefundCall[] = [],
@@ -68,7 +57,7 @@ function fakeCheckout(
           (sum, line) => sum + line.unitAmountCents * line.quantity,
           0,
         ),
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        expiresAt: new Date(nowMs() + 24 * 60 * 60 * 1000),
       };
     },
     async retrieveCheckoutSession() {

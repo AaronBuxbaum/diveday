@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import type { CheckoutProvider, CreateCheckoutSessionResult } from "@/lib/payments/checkout";
 import { seededShopContext } from "@/test/db";
+import { fakeCheckout, recordingCheckout } from "@/test/fakes";
 import { createBookingParty } from "./bookings";
 import { bookings, tips } from "./schema";
 import { setShopCurrency } from "./shops";
@@ -15,47 +15,6 @@ import {
   tipBoundsCents,
 } from "./tips";
 import { upcomingTripsWithCounts } from "./trips";
-
-function fakeCheckout(overrides: Partial<CheckoutProvider> = {}): CheckoutProvider {
-  let counter = 0;
-  return {
-    async createCheckoutSession(request): Promise<CreateCheckoutSessionResult> {
-      counter += 1;
-      return {
-        status: "created",
-        stripeSessionId: `cs_tip_${counter}`,
-        stripeStatus: "open",
-        paymentStatus: "unpaid",
-        checkoutUrl: `https://checkout.stripe.com/c/pay/cs_tip_${counter}`,
-        amountTotalCents: request.lineItems.reduce(
-          (sum, line) => sum + line.unitAmountCents * line.quantity,
-          0,
-        ),
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-      };
-    },
-    async retrieveCheckoutSession() {
-      return { status: "failed" };
-    },
-    async refundCheckoutSession() {
-      return { status: "refunded", refundId: "re_test" };
-    },
-    ...overrides,
-  };
-}
-
-/** A provider that records every request it was handed, for currency/amount assertions. */
-function capturedRequests() {
-  const requests: Parameters<CheckoutProvider["createCheckoutSession"]>[0][] = [];
-  const inner = fakeCheckout();
-  const provider = fakeCheckout({
-    async createCheckoutSession(request) {
-      requests.push(request);
-      return inner.createCheckoutSession(request);
-    },
-  });
-  return { requests, provider };
-}
 
 async function tipContext() {
   const { db, shop } = await seededShopContext();
@@ -175,7 +134,7 @@ describe("startTipCheckout", () => {
       detailsSubmitted: true,
       defaultCurrency: "usd",
     });
-    const seen = capturedRequests();
+    const seen = recordingCheckout();
 
     const outcome = await startTipCheckout(db, tipInput(bookingId), seen.provider);
     expect(outcome.ok).toBe(true);
@@ -192,7 +151,7 @@ describe("startTipCheckout", () => {
 
     // ¥1,000 is 1000 minor units, not 100,000 — the divisor comes from the
     // currency, and JPY's minor unit *is* the yen (docs ADR 20260731-shop-currency).
-    const seen = capturedRequests();
+    const seen = recordingCheckout();
     const outcome = await startTipCheckout(db, tipInput(bookingId, 1000), seen.provider);
     expect(outcome.ok).toBe(true);
     expect(seen.requests[0]?.currency).toBe("jpy");

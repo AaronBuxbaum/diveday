@@ -1,13 +1,9 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
-import type {
-  CheckoutProvider,
-  CheckoutSessionLookupResult,
-  CheckoutSessionSnapshot,
-  CreateCheckoutSessionResult,
-} from "@/lib/payments/checkout";
-import type { CreateTripPromotionResult, PromotionProvider } from "@/lib/payments/promotions";
+import { nowDate } from "@/lib/clock";
+import type { CheckoutSessionLookupResult, CheckoutSessionSnapshot } from "@/lib/payments/checkout";
 import { seededShopContext } from "@/test/db";
+import { fakeCheckout, fakePromotions, recordingCheckout } from "@/test/fakes";
 import { cancelBooking, createBookingParty } from "./bookings";
 import {
   getLatestCheckoutForBooking,
@@ -24,52 +20,6 @@ import { setShopCurrency } from "./shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { getActiveTripPromoByCode, sendLastMinuteDealBlast } from "./trip-promos";
 import { getTripRoster, upcomingTripsWithCounts, updateTrip } from "./trips";
-
-function fakeCheckout(overrides: Partial<CheckoutProvider> = {}): CheckoutProvider {
-  let counter = 0;
-  return {
-    async createCheckoutSession(request): Promise<CreateCheckoutSessionResult> {
-      counter += 1;
-      return {
-        status: "created",
-        stripeSessionId: `cs_${counter}`,
-        stripeStatus: "open",
-        paymentStatus: "unpaid",
-        checkoutUrl: `https://checkout.stripe.com/c/pay/cs_${counter}`,
-        amountTotalCents: request.lineItems.reduce(
-          (sum, line) => sum + line.unitAmountCents * line.quantity,
-          0,
-        ),
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-      };
-    },
-    async retrieveCheckoutSession(): Promise<CheckoutSessionLookupResult> {
-      return { status: "failed" };
-    },
-    async refundCheckoutSession() {
-      return { status: "refunded", refundId: "re_test" };
-    },
-    ...overrides,
-  };
-}
-
-/** Stripe's promotion API, faked: shop-wide code creation always succeeds. */
-function fakePromotions(): PromotionProvider {
-  let counter = 0;
-  return {
-    async createTripPromotion(): Promise<CreateTripPromotionResult> {
-      return { status: "failed" };
-    },
-    async createShopPromotion(): Promise<CreateTripPromotionResult> {
-      counter += 1;
-      return {
-        status: "created",
-        stripeCouponId: `coupon_${counter}`,
-        stripePromotionCodeId: `promo_${counter}`,
-      };
-    },
-  };
-}
 
 /**
  * A live trip-scoped last-minute deal on `tripId`, minted the way a shop
@@ -92,18 +42,15 @@ async function sentTripDeal(
   const blast = await sendLastMinuteDealBlast(
     db,
     { shopId, shopSlug: "blue-mantis", tripId, discountPercent },
-    {
-      async createTripPromotion(): Promise<CreateTripPromotionResult> {
+    fakePromotions({
+      async createTripPromotion() {
         return {
           status: "created",
           stripeCouponId: "coupon_trip_deal",
           stripePromotionCodeId: "promo_trip_deal",
         };
       },
-      async createShopPromotion(): Promise<CreateTripPromotionResult> {
-        return { status: "failed" };
-      },
-    },
+    }),
   );
   if (!blast.ok) throw new Error(`last-minute blast failed: ${blast.reason}`);
   const promo = await getActiveTripPromoByCode(db, { shopId, tripId, code: blast.code });
@@ -189,19 +136,6 @@ function describeTestLine({ isDeposit, tripTitle }: { isDeposit: boolean; tripTi
   return isDeposit ? `DEPOSIT:${tripTitle}` : `FULL:${tripTitle}`;
 }
 
-/** A provider that records every request it was handed, for currency/label assertions. */
-function capturedRequests() {
-  const requests: Parameters<CheckoutProvider["createCheckoutSession"]>[0][] = [];
-  const inner = fakeCheckout();
-  const provider = fakeCheckout({
-    async createCheckoutSession(request) {
-      requests.push(request);
-      return inner.createCheckoutSession(request);
-    },
-  });
-  return { requests, provider };
-}
-
 function startInput(shopId: string, tripId: string, bookingIds: string[]) {
   return {
     shopId,
@@ -240,7 +174,7 @@ describe("startBookingCheckout", () => {
   it("charges in the shop's currency and takes its line words from the caller", async () => {
     const { db, shop, reef, bookingIds } = await checkoutContext();
     await setShopCurrency(db, shop.id, "eur");
-    const seen = capturedRequests();
+    const seen = recordingCheckout();
     const outcome = await startBookingCheckout(
       db,
       startInput(shop.id, reef.id, bookingIds),
@@ -269,7 +203,7 @@ describe("startBookingCheckout", () => {
       priceCents: REEF_PRICE_CENTS,
       depositCents: 5_000,
     });
-    const seen = capturedRequests();
+    const seen = recordingCheckout();
     const outcome = await startBookingCheckout(
       db,
       startInput(shop.id, reef.id, bookingIds),
@@ -292,7 +226,7 @@ describe("startBookingCheckout", () => {
       priceCents: REEF_PRICE_CENTS,
       depositCents: 5_000,
     });
-    const seen = capturedRequests();
+    const seen = recordingCheckout();
     const outcome = await startBookingCheckout(
       db,
       {
@@ -347,7 +281,7 @@ describe("startBookingCheckout", () => {
 
   it("drops a gear line for a booking outside the party and a non-positive amount", async () => {
     const { db, shop, reef, bookingIds } = await checkoutContext();
-    const seen = capturedRequests();
+    const seen = recordingCheckout();
     const outcome = await startBookingCheckout(
       db,
       {
@@ -372,7 +306,7 @@ describe("startBookingCheckout", () => {
   it("never divides a zero-decimal currency by 100", async () => {
     const { db, shop, reef, bookingIds } = await checkoutContext();
     await setShopCurrency(db, shop.id, "jpy");
-    const seen = capturedRequests();
+    const seen = recordingCheckout();
     const outcome = await startBookingCheckout(
       db,
       startInput(shop.id, reef.id, bookingIds),
@@ -1124,7 +1058,7 @@ describe("checkout completion", () => {
 
     await db
       .update(bookingCheckouts)
-      .set({ status: "completed", completedAt: new Date() })
+      .set({ status: "completed", completedAt: nowDate() })
       .where(eq(bookingCheckouts.id, start.checkout.id));
     for (const bookingId of bookingIds) {
       expect(await getBookingPayment(db, shop.id, bookingId)).toBeNull();

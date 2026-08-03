@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { CreateTripPromotionResult, PromotionProvider } from "@/lib/payments/promotions";
 import { seededShopContext } from "@/test/db";
+import { fakePromotions } from "@/test/fakes";
 import { cancelBooking } from "./bookings";
 import { joinLastMinuteList } from "./last-minute-list";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
@@ -13,24 +13,6 @@ import {
 } from "./trip-promos";
 import { getTripRoster, upcomingTripsWithCounts } from "./trips";
 import { joinTripWaitlist } from "./waitlist";
-
-function fakePromotions(overrides: Partial<PromotionProvider> = {}): PromotionProvider {
-  let counter = 0;
-  return {
-    async createTripPromotion(): Promise<CreateTripPromotionResult> {
-      counter += 1;
-      return {
-        status: "created",
-        stripeCouponId: `coupon_${counter}`,
-        stripePromotionCodeId: `promo_${counter}`,
-      };
-    },
-    async createShopPromotion(): Promise<CreateTripPromotionResult> {
-      return { status: "failed" };
-    },
-    ...overrides,
-  };
-}
 
 const visitor = { fullName: "Nora Quinn", email: "nora@example.com" };
 

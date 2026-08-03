@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { TripRequirement } from "@/db/schema";
+import { nowDate } from "@/lib/clock";
 import type { ReadinessResult } from "./readiness";
 import { buildDiverChecklist, nextDiverStep, reminderReadiness } from "./readiness-summary";
 
@@ -12,8 +13,8 @@ function requirement(overrides: Partial<TripRequirement> = {}): TripRequirement 
     requiredSpecialties: [],
     requiresNitrox: false,
     requiresPayment: true,
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    createdAt: nowDate(),
+    updatedAt: nowDate(),
     ...overrides,
   } as TripRequirement;
 }
