@@ -2,6 +2,7 @@ import Link from "next/link";
 import { waiverSendCopy } from "@/app/actions/waiver-send-types";
 import { EmptyState } from "@/components/EmptyState";
 import { WaiverSendControl } from "@/components/today/WaiverSendControl";
+import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import type { BlockerQueue } from "@/db/blockers";
 import { readinessBlockerText } from "@/i18n/readiness-labels";
@@ -179,13 +180,26 @@ export function BlockerGroups({
 
   return (
     <section aria-labelledby={headingId}>
-      <h2 id={headingId} className="text-lg font-semibold">
-        {t("blockers.title")}
-      </h2>
+      {/* The count rides the heading, not the sentence under it. "Not ready"
+          was a page with its own headline number until ADR
+          20260803-not-ready-is-a-view folded it in here; a muted subtitle is
+          where a fact goes to be skimmed past, and how many divers cannot board
+          is the one number this view exists to state. Danger, like every other
+          surface that names a blocked diver (`readinessStatusTone`). */}
+      <div className="flex flex-wrap items-center gap-2">
+        <h2 id={headingId} className="text-lg font-semibold">
+          {t("blockers.title")}
+        </h2>
+        {blocked > 0 ? (
+          <Badge tone="danger" size="sm" tabularNums>
+            {t("blockers.blockedCount", { count: blocked })}
+          </Badge>
+        ) : null}
+      </div>
       <p className="mt-1 text-sm text-muted">
         {blocked === 0
           ? t("blockers.description.none")
-          : t("blockers.description.some", { blocked, departures: trips.length })}
+          : t("blockers.description.some", { departures: trips.length })}
       </p>
 
       {trips.length === 0 ? (

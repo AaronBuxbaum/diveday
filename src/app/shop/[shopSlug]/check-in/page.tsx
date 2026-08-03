@@ -57,6 +57,13 @@ const noticeCopy: Record<
   staff_not_found: { tone: "danger", key: "checkIn.notice.staffNotFound" },
   invalid: { tone: "danger", key: "checkIn.notice.invalid" },
   walkin_added: { tone: "success", key: "checkIn.notice.walkinAdded" },
+  // The counter's *ordinary* outcome, not an edge case: a walk-in added on a
+  // name alone has no address to mail a waiver to, so the notice has to say
+  // the link is still owed rather than let "Added" imply it went out.
+  walkin_added_waiver_undelivered: {
+    tone: "warning",
+    key: "checkIn.notice.walkinAddedWaiverUndelivered",
+  },
   walkin_full: { tone: "danger", key: "checkIn.notice.walkinFull" },
   walkin_already: { tone: "neutral", key: "checkIn.notice.walkinAlready" },
   walkin_unavailable: { tone: "danger", key: "checkIn.notice.walkinUnavailable" },
@@ -264,7 +271,13 @@ export default async function CheckInPage({
                   </div>
                   {!ready ? (
                     <>
-                      <ul className="mt-4 space-y-1 border-t border-border pt-3 text-sm text-warning">
+                      {/* Danger, matching the roster and the manifest — and the
+                          Blocked badge these reasons sit under. A blocked diver
+                          is always danger (glossary / `readinessStatusTone`);
+                          the counter reading the same fact in warning was the
+                          one place the shop's readiness vocabulary changed
+                          colour between surfaces. */}
+                      <ul className="mt-4 space-y-1 border-t border-border pt-3 text-sm text-danger">
                         {row.readiness.blockers.slice(0, 3).map((blocker) => (
                           <li key={blocker.code}>• {readinessBlockerText(t, blocker)}</li>
                         ))}

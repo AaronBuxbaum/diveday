@@ -881,7 +881,7 @@
         },
         "yourRecords": {
           "lead": "Tus registros se van contigo.",
-          "body": "Ajustes entrega un ZIP de los archivos de tu tienda — buceadores, reservas, descargos, pagos, fotos. Funciona desde tu primer día, no solo el último."
+          "body": "Ajustes entrega un ZIP de los archivos de tu tienda — buceadores, reservas, exenciones, pagos, fotos. Funciona desde tu primer día, no solo el último."
         },
         "founderLine": {
           "lead": "Tienes una línea directa con el fundador.",
@@ -964,7 +964,7 @@
       "backToGuides": "← Todas las guías de cambio",
       "eyebrow": "Vienes de una hoja de cálculo",
       "title": "La hoja de cálculo te trajo hasta aquí.",
-      "heroLede": "No marcará una tarjeta sin verificar, no perseguirá un descargo sin firmar, ni dejará que un buceador reserve su propio asiento un domingo por la noche. DiveDay lee la hoja que ya llevas — buceadores, tarjetas, tallas — y se encarga del resto. Ningún sistema que arrancar; ya tienes el archivo.",
+      "heroLede": "No marcará una tarjeta sin verificar, no perseguirá una exención sin firmar, ni dejará que un buceador reserve su propio asiento un domingo por la noche. DiveDay lee la hoja que ya llevas — buceadores, tarjetas, tallas — y se encarga del resto. Ningún sistema que arrancar; ya tienes el archivo.",
       "wedgeIntro1": "Una hoja de cálculo es una buena memoria y un mal compañero de equipo. Guarda nombres y números, pero no puede hacer el trabajo que de verdad mantiene un día de buceo tranquilo y seguro — la parte que estás haciendo a mano ahora mismo, en tu cabeza y en una pila de papeles.",
       "wedgeIntro2": "Ese es el intercambio que hace que valga la pena DiveDay. No una lista más bonita — los trabajos que una lista no puede sostener:",
       "wedge": {
@@ -974,11 +974,11 @@
         },
         "blockersOnePlace": {
           "title": "Los bloqueos del día en un solo lugar",
-          "body": "Una pantalla muestra quién todavía no puede embarcar y por qué — un descargo que falta, una tarjeta por verificar — así que nada se recuerda en el muelle en vez de en el mostrador."
+          "body": "Una pantalla muestra quién todavía no puede embarcar y por qué — una exención que falta, una tarjeta por verificar — así que nada se recuerda en el muelle en vez de en el mostrador."
         },
         "diversBookThemselves": {
           "title": "Los buceadores reservan y firman ellos mismos",
-          "body": "Un buceador elige un asiento y firma el descargo desde un enlace, sin cuenta ni aplicación — la persecución de firmas en el muelle casi desaparece."
+          "body": "Un buceador elige un asiento y firma la exención desde un enlace, sin cuenta ni aplicación — la persecución de firmas en el muelle casi desaparece."
         },
         "manifestHeadCount": {
           "title": "Un listado que es un recuento, no una impresión",
@@ -1086,7 +1086,7 @@
     "readiness": "Preparación",
     "answerBeforeDock": "La respuesta antes del muelle",
     "noDiverClears": "Ningún buceador se autoriza hasta que todo esté en orden.",
-    "waiverNeedsAttention": "El descargo necesita atención",
+    "waiverNeedsAttention": "La exención necesita atención",
     "certificationPending": "Certificación pendiente",
     "upcomingTrips": "Próximos viajes",
     "findNextDive": "Encuentra tu próxima inmersión",
@@ -1122,8 +1122,8 @@
       },
       "divemaster": {
         "title": "Divemaster",
-        "desc": "Guía a los buceadores, verifica el papeleo de descargos y mantiene al día el ajuste del equipo de alquiler.",
-        "tryThis": "Revisa Descargos, o abre la lista de preparación de un viaje para ver qué preparar."
+        "desc": "Guía a los buceadores, verifica el papeleo de exenciones y mantiene al día el ajuste del equipo de alquiler.",
+        "tryThis": "Revisa Exenciones, o abre la lista de preparación de un viaje para ver qué preparar."
       },
       "captain": {
         "title": "Capitán",
@@ -1132,7 +1132,7 @@
       },
       "diver": {
         "title": "Buceador",
-        "desc": "Lo que ven tus clientes — reservar un viaje, firmar el descargo, pedir equipo de alquiler.",
+        "desc": "Lo que ven tus clientes — reservar un viaje, firmar la exención, pedir equipo de alquiler.",
         "tryThis": "Elige un viaje en el horario y reserva una plaza."
       }
     }
@@ -1161,7 +1161,7 @@
         "frontDesk": {
           "role": "Para la recepción",
           "title": "Una sola respuesta a «¿están listos?»",
-          "description": "Descargo de responsabilidad, certificación, requisitos del sitio, pago y ajuste del equipo se juntan antes de que un problema llegue al muelle — y cuando algo no se puede verificar, DiveDay lo dice con claridad en vez de dejarlo pasar.",
+          "description": "Exención de responsabilidad, certificación, requisitos del sitio, pago y ajuste del equipo se juntan antes de que un problema llegue al muelle — y cuando algo no se puede verificar, DiveDay lo dice con claridad en vez de dejarlo pasar.",
           "mockupLabel": "La sección de preparación de la salida mostrando claramente los estados de buceador listo y bloqueado."
         }
       },
@@ -1176,7 +1176,7 @@
       "switchingLink": "¿Cambias desde {competitors}? Lee las guías →",
       "inExportEyebrow": "En la exportación",
       "exportItem1": "Un ZIP de archivos CSV documentados, descargado desde Ajustes por ti",
-      "exportItem2": "Buceadores, reservas, registros de descargo y historial de pagos",
+      "exportItem2": "Buceadores, reservas, registros de exención y historial de pagos",
       "exportItem3": "Un archivo de contactos con el formato del asistente de importación de otro sistema",
       "exportItem4": "Un README que explica cada archivo — sin proyecto de descifrado después",
       "tryEyebrow": "Fácil de probar",
@@ -1269,10 +1269,10 @@
     "product": {
       "eyebrow": "El producto",
       "heroTitle": "Desde la primera reserva hasta el último recuento.",
-      "heroDescription": "DiveDay se organiza en torno al propio viaje. Cada reserva, descargo de responsabilidad, certificación, pago, decisión de equipo y recuento queda vinculado a las personas que salen en el barco.",
+      "heroDescription": "DiveDay se organiza en torno al propio viaje. Cada reserva, exención de responsabilidad, certificación, pago, decisión de equipo y recuento queda vinculado a las personas que salen en el barco.",
       "readinessEyebrow": "Antes de salir",
       "readinessTitle": "Una sola respuesta de preparación, compartida donde importa.",
-      "readinessDescription": "La recepción ve por qué un buceador está bloqueado. El capitán ve la misma respuesta en el listado. Nadie tiene que adivinar si un descargo que falta o una tarjeta pendiente se puede ignorar.",
+      "readinessDescription": "La recepción ve por qué un buceador está bloqueado. El capitán ve la misma respuesta en el listado. Nadie tiene que adivinar si una exención que falta o una tarjeta pendiente se puede ignorar.",
       "readinessStep1": "El viaje y el sitio de buceo deciden qué necesita cada buceador.",
       "readinessStep2": "Si algo no se puede verificar, DiveDay lo dice con claridad — sin pases silenciosos.",
       "readinessStep3": "El personal soluciona el problema en el mostrador, no en el muelle.",
@@ -1290,7 +1290,7 @@
       "yourAccountTitle": "Tu cuenta, tu dinero",
       "yourAccountBody": "Los pagos, disputas e historial permanecen en la cuenta de Stripe que ya controlas. DiveDay nunca se interpone entre tú y el pago — y no hay comisión por reserva sobre el precio fijo.",
       "pricedTitle": "Con el pago resuelto antes de embarcar",
-      "pricedBody": "El pago forma parte de la misma respuesta de preparación que el descargo y la tarjeta, así que «¿están listos?» significa todo eso. Nadie embarca dando por hecho que otro ya pagó.",
+      "pricedBody": "El pago forma parte de la misma respuesta de preparación que la exención y la tarjeta, así que «¿están listos?» significa todo eso. Nadie embarca dando por hecho que otro ya pagó.",
       "recapEyebrow": "Con el barco de vuelta",
       "recapTitle": "El día termina con un resumen que los buceadores quieren compartir.",
       "recapDescription": "El papeleo es trabajo de DiveDay; el recuerdo es del buceador. La noche anterior, cada buceador recibe un aviso en lenguaje sencillo — hora en el muelle, condiciones del agua, qué llevar, a quién escribir. Después del viaje, cada buceador recibe su propia página de resumen para guardar y compartir.",

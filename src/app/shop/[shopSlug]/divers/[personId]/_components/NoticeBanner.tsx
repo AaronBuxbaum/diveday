@@ -8,7 +8,22 @@ import { noticeFromParam } from "@/lib/staff-notices";
  * rendered a failure in success green. Tone lives with the key so the two
  * cannot drift.
  */
-const NOTICE_KEYS: Record<string, { tone: "success" | "danger"; key: StaffMessageKey }> = {
+type NoticeTone = "success" | "danger" | "warning";
+
+/**
+ * `warning` is the third tone this banner needs: a seating that worked but left
+ * the staffer holding something (`booked-waiver-undelivered`) is neither a
+ * failure to fix nor a clean success to walk away from. `-strong` because the
+ * text sits on its own `/10` fill at small size (see --warning-strong in
+ * globals.css).
+ */
+const TONE_CLASS: Record<NoticeTone, string> = {
+  success: "bg-success/10 text-success",
+  danger: "bg-danger/10 text-danger",
+  warning: "bg-warning/10 text-warning-strong",
+};
+
+const NOTICE_KEYS: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
   captured: { tone: "success", key: "divers.notices.captured" },
   "captured-no-photo": { tone: "success", key: "divers.notices.capturedNoPhoto" },
   verified: { tone: "success", key: "divers.notices.verified" },
@@ -23,6 +38,10 @@ const NOTICE_KEYS: Record<string, { tone: "success" | "danger"; key: StaffMessag
   duplicate: { tone: "danger", key: "divers.notices.duplicate" },
   refunded: { tone: "success", key: "divers.notices.refunded" },
   booked: { tone: "success", key: "divers.notices.booked" },
+  "booked-waiver-undelivered": {
+    tone: "warning",
+    key: "divers.notices.bookedWaiverUndelivered",
+  },
   trip_full: { tone: "danger", key: "divers.notices.tripFull" },
   already_booked: { tone: "danger", key: "divers.notices.alreadyBooked" },
   course_unstaffed: { tone: "danger", key: "divers.notices.courseUnstaffed" },
@@ -52,7 +71,7 @@ export function NoticeBanner({ notice, locale }: { notice?: string; locale: stri
   return (
     <p
       role="status"
-      className={`mt-6 rounded-lg px-4 py-3 text-sm font-medium ${banner.tone === "danger" ? "bg-danger/10 text-danger" : "bg-success/10 text-success"}`}
+      className={`mt-6 rounded-lg px-4 py-3 text-sm font-medium ${TONE_CLASS[banner.tone]}`}
     >
       {t(banner.key)}
     </p>

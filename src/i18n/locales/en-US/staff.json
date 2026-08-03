@@ -396,6 +396,7 @@
       "duplicate": "Another diver already uses that email in this shop.",
       "refunded": "Payment refunded — the trip now shows as unpaid for this diver.",
       "booked": "Activity booked. Review it below, then create and send the invoice.",
+      "bookedWaiverUndelivered": "Activity booked — but their waiver wasn’t emailed. Open the trip’s guest list to send it or share the link.",
       "tripFull": "That activity just filled up. Choose another.",
       "alreadyBooked": "This diver is already booked on that activity.",
       "courseUnstaffed": "Assign an instructor before booking this course.",
@@ -1122,6 +1123,7 @@
       "bookingRestoreFull": "Couldn't undo — the freed spot has been taken and the trip is full again. Add them to the wait list instead.",
       "bookingRestoreRatio": "Couldn't undo — the freed seat has been taken and this course session is now at its instructor-to-student ratio limit. Assign another instructor, or add them to the wait list instead.",
       "diverAdded": "Diver added to the trip.",
+      "diverAddedWaiverUndelivered": "Diver added to the trip — but their waiver wasn’t emailed. Send it or share the link from their row below.",
       "diverWaitlisted": "Diver added to the wait list.",
       "identityConfirmed": "Identity confirmed — this diver can be cleared to board.",
       "contactSaved": "Emergency contact saved.",
@@ -1386,7 +1388,7 @@
       "noBookings": "No bookings yet — share the trip page and they'll show up here.",
       "selectToSendWaiverAriaLabel": "Select {name} to send a waiver",
       "noEmailOnFile": "no email on file",
-      "checkedInPill": "Checked in ✓",
+      "checkedInPill": "Checked in",
       "ageYears": "Age {age}",
       "minorBadge": "Minor",
       "depthWarning": "This trip reaches {site} {unit} — deeper than the {limit} {unit} their card trains for. Not a block: plan the dive shallower, or confirm the guide is keeping them within limits.",
@@ -1492,7 +1494,7 @@
       "checkpointRollCallHeading": "{checkpoint} roll call",
       "checkEachDiverDescription": "Check each diver at this checkpoint. Every change is time-stamped with the staff member who made it.",
       "shopTimeLabel": "Shop time: {timezone}",
-      "checkedInPill": "Checked in ✓",
+      "checkedInPill": "Checked in",
       "age": "Age {age}",
       "minorAge": "Minor · age {age}",
       "emergencyContactLabel": "Emergency contact",
@@ -2086,10 +2088,11 @@
     }
   },
   "blockers": {
+    "blockedCount": "{count, plural, one {# diver} other {# divers}}",
     "title": "Not ready",
     "description": {
       "none": "Everyone booked on an upcoming departure is ready to board.",
-      "some": "{blocked, plural, one {# diver} other {# divers}} across {departures, plural, one {# departure} other {# departures}} can't board yet. Clearing a row takes you straight to the fix."
+      "some": "Spread across {departures, plural, one {# departure} other {# departures}}. Clearing a row takes you straight to the fix."
     },
     "alsoBlockedOn": "Also blocked on {trips} — same diver, fix once.",
     "tripBlockedCount": "{blocked} of {booked} blocked",
@@ -2137,10 +2140,11 @@
       "notFound": "That booking could not be found.",
       "staffNotFound": "Your staff access could not be confirmed.",
       "invalid": "Choose a diver from the queue before checking in.",
-      "walkinAdded": "Added and on the boat.",
+      "walkinAdded": "Added to this boat’s list — check them in when they arrive.",
+      "walkinAddedWaiverUndelivered": "Added to this boat’s list — but their waiver wasn’t emailed. Send it or share the link from their row below.",
       "walkinFull": "That boat is full — try the wait list from its trip page instead.",
       "walkinAlready": "That diver is already on this boat.",
-      "walkinUnavailable": "That boat isn’t taking walk-ins right now — check its trip page for why.",
+      "walkinUnavailable": "Can’t add this diver to that boat right now — open its trip page for the reason.",
       "walkinInvalid": "Choose a boat and enter a name before adding a walk-in."
     },
     "walkIn": {
@@ -2460,6 +2464,8 @@
     },
     "shopNavLinks": {
       "primaryNavAriaLabel": "Primary",
+      "badgeBlocked": "{count, plural, one {# diver blocked} other {# divers blocked}}",
+      "badgeReviews": "{count, plural, one {# review waiting} other {# reviews waiting}}",
       "more": "More",
       "groupDaily": "Run the shop",
       "groupSetup": "Set up",
@@ -2518,7 +2524,7 @@
         "blockedWarningOther": "{count} divers cannot board yet — they are in the list below.",
         "noneBooked": "No one’s booked yet — share the trip page and they’ll show up here.",
         "everyoneAboard": "Everyone’s aboard.",
-        "clearToBoard": "Everyone aboard this trip is clear to board.",
+        "clearToBoard": "Everyone booked on this trip is clear to board.",
         "sailingToday": "Sailing today",
         "sailingTodaySubtitle": "Check divers in at the counter or run roll call from the manifest — readiness is rechecked the moment you board someone.",
         "dragStaffLabel": "Or drag to assign (desktop):"
@@ -2635,6 +2641,13 @@
       "pointingLabel": {
         "trip": "Open roster",
         "diver": "Open {name}’s record"
+      },
+      "nameList": {
+        "all": "{leading} and {last}",
+        "overflow": "{leading} and {rest, plural, one {# other} other {# others}}"
+      },
+      "subject": {
+        "diverGroup": "{count, plural, one {# diver} other {# divers}}"
       },
       "blockerDetail": {
         "withRemaining": "{detail} {remaining, plural, one {# other blocker to clear too.} other {# other blockers to clear too.}}",

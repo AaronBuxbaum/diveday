@@ -180,6 +180,15 @@ export function ShopNav({
               groupDaily: t("shared.shopNavLinks.groupDaily"),
               groupSetup: t("shared.shopNavLinks.groupSetup"),
               labels: destinationLabels,
+              // Resolved for the count each badge actually carries, so the
+              // sr-only noun is pluralised rather than assembled from a digit
+              // and a bare word.
+              badgeLabels: {
+                blockers: t("shared.shopNavLinks.badgeBlocked", {
+                  count: navCounts?.blockers ?? 0,
+                }),
+                reviews: t("shared.shopNavLinks.badgeReviews", { count: navCounts?.reviews ?? 0 }),
+              },
             } satisfies ShopNavLinksCopy
           }
           className="order-last w-full sm:order-2 sm:w-auto sm:flex-1"

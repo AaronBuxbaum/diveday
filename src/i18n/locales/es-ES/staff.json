@@ -396,6 +396,7 @@
       "duplicate": "Otro buceador ya usa ese correo en esta tienda.",
       "refunded": "Pago reembolsado — la salida ahora aparece como no pagada para este buceador.",
       "booked": "Actividad reservada. Revísala abajo, luego crea y envía la factura.",
+      "bookedWaiverUndelivered": "Actividad reservada, pero no se envió su exención por correo. Abre la lista de invitados de la salida para enviarla o compartir el enlace.",
       "tripFull": "Esa actividad acaba de llenarse. Elige otra.",
       "alreadyBooked": "Este buceador ya está reservado en esa actividad.",
       "courseUnstaffed": "Asigna un instructor antes de reservar este curso.",
@@ -1122,6 +1123,7 @@
       "bookingRestoreFull": "No se pudo deshacer — la plaza liberada ya se ocupó y la salida está llena de nuevo. Añádelo a la lista de espera en su lugar.",
       "bookingRestoreRatio": "No se pudo deshacer — la plaza liberada ya se ocupó y esta sesión del curso está en su límite de ratio instructor-alumno. Asigna otro instructor, o añádelo a la lista de espera en su lugar.",
       "diverAdded": "Buceador añadido a la salida.",
+      "diverAddedWaiverUndelivered": "Buceador añadido a la salida, pero no se envió su exención por correo. Envíala o comparte el enlace desde su fila de abajo.",
       "diverWaitlisted": "Buceador añadido a la lista de espera.",
       "identityConfirmed": "Identidad confirmada — este buceador puede autorizarse a embarcar.",
       "contactSaved": "Contacto de emergencia guardado.",
@@ -1386,7 +1388,7 @@
       "noBookings": "Todavía no hay reservas — comparte la página de la salida y aparecerán aquí.",
       "selectToSendWaiverAriaLabel": "Seleccionar a {name} para enviarle una exención",
       "noEmailOnFile": "sin correo registrado",
-      "checkedInPill": "Registrado ✓",
+      "checkedInPill": "Registrado",
       "ageYears": "{age} años",
       "minorBadge": "Menor",
       "depthWarning": "Esta salida llega a {site} {unit} — más de los {limit} {unit} para los que le habilita su tarjeta. No es un bloqueo: planifica la inmersión más somera o confirma que el guía lo mantiene dentro de sus límites.",
@@ -1492,7 +1494,7 @@
       "checkpointRollCallHeading": "Pase de lista · {checkpoint}",
       "checkEachDiverDescription": "Marca cada buceador en este punto de control. Cada cambio queda con la marca de tiempo del miembro del personal que lo hizo.",
       "shopTimeLabel": "Hora del centro: {timezone}",
-      "checkedInPill": "Registrado ✓",
+      "checkedInPill": "Registrado",
       "age": "{age} años",
       "minorAge": "Menor · {age} años",
       "emergencyContactLabel": "Contacto de emergencia",
@@ -2086,17 +2088,18 @@
     }
   },
   "blockers": {
+    "blockedCount": "{count, plural, one {# buceador} other {# buceadores}}",
     "title": "No listos",
     "description": {
       "none": "Todos los reservados en una próxima salida están listos para embarcar.",
-      "some": "{blocked, plural, one {# buceador} other {# buceadores}} en {departures, plural, one {# salida} other {# salidas}} no pueden embarcar todavía. Resolver una fila te lleva directo a la solución."
+      "some": "Repartidos entre {departures, plural, one {# salida} other {# salidas}}. Resolver una fila te lleva directo a la solución."
     },
     "alsoBlockedOn": "También bloqueado en {trips} — mismo buceador, se resuelve una vez.",
     "tripBlockedCount": "{blocked} de {booked} bloqueados",
-    "sendAllWaivers": "{count, plural, one {Enviar # descargo} other {Enviar los # descargos}}",
+    "sendAllWaivers": "{count, plural, one {Enviar # exención} other {Enviar las # exenciones}}",
     "sendingAll": "Enviando todos…",
     "emptyTitle": "Todos los barcos listos para embarcar",
-    "emptyDescription": "Ningún próximo buceador está esperando un descargo, una tarjeta o un pago. Las nuevas reservas aparecerán aquí en cuanto necesiten una mano.",
+    "emptyDescription": "Ningún próximo buceador está esperando una exención, una tarjeta o un pago. Las nuevas reservas aparecerán aquí en cuanto necesiten una mano.",
     "viewSchedule": "Ver el calendario",
     "truncated": "Esta ventana tiene más salidas de las que una sola lista debería cargar; el resto está en el <link>calendario</link>.",
     "pagination": {
@@ -2137,10 +2140,11 @@
       "notFound": "No se encontró esa reserva.",
       "staffNotFound": "No se pudo confirmar tu acceso de personal.",
       "invalid": "Elige un buceador de la cola antes de registrarlo.",
-      "walkinAdded": "Añadido y a bordo.",
+      "walkinAdded": "Añadido a la lista de este barco: regístralo cuando llegue.",
+      "walkinAddedWaiverUndelivered": "Añadido a la lista de este barco, pero no se envió su exención por correo. Envíala o comparte el enlace desde su fila de abajo.",
       "walkinFull": "Ese barco está completo — prueba la lista de espera desde su página de salida.",
       "walkinAlready": "Ese buceador ya está en este barco.",
-      "walkinUnavailable": "Ese barco no admite walk-ins ahora mismo — revisa su página de salida para saber por qué.",
+      "walkinUnavailable": "No se puede añadir a este buceador a ese barco ahora mismo: abre su página de salida para ver el motivo.",
       "walkinInvalid": "Elige un barco y escribe un nombre antes de añadir un walk-in."
     },
     "walkIn": {
@@ -2173,33 +2177,33 @@
   "waiversStaff": {
     "eyebrow": "Ajustes",
     "title": "Plantilla de exención",
-    "description": "Todos los buceadores firman este mismo descargo. Edítalo para que se ajuste a tu centro.",
+    "description": "Todos los buceadores firman esta misma exención. Edítala para que se ajuste a tu centro.",
     "chaseUnsigned": "¿Persiguiendo una exención sin firmar? <link>No listos</link> muestra a cada buceador que la tiene pendiente.",
     "banner": {
       "savedNew": "Guardado como nueva versión.",
-      "savedFirst": "Tu descargo está guardado. Cada futura edición se conserva como una nueva versión.",
-      "invalid": "Eso no se guardó. El descargo debe tener al menos unas frases de extensión."
+      "savedFirst": "Tu exención está guardada. Cada futura edición se conserva como una nueva versión.",
+      "invalid": "Eso no se guardó. La exención debe tener al menos unas frases de extensión."
     },
-    "fieldLabel": "Texto del descargo",
-    "placeholder": "Escribe el descargo que leerá y firmará el buceador.",
+    "fieldLabel": "Texto de la exención",
+    "placeholder": "Escribe la exención que leerá y firmará el buceador.",
     "pendingLabel": "Guardando…",
     "saveNewVersion": "Guardar nueva versión",
-    "saveWaiver": "Guardar descargo",
-    "releaseTextHeading": "Texto del descargo",
+    "saveWaiver": "Guardar exención",
+    "releaseTextHeading": "Texto de la exención",
     "releaseDescription": {
-      "current": "Este es el descargo que envía cada enlace nuevo. Guardar lo reemplaza para los enlaces nuevos — los descargos ya firmados conservan el texto exacto que firmaron.",
+      "current": "Esta es la exención que envía cada enlace nuevo. Guardarla la reemplaza para los enlaces nuevos — las exenciones ya firmadas conservan el texto exacto que se firmó.",
       "sample": "Este es un texto de muestra para empezar — edítalo para tu centro y haz que tu propio asesor legal lo revise."
     },
     "versionInfo": "Versión {version} · guardado el {date}",
     "tabs": {
-      "ariaLabel": "Secciones del descargo",
+      "ariaLabel": "Secciones de la exención",
       "template": "Plantilla",
       "signatures": "Firmas"
     },
     "signatures": {
       "eyebrow": "Ajustes",
       "title": "Firmas",
-      "description": "Todos los descargos firmados que tiene este centro — quién firmó, en qué salida, y cualquier seguimiento médico. Los waivers firmados son a prueba de manipulaciones — si un registro fue alterado, lo marcamos.",
+      "description": "Todas las exenciones firmadas que tiene este centro — quién firmó, en qué salida, y cualquier seguimiento médico. Las exenciones firmadas son a prueba de manipulaciones — si un registro fue alterado, lo marcamos.",
       "signedRecordHeading": "Registro firmado",
       "heading": "Registros firmados",
       "noSignedRecords": "Todavía no hay registros firmados.",
@@ -2459,6 +2463,8 @@
       "signOutPending": "Cerrando sesión…"
     },
     "shopNavLinks": {
+      "badgeBlocked": "{count, plural, one {# buceador bloqueado} other {# buceadores bloqueados}}",
+      "badgeReviews": "{count, plural, one {# reseña pendiente} other {# reseñas pendientes}}",
       "primaryNavAriaLabel": "Principal",
       "more": "Más",
       "groupDaily": "Llevar la tienda",
@@ -2635,6 +2641,13 @@
       "pointingLabel": {
         "trip": "Ver lista",
         "diver": "Abrir la ficha de {name}"
+      },
+      "nameList": {
+        "all": "{leading} y {last}",
+        "overflow": "{leading} y {rest, plural, one {# más} other {# más}}"
+      },
+      "subject": {
+        "diverGroup": "{count, plural, one {# buceador} other {# buceadores}}"
       },
       "blockerDetail": {
         "withRemaining": "{detail} {remaining, plural, one {Queda # bloqueo más por resolver.} other {Quedan # bloqueos más por resolver.}}",

@@ -36,6 +36,21 @@ export type StaffDestinationBadge = "reviews" | "blockers";
 export type StaffDestinationCounts = Record<StaffDestinationBadge, number>;
 
 /**
+ * What each badge's number *means*, in tone. Beside the badge sources rather
+ * than in the nav component so the two cannot disagree, and so a new badge
+ * source has to answer the question.
+ *
+ * `blockers` is danger because every other surface that names a blocked diver
+ * is (glossary: "blocked is always danger" — `readinessStatusTone`). A count of
+ * people who cannot board, toned like Reviews' moderation queue, was the one
+ * place the shop's readiness vocabulary changed colour on the way to the nav.
+ */
+export const STAFF_DESTINATION_BADGE_TONES: Record<StaffDestinationBadge, "primary" | "danger"> = {
+  reviews: "primary",
+  blockers: "danger",
+};
+
+/**
  * Where a destination sits in the header.
  *
  * - `primary` — the five tabs always on screen.

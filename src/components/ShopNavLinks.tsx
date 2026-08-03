@@ -5,7 +5,9 @@ import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import {
+  STAFF_DESTINATION_BADGE_TONES,
   type StaffDestination,
+  type StaffDestinationBadge,
   type StaffDestinationCounts,
   type StaffDestinationGates,
   type StaffDestinationLabels,
@@ -44,6 +46,14 @@ export interface ShopNavLinksCopy {
   /** Heading over the configure-once half. */
   groupSetup: string;
   labels: StaffDestinationLabels;
+  /**
+   * What each badge's number counts, already pluralised for that count —
+   * "3 divers blocked", "2 reviews waiting". Rendered sr-only beside the digit:
+   * a bare "3" next to "Today" is a number with no noun, which is exactly what
+   * a screen reader announces. Sighted staff get the same fact from the tone
+   * and the tab it hangs off.
+   */
+  badgeLabels: Record<StaffDestinationBadge, string>;
 }
 
 function isCurrent(pathname: string, href: string, root: string) {
@@ -54,12 +64,31 @@ function navClass(active: boolean) {
   return `${linkClass} ${active ? "bg-primary/10 text-primary" : "text-muted"}`;
 }
 
-/** A count badge next to a nav label — omitted entirely at zero, never a "0" pill. */
-function NavCountBadge({ count }: { count: number | undefined }) {
-  if (!count) return null;
+/**
+ * A count badge next to a nav label — omitted entirely at zero, never a "0"
+ * pill. Tone comes from what the number means
+ * (`STAFF_DESTINATION_BADGE_TONES`), not from the nav, and the number never
+ * travels without a noun.
+ */
+function NavCountBadge({
+  badge,
+  count,
+  label,
+}: {
+  badge: StaffDestinationBadge | undefined;
+  count: number | undefined;
+  label: string | undefined;
+}) {
+  if (!badge || !count) return null;
   return (
-    <Badge tone="primary" size="sm" tabularNums className="ml-1.5 px-1.5 py-0">
-      {count}
+    <Badge
+      tone={STAFF_DESTINATION_BADGE_TONES[badge]}
+      size="sm"
+      tabularNums
+      className="ml-1.5 px-1.5 py-0"
+    >
+      <span aria-hidden="true">{count}</span>
+      <span className="sr-only">{label}</span>
     </Badge>
   );
 }
@@ -71,6 +100,7 @@ function MoreLink({
   pathname,
   label,
   count,
+  badgeLabel,
   onNavigate,
 }: {
   destination: StaffDestination;
@@ -78,6 +108,7 @@ function MoreLink({
   pathname: string;
   label: string;
   count: number | undefined;
+  badgeLabel: string | undefined;
   onNavigate: () => void;
 }) {
   const href = staffDestinationHref(root, destination);
@@ -91,7 +122,7 @@ function MoreLink({
         aria-current={active ? "page" : undefined}
       >
         {label}
-        <NavCountBadge count={count} />
+        <NavCountBadge badge={destination.badge} count={count} label={badgeLabel} />
       </Link>
     </li>
   );
@@ -204,6 +235,7 @@ export function ShopNavLinks({
       pathname={pathname}
       label={copy.labels[destination.id]}
       count={destination.badge ? counts?.[destination.badge] : undefined}
+      badgeLabel={destination.badge ? copy.badgeLabels[destination.badge] : undefined}
       onNavigate={closeMore}
     />
   );
@@ -243,7 +275,11 @@ export function ShopNavLinks({
               onClick={closeMore}
             >
               {copy.labels[destination.id]}
-              <NavCountBadge count={destination.badge ? counts?.[destination.badge] : undefined} />
+              <NavCountBadge
+                badge={destination.badge}
+                count={destination.badge ? counts?.[destination.badge] : undefined}
+                label={destination.badge ? copy.badgeLabels[destination.badge] : undefined}
+              />
             </Link>
           );
         })}
