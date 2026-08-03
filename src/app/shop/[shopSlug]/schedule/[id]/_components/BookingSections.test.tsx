@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, screen } from "@testing-library/react";
+import { cleanup, fireEvent, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { EMPTY_RENTAL_PRICING, type RentalPricing } from "@/lib/rentals";
 import { renderDiver } from "@/test/intl";
@@ -112,7 +112,14 @@ describe("BookSpotSection rental gear at checkout", () => {
     );
 
     expect(screen.getByText("Rental gear")).toBeInTheDocument();
-    expect(screen.getByText(/Total due at checkout, gear included/)).toBeInTheDocument();
+    // Nothing is added until the diver asks for gear, so the running total
+    // stays out of the way rather than announcing a charge nobody chose.
+    expect(screen.queryByText(/Total due at checkout, gear included/)).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText("Need rental gear?"));
+    fireEvent.click(screen.getByLabelText(/^BCD/));
+    // $120 seat + $15 BCD.
+    expect(screen.getByText(/Total due at checkout, gear included: \$135\.00/)).toBeInTheDocument();
   });
 
   it("shows no gear step when the shop hasn't priced any rental gear online", () => {

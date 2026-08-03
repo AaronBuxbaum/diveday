@@ -53,6 +53,15 @@ test.describe("staff", () => {
     await page.getByRole("button", { name: "Book these spots" }).click();
     await expect(page.getByRole("heading", { name: /You’re on the boat, Nora/ })).toBeVisible();
 
+    // The waiver is the real next step, so the confirmation offers it directly
+    // rather than one hop further on the readiness page. No email provider is
+    // configured in the e2e fleet, so nothing left the building — and the page
+    // must not claim two emails are coming when they aren't.
+    await expect(page.getByText(/Two emails are on their way/)).toHaveCount(0);
+    await page.getByRole("button", { name: "Sign your waiver now" }).click();
+    await expect(page).toHaveURL(/\/waivers\//);
+    await page.goBack();
+
     // WP-3: the confirmation takes the top — it sits above the pre-trip content
     // (pack list, briefings), not buried at the bottom of a long page.
     const confirmationBox = await page

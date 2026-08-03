@@ -46,6 +46,7 @@ export type ErrorCode =
   | "course-ratio-full"
   | "fit"
   | "pay"
+  | "waiver"
   | "rate_limited";
 
 export const ERROR_MESSAGE_KEYS: Record<ErrorCode, DiverMessageKey> = {
@@ -58,6 +59,9 @@ export const ERROR_MESSAGE_KEYS: Record<ErrorCode, DiverMessageKey> = {
   "course-ratio-full": "booking.errors.courseRatioFull",
   fit: "booking.errors.fit",
   pay: "booking.errors.pay",
+  // Reuses `/ready`'s own wording for the same refusal, so a diver who lands
+  // on it from either surface reads one sentence, not two.
+  waiver: "ready.waiverUnavailable",
   rate_limited: "common.rateLimited",
 };
 

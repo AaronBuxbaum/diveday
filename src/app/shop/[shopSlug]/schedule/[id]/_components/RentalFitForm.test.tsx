@@ -43,6 +43,55 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+describe("RentalFitForm defaults", () => {
+  /**
+   * The post-booking form keeps seeding from `RentableItem.defaultRented` — it
+   * is a *plan*, not a charge, and a diver with nothing on file is best served
+   * by the shop's usual kit already ticked. Only the checkout picker
+   * (`BookingGearFields`) deliberately ignores that flag, because there the
+   * same tick puts money on a card.
+   */
+  it("still pre-checks the shop's usual kit for a diver with no fit on file", () => {
+    renderDiver(
+      <RentalFitForm
+        action={mockAction}
+        rentalFit={null}
+        rentalItems={["bcd", "mask_fins", "gopro"]}
+        pricing={defaultPricing}
+        wantsNitrox={false}
+        nitroxCardVerified={false}
+        plannedDives={2}
+        saved={false}
+        currency="usd"
+      />,
+    );
+
+    // By role, not label text: "BCD" also prefixes the "BCD size" select.
+    expect(screen.getByRole("checkbox", { name: /^BCD/ })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: /^Mask & fins/ })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: /^GoPro/ })).not.toBeChecked();
+  });
+
+  it("lets a saved fit that rents nothing stay empty", () => {
+    renderDiver(
+      <RentalFitForm
+        action={mockAction}
+        rentalFit={emptyFit}
+        rentalItems={["bcd", "mask_fins"]}
+        pricing={defaultPricing}
+        wantsNitrox={false}
+        nitroxCardVerified={false}
+        plannedDives={2}
+        saved={false}
+        currency="usd"
+      />,
+    );
+
+    expect(screen.getByRole("checkbox", { name: /^BCD/ })).not.toBeChecked();
+    expect(screen.getByRole("checkbox", { name: /^Mask & fins/ })).not.toBeChecked();
+  });
+});
+
 describe("RentalFitForm Gear-Status Light-up Indicator", () => {
   it("renders 'Bringing own gear' by default if no rentals selected", () => {
     renderDiver(

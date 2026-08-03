@@ -12,6 +12,7 @@ import { getDb } from "@/db/client";
 import { listCoursePaths, nextPathStep } from "@/db/course-paths";
 import { listDiveSiteBriefingExtras } from "@/db/dive-sites";
 import { verifiedNitroxPersonIds } from "@/db/nitrox";
+import { bookingConfirmationAndWaiverEmailsSent } from "@/db/notifications";
 import { getBookingPayment } from "@/db/payments";
 import {
   getBookingReadiness,
@@ -227,6 +228,7 @@ export default async function TripDetailPage({
     readinessCapability,
     coursePaths,
     heldLevel,
+    emailsOnTheWay,
   ] = confirmed
     ? await Promise.all([
         resolvePaymentPanel(
@@ -250,8 +252,11 @@ export default async function TripDetailPage({
         }),
         listCoursePaths(db, shop.id, { activeOnly: true }),
         highestVerifiedCertificationLevel(db, shop.id, confirmed.person.id, shop.timezone),
+        // Only say "two emails are on their way" when both actually went —
+        // a party member booked without an address of their own gets neither.
+        bookingConfirmationAndWaiverEmailsSent(db, shop.id, confirmed.booking.id),
       ])
-    : [null, null, null, null, false, null, [], null];
+    : [null, null, null, null, false, null, [], null, false];
   const readinessLink = readinessCapability ? readinessLinkPath(readinessCapability.token) : null;
 
   // "What should I learn next?" is the shop's own answer, read off the paths it
@@ -303,7 +308,9 @@ export default async function TripDetailPage({
     <DiverIntlProvider
       locale={locale}
       timeZone={shop.timezone}
-      namespaces={["booking", "common", "fallback", "party", "rental", "trip"]}
+      // `bookingGear` is BookingGearFields' own namespace; without it every
+      // string in the checkout gear picker rendered as its raw key.
+      namespaces={["booking", "bookingGear", "common", "fallback", "party", "rental", "trip"]}
     >
       <main
         className={
@@ -381,6 +388,7 @@ export default async function TripDetailPage({
             payment={payment}
             payCancelled={pay === "cancelled"}
             readinessLink={readinessLink}
+            emailsOnTheWay={emailsOnTheWay}
             progression={
               readiness?.blockers.some((blocker) => blocker.code === "certification_insufficient")
                 ? progression

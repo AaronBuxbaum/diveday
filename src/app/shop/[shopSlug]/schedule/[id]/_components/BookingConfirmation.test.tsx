@@ -3,7 +3,7 @@ import { cleanup, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { renderDiver } from "@/test/intl";
 import { BookingConfirmation } from "./BookingConfirmation";
-import type { Confirmed, PaymentPanel, Shop, Trip } from "./types";
+import type { Confirmed, PaymentPanel, Readiness, Requirement, Shop, Trip } from "./types";
 
 /**
  * The confirmation's receipt line is *evidence of what was charged*, so it
@@ -36,7 +36,22 @@ const confirmed = {
   person: { id: "person-1", fullName: "Ingrid Vogel", email: null },
 } as unknown as Confirmed;
 
-function renderConfirmation(payment: PaymentPanel) {
+/** A trip that gates on a waiver, and a diver whose link is issued but unsigned. */
+const waiverRequirement = { requiresWaiver: true } as unknown as Requirement;
+const waiverPending = {
+  status: "blocked",
+  blockers: [{ code: "waiver_pending" }],
+} as unknown as Readiness;
+
+function renderConfirmation(
+  payment: PaymentPanel,
+  overrides: {
+    readiness?: Readiness;
+    requirement?: Requirement;
+    embed?: boolean;
+    emailsOnTheWay?: boolean;
+  } = {},
+) {
   return renderDiver(
     <BookingConfirmation
       shop={shop}
@@ -44,16 +59,22 @@ function renderConfirmation(payment: PaymentPanel) {
       locale="en-US"
       trip={trip}
       confirmed={confirmed}
-      readiness={null}
-      requirement={null}
-      fitRef={{ shopSlug: "reef-shop", tripId: "trip-1", embed: false, token: "tok" }}
+      readiness={overrides.readiness ?? null}
+      requirement={overrides.requirement ?? null}
+      fitRef={{
+        shopSlug: "reef-shop",
+        tripId: "trip-1",
+        embed: overrides.embed ?? false,
+        token: "tok",
+      }}
       rentalFit={null}
       nitroxCardVerified={false}
       fitSaved={false}
       payment={payment}
       payCancelled={false}
-      readinessLink={null}
+      readinessLink="/ready/tok"
       progression={null}
+      emailsOnTheWay={overrides.emailsOnTheWay ?? false}
     />,
   );
 }
@@ -98,5 +119,67 @@ describe("BookingConfirmation receipt currency (task 35)", () => {
 
     expect(screen.getByText(/€400\.00/)).toBeInTheDocument();
     expect(screen.getByText(/€900\.00/)).toBeInTheDocument();
+  });
+});
+
+describe("BookingConfirmation next step", () => {
+  it("offers the waiver itself, not just the readiness page, when one is outstanding", () => {
+    renderConfirmation(null, { readiness: waiverPending, requirement: waiverRequirement });
+
+    expect(screen.getByRole("button", { name: "Sign your waiver now" })).toBeInTheDocument();
+    // The readiness page stays reachable — it is the calmer, everything-else link.
+    expect(screen.getByRole("link", { name: /readiness page/ })).toBeInTheDocument();
+  });
+
+  it("keeps the waiver as the primary action when there is no payment competing for it", () => {
+    renderConfirmation(null, { readiness: waiverPending, requirement: waiverRequirement });
+
+    expect(screen.getByRole("button", { name: "Sign your waiver now" }).className).toContain(
+      "bg-primary",
+    );
+  });
+
+  it("demotes the waiver button while an unpaid checkout still holds the primary", () => {
+    renderConfirmation(
+      { state: "payable" },
+      { readiness: waiverPending, requirement: waiverRequirement },
+    );
+
+    const waiverButton = screen.getByRole("button", { name: "Sign your waiver now" });
+    expect(waiverButton.className).not.toContain("bg-primary");
+    expect(screen.getByRole("button", { name: "Pay now" }).className).toContain("bg-primary");
+  });
+
+  it("offers no waiver button when nothing about the waiver is outstanding", () => {
+    renderConfirmation(null);
+
+    expect(screen.queryByRole("button", { name: "Sign your waiver now" })).not.toBeInTheDocument();
+  });
+
+  it("leaves the waiver button out of the embed, where /waivers can't be framed", () => {
+    renderConfirmation(null, {
+      readiness: waiverPending,
+      requirement: waiverRequirement,
+      embed: true,
+    });
+
+    expect(screen.queryByRole("button", { name: "Sign your waiver now" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /readiness page/ })).toBeInTheDocument();
+  });
+});
+
+describe("BookingConfirmation email promise", () => {
+  it("warns that two emails are coming once both have actually been sent", () => {
+    renderConfirmation(null, { emailsOnTheWay: true });
+
+    expect(screen.getByText(/Two emails are on their way/)).toBeInTheDocument();
+  });
+
+  it("promises nothing to a diver whose emails never went out", () => {
+    // The walk-in party member with no address of their own: claiming mail is
+    // coming would send them looking for something that never left.
+    renderConfirmation(null, { emailsOnTheWay: false });
+
+    expect(screen.queryByText(/Two emails are on their way/)).not.toBeInTheDocument();
   });
 });

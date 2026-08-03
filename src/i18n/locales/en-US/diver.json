@@ -231,13 +231,18 @@
       "phoneTooLong": "That phone number is too long.",
       "noteTooLong": "Keep this note under 300 characters.",
       "promoInvalid": "That code isn't active."
-    }
+    },
+    "signWaiverNow": "Sign your waiver now",
+    "openingWaiver": "Opening your waiver…",
+    "emailsOnTheWay": "Two emails are on their way: your booking confirmation, and the link to sign your waiver."
   },
   "bookingGear": {
     "heading": "Rental gear",
     "introBody": "Add what you need and we'll charge it together with your booking. You can fine-tune exact sizes after booking.",
     "diverNHeading": "Diver {number}'s gear",
-    "gearTotal": "Gear for this diver: {price}"
+    "gearTotal": "Gear for this diver: {price}",
+    "needGear": "Need rental gear?",
+    "skipBody": "Bringing your own kit? Leave this unchecked and you won't be charged for gear. Check it to see what we rent."
   },
   "lastMinute": {
     "heading": "Want a deal on a last-minute spot?",

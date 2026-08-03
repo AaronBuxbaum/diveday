@@ -231,13 +231,18 @@
       "phoneTooLong": "Ese número de teléfono es demasiado largo.",
       "noteTooLong": "Deja esta nota en menos de 300 caracteres.",
       "promoInvalid": "Ese código no está activo."
-    }
+    },
+    "signWaiverNow": "Firma tu exención ahora",
+    "openingWaiver": "Abriendo tu exención…",
+    "emailsOnTheWay": "Te llegarán dos correos: la confirmación de tu reserva y el enlace para firmar tu exención."
   },
   "bookingGear": {
     "heading": "Equipo de alquiler",
     "introBody": "Añade lo que necesites y lo cobraremos junto con tu reserva. Podrás ajustar las tallas exactas después de reservar.",
     "diverNHeading": "Equipo del buceador {number}",
-    "gearTotal": "Equipo para este buceador: {price}"
+    "gearTotal": "Equipo para este buceador: {price}",
+    "needGear": "¿Necesitas alquilar equipo?",
+    "skipBody": "¿Traes tu propio equipo? Deja la casilla sin marcar y no te cobraremos alquiler. Márcala para ver lo que alquilamos."
   },
   "lastMinute": {
     "heading": "¿Quieres una oferta de última hora?",

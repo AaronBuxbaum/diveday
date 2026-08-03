@@ -18,6 +18,7 @@ import { getActiveTripPromoByCode } from "@/db/trip-promos";
 import { getTripWithBooked } from "@/db/trips";
 import { joinTripWaitlist } from "@/db/waitlist";
 import { issueWaiverOnJoin } from "@/db/waiver-issue";
+import { issueWaiverRequest } from "@/db/waivers";
 import { diverTranslator } from "@/i18n/messages";
 import { requestFirstHandLocale, requestLocale } from "@/i18n/request";
 import { trackEvent } from "@/lib/analytics";
@@ -563,6 +564,37 @@ export async function payForBooking(
     : null;
   if (checkoutUrl) redirect(checkoutUrl);
   redirect(`${base}?booking=${token}&error=pay${embedParam(embed, "&")}`);
+}
+
+/**
+ * "Sign your waiver now" from the confirmation panel — the same one-hop shape
+ * `/ready` already offers (`signWaiverFromReady`), moved to the moment a diver
+ * actually finishes booking, when the waiver is the real next step.
+ *
+ * A waiver URL *is* its capability, so two things keep this honest. The booking
+ * comes from the verified `confirm` capability and nothing else — never a
+ * booking id, party index, or person id from the client — so this can only ever
+ * reach the *lead* diver's own waiver, never another party member's, whatever a
+ * caller submits. And the fresh signing link is only ever handed over as a
+ * redirect: it is never rendered into the confirmation page, so the URL a diver
+ * may screenshot, share, or leave in browser history never carries a waiver
+ * capability of its own. `confirmContextFor` rate-limits by IP ahead of
+ * verification, as it does for every other action bound to this token.
+ */
+export async function signWaiverFromConfirmation(
+  { shopSlug, tripId, token, embed }: RentalFitRef,
+  _formData: FormData,
+) {
+  const base = `/shop/${shopSlug}/schedule/${tripId}`;
+  const failed = `${base}?booking=${token}&error=waiver${embedParam(embed, "&")}`;
+  const ctx = await confirmContextFor(tripId, token);
+  if (!ctx) redirect(failed);
+  const issued = await issueWaiverRequest(ctx.db, {
+    shopId: ctx.capability.shopId,
+    bookingId: ctx.capability.bookingId,
+  });
+  if (!issued.ok) redirect(failed);
+  redirect(`/waivers/${issued.token}`);
 }
 
 export async function joinWaitlist({ shopSlug, tripId, embed }: TripRef, formData: FormData) {

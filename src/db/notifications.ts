@@ -619,6 +619,33 @@ export async function listNotificationDeliveryIssues(
     .orderBy(desc(notificationDeliveries.attemptedAt));
 }
 
+/**
+ * Whether this booking's confirmation email *and* its waiver-link email both
+ * actually left the building. A page may only promise mail it can see went out
+ * — a walk-in party member with no address of their own, an unconfigured
+ * provider, or a rejected recipient all leave the promise unearned
+ * (design/principles.md #4). Returns a plain fact, not words.
+ */
+export async function bookingConfirmationAndWaiverEmailsSent(
+  db: AppDb,
+  shopId: string,
+  bookingId: string,
+): Promise<boolean> {
+  const rows = await db
+    .select({ kind: notificationDeliveries.kind })
+    .from(notificationDeliveries)
+    .where(
+      and(
+        eq(notificationDeliveries.shopId, shopId),
+        eq(notificationDeliveries.bookingId, bookingId),
+        eq(notificationDeliveries.status, "sent"),
+        inArray(notificationDeliveries.kind, ["booking_confirmation", "waiver_request"]),
+      ),
+    );
+  const sent = new Set(rows.map((row) => row.kind));
+  return sent.has("booking_confirmation") && sent.has("waiver_request");
+}
+
 /** The full attempt trail for one booking/purpose, oldest first. */
 export async function listDeliveryAttempts(
   db: AppDb,

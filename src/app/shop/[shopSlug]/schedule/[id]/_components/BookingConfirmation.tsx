@@ -7,7 +7,12 @@ import { checklistCategoryText, checklistDetailText } from "@/i18n/readiness-sum
 import { formatMoneyCents, formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { buildDiverChecklist, nextDiverStep } from "@/lib/readiness-summary";
-import { payForBooking, type RentalFitRef, saveRentalFitRequest } from "../actions";
+import {
+  payForBooking,
+  type RentalFitRef,
+  saveRentalFitRequest,
+  signWaiverFromConfirmation,
+} from "../actions";
 import { RememberBooker } from "./RememberBooker";
 import { RentalFitForm } from "./RentalFitForm";
 import type {
@@ -103,6 +108,7 @@ export function BookingConfirmation({
   payCancelled,
   readinessLink,
   progression,
+  emailsOnTheWay,
 }: {
   shop: Shop;
   shopSlug: string;
@@ -129,10 +135,33 @@ export function BookingConfirmation({
     path: { title: string };
     step: { note: string | null; course: { title: string; slug: string } };
   } | null;
+  /**
+   * True only when this booking's confirmation email *and* its waiver-link
+   * email both actually went out. A walk-in party member with no address of
+   * their own gets neither, so the page must not promise them — see
+   * `bookingConfirmationAndWaiverEmailsSent`.
+   */
+  emailsOnTheWay: boolean;
 }) {
   const t = diverTranslator(locale);
   const checklist = readiness ? buildDiverChecklist(requirement, readiness) : [];
   const nextStep = nextDiverStep(checklist);
+  // The waiver is the real next step after booking, so offer it here rather
+  // than one hop further on `/ready`. Only for the diver this confirmation
+  // belongs to: the action derives the booking from the verified `confirm`
+  // capability, so a party member's waiver is never reachable from here.
+  //
+  // Not inside the embed widget: `/waivers/[token]` is deliberately outside
+  // the framing allowlist (docs ADR 20260726-schedule-embed), so a server
+  // action redirecting there would swap a working iframe for a blocked frame.
+  // Embedded divers keep the readiness link below, which breaks out to `_top`.
+  const waiverStep =
+    !fitRef.embed &&
+    checklist.some((item) => item.code === "waiver_pending" || item.code === "waiver_expired");
+  // Money first when both are outstanding: a still-open Stripe session is the
+  // one thing that expires, and one primary-weight control per section is the
+  // rule (design/principles.md #8).
+  const paymentHoldsThePrimary = payment !== null && payment.state !== "paid";
 
   return (
     <>
@@ -160,6 +189,13 @@ export function BookingConfirmation({
           })}
         </p>
       </EarnedMoment>
+
+      {/* Two messages land within seconds of each other; saying so up front
+          stops the second one reading as a duplicate or a mistake. Claimed
+          only when both actually left the building. */}
+      {emailsOnTheWay ? (
+        <p className="mt-3 text-sm text-muted">{t("booking.emailsOnTheWay")}</p>
+      ) : null}
 
       <PaymentSection
         payment={payment}
@@ -207,6 +243,20 @@ export function BookingConfirmation({
             <p className="mt-1 text-sm text-muted">{t("booking.shopTakesOverBody")}</p>
           </>
         )}
+        {waiverStep ? (
+          <form action={signWaiverFromConfirmation.bind(null, fitRef)} className="mt-3">
+            <SubmitButton
+              pendingLabel={t("booking.openingWaiver")}
+              className={buttonClass({
+                variant: paymentHoldsThePrimary ? "secondary" : "primary",
+                size: "lg",
+                className: "disabled:opacity-70",
+              })}
+            >
+              {t("booking.signWaiverNow")}
+            </SubmitButton>
+          </form>
+        ) : null}
         <Link
           href={readinessLink ?? "#"}
           aria-disabled={readinessLink === null}
