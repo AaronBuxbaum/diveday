@@ -6,6 +6,7 @@ import {
   canExportShopData,
   canImportShopData,
   canManageMessagingSettings,
+  canManageOrders,
   canManagePaymentSettings,
   canManageStaffAccounts,
   canManageWaiverTemplates,
@@ -39,6 +40,8 @@ describe("accountable-role gates (export/import/reports)", () => {
     // H-14: money, legal templates, and roster deletion share the same gate.
     ["canManagePaymentSettings", canManagePaymentSettings],
     ["canRefund", canRefund],
+    // H-14 extended: raising an invoice is the same money work as refunding one.
+    ["canManageOrders", canManageOrders],
     ["canManageWaiverTemplates", canManageWaiverTemplates],
     ["canDeleteDiver", canDeleteDiver],
     // 20260726-staff-invite-accounts: invite/edit-roles/disable/remove share the same gate.

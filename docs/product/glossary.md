@@ -499,6 +499,9 @@ new domain concept, define it here in the same PR.
   status (`open`/`paid`/`void`/`uncollectible`/`refunded`) mirrors the Stripe invoice backing it. A trip's
   optional per-diver price pre-fills the trip-fee line item when an order is started from a
   booking's roster row — staff can still edit the amount or add more line items before sending.
+  **Raising** one is owner/manager work, like the refund it may later need — every staff role can
+  read orders, but billing a diver on the shop's own Stripe account is not deck work
+  ([20260803-invoicing-role-gate](../architecture/decisions/20260803-invoicing-role-gate.md)).
 - **Invoice** — the payable Stripe document behind an order, created on the shop's connected
   account. Staff can share its hosted link directly, or let Stripe email the customer; a webhook
   (or manual refresh) brings the paid/void result back into the order and, when the order is linked

@@ -1,26 +1,26 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { z } from "zod";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { canPersonManageOrders } from "@/db/authz";
 import { getDb } from "@/db/client";
-import { createOrder, getBookingContext, listOrderableCustomers } from "@/db/orders";
-import { orderLineItemKind } from "@/db/schema";
+import { getBookingContext, listOrderableCustomers } from "@/db/orders";
 import { getShopById } from "@/db/shops";
-import { canAcceptPayments, getShopCurrency, getShopStripeAccount } from "@/db/stripe-accounts";
+import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { bookingInvoiceLines } from "@/lib/courses";
 import { formatShortDate } from "@/lib/format";
-import { currencyFractionDigits, majorToMinor, minorToMajor, toShopCurrency } from "@/lib/money";
-import { revalidateAndRedirect } from "@/lib/navigation";
+import { currencyFractionDigits, minorToMajor, toShopCurrency } from "@/lib/money";
 import { requireStaffSession } from "@/lib/session";
 import { noticeFromParam } from "@/lib/staff-notices";
+import { createOrderAction } from "./actions";
+import { LINE_ITEM_ROWS } from "./order-form";
 
 // TODO: Cache Components adoption. Refactor this route so this opt-out can be removed.
 // See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
@@ -39,83 +39,7 @@ const LINE_ITEM_KINDS = [
   { value: "other", key: "orders.new.kind.other" },
 ] as const satisfies { value: string; key: StaffMessageKey }[];
 
-const LINE_ITEM_ROWS = 4;
-
 type LineItemKind = (typeof LINE_ITEM_KINDS)[number]["value"];
-
-// Bounds match the house convention for a bounded dollar-to-cents amount
-// (courses edit action: .max(100_000)) and an explicit integer quantity
-// range (trip capacity/party-size actions: .int().min().max()) — CR-016.
-const dollarsSchema = z.coerce.number().nonnegative().max(100_000);
-const quantitySchema = z.coerce.number().int().min(1).max(100);
-const lineDescriptionSchema = z.string().trim().min(1).max(200);
-// Sourced from the pg enum, not a hand-typed literal list, so it can never
-// drift from what the database will actually accept.
-const lineItemKindSchema = z.enum(orderLineItemKind.enumValues);
-
-async function createOrderAction(formData: FormData) {
-  "use server";
-  const session = await requireStaffSession();
-  const personId = String(formData.get("personId") ?? "");
-  const bookingId = String(formData.get("bookingId") ?? "").trim() || null;
-  const description = String(formData.get("description") ?? "").trim() || null;
-
-  const db = await getDb();
-  // Staff type a major-unit price ("129.00"); the invoice is billed in an
-  // integer count of the shop currency's minor unit. The multiplier is the
-  // currency's own, never a literal 100 — ¥5000 typed is 5000 stored, not
-  // 500000 (docs ADR 20260731-shop-currency). `createOrder` reads the same
-  // shop setting for the invoice itself, so the two can't disagree.
-  const currency = await getShopCurrency(db, session.user.shopId);
-
-  const lineItems: {
-    kind: LineItemKind;
-    description: string;
-    quantity: number;
-    unitAmountCents: number;
-  }[] = [];
-  for (let i = 0; i < LINE_ITEM_ROWS; i++) {
-    const rawDescription = String(formData.get(`description-${i}`) ?? "").trim();
-    if (!rawDescription) continue;
-    const itemDescription = lineDescriptionSchema.safeParse(rawDescription);
-    const kind = lineItemKindSchema.safeParse(formData.get(`kind-${i}`));
-    const quantity = quantitySchema.safeParse(formData.get(`quantity-${i}`) ?? "1");
-    const dollars = dollarsSchema.safeParse(formData.get(`unitAmount-${i}`));
-    // A filled-in row with an out-of-bounds value fails the whole submission
-    // rather than silently dropping the row — a staff member who typed four
-    // line items should never end up with a three-line invoice unexplained.
-    if (!itemDescription.success || !kind.success || !quantity.success || !dollars.success) {
-      redirect(`/shop/${session.user.shopSlug}/orders/new?notice=invalid`);
-    }
-    lineItems.push({
-      kind: kind.data,
-      description: itemDescription.data,
-      quantity: quantity.data,
-      unitAmountCents: majorToMinor(dollars.data, currency),
-    });
-  }
-
-  if (!personId || lineItems.length === 0) {
-    redirect(`/shop/${session.user.shopSlug}/orders/new?notice=invalid`);
-  }
-
-  const result = await createOrder(db, {
-    shopId: session.user.shopId,
-    personId,
-    createdByPersonId: session.user.personId,
-    bookingId,
-    description,
-    lineItems,
-  });
-
-  if (!result.ok) {
-    redirect(`/shop/${session.user.shopSlug}/orders/new?notice=${result.reason}`);
-  }
-  revalidateAndRedirect(
-    `/shop/${session.user.shopSlug}/orders`,
-    `/shop/${session.user.shopSlug}/orders/${result.order.id}`,
-  );
-}
 
 // A notice query param maps to a message key, never to a sentence — the words
 // come from the staff bundle at render time (docs ADR 20260730-staff-copy-localization).
@@ -136,6 +60,16 @@ export default async function NewOrderPage({
   const { shopSlug } = await params;
   const { notice, personId: prefillPersonId, bookingId: prefillBookingId } = await searchParams;
   const db = await getDb();
+
+  // Billing a diver is owner/manager work (H-14, ADR 20260724-role-authorization),
+  // like the refund on the order it becomes and the discount codes that set what
+  // a trip costs. The whole page is that one concern, so for anyone else it isn't
+  // a surface — but the landing is the Orders index with the reason rather than
+  // Today, because a captain can still *read* orders: the door is closed, not the
+  // room. `createOrderAction` re-checks; this only saves a wasted round trip.
+  if (!(await canPersonManageOrders(db, session.user.shopId, session.user.personId))) {
+    redirect(`/shop/${shopSlug}/orders?notice=not_authorized`);
+  }
 
   // The gate, not a courtesy: the entry links hide themselves when the shop
   // can't accept payments, but this page refuses regardless of how it was

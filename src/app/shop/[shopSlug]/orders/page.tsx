@@ -39,12 +39,15 @@ const STATUS_TONES: Record<string, BadgeTone> = {
 };
 
 /**
- * Where `orders/new` lands a staffer it turned away for having no connected
- * account and no diver in hand — this index, the surface that door belongs
- * to, rather than `/divers`, which has nothing to say about payments.
+ * Where `orders/new` lands a staffer it turned away — for having no connected
+ * account and no diver in hand, or for not being an owner/manager (H-14) — this
+ * index, the surface that door belongs to, rather than `/divers`, which has
+ * nothing to say about payments. Reading orders stays open to every staff role;
+ * only raising one is gated, so this is a page they can still use.
  */
 const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
   payment_not_connected: { tone: "warning", key: "orders.index.notice.paymentNotConnected" },
+  not_authorized: { tone: "danger", key: "orders.index.notice.notAuthorized" },
 };
 
 const DATE_INPUT = /^(\d{4})-(\d{2})-(\d{2})$/;

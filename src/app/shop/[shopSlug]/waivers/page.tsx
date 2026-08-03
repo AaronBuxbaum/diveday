@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { z } from "zod";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -10,13 +9,13 @@ import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { canPersonManageWaiverTemplates } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
-import { getCurrentWaiverTemplate, saveWaiverTemplate } from "@/db/waivers";
+import { getCurrentWaiverTemplate } from "@/db/waivers";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate } from "@/lib/format";
-import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
-import { DEFAULT_WAIVER_BODY, DEFAULT_WAIVER_TITLE } from "@/lib/waivers";
+import { DEFAULT_WAIVER_BODY } from "@/lib/waivers";
+import { saveWaiverAction } from "./actions";
 
 // TODO: Cache Components adoption. Refactor this route so this opt-out can be removed.
 // See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
@@ -25,10 +24,6 @@ export const instant = false;
 export const metadata: Metadata = {
   title: "Waivers — DiveDay",
 };
-
-const templateSchema = z.object({
-  body: z.string().trim().min(40).max(12_000),
-});
 
 export default async function WaiverTemplatesPage({
   params,
@@ -63,26 +58,6 @@ export default async function WaiverTemplatesPage({
   // 11 "Kai"): Today already renders `shopHome.notice.*` codes.
   if (!canManage) redirect(`/shop/${shopSlug}?notice=waivers_not_authorized`);
   const current = await getCurrentWaiverTemplate(db, shop.id);
-
-  async function saveWaiverAction(formData: FormData) {
-    "use server";
-    const staff = await requireStaffSession();
-    const editor = await getDb();
-    if (!(await canPersonManageWaiverTemplates(editor, staff.user.shopId, staff.user.personId))) {
-      redirect(`/shop/${staff.user.shopSlug}?notice=waivers_not_authorized`);
-    }
-    const parsed = templateSchema.safeParse(Object.fromEntries(formData));
-    if (!parsed.success) redirect(`/shop/${staff.user.shopSlug}/waivers?notice=invalid`);
-    await saveWaiverTemplate(await getDb(), {
-      shopId: staff.user.shopId,
-      title: DEFAULT_WAIVER_TITLE,
-      body: parsed.data.body,
-    });
-    revalidateAndRedirect(
-      `/shop/${staff.user.shopSlug}/waivers`,
-      `/shop/${staff.user.shopSlug}/waivers?notice=saved`,
-    );
-  }
 
   const banner =
     notice === "saved"

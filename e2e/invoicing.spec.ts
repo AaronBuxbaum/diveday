@@ -21,6 +21,7 @@ import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
  * framing e2e/refunds.spec.ts and e2e/promo-codes.spec.ts use:
  *
  * - the connect-first refusal (no order form at all until the shop can take money);
+ * - the role refusal (raising an invoice is owner/manager work, H-14);
  * - the form rendering against real seeded customers;
  * - both pre-Stripe validation refusals, which never call Stripe;
  * - the Stripe-step failure, which is what a real submission actually reaches here.
@@ -138,20 +139,23 @@ test.describe("as captain", () => {
   signedInAs("captain");
 
   /**
-   * Pinning current behaviour, deliberately: unlike `/shop/[shopSlug]/promos`,
-   * which refuses a captain outright, this route's only gate is
-   * `requireStaffSession()` plus "can this shop take money" — there is no
-   * owner/manager check on the page or on `createOrderAction`. Any staff member
-   * can raise an invoice today. If that is ever meant to be owner/manager work,
-   * this test is where the decision becomes visible instead of silent.
+   * Billing a diver is owner/manager work, same as the refund on the order it
+   * becomes and the discount codes that set what a trip costs (H-14, ADR
+   * 20260724-role-authorization, extended by 20260803-invoicing-role-gate).
+   * This spec used to pin the opposite — any staff role could raise an invoice —
+   * as the place that decision would become visible; it was made, and this is
+   * now the refusal.
+   *
+   * A captain keeps *reading* orders, which is why the landing is the Orders
+   * index with the reason rather than Today: the door is closed, not the room.
    */
-  test("any staff member can reach the order form — there is no owner/manager gate today", async ({
-    page,
-    request,
-  }) => {
+  test("a captain is turned away from the order form and told why", async ({ page, request }) => {
     await request.post("/api/test/seed-stripe-account");
     await page.goto(NEW_ORDER);
-    await expect(page.getByRole("heading", { level: 1, name: "New order" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Create and send invoice" })).toBeVisible();
+
+    await expect(page).toHaveURL(/\/shop\/blue-mantis\/orders$/);
+    // FlashParams strips the query, so assert the banner, not the URL param.
+    await expect(page.getByText(/limited to owners and managers/).first()).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "New order" })).toHaveCount(0);
   });
 });

@@ -4,6 +4,7 @@ import { seededShopContext } from "@/test/db";
 import {
   canPersonConfigureTrips,
   canPersonDeleteDiver,
+  canPersonManageOrders,
   canPersonManagePaymentSettings,
   canPersonManageStaffAccounts,
   canPersonManageWaiverTemplates,
@@ -77,6 +78,7 @@ describe("H-14 owner/manager surfaces", () => {
     const divemaster = await makeStaff(db, shop.id, ["divemaster"]);
 
     for (const gate of [
+      canPersonManageOrders,
       canPersonManagePaymentSettings,
       canPersonRefund,
       canPersonManageWaiverTemplates,
