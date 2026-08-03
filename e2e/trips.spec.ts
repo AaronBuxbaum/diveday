@@ -104,6 +104,11 @@ test.describe("per-trip crew role", () => {
     // And "not specified" is reachable again — it is the honest default, not a
     // safety claim, and clearing it must never need SQL.
     await page.getByLabel("Job Keiko Tanaka is doing on this trip").selectOption("");
+    // The select is controlled and only re-renders once the server accepted the
+    // write (CrewSection's confirm-then-render discipline), so this settles only
+    // after persistence. Without it the reload races the server action and reads
+    // the old role back — the captain step above already waits the same way.
+    await expect(page.getByLabel("Job Keiko Tanaka is doing on this trip")).toHaveValue("");
     await page.reload();
     await expect(page.getByLabel("Job Keiko Tanaka is doing on this trip")).toHaveValue("");
   });

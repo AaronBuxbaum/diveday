@@ -107,7 +107,11 @@ test.describe("refunds", () => {
     await expect(
       page.getByRole("alert").filter({ hasText: "a refund is owed but must be issued by hand" }),
     ).toBeVisible();
-    await expect(page.getByText("Nora Quinn")).toHaveCount(0);
+    // Scoped to the roster: removals now also write the trip activity trail
+    // ("… removed Nora Quinn from the trip"), so the name legitimately stays
+    // on the page — what must be gone is her seat.
+    await expect(page.locator("#roster").getByText("Nora Quinn")).toHaveCount(0);
+    await expect(page.getByText(/removed Nora Quinn from the trip/)).toBeVisible();
   });
 
   test("cancelling a paid booking past the cancellation deadline forfeits the refund", async ({
@@ -138,6 +142,9 @@ test.describe("refunds", () => {
         .getByRole("status")
         .filter({ hasText: "past the cancellation window, so the seat was non-refundable" }),
     ).toBeVisible();
-    await expect(page.getByText("Nora Quinn")).toHaveCount(0);
+    // Same roster scoping as above: the activity trail now names the removed
+    // diver on purpose.
+    await expect(page.locator("#roster").getByText("Nora Quinn")).toHaveCount(0);
+    await expect(page.getByText(/removed Nora Quinn from the trip/)).toBeVisible();
   });
 });

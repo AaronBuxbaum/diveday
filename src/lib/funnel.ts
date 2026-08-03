@@ -14,6 +14,8 @@ import { publicSchedulePath } from "./public-routes";
  */
 const FIXED_SOURCES = [
   "home-hero",
+  "home-diver-moment",
+  "home-mid",
   "home-closing",
   "nav",
   "product",

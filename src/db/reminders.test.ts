@@ -1,4 +1,3 @@
-// @vitest-environment node
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import type { Notification, NotificationDelivery, NotificationProvider } from "@/lib/notifications";

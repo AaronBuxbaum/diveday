@@ -1,4 +1,5 @@
 import { eq } from "drizzle-orm";
+import { notFound } from "next/navigation";
 import { DemoBanner } from "@/components/DemoBanner";
 import { OfflineManifestAutoSave } from "@/components/OfflineManifestAutoSave";
 import { PreserveFormScroll } from "@/components/PreserveFormScroll";
@@ -123,7 +124,29 @@ export default async function ShopLayout({
   const demoT = showBanner ? diverTranslator(await requestLocale(shop?.defaultLocale)) : undefined;
   const staffT = staffTranslator(locale);
 
-  const showNav = Boolean(session?.user) && Boolean(shop);
+  // INVARIANT: staff chrome and counts are scoped to the session's own shop —
+  // a mismatched slug renders nothing of the other tenant.
+  //
+  // This layout resolves the shop from the URL slug, but every staff *page*
+  // below it reads its data from `session.user.shopId`. Without this check the
+  // two disagree the moment someone signed into shop A opens
+  // /shop/shop-b/anything: the page shows A's rows while the shell around it
+  // shows B's name, B's next departure, and B's pending-work counts (reviews
+  // awaiting moderation, blocked divers — which include medical review). Those
+  // counts are another tenant's operational data, and no page-level gate can
+  // catch them because they are read here, in the shell. Since the public
+  // namespace split (ADR 20260803-public-shop-namespace) everything under
+  // /shop is staff-only, so a cross-tenant visit has no public carve-out:
+  // it is refused outright rather than rendered as a mix of two shops.
+  const ownShop = Boolean(session?.user && shop && session.user.shopId === shop.id);
+  if (session?.user && shop && !ownShop) notFound();
+  // An unknown slug is nobody's shop: without this, a signed-in staffer
+  // visiting /shop/no-such-shop/divers would get their *own* roster rendered
+  // under a foreign-looking URL — not a leak, but a phishing-shaped breach of
+  // the "slug and session agree" invariant above.
+  if (session?.user && !shop) notFound();
+
+  const showNav = ownShop;
   // Small "pending work" counts for the Reviews/Blockers nav badges (task 83,
   // UX persona 11 "Kai"/12 "Maren") — both queries the shop's own pages
   // already run on every visit, gated the same way the nav itself is so a
@@ -195,14 +218,10 @@ export default async function ShopLayout({
       ) : null}
       {/* Keeps every trip in the shop's near-term board saved offline, not just
           a trip whose live manifest someone opened — see ADR
-          20260726-shopwide-offline-manifest-priming. Still gated to staff
-          actually signed into *this* routed shop even though /shop is now
-          staff-only end to end: staff of a *different* shop browsing this
-          one's URL would otherwise silently save their own shop's roster while
-          the visible page is this one. */}
-      {session?.user && shop && isStaff(session.user.roles) && session.user.shopId === shop.id ? (
-        <OfflineManifestAutoSave />
-      ) : null}
+          20260726-shopwide-offline-manifest-priming. `ownShop` (the tenant
+          invariant above) keeps staff of a *different* shop from silently
+          saving their own shop's roster while the visible page is this one. */}
+      {ownShop && session?.user && isStaff(session.user.roles) ? <OfflineManifestAutoSave /> : null}
       <PreserveFormScroll />
       <div id="shop-main-content" tabIndex={-1} className="flex-1 outline-none">
         {children}

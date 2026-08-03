@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createTestDb } from "./client";
+import type { AppDb } from "./client";
 import { publishManifestEvent, subscribeManifestEvents } from "./manifest-events";
 
 // vitest.config.ts sets DATABASE_URL to "" for every test worker, so this
@@ -7,9 +7,15 @@ import { publishManifestEvent, subscribeManifestEvents } from "./manifest-events
 // PGlite has no cross-process notify to model) — see the module docblock and
 // ADR 20260726-manifest-push-refresh for the Postgres LISTEN/NOTIFY path this
 // intentionally doesn't cover.
+
+// That same empty DATABASE_URL makes `publishManifestEvent` return from its
+// in-process dispatch branch before it ever touches the database (see
+// manifest-events.ts), so booting a real PGlite here would cost ~5s per test
+// to hand it an argument nothing reads. A typed stand-in is the honest fixture.
+const db = {} as AppDb;
+
 describe("manifest-events", () => {
   it("notifies a subscriber only for its own shop and trip", async () => {
-    const db = await createTestDb();
     const received: string[] = [];
     const unsubscribe = subscribeManifestEvents("shop-a", "trip-1", () => received.push("a"));
     try {
@@ -25,7 +31,6 @@ describe("manifest-events", () => {
   });
 
   it("stops delivering after unsubscribe", async () => {
-    const db = await createTestDb();
     let count = 0;
     const unsubscribe = subscribeManifestEvents("shop-a", "trip-1", () => {
       count++;
@@ -39,7 +44,6 @@ describe("manifest-events", () => {
   });
 
   it("notifies every independent subscriber to the same trip", async () => {
-    const db = await createTestDb();
     let first = 0;
     let second = 0;
     const unsubscribeFirst = subscribeManifestEvents("shop-a", "trip-1", () => {

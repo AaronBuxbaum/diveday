@@ -104,8 +104,12 @@ test.describe("staff", () => {
     await noraRow.getByRole("button", { name: "Remove booking" }).click();
     await noraRow.getByRole("button", { name: "Yes, remove booking" }).click();
     await expect(page.getByRole("status")).toContainText("Booking cancelled");
-    await expect(page.getByText("Nora Quinn")).toHaveCount(0);
-    await expect(page.getByText("Sam Quinn").first()).toBeVisible();
+    // Scoped to the roster: removals now also write the trip activity trail
+    // ("… removed Nora Quinn from the trip"), so the name legitimately stays
+    // on the page — what must be gone is her seat.
+    await expect(page.locator("#roster").getByText("Nora Quinn")).toHaveCount(0);
+    await expect(page.getByText(/removed Nora Quinn from the trip/)).toBeVisible();
+    await expect(page.locator("#roster").getByText("Sam Quinn").first()).toBeVisible();
   });
 
   test("a crew conditions hold pauses public booking and explains the final-call state", async ({

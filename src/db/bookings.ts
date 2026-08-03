@@ -408,8 +408,34 @@ export async function getBookingForTrip(db: AppDb, tripId: string, bookingId: st
   return row ?? null;
 }
 
+/**
+ * The diver's name on a booking, whatever its status — for the trip activity
+ * log, which has to name the person on a *removal* too, when the row it is
+ * describing has just gone cancelled. `getBookingForTrip` deliberately hides
+ * cancelled bookings because it feeds a confirmation panel; the log is the
+ * opposite case, so this is its own narrow read rather than a loosened filter
+ * on that one.
+ */
+export async function bookingDiverName(db: AppDb, shopId: string, bookingId: string) {
+  const [row] = await db
+    .select({ fullName: people.fullName })
+    .from(bookings)
+    .innerJoin(people, eq(people.id, bookings.personId))
+    .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId)))
+    .limit(1);
+  return row?.fullName ?? null;
+}
+
 export type RestoreBookingOutcome =
   | "restored"
+  /**
+   * The departure itself is gone — the crew stood it down, so there is no
+   * manifest left to put anyone back on. Narrower than
+   * `createBookingRecord`'s `trip_unavailable` on purpose: that word covers
+   * three states a *new* seat can't be sold into, and only one of them is a
+   * reason to refuse an undo. See `restoreBooking` for the other two.
+   */
+  | "trip_cancelled"
   | "already_active"
   | "trip_full"
   | "course_ratio_full"
@@ -428,6 +454,25 @@ export type RestoreBookingOutcome =
  * from being exceeded — remove a diver from a four-seat DSD, let a walk-up book
  * the freed seat, then tap Undo and a fifth uncertified first-timer joins one
  * instructor with no refusal at all.
+ *
+ * The trip itself is checked too, but only for the one state that makes an
+ * undo meaningless: **cancelled**. An undo is not a new booking, and the two
+ * remaining conditions `createBookingRecord` insists on are deliberately not
+ * copied here.
+ *
+ * - *Conditions hold.* A hold means "existing bookings remain valid, new
+ *   bookings pause" (glossary). The diver whose row was mis-tapped is an
+ *   existing booking; putting them back is undoing a clerical slip, not
+ *   selling a seat the hold was meant to stop.
+ * - *Already departed.* `cancelBooking` has no trip-state gate at all and the
+ *   Remove control renders on every roster row, including at sea — a departed
+ *   trip is still `scheduled` and roll call stays live. Refusing the undo
+ *   there would make a misclick on an at-sea manifest permanent, and the two
+ *   errors are not symmetric: an under-listed manifest costs a search, an
+ *   over-listed one costs a tap.
+ *
+ * Capacity and the course ratio still bind in both cases, so a seat that has
+ * genuinely been taken is still refused.
  */
 export async function restoreBooking(
   db: AppDb,
@@ -454,6 +499,11 @@ export async function restoreBooking(
       .limit(1)
       .for("update");
     if (!trip) return "not_found";
+    // Read under the same lock. A cancelled departure has no roster to
+    // restore onto; reinstating the trip is the recovery, and then the undo
+    // works. No hold check and no departure-time check here — see the doc
+    // comment for why an undo is not a new booking.
+    if (trip.status === "cancelled") return "trip_cancelled";
     const [row] = await tx
       .select({ booked: count(bookings.id) })
       .from(bookings)

@@ -1,4 +1,3 @@
-// @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { distinctBlockedDivers } from "@/lib/blockers";
 import { nowDate } from "@/lib/clock";

@@ -1,4 +1,3 @@
-// @vitest-environment node
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { calendarFeeds, people, personRoles, userAccounts } from "@/db/schema";

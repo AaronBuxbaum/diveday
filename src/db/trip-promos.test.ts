@@ -1,4 +1,3 @@
-// @vitest-environment node
 import { describe, expect, it } from "vitest";
 import type { CreateTripPromotionResult, PromotionProvider } from "@/lib/payments/promotions";
 import { seededShopContext } from "@/test/db";

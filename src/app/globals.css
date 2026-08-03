@@ -21,6 +21,14 @@
   --foreground: #0c2a35; /* deep-sea ink */
   --muted: #5b6f77;
 
+  /*
+   * Device bezel for the marketing phone mockups. Deliberately NOT
+   * --foreground: ink flips light in dark mode, and a bezel that flips with
+   * it renders as a glowing white phone — the brightest object on a dark
+   * page. A phone frame is dark in both schemes.
+   */
+  --device-frame: #0c2a35;
+
   /* Action — lagoon */
   --primary: #0e7490;
   --primary-hover: #155e75;
@@ -93,6 +101,9 @@
     --foreground: #e9f3f4;
     --muted: #8fa8b0;
 
+    /* Bezel stays dark at depth (see the light-scheme note). */
+    --device-frame: #051118;
+
     /* Action — lagoon, brightened for contrast at depth */
     --primary: #22d3ee;
     --primary-hover: #67e8f9;
@@ -118,6 +129,7 @@
   --color-border-strong: var(--border-strong);
   --color-foreground: var(--foreground);
   --color-muted: var(--muted);
+  --color-device-frame: var(--device-frame);
   --color-primary: var(--primary);
   --color-primary-hover: var(--primary-hover);
   --color-primary-foreground: var(--primary-foreground);

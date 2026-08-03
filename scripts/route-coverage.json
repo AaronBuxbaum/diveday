@@ -1,0 +1,416 @@
+{
+  "/": {
+    "e2e": ["demo.spec.ts", "manifest.spec.ts", "marketing.spec.ts", "seo.spec.ts"],
+    "visual": ["landing"]
+  },
+  "//": "Every `src/app/**/page.tsx` route and the tests that cover it. `e2e` names spec files under e2e/, `visual` names captures in e2e/visual.spec.ts, `exempt` states why a route has neither. Mechanical facts are written by `node scripts/check-route-coverage.mjs --write`; the coverage lists are hand-maintained on purpose \u2014 see scripts/check-route-coverage.mjs.",
+  "/about": {
+    "e2e": ["seo.spec.ts"],
+    "visual": ["about"]
+  },
+  "/forgot-password": {
+    "e2e": ["account-lifecycle.spec.ts"],
+    "visual": ["forgot-password"]
+  },
+  "/invite/[token]": {
+    "e2e": ["staff-invite.spec.ts"],
+    "visual": []
+  },
+  "/offline-manifest": {
+    "e2e": ["a11y.spec.ts", "manifest.spec.ts"],
+    "visual": ["offline-manifest-empty", "offline-manifest-list"]
+  },
+  "/onboard": {
+    "e2e": [
+      "account-lifecycle.spec.ts",
+      "demo.spec.ts",
+      "marketing.spec.ts",
+      "nitrox.spec.ts",
+      "onboard.spec.ts",
+      "tenant-isolation.spec.ts"
+    ],
+    "visual": ["onboard"]
+  },
+  "/pricing": {
+    "e2e": ["marketing.spec.ts"],
+    "visual": ["pricing"]
+  },
+  "/product": {
+    "e2e": ["seo.spec.ts"],
+    "visual": ["product"]
+  },
+  "/ready/[token]": {
+    "e2e": ["readiness.spec.ts", "self-service-reschedule.spec.ts"],
+    "visual": ["readiness"]
+  },
+  "/recap/[token]": {
+    "e2e": ["recap.spec.ts", "reviews.spec.ts"],
+    "visual": ["recap"]
+  },
+  "/reset-password/[token]": {
+    "e2e": ["account-lifecycle.spec.ts"],
+    "visual": ["reset-password-invalid"]
+  },
+  "/s/[shopSlug]": {
+    "e2e": [
+      "a11y.spec.ts",
+      "booking.spec.ts",
+      "courses.spec.ts",
+      "courtesy-email-unsubscribe.spec.ts",
+      "dive-sites.spec.ts",
+      "last-minute-fill.spec.ts",
+      "next-departure.spec.ts",
+      "nitrox.spec.ts",
+      "readiness.spec.ts",
+      "refunds.spec.ts",
+      "rentals.spec.ts",
+      "returning-diver.spec.ts",
+      "reviews.spec.ts",
+      "schedule-embed.spec.ts",
+      "schedule-filters.spec.ts",
+      "schedule-trip.spec.ts",
+      "self-service-reschedule.spec.ts",
+      "seo.spec.ts",
+      "tenant-isolation.spec.ts",
+      "trips.spec.ts"
+    ],
+    "visual": ["schedule", "schedule-embed"]
+  },
+  "/s/[shopSlug]/courses": {
+    "e2e": ["courses.spec.ts"],
+    "visual": ["public-courses"]
+  },
+  "/s/[shopSlug]/courses/[slug]": {
+    "e2e": ["course-paths.spec.ts", "courses.spec.ts", "gear-fit-and-age.spec.ts"],
+    "visual": ["course-page"]
+  },
+  "/s/[shopSlug]/courses/paths": {
+    "e2e": ["course-paths.spec.ts"],
+    "visual": ["public-course-paths"]
+  },
+  "/s/[shopSlug]/courses/paths/[pathSlug]": {
+    "e2e": ["course-paths.spec.ts"],
+    "visual": ["public-course-paths"]
+  },
+  "/s/[shopSlug]/trips/[id]": {
+    "e2e": [
+      "a11y.spec.ts",
+      "booking.spec.ts",
+      "courses.spec.ts",
+      "dive-sites.spec.ts",
+      "keyboard-shortcuts.spec.ts",
+      "next-departure.spec.ts",
+      "nitrox.spec.ts",
+      "promo-codes.spec.ts",
+      "readiness.spec.ts",
+      "refunds.spec.ts",
+      "rentals.spec.ts",
+      "returning-diver.spec.ts",
+      "self-service-reschedule.spec.ts",
+      "schedule-embed.spec.ts"
+    ],
+    "visual": ["site-briefing"]
+  },
+  "/shop/[shopSlug]": {
+    "e2e": [
+      "boat-loop.spec.ts",
+      "keyboard-shortcuts.spec.ts",
+      "last-minute-fill.spec.ts",
+      "onboard.spec.ts",
+      "role-lens.spec.ts",
+      "role-permissions.spec.ts",
+      "search.spec.ts",
+      "staff-invite.spec.ts",
+      "tenant-isolation.spec.ts"
+    ],
+    "visual": ["today", "today-empty"]
+  },
+  "/shop/[shopSlug]/blockers": {
+    "e2e": ["blockers.spec.ts", "tenant-isolation.spec.ts"],
+    "visual": ["blockers"]
+  },
+  "/shop/[shopSlug]/bookings/new": {
+    "e2e": ["add-diver.spec.ts"],
+    "visual": ["booking-new"]
+  },
+  "/shop/[shopSlug]/bookings/new/[tripId]": {
+    "e2e": ["add-diver.spec.ts"],
+    "visual": ["booking-new-diver"]
+  },
+  "/shop/[shopSlug]/check-in": {
+    "e2e": ["check-in.spec.ts", "tenant-isolation.spec.ts"],
+    "visual": []
+  },
+  "/shop/[shopSlug]/check-in/walk-in": {
+    "e2e": ["check-in.spec.ts"],
+    "visual": ["check-in-walk-in"]
+  },
+  "/shop/[shopSlug]/courses": {
+    "e2e": ["course-paths.spec.ts", "courses.spec.ts"],
+    "visual": ["courses-list"]
+  },
+  "/shop/[shopSlug]/courses/[slug]/edit": {
+    "e2e": ["courses.spec.ts", "search.spec.ts"],
+    "visual": ["course-edit"]
+  },
+  "/shop/[shopSlug]/courses/paths": {
+    "e2e": ["course-paths.spec.ts"],
+    "visual": ["course-paths"]
+  },
+  "/shop/[shopSlug]/courses/paths/[pathSlug]": {
+    "e2e": ["course-paths.spec.ts"],
+    "visual": ["course-path-builder"]
+  },
+  "/shop/[shopSlug]/dive-sites": {
+    "e2e": ["depth-and-age-surfaces.spec.ts", "dive-sites.spec.ts"],
+    "visual": []
+  },
+  "/shop/[shopSlug]/dive-sites/[id]": {
+    "e2e": ["dive-sites.spec.ts"],
+    "visual": []
+  },
+  "/shop/[shopSlug]/dive-sites/catalog": {
+    "e2e": [],
+    "exempt": "no coverage yet \u2014 found by the 2026-08-03 test-system evaluation; needs a spec",
+    "visual": []
+  },
+  "/shop/[shopSlug]/dive-sites/new": {
+    "e2e": ["dive-sites.spec.ts"],
+    "visual": []
+  },
+  "/shop/[shopSlug]/divers": {
+    "e2e": [
+      "certifications.spec.ts",
+      "divers.spec.ts",
+      "gear-fit-and-age.spec.ts",
+      "import.spec.ts",
+      "keyboard-shortcuts.spec.ts",
+      "nitrox.spec.ts",
+      "orders-demo.spec.ts",
+      "role-permissions.spec.ts",
+      "saved-views.spec.ts",
+      "search.spec.ts",
+      "tenant-isolation.spec.ts"
+    ],
+    "visual": ["divers"]
+  },
+  "/shop/[shopSlug]/divers/[personId]": {
+    "e2e": [
+      "certifications.spec.ts",
+      "divers.spec.ts",
+      "gear-fit-and-age.spec.ts",
+      "orders-demo.spec.ts"
+    ],
+    "visual": [
+      "diver-profile",
+      "diver-profile-expired",
+      "diver-profile-imported",
+      "diver-profile-payments"
+    ]
+  },
+  "/shop/[shopSlug]/orders": {
+    "e2e": ["orders-demo.spec.ts", "tenant-isolation.spec.ts"],
+    "visual": ["orders"]
+  },
+  "/shop/[shopSlug]/orders/[id]": {
+    "e2e": ["orders-demo.spec.ts"],
+    "visual": ["order-detail"]
+  },
+  "/shop/[shopSlug]/orders/new": {
+    "e2e": [],
+    "exempt": "no coverage yet \u2014 found by the 2026-08-03 test-system evaluation; needs a spec",
+    "visual": []
+  },
+  "/shop/[shopSlug]/promos": {
+    "e2e": ["promo-codes.spec.ts"],
+    "visual": ["staff-promos"]
+  },
+  "/shop/[shopSlug]/reports": {
+    "e2e": ["currency.spec.ts", "reports.spec.ts"],
+    "visual": ["reports"]
+  },
+  "/shop/[shopSlug]/reviews": {
+    "e2e": ["reviews.spec.ts", "tenant-isolation.spec.ts"],
+    "visual": ["staff-reviews"]
+  },
+  "/shop/[shopSlug]/schedule/board": {
+    "e2e": [
+      "a11y.spec.ts",
+      "add-diver.spec.ts",
+      "booking.spec.ts",
+      "check-in.spec.ts",
+      "depth-and-age-surfaces.spec.ts",
+      "dive-sites.spec.ts",
+      "divers.spec.ts",
+      "import.spec.ts",
+      "manifest.spec.ts",
+      "nitrox.spec.ts",
+      "promo-codes.spec.ts",
+      "refunds.spec.ts",
+      "role-permissions.spec.ts",
+      "schedule-builder.spec.ts",
+      "schedule-trip.spec.ts",
+      "tenant-isolation.spec.ts",
+      "trip-series.spec.ts",
+      "waivers.spec.ts"
+    ],
+    "visual": ["schedule-builder"]
+  },
+  "/shop/[shopSlug]/settings": {
+    "e2e": [
+      "calendar-sync.spec.ts",
+      "currency.spec.ts",
+      "depth-and-age-surfaces.spec.ts",
+      "nitrox.spec.ts",
+      "recap.spec.ts",
+      "role-permissions.spec.ts",
+      "whatsapp-settings.spec.ts"
+    ],
+    "visual": ["settings-payments"]
+  },
+  "/shop/[shopSlug]/settings/calendar": {
+    "e2e": ["calendar-sync.spec.ts"],
+    "visual": ["settings-calendar"]
+  },
+  "/shop/[shopSlug]/settings/embed": {
+    "e2e": ["schedule-embed.spec.ts"],
+    "visual": ["settings-embed"]
+  },
+  "/shop/[shopSlug]/settings/export": {
+    "e2e": ["export.spec.ts"],
+    "visual": ["settings-export"]
+  },
+  "/shop/[shopSlug]/settings/import": {
+    "e2e": ["import.spec.ts"],
+    "visual": ["settings-import"]
+  },
+  "/shop/[shopSlug]/settings/team": {
+    "e2e": ["staff-invite.spec.ts"],
+    "visual": ["settings-team"]
+  },
+  "/shop/[shopSlug]/settings/whatsapp": {
+    "e2e": ["whatsapp-settings.spec.ts"],
+    "visual": ["settings-whatsapp"]
+  },
+  "/shop/[shopSlug]/staffing": {
+    "e2e": [],
+    "exempt": "no coverage yet \u2014 found by the 2026-08-03 test-system evaluation; needs a spec (e2e/search.spec.ts hops here from the command palette but asserts only the URL, never that the page renders)",
+    "visual": []
+  },
+  "/shop/[shopSlug]/trips/[id]": {
+    "e2e": [
+      "a11y.spec.ts",
+      "add-diver.spec.ts",
+      "boat-loop.spec.ts",
+      "check-in.spec.ts",
+      "courses.spec.ts",
+      "depth-and-age-surfaces.spec.ts",
+      "divers.spec.ts",
+      "gear-fit-and-age.spec.ts",
+      "import.spec.ts",
+      "last-minute-fill.spec.ts",
+      "nitrox.spec.ts",
+      "promo-codes.spec.ts",
+      "recap.spec.ts",
+      "refunds.spec.ts",
+      "trip-series.spec.ts",
+      "trips.spec.ts"
+    ],
+    "visual": ["trip-manage"]
+  },
+  "/shop/[shopSlug]/trips/[id]/guests": {
+    "e2e": [
+      "a11y.spec.ts",
+      "add-diver.spec.ts",
+      "boat-loop.spec.ts",
+      "booking.spec.ts",
+      "check-in.spec.ts",
+      "depth-and-age-surfaces.spec.ts",
+      "divers.spec.ts",
+      "gear-fit-and-age.spec.ts",
+      "import.spec.ts",
+      "manifest.spec.ts",
+      "recap.spec.ts",
+      "refunds.spec.ts",
+      "waivers.spec.ts"
+    ],
+    "visual": [
+      "trip-guests",
+      "trip-guests-depth-warning",
+      "trip-guests-identity",
+      "trip-guests-note-undo"
+    ]
+  },
+  "/shop/[shopSlug]/trips/[id]/manifest": {
+    "e2e": [
+      "a11y.spec.ts",
+      "boat-loop.spec.ts",
+      "depth-and-age-surfaces.spec.ts",
+      "divers.spec.ts",
+      "manifest.spec.ts"
+    ],
+    "visual": ["manifest", "manifest-not-back-aboard"]
+  },
+  "/shop/[shopSlug]/trips/[id]/prep": {
+    "e2e": ["boat-loop.spec.ts", "gear-fit-and-age.spec.ts", "nitrox.spec.ts"],
+    "visual": ["prep", "prep-no-nitrox"]
+  },
+  "/shop/[shopSlug]/trips/new": {
+    "e2e": [
+      "a11y.spec.ts",
+      "add-diver.spec.ts",
+      "booking.spec.ts",
+      "check-in.spec.ts",
+      "courses.spec.ts",
+      "dive-sites.spec.ts",
+      "divers.spec.ts",
+      "gear-fit-and-age.spec.ts",
+      "import.spec.ts",
+      "readiness.spec.ts",
+      "refunds.spec.ts",
+      "role-permissions.spec.ts",
+      "schedule-embed.spec.ts",
+      "schedule-trip.spec.ts",
+      "self-service-reschedule.spec.ts",
+      "trip-series.spec.ts",
+      "trips.spec.ts"
+    ],
+    "visual": []
+  },
+  "/shop/[shopSlug]/waivers": {
+    "e2e": ["role-permissions.spec.ts", "tenant-isolation.spec.ts", "waivers.spec.ts"],
+    "visual": ["staff-waivers"]
+  },
+  "/shop/[shopSlug]/waivers/signatures": {
+    "e2e": ["role-permissions.spec.ts", "waivers.spec.ts"],
+    "visual": ["staff-waivers-signatures"]
+  },
+  "/sign-in": {
+    "e2e": ["account-lifecycle.spec.ts", "auth.spec.ts", "export.spec.ts"],
+    "visual": ["sign-in"]
+  },
+  "/switching": {
+    "e2e": ["marketing.spec.ts", "seo.spec.ts"],
+    "visual": ["switching-hub"]
+  },
+  "/switching/[competitor]": {
+    "e2e": ["import.spec.ts", "marketing.spec.ts"],
+    "visual": ["switching-eve", "switching-fareharbor", "switching-rezdy"]
+  },
+  "/switching/spreadsheet": {
+    "e2e": ["marketing.spec.ts"],
+    "visual": ["switching-spreadsheet"]
+  },
+  "/unsubscribe/[token]": {
+    "e2e": ["courtesy-email-unsubscribe.spec.ts", "last-minute-fill.spec.ts"],
+    "visual": ["unsubscribe-invalid"]
+  },
+  "/verify/[token]": {
+    "e2e": ["account-lifecycle.spec.ts"],
+    "visual": ["verify-invalid"]
+  },
+  "/waivers/[token]": {
+    "e2e": ["a11y.spec.ts", "waivers.spec.ts"],
+    "visual": ["waiver-active"]
+  }
+}

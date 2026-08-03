@@ -81,16 +81,21 @@ test.describe("demo billing history", () => {
     await page.goto("/shop/blue-mantis/orders?status=paid");
     await page.getByRole("heading", { level: 1, name: "Orders" }).waitFor();
     const pager = page.getByRole("navigation", { name: "Order pages" });
-    if ((await pager.count()) === 0) return; // fewer paid orders than one page
+    // Not "skip if there's nothing to page": the seeded demo carries 323
+    // invoices and the paid slice is far past one page, so a missing pager is
+    // the regression, not a reason to pass. The early return this replaces
+    // meant a filter that silently returned one page of results — exactly what
+    // a dropped `status` on the count query looks like — ended the test green.
+    await expect(pager.first()).toBeVisible();
     await pager.getByRole("link", { name: "Next" }).click();
     await page.waitForURL(/status=paid/);
     await expect(page).toHaveURL(/page=2/);
-    for (const badge of await page
-      .locator("tbody tr")
-      .getByText("Paid")
-      .filter({ visible: true })
-      .all()) {
-      await expect(badge).toBeVisible();
+    // Every row on page 2, not "every row that happened to match" — iterating
+    // the matched badges alone passes trivially when the match set is empty.
+    const rows = page.locator("tbody tr").filter({ visible: true });
+    await expect(rows.first()).toBeVisible();
+    for (const row of await rows.all()) {
+      await expect(row.getByText("Paid").filter({ visible: true }).first()).toBeVisible();
     }
   });
 });

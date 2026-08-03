@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { unseededTestDb } from "@/test/db";
 
 vi.mock("./seed", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./seed")>();
@@ -8,12 +9,12 @@ vi.mock("./seed", async (importOriginal) => {
   };
 });
 
-const { createTestDb, isDemoShopSeeded, seedProductionDb } = await import("./client");
+const { isDemoShopSeeded, seedProductionDb } = await import("./client");
 const { seedIfEmpty } = await import("./seed");
 
 describe("seedProductionDb (cold-start fast path)", () => {
   it("runs the seed on a genuinely fresh database", async () => {
-    const db = await createTestDb();
+    const db = await unseededTestDb();
     await expect(isDemoShopSeeded(db)).resolves.toBe(false);
 
     await seedProductionDb(db);
@@ -23,7 +24,7 @@ describe("seedProductionDb (cold-start fast path)", () => {
   });
 
   it("skips the lock and the seed once the demo-shop marker is present", async () => {
-    const db = await createTestDb();
+    const db = await unseededTestDb();
     // Seed once directly (bypassing the fast path under test) so the marker
     // is present before we exercise seedProductionDb.
     await seedIfEmpty(db);

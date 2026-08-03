@@ -168,7 +168,9 @@ export default async function OnboardPage({
 
   return (
     <div className="flex flex-1 flex-col">
-      <MarketingNav />
+      {/* The nav's trial CTA would link to the page it's on and compete with
+          the form's own "Create shop & start trial" — the one primary here. */}
+      <MarketingNav hideTrialCta />
       <main className="mx-auto flex w-full max-w-xl flex-1 flex-col justify-center gap-6 px-6 py-12 sm:py-24">
         <div className="rounded-lg border border-border bg-surface p-6 sm:p-8 shadow-sm">
           <p className="text-xs font-semibold tracking-widest text-primary uppercase">
@@ -203,7 +205,10 @@ export default async function OnboardPage({
                     className={controlClass}
                   />
                 </Field>
-                <Field label={t("account.onboard.shopLinkLabel")}>
+                <Field
+                  label={t("account.onboard.shopLinkLabel")}
+                  hint={t("account.onboard.shopLinkHint")}
+                >
                   <input
                     name="shopSlug"
                     type="text"

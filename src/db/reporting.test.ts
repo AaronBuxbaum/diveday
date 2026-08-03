@@ -1,4 +1,3 @@
-// @vitest-environment node
 import { describe, expect, it } from "vitest";
 import type { Role } from "@/lib/authz";
 import { summarizeMonth } from "@/lib/reporting";

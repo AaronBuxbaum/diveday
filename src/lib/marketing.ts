@@ -84,9 +84,12 @@ export const earlyAccessPrice = {
 export const earlyAccessPriceAmount = earlyAccessPrice.price.replace(/[^\d.]/g, "");
 
 /**
- * The full-shop export claim, shared by the home "Safe to leave" band and the
- * pricing data-exit FAQ so the two surfaces can never drift apart. Contents
- * verified against src/lib/export.ts; keep them in sync with the bundle.
+ * The full-shop export claim, shared across the marketing surfaces so they can
+ * never drift apart: the pricing data-exit FAQ renders `claim` + `terms`; the
+ * home export band renders `terms` in prose and carries the claim's inventory
+ * as its itemized card (`marketing.home.exportItem*`) instead of the long
+ * sentence. Contents verified against src/lib/export.ts; keep them in sync
+ * with the bundle.
  */
 export const fullShopExport = {
   claim:

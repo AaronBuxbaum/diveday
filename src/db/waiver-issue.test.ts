@@ -1,4 +1,3 @@
-// @vitest-environment node
 import { eq } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { seededShopContext } from "@/test/db";

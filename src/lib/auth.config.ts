@@ -37,11 +37,28 @@ export function isEmbeddableShopRoute(pathname: string): boolean {
  * when — and only when — the current request is a genuine embed request
  * (`isEmbeddableShopRoute` route + `?embed=1`). The public shop layout reads it
  * to suppress chrome, since a layout (unlike a page) is never handed
- * `searchParams` directly. Every request's incoming copy of this header is
- * explicitly overwritten in the proxy (set or deleted), so a client-supplied
- * value can never survive to reach a reader downstream.
+ * `searchParams` directly. On every proxied request the incoming copy of this
+ * header is explicitly overwritten (set or deleted), so a client-supplied
+ * value can never survive to reach a reader downstream. The proxy matcher's
+ * static-asset escape hatch means "proxied" is not "all", so readers must stay
+ * fail-closed about its absence and treat the value as advisory, never as
+ * proof.
  */
 export const EMBED_REQUEST_HEADER = "x-diveday-embed";
+
+/**
+ * The request's own pathname, stamped onto the request by `src/proxy.ts` for
+ * the same reason `EMBED_REQUEST_HEADER` exists: a layout is never handed the
+ * URL (no `searchParams`, no pathname — only its own `params`), and
+ * `ShopLayout` has to tell a *public* shop route (schedule, courses — readable
+ * by anyone, including staff of a different shop) apart from a staff one
+ * before it decides whether a cross-tenant visit is a 404. Overwritten on
+ * every *proxied* request, exactly like the embed header; because the proxy
+ * matcher carries a static-asset escape hatch, `ShopLayout` additionally
+ * binds the value to the slug it is rendering and fails closed on anything
+ * else, so a value that somehow arrived unproxied still grants nothing.
+ */
+export const REQUEST_PATH_HEADER = "x-diveday-path";
 
 export const authConfig = {
   secret: authSecret,
