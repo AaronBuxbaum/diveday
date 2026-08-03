@@ -430,7 +430,17 @@ export async function getOrder(db: DbExecutor, shopId: string, orderId: string) 
     .select()
     .from(orderLineItems)
     .where(eq(orderLineItems.orderId, orderId));
-  return { ...row, lineItems };
+  // Who raised it. A second lookup rather than a second join onto `people`,
+  // which would need a table alias to sit alongside the diver join above; the
+  // detail page reads one order, so the extra round trip buys clarity cheaply.
+  // Shop-scoped as well as id-matched: `created_by_person_id` is a foreign key,
+  // not a claim, but this query is never the place to widen a tenant boundary.
+  const [createdBy] = await db
+    .select({ id: people.id, fullName: people.fullName })
+    .from(people)
+    .where(and(eq(people.id, row.order.createdByPersonId), eq(people.shopId, shopId)))
+    .limit(1);
+  return { ...row, lineItems, createdBy: createdBy ?? null };
 }
 
 /**

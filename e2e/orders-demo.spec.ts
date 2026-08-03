@@ -36,6 +36,29 @@ test.describe("demo billing history", () => {
     await expect(page.getByText(/backed by a live Stripe invoice/i)).toBeVisible();
   });
 
+  test("an order opened from the index says when it was raised and offers both ways back", async ({
+    page,
+  }) => {
+    // Arriving from the index (not from a diver) used to leave browser-back as
+    // the only exit, and the date the index column showed disappeared on the
+    // way in — on the one screen a refund argument turns on.
+    await page.goto("/shop/blue-mantis/orders");
+    await page.getByRole("heading", { level: 1, name: "Orders" }).waitFor();
+    const firstRow = page.locator("tbody tr").filter({ visible: true }).first();
+    const rowDate = ((await firstRow.locator("td").nth(3).textContent()) ?? "").trim();
+    await firstRow.getByRole("link").first().click();
+    await page.waitForURL(/\/orders\/[0-9a-f-]{36}/);
+
+    // The same day the row showed, plus who raised it.
+    await expect(page.getByText(`Raised ${rowDate}`)).toBeVisible();
+    await expect(page.getByText(/Raised .+ · by .+/)).toBeVisible();
+
+    // Both journeys home, neither of them the browser's back button.
+    await expect(page.getByRole("link", { name: "Back to diver" })).toBeVisible();
+    await page.getByRole("link", { name: "Back to orders" }).click();
+    await expect(page).toHaveURL(/\/shop\/blue-mantis\/orders$/);
+  });
+
   /**
    * The index is paged (`ORDER_PAGE_SIZE`). Before that it rendered every one
    * of the demo's 323 invoices in a single ~17,700px scroll — the whole table

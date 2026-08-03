@@ -745,6 +745,9 @@
       "eyebrow": "Front desk",
       "fallbackDescription": "Order",
       "backToDiver": "Back to diver",
+      "backToOrders": "Back to orders",
+      "raisedOn": "Raised {date}",
+      "createdBy": "by {name}",
       "status": {
         "open": "Open — awaiting payment",
         "paid": "Paid",
@@ -971,6 +974,11 @@
     "previousMonth": "Previous month",
     "nextMonth": "Next month",
     "currentMonthTitle": "You're viewing the current month",
+    "earliestMonthTitle": "This is your first month with departures",
+    "monthPicker": {
+      "label": "Jump to a month",
+      "go": "Go"
+    },
     "numbersLabel": "This month's numbers",
     "metrics": {
       "revenueLabel": "Revenue collected",
@@ -1009,6 +1017,8 @@
       "published": "Review published to your schedule page.",
       "hidden": "Review hidden — it no longer counts toward your rating.",
       "hiddenToast": "Review hidden.",
+      "publishedMany": "{count, plural, one {# review published} other {# reviews published}} to your schedule page.",
+      "noneSelected": "Tick the reviews you want to publish first.",
       "error": "That review couldn't be updated. Try again."
     },
     "overviewLabel": "Rating overview",
@@ -1029,6 +1039,9 @@
     "reviewMeta": "<diver>{diverName}</diver> · <trip>{tripTitle}</trip> · {date}",
     "hide": "Hide",
     "publish": "Publish",
+    "publishSelected": "Publish selected",
+    "tickThenPublish": "Tick the ones to publish, then",
+    "selectToPublishAriaLabel": "Select {name}'s review to publish",
     "saving": "Saving…",
     "showMoreReviews": "Show more reviews",
     "backToTop": "← Back to the top of the list",

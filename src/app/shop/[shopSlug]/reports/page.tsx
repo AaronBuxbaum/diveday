@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { controlClass } from "@/components/ui/form";
 import { canPersonErasePersonalData } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { listPendingMediaDeletions } from "@/db/media-deletions";
@@ -11,6 +12,7 @@ import { listStuckPaymentOperations } from "@/db/payment-operations";
 import { listOwedProcessorErasures } from "@/db/processor-erasure";
 import {
   canPersonViewShopReports,
+  earliestReportedTripStart,
   getMonthlyReport,
   pagedMonthlyReportTrips,
 } from "@/db/reporting";
@@ -19,6 +21,8 @@ import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import {
   addMonths,
+  clampMonth,
+  compareMonths,
   isoDate,
   type MonthRef,
   monthKey,
@@ -196,7 +200,22 @@ export default async function ReportsPage({
   const now = nowDate();
   const todayWall = utcToWallTime(now, tz);
   const thisMonth: MonthRef = { year: todayWall.year, month: todayWall.month };
-  const current = parseMonthKey(month) ?? thisMonth;
+  // The oldest month this shop could have anything to report on. It is the
+  // floor of both the picker and the back arrow: walking further back only ever
+  // renders identical empty months, and `?month=0001-01` should land somewhere
+  // real rather than querying the year 1. A shop with no trips at all floors at
+  // the current month; a shop whose only trips are still ahead floors there too
+  // (`clampMonth` needs min <= max, and "earliest" can be in the future).
+  const earliestTripStart = await earliestReportedTripStart(db, shop.id);
+  const earliestWall = earliestTripStart ? utcToWallTime(earliestTripStart, tz) : null;
+  const earliestTripMonth: MonthRef = earliestWall
+    ? { year: earliestWall.year, month: earliestWall.month }
+    : thisMonth;
+  const floorMonth =
+    compareMonths(earliestTripMonth, thisMonth) < 0 ? earliestTripMonth : thisMonth;
+  // No ceiling: a shop that schedules ahead can still ask for a month that has
+  // not happened yet, and the page frames it honestly as one that hasn't sailed.
+  const current = clampMonth(parseMonthKey(month) ?? thisMonth, floorMonth);
   const next = addMonths(current, 1);
 
   const monthStart = wallTimeToUtc(
@@ -241,8 +260,11 @@ export default async function ReportsPage({
     current.year > thisMonth.year ||
     (current.year === thisMonth.year && current.month > thisMonth.month);
   // Paging forward past the current month is allowed but rarely useful — cap the
-  // "next" arrow at the current month so the default view is the far edge.
-  const prevMonthKey = monthKey(addMonths(current, -1));
+  // "next" arrow at the current month so the default view is the far edge. The
+  // back arrow stops at the shop's first month for the mirror-image reason:
+  // beyond it there is nothing but identical empty months.
+  const prevMonthKey =
+    compareMonths(current, floorMonth) > 0 ? monthKey(addMonths(current, -1)) : null;
   const nextMonthKey = isThisMonth ? null : monthKey(next);
 
   const bookingsDetail = isThisMonth
@@ -268,153 +290,63 @@ export default async function ReportsPage({
         description={description}
       />
 
-      {stuckPaymentOperations.length > 0 ? (
-        <section aria-label={t("reports.paymentOps.sectionLabel")} className="mb-8">
-          <ShopNotice tone="warning" role="status">
-            <p className="font-medium">
-              {t("reports.paymentOps.heading", { count: stuckPaymentOperations.length })}
-            </p>
-            <p className="mt-1 text-sm">{t("reports.paymentOps.detail")}</p>
-            <ul className="mt-3 space-y-2 text-sm">
-              {stuckPaymentOperations.map(({ intent, tripId, tripTitle, personName }) => (
-                <li key={intent.id} className="flex flex-wrap items-baseline gap-x-2">
-                  <span className="font-medium">{t(OPERATION_KIND_KEYS[intent.kind])}</span>
-                  {tripTitle ? <span>· {tripTitle}</span> : null}
-                  {personName ? <span>· {personName}</span> : null}
-                  <span className="text-muted">
-                    ·{" "}
-                    {t("reports.paymentOps.started", {
-                      date: formatShortDate(intent.startedAt, locale, tz),
-                    })}
-                    {intent.stripeObjectId
-                      ? ` · ${t("reports.paymentOps.stripeId", { id: intent.stripeObjectId })}`
-                      : ""}
-                  </span>
-                  {tripId ? (
-                    <Link
-                      href={`/shop/${shopSlug}/trips/${tripId}/guests`}
-                      className="font-medium text-primary underline underline-offset-2"
-                    >
-                      {t("reports.paymentOps.openTrip")}
-                    </Link>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
-          </ShopNotice>
-        </section>
-      ) : null}
-
-      {pendingMediaDeletions.length > 0 ? (
-        <section aria-label={t("reports.mediaDeletions.sectionLabel")} className="mb-8">
-          <ShopNotice tone="warning" role="status">
-            <p className="font-medium">
-              {t("reports.mediaDeletions.heading", { count: pendingMediaDeletions.length })}
-            </p>
-            <p className="mt-1 text-sm">{t("reports.mediaDeletions.detail")}</p>
-            <ul className="mt-3 space-y-2 text-sm">
-              {pendingMediaDeletions.map((attempt) => (
-                <li key={attempt.id} className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                  <span className="font-medium">{t(MEDIA_KIND_KEYS[attempt.kind])}</span>
-                  <span className="text-muted">
-                    ·{" "}
-                    {t("reports.mediaDeletions.queued", {
-                      date: formatShortDate(attempt.createdAt, locale, tz),
-                    })}
-                    {attempt.lastError ? ` · ${attempt.lastError}` : ""}
-                  </span>
-                  <form action={retryMediaDeletion}>
-                    <input type="hidden" name="attemptId" value={attempt.id} />
-                    <SubmitButton
-                      pendingLabel={t("reports.mediaDeletions.retrying")}
-                      className={buttonClass({ variant: "secondary", size: "sm" })}
-                    >
-                      {t("reports.mediaDeletions.retry")}
-                    </SubmitButton>
-                  </form>
-                </li>
-              ))}
-            </ul>
-          </ShopNotice>
-        </section>
-      ) : null}
-
       {/*
-        Erasures that are done here but not yet done at Stripe
-        (ADR 20260803-processor-erasure-obligations). Two kinds, and the row
-        offers what can actually act on each: a customer delete DiveDay makes
-        itself gets "Retry" (the nightly tick also retries it), while an invoice
-        snapshot has no API behind it at all and can only be closed by an owner
-        attesting they filed Stripe's data-deletion request. The panel shows the
-        `cus_…`/`in_…` handle and nothing else — the diver's identity is exactly
-        what erasure already removed here.
+        Month navigator — plain server-rendered links plus one GET form, no
+        client JS. The arrows walk neighbouring months; the picker exists
+        because they are useless for a far one (last July used to be thirteen
+        clicks). `<input type="month">` submits exactly the `YYYY-MM` shape
+        `parseMonthKey` already reads, and its `min` matches the floor the page
+        clamps to server-side, so the control cannot offer a month the page
+        would silently rewrite.
       */}
-      {owedProcessorErasures.length > 0 ? (
-        <section aria-label={t("reports.processorErasures.sectionLabel")} className="mb-8">
-          <ShopNotice tone="warning" role="status">
-            <p className="font-medium">
-              {t("reports.processorErasures.heading", { count: owedProcessorErasures.length })}
-            </p>
-            <p className="mt-1 text-sm">{t("reports.processorErasures.detail")}</p>
-            <ul className="mt-3 space-y-2 text-sm">
-              {owedProcessorErasures.map((obligation) => (
-                <li key={obligation.id} className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                  <span className="font-medium">
-                    {t(PROCESSOR_ERASURE_TARGET_KEYS[obligation.target])}
-                  </span>
-                  <span className="font-mono">{obligation.externalId}</span>
-                  <span className="text-muted">
-                    ·{" "}
-                    {t("reports.processorErasures.raised", {
-                      date: formatShortDate(obligation.createdAt, locale, tz),
-                    })}
-                    {obligation.lastError ? ` · ${obligation.lastError}` : ""}
-                  </span>
-                  {canErase && obligation.target === "stripe_customer" ? (
-                    <form action={retryProcessorErasure}>
-                      <input type="hidden" name="obligationId" value={obligation.id} />
-                      <SubmitButton
-                        pendingLabel={t("reports.processorErasures.retrying")}
-                        className={buttonClass({ variant: "secondary", size: "sm" })}
-                      >
-                        {t("reports.processorErasures.retry")}
-                      </SubmitButton>
-                    </form>
-                  ) : null}
-                  {canErase ? (
-                    <form action={dischargeProcessorErasure}>
-                      <input type="hidden" name="obligationId" value={obligation.id} />
-                      <SubmitButton
-                        pendingLabel={t("reports.processorErasures.discharging")}
-                        className={buttonClass({ variant: "secondary", size: "sm" })}
-                      >
-                        {t("reports.processorErasures.discharge")}
-                      </SubmitButton>
-                    </form>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
-          </ShopNotice>
-        </section>
-      ) : null}
-
-      {/* Month navigator — plain server-rendered links, no client JS. */}
-      <div className="mb-6 flex items-center justify-between gap-3">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-semibold">
-          {monthLabel(current)}
+          {monthLabel(current, locale)}
           {isThisMonth ? (
             <span className="ml-2 text-sm font-normal text-muted">{t("reports.soFar")}</span>
           ) : null}
         </h2>
-        <nav aria-label={t("reports.chooseMonth")} className="flex items-center gap-2">
-          <Link
-            href={`/shop/${shopSlug}/reports?month=${prevMonthKey}`}
-            aria-label={t("reports.previousMonth")}
-            className={navClass}
-          >
-            <span aria-hidden="true">←</span>
-          </Link>
+        <nav aria-label={t("reports.chooseMonth")} className="flex flex-wrap items-center gap-2">
+          {prevMonthKey ? (
+            <Link
+              href={`/shop/${shopSlug}/reports?month=${prevMonthKey}`}
+              aria-label={t("reports.previousMonth")}
+              className={navClass}
+            >
+              <span aria-hidden="true">←</span>
+            </Link>
+          ) : (
+            <span
+              aria-hidden="true"
+              title={t("reports.earliestMonthTitle")}
+              className={`${navClass} cursor-default text-muted opacity-40`}
+            >
+              ←
+            </span>
+          )}
+          <form className="flex items-center gap-2">
+            <label htmlFor="report-month" className="sr-only">
+              {t("reports.monthPicker.label")}
+            </label>
+            <input
+              id="report-month"
+              type="month"
+              name="month"
+              defaultValue={monthKey(current)}
+              min={monthKey(floorMonth)}
+              className={`${controlClass} w-40`}
+            />
+            <button
+              type="submit"
+              className={buttonClass({
+                variant: "secondary",
+                size: "sm",
+                className: "text-foreground",
+              })}
+            >
+              {t("reports.monthPicker.go")}
+            </button>
+          </form>
           {nextMonthKey ? (
             <Link
               href={`/shop/${shopSlug}/reports?month=${nextMonthKey}`}
@@ -574,6 +506,144 @@ export default async function ReportsPage({
           </section>
         </>
       )}
+
+      {/*
+        The compliance chores. They used to sit above the month's numbers, which
+        put up to three unbounded lists between an owner and the one thing they
+        opened this page for. They are below the report now, and danger-toned
+        rather than folded away: stuck money and an owed erasure are legal and
+        financial obligations, not notifications to dismiss.
+      */}
+      {stuckPaymentOperations.length > 0 ? (
+        <section aria-label={t("reports.paymentOps.sectionLabel")} className="mt-10">
+          <ShopNotice tone="danger" role="status">
+            <p className="font-medium">
+              {t("reports.paymentOps.heading", { count: stuckPaymentOperations.length })}
+            </p>
+            <p className="mt-1 text-sm">{t("reports.paymentOps.detail")}</p>
+            <ul className="mt-3 space-y-2 text-sm">
+              {stuckPaymentOperations.map(({ intent, tripId, tripTitle, personName }) => (
+                <li key={intent.id} className="flex flex-wrap items-baseline gap-x-2">
+                  <span className="font-medium">{t(OPERATION_KIND_KEYS[intent.kind])}</span>
+                  {tripTitle ? <span>· {tripTitle}</span> : null}
+                  {personName ? <span>· {personName}</span> : null}
+                  <span className="text-muted">
+                    ·{" "}
+                    {t("reports.paymentOps.started", {
+                      date: formatShortDate(intent.startedAt, locale, tz),
+                    })}
+                    {intent.stripeObjectId
+                      ? ` · ${t("reports.paymentOps.stripeId", { id: intent.stripeObjectId })}`
+                      : ""}
+                  </span>
+                  {tripId ? (
+                    <Link
+                      href={`/shop/${shopSlug}/trips/${tripId}/guests`}
+                      className="font-medium text-primary underline underline-offset-2"
+                    >
+                      {t("reports.paymentOps.openTrip")}
+                    </Link>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          </ShopNotice>
+        </section>
+      ) : null}
+
+      {pendingMediaDeletions.length > 0 ? (
+        <section aria-label={t("reports.mediaDeletions.sectionLabel")} className="mt-8">
+          <ShopNotice tone="danger" role="status">
+            <p className="font-medium">
+              {t("reports.mediaDeletions.heading", { count: pendingMediaDeletions.length })}
+            </p>
+            <p className="mt-1 text-sm">{t("reports.mediaDeletions.detail")}</p>
+            <ul className="mt-3 space-y-2 text-sm">
+              {pendingMediaDeletions.map((attempt) => (
+                <li key={attempt.id} className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <span className="font-medium">{t(MEDIA_KIND_KEYS[attempt.kind])}</span>
+                  <span className="text-muted">
+                    ·{" "}
+                    {t("reports.mediaDeletions.queued", {
+                      date: formatShortDate(attempt.createdAt, locale, tz),
+                    })}
+                    {attempt.lastError ? ` · ${attempt.lastError}` : ""}
+                  </span>
+                  <form action={retryMediaDeletion}>
+                    <input type="hidden" name="attemptId" value={attempt.id} />
+                    <SubmitButton
+                      pendingLabel={t("reports.mediaDeletions.retrying")}
+                      className={buttonClass({ variant: "secondary", size: "sm" })}
+                    >
+                      {t("reports.mediaDeletions.retry")}
+                    </SubmitButton>
+                  </form>
+                </li>
+              ))}
+            </ul>
+          </ShopNotice>
+        </section>
+      ) : null}
+
+      {/*
+        Erasures that are done here but not yet done at Stripe
+        (ADR 20260803-processor-erasure-obligations). Two kinds, and the row
+        offers what can actually act on each: a customer delete DiveDay makes
+        itself gets "Retry" (the nightly tick also retries it), while an invoice
+        snapshot has no API behind it at all and can only be closed by an owner
+        attesting they filed Stripe's data-deletion request. The panel shows the
+        `cus_…`/`in_…` handle and nothing else — the diver's identity is exactly
+        what erasure already removed here.
+      */}
+      {owedProcessorErasures.length > 0 ? (
+        <section aria-label={t("reports.processorErasures.sectionLabel")} className="mt-8">
+          <ShopNotice tone="danger" role="status">
+            <p className="font-medium">
+              {t("reports.processorErasures.heading", { count: owedProcessorErasures.length })}
+            </p>
+            <p className="mt-1 text-sm">{t("reports.processorErasures.detail")}</p>
+            <ul className="mt-3 space-y-2 text-sm">
+              {owedProcessorErasures.map((obligation) => (
+                <li key={obligation.id} className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <span className="font-medium">
+                    {t(PROCESSOR_ERASURE_TARGET_KEYS[obligation.target])}
+                  </span>
+                  <span className="font-mono">{obligation.externalId}</span>
+                  <span className="text-muted">
+                    ·{" "}
+                    {t("reports.processorErasures.raised", {
+                      date: formatShortDate(obligation.createdAt, locale, tz),
+                    })}
+                    {obligation.lastError ? ` · ${obligation.lastError}` : ""}
+                  </span>
+                  {canErase && obligation.target === "stripe_customer" ? (
+                    <form action={retryProcessorErasure}>
+                      <input type="hidden" name="obligationId" value={obligation.id} />
+                      <SubmitButton
+                        pendingLabel={t("reports.processorErasures.retrying")}
+                        className={buttonClass({ variant: "secondary", size: "sm" })}
+                      >
+                        {t("reports.processorErasures.retry")}
+                      </SubmitButton>
+                    </form>
+                  ) : null}
+                  {canErase ? (
+                    <form action={dischargeProcessorErasure}>
+                      <input type="hidden" name="obligationId" value={obligation.id} />
+                      <SubmitButton
+                        pendingLabel={t("reports.processorErasures.discharging")}
+                        className={buttonClass({ variant: "secondary", size: "sm" })}
+                      >
+                        {t("reports.processorErasures.discharge")}
+                      </SubmitButton>
+                    </form>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          </ShopNotice>
+        </section>
+      ) : null}
     </main>
   );
 }

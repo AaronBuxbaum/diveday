@@ -3,7 +3,12 @@ import type { Role } from "@/lib/authz";
 import { summarizeMonth } from "@/lib/reporting";
 import { seededShopContext } from "@/test/db";
 import type { AppDb } from "./client";
-import { canPersonViewShopReports, getMonthlyReport, pagedMonthlyReportTrips } from "./reporting";
+import {
+  canPersonViewShopReports,
+  earliestReportedTripStart,
+  getMonthlyReport,
+  pagedMonthlyReportTrips,
+} from "./reporting";
 import {
   bookingCheckoutBookings,
   bookingCheckouts,
@@ -417,6 +422,31 @@ describe("pagedMonthlyReportTrips", () => {
       cursor: "not-a-real-cursor",
     });
     expect(mangled.trips.map((trip) => trip.tripId)).toEqual(all.trips.map((trip) => trip.tripId));
+  });
+});
+
+describe("earliestReportedTripStart", () => {
+  it("returns the oldest scheduled departure, ignoring cancelled ones", async () => {
+    const { db, shop } = await seededShopContext();
+    // Older than anything the demo seed lays down, so it is unambiguously the
+    // floor whatever the seeded history happens to contain.
+    const oldest = new Date("2019-03-04T09:00:00Z");
+    await makeTrip(db, shop.id, new Date("2019-01-02T09:00:00Z"), 6, "Scrubbed", "cancelled");
+    await makeTrip(db, shop.id, oldest, 6, "First ever");
+
+    expect(await earliestReportedTripStart(db, shop.id)).toEqual(oldest);
+  });
+
+  it("is shop-scoped, and null for a shop that has never scheduled a trip", async () => {
+    const { db, shop } = await seededShopContext();
+    const [other] = await db
+      .insert(shops)
+      .values({ name: "Empty Shop", slug: `empty-${Date.now()}`, timezone: "UTC" })
+      .returning();
+    if (!other) throw new Error("failed to insert shop");
+
+    expect(await earliestReportedTripStart(db, other.id)).toBeNull();
+    expect(await earliestReportedTripStart(db, shop.id)).not.toBeNull();
   });
 });
 

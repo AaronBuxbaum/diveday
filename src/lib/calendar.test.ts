@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   addMonths,
   buildCalendarWeeks,
+  clampMonth,
+  compareMonths,
   isoDate,
   monthKey,
   monthLabel,
@@ -126,5 +128,43 @@ describe("weekStartsOn", () => {
     } finally {
       proto.getWeekInfo = original;
     }
+  });
+});
+
+describe("compareMonths", () => {
+  it("orders by year first, then month", () => {
+    expect(compareMonths({ year: 2025, month: 12 }, { year: 2026, month: 1 })).toBeLessThan(0);
+    expect(compareMonths({ year: 2026, month: 3 }, { year: 2026, month: 2 })).toBeGreaterThan(0);
+    expect(compareMonths({ year: 2026, month: 7 }, { year: 2026, month: 7 })).toBe(0);
+  });
+});
+
+describe("clampMonth", () => {
+  const floor = { year: 2026, month: 3 };
+  const ceiling = { year: 2026, month: 8 };
+
+  it("leaves a month inside the range alone", () => {
+    expect(clampMonth({ year: 2026, month: 5 }, floor, ceiling)).toEqual({ year: 2026, month: 5 });
+  });
+
+  it("pulls a month before the floor up to it", () => {
+    // The reports page's real defence: a `?month=0001-01` carried by a bookmark
+    // or a crafted link lands on the shop's first month, not on the year 1.
+    expect(clampMonth({ year: 1, month: 1 }, floor, ceiling)).toEqual(floor);
+    expect(clampMonth({ year: 2026, month: 2 }, floor)).toEqual(floor);
+  });
+
+  it("pulls a month past the ceiling back to it", () => {
+    expect(clampMonth({ year: 9999, month: 12 }, floor, ceiling)).toEqual(ceiling);
+  });
+
+  it("treats an omitted bound as unbounded on that side", () => {
+    expect(clampMonth({ year: 9999, month: 12 }, floor)).toEqual({ year: 9999, month: 12 });
+    expect(clampMonth({ year: 1, month: 1 }, null, ceiling)).toEqual({ year: 1, month: 1 });
+  });
+
+  it("keeps the boundary months themselves", () => {
+    expect(clampMonth(floor, floor, ceiling)).toEqual(floor);
+    expect(clampMonth(ceiling, floor, ceiling)).toEqual(ceiling);
   });
 });

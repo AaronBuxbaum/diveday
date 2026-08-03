@@ -745,6 +745,9 @@
       "eyebrow": "Recepción",
       "fallbackDescription": "Pedido",
       "backToDiver": "Volver al buceador",
+      "backToOrders": "Volver a pedidos",
+      "raisedOn": "Emitido el {date}",
+      "createdBy": "por {name}",
       "status": {
         "open": "Abierto — pendiente de pago",
         "paid": "Pagado",
@@ -971,6 +974,11 @@
     "previousMonth": "Mes anterior",
     "nextMonth": "Mes siguiente",
     "currentMonthTitle": "Estás viendo el mes actual",
+    "earliestMonthTitle": "Este es tu primer mes con salidas",
+    "monthPicker": {
+      "label": "Ir a un mes",
+      "go": "Ir"
+    },
     "numbersLabel": "Los números de este mes",
     "metrics": {
       "revenueLabel": "Ingresos cobrados",
@@ -1009,6 +1017,8 @@
       "published": "Reseña publicada en tu página de calendario.",
       "hidden": "Reseña oculta — ya no cuenta para tu valoración.",
       "hiddenToast": "Reseña oculta.",
+      "publishedMany": "{count, plural, one {# reseña publicada} other {# reseñas publicadas}} en tu página de calendario.",
+      "noneSelected": "Marca primero las reseñas que quieres publicar.",
       "error": "No se pudo actualizar esa reseña. Inténtalo de nuevo."
     },
     "overviewLabel": "Resumen de valoraciones",
@@ -1029,6 +1039,9 @@
     "reviewMeta": "<diver>{diverName}</diver> · <trip>{tripTitle}</trip> · {date}",
     "hide": "Ocultar",
     "publish": "Publicar",
+    "publishSelected": "Publicar seleccionadas",
+    "tickThenPublish": "Marca las que quieras publicar y luego",
+    "selectToPublishAriaLabel": "Seleccionar la reseña de {name} para publicarla",
     "saving": "Guardando…",
     "showMoreReviews": "Mostrar más reseñas",
     "backToTop": "← Volver al principio de la lista",

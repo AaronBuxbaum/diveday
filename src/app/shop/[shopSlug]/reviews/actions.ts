@@ -1,7 +1,7 @@
 "use server";
 
 import { getDb } from "@/db/client";
-import { setReviewPublished } from "@/db/reviews";
+import { setReviewPublished, setReviewsPublished } from "@/db/reviews";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 
@@ -30,4 +30,29 @@ export async function setReviewPublishedAction(formData: FormData) {
     reviews,
     publish ? `${reviews}?notice=published` : `${reviews}?notice=hidden&undo=${reviewId}`,
   );
+}
+
+/**
+ * Release every ticked review in one go — the queue's answer to a weekend that
+ * left eight reviews waiting and only a per-row button to clear them with.
+ *
+ * Publish-only, deliberately: the same shop-scoping as the single toggle above
+ * (`setReviewsPublished` re-checks the session's shop, so ids belonging to
+ * another shop change nothing and come back as a refusal), but no bulk *hide*.
+ * Taking words down is the destructive direction and keeps its per-review undo.
+ * An empty tick list is refused with its own notice rather than silently
+ * redirecting to a page that looks unchanged.
+ */
+export async function publishReviewsAction(formData: FormData) {
+  const session = await requireStaffSession();
+  const reviews = `/shop/${session.user.shopSlug}/reviews`;
+  const reviewIds = formData
+    .getAll("reviewIds")
+    .map((value) => String(value))
+    .filter(Boolean);
+  if (reviewIds.length === 0) revalidateAndRedirect(reviews, `${reviews}?notice=none_selected`);
+
+  const published = await setReviewsPublished(await getDb(), session.user.shopId, reviewIds);
+  if (published === 0) revalidateAndRedirect(reviews, `${reviews}?notice=error`);
+  revalidateAndRedirect(reviews, `${reviews}?notice=published_many&published=${published}`);
 }
