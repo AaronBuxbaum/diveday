@@ -151,6 +151,8 @@ test.describe("as captain", () => {
     // WhatsApp already followed. FlashParams strips the query, so assert
     // the banner text rather than the URL param.
     await expect(page).toHaveURL(`/shop/${SHOP}/settings`);
-    await expect(page.getByText("Team management is limited to owners and managers.")).toBeVisible();
+    await expect(
+      page.getByText("Team management is limited to owners and managers."),
+    ).toBeVisible();
   });
 });
