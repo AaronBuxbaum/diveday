@@ -31,6 +31,13 @@ test("the ? help lists shortcuts and a g-sequence jumps between surfaces", async
   await page.keyboard.press("d");
   await expect(page).toHaveURL(/\/divers$/);
 
+  // `g` then `a` opens the global Add-a-booking door — a registry destination
+  // now rather than a hand-written palette item, so it has a sequence like
+  // every other place staff go by name.
+  await page.keyboard.press("g");
+  await page.keyboard.press("a");
+  await expect(page).toHaveURL(/\/bookings\/new$/);
+
   // `g` then `b` still asks for Not ready by name, but it is a *view* of Today
   // now rather than a route — so the sequence has to carry the view query. The
   // bare shop root would land on the urgency queue and read as a dead key.

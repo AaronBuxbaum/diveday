@@ -7,8 +7,6 @@ import { ShopNotice, ShopPageHeader, ShopStat } from "@/components/ShopPageHeade
 import { buttonClass } from "@/components/ui/button";
 import { canPersonConfigureTrips } from "@/db/authz";
 import { getDb } from "@/db/client";
-import { listActiveCourses } from "@/db/courses";
-import { listDiveSites } from "@/db/dive-sites";
 import { getShopById } from "@/db/shops";
 import { openAfterDiveRollCalls } from "@/db/today";
 import {
@@ -21,7 +19,8 @@ import {
 import { requestTranslator } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
-import { formatShortDate, formatTimeRange } from "@/lib/format";
+import { formatMoneyCents, formatShortDate, formatTimeRange } from "@/lib/format";
+import { currencyFractionDigits, maxPriceMajor, toShopCurrency } from "@/lib/money";
 import { publicSchedulePath } from "@/lib/public-routes";
 import {
   decodeCursorStack,
@@ -32,10 +31,16 @@ import {
 import { requireStaffSession } from "@/lib/session";
 import { noticeFromParam } from "@/lib/staff-notices";
 import { toDateInputValue, toTimeInputValue, utcToWallTime } from "@/lib/zoned";
-import { type BuilderCopy, type BuilderDay, ScheduleBuilder } from "./_components/ScheduleBuilder";
+import {
+  type BuilderCopy,
+  type BuilderDay,
+  type BuilderPriceInput,
+  ScheduleBuilder,
+} from "./_components/ScheduleBuilder";
 import {
   addDepartureAction,
   duplicateDepartureAction,
+  loadBuilderOptionsAction,
   moveDepartureAction,
   removeDepartureAction,
 } from "./actions";
@@ -115,31 +120,24 @@ export default async function ScheduleBoardPage({
   // The board works off one keyset page of departures, same as the public
   // list — a shop with hundreds of upcoming departures still loads one page,
   // not the whole future.
-  const [
-    range,
-    stats,
-    { trips: upcoming, nextCursor },
-    canConfigure,
-    courses,
-    diveSites,
-    openRollCalls,
-  ] = await Promise.all([
-    upcomingScheduleRange(db, shop.id, now),
-    upcomingScheduleStats(db, shop.id, now),
-    pagedUpcomingTripsWithCounts(db, shop.id, { cursor: after, now }),
-    canPersonConfigureTrips(db, shop.id, session.user.personId),
-    listActiveCourses(db, shop.id).then((rows) =>
-      rows.map((row) => ({ id: row.id, title: row.title })),
-    ),
-    listDiveSites(db, shop.id).then((rows) => rows.map((row) => ({ id: row.id, title: row.name }))),
-    // Departures that already came back with a head count still open (DOM-H3).
-    // `pagedUpcomingTripsWithCounts` cannot reach them — it only returns trips
-    // whose `startsAt` is still ahead of `now` — so this is its own backwards
-    // query, and one batched query for every such boat rather than a per-trip
-    // roll-call lookup. Only on the first page: they belong at the front of
-    // the board, not repeated on top of every later cursor page.
-    after ? [] : openAfterDiveRollCalls(db, shop.id, now),
-  ]);
+  // The add panel's course and dive-site options are deliberately *not* here:
+  // they are two queries and a whole catalogue of client props for two selects
+  // inside a panel that is closed by default, so they load when it opens
+  // (`loadBuilderOptionsAction`).
+  const [range, stats, { trips: upcoming, nextCursor }, canConfigure, openRollCalls] =
+    await Promise.all([
+      upcomingScheduleRange(db, shop.id, now),
+      upcomingScheduleStats(db, shop.id, now),
+      pagedUpcomingTripsWithCounts(db, shop.id, { cursor: after, now }),
+      canPersonConfigureTrips(db, shop.id, session.user.personId),
+      // Departures that already came back with a head count still open (DOM-H3).
+      // `pagedUpcomingTripsWithCounts` cannot reach them — it only returns trips
+      // whose `startsAt` is still ahead of `now` — so this is its own backwards
+      // query, and one batched query for every such boat rather than a per-trip
+      // roll-call lookup. Only on the first page: they belong at the front of
+      // the board, not repeated on top of every later cursor page.
+      after ? [] : openAfterDiveRollCalls(db, shop.id, now),
+    ]);
   const hasUpcoming = range.first !== null;
   // Depends on the trip ids above, so it runs as a second wave rather than
   // inside the batch that produces `upcoming`.
@@ -188,11 +186,14 @@ export default async function ScheduleBoardPage({
     returns: st("schedule.builder.returns"),
     seats: st("schedule.builder.seats"),
     dives: st("schedule.builder.dives"),
+    price: st("schedule.builder.price"),
+    priceDescription: st("schedule.builder.priceDescription"),
     course: st("schedule.builder.course"),
     optional: st("schedule.builder.optional"),
     diveSite: st("schedule.builder.diveSite"),
     ordinaryTrip: st("schedule.builder.ordinaryTrip"),
     decideLater: st("schedule.builder.decideLater"),
+    optionsLoading: st("schedule.builder.optionsLoading"),
     adding: st("schedule.builder.adding"),
     putOnBoard: st("schedule.builder.putOnBoard"),
     newDate: st("schedule.builder.newDate"),
@@ -205,6 +206,17 @@ export default async function ScheduleBoardPage({
     departureTime: st("schedule.builder.departureTime"),
     copying: st("schedule.builder.copying"),
     copyIt: st("schedule.builder.copyIt"),
+  };
+
+  // The price box follows the shop's currency, same as the full trip form:
+  // whole-number entry and a symbol-only placeholder for a zero-decimal
+  // currency, where "$0.00" would be wrong twice over.
+  const currency = toShopCurrency(shop.currency);
+  const fractionDigits = currencyFractionDigits(currency);
+  const priceInput: BuilderPriceInput = {
+    step: fractionDigits === 0 ? "1" : `0.${"0".repeat(fractionDigits - 1)}1`,
+    max: maxPriceMajor(currency),
+    placeholder: formatMoneyCents(0, currency, locale),
   };
 
   const todayIso = toDateInputValue(utcToWallTime(now, tz));
@@ -382,8 +394,8 @@ export default async function ScheduleBoardPage({
       <ScheduleBuilder
         shopSlug={shopSlug}
         days={builderDays}
-        courses={courses}
-        diveSites={diveSites}
+        loadOptions={loadBuilderOptionsAction}
+        price={priceInput}
         defaultDateIso={firstUpcomingDateIso ?? todayIso}
         canConfigure={canConfigure}
         copy={builderCopy}

@@ -53,12 +53,13 @@ export const STAFF_DESTINATION_BADGE_TONES: Record<StaffDestinationBadge, "prima
 /**
  * Where a destination sits in the header.
  *
- * - `primary` — the five tabs always on screen.
+ * - `primary` — the four tabs always on screen (Today, Check-in, Divers, Board;
+ *   Not ready gave its tab up when it became Today's by-departure view).
  * - `daily` — inside "More": the surfaces a shop touches on an ordinary day.
  * - `setup` — inside "More": the ones it configures once and revisits rarely.
  *
  * `null` means the destination is real and reachable, but not in the header —
- * it earns its place in the palette instead of a fifteenth tab (design
+ * it earns its place in the palette instead of one more tab (design
  * principle 8, fewer controls).
  */
 export type StaffNavGroup = "primary" | "daily" | "setup";
@@ -70,6 +71,7 @@ export type StaffDestinationId =
   | "blockers"
   | "divers"
   | "board"
+  | "addBooking"
   | "staffing"
   | "diveSites"
   | "courses"
@@ -158,6 +160,12 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
     shortcut: "s",
     alsoMatch: "/trips",
   },
+  // The global "seat a diver" door. It is an action rather than a place, so it
+  // stays out of the header — the board hosts its own button and the palette
+  // answers for it everywhere else. It is *here* because the registry is the
+  // only place a destination may be declared: it used to be a hand-written
+  // palette item, which is exactly the drift this file exists to end.
+  { id: "addBooking", suffix: "/bookings/new", navGroup: null, inPalette: true, shortcut: "a" },
   // A shortcut into Check-in rather than a destination of its own, so it stays
   // out of the header and lives where someone types what they want.
   { id: "walkIn", suffix: "/check-in/walk-in", navGroup: null, inPalette: true },

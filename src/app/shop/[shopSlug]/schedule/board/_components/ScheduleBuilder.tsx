@@ -56,6 +56,28 @@ export type BuilderDay = {
 
 export type BuilderOption = { id: string; title: string };
 
+/**
+ * What the add-a-departure panel's two selects offer. Fetched when the panel
+ * opens (`loadOptions` below) rather than serialized into this component's
+ * props on every board render: a shop's whole course catalogue and every dive
+ * site it dives, shipped to a browser for two controls behind a closed panel.
+ */
+export type BuilderOptions = { courses: BuilderOption[]; diveSites: BuilderOption[] };
+
+/**
+ * Everything the price box needs that is neither copy nor a value — all of it
+ * derived server-side from the shop's currency and the reader's locale, since
+ * a Client Component may format neither.
+ */
+export type BuilderPriceInput = {
+  /** `step`, from the currency's fraction digits: "1" for a zero-decimal one. */
+  step: string;
+  /** The largest figure the box accepts, in the shop's major units. */
+  max: number;
+  /** Zero, formatted for the shop's currency — the box's placeholder. */
+  placeholder: string;
+};
+
 type BuilderActions = {
   // i18n-exempt: type annotation, not copy — the scanner misreads the union as a string.
   add: (formData: FormData) => void | Promise<void>;
@@ -110,11 +132,14 @@ export type BuilderCopy = {
   returns: string;
   seats: string;
   dives: string;
+  price: string;
+  priceDescription: string;
   course: string;
   optional: string;
   diveSite: string;
   ordinaryTrip: string;
   decideLater: string;
+  optionsLoading: string;
   adding: string;
   putOnBoard: string;
   newDate: string;
@@ -165,15 +190,16 @@ function focusOnMount(el: HTMLElement | null) {
  */
 function AddPanel({
   dateIso,
-  courses,
-  diveSites,
+  options,
+  price,
   copy,
   onAdd,
   onCancel,
 }: {
   dateIso: string;
-  courses: BuilderOption[];
-  diveSites: BuilderOption[];
+  /** `null` until the panel's own fetch lands; the selects say so meanwhile. */
+  options: BuilderOptions | null;
+  price: BuilderPriceInput;
   copy: BuilderCopy;
   // i18n-exempt: type annotation, not copy — the scanner misreads the union as a string.
   onAdd: (formData: FormData) => void | Promise<void>;
@@ -244,25 +270,57 @@ function AddPanel({
           />
         </Field>
       </FieldGrid>
+      {/* A departure minted here is on the public schedule the moment it is on
+          the board, so this is where the price belongs — the board used to
+          have no price box at all and then flag its own work with a "No price
+          set" badge (task 150, UX persona lens 17). Still optional: the badge
+          stays for the departure someone puts up before the season's rate is
+          settled. The box is narrow, its helper line is not, so only the input
+          is capped — same shape as the full trip form. */}
+      <FieldGrid columns={1}>
+        <Field label={copy.price} hint={copy.optional} description={copy.priceDescription}>
+          <input
+            name="priceDollars"
+            type="number"
+            step={price.step}
+            min={0}
+            max={price.max}
+            placeholder={price.placeholder}
+            className={`${controlClass} tabular-nums sm:w-40`}
+          />
+        </Field>
+      </FieldGrid>
       <FieldGrid columns={2} className="gap-y-4">
         <Field label={copy.course} hint={copy.optional}>
           <select name="courseId" defaultValue="" className={controlClass}>
             <option value="">{copy.ordinaryTrip}</option>
-            {courses.map((course) => (
-              <option key={course.id} value={course.id}>
-                {course.title}
+            {options === null ? (
+              <option value="" disabled>
+                {copy.optionsLoading}
               </option>
-            ))}
+            ) : (
+              options.courses.map((course) => (
+                <option key={course.id} value={course.id}>
+                  {course.title}
+                </option>
+              ))
+            )}
           </select>
         </Field>
         <Field label={copy.diveSite} hint={copy.optional}>
           <select name="diveSiteId" defaultValue="" className={controlClass}>
             <option value="">{copy.decideLater}</option>
-            {diveSites.map((site) => (
-              <option key={site.id} value={site.id}>
-                {site.title}
+            {options === null ? (
+              <option value="" disabled>
+                {copy.optionsLoading}
               </option>
-            ))}
+            ) : (
+              options.diveSites.map((site) => (
+                <option key={site.id} value={site.id}>
+                  {site.title}
+                </option>
+              ))
+            )}
           </select>
         </Field>
       </FieldGrid>
@@ -302,8 +360,8 @@ function AddPanel({
 export function ScheduleBuilder({
   shopSlug,
   days,
-  courses,
-  diveSites,
+  loadOptions,
+  price,
   actions,
   defaultDateIso,
   canConfigure,
@@ -311,8 +369,9 @@ export function ScheduleBuilder({
 }: {
   shopSlug: string;
   days: BuilderDay[];
-  courses: BuilderOption[];
-  diveSites: BuilderOption[];
+  /** Fetches the add panel's course and dive-site options, first time it opens. */
+  loadOptions: () => Promise<BuilderOptions>;
+  price: BuilderPriceInput;
   actions: BuilderActions;
   /** The soonest day on the board, for the "Add a departure" button in the header. */
   defaultDateIso: string;
@@ -322,6 +381,20 @@ export function ScheduleBuilder({
   // One of `add:<dateIso>`, `move:<tripId>`, `copy:<tripId>`, or null.
   const [open, setOpen] = useState<string | null>(null);
   const toggle = (panel: string) => setOpen((current) => (current === panel ? null : panel));
+
+  // The add panel's selects, fetched the first time any add panel opens and
+  // kept for the rest of the visit — the catalogue does not change while a
+  // staff member schedules a week. A failed fetch clears the guard so the next
+  // open tries again rather than leaving the selects saying "Loading…" forever.
+  const [options, setOptions] = useState<BuilderOptions | null>(null);
+  const optionsRequested = useRef(false);
+  useEffect(() => {
+    if (!open?.startsWith("add:") || optionsRequested.current) return;
+    optionsRequested.current = true;
+    loadOptions().then(setOptions, () => {
+      optionsRequested.current = false;
+    });
+  }, [open, loadOptions]);
 
   // Every toggle button that can open a panel, keyed the same way `open` is,
   // so Cancel can hand keyboard focus back to the exact control that opened
@@ -374,8 +447,8 @@ export function ScheduleBuilder({
       {canConfigure && open === "add:top" ? (
         <AddPanel
           dateIso={defaultDateIso}
-          courses={courses}
-          diveSites={diveSites}
+          options={options}
+          price={price}
           copy={copy}
           onAdd={actions.add}
           onCancel={() => closePanel("add:top")}
@@ -405,8 +478,8 @@ export function ScheduleBuilder({
             {canConfigure && open === `add:${day.dateIso}` ? (
               <AddPanel
                 dateIso={day.dateIso}
-                courses={courses}
-                diveSites={diveSites}
+                options={options}
+                price={price}
                 copy={copy}
                 onAdd={actions.add}
                 onCancel={() => closePanel(`add:${day.dateIso}`)}

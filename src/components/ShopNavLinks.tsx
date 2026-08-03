@@ -246,11 +246,12 @@ export function ShopNavLinks({
     // `items-center` from `sm` up, where the strip is a single row.
     <div className={`flex min-w-0 items-start gap-2 ${className}`}>
       {/*
-       * Wraps rather than scrolls. The five primary labels need ~400px and a
-       * phone gives this strip ~285, so as a one-line scroller it always hid
-       * two of them: the right edge guillotined "Divers" mid-word against the
-       * More button, and on the schedule board the *active* tab sat entirely
-       * off-screen, so nothing on the page read as current. Wrapping costs one
+       * Wraps rather than scrolls. The primary labels (four of them since Not
+       * ready became Today's view) still need more room than a phone gives this
+       * strip — ~285px — so as a one-line scroller it hid the tail of the row:
+       * the right edge guillotined "Divers" mid-word against the More button,
+       * and on the schedule board the *active* tab sat entirely off-screen, so
+       * nothing on the page read as current. Wrapping costs one
        * header row on a phone and shows every destination, with the label
        * itself kept whole by `whitespace-nowrap` in `linkClass`. It never wraps
        * from `sm` up, where the row has room.
