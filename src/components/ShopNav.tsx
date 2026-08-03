@@ -101,15 +101,23 @@ export function ShopNav({
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-surface/95 px-4 py-3 shadow-sm backdrop-blur print:hidden sm:px-6">
       {/*
-       * On phones the primary links wrap to their own full-width row below the
+       * Below `lg` the primary links take their own full-width row under the
        * logo instead of being crushed into whatever slice of the top row is
-       * left over (which forced a cramped horizontal scroll). On sm+ everything
-       * collapses back to a single row via the `order` utilities.
+       * left over; from `lg` up everything collapses back to a single row via
+       * the `order` utilities.
+       *
+       * That breakpoint used to be `sm`, which is where the row *stops being a
+       * phone*, not where it fits: the logo, search, shortcut key, and sign-out
+       * are fixed-width, so between 640px and roughly 980px the links were left
+       * a ~300px column and wrapped one per line — a tablet in portrait got a
+       * vertical stack of nav links beside a vertically centred logo, and at
+       * 640px itself "Today" and "More" overlapped outright. `lg` is the first
+       * width where the single row actually has the room.
        */}
       <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-3 gap-y-2">
         <Link
           href={root}
-          className="flex shrink-0 items-center gap-2 font-semibold tracking-tight sm:order-1"
+          className="flex shrink-0 items-center gap-2 font-semibold tracking-tight lg:order-1"
         >
           <span className="grid size-9 place-items-center rounded-xl bg-primary text-primary-foreground shadow-sm transition-transform duration-200 hover:rotate-6">
             <LogoMark className="size-5" />
@@ -119,7 +127,7 @@ export function ShopNav({
           <span className="sm:hidden">DiveDay</span>
         </Link>
         {/* Trips are created from the Schedule, where the surrounding week is visible. */}
-        <div className="ml-auto flex shrink-0 items-center gap-2 sm:order-3 sm:ml-0 sm:gap-3">
+        <div className="ml-auto flex shrink-0 items-center gap-2 lg:order-3 lg:ml-0 lg:gap-3">
           <CommandPalette
             shopSlug={shopSlug}
             boatBoardingHref={boatBoardingHref}
@@ -191,7 +199,7 @@ export function ShopNav({
               },
             } satisfies ShopNavLinksCopy
           }
-          className="order-last w-full sm:order-2 sm:w-auto sm:flex-1"
+          className="order-last w-full lg:order-2 lg:w-auto lg:flex-1"
         />
       </div>
     </header>

@@ -5,7 +5,6 @@ import { FlashParams } from "@/components/FlashParams";
 import { Pager } from "@/components/Pager";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
-import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { canPersonDeleteDiver } from "@/db/authz";
@@ -83,6 +82,8 @@ export default async function DiversPage({
     query,
     page: Number.parseInt(page ?? "", 10),
     filter,
+    // "Diving today" is the shop's own calendar day, not the server's.
+    timeZone: shop.timezone,
   });
   // The roster's empty state offers a bulk import beside the one-diver form,
   // for the shop arriving with a spreadsheet. Same gate the import page itself
@@ -149,20 +150,6 @@ export default async function DiversPage({
         eyebrow={t("divers.page.eyebrow")}
         title={t("divers.page.title")}
         description={t("divers.page.description")}
-        meta={
-          <span className="inline-flex items-center">
-            <span aria-hidden="true">
-              <Badge tone="primary" tabularNums>
-                {diverPage.total}
-              </Badge>
-            </span>
-            <span className="sr-only">
-              {query
-                ? t("divers.page.matchingCount", { count: diverPage.total })
-                : t("divers.page.onFileCount", { count: diverPage.total })}
-            </span>
-          </span>
-        }
       />
 
       {noticeText ? (
@@ -243,16 +230,16 @@ export default async function DiversPage({
         }
         copy={{
           viewAllDivers: t("divers.list.viewAllDivers"),
+          viewDivingToday: t("divers.list.viewDivingToday"),
+          viewNeedsAttention: t("divers.list.viewNeedsAttention"),
           viewMissingContact: t("divers.list.viewMissingContact"),
-          viewInsured: t("divers.list.viewInsured"),
-          savedViewsAriaLabel: t("divers.list.savedViewsAriaLabel"),
-          namePromptText: t("divers.list.namePromptText"),
-          removeSavedViewAriaLabel: t("divers.list.removeSavedViewAriaLabel"),
-          saveThisView: t("divers.list.saveThisView"),
-          saveViewConfirm: t("divers.list.saveViewConfirm"),
-          saveViewCancel: t("divers.list.saveViewCancel"),
-          savedOnThisDevice: t("divers.list.savedOnThisDevice"),
+          viewsAriaLabel: t("divers.list.viewsAriaLabel"),
           peopleHeading: t("divers.list.peopleHeading"),
+          // The badge's digit is announced with the noun the count belongs to,
+          // and with whether it is a match count or the whole roster.
+          peopleCountLabel: query
+            ? t("divers.page.matchingCount", { count: diverPage.total })
+            : t("divers.page.onFileCount", { count: diverPage.total }),
           searchHintText: t("divers.list.searchHintText"),
           searchDiversLabel: t("divers.list.searchDiversLabel"),
           searchPlaceholder: t("divers.list.searchPlaceholder"),

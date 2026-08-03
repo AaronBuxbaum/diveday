@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import { ANONYMIZED_PERSON_NAME, REDACTED_TEXT } from "@/lib/anonymization";
-import { nowMs } from "@/lib/clock";
+import { nowDate, nowMs } from "@/lib/clock";
 import type { DeleteCustomerResult } from "@/lib/payments/customers";
 import { computeWaiverIntegrityHash, verifyWaiverIntegrity } from "@/lib/waiver-integrity";
 import { seededShopContext } from "@/test/db";
@@ -49,6 +49,7 @@ import {
   shops,
   specialtyCertifications,
   tripReviews,
+  trips,
   tripWaitlistEntries,
   userAccounts,
   waiverRecords,
@@ -275,7 +276,7 @@ describe("roster search and pagination", () => {
     expect(nobody.page).toBe(1);
   });
 
-  it("filters the roster by saved-view facet (missing contact, insured)", async () => {
+  it("filters the roster to whoever still owes a safety contact", async () => {
     const { db, shop } = await seededShopContext();
     const target = (await listDiverSummaries(db, shop.id)).divers[0]?.person;
     if (!target) throw new Error("expected seeded divers");
@@ -290,29 +291,128 @@ describe("roster search and pagination", () => {
       .total;
     expect(baselineMissing).toBeGreaterThan(0);
 
-    // Now complete the target's contact and give them dive insurance.
-    await updateDiver(db, {
-      shopId: shop.id,
-      personId: target.id,
-      fullName: target.fullName,
-      email: target.email ?? "",
-      phone: target.phone ?? "",
-      diveInsurance: "DAN #999",
-    });
     await db
       .update(people)
       .set({ emergencyContactName: "Kin Ono", emergencyContactPhone: "+1 305 555 0000" })
       .where(eq(people.id, target.id));
 
-    // Insurance is a new column defaulting null, so only the target carries it.
-    const insured = await listDiverSummaries(db, shop.id, { filter: "insured" });
-    expect(insured.divers.map((row) => row.person.id)).toEqual([target.id]);
-    expect(insured.total).toBe(1);
-
     // With a full contact now on file, the target leaves the "missing" view.
     const missing = await listDiverSummaries(db, shop.id, { filter: "missing_contact" });
     expect(missing.divers.some((row) => row.person.id === target.id)).toBe(false);
     expect(missing.total).toBe(baselineMissing - 1);
+  });
+
+  /**
+   * "Needs attention" is the roster-wide version of the per-row "pending
+   * review" / "to confirm" badges, so the two have to be counted off the same
+   * evidence — a card awaiting review, or an imported card awaiting its
+   * one-tap confirm (ADR 20260724-import-verified-cards). The count and the
+   * page share one WHERE clause, so this asserts both.
+   */
+  it("filters the roster to whoever has a card waiting on a staffer", async () => {
+    const { db, shop } = await seededShopContext();
+    const roster = await listDiverSummaries(db, shop.id, { limit: 1000 });
+
+    const flagged = await listDiverSummaries(db, shop.id, {
+      filter: "needs_attention",
+      limit: 1000,
+    });
+    const flaggedIds = new Set(flagged.divers.map((row) => row.person.id));
+    expect(flagged.total).toBe(flagged.divers.length);
+
+    // Whoever the view returns is exactly whoever the badges would light up
+    // for — no more, no fewer.
+    const expected = roster.divers.filter(
+      (row) =>
+        row.pendingCertificationCount +
+          row.pendingSpecialtyOrNitroxCount +
+          row.importedUnconfirmedCount >
+        0,
+    );
+    expect(expected.length).toBeGreaterThan(0);
+    expect([...flaggedIds].sort()).toEqual(expected.map((row) => row.person.id).sort());
+
+    // Clearing the last waiting card takes that diver back out of the view.
+    const target = expected[0];
+    if (!target) throw new Error("expected a diver with a waiting card");
+    const reviewed = nowDate();
+    for (const table of [certifications, specialtyCertifications, nitroxCertifications]) {
+      await db
+        .update(table)
+        .set({ status: "verified", reviewedAt: reviewed })
+        .where(eq(table.personId, target.person.id));
+    }
+    const after = await listDiverSummaries(db, shop.id, {
+      filter: "needs_attention",
+      limit: 1000,
+    });
+    expect(after.divers.some((row) => row.person.id === target.person.id)).toBe(false);
+    expect(after.total).toBe(flagged.total - 1);
+  });
+
+  it("filters the roster to whoever holds a seat on one of today's boats", async () => {
+    const { db, shop } = await seededShopContext();
+    const target = (await listDiverSummaries(db, shop.id)).divers[0]?.person;
+    if (!target) throw new Error("expected seeded divers");
+
+    // A departure at midday in the shop's own timezone, so the assertion is
+    // about the shop's calendar day rather than the server's.
+    const now = new Date("2026-08-03T16:00:00Z");
+    const [trip] = await db
+      .insert(trips)
+      .values({
+        shopId: shop.id,
+        title: "Diving-today probe",
+        startsAt: new Date("2026-08-03T14:00:00Z"),
+        endsAt: new Date("2026-08-03T18:00:00Z"),
+        capacity: 6,
+      })
+      .returning();
+    if (!trip) throw new Error("trip insert returned no row");
+
+    const before = await listDiverSummaries(db, shop.id, {
+      filter: "diving_today",
+      timeZone: shop.timezone,
+      now,
+      limit: 1000,
+    });
+    expect(before.divers.some((row) => row.person.id === target.id)).toBe(false);
+
+    const booking = await createBooking(db, {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: trip.id,
+      personId: target.id,
+    });
+    expect(booking.ok).toBe(true);
+
+    const booked = await listDiverSummaries(db, shop.id, {
+      filter: "diving_today",
+      timeZone: shop.timezone,
+      now,
+      limit: 1000,
+    });
+    expect(booked.divers.some((row) => row.person.id === target.id)).toBe(true);
+    expect(booked.total).toBe(booked.divers.length);
+
+    // Tomorrow the same seat is not today's work.
+    const tomorrow = await listDiverSummaries(db, shop.id, {
+      filter: "diving_today",
+      timeZone: shop.timezone,
+      now: new Date("2026-08-04T16:00:00Z"),
+      limit: 1000,
+    });
+    expect(tomorrow.divers.some((row) => row.person.id === target.id)).toBe(false);
+
+    // Nor is a cancelled departure a dive.
+    await db.update(trips).set({ status: "cancelled" }).where(eq(trips.id, trip.id));
+    const cancelled = await listDiverSummaries(db, shop.id, {
+      filter: "diving_today",
+      timeZone: shop.timezone,
+      now,
+      limit: 1000,
+    });
+    expect(cancelled.divers.some((row) => row.person.id === target.id)).toBe(false);
   });
 
   it("pages by number and never repeats or skips a diver", async () => {

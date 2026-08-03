@@ -113,7 +113,7 @@ function ResultNotice({ state, copy }: { state: WaiverSendState; copy: WaiverSen
       {state.emptySelection ? <p className="text-danger">{copy.emptySelection}</p> : null}
       {state.sent.length > 0 ? (
         <p className="font-medium text-success">
-          <span aria-hidden="true">✓ </span>
+          <span aria-hidden="true">✅ </span>
           {fill(copy.sent, { names: state.sent.join(", ") })}
         </p>
       ) : null}

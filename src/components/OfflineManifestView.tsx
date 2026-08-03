@@ -2,7 +2,7 @@
 
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AmbientContrastSlider, AmbientGlareDetector } from "@/components/AmbientGlareDetector";
+import { AmbientContrastControl, AmbientGlareDetector } from "@/components/AmbientGlareDetector";
 import { ConnectivityStatus } from "@/components/ConnectivityStatus";
 import { MilestoneHaptics } from "@/components/MilestoneHaptics";
 import { MissingDiversGrid } from "@/components/MissingDiversGrid";
@@ -596,17 +596,12 @@ export function OfflineManifestView() {
           actions={
             <>
               <div className="print:hidden">
-                <AmbientContrastSlider
+                <AmbientContrastControl
                   copy={{
-                    contrastAutoFallback: t("shared.ambientContrast.contrastAutoFallback"),
-                    contrastIconTitle: t("shared.ambientContrast.contrastIconTitle"),
                     contrastLabel: t("shared.ambientContrast.contrastLabel"),
                     labelAuto: t("shared.ambientContrast.labelAuto"),
                     labelStandard: t("shared.ambientContrast.labelStandard"),
                     labelFullAaa: t("shared.ambientContrast.labelFullAaa"),
-                    modeAuto: t("shared.ambientContrast.modeAuto"),
-                    modeStandard: t("shared.ambientContrast.modeStandard"),
-                    modeFullAaa: t("shared.ambientContrast.modeFullAaa"),
                   }}
                 />
               </div>

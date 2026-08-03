@@ -36,7 +36,6 @@ export interface OfflineManifestManagerCopy {
   reconcileCaughtUp: string;
   reconcileErrorFallback: string;
   savingMessage: string;
-  saveSuccessMessage: string;
   saveErrorFallback: string;
   offlineWithSavedCopy: string;
   offlineNoSavedCopy: string;
@@ -209,9 +208,14 @@ export function OfflineManifestManager({
         lastRejectedCount.current = envelope.events.filter(
           (event) => event.syncStatus === "rejected",
         ).length;
-        // Settled message either way — a silent background save still needs
-        // to land on something other than the initial "Checking…" text.
-        setMessage(copy.saveSuccessMessage);
+        // Settled: clear the narration rather than restating the outcome. Once
+        // the save lands, the pills say "Online / Fresh copy" and the line
+        // under them says when it was saved and what is still owed — a fourth
+        // sentence ("This device has an up-to-date offline copy.") saying the
+        // same thing is what made this card read as three status readouts
+        // stacked on each other. Anything the pills *don't* cover — saving,
+        // an error, a reconcile outcome, no signal — still lands here.
+        setMessage("");
       } catch (error) {
         setMessage(error instanceof Error ? error.message : copy.saveErrorFallback);
       } finally {
@@ -266,6 +270,12 @@ export function OfflineManifestManager({
       const envelope = await loadOfflineManifest(tripId).catch(() => null);
       if (cancelled) return;
       setSaved(envelope);
+      // The pills and the saved-summary line take over the moment there is an
+      // envelope for them to describe — "Checking this device…" only stands in
+      // for a card with nothing on it yet, and left up beside "Fresh copy ·
+      // Saved 9:30 AM" it is a fourth voice saying the same thing. A failure
+      // from the save below still lands in this same region.
+      if (envelope) setMessage("");
       // Reflects reality even when the branch below can't run yet (e.g. this
       // mount happens while offline) — otherwise reconcile()'s "did anything
       // just resolve/newly reject" check compares against a stale 0 once
@@ -398,7 +408,9 @@ export function OfflineManifestManager({
               </span>
             ) : null}
           </div>
-          <p className="mt-2 text-sm font-medium" aria-live="polite">
+          {/* The live region stays mounted whether or not it currently has
+              anything to say, so an announcement is heard when one arrives. */}
+          <p className={message ? "mt-2 text-sm font-medium" : ""} aria-live="polite">
             {message}
           </p>
           {saved ? (

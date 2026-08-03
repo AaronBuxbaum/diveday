@@ -73,7 +73,7 @@ function ResultNotice({ state, copy }: { state: InvoiceResendState; copy: Paymen
     >
       {state.status === "sent" ? (
         <>
-          <span aria-hidden="true">✓ </span>
+          <span aria-hidden="true">✅ </span>
           {copy.invoiceResent}
         </>
       ) : (

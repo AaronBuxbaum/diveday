@@ -761,36 +761,9 @@ summary {
   animation: sub-surface-message-fade 1.4s var(--ease-out-soft) forwards;
 }
 
-/* The active trip tab explains location with a quiet underline, not another fill. */
-.tab-accent {
-  position: relative;
-}
-
-.tab-accent::after {
-  position: absolute;
-  right: 1rem;
-  bottom: 0.2rem;
-  left: 1rem;
-  height: 2px;
-  border-radius: 999px;
-  background: var(--primary);
-  content: "";
-  transform: scaleX(0);
-  transform-origin: center;
-  opacity: 0;
-}
-
-.tab-accent-active::after {
-  animation: tab-underline-in 180ms var(--ease-out-soft) both;
-}
-
-@keyframes tab-underline-in {
-  from {
-    transform: scaleX(0);
-    opacity: 0;
-  }
-  to {
-    transform: scaleX(1);
-    opacity: 1;
-  }
-}
+/*
+ * The sub-nav tabs used to carry a `.tab-accent` underline under the active
+ * one, on top of the raised white pill and the primary label. Three signals for
+ * one fact: the pill already says where you are, and the bar under it read as a
+ * stray rule inside the segmented control rather than as an accent.
+ */

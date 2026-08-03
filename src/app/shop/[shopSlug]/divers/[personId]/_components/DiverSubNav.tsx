@@ -55,7 +55,7 @@ export function DiverSubNav({
         <a
           key={section.id}
           href={`#${section.id}`}
-          className="tab-accent inline-flex min-h-11 flex-1 snap-start items-center justify-center rounded-xl px-3 text-sm font-semibold whitespace-nowrap text-muted transition-colors duration-200 hover:bg-surface hover:text-foreground"
+          className="inline-flex min-h-11 flex-1 snap-start items-center justify-center rounded-xl px-3 text-sm font-semibold whitespace-nowrap text-muted transition-colors duration-200 hover:bg-surface hover:text-foreground"
         >
           {labels[index]}
         </a>

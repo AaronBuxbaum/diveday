@@ -15,24 +15,21 @@ type DiverSummary = DiverPage["divers"][number];
 
 /**
  * Every value is a plain string — never a function. This is a client
- * component with its own client-side-only state (search text, saved views),
- * so the translated copy is fully resolved server-side and handed down as
- * plain data; no translator ever crosses the Server->Client boundary.
+ * component with its own client-side-only state (the search text), so the
+ * translated copy is fully resolved server-side and handed down as plain
+ * data; no translator ever crosses the Server->Client boundary.
  * Count-driven text is a translated `{ one, other }` pair, picked and filled
  * at render time via `pluralForm()`/`fill()` (`@/i18n/fill`).
  */
 export interface DiverListCopy {
   viewAllDivers: string;
+  viewDivingToday: string;
+  viewNeedsAttention: string;
   viewMissingContact: string;
-  viewInsured: string;
-  savedViewsAriaLabel: string;
-  namePromptText: string;
-  removeSavedViewAriaLabel: string;
-  saveThisView: string;
-  saveViewConfirm: string;
-  saveViewCancel: string;
-  savedOnThisDevice: string;
+  viewsAriaLabel: string;
   peopleHeading: string;
+  /** Already pluralised for the count the badge carries — never a bare digit. */
+  peopleCountLabel: string;
   searchHintText: string;
   searchDiversLabel: string;
   searchPlaceholder: string;
@@ -53,33 +50,6 @@ export interface DiverListCopy {
   tableHeaderPerson: string;
   tableHeaderCards: string;
   tableHeaderAttention: string;
-}
-
-/**
- * A staffer's own pinned view — a name over a search + filter, stored per shop.
- *
- * These live in this browser's own storage, not on the account. That is a real
- * limitation on a shared counter tablet — one browser reset takes them with it,
- * and the same person's phone starts empty — so the row says so out loud
- * ("Saved on this device") rather than implying a roaming preference the app
- * does not keep. There is no per-account preference store to move them to
- * today; adding one is a schema decision, not a copy fix.
- */
-type SavedView = { name: string; query: string; filter: DiverFilter };
-
-function savedViewsKey(shopSlug: string) {
-  return `diveday:diver-views:${shopSlug}`;
-}
-
-function readSavedViews(shopSlug: string): SavedView[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = window.localStorage.getItem(savedViewsKey(shopSlug));
-    const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? (parsed as SavedView[]) : [];
-  } catch {
-    return [];
-  }
 }
 
 function initials(fullName: string): string {
@@ -141,32 +111,25 @@ export function DiverList({
     fill(pluralForm(count, { one: copy.cardCountOne, other: copy.cardCountOther }, locale), {
       count,
     });
-  const BUILT_IN_VIEWS: { label: string; filter: DiverFilter }[] = [
+  // The three questions the counter asks of the roster, in the order a day
+  // runs: who is on a boat today, whose paperwork needs a staffer, and who
+  // still owes a safety contact. Each is a server-side WHERE clause
+  // (`DiverFilter`, src/db/divers.ts), so a chip narrows the count and the
+  // page together.
+  const VIEWS: { label: string; filter: DiverFilter }[] = [
     { label: copy.viewAllDivers, filter: "all" },
+    { label: copy.viewDivingToday, filter: "diving_today" },
+    { label: copy.viewNeedsAttention, filter: "needs_attention" },
     { label: copy.viewMissingContact, filter: "missing_contact" },
-    { label: copy.viewInsured, filter: "insured" },
   ];
   const router = useRouter();
   const pathname = usePathname();
   const [typed, setTyped] = useState(query);
-  const [savedViews, setSavedViews] = useState<SavedView[]>([]);
-  // Naming a view is an in-page form, never `window.prompt`: the native dialog
-  // blocks the tab, ignores the shop's locale and the app's type scale, and on
-  // a counter tablet lands as an unstyled system sheet over the roster.
-  const [naming, setNaming] = useState(false);
-  const [viewName, setViewName] = useState("");
-  const nameInput = useRef<HTMLInputElement>(null);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Keep the input in sync when navigation (back/forward, a view chip) changes
   // the query underneath us — but never while the user is mid-debounce.
   useEffect(() => setTyped(query), [query]);
   useEffect(() => () => clearTimeout(debounce.current ?? undefined), []);
-  useEffect(() => setSavedViews(readSavedViews(shopSlug)), [shopSlug]);
-  // The field replaces the button it was opened from, so the cursor has to
-  // follow — otherwise the tap lands somewhere with nothing focused.
-  useEffect(() => {
-    if (naming) nameInput.current?.focus();
-  }, [naming]);
 
   // One place builds every roster URL, so search, a view chip, and the pager all
   // carry both the text query and the active filter (never dropping one).
@@ -186,29 +149,6 @@ export function DiverList({
     debounce.current = setTimeout(() => {
       router.replace(hrefFor(value, filter), { scroll: false });
     }, 250);
-  };
-
-  const closeNaming = () => {
-    setNaming(false);
-    setViewName("");
-  };
-
-  const saveCurrentView = (event: React.FormEvent) => {
-    event.preventDefault();
-    const name = viewName.trim();
-    // Re-saving under an existing name replaces that view rather than pinning a
-    // second chip with the same words on it.
-    if (!name) return;
-    const next = [...savedViews.filter((view) => view.name !== name), { name, query, filter }];
-    window.localStorage.setItem(savedViewsKey(shopSlug), JSON.stringify(next));
-    setSavedViews(next);
-    closeNaming();
-  };
-
-  const removeSavedView = (name: string) => {
-    const next = savedViews.filter((view) => view.name !== name);
-    window.localStorage.setItem(savedViewsKey(shopSlug), JSON.stringify(next));
-    setSavedViews(next);
   };
 
   /**
@@ -241,8 +181,8 @@ export function DiverList({
 
   return (
     <section className="mt-10" aria-labelledby="diver-list-heading">
-      <nav aria-label={copy.savedViewsAriaLabel} className="mb-4 flex flex-wrap items-center gap-2">
-        {BUILT_IN_VIEWS.map((view) => (
+      <nav aria-label={copy.viewsAriaLabel} className="mb-4 flex flex-wrap items-center gap-2">
+        {VIEWS.map((view) => (
           <Link
             key={view.filter}
             href={hrefFor(query, view.filter)}
@@ -252,85 +192,19 @@ export function DiverList({
             {view.label}
           </Link>
         ))}
-        {savedViews.map((view) => {
-          const active = view.query === query && view.filter === filter;
-          return (
-            <span key={view.name} className="inline-flex items-center">
-              <Link
-                href={hrefFor(view.query, view.filter)}
-                scroll={false}
-                className={chipClass(active)}
-              >
-                {view.name}
-              </Link>
-              <button
-                type="button"
-                onClick={() => removeSavedView(view.name)}
-                aria-label={fill(copy.removeSavedViewAriaLabel, { name: view.name })}
-                className="ml-0.5 inline-flex size-6 items-center justify-center rounded-full text-muted hover:text-danger"
-              >
-                ×
-              </button>
-            </span>
-          );
-        })}
-        {naming ? (
-          <form onSubmit={saveCurrentView} className="flex flex-wrap items-center gap-2">
-            <label className="sr-only" htmlFor="saved-view-name">
-              {copy.namePromptText}
-            </label>
-            <div className="w-44">
-              <input
-                id="saved-view-name"
-                ref={nameInput}
-                type="text"
-                value={viewName}
-                onChange={(event) => setViewName(event.target.value)}
-                // Escape backs out the way it does out of the ⌘K palette and an
-                // armed InlineConfirm — the one gesture that means "never mind"
-                // everywhere in the app.
-                onKeyDown={(event) => {
-                  if (event.key === "Escape") closeNaming();
-                }}
-                placeholder={copy.namePromptText}
-                className={`${controlClass} min-w-0`}
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={!viewName.trim()}
-              className={buttonClass({ variant: "secondary", size: "sm" })}
-            >
-              {copy.saveViewConfirm}
-            </button>
-            <button
-              type="button"
-              onClick={closeNaming}
-              className={buttonClass({ variant: "ghost", size: "sm" })}
-            >
-              {copy.saveViewCancel}
-            </button>
-          </form>
-        ) : (
-          <button
-            type="button"
-            onClick={() => setNaming(true)}
-            className="inline-flex min-h-9 items-center rounded-full border border-dashed border-border px-3 text-sm font-medium text-muted hover:text-foreground"
-          >
-            {copy.saveThisView}
-          </button>
-        )}
-        {/* Only once there is something to lose. An empty row saying where
-            nothing is stored is noise; a row of pinned views that a browser
-            reset would take is worth being honest about. */}
-        {savedViews.length > 0 ? (
-          <p className="text-sm text-muted">{copy.savedOnThisDevice}</p>
-        ) : null}
       </nav>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h2 id="diver-list-heading" className="text-lg font-semibold">
+          {/* The count belongs to this heading — it is how many people are in
+              the list below, under whichever view is on. It used to hang off
+              the page header several sections up, where it read as a stray
+              number with nothing to attach to. */}
+          <h2 id="diver-list-heading" className="flex items-center gap-2 text-lg font-semibold">
             {copy.peopleHeading}
+            <Badge tone="primary" tabularNums>
+              <span aria-hidden="true">{page.total}</span>
+              <span className="sr-only">{copy.peopleCountLabel}</span>
+            </Badge>
           </h2>
           {query ? null : <p className="mt-1 text-sm text-muted">{copy.searchHintText}</p>}
         </div>

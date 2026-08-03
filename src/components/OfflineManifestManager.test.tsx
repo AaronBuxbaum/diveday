@@ -20,7 +20,6 @@ const copy: OfflineManifestManagerCopy = {
   reconcileErrorFallback:
     "Couldn't reach DiveDay just now — your offline changes are still saved here and will try to send again on reconnect.",
   savingMessage: "Saving the latest manifest to this device…",
-  saveSuccessMessage: "This device has an up-to-date offline copy.",
   saveErrorFallback:
     "This device couldn't save the manifest. It'll try again once you have signal.",
   offlineWithSavedCopy: "Offline — showing the last saved copy.",

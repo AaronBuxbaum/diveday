@@ -73,18 +73,13 @@ export function TripSubNav({
     >
       {TABS.map(({ page, label, suffix }) => {
         const active = page === current;
-        const cls = `tab-accent inline-flex min-h-11 flex-1 snap-start items-center justify-center rounded-xl px-3 text-sm font-semibold whitespace-nowrap transition-colors duration-200 ${
+        const cls = `inline-flex min-h-11 flex-1 snap-start items-center justify-center rounded-xl px-3 text-sm font-semibold whitespace-nowrap transition-colors duration-200 ${
           active
             ? "bg-surface text-primary shadow-sm"
             : "text-muted hover:bg-surface hover:text-foreground"
         }`;
         return active ? (
-          <span
-            key={page}
-            aria-current="page"
-            data-tab-active="true"
-            className={`${cls} tab-accent-active`}
-          >
+          <span key={page} aria-current="page" data-tab-active="true" className={cls}>
             {label}
           </span>
         ) : (
