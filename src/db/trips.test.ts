@@ -26,6 +26,7 @@ import {
   duplicateTrip,
   extendTripSeries,
   getLatestSeriesInstance,
+  getTripCrewAssignments,
   getTripCrewIds,
   getTripRoster,
   getTripSeriesById,
@@ -47,6 +48,10 @@ import {
 } from "./trips";
 
 const FOREIGN_SHOP_ID = "00000000-0000-4000-8000-000000000099";
+
+/** `{ personId, tripRole }` as a Map entry, so a role assertion reads as one object. */
+const byPerson = (row: { personId: string; tripRole: string | null }) =>
+  [row.personId, row.tripRole] as const;
 
 describe("demo seed + schedule queries (in-memory PGlite)", () => {
   it("stores variable meeting windows and rejects crew overlap on any course day", async () => {
@@ -824,6 +829,117 @@ describe("trip crew (CR-007: cross-tenant write path)", () => {
       }),
     ).toBe(true);
     expect(await getTripCrewIds(db, shop.id, trip.id)).toEqual([second.person.id]);
+  });
+
+  /**
+   * DOM-M3 (ADR 20260803-per-trip-crew-role). `setTripCrew` is
+   * delete-all-then-insert and `changeTripCrew` inserted with
+   * `onConflictDoNothing`, so the per-trip role had two ways to be silently
+   * lost the moment it was added: any full crew edit would blank it, and a role
+   * change on somebody already assigned would be accepted and ignored. Both are
+   * safety bugs — the role is what keeps a rostered captain out of the
+   * supervision ratio.
+   */
+  describe("per-trip crew roles survive both write paths", () => {
+    async function context() {
+      const { db, shop } = await seededShopContext();
+      const trips = await upcomingTripsWithCounts(db, shop.id);
+      const trip = trips[0];
+      if (!trip) throw new Error("expected a seeded trip");
+      const staff = await listStaff(db, shop.id);
+      const [first, second] = staff;
+      if (!first || !second) throw new Error("expected two seeded staff");
+      return { db, shop, trip, first: first.person, second: second.person };
+    }
+
+    it("round-trips a role through setTripCrew instead of wiping it", async () => {
+      const { db, shop, trip, first, second } = await context();
+      expect(
+        await setTripCrew(db, shop.id, trip.id, [
+          { personId: first.id, tripRole: "captain" },
+          { personId: second.id, tripRole: "divemaster" },
+        ]),
+      ).toBe(true);
+      expect(new Map((await getTripCrewAssignments(db, shop.id, trip.id)).map(byPerson))).toEqual(
+        new Map([
+          [first.id, "captain"],
+          [second.id, "divemaster"],
+        ]),
+      );
+
+      // A later full crew edit that says nothing about roles — the ordinary
+      // "who is on this boat" edit — must not blank them.
+      expect(await setTripCrew(db, shop.id, trip.id, [first.id, second.id])).toBe(true);
+      expect(new Map((await getTripCrewAssignments(db, shop.id, trip.id)).map(byPerson))).toEqual(
+        new Map([
+          [first.id, "captain"],
+          [second.id, "divemaster"],
+        ]),
+      );
+
+      // And an explicit null is how a role is actually cleared.
+      expect(
+        await setTripCrew(db, shop.id, trip.id, [
+          { personId: first.id, tripRole: null },
+          second.id,
+        ]),
+      ).toBe(true);
+      expect(new Map((await getTripCrewAssignments(db, shop.id, trip.id)).map(byPerson))).toEqual(
+        new Map([
+          [first.id, null],
+          [second.id, "divemaster"],
+        ]),
+      );
+    });
+
+    it("updates a role on an existing assignment instead of ignoring the change", async () => {
+      const { db, shop, trip, first } = await context();
+      expect(
+        await setTripCrew(db, shop.id, trip.id, [{ personId: first.id, tripRole: "divemaster" }]),
+      ).toBe(true);
+
+      // Already assigned: this is the `onConflict` path, and it used to accept
+      // the call, return true, and keep the old role.
+      expect(
+        await changeTripCrew(db, shop.id, trip.id, {
+          personId: first.id,
+          operation: "assign",
+          tripRole: "captain",
+        }),
+      ).toBe(true);
+      expect(new Map((await getTripCrewAssignments(db, shop.id, trip.id)).map(byPerson))).toEqual(
+        new Map([[first.id, "captain"]]),
+      );
+
+      // Omitting the role still means "leave it alone" — assign stays idempotent.
+      expect(
+        await changeTripCrew(db, shop.id, trip.id, {
+          personId: first.id,
+          operation: "assign",
+        }),
+      ).toBe(true);
+      expect(new Map((await getTripCrewAssignments(db, shop.id, trip.id)).map(byPerson))).toEqual(
+        new Map([[first.id, "captain"]]),
+      );
+    });
+
+    it("scopes both reads and writes to the owning shop", async () => {
+      const { db, shop, trip, first } = await context();
+      await setTripCrew(db, shop.id, trip.id, [{ personId: first.id, tripRole: "captain" }]);
+      // `trip_assignments` carries no shop_id (CR-007): the read proves tenancy
+      // through the trip, so another shop sees nothing at all here.
+      expect(await getTripCrewAssignments(db, FOREIGN_SHOP_ID, trip.id)).toEqual([]);
+      expect(
+        await changeTripCrew(db, FOREIGN_SHOP_ID, trip.id, {
+          personId: first.id,
+          operation: "assign",
+          tripRole: "crew",
+        }),
+      ).toBe(false);
+      expect(new Map((await getTripCrewAssignments(db, shop.id, trip.id)).map(byPerson))).toEqual(
+        new Map([[first.id, "captain"]]),
+      );
+    });
   });
 
   /**

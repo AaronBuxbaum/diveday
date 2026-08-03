@@ -307,12 +307,35 @@ new domain concept, define it here in the same PR.
   booking, so they cannot be roll-call *subjects* — a roll-call event's only subject is a booking —
   and before this existed a checkpoint could read "roll call complete" with a divemaster still in
   the water. Append-only like a roll-call event: a later count supersedes an earlier one, never
-  rewrites it. It is an interim count, not a per-person crew roll call, which needs a per-trip crew
-  role first (see [ADR 20260802-crew-roll-call-attestation](../architecture/decisions/20260802-crew-roll-call-attestation.md)).
+  rewrites it. It is the **count-level** half of the crew head count; the per-person half is the
+  **crew roll-call event** below, and a checkpoint needs both (see
+  [ADR 20260802-crew-roll-call-attestation](../architecture/decisions/20260802-crew-roll-call-attestation.md)
+  and [ADR 20260803-per-person-crew-roll-call](../architecture/decisions/20260803-per-person-crew-roll-call.md)).
   A trip with **no crew assigned is not exempt**: "0 of 0" is still something a human says, because
   an empty assignment list is a scheduling gap, not evidence nobody else was aboard. Recorded on the
   live manifest only; the offline copy reads the saved count and keeps the checkpoint open when
   there isn't one.
+- **Crew roll-call event** — the per-person half: a named staff member said one **assigned crew
+  member** is aboard, not aboard, or cleared, at one checkpoint. Same append-only history, same
+  supersession, and the same two meanings of "not boarded" as a diver's roll-call event; the subject
+  is a person on the trip's crew list rather than a booking, which is why it is its own table
+  (`roll_call_crew_events`) and `roll_call_events.booking_id` stays `NOT NULL`. It exists because a
+  count **names nobody**: "3 of 3 aboard" cannot tell the boat that the third body is the deckhand
+  rather than the divemaster who has not surfaced. Read-only on the offline copy, where a crew
+  member with no saved result reads as still-to-call.
+- **Per-trip crew role** — what a crew member is rostered to *do on one sailing*
+  (`instructor`/`divemaster`/`captain`/`crew`), as opposed to the shop-wide roles they hold. Unset
+  means **not specified**, which counts exactly as it always did, by shop-wide inference — never a
+  claim that anyone is or is not in the water. It can only ever *narrow* what someone is worth to
+  the in-water ratio: the roster says which job they are doing, `person_roles` stays the evidence of
+  what they are qualified to do, and the count takes the lesser. A divemaster rostered as this
+  trip's captain is therefore not a **certified assistant** for it (see
+  [ADR 20260803-per-trip-crew-role](../architecture/decisions/20260803-per-trip-crew-role.md)).
+- **In-water certified assistant** — a Divemaster actually supervising students in the water on this
+  trip; each one extends the **entry-level in-water ratio** by two students per instructor. A
+  person holding both instructor and divemaster roles is counted as the instructor, never as their
+  own assistant. One definition, `countInWaterCrew` in `src/lib/crew-roles.ts`, shared by the
+  booking gate, the trip page, the staffing coverage list, and the Today queue.
 - **Roll-call checkpoint** — one independent head count: before departure or after a numbered dive.
   A two-tank charter has three checkpoints. Each checkpoint is re-verified against the bodies on the
   boat; a **boarded** result never carries into the next. **"Not boarded" means two opposite

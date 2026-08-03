@@ -19,6 +19,7 @@ import { rentalFitLineText } from "@/i18n/rental-labels";
 import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
 import { staffTranslator } from "@/i18n/staff-messages";
 import {
+  crewRollCallCounts,
   isNotBackAboard,
   isRollCallCheckpoint,
   type RollCallCheckpoint,
@@ -462,21 +463,25 @@ export function OfflineManifestView() {
   // either being wrong on its own, so both read the same predicate (DOM-H3).
   const notBackAboard = localStates.filter((state) => isNotBackAboard(checkpoint, state)).length;
   // The same definition the live manifest uses — divers *and* crew (DOM-H1,
-  // ADR 20260802-crew-roll-call-attestation). Recomputed here rather than read
-  // off the snapshot because `awaiting` comes from events on this device, not
-  // from what the server knew at save time. The crew half does not: crew
-  // attestation is deliberately not recordable offline in this slice, so the
-  // snapshot's saved attestation is the only crew evidence a dock copy has. A
-  // checkpoint with every diver counted and no crew attested therefore reads
-  // *open* here exactly as it does online — never "complete" offline and "not
+  // ADRs 20260802-crew-roll-call-attestation and
+  // 20260803-per-person-crew-roll-call). Recomputed here rather than read off
+  // the snapshot because `awaiting` comes from events on this device, not from
+  // what the server knew at save time. The crew half does not: neither the
+  // attestation nor a per-person crew result is recordable offline in this
+  // slice, so the snapshot is the only crew evidence a dock copy has, and both
+  // read fail-closed — absence is "nobody has said", never "accounted for". A
+  // checkpoint with every diver counted and the crew uncounted therefore reads
+  // *open* here exactly as it does online; never "complete" offline and "not
   // complete" online, which would be worse than the bug this closes.
   const crewAssigned = manifest.crew.length;
   const savedCrewAttestation = manifest.crewAttestation;
+  const crewCounts = crewRollCallCounts(checkpoint, manifest.crew);
   const completeness = rollCallCompleteness({
     totalDivers: manifest.summary.totalDivers,
     awaiting,
     notBackAboard,
     crewAssigned,
+    ...crewCounts,
     crewAttestation: savedCrewAttestation
       ? {
           crewAboard: savedCrewAttestation.crewAboard,
@@ -701,13 +706,45 @@ export function OfflineManifestView() {
                   assigned: crewAssigned,
                   name: savedCrewAttestation.attestedByName,
                 })
-              : savedCrewAttestation
-                ? t("shared.offlineManifest.single.crewShort", {
-                    aboard: savedCrewAttestation.crewAboard,
-                    assigned: crewAssigned,
+              : completeness.reason === "crew_not_back_aboard"
+                ? t("shared.offlineManifest.single.crewNotBackAboard", {
+                    count: crewCounts.crewNotBackAboard,
                   })
-                : t("shared.offlineManifest.single.crewNotAttested", { assigned: crewAssigned })}
+                : completeness.reason === "crew_awaiting"
+                  ? t("shared.offlineManifest.single.crewAwaiting", {
+                      count: crewCounts.crewAwaiting,
+                    })
+                  : savedCrewAttestation
+                    ? t("shared.offlineManifest.single.crewShort", {
+                        aboard: savedCrewAttestation.crewAboard,
+                        assigned: crewAssigned,
+                      })
+                    : t("shared.offlineManifest.single.crewNotAttested", {
+                        assigned: crewAssigned,
+                      })}
           </p>
+          {/* Who, not just how many. A crew member's saved result is read-only
+              here — recording one needs signal — but naming the person nobody
+              has counted is the whole point of the per-person model. */}
+          {crewAssigned > 0 ? (
+            <ul className="mt-2 flex flex-wrap gap-2">
+              {manifest.crew.map((member) => (
+                <li
+                  key={`${member.fullName}-${member.roles.join("-")}`}
+                  className={
+                    isNotBackAboard(checkpoint, member.rollCall)
+                      ? "rounded-full bg-danger/15 px-3 py-1 text-sm font-bold text-danger"
+                      : member.rollCall
+                        ? "rounded-full bg-surface-sunken px-3 py-1 text-sm"
+                        : "rounded-full bg-warning/20 px-3 py-1 text-sm font-semibold"
+                  }
+                >
+                  {member.fullName} ·{" "}
+                  {rollCallLabelText(t, rollCallLabel(checkpoint, member.rollCall))}
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </div>
         <ul
           id="offline-roll-call"

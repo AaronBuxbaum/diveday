@@ -46,6 +46,7 @@ import {
   recapPhotos,
   rentalFitProfiles,
   rollCallCrewAttestations,
+  rollCallCrewEvents,
   rollCallEvents,
   shopPromoCodes,
   shopPromoRedemptions,
@@ -53,6 +54,7 @@ import {
   shops,
   specialtyCertifications,
   staffShifts,
+  type TripAssignmentRole,
   tips,
   tripAssignments,
   tripDives,
@@ -1925,12 +1927,35 @@ export async function seedDemoSchedule(
   );
   const captainId = crewByRole.get("captain");
   const divemasterId = crewByRole.get("divemaster");
+  // The job each is doing on this sailing, not just who is aboard (DOM-M3, ADR
+  // 20260803-per-trip-crew-role). Each matches the person's own shop-wide role
+  // here, so nothing about the supervision ratio moves — what it demonstrates
+  // is that the captain is rostered as the captain, and therefore is not
+  // counted as an in-water certified assistant.
   await db.insert(tripAssignments).values(
     tripRows.flatMap((trip) => {
-      if (trip.courseId) return [{ tripId: trip.id, personId: instructor.id }];
+      if (trip.courseId) {
+        return [
+          {
+            tripId: trip.id,
+            personId: instructor.id,
+            tripRole: "instructor" as TripAssignmentRole,
+          },
+        ];
+      }
       return [
-        ...(captainId ? [{ tripId: trip.id, personId: captainId }] : []),
-        ...(divemasterId ? [{ tripId: trip.id, personId: divemasterId }] : []),
+        ...(captainId
+          ? [{ tripId: trip.id, personId: captainId, tripRole: "captain" as TripAssignmentRole }]
+          : []),
+        ...(divemasterId
+          ? [
+              {
+                tripId: trip.id,
+                personId: divemasterId,
+                tripRole: "divemaster" as TripAssignmentRole,
+              },
+            ]
+          : []),
       ];
     }),
   );
@@ -3825,10 +3850,24 @@ async function seedMoreTrips(
   await db.insert(tripAssignments).values(
     insertedTrips.flatMap((trip, i) => {
       const def = tripDefs[i];
-      if (def.courseTitle) return [{ tripId: trip.id, personId: instructorId }];
+      if (def.courseTitle) {
+        return [
+          { tripId: trip.id, personId: instructorId, tripRole: "instructor" as TripAssignmentRole },
+        ];
+      }
       return [
-        ...(captainId ? [{ tripId: trip.id, personId: captainId }] : []),
-        ...(divemasterId ? [{ tripId: trip.id, personId: divemasterId }] : []),
+        ...(captainId
+          ? [{ tripId: trip.id, personId: captainId, tripRole: "captain" as TripAssignmentRole }]
+          : []),
+        ...(divemasterId
+          ? [
+              {
+                tripId: trip.id,
+                personId: divemasterId,
+                tripRole: "divemaster" as TripAssignmentRole,
+              },
+            ]
+          : []),
       ];
     }),
   );
@@ -4122,6 +4161,7 @@ export async function resetDemoSchedule(
   // order left behind blocks the trips/bookings delete and dirties the next
   // test's fixture (regression tests live in seed.test.ts).
   await db.delete(rollCallCrewAttestations).where(eq(rollCallCrewAttestations.shopId, shopId));
+  await db.delete(rollCallCrewEvents).where(eq(rollCallCrewEvents.shopId, shopId));
   await db.delete(rollCallEvents).where(eq(rollCallEvents.shopId, shopId));
   await db.delete(rentalFitProfiles).where(eq(rentalFitProfiles.shopId, shopId));
   // References people, so it clears before them like any other people-scoped row.
@@ -4364,6 +4404,7 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(tips).where(eq(tips.shopId, shopId));
   await db.delete(bookingCapabilities).where(eq(bookingCapabilities.shopId, shopId));
   await db.delete(rollCallCrewAttestations).where(eq(rollCallCrewAttestations.shopId, shopId));
+  await db.delete(rollCallCrewEvents).where(eq(rollCallCrewEvents.shopId, shopId));
   await db.delete(rollCallEvents).where(eq(rollCallEvents.shopId, shopId));
   await db.delete(recapPhotos).where(eq(recapPhotos.shopId, shopId));
   await db.delete(tripReviews).where(eq(tripReviews.shopId, shopId));

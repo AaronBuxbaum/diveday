@@ -108,19 +108,39 @@ function richPayload(
     /** Second diver, present at departure and carried not-boarded after dive 1. */
     withCarriedNotBoarded?: boolean;
     /**
-     * Crew were counted at both checkpoints before the snapshot was saved.
-     * Divers alone no longer close a checkpoint (DOM-H1, ADR
-     * 20260802-crew-roll-call-attestation), so anything asserting "roll call
+     * Crew were counted at both checkpoints before the snapshot was saved —
+     * both halves: the attested count *and* a per-person result for each crew
+     * member. Divers alone no longer close a checkpoint (DOM-H1, ADRs
+     * 20260802-crew-roll-call-attestation and
+     * 20260803-per-person-crew-roll-call), so anything asserting "roll call
      * complete" needs this; anything asserting it *stays open* leaves it off.
      */
     crewAttested?: boolean;
+    /**
+     * The count was taken but one named crew member has no result of their
+     * own — the case a count alone can never see, because "2 of 2 aboard"
+     * names nobody.
+     */
+    crewMemberUncounted?: boolean;
   } = {},
 ): OfflineManifestPayload {
   // Every charter is crewed, so both cases carry the same two people; the
   // difference under test is whether anyone counted them.
+  const crewRollCall = opts.crewAttested
+    ? {
+        state: "boarded" as const,
+        occurredAt: "2026-08-01T12:55:00.000Z",
+        recordedByName: "Dana Divemaster",
+        note: null,
+      }
+    : undefined;
   const crew = [
-    { fullName: "Dana Divemaster", roles: ["divemaster"] },
-    { fullName: "Sal Ortiz", roles: ["captain"] },
+    { fullName: "Dana Divemaster", roles: ["divemaster"], rollCall: crewRollCall },
+    {
+      fullName: "Sal Ortiz",
+      roles: ["captain"],
+      rollCall: opts.crewMemberUncounted ? undefined : crewRollCall,
+    },
   ];
   const crewAttestation = opts.crewAttested
     ? {
@@ -866,6 +886,55 @@ describe("OfflineManifestView — crew are part of the head count offline too", 
     await waitFor(() => expect(appendOfflineRollCall).toHaveBeenCalled());
 
     expect(await screen.findByText(/Roll call complete/)).toBeInTheDocument();
+  });
+
+  /**
+   * DOM-H1's per-person half, offline (ADR 20260803-per-person-crew-roll-call).
+   * A count names nobody, so a saved "2 of 2 aboard" cannot tell this device
+   * that the second body was the deckhand rather than the divemaster still
+   * down. Crew results are read-only here — recording one needs signal — and
+   * their absence reads as *not counted*, which is what keeps the dock copy
+   * fail-closed rather than ahead of the live page.
+   */
+  it("stays open, and says who, when a named crew member has no saved result", async () => {
+    searchParams = new URLSearchParams({ trip: "trip-1", checkpoint: "after_dive_1" });
+    const saved = richEnvelope("trip-1", {
+      withCarriedNotBoarded: true,
+      crewAttested: true,
+      crewMemberUncounted: true,
+    });
+    vi.mocked(loadOfflineManifest).mockResolvedValue(saved);
+    vi.mocked(syncOfflineManifest).mockResolvedValue(null);
+    vi.mocked(appendOfflineRollCall).mockResolvedValue({
+      ...saved,
+      events: [
+        {
+          clientEventId: "evt-1",
+          snapshotId: saved.snapshot.snapshotId,
+          snapshotSavedAt: saved.snapshot.savedAt,
+          tripId: "trip-1",
+          bookingId: "diver-priya",
+          checkpoint: "after_dive_1",
+          status: "boarded",
+          note: null,
+          occurredAt: new Date(FROZEN_MS).toISOString(),
+          syncStatus: "pending",
+        },
+      ],
+    });
+
+    render(<OfflineManifestView />);
+    await screen.findByRole("heading", { name: "Two-Tank Reef" });
+    fireEvent.click(screen.getAllByRole("button", { name: "Mark boarded" })[0] as HTMLElement);
+    await waitFor(() => expect(appendOfflineRollCall).toHaveBeenCalled());
+
+    // Every diver counted, the crew count taken — and still not complete.
+    expect(await screen.findByText(/Saved on this phone/)).toBeInTheDocument();
+    expect(screen.queryByText(/Roll call complete/)).not.toBeInTheDocument();
+    expect(screen.getByText(/1 crew member still to call/)).toBeInTheDocument();
+    // Named, not just counted: the captain nobody has tapped is on screen.
+    expect(screen.getByText(/Sal Ortiz · Awaiting/)).toBeInTheDocument();
+    expect(screen.getByText(/Dana Divemaster · Boarded/)).toBeInTheDocument();
   });
 });
 

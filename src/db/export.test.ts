@@ -40,6 +40,7 @@ const EXPECTED_FILES = [
   "trip_last_minute_promos.csv",
   "roll_call_events.csv",
   "roll_call_crew_attestations.csv",
+  "roll_call_crew_events.csv",
   "waiver_templates.csv",
   "waiver_records.csv",
   "rental_fit.csv",
@@ -78,6 +79,7 @@ const EXPORTED_TABLES = [
   "trip_last_minute_promos",
   "roll_call_events",
   "roll_call_crew_attestations",
+  "roll_call_crew_events",
   "waiver_templates",
   "waiver_records",
   "rental_fit_profiles",
@@ -187,6 +189,7 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
   ],
   roll_call_events: ["shop_id"],
   roll_call_crew_attestations: ["shop_id"],
+  roll_call_crew_events: ["shop_id"],
   waiver_templates: ["shop_id"],
   waiver_records: [
     "shop_id",

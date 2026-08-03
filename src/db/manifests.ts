@@ -3,6 +3,7 @@ import { ageOnDate, birthdayCallout, isMinorOnDate } from "@/lib/age";
 import { STAFF_ROLES } from "@/lib/authz";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
+import { effectiveCrewRoles } from "@/lib/crew-roles";
 import { rentalFitLine } from "@/lib/dive-prep";
 import {
   buildTripManifest,
@@ -11,6 +12,7 @@ import {
   isRollCallCheckpoint,
   type ManifestCrewMember,
   type RollCallCheckpoint,
+  type RollCallRecord,
   rollCallCheckpoints,
   type TripManifest,
 } from "@/lib/manifests";
@@ -25,6 +27,7 @@ import {
   people,
   personRoles,
   rollCallCrewAttestations,
+  rollCallCrewEvents,
   rollCallEvents,
   tripAssignments,
   trips,
@@ -34,7 +37,7 @@ import { getTripRoster, getTripWithBooked } from "./trips";
 
 async function listTripCrew(db: DbExecutor, shopId: string, tripId: string) {
   const rows = await db
-    .select({ person: people, role: personRoles.role })
+    .select({ person: people, tripRole: tripAssignments.tripRole, role: personRoles.role })
     .from(tripAssignments)
     // `trip_assignments` carries no shop_id of its own; proving the trip
     // itself belongs to shopId (not just the assigned person) is what closes
@@ -55,15 +58,55 @@ async function listTripCrew(db: DbExecutor, shopId: string, tripId: string) {
   // The person id is carried through, not dropped. It used to be, which is what
   // made a per-person crew roll call unreachable: no surface downstream could
   // address a crew member even if the write path had allowed it (ADR
-  // 20260802-crew-roll-call-attestation). Tenancy is proven by the joins above,
-  // through `trips`, because `trip_assignments` has no `shop_id` of its own.
-  const byId = new Map<string, ManifestCrewMember>();
-  for (const { person, role } of rows) {
-    const crew = byId.get(person.id) ?? { id: person.id, fullName: person.fullName, roles: [] };
-    crew.roles.push(role);
+  // 20260802-crew-roll-call-attestation). It is now that roll call's subject
+  // (ADR 20260803-per-person-crew-roll-call). Tenancy is proven by the joins
+  // above, through `trips`, because `trip_assignments` has no `shop_id`.
+  const byId = new Map<string, ManifestCrewMember & { shopRoles: string[] }>();
+  for (const { person, tripRole, role } of rows) {
+    const crew = byId.get(person.id) ?? {
+      id: person.id,
+      fullName: person.fullName,
+      roles: [],
+      shopRoles: [],
+    };
+    crew.shopRoles.push(role);
+    // The job on *this* boat when the roster says so, otherwise the standing
+    // roles — one definition, src/lib/crew-roles.ts.
+    crew.roles = effectiveCrewRoles({ tripRole, shopRoles: crew.shopRoles });
     byId.set(person.id, crew);
   }
-  return [...byId.values()];
+  return [...byId.values()].map(({ shopRoles: _shopRoles, ...crew }) => crew);
+}
+
+/**
+ * The latest per-person crew roll-call result for one trip, keyed
+ * `checkpoint\u0000personId`. Same "newest `occurredAt`, then `createdAt`"
+ * supersession and the same "a latest `cleared` reads as no result" undo
+ * semantics as `listLatestRollCallByBooking` — one rule for both subject kinds
+ * (ADR 20260803-per-person-crew-roll-call).
+ */
+async function listLatestCrewRollCalls(db: AppDb, shopId: string, tripId: string) {
+  const rows = await db
+    .select({ event: rollCallCrewEvents, recorder: people })
+    .from(rollCallCrewEvents)
+    .innerJoin(people, eq(people.id, rollCallCrewEvents.recordedByPersonId))
+    .where(and(eq(rollCallCrewEvents.shopId, shopId), eq(rollCallCrewEvents.tripId, tripId)))
+    .orderBy(desc(rollCallCrewEvents.occurredAt), desc(rollCallCrewEvents.createdAt));
+  const latest = new Map<string, RollCallRecord>();
+  const seen = new Set<string>();
+  for (const { event, recorder } of rows) {
+    const key = `${event.checkpoint}\u0000${event.personId}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    if (event.status === "cleared") continue;
+    latest.set(key, {
+      state: event.status,
+      occurredAt: event.occurredAt,
+      recordedByName: recorder.fullName,
+      note: event.note,
+    });
+  }
+  return latest;
 }
 
 /**
@@ -202,6 +245,7 @@ export async function getTripManifests(
     fitByBooking,
     crew,
     crewAttestations,
+    crewRollCalls,
     ...rollCalls
   ] = await Promise.all([
     getShopById(db, shopId),
@@ -211,6 +255,7 @@ export async function getTripManifests(
     rentalFitByBooking(db, shopId, tripId),
     listTripCrew(db, shopId, tripId),
     listLatestCrewAttestations(db, shopId, tripId),
+    listLatestCrewRollCalls(db, shopId, tripId),
     ...checkpoints.map((checkpoint) => listLatestRollCallByBooking(db, shopId, tripId, checkpoint)),
   ]);
   if (!shop) return null;
@@ -266,11 +311,26 @@ export async function getTripManifests(
       ),
     ]),
   );
+  // Crew results carry forward exactly like a diver's: a crew member marked
+  // not boarded **at the dock** stays ashore at every later checkpoint until
+  // an explicit result breaks the chain, and an after-dive `not_boarded` never
+  // carries (it means "did not come back" — `carryForwardNotBoarded`, DOM-H3).
+  const crewEffective = new Map(
+    crew.map((member) => [
+      member.id,
+      carryForwardNotBoarded(
+        checkpoints.map((checkpoint) => crewRollCalls.get(`${checkpoint}\u0000${member.id}`)),
+      ),
+    ]),
+  );
   return checkpoints.map((checkpoint, index) =>
     buildTripManifest({
       trip: tripInput,
       checkpoint,
-      crew,
+      crew: crew.map((member) => ({
+        ...member,
+        rollCall: crewEffective.get(member.id)?.[index],
+      })),
       crewAttestation: crewAttestations.get(checkpoint) ?? null,
       divers: diverInputs.map((diver) => ({
         ...diver,
@@ -443,6 +503,116 @@ export async function recordRollCall(
   if (outcome.ok && !outcome.duplicate) {
     await publishManifestEvent(db, input.shopId, input.tripId);
   }
+  return outcome;
+}
+
+export type RecordCrewRollCallOutcome =
+  | { ok: true; eventId: string }
+  | {
+      ok: false;
+      reason: "trip_unavailable" | "staff_not_found" | "crew_not_assigned" | "invalid_checkpoint";
+    };
+
+/**
+ * Record one **assigned crew member's** result at one checkpoint. Append-only
+ * history, the same shape `recordRollCall` writes for a diver: a later event
+ * supersedes an earlier one and a `cleared` event is an explicit undo that
+ * returns them to awaiting (ADR 20260803-per-person-crew-roll-call).
+ *
+ * The subject must be on *this* trip's crew list, proven inside the
+ * transaction through `trips` — `trip_assignments` carries no `shop_id` of its
+ * own (CR-007), so a bare trip UUID plus a personId from any shop would
+ * otherwise be enough to write a head-count row against someone else's boat.
+ * Being staff in the shop is not sufficient: a person nobody rostered is not a
+ * subject, because the checkpoint's rule is about the crew this trip *has*.
+ *
+ * No readiness gate: crew hold no booking and therefore no readiness. What
+ * gates a diver at departure — waiver, payment, certification — is not a
+ * question anyone asks of the divemaster.
+ */
+export async function recordCrewRollCall(
+  db: AppDb,
+  input: {
+    shopId: string;
+    tripId: string;
+    personId: string;
+    recordedByPersonId: string;
+    status: "boarded" | "not_boarded" | "cleared";
+    checkpoint?: RollCallCheckpoint;
+    note?: string;
+    occurredAt?: Date;
+  },
+): Promise<RecordCrewRollCallOutcome> {
+  const outcome = await db.transaction(async (tx): Promise<RecordCrewRollCallOutcome> => {
+    const checkpoint = input.checkpoint ?? "departure";
+    const occurredAt = input.occurredAt ?? nowDate();
+
+    const [staff] = await tx
+      .select({ id: people.id })
+      .from(people)
+      .innerJoin(personRoles, eq(personRoles.personId, people.id))
+      .where(
+        and(
+          eq(people.id, input.recordedByPersonId),
+          eq(people.shopId, input.shopId),
+          inArray(personRoles.role, [...STAFF_ROLES]),
+        ),
+      )
+      .limit(1);
+    if (!staff) return { ok: false, reason: "staff_not_found" };
+
+    // Same tenancy and trip-status gate the other two writers apply.
+    const [trip] = await tx
+      .select({ id: trips.id, plannedDives: trips.plannedDives })
+      .from(trips)
+      .where(
+        and(
+          eq(trips.id, input.tripId),
+          eq(trips.shopId, input.shopId),
+          eq(trips.status, "scheduled"),
+        ),
+      )
+      .limit(1);
+    if (!trip) return { ok: false, reason: "trip_unavailable" };
+    if (!isRollCallCheckpoint(checkpoint, trip.plannedDives)) {
+      return { ok: false, reason: "invalid_checkpoint" };
+    }
+
+    const [assigned] = await tx
+      .select({ personId: tripAssignments.personId })
+      .from(tripAssignments)
+      .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
+      .innerJoin(people, eq(people.id, tripAssignments.personId))
+      .where(
+        and(
+          eq(tripAssignments.tripId, input.tripId),
+          eq(tripAssignments.personId, input.personId),
+          eq(trips.shopId, input.shopId),
+          eq(people.shopId, input.shopId),
+        ),
+      )
+      .limit(1);
+    if (!assigned) return { ok: false, reason: "crew_not_assigned" };
+
+    const [event] = await tx
+      .insert(rollCallCrewEvents)
+      .values({
+        shopId: input.shopId,
+        tripId: input.tripId,
+        personId: assigned.personId,
+        recordedByPersonId: staff.id,
+        status: input.status,
+        checkpoint,
+        note: input.note?.trim() || null,
+        occurredAt,
+      })
+      .returning({ id: rollCallCrewEvents.id });
+    if (!event) throw new Error("recordCrewRollCall: insert returned no row");
+    return { ok: true, eventId: event.id };
+  });
+  // Same push signal the other head-count writes raise: this changes whether
+  // the checkpoint reads complete on every device holding the manifest open.
+  if (outcome.ok) await publishManifestEvent(db, input.shopId, input.tripId);
   return outcome;
 }
 

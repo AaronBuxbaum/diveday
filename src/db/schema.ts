@@ -1946,6 +1946,19 @@ export const paymentOperationIntents = pgTable(
 );
 
 /** Staff crewing a trip (captain, DM, instructor…). Roles live on person_roles. */
+/**
+ * What a person is rostered to do on **one trip**. A deliberate subset of
+ * `person_role` — `owner`, `manager`, and `diver` are standing facts about a
+ * person, never a job on a boat. Keep aligned with `TRIP_CREW_ROLES` in
+ * src/lib/crew-roles.ts.
+ */
+export const tripAssignmentRole = pgEnum("trip_assignment_role", [
+  "instructor",
+  "divemaster",
+  "captain",
+  "crew",
+]);
+
 export const tripAssignments = pgTable(
   "trip_assignments",
   {
@@ -1955,6 +1968,23 @@ export const tripAssignments = pgTable(
     personId: uuid("person_id")
       .notNull()
       .references(() => people.id),
+    /**
+     * The job this person is doing on this sailing, or null for **not
+     * specified** (DOM-M3, ADR 20260803-per-trip-crew-role).
+     *
+     * Null is the status quo, not a safety claim. Roles are otherwise
+     * shop-wide (`person_roles`), so a divemaster rostered as this trip's boat
+     * captain still counted as an in-water certified assistant and raised the
+     * supervision-ratio capacity by two per head. Every row written before
+     * this column existed is null and must keep counting exactly as it did —
+     * by shop-wide inference (`inWaterCrewRole`, src/lib/crew-roles.ts).
+     *
+     * The role can only ever *narrow* what a person is worth to the ratio: it
+     * says which job they are doing, while `person_roles` stays the evidence
+     * of what they are qualified to do. A roster is a scheduling document and
+     * must never be able to mint a credential.
+     */
+    tripRole: tripAssignmentRole("trip_role"),
   },
   (table) => [primaryKey({ columns: [table.tripId, table.personId] })],
 );
@@ -2720,11 +2750,13 @@ export const rollCallEvents = pgTable(
  * written with no subject at all. The subject shapes differ (one booking vs. a
  * count over a trip's assignments), so they are separate rows.
  *
- * This is an interim slice, not the eventual model. A per-person crew roll call
- * needs `trip_assignments` to carry a per-trip role (there is none today — roles
- * are shop-wide on `person_roles`) and a subject model that is not `bookingId`.
- * Until then a count attested by a named human is what stops a checkpoint from
- * reading complete with a divemaster still in the water.
+ * It stays the **count-level** record now that `rollCallCrewEvents` below adds
+ * the per-person one (ADR 20260803-per-person-crew-roll-call, the follow-on
+ * 20260802 anticipated). The two answer different questions and a checkpoint
+ * needs both: the events say every *named* crew member is accounted for, and
+ * the attestation is the only thing that can speak for a hand nobody rostered
+ * — or for a trip with an empty assignment list, where "0 of 0" is still a
+ * sentence a human has to say out loud.
  */
 export const rollCallCrewAttestations = pgTable(
   "roll_call_crew_attestations",
@@ -2760,6 +2792,71 @@ export const rollCallCrewAttestations = pgTable(
       table.shopId,
       table.tripId,
       table.checkpoint,
+      table.occurredAt,
+    ),
+  ],
+);
+
+/**
+ * The per-person half of the crew head count: one staff member said one
+ * **assigned crew member** is aboard, not aboard, or cleared, at one
+ * checkpoint. Append-only history, exactly like `rollCallEvents` — the newest
+ * row per person per checkpoint is the current answer and nothing is rewritten
+ * (ADR 20260803-per-person-crew-roll-call).
+ *
+ * Its own table rather than a widened `rollCallEvents`, for the same reason
+ * `rollCallCrewAttestations` is (ADR 20260802): carrying crew there would have
+ * meant making `booking_id` nullable, weakening a NOT NULL invariant on the
+ * safety spine so a *diver* event could be written with no subject at all. The
+ * subjects genuinely differ — a booking is a paid seat, an assignment is a
+ * roster line — so they are separate rows, and each table's subject column
+ * stays `notNull`.
+ *
+ * `person_id` is the subject; `recorded_by_person_id` is who said so. They are
+ * routinely the same human (a divemaster boarding herself) and that is fine —
+ * the point is that the count names somebody, not that a second person
+ * witnesses it.
+ *
+ * No `source`/`client_event_id`: crew roll call is **not recordable offline**
+ * in this slice, so there is no device-generated event to deduplicate. The
+ * offline snapshot carries these results read-only and fails closed when they
+ * are absent (see `OFFLINE_MANIFEST_RECORD_VERSION`, src/lib/offline-manifests.ts).
+ *
+ * Tenancy: `shop_id` is carried here (unlike `trip_assignments`, CR-007) so a
+ * read never has to reach through `trips` to know whose row it is — the same
+ * shape `roll_call_events` already has. Writers still prove the *subject* is
+ * assigned to the trip, joining through `trips`.
+ */
+export const rollCallCrewEvents = pgTable(
+  "roll_call_crew_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    tripId: uuid("trip_id")
+      .notNull()
+      .references(() => trips.id),
+    /** The crew member this is about — a `trip_assignments` row's person. */
+    personId: uuid("person_id")
+      .notNull()
+      .references(() => people.id),
+    recordedByPersonId: uuid("recorded_by_person_id")
+      .notNull()
+      .references(() => people.id),
+    status: rollCallStatus("status").notNull(),
+    /** `departure` or `after_dive_N`; validated against the trip's planned dive count. */
+    checkpoint: text("checkpoint").notNull(),
+    note: text("note"),
+    occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("roll_call_crew_events_shop_trip_checkpoint_person_occurred_idx").on(
+      table.shopId,
+      table.tripId,
+      table.checkpoint,
+      table.personId,
       table.occurredAt,
     ),
   ],
@@ -3035,6 +3132,8 @@ export type DiveSite = typeof diveSites.$inferSelect;
 export type TripRequirement = typeof tripRequirements.$inferSelect;
 export type RentalFitProfile = typeof rentalFitProfiles.$inferSelect;
 export type RollCallEvent = typeof rollCallEvents.$inferSelect;
+export type RollCallCrewEvent = typeof rollCallCrewEvents.$inferSelect;
+export type TripAssignmentRole = (typeof tripAssignmentRole.enumValues)[number];
 export type NitroxCertification = typeof nitroxCertifications.$inferSelect;
 export type ShopStripeAccount = typeof shopStripeAccounts.$inferSelect;
 export type ShopWhatsappAccount = typeof shopWhatsappAccounts.$inferSelect;

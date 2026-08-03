@@ -1093,11 +1093,19 @@ for (const scheme of ["light", "dark"] as const) {
           .getByRole("link", { name: "After dive 1" })
           .evaluate((link: HTMLElement) => link.click());
         await page.waitForURL(/checkpoint=after_dive_1/);
-        const markNotBack = page.getByRole("button", { name: "Mark not back aboard" }).first();
+        // Scoped to the diver list: the crew section above it carries controls
+        // with the same words, for a crew member rather than a diver.
+        const markNotBack = page
+          .locator("#roll-call-list")
+          .getByRole("button", { name: "Mark not back aboard" })
+          .first();
         await markNotBack.evaluate((button) => button.scrollIntoView({ block: "center" }));
         await markNotBack.click();
         await expect(
-          page.getByRole("button", { name: "Not back aboard", exact: true }).first(),
+          page
+            .locator("#roll-call-list")
+            .getByRole("button", { name: "Not back aboard", exact: true })
+            .first(),
         ).toBeVisible();
         await capture(page, "manifest-not-back-aboard", scheme);
       });

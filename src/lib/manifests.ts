@@ -151,24 +151,41 @@ export type RollCallRecord = {
 
 export type ManifestCrewMember = {
   /**
-   * The crew member's `people.id`. Carried even though nothing addresses a crew
-   * member individually yet: dropping it is what foreclosed a per-person crew
-   * roll call, since no id ever reached a surface that could have named one
-   * (ADR 20260802-crew-roll-call-attestation). It is also the stable list key —
-   * two crew can share a full name.
+   * The crew member's `people.id` — the **subject** of their roll-call result
+   * (ADR 20260803-per-person-crew-roll-call). Carrying it is what made a
+   * per-person crew roll call reachable at all; dropping it is what foreclosed
+   * one, since no id ever reached a surface that could name a crew member (ADR
+   * 20260802). It is also the stable list key — two crew can share a full name.
    */
   id: string;
   fullName: string;
+  /**
+   * What this person is doing on **this** trip when the roster says so
+   * (`effectiveCrewRoles`, src/lib/crew-roles.ts), otherwise their standing
+   * shop-wide roles. Display only — the supervision ratio reads the per-trip
+   * role and the shop-wide roles together, never this list.
+   */
   roles: string[];
+  /**
+   * Their result at this checkpoint, read through the same predicates a diver's
+   * is (`isRollCallAccountedFor`, `carryForwardNotBoarded`). Absent means
+   * nobody has said, which keeps the checkpoint open.
+   */
+  rollCall?: RollCallRecord;
 };
 
 /**
  * A staff member's statement of how many crew are aboard at one checkpoint,
- * out of how many the trip has assigned. The crew half of the head count:
- * crew hold no booking, so they are not roll-call subjects, and before this
- * existed a checkpoint could read "complete" with a divemaster still down.
+ * out of how many the trip has assigned. The **count-level** half of the crew
+ * head count: crew hold no booking, so they are not `roll_call_events`
+ * subjects, and before this existed a checkpoint could read "complete" with a
+ * divemaster still down.
  *
- * Interim by design — a count, not a per-person roll call. See the ADR.
+ * It is no longer the only crew evidence — each assigned crew member now has a
+ * result of their own (`ManifestCrewMember.rollCall`, ADR
+ * 20260803-per-person-crew-roll-call). The count stays because it is the only
+ * thing that can speak for a hand nobody rostered, and for a trip with an empty
+ * assignment list where there is no named person to ask about.
  */
 export type CrewAttestation = {
   /** Bodies counted by a human. Never derived from the assignment list. */
@@ -226,6 +243,31 @@ export function isRollCallAccountedFor(
 }
 
 /**
+ * The crew half of "who is unaccounted for", from the crew list itself. The
+ * same two predicates a diver's result goes through, so the live manifest, the
+ * dock copy, and every test answer this identically — and so a crew member who
+ * did not come back can never read as handled (DOM-H3's rule, applied to the
+ * people most reliably in the water).
+ *
+ * Absence is *awaiting*, never accounted for. That is what makes the offline
+ * copy fail closed: a snapshot saved before per-person crew results existed
+ * carries no results, so every crew member on it reads as awaiting and the
+ * checkpoint stays open there exactly as it does online.
+ */
+export function crewRollCallCounts(
+  checkpoint: RollCallCheckpoint,
+  crew: readonly { rollCall?: Pick<RollCallRecord, "state" | "implied"> }[],
+): { crewAwaiting: number; crewNotBackAboard: number } {
+  return {
+    // Named `crew*` rather than `awaiting`/`notBackAboard` so the result spreads
+    // straight into `rollCallCompleteness` without a caller silently
+    // overwriting the *diver* counts with the crew ones.
+    crewAwaiting: crew.filter((member) => !member.rollCall).length,
+    crewNotBackAboard: crew.filter((member) => isNotBackAboard(checkpoint, member.rollCall)).length,
+  };
+}
+
+/**
  * Why a checkpoint is not closed yet. Codes, not sentences — the UI picks the
  * words from each locale's `staff.json`.
  *
@@ -235,17 +277,28 @@ export function isRollCallAccountedFor(
  *   `listRollCallGaps` ranks `missing_diver` above `after_dive_uncounted`: a
  *   stated "they didn't come back" outranks a clerical gap on the same boat.
  * - `divers_awaiting` — at least one booked diver has no result here.
+ * - `crew_not_back_aboard` — a human recorded a *named* crew member as not back
+ *   aboard after a dive. The loudest thing on this list: it is a stated
+ *   emergency about the people most reliably in the water, so it outranks
+ *   every other crew reason.
  * - `crew_not_attested` — every diver is counted, but nobody has said how many
  *   crew are aboard. Includes a trip with *zero* assigned crew: "0 of 0" is
  *   still a human statement, never an automatic pass (see below).
  * - `crew_short` — fewer crew were counted aboard than the trip has assigned.
+ * - `crew_awaiting` — the count covers everyone, but a named crew member has no
+ *   result of their own at this checkpoint. Ranked below `crew_short` for the
+ *   same reason `divers_not_back_aboard` outranks `divers_awaiting`: a human
+ *   who counted and came up short has stated an absence, while an untapped
+ *   button is a clerical gap.
  */
 export type RollCallIncompleteReason =
   | "no_divers"
   | "divers_not_back_aboard"
   | "divers_awaiting"
+  | "crew_not_back_aboard"
   | "crew_not_attested"
-  | "crew_short";
+  | "crew_short"
+  | "crew_awaiting";
 
 export type RollCallCompleteness = {
   complete: boolean;
@@ -272,10 +325,17 @@ export type RollCallCompleteness = {
  *    DOM-H3). That is why this takes both counts rather than one `awaiting`:
  *    the *closing* rule is `unaccountedFor === 0`, and the split only decides
  *    which reason to name.
- * 2. Then crew: an attestation must exist, and it must account for at least as
- *    many crew as the trip has assigned **right now** — not the denominator
- *    stored on the attestation. Assigning another crew member after the fact
- *    re-opens the checkpoint instead of riding on a stale count.
+ * 2. Then crew, which is two sources and **one predicate** (ADR
+ *    20260803-per-person-crew-roll-call). An attestation must exist and must
+ *    account for at least as many crew as the trip has assigned **right now** —
+ *    not the denominator stored on the attestation, so assigning another crew
+ *    member after the fact re-opens the checkpoint instead of riding on a stale
+ *    count — *and* every crew member the trip names must be accounted for
+ *    individually. A count that says "3 aboard" names nobody; it cannot tell
+ *    the boat that the third body is the deckhand rather than the divemaster
+ *    who has not surfaced. Both halves stay because they answer different
+ *    questions: the events cover the named crew, the count covers everyone
+ *    else, including a hand nobody rostered.
  *
  * **Zero assigned crew does not auto-complete.** A trip with no crew assigned is
  * a scheduling gap (the app already nags about it as a coverage gap), not
@@ -301,12 +361,26 @@ export function rollCallCompleteness(input: {
   /** Assigned crew *now* — `manifest.crew.length`, not the attested denominator. */
   crewAssigned: number;
   crewAttestation?: CrewAttestation | null;
+  /**
+   * Assigned crew with no result of their own at this checkpoint
+   * (`crewRollCallCounts`). Defaults to 0 so a caller that knows nothing about
+   * per-person crew results reads exactly as it did before they existed —
+   * every in-app caller passes both, and the offline copy derives them from
+   * the snapshot's own crew list so an older snapshot with no crew results
+   * reads every crew member as awaiting rather than as accounted for.
+   */
+  crewAwaiting?: number;
+  /** Assigned crew a human recorded as not back aboard *after a dive*. */
+  crewNotBackAboard?: number;
 }): RollCallCompleteness {
   const notBackAboard = input.notBackAboard ?? 0;
   const unaccountedFor = input.awaiting + notBackAboard;
   const diversAccountedFor = input.totalDivers > 0 && unaccountedFor === 0;
   const attestation = input.crewAttestation ?? null;
-  const crewAccountedFor = attestation !== null && attestation.crewAboard >= input.crewAssigned;
+  const crewAwaiting = input.crewAwaiting ?? 0;
+  const crewNotBackAboard = input.crewNotBackAboard ?? 0;
+  const crewCounted = attestation !== null && attestation.crewAboard >= input.crewAssigned;
+  const crewAccountedFor = crewCounted && crewAwaiting === 0 && crewNotBackAboard === 0;
   const reason: RollCallIncompleteReason | null =
     input.totalDivers === 0
       ? "no_divers"
@@ -314,11 +388,15 @@ export function rollCallCompleteness(input: {
         ? "divers_not_back_aboard"
         : input.awaiting > 0
           ? "divers_awaiting"
-          : attestation === null
-            ? "crew_not_attested"
-            : crewAccountedFor
-              ? null
-              : "crew_short";
+          : crewNotBackAboard > 0
+            ? "crew_not_back_aboard"
+            : attestation === null
+              ? "crew_not_attested"
+              : !crewCounted
+                ? "crew_short"
+                : crewAwaiting > 0
+                  ? "crew_awaiting"
+                  : null;
   return {
     complete: diversAccountedFor && crewAccountedFor,
     diversAccountedFor,
@@ -405,6 +483,7 @@ export function buildTripManifest(input: {
     unaccountedFor: awaiting + notBackAboard,
   };
   const crewAttestation = input.crewAttestation ?? null;
+  const crewCounts = crewRollCallCounts(checkpoint, input.crew);
   return {
     trip: input.trip,
     checkpoint,
@@ -416,6 +495,7 @@ export function buildTripManifest(input: {
       notBackAboard: summary.notBackAboard,
       crewAssigned: input.crew.length,
       crewAttestation,
+      ...crewCounts,
     }),
     divers,
     summary,

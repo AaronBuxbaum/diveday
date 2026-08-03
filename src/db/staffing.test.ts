@@ -156,6 +156,63 @@ describe("staffing view", () => {
     expect(entry?.gaps).toContain("course_needs_instructor");
   });
 
+  /**
+   * DOM-M3. The coverage list, the trip page, the Today queue, and the booking
+   * gate all ask "is this course session staffed" and all used to answer it
+   * from shop-wide roles alone, so an instructor rostered as this trip's deck
+   * hand cleared the gap on his own. One definition now decides it
+   * (`countInWaterCrew`, src/lib/crew-roles.ts).
+   */
+  it("does not let an instructor rostered as deck crew cover a course session", async () => {
+    const { db, shop } = await seededShopContext();
+    const [course] = await db
+      .select()
+      .from(courses)
+      .where(and(eq(courses.shopId, shop.id), eq(courses.title, "Open Water Diver")));
+    const staff = await listStaff(db, shop.id);
+    const instructor = staff.find((entry) => entry.roles.includes("instructor"));
+    if (!course || !instructor) throw new Error("seeded fixture missing");
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      courseId: course.id,
+      title: "Per-trip role coverage session",
+      startsAt: new Date(Date.now() + OPEN_TEST_SESSION_OFFSET_MS + 2 * 60 * 60 * 1000),
+      endsAt: new Date(Date.now() + OPEN_TEST_SESSION_OFFSET_MS + 6 * 60 * 60 * 1000),
+      capacity: 10,
+      plannedDives: 2,
+    });
+    if (!trip) throw new Error("failed to create course trip");
+
+    const gapsFor = async () => {
+      const view = await getStaffingView(
+        db,
+        shop.id,
+        new Date(trip.startsAt.getTime() - 60 * 60 * 1000),
+        new Date(trip.endsAt.getTime() + 60 * 60 * 1000),
+      );
+      return view.trips.find((row) => row.trip.id === trip.id)?.gaps ?? [];
+    };
+
+    expect(
+      await setTripCrew(db, shop.id, trip.id, [
+        { personId: instructor.person.id, tripRole: "crew" },
+      ]),
+    ).toBe(true);
+    expect(await gapsFor()).toContain("course_needs_instructor");
+
+    // The same person, rostered to the job he is actually doing.
+    expect(
+      await setTripCrew(db, shop.id, trip.id, [
+        { personId: instructor.person.id, tripRole: "instructor" },
+      ]),
+    ).toBe(true);
+    expect(await gapsFor()).not.toContain("course_needs_instructor");
+
+    // And an unspecified role stays the status quo.
+    expect(await setTripCrew(db, shop.id, trip.id, [instructor.person.id])).toBe(true);
+    expect(await gapsFor()).not.toContain("course_needs_instructor");
+  });
+
   it("shows a staff member's crewed trips on their staffing card", async () => {
     const { db, shop } = await seededShopContext();
     const staff = await listStaff(db, shop.id);

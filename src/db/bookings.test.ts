@@ -27,6 +27,7 @@ import {
   trips,
 } from "./schema";
 import {
+  changeTripCrew,
   createTrip,
   getTripRoster,
   listStaff,
@@ -487,6 +488,133 @@ describe("restoreBooking (undo of a roster removal)", () => {
     }
     return trip;
   }
+
+  /**
+   * DOM-M3. Roles were shop-wide only, so the crew list said who was aboard and
+   * never what they were doing there: an instructor rostered as this trip's
+   * deck hand still counted as the session's instructor and cleared
+   * `course_unstaffed` on his own, and a divemaster rostered as the captain
+   * still bought two students' worth of ratio capacity. The one definition is
+   * `countInWaterCrew` (src/lib/crew-roles.ts); this is it reaching the gate
+   * that actually refuses a seat.
+   */
+  describe("a per-trip role decides who counts toward the ratio", () => {
+    async function bookOne(db: AppDb, shopId: string, tripId: string, name: string) {
+      return createBooking(db, {
+        actor: "staff",
+        shopId,
+        tripId,
+        fullName: name,
+        email: `${name.toLowerCase().replace(/\W+/g, "-")}@example.com`,
+      });
+    }
+
+    it("does not let an instructor rostered as deck crew staff the session", async () => {
+      const { db, shop } = await seededContext();
+      const trip = await introSession(db, shop.id);
+      const staff = await listStaff(db, shop.id);
+      const instructor = staff.find((entry) => entry.roles.includes("instructor"));
+      if (!instructor) throw new Error("seeded instructor missing");
+
+      // Same person, same qualification, same assignment row — only the job
+      // they are rostered to do differs.
+      expect(
+        await setTripCrew(db, shop.id, trip.id, [
+          { personId: instructor.person.id, tripRole: "crew" },
+        ]),
+      ).toBe(true);
+      await expect(bookOne(db, shop.id, trip.id, "Ratio Role Diver A")).resolves.toMatchObject({
+        ok: false,
+        reason: "course_unstaffed",
+      });
+
+      // Rostered as the instructor: the session is staffed and seats open.
+      expect(
+        await setTripCrew(db, shop.id, trip.id, [
+          { personId: instructor.person.id, tripRole: "instructor" },
+        ]),
+      ).toBe(true);
+      await expect(bookOne(db, shop.id, trip.id, "Ratio Role Diver B")).resolves.toMatchObject({
+        ok: true,
+      });
+
+      // And an unspecified role is the status quo — exactly what every row
+      // written before the column existed carries, and it must keep behaving
+      // the way it always did.
+      expect(await setTripCrew(db, shop.id, trip.id, [instructor.person.id])).toBe(true);
+      await expect(bookOne(db, shop.id, trip.id, "Ratio Role Diver C")).resolves.toMatchObject({
+        ok: true,
+      });
+    });
+
+    it("stops a divemaster rostered as captain from raising the seat cap", async () => {
+      const { db, shop } = await seededContext();
+      const [course] = await db
+        .select()
+        .from(courses)
+        .where(and(eq(courses.shopId, shop.id), eq(courses.title, "Open Water Diver")));
+      if (!course) throw new Error("Open Water Diver course missing");
+      const staff = await listStaff(db, shop.id);
+      const instructor = staff.find((entry) => entry.roles.includes("instructor"));
+      const divemaster = staff.find(
+        (entry) => entry.roles.includes("divemaster") && !entry.roles.includes("instructor"),
+      );
+      if (!instructor || !divemaster) throw new Error("seeded crew missing");
+
+      // Entry-level ratio: 8 students per instructor, +2 per certified
+      // assistant. Capacity 12 so only the ratio can refuse anything.
+      const trip = await createTrip(db, {
+        shopId: shop.id,
+        courseId: course.id,
+        title: "Open Water — per-trip role test",
+        startsAt: new Date(Date.now() + INTRO_SESSION_OFFSET_MS + 60 * 60 * 1000),
+        endsAt: new Date(Date.now() + INTRO_SESSION_OFFSET_MS + 5 * 60 * 60 * 1000),
+        capacity: 12,
+        plannedDives: 2,
+      });
+      if (!trip) throw new Error("failed to create course trip");
+      expect(
+        await setTripCrew(db, shop.id, trip.id, [
+          { personId: instructor.person.id, tripRole: "instructor" },
+          { personId: divemaster.person.id, tripRole: "divemaster" },
+        ]),
+      ).toBe(true);
+
+      // 8 base + 2 for the assistant = 10 seats. Fill 9 of them.
+      for (let i = 0; i < 9; i += 1) {
+        await expect(bookOne(db, shop.id, trip.id, `OW Ratio Diver ${i}`)).resolves.toMatchObject({
+          ok: true,
+        });
+      }
+
+      // Move the divemaster to the helm. She is still aboard and still a
+      // divemaster — she is just not supervising anybody in the water, so the
+      // cap drops back to 8 and the boat is already over it.
+      expect(
+        await changeTripCrew(db, shop.id, trip.id, {
+          personId: divemaster.person.id,
+          operation: "assign",
+          tripRole: "captain",
+        }),
+      ).toBe(true);
+      await expect(bookOne(db, shop.id, trip.id, "OW Ratio Diver 9")).resolves.toMatchObject({
+        ok: false,
+        reason: "course_ratio_full",
+      });
+
+      // Hand her back to the water and the tenth seat exists again.
+      expect(
+        await changeTripCrew(db, shop.id, trip.id, {
+          personId: divemaster.person.id,
+          operation: "assign",
+          tripRole: "divemaster",
+        }),
+      ).toBe(true);
+      await expect(bookOne(db, shop.id, trip.id, "OW Ratio Diver 10")).resolves.toMatchObject({
+        ok: true,
+      });
+    });
+  });
 
   it("refuses an undo that would put a third diver on a two-seat intro session", async () => {
     const { db, shop } = await seededContext();

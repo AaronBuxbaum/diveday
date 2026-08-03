@@ -17,6 +17,7 @@ import {
 } from "drizzle-orm";
 import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
+import type { TripCrewRole } from "@/lib/crew-roles";
 import { reviewManifestChange } from "@/lib/manifest-change-review";
 import { maxRecordedDiveNumber } from "@/lib/manifests";
 import type { TripRecurrenceFrequency } from "@/lib/recurrence";
@@ -1099,6 +1100,24 @@ export async function getTripCrewIds(db: AppDb, shopId: string, tripId: string):
   return rows.map((r) => r.personId);
 }
 
+/**
+ * A trip's crew with the job each is rostered to do on it (null = not
+ * specified, ADR 20260803-per-trip-crew-role). Same tenancy proof as
+ * `getTripCrewIds` — through `trips`, because `trip_assignments` carries no
+ * `shop_id` of its own (CR-007).
+ */
+export async function getTripCrewAssignments(
+  db: DbExecutor,
+  shopId: string,
+  tripId: string,
+): Promise<{ personId: string; tripRole: TripCrewRole | null }[]> {
+  return db
+    .select({ personId: tripAssignments.personId, tripRole: tripAssignments.tripRole })
+    .from(tripAssignments)
+    .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
+    .where(and(eq(tripAssignments.tripId, tripId), eq(trips.shopId, shopId)));
+}
+
 export async function listTripScheduleDays(db: DbExecutor, shopId: string, tripId: string) {
   const rows = await db
     .select({ day: tripScheduleDays })
@@ -1110,21 +1129,43 @@ export async function listTripScheduleDays(db: DbExecutor, shopId: string, tripI
 }
 
 /**
+ * One entry in a crew replacement. A bare id means "this person, leave their
+ * per-trip role alone"; the object form sets it, and an explicit `null` clears
+ * it back to unspecified.
+ */
+export type TripCrewMemberInput = string | { personId: string; tripRole?: TripCrewRole | null };
+
+function crewInputPersonId(entry: TripCrewMemberInput): string {
+  return typeof entry === "string" ? entry : entry.personId;
+}
+
+/**
  * Replace a trip's crew. Only people with a staff role in the shop stick.
  * Proves the trip itself belongs to the shop in the same transaction as the
  * write — `trip_assignments` carries no `shop_id` of its own to lean on, so
  * without this a tripId for any shop plus a validated personId list would
  * silently rewrite another shop's crew (CR-007). Returns false, doing
  * nothing, for a tripId that isn't this shop's.
+ *
+ * The write is still delete-all-then-insert, which is why per-trip roles are
+ * **read back inside the transaction and carried forward** for anyone who
+ * stays on the crew (ADR 20260803-per-trip-crew-role). Without that, every
+ * full crew edit — a surface that has nothing to do with roles — would
+ * silently blank "Ana is captain of this sailing" and hand her back to the
+ * supervision ratio as an in-water assistant. A caller only overwrites a role
+ * by passing one.
  */
 export async function setTripCrew(
   db: AppDb,
   shopId: string,
   tripId: string,
-  personIds: string[],
+  personIds: readonly TripCrewMemberInput[],
 ): Promise<boolean> {
   const staff = await listStaff(db, shopId);
-  const valid = personIds.filter((id) => staff.some((s) => s.person.id === id));
+  const requested = personIds.filter((entry) =>
+    staff.some((s) => s.person.id === crewInputPersonId(entry)),
+  );
+  const valid = requested.map(crewInputPersonId);
   return db.transaction(async (tx) => {
     const [trip] = await tx
       .select({
@@ -1186,9 +1227,31 @@ export async function setTripCrew(
         .limit(1);
       if (conflict.length > 0) return false;
     }
+    // Read the roles that already exist before the delete, so a crew edit that
+    // says nothing about roles preserves them instead of blanking them.
+    const existingRoles = new Map(
+      (
+        await tx
+          .select({ personId: tripAssignments.personId, tripRole: tripAssignments.tripRole })
+          .from(tripAssignments)
+          .where(eq(tripAssignments.tripId, tripId))
+      ).map((row) => [row.personId, row.tripRole] as const),
+    );
     await tx.delete(tripAssignments).where(eq(tripAssignments.tripId, tripId));
-    if (valid.length > 0) {
-      await tx.insert(tripAssignments).values(valid.map((personId) => ({ tripId, personId })));
+    if (requested.length > 0) {
+      await tx.insert(tripAssignments).values(
+        requested.map((entry) => {
+          const personId = crewInputPersonId(entry);
+          const specified = typeof entry === "string" ? undefined : entry.tripRole;
+          return {
+            tripId,
+            personId,
+            // `undefined` means the caller did not mention the role; an
+            // explicit `null` clears it.
+            tripRole: specified === undefined ? (existingRoles.get(personId) ?? null) : specified,
+          };
+        }),
+      );
     }
     return true;
   });
@@ -1197,6 +1260,13 @@ export async function setTripCrew(
 export type TripCrewChange = {
   personId: string;
   operation: "assign" | "unassign";
+  /**
+   * The job this person is doing on this trip (ADR
+   * 20260803-per-trip-crew-role). Omit to leave an existing assignment's role
+   * untouched; pass `null` to clear it back to unspecified. Ignored on
+   * `unassign`, which removes the row and its role with it.
+   */
+  tripRole?: TripCrewRole | null;
 };
 
 /**
@@ -1304,10 +1374,21 @@ export async function changeTripCrew(
         )
         .limit(1);
       if (conflict.length > 0) return false;
-      await tx
+      const insert = tx
         .insert(tripAssignments)
-        .values({ tripId, personId: change.personId })
-        .onConflictDoNothing();
+        .values({ tripId, personId: change.personId, tripRole: change.tripRole ?? null });
+      // Assign is idempotent, so an already-assigned person hits the conflict
+      // path — which is exactly where a *role change* on an existing
+      // assignment arrives. `onConflictDoNothing` alone would accept the call,
+      // return true, and silently keep the old role (ADR
+      // 20260803-per-trip-crew-role). Only a caller that actually named a role
+      // writes one; omitting it still means "leave it as it is".
+      await (change.tripRole === undefined
+        ? insert.onConflictDoNothing()
+        : insert.onConflictDoUpdate({
+            target: [tripAssignments.tripId, tripAssignments.personId],
+            set: { tripRole: change.tripRole },
+          }));
     } else {
       await tx
         .delete(tripAssignments)

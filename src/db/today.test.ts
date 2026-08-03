@@ -16,16 +16,19 @@ import { startPaymentOperation } from "./payment-operations";
 import { saveRentalFit } from "./rental-fit";
 import {
   bookings as bookingsTable,
+  courses,
   nitroxCertifications,
   people,
   rollCallEvents as rollCallEventsTable,
+  tripAssignments,
   trips as tripsTable,
   tripWaitlistEntries,
 } from "./schema";
+import { getStaffingView } from "./staffing";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { getTodayWork } from "./today";
 import { sendLastMinuteDealBlast } from "./trip-promos";
-import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
+import { createTrip, getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
 
 function fakePromotions(): PromotionProvider {
@@ -457,6 +460,85 @@ describe("today's work queue (in-memory PGlite)", () => {
       expect(action.actionLabel).toBeTruthy();
       expect(action.detail).toBeTruthy();
     }
+  });
+});
+
+/**
+ * DOM-M3. Today, the staffing coverage list, the trip page, and the booking
+ * gate all ask "is this course session staffed", and all four used to answer
+ * it from shop-wide roles alone — so an instructor rostered as this trip's
+ * deck hand cleared `instructor_missing` on his own. Two safety surfaces
+ * disagreeing is worse than either being wrong alone, so this asserts the
+ * agreement directly: one definition (`countInWaterCrew`, src/lib/crew-roles.ts).
+ */
+describe("Today and the staffing view count crew the same way (DOM-M3)", () => {
+  async function courseSessionToday() {
+    const { db, shop } = await seededShopContext();
+    const [course] = await db
+      .select()
+      .from(courses)
+      .where(and(eq(courses.shopId, shop.id), eq(courses.title, "Open Water Diver")));
+    const staff = await listStaff(db, shop.id);
+    const instructor = staff.find((entry) => entry.roles.includes("instructor"));
+    if (!course || !instructor) throw new Error("seeded fixture missing");
+    const startsAt = new Date(nowMs() + 3 * 60 * 60 * 1000);
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      courseId: course.id,
+      title: "Per-trip role session",
+      startsAt,
+      endsAt: new Date(startsAt.getTime() + 4 * 60 * 60 * 1000),
+      capacity: 8,
+      plannedDives: 2,
+    });
+    if (!trip) throw new Error("failed to create course trip");
+    // Inserted directly rather than through `setTripCrew`: the seeded
+    // instructor already crews a boat in this window, and the overlap refusal
+    // is not what this test is about.
+    await db.insert(tripAssignments).values({ tripId: trip.id, personId: instructor.person.id });
+    return { db, shop, trip, instructorId: instructor.person.id };
+  }
+
+  async function unstaffed(
+    db: Awaited<ReturnType<typeof courseSessionToday>>["db"],
+    shop: Awaited<ReturnType<typeof courseSessionToday>>["shop"],
+    trip: { id: string; startsAt: Date; endsAt: Date },
+  ) {
+    const tripId = trip.id;
+    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const view = await getStaffingView(
+      db,
+      shop.id,
+      new Date(trip.startsAt.getTime() - 60 * 60 * 1000),
+      new Date(trip.endsAt.getTime() + 60 * 60 * 1000),
+    );
+    const today = work.actions.some(
+      (action) => action.kind === "instructor_missing" && action.id === `instructor:${tripId}`,
+    );
+    const staffing = (view.trips.find((row) => row.trip.id === tripId)?.gaps ?? []).includes(
+      "course_needs_instructor",
+    );
+    // The agreement itself, stated as one assertion.
+    expect(today).toBe(staffing);
+    return today;
+  }
+
+  it("agrees that a rostered deck hand does not staff the session, and that the instructor does", async () => {
+    const { db, shop, trip, instructorId } = await courseSessionToday();
+    // No per-trip role: the status quo, and both surfaces say it is staffed.
+    expect(await unstaffed(db, shop, trip)).toBe(false);
+
+    await db
+      .update(tripAssignments)
+      .set({ tripRole: "crew" })
+      .where(and(eq(tripAssignments.tripId, trip.id), eq(tripAssignments.personId, instructorId)));
+    expect(await unstaffed(db, shop, trip)).toBe(true);
+
+    await db
+      .update(tripAssignments)
+      .set({ tripRole: "instructor" })
+      .where(and(eq(tripAssignments.tripId, trip.id), eq(tripAssignments.personId, instructorId)));
+    expect(await unstaffed(db, shop, trip)).toBe(false);
   });
 });
 

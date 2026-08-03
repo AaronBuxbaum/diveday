@@ -25,6 +25,7 @@ import {
 } from "@/i18n/today-labels";
 import { nowDate } from "@/lib/clock";
 import { courseCrewGap } from "@/lib/course-ratios";
+import { countInWaterCrew, groupCrewAssignments } from "@/lib/crew-roles";
 import { formatDateTimeTz, formatShortDate, formatTime } from "@/lib/format";
 import { rollCallCheckpoints } from "@/lib/manifests";
 import {
@@ -692,7 +693,11 @@ async function waitlistFrontByTrip(db: AppDb, shopId: string, tripIds: string[])
   return fronts;
 }
 
-/** How many instructors and certified assistants (divemasters) each course trip's crew has. */
+/**
+ * How many instructors and certified assistants (divemasters) each course
+ * trip's crew has, counted by the one definition every ratio gate shares
+ * (`countInWaterCrew`, src/lib/crew-roles.ts).
+ */
 async function courseCrewCountsByTrip(
   db: AppDb,
   shopId: string,
@@ -704,6 +709,7 @@ async function courseCrewCountsByTrip(
     .select({
       tripId: tripAssignments.tripId,
       personId: tripAssignments.personId,
+      tripRole: tripAssignments.tripRole,
       role: personRoles.role,
     })
     .from(tripAssignments)
@@ -715,33 +721,25 @@ async function courseCrewCountsByTrip(
     // helper itself shouldn't depend on that discipline.
     .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
     .innerJoin(people, eq(people.id, tripAssignments.personId))
-    .innerJoin(personRoles, eq(personRoles.personId, people.id))
+    // A `left join`, and no role filter: the per-trip role lives on the
+    // assignment row, so a rostered captain has to reach the rule that decides
+    // they count for nothing rather than being filtered out of the query.
+    .leftJoin(personRoles, eq(personRoles.personId, people.id))
     .where(
       and(
         eq(trips.shopId, shopId),
         eq(people.shopId, shopId),
-        inArray(personRoles.role, ["instructor", "divemaster"]),
         inArray(tripAssignments.tripId, tripIds),
       ),
     );
-  const rolesByTrip = new Map<string, Map<string, Set<string>>>();
+  const rowsByTrip = new Map<string, typeof rows>();
   for (const row of rows) {
-    const rolesByPerson = rolesByTrip.get(row.tripId) ?? new Map<string, Set<string>>();
-    const roles = rolesByPerson.get(row.personId) ?? new Set<string>();
-    roles.add(row.role);
-    rolesByPerson.set(row.personId, roles);
-    rolesByTrip.set(row.tripId, rolesByPerson);
+    const list = rowsByTrip.get(row.tripId) ?? [];
+    list.push(row);
+    rowsByTrip.set(row.tripId, list);
   }
   for (const tripId of tripIds) {
-    const rolesByPerson = rolesByTrip.get(tripId) ?? new Map<string, Set<string>>();
-    let instructorCount = 0;
-    let assistantCount = 0;
-    for (const roles of rolesByPerson.values()) {
-      if (roles.has("instructor")) instructorCount += 1;
-      // A person holding both roles is the instructor, not their own assistant.
-      else if (roles.has("divemaster")) assistantCount += 1;
-    }
-    counts.set(tripId, { instructorCount, assistantCount });
+    counts.set(tripId, countInWaterCrew(groupCrewAssignments(rowsByTrip.get(tripId) ?? [])));
   }
   return counts;
 }
@@ -867,11 +865,12 @@ export async function getTodayWork(
             tripId: tripAssignments.tripId,
             personId: people.id,
             fullName: people.fullName,
+            tripRole: tripAssignments.tripRole,
             role: personRoles.role,
           })
           .from(tripAssignments)
           .innerJoin(people, eq(people.id, tripAssignments.personId))
-          .innerJoin(personRoles, eq(personRoles.personId, people.id))
+          .leftJoin(personRoles, eq(personRoles.personId, people.id))
           .where(inArray(tripAssignments.tripId, tripIds))
       : [];
 
@@ -883,7 +882,16 @@ export async function getTodayWork(
       entry = { id: row.personId, fullName: row.fullName, roles: [] };
       list.push(entry);
     }
-    if (!entry.roles.includes(row.role)) {
+    // What this person is doing on *this* boat when the roster says
+    // (`effectiveCrewRoles`, src/lib/crew-roles.ts) — the standing role list is
+    // true and misleading at once on a board whose whole question is "who is
+    // doing what today".
+    if (row.tripRole) {
+      entry.roles = [row.tripRole];
+      crewByTrip.set(row.tripId, list);
+      continue;
+    }
+    if (row.role && !entry.roles.includes(row.role)) {
       entry.roles.push(row.role);
     }
     crewByTrip.set(row.tripId, list);
