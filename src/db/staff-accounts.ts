@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
-import { hash } from "bcryptjs";
 import { and, eq, inArray, isNull, ne, sql } from "drizzle-orm";
 import { type Role, STAFF_ROLES } from "@/lib/authz";
+import { hashPassword } from "@/lib/password-hashing";
 import type { AppDb, DbExecutor } from "./client";
 import { people, personRoles, userAccounts } from "./schema";
 
@@ -194,7 +194,7 @@ export async function inviteStaffMember(
       // Never given to anyone: the invitee chooses their real password when
       // they accept the invite, and until then this hash cannot match any
       // submitted password.
-      const hashedPassword = await hash(randomBytes(32).toString("hex"), 10);
+      const hashedPassword = await hashPassword(randomBytes(32).toString("hex"));
       const [account] = await tx
         .insert(userAccounts)
         .values({ personId, email, hashedPassword, status: "invited" })
