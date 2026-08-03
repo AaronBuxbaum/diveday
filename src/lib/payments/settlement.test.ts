@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { allocateSettledTotal, type SettlementShare } from "./settlement";
+import { allocateSettledTotal, netOfPercentDiscount, type SettlementShare } from "./settlement";
 
 function sum(allocation: Map<string, number>): number {
   return [...allocation.values()].reduce((total, cents) => total + cents, 0);
@@ -108,5 +108,31 @@ describe("allocateSettledTotal", () => {
     expect(free.get("a")).toBe(0);
     // Nonsense inputs clamp rather than propagate.
     expect(allocateSettledTotal([{ key: "a", askedCents: -5 }], -100).get("a")).toBe(0);
+  });
+});
+
+describe("netOfPercentDiscount", () => {
+  // PAY-M3: used only when Stripe reported no `amount_total`, to work out what
+  // a discounted session can have captured before splitting it per booking.
+  it("takes the percentage off the asked total", () => {
+    expect(netOfPercentDiscount(36_000, 20)).toBe(28_800);
+    expect(netOfPercentDiscount(42_000, 10)).toBe(37_800);
+    expect(netOfPercentDiscount(18_000, 0)).toBe(18_000);
+  });
+
+  it("rounds the discount up, so the answer is a floor on what was captured", () => {
+    // 33% of 10001 is 3300.33. Rounding the *discount* up leaves 6700 — a cent
+    // under what Stripe would have kept. Erring low can only ever under-refund
+    // by a cent; erring high is what lets one party member drain the pot.
+    expect(netOfPercentDiscount(10_001, 33)).toBe(6_700);
+    expect(netOfPercentDiscount(10_001, 33)).toBeLessThanOrEqual(10_001 - Math.round(3_300.33));
+  });
+
+  it("never returns a negative, and reads a 100% code as the zero it is", () => {
+    expect(netOfPercentDiscount(18_000, 100)).toBe(0);
+    // Nonsense percentages clamp rather than propagate.
+    expect(netOfPercentDiscount(18_000, 140)).toBe(0);
+    expect(netOfPercentDiscount(18_000, -5)).toBe(18_000);
+    expect(netOfPercentDiscount(Number.NaN, 20)).toBe(0);
   });
 });

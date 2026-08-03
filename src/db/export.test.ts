@@ -121,6 +121,14 @@ const EXCLUDED_TABLES = [
   "payment_operation_intents", // internal reconciliation ledger, not a shop record (CR-005)
   "stripe_webhook_events", // provider webhook-delivery ledger, not a shop record — same reasoning as payment_operation_intents
   "media_deletion_attempts", // internal reconciliation ledger, not a shop record (CR-012)
+  // The "Stripe still holds this erased diver" ledger. Not a shop record: every
+  // row is a pointer into *this* Stripe account (`cus_…`) plus an attestation
+  // about work done there, both meaningless in another system — the same
+  // reasoning as shop_stripe_accounts. Deliberately not exported for a second
+  // reason too: an outstanding obligation is the shop's own compliance state,
+  // and shipping it into a portable bundle would carry it somewhere nobody can
+  // discharge it (ADR 20260803-processor-erasure-obligations).
+  "processor_erasure_obligations",
   "global_dive_sites", // DiveDay's shared catalog; the shop's copies export
   "global_dive_site_versions",
   "user_accounts", // credentials are never exported

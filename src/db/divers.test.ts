@@ -16,6 +16,7 @@ import {
   restoreDiver,
   updateDiver,
 } from "./divers";
+import { listOwedProcessorErasures } from "./processor-erasure";
 import { saveRentalFit } from "./rental-fit";
 import {
   activityEvents,
@@ -961,7 +962,12 @@ describe("diver erasure", () => {
 
     expect(
       await anonymizeDiver(db, { shopId: shop.id, personId: diver.id, actorPersonId: ownerId }),
-    ).toEqual({ ok: true, alreadyAnonymized: false, queuedMediaDeletions: 0 });
+    ).toEqual({
+      ok: true,
+      alreadyAnonymized: false,
+      queuedMediaDeletions: 0,
+      queuedProcessorErasures: 0,
+    });
     const [person] = await db.select().from(people).where(eq(people.id, diver.id));
     expect(person).toMatchObject({ fullName: ANONYMIZED_PERSON_NAME, email: null });
     expect(person?.anonymizedAt).toBeInstanceOf(Date);
@@ -1061,7 +1067,12 @@ describe("diver erasure", () => {
       personId: diver.id,
       actorPersonId: ownerId,
     });
-    expect(second).toEqual({ ok: true, alreadyAnonymized: true, queuedMediaDeletions: 0 });
+    expect(second).toEqual({
+      ok: true,
+      alreadyAnonymized: true,
+      queuedMediaDeletions: 0,
+      queuedProcessorErasures: 0,
+    });
 
     const [afterSecond] = await db
       .select()
@@ -1460,6 +1471,246 @@ describe("diver erasure", () => {
       expect(after.some((message) => message.includes("about Ana"))).toBe(false);
       // …and `Dana` is not `Ana`.
       expect(after).toContain("Dana Reyes updated the manifest");
+    });
+  });
+
+  /**
+   * `orders.stripe_customer_id` is NOT NULL and names a customer object living
+   * in the shop's own Stripe account under the diver's name and email. Erasure
+   * cannot rewrite it and deliberately does not delete it — it records the
+   * obligation instead (ADR 20260803-processor-erasure-obligations).
+   */
+  describe("the Stripe customer erasure cannot reach", () => {
+    it("records the obligation the erasure could not discharge itself", async () => {
+      const { db, shop, diver, ownerId } = await erasableDiver();
+
+      const result = await anonymizeDiver(db, {
+        shopId: shop.id,
+        personId: diver.id,
+        actorPersonId: ownerId,
+      });
+      expect(result).toMatchObject({ ok: true, queuedProcessorErasures: 1 });
+
+      const owed = await listOwedProcessorErasures(db, shop.id);
+      expect(owed).toHaveLength(1);
+      expect(owed[0]).toMatchObject({
+        shopId: shop.id,
+        personId: diver.id,
+        target: "stripe_customer",
+        externalId: "cus_elena",
+        status: "owed",
+      });
+      // The row is a pointer and an attestation, nothing else — the identity is
+      // exactly what the erasure just removed.
+      expect(JSON.stringify(owed[0])).not.toContain("Elena");
+    });
+
+    it("raises nothing for a diver who never had an order", async () => {
+      const { db, shop, ownerId } = await erasableDiver();
+      const orderless = await createDiver(db, { shopId: shop.id, fullName: "Orderless Ola" });
+      if (!orderless) throw new Error("diver insert failed");
+
+      const result = await anonymizeDiver(db, {
+        shopId: shop.id,
+        personId: orderless.id,
+        actorPersonId: ownerId,
+      });
+      expect(result).toMatchObject({ ok: true, queuedProcessorErasures: 0 });
+      expect(await listOwedProcessorErasures(db, shop.id)).toEqual([]);
+    });
+
+    it("never raises an obligation for a bystander's Stripe customer", async () => {
+      const { db, shop, diver, ownerId, trip } = await erasableDiver();
+      const bystander = await createDiver(db, {
+        shopId: shop.id,
+        fullName: "Bystander Bea",
+        email: "bea@example.com",
+      });
+      if (!bystander) throw new Error("bystander insert failed");
+      const beaBooking = await createBooking(db, {
+        actor: "staff",
+        shopId: shop.id,
+        tripId: trip.id,
+        personId: bystander.id,
+      });
+      if (!beaBooking.ok) throw new Error("bystander booking failed");
+      await db.insert(orders).values({
+        shopId: shop.id,
+        bookingId: beaBooking.bookingId,
+        personId: bystander.id,
+        createdByPersonId: ownerId,
+        status: "paid",
+        totalCents: 9000,
+        stripeAccountId: "acct_test",
+        stripeCustomerId: "cus_bea",
+        stripeInvoiceId: "in_bea",
+      });
+
+      await anonymizeDiver(db, { shopId: shop.id, personId: diver.id, actorPersonId: ownerId });
+
+      const owed = await listOwedProcessorErasures(db, shop.id);
+      expect(owed.map((row) => row.externalId)).toEqual(["cus_elena"]);
+      // Bea's own order is untouched: erasing one diver must never queue a
+      // delete against another diver's customer record at the processor.
+      const [beaOrder] = await db.select().from(orders).where(eq(orders.personId, bystander.id));
+      expect(beaOrder?.stripeCustomerId).toBe("cus_bea");
+    });
+
+    it("does not raise an obligation visible to another shop", async () => {
+      const { db, shop, diver, ownerId } = await erasableDiver();
+      const [rival] = await db
+        .insert(shops)
+        .values({ name: "Rival Reef", slug: "rival-reef-processor-erasure", timezone: "UTC" })
+        .returning();
+      if (!rival) throw new Error("rival shop insert failed");
+
+      await anonymizeDiver(db, { shopId: shop.id, personId: diver.id, actorPersonId: ownerId });
+
+      expect(await listOwedProcessorErasures(db, shop.id)).toHaveLength(1);
+      expect(await listOwedProcessorErasures(db, rival.id)).toEqual([]);
+    });
+  });
+
+  /**
+   * `course_inquiries` is written from a public page, before any person need
+   * exist, so it carries a *nullable* `person_id` snapshotted at capture when
+   * the supplied address already matched a live diver. That link is the only
+   * handle the sweep has once the diver changes their email.
+   */
+  describe("the course lead's person link", () => {
+    async function inquiryFor(
+      db: AppDb,
+      input: { shopId: string; personId?: string; email?: string; phone?: string; name: string },
+    ) {
+      const [course] = await db
+        .select()
+        .from(courses)
+        .where(eq(courses.shopId, input.shopId))
+        .limit(1);
+      if (!course) throw new Error("seed course missing");
+      const [row] = await db
+        .insert(courseInquiries)
+        .values({
+          shopId: input.shopId,
+          courseId: course.id,
+          personId: input.personId ?? null,
+          name: input.name,
+          email: input.email ?? null,
+          phone: input.phone ?? null,
+          experienceLevel: "certified",
+          message: `${input.name} asking about the advanced course`,
+        })
+        .returning();
+      if (!row) throw new Error("inquiry insert failed");
+      return row.id;
+    }
+
+    async function inquiryById(db: AppDb, id: string) {
+      const [row] = await db.select().from(courseInquiries).where(eq(courseInquiries.id, id));
+      return row;
+    }
+
+    it("reaches a lead whose contact details no longer match the diver's", async () => {
+      const { db, shop, diver, ownerId } = await erasableDiver();
+      // The link was snapshotted when the addresses agreed; the diver has since
+      // moved to a new address and dropped the number. Neither fuzzy handle can
+      // find this row any more.
+      const linked = await inquiryFor(db, {
+        shopId: shop.id,
+        personId: diver.id,
+        name: "Erasure Elena",
+        email: "elena-old@example.com",
+      });
+
+      const result = await anonymizeDiver(db, {
+        shopId: shop.id,
+        personId: diver.id,
+        actorPersonId: ownerId,
+      });
+      if (!result.ok) throw new Error("erasure refused");
+
+      expect(await inquiryById(db, linked)).toMatchObject({
+        name: null,
+        email: null,
+        phone: null,
+        message: null,
+        // Kept: it points at an already-erased row, so it discloses nothing, and
+        // it is what makes a replayed erasure reach this lead again.
+        personId: diver.id,
+      });
+    });
+
+    it("leaves a bystander's lead standing, linked or not", async () => {
+      const { db, shop, diver, ownerId } = await erasableDiver();
+      const bystander = await createDiver(db, {
+        shopId: shop.id,
+        fullName: "Bystander Bea",
+        email: "bea@example.com",
+      });
+      if (!bystander) throw new Error("bystander insert failed");
+      const beasOwn = await inquiryFor(db, {
+        shopId: shop.id,
+        personId: bystander.id,
+        name: "Bystander Bea",
+        email: "bea@example.com",
+      });
+      const unlinked = await inquiryFor(db, {
+        shopId: shop.id,
+        name: "Walk-in Wally",
+        email: "wally@example.com",
+      });
+
+      await anonymizeDiver(db, { shopId: shop.id, personId: diver.id, actorPersonId: ownerId });
+
+      expect(await inquiryById(db, beasOwn)).toMatchObject({
+        name: "Bystander Bea",
+        email: "bea@example.com",
+        personId: bystander.id,
+      });
+      expect(await inquiryById(db, unlinked)).toMatchObject({
+        name: "Walk-in Wally",
+        email: "wally@example.com",
+        personId: null,
+      });
+    });
+
+    it("is tenant-scoped — another shop's lead is untouched", async () => {
+      const { db, shop, diver, ownerId } = await erasableDiver();
+      const [rival] = await db
+        .insert(shops)
+        .values({ name: "Rival Reef", slug: "rival-reef-inquiry-link", timezone: "UTC" })
+        .returning();
+      if (!rival) throw new Error("rival shop insert failed");
+      const [rivalCourse] = await db
+        .insert(courses)
+        .values({ shopId: rival.id, slug: "rival-open-water", title: "Open Water" })
+        .returning();
+      if (!rivalCourse) throw new Error("rival course insert failed");
+      // A row in the rival's shop carrying *our* diver's person id is not a
+      // state the app can reach, so this pins the query's own scoping: the
+      // sweep must key on shop as well as person.
+      const [foreign] = await db
+        .insert(courseInquiries)
+        .values({
+          shopId: rival.id,
+          courseId: rivalCourse.id,
+          personId: diver.id,
+          name: "Erasure Elena",
+          email: "elena@example.com",
+          phone: "+1 305 555 0142",
+          experienceLevel: "certified",
+          message: "Same person, other shop's lead",
+        })
+        .returning();
+      if (!foreign) throw new Error("rival inquiry insert failed");
+
+      await anonymizeDiver(db, { shopId: shop.id, personId: diver.id, actorPersonId: ownerId });
+
+      expect(await inquiryById(db, foreign.id)).toMatchObject({
+        name: "Erasure Elena",
+        email: "elena@example.com",
+        message: "Same person, other shop's lead",
+      });
     });
   });
 });

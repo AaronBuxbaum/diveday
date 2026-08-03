@@ -52,6 +52,35 @@ export async function claimStripeWebhookEvent(
 }
 
 /**
+ * Give a claim back, so a redelivery of the same event id is handled rather
+ * than dropped as a duplicate.
+ *
+ * The claim is its own committed statement, taken *before* the handler runs
+ * and independent of it. Without this, a handler that throws left the row
+ * behind: Stripe (at-least-once) redelivers, `claimStripeWebhookEvent` returns
+ * `false`, the route answers 200, and the event is marked delivered having
+ * never been handled — for `invoice.paid`, `invoice.voided` and
+ * `account.application.deauthorized` there is no other self-heal, so the order
+ * silently never goes paid (PAY-M1).
+ *
+ * Only ever called on the **failure** path. A successfully handled event keeps
+ * its claim forever, which is the ledger's actual invariant: a replay of a
+ * handled event must never reach a handler again, even when a human has since
+ * made a legitimate change (a manual refund) that a re-run would undo — see
+ * `webhook-events.test.ts`.
+ *
+ * Returns whether a row was actually removed. `false` means there was nothing
+ * to release (already gone), which is not an error.
+ */
+export async function releaseStripeWebhookEventClaim(db: AppDb, eventId: string): Promise<boolean> {
+  const [row] = await db
+    .delete(stripeWebhookEvents)
+    .where(eq(stripeWebhookEvents.id, eventId))
+    .returning({ id: stripeWebhookEvents.id });
+  return !!row;
+}
+
+/**
  * True when a chronologically newer `account.updated` event for this
  * connected account has already been claimed in the ledger — the defense
  * against `account.updated`'s otherwise pure last-write-wins update

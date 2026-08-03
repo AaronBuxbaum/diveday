@@ -934,6 +934,17 @@
       "retry": "Retry delete",
       "retrying": "Retrying…"
     },
+    "processorErasureTarget": {
+      "stripe_customer": "Stripe customer"
+    },
+    "processorErasures": {
+      "sectionLabel": "Erasures still owed at Stripe",
+      "heading": "{count, plural, one {# erased diver} other {# erased divers}} still on file at Stripe",
+      "detail": "You erased them here, but Stripe still holds their name and email on these customer records. Only you can remove those — open each one in your Stripe dashboard, then mark it done. Deleting a Stripe customer can't be undone, and your invoices for tax and chargebacks go with it, so check before you do.",
+      "raised": "raised {date}",
+      "discharge": "Mark done at Stripe",
+      "discharging": "Saving…"
+    },
     "soFar": "so far",
     "chooseMonth": "Choose month",
     "previousMonth": "Previous month",

@@ -118,7 +118,8 @@ deleted; rows that are evidence are kept and their personal fields scrubbed.**
 | `notification_delivery_attempts` | `send_error` → null. The append-only twin of the row above, written from the same `delivery.detail` in the same call, so it quotes the same address; scrubbing only the denormalized latest state would leave the address in the history behind it. `send_error_code` is a provider code, not prose, and stays. |
 | `booking_checkouts` | `customer_email` → null. Two asymmetric sweeps — see "The checkout's copy of the address" below. |
 | `notification_send_queue` | rows deleted, matched on `payload->>'to'` (case-insensitive) and `payload->>'bookingId'`. The one un-normalized PII blob; a work queue, not evidence. |
-| `course_inquiries` | `name`, `email`, `phone`, `timing`, `message` → null, matched on the diver's email or phone — see residuals |
+| `course_inquiries` | `name`, `email`, `phone`, `timing`, `message` → null, matched on `person_id` (snapshotted at capture) first, then on the diver's email or phone — see residuals. `person_id` is left in place: it points at an already-erased row, and keeping it is what makes a replayed erasure reach the same leads. |
+| `processor_erasure_obligations` | *written, not scrubbed* — one row per `orders.stripe_customer_id` the erasure could not reach, for the shop to discharge at Stripe ([20260803-processor-erasure-obligations](20260803-processor-erasure-obligations.md)) |
 
 ### The checkout's copy of the address
 
@@ -209,14 +210,25 @@ still in `waiver_records` — is the worst outcome available.
 
 - **`orders.stripe_customer_id` and `stripe_invoice_id`** are `NOT NULL` pointers into Stripe's own
   records. The shop must retain them for tax and chargeback, and DiveDay cannot rewrite Stripe's
-  copy of the customer's name and email from here. Erasure at the processor is a **separate, manual
-  step** (deleting the Stripe customer) and is out of scope for this mechanism. Any commitment made
-  to a diver about erasure must say so.
-- **`course_inquiries` carries no `person_id` at all.** A lead is written before any person exists,
-  so a `person_id`-driven sweep structurally cannot reach it; the sweep matches on the email or
-  phone the diver themselves supplied, which is the only link there is. **An inquiry that carries
-  neither a matching email nor a matching phone is not reached.** That is a stated gap, not an
-  oversight: the alternative is fuzzy name matching, which would scrub other people's leads.
+  copy of the customer's name and email from here. Erasure at the processor stays **work only the
+  shop can do** — but it is no longer an untracked manual step: every customer id the erasure could
+  not reach now raises a durable obligation on the shop's reports page, discharged by an owner who
+  says they did the work at Stripe
+  ([20260803-processor-erasure-obligations](20260803-processor-erasure-obligations.md)). An
+  undischarged obligation means the erasure is incomplete, and `stripe_invoice_id`'s finalized
+  invoices — which snapshot the name and email independently of the customer object — are outside
+  what any deletion at either end reaches. Any commitment made to a diver about erasure must say so.
+- **`course_inquiries` carries a `person_id` only when capture could know one.** A lead is written
+  from a public page before any person need exist, so the column is nullable and the sweep still
+  leans on the email or phone the diver supplied. What `person_id` adds is the one case those two
+  cannot cover: `recordCourseInquiry` snapshots the link when the supplied address exactly matches a
+  live diver of this shop (`people_shop_email_unique` makes that at most one row), so a diver who
+  later changes their address does not thereby take their own lead out of reach. Never resolved from
+  a phone number — a household number is shared — and never back-filled by a matching job, because a
+  link inferred after the fact would erase a bystander's lead. **An inquiry written with no email, or
+  with an address no diver of this shop held at the time, and carrying neither a matching email nor
+  a matching phone at erasure, is still not reached.** That residue is narrower than it was, not
+  closed; closing it needs a human saying "this lead is that diver", not fuzzier matching.
 - **A checkout address that is the diver's but no longer on their person row, on a party that also
   covers other divers, is not reached.** Sweep 1 misses it (the addresses differ), and sweep 2 stops
   at a mixed party on purpose (see above). Reaching it would mean blanking whatever address a

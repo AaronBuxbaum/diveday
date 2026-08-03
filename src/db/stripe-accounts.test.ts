@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { seededShopContext } from "@/test/db";
 import { setShopCurrency } from "./shops";
 import {
@@ -38,6 +38,40 @@ describe("shop stripe accounts", () => {
       shopId: shop.id,
       chargesEnabled: true,
     });
+  });
+
+  // PAY-M1: the Stripe webhook route now releases its event claim when a
+  // handler throws, so a redelivery of `account.application.deauthorized`
+  // genuinely re-reaches this function. A second run must be a true no-op —
+  // an unconditional `disconnectedAt: now()` would walk the timestamp forward
+  // on every retry and re-disconnect a shop that has since reconnected.
+  it("is idempotent: a re-run never moves the recorded disconnect time", async () => {
+    const { db, shop } = await shopContext();
+    await upsertShopStripeAccount(db, shop.id, "acct_dedup");
+    await setShopStripeAccountStatus(db, "acct_dedup", {
+      chargesEnabled: true,
+      payoutsEnabled: true,
+      detailsSubmitted: true,
+    });
+
+    const first = await disconnectShopStripeAccount(db, "acct_dedup");
+    expect(first?.disconnectedAt).not.toBeNull();
+
+    // The unit-test clock is frozen (src/test/frozen-clock.ts), so a re-run at
+    // the same instant would pass whatever this function does. Advance it a day
+    // to make a moved timestamp actually visible.
+    vi.stubEnv("DIVEDAY_CLOCK", "2026-07-22T13:30:00.000Z");
+    const again = await disconnectShopStripeAccount(db, "acct_dedup");
+    vi.unstubAllEnvs();
+    // Still returns the row, so callers can't tell a first disconnect from a
+    // repeat — but the evidence of *when* the shop was cut off is untouched.
+    expect(again?.disconnectedAt?.getTime()).toBe(first?.disconnectedAt?.getTime());
+    expect(canAcceptPayments(again)).toBe(false);
+  });
+
+  it("reports no row for an account it has never seen", async () => {
+    const { db } = await shopContext();
+    expect(await disconnectShopStripeAccount(db, "acct_unknown")).toBeNull();
   });
 
   it("reconnecting replaces the stored account id and clears disconnected state", async () => {

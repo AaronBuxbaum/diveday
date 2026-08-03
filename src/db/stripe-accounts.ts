@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { type ShopCurrency, toShopCurrency } from "@/lib/money";
 import type { AccountStatusResult } from "@/lib/payments/connect";
@@ -127,6 +127,20 @@ export async function setShopStripeAccountStatus(
   return row ?? null;
 }
 
+/**
+ * Mark a connected account disconnected. Idempotent by construction: the
+ * update only matches a row that is not already disconnected, so a re-run
+ * leaves the original `disconnected_at` exactly where it was.
+ *
+ * This matters because `account.application.deauthorized` has no other
+ * self-heal, and the webhook route now releases its event claim when a handler
+ * throws (PAY-M1) — a redelivery genuinely re-reaches this function. An
+ * unconditional `disconnectedAt: nowDate()` would walk the timestamp forward
+ * on every re-run, and would clobber a legitimate reconnect
+ * (`upsertShopStripeAccount` clears `disconnected_at`) by re-disconnecting a
+ * shop that is back online. The already-disconnected row is still returned, so
+ * callers cannot tell a first disconnect from a repeat and do not need to.
+ */
 export async function disconnectShopStripeAccount(
   db: AppDb,
   stripeAccountId: string,
@@ -139,9 +153,17 @@ export async function disconnectShopStripeAccount(
       payoutsEnabled: false,
       updatedAt: nowDate(),
     })
-    .where(eq(shopStripeAccounts.stripeAccountId, stripeAccountId))
+    .where(
+      and(
+        eq(shopStripeAccounts.stripeAccountId, stripeAccountId),
+        isNull(shopStripeAccounts.disconnectedAt),
+      ),
+    )
     .returning();
-  return row ?? null;
+  if (row) return row;
+  // Either already disconnected (nothing to do, and nothing to move) or no
+  // such account at all — the lookup tells the two apart for the caller.
+  return getShopStripeAccountByAccountId(db, stripeAccountId);
 }
 
 /**

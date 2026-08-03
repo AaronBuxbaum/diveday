@@ -7,6 +7,7 @@ import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { listPendingMediaDeletions } from "@/db/media-deletions";
 import { listStuckPaymentOperations } from "@/db/payment-operations";
+import { listOwedProcessorErasures } from "@/db/processor-erasure";
 import {
   canPersonViewShopReports,
   getMonthlyReport,
@@ -29,7 +30,7 @@ import { toShopCurrency } from "@/lib/money";
 import { formatPercent, formatReportMoney, summarizeMonth, tripFillRate } from "@/lib/reporting";
 import { requireStaffSession } from "@/lib/session";
 import { utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
-import { retryMediaDeletionAction } from "./actions";
+import { dischargeProcessorErasureAction, retryMediaDeletionAction } from "./actions";
 
 // TODO: Cache Components adoption. Refactor this route so this opt-out can be removed.
 // See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
@@ -49,6 +50,15 @@ const MEDIA_KIND_KEYS: Record<string, StaffMessageKey> = {
   // would read "certification_card" on the owner's reports panel.
   certification_card: "reports.mediaKind.certification_card",
   waiver_document: "reports.mediaKind.waiver_document",
+};
+
+/**
+ * Which record at the processor is still owed an erasure. One entry today, and
+ * present for the same reason MEDIA_KIND_KEYS is: without it the lookup falls
+ * through to the raw enum value and the panel reads "stripe_customer".
+ */
+const PROCESSOR_ERASURE_TARGET_KEYS: Record<string, StaffMessageKey> = {
+  stripe_customer: "reports.processorErasureTarget.stripe_customer",
 };
 
 export const metadata: Metadata = {
@@ -193,7 +203,9 @@ export default async function ReportsPage({
 
   const stuckPaymentOperations = await listStuckPaymentOperations(db, shop.id);
   const pendingMediaDeletions = await listPendingMediaDeletions(db, shop.id);
+  const owedProcessorErasures = await listOwedProcessorErasures(db, shop.id);
   const retryMediaDeletion = retryMediaDeletionAction.bind(null, shopSlug);
+  const dischargeProcessorErasure = dischargeProcessorErasureAction.bind(null, shopSlug);
   // Totals see every trip in the month (summarizeMonth's fill rate and waiver
   // completion would quietly go wrong if this were page-limited); the table
   // below gets its own bounded, cursor-paginated slice.
@@ -298,6 +310,50 @@ export default async function ReportsPage({
                       className={buttonClass({ variant: "secondary", size: "sm" })}
                     >
                       {t("reports.mediaDeletions.retry")}
+                    </SubmitButton>
+                  </form>
+                </li>
+              ))}
+            </ul>
+          </ShopNotice>
+        </section>
+      ) : null}
+
+      {/*
+        Erasures DiveDay finished locally and cannot finish at Stripe
+        (ADR 20260803-processor-erasure-obligations). Nothing retries these —
+        the row stands until an owner removes the customer at Stripe and says
+        so, because deleting it is irreversible and takes the shop's own tax and
+        chargeback trail with it. The panel shows the `cus_…` handle and nothing
+        else: the diver's identity is exactly what erasure already removed here.
+      */}
+      {owedProcessorErasures.length > 0 ? (
+        <section aria-label={t("reports.processorErasures.sectionLabel")} className="mb-8">
+          <ShopNotice tone="warning" role="status">
+            <p className="font-medium">
+              {t("reports.processorErasures.heading", { count: owedProcessorErasures.length })}
+            </p>
+            <p className="mt-1 text-sm">{t("reports.processorErasures.detail")}</p>
+            <ul className="mt-3 space-y-2 text-sm">
+              {owedProcessorErasures.map((obligation) => (
+                <li key={obligation.id} className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <span className="font-medium">
+                    {t(PROCESSOR_ERASURE_TARGET_KEYS[obligation.target])}
+                  </span>
+                  <span className="font-mono">{obligation.externalId}</span>
+                  <span className="text-muted">
+                    ·{" "}
+                    {t("reports.processorErasures.raised", {
+                      date: formatShortDate(obligation.createdAt, locale, tz),
+                    })}
+                  </span>
+                  <form action={dischargeProcessorErasure}>
+                    <input type="hidden" name="obligationId" value={obligation.id} />
+                    <SubmitButton
+                      pendingLabel={t("reports.processorErasures.discharging")}
+                      className={buttonClass({ variant: "secondary", size: "sm" })}
+                    >
+                      {t("reports.processorErasures.discharge")}
                     </SubmitButton>
                   </form>
                 </li>

@@ -1,11 +1,13 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import type { CheckoutProvider, RefundCheckoutResult } from "@/lib/payments/checkout";
+import type { CreateTripPromotionResult, PromotionProvider } from "@/lib/payments/promotions";
 import { seededShopContext } from "@/test/db";
 import { createBookingParty } from "./bookings";
 import { markCheckoutPaidBySessionId, startBookingCheckout } from "./checkouts";
 import { getBookingPayment, setBookingPayment } from "./payments";
 import { refundBookingOnCancellation } from "./refunds";
+import { createShopPromoCode } from "./shop-promos";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { upcomingTripsWithCounts, updateTrip } from "./trips";
 
@@ -14,11 +16,40 @@ const REEF_PRICE_CENTS = 18_000;
 /** Every refund POST the provider was asked to make, in order. */
 type RefundCall = { sessionId: string; idempotencyKey: string; amountCents?: number };
 
+function fakePromotions(): PromotionProvider {
+  let counter = 0;
+  return {
+    async createTripPromotion(): Promise<CreateTripPromotionResult> {
+      return { status: "failed" };
+    },
+    async createShopPromotion(): Promise<CreateTripPromotionResult> {
+      counter += 1;
+      return {
+        status: "created",
+        stripeCouponId: `coupon_${counter}`,
+        stripePromotionCodeId: `promo_${counter}`,
+      };
+    },
+  };
+}
+
 function fakeCheckout(
   refund: RefundCheckoutResult,
   refundCalls: RefundCall[] = [],
+  /**
+   * What Stripe actually captured on the session being refunded. Supplying it
+   * makes this fake enforce the ceiling the real Stripe enforces: a refund is
+   * bounded against the **payment intent's** captured total, never against the
+   * per-diver share DiveDay recorded. One party checkout is one intent, so
+   * without this the fake happily reverses more money than ever changed hands
+   * and no test in this repo can catch an over-attributed party (PAY-M3).
+   * Beyond the ceiling Stripe errors; the provider reports that as
+   * `not_refundable`, which the domain surfaces to staff as `manual`.
+   */
+  capturedCents?: number,
 ): CheckoutProvider {
   let counter = 0;
+  const reversedBySession = new Map<string, number>();
   return {
     async createCheckoutSession(request) {
       counter += 1;
@@ -40,6 +71,14 @@ function fakeCheckout(
     },
     async refundCheckoutSession(_accountId, stripeSessionId, idempotencyKey, amountCents) {
       refundCalls.push({ sessionId: stripeSessionId, idempotencyKey, amountCents });
+      if (capturedCents !== undefined) {
+        const asked = amountCents ?? capturedCents;
+        const alreadyReversed = reversedBySession.get(stripeSessionId) ?? 0;
+        if (alreadyReversed + asked > capturedCents) return { status: "not_refundable" };
+        if (refund.status === "refunded") {
+          reversedBySession.set(stripeSessionId, alreadyReversed + asked);
+        }
+      }
       return refund;
     },
   };
@@ -51,11 +90,17 @@ function fakeCheckout(
  * condition PAY-C1 lives in), and a stated cancellation window. `windowHours`
  * null states no window. `gearCents` prices rental gear for the first diver
  * only; `settledTotalCents` stands in for Stripe's own `amount_total` on the
- * completion, so a discounted checkout can be exercised end to end.
+ * completion, so a discounted checkout can be exercised end to end;
+ * `discountPercent` mints a real shop-wide code and spends it on the checkout,
+ * which is the case where a discount applies but no `amount_total` arrives.
+ *
+ * Returns `capturedCents`: what Stripe genuinely took for this session,
+ * whatever DiveDay recorded per booking. Hand it to `fakeCheckout` so refunds
+ * are bounded the way the real payment intent bounds them.
  */
 async function paidBookingContext(
   windowHours: number | null = 48,
-  options: { gearCents?: number; settledTotalCents?: number } = {},
+  options: { gearCents?: number; settledTotalCents?: number; discountPercent?: number } = {},
 ) {
   const { db, shop } = await seededShopContext();
   await upsertShopStripeAccount(db, shop.id, "acct_test");
@@ -96,6 +141,21 @@ async function paidBookingContext(
   const bookingIds = party.bookings.map((booking) => booking.bookingId);
   const bookingId = bookingIds[0];
 
+  const promo = options.discountPercent
+    ? await createShopPromoCode(
+        db,
+        {
+          shopId: shop.id,
+          code: "party20",
+          discountPercent: options.discountPercent,
+          scope: "all",
+        },
+        fakePromotions(),
+      )
+    : null;
+  if (promo && !promo.ok) throw new Error(`promo creation failed: ${promo.reason}`);
+  const shopPromo = promo?.ok ? promo.promo : null;
+
   const start = await startBookingCheckout(
     db,
     {
@@ -109,6 +169,8 @@ async function paidBookingContext(
       gearLines: options.gearCents
         ? [{ bookingId, description: "Rental gear — Pat", amountCents: options.gearCents }]
         : undefined,
+      promotionCode: shopPromo?.stripePromotionCodeId ?? undefined,
+      shopPromo: shopPromo ? { id: shopPromo.id, code: shopPromo.code } : undefined,
     },
     fakeCheckout({ status: "refunded", refundId: "re_seed" }),
   );
@@ -120,18 +182,25 @@ async function paidBookingContext(
     options.settledTotalCents ?? null,
   );
 
+  // What Stripe really took: its reported total when there is one, otherwise
+  // the asked total less whatever the applied code discounted.
+  const askedCents = REEF_PRICE_CENTS * 2 + (options.gearCents ?? 0);
+  const capturedCents =
+    options.settledTotalCents ??
+    askedCents - Math.ceil((askedCents * (options.discountPercent ?? 0)) / 100);
+
   const insideWindow = new Date(reef.startsAt.getTime() - 72 * 60 * 60 * 1000);
   const pastDeadline = new Date(reef.startsAt.getTime() - 1 * 60 * 60 * 1000);
-  return { db, shop, reef, bookingId, bookingIds, insideWindow, pastDeadline };
+  return { db, shop, reef, bookingId, bookingIds, capturedCents, insideWindow, pastDeadline };
 }
 
 describe("refundBookingOnCancellation", () => {
   it("refunds a Stripe payment in full inside the window and flips the row to refunded", async () => {
-    const { db, shop, bookingId, insideWindow } = await paidBookingContext(48);
+    const { db, shop, bookingId, capturedCents, insideWindow } = await paidBookingContext(48);
     const outcome = await refundBookingOnCancellation(
       db,
       { shopId: shop.id, bookingId, now: insideWindow },
-      fakeCheckout({ status: "refunded", refundId: "re_ok" }),
+      fakeCheckout({ status: "refunded", refundId: "re_ok" }, [], capturedCents),
     );
     expect(outcome).toEqual({ status: "refunded", amountCents: REEF_PRICE_CENTS });
     const payment = await getBookingPayment(db, shop.id, bookingId);
@@ -246,9 +315,13 @@ describe("refundBookingOnCancellation", () => {
   // for both, so Stripe would replay the first refund and return it again —
   // both local rows would read "refunded" while only one diver got money back.
   it("issues two distinctly-keyed refunds when two party members cancel for the same amount", async () => {
-    const { db, shop, bookingIds, insideWindow } = await paidBookingContext(48);
+    const { db, shop, bookingIds, capturedCents, insideWindow } = await paidBookingContext(48);
     const refundCalls: RefundCall[] = [];
-    const provider = fakeCheckout({ status: "refunded", refundId: "re_party" }, refundCalls);
+    const provider = fakeCheckout(
+      { status: "refunded", refundId: "re_party" },
+      refundCalls,
+      capturedCents,
+    );
 
     for (const bookingId of bookingIds) {
       const outcome = await refundBookingOnCancellation(
@@ -280,12 +353,16 @@ describe("refundBookingOnCancellation", () => {
   it("refunds what Stripe collected on a discounted checkout, gear included", async () => {
     const GEAR_CENTS = 6_000;
     // Asked: (18000 + 18000) + 6000 gear = 42000. Stripe took 10% off: 37800.
-    const { db, shop, bookingIds, insideWindow } = await paidBookingContext(48, {
+    const { db, shop, bookingIds, capturedCents, insideWindow } = await paidBookingContext(48, {
       gearCents: GEAR_CENTS,
       settledTotalCents: 37_800,
     });
     const refundCalls: RefundCall[] = [];
-    const provider = fakeCheckout({ status: "refunded", refundId: "re_promo" }, refundCalls);
+    const provider = fakeCheckout(
+      { status: "refunded", refundId: "re_promo" },
+      refundCalls,
+      capturedCents,
+    );
 
     // The gear diver's share of what settled: 24000/42000 of 37800 = 21600.
     const gearOutcome = await refundBookingOnCancellation(
@@ -306,6 +383,54 @@ describe("refundBookingOnCancellation", () => {
     expect(refundCalls.map((call) => call.amountCents)).toEqual([21_600, 16_200]);
     // Nothing more than Stripe collected leaves the shop's account.
     expect(refundCalls.reduce((total, call) => total + (call.amountCents ?? 0), 0)).toBe(37_800);
+  });
+
+  // PAY-M3: the branch where Stripe reported no `amount_total` at all —
+  // `refreshCheckoutFromStripe` and the daily checkout-recovery scan both
+  // forward a `number | null`, and both webhook arms tolerate a missing one.
+  // A *discounted party* on that branch used to be recorded at quoted,
+  // pre-discount amounts, so the two per-booking figures summed above what the
+  // single shared payment intent captured. The first canceller reversed their
+  // inflated share out of the shared pot and the second was refused money that
+  // had already gone to someone else — surfacing as `manual`, not an error,
+  // which is how it stayed invisible.
+  it("keeps both party members whole on a discounted checkout Stripe reported no total for", async () => {
+    // Asked 2 × $180 = $360; the shop's own 20% code took $72, so the intent
+    // captured $288 — and Stripe never told us, because no amount_total came.
+    const { db, shop, bookingIds, capturedCents, insideWindow } = await paidBookingContext(48, {
+      discountPercent: 20,
+    });
+    expect(capturedCents).toBe(28_800);
+
+    // Each diver is recorded at their share of what can have been captured,
+    // not at the $180 they were quoted.
+    for (const bookingId of bookingIds) {
+      expect((await getBookingPayment(db, shop.id, bookingId))?.amountCents).toBe(14_400);
+    }
+
+    const refundCalls: RefundCall[] = [];
+    const provider = fakeCheckout(
+      { status: "refunded", refundId: "re_party_promo" },
+      refundCalls,
+      capturedCents,
+    );
+
+    // Both cancel. Neither is refused, and the second gets exactly as much as
+    // the first — the failure mode was the first one draining the pot.
+    for (const bookingId of bookingIds) {
+      const outcome = await refundBookingOnCancellation(
+        db,
+        { shopId: shop.id, bookingId, now: insideWindow },
+        provider,
+      );
+      expect(outcome).toEqual({ status: "refunded", amountCents: 14_400 });
+    }
+
+    // Nothing more than the intent captured ever leaves the shop's account.
+    expect(refundCalls.reduce((total, call) => total + (call.amountCents ?? 0), 0)).toBe(28_800);
+    for (const bookingId of bookingIds) {
+      expect((await getBookingPayment(db, shop.id, bookingId))?.status).toBe("refunded");
+    }
   });
 
   it("is tenant-scoped: another shop cannot refund this booking", async () => {

@@ -934,6 +934,17 @@
       "retry": "Reintentar eliminación",
       "retrying": "Reintentando…"
     },
+    "processorErasureTarget": {
+      "stripe_customer": "Cliente de Stripe"
+    },
+    "processorErasures": {
+      "sectionLabel": "Borrados pendientes en Stripe",
+      "heading": "{count, plural, one {# buceador borrado} other {# buceadores borrados}} siguen registrados en Stripe",
+      "detail": "Aquí ya los borraste, pero Stripe todavía guarda su nombre y su correo en estos registros de cliente. Solo tú puedes quitarlos: abre cada uno en tu panel de Stripe y luego márcalo como hecho. Borrar un cliente de Stripe no se puede deshacer, y tus facturas para impuestos y contracargos se van con él, así que compruébalo antes.",
+      "raised": "registrado el {date}",
+      "discharge": "Marcar como hecho en Stripe",
+      "discharging": "Guardando…"
+    },
     "soFar": "hasta ahora",
     "chooseMonth": "Elegir mes",
     "previousMonth": "Mes anterior",

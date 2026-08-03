@@ -9,7 +9,11 @@ import { markCheckoutPaidBySessionId, startBookingCheckout } from "./checkouts";
 import { getBookingPayment, setBookingPayment } from "./payments";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { upcomingTripsWithCounts, updateTrip } from "./trips";
-import { claimStripeWebhookEvent, hasNewerAccountUpdate } from "./webhook-events";
+import {
+  claimStripeWebhookEvent,
+  hasNewerAccountUpdate,
+  releaseStripeWebhookEventClaim,
+} from "./webhook-events";
 
 const REEF_PRICE_CENTS = 18_000;
 
@@ -166,6 +170,86 @@ describe("claimStripeWebhookEvent", () => {
       status: "refunded",
       providerRef: "re_manual",
     });
+  });
+});
+
+describe("releaseStripeWebhookEventClaim", () => {
+  // PAY-M1: the claim is its own committed statement, taken before the handler
+  // runs. Without a release, a handler that threw left the row behind and every
+  // Stripe redelivery read as a duplicate — the event was marked delivered
+  // having never been handled, and `invoice.paid`/`invoice.voided`/
+  // `account.application.deauthorized` have no other self-heal.
+  it("gives a claim back so the same event id can be claimed and handled again", async () => {
+    const { db } = await seededShopContext();
+    const input = {
+      id: "evt_release_1",
+      type: "invoice.paid",
+      account: "acct_test",
+      occurredAt: nowDate(),
+    };
+    expect(await claimStripeWebhookEvent(db, input)).toBe(true);
+    expect(await claimStripeWebhookEvent(db, input)).toBe(false);
+
+    expect(await releaseStripeWebhookEventClaim(db, input.id)).toBe(true);
+    // The redelivery now reaches the handler, which is the whole point.
+    expect(await claimStripeWebhookEvent(db, input)).toBe(true);
+  });
+
+  it("is a no-op, not an error, when there is no claim to release", async () => {
+    const { db } = await seededShopContext();
+    expect(await releaseStripeWebhookEventClaim(db, "evt_never_claimed")).toBe(false);
+  });
+
+  it("releases only the named event, leaving every other claim standing", async () => {
+    const { db } = await seededShopContext();
+    const occurredAt = nowDate();
+    await claimStripeWebhookEvent(db, {
+      id: "evt_keep",
+      type: "invoice.paid",
+      account: "acct_test",
+      occurredAt,
+    });
+    await claimStripeWebhookEvent(db, {
+      id: "evt_drop",
+      type: "invoice.paid",
+      account: "acct_test",
+      occurredAt,
+    });
+
+    await releaseStripeWebhookEventClaim(db, "evt_drop");
+
+    expect(
+      await claimStripeWebhookEvent(db, {
+        id: "evt_keep",
+        type: "invoice.paid",
+        account: "acct_test",
+        occurredAt,
+      }),
+    ).toBe(false);
+  });
+
+  // The release must never widen into "replays are fine now": a *successfully*
+  // handled event keeps its claim forever, so a manual refund made between two
+  // deliveries still survives (the test above). This pins the ordering the
+  // route depends on — a released claim is only ever a failed one.
+  it("a released claim re-runs the handler, so state a failed delivery never wrote is repaired", async () => {
+    const { db, shop, bookingId, stripeSessionId } = await paidCheckoutContext();
+    const event = {
+      id: "evt_release_repair",
+      type: "checkout.session.completed",
+      account: "acct_test",
+      occurredAt: nowDate(),
+    };
+
+    // First delivery claims, then the handler throws before writing anything.
+    expect(await claimStripeWebhookEvent(db, event)).toBe(true);
+    expect(await getBookingPayment(db, shop.id, bookingId)).toBeNull();
+    await releaseStripeWebhookEventClaim(db, event.id);
+
+    // Stripe retries the 5xx delivery; this time the handler runs to completion.
+    expect(await claimStripeWebhookEvent(db, event)).toBe(true);
+    await markCheckoutPaidBySessionId(db, stripeSessionId, "acct_test");
+    expect(await getBookingPayment(db, shop.id, bookingId)).toMatchObject({ status: "paid" });
   });
 });
 

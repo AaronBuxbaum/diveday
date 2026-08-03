@@ -8,6 +8,7 @@ import type {
   CheckoutSessionSnapshot,
   CreateCheckoutSessionResult,
 } from "@/lib/payments/checkout";
+import type { CreateTripPromotionResult, PromotionProvider } from "@/lib/payments/promotions";
 import { seededShopContext } from "@/test/db";
 import { cancelBooking, createBookingParty } from "./bookings";
 import {
@@ -19,6 +20,7 @@ import {
 } from "./checkouts";
 import { getBookingPayment, setBookingPayment } from "./payments";
 import { bookingCheckoutBookings, bookingCheckouts } from "./schema";
+import { createShopPromoCode } from "./shop-promos";
 import { setShopCurrency } from "./shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { getTripRoster, upcomingTripsWithCounts, updateTrip } from "./trips";
@@ -48,6 +50,24 @@ function fakeCheckout(overrides: Partial<CheckoutProvider> = {}): CheckoutProvid
       return { status: "refunded", refundId: "re_test" };
     },
     ...overrides,
+  };
+}
+
+/** Stripe's promotion API, faked: shop-wide code creation always succeeds. */
+function fakePromotions(): PromotionProvider {
+  let counter = 0;
+  return {
+    async createTripPromotion(): Promise<CreateTripPromotionResult> {
+      return { status: "failed" };
+    },
+    async createShopPromotion(): Promise<CreateTripPromotionResult> {
+      counter += 1;
+      return {
+        status: "created",
+        stripeCouponId: `coupon_${counter}`,
+        stripePromotionCodeId: `promo_${counter}`,
+      };
+    },
   };
 }
 
@@ -630,7 +650,7 @@ describe("checkout completion", () => {
     }
   });
 
-  it("falls back to the asked amounts when Stripe reported no settled total", async () => {
+  it("falls back to the asked amounts when Stripe reported no settled total and no code applied", async () => {
     const { db, shop, reef, bookingIds } = await checkoutContext();
     const start = await startBookingCheckout(
       db,
@@ -652,6 +672,91 @@ describe("checkout completion", () => {
     expect((await getBookingPayment(db, shop.id, bookingIds[1]))?.amountCents).toBe(
       REEF_PRICE_CENTS,
     );
+  });
+
+  // PAY-M3: same branch, but a shop-wide code was spent. Recording the quoted
+  // amounts here makes the per-booking rows sum above what the one shared
+  // payment intent captured, and those rows are exactly what a cancellation
+  // asks Stripe to reverse — so the first party member to cancel drains more
+  // than their share of the pot. `shop_promo_codes.discount_percent` is NOT
+  // NULL, so the net is reconstructible without asking Stripe anything.
+  it("records a discounted party net of its own code when Stripe reported no settled total", async () => {
+    const { db, shop, reef, bookingIds } = await checkoutContext();
+    const promo = await createShopPromoCode(
+      db,
+      { shopId: shop.id, code: "party25", discountPercent: 25, scope: "all" },
+      fakePromotions(),
+    );
+    if (!promo.ok) throw new Error(`promo creation failed: ${promo.reason}`);
+
+    const start = await startBookingCheckout(
+      db,
+      {
+        ...startInput(shop.id, reef.id, bookingIds),
+        gearLines: [
+          { bookingId: bookingIds[0], description: "Rental gear — Pat", amountCents: 6_000 },
+        ],
+        promotionCode: promo.promo.stripePromotionCodeId ?? undefined,
+        shopPromo: { id: promo.promo.id, code: promo.promo.code },
+      },
+      fakeCheckout(),
+    );
+    if (!start.ok) throw new Error("checkout start failed");
+    expect(start.checkout.totalCents).toBe(42_000);
+
+    const completed = await markCheckoutPaidBySessionId(db, start.checkout.stripeSessionId);
+    // Stripe still reported nothing, so nothing is claimed as its evidence —
+    // `settledTotalCents` stays null and a later delivery carrying a real
+    // figure can still backfill it.
+    expect(completed?.settledTotalCents).toBeNull();
+
+    // $420 asked, 25% off = $315 the intent can have captured, split in
+    // proportion to each diver's ask ($240 with gear, $180 without).
+    expect((await getBookingPayment(db, shop.id, bookingIds[0]))?.amountCents).toBe(18_000);
+    expect((await getBookingPayment(db, shop.id, bookingIds[1]))?.amountCents).toBe(13_500);
+    const recorded = await Promise.all(
+      bookingIds.map(
+        async (bookingId) => (await getBookingPayment(db, shop.id, bookingId))?.amountCents ?? 0,
+      ),
+    );
+    // The whole point: the per-booking rows no longer sum above the pot.
+    expect(recorded.reduce((total, cents) => total + cents, 0)).toBe(31_500);
+  });
+
+  it("prefers Stripe's own settled total over the reconstruction whenever there is one", async () => {
+    // The reconstruction is a fallback, never a second opinion: a real
+    // `amount_total` (a promo that only partly applied, a code Stripe refused)
+    // always wins over what the code's percentage suggests (PAY-M3).
+    const { db, shop, reef, bookingIds } = await checkoutContext();
+    const promo = await createShopPromoCode(
+      db,
+      { shopId: shop.id, code: "half50", discountPercent: 50, scope: "all" },
+      fakePromotions(),
+    );
+    if (!promo.ok) throw new Error(`promo creation failed: ${promo.reason}`);
+    const start = await startBookingCheckout(
+      db,
+      {
+        ...startInput(shop.id, reef.id, bookingIds),
+        promotionCode: promo.promo.stripePromotionCodeId ?? undefined,
+        shopPromo: { id: promo.promo.id, code: promo.promo.code },
+      },
+      fakeCheckout(),
+    );
+    if (!start.ok) throw new Error("checkout start failed");
+
+    // Stripe says it took $300 of the $360 asked, not the $180 a 50% code
+    // would imply.
+    const completed = await markCheckoutPaidBySessionId(
+      db,
+      start.checkout.stripeSessionId,
+      undefined,
+      30_000,
+    );
+    expect(completed?.settledTotalCents).toBe(30_000);
+    for (const bookingId of bookingIds) {
+      expect((await getBookingPayment(db, shop.id, bookingId))?.amountCents).toBe(15_000);
+    }
   });
 
   it("splits a zero-decimal currency's settled total in whole minor units", async () => {

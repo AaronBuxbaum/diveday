@@ -1,5 +1,5 @@
 import { hash } from "bcryptjs";
-import { and, asc, eq, inArray, lt, ne } from "drizzle-orm";
+import { and, asc, eq, inArray, lt, ne, or } from "drizzle-orm";
 import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate, nowMs } from "@/lib/clock";
 import { courseSlug } from "@/lib/courses";
@@ -42,6 +42,7 @@ import {
   personCourtesyEmailUnsubscribeTokens,
   personRoles,
   priorVisits,
+  processorErasureObligations,
   recapPhotos,
   rentalFitProfiles,
   rollCallCrewAttestations,
@@ -4257,6 +4258,19 @@ export async function resetDemoSchedule(
       await db.delete(accountTokens).where(inArray(accountTokens.userAccountId, purgeAccountIds));
     }
     await db.delete(userAccounts).where(inArray(userAccounts.personId, purgeIds));
+    // A processor-erasure obligation names the erased person and the staff
+    // member who discharged it (ADR 20260803-processor-erasure-obligations), so
+    // an erasure run against the demo shop leaves a row pointing at a person
+    // this purge is about to delete — the same FK chain the login rows above
+    // walk, with the same consequence if it is missed.
+    await db
+      .delete(processorErasureObligations)
+      .where(
+        or(
+          inArray(processorErasureObligations.personId, purgeIds),
+          inArray(processorErasureObligations.dischargedByPersonId, purgeIds),
+        ),
+      );
     await db.delete(people).where(inArray(people.id, purgeIds));
   }
 
@@ -4401,6 +4415,13 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(waiverTemplates).where(eq(waiverTemplates.shopId, shopId));
   await db.delete(shopStripeAccounts).where(eq(shopStripeAccounts.shopId, shopId));
   await db.delete(mediaDeletionAttempts).where(eq(mediaDeletionAttempts.shopId, shopId));
+  // References both shops and people (ADR 20260803-processor-erasure-obligations),
+  // so it must go before the people/shops deletes below or reaping a demo shop
+  // whose visitor tried the erasure flow FK-violates and strands the shop past
+  // its TTL — the same class of bug the account-tokens comment below walks.
+  await db
+    .delete(processorErasureObligations)
+    .where(eq(processorErasureObligations.shopId, shopId));
 
   if (personIds.length > 0) {
     // Account tokens reference user_accounts, one layer further down the same

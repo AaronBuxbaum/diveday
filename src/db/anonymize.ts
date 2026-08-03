@@ -30,6 +30,12 @@
  *      (ADR 20260723-media-validation-and-deletion), so the object itself is
  *      retired by the same durable retry every other blob deletion uses rather
  *      than by a second, parallel mechanism invented here.
+ *   4. **What it cannot erase, it records.** A Stripe customer object carrying
+ *      the diver's name and email is not DiveDay's to rewrite or to delete, so
+ *      every one the diver's orders point at raises a durable obligation the
+ *      shop can see and discharge (`./processor-erasure`,
+ *      ADR 20260803-processor-erasure-obligations). An erasure with an
+ *      undischarged obligation is honestly incomplete, and says so.
  *
  * The scrub is one transaction. A partial erasure — identity gone from
  * `people` but medical answers still sitting in `waiver_records` — is the worst
@@ -234,7 +240,12 @@ export async function anonymizeDiver(
     }
     if (input.actorPersonId === input.personId) return { ok: false, reason: "self" } as const;
     if (person.anonymizedAt) {
-      return { ok: true, alreadyAnonymized: true, queuedMediaDeletions: 0 } as const;
+      return {
+        ok: true,
+        alreadyAnonymized: true,
+        queuedMediaDeletions: 0,
+        queuedProcessorErasures: 0,
+      } as const;
     }
 
     const roleRows = await tx
@@ -245,7 +256,7 @@ export async function anonymizeDiver(
       return { ok: false, reason: "staff_member" } as const;
     }
 
-    const queuedMediaDeletions = await scrub(tx, {
+    const counts = await scrub(tx, {
       shopId: input.shopId,
       personId: input.personId,
       actorPersonId: input.actorPersonId,
@@ -256,7 +267,7 @@ export async function anonymizeDiver(
       now,
     });
 
-    return { ok: true, alreadyAnonymized: false, queuedMediaDeletions } as const;
+    return { ok: true, alreadyAnonymized: false, ...counts } as const;
   });
 }
 
@@ -271,7 +282,9 @@ type ScrubContext = {
   now: Date;
 };
 
-async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<number> {
+type ScrubCounts = { queuedMediaDeletions: number; queuedProcessorErasures: number };
+
+async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubCounts> {
   const { shopId, personId, now } = ctx;
 
   const bookingRows = await tx
@@ -825,13 +838,34 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<number> {
       );
   }
 
-  // --- course inquiries: the table with no person_id ----------------------
-  // A public course-page lead is deliberately unlinked (there is no person yet
-  // when it is written), so a person_id-driven sweep structurally cannot reach
-  // it. Matched on the contact details the diver themselves supplied — the only
-  // link that exists. An inquiry left with neither a matching email nor phone
-  // is *not* reached by this; that gap is stated in the ADR rather than papered
-  // over here.
+  // --- course inquiries ----------------------------------------------------
+  // Three statements, strongest handle first. `person_id` is deliberately left
+  // in place on every one of them: it points at a row that is itself already
+  // erased, so it discloses nothing, and keeping it makes a replayed erasure
+  // reach the same leads a second time.
+  const blankInquiry = { name: null, email: null, phone: null, timing: null, message: null };
+
+  // 1. `person_id`, when the lead carries one. A public lead is still written
+  //    before any person may exist, so the column stays nullable — but when the
+  //    address on the form matched a live diver of this shop at capture time,
+  //    `recordCourseInquiry` (src/db/course-inquiries.ts) snapshotted the link,
+  //    and that snapshot is an exact foreign key rather than a match against
+  //    whatever the two rows happen to say today. It is the one handle that
+  //    survives the diver changing their email afterwards, which the address
+  //    sweep below cannot.
+  //
+  //    A lead written with no email, or with an address no diver of this shop
+  //    held at the time, still has no link and is still reachable only by the
+  //    two fuzzy handles after it. That residual is narrower than it was, not
+  //    closed: see the ADR. Nothing back-fills this column from a later match —
+  //    a link inferred after the fact would erase a bystander's lead.
+  await tx
+    .update(courseInquiries)
+    .set(blankInquiry)
+    .where(and(eq(courseInquiries.shopId, shopId), eq(courseInquiries.personId, personId)));
+
+  // 2 and 3 match on the contact details the diver themselves supplied, for the
+  // leads statement 1 cannot reach.
   //
   // Split into two statements so the phone predicate can be counted on its
   // own. It is the fuzzier of the two by a distance: a household or family
@@ -841,7 +875,6 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<number> {
   // that would drop the real case it exists for: the diver who used a
   // different address on the public lead form than the one on their record.
   // The over-reach is accepted, owner-gated, and logged.
-  const blankInquiry = { name: null, email: null, phone: null, timing: null, message: null };
   if (ctx.email) {
     await tx
       .update(courseInquiries)
@@ -864,5 +897,5 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<number> {
     logFuzzyMatch(ctx, "course_inquiry_phone", byPhone.length);
   }
 
-  return queued;
+  return { queuedMediaDeletions: queued, queuedProcessorErasures };
 }
