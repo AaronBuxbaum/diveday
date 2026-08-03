@@ -1384,8 +1384,7 @@
       "noBookings": "No bookings yet — share the trip page and they'll show up here.",
       "selectToSendWaiverAriaLabel": "Select {name} to send a waiver",
       "noEmailOnFile": "no email on file",
-      "ready": "Ready",
-      "needsAttention": "Needs attention",
+      "checkedInPill": "Checked in ✓",
       "ageYears": "Age {age}",
       "minorBadge": "Minor",
       "depthWarning": "This trip reaches {site} {unit} — deeper than the {limit} {unit} their card trains for. Not a block: plan the dive shallower, or confirm the guide is keeping them within limits.",
@@ -1469,7 +1468,7 @@
       "notBackAboardOpen": "{count, plural, one {# diver is not back aboard.} other {# divers are not back aboard.}} This checkpoint stays open until they’re counted.",
       "crewNotAttestedYet": "Every diver is counted. Confirm how many crew are aboard to close this checkpoint.",
       "crewShort": "{aboard} of {assigned} crew confirmed aboard. This checkpoint stays open until every crew member is accounted for.",
-      "readinessNeedsAttention": "Readiness needs attention",
+      "readinessNeedsAttention": "Blocked divers",
       "blockedDeparture": "{count, plural, one {# diver is blocked. They remain on this manifest and cannot board until their readiness check clears.} other {# divers are blocked. They remain on this manifest and cannot board until their readiness check clears.}}",
       "blockedAfterDive": "{count, plural, one {# diver already sailed — record them anyway; readiness follow-up happens ashore, not here.} other {# divers already sailed — record them anyway; readiness follow-up happens ashore, not here.}}",
       "crewHeading": "Crew",
@@ -1491,8 +1490,6 @@
       "checkpointRollCallHeading": "{checkpoint} roll call",
       "checkEachDiverDescription": "Check each diver at this checkpoint. Every change is time-stamped with the staff member who made it.",
       "shopTimeLabel": "Shop time: {timezone}",
-      "readyToBoard": "Ready to board",
-      "blockedBadge": "Blocked",
       "checkedInPill": "Checked in ✓",
       "age": "Age {age}",
       "minorAge": "Minor · age {age}",
@@ -2076,7 +2073,6 @@
     }
   },
   "blockers": {
-    "eyebrow": "Front desk",
     "title": "Not ready",
     "description": {
       "none": "Everyone booked on an upcoming departure is ready to board.",
@@ -2111,8 +2107,6 @@
     "clearedTitle": "Everyone’s aboard the day 🎉 — all checked in.",
     "checkedInBadge": "Checked in",
     "boardedBadge": "Boarded",
-    "readyBadge": "Ready",
-    "needsAttentionBadge": "Needs attention",
     "checkInButton": "Check in",
     "checkInAriaLabel": "Check in {name}",
     "blockersMore": "+{count} more",
@@ -2286,11 +2280,16 @@
       "stripeAction": "Connect Stripe",
       "stripeDone": "Stripe connected.",
       "doneBadge": "Done"
+    },
+    "queueView": {
+      "label": "How to read the queue",
+      "byUrgency": "By urgency",
+      "byDeparture": "By departure"
     }
   },
   "shared": {
     "operationalWindow": {
-      "note": "The next {days} days of departures — the same window Today, Not ready and Check-in all read.",
+      "note": "The next {days} days of departures — the same window Today and Check-in both read.",
       "arrivalsLens": "Counter mode narrows it to arrivals from {lookback} hours ago through the next {ahead} hours.",
       "pivotsLabel": "The same window, seen another way"
     },
@@ -2408,6 +2407,10 @@
         "night": "Night",
         "drysuit": "Drysuit"
       },
+      "status": {
+        "ready": "Ready",
+        "blocked": "Blocked"
+      },
       "blockers": {
         "requirementsNotConfigured": "Trip requirements have not been configured yet.",
         "identityUnconfirmed": "Identity unconfirmed: this booking used an existing diver’s email under a different name. Confirm it’s the same person before boarding.",
@@ -2492,8 +2495,6 @@
         "assignFailed": "That didn’t save — recheck your connection or try again.",
         "unassignAria": "Unassign {name}",
         "noCrewAssigned": "No crew assigned. Drag staff from above here.",
-        "countReady": "Ready",
-        "countBlocked": "Blocked",
         "countBoarded": "Boarded",
         "blockedWarningOne": "{count} diver cannot board yet — they are in the list below.",
         "blockedWarningOther": "{count} divers cannot board yet — they are in the list below.",

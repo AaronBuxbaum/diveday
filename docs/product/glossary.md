@@ -154,15 +154,33 @@ new domain concept, define it here in the same PR.
 ## Operations
 
 - **Operational horizon** — the single forward window every readiness surface reads: now through
-  seven days out. Today ranks the work inside it, **Not ready** lists the people inside it, and the
-  nav's blocked-diver badge counts the same set — so a diver cleared on one is cleared on all of
-  them. Anything past it is Schedule's job, not a triage list's. Defined once in
-  `src/lib/operational-window.ts`; each surface derives its bounds from there rather than declaring
-  its own. Reports is deliberately outside this model — a calendar month is genuinely its job.
+  seven days out. Today ranks the work inside it in both of its views, and the nav's blocked-diver
+  badge counts the same set — so a diver cleared on one is cleared on all of them. Anything past it
+  is Schedule's job, not a triage list's. Defined once in `src/lib/operational-window.ts`; each
+  surface derives its bounds from there rather than declaring its own. Reports is deliberately
+  outside this model — a calendar month is genuinely its job.
+- **Not ready** — the **by-departure view** of Today's work queue (`?view=departures`), not a page
+  of its own: the same blocked divers the urgency view ranks chronologically, grouped instead under
+  the boat each one holds up, with a per-departure batch waiver send. It had its own route until
+  ADR 20260803-not-ready-is-a-view folded it in; that URL now redirects. "Not ready" names the
+  *view*; an individual diver's status is **Blocked** or **Ready**, never "Not ready".
+- **Blocked / Ready** — the shop's one readiness vocabulary, and the only two states a booking's
+  readiness check has. Every surface that shows one — roster, counter check-in, manifest, departure
+  board, offline manifest — uses these words and one tone per state (blocked is always danger),
+  resolved through `readinessStatusText`/`readinessStatusTone` in `src/i18n/readiness-labels.ts`.
+  The same fact used to read as "Needs attention" in warning at the counter and "Blocked" in danger
+  on the manifest, for the same diver.
+- **Shop day scan** — the coarse ±26-hour bound (`shopDayWindow`, `src/lib/operational-window.ts`)
+  a query casts when the question is about the shop's own *calendar date* rather than a horizon —
+  today's boat, for the command palette's boarding jump. SQL cannot ask "same day in this shop's
+  timezone" of a UTC column, so the scan over-fetches and the caller filters by shop-local date.
+  Twenty-six hours is what a local day can span either side of any instant inside it, plus slack
+  for a daylight-saving transition. Never a readiness lens.
 - **Arrivals window** — counter mode's narrower lens on the operational horizon: departures from six
   hours ago through the next thirty-six. The backwards reach is the one deliberate asymmetry (a
   diver still walks up to the desk for a boat that already sailed); forwards it never outruns the
-  horizon, so a departure can never reach **check-in** without also appearing on Today and Not ready.
+  horizon, so a departure can never reach **check-in** without also appearing in both of Today's
+  views.
 - **Check-in** — a staff-recorded arrival state for a booked diver. It confirms the live readiness
   result at the counter and changes the booking to `checked_in`; it is not boarding, which remains
   a separate departure-time manifest decision.

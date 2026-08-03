@@ -1384,8 +1384,7 @@
       "noBookings": "Todavía no hay reservas — comparte la página de la salida y aparecerán aquí.",
       "selectToSendWaiverAriaLabel": "Seleccionar a {name} para enviarle una exención",
       "noEmailOnFile": "sin correo registrado",
-      "ready": "Listo",
-      "needsAttention": "Necesita atención",
+      "checkedInPill": "Registrado ✓",
       "ageYears": "{age} años",
       "minorBadge": "Menor",
       "depthWarning": "Esta salida llega a {site} {unit} — más de los {limit} {unit} para los que le habilita su tarjeta. No es un bloqueo: planifica la inmersión más somera o confirma que el guía lo mantiene dentro de sus límites.",
@@ -1469,7 +1468,7 @@
       "notBackAboardOpen": "{count, plural, one {# buceador no ha regresado a bordo.} other {# buceadores no han regresado a bordo.}} Este control sigue abierto hasta contabilizarlos.",
       "crewNotAttestedYet": "Todos los buceadores están contabilizados. Confirma cuánta tripulación está a bordo para cerrar este control.",
       "crewShort": "{aboard} de {assigned} tripulantes confirmados a bordo. Este control sigue abierto hasta contabilizar a toda la tripulación.",
-      "readinessNeedsAttention": "La preparación necesita atención",
+      "readinessNeedsAttention": "Buceadores bloqueados",
       "blockedDeparture": "{count, plural, one {Hay # buceador bloqueado. Permanece en este manifiesto y no puede embarcar hasta que se despeje su control de preparación.} other {Hay # buceadores bloqueados. Permanecen en este manifiesto y no pueden embarcar hasta que se despeje su control de preparación.}}",
       "blockedAfterDive": "{count, plural, one {# buceador ya zarpó — regístralo igual; el seguimiento de su preparación se resuelve en tierra, no aquí.} other {# buceadores ya zarparon — regístralos igual; el seguimiento de su preparación se resuelve en tierra, no aquí.}}",
       "crewHeading": "Tripulación",
@@ -1491,8 +1490,6 @@
       "checkpointRollCallHeading": "Pase de lista · {checkpoint}",
       "checkEachDiverDescription": "Marca cada buceador en este punto de control. Cada cambio queda con la marca de tiempo del miembro del personal que lo hizo.",
       "shopTimeLabel": "Hora del centro: {timezone}",
-      "readyToBoard": "Listo para embarcar",
-      "blockedBadge": "Bloqueado",
       "checkedInPill": "Registrado ✓",
       "age": "{age} años",
       "minorAge": "Menor · {age} años",
@@ -2076,7 +2073,6 @@
     }
   },
   "blockers": {
-    "eyebrow": "Recepción",
     "title": "No listos",
     "description": {
       "none": "Todos los reservados en una próxima salida están listos para embarcar.",
@@ -2111,8 +2107,6 @@
     "clearedTitle": "Todos a bordo por hoy 🎉 — todos registrados.",
     "checkedInBadge": "Registrado",
     "boardedBadge": "Embarcado",
-    "readyBadge": "Listo",
-    "needsAttentionBadge": "Necesita atención",
     "checkInButton": "Registrar",
     "checkInAriaLabel": "Registrar a {name}",
     "blockersMore": "+{count} más",
@@ -2286,11 +2280,16 @@
       "stripeAction": "Conectar Stripe",
       "stripeDone": "Stripe conectado.",
       "doneBadge": "Hecho"
+    },
+    "queueView": {
+      "label": "Cómo leer la lista",
+      "byUrgency": "Por urgencia",
+      "byDeparture": "Por salida"
     }
   },
   "shared": {
     "operationalWindow": {
-      "note": "Las salidas de los próximos {days} días: la misma ventana que leen Hoy, No listos y Registro.",
+      "note": "Las salidas de los próximos {days} días: la misma ventana que leen Hoy y Registro.",
       "arrivalsLens": "El modo mostrador la reduce a las llegadas desde hace {lookback} horas hasta las próximas {ahead} horas.",
       "pivotsLabel": "La misma ventana, vista de otra forma"
     },
@@ -2408,6 +2407,10 @@
         "night": "Nocturno",
         "drysuit": "Traje seco"
       },
+      "status": {
+        "ready": "Listo",
+        "blocked": "Bloqueado"
+      },
       "blockers": {
         "requirementsNotConfigured": "Aún no se han configurado los requisitos de la salida.",
         "identityUnconfirmed": "Identidad sin confirmar: esta reserva usó el correo de un buceador existente con un nombre distinto. Confirma que es la misma persona antes de embarcar.",
@@ -2492,8 +2495,6 @@
         "assignFailed": "No se ha guardado — comprueba tu conexión o inténtalo de nuevo.",
         "unassignAria": "Quitar a {name}",
         "noCrewAssigned": "Sin tripulación asignada. Arrastra al personal desde arriba hasta aquí.",
-        "countReady": "Listos",
-        "countBlocked": "Bloqueados",
         "countBoarded": "Embarcados",
         "blockedWarningOne": "{count} buceador todavía no puede embarcar — está en la lista de abajo.",
         "blockedWarningOther": "{count} buceadores todavía no pueden embarcar — están en la lista de abajo.",

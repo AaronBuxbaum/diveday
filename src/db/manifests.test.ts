@@ -18,6 +18,8 @@ import { subscribeManifestEvents } from "./manifest-events";
 import {
   getTripManifest,
   getTripManifests,
+  listDepartureBoardedBookingIds,
+  listDepartureBoardedByTrip,
   recordCrewAttestation,
   recordRollCall,
   updateLatestRollCallNote,
@@ -98,6 +100,90 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
       readiness: { status: "ready" },
       rollCall: { state: "boarded", recordedByName: staff.fullName },
     });
+  });
+
+  it("answers 'who is aboard' the same way for the counter and for the departure board", async () => {
+    // One reader, two shapes. `boardedCountsByTrip` (src/db/today.ts) used to
+    // be a second hand-written copy of this query, and the copies had already
+    // drifted: only one of them carried the cancelled-booking guard. Both
+    // derive from `listDepartureBoardedByTrip` now, so a head count and a
+    // per-diver badge can no longer disagree about the same booking.
+    const { db, shop, reef, booking, staff } = await manifestContext();
+    const issued = await issueWaiverRequest(db, {
+      shopId: shop.id,
+      bookingId: booking.booking.id,
+    });
+    if (!issued.ok) throw new Error("expected waiver link");
+    await completeWaiver(db, issued.token, {
+      signerName: booking.person.fullName,
+      agreed: true,
+      medicalAnswers: clearAnswers,
+    });
+    await expect(
+      recordRollCall(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        bookingId: booking.booking.id,
+        recordedByPersonId: staff.id,
+        status: "boarded",
+      }),
+    ).resolves.toMatchObject({ ok: true });
+
+    const byTrip = await listDepartureBoardedByTrip(db, shop.id, [reef.id]);
+    const flat = await listDepartureBoardedBookingIds(db, shop.id, [reef.id]);
+    expect(byTrip.get(reef.id)?.has(booking.booking.id)).toBe(true);
+    expect(flat.has(booking.booking.id)).toBe(true);
+    // The flat reader is exactly the grouped one, flattened — never its own query.
+    expect(flat.size).toBe([...byTrip.values()].reduce((sum, set) => sum + set.size, 0));
+
+    // A seat pulled after the count keeps its roll-call row. Counting it would
+    // let the head count agree with `booked` while a real diver is still
+    // ashore — the failure this guard exists to stop.
+    await db
+      .update(bookings)
+      .set({ status: "cancelled" })
+      .where(eq(bookings.id, booking.booking.id));
+
+    const afterCancel = await listDepartureBoardedByTrip(db, shop.id, [reef.id]);
+    const afterCancelFlat = await listDepartureBoardedBookingIds(db, shop.id, [reef.id]);
+    expect(afterCancel.get(reef.id)?.has(booking.booking.id) ?? false).toBe(false);
+    expect(afterCancelFlat.has(booking.booking.id)).toBe(false);
+  });
+
+  it("drops a boarding that was undone, for both shapes of the aboard reader", async () => {
+    // A later `cleared` is staff undoing a mistake, not a boarding that stands
+    // — the same "latest event, not latest boarded event" rule the manifest
+    // itself applies.
+    const { db, shop, reef, booking, staff } = await manifestContext();
+    const issued = await issueWaiverRequest(db, {
+      shopId: shop.id,
+      bookingId: booking.booking.id,
+    });
+    if (!issued.ok) throw new Error("expected waiver link");
+    await completeWaiver(db, issued.token, {
+      signerName: booking.person.fullName,
+      agreed: true,
+      medicalAnswers: clearAnswers,
+    });
+    await recordRollCall(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      bookingId: booking.booking.id,
+      recordedByPersonId: staff.id,
+      status: "boarded",
+    });
+    await recordRollCall(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      bookingId: booking.booking.id,
+      recordedByPersonId: staff.id,
+      status: "cleared",
+    });
+
+    const byTrip = await listDepartureBoardedByTrip(db, shop.id, [reef.id]);
+    const flat = await listDepartureBoardedBookingIds(db, shop.id, [reef.id]);
+    expect(byTrip.get(reef.id)?.has(booking.booking.id) ?? false).toBe(false);
+    expect(flat.has(booking.booking.id)).toBe(false);
   });
 
   it("carries the counter check-in status onto the manifest, independent of roll call (task 149)", async () => {

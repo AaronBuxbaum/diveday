@@ -27,7 +27,7 @@ import { nowDate } from "@/lib/clock";
 import { courseCrewGap } from "@/lib/course-ratios";
 import { formatDateTimeTz, formatShortDate, formatTime } from "@/lib/format";
 import { rollCallCheckpoints } from "@/lib/manifests";
-import { OPERATIONAL_MAX_TRIPS, operationalWindow } from "@/lib/operational-window";
+import { OPERATIONAL_MAX_TRIPS, operationalWindow, shopDayWindow } from "@/lib/operational-window";
 import { publicTripPath } from "@/lib/public-routes";
 import {
   collapseDiverActions,
@@ -39,6 +39,7 @@ import {
 } from "@/lib/today";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import type { AppDb } from "./client";
+import { listDepartureBoardedByTrip } from "./manifests";
 import { listPendingMediaDeletions, STALE_PENDING_AFTER_MS } from "./media-deletions";
 import { authorizesNitroxFill } from "./nitrox";
 import { listNotificationDeliveryIssues } from "./notifications";
@@ -69,6 +70,11 @@ const HOUR_MS = 60 * 60 * 1000;
  * lightweight — a bounded scan of scheduled trips around now, filtered to the
  * shop's calendar day, preferring a boat that hasn't finished over one that
  * already sailed.
+ *
+ * The scan's bounds are `shopDayWindow` (src/lib/operational-window.ts), beside
+ * the other windows this app slices time with, rather than the freestanding
+ * ±hours this query used to carry inline. It is a query bound, not a lens: the
+ * shop-local date filter below is what actually decides "today".
  */
 export async function todayNextDepartureTripId(
   db: AppDb,
@@ -77,6 +83,7 @@ export async function todayNextDepartureTripId(
   now: Date = nowDate(),
 ): Promise<string | null> {
   const today = shopDay(now, timeZone);
+  const scan = shopDayWindow(now);
   const rows = await db
     .select({ id: trips.id, startsAt: trips.startsAt, endsAt: trips.endsAt })
     .from(trips)
@@ -84,8 +91,8 @@ export async function todayNextDepartureTripId(
       and(
         eq(trips.shopId, shopId),
         eq(trips.status, "scheduled"),
-        gte(trips.startsAt, new Date(now.getTime() - 18 * HOUR_MS)),
-        lte(trips.startsAt, new Date(now.getTime() + 30 * HOUR_MS)),
+        gte(trips.startsAt, scan.from),
+        lte(trips.startsAt, scan.to),
       ),
     )
     .orderBy(asc(trips.startsAt));
@@ -152,48 +159,17 @@ function at(date: Date, timeZone: string, locale: string): string {
 }
 
 /**
- * Latest departure-checkpoint roll call per booking, for every trip sailing
- * today. One query rather than a manifest build per trip: the board needs a
- * head count, not the safety document.
+ * How many divers are aboard each of today's boats — a *count*, read through
+ * the one reader that owns the question (`listDepartureBoardedByTrip`,
+ * src/db/manifests.ts). This used to be a second hand-written copy of that
+ * query living here, which is how the two drifted: only one of them carried
+ * the cancelled-booking guard. The board needs a head count, not the safety
+ * document, so it stays a count — but it can no longer count differently.
  */
 async function boardedCountsByTrip(db: AppDb, shopId: string, tripIds: string[]) {
+  const byTrip = await listDepartureBoardedByTrip(db, shopId, tripIds);
   const counts = new Map<string, number>();
-  if (tripIds.length === 0) return counts;
-  const rows = await db
-    .select({
-      tripId: rollCallEvents.tripId,
-      bookingId: rollCallEvents.bookingId,
-      status: rollCallEvents.status,
-    })
-    .from(rollCallEvents)
-    // A booking cancelled after boarding (a no-show pulled, a refund) keeps its
-    // roll-call event row — without this join, its stale "boarded" would still
-    // count here even though `booked` (upcomingTripsWithCounts) already excludes
-    // it, letting the two totals coincidentally match with someone still
-    // unboarded. Same guard the write path (recordRollCall) and the manifest's
-    // own roster already apply.
-    .innerJoin(
-      bookings,
-      and(eq(bookings.id, rollCallEvents.bookingId), ne(bookings.status, "cancelled")),
-    )
-    .where(
-      and(
-        eq(rollCallEvents.shopId, shopId),
-        eq(rollCallEvents.checkpoint, "departure"),
-        inArray(rollCallEvents.tripId, tripIds),
-      ),
-    )
-    .orderBy(asc(rollCallEvents.occurredAt), asc(rollCallEvents.createdAt));
-  // Ordered oldest-first, so the last write per booking wins. A latest `cleared`
-  // event is an undo, so it simply never counts as boarded below.
-  const latest = new Map<
-    string,
-    { tripId: string; status: "boarded" | "not_boarded" | "cleared" }
-  >();
-  for (const row of rows) latest.set(row.bookingId, { tripId: row.tripId, status: row.status });
-  for (const { tripId, status } of latest.values()) {
-    if (status === "boarded") counts.set(tripId, (counts.get(tripId) ?? 0) + 1);
-  }
+  for (const [tripId, aboard] of byTrip) counts.set(tripId, aboard.size);
   return counts;
 }
 

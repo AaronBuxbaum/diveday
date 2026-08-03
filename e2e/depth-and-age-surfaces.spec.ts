@@ -129,9 +129,11 @@ test.describe("staff", () => {
     await expect(warning).toContainText("Not a block");
 
     // And the diver it is about is still boardable: the manifest must not have
-    // turned this into a blocked seat.
+    // turned this into a blocked seat. "Ready", not "Ready to board" — the one
+    // readiness vocabulary (src/i18n/readiness-labels.ts) that the roster and
+    // the counter now share with the manifest.
     await page.goto(`${tripPath}/manifest`);
-    await expect(page.getByText("Ready to board").first()).toBeVisible();
+    await expect(page.getByText("✓ Ready", { exact: true }).first()).toBeVisible();
   });
 
   test("depth is entered and read back in the shop's own unit", async ({ page }) => {

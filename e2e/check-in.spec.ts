@@ -20,10 +20,12 @@ test("counter check-in searches by diver, confirms live readiness, and keeps blo
     .filter({ hasText: "Priya Sharma" })
     .filter({ visible: true });
   await expect(card).toHaveCount(1);
-  // The warning-tone Badge prepends a decorative aria-hidden glyph
-  // (Badge.tsx toneGlyph), so the element's own text is "▲ Needs
-  // attention", not "Needs attention" alone.
-  await expect(card.getByText("▲ Needs attention")).toBeVisible();
+  // One readiness vocabulary and one tone per state
+  // (src/i18n/readiness-labels.ts): the counter used to call this diver "Needs
+  // attention" in warning while the manifest called the same person "Blocked"
+  // in danger. The danger-tone Badge prepends a decorative aria-hidden glyph
+  // (Badge.tsx toneGlyph), so the element's own text is "✕ Blocked".
+  await expect(card.getByText("✕ Blocked")).toBeVisible();
   await expect(card.getByText("Waiver has not been sent.")).toBeVisible();
   await expect(card.getByRole("button", { name: "Check in Priya Sharma" })).toHaveCount(0);
 

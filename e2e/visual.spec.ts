@@ -698,8 +698,15 @@ for (const scheme of ["light", "dark"] as const) {
         // nothing could capture sanely (the same shape the orders index was
         // found in). Two bounds now: the shared operational horizon decides
         // which departures it holds, the pager how many render at once.
+        //
+        // It is Today's by-departure *view* rather than a route of its own
+        // since Not ready folded into the shop home, so this navigates through
+        // the redirect the old URL still serves and keeps the `blockers`
+        // capture name. The baseline will move: the same groups now render
+        // under Today's greeting, departure board, and view switch instead of
+        // their own page header, which is the change this capture should show.
         await page.goto("/shop/blue-mantis/blockers");
-        await page.getByRole("heading", { name: "Not ready", level: 1 }).waitFor();
+        await page.getByRole("heading", { name: "Not ready", level: 2 }).waitFor();
         await capture(page, "blockers", scheme);
 
         // Counter mode itself — the third surface reading the shared

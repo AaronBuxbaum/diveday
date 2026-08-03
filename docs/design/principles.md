@@ -61,7 +61,8 @@ otherwise stay out of the way: the product speaks as the shop's own tool, not as
 with a personality.
 
 **Empty states follow one rule: terminal vs. section.** A **terminal/whole-page** empty state —
-nothing else renders on the page (see `src/app/shop/[shopSlug]/blockers/page.tsx`) — uses the
+nothing else renders on the page (see `src/components/OfflineManifestView.tsx`, whose "no saved
+manifests" and "nothing here offline" screens are the whole page) — uses the
 bespoke warm pattern: a large emoji in a rounded circle, a heading, and subtext, with no card
 border. An **empty section within an otherwise-populated page** — a list or panel sitting below
 filters, a header, or other real content — uses the shared `EmptyState` component

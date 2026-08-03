@@ -11,7 +11,11 @@ import { buttonClass } from "@/components/ui/button";
 import { listCheckInQueue } from "@/db/check-in";
 import { getDb } from "@/db/client";
 import { getShopBySlug } from "@/db/shops";
-import { readinessBlockerText } from "@/i18n/readiness-labels";
+import {
+  readinessBlockerText,
+  readinessStatusText,
+  readinessStatusTone,
+} from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { blockerFixFor } from "@/lib/blockers";
@@ -237,8 +241,12 @@ export default async function CheckInPage({
                       ) : null}
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
-                      <Badge tone={ready ? "success" : "warning"}>
-                        {ready ? t("checkIn.readyBadge") : t("checkIn.needsAttentionBadge")}
+                      {/* The one readiness vocabulary and the one tone per
+                          state (src/i18n/readiness-labels.ts). This badge used
+                          to say "Needs attention" in warning while the manifest
+                          said "Blocked" in danger about the very same diver. */}
+                      <Badge tone={readinessStatusTone(row.readiness.status)}>
+                        {readinessStatusText(t, row.readiness.status)}
                       </Badge>
                       {checkedIn ? null : ready ? (
                         <form action={checkInAction.bind(null, shopSlug)}>

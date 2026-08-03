@@ -24,7 +24,10 @@ import type { WaiverSendState, WaiverSendSurface } from "./waiver-send-types";
 
 const SURFACE_PATH: Record<WaiverSendSurface, (shopSlug: string, tripId?: string) => string> = {
   today: (shopSlug) => `/shop/${shopSlug}`,
-  blockers: (shopSlug) => `/shop/${shopSlug}/blockers`,
+  // The by-departure view lives *on* the shop home now, so revalidating it is
+  // revalidating that path — the `?view=` query selects a view of the same
+  // route, and `revalidatePath` is keyed on the route, not the query.
+  blockers: (shopSlug) => `/shop/${shopSlug}`,
   check_in: (shopSlug) => `/shop/${shopSlug}/check-in`,
   roster: (shopSlug, tripId) => `/shop/${shopSlug}/trips/${tripId}/guests`,
 };
