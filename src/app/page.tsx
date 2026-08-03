@@ -136,14 +136,19 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
             <p className="mt-6 max-w-xl text-lg leading-8 text-muted sm:text-xl">
               {t("marketing.home.heroDescription")}
             </p>
+            {/* `w-full sm:w-auto` on all three: without it the primary (inside
+                a form, hugging its label) rendered *narrower* than the
+                stretched secondary link on phones — the demoted action was the
+                biggest target on first paint. Full-width buttons are also the
+                better wet-thumb target. */}
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <form action={enterDemoAction}>
+              <form action={enterDemoAction} className="w-full sm:w-auto">
                 <FunnelTag source="home-hero" />
                 <SubmitButton
                   pendingLabel={t("nav.gettingReady")}
                   className={buttonClass({
                     size: "cta",
-                    className: "cursor-pointer disabled:opacity-70",
+                    className: "w-full cursor-pointer disabled:opacity-70 sm:w-auto",
                   })}
                 >
                   {t("nav.tryDemo")}
@@ -154,14 +159,13 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
                 className={buttonClass({
                   variant: "secondary",
                   size: "cta",
-                  className: "border-border-strong",
+                  className: "w-full border-border-strong sm:w-auto",
                 })}
               >
                 {t("nav.startTrial")}
               </Link>
             </div>
-            <p className="mt-3 text-sm font-medium text-muted">{t("marketing.home.demoNote")}</p>
-            <p className="mt-2 text-sm text-muted">{t("marketing.home.exploreNote")}</p>
+            <p className="mt-3 text-sm font-medium text-muted">{t("marketing.common.demoNote")}</p>
           </div>
 
           <div className="mx-auto w-full max-w-sm lg:max-w-md">
@@ -238,6 +242,23 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
           </div>
           <div className="mt-12">
             <FeatureGroupsGrid columns={4} featuresPerGroup={1} />
+          </div>
+          {/* A door out at the page's midpoint: on a phone the hero CTA and
+              the closing band sit several thousand pixels apart, and a reader
+              convinced here shouldn't have to scroll to either end to act. */}
+          <div className="mt-12 flex flex-col items-center gap-4 rounded-2xl border border-border bg-background px-6 py-8 text-center sm:flex-row sm:justify-between sm:text-left">
+            <h3 className="text-xl font-semibold tracking-tight">
+              {t("marketing.common.midCtaTitle")}
+            </h3>
+            <form action={enterDemoAction} className="shrink-0">
+              <FunnelTag source="home-mid" />
+              <SubmitButton
+                pendingLabel={t("nav.gettingReady")}
+                className={buttonClass({ className: "cursor-pointer disabled:opacity-70" })}
+              >
+                {t("nav.tryDemo")}
+              </SubmitButton>
+            </form>
           </div>
         </div>
       </section>
@@ -332,7 +353,7 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
                 {t("marketing.home.startTrial")}
               </Link>
             </div>
-            <p className="text-sm text-muted">{t("marketing.home.demoNote")}</p>
+            <p className="text-sm text-muted">{t("marketing.common.demoNote")}</p>
             <p className="mt-2 font-medium">
               {t("marketing.home.priceLine", {
                 price: earlyAccessPrice.price,

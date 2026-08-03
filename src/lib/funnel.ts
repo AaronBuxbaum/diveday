@@ -14,6 +14,7 @@ import { MIGRATION_GUIDE_SLUGS } from "./migration-guides";
 const FIXED_SOURCES = [
   "home-hero",
   "home-diver-moment",
+  "home-mid",
   "home-closing",
   "nav",
   "product",

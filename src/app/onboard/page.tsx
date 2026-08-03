@@ -205,7 +205,10 @@ export default async function OnboardPage({
                     className={controlClass}
                   />
                 </Field>
-                <Field label={t("account.onboard.shopLinkLabel")}>
+                <Field
+                  label={t("account.onboard.shopLinkLabel")}
+                  hint={t("account.onboard.shopLinkHint")}
+                >
                   <input
                     name="shopSlug"
                     type="text"

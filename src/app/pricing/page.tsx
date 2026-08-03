@@ -195,7 +195,7 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
                   className: "w-full cursor-pointer border-border-strong disabled:opacity-70",
                 })}
               >
-                {t("marketing.pricing.tryDemoFirst")}
+                {t("marketing.common.tryDemo")}
               </SubmitButton>
             </form>
           </div>

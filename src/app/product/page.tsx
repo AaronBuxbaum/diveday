@@ -88,6 +88,35 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
           <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-muted">
             {t("marketing.product.heroDescription")}
           </p>
+          {/* The nav tap that lands here is the most evaluation-intent click
+              on the site; without its own CTA the first offered action was
+              the nav's trial link — the wrong ask while a buyer is still
+              verifying claims. Same one-primary block as the home hero. */}
+          <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
+            <form action={enterDemoAction} className="w-full sm:w-auto">
+              <FunnelTag source="product" />
+              <SubmitButton
+                pendingLabel={t("marketing.product.gettingDemoReady")}
+                className={buttonClass({
+                  size: "cta",
+                  className: "w-full cursor-pointer disabled:opacity-70 sm:w-auto",
+                })}
+              >
+                {t("marketing.common.tryDemo")}
+              </SubmitButton>
+            </form>
+            <Link
+              href={trialHref("product")}
+              className={buttonClass({
+                variant: "secondary",
+                size: "cta",
+                className: "w-full border-border-strong sm:w-auto",
+              })}
+            >
+              {t("marketing.common.startTrial")}
+            </Link>
+          </div>
+          <p className="mt-3 text-sm font-medium text-muted">{t("marketing.common.demoNote")}</p>
         </div>
       </section>
 
@@ -172,7 +201,7 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
             on it (conversion review — one CTA at the bottom of ten sections). */}
         <div className="mt-14 flex flex-col items-center gap-4 rounded-2xl border border-border bg-surface px-6 py-8 text-center sm:flex-row sm:justify-between sm:text-left">
           <h3 className="text-xl font-semibold tracking-tight">
-            {t("marketing.product.midCtaTitle")}
+            {t("marketing.common.midCtaTitle")}
           </h3>
           <div className="flex flex-col gap-3 sm:flex-row">
             <form action={enterDemoAction}>
@@ -354,7 +383,9 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
               {t("marketing.product.spreadsheetLink")}
             </Link>
           </div>
-          <div className="flex flex-col gap-3 sm:flex-row">
+          {/* `shrink-0` matters: without it the closing text squeezes both
+              buttons into ~140px three-line blobs at tablet widths. */}
+          <div className="flex shrink-0 flex-col gap-3 sm:flex-row">
             <form action={enterDemoAction}>
               <FunnelTag source="product" />
               <SubmitButton

@@ -11,15 +11,16 @@ test("the homepage hero offers one demo door, and the diver preview lives on its
   // label than every other page gave the same action). `.first()` targets
   // the hero; the closing band repeats the same label deliberately.
   await expect(page.getByRole("button", { name: "Try the live demo" }).first()).toBeVisible();
-  // The click's cost is stated at the point of decision.
+  // The click's cost is stated at the point of decision, scoped to the demo —
+  // it must not promise "no sign-up" on behalf of the trial button beside it.
   await expect(
     page
-      .getByText("No sign-up, no card — one click opens a working sample shop in your browser.")
+      .getByText("The demo opens a working sample shop in one click — no sign-up, no card.")
       .first(),
   ).toBeVisible();
-  // Exactly two demo buttons (hero + closing) — the five-chip role picker is
-  // gone from the hero; role switching is the in-demo switcher's job.
-  await expect(page.getByRole("button", { name: "Try the live demo" })).toHaveCount(2);
+  // Exactly three demo buttons (hero, mid-page, closing) — the five-chip role
+  // picker is gone from the hero; role switching is the in-demo switcher's job.
+  await expect(page.getByRole("button", { name: "Try the live demo" })).toHaveCount(3);
 
   // The diver preview moved out of the hero (where it was a third competing
   // door) onto the "For the diver" moment card, still tagged for attribution.
@@ -91,9 +92,11 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   await expect(page.getByRole("heading", { name: "Booking and the public pages" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Your records" })).toBeVisible();
   // The honest-no scope block and the demo CTA both land on the product page —
-  // two demo doors now: mid-page after the dock story, and the closing band.
+  // three demo doors: the hero (the most evaluation-intent click on the site
+  // must offer proof above the fold), mid-page after the dock story, and the
+  // closing band.
   await expect(page.getByRole("heading", { name: "What DiveDay doesn't do." })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Try the live demo" })).toHaveCount(2);
+  await expect(page.getByRole("button", { name: "Try the live demo" })).toHaveCount(3);
 
   await page.getByRole("link", { name: "Pricing" }).first().click();
   await expect(
@@ -108,7 +111,9 @@ test("public marketing pages lead to the product and pricing details", async ({ 
       name: "DiveDay is new. What happens to my data if this doesn't work out?",
     }),
   ).toBeVisible();
-  await expect(page.getByRole("button", { name: "Try the live demo first" })).toBeVisible();
+  // Same shared label as everywhere else — "Try the live demo first" was the
+  // exact per-page synonym drift the one-label rule exists to catch.
+  await expect(page.getByRole("button", { name: "Try the live demo" })).toBeVisible();
 });
 
 test("the sign-up form answers the hesitation it creates", async ({ page }) => {

@@ -111,8 +111,11 @@ export function FeatureGroupsGrid({
   featuresPerGroup?: number;
   columns?: 2 | 4;
 }) {
+  // Four columns wait for `xl`: at 1024 the ~226px cards wrapped their
+  // uppercase eyebrows onto two lines and knocked the four headings onto
+  // three different baselines — a comfortable 2×2 reads calmer there.
   const gridClass =
-    columns === 4 ? "grid gap-4 sm:grid-cols-2 lg:grid-cols-4" : "grid gap-5 md:grid-cols-2";
+    columns === 4 ? "grid gap-4 sm:grid-cols-2 xl:grid-cols-4" : "grid gap-5 md:grid-cols-2";
 
   return (
     <div className={gridClass}>
