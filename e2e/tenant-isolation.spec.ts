@@ -39,13 +39,23 @@ const STAFF_PATHS = [
   "/schedule/board",
   "/reviews",
   "/blockers",
+  // The highest-value staff surfaces by data sensitivity: team roster and
+  // export live under settings, reports aggregate revenue, staffing shows
+  // who works when.
+  "/settings",
+  "/settings/team",
+  "/settings/export",
+  "/reports",
+  "/promos",
+  "/staffing",
+  "/dive-sites",
 ];
 
 test("a second shop's owner reaches none of Blue Mantis's staff surfaces", async ({ page }) => {
-  // Onboarding, then a dozen sequential navigations. Same aggregate-cost
+  // Onboarding, then ~19 sequential navigations. Same aggregate-cost
   // reasoning as booking.spec.ts's chained flows: each step is fast, the sum
   // is past the 15s default.
-  test.setTimeout(60_000);
+  test.setTimeout(90_000);
 
   // Mint the second tenant through the real sign-up flow — it ends with us
   // signed in as that shop's owner, which is exactly the actor this spec is
@@ -126,6 +136,17 @@ test("a second shop's owner reaches none of Blue Mantis's staff surfaces", async
     await expect(page.getByText(OTHER_SHOP_DIVER), path).toHaveCount(0);
     await expect(page.getByRole("navigation", { name: "Primary" }), path).toHaveCount(0);
   }
+
+  // A hand-supplied x-diveday-path claiming a public route must not soften
+  // the refusal: the proxy overwrites the header on every matched request,
+  // and the layout additionally binds it to the slug it renders, so this
+  // probe is the regression test for both halves of that trust boundary.
+  const spoofed = await page.request.get("/shop/blue-mantis/divers", {
+    headers: { "x-diveday-path": "/shop/blue-mantis/schedule" },
+  });
+  const spoofedBody = await spoofed.text();
+  expect(spoofedBody).toContain("We couldn’t find that page");
+  expect(spoofedBody).not.toContain(OTHER_SHOP_DIVER);
 
   // Their own console is untouched by any of it.
   await page.goto(`/shop/${unique}/divers`);

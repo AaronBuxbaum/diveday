@@ -72,13 +72,22 @@ export default async function ShopLayout({
   // embed (docs ADR 20260726-schedule-embed).
   const requestHeaders = await headers();
   const isEmbed = requestHeaders.get(EMBED_REQUEST_HEADER) === "1";
-  // Also proxy-set (src/proxy.ts) and, like the embed header above, always
-  // overwritten there so a client can never supply it. A layout is handed no
+  // Also proxy-set (src/proxy.ts) and, like the embed header above,
+  // overwritten there on every proxied request. A layout is handed no
   // URL at all, and this shell wraps both the shop's public pages and its
   // staff console, so telling the two apart is the only way the tenant check
   // below can 404 a cross-shop staff visit without also 404ing this shop's
-  // public schedule for the very same person.
-  const requestPath = requestHeaders.get(REQUEST_PATH_HEADER) ?? "";
+  // public schedule for the very same person. The header is additionally
+  // bound to the slug actually rendering: the proxy matcher has an
+  // extension-based escape hatch, so a request could in principle arrive
+  // with a client-supplied value naming some other shop's public route —
+  // a path that doesn't belong to this slug fails closed like a missing
+  // header, which makes the value self-validating rather than trusted.
+  const statedPath = requestHeaders.get(REQUEST_PATH_HEADER) ?? "";
+  const requestPath =
+    statedPath === `/shop/${shopSlug}` || statedPath.startsWith(`/shop/${shopSlug}/`)
+      ? statedPath
+      : "";
   const db = await getDb();
   const shop = await getShopBySlug(db, shopSlug);
   const showBanner = !isEmbed && (shop?.isDemo ?? false);
@@ -155,6 +164,12 @@ export default async function ShopLayout({
   // cross-tenant visit is refused outright rather than rendered as a mix of
   // two shops. Fails closed: an absent path header is not a public route.
   if (session?.user && shop && !ownShop && !isPublicShopRoute(requestPath)) notFound();
+  // An unknown slug is nobody's shop: without this, a signed-in staffer
+  // visiting /shop/no-such-shop/divers would get their *own* roster rendered
+  // under a foreign-looking URL — not a leak, but a phishing-shaped breach of
+  // the "slug and session agree" invariant above. Public routes keep their
+  // own unknown-slug handling (those pages notFound() themselves).
+  if (session?.user && !shop && !isPublicShopRoute(requestPath)) notFound();
 
   const showNav = !isEmbed && ownShop;
   // Small "pending work" counts for the Reviews/Blockers nav badges (task 83,
