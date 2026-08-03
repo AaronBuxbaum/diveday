@@ -57,6 +57,42 @@ test("a diver's record shows their still-scheduled trips, linked straight to the
   await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+\/manifest$/);
 });
 
+/**
+ * The diver record is one ~6,400px scroll on a phone. Payments — the section a
+ * staffer opens this page for when somebody is standing at the counter with a
+ * bill — used to sit seventh, below "Book an activity", reachable only by
+ * flicking. The sub-nav is the way down, and it is a plain hash jump: no route
+ * change, no refetch, the whole record stays loaded behind it.
+ */
+test("the diver record's sub-nav jumps to a section without leaving the page", async ({ page }) => {
+  await page.goto("/shop/blue-mantis/divers?q=Talia");
+  await page.getByRole("row").filter({ hasText: "Talia Rosen" }).getByText("TR").click();
+  await expect(page.getByRole("heading", { level: 1, name: "Talia Rosen" })).toBeVisible();
+
+  const subNav = page.getByRole("navigation", { name: "Diver record" });
+  await expect(subNav).toBeVisible();
+
+  const payments = page.getByRole("heading", { name: "Payments" });
+  // Seventh of eleven sections: far below the fold on arrival.
+  await expect(payments).not.toBeInViewport();
+
+  await subNav.getByRole("link", { name: "Payments" }).click();
+  await expect(page).toHaveURL(/\/divers\/[a-f0-9-]+#payments$/);
+  await expect(payments).toBeInViewport();
+  // Same document, not a navigation — the header never re-rendered away.
+  await expect(page.getByRole("heading", { level: 1, name: "Talia Rosen" })).toBeAttached();
+
+  // And back up, so the bar is a spine rather than a one-way trip.
+  await subNav.getByRole("link", { name: "Cards" }).click();
+  await expect(page).toHaveURL(/#cards$/);
+  await expect(page.getByRole("heading", { name: "Certification cards" })).toBeInViewport();
+
+  // The destructive tail is deliberately not a sub-nav target: removing a diver
+  // and erasing their personal data cost a scroll, on purpose.
+  await expect(subNav.getByRole("link")).toHaveCount(5);
+  await expect(subNav.getByRole("link", { name: /Erase|Remove/ })).toHaveCount(0);
+});
+
 // Task 144 (safety-adjacent — this prints on the manifest): Today used to
 // tell staff to "ask at the counter" and link to a roster with no field to
 // type it into. Covers both entry points, the incomplete-entry failure path,

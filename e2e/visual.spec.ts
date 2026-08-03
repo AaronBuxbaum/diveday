@@ -784,6 +784,14 @@ for (const scheme of ["light", "dark"] as const) {
           .filter({ visible: true })
           .click();
         await page.getByRole("heading", { level: 1, name: "Priya Sharma" }).waitFor();
+        // Park the pointer before shooting a diver record. The roster row these
+        // four captures click sits, at 390, exactly where the record's sub-nav
+        // bar lands — so the pointer left behind by the click renders one tab in
+        // its hover state, and the phone baselines photographed a "Fit" that
+        // looked selected. Deterministic, so never a flake; just a lie about
+        // state that a reviewer has to re-derive every time. (0,0) is the demo
+        // banner, which has nothing hoverable in the corner.
+        await page.mouse.move(0, 0);
         await capture(page, "diver-profile", scheme);
 
         // A diver holding a card past its shop refresher-due date: the
@@ -797,6 +805,7 @@ for (const scheme of ["light", "dark"] as const) {
           .filter({ visible: true })
           .click();
         await page.getByRole("heading", { level: 1, name: "Yusuf Demir" }).waitFor();
+        await page.mouse.move(0, 0);
         await capture(page, "diver-profile-expired", scheme);
 
         // The migrated diver, and every surface that has to say so. Her level
@@ -815,6 +824,7 @@ for (const scheme of ["light", "dark"] as const) {
           .filter({ visible: true })
           .click();
         await page.getByRole("heading", { level: 1, name: "Hana Kobayashi" }).waitFor();
+        await page.mouse.move(0, 0);
         await capture(page, "diver-profile-imported", scheme);
 
         // A diver who has actually paid for something. None of the three
@@ -846,7 +856,10 @@ for (const scheme of ["light", "dark"] as const) {
           .filter({ visible: true })
           .click();
         await page.getByRole("heading", { level: 1, name: "Talia Rosen" }).waitFor();
+        // Still resolves after the reorder — Payments moved from seventh to
+        // fourth, but the section (and its heading) is the same one.
         await page.getByRole("heading", { name: "Payments" }).waitFor();
+        await page.mouse.move(0, 0);
         await capture(page, "diver-profile-payments", scheme);
 
         // The seeded reef trip: schedule card → Overview (what the dive is) →

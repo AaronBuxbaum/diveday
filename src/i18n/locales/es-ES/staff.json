@@ -121,6 +121,14 @@
     "day": "Día {number}"
   },
   "divers": {
+    "subNav": {
+      "ariaLabel": "Ficha del buceador",
+      "cards": "Titulaciones",
+      "fit": "Tallas",
+      "payments": "Pagos",
+      "trips": "Salidas",
+      "history": "Historial"
+    },
     "upcoming": {
       "heading": "Próximas salidas"
     },
