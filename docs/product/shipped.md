@@ -7,6 +7,150 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## The 2026-08-02 comprehensive review: fourteen top findings delivered (2026-08-02)
+
+All fourteen rows of "the findings that matter most" in the
+[2026-08-02 ten-lens review](assessments/comprehensive-review-20260802.md) — three Criticals and
+eleven Highs — plus two further queue items and a set of defects the required reviews found in the
+new work. The assessment has been pruned to what remains open; what is still open is **not** listed
+here. Owner decisions taken before the work started: refunds return what was actually paid with gear
+included (HD-12/HD-13), erasure is anonymize-and-keep (HD-11 direction, ADR still Proposed), contrast
+is focus-ring only (HD-17 unchanged), and visual diffs warn loudly rather than block (HD-18).
+
+**Safety.**
+
+- **Cert, specialty and nitrox gates read every site a trip visits** (DOM-C1), not just
+  `trips.dive_site_id`. `getTripSiteRequirement` and the batch path in `listTripsReadiness` compose
+  the stricter `minimum_certification_level`, the union of required specialties, and `requires_nitrox`
+  across the primary site **and** every `trip_dives.dive_site_id`, mirroring the depth advisory's join
+  — an Open Water diver on a shallow primary with an AOW/Deep second dive is now blocked
+  (`src/db/readiness.ts`).
+- **Intro sessions cap at 2 students per instructor with no assistant bonus** (DOM-H2), the PADI
+  Instructor Manual's open-water Discover Scuba figure obtained under HD-6, replacing the Open Water
+  training ratio (8, +2 per assistant, ceiling 12) that had been applied to DSD for lack of a real
+  number. DiveDay's trip model has no confined-water session type, so the Manual's 4:1 confined figure
+  is recorded and deliberately unenforced. The cap is **agency-agnostic** — zero prior water time does
+  not depend on whose logo is on the course — while the cited 8/+2/12 entry-level figure stays
+  PADI-scoped; `courses.agency` comparisons are normalized, closing the case where a shop typing
+  `"PADI"` silently lost the cap entirely (DATA-L2). `restoreBooking` re-checks the ratio, and a crew
+  change that leaves a session over ratio is now **recorded rather than refused**, so a manifest never
+  lists crew who are not aboard.
+  [20260802-dsd-instructor-manual-ratio](../architecture/decisions/20260802-dsd-instructor-manual-ratio.md)
+  and the [2026-08-02 amendment](../architecture/decisions/20260724-course-admission-standards.md) to
+  the course-admission standards.
+- **Crew enter the head count** (DOM-H1, interim slice): a per-checkpoint "crew aboard: N of N"
+  attestation that a checkpoint cannot read complete without, surfaced in the live *and* offline
+  manifests and carried in the export. "0 of 0" deliberately still needs a human — auto-completing
+  would hand a silent all-clear to exactly the trips whose crew data is worst.
+  [20260802-crew-roll-call-attestation](../architecture/decisions/20260802-crew-roll-call-attestation.md).
+  Per-person crew roll call remains open and still waits on `trip_assignments` gaining a per-trip role.
+- **A returned boat with an unfinished head count escalates** (DOM-H3): top-severity Today item plus a
+  schedule-board badge for any trip past its end with awaiting divers or no after-dive events. The
+  review of this work found the alarm was silenced by the input that should trigger it — `not_boarded`
+  means "never left the dock" at departure and "**did not come back to the boat**" after a dive, and
+  both were being treated as accounted-for and carried forward, rendering as "Not boarded ✓". Fixed
+  before merge, along with a returned-trips query that kept the twenty *oldest* trips before testing
+  whether any count was open, so the busiest shop lost the most recent boat.
+
+**Money.**
+
+- **Refund idempotency is keyed on the payment-operation intent** (PAY-C1), not
+  `refund:{intent}:{amount}` — two party members cancelling for the same amount against one payment
+  intent no longer collide into a single replayed Stripe refund with two local rows claiming money
+  came back (`src/db/refunds.ts`, `src/lib/payments/checkout.ts`).
+- **A settled-amount ledger** (PAY-H1/H2): `booking_checkouts` records the session's actual
+  `amount_total` at completion, per-booking paid amounts are derived from it post-discount with gear
+  included, and refunds and the monthly report are based on that instead of the quoted list price
+  (`src/lib/payments/settlement.ts`, `src/db/checkouts.ts`, `src/db/reporting.ts`). A shop no longer
+  loses money on every within-window promo cancellation, and gear money is no longer invisible.
+
+**Data and privacy.**
+
+- **A diver can be erased** (DATA-H1): a one-way, owner-gated anonymization that strips identity and
+  medical fields across the schema while preserving a verifiable signed-release skeleton. The hard
+  part was that `waiverIntegrityMetadata` HMACs a field set including `signedName` and
+  `medicalAnswers`, so stripping medical answers would have flipped every erased record to `invalid`
+  — "strip medical" and "preserve verifiable evidence" were mutually exclusive as the code stood.
+  Resolved with a **waiver integrity v2** seal over the surviving fields, dispatched per record
+  (`src/db/anonymize.ts`, `src/lib/waiver-integrity.ts`), with the erased-diver markers carried into
+  the CSV export so a destination system can tell an erased record from an incomplete one.
+  [20260802-diver-data-erasure](../architecture/decisions/20260802-diver-data-erasure.md) — **Status:
+  Proposed on purpose**: HD-10/HD-11 (counsel on erasure vs signed evidence, and retention windows)
+  decide when the mechanism may point at a real diver. The ADR is honest that erasure is one-way and
+  evidence-reducing, and records what it cannot reach: `orders.stripe_customer_id` is a `NOT NULL`
+  pointer erasure cannot rewrite, so processor-side deletion is a separate manual step.
+
+**Operations.**
+
+- **A backup and restore posture** (OPS-1) where there was none: Neon PITR plus a scheduled per-shop
+  logical export to a versioned private S3 bucket provisioned in `infra/`, its two known gaps written
+  down, and a quarterly restore test on the calendar.
+  [20260802-backup-and-restore-posture](../architecture/decisions/20260802-backup-and-restore-posture.md),
+  [backup-and-restore-runbook.md](../engineering/backup-and-restore-runbook.md).
+- **The daily cron is no longer silent** (OPS-3): per-scan try/catch with `Sentry.captureException` so
+  one failure cannot starve later scans, an exported `maxDuration`, structured per-scan logging, and a
+  real Sentry Cron Monitor check-in from the route itself — `webpack.automaticVercelMonitors` was inert
+  under Turbopack, so the configured monitor had never worked.
+- **`/api/health`** (OPS-6 half): an unauthenticated liveness probe (DB `select 1` + commit SHA), plus
+  [deploy-and-migrations-runbook.md](../engineering/deploy-and-migrations-runbook.md) (expand/contract
+  rule, forward-only rollback, concurrent-deploy posture) and
+  [incident-response-runbook.md](../engineering/incident-response-runbook.md) (severity ladder, first
+  five minutes, Vercel instant rollback, Neon restore, comms template) — OPS-2 and OPS-4's
+  documentation halves.
+- **`/calendar/[token]` joined `CAPABILITY_ROUTE_PREFIXES`** (OPS-5) — the one bearer route the
+  redaction map had forgotten, so a route error no longer sends a raw feed token to Sentry
+  (`src/app/observability.ts`).
+
+**Conversion, tooling, and the launch stall.**
+
+- **The onboard timezone field no longer hard-blocks a dive shop** (MKT-F2): the full IANA list from
+  `Intl.supportedValuesOf("timeZone")` with curated dive-region optgroups on top, so Bonaire, Cayman,
+  Belize, Roatán, Indonesia, the Maldives and Fiji can complete signup (`src/lib/timezones.ts`).
+- **Switching guides carry an above-the-fold CTA** (MKT-F1) plus a repeat after the scope table, for
+  signed-out buyers too — previously the highest-intent landers had no actionable CTA until ~7
+  sections deep and the mid-page CTA rendered `null`.
+- **Visual diffs are summarized on the PR** (TEST-1): `visual-report` parses reg-suit's `out.json` into
+  a markdown report and a per-PR comment behind a **neutral** check. The owner's decision was warn
+  loudly, never block —
+  [20260802-visual-diff-pr-comment](../architecture/decisions/20260802-visual-diff-pr-comment.md),
+  closing HD-18.
+- **`pnpm gates`** (PROD-C1's tooling only): a report — never a gate, never in `check` — of days since
+  each `human-decisions.md` H-/V- row last moved, reconciled against `rollout.md`'s "next 30 days"
+  list, with ages derived from dated outcomes and `git blame` and printed as `≥ N` when a shallow
+  clone can only bound them (`scripts/gate-freshness.mjs`). With it, the
+  [pilot-kit/](pilot-kit/README.md): design-partner one-pager, Florida call-list template, first-call
+  script, and a printable V-02 run sheet that includes the spray-guard false-trigger measurement
+  (DOM-L3). The call list ships with **no rows** on purpose — ten plausible shop names would get
+  dialled and counted as pipeline. **This measured the launch stall; it did not move it**, and the
+  finding itself stays open in the assessment.
+
+**Defects the reviews found in the new work, all fixed before merge.** Beyond the roll-call and
+returned-trips defects above, `dive-domain-expert` and `security-reviewer` found: the 4:1 intro cap
+applying only to PADI when the reason for it is agency-independent; an over-ratio warning citing a
+standard that didn't apply and prescribing "assign an assistant", which the new rule ignores; erasure
+that the cron would have undone, because `booking_checkouts.customer_email` wasn't scrubbed and
+erasure doesn't cancel bookings, so the next daily tick would have emailed the address the shop had
+just said was destroyed; an activity-log scrub written as `ILIKE '%fullName%'`, so erasing a diver
+named "Al" would have irreversibly redacted most of the shop's history; `restoreBooking` bypassing the
+ratio cap; and a system that refused to record reality on a safety document, since an instructor
+calling in sick couldn't be unassigned if it put the session over ratio. Two more were found outside
+the findings' scope: the offline shell precached only assets named in the shell HTML, so hydration
+could hand a captain the error boundary instead of the roll call; and the new attestation table
+blocked `delete from trips`, which would have broken demo-shop reaping from the daily cron while e2e
+still reported green.
+
+**The offline shell stops claiming an empty phone before it has looked.** `envelope` and `list` both
+start `null` meaning "not looked yet", and every branch read that as "nothing there" — a definitive
+claim about a safety artifact, printed above a status line saying the store was still opening. Worse,
+`manifest-sw.js` caches one document under `/offline-manifest` and replayed it for every offline
+reload whatever `?trip=`/`?checkpoint=` the captain was on, so the reloaded page painted a different
+page than the one requested and only became correct through React's hydration-mismatch error
+recovery — a recoverable hydration error on **every** offline reload. A `storeRead` flag gates both,
+so the server always emits one neutral view, the client hydrates against a match, and the real branch
+is chosen by an ordinary render. This was reached by investigating a flaky storage-eviction e2e test;
+the product bug is real and removed, but the flake was **never reproduced**, so it is not proven
+fixed — tracked as TEST-3 in the assessment.
+
 ## The keyboard focus ring passes WCAG 1.4.11 in every palette (2026-08-02)
 
 The first of the three deferred accessibility contrast tasks. `src/app/globals.css` gained a
