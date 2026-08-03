@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { waiverSendCopy } from "@/app/actions/waiver-send-types";
 import { EmptyState } from "@/components/EmptyState";
+import { OperationalWindowNote, readinessPivots } from "@/components/OperationalWindowNote";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { WaiverSendControl } from "@/components/today/WaiverSendControl";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +17,11 @@ import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { blockerFixFor } from "@/lib/blockers";
 import { allDiversCheckedIn } from "@/lib/check-in";
 import { formatShortDate, formatTimeRange } from "@/lib/format";
+import {
+  ARRIVALS_AHEAD_HOURS,
+  ARRIVALS_LOOKBACK_HOURS,
+  OPERATIONAL_HORIZON_DAYS,
+} from "@/lib/operational-window";
 import { requireStaffSession } from "@/lib/session";
 import { noticeFromParam } from "@/lib/staff-notices";
 import { checkInAction } from "./actions";
@@ -103,10 +109,28 @@ export default async function CheckInPage({
         eyebrow={t("checkIn.eyebrow")}
         title={t("checkIn.title")}
         description={t("checkIn.description")}
-        // Today, Blockers, and Check-in each slice the same readiness data on
-        // a different, undocumented horizon (task 141, UX persona lens 17) —
-        // a diver "cleared" here can still show on one of the other two.
-        meta={<p className="text-sm text-muted">{t("checkIn.windowNote")}</p>}
+        // The same window sentence Today and Not ready print, plus the one
+        // extra clause naming how counter mode narrows it. The arrivals lens
+        // never reaches past the shared horizon (`arrivalsWindowIsInsideHorizon`),
+        // so a diver at the counter is always someone the other two also show
+        // (task 141, UX persona lens 17).
+        meta={
+          <OperationalWindowNote
+            copy={{
+              note: t("shared.operationalWindow.note", { days: OPERATIONAL_HORIZON_DAYS }),
+              lens: t("shared.operationalWindow.arrivalsLens", {
+                lookback: ARRIVALS_LOOKBACK_HOURS,
+                ahead: ARRIVALS_AHEAD_HOURS,
+              }),
+              pivotsLabel: t("shared.operationalWindow.pivotsLabel"),
+            }}
+            pivots={readinessPivots(shopSlug, "check_in", {
+              today: t("shared.shopNavLinks.today"),
+              blockers: t("shared.shopNavLinks.blockers"),
+              check_in: t("shared.shopNavLinks.checkIn"),
+            })}
+          />
+        }
         actions={
           <Link href={`/shop/${shopSlug}/check-in/walk-in`} className={buttonClass()}>
             {t("checkIn.walkIn.title")}

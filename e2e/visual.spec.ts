@@ -674,14 +674,23 @@ for (const scheme of ["light", "dark"] as const) {
           .waitFor();
         await capture(page, "today", scheme);
 
-        // The blocker queue — until now the one staff surface with no baseline
-        // at all, because a flat unpaginated list of every blocked diver across
-        // every upcoming departure rendered a ~10,700px page nothing could
-        // capture sanely (the same shape the orders index was found in). Now
-        // paginated ten departures at a time, so this is finally capturable.
+        // The blocker queue — until recently the one staff surface with no
+        // baseline at all, because a flat unpaginated list of every blocked
+        // diver across every upcoming departure rendered a ~10,700px page
+        // nothing could capture sanely (the same shape the orders index was
+        // found in). Two bounds now: the shared operational horizon decides
+        // which departures it holds, the pager how many render at once.
         await page.goto("/shop/blue-mantis/blockers");
         await page.getByRole("heading", { name: "Not ready", level: 1 }).waitFor();
         await capture(page, "blockers", scheme);
+
+        // Counter mode itself — the third surface reading the shared
+        // operational window (task 141). Only its walk-in sub-page had a
+        // baseline before, so the queue staff actually stand in front of, and
+        // the window note the three surfaces now share, went uncaptured.
+        await page.goto("/shop/blue-mantis/check-in");
+        await page.getByRole("heading", { name: "Counter check-in", level: 1 }).waitFor();
+        await capture(page, "check-in", scheme);
 
         // The fast walk-in flow: pick today's boat, then search or hand-enter
         // a diver — no trip page detour, no required email at the counter.

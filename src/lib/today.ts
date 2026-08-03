@@ -20,6 +20,10 @@ import { utcToWallTime } from "./zoned";
  * into ranked, human-readable actions. It never queries; `src/db/today.ts`
  * gathers the facts and calls in here.
  *
+ * How far out the queue looks is *not* decided here: the horizon is shared with
+ * Not ready and Check-in and lives in `src/lib/operational-window.ts`. The
+ * urgency bands below slice that horizon into "how soon"; they never widen it.
+ *
  * Words live in the message bundles, not here — `src/i18n/today-labels.ts`
  * maps every code this file produces to its staff-bundle key, and the
  * `src/app`/`src/components` caller does the `t()` call. The one exception is
@@ -44,8 +48,6 @@ const IMMINENT_WINDOW_MS = 3 * HOUR;
 /** Anything departing inside a day is "get it done today" work. */
 const NOW_WINDOW_MS = 24 * HOUR;
 const SOON_WINDOW_MS = 72 * HOUR;
-/** The queue never looks further out than this; beyond it, Schedule is the tool. */
-export const TODAY_HORIZON_MS = 7 * 24 * HOUR;
 
 export type TodayActionKind =
   | "roll_call_missing_diver"

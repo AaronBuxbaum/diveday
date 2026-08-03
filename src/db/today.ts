@@ -27,12 +27,12 @@ import { nowDate } from "@/lib/clock";
 import { courseCrewGap } from "@/lib/course-ratios";
 import { formatDateTimeTz, formatShortDate, formatTime } from "@/lib/format";
 import { rollCallCheckpoints } from "@/lib/manifests";
+import { OPERATIONAL_MAX_TRIPS, operationalWindow } from "@/lib/operational-window";
 import {
   collapseDiverActions,
   ROLL_CALL_GAP_KINDS,
   type RollCallGapReason,
   rollCallGapUrgency,
-  TODAY_HORIZON_MS,
   type TodayAction,
   urgencyFor,
 } from "@/lib/today";
@@ -94,11 +94,12 @@ export async function todayNextDepartureTripId(
 }
 
 /**
- * How many upcoming departures the queue will inspect. Readiness is a per-trip
- * roll-up, so this bounds the work; a shop with more than this many departures
- * inside a week is served better by Schedule than by a triage list.
+ * How many upcoming departures the queue will inspect. Shared with Not ready
+ * (`src/db/blockers.ts`) via `src/lib/operational-window.ts` — the two surfaces
+ * rank the same people, so a cap either of them applied alone would make their
+ * counts disagree for a shop busy enough to reach it.
  */
-const MAX_TRIPS = 20;
+const MAX_TRIPS = OPERATIONAL_MAX_TRIPS;
 
 /** A departure happening today, with just enough to know whether it can sail. */
 export type DepartureSummary = {
@@ -778,7 +779,8 @@ export async function getTodayWork(
    */
   includeOpsAlerts = false,
 ): Promise<TodayWork> {
-  const horizon = new Date(now.getTime() + TODAY_HORIZON_MS);
+  // The one horizon every readiness surface shares (src/lib/operational-window.ts).
+  const { to: horizon } = operationalWindow(now);
   // The board only ever shows the soonest MAX_TRIPS departures, so bound the
   // query itself with the already-existing keyset page (`pagedUpcomingTripsWithCounts`)
   // rather than fetching every scheduled trip in the shop's future and slicing after.

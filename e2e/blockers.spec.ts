@@ -2,48 +2,74 @@ import { expect, signedInAsOwner, test } from "./fixtures";
 
 signedInAsOwner();
 
-test("the queue pages instead of rendering every blocked departure on one screen", async ({
-  page,
-}) => {
+/** The shared window sentence, printed identically on all three surfaces. */
+const WINDOW_NOTE = /The next 7 days of departures/;
+
+test("the queue stays inside one screenful of departure groups", async ({ page }) => {
   // Regression: the demo shop's full blocked-departure list used to render
   // as one unbroken ~10,700px scroll (26 departures, no pager) — the same
-  // shape the orders index was found in before it got one. A page this tall
-  // is also why the surface had no visual baseline: nothing could capture it
-  // sanely. Bounded here to a page's worth of departure groups instead.
+  // shape the orders index was found in before it got one. Two things bound
+  // it now: the shared operational horizon decides *which* departures the
+  // queue holds, and the pager decides how many render at once. Neither
+  // truncates — the tail is a page away, and anything past the horizon is
+  // named by the window note below the title.
   await page.goto("/shop/blue-mantis/blockers");
   await expect(page.getByRole("heading", { name: "Not ready", level: 1 })).toBeVisible();
 
   const groups = page.locator("section.overflow-hidden");
-  const pageOneCount = await groups.count();
-  expect(pageOneCount).toBeGreaterThan(0);
-  expect(pageOneCount).toBeLessThanOrEqual(10);
+  const groupCount = await groups.count();
+  expect(groupCount).toBeGreaterThan(0);
+  expect(groupCount).toBeLessThanOrEqual(10);
 
-  const pageOneHeight = await page.evaluate(() => document.documentElement.scrollHeight);
-  expect(pageOneHeight).toBeLessThan(6_000);
+  expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBeLessThan(6_000);
+});
 
-  const nav = page.getByRole("navigation", { name: "Blocker pages" });
-  await expect(nav).toBeVisible();
-  const pageOneTitles = await groups.evaluateAll((els) => els.map((el) => el.textContent));
-
-  await nav.getByRole("link", { name: "Next" }).click();
-  await expect(page).toHaveURL(/[?&]page=2/);
-  // A different set of departures, not the same ten again — proves the link
-  // actually changes what's shown rather than reloading the same page.
-  const pageTwoTitles = await page
+test("a stale page link clamps back into the queue instead of showing nothing", async ({
+  page,
+}) => {
+  // A bookmarked `?page=9` from a busier week (or a hand-typed number) must
+  // land on the last page that exists — never an empty list while divers are
+  // still blocked. Same clamp for a nonsense value.
+  await page.goto("/shop/blue-mantis/blockers");
+  const firstPage = await page
     .locator("section.overflow-hidden")
     .evaluateAll((els) => els.map((el) => el.textContent));
-  expect(pageTwoTitles.length).toBeGreaterThan(0);
-  expect(pageTwoTitles.some((title) => pageOneTitles.includes(title))).toBe(false);
+  expect(firstPage.length).toBeGreaterThan(0);
+
+  for (const query of ["?page=99", "?page=0", "?page=banana"]) {
+    await page.goto(`/shop/blue-mantis/blockers${query}`);
+    await expect(page.getByRole("heading", { name: "Not ready", level: 1 })).toBeVisible();
+    const clamped = await page
+      .locator("section.overflow-hidden")
+      .evaluateAll((els) => els.map((el) => el.textContent));
+    expect(clamped.length).toBeGreaterThan(0);
+  }
+});
+
+test("Today, Not ready and Check-in all state the same window and link to each other", async ({
+  page,
+}) => {
+  // Task 141: the three readiness surfaces used to disclose three different,
+  // unrelated horizons ("the next 7 days", "the nearest 40 departures",
+  // "−6h → +36h"), so a diver cleared on one still appeared on another. They
+  // read one window now and say so in one sentence, in the same place.
+  await page.goto("/shop/blue-mantis");
+  await expect(page.getByText(WINDOW_NOTE)).toBeVisible();
+  const todayPivots = page.getByRole("navigation", { name: "The same window, seen another way" });
+  await expect(todayPivots.getByRole("link", { name: "Not ready" })).toBeVisible();
+
+  await todayPivots.getByRole("link", { name: "Check-in" }).click();
+  await expect(page.getByRole("heading", { name: "Counter check-in", level: 1 })).toBeVisible();
+  await expect(page.getByText(WINDOW_NOTE)).toBeVisible();
+  // Counter mode is a narrower lens on that same window, and says only that.
+  await expect(page.getByText(/Counter mode narrows it to arrivals/)).toBeVisible();
 
   await page
-    .getByRole("navigation", { name: "Blocker pages" })
-    .getByRole("link", { name: "Previous" })
+    .getByRole("navigation", { name: "The same window, seen another way" })
+    .getByRole("link", { name: "Not ready" })
     .click();
-  await expect(page).toHaveURL(/\/blockers$/);
-  const backOnPageOne = await page
-    .locator("section.overflow-hidden")
-    .evaluateAll((els) => els.map((el) => el.textContent));
-  expect(backOnPageOne).toEqual(pageOneTitles);
+  await expect(page.getByRole("heading", { name: "Not ready", level: 1 })).toBeVisible();
+  await expect(page.getByText(WINDOW_NOTE)).toBeVisible();
 });
 
 test("the one-tap waiver send on the blockers queue reports success inline", async ({ page }) => {
