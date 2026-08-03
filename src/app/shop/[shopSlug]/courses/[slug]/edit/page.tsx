@@ -17,6 +17,7 @@ import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatFaqs } from "@/lib/courses";
 import { toShopCurrency } from "@/lib/money";
+import { publicCoursePath } from "@/lib/public-routes";
 import { requireStaffSession } from "@/lib/session";
 import { noticeFromParam } from "@/lib/staff-notices";
 import { MAX_IMAGE_MB, MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION } from "@/lib/storage/limits";
@@ -104,10 +105,10 @@ export default async function EditCoursePage({
               <p className="text-sm text-muted">
                 {t("courses.edit.liveAt")}{" "}
                 <Link
-                  href={`/shop/${shopSlug}/courses/${slug}`}
+                  href={publicCoursePath(shopSlug, slug)}
                   className="font-medium text-primary hover:underline"
                 >
-                  /shop/{shopSlug}/courses/{slug}
+                  {publicCoursePath(shopSlug, slug)}
                 </Link>
               </p>
             ) : (
