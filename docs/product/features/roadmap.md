@@ -203,6 +203,15 @@ ADR rather than letting this become an unbounded second backlog.
 3. **Realistic seeded scenarios and visual-regression coverage for the states that aren't the happy
    path** — empty, loading, error, and safety states. The seed is realistic and busy, and the money
    surfaces and a first empty state are captured; systematic coverage of the rest is not.
+4. **A real-Postgres CI job.** Everything runs on PGlite today, which cannot exhibit the races the
+   schema is designed against: the `FOR UPDATE` oversell guard in `src/db/bookings.ts` is dead code
+   under test, and committed `drizzle/` migrations first meet a real server during the production
+   deploy. A service-container job should apply the migrations from empty *and* from the previous
+   release's schema, then run the booking/payments/payment-operations suites with genuinely
+   concurrent connections — two transactions racing for the last seat, asserting exactly one wins.
+   Nightly or gated on `src/db/**`; the spend choice is HD-19 in the
+   [2026-08-02 review](../assessments/comprehensive-review-20260802.md#human-decision-register).
+   Carried out of that review (TEST-2 / DATA-L1 / OPS-2) as the highest-value enablement item open.
 
 ### P2 — when parallelism or scale proves the need
 
@@ -213,6 +222,15 @@ ADR rather than letting this become an unbounded second backlog.
    paths, invariants, and validation commands, generated from the same data `pnpm task:context`
    reads.
 4. Add automated PR scope/collision warnings based on changed paths and declared ownership.
+5. **Make the remaining prose invariants executable.** Carried out of the
+   [2026-08-02 review](../assessments/comprehensive-review-20260802.md#2-architecture--code-quality)'s
+   recurring theme that only ratcheted rules hold: fix `check-architecture.mjs`'s side-effect-import
+   blind spot and add `src/i18n`/`src/components` to its forbidden table (ARCH-2); a
+   `scripts/check-tokens.mjs` failing raw hex and palette-scale classes so ADR-0004 ratchets like
+   copy and clock (I18N-4); a static walk from each `useTranslations()` call site to a
+   `DiverIntlProvider` declaring that namespace, turning both documented silent failure modes into a
+   gate (I18N-2); and a scheduled check watching Next 16.3 GA, drizzle 1.0 stable and next-auth v5
+   stable, which the ADRs commit to migrating to promptly with nothing tracking them (ARCH-4, HD-20).
 
 (Feature-folder boundaries were P2 and are now settled — see
 [20260730-feature-module-contracts](../../architecture/decisions/20260730-feature-module-contracts.md)
