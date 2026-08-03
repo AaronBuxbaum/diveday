@@ -649,14 +649,17 @@ describe("course catalog and sessions (in-memory PGlite)", () => {
 
   /**
    * The prerequisite gate is a **card** check, not a level check: the diver's
-   * card has to be verified, unexpired, and still on the record. Every other
-   * prerequisite test above refuses a diver with no card at all, which only
-   * ever proves the gate notices an empty list — it would pass just as happily
-   * against a gate that admitted any card of the right level whatever its
-   * state. These cases hold the difference, because each of them is a real
-   * desk situation that ends with an under-qualified diver in the water:
-   * someone who typed their own level into the booking form, a card that
-   * lapsed since the shop last saw it, and a record staff deliberately pulled.
+   * card has to be verified, not past its refresher-due date, and still on the
+   * record. (Cards do not expire — glossary; `expires_at` is the shop-set
+   * refresher-due date, and a card past it stops satisfying readiness until
+   * the diver refreshes.) Every other prerequisite test above refuses a diver
+   * with no card at all, which only ever proves the gate notices an empty list
+   * — it would pass just as happily against a gate that admitted any card of
+   * the right level whatever its state. These cases hold the difference,
+   * because each of them is a real desk situation that ends with an
+   * under-qualified diver in the water: someone who typed their own level into
+   * the booking form, a diver whose refresher came due since the shop last saw
+   * them, and a record staff deliberately pulled.
    *
    * Deliberately fails closed, unlike the minimum-age gate next door (H-08):
    * staff capture and verify a card, and *then* the same form admits the
@@ -733,18 +736,59 @@ describe("course catalog and sessions (in-memory PGlite)", () => {
       });
     });
 
-    it("refuses a verified card that expired yesterday in the shop's own timezone", async () => {
+    /**
+     * The card itself never lapses (glossary: cards **do not expire**);
+     * `expires_at` is the shop's own refresher-due date, and a card past it
+     * stops satisfying readiness until the diver refreshes. The vocabulary
+     * matters at the desk — "your card expired" is wrong and alarming, "your
+     * refresher is due" is what actually happened.
+     */
+    it("refuses a verified card past its refresher-due date", async () => {
       const { db, shop } = await courseContext();
       const session = await gatedSession(db, shop.id);
-      // Expiry is a date, read against the shop's local calendar (CR-009) —
-      // the same `calendarDateInTimezone(nowDate(), shop.timezone)` the gate
-      // itself computes. A card is valid through the end of its own local day,
-      // so "yesterday, locally" is the first day it is genuinely lapsed.
+      // The due date is a date, read against the shop's local calendar
+      // (CR-009) — the same `calendarDateInTimezone(nowDate(), shop.timezone)`
+      // the gate itself computes. A card satisfies readiness through the end
+      // of its own local due day, so "yesterday, locally" is the first day the
+      // refresher is genuinely overdue.
       const yesterdayLocal = calendarDateInTimezone(
         new Date(nowDate().getTime() - 24 * 60 * 60 * 1000),
         shop.timezone,
       );
-      const diver = await diverHoldingCard(db, shop.id, "expired", { expiresAt: yesterdayLocal });
+      const diver = await diverHoldingCard(db, shop.id, "refresher-due", {
+        expiresAt: yesterdayLocal,
+      });
+
+      await expect(enroll(db, shop.id, session.id, diver.id)).resolves.toEqual({
+        ok: false,
+        reason: "course_prerequisite",
+      });
+    });
+
+    /**
+     * The import trust decision (H-20, ADR 20260724-import-verified-cards) is
+     * about *who checked the card*, not about how long ago the diver was in
+     * the water: an imported card lands `verified` "with its refresher-due
+     * date still applied" (glossary). So the two facts have to compose — the
+     * card below would enroll on its import status alone, and would enroll on
+     * its level alone, and must still be refused because the refresher is
+     * overdue. A migration that quietly waived the refresher gate for every
+     * row it brought in would put the least-recently-dived divers in the shop
+     * straight onto a course session.
+     */
+    it("refuses an imported card past its refresher-due date — importing does not waive the refresher", async () => {
+      const { db, shop } = await courseContext();
+      const session = await gatedSession(db, shop.id);
+      const yesterdayLocal = calendarDateInTimezone(
+        new Date(nowDate().getTime() - 24 * 60 * 60 * 1000),
+        shop.timezone,
+      );
+      const diver = await diverHoldingCard(db, shop.id, "imported-refresher-due", {
+        importedAt: nowDate(),
+        reviewedAt: null,
+        importedFromLabel: "Prior shop system",
+        expiresAt: yesterdayLocal,
+      });
 
       await expect(enroll(db, shop.id, session.id, diver.id)).resolves.toEqual({
         ok: false,
@@ -767,7 +811,7 @@ describe("course catalog and sessions (in-memory PGlite)", () => {
       });
     });
 
-    it("admits a verified, unexpired card", async () => {
+    it("admits a verified card whose refresher-due date is still ahead", async () => {
       const { db, shop } = await courseContext();
       const session = await gatedSession(db, shop.id);
       const tomorrowLocal = calendarDateInTimezone(

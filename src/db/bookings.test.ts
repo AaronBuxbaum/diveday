@@ -833,19 +833,33 @@ describe("restoreBooking (undo of a roster removal)", () => {
   });
 
   /**
-   * Undo only ever puts a diver back onto a departure that could still sell
-   * them the seat. `createBookingRecord` refuses a fresh booking on exactly
-   * three trip states — cancelled (or otherwise not `scheduled`), a conditions
-   * hold, and a departure time that has already passed — and undo is the same
-   * seat-granting write, so it answers to the same three. Checking only
-   * capacity and ratio left the roster one tap from gaining a diver the
-   * booking form would have turned away: a name added back to the manifest of
-   * a boat that has already left, or to a trip the crew has stood down.
+   * Which trip states may refuse an undo, and — more importantly — which must
+   * not. An undo is not a new booking: it is a staff member taking back a
+   * removal they didn't mean to make, so the trip states that stop a *stranger
+   * buying a seat* are mostly none of its business.
    *
-   * The three cases below each assert the booking row is *still cancelled*
-   * afterwards, not merely that the outcome reads as a refusal — a refusal
-   * that had already written the status would be the same bug wearing a
-   * better return value.
+   * Exactly one refuses: a **cancelled** departure, which has no roster left to
+   * put anyone on. The recovery is real and reachable — reinstate the trip,
+   * then undo — and the last case below pins that round trip.
+   *
+   * A **conditions hold** does not refuse. The glossary defines a hold as
+   * "existing bookings remain valid, new bookings pause"; the diver whose row
+   * was mis-tapped is an existing booking, and putting them back is undoing a
+   * clerical slip, not selling a seat.
+   *
+   * An **already-departed** trip does not refuse either, and this one is a
+   * safety matter rather than a nicety: `cancelBooking` has no trip-state gate
+   * at all and the Remove control renders on every roster row, including at
+   * sea (a departed trip is still `scheduled`, and roll call stays live). If
+   * the undo refused there, one misclick would strike a diver off an at-sea
+   * manifest permanently. The two errors are not symmetric — an under-listed
+   * manifest costs a search, an over-listed one costs a tap.
+   *
+   * The refusal case asserts the booking row is *still cancelled* afterwards,
+   * not merely that the outcome reads as a refusal; the two restore cases
+   * assert the diver is genuinely back on `getTripRoster`, not merely that the
+   * outcome reads as success. Either check on its own would pass for a bug
+   * wearing a better return value.
    */
   it("refuses to restore onto a trip the crew has since cancelled", async () => {
     const { db, shop, open } = await seededContext();
@@ -854,47 +868,70 @@ describe("restoreBooking (undo of a roster removal)", () => {
     await cancelBooking(db, shop.id, booked.bookingId);
     await setTripStatus(db, shop.id, open.id, "cancelled");
 
-    expect(await restoreBooking(db, shop.id, booked.bookingId)).toBe("trip_unavailable");
+    expect(await restoreBooking(db, shop.id, booked.bookingId)).toBe("trip_cancelled");
     const [row] = await db.select().from(bookings).where(eq(bookings.id, booked.bookingId));
     expect(row?.status).toBe("cancelled");
     const roster = await getTripRoster(db, shop.id, open.id);
     expect(roster.map((r) => r.person.fullName)).not.toContain(visitor.fullName);
   });
 
-  it("refuses to restore while the crew has a conditions hold in place", async () => {
+  it("restores onto a trip with a conditions hold in place — an undo is not a new booking", async () => {
     const { db, shop, open } = await seededContext();
     const booked = await bookVisitor(db, shop.id, open.id);
     if (!booked.ok) throw new Error("setup booking failed");
     await cancelBooking(db, shop.id, booked.bookingId);
-    // The same hold that stops `createBooking` selling a seat here (see
-    // "rejects new bookings while the crew has a conditions hold in place") —
-    // a hold is the crew saying the water isn't taking anyone today.
+    // The hold that stops `createBooking` selling a seat here (see "rejects
+    // new bookings while the crew has a conditions hold in place") pauses new
+    // bookings; it does not invalidate the ones already made. This diver was
+    // already made.
     await db.update(trips).set({ conditionsHold: true }).where(eq(trips.id, open.id));
 
-    expect(await restoreBooking(db, shop.id, booked.bookingId)).toBe("trip_unavailable");
+    expect(await restoreBooking(db, shop.id, booked.bookingId)).toBe("restored");
     const [row] = await db.select().from(bookings).where(eq(bookings.id, booked.bookingId));
-    expect(row?.status).toBe("cancelled");
+    expect(row?.status).toBe("booked");
+    const roster = await getTripRoster(db, shop.id, open.id);
+    expect(roster.map((r) => r.person.fullName)).toContain(visitor.fullName);
   });
 
-  it("refuses to restore onto a boat that has already left", async () => {
+  it("restores onto a boat that has already departed — a mis-removal at sea must be reversible", async () => {
     const { db, shop, open } = await seededContext();
     const booked = await bookVisitor(db, shop.id, open.id);
     if (!booked.ok) throw new Error("setup booking failed");
     await cancelBooking(db, shop.id, booked.bookingId);
-    // Sail the trip rather than move the clock: `restoreBooking` reads time
-    // through `nowDate()` exactly as `createBookingRecord` does, with no
-    // injectable `now`, so the departure is what moves. Mirrors
-    // selfCancelBooking's "already departed" refusal — a seat handed back on a
-    // boat that has left is a name on a manifest no one can act on.
+    // Sail the trip rather than move the clock, so this reads the same however
+    // the suite's clock is frozen. Removing the wrong roster row happens most
+    // easily precisely here — one-handed, on a moving deck, during roll call —
+    // and the crew must be able to put the name straight back.
     const departed = new Date(nowDate().getTime() - 2 * 60 * 60 * 1000);
     await db
       .update(trips)
       .set({ startsAt: departed, endsAt: new Date(departed.getTime() + 60 * 60 * 1000) })
       .where(eq(trips.id, open.id));
 
-    expect(await restoreBooking(db, shop.id, booked.bookingId)).toBe("trip_unavailable");
+    expect(await restoreBooking(db, shop.id, booked.bookingId)).toBe("restored");
     const [row] = await db.select().from(bookings).where(eq(bookings.id, booked.bookingId));
-    expect(row?.status).toBe("cancelled");
+    expect(row?.status).toBe("booked");
+    const roster = await getTripRoster(db, shop.id, open.id);
+    expect(roster.map((r) => r.person.fullName)).toContain(visitor.fullName);
+  });
+
+  it("takes the undo once the crew reinstates the trip they had cancelled", async () => {
+    const { db, shop, open } = await seededContext();
+    const booked = await bookVisitor(db, shop.id, open.id);
+    if (!booked.ok) throw new Error("setup booking failed");
+    await cancelBooking(db, shop.id, booked.bookingId);
+
+    // Stood down, so the undo has nowhere to land...
+    await setTripStatus(db, shop.id, open.id, "cancelled");
+    expect(await restoreBooking(db, shop.id, booked.bookingId)).toBe("trip_cancelled");
+
+    // ...and back on, so it does. This is the whole reason the refusal is
+    // allowed to be a refusal: the notice tells the crew to reinstate the trip
+    // first, and that instruction has to actually work.
+    await setTripStatus(db, shop.id, open.id, "scheduled");
+    expect(await restoreBooking(db, shop.id, booked.bookingId)).toBe("restored");
+    const roster = await getTripRoster(db, shop.id, open.id);
+    expect(roster.map((r) => r.person.fullName)).toContain(visitor.fullName);
   });
 });
 

@@ -1129,7 +1129,7 @@
       "bookingRestored": "Back on the roster.",
       "bookingRestoreFull": "Couldn't undo — the freed spot has been taken and the trip is full again. Add them to the wait list instead.",
       "bookingRestoreRatio": "Couldn't undo — the freed seat has been taken and this course session is now at its instructor-to-student ratio limit. Assign another instructor, or add them to the wait list instead.",
-      "bookingRestoreUnavailable": "Couldn't undo — this trip isn't taking bookings any more. It's been cancelled, put on a conditions hold, or has already departed.",
+      "bookingRestoreCancelled": "Couldn't undo — this trip has been cancelled. Reinstate the trip first, then add them back.",
       "diverAdded": "Diver added to the trip.",
       "diverWaitlisted": "Diver added to the wait list.",
       "identityConfirmed": "Identity confirmed — this diver can be cleared to board.",
