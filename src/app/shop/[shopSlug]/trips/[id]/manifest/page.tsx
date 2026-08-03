@@ -7,7 +7,7 @@ import {
   RollCallButton,
   type RollCallResult,
 } from "@/app/shop/[shopSlug]/trips/[id]/_components/RollCallButton";
-import { AmbientContrastSlider, AmbientGlareDetector } from "@/components/AmbientGlareDetector";
+import { AmbientContrastControl, AmbientGlareDetector } from "@/components/AmbientGlareDetector";
 import { MilestoneHaptics } from "@/components/MilestoneHaptics";
 import { MissingDiversGrid, type MissingDiversGridCopy } from "@/components/MissingDiversGrid";
 import {
@@ -309,30 +309,29 @@ export default async function TripManifestPage({
             {formatShortDate(manifest.trip.startsAt, locale, shop.timezone)} ·{" "}
             {formatTimeRangeTz(manifest.trip.startsAt, manifest.trip.endsAt, locale, shop.timezone)}
           </p>
+          {/* One line about what this page *is*. What to do at each checkpoint
+              is said by the checkpoint nav and the "Active checkpoint" panel
+              below, both of which name the current one; saying it a third time
+              up here was the page explaining itself before it showed itself.
+              The "Live manifest · save an offline copy below" badge went with
+              it — the offline card is the next thing on screen and says so
+              under its own heading. */}
           <p className="mt-2 max-w-prose text-sm text-muted print:hidden">
-            {t.rich("trips.manifest.description", {
-              strong: (chunks) => <span className="font-semibold text-foreground">{chunks}</span>,
-            })}
+            {t("trips.manifest.description")}
           </p>
           <p className="mt-3 flex flex-wrap gap-2 print:hidden">
-            <Badge tone="primary">{t("trips.manifest.liveManifestBadge")}</Badge>
             <span className="glare-mode-indicator rounded-full bg-foreground/10 px-3 py-1 text-sm font-medium text-foreground ring-1 ring-inset ring-foreground/20">
               {t("trips.manifest.glareModeActive")}
             </span>
           </p>
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-4 print:hidden">
-          <AmbientContrastSlider
+          <AmbientContrastControl
             copy={{
-              contrastAutoFallback: t("shared.ambientContrast.contrastAutoFallback"),
-              contrastIconTitle: t("shared.ambientContrast.contrastIconTitle"),
               contrastLabel: t("shared.ambientContrast.contrastLabel"),
               labelAuto: t("shared.ambientContrast.labelAuto"),
               labelStandard: t("shared.ambientContrast.labelStandard"),
               labelFullAaa: t("shared.ambientContrast.labelFullAaa"),
-              modeAuto: t("shared.ambientContrast.modeAuto"),
-              modeStandard: t("shared.ambientContrast.modeStandard"),
-              modeFullAaa: t("shared.ambientContrast.modeFullAaa"),
             }}
           />
           <PrintButton label={t("shared.printButton.label")} />
@@ -355,7 +354,6 @@ export default async function TripManifestPage({
             reconcileCaughtUp: t("trips.offlineManifestManager.reconcileCaughtUp"),
             reconcileErrorFallback: t("trips.offlineManifestManager.reconcileErrorFallback"),
             savingMessage: t("trips.offlineManifestManager.savingMessage"),
-            saveSuccessMessage: t("trips.offlineManifestManager.saveSuccessMessage"),
             saveErrorFallback: t("trips.offlineManifestManager.saveErrorFallback"),
             offlineWithSavedCopy: t("trips.offlineManifestManager.offlineWithSavedCopy"),
             offlineNoSavedCopy: t("trips.offlineManifestManager.offlineNoSavedCopy"),

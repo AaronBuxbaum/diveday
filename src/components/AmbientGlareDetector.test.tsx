@@ -2,22 +2,17 @@
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  AmbientContrastControl,
   type AmbientContrastCopy,
-  AmbientContrastSlider,
   AmbientGlareDetector,
   GLARE_LUX_THRESHOLD,
 } from "./AmbientGlareDetector";
 
 const contrastCopy: AmbientContrastCopy = {
-  contrastAutoFallback: "Contrast: Auto",
-  contrastIconTitle: "Contrast Icon",
   contrastLabel: "Contrast",
   labelAuto: "Auto",
   labelStandard: "Standard",
-  labelFullAaa: "Full AAA",
-  modeAuto: "Auto ☀",
-  modeStandard: "Standard",
-  modeFullAaa: "Full AAA ☀",
+  labelFullAaa: "Maximum",
 };
 
 class MockAmbientLightSensor implements EventTarget {
@@ -61,7 +56,7 @@ afterEach(() => {
   MockAmbientLightSensor.listeners = {};
 });
 
-describe("AmbientGlareDetector & AmbientContrastSlider", () => {
+describe("AmbientGlareDetector & AmbientContrastControl", () => {
   it("does not add glare-mode class by default", () => {
     render(<AmbientGlareDetector />);
     expect(document.documentElement.classList.contains("glare-mode")).toBe(false);
@@ -93,19 +88,17 @@ describe("AmbientGlareDetector & AmbientContrastSlider", () => {
     render(
       <>
         <AmbientGlareDetector />
-        <AmbientContrastSlider copy={contrastCopy} />
+        <AmbientContrastControl copy={contrastCopy} />
       </>,
     );
 
-    // Set slider to Standard override (value = 1)
-    const slider = screen.getByRole("slider") as HTMLInputElement;
     act(() => {
-      fireEvent.change(slider, { target: { value: "1" } });
+      fireEvent.click(screen.getByRole("radio", { name: "Standard" }));
     });
 
-    expect(slider.value).toBe("1");
-    // Use getAllByText and choose index 0 to get the status badge instead of tick labels
-    expect(screen.getAllByText("Standard")[0]).toBeInTheDocument();
+    // The selected option *is* the readout — there is no second chip repeating it.
+    expect(screen.getByRole("radio", { name: "Standard" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "Auto" })).not.toBeChecked();
 
     // Dispatch high lux event
     act(() => {
@@ -119,22 +112,19 @@ describe("AmbientGlareDetector & AmbientContrastSlider", () => {
     expect(document.documentElement.classList.contains("glare-mode")).toBe(false);
   });
 
-  it("forces glare-mode to be active in full AAA mode override", () => {
+  it("forces glare-mode to be active in maximum-contrast mode override", () => {
     render(
       <>
         <AmbientGlareDetector />
-        <AmbientContrastSlider copy={contrastCopy} />
+        <AmbientContrastControl copy={contrastCopy} />
       </>,
     );
 
-    // Set slider to Full AAA override (value = 2)
-    const slider = screen.getByRole("slider") as HTMLInputElement;
     act(() => {
-      fireEvent.change(slider, { target: { value: "2" } });
+      fireEvent.click(screen.getByRole("radio", { name: "Maximum" }));
     });
 
-    expect(slider.value).toBe("2");
-    expect(screen.getByText("Full AAA ☀")).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "Maximum" })).toBeChecked();
 
     // Glare mode should be active even if lux is low (which it is by default, 0)
     expect(document.documentElement.classList.contains("glare-mode")).toBe(true);
@@ -146,12 +136,11 @@ describe("AmbientGlareDetector & AmbientContrastSlider", () => {
     render(
       <>
         <AmbientGlareDetector />
-        <AmbientContrastSlider copy={contrastCopy} />
+        <AmbientContrastControl copy={contrastCopy} />
       </>,
     );
 
-    const slider = screen.getByRole("slider") as HTMLInputElement;
-    expect(slider.value).toBe("2"); // Full AAA
+    expect(screen.getByRole("radio", { name: "Maximum" })).toBeChecked();
     expect(document.documentElement.classList.contains("glare-mode")).toBe(true);
   });
 

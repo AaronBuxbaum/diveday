@@ -46,7 +46,7 @@ function ResultNotice({ state, copy }: { state: ResendState; copy: ResendConfirm
     >
       {state.status === "sent" ? (
         <>
-          <span aria-hidden="true">✓ </span>
+          <span aria-hidden="true">✅ </span>
           {copy.confirmationResent}
         </>
       ) : (

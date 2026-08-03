@@ -4,15 +4,18 @@ import {
   count,
   desc,
   eq,
+  gte,
   ilike,
   inArray,
   isNotNull,
   isNull,
+  lt,
   ne,
   notInArray,
   or,
 } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
+import { shopDayBounds } from "@/lib/zoned";
 import { type AppDb, isUniqueConstraintViolation } from "./client";
 import { listOrdersForPerson } from "./orders";
 import { offsetPage } from "./paging";
@@ -216,21 +219,25 @@ export const DIVER_PAGE_SIZE = 20;
  */
 /**
  * Named roster views for common front-desk jobs. Deliberately code-defined, not
- * a per-shop table: they are role-shaped presets over the one roster ("who needs
- * a safety contact chased", "who carries insurance"), and any staffer can pin
- * their own combinations in the browser (see DiverQuickViews). Each is a cheap
- * WHERE clause applied to both the page and its count, so filtering never
- * breaks the paging.
+ * a per-shop table: they are the three questions the counter actually asks of
+ * the roster — who is on a boat today, whose paperwork needs a staffer, and who
+ * still owes a safety contact. Each is a cheap WHERE clause applied to both the
+ * page and its count, so filtering never breaks the paging.
  */
-export type DiverFilter = "all" | "missing_contact" | "insured";
+export type DiverFilter = "all" | "diving_today" | "needs_attention" | "missing_contact";
 
-export const DIVER_FILTERS = ["all", "missing_contact", "insured"] as const;
+export const DIVER_FILTERS = ["all", "diving_today", "needs_attention", "missing_contact"] as const;
 
 export function isDiverFilter(value: string | undefined): value is DiverFilter {
-  return value === "all" || value === "missing_contact" || value === "insured";
+  return (DIVER_FILTERS as readonly string[]).includes(value ?? "");
 }
 
-function diverFilterCondition(filter: DiverFilter) {
+function diverFilterCondition(
+  db: AppDb,
+  filter: DiverFilter,
+  context: { shopId: string; timeZone: string; now: Date },
+) {
+  const { shopId } = context;
   if (filter === "missing_contact") {
     // "On file" needs both a name and a phone (glossary — Emergency contact), so
     // a hole in either lands the diver in this view.
@@ -241,8 +248,96 @@ function diverFilterCondition(filter: DiverFilter) {
       eq(people.emergencyContactPhone, ""),
     );
   }
-  if (filter === "insured") {
-    return and(isNotNull(people.diveInsurance), ne(people.diveInsurance, ""));
+  if (filter === "needs_attention") {
+    // The same evidence the "pending review" / "to confirm" badges on each row
+    // are counted from (`summarizeDivers`), asked as a WHERE clause so the
+    // count and the page agree. A diver appears once however many cards they
+    // have waiting — the view answers "who", the badges answer "how many".
+    //
+    // Each card table carries the same two shapes — a card awaiting review, and
+    // an imported card awaiting its one-tap confirm (ADR
+    // 20260724-import-verified-cards) — spelled out three times rather than
+    // through a shared helper: Drizzle types every column against its own table
+    // name, so the generic version costs more casting than it saves.
+    return or(
+      inArray(
+        people.id,
+        db
+          .select({ personId: certifications.personId })
+          .from(certifications)
+          .where(
+            and(
+              eq(certifications.shopId, shopId),
+              isNull(certifications.deletedAt),
+              or(
+                eq(certifications.status, "pending"),
+                and(isNotNull(certifications.importedAt), isNull(certifications.reviewedAt)),
+              ),
+            ),
+          ),
+      ),
+      inArray(
+        people.id,
+        db
+          .select({ personId: specialtyCertifications.personId })
+          .from(specialtyCertifications)
+          .where(
+            and(
+              eq(specialtyCertifications.shopId, shopId),
+              isNull(specialtyCertifications.deletedAt),
+              or(
+                eq(specialtyCertifications.status, "pending"),
+                and(
+                  isNotNull(specialtyCertifications.importedAt),
+                  isNull(specialtyCertifications.reviewedAt),
+                ),
+              ),
+            ),
+          ),
+      ),
+      inArray(
+        people.id,
+        db
+          .select({ personId: nitroxCertifications.personId })
+          .from(nitroxCertifications)
+          .where(
+            and(
+              eq(nitroxCertifications.shopId, shopId),
+              isNull(nitroxCertifications.deletedAt),
+              or(
+                eq(nitroxCertifications.status, "pending"),
+                and(
+                  isNotNull(nitroxCertifications.importedAt),
+                  isNull(nitroxCertifications.reviewedAt),
+                ),
+              ),
+            ),
+          ),
+      ),
+    );
+  }
+  if (filter === "diving_today") {
+    // "Today" is the *shop's* calendar day, not the server's — `shopDayBounds`
+    // resolves it to the exact UTC pair so this narrows a COUNT(*) correctly
+    // without the second JS pass the looser `shopDayWindow` scans need. A
+    // cancelled seat or a cancelled departure is not a dive.
+    const day = shopDayBounds(context.now, context.timeZone);
+    return inArray(
+      people.id,
+      db
+        .select({ personId: bookings.personId })
+        .from(bookings)
+        .innerJoin(trips, eq(trips.id, bookings.tripId))
+        .where(
+          and(
+            eq(trips.shopId, shopId),
+            eq(trips.status, "scheduled"),
+            ne(bookings.status, "cancelled"),
+            gte(trips.startsAt, day.from),
+            lt(trips.startsAt, day.to),
+          ),
+        ),
+    );
   }
   return undefined;
 }
@@ -250,7 +345,15 @@ function diverFilterCondition(filter: DiverFilter) {
 export async function listDiverSummaries(
   db: AppDb,
   shopId: string,
-  options: { query?: string; page?: number; limit?: number; filter?: DiverFilter } = {},
+  options: {
+    query?: string;
+    page?: number;
+    limit?: number;
+    filter?: DiverFilter;
+    /** The shop's own timezone — what "diving today" is measured against. */
+    timeZone?: string;
+    now?: Date;
+  } = {},
 ) {
   const query = options.query?.trim() ?? "";
   const like = query ? `%${query}%` : null;
@@ -259,7 +362,11 @@ export async function listDiverSummaries(
     eq(people.shopId, shopId),
     eq(personRoles.role, "diver"),
     isNull(people.deletedAt),
-    diverFilterCondition(options.filter ?? "all"),
+    diverFilterCondition(db, options.filter ?? "all", {
+      shopId,
+      timeZone: options.timeZone ?? "UTC",
+      now: options.now ?? nowDate(),
+    }),
     like
       ? or(ilike(people.fullName, like), ilike(people.email, like), ilike(people.phone, like))
       : undefined,

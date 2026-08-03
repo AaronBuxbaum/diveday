@@ -80,6 +80,48 @@ describe("DepartureBoard Drag and Drop Crew Assign", () => {
     expect(screen.getByText(COPY.assignCrewLabel)).toBeVisible();
   });
 
+  /**
+   * The default drag image is the browser's own snapshot of the element, and
+   * the staff pill's fill is translucent — lifted off the page there is
+   * nothing behind that tint, so the snapshot gets composited onto white and
+   * the name drags around inside a white square. The fix is an opaque clone
+   * handed to `setDragImage`, torn down when the drag ends.
+   */
+  it("drags an opaque clone of the staff pill, not the see-through original", async () => {
+    const updateCrewAction = vi.fn().mockResolvedValue({ ok: true });
+    render(
+      <DepartureBoard
+        departures={departures}
+        shopSlug="blue-mantis"
+        timeZone="America/New_York"
+        locale="en-US"
+        availableStaff={availableStaff}
+        updateCrewAction={updateCrewAction}
+        copy={COPY}
+      />,
+    );
+
+    const pill = screen.getByText("Sal Moretti 👤");
+    const setDragImage = vi.fn();
+    const setData = vi.fn();
+    fireEvent.dragStart(pill, { dataTransfer: { setData, setDragImage } });
+
+    expect(setData).toHaveBeenCalledWith("text/plain", "staff-2");
+    expect(setDragImage).toHaveBeenCalledTimes(1);
+    const ghost = setDragImage.mock.calls[0]?.[0] as HTMLElement;
+    // In the document (setDragImage reads nothing else), off-screen, and with
+    // the tint flattened so the drag has a backdrop of its own.
+    expect(ghost.isConnected).toBe(true);
+    expect(ghost.textContent).toContain("Sal Moretti");
+    expect(ghost.style.background).not.toBe("");
+    expect(ghost.style.left).toBe("-1000px");
+
+    // Every drag ends in a `dragend`, cancelled or dropped — so nothing is left
+    // behind the page after one.
+    fireEvent.dragEnd(pill);
+    expect(ghost.isConnected).toBe(false);
+  });
+
   it("adds crew on drop once the server confirms, and calls updateCrewAction", async () => {
     const updateCrewAction = vi.fn().mockResolvedValue({ ok: true });
     render(

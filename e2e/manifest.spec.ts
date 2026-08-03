@@ -118,7 +118,12 @@ test("captain saves the full checkpoint manifest, reloads it offline, and reconc
   // "Refresh now" stays as the one manual control, for a captain who wants a
   // fresh snapshot immediately rather than wait on the automatic pass.
   await page.getByRole("button", { name: "Refresh now" }).click();
-  await expect(page.getByText("This device has an up-to-date offline copy.")).toBeVisible();
+  // Settled: the button is back from "Refreshing…" and the freshness pill is
+  // green. There is deliberately no sentence restating that — the pills and the
+  // "Saved … · 0 waiting to send" line already say it, and the card used to
+  // carry all three at once (see OfflineManifestManager).
+  await expect(page.getByRole("button", { name: "Refresh now" })).toBeVisible();
+  await expect(page.getByText("Fresh copy")).toBeVisible();
   await page.getByRole("link", { name: "Open offline roll call" }).click();
   await expect(page.getByText("Offline manifest", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "After dive 1" })).toBeVisible();

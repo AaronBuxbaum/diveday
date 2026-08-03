@@ -18,17 +18,12 @@ export type ContrastMode = "auto" | "standard" | "full";
 export const CONTRAST_MODE_STORAGE_KEY = "diveday:contrast-mode";
 export const CONTRAST_MODE_CHANGE_EVENT = "diveday:contrast-mode-change";
 
-/** Every word `AmbientContrastSlider` renders, resolved server-side. */
+/** Every word `AmbientContrastControl` renders, resolved server-side. */
 export interface AmbientContrastCopy {
-  contrastAutoFallback: string;
-  contrastIconTitle: string;
   contrastLabel: string;
   labelAuto: string;
   labelStandard: string;
   labelFullAaa: string;
-  modeAuto: string;
-  modeStandard: string;
-  modeFullAaa: string;
 }
 
 /**
@@ -162,12 +157,28 @@ export function AmbientGlareDetector() {
   return null;
 }
 
+const CONTRAST_MODES = ["auto", "standard", "full"] as const;
+
 /**
- * AmbientContrastSlider is a slider UI that allows manual overrides of the contrast mode.
- * Toggling standard or full AAA contrast overrides the auto-glare detection.
+ * Manual override for the glare detection above: Auto follows the light
+ * sensor, Standard pins it off, Maximum pins it on.
+ *
+ * A **segmented control**, not the range slider this used to be. Three named
+ * stops is not a magnitude — nothing here is "more contrast than the last
+ * notch" — and rendering it as a slider cost the surface three problems at
+ * once: the three tick labels under a ~210px track ran into each other
+ * ("AUTOSTANDARDMAXIMUM CONTRAST"), the mode had to be repeated in a chip
+ * above the track because the handle position alone did not say which stop it
+ * was on, and dragging a 1px rail is the wrong target for a wet hand on a
+ * moving boat. Each option is now a real 44px button whose pressed state *is*
+ * the answer, in the same segmented grammar as `QueueViewSwitch`.
  */
-export function AmbientContrastSlider({ copy }: { copy: AmbientContrastCopy }) {
+export function AmbientContrastControl({ copy }: { copy: AmbientContrastCopy }) {
   const [mode, setMode] = useState<ContrastMode>("auto");
+  // The stored choice lives in this browser, so the server cannot know it. The
+  // control renders in its Auto position until the effect has read storage,
+  // rather than rendering a placeholder of a different shape that would shift
+  // the header the moment it hydrates.
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -184,74 +195,56 @@ export function AmbientContrastSlider({ copy }: { copy: AmbientContrastCopy }) {
     }
   }, []);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = parseInt(e.target.value, 10);
-    const newMode: ContrastMode = val === 0 ? "auto" : val === 1 ? "standard" : "full";
-    setMode(newMode);
+  const choose = (next: ContrastMode) => {
+    setMode(next);
     if (typeof window !== "undefined") {
       try {
-        localStorage.setItem(CONTRAST_MODE_STORAGE_KEY, newMode);
+        localStorage.setItem(CONTRAST_MODE_STORAGE_KEY, next);
       } catch (err) {
         console.warn("Failed to write contrast mode to localStorage:", err);
       }
-      window.dispatchEvent(
-        new CustomEvent(CONTRAST_MODE_CHANGE_EVENT, { detail: { mode: newMode } }),
-      );
+      window.dispatchEvent(new CustomEvent(CONTRAST_MODE_CHANGE_EVENT, { detail: { mode: next } }));
     }
   };
 
-  if (!mounted) {
-    return (
-      <div className="flex items-center h-11 px-3 border border-border rounded-xl bg-surface/50 opacity-50">
-        <span className="text-xs font-semibold text-muted">{copy.contrastAutoFallback}</span>
-      </div>
-    );
-  }
-
-  const sliderVal = mode === "auto" ? 0 : mode === "standard" ? 1 : 2;
-  const modeLabel =
-    mode === "auto" ? copy.modeAuto : mode === "standard" ? copy.modeStandard : copy.modeFullAaa;
+  const labelFor = (value: ContrastMode) =>
+    value === "auto"
+      ? copy.labelAuto
+      : value === "standard"
+        ? copy.labelStandard
+        : copy.labelFullAaa;
 
   return (
-    <div
-      data-testid="contrast-tuning-slider"
-      className="flex flex-col gap-1.5 p-2.5 px-3 border border-border bg-surface rounded-xl shadow-sm min-w-[210px] select-none text-left print:hidden"
-    >
-      <div className="flex justify-between items-center text-xs font-bold text-muted uppercase">
-        <span className="flex items-center gap-1.5">
-          <svg
-            className="w-3.5 h-3.5"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-          >
-            <title>{copy.contrastIconTitle}</title>
-            <circle cx="12" cy="12" r="4" />
-            <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
-          </svg>
-          {copy.contrastLabel}
-        </span>
-        <span className="font-semibold px-2 py-0.5 rounded-full bg-surface-sunken text-foreground">
-          {modeLabel}
-        </span>
+    // Real radios in a fieldset, not styled buttons: exactly one of the three
+    // is on, arrow keys move between them for free, and the legend names the
+    // group without a second visible heading.
+    <fieldset data-testid="contrast-control" className="select-none text-left print:hidden">
+      <legend className="text-xs font-bold tracking-wide text-muted uppercase">
+        {copy.contrastLabel}
+      </legend>
+      <div className="mt-1.5 inline-flex rounded-full border border-border bg-surface-sunken p-1">
+        {CONTRAST_MODES.map((value) => {
+          const active = mounted && value === mode;
+          return (
+            <label
+              key={value}
+              className={`inline-flex min-h-11 cursor-pointer items-center rounded-full px-3 text-sm font-semibold whitespace-nowrap transition-colors duration-200 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary ${
+                active ? "bg-surface text-foreground shadow-sm" : "text-muted hover:text-foreground"
+              }`}
+            >
+              <input
+                type="radio"
+                name="contrast-mode"
+                value={value}
+                checked={active}
+                onChange={() => choose(value)}
+                className="sr-only"
+              />
+              {labelFor(value)}
+            </label>
+          );
+        })}
       </div>
-      <input
-        type="range"
-        min="0"
-        max="2"
-        step="1"
-        value={sliderVal}
-        onChange={handleChange}
-        aria-label={copy.contrastLabel}
-        aria-valuetext={modeLabel}
-        className="w-full h-1 bg-surface-sunken rounded-lg appearance-none cursor-pointer accent-primary"
-      />
-      <div className="flex justify-between text-xs text-muted font-bold px-0.5 uppercase tracking-wider">
-        <span>{copy.labelAuto}</span>
-        <span>{copy.labelStandard}</span>
-        <span>{copy.labelFullAaa}</span>
-      </div>
-    </div>
+    </fieldset>
   );
 }

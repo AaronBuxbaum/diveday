@@ -35,6 +35,36 @@ export type DepartureBoardCopy = {
 };
 
 /**
+ * The staff pill's drag image.
+ *
+ * The default one is the browser's own snapshot of the element as it sits on
+ * the page, and the pill's fill is translucent (`bg-primary/5`). Lifted out of
+ * the page there is nothing behind that tint, so the snapshot is composited
+ * onto white — which is the white square that used to follow the name around.
+ * Dragging an opaque clone fixes the backdrop without changing how the pill
+ * looks at rest: `color-mix` here is the same colour `bg-primary/5` resolves to
+ * over the card, just flattened.
+ *
+ * The clone lives off-screen because `setDragImage` only reads from an element
+ * that is actually in the document, and it is torn down on `dragend` — every
+ * drag ends in one, cancelled or dropped.
+ */
+function makeDragImage(source: HTMLElement, transfer: DataTransfer): HTMLElement {
+  const rect = source.getBoundingClientRect();
+  const ghost = source.cloneNode(true) as HTMLElement;
+  ghost.style.position = "fixed";
+  ghost.style.top = "-1000px";
+  ghost.style.left = "-1000px";
+  ghost.style.width = `${rect.width}px`;
+  ghost.style.height = `${rect.height}px`;
+  ghost.style.background = "color-mix(in srgb, var(--primary) 5%, var(--surface))";
+  ghost.style.pointerEvents = "none";
+  document.body.append(ghost);
+  transfer.setDragImage(ghost, rect.width / 2, rect.height / 2);
+  return ghost;
+}
+
+/**
  * A count that has to be read at a glance in sunlight: big, tabular, and
  * labelled in words so the tone is never the only signal.
  */
@@ -296,7 +326,7 @@ function DepartureCard({
       </div>
       {blocked > 0 ? (
         <p className="mt-3 text-sm font-semibold text-danger">
-          <span aria-hidden="true">⚠ </span>
+          <span aria-hidden="true">⚠️ </span>
           {fill(
             pluralForm(
               blocked,
@@ -315,12 +345,12 @@ function DepartureCard({
         // 3) instead of readiness copy that's gone stale the moment the boat
         // is actually full.
         <p className="rise-in mt-3 rounded-lg border border-accent/40 bg-accent/10 px-3 py-2 text-sm font-semibold">
-          <span aria-hidden="true">✦ </span>
+          <span aria-hidden="true">🎉 </span>
           {copy.everyoneAboard}
         </p>
       ) : (
         <p className="mt-3 text-sm font-semibold text-success">
-          <span aria-hidden="true">✓ </span>
+          <span aria-hidden="true">✅ </span>
           {copy.clearToBoard}
         </p>
       )}
@@ -355,6 +385,11 @@ export function DepartureBoard({
   ) => Promise<{ ok: boolean }>;
   copy: DepartureBoardCopy;
 }) {
+  const dragImage = useRef<HTMLElement | null>(null);
+  const clearDragImage = () => {
+    dragImage.current?.remove();
+    dragImage.current = null;
+  };
   if (departures.length === 0) return null;
   const crewed = new Set(crewedTripIds ?? []);
   return (
@@ -375,7 +410,12 @@ export function DepartureBoard({
                 key={staff.id}
                 type="button"
                 draggable
-                onDragStart={(e) => e.dataTransfer.setData("text/plain", staff.id)}
+                onDragStart={(e) => {
+                  e.dataTransfer.setData("text/plain", staff.id);
+                  clearDragImage();
+                  dragImage.current = makeDragImage(e.currentTarget, e.dataTransfer);
+                }}
+                onDragEnd={clearDragImage}
                 className="min-h-11 cursor-grab rounded-full border border-primary/20 bg-primary/5 px-3 text-xs font-medium text-primary transition-all active:cursor-grabbing hover:bg-primary/10"
               >
                 {staff.fullName} 👤
