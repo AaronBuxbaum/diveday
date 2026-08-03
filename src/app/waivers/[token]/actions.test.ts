@@ -19,6 +19,7 @@ vi.mock("@/db/client", async (importOriginal) => {
   return { ...actual, getDb: vi.fn(async () => ({}) as never) };
 });
 vi.mock("@/db/waiver-issue", () => ({ emailFreshWaiverLink: vi.fn() }));
+vi.mock("@/db/waivers", () => ({ staleWaiverRecordForToken: vi.fn() }));
 vi.mock("@/lib/request-ip", () => ({ clientIp: vi.fn(async () => "203.0.113.7") }));
 vi.mock("@/lib/rate-limit", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/rate-limit")>();
@@ -26,10 +27,17 @@ vi.mock("@/lib/rate-limit", async (importOriginal) => {
 });
 
 const { emailFreshWaiverLink } = await import("@/db/waiver-issue");
+const { staleWaiverRecordForToken } = await import("@/db/waivers");
 const { checkRateLimit, RATE_LIMITS } = await import("@/lib/rate-limit");
 const { emailFreshWaiverLinkAction } = await import("./actions");
 
 const TOKEN = "stale-token";
+const BOOKING_ID = "0f2a9c1e-1111-4222-8333-444444444444";
+
+/** The stale record a token resolves to — only `bookingId` matters here. */
+function staleRecordFor(bookingId: string | null) {
+  return { bookingId } as unknown as Awaited<ReturnType<typeof staleWaiverRecordForToken>>;
+}
 
 /** Where the action sent the diver, without the redirect's control-flow throw. */
 async function redirectedTo(token = TOKEN): Promise<string> {
@@ -45,6 +53,7 @@ async function redirectedTo(token = TOKEN): Promise<string> {
 
 beforeEach(() => {
   vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, retryAfterMs: 0 });
+  vi.mocked(staleWaiverRecordForToken).mockResolvedValue(staleRecordFor(BOOKING_ID));
 });
 
 afterEach(() => {
@@ -64,6 +73,7 @@ describe("emailFreshWaiverLinkAction", () => {
   it.each([
     ["no_email", "none"],
     ["already_signed", "signed"],
+    ["current_link_live", "live"],
     ["unavailable", "unavailable"],
     ["failed", "failed"],
   ] as const)("reports %s honestly rather than as a send", async (outcome, param) => {
@@ -87,16 +97,48 @@ describe("emailFreshWaiverLinkAction", () => {
     expect(emailFreshWaiverLink).not.toHaveBeenCalled();
   });
 
-  it("throttles by IP and by token, keyed on the token itself", async () => {
+  it("throttles by IP and by the booking behind the link", async () => {
     vi.mocked(emailFreshWaiverLink).mockResolvedValue("sent");
     await redirectedTo();
     expect(checkRateLimit).toHaveBeenCalledTimes(2);
     const configs = vi.mocked(checkRateLimit).mock.calls.map((call) => call[1]);
-    expect(configs).toEqual([RATE_LIMITS.capabilityAction, RATE_LIMITS.waiverLinkResendByToken]);
-    // Keys are hashed, never the raw token — assert only that the two nets
-    // hash different things, so neither can stand in for the other.
+    expect(configs).toEqual([RATE_LIMITS.capabilityAction, RATE_LIMITS.waiverLinkResendByBooking]);
+    // Keys are hashed, never the raw token or booking id — assert only that the
+    // two nets hash different things, so neither can stand in for the other.
     const keys = vi.mocked(checkRateLimit).mock.calls.map((call) => call[0]);
     expect(keys[0]).not.toBe(keys[1]);
     expect(keys.join(" ")).not.toContain(TOKEN);
+    expect(keys.join(" ")).not.toContain(BOOKING_ID);
+  });
+
+  it("gives every stale link for one booking a single shared inbox budget", async () => {
+    // A booking collects a new dead token on every reissue. Keyed by token,
+    // each of those leaked URLs carried its own full 5/hr budget aimed at the
+    // same mailbox; keyed by the booking they resolve to, they share one.
+    vi.mocked(emailFreshWaiverLink).mockResolvedValue("sent");
+    await redirectedTo("stale-token-a");
+    const first = vi.mocked(checkRateLimit).mock.calls[1]?.[0];
+    vi.clearAllMocks();
+    vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, retryAfterMs: 0 });
+    vi.mocked(staleWaiverRecordForToken).mockResolvedValue(staleRecordFor(BOOKING_ID));
+    vi.mocked(emailFreshWaiverLink).mockResolvedValue("sent");
+    await redirectedTo("stale-token-b");
+    expect(vi.mocked(checkRateLimit).mock.calls[1]?.[0]).toBe(first);
+  });
+
+  it("falls back to the token's own bucket when it resolves to no booking", async () => {
+    // Nothing resolved means no inbox to protect and no booking to key on. The
+    // per-IP net above still applies, and the send itself refuses anyway — but
+    // the narrow bucket must never key two unrelated dead tokens together.
+    vi.mocked(staleWaiverRecordForToken).mockResolvedValue(null);
+    vi.mocked(emailFreshWaiverLink).mockResolvedValue("unavailable");
+    await redirectedTo("garbage-a");
+    const first = vi.mocked(checkRateLimit).mock.calls[1]?.[0];
+    vi.clearAllMocks();
+    vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, retryAfterMs: 0 });
+    vi.mocked(staleWaiverRecordForToken).mockResolvedValue(null);
+    vi.mocked(emailFreshWaiverLink).mockResolvedValue("unavailable");
+    await redirectedTo("garbage-b");
+    expect(vi.mocked(checkRateLimit).mock.calls[1]?.[0]).not.toBe(first);
   });
 });
