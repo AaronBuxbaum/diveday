@@ -27,9 +27,9 @@ const ENTERABLE_DEMO_ROLES = new Set<DemoRoleId>([
 ]);
 
 /**
- * The landing page's role picker submits a `role` field alongside the usual
- * `source` tag; the primary "Try the staff app" button sends neither, which
- * defaults here to the owner view it has always opened on.
+ * A demo form submits a `source` tag and, from the in-demo role switcher, a
+ * `role`; a marketing-page CTA sends only the tag, which defaults here to the
+ * owner view it has always opened on.
  */
 function requestedDemoRole(formData?: FormData): DemoRoleId {
   const raw = formData?.get("role");

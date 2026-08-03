@@ -284,9 +284,19 @@ engineering they were blocking has shipped, so what is left in each is only the 
   or refuse — and the retention windows for webhook/notification/token trails. A second question
   arrived with the obligation ledger: **who files Stripe's data-deletion request, and on what
   cadence**, since that obligation closes only on a human attestation and is never auto-retried.
-  Blocks P1-6 and P2-17.
-- **HD-14.** Payment history ledger: invest in the local append-only trail now, or accept Stripe as
-  sole historical ledger until the first dispute — P2-18.
+  Blocks P1-6. **Its retention half narrowed 2026-08-03:** the pruning *mechanism* now ships, so all
+  that is left is the numbers. They live in one place — `RETENTION_DAYS` in `src/lib/retention.ts`
+  ([20260803-append-only-retention](../../architecture/decisions/20260803-append-only-retention.md)) —
+  and changing one is a one-line edit, not a project. The `stripe_webhook_events` window is the one
+  with a floor rather than a preference: those rows are the chronological evidence
+  `hasNewerAccountUpdate` reads, so a test fails if it is shortened toward Stripe's own retry
+  horizon.
+- **HD-14 (rewritten).** Payment history ledger: **the local append-only trail is built** —
+  `booking_payment_events`, written inside `setBookingPayment` in the same transaction as every
+  mutation ([20260803-booking-payment-events](../../architecture/decisions/20260803-booking-payment-events.md)).
+  So the question is no longer whether to build it but whether to keep it and whether to surface it:
+  nothing reads the trail yet, deliberately, because history cannot be added retroactively but a
+  screen can.
 - **HD-15.** Abandoned checkout = seats held forever: confirm book-now-pay-later, or define an
   auto-release window.
 - **HD-16.** Platform economics: confirm monetization stays subscription-only (no `application_fee`

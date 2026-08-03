@@ -7,6 +7,92 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## The 2026-08-02 review's engineering queue (delivered 2026-08-03)
+
+The Medium and Low engineering items the [2026-08-02 review](assessments/comprehensive-review-20260802.md)
+still carried below its top findings. What it did *not* touch: MKT-F5 and MKT-F10, the two live
+claims-policy violations at P0-1, which are owner decisions under HD-25 and not an agent's to close.
+
+**Money.**
+
+- **A booking's payment history is now local** (DATA-M3). `booking_payments` is one mutable row that
+  refunds overwrite in place, so reconstructing how a booking got to its balance meant asking
+  Stripe. The new append-only `booking_payment_events` records every transition — status, previous
+  status, amount, currency, provider reference, and the operation that caused it — written inside
+  `setBookingPayment`, the single funnel every writer reaches, under the same lock and in the same
+  transaction. It records **transitions, not writes**: a replayed webhook re-running the self-healing
+  checkout cascade appends nothing, and a refused write appends nothing, so a row always means the
+  state genuinely changed. This is the built alternative to HD-14's "accept Stripe as sole ledger".
+  See [20260803-booking-payment-events](../architecture/decisions/20260803-booking-payment-events.md).
+- **Tips are in Reports** (PAY-M2), the last Stripe-vs-Reports divergence. Reported *beside* revenue,
+  not inside it — a tip is its own Stripe charge, 100% to the shop, and never touches the booking
+  payment gate, so folding it in would make "Revenue collected" stop meaning what its own detail
+  line says.
+- **`checkout.session.async_payment_failed` is handled** (PAY-L1); it previously left a permanent
+  pending desync. `booking_payments` is deliberately untouched by it: an unsettled async payment
+  wrote no row, and writing `unpaid` is the one thing that could regress a booking a human has since
+  marked paid or waived.
+  See [20260803-async-payment-failed](../architecture/decisions/20260803-async-payment-failed.md).
+- **Append-only tables are pruned** (PAY-L2/DATA-M4). One `RETENTION_DAYS` table in
+  `src/lib/retention.ts` is the only place a human edits, on a weekly cron with the same fail-closed
+  auth as the reminders cron. The `stripe_webhook_events` window is **asserted, not commented**:
+  those rows are load-bearing evidence now that `hasNewerAccountUpdate` reads their `occurred_at`,
+  so `retentionWindowsOutlastStripeRetries()` fails a test if anyone shortens it toward Stripe's own
+  retry horizon. The window *values* remain HD-11's to set.
+  See [20260803-append-only-retention](../architecture/decisions/20260803-append-only-retention.md).
+- **Money columns no longer default their currency** (DATA-L3). Dropped from `booking_payments`,
+  `orders`, `booking_checkouts` and `tips`; `shops.currency` (the source-of-truth setting) and
+  `shop_stripe_accounts.default_currency` (Stripe-reported, advisory) keep theirs. Exactly one
+  production writer had been relying on the default.
+
+**Safety.** A trip's certification and specialty requirement is now checked at **booking**, not only
+at boarding (DOM-M6) — a diver could pay in full for a charter they could not qualify for. The gate
+lives in `createBookingRecord`, so every door inherits it, and the lookup fails closed. It is
+deliberately **weaker than readiness** and may never refuse someone readiness would clear — a
+property test asserts that invariant across every requirement × evidence combination. A course
+session is carved out: a site's inherent gate must not refuse a student from the course that grants
+the very card. **This narrows DOM-M6 rather than closing it** — following the H-08 precedent, a
+diver the shop has never carded is not refused, which is why the trip's requirement is now stated
+above the public booking form and why H-27 through H-30 exist.
+See [20260803-trip-admission-at-booking](../architecture/decisions/20260803-trip-admission-at-booking.md).
+
+**Architecture.** The four files every feature touched are split (ARCH-3): `src/db/seed.ts`
+4,650 → a 740-line orchestrator over 14 scenario modules, `src/db/trips.ts` 2,003 → a 94-line barrel
+over six, `notifications/index.ts` 731 → a 77-line surface over five, and `SettingsPage.tsx`'s
+inline `"use server"` closures extracted to a sibling `actions.ts`. Every public export is
+byte-identical and no importer changed; the seeded database was proven identical by fingerprinting
+every row, after first validating the method on unchanged code.
+See [20260803-seed-scenario-modules](../architecture/decisions/20260803-seed-scenario-modules.md).
+The `tx as unknown as AppDb` casts are gone (ARCH-5) — `DbExecutor` everywhere it belongs.
+Auth-path hygiene (ARCH-8): the missing-account short-circuit no longer skips the bcrypt compare
+(an enumeration oracle), the demo bypass moved behind a reserved `*.demo.invalid` namespace so
+database write access to `is_demo` alone grants nothing, and bcrypt cost 10 became one documented
+constant — deliberately not applied at the verify site, where `compare()` reads the cost out of the
+stored hash. See [20260803-demo-bypass-containment](../architecture/decisions/20260803-demo-bypass-containment.md).
+
+**Copy and languages.** Bearer-token error boundaries speak the reader's language (I18N-3). The old
+exemption comments assumed a provider meant shipping the diver bundle on every visit; that stopped
+being true when `DiverIntlProvider` grew a required `namespaces` list, so each route's `layout.tsx`
+now mounts four strings above the boundary. Seven token routes, not the six the review counted, plus
+the public shop namespace. `src/i18n/provider-coverage.test.ts` makes the `DiverIntlProvider`
+footgun executable instead of tribal. es-ES swept for terminology and register (I18N-5): 256 strings,
+`tienda` → `centro` with agreement fixed and the retail sense split off, recorded in
+`src/i18n/locales/es-ES/README.md` so the next translator is consistent.
+See [20260803-error-boundary-copy-bridge](../architecture/decisions/20260803-error-boundary-copy-bridge.md).
+
+**Marketing.** `/product`'s mid-page CTA can finally be measured (MKT-F3 — it existed, but tagged
+itself identically to the hero and closing). `/switching/spreadsheet` gained its OG block and every
+marketing route sets Twitter cards (MKT-F6) — and verifying that policy surfaced a live defect:
+Next merges `metadata` shallowly, so every marketing page except `/` had been unfurling with **no
+`og:image`**. `/about`'s hero stopped being pasteable onto any dive vendor's site (MKT-F7).
+`/pricing` anchors against the per-booking fees the switching guides document, using only figures
+already in the repo and no savings arithmetic (MKT-F9). MKT-F4 and MKT-F8 were already delivered
+before this slice; the review measures `be15104`, not HEAD.
+
+**Domain wording.** H-11, V-05 and the nitrox provisional defaults now say plainly that DiveDay
+gates the fill *request* and holds no fill log of any kind (DOM-M4). HD-8 is left standing and named
+as unanswered in all three places.
+
 ## A shop's water-temperature unit is its own setting (2026-08-03)
 
 `shops.temperature_unit` (`celsius` | `fahrenheit`, default Celsius) replaces the derivation that

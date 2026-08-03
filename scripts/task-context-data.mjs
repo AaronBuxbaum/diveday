@@ -279,10 +279,20 @@ export const areas = {
     code: [
       "src/db/schema.ts",
       "src/db/client.ts",
+      // `trips.ts` and `seed.ts` are barrels; the code lives in the siblings.
       "src/db/trips.ts",
+      "src/db/trips-create.ts",
+      "src/db/trips-series.ts",
+      "src/db/trips-record.ts",
+      "src/db/trips-schedule.ts",
+      "src/db/trips-crew.ts",
+      "src/db/trips-roster.ts",
       "src/db/shops.ts",
       "src/db/bookings.ts",
       "src/db/seed.ts",
+      "src/db/seed-cast.ts",
+      "src/db/seed-trips.ts",
+      "src/db/seed-bookings.ts",
     ],
     tests: ["src/db", "src/lib"],
     invariants: [
@@ -420,7 +430,13 @@ export const areas = {
       "docs/architecture/decisions/20260802-sms-delivery-receipts-in-cloudformation.md",
     ],
     code: [
+      // `index.ts` is the module surface; the code lives in the siblings.
       "src/lib/notifications/index.ts",
+      "src/lib/notifications/kinds.ts",
+      "src/lib/notifications/ses.ts",
+      "src/lib/notifications/provider.ts",
+      "src/lib/notifications/render.ts",
+      "src/lib/notifications/app-url.ts",
       "src/lib/notifications/email.ts",
       "src/lib/notifications/sms.ts",
       "src/lib/notifications/whatsapp.ts",
