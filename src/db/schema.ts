@@ -32,6 +32,12 @@ export const medicalJurisdiction = pgEnum("medical_jurisdiction", ["rstc", "uk"]
 /** How a shop reads depth. Storage stays metres either way (src/lib/depth-units.ts). */
 export const depthUnit = pgEnum("depth_unit", ["meters", "feet"]);
 
+/**
+ * How a shop reads water temperature. Storage stays Celsius either way
+ * (src/lib/temperature-units.ts).
+ */
+export const temperatureUnit = pgEnum("temperature_unit", ["celsius", "fahrenheit"]);
+
 export const shops = pgTable(
   "shops",
   {
@@ -65,6 +71,23 @@ export const shops = pgTable(
      * (20260724-course-admission-standards); a US shop flips it once in settings.
      */
     depthUnit: depthUnit("depth_unit").notNull().default("meters"),
+    /**
+     * Whether this shop reads water temperature in Celsius or Fahrenheit.
+     * Display and entry only — `trips.water_temperature_c` is always canonical
+     * Celsius, so switching the unit reinterprets nothing and no stored number
+     * ever moves, exactly like `depth_unit` above.
+     *
+     * Its own column rather than a reading of `depth_unit`, which is what
+     * src/lib/temperature-units.ts derived before this existed: the two
+     * genuinely come apart. A UK shop dives in metres and talks about the water
+     * in Celsius; a US shop does feet and Fahrenheit; but plenty of shops in
+     * between (Caribbean operators serving American divers, for one) publish
+     * feet *and* Celsius, and had no way to say so. Celsius is the default
+     * because storage is Celsius and most of the diving world reads it; the
+     * migration that added this column backfilled Fahrenheit for shops already
+     * set to feet, so no existing shop's reading changed on the day it landed.
+     */
+    temperatureUnit: temperatureUnit("temperature_unit").notNull().default("celsius"),
     /**
      * Where a diver who is not booking yet should write. Published on public
      * pages, so it is the shop's front-desk address rather than an owner's
@@ -740,8 +763,16 @@ export const trips = pgTable(
     /** Crew weather/conditions caution: the trip remains visible, but bookings pause for a final call. */
     conditionsHold: boolean("conditions_hold").notNull().default(false),
     conditionsSummary: text("conditions_summary"),
-    waterTemperatureC: integer("water_temperature_c"),
-    visibilityMeters: integer("visibility_meters"),
+    /**
+     * Always Celsius regardless of the shop's `temperature_unit`, and
+     * floating-point for the same reason `dive_sites.max_depth_meters` is:
+     * crew type whole degrees in their own unit, and 76°F is 24.44°C. Stored
+     * as an integer it read back as 76°F for one shop and 75°F for the next
+     * save; stored as a float it round-trips exactly (src/lib/temperature-units.ts).
+     */
+    waterTemperatureC: doublePrecision("water_temperature_c"),
+    /** Always metres regardless of `depth_unit`; floating-point for the same round-trip reason. */
+    visibilityMeters: doublePrecision("visibility_meters"),
     surfaceConditions: text("surface_conditions"),
     conditionsUpdatedAt: timestamp("conditions_updated_at", { withTimezone: true }),
     /**

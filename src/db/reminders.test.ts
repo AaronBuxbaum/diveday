@@ -311,6 +311,35 @@ describe("sendDueReminders", () => {
     expect(reminder.brief?.firstTimerNote).toContain("First boat dive");
   });
 
+  it("writes the brief's conditions in the shop's own units", async () => {
+    // Same stored row as the test above (Celsius and metres on disk); only the
+    // shop's two display settings differ, and the diver's brief must follow
+    // them or it will disagree with the trip page it links to.
+    const { db, shop, reef, bookingId } = await reminderContext();
+    await updateTripConditions(db, shop.id, reef.id, {
+      waterTemperatureC: 27,
+      visibilityMeters: 20,
+    });
+    await db
+      .update(shops)
+      .set({ temperatureUnit: "fahrenheit", depthUnit: "feet" })
+      .where(eq(shops.id, shop.id));
+    const email = fakeEmail();
+
+    await sendDueReminders(db, {
+      now: new Date(reef.startsAt.getTime() - 10 * 60 * 60 * 1000),
+      emailProvider: email.provider,
+      smsProvider: fakeSms().provider,
+      appOrigin: null,
+    });
+
+    const [reminder] = emailsFor(email, bookingId);
+    if (reminder.kind !== "trip_reminder_24h") throw new Error("expected the night-before brief");
+    expect(reminder.brief?.forecast).toContain("81°F");
+    expect(reminder.brief?.forecast).toContain("66 ft");
+    expect(reminder.brief?.forecast).not.toContain("27°C");
+  });
+
   it("keeps the 7-day reminder a light nudge with no brief", async () => {
     const { db, bookingId, inWeekBucket } = await reminderContext();
     const email = fakeEmail();

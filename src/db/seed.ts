@@ -4276,7 +4276,13 @@ export async function resetDemoSchedule(
   // starts already on "feet" and the test's own `/Maximum depth \(metres\)/`
   // locator then never matches, hanging for the full test timeout rather
   // than failing fast.
-  await db.update(shops).set({ reviewUrl: null, depthUnit: "meters" }).where(eq(shops.id, shopId));
+  // `shops.temperature_unit` rides along for the same reason: it is the second
+  // half of the same settings pair and leaks exactly the same way once a spec
+  // flips it.
+  await db
+    .update(shops)
+    .set({ reviewUrl: null, depthUnit: "meters", temperatureUnit: "celsius" })
+    .where(eq(shops.id, shopId));
   await db.delete(shopStripeAccounts).where(eq(shopStripeAccounts.shopId, shopId));
 
   // The waiver is the same class of fixture. Editing the release text saves a

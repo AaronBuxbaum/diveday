@@ -53,12 +53,12 @@ export function PackingSection({
         <p className="mt-2 text-sm text-muted">
           {t(TEMPERATURE_TIP_KEYS[packing.temperatureTip.tone], {
             // The tip and the forecast tile above it are on the same page and
-            // must not disagree about units: both read the shop's own unit
-            // off `depth_unit` (src/lib/temperature-units.ts).
+            // must not disagree about units: both read the shop's own
+            // `temperature_unit` (src/lib/temperature-units.ts).
             temperature: temperatureText(
               t,
               packing.temperatureTip.celsius,
-              temperatureUnitFor(shop.depthUnit),
+              temperatureUnitFor(shop),
             ),
           })}
         </p>

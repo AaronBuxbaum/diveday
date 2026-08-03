@@ -1216,8 +1216,8 @@
       "holdDescription": "Pausa nuevas reservas, publica el estado de decisión final y avisa por correo a los buceadores con reserva cuando el envío esté configurado.",
       "overviewLabel": "Resumen de condiciones",
       "overviewPlaceholder": "Se espera una mañana tranquila; la tripulación confirmará la decisión final en el muelle.",
-      "waterTempLabel": "Temperatura del agua °C",
-      "visibilityLabel": "Visibilidad en metros",
+      "waterTempLabel": "Temperatura del agua {unit}",
+      "visibilityLabel": "Visibilidad {unit}",
       "surfaceNotesLabel": "Notas de superficie",
       "surfaceNotesPlaceholder": "Brisa suave · oleaje ligero",
       "publishing": "Publicando…",
@@ -1660,6 +1660,8 @@
         "dockInvalid": "Introduce una hora de presentación en el muelle de entre 5 y 180 minutos.",
         "depthUnitSaved": "Unidad de profundidad guardada. Las profundidades registradas no cambian — solo cómo se muestran.",
         "depthUnitInvalid": "Elige metros o pies.",
+        "temperatureUnitSaved": "Unidad de temperatura guardada. Las temperaturas del agua registradas no cambian — solo cómo se muestran.",
+        "temperatureUnitInvalid": "Elige Celsius o Fahrenheit.",
         "rentalsSaved": "Catálogo de alquiler guardado.",
         "rentalPricesSaved": "Precios de alquiler guardados.",
         "rentalPricesInvalid": "Introduce cada precio como una cantidad en dólares (o deja el campo vacío), entre $0 y $100.000.",
@@ -1732,6 +1734,15 @@
         "meters": "Metros (m)",
         "feet": "Pies (ft)",
         "submit": "Guardar unidad de profundidad",
+        "submitting": "Guardando…"
+      },
+      "temperatureUnit": {
+        "heading": "Unidad de temperatura del agua",
+        "description": "Si tu tripulación lee la temperatura del agua en Celsius o en Fahrenheit. Se configura aparte de la unidad de profundidad — muchos centros publican pies y Celsius. Las temperaturas siempre se guardan en Celsius, así que cambiar esto solo afecta a lo que escribes y lees.",
+        "label": "Mostrar la temperatura del agua en",
+        "celsius": "Celsius (°C)",
+        "fahrenheit": "Fahrenheit (°F)",
+        "submit": "Guardar unidad de temperatura",
         "submitting": "Guardando…"
       },
       "paymentsGate": {
@@ -2339,6 +2350,10 @@
     "depth": {
       "meters": "m",
       "feet": "ft"
+    },
+    "temperature": {
+      "celsius": "°C",
+      "fahrenheit": "°F"
     },
     "birthday": {
       "label": "Cumpleaños",

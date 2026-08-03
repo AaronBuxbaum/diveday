@@ -23,6 +23,7 @@ import {
   setShopRentalItems,
   setShopRentalPricing,
   setShopReviewUrl,
+  setShopTemperatureUnit,
 } from "@/db/shops";
 import {
   canAcceptPayments,
@@ -67,6 +68,14 @@ function noticeMessages(
     dock_invalid: { tone: "danger", text: t("settings.main.notice.dockInvalid") },
     depth_unit_saved: { tone: "success", text: t("settings.main.notice.depthUnitSaved") },
     depth_unit_invalid: { tone: "danger", text: t("settings.main.notice.depthUnitInvalid") },
+    temperature_unit_saved: {
+      tone: "success",
+      text: t("settings.main.notice.temperatureUnitSaved"),
+    },
+    temperature_unit_invalid: {
+      tone: "danger",
+      text: t("settings.main.notice.temperatureUnitInvalid"),
+    },
     currency_saved: { tone: "success", text: t("settings.main.notice.currencySaved") },
     currency_invalid: { tone: "danger", text: t("settings.main.notice.currencyInvalid") },
     rentals_saved: { tone: "success", text: t("settings.main.notice.rentalsSaved") },
@@ -184,6 +193,27 @@ async function saveDepthUnitAction(formData: FormData) {
   if (!parsed.success) redirect(`${settings}?notice=depth_unit_invalid&saved=depthUnit`);
   await setShopDepthUnit(await getDb(), session.user.shopId, parsed.data);
   revalidateAndRedirect(settings, `${settings}?notice=depth_unit_saved&saved=depthUnit`);
+}
+
+/**
+ * Whether this shop reads water temperature in Celsius or Fahrenheit. Its own
+ * setting rather than a reading of the depth unit above (a shop can dive in
+ * feet and talk about the water in Celsius), and lossless on the same terms —
+ * `trips.water_temperature_c` stays Celsius, so switching back and forth moves
+ * no recorded reading.
+ */
+async function saveTemperatureUnitAction(formData: FormData) {
+  "use server";
+  const session = await requireStaffSession();
+  const settings = `/shop/${session.user.shopSlug}/settings`;
+  const parsed = z.enum(["celsius", "fahrenheit"]).safeParse(formData.get("temperatureUnit"));
+  if (!parsed.success)
+    redirect(`${settings}?notice=temperature_unit_invalid&saved=temperatureUnit`);
+  await setShopTemperatureUnit(await getDb(), session.user.shopId, parsed.data);
+  revalidateAndRedirect(
+    settings,
+    `${settings}?notice=temperature_unit_saved&saved=temperatureUnit`,
+  );
 }
 
 /**
@@ -449,7 +479,7 @@ function SettingsGroup({
 }
 
 /**
- * The ten forms on this page each carry their own section id through
+ * The eleven forms on this page each carry their own section id through
  * `?saved=<id>` (set by the action that redirects back here), so the notice
  * that comes back renders inside the section that changed instead of one
  * banner at the top of the page — after `PreserveFormScroll` restores the
@@ -463,6 +493,7 @@ const SECTION_IDS = [
   "packing",
   "dockCall",
   "depthUnit",
+  "temperatureUnit",
   "currency",
   "rentals",
   "rentalPricing",
@@ -755,6 +786,38 @@ export default async function SettingsPage({
                 className={buttonClass()}
               >
                 {t("settings.main.depthUnit.submit")}
+              </SubmitButton>
+            </FieldActions>
+          </FieldGrid>
+        </section>
+
+        {/* Its own setting, not a reading of the depth unit above: a Caribbean
+          operator serving American divers publishes feet and Celsius, and until
+          this existed the two were welded together. Water temperature is stored
+          in Celsius whatever this says. */}
+        <section className="mt-6 rounded-lg border border-border bg-surface p-6">
+          <h3 className="font-medium">{t("settings.main.temperatureUnit.heading")}</h3>
+          <p className="mt-1 text-sm text-muted">
+            {t("settings.main.temperatureUnit.description")}
+          </p>
+          <SectionNotice banner={banner} section="temperatureUnit" active={activeSection} />
+          <FieldGrid as="form" action={saveTemperatureUnitAction} columns={2} className="mt-4">
+            <Field label={t("settings.main.temperatureUnit.label")}>
+              <select
+                name="temperatureUnit"
+                defaultValue={shop.temperatureUnit}
+                className={controlClass}
+              >
+                <option value="celsius">{t("settings.main.temperatureUnit.celsius")}</option>
+                <option value="fahrenheit">{t("settings.main.temperatureUnit.fahrenheit")}</option>
+              </select>
+            </Field>
+            <FieldActions>
+              <SubmitButton
+                pendingLabel={t("settings.main.temperatureUnit.submitting")}
+                className={buttonClass()}
+              >
+                {t("settings.main.temperatureUnit.submit")}
               </SubmitButton>
             </FieldActions>
           </FieldGrid>

@@ -102,6 +102,14 @@ new domain concept, define it here in the same PR.
   Display and entry only: storage is canonical metres, so switching it moves no stored number.
   Florida crews say "sixty feet"; every agency standard DiveDay encodes is published in metres,
   which is why the stored unit and the default are metric.
+- **Temperature unit** — `shops.temperature_unit`, whether a shop's staff and divers read water
+  temperature in Celsius or Fahrenheit. Display and entry only, on the same terms as the depth unit
+  above: storage is canonical Celsius (`trips.water_temperature_c`), so switching it moves no
+  stored reading. A **separate setting from the depth unit**, not derived from it — a Caribbean
+  operator serving American divers publishes depths in feet and water temperature in Celsius, and
+  that pairing is common enough that welding the two together mislabels real shops. Celsius is the
+  default because storage is Celsius; the migration that introduced the column backfilled
+  Fahrenheit for shops already set to feet, matching what they were being shown at the time.
 - **Minor** — a diver under 18 on the trip date. Eighteen, not the diving world's 15: the flag
   exists because a minor's liability waiver may need a guardian signature, a question of legal
   majority in the shop's jurisdiction (Florida at launch, H-01). The diving restrictions on

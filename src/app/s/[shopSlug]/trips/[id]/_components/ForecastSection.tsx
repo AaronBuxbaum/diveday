@@ -21,9 +21,10 @@ export function ForecastSection({
   const t = diverTranslator(locale);
   // Stored metric, displayed in the shop's own units (src/lib/depth-units.ts,
   // src/lib/temperature-units.ts): a Florida shop set to feet was still being
-  // shown "24°C" and "12 m" on its own diver-facing trip page.
+  // shown "24°C" and "12 m" on its own diver-facing trip page. The two units
+  // are independent settings — a shop can publish feet and Celsius.
   const depthUnit = shop.depthUnit;
-  const temperatureUnit = temperatureUnitFor(depthUnit);
+  const temperatureUnit = temperatureUnitFor(shop);
   const waterTemperatureC = crewPrediction
     ? trip.waterTemperatureC
     : (automatedForecast?.waterTemperatureC ?? null);

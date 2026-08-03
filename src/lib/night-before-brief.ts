@@ -4,6 +4,9 @@
 // 20260731-notification-locale).
 import type { DiverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
+import { depthText, temperatureText } from "@/i18n/unit-labels";
+import type { DepthUnit } from "@/lib/depth-units";
+import type { TemperatureUnit } from "@/lib/temperature-units";
 
 /**
  * The night-before brief, shared by both channels (`src/lib/notifications/email.ts`
@@ -18,6 +21,15 @@ import type { DiverLocale } from "@/i18n/settings";
  * for their content, so unlike most of `src/lib` they resolve their own words
  * rather than handing back a code for `src/app` to translate).
  */
+
+/**
+ * The units the recipient's shop reads measurements in. The brief is stored
+ * metric like everything else, but a Florida shop's diver was still being told
+ * "water around 27°C" the night before a dive its own trip page describes as
+ * 81°F — the one place a shop's units were still being ignored after the trip
+ * page, recap, and packing tip stopped ignoring them.
+ */
+export type BriefUnits = { temperature: TemperatureUnit; depth: DepthUnit };
 
 /** The crew's published read on a trip's conditions; every field is optional. */
 export type BriefConditions = {
@@ -42,18 +54,32 @@ function ensureStop(text: string): string {
  * short "expect …" clause, joined through `Intl.ListFormat` so the conjunction
  * is correct for the recipient's locale, so a nervous diver gets both the feel
  * and the numbers.
+ *
+ * Both figures are written in the shop's own units through the same two
+ * helpers the trip page and recap use (`src/i18n/unit-labels.ts`), so the
+ * brief and the page a diver opens from it can never disagree about whether
+ * the water is 27°C or 81°F.
  */
 export function forecastText(
   t: DiverTranslator,
   locale: DiverLocale,
   conditions: BriefConditions,
+  units: BriefUnits,
 ): string | null {
   const measured: string[] = [];
   if (conditions.waterTemperatureC !== null) {
-    measured.push(t("notifications.brief.waterTemp", { celsius: conditions.waterTemperatureC }));
+    measured.push(
+      t("notifications.brief.waterTemp", {
+        value: temperatureText(t, conditions.waterTemperatureC, units.temperature),
+      }),
+    );
   }
   if (conditions.visibilityMeters !== null) {
-    measured.push(t("notifications.brief.visibility", { meters: conditions.visibilityMeters }));
+    measured.push(
+      t("notifications.brief.visibility", {
+        value: depthText(t, conditions.visibilityMeters, units.depth),
+      }),
+    );
   }
   const surface = conditions.surfaceConditions?.trim();
   if (surface) measured.push(surface);

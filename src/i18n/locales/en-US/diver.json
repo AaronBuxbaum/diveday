@@ -1396,8 +1396,8 @@
   },
   "notifications": {
     "brief": {
-      "waterTemp": "water around {celsius}°C",
-      "visibility": "visibility near {meters} m",
+      "waterTemp": "water around {value}",
+      "visibility": "visibility near {value}",
       "expect": "Expect {list}.",
       "firstTimer": "First boat dive? The crew walks everyone through the gear and the plan before you get in — you'll never be handed kit and left to figure it out. Come with questions.",
       "conditionsLabel": "Conditions:",

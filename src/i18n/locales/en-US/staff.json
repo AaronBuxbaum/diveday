@@ -1216,8 +1216,8 @@
       "holdDescription": "Pause new bookings, publish the final-call state, and email booked divers when delivery is configured.",
       "overviewLabel": "Conditions overview",
       "overviewPlaceholder": "A calm morning is expected; the crew will confirm the final call at the dock.",
-      "waterTempLabel": "Water temp °C",
-      "visibilityLabel": "Visibility metres",
+      "waterTempLabel": "Water temp {unit}",
+      "visibilityLabel": "Visibility {unit}",
       "surfaceNotesLabel": "Surface notes",
       "surfaceNotesPlaceholder": "Light breeze · gentle chop",
       "publishing": "Publishing…",
@@ -1660,6 +1660,8 @@
         "dockInvalid": "Enter a dock call time between 5 and 180 minutes.",
         "depthUnitSaved": "Depth unit saved. Recorded depths are unchanged — only how they are shown.",
         "depthUnitInvalid": "Choose either metres or feet.",
+        "temperatureUnitSaved": "Temperature unit saved. Recorded water temperatures are unchanged — only how they are shown.",
+        "temperatureUnitInvalid": "Choose either Celsius or Fahrenheit.",
         "rentalsSaved": "Rental catalog saved.",
         "rentalPricesSaved": "Rental prices saved.",
         "rentalPricesInvalid": "Enter each price as a dollar amount (or leave it blank), between $0 and $100,000.",
@@ -1732,6 +1734,15 @@
         "meters": "Metres (m)",
         "feet": "Feet (ft)",
         "submit": "Save depth unit",
+        "submitting": "Saving…"
+      },
+      "temperatureUnit": {
+        "heading": "Water temperature unit",
+        "description": "Whether your crew reads water temperature in Celsius or Fahrenheit. Set separately from the depth unit — plenty of shops publish feet and Celsius. Temperatures are always stored in Celsius, so switching this changes only what you type in and read back.",
+        "label": "Show water temperature in",
+        "celsius": "Celsius (°C)",
+        "fahrenheit": "Fahrenheit (°F)",
+        "submit": "Save temperature unit",
         "submitting": "Saving…"
       },
       "paymentsGate": {
@@ -2339,6 +2350,10 @@
     "depth": {
       "meters": "m",
       "feet": "ft"
+    },
+    "temperature": {
+      "celsius": "°C",
+      "fahrenheit": "°F"
     },
     "birthday": {
       "label": "Birthday",

@@ -101,6 +101,27 @@ The server **re-reads the shop** to learn the unit rather than trusting a form f
 `unit` input would let a crafted post store a depth 3.3× off, which on a safety-adjacent figure is
 not an acceptable trust boundary.
 
+#### Amendment 2026-08-03 — the temperature unit is a sibling setting, not a reading of this one
+
+Water temperature briefly derived its unit from `depth_unit` (feet ⇒ Fahrenheit) because there was
+no column to read: a Florida shop set to feet was being shown "24°C" on its own diver-facing trip
+page, and the derivation was the cheapest way to stop that. It is now its own enum column
+(`celsius` | `fahrenheit`, default `celsius`), on exactly the terms above — display and entry
+only, `trips.water_temperature_c` stays canonical Celsius, and the server re-reads the shop rather
+than trusting a form field, for the same reason.
+
+The derivation was wrong in one direction the depth setting cannot express: **feet with Celsius**
+is an ordinary pairing (a Caribbean operator serving American divers), and welding the two
+together mislabelled those shops rather than helping them. The migration backfilled `fahrenheit`
+for every shop already on feet, so nothing anyone was reading changed on the day the column
+landed; the default for new shops is Celsius, because storage is Celsius and no onboarding step
+asks a units question.
+
+`trips.water_temperature_c` and `trips.visibility_meters` were widened from `integer` to
+`double precision` in the same migration, for the reason `dive_sites.max_depth_meters` was
+floating point from the start: crew type whole numbers in their own unit, 76°F is 24.44°C, and an
+integer column read that back as 75°F.
+
 ### 4. Age, minor status, and birthdays on the roster and manifest
 
 `isMinorOnDate` uses **18, not the diving world's 15**. The flag exists because a minor's
