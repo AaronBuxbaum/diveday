@@ -117,6 +117,62 @@ test.describe("staff", () => {
     await expect(page.getByRole("button", { name: "Reinstate trip" })).toBeVisible();
   });
 
+  test("staff import a DiveDay catalog site and it lands in the shop's own library", async ({
+    page,
+  }) => {
+    // The catalog (`/shop/[shopSlug]/dive-sites/catalog`) shipped with no e2e
+    // or visual coverage — found by the 2026-08-03 test-system evaluation,
+    // which is why scripts/route-coverage.json carried an exemption for it
+    // until this test landed.
+    //
+    // The seed publishes one global template, Molasses Reef, currently at v2,
+    // and the demo shop already holds a copy imported at v1 — so the library
+    // opens offering an update, and importing again makes a *second,
+    // independent* site rather than overwriting the tailored one. That
+    // independence is the whole promise the catalog page makes.
+    //
+    // The imported site lands as "Molasses Reef 2": `dive_sites_shop_name_unique`
+    // is a hard (shop_id, name) index and an import can't choose its own name,
+    // so `importGlobalDiveSiteTemplate` disambiguates the way the "Copy and
+    // tailor" action does. Before that, this exact button — the catalog's only
+    // action, on the state every demo shop ships in — raised an unhandled 23505
+    // and crashed the page into its error boundary.
+    const existing = page.getByRole("heading", { level: 2, name: "Molasses Reef", exact: true });
+    const imported = page.getByRole("heading", { level: 2, name: "Molasses Reef 2", exact: true });
+
+    await page.goto("/shop/blue-mantis/dive-sites");
+    await expect(existing).toHaveCount(1);
+    await expect(imported).toHaveCount(0);
+    await expect(page.getByText("Template update v2 ready — your edits are safe.")).toBeVisible();
+
+    await page.getByRole("link", { name: "Browse templates" }).click();
+    await expect(
+      page.getByRole("heading", { level: 1, name: "DiveDay common dive sites" }),
+    ).toBeVisible();
+    const template = page.locator("li").filter({ hasText: "Molasses Reef" }).filter({
+      visible: true,
+    });
+    await expect(template.getByText("Template v2")).toBeVisible();
+
+    // The catalog's one action. It lands on the freshly created site's own
+    // briefing, ready to tailor — not back on a list where staff would have to
+    // find what they just imported.
+    await template.getByRole("button", { name: "Import to my library" }).click();
+    await expect(page).toHaveURL(/\/shop\/blue-mantis\/dive-sites\/[0-9a-f-]+/);
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Molasses Reef 2", exact: true }),
+    ).toBeVisible();
+
+    await page.getByRole("link", { name: "Dive-site library" }).click();
+    await expect(page).toHaveURL(/\/shop\/blue-mantis\/dive-sites$/);
+    // Both sites now: the new one states the version it came from, while the
+    // shop's own tailored v1 copy is untouched and still offered the update.
+    await expect(existing).toHaveCount(1);
+    await expect(imported).toHaveCount(1);
+    await expect(page.getByText("DiveDay template v2")).toBeVisible();
+    await expect(page.getByText("Template update v2 ready — your edits are safe.")).toBeVisible();
+  });
+
   test("a URL resolving to a private address is blocked server-side, never saved raw (CR-020)", async ({
     page,
   }) => {
@@ -131,6 +187,14 @@ test.describe("staff", () => {
     await page.getByRole("button", { name: "Save site briefing" }).click();
     await expect(page.getByText(/couldn.t be used/)).toBeVisible();
   });
+});
+
+test("the dive-site catalog is staff-only", async ({ page }) => {
+  // The catalog's only gate is `requireStaffSession()`: any staff role may
+  // browse and import, and there is no owner/manager split on this route.
+  // Signed out, the staff gate sends an anonymous visitor to sign in.
+  await page.goto("/shop/blue-mantis/dive-sites/catalog");
+  await expect(page).toHaveURL(/\/sign-in/);
 });
 
 test("the seeded reef briefing shows a satellite map, a gentle route, landmarks, and a field guide", async ({

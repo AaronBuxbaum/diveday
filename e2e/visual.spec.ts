@@ -5,18 +5,19 @@ import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import { openTripFromBoard } from "./helpers";
 
 /**
- * Visual regression coverage. Sixty key surfaces × light/dark, each
- * captured at a phone and a desktop viewport — 240 screenshots per run (see
+ * Visual regression coverage. Sixty-five key surfaces × light/dark, each
+ * captured at a phone and a desktop viewport — 260 screenshots per run (see
  * ADR 20260729-reg-suit-visual-regression). Keep this count in sync when
  * adding a surface; each `capture()` call costs 4 screenshots per CI run.
- * `grep -c 'await capture(page' e2e/visual.spec.ts` is the number — it read 48
- * here while the grep said 56, so trust the grep and correct the prose.
+ * `grep -c 'await capture(page' e2e/visual.spec.ts` is the number — the prose
+ * has drifted from it before (it read 48 while the grep said 56), so trust the
+ * grep and correct the prose.
  *
  * Two more come from the `print` block at the bottom: the manifest and prep
  * pages as they render for the printer. Print is its own concern, not a
  * light/dark one — the `@media print` token override collapses both schemes to
  * one black-and-white palette — so each is captured once, at a US-Letter width,
- * via `capturePrint()`. That brings the run to 242 screenshots.
+ * via `capturePrint()`. That brings the run to 262 screenshots.
  *
  * Nothing here asserts. `capture()` writes raw `page.screenshot()` PNGs into
  * `e2e/screenshots/` (gitignored); `reg-suit` diffs them against the baseline
@@ -1192,6 +1193,51 @@ for (const scheme of ["light", "dark"] as const) {
         await row.getByRole("button", { name: "Delete" }).click();
         await page.getByText("Private note deleted.").waitFor();
         await capture(page, "trip-guests-note-undo", scheme);
+      });
+
+      /**
+       * The three staff surfaces that shipped with no baseline and no e2e spec
+       * at all — the gap `scripts/route-coverage.json` recorded as exemptions
+       * until e2e/staffing.spec.ts, e2e/invoicing.spec.ts and the catalog test
+       * in e2e/dive-sites.spec.ts closed it.
+       *
+       * Its own small test rather than three more stops on either 18-surface
+       * tour above: both are already sized at 90s for exactly what they do, and
+       * this one marks the demo shop Stripe-connected, which the tours must not
+       * inherit — a connected shop changes what several of their surfaces render.
+       */
+      test(`staffing, invoicing and the dive-site catalog render true to the design (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        // Three navigate+capture surfaces (12 screenshots), each with its own
+        // `paintWholeDocument` scroll.
+        test.setTimeout(45_000);
+
+        // Who is working this week, each person's capabilities and shifts, and
+        // the coverage gaps on the departures in the same window. The window
+        // defaults to the shop-local week starting at `nowDate()` — the frozen
+        // clock — so both the dates and the seeded shifts inside them are
+        // stable run to run.
+        await page.goto("/shop/blue-mantis/staffing");
+        await page.getByRole("heading", { level: 1, name: "Staffing" }).waitFor();
+        await capture(page, "staffing", scheme);
+
+        // The front desk's invoice builder. It redirects to Divers for a shop
+        // that can't take money, so mark the demo shop connected first:
+        // /api/test/seed-stripe-account is a pure DB write that never calls
+        // Stripe (same use as the recap tip section above), and no order is
+        // created here — this is the empty form, which is the whole surface.
+        await request.post("/api/test/seed-stripe-account");
+        await page.goto("/shop/blue-mantis/orders/new");
+        await page.getByRole("heading", { level: 1, name: "New order" }).waitFor();
+        await capture(page, "orders-new", scheme);
+
+        // DiveDay's published dive-site templates, each card stating the
+        // version it would import into the shop's own library.
+        await page.goto("/shop/blue-mantis/dive-sites/catalog");
+        await page.getByRole("heading", { level: 1, name: "DiveDay common dive sites" }).waitFor();
+        await capture(page, "dive-sites-catalog", scheme);
       });
     });
 

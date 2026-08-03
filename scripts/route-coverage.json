@@ -106,9 +106,8 @@
     "visual": []
   },
   "/shop/[shopSlug]/dive-sites/catalog": {
-    "e2e": [],
-    "visual": [],
-    "exempt": "no coverage yet — found by the 2026-08-03 test-system evaluation; needs a spec"
+    "e2e": ["dive-sites.spec.ts"],
+    "visual": ["dive-sites-catalog"]
   },
   "/shop/[shopSlug]/dive-sites/new": {
     "e2e": ["dive-sites.spec.ts"],
@@ -153,9 +152,8 @@
     "visual": ["order-detail"]
   },
   "/shop/[shopSlug]/orders/new": {
-    "e2e": [],
-    "visual": [],
-    "exempt": "no coverage yet — found by the 2026-08-03 test-system evaluation; needs a spec"
+    "e2e": ["invoicing.spec.ts"],
+    "visual": ["orders-new"]
   },
   "/shop/[shopSlug]/promos": {
     "e2e": ["promo-codes.spec.ts"],
@@ -272,9 +270,8 @@
     "visual": ["settings-whatsapp"]
   },
   "/shop/[shopSlug]/staffing": {
-    "e2e": [],
-    "visual": [],
-    "exempt": "no coverage yet — found by the 2026-08-03 test-system evaluation; needs a spec (e2e/search.spec.ts hops here from the command palette but asserts only the URL, never that the page renders)"
+    "e2e": ["staffing.spec.ts"],
+    "visual": ["staffing"]
   },
   "/shop/[shopSlug]/trips/[id]": {
     "e2e": [
