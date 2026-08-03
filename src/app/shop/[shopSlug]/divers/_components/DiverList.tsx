@@ -127,8 +127,15 @@ export function DiverList({
   const [typed, setTyped] = useState(query);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Keep the input in sync when navigation (back/forward, a view chip) changes
-  // the query underneath us — but never while the user is mid-debounce.
-  useEffect(() => setTyped(query), [query]);
+  // the query underneath us — but never while the user is mid-debounce: the
+  // render that lands here can be the *previous* search's, and syncing to it
+  // would resurrect text the user just cleared. The chips build their hrefs
+  // from `typed`, so a resurrected value would ride the next tap back into
+  // the URL (e2e/roster-views.spec.ts caught this as an intermittent failure).
+  useEffect(() => {
+    if (debounce.current) return;
+    setTyped(query);
+  }, [query]);
   useEffect(() => () => clearTimeout(debounce.current ?? undefined), []);
 
   // One place builds every roster URL, so search, a view chip, and the pager all
@@ -164,6 +171,9 @@ export function DiverList({
     setTyped(value);
     cancelPendingSearch();
     debounce.current = setTimeout(() => {
+      // Cleared before the replace so the navigation this triggers is free to
+      // sync the input again — the timer is no longer "pending" once it fires.
+      debounce.current = null;
       router.replace(hrefFor(value, filter), { scroll: false });
     }, 250);
   };
