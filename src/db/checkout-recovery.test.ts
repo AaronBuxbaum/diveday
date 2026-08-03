@@ -1,8 +1,8 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import type { Notification, NotificationDelivery, NotificationProvider } from "@/lib/notifications";
-import type { CheckoutProvider, CreateCheckoutSessionResult } from "@/lib/payments/checkout";
+import type { CheckoutProvider } from "@/lib/payments/checkout";
 import { seededShopContext } from "@/test/db";
+import { fakeCheckout, fakeEmail } from "@/test/fakes";
 import { anonymizeDiver } from "./anonymize";
 import { cancelBooking, createBookingParty } from "./bookings";
 import { sendDueCheckoutRecoveries } from "./checkout-recovery";
@@ -15,31 +15,28 @@ import { upcomingTripsWithCounts, updateTrip } from "./trips";
 const NOW = new Date("2026-08-01T12:00:00Z");
 const HOUR_MS = 60 * 60 * 1000;
 
+/**
+ * The shared checkout stub, with the read-back Stripe reports stated per test.
+ *
+ * Sessions expire relative to this file's own `NOW` rather than the shared
+ * fake's clock: the recovery scan only considers checkouts that have not
+ * expired yet (`expires_at > now`), and every test here runs the scan at `NOW`,
+ * which is well ahead of the frozen instant. A session anchored anywhere else
+ * is already dead by the time the scan looks and the candidate set comes back
+ * empty.
+ */
 function fakeCheckoutProvider(
   retrieve: CheckoutProvider["retrieveCheckoutSession"],
 ): CheckoutProvider {
-  let counter = 0;
-  return {
-    async createCheckoutSession(request): Promise<CreateCheckoutSessionResult> {
-      counter += 1;
-      return {
-        status: "created",
-        stripeSessionId: `cs_${counter}`,
-        stripeStatus: "open",
-        paymentStatus: "unpaid",
-        checkoutUrl: `https://checkout.stripe.com/c/pay/cs_${counter}`,
-        amountTotalCents: request.lineItems.reduce(
-          (sum, line) => sum + line.unitAmountCents * line.quantity,
-          0,
-        ),
-        expiresAt: new Date(NOW.getTime() + 24 * HOUR_MS),
-      };
-    },
+  const stub = fakeCheckout({ retrieveCheckoutSession: retrieve });
+  return fakeCheckout({
     retrieveCheckoutSession: retrieve,
-    async refundCheckoutSession() {
-      return { status: "refunded", refundId: "re_test" };
+    async createCheckoutSession(request) {
+      const session = await stub.createCheckoutSession(request);
+      if (session.status !== "created") return session;
+      return { ...session, expiresAt: new Date(NOW.getTime() + 24 * HOUR_MS) };
     },
-  };
+  });
 }
 
 const stillOpen: CheckoutProvider["retrieveCheckoutSession"] = async () => ({
@@ -65,17 +62,6 @@ const alreadyPaid: CheckoutProvider["retrieveCheckoutSession"] = async () => ({
     expiresAt: null,
   },
 });
-
-function fakeEmail(result: NotificationDelivery = { status: "sent", providerMessageId: "em_1" }) {
-  const sent: Notification[] = [];
-  const provider: NotificationProvider = {
-    async send(notification) {
-      sent.push(notification);
-      return result;
-    },
-  };
-  return { sent, provider };
-}
 
 /** A connected shop, one priced future trip, one pending checkout `hoursAgo` old. */
 async function pendingCheckoutContext(hoursAgo: number, partySize: 1 | 2 = 1) {

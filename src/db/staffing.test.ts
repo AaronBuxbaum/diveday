@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { nowMs } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
 import { bookings, courses, people, staffShifts, tripAssignments } from "./schema";
@@ -104,8 +105,8 @@ describe("staffing view", () => {
       shopId: shop.id,
       courseId: course.id,
       title: `Ratio-over-capacity session (${tag})`,
-      startsAt: new Date(Date.now() + OPEN_TEST_SESSION_OFFSET_MS),
-      endsAt: new Date(Date.now() + OPEN_TEST_SESSION_OFFSET_MS + 4 * 60 * 60 * 1000),
+      startsAt: new Date(nowMs() + OPEN_TEST_SESSION_OFFSET_MS),
+      endsAt: new Date(nowMs() + OPEN_TEST_SESSION_OFFSET_MS + 4 * 60 * 60 * 1000),
       capacity: 20,
       plannedDives: 2,
     });
@@ -185,8 +186,8 @@ describe("staffing view", () => {
       shopId: shop.id,
       courseId: course.id,
       title: "Uninstructed session",
-      startsAt: new Date(Date.now() + OPEN_TEST_SESSION_OFFSET_MS),
-      endsAt: new Date(Date.now() + OPEN_TEST_SESSION_OFFSET_MS + 4 * 60 * 60 * 1000),
+      startsAt: new Date(nowMs() + OPEN_TEST_SESSION_OFFSET_MS),
+      endsAt: new Date(nowMs() + OPEN_TEST_SESSION_OFFSET_MS + 4 * 60 * 60 * 1000),
       capacity: 20,
       plannedDives: 2,
     });
@@ -221,8 +222,8 @@ describe("staffing view", () => {
       shopId: shop.id,
       courseId: course.id,
       title: "Within-ratio session",
-      startsAt: new Date(Date.now() + OPEN_TEST_SESSION_OFFSET_MS),
-      endsAt: new Date(Date.now() + OPEN_TEST_SESSION_OFFSET_MS + 4 * 60 * 60 * 1000),
+      startsAt: new Date(nowMs() + OPEN_TEST_SESSION_OFFSET_MS),
+      endsAt: new Date(nowMs() + OPEN_TEST_SESSION_OFFSET_MS + 4 * 60 * 60 * 1000),
       capacity: 20,
       plannedDives: 2,
     });
@@ -273,8 +274,8 @@ describe("staffing view", () => {
       shopId: shop.id,
       courseId: course.id,
       title: "Per-trip role coverage session",
-      startsAt: new Date(Date.now() + OPEN_TEST_SESSION_OFFSET_MS + 2 * 60 * 60 * 1000),
-      endsAt: new Date(Date.now() + OPEN_TEST_SESSION_OFFSET_MS + 6 * 60 * 60 * 1000),
+      startsAt: new Date(nowMs() + OPEN_TEST_SESSION_OFFSET_MS + 2 * 60 * 60 * 1000),
+      endsAt: new Date(nowMs() + OPEN_TEST_SESSION_OFFSET_MS + 6 * 60 * 60 * 1000),
       capacity: 10,
       plannedDives: 2,
     });

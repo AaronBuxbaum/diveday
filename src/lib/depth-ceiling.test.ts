@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Certification, SpecialtyCertification } from "@/db/schema";
+import { nowDate } from "@/lib/clock";
 import { checkDepthCeiling, diverDepthLimit } from "./depth-ceiling";
 import { feetToMeters } from "./depth-units";
 import type { CertificationLevel } from "./readiness";
@@ -87,7 +88,7 @@ describe("diverDepthLimit", () => {
     });
 
     it("ignores an unconfirmed imported card, matching the readiness gate", () => {
-      const imported = specialty({ importedAt: new Date(), reviewedAt: null });
+      const imported = specialty({ importedAt: nowDate(), reviewedAt: null });
       expect(diverDepthLimit([card("open_water")], [imported], TODAY)).toMatchObject({
         ceiling: { meters: 18 },
       });

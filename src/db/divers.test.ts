@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import { ANONYMIZED_PERSON_NAME, REDACTED_TEXT } from "@/lib/anonymization";
+import { nowMs } from "@/lib/clock";
 import type { DeleteCustomerResult } from "@/lib/payments/customers";
 import { computeWaiverIntegrityHash, verifyWaiverIntegrity } from "@/lib/waiver-integrity";
 import { seededShopContext } from "@/test/db";
@@ -1053,7 +1054,7 @@ describe("diver erasure", () => {
     // The link is dead: the hash no longer matches any issued token, and the
     // record has expired.
     expect(after.tokenHash).not.toBe(before.tokenHash);
-    expect(after.expiresAt.getTime()).toBeLessThanOrEqual(Date.now());
+    expect(after.expiresAt.getTime()).toBeLessThanOrEqual(nowMs());
   });
 
   it("is idempotent — a replayed call changes nothing", async () => {

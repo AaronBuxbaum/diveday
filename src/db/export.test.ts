@@ -2,6 +2,7 @@ import { and, eq, getTableColumns, getTableName } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { DEV_STAFF_LOGINS } from "@/db/dev-credentials";
 import { ANONYMIZED_PERSON_NAME } from "@/lib/anonymization";
+import { nowDate } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
 import { createDiver, deleteDiver } from "./divers";
@@ -653,13 +654,13 @@ describe("full-shop export dataset", () => {
       templateBody: template.body,
       status: "medical_review",
       tokenHash: "held-holly",
-      expiresAt: new Date(),
+      expiresAt: nowDate(),
       signedName: "Held Holly",
       signatureMethod: "typed_consent",
-      consentedAt: new Date(),
-      signedAt: new Date(),
+      consentedAt: nowDate(),
+      signedAt: nowDate(),
       medicalReviewRequired: true,
-      completedAt: new Date(),
+      completedAt: nowDate(),
     });
 
     const input = await loadShopExportBundleInput(db, shop.id);

@@ -724,6 +724,7 @@
       "noteHint": "(opcional)",
       "notePlaceholder": "p. ej. Salida de dos inmersiones + equipo de alquiler",
       "lineItemsLegend": "Líneas del pedido",
+      "lineItemKindAria": "Tipo de la línea {number}",
       "lineItemDescriptionPlaceholder": "Descripción",
       "quantityLabel": "Cantidad",
       "unitPriceLabel": "Precio unitario (USD)",
@@ -1780,6 +1781,7 @@
       "packing": {
         "heading": "Lista de equipo del viaje",
         "description": "Un artículo por línea. Los buceadores ven esta misma lista concisa en cada salida.",
+        "label": "Elementos de la lista",
         "submit": "Guardar lista de equipo",
         "submitting": "Guardando…"
       },

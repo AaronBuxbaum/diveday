@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { CheckoutProvider, CreateCheckoutSessionResult } from "@/lib/payments/checkout";
-import type { CreateTripPromotionResult, PromotionProvider } from "@/lib/payments/promotions";
 import { seededShopContext } from "@/test/db";
+import { fakeCheckout, fakePromotions } from "@/test/fakes";
 import { createBookingParty } from "./bookings";
 import { markCheckoutPaidBySessionId, startBookingCheckout } from "./checkouts";
 import { shopPromoCodes, shopPromoRedemptions } from "./schema";
@@ -23,51 +22,6 @@ import { upcomingTripsWithCounts, updateTrip } from "./trips";
 
 const OTHER_SHOP_ID = "00000000-0000-0000-0000-000000000000";
 const NOW = new Date("2026-07-29T12:00:00.000Z");
-
-function fakePromotions(overrides: Partial<PromotionProvider> = {}): PromotionProvider {
-  let counter = 0;
-  return {
-    async createTripPromotion(): Promise<CreateTripPromotionResult> {
-      return { status: "failed" };
-    },
-    async createShopPromotion(): Promise<CreateTripPromotionResult> {
-      counter += 1;
-      return {
-        status: "created",
-        stripeCouponId: `coupon_${counter}`,
-        stripePromotionCodeId: `promo_${counter}`,
-      };
-    },
-    ...overrides,
-  };
-}
-
-function fakeCheckout(): CheckoutProvider {
-  let counter = 0;
-  return {
-    async createCheckoutSession(request): Promise<CreateCheckoutSessionResult> {
-      counter += 1;
-      return {
-        status: "created",
-        stripeSessionId: `cs_promo_${counter}`,
-        stripeStatus: "open",
-        paymentStatus: "unpaid",
-        checkoutUrl: `https://checkout.stripe.com/c/pay/cs_promo_${counter}`,
-        amountTotalCents: request.lineItems.reduce(
-          (sum, line) => sum + line.unitAmountCents * line.quantity,
-          0,
-        ),
-        expiresAt: new Date(NOW.getTime() + 24 * 60 * 60 * 1000),
-      };
-    },
-    async retrieveCheckoutSession() {
-      return { status: "failed" };
-    },
-    async refundCheckoutSession() {
-      return { status: "refunded", refundId: "re_test" };
-    },
-  };
-}
 
 /** A connected, charges-enabled shop — the precondition for holding any code at all. */
 async function promoContext(options: { connected?: boolean } = {}) {
@@ -123,7 +77,7 @@ describe("createShopPromoCode", () => {
       db,
       promoInput(shop.id),
       fakePromotions({
-        async createShopPromotion(): Promise<CreateTripPromotionResult> {
+        async createShopPromotion() {
           return { status: "failed" };
         },
       }),
@@ -300,7 +254,7 @@ describe("setShopPromoEnabled", () => {
       db,
       promoInput(shop.id),
       fakePromotions({
-        async createShopPromotion(): Promise<CreateTripPromotionResult> {
+        async createShopPromotion() {
           return { status: "failed" };
         },
       }),
@@ -488,7 +442,7 @@ async function failedPromoContext(overrides: Record<string, unknown> = {}) {
     db,
     promoInput(shop.id, overrides),
     fakePromotions({
-      async createShopPromotion(): Promise<CreateTripPromotionResult> {
+      async createShopPromotion() {
         return { status: "failed" };
       },
     }),
@@ -520,7 +474,7 @@ describe("retryShopPromoCode", () => {
       shop.id,
       promo.id,
       fakePromotions({
-        async createShopPromotion(): Promise<CreateTripPromotionResult> {
+        async createShopPromotion() {
           return { status: "failed" };
         },
       }),

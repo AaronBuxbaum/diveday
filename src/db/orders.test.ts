@@ -10,7 +10,7 @@ import type {
   ResendInvoiceResult,
   VoidInvoiceResult,
 } from "@/lib/payments/invoicing";
-import { seededShopContext } from "@/test/db";
+import { dbNow, seededShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
 import { updateCourse } from "./courses";
 import {
@@ -929,8 +929,12 @@ describe("orders", () => {
       // Date range: a window around now catches both; a window that closes
       // before now catches neither (Reports' "revenue rows" link a month range
       // this same way).
-      const soon = new Date(Date.now() + 60_000);
-      const justNow = new Date(Date.now() - 60_000);
+      // Bounded against the database's clock, not the (frozen) app clock:
+      // `orders.created_at` is a `defaultNow()` column, so Postgres is what
+      // stamped the rows this window has to straddle.
+      const dbTime = (await dbNow(db)).getTime();
+      const soon = new Date(dbTime + 60_000);
+      const justNow = new Date(dbTime - 60_000);
       const longAgo = new Date("2000-01-01T00:00:00Z");
       const inRange = await listShopOrders(db, shop.id, { from: justNow, to: soon });
       expect(inRange.rows.map((row) => row.order.id)).toEqual(

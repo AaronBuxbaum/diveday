@@ -24,16 +24,47 @@ import process from "node:process";
  * freeze with page.clock instead), so a blanket ban there would fire on
  * genuinely-live UI. Server components under src/app should still thread time
  * from the clock; that is a review expectation, not a machine-checked one.
+ *
+ * ## Why the tests in those roots are in scope too
+ *
+ * Test files under the guarded roots used to be skipped wholesale, and dozens
+ * of them drifted into a hidden dependency on *real* time running ahead of the
+ * frozen instant. The shapes were always the same:
+ *
+ * - `listPendingMediaDeletions(db, shopId, new Date(Date.now() + 1000))` — an
+ *   upper bound meaning "everything due by now". The rows it is bounding were
+ *   written at the frozen instant, so this only selects them while the wall
+ *   clock is *later* than the freeze.
+ * - `startsAt: new Date(Date.now() + OFFSET)` — a session placed relative to
+ *   real time, then read back by a query anchored at `nowMs()`. The two only
+ *   agree on which side of "now" the row falls while the same inequality holds.
+ *
+ * Both invert the day the frozen instant is moved forward past the wall clock,
+ * and they fail as a confusing mass rather than at the one seam that moved. A
+ * test that means "the application's now" says `nowMs()`; a test that genuinely
+ * means the wall clock is listed below with its reason.
  */
 
 const ROOT = process.cwd();
 const guardedRoots = ["src/lib", "src/db", "src/features"];
 const sourceExtensions = new Set([".ts", ".tsx"]);
-// The clock module is the one place the real wall clock is allowed.
+// The clock module is the one place production code reads the real wall clock.
 const allowed = new Set([path.normalize("src/lib/clock.ts")]);
+/**
+ * Test files that legitimately read the wall clock, each with the reason. A
+ * new entry needs a reason a reader can check — "it was easier" is not one.
+ */
+const allowedTests = new Map([
+  [
+    path.normalize("src/lib/clock.test.ts"),
+    "tests the live-clock path itself — bracketing nowMs() between two real Date.now() readings is the assertion",
+  ],
+]);
 // Argless `new Date()` and `Date.now()` only — `new Date(startsAt)` and other
 // parameterised parses are fine.
 const clockPattern = /\bnew Date\(\s*\)|\bDate\.now\(\s*\)/g;
+
+const isTestFile = (file) => /\.test\.tsx?$/.test(file);
 
 async function walk(relativeDirectory) {
   const absoluteDirectory = path.join(ROOT, relativeDirectory);
@@ -49,13 +80,7 @@ async function walk(relativeDirectory) {
   for (const entry of entries) {
     const relativePath = path.join(relativeDirectory, entry.name);
     if (entry.isDirectory()) files.push(...(await walk(relativePath)));
-    else if (
-      sourceExtensions.has(path.extname(entry.name)) &&
-      !entry.name.endsWith(".test.ts") &&
-      !entry.name.endsWith(".test.tsx")
-    ) {
-      files.push(relativePath);
-    }
+    else if (sourceExtensions.has(path.extname(entry.name))) files.push(relativePath);
   }
   return files;
 }
@@ -63,7 +88,9 @@ async function walk(relativeDirectory) {
 const violations = [];
 for (const root of guardedRoots) {
   for (const file of await walk(root)) {
-    if (allowed.has(path.normalize(file))) continue;
+    const normalized = path.normalize(file);
+    if (allowed.has(normalized)) continue;
+    if (isTestFile(file) && allowedTests.has(normalized)) continue;
     const contents = await readFile(path.join(ROOT, file), "utf8");
     const lines = contents.split("\n");
     lines.forEach((line, index) => {
@@ -80,7 +107,10 @@ if (violations.length > 0) {
   console.error(
     "Read time through src/lib/clock.ts (`nowDate()` / `nowMs()`) so the e2e clock freeze can stabilise it. In production the clock is `new Date()` / `Date.now()` unchanged.",
   );
+  console.error(
+    "In a test this also stops the assertion depending on real time running ahead of the frozen instant. If the file genuinely means the wall clock, add it to `allowedTests` in this script with the reason.",
+  );
   process.exit(1);
 }
 
-console.log("clock: domain/data time reads route through src/lib/clock.ts");
+console.log("clock: domain/data time reads — tests included — route through src/lib/clock.ts");

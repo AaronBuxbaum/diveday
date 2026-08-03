@@ -167,27 +167,13 @@ test.describe("automated accessibility scans (specialist optimization audit §3)
  * scan". Each scan costs ~3.5s here (the `networkidle` wait dominates), which
  * is what every `test.setTimeout` below is sized from.
  *
- * ## Routes deliberately absent
- *
- * Three staff routes were scanned during this table's development and axe
- * found a real, reproducible violation on each. Fixing them is product work in
- * `src/app/**`, outside this change's scope, so each is listed here by name
- * with its rule rather than quietly dropped — and none is skipped with
- * `test.skip`/`fixme`, because a red or skipped test is not this repo's way of
- * carrying known debt (AGENTS.md). Add the route back to its table in the same
- * change that fixes the markup:
- *
- * - `/shop/[shopSlug]/orders/new` — `select-name` (WCAG 4.1.2), ×4. The four
- *   line-item kind `<select name="kind-N">` pickers in the "Line items"
- *   fieldset (`orders/new/page.tsx`) carry no label, `aria-label`, or `title`;
- *   the `<legend>` names the fieldset, not each row's control.
- * - `/shop/[shopSlug]/settings` — `label` (WCAG 4.1.2). The packing-list
- *   `<textarea name="packingList">` (`settings/SettingsPage.tsx`) has only an
- *   `<h3>` above it, no programmatic label.
- * - `/shop/[shopSlug]/waivers` — `link-in-text-block` (WCAG 1.4.1). The inline
- *   "Not ready" link inside the chase-unsigned paragraph (`waivers/page.tsx`)
- *   is `text-primary hover:underline`, so at rest it differs from the prose
- *   around it by colour alone.
+ * Every staff route reachable by URL is in a table below — there are no
+ * exclusions left. Three routes were carried out-of-table for one change while
+ * the markup they tripped on was fixed in `src/app/**` (`/orders/new`'s
+ * unlabelled line-item kind pickers, `/settings`' unlabelled packing-list
+ * textarea, `/waivers`' colour-only inline link); all three now scan clean and
+ * are back in. If a new violation turns up, fix the markup — a route dropped
+ * from this table is debt no one can see.
  */
 type StaffScan = {
   /** A URL a signed-in staff member can type. */
@@ -235,8 +221,8 @@ test.describe("automated accessibility scans of the static staff routes", () => 
     page,
     request,
   }) => {
-    // 8 scans at ~3.5s each.
-    test.setTimeout(90_000);
+    // 10 scans at ~3.5s each.
+    test.setTimeout(110_000);
     // The orders index only has rows to render (and `/orders/new` only exists
     // at all) for a shop that can take money. This is a pure DB write that
     // never calls Stripe — the same door e2e/visual.spec.ts opens for the
@@ -244,13 +230,13 @@ test.describe("automated accessibility scans of the static staff routes", () => 
     await request.post("/api/test/seed-stripe-account");
     await scanStaticRoutes(page, [
       { path: "/shop/blue-mantis/orders", heading: "Orders" },
-      // `/shop/blue-mantis/orders/new` — excluded, `select-name`; see above.
+      { path: "/shop/blue-mantis/orders/new", heading: "New order" },
       { path: "/shop/blue-mantis/promos", heading: "Discounts a diver can type" },
       { path: "/shop/blue-mantis/reviews", heading: "What divers said" },
       { path: "/shop/blue-mantis/reports", heading: "How's your month" },
       { path: "/shop/blue-mantis/staffing", heading: "Staffing" },
       { path: "/shop/blue-mantis/courses", heading: "Courses" },
-      // `/shop/blue-mantis/waivers` — excluded, `link-in-text-block`; see above.
+      { path: "/shop/blue-mantis/waivers", heading: "Waiver template" },
       { path: "/shop/blue-mantis/dive-sites", heading: "Dive-site library" },
       { path: "/shop/blue-mantis/dive-sites/catalog", heading: "DiveDay common dive sites" },
     ]);
@@ -259,10 +245,10 @@ test.describe("automated accessibility scans of the static staff routes", () => 
   test("the settings surfaces and the not-found backstop have no automated a11y violations", async ({
     page,
   }) => {
-    // 5 scans at ~3.5s each.
-    test.setTimeout(60_000);
+    // 6 scans at ~3.5s each.
+    test.setTimeout(70_000);
     await scanStaticRoutes(page, [
-      // `/shop/blue-mantis/settings` — excluded, `label`; see above.
+      { path: "/shop/blue-mantis/settings", heading: "Shop settings" },
       { path: "/shop/blue-mantis/settings/team", heading: "Team" },
       { path: "/shop/blue-mantis/settings/import", heading: "Import contacts" },
       { path: "/shop/blue-mantis/settings/export", heading: "Data export" },

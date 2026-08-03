@@ -2,7 +2,7 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
-import { nowDate } from "@/lib/clock";
+import { nowDate, nowMs } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
 import { createBooking, rescheduleBooking } from "./bookings";
 import type { AppDb } from "./client";
@@ -115,8 +115,8 @@ describe("course catalog and sessions (in-memory PGlite)", () => {
       shopId,
       courseId: course.id,
       title: `${courseTitle} — ratio test session`,
-      startsAt: new Date(Date.now() + OPEN_TEST_SESSION_OFFSET_MS),
-      endsAt: new Date(Date.now() + OPEN_TEST_SESSION_OFFSET_MS + 4 * 60 * 60 * 1000),
+      startsAt: new Date(nowMs() + OPEN_TEST_SESSION_OFFSET_MS),
+      endsAt: new Date(nowMs() + OPEN_TEST_SESSION_OFFSET_MS + 4 * 60 * 60 * 1000),
       capacity: options.capacity,
       plannedDives: 2,
     });
@@ -255,8 +255,8 @@ describe("course catalog and sessions (in-memory PGlite)", () => {
       shopId: shop.id,
       courseId: aowCourse.id,
       title: "AOW ratio test session",
-      startsAt: new Date(Date.now() + OPEN_TEST_SESSION_OFFSET_MS),
-      endsAt: new Date(Date.now() + OPEN_TEST_SESSION_OFFSET_MS + 4 * 60 * 60 * 1000),
+      startsAt: new Date(nowMs() + OPEN_TEST_SESSION_OFFSET_MS),
+      endsAt: new Date(nowMs() + OPEN_TEST_SESSION_OFFSET_MS + 4 * 60 * 60 * 1000),
       capacity: 20,
       plannedDives: 2,
     });
@@ -322,7 +322,7 @@ describe("course catalog and sessions (in-memory PGlite)", () => {
     }
 
     it("fails open for a diver with no date of birth on file", async () => {
-      const startsAt = new Date(Date.now() + OPEN_TEST_SESSION_OFFSET_MS);
+      const startsAt = new Date(nowMs() + OPEN_TEST_SESSION_OFFSET_MS);
       const { db, shop, trip } = await ageContext(15, startsAt);
       const person = await diverWithDob(db, shop.id, null, "no-dob@example.com");
       await expect(
@@ -336,7 +336,7 @@ describe("course catalog and sessions (in-memory PGlite)", () => {
     });
 
     it("fails open for a brand-new walk-in, who has no date on file yet", async () => {
-      const startsAt = new Date(Date.now() + OPEN_TEST_SESSION_OFFSET_MS);
+      const startsAt = new Date(nowMs() + OPEN_TEST_SESSION_OFFSET_MS);
       const { db, shop, trip } = await ageContext(15, startsAt);
       await expect(
         createBooking(db, {
@@ -350,9 +350,9 @@ describe("course catalog and sessions (in-memory PGlite)", () => {
     });
 
     it("refuses a diver under the minimum age on the course date", async () => {
-      const startsAt = new Date(Date.now() + OPEN_TEST_SESSION_OFFSET_MS);
+      const startsAt = new Date(nowMs() + OPEN_TEST_SESSION_OFFSET_MS);
       const { db, shop, trip } = await ageContext(15, startsAt);
-      const tenYearsAgo = new Date(Date.now() - 10 * 365.25 * 24 * 60 * 60 * 1000)
+      const tenYearsAgo = new Date(nowMs() - 10 * 365.25 * 24 * 60 * 60 * 1000)
         .toISOString()
         .slice(0, 10);
       const person = await diverWithDob(db, shop.id, tenYearsAgo, "too-young@example.com");
@@ -367,9 +367,9 @@ describe("course catalog and sessions (in-memory PGlite)", () => {
     });
 
     it("admits a diver who is old enough", async () => {
-      const startsAt = new Date(Date.now() + OPEN_TEST_SESSION_OFFSET_MS);
+      const startsAt = new Date(nowMs() + OPEN_TEST_SESSION_OFFSET_MS);
       const { db, shop, trip } = await ageContext(15, startsAt);
-      const thirtyYearsAgo = new Date(Date.now() - 30 * 365.25 * 24 * 60 * 60 * 1000)
+      const thirtyYearsAgo = new Date(nowMs() - 30 * 365.25 * 24 * 60 * 60 * 1000)
         .toISOString()
         .slice(0, 10);
       const person = await diverWithDob(db, shop.id, thirtyYearsAgo, "old-enough@example.com");
@@ -388,9 +388,9 @@ describe("course catalog and sessions (in-memory PGlite)", () => {
       // anyone who can guess an address — a disclosure about a minor, to an
       // unauthenticated caller, and unsound besides: the public form never
       // proves the submitter is the person on file for that email (H-13).
-      const startsAt = new Date(Date.now() + OPEN_TEST_SESSION_OFFSET_MS);
+      const startsAt = new Date(nowMs() + OPEN_TEST_SESSION_OFFSET_MS);
       const { db, shop, trip } = await ageContext(15, startsAt);
-      const tenYearsAgo = new Date(Date.now() - 10 * 365.25 * 24 * 60 * 60 * 1000)
+      const tenYearsAgo = new Date(nowMs() - 10 * 365.25 * 24 * 60 * 60 * 1000)
         .toISOString()
         .slice(0, 10);
       const person = await diverWithDob(db, shop.id, tenYearsAgo, "public-probe@example.com");
@@ -422,9 +422,9 @@ describe("course catalog and sessions (in-memory PGlite)", () => {
       // diver's own personId, not a free-typed guess — so unlike an
       // anonymous public booking, the real age gate should apply, not the
       // fail-open readiness-blocker-only path.
-      const startsAt = new Date(Date.now() + OPEN_TEST_SESSION_OFFSET_MS);
+      const startsAt = new Date(nowMs() + OPEN_TEST_SESSION_OFFSET_MS);
       const { db, shop, trip } = await ageContext(15, startsAt);
-      const tenYearsAgo = new Date(Date.now() - 10 * 365.25 * 24 * 60 * 60 * 1000)
+      const tenYearsAgo = new Date(nowMs() - 10 * 365.25 * 24 * 60 * 60 * 1000)
         .toISOString()
         .slice(0, 10);
       const person = await diverWithDob(
@@ -459,9 +459,9 @@ describe("course catalog and sessions (in-memory PGlite)", () => {
 
     it("measures age on the course date, so a birthday before it admits the diver", async () => {
       // Turns 15 in ~40 days; the session runs ~100 days out, after that.
-      const startsAt = new Date(Date.now() + 100 * 24 * 60 * 60 * 1000);
+      const startsAt = new Date(nowMs() + 100 * 24 * 60 * 60 * 1000);
       const { db, shop, trip } = await ageContext(15, startsAt);
-      const turns15Soon = new Date(Date.now() - (15 * 365.25 - 40) * 24 * 60 * 60 * 1000)
+      const turns15Soon = new Date(nowMs() - (15 * 365.25 - 40) * 24 * 60 * 60 * 1000)
         .toISOString()
         .slice(0, 10);
       const person = await diverWithDob(db, shop.id, turns15Soon, "birthday-first@example.com");
@@ -501,8 +501,8 @@ describe("course catalog and sessions (in-memory PGlite)", () => {
       shopId: shop.id,
       courseId: ssiCourse.id,
       title: "SSI ratio test session",
-      startsAt: new Date(Date.now() + OPEN_TEST_SESSION_OFFSET_MS),
-      endsAt: new Date(Date.now() + OPEN_TEST_SESSION_OFFSET_MS + 4 * 60 * 60 * 1000),
+      startsAt: new Date(nowMs() + OPEN_TEST_SESSION_OFFSET_MS),
+      endsAt: new Date(nowMs() + OPEN_TEST_SESSION_OFFSET_MS + 4 * 60 * 60 * 1000),
       capacity: 10, // above the PADI ratio (8) that must NOT apply here
       plannedDives: 2,
     });
@@ -560,8 +560,8 @@ describe("course catalog and sessions (in-memory PGlite)", () => {
       shopId: shop.id,
       courseId: ssiIntro.id,
       title: "SSI Try Scuba ratio test session",
-      startsAt: new Date(Date.now() + OPEN_TEST_SESSION_OFFSET_MS),
-      endsAt: new Date(Date.now() + OPEN_TEST_SESSION_OFFSET_MS + 4 * 60 * 60 * 1000),
+      startsAt: new Date(nowMs() + OPEN_TEST_SESSION_OFFSET_MS),
+      endsAt: new Date(nowMs() + OPEN_TEST_SESSION_OFFSET_MS + 4 * 60 * 60 * 1000),
       capacity: 12, // six times the ratio cap, so only the ratio can bind
       plannedDives: 2,
     });
@@ -1002,7 +1002,7 @@ describe("course content and public pages (in-memory PGlite)", () => {
     expect(sessions.map((session) => session.id)).toContain(discover.id);
     expect(sessions[0]).toHaveProperty("booked");
 
-    const distantFuture = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+    const distantFuture = new Date(nowMs() + 365 * 24 * 60 * 60 * 1000);
     expect(await listUpcomingSessionsForCourse(db, shop.id, courseId, distantFuture)).toEqual([]);
   });
 });

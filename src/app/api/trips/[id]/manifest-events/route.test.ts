@@ -1,10 +1,8 @@
 import type { Session } from "next-auth";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { AppDb } from "@/db/client";
 import { publishManifestEvent } from "@/db/manifest-events";
-import { getShopBySlug } from "@/db/shops";
 import { upcomingTripsWithCounts } from "@/db/trips";
-import { seededTestDb } from "@/test/db";
+import { seededShopContext } from "@/test/db";
 
 vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
@@ -26,9 +24,7 @@ function manifestEventsRequest(tripId: string, signal?: AbortSignal) {
 }
 
 async function seededContext() {
-  const db: AppDb = await seededTestDb();
-  const shop = await getShopBySlug(db, "blue-mantis");
-  if (!shop) throw new Error("demo shop missing");
+  const { db, shop } = await seededShopContext();
   const trips = await upcomingTripsWithCounts(db, shop.id);
   const trip = trips.find((t) => t.title === "Two-Tank Reef — Molasses & French");
   if (!trip) throw new Error("expected seeded trip missing");

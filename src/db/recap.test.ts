@@ -1,11 +1,8 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { toDiverLocale } from "@/i18n/settings";
-import type { Notification, NotificationDelivery, NotificationProvider } from "@/lib/notifications";
-import type { CourtesyMessage, CourtesyProvider } from "@/lib/notifications/courtesy";
-import type { SmsDelivery, SmsMessage, SmsProvider } from "@/lib/notifications/sms";
-import type { CheckoutProvider, CreateCheckoutSessionResult } from "@/lib/payments/checkout";
 import { seededShopContext } from "@/test/db";
+import { fakeCheckout, fakeCourtesy, fakeEmail, fakeSms } from "@/test/fakes";
 import { createBookingParty } from "./bookings";
 import { recordDiverOwnLocale } from "./people";
 import {
@@ -24,28 +21,6 @@ import { setShopCurrency, setShopReviewUrl } from "./shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { startTipCheckout } from "./tips";
 import { upcomingTripsWithCounts } from "./trips";
-
-function fakeEmail(result: NotificationDelivery = { status: "sent", providerMessageId: "em_1" }) {
-  const sent: Notification[] = [];
-  const provider: NotificationProvider = {
-    async send(notification) {
-      sent.push(notification);
-      return result;
-    },
-  };
-  return { sent, provider };
-}
-
-function fakeSms(result: SmsDelivery = { status: "sent", providerMessageId: "SM_1" }) {
-  const sent: SmsMessage[] = [];
-  const provider: SmsProvider = {
-    async send(message) {
-      sent.push(message);
-      return result;
-    },
-  };
-  return { sent, provider };
-}
 
 const ORIGIN = "https://diveday.test";
 
@@ -160,32 +135,6 @@ describe("getRecapPageData", () => {
   });
 });
 
-function fakeCheckout(overrides: Partial<CheckoutProvider> = {}): CheckoutProvider {
-  return {
-    async createCheckoutSession(request): Promise<CreateCheckoutSessionResult> {
-      return {
-        status: "created",
-        stripeSessionId: "cs_recap_tip_1",
-        stripeStatus: "open",
-        paymentStatus: "unpaid",
-        checkoutUrl: "https://checkout.stripe.com/c/pay/cs_recap_tip_1",
-        amountTotalCents: request.lineItems.reduce(
-          (sum, line) => sum + line.unitAmountCents * line.quantity,
-          0,
-        ),
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-      };
-    },
-    async retrieveCheckoutSession() {
-      return { status: "failed" };
-    },
-    async refundCheckoutSession() {
-      return { status: "refunded", refundId: "re_test" };
-    },
-    ...overrides,
-  };
-}
-
 async function pendingTipContext() {
   const ctx = await recapContext();
   await upsertShopStripeAccount(ctx.db, ctx.shop.id, "acct_test");
@@ -206,7 +155,7 @@ async function pendingTipContext() {
     fakeCheckout(),
   );
   if (!started.ok) throw new Error(`tip start failed: ${started.reason}`);
-  return ctx;
+  return { ...ctx, checkoutUrl: started.checkoutUrl };
 }
 
 describe("getRecapPageData tip reconciliation", () => {
@@ -221,7 +170,7 @@ describe("getRecapPageData tip reconciliation", () => {
           return {
             status: "ok",
             session: {
-              stripeSessionId: "cs_recap_tip_1",
+              stripeSessionId: "cs_1",
               stripeStatus: "complete",
               paymentStatus: "paid",
               checkoutUrl: null,
@@ -245,7 +194,7 @@ describe("getRecapPageData tip reconciliation", () => {
           return {
             status: "ok",
             session: {
-              stripeSessionId: "cs_recap_tip_1",
+              stripeSessionId: "cs_1",
               stripeStatus: "expired",
               paymentStatus: "unpaid",
               checkoutUrl: null,
@@ -260,10 +209,11 @@ describe("getRecapPageData tip reconciliation", () => {
   });
 
   it("leaves a tip pending, checkout link intact, when Stripe can't be reached to reconcile it", async () => {
-    const { db, bookingId } = await pendingTipContext();
+    const { db, bookingId, checkoutUrl } = await pendingTipContext();
     const data = await getRecapPageData(db, bookingId, fakeCheckout()); // default retrieveCheckoutSession fails
     expect(data?.tip?.status).toBe("pending");
-    expect(data?.tip?.checkoutUrl).toBe("https://checkout.stripe.com/c/pay/cs_recap_tip_1");
+    // The link the diver was handed when the tip started, still intact.
+    expect(data?.tip?.checkoutUrl).toBe(checkoutUrl);
   });
 });
 
@@ -609,13 +559,10 @@ describe("sendDueRecaps", () => {
       .where(eq(people.id, person.id));
 
     const sms = fakeSms();
-    const sent: CourtesyMessage[] = [];
-    const whatsapp: CourtesyProvider = {
-      async send(message) {
-        sent.push(message);
-        return { status: "sent", providerMessageId: "wamid.recap" };
-      },
-    };
+    const { sent, provider: whatsapp } = fakeCourtesy({
+      status: "sent",
+      providerMessageId: "wamid.recap",
+    });
 
     await sendDueRecaps(db, {
       now: afterTrip,

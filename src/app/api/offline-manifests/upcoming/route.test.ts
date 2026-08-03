@@ -1,10 +1,8 @@
 import type { Session } from "next-auth";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { AppDb } from "@/db/client";
-import { getShopBySlug } from "@/db/shops";
 import { createTrip } from "@/db/trips";
 import { nowDate } from "@/lib/clock";
-import { seededTestDb } from "@/test/db";
+import { seededShopContext } from "@/test/db";
 
 vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
@@ -25,13 +23,6 @@ const authModule = (await import("@/lib/auth")) as unknown as {
 };
 const auth = authModule.auth;
 const { GET } = await import("./route");
-
-async function seededContext() {
-  const db: AppDb = await seededTestDb();
-  const shop = await getShopBySlug(db, "blue-mantis");
-  if (!shop) throw new Error("demo shop missing");
-  return { db, shop };
-}
 
 const staffSession = (shopId: string): Session => ({
   user: {
@@ -57,7 +48,7 @@ describe("GET /api/offline-manifests/upcoming", () => {
   });
 
   it("rejects a non-staff caller even with a valid session shape", async () => {
-    const { db, shop } = await seededContext();
+    const { db, shop } = await seededShopContext();
     vi.mocked(getDb).mockResolvedValue(db);
     vi.mocked(auth).mockResolvedValue({
       user: { personId: "diver-1", shopId: shop.id, shopSlug: "blue-mantis", roles: ["diver"] },
@@ -69,7 +60,7 @@ describe("GET /api/offline-manifests/upcoming", () => {
   });
 
   it("returns trips departing within the 48-hour window and excludes trips beyond it", async () => {
-    const { db, shop } = await seededContext();
+    const { db, shop } = await seededShopContext();
     vi.mocked(getDb).mockResolvedValue(db);
     vi.mocked(auth).mockResolvedValue(staffSession(shop.id));
 
@@ -94,7 +85,7 @@ describe("GET /api/offline-manifests/upcoming", () => {
     // (departed, not yet ended) still needs its after-dive-checkpoint copy
     // auto-saved — startsAt < now must not exclude it, only endsAt < now
     // should (see listTripIdsInOfflineManifestWindow).
-    const { db, shop } = await seededContext();
+    const { db, shop } = await seededShopContext();
     const now = nowDate();
     const active = await createTrip(db, {
       shopId: shop.id,
@@ -117,7 +108,7 @@ describe("GET /api/offline-manifests/upcoming", () => {
   });
 
   it("never returns another shop's trips", async () => {
-    const { db, shop } = await seededContext();
+    const { db, shop } = await seededShopContext();
     vi.mocked(getDb).mockResolvedValue(db);
     vi.mocked(auth).mockResolvedValue(staffSession(shop.id));
 
@@ -137,7 +128,7 @@ describe("GET /api/offline-manifests/upcoming", () => {
     // shop with nothing sailing in the next 48 hours would never learn "you
     // are signed in as this shop" and stale records from a previous shop on
     // this device would never get purged.
-    const { db, shop } = await seededContext();
+    const { db, shop } = await seededShopContext();
     vi.mocked(getDb).mockResolvedValue(db);
     vi.mocked(auth).mockResolvedValue(staffSession(shop.id));
 

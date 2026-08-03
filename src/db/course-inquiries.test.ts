@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { nowDate } from "@/lib/clock";
 import type { CourseInquiryExperience } from "@/lib/course-inquiry";
 import { seededShopContext } from "@/test/db";
 import type { AppDb } from "./client";
@@ -166,7 +167,7 @@ describe("recordCourseInquiry", () => {
         email: "rhea@example.com",
       });
       if (!diver) throw new Error("diver insert failed");
-      await db.update(people).set({ deletedAt: new Date() }).where(eq(people.id, diver.id));
+      await db.update(people).set({ deletedAt: nowDate() }).where(eq(people.id, diver.id));
 
       const record = await recordCourseInquiry(db, {
         shopId: shop.id,

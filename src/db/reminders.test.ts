@@ -1,9 +1,7 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import type { Notification, NotificationDelivery, NotificationProvider } from "@/lib/notifications";
-import type { CourtesyMessage, CourtesyProvider } from "@/lib/notifications/courtesy";
-import type { SmsDelivery, SmsMessage, SmsProvider } from "@/lib/notifications/sms";
 import { seededShopContext } from "@/test/db";
+import { fakeEmail, fakeSms, fakeCourtesy as fakeWhatsApp } from "@/test/fakes";
 import { createBookingParty } from "./bookings";
 import { sendDueReminders } from "./reminders";
 import { notificationDeliveries, people, shops, waiverRecords } from "./schema";
@@ -14,39 +12,6 @@ import { issueWaiverRequest } from "./waivers";
 // The seeded shop already has bookings on several future trips, so
 // sendDueReminders (a global cron) touches more than the one under test. Every
 // assertion here filters to this test's booking, phone, or delivery rows.
-
-function fakeEmail(result: NotificationDelivery = { status: "sent", providerMessageId: "em_1" }) {
-  const sent: Notification[] = [];
-  const provider: NotificationProvider = {
-    async send(notification) {
-      sent.push(notification);
-      return result;
-    },
-  };
-  return { sent, provider };
-}
-
-function fakeSms(result: SmsDelivery = { status: "sent", providerMessageId: "SM_1" }) {
-  const sent: SmsMessage[] = [];
-  const provider: SmsProvider = {
-    async send(message) {
-      sent.push(message);
-      return result;
-    },
-  };
-  return { sent, provider };
-}
-
-function fakeWhatsApp(result: SmsDelivery = { status: "sent", providerMessageId: "wamid.1" }) {
-  const sent: CourtesyMessage[] = [];
-  const provider: CourtesyProvider = {
-    async send(message) {
-      sent.push(message);
-      return result;
-    },
-  };
-  return { sent, provider };
-}
 
 const PHONE = "+13055559999";
 const ORIGIN = "https://diveday.example";
