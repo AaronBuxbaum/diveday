@@ -507,6 +507,24 @@ export const courseInquiries = pgTable(
     courseId: uuid("course_id")
       .notNull()
       .references(() => courses.id),
+    /**
+     * The shop's diver this lead belongs to, when that was knowable *at capture
+     * time* — resolved by `recordCourseInquiry` from an exact, case-insensitive
+     * match of the supplied email against a live person of this shop
+     * (`people_shop_email_unique` makes that at most one row, so the link is
+     * deterministic, never a guess). Null whenever the writer left no email, or
+     * left one no diver of this shop holds — a lead genuinely is written before
+     * any person exists, which is why the column is nullable and why nothing
+     * downstream may treat null as "nobody".
+     *
+     * It exists for erasure (ADR 20260802-diver-data-erasure): the sweep's only
+     * other handles are the email and phone still sitting on this row, so a
+     * diver who later changes their address takes their own lead out of reach.
+     * Snapshotting the link at the moment the two addresses did agree is what
+     * survives that. Never back-filled by a matching job: a link written later
+     * from fuzzier evidence would erase a bystander's lead.
+     */
+    personId: uuid("person_id").references(() => people.id),
     name: text("name"),
     email: text("email"),
     phone: text("phone"),
@@ -757,6 +775,22 @@ export const trips = pgTable(
   (table) => [
     index("trips_shop_starts_idx").on(table.shopId, table.startsAt),
     index("trips_series_starts_idx").on(table.seriesId, table.startsAt),
+    // The daily cron's two cross-shop window scans (DATA-M2). Both sweep every
+    // shop at once, so `trips_shop_starts_idx` above cannot serve either — its
+    // leading column is the one column these two do not constrain.
+    //
+    // `status` leads because both queries pin it to a single value
+    // (`= 'scheduled'`) and then take a *range* on the timestamp, which is the
+    // only column order Postgres can walk as one index scan; a bare
+    // `(starts_at)` index would have to read every trip in the window across
+    // every shop and re-check `status` per row.
+    //
+    // `sendDueReminders` (src/db/reminders.ts): scheduled trips departing
+    // between now and the reminder horizon.
+    index("trips_status_starts_idx").on(table.status, table.startsAt),
+    // `sendDueRecaps` (src/db/recap.ts): scheduled trips that came home inside
+    // the recap lookback — the same shape one column over, on `ends_at`.
+    index("trips_status_ends_idx").on(table.status, table.endsAt),
     // Backs the command-palette leading-wildcard ILIKE search (src/db/search.ts, CR-018).
     index("trips_title_trgm_idx").using("gin", sql`${table.title} gin_trgm_ops`),
     check("trips_capacity_range", sql`${table.capacity} between 1 and 60`),
@@ -1836,7 +1870,25 @@ export const paymentOperationIntents = pgTable(
     startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
     resolvedAt: timestamp("resolved_at", { withTimezone: true }),
   },
-  (table) => [index("payment_operation_intents_shop_status_idx").on(table.shopId, table.status)],
+  (table) => [
+    index("payment_operation_intents_shop_status_idx").on(table.shopId, table.status),
+    // `claimBookingsForCheckout`'s stale-intent sweep (src/db/payment-operations.ts,
+    // DATA-M1) runs on every checkout click and is deliberately cross-shop, so
+    // the `(shop_id, status)` index above cannot serve it at all. Partial on
+    // `status = 'started'` because that is the only status the sweep ever looks
+    // at and it is a vanishing slice of the table — every intent resolves within
+    // one Stripe round trip, so the index stays a handful of rows wide however
+    // large the resolved history grows.
+    //
+    // `kind` leads the key: the sweep pins it (`= 'checkout_session'`) and then
+    // takes a range on `started_at`, so equality-before-range is the order a
+    // single index scan can walk. (The review that raised DATA-M1 prescribed a
+    // bare `(started_at)`; the query also filters `kind`, and including it costs
+    // nothing on an index this small.)
+    index("payment_operation_intents_stale_scan_idx")
+      .on(table.kind, table.startedAt)
+      .where(sql`${table.status} = 'started'`),
+  ],
 );
 
 /** Staff crewing a trip (captain, DM, instructor…). Roles live on person_roles. */
@@ -2792,6 +2844,84 @@ export const mediaDeletionAttempts = pgTable(
   (table) => [index("media_deletion_attempts_shop_status_idx").on(table.shopId, table.status)],
 );
 
+/**
+ * Which record at which processor an erasure obligation is still owed against.
+ * One value today; the enum exists so a second processor is an additive
+ * migration rather than a reshape.
+ */
+export const processorErasureTarget = pgEnum("processor_erasure_target", ["stripe_customer"]);
+
+export const processorErasureStatus = pgEnum("processor_erasure_status", ["owed", "discharged"]);
+
+/**
+ * One row per "a processor still holds this erased diver's identity, and only
+ * the shop can go and remove it" — the durable counterpart to
+ * `mediaDeletionAttempts` for records DiveDay does not own
+ * (ADR 20260803-processor-erasure-obligations).
+ *
+ * Raised by `anonymizeDiver` (src/db/anonymize.ts) for every distinct
+ * `orders.stripe_customer_id` the erased diver's orders point at. That column
+ * is `NOT NULL` and names a customer object living in the shop's *own* Stripe
+ * account, carrying the diver's name and email; erasure cannot rewrite it, and
+ * DiveDay deliberately does not delete it on the shop's behalf — a Stripe
+ * customer deletion is irreversible and takes the shop's tax and chargeback
+ * trail with it, which is the shop's call and its regulator's problem, not a
+ * side effect of a button in DiveDay.
+ *
+ * So this is a ledger, not a queue: nothing retries it, no cron drains it, and
+ * a row is discharged only when a human says they did the work at the
+ * processor. Its honest claim is exactly "we know this is still owed and we
+ * have not forgotten which record" — an undischarged row is not erasure, and
+ * a discharged one is the shop's own attestation, not a verified fact about
+ * Stripe.
+ *
+ * `external_id` is a `cus_…` handle, not personal data: it is the pointer the
+ * shop pastes into the Stripe dashboard. The row keeps no name, address or
+ * amount — the whole point is that the identity is gone from here.
+ */
+export const processorErasureObligations = pgTable(
+  "processor_erasure_obligations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    /**
+     * The erasure that raised this. The row it points at is already anonymized,
+     * so this is provenance ("which erasure still owes work"), never a way back
+     * to who the diver was.
+     */
+    personId: uuid("person_id")
+      .notNull()
+      .references(() => people.id),
+    target: processorErasureTarget("target").notNull(),
+    externalId: text("external_id").notNull(),
+    status: processorErasureStatus("status").notNull().default("owed"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    dischargedAt: timestamp("discharged_at", { withTimezone: true }),
+    /** Who attested the processor-side work was done. Null while still owed. */
+    dischargedByPersonId: uuid("discharged_by_person_id").references(() => people.id),
+  },
+  (table) => [
+    // One obligation per processor record per shop, ever. A second erasure that
+    // reaches the same Stripe customer (two people sharing one customer object
+    // — itself a data problem, but possible) is folded into the existing row
+    // rather than raising a duplicate: the work owed is the same single delete,
+    // and `personId` names whichever erasure got there first.
+    uniqueIndex("processor_erasure_obligations_shop_target_external_unique").on(
+      table.shopId,
+      table.target,
+      table.externalId,
+    ),
+    // The reports-page panel's read: this shop's still-owed obligations.
+    index("processor_erasure_obligations_shop_status_idx").on(table.shopId, table.status),
+    check(
+      "processor_erasure_obligations_discharged_consistent",
+      sql`(${table.status} = 'discharged') = (${table.dischargedAt} is not null)`,
+    ),
+  ],
+);
+
 export type Shop = typeof shops.$inferSelect;
 export type Person = typeof people.$inferSelect;
 export type Trip = typeof trips.$inferSelect;
@@ -2840,6 +2970,7 @@ export type ShopPromoStatus = (typeof shopPromoStatus.enumValues)[number];
 export type ShopPromoRedemption = typeof shopPromoRedemptions.$inferSelect;
 export type PaymentOperationIntent = typeof paymentOperationIntents.$inferSelect;
 export type MediaDeletionAttempt = typeof mediaDeletionAttempts.$inferSelect;
+export type ProcessorErasureObligation = typeof processorErasureObligations.$inferSelect;
 export type MediaDeletionKind = (typeof mediaDeletionKind.enumValues)[number];
 export type PaymentOperationKind = (typeof paymentOperationKind.enumValues)[number];
 export type PaymentOperationStatus = (typeof paymentOperationStatus.enumValues)[number];

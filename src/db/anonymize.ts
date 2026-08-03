@@ -49,6 +49,7 @@ import { createWaiverToken, hashWaiverToken } from "@/lib/waivers";
 import { canPersonErasePersonalData } from "./authz";
 import type { AppDb, AppTransaction } from "./client";
 import { queueMediaDeletion } from "./media-deletions";
+import { recordProcessorErasureObligations } from "./processor-erasure";
 import {
   accountTokens,
   activityEvents,
@@ -105,6 +106,12 @@ export type AnonymizeDiverResult =
       alreadyAnonymized: boolean;
       /** Blob objects handed to the media-deletion ledger by this call. */
       queuedMediaDeletions: number;
+      /**
+       * Processor-side records this call recorded as still owing an erasure —
+       * work DiveDay cannot do and the shop must (see `./processor-erasure`).
+       * A non-zero count means the erasure is incomplete until a human acts.
+       */
+      queuedProcessorErasures: number;
     }
   | { ok: false; reason: AnonymizeDiverRefusal };
 
@@ -662,10 +669,30 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<number> {
   // and invoice PDF are publicly reachable URLs that render the customer's name
   // and email, so leaving them in the row leaves the diver's details one click
   // away from an "erased" record.
+  const orderRows = await tx
+    .select({ stripeCustomerId: orders.stripeCustomerId })
+    .from(orders)
+    .where(and(eq(orders.shopId, shopId), eq(orders.personId, personId)));
   await tx
     .update(orders)
     .set({ hostedInvoiceUrl: null, invoicePdfUrl: null })
     .where(and(eq(orders.shopId, shopId), eq(orders.personId, personId)));
+
+  // The customer object those orders point at is still sitting in the shop's
+  // Stripe account under the diver's name and email, and no statement made from
+  // inside this transaction can change that. So the obligation is *recorded*
+  // rather than performed: a durable row per distinct customer id, surfaced on
+  // the shop's reports page until someone says they removed it at Stripe
+  // (ADR 20260803-processor-erasure-obligations). DiveDay deliberately does not
+  // delete the customer itself — that is irreversible and takes the shop's tax
+  // and chargeback trail with it. An undischarged row means erasure is
+  // genuinely incomplete, and the point of the row is that it says so out loud
+  // instead of leaving the gap to an undocumented manual step.
+  const queuedProcessorErasures = await recordProcessorErasureObligations(tx, {
+    shopId,
+    personId,
+    stripeCustomerIds: orderRows.map((row) => row.stripeCustomerId),
+  });
 
   // --- the checkout's own copy of the diver's address ----------------------
   // `booking_checkouts.customer_email` is the same class of un-normalized PII
