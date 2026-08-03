@@ -42,15 +42,19 @@ test("the order form is not reachable signed out", async ({ page }) => {
 test.describe("as owner", () => {
   signedInAsOwner();
 
-  test("a shop that can't take money is sent to its divers instead of an order form", async ({
+  test("a shop that can't take money lands on Orders with the reason, not a dead order form", async ({
     page,
   }) => {
     // No /api/test/seed-stripe-account here: the demo shop starts unconnected,
     // and `canAcceptPayments` is what the page checks before rendering a single
     // field. An invoice form for a shop with nowhere to send the money would be
-    // a dead end, so the route redirects rather than showing one.
+    // a dead end, so the route lands back on Orders and says why — with the
+    // connect path offered — instead of silently dumping on the divers list
+    // (the explained-landing rule every payment gate now follows). FlashParams
+    // strips the query, so assert the banner, not the URL param.
     await page.goto(NEW_ORDER);
-    await expect(page).toHaveURL(/\/shop\/blue-mantis\/divers$/);
+    await expect(page).toHaveURL(/\/shop\/blue-mantis\/orders$/);
+    await expect(page.getByText(/Payments aren't connected yet/).first()).toBeVisible();
   });
 
   test("an owner builds an invoice and it gets as far as Stripe, which this fleet can't reach", async ({
