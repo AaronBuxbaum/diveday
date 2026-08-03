@@ -21,7 +21,7 @@ import { currencySymbol, minorToMajor } from "@/lib/money";
 import { publicSchedulePath } from "@/lib/public-routes";
 import { verifyRecapToken } from "@/lib/recap-links";
 import { MAX_REVIEW_COMMENT_LENGTH, REVIEW_RATINGS } from "@/lib/reviews";
-import { noticeFromParam } from "@/lib/staff-notices";
+import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
 import { MAX_IMAGE_MB } from "@/lib/storage/limits";
 import { temperatureUnitFor } from "@/lib/temperature-units";
 import { startTipAction, submitReviewAction, uploadRecapPhotoAction } from "./actions";
@@ -333,7 +333,7 @@ export default async function DiveRecapPage({
         <p className="mt-1 text-base text-muted">{t("reviews.askBody")}</p>
         {reviewNotice ? (
           <p
-            role={reviewNotice.tone === "danger" ? "alert" : "status"}
+            role={noticeRole(reviewNotice.tone)}
             className={`mt-3 rounded-lg border px-3 py-2 text-sm ${
               reviewNotice.tone === "danger"
                 ? "border-danger/30 bg-danger/10 text-danger"
@@ -405,7 +405,7 @@ export default async function DiveRecapPage({
           <h2 className="text-lg font-semibold">{t("recap.tipCrew")}</h2>
           {tipNotice ? (
             <p
-              role={tipNotice.tone === "danger" ? "alert" : "status"}
+              role={noticeRole(tipNotice.tone)}
               className={`mt-3 rounded-lg border px-3 py-2 text-sm ${
                 tipNotice.tone === "danger"
                   ? "border-danger/30 bg-danger/10 text-danger"
@@ -474,7 +474,7 @@ export default async function DiveRecapPage({
 
         {photoNotice ? (
           <p
-            role={photoNotice.tone === "danger" ? "alert" : "status"}
+            role={noticeRole(photoNotice.tone)}
             className={`mt-3 rounded-lg border px-3 py-2 text-sm ${
               photoNotice.tone === "danger"
                 ? "border-danger/30 bg-danger/10 text-danger"

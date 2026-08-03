@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { FlashParams } from "@/components/FlashParams";
+import { JumpNav } from "@/components/JumpNav";
 import { UndoToast } from "@/components/UndoToast";
 import {
   canPersonDeleteDiver,
@@ -19,7 +20,7 @@ import { requireStaffSession } from "@/lib/session";
 import { BookActivity } from "./_components/BookActivity";
 import { CertificationCards } from "./_components/CertificationCards";
 import { DiverHeader } from "./_components/DiverHeader";
-import { DIVER_SECTIONS, DiverSection, DiverSubNav } from "./_components/DiverSubNav";
+import { DIVER_SECTIONS, DiverSection } from "./_components/DiverSections";
 import { ErasePersonalData } from "./_components/ErasePersonalData";
 import { NoticeBanner } from "./_components/NoticeBanner";
 import { PaymentsSection } from "./_components/PaymentsSection";
@@ -103,11 +104,11 @@ export default async function DiverDetailPage({
         <NoticeBanner notice={notice} locale={locale} shopSlug={shopSlug} />
       )}
       {/* Above the stat cards, not below them: on a 390px phone those three
-          cards stack, and a bar sitting under them lands ~1,150px down — a spine
+          cards stack, and a row sitting under them lands ~1,150px down — a spine
           you have to scroll to find is not a spine. */}
-      <DiverSubNav
+      <JumpNav
         ariaLabel={t("divers.subNav.ariaLabel")}
-        labels={DIVER_SECTIONS.map((section) => t(section.labelKey))}
+        items={DIVER_SECTIONS.map((section) => ({ id: section.id, label: t(section.labelKey) }))}
         className="mt-8"
       />
       <StatsSummary diver={diver} locale={locale} />

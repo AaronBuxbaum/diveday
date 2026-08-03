@@ -73,7 +73,14 @@ or give the reader any sense of what they were looking at.
 The board earns it. Three secondary staff lists — the courses roster, the promo-code lists, and the
 waiver signature log — still wear the old forward-only "Show more … / ← Back to the top" and are
 **not** yet converted; they are the same job as Divers/Reports/Reviews and should adopt this model
-next. Any *new* paged staff list uses `offsetPage` + `Pager` from the start.
+next. Grammar 4 survives too, and is the fourth straggler: the add-booking departure picker
+(`bookings/new/page.tsx`) still shows the first 24 upcoming departures with space and names the
+schedule board as the way to reach anything past them, with no pager of its own. That is tolerable
+— it is a *pick one* step, not a list to read, and the board really is the surface built for
+scrolling the season — but it is the one place a staffer still meets "go look somewhere else"
+where every other list now says "page 2 of 4". Revisit it with the three above; do not read its
+survival as this decision blessing a fourth grammar. Any *new* paged staff list uses `offsetPage` +
+`Pager` from the start.
 
 Three surfaces change shape visually (a pager band where a "Show more" button was) and the Orders
 index gains a range note above its table; those baselines move.

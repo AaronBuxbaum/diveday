@@ -23,7 +23,7 @@ import {
 import { nowDate } from "@/lib/clock";
 import { formatTimeRangeTz } from "@/lib/format";
 import { requireStaffSession } from "@/lib/session";
-import { noticeFromParam } from "@/lib/staff-notices";
+import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
 import { parseWallTime, toDateInputValue, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { createShiftAction, deleteShiftAction } from "./actions";
 
@@ -113,7 +113,7 @@ export default async function StaffingPage({
 
       {notice ? (
         <div className="mt-6">
-          <ShopNotice tone={notice.tone} role={notice.tone === "danger" ? "alert" : "status"}>
+          <ShopNotice tone={notice.tone} role={noticeRole(notice.tone)}>
             {t(notice.key)}
           </ShopNotice>
         </div>

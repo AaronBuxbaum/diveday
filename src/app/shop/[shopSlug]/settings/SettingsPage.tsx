@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { z } from "zod";
 import { FlashParams } from "@/components/FlashParams";
+import { JumpNav } from "@/components/JumpNav";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -55,7 +56,7 @@ import {
   toRentableKinds,
 } from "@/lib/rentals";
 import { requireStaffSession } from "@/lib/session";
-import { noticeFromParam } from "@/lib/staff-notices";
+import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
 
 export const metadata: Metadata = { title: "Shop settings — DiveDay" };
 
@@ -464,10 +465,10 @@ function StatusRow({
 
 /**
  * The page's three groups, in render order — "Your shop" / "Money" / "Data &
- * integrations" (task 154). One list rather than three literals so the jump
- * row below and the `<h2 id>` it targets cannot disagree: the anchors existed
- * for a release with nothing linking them, which is how a 7,000px page ends up
- * with no way down it but the scrollbar.
+ * integrations" (task 154). One list rather than three literals so the
+ * `JumpNav` this page feeds and the `<h2 id>` it targets cannot disagree: the
+ * anchors existed for a release with nothing linking them, which is how a
+ * 7,000px page ends up with no way down it but the scrollbar.
  */
 export const SETTINGS_GROUPS = [
   { id: "your-shop", labelKey: "settings.main.groups.yourShop" },
@@ -478,35 +479,6 @@ export const SETTINGS_GROUPS = [
 type SettingsGroupSpec = (typeof SETTINGS_GROUPS)[number];
 
 const [YOUR_SHOP_GROUP, MONEY_GROUP, DATA_GROUP] = SETTINGS_GROUPS;
-
-/**
- * Plain in-page anchors, deliberately: a hash link is a same-document jump the
- * browser handles itself, so it never re-renders the route and cannot disturb
- * `PreserveFormScroll`'s save-on-submit / restore-on-return handshake the way a
- * router navigation or a scroll-scripted button would.
- */
-export function SettingsJumpNav({ label, groupLabels }: { label: string; groupLabels: string[] }) {
-  return (
-    // The rule sits on the wrapper at content width; the row inside is pulled
-    // left by its own first link's padding, so the first label lines up with
-    // the page title above rather than sitting 12px inside it. The padding
-    // itself stays — with `min-h-11` it is what makes each label a real touch
-    // target on a phone.
-    <div className="-mt-2 mb-8 border-b border-border pb-2">
-      <nav aria-label={label} className="-ml-3 flex flex-wrap items-center gap-x-1">
-        {SETTINGS_GROUPS.map((group, index) => (
-          <a
-            key={group.id}
-            href={`#${group.id}`}
-            className={buttonClass({ variant: "link", size: "sm" })}
-          >
-            {groupLabels[index]}
-          </a>
-        ))}
-      </nav>
-    </div>
-  );
-}
 
 /**
  * A labelled group of settings cards with an anchor `#id`. Cards keep their own
@@ -570,7 +542,7 @@ function SectionNotice({
   if (!banner || active !== section) return null;
   return (
     <div className="mt-4">
-      <ShopNotice tone={banner.tone} role={banner.tone === "danger" ? "alert" : "status"}>
+      <ShopNotice tone={banner.tone} role={noticeRole(banner.tone)}>
         {banner.text}
       </ShopNotice>
     </div>
@@ -632,9 +604,10 @@ export default async function SettingsPage({
         description={t("settings.main.description")}
       />
 
-      <SettingsJumpNav
-        label={t("settings.main.jump.label")}
-        groupLabels={SETTINGS_GROUPS.map((group) => t(group.labelKey))}
+      <JumpNav
+        ariaLabel={t("settings.main.jump.label")}
+        items={SETTINGS_GROUPS.map((group) => ({ id: group.id, label: t(group.labelKey) }))}
+        className="-mt-2"
       />
 
       {banner && !activeSection ? (

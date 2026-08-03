@@ -130,8 +130,20 @@ describe("DiverList empty state", () => {
 });
 
 describe("DiverList roster views", () => {
-  it("offers the day's three questions over the roster, and nothing to pin", () => {
+  it("hides the view chips over a day-one empty roster — controls with nothing to govern", () => {
     renderList();
+    expect(screen.queryByRole("navigation", { name: "Roster views" })).toBeNull();
+    // Narrowed-to-nothing is a different state: the chips are how you widen
+    // back out, so the row stays.
+    cleanup();
+    renderList({ filter: "missing_contact" });
+    expect(screen.getByRole("navigation", { name: "Roster views" })).toBeInTheDocument();
+  });
+
+  it("offers the day's three questions over the roster, and nothing to pin", () => {
+    // A view chip is active so the row renders (the roster itself is empty in
+    // this fixture; see the day-one test above for the hidden state).
+    renderList({ filter: "diving_today" });
     const views = screen.getByRole("navigation", { name: "Roster views" });
     expect(
       [...views.querySelectorAll("a")].map((link) => [link.textContent, link.getAttribute("href")]),
