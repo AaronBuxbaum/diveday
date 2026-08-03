@@ -1,4 +1,10 @@
 import type { Role } from "@/lib/authz";
+import {
+  type StaffDestinationId,
+  staffDestination,
+  staffDestinationHref,
+  staffShopRoot,
+} from "@/lib/staff-destinations";
 import type { StaffTranslator } from "./staff-messages";
 
 /** The staff roles Today's first-visit orientation card has its own content for. */
@@ -52,27 +58,36 @@ export function orientationTourText(
  * Where the role's "Try:" prompt points. Captain and crew point at the surface
  * built for their actual shift (today's manifest, check-in); every other role
  * points at a nav page since they have no single "the one boat/counter" today.
+ *
+ * Every one of those pages is resolved from `staff-destinations.ts`, the one
+ * place a staff destination may be declared, rather than spelled out here. The
+ * divemaster's prompt is why: it pointed at `/shop/<slug>/blockers`, which has
+ * been a 308 to Today's by-departure view since ADR
+ * 20260803-not-ready-is-a-view. The registry knew the one-hop URL — including
+ * the `?view=` that selects it — and this file did not.
  */
 export function orientationTourHref(
   shopSlug: string,
   role: OrientationRole,
   boatBoardingHref: string | undefined,
 ): string {
+  const hrefFor = (id: StaffDestinationId) =>
+    staffDestinationHref(staffShopRoot(shopSlug), staffDestination(id));
   switch (role) {
     case "owner":
-      return `/shop/${shopSlug}/schedule/board`;
+      return hrefFor("board");
     case "manager":
-      return `/shop/${shopSlug}/reviews`;
+      return hrefFor("reviews");
     case "instructor":
-      return `/shop/${shopSlug}/divers`;
+      return hrefFor("divers");
     case "divemaster":
-      return `/shop/${shopSlug}/blockers`;
+      return hrefFor("blockers");
     case "captain":
       // Falls back to the operations board when no boat is out today — the
       // manifest route needs a real trip id, and there is no "today's
       // manifest" page without one.
-      return boatBoardingHref ?? `/shop/${shopSlug}/schedule/board`;
+      return boatBoardingHref ?? hrefFor("board");
     case "crew":
-      return `/shop/${shopSlug}/check-in`;
+      return hrefFor("checkIn");
   }
 }
