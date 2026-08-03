@@ -310,9 +310,19 @@ export default async function ScheduleBoardPage({
             </Link>
             <Link
               href={`/shop/${shopSlug}/trips/new`}
-              className={buttonClass({ className: "rounded-xl" })}
+              className={buttonClass({ variant: "secondary", className: "rounded-xl" })}
             >
               {st("schedule.fullTripForm")}
+            </Link>
+            {/* The board's primary action. Scheduling a departure is the rarer
+                job — a shop puts a boat on the board once and then seats
+                divers on it all week — and until now "someone just called,
+                put them on Saturday" had no door of its own at all. */}
+            <Link
+              href={`/shop/${shopSlug}/bookings/new`}
+              className={buttonClass({ className: "rounded-xl" })}
+            >
+              {st("schedule.addBooking")}
             </Link>
           </>
         }

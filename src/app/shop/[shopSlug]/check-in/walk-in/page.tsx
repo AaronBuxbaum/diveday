@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { seatExistingDiverAction, seatNewDiverAction } from "@/app/actions/seat-diver";
 import { EmptyState } from "@/components/EmptyState";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -14,7 +15,6 @@ import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate, formatTimeRange } from "@/lib/format";
 import { requireStaffSession } from "@/lib/session";
-import { addExistingWalkInAction, addWalkInBookingAction } from "./actions";
 
 // TODO: Cache Components adoption. Refactor this route so this opt-out can be removed.
 // See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
@@ -29,6 +29,12 @@ export const metadata: Metadata = {
  * then either pick a returning diver by name/email/phone or hand-enter a
  * fresh one — email optional, the crew can collect it later. One screen,
  * no trip page detour, no required email for someone who just walked up.
+ *
+ * Both halves submit through the shared seat-a-diver actions
+ * (src/app/actions/seat-diver.ts) under the `"walk-in"` surface, which is what
+ * keeps this page's own vocabulary — email optional, and the deliberately
+ * blunt three-code refusal — a parameter rather than a second implementation
+ * of everything a seating owes.
  */
 export default async function WalkInPage({
   params,
@@ -162,7 +168,7 @@ export default async function WalkInPage({
                           {person.email ?? t("checkIn.walkIn.noEmailOnFile")}
                         </p>
                       </div>
-                      <form action={addExistingWalkInAction.bind(null, shopSlug)}>
+                      <form action={seatExistingDiverAction.bind(null, "walk-in", shopSlug)}>
                         <input type="hidden" name="tripId" value={selectedTrip.tripId} />
                         <input type="hidden" name="personId" value={person.id} />
                         <SubmitButton
@@ -189,7 +195,7 @@ export default async function WalkInPage({
           <section className="mt-6 rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-6">
             <h2 className="text-lg font-semibold">{t("checkIn.walkIn.handEntryHeading")}</h2>
             <p className="mt-1 text-sm text-muted">{t("checkIn.walkIn.handEntryDescription")}</p>
-            <form action={addWalkInBookingAction.bind(null, shopSlug)} className="mt-4">
+            <form action={seatNewDiverAction.bind(null, "walk-in", shopSlug)} className="mt-4">
               <input type="hidden" name="tripId" value={selectedTrip.tripId} />
               <FieldGrid columns={3}>
                 <Field label={t("checkIn.walkIn.nameLabel")}>

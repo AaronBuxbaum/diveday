@@ -138,6 +138,7 @@ export function ShopNav({
               groupGoTo: t("shared.commandPalette.groupGoTo"),
               destinationLabels,
               goToBoarding: t("shared.commandPalette.goToBoarding"),
+              goToAddBooking: t("shared.commandPalette.goToAddBooking"),
               goToOfflineRollCall: t("shared.commandPalette.goToOfflineRollCall"),
             }}
           />

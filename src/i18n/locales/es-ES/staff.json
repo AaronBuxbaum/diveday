@@ -277,8 +277,8 @@
       "chooseActivity": "Elige una actividad disponible",
       "booking": "Reservando…",
       "bookActivityButton": "Reservar actividad",
-      "needEmailWarning": "Añade un correo electrónico antes de reservar. Identifica al buceador y es necesario para enviar su pedido.",
-      "noOpenActivities": "No hay actividades abiertas disponibles ahora mismo."
+      "noOpenActivities": "No hay actividades abiertas disponibles ahora mismo.",
+      "noEmailNote": "Sin correo registrado — entrégale el enlace del consentimiento en persona o añade una dirección a su ficha."
     },
     "payments": {
       "heading": "Pagos",
@@ -1092,7 +1092,8 @@
       "departureTime": "Hora de salida",
       "copying": "Copiando…",
       "copyIt": "Copiarla"
-    }
+    },
+    "addBooking": "Añadir una reserva"
   },
   "trips": {
     "subNav": {
@@ -2396,7 +2397,8 @@
       "groupOrders": "Pedidos",
       "groupGoTo": "Ir a",
       "goToBoarding": "Embarque — el barco de hoy",
-      "goToOfflineRollCall": "Abrir pase de lista sin conexión"
+      "goToOfflineRollCall": "Abrir pase de lista sin conexión",
+      "goToAddBooking": "Añadir una reserva"
     },
     "keyboardShortcuts": {
       "buttonAriaLabel": "Atajos de teclado",
@@ -2921,6 +2923,37 @@
       "connecting": "Conectando…",
       "cancelled": "Conexión cancelada; no se cambió nada. Pulsa Conectar para intentarlo de nuevo.",
       "blocked": "No se pudo abrir la ventana de Meta. Comprueba que tu navegador no bloquee las ventanas emergentes e inténtalo de nuevo."
+    }
+  },
+  "bookings": {
+    "new": {
+      "eyebrow": "Reservas",
+      "title": "Añadir una reserva",
+      "description": "Sienta a un buceador en cualquier salida próxima — elige el barco y luego al buceador.",
+      "backToBoard": "Volver al tablero",
+      "tripHeading": "¿Qué salida?",
+      "tripEmpty": "No queda ninguna plaza en las próximas salidas. Programa una salida primero.",
+      "tripSummary": "{title} · {date} · {time} · {booked}/{capacity} reservados",
+      "seatsLeft": "{count, plural, one {# plaza libre} other {# plazas libres}}",
+      "changeTrip": "¿No es esta? Elige otra salida.",
+      "findHeading": "Buscar un buceador que ya conste",
+      "findLabel": "Busca por nombre, correo o teléfono",
+      "findPlaceholder": "Empieza a escribir un nombre…",
+      "search": "Buscar",
+      "searching": "Buscando…",
+      "noMatches": "Sin coincidencias para «{query}» — añádelo de cero abajo.",
+      "noEmailOnFile": "Sin correo registrado",
+      "addToTrip": "Añadir a la salida",
+      "addPersonAriaLabel": "Añadir a {name} a esta salida",
+      "adding": "Añadiendo…",
+      "handEntryHeading": "Buceador nuevo",
+      "handEntryDescription": "El correo es opcional — con el nombre basta para guardar la plaza y el resto puede llegar después.",
+      "nameLabel": "Nombre completo",
+      "emailLabel": "Correo",
+      "phoneLabel": "Teléfono",
+      "optionalHint": "(opcional)",
+      "moreOnBoard": "Hay más salidas en el tablero",
+      "noticeInvalid": "Introduce un nombre para añadir a un buceador — el correo y el teléfono son opcionales aquí."
     }
   }
 }

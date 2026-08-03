@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { daysFromNow, e2eNow, openTripFromBoard } from "./helpers";
+import { daysFromNow, e2eNow, findTripOnBoard, openTripFromBoard } from "./helpers";
 
 signedInAsOwner();
 
@@ -279,4 +279,118 @@ test("the bulk waiver send nudges rather than silently no-ops with nothing ticke
   await expect(page.getByRole("status")).toContainText(
     "Tick at least one diver, then send the waiver to the whole selection.",
   );
+});
+
+/**
+ * Creates a departure with room on it and returns its id. Every door below
+ * needs one this spec owns, so an assertion can never be satisfied (or broken)
+ * by a seeded trip another test also touches.
+ */
+async function scheduleTrip(page: Page, title: string, inDays: number, capacity = 4) {
+  await page.goto("/shop/blue-mantis/trips/new");
+  await page.getByLabel("Title").fill(title);
+  await page.getByLabel("Date").fill(daysFromNow(inDays));
+  await page.getByLabel("Departs").fill("09:00");
+  await page.getByLabel("Returns").fill("11:00");
+  await page.getByLabel("Capacity").fill(String(capacity));
+  await page.getByRole("button", { name: "Put it on the board" }).click();
+  await expect(page.getByRole("status")).toContainText(title);
+  // Creating a departure settles on the board, not on the new trip — so the id
+  // is read from the board card's own href (`findTripOnBoard` pages to it),
+  // never from `page.url()`.
+  const href = await (await findTripOnBoard(page, "blue-mantis", title)).getAttribute("href");
+  const tripId = href?.match(/\/trips\/([^/?]+)/)?.[1];
+  if (!tripId) throw new Error(`could not read the trip id for "${title}"`);
+  return tripId;
+}
+
+/**
+ * Regression: booking a diver from their own record used to skip the waiver
+ * entirely — that door called `createBooking` and nothing else — so a diver
+ * seated there reached the dock unsigned and no staff surface said why. Every
+ * door now goes through `seatDiver` (src/db/seat-diver.ts), so the evidence is
+ * the roster's own waiver control reading "Waiver sent".
+ */
+test("booking a diver from their record issues their waiver, like every other door", async ({
+  page,
+}) => {
+  test.setTimeout(30_000);
+  const title = `Diver Record Trip ${e2eNow().getTime()}`;
+  const tripId = await scheduleTrip(page, title, 5);
+
+  await page.goto("/shop/blue-mantis/divers");
+  await page.getByRole("searchbox", { name: "Search divers" }).fill("Priya Sharma");
+  await page.getByRole("link", { name: "Priya Sharma" }).first().click();
+  await expect(page.getByRole("heading", { level: 1, name: "Priya Sharma" })).toBeVisible();
+
+  // The picker's option values are trip ids, so this targets *our* departure
+  // without depending on how an option label is formatted for the locale.
+  await page.getByLabel("Course or dive").selectOption(tripId);
+  await page.getByRole("button", { name: "Book activity" }).click();
+  await expect(page.getByRole("status")).toContainText("Activity booked.");
+
+  await page.goto(`/shop/blue-mantis/trips/${tripId}/guests`);
+  await expect(page.getByRole("link", { name: "Priya Sharma" }).first()).toBeVisible();
+  await expect(page.getByText("Waiver sent").first()).toBeVisible();
+  // ...and the seating reaches the trip's activity trail, which this door also
+  // used to skip.
+  await expect(page.getByText(/added Priya Sharma to the trip/)).toBeVisible();
+});
+
+test("the global Add-booking door seats a diver on a departure chosen from scratch", async ({
+  page,
+}) => {
+  test.setTimeout(30_000);
+  const title = `Global Door Trip ${e2eNow().getTime()}`;
+  const tripId = await scheduleTrip(page, title, 8);
+
+  // The board's primary action is this door's front entrance.
+  await page.goto("/shop/blue-mantis/schedule/board");
+  await page.getByRole("link", { name: "Add a booking" }).click();
+  await expect(page).toHaveURL(/\/bookings\/new/);
+  await expect(page.getByRole("heading", { level: 1, name: "Add a booking" })).toBeVisible();
+
+  // ...and the command palette is the other one, for a staffer already typing.
+  // Opened by the nav button rather than ⌘K, which only works once the page
+  // has hydrated (search.spec.ts takes the same care).
+  await page.goto("/shop/blue-mantis");
+  await page.getByRole("button", { name: "Search" }).click();
+  await page.getByRole("combobox", { name: /Search divers/ }).fill("booking");
+  await page.getByRole("option", { name: "Add a booking" }).click();
+  await expect(page).toHaveURL(/\/bookings\/new$/);
+  // The picker pages the season, so this spec's own departure can sit past the
+  // first page — the door resolves a chosen trip by id either way.
+  await page.goto(`/shop/blue-mantis/bookings/new/${tripId}`);
+  await expect(page.getByText(title).first()).toBeVisible();
+
+  // Name only: this door takes the no-email diver the counter always could.
+  await page.locator('input[name="fullName"]').filter({ visible: true }).fill("Phoned In Pat");
+  await page.getByRole("button", { name: "Add to trip" }).click();
+
+  // Lands on the trip's Guests tab with the roster's usual success affordance.
+  await expect(page).toHaveURL(new RegExp(`/trips/${tripId}/guests`));
+  await expect(page.getByRole("status")).toContainText("Diver added to the trip.");
+  await expect(page.getByRole("link", { name: "Phoned In Pat" })).toBeVisible();
+});
+
+test("a refusal from the global door stays on the form, boat still chosen", async ({ page }) => {
+  test.setTimeout(30_000);
+  const title = `Global Door Full ${e2eNow().getTime()}`;
+  const tripId = await scheduleTrip(page, title, 9, 1);
+
+  await page.goto(`/shop/blue-mantis/bookings/new/${tripId}`);
+  await page.locator('input[name="fullName"]').filter({ visible: true }).fill("First Aboard Fay");
+  await page.getByRole("button", { name: "Add to trip" }).click();
+  await expect(page.getByRole("status")).toContainText("Diver added to the trip.");
+
+  // The boat is full now. The refusal comes back to the door that produced it,
+  // still pointed at the same departure, so the next diver is one field away.
+  await page.goto(`/shop/blue-mantis/bookings/new/${tripId}`);
+  await page.locator('input[name="fullName"]').filter({ visible: true }).fill("Too Late Theo");
+  await page.getByRole("button", { name: "Add to trip" }).click();
+
+  await expect(page).toHaveURL(new RegExp(`/bookings/new/${tripId}\\?notice=diver-full`));
+  // Next's own route announcer is also `role="alert"`, so target the banner.
+  await expect(page.getByRole("alert").filter({ hasText: "That trip is full" })).toBeVisible();
+  await expect(page.getByText(title).first()).toBeVisible();
 });

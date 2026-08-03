@@ -277,8 +277,8 @@
       "chooseActivity": "Choose an available activity",
       "booking": "Booking…",
       "bookActivityButton": "Book activity",
-      "needEmailWarning": "Add an email address before booking. It identifies the diver and is needed to send their order.",
-      "noOpenActivities": "No open activities are available right now."
+      "noOpenActivities": "No open activities are available right now.",
+      "noEmailNote": "No email on file — hand this diver their waiver link in person, or add an address to their record."
     },
     "payments": {
       "heading": "Payments",
@@ -1092,7 +1092,8 @@
       "departureTime": "Departure time",
       "copying": "Copying…",
       "copyIt": "Copy it"
-    }
+    },
+    "addBooking": "Add a booking"
   },
   "trips": {
     "subNav": {
@@ -2396,7 +2397,8 @@
       "groupOrders": "Orders",
       "groupGoTo": "Go to",
       "goToBoarding": "Boarding — today's boat",
-      "goToOfflineRollCall": "Open offline roll call"
+      "goToOfflineRollCall": "Open offline roll call",
+      "goToAddBooking": "Add a booking"
     },
     "keyboardShortcuts": {
       "buttonAriaLabel": "Keyboard shortcuts",
@@ -2921,6 +2923,37 @@
       "connecting": "Connecting…",
       "cancelled": "Connection cancelled — nothing was changed. Press Connect to try again.",
       "blocked": "Meta's window could not open. Check that your browser isn't blocking pop-ups, then try again."
+    }
+  },
+  "bookings": {
+    "new": {
+      "eyebrow": "Bookings",
+      "title": "Add a booking",
+      "description": "Seat a diver on any upcoming departure — pick the boat, then the diver.",
+      "backToBoard": "Back to the board",
+      "tripHeading": "Which departure?",
+      "tripEmpty": "Nothing upcoming has a seat left. Put a departure on the board first.",
+      "tripSummary": "{title} · {date} · {time} · {booked}/{capacity} booked",
+      "seatsLeft": "{count, plural, one {# seat left} other {# seats left}}",
+      "changeTrip": "Not this one? Pick a different departure.",
+      "findHeading": "Find a returning diver",
+      "findLabel": "Search by name, email, or phone",
+      "findPlaceholder": "Start typing a name…",
+      "search": "Search",
+      "searching": "Searching…",
+      "noMatches": "No matches for “{query}” — add them fresh below.",
+      "noEmailOnFile": "No email on file",
+      "addToTrip": "Add to trip",
+      "addPersonAriaLabel": "Add {name} to this departure",
+      "adding": "Adding…",
+      "handEntryHeading": "New diver",
+      "handEntryDescription": "Email is optional — a name is enough to hold the seat, and the rest can follow.",
+      "nameLabel": "Full name",
+      "emailLabel": "Email",
+      "phoneLabel": "Phone",
+      "optionalHint": "(optional)",
+      "moreOnBoard": "More departures are on the board",
+      "noticeInvalid": "Enter a name to add a diver — email and phone are optional here."
     }
   }
 }
