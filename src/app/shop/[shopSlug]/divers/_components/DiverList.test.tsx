@@ -23,6 +23,30 @@ type DiverPage = Awaited<ReturnType<typeof listDiverSummaries>>;
 
 const emptyPage: DiverPage = { divers: [], total: 0, page: 1, pageCount: 0, pageSize: 25 };
 
+/**
+ * One diver, carrying only what the list actually renders. The real row is a
+ * whole `people` record the summary query already strips (date of birth,
+ * insurance, emergency contact) before it crosses to the client, so spelling
+ * the rest of it out here would assert nothing.
+ */
+const populatedPage: DiverPage = {
+  ...emptyPage,
+  total: 1,
+  pageCount: 1,
+  divers: [
+    {
+      person: { id: "diver-1", fullName: "Rosa Marín", email: "rosa@example.com", phone: null },
+      certificationCount: 1,
+      pendingCertificationCount: 0,
+      specialtyCount: 0,
+      pendingSpecialtyOrNitroxCount: 0,
+      importedUnconfirmedCount: 0,
+      nitroxCertificationCount: 0,
+      rentalFit: null,
+    },
+  ] as unknown as DiverPage["divers"],
+};
+
 const copy = {
   viewAllDivers: t("divers.list.viewAllDivers"),
   viewMissingContact: t("divers.list.viewMissingContact"),
@@ -61,10 +85,11 @@ function renderList({
   query = "",
   filter = "all" as DiverFilter,
   importHref = "/shop/blue-mantis/settings/import" as string | null,
+  page = emptyPage,
 } = {}) {
   return render(
     <DiverList
-      page={emptyPage}
+      page={page}
       shopSlug="blue-mantis"
       query={query}
       filter={filter}
@@ -148,7 +173,7 @@ describe("DiverList saved views", () => {
 
   it("names a view in the page, never through a native prompt", async () => {
     const prompt = vi.spyOn(window, "prompt");
-    renderList();
+    renderList({ page: populatedPage });
 
     await userEvent.click(screen.getByRole("button", { name: "+ Save this view" }));
     expect(prompt).not.toHaveBeenCalled();
@@ -196,7 +221,7 @@ describe("DiverList saved views", () => {
   });
 
   it("refuses to pin a view with no name on it", async () => {
-    renderList();
+    renderList({ page: populatedPage });
 
     await userEvent.click(screen.getByRole("button", { name: "+ Save this view" }));
     expect(screen.getByRole("button", { name: "Save view" })).toBeDisabled();
@@ -208,7 +233,7 @@ describe("DiverList saved views", () => {
   });
 
   it("backs out on Escape and on Never mind, saving nothing either way", async () => {
-    renderList();
+    renderList({ page: populatedPage });
 
     await userEvent.click(screen.getByRole("button", { name: "+ Save this view" }));
     await userEvent.type(screen.getByRole("textbox", { name: "Name this view" }), "Half typed");
@@ -225,7 +250,7 @@ describe("DiverList saved views", () => {
   });
 
   it("says where the views actually live, and only once there are some", async () => {
-    renderList();
+    renderList({ page: populatedPage });
     // Nothing pinned yet: a note about storage with nothing stored is noise.
     expect(screen.queryByText("Saved on this device")).toBeNull();
 
@@ -248,5 +273,69 @@ describe("DiverList saved views", () => {
     await userEvent.click(screen.getByRole("button", { name: "Remove saved view Sunday boat" }));
     expect(JSON.parse(window.localStorage.getItem(VIEWS_KEY) ?? "[]")).toEqual([]);
     expect(screen.queryByRole("link", { name: "Sunday boat" })).toBeNull();
+  });
+
+  /**
+   * The remove control is a 24px glyph, and a 24px glyph is not a target —
+   * principle 2's dock test puts the floor at 44px. The box grew; the × did
+   * not. The negative margin is vertical only: bleeding sideways would lay
+   * "remove this view" over the right edge of the chip that *applies* it.
+   */
+  it("gives the remove control a dock-test-sized target around a small glyph", () => {
+    window.localStorage.setItem(
+      VIEWS_KEY,
+      JSON.stringify([{ name: "Sunday boat", query: "", filter: "all" }]),
+    );
+    renderList();
+
+    const remove = screen.getByRole("button", { name: "Remove saved view Sunday boat" });
+    expect(remove).toHaveClass("size-11");
+    expect(remove.className).not.toMatch(/(^|\s)-m[xlr]-/);
+  });
+});
+
+/**
+ * Day one: no divers, no search, no filter, no pinned views. Three chips that
+ * all resolve to the same nothing plus an offer to pin it are controls with
+ * nothing to govern, and they push the empty card's "Add your first diver"
+ * down the page.
+ */
+describe("DiverList saved-views row on an empty roster", () => {
+  const VIEWS_KEY = "diveday:diver-views:blue-mantis";
+
+  beforeEach(() => window.localStorage.clear());
+  afterEach(() => window.localStorage.clear());
+
+  it("is gone when there is nothing to govern", () => {
+    renderList();
+    expect(screen.queryByRole("navigation", { name: "Saved views" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "+ Save this view" })).toBeNull();
+    // The one thing that helps is still there.
+    expect(screen.getByRole("button", { name: "Add your first diver" })).toBeInTheDocument();
+  });
+
+  it("stays when a search narrowed the roster to nothing — that is how you widen back out", () => {
+    renderList({ query: "nobody" });
+    expect(screen.getByRole("navigation", { name: "Saved views" })).toBeInTheDocument();
+  });
+
+  it("stays when a view chip narrowed the roster to nothing", () => {
+    renderList({ filter: "insured" });
+    expect(screen.getByRole("navigation", { name: "Saved views" })).toBeInTheDocument();
+  });
+
+  it("stays when this device already has views pinned, empty roster or not", () => {
+    window.localStorage.setItem(
+      VIEWS_KEY,
+      JSON.stringify([{ name: "Sunday boat", query: "", filter: "all" }]),
+    );
+    renderList();
+    expect(screen.getByRole("navigation", { name: "Saved views" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Sunday boat" })).toBeInTheDocument();
+  });
+
+  it("is there as soon as there is a roster to govern", () => {
+    renderList({ page: populatedPage });
+    expect(screen.getByRole("navigation", { name: "Saved views" })).toBeInTheDocument();
   });
 });

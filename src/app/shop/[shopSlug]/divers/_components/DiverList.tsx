@@ -232,6 +232,17 @@ export function DiverList({
   const { divers } = page;
   /** A search box or a view chip is on, so "nothing here" is a filter result. */
   const narrowed = Boolean(query) || filter !== "all";
+  /**
+   * The views row governs a roster. On day one there is no roster: three chips
+   * that all resolve to the same nothing, plus "Save this view" offering to pin
+   * it, are controls with nothing to control — and they sit above the one thing
+   * that helps, the empty card's "Add your first diver".
+   *
+   * Narrowed-to-nothing is a different state and keeps the row: the chips are
+   * how you widen back out. So does a device that already has views pinned —
+   * they are this staffer's, and silently hiding them would read as lost.
+   */
+  const showSavedViews = divers.length > 0 || narrowed || savedViews.length > 0;
   const chipClass = (active: boolean) =>
     `inline-flex min-h-9 items-center rounded-full border px-3 text-sm font-medium transition-colors ${
       active
@@ -241,92 +252,105 @@ export function DiverList({
 
   return (
     <section className="mt-10" aria-labelledby="diver-list-heading">
-      <nav aria-label={copy.savedViewsAriaLabel} className="mb-4 flex flex-wrap items-center gap-2">
-        {BUILT_IN_VIEWS.map((view) => (
-          <Link
-            key={view.filter}
-            href={hrefFor(query, view.filter)}
-            scroll={false}
-            className={chipClass(filter === view.filter)}
-          >
-            {view.label}
-          </Link>
-        ))}
-        {savedViews.map((view) => {
-          const active = view.query === query && view.filter === filter;
-          return (
-            <span key={view.name} className="inline-flex items-center">
-              <Link
-                href={hrefFor(view.query, view.filter)}
-                scroll={false}
-                className={chipClass(active)}
+      {showSavedViews ? (
+        <nav
+          aria-label={copy.savedViewsAriaLabel}
+          className="mb-4 flex flex-wrap items-center gap-2"
+        >
+          {BUILT_IN_VIEWS.map((view) => (
+            <Link
+              key={view.filter}
+              href={hrefFor(query, view.filter)}
+              scroll={false}
+              className={chipClass(filter === view.filter)}
+            >
+              {view.label}
+            </Link>
+          ))}
+          {savedViews.map((view) => {
+            const active = view.query === query && view.filter === filter;
+            return (
+              <span key={view.name} className="inline-flex items-center">
+                <Link
+                  href={hrefFor(view.query, view.filter)}
+                  scroll={false}
+                  className={chipClass(active)}
+                >
+                  {view.name}
+                </Link>
+                {/* A 44px target with a 24px glyph in it (principle 2's dock
+                  test): the box is `size-11` and the negative vertical margin
+                  gives the height back to the row, so the × looks exactly as
+                  small as before while a wet finger can actually hit it. The
+                  horizontal padding is real, not negative — bleeding sideways
+                  would put "remove this view" over the last 10px of the chip
+                  that *applies* it, and an accidental delete is a worse trade
+                  than a slightly wider row. */}
+                <button
+                  type="button"
+                  onClick={() => removeSavedView(view.name)}
+                  aria-label={fill(copy.removeSavedViewAriaLabel, { name: view.name })}
+                  className="-my-2.5 inline-flex size-11 items-center justify-center rounded-full text-muted hover:text-danger"
+                >
+                  ×
+                </button>
+              </span>
+            );
+          })}
+          {naming ? (
+            <form onSubmit={saveCurrentView} className="flex flex-wrap items-center gap-2">
+              <label className="sr-only" htmlFor="saved-view-name">
+                {copy.namePromptText}
+              </label>
+              <div className="w-44">
+                <input
+                  id="saved-view-name"
+                  ref={nameInput}
+                  type="text"
+                  value={viewName}
+                  onChange={(event) => setViewName(event.target.value)}
+                  // Escape backs out the way it does out of the ⌘K palette and an
+                  // armed InlineConfirm — the one gesture that means "never mind"
+                  // everywhere in the app.
+                  onKeyDown={(event) => {
+                    if (event.key === "Escape") closeNaming();
+                  }}
+                  placeholder={copy.namePromptText}
+                  className={`${controlClass} min-w-0`}
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={!viewName.trim()}
+                className={buttonClass({ variant: "secondary", size: "sm" })}
               >
-                {view.name}
-              </Link>
+                {copy.saveViewConfirm}
+              </button>
               <button
                 type="button"
-                onClick={() => removeSavedView(view.name)}
-                aria-label={fill(copy.removeSavedViewAriaLabel, { name: view.name })}
-                className="ml-0.5 inline-flex size-6 items-center justify-center rounded-full text-muted hover:text-danger"
+                onClick={closeNaming}
+                className={buttonClass({ variant: "ghost", size: "sm" })}
               >
-                ×
+                {copy.saveViewCancel}
               </button>
-            </span>
-          );
-        })}
-        {naming ? (
-          <form onSubmit={saveCurrentView} className="flex flex-wrap items-center gap-2">
-            <label className="sr-only" htmlFor="saved-view-name">
-              {copy.namePromptText}
-            </label>
-            <div className="w-44">
-              <input
-                id="saved-view-name"
-                ref={nameInput}
-                type="text"
-                value={viewName}
-                onChange={(event) => setViewName(event.target.value)}
-                // Escape backs out the way it does out of the ⌘K palette and an
-                // armed InlineConfirm — the one gesture that means "never mind"
-                // everywhere in the app.
-                onKeyDown={(event) => {
-                  if (event.key === "Escape") closeNaming();
-                }}
-                placeholder={copy.namePromptText}
-                className={`${controlClass} min-w-0`}
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={!viewName.trim()}
-              className={buttonClass({ variant: "secondary", size: "sm" })}
-            >
-              {copy.saveViewConfirm}
-            </button>
+            </form>
+          ) : (
             <button
               type="button"
-              onClick={closeNaming}
-              className={buttonClass({ variant: "ghost", size: "sm" })}
+              onClick={() => setNaming(true)}
+              className="inline-flex min-h-9 items-center rounded-full border border-dashed border-border px-3 text-sm font-medium text-muted hover:text-foreground"
             >
-              {copy.saveViewCancel}
+              {copy.saveThisView}
             </button>
-          </form>
-        ) : (
-          <button
-            type="button"
-            onClick={() => setNaming(true)}
-            className="inline-flex min-h-9 items-center rounded-full border border-dashed border-border px-3 text-sm font-medium text-muted hover:text-foreground"
-          >
-            {copy.saveThisView}
-          </button>
-        )}
-        {/* Only once there is something to lose. An empty row saying where
+          )}
+          {/* Only once there is something to lose. An empty row saying where
             nothing is stored is noise; a row of pinned views that a browser
             reset would take is worth being honest about. */}
-        {savedViews.length > 0 ? (
-          <p className="text-sm text-muted">{copy.savedOnThisDevice}</p>
-        ) : null}
-      </nav>
+          {savedViews.length > 0 ? (
+            <p className="text-sm text-muted">{copy.savedOnThisDevice}</p>
+          ) : null}
+        </nav>
+      ) : null}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 id="diver-list-heading" className="text-lg font-semibold">
