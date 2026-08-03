@@ -440,3 +440,77 @@ test("a diver's inquiry is recorded server-side and the shop's details stay reac
   await expect(inquiry.getByText("Inquiry sent")).toBeVisible();
   await expect(inquiry.getByText("hello@demo.invalid")).toBeVisible();
 });
+
+/**
+ * The public pages' spine. Before this the catalog was structurally
+ * unreachable: `publicCoursesPath` was linked only from inside the courses
+ * subtree, so a diver who landed on the schedule had no way to discover that
+ * the shop teaches anything at all. The header carries the map on every public
+ * page, so the walk works from wherever a diver came in.
+ */
+test.describe("the public header nav", () => {
+  test("walks a diver from the schedule to the catalog and back", async ({ page }) => {
+    await page.goto("/s/blue-mantis");
+    const nav = page.getByRole("navigation", { name: "Shop pages" });
+    await expect(nav.getByRole("link", { name: "Schedule" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+
+    await nav.getByRole("link", { name: "Courses" }).click();
+    await expect(page).toHaveURL("/s/blue-mantis/courses");
+    await expect(page.getByRole("heading", { level: 1, name: "Courses" })).toBeVisible();
+    // The tab a diver is standing on says so, and only that one.
+    await expect(nav.getByRole("link", { name: "Courses" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    await expect(nav.getByRole("link", { name: "Schedule" })).not.toHaveAttribute("aria-current");
+
+    // Certification paths stay one level down, linked from the catalog that
+    // explains them rather than taking a third tab — and the nav still tells
+    // the diver they are inside Courses down there.
+    await page.getByRole("link", { name: /certification paths/i }).click();
+    await expect(page).toHaveURL("/s/blue-mantis/courses/paths");
+    await expect(nav.getByRole("link", { name: "Courses" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+
+    await nav.getByRole("link", { name: "Schedule" }).click();
+    await expect(page).toHaveURL("/s/blue-mantis");
+  });
+
+  test("reaches the catalog from a departure's booking page too", async ({ page }) => {
+    // A diver who followed a shared trip link is the one most likely to be
+    // wondering how to get certified in the first place.
+    await page.goto("/s/blue-mantis");
+    await page
+      .locator("li")
+      .filter({ hasText: "Two-Tank Reef — Molasses & French" })
+      .getByRole("link", { name: "Two-Tank Reef — Molasses & French" })
+      .click();
+    await expect(page).toHaveURL(/\/s\/blue-mantis\/trips\/[0-9a-f-]{36}/);
+
+    const nav = page.getByRole("navigation", { name: "Shop pages" });
+    // A departure has no closer parent than the schedule it was found on.
+    await expect(nav.getByRole("link", { name: "Schedule" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    await nav.getByRole("link", { name: "Courses" }).click();
+    await expect(page).toHaveURL("/s/blue-mantis/courses");
+  });
+
+  test("keeps the shop's phone and email in the footer, once", async ({ page }) => {
+    await page.goto("/s/blue-mantis");
+    const header = page.getByRole("banner");
+    const footer = page.getByRole("contentinfo");
+    await expect(footer.locator('a[href^="tel:"]')).toBeVisible();
+    await expect(footer.locator('a[href^="mailto:"]')).toBeVisible();
+    // The header used to repeat both on every page; it is the shop's name and
+    // where you can go, nothing else.
+    await expect(header.locator('a[href^="tel:"]')).toHaveCount(0);
+    await expect(header.locator('a[href^="mailto:"]')).toHaveCount(0);
+  });
+});

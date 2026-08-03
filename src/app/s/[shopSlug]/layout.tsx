@@ -4,8 +4,10 @@ import Link from "next/link";
 import { DemoBanner } from "@/components/DemoBanner";
 import { PreserveFormScroll } from "@/components/PreserveFormScroll";
 import { PublicShopFooter, PublicShopHeader } from "@/components/PublicShopChrome";
+import type { PublicShopNavItem } from "@/components/PublicShopNav";
 import { SkipLink } from "@/components/SkipLink";
 import { getDb } from "@/db/client";
+import { hasActiveCourses } from "@/db/courses";
 import { DEMO_SHOP_SLUG } from "@/db/dev-credentials";
 import { people, personRoles } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
@@ -17,6 +19,7 @@ import { EMBED_REQUEST_HEADER } from "@/lib/auth.config";
 import { isStaff } from "@/lib/authz";
 import { DEMO_BYPASS_PASSWORD } from "@/lib/credentials";
 import { DEMO_ROLE_KEYS, DEMO_ROLE_META } from "@/lib/demo-roles";
+import { publicCoursesPath, publicSchedulePath } from "@/lib/public-routes";
 
 /**
  * Same reasoning as `/shop/[shopSlug]`'s layout: every page below reads
@@ -70,6 +73,19 @@ export default async function PublicShopLayout({
       ...(["instructor", "divemaster", "captain"] as const).filter((role) => present.has(role)),
       "diver",
     ];
+  }
+
+  // The public map, built once for the whole namespace so no page has to grow
+  // its own cross-links. Courses only earns a tab when the shop has something
+  // to teach — an existence probe (`limit 1`), not a catalog read, because it
+  // runs on every public render and the header shows no number. Skipped
+  // entirely for an embed, which drops the header anyway.
+  const navItems: PublicShopNavItem[] = [];
+  if (!isEmbed && shop) {
+    navItems.push({ href: publicSchedulePath(shop.slug), label: t("schedule.title") });
+    if (await hasActiveCourses(db, shop.id)) {
+      navItems.push({ href: publicCoursesPath(shop.slug), label: t("courses.index.title") });
+    }
   }
 
   const session = await auth();
@@ -149,7 +165,13 @@ export default async function PublicShopLayout({
           </div>
         </div>
       ) : null}
-      {!isEmbed && shop ? <PublicShopHeader shop={shop} /> : null}
+      {!isEmbed && shop ? (
+        <PublicShopHeader
+          shop={shop}
+          navAriaLabel={t("shopChrome.navAriaLabel")}
+          navItems={navItems}
+        />
+      ) : null}
       <PreserveFormScroll />
       <div id="public-shop-main-content" tabIndex={-1} className="flex-1 outline-none">
         {children}
