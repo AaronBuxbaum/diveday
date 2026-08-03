@@ -20,7 +20,7 @@ const t = staffTranslator("en-US");
 
 type DiverPage = Awaited<ReturnType<typeof listDiverSummaries>>;
 
-const emptyPage: DiverPage = { divers: [], nextCursor: null, total: 0 };
+const emptyPage: DiverPage = { divers: [], total: 0, page: 1, pageCount: 0, pageSize: 25 };
 
 const copy = {
   viewAllDivers: t("divers.list.viewAllDivers"),
@@ -51,8 +51,6 @@ const copy = {
   tableHeaderPerson: t("divers.list.tableHeaderPerson"),
   tableHeaderCards: t("divers.list.tableHeaderCards"),
   tableHeaderAttention: t("divers.list.tableHeaderAttention"),
-  showMoreDivers: t("divers.list.showMoreDivers"),
-  backToTop: t("divers.list.backToTop"),
 };
 
 function renderList({
@@ -66,7 +64,6 @@ function renderList({
       shopSlug="blue-mantis"
       query={query}
       filter={filter}
-      cursorActive={false}
       locale="en-US"
       importHref={importHref}
       copy={copy}

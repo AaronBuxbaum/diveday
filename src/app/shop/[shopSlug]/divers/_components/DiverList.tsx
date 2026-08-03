@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { EmptyState } from "@/components/EmptyState";
 import { Badge } from "@/components/ui/badge";
+import { buttonClass } from "@/components/ui/button";
 import { controlClass } from "@/components/ui/form";
 import type { DiverFilter, listDiverSummaries } from "@/db/divers";
 import { fill, pluralForm } from "@/i18n/fill";
