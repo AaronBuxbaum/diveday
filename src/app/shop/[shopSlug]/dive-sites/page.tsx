@@ -66,32 +66,38 @@ export default async function DiveSitesPage({
         }
       />
 
-      <section
-        aria-label={t("diveSites.list.overviewAriaLabel")}
-        className="mb-8 grid gap-3 sm:grid-cols-3"
-      >
-        <ShopStat
-          label={t("diveSites.list.savedSites")}
-          value={sites.length}
-          detail={t("diveSites.list.savedSitesDetail")}
-          tone="primary"
-        />
-        <ShopStat
-          label={t("diveSites.list.withForecastPoints")}
-          value={
-            sites.filter(
-              (site) => site.forecastLatitude !== null && site.forecastLongitude !== null,
-            ).length
-          }
-          detail={t("diveSites.list.withForecastPointsDetail")}
-          tone="success"
-        />
-        <ShopStat
-          label={t("diveSites.list.fromTemplates")}
-          value={sites.filter((site) => site.sourceTemplateId).length}
-          detail={t("diveSites.list.fromTemplatesDetail")}
-        />
-      </section>
+      {/* Three tiles reading 0 / 0 / 0 teach a day-one shop nothing it doesn't
+          already know from the empty list below, and they push the one thing
+          that helps — the way to add a site — below the fold. The overview
+          returns the moment there is anything to count. */}
+      {sites.length === 0 ? null : (
+        <section
+          aria-label={t("diveSites.list.overviewAriaLabel")}
+          className="mb-8 grid gap-3 sm:grid-cols-3"
+        >
+          <ShopStat
+            label={t("diveSites.list.savedSites")}
+            value={sites.length}
+            detail={t("diveSites.list.savedSitesDetail")}
+            tone="primary"
+          />
+          <ShopStat
+            label={t("diveSites.list.withForecastPoints")}
+            value={
+              sites.filter(
+                (site) => site.forecastLatitude !== null && site.forecastLongitude !== null,
+              ).length
+            }
+            detail={t("diveSites.list.withForecastPointsDetail")}
+            tone="success"
+          />
+          <ShopStat
+            label={t("diveSites.list.fromTemplates")}
+            value={sites.filter((site) => site.sourceTemplateId).length}
+            detail={t("diveSites.list.fromTemplatesDetail")}
+          />
+        </section>
+      )}
 
       {notice === "archived" ? (
         <div className="mt-4">
@@ -100,9 +106,28 @@ export default async function DiveSitesPage({
       ) : null}
 
       {sites.length === 0 ? (
+        // Both header actions again, inside the card: on an empty catalog the
+        // header is the only place they exist, and a shop reading "start with a
+        // site your crew knows well" should be able to start from that sentence.
         <EmptyState className="mt-4">
           <h2 className="font-semibold">{t("diveSites.list.emptyHeading")}</h2>
-          <p className="mt-1 text-sm text-muted">{t("diveSites.list.emptyBody")}</p>
+          <p className="mx-auto mt-1 max-w-md text-sm text-muted">
+            {t("diveSites.list.emptyBody")}
+          </p>
+          <div className="mt-4 flex flex-wrap justify-center gap-3">
+            <Link
+              href={`/shop/${shopSlug}/dive-sites/new`}
+              className={buttonClass({ className: "rounded-xl" })}
+            >
+              <span aria-hidden="true">+</span> {t("diveSites.list.createSite")}
+            </Link>
+            <Link
+              href={`/shop/${shopSlug}/dive-sites/catalog`}
+              className={buttonClass({ variant: "secondary", className: "rounded-xl" })}
+            >
+              {t("diveSites.list.browseTemplates")}
+            </Link>
+          </div>
         </EmptyState>
       ) : (
         <ul className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

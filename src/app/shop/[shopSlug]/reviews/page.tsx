@@ -226,9 +226,28 @@ export default async function ReviewsPage({
             <h2 className="font-medium">
               {onlyWaiting ? t("reviews.emptyWaitingHeading") : t("reviews.emptyHeading")}
             </h2>
-            <p className="mt-1 text-sm text-muted">
+            <p className="mx-auto mt-1 max-w-md text-sm text-muted">
               {onlyWaiting ? t("reviews.emptyWaitingDetail") : t("reviews.emptyDetail")}
             </p>
+            {/* Nothing here yet is not something staff can fix by clicking — a
+                review arrives when a diver opens the recap after a trip sails,
+                and no setting turns that on. What *is* theirs to set is where a
+                happy diver goes next, so that is the door: the review link the
+                recap offers after a strong rating. The "waiting" filter's own
+                empty state already has its way out (the All chip above it). */}
+            {onlyWaiting ? null : (
+              <>
+                <p className="mx-auto mt-4 max-w-md text-sm text-muted">
+                  {t("reviews.emptyReviewLinkBody")}
+                </p>
+                <Link
+                  href={`/shop/${shopSlug}/settings#review-link`}
+                  className={buttonClass({ variant: "secondary", size: "sm", className: "mt-2" })}
+                >
+                  {t("reviews.emptyReviewLinkAction")}
+                </Link>
+              </>
+            )}
           </EmptyState>
         ) : (
           <ul className="flex flex-col gap-3">

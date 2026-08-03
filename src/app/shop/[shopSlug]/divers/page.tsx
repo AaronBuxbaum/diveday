@@ -10,6 +10,7 @@ import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/fo
 import { canPersonDeleteDiver } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { createDiver, isDiverFilter, listDiverSummaries, restoreDiver } from "@/db/divers";
+import { canPersonImportShopData } from "@/db/import";
 import { getShopById } from "@/db/shops";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
@@ -75,6 +76,11 @@ export default async function DiversPage({
   const query = q?.trim() ?? "";
   const filter = isDiverFilter(filterParam) ? filterParam : "all";
   const diverPage = await listDiverSummaries(db, shop.id, { query, cursor: after, filter });
+  // The roster's empty state offers a bulk import beside the one-diver form,
+  // for the shop arriving with a spreadsheet. Same gate the import page itself
+  // enforces (`canPersonImportShopData`), so the door is only shown to whoever
+  // may walk through it (ADR 20260724-role-gated-surfaces-hide-not-explain).
+  const canImport = await canPersonImportShopData(db, shop.id, session.user.personId);
 
   async function addDiverAction(formData: FormData) {
     "use server";
@@ -165,7 +171,14 @@ export default async function DiversPage({
         </div>
       ) : null}
 
-      <details className="mt-8 rounded-2xl border border-border bg-surface p-5 shadow-sm">
+      {/* The id is the door the roster's empty state opens: with nobody on
+          file, "add one here" used to be prose pointing at a collapsed
+          disclosure two sections up, which is not a way forward. `scroll-mt`
+          keeps the summary clear of the sticky header once it is scrolled to. */}
+      <details
+        id="add-diver"
+        className="mt-8 scroll-mt-24 rounded-2xl border border-border bg-surface p-5 shadow-sm"
+      >
         <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between font-semibold [&::-webkit-details-marker]:hidden">
           {t("divers.page.addDiverSummary")}{" "}
           <span aria-hidden="true" className="text-xl font-normal text-primary">
@@ -201,6 +214,7 @@ export default async function DiversPage({
         filter={filter}
         cursorActive={Boolean(after)}
         locale={locale}
+        importHref={canImport ? `/shop/${shopSlug}/settings/import` : null}
         copy={{
           viewAllDivers: t("divers.list.viewAllDivers"),
           viewMissingContact: t("divers.list.viewMissingContact"),
@@ -217,6 +231,10 @@ export default async function DiversPage({
           noDiversOnFile: t("divers.list.noDiversOnFile"),
           tryDifferentSearch: t("divers.list.tryDifferentSearch"),
           addOneHere: t("divers.list.addOneHere"),
+          emptyAddAction: t("divers.list.emptyAddAction"),
+          emptyShowAll: t("divers.list.emptyShowAll"),
+          emptyImportBody: t("divers.list.emptyImportBody"),
+          emptyImportAction: t("divers.list.emptyImportAction"),
           noContactDetails: t("divers.list.noContactDetails"),
           cardCountOne: t("divers.list.cardCountOne"),
           cardCountOther: t("divers.list.cardCountOther"),

@@ -103,8 +103,16 @@ export default async function WalkInPage({
         <section className="mt-6 rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-6">
           <h2 className="text-lg font-semibold">{t("checkIn.walkIn.tripLabel")}</h2>
           {trips.length === 0 ? (
+            // The copy already names the schedule as where to look; this is
+            // the link that sentence was describing.
             <EmptyState className="mt-2">
-              <p className="text-sm text-muted">{t("checkIn.walkIn.tripEmpty")}</p>
+              <p className="mx-auto max-w-md text-sm text-muted">{t("checkIn.walkIn.tripEmpty")}</p>
+              <Link
+                href={`/shop/${shopSlug}/schedule/board`}
+                className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
+              >
+                {t("checkIn.walkIn.tripEmptyAction")}
+              </Link>
             </EmptyState>
           ) : (
             <ul className="mt-3 flex flex-col gap-2">

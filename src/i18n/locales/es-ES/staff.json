@@ -69,7 +69,11 @@
       "remove": "Quitar",
       "removing": "Quitando…",
       "crewingHeading": "Tripulación",
-      "crewingEmpty": "No forma parte de la tripulación de ninguna salida en este periodo."
+      "crewingEmpty": "No forma parte de la tripulación de ninguna salida en este periodo.",
+      "rosterEmptyHeading": "Todavía no hay tripulación registrada",
+      "rosterEmptyManagerBody": "Invita a los instructores y divemasters que llevan tus barcos y luego asígnales turnos aquí.",
+      "rosterEmptyBody": "Un propietario o gerente añade tripulación desde los ajustes de Equipo — pídele a alguno que lo ponga en marcha.",
+      "rosterEmptyAction": "Invitar a tu tripulación"
     },
     "capability": {
       "teach": "Puede enseñar",
@@ -247,6 +251,10 @@
       "noDiversOnFile": "Aún no hay buceadores registrados.",
       "tryDifferentSearch": "Prueba una búsqueda o vista distinta, o añade un nuevo buceador arriba.",
       "addOneHere": "Añade uno aquí o acepta una reserva para crear su registro de persona.",
+      "emptyAddAction": "Añadir tu primer buceador",
+      "emptyShowAll": "Ver todos los buceadores",
+      "emptyImportBody": "¿Vienes de una hoja de cálculo o de otro sistema? Trae toda la lista de una vez.",
+      "emptyImportAction": "Importar tu lista",
       "noContactDetails": "Aún sin datos de contacto",
       "cardCountOne": "{count} tarjeta",
       "cardCountOther": "{count} tarjetas",
@@ -806,6 +814,7 @@
       "filteredByDiver": "Mostrando los pedidos de {name}.",
       "emptyAll": "Todavía no hay pedidos — aparecerán aquí en cuanto recepción envíe uno.",
       "emptyFiltered": "Ningún pedido coincide con estos filtros.",
+      "emptyNoPayments": "Todavía no hay pedidos — conecta los pagos y recepción podrá enviar su primera factura desde aquí.",
       "table": {
         "diver": "Buceador",
         "trip": "Salida",
@@ -883,7 +892,8 @@
     "backToTop": "← Volver al principio de la lista",
     "empty": {
       "heading": "Todavía no hay códigos",
-      "detail": "Crea uno arriba, o envía una oferta de última hora desde la página de una salida cuando el barco necesite llenarse."
+      "detail": "Crea uno arriba, o envía una oferta de última hora desde la página de una salida cuando el barco necesite llenarse.",
+      "action": "Crear tu primer código"
     },
     "status": {
       "failed": "Falló en Stripe",
@@ -913,6 +923,7 @@
       "heading": "Ofertas por salida",
       "description": "Descuentos de una sola salida enviados desde la página de una salida — la otra mitad de cada código activo, reunidos aquí para que ninguno sea visible solo desde la salida en la que se envió.",
       "empty": "No hay ofertas por salida activas ahora mismo. Envía una desde la página de una salida cuando el barco necesite llenarse.",
+      "emptyAction": "Abrir el calendario",
       "recipients": "{count, plural, one {Enviado a # buceador} other {Enviado a # buceadores}}",
       "expiresAt": "Caduca {date}",
       "rangeNote": "Las ofertas por salida llegan como máximo al 90% de descuento — el barco sale de todos modos, así que la oferta siempre deja algo sobre la mesa. Los códigos de toda la tienda de arriba pueden llegar al 100% porque el personal también los usa para cortesías y fidelización, no solo para llenar plazas.",
@@ -1035,6 +1046,8 @@
     "emptyDetail": "A los buceadores se les pide una en su página de resumen después de una salida. Las primeras aparecerán aquí.",
     "emptyWaitingHeading": "Nada esperando tu revisión",
     "emptyWaitingDetail": "Ya se ha leído toda reseña con palabras. Las nuevas aparecerán aquí en cuanto un buceador deje una.",
+    "emptyReviewLinkBody": "Aquí no hay nada que activar: una reseña llega cuando un buceador abre su resumen. Lo que sí decides tú es adónde va después alguien contento.",
+    "emptyReviewLinkAction": "Configurar tu enlace de reseñas",
     "ratingOnly": "Solo valoración — sin palabras que revisar.",
     "reviewMeta": "<diver>{diverName}</diver> · <trip>{tripTitle}</trip> · {date}",
     "hide": "Ocultar",
@@ -1955,6 +1968,7 @@
         "heading": "Equipo actual",
         "description": "Habilitar, deshabilitar y eliminar surten efecto de inmediato. Los cambios de rol de abajo esperan a Guardar cambios.",
         "empty": "Todavía no se ha invitado a nadie.",
+        "emptyAction": "Invitar a un compañero",
         "save": "Guardar cambios",
         "saving": "Guardando…"
       },
@@ -2252,6 +2266,13 @@
     "diverCount": "{count, plural, one {# buceador} other {# buceadores}}",
     "emptyTitle": "Nadie coincide con ese escaneo",
     "emptyDescription": "Prueba con el nombre, el correo o el ID de reserva completo del buceador.",
+    "emptyClearSearch": "Ver a todos los que llegan",
+    "emptyQuietTitle": "Todavía no hay nadie en el mostrador",
+    "emptyQuietDescription": "Los buceadores aparecen aquí cerca de la hora de su salida. Ahora mismo no hay nada en ese margen — el calendario tiene el resto de la semana.",
+    "emptyViewSchedule": "Ver el calendario",
+    "emptyNoTripsTitle": "No hay salidas en el calendario",
+    "emptyNoTripsDescription": "El mostrador se llena solo desde tu calendario. Programa un barco y todos los que reserven en él aparecerán aquí.",
+    "emptyScheduleDeparture": "Programar una salida",
     "clearedTitle": "Todos a bordo por hoy 🎉 — todos registrados.",
     "checkedInBadge": "Registrado",
     "boardedBadge": "Embarcado",
@@ -2286,6 +2307,7 @@
       "backToQueue": "Volver al check-in",
       "tripLabel": "¿Qué barco?",
       "tripEmpty": "No sale ningún barco en el próximo día y medio — consulta el calendario en su lugar.",
+      "tripEmptyAction": "Ver el calendario",
       "tripSummary": "{title} · {date} · {time} · {booked}/{capacity} reservados",
       "changeTrip": "¿No es este? Elige otro barco.",
       "findHeading": "Buscar un buceador que ya conste",
@@ -2665,6 +2687,7 @@
       "todayQueue": {
         "emptyHeading": "No hay nada pendiente para ti",
         "emptyBody": "Todos los buceadores reservados en la próxima semana tienen en orden su exención, sus tarjetas y su pago.",
+        "emptyAction": "Ver el calendario",
         "needsYouHeading": "Necesita tu atención",
         "needsYouSubtitle": "Ordenado por la salida que cada uno retiene. Resolver una fila te lleva directo a la solución.",
         "boatsClear": "Las salidas de hoy están todas despejadas 🤙",
@@ -3093,6 +3116,7 @@
       "tripHeading": "¿Qué salida?",
       "fullExcluded": "Las salidas completas no aparecen en esta lista. Cambia las plazas de un barco, o programa otra salida ese día, desde el tablero.",
       "tripEmpty": "No queda ninguna plaza en las próximas salidas. Programa una salida primero.",
+      "tripEmptyAction": "Abrir el calendario",
       "tripSummary": "{title} · {date} · {time} · {booked}/{capacity} reservados",
       "seatsLeft": "{count, plural, one {# plaza libre} other {# plazas libres}}",
       "changeTrip": "¿No es esta? Elige otra salida.",

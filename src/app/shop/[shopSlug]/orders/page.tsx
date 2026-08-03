@@ -223,10 +223,40 @@ export default async function OrdersIndexPage({
       ) : null}
 
       {rows.length === 0 ? (
+        // The same fork the header makes (Loop 3): with no orders on file the
+        // one thing that moves a shop forward is either sending the first one
+        // or connecting the account that can. Filtered-to-nothing is a
+        // different problem and gets the way back out instead.
         <EmptyState className="mt-8">
           <p className="text-sm text-muted">
-            {hasFilters ? t("orders.index.emptyFiltered") : t("orders.index.emptyAll")}
+            {hasFilters
+              ? t("orders.index.emptyFiltered")
+              : paymentsConnected
+                ? t("orders.index.emptyAll")
+                : t("orders.index.emptyNoPayments")}
           </p>
+          {hasFilters ? (
+            <Link
+              href={`/shop/${shopSlug}/orders`}
+              className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
+            >
+              {t("orders.index.filters.clear")}
+            </Link>
+          ) : paymentsConnected ? (
+            <Link
+              href={`/shop/${shopSlug}/orders/new`}
+              className={buttonClass({ className: "mt-4" })}
+            >
+              {t("orders.index.newOrder")}
+            </Link>
+          ) : (
+            <Link
+              href={`/shop/${shopSlug}/settings#money`}
+              className={buttonClass({ className: "mt-4" })}
+            >
+              {t("shared.payments.connect")}
+            </Link>
+          )}
         </EmptyState>
       ) : (
         <div className="mt-6 overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">

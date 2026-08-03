@@ -291,7 +291,8 @@ export default async function TeamSettingsPage({
         <StaffNoticeBanner tone={banner.tone}>{banner.text}</StaffNoticeBanner>
       ) : null}
 
-      <section className="rounded-lg border border-border bg-surface p-6">
+      {/* The anchor the roster's empty state jumps to. */}
+      <section id="invite" className="scroll-mt-24 rounded-lg border border-border bg-surface p-6">
         <h2 className="font-medium">{t("settings.team.invite.heading")}</h2>
         <p className="mt-1 text-sm text-muted">{t("settings.team.invite.description")}</p>
         <FieldGrid as="form" action={inviteStaffAction} columns={2} className="mt-4">
@@ -334,7 +335,14 @@ export default async function TeamSettingsPage({
         <p className="mt-1 text-sm text-muted">{t("settings.team.current.description")}</p>
         {staff.length === 0 ? (
           <EmptyState className="mt-2">
-            <p className="text-sm text-muted">{t("settings.team.current.empty")}</p>
+            <p className="mx-auto max-w-md text-sm text-muted">
+              {t("settings.team.current.empty")}
+            </p>
+            {/* Reaching this page at all took the manage-staff gate, so anyone
+                reading this may send the invite — no second check needed. */}
+            <a href="#invite" className={buttonClass({ size: "sm", className: "mt-4" })}>
+              {t("settings.team.current.emptyAction")}
+            </a>
           </EmptyState>
         ) : (
           <>
