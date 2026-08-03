@@ -5,7 +5,6 @@ import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { EmptyState } from "@/components/EmptyState";
 import { Badge } from "@/components/ui/badge";
-import { buttonClass } from "@/components/ui/button";
 import { controlClass } from "@/components/ui/form";
 import type { DiverFilter, listDiverSummaries } from "@/db/divers";
 import { fill, pluralForm } from "@/i18n/fill";
@@ -46,8 +45,6 @@ export interface DiverListCopy {
   tableHeaderPerson: string;
   tableHeaderCards: string;
   tableHeaderAttention: string;
-  showMoreDivers: string;
-  backToTop: string;
 }
 
 /** A staffer's own pinned view — a name over a search + filter, stored per shop. */
@@ -94,24 +91,31 @@ function cardCount(diver: DiverSummary): number {
  * The divers list filters live as you type — the input drives the URL's `?q=`
  * (debounced) and the server answers with the matching page, so the roster
  * scales to thousands of records without shipping them all to the browser.
- * Pages are cursor links, so back/forward and sharing keep working.
+ * Pages are `?page=` links, so back/forward and sharing keep working — and,
+ * unlike the forward-only cursor this replaced, so does going back one page.
  */
 export function DiverList({
   page,
   shopSlug,
   query,
   filter,
-  cursorActive,
   locale,
   copy,
+  pager,
 }: {
   page: DiverPage;
   shopSlug: string;
   query: string;
   filter: DiverFilter;
-  cursorActive: boolean;
   locale: string;
   copy: DiverListCopy;
+  /**
+   * The roster's `<Pager>`, rendered by the Server Component above this one.
+   * Staff copy never crosses to the client (`src/i18n/staff-messages.ts`), so
+   * the shared pager stays a Server Component and arrives as an element rather
+   * than as four more strings on `copy`.
+   */
+  pager?: React.ReactNode;
 }) {
   const cardCountText = (count: number) =>
     fill(pluralForm(count, { one: copy.cardCountOne, other: copy.cardCountOther }, locale), {
@@ -136,11 +140,10 @@ export function DiverList({
   // One place builds every roster URL, so search, a view chip, and the pager all
   // carry both the text query and the active filter (never dropping one).
   const hrefFor = useCallback(
-    (nextQuery: string, nextFilter: DiverFilter, cursor?: string) => {
+    (nextQuery: string, nextFilter: DiverFilter) => {
       const params = new URLSearchParams();
       if (nextQuery.trim()) params.set("q", nextQuery.trim());
       if (nextFilter !== "all") params.set("filter", nextFilter);
-      if (cursor) params.set("after", cursor);
       return params.size ? `${pathname}?${params}` : pathname;
     },
     [pathname],
@@ -168,9 +171,7 @@ export function DiverList({
     setSavedViews(next);
   };
 
-  const { divers, nextCursor } = page;
-  const nextHref = nextCursor ? hrefFor(query, filter, nextCursor) : null;
-  const topHref = hrefFor(query, filter);
+  const { divers } = page;
   const chipClass = (active: boolean) =>
     `inline-flex min-h-9 items-center rounded-full border px-3 text-sm font-medium transition-colors ${
       active
@@ -371,20 +372,7 @@ export function DiverList({
           </div>
         </>
       )}
-      {nextHref || cursorActive ? (
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-          {nextHref ? (
-            <Link href={nextHref} className={buttonClass({ variant: "secondary" })}>
-              {copy.showMoreDivers}
-            </Link>
-          ) : null}
-          {cursorActive ? (
-            <Link href={topHref} className="text-sm font-medium text-primary hover:underline">
-              {copy.backToTop}
-            </Link>
-          ) : null}
-        </div>
-      ) : null}
+      {pager}
     </section>
   );
 }

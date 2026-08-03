@@ -256,8 +256,9 @@
       "tableHeaderPerson": "Persona",
       "tableHeaderCards": "Tarjetas",
       "tableHeaderAttention": "Atención",
-      "showMoreDivers": "Mostrar más buceadores",
-      "backToTop": "← Volver al principio de la lista"
+      "pagination": {
+        "total": "{count, plural, one {# buceador} other {# buceadores}}"
+      }
     },
     "header": {
       "backToAllDivers": "← Todos los buceadores",
@@ -814,10 +815,13 @@
         "amount": "Importe"
       },
       "pagination": {
-        "label": "Páginas de pedidos",
-        "previous": "Anterior",
-        "next": "Siguiente",
-        "position": "Página {page} de {pageCount} · {total} pedidos"
+        "total": "{count, plural, one {# pedido} other {# pedidos}}"
+      },
+      "range": {
+        "recentNote": "Mostrando los últimos {days} días. Las facturas anteriores siguen aquí.",
+        "showAll": "Mostrar todos los pedidos",
+        "allNote": "Mostrando todos los pedidos que ha emitido la tienda.",
+        "showRecent": "Volver a los últimos {days} días"
       }
     }
   },
@@ -1005,8 +1009,9 @@
     "seatsMobile": "{booked}/{capacity} plazas",
     "fillLabel": "{booked} de {capacity} plazas reservadas",
     "waiversRowLabel": "{complete} de {total} hojas de exención firmadas",
-    "showMoreTrips": "Mostrar más salidas",
-    "backToTop": "← Volver al principio de la lista"
+    "pagination": {
+      "total": "{count, plural, one {# salida} other {# salidas}}"
+    }
   },
   "reviews": {
     "eyebrow": "Reseñas",
@@ -1043,12 +1048,13 @@
     "tickThenPublish": "Marca las que quieras publicar y luego",
     "selectToPublishAriaLabel": "Seleccionar la reseña de {name} para publicarla",
     "saving": "Guardando…",
-    "showMoreReviews": "Mostrar más reseñas",
-    "backToTop": "← Volver al principio de la lista",
     "filterLabel": "Filtrar reseñas",
     "filter": {
       "all": "Todas las reseñas",
       "waiting": "Esperando tu revisión"
+    },
+    "pagination": {
+      "total": "{count, plural, one {# reseña} other {# reseñas}}"
     }
   },
   "schedule": {
@@ -2235,10 +2241,7 @@
     "viewSchedule": "Ver el calendario",
     "truncated": "Esta ventana tiene más salidas de las que una sola lista debería cargar; el resto está en el <link>calendario</link>.",
     "pagination": {
-      "label": "Páginas de bloqueos",
-      "previous": "Anterior",
-      "next": "Siguiente",
-      "position": "Página {page} de {pageCount} · {total} salidas"
+      "total": "{count, plural, one {# salida} other {# salidas}}"
     }
   },
   "checkIn": {
@@ -3019,6 +3022,12 @@
     },
     "payments": {
       "connect": "Conectar pagos"
+    },
+    "pager": {
+      "label": "Páginas",
+      "previous": "Anterior",
+      "next": "Siguiente",
+      "position": "Página {page} de {pageCount}"
     }
   },
   "whatsapp": {

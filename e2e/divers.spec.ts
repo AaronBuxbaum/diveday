@@ -167,6 +167,51 @@ test("staff record and correct a diver's emergency contact from the roster and t
   await expect(page.getByText("Casey Diver · +1 305 555 0166")).toBeVisible();
 });
 
+/**
+ * The roster paged forward-only by cursor: "Show more divers" and, once you
+ * had moved, "Back to the top of the list" — so a staffer three pages into the
+ * roster could only start over, and was never told how much roster was left.
+ * It wears the shared pager now (ADR 20260803-one-pagination-model), and the
+ * thing that spec must prove is the thing that was missing: going *back* one
+ * page lands on the page you came from, not at the top.
+ */
+test("the roster pages both ways, and back one page is the page you came from", async ({
+  page,
+}) => {
+  await page.goto("/shop/blue-mantis/divers");
+  const pager = page.getByRole("navigation", { name: "Pages" });
+  // Not "skip when there's nothing to page": the demo roster is well past one
+  // page, so a missing pager is the regression, not a reason to pass.
+  await expect(pager).toBeVisible();
+  await expect(pager).toContainText(/Page 1 of \d+/);
+
+  const firstName = await page.getByRole("row").nth(1).getByRole("link").first().textContent();
+
+  await pager.getByRole("link", { name: "Next" }).click();
+  await expect(page).toHaveURL(/page=2/);
+  await expect(page.getByRole("navigation", { name: "Pages" })).toContainText("Page 2 of");
+  const secondName = await page.getByRole("row").nth(1).getByRole("link").first().textContent();
+  expect(secondName).not.toBe(firstName);
+
+  // Forward once more, then back one — page 2 again, not page 1 and not the top.
+  await page.getByRole("navigation", { name: "Pages" }).getByRole("link", { name: "Next" }).click();
+  await expect(page.getByRole("navigation", { name: "Pages" })).toContainText("Page 3 of");
+  await page
+    .getByRole("navigation", { name: "Pages" })
+    .getByRole("link", { name: "Previous" })
+    .click();
+  await expect(page.getByRole("navigation", { name: "Pages" })).toContainText("Page 2 of");
+  expect(await page.getByRole("row").nth(1).getByRole("link").first().textContent()).toBe(
+    secondName,
+  );
+
+  // A search resets to the first page rather than stranding the reader on a
+  // page the narrowed result set does not have.
+  await page.getByRole("searchbox", { name: "Search divers" }).fill("Priya Sharma");
+  await expect(page.getByRole("row").filter({ hasText: "Priya Sharma" })).toBeVisible();
+  await expect(page).not.toHaveURL(/page=/);
+});
+
 test.describe("on a phone", () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
