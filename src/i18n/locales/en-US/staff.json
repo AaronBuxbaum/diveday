@@ -243,6 +243,9 @@
       "namePromptText": "Name this view",
       "removeSavedViewAriaLabel": "Remove saved view {name}",
       "saveThisView": "+ Save this view",
+      "saveViewConfirm": "Save view",
+      "saveViewCancel": "Never mind",
+      "savedOnThisDevice": "Saved on this device",
       "peopleHeading": "People",
       "searchHintText": "Search by name, email, or phone.",
       "searchDiversLabel": "Search divers",
@@ -2163,6 +2166,7 @@
           "waiverAcceptedImported": "accepted · imported",
           "emptyValue": "—"
         },
+        "previewSwipeHint": "Swipe the table to see every column →",
         "hiddenRowsNotice": "Showing the first {limit} rows. All {total} are imported on confirm.",
         "submit": "{count, plural, one {Import 1 contact} other {Import # contacts}}",
         "submitting": "Importing…",

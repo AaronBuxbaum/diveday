@@ -29,6 +29,9 @@ export interface DiverListCopy {
   namePromptText: string;
   removeSavedViewAriaLabel: string;
   saveThisView: string;
+  saveViewConfirm: string;
+  saveViewCancel: string;
+  savedOnThisDevice: string;
   peopleHeading: string;
   searchHintText: string;
   searchDiversLabel: string;
@@ -52,7 +55,16 @@ export interface DiverListCopy {
   tableHeaderAttention: string;
 }
 
-/** A staffer's own pinned view — a name over a search + filter, stored per shop. */
+/**
+ * A staffer's own pinned view — a name over a search + filter, stored per shop.
+ *
+ * These live in this browser's own storage, not on the account. That is a real
+ * limitation on a shared counter tablet — one browser reset takes them with it,
+ * and the same person's phone starts empty — so the row says so out loud
+ * ("Saved on this device") rather than implying a roaming preference the app
+ * does not keep. There is no per-account preference store to move them to
+ * today; adding one is a schema decision, not a copy fix.
+ */
 type SavedView = { name: string; query: string; filter: DiverFilter };
 
 function savedViewsKey(shopSlug: string) {
@@ -138,12 +150,23 @@ export function DiverList({
   const pathname = usePathname();
   const [typed, setTyped] = useState(query);
   const [savedViews, setSavedViews] = useState<SavedView[]>([]);
+  // Naming a view is an in-page form, never `window.prompt`: the native dialog
+  // blocks the tab, ignores the shop's locale and the app's type scale, and on
+  // a counter tablet lands as an unstyled system sheet over the roster.
+  const [naming, setNaming] = useState(false);
+  const [viewName, setViewName] = useState("");
+  const nameInput = useRef<HTMLInputElement>(null);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Keep the input in sync when navigation (back/forward, a view chip) changes
   // the query underneath us — but never while the user is mid-debounce.
   useEffect(() => setTyped(query), [query]);
   useEffect(() => () => clearTimeout(debounce.current ?? undefined), []);
   useEffect(() => setSavedViews(readSavedViews(shopSlug)), [shopSlug]);
+  // The field replaces the button it was opened from, so the cursor has to
+  // follow — otherwise the tap lands somewhere with nothing focused.
+  useEffect(() => {
+    if (naming) nameInput.current?.focus();
+  }, [naming]);
 
   // One place builds every roster URL, so search, a view chip, and the pager all
   // carry both the text query and the active filter (never dropping one).
@@ -165,12 +188,21 @@ export function DiverList({
     }, 250);
   };
 
-  const saveCurrentView = () => {
-    const name = window.prompt(copy.namePromptText)?.trim();
+  const closeNaming = () => {
+    setNaming(false);
+    setViewName("");
+  };
+
+  const saveCurrentView = (event: React.FormEvent) => {
+    event.preventDefault();
+    const name = viewName.trim();
+    // Re-saving under an existing name replaces that view rather than pinning a
+    // second chip with the same words on it.
     if (!name) return;
     const next = [...savedViews.filter((view) => view.name !== name), { name, query, filter }];
     window.localStorage.setItem(savedViewsKey(shopSlug), JSON.stringify(next));
     setSavedViews(next);
+    closeNaming();
   };
 
   const removeSavedView = (name: string) => {
@@ -242,13 +274,58 @@ export function DiverList({
             </span>
           );
         })}
-        <button
-          type="button"
-          onClick={saveCurrentView}
-          className="inline-flex min-h-9 items-center rounded-full border border-dashed border-border px-3 text-sm font-medium text-muted hover:text-foreground"
-        >
-          {copy.saveThisView}
-        </button>
+        {naming ? (
+          <form onSubmit={saveCurrentView} className="flex flex-wrap items-center gap-2">
+            <label className="sr-only" htmlFor="saved-view-name">
+              {copy.namePromptText}
+            </label>
+            <div className="w-44">
+              <input
+                id="saved-view-name"
+                ref={nameInput}
+                type="text"
+                value={viewName}
+                onChange={(event) => setViewName(event.target.value)}
+                // Escape backs out the way it does out of the ⌘K palette and an
+                // armed InlineConfirm — the one gesture that means "never mind"
+                // everywhere in the app.
+                onKeyDown={(event) => {
+                  if (event.key === "Escape") closeNaming();
+                }}
+                placeholder={copy.namePromptText}
+                className={`${controlClass} min-w-0`}
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={!viewName.trim()}
+              className={buttonClass({ variant: "secondary", size: "sm" })}
+            >
+              {copy.saveViewConfirm}
+            </button>
+            <button
+              type="button"
+              onClick={closeNaming}
+              className={buttonClass({ variant: "ghost", size: "sm" })}
+            >
+              {copy.saveViewCancel}
+            </button>
+          </form>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setNaming(true)}
+            className="inline-flex min-h-9 items-center rounded-full border border-dashed border-border px-3 text-sm font-medium text-muted hover:text-foreground"
+          >
+            {copy.saveThisView}
+          </button>
+        )}
+        {/* Only once there is something to lose. An empty row saying where
+            nothing is stored is noise; a row of pinned views that a browser
+            reset would take is worth being honest about. */}
+        {savedViews.length > 0 ? (
+          <p className="text-sm text-muted">{copy.savedOnThisDevice}</p>
+        ) : null}
       </nav>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>

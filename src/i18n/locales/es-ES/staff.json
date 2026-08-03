@@ -243,6 +243,9 @@
       "namePromptText": "Nombra esta vista",
       "removeSavedViewAriaLabel": "Eliminar vista guardada {name}",
       "saveThisView": "+ Guardar esta vista",
+      "saveViewConfirm": "Guardar vista",
+      "saveViewCancel": "Mejor no",
+      "savedOnThisDevice": "Guardado en este dispositivo",
       "peopleHeading": "Personas",
       "searchHintText": "Busca por nombre, correo o teléfono.",
       "searchDiversLabel": "Buscar buceadores",
@@ -2163,6 +2166,7 @@
           "waiverAcceptedImported": "aceptado · importado",
           "emptyValue": "—"
         },
+        "previewSwipeHint": "Desliza la tabla para ver todas las columnas →",
         "hiddenRowsNotice": "Mostrando las primeras {limit} filas. Las {total} se importan al confirmar.",
         "submit": "{count, plural, one {Importar 1 contacto} other {Importar # contactos}}",
         "submitting": "Importando…",
