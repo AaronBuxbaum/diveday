@@ -1,4 +1,3 @@
-// @vitest-environment node
 import { and, eq, ne } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import type { Role } from "@/lib/authz";

@@ -5,7 +5,7 @@ import { onTestFinished } from "vitest";
 import { type AppDb, createTestDb } from "@/db/client";
 import { seedDemo } from "@/db/seed";
 import { getShopBySlug } from "@/db/shops";
-import { templateBytes } from "./db-template";
+import { type TemplateVariant, templateBytes } from "./db-template";
 
 /**
  * Close the test's PGlite when the test finishes.
@@ -26,30 +26,59 @@ function closeWhenTestFinishes(client: PGlite): void {
 }
 
 /**
+ * Migrated but *unseeded* in-memory PGlite database, closed when the owning
+ * test finishes.
+ *
+ * Prefer this over importing `createTestDb` from `@/db/client` directly: that
+ * factory has no lifecycle hook, so a test using it pins its ~250MB embedded
+ * Postgres for the rest of the worker's life. See {@link closeWhenTestFinishes}.
+ */
+export async function unseededTestDb(): Promise<AppDb> {
+  const db = await createTestDb();
+  closeWhenTestFinishes(db.$client as PGlite);
+  return db;
+}
+
+// The snapshot is tens of megabytes and hydration wraps it in a Blob every
+// time. PGlite only reads the Blob (via `.arrayBuffer()`), never consumes it,
+// so one Blob per worker per variant serves every hydration — rebuilding it per
+// call cost ~57ms each across ~900 db-backed tests. Same globalThis-keyed
+// per-worker caching as the bytes themselves (db-template.ts).
+const globalForBlob = globalThis as typeof globalThis & {
+  divedayTestDbBlob?: Partial<Record<TemplateVariant, Blob>>;
+};
+
+function templateBlob(variant: TemplateVariant, bytes: Uint8Array<ArrayBuffer>): Blob {
+  globalForBlob.divedayTestDbBlob ??= {};
+  const cache = globalForBlob.divedayTestDbBlob;
+  const cached = cache[variant];
+  if (cached) return cached;
+  const blob = new Blob([bytes], { type: "application/x-tar" });
+  cache[variant] = blob;
+  return blob;
+}
+
+/**
  * Fresh in-memory PGlite database seeded with the demo dataset. Each call
  * hydrates its own isolated database from the snapshot built by the Vitest
  * global setup (see db-template.ts) — do not cache or share a single instance
- * across tests. The instance is closed automatically when the owning test
- * finishes.
+ * across tests. `{ history: true }` hydrates from the second snapshot, the one
+ * carrying seed.ts's trailing-quarter back-fill. The instance is closed
+ * automatically when the owning test finishes.
  */
 export async function seededTestDb(options: { history?: boolean } = {}): Promise<AppDb> {
-  if (options.history) {
-    const db = await createTestDb();
-    await seedDemo(db, { history: true });
-    closeWhenTestFinishes(db.$client as PGlite);
-    return db;
-  }
-  const bytes = await templateBytes();
+  const variant: TemplateVariant = options.history ? "history" : "lean";
+  const bytes = await templateBytes(variant);
   if (!bytes) {
-    // Global setup didn't run (foreign config / direct runner): pay full price.
-    // Match the template — the lean demo, without the reporting history back-fill.
+    // Global setup didn't run (foreign config / direct runner): pay full price,
+    // building the same dataset the missing snapshot would have held.
     const db = await createTestDb();
-    await seedDemo(db, { history: false });
+    await seedDemo(db, { history: variant === "history" });
     closeWhenTestFinishes(db.$client as PGlite);
     return db;
   }
   const client = new PGlite({
-    loadDataDir: new Blob([bytes], { type: "application/x-tar" }),
+    loadDataDir: templateBlob(variant, bytes),
     extensions: { pg_trgm },
   });
   closeWhenTestFinishes(client);

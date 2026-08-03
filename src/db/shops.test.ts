@@ -1,4 +1,3 @@
-// @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { seededShopContext, seededTestDb } from "@/test/db";
 import { shops } from "./schema";

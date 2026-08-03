@@ -1,11 +1,9 @@
-// @vitest-environment node
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
-import { seededShopContext } from "@/test/db";
+import { seededShopContext, unseededTestDb } from "@/test/db";
 import { issueBookingCapability } from "./booking-capabilities";
 import { createBooking } from "./bookings";
-import { createTestDb } from "./client";
 import { getTripManifest } from "./manifests";
 import { verifiedNitroxPersonIds } from "./nitrox";
 import { getBookingReadiness } from "./readiness";
@@ -582,7 +580,7 @@ describe("demoTodayDepartureStart", () => {
 
 describe("seedIfEmpty (CR-010)", () => {
   it("seeds a fresh database and is a no-op the second time", async () => {
-    const db = await createTestDb();
+    const db = await unseededTestDb();
     await expect(db.select({ id: shops.id }).from(shops)).resolves.toHaveLength(0);
 
     await seedIfEmpty(db);
@@ -601,7 +599,7 @@ describe("seedIfEmpty (CR-010)", () => {
     // completes (a crash writing the return value, a network blip) undoes
     // every row instead of leaving a half-seeded shop a retry would find
     // already non-empty and stop repairing (CR-010).
-    const db = await createTestDb();
+    const db = await unseededTestDb();
     await expect(
       db.transaction(async (tx) => {
         await seedIfEmpty(tx);

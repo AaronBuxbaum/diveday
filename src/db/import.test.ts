@@ -1,4 +1,3 @@
-// @vitest-environment node
 import { and, eq, isNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { prepareContactImport } from "@/lib/import";

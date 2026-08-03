@@ -1,4 +1,3 @@
-// @vitest-environment node
 import { and, count, eq, ne } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";

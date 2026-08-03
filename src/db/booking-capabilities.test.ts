@@ -1,4 +1,3 @@
-// @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { CAPABILITY_MAX_TTL_MS, CAPABILITY_MIN_TTL_MS } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
