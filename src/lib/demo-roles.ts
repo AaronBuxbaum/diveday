@@ -10,11 +10,11 @@ export type DemoRoleId = "owner" | "instructor" | "divemaster" | "captain" | "di
 
 /** Data (icon/sample name), not copy — the words come from the `demo` message namespace. */
 export const DEMO_ROLE_META: { id: DemoRoleId; icon: string; name: string }[] = [
-  { id: "owner", icon: "👑", name: "Dana Reyes" },
-  { id: "instructor", icon: "🎓", name: "Marcus Webb" },
-  { id: "divemaster", icon: "🤿", name: "Keiko Tanaka" },
-  { id: "captain", icon: "⚓", name: "Sal Moretti" },
-  { id: "diver", icon: "🐬", name: "Public Guest" },
+  { id: "owner", icon: "👑", name: "Dana Reyes" }, // i18n-exempt: sample person name
+  { id: "instructor", icon: "🎓", name: "Marcus Webb" }, // i18n-exempt: sample person name
+  { id: "divemaster", icon: "🤿", name: "Keiko Tanaka" }, // i18n-exempt: sample person name
+  { id: "captain", icon: "⚓", name: "Sal Moretti" }, // i18n-exempt: sample person name
+  { id: "diver", icon: "🐬", name: "Public Guest" }, // i18n-exempt: seed placeholder, not rendered as copy
 ];
 
 export const DEMO_ROLE_KEYS: Record<

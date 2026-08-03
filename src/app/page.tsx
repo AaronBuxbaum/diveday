@@ -241,7 +241,7 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
             </Link>
           </div>
           <div className="mt-12">
-            <FeatureGroupsGrid columns={4} featuresPerGroup={1} />
+            <FeatureGroupsGrid locale={locale} columns={4} featuresPerGroup={1} />
           </div>
           {/* A door out at the page's midpoint: on a phone the hero CTA and
               the closing band sit several thousand pixels apart, and a reader
@@ -273,7 +273,7 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
               {t("marketing.home.exportTitle")}
             </h2>
             <p className="mt-5 text-lg leading-8 text-muted">
-              {t("marketing.home.exportDescription1", { terms: fullShopExport.terms })}
+              {t("marketing.home.exportDescription1", { terms: t(fullShopExport.termsKey) })}
             </p>
             <p className="mt-4 text-lg leading-8 text-muted">
               {t("marketing.home.exportDescription2")}
@@ -357,7 +357,7 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
             <p className="mt-2 font-medium">
               {t("marketing.home.priceLine", {
                 price: earlyAccessPrice.price,
-                cadence: earlyAccessPrice.cadence,
+                cadence: t(earlyAccessPrice.cadenceKey),
               })}
             </p>
             <Link href="/pricing" className={buttonClass({ variant: "link" })}>

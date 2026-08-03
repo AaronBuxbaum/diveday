@@ -14,11 +14,12 @@ import { SwitchingImportCta } from "@/components/SwitchingImportCta";
 import { buttonClass } from "@/components/ui/button";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
-import type { DiverLocale } from "@/i18n/settings";
+import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
 import { guideSource, trialHref } from "@/lib/funnel";
 import { IMPORT_HONESTY_TABLE } from "@/lib/import";
 import {
   getMigrationGuide,
+  IMPORT_SCOPE_ROW_KEYS,
   MIGRATION_GUIDE_SLUGS,
   type MigrationGuide,
 } from "@/lib/migration-guides";
@@ -39,14 +40,19 @@ export async function generateMetadata({
   const { competitor } = await params;
   const guide = getMigrationGuide(competitor);
   if (!guide) return { title: "Switching to DiveDay" };
-  const title = `${guide.metaTitle} — DiveDay`;
+  // Fixed to the default locale, like the hub page's static `metadata`:
+  // negotiating here would read request headers inside `generateMetadata` and
+  // cost the registered slugs their prerendered shells.
+  const t = diverTranslator(DEFAULT_DIVER_LOCALE);
+  const title = `${t(guide.metaTitle)} — DiveDay`;
+  const description = t(guide.metaDescription);
   return {
     title,
-    description: guide.metaDescription,
+    description,
     alternates: { canonical: `/switching/${guide.slug}` },
     openGraph: {
       title,
-      description: guide.metaDescription,
+      description,
       url: `/switching/${guide.slug}`,
     },
   };
@@ -151,12 +157,12 @@ async function GuideBody({
             {t("switching.competitor.backToGuides")}
           </Link>
           <p className="mt-6 text-sm font-semibold tracking-widest text-primary uppercase">
-            {guide.heroEyebrow}
+            {t(guide.heroEyebrow)}
           </p>
           <h1 className="mt-4 text-4xl font-semibold tracking-[-0.045em] text-balance sm:text-5xl">
-            {guide.heroTitle}
+            {t(guide.heroTitle)}
           </h1>
-          <p className="mt-6 max-w-2xl text-lg leading-8 text-muted">{guide.heroLede}</p>
+          <p className="mt-6 max-w-2xl text-lg leading-8 text-muted">{t(guide.heroLede)}</p>
 
           {/* The buyer's first door out of the page, before six sections of
               export click-path and scope table. Deliberately NOT the
@@ -197,7 +203,7 @@ async function GuideBody({
         <div className="max-w-2xl space-y-5">
           {guide.context.map((paragraph) => (
             <p key={paragraph} className="text-lg leading-8 text-muted">
-              {paragraph}
+              {t(paragraph)}
             </p>
           ))}
         </div>
@@ -213,26 +219,29 @@ async function GuideBody({
               {t("switching.competitor.keepOrLeaveEyebrow")}
             </p>
             <h2 className="mt-3 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
-              {guide.coexist.heading}
+              {t(guide.coexist.heading)}
             </h2>
-            <p className="mt-5 max-w-2xl text-lg leading-8 text-muted">{guide.coexist.intro}</p>
+            <p className="mt-5 max-w-2xl text-lg leading-8 text-muted">{t(guide.coexist.intro)}</p>
 
             <ul className="mt-10 grid gap-5 sm:grid-cols-2">
+              {/* Shared messages — two of them interpolate the competitor's name. */}
               {guide.coexist.runsInDiveDay.map((item) => (
                 <li key={item.title} className="rounded-2xl border border-border bg-surface p-6">
-                  <h3 className="font-semibold leading-6">{item.title}</h3>
-                  <p className="mt-2 text-sm leading-6 text-muted">{item.detail}</p>
+                  <h3 className="font-semibold leading-6">{t(item.title)}</h3>
+                  <p className="mt-2 text-sm leading-6 text-muted">
+                    {t(item.detail, { competitor: guide.competitor })}
+                  </p>
                 </li>
               ))}
             </ul>
 
-            <p className="mt-8 max-w-2xl leading-7 text-muted">{guide.coexist.bridgeNote}</p>
+            <p className="mt-8 max-w-2xl leading-7 text-muted">{t(guide.coexist.bridgeNote)}</p>
 
             <div className="mt-8 rounded-2xl border border-primary/30 bg-primary/5 p-6">
               <h3 className="text-lg font-semibold tracking-tight">
-                {guide.coexist.replace.heading}
+                {t(guide.coexist.replace.heading)}
               </h3>
-              <p className="mt-2 leading-7 text-muted">{guide.coexist.replace.body}</p>
+              <p className="mt-2 leading-7 text-muted">{t(guide.coexist.replace.body)}</p>
             </div>
           </div>
         </section>
@@ -245,9 +254,9 @@ async function GuideBody({
             {t("switching.competitor.step1")}
           </p>
           <h2 className="mt-3 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
-            {guide.exportHeading}
+            {t(guide.exportHeading)}
           </h2>
-          <p className="mt-5 max-w-2xl text-lg leading-8 text-muted">{guide.exportIntro}</p>
+          <p className="mt-5 max-w-2xl text-lg leading-8 text-muted">{t(guide.exportIntro)}</p>
 
           <ol className="mt-10 space-y-6">
             {guide.exportSteps.map((step, index) => (
@@ -256,8 +265,8 @@ async function GuideBody({
                   {index + 1}
                 </span>
                 <div className="pt-1">
-                  <h3 className="font-semibold leading-6">{step.title}</h3>
-                  <p className="mt-1.5 leading-7 text-muted">{step.detail}</p>
+                  <h3 className="font-semibold leading-6">{t(step.title)}</h3>
+                  <p className="mt-1.5 leading-7 text-muted">{t(step.detail)}</p>
                 </div>
               </li>
             ))}
@@ -270,7 +279,7 @@ async function GuideBody({
                   <span aria-hidden className="font-semibold text-primary">
                     •
                   </span>
-                  <span>{note}</span>
+                  <span>{t(note)}</span>
                 </li>
               ))}
             </ul>
@@ -293,10 +302,12 @@ async function GuideBody({
         <ul className="mt-8 space-y-2">
           {IMPORT_HONESTY_TABLE.map((row) => (
             <li
-              key={row.what}
+              key={row.id}
               className="grid gap-1 rounded-xl border border-border bg-surface px-4 py-3 sm:grid-cols-[11rem_7rem_1fr] sm:items-baseline sm:gap-3"
             >
-              <span className="font-medium text-foreground">{row.what}</span>
+              <span className="font-medium text-foreground">
+                {t(IMPORT_SCOPE_ROW_KEYS[row.id].what)}
+              </span>
               <span>
                 <span
                   className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${scopeChip[row.scope].className}`}
@@ -304,7 +315,9 @@ async function GuideBody({
                   {scopeChip[row.scope].label}
                 </span>
               </span>
-              <span className="text-sm leading-6 text-muted">{row.detail}</span>
+              <span className="text-sm leading-6 text-muted">
+                {t(IMPORT_SCOPE_ROW_KEYS[row.id].detail)}
+              </span>
             </li>
           ))}
         </ul>
@@ -404,7 +417,7 @@ async function GuideBody({
               <span className="font-semibold text-foreground">
                 {t("switching.competitor.forExportPrefix", { competitor: guide.competitor })}{" "}
               </span>
-              {guide.importerNote}
+              {t(guide.importerNote)}
             </p>
           )}
 
@@ -415,9 +428,9 @@ async function GuideBody({
       {/* What the actual switch looks like — parallel-run, timing, re-import safety. */}
       <section className="mx-auto max-w-4xl px-6 py-16 lg:py-20">
         <h2 className="text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
-          {guide.cutover.heading}
+          {t(guide.cutover.heading)}
         </h2>
-        <p className="mt-5 max-w-2xl text-lg leading-8 text-muted">{guide.cutover.intro}</p>
+        <p className="mt-5 max-w-2xl text-lg leading-8 text-muted">{t(guide.cutover.intro)}</p>
 
         <ol className="mt-10 space-y-6">
           {guide.cutover.steps.map((step, index) => (
@@ -426,8 +439,8 @@ async function GuideBody({
                 {index + 1}
               </span>
               <div className="pt-1">
-                <h3 className="font-semibold leading-6">{step.title}</h3>
-                <p className="mt-1.5 leading-7 text-muted">{step.detail}</p>
+                <h3 className="font-semibold leading-6">{t(step.title)}</h3>
+                <p className="mt-1.5 leading-7 text-muted">{t(step.detail)}</p>
               </div>
             </li>
           ))}

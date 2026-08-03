@@ -7,8 +7,13 @@ import { getDb } from "@/db/client";
 import { canPersonImportShopData } from "@/db/import";
 import { getShopById } from "@/db/shops";
 import { requestLocale } from "@/i18n/request";
-import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
-import { IMPORT_HONESTY_TABLE, type ImportField, type ImportIssueCode } from "@/lib/import";
+import { type StaffMessageKey, type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
+import {
+  IMPORT_HONESTY_TABLE,
+  type ImportField,
+  type ImportIssueCode,
+  type ImportScopeRowId,
+} from "@/lib/import";
 import { requireStaffSession } from "@/lib/session";
 import type { ImportActionErrorCode } from "./actions";
 import { ImportWizard } from "./ImportWizard";
@@ -168,6 +173,68 @@ function importWizardCopy(t: StaffTranslator) {
 export const metadata: Metadata = { title: "Import contacts — DiveDay" };
 
 /**
+ * This surface's words for {@link IMPORT_HONESTY_TABLE}'s rows — the staff
+ * bundle's map, mirroring the diver-bundle `IMPORT_SCOPE_ROW_KEYS` the
+ * /switching pages use (one bundle per surface; the table's rows and buckets
+ * stay the single source in src/lib/import.ts).
+ */
+const SCOPE_ROW_KEYS: Record<ImportScopeRowId, { what: StaffMessageKey; detail: StaffMessageKey }> =
+  {
+    contact: {
+      what: "settings.import.scopeTable.contact.what",
+      detail: "settings.import.scopeTable.contact.detail",
+    },
+    emergencyContact: {
+      what: "settings.import.scopeTable.emergencyContact.what",
+      detail: "settings.import.scopeTable.emergencyContact.detail",
+    },
+    diveInsurance: {
+      what: "settings.import.scopeTable.diveInsurance.what",
+      detail: "settings.import.scopeTable.diveInsurance.detail",
+    },
+    rentalSizes: {
+      what: "settings.import.scopeTable.rentalSizes.what",
+      detail: "settings.import.scopeTable.rentalSizes.detail",
+    },
+    certificationCard: {
+      what: "settings.import.scopeTable.certificationCard.what",
+      detail: "settings.import.scopeTable.certificationCard.detail",
+    },
+    specialtyCards: {
+      what: "settings.import.scopeTable.specialtyCards.what",
+      detail: "settings.import.scopeTable.specialtyCards.detail",
+    },
+    nitrox: {
+      what: "settings.import.scopeTable.nitrox.what",
+      detail: "settings.import.scopeTable.nitrox.detail",
+    },
+    signedWaivers: {
+      what: "settings.import.scopeTable.signedWaivers.what",
+      detail: "settings.import.scopeTable.signedWaivers.detail",
+    },
+    waiverDocuments: {
+      what: "settings.import.scopeTable.waiverDocuments.what",
+      detail: "settings.import.scopeTable.waiverDocuments.detail",
+    },
+    role: {
+      what: "settings.import.scopeTable.role.what",
+      detail: "settings.import.scopeTable.role.detail",
+    },
+    cardOnFile: {
+      what: "settings.import.scopeTable.cardOnFile.what",
+      detail: "settings.import.scopeTable.cardOnFile.detail",
+    },
+    pastVisits: {
+      what: "settings.import.scopeTable.pastVisits.what",
+      detail: "settings.import.scopeTable.pastVisits.detail",
+    },
+    receiptsService: {
+      what: "settings.import.scopeTable.receiptsService.what",
+      detail: "settings.import.scopeTable.receiptsService.detail",
+    },
+  };
+
+/**
  * Built inside the request, not at module scope, so the chip text tracks the
  * negotiated locale rather than freezing to whichever locale first imported
  * this file.
@@ -260,10 +327,10 @@ export default async function ImportContactsPage({
         <ul className="mt-4 space-y-2">
           {IMPORT_HONESTY_TABLE.map((row) => (
             <li
-              key={row.what}
+              key={row.id}
               className="grid gap-1 rounded-xl bg-surface-sunken px-4 py-3 sm:grid-cols-[10rem_7rem_1fr] sm:items-baseline sm:gap-3"
             >
-              <span className="font-medium text-foreground">{row.what}</span>
+              <span className="font-medium text-foreground">{t(SCOPE_ROW_KEYS[row.id].what)}</span>
               <span>
                 <span
                   className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${chips[row.scope].className}`}
@@ -271,7 +338,7 @@ export default async function ImportContactsPage({
                   {chips[row.scope].label}
                 </span>
               </span>
-              <span className="text-sm text-muted">{row.detail}</span>
+              <span className="text-sm text-muted">{t(SCOPE_ROW_KEYS[row.id].detail)}</span>
             </li>
           ))}
         </ul>

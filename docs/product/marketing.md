@@ -207,18 +207,30 @@ them) is a deliberate, ADR-gated decision if the mockups ever stop being enough.
 
 ## Where the words live
 
-| Content | Source of truth |
-| --- | --- |
-| Feature claims shared across pages | `src/lib/marketing.ts` (`productFeatureGroups`) |
-| Price, plan name, included list | `src/lib/marketing.ts` (`earlyAccessPrice`) — the only place |
-| Page-specific narrative copy | The page file (`src/app/{page,product/page,pricing/page}.tsx`) |
-| Sign-up reassurance (no card, the exit, the founder line) | `src/app/onboard/page.tsx` |
-| Who builds DiveDay, and what it concedes | `src/app/about/page.tsx` |
-| Mockup copy | `src/components/MarketingScreenFallbacks.tsx` |
-| Nav / footer | `src/components/MarketingNav.tsx` / `MarketingFooter.tsx` |
-| Switching-guide content (per incumbent) | `src/lib/migration-guides.ts` (framework-free data); pages in `src/app/switching/` |
+**Every word a visitor reads lives in the locale bundles** —
+`src/i18n/locales/<locale>/diver.json`, edited for **every locale in the same change** (the
+check:locale gate enforces coverage). The files below are where each surface's *keys and
+structure* live; none of them may contain an English sentence:
 
-A claim used on more than one page belongs in `src/lib/marketing.ts`, not copy-pasted.
+| Content | Structure / keys | Words |
+| --- | --- | --- |
+| Feature claims shared across pages | `src/lib/marketing.ts` (`productFeatureGroups`, key registry) | `marketing.features.*` in the bundles |
+| Price, plan name, included list | `src/lib/marketing.ts` (`earlyAccessPrice`) — the `$99` figure is the only literal, and the only place it exists | `marketing.price.*` in the bundles |
+| Export claim shared by home + pricing | `src/lib/marketing.ts` (`fullShopExport`) | `marketing.export.*` in the bundles |
+| Capability index on `/product` | `src/lib/marketing.ts` (`productCapabilityIndex`) | `marketing.capabilities.*` in the bundles |
+| Page-specific narrative copy | The page file (`src/app/{page,product/page,pricing/page}.tsx`) | `marketing.home/product/pricing.*` in the bundles |
+| Sign-up reassurance (no card, the exit, the founder line) | `src/app/onboard/page.tsx` | `account.onboard.*` in the bundles |
+| Who builds DiveDay, and what it concedes | `src/app/about/page.tsx` | `marketing.about.*` in the bundles |
+| Mockup copy | `src/components/MarketingScreenFallbacks.tsx` | `fallback.*` in the bundles |
+| Nav / footer | `src/components/MarketingNav.tsx` / `MarketingFooter.tsx` | `nav.*` in the bundles |
+| Switching-guide content (per incumbent) | `src/lib/migration-guides.ts` (key registry; slugs, URLs, source citations); pages in `src/app/switching/` | `marketing.guides.*` in the bundles |
+
+A claim used on more than one page belongs in `src/lib/marketing.ts` as a shared *key*, not
+copy-pasted. The key-registry files hard-fail `pnpm check:domain-strings` on any unexempted
+prose literal (`proseFreeFiles` in the script), so a claim written as English in the registry
+never reaches a review. Page `metadata` blocks (titles/descriptions for search engines and link
+unfurls) are the deliberate exception: they stay English in the page file until a locale-routing
+decision exists, because a single canonical URL serves one `<head>` to every crawler.
 
 A switching guide is a live page only — no roadmap or "coming soon" entries (claims policy).
 Each names one incumbent's own export click-path, renders the import scope table from
