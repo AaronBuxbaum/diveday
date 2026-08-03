@@ -403,7 +403,33 @@ const MEDICAL_HEADER_PATTERN =
   /medical|health|rstc|allerg|physician|doctor|condition|diagnos|medication|liability|indemnif/i;
 
 /**
- * Published scope table — what the importer takes, in the shop owner's words.
+ * Row identity for the published scope table below — the stable code each
+ * rendering surface maps to its own bundle's words (codes-not-sentences, ADR
+ * 20260731-domain-layer-copy-leaks). The diver-facing map is
+ * `IMPORT_SCOPE_ROW_KEYS` in src/lib/migration-guides.ts; the staff importer
+ * keeps its own staff-bundle map.
+ */
+export type ImportScopeRowId =
+  | "contact"
+  | "emergencyContact"
+  | "diveInsurance"
+  | "rentalSizes"
+  | "certificationCard"
+  | "specialtyCards"
+  | "nitrox"
+  | "signedWaivers"
+  | "waiverDocuments"
+  | "role"
+  | "cardOnFile"
+  | "pastVisits"
+  | "receiptsService";
+
+/**
+ * Published scope table — what the importer takes. The words live in the
+ * message bundles (`marketing.guides.shared.scopeTable.*` for the switching
+ * pages, `settings.import.scopeTable.*` for the staff importer); this holds
+ * the rows, their order, and the honest bucket each one lands in, so every
+ * surface renders the same table from this one source.
  *
  * Two honest buckets, no alarm-red middle ground: `included` is what comes
  * across, `stays-behind` is what a contact file simply doesn't carry (and where
@@ -414,84 +440,22 @@ const MEDICAL_HEADER_PATTERN =
  * re-checks, and the never-reconstruct-medical-answers rule all still hold.
  */
 export const IMPORT_HONESTY_TABLE: {
-  what: string;
+  id: ImportScopeRowId;
   scope: "included" | "stays-behind";
-  detail: string;
 }[] = [
-  {
-    what: "Names, email, phone",
-    scope: "included",
-    detail:
-      "Imported as given. A row with an email matches an existing diver on re-import; without one, it's always a new record.",
-  },
-  {
-    what: "Emergency contact",
-    scope: "included",
-    detail: "Name and phone carry over when present.",
-  },
-  {
-    what: "Dive insurance (DAN)",
-    scope: "included",
-    detail:
-      "Carried across as free text, exactly as your file holds it. Never a gate — just detail the crew wants on hand.",
-  },
-  {
-    what: "Rental sizes",
-    scope: "included",
-    detail: "BCD, wetsuit, boot, and fin sizes become a rental-fit profile.",
-  },
-  {
-    what: "Certification card",
-    scope: "included",
-    detail:
-      "Imported verified and flagged imported, refresher date included — staff give it a one-tap confirm; unrecognized levels need manual entry.",
-  },
-  {
-    what: "Specialty cards (deep, wreck, night, drysuit)",
-    scope: "included",
-    detail:
-      "Imported as verified specialty cards, flagged imported; each one still needs a staff confirm before the dive that requires it.",
-  },
-  {
-    what: "Nitrox",
-    scope: "included",
-    detail:
-      "Imported as a verified nitrox card, flagged imported — but a diver gets plain air until staff confirm it; boarding never waits.",
-  },
-  {
-    what: "Signed waivers & medical clearance",
-    scope: "included",
-    detail:
-      "A row marked already-accepted is trusted, medical clearance included, and marked imported — individual medical answers are never reconstructed, only the outcome.",
-  },
-  {
-    what: "Waiver / medical documents",
-    scope: "included",
-    detail:
-      "Fetched once from your file's URL and re-stored in DiveDay's own storage for audit. Images and PDFs up to 5 MB.",
-  },
-  {
-    what: "Role",
-    scope: "included",
-    detail: "Everyone imports as a diver. Staff roles and logins are never granted by import.",
-  },
-  {
-    what: "Card on file / payment",
-    scope: "stays-behind",
-    detail: "Stays with your payment processor — DiveDay never imports card or payment data.",
-  },
-  {
-    what: "Past visits (what they booked, when)",
-    scope: "included",
-    detail:
-      "One row per booking becomes visit history — not a dive, and it never appears on your schedule or counts toward capacity.",
-  },
-  {
-    what: "Receipts & service history",
-    scope: "stays-behind",
-    detail:
-      "Payment records stay with your processor; gear-service history has nowhere to land — DiveDay tracks sizes, not individual rigs.",
-  },
+  { id: "contact", scope: "included" },
+  { id: "emergencyContact", scope: "included" },
+  { id: "diveInsurance", scope: "included" },
+  { id: "rentalSizes", scope: "included" },
+  { id: "certificationCard", scope: "included" },
+  { id: "specialtyCards", scope: "included" },
+  { id: "nitrox", scope: "included" },
+  { id: "signedWaivers", scope: "included" },
+  { id: "waiverDocuments", scope: "included" },
+  { id: "role", scope: "included" },
+  { id: "cardOnFile", scope: "stays-behind" },
+  { id: "pastVisits", scope: "included" },
+  { id: "receiptsService", scope: "stays-behind" },
 ];
 
 /** Normalize a header for alias lookup: lower, trim, punctuation/space → single "_". */

@@ -167,7 +167,7 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
             </h2>
           </div>
           <div className="mt-12">
-            <FeatureGroupsGrid columns={2} />
+            <FeatureGroupsGrid locale={locale} columns={2} />
           </div>
         </div>
       </section>
@@ -326,9 +326,9 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
             </summary>
             <div className="mt-8 grid gap-x-10 gap-y-10 md:grid-cols-2 lg:grid-cols-3">
               {productCapabilityIndex.map((group) => (
-                <section key={group.area}>
+                <section key={group.title}>
                   <h3 className="text-xs font-semibold tracking-widest text-primary uppercase">
-                    {group.area}
+                    {t(group.title)}
                   </h3>
                   <ul className="mt-4 space-y-2.5 text-sm leading-6 text-muted">
                     {group.items.map((item) => (
@@ -336,7 +336,7 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
                         <span aria-hidden="true" className="font-semibold text-primary">
                           ✓
                         </span>
-                        <span>{item}</span>
+                        <span>{t(item)}</span>
                       </li>
                     ))}
                   </ul>

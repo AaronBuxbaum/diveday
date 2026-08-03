@@ -1,80 +1,108 @@
+import type { DiverMessageKey } from "@/i18n/messages";
+
 /**
- * Public-facing product language lives here so the homepage, product, and
- * pricing pages always describe the same product. Keep claims constrained to
- * workflows that are available in DiveDay today.
+ * Public-facing product claims, as message-bundle *keys* — never words. The
+ * homepage, product, and pricing pages resolve these through the request
+ * locale's `diverTranslator`, so every claim renders in the visitor's own
+ * language and the pages always describe the same product. Keep claims
+ * constrained to workflows that are available in DiveDay today; the words
+ * themselves live in `src/i18n/locales/<locale>/diver.json` under
+ * `marketing.features`, `marketing.price`, `marketing.export`, and
+ * `marketing.capabilities` — edit every locale together.
+ *
+ * This file holds structure (grouping, ordering, the price figure), following
+ * the same keys-not-copy pattern as `src/lib/demo-roles.ts`: `src/lib`
+ * returns codes, the UI picks the words (ADR 20260731-domain-layer-copy-leaks).
  */
 
-export const productFeatureGroups = [
+export interface FeatureGroupKeys {
+  eyebrow: DiverMessageKey;
+  title: DiverMessageKey;
+  features: readonly DiverMessageKey[];
+}
+
+export const productFeatureGroups: readonly FeatureGroupKeys[] = [
   {
-    eyebrow: "Welcome divers well",
-    title: "From first click to confirmed place on the boat",
+    eyebrow: "marketing.features.welcome.eyebrow",
+    title: "marketing.features.welcome.title",
     features: [
-      "A live schedule divers book themselves — never past what the boat can hold",
-      "Courses, charters, and dive trips on one calendar",
-      "A booking widget you paste into the website you already have",
-      "Book for the whole party in one go, or as a gift for someone else",
-      "Discount codes shop-wide, or a last-minute deal on one under-booked boat",
-      "Confirmation emails you can see arrived — and resend when they didn't",
-      "Divers share their sizes and gear needs before they ever reach the counter",
-      "Every public page in the visitor's own language, English or Spanish",
+      "marketing.features.welcome.item1",
+      "marketing.features.welcome.item2",
+      "marketing.features.welcome.item3",
+      "marketing.features.welcome.item4",
+      "marketing.features.welcome.item5",
+      "marketing.features.welcome.item6",
+      "marketing.features.welcome.item7",
+      "marketing.features.welcome.item8",
     ],
   },
   {
-    eyebrow: "Get ready before the dock",
-    title: "The paperwork, evidence, and exceptions stay together",
+    eyebrow: "marketing.features.ready.eyebrow",
+    title: "marketing.features.ready.title",
     features: [
-      "Waivers signed from home, with medical flags raised long before the boat",
-      "A medical questionnaire that matches the jurisdiction the shop dives in",
-      "C-cards photographed once, certified by staff, and kept with the diver",
-      "One honest answer to “is this diver ready?” — waiver, cert, sites, and payment together",
-      "Specialty and nitrox cards gated per site and per trip, not per hunch",
-      "A clear staff view of exactly what still needs attention",
-      "Each diver's own page for what's left, with an emergency contact they fill in",
+      "marketing.features.ready.item1",
+      "marketing.features.ready.item2",
+      "marketing.features.ready.item3",
+      "marketing.features.ready.item4",
+      "marketing.features.ready.item5",
+      "marketing.features.ready.item6",
+      "marketing.features.ready.item7",
     ],
   },
   {
-    eyebrow: "Run the dive day",
-    title: "Crew, prep, and the boat share one source of truth",
+    eyebrow: "marketing.features.diveDay.eyebrow",
+    title: "marketing.features.diveDay.title",
     features: [
-      "Every diver's rental sizes on the trip's prep list, so the boat is packed without a clipboard",
-      "Dive-site briefings with the route and conditions notes crews actually use",
-      "Nitrox requested per booking — filled as plain air until the diver's nitrox card is verified",
-      "A counter queue built for a line of divers, not a database",
-      "Save the manifest to a phone and roll call keeps working with no signal — every dive, print backup included",
-      "A boarding history that keeps every correction instead of overwriting it",
-      "Crew conditions and an automated marine outlook on the trip a diver already booked",
+      "marketing.features.diveDay.item1",
+      "marketing.features.diveDay.item2",
+      "marketing.features.diveDay.item3",
+      "marketing.features.diveDay.item4",
+      "marketing.features.diveDay.item5",
+      "marketing.features.diveDay.item6",
+      "marketing.features.diveDay.item7",
     ],
   },
   {
-    eyebrow: "Keep the shop in motion",
-    title: "The next handoff is already clear",
+    eyebrow: "marketing.features.motion.eyebrow",
+    title: "marketing.features.motion.title",
     features: [
-      "Build the board itself: add a departure, move it, copy it forward, take it off",
-      "Repeating trips put a season on the calendar in one pass",
-      "Every trip and class shows who's leading it and who's crewing",
-      "A live picture of bookings, blockers, and staffing gaps — before they become tomorrow's problem",
-      "Card payments, deposits, invoices, and refunds through the shop's own Stripe account",
-      "A recap page each diver keeps, a rating you can publish, and a tip that reaches the crew",
-      "Walk the day as the front desk, the captain, or the diver before you commit",
-      "Leave any day with a one-ZIP export of your shop's records — no phone call, no fee",
+      "marketing.features.motion.item1",
+      "marketing.features.motion.item2",
+      "marketing.features.motion.item3",
+      "marketing.features.motion.item4",
+      "marketing.features.motion.item5",
+      "marketing.features.motion.item6",
+      "marketing.features.motion.item7",
+      "marketing.features.motion.item8",
     ],
   },
 ] as const;
 
+/**
+ * The price itself is the one figure that stays here — H-12 requires exactly
+ * one source for the number, and a currency amount is not language. Every
+ * word around it resolves from `marketing.price.*` in the bundles.
+ */
 export const earlyAccessPrice = {
-  name: "Founding shop",
-  price: "$99",
-  cadence: "per location / month",
-  description: "One clear price for the whole shop — every role, every workflow, no per-seat math.",
-  included: [
-    "Bookings, courses, waivers, certifications, rental fit, dive sites, nitrox, and the offline-ready manifest",
-    "Every staff role, from front desk to captain, in one place",
-    "New features as they ship, all through early access",
-    "A practice shop preloaded with realistic trips to train on",
-    "Today's price, locked for two years — no surprise increases while you help shape what ships next",
-    "A founder-direct line for support — write in, hear back from a real person",
+  price: "$99", // i18n-exempt: currency figure, the H-12 single source — never restate elsewhere
+  nameKey: "marketing.price.name",
+  cadenceKey: "marketing.price.cadence",
+  descriptionKey: "marketing.price.description",
+  includedKeys: [
+    "marketing.price.item1",
+    "marketing.price.item2",
+    "marketing.price.item3",
+    "marketing.price.item4",
+    "marketing.price.item5",
+    "marketing.price.item6",
   ],
-} as const;
+} as const satisfies {
+  price: string;
+  nameKey: DiverMessageKey;
+  cadenceKey: DiverMessageKey;
+  descriptionKey: DiverMessageKey;
+  includedKeys: readonly DiverMessageKey[];
+};
 
 /**
  * The bare amount inside `earlyAccessPrice.price`, for structured data that
@@ -85,18 +113,21 @@ export const earlyAccessPriceAmount = earlyAccessPrice.price.replace(/[^\d.]/g, 
 
 /**
  * The full-shop export claim, shared across the marketing surfaces so they can
- * never drift apart: the pricing data-exit FAQ renders `claim` + `terms`; the
- * home export band renders `terms` in prose and carries the claim's inventory
- * as its itemized card (`marketing.home.exportItem*`) instead of the long
- * sentence. Contents verified against src/lib/export.ts; keep them in sync
- * with the bundle.
+ * never drift apart: the pricing data-exit FAQ renders `claimKey` + `termsKey`;
+ * the home export band renders `termsKey` in prose and carries the claim's
+ * inventory as its itemized card (`marketing.home.exportItem*`) instead of the
+ * long sentence. Contents verified against src/lib/export.ts; keep every
+ * locale's rendering of these keys in sync with the bundle.
  */
 export const fullShopExport = {
-  claim:
-    "Settings → Data export downloads one ZIP of plain, documented CSV files — divers, bookings, waiver records, payment history — led by a contacts file shaped for another system's import wizard, with every stored photo (card images, dive-site pictures, trip recaps) included as a real file, not just a link.",
-  terms:
-    "No export fee, no support ticket, no minimum stay, and the same download works on the first day of a trial.",
-} as const;
+  claimKey: "marketing.export.claim",
+  termsKey: "marketing.export.terms",
+} as const satisfies { claimKey: DiverMessageKey; termsKey: DiverMessageKey };
+
+export interface CapabilityAreaKeys {
+  title: DiverMessageKey;
+  items: readonly DiverMessageKey[];
+}
 
 /**
  * The whole shipped surface, by the job it does — the reference section on
@@ -109,79 +140,79 @@ export const fullShopExport = {
  * scan with a competitor's page open beside it, and it earns nothing by being
  * written like the bands above it.
  */
-export const productCapabilityIndex = [
+export const productCapabilityIndex: readonly CapabilityAreaKeys[] = [
   {
-    area: "Booking and the public pages",
+    title: "marketing.capabilities.booking.title",
     items: [
-      "A public schedule with a month calendar, per-departure pages, and capacity that can't be oversold",
-      "An embeddable booking widget for the shop's existing website",
-      "Party booking, gift booking, and a wait list that recovers a seat when one opens",
-      "Shop-wide discount codes and one-trip last-minute deals",
-      "A standing last-minute list divers opt into with the dates they're around",
-      "Public course pages with prices, prerequisites, day-by-day plans, and dates",
-      "Search-engine structured data on the schedule, trip, and course pages",
-      "Every diver-facing page in the visitor's negotiated language",
+      "marketing.capabilities.booking.item1",
+      "marketing.capabilities.booking.item2",
+      "marketing.capabilities.booking.item3",
+      "marketing.capabilities.booking.item4",
+      "marketing.capabilities.booking.item5",
+      "marketing.capabilities.booking.item6",
+      "marketing.capabilities.booking.item7",
+      "marketing.capabilities.booking.item8",
     ],
   },
   {
-    area: "Divers, cards, and readiness",
+    title: "marketing.capabilities.divers.title",
     items: [
-      "One page per diver: cards, rental fit, contact, bookings, and history together",
-      "Waivers signed from home on an expiring link, with drafts saved as they go",
-      "One versioned waiver release per shop, with every signed version kept",
-      "A jurisdiction-aware medical questionnaire and a hard medical-review block",
-      "Tamper-evident waiver records with a verifiable integrity seal",
-      "Certification cards captured with a photo and verified by a person, never by guesswork",
-      "Specialty, nitrox, minimum-age, and dive-site gates composed into one readiness answer",
-      "A blockers queue that says exactly who isn't ready and why",
+      "marketing.capabilities.divers.item1",
+      "marketing.capabilities.divers.item2",
+      "marketing.capabilities.divers.item3",
+      "marketing.capabilities.divers.item4",
+      "marketing.capabilities.divers.item5",
+      "marketing.capabilities.divers.item6",
+      "marketing.capabilities.divers.item7",
+      "marketing.capabilities.divers.item8",
     ],
   },
   {
-    area: "The dive day",
+    title: "marketing.capabilities.diveDay.title",
     items: [
-      "A trip page that carries the dive, the roster, the prep list, and the manifest",
-      "Per-dive roll-call checkpoints with an append-only boarding history",
-      "An encrypted offline manifest saved to the crew's phone, and reconciled when signal returns",
-      "A print view of the manifest and prep list from the same data",
-      "A rental prep list derived from the sizes divers gave you",
-      "Dive-site briefings with routes, landmarks, a field guide, and diver moments",
-      "Crew conditions predictions and an automated marine outlook",
-      "A counter check-in for the morning rush",
+      "marketing.capabilities.diveDay.item1",
+      "marketing.capabilities.diveDay.item2",
+      "marketing.capabilities.diveDay.item3",
+      "marketing.capabilities.diveDay.item4",
+      "marketing.capabilities.diveDay.item5",
+      "marketing.capabilities.diveDay.item6",
+      "marketing.capabilities.diveDay.item7",
+      "marketing.capabilities.diveDay.item8",
     ],
   },
   {
-    area: "Money",
+    title: "marketing.capabilities.money.title",
     items: [
-      "Card payments at booking through the shop's own Stripe account",
-      "Deposits with the balance owed at the dock",
-      "A free-cancellation window, with the automated refund when a diver cancels inside it",
-      "Staff-issued orders and invoices with trip, course, rental, nitrox, and retail lines",
-      "Crew tips a diver starts from their own recap page",
-      "Payment state folded into whether a diver is ready to board",
+      "marketing.capabilities.money.item1",
+      "marketing.capabilities.money.item2",
+      "marketing.capabilities.money.item3",
+      "marketing.capabilities.money.item4",
+      "marketing.capabilities.money.item5",
+      "marketing.capabilities.money.item6",
     ],
   },
   {
-    area: "Running the shop",
+    title: "marketing.capabilities.shop.title",
     items: [
-      "A Today queue that ranks the work by what sails soonest",
-      "A landing page that leads with your own work — captain, instructor, or owner",
-      "The schedule as a builder: add, move, copy, and remove departures in place",
-      "Repeating trip series, edited and rolled forward as one",
-      "A course catalog with certification paths you define yourself",
-      "Staff roles with real boundaries, and a staffing view that shows coverage gaps",
-      "Saved diver views and search that jumps straight to a diver or a trip",
-      "Reports on the numbers a shop actually asks about",
+      "marketing.capabilities.shop.item1",
+      "marketing.capabilities.shop.item2",
+      "marketing.capabilities.shop.item3",
+      "marketing.capabilities.shop.item4",
+      "marketing.capabilities.shop.item5",
+      "marketing.capabilities.shop.item6",
+      "marketing.capabilities.shop.item7",
+      "marketing.capabilities.shop.item8",
     ],
   },
   {
-    area: "Your records",
+    title: "marketing.capabilities.records.title",
     items: [
-      "A one-ZIP export of every record, in documented CSVs, on any day of a trial",
-      "Photos included as real files, not links that expire with the account",
-      "A contacts file shaped for another system's import wizard",
-      "A diver importer that marks what it trusted and what it left behind",
-      "Prior visits carried across from your old system, kept honestly separate from dives here",
-      "Email delivery history you can read, with a resend when one doesn't land",
+      "marketing.capabilities.records.item1",
+      "marketing.capabilities.records.item2",
+      "marketing.capabilities.records.item3",
+      "marketing.capabilities.records.item4",
+      "marketing.capabilities.records.item5",
+      "marketing.capabilities.records.item6",
     ],
   },
 ] as const;
