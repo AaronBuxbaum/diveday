@@ -21,6 +21,273 @@ finally writes both water temperature and visibility in the shop's own units ins
 a whole-degree Fahrenheit entry round-trips exactly, the same reason `dive_sites.max_depth_meters`
 was floating point from the start. See the
 [amendment to 20260730-site-depth-and-diver-age-surfaces](../architecture/decisions/20260730-site-depth-and-diver-age-surfaces.md#amendment-2026-08-03--the-temperature-unit-is-a-sibling-setting-not-a-reading-of-this-one).
+## The 2026-08-02 review: payments, data, and crew residuals delivered (2026-08-03)
+
+The six findings the [2026-08-02 review](assessments/comprehensive-review-20260802.md) still carried
+in its top ten after the first delivery below — **PAY-M1, PAY-M3, DATA-M1/M2, the two DATA-H1
+engineering residuals, DOM-M3 and the DOM-H1 residue**. With these the review has **no open code
+finding left**: everything that survives in it is a human decision, a human action, or a claim only
+the owner can retract. The assessment was pruned again the same day.
+
+**Money.**
+
+- **A Stripe webhook claim can no longer outlive a failed handler** (PAY-M1, the review's last P0).
+  The claim and the *evidence* now sit on two columns of `stripe_webhook_events`: `occurred_at` is
+  Stripe's own event-creation time and is never deleted, and a new nullable `claimed_at` is the
+  dedup claim, released when a handler throws so Stripe's own retry genuinely re-reaches it (the
+  route then answers non-2xx, so Stripe does retry). Every reachable handler was re-read for
+  re-runnability first. The two-column shape exists because the **first** fix released the claim by
+  *deleting* the row — which also destroyed the only chronological record `hasNewerAccountUpdate`
+  reads, reopening the out-of-order `account.updated` fail-open that regresses `charges_enabled`;
+  the `security-reviewer` pass caught it, and the ADR now says so. `account.application.deauthorized`
+  additionally orders itself against the shop's own `connected_at`, so a redelivery landing after
+  the owner reconnected cannot re-disconnect a live account (`src/app/api/webhooks/stripe/route.ts`,
+  `src/db/webhook-events.ts`, `src/db/stripe-accounts.ts`).
+- **The applied discount is snapshotted, so an unsettled party splits correctly** (PAY-M3), for
+  **every** discount class rather than only shop-wide codes. `booking_checkouts` records
+  `applied_discount_percent` and its source (`promo_code_id` *or* `trip_promo_id`, at most one) at
+  session-creation time, written only when a code was genuinely handed to Stripe and never
+  re-derived afterwards from whatever promo is live on the trip. A trip-scoped last-minute deal is
+  therefore reconstructible without asking Stripe anything, which is what the review's "party on a
+  discounted session with no `amount_total`" case needed. Rows written before the column keep their
+  prior conservative behaviour — a shop-wide code still reconstructs from `promo_code_id`, anything
+  else falls back to the asked total — so no completion is refused or recorded as zero for want of
+  the figure (`src/db/checkouts.ts`, `src/lib/payments/settlement.ts`).
+
+**Data and privacy.**
+
+- **Erasure reaches the processor** (DATA-H1 residue 1). `anonymizeDiver` now deletes the diver's
+  Stripe **customer** through a provider seam after its own transaction commits — never as a
+  condition of it, so a Stripe outage cannot roll back an erasure a diver asked for — and records
+  what no API can reach in a new `processor_erasure_obligations` ledger: one row per customer
+  (retryable, with `attempts`/`last_error` so a failure is visible rather than retried into
+  silence) and one per finalized invoice, because Stripe snapshots the name and email onto an
+  invoice **at finalization** and deleting the customer afterwards does not rewrite that copy. The
+  design's first premise — "deleting a Stripe customer destroys the shop's tax and chargeback
+  record" — was checked against Stripe's documented behaviour and is **wrong**; charges, invoices,
+  refunds and disputes are separate objects and survive. That is recorded in the ADR so nobody
+  re-derives it from intuition.
+  [20260803-processor-erasure-obligations](../architecture/decisions/20260803-processor-erasure-obligations.md).
+- **A lead is reachable after the diver changes their email** (DATA-H1 residue 2).
+  `course_inquiries` gained a nullable `person_id`, resolved **at capture time by exact email
+  match** against a live diver of that shop (`people_shop_email_unique` makes that at most one
+  row) — never from a phone number, which households share, and never back-filled by a matching
+  job, because a link inferred after the fact would erase a bystander's lead. The erasure sweep
+  matches on the link first, then still on email and phone.
+- **The two hot cross-shop scans have indexes** (DATA-M1/M2), with shapes derived from the queries
+  rather than from the review's prescription: both scans pin a leading equality column and then take
+  a range, which is the only order a single index scan can walk. `claimBookingsForCheckout`'s
+  stale-intent sweep gets a partial `payment_operation_intents(kind, started_at) WHERE
+  status = 'started'`; the daily cron's two window scans get `trips(status, starts_at)` and
+  `trips(status, ends_at)`. The review had prescribed bare `(started_at)` and bare
+  `starts_at`/`ends_at`, which would have read every row in the window across every shop.
+
+**Safety.**
+
+- **`trip_assignments` carries the job, and "in-water certified assistant" is defined once**
+  (DOM-M3). A nullable `trip_role` on a new `trip_assignment_role` enum
+  (`instructor | divemaster | captain | crew` — a deliberate subset of `person_role`), so a
+  divemaster rostered as *this trip's captain* no longer raises the supervision ratio by two
+  students per head and a shop-wide instructor rostered as deck crew no longer clears
+  `course_unstaffed` on their own. The rule had been written out five times in three idioms and
+  named nowhere in `src/lib`; it is now `src/lib/crew-roles.ts` and read from one place. A roster
+  can only ever **downgrade** — rostering an unqualified deckhand as "instructor" buys the session
+  nothing — asserted as a monotonicity test over every (shop roles × trip role) pair. The role is
+  settable in the UI by a job picker on the trip's crew section, and both write paths preserve it.
+  [20260803-per-trip-crew-role](../architecture/decisions/20260803-per-trip-crew-role.md).
+- **Crew roll call names people** (DOM-H1 residue). A new `roll_call_crew_events` table gives every
+  rostered crew member their own append-only roll-call subject beside the count, with
+  `roll_call_events.booking_id` left `notNull` rather than widened. `rollCallCompleteness` stays the
+  single definition of "this checkpoint is closed" and now requires a named result per rostered crew
+  member *and* the count. Two new Today reasons — `missing_crew` and `crew_uncounted` — put an
+  unclosed after-dive crew gap on the same footing as a diver's, where before the loudest signal the
+  manifest has went nowhere at all. The offline copy shows crew by name and state and **absence
+  reads as awaiting**, so an old snapshot keeps the checkpoint open rather than reading "done".
+  Carried in the CSV export.
+  [20260803-per-person-crew-roll-call](../architecture/decisions/20260803-per-person-crew-roll-call.md),
+  which extends
+  [20260802-crew-roll-call-attestation](../architecture/decisions/20260802-crew-roll-call-attestation.md)
+  — that ADR named this work as its own follow-on and is **not superseded**: the attestation stays
+  as the count-level record, and its
+  [2026-08-03 amendment](../architecture/decisions/20260802-crew-roll-call-attestation.md#amendment-2026-08-03--the-follow-on-landed-this-adr-is-not-superseded)
+  records which of its statements the follow-on narrows and which are unchanged.
+
+**What did NOT ship, deliberately.** Each is stated in the ADR that created it, not left to be
+rediscovered:
+
+- **Crew roll call is not recordable offline.** It needs a subject kind on `OfflineRollCallEvent`
+  and on the offline idempotency key, plus store, sync-route and reconciliation work. The offline
+  crew panel now says so in a **third, neutral tone** — "not recordable here" is a limitation, "a
+  named crew member is not back aboard" is the alarm — because rendering both in warning-yellow on
+  every out-of-signal dive teaches crews to stop reading the panel. Fail-closed is unchanged.
+- **Today's departure board still assigns crew without a job.** It is a drag-and-drop scheduling
+  surface; the job someone is doing is set on the trip page, where the ratio that reads it lives.
+- **Unassign-then-reassign does not preserve a per-trip role**, and cannot — the row and the role go
+  together. That is how staff fix a mis-tap, so it carries a regression test rather than a sentence.
+- **The seed lacks one case:** an instructor rostered as a session's **divemaster**. The demo shop
+  has exactly one instructor, so seeding it would leave that session with nobody on the ratio and
+  move seeded bookings, staffing and Today across the whole demo. A second seeded instructor is the
+  obvious follow-on and is carried in
+  [features/roadmap.md](features/roadmap.md#p1--next). The rule is asserted directly by the
+  monotonicity test meanwhile.
+- **The count-level crew attestation deliberately raises no Today row.** Most shops have never
+  filled it in, so it would fire on nearly every trip and bury the rows that mean a person is in the
+  water. Only the per-person gaps escalate.
+- **Erasure cannot reach the PII Stripe snapshots onto an invoice at finalization.** There is no API
+  behind it; that obligation is **never auto-retried** and closes only when an owner attests they
+  filed Stripe's data-deletion request. An erasure with an undischarged obligation is genuinely
+  incomplete, and any promise made to a diver has to say so.
+- **The erasure ADR is still `Proposed`,** and no human gate moved. HD-10/HD-11 (counsel on erasure
+  vs signed evidence, and retention windows) and HD-7 (whether the launch jurisdiction requires
+  per-person crew coverage) are open exactly as they were; `pnpm gates` reports the same 16 open
+  rows on 2026-08-03 as on 2026-08-02.
+
+## The 2026-08-02 comprehensive review: fourteen top findings delivered (2026-08-02)
+
+All fourteen rows of "the findings that matter most" in the
+[2026-08-02 ten-lens review](assessments/comprehensive-review-20260802.md) — three Criticals and
+eleven Highs — plus two further queue items and a set of defects the required reviews found in the
+new work. The assessment has been pruned to what remains open; what is still open is **not** listed
+here. Owner decisions taken before the work started: refunds return what was actually paid with gear
+included (HD-12/HD-13), erasure is anonymize-and-keep (HD-11 direction, ADR still Proposed), contrast
+is focus-ring only (HD-17 unchanged), and visual diffs warn loudly rather than block (HD-18).
+
+**Safety.**
+
+- **Cert, specialty and nitrox gates read every site a trip visits** (DOM-C1), not just
+  `trips.dive_site_id`. `getTripSiteRequirement` and the batch path in `listTripsReadiness` compose
+  the stricter `minimum_certification_level`, the union of required specialties, and `requires_nitrox`
+  across the primary site **and** every `trip_dives.dive_site_id`, mirroring the depth advisory's join
+  — an Open Water diver on a shallow primary with an AOW/Deep second dive is now blocked
+  (`src/db/readiness.ts`).
+- **Intro sessions cap at 2 students per instructor with no assistant bonus** (DOM-H2), the PADI
+  Instructor Manual's open-water Discover Scuba figure obtained under HD-6, replacing the Open Water
+  training ratio (8, +2 per assistant, ceiling 12) that had been applied to DSD for lack of a real
+  number. DiveDay's trip model has no confined-water session type, so the Manual's 4:1 confined figure
+  is recorded and deliberately unenforced. The cap is **agency-agnostic** — zero prior water time does
+  not depend on whose logo is on the course — while the cited 8/+2/12 entry-level figure stays
+  PADI-scoped; `courses.agency` comparisons are normalized, closing the case where a shop typing
+  `"PADI"` silently lost the cap entirely (DATA-L2). `restoreBooking` re-checks the ratio, and a crew
+  change that leaves a session over ratio is now **recorded rather than refused**, so a manifest never
+  lists crew who are not aboard.
+  [20260802-dsd-instructor-manual-ratio](../architecture/decisions/20260802-dsd-instructor-manual-ratio.md)
+  and the [2026-08-02 amendment](../architecture/decisions/20260724-course-admission-standards.md) to
+  the course-admission standards.
+- **Crew enter the head count** (DOM-H1, interim slice): a per-checkpoint "crew aboard: N of N"
+  attestation that a checkpoint cannot read complete without, surfaced in the live *and* offline
+  manifests and carried in the export. "0 of 0" deliberately still needs a human — auto-completing
+  would hand a silent all-clear to exactly the trips whose crew data is worst.
+  [20260802-crew-roll-call-attestation](../architecture/decisions/20260802-crew-roll-call-attestation.md).
+  Per-person crew roll call and the per-trip role landed the next day — see the 2026-08-03 section
+  above; this table stays as the count-level record.
+- **A returned boat with an unfinished head count escalates** (DOM-H3): top-severity Today item plus a
+  schedule-board badge for any trip past its end with awaiting divers or no after-dive events. The
+  review of this work found the alarm was silenced by the input that should trigger it — `not_boarded`
+  means "never left the dock" at departure and "**did not come back to the boat**" after a dive, and
+  both were being treated as accounted-for and carried forward, rendering as "Not boarded ✓". Fixed
+  before merge, along with a returned-trips query that kept the twenty *oldest* trips before testing
+  whether any count was open, so the busiest shop lost the most recent boat.
+
+**Money.**
+
+- **Refund idempotency is keyed on the payment-operation intent** (PAY-C1), not
+  `refund:{intent}:{amount}` — two party members cancelling for the same amount against one payment
+  intent no longer collide into a single replayed Stripe refund with two local rows claiming money
+  came back (`src/db/refunds.ts`, `src/lib/payments/checkout.ts`).
+- **A settled-amount ledger** (PAY-H1/H2): `booking_checkouts` records the session's actual
+  `amount_total` at completion, per-booking paid amounts are derived from it post-discount with gear
+  included, and refunds and the monthly report are based on that instead of the quoted list price
+  (`src/lib/payments/settlement.ts`, `src/db/checkouts.ts`, `src/db/reporting.ts`). A shop no longer
+  loses money on every within-window promo cancellation, and gear money is no longer invisible.
+
+**Data and privacy.**
+
+- **A diver can be erased** (DATA-H1): a one-way, owner-gated anonymization that strips identity and
+  medical fields across the schema while preserving a verifiable signed-release skeleton. The hard
+  part was that `waiverIntegrityMetadata` HMACs a field set including `signedName` and
+  `medicalAnswers`, so stripping medical answers would have flipped every erased record to `invalid`
+  — "strip medical" and "preserve verifiable evidence" were mutually exclusive as the code stood.
+  Resolved with a **waiver integrity v2** seal over the surviving fields, dispatched per record
+  (`src/db/anonymize.ts`, `src/lib/waiver-integrity.ts`), with the erased-diver markers carried into
+  the CSV export so a destination system can tell an erased record from an incomplete one.
+  [20260802-diver-data-erasure](../architecture/decisions/20260802-diver-data-erasure.md) — **Status:
+  Proposed on purpose**: HD-10/HD-11 (counsel on erasure vs signed evidence, and retention windows)
+  decide when the mechanism may point at a real diver. The ADR is honest that erasure is one-way and
+  evidence-reducing, and records what it cannot reach: `orders.stripe_customer_id` is a `NOT NULL`
+  pointer erasure cannot rewrite, so processor-side deletion was a separate manual step — closed
+  the next day by the obligation ledger in the 2026-08-03 section above. The ADR stays **Proposed**
+  regardless: that is the human gate, not the mechanism.
+
+**Operations.**
+
+- **A backup and restore posture** (OPS-1) where there was none: Neon PITR plus a scheduled per-shop
+  logical export to a versioned private S3 bucket provisioned in `infra/`, its two known gaps written
+  down, and a quarterly restore test on the calendar.
+  [20260802-backup-and-restore-posture](../architecture/decisions/20260802-backup-and-restore-posture.md),
+  [backup-and-restore-runbook.md](../engineering/backup-and-restore-runbook.md).
+- **The daily cron is no longer silent** (OPS-3): per-scan try/catch with `Sentry.captureException` so
+  one failure cannot starve later scans, an exported `maxDuration`, structured per-scan logging, and a
+  real Sentry Cron Monitor check-in from the route itself — `webpack.automaticVercelMonitors` was inert
+  under Turbopack, so the configured monitor had never worked.
+- **`/api/health`** (OPS-6 half): an unauthenticated liveness probe (DB `select 1` + commit SHA), plus
+  [deploy-and-migrations-runbook.md](../engineering/deploy-and-migrations-runbook.md) (expand/contract
+  rule, forward-only rollback, concurrent-deploy posture) and
+  [incident-response-runbook.md](../engineering/incident-response-runbook.md) (severity ladder, first
+  five minutes, Vercel instant rollback, Neon restore, comms template) — OPS-2 and OPS-4's
+  documentation halves.
+- **`/calendar/[token]` joined `CAPABILITY_ROUTE_PREFIXES`** (OPS-5) — the one bearer route the
+  redaction map had forgotten, so a route error no longer sends a raw feed token to Sentry
+  (`src/app/observability.ts`).
+
+**Conversion, tooling, and the launch stall.**
+
+- **The onboard timezone field no longer hard-blocks a dive shop** (MKT-F2): the full IANA list from
+  `Intl.supportedValuesOf("timeZone")` with curated dive-region optgroups on top, so Bonaire, Cayman,
+  Belize, Roatán, Indonesia, the Maldives and Fiji can complete signup (`src/lib/timezones.ts`).
+- **Switching guides carry an above-the-fold CTA** (MKT-F1) plus a repeat after the scope table, for
+  signed-out buyers too — previously the highest-intent landers had no actionable CTA until ~7
+  sections deep and the mid-page CTA rendered `null`.
+- **Visual diffs are summarized on the PR** (TEST-1): `visual-report` parses reg-suit's `out.json` into
+  a markdown report and a per-PR comment behind a **neutral** check. The owner's decision was warn
+  loudly, never block —
+  [20260802-visual-diff-pr-comment](../architecture/decisions/20260802-visual-diff-pr-comment.md),
+  closing HD-18.
+- **`pnpm gates`** (PROD-C1's tooling only): a report — never a gate, never in `check` — of days since
+  each `human-decisions.md` H-/V- row last moved, reconciled against `rollout.md`'s "next 30 days"
+  list, with ages derived from dated outcomes and `git blame` and printed as `≥ N` when a shallow
+  clone can only bound them (`scripts/gate-freshness.mjs`). With it, the
+  [pilot-kit/](pilot-kit/README.md): design-partner one-pager, Florida call-list template, first-call
+  script, and a printable V-02 run sheet that includes the spray-guard false-trigger measurement
+  (DOM-L3). The call list ships with **no rows** on purpose — ten plausible shop names would get
+  dialled and counted as pipeline. **This measured the launch stall; it did not move it**, and the
+  finding itself stays open in the assessment.
+
+**Defects the reviews found in the new work, all fixed before merge.** Beyond the roll-call and
+returned-trips defects above, `dive-domain-expert` and `security-reviewer` found: the 4:1 intro cap
+applying only to PADI when the reason for it is agency-independent; an over-ratio warning citing a
+standard that didn't apply and prescribing "assign an assistant", which the new rule ignores; erasure
+that the cron would have undone, because `booking_checkouts.customer_email` wasn't scrubbed and
+erasure doesn't cancel bookings, so the next daily tick would have emailed the address the shop had
+just said was destroyed; an activity-log scrub written as `ILIKE '%fullName%'`, so erasing a diver
+named "Al" would have irreversibly redacted most of the shop's history; `restoreBooking` bypassing the
+ratio cap; and a system that refused to record reality on a safety document, since an instructor
+calling in sick couldn't be unassigned if it put the session over ratio. Two more were found outside
+the findings' scope: the offline shell precached only assets named in the shell HTML, so hydration
+could hand a captain the error boundary instead of the roll call; and the new attestation table
+blocked `delete from trips`, which would have broken demo-shop reaping from the daily cron while e2e
+still reported green.
+
+**The offline shell stops claiming an empty phone before it has looked.** `envelope` and `list` both
+start `null` meaning "not looked yet", and every branch read that as "nothing there" — a definitive
+claim about a safety artifact, printed above a status line saying the store was still opening. Worse,
+`manifest-sw.js` caches one document under `/offline-manifest` and replayed it for every offline
+reload whatever `?trip=`/`?checkpoint=` the captain was on, so the reloaded page painted a different
+page than the one requested and only became correct through React's hydration-mismatch error
+recovery — a recoverable hydration error on **every** offline reload. A `storeRead` flag gates both,
+so the server always emits one neutral view, the client hydrates against a match, and the real branch
+is chosen by an ordinary render. This was reached by investigating a flaky storage-eviction e2e test;
+the product bug is real and removed, but the flake was **never reproduced**, so it is not proven
+fixed — tracked as TEST-3 in the assessment.
 
 ## The keyboard focus ring passes WCAG 1.4.11 in every palette (2026-08-02)
 

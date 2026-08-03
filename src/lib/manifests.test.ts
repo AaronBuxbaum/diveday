@@ -3,6 +3,7 @@ import {
   buildTripManifest,
   type CrewAttestation,
   carryForwardNotBoarded,
+  crewRollCallCounts,
   isNotBackAboard,
   isRollCallAccountedFor,
   isRollCallCheckpoint,
@@ -109,7 +110,11 @@ describe("buildTripManifest", () => {
       buildTripManifest({
         trip,
         checkpoint,
-        crew: [{ id: "crew-1", fullName: "Dana Reyes", roles: ["captain"] }],
+        // The captain has her own result too: since
+        // 20260803-per-person-crew-roll-call the count alone no longer closes
+        // the crew half, so this fixture states both halves and the assertion
+        // below stays about the *divers*.
+        crew: [{ id: "crew-1", fullName: "Dana Reyes", roles: ["captain"], rollCall: boardedAt() }],
         crewAttestation: {
           crewAboard: 1,
           crewAssigned: 1,
@@ -360,24 +365,63 @@ describe("rollCallCompleteness — the crew half of the head count (DOM-H1)", ()
     note: null,
   });
 
+  /**
+   * A crew list of `assigned` people, built from the outcomes the checkpoint
+   * cares about. `rollCallCompleteness` takes the **list**, never counts: the
+   * crew fields used to be optional numbers defaulting to 0, so a caller who
+   * supplied the attestation and forgot the per-person figures got
+   * `complete: true` with nobody named and the compiler said nothing (D7).
+   */
+  const crewOf = ({
+    assigned,
+    awaiting = 0,
+    notBackAboard = 0,
+    ashore = 0,
+  }: {
+    assigned: number;
+    awaiting?: number;
+    notBackAboard?: number;
+    ashore?: number;
+  }) =>
+    Array.from({ length: assigned }, (_, index) => {
+      if (index < awaiting) return {};
+      if (index < awaiting + notBackAboard) return { rollCall: notBoardedAt() };
+      if (index < awaiting + notBackAboard + ashore) {
+        return { rollCall: { ...notBoardedAt(), implied: true } };
+      }
+      return { rollCall: boardedAt() };
+    });
+  /** Everyone assigned is aboard — the ordinary case the crew rules ride on. */
+  const allAboard = (assigned: number) => crewOf({ assigned });
+
   it("does not read complete when every diver is counted but no crew attestation exists", () => {
     // The bug, stated as a test: divers all done, checkpoint still open.
     expect(
-      rollCallCompleteness({ totalDivers: 6, awaiting: 0, crewAssigned: 2, crewAttestation: null }),
-    ).toEqual({
+      rollCallCompleteness({
+        checkpoint: "departure",
+        totalDivers: 6,
+        awaiting: 0,
+        notBackAboard: 0,
+        crew: allAboard(2),
+        crewAttestation: null,
+      }),
+    ).toMatchObject({
       complete: false,
       diversAccountedFor: true,
       crewAccountedFor: false,
       reason: "crew_not_attested",
+      crewReason: "crew_not_attested",
     });
   });
 
   it("does not read complete when fewer crew are attested aboard than are assigned", () => {
     expect(
       rollCallCompleteness({
+        checkpoint: "departure",
         totalDivers: 6,
         awaiting: 0,
-        crewAssigned: 3,
+        notBackAboard: 0,
+        crew: allAboard(3),
         crewAttestation: attested(2, 3),
       }),
     ).toMatchObject({ complete: false, crewAccountedFor: false, reason: "crew_short" });
@@ -386,48 +430,88 @@ describe("rollCallCompleteness — the crew half of the head count (DOM-H1)", ()
   it("reads complete only once divers and crew are both accounted for", () => {
     expect(
       rollCallCompleteness({
+        checkpoint: "departure",
         totalDivers: 6,
         awaiting: 0,
-        crewAssigned: 2,
+        notBackAboard: 0,
+        crew: allAboard(2),
         crewAttestation: attested(2),
       }),
-    ).toEqual({
+    ).toMatchObject({
       complete: true,
       diversAccountedFor: true,
       crewAccountedFor: true,
       reason: null,
+      crewReason: null,
     });
   });
 
   it("keeps the diver rules first: an awaiting diver outranks any crew count", () => {
     expect(
       rollCallCompleteness({
+        checkpoint: "departure",
         totalDivers: 6,
         awaiting: 1,
-        crewAssigned: 2,
+        notBackAboard: 0,
+        crew: allAboard(2),
         crewAttestation: attested(2),
       }),
     ).toMatchObject({ complete: false, diversAccountedFor: false, reason: "divers_awaiting" });
     // An empty roster never read complete before this change either.
     expect(
-      rollCallCompleteness({ totalDivers: 0, awaiting: 0, crewAssigned: 2, crewAttestation: null }),
+      rollCallCompleteness({
+        checkpoint: "departure",
+        totalDivers: 0,
+        awaiting: 0,
+        notBackAboard: 0,
+        crew: allAboard(2),
+        crewAttestation: null,
+      }),
     ).toMatchObject({ complete: false, reason: "no_divers" });
   });
 
-  it("treats a trip with zero assigned crew as still needing a human to say “0 of 0”", () => {
+  /**
+   * The crew panel on both manifests reads `crewReason`, never `reason`. With a
+   * diver still awaiting, `reason` is `divers_awaiting`, and a panel keyed off
+   * it would quietly show "nobody has attested" on a boat where a named crew
+   * member has been recorded as not back aboard.
+   */
+  it("states the crew half's own reason even while a diver reason ranks above it", () => {
+    expect(
+      rollCallCompleteness({
+        checkpoint: "after_dive_1",
+        totalDivers: 6,
+        awaiting: 1,
+        notBackAboard: 0,
+        crew: crewOf({ assigned: 2, notBackAboard: 1 }),
+        crewAttestation: attested(2),
+      }),
+    ).toMatchObject({ reason: "divers_awaiting", crewReason: "crew_not_back_aboard" });
+  });
+
+  it("treats a trip with zero assigned crew as still needing a human to say \u201c0 of 0\u201d", () => {
     // The tempting shortcut — "no crew assigned, so nothing to count" — would
     // hand back a silent pass on exactly the trips whose crew data is worst,
     // since an empty assignment list is a scheduling gap rather than evidence
     // that nobody else was aboard.
     expect(
-      rollCallCompleteness({ totalDivers: 4, awaiting: 0, crewAssigned: 0, crewAttestation: null }),
+      rollCallCompleteness({
+        checkpoint: "departure",
+        totalDivers: 4,
+        awaiting: 0,
+        notBackAboard: 0,
+        crew: [],
+        crewAttestation: null,
+      }),
     ).toMatchObject({ complete: false, crewAccountedFor: false, reason: "crew_not_attested" });
     // Said out loud by a named human, it closes.
     expect(
       rollCallCompleteness({
+        checkpoint: "departure",
         totalDivers: 4,
         awaiting: 0,
-        crewAssigned: 0,
+        notBackAboard: 0,
+        crew: [],
         crewAttestation: attested(0),
       }),
     ).toMatchObject({ complete: true, crewAccountedFor: true, reason: null });
@@ -438,9 +522,11 @@ describe("rollCallCompleteness — the crew half of the head count (DOM-H1)", ()
     // rather than riding on a stale "2 of 2".
     expect(
       rollCallCompleteness({
+        checkpoint: "departure",
         totalDivers: 4,
         awaiting: 0,
-        crewAssigned: 3,
+        notBackAboard: 0,
+        crew: allAboard(3),
         crewAttestation: attested(2, 2),
       }),
     ).toMatchObject({ complete: false, reason: "crew_short" });
@@ -449,12 +535,215 @@ describe("rollCallCompleteness — the crew half of the head count (DOM-H1)", ()
   it("accepts more crew aboard than assigned — an extra hand is accounted for, not missing", () => {
     expect(
       rollCallCompleteness({
+        checkpoint: "departure",
         totalDivers: 4,
         awaiting: 0,
-        crewAssigned: 2,
+        notBackAboard: 0,
+        crew: allAboard(2),
         crewAttestation: attested(3, 2),
       }),
     ).toMatchObject({ complete: true, reason: null });
+  });
+
+  /**
+   * Review 20260803, D2. Three crew rostered, Ana calls in sick. The crew mark
+   * her `not_boarded` at departure — the correct thing, and it carries forward
+   * — and attest "2 aboard", which is the true number of bodies on the boat.
+   * Measuring the count against `crew.length` read `crew_short` at every
+   * checkpoint of that trip, forever, and the only exits were typing `3` (a
+   * false statement on a legal document) or deleting Ana from the crew, which
+   * erases her roll-call history. A crew that cannot close an honest count
+   * learns within two trips to type whatever number closes the box.
+   */
+  it("counts against the crew still expected aboard, not everyone rostered", () => {
+    const ashoreAtDeparture = rollCallCompleteness({
+      checkpoint: "departure",
+      totalDivers: 4,
+      awaiting: 0,
+      notBackAboard: 0,
+      crew: crewOf({ assigned: 3, ashore: 1 }),
+      crewAttestation: attested(2, 3),
+    });
+    expect(ashoreAtDeparture.crewCounts).toMatchObject({
+      crewAshore: 1,
+      crewExpectedAboard: 2,
+      crewAwaiting: 0,
+    });
+    expect(ashoreAtDeparture).toMatchObject({
+      complete: true,
+      crewAccountedFor: true,
+      reason: null,
+    });
+    // And it stays closed at every later checkpoint, where her dock result is
+    // carried forward rather than recorded again.
+    expect(
+      rollCallCompleteness({
+        checkpoint: "after_dive_1",
+        totalDivers: 4,
+        awaiting: 0,
+        notBackAboard: 0,
+        crew: crewOf({ assigned: 3, ashore: 1 }),
+        crewAttestation: attested(2, 3),
+      }),
+    ).toMatchObject({ complete: true, reason: null });
+    // Two ashore, one aboard, and a count of 2 is now one body too many to be
+    // short — but one *fewer* than expected still reads short.
+    expect(
+      rollCallCompleteness({
+        checkpoint: "departure",
+        totalDivers: 4,
+        awaiting: 0,
+        notBackAboard: 0,
+        crew: crewOf({ assigned: 3, ashore: 1 }),
+        crewAttestation: attested(1, 3),
+      }),
+    ).toMatchObject({ complete: false, reason: "crew_short" });
+  });
+
+  it("still makes somebody say the number when the whole crew is ashore", () => {
+    // The expected count falls to zero, which is not the same as nothing to
+    // say: "0 aboard" is still a sentence a named human has to state.
+    const crew = crewOf({ assigned: 2, ashore: 2 });
+    expect(
+      rollCallCompleteness({
+        checkpoint: "departure",
+        totalDivers: 4,
+        awaiting: 0,
+        notBackAboard: 0,
+        crew,
+        crewAttestation: null,
+      }),
+    ).toMatchObject({ complete: false, reason: "crew_not_attested" });
+    expect(
+      rollCallCompleteness({
+        checkpoint: "departure",
+        totalDivers: 4,
+        awaiting: 0,
+        notBackAboard: 0,
+        crew,
+        crewAttestation: attested(0, 2),
+      }),
+    ).toMatchObject({ complete: true, reason: null });
+  });
+
+  it("never lets an after-dive “did not come back” shrink the expected count", () => {
+    // The one `not_boarded` that must *not* reconcile: after a dive it means
+    // "did not return to the boat", so the person is still expected aboard and
+    // the checkpoint stays open however the count reads.
+    const counts = crewRollCallCounts("after_dive_1", crewOf({ assigned: 3, notBackAboard: 1 }));
+    expect(counts).toMatchObject({ crewAshore: 0, crewExpectedAboard: 3, crewNotBackAboard: 1 });
+    expect(
+      rollCallCompleteness({
+        checkpoint: "after_dive_1",
+        totalDivers: 4,
+        awaiting: 0,
+        notBackAboard: 0,
+        crew: crewOf({ assigned: 3, notBackAboard: 1 }),
+        crewAttestation: attested(3, 3),
+      }),
+    ).toMatchObject({ complete: false, reason: "crew_not_back_aboard" });
+  });
+
+  /**
+   * DOM-H1, the per-person half (ADR 20260803-per-person-crew-roll-call). A
+   * count says how many; it names nobody. "3 of 3 aboard" cannot tell the boat
+   * that the third body is the deckhand rather than the divemaster who has not
+   * surfaced — so a checkpoint also needs every crew member the trip *names* to
+   * have a result of their own. Both halves stay: the events cover the named
+   * crew, the count covers anyone the assignment list never named.
+   */
+  it("keeps the checkpoint open when a named crew member has no result of their own", () => {
+    expect(
+      rollCallCompleteness({
+        checkpoint: "departure",
+        totalDivers: 4,
+        awaiting: 0,
+        notBackAboard: 0,
+        crew: crewOf({ assigned: 3, awaiting: 1 }),
+        crewAttestation: attested(3),
+      }),
+    ).toMatchObject({ complete: false, crewAccountedFor: false, reason: "crew_awaiting" });
+  });
+
+  it("makes a crew member recorded as not back aboard the loudest reason on the boat", () => {
+    // Ranked above every other crew reason: a human has stated that somebody
+    // who was in the water has not come back. The count being satisfied, or
+    // never taken, does not soften that.
+    expect(
+      rollCallCompleteness({
+        checkpoint: "after_dive_1",
+        totalDivers: 4,
+        awaiting: 0,
+        notBackAboard: 0,
+        crew: crewOf({ assigned: 2, notBackAboard: 1 }),
+        crewAttestation: attested(2),
+      }),
+    ).toMatchObject({ complete: false, crewAccountedFor: false, reason: "crew_not_back_aboard" });
+    expect(
+      rollCallCompleteness({
+        checkpoint: "after_dive_1",
+        totalDivers: 4,
+        awaiting: 0,
+        notBackAboard: 0,
+        crew: crewOf({ assigned: 2, awaiting: 1, notBackAboard: 1 }),
+        crewAttestation: null,
+      }),
+    ).toMatchObject({ complete: false, reason: "crew_not_back_aboard" });
+    // But a diver still in the water outranks it — divers stay first, which is
+    // the ordering the surfaces above have always relied on.
+    expect(
+      rollCallCompleteness({
+        checkpoint: "after_dive_1",
+        totalDivers: 4,
+        awaiting: 0,
+        notBackAboard: 1,
+        crew: crewOf({ assigned: 2, notBackAboard: 1 }),
+        crewAttestation: attested(2),
+      }),
+    ).toMatchObject({ reason: "divers_not_back_aboard", crewReason: "crew_not_back_aboard" });
+  });
+
+  it("names a short count before an untapped button, and closes only when both halves agree", () => {
+    // A human who counted and came up short has *stated* an absence; an
+    // untapped button is a clerical gap. Same ranking as
+    // `divers_not_back_aboard` over `divers_awaiting`.
+    expect(
+      rollCallCompleteness({
+        checkpoint: "departure",
+        totalDivers: 4,
+        awaiting: 0,
+        notBackAboard: 0,
+        crew: crewOf({ assigned: 3, awaiting: 1 }),
+        crewAttestation: attested(2, 3),
+      }),
+    ).toMatchObject({ complete: false, reason: "crew_short" });
+    // Count taken, every named crew member accounted for: closed.
+    expect(
+      rollCallCompleteness({
+        checkpoint: "departure",
+        totalDivers: 4,
+        awaiting: 0,
+        notBackAboard: 0,
+        crew: allAboard(3),
+        crewAttestation: attested(3),
+      }),
+    ).toMatchObject({ complete: true, crewAccountedFor: true, reason: null });
+  });
+
+  it("still needs the count on a trip with named crew who are all accounted for", () => {
+    // Per-person results are stronger evidence about the *named* crew, and
+    // weaker about everyone else — a deckhand nobody rostered has no row to
+    // account for. The count is what covers them, so it is not optional.
+    expect(
+      rollCallCompleteness({
+        checkpoint: "departure",
+        totalDivers: 4,
+        awaiting: 0,
+        notBackAboard: 0,
+        crew: allAboard(2),
+        crewAttestation: null,
+      }),
+    ).toMatchObject({ complete: false, reason: "crew_not_attested" });
   });
 
   /**
@@ -467,13 +756,14 @@ describe("rollCallCompleteness — the crew half of the head count (DOM-H1)", ()
   it("does not let a diver recorded as not back aboard close the checkpoint", () => {
     expect(
       rollCallCompleteness({
+        checkpoint: "after_dive_1",
         totalDivers: 6,
         awaiting: 0,
         notBackAboard: 1,
-        crewAssigned: 2,
+        crew: allAboard(2),
         crewAttestation: attested(2),
       }),
-    ).toEqual({
+    ).toMatchObject({
       complete: false,
       diversAccountedFor: false,
       crewAccountedFor: true,
@@ -487,10 +777,11 @@ describe("rollCallCompleteness — the crew half of the head count (DOM-H1)", ()
     // to hide behind "three still to call".
     expect(
       rollCallCompleteness({
+        checkpoint: "after_dive_1",
         totalDivers: 6,
         awaiting: 3,
         notBackAboard: 1,
-        crewAssigned: 0,
+        crew: [],
         crewAttestation: null,
       }),
     ).toMatchObject({ complete: false, reason: "divers_not_back_aboard" });
@@ -500,7 +791,7 @@ describe("rollCallCompleteness — the crew half of the head count (DOM-H1)", ()
     const withCrew = (crewAttestation: CrewAttestation | null) =>
       buildTripManifest({
         trip,
-        crew: [{ id: "crew-1", fullName: "Dana Reyes", roles: ["captain"] }],
+        crew: [{ id: "crew-1", fullName: "Dana Reyes", roles: ["captain"], rollCall: boardedAt() }],
         crewAttestation,
         divers: [
           {
@@ -527,5 +818,48 @@ describe("rollCallCompleteness — the crew half of the head count (DOM-H1)", ()
       reason: "crew_not_attested",
     });
     expect(withCrew(attested(1)).completeness.complete).toBe(true);
+  });
+
+  /**
+   * `buildTripManifest` derives the crew half from the crew list itself, so a
+   * caller cannot hand it a count that disagrees with the people on the list.
+   */
+  it("derives the crew counts from the crew list, not from a caller-supplied number", () => {
+    const build = (crewRollCall: RollCallRecord | undefined, checkpoint?: "after_dive_1") =>
+      buildTripManifest({
+        trip,
+        checkpoint,
+        crew: [
+          { id: "crew-1", fullName: "Dana Reyes", roles: ["captain"], rollCall: boardedAt() },
+          { id: "crew-2", fullName: "Ana Vidal", roles: ["divemaster"], rollCall: crewRollCall },
+        ],
+        crewAttestation: attested(2),
+        divers: [
+          {
+            bookingId: "booking-1",
+            fullName: "Priya Sharma",
+            email: null,
+            emergencyContactName: null,
+            emergencyContactPhone: null,
+            readiness: { status: "ready", blockers: [] },
+            rentalFit: { state: "own_kit" as const },
+            nitroxRequested: false,
+            checkedIn: true,
+            rollCall: boardedAt(),
+          },
+        ],
+      });
+
+    // The divemaster nobody has tapped keeps it open, even with "2 of 2" said.
+    expect(build(undefined).completeness).toMatchObject({
+      complete: false,
+      reason: "crew_awaiting",
+    });
+    expect(build(boardedAt()).completeness).toMatchObject({ complete: true, reason: null });
+    // And after a dive, "not boarded" against her means she has not come back.
+    expect(build(notBoardedAt(), "after_dive_1").completeness).toMatchObject({
+      complete: false,
+      reason: "crew_not_back_aboard",
+    });
   });
 });

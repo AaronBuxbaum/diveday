@@ -20,7 +20,7 @@ describe("reviewManifestChange", () => {
       recordedDiveCount: 2,
       proposedDiveCount: 1,
       courseRequiresInstructor: true,
-      proposedCrew: [{ roles: ["captain"] }],
+      proposedCrew: [{ shopRoles: ["captain"] }],
       boardingGateChanged: true,
     });
     expect(review.risks.map((risk) => risk.code)).toEqual([
@@ -28,6 +28,37 @@ describe("reviewManifestChange", () => {
       "course_without_instructor",
       "boarding_gate_changed",
     ]);
+  });
+
+  /**
+   * "Has an instructor" is `inWaterCrewRole` (src/lib/crew-roles.ts), the one
+   * definition — never a scan of `person_roles` here. A shop-wide instructor
+   * rostered as *this session's captain* is driving the boat, and a course
+   * session whose only instructor is on the helm has no instructor (review
+   * 20260803, D8).
+   */
+  it("reads the job on this sailing, not the standing role, for the instructor check", () => {
+    const rosteredAsCaptain = reviewManifestChange({
+      courseRequiresInstructor: true,
+      proposedCrew: [{ tripRole: "captain", shopRoles: ["instructor"] }],
+    });
+    expect(rosteredAsCaptain.risks.map((risk) => risk.code)).toContain("course_without_instructor");
+    expect(rosteredAsCaptain.blocking).toBe(true);
+    // Unspecified stays the status quo: shop-wide inference, exactly as before.
+    expect(
+      reviewManifestChange({
+        courseRequiresInstructor: true,
+        proposedCrew: [{ shopRoles: ["instructor"] }],
+      }).blocking,
+    ).toBe(false);
+    // And the roster can never mint a credential: rostering a deckhand as the
+    // instructor buys the session nothing.
+    expect(
+      reviewManifestChange({
+        courseRequiresInstructor: true,
+        proposedCrew: [{ tripRole: "instructor", shopRoles: ["crew"] }],
+      }).blocking,
+    ).toBe(true);
   });
 
   it("keeps an empty crew visible as a non-blocking operational gap", () => {

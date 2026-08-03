@@ -51,7 +51,9 @@ const SOON_WINDOW_MS = 72 * HOUR;
 
 export type TodayActionKind =
   | "roll_call_missing_diver"
+  | "roll_call_missing_crew"
   | "roll_call_unfinished"
+  | "roll_call_crew_unfinished"
   | "roll_call_departure_open"
   | "roll_call_not_started"
   | "medical_review"
@@ -81,40 +83,49 @@ const KIND_SEVERITY: Record<TodayActionKind, number> = {
   // Somebody said so out loud; this is the closest thing the app has to a
   // missing-person report, so nothing outranks it (DOM-H3).
   roll_call_missing_diver: 0,
+  // The same statement about a **crew member**: somebody tapped "not back
+  // aboard" against a named divemaster, captain or deckhand. It sits beside
+  // the diver row rather than below the clerical ones because the crew are the
+  // people most reliably in the water — the DM who goes back down for a lost
+  // weight belt is the scenario, and before this it reached no surface at all
+  // (review 20260803, D1).
+  roll_call_missing_crew: 1,
   // An after-dive head count that never closed: nobody said the diver is
   // missing, but nobody said they are aboard either. Every other kind below
-  // describes someone who cannot board; these two describe someone who may
-  // still be in the water.
-  roll_call_unfinished: 1,
-  medical_review: 2,
-  readiness_unavailable: 3,
+  // describes someone who cannot board; these describe someone who may still
+  // be in the water.
+  roll_call_unfinished: 2,
+  /** The same, for a crew member who boarded and has no result after a dive. */
+  roll_call_crew_unfinished: 3,
+  medical_review: 4,
+  readiness_unavailable: 5,
   // An unconfirmed identity can hide a missing medical/cert for a different
   // human, so it ranks with the other hard safety gates, above card/waiver work.
-  identity: 4,
-  certification: 5,
-  requirements: 6,
-  waiver: 7,
-  instructor_missing: 8,
-  nitrox_gate: 9,
+  identity: 6,
+  certification: 7,
+  requirements: 8,
+  waiver: 9,
+  instructor_missing: 10,
+  nitrox_gate: 11,
   // The dock-side counts. An unfinished *departure* count is paperwork — the
   // boat is home and nobody was ever unaccounted for in the water — so it
-  // deliberately sits far below the two after-dive kinds above. Collapsing the
+  // deliberately sits far below the after-dive kinds above. Collapsing the
   // two into one row is what turns the red row into wallpaper (DOM-H3).
-  roll_call_departure_open: 10,
-  roll_call_not_started: 11,
-  dive_prep: 12,
-  payment: 13,
-  email_delivery: 14,
-  waitlist_seat: 15,
+  roll_call_departure_open: 12,
+  roll_call_not_started: 13,
+  dive_prep: 14,
+  payment: 15,
+  email_delivery: 16,
+  waitlist_seat: 17,
   // A revenue opportunity, not anything blocking or dock-settleable — ranks
   // with the other purely-commercial rows.
-  last_minute_fill: 16,
+  last_minute_fill: 18,
   // Dock-settleable and never a boarding blocker, so it rides at the bottom.
-  emergency_contact: 17,
+  emergency_contact: 19,
   // Platform-health chores (task 157) — never a departure blocker, so they
   // sink below every per-diver row when severity is what breaks a tie.
-  stuck_payment_operation: 18,
-  failed_photo_deletion: 19,
+  stuck_payment_operation: 20,
+  failed_photo_deletion: 21,
 };
 
 /**
@@ -125,7 +136,9 @@ const KIND_SEVERITY: Record<TodayActionKind, number> = {
  */
 export const ACTION_KIND_META = {
   roll_call_missing_diver: { tone: "danger" },
+  roll_call_missing_crew: { tone: "danger" },
   roll_call_unfinished: { tone: "danger" },
+  roll_call_crew_unfinished: { tone: "danger" },
   // Warning, not danger, and on purpose: an unfinished dock count is missing
   // paperwork. Toning it the same as a diver who never came back is what
   // teaches crews to stop reading the red rows.
@@ -152,44 +165,64 @@ export const ACTION_KIND_META = {
 /**
  * Why one trip's head count is not closed (DOM-H3). Codes, not sentences: the
  * evidence is gathered in `src/db/today.ts` and the words come from
- * `src/i18n/today-labels.ts`. The four are deliberately *not* interchangeable —
+ * `src/i18n/today-labels.ts`. They are deliberately *not* interchangeable —
  * collapsing them into one row is the defect this type exists to prevent:
  *
  * - `missing_diver` — somebody tapped "not back aboard" at an after-dive
  *   checkpoint. A human said a diver did not return to the boat. Loudest row
  *   the app has.
+ * - `missing_crew` — the same statement about a named **crew member** (ADR
+ *   20260803-per-person-crew-roll-call). The DM who went back down for a lost
+ *   weight belt and has not surfaced is exactly this row, and until it existed
+ *   the manifest went red while Today and the schedule board said nothing —
+ *   which made the glossary's "an unclosed head count is chased, not merely
+ *   displayed" false for the people most reliably in the water (review
+ *   20260803, D1).
  * - `after_dive_uncounted` — an after-dive checkpoint where a diver who
  *   *boarded at departure* still has no result. Nobody said they are missing;
  *   nobody said they are aboard either.
+ * - `crew_uncounted` — the same, for a crew member who boarded at departure.
  * - `departure_uncounted` — the dock count never finished. The boat is home and
  *   nobody was ever unaccounted for in the water: this is paperwork.
  * - `no_roll_call` — the trip has no roll-call events at all. That is a shop
  *   not using the feature, not a lost diver — but reading it as fine would be a
  *   false all-clear, so it is still stated, quietly.
+ *
+ * The two crew kinds count the same **population rule** the diver kinds do: only
+ * somebody who actually boarded is in the water. A shop that never taps a crew
+ * roll call therefore raises no crew rows at all, rather than a danger-toned
+ * row on every trip it ever ran — which is the failure mode that stops the red
+ * rows being read.
  */
 export type RollCallGapReason =
   | "missing_diver"
+  | "missing_crew"
   | "after_dive_uncounted"
+  | "crew_uncounted"
   | "departure_uncounted"
   | "no_roll_call";
 
 /** Which queue row each gap becomes. One place, so tone and severity can't drift. */
 export const ROLL_CALL_GAP_KINDS: Record<RollCallGapReason, TodayActionKind> = {
   missing_diver: "roll_call_missing_diver",
+  missing_crew: "roll_call_missing_crew",
   after_dive_uncounted: "roll_call_unfinished",
+  crew_uncounted: "roll_call_crew_unfinished",
   departure_uncounted: "roll_call_departure_open",
   no_roll_call: "roll_call_not_started",
 };
 
 /**
- * How urgent each gap is. The two after-dive kinds are pinned to the top band —
- * there is no "before it sails" left to derive from, and a person may be in the
- * water. The dock-count kinds land in "before today's boats": real work, not an
- * emergency.
+ * How urgent each gap is. The four after-dive kinds — divers' and crew's alike
+ * — are pinned to the top band: there is no "before it sails" left to derive
+ * from, and a person may be in the water. The dock-count kinds land in "before
+ * today's boats": real work, not an emergency.
  *
  * A `stale` gap (one the shop never closed and can no longer settle on the
  * dock) drops a band rather than disappearing — see `ROLL_CALL_RESIDUE_MS` in
- * `src/db/today.ts`. A signal that self-clears is not a signal.
+ * `src/db/today.ts`. A signal that self-clears is not a signal. Crew gaps age
+ * on exactly the same 48h dock-work / 30-day residue schedule divers' do; a
+ * crew member is not less findable than a customer.
  */
 export function rollCallGapUrgency(reason: RollCallGapReason, stale: boolean): TodayUrgency {
   if (reason === "departure_uncounted" || reason === "no_roll_call") return "now";

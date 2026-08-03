@@ -274,6 +274,13 @@ describe("offline manifest policy", () => {
         diversAccountedFor: true,
         crewAccountedFor: false,
         reason: "crew_not_attested",
+        crewReason: "crew_not_attested",
+        crewCounts: {
+          crewAwaiting: 0,
+          crewNotBackAboard: 0,
+          crewAshore: 0,
+          crewExpectedAboard: 0,
+        },
       },
       divers: [
         {
@@ -345,6 +352,13 @@ describe("offline manifest policy", () => {
         diversAccountedFor: false,
         crewAccountedFor: false,
         reason: "divers_awaiting",
+        crewReason: "crew_not_attested",
+        crewCounts: {
+          crewAwaiting: 0,
+          crewNotBackAboard: 0,
+          crewAshore: 0,
+          crewExpectedAboard: 0,
+        },
       },
       divers: [
         {

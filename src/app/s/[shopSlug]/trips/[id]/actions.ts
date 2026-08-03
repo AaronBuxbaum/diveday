@@ -485,7 +485,18 @@ export async function bookSpot(
         embed,
         promotionCode:
           tripPromo?.stripePromotionCodeId ?? shopPromo?.stripePromotionCodeId ?? undefined,
-        shopPromo: shopPromo ? { id: shopPromo.id, code: shopPromo.code } : undefined,
+        // Whichever of the two matched, handed on so the checkout row can
+        // snapshot the discount it is actually applying (PAY-M3).
+        tripPromo: tripPromo
+          ? {
+              id: tripPromo.id,
+              code: tripPromo.code,
+              discountPercent: tripPromo.discountPercent,
+            }
+          : undefined,
+        shopPromo: shopPromo
+          ? { id: shopPromo.id, code: shopPromo.code, discountPercent: shopPromo.discountPercent }
+          : undefined,
         gearLines,
       })
     : null;
@@ -513,7 +524,8 @@ async function startCheckoutUrl(
     customerEmail: string;
     embed?: boolean;
     promotionCode?: string;
-    shopPromo?: { id: string; code: string };
+    tripPromo?: { id: string; code: string; discountPercent: number };
+    shopPromo?: { id: string; code: string; discountPercent: number };
     /** Priced gear a diver chose at booking, threaded straight to `startBookingCheckout`. */
     gearLines?: Array<{ bookingId: string; description: string; amountCents: number }>;
   },
@@ -534,6 +546,7 @@ async function startCheckoutUrl(
     successUrl: returnBase,
     cancelUrl: `${returnBase}&pay=cancelled`,
     promotionCode: input.promotionCode,
+    tripPromo: input.tripPromo,
     shopPromo: input.shopPromo,
     gearLines: input.gearLines,
     describeLine: ({ isDeposit, tripTitle }) =>

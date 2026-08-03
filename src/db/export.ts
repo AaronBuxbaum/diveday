@@ -38,6 +38,7 @@ import {
   recapPhotos,
   rentalFitProfiles,
   rollCallCrewAttestations,
+  rollCallCrewEvents,
   rollCallEvents,
   shopPromoCodes,
   shops,
@@ -331,6 +332,14 @@ export async function loadShopExportBundleInput(
         .from(rollCallCrewAttestations)
         .where(eq(rollCallCrewAttestations.shopId, shopId))
         .orderBy(asc(rollCallCrewAttestations.occurredAt), asc(rollCallCrewAttestations.id));
+
+      // And the per-person half: who, not just how many. Same oldest-first
+      // ordering, same append-only replay rule as the diver events.
+      const crewRollCallRows = await tx
+        .select()
+        .from(rollCallCrewEvents)
+        .where(eq(rollCallCrewEvents.shopId, shopId))
+        .orderBy(asc(rollCallCrewEvents.occurredAt), asc(rollCallCrewEvents.id));
 
       const certificationRows = await tx
         .select()
@@ -819,7 +828,15 @@ export async function loadShopExportBundleInput(
         },
         {
           file: "trip_assignments.csv",
-          header: ["trip_id", "trip_title", "trip_starts_at", "person_id", "person_name", "roles"],
+          header: [
+            "trip_id",
+            "trip_title",
+            "trip_starts_at",
+            "person_id",
+            "person_name",
+            "roles",
+            "trip_role",
+          ],
           rows: assignmentRows.map((row) => [
             row.tripId,
             tripTitle.get(row.tripId),
@@ -827,6 +844,7 @@ export async function loadShopExportBundleInput(
             row.personId,
             personName.get(row.personId),
             personRolesText(row.personId),
+            row.tripRole,
           ]),
           note: EXPORT_FILE_NOTES["trip_assignments.csv"],
         },
@@ -1051,6 +1069,40 @@ export async function loadShopExportBundleInput(
             row.createdAt,
           ]),
           note: EXPORT_FILE_NOTES["roll_call_crew_attestations.csv"],
+        },
+        {
+          file: "roll_call_crew_events.csv",
+          header: [
+            "id",
+            "trip_id",
+            "trip_title",
+            "trip_starts_at",
+            "person_id",
+            "person_name",
+            "status",
+            "checkpoint",
+            "recorded_by_person_id",
+            "recorded_by_name",
+            "note",
+            "occurred_at",
+            "created_at",
+          ],
+          rows: crewRollCallRows.map((row) => [
+            row.id,
+            row.tripId,
+            tripTitle.get(row.tripId),
+            tripStartsAt.get(row.tripId),
+            row.personId,
+            personName.get(row.personId),
+            row.status,
+            row.checkpoint,
+            row.recordedByPersonId,
+            personName.get(row.recordedByPersonId),
+            row.note,
+            row.occurredAt,
+            row.createdAt,
+          ]),
+          note: EXPORT_FILE_NOTES["roll_call_crew_events.csv"],
         },
         {
           file: "waiver_templates.csv",
@@ -1677,6 +1729,12 @@ export async function loadShopExportCounts(
     ),
     "roll_call_events.csv": await countOf(
       db.select({ n: count() }).from(rollCallEvents).where(eq(rollCallEvents.shopId, shopId)),
+    ),
+    "roll_call_crew_events.csv": await countOf(
+      db
+        .select({ n: count() })
+        .from(rollCallCrewEvents)
+        .where(eq(rollCallCrewEvents.shopId, shopId)),
     ),
     "roll_call_crew_attestations.csv": await countOf(
       db

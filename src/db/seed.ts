@@ -1,5 +1,5 @@
 import { hash } from "bcryptjs";
-import { and, asc, eq, inArray, lt, ne } from "drizzle-orm";
+import { and, asc, eq, inArray, lt, ne, or } from "drizzle-orm";
 import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate, nowMs } from "@/lib/clock";
 import { courseSlug } from "@/lib/courses";
@@ -42,9 +42,11 @@ import {
   personCourtesyEmailUnsubscribeTokens,
   personRoles,
   priorVisits,
+  processorErasureObligations,
   recapPhotos,
   rentalFitProfiles,
   rollCallCrewAttestations,
+  rollCallCrewEvents,
   rollCallEvents,
   shopPromoCodes,
   shopPromoRedemptions,
@@ -52,6 +54,7 @@ import {
   shops,
   specialtyCertifications,
   staffShifts,
+  type TripAssignmentRole,
   tips,
   tripAssignments,
   tripDives,
@@ -1924,12 +1927,78 @@ export async function seedDemoSchedule(
   );
   const captainId = crewByRole.get("captain");
   const divemasterId = crewByRole.get("divemaster");
+  /**
+   * The job each person is doing on this sailing, not just who is aboard
+   * (DOM-M3, ADR 20260803-per-trip-crew-role). Deliberately *varied*: a seed
+   * where every `trip_role` simply repeats that person's own shop-wide role
+   * demonstrates nothing about what the column changed, and — worse — leaves
+   * the `null` path, which is the state 100% of production rows are in,
+   * unexercised by any seeded row.
+   *
+   * So the demo shop carries, on purpose:
+   *
+   * - a charter where the **divemaster is driving** (`captain`) and the captain
+   *   is on the lines (`crew`): the DOM-M3 case itself. Keiko is still a
+   *   divemaster and still aboard; she is not supervising anybody in the water,
+   *   so she is not an in-water certified assistant on that sailing.
+   * - a charter with **no roles at all**: exactly what every row written before
+   *   the column existed looks like, counted by shop-wide inference, unchanged.
+   * - a course session with a **captain** aboard. Before this the seeded course
+   *   session had exactly one person on it — a boat with nobody driving it.
+   * - a course session where the **divemaster is rostered as its instructor**:
+   *   the roster is a scheduling document and cannot mint a credential, so she
+   *   still counts as a certified assistant and the session's real instructor
+   *   is still the one carrying it.
+   *
+   * None of this moves a seeded ratio: a captain and a deckhand were already
+   * worth nothing to it, and the divemaster-as-instructor still counts as the
+   * assistant she is qualified to be.
+   */
+  type CrewRow = { tripId: string; personId: string; tripRole: TripAssignmentRole | null };
+  let charterIndex = 0;
   await db.insert(tripAssignments).values(
-    tripRows.flatMap((trip) => {
-      if (trip.courseId) return [{ tripId: trip.id, personId: instructor.id }];
+    tripRows.flatMap((trip): CrewRow[] => {
+      if (trip.courseId) {
+        return [
+          {
+            tripId: trip.id,
+            personId: instructor.id,
+            tripRole: "instructor" as TripAssignmentRole,
+          },
+          ...(captainId && trip.courseId === discoverCourse.id
+            ? [{ tripId: trip.id, personId: captainId, tripRole: "captain" as TripAssignmentRole }]
+            : []),
+          ...(divemasterId && openWaterCourse && trip.courseId === openWaterCourse.id
+            ? [
+                {
+                  tripId: trip.id,
+                  personId: divemasterId,
+                  tripRole: "instructor" as TripAssignmentRole,
+                },
+              ]
+            : []),
+        ];
+      }
+      const nth = charterIndex++;
+      // nth 0: the divemaster is driving. nth 1: nobody has said. Everyone
+      // else: the ordinary roster, each doing the job they hold.
+      const captainRole: TripAssignmentRole | null =
+        nth === 0 ? "crew" : nth === 1 ? null : "captain";
+      const divemasterRole: TripAssignmentRole | null =
+        nth === 0 ? "captain" : nth === 1 ? null : "divemaster";
       return [
-        ...(captainId ? [{ tripId: trip.id, personId: captainId }] : []),
-        ...(divemasterId ? [{ tripId: trip.id, personId: divemasterId }] : []),
+        ...(captainId
+          ? [{ tripId: trip.id, personId: captainId, tripRole: captainRole } satisfies CrewRow]
+          : []),
+        ...(divemasterId
+          ? [
+              {
+                tripId: trip.id,
+                personId: divemasterId,
+                tripRole: divemasterRole,
+              } satisfies CrewRow,
+            ]
+          : []),
       ];
     }),
   );
@@ -3821,13 +3890,43 @@ async function seedMoreTrips(
     }),
   );
 
+  // Same deliberate variety as the demo shop above (see the long note there):
+  // the first charter's crew carry **no** per-trip role, which is the state
+  // every row written before the column existed is in, and the one no seeded
+  // row exercised at all.
+  type ScenarioCrewRow = { tripId: string; personId: string; tripRole: TripAssignmentRole | null };
+  let scenarioCharterIndex = 0;
   await db.insert(tripAssignments).values(
-    insertedTrips.flatMap((trip, i) => {
+    insertedTrips.flatMap((trip, i): ScenarioCrewRow[] => {
       const def = tripDefs[i];
-      if (def.courseTitle) return [{ tripId: trip.id, personId: instructorId }];
+      if (def.courseTitle) {
+        return [
+          { tripId: trip.id, personId: instructorId, tripRole: "instructor" as TripAssignmentRole },
+          ...(captainId
+            ? [{ tripId: trip.id, personId: captainId, tripRole: "captain" as TripAssignmentRole }]
+            : []),
+        ];
+      }
+      const unspecified = scenarioCharterIndex++ === 0;
       return [
-        ...(captainId ? [{ tripId: trip.id, personId: captainId }] : []),
-        ...(divemasterId ? [{ tripId: trip.id, personId: divemasterId }] : []),
+        ...(captainId
+          ? [
+              {
+                tripId: trip.id,
+                personId: captainId,
+                tripRole: unspecified ? null : ("captain" as TripAssignmentRole),
+              },
+            ]
+          : []),
+        ...(divemasterId
+          ? [
+              {
+                tripId: trip.id,
+                personId: divemasterId,
+                tripRole: unspecified ? null : ("divemaster" as TripAssignmentRole),
+              },
+            ]
+          : []),
       ];
     }),
   );
@@ -4121,6 +4220,7 @@ export async function resetDemoSchedule(
   // order left behind blocks the trips/bookings delete and dirties the next
   // test's fixture (regression tests live in seed.test.ts).
   await db.delete(rollCallCrewAttestations).where(eq(rollCallCrewAttestations.shopId, shopId));
+  await db.delete(rollCallCrewEvents).where(eq(rollCallCrewEvents.shopId, shopId));
   await db.delete(rollCallEvents).where(eq(rollCallEvents.shopId, shopId));
   await db.delete(rentalFitProfiles).where(eq(rentalFitProfiles.shopId, shopId));
   // References people, so it clears before them like any other people-scoped row.
@@ -4257,6 +4357,19 @@ export async function resetDemoSchedule(
       await db.delete(accountTokens).where(inArray(accountTokens.userAccountId, purgeAccountIds));
     }
     await db.delete(userAccounts).where(inArray(userAccounts.personId, purgeIds));
+    // A processor-erasure obligation names the erased person and the staff
+    // member who discharged it (ADR 20260803-processor-erasure-obligations), so
+    // an erasure run against the demo shop leaves a row pointing at a person
+    // this purge is about to delete — the same FK chain the login rows above
+    // walk, with the same consequence if it is missed.
+    await db
+      .delete(processorErasureObligations)
+      .where(
+        or(
+          inArray(processorErasureObligations.personId, purgeIds),
+          inArray(processorErasureObligations.dischargedByPersonId, purgeIds),
+        ),
+      );
     await db.delete(people).where(inArray(people.id, purgeIds));
   }
 
@@ -4356,6 +4469,7 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(tips).where(eq(tips.shopId, shopId));
   await db.delete(bookingCapabilities).where(eq(bookingCapabilities.shopId, shopId));
   await db.delete(rollCallCrewAttestations).where(eq(rollCallCrewAttestations.shopId, shopId));
+  await db.delete(rollCallCrewEvents).where(eq(rollCallCrewEvents.shopId, shopId));
   await db.delete(rollCallEvents).where(eq(rollCallEvents.shopId, shopId));
   await db.delete(recapPhotos).where(eq(recapPhotos.shopId, shopId));
   await db.delete(tripReviews).where(eq(tripReviews.shopId, shopId));
@@ -4407,6 +4521,13 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(waiverTemplates).where(eq(waiverTemplates.shopId, shopId));
   await db.delete(shopStripeAccounts).where(eq(shopStripeAccounts.shopId, shopId));
   await db.delete(mediaDeletionAttempts).where(eq(mediaDeletionAttempts.shopId, shopId));
+  // References both shops and people (ADR 20260803-processor-erasure-obligations),
+  // so it must go before the people/shops deletes below or reaping a demo shop
+  // whose visitor tried the erasure flow FK-violates and strands the shop past
+  // its TTL — the same class of bug the account-tokens comment below walks.
+  await db
+    .delete(processorErasureObligations)
+    .where(eq(processorErasureObligations.shopId, shopId));
 
   if (personIds.length > 0) {
     // Account tokens reference user_accounts, one layer further down the same

@@ -7,7 +7,15 @@ on:
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  # Superseded PR pushes are pure waste and get cancelled. Pushes to main are
+  # not: `visual-report` is what publishes that commit's screenshot snapshot to
+  # S3, and reg-suit resolves a baseline by asking S3 for the *parent commit's*
+  # snapshot (ADR 20260729-reg-suit-visual-regression). Cancelling an in-flight
+  # main run because a second merge landed leaves that commit with no published
+  # snapshot, so the next merge's baseline lookup silently degrades to "no
+  # baseline" and reports every screenshot as new — the exact quiet failure the
+  # visual pipeline is built to avoid.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   repo-safeguards:
@@ -132,8 +140,12 @@ jobs:
       - uses: ./.github/actions/playwright-shell
       - name: Run non-visual Playwright tests
         run: |
+          # Recursive, like playwright.config.ts's own discovery under testDir
+          # (./e2e): a flat e2e/*.spec.ts glob would silently skip any spec in a
+          # subdirectory here while it still ran locally.
+          shopt -s globstar nullglob
           spec_files=()
-          for spec in e2e/*.spec.ts; do
+          for spec in e2e/**/*.spec.ts; do
             if [ "$spec" != "e2e/visual.spec.ts" ]; then
               spec_files+=("$spec")
             fi
@@ -220,6 +232,12 @@ jobs:
   visual-report:
     name: reg-suit visual regression
     needs: visual
+    # `needs:` alone skips this job outright whenever any visual shard fails,
+    # which is precisely when a reviewer most needs to hear that no pixel was
+    # checked — and it silently defeats the `!cancelled()` on the summary step
+    # below, which was written to speak on exactly that path. Run whenever the
+    # run wasn't cancelled instead; the steps decide what is still meaningful.
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     # The only job in this workflow that writes anything back to GitHub: the
@@ -271,12 +289,22 @@ jobs:
       # (actions/upload-artifact refuses to let two jobs write the same
       # artifact name); merge them back into one directory here so reg-suit
       # sees the full set, exactly as if a single job had captured it all.
+      #
+      # Both of these steps require *every* shard to have succeeded, because a
+      # failed shard uploads no artifact at all: comparing what's left would
+      # report that shard's surfaces as deleted, and `reg-suit run` publishes
+      # the actual set as this commit's S3 snapshot, so a partial set becomes
+      # the next commit's baseline and reports the missing surfaces as new
+      # forever after. The summary step below still runs on that path (its
+      # `!cancelled()`) and says, in those words, that nothing was compared.
       - uses: actions/download-artifact@v8
+        if: ${{ needs.visual.result == 'success' }}
         with:
           pattern: visual-screenshots-*
           path: e2e/screenshots
           merge-multiple: true
       - name: Run reg-suit visual regression
+        if: ${{ needs.visual.result == 'success' }}
         run: pnpm visual:compare
         env:
           REG_SUIT_S3_BUCKET_NAME: ${{ secrets.REG_SUIT_S3_BUCKET_NAME }}

@@ -30,6 +30,18 @@
  *      (ADR 20260723-media-validation-and-deletion), so the object itself is
  *      retired by the same durable retry every other blob deletion uses rather
  *      than by a second, parallel mechanism invented here.
+ *   4. **The processor is erased too, and what cannot be is recorded.** The
+ *      Stripe customer objects the diver's orders point at are deleted through
+ *      `DELETE /v1/customers` on the shop's connected account; the name/email
+ *      snapshot Stripe keeps on each finalized invoice has no API behind it and
+ *      is recorded as an obligation the shop discharges through Stripe's own
+ *      data-deletion request (`./processor-erasure`,
+ *      ADR 20260803-processor-erasure-obligations). Both go through one ledger,
+ *      so an erasure that is not finished at the processor says so out loud.
+ *
+ *      The Stripe call runs **after** the transaction below commits and can
+ *      never fail it. An outage or a revoked Connect token leaves a visible,
+ *      retryable `owed` row — it does not undo an erasure a diver asked for.
  *
  * The scrub is one transaction. A partial erasure — identity gone from
  * `people` but medical answers still sitting in `waiver_records` — is the worst
@@ -41,6 +53,7 @@ import { ANONYMIZED_PERSON_NAME, REDACTED_TEXT, redactedUniqueValue } from "@/li
 import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
+import { type CustomerProvider, customerProviderFromEnvironment } from "@/lib/payments/customers";
 import {
   computeWaiverIntegrityHash,
   WAIVER_INTEGRITY_VERSION_ERASED,
@@ -49,6 +62,8 @@ import { createWaiverToken, hashWaiverToken } from "@/lib/waivers";
 import { canPersonErasePersonalData } from "./authz";
 import type { AppDb, AppTransaction } from "./client";
 import { queueMediaDeletion } from "./media-deletions";
+import { attemptProcessorErasures, recordProcessorErasureObligations } from "./processor-erasure";
+import type { ProcessorErasureObligation } from "./schema";
 import {
   accountTokens,
   activityEvents,
@@ -105,6 +120,15 @@ export type AnonymizeDiverResult =
       alreadyAnonymized: boolean;
       /** Blob objects handed to the media-deletion ledger by this call. */
       queuedMediaDeletions: number;
+      /** Stripe customer objects this call deleted (or found already deleted). */
+      dischargedProcessorErasures: number;
+      /**
+       * Processor-side records still owed after this call: an invoice snapshot
+       * only Stripe's data-deletion request can clear, or a customer delete that
+       * failed and is waiting on a retry. Non-zero means the erasure is
+       * genuinely incomplete at the processor and the reports panel says so.
+       */
+      owedProcessorErasures: number;
     }
   | { ok: false; reason: AnonymizeDiverRefusal };
 
@@ -206,13 +230,27 @@ function logFuzzyMatch(
  * Erase one diver. Idempotent: a second call on an already-erased record
  * reports success without touching anything, so a double-submitted form or a
  * retried job can never half-apply a second pass.
+ *
+ * Two phases, in this order and never the other:
+ *
+ *   1. **One transaction** scrubs every local table and writes the processor
+ *      obligations. All of it lands or none of it does.
+ *   2. **After that transaction commits**, the Stripe customer deletes are
+ *      attempted. Nothing in phase 2 can fail phase 1 — a failed delete leaves
+ *      an `owed` row for the retry, and the erasure the diver asked for stands
+ *      either way.
+ *
+ * `customerProvider` is injectable for tests; it defaults to the environment's,
+ * which is the disabled provider when no Stripe key is configured (and that
+ * records "stripe not configured" on the row rather than pretending success).
  */
 export async function anonymizeDiver(
   db: AppDb,
   input: { shopId: string; personId: string; actorPersonId: string },
+  options: { customerProvider?: CustomerProvider } = {},
 ): Promise<AnonymizeDiverResult> {
   const now = nowDate();
-  return db.transaction(async (tx) => {
+  const outcome = await db.transaction(async (tx) => {
     const [person] = await tx
       .select()
       .from(people)
@@ -227,7 +265,12 @@ export async function anonymizeDiver(
     }
     if (input.actorPersonId === input.personId) return { ok: false, reason: "self" } as const;
     if (person.anonymizedAt) {
-      return { ok: true, alreadyAnonymized: true, queuedMediaDeletions: 0 } as const;
+      return {
+        ok: true,
+        alreadyAnonymized: true,
+        queuedMediaDeletions: 0,
+        raisedProcessorErasures: [] as ProcessorErasureObligation[],
+      } as const;
     }
 
     const roleRows = await tx
@@ -238,7 +281,7 @@ export async function anonymizeDiver(
       return { ok: false, reason: "staff_member" } as const;
     }
 
-    const queuedMediaDeletions = await scrub(tx, {
+    const result = await scrub(tx, {
       shopId: input.shopId,
       personId: input.personId,
       actorPersonId: input.actorPersonId,
@@ -249,8 +292,34 @@ export async function anonymizeDiver(
       now,
     });
 
-    return { ok: true, alreadyAnonymized: false, queuedMediaDeletions } as const;
+    return { ok: true, alreadyAnonymized: false, ...result } as const;
   });
+
+  if (!outcome.ok) return outcome;
+
+  // Phase 2. The transaction above has committed; the diver is erased locally
+  // whatever happens from here. Every failure is recorded on its own row and
+  // reported as "still owed" — none of it throws, because there is nothing left
+  // to roll back and a throw would only make a completed erasure look failed.
+  const { discharged, stillOwed } = await attemptProcessorErasures(
+    db,
+    outcome.raisedProcessorErasures,
+    options.customerProvider ?? customerProviderFromEnvironment(),
+  );
+  if (stillOwed > 0) {
+    log("anonymize.processor_erasure_owed", "warn", {
+      shopId: input.shopId,
+      personId: input.personId,
+      owed: stillOwed,
+    });
+  }
+  return {
+    ok: true,
+    alreadyAnonymized: outcome.alreadyAnonymized,
+    queuedMediaDeletions: outcome.queuedMediaDeletions,
+    dischargedProcessorErasures: discharged,
+    owedProcessorErasures: stillOwed,
+  };
 }
 
 type ScrubContext = {
@@ -264,7 +333,13 @@ type ScrubContext = {
   now: Date;
 };
 
-async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<number> {
+type ScrubResult = {
+  queuedMediaDeletions: number;
+  /** The obligation rows this scrub created — the caller attempts them post-commit. */
+  raisedProcessorErasures: ProcessorErasureObligation[];
+};
+
+async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult> {
   const { shopId, personId, now } = ctx;
 
   const bookingRows = await tx
@@ -655,17 +730,54 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<number> {
   }
 
   // --- orders --------------------------------------------------------------
-  // `stripe_customer_id` and `stripe_invoice_id` are NOT NULL pointers into
-  // Stripe's own records, which the shop must keep for tax and chargeback and
-  // which DiveDay cannot rewrite — see the ADR's residuals. What DiveDay *can*
-  // close is the pair of hosted document links: Stripe's hosted invoice page
-  // and invoice PDF are publicly reachable URLs that render the customer's name
-  // and email, so leaving them in the row leaves the diver's details one click
-  // away from an "erased" record.
+  // `stripe_customer_id` and `stripe_invoice_id` are NOT NULL pointers into the
+  // shop's own Stripe account and stay on the row — the local record of which
+  // objects the order maps to is what makes the processor-side work findable at
+  // all. What this statement closes is the pair of hosted document links:
+  // Stripe's hosted invoice page and invoice PDF are publicly reachable URLs
+  // that render the customer's name and email, so leaving them here leaves the
+  // diver's details one click away from an "erased" record.
+  const orderRows = await tx
+    .select({
+      stripeAccountId: orders.stripeAccountId,
+      stripeCustomerId: orders.stripeCustomerId,
+      stripeInvoiceId: orders.stripeInvoiceId,
+    })
+    .from(orders)
+    .where(and(eq(orders.shopId, shopId), eq(orders.personId, personId)));
   await tx
     .update(orders)
     .set({ hostedInvoiceUrl: null, invoicePdfUrl: null })
     .where(and(eq(orders.shopId, shopId), eq(orders.personId, personId)));
+
+  // Everything those orders point at *at Stripe* becomes a row in the erasure
+  // ledger (ADR 20260803-processor-erasure-obligations): the customer objects,
+  // which DiveDay deletes itself once this transaction commits, and the
+  // finalized invoices, whose name/email snapshot no API rewrites and which the
+  // shop clears through Stripe's own data-deletion request.
+  //
+  // Recorded here, attempted after — writing the row inside the transaction is
+  // what makes the obligation durable against a crash a millisecond later;
+  // making the *call* here would put a third-party round trip inside the
+  // erasure transaction and let a Stripe outage roll back the scrub. Each
+  // order's own `stripe_account_id` travels with the row rather than the shop's
+  // current account, the same discipline `refundOrder` uses.
+  const raisedProcessorErasures = await recordProcessorErasureObligations(tx, {
+    shopId,
+    personId,
+    targets: [
+      ...orderRows.map((row) => ({
+        target: "stripe_customer" as const,
+        externalId: row.stripeCustomerId,
+        stripeAccountId: row.stripeAccountId,
+      })),
+      ...orderRows.map((row) => ({
+        target: "stripe_invoice_snapshot" as const,
+        externalId: row.stripeInvoiceId,
+        stripeAccountId: row.stripeAccountId,
+      })),
+    ],
+  });
 
   // --- the checkout's own copy of the diver's address ----------------------
   // `booking_checkouts.customer_email` is the same class of un-normalized PII
@@ -740,7 +852,16 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<number> {
           bookingId: bookingCheckoutBookings.bookingId,
         })
         .from(bookingCheckoutBookings)
-        .where(inArray(bookingCheckoutBookings.checkoutId, coveringIds));
+        // Shop-scoped like every other read in this file. A checkout's links
+        // are same-shop by construction and `coveringIds` was itself resolved
+        // under the shop scope, so this changes no result today — it is here so
+        // the rule holds by inspection rather than by argument.
+        .where(
+          and(
+            eq(bookingCheckoutBookings.shopId, shopId),
+            inArray(bookingCheckoutBookings.checkoutId, coveringIds),
+          ),
+        );
       const soleOccupant = coveringIds.filter((checkoutId) =>
         allLinks
           .filter((link) => link.checkoutId === checkoutId)
@@ -798,13 +919,34 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<number> {
       );
   }
 
-  // --- course inquiries: the table with no person_id ----------------------
-  // A public course-page lead is deliberately unlinked (there is no person yet
-  // when it is written), so a person_id-driven sweep structurally cannot reach
-  // it. Matched on the contact details the diver themselves supplied — the only
-  // link that exists. An inquiry left with neither a matching email nor phone
-  // is *not* reached by this; that gap is stated in the ADR rather than papered
-  // over here.
+  // --- course inquiries ----------------------------------------------------
+  // Three statements, strongest handle first. `person_id` is deliberately left
+  // in place on every one of them: it points at a row that is itself already
+  // erased, so it discloses nothing, and keeping it makes a replayed erasure
+  // reach the same leads a second time.
+  const blankInquiry = { name: null, email: null, phone: null, timing: null, message: null };
+
+  // 1. `person_id`, when the lead carries one. A public lead is still written
+  //    before any person may exist, so the column stays nullable — but when the
+  //    address on the form matched a live diver of this shop at capture time,
+  //    `recordCourseInquiry` (src/db/course-inquiries.ts) snapshotted the link,
+  //    and that snapshot is an exact foreign key rather than a match against
+  //    whatever the two rows happen to say today. It is the one handle that
+  //    survives the diver changing their email afterwards, which the address
+  //    sweep below cannot.
+  //
+  //    A lead written with no email, or with an address no diver of this shop
+  //    held at the time, still has no link and is still reachable only by the
+  //    two fuzzy handles after it. That residual is narrower than it was, not
+  //    closed: see the ADR. Nothing back-fills this column from a later match —
+  //    a link inferred after the fact would erase a bystander's lead.
+  await tx
+    .update(courseInquiries)
+    .set(blankInquiry)
+    .where(and(eq(courseInquiries.shopId, shopId), eq(courseInquiries.personId, personId)));
+
+  // 2 and 3 match on the contact details the diver themselves supplied, for the
+  // leads statement 1 cannot reach.
   //
   // Split into two statements so the phone predicate can be counted on its
   // own. It is the fuzzier of the two by a distance: a household or family
@@ -814,7 +956,6 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<number> {
   // that would drop the real case it exists for: the diver who used a
   // different address on the public lead form than the one on their record.
   // The over-reach is accepted, owner-gated, and logged.
-  const blankInquiry = { name: null, email: null, phone: null, timing: null, message: null };
   if (ctx.email) {
     await tx
       .update(courseInquiries)
@@ -837,5 +978,5 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<number> {
     logFuzzyMatch(ctx, "course_inquiry_phone", byPhone.length);
   }
 
-  return queued;
+  return { queuedMediaDeletions: queued, raisedProcessorErasures };
 }

@@ -103,3 +103,29 @@ which mechanism (per-person roll call vs. attestation). If counsel says per-pers
 as the count-level record and a per-person subject model is added beside it — that work needs DOM-M3
 first. Revisit when either HD-7 lands or `trip_assignments` grows a per-trip role; migration cost is
 one additive table plus a new subject column, with no rewrite of `roll_call_events`.
+
+## Amendment 2026-08-03 — the follow-on landed; this ADR is not superseded
+
+The revisit trigger above fired the next day. `trip_assignments` gained a per-trip role
+([20260803-per-trip-crew-role](20260803-per-trip-crew-role.md)) and per-person crew roll call was
+built on top of it ([20260803-per-person-crew-roll-call](20260803-per-person-crew-roll-call.md)),
+exactly as this ADR's "Alternatives considered" said it would be.
+
+Nothing decided here is reversed. `roll_call_crew_attestations` **stays** as the count-level record
+and is still required for a checkpoint to read complete — retiring it was considered and rejected,
+because it is the only thing that accounts for an extra hand nobody rostered and the only thing that
+denies a zero-crew trip a silent pass. A checkpoint now needs a named result per rostered crew
+member *and* this count.
+
+Two statements above are narrowed by the follow-on rather than contradicted:
+
+- **"Today's `roll_call_unfinished` escalation … is untouched here"** was true of this slice and
+  remains a correct description of it. Today now does reason about crew, through the two *new*
+  reasons `missing_crew` and `crew_uncounted`, which are raised by the per-person events only. **The
+  count-level attestation in this ADR still raises no Today row**, deliberately: it is a form most
+  shops have never filled in, so it would fire on nearly every trip and bury the rows that mean a
+  person is in the water.
+- **"Offline: read-only in this slice, and it fails closed"** is unchanged and now covers both
+  halves. Neither the attestation nor the per-person roll call is recordable offline; the offline
+  crew panel distinguishes that limitation from an alarm by tone, and a checkpoint still cannot
+  close out of signal.

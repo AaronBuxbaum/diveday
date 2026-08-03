@@ -27,6 +27,15 @@ async function waitForShellPrimed(page: Page) {
 test("live manifest retains blocked divers and records an explicit not-boarded result", async ({
   page,
 }) => {
+  // Eight full server round trips — board, trip page, manifest, two checkpoint
+  // switches, a note save, and two roll-call writes — each re-rendering a
+  // 9-diver manifest. Measured at 12.4s serially against the default 15s
+  // ceiling, which leaves no headroom once the config's own parallelism
+  // (`E2E_WORKER_COUNT`, cpus/2) puts two workers and two Next servers on the
+  // same cores: it then times out reproducibly, and did so before the crew
+  // roll-call work landed. Same reasoning as the crew checkpoint test below —
+  // the budget bounds a *stuck* test, and this one is simply long.
+  test.setTimeout(45_000);
   await page.goto("/shop/blue-mantis/schedule/board");
   await page
     .locator("li")
@@ -485,11 +494,31 @@ test("a checkpoint with every diver counted stays open until the crew are counte
   await expect(page.getByText(/1 of 2 crew aboard/)).toBeVisible();
   await expect(page.getByRole("heading", { name: "Roll call complete ✦" })).toHaveCount(0);
 
-  // Counting the rest is what closes it — and the attestation is append-only,
-  // so this supersedes the short count rather than editing it.
+  // Counting the rest is what closes the *count* — and the attestation is
+  // append-only, so this supersedes the short count rather than editing it.
   await page.getByLabel("Crew aboard").fill("2");
   await page.getByRole("button", { name: "Confirm crew count" }).click();
   await expect(page.getByText(/2 of 2 crew aboard/)).toBeVisible();
+
+  // DOM-H1's per-person half. "2 of 2 aboard" names nobody, so the checkpoint
+  // is still open — and now it says which crew member nobody has called.
+  await expect(page.getByRole("heading", { name: "Roll call complete ✦" })).toHaveCount(0);
+  await expect(page.getByText(/crew members still to call/)).toBeVisible();
+
+  const crewAboardButtons = page.getByRole("button", { name: "Mark aboard" });
+  for (let guard = 0; guard < 6; guard += 1) {
+    const remaining = await crewAboardButtons.count();
+    if (remaining === 0) break;
+    const settled = page.getByRole("button", { name: "Aboard ✓" });
+    const settledBefore = await settled.count();
+    const next = crewAboardButtons.first();
+    await next.evaluate((button) => button.scrollIntoView({ block: "center" }));
+    await next.click();
+    await expect(settled).toHaveCount(settledBefore + 1);
+  }
+  await expect(crewAboardButtons).toHaveCount(0);
+
+  // Both halves said out loud by a named human: now it closes.
   await expect(page.getByRole("heading", { name: "Roll call complete ✦" })).toBeVisible();
 
   // DOM-H3. Now a diver does not come back from dive one. After a dive, the
@@ -497,14 +526,20 @@ test("a checkpoint with every diver counted stays open until the crew are counte
   // a green-checked "Not boarded ✓", and the closed checkpoint re-opens —
   // which is what the Today queue is simultaneously alarming about.
   await expect(page.getByRole("button", { name: "Mark not boarded" })).toHaveCount(0);
-  const markNotBack = page.getByRole("button", { name: "Mark not back aboard" }).first();
+  const markNotBack = page
+    .locator("#roll-call-list")
+    .getByRole("button", { name: "Mark not back aboard" })
+    .first();
   await markNotBack.evaluate((button) => button.scrollIntoView({ block: "center" }));
   await markNotBack.click();
   // `exact` matters: without it the substring match resolves against the
   // *other* rows' still-unpressed "Mark not back aboard" buttons and settles
   // instantly, so the assertion never waits for this write at all.
   await expect(
-    page.getByRole("button", { name: "Not back aboard", exact: true }).first(),
+    page
+      .locator("#roll-call-list")
+      .getByRole("button", { name: "Not back aboard", exact: true })
+      .first(),
   ).toBeVisible();
   await expect(page.getByRole("button", { name: "Not boarded ✓" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Roll call complete ✦" })).toHaveCount(0);

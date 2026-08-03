@@ -3,6 +3,7 @@ import { checkMinimumAge } from "@/lib/age";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { courseSeatCapacity } from "@/lib/course-ratios";
+import { countInWaterCrew, groupCrewAssignments } from "@/lib/crew-roles";
 import { personNamesMatch } from "@/lib/person-name";
 import { hasVerifiedCertificationAtLeast } from "@/lib/readiness";
 import { revokeBookingCapabilities } from "./booking-capabilities";
@@ -141,33 +142,28 @@ class PartyBookingError extends Error {
 
 /**
  * The instructors and certified assistants currently assigned to a trip, as the
- * ratio rules count them: a person holding both roles is the instructor, not
- * their own assistant. One query for every seat-granting path, so the undo of a
- * roster removal can never read a looser crew than the booking that preceded it.
+ * ratio rules count them — `countInWaterCrew` (src/lib/crew-roles.ts) is the one
+ * definition of that, shared with Today, the staffing window, and the trip page.
+ * One query for every seat-granting path, so the undo of a roster removal can
+ * never read a looser crew than the booking that preceded it.
  */
 async function tripCourseCrewCounts(
   tx: DbExecutor,
   tripId: string,
 ): Promise<{ instructorCount: number; assistantCount: number }> {
+  // Every assignment, not only those whose holder has an in-water role: the
+  // per-trip role is read off the assignment row, so a `left join` keeps a
+  // rostered captain visible to the rule that decides they count for nothing.
   const crew = await tx
-    .select({ personId: tripAssignments.personId, role: personRoles.role })
+    .select({
+      personId: tripAssignments.personId,
+      tripRole: tripAssignments.tripRole,
+      role: personRoles.role,
+    })
     .from(tripAssignments)
-    .innerJoin(personRoles, eq(personRoles.personId, tripAssignments.personId))
-    .where(
-      and(
-        eq(tripAssignments.tripId, tripId),
-        inArray(personRoles.role, ["instructor", "divemaster"]),
-      ),
-    );
-  const instructorIds = new Set(
-    crew.filter((row) => row.role === "instructor").map((row) => row.personId),
-  );
-  const assistantIds = new Set(
-    crew
-      .filter((row) => row.role === "divemaster" && !instructorIds.has(row.personId))
-      .map((row) => row.personId),
-  );
-  return { instructorCount: instructorIds.size, assistantCount: assistantIds.size };
+    .leftJoin(personRoles, eq(personRoles.personId, tripAssignments.personId))
+    .where(eq(tripAssignments.tripId, tripId));
+  return countInWaterCrew(groupCrewAssignments(crew));
 }
 
 async function createBookingRecord(db: AppDb, req: BookingRequest): Promise<BookingOutcome> {

@@ -462,21 +462,24 @@ export function OfflineManifestView() {
   // either being wrong on its own, so both read the same predicate (DOM-H3).
   const notBackAboard = localStates.filter((state) => isNotBackAboard(checkpoint, state)).length;
   // The same definition the live manifest uses — divers *and* crew (DOM-H1,
-  // ADR 20260802-crew-roll-call-attestation). Recomputed here rather than read
-  // off the snapshot because `awaiting` comes from events on this device, not
-  // from what the server knew at save time. The crew half does not: crew
-  // attestation is deliberately not recordable offline in this slice, so the
-  // snapshot's saved attestation is the only crew evidence a dock copy has. A
-  // checkpoint with every diver counted and no crew attested therefore reads
-  // *open* here exactly as it does online — never "complete" offline and "not
+  // ADRs 20260802-crew-roll-call-attestation and
+  // 20260803-per-person-crew-roll-call). Recomputed here rather than read off
+  // the snapshot because `awaiting` comes from events on this device, not from
+  // what the server knew at save time. The crew half does not: neither the
+  // attestation nor a per-person crew result is recordable offline in this
+  // slice, so the snapshot is the only crew evidence a dock copy has, and both
+  // read fail-closed — absence is "nobody has said", never "accounted for". A
+  // checkpoint with every diver counted and the crew uncounted therefore reads
+  // *open* here exactly as it does online; never "complete" offline and "not
   // complete" online, which would be worse than the bug this closes.
   const crewAssigned = manifest.crew.length;
   const savedCrewAttestation = manifest.crewAttestation;
   const completeness = rollCallCompleteness({
+    checkpoint,
     totalDivers: manifest.summary.totalDivers,
     awaiting,
     notBackAboard,
-    crewAssigned,
+    crew: manifest.crew,
     crewAttestation: savedCrewAttestation
       ? {
           crewAboard: savedCrewAttestation.crewAboard,
@@ -487,6 +490,33 @@ export function OfflineManifestView() {
         }
       : null,
   });
+  const crewCounts = completeness.crewCounts;
+  // The dock copy deliberately carries **no person ids**
+  // (src/lib/offline-manifests.ts), so its crew list has no `id` to key on the
+  // way the live manifest does. `fullName-roles` was the key, and it collides
+  // for two crew who share both — exactly what `ManifestCrewMember.id` prevents
+  // online (review 20260803, D6). Disambiguating by how many identical entries
+  // came before gives each namesake a distinct identity that survives
+  // re-rendering, without shipping an id to the device.
+  const crewSeen = new Map<string, number>();
+  const crewWithKeys = manifest.crew.map((member) => {
+    const base = `${member.fullName}\u0000${member.roles.join(",")}`;
+    const nth = crewSeen.get(base) ?? 0;
+    crewSeen.set(base, nth + 1);
+    return { ...member, key: `${base}\u0000${nth}` };
+  });
+  // Two different facts, and a crew reading warning-yellow on every single dive
+  // stops reading it at all (review 20260803, D6):
+  //
+  // - somebody **is unaccounted for**: a named crew member was recorded not back
+  //   aboard. That is an emergency and reads as danger, wherever the divers are.
+  // - the crew half **is not recordable here**: neither the attestation nor a
+  //   per-person crew result can be written without signal in this slice, so on
+  //   an out-of-signal trip every checkpoint is open for a reason nobody aboard
+  //   can act on. It stays fail-closed — the checkpoint does *not* read complete
+  //   — but it is stated as a limitation of the dock copy, not as an alarm.
+  const crewMissing = completeness.crewReason === "crew_not_back_aboard";
+  const crewUnrecordableHere = completeness.crewReason !== null && !crewMissing;
   const rollCallComplete = completeness.complete;
   // The actual roster rendered on this device, not the (possibly stale,
   // save-time) `manifest.summary.totalDivers`. Feeds MilestoneHaptics and the
@@ -688,26 +718,70 @@ export function OfflineManifestView() {
          */}
         <div
           className={
-            completeness.crewAccountedFor
-              ? "mt-3 rounded-xl border border-success/40 bg-success/10 p-3"
-              : "mt-3 rounded-xl border border-warning/50 bg-warning/10 p-3"
+            crewMissing
+              ? "mt-3 rounded-xl border border-danger bg-danger/10 p-3 ring-1 ring-inset ring-danger/40"
+              : completeness.crewAccountedFor
+                ? "mt-3 rounded-xl border border-success/40 bg-success/10 p-3"
+                : "mt-3 rounded-xl border border-border-strong bg-surface-sunken p-3"
           }
         >
-          <p className="text-sm font-bold">{t("shared.offlineManifest.single.crewHeading")}</p>
+          <p className={`text-sm font-bold${crewMissing ? " text-danger" : ""}`}>
+            {t("shared.offlineManifest.single.crewHeading")}
+          </p>
           <p className="mt-1 text-sm">
             {savedCrewAttestation && completeness.crewAccountedFor
               ? t("shared.offlineManifest.single.crewAttested", {
                   aboard: savedCrewAttestation.crewAboard,
-                  assigned: crewAssigned,
+                  assigned: crewCounts.crewExpectedAboard,
                   name: savedCrewAttestation.attestedByName,
                 })
-              : savedCrewAttestation
-                ? t("shared.offlineManifest.single.crewShort", {
-                    aboard: savedCrewAttestation.crewAboard,
-                    assigned: crewAssigned,
+              : crewMissing
+                ? t("shared.offlineManifest.single.crewNotBackAboard", {
+                    count: crewCounts.crewNotBackAboard,
                   })
-                : t("shared.offlineManifest.single.crewNotAttested", { assigned: crewAssigned })}
+                : completeness.crewReason === "crew_awaiting"
+                  ? t("shared.offlineManifest.single.crewAwaiting", {
+                      count: crewCounts.crewAwaiting,
+                    })
+                  : savedCrewAttestation
+                    ? t("shared.offlineManifest.single.crewShort", {
+                        aboard: savedCrewAttestation.crewAboard,
+                        assigned: crewCounts.crewExpectedAboard,
+                      })
+                    : t("shared.offlineManifest.single.crewNotAttested", {
+                        assigned: crewAssigned,
+                      })}
           </p>
+          {/* Says plainly that this half of the count belongs to the live
+              manifest, so the state above reads as "not recordable here"
+              rather than as one more thing the boat has failed to do. */}
+          {crewUnrecordableHere ? (
+            <p className="mt-1 text-sm font-semibold text-muted">
+              {t("shared.offlineManifest.single.crewReadOnlyHere")}
+            </p>
+          ) : null}
+          {/* Who, not just how many. A crew member's saved result is read-only
+              here — recording one needs signal — but naming the person nobody
+              has counted is the whole point of the per-person model. */}
+          {crewAssigned > 0 ? (
+            <ul className="mt-2 flex flex-wrap gap-2">
+              {crewWithKeys.map((member) => (
+                <li
+                  key={member.key}
+                  className={
+                    isNotBackAboard(checkpoint, member.rollCall)
+                      ? "rounded-full bg-danger/15 px-3 py-1 text-sm font-bold text-danger"
+                      : member.rollCall
+                        ? "rounded-full bg-surface-sunken px-3 py-1 text-sm"
+                        : "rounded-full bg-warning/20 px-3 py-1 text-sm font-semibold"
+                  }
+                >
+                  {member.fullName} ·{" "}
+                  {rollCallLabelText(t, rollCallLabel(checkpoint, member.rollCall))}
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </div>
         <ul
           id="offline-roll-call"

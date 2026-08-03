@@ -21,6 +21,14 @@ const COPY: CrewSectionCopy = {
   onShift: "On shift",
   notOnShift: "Not on shift",
   manageShifts: "Manage shifts",
+  roleAria: "Job {name} is doing on this trip",
+  roleUnspecified: "Job not set",
+  roleOptions: {
+    instructor: "Instructor",
+    divemaster: "Divemaster",
+    captain: "Captain",
+    crew: "Deck crew",
+  },
 };
 
 function staffMember(id: string, fullName: string, roles: string[] = ["instructor"]) {
@@ -44,6 +52,7 @@ describe("CrewSection assignError reset on revisit", () => {
       <CrewSection
         tripId="trip-a"
         staff={staff}
+        crewRoles={{}}
         crewIds={["staff-1"]}
         onShiftIds={["staff-1"]}
         crewGapCode="none"
@@ -70,6 +79,7 @@ describe("CrewSection assignError reset on revisit", () => {
       <CrewSection
         tripId="trip-b"
         staff={staff}
+        crewRoles={{}}
         crewIds={["staff-1"]}
         onShiftIds={["staff-1"]}
         crewGapCode="none"
@@ -101,6 +111,7 @@ describe("CrewSection confirm-then-render", () => {
       <CrewSection
         tripId="trip-a"
         staff={staff}
+        crewRoles={{}}
         crewIds={["staff-1"]}
         onShiftIds={["staff-1"]}
         crewGapCode="none"
@@ -126,5 +137,82 @@ describe("CrewSection confirm-then-render", () => {
         screen.getByRole("button", { name: "Remove Marcus Webb from crew" }),
       ).toBeInTheDocument();
     });
+  });
+});
+
+/**
+ * Review 20260803, D5. Nothing in the app wrote `trip_assignments.trip_role`
+ * except the seed — `CrewSection`, Today's departure board and
+ * `updateTripCrewAction` all assigned with no role — so for every real shop the
+ * divemaster-rostered-as-captain over-count DOM-M3 fixed was 100% live, while
+ * the glossary stated the fixed behaviour as fact. This is the control that
+ * makes the field settable.
+ */
+describe("CrewSection per-trip role picker", () => {
+  it("posts the job on this sailing through the same assign mutation, and only renders it once the server agrees", async () => {
+    const calls: unknown[] = [];
+    let resolveAction: (result: { ok: boolean }) => void = () => {};
+    const action = vi.fn((_tripId: string, change: unknown) => {
+      calls.push(change);
+      return new Promise<{ ok: boolean }>((resolve) => {
+        resolveAction = resolve;
+      });
+    });
+    const staff: StaffList = [staffMember("staff-1", "Keiko Tanaka", ["divemaster"])];
+
+    render(
+      <CrewSection
+        tripId="trip-a"
+        staff={staff}
+        crewRoles={{ "staff-1": null }}
+        crewIds={["staff-1"]}
+        onShiftIds={["staff-1"]}
+        crewGapCode="none"
+        shopSlug="blue-mantis"
+        updateCrewAction={action}
+        copy={COPY}
+      />,
+    );
+
+    const picker = screen.getByLabelText("Job Keiko Tanaka is doing on this trip");
+    expect((picker as HTMLSelectElement).value).toBe("");
+    await userEvent.selectOptions(picker, "captain");
+    expect(calls).toEqual([{ personId: "staff-1", operation: "assign", tripRole: "captain" }]);
+
+    resolveAction({ ok: true });
+    await waitFor(() =>
+      expect(
+        (screen.getByLabelText("Job Keiko Tanaka is doing on this trip") as HTMLSelectElement)
+          .value,
+      ).toBe("captain"),
+    );
+  });
+
+  it("keeps the shown role at what the server holds when the write is refused", async () => {
+    const refusing = vi.fn(async () => ({ ok: false }));
+    const staff: StaffList = [staffMember("staff-1", "Keiko Tanaka", ["divemaster"])];
+
+    render(
+      <CrewSection
+        tripId="trip-a"
+        staff={staff}
+        crewRoles={{ "staff-1": "captain" }}
+        crewIds={["staff-1"]}
+        onShiftIds={["staff-1"]}
+        crewGapCode="none"
+        shopSlug="blue-mantis"
+        updateCrewAction={refusing}
+        copy={COPY}
+      />,
+    );
+
+    const picker = screen.getByLabelText("Job Keiko Tanaka is doing on this trip");
+    await userEvent.selectOptions(picker, "divemaster");
+    // The supervision ratio reads this field, so a refused write must never
+    // leave the screen claiming a job the server did not accept.
+    await screen.findByRole("alert");
+    expect(
+      (screen.getByLabelText("Job Keiko Tanaka is doing on this trip") as HTMLSelectElement).value,
+    ).toBe("captain");
   });
 });

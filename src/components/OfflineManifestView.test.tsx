@@ -108,20 +108,58 @@ function richPayload(
     /** Second diver, present at departure and carried not-boarded after dive 1. */
     withCarriedNotBoarded?: boolean;
     /**
-     * Crew were counted at both checkpoints before the snapshot was saved.
-     * Divers alone no longer close a checkpoint (DOM-H1, ADR
-     * 20260802-crew-roll-call-attestation), so anything asserting "roll call
+     * Crew were counted at both checkpoints before the snapshot was saved —
+     * both halves: the attested count *and* a per-person result for each crew
+     * member. Divers alone no longer close a checkpoint (DOM-H1, ADRs
+     * 20260802-crew-roll-call-attestation and
+     * 20260803-per-person-crew-roll-call), so anything asserting "roll call
      * complete" needs this; anything asserting it *stays open* leaves it off.
      */
     crewAttested?: boolean;
+    /**
+     * The count was taken but one named crew member has no result of their
+     * own — the case a count alone can never see, because "2 of 2 aboard"
+     * names nobody.
+     */
+    crewMemberUncounted?: boolean;
+    /** A named crew member the crew recorded as *not back aboard* after the dive. */
+    crewNotBackAboard?: boolean;
+    /** Two crew who share a full name and a role — the list-key collision. */
+    crewNamesake?: boolean;
   } = {},
 ): OfflineManifestPayload {
   // Every charter is crewed, so both cases carry the same two people; the
   // difference under test is whether anyone counted them.
-  const crew = [
-    { fullName: "Dana Divemaster", roles: ["divemaster"] },
-    { fullName: "Sal Ortiz", roles: ["captain"] },
-  ];
+  const crewRollCall = opts.crewAttested
+    ? {
+        state: "boarded" as const,
+        occurredAt: "2026-08-01T12:55:00.000Z",
+        recordedByName: "Dana Divemaster",
+        note: null,
+      }
+    : undefined;
+  const crew = opts.crewNamesake
+    ? [
+        { fullName: "Sal Ortiz", roles: ["captain"], rollCall: crewRollCall },
+        { fullName: "Sal Ortiz", roles: ["captain"], rollCall: undefined },
+      ]
+    : [
+        { fullName: "Dana Divemaster", roles: ["divemaster"], rollCall: crewRollCall },
+        {
+          fullName: "Sal Ortiz",
+          roles: ["captain"],
+          rollCall: opts.crewNotBackAboard
+            ? {
+                state: "not_boarded" as const,
+                occurredAt: "2026-08-01T14:55:00.000Z",
+                recordedByName: "Dana Divemaster",
+                note: null,
+              }
+            : opts.crewMemberUncounted
+              ? undefined
+              : crewRollCall,
+        },
+      ];
   const crewAttestation = opts.crewAttested
     ? {
         crewAboard: 2,
@@ -866,6 +904,121 @@ describe("OfflineManifestView — crew are part of the head count offline too", 
     await waitFor(() => expect(appendOfflineRollCall).toHaveBeenCalled());
 
     expect(await screen.findByText(/Roll call complete/)).toBeInTheDocument();
+  });
+
+  /**
+   * DOM-H1's per-person half, offline (ADR 20260803-per-person-crew-roll-call).
+   * A count names nobody, so a saved "2 of 2 aboard" cannot tell this device
+   * that the second body was the deckhand rather than the divemaster still
+   * down. Crew results are read-only here — recording one needs signal — and
+   * their absence reads as *not counted*, which is what keeps the dock copy
+   * fail-closed rather than ahead of the live page.
+   */
+  it("stays open, and says who, when a named crew member has no saved result", async () => {
+    searchParams = new URLSearchParams({ trip: "trip-1", checkpoint: "after_dive_1" });
+    const saved = richEnvelope("trip-1", {
+      withCarriedNotBoarded: true,
+      crewAttested: true,
+      crewMemberUncounted: true,
+    });
+    vi.mocked(loadOfflineManifest).mockResolvedValue(saved);
+    vi.mocked(syncOfflineManifest).mockResolvedValue(null);
+    vi.mocked(appendOfflineRollCall).mockResolvedValue({
+      ...saved,
+      events: [
+        {
+          clientEventId: "evt-1",
+          snapshotId: saved.snapshot.snapshotId,
+          snapshotSavedAt: saved.snapshot.savedAt,
+          tripId: "trip-1",
+          bookingId: "diver-priya",
+          checkpoint: "after_dive_1",
+          status: "boarded",
+          note: null,
+          occurredAt: new Date(FROZEN_MS).toISOString(),
+          syncStatus: "pending",
+        },
+      ],
+    });
+
+    render(<OfflineManifestView />);
+    await screen.findByRole("heading", { name: "Two-Tank Reef" });
+    fireEvent.click(screen.getAllByRole("button", { name: "Mark boarded" })[0] as HTMLElement);
+    await waitFor(() => expect(appendOfflineRollCall).toHaveBeenCalled());
+
+    // Every diver counted, the crew count taken — and still not complete.
+    expect(await screen.findByText(/Saved on this phone/)).toBeInTheDocument();
+    expect(screen.queryByText(/Roll call complete/)).not.toBeInTheDocument();
+    expect(screen.getByText(/1 crew member still to call/)).toBeInTheDocument();
+    // Named, not just counted: the captain nobody has tapped is on screen.
+    expect(screen.getByText(/Sal Ortiz · Awaiting/)).toBeInTheDocument();
+    expect(screen.getByText(/Dana Divemaster · Boarded/)).toBeInTheDocument();
+  });
+});
+
+/**
+ * Review 20260803, D6. Both crew halves are online-only and both are required,
+ * so on an out-of-signal trip *every* checkpoint reads open — on the surface
+ * built specifically for no signal. It has to stay fail-closed, but "the crew
+ * half isn't recordable here" and "somebody is unaccounted for" are different
+ * facts, and a crew seeing warning-yellow on every dive stops reading it.
+ */
+describe("OfflineManifestView — the crew panel tells apart 'not recordable here' from 'missing'", () => {
+  it("states the read-only limitation, without alarming, when only the crew half is open", async () => {
+    searchParams = new URLSearchParams({ trip: "trip-1", checkpoint: "after_dive_1" });
+    const saved = richEnvelope("trip-1", {
+      withCarriedNotBoarded: true,
+      crewAttested: true,
+      crewMemberUncounted: true,
+    });
+    vi.mocked(loadOfflineManifest).mockResolvedValue(saved);
+    vi.mocked(syncOfflineManifest).mockResolvedValue(null);
+
+    render(<OfflineManifestView />);
+    await screen.findByRole("heading", { name: "Two-Tank Reef" });
+    // Still open — the fail-closed rule is untouched.
+    expect(screen.queryByText(/Roll call complete/)).not.toBeInTheDocument();
+    // And it says whose surface this belongs to, rather than reading as one
+    // more thing the boat has failed to do.
+    const note = screen.getByText(/can’t be tapped from this saved copy/);
+    expect(note).toBeInTheDocument();
+    const panel = note.closest("div");
+    expect(panel?.className).not.toContain("warning");
+    expect(panel?.className).not.toContain("danger");
+  });
+
+  it("does alarm, in danger tone, when a named crew member is not back aboard", async () => {
+    searchParams = new URLSearchParams({ trip: "trip-1", checkpoint: "after_dive_1" });
+    const saved = richEnvelope("trip-1", {
+      withCarriedNotBoarded: true,
+      crewAttested: true,
+      crewNotBackAboard: true,
+    });
+    vi.mocked(loadOfflineManifest).mockResolvedValue(saved);
+    vi.mocked(syncOfflineManifest).mockResolvedValue(null);
+
+    render(<OfflineManifestView />);
+    await screen.findByRole("heading", { name: "Two-Tank Reef" });
+    const alarm = screen.getByText(/1 crew member is not back aboard/);
+    expect(alarm.closest("div")?.className).toContain("danger");
+    // This one is emphatically *not* "we can't record it here".
+    expect(screen.queryByText(/can’t be tapped from this saved copy/)).not.toBeInTheDocument();
+    expect(screen.getByText(/Sal Ortiz · Not back aboard/)).toBeInTheDocument();
+  });
+
+  it("renders two crew who share a name and a role as two separate people", async () => {
+    // The list key was `fullName-roles`, so a namesake pair collided — which is
+    // exactly what `ManifestCrewMember.id` prevents on the live manifest. The
+    // dock copy carries no person ids by design, so its key is the position.
+    searchParams = new URLSearchParams({ trip: "trip-1", checkpoint: "after_dive_1" });
+    const saved = richEnvelope("trip-1", { crewAttested: true, crewNamesake: true });
+    vi.mocked(loadOfflineManifest).mockResolvedValue(saved);
+    vi.mocked(syncOfflineManifest).mockResolvedValue(null);
+
+    render(<OfflineManifestView />);
+    await screen.findByRole("heading", { name: "Two-Tank Reef" });
+    expect(screen.getByText(/Sal Ortiz · Boarded/)).toBeInTheDocument();
+    expect(screen.getByText(/Sal Ortiz · Awaiting/)).toBeInTheDocument();
   });
 });
 

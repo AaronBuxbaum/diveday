@@ -25,7 +25,9 @@ vi.mock("@/db/stripe-accounts", () => ({
 vi.mock("@/db/webhook-events", () => ({
   claimStripeWebhookEvent: vi.fn(),
   hasNewerAccountUpdate: vi.fn(),
+  releaseStripeWebhookEventClaim: vi.fn(),
 }));
+vi.mock("@sentry/nextjs", () => ({ captureException: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
 const { markCheckoutPaidBySessionId, markCheckoutExpiredBySessionId } = await import(
@@ -36,7 +38,9 @@ const { markOrderPaidByInvoiceId, markOrderVoidedByInvoiceId } = await import("@
 const { setShopStripeAccountStatus, disconnectShopStripeAccount } = await import(
   "@/db/stripe-accounts"
 );
-const { claimStripeWebhookEvent, hasNewerAccountUpdate } = await import("@/db/webhook-events");
+const { claimStripeWebhookEvent, hasNewerAccountUpdate, releaseStripeWebhookEventClaim } =
+  await import("@/db/webhook-events");
+const Sentry = await import("@sentry/nextjs");
 const { POST } = await import("./route");
 
 const secret = "whsec_test";
@@ -87,6 +91,8 @@ beforeEach(() => {
   vi.mocked(markTipExpiredBySessionId).mockReset();
   vi.mocked(claimStripeWebhookEvent).mockReset().mockResolvedValue(true);
   vi.mocked(hasNewerAccountUpdate).mockReset().mockResolvedValue(false);
+  vi.mocked(releaseStripeWebhookEventClaim).mockReset().mockResolvedValue(true);
+  vi.mocked(Sentry.captureException).mockReset();
 });
 
 describe("POST /api/webhooks/stripe — fails closed on a bad signature", () => {
@@ -394,10 +400,34 @@ describe("POST /api/webhooks/stripe — event dispatch", () => {
       id: "evt_1",
       type: "account.application.deauthorized",
       account: "acct_123",
+      created: 1_700_000_000,
       data: { object: {} },
     });
     expect(response.status).toBe(200);
-    expect(disconnectShopStripeAccount).toHaveBeenCalledWith(FAKE_DB, "acct_123");
+    // Ordered against Stripe's own creation time, so a redelivery landing after
+    // the owner has reconnected cannot cut a live account off (PAY-M1's second
+    // half: the claim really is released and this handler really is re-reached).
+    expect(disconnectShopStripeAccount).toHaveBeenCalledWith(FAKE_DB, "acct_123", {
+      deauthorizedAt: new Date(1_700_000_000 * 1000),
+    });
+  });
+
+  it("account.application.deauthorized is a quiet 200 when the shop has since reconnected", async () => {
+    // The db call refuses a deauthorization older than the connection it names
+    // and hands back the still-connected row; the route must read that as a
+    // handled no-op, not as a failure Stripe should retry.
+    vi.mocked(disconnectShopStripeAccount).mockResolvedValue({
+      stripeAccountId: "acct_123",
+      disconnectedAt: null,
+    } as never);
+    const response = await post({
+      id: "evt_stale_deauth",
+      type: "account.application.deauthorized",
+      account: "acct_123",
+      created: 1_700_000_000,
+      data: { object: {} },
+    });
+    expect(response.status).toBe(200);
   });
 
   it("account.application.deauthorized does nothing if the event has no account field", async () => {
@@ -479,6 +509,9 @@ describe("POST /api/webhooks/stripe — event ledger", () => {
     // Still just the one call from the first delivery — the replay never
     // reached the handler at all.
     expect(markCheckoutPaidBySessionId).toHaveBeenCalledTimes(1);
+    // …and nothing released the claim, because nothing failed. A successful
+    // handle keeps its claim forever (PAY-M1).
+    expect(releaseStripeWebhookEventClaim).not.toHaveBeenCalled();
   });
 
   it("falls back to the local clock when a fixture event has no created timestamp", async () => {
@@ -626,5 +659,232 @@ describe("POST /api/webhooks/stripe — structured logging", () => {
         outcome: "duplicate_event",
       }),
     );
+  });
+});
+
+// PAY-M1: the claim is committed independently of the handler, so before this
+// a throw anywhere in the dispatch left the row behind. Stripe redelivered, the
+// claim said "already seen", the route answered 200, and Stripe marked the
+// event delivered having never handled it — for invoice.paid, invoice.voided
+// and account.application.deauthorized there is no other self-heal, so the
+// order simply never went paid. Every arm below therefore has to give the claim
+// back and answer non-2xx so Stripe actually retries.
+describe("POST /api/webhooks/stripe — a failed handle releases its claim", () => {
+  function post(event: Record<string, unknown>) {
+    const payload = eventPayload(event);
+    const header = signedHeader(payload, Math.floor(nowMs() / 1000));
+    return POST(webhookRequest(payload, header));
+  }
+
+  beforeEach(() => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.mocked(console.log).mockRestore();
+    vi.mocked(console.error).mockRestore();
+  });
+
+  const boom = new Error("db is down");
+
+  /** Every dispatch arm, with the db call that can throw inside it. */
+  const arms: Array<{
+    name: string;
+    event: Record<string, unknown>;
+    arrange: () => void;
+  }> = [
+    {
+      name: "invoice.paid",
+      event: { id: "evt_fail_paid", type: "invoice.paid", data: { object: { id: "in_1" } } },
+      arrange: () => vi.mocked(markOrderPaidByInvoiceId).mockRejectedValue(boom),
+    },
+    {
+      name: "invoice.voided",
+      event: { id: "evt_fail_void", type: "invoice.voided", data: { object: { id: "in_1" } } },
+      arrange: () => vi.mocked(markOrderVoidedByInvoiceId).mockRejectedValue(boom),
+    },
+    {
+      name: "checkout.session.completed",
+      event: {
+        id: "evt_fail_checkout",
+        type: "checkout.session.completed",
+        data: { object: { id: "cs_1", payment_status: "paid" } },
+      },
+      arrange: () => vi.mocked(markCheckoutPaidBySessionId).mockRejectedValue(boom),
+    },
+    {
+      name: "checkout.session.completed (tip fallback)",
+      event: {
+        id: "evt_fail_tip",
+        type: "checkout.session.completed",
+        data: { object: { id: "cs_tip", payment_status: "paid" } },
+      },
+      arrange: () => {
+        vi.mocked(markCheckoutPaidBySessionId).mockResolvedValue(null);
+        vi.mocked(markTipPaidBySessionId).mockRejectedValue(boom);
+      },
+    },
+    {
+      name: "checkout.session.async_payment_succeeded",
+      event: {
+        id: "evt_fail_async",
+        type: "checkout.session.async_payment_succeeded",
+        data: { object: { id: "cs_1" } },
+      },
+      arrange: () => vi.mocked(markCheckoutPaidBySessionId).mockRejectedValue(boom),
+    },
+    {
+      name: "checkout.session.expired",
+      event: {
+        id: "evt_fail_expired",
+        type: "checkout.session.expired",
+        data: { object: { id: "cs_1" } },
+      },
+      arrange: () => vi.mocked(markCheckoutExpiredBySessionId).mockRejectedValue(boom),
+    },
+    {
+      name: "checkout.session.expired (tip fallback)",
+      event: {
+        id: "evt_fail_tip_expired",
+        type: "checkout.session.expired",
+        data: { object: { id: "cs_tip" } },
+      },
+      arrange: () => {
+        vi.mocked(markCheckoutExpiredBySessionId).mockResolvedValue(null);
+        vi.mocked(markTipExpiredBySessionId).mockRejectedValue(boom);
+      },
+    },
+    {
+      name: "account.updated (staleness check)",
+      event: {
+        id: "evt_fail_stale",
+        type: "account.updated",
+        data: {
+          object: {
+            id: "acct_1",
+            charges_enabled: true,
+            payouts_enabled: true,
+            details_submitted: true,
+          },
+        },
+      },
+      arrange: () => vi.mocked(hasNewerAccountUpdate).mockRejectedValue(boom),
+    },
+    {
+      name: "account.updated (status write)",
+      event: {
+        id: "evt_fail_account",
+        type: "account.updated",
+        data: {
+          object: {
+            id: "acct_1",
+            charges_enabled: true,
+            payouts_enabled: true,
+            details_submitted: true,
+          },
+        },
+      },
+      arrange: () => vi.mocked(setShopStripeAccountStatus).mockRejectedValue(boom),
+    },
+    {
+      name: "account.application.deauthorized",
+      event: {
+        id: "evt_fail_deauth",
+        type: "account.application.deauthorized",
+        account: "acct_1",
+        data: { object: {} },
+      },
+      arrange: () => vi.mocked(disconnectShopStripeAccount).mockRejectedValue(boom),
+    },
+  ];
+
+  for (const arm of arms) {
+    it(`${arm.name} answers 5xx and releases the claim when its handler throws`, async () => {
+      arm.arrange();
+      const response = await post(arm.event);
+
+      // Non-2xx, or Stripe treats this delivery as done and never retries.
+      expect(response.status).toBe(500);
+      expect(releaseStripeWebhookEventClaim).toHaveBeenCalledWith(FAKE_DB, arm.event.id);
+      // The original error, not a replacement, is what an operator sees.
+      expect(Sentry.captureException).toHaveBeenCalledWith(boom, expect.anything());
+    });
+  }
+
+  it("re-runs the handler and advances state on the redelivery after a failure", async () => {
+    const event = {
+      id: "evt_retry_1",
+      type: "invoice.paid",
+      data: { object: { id: "in_retry", amount_paid: 4500 } },
+    };
+    // First delivery: the order write throws.
+    vi.mocked(markOrderPaidByInvoiceId)
+      .mockRejectedValueOnce(boom)
+      .mockResolvedValue({
+        id: "order_1",
+      } as never);
+    const failed = await post(event);
+    expect(failed.status).toBe(500);
+    expect(releaseStripeWebhookEventClaim).toHaveBeenCalledWith(FAKE_DB, "evt_retry_1");
+
+    // Stripe retries. The claim was released, so the ledger claims it afresh
+    // and the handler actually runs — this is the whole point: without the
+    // release the retry reads as a duplicate and the order never goes paid.
+    const retried = await post(event);
+    expect(retried.status).toBe(200);
+    expect(markOrderPaidByInvoiceId).toHaveBeenCalledTimes(2);
+    expect(markOrderPaidByInvoiceId).toHaveBeenLastCalledWith(FAKE_DB, "in_retry", 4500, undefined);
+  });
+
+  it("still does not re-run a handler on the redelivery after a success", async () => {
+    // The invariant release-on-failure must not weaken (webhook-events.test.ts):
+    // a handled event keeps its claim, so a manual refund made between two
+    // deliveries survives the replay.
+    vi.mocked(claimStripeWebhookEvent).mockResolvedValueOnce(true).mockResolvedValueOnce(false);
+    const event = {
+      id: "evt_success_replay",
+      type: "checkout.session.completed",
+      data: { object: { id: "cs_ok", payment_status: "paid" } },
+    };
+
+    expect((await post(event)).status).toBe(200);
+    expect((await post(event)).status).toBe(200);
+    expect(markCheckoutPaidBySessionId).toHaveBeenCalledTimes(1);
+    expect(releaseStripeWebhookEventClaim).not.toHaveBeenCalled();
+  });
+
+  it("a release that itself fails never masks the original error", async () => {
+    const releaseBoom = new Error("release failed too");
+    vi.mocked(markOrderPaidByInvoiceId).mockRejectedValue(boom);
+    vi.mocked(releaseStripeWebhookEventClaim).mockRejectedValue(releaseBoom);
+
+    const response = await post({
+      id: "evt_release_boom",
+      type: "invoice.paid",
+      data: { object: { id: "in_1" } },
+    });
+
+    // Still a retry-triggering 5xx, and both failures are reported — the
+    // handler's own error above all, since a swallowed release error would
+    // otherwise be the only thing anyone saw.
+    expect(response.status).toBe(500);
+    expect(Sentry.captureException).toHaveBeenCalledWith(boom, expect.anything());
+    expect(Sentry.captureException).toHaveBeenCalledWith(releaseBoom, expect.anything());
+  });
+
+  it("never releases a claim it never took (a duplicate is not a failure)", async () => {
+    vi.mocked(claimStripeWebhookEvent).mockResolvedValue(false);
+    vi.mocked(markOrderPaidByInvoiceId).mockRejectedValue(boom);
+
+    const response = await post({
+      id: "evt_dup_no_release",
+      type: "invoice.paid",
+      data: { object: { id: "in_1" } },
+    });
+
+    expect(response.status).toBe(200);
+    expect(markOrderPaidByInvoiceId).not.toHaveBeenCalled();
+    expect(releaseStripeWebhookEventClaim).not.toHaveBeenCalled();
   });
 });

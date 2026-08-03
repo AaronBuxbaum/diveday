@@ -102,11 +102,18 @@ export default async function DiversPage({
           ? t("divers.page.noticeRestored")
           : notice === "erased"
             ? t("divers.page.noticeErased")
-            : notice === "not-authorized"
-              ? t("divers.page.noticeNotAuthorized")
-              : notice === "invalid"
-                ? t("divers.page.noticeInvalid")
-                : null;
+            : // The erasure landed locally and deleted what it could at Stripe,
+              // but something there is still owed — a failed customer delete, or
+              // the invoice snapshot only a data-deletion request clears. Saying
+              // plain "erased" here would overstate what happened
+              // (ADR 20260803-processor-erasure-obligations).
+              notice === "erased-processor-owed"
+              ? t("divers.page.noticeErasedProcessorOwed")
+              : notice === "not-authorized"
+                ? t("divers.page.noticeNotAuthorized")
+                : notice === "invalid"
+                  ? t("divers.page.noticeInvalid")
+                  : null;
   const noticeIsError =
     notice === "duplicate" || notice === "invalid" || notice === "not-authorized";
 

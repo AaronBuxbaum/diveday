@@ -302,27 +302,38 @@ new domain concept, define it here in the same PR.
   regulations apply. **Roll call** happens before departure and *after every dive*; a diver
   left behind is the industry's nightmare scenario. Manifests must work offline and print
   cleanly. An after-dive head count that is not closed is chased, not merely displayed: Today
-  raises it and the schedule board badges the departure. It comes in four distinct kinds, which are
-  deliberately never worded or ranked alike — see **unaccounted for** below.
-- **Unaccounted for** — the four ways a head count can be open, in descending severity. A diver is
+  raises it and the schedule board badges the departure — **for crew as well as divers**. It comes
+  in six distinct kinds, which are deliberately never worded or ranked alike — see **unaccounted
+  for** below.
+- **Unaccounted for** — the six ways a head count can be open, in descending severity. A person is
   accounted for at an after-dive checkpoint **only if their latest live result there is
-  "boarded"**; nothing else closes that count.
+  "boarded"**; nothing else closes that count, and the rule is the same whether they hold a booking
+  or a roster line.
   1. **Missing diver** — a crew member explicitly marked someone *not back aboard* at an after-dive
      checkpoint. A human said a diver did not return to the boat: the loudest row the app has.
-  2. **Unfinished head count** — a diver who boarded at departure has no result at an after-dive
+  2. **Missing crew** — the same statement about a named **crew member**. The divemaster who went
+     back down for a lost weight belt and has not surfaced is this row. It sits beside the diver
+     row rather than below the clerical ones, because the crew are the people most reliably in the
+     water.
+  3. **Unfinished head count** — a diver who boarded at departure has no result at an after-dive
      checkpoint (a `cleared` undo counts as no result). Nobody said they are missing; nobody said
      they are aboard.
-  3. **Unfinished dock count** — the departure count was never finished. The boat is home and nobody
+  4. **Unfinished crew count** — the same, for a crew member who boarded at departure.
+  5. **Unfinished dock count** — the departure count was never finished. The boat is home and nobody
      was ever unaccounted for in the water: this is paperwork, and it is toned and ranked as such.
-  4. **No roll call** — the trip has no roll-call events at all. A shop not using the feature, not a
-     lost diver — but never read as an all-clear either.
-  Kinds 1 and 2 are the ones that can mean a person is still in the water, so they also raise on a
+  6. **No roll call** — the trip has no roll-call events at all, of either kind. A shop not using
+     the feature, not a lost diver — but never read as an all-clear either.
+  Kinds 1–4 are the ones that can mean a person is still in the water, so they also raise on a
   trip *still underway* whose checkpoint was started and abandoned (at least one result and at least
-  one diver awaiting), and they never age to nothing: past the 48-hour dock-work window they drop a
-  band and say plainly that the count was never closed. Kinds 3 and 4 are chased for 48 hours only.
-  The population an after-dive count is counting is **who boarded**, never who bought a seat — a
-  diver who never showed and was never tapped is an unfinished *dock* count, not somebody left in
-  the water.
+  one person awaiting), and they never age to nothing: past the 48-hour dock-work window they drop a
+  band and say plainly that the count was never closed. Kinds 5 and 6 are chased for 48 hours only.
+  The population an after-dive count is counting is **who boarded**, never who bought a seat or was
+  rostered — a diver who never showed and was never tapped is an unfinished *dock* count, not
+  somebody left in the water, and a shop that has never tapped a crew roll call raises no crew rows
+  at all rather than one on every trip it has run. The **crew attestation** is the one piece of an
+  open checkpoint Today does not chase: it is a form most shops have never filled in, so a row for
+  it would fire on nearly every trip and bury the rows that mean a person is in the water. The
+  manifest states it; the queue chases what somebody actually recorded.
 - **Emergency contact** — a name *and* a reachable phone number the crew can call for a diver in
   an incident. It is captured from the diver (the waiver flow, and the `/ready` page), never
   invented, and it is **only "on file" when both the name and the phone are present** — a name with
@@ -343,12 +354,49 @@ new domain concept, define it here in the same PR.
   booking, so they cannot be roll-call *subjects* — a roll-call event's only subject is a booking —
   and before this existed a checkpoint could read "roll call complete" with a divemaster still in
   the water. Append-only like a roll-call event: a later count supersedes an earlier one, never
-  rewrites it. It is an interim count, not a per-person crew roll call, which needs a per-trip crew
-  role first (see [ADR 20260802-crew-roll-call-attestation](../architecture/decisions/20260802-crew-roll-call-attestation.md)).
+  rewrites it. It is the **count-level** half of the crew head count; the per-person half is the
+  **crew roll-call event** below, and a checkpoint needs both (see
+  [ADR 20260802-crew-roll-call-attestation](../architecture/decisions/20260802-crew-roll-call-attestation.md)
+  and [ADR 20260803-per-person-crew-roll-call](../architecture/decisions/20260803-per-person-crew-roll-call.md)).
   A trip with **no crew assigned is not exempt**: "0 of 0" is still something a human says, because
-  an empty assignment list is a scheduling gap, not evidence nobody else was aboard. Recorded on the
-  live manifest only; the offline copy reads the saved count and keeps the checkpoint open when
-  there isn't one.
+  an empty assignment list is a scheduling gap, not evidence nobody else was aboard. The count is
+  measured against the crew the trip still **expects aboard** — everyone assigned, minus anyone the
+  per-person half already records as ashore. A rostered hand who was marked not-boarded at the dock
+  is not a body anyone can count aboard, and demanding the number cover them anyway left an honest
+  count unclosable, with only a false number or deleting the person from the crew as exits.
+  Recorded on the live manifest only; the offline copy reads the saved count, keeps the checkpoint
+  open when there isn't one, and says plainly that this half belongs to the live manifest rather
+  than alarming about it.
+- **Crew roll-call event** — the per-person half: a named staff member said one **assigned crew
+  member** is aboard, not aboard, or cleared, at one checkpoint. Same append-only history, same
+  supersession, and the same two meanings of "not boarded" as a diver's roll-call event; the subject
+  is a person on the trip's crew list rather than a booking, which is why it is its own table
+  (`roll_call_crew_events`) and `roll_call_events.booking_id` stays `NOT NULL`. It exists because a
+  count **names nobody**: "3 of 3 aboard" cannot tell the boat that the third body is the deckhand
+  rather than the divemaster who has not surfaced. Read-only on the offline copy, where a crew
+  member with no saved result reads as still-to-call. A subject must be assigned to the trip *and*
+  hold a staff role — the same filter the crew list itself reads through, so a result can never
+  exist about somebody the head count cannot see. Once somebody has one, they **cannot be taken off
+  the trip's crew**: removing them would delete the assignment the result hangs off and let a
+  checkpoint that is open because they did not come back read complete.
+- **Per-trip crew role** — what a crew member is rostered to *do on one sailing*
+  (`instructor`/`divemaster`/`captain`/`crew`), as opposed to the shop-wide roles they hold. Unset
+  means **not specified**, which counts exactly as it always did, by shop-wide inference — never a
+  claim that anyone is or is not in the water. It can only ever *narrow* what someone is worth to
+  the in-water ratio: the roster says which job they are doing, `person_roles` stays the evidence of
+  what they are qualified to do, and the count takes the lesser. A divemaster rostered as this
+  trip's captain is therefore not a **certified assistant** for it (see
+  [ADR 20260803-per-trip-crew-role](../architecture/decisions/20260803-per-trip-crew-role.md)).
+  Set on the trip's crew section, per person, from the job picker beside their name. Both crew write
+  paths refuse to leave a course session with nobody on the ratio, so rostering the session's only
+  instructor onto the deck is refused exactly as removing them is — the two say the same thing about
+  the session. Unassign-then-reassign does not preserve it: the row and its role go together, and
+  the picker is how it is set again.
+- **In-water certified assistant** — a Divemaster actually supervising students in the water on this
+  trip; each one extends the **entry-level in-water ratio** by two students per instructor. A
+  person holding both instructor and divemaster roles is counted as the instructor, never as their
+  own assistant. One definition, `countInWaterCrew` in `src/lib/crew-roles.ts`, shared by the
+  booking gate, the trip page, the staffing coverage list, and the Today queue.
 - **Roll-call checkpoint** — one independent head count: before departure or after a numbered dive.
   A two-tank charter has three checkpoints. Each checkpoint is re-verified against the bodies on the
   boat; a **boarded** result never carries into the next. **"Not boarded" means two opposite
@@ -360,8 +408,11 @@ new domain concept, define it here in the same PR.
   (shown as "carried forward") until staff explicitly re-board them — a diver who left the boat is
   presumed still ashore rather than resetting to awaiting. The default is always flagged as carried,
   can never imply "present," and staff can override it at any checkpoint. A checkpoint is
-  **complete** only when every booked diver has a result *and* the **crew attestation** covers every
-  assigned crew member — divers alone were never the whole boat.
+  **complete** only when every booked diver is **accounted for** — which is not the same as having a
+  result, since a diver recorded as not back aboard has one and is precisely the person who is
+  missing — *and* every assigned crew member is accounted for individually **and** the **crew
+  attestation** covers the crew still expected aboard. Divers alone were never the whole boat, and
+  a count that names nobody was never the whole crew.
 - **Offline manifest snapshot** — a time-stamped, encrypted device copy of the complete derived
   manifest and every checkpoint, saved and refreshed automatically while the device has signal
   (staff can also force an immediate "Refresh now"). It is safety evidence as saved, never an

@@ -1,5 +1,5 @@
-import { expect, test } from "./fixtures";
-import { e2eNow } from "./helpers";
+import { expect, signedInAsOwner, test } from "./fixtures";
+import { daysFromNow, e2eNow, findTripOnBoard } from "./helpers";
 
 test("the public schedule lists seeded trips with capacity states, a calendar, and per-dive briefings", async ({
   page,
@@ -53,4 +53,58 @@ test("the public schedule lists seeded trips with capacity states, a calendar, a
   await expect(page.getByRole("paragraph").filter({ hasText: /^Dive 1$/ })).toBeVisible();
   await expect(page.getByRole("paragraph").filter({ hasText: /^Dive 2$/ })).toBeVisible();
   await expect(page.getByText("French Reef is the second tank")).toBeVisible();
+});
+
+/**
+ * DOM-M3's picker (ADR 20260803-per-trip-crew-role, review 20260803 D5).
+ * Until this control shipped, nothing in the app wrote
+ * `trip_assignments.trip_role` except the seed — so the
+ * divemaster-rostered-as-captain over-count the column exists to fix was still
+ * live at every real shop while the docs stated the fixed behaviour as fact.
+ */
+test.describe("per-trip crew role", () => {
+  signedInAsOwner();
+
+  test("staff set the job a crew member is doing on one sailing, and it survives a reload", async ({
+    page,
+  }) => {
+    // Creating the departure, paging the board to it, one assign, three role
+    // writes and two reloads — each a full server round trip, well past the
+    // default per-test budget (same reason the crew checkpoint test in
+    // e2e/manifest.spec.ts raises its own).
+    test.setTimeout(60_000);
+    // Its own departure, so a crew edit here can never pull a seeded charter's
+    // crew count out from under the manifest spec running in parallel.
+    const title = `Crew role charter ${e2eNow().getTime()}`;
+    await page.goto("/shop/blue-mantis/trips/new");
+    await page.getByLabel("Title").fill(title);
+    await page.getByLabel("Date").fill(daysFromNow(21));
+    await page.getByLabel("Departs").fill("08:00");
+    await page.getByLabel("Returns").fill("12:00");
+    await page.getByRole("button", { name: "Put it on the board" }).click();
+    await expect(page.getByRole("status")).toBeVisible();
+    // Read the card's href rather than clicking it: the board streams in, so
+    // reading `page.url()` after a click races that render.
+    const link = await findTripOnBoard(page, "blue-mantis", title);
+    const href = await link.getAttribute("href");
+    if (!href) throw new Error(`no trip card found for ${title}`);
+    await page.goto(href);
+
+    await page.getByLabel("Assign crew").selectOption({ label: "Keiko Tanaka" });
+    await expect(page.getByRole("button", { name: "Unassign Keiko Tanaka" })).toBeVisible();
+
+    const picker = page.getByLabel("Job Keiko Tanaka is doing on this trip");
+    await picker.selectOption("captain");
+    await expect(picker).toHaveValue("captain");
+
+    // It is a write, not a client-side toggle: the ratio reads this column.
+    await page.reload();
+    await expect(page.getByLabel("Job Keiko Tanaka is doing on this trip")).toHaveValue("captain");
+
+    // And "not specified" is reachable again — it is the honest default, not a
+    // safety claim, and clearing it must never need SQL.
+    await page.getByLabel("Job Keiko Tanaka is doing on this trip").selectOption("");
+    await page.reload();
+    await expect(page.getByLabel("Job Keiko Tanaka is doing on this trip")).toHaveValue("");
+  });
 });
