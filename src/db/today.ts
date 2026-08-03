@@ -976,8 +976,10 @@ export async function getTodayWork(
     }
 
     // The one "course crew gap" computation (Lens 17 task 151) — also
-    // consumed by the trip page and the staffing coverage list, so a course
-    // Today calls fully crewed can't secretly still be over its ratio there.
+    // consumed by the trip page and the staffing coverage list, and all three
+    // report its two codes separately, so a session Today flags as over its
+    // ratio can neither read as "Covered" on staffing nor be filed there under
+    // "needs an instructor" when it already has one.
     const counts = courseCrewCounts.get(trip.id) ?? { instructorCount: 0, assistantCount: 0 };
     const crewGap = courseCrewGap({
       course: trip.course,

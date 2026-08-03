@@ -101,6 +101,7 @@
     "gap": {
       "no_crew": "Sin tripulación asignada",
       "course_needs_instructor": "El curso necesita un instructor",
+      "over_ratio": "Hay más buceadores reservados de los que cubre esta tripulación según la proporción del curso",
       "no_shift_coverage": "Ningún turno de trabajo cubre esta salida"
     },
     "notice": {

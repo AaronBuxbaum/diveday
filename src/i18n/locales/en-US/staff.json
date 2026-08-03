@@ -101,6 +101,7 @@
     "gap": {
       "no_crew": "No crew assigned",
       "course_needs_instructor": "Course needs an instructor",
+      "over_ratio": "More divers booked than this crew covers at the course ratio",
       "no_shift_coverage": "No working shift covers this trip"
     },
     "notice": {

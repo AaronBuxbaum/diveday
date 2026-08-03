@@ -1,6 +1,6 @@
 import { and, asc, count, eq, gt, inArray, isNull, lt, ne } from "drizzle-orm";
 import { STAFF_ROLES } from "@/lib/authz";
-import { courseCrewGap, hasCourseCrewGap } from "@/lib/course-ratios";
+import { type CourseCrewGap, courseCrewGap } from "@/lib/course-ratios";
 import type { AppDb } from "./client";
 import {
   bookings,
@@ -32,7 +32,37 @@ export function capabilitiesForRoles(roles: readonly string[]): StaffCapability[
  * and no `pnpm check:copy` scan can reach (docs ADR
  * 20260730-staff-copy-localization).
  */
-export type StaffingGapCode = "no_crew" | "course_needs_instructor" | "no_shift_coverage";
+export type StaffingGapCode =
+  | "no_crew"
+  | "course_needs_instructor"
+  | "over_ratio"
+  | "no_shift_coverage";
+
+/**
+ * The two course-crew gaps this list can show, named as `courseCrewGap`
+ * (src/lib/course-ratios.ts) names them. Coverage reads that one computation —
+ * the same one the trip page and the Today queue read — instead of re-deriving
+ * a rule of its own, and reports its two codes *separately*: an over-ratio
+ * session already has an instructor, so filing it under
+ * `course_needs_instructor` told a manager to do something they had already
+ * done, and hid the ratio Today and the trip page were both shouting about.
+ *
+ * Written as an exhaustive record rather than a chain of ifs so that a new
+ * `CourseCrewGap` code is a compile error here — a silently unmapped gap would
+ * be a session this page calls "Covered" while the other two surfaces flag it.
+ *
+ * Advisory throughout: booking-time ratio enforcement stays in
+ * `createBookingRecord` (src/db/bookings.ts). Nothing here refuses anything.
+ */
+const COURSE_GAP_CODES: Record<Exclude<CourseCrewGap["code"], "none">, StaffingGapCode> = {
+  no_instructor: "course_needs_instructor",
+  over_ratio: "over_ratio",
+};
+
+/** `courseCrewGap`'s verdict as the zero-or-one gap codes coverage lists. */
+function courseGapCodes(gap: CourseCrewGap): StaffingGapCode[] {
+  return gap.code === "none" ? [] : [COURSE_GAP_CODES[gap.code]];
+}
 
 /** A trip a staff member crews, shown on their staffing card (task 165). */
 export type StaffCrewingTrip = {
@@ -195,8 +225,9 @@ export async function getStaffingView(
       (member) => member.roles.includes("divemaster") && !member.roles.includes("instructor"),
     ).length;
     // The one "course crew gap" computation (Lens 17 task 151) — also
-    // consumed by the trip page and the Today queue — so a course this
-    // window calls "needs an instructor" isn't secretly fine on Today.
+    // consumed by the trip page and the Today queue — so a course this window
+    // calls covered isn't secretly over its ratio on Today, and the two
+    // surfaces name the same shortfall the same way.
     const gap = courseCrewGap({
       course: entry.course,
       instructorCount,
@@ -210,7 +241,7 @@ export async function getStaffingView(
     );
     const gaps: StaffingGapCode[] = [
       ...(entry.crew.length === 0 ? (["no_crew"] as const) : []),
-      ...(hasCourseCrewGap(gap) ? (["course_needs_instructor"] as const) : []),
+      ...courseGapCodes(gap),
       ...(!crewShifted ? (["no_shift_coverage"] as const) : []),
     ];
     return {

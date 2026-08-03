@@ -8,7 +8,6 @@ import {
   DSD_RATIO,
   ENTRY_LEVEL_COURSE_RATIO,
   entryLevelCourseCapacity,
-  hasCourseCrewGap,
   INTRO_COURSE_RATIO,
 } from "./course-ratios";
 
@@ -283,15 +282,5 @@ describe("courseCrewGap", () => {
     expect(
       courseCrewGap({ course: padiIntro, instructorCount: 1, assistantCount: 3, booked: 3 }),
     ).toEqual({ code: "over_ratio", booked: 3, capacity: 2, ratio: "intro" });
-  });
-});
-
-describe("hasCourseCrewGap", () => {
-  it("is false only for 'none'", () => {
-    expect(hasCourseCrewGap({ code: "none" })).toBe(false);
-    expect(hasCourseCrewGap({ code: "no_instructor" })).toBe(true);
-    expect(
-      hasCourseCrewGap({ code: "over_ratio", booked: 9, capacity: 8, ratio: "entry_level" }),
-    ).toBe(true);
   });
 });
