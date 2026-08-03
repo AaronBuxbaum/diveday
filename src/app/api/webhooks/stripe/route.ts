@@ -259,8 +259,20 @@ export async function POST(request: Request) {
       }
       case "account.application.deauthorized": {
         if (event.account) {
-          await disconnectShopStripeAccount(db, event.account);
-          logOutcome("account_disconnected");
+          // Ordered against the shop's own `connected_at`, not applied blind:
+          // Stripe retries this event for ~3 days and the claim is given back
+          // on a failed handle, so a redelivery that lands *after* the owner
+          // has reconnected must not re-disconnect a live account.
+          const account = await disconnectShopStripeAccount(db, event.account, {
+            deauthorizedAt: occurredAt,
+          });
+          // A row that is still connected means the shop reconnected after this
+          // deauthorization happened, so the update deliberately matched nothing.
+          logOutcome(
+            account && account.disconnectedAt === null
+              ? "stale_account_deauthorization"
+              : "account_disconnected",
+          );
         } else {
           logOutcome("missing_account");
         }
@@ -282,11 +294,17 @@ export async function POST(request: Request) {
     // recorded settled total and dedupes its promo redemption,
     // `markTipPaidBySessionId` early-returns once paid, both
     // `*ExpiredBySessionId` only touch a `pending` row,
-    // `setShopStripeAccountStatus` is gated by `hasNewerAccountUpdate` (which
-    // reads the ledger *including* this event, so releasing the claim leaves
-    // that check reading exactly what it read the first time), and
-    // `disconnectShopStripeAccount` no longer moves `disconnectedAt` on a row
-    // that is already disconnected.
+    // `setShopStripeAccountStatus` is gated by `hasNewerAccountUpdate`, and
+    // `disconnectShopStripeAccount` neither moves `disconnectedAt` on a row
+    // that is already disconnected nor touches one reconnected since this
+    // event's own `created` time.
+    //
+    // The two ordering checks above are what a release must not undermine, and
+    // the reason it nulls `claimed_at` instead of deleting the row: the ledger
+    // entry is *this* event's evidence for every **other** event's staleness
+    // check, not only for its own. A deleted row let a failed newer
+    // `account.updated` be overtaken by an older redelivery — fail-open on
+    // `charges_enabled` (see `releaseStripeWebhookEventClaim`).
     //
     // Narrow race, accepted: a concurrent redelivery landing between the claim
     // and this release sees the claim, logs `duplicate_event` and returns 200

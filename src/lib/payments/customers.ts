@@ -50,9 +50,16 @@ type PaymentEnvironment = Readonly<Record<string, string | undefined>>;
 
 const configSchema = z.object({ secretKey: z.string().trim().min(1) });
 
+/**
+ * Stripe's deleted-object envelope. `deleted` is **required and must be true**:
+ * this result is written into a compliance ledger as an attestation that the
+ * customer is gone, so a 2xx body that merely echoes an `id` — a customer
+ * object Stripe returned without deleting anything, a proxy's rewritten
+ * response — must not discharge the obligation.
+ */
 const deletedResponseSchema = z.object({
   id: z.string().min(1),
-  deleted: z.boolean().optional(),
+  deleted: z.literal(true),
 });
 
 /** Stripe's error envelope, for a message worth putting in front of an owner. */
@@ -100,14 +107,16 @@ export function stripeCustomerProvider(
         // failure to retry forever — it is what a replayed delete looks like.
         if (response.status === 404) return { status: "already_deleted" };
         if (!response.ok) return await failureFrom(response);
+        // Stripe answers `deleted: true` and nothing else counts. A 2xx that
+        // does not say so — `deleted: false`, the field absent, a body that is
+        // not the deleted-object envelope at all — leaves the obligation owed
+        // and visible, because calling it deleted would be a lie in a
+        // compliance ledger. Failing here costs a retry; failing open costs an
+        // attestation that a diver's data is gone from Stripe when it is not.
         const body = deletedResponseSchema.safeParse(await response.json());
-        if (!body.success) return { status: "failed", error: "unexpected response" };
-        // Stripe answers `deleted: true`; anything else means the object is
-        // still there and calling it deleted would be a lie in a compliance
-        // ledger.
-        return body.data.deleted === false
-          ? { status: "failed", error: "stripe did not report the customer deleted" }
-          : { status: "deleted" };
+        return body.success
+          ? { status: "deleted" }
+          : { status: "failed", error: "stripe did not report the customer deleted" };
       } catch (error) {
         return {
           status: "failed",

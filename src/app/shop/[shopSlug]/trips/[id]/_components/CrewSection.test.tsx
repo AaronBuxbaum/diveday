@@ -21,6 +21,14 @@ const COPY: CrewSectionCopy = {
   onShift: "On shift",
   notOnShift: "Not on shift",
   manageShifts: "Manage shifts",
+  roleAria: "Job {name} is doing on this trip",
+  roleUnspecified: "Job not set",
+  roleOptions: {
+    instructor: "Instructor",
+    divemaster: "Divemaster",
+    captain: "Captain",
+    crew: "Deck crew",
+  },
 };
 
 function staffMember(id: string, fullName: string, roles: string[] = ["instructor"]) {
@@ -44,6 +52,7 @@ describe("CrewSection assignError reset on revisit", () => {
       <CrewSection
         tripId="trip-a"
         staff={staff}
+        crewRoles={{}}
         crewIds={["staff-1"]}
         onShiftIds={["staff-1"]}
         crewGapCode="none"
@@ -70,6 +79,7 @@ describe("CrewSection assignError reset on revisit", () => {
       <CrewSection
         tripId="trip-b"
         staff={staff}
+        crewRoles={{}}
         crewIds={["staff-1"]}
         onShiftIds={["staff-1"]}
         crewGapCode="none"
@@ -101,6 +111,7 @@ describe("CrewSection confirm-then-render", () => {
       <CrewSection
         tripId="trip-a"
         staff={staff}
+        crewRoles={{}}
         crewIds={["staff-1"]}
         onShiftIds={["staff-1"]}
         crewGapCode="none"

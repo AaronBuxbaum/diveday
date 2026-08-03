@@ -176,7 +176,7 @@ export async function startBookingCheckout(
     existing?.status === "pending" &&
     existing.checkoutUrl &&
     (!existing.expiresAt || existing.expiresAt > nowDate()) &&
-    (await checkoutCoversExactly(db, existing.id, input.bookingIds))
+    (await checkoutCoversExactly(db, input.shopId, existing.id, input.bookingIds))
   ) {
     return { ok: true, checkout: existing, reused: true };
   }
@@ -313,13 +313,22 @@ export async function startBookingCheckout(
  */
 async function checkoutCoversExactly(
   db: DbExecutor,
+  shopId: string,
   checkoutId: string,
   bookingIds: string[],
 ): Promise<boolean> {
   const linked = await db
     .select({ bookingId: bookingCheckoutBookings.bookingId })
     .from(bookingCheckoutBookings)
-    .where(eq(bookingCheckoutBookings.checkoutId, checkoutId));
+    // Shop-scoped like every other read in this file. The checkout was resolved
+    // under the shop scope and its links are same-shop by construction, so no
+    // result moves — the predicate is here so the rule holds by inspection.
+    .where(
+      and(
+        eq(bookingCheckoutBookings.shopId, shopId),
+        eq(bookingCheckoutBookings.checkoutId, checkoutId),
+      ),
+    );
   if (linked.length !== bookingIds.length) return false;
   const requested = new Set(bookingIds);
   return linked.every((row) => requested.has(row.bookingId));

@@ -3,7 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
-import { bookings, courses, people, staffShifts } from "./schema";
+import { bookings, courses, people, staffShifts, tripAssignments } from "./schema";
 import { createStaffShift, crewShiftCoverage, getStaffingView } from "./staffing";
 import { createTrip, listStaff, setTripCrew, upcomingTripsWithCounts } from "./trips";
 
@@ -193,11 +193,20 @@ describe("staffing view", () => {
       return view.trips.find((row) => row.trip.id === trip.id)?.gaps ?? [];
     };
 
-    expect(
-      await setTripCrew(db, shop.id, trip.id, [
-        { personId: instructor.person.id, tripRole: "crew" },
-      ]),
-    ).toBe(true);
+    // Written straight to the row: `setTripCrew` now refuses to leave a course
+    // session with nobody on the ratio (review 20260803, D8), and the staffing
+    // view still has to read such a row truthfully — it can arrive from an
+    // import, or from a qualification revoked after the roster was set.
+    expect(await setTripCrew(db, shop.id, trip.id, [instructor.person.id])).toBe(true);
+    await db
+      .update(tripAssignments)
+      .set({ tripRole: "crew" })
+      .where(
+        and(
+          eq(tripAssignments.tripId, trip.id),
+          eq(tripAssignments.personId, instructor.person.id),
+        ),
+      );
     expect(await gapsFor()).toContain("course_needs_instructor");
 
     // The same person, rostered to the job he is actually doing.

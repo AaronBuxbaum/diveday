@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { controlClass } from "@/components/ui/form";
 import type { TripCrewChange } from "@/db/trips";
+import { TRIP_CREW_ROLES, type TripCrewRole } from "@/lib/crew-roles";
 import type { StaffList } from "./types";
 
 export type CrewSectionCopy = {
@@ -25,6 +27,10 @@ export type CrewSectionCopy = {
   onShift: string;
   notOnShift: string;
   manageShifts: string;
+  /** The per-trip role picker: its `{name}` aria template, its "not specified" option, and each job. */
+  roleAria: string;
+  roleUnspecified: string;
+  roleOptions: Record<TripCrewRole, string>;
 };
 
 /** Fills `{name}` placeholders in a plain ICU-style template — never a translator crossing the client boundary. */
@@ -46,6 +52,7 @@ export function CrewSection({
   tripId,
   staff,
   crewIds,
+  crewRoles,
   onShiftIds,
   crewGapCode,
   shopSlug,
@@ -55,6 +62,8 @@ export function CrewSection({
   tripId: string;
   staff: StaffList;
   crewIds: string[];
+  /** Each assigned person's current `trip_assignments.trip_role`, or null. */
+  crewRoles: Record<string, TripCrewRole | null>;
   /** Person ids among `crewIds` who have a staff shift overlapping this trip's window. */
   onShiftIds: string[];
   crewGapCode: "none" | "no_instructor" | "over_ratio";
@@ -69,6 +78,7 @@ export function CrewSection({
   }));
   const crewFromProps = availableStaff.filter((entry) => crewIds.includes(entry.id));
   const [localCrew, setLocalCrew] = useState(crewFromProps);
+  const [localRoles, setLocalRoles] = useState(crewRoles);
   const [assignError, setAssignError] = useState(false);
 
   // Resyncs from the server's crewIds/staff, not from crewFromProps (a new
@@ -83,8 +93,9 @@ export function CrewSection({
   // biome-ignore lint/correctness/useExhaustiveDependencies: resyncs from the server's crewIds/staff, not from crewFromProps (a new array every render).
   useEffect(() => {
     setLocalCrew(availableStaff.filter((entry) => crewIds.includes(entry.id)));
+    setLocalRoles(crewRoles);
     setAssignError(false);
-  }, [crewIds, staff]);
+  }, [crewIds, crewRoles, staff]);
 
   const onShift = new Set(onShiftIds);
   const hasUnassignedStaff = localCrew.length < availableStaff.length;
@@ -107,6 +118,30 @@ export function CrewSection({
       const res = await updateCrewAction(tripId, { personId, operation: "assign" });
       if (res.ok) {
         setLocalCrew([...localCrew, person]);
+      } else {
+        setAssignError(true);
+      }
+    } catch {
+      setAssignError(true);
+    }
+  };
+
+  /**
+   * Set (or clear) the job this person is doing on **this** sailing.
+   *
+   * `assign` is the idempotent upsert for someone already on the crew
+   * (`changeTripCrew`), so the role change is one call on the same mutation the
+   * rest of this section uses — no second action, no second write path. Same
+   * confirm-then-render discipline as assign/unassign: the supervision ratio
+   * reads this field, so the control must never show a role the server has not
+   * accepted.
+   */
+  const handleRole = async (personId: string, tripRole: TripCrewRole | null) => {
+    setAssignError(false);
+    try {
+      const res = await updateCrewAction(tripId, { personId, operation: "assign", tripRole });
+      if (res.ok) {
+        setLocalRoles({ ...localRoles, [personId]: tripRole });
       } else {
         setAssignError(true);
       }
@@ -200,14 +235,41 @@ export function CrewSection({
                       {onShift.has(entry.id) ? copy.onShift : copy.notOnShift}
                     </Badge>
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => handleUnassign(entry.id)}
-                    className="min-h-11 rounded-lg px-2 text-xs font-semibold text-muted hover:text-danger"
-                    aria-label={fill(copy.unassignAria, { name: entry.fullName })}
-                  >
-                    ×
-                  </button>
+                  <span className="flex items-center gap-2">
+                    {/* The job on *this* sailing (ADR 20260803-per-trip-crew-role).
+                        Until this existed nothing in the app could write the
+                        field, so the divemaster-rostered-as-captain over-count
+                        it fixes was live at every shop (review 20260803, D5).
+                        Unspecified stays the honest default — it means nobody
+                        has said, and it counts exactly as it always did. */}
+                    <select
+                      aria-label={fill(copy.roleAria, { name: entry.fullName })}
+                      value={localRoles[entry.id] ?? ""}
+                      onChange={(event) => {
+                        const next = event.currentTarget.value;
+                        void handleRole(
+                          entry.id,
+                          next === "" ? null : (next as TripCrewRole),
+                        );
+                      }}
+                      className={`${controlClass} w-auto max-w-[11rem] text-sm`}
+                    >
+                      <option value="">{copy.roleUnspecified}</option>
+                      {TRIP_CREW_ROLES.map((role) => (
+                        <option key={role} value={role}>
+                          {copy.roleOptions[role]}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => handleUnassign(entry.id)}
+                      className="min-h-11 rounded-lg px-2 text-xs font-semibold text-muted hover:text-danger"
+                      aria-label={fill(copy.unassignAria, { name: entry.fullName })}
+                    >
+                      ×
+                    </button>
+                  </span>
                 </li>
               ))}
             </ul>

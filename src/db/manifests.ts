@@ -578,17 +578,26 @@ export async function recordCrewRollCall(
       return { ok: false, reason: "invalid_checkpoint" };
     }
 
+    // Assigned **and** holding a staff role — the identical filter
+    // `listTripCrew` reads the crew list through. Without the `personRoles`
+    // join this accepted a subject who was assigned but held no staff role at
+    // all: their events were written, and then neither the crew list nor the
+    // denominator ever mentioned them, so a result existed about somebody the
+    // head count could not see (review 20260803, D11). One definition of "on
+    // this trip's crew", or the two halves answer differently.
     const [assigned] = await tx
       .select({ personId: tripAssignments.personId })
       .from(tripAssignments)
       .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
       .innerJoin(people, eq(people.id, tripAssignments.personId))
+      .innerJoin(personRoles, eq(personRoles.personId, people.id))
       .where(
         and(
           eq(tripAssignments.tripId, input.tripId),
           eq(tripAssignments.personId, input.personId),
           eq(trips.shopId, input.shopId),
           eq(people.shopId, input.shopId),
+          inArray(personRoles.role, [...STAFF_ROLES]),
         ),
       )
       .limit(1);

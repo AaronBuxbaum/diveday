@@ -1927,13 +1927,37 @@ export async function seedDemoSchedule(
   );
   const captainId = crewByRole.get("captain");
   const divemasterId = crewByRole.get("divemaster");
-  // The job each is doing on this sailing, not just who is aboard (DOM-M3, ADR
-  // 20260803-per-trip-crew-role). Each matches the person's own shop-wide role
-  // here, so nothing about the supervision ratio moves — what it demonstrates
-  // is that the captain is rostered as the captain, and therefore is not
-  // counted as an in-water certified assistant.
+  /**
+   * The job each person is doing on this sailing, not just who is aboard
+   * (DOM-M3, ADR 20260803-per-trip-crew-role). Deliberately *varied*: a seed
+   * where every `trip_role` simply repeats that person's own shop-wide role
+   * demonstrates nothing about what the column changed, and — worse — leaves
+   * the `null` path, which is the state 100% of production rows are in,
+   * unexercised by any seeded row.
+   *
+   * So the demo shop carries, on purpose:
+   *
+   * - a charter where the **divemaster is driving** (`captain`) and the captain
+   *   is on the lines (`crew`): the DOM-M3 case itself. Keiko is still a
+   *   divemaster and still aboard; she is not supervising anybody in the water,
+   *   so she is not an in-water certified assistant on that sailing.
+   * - a charter with **no roles at all**: exactly what every row written before
+   *   the column existed looks like, counted by shop-wide inference, unchanged.
+   * - a course session with a **captain** aboard. Before this the seeded course
+   *   session had exactly one person on it — a boat with nobody driving it.
+   * - a course session where the **divemaster is rostered as its instructor**:
+   *   the roster is a scheduling document and cannot mint a credential, so she
+   *   still counts as a certified assistant and the session's real instructor
+   *   is still the one carrying it.
+   *
+   * None of this moves a seeded ratio: a captain and a deckhand were already
+   * worth nothing to it, and the divemaster-as-instructor still counts as the
+   * assistant she is qualified to be.
+   */
+  type CrewRow = { tripId: string; personId: string; tripRole: TripAssignmentRole | null };
+  let charterIndex = 0;
   await db.insert(tripAssignments).values(
-    tripRows.flatMap((trip) => {
+    tripRows.flatMap((trip): CrewRow[] => {
       if (trip.courseId) {
         return [
           {
@@ -1941,19 +1965,38 @@ export async function seedDemoSchedule(
             personId: instructor.id,
             tripRole: "instructor" as TripAssignmentRole,
           },
+          ...(captainId && trip.courseId === discoverCourse.id
+            ? [{ tripId: trip.id, personId: captainId, tripRole: "captain" as TripAssignmentRole }]
+            : []),
+          ...(divemasterId && openWaterCourse && trip.courseId === openWaterCourse.id
+            ? [
+                {
+                  tripId: trip.id,
+                  personId: divemasterId,
+                  tripRole: "instructor" as TripAssignmentRole,
+                },
+              ]
+            : []),
         ];
       }
+      const nth = charterIndex++;
+      // nth 0: the divemaster is driving. nth 1: nobody has said. Everyone
+      // else: the ordinary roster, each doing the job they hold.
+      const captainRole: TripAssignmentRole | null =
+        nth === 0 ? "crew" : nth === 1 ? null : "captain";
+      const divemasterRole: TripAssignmentRole | null =
+        nth === 0 ? "captain" : nth === 1 ? null : "divemaster";
       return [
         ...(captainId
-          ? [{ tripId: trip.id, personId: captainId, tripRole: "captain" as TripAssignmentRole }]
+          ? [{ tripId: trip.id, personId: captainId, tripRole: captainRole } satisfies CrewRow]
           : []),
         ...(divemasterId
           ? [
               {
                 tripId: trip.id,
                 personId: divemasterId,
-                tripRole: "divemaster" as TripAssignmentRole,
-              },
+                tripRole: divemasterRole,
+              } satisfies CrewRow,
             ]
           : []),
       ];
@@ -3847,24 +3890,40 @@ async function seedMoreTrips(
     }),
   );
 
+  // Same deliberate variety as the demo shop above (see the long note there):
+  // the first charter's crew carry **no** per-trip role, which is the state
+  // every row written before the column existed is in, and the one no seeded
+  // row exercised at all.
+  type ScenarioCrewRow = { tripId: string; personId: string; tripRole: TripAssignmentRole | null };
+  let scenarioCharterIndex = 0;
   await db.insert(tripAssignments).values(
-    insertedTrips.flatMap((trip, i) => {
+    insertedTrips.flatMap((trip, i): ScenarioCrewRow[] => {
       const def = tripDefs[i];
       if (def.courseTitle) {
         return [
           { tripId: trip.id, personId: instructorId, tripRole: "instructor" as TripAssignmentRole },
+          ...(captainId
+            ? [{ tripId: trip.id, personId: captainId, tripRole: "captain" as TripAssignmentRole }]
+            : []),
         ];
       }
+      const unspecified = scenarioCharterIndex++ === 0;
       return [
         ...(captainId
-          ? [{ tripId: trip.id, personId: captainId, tripRole: "captain" as TripAssignmentRole }]
+          ? [
+              {
+                tripId: trip.id,
+                personId: captainId,
+                tripRole: unspecified ? null : ("captain" as TripAssignmentRole),
+              },
+            ]
           : []),
         ...(divemasterId
           ? [
               {
                 tripId: trip.id,
                 personId: divemasterId,
-                tripRole: "divemaster" as TripAssignmentRole,
+                tripRole: unspecified ? null : ("divemaster" as TripAssignmentRole),
               },
             ]
           : []),

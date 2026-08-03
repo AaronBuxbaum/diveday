@@ -1597,16 +1597,28 @@ export const orders = pgTable(
 );
 
 /**
- * A ledger of every Stripe webhook event this app has claimed, keyed by
- * Stripe's own globally-unique event id — belt-and-suspenders on top of each
- * handler's own idempotent state machine (docs ADR 20260719-stripe-connect-orders).
- * `POST /api/webhooks/stripe` claims an event here (an `onConflictDoNothing`
- * insert) before doing anything else, so a redelivered event is a no-op
- * before it ever reaches a handler. `occurred_at` is Stripe's own
- * event-creation time (not when we received it), which lets the
- * `account.updated` handler — otherwise pure last-write-wins — refuse to
- * apply an event that is chronologically older than one already applied for
- * the same connected account.
+ * A ledger of every Stripe webhook event this app has ever accepted, keyed by
+ * Stripe's own globally-unique event id. The row does **two separate jobs**,
+ * and they are deliberately carried by two different columns:
+ *
+ *  1. **The dedup claim** — `claimed_at`. `POST /api/webhooks/stripe` claims an
+ *     event here before doing anything else, so a redelivered event is a no-op
+ *     before it ever reaches a handler; belt-and-suspenders on top of each
+ *     handler's own idempotent state machine (docs ADR
+ *     20260719-stripe-connect-orders). A handler that throws *releases* the
+ *     claim (`claimed_at` back to null) so Stripe's own retry genuinely
+ *     re-reaches the handler (PAY-M1).
+ *  2. **Chronological evidence** — `occurred_at`, Stripe's own event-creation
+ *     time (not when we received it), which lets the `account.updated` handler
+ *     — otherwise pure last-write-wins — refuse to apply an event that is
+ *     chronologically older than one already delivered for the same connected
+ *     account (`hasNewerAccountUpdate`).
+ *
+ * The row is therefore **never deleted**: releasing a claim nulls `claimed_at`
+ * and leaves the evidence standing. Deleting it instead would erase job 2 to
+ * do job 1, and a *different*, older `account.updated` would then read as
+ * fresh and regress `charges_enabled` — fail-open on the flag that gates order
+ * and checkout creation.
  */
 export const stripeWebhookEvents = pgTable(
   "stripe_webhook_events",
@@ -1617,6 +1629,19 @@ export const stripeWebhookEvents = pgTable(
     account: text("account"),
     occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
     receivedAt: timestamp("received_at", { withTimezone: true }).notNull().defaultNow(),
+    /**
+     * When this event's handling was claimed. Non-null means "claimed, and
+     * treat every redelivery as a duplicate"; null means the delivery was
+     * attempted, the handler failed, and the claim was given back so a
+     * redelivery re-runs it. The row itself survives either way — it is still
+     * the evidence that an event with this `occurred_at` was delivered.
+     *
+     * Defaulted rather than left bare so the column's arrival backfills every
+     * pre-existing row as claimed (Postgres applies an `ADD COLUMN` default to
+     * existing rows): those events were all handled successfully under the
+     * old model, and a migration must not silently re-open them to redelivery.
+     */
+    claimedAt: timestamp("claimed_at", { withTimezone: true }).defaultNow(),
   },
   (table) => [
     index("stripe_webhook_events_account_type_idx").on(table.account, table.type, table.occurredAt),

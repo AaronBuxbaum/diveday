@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, lte } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { type ShopCurrency, toShopCurrency } from "@/lib/money";
 import type { AccountStatusResult } from "@/lib/payments/connect";
@@ -128,22 +128,35 @@ export async function setShopStripeAccountStatus(
 }
 
 /**
- * Mark a connected account disconnected. Idempotent by construction: the
- * update only matches a row that is not already disconnected, so a re-run
- * leaves the original `disconnected_at` exactly where it was.
+ * Mark a connected account disconnected.
  *
- * This matters because `account.application.deauthorized` has no other
- * self-heal, and the webhook route now releases its event claim when a handler
- * throws (PAY-M1) — a redelivery genuinely re-reaches this function. An
- * unconditional `disconnectedAt: nowDate()` would walk the timestamp forward
- * on every re-run, and would clobber a legitimate reconnect
- * (`upsertShopStripeAccount` clears `disconnected_at`) by re-disconnecting a
- * shop that is back online. The already-disconnected row is still returned, so
- * callers cannot tell a first disconnect from a repeat and do not need to.
+ * Repeat-safe on an already-disconnected row: the update only matches a row
+ * whose `disconnected_at` is null, so a re-run leaves the original timestamp
+ * exactly where it was instead of walking it forward. The already-disconnected
+ * row is still returned, so callers cannot tell a first disconnect from a
+ * repeat and do not need to.
+ *
+ * That guard alone does **not** protect a legitimate reconnect, and it is
+ * important not to believe it does: `upsertShopStripeAccount` sets
+ * `disconnected_at = null`, which is exactly the state the guard permits. A
+ * redelivered `account.application.deauthorized` — which Stripe will retry for
+ * ~3 days, and which the route now re-reaches after a failed handle releases
+ * its claim (PAY-M1) — would re-disconnect a shop that has since reconnected
+ * and force `charges_enabled` false on a live account.
+ *
+ * `deauthorizedAt` is what closes that: pass the event's own Stripe `created`
+ * time and the update additionally requires the account to have been connected
+ * *before* the deauthorization happened. A reconnect moves `connected_at`
+ * forward, so a stale redelivery finds nothing to disconnect — the same
+ * "compare Stripe's own clock, not ours" discipline `hasNewerAccountUpdate`
+ * uses for `account.updated`. Omit it for a disconnect a human is performing
+ * right now (the settings page), where there is no stale event to order
+ * against.
  */
 export async function disconnectShopStripeAccount(
   db: AppDb,
   stripeAccountId: string,
+  options: { deauthorizedAt?: Date } = {},
 ): Promise<ShopStripeAccount | null> {
   const [row] = await db
     .update(shopStripeAccounts)
@@ -157,6 +170,9 @@ export async function disconnectShopStripeAccount(
       and(
         eq(shopStripeAccounts.stripeAccountId, stripeAccountId),
         isNull(shopStripeAccounts.disconnectedAt),
+        ...(options.deauthorizedAt
+          ? [lte(shopStripeAccounts.connectedAt, options.deauthorizedAt)]
+          : []),
       ),
     )
     .returning();

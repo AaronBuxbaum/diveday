@@ -19,7 +19,6 @@ import { rentalFitLineText } from "@/i18n/rental-labels";
 import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
 import { staffTranslator } from "@/i18n/staff-messages";
 import {
-  crewRollCallCounts,
   isNotBackAboard,
   isRollCallCheckpoint,
   type RollCallCheckpoint,
@@ -475,13 +474,12 @@ export function OfflineManifestView() {
   // complete" online, which would be worse than the bug this closes.
   const crewAssigned = manifest.crew.length;
   const savedCrewAttestation = manifest.crewAttestation;
-  const crewCounts = crewRollCallCounts(checkpoint, manifest.crew);
   const completeness = rollCallCompleteness({
+    checkpoint,
     totalDivers: manifest.summary.totalDivers,
     awaiting,
     notBackAboard,
-    crewAssigned,
-    ...crewCounts,
+    crew: manifest.crew,
     crewAttestation: savedCrewAttestation
       ? {
           crewAboard: savedCrewAttestation.crewAboard,
@@ -492,6 +490,19 @@ export function OfflineManifestView() {
         }
       : null,
   });
+  const crewCounts = completeness.crewCounts;
+  // Two different facts, and a crew reading warning-yellow on every single dive
+  // stops reading it at all (review 20260803, D6):
+  //
+  // - somebody **is unaccounted for**: a named crew member was recorded not back
+  //   aboard. That is an emergency and reads as danger, wherever the divers are.
+  // - the crew half **is not recordable here**: neither the attestation nor a
+  //   per-person crew result can be written without signal in this slice, so on
+  //   an out-of-signal trip every checkpoint is open for a reason nobody aboard
+  //   can act on. It stays fail-closed — the checkpoint does *not* read complete
+  //   — but it is stated as a limitation of the dock copy, not as an alarm.
+  const crewMissing = completeness.crewReason === "crew_not_back_aboard";
+  const crewUnrecordableHere = completeness.crewReason !== null && !crewMissing;
   const rollCallComplete = completeness.complete;
   // The actual roster rendered on this device, not the (possibly stale,
   // save-time) `manifest.summary.totalDivers`. Feeds MilestoneHaptics and the
@@ -693,44 +704,62 @@ export function OfflineManifestView() {
          */}
         <div
           className={
-            completeness.crewAccountedFor
-              ? "mt-3 rounded-xl border border-success/40 bg-success/10 p-3"
-              : "mt-3 rounded-xl border border-warning/50 bg-warning/10 p-3"
+            crewMissing
+              ? "mt-3 rounded-xl border border-danger bg-danger/10 p-3 ring-1 ring-inset ring-danger/40"
+              : completeness.crewAccountedFor
+                ? "mt-3 rounded-xl border border-success/40 bg-success/10 p-3"
+                : "mt-3 rounded-xl border border-border-strong bg-surface-sunken p-3"
           }
         >
-          <p className="text-sm font-bold">{t("shared.offlineManifest.single.crewHeading")}</p>
+          <p className={`text-sm font-bold${crewMissing ? " text-danger" : ""}`}>
+            {t("shared.offlineManifest.single.crewHeading")}
+          </p>
           <p className="mt-1 text-sm">
             {savedCrewAttestation && completeness.crewAccountedFor
               ? t("shared.offlineManifest.single.crewAttested", {
                   aboard: savedCrewAttestation.crewAboard,
-                  assigned: crewAssigned,
+                  assigned: crewCounts.crewExpectedAboard,
                   name: savedCrewAttestation.attestedByName,
                 })
-              : completeness.reason === "crew_not_back_aboard"
+              : crewMissing
                 ? t("shared.offlineManifest.single.crewNotBackAboard", {
                     count: crewCounts.crewNotBackAboard,
                   })
-                : completeness.reason === "crew_awaiting"
+                : completeness.crewReason === "crew_awaiting"
                   ? t("shared.offlineManifest.single.crewAwaiting", {
                       count: crewCounts.crewAwaiting,
                     })
                   : savedCrewAttestation
                     ? t("shared.offlineManifest.single.crewShort", {
                         aboard: savedCrewAttestation.crewAboard,
-                        assigned: crewAssigned,
+                        assigned: crewCounts.crewExpectedAboard,
                       })
                     : t("shared.offlineManifest.single.crewNotAttested", {
                         assigned: crewAssigned,
                       })}
           </p>
+          {/* Says plainly that this half of the count belongs to the live
+              manifest, so the state above reads as "not recordable here"
+              rather than as one more thing the boat has failed to do. */}
+          {crewUnrecordableHere ? (
+            <p className="mt-1 text-sm font-semibold text-muted">
+              {t("shared.offlineManifest.single.crewReadOnlyHere")}
+            </p>
+          ) : null}
           {/* Who, not just how many. A crew member's saved result is read-only
               here — recording one needs signal — but naming the person nobody
               has counted is the whole point of the per-person model. */}
           {crewAssigned > 0 ? (
             <ul className="mt-2 flex flex-wrap gap-2">
-              {manifest.crew.map((member) => (
+              {/* Keyed by position, not by name: the dock copy deliberately
+                  carries **no person ids** (src/lib/offline-manifests.ts), and
+                  `fullName-roles` collides for two crew who share both — which
+                  is exactly what `ManifestCrewMember.id` prevents online. This
+                  list is a fixed slice of one saved snapshot, never sorted,
+                  filtered or appended to, so its index is a stable identity. */}
+              {manifest.crew.map((member, index) => (
                 <li
-                  key={`${member.fullName}-${member.roles.join("-")}`}
+                  key={`crew-${index}`}
                   className={
                     isNotBackAboard(checkpoint, member.rollCall)
                       ? "rounded-full bg-danger/15 px-3 py-1 text-sm font-bold text-danger"

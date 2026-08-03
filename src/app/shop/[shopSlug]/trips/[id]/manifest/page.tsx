@@ -41,7 +41,6 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { trackEvent } from "@/lib/analytics";
 import { formatDateTimeTz, formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import {
-  crewRollCallCounts,
   isNotBackAboard,
   isRollCallCheckpoint,
   type RollCallCheckpoint,
@@ -131,9 +130,11 @@ export default async function TripManifestPage({
   const rollCallComplete = completeness.complete;
   const crewAssigned = manifest.crew.length;
   const crewAttestation = manifest.crewAttestation;
-  // Who among the named crew is still unaccounted for at this checkpoint — the
-  // same helper the offline copy uses, so the two surfaces cannot disagree.
-  const crewCounts = crewRollCallCounts(checkpoint, manifest.crew);
+  // Who among the named crew is still unaccounted for at this checkpoint, and
+  // how many bodies the count actually has to cover. Read off the completeness
+  // verdict itself rather than recomputed, so this page and the number that
+  // closes the checkpoint can never disagree.
+  const crewCounts = completeness.crewCounts;
   // Readiness gates boarding at departure only. After a dive, roll call is a
   // physical head count — a diver who is aboard is recorded present regardless
   // of a paperwork state that changed after the boat left.
@@ -532,7 +533,9 @@ export default async function TripManifestPage({
                   : completeness.reason === "crew_short" && crewAttestation
                     ? t("trips.manifest.crewShort", {
                         aboard: crewAttestation.crewAboard,
-                        assigned: crewAssigned,
+                        // Everyone assigned *minus* anyone already recorded as
+                        // ashore — the number the count actually has to cover.
+                        assigned: crewCounts.crewExpectedAboard,
                       })
                     : completeness.reason === "crew_awaiting"
                       ? t("trips.manifest.crewAwaiting", { count: crewCounts.crewAwaiting })
@@ -729,7 +732,18 @@ export default async function TripManifestPage({
           <FieldGrid as="form" action={attestCrewAction} columns={2} className="mt-4">
             <Field
               label={t("trips.manifest.crewAboardLabel")}
-              hint={t("trips.manifest.crewAboardHint", { assigned: crewAssigned })}
+              // The hint names the number that closes the checkpoint. When
+              // somebody is recorded ashore that is *not* the assignment count,
+              // and asking for the assignment count would be asking the crew to
+              // type a body that is not on the boat (review 20260803, D2).
+              hint={
+                crewCounts.crewAshore > 0
+                  ? t("trips.manifest.crewAboardHintExpected", {
+                      expected: crewCounts.crewExpectedAboard,
+                      ashore: crewCounts.crewAshore,
+                    })
+                  : t("trips.manifest.crewAboardHint", { assigned: crewAssigned })
+              }
               description={t("trips.manifest.crewAboardFieldDescription")}
             >
               <input

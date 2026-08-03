@@ -852,7 +852,16 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
           bookingId: bookingCheckoutBookings.bookingId,
         })
         .from(bookingCheckoutBookings)
-        .where(inArray(bookingCheckoutBookings.checkoutId, coveringIds));
+        // Shop-scoped like every other read in this file. A checkout's links
+        // are same-shop by construction and `coveringIds` was itself resolved
+        // under the shop scope, so this changes no result today — it is here so
+        // the rule holds by inspection rather than by argument.
+        .where(
+          and(
+            eq(bookingCheckoutBookings.shopId, shopId),
+            inArray(bookingCheckoutBookings.checkoutId, coveringIds),
+          ),
+        );
       const soleOccupant = coveringIds.filter((checkoutId) =>
         allLinks
           .filter((link) => link.checkoutId === checkoutId)

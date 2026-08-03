@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { canPersonErasePersonalData } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { listPendingMediaDeletions } from "@/db/media-deletions";
 import { listStuckPaymentOperations } from "@/db/payment-operations";
@@ -209,6 +210,13 @@ export default async function ReportsPage({
   const stuckPaymentOperations = await listStuckPaymentOperations(db, shop.id);
   const pendingMediaDeletions = await listPendingMediaDeletions(db, shop.id);
   const owedProcessorErasures = await listOwedProcessorErasures(db, shop.id);
+  // The panel is readable behind the reports gate (owner *or* manager), but both
+  // of its buttons are owner-only: a retry fires a destructive call at the
+  // shop's Stripe account, and a discharge signs an attestation that a diver's
+  // data is gone from the processor. The actions enforce that themselves and
+  // return silently on refusal — this is the house rule that a control the user
+  // will be bounced from is not shown at all (src/lib/authz.ts).
+  const canErase = await canPersonErasePersonalData(db, shop.id, session.user.personId);
   const retryMediaDeletion = retryMediaDeletionAction.bind(null, shopSlug);
   const dischargeProcessorErasure = dischargeProcessorErasureAction.bind(null, shopSlug);
   const retryProcessorErasure = retryProcessorErasureAction.bind(null, shopSlug);
@@ -356,7 +364,7 @@ export default async function ReportsPage({
                     })}
                     {obligation.lastError ? ` · ${obligation.lastError}` : ""}
                   </span>
-                  {obligation.target === "stripe_customer" ? (
+                  {canErase && obligation.target === "stripe_customer" ? (
                     <form action={retryProcessorErasure}>
                       <input type="hidden" name="obligationId" value={obligation.id} />
                       <SubmitButton
@@ -367,15 +375,17 @@ export default async function ReportsPage({
                       </SubmitButton>
                     </form>
                   ) : null}
-                  <form action={dischargeProcessorErasure}>
-                    <input type="hidden" name="obligationId" value={obligation.id} />
-                    <SubmitButton
-                      pendingLabel={t("reports.processorErasures.discharging")}
-                      className={buttonClass({ variant: "secondary", size: "sm" })}
-                    >
-                      {t("reports.processorErasures.discharge")}
-                    </SubmitButton>
-                  </form>
+                  {canErase ? (
+                    <form action={dischargeProcessorErasure}>
+                      <input type="hidden" name="obligationId" value={obligation.id} />
+                      <SubmitButton
+                        pendingLabel={t("reports.processorErasures.discharging")}
+                        className={buttonClass({ variant: "secondary", size: "sm" })}
+                      >
+                        {t("reports.processorErasures.discharge")}
+                      </SubmitButton>
+                    </form>
+                  ) : null}
                 </li>
               ))}
             </ul>

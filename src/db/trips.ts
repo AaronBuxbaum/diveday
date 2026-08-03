@@ -17,7 +17,7 @@ import {
 } from "drizzle-orm";
 import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
-import type { TripCrewRole } from "@/lib/crew-roles";
+import { countInWaterCrew, type TripCrewRole } from "@/lib/crew-roles";
 import { reviewManifestChange } from "@/lib/manifest-change-review";
 import { maxRecordedDiveNumber } from "@/lib/manifests";
 import type { TripRecurrenceFrequency } from "@/lib/recurrence";
@@ -31,6 +31,8 @@ import {
   diveSites,
   people,
   personRoles,
+  rollCallCrewAttestations,
+  rollCallCrewEvents,
   rollCallEvents,
   shops,
   tripAssignments,
@@ -788,6 +790,30 @@ export type MoveTripOutcome =
  * progress is not a schedule edit, it is a falsified record. Refuses a cancelled
  * trip for the same reason a cancelled trip is not on the board.
  */
+/**
+ * Every kind of head-count evidence a trip can carry — the divers' roll call,
+ * the per-person crew roll call, and the count-level crew attestation. A trip
+ * with any of it has **sailed**, and the two guards that turn on that fact
+ * (`moveTrip`, `deleteTrip`) have to ask the whole question.
+ *
+ * Counting only `rollCallEvents` was the hole: a bookingless charter that
+ * carried crew — a boat with a divemaster and no paying divers, or one whose
+ * only head count was of its crew — walked past the guard, and `deleteTrip`
+ * then deleted it straight into a foreign-key violation instead of refusing
+ * cleanly (review 20260803, D3).
+ */
+async function countRollCallEvidence(tx: DbExecutor, tripId: string): Promise<number> {
+  const [[divers], [crew], [attestations]] = await Promise.all([
+    tx.select({ n: count() }).from(rollCallEvents).where(eq(rollCallEvents.tripId, tripId)),
+    tx.select({ n: count() }).from(rollCallCrewEvents).where(eq(rollCallCrewEvents.tripId, tripId)),
+    tx
+      .select({ n: count() })
+      .from(rollCallCrewAttestations)
+      .where(eq(rollCallCrewAttestations.tripId, tripId)),
+  ]);
+  return (divers?.n ?? 0) + (crew?.n ?? 0) + (attestations?.n ?? 0);
+}
+
 export async function moveTrip(
   db: AppDb,
   shopId: string,
@@ -805,11 +831,9 @@ export async function moveTrip(
     if (!existing) return { ok: false, reason: "not_found" };
     if (existing.status !== "scheduled") return { ok: false, reason: "not_scheduled" };
 
-    const [{ events }] = await tx
-      .select({ events: count() })
-      .from(rollCallEvents)
-      .where(eq(rollCallEvents.tripId, tripId));
-    if (events > 0) return { ok: false, reason: "already_sailed" };
+    if ((await countRollCallEvidence(tx, tripId)) > 0) {
+      return { ok: false, reason: "already_sailed" };
+    }
 
     if (startsAt.getTime() === existing.startsAt.getTime()) return { ok: true, trip: existing };
 
@@ -887,11 +911,9 @@ export async function deleteTrip(
       .where(eq(tripWaitlistEntries.tripId, tripId));
     if (waiting > 0) return { ok: false, reason: "has_roster" };
 
-    const [{ events }] = await tx
-      .select({ events: count() })
-      .from(rollCallEvents)
-      .where(eq(rollCallEvents.tripId, tripId));
-    if (events > 0) return { ok: false, reason: "already_sailed" };
+    if ((await countRollCallEvidence(tx, tripId)) > 0) {
+      return { ok: false, reason: "already_sailed" };
+    }
 
     // Children without a cascade of their own, innermost first. `activityEvents`
     // cascades from the trip and needs no line here.
@@ -1155,6 +1177,40 @@ function crewInputPersonId(entry: TripCrewMemberInput): string {
  * supervision ratio as an in-water assistant. A caller only overwrites a role
  * by passing one.
  */
+/**
+ * Which of these people already have a **per-person crew roll-call result** on
+ * this trip — somebody stood on the deck and said, by name, whether they were
+ * aboard (ADR 20260803-per-person-crew-roll-call).
+ *
+ * That statement is safety history, and taking the person off the crew is what
+ * makes it disappear: `listTripCrew` drops them, the assigned count falls, and
+ * a checkpoint that was open *because a named crew member did not come back*
+ * flips to complete with their event rows still sitting in the table, read by
+ * nothing. One tap, and a stated "did not come back" is gone (review 20260803,
+ * D3). Divers have had the analogous guard from the start.
+ *
+ * `cleared` rows count. A clear is an undo of a *result*, not of the fact that
+ * this person was part of the count — the audit trail is the thing being
+ * protected, and it is append-only.
+ */
+async function crewWithRollCallHistory(
+  tx: DbExecutor,
+  tripId: string,
+  personIds: readonly string[],
+): Promise<Set<string>> {
+  if (personIds.length === 0) return new Set();
+  const rows = await tx
+    .selectDistinct({ personId: rollCallCrewEvents.personId })
+    .from(rollCallCrewEvents)
+    .where(
+      and(
+        eq(rollCallCrewEvents.tripId, tripId),
+        inArray(rollCallCrewEvents.personId, [...personIds]),
+      ),
+    );
+  return new Set(rows.map((row) => row.personId));
+}
+
 export async function setTripCrew(
   db: AppDb,
   shopId: string,
@@ -1179,15 +1235,60 @@ export async function setTripCrew(
       .limit(1)
       .for("update");
     if (!trip) return false;
+    // The per-trip roles already on this trip, read before anything else needs
+    // them: the course check below has to know which job each person would be
+    // doing, and the delete-all-then-insert write further down has to carry
+    // them forward for anyone who stays.
+    const existingRoles = new Map(
+      (
+        await tx
+          .select({ personId: tripAssignments.personId, tripRole: tripAssignments.tripRole })
+          .from(tripAssignments)
+          .where(eq(tripAssignments.tripId, tripId))
+      ).map((row) => [row.personId, row.tripRole] as const),
+    );
+    const roleAfterChange = (entry: TripCrewMemberInput) => {
+      const personId = crewInputPersonId(entry);
+      const specified = typeof entry === "string" ? undefined : entry.tripRole;
+      // `undefined` means the caller did not mention the role; an explicit
+      // `null` clears it.
+      return specified === undefined ? (existingRoles.get(personId) ?? null) : specified;
+    };
+    // Nobody with roll-call history on this trip can be dropped from it. The
+    // divers' analogue has always been there (`deleteTrip` refuses
+    // `already_sailed` when roll-call events exist); crew had none, so one
+    // whole-crew edit that omitted a person who had been recorded as *not back
+    // aboard* deleted their assignment, dropped them off the manifest, and
+    // flipped the checkpoint to complete while their event rows sat unread
+    // (review 20260803, D3). They stay on the crew list, and their count stays
+    // open, until a human resolves it.
+    const dropped = [...existingRoles.keys()].filter((personId) => !valid.includes(personId));
+    if (dropped.length > 0 && (await crewWithRollCallHistory(tx, tripId, dropped)).size > 0) {
+      return false;
+    }
     if (trip.courseId) {
-      const assigned = staff.filter((member) => valid.includes(member.person.id));
+      const assignedIds = new Set(valid);
+      // Who is doing what on *this* sailing, with the roles this very edit
+      // would leave in place — never the shop-wide list alone (`countInWaterCrew`,
+      // src/lib/crew-roles.ts, ADR 20260803-per-trip-crew-role). Reading
+      // `person_roles` here was the sixth copy of a rule that already has one
+      // home, and it let the session's only instructor be rostered onto the
+      // deck as its captain while this check happily read "1 instructor"
+      // (review 20260803, D8).
+      const proposedCrew = requested
+        .filter((entry) => assignedIds.has(crewInputPersonId(entry)))
+        .map((entry) => ({
+          tripRole: roleAfterChange(entry),
+          shopRoles:
+            staff.find((member) => member.person.id === crewInputPersonId(entry))?.roles ?? [],
+        }));
       const review = reviewManifestChange({
         courseRequiresInstructor: true,
-        proposedCrew: assigned,
+        proposedCrew,
       });
       if (review.blocking) return false;
-      const instructors = assigned.filter((member) => member.roles.includes("instructor")).length;
-      if (instructors === 0) return false;
+      const { instructorCount } = countInWaterCrew(proposedCrew);
+      if (instructorCount === 0) return false;
       // Deliberately no ratio check here. A crew change that leaves the session
       // over its ratio is **recorded**, not refused: the manifest is a safety
       // document and must say who is actually aboard. Refusing meant an
@@ -1227,30 +1328,17 @@ export async function setTripCrew(
         .limit(1);
       if (conflict.length > 0) return false;
     }
-    // Read the roles that already exist before the delete, so a crew edit that
-    // says nothing about roles preserves them instead of blanking them.
-    const existingRoles = new Map(
-      (
-        await tx
-          .select({ personId: tripAssignments.personId, tripRole: tripAssignments.tripRole })
-          .from(tripAssignments)
-          .where(eq(tripAssignments.tripId, tripId))
-      ).map((row) => [row.personId, row.tripRole] as const),
-    );
+    // The roles were read before the delete (`existingRoles` above), so a crew
+    // edit that says nothing about roles preserves them instead of blanking
+    // them.
     await tx.delete(tripAssignments).where(eq(tripAssignments.tripId, tripId));
     if (requested.length > 0) {
       await tx.insert(tripAssignments).values(
-        requested.map((entry) => {
-          const personId = crewInputPersonId(entry);
-          const specified = typeof entry === "string" ? undefined : entry.tripRole;
-          return {
-            tripId,
-            personId,
-            // `undefined` means the caller did not mention the role; an
-            // explicit `null` clears it.
-            tripRole: specified === undefined ? (existingRoles.get(personId) ?? null) : specified,
-          };
-        }),
+        requested.map((entry) => ({
+          tripId,
+          personId: crewInputPersonId(entry),
+          tripRole: roleAfterChange(entry),
+        })),
       );
     }
     return true;
@@ -1272,6 +1360,18 @@ export type TripCrewChange = {
 /**
  * Apply one crew assignment change without replacing concurrent assignments.
  * The trip and person are both tenant-checked inside the transaction.
+ *
+ * **Unassign is refused for anybody who has a per-person crew roll-call result
+ * on this trip** (`crewWithRollCallHistory`). Removing them would delete the
+ * assignment their result hangs off, drop them from the manifest, and let a
+ * checkpoint that is open *because a named crew member did not come back* read
+ * complete.
+ *
+ * Unassign-then-reassign does **not** preserve `trip_role` — the row and its
+ * role go together, and the re-assign lands whatever role the caller names (so
+ * `undefined` lands `null`, "unspecified"). That is why the trip's crew section
+ * ships a role picker: the fix for a mis-tap is to set the role again, in the
+ * UI, rather than a value nobody can reach without SQL (review 20260803, D4/D5).
  */
 export async function changeTripCrew(
   db: AppDb,
@@ -1303,19 +1403,43 @@ export async function changeTripCrew(
       .limit(1)
       .for("update");
     if (!targetTrip) return false;
+    // Nobody with per-person roll-call history on this trip is removable — the
+    // same guard `setTripCrew` applies, checked before the course rules so the
+    // refusal reason cannot depend on whether the trip happens to be a course
+    // (review 20260803, D3).
+    if (
+      change.operation === "unassign" &&
+      (await crewWithRollCallHistory(tx, tripId, [change.personId])).size > 0
+    ) {
+      return false;
+    }
+
     if (targetTrip.courseId) {
       const current = await tx
-        .select({ personId: tripAssignments.personId })
+        .select({
+          personId: tripAssignments.personId,
+          tripRole: tripAssignments.tripRole,
+        })
         .from(tripAssignments)
         .where(eq(tripAssignments.tripId, tripId));
-      const proposed = new Set(current.map((row) => row.personId));
-      if (change.operation === "assign") proposed.add(change.personId);
-      else proposed.delete(change.personId);
-      const roles = proposed.size
+      const proposedRoles = new Map(current.map((row) => [row.personId, row.tripRole] as const));
+      if (change.operation === "assign") {
+        proposedRoles.set(
+          change.personId,
+          // Omitting the role on an assign means "leave it as it is", which for
+          // a person who is not on the crew yet is "unspecified".
+          change.tripRole === undefined
+            ? (proposedRoles.get(change.personId) ?? null)
+            : change.tripRole,
+        );
+      } else {
+        proposedRoles.delete(change.personId);
+      }
+      const roles = proposedRoles.size
         ? await tx
             .select({ personId: personRoles.personId, role: personRoles.role })
             .from(personRoles)
-            .where(inArray(personRoles.personId, [...proposed]))
+            .where(inArray(personRoles.personId, [...proposedRoles.keys()]))
         : [];
       const roleSets = new Map<string, string[]>();
       for (const role of roles) {
@@ -1323,15 +1447,23 @@ export async function changeTripCrew(
         personRolesForMember.push(role.role);
         roleSets.set(role.personId, personRolesForMember);
       }
+      // One definition of who counts as this session's instructor
+      // (`countInWaterCrew`, src/lib/crew-roles.ts) — with the per-trip roles
+      // this change would leave in place, not `person_roles` alone. Reading the
+      // shop-wide list here let a course session keep its "has an instructor"
+      // pass while that instructor was rostered as the captain (review
+      // 20260803, D8).
+      const proposedCrew = [...proposedRoles].map(([personId, tripRole]) => ({
+        tripRole,
+        shopRoles: roleSets.get(personId) ?? [],
+      }));
       const review = reviewManifestChange({
         courseRequiresInstructor: true,
-        proposedCrew: [...roleSets.values()].map((memberRoles) => ({ roles: memberRoles })),
+        proposedCrew,
       });
       if (review.blocking) return false;
-      const instructors = new Set(
-        roles.filter((row) => row.role === "instructor").map((row) => row.personId),
-      );
-      if (instructors.size === 0) return false;
+      const { instructorCount } = countInWaterCrew(proposedCrew);
+      if (instructorCount === 0) return false;
       // No ratio check — same reason as `setTripCrew` above: pulling a crew
       // member who is not on the boat must always be recordable, even when it
       // leaves the session over ratio. The `over_ratio` advisory is the nudge;

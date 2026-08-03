@@ -53,6 +53,7 @@ import {
   userAccounts,
   waiverRecords,
 } from "./schema";
+import { upsertShopStripeAccount } from "./stripe-accounts";
 import { upcomingTripsWithCounts } from "./trips";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
 
@@ -646,6 +647,12 @@ describe("diver erasure", () => {
       isPublished: true,
       publishedAt: erasureNow,
     });
+    // The connected account the orders below were created on. A real order can
+    // only exist on one, and the processor erasure re-proves the account still
+    // belongs to this shop before it fires a delete at it — so a fixture that
+    // skipped this would be testing a shop whose orders name somebody else's
+    // Stripe account.
+    await upsertShopStripeAccount(db, shop.id, "acct_test");
     await db.insert(orders).values({
       shopId: shop.id,
       bookingId,

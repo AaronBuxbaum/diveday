@@ -74,6 +74,52 @@ describe("shop stripe accounts", () => {
     expect(await disconnectShopStripeAccount(db, "acct_unknown")).toBeNull();
   });
 
+  // The `disconnected_at is null` guard above does NOT protect a reconnect —
+  // `upsertShopStripeAccount` sets that column back to null, which is exactly
+  // the state the guard permits. Stripe retries a deauthorization for ~3 days
+  // and the webhook route gives its claim back on a failed handle, so a stale
+  // redelivery landing after the owner has reconnected the same account would
+  // cut a live shop off from payments. Ordering against the event's own Stripe
+  // `created` time is what actually closes it.
+  it("refuses a deauthorization older than the connection it names", async () => {
+    const { db, shop } = await shopContext();
+    const deauthorizedAt = new Date("2026-07-20T09:00:00.000Z");
+
+    // The owner reconnects *after* the deauthorization Stripe is still retrying.
+    vi.stubEnv("DIVEDAY_CLOCK", "2026-07-20T10:00:00.000Z");
+    await upsertShopStripeAccount(db, shop.id, "acct_reconnected");
+    await setShopStripeAccountStatus(db, "acct_reconnected", {
+      chargesEnabled: true,
+      payoutsEnabled: true,
+      detailsSubmitted: true,
+    });
+
+    const after = await disconnectShopStripeAccount(db, "acct_reconnected", { deauthorizedAt });
+    vi.unstubAllEnvs();
+
+    // Untouched: still connected, still able to take payments.
+    expect(after?.disconnectedAt).toBeNull();
+    expect(canAcceptPayments(after)).toBe(true);
+  });
+
+  it("still applies a deauthorization newer than the connection it names", async () => {
+    const { db, shop } = await shopContext();
+    vi.stubEnv("DIVEDAY_CLOCK", "2026-07-20T09:00:00.000Z");
+    await upsertShopStripeAccount(db, shop.id, "acct_live");
+    await setShopStripeAccountStatus(db, "acct_live", {
+      chargesEnabled: true,
+      payoutsEnabled: true,
+      detailsSubmitted: true,
+    });
+    vi.unstubAllEnvs();
+
+    const disconnected = await disconnectShopStripeAccount(db, "acct_live", {
+      deauthorizedAt: new Date("2026-07-20T10:00:00.000Z"),
+    });
+    expect(disconnected?.disconnectedAt).not.toBeNull();
+    expect(canAcceptPayments(disconnected)).toBe(false);
+  });
+
   it("reconnecting replaces the stored account id and clears disconnected state", async () => {
     const { db, shop } = await shopContext();
     await upsertShopStripeAccount(db, shop.id, "acct_old");

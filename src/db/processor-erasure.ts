@@ -27,7 +27,7 @@
  * over.
  */
 
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, lt } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 import { type CustomerProvider, customerProviderFromEnvironment } from "@/lib/payments/customers";
@@ -37,6 +37,7 @@ import {
   type ProcessorErasureObligation,
   type ProcessorErasureTarget,
   processorErasureObligations,
+  shopStripeAccounts,
 } from "./schema";
 
 /**
@@ -148,8 +149,10 @@ export type AttemptProcessorErasureOutcome =
  *
  * Deliberately takes an already-loaded row rather than an id: the caller is
  * `anonymizeDiver`, immediately after its transaction commits, and it holds the
- * rows it just wrote. Nothing here re-reads or re-authorizes — the erasure that
- * raised the row was owner-gated, and this is that decision being carried out.
+ * rows it just wrote. Nobody's *permission* is re-checked here — the erasure
+ * that raised the row was owner-gated, and this is that decision being carried
+ * out — but the connected account the row names is re-proved to still belong to
+ * the row's shop before any destructive call goes out (see below).
  */
 export async function attemptProcessorErasure(
   db: DbExecutor,
@@ -159,10 +162,31 @@ export async function attemptProcessorErasure(
   if (obligation.target !== "stripe_customer") return { status: "manual" };
   if (obligation.status === "discharged") return { status: "discharged" };
 
+  // Re-prove the snapshotted account still belongs to this obligation's shop
+  // before firing a destructive call at it. The `(stripeAccountId, externalId)`
+  // pair was genuinely shop-owned when the row was raised and is deliberately
+  // never re-derived, but the delete goes out on the *platform* key, which can
+  // act on every connected account: if shop A reconnected under a new account
+  // (freeing `acct_X`) and shop B has since connected `acct_X`, A's old
+  // obligation would aim `DELETE /v1/customers` at a tenant that never asked
+  // for it. Exotic, and cheap to make impossible. An account that maps to
+  // nobody is refused too — an unprovable pair is not a pair to fire at, and
+  // the platform has no authorization on a deauthorized account anyway, so the
+  // call could only have failed. Either way the row stays `owed` and the owner
+  // can close it by attestation.
+  const owned = await accountBelongsToShop(db, obligation.stripeAccountId, obligation.shopId);
+  if (!owned) return recordFailedAttempt(db, obligation, "stripe account not owned by this shop");
+
   const result = await provider.deleteCustomer(
     obligation.stripeAccountId,
     obligation.externalId,
-    idempotencyKeyFor(obligation.id, "customer-delete"),
+    // The attempt ordinal is part of the key on purpose. Stripe caches the
+    // response for an idempotency key for 24h *including errors*, so a key
+    // derived from the obligation id alone replayed the cached failure at an
+    // owner who had just fixed the problem and clicked Retry: attempts went up,
+    // `last_error` never changed, and no call was really made. Deletion is
+    // idempotent by construction, so a distinct key per attempt costs nothing.
+    idempotencyKeyFor(obligation.id, `customer-delete-${obligation.attempts + 1}`),
   );
 
   if (result.status === "deleted" || result.status === "already_deleted") {
@@ -182,6 +206,43 @@ export async function attemptProcessorErasure(
   // deployment with no Stripe key has not erased anything at the processor, and
   // a ledger that quietly discharged the row would be claiming otherwise.
   const error = result.status === "not_configured" ? "stripe not configured" : result.error;
+  return recordFailedAttempt(db, obligation, error);
+}
+
+/**
+ * Is this connected account still the one the shop holds? Read directly rather
+ * than through `getShopStripeAccountByAccountId` so the shop predicate is in
+ * the query — a row that has moved to another tenant must come back as "no",
+ * not as somebody else's row for the caller to compare.
+ */
+async function accountBelongsToShop(
+  db: DbExecutor,
+  stripeAccountId: string,
+  shopId: string,
+): Promise<boolean> {
+  const [row] = await db
+    .select({ shopId: shopStripeAccounts.shopId })
+    .from(shopStripeAccounts)
+    .where(
+      and(
+        eq(shopStripeAccounts.stripeAccountId, stripeAccountId),
+        eq(shopStripeAccounts.shopId, shopId),
+      ),
+    )
+    .limit(1);
+  return !!row;
+}
+
+/**
+ * One place that burns an attempt and records why, so every failure path —
+ * Stripe's, and the ones that never reach Stripe — leaves the same shape on
+ * the row: still `owed`, still visible, with the reason an owner can read.
+ */
+async function recordFailedAttempt(
+  db: DbExecutor,
+  obligation: ProcessorErasureObligation,
+  error: string,
+): Promise<{ status: "failed"; error: string }> {
   await db
     .update(processorErasureObligations)
     .set({ attempts: obligation.attempts + 1, lastError: error })
@@ -263,6 +324,14 @@ export async function retryProcessorErasure(
  * `stripe_customer` rows under the attempt cap are eligible — an invoice
  * snapshot has no API to retry, and a row past the cap is a standing human
  * problem rather than a nightly Stripe call.
+ *
+ * **The cap is in the query, not in the caller.** A capped row stays `owed`
+ * forever by design and keeps its original `created_at`, so it sits at the head
+ * of this oldest-first, cross-shop scan permanently. Filtering after a `LIMIT`
+ * meant that once ~`limit` capped rows existed *anywhere on the platform*, the
+ * scan fetched the same dead rows every night, discarded them all, and returned
+ * `attempted: 0` — every other shop's genuinely transient failure silently
+ * stopped being retried, and the log read exactly like "nothing due".
  */
 export async function retryPendingProcessorErasures(
   db: AppDb,
@@ -270,20 +339,18 @@ export async function retryPendingProcessorErasures(
 ): Promise<{ attempted: number; discharged: number }> {
   const limit = options.limit ?? 25;
   const provider = options.provider ?? customerProviderFromEnvironment();
-  const rows = await db
+  const eligible = await db
     .select()
     .from(processorErasureObligations)
     .where(
       and(
         eq(processorErasureObligations.status, "owed"),
         eq(processorErasureObligations.target, "stripe_customer"),
+        lt(processorErasureObligations.attempts, MAX_AUTOMATIC_DELETE_ATTEMPTS),
       ),
     )
     .orderBy(asc(processorErasureObligations.createdAt))
-    .limit(limit * 4);
-  const eligible = rows
-    .filter((row) => row.attempts < MAX_AUTOMATIC_DELETE_ATTEMPTS)
-    .slice(0, limit);
+    .limit(limit);
 
   let discharged = 0;
   for (const obligation of eligible) {

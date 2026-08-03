@@ -8,7 +8,7 @@ import { groupActions } from "@/lib/today";
 import { seededShopContext } from "@/test/db";
 import { cancelBooking } from "./bookings";
 import { joinLastMinuteList } from "./last-minute-list";
-import { getTripManifest, recordRollCall } from "./manifests";
+import { getTripManifest, recordCrewRollCall, recordRollCall } from "./manifests";
 import { queueMediaDeletion, resolveMediaDeletion } from "./media-deletions";
 import { setBookingNitrox } from "./nitrox";
 import { recordNotificationDelivery } from "./notifications";
@@ -19,6 +19,7 @@ import {
   courses,
   nitroxCertifications,
   people,
+  rollCallCrewEvents as rollCallCrewEventsTable,
   rollCallEvents as rollCallEventsTable,
   tripAssignments,
   trips as tripsTable,
@@ -915,6 +916,212 @@ describe("unclosed roll call (DOM-H3)", () => {
       // Still the same kind: what happened did not become less serious, only
       // less settleable on the dock.
       expect(row?.kind).toBe("roll_call_missing_diver");
+    });
+  });
+
+  /**
+   * Review 20260803, D1. The per-person crew half reached this function not at
+   * all: a crew member tapped "not back aboard" against a divemaster, the
+   * manifest went red with `crew_not_back_aboard` — its own comment calls it
+   * "the loudest thing on this list" — and Today showed nothing, the schedule
+   * board badged nothing, and neither the 48-hour dock-work chase nor the
+   * 30-day residue a *diver* gets applied. On dive two the DM goes back down
+   * for a lost weight belt and does not surface: this is that boat.
+   */
+  describe("a crew member who did not come back", () => {
+    /** Roster `count` staff onto the trip and board them all at the dock. */
+    async function crewAboard(
+      db: Awaited<ReturnType<typeof seededShopContext>>["db"],
+      input: { shopId: string; tripId: string; count: number },
+      occurredAt = new Date(nowMs() - 5 * HOUR),
+    ) {
+      const staff = (await listStaff(db, input.shopId)).slice(0, input.count);
+      if (staff.length < input.count) throw new Error("seed has too few staff for this fixture");
+      const personIds = staff.map((entry) => entry.person.id);
+      await db
+        .insert(tripAssignments)
+        .values(personIds.map((personId) => ({ tripId: input.tripId, personId })));
+      await db.insert(rollCallCrewEventsTable).values(
+        personIds.map((personId) => ({
+          shopId: input.shopId,
+          tripId: input.tripId,
+          personId,
+          recordedByPersonId: personIds[0] ?? personId,
+          status: "boarded" as const,
+          checkpoint: "departure",
+          occurredAt,
+        })),
+      );
+      return personIds;
+    }
+
+    it("raises a crew row of its own when a named crew member is marked not back aboard", async () => {
+      const { db, shop } = await seededShopContext();
+      const { trip, bookingIds, staffId } = await returnedTrip(db, shop.id, {
+        endedHoursAgo: 2,
+        divers: 2,
+        plannedDives: 2,
+      });
+      await boardAtDeparture(db, { shopId: shop.id, tripId: trip.id, staffId, bookingIds });
+      // Every diver came back from both dives — the diver half is closed, and
+      // before this that was the whole of what Today looked at.
+      for (const bookingId of bookingIds) {
+        for (const checkpoint of ["after_dive_1", "after_dive_2"] as const) {
+          await recordRollCall(db, {
+            shopId: shop.id,
+            tripId: trip.id,
+            bookingId,
+            recordedByPersonId: staffId,
+            status: "boarded",
+            checkpoint,
+          });
+        }
+      }
+      const [dm, second] = await crewAboard(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        count: 2,
+      });
+      if (!dm || !second) throw new Error("fixture crew missing");
+      for (const personId of [dm, second]) {
+        await recordCrewRollCall(db, {
+          shopId: shop.id,
+          tripId: trip.id,
+          personId,
+          recordedByPersonId: second,
+          status: "boarded",
+          checkpoint: "after_dive_1",
+        });
+      }
+      // Dive two: the DM went back down for a lost weight belt.
+      await recordCrewRollCall(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        personId: dm,
+        recordedByPersonId: second,
+        status: "not_boarded",
+        checkpoint: "after_dive_2",
+      });
+      await recordCrewRollCall(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        personId: second,
+        recordedByPersonId: second,
+        status: "boarded",
+        checkpoint: "after_dive_2",
+      });
+
+      const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+      const row = rollCallRow(work, trip.id, "missing_crew");
+      expect(row).toBeDefined();
+      expect(row?.kind).toBe("roll_call_missing_crew");
+      // Same tone band and same urgency a diver gets — a crew member is not
+      // less findable than a customer.
+      expect(row?.urgency).toBe("imminent");
+      expect(row?.detail).toContain("crew");
+      expect(row?.detail).toContain("not back aboard");
+      expect(row?.href).toBe(
+        `/shop/${shop.slug}/trips/${trip.id}/manifest?checkpoint=after_dive_2`,
+      );
+      // No diver row: the two halves are separate rows and the crew one is not
+      // worded as a diver problem.
+      expect(rollCallRow(work, trip.id, "missing_diver")).toBeUndefined();
+      // And it leads the queue, exactly as the diver row does.
+      const [first] = groupActions(work.actions)[0]?.actions ?? [];
+      expect(first?.id).toBe(row?.id);
+    });
+
+    it("keeps saying so as residue, on the same schedule a diver's row ages by", async () => {
+      const { db, shop } = await seededShopContext();
+      const { trip, bookingIds, staffId } = await returnedTrip(db, shop.id, {
+        endedHoursAgo: 24 * 5,
+        divers: 2,
+      });
+      await boardAtDeparture(
+        db,
+        { shopId: shop.id, tripId: trip.id, staffId, bookingIds },
+        new Date(nowMs() - 24 * 5 * HOUR - 3 * HOUR),
+      );
+      const [dm] = await crewAboard(
+        db,
+        { shopId: shop.id, tripId: trip.id, count: 1 },
+        new Date(nowMs() - 24 * 5 * HOUR - 3 * HOUR),
+      );
+      if (!dm) throw new Error("fixture crew missing");
+      await recordCrewRollCall(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        personId: dm,
+        recordedByPersonId: dm,
+        status: "not_boarded",
+        checkpoint: "after_dive_1",
+        occurredAt: new Date(nowMs() - 24 * 5 * HOUR),
+      });
+
+      const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+      const row = rollCallRow(work, trip.id, "missing_crew");
+      expect(row).toBeDefined();
+      expect(row?.urgency).toBe("soon");
+      expect(row?.detail).toContain("never closed");
+      expect(row?.kind).toBe("roll_call_missing_crew");
+    });
+
+    it("raises an unfinished crew count, and stays silent for a shop that never taps one", async () => {
+      const { db, shop } = await seededShopContext();
+      const { trip, bookingIds, staffId } = await returnedTrip(db, shop.id, {
+        endedHoursAgo: 2,
+        divers: 2,
+      });
+      await boardAtDeparture(db, { shopId: shop.id, tripId: trip.id, staffId, bookingIds });
+      for (const bookingId of bookingIds) {
+        await recordRollCall(db, {
+          shopId: shop.id,
+          tripId: trip.id,
+          bookingId,
+          recordedByPersonId: staffId,
+          status: "boarded",
+          checkpoint: "after_dive_1",
+        });
+      }
+      // Two crew boarded at the dock; nobody counted either of them after the
+      // dive. That is the crew twin of `after_dive_uncounted`.
+      await crewAboard(db, { shopId: shop.id, tripId: trip.id, count: 2 });
+
+      const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+      const row = rollCallRow(work, trip.id, "crew_uncounted");
+      expect(row?.kind).toBe("roll_call_crew_unfinished");
+      expect(row?.urgency).toBe("imminent");
+      expect(row?.detail).toContain("2 of 2 crew");
+
+      // The population rule is what keeps this usable: a shop that has never
+      // tapped a crew roll call has no crew subjects, so it raises nothing at
+      // all rather than a danger-toned row on every trip it has ever run.
+      const quiet = await returnedTrip(db, shop.id, {
+        endedHoursAgo: 3,
+        divers: 2,
+        title: "Returned Two-Tank — no crew roll call",
+      });
+      await boardAtDeparture(db, {
+        shopId: shop.id,
+        tripId: quiet.trip.id,
+        staffId,
+        bookingIds: quiet.bookingIds,
+      });
+      for (const bookingId of quiet.bookingIds) {
+        await recordRollCall(db, {
+          shopId: shop.id,
+          tripId: quiet.trip.id,
+          bookingId,
+          recordedByPersonId: staffId,
+          status: "boarded",
+          checkpoint: "after_dive_1",
+        });
+      }
+      await db
+        .insert(tripAssignments)
+        .values({ tripId: quiet.trip.id, personId: staffId });
+      const quietWork = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+      expect(rollCallRows(quietWork, quiet.trip.id)).toHaveLength(0);
     });
   });
 

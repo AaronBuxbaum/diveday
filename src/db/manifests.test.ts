@@ -6,7 +6,6 @@ import { ageOnDate, birthdayCallout } from "@/lib/age";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate, nowMs } from "@/lib/clock";
 import {
-  crewRollCallCounts,
   isRollCallAccountedFor,
   type RollCallCheckpoint,
   rollCallCompleteness,
@@ -710,7 +709,7 @@ describe("crew aboard attestation (in-memory PGlite)", () => {
       }),
     ).resolves.toMatchObject({ ok: true });
     const closed = await getTripManifest(db, shop.id, reef.id, "after_dive_1");
-    expect(closed?.completeness).toEqual({
+    expect(closed?.completeness).toMatchObject({
       complete: true,
       diversAccountedFor: true,
       crewAccountedFor: true,
@@ -1092,6 +1091,41 @@ describe("crew aboard attestation (in-memory PGlite)", () => {
       ).toEqual([]);
     });
 
+    /**
+     * Review 20260803, D11. The subject check proved only "assigned to this
+     * trip", while `listTripCrew` reads the crew list through a `person_roles`
+     * join filtered to `STAFF_ROLES`. A person who was assigned but held no
+     * staff role could therefore carry roll-call events and appear in neither
+     * the crew list nor the denominator — a result about somebody the head
+     * count could not see. One definition of "on this trip's crew", or the two
+     * halves answer differently.
+     */
+    it("refuses a subject who is assigned but holds no staff role, as the crew list does", async () => {
+      const { db, shop, reef, staff, booking } = await manifestContext();
+      // A booked diver, rostered onto the trip by a direct insert: assigned,
+      // but not staff.
+      await db
+        .insert(tripAssignments)
+        .values({ tripId: reef.id, personId: booking.person.id });
+      expect(
+        (await getTripManifest(db, shop.id, reef.id))?.crew.some(
+          (member) => member.id === booking.person.id,
+        ),
+      ).toBe(false);
+      await expect(
+        recordCrewRollCall(db, {
+          shopId: shop.id,
+          tripId: reef.id,
+          personId: booking.person.id,
+          recordedByPersonId: staff.id,
+          status: "boarded",
+        }),
+      ).resolves.toEqual({ ok: false, reason: "crew_not_assigned" });
+      expect(
+        await db.select().from(rollCallCrewEvents).where(eq(rollCallCrewEvents.tripId, reef.id)),
+      ).toEqual([]);
+    });
+
     it("carries each crew member's result into the offline snapshot, without their id", async () => {
       const { db, shop, reef, staff } = await manifestContext();
       const crew = (await getTripManifest(db, shop.id, reef.id))?.crew ?? [];
@@ -1165,15 +1199,16 @@ describe("crew aboard attestation (in-memory PGlite)", () => {
     expect(unattestedAfterDive?.crewAttestation).toBeUndefined();
     expect(
       rollCallCompleteness({
+        checkpoint: "after_dive_1",
         totalDivers: unattestedAfterDive?.summary.totalDivers ?? 0,
         awaiting: 0,
-        crewAssigned: unattestedAfterDive?.crew.length ?? 0,
-        crewAttestation: null,
+        notBackAboard: 0,
         // The dock copy derives the crew half from the snapshot's own crew
         // list, exactly as OfflineManifestView does — which is what makes an
         // older snapshot with no crew results read every crew member as
         // awaiting rather than as accounted for.
-        ...crewRollCallCounts("after_dive_1", unattestedAfterDive?.crew ?? []),
+        crew: unattestedAfterDive?.crew ?? [],
+        crewAttestation: null,
       }),
     ).toMatchObject({ complete: false, reason: "crew_not_attested" });
 
@@ -1207,10 +1242,11 @@ describe("crew aboard attestation (in-memory PGlite)", () => {
     // Same function the offline view calls, same answer as the live page.
     expect(
       rollCallCompleteness({
+        checkpoint: "after_dive_1",
         totalDivers: afterDive?.summary.totalDivers ?? 0,
         awaiting: 0,
-        crewAssigned: afterDive?.crew.length ?? 0,
-        ...crewRollCallCounts("after_dive_1", afterDive?.crew ?? []),
+        notBackAboard: 0,
+        crew: afterDive?.crew ?? [],
         crewAttestation: afterDive?.crewAttestation
           ? {
               ...afterDive.crewAttestation,

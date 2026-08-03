@@ -400,10 +400,34 @@ describe("POST /api/webhooks/stripe — event dispatch", () => {
       id: "evt_1",
       type: "account.application.deauthorized",
       account: "acct_123",
+      created: 1_700_000_000,
       data: { object: {} },
     });
     expect(response.status).toBe(200);
-    expect(disconnectShopStripeAccount).toHaveBeenCalledWith(FAKE_DB, "acct_123");
+    // Ordered against Stripe's own creation time, so a redelivery landing after
+    // the owner has reconnected cannot cut a live account off (PAY-M1's second
+    // half: the claim really is released and this handler really is re-reached).
+    expect(disconnectShopStripeAccount).toHaveBeenCalledWith(FAKE_DB, "acct_123", {
+      deauthorizedAt: new Date(1_700_000_000 * 1000),
+    });
+  });
+
+  it("account.application.deauthorized is a quiet 200 when the shop has since reconnected", async () => {
+    // The db call refuses a deauthorization older than the connection it names
+    // and hands back the still-connected row; the route must read that as a
+    // handled no-op, not as a failure Stripe should retry.
+    vi.mocked(disconnectShopStripeAccount).mockResolvedValue({
+      stripeAccountId: "acct_123",
+      disconnectedAt: null,
+    } as never);
+    const response = await post({
+      id: "evt_stale_deauth",
+      type: "account.application.deauthorized",
+      account: "acct_123",
+      created: 1_700_000_000,
+      data: { object: {} },
+    });
+    expect(response.status).toBe(200);
   });
 
   it("account.application.deauthorized does nothing if the event has no account field", async () => {

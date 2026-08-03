@@ -6,6 +6,7 @@ import { courseCrewGap } from "@/lib/course-ratios";
 import { utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { seededShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
+import { getTripManifest, recordCrewAttestation, recordCrewRollCall } from "./manifests";
 import type { AppDb } from "./client";
 import type { Course } from "./schema";
 import {
@@ -23,6 +24,7 @@ import {
   changeTripCrew,
   createTrip,
   createTripSeries,
+  deleteTrip,
   duplicateTrip,
   extendTripSeries,
   getLatestSeriesInstance,
@@ -916,6 +918,170 @@ describe("trip crew (CR-007: cross-tenant write path)", () => {
         await changeTripCrew(db, shop.id, trip.id, {
           personId: first.id,
           operation: "assign",
+        }),
+      ).toBe(true);
+      expect(new Map((await getTripCrewAssignments(db, shop.id, trip.id)).map(byPerson))).toEqual(
+        new Map([[first.id, "captain"]]),
+      );
+    });
+
+    /**
+     * Review 20260803, D3. `changeTripCrew`'s unassign deleted the
+     * `trip_assignments` row with no check for roll-call history:
+     * `listTripCrew` then dropped the person, the assigned count fell, and a
+     * checkpoint that was open **because a named crew member had been recorded
+     * as not back aboard** flipped to complete — with their event rows still
+     * sitting in `roll_call_crew_events`, read by nothing. One tap made a
+     * stated "did not come back" disappear. Divers have had the analogous
+     * guard from the start (`deleteTrip` refuses `already_sailed`).
+     */
+    it("refuses to take a crew member with roll-call history off the trip", async () => {
+      const { db, shop, trip, first, second } = await context();
+      expect(await setTripCrew(db, shop.id, trip.id, [first.id, second.id])).toBe(true);
+      // She went back down for a lost weight belt and has not surfaced.
+      await expect(
+        recordCrewRollCall(db, {
+          shopId: shop.id,
+          tripId: trip.id,
+          personId: first.id,
+          recordedByPersonId: second.id,
+          status: "not_boarded",
+          checkpoint: "after_dive_1",
+        }),
+      ).resolves.toMatchObject({ ok: true });
+
+      // Both write paths refuse, and she stays on the crew list.
+      expect(
+        await changeTripCrew(db, shop.id, trip.id, {
+          personId: first.id,
+          operation: "unassign",
+        }),
+      ).toBe(false);
+      expect(await setTripCrew(db, shop.id, trip.id, [second.id])).toBe(false);
+      expect(new Set(await getTripCrewIds(db, shop.id, trip.id))).toEqual(
+        new Set([first.id, second.id]),
+      );
+      // The checkpoint she is missing from is still open, which is the whole
+      // point of refusing.
+      const manifest = await getTripManifest(db, shop.id, trip.id, "after_dive_1");
+      expect(manifest?.completeness).toMatchObject({
+        complete: false,
+        crewReason: "crew_not_back_aboard",
+      });
+
+      // Somebody with no roll-call history on this trip is still removable.
+      expect(
+        await changeTripCrew(db, shop.id, trip.id, {
+          personId: second.id,
+          operation: "unassign",
+        }),
+      ).toBe(true);
+      expect(await getTripCrewIds(db, shop.id, trip.id)).toEqual([first.id]);
+    });
+
+    /**
+     * Review 20260803, D3, the related half. `deleteTrip` counted only
+     * `rollCallEvents`, so a **bookingless** trip that carried crew — a charter
+     * with a divemaster and no paying divers, or one whose only head count was
+     * of its crew — walked straight past the "already sailed" guard and deleted
+     * into a foreign-key violation instead of refusing cleanly.
+     */
+    it("refuses to delete a bookingless trip that carries crew head-count evidence", async () => {
+      const { db, shop, first, second } = await context();
+      const bare = await createTrip(db, {
+        shopId: shop.id,
+        title: "Crew-only charter",
+        startsAt: new Date(nowDate().getTime() + 72 * 60 * 60 * 1000),
+        endsAt: new Date(nowDate().getTime() + 76 * 60 * 60 * 1000),
+        capacity: 8,
+        plannedDives: 1,
+      });
+      if (!bare) throw new Error("failed to create trip");
+      // Nothing has happened yet, so it is still an ordinary board mistake.
+      expect(await setTripCrew(db, shop.id, bare.id, [first.id, second.id])).toBe(true);
+
+      await expect(
+        recordCrewRollCall(db, {
+          shopId: shop.id,
+          tripId: bare.id,
+          personId: first.id,
+          recordedByPersonId: second.id,
+          status: "boarded",
+        }),
+      ).resolves.toMatchObject({ ok: true });
+      expect(await deleteTrip(db, shop.id, bare.id)).toEqual({
+        ok: false,
+        reason: "already_sailed",
+      });
+
+      // The attested count on its own is enough too — it is a statement a named
+      // human made about this boat.
+      const attestOnly = await createTrip(db, {
+        shopId: shop.id,
+        title: "Attested-only charter",
+        startsAt: new Date(nowDate().getTime() + 96 * 60 * 60 * 1000),
+        endsAt: new Date(nowDate().getTime() + 100 * 60 * 60 * 1000),
+        capacity: 8,
+        plannedDives: 1,
+      });
+      if (!attestOnly) throw new Error("failed to create trip");
+      await expect(
+        recordCrewAttestation(db, {
+          shopId: shop.id,
+          tripId: attestOnly.id,
+          attestedByPersonId: first.id,
+          crewAboard: 0,
+        }),
+      ).resolves.toMatchObject({ ok: true });
+      expect(await deleteTrip(db, shop.id, attestOnly.id)).toEqual({
+        ok: false,
+        reason: "already_sailed",
+      });
+
+      // A departure nobody has touched still deletes, which is what the guard
+      // is for in the first place.
+      const untouched = await createTrip(db, {
+        shopId: shop.id,
+        title: "Board mistake",
+        startsAt: new Date(nowDate().getTime() + 120 * 60 * 60 * 1000),
+        endsAt: new Date(nowDate().getTime() + 124 * 60 * 60 * 1000),
+        capacity: 8,
+        plannedDives: 1,
+      });
+      if (!untouched) throw new Error("failed to create trip");
+      expect(await deleteTrip(db, shop.id, untouched.id)).toEqual({ ok: true });
+    });
+
+    /**
+     * Review 20260803, D4. Unassign-then-reassign — the CrewSection flow, and
+     * how staff fix a mis-tap — deletes the row and its role with it, and a
+     * re-assign that names no role lands `null`. The captain silently becomes
+     * an in-water certified assistant again and the seat cap rises by two.
+     * That is why the role has to be settable in the UI: this asserts the
+     * losing behaviour plainly, and that naming the role restores it.
+     */
+    it("loses the role on unassign, and takes it back the moment a caller names one", async () => {
+      const { db, shop, trip, first } = await context();
+      expect(
+        await setTripCrew(db, shop.id, trip.id, [{ personId: first.id, tripRole: "captain" }]),
+      ).toBe(true);
+      expect(
+        await changeTripCrew(db, shop.id, trip.id, { personId: first.id, operation: "unassign" }),
+      ).toBe(true);
+      expect(
+        await changeTripCrew(db, shop.id, trip.id, { personId: first.id, operation: "assign" }),
+      ).toBe(true);
+      // The row and its role went together: this is "nobody has said", which is
+      // the status quo, and it counts by shop-wide inference again.
+      expect(new Map((await getTripCrewAssignments(db, shop.id, trip.id)).map(byPerson))).toEqual(
+        new Map([[first.id, null]]),
+      );
+      // The trip's crew section ships a role picker that posts exactly this.
+      expect(
+        await changeTripCrew(db, shop.id, trip.id, {
+          personId: first.id,
+          operation: "assign",
+          tripRole: "captain",
         }),
       ).toBe(true);
       expect(new Map((await getTripCrewAssignments(db, shop.id, trip.id)).map(byPerson))).toEqual(

@@ -90,6 +90,23 @@ describe("stripe customer provider", () => {
     });
   });
 
+  // The result of this call is written into a compliance ledger as "Stripe
+  // erased this customer". A 200 that does not actually say `deleted: true` is
+  // not that evidence, and treating it as such discharges the obligation and
+  // files a false attestation — the one failure mode worth being paranoid
+  // about here. Failing instead only costs a retry.
+  it.each([
+    ["the deleted flag is missing entirely", { id: "cus_1" }],
+    ["the body is a live customer object", { id: "cus_1", object: "customer", email: null }],
+    ["the body is not the deleted envelope at all", { ok: true }],
+  ])("refuses to call it deleted when %s", async (_name, body) => {
+    const fetchImpl = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => body });
+    const provider = providerWith(CONFIGURED, fetchImpl);
+    expect(await provider.deleteCustomer("acct_1", "cus_1", "key")).toMatchObject({
+      status: "failed",
+    });
+  });
+
   it("turns a network throw into a failure, never an exception at the caller", async () => {
     const fetchImpl = vi.fn().mockRejectedValue(new Error("ECONNRESET"));
     const provider = providerWith(CONFIGURED, fetchImpl);

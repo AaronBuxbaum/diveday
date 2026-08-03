@@ -24,6 +24,7 @@ import {
   courses,
   people,
   personRoles,
+  tripAssignments,
   trips,
 } from "./schema";
 import {
@@ -516,24 +517,33 @@ describe("restoreBooking (undo of a roster removal)", () => {
       const instructor = staff.find((entry) => entry.roles.includes("instructor"));
       if (!instructor) throw new Error("seeded instructor missing");
 
-      // Same person, same qualification, same assignment row — only the job
-      // they are rostered to do differs.
-      expect(
-        await setTripCrew(db, shop.id, trip.id, [
-          { personId: instructor.person.id, tripRole: "crew" },
-        ]),
-      ).toBe(true);
+      // Written straight to the row rather than through `setTripCrew`, which
+      // now refuses this very edit (see the symmetry test below). The booking
+      // gate still has to read such a row correctly: it can arrive from an
+      // import, from a qualification revoked after the roster was set, or from
+      // any future writer. Same person, same qualification, same assignment
+      // row — only the job they are rostered to do differs.
+      const rosterAs = async (tripRole: "instructor" | "divemaster" | "captain" | "crew" | null) => {
+        expect(await setTripCrew(db, shop.id, trip.id, [instructor.person.id])).toBe(true);
+        await db
+          .update(tripAssignments)
+          .set({ tripRole })
+          .where(
+            and(
+              eq(tripAssignments.tripId, trip.id),
+              eq(tripAssignments.personId, instructor.person.id),
+            ),
+          );
+      };
+
+      await rosterAs("crew");
       await expect(bookOne(db, shop.id, trip.id, "Ratio Role Diver A")).resolves.toMatchObject({
         ok: false,
         reason: "course_unstaffed",
       });
 
       // Rostered as the instructor: the session is staffed and seats open.
-      expect(
-        await setTripCrew(db, shop.id, trip.id, [
-          { personId: instructor.person.id, tripRole: "instructor" },
-        ]),
-      ).toBe(true);
+      await rosterAs("instructor");
       await expect(bookOne(db, shop.id, trip.id, "Ratio Role Diver B")).resolves.toMatchObject({
         ok: true,
       });
@@ -541,10 +551,57 @@ describe("restoreBooking (undo of a roster removal)", () => {
       // And an unspecified role is the status quo — exactly what every row
       // written before the column existed carries, and it must keep behaving
       // the way it always did.
-      expect(await setTripCrew(db, shop.id, trip.id, [instructor.person.id])).toBe(true);
+      await rosterAs(null);
       await expect(bookOne(db, shop.id, trip.id, "Ratio Role Diver C")).resolves.toMatchObject({
         ok: true,
       });
+    });
+
+    /**
+     * Review 20260803, D8. Both crew write paths refuse to leave a course
+     * session with no instructor — and "no instructor" is `countInWaterCrew`,
+     * the one definition, not a scan of `person_roles`. Before this,
+     * `setTripCrew` refused to *unassign* the session's last instructor but
+     * happily rostered the same person onto the deck, which says exactly the
+     * same thing about the session and left it unstaffed by a different route.
+     */
+    it("refuses to roster the last instructor off the ratio, as it refuses to remove them", async () => {
+      const { db, shop } = await seededContext();
+      const trip = await introSession(db, shop.id);
+      const staff = await listStaff(db, shop.id);
+      const instructor = staff.find((entry) => entry.roles.includes("instructor"));
+      if (!instructor) throw new Error("seeded instructor missing");
+
+      for (const tripRole of ["crew", "captain"] as const) {
+        expect(
+          await setTripCrew(db, shop.id, trip.id, [
+            { personId: instructor.person.id, tripRole },
+          ]),
+        ).toBe(false);
+        expect(
+          await changeTripCrew(db, shop.id, trip.id, {
+            personId: instructor.person.id,
+            operation: "assign",
+            tripRole,
+          }),
+        ).toBe(false);
+      }
+      // Refused, not half-applied: the session is still staffed and still sells.
+      await expect(bookOne(db, shop.id, trip.id, "Ratio Symmetry Diver")).resolves.toMatchObject({
+        ok: true,
+      });
+      // Rostering someone onto the deck is fine once somebody else is teaching.
+      const second = staff.find(
+        (entry) => entry.roles.includes("instructor") && entry.person.id !== instructor.person.id,
+      );
+      if (second) {
+        expect(
+          await setTripCrew(db, shop.id, trip.id, [
+            { personId: second.person.id, tripRole: "instructor" },
+            { personId: instructor.person.id, tripRole: "crew" },
+          ]),
+        ).toBe(true);
+      }
     });
 
     it("stops a divemaster rostered as captain from raising the seat cap", async () => {

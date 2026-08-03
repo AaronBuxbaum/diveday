@@ -261,7 +261,7 @@ export default async function ScheduleBoardPage({
         endsAt: open.endsAt,
         capacity: open.capacity,
         priceCents: open.priceCents,
-        booked: open.totalDivers,
+        booked: open.rosterSize,
         courseTitle: null,
         diveSiteName: null,
       },

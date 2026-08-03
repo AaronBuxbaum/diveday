@@ -365,6 +365,7 @@ export default async function ManageTripPage({
         tripId={tripId}
         staff={staff}
         crewIds={crewIds}
+        crewRoles={Object.fromEntries(tripRoleByPerson)}
         onShiftIds={onShiftIds}
         crewGapCode={crewGap.code}
         updateCrewAction={updateTripCrewAction.bind(null, shopSlug)}
@@ -379,6 +380,14 @@ export default async function ManageTripPage({
           assignOption: t("shared.today.departureBoard.assignCrewOption"),
           unassignAria: t("shared.today.departureBoard.unassignAria"),
           assignFailed: t("shared.today.departureBoard.assignFailed"),
+          roleAria: t("trips.crew.roleAria"),
+          roleUnspecified: t("trips.crew.roleUnspecified"),
+          roleOptions: {
+            instructor: t("trips.crew.roleInstructor"),
+            divemaster: t("trips.crew.roleDivemaster"),
+            captain: t("trips.crew.roleCaptain"),
+            crew: t("trips.crew.roleCrew"),
+          },
           onShift: t("trips.crew.onShift"),
           notOnShift: t("trips.crew.notOnShift"),
           manageShifts: t("trips.crew.manageShifts"),
