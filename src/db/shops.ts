@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import type { DepthUnit } from "@/lib/depth-units";
 import type { ShopCurrency } from "@/lib/money";
 import type { RentalPricing } from "@/lib/rentals";
+import type { TemperatureUnit } from "@/lib/temperature-units";
 import type { AppDb } from "./client";
 import { shops } from "./schema";
 
@@ -82,6 +83,22 @@ export async function setShopDepthUnit(db: AppDb, shopId: string, unit: DepthUni
   const [shop] = await db
     .update(shops)
     .set({ depthUnit: unit })
+    .where(eq(shops.id, shopId))
+    .returning();
+  return shop ?? null;
+}
+
+/**
+ * Sets whether the shop reads water temperature in Celsius or Fahrenheit.
+ * Presentation only, on the same terms as the depth unit above —
+ * `trips.water_temperature_c` stays canonical Celsius, so flipping this never
+ * changes a stored reading. Independent of the depth unit on purpose: a shop
+ * that dives in feet and talks about the water in Celsius is a real shop.
+ */
+export async function setShopTemperatureUnit(db: AppDb, shopId: string, unit: TemperatureUnit) {
+  const [shop] = await db
+    .update(shops)
+    .set({ temperatureUnit: unit })
     .where(eq(shops.id, shopId))
     .returning();
   return shop ?? null;

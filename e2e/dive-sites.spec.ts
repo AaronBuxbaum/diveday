@@ -77,7 +77,7 @@ test.describe("staff", () => {
       .getByLabel("Conditions overview")
       .fill("Warm water and an easy morning are expected.");
     await page.getByLabel("Water temp °C").fill("27");
-    await page.getByLabel("Visibility metres").fill("18");
+    await page.getByLabel("Visibility m").fill("18");
     await page.getByRole("button", { name: "Publish crew prediction" }).click();
     await expect(page.getByRole("status")).toContainText("Crew prediction published");
 
@@ -108,7 +108,7 @@ test.describe("staff", () => {
     await page.getByRole("button", { name: "Return to automated outlook" }).click();
     await expect(page.getByRole("status")).toContainText("Crew prediction cleared");
     await expect(page.getByLabel("Water temp °C")).toHaveValue("");
-    await expect(page.getByLabel("Visibility metres")).toHaveValue("");
+    await expect(page.getByLabel("Visibility m")).toHaveValue("");
 
     // Cancel the trip — this leg exercises the cancel/reinstate controls
     // themselves; test isolation is already handled by the per-test demo

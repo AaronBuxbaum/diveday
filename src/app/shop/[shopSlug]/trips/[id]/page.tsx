@@ -29,6 +29,7 @@ import { toShopCurrency } from "@/lib/money";
 import { publicTripPath } from "@/lib/public-routes";
 import { recurrenceSummary } from "@/lib/recurrence";
 import { requireStaffSession } from "@/lib/session";
+import { temperatureUnitFor } from "@/lib/temperature-units";
 import { capacityLabel, isFull } from "@/lib/trips";
 import { utcToWallTime } from "@/lib/zoned";
 import { ConditionsSection } from "./_components/ConditionsSection";
@@ -316,6 +317,8 @@ export default async function ManageTripPage({
         clearAction={clearConditionsAction.bind(null, shopSlug, tripId)}
         trip={trip}
         locale={locale}
+        temperatureUnit={temperatureUnitFor(shop)}
+        depthUnit={shop.depthUnit}
       />
 
       <RecapNoteSection

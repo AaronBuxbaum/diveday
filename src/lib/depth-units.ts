@@ -52,3 +52,22 @@ export const MAX_ENTERED_DEPTH_METERS = 300;
 export function maxEnteredDepth(unit: DepthUnit): number {
   return Math.round(depthInUnit(MAX_ENTERED_DEPTH_METERS, unit));
 }
+
+/**
+ * The largest underwater visibility the conditions form accepts, in metres.
+ * Separate from the depth ceiling above and much lower: 100 m is already the
+ * clearest water on earth (a Bahamian blue hole on a still day), so a bigger
+ * number is a typo, not a record.
+ */
+export const MAX_ENTERED_VISIBILITY_METERS = 100;
+
+/**
+ * The same bound in the shop's own unit. Rounded down, never to nearest — a
+ * ceiling offered in feet must still convert to something the metres bound
+ * accepts.
+ */
+export function maxEnteredVisibility(unit: DepthUnit): number {
+  return unit === "feet"
+    ? Math.floor(metersToFeet(MAX_ENTERED_VISIBILITY_METERS))
+    : MAX_ENTERED_VISIBILITY_METERS;
+}

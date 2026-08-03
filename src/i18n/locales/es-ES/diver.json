@@ -1396,8 +1396,8 @@
   },
   "notifications": {
     "brief": {
-      "waterTemp": "agua alrededor de {celsius}°C",
-      "visibility": "visibilidad cercana a {meters} m",
+      "waterTemp": "agua alrededor de {value}",
+      "visibility": "visibilidad cercana a {value}",
       "expect": "Prevé {list}.",
       "firstTimer": "¿Tu primera inmersión en barco? El equipo te explica todo el material y el plan antes de entrar al agua — nunca te dejarán con el equipo sin más indicaciones. Ven con tus preguntas.",
       "conditionsLabel": "Condiciones:",

@@ -1,8 +1,10 @@
 // @vitest-environment node
+import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { temperatureUnitFor } from "@/lib/temperature-units";
 import { seededShopContext, seededTestDb } from "@/test/db";
-import { shops } from "./schema";
-import { getShopBySlug, setShopAddress } from "./shops";
+import { shops, trips } from "./schema";
+import { getShopBySlug, setShopAddress, setShopDepthUnit, setShopTemperatureUnit } from "./shops";
 
 describe("shop queries (in-memory PGlite)", () => {
   it("seeds a shop retrievable by slug", async () => {
@@ -60,5 +62,52 @@ describe("setShopAddress", () => {
     if (!freshShop) throw new Error("setup shop insert failed");
     expect(freshShop.addressStreet).toBeNull();
     expect(freshShop.addressCountry).toBeNull();
+  });
+});
+
+describe("setShopTemperatureUnit", () => {
+  it("defaults a brand-new shop to Celsius", async () => {
+    const db = await seededTestDb();
+    const [freshShop] = await db
+      .insert(shops)
+      .values({ name: "Plain Shop", slug: "plain-shop-temperature", timezone: "America/New_York" })
+      .returning();
+    if (!freshShop) throw new Error("setup shop insert failed");
+    expect(freshShop.temperatureUnit).toBe("celsius");
+    expect(temperatureUnitFor(freshShop)).toBe("celsius");
+  });
+
+  it("stores the shop's chosen unit and reads it back", async () => {
+    const { db, shop } = await seededShopContext();
+    const after = await setShopTemperatureUnit(db, shop.id, "fahrenheit");
+    expect(after?.temperatureUnit).toBe("fahrenheit");
+    expect(temperatureUnitFor(await getShopBySlug(db, shop.slug))).toBe("fahrenheit");
+  });
+
+  it("is independent of the depth unit — a shop can read feet and Celsius", async () => {
+    // The combination the pre-column derivation could not express, and the
+    // reason this is its own setting rather than a reading of `depth_unit`.
+    const { db, shop } = await seededShopContext();
+    await setShopDepthUnit(db, shop.id, "feet");
+    const after = await getShopBySlug(db, shop.slug);
+    expect(after?.depthUnit).toBe("feet");
+    expect(temperatureUnitFor(after)).toBe("celsius");
+  });
+
+  it("moves no stored water temperature when the unit flips", async () => {
+    const { db, shop } = await seededShopContext();
+    const [trip] = await db
+      .select({ id: trips.id })
+      .from(trips)
+      .where(eq(trips.shopId, shop.id))
+      .limit(1);
+    if (!trip) throw new Error("seed produced no trip");
+    await db.update(trips).set({ waterTemperatureC: 24 }).where(eq(trips.id, trip.id));
+    await setShopTemperatureUnit(db, shop.id, "fahrenheit");
+    const [after] = await db
+      .select({ waterTemperatureC: trips.waterTemperatureC })
+      .from(trips)
+      .where(eq(trips.id, trip.id));
+    expect(after?.waterTemperatureC).toBe(24);
   });
 });

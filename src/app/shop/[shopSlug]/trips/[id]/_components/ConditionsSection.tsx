@@ -2,7 +2,14 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { staffTranslator } from "@/i18n/staff-messages";
+import { type DepthUnit, depthInUnit, maxEnteredVisibility } from "@/lib/depth-units";
 import { hasCrewPrediction } from "@/lib/marine-forecast";
+import {
+  maxEnteredTemperature,
+  minEnteredTemperature,
+  type TemperatureUnit,
+  temperatureInUnit,
+} from "@/lib/temperature-units";
 import type { Trip } from "./types";
 
 export function ConditionsSection({
@@ -10,13 +17,27 @@ export function ConditionsSection({
   clearAction,
   trip,
   locale,
+  temperatureUnit,
+  depthUnit,
 }: {
   saveAction: (formData: FormData) => void;
   clearAction: () => void;
   trip: Trip;
   locale: string;
+  /** The shop's own units — the crew type in these; storage stays Celsius and metres. */
+  temperatureUnit: TemperatureUnit;
+  depthUnit: DepthUnit;
 }) {
   const t = staffTranslator(locale);
+  // The unit belongs in the label, not as a hint beside it: a crew member
+  // reading a bare "Water temp" types whichever unit they think in, and a 27
+  // meant as °F would reach every diver's night-before brief as an 81°F day.
+  const temperatureUnitLabel = t(
+    temperatureUnit === "fahrenheit"
+      ? "shared.temperature.fahrenheit"
+      : "shared.temperature.celsius",
+  );
+  const depthUnitLabel = t(depthUnit === "feet" ? "shared.depth.feet" : "shared.depth.meters");
   return (
     <section className="mt-10 rounded-lg border border-border bg-surface p-5">
       <h2 className="text-lg font-semibold">{t("trips.conditions.heading")}</h2>
@@ -50,23 +71,29 @@ export function ConditionsSection({
           </Field>
         </FieldGrid>
         <FieldGrid columns={3} className="gap-x-5 gap-y-5">
-          <Field label={t("trips.conditions.waterTempLabel")}>
+          <Field label={t("trips.conditions.waterTempLabel", { unit: temperatureUnitLabel })}>
             <input
-              name="waterTemperatureC"
+              name="waterTemperature"
               type="number"
-              min={-2}
-              max={40}
-              defaultValue={trip.waterTemperatureC ?? ""}
+              min={minEnteredTemperature(temperatureUnit)}
+              max={maxEnteredTemperature(temperatureUnit)}
+              defaultValue={
+                trip.waterTemperatureC === null
+                  ? ""
+                  : temperatureInUnit(trip.waterTemperatureC, temperatureUnit)
+              }
               className={controlClass}
             />
           </Field>
-          <Field label={t("trips.conditions.visibilityLabel")}>
+          <Field label={t("trips.conditions.visibilityLabel", { unit: depthUnitLabel })}>
             <input
-              name="visibilityMeters"
+              name="visibility"
               type="number"
               min={0}
-              max={100}
-              defaultValue={trip.visibilityMeters ?? ""}
+              max={maxEnteredVisibility(depthUnit)}
+              defaultValue={
+                trip.visibilityMeters === null ? "" : depthInUnit(trip.visibilityMeters, depthUnit)
+              }
               className={controlClass}
             />
           </Field>

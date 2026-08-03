@@ -226,7 +226,7 @@ export default async function DiveRecapPage({
   // Stored metric, displayed in the shop's own units (src/lib/depth-units.ts,
   // src/lib/temperature-units.ts) — a shop working in feet was reading its own
   // divers' recaps in °C and metres.
-  const temperatureUnit = temperatureUnitFor(shop.depthUnit);
+  const temperatureUnit = temperatureUnitFor(shop);
   const conditions = [
     trip.waterTemperatureC !== null
       ? {
