@@ -26,7 +26,8 @@
       "demo.spec.ts",
       "marketing.spec.ts",
       "nitrox.spec.ts",
-      "onboard.spec.ts"
+      "onboard.spec.ts",
+      "tenant-isolation.spec.ts"
     ],
     "visual": ["onboard"]
   },
@@ -59,16 +60,17 @@
       "role-lens.spec.ts",
       "role-permissions.spec.ts",
       "search.spec.ts",
-      "staff-invite.spec.ts"
+      "staff-invite.spec.ts",
+      "tenant-isolation.spec.ts"
     ],
     "visual": ["today", "today-empty"]
   },
   "/shop/[shopSlug]/blockers": {
-    "e2e": ["blockers.spec.ts"],
+    "e2e": ["blockers.spec.ts", "tenant-isolation.spec.ts"],
     "visual": ["blockers"]
   },
   "/shop/[shopSlug]/check-in": {
-    "e2e": ["check-in.spec.ts"],
+    "e2e": ["check-in.spec.ts", "tenant-isolation.spec.ts"],
     "visual": []
   },
   "/shop/[shopSlug]/check-in/walk-in": {
@@ -123,7 +125,8 @@
       "orders-demo.spec.ts",
       "role-permissions.spec.ts",
       "saved-views.spec.ts",
-      "search.spec.ts"
+      "search.spec.ts",
+      "tenant-isolation.spec.ts"
     ],
     "visual": ["divers"]
   },
@@ -142,7 +145,7 @@
     ]
   },
   "/shop/[shopSlug]/orders": {
-    "e2e": ["orders-demo.spec.ts"],
+    "e2e": ["orders-demo.spec.ts", "tenant-isolation.spec.ts"],
     "visual": ["orders"]
   },
   "/shop/[shopSlug]/orders/[id]": {
@@ -163,7 +166,7 @@
     "visual": ["reports"]
   },
   "/shop/[shopSlug]/reviews": {
-    "e2e": ["reviews.spec.ts"],
+    "e2e": ["reviews.spec.ts", "tenant-isolation.spec.ts"],
     "visual": ["staff-reviews"]
   },
   "/shop/[shopSlug]/schedule": {
@@ -186,6 +189,7 @@
       "schedule-trip.spec.ts",
       "self-service-reschedule.spec.ts",
       "seo.spec.ts",
+      "tenant-isolation.spec.ts",
       "trips.spec.ts"
     ],
     "visual": ["schedule", "schedule-embed"]
@@ -225,6 +229,7 @@
       "role-permissions.spec.ts",
       "schedule-builder.spec.ts",
       "schedule-trip.spec.ts",
+      "tenant-isolation.spec.ts",
       "trip-series.spec.ts",
       "waivers.spec.ts"
     ],
@@ -352,7 +357,7 @@
     "visual": []
   },
   "/shop/[shopSlug]/waivers": {
-    "e2e": ["role-permissions.spec.ts", "waivers.spec.ts"],
+    "e2e": ["role-permissions.spec.ts", "tenant-isolation.spec.ts", "waivers.spec.ts"],
     "visual": ["staff-waivers"]
   },
   "/shop/[shopSlug]/waivers/signatures": {
