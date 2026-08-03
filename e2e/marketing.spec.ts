@@ -21,6 +21,21 @@ test("the homepage hero offers one demo door, and the diver preview lives on its
   // Exactly three demo buttons (hero, mid-page, closing) — the five-chip role
   // picker is gone from the hero; role switching is the in-demo switcher's job.
   await expect(page.getByRole("button", { name: "Try the live demo" })).toHaveCount(3);
+  // The old label is gone site-wide, not merely replaced here: one action
+  // wearing two names is what the single-label rule exists to stop, and the
+  // rename has to stay renamed (docs/product/marketing.md, Voice).
+  await expect(page.getByRole("button", { name: "Try the staff app" })).toHaveCount(0);
+
+  // Hero decision density: one primary action, at most one secondary. The hero
+  // once offered ~9 (a five-chip role picker, the diver preview, demo, trial),
+  // and every retired destination moved rather than disappeared — the roles
+  // into the in-demo switcher, the preview onto its moment card below. The
+  // mockup's "Mark boarded" buttons are `disabled` scenery, not doors, so the
+  // count is of things a visitor can actually act on.
+  const heroSection = page.getByRole("main").locator("section").first();
+  await expect(heroSection.locator("button:not([disabled])")).toHaveCount(1);
+  await expect(heroSection.getByRole("link")).toHaveCount(1);
+  await expect(heroSection.getByRole("link")).toHaveAttribute("href", "/onboard?from=home-hero");
 
   // The diver preview moved out of the hero (where it was a third competing
   // door) onto the "For the diver" moment card, still tagged for attribution.
@@ -102,12 +117,53 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   await expect(page.getByRole("heading", { name: "What DiveDay doesn't do." })).toBeVisible();
   await expect(page.getByRole("button", { name: "Try the live demo" })).toHaveCount(3);
 
+  // The mid-page door carries its own funnel tag. Folded into `product` it
+  // could never be shown to have earned its place among ten sections; the hero
+  // and closing pair keep the page's original tag so their history holds.
+  // Scoped through `<main>` for the same reason the sign-up test is: a previous
+  // route's hidden `input[name="source"]` stays reachable while Activity keeps
+  // it in the DOM, and a raw `page.locator` would count it.
+  const productMain = page.getByRole("main");
+  await expect(productMain.locator('input[name="source"][value="product-mid"]')).toHaveCount(1);
+  await expect(productMain.locator('input[name="source"][value="product"]')).toHaveCount(2);
+  await expect(
+    productMain.locator('a[href="/onboard?from=product-mid"]'),
+    "the mid-page trial link is tagged like its demo twin",
+  ).toHaveCount(1);
+
   await page.getByRole("link", { name: "Pricing" }).first().click();
   await expect(
     page.getByRole("heading", { name: "One flat price for the whole shop." }),
   ).toBeVisible();
   await expect(page.getByText("$99", { exact: true })).toBeVisible();
   await expect(page.getByText(/The crew saves the manifest to their phone/)).toBeVisible();
+
+  // A flat price only means something next to the model it replaces, so the
+  // page anchors against the per-booking fees the switching guides document —
+  // each stated as the incumbent's own published terms (or, for FareHarbor,
+  // explicitly as an unpublished rate third parties report), each linked to the
+  // guide that carries the citation. No claim about what a shop pays in
+  // practice and no savings arithmetic: we have no customers to know either.
+  await expect(
+    page.getByRole("heading", { name: "A flat price, or a cut of every seat you sell." }),
+  ).toBeVisible();
+  await expect(
+    page.getByText(/monthly subscription plus 3% of every online booking/),
+  ).toBeVisible();
+  await expect(page.getByText(/publishes no rate at all/)).toBeVisible();
+  await expect(page.getByText(/third parties report that fee at around 6%/)).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: /What moving off Rezdy looks like/ }),
+  ).toHaveAttribute("href", "/switching/rezdy");
+  await expect(
+    page.getByRole("link", { name: /What moving off FareHarbor looks like/ }),
+  ).toHaveAttribute("href", "/switching/fareharbor");
+  // The claims-policy guard for this section: no savings promise, no invented
+  // figure for what shops actually pay.
+  const pricingBody = await page.locator("body").innerText();
+  for (const pattern of [/\bsave[sd]? (you )?\$?\d/i, /shops (pay|save) (around|about|roughly)/i]) {
+    expect(pricingBody, `unfounded savings claim matching ${pattern}`).not.toMatch(pattern);
+  }
   // The objection layer answers the deal-killers, and a skeptic can reach the
   // demo without committing to a trial form.
   await expect(
@@ -152,11 +208,18 @@ test("the about page says who is behind DiveDay and what it won't pretend", asyn
   await page.goto("/");
   await page.getByRole("contentinfo").getByRole("link", { name: "About" }).click();
 
+  // The hero has to survive the rulebook's own paste test: "Built by divers,
+  // for divers." was true of every dive-adjacent vendor on earth — a rival
+  // could paste it unchanged — which made it an eyebrow wearing a headline's
+  // clothes. This one names the thing only DiveDay can say —
+  // one person writes it and answers the mail — and the page proves it two
+  // sections down with a real address.
   await expect(
     page.getByRole("heading", {
-      name: "Built by divers, for divers.",
+      name: "The person who writes the code answers your email.",
     }),
   ).toBeVisible();
+  await expect(page.getByText(/one of them owns it, writes every line of it/)).toBeVisible();
 
   // The page earns trust by conceding, not by claiming: the honest-no block and
   // the named accountable human are the load-bearing parts.
@@ -408,6 +471,51 @@ test("the spreadsheet guide brings a no-system shop across for free", async ({ p
     "href",
     "/onboard?from=switching-spreadsheet",
   );
+});
+
+test("every public marketing page unfurls as a card, not a bare URL", async ({ page }) => {
+  // Shared links are one of two free inbound channels, and these pages get
+  // pasted into shop owners' chat groups. `/switching/spreadsheet` shipped
+  // without an Open Graph block at all, and the Twitter card had no per-page
+  // words anywhere — both are silent failures that only show up in someone
+  // else's chat window, so they get a test rather than a review habit.
+  for (const path of [
+    "/",
+    "/product",
+    "/pricing",
+    "/about",
+    "/switching",
+    "/switching/spreadsheet",
+    "/switching/eve",
+    "/onboard",
+  ]) {
+    await page.goto(path);
+    // `.first()`: a dynamic hole resolving after a client-side render can
+    // insert a second, identical tag — see the `meta[name="robots"]` note above.
+    const content = async (selector: string) =>
+      await page.locator(selector).first().getAttribute("content");
+
+    expect(await content('meta[property="og:title"]'), `${path} og:title`).toBeTruthy();
+    expect(await content('meta[property="og:description"]'), `${path} og:description`).toBeTruthy();
+    expect(await content('meta[property="og:url"]'), `${path} og:url`).toContain(
+      path === "/" ? "/" : path,
+    );
+    // Policy (docs/product/marketing.md): `summary_large_image` wherever the
+    // shared link card applies. The root `src/app/opengraph-image.tsx` renders
+    // for every marketing page (a segment with its own file overrides it — see
+    // the per-shop card in e2e/seo.spec.ts), so today that is all of them, and
+    // asserting the image beside the card type is what keeps the pair honest:
+    // a large-image card with no image unfurls worse than a small one.
+    expect(await content('meta[property="og:image"]'), `${path} og:image`).toMatch(/^https?:\/\//);
+    expect(await content('meta[name="twitter:card"]'), `${path} twitter:card`).toBe(
+      "summary_large_image",
+    );
+    expect(await content('meta[name="twitter:title"]'), `${path} twitter:title`).toBeTruthy();
+    expect(
+      await content('meta[name="twitter:description"]'),
+      `${path} twitter:description`,
+    ).toBeTruthy();
+  }
 });
 
 test("a signed-out visitor reaches the demo from the top of a switching guide", async ({

@@ -18,7 +18,7 @@ import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
 import { trialHref } from "@/lib/funnel";
-import { productCapabilityIndex } from "@/lib/marketing";
+import { productCapabilityIndex, sharedLinkCard } from "@/lib/marketing";
 
 export const metadata: Metadata = {
   title: "Product — booking to head count | DiveDay",
@@ -26,10 +26,22 @@ export const metadata: Metadata = {
     "How DiveDay runs a dive shop's day: bookings, waivers, cert checks, trip prep, and a boat manifest that keeps working when the signal doesn't.",
   alternates: { canonical: "/product" },
   openGraph: {
+    ...sharedLinkCard,
     title: "The DiveDay product — booking to head count",
     description:
       "Bookings, waivers, cert checks, trip prep, and the boat manifest, organized around the trip itself.",
     url: "/product",
+  },
+  // `summary_large_image`: the OG block above names the shared link card
+  // (`sharedLinkCard` → `src/app/opengraph-image.tsx`), so the large card has an
+  // image to fill it (docs/product/marketing.md, Twitter-card policy). Title and
+  // description are restated here rather than left to inherit, so a shared link
+  // never unfurls with the root layout's generic site-level words.
+  twitter: {
+    card: "summary_large_image",
+    title: "The DiveDay product — booking to head count",
+    description:
+      "Bookings, waivers, cert checks, trip prep, and the boat manifest, organized around the trip itself.",
   },
 };
 
@@ -198,14 +210,17 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
         </div>
         {/* A door out mid-page: the dock story is the differentiator, and a
             convinced reader shouldn't have to scroll six more sections to act
-            on it (conversion review — one CTA at the bottom of ten sections). */}
+            on it (conversion review — one CTA at the bottom of ten sections).
+            Tagged `product-mid` rather than `product`: folded into the page's
+            own tag it could never be shown to have earned its place, and the
+            hero/closing pair keeps the original tag so their history holds. */}
         <div className="mt-14 flex flex-col items-center gap-4 rounded-2xl border border-border bg-surface px-6 py-8 text-center sm:flex-row sm:justify-between sm:text-left">
           <h3 className="text-xl font-semibold tracking-tight">
             {t("marketing.common.midCtaTitle")}
           </h3>
           <div className="flex flex-col gap-3 sm:flex-row">
             <form action={enterDemoAction}>
-              <FunnelTag source="product" />
+              <FunnelTag source="product-mid" />
               <SubmitButton
                 pendingLabel={t("marketing.product.gettingDemoReady")}
                 className={buttonClass({ className: "cursor-pointer disabled:opacity-70" })}
@@ -214,7 +229,7 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
               </SubmitButton>
             </form>
             <Link
-              href={trialHref("product")}
+              href={trialHref("product-mid")}
               className={buttonClass({ variant: "secondary", className: "border-border-strong" })}
             >
               {t("marketing.common.startTrial")}

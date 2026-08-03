@@ -17,6 +17,15 @@ describe("eventSource", () => {
     }
   });
 
+  it("keeps a page's mid-page door distinct from the page itself", () => {
+    // The whole reason a mid-page CTA gets its own tag: folded into the page's
+    // one bucket, a door added to answer "one CTA at the bottom of ten
+    // sections" can never be shown to have earned its place.
+    expect(eventSource("product-mid")).toBe("product-mid");
+    expect(eventSource("product")).toBe("product");
+    expect(trialHref("product-mid")).toBe("/onboard?from=product-mid");
+  });
+
   it("collapses anything outside the vocabulary to unknown", () => {
     // The value reaches us from the visitor's own request, so free-form text
     // and markup collapse to one bucket rather than becoming event properties.

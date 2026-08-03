@@ -11,6 +11,13 @@ import { publicSchedulePath } from "./public-routes";
  * looks like a real page with suspiciously few visits. Tags are chosen from
  * this list at the call site (`trialHref`, `<FunnelTag>`), and anything that
  * arrives off a request is clamped back to it by `eventSource`.
+ *
+ * A page that offers the same action from more than one place splits its tag by
+ * position (`home-hero` / `home-mid` / `home-closing`, `product` / `product-mid`)
+ * — otherwise a mid-page door added to answer "one CTA at the bottom of ten
+ * sections" folds into the page total and can never be shown to have earned its
+ * place. The unsuffixed tag stays the page's original one so attribution
+ * history doesn't break when a new position is added beside it.
  */
 const FIXED_SOURCES = [
   "home-hero",
@@ -19,6 +26,7 @@ const FIXED_SOURCES = [
   "home-closing",
   "nav",
   "product",
+  "product-mid",
   "pricing",
   "about-closing",
   "sign-in",

@@ -93,6 +93,16 @@ chosen battlegrounds — and re-read it before changing the spine.
   factually. Prefer contrasting with the *buyer's fear* (setup fees, add-on stacks, export limits)
   over naming the rival. Switching guides may name incumbents; they cite sources and never
   speculate.
+- **Anchoring the price against a rival's is the one place naming them earns its keep** — a flat
+  number means nothing until the reader sees the model it replaces. `/pricing` carries that anchor
+  (`marketing.pricing.feeAnchor.*`), and it is bounded hard: only figures already documented in a
+  switching guide may appear, each presented as *the incumbent's own published terms* and linked to
+  the guide that carries the citation; an unpublished fee is stated as unpublished and attributed to
+  whoever reported it (FareHarbor's ~6%), never as their price. **No figure for what a shop pays in
+  practice, no booking volume, no savings arithmetic, no "typical shop" —** with zero customers we
+  have no basis for any of it, and a comparison invented to flatter the flat price is the same
+  fabricated-proof failure as an invented testimonial, wearing a spreadsheet. A figure not already
+  in the repo does not go on the page; it goes into a switching guide first, with its source.
 - **The price renders only from `src/lib/marketing.ts`.** Never restate the figure in prose, docs,
   JSON-LD literals, or images — every copy is a future stale claim. The product owner has **approved
   the price for now** (H-12, 2026-07-24; early-access and still moving), so it may be shown from
@@ -126,7 +136,13 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
 
 - **Headlines state an outcome in the buyer's world**, not a category label. "Roll-call buttons big
   enough for wet thumbs" beats "mobile-first manifest management". Test: could a rival paste this
-  headline onto their site truthfully? If yes, sharpen it.
+  headline onto their site truthfully? If yes, sharpen it. **The test binds `/about` too**, which is
+  where it is easiest to forget: that page's hero read "Built by divers, for divers." until
+  2026-08-03 — true of every dive-adjacent vendor alive, and therefore an eyebrow wearing a
+  headline's clothes. It now names the thing only DiveDay can say and the page can prove two
+  sections down with a real address ("The person who writes the code answers your email"). A trust
+  page that opens with a sentence anyone could sign has spent its most valuable line arguing
+  nothing.
 - **Concrete nouns over software jargon.** The buyer runs a shop, a counter, a boat — not an
   "operating system", "platform", or "solution". Name what DiveDay replaces: the whiteboard, the
   clipboard, the three apps and a spreadsheet.
@@ -139,9 +155,25 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   visitor can't parse, and one action wearing three labels reads as three different products. Every
   button that submits `enterDemoAction` uses the shared label (`nav.tryDemo` /
   `marketing.common.tryDemo`); don't introduce per-page synonyms.
+  **The wording, and why it won (recorded 2026-08-03):** the rename adopted the label `/product`,
+  `/pricing`, `/about` and every `/switching` page were already using rather than inventing a third
+  — the homepage was the outlier, not the standard, so the cheapest correct move was to make the
+  outlier conform. "Try" states the commitment level (look, don't buy), "live" answers the question
+  a static screenshot raises, and "demo" is the word a shop owner already uses for it; "staff app"
+  named an internal architecture boundary a buyer has no reason to know and, worse, implied the
+  diver-facing half was a different purchase. The funnel tags did **not** change with the label —
+  `home-hero`, `home-mid`, `home-closing` still mean what they meant, so attribution history spans
+  the rename. This closes the MKT-F4 half of **HD-25**; the remaining HD-25 calls (MKT-F5's "most
+  shops…" wording, MKT-F10's offline roll-call claim versus the V-02 embargo) are untouched by it.
 - **One primary CTA per screen.** Each marketing page carries its own primary (demo on `/` and
   `/product`, the trial on `/pricing`'s card); the nav's "Start a trial" stays secondary weight so
   it never competes, and it hides entirely on `/onboard`, where it would link to the page it's on.
+  **The homepage hero is the scarcest screen on the site and is capped at one primary plus one
+  secondary** — it once offered around nine choices (a five-chip role picker, a diver-preview link,
+  demo, trial), which is a menu, not an ask. Cutting a hero control never means deleting the
+  destination: the roles moved into the in-demo switcher, the diver preview onto its own moment
+  card, and both are still reachable and still tagged. `e2e/marketing.spec.ts` counts the hero's
+  enabled controls so the budget can't quietly grow back.
   The internal positioning pillars ("easy to try", "safe to leave") are argument structure, not
   user-facing labels — section eyebrows say what the reader is looking at ("Your records", "Try
   it"), not what the strategy doc calls it.
@@ -155,6 +187,26 @@ substrate:
   (the category term "dive shop software" belongs in the home title), a description in the product
   voice, a canonical URL, and Open Graph + Twitter card data — these pages get shared in shop
   owners' chat groups, and a bare link is a lost visit.
+- **Twitter-card policy (HD-25, adopted 2026-08-03).** A page uses `summary_large_image` when a
+  link-preview image resolves for it, and `summary` when none does — a large-image card with no
+  image unfurls worse than a small one, so the card type follows the image rather than being chosen
+  page by page. Every marketing page is `summary_large_image` today because every one of them names
+  the shared card. Each page writes the block itself, restating its own `title` and `description`
+  rather than letting the root layout's site-level words stand in, because a card is what a stranger
+  reads before deciding to click; `src/app/layout.tsx` keeps `twitter.card` as the app-wide default
+  so a new page can never unfurl with none, and the per-page block is what makes it *say* something.
+  A page that ever ships without an image — a bare form, a legal notice — sets `summary` in the same
+  change that removes the image. Coverage is a test, not a habit: `e2e/marketing.spec.ts` walks every
+  marketing route and asserts the OG block, the image, and the card triple on each.
+- **A page-level `openGraph` block replaces the root layout's — it does not merge into it.** Next
+  merges `metadata` shallowly, so the moment a page exports its own `openGraph` (every marketing page
+  does, because a shared link has to unfurl with *that page's* words) it loses `siteName`, `type`,
+  and the shared link card from `src/app/opengraph-image.tsx`. File-based image metadata is collected
+  per route segment, so the root card re-attaches only to pages in the root segment — `/` — and every
+  other marketing route was unfurling image-less until 2026-08-03. That is why `sharedLinkCard` in
+  `src/lib/marketing.ts` exists and why every page except `/` spreads it into its `openGraph`. The
+  failure mode is what makes this worth a rule: it is invisible from inside the app and only shows up
+  in someone else's chat window, which is precisely where these pages do their work.
 - Site-level `robots` and `sitemap` cover the public surface; tokened pages (`/waivers/*`,
   `/ready/*`, `/recap/*`, `/offline-manifest`) stay `noindex` individually.
 - Structured data where content already supports it: `FAQPage` on `/pricing`, `SoftwareApplication`
@@ -185,6 +237,13 @@ off a request goes through `eventSource()`, which returns `unknown` for anything
 **Adding a marketing CTA means tagging it**, and a new page means adding its tag to the registry
 first; an untagged link is a conversion we can't attribute. Read the pair per surface: a page with
 demo entries and no trials is telling you something different from a page with neither.
+
+**A page that offers the same action from more than one place splits its tag by position** —
+`home-hero` / `home-mid` / `home-closing`, `product` / `product-mid`. Mid-page doors exist because
+one CTA at the bottom of ten sections is a scroll a convinced reader shouldn't have to make; folded
+into the page's own tag, such a door can never be shown to have earned its place, and the next
+review re-opens the same question with no evidence either way. The unsuffixed tag stays the page's
+original one when a position is added beside it, so attribution history spans the change.
 
 ## Product visuals
 
@@ -217,6 +276,7 @@ structure* live; none of them may contain an English sentence:
 | Feature claims shared across pages | `src/lib/marketing.ts` (`productFeatureGroups`, key registry) | `marketing.features.*` in the bundles |
 | Price, plan name, included list | `src/lib/marketing.ts` (`earlyAccessPrice`) — the `$99` figure is the only literal, and the only place it exists | `marketing.price.*` in the bundles |
 | Export claim shared by home + pricing | `src/lib/marketing.ts` (`fullShopExport`) | `marketing.export.*` in the bundles |
+| Shared link-preview card fields every page's `openGraph` needs | `src/lib/marketing.ts` (`sharedLinkCard`) | none — URLs and dimensions, no words |
 | Capability index on `/product` | `src/lib/marketing.ts` (`productCapabilityIndex`) | `marketing.capabilities.*` in the bundles |
 | Page-specific narrative copy | The page file (`src/app/{page,product/page,pricing/page}.tsx`) | `marketing.home/product/pricing.*` in the bundles |
 | Sign-up reassurance (no card, the exit, the founder line) | `src/app/onboard/page.tsx` | `account.onboard.*` in the bundles |

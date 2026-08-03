@@ -13,6 +13,7 @@ import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
 import { trialHref } from "@/lib/funnel";
+import { sharedLinkCard } from "@/lib/marketing";
 import { MIGRATION_GUIDES } from "@/lib/migration-guides";
 
 // Generated from the migration-guides registry, never hand-listed, so a new
@@ -30,10 +31,22 @@ export const metadata: Metadata = {
   description: `On a spreadsheet, or leaving ${metadataCompetitors}? Step-by-step guides to bring your divers, cards, and sizes into DiveDay — with an honest account of what comes across.`,
   alternates: { canonical: "/switching" },
   openGraph: {
+    ...sharedLinkCard,
     title: "Switching guides — DiveDay",
     description:
       "Step-by-step guides to bring your divers, cards, and sizes into DiveDay — with an honest account of what comes across.",
     url: "/switching",
+  },
+  // `summary_large_image`: the OG block above names the shared link card
+  // (`sharedLinkCard` → `src/app/opengraph-image.tsx`), so the large card has an
+  // image to fill it — docs/product/marketing.md, Twitter-card policy. These
+  // pages get pasted into shop owners' chat groups more than any other, which
+  // is the whole reason the card block is not optional here.
+  twitter: {
+    card: "summary_large_image",
+    title: "Switching guides — DiveDay",
+    description:
+      "Step-by-step guides to bring your divers, cards, and sizes into DiveDay — with an honest account of what comes across.",
   },
 };
 

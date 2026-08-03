@@ -1,6 +1,5 @@
 "use server";
 
-import { hash } from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
@@ -16,6 +15,7 @@ import { signIn } from "@/lib/auth";
 import { eventSource } from "@/lib/funnel";
 import { publicAppUrl } from "@/lib/notifications";
 import { onboardSchema } from "@/lib/onboarding";
+import { hashPassword } from "@/lib/password-hashing";
 import { ALERT_EMAIL } from "@/lib/platform-mail";
 import { checkRateLimit, RATE_LIMIT_MESSAGE, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
@@ -135,8 +135,7 @@ export async function onboardAction(formData: FormData) {
         { personId: newPerson.id, role: "manager" },
       ]);
 
-      // Hash password (cost 10)
-      const hashedPassword = await hash(ownerPassword, 10);
+      const hashedPassword = await hashPassword(ownerPassword);
 
       // Create user account
       const [newAccount] = await tx

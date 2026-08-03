@@ -13,8 +13,8 @@ import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
 import { trialHref } from "@/lib/funnel";
-import { earlyAccessPrice, fullShopExport } from "@/lib/marketing";
-import { MIGRATION_GUIDES } from "@/lib/migration-guides";
+import { earlyAccessPrice, fullShopExport, sharedLinkCard } from "@/lib/marketing";
+import { getMigrationGuide, MIGRATION_GUIDES } from "@/lib/migration-guides";
 import { FOUNDER_EMAIL } from "@/lib/platform-mail";
 
 export const metadata: Metadata = {
@@ -23,10 +23,22 @@ export const metadata: Metadata = {
     "One flat price for the whole dive shop — bookings, waivers, cert checks, trip prep, and the boat manifest included. No setup fee, no per-seat math, no feature tiers.",
   alternates: { canonical: "/pricing" },
   openGraph: {
+    ...sharedLinkCard,
     title: "DiveDay pricing — one flat price per shop",
     description:
       "Every workflow DiveDay ships, in one plan. No setup fee, no per-seat math, no feature tiers.",
     url: "/pricing",
+  },
+  // `summary_large_image`: the OG block above names the shared link card
+  // (`sharedLinkCard` → `src/app/opengraph-image.tsx`), so the large card has an
+  // image to fill it — docs/product/marketing.md, Twitter-card policy. The
+  // price figure deliberately stays out of the card: it lives in exactly one
+  // place (`earlyAccessPrice`), and a card is a copy that goes stale silently.
+  twitter: {
+    card: "summary_large_image",
+    title: "DiveDay pricing — one flat price per shop",
+    description:
+      "Every workflow DiveDay ships, in one plan. No setup fee, no per-seat math, no feature tiers.",
   },
 };
 
@@ -61,6 +73,36 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
   const competitors = new Intl.ListFormat(locale, { type: "conjunction" }).format(
     MIGRATION_GUIDES.map((guide) => guide.competitor),
   );
+
+  /**
+   * The anchor a flat price needs: the other pricing model a dive shop is
+   * actually offered. Both rows restate what the incumbent itself publishes —
+   * or, for FareHarbor, that it publishes nothing and the figure is a
+   * third-party report — and each links to the switching guide that carries the
+   * citations (docs/product/marketing.md: competitor statements are documented
+   * fact, and an unpublished fee is never stated as a published price).
+   *
+   * Deliberately absent: any figure for what a shop pays in practice, any
+   * per-booking volume, and any arithmetic comparing the two. We have no
+   * customers, so we have no basis for either, and inventing one to make the
+   * flat price look better is the exact failure the claims policy exists to
+   * stop. Rows are derived from the guide registry, so a de-registered guide
+   * drops its row rather than leaving a dead link on the pricing page.
+   */
+  const rezdyGuide = getMigrationGuide("rezdy");
+  const fareHarborGuide = getMigrationGuide("fareharbor");
+  const channelFees = [
+    rezdyGuide && {
+      guide: rezdyGuide,
+      claim: t("marketing.pricing.feeAnchor.rezdy", { competitor: rezdyGuide.competitor }),
+    },
+    fareHarborGuide && {
+      guide: fareHarborGuide,
+      claim: t("marketing.pricing.feeAnchor.fareharbor", {
+        competitor: fareHarborGuide.competitor,
+      }),
+    },
+  ].flatMap((row) => (row ? [row] : []));
 
   const faq = [
     {
@@ -202,6 +244,46 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
           <p className="mx-auto mt-5 max-w-xl text-center text-sm leading-6 text-muted">
             {t("marketing.pricing.feesNote")}
           </p>
+        </section>
+
+        {/* The flat price is only meaningful next to the model it replaces.
+            Sits directly under the card so the two numbers are read together,
+            and above the included list, which answers a different question. */}
+        <section className="border-t border-border">
+          <div className="mx-auto max-w-4xl px-6 py-16 lg:py-20">
+            <p className="text-sm font-semibold tracking-widest text-primary uppercase">
+              {t("marketing.pricing.feeAnchor.eyebrow")}
+            </p>
+            <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
+              {t("marketing.pricing.feeAnchor.title")}
+            </h2>
+            <p className="mt-5 max-w-2xl text-lg leading-8 text-muted">
+              {t("marketing.pricing.feeAnchor.body")}
+            </p>
+            <ul className="mt-8 space-y-4">
+              {channelFees.map(({ guide, claim }) => (
+                <li
+                  key={guide.slug}
+                  className="rounded-2xl border border-border bg-surface p-5 sm:p-6"
+                >
+                  <h3 className="font-semibold leading-6">{guide.competitor}</h3>
+                  <p className="mt-2 leading-7 text-muted">{claim}</p>
+                  <Link
+                    href={`/switching/${guide.slug}`}
+                    className={buttonClass({ variant: "link", className: "mt-2 px-0 text-left" })}
+                  >
+                    {t("marketing.pricing.feeAnchor.guideLink", { competitor: guide.competitor })}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-6 max-w-2xl leading-7 text-muted">
+              {t("marketing.pricing.feeAnchor.ours")}
+            </p>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-muted">
+              {t("marketing.pricing.feeAnchor.sourcesNote")}
+            </p>
+          </div>
         </section>
 
         <section className="border-y border-border bg-surface">

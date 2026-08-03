@@ -9,6 +9,7 @@ import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { type DiverMessageKey, type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { eventSource } from "@/lib/funnel";
+import { sharedLinkCard } from "@/lib/marketing";
 import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH, type OnboardErrorCode } from "@/lib/onboarding";
 import {
   type CuratedTimeZone,
@@ -138,10 +139,20 @@ export const metadata: Metadata = {
   // funnel tag — one page, not nine.
   alternates: { canonical: "/onboard" },
   openGraph: {
+    ...sharedLinkCard,
     title: "Start a dive shop trial — DiveDay",
     description:
       "A few details and you're looking at your own working shop. No card, no setup fee.",
     url: "/onboard",
+  },
+  // `summary_large_image`: the OG block above names the shared link card
+  // (`sharedLinkCard` → `src/app/opengraph-image.tsx`), so the large card has an
+  // image to fill it — docs/product/marketing.md, Twitter-card policy.
+  twitter: {
+    card: "summary_large_image",
+    title: "Start a dive shop trial — DiveDay",
+    description:
+      "A few details and you're looking at your own working shop. No card, no setup fee.",
   },
 };
 
