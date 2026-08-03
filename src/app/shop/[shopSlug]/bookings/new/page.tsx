@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { EmptyState } from "@/components/EmptyState";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
 import { pagedUpcomingTripsWithCounts } from "@/db/trips";
@@ -83,8 +84,15 @@ export default async function NewBookingPage({
             about it. Says both, and names the board as the place to do it. */}
         <p className="mt-1 text-sm text-muted">{t("bookings.new.fullExcluded")}</p>
         {trips.length === 0 ? (
+          // "Put a departure on the board first" now goes to the board.
           <EmptyState className="mt-2">
-            <p className="text-sm text-muted">{t("bookings.new.tripEmpty")}</p>
+            <p className="mx-auto max-w-md text-sm text-muted">{t("bookings.new.tripEmpty")}</p>
+            <Link
+              href={`/shop/${shopSlug}/schedule/board`}
+              className={buttonClass({ className: "mt-4" })}
+            >
+              {t("bookings.new.tripEmptyAction")}
+            </Link>
           </EmptyState>
         ) : (
           <>

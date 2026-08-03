@@ -37,6 +37,10 @@ export interface DiverListCopy {
   noDiversOnFile: string;
   tryDifferentSearch: string;
   addOneHere: string;
+  emptyAddAction: string;
+  emptyShowAll: string;
+  emptyImportBody: string;
+  emptyImportAction: string;
   noContactDetails: string;
   cardCountOne: string;
   cardCountOther: string;
@@ -103,6 +107,7 @@ export function DiverList({
   filter,
   cursorActive,
   locale,
+  importHref,
   copy,
 }: {
   page: DiverPage;
@@ -111,6 +116,8 @@ export function DiverList({
   filter: DiverFilter;
   cursorActive: boolean;
   locale: string;
+  /** Where a bulk import lives, or null when this staffer may not run one. */
+  importHref: string | null;
   copy: DiverListCopy;
 }) {
   const cardCountText = (count: number) =>
@@ -168,7 +175,27 @@ export function DiverList({
     setSavedViews(next);
   };
 
+  /**
+   * The empty state's door to the add-diver form. That form is a collapsed
+   * `<details id="add-diver">` further up this page, so a bare `#add-diver`
+   * anchor would jump to a summary that is still shut — the fix is to open it,
+   * bring it into view, and put the cursor in the first field, which is what a
+   * staffer clicking the button meant. Wired here rather than re-rendering
+   * the form inside the card so there is still exactly one add form on the page.
+   */
+  const openAddDiver = () => {
+    const details = document.getElementById("add-diver");
+    if (!(details instanceof HTMLDetailsElement)) return;
+    details.open = true;
+    details.scrollIntoView({ behavior: "smooth", block: "start" });
+    details.querySelector<HTMLInputElement>('input[name="fullName"]')?.focus({
+      preventScroll: true,
+    });
+  };
+
   const { divers, nextCursor } = page;
+  /** A search box or a view chip is on, so "nothing here" is a filter result. */
+  const narrowed = Boolean(query) || filter !== "all";
   const nextHref = nextCursor ? hrefFor(query, filter, nextCursor) : null;
   const topHref = hrefFor(query, filter);
   const chipClass = (active: boolean) =>
@@ -244,12 +271,46 @@ export function DiverList({
       </div>
       {divers.length === 0 ? (
         <EmptyState className="mt-4">
-          <p className="font-medium">
-            {query || filter !== "all" ? copy.noDiversMatchView : copy.noDiversOnFile}
+          <p className="font-medium">{narrowed ? copy.noDiversMatchView : copy.noDiversOnFile}</p>
+          <p className="mx-auto mt-1 max-w-md text-sm text-muted">
+            {narrowed ? copy.tryDifferentSearch : copy.addOneHere}
           </p>
-          <p className="mt-1 text-sm text-muted">
-            {query || filter !== "all" ? copy.tryDifferentSearch : copy.addOneHere}
-          </p>
+          {/* Narrowed to nothing and empty on day one are different problems,
+              so they get different doors: widen the view, or start the roster. */}
+          {narrowed ? (
+            <Link
+              href={hrefFor("", "all")}
+              scroll={false}
+              className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
+            >
+              {copy.emptyShowAll}
+            </Link>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={openAddDiver}
+                className={buttonClass({ className: "mt-4" })}
+              >
+                {copy.emptyAddAction}
+              </button>
+              {importHref ? (
+                <>
+                  <p className="mx-auto mt-5 max-w-md text-sm text-muted">{copy.emptyImportBody}</p>
+                  <Link
+                    href={importHref}
+                    className={buttonClass({
+                      variant: "secondary",
+                      size: "sm",
+                      className: "mt-2",
+                    })}
+                  >
+                    {copy.emptyImportAction}
+                  </Link>
+                </>
+              ) : null}
+            </>
+          )}
         </EmptyState>
       ) : (
         <>
