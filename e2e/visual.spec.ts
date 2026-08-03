@@ -5,18 +5,19 @@ import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import { openTripFromBoard } from "./helpers";
 
 /**
- * Visual regression coverage. Sixty key surfaces × light/dark, each
- * captured at a phone and a desktop viewport — 240 screenshots per run (see
+ * Visual regression coverage. Seventy-one key surfaces × light/dark, each
+ * captured at a phone and a desktop viewport — 284 screenshots per run (see
  * ADR 20260729-reg-suit-visual-regression). Keep this count in sync when
  * adding a surface; each `capture()` call costs 4 screenshots per CI run.
- * `grep -c 'await capture(page' e2e/visual.spec.ts` is the number — it read 48
- * here while the grep said 56, so trust the grep and correct the prose.
+ * `grep -c 'await capture(page' e2e/visual.spec.ts` is the number — the prose
+ * has drifted from it before (it read 48 while the grep said 56), so trust the
+ * grep and correct the prose.
  *
  * Two more come from the `print` block at the bottom: the manifest and prep
  * pages as they render for the printer. Print is its own concern, not a
  * light/dark one — the `@media print` token override collapses both schemes to
  * one black-and-white palette — so each is captured once, at a US-Letter width,
- * via `capturePrint()`. That brings the run to 242 screenshots.
+ * via `capturePrint()`. That brings the run to 286 screenshots.
  *
  * Nothing here asserts. `capture()` writes raw `page.screenshot()` PNGs into
  * `e2e/screenshots/` (gitignored); `reg-suit` diffs them against the baseline
@@ -975,16 +976,17 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { name: "What comes across" }).waitFor();
         await capture(page, "settings-import", scheme);
 
-        // The embed settings page (docs ADR 20260726-schedule-embed). This
-        // fleet runs `next start` against a loopback origin with no APP_HOST,
-        // and publicAppUrl() refuses a loopback origin in production
-        // (src/lib/notifications/index.ts checkPublicHost) — so this baseline
-        // is necessarily the "hosting isn't configured" state, not the
-        // SnippetField/generated-snippet state a real deploy shows. Still a
-        // real, reachable page worth a regression baseline; just not the
-        // whole surface.
+        // The embed settings page (docs ADR 20260726-schedule-embed). The fleet
+        // now runs against a configured non-loopback APP_HOST (E2E_APP_HOST in
+        // e2e/servers.ts), so this baseline is the generated-snippet state a
+        // real deploy shows — the two SnippetField boxes and the copy buttons —
+        // rather than the "hosting isn't configured" warning it was stuck on
+        // while publicAppUrl() returned null here.
         await page.goto("/shop/blue-mantis/settings/embed");
         await page.getByRole("heading", { name: "Website embed" }).waitFor();
+        // The snippets are a Client Component; wait for a control it only
+        // renders once mounted before shooting.
+        await page.getByRole("button", { name: "Copy" }).first().waitFor();
         await capture(page, "settings-embed", scheme);
 
         // The team surface: inviting staff and the current roster, each card's
@@ -1250,6 +1252,44 @@ for (const scheme of ["light", "dark"] as const) {
         await row.getByRole("button", { name: "Delete" }).click();
         await page.getByText("Private note deleted.").waitFor();
         await capture(page, "trip-guests-note-undo", scheme);
+      });
+
+      /**
+       * Two of the three staff surfaces that shipped with no baseline and no
+       * e2e spec at all — the gap `scripts/route-coverage.json` recorded as
+       * exemptions until e2e/staffing.spec.ts, e2e/invoicing.spec.ts and the
+       * catalog test in e2e/dive-sites.spec.ts closed it (staffing's capture
+       * lives on the staff tour above).
+       *
+       * Its own small test rather than more stops on either 18-surface
+       * tour above: both are already sized at 90s for exactly what they do, and
+       * this one marks the demo shop Stripe-connected, which the tours must not
+       * inherit — a connected shop changes what several of their surfaces render.
+       */
+      test(`invoicing and the dive-site catalog render true to the design (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        // Two navigate+capture surfaces (8 screenshots), each with its own
+        // `paintWholeDocument` scroll. (Staffing is captured on the staff tour
+        // above — it gained its baseline in the over_ratio parity fix.)
+        test.setTimeout(45_000);
+
+        // The front desk's invoice builder. It redirects to Divers for a shop
+        // that can't take money, so mark the demo shop connected first:
+        // /api/test/seed-stripe-account is a pure DB write that never calls
+        // Stripe (same use as the recap tip section above), and no order is
+        // created here — this is the empty form, which is the whole surface.
+        await request.post("/api/test/seed-stripe-account");
+        await page.goto("/shop/blue-mantis/orders/new");
+        await page.getByRole("heading", { level: 1, name: "New order" }).waitFor();
+        await capture(page, "orders-new", scheme);
+
+        // DiveDay's published dive-site templates, each card stating the
+        // version it would import into the shop's own library.
+        await page.goto("/shop/blue-mantis/dive-sites/catalog");
+        await page.getByRole("heading", { level: 1, name: "DiveDay common dive sites" }).waitFor();
+        await capture(page, "dive-sites-catalog", scheme);
       });
     });
 

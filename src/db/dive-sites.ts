@@ -296,6 +296,7 @@ export async function importGlobalDiveSiteTemplate(db: AppDb, shopId: string, te
     .values({
       shopId,
       ...briefing,
+      name: await availableSiteName(db, shopId, briefing.name),
       sourceTemplateId: row.template.id,
       sourceTemplateVersion: row.version.version,
       imageUrls: briefing.imageUrls ?? [],
@@ -303,4 +304,32 @@ export async function importGlobalDiveSiteTemplate(db: AppDb, shopId: string, te
     })
     .returning();
   return site ?? null;
+}
+
+/**
+ * `name`, or the first free `name 2`, `name 3`, … for this shop.
+ *
+ * `dive_sites_shop_name_unique` is a hard (shop_id, name) constraint, and an
+ * import is the one write that cannot choose its own name — it takes the
+ * template's. A shop that already holds a site by that name is the *normal*
+ * case, not an edge one: importing a template is exactly how most shops got
+ * their copy, and the catalog offers the same card again afterwards (the seeded
+ * demo shop ships in precisely that state). Without this the insert raised an
+ * unhandled 23505 and the import crashed the page into its error boundary —
+ * found the moment e2e/dive-sites.spec.ts first pressed the button.
+ *
+ * Disambiguating rather than refusing keeps the promise the catalog page makes:
+ * importing makes an *independent* briefing and never overwrites the shop's own
+ * edits. Same shape as the "Copy and tailor" action's `{name} copy 2` loop.
+ * Archived sites count — the unique index does not exclude them.
+ */
+async function availableSiteName(db: AppDb, shopId: string, name: string): Promise<string> {
+  const taken = new Set(
+    (
+      await db.select({ name: diveSites.name }).from(diveSites).where(eq(diveSites.shopId, shopId))
+    ).map((row) => row.name),
+  );
+  let candidate = name;
+  for (let suffix = 2; taken.has(candidate); suffix += 1) candidate = `${name} ${suffix}`;
+  return candidate;
 }

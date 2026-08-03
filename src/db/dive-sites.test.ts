@@ -4,11 +4,41 @@ import {
   copyDiveSite,
   createDiveSite,
   deleteDiveSite,
+  importGlobalDiveSiteTemplate,
   listDiveSites,
+  listGlobalDiveSiteTemplates,
   updateDiveSite,
 } from "./dive-sites";
 
 describe("dive-site library", () => {
+  /**
+   * `dive_sites_shop_name_unique` is a hard (shop_id, name) index and an import
+   * cannot choose its own name — it takes the template's. The seeded shop
+   * already holds "Molasses Reef" imported at v1, which is the state every demo
+   * shop ships in and the one the catalog re-offers that card in, so this is the
+   * ordinary path rather than an edge case. Before `availableSiteName` the
+   * insert raised an unhandled 23505 and the catalog's only action crashed the
+   * page into its error boundary.
+   */
+  it("imports a catalog template beside a same-named site instead of violating the unique index", async () => {
+    const { db, shop } = await seededShopContext();
+    const [catalogEntry] = await listGlobalDiveSiteTemplates(db);
+    if (!catalogEntry) throw new Error("seed: no published dive-site template");
+
+    const first = await importGlobalDiveSiteTemplate(db, shop.id, catalogEntry.template.id);
+    expect(first?.name).toBe("Molasses Reef 2");
+    const second = await importGlobalDiveSiteTemplate(db, shop.id, catalogEntry.template.id);
+    expect(second?.name).toBe("Molasses Reef 3");
+
+    // Independent briefings, all still there — an import never overwrites the
+    // copy a shop has already tailored.
+    const molasses = (await listDiveSites(db, shop.id))
+      .map((site) => site.name)
+      .filter((name) => name.startsWith("Molasses Reef"));
+    expect(molasses).toEqual(["Molasses Reef", "Molasses Reef 2", "Molasses Reef 3"]);
+    expect(second?.sourceTemplateVersion).toBe(catalogEntry.version.version);
+  });
+
   it("keeps the full briefing and readiness gates through create and edit", async () => {
     const { db, shop } = await seededShopContext();
 

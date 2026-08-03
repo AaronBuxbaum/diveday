@@ -115,23 +115,46 @@ test("the non-embed schedule page carries no Powered-by-DiveDay attribution link
   await expect(page.getByRole("link", { name: "Powered by DiveDay" })).toHaveCount(0);
 });
 
-// The e2e fleet runs `next start` (production mode) against a loopback
-// origin with no APP_HOST set, and publicAppUrl() refuses a loopback origin
-// in production (src/lib/notifications/index.ts checkPublicHost) — so this
-// environment can only ever exercise the "hosting isn't configured" branch,
-// never the live-snippet one. That's still a real, user-reachable state
-// (any deploy that forgets APP_HOST lands here too), and it's what's worth
-// locking in here; the snippet-generation string logic itself is simple
-// interpolation covered by reading the page's source.
+// The fleet now runs against a configured non-loopback `APP_HOST`
+// (playwright.config.ts `serverEnv`), so `publicAppUrl()` resolves and this
+// page renders the branch a real deploy shows: two generated snippets built
+// from the shop's own public schedule URL. Previously the fleet could only
+// ever reach the "hosting isn't configured" branch, so the snippet strings —
+// the entire point of the page — had never been exercised end to end.
 test.describe("settings/embed, as owner", () => {
   signedInAsOwner();
 
-  test("settings/embed asks for hosting setup when no public origin is configured", async ({
+  test("settings/embed generates both snippets against the configured public origin", async ({
     page,
   }) => {
     await page.goto("/shop/blue-mantis/settings/embed");
     await expect(page.getByRole("heading", { name: "Website embed" })).toBeVisible();
-    await expect(page.getByText(/configured public hosting address/)).toBeVisible();
+    await expect(page.getByText(/configured public hosting address/)).toHaveCount(0);
+
+    // Both snippets target the *public* namespace for this shop, never a
+    // /shop/** staff path (ADR 20260803-public-shop-namespace), and the origin
+    // is the configured one rather than the worker's own loopback base URL —
+    // a snippet a shop pastes into its website has to survive leaving this box.
+    const embedCode = await page.getByLabel("Embed code").inputValue();
+    expect(embedCode).toContain('<iframe src="https://');
+    expect(embedCode).toContain("/s/blue-mantis?embed=1");
+    expect(embedCode).not.toContain("/shop/blue-mantis");
+    // The crawlable backlink lives outside the iframe, carrying the shop's
+    // campaign params — the same attribution the widget itself renders.
+    expect(embedCode).toContain("utm_source=embed");
+    expect(embedCode).toContain("utm_campaign=blue-mantis");
+
+    // The button snippet is deliberately the plain schedule URL, not the embed
+    // one: it's a link a browser navigates to, never a frame.
+    const buttonCode = await page.getByLabel("Button code").inputValue();
+    expect(buttonCode).toContain("/s/blue-mantis");
+    expect(buttonCode).not.toContain("embed=1");
+    expect(buttonCode).toContain("Book a dive");
+
+    await expect(page.getByRole("link", { name: "your public schedule" })).toHaveAttribute(
+      "href",
+      /^https:\/\/[^/]+\/s\/blue-mantis$/,
+    );
   });
 });
 

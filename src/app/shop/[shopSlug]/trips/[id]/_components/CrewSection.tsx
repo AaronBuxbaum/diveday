@@ -80,6 +80,12 @@ export function CrewSection({
   const [localCrew, setLocalCrew] = useState(crewFromProps);
   const [localRoles, setLocalRoles] = useState(crewRoles);
   const [assignError, setAssignError] = useState(false);
+  // Same affordance as BookingPartyFields: every control here is wired through
+  // React handlers, so a pick made before hydration silently does nothing (the
+  // DOM value changes, no action fires). Tests wait for this attribute before
+  // interacting; real users are slower than hydration in practice.
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => setHydrated(true), []);
 
   // Resyncs from the server's crewIds/staff, not from crewFromProps (a new
   // array every render). `assignError` rides along on the same dependency
@@ -200,6 +206,7 @@ export function CrewSection({
               <select
                 aria-label={copy.assignLabel}
                 defaultValue=""
+                data-hydrated={hydrated ? "true" : "false"}
                 onChange={(event) => {
                   const personId = event.currentTarget.value;
                   event.currentTarget.value = "";
