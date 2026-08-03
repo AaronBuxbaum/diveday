@@ -212,6 +212,22 @@ export function staffDestinationHref(root: string, destination: StaffDestination
   return `${root}${staffDestinationSuffix(destination)}`;
 }
 
+/**
+ * One destination by id, for the callers that link to a *particular* place
+ * rather than rendering a list of them (Today's orientation card). Without
+ * this they hand-write the path, which is how a link ends up pointing at
+ * `/blockers` — a 308 to the view that replaced it — long after the registry
+ * learned the one-hop URL.
+ *
+ * Total by construction: every `StaffDestinationId` has an entry, and the
+ * throw is the guard that keeps it that way if one is ever removed.
+ */
+export function staffDestination(id: StaffDestinationId): StaffDestination {
+  const destination = STAFF_DESTINATIONS.find((candidate) => candidate.id === id);
+  if (!destination) throw new Error(`unregistered staff destination: ${id}`);
+  return destination;
+}
+
 function passesGate(destination: StaffDestination, gates: StaffDestinationGates): boolean {
   return destination.gate === undefined || gates[destination.gate];
 }

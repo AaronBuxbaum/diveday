@@ -14,6 +14,7 @@ import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate } from "@/lib/format";
 import { requireStaffSession } from "@/lib/session";
+import { type NoticeTone, noticeRole } from "@/lib/staff-notices";
 import { DEFAULT_WAIVER_BODY } from "@/lib/waivers";
 import { saveWaiverAction } from "./actions";
 
@@ -67,7 +68,7 @@ export default async function WaiverTemplatesPage({
       : notice === "invalid"
         ? t("waiversStaff.banner.invalid")
         : undefined;
-  const bannerIsError = notice === "invalid";
+  const bannerTone: NoticeTone = notice === "invalid" ? "danger" : "success";
 
   const editForm = (
     <form action={saveWaiverAction} className="flex flex-col gap-5">
@@ -127,10 +128,7 @@ export default async function WaiverTemplatesPage({
 
       {banner ? (
         <div className="mt-6">
-          <ShopNotice
-            tone={bannerIsError ? "danger" : "success"}
-            role={bannerIsError ? "alert" : "status"}
-          >
+          <ShopNotice tone={bannerTone} role={noticeRole(bannerTone)}>
             {banner}
           </ShopNotice>
         </div>

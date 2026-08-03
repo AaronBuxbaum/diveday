@@ -30,7 +30,7 @@ import {
   type DiverChecklistItem,
   nextDiverStep,
 } from "@/lib/readiness-summary";
-import { noticeFromParam } from "@/lib/staff-notices";
+import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
 import {
   cancelMyBookingAction,
   payFromReady,
@@ -448,7 +448,7 @@ export default async function DiverReadinessPage({
 
         {notice ? (
           <div className="mt-6">
-            <ShopNotice tone={notice.tone} role={notice.tone === "danger" ? "alert" : "status"}>
+            <ShopNotice tone={notice.tone} role={noticeRole(notice.tone)}>
               {t(notice.key)}
             </ShopNotice>
           </div>

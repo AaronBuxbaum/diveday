@@ -1230,7 +1230,8 @@ for (const scheme of ["light", "dark"] as const) {
           await page.getByRole("link", { name: "Molasses Reef" }).first().click();
           await page.waitForURL(/\/dive-sites\//);
           // The seeded briefing's photo URLs can't be re-ingested from the e2e
-          // sandbox and would bounce the save to ?error=images.
+          // sandbox, so leaving them in refuses the save with the image error
+          // (returned to the form now, not a `?error=images` redirect).
           await page.getByLabel(/Site photo URLs/).fill("");
           await page.getByLabel(/Maximum depth/).fill(meters);
           await page.getByRole("button", { name: "Save briefing" }).click();

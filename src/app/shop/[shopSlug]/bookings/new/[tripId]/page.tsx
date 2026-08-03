@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { seatExistingDiverAction, seatNewDiverAction } from "@/app/actions/seat-diver";
+import { EmptyState } from "@/components/EmptyState";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
@@ -91,11 +92,15 @@ export default async function NewBookingDiverPage({
         title={t("bookings.new.title")}
         description={t("bookings.new.description")}
       />
+      {/* R9: step two used to point back at the board, exactly like step one —
+          so a staffer who picked the wrong departure had to leave the flow and
+          re-enter it. Back, here, means back one step: the departure picker.
+          Step one keeps the board link, because that is what is behind it. */}
       <Link
-        href={`/shop/${shopSlug}/schedule/board`}
+        href={`/shop/${shopSlug}/bookings/new`}
         className="mt-2 inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline"
       >
-        ← {t("bookings.new.backToBoard")}
+        ← {t("bookings.new.backToPicker")}
       </Link>
 
       {banner ? (
@@ -183,14 +188,28 @@ export default async function NewBookingDiverPage({
               ))}
             </ul>
           ) : (
-            <p className="mt-4 rounded-lg border border-border bg-surface px-4 py-4 text-center text-sm text-muted">
-              {t("bookings.new.noMatches", { query })}
-            </p>
+            // The shared empty box, with the sentence's "below" as a real door
+            // down to the hand-entry form.
+            <EmptyState className="mt-4">
+              <h3 className="font-medium">{t("bookings.new.noMatchesHeading")}</h3>
+              <p className="mx-auto mt-1 max-w-md text-sm text-muted">
+                {t("bookings.new.noMatches", { query })}
+              </p>
+              <a
+                href="#hand-entry"
+                className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
+              >
+                {t("bookings.new.noMatchesAction")}
+              </a>
+            </EmptyState>
           )
         ) : null}
       </section>
 
-      <section className="mt-6 rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-6">
+      <section
+        id="hand-entry"
+        className="mt-6 scroll-mt-24 rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-6"
+      >
         <h2 className="text-lg font-semibold">{t("bookings.new.handEntryHeading")}</h2>
         <p className="mt-1 text-sm text-muted">{t("bookings.new.handEntryDescription")}</p>
         <form action={seatNewDiverAction.bind(null, "new-booking", shopSlug)} className="mt-4">

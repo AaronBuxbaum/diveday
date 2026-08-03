@@ -127,8 +127,15 @@ export function DiverList({
   const [typed, setTyped] = useState(query);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Keep the input in sync when navigation (back/forward, a view chip) changes
-  // the query underneath us — but never while the user is mid-debounce.
-  useEffect(() => setTyped(query), [query]);
+  // the query underneath us — but never while the user is mid-debounce: the
+  // render that lands here can be the *previous* search's, and syncing to it
+  // would resurrect text the user just cleared. The chips build their hrefs
+  // from `typed`, so a resurrected value would ride the next tap back into
+  // the URL (e2e/roster-views.spec.ts caught this as an intermittent failure).
+  useEffect(() => {
+    if (debounce.current) return;
+    setTyped(query);
+  }, [query]);
   useEffect(() => () => clearTimeout(debounce.current ?? undefined), []);
 
   // One place builds every roster URL, so search, a view chip, and the pager all
@@ -164,6 +171,9 @@ export function DiverList({
     setTyped(value);
     cancelPendingSearch();
     debounce.current = setTimeout(() => {
+      // Cleared before the replace so the navigation this triggers is free to
+      // sync the input again — the timer is no longer "pending" once it fires.
+      debounce.current = null;
       router.replace(hrefFor(value, filter), { scroll: false });
     }, 250);
   };
@@ -189,6 +199,14 @@ export function DiverList({
   const { divers } = page;
   /** A search box or a view chip is on, so "nothing here" is a filter result. */
   const narrowed = Boolean(query) || filter !== "all";
+  /**
+   * The views row governs a roster. On day one there is no roster: four chips
+   * that all resolve to the same nothing are controls with nothing to control —
+   * and they sit above the one thing that helps, the empty card's "Add your
+   * first diver". Narrowed-to-nothing is a different state and keeps the row:
+   * the chips are how you widen back out.
+   */
+  const showViews = divers.length > 0 || narrowed;
   const chipClass = (active: boolean) =>
     `inline-flex min-h-9 items-center rounded-full border px-3 text-sm font-medium transition-colors ${
       active
@@ -198,23 +216,28 @@ export function DiverList({
 
   return (
     <section className="mt-10" aria-labelledby="diver-list-heading">
-      <nav aria-label={copy.viewsAriaLabel} className="mb-4 flex flex-wrap items-center gap-2">
-        {VIEWS.map((view) => (
-          <Link
-            key={view.filter}
-            // `typed`, not `query`: the chip carries what is in the box right
-            // now, not the last search that reached the URL. Built from `query`
-            // it re-applied a search the staffer had just cleared but whose
-            // debounce had not landed yet.
-            href={hrefFor(typed, view.filter)}
-            scroll={false}
-            onClick={cancelPendingSearch}
-            className={chipClass(filter === view.filter)}
-          >
-            {view.label}
-          </Link>
-        ))}
-      </nav>
+      {/* Hidden over a day-one empty roster (see `showViews` above); kept
+          whenever a search or chip narrowed the list, so the way back out
+          stays on screen. */}
+      {showViews ? (
+        <nav aria-label={copy.viewsAriaLabel} className="mb-4 flex flex-wrap items-center gap-2">
+          {VIEWS.map((view) => (
+            <Link
+              key={view.filter}
+              // `typed`, not `query`: the chip carries what is in the box right
+              // now, not the last search that reached the URL. Built from `query`
+              // it re-applied a search the staffer had just cleared but whose
+              // debounce had not landed yet.
+              href={hrefFor(typed, view.filter)}
+              scroll={false}
+              onClick={cancelPendingSearch}
+              className={chipClass(filter === view.filter)}
+            >
+              {view.label}
+            </Link>
+          ))}
+        </nav>
+      ) : null}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           {/* The count belongs to this heading — it is how many people are in

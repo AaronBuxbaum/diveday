@@ -43,9 +43,15 @@ function rolesFromFormData(formData: FormData): Role[] {
   return STAFF_ROLES.filter((role) => formData.get(`role_${role}`) === "on");
 }
 
+// No message arguments. A Zod message is a sentence in the language whoever
+// typed the schema happened to speak, and `pnpm check:copy` cannot see a string
+// literal passed as a validator argument — so one lands in the UI untranslated
+// the first time a caller renders `error.issues[].message`. This schema fails
+// with issue codes; the page turns a refusal into a `?notice=invite_invalid`
+// and the staff bundle picks the words.
 const inviteSchema = z.object({
-  fullName: z.string().trim().min(1, "Name is required").max(120),
-  email: z.string().trim().toLowerCase().email("Invalid email address").max(150),
+  fullName: z.string().trim().min(1).max(120),
+  email: z.string().trim().toLowerCase().pipe(z.email().max(150)),
 });
 
 /** Sends a staff invite email deferred past the response, matching onboardAction's pattern. */

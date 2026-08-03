@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { EmptyState } from "@/components/EmptyState";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { MAX_PATH_STEPS } from "@/lib/courses";
@@ -25,6 +26,8 @@ export type PathBuilderStep = { courseId: string; note: string };
  */
 export interface PathBuilderCopy {
   noSteps: string;
+  noStepsHeading: string;
+  noStepsAction: string;
   stepLabel: string;
   courseGoneFromCatalog: string;
   hidden: string;
@@ -114,9 +117,20 @@ export function PathBuilder({
       <input type="hidden" name="stepsJson" value={JSON.stringify(steps)} />
 
       {steps.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-border-strong px-4 py-6 text-center text-sm text-muted">
-          {copy.noSteps}
-        </p>
+        // Was a hand-rolled dashed box copying `EmptyState`'s look from a
+        // distance; now it is the component, so it can't drift from every other
+        // empty state in the staff app. The picker below is the only way to put
+        // a first rung on a path, so that is the door.
+        <EmptyState>
+          <h3 className="font-medium">{copy.noStepsHeading}</h3>
+          <p className="mx-auto mt-1 max-w-md text-sm text-muted">{copy.noSteps}</p>
+          <a
+            href="#path-add-course"
+            className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
+          >
+            {copy.noStepsAction}
+          </a>
+        </EmptyState>
       ) : (
         <ol className="flex flex-col gap-3">
           {steps.map((step, index) => {
@@ -196,7 +210,10 @@ export function PathBuilder({
         </ol>
       )}
 
-      <div className="rounded-xl border border-border bg-surface-sunken/40 p-4">
+      <div
+        id="path-add-course"
+        className="scroll-mt-24 rounded-xl border border-border bg-surface-sunken/40 p-4"
+      >
         <div className="flex flex-wrap items-end gap-2">
           <Field
             label={copy.addACourse}

@@ -4,7 +4,8 @@ import { notFound } from "next/navigation";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { Pager } from "@/components/Pager";
-import { ShopNotice, ShopPageHeader, ShopStat } from "@/components/ShopPageHeader";
+import { ShopPageHeader, ShopStat } from "@/components/ShopPageHeader";
+import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
@@ -17,8 +18,16 @@ import {
 import { getShopById } from "@/db/shops";
 import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
-import { staffTranslator } from "@/i18n/staff-messages";
+import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { requireStaffSession } from "@/lib/session";
+import { type NoticeTone, noticeFromParam } from "@/lib/staff-notices";
+
+/** `?notice=` codes this page redirects back to itself with. Read through
+ * `noticeFromParam`, never a bare `NOTICES[notice]` — the param is
+ * attacker-supplied (src/lib/staff-notices.ts). */
+const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
+  archived: { tone: "success", key: "diveSites.list.siteArchivedNotice" },
+};
 
 // TODO: Cache Components adoption. Refactor this route so this opt-out can be removed.
 // See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
@@ -56,6 +65,7 @@ export default async function DiveSitesPage({
     listGlobalDiveSiteTemplates(db),
   ]);
   const sites = sitePage.rows;
+  const banner = noticeFromParam(notice, NOTICES);
   const currentTemplateVersion = new Map(
     templates.map(({ template, version }) => [template.id, version.version]),
   );
@@ -76,23 +86,31 @@ export default async function DiveSitesPage({
         eyebrow={t("diveSites.catalogEyebrow")}
         title={t("diveSites.list.title")}
         description={t("diveSites.list.description")}
+        // An empty library gets no header actions: the empty card below is
+        // already the whole page, and it carries these same two doors. Two
+        // identical primaries on one screen is what principle 8 forbids — so
+        // the card owns them until there is a library to act on.
         actions={
-          <>
-            <Link
-              href={`/shop/${shopSlug}/dive-sites/new`}
-              className={buttonClass({ className: "rounded-xl" })}
-            >
-              <span aria-hidden="true">+</span> {t("diveSites.list.createSite")}
-            </Link>
-            <Link
-              href={`/shop/${shopSlug}/dive-sites/catalog`}
-              className={buttonClass({ variant: "secondary", className: "rounded-xl" })}
-            >
-              {t("diveSites.list.browseTemplates")}
-            </Link>
-          </>
+          stats.total === 0 ? undefined : (
+            <>
+              <Link
+                href={`/shop/${shopSlug}/dive-sites/new`}
+                className={buttonClass({ className: "rounded-xl" })}
+              >
+                <span aria-hidden="true">+</span> {t("diveSites.list.createSite")}
+              </Link>
+              <Link
+                href={`/shop/${shopSlug}/dive-sites/catalog`}
+                className={buttonClass({ variant: "secondary", className: "rounded-xl" })}
+              >
+                {t("diveSites.list.browseTemplates")}
+              </Link>
+            </>
+          )
         }
       />
+
+      {banner ? <StaffNoticeBanner tone={banner.tone}>{t(banner.key)}</StaffNoticeBanner> : null}
 
       {/* Three tiles reading 0 / 0 / 0 teach a day-one shop nothing it doesn't
           already know from the empty list below, and they push the one thing
@@ -167,12 +185,6 @@ export default async function DiveSitesPage({
         </FieldGrid>
       ) : null}
 
-      {notice === "archived" ? (
-        <div className="mt-4">
-          <ShopNotice>{t("diveSites.list.siteArchivedNotice")}</ShopNotice>
-        </div>
-      ) : null}
-
       {sites.length === 0 ? (
         <EmptyState className="mt-4">
           <h2 className="font-semibold">
@@ -184,11 +196,11 @@ export default async function DiveSitesPage({
           {/* No second "Clear search" here: the search band right above this
               card already carries one whenever a query is active, and two
               identical controls is exactly what principle 8 forbids. */}
-          {query ? null : (
-            // Both header actions again, inside the card: on an empty library
-            // the header is the only place they exist, and a shop reading
-            // "start with a site your crew knows well" should be able to start
-            // from that sentence.
+          {query || stats.total > 0 ? null : (
+            // The only place these two doors exist on an empty library: the
+            // header drops its actions when `stats.total === 0` precisely so
+            // this card owns them, and a shop reading "start with a site your
+            // crew knows well" can start from that sentence.
             <div className="mt-4 flex flex-wrap justify-center gap-3">
               <Link
                 href={`/shop/${shopSlug}/dive-sites/new`}

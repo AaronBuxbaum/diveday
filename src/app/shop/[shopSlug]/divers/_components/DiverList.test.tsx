@@ -132,8 +132,20 @@ describe("DiverList empty state", () => {
 });
 
 describe("DiverList roster views", () => {
-  it("offers the day's three questions over the roster, and nothing to pin", () => {
+  it("hides the view chips over a day-one empty roster — controls with nothing to govern", () => {
     renderList();
+    expect(screen.queryByRole("navigation", { name: "Roster views" })).toBeNull();
+    // Narrowed-to-nothing is a different state: the chips are how you widen
+    // back out, so the row stays.
+    cleanup();
+    renderList({ filter: "missing_contact" });
+    expect(screen.getByRole("navigation", { name: "Roster views" })).toBeInTheDocument();
+  });
+
+  it("offers the day's three questions over the roster, and nothing to pin", () => {
+    // A view chip is active so the row renders (the roster itself is empty in
+    // this fixture; see the day-one test above for the hidden state).
+    renderList({ filter: "diving_today" });
     const views = screen.getByRole("navigation", { name: "Roster views" });
     expect(
       [...views.querySelectorAll("a")].map((link) => [link.textContent, link.getAttribute("href")]),
@@ -183,6 +195,59 @@ describe("DiverList roster views", () => {
         vi.advanceTimersByTime(1000);
       });
       expect(replace).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  /**
+   * The other half of the race above: after a search commits to the URL, the
+   * server render for it can land *after* the staffer has already cleared the
+   * box. The prop-sync effect used to restore that stale query into the input
+   * unconditionally — and since the chips build their hrefs from the box, the
+   * next chip tap carried the resurrected search back into the URL (the
+   * "All divers" chip landing on `?q=…` in e2e/roster-views.spec.ts).
+   * Mid-debounce, the staffer's keystrokes win over any late render.
+   */
+  it("does not resurrect a cleared search when the previous search's render lands late", () => {
+    vi.useFakeTimers();
+    try {
+      const props = {
+        page: emptyPage,
+        shopSlug: "blue-mantis",
+        filter: "needs_attention" as DiverFilter,
+        locale: "en-US",
+        importHref: null,
+        copy,
+      };
+      const view = render(<DiverList {...props} query="" />);
+      const input = screen.getByRole("searchbox", { name: "Search divers" });
+
+      // The staffer searches; the debounce fires and commits `?q=mateo` to
+      // the URL. The server render for it is now in flight.
+      fireEvent.change(input, { target: { value: "mateo" } });
+      act(() => {
+        vi.advanceTimersByTime(250);
+      });
+      expect(replace).toHaveBeenCalledTimes(1);
+
+      // They clear the box before that render arrives — and then it lands,
+      // as a prop change carrying the search they just abandoned.
+      fireEvent.change(input, { target: { value: "" } });
+      view.rerender(<DiverList {...props} query="mateo" />);
+
+      expect(input).toHaveValue("");
+      expect(screen.getByRole("link", { name: "All divers" })).toHaveAttribute(
+        "href",
+        "/shop/blue-mantis/divers",
+      );
+
+      // Once the pending clear lands, the sync is welcome again.
+      act(() => {
+        vi.advanceTimersByTime(1000);
+      });
+      view.rerender(<DiverList {...props} query="nadia" />);
+      expect(input).toHaveValue("nadia");
     } finally {
       vi.useRealTimers();
     }

@@ -206,6 +206,51 @@ test.describe("staff", () => {
     await expect(card.getByText("Location to add")).toBeVisible();
   });
 
+  test("a half-entered forecast point is named as the reason, and nothing typed is lost", async ({
+    page,
+  }) => {
+    // Both legs of the same bug (R4). A rejected briefing used to
+    // `redirect(?error=invalid)`, which re-rendered ~20 fields blank and said
+    // "check the required name and links" — while the name was fine and the
+    // real rejection was the both-coordinates-or-neither rule, which that
+    // sentence names nowhere. The form now stays put, keeps every value, and
+    // the banner names the rule that actually refused it.
+    test.setTimeout(30_000);
+    const siteName = `Half Point ${e2eNow().getTime()}`;
+
+    await page.goto("/shop/blue-mantis/dive-sites/new");
+    await page.getByLabel("Name").fill(siteName);
+    await page.getByLabel("Location").fill("Key Largo");
+    await page.getByLabel("What might divers see?").fill("Green turtles");
+    await page.getByLabel("Latitude").fill("25.123"); // …and no longitude.
+    await page.getByRole("button", { name: "Save site briefing" }).click();
+
+    // Not `getByRole("alert")` — Next's own route announcer is one too.
+    await expect(page.getByText(/Add both forecast coordinates/)).toBeVisible();
+    // The whole point: still on the form, still filled in.
+    await expect(page).toHaveURL(/\/dive-sites\/new$/);
+    await expect(page.getByLabel("Name")).toHaveValue(siteName);
+    await expect(page.getByLabel("Location")).toHaveValue("Key Largo");
+    await expect(page.getByLabel("What might divers see?")).toHaveValue("Green turtles");
+    await expect(page.getByLabel("Latitude")).toHaveValue("25.123");
+
+    // Completing the pair is all it takes — no retyping.
+    await page.getByLabel("Longitude").fill("-80.321");
+    await page.getByRole("button", { name: "Save site briefing" }).click();
+    await expect(page.getByRole("heading", { level: 1, name: siteName })).toBeVisible();
+
+    // The edit form shares the shape, and so does the fix.
+    await page.getByLabel("Longitude").fill("");
+    await page.getByLabel("Underwater briefing").fill("Turtles rest below the coral heads.");
+    await page.getByRole("button", { name: "Save briefing" }).click();
+    // Not `getByRole("alert")` — Next's own route announcer is one too.
+    await expect(page.getByText(/Add both forecast coordinates/)).toBeVisible();
+    await expect(page.getByLabel("Underwater briefing")).toHaveValue(
+      "Turtles rest below the coral heads.",
+    );
+    await expect(page.getByLabel("Latitude")).toHaveValue("25.123");
+  });
+
   test("staff import a DiveDay catalog site and it lands in the shop's own library", async ({
     page,
   }) => {

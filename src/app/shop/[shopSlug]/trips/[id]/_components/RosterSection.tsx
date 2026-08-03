@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { waiverSendCopy } from "@/app/actions/waiver-send-types";
+import { EmptyState } from "@/components/EmptyState";
 import { SubmitButton } from "@/components/SubmitButton";
 import { WaiverSendControl } from "@/components/today/WaiverSendControl";
 import { Badge } from "@/components/ui/badge";
@@ -131,6 +132,7 @@ export function RosterSection({
   depthUnit: _depthUnit,
   tripDate,
   rosterFilter,
+  canAddDivers,
 }: {
   shopSlug: string;
   shopTimezone: string;
@@ -141,6 +143,12 @@ export function RosterSection({
   roster: RosterEntry[];
   /** Server-rendered `?rf=` selection (task 69) — defaults to "all" upstream. */
   rosterFilter: RosterFilter;
+  /**
+   * Whether the page above still renders its `#add-diver` section (it doesn't
+   * on a cancelled departure). The empty roster's one action anchors there, so
+   * without this the box would offer a door that isn't on the page.
+   */
+  canAddDivers: boolean;
   readinessByBooking: ReadinessByBooking;
   waiverByBooking: WaiverByBooking;
   rentalFitByBooking: RentalFitByBooking;
@@ -280,13 +288,36 @@ export function RosterSection({
         </nav>
       ) : null}
       {roster.length === 0 ? (
-        <p className="mt-4 rounded-lg border border-border bg-surface px-4 py-6 text-center text-sm text-muted">
-          {t("trips.roster.noBookings")}
-        </p>
+        // The shared empty state, not a bare paragraph: the wait list two
+        // sections up already wore one, so this tab was teaching two visual
+        // languages for "nothing here" on one screen (docs/design/principles.md
+        // #4). The door is the add-a-diver section on this same page — dropped
+        // when the departure is cancelled, where there is nothing to seat.
+        <EmptyState className="mt-4">
+          <h3 className="font-medium">{t("trips.roster.emptyHeading")}</h3>
+          <p className="mx-auto mt-1 max-w-md text-sm text-muted">{t("trips.roster.noBookings")}</p>
+          {canAddDivers ? (
+            <a href="#add-diver" className={buttonClass({ className: "mt-4" })}>
+              {t("trips.roster.emptyAction")}
+            </a>
+          ) : null}
+        </EmptyState>
       ) : filteredRoster.length === 0 ? (
-        <p className="mt-4 rounded-lg border border-border bg-surface px-4 py-6 text-center text-sm text-muted">
-          {t("trips.roster.noneMatchFilter")}
-        </p>
+        // A filter that hides everyone is a dead end unless the way back out is
+        // in the box with the bad news.
+        <EmptyState className="mt-4">
+          <h3 className="font-medium">{t("trips.roster.filterEmptyHeading")}</h3>
+          <p className="mx-auto mt-1 max-w-md text-sm text-muted">
+            {t("trips.roster.noneMatchFilter")}
+          </p>
+          <Link
+            href={filterChipHref("all")}
+            scroll={false}
+            className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
+          >
+            {t("trips.roster.filterEmptyAction", { count: filterCounts.all })}
+          </Link>
+        </EmptyState>
       ) : (
         <ul className="mt-5 grid gap-4">
           {filteredRoster.map(({ booking, person }) => {
