@@ -143,9 +143,26 @@ export function DiverList({
     [pathname],
   );
 
+  /**
+   * Drop any keystroke that has not reached the URL yet.
+   *
+   * Every link out of this component already encodes the view *and* the search
+   * it means, so once one is followed the pending timer has nothing left to
+   * say — and letting it fire is actively wrong: it was scheduled against the
+   * view that was on screen when the key was pressed, so 250ms later it would
+   * replace the URL with the view the staffer had just left. Clearing the box
+   * and tapping a chip inside that window silently undid the tap, and the next
+   * search then ran under the wrong view (e2e/roster-views.spec.ts caught this
+   * as an intermittent failure).
+   */
+  const cancelPendingSearch = () => {
+    if (debounce.current) clearTimeout(debounce.current);
+    debounce.current = null;
+  };
+
   const search = (value: string) => {
     setTyped(value);
-    if (debounce.current) clearTimeout(debounce.current);
+    cancelPendingSearch();
     debounce.current = setTimeout(() => {
       router.replace(hrefFor(value, filter), { scroll: false });
     }, 250);
@@ -185,8 +202,13 @@ export function DiverList({
         {VIEWS.map((view) => (
           <Link
             key={view.filter}
-            href={hrefFor(query, view.filter)}
+            // `typed`, not `query`: the chip carries what is in the box right
+            // now, not the last search that reached the URL. Built from `query`
+            // it re-applied a search the staffer had just cleared but whose
+            // debounce had not landed yet.
+            href={hrefFor(typed, view.filter)}
             scroll={false}
+            onClick={cancelPendingSearch}
             className={chipClass(filter === view.filter)}
           >
             {view.label}
@@ -234,6 +256,10 @@ export function DiverList({
             <Link
               href={hrefFor("", "all")}
               scroll={false}
+              // Same reasoning as the view chips: this link clears the search
+              // and the view together, so a pending keystroke must not land
+              // afterwards and put half of it back.
+              onClick={cancelPendingSearch}
               className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
             >
               {copy.emptyShowAll}
