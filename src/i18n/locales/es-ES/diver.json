@@ -21,6 +21,7 @@
   },
   "shopChrome": {
     "skipToContent": "Saltar al contenido principal",
+    "navAriaLabel": "Páginas del centro",
     "footerLine": "{shop} · Con la tecnología de DiveDay"
   },
   "schedule": {
