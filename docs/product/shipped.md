@@ -7,6 +7,127 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## The 2026-08-02 review: payments, data, and crew residuals delivered (2026-08-03)
+
+The six findings the [2026-08-02 review](assessments/comprehensive-review-20260802.md) still carried
+in its top ten after the first delivery below — **PAY-M1, PAY-M3, DATA-M1/M2, the two DATA-H1
+engineering residuals, DOM-M3 and the DOM-H1 residue**. With these the review has **no open code
+finding left**: everything that survives in it is a human decision, a human action, or a claim only
+the owner can retract. The assessment was pruned again the same day.
+
+**Money.**
+
+- **A Stripe webhook claim can no longer outlive a failed handler** (PAY-M1, the review's last P0).
+  The claim and the *evidence* now sit on two columns of `stripe_webhook_events`: `occurred_at` is
+  Stripe's own event-creation time and is never deleted, and a new nullable `claimed_at` is the
+  dedup claim, released when a handler throws so Stripe's own retry genuinely re-reaches it (the
+  route then answers non-2xx, so Stripe does retry). Every reachable handler was re-read for
+  re-runnability first. The two-column shape exists because the **first** fix released the claim by
+  *deleting* the row — which also destroyed the only chronological record `hasNewerAccountUpdate`
+  reads, reopening the out-of-order `account.updated` fail-open that regresses `charges_enabled`;
+  the `security-reviewer` pass caught it, and the ADR now says so. `account.application.deauthorized`
+  additionally orders itself against the shop's own `connected_at`, so a redelivery landing after
+  the owner reconnected cannot re-disconnect a live account (`src/app/api/webhooks/stripe/route.ts`,
+  `src/db/webhook-events.ts`, `src/db/stripe-accounts.ts`).
+- **The applied discount is snapshotted, so an unsettled party splits correctly** (PAY-M3), for
+  **every** discount class rather than only shop-wide codes. `booking_checkouts` records
+  `applied_discount_percent` and its source (`promo_code_id` *or* `trip_promo_id`, at most one) at
+  session-creation time, written only when a code was genuinely handed to Stripe and never
+  re-derived afterwards from whatever promo is live on the trip. A trip-scoped last-minute deal is
+  therefore reconstructible without asking Stripe anything, which is what the review's "party on a
+  discounted session with no `amount_total`" case needed. Rows written before the column keep their
+  prior conservative behaviour — a shop-wide code still reconstructs from `promo_code_id`, anything
+  else falls back to the asked total — so no completion is refused or recorded as zero for want of
+  the figure (`src/db/checkouts.ts`, `src/lib/payments/settlement.ts`).
+
+**Data and privacy.**
+
+- **Erasure reaches the processor** (DATA-H1 residue 1). `anonymizeDiver` now deletes the diver's
+  Stripe **customer** through a provider seam after its own transaction commits — never as a
+  condition of it, so a Stripe outage cannot roll back an erasure a diver asked for — and records
+  what no API can reach in a new `processor_erasure_obligations` ledger: one row per customer
+  (retryable, with `attempts`/`last_error` so a failure is visible rather than retried into
+  silence) and one per finalized invoice, because Stripe snapshots the name and email onto an
+  invoice **at finalization** and deleting the customer afterwards does not rewrite that copy. The
+  design's first premise — "deleting a Stripe customer destroys the shop's tax and chargeback
+  record" — was checked against Stripe's documented behaviour and is **wrong**; charges, invoices,
+  refunds and disputes are separate objects and survive. That is recorded in the ADR so nobody
+  re-derives it from intuition.
+  [20260803-processor-erasure-obligations](../architecture/decisions/20260803-processor-erasure-obligations.md).
+- **A lead is reachable after the diver changes their email** (DATA-H1 residue 2).
+  `course_inquiries` gained a nullable `person_id`, resolved **at capture time by exact email
+  match** against a live diver of that shop (`people_shop_email_unique` makes that at most one
+  row) — never from a phone number, which households share, and never back-filled by a matching
+  job, because a link inferred after the fact would erase a bystander's lead. The erasure sweep
+  matches on the link first, then still on email and phone.
+- **The two hot cross-shop scans have indexes** (DATA-M1/M2), with shapes derived from the queries
+  rather than from the review's prescription: both scans pin a leading equality column and then take
+  a range, which is the only order a single index scan can walk. `claimBookingsForCheckout`'s
+  stale-intent sweep gets a partial `payment_operation_intents(kind, started_at) WHERE
+  status = 'started'`; the daily cron's two window scans get `trips(status, starts_at)` and
+  `trips(status, ends_at)`. The review had prescribed bare `(started_at)` and bare
+  `starts_at`/`ends_at`, which would have read every row in the window across every shop.
+
+**Safety.**
+
+- **`trip_assignments` carries the job, and "in-water certified assistant" is defined once**
+  (DOM-M3). A nullable `trip_role` on a new `trip_assignment_role` enum
+  (`instructor | divemaster | captain | crew` — a deliberate subset of `person_role`), so a
+  divemaster rostered as *this trip's captain* no longer raises the supervision ratio by two
+  students per head and a shop-wide instructor rostered as deck crew no longer clears
+  `course_unstaffed` on their own. The rule had been written out five times in three idioms and
+  named nowhere in `src/lib`; it is now `src/lib/crew-roles.ts` and read from one place. A roster
+  can only ever **downgrade** — rostering an unqualified deckhand as "instructor" buys the session
+  nothing — asserted as a monotonicity test over every (shop roles × trip role) pair. The role is
+  settable in the UI by a job picker on the trip's crew section, and both write paths preserve it.
+  [20260803-per-trip-crew-role](../architecture/decisions/20260803-per-trip-crew-role.md).
+- **Crew roll call names people** (DOM-H1 residue). A new `roll_call_crew_events` table gives every
+  rostered crew member their own append-only roll-call subject beside the count, with
+  `roll_call_events.booking_id` left `notNull` rather than widened. `rollCallCompleteness` stays the
+  single definition of "this checkpoint is closed" and now requires a named result per rostered crew
+  member *and* the count. Two new Today reasons — `missing_crew` and `crew_uncounted` — put an
+  unclosed after-dive crew gap on the same footing as a diver's, where before the loudest signal the
+  manifest has went nowhere at all. The offline copy shows crew by name and state and **absence
+  reads as awaiting**, so an old snapshot keeps the checkpoint open rather than reading "done".
+  Carried in the CSV export.
+  [20260803-per-person-crew-roll-call](../architecture/decisions/20260803-per-person-crew-roll-call.md),
+  which extends
+  [20260802-crew-roll-call-attestation](../architecture/decisions/20260802-crew-roll-call-attestation.md)
+  — that ADR named this work as its own follow-on and is **not superseded**: the attestation stays
+  as the count-level record, and its
+  [2026-08-03 amendment](../architecture/decisions/20260802-crew-roll-call-attestation.md#amendment-2026-08-03--the-follow-on-landed-this-adr-is-not-superseded)
+  records which of its statements the follow-on narrows and which are unchanged.
+
+**What did NOT ship, deliberately.** Each is stated in the ADR that created it, not left to be
+rediscovered:
+
+- **Crew roll call is not recordable offline.** It needs a subject kind on `OfflineRollCallEvent`
+  and on the offline idempotency key, plus store, sync-route and reconciliation work. The offline
+  crew panel now says so in a **third, neutral tone** — "not recordable here" is a limitation, "a
+  named crew member is not back aboard" is the alarm — because rendering both in warning-yellow on
+  every out-of-signal dive teaches crews to stop reading the panel. Fail-closed is unchanged.
+- **Today's departure board still assigns crew without a job.** It is a drag-and-drop scheduling
+  surface; the job someone is doing is set on the trip page, where the ratio that reads it lives.
+- **Unassign-then-reassign does not preserve a per-trip role**, and cannot — the row and the role go
+  together. That is how staff fix a mis-tap, so it carries a regression test rather than a sentence.
+- **The seed lacks one case:** an instructor rostered as a session's **divemaster**. The demo shop
+  has exactly one instructor, so seeding it would leave that session with nobody on the ratio and
+  move seeded bookings, staffing and Today across the whole demo. A second seeded instructor is the
+  obvious follow-on and is carried in
+  [features/roadmap.md](features/roadmap.md#p1--next). The rule is asserted directly by the
+  monotonicity test meanwhile.
+- **The count-level crew attestation deliberately raises no Today row.** Most shops have never
+  filled it in, so it would fire on nearly every trip and bury the rows that mean a person is in the
+  water. Only the per-person gaps escalate.
+- **Erasure cannot reach the PII Stripe snapshots onto an invoice at finalization.** There is no API
+  behind it; that obligation is **never auto-retried** and closes only when an owner attests they
+  filed Stripe's data-deletion request. An erasure with an undischarged obligation is genuinely
+  incomplete, and any promise made to a diver has to say so.
+- **The erasure ADR is still `Proposed`,** and no human gate moved. HD-10/HD-11 (counsel on erasure
+  vs signed evidence, and retention windows) and HD-7 (whether the launch jurisdiction requires
+  per-person crew coverage) are open exactly as they were; `pnpm gates` reports the same 16 open
+  rows on 2026-08-03 as on 2026-08-02.
+
 ## The 2026-08-02 comprehensive review: fourteen top findings delivered (2026-08-02)
 
 All fourteen rows of "the findings that matter most" in the
@@ -43,7 +164,8 @@ is focus-ring only (HD-17 unchanged), and visual diffs warn loudly rather than b
   manifests and carried in the export. "0 of 0" deliberately still needs a human — auto-completing
   would hand a silent all-clear to exactly the trips whose crew data is worst.
   [20260802-crew-roll-call-attestation](../architecture/decisions/20260802-crew-roll-call-attestation.md).
-  Per-person crew roll call remains open and still waits on `trip_assignments` gaining a per-trip role.
+  Per-person crew roll call and the per-trip role landed the next day — see the 2026-08-03 section
+  above; this table stays as the count-level record.
 - **A returned boat with an unfinished head count escalates** (DOM-H3): top-severity Today item plus a
   schedule-board badge for any trip past its end with awaiting divers or no after-dive events. The
   review of this work found the alarm was silenced by the input that should trigger it — `not_boarded`
@@ -78,7 +200,9 @@ is focus-ring only (HD-17 unchanged), and visual diffs warn loudly rather than b
   Proposed on purpose**: HD-10/HD-11 (counsel on erasure vs signed evidence, and retention windows)
   decide when the mechanism may point at a real diver. The ADR is honest that erasure is one-way and
   evidence-reducing, and records what it cannot reach: `orders.stripe_customer_id` is a `NOT NULL`
-  pointer erasure cannot rewrite, so processor-side deletion is a separate manual step.
+  pointer erasure cannot rewrite, so processor-side deletion was a separate manual step — closed
+  the next day by the obligation ledger in the 2026-08-03 section above. The ADR stays **Proposed**
+  regardless: that is the human gate, not the mechanism.
 
 **Operations.**
 

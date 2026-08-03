@@ -144,6 +144,15 @@ These are per-feature rough edges on shipped work, not future subsystems. They a
   [20260729-verified-diver-reviews](../../architecture/decisions/20260729-verified-diver-reviews.md).
 - Currencies beyond the shop's declared one on a single order, and Stripe-reported settlement
   currency drift — [20260731-shop-currency](../../architecture/decisions/20260731-shop-currency.md).
+- Recording **crew** roll call offline (it is online-only; the offline panel states the limitation
+  neutrally and the checkpoint stays open), and retiring the count-level attestation now that crew
+  are named — [20260803-per-person-crew-roll-call](../../architecture/decisions/20260803-per-person-crew-roll-call.md).
+- Setting a per-trip crew role from Today's departure board (assign-only by design), and a
+  vocabulary for roles this enum cannot express (assistant instructor, safety diver) —
+  [20260803-per-trip-crew-role](../../architecture/decisions/20260803-per-trip-crew-role.md).
+- Retrying a `stripe_invoice_snapshot` erasure obligation, if Stripe ever exposes an API that clears
+  a finalized invoice's identity snapshot —
+  [20260803-processor-erasure-obligations](../../architecture/decisions/20260803-processor-erasure-obligations.md).
 
 ## Accessibility contrast fixes (blocked on a color-guide decision)
 
@@ -202,7 +211,14 @@ ADR rather than letting this become an unbounded second backlog.
    AGENTS.md makes accounting for every diff a hard rule.
 3. **Realistic seeded scenarios and visual-regression coverage for the states that aren't the happy
    path** — empty, loading, error, and safety states. The seed is realistic and busy, and the money
-   surfaces and a first empty state are captured; systematic coverage of the rest is not.
+   surfaces and a first empty state are captured; systematic coverage of the rest is not. The first
+   concrete gap: **add a second seeded instructor**, then seed an instructor rostered as a session's
+   **divemaster**. That is the one (shop roles × trip role) combination
+   [20260803-per-trip-crew-role](../../architecture/decisions/20260803-per-trip-crew-role.md) leaves
+   unseeded, because the demo shop has a single instructor and rostering them as DM would leave that
+   session with nobody on the supervision ratio and move seeded bookings, staffing and Today across
+   the whole demo. The rule is asserted by a monotonicity test meanwhile; what is missing is a
+   visible example (review 20260802, DOM-M7).
 4. **A real-Postgres CI job.** Everything runs on PGlite today, which cannot exhibit the races the
    schema is designed against: the `FOR UPDATE` oversell guard in `src/db/bookings.ts` is dead code
    under test, and committed `drizzle/` migrations first meet a real server during the production
@@ -211,7 +227,10 @@ ADR rather than letting this become an unbounded second backlog.
    concurrent connections — two transactions racing for the last seat, asserting exactly one wins.
    Nightly or gated on `src/db/**`; the spend choice is HD-19 in the
    [2026-08-02 review](../assessments/comprehensive-review-20260802.md#human-decision-register).
-   Carried out of that review (TEST-2 / DATA-L1 / OPS-2) as the highest-value enablement item open.
+   Carried out of that review (TEST-2 / DATA-L1 / OPS-2) as the highest-value enablement item open —
+   and now the **only** open engineering finding that review left, everything else in it being a
+   human decision. The migration set it would exercise grew on 2026-08-03 by five migrations —
+   two tables, six indexes and three enum types.
 
 ### P2 — when parallelism or scale proves the need
 
