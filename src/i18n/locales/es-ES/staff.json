@@ -700,6 +700,8 @@
       "nitroxCheckbox": "Nitrox",
       "saving": "Guardando…",
       "optionalHint": "(opcional)",
+      "errorCoordinates": "Añade ambas coordenadas del pronóstico, o deja las dos en blanco — un punto de pronóstico necesita latitud y longitud. Todo lo demás que escribiste sigue aquí.",
+      "errorDepth": "Esa profundidad máxima es mayor que la de cualquier sitio de buceo — revisa la cifra y vuelve a guardar.",
       "errorImages": "Uno de esos enlaces de imagen no se pudo usar — usa hasta seis enlaces HTTP(S) completos, uno por línea, cada uno apuntando a una imagen real y accesible.",
       "errorImagesUnconfigured": "El alojamiento de imágenes aún no está configurado para esta tienda — deja los enlaces de imagen en blanco por ahora, o pide al propietario o gerente de tu tienda que lo configure."
     },

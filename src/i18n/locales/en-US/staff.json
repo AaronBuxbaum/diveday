@@ -700,6 +700,8 @@
       "nitroxCheckbox": "Nitrox",
       "saving": "Saving…",
       "optionalHint": "(optional)",
+      "errorCoordinates": "Add both forecast coordinates, or leave both blank — a forecast point needs a latitude and a longitude. Everything else you typed is still here.",
+      "errorDepth": "That maximum depth is deeper than any dive site — check the figure, then save again.",
       "errorImages": "One of those image links couldn't be used — use up to six complete HTTP(S) links, one per line, each pointing to a real, reachable image.",
       "errorImagesUnconfigured": "Image hosting isn't set up for this shop yet — leave the image links blank for now, or ask your shop's owner or manager to configure it."
     },

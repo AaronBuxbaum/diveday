@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { z } from "zod";
-import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
+import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
@@ -13,119 +12,78 @@ import { getShopById } from "@/db/shops";
 import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
+import { type DepthUnit, maxEnteredDepth } from "@/lib/depth-units";
 import {
-  type DepthUnit,
-  depthToMeters,
-  MAX_ENTERED_DEPTH_METERS,
-  maxEnteredDepth,
-} from "@/lib/depth-units";
-import { splitMediaUrls } from "@/lib/dive-sites";
+  type DiveSiteFormError,
+  parseDiveSiteForm,
+  splitMediaUrls,
+  submittedValues,
+} from "@/lib/dive-sites";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { ingestDiveSiteMedia } from "@/lib/storage/ingest-dive-site-media";
+import { SiteFormShell, type SiteFormState } from "../_components/SiteFormShell";
+import { siteFormErrorMessages } from "../_components/site-form-errors";
 
 export const metadata: Metadata = { title: "Create dive site — DiveDay" };
 
-const optionalUrl = z.union([z.literal(""), z.url().max(2_000)]);
 const specialtySchema = z.enum(["deep", "wreck", "night", "drysuit"]);
-const siteSchema = z
-  .object({
-    name: z.string().trim().min(1).max(120),
-    description: z.string().trim().max(1_200),
-    locationName: z.string().trim().max(160),
-    forecastLatitude: z.union([z.literal(""), z.coerce.number().min(-90).max(90)]),
-    forecastLongitude: z.union([z.literal(""), z.coerce.number().min(-180).max(180)]),
-    satelliteImageUrl: optionalUrl,
-    routeImageUrl: optionalUrl,
-    imageUrls: z.string().max(12_000),
-    marineLife: z.string().trim().max(400),
-    marineLifeDescription: z.string().trim().max(1_200),
-    difficulty: z.string().trim().max(120),
-    depthRange: z.string().trim().max(120),
-    // Typed in the shop's own unit (metres or feet), so the real bound can only
-    // be applied after the unit is known — this is the loose outer guard, and
-    // `depthToMeters`/`MAX_ENTERED_DEPTH_METERS` below apply the true ceiling.
-    maxDepth: z.union([z.literal(""), z.coerce.number().positive().max(1_000)]),
-    currentNote: z.string().trim().max(500),
-    divePlan: z.string().trim().max(1_200),
-    landmarks: z.string().max(4_000),
-    minimumCertificationLevel: z.preprocess(
-      (value) => (value === "" ? null : value),
-      z
-        .enum(["open_water", "advanced_open_water", "rescue", "divemaster", "instructor"])
-        .nullable(),
-    ),
-  })
-  .refine(
-    (site) => (site.forecastLatitude === "") === (site.forecastLongitude === ""),
-    "Add both forecast coordinates or leave both blank.",
-  );
 
 // Not `instant = false` (a dev-time validation opt-out only, with zero
 // production effect — see ADR 20260801-cache-components-e2e-activity-migration's
-// Outcome section). Without a real Suspense boundary, this route still got a
+// Outcome section). Without a real Suspense boundary this route got a
 // Partial-Prerendered shell with an implicit dynamic hole around the
-// unwrapped `searchParams`/session/shop reads below, and a
-// `redirect(...?error=...)` fired from `createAction` on a rejected form
-// raced that hole's pending fetch and lost — the error banner never
-// rendered. An explicit boundary makes the dynamic part exactly what streams
-// in on redirect, instead of leaving Next to guess.
-export default function NewDiveSitePage({
-  params,
-  searchParams,
-}: {
-  params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{ error?: string }>;
-}) {
+// session/shop reads below; an explicit boundary makes the dynamic part exactly
+// what streams in. It used to matter for a second reason too — a rejected form
+// fired `redirect(...?error=...)`, which raced that hole's pending fetch and
+// lost, so the error banner never rendered. A refusal no longer navigates at
+// all (see `SiteFormShell`), so that race is gone with the redirect.
+export default function NewDiveSitePage({ params }: { params: Promise<{ shopSlug: string }> }) {
   return (
     <Suspense fallback={<main className="flex-1" />}>
-      <NewDiveSiteBody params={params} searchParams={searchParams} />
+      <NewDiveSiteBody params={params} />
     </Suspense>
   );
 }
 
-async function NewDiveSiteBody({
-  params,
-  searchParams,
-}: {
-  params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{ error?: string }>;
-}) {
+async function NewDiveSiteBody({ params }: { params: Promise<{ shopSlug: string }> }) {
   const session = await requireStaffSession();
   const { shopSlug } = await params;
-  const { error } = await searchParams;
   const back = `/shop/${shopSlug}/dive-sites`;
   const shop = await getShopById(await getDb(), session.user.shopId);
   const t = staffTranslator(await requestLocale(shop?.defaultLocale));
   const depthUnit = shop?.depthUnit ?? "meters";
 
-  async function createAction(formData: FormData) {
+  async function createAction(_state: SiteFormState, formData: FormData): Promise<SiteFormState> {
     "use server";
     const activeSession = await requireStaffSession();
-    const parsed = siteSchema.safeParse(Object.fromEntries(formData));
-    if (!parsed.success) redirect(`${back}/new?error=invalid`);
+    // Every refusal carries the whole submission back to the form, which is
+    // what lets a staffer fix the one field that was wrong instead of retyping
+    // a briefing (see `SiteFormShell`).
+    const refuse = (errorCode: DiveSiteFormError): SiteFormState => ({
+      errorCode,
+      values: submittedValues(formData),
+    });
     // Depth arrives in whatever unit this shop works in; metres is what's
     // stored. Re-read the shop rather than trusting a form field for the unit —
     // a hidden input would let a crafted post store a depth 3.3× off.
     const activeShop = await getShopById(await getDb(), activeSession.user.shopId);
-    const maxDepthMeters =
-      parsed.data.maxDepth === ""
-        ? null
-        : depthToMeters(parsed.data.maxDepth, activeShop?.depthUnit ?? "meters");
-    if (maxDepthMeters !== null && maxDepthMeters > MAX_ENTERED_DEPTH_METERS) {
-      redirect(`${back}/new?error=invalid`);
-    }
+    const parsed = parseDiveSiteForm(
+      Object.fromEntries(formData),
+      activeShop?.depthUnit ?? "meters",
+    );
+    if (!parsed.ok) return refuse(parsed.error);
     let imageUrls: string[];
     try {
-      imageUrls = splitMediaUrls(parsed.data.imageUrls);
+      imageUrls = splitMediaUrls(parsed.fields.imageUrls);
     } catch {
-      redirect(`${back}/new?error=images`);
+      return refuse("images");
     }
     const specialties = z
       .array(specialtySchema)
       .safeParse(formData.getAll("specialty").map(String));
-    if (!specialties.success) redirect(`${back}/new?error=invalid`);
-    const landmarks = parsed.data.landmarks
+    if (!specialties.success) return refuse("invalid");
+    const landmarks = parsed.fields.landmarks
       .split("\n")
       .map((landmark) => landmark.trim())
       .filter(Boolean);
@@ -133,36 +91,34 @@ async function NewDiveSiteBody({
     // dive-site page must never make a live request to a staff-pasted
     // third-party host (CR-020).
     const media = await ingestDiveSiteMedia({
-      satelliteImageUrl: parsed.data.satelliteImageUrl || undefined,
-      routeImageUrl: parsed.data.routeImageUrl || undefined,
+      satelliteImageUrl: parsed.fields.satelliteImageUrl || undefined,
+      routeImageUrl: parsed.fields.routeImageUrl || undefined,
       imageUrls,
     });
     if (!media.ok) {
-      redirect(
-        `${back}/new?error=${media.reason === "not_configured" ? "images-unconfigured" : "images"}`,
-      );
+      return refuse(media.reason === "not_configured" ? "imagesUnconfigured" : "images");
     }
-    // `maxDepth` is the form's unit-relative field, not a column — it becomes
-    // `maxDepthMeters` below, so it must not reach the spread.
-    const { maxDepth: _maxDepth, ...siteFields } = parsed.data;
+    // `maxDepth` is the form's unit-relative field, not a column — it became
+    // `parsed.maxDepthMeters`, so it must not reach the spread.
+    const { maxDepth: _maxDepth, ...siteFields } = parsed.fields;
     const site = await createDiveSite(await getDb(), {
       shopId: activeSession.user.shopId,
       ...siteFields,
       forecastLatitude:
-        parsed.data.forecastLatitude === "" ? undefined : parsed.data.forecastLatitude,
+        parsed.fields.forecastLatitude === "" ? undefined : parsed.fields.forecastLatitude,
       forecastLongitude:
-        parsed.data.forecastLongitude === "" ? undefined : parsed.data.forecastLongitude,
+        parsed.fields.forecastLongitude === "" ? undefined : parsed.fields.forecastLongitude,
       satelliteImageUrl: media.satelliteImageUrl,
       routeImageUrl: media.routeImageUrl,
       imageUrls: media.imageUrls,
-      minimumCertificationLevel: parsed.data.minimumCertificationLevel,
+      minimumCertificationLevel: parsed.fields.minimumCertificationLevel,
       requiredSpecialties: specialties.data,
       requiresNitrox: formData.get("requiresNitrox") === "on",
-      difficulty: parsed.data.difficulty,
-      depthRange: parsed.data.depthRange,
-      maxDepthMeters,
-      currentNote: parsed.data.currentNote,
-      divePlan: parsed.data.divePlan,
+      difficulty: parsed.fields.difficulty,
+      depthRange: parsed.fields.depthRange,
+      maxDepthMeters: parsed.maxDepthMeters,
+      currentNote: parsed.fields.currentNote,
+      divePlan: parsed.fields.divePlan,
       landmarks,
     });
     revalidateAndRedirect(back, `${back}/${site.id}`);
@@ -180,39 +136,37 @@ async function NewDiveSiteBody({
           description={t("diveSites.new.description")}
         />
       </div>
-      {error ? (
-        <ShopNotice tone="danger" role="alert" className="mt-6">
-          {error === "images"
-            ? t("diveSites.form.errorImages")
-            : error === "images-unconfigured"
-              ? t("diveSites.form.errorImagesUnconfigured")
-              : t("diveSites.new.errorInvalid")}
-        </ShopNotice>
-      ) : null}
-      <SiteForm
-        t={t}
+      <SiteFormShell
         action={createAction}
-        submitLabel={t("diveSites.new.saveSiteBriefing")}
-        depthUnit={depthUnit}
-      />
+        errorMessages={siteFormErrorMessages(t, "diveSites.new.errorInvalid")}
+      >
+        <SiteFormFields
+          t={t}
+          submitLabel={t("diveSites.new.saveSiteBriefing")}
+          depthUnit={depthUnit}
+        />
+      </SiteFormShell>
     </main>
   );
 }
 
-function SiteForm({
+/**
+ * The blank briefing's fields. Rendered on the server (staff copy is
+ * server-side) and handed to `SiteFormShell` as children, so a refused submit
+ * re-renders nothing here and every value the staffer typed survives.
+ */
+function SiteFormFields({
   t,
-  action,
   submitLabel,
   depthUnit,
 }: {
   t: StaffTranslator;
-  action: (formData: FormData) => Promise<void>;
   submitLabel: string;
   /** How this shop reads depth; the stored figure is always metres. */
   depthUnit: DepthUnit;
 }) {
   return (
-    <form action={action} className="mt-8 flex flex-col gap-5">
+    <>
       <FieldGrid columns={1}>
         <Field label={t("diveSites.form.nameLabel")}>
           <input
@@ -394,6 +348,6 @@ function SiteForm({
       >
         {submitLabel}
       </SubmitButton>
-    </form>
+    </>
   );
 }

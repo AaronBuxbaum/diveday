@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { z } from "zod";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
@@ -20,18 +20,20 @@ import { getShopById } from "@/db/shops";
 import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
+import { depthInUnit, maxEnteredDepth } from "@/lib/depth-units";
 import {
-  depthInUnit,
-  depthToMeters,
-  MAX_ENTERED_DEPTH_METERS,
-  maxEnteredDepth,
-} from "@/lib/depth-units";
-import { splitMediaUrls } from "@/lib/dive-sites";
+  type DiveSiteFormError,
+  parseDiveSiteForm,
+  splitMediaUrls,
+  submittedValues,
+} from "@/lib/dive-sites";
 import { formatShortDate } from "@/lib/format";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { noticeFromParam } from "@/lib/staff-notices";
 import { ingestDiveSiteMedia } from "@/lib/storage/ingest-dive-site-media";
+import { SiteFormShell, type SiteFormState } from "../_components/SiteFormShell";
+import { siteFormErrorMessages } from "../_components/site-form-errors";
 
 // TODO: Cache Components adoption. Refactor this route so this opt-out can be removed.
 // See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
@@ -39,39 +41,7 @@ export const instant = false;
 
 export const metadata: Metadata = { title: "Edit dive site — DiveDay" };
 
-const optionalUrl = z.union([z.literal(""), z.url().max(2_000)]);
 const specialtySchema = z.enum(["deep", "wreck", "night", "drysuit"]);
-const siteSchema = z
-  .object({
-    name: z.string().trim().min(1).max(120),
-    description: z.string().trim().max(1_200),
-    locationName: z.string().trim().max(160),
-    forecastLatitude: z.union([z.literal(""), z.coerce.number().min(-90).max(90)]),
-    forecastLongitude: z.union([z.literal(""), z.coerce.number().min(-180).max(180)]),
-    satelliteImageUrl: optionalUrl,
-    routeImageUrl: optionalUrl,
-    imageUrls: z.string().max(12_000),
-    marineLife: z.string().trim().max(400),
-    marineLifeDescription: z.string().trim().max(1_200),
-    difficulty: z.string().trim().max(120),
-    depthRange: z.string().trim().max(120),
-    // Typed in the shop's own unit; see the matching guard on the create form.
-    // The real ceiling is applied after the unit is known.
-    maxDepth: z.union([z.literal(""), z.coerce.number().positive().max(1_000)]),
-    currentNote: z.string().trim().max(500),
-    divePlan: z.string().trim().max(1_200),
-    landmarks: z.string().max(4_000),
-    minimumCertificationLevel: z.preprocess(
-      (value) => (value === "" ? null : value),
-      z
-        .enum(["open_water", "advanced_open_water", "rescue", "divemaster", "instructor"])
-        .nullable(),
-    ),
-  })
-  .refine(
-    (site) => (site.forecastLatitude === "") === (site.forecastLongitude === ""),
-    "Add both forecast coordinates or leave both blank.",
-  );
 
 // A notice/error query param maps to a message key, never to a sentence — the
 // words come from the staff bundle at render time (docs ADR
@@ -81,10 +51,11 @@ const NOTICE_KEYS: Record<string, StaffMessageKey> = {
   copied: "diveSites.edit.copiedNotice",
 };
 
+// Only the archive action still refuses through the URL; a rejected *save*
+// hands its code back to the form instead (see `SiteFormShell`), which is what
+// keeps a briefing's twenty fields from being wiped by their own error banner.
 const ERROR_KEYS: Record<string, StaffMessageKey> = {
   invalid: "diveSites.edit.errorInvalid",
-  images: "diveSites.form.errorImages",
-  "images-unconfigured": "diveSites.form.errorImagesUnconfigured",
 };
 
 export default async function EditDiveSitePage({
@@ -115,11 +86,15 @@ export default async function EditDiveSitePage({
   const errorKey = noticeFromParam(error, ERROR_KEYS);
   const upcomingTrips = await listUpcomingTripsForSite(db, session.user.shopId, id);
 
-  async function saveAction(formData: FormData) {
+  async function saveAction(_state: SiteFormState, formData: FormData): Promise<SiteFormState> {
     "use server";
     const activeSession = await requireStaffSession();
-    const parsed = siteSchema.safeParse(Object.fromEntries(formData));
-    if (!parsed.success) redirect(`${back}/${id}?error=invalid`);
+    // Every refusal carries the whole submission back to the form, so an edit
+    // in progress survives a rejected save (see `SiteFormShell`).
+    const refuse = (errorCode: DiveSiteFormError): SiteFormState => ({
+      errorCode,
+      values: submittedValues(formData),
+    });
     // Depth arrives in whatever unit this shop works in; metres is what's
     // stored. Re-read the shop rather than trusting a form field for the unit —
     // a hidden input would let a crafted post store a depth 3.3x off.
@@ -127,24 +102,22 @@ export default async function EditDiveSitePage({
     // serializes what it captures, and handing it a live database client
     // recurses until the stack blows.
     const activeShop = await getShopById(await getDb(), activeSession.user.shopId);
-    const maxDepthMeters =
-      parsed.data.maxDepth === ""
-        ? null
-        : depthToMeters(parsed.data.maxDepth, activeShop?.depthUnit ?? "meters");
-    if (maxDepthMeters !== null && maxDepthMeters > MAX_ENTERED_DEPTH_METERS) {
-      redirect(`${back}/${id}?error=invalid`);
-    }
+    const parsed = parseDiveSiteForm(
+      Object.fromEntries(formData),
+      activeShop?.depthUnit ?? "meters",
+    );
+    if (!parsed.ok) return refuse(parsed.error);
     const specialties = z
       .array(specialtySchema)
       .safeParse(formData.getAll("specialty").map(String));
-    if (!specialties.success) redirect(`${back}/${id}?error=invalid`);
+    if (!specialties.success) return refuse("invalid");
     let imageUrls: string[];
     try {
-      imageUrls = splitMediaUrls(parsed.data.imageUrls);
+      imageUrls = splitMediaUrls(parsed.fields.imageUrls);
     } catch {
-      redirect(`${back}/${id}?error=images`);
+      return refuse("images");
     }
-    const landmarks = parsed.data.landmarks
+    const landmarks = parsed.fields.landmarks
       .split("\n")
       .map((landmark) => landmark.trim())
       .filter(Boolean);
@@ -152,35 +125,34 @@ export default async function EditDiveSitePage({
     // dive-site page must never make a live request to a staff-pasted
     // third-party host (CR-020).
     const media = await ingestDiveSiteMedia({
-      satelliteImageUrl: parsed.data.satelliteImageUrl || undefined,
-      routeImageUrl: parsed.data.routeImageUrl || undefined,
+      satelliteImageUrl: parsed.fields.satelliteImageUrl || undefined,
+      routeImageUrl: parsed.fields.routeImageUrl || undefined,
       imageUrls,
     });
     if (!media.ok) {
-      redirect(
-        `${back}/${id}?error=${media.reason === "not_configured" ? "images-unconfigured" : "images"}`,
-      );
+      return refuse(media.reason === "not_configured" ? "imagesUnconfigured" : "images");
     }
-    // `maxDepth` is the form's unit-relative field, not a column — it becomes
-    // `maxDepthMeters` below, so it must not reach the spread.
-    const { maxDepth: _maxDepth, ...siteFields } = parsed.data;
+    // `maxDepth` is the form's unit-relative field, not a column — it became
+    // `parsed.maxDepthMeters`, so it must not reach the spread.
+    const { maxDepth: _maxDepth, ...siteFields } = parsed.fields;
     const updated = await updateDiveSite(await getDb(), activeSession.user.shopId, id, {
       shopId: activeSession.user.shopId,
       ...siteFields,
-      forecastLatitude: parsed.data.forecastLatitude === "" ? null : parsed.data.forecastLatitude,
+      forecastLatitude:
+        parsed.fields.forecastLatitude === "" ? null : parsed.fields.forecastLatitude,
       forecastLongitude:
-        parsed.data.forecastLongitude === "" ? null : parsed.data.forecastLongitude,
+        parsed.fields.forecastLongitude === "" ? null : parsed.fields.forecastLongitude,
       satelliteImageUrl: media.satelliteImageUrl,
       routeImageUrl: media.routeImageUrl,
       imageUrls: media.imageUrls,
-      minimumCertificationLevel: parsed.data.minimumCertificationLevel,
+      minimumCertificationLevel: parsed.fields.minimumCertificationLevel,
       requiredSpecialties: specialties.data,
       requiresNitrox: formData.get("requiresNitrox") === "on",
-      difficulty: parsed.data.difficulty,
-      depthRange: parsed.data.depthRange,
-      maxDepthMeters,
-      currentNote: parsed.data.currentNote,
-      divePlan: parsed.data.divePlan,
+      difficulty: parsed.fields.difficulty,
+      depthRange: parsed.fields.depthRange,
+      maxDepthMeters: parsed.maxDepthMeters,
+      currentNote: parsed.fields.currentNote,
+      divePlan: parsed.fields.divePlan,
       landmarks,
     });
     if (!updated) notFound();
@@ -292,7 +264,10 @@ export default async function EditDiveSitePage({
           </ul>
         </section>
       ) : null}
-      <form action={saveAction} className="mt-8 flex flex-col gap-5">
+      <SiteFormShell
+        action={saveAction}
+        errorMessages={siteFormErrorMessages(t, "diveSites.edit.errorInvalid")}
+      >
         <FieldGrid columns={1}>
           <Field label={t("diveSites.form.nameLabel")}>
             <input
@@ -546,7 +521,7 @@ export default async function EditDiveSitePage({
         >
           {t("diveSites.edit.saveBriefing")}
         </SubmitButton>
-      </form>
+      </SiteFormShell>
     </main>
   );
 }
