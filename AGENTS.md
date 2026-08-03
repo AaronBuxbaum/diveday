@@ -181,8 +181,15 @@ docs, tests, or code, the skill is stale and must be fixed in the same change.
   `scripts/domain-strings-baseline.json` are empty, so the ratchet now behaves as a full gate: any
   hard-coded copy anywhere under the guarded roots (including `src/features`) fails the check.
   Check those files directly for current state rather than trusting a number here. `src/lib`
-  and `src/db` return **codes, not sentences**; the UI picks the words. Waiver/medical wording
-  stays English pending H-01/H-03. See the **i18n-copy** skill.
+  and `src/db` return **codes, not sentences**; the UI picks the words. A data module that
+  *feeds* the UI (marketing claims, switching guides, demo roles) holds **message-bundle keys,
+  never words** — the key-registry pattern of `src/lib/marketing.ts` / `src/lib/demo-roles.ts` —
+  and the registries listed in `scripts/check-domain-strings.mjs`'s `proseFreeFiles` hard-fail on
+  any unexempted prose literal. **Never add English (or any language) as a string the user will
+  read outside `src/i18n/locales/`** — every new sentence lands in *every* locale's bundle in the
+  same change, and there is no "translate it later": a key missing from one locale fails
+  `pnpm check:locale`. Waiver/medical wording stays English pending H-01/H-03. See the
+  **i18n-copy** skill.
 - **Read time through the clock.** `src/lib`, `src/db`, and `src/features` never call `new Date()` / `Date.now()`
   directly — use `nowDate()` / `nowMs()` from `src/lib/clock.ts` (default a `now` parameter to it).
   This is what lets the e2e fleet freeze one instant so the clock-anchored seed and every render

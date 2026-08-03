@@ -1,3 +1,6 @@
+// i18n-exempt-file: medical questionnaire wording is safety-legal English pending the H-01/H-03
+// sign-off (docs/product/human-decisions.md) — translating it is a legal decision, not an
+// engineering one. Do not extract these prompts to the bundles without that sign-off.
 import type { MedicalAnswers, MedicalJurisdiction } from "@/db/schema";
 
 /**

@@ -31,18 +31,29 @@ export const instant = false;
  * diver-bundle message right here — never earlier. `onboardSchema`'s
  * validation messages are codes for exactly this reason (Zod has no
  * request-scoped locale to translate with at schema-definition time; see
- * src/lib/onboarding.ts), and the rate limiter's rejection is the same kind
- * of code (src/lib/rate-limit.ts). A `?error=` value this map doesn't
- * recognize is one of the handful of business-rule messages in
- * `onboardAction` not yet extracted (shop link taken, email taken, sign-in
- * failure) — those still arrive as plain English and render as-is.
+ * src/lib/onboarding.ts), and the rate limiter's rejection and the action's
+ * business-rule refusals (shop link taken, email taken, create/sign-in
+ * failure) are the same kind of code. Every path is covered: an unknown
+ * `?error=` value falls back to the generic invalid-input message rather
+ * than echoing a raw string.
  */
 const ONBOARD_ERROR_MESSAGES: Record<
-  OnboardErrorCode | "rate_limited" | "invalid_input",
-  (t: DiverTranslator) => string
+  | OnboardErrorCode
+  | "rate_limited"
+  | "invalid_input"
+  | "shop_slug_taken"
+  | "email_taken"
+  | "create_failed"
+  | "signin_failed",
+  (t: DiverTranslator, ctx: { shopSlug?: string }) => string
 > = {
   rate_limited: (t) => t("common.rateLimited"),
   invalid_input: (t) => t("account.onboard.errors.invalidInput"),
+  shop_slug_taken: (t, ctx) =>
+    t("account.onboard.errors.shopSlugTaken", { slug: ctx.shopSlug ?? "" }),
+  email_taken: (t) => t("account.onboard.errors.emailTaken"),
+  create_failed: (t) => t("account.onboard.errors.createFailed"),
+  signin_failed: (t) => t("account.onboard.errors.signinFailed"),
   shop_name_required: (t) => t("account.onboard.errors.shopNameRequired"),
   shop_slug_required: (t) => t("account.onboard.errors.shopSlugRequired"),
   shop_slug_invalid: (t) => t("account.onboard.errors.shopSlugInvalid"),
@@ -56,12 +67,20 @@ const ONBOARD_ERROR_MESSAGES: Record<
     t("account.onboard.errors.ownerPasswordTooLong", { max: MAX_PASSWORD_LENGTH }),
 };
 
-/** Resolves a known `?error=` code, or falls back to the raw (English) text of an
- * `onboardAction` message not yet converted to a code. */
-function onboardErrorMessage(t: DiverTranslator, error: string): string {
+/**
+ * Resolves a known `?error=` code. Anything unrecognized gets the generic
+ * invalid-input message: every real code is in the map, so an unknown value is
+ * a stale link or a hand-edited URL, and echoing it back would both leak raw
+ * strings into the page and bypass the bundle.
+ */
+function onboardErrorMessage(
+  t: DiverTranslator,
+  error: string,
+  ctx: { shopSlug?: string },
+): string {
   return Object.hasOwn(ONBOARD_ERROR_MESSAGES, error)
-    ? ONBOARD_ERROR_MESSAGES[error as keyof typeof ONBOARD_ERROR_MESSAGES](t)
-    : decodeURIComponent(error);
+    ? ONBOARD_ERROR_MESSAGES[error as keyof typeof ONBOARD_ERROR_MESSAGES](t, ctx)
+    : t("account.onboard.errors.invalidInput");
 }
 
 /**
@@ -183,7 +202,7 @@ export default async function OnboardPage({
 
           {error ? (
             <ShopNotice tone="danger" role="alert" className="mt-4">
-              {onboardErrorMessage(t, error)}
+              {onboardErrorMessage(t, error, { shopSlug })}
             </ShopNotice>
           ) : null}
 

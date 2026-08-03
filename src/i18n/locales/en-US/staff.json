@@ -1945,6 +1945,60 @@
         "included": "Comes across",
         "staysBehind": "Stays behind"
       },
+      "scopeTable": {
+        "contact": {
+          "what": "Names, email, phone",
+          "detail": "Imported as given. A row with an email matches an existing diver on re-import; without one, it's always a new record."
+        },
+        "emergencyContact": {
+          "what": "Emergency contact",
+          "detail": "Name and phone carry over when present."
+        },
+        "diveInsurance": {
+          "what": "Dive insurance (DAN)",
+          "detail": "Carried across as free text, exactly as your file holds it. Never a gate — just detail the crew wants on hand."
+        },
+        "rentalSizes": {
+          "what": "Rental sizes",
+          "detail": "BCD, wetsuit, boot, and fin sizes become a rental-fit profile."
+        },
+        "certificationCard": {
+          "what": "Certification card",
+          "detail": "Imported verified and flagged imported, refresher date included — staff give it a one-tap confirm; unrecognized levels need manual entry."
+        },
+        "specialtyCards": {
+          "what": "Specialty cards (deep, wreck, night, drysuit)",
+          "detail": "Imported as verified specialty cards, flagged imported; each one still needs a staff confirm before the dive that requires it."
+        },
+        "nitrox": {
+          "what": "Nitrox",
+          "detail": "Imported as a verified nitrox card, flagged imported — but a diver gets plain air until staff confirm it; boarding never waits."
+        },
+        "signedWaivers": {
+          "what": "Signed waivers & medical clearance",
+          "detail": "A row marked already-accepted is trusted, medical clearance included, and marked imported — individual medical answers are never reconstructed, only the outcome."
+        },
+        "waiverDocuments": {
+          "what": "Waiver / medical documents",
+          "detail": "Fetched once from your file's URL and re-stored in DiveDay's own storage for audit. Images and PDFs up to 5 MB."
+        },
+        "role": {
+          "what": "Role",
+          "detail": "Everyone imports as a diver. Staff roles and logins are never granted by import."
+        },
+        "cardOnFile": {
+          "what": "Card on file / payment",
+          "detail": "Stays with your payment processor — DiveDay never imports card or payment data."
+        },
+        "pastVisits": {
+          "what": "Past visits (what they booked, when)",
+          "detail": "One row per booking becomes visit history — not a dive, and it never appears on your schedule or counts toward capacity."
+        },
+        "receiptsService": {
+          "what": "Receipts & service history",
+          "detail": "Payment records stay with your processor; gear-service history has nowhere to land — DiveDay tracks sizes, not individual rigs."
+        }
+      },
       "wizard": {
         "heading": "Upload a contacts file",
         "intro": "A CSV from your old system, or DiveDay's own <mono>contacts.csv</mono> export. An email match updates that diver on re-import; without one, it's a new record. Nothing is written until you review the preview and confirm.",

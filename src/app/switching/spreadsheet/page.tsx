@@ -16,6 +16,7 @@ import { requestLocale } from "@/i18n/request";
 import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
 import { trialHref } from "@/lib/funnel";
 import { IMPORT_HONESTY_TABLE } from "@/lib/import";
+import { IMPORT_SCOPE_ROW_KEYS } from "@/lib/migration-guides";
 
 /**
  * "Coming from a spreadsheet" — the front door for the largest, most
@@ -299,10 +300,12 @@ async function SpreadsheetBody({
         <ul className="mt-8 space-y-2">
           {IMPORT_HONESTY_TABLE.map((row) => (
             <li
-              key={row.what}
+              key={row.id}
               className="grid gap-1 rounded-xl border border-border bg-surface px-4 py-3 sm:grid-cols-[11rem_7rem_1fr] sm:items-baseline sm:gap-3"
             >
-              <span className="font-medium text-foreground">{row.what}</span>
+              <span className="font-medium text-foreground">
+                {t(IMPORT_SCOPE_ROW_KEYS[row.id].what)}
+              </span>
               <span>
                 <span
                   className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${scopeChip[row.scope].className}`}
@@ -310,7 +313,9 @@ async function SpreadsheetBody({
                   {scopeChip[row.scope].label}
                 </span>
               </span>
-              <span className="text-sm leading-6 text-muted">{row.detail}</span>
+              <span className="text-sm leading-6 text-muted">
+                {t(IMPORT_SCOPE_ROW_KEYS[row.id].detail)}
+              </span>
             </li>
           ))}
         </ul>

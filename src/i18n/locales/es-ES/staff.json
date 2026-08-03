@@ -1945,6 +1945,60 @@
         "included": "Se importa",
         "staysBehind": "Se queda fuera"
       },
+      "scopeTable": {
+        "contact": {
+          "what": "Nombre, correo, teléfono",
+          "detail": "Se importan tal cual. Una fila con correo se empareja con un buceador existente al reimportar; sin él, siempre es una ficha nueva."
+        },
+        "emergencyContact": {
+          "what": "Contacto de emergencia",
+          "detail": "El nombre y el teléfono se trasladan cuando están."
+        },
+        "diveInsurance": {
+          "what": "Seguro de buceo (DAN)",
+          "detail": "Se traslada como texto libre, exactamente como lo tenga tu archivo. Nunca es una barrera — solo información que la tripulación quiere tener a mano."
+        },
+        "rentalSizes": {
+          "what": "Tallas de alquiler",
+          "detail": "Las tallas de BCD, traje, bota y aleta se convierten en un perfil de ajuste de alquiler."
+        },
+        "certificationCard": {
+          "what": "Tarjeta de certificación",
+          "detail": "Se importa verificada y marcada como importada, fecha de repaso incluida — el personal la confirma con un toque; los niveles no reconocidos requieren entrada manual."
+        },
+        "specialtyCards": {
+          "what": "Tarjetas de especialidad (profundidad, naufragios, nocturna, traje seco)",
+          "detail": "Se importan como tarjetas de especialidad verificadas, marcadas como importadas; cada una sigue necesitando la confirmación del personal antes de la inmersión que la exige."
+        },
+        "nitrox": {
+          "what": "Nitrox",
+          "detail": "Se importa como una tarjeta de nitrox verificada, marcada como importada — pero el buceador recibe aire normal hasta que el personal la confirme; el embarque nunca espera."
+        },
+        "signedWaivers": {
+          "what": "Descargos firmados y aptitud médica",
+          "detail": "Una fila marcada como ya aceptada se da por buena, aptitud médica incluida, y queda marcada como importada — las respuestas médicas individuales nunca se reconstruyen, solo el resultado."
+        },
+        "waiverDocuments": {
+          "what": "Documentos de descargo / médicos",
+          "detail": "Se descargan una vez desde la URL de tu archivo y se guardan de nuevo en el almacenamiento propio de DiveDay para auditoría. Imágenes y PDF de hasta 5 MB."
+        },
+        "role": {
+          "what": "Rol",
+          "detail": "Todo el mundo se importa como buceador. Los roles de personal y los accesos nunca se conceden por importación."
+        },
+        "cardOnFile": {
+          "what": "Tarjeta guardada / pagos",
+          "detail": "Se queda con tu procesador de pagos — DiveDay nunca importa datos de tarjetas ni de pagos."
+        },
+        "pastVisits": {
+          "what": "Visitas pasadas (qué reservaron y cuándo)",
+          "detail": "Cada fila de reserva se convierte en historial de visitas — no es una inmersión, y nunca aparece en tu horario ni cuenta para el aforo."
+        },
+        "receiptsService": {
+          "what": "Recibos e historial de taller",
+          "detail": "Los registros de pago se quedan con tu procesador; el historial de mantenimiento del equipo no tiene dónde aterrizar — DiveDay guarda tallas, no equipos concretos."
+        }
+      },
       "wizard": {
         "heading": "Subir un archivo de contactos",
         "intro": "Un CSV de tu antiguo sistema, o el propio <mono>contacts.csv</mono> de DiveDay. Un correo coincidente actualiza a ese buceador al reimportar; sin uno, siempre es un registro nuevo. No se escribe nada hasta que revisas la vista previa y confirmas.",

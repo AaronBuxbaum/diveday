@@ -4,6 +4,7 @@ import {
   DiverBookingFallback,
   FrontDeskReadinessFallback,
 } from "@/components/MarketingScreenFallbacks";
+import { diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
 import { productFeatureGroups } from "@/lib/marketing";
 
@@ -102,15 +103,20 @@ export const marketingMockups = {
  *
  * `featuresPerGroup` caps how many features each card lists; `1` renders a
  * single summary paragraph (the compact landing treatment), anything higher
- * renders a checklist. `columns` chooses the responsive grid width.
+ * renders a checklist. `columns` chooses the responsive grid width. The groups
+ * arrive as message keys (src/lib/marketing.ts holds structure, not words), so
+ * the caller passes the negotiated `locale` and the words resolve here.
  */
 export function FeatureGroupsGrid({
+  locale,
   featuresPerGroup,
   columns = 2,
 }: {
+  locale: DiverLocale;
   featuresPerGroup?: number;
   columns?: 2 | 4;
 }) {
+  const t = diverTranslator(locale);
   // Four columns wait for `xl`: at 1024 the ~226px cards wrapped their
   // uppercase eyebrows onto two lines and knocked the four headings onto
   // three different baselines — a comfortable 2×2 reads calmer there.
@@ -131,17 +137,17 @@ export function FeatureGroupsGrid({
             className="rounded-xl border border-border bg-background p-5 sm:p-6"
           >
             <p className="text-xs font-semibold tracking-widest text-primary uppercase">
-              {group.eyebrow}
+              {t(group.eyebrow)}
             </p>
-            <h3 className="mt-3 font-semibold leading-6">{group.title}</h3>
+            <h3 className="mt-3 font-semibold leading-6">{t(group.title)}</h3>
             {summaryOnly ? (
-              <p className="mt-3 text-sm leading-6 text-muted">{features[0]}</p>
+              <p className="mt-3 text-sm leading-6 text-muted">{t(features[0])}</p>
             ) : (
               <ul className="mt-4 space-y-2 text-sm leading-6 text-muted">
                 {features.map((feature) => (
                   <li key={feature} className="flex gap-2">
                     <span className="font-semibold text-primary">✓</span>
-                    <span>{feature}</span>
+                    <span>{t(feature)}</span>
                   </li>
                 ))}
               </ul>
