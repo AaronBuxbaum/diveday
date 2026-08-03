@@ -173,11 +173,16 @@ new domain concept, define it here in the same PR.
   ADR 20260803-not-ready-is-a-view folded it in; that URL now redirects. "Not ready" names the
   *view*; an individual diver's status is **Blocked** or **Ready**, never "Not ready".
 - **Blocked / Ready** — the shop's one readiness vocabulary, and the only two states a booking's
-  readiness check has. Every surface that shows one — roster, counter check-in, manifest, departure
-  board, offline manifest — uses these words and one tone per state (blocked is always danger),
-  resolved through `readinessStatusText`/`readinessStatusTone` in `src/i18n/readiness-labels.ts`.
-  The same fact used to read as "Needs attention" in warning at the counter and "Blocked" in danger
-  on the manifest, for the same diver.
+  readiness check has. Every *live* surface that shows one — roster, counter check-in, manifest,
+  departure board — uses these words and one tone per state (blocked is always danger), resolved
+  through `readinessStatusText`/`readinessStatusTone` in `src/i18n/readiness-labels.ts`. The same
+  fact used to read as "Needs attention" in warning at the counter and "Blocked" in danger on the
+  manifest, for the same diver. **The offline manifest is a deliberate exception**: it says
+  "Ready when saved" / "Blocked when saved" (`shared.offlineManifest.single.readyBadge`) rather
+  than resolving through those helpers, because a snapshot on a boat with no signal cannot know
+  whether a waiver was signed or a card sighted since it was taken. Dropping the qualifier there
+  would be the one lie a roll-call surface must not tell — a stale copy reading as current
+  (design/principles.md #4, "safety surfaces keep their precision").
 - **Shop day scan** — the coarse ±26-hour bound (`shopDayWindow`, `src/lib/operational-window.ts`)
   a query casts when the question is about the shop's own *calendar date* rather than a horizon —
   today's boat, for the command palette's boarding jump. SQL cannot ask "same day in this shop's

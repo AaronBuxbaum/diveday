@@ -2,7 +2,7 @@ import { trackEvent } from "@/lib/analytics";
 import { type BookingOutcome, createBooking } from "./bookings";
 import type { AppDb } from "./client";
 import { recordTripActivity } from "./operations";
-import { issueWaiverOnJoin } from "./waiver-issue";
+import { type IssueAndDeliverWaiverResult, issueWaiverOnJoin } from "./waiver-issue";
 
 /**
  * Seating a diver has never been just the booking row. Every staff door that
@@ -70,12 +70,28 @@ export type SeatDiverInput = {
 };
 
 /**
- * What became of the waiver-on-join attempt. `not_needed` covers both a trip
- * that gates no waiver and a diver already covered by a current signature
- * (sign-once) — `issueWaiverOnJoin` decides, this only reports. `failed` is
- * never fatal: a delivery hiccup must not undo a diver's seat.
+ * What became of the waiver-on-join attempt — reported at the granularity a
+ * staffer acts on, because the door's success notice is the only place the
+ * difference ever surfaces.
+ *
+ * - `not_needed` — no waiver was owed: the trip gates none, or the diver is
+ *   already covered by a current signature (sign-once). `issueWaiverOnJoin`
+ *   decides; this only reports.
+ * - `sent` — a link was issued *and* the email actually left the building.
+ * - `not_delivered` — a link exists but nothing was mailed: no address on file
+ *   (the normal walk-in), no provider configured, a rejected test recipient, a
+ *   provider error. Staff must hand the link over themselves.
+ * - `failed` — the link could not be issued at all.
+ *
+ * The distinction is the whole point of this type. It used to be a boolean
+ * cast of `issueWaiverOnJoin`'s result, which made every one of those outcomes
+ * read as "issued" — so the no-email counter walk-in, the *normal* case, told
+ * the staffer a waiver was on its way while the diver's readiness sat waiting
+ * for a signature that nobody had been asked for.
+ *
+ * Never fatal: a diver keeps their seat no matter which of these it is.
  */
-export type SeatDiverWaiver = "issued" | "not_needed" | "failed";
+export type SeatDiverWaiver = "not_needed" | "sent" | "not_delivered" | "failed";
 
 export type SeatDiverResult =
   | {
@@ -101,6 +117,23 @@ function activityAction(entry: SeatDiverEntry, personName: string): string {
 function collapse(reason: BookingRefusal, detail: SeatDiverRefusalDetail): SeatDiverRefusal {
   if (detail === "specific") return reason;
   return reason === "trip_full" || reason === "already_booked" ? reason : "unavailable";
+}
+
+/**
+ * Read `issueWaiverOnJoin`'s real result rather than its truthiness.
+ *
+ * `null` is "nothing was owed". Everything else is an
+ * `IssueAndDeliverWaiverResult`, and only `delivery: "sent"` means a diver
+ * actually received something — `no_email`, `unconfigured`, `test_recipient`,
+ * and `failed` all mean a link exists that only staff can hand over
+ * (`WaiverDelivery`, src/db/waiver-issue.ts). `already_completed` reaches here
+ * as a refusal but is not a problem: the diver's signature is already on file,
+ * which is the same nothing-to-do as `null`.
+ */
+function waiverOutcome(result: IssueAndDeliverWaiverResult | null): SeatDiverWaiver {
+  if (!result) return "not_needed";
+  if (!result.ok) return result.reason === "already_completed" ? "not_needed" : "failed";
+  return result.delivery === "sent" ? "sent" : "not_delivered";
 }
 
 /**
@@ -131,9 +164,7 @@ export async function seatDiver(db: AppDb, input: SeatDiverInput): Promise<SeatD
     // Uses the resolved booking, so a returning diver picked by identity gets
     // the same waiver-on-join a hand-entered walk-in does. Idempotent: a
     // diver already holding a link or a signature is skipped, not re-sent.
-    waiver = (await issueWaiverOnJoin(db, input.shopId, outcome.bookingId))
-      ? "issued"
-      : "not_needed";
+    waiver = waiverOutcome(await issueWaiverOnJoin(db, input.shopId, outcome.bookingId));
   } catch {
     console.error("Waiver-on-join could not be issued", { bookingId: outcome.bookingId });
     waiver = "failed";

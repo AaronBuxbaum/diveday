@@ -63,7 +63,9 @@ test("staff adds a walk-in diver, then wait-lists one once the trip is full", as
   await addDiver.getByLabel("Email").fill(`wanda-${e2eNow().getTime()}@example.com`);
   await addDiver.getByRole("button", { name: "Add to trip" }).click();
 
-  await expect(page.getByRole("status")).toContainText("Diver added to the trip.");
+  await expect(page.getByRole("status")).toContainText(
+    "Diver added to the trip — but their waiver wasn’t emailed.",
+  );
   await expect(page.getByRole("link", { name: "Walk-in Wanda" })).toBeVisible();
   // The success-tone Badge prepends a decorative aria-hidden glyph
   // (Badge.tsx toneGlyph), so the element's own text is "✓ Full", not
@@ -162,7 +164,9 @@ test("staff adds a returning diver by picking them, no re-entry", async ({ page 
   await expect(candidate).toBeVisible();
   await candidate.click();
 
-  await expect(page.getByRole("status")).toContainText("Diver added to the trip.");
+  await expect(page.getByRole("status")).toContainText(
+    "Diver added to the trip — but their waiver wasn’t emailed.",
+  );
   const roster = page
     .locator("section")
     .filter({ has: page.getByRole("heading", { name: "Divers" }) });
@@ -212,7 +216,9 @@ test("staff sends waivers to a multi-selected roster in one action", async ({ pa
       .getByLabel("Email")
       .fill(`${name.toLowerCase().replace(/\s+/g, ".")}-${stamp}@example.com`);
     await addDiver.getByRole("button", { name: "Add to trip" }).click();
-    await expect(page.getByRole("status")).toContainText("Diver added to the trip.");
+    await expect(page.getByRole("status")).toContainText(
+      "Diver added to the trip — but their waiver wasn’t emailed.",
+    );
   }
   // The bulk selection's Client Component (BulkWaiverSelectionProvider) lives
   // in TripLayout, above this page's own re-renders, so a diver-add redirect
@@ -273,7 +279,9 @@ test("the bulk waiver send nudges rather than silently no-ops with nothing ticke
   await addDiver.getByLabel("Name").fill("Bulk Drew");
   await addDiver.getByLabel("Email").fill(`bulk.drew-${e2eNow().getTime()}@example.com`);
   await addDiver.getByRole("button", { name: "Add to trip" }).click();
-  await expect(page.getByRole("status")).toContainText("Diver added to the trip.");
+  await expect(page.getByRole("status")).toContainText(
+    "Diver added to the trip — but their waiver wasn’t emailed.",
+  );
 
   await page.getByRole("button", { name: "Send waivers to selected" }).click();
   await expect(page.getByRole("status")).toContainText(
@@ -327,7 +335,9 @@ test("booking a diver from their record issues their waiver, like every other do
   // without depending on how an option label is formatted for the locale.
   await page.getByLabel("Course or dive").selectOption(tripId);
   await page.getByRole("button", { name: "Book activity" }).click();
-  await expect(page.getByRole("status")).toContainText("Activity booked.");
+  await expect(page.getByRole("status")).toContainText(
+    "Activity booked — but their waiver wasn’t emailed.",
+  );
 
   await page.goto(`/shop/blue-mantis/trips/${tripId}/guests`);
   await expect(page.getByRole("link", { name: "Priya Sharma" }).first()).toBeVisible();
@@ -369,7 +379,9 @@ test("the global Add-booking door seats a diver on a departure chosen from scrat
 
   // Lands on the trip's Guests tab with the roster's usual success affordance.
   await expect(page).toHaveURL(new RegExp(`/trips/${tripId}/guests`));
-  await expect(page.getByRole("status")).toContainText("Diver added to the trip.");
+  await expect(page.getByRole("status")).toContainText(
+    "Diver added to the trip — but their waiver wasn’t emailed.",
+  );
   await expect(page.getByRole("link", { name: "Phoned In Pat" })).toBeVisible();
 });
 
@@ -381,7 +393,9 @@ test("a refusal from the global door stays on the form, boat still chosen", asyn
   await page.goto(`/shop/blue-mantis/bookings/new/${tripId}`);
   await page.locator('input[name="fullName"]').filter({ visible: true }).fill("First Aboard Fay");
   await page.getByRole("button", { name: "Add to trip" }).click();
-  await expect(page.getByRole("status")).toContainText("Diver added to the trip.");
+  await expect(page.getByRole("status")).toContainText(
+    "Diver added to the trip — but their waiver wasn’t emailed.",
+  );
 
   // The boat is full now. The refusal comes back to the door that produced it,
   // still pointed at the same departure, so the next diver is one field away.

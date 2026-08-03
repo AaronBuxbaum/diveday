@@ -93,9 +93,19 @@ async function seat(
   if (!result.ok) refuse(surface, landing, surface.refusalNotice[result.reason]);
   const settled: SeatLanding = { ...landing, personId: result.personId };
   const path = surface.seatedPath(settled);
+  // The seat happened either way; what differs is whether the staffer can walk
+  // away. A waiver that was issued but never mailed — no address on file, no
+  // provider, a bounced test recipient — leaves work at the desk, so the notice
+  // says so instead of letting "Added…" imply an email is on its way while the
+  // diver's readiness waits for a signature nobody asked for. The link itself
+  // stays off the URL and on the diver's row (`seatedWaiverUndeliveredNotice`).
+  const notice =
+    result.waiver === "not_delivered" || result.waiver === "failed"
+      ? surface.seatedWaiverUndeliveredNotice
+      : surface.seatedNotice;
   revalidateAndRedirect(
     path,
-    withNotice(path, surface.seatedNotice, surface.carriesBookingId ? result.bookingId : undefined),
+    withNotice(path, notice, surface.carriesBookingId ? result.bookingId : undefined),
   );
 }
 

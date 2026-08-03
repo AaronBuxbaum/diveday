@@ -1,9 +1,17 @@
 // @vitest-environment node
 import { and, eq, inArray, ne } from "drizzle-orm";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { seededShopContext } from "@/test/db";
 import type { AppDb } from "./client";
-import { activityEvents, bookings, people, personRoles, waiverRecords } from "./schema";
+import {
+  activityEvents,
+  bookings,
+  people,
+  personRoles,
+  tripRequirements,
+  waiverRecords,
+  waiverTemplates,
+} from "./schema";
 import { seatDiver } from "./seat-diver";
 import { upcomingTripsWithCounts } from "./trips";
 
@@ -63,6 +71,26 @@ async function waiverCount(db: AppDb, bookingId: string) {
 
 const UNKNOWN_ID = "00000000-0000-4000-8000-000000000000";
 
+/** Resend's reserved sink address — the one value its adapter treats as real mail. */
+const DELIVERABLE_EMAIL = "delivered@resend.dev";
+
+/** Stub a shop whose waiver email can actually go out, and capture the send. */
+function deliverableEmailEnv() {
+  vi.stubEnv("APP_HOST", "https://diveday.example");
+  vi.stubEnv("RESEND_API_KEY", "re_test");
+  vi.stubEnv("RESEND_FROM_EMAIL", "shop@diveday.example");
+  const fetchImpl = vi
+    .fn()
+    .mockResolvedValue(new Response(JSON.stringify({ id: "resend-id" }), { status: 200 }));
+  vi.stubGlobal("fetch", fetchImpl);
+  return fetchImpl;
+}
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
+});
+
 describe("seatDiver (the one consequence path behind every staff door)", () => {
   /**
    * The bug this extraction exists for. Booking a diver from their own record
@@ -84,7 +112,9 @@ describe("seatDiver (the one consequence path behind every staff door)", () => {
       refusals: "specific",
     });
 
-    expect(result).toMatchObject({ ok: true, personId: diver.id, waiver: "issued" });
+    // The record itself is what this test is about; *what became of it* is the
+    // separate contract exercised below.
+    expect(result).toMatchObject({ ok: true, personId: diver.id });
     if (!result.ok) throw new Error("expected the diver to be seated");
     expect(await waiverCount(db, result.bookingId)).toBe(1);
   });
@@ -120,7 +150,10 @@ describe("seatDiver (the one consequence path behind every staff door)", () => {
       refusals: "coarse",
     });
 
-    expect(result).toMatchObject({ ok: true, personName: "Counter Cass", waiver: "issued" });
+    // `not_delivered`, not "issued": a diver with no address on file has a
+    // waiver link and no way to have received it. This assertion used to read
+    // `waiver: "issued"` and was pinning the bug it was meant to catch.
+    expect(result).toMatchObject({ ok: true, personName: "Counter Cass", waiver: "not_delivered" });
     expect(await activityMessages(db, open.id)).toContainEqual(
       expect.stringContaining("added Counter Cass to the trip as a walk-in"),
     );
@@ -187,6 +220,129 @@ describe("seatDiver (the one consequence path behind every staff door)", () => {
     });
 
     expect(await activityMessages(db, fullTrip.id)).toEqual(before);
+  });
+});
+
+/**
+ * `waiver` is the only thing telling a door whether its staffer can walk away,
+ * so every value has to be earned rather than inferred from "a result came
+ * back". The bug these cover: `issueWaiverOnJoin`'s result was read as a
+ * boolean, so a link that was issued and then *not* mailed — the no-email
+ * counter walk-in, the shop with no email set up, an outright failure to issue
+ * — all reported the same success as a delivered email. The staffer saw
+ * "Added…", the diver's readiness sat waiting for a signature, and nobody had
+ * asked for one.
+ */
+describe("seatDiver waiver reporting (what a door is allowed to claim)", () => {
+  it("reports sent only when the email actually went out", async () => {
+    const { db, shop, open, actorPersonId } = await context();
+    const fetchImpl = deliverableEmailEnv();
+
+    const result = await seatDiver(db, {
+      shopId: shop.id,
+      tripId: open.id,
+      actorPersonId,
+      diver: { fullName: "Mailed Mira", email: DELIVERABLE_EMAIL },
+      entry: "roster",
+      refusals: "specific",
+    });
+
+    expect(result).toMatchObject({ ok: true, waiver: "sent" });
+    expect(fetchImpl).toHaveBeenCalledOnce();
+  });
+
+  /**
+   * The normal counter case, and the one the old boolean got most wrong: the
+   * walk-in door takes a diver on a name alone precisely so a queue keeps
+   * moving, which means no address, which means no email — every time.
+   */
+  it("reports not_delivered for a walk-in with no address on file", async () => {
+    const { db, shop, open, actorPersonId } = await context();
+    deliverableEmailEnv();
+
+    const result = await seatDiver(db, {
+      shopId: shop.id,
+      tripId: open.id,
+      actorPersonId,
+      diver: { fullName: "No Email Nell" },
+      entry: "walk_in",
+      refusals: "coarse",
+    });
+
+    expect(result).toMatchObject({ ok: true, waiver: "not_delivered" });
+    // Seated regardless — a waiver that could not be mailed never costs a seat.
+    if (!result.ok) throw new Error("expected the diver to be seated");
+    expect(await waiverCount(db, result.bookingId)).toBe(1);
+  });
+
+  it("reports not_delivered when the shop has no email delivery set up", async () => {
+    const { db, shop, open, actorPersonId } = await context();
+    vi.stubEnv("APP_HOST", "https://diveday.example");
+    vi.stubEnv("RESEND_API_KEY", "");
+    vi.stubEnv("RESEND_FROM_EMAIL", "");
+
+    const result = await seatDiver(db, {
+      shopId: shop.id,
+      tripId: open.id,
+      actorPersonId,
+      // An address on file is not enough; nothing can carry the link.
+      diver: { fullName: "Unconfigured Uma", email: DELIVERABLE_EMAIL },
+      entry: "roster",
+      refusals: "specific",
+    });
+
+    expect(result).toMatchObject({ ok: true, waiver: "not_delivered" });
+  });
+
+  it("reports not_needed when the trip gates no waiver", async () => {
+    const { db, shop, open, actorPersonId } = await context();
+    deliverableEmailEnv();
+    await db
+      .update(tripRequirements)
+      .set({ requiresWaiver: false })
+      .where(eq(tripRequirements.tripId, open.id));
+
+    const result = await seatDiver(db, {
+      shopId: shop.id,
+      tripId: open.id,
+      actorPersonId,
+      diver: { fullName: "No Waiver Nadia", email: DELIVERABLE_EMAIL },
+      entry: "roster",
+      refusals: "specific",
+    });
+
+    expect(result).toMatchObject({ ok: true, waiver: "not_needed" });
+    if (!result.ok) throw new Error("expected the diver to be seated");
+    expect(await waiverCount(db, result.bookingId)).toBe(0);
+  });
+
+  /**
+   * The failure path a shop can actually reach: the trip demands a waiver and
+   * the shop has no active template to issue one from. Nothing exists to hand
+   * over, which is a different sentence at the desk than "we have a link you
+   * must pass along" — hence its own code.
+   */
+  it("reports failed when no waiver could be issued at all", async () => {
+    const { db, shop, open, actorPersonId } = await context();
+    deliverableEmailEnv();
+    await db
+      .update(waiverTemplates)
+      .set({ archivedAt: new Date() })
+      .where(eq(waiverTemplates.shopId, shop.id));
+
+    const result = await seatDiver(db, {
+      shopId: shop.id,
+      tripId: open.id,
+      actorPersonId,
+      diver: { fullName: "No Template Tam", email: DELIVERABLE_EMAIL },
+      entry: "roster",
+      refusals: "specific",
+    });
+
+    expect(result).toMatchObject({ ok: true, waiver: "failed" });
+    // Still seated: the diver's place on the boat never depends on this.
+    if (!result.ok) throw new Error("expected the diver to be seated");
+    expect(await waiverCount(db, result.bookingId)).toBe(0);
   });
 });
 

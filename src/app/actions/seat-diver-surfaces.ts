@@ -37,6 +37,24 @@ export type SeatSurface = {
   refusedPath: (landing: SeatLanding) => string;
   seatedNotice: string;
   /**
+   * The same seating, when the waiver it triggered could not be emailed —
+   * `SeatDiverWaiver`'s `not_delivered` / `failed` (src/db/seat-diver.ts). The
+   * diver is seated either way, so this is still a success notice; what it adds
+   * is the one fact `seatedNotice` would otherwise hide, that nothing went out
+   * and the link has to be handed over from the diver's row.
+   *
+   * Every door needs one. The counter walk-in is not the edge case here — it is
+   * the *common* case, since the counter deliberately takes a diver on a name
+   * alone and `no_email` is what that produces.
+   *
+   * A separate notice code rather than a token in the URL: a waiver link is its
+   * own capability, and a redirect query is exactly where one must never go
+   * (docs/engineering/capability-telemetry-runbook.md). The landing page already
+   * carries the real link on the diver's own row, behind `WaiverSendControl` /
+   * `WaiverFallbackLink`; this notice points there.
+   */
+  seatedWaiverUndeliveredNotice: string;
+  /**
    * Whether the settle URL carries the new booking id — the roster's
    * scroll-to-the-new-row-and-toast affordance. Surfaces without a roster to
    * scroll leave it off rather than trailing a meaningless query param.
@@ -72,6 +90,7 @@ export const SEAT_SURFACES: Record<SeatSurfaceId, SeatSurface> = {
     seatedPath: guestsPath,
     refusedPath: guestsPath,
     seatedNotice: "diver-added",
+    seatedWaiverUndeliveredNotice: "diver-added-waiver-undelivered",
     carriesBookingId: true,
     invalidNotice: "diver-invalid",
     refusalNotice: TRIP_REFUSAL_NOTICE,
@@ -88,6 +107,7 @@ export const SEAT_SURFACES: Record<SeatSurfaceId, SeatSurface> = {
     seatedPath: ({ shopSlug }) => `/shop/${shopSlug}/check-in`,
     refusedPath: ({ shopSlug }) => `/shop/${shopSlug}/check-in`,
     seatedNotice: "walkin_added",
+    seatedWaiverUndeliveredNotice: "walkin_added_waiver_undelivered",
     carriesBookingId: true,
     invalidNotice: "walkin_invalid",
     refusalNotice: {
@@ -113,6 +133,7 @@ export const SEAT_SURFACES: Record<SeatSurfaceId, SeatSurface> = {
     seatedPath: ({ shopSlug, personId }) => `/shop/${shopSlug}/divers/${personId}`,
     refusedPath: ({ shopSlug, personId }) => `/shop/${shopSlug}/divers/${personId}`,
     seatedNotice: "booked",
+    seatedWaiverUndeliveredNotice: "booked-waiver-undelivered",
     carriesBookingId: false,
     invalidNotice: "booking-invalid",
     refusalNotice: {
@@ -147,6 +168,7 @@ export const SEAT_SURFACES: Record<SeatSurfaceId, SeatSurface> = {
     refusedPath: ({ shopSlug, tripId }) =>
       tripId ? `/shop/${shopSlug}/bookings/new/${tripId}` : `/shop/${shopSlug}/bookings/new`,
     seatedNotice: "diver-added",
+    seatedWaiverUndeliveredNotice: "diver-added-waiver-undelivered",
     carriesBookingId: true,
     invalidNotice: "diver-invalid",
     refusalNotice: TRIP_REFUSAL_NOTICE,
