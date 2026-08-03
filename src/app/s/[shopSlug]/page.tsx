@@ -121,6 +121,21 @@ export default async function SchedulePage({
   // website (docs ADR 20260726-schedule-embed) — never for staff, who always
   // arrive signed in and never via a third-party iframe.
   const isEmbed = embed === "1";
+  // The view a diver has built — month, embed mode, and both list filters —
+  // must survive every link that re-renders this page. A pager or month arrow
+  // that drops `hasSpace` quietly hands back the full unfiltered list with
+  // the checkbox reset, with nothing saying why.
+  const withViewParams = (params: URLSearchParams) => {
+    if (month) params.set("month", month);
+    if (isEmbed) params.set("embed", "1");
+    if (hasSpaceFilter) params.set("hasSpace", "1");
+    if (tripTypeFilter) params.set("tripType", tripTypeFilter);
+    return params;
+  };
+  /** The same filters as `withViewParams`, for links that already carry their own `?month=`. */
+  const filterSuffix = `${hasSpaceFilter ? "&hasSpace=1" : ""}${
+    tripTypeFilter ? `&tripType=${tripTypeFilter}` : ""
+  }`;
   const db = await getDb();
   const shop = await getShopBySlug(db, shopSlug);
   if (!shop) {
@@ -283,6 +298,7 @@ export default async function SchedulePage({
             prevMonthKey={prevMonthKey}
             nextMonthKey={nextMonthKey}
             embed={isEmbed}
+            filterSuffix={filterSuffix}
           />
         </Suspense>
       ) : null}
@@ -457,8 +473,7 @@ export default async function SchedulePage({
             const params = new URLSearchParams();
             if (previous.after) params.set("after", previous.after);
             if (previous.stack.length > 0) params.set("back", encodeCursorStack(previous.stack));
-            if (month) params.set("month", month);
-            if (isEmbed) params.set("embed", "1");
+            withViewParams(params);
             const query = params.toString();
             return (
               <Link
@@ -476,8 +491,7 @@ export default async function SchedulePage({
                 params.set("after", nextCursor);
                 const nextStack = pushCursor(decodeCursorStack(back), after);
                 if (nextStack.length > 0) params.set("back", encodeCursorStack(nextStack));
-                if (month) params.set("month", month);
-                if (isEmbed) params.set("embed", "1");
+                withViewParams(params);
                 return `${publicSchedulePath(shopSlug)}?${params.toString()}`;
               })()}
               className={buttonClass({ variant: "secondary" })}
@@ -487,7 +501,10 @@ export default async function SchedulePage({
           ) : null}
           {after ? (
             <Link
-              href={`${publicSchedulePath(shopSlug)}${month ? `?month=${month}` : ""}${isEmbed ? `${month ? "&" : "?"}embed=1` : ""}`}
+              href={(() => {
+                const query = withViewParams(new URLSearchParams()).toString();
+                return `${publicSchedulePath(shopSlug)}${query ? `?${query}` : ""}`;
+              })()}
               className="text-sm font-medium text-primary hover:underline"
             >
               {t("schedule.backToNext")}
@@ -572,6 +589,7 @@ async function ScheduleCalendarSection({
   prevMonthKey,
   nextMonthKey,
   embed,
+  filterSuffix,
 }: {
   db: AppDb;
   shopId: string;
@@ -588,6 +606,7 @@ async function ScheduleCalendarSection({
   prevMonthKey: string | null;
   nextMonthKey: string | null;
   embed: boolean;
+  filterSuffix: string;
 }) {
   const monthTrips = await upcomingTripsForCalendar(db, shopId, monthStart, monthEnd, now);
   const tripsByDay = new Map<string, CalendarTrip[]>();
@@ -614,6 +633,7 @@ async function ScheduleCalendarSection({
       prevMonthKey={prevMonthKey}
       nextMonthKey={nextMonthKey}
       embed={embed}
+      filterSuffix={filterSuffix}
     />
   );
 }

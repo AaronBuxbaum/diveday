@@ -31,6 +31,12 @@ test("a freshly onboarded shop sees a first-run checklist on Today, and a step c
   // A brand-new shop has completed none of the five steps yet.
   await expect(page.getByText("Done", { exact: true })).toHaveCount(0);
 
+  // Regression: the "No boats out today" card used to render here with its
+  // heading and nothing else — an empty bordered box as the owner's first
+  // screen. With the checklist on screen (which owns "schedule your first
+  // trip"), the card sits out entirely.
+  await expect(page.getByRole("heading", { name: "No boats out today" })).toHaveCount(0);
+
   // Complete the contact-details step for real, through the actual settings
   // form — not a flag the checklist sets itself — then confirm it reflects.
   await page.getByRole("link", { name: "Add contact details" }).click();

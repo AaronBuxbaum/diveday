@@ -115,6 +115,10 @@ test("a full boat refuses a counter walk-in with the wait-list nudge", async ({ 
   await page.getByRole("button", { name: "Add to boat" }).click();
 
   await expect(page).toHaveURL(/\/check-in\?notice=walkin_full/);
+  // Regression: this refusal rendered with no role at all, so screen readers
+  // heard nothing. Danger notices announce as alerts (noticeRole); filtered
+  // because Next's route announcer is also role="alert".
+  await expect(page.getByRole("alert").filter({ hasText: "That boat is full" })).toBeVisible();
   await expect(
     page.getByText("That boat is full — try the wait list from its trip page instead."),
   ).toBeVisible();

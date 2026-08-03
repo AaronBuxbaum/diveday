@@ -36,3 +36,32 @@ test("the schedule's trip-type and has-space filters narrow the list, server-ren
   await expect(page).toHaveURL(/tripType=course/);
   await expect(page).toHaveURL(/hasSpace=1/);
 });
+
+test("paging and month arrows keep the filters a diver applied", async ({ page }) => {
+  // Regression: the pager and month-arrow links rebuilt their query from
+  // scratch and dropped `hasSpace`/`tripType`, so tapping "Show later" handed
+  // back the full unfiltered list with the checkbox silently reset.
+  await page.goto("/s/blue-mantis?hasSpace=1");
+  const later = page.getByRole("link", { name: "Show later departures" });
+  await expect(later).toHaveAttribute("href", /hasSpace=1/);
+
+  // Deeper pages offer the way back — earlier, and straight to the start —
+  // and both of those keep the view too.
+  await later.click();
+  await expect(page).toHaveURL(/after=/);
+  await expect(page.getByRole("link", { name: "Show earlier departures" })).toHaveAttribute(
+    "href",
+    /hasSpace=1/,
+  );
+  await expect(page.getByRole("link", { name: "← Back to the next departure" })).toHaveAttribute(
+    "href",
+    /hasSpace=1/,
+  );
+
+  // The calendar's month arrows re-render the same page (the list below the
+  // grid is bounded by the filters), so they carry the whole view as well.
+  await page.goto("/s/blue-mantis?hasSpace=1&tripType=fun_dive");
+  const nextMonth = page.getByRole("link", { name: "Next month" });
+  await expect(nextMonth).toHaveAttribute("href", /hasSpace=1/);
+  await expect(nextMonth).toHaveAttribute("href", /tripType=fun_dive/);
+});

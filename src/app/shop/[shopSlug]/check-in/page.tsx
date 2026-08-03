@@ -28,7 +28,7 @@ import {
   OPERATIONAL_HORIZON_DAYS,
 } from "@/lib/operational-window";
 import { requireStaffSession } from "@/lib/session";
-import { noticeFromParam } from "@/lib/staff-notices";
+import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
 import { checkInAction } from "./actions";
 import { CheckInSearch } from "./CheckInSearch";
 
@@ -156,7 +156,9 @@ export default async function CheckInPage({
       />
 
       {copy ? (
-        <ShopNotice tone={copy.tone} className="mb-6">
+        // Seven of this page's codes are refusals (walk-in full, not found,
+        // invalid…) — noticeRole gives those `role="alert"` so they announce.
+        <ShopNotice tone={copy.tone} role={noticeRole(copy.tone)} className="mb-6">
           {noticeContent}
         </ShopNotice>
       ) : null}
