@@ -523,9 +523,11 @@ describe("restoreBooking (undo of a roster removal)", () => {
       // import, from a qualification revoked after the roster was set, or from
       // any future writer. Same person, same qualification, same assignment
       // row — only the job they are rostered to do differs.
-      const rosterAs = async (tripRole: "instructor" | "divemaster" | "captain" | "crew" | null) => {
-        expect(await setTripCrew(db, shop.id, trip.id, [instructor.person.id])).toBe(true);
-        await db
+      // `introSession` already rostered him, so this only rewrites the job on
+      // the existing row — a `setTripCrew` call here would carry the previous
+      // role forward and refuse the very edit being set up.
+      const rosterAs = async (tripRole: "instructor" | "divemaster" | "captain" | "crew" | null) =>
+        db
           .update(tripAssignments)
           .set({ tripRole })
           .where(
@@ -534,7 +536,6 @@ describe("restoreBooking (undo of a roster removal)", () => {
               eq(tripAssignments.personId, instructor.person.id),
             ),
           );
-      };
 
       await rosterAs("crew");
       await expect(bookOne(db, shop.id, trip.id, "Ratio Role Diver A")).resolves.toMatchObject({
@@ -574,9 +575,7 @@ describe("restoreBooking (undo of a roster removal)", () => {
 
       for (const tripRole of ["crew", "captain"] as const) {
         expect(
-          await setTripCrew(db, shop.id, trip.id, [
-            { personId: instructor.person.id, tripRole },
-          ]),
+          await setTripCrew(db, shop.id, trip.id, [{ personId: instructor.person.id, tripRole }]),
         ).toBe(false);
         expect(
           await changeTripCrew(db, shop.id, trip.id, {

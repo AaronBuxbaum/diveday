@@ -3,13 +3,13 @@ import {
   buildTripManifest,
   type CrewAttestation,
   carryForwardNotBoarded,
+  crewRollCallCounts,
   isNotBackAboard,
   isRollCallAccountedFor,
   isRollCallCheckpoint,
   maxRecordedDiveNumber,
   type RollCallRecord,
   rollCallCheckpoints,
-  crewRollCallCounts,
   rollCallCompleteness,
   rollCallLabel,
 } from "./manifests";
@@ -630,10 +630,7 @@ describe("rollCallCompleteness — the crew half of the head count (DOM-H1)", ()
     // The one `not_boarded` that must *not* reconcile: after a dive it means
     // "did not return to the boat", so the person is still expected aboard and
     // the checkpoint stays open however the count reads.
-    const counts = crewRollCallCounts(
-      "after_dive_1",
-      crewOf({ assigned: 3, notBackAboard: 1 }),
-    );
+    const counts = crewRollCallCounts("after_dive_1", crewOf({ assigned: 3, notBackAboard: 1 }));
     expect(counts).toMatchObject({ crewAshore: 0, crewExpectedAboard: 3, crewNotBackAboard: 1 });
     expect(
       rollCallCompleteness({

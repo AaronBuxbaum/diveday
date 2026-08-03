@@ -491,6 +491,20 @@ export function OfflineManifestView() {
       : null,
   });
   const crewCounts = completeness.crewCounts;
+  // The dock copy deliberately carries **no person ids**
+  // (src/lib/offline-manifests.ts), so its crew list has no `id` to key on the
+  // way the live manifest does. `fullName-roles` was the key, and it collides
+  // for two crew who share both — exactly what `ManifestCrewMember.id` prevents
+  // online (review 20260803, D6). Disambiguating by how many identical entries
+  // came before gives each namesake a distinct identity that survives
+  // re-rendering, without shipping an id to the device.
+  const crewSeen = new Map<string, number>();
+  const crewWithKeys = manifest.crew.map((member) => {
+    const base = `${member.fullName}\u0000${member.roles.join(",")}`;
+    const nth = crewSeen.get(base) ?? 0;
+    crewSeen.set(base, nth + 1);
+    return { ...member, key: `${base}\u0000${nth}` };
+  });
   // Two different facts, and a crew reading warning-yellow on every single dive
   // stops reading it at all (review 20260803, D6):
   //
@@ -751,15 +765,9 @@ export function OfflineManifestView() {
               has counted is the whole point of the per-person model. */}
           {crewAssigned > 0 ? (
             <ul className="mt-2 flex flex-wrap gap-2">
-              {/* Keyed by position, not by name: the dock copy deliberately
-                  carries **no person ids** (src/lib/offline-manifests.ts), and
-                  `fullName-roles` collides for two crew who share both — which
-                  is exactly what `ManifestCrewMember.id` prevents online. This
-                  list is a fixed slice of one saved snapshot, never sorted,
-                  filtered or appended to, so its index is a stable identity. */}
-              {manifest.crew.map((member, index) => (
+              {crewWithKeys.map((member) => (
                 <li
-                  key={`crew-${index}`}
+                  key={member.key}
                   className={
                     isNotBackAboard(checkpoint, member.rollCall)
                       ? "rounded-full bg-danger/15 px-3 py-1 text-sm font-bold text-danger"

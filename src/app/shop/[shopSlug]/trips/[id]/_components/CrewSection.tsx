@@ -242,25 +242,29 @@ export function CrewSection({
                         it fixes was live at every shop (review 20260803, D5).
                         Unspecified stays the honest default — it means nobody
                         has said, and it counts exactly as it always did. */}
-                    <select
-                      aria-label={fill(copy.roleAria, { name: entry.fullName })}
-                      value={localRoles[entry.id] ?? ""}
-                      onChange={(event) => {
-                        const next = event.currentTarget.value;
-                        void handleRole(
-                          entry.id,
-                          next === "" ? null : (next as TripCrewRole),
-                        );
-                      }}
-                      className={`${controlClass} w-auto max-w-[11rem] text-sm`}
-                    >
-                      <option value="">{copy.roleUnspecified}</option>
-                      {TRIP_CREW_ROLES.map((role) => (
-                        <option key={role} value={role}>
-                          {copy.roleOptions[role]}
-                        </option>
-                      ))}
-                    </select>
+                    {/* Sized by the wrapper, not by a width class appended to
+                        `controlClass` — that string already carries `w-full`,
+                        and two width utilities resolve by stylesheet order
+                        rather than class order (same trap as `min-h-*`, see
+                        components/ui/button.ts). */}
+                    <span className="w-44 shrink-0">
+                      <select
+                        aria-label={fill(copy.roleAria, { name: entry.fullName })}
+                        value={localRoles[entry.id] ?? ""}
+                        onChange={(event) => {
+                          const next = event.currentTarget.value;
+                          void handleRole(entry.id, next === "" ? null : (next as TripCrewRole));
+                        }}
+                        className={`${controlClass} text-sm`}
+                      >
+                        <option value="">{copy.roleUnspecified}</option>
+                        {TRIP_CREW_ROLES.map((role) => (
+                          <option key={role} value={role}>
+                            {copy.roleOptions[role]}
+                          </option>
+                        ))}
+                      </select>
+                    </span>
                     <button
                       type="button"
                       onClick={() => handleUnassign(entry.id)}

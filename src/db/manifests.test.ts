@@ -1104,9 +1104,7 @@ describe("crew aboard attestation (in-memory PGlite)", () => {
       const { db, shop, reef, staff, booking } = await manifestContext();
       // A booked diver, rostered onto the trip by a direct insert: assigned,
       // but not staff.
-      await db
-        .insert(tripAssignments)
-        .values({ tripId: reef.id, personId: booking.person.id });
+      await db.insert(tripAssignments).values({ tripId: reef.id, personId: booking.person.id });
       expect(
         (await getTripManifest(db, shop.id, reef.id))?.crew.some(
           (member) => member.id === booking.person.id,

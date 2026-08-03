@@ -42,9 +42,7 @@ describe("reviewManifestChange", () => {
       courseRequiresInstructor: true,
       proposedCrew: [{ tripRole: "captain", shopRoles: ["instructor"] }],
     });
-    expect(rosteredAsCaptain.risks.map((risk) => risk.code)).toContain(
-      "course_without_instructor",
-    );
+    expect(rosteredAsCaptain.risks.map((risk) => risk.code)).toContain("course_without_instructor");
     expect(rosteredAsCaptain.blocking).toBe(true);
     // Unspecified stays the status quo: shop-wide inference, exactly as before.
     expect(

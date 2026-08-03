@@ -41,14 +41,41 @@ key carries no subject kind.
    checkpoint's question is about the crew this trip *has*. No readiness gate: crew hold no booking,
    so there is no waiver or payment to check.
 
+   **Correction (review 20260803, D11):** assignment alone was not enough either. The crew *list*
+   (`listTripCrew`) filters to `STAFF_ROLES`, so a person who was assigned but held no staff role
+   could carry events while appearing in neither the list nor the denominator — a result about
+   somebody the head count could not see. The subject check now applies the identical filter.
+
+   **And a subject cannot be removed.** `changeTripCrew`/`setTripCrew` refuse to take a crew member
+   with roll-call history off the trip. Removing them deleted the row the result hangs off:
+   `listTripCrew` dropped them, the assigned count fell, and a checkpoint open *because a named crew
+   member did not come back* flipped to complete with the event rows unread (review 20260803, D3).
+   `deleteTrip` and `moveTrip` count crew events and attestations as "already sailed" too — before,
+   a bookingless crewed charter walked past the guard and deleted into a foreign-key violation.
+
 3. **The attestation stays, and a checkpoint needs both.** They answer different questions: the
    events cover every crew member the trip *names*, and the count is the only thing that can speak
    for a hand nobody rostered — or for a trip with an empty assignment list, where there is no named
    person to ask about and "0 of 0" is still a sentence a human has to say out loud.
 
 4. **Completeness stays one function** with a two-source crew predicate:
-   `crewAccountedFor = attestation covers the crew assigned now && every named crew member is
-   accounted for`. "Accounted for" is the *same* predicate a diver's result goes through
+   `crewAccountedFor = attestation covers the crew still expected aboard && every named crew member
+   is accounted for`.
+
+   **"Expected aboard" is the assignment list minus anyone the per-person half already records as
+   ashore** (review 20260803, D2). Measuring against `crew.length` meant three crew rostered, one
+   marked `not_boarded` at the dock, and an honest "2 aboard" read `crew_short` at every checkpoint
+   of that trip forever — with only a false number or deleting the person from the crew as exits.
+   The two halves have to reconcile; a crew that cannot close an honest count learns to type
+   whatever number closes the box. An after-dive `not_boarded` never reconciles, because there it
+   means *did not come back*.
+
+   `rollCallCompleteness` takes the **crew list**, not counts, and every field is required. The crew
+   fields were optional numbers defaulting to `0`, so the one function that decides whether everyone
+   is out of the water failed open by construction: supply the attestation, forget the per-person
+   figures, and it returned `complete: true` with nobody named (D7). It also returns `crewReason`
+   — the crew half's own reason, independent of the divers' — because a crew panel keyed off the
+   single top `reason` shows "nobody has attested" on a boat where a named crew member is missing. "Accounted for" is the *same* predicate a diver's result goes through
    (`isRollCallAccountedFor` / `isNotBackAboard`), and crew results carry forward from the dock the
    same way — so a crew member marked not boarded at departure is ashore at every later checkpoint,
    while an after-dive `not_boarded` means *did not come back* and never carries (DOM-H3).
@@ -64,11 +91,20 @@ key carries no subject kind.
    *now* rather than the attested denominator, and "0 of 0" is never an automatic pass.
 
 6. **Offline stays read-only for crew, and fails closed.** The snapshot carries each crew member's
-   saved result (names only — no person ids reach a crew phone, since nothing there can record one),
-   and `OfflineManifestView` recomputes completeness from that list. **Absence reads as awaiting**,
-   so a snapshot saved before this existed reads *every* crew member as uncounted and the checkpoint
-   stays open there exactly as it does online. The divergence that would be worse than the original
-   bug — offline "done", online "not done" — cannot occur.
+   saved result (names only — no person ids reach a crew phone, since nothing there can record one;
+   the list is keyed by position, which is stable in a fixed saved slice and does not collide for
+   two crew who share a name and a role, as `fullName-roles` did). `OfflineManifestView` recomputes
+   completeness from that list. **Absence reads as awaiting**, so a snapshot saved before this
+   existed reads *every* crew member as uncounted and the checkpoint stays open there exactly as it
+   does online. The divergence that would be worse than the original bug — offline "done", online
+   "not done" — cannot occur.
+
+   The crew panel there has **three** states, not two (review 20260803, D6). Both crew halves are
+   online-only and both are required, so on an out-of-signal trip every checkpoint is open for a
+   reason nobody aboard can act on; rendering that in warning-yellow on every dive teaches the crew
+   to stop reading the panel. "The crew half isn't recordable here" is stated neutrally, "a named
+   crew member is not back aboard" is danger-toned, and accounted-for is success. Fail-closed is
+   unchanged — only the tone distinguishes a limitation from an alarm.
 
    `OFFLINE_MANIFEST_RECORD_VERSION` is deliberately **not** bumped: a bump is a purge, and a purge
    discards any roll call a crew member queued offline and has not synced. The field is additive,
@@ -78,8 +114,14 @@ key carries no subject kind.
    `subject: { field: "bookingId" | "personId"; id }` instead of a hardwired `bookingId`. The
    subject is the only thing that differs; the instant pending label, the confirm/refuse haptics,
    the `role="alert"` refusal, the no-JS form post, and the remount-key contract are all safety
-   behaviour, and a sibling component would be a second place for them to drift. The union rather
-   than a bare field name is what stops a caller posting a person id into the diver action.
+   behaviour, and a sibling component would be a second place for them to drift.
+
+   **Correction (review 20260803, D11):** this originally claimed the union "stops a caller posting
+   a person id into the diver action". It does not — the union is structurally identical to a single
+   `{ field: string; id: string }`, and nothing type-checks the pairing of a subject with an action.
+   What actually protects the diver action is its own zod schema, which parses a `bookingId` field
+   and rejects a form carrying `personId`, and the server-side re-proof of the subject inside each
+   write.
 
 ## Alternatives considered
 
@@ -96,6 +138,15 @@ key carries no subject kind.
   on the control that closes a head count.
 
 ## Consequences
+
+Every unclosed **after-dive** crew count now reaches Today and the schedule board on the same
+terms a diver's does — same tone band, same urgency, same 48-hour dock-work window and 30-day
+residue — through two new reasons, `missing_crew` and `crew_uncounted` (review 20260803, D1).
+Before, the loudest signal the manifest has went nowhere at all. The count-level attestation
+deliberately raises no queue row: it is a form most shops have never filled in, so it would fire on
+nearly every trip and bury the rows that mean a person is in the water. The crew rows use the same
+population rule the diver rows do — only somebody who actually boarded is in the water — so a shop
+that has never tapped a crew roll call sees nothing new.
 
 Every checkpoint now needs a named result per rostered crew member *and* a count. That is more taps
 on a wet boat, on the surface where taps are most expensive — deliberately, because the crew are the

@@ -563,7 +563,15 @@ describe("role lens raw material", () => {
     for (const departure of forCaptain.departures.filter((d) => !d.courseTitle)) {
       expect(forCaptain.crewedTripIds).toContain(departure.tripId);
     }
-    expect(forCaptain.crewedSessions).toHaveLength(0); // captain teaches nothing
+    // The seed puts the captain on a course session too — a training boat still
+    // needs somebody driving it, and a session with exactly one person aboard
+    // was the thing worth fixing. `crewedSessions` is "sessions you crew", so
+    // it names that one; what keeps "Your sessions" off a captain's Today is
+    // the *lens* their shop-wide role selects, not an empty list.
+    for (const session of forCaptain.crewedSessions) {
+      expect(session.courseTitle).toBeTruthy();
+      expect(forCaptain.crewedTripIds).toContain(session.tripId);
+    }
 
     const forInstructor = await getTodayWork(
       db,
@@ -1117,9 +1125,7 @@ describe("unclosed roll call (DOM-H3)", () => {
           checkpoint: "after_dive_1",
         });
       }
-      await db
-        .insert(tripAssignments)
-        .values({ tripId: quiet.trip.id, personId: staffId });
+      await db.insert(tripAssignments).values({ tripId: quiet.trip.id, personId: staffId });
       const quietWork = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
       expect(rollCallRows(quietWork, quiet.trip.id)).toHaveLength(0);
     });

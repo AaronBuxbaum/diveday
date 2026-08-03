@@ -6,8 +6,8 @@ import { courseCrewGap } from "@/lib/course-ratios";
 import { utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { seededShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
-import { getTripManifest, recordCrewAttestation, recordCrewRollCall } from "./manifests";
 import type { AppDb } from "./client";
+import { getTripManifest, recordCrewAttestation, recordCrewRollCall } from "./manifests";
 import type { Course } from "./schema";
 import {
   bookings,
@@ -991,8 +991,8 @@ describe("trip crew (CR-007: cross-tenant write path)", () => {
       const bare = await createTrip(db, {
         shopId: shop.id,
         title: "Crew-only charter",
-        startsAt: new Date(nowDate().getTime() + 72 * 60 * 60 * 1000),
-        endsAt: new Date(nowDate().getTime() + 76 * 60 * 60 * 1000),
+        startsAt: new Date(nowDate().getTime() + 300 * 24 * 60 * 60 * 1000),
+        endsAt: new Date(nowDate().getTime() + 300 * 24 * 60 * 60 * 1000 + 4 * 60 * 60 * 1000),
         capacity: 8,
         plannedDives: 1,
       });
@@ -1019,8 +1019,8 @@ describe("trip crew (CR-007: cross-tenant write path)", () => {
       const attestOnly = await createTrip(db, {
         shopId: shop.id,
         title: "Attested-only charter",
-        startsAt: new Date(nowDate().getTime() + 96 * 60 * 60 * 1000),
-        endsAt: new Date(nowDate().getTime() + 100 * 60 * 60 * 1000),
+        startsAt: new Date(nowDate().getTime() + 310 * 24 * 60 * 60 * 1000),
+        endsAt: new Date(nowDate().getTime() + 310 * 24 * 60 * 60 * 1000 + 4 * 60 * 60 * 1000),
         capacity: 8,
         plannedDives: 1,
       });
@@ -1043,8 +1043,8 @@ describe("trip crew (CR-007: cross-tenant write path)", () => {
       const untouched = await createTrip(db, {
         shopId: shop.id,
         title: "Board mistake",
-        startsAt: new Date(nowDate().getTime() + 120 * 60 * 60 * 1000),
-        endsAt: new Date(nowDate().getTime() + 124 * 60 * 60 * 1000),
+        startsAt: new Date(nowDate().getTime() + 320 * 24 * 60 * 60 * 1000),
+        endsAt: new Date(nowDate().getTime() + 320 * 24 * 60 * 60 * 1000 + 4 * 60 * 60 * 1000),
         capacity: 8,
         plannedDives: 1,
       });

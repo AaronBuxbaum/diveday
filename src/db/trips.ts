@@ -773,24 +773,6 @@ export type MoveTripOutcome =
   | { ok: false; reason: "not_found" | "not_scheduled" | "already_sailed" | "invalid" };
 
 /**
- * Slides a whole departure to a new instant, keeping its shape.
- *
- * The caller sets a new *start*; the end and every schedule day shift by
- * that same wall-clock delta in the shop's own timezone, so a two-tank
- * morning stays three and a half hours long even when the move also changes
- * the start's clock time, and a three-day course stays three days with its
- * second and third mornings at their own published wall-clock hour even
- * when the move crosses a DST transition (a fixed millisecond shift would
- * drift day 2/3 by the DST offset change; see `tripShiftPlan`). Editing the
- * individual windows is still the trip page's job — this is the schedule
- * builder's "drag it to Thursday", nothing more.
- *
- * Refuses a trip that has any roll-call history: the crew has begun counting
- * heads against that departure, and moving the date under a manifest already in
- * progress is not a schedule edit, it is a falsified record. Refuses a cancelled
- * trip for the same reason a cancelled trip is not on the board.
- */
-/**
  * Every kind of head-count evidence a trip can carry — the divers' roll call,
  * the per-person crew roll call, and the count-level crew attestation. A trip
  * with any of it has **sailed**, and the two guards that turn on that fact
@@ -814,6 +796,24 @@ async function countRollCallEvidence(tx: DbExecutor, tripId: string): Promise<nu
   return (divers?.n ?? 0) + (crew?.n ?? 0) + (attestations?.n ?? 0);
 }
 
+/**
+ * Slides a whole departure to a new instant, keeping its shape.
+ *
+ * The caller sets a new *start*; the end and every schedule day shift by
+ * that same wall-clock delta in the shop's own timezone, so a two-tank
+ * morning stays three and a half hours long even when the move also changes
+ * the start's clock time, and a three-day course stays three days with its
+ * second and third mornings at their own published wall-clock hour even
+ * when the move crosses a DST transition (a fixed millisecond shift would
+ * drift day 2/3 by the DST offset change; see `tripShiftPlan`). Editing the
+ * individual windows is still the trip page's job — this is the schedule
+ * builder's "drag it to Thursday", nothing more.
+ *
+ * Refuses a trip that has any roll-call history: the crew has begun counting
+ * heads against that departure, and moving the date under a manifest already in
+ * progress is not a schedule edit, it is a falsified record. Refuses a cancelled
+ * trip for the same reason a cancelled trip is not on the board.
+ */
 export async function moveTrip(
   db: AppDb,
   shopId: string,
@@ -1162,22 +1162,6 @@ function crewInputPersonId(entry: TripCrewMemberInput): string {
 }
 
 /**
- * Replace a trip's crew. Only people with a staff role in the shop stick.
- * Proves the trip itself belongs to the shop in the same transaction as the
- * write — `trip_assignments` carries no `shop_id` of its own to lean on, so
- * without this a tripId for any shop plus a validated personId list would
- * silently rewrite another shop's crew (CR-007). Returns false, doing
- * nothing, for a tripId that isn't this shop's.
- *
- * The write is still delete-all-then-insert, which is why per-trip roles are
- * **read back inside the transaction and carried forward** for anyone who
- * stays on the crew (ADR 20260803-per-trip-crew-role). Without that, every
- * full crew edit — a surface that has nothing to do with roles — would
- * silently blank "Ana is captain of this sailing" and hand her back to the
- * supervision ratio as an in-water assistant. A caller only overwrites a role
- * by passing one.
- */
-/**
  * Which of these people already have a **per-person crew roll-call result** on
  * this trip — somebody stood on the deck and said, by name, whether they were
  * aboard (ADR 20260803-per-person-crew-roll-call).
@@ -1211,6 +1195,22 @@ async function crewWithRollCallHistory(
   return new Set(rows.map((row) => row.personId));
 }
 
+/**
+ * Replace a trip's crew. Only people with a staff role in the shop stick.
+ * Proves the trip itself belongs to the shop in the same transaction as the
+ * write — `trip_assignments` carries no `shop_id` of its own to lean on, so
+ * without this a tripId for any shop plus a validated personId list would
+ * silently rewrite another shop's crew (CR-007). Returns false, doing
+ * nothing, for a tripId that isn't this shop's.
+ *
+ * The write is still delete-all-then-insert, which is why per-trip roles are
+ * **read back inside the transaction and carried forward** for anyone who
+ * stays on the crew (ADR 20260803-per-trip-crew-role). Without that, every
+ * full crew edit — a surface that has nothing to do with roles — would
+ * silently blank "Ana is captain of this sailing" and hand her back to the
+ * supervision ratio as an in-water assistant. A caller only overwrites a role
+ * by passing one.
+ */
 export async function setTripCrew(
   db: AppDb,
   shopId: string,

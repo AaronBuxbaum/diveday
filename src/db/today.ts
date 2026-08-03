@@ -438,7 +438,9 @@ export async function listRollCallGaps(
           eq(tripAssignments.personId, rollCallCrewEvents.personId),
         ),
       )
-      .where(and(eq(rollCallCrewEvents.shopId, shopId), inArray(rollCallCrewEvents.tripId, tripIds)))
+      .where(
+        and(eq(rollCallCrewEvents.shopId, shopId), inArray(rollCallCrewEvents.tripId, tripIds)),
+      )
       .orderBy(asc(rollCallCrewEvents.occurredAt), asc(rollCallCrewEvents.createdAt)),
   ]);
 
@@ -595,9 +597,7 @@ export async function listRollCallGaps(
     );
     const crewOpenDive = checkpoints.findIndex(
       (_, dive) =>
-        dive >= 1 &&
-        (crewUnaccounted[dive] ?? 0) > 0 &&
-        (home || (crewRecorded[dive] ?? 0) > 0),
+        dive >= 1 && (crewUnaccounted[dive] ?? 0) > 0 && (home || (crewRecorded[dive] ?? 0) > 0),
     );
     if (crewMissingDive >= 1) {
       gaps.push({

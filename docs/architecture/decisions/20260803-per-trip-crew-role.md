@@ -35,10 +35,24 @@ Two write paths could silently discard a new column: `setTripCrew` is delete-all
    shop-wide inference. The migration is additive with no backfill.
 
 2. **One definition, `src/lib/crew-roles.ts`.** `inWaterCrewRole` / `countInWaterCrew` decide who
-   is an instructor and who is an in-water certified assistant; all five call sites route through
-   it, and it has its own direct tests (`src/lib/course-ratios.test.ts` takes bare numbers and
-   never exercised the role→count mapping — that was the gap). `effectiveCrewRoles` is the display
-   companion: what someone is doing on this sailing beats their standing list on a trip surface.
+   is an instructor and who is an in-water certified assistant, and it has its own direct tests
+   (`src/lib/course-ratios.test.ts` takes bare numbers and never exercised the role→count mapping —
+   that was the gap). `effectiveCrewRoles` is the display companion: what someone is doing on this
+   sailing beats their standing list on a trip surface.
+
+   **Correction (review 20260803, D8).** This originally claimed "all five call sites route through
+   it". They did not. `setTripCrew`, `changeTripCrew` and `reviewManifestChange` still decided "has
+   an instructor" from shop-wide `person_roles` alone, and `getTodayWork` re-implemented
+   `effectiveCrewRoles` inline — a sixth copy. All four now route through the module, and
+   `reviewManifestChange` takes `TripCrewAssignment` (per-trip role plus shop roles) rather than a
+   bare role list.
+
+   Consolidating the two write paths removed a real asymmetry: `setTripCrew` refused to *unassign*
+   a course session's last instructor but happily rostered the same person onto the deck as its
+   captain, which says exactly the same thing about the session. Both are refused now. The state is
+   therefore no longer reachable through the crew UI — the staffing view and the booking gate still
+   read such a row truthfully, because it can arrive from an import or from a qualification revoked
+   after the roster was set.
 
 3. **A per-trip role can only ever narrow what a person is worth to the ratio, never raise it.**
    The role says which job they are doing; `person_roles` stays the evidence of what they are
@@ -56,7 +70,17 @@ Two write paths could silently discard a new column: `setTripCrew` is delete-all
    existing assignment is applied instead of accepted-and-ignored, while a bare re-assign stays
    idempotent.
 
-5. **Tenancy is unchanged.** `trip_assignments` still has no `shop_id`; the new reader
+   **Unassign-then-reassign does not preserve it**, and cannot: the row and its role go together.
+   That is a real edge — it is how staff fix a mis-tap — and it is why (5) exists.
+
+5. **The role is settable in the UI** (review 20260803, D5). The trip's crew section carries a job
+   picker beside each crew member's name, posting the same idempotent `changeTripCrew` assign the
+   rest of that section uses, with the same confirm-then-render discipline: the supervision ratio
+   reads this field, so the screen never shows a job the server has not accepted. Today's departure
+   board stays assign-only — it is a drag-and-drop scheduling surface, and the job someone is doing
+   belongs on the trip.
+
+6. **Tenancy is unchanged.** `trip_assignments` still has no `shop_id`; the new reader
    (`getTripCrewAssignments`) proves membership through `trips`, like every other reader.
 
 ## Alternatives considered
@@ -81,10 +105,18 @@ a tighter, truthful ratio — which can *reduce* seats on a session that was pre
 its crew, and can newly surface `course_unstaffed` or `over_ratio` on a boat whose instructor is
 really driving it. That is the intended correction, and it is visible rather than silent.
 
-There is no UI yet for choosing a per-trip role: `CrewSection` and Today's departure board still
-assign a person without one, and the seed sets roles that match each person's own shop-wide role
-(so nothing about the seeded ratios moves). Adding the picker is the obvious follow-on and needs no
-schema change.
+The picker ships with this correction, so the field is settable for every shop rather than only by
+the seed — until it did, the over-count DOM-M3 describes was 100% live in production while this ADR
+and the glossary stated the fixed behaviour as fact.
+
+The seed now carries deliberate *variety* rather than roles that merely echo each person's shop-wide
+role: a charter where the divemaster is driving and the captain is on the lines, a charter with **no
+roles at all** (the state every pre-migration row is in, and the one nothing exercised), a captain on
+a course session, and a course session where the divemaster is rostered as its instructor and still
+counts as an assistant — the roster cannot mint a credential. None of it moves a seeded ratio. The
+one case still not seeded is an instructor rostered as a session's divemaster: the demo shop has a
+single instructor, so that session would have nobody on the ratio, and the rule is asserted directly
+by the monotonicity test over every (shop roles × trip role) pair instead.
 
 Revisit if agencies start distinguishing roles this vocabulary cannot express (an assistant
 instructor, a safety diver who is not the DM of record). Migration cost then is one enum value plus
