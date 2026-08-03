@@ -562,6 +562,7 @@
     "sendingFreshLink": "Enviando…",
     "freshLinkSent": "Ya va en camino — revisa el correo de tu reserva. Debería llegar en un par de minutos.",
     "freshLinkAlreadySigned": "Buenas noticias: tu exención ya está firmada y guardada. No queda nada por hacer.",
+    "freshLinkCurrentLive": "Ya tienes un enlace más reciente y sigue funcionando: busca nuestro último correo. Lo que hubieras empezado a rellenar está guardado allí, esperándote.",
     "freshLinkNoEmail": "No hay ninguna dirección de correo en tu reserva, así que no podemos enviártelo. Escribe al centro y te darán un enlace nuevo.",
     "freshLinkUnavailable": "No podemos enviar un enlace nuevo para esta reserva. Escribe al centro y lo resolverán.",
     "freshLinkFailed": "No se pudo enviar. Inténtalo de nuevo en un momento o escribe al centro.",

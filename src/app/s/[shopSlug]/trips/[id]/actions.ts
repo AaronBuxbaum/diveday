@@ -586,7 +586,12 @@ export async function signWaiverFromConfirmation(
   { shopSlug, tripId, token, embed }: RentalFitRef,
   _formData: FormData,
 ) {
-  const base = `/shop/${shopSlug}/schedule/${tripId}`;
+  // The public namespace, like every other redirect in this file. The old
+  // `/shop/<slug>/schedule/<id>` form still 308s here, but a refusal path that
+  // takes the redirect carries the live `confirm` token through a staff URL and
+  // into the `?callbackUrl=` of anything that bounces it — a capability has no
+  // business on a `/shop/**` path (ADR 20260803-public-shop-namespace).
+  const base = publicTripPath(shopSlug, tripId);
   const failed = `${base}?booking=${token}&error=waiver${embedParam(embed, "&")}`;
   const ctx = await confirmContextFor(tripId, token);
   if (!ctx) redirect(failed);

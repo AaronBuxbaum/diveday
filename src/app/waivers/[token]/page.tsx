@@ -701,6 +701,11 @@ const RESCUE_NOTICES: Record<
 > = {
   ok: { tone: "success", key: "waiver.freshLinkSent" },
   signed: { tone: "success", key: "waiver.freshLinkAlreadySigned" },
+  // A newer link for this booking is still signable, so nothing was reissued —
+  // reissuing would have killed it and taken the diver's saved answers with it.
+  // Point them at their inbox without naming the address, same as every other
+  // notice on this card.
+  live: { tone: "success", key: "waiver.freshLinkCurrentLive" },
   none: { tone: "neutral", key: "waiver.freshLinkNoEmail" },
   unavailable: { tone: "danger", key: "waiver.freshLinkUnavailable" },
   failed: { tone: "danger", key: "waiver.freshLinkFailed" },

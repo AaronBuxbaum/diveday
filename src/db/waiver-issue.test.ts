@@ -3,10 +3,11 @@ import { eq } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { seededShopContext } from "@/test/db";
 import { cancelBooking, createBooking } from "./bookings";
+import type { MedicalAnswers } from "./schema";
 import { bookings, notificationDeliveries, people, waiverRecords } from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
 import { emailFreshWaiverLink, issueAndDeliverWaiver, issueWaiverOnJoin } from "./waiver-issue";
-import { completeWaiver, getWaiverForToken, issueWaiverRequest } from "./waivers";
+import { completeWaiver, getWaiverForToken, issueWaiverRequest, saveWaiverDraft } from "./waivers";
 
 async function seededBooking(email: string | null = "delivered@resend.dev") {
   const { db, shop } = await seededShopContext();
@@ -189,7 +190,54 @@ describe("emailFreshWaiverLink", () => {
     // token lookup gives up on it — a second tap (or a refresh) must still
     // reach the rescue rather than a dead end.
     expect(await getWaiverForToken(db, token, after)).toEqual({ state: "unavailable" });
+    // While the replacement is still signable, a second tap reports that rather
+    // than issuing over it and killing the link the diver is using.
+    const whileLive = new Date(after.getTime() - 1);
+    await expect(emailFreshWaiverLink(db, token, whileLive)).resolves.toBe("current_link_live");
+    // Once the replacement has aged out too, the same dead URL rescues again —
+    // the whole point of it staying resolvable.
     await expect(emailFreshWaiverLink(db, token, after)).resolves.toBe("sent");
+  });
+
+  it("refuses when a fresher link is still live, and leaves that link and its draft alone", async () => {
+    // The attack: a stale waiver URL is its own capability, and issuing
+    // supersedes every non-superseded record for the booking. Without a guard,
+    // whoever holds the dead link could reissue at will — killing the link the
+    // diver is actually working in and taking their half-filled medical
+    // answers with it. A remote wipe button, triggerable by a forwarded email.
+    const fetchImpl = configureEmail();
+    const { db, shop, bookingId, token, after } = await expiredLink();
+    // Issued at the instant the first link dies, so at `after` the diver's own
+    // link is comfortably live while the one in the attacker's hands is not.
+    const live = await issueWaiverRequest(db, { shopId: shop.id, bookingId, now: after });
+    if (!live.ok) throw new Error(`issue failed: ${live.reason}`);
+    const draft: MedicalAnswers = {
+      questionnaireId: "rstc",
+      questionnaireVersion: 1,
+      responses: { heart: false },
+    };
+    expect(
+      await saveWaiverDraft(db, live.token, {
+        signerName: "Nora Quinn",
+        acknowledged: true,
+        medicalAnswers: draft,
+      }),
+    ).toBe(true);
+
+    await expect(emailFreshWaiverLink(db, token, after)).resolves.toBe("current_link_live");
+
+    // Nothing was issued and nothing was mailed…
+    expect(fetchImpl).not.toHaveBeenCalled();
+    const records = await db
+      .select({ id: waiverRecords.id })
+      .from(waiverRecords)
+      .where(eq(waiverRecords.bookingId, bookingId));
+    expect(records).toHaveLength(2);
+    // …and the diver's live link and saved work are exactly as they left them.
+    const state = await getWaiverForToken(db, live.token, after);
+    expect(state.state).toBe("available");
+    expect(state.state === "available" ? state.record.draftMedicalAnswers : null).toEqual(draft);
+    expect(state.state === "available" ? state.record.draftSignerName : null).toBe("Nora Quinn");
   });
 
   it("refuses a cancelled booking", async () => {
