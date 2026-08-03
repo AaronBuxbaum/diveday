@@ -1,5 +1,5 @@
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
-import { openTripFromBoard } from "./helpers";
+import { daysFromNow, e2eNow, findTripOnBoard } from "./helpers";
 
 /**
  * Shop-wide promo codes (docs ADR 20260729-shop-promo-codes). The fleet has no
@@ -147,43 +147,188 @@ test.describe("as owner", () => {
   });
 
   /**
-   * The promo box rides on pay-at-booking, which needs three things at once
-   * (schedule/[id]/page.tsx): a priced trip, a Stripe account that can take a
-   * charge, and `publicAppUrl()` — a configured public origin for Stripe's
-   * return links. This fleet runs `next start` (a production runtime) with
-   * `APP_HOST` deliberately blanked in playwright.config.ts's `serverEnv`, and
-   * `checkPublicHost` refuses a loopback origin in production, so
-   * `publicAppUrl()` is null here and pay-at-booking can never switch on — the
-   * same limitation schedule-embed.spec.ts and visual.spec.ts both document
-   * against this same helper.
-   *
-   * So this pins the state the fleet can actually reach, which is a real one
-   * (any deploy that forgets APP_HOST lands in it): the shop is connected to
-   * Stripe, and the booking form still falls back to book-now-pay-later with
-   * no promo box and no payment hand-off. What it deliberately does *not*
-   * claim is that a diver can type a code — that half is unreachable here, and
-   * the promo resolution behind it is covered by src/lib/promo-codes.ts's unit
-   * tests and by `bookSpot`'s. This test previously wrapped its whole body in
-   * `if (await promoField.isVisible())`, which meant it asserted nothing at
-   * all on every run since the day it was written.
+   * `resetDemoSchedule` treats a shop's promo codes as shop configuration and
+   * deliberately leaves them alone (src/db/seed.ts, the comment above the
+   * `shopPromoRedemptions` delete), so REEF10's on/off state is whatever an
+   * earlier test in this file left it as. Drive it to the state the test needs
+   * instead of inheriting one — the assertion after the click is unconditional,
+   * only the setup click is.
    */
-  test("a Stripe-connected shop with no public origin still books without a payment step", async ({
+  async function setSeededCodeLive(page: import("@playwright/test").Page, live: boolean) {
+    await page.goto("/shop/blue-mantis/promos");
+    const row = page.locator("li").filter({ hasText: "REEF10" }).filter({ visible: true });
+    const target = row.getByRole("button", { name: live ? "Switch on" : "Switch off" });
+    if ((await target.count()) > 0) {
+      await target.click();
+      await expect(page.getByText(live ? /Code switched on/ : /Code switched off/)).toBeVisible();
+    }
+    await expect(
+      page
+        .locator("li")
+        .filter({ hasText: "REEF10" })
+        .filter({ visible: true })
+        .getByText(live ? "✓ Live" : "Switched off"),
+    ).toBeVisible();
+  }
+
+  /**
+   * The promo box rides on pay-at-booking, which needs three things at once
+   * (src/app/s/[shopSlug]/trips/[id]/page.tsx): a priced trip, a Stripe
+   * account that can take a charge, and `publicAppUrl()` — a configured public
+   * origin for Stripe's return links.
+   *
+   * The fleet now configures a real non-loopback `APP_HOST`
+   * (playwright.config.ts `serverEnv`), so the origin holds everywhere. The
+   * trip is *created* with a price because **no seeded upcoming departure
+   * carries one** — every `priceCents` in src/db/seed.ts sits on a past trip
+   * or a course, so the seeded board alone can never reach pay-at-booking
+   * however the origin is configured. Same shape as e2e/refunds.spec.ts's
+   * `createPaymentRequiredTrip`.
+   *
+   * The Stripe half is the caller's: POST /api/test/seed-stripe-account first
+   * for the payable case, skip it for the fallback case, so each test differs
+   * in exactly the one condition it is about.
+   *
+   * Returns on the *diver's* page under /s/<shopSlug> with the staff cookies
+   * cleared — this is the anonymous visitor's booking form, not a staff
+   * surface (ADR 20260803-public-shop-namespace).
+   */
+  async function pricedTripAsVisitor(page: import("@playwright/test").Page, title: string) {
+    await page.goto("/shop/blue-mantis/trips/new");
+    await page.getByLabel("Title").fill(title);
+    await page.getByLabel("Date").fill(daysFromNow(6));
+    await page.getByLabel("Departs").fill("08:00");
+    await page.getByLabel("Returns").fill("11:30");
+    await page.getByLabel("Capacity").fill("6");
+    await page.getByLabel(/Price per diver/).fill("120");
+    await page.getByRole("button", { name: "Put it on the board" }).click();
+    await expect(page.getByRole("status")).toBeVisible();
+
+    const tripLink = await findTripOnBoard(page, "blue-mantis", title);
+    const tripId = (await tripLink.getAttribute("href"))?.split("/").at(-1);
+    expect(tripId).toBeTruthy();
+
+    // The board links staff at trip *management*; the booking form a diver sees
+    // is the public page for the same departure, and a signed-in staff member
+    // is redirected off it — so drop the session before opening it.
+    await page.context().clearCookies();
+    await page.goto(`/s/blue-mantis/trips/${tripId}`);
+    // The booking form is controlled, so wait for hydration before typing.
+    await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+  }
+
+  test("a diver on a payable trip gets the promo box, and the shop's live code is accepted", async ({
     page,
     request,
   }) => {
+    // Trip creation → board crawl → public page → a full booking submit that
+    // runs the promo lookup, the party transaction, waiver-on-join, and the
+    // checkout attempt. Several full flows chained, well past the 15s default.
+    test.setTimeout(60_000);
     await request.post("/api/test/seed-stripe-account");
-    await page.goto("/shop/blue-mantis/schedule/board");
-    await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
-    // The board links staff at trip *management*; the booking form a diver sees
-    // is the public page for the same departure.
-    const tripId = new URL(page.url()).pathname.split("/").pop();
+    await setSeededCodeLive(page, true);
+    await pricedTripAsVisitor(page, `Promo Live Check ${e2eNow().getTime()}`);
 
-    await page.context().clearCookies();
-    await page.goto(`/s/blue-mantis/trips/${tripId}`);
-    // Wait for the booking form itself before asserting anything is absent —
-    // otherwise "no promo box" is indistinguishable from "the form hasn't
-    // rendered yet".
-    await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+    // The form is genuinely in its payable shape — the promo box only exists
+    // here, so assert the state it belongs to rather than the box alone.
+    await expect(page.getByText(/per diver — paid securely when you book\./)).toBeVisible();
+    await expect(page.getByRole("button", { name: /^Book and pay/ })).toBeVisible();
+    await expect(page.getByText("You'll finish paying on a secure Stripe page.")).toBeVisible();
+
+    // The hard assertion this spec exists for.
+    const promoField = page.getByLabel("Promo code");
+    await expect(promoField).toBeVisible();
+    await expect(page.getByText("(if you have one)")).toBeVisible();
+
+    // REEF10 is seeded at scope "all" with no window bounds (src/db/seed.ts)
+    // and was driven live above — the one code a diver on this trip can
+    // actually redeem. `bookSpot` resolves it *before* the party is booked
+    // (task 20),
+    // so an accepted code shows up as the absence of a refusal and a completed
+    // booking, not as a re-rendered form.
+    await page.getByLabel("Name", { exact: true }).fill("Promo Diver");
+    await page
+      .getByLabel("Email", { exact: true })
+      .fill(`promo-live-${e2eNow().getTime()}@example.com`);
+    await promoField.fill("reef10");
+    await page.getByRole("button", { name: /^Book and pay/ }).click();
+
+    // No `stripePromotionCodeId` can be honoured without a real
+    // STRIPE_SECRET_KEY, so `startBookingCheckout` fails closed and the flow
+    // degrades to the ordinary book-now-pay-later confirmation — deliberately,
+    // so a Stripe outage can never cost a diver their seat
+    // (docs ADR 20260721-checkout-at-booking). The seat is what's asserted;
+    // the discount arithmetic is Stripe's and is unit-tested in
+    // src/lib/promo-codes.ts (`discountedAmountCents`).
+    await expect(page.getByRole("heading", { name: /You’re on the boat, Promo/ })).toBeVisible();
+    await expect(page.getByText("That code isn't active.")).toHaveCount(0);
+  });
+
+  /**
+   * The one behaviour a promo box must not have: telling a stranger which
+   * codes a shop owns. `isPromoRedeemable` is deliberately boolean and
+   * `bookSpot` maps every failure onto one message
+   * (`booking.fieldErrors.promoInvalid`), so a switched-off real code and a
+   * code that never existed are byte-identical to the diver. Asserting the two
+   * separately would let them drift apart; this asserts they are the same
+   * string, which is the actual contract.
+   */
+  test("a switched-off code and a code that never existed are refused identically", async ({
+    page,
+    request,
+  }) => {
+    test.setTimeout(60_000);
+    await request.post("/api/test/seed-stripe-account");
+    // Switch the shop's one live code off first, as the owner — after this it
+    // is a real code of this shop that simply can't be spent.
+    await setSeededCodeLive(page, false);
+    await pricedTripAsVisitor(page, `Promo Refusal Check ${e2eNow().getTime()}`);
+    const promoField = page.getByLabel("Promo code");
+    await expect(promoField).toBeVisible();
+    await page.getByLabel("Name", { exact: true }).fill("Refused Diver");
+    await page
+      .getByLabel("Email", { exact: true })
+      .fill(`promo-refused-${e2eNow().getTime()}@example.com`);
+
+    const bookButton = page.getByRole("button", { name: /^Book and pay/ });
+    const refusal = page.getByText("That code isn't active.");
+
+    await promoField.fill("REEF10");
+    await bookButton.click();
+    await expect(refusal).toBeVisible();
+    // Refused *before* the party is booked, so the diver is still on the form
+    // with everything they typed — never a seat taken on a code that failed.
+    await expect(page.getByRole("heading", { name: /You’re on the boat/ })).toHaveCount(0);
+    await expect(page.getByLabel("Name", { exact: true })).toHaveValue("Refused Diver");
+    const switchedOffMessage = await refusal.textContent();
+
+    // A code this shop has never had. Same message, word for word — the form
+    // is not an oracle for enumerating a shop's codes.
+    await promoField.fill("NOSUCHCODE99");
+    await bookButton.click();
+    await expect(refusal).toBeVisible();
+    expect(await refusal.textContent()).toBe(switchedOffMessage);
+    await expect(page.getByRole("heading", { name: /You’re on the boat/ })).toHaveCount(0);
+  });
+
+  /**
+   * The fallback the promo box rides on top of, kept as its own test because
+   * it is a real, user-reachable state a shop can sit in for months: priced
+   * departures, a configured origin, and no Stripe connection yet. (Before the
+   * fleet had an `APP_HOST` this was the *only* state reachable here, and this
+   * file's booking-form test could assert nothing else.) Same priced trip as
+   * the payable tests, so the Stripe connection is the one variable.
+   */
+  test("a shop that can't take a card books without a payment step or a promo box", async ({
+    page,
+  }) => {
+    test.setTimeout(45_000);
+    // No /api/test/seed-stripe-account: the demo seed leaves the shop
+    // unconnected, so `canAcceptPayments` is false and pay-at-booking stays off
+    // however the origin and the price are configured.
+    await pricedTripAsVisitor(page, `Promo Unconnected Check ${e2eNow().getTime()}`);
+    // The form has rendered (pricedTripAsVisitor waits on hydration), so "no
+    // promo box" is a real absence rather than a not-yet-rendered one.
     await expect(
       page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }),
     ).toBeVisible();

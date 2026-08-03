@@ -976,16 +976,17 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { name: "What comes across" }).waitFor();
         await capture(page, "settings-import", scheme);
 
-        // The embed settings page (docs ADR 20260726-schedule-embed). This
-        // fleet runs `next start` against a loopback origin with no APP_HOST,
-        // and publicAppUrl() refuses a loopback origin in production
-        // (src/lib/notifications/index.ts checkPublicHost) — so this baseline
-        // is necessarily the "hosting isn't configured" state, not the
-        // SnippetField/generated-snippet state a real deploy shows. Still a
-        // real, reachable page worth a regression baseline; just not the
-        // whole surface.
+        // The embed settings page (docs ADR 20260726-schedule-embed). The fleet
+        // now runs against a configured non-loopback APP_HOST (E2E_APP_HOST in
+        // e2e/servers.ts), so this baseline is the generated-snippet state a
+        // real deploy shows — the two SnippetField boxes and the copy buttons —
+        // rather than the "hosting isn't configured" warning it was stuck on
+        // while publicAppUrl() returned null here.
         await page.goto("/shop/blue-mantis/settings/embed");
         await page.getByRole("heading", { name: "Website embed" }).waitFor();
+        // The snippets are a Client Component; wait for a control it only
+        // renders once mounted before shooting.
+        await page.getByRole("button", { name: "Copy" }).first().waitFor();
         await capture(page, "settings-embed", scheme);
 
         // The team surface: inviting staff and the current roster, each card's

@@ -1,6 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 import { chromiumLaunchOptions } from "./e2e/browser";
 import {
+  E2E_APP_HOST,
   E2E_FROZEN_CLOCK,
   E2E_TEST_ROUTE_SECRET,
   E2E_WORKER_COUNT,
@@ -28,7 +29,10 @@ process.env.AUTH_SECRET ??= "diveday-e2e-secret";
 //     manual request context.
 const serverEnv = {
   ...process.env,
-  APP_HOST: "",
+  // A real, non-loopback public origin so `publicAppUrl()` resolves fleet-wide
+  // — see E2E_APP_HOST in e2e/servers.ts for what that unlocks, why nothing
+  // needs the hostname to resolve, and why it must match `pnpm e2e:build`.
+  APP_HOST: E2E_APP_HOST,
   DATABASE_URL: "",
   DATABASE_URL_UNPOOLED: "",
   PGLITE_DATA_DIR: "memory",
