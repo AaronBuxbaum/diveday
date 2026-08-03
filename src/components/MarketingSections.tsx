@@ -48,9 +48,9 @@ export function CaptainPhoneFrame({
 }) {
   return (
     <div
-      className={`rounded-[2.5rem] border-[9px] border-foreground bg-foreground p-1.5 shadow-2xl shadow-foreground/15 ${className}`}
+      className={`rounded-[2.5rem] border-[9px] border-device-frame bg-device-frame p-1.5 shadow-2xl shadow-device-frame/20 ${className}`}
     >
-      <div className="mx-auto mb-1.5 h-1.5 w-20 rounded-full bg-surface-sunken" />
+      <div className="mx-auto mb-1.5 h-1.5 w-20 rounded-full bg-muted/50" />
       <MarketingMockup label={label} className="rounded-[1.9rem] border-0">
         <CaptainRollCallFallback locale={locale} />
       </MarketingMockup>
@@ -58,16 +58,18 @@ export function CaptainPhoneFrame({
   );
 }
 
-/** A "moment" card: role eyebrow + title + description above an illustrated mockup. */
+/** A "moment" card: role eyebrow + title + description (and an optional link) above an illustrated mockup. */
 export function MarketingMomentCard({
   role,
   title,
   description,
+  link,
   children,
 }: {
   role: string;
   title: string;
   description: string;
+  link?: ReactNode;
   children: ReactNode;
 }) {
   return (
@@ -76,6 +78,7 @@ export function MarketingMomentCard({
         <p className="text-sm font-semibold tracking-widest text-primary uppercase">{role}</p>
         <h3 className="mt-3 text-2xl font-semibold tracking-tight">{title}</h3>
         <p className="mt-3 max-w-lg leading-7 text-muted">{description}</p>
+        {link ? <div className="mt-3">{link}</div> : null}
       </div>
       <div className="border-t border-border bg-surface-sunken p-4 sm:p-6">{children}</div>
     </article>

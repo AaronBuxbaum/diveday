@@ -167,6 +167,31 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
             </p>
           </div>
         </div>
+        {/* A door out mid-page: the dock story is the differentiator, and a
+            convinced reader shouldn't have to scroll six more sections to act
+            on it (conversion review — one CTA at the bottom of ten sections). */}
+        <div className="mt-14 flex flex-col items-center gap-4 rounded-2xl border border-border bg-surface px-6 py-8 text-center sm:flex-row sm:justify-between sm:text-left">
+          <h3 className="text-xl font-semibold tracking-tight">
+            {t("marketing.product.midCtaTitle")}
+          </h3>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <form action={enterDemoAction}>
+              <FunnelTag source="product" />
+              <SubmitButton
+                pendingLabel={t("marketing.product.gettingDemoReady")}
+                className={buttonClass({ className: "cursor-pointer disabled:opacity-70" })}
+              >
+                {t("marketing.common.tryDemo")}
+              </SubmitButton>
+            </form>
+            <Link
+              href={trialHref("product")}
+              className={buttonClass({ variant: "secondary", className: "border-border-strong" })}
+            >
+              {t("marketing.common.startTrial")}
+            </Link>
+          </div>
+        </div>
       </section>
 
       <section className="mx-auto max-w-7xl px-6 py-20 lg:py-28">

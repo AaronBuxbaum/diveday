@@ -1,28 +1,58 @@
 import { DEMO_SHOP_SLUG } from "../src/db/dev-credentials";
 import { expect, test } from "./fixtures";
 
-test("the homepage hero distinguishes trying the staff app from previewing a diver's booking page", async ({
+test("the homepage hero offers one demo door, and the diver preview lives on its moment card", async ({
   page,
 }) => {
   await page.goto("/");
 
-  // "Try the staff app" mints a fresh demo shop and drops the visitor into it
-  // — a different door than the schedule preview below, so the two must read
-  // as distinct rather than both promising "a live demo". The same label
-  // also appears on the page's closing-band CTA (deliberately consistent
-  // with the hero, conversion-reviewer finding) — `.first()` targets the hero.
-  await expect(page.getByRole("button", { name: "Try the staff app" }).first()).toBeVisible();
+  // One site-wide name for the demo CTA — the hero used to say "Try the
+  // staff app" (jargon a first-time visitor can't parse, and a different
+  // label than every other page gave the same action). `.first()` targets
+  // the hero; the closing band repeats the same label deliberately.
+  await expect(page.getByRole("button", { name: "Try the live demo" }).first()).toBeVisible();
+  // The click's cost is stated at the point of decision.
+  await expect(
+    page
+      .getByText("No sign-up, no card — one click opens a working sample shop in your browser.")
+      .first(),
+  ).toBeVisible();
+  // Exactly two demo buttons (hero + closing) — the five-chip role picker is
+  // gone from the hero; role switching is the in-demo switcher's job.
+  await expect(page.getByRole("button", { name: "Try the live demo" })).toHaveCount(2);
 
+  // The diver preview moved out of the hero (where it was a third competing
+  // door) onto the "For the diver" moment card, still tagged for attribution.
   const scheduleLink = page.getByRole("link", { name: "See a diver's booking page →" });
   const href = await scheduleLink.getAttribute("href");
-  // Sourced from DEMO_SHOP_SLUG rather than a hand-typed literal, and tagged
-  // for funnel attribution the same way the trial link is.
-  expect(href).toBe(`/shop/${DEMO_SHOP_SLUG}/schedule?from=home-hero`);
+  expect(href).toBe(`/shop/${DEMO_SHOP_SLUG}/schedule?from=home-diver-moment`);
 
   await scheduleLink.click();
   await expect(page.getByRole("heading", { name: "Schedule", level: 1 })).toBeVisible();
   // The diver-facing schedule, not a staff console — no sign-in chrome.
   await expect(page.getByRole("button", { name: "Sign out" })).toHaveCount(0);
+});
+
+test("the homepage answers price and offers the founder before the footer", async ({ page }) => {
+  await page.goto("/");
+
+  // The flat price renders in the closing band (from src/lib/marketing.ts —
+  // never a prose literal), so a buyer doesn't have to click through to learn
+  // whether this is a $99 tool or an enterprise quote form.
+  await expect(page.getByText(/One flat price/)).toBeVisible();
+  await expect(page.getByRole("link", { name: "See what's included →" })).toHaveAttribute(
+    "href",
+    "/pricing",
+  );
+
+  // The founder-contact band: a hesitant buyer who won't self-serve a demo or
+  // trial gets a visible human path — not just an unlabeled address in the
+  // footer.
+  await expect(page.getByRole("heading", { name: "Rather ask a question first?" })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Email aaron@dive\.day/ })).toHaveAttribute(
+    "href",
+    "mailto:aaron@dive.day",
+  );
 });
 
 test("public marketing pages lead to the product and pricing details", async ({ page }) => {
@@ -60,9 +90,10 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   await page.getByText("The full list").click();
   await expect(page.getByRole("heading", { name: "Booking and the public pages" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Your records" })).toBeVisible();
-  // The honest-no scope block and the demo CTA both land on the product page.
+  // The honest-no scope block and the demo CTA both land on the product page —
+  // two demo doors now: mid-page after the dock story, and the closing band.
   await expect(page.getByRole("heading", { name: "What DiveDay doesn't do." })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Try the live demo" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Try the live demo" })).toHaveCount(2);
 
   await page.getByRole("link", { name: "Pricing" }).first().click();
   await expect(

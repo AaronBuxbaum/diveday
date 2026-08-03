@@ -57,7 +57,9 @@ chosen battlegrounds — and re-read it before changing the spine.
   the same way the price does. **Also authorized (2026-07-27):** a general founder-direct contact
   line, routed to the `aaron@dive.day` inbox — the same promise the "You can reach the founder"
   section on `/about` already made in prose, now with a real `mailto:` CTA. It appears on `/about`,
-  the marketing footer, `/pricing`, and the signed-in shop settings page, always framed as a person
+  the marketing footer, `/pricing`, the homepage's closing contact band (added 2026-08-03 under the
+  owner's buyer-conversion directive — the landing page previously offered a hesitant buyer no
+  visible human path at all), and the signed-in shop settings page, always framed as a person
   who wants to hear from you, never a support ticket queue. `/onboard` states the same promise as a
   founding-shop reassurance without its own `mailto:` — the sign-up form is not the place to offer
   an exit from the form.
@@ -132,6 +134,17 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   "from booking to head count".
 - Buttons are verbs; eyebrows are short; body copy earns each sentence. Read it aloud as a dive
   briefing — anything you'd be embarrassed to say to a captain's face gets cut.
+- **The demo CTA has exactly one name, site-wide: "Try the live demo."** It once shipped as "Try
+  the staff app" on the homepage while other pages said "Try the live demo" — jargon a first-time
+  visitor can't parse, and one action wearing three labels reads as three different products. Every
+  button that submits `enterDemoAction` uses the shared label (`nav.tryDemo` /
+  `marketing.common.tryDemo`); don't introduce per-page synonyms.
+- **One primary CTA per screen.** Each marketing page carries its own primary (demo on `/` and
+  `/product`, the trial on `/pricing`'s card); the nav's "Start a trial" stays secondary weight so
+  it never competes, and it hides entirely on `/onboard`, where it would link to the page it's on.
+  The internal positioning pillars ("easy to try", "safe to leave") are argument structure, not
+  user-facing labels — section eyebrows say what the reader is looking at ("Your records", "Try
+  it"), not what the strategy doc calls it.
 
 ## SEO and shared links
 

@@ -4,7 +4,6 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { enterDemoAction } from "@/app/actions/demo";
 import { FunnelTag } from "@/components/FunnelTag";
-import { HomeCTA } from "@/components/HomeCTA";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
 import { MarketingNav, MarketingNavFallback } from "@/components/MarketingNav";
 import {
@@ -20,10 +19,10 @@ import { DEMO_SHOP_SLUG } from "@/db/dev-credentials";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
-import { DEMO_ROLE_KEYS, DEMO_ROLE_META } from "@/lib/demo-roles";
 import { scheduleAttributionHref, trialHref } from "@/lib/funnel";
-import { earlyAccessPriceAmount, fullShopExport } from "@/lib/marketing";
+import { earlyAccessPrice, earlyAccessPriceAmount, fullShopExport } from "@/lib/marketing";
 import { MIGRATION_GUIDES } from "@/lib/migration-guides";
+import { FOUNDER_EMAIL } from "@/lib/platform-mail";
 
 export const metadata: Metadata = {
   title: "Dive shop software for the whole dive day — DiveDay",
@@ -83,11 +82,11 @@ async function LocalizedHomeBody() {
 
 /**
  * The whole home page body, cached per negotiated locale (DIVER_LOCALES —
- * two entries). Everything here is deterministic given
- * `locale`: message-bundle copy, the migration-guide competitor list, and
- * the demo-role picker. Nothing session-scoped lives in this tree — `HomeCTA`
- * only takes `enterDemoAction` (a Server Action reference, safe to pass
- * through per Next's `"use cache"` interleaving rules) and plain strings.
+ * two entries). Everything here is deterministic given `locale`:
+ * message-bundle copy and the migration-guide competitor list. Nothing
+ * session-scoped lives in this tree — the CTA forms only reference
+ * `enterDemoAction` (a Server Action reference, safe to pass through per
+ * Next's `"use cache"` interleaving rules).
  */
 async function HomeBody({ locale }: { locale: DiverLocale }) {
   "use cache";
@@ -98,24 +97,18 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
   const competitors = new Intl.ListFormat(locale, { type: "disjunction" }).format(
     MIGRATION_GUIDES.map((guide) => guide.competitor),
   );
-  // The five per-role "Try:" prompts, surfaced as a picker under the demo CTA
-  // instead of a blind button (UX persona review #103) — each option wires
-  // straight to `enterDemoAction`'s `role` field.
-  const demoRoleOptions = DEMO_ROLE_META.map((role) => {
-    const title = t(DEMO_ROLE_KEYS[role.id].title);
-    return {
-      id: role.id,
-      icon: role.icon,
-      title,
-      tryThis: t(DEMO_ROLE_KEYS[role.id].tryThis),
-      ariaLabel: t("marketing.home.enterAsAria", { role: title }),
-    };
-  });
   const dailyMoments = [
     {
       role: t("marketing.home.moments.diver.role"),
       title: t("marketing.home.moments.diver.title"),
       description: t("marketing.home.moments.diver.description"),
+      // The diver preview stays a moment-card link rather than a third hero
+      // door: in the hero it competed with the demo and trial CTAs for the
+      // first click; here it sits beside the schedule mockup it opens.
+      link: {
+        label: t("marketing.home.moments.diver.link"),
+        href: scheduleAttributionHref(DEMO_SHOP_SLUG, "home-diver-moment"),
+      },
       mockupLabel: t("marketing.home.moments.diver.mockupLabel"),
       mockup: marketingMockups.diverBooking,
     },
@@ -123,6 +116,7 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
       role: t("marketing.home.moments.frontDesk.role"),
       title: t("marketing.home.moments.frontDesk.title"),
       description: t("marketing.home.moments.frontDesk.description"),
+      link: null,
       mockupLabel: t("marketing.home.moments.frontDesk.mockupLabel"),
       mockup: marketingMockups.frontDeskReadiness,
     },
@@ -142,21 +136,32 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
             <p className="mt-6 max-w-xl text-lg leading-8 text-muted sm:text-xl">
               {t("marketing.home.heroDescription")}
             </p>
-            <div className="mt-8">
-              <HomeCTA
-                enterDemoAction={enterDemoAction}
-                scheduleHref={scheduleAttributionHref(DEMO_SHOP_SLUG, "home-hero")}
-                roleOptions={demoRoleOptions}
-                copy={{
-                  gettingReady: t("nav.gettingReady"),
-                  tryDemo: t("nav.tryDemo"),
-                  startTrial: t("nav.startTrial"),
-                  seeLiveSchedule: t("nav.seeLiveSchedule"),
-                  enterAsLabel: t("marketing.home.enterAsLabel"),
-                }}
-              />
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <form action={enterDemoAction}>
+                <FunnelTag source="home-hero" />
+                <SubmitButton
+                  pendingLabel={t("nav.gettingReady")}
+                  className={buttonClass({
+                    size: "cta",
+                    className: "cursor-pointer disabled:opacity-70",
+                  })}
+                >
+                  {t("nav.tryDemo")}
+                </SubmitButton>
+              </form>
+              <Link
+                href={trialHref("home-hero")}
+                className={buttonClass({
+                  variant: "secondary",
+                  size: "cta",
+                  className: "border-border-strong",
+                })}
+              >
+                {t("nav.startTrial")}
+              </Link>
             </div>
-            <p className="mt-4 text-sm text-muted">{t("marketing.home.exploreNote")}</p>
+            <p className="mt-3 text-sm font-medium text-muted">{t("marketing.home.demoNote")}</p>
+            <p className="mt-2 text-sm text-muted">{t("marketing.home.exploreNote")}</p>
           </div>
 
           <div className="mx-auto w-full max-w-sm lg:max-w-md">
@@ -191,6 +196,16 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
               role={moment.role}
               title={moment.title}
               description={moment.description}
+              link={
+                moment.link ? (
+                  <Link
+                    href={moment.link.href}
+                    className={buttonClass({ variant: "link", className: "px-0" })}
+                  >
+                    {moment.link.label}
+                  </Link>
+                ) : undefined
+              }
             >
               <MarketingMockup label={moment.mockupLabel}>
                 {moment.mockup.render(locale)}
@@ -237,10 +252,7 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
               {t("marketing.home.exportTitle")}
             </h2>
             <p className="mt-5 text-lg leading-8 text-muted">
-              {t("marketing.home.exportDescription1", {
-                claim: fullShopExport.claim,
-                terms: fullShopExport.terms,
-              })}
+              {t("marketing.home.exportDescription1", { terms: fullShopExport.terms })}
             </p>
             <p className="mt-4 text-lg leading-8 text-muted">
               {t("marketing.home.exportDescription2")}
@@ -320,10 +332,41 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
                 {t("marketing.home.startTrial")}
               </Link>
             </div>
+            <p className="text-sm text-muted">{t("marketing.home.demoNote")}</p>
+            <p className="mt-2 font-medium">
+              {t("marketing.home.priceLine", {
+                price: earlyAccessPrice.price,
+                cadence: earlyAccessPrice.cadence,
+              })}
+            </p>
             <Link href="/pricing" className={buttonClass({ variant: "link" })}>
-              {t("marketing.home.viewPricing")}
+              {t("marketing.home.seeIncluded")}
             </Link>
           </div>
+        </div>
+      </section>
+
+      <section className="border-t border-border">
+        <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-6 py-16 lg:flex-row lg:items-center lg:justify-between lg:py-20">
+          <div className="max-w-2xl">
+            <p className="text-sm font-semibold tracking-widest text-primary uppercase">
+              {t("marketing.home.contactEyebrow")}
+            </p>
+            <h2 className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-balance sm:text-3xl">
+              {t("marketing.home.contactTitle")}
+            </h2>
+            <p className="mt-3 leading-7 text-muted">{t("marketing.home.contactBody")}</p>
+          </div>
+          <a
+            href={`mailto:${FOUNDER_EMAIL}`}
+            className={buttonClass({
+              variant: "secondary",
+              size: "cta",
+              className: "shrink-0 self-start border-border-strong lg:self-auto",
+            })}
+          >
+            {t("marketing.home.contactCta", { email: FOUNDER_EMAIL })}
+          </a>
         </div>
       </section>
     </main>

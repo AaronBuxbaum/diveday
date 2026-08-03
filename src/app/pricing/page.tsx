@@ -214,9 +214,17 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
                 {t("marketing.pricing.includedTitle")}
               </h2>
             </div>
+            {/* Summary treatment, not the full checklists: the product page
+                already carries the complete inventory, and a landing → product
+                → pricing walk was reading the same ~30 lines twice more
+                (design review). Pricing answers "what does it cost"; the list
+                lives one click away. */}
             <div className="mt-10">
-              <FeatureGroupsGrid columns={2} />
+              <FeatureGroupsGrid columns={2} featuresPerGroup={1} />
             </div>
+            <Link href="/product" className={buttonClass({ variant: "link", className: "mt-6" })}>
+              {t("marketing.pricing.seeFullList")}
+            </Link>
           </div>
         </section>
 
