@@ -46,6 +46,11 @@ export function ScheduleCalendar({
    * delimiter, since month nav already has a `?month=` query and the day
    * links don't. */
   embed = false,
+  /** Already-encoded `&key=value` filters the month arrows must keep: the
+   * trip list below the grid is bounded by them, so an arrow that dropped
+   * them would silently reset a diver's "only trips with space" view. Day
+   * taps go to a trip page, where the filters mean nothing — they omit it. */
+  filterSuffix = "",
   locale,
   t,
 }: {
@@ -60,6 +65,7 @@ export function ScheduleCalendar({
   prevMonthKey: string | null;
   nextMonthKey: string | null;
   embed?: boolean;
+  filterSuffix?: string;
 }) {
   const embedSuffix = embed ? "&embed=1" : "";
   const weekdays = weekdayNames(locale);
@@ -77,7 +83,7 @@ export function ScheduleCalendar({
         <div className="flex items-center gap-2">
           {prevMonthKey ? (
             <Link
-              href={`${publicSchedulePath(shopSlug)}?month=${prevMonthKey}${embedSuffix}`}
+              href={`${publicSchedulePath(shopSlug)}?month=${prevMonthKey}${embedSuffix}${filterSuffix}`}
               aria-label={t("schedule.previousMonth")}
               className={navClass}
             >
@@ -90,7 +96,7 @@ export function ScheduleCalendar({
           )}
           {nextMonthKey ? (
             <Link
-              href={`${publicSchedulePath(shopSlug)}?month=${nextMonthKey}${embedSuffix}`}
+              href={`${publicSchedulePath(shopSlug)}?month=${nextMonthKey}${embedSuffix}${filterSuffix}`}
               aria-label={t("schedule.nextMonth")}
               className={navClass}
             >

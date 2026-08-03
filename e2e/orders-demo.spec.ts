@@ -79,13 +79,13 @@ test.describe("demo billing history", () => {
     const firstDiver = (await rows.first().getByRole("link").first().textContent()) ?? "";
 
     // The pager states the whole set, not just what is on screen.
-    const pager = page.getByRole("navigation", { name: "Order pages" });
+    const pager = page.getByRole("navigation", { name: "Pages" });
     await expect(pager).toBeVisible();
     await expect(pager).toContainText(/Page 1 of \d+/);
 
     await pager.getByRole("link", { name: "Next" }).click();
     await page.waitForURL(/[?&]page=2/);
-    await expect(page.getByRole("navigation", { name: "Order pages" })).toContainText("Page 2 of");
+    await expect(page.getByRole("navigation", { name: "Pages" })).toContainText("Page 2 of");
     // Different invoices, not the same screen re-rendered.
     await expect(page.locator("tbody tr").first().getByRole("link").first()).not.toHaveText(
       firstDiver,
@@ -93,17 +93,83 @@ test.describe("demo billing history", () => {
 
     // And back, without losing the pager.
     await page
-      .getByRole("navigation", { name: "Order pages" })
+      .getByRole("navigation", { name: "Pages" })
       .getByRole("link", { name: "Previous" })
       .click();
     await expect(page.locator("tbody tr").first().getByRole("link").first()).toHaveText(firstDiver);
+  });
+
+  /**
+   * The index used to load every invoice a shop had ever raised. It opens on a
+   * window now — which is only acceptable because the window is *stated* and
+   * has a door out of it, right where a staffer hunting an older invoice will
+   * look for one.
+   */
+  test("the index opens on a stated window with an explicit way to see everything", async ({
+    page,
+  }) => {
+    await page.goto("/shop/blue-mantis/orders");
+    await page.getByRole("heading", { level: 1, name: "Orders" }).waitFor();
+    await expect(page.getByText(/Showing the last 90 days/)).toBeVisible();
+
+    const windowed = await page.locator("tbody tr").filter({ visible: true }).count();
+    const windowedTotal = await page.getByRole("navigation", { name: "Pages" }).textContent();
+
+    await page.getByRole("link", { name: "Show every order" }).click();
+    await expect(page).toHaveURL(/range=all/);
+    await expect(page.getByText(/Showing every order/)).toBeVisible();
+    // A strictly larger set — otherwise the window was never doing anything,
+    // and this test would pass on a page that silently ignores `?range=`.
+    const allTotal = await page.getByRole("navigation", { name: "Pages" }).textContent();
+    expect(allTotal).not.toBe(windowedTotal);
+    expect(await page.locator("tbody tr").filter({ visible: true }).count()).toBeGreaterThanOrEqual(
+      windowed,
+    );
+
+    // And back to the default, so the escape hatch is not one-way.
+    await page.getByRole("link", { name: "Back to the last 90 days" }).click();
+    await expect(page.getByText(/Showing the last 90 days/)).toBeVisible();
+  });
+
+  /**
+   * Applying a status filter while looking at one diver's invoices used to
+   * throw the staffer back to every diver's: the GET form carried no
+   * `personId`, so submitting it dropped the very filter the page was
+   * explaining in the line above the table.
+   */
+  test("a diver filter survives applying another filter, and says whose orders these are", async ({
+    page,
+  }) => {
+    await page.goto("/shop/blue-mantis/divers");
+    await page.getByRole("searchbox", { name: "Search divers" }).fill("Grace Halloran");
+    await page
+      .getByRole("row")
+      .filter({ hasText: "Grace Halloran" })
+      .getByRole("link")
+      .first()
+      .click();
+    await page.getByRole("heading", { level: 1, name: "Grace Halloran" }).waitFor();
+    const personId = new URL(page.url()).pathname.split("/").pop() ?? "";
+
+    await page.goto(`/shop/blue-mantis/orders?personId=${personId}&range=all`);
+    await expect(page.getByText("Showing orders for Grace Halloran.")).toBeVisible();
+
+    await page.getByLabel("Status").selectOption("void");
+    await page.getByRole("button", { name: "Apply filters" }).click();
+    await expect(page).toHaveURL(new RegExp(`personId=${personId}`));
+
+    // Grace has no voided invoices, so this is also the empty-result case: the
+    // sentence naming whose orders these are used to be read off the first row
+    // and therefore vanished exactly here.
+    await expect(page.getByText("Showing orders for Grace Halloran.")).toBeVisible();
+    await expect(page.getByText("No orders match these filters.")).toBeVisible();
   });
 
   /** A filter has to survive paging, or page 2 quietly shows the unfiltered set. */
   test("paging keeps the active filter", async ({ page }) => {
     await page.goto("/shop/blue-mantis/orders?status=paid");
     await page.getByRole("heading", { level: 1, name: "Orders" }).waitFor();
-    const pager = page.getByRole("navigation", { name: "Order pages" });
+    const pager = page.getByRole("navigation", { name: "Pages" });
     // Not "skip if there's nothing to page": the seeded demo carries 323
     // invoices and the paid slice is far past one page, so a missing pager is
     // the regression, not a reason to pass. The early return this replaces

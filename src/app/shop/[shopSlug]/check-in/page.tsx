@@ -11,6 +11,7 @@ import { buttonClass } from "@/components/ui/button";
 import { listCheckInQueue } from "@/db/check-in";
 import { getDb } from "@/db/client";
 import { getShopBySlug } from "@/db/shops";
+import { upcomingScheduleStats } from "@/db/trips";
 import {
   readinessBlockerText,
   readinessStatusText,
@@ -27,7 +28,7 @@ import {
   OPERATIONAL_HORIZON_DAYS,
 } from "@/lib/operational-window";
 import { requireStaffSession } from "@/lib/session";
-import { noticeFromParam } from "@/lib/staff-notices";
+import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
 import { checkInAction } from "./actions";
 import { CheckInSearch } from "./CheckInSearch";
 
@@ -90,6 +91,11 @@ export default async function CheckInPage({
 
   const query = q?.trim() ?? "";
   const queue = await listCheckInQueue(db, shop.id, { query });
+  // Only asked when the counter has nobody to show and nothing was typed —
+  // it is the difference between "the day is quiet" and "there is no schedule
+  // yet", and the empty state below cannot say the honest one without it.
+  const upcomingDepartures =
+    queue.length === 0 && !query ? (await upcomingScheduleStats(db, shop.id)).departures : 0;
   const copy = noticeFromParam(notice, noticeCopy);
   // The `not_ready` refusal links straight to the diver's guest row instead
   // of just naming the problem — the same rich-link pattern the manifest's
@@ -150,7 +156,9 @@ export default async function CheckInPage({
       />
 
       {copy ? (
-        <ShopNotice tone={copy.tone} className="mb-6">
+        // Seven of this page's codes are refusals (walk-in full, not found,
+        // invalid…) — noticeRole gives those `role="alert"` so they announce.
+        <ShopNotice tone={copy.tone} role={noticeRole(copy.tone)} className="mb-6">
           {noticeContent}
         </ShopNotice>
       ) : null}
@@ -181,9 +189,47 @@ export default async function CheckInPage({
         </div>
 
         {queue.length === 0 ? (
+          // "No one matches that scan" is true of a search that found nobody
+          // and false of a counter that has nothing to show — on day one it
+          // blamed the staffer's typing for an empty schedule. Three states,
+          // each with the door that actually helps: widen the search, wait for
+          // the boat, or put a departure on the board.
           <EmptyState>
-            <h3 className="font-semibold">{t("checkIn.emptyTitle")}</h3>
-            <p className="mt-1 text-sm text-muted">{t("checkIn.emptyDescription")}</p>
+            <h3 className="font-semibold">
+              {query
+                ? t("checkIn.emptyTitle")
+                : upcomingDepartures > 0
+                  ? t("checkIn.emptyQuietTitle")
+                  : t("checkIn.emptyNoTripsTitle")}
+            </h3>
+            <p className="mx-auto mt-1 max-w-md text-sm text-muted">
+              {query
+                ? t("checkIn.emptyDescription")
+                : upcomingDepartures > 0
+                  ? t("checkIn.emptyQuietDescription")
+                  : t("checkIn.emptyNoTripsDescription")}
+            </p>
+            {query ? (
+              <Link
+                href={`/shop/${shopSlug}/check-in`}
+                className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
+              >
+                {t("checkIn.emptyClearSearch")}
+              </Link>
+            ) : (
+              <Link
+                href={`/shop/${shopSlug}/schedule/board`}
+                className={buttonClass({
+                  variant: upcomingDepartures > 0 ? "secondary" : "primary",
+                  size: "sm",
+                  className: "mt-4",
+                })}
+              >
+                {upcomingDepartures > 0
+                  ? t("checkIn.emptyViewSchedule")
+                  : t("checkIn.emptyScheduleDeparture")}
+              </Link>
+            )}
           </EmptyState>
         ) : cleared ? (
           <div className="rounded-2xl border border-dashed border-success/40 bg-success/5 p-8 text-center">

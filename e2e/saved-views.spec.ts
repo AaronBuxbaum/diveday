@@ -65,3 +65,47 @@ test("the diver roster offers role-view chips that drive the filter", async ({ p
   await expect(page).not.toHaveURL(/filter=/);
   await expect(rowFor(CONTACT_ON_FILE_DIVER)).toHaveCount(1);
 });
+
+// Pinning a staffer's own view. Naming it used to be `window.prompt` — a
+// blocking native dialog in the browser's language, not the shop's — and this
+// spec is what proves the replacement is a real form in the page: the flow
+// below never installs a `dialog` handler, so a prompt reappearing would hang
+// the page and fail here rather than passing silently.
+test("a staffer pins their own view from an in-page form and unpins it again", async ({ page }) => {
+  await page.goto("/shop/blue-mantis/divers");
+  const views = page.getByRole("navigation", { name: "Saved views" });
+
+  await page.getByRole("searchbox", { name: "Search divers" }).fill(MISSING_CONTACT_DIVER);
+  await expect(page).toHaveURL(/[?&]q=Nadia/);
+
+  await views.getByRole("button", { name: "+ Save this view" }).click();
+  const name = views.getByRole("textbox", { name: "Name this view" });
+  await expect(name).toBeFocused();
+  // Nothing typed yet, so there is nothing to save — the disabled state, not a
+  // chip with an empty label.
+  await expect(views.getByRole("button", { name: "Save view" })).toBeDisabled();
+
+  await name.fill("Chasing contacts");
+  await views.getByRole("button", { name: "Save view" }).click();
+
+  // The chip carries the search it was pinned from, so following it restores
+  // the roster the staffer actually saved.
+  const chip = views.getByRole("link", { name: "Chasing contacts" });
+  await expect(chip).toBeVisible();
+  await expect(chip).toHaveAttribute("href", /q=Nadia/);
+  // And it says where it lives, because a browser reset takes it.
+  await expect(page.getByText("Saved on this device")).toBeVisible();
+
+  // Clear the search rather than clicking "All divers": that chip deliberately
+  // keeps the text query and only widens the filter, so it would leave `q=` in
+  // the URL and the chip below would have nothing to restore.
+  await page.getByRole("searchbox", { name: "Search divers" }).fill("");
+  await expect(page).toHaveURL(/\/divers$/);
+  await chip.click();
+  await expect(page).toHaveURL(/[?&]q=Nadia/);
+  await expect(page.getByRole("row").filter({ hasText: MISSING_CONTACT_DIVER })).toHaveCount(1);
+
+  await views.getByRole("button", { name: "Remove saved view Chasing contacts" }).click();
+  await expect(chip).toHaveCount(0);
+  await expect(page.getByText("Saved on this device")).toHaveCount(0);
+});

@@ -2,18 +2,21 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
+import { Pager } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { getDb } from "@/db/client";
-import { listShopOrders } from "@/db/orders";
+import { listShopOrders, ORDER_DEFAULT_RANGE_DAYS } from "@/db/orders";
+import { getShopPersonName } from "@/db/people";
 import { orderStatus } from "@/db/schema";
 import { getShopById } from "@/db/shops";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
+import { nowDate } from "@/lib/clock";
 import { formatMoneyCents, formatShortDate } from "@/lib/format";
 import { requireStaffSession } from "@/lib/session";
 import { type NoticeTone, noticeFromParam } from "@/lib/staff-notices";
@@ -90,13 +93,14 @@ export default async function OrdersIndexPage({
     personQuery?: string;
     from?: string;
     to?: string;
+    range?: string;
     page?: string;
     notice?: string;
   }>;
 }) {
   const session = await requireStaffSession();
   const { shopSlug } = await params;
-  const { status, personId, personQuery, from, to, page, notice } = await searchParams;
+  const { status, personId, personQuery, from, to, range, page, notice } = await searchParams;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) return null;
@@ -116,8 +120,19 @@ export default async function OrdersIndexPage({
     : undefined;
   const trimmedQuery = personQuery?.trim() || undefined;
 
-  // A non-numeric or missing `?page=` reads as page 1 rather than NaN.
-  const requestedPage = Number.parseInt(page ?? "", 10);
+  const fromBoundary = dayBoundary(from, shop.timezone, 0);
+  const toBoundary = dayBoundary(to, shop.timezone, 1);
+  // The index is windowed unless it is told otherwise: without one it loaded
+  // every invoice a shop has ever raised. `?range=all` is the stated way out,
+  // and an explicit `?from=`/`?to=` replaces the window rather than nesting
+  // inside it — a staffer who asked for last March means last March.
+  const showAll = range === "all";
+  const explicitRange = Boolean(fromBoundary || toBoundary);
+  const windowed = !showAll && !explicitRange;
+  const defaultFrom = windowed
+    ? new Date(nowDate().getTime() - ORDER_DEFAULT_RANGE_DAYS * 24 * 60 * 60 * 1000)
+    : undefined;
+
   const orderPage = await listShopOrders(
     db,
     shop.id,
@@ -128,28 +143,37 @@ export default async function OrdersIndexPage({
       // over a typed name — the two never combine, so the filter box always
       // reflects what it can actually change.
       personQuery: personId ? undefined : trimmedQuery,
-      from: dayBoundary(from, shop.timezone, 0),
-      to: dayBoundary(to, shop.timezone, 1),
+      from: fromBoundary ?? defaultFrom,
+      to: toBoundary,
     },
-    { page: Number.isFinite(requestedPage) ? requestedPage : 1 },
+    // A non-numeric or missing `?page=` reads as page 1 rather than NaN;
+    // `listShopOrders` clamps it into range either way.
+    { page: Number.parseInt(page ?? "", 10) },
   );
   const rows = orderPage.rows;
 
-  /** This page's URL with the filters kept and only `page` swapped. */
-  const pageHref = (target: number) => {
+  /** This page's URL with the filters kept and only the given params swapped. */
+  const hrefWith = (overrides: { page?: number; range?: string | null }) => {
     const query = new URLSearchParams();
     if (status) query.set("status", status);
     if (personId) query.set("personId", personId);
     if (personQuery) query.set("personQuery", personQuery);
     if (from) query.set("from", from);
     if (to) query.set("to", to);
-    if (target > 1) query.set("page", String(target));
+    const nextRange = overrides.range === undefined ? (showAll ? "all" : null) : overrides.range;
+    if (nextRange) query.set("range", nextRange);
+    if (overrides.page !== undefined && overrides.page > 1) {
+      query.set("page", String(overrides.page));
+    }
     const search = query.toString();
     return search ? `/shop/${shopSlug}/orders?${search}` : `/shop/${shopSlug}/orders`;
   };
 
-  const filteredPersonName = personId ? rows[0]?.person.fullName : null;
-  const hasFilters = Boolean(statusFilter || personId || trimmedQuery || from || to);
+  // Looked up rather than read off `rows[0]` — a filter that matches nothing
+  // still has to say whose orders it was looking for, and the row-derived name
+  // vanished on exactly the empty screen that needed the explanation most.
+  const filteredPersonName = personId ? await getShopPersonName(db, shop.id, personId) : null;
+  const hasFilters = Boolean(statusFilter || personId || trimmedQuery || from || to || showAll);
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
@@ -185,15 +209,24 @@ export default async function OrdersIndexPage({
           </select>
         </Field>
         <Field label={t("orders.index.filters.diverLabel")}>
+          {/* Pinned by a `?personId=` link (roster, diver record). The name is
+              shown but not editable, because `personId` wins over a typed one
+              — and the id rides along as a hidden field so applying a status or
+              a date does not silently throw the staffer back to every diver,
+              which is what this form's missing `personId` used to do. */}
           <input
             type="text"
-            name="personQuery"
-            defaultValue={personId ? "" : (personQuery ?? "")}
+            name={personId ? undefined : "personQuery"}
+            defaultValue={personId ? (filteredPersonName ?? "") : (personQuery ?? "")}
             placeholder={t("orders.index.filters.diverPlaceholder")}
             maxLength={120}
+            readOnly={Boolean(personId)}
+            disabled={Boolean(personId)}
             className={controlClass}
           />
         </Field>
+        {personId ? <input type="hidden" name="personId" value={personId} /> : null}
+        {showAll ? <input type="hidden" name="range" value="all" /> : null}
         <Field label={t("orders.index.filters.fromLabel")}>
           <input type="date" name="from" defaultValue={from ?? ""} className={controlClass} />
         </Field>
@@ -225,11 +258,62 @@ export default async function OrdersIndexPage({
         </p>
       ) : null}
 
+      {/* The window is stated, never silent, and the way out of it is right
+          here. An explicit `?from=`/`?to=` says its own range in the fields
+          above, so it gets no line of its own. */}
+      {windowed || showAll ? (
+        <p className="mt-4 flex flex-wrap items-baseline gap-x-2 text-sm text-muted">
+          <span>
+            {windowed
+              ? t("orders.index.range.recentNote", { days: ORDER_DEFAULT_RANGE_DAYS })
+              : t("orders.index.range.allNote")}
+          </span>
+          <Link
+            href={hrefWith({ range: windowed ? "all" : null })}
+            className="font-medium text-primary hover:underline"
+          >
+            {windowed
+              ? t("orders.index.range.showAll")
+              : t("orders.index.range.showRecent", { days: ORDER_DEFAULT_RANGE_DAYS })}
+          </Link>
+        </p>
+      ) : null}
+
       {rows.length === 0 ? (
+        // The same fork the header makes (Loop 3): with no orders on file the
+        // one thing that moves a shop forward is either sending the first one
+        // or connecting the account that can. Filtered-to-nothing is a
+        // different problem and gets the way back out instead.
         <EmptyState className="mt-8">
           <p className="text-sm text-muted">
-            {hasFilters ? t("orders.index.emptyFiltered") : t("orders.index.emptyAll")}
+            {hasFilters
+              ? t("orders.index.emptyFiltered")
+              : paymentsConnected
+                ? t("orders.index.emptyAll")
+                : t("orders.index.emptyNoPayments")}
           </p>
+          {hasFilters ? (
+            <Link
+              href={`/shop/${shopSlug}/orders`}
+              className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
+            >
+              {t("orders.index.filters.clear")}
+            </Link>
+          ) : paymentsConnected ? (
+            <Link
+              href={`/shop/${shopSlug}/orders/new`}
+              className={buttonClass({ className: "mt-4" })}
+            >
+              {t("orders.index.newOrder")}
+            </Link>
+          ) : (
+            <Link
+              href={`/shop/${shopSlug}/settings#money`}
+              className={buttonClass({ className: "mt-4" })}
+            >
+              {t("shared.payments.connect")}
+            </Link>
+          )}
         </EmptyState>
       ) : (
         <div className="mt-6 overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
@@ -290,42 +374,14 @@ export default async function OrdersIndexPage({
         </div>
       )}
 
-      {/* Only when there is somewhere to go — a shop with one screenful of
-        invoices should not be told it is on "page 1 of 1". */}
-      {orderPage.pageCount > 1 ? (
-        <nav
-          aria-label={t("orders.index.pagination.label")}
-          className="mt-4 flex items-center justify-between gap-3"
-        >
-          {orderPage.page > 1 ? (
-            <Link
-              href={pageHref(orderPage.page - 1)}
-              className={buttonClass({ variant: "secondary", size: "sm" })}
-            >
-              {t("orders.index.pagination.previous")}
-            </Link>
-          ) : (
-            <span />
-          )}
-          <p className="text-sm text-muted">
-            {t("orders.index.pagination.position", {
-              page: orderPage.page,
-              pageCount: orderPage.pageCount,
-              total: orderPage.total,
-            })}
-          </p>
-          {orderPage.page < orderPage.pageCount ? (
-            <Link
-              href={pageHref(orderPage.page + 1)}
-              className={buttonClass({ variant: "secondary", size: "sm" })}
-            >
-              {t("orders.index.pagination.next")}
-            </Link>
-          ) : (
-            <span />
-          )}
-        </nav>
-      ) : null}
+      <Pager
+        page={orderPage.page}
+        pageCount={orderPage.pageCount}
+        href={(target) => hrefWith({ page: target })}
+        total={t("orders.index.pagination.total", { count: orderPage.total })}
+        t={t}
+        className="mt-4"
+      />
     </main>
   );
 }

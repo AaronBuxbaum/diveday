@@ -32,6 +32,11 @@ test("counter check-in searches by diver, confirms live readiness, and keeps blo
   await search.fill("not-a-real-diver");
   await search.press("Enter");
   await expect(page.getByRole("heading", { name: "No one matches that scan" })).toBeVisible();
+  // A search that found nobody has one honest way on: drop the search. The
+  // counter used to say "no one matches that scan" and stop there — including
+  // when nothing had been typed at all (docs/design/principles.md #4).
+  await page.getByRole("link", { name: "Show everyone arriving" }).click();
+  await expect(page).toHaveURL("/shop/blue-mantis/check-in");
 });
 
 test("a counter walk-in books straight onto a boat with no email required", async ({ page }) => {
@@ -110,6 +115,10 @@ test("a full boat refuses a counter walk-in with the wait-list nudge", async ({ 
   await page.getByRole("button", { name: "Add to boat" }).click();
 
   await expect(page).toHaveURL(/\/check-in\?notice=walkin_full/);
+  // Regression: this refusal rendered with no role at all, so screen readers
+  // heard nothing. Danger notices announce as alerts (noticeRole); filtered
+  // because Next's route announcer is also role="alert".
+  await expect(page.getByRole("alert").filter({ hasText: "That boat is full" })).toBeVisible();
   await expect(
     page.getByText("That boat is full — try the wait list from its trip page instead."),
   ).toBeVisible();

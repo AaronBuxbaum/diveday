@@ -10,17 +10,16 @@ import {
 } from "@/lib/notifications/sns";
 
 /**
- * The SES delivery-outcome webhook, dormant until the app is cut over from
- * Resend (ADR 20260802-ses-adapter-and-webhook). SES itself never calls this
- * endpoint directly — Amazon SNS does, carrying an SES event inside its own
+ * The SES delivery-outcome webhook (ADR 20260802-ses-adapter-and-webhook,
+ * 20260803-ses-sole-email-provider). SES itself never calls this endpoint
+ * directly — Amazon SNS does, carrying an SES event inside its own
  * `Notification` envelope. Fails closed on an unconfigured topic, an
  * untrusted certificate host, or a bad/mismatched signature before any event
  * is handled.
  *
- * Answers 200 for anything verified but not acted on, mirroring the Resend
- * webhook: SNS retries a non-2xx, so erroring on an event type this endpoint
- * doesn't handle — or a message id it never tracked — would buy an endless
- * redelivery loop and nothing else.
+ * Answers 200 for anything verified but not acted on: SNS retries a non-2xx,
+ * so erroring on an event type this endpoint doesn't handle — or a message id
+ * it never tracked — would buy an endless redelivery loop and nothing else.
  */
 export async function POST(request: Request) {
   const payload = await readWebhookPayload(request);

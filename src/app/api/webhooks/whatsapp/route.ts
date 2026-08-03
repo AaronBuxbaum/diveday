@@ -38,7 +38,7 @@ export async function GET(request: Request) {
  * Delivery outcomes. Answers 200 for anything verified but not acted on: Meta
  * retries a non-2xx, so erroring on an event type we don't handle — or on a
  * message id we never tracked — would buy an endless redelivery loop and
- * nothing else. That is the same posture as the Resend route.
+ * nothing else. That is the same posture as the SES route.
  */
 export async function POST(request: Request) {
   // Read as text and verify *before* parsing: Meta signs the exact bytes, and a
@@ -84,7 +84,7 @@ export async function POST(request: Request) {
     });
     // `unknown_message` is routine rather than a fault: a courtesy text sent
     // alongside an email is not the tracked channel, so it has no delivery row
-    // of its own to update. Still worth a trace, same as the Resend route.
+    // of its own to update. Still worth a trace, same as the SES route.
     log("whatsapp_webhook.delivery_applied", result === "applied" ? "info" : "warn", {
       providerMessageId: event.providerMessageId,
       status: event.status,

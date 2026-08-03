@@ -4,6 +4,10 @@
 - **Date:** 2026-07-26
 - **Supersedes:** [20260724-resend-webhook-email-events](20260724-resend-webhook-email-events.md)
 
+> **Amended 2026-08-03:** the hosted-mailbox decision below is unaffected. The webhook it refers to
+> is now SES's (`/api/webhooks/ses`), not Resend's — see
+> [20260803-ses-sole-email-provider](20260803-ses-sole-email-provider.md).
+
 ## Context
 
 The superseded decision solved two problems with one Resend webhook: delivery outcomes for mail

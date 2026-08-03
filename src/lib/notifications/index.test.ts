@@ -3,19 +3,26 @@ import { describe, expect, it, vi } from "vitest";
 import { bookingConfirmationEmail, waitlistInviteEmail, waiverRequestEmail } from "./email";
 import {
   checkPublicHost,
+  notificationIdempotencyKey,
   notificationProviderFromEnvironment,
   notify,
   publicAppUrl,
   recipientLocale,
-  resendNotificationProvider,
   sesNotificationProvider,
 } from "./index";
+
+const sesConfig = {
+  region: "us-east-1",
+  from: "Blue Mantis <bookings@ses.dive.day>",
+  accessKeyId: "AKIA_TEST",
+  secretAccessKey: "test-secret",
+};
 
 const booking = {
   kind: "booking_confirmation" as const,
   bookingId: "00000000-0000-4000-8000-000000000001",
   shopId: "00000000-0000-4000-8000-000000000010",
-  to: "delivered+booking@resend.dev",
+  to: "delivered+booking@dive.day",
   locale: "en-US" as const,
   diverName: "Nora Quinn",
   shopName: "Blue Mantis",
@@ -44,156 +51,29 @@ describe("bookingConfirmationEmail", () => {
 });
 
 describe("notify", () => {
-  it("brands an unlabelled configured sender as DiveDay", async () => {
-    const fetchImpl = vi
-      .fn()
-      .mockResolvedValue(new Response(JSON.stringify({ id: "resend-email-id" }), { status: 200 }));
-    const provider = notificationProviderFromEnvironment(
-      { RESEND_API_KEY: "re_test", RESEND_FROM_EMAIL: "notifications@demo.invalid" },
-      fetchImpl,
-    );
-
-    await notify(booking, provider);
-
-    const request = fetchImpl.mock.calls[0]?.[1];
-    expect(JSON.parse(String(request?.body))).toMatchObject({
-      from: "DiveDay <notifications@demo.invalid>",
-    });
-  });
-
-  it("sends a booking confirmation through Resend with an idempotency key", async () => {
-    const fetchImpl = vi
-      .fn()
-      .mockResolvedValue(new Response(JSON.stringify({ id: "resend-email-id" }), { status: 200 }));
-    const provider = resendNotificationProvider(
-      { apiKey: "re_test", from: "Blue Mantis <bookings@example.com>" },
-      fetchImpl,
-    );
+  it("sends a booking confirmation through SES and returns its message id", async () => {
+    const client = { send: vi.fn().mockResolvedValue({ MessageId: "ses-email-id" }) };
+    const provider = sesNotificationProvider(sesConfig, { client });
 
     await expect(notify(booking, provider)).resolves.toEqual({
       status: "sent",
-      providerMessageId: "resend-email-id",
+      providerMessageId: "ses-email-id",
     });
 
-    expect(fetchImpl).toHaveBeenCalledWith(
-      "https://api.resend.com/emails",
-      expect.objectContaining({
-        method: "POST",
-        headers: expect.objectContaining({
-          Authorization: "Bearer re_test",
-          "Idempotency-Key": "booking-confirmation/00000000-0000-4000-8000-000000000001",
-        }),
-      }),
-    );
-    const request = fetchImpl.mock.calls[0]?.[1];
-    expect(JSON.parse(String(request?.body))).toMatchObject({
-      to: ["delivered+booking@resend.dev"],
-      subject: "You're on the boat — Two-Tank Reef",
+    const command = client.send.mock.calls[0]?.[0] as SendEmailCommand;
+    expect(command.input).toMatchObject({
+      Destination: { ToAddresses: ["delivered+booking@dive.day"] },
+      Content: {
+        Simple: {
+          Subject: { Data: "You're on the boat — Two-Tank Reef", Charset: "UTF-8" },
+        },
+      },
     });
   });
 
-  it("keys a reschedule confirmation's idempotency by confirmedAt, not just bookingId (Codex finding)", async () => {
-    // A reschedule can reactivate the same bookingId a much earlier
-    // confirmation already used — without `confirmedAt` distinguishing the
-    // two sends, the provider's own idempotency window would replay the
-    // first (stale) response instead of delivering this one.
-    const fetchImpl = vi
-      .fn()
-      .mockResolvedValue(new Response(JSON.stringify({ id: "resend-email-id" }), { status: 200 }));
-    const provider = resendNotificationProvider(
-      { apiKey: "re_test", from: "Blue Mantis <bookings@example.com>" },
-      fetchImpl,
-    );
-
-    await notify({ ...booking, confirmedAt: new Date("2026-08-02T09:00:00.000Z") }, provider);
-
-    expect(fetchImpl).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({
-        headers: expect.objectContaining({
-          "Idempotency-Key":
-            "booking-confirmation/00000000-0000-4000-8000-000000000001/2026-08-02T09:00:00.000Z",
-        }),
-      }),
-    );
-  });
-
-  it("fails closed when Resend rejects a delivery without exposing provider details", async () => {
-    const provider = resendNotificationProvider(
-      { apiKey: "re_test", from: "Blue Mantis <bookings@example.com>" },
-      vi.fn().mockResolvedValue(new Response("bad sender", { status: 422 })),
-    );
-
-    await expect(notify(booking, provider)).resolves.toMatchObject({
-      status: "failed",
-      retryable: false,
-      httpStatus: 422,
-    });
-  });
-
-  it("retries a 429 using Retry-After and keeps the idempotency key", async () => {
-    const fetchImpl = vi
-      .fn()
-      .mockResolvedValueOnce(
-        new Response(JSON.stringify({ error: { code: "rate_limit_exceeded" } }), {
-          status: 429,
-          headers: { "Retry-After": "2" },
-        }),
-      )
-      .mockResolvedValueOnce(
-        new Response(JSON.stringify({ id: "resend-after-429" }), { status: 200 }),
-      );
-    const sleep = vi.fn().mockResolvedValue(undefined);
-    const provider = resendNotificationProvider(
-      { apiKey: "re_test", from: "Blue Mantis <bookings@example.com>" },
-      fetchImpl,
-      { beforeRequest: vi.fn().mockResolvedValue(undefined), sleep, maxAttempts: 2 },
-    );
-
-    await expect(notify(booking, provider)).resolves.toEqual({
-      status: "sent",
-      providerMessageId: "resend-after-429",
-    });
-    expect(sleep).toHaveBeenCalledWith(2_000);
-    expect(fetchImpl).toHaveBeenCalledTimes(2);
-    expect(fetchImpl.mock.calls[0]?.[1]?.headers).toMatchObject({
-      "Idempotency-Key": "booking-confirmation/00000000-0000-4000-8000-000000000001",
-    });
-    expect(fetchImpl.mock.calls[1]?.[1]?.headers).toMatchObject({
-      "Idempotency-Key": "booking-confirmation/00000000-0000-4000-8000-000000000001",
-    });
-  });
-
-  it("sends a batch and maps Resend ids back to the input order", async () => {
-    const fetchImpl = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ data: [{ id: "batch-1" }, { id: "batch-2" }] }), {
-        status: 200,
-      }),
-    );
-    const provider = resendNotificationProvider(
-      { apiKey: "re_test", from: "Blue Mantis <bookings@example.com>" },
-      fetchImpl,
-      { beforeRequest: vi.fn().mockResolvedValue(undefined) },
-    );
-    const second = { ...booking, to: "delivered+second@resend.dev" };
-
-    await expect(provider.sendBatch?.([booking, second])).resolves.toEqual([
-      { status: "sent", providerMessageId: "batch-1" },
-      { status: "sent", providerMessageId: "batch-2" },
-    ]);
-    expect(fetchImpl).toHaveBeenCalledWith(
-      "https://api.resend.com/emails/batch",
-      expect.objectContaining({ method: "POST" }),
-    );
-    expect(JSON.parse(String(fetchImpl.mock.calls[0]?.[1]?.body))).toHaveLength(2);
-  });
-
-  it("rejects reserved test domains locally without calling Resend", async () => {
-    const fetchImpl = vi.fn();
-    const provider = resendNotificationProvider(
-      { apiKey: "re_test", from: "Blue Mantis <bookings@example.com>" },
-      fetchImpl,
-    );
+  it("rejects a reserved test domain locally without calling SES", async () => {
+    const client = { send: vi.fn() };
+    const provider = sesNotificationProvider(sesConfig, { client });
 
     await expect(notify({ ...booking, to: "nora@example.com" }, provider)).resolves.toEqual({
       status: "failed",
@@ -201,293 +81,153 @@ describe("notify", () => {
       errorCode: "invalid_test_recipient",
       detail: expect.stringContaining("example.com"),
     });
-    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(client.send).not.toHaveBeenCalled();
   });
 
-  it("never sends seeded demo.com recipients to Resend", async () => {
-    const fetchImpl = vi.fn();
-    const provider = resendNotificationProvider(
-      { apiKey: "re_test", from: "Blue Mantis <bookings@example.com>" },
-      fetchImpl,
-    );
+  it("never sends seeded demo.com recipients to SES", async () => {
+    const client = { send: vi.fn() };
+    const provider = sesNotificationProvider(sesConfig, { client });
 
     await expect(notify({ ...booking, to: "marcus@demo.com" }, provider)).resolves.toMatchObject({
       status: "failed",
       retryable: false,
       errorCode: "invalid_test_recipient",
     });
-    expect(fetchImpl).not.toHaveBeenCalled();
-  });
-
-  it("keeps reserved test recipients out of a mixed batch", async () => {
-    const fetchImpl = vi
-      .fn()
-      .mockResolvedValue(
-        new Response(JSON.stringify({ data: [{ id: "batch-valid" }] }), { status: 200 }),
-      );
-    const provider = resendNotificationProvider(
-      { apiKey: "re_test", from: "Blue Mantis <bookings@example.com>" },
-      fetchImpl,
-      { beforeRequest: vi.fn().mockResolvedValue(undefined) },
-    );
-
-    await expect(
-      provider.sendBatch?.([
-        { ...booking, to: "nora@example.com" },
-        { ...booking, to: "delivered@resend.dev" },
-      ]),
-    ).resolves.toEqual([
-      expect.objectContaining({ errorCode: "invalid_test_recipient", retryable: false }),
-      { status: "sent", providerMessageId: "batch-valid" },
-    ]);
-    expect(JSON.parse(String(fetchImpl.mock.calls[0]?.[1]?.body))).toHaveLength(1);
-  });
-
-  it("uses the waiver record as the idempotency boundary for a private link", async () => {
-    const fetchImpl = vi
-      .fn()
-      .mockResolvedValue(new Response(JSON.stringify({ id: "resend-waiver-id" }), { status: 200 }));
-    const provider = resendNotificationProvider(
-      { apiKey: "re_test", from: "Blue Mantis <bookings@example.com>" },
-      fetchImpl,
-    );
-
-    await expect(
-      notify(
-        {
-          kind: "waiver_request",
-          waiverRecordId: "00000000-0000-4000-8000-000000000002",
-          bookingId: "00000000-0000-4000-8000-000000000001",
-          shopId: "00000000-0000-4000-8000-000000000010",
-          to: "delivered+waiver@resend.dev",
-          locale: "en-US",
-          diverName: "Nora Quinn",
-          shopName: "Blue Mantis",
-          tripTitle: "Two-Tank Reef",
-          completionUrl: "https://diveday.example/waivers/private-token",
-          expiresAt: new Date("2026-08-02T12:00:00.000Z"),
-          timezone: "America/New_York",
-        },
-        provider,
-      ),
-    ).resolves.toEqual({ status: "sent", providerMessageId: "resend-waiver-id" });
-
-    expect(fetchImpl).toHaveBeenCalledWith(
-      "https://api.resend.com/emails",
-      expect.objectContaining({
-        headers: expect.objectContaining({
-          "Idempotency-Key": "waiver-request/00000000-0000-4000-8000-000000000002",
-        }),
-      }),
-    );
-  });
-
-  it("keys a wait-list invite by its stamp so a genuine re-invite is a fresh send", async () => {
-    const fetchImpl = vi
-      .fn()
-      .mockResolvedValue(
-        new Response(JSON.stringify({ id: "resend-waitlist-id" }), { status: 200 }),
-      );
-    const provider = resendNotificationProvider(
-      { apiKey: "re_test", from: "Blue Mantis <bookings@example.com>" },
-      fetchImpl,
-    );
-
-    await expect(
-      notify(
-        {
-          kind: "waitlist_invite",
-          waitlistEntryId: "00000000-0000-4000-8000-000000000003",
-          shopId: "00000000-0000-4000-8000-000000000010",
-          to: "delivered+waitlist@resend.dev",
-          locale: "en-US",
-          diverName: "Nora Quinn",
-          shopName: "Blue Mantis",
-          tripTitle: "Two-Tank Reef",
-          startsAt: new Date("2026-08-01T12:00:00.000Z"),
-          endsAt: new Date("2026-08-01T15:00:00.000Z"),
-          timezone: "America/New_York",
-          bookingUrl: "https://diveday.example/s/blue-mantis/trips/trip-1",
-          invitedAt: new Date("2026-07-21T10:00:00.000Z"),
-          unsubscribeUrl: "https://diveday.example/unsubscribe/tok_abc123",
-        },
-        provider,
-      ),
-    ).resolves.toEqual({ status: "sent", providerMessageId: "resend-waitlist-id" });
-
-    expect(fetchImpl).toHaveBeenCalledWith(
-      "https://api.resend.com/emails",
-      expect.objectContaining({
-        headers: expect.objectContaining({
-          "Idempotency-Key":
-            "waitlist-invite/00000000-0000-4000-8000-000000000003/2026-07-21T10:00:00.000Z",
-        }),
-      }),
-    );
+    expect(client.send).not.toHaveBeenCalled();
   });
 
   it("does not attempt delivery when production email configuration is absent", async () => {
-    const fetchImpl = vi.fn();
-    const provider = notificationProviderFromEnvironment({}, fetchImpl);
+    const provider = notificationProviderFromEnvironment({});
 
     await expect(notify(booking, provider)).resolves.toEqual({ status: "not_configured" });
-    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+});
+
+describe("notificationIdempotencyKey", () => {
+  it("keys a booking confirmation by bookingId alone by default", () => {
+    expect(notificationIdempotencyKey(booking)).toBe(
+      "booking-confirmation/00000000-0000-4000-8000-000000000001",
+    );
   });
 
-  it("sends a welcome email keyed by the account, once ever", async () => {
-    const fetchImpl = vi
-      .fn()
-      .mockResolvedValue(
-        new Response(JSON.stringify({ id: "resend-welcome-id" }), { status: 200 }),
-      );
-    const provider = resendNotificationProvider(
-      { apiKey: "re_test", from: "Blue Mantis <bookings@example.com>" },
-      fetchImpl,
-    );
-
-    await expect(
-      notify(
-        {
-          kind: "welcome",
-          userAccountId: "00000000-0000-4000-8000-000000000020",
-          shopId: "00000000-0000-4000-8000-000000000010",
-          to: "delivered+welcome@resend.dev",
-          locale: "en-US",
-          ownerName: "Pat Diver",
-          shopName: "Blue Mantis",
-          signInUrl: "https://diveday.example/sign-in",
-        },
-        provider,
-      ),
-    ).resolves.toEqual({ status: "sent", providerMessageId: "resend-welcome-id" });
-
-    expect(fetchImpl).toHaveBeenCalledWith(
-      "https://api.resend.com/emails",
-      expect.objectContaining({
-        headers: expect.objectContaining({
-          "Idempotency-Key": "welcome/00000000-0000-4000-8000-000000000020",
-        }),
+  it("keys a reschedule confirmation by confirmedAt, not just bookingId (Codex finding)", () => {
+    // A reschedule can reactivate the same bookingId a much earlier
+    // confirmation already used — without `confirmedAt` distinguishing the
+    // two sends, a provider's own idempotency window would replay the first
+    // (stale) response instead of delivering this one.
+    expect(
+      notificationIdempotencyKey({
+        ...booking,
+        confirmedAt: new Date("2026-08-02T09:00:00.000Z"),
       }),
-    );
+    ).toBe("booking-confirmation/00000000-0000-4000-8000-000000000001/2026-08-02T09:00:00.000Z");
   });
 
-  it("keys email verification by the token row's id, not the raw token", async () => {
-    const fetchImpl = vi
-      .fn()
-      .mockResolvedValue(new Response(JSON.stringify({ id: "resend-verify-id" }), { status: 200 }));
-    const provider = resendNotificationProvider(
-      { apiKey: "re_test", from: "Blue Mantis <bookings@example.com>" },
-      fetchImpl,
-    );
-
-    await expect(
-      notify(
-        {
-          kind: "email_verification",
-          userAccountId: "00000000-0000-4000-8000-000000000020",
-          tokenId: "00000000-0000-4000-8000-000000000030",
-          shopId: "00000000-0000-4000-8000-000000000010",
-          to: "delivered+verification@resend.dev",
-          locale: "en-US",
-          ownerName: "Pat Diver",
-          verifyUrl: "https://diveday.example/verify/raw-token-should-not-appear",
-          expiresAt: new Date("2026-07-29T12:00:00.000Z"),
-          timezone: "America/New_York",
-        },
-        provider,
-      ),
-    ).resolves.toEqual({ status: "sent", providerMessageId: "resend-verify-id" });
-
-    const headers = fetchImpl.mock.calls[0]?.[1]?.headers;
-    expect(headers["Idempotency-Key"]).toBe(
-      "email-verification/00000000-0000-4000-8000-000000000030",
-    );
-    expect(headers["Idempotency-Key"]).not.toContain("raw-token-should-not-appear");
-  });
-
-  it("keys a password-reset request by the token row's id", async () => {
-    const fetchImpl = vi
-      .fn()
-      .mockResolvedValue(new Response(JSON.stringify({ id: "resend-reset-id" }), { status: 200 }));
-    const provider = resendNotificationProvider(
-      { apiKey: "re_test", from: "Blue Mantis <bookings@example.com>" },
-      fetchImpl,
-    );
-
-    await expect(
-      notify(
-        {
-          kind: "password_reset_request",
-          userAccountId: "00000000-0000-4000-8000-000000000020",
-          tokenId: "00000000-0000-4000-8000-000000000031",
-          shopId: "00000000-0000-4000-8000-000000000010",
-          to: "delivered+reset@resend.dev",
-          locale: "en-US",
-          ownerName: "Pat Diver",
-          resetUrl: "https://diveday.example/reset-password/raw-token-should-not-appear",
-          expiresAt: new Date("2026-07-26T13:00:00.000Z"),
-          timezone: "America/New_York",
-        },
-        provider,
-      ),
-    ).resolves.toEqual({ status: "sent", providerMessageId: "resend-reset-id" });
-
-    expect(fetchImpl).toHaveBeenCalledWith(
-      "https://api.resend.com/emails",
-      expect.objectContaining({
-        headers: expect.objectContaining({
-          "Idempotency-Key": "password-reset-request/00000000-0000-4000-8000-000000000031",
-        }),
+  it("uses the waiver record as the idempotency boundary for a private link", () => {
+    expect(
+      notificationIdempotencyKey({
+        kind: "waiver_request",
+        waiverRecordId: "00000000-0000-4000-8000-000000000002",
+        bookingId: "00000000-0000-4000-8000-000000000001",
+        shopId: "00000000-0000-4000-8000-000000000010",
+        to: "delivered+waiver@dive.day",
+        locale: "en-US",
+        diverName: "Nora Quinn",
+        shopName: "Blue Mantis",
+        tripTitle: "Two-Tank Reef",
+        completionUrl: "https://diveday.example/waivers/private-token",
+        expiresAt: new Date("2026-08-02T12:00:00.000Z"),
+        timezone: "America/New_York",
       }),
-    );
+    ).toBe("waiver-request/00000000-0000-4000-8000-000000000002");
   });
 
-  it("keys a password-changed notice by its own timestamp so a second reset is a fresh send", async () => {
-    const fetchImpl = vi
-      .fn()
-      .mockResolvedValue(
-        new Response(JSON.stringify({ id: "resend-changed-id" }), { status: 200 }),
-      );
-    const provider = resendNotificationProvider(
-      { apiKey: "re_test", from: "Blue Mantis <bookings@example.com>" },
-      fetchImpl,
-    );
-
-    await expect(
-      notify(
-        {
-          kind: "password_changed",
-          userAccountId: "00000000-0000-4000-8000-000000000020",
-          shopId: "00000000-0000-4000-8000-000000000010",
-          to: "delivered+changed@resend.dev",
-          locale: "en-US",
-          ownerName: "Pat Diver",
-          changedAt: new Date("2026-07-26T13:00:00.000Z"),
-        },
-        provider,
-      ),
-    ).resolves.toEqual({ status: "sent", providerMessageId: "resend-changed-id" });
-
-    expect(fetchImpl).toHaveBeenCalledWith(
-      "https://api.resend.com/emails",
-      expect.objectContaining({
-        headers: expect.objectContaining({
-          "Idempotency-Key":
-            "password-changed/00000000-0000-4000-8000-000000000020/2026-07-26T13:00:00.000Z",
-        }),
+  it("keys a wait-list invite by its stamp so a genuine re-invite is a fresh send", () => {
+    expect(
+      notificationIdempotencyKey({
+        kind: "waitlist_invite",
+        waitlistEntryId: "00000000-0000-4000-8000-000000000003",
+        shopId: "00000000-0000-4000-8000-000000000010",
+        to: "delivered+waitlist@dive.day",
+        locale: "en-US",
+        diverName: "Nora Quinn",
+        shopName: "Blue Mantis",
+        tripTitle: "Two-Tank Reef",
+        startsAt: new Date("2026-08-01T12:00:00.000Z"),
+        endsAt: new Date("2026-08-01T15:00:00.000Z"),
+        timezone: "America/New_York",
+        bookingUrl: "https://diveday.example/s/blue-mantis/trips/trip-1",
+        invitedAt: new Date("2026-07-21T10:00:00.000Z"),
+        unsubscribeUrl: "https://diveday.example/unsubscribe/tok_abc123",
       }),
-    );
+    ).toBe("waitlist-invite/00000000-0000-4000-8000-000000000003/2026-07-21T10:00:00.000Z");
+  });
+
+  it("keys a welcome email by the account, once ever", () => {
+    expect(
+      notificationIdempotencyKey({
+        kind: "welcome",
+        userAccountId: "00000000-0000-4000-8000-000000000020",
+        shopId: "00000000-0000-4000-8000-000000000010",
+        to: "delivered+welcome@dive.day",
+        locale: "en-US",
+        ownerName: "Pat Diver",
+        shopName: "Blue Mantis",
+        signInUrl: "https://diveday.example/sign-in",
+      }),
+    ).toBe("welcome/00000000-0000-4000-8000-000000000020");
+  });
+
+  it("keys email verification by the token row's id, not the raw token", () => {
+    const key = notificationIdempotencyKey({
+      kind: "email_verification",
+      userAccountId: "00000000-0000-4000-8000-000000000020",
+      tokenId: "00000000-0000-4000-8000-000000000030",
+      shopId: "00000000-0000-4000-8000-000000000010",
+      to: "delivered+verification@dive.day",
+      locale: "en-US",
+      ownerName: "Pat Diver",
+      verifyUrl: "https://diveday.example/verify/raw-token-should-not-appear",
+      expiresAt: new Date("2026-07-29T12:00:00.000Z"),
+      timezone: "America/New_York",
+    });
+    expect(key).toBe("email-verification/00000000-0000-4000-8000-000000000030");
+    expect(key).not.toContain("raw-token-should-not-appear");
+  });
+
+  it("keys a password-reset request by the token row's id", () => {
+    expect(
+      notificationIdempotencyKey({
+        kind: "password_reset_request",
+        userAccountId: "00000000-0000-4000-8000-000000000020",
+        tokenId: "00000000-0000-4000-8000-000000000031",
+        shopId: "00000000-0000-4000-8000-000000000010",
+        to: "delivered+reset@dive.day",
+        locale: "en-US",
+        ownerName: "Pat Diver",
+        resetUrl: "https://diveday.example/reset-password/raw-token-should-not-appear",
+        expiresAt: new Date("2026-07-26T13:00:00.000Z"),
+        timezone: "America/New_York",
+      }),
+    ).toBe("password-reset-request/00000000-0000-4000-8000-000000000031");
+  });
+
+  it("keys a password-changed notice by its own timestamp so a second reset is a fresh send", () => {
+    expect(
+      notificationIdempotencyKey({
+        kind: "password_changed",
+        userAccountId: "00000000-0000-4000-8000-000000000020",
+        shopId: "00000000-0000-4000-8000-000000000010",
+        to: "delivered+changed@dive.day",
+        locale: "en-US",
+        ownerName: "Pat Diver",
+        changedAt: new Date("2026-07-26T13:00:00.000Z"),
+      }),
+    ).toBe("password-changed/00000000-0000-4000-8000-000000000020/2026-07-26T13:00:00.000Z");
   });
 });
 
 describe("sesNotificationProvider (ADR 20260802-ses-adapter-and-webhook)", () => {
-  const sesConfig = {
-    region: "us-east-1",
-    from: "Blue Mantis <bookings@ses.dive.day>",
-    accessKeyId: "AKIA_TEST",
-    secretAccessKey: "test-secret",
-  };
-
   it("sends through the injected SES client and returns its message id", async () => {
     const client = { send: vi.fn().mockResolvedValue({ MessageId: "ses-message-id" }) };
     const provider = sesNotificationProvider(sesConfig, { client });
@@ -500,7 +240,7 @@ describe("sesNotificationProvider (ADR 20260802-ses-adapter-and-webhook)", () =>
     const command = client.send.mock.calls[0]?.[0] as SendEmailCommand;
     expect(command.input).toMatchObject({
       FromEmailAddress: "Blue Mantis <bookings@ses.dive.day>",
-      Destination: { ToAddresses: ["delivered+booking@resend.dev"] },
+      Destination: { ToAddresses: ["delivered+booking@dive.day"] },
       Content: {
         Simple: {
           Subject: { Data: "You're on the boat — Two-Tank Reef", Charset: "UTF-8" },
@@ -592,47 +332,16 @@ describe("sesNotificationProvider (ADR 20260802-ses-adapter-and-webhook)", () =>
   });
 });
 
-describe("notificationProviderFromEnvironment provider selection", () => {
-  it("stays on Resend when EMAIL_PROVIDER is unset, even if SES vars are also present", async () => {
-    const fetchImpl = vi
-      .fn()
-      .mockResolvedValue(new Response(JSON.stringify({ id: "resend-id" }), { status: 200 }));
-    const sesClient = { send: vi.fn() };
-    const provider = notificationProviderFromEnvironment(
-      {
-        RESEND_API_KEY: "re_test",
-        RESEND_FROM_EMAIL: "notifications@demo.invalid",
-        SES_AWS_REGION: "us-east-1",
-        SES_AWS_ACCESS_KEY_ID: "AKIA_TEST",
-        SES_AWS_SECRET_ACCESS_KEY: "test-secret",
-        SES_FROM_EMAIL: "bookings@ses.dive.day",
-      },
-      fetchImpl,
-      {},
-      { client: sesClient },
-    );
-
-    await notify(booking, provider);
-
-    expect(fetchImpl).toHaveBeenCalled();
-    expect(sesClient.send).not.toHaveBeenCalled();
-  });
-
-  it("switches to SES only when EMAIL_PROVIDER=ses is explicit", async () => {
-    const fetchImpl = vi.fn();
+describe("notificationProviderFromEnvironment (ADR 20260803-ses-sole-email-provider)", () => {
+  it("builds an SES provider from SES_* env vars and sends", async () => {
     const sesClient = { send: vi.fn().mockResolvedValue({ MessageId: "ses-id" }) };
     const provider = notificationProviderFromEnvironment(
       {
-        EMAIL_PROVIDER: "ses",
-        RESEND_API_KEY: "re_test",
-        RESEND_FROM_EMAIL: "notifications@demo.invalid",
         SES_AWS_REGION: "us-east-1",
         SES_AWS_ACCESS_KEY_ID: "AKIA_TEST",
         SES_AWS_SECRET_ACCESS_KEY: "test-secret",
         SES_FROM_EMAIL: "bookings@ses.dive.day",
       },
-      fetchImpl,
-      {},
       { client: sesClient },
     );
 
@@ -640,11 +349,28 @@ describe("notificationProviderFromEnvironment provider selection", () => {
       status: "sent",
       providerMessageId: "ses-id",
     });
-    expect(fetchImpl).not.toHaveBeenCalled();
   });
 
-  it("is disabled when EMAIL_PROVIDER=ses but SES config is incomplete", async () => {
-    const provider = notificationProviderFromEnvironment({ EMAIL_PROVIDER: "ses" }, vi.fn());
+  it("brands an unlabelled configured sender as DiveDay", async () => {
+    const sesClient = { send: vi.fn().mockResolvedValue({ MessageId: "ses-id" }) };
+    const provider = notificationProviderFromEnvironment(
+      {
+        SES_AWS_REGION: "us-east-1",
+        SES_AWS_ACCESS_KEY_ID: "AKIA_TEST",
+        SES_AWS_SECRET_ACCESS_KEY: "test-secret",
+        SES_FROM_EMAIL: "notifications@demo.invalid",
+      },
+      { client: sesClient },
+    );
+
+    await notify(booking, provider);
+
+    const command = sesClient.send.mock.calls[0]?.[0] as SendEmailCommand;
+    expect(command.input.FromEmailAddress).toBe("DiveDay <notifications@demo.invalid>");
+  });
+
+  it("is disabled when SES config is incomplete", async () => {
+    const provider = notificationProviderFromEnvironment({ SES_AWS_REGION: "us-east-1" });
 
     await expect(notify(booking, provider)).resolves.toEqual({ status: "not_configured" });
   });

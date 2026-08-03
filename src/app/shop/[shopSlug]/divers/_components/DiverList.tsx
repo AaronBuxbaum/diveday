@@ -29,6 +29,9 @@ export interface DiverListCopy {
   namePromptText: string;
   removeSavedViewAriaLabel: string;
   saveThisView: string;
+  saveViewConfirm: string;
+  saveViewCancel: string;
+  savedOnThisDevice: string;
   peopleHeading: string;
   searchHintText: string;
   searchDiversLabel: string;
@@ -37,6 +40,10 @@ export interface DiverListCopy {
   noDiversOnFile: string;
   tryDifferentSearch: string;
   addOneHere: string;
+  emptyAddAction: string;
+  emptyShowAll: string;
+  emptyImportBody: string;
+  emptyImportAction: string;
   noContactDetails: string;
   cardCountOne: string;
   cardCountOther: string;
@@ -46,11 +53,18 @@ export interface DiverListCopy {
   tableHeaderPerson: string;
   tableHeaderCards: string;
   tableHeaderAttention: string;
-  showMoreDivers: string;
-  backToTop: string;
 }
 
-/** A staffer's own pinned view — a name over a search + filter, stored per shop. */
+/**
+ * A staffer's own pinned view — a name over a search + filter, stored per shop.
+ *
+ * These live in this browser's own storage, not on the account. That is a real
+ * limitation on a shared counter tablet — one browser reset takes them with it,
+ * and the same person's phone starts empty — so the row says so out loud
+ * ("Saved on this device") rather than implying a roaming preference the app
+ * does not keep. There is no per-account preference store to move them to
+ * today; adding one is a schema decision, not a copy fix.
+ */
 type SavedView = { name: string; query: string; filter: DiverFilter };
 
 function savedViewsKey(shopSlug: string) {
@@ -94,24 +108,34 @@ function cardCount(diver: DiverSummary): number {
  * The divers list filters live as you type — the input drives the URL's `?q=`
  * (debounced) and the server answers with the matching page, so the roster
  * scales to thousands of records without shipping them all to the browser.
- * Pages are cursor links, so back/forward and sharing keep working.
+ * Pages are `?page=` links, so back/forward and sharing keep working — and,
+ * unlike the forward-only cursor this replaced, so does going back one page.
  */
 export function DiverList({
   page,
   shopSlug,
   query,
   filter,
-  cursorActive,
   locale,
+  importHref,
   copy,
+  pager,
 }: {
   page: DiverPage;
   shopSlug: string;
   query: string;
   filter: DiverFilter;
-  cursorActive: boolean;
   locale: string;
+  /** Where a bulk import lives, or null when this staffer may not run one. */
+  importHref: string | null;
   copy: DiverListCopy;
+  /**
+   * The roster's `<Pager>`, rendered by the Server Component above this one.
+   * Staff copy never crosses to the client (`src/i18n/staff-messages.ts`), so
+   * the shared pager stays a Server Component and arrives as an element rather
+   * than as four more strings on `copy`.
+   */
+  pager?: React.ReactNode;
 }) {
   const cardCountText = (count: number) =>
     fill(pluralForm(count, { one: copy.cardCountOne, other: copy.cardCountOther }, locale), {
@@ -126,21 +150,31 @@ export function DiverList({
   const pathname = usePathname();
   const [typed, setTyped] = useState(query);
   const [savedViews, setSavedViews] = useState<SavedView[]>([]);
+  // Naming a view is an in-page form, never `window.prompt`: the native dialog
+  // blocks the tab, ignores the shop's locale and the app's type scale, and on
+  // a counter tablet lands as an unstyled system sheet over the roster.
+  const [naming, setNaming] = useState(false);
+  const [viewName, setViewName] = useState("");
+  const nameInput = useRef<HTMLInputElement>(null);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Keep the input in sync when navigation (back/forward, a view chip) changes
   // the query underneath us — but never while the user is mid-debounce.
   useEffect(() => setTyped(query), [query]);
   useEffect(() => () => clearTimeout(debounce.current ?? undefined), []);
   useEffect(() => setSavedViews(readSavedViews(shopSlug)), [shopSlug]);
+  // The field replaces the button it was opened from, so the cursor has to
+  // follow — otherwise the tap lands somewhere with nothing focused.
+  useEffect(() => {
+    if (naming) nameInput.current?.focus();
+  }, [naming]);
 
   // One place builds every roster URL, so search, a view chip, and the pager all
   // carry both the text query and the active filter (never dropping one).
   const hrefFor = useCallback(
-    (nextQuery: string, nextFilter: DiverFilter, cursor?: string) => {
+    (nextQuery: string, nextFilter: DiverFilter) => {
       const params = new URLSearchParams();
       if (nextQuery.trim()) params.set("q", nextQuery.trim());
       if (nextFilter !== "all") params.set("filter", nextFilter);
-      if (cursor) params.set("after", cursor);
       return params.size ? `${pathname}?${params}` : pathname;
     },
     [pathname],
@@ -154,12 +188,21 @@ export function DiverList({
     }, 250);
   };
 
-  const saveCurrentView = () => {
-    const name = window.prompt(copy.namePromptText)?.trim();
+  const closeNaming = () => {
+    setNaming(false);
+    setViewName("");
+  };
+
+  const saveCurrentView = (event: React.FormEvent) => {
+    event.preventDefault();
+    const name = viewName.trim();
+    // Re-saving under an existing name replaces that view rather than pinning a
+    // second chip with the same words on it.
     if (!name) return;
     const next = [...savedViews.filter((view) => view.name !== name), { name, query, filter }];
     window.localStorage.setItem(savedViewsKey(shopSlug), JSON.stringify(next));
     setSavedViews(next);
+    closeNaming();
   };
 
   const removeSavedView = (name: string) => {
@@ -168,9 +211,27 @@ export function DiverList({
     setSavedViews(next);
   };
 
-  const { divers, nextCursor } = page;
-  const nextHref = nextCursor ? hrefFor(query, filter, nextCursor) : null;
-  const topHref = hrefFor(query, filter);
+  /**
+   * The empty state's door to the add-diver form. That form is a collapsed
+   * `<details id="add-diver">` further up this page, so a bare `#add-diver`
+   * anchor would jump to a summary that is still shut — the fix is to open it,
+   * bring it into view, and put the cursor in the first field, which is what a
+   * staffer clicking the button meant. Wired here rather than re-rendering
+   * the form inside the card so there is still exactly one add form on the page.
+   */
+  const openAddDiver = () => {
+    const details = document.getElementById("add-diver");
+    if (!(details instanceof HTMLDetailsElement)) return;
+    details.open = true;
+    details.scrollIntoView({ behavior: "smooth", block: "start" });
+    details.querySelector<HTMLInputElement>('input[name="fullName"]')?.focus({
+      preventScroll: true,
+    });
+  };
+
+  const { divers } = page;
+  /** A search box or a view chip is on, so "nothing here" is a filter result. */
+  const narrowed = Boolean(query) || filter !== "all";
   const chipClass = (active: boolean) =>
     `inline-flex min-h-9 items-center rounded-full border px-3 text-sm font-medium transition-colors ${
       active
@@ -213,13 +274,58 @@ export function DiverList({
             </span>
           );
         })}
-        <button
-          type="button"
-          onClick={saveCurrentView}
-          className="inline-flex min-h-9 items-center rounded-full border border-dashed border-border px-3 text-sm font-medium text-muted hover:text-foreground"
-        >
-          {copy.saveThisView}
-        </button>
+        {naming ? (
+          <form onSubmit={saveCurrentView} className="flex flex-wrap items-center gap-2">
+            <label className="sr-only" htmlFor="saved-view-name">
+              {copy.namePromptText}
+            </label>
+            <div className="w-44">
+              <input
+                id="saved-view-name"
+                ref={nameInput}
+                type="text"
+                value={viewName}
+                onChange={(event) => setViewName(event.target.value)}
+                // Escape backs out the way it does out of the ⌘K palette and an
+                // armed InlineConfirm — the one gesture that means "never mind"
+                // everywhere in the app.
+                onKeyDown={(event) => {
+                  if (event.key === "Escape") closeNaming();
+                }}
+                placeholder={copy.namePromptText}
+                className={`${controlClass} min-w-0`}
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={!viewName.trim()}
+              className={buttonClass({ variant: "secondary", size: "sm" })}
+            >
+              {copy.saveViewConfirm}
+            </button>
+            <button
+              type="button"
+              onClick={closeNaming}
+              className={buttonClass({ variant: "ghost", size: "sm" })}
+            >
+              {copy.saveViewCancel}
+            </button>
+          </form>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setNaming(true)}
+            className="inline-flex min-h-9 items-center rounded-full border border-dashed border-border px-3 text-sm font-medium text-muted hover:text-foreground"
+          >
+            {copy.saveThisView}
+          </button>
+        )}
+        {/* Only once there is something to lose. An empty row saying where
+            nothing is stored is noise; a row of pinned views that a browser
+            reset would take is worth being honest about. */}
+        {savedViews.length > 0 ? (
+          <p className="text-sm text-muted">{copy.savedOnThisDevice}</p>
+        ) : null}
       </nav>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
@@ -244,12 +350,46 @@ export function DiverList({
       </div>
       {divers.length === 0 ? (
         <EmptyState className="mt-4">
-          <p className="font-medium">
-            {query || filter !== "all" ? copy.noDiversMatchView : copy.noDiversOnFile}
+          <p className="font-medium">{narrowed ? copy.noDiversMatchView : copy.noDiversOnFile}</p>
+          <p className="mx-auto mt-1 max-w-md text-sm text-muted">
+            {narrowed ? copy.tryDifferentSearch : copy.addOneHere}
           </p>
-          <p className="mt-1 text-sm text-muted">
-            {query || filter !== "all" ? copy.tryDifferentSearch : copy.addOneHere}
-          </p>
+          {/* Narrowed to nothing and empty on day one are different problems,
+              so they get different doors: widen the view, or start the roster. */}
+          {narrowed ? (
+            <Link
+              href={hrefFor("", "all")}
+              scroll={false}
+              className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
+            >
+              {copy.emptyShowAll}
+            </Link>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={openAddDiver}
+                className={buttonClass({ className: "mt-4" })}
+              >
+                {copy.emptyAddAction}
+              </button>
+              {importHref ? (
+                <>
+                  <p className="mx-auto mt-5 max-w-md text-sm text-muted">{copy.emptyImportBody}</p>
+                  <Link
+                    href={importHref}
+                    className={buttonClass({
+                      variant: "secondary",
+                      size: "sm",
+                      className: "mt-2",
+                    })}
+                  >
+                    {copy.emptyImportAction}
+                  </Link>
+                </>
+              ) : null}
+            </>
+          )}
         </EmptyState>
       ) : (
         <>
@@ -371,20 +511,7 @@ export function DiverList({
           </div>
         </>
       )}
-      {nextHref || cursorActive ? (
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-          {nextHref ? (
-            <Link href={nextHref} className={buttonClass({ variant: "secondary" })}>
-              {copy.showMoreDivers}
-            </Link>
-          ) : null}
-          {cursorActive ? (
-            <Link href={topHref} className="text-sm font-medium text-primary hover:underline">
-              {copy.backToTop}
-            </Link>
-          ) : null}
-        </div>
-      ) : null}
+      {pager}
     </section>
   );
 }

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { FlashParams } from "@/components/FlashParams";
+import { Pager } from "@/components/Pager";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +11,7 @@ import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/fo
 import { canPersonDeleteDiver } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { createDiver, isDiverFilter, listDiverSummaries, restoreDiver } from "@/db/divers";
+import { canPersonImportShopData } from "@/db/import";
 import { getShopById } from "@/db/shops";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
@@ -60,13 +62,13 @@ export default async function DiversPage({
     notice?: string;
     deleted?: string;
     q?: string;
-    after?: string;
+    page?: string;
     filter?: string;
   }>;
 }) {
   const session = await requireStaffSession();
   const { shopSlug } = await params;
-  const { notice, deleted, q, after, filter: filterParam } = await searchParams;
+  const { notice, deleted, q, page, filter: filterParam } = await searchParams;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) return null;
@@ -74,7 +76,28 @@ export default async function DiversPage({
   const t = staffTranslator(locale);
   const query = q?.trim() ?? "";
   const filter = isDiverFilter(filterParam) ? filterParam : "all";
-  const diverPage = await listDiverSummaries(db, shop.id, { query, cursor: after, filter });
+  // A non-numeric or missing `?page=` reads as page 1; the query clamps it into
+  // range, so a search that narrows the roster never strands the reader on a
+  // page the new result set does not have.
+  const diverPage = await listDiverSummaries(db, shop.id, {
+    query,
+    page: Number.parseInt(page ?? "", 10),
+    filter,
+  });
+  // The roster's empty state offers a bulk import beside the one-diver form,
+  // for the shop arriving with a spreadsheet. Same gate the import page itself
+  // enforces (`canPersonImportShopData`), so the door is only shown to whoever
+  // may walk through it (ADR 20260724-role-gated-surfaces-hide-not-explain).
+  const canImport = await canPersonImportShopData(db, shop.id, session.user.personId);
+
+  /** The roster's URL with the search and view kept and only `page` swapped. */
+  const pageHref = (target: number) => {
+    const search = new URLSearchParams();
+    if (query) search.set("q", query);
+    if (filter !== "all") search.set("filter", filter);
+    if (target > 1) search.set("page", String(target));
+    return search.size ? `/shop/${shopSlug}/divers?${search}` : `/shop/${shopSlug}/divers`;
+  };
 
   async function addDiverAction(formData: FormData) {
     "use server";
@@ -165,7 +188,14 @@ export default async function DiversPage({
         </div>
       ) : null}
 
-      <details className="mt-8 rounded-2xl border border-border bg-surface p-5 shadow-sm">
+      {/* The id is the door the roster's empty state opens: with nobody on
+          file, "add one here" used to be prose pointing at a collapsed
+          disclosure two sections up, which is not a way forward. `scroll-mt`
+          keeps the summary clear of the sticky header once it is scrolled to. */}
+      <details
+        id="add-diver"
+        className="mt-8 scroll-mt-24 rounded-2xl border border-border bg-surface p-5 shadow-sm"
+      >
         <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between font-semibold [&::-webkit-details-marker]:hidden">
           {t("divers.page.addDiverSummary")}{" "}
           <span aria-hidden="true" className="text-xl font-normal text-primary">
@@ -199,8 +229,18 @@ export default async function DiversPage({
         shopSlug={shopSlug}
         query={query}
         filter={filter}
-        cursorActive={Boolean(after)}
         locale={locale}
+        importHref={canImport ? `/shop/${shopSlug}/settings/import` : null}
+        pager={
+          <Pager
+            page={diverPage.page}
+            pageCount={diverPage.pageCount}
+            href={pageHref}
+            total={t("divers.list.pagination.total", { count: diverPage.total })}
+            t={t}
+            className="mt-4"
+          />
+        }
         copy={{
           viewAllDivers: t("divers.list.viewAllDivers"),
           viewMissingContact: t("divers.list.viewMissingContact"),
@@ -209,6 +249,9 @@ export default async function DiversPage({
           namePromptText: t("divers.list.namePromptText"),
           removeSavedViewAriaLabel: t("divers.list.removeSavedViewAriaLabel"),
           saveThisView: t("divers.list.saveThisView"),
+          saveViewConfirm: t("divers.list.saveViewConfirm"),
+          saveViewCancel: t("divers.list.saveViewCancel"),
+          savedOnThisDevice: t("divers.list.savedOnThisDevice"),
           peopleHeading: t("divers.list.peopleHeading"),
           searchHintText: t("divers.list.searchHintText"),
           searchDiversLabel: t("divers.list.searchDiversLabel"),
@@ -217,6 +260,10 @@ export default async function DiversPage({
           noDiversOnFile: t("divers.list.noDiversOnFile"),
           tryDifferentSearch: t("divers.list.tryDifferentSearch"),
           addOneHere: t("divers.list.addOneHere"),
+          emptyAddAction: t("divers.list.emptyAddAction"),
+          emptyShowAll: t("divers.list.emptyShowAll"),
+          emptyImportBody: t("divers.list.emptyImportBody"),
+          emptyImportAction: t("divers.list.emptyImportAction"),
           noContactDetails: t("divers.list.noContactDetails"),
           cardCountOne: t("divers.list.cardCountOne"),
           cardCountOther: t("divers.list.cardCountOther"),
@@ -226,8 +273,6 @@ export default async function DiversPage({
           tableHeaderPerson: t("divers.list.tableHeaderPerson"),
           tableHeaderCards: t("divers.list.tableHeaderCards"),
           tableHeaderAttention: t("divers.list.tableHeaderAttention"),
-          showMoreDivers: t("divers.list.showMoreDivers"),
-          backToTop: t("divers.list.backToTop"),
         }}
       />
     </main>

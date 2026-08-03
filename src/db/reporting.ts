@@ -12,14 +12,13 @@ import {
   lt,
   ne,
   not,
-  or,
   sql,
   sum,
 } from "drizzle-orm";
 import { canViewShopReports, type Role } from "@/lib/authz";
 import type { MonthlyReportInput, ReportTrip } from "@/lib/reporting";
 import type { DbExecutor } from "./client";
-import { decodeCursor, encodeCursor } from "./cursor";
+import { offsetPage } from "./paging";
 import {
   bookingCheckoutBookings,
   bookingCheckouts,
@@ -298,70 +297,80 @@ export async function earliestReportedTripStart(
   return row?.startsAt ?? null;
 }
 
-/** How many trips the "Trips this month" table shows per page before "Show more". */
+/** How many trips the "Trips this month" table shows per page. */
 export const REPORT_TRIPS_PAGE_SIZE = 20;
 
 export type MonthlyReportTripPage = {
   trips: ReportTrip[];
-  nextCursor: string | null;
+  page: number;
+  pageCount: number;
+  pageSize: number;
+  total: number;
 };
 
 /**
- * The month's trips, one keyset page at a time (ordered by departure, then id
- * for a stable tiebreak) — the "Trips this month" table's own display slice.
+ * The month's trips, one page at a time (ordered by departure, then id for a
+ * stable tiebreak) — the "Trips this month" table's own display slice.
  * `getMonthlyReport`'s `trips` array stays unbounded on purpose:
  * `summarizeMonth`'s totals (seat fill, waiver completion, at-capacity count)
  * have to see every trip in the month, not just the page a viewer happens to
  * be looking at, so a shop with a busy month costs the table one page, not
  * the headline numbers going quietly wrong.
+ *
+ * Offset-paged, like every other paged staff list. It was a forward-only
+ * keyset cursor with no way back a page and no count to state
+ * (ADR 20260803-one-pagination-model).
  */
 export async function pagedMonthlyReportTrips(
   db: DbExecutor,
   shopId: string,
   startUtc: Date,
   endUtc: Date,
-  options: { cursor?: string; limit?: number } = {},
+  options: { page?: number; limit?: number } = {},
 ): Promise<MonthlyReportTripPage> {
-  const limit = options.limit ?? REPORT_TRIPS_PAGE_SIZE;
-  const after = decodeCursor(options.cursor);
-  const afterDate = after ? new Date(after[0]) : null;
-
   const inWindow = and(
     eq(trips.shopId, shopId),
     ne(trips.status, "cancelled"),
     gte(trips.startsAt, startUtc),
     lt(trips.startsAt, endUtc),
-    afterDate && after && !Number.isNaN(afterDate.getTime())
-      ? or(
-          gt(trips.startsAt, afterDate),
-          and(eq(trips.startsAt, afterDate), gt(trips.id, after[1])),
-        )
-      : undefined,
   );
 
-  const tripRows = await db
-    .select({
-      tripId: trips.id,
-      title: trips.title,
-      startsAt: trips.startsAt,
-      capacity: trips.capacity,
-      activeBookings: count(bookings.id),
-    })
-    .from(trips)
-    .leftJoin(
-      bookings,
-      and(
-        eq(bookings.tripId, trips.id),
-        eq(bookings.shopId, shopId),
-        inArray(bookings.status, [...ACTIVE_BOOKING_STATUSES]),
-      ),
-    )
-    .where(inWindow)
-    .groupBy(trips.id, trips.title, trips.startsAt, trips.capacity)
-    .orderBy(asc(trips.startsAt), asc(trips.id))
-    .limit(limit + 1);
+  const paged = await offsetPage({
+    page: options.page,
+    pageSize: options.limit ?? REPORT_TRIPS_PAGE_SIZE,
+    countRows: async () => {
+      // Counted off `trips` alone. The row query below groups over a booking
+      // join, so counting *its* rows would need a distinct — the window itself
+      // is the honest denominator either way.
+      const [counted] = await db.select({ total: count() }).from(trips).where(inWindow);
+      return counted?.total ?? 0;
+    },
+    fetchRows: async (offset, limit) =>
+      db
+        .select({
+          tripId: trips.id,
+          title: trips.title,
+          startsAt: trips.startsAt,
+          capacity: trips.capacity,
+          activeBookings: count(bookings.id),
+        })
+        .from(trips)
+        .leftJoin(
+          bookings,
+          and(
+            eq(bookings.tripId, trips.id),
+            eq(bookings.shopId, shopId),
+            inArray(bookings.status, [...ACTIVE_BOOKING_STATUSES]),
+          ),
+        )
+        .where(inWindow)
+        .groupBy(trips.id, trips.title, trips.startsAt, trips.capacity)
+        .orderBy(asc(trips.startsAt), asc(trips.id))
+        .limit(limit)
+        .offset(offset),
+  });
 
-  const pageRows = tripRows.slice(0, limit);
+  const pageRows = paged.rows;
   const tripIds = pageRows.map((row) => row.tripId);
 
   const waiverRows = tripIds.length
@@ -402,12 +411,11 @@ export async function pagedMonthlyReportTrips(
     waiverComplete: waiverByTrip.get(row.tripId) ?? 0,
   }));
 
-  const last = pageRows.at(-1);
   return {
     trips: reportTrips,
-    nextCursor:
-      tripRows.length > limit && last
-        ? encodeCursor(last.startsAt.toISOString(), last.tripId)
-        : null,
+    page: paged.page,
+    pageCount: paged.pageCount,
+    pageSize: paged.pageSize,
+    total: paged.total,
   };
 }

@@ -23,7 +23,7 @@ a pilot. Status of record: [human-decisions.md](../human-decisions.md) rows **H-
 | --- | --- | --- |
 | Privacy counsel (usually the same firm as [legal.md](legal.md)'s business counsel) | Privacy policy, state-law applicability, breach duties, controller/processor posture | Within the legal engagement |
 | AWS SNS (SMS carrier compliance registration) | Legal US SMS sending: brand + campaign registration | **Submit this week** — long lead |
-| Resend | Production sender domain verification, `RESEND_FROM_EMAIL` identity | This week — self-serve, fast |
+| AWS SES | Production access request, DKIM domain verification, `SES_FROM_EMAIL` identity | This week — production access is an AWS Support case, start early |
 
 ## AWS SNS SMS carrier compliance — what the registration asks for
 
@@ -56,8 +56,8 @@ H-09 asks for two paragraphs. Proposed draft (owner + counsel edit, then record 
 > DiveDay sends on a shop's behalf from a verified DiveDay-operated sender identity.
 
 Sender identity: a real shop-facing address on the production domain (e.g. `bookings@…`), set as
-`RESEND_FROM_EMAIL` after domain verification. Name the `CRON_SECRET` / `SNS_AWS_*` credential
-owner in the same H-09 update (rollout 0.2 pairs them).
+`SES_FROM_EMAIL` after DKIM domain verification and SES production access. Name the `CRON_SECRET` /
+`SNS_AWS_*` credential owner in the same H-09 update (rollout 0.2 pairs them).
 
 ## Privacy counsel — question list
 

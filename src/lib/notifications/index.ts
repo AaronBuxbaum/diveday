@@ -1,7 +1,6 @@
 import { SESv2Client, SendEmailCommand } from "@aws-sdk/client-sesv2";
 import { z } from "zod";
 import { DIVER_LOCALES, type DiverLocale, isDiverLocale, toDiverLocale } from "@/i18n/settings";
-import { nowMs } from "@/lib/clock";
 import { COURSE_INQUIRY_EXPERIENCE } from "@/lib/course-inquiry";
 import { log } from "@/lib/log";
 import { REMINDER_ACTION_CODES } from "@/lib/readiness-summary";
@@ -380,28 +379,7 @@ export interface NotificationProvider {
   sendBatch?(notifications: Notification[]): Promise<NotificationDelivery[]>;
 }
 
-type ResendConfig = {
-  apiKey: string;
-  from: string;
-};
-
-type Fetch = typeof fetch;
 type NotificationEnvironment = Readonly<Record<string, string | undefined>>;
-
-export type ResendProviderOptions = {
-  /** Reserve a team-wide request slot before each attempt. */
-  beforeRequest?: () => Promise<void>;
-  sleep?: (milliseconds: number) => Promise<void>;
-  random?: () => number;
-  maxAttempts?: number;
-};
-
-const resendConfigSchema = z.object({
-  apiKey: z.string().trim().min(1),
-  from: z.string().trim().min(3).max(320),
-});
-
-const resendResponseSchema = z.object({ id: z.string().min(1) });
 
 function formatSender(value: string): string {
   // Keep an explicitly branded sender untouched, while giving the common
@@ -439,7 +417,7 @@ function reservedTestRecipientDelivery(to: string): NotificationDelivery | null 
     retryable: false,
     errorCode: "invalid_test_recipient",
     detail:
-      "Resend blocks reserved test domains such as example.com. Use a real recipient or a Resend test address such as delivered@resend.dev.",
+      "Reserved test domains such as example.com are blocked. Use a real recipient or an SES mailbox simulator address such as success@simulator.amazonses.com.",
   };
 }
 
@@ -485,7 +463,8 @@ export function notificationIdempotencyKey(notification: Notification): string {
     case "waiver_request":
       return `waiver-request/${notification.waiverRecordId}`;
     // Keyed by invite timestamp so a genuine re-invite (a seat opens twice) is a
-    // fresh send, while a double-submit of the same tap still dedups at Resend.
+    // fresh send, while a double-submit of the same tap still dedups at the
+    // notification_send_queue level.
     case "waitlist_invite":
       return `waitlist-invite/${notification.waitlistEntryId}/${notification.invitedAt.toISOString()}`;
     // One reminder per booking per cadence — the kind alone keys it.
@@ -501,8 +480,8 @@ export function notificationIdempotencyKey(notification: Notification): string {
     case "welcome":
       return `welcome/${notification.userAccountId}`;
     // Keyed by the token row's own id, not the raw token, so a retried send
-    // never doubles up without the Idempotency-Key header ever carrying the
-    // bearer secret itself.
+    // never doubles up without this idempotency key ever carrying the bearer
+    // secret itself.
     case "email_verification":
       return `email-verification/${notification.tokenId}`;
     case "password_reset_request":
@@ -515,7 +494,7 @@ export function notificationIdempotencyKey(notification: Notification): string {
       return `password-changed/${notification.userAccountId}/${notification.changedAt.toISOString()}`;
     // One recovery send per checkout attempt — the row-level
     // abandonedRecoverySentAt gate is the real dedup; this only protects a
-    // single call from double-hitting Resend.
+    // single call from double-hitting the notification_send_queue.
     case "checkout_recovery":
       return `checkout-recovery/${notification.checkoutId}`;
     // Keyed by the code (unique per blast) and recipient, so a retry of one
@@ -530,268 +509,6 @@ export function notificationIdempotencyKey(notification: Notification): string {
     case "course_inquiry":
       return `course-inquiry/${notification.courseInquiryId}`;
   }
-}
-
-function sleep(milliseconds: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, milliseconds));
-}
-
-let nextInProcessRequestAt = 0;
-let inProcessPermitTail = Promise.resolve();
-
-/**
- * A local fallback for development and single-instance deployments. Production
- * callers pass the database-backed permit in `notificationProviderFromEnvironment`.
- */
-async function acquireInProcessPermit(): Promise<void> {
-  const previous = inProcessPermitTail;
-  let release!: () => void;
-  inProcessPermitTail = new Promise((resolve) => {
-    release = resolve;
-  });
-  await previous;
-  const now = nowMs();
-  const scheduledAt = Math.max(now, nextInProcessRequestAt);
-  nextInProcessRequestAt = scheduledAt + 125;
-  try {
-    if (scheduledAt > now) await sleep(scheduledAt - now);
-  } finally {
-    release();
-  }
-}
-
-function retryDelayMs(
-  attempt: number,
-  retryAfterMs: number | undefined,
-  random: () => number,
-): number {
-  if (retryAfterMs !== undefined) return Math.max(0, retryAfterMs);
-  const base = Math.min(4_000, 250 * 2 ** (attempt - 1));
-  return base + Math.floor(random() * base);
-}
-
-function parseRetryAfter(response: Response): number | undefined {
-  const retryAfter = response.headers.get("retry-after");
-  if (retryAfter) {
-    const seconds = Number(retryAfter);
-    if (Number.isFinite(seconds)) return Math.max(0, Math.ceil(seconds * 1_000));
-    const timestamp = Date.parse(retryAfter);
-    if (!Number.isNaN(timestamp)) return Math.max(0, timestamp - nowMs());
-  }
-  const resetHeader = response.headers.get("ratelimit-reset");
-  if (!resetHeader) return undefined;
-  const reset = Number(resetHeader);
-  return Number.isFinite(reset) && reset >= 0 ? Math.ceil(reset * 1_000) : undefined;
-}
-
-function parseProviderError(body: string): { code?: string; message?: string } {
-  try {
-    const parsed: unknown = JSON.parse(body);
-    if (!parsed || typeof parsed !== "object" || !("error" in parsed)) return {};
-    const error = parsed.error;
-    if (!error || typeof error !== "object") return {};
-    return {
-      code: "code" in error && typeof error.code === "string" ? error.code : undefined,
-      message:
-        "message" in error && typeof error.message === "string"
-          ? error.message.slice(0, 500)
-          : undefined,
-    };
-  } catch {
-    return {};
-  }
-}
-
-type ResendHttpResult =
-  | { ok: true; body: unknown }
-  | {
-      ok: false;
-      retryable: boolean;
-      retryAfterMs?: number;
-      httpStatus?: number;
-      errorCode?: string;
-      detail?: string;
-    };
-
-async function requestResend(
-  config: ResendConfig,
-  fetchImpl: Fetch,
-  options: Required<
-    Pick<ResendProviderOptions, "beforeRequest" | "sleep" | "random" | "maxAttempts">
-  >,
-  endpoint: string,
-  idempotencyKey: string,
-  body: unknown,
-): Promise<ResendHttpResult> {
-  for (let attempt = 1; attempt <= options.maxAttempts; attempt += 1) {
-    await options.beforeRequest();
-    try {
-      const response = await fetchImpl(`https://api.resend.com/${endpoint}`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${config.apiKey}`,
-          "Content-Type": "application/json",
-          "Idempotency-Key": idempotencyKey,
-        },
-        body: JSON.stringify(body),
-      });
-      const rawBody = await response.text();
-      let parsedBody: unknown = null;
-      try {
-        parsedBody = JSON.parse(rawBody);
-      } catch {
-        // The status code remains the useful diagnostic for a non-JSON response.
-      }
-      if (response.ok) return { ok: true, body: parsedBody };
-
-      const providerError = parseProviderError(rawBody);
-      const retryable = response.status === 429 || response.status >= 500;
-      const retryAfterMs = parseRetryAfter(response);
-      if (retryable && attempt < options.maxAttempts) {
-        await options.sleep(retryDelayMs(attempt, retryAfterMs, options.random));
-        continue;
-      }
-      return {
-        ok: false,
-        retryable,
-        retryAfterMs,
-        httpStatus: response.status,
-        errorCode: providerError.code,
-        detail: providerError.message,
-      };
-    } catch (error) {
-      if (attempt < options.maxAttempts) {
-        await options.sleep(retryDelayMs(attempt, undefined, options.random));
-        continue;
-      }
-      return {
-        ok: false,
-        retryable: true,
-        errorCode: "network_error",
-        detail: error instanceof Error ? error.message.slice(0, 500) : undefined,
-      };
-    }
-  }
-  return { ok: false, retryable: true, errorCode: "retry_exhausted" };
-}
-
-function failedDelivery(result: Extract<ResendHttpResult, { ok: false }>): NotificationDelivery {
-  const delivery: Extract<NotificationDelivery, { status: "failed" }> = {
-    status: "failed",
-    retryable: result.retryable,
-  };
-  if (result.retryAfterMs !== undefined) delivery.retryAfterMs = result.retryAfterMs;
-  if (result.httpStatus !== undefined) delivery.httpStatus = result.httpStatus;
-  if (result.errorCode !== undefined) delivery.errorCode = result.errorCode;
-  if (result.detail !== undefined) delivery.detail = result.detail;
-  return delivery;
-}
-
-function batchIdempotencyKey(notifications: Notification[]): string {
-  let hash = 2_166_136_261;
-  for (const value of notifications.map(notificationIdempotencyKey).join("\u0000")) {
-    hash ^= value.charCodeAt(0);
-    hash = Math.imul(hash, 16_777_619);
-  }
-  return `notification-batch/${notifications.length}/${hash >>> 0}`;
-}
-
-export function resendNotificationProvider(
-  config: ResendConfig,
-  fetchImpl: Fetch,
-  providerOptions: ResendProviderOptions = {},
-): NotificationProvider {
-  const options = {
-    beforeRequest: providerOptions.beforeRequest ?? acquireInProcessPermit,
-    sleep: providerOptions.sleep ?? sleep,
-    random: providerOptions.random ?? Math.random,
-    maxAttempts: providerOptions.maxAttempts ?? 4,
-  };
-  return {
-    async send(notification) {
-      const invalidRecipient = reservedTestRecipientDelivery(notification.to);
-      if (invalidRecipient) return invalidRecipient;
-      const message = messageFor(notification);
-      const result = await requestResend(
-        config,
-        fetchImpl,
-        options,
-        "emails",
-        notificationIdempotencyKey(notification),
-        {
-          from: config.from,
-          to: [notification.to],
-          subject: message.subject,
-          text: message.text,
-          html: message.html,
-        },
-      );
-      if (!result.ok) {
-        log("notification.resend_send_failed", "warn", {
-          httpStatus: result.httpStatus,
-          errorCode: result.errorCode,
-          retryAfterMs: result.retryAfterMs,
-          retryable: result.retryable,
-        });
-        return failedDelivery(result);
-      }
-      const body = resendResponseSchema.safeParse(result.body);
-      if (!body.success)
-        return { status: "failed", retryable: true, errorCode: "invalid_response" };
-      return { status: "sent", providerMessageId: body.data.id };
-    },
-    async sendBatch(notifications) {
-      if (notifications.length === 0) return [];
-      const results: NotificationDelivery[] = notifications.map(
-        (notification) =>
-          reservedTestRecipientDelivery(notification.to) ?? { status: "not_configured" },
-      );
-      const deliverable = notifications.flatMap((notification, index) =>
-        results[index]?.status === "not_configured" ? [{ notification, index }] : [],
-      );
-      if (deliverable.length === 0) return results;
-
-      const messages = deliverable.map(({ notification }) => {
-        const message = messageFor(notification);
-        return {
-          from: config.from,
-          to: [notification.to],
-          subject: message.subject,
-          text: message.text,
-          html: message.html,
-        };
-      });
-      const result = await requestResend(
-        config,
-        fetchImpl,
-        options,
-        "emails/batch",
-        batchIdempotencyKey(deliverable.map(({ notification }) => notification)),
-        messages,
-      );
-      if (!result.ok) {
-        log("notification.resend_batch_send_failed", "warn", {
-          count: notifications.length,
-          httpStatus: result.httpStatus,
-          errorCode: result.errorCode,
-          retryAfterMs: result.retryAfterMs,
-          retryable: result.retryable,
-        });
-        for (const { index } of deliverable) results[index] = failedDelivery(result);
-        return results;
-      }
-      const body = result.body as { data?: unknown } | null;
-      const ids = Array.isArray(body?.data)
-        ? body.data.map((item) => resendResponseSchema.safeParse(item).data?.id ?? null)
-        : [];
-      for (const [index, { index: originalIndex }] of deliverable.entries()) {
-        results[originalIndex] = ids[index]
-          ? { status: "sent", providerMessageId: ids[index] as string }
-          : { status: "failed", retryable: true, errorCode: "invalid_response" };
-      }
-      return results;
-    },
-  };
 }
 
 const disabledNotificationProvider: NotificationProvider = {
@@ -829,8 +546,7 @@ const sesConfigSchema = z.object({
 /**
  * Every SES SDK error extends `SESv2ServiceException`, which carries `$metadata.httpStatusCode`
  * and a `.name` matching the specific AWS error type. A response that never reached AWS at all
- * (a network failure) has no `$metadata` and is treated as retryable, mirroring the Resend
- * adapter's `network_error` catch-all.
+ * (a network failure) has no `$metadata` and is treated as retryable.
  */
 function sesErrorInfo(error: unknown): {
   retryable: boolean;
@@ -843,9 +559,8 @@ function sesErrorInfo(error: unknown): {
     ? (error as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode
     : undefined;
   // "Error" (every plain JS error's default .name) is not a useful code; only
-  // a modeled AWS exception's specific name is worth surfacing, matching how
-  // the Resend adapter reserves "network_error" for a request that never got
-  // a response at all.
+  // a modeled AWS exception's specific name is worth surfacing. "network_error"
+  // is reserved for a request that never got a response at all.
   const errorCode = isAwsException && error instanceof Error ? error.name : "network_error";
   const detail = error instanceof Error ? error.message.slice(0, 500) : undefined;
   const retryable =
@@ -860,13 +575,13 @@ function sesErrorInfo(error: unknown): {
 /**
  * SES sending via the AWS SDK (ADR 20260802-ses-adapter-and-webhook — the SDK
  * handles SigV4 signing and its own retry/backoff for throttling and 5xx, so
- * unlike the Resend adapter this needs no hand-rolled request loop). Dormant
- * until `EMAIL_PROVIDER=ses` is set; see `notificationProviderFromEnvironment`.
+ * this needs no hand-rolled request loop). The sole email provider (ADR
+ * 20260803-ses-sole-email-provider); see `notificationProviderFromEnvironment`.
  *
- * SES has no request-level idempotency token, unlike Resend's
- * `Idempotency-Key` header — a client-side timeout racing a server-side
- * success can double-send here in a way Resend's 24h dedup would have
- * caught. Accepted for now; see the ADR's Consequences.
+ * SES has no request-level idempotency token — a client-side timeout racing a
+ * server-side success can double-send. The queue-level dedup on
+ * `notification_send_queue.idempotency_key` is the real safety net; this is a
+ * narrower, accepted gap. See the ADR's Consequences.
  */
 export function sesNotificationProvider(
   config: SesConfig,
@@ -915,7 +630,7 @@ export function sesNotificationProvider(
 /**
  * The only application entry point for an outbound notification. Provider
  * details stay here so booking and waiver flows remain testable without email
- * credentials (ADR 20260718-resend-transactional-email).
+ * credentials (ADR 20260803-ses-sole-email-provider).
  */
 export async function notify(
   input: Notification,
@@ -926,34 +641,24 @@ export async function notify(
 }
 
 /**
- * Resend is the default and only implicit provider — SES is never picked up
- * just because its credentials happen to be present. A cutover is the
- * explicit `EMAIL_PROVIDER=ses` flag, never a side effect of environment
- * configuration left over from testing (ADR 20260802-ses-adapter-and-webhook).
+ * SES is the only email provider (ADR 20260803-ses-sole-email-provider,
+ * superseding 20260802-ses-adapter-and-webhook's opt-in `EMAIL_PROVIDER=ses`
+ * flag). Missing or invalid SES credentials fall back to
+ * `disabledNotificationProvider` rather than throwing, so a booking or waiver
+ * flow degrades to "email not configured" instead of failing outright.
  */
 export function notificationProviderFromEnvironment(
   env: NotificationEnvironment = process.env,
-  fetchImpl: Fetch = fetch,
-  providerOptions: ResendProviderOptions = {},
   sesProviderOptions: SesProviderOptions = {},
 ): NotificationProvider {
-  if (env.EMAIL_PROVIDER === "ses") {
-    const sesConfig = sesConfigSchema.safeParse({
-      region: env.SES_AWS_REGION,
-      from: env.SES_FROM_EMAIL ? formatSender(env.SES_FROM_EMAIL) : undefined,
-      accessKeyId: env.SES_AWS_ACCESS_KEY_ID,
-      secretAccessKey: env.SES_AWS_SECRET_ACCESS_KEY,
-    });
-    return sesConfig.success
-      ? sesNotificationProvider(sesConfig.data, sesProviderOptions)
-      : disabledNotificationProvider;
-  }
-  const config = resendConfigSchema.safeParse({
-    apiKey: env.RESEND_API_KEY,
-    from: env.RESEND_FROM_EMAIL ? formatSender(env.RESEND_FROM_EMAIL) : undefined,
+  const sesConfig = sesConfigSchema.safeParse({
+    region: env.SES_AWS_REGION,
+    from: env.SES_FROM_EMAIL ? formatSender(env.SES_FROM_EMAIL) : undefined,
+    accessKeyId: env.SES_AWS_ACCESS_KEY_ID,
+    secretAccessKey: env.SES_AWS_SECRET_ACCESS_KEY,
   });
-  return config.success
-    ? resendNotificationProvider(config.data, fetchImpl, providerOptions)
+  return sesConfig.success
+    ? sesNotificationProvider(sesConfig.data, sesProviderOptions)
     : disabledNotificationProvider;
 }
 

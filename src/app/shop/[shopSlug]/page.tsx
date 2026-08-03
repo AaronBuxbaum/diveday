@@ -36,7 +36,7 @@ import { publicAppUrl } from "@/lib/notifications";
 import { OPERATIONAL_HORIZON_DAYS } from "@/lib/operational-window";
 import { publicSchedulePath } from "@/lib/public-routes";
 import { requireStaffSession } from "@/lib/session";
-import { noticeFromParam } from "@/lib/staff-notices";
+import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
 import { getTimeOfDayGreeting, leadWithCrewed, roleLensFor, summarizeDay } from "@/lib/today";
 import { BlockerGroups } from "./_components/BlockerGroups";
 import { isQueueView, type QueueView, QueueViewSwitch } from "./_components/QueueViewSwitch";
@@ -288,7 +288,12 @@ async function TodayBody({
       ) : null}
       {email ? (
         <div className="mb-6">
-          <ShopNotice tone={email === "sent" ? "success" : "danger"}>
+          {/* A failed send must announce itself (noticeRole: danger → alert);
+              without a role this read as ambient status to screen readers. */}
+          <ShopNotice
+            tone={email === "sent" ? "success" : "danger"}
+            role={noticeRole(email === "sent" ? "success" : "danger")}
+          >
             {email === "sent" ? t("shopHome.emailResent") : t("shopHome.emailFailed")}
           </ShopNotice>
         </div>
@@ -366,7 +371,12 @@ async function TodayBody({
         }}
       />
 
-      {departures.length === 0 ? (
+      {/* On a brand-new shop (no departures, nothing coming up, checklist
+          showing) this card would render its heading and nothing else — the
+          first-run checklist right below already owns "schedule your first
+          trip", so an empty bordered box would be the owner's first screen.
+          The card sits out until it has something to say. */}
+      {departures.length === 0 && (nextDeparture || !showFirstRunChecklist) ? (
         <section
           aria-labelledby="no-departures-heading"
           className="mb-10 rounded-2xl border border-border bg-surface p-5 sm:p-6"
@@ -390,7 +400,7 @@ async function TodayBody({
                 time: formatTime(nextDeparture.startsAt, locale, shop.timezone),
               })}
             </p>
-          ) : !showFirstRunChecklist ? (
+          ) : (
             <>
               <p className="mt-1 text-muted">{t("shopHome.noDeparturesEmpty")}</p>
               <Link
@@ -400,7 +410,7 @@ async function TodayBody({
                 {t("shopHome.scheduleTrip")}
               </Link>
             </>
-          ) : null}
+          )}
         </section>
       ) : null}
 

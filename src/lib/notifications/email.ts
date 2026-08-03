@@ -154,7 +154,7 @@ const BRAND_PRIMARY_COLOR = "#0e7490";
  * Wraps a template's inner body fragment in a real HTML document — doctype,
  * `<html lang>`, a viewport meta tag, and a max-width container, none of
  * which any individual template had before (they returned bare `<p>` soup
- * that Resend delivered as-is). Kept deliberately plain: inline styles only,
+ * delivered as-is). Kept deliberately plain: inline styles only,
  * no external stylesheet or font, so it stays deliverability-safe. The shop
  * name renders as a small text header — never a logo image, matching the
  * "no image-heavy layouts" rule for transactional mail.

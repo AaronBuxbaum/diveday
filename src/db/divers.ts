@@ -4,7 +4,6 @@ import {
   count,
   desc,
   eq,
-  gt,
   ilike,
   inArray,
   isNotNull,
@@ -15,8 +14,8 @@ import {
 } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { type AppDb, isUniqueConstraintViolation } from "./client";
-import { decodeCursor, encodeCursor } from "./cursor";
 import { listOrdersForPerson } from "./orders";
+import { offsetPage } from "./paging";
 import { listPersonBookingPayments } from "./payments";
 import {
   bookings,
@@ -212,15 +211,16 @@ export const DIVER_PAGE_SIZE = 20;
 /**
  * The diver roster stays server-fed: search is indexed `ilike` over the
  * columns the front desk actually types (name, email, phone — same shape as
- * the command palette in `search.ts`), and pages are keyset-bounded so a shop
- * with thousands of records costs one page, not the whole table.
+ * the command palette in `search.ts`), and pages are bounded so a shop with
+ * thousands of records costs one page, not the whole table.
  */
 /**
  * Named roster views for common front-desk jobs. Deliberately code-defined, not
  * a per-shop table: they are role-shaped presets over the one roster ("who needs
  * a safety contact chased", "who carries insurance"), and any staffer can pin
  * their own combinations in the browser (see DiverQuickViews). Each is a cheap
- * WHERE clause, so filtering never breaks the keyset paging.
+ * WHERE clause applied to both the page and its count, so filtering never
+ * breaks the paging.
  */
 export type DiverFilter = "all" | "missing_contact" | "insured";
 
@@ -250,12 +250,10 @@ function diverFilterCondition(filter: DiverFilter) {
 export async function listDiverSummaries(
   db: AppDb,
   shopId: string,
-  options: { query?: string; cursor?: string; limit?: number; filter?: DiverFilter } = {},
+  options: { query?: string; page?: number; limit?: number; filter?: DiverFilter } = {},
 ) {
   const query = options.query?.trim() ?? "";
-  const limit = options.limit ?? DIVER_PAGE_SIZE;
   const like = query ? `%${query}%` : null;
-  const after = decodeCursor(options.cursor);
 
   const scope = and(
     eq(people.shopId, shopId),
@@ -267,40 +265,43 @@ export async function listDiverSummaries(
       : undefined,
   );
 
-  const [rows, [counted]] = await Promise.all([
-    db
-      .select({ person: people })
-      .from(people)
-      .innerJoin(personRoles, eq(personRoles.personId, people.id))
-      .where(
-        and(
-          scope,
-          after
-            ? or(
-                gt(people.fullName, after[0]),
-                and(eq(people.fullName, after[0]), gt(people.id, after[1])),
-              )
-            : undefined,
-        ),
-      )
-      .orderBy(asc(people.fullName), asc(people.id))
-      .limit(limit + 1),
-    db
-      .select({ total: count() })
-      .from(people)
-      .innerJoin(personRoles, eq(personRoles.personId, people.id))
-      .where(scope),
-  ]);
-
-  const pageRows = rows.slice(0, limit).map(({ person }) => person);
-  const last = pageRows.at(-1);
-  const nextCursor = rows.length > limit && last ? encodeCursor(last.fullName, last.id) : null;
-  const total = counted?.total ?? 0;
+  // Offset rather than keyset. The roster used to page forward-only by cursor,
+  // which meant a staffer three pages into "who is missing a safety contact"
+  // could only start over — there was no way back one page, and no way to say
+  // where they were. Name-then-id is a total order, so an offset lands exactly
+  // where "Page 3 of 7" claims (ADR 20260803-one-pagination-model).
+  const page = await offsetPage({
+    page: options.page,
+    pageSize: options.limit ?? DIVER_PAGE_SIZE,
+    countRows: async () => {
+      const [counted] = await db
+        .select({ total: count() })
+        .from(people)
+        .innerJoin(personRoles, eq(personRoles.personId, people.id))
+        .where(scope);
+      return counted?.total ?? 0;
+    },
+    fetchRows: async (offset, limit) =>
+      db
+        .select({ person: people })
+        .from(people)
+        .innerJoin(personRoles, eq(personRoles.personId, people.id))
+        .where(scope)
+        .orderBy(asc(people.fullName), asc(people.id))
+        .limit(limit)
+        .offset(offset),
+  });
 
   return {
-    divers: await summarizeDivers(db, shopId, pageRows),
-    nextCursor,
-    total,
+    divers: await summarizeDivers(
+      db,
+      shopId,
+      page.rows.map(({ person }) => person),
+    ),
+    total: page.total,
+    page: page.page,
+    pageCount: page.pageCount,
+    pageSize: page.pageSize,
   };
 }
 
