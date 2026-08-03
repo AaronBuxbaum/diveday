@@ -21,7 +21,7 @@ test("a diver can self-serve unsubscribe from courtesy email (wait-list openings
   page,
   request,
 }) => {
-  await page.goto("/shop/blue-mantis/schedule");
+  await page.goto("/s/blue-mantis");
   await page.getByLabel("Name").fill("Priya Nair");
   await page.getByLabel("Email").fill("priya.courtesy.e2e@example.com");
   await page.getByRole("button", { name: "Notify me" }).click();

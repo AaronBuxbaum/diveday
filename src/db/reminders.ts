@@ -29,6 +29,7 @@ import {
   type ReminderKind,
   TRIP_REMINDER_CADENCES,
 } from "@/lib/reminders";
+import { temperatureUnitFor } from "@/lib/temperature-units";
 import { issueBookingCapability } from "./booking-capabilities";
 import type { AppDb } from "./client";
 import {
@@ -292,12 +293,20 @@ export async function sendDueReminders(
     // for a first-timer. The 7-day nudge carries none of it.
     const isDay = cadence.kind === "trip_reminder_24h";
     const forecast = isDay
-      ? forecastText(t, locale, {
-          conditionsSummary: trip.conditionsSummary,
-          waterTemperatureC: trip.waterTemperatureC,
-          visibilityMeters: trip.visibilityMeters,
-          surfaceConditions: trip.surfaceConditions,
-        })
+      ? forecastText(
+          t,
+          locale,
+          {
+            conditionsSummary: trip.conditionsSummary,
+            waterTemperatureC: trip.waterTemperatureC,
+            visibilityMeters: trip.visibilityMeters,
+            surfaceConditions: trip.surfaceConditions,
+          },
+          // Written in the shop's own units, so the brief agrees with the trip
+          // page the diver opens from it (src/lib/temperature-units.ts,
+          // src/lib/depth-units.ts). Storage stays Celsius and metres.
+          { temperature: temperatureUnitFor(shop), depth: shop.depthUnit },
+        )
       : null;
     const whoToText = isDay ? shop.contactPhone?.trim() || null : null;
     const brief = isDay

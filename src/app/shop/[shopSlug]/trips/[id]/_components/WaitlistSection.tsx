@@ -1,5 +1,6 @@
 import { EmptyState } from "@/components/EmptyState";
 import { staffTranslator } from "@/i18n/staff-messages";
+import { publicTripPath } from "@/lib/public-routes";
 import type { Waitlist } from "./types";
 import { WaitlistInvite, type WaitlistInviteCopy } from "./WaitlistInvite";
 
@@ -23,7 +24,7 @@ export function WaitlistSection({
   locale: string;
 }) {
   const t = staffTranslator(locale);
-  const bookingPath = `/shop/${shopSlug}/schedule/${tripId}`;
+  const bookingPath = publicTripPath(shopSlug, tripId);
   // Every word `WaitlistInvite` (a Client Component) renders, resolved here on
   // the server — see the note in src/i18n/staff-messages.ts. Its own relative-
   // time and email-draft text is genuinely client-derived (the current instant,

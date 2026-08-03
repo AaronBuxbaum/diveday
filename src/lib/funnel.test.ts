@@ -51,7 +51,7 @@ describe("trialHref", () => {
 describe("scheduleAttributionHref", () => {
   it("tags the schedule preview link with the shop and the page that sent the visitor", () => {
     expect(scheduleAttributionHref("blue-mantis", "home-hero")).toBe(
-      "/shop/blue-mantis/schedule?from=home-hero",
+      "/s/blue-mantis?from=home-hero",
     );
   });
 

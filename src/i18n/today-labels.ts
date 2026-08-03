@@ -141,6 +141,37 @@ export function blockerDetailGroupText(t: StaffTranslator, detail: string, names
   return t("shared.today.blockerDetail.group", { detail, names });
 }
 
+/**
+ * "Ana, Ben and 6 others" — enough to recognise the group, short enough to
+ * scan. Here rather than in `src/lib/today.ts` because the joining words are
+ * *words*: that version baked " and ", "other" and "others" into a string a
+ * page renders verbatim, so a Spanish reader got English conjunctions inside an
+ * otherwise translated sentence.
+ *
+ * `shown` is how many names survive before the tail collapses to a count. A
+ * list only one longer than that prints in full, because "…and 1 other" costs
+ * the same room as the name it withholds.
+ */
+export function nameListText(t: StaffTranslator, names: readonly string[], shown = 2): string {
+  if (names.length === 0) return "";
+  if (names.length === 1) return names[0] ?? "";
+  if (names.length <= shown + 1) {
+    return t("shared.today.nameList.all", {
+      leading: names.slice(0, -1).join(", "),
+      last: names.at(-1) ?? "",
+    });
+  }
+  return t("shared.today.nameList.overflow", {
+    leading: names.slice(0, shown).join(", "),
+    rest: names.length - shown,
+  });
+}
+
+/** A collapsed multi-diver row's subject — "6 divers", pluralised by the bundle. */
+export function diverGroupSubjectText(t: StaffTranslator, count: number): string {
+  return t("shared.today.subject.diverGroup", { count });
+}
+
 /** The remaining `src/db/today.ts` action rows, resolved through the same bundle-only rule. */
 
 export function missingFitDetailText(t: StaffTranslator, count: number): string {

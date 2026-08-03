@@ -13,6 +13,7 @@ import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { signIn } from "@/lib/auth";
 import { trialHref } from "@/lib/funnel";
+import { publicSchedulePath, shopSlugFromStaffUrl } from "@/lib/public-routes";
 
 // Reads `searchParams`/`requestLocale()` inside `SignInForm` below, wrapped in
 // its own `<Suspense>` — not `instant = false`, which (per
@@ -53,10 +54,17 @@ async function authenticate(formData: FormData) {
   }
 }
 
+/**
+ * `callbackUrl` is Auth.js's own parameter, set when it bounces an unauthorized
+ * request here. Typed as possibly repeated because a URL can carry it twice;
+ * only a single value is trusted.
+ */
+type SignInSearchParams = { error?: string; callbackUrl?: string | string[] };
+
 export default function SignInPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<SignInSearchParams>;
 }) {
   return (
     <div className="flex flex-1 flex-col">
@@ -73,9 +81,15 @@ export default function SignInPage({
   );
 }
 
-async function SignInForm({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
-  const { error } = await searchParams;
+async function SignInForm({ searchParams }: { searchParams: Promise<SignInSearchParams> }) {
+  const { error, callbackUrl } = await searchParams;
   const t = diverTranslator(await requestLocale());
+  // A diver who followed a `/shop/<slug>/…` link lands here with no way back to
+  // the thing they wanted. `callbackUrl` names the shop; if it doesn't — no
+  // parameter, a repeated one, or anything that isn't a `/shop/<slug>` path —
+  // this stays null and the link is simply absent rather than pointing at a
+  // guess.
+  const publicShopSlug = shopSlugFromStaffUrl(typeof callbackUrl === "string" ? callbackUrl : null);
 
   return (
     <main className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center gap-6 px-6 py-16">
@@ -123,6 +137,16 @@ async function SignInForm({ searchParams }: { searchParams: Promise<{ error?: st
             {t("account.signIn.createShop")}
           </Link>
         </p>
+        {publicShopSlug ? (
+          <p className="mt-2 text-center text-sm">
+            <Link
+              href={publicSchedulePath(publicShopSlug)}
+              className="text-primary hover:underline"
+            >
+              {t("account.signIn.publicSchedule")}
+            </Link>
+          </p>
+        ) : null}
       </div>
     </main>
   );

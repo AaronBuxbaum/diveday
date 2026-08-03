@@ -104,7 +104,7 @@ async function SwitchHubBody({ locale }: { locale: DiverLocale }) {
               <h2 className="text-xl font-semibold tracking-tight">
                 {t("switching.hub.switchingFrom", { competitor: guide.competitor })}
               </h2>
-              <p className="mt-3 flex-1 leading-7 text-muted">{guide.cardSummary}</p>
+              <p className="mt-3 flex-1 leading-7 text-muted">{t(guide.cardSummary)}</p>
               <span className="mt-5 text-sm font-semibold text-primary group-hover:underline">
                 {t("switching.hub.readGuide")}
               </span>

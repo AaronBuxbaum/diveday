@@ -1,21 +1,34 @@
 import { createBearerToken, hashBearerToken } from "./bearer-tokens";
 
 /**
- * A booking capability (CR-002/CR-003) never runs forever: it outlives the
- * trip by a grace window so post-trip follow-up (a late payment, a missed
- * waiver) still works, is capped at a flat ceiling so an early-booked trip
- * doesn't mint a years-long credential, and never expires sooner than a day
- * out even for a same-day booking.
+ * A booking capability (CR-002/CR-003) is anchored to the **trip**, not to the
+ * moment it was minted: it stays valid until the trip ends plus a grace window
+ * so post-trip follow-up (a late payment, a missed waiver, the recap that
+ * lands after the boat is back) still works, and never expires sooner than a
+ * day out even for a same-day booking.
+ *
+ * Deriving it from the trip is the whole point. A flat offset from issuance
+ * (this was 60 days) quietly killed the confirmation URL and the readiness
+ * link in the confirmation email for anyone who booked a season ahead — the
+ * links were dead *before* the trip they were about.
+ *
+ * Still bounded, never unlimited: `CAPABILITY_MAX_TTL_MS` remains as an
+ * absolute backstop so a mistyped departure date (a trip keyed to 2199)
+ * cannot mint a lifetime credential. It sits far past any real booking lead
+ * time, so it never truncates a legitimate one.
  */
-export const CAPABILITY_MAX_TTL_MS = 60 * 24 * 60 * 60 * 1000;
-export const CAPABILITY_TRIP_GRACE_MS = 48 * 60 * 60 * 1000;
+export const CAPABILITY_MAX_TTL_MS = 2 * 365 * 24 * 60 * 60 * 1000;
+export const CAPABILITY_TRIP_GRACE_MS = 30 * 24 * 60 * 60 * 1000;
 export const CAPABILITY_MIN_TTL_MS = 24 * 60 * 60 * 1000;
 
 export const createCapabilityToken = createBearerToken;
 
 export const hashCapabilityToken = hashBearerToken;
 
-/** `min(tripEndsAt + grace, now + max)`, floored at `now + min` so it's never issued dead-on-arrival. */
+/**
+ * `tripEndsAt + grace`, floored at `now + min` so it's never issued
+ * dead-on-arrival and capped at `now + max` as a nonsense-date backstop.
+ */
 export function capabilityExpiryFor(tripEndsAt: Date, now: Date): Date {
   const tripBound = tripEndsAt.getTime() + CAPABILITY_TRIP_GRACE_MS;
   const ceiling = now.getTime() + CAPABILITY_MAX_TTL_MS;

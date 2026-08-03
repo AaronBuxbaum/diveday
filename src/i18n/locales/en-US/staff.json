@@ -101,6 +101,7 @@
     "gap": {
       "no_crew": "No crew assigned",
       "course_needs_instructor": "Course needs an instructor",
+      "over_ratio": "More divers booked than this crew covers at the course ratio",
       "no_shift_coverage": "No working shift covers this trip"
     },
     "notice": {
@@ -277,8 +278,8 @@
       "chooseActivity": "Choose an available activity",
       "booking": "Booking…",
       "bookActivityButton": "Book activity",
-      "needEmailWarning": "Add an email address before booking. It identifies the diver and is needed to send their order.",
-      "noOpenActivities": "No open activities are available right now."
+      "noOpenActivities": "No open activities are available right now.",
+      "noEmailNote": "No email on file — hand this diver their waiver link in person, or add an address to their record."
     },
     "payments": {
       "heading": "Payments",
@@ -396,6 +397,7 @@
       "duplicate": "Another diver already uses that email in this shop.",
       "refunded": "Payment refunded — the trip now shows as unpaid for this diver.",
       "booked": "Activity booked. Review it below, then create and send the invoice.",
+      "bookedWaiverUndelivered": "Activity booked — but their waiver wasn’t emailed. Open the trip’s guest list to send it or share the link.",
       "tripFull": "That activity just filled up. Choose another.",
       "alreadyBooked": "This diver is already booked on that activity.",
       "courseUnstaffed": "Assign an instructor before booking this course.",
@@ -554,6 +556,7 @@
       "eyebrow": "Catalog",
       "description": "Drop courses in the order a diver would take them. Nothing here decides who may enrol — that stays with each course's own certification requirement.",
       "allPaths": "All paths",
+      "viewPublicPage": "View public page",
       "pathSaved": "Path saved.",
       "oneHiddenStep": "{course} is hidden in your catalog, so divers won't be shown that step.",
       "manyHiddenSteps": "{count} courses on this path are hidden in your catalog, so divers won't be shown those steps.",
@@ -575,6 +578,7 @@
       "title": "Certification paths",
       "description": "The order you'd walk a diver through your courses. A path is guidance, not a gate — it never changes who may enrol in anything.",
       "backToCourses": "Back to courses",
+      "viewPublicPage": "View public page",
       "noPathsHeading": "No paths yet",
       "noPathsBody": "Most shops start with the one every diver asks about: Open Water, then Advanced, then Rescue.",
       "oneCourse": "1 course",
@@ -1022,6 +1026,9 @@
     }
   },
   "schedule": {
+    "boardEyebrow": "Schedule",
+    "boardTitle": "Board",
+    "boardDescription": "Upcoming trips. Open a departure to work through its roster, readiness, prep list, and manifest.",
     "viewPublicPage": "View public page",
     "fullTripForm": "Full trip form",
     "scheduleTrip": "Schedule a trip",
@@ -1101,7 +1108,8 @@
       "departureTime": "Departure time",
       "copying": "Copying…",
       "copyIt": "Copy it"
-    }
+    },
+    "addBooking": "Add a booking"
   },
   "trips": {
     "subNav": {
@@ -1131,6 +1139,7 @@
       "bookingRestoreRatio": "Couldn't undo — the freed seat has been taken and this course session is now at its instructor-to-student ratio limit. Assign another instructor, or add them to the wait list instead.",
       "bookingRestoreCancelled": "Couldn't undo — this trip has been cancelled. Reinstate the trip first, then add them back.",
       "diverAdded": "Diver added to the trip.",
+      "diverAddedWaiverUndelivered": "Diver added to the trip — but their waiver wasn’t emailed. Send it or share the link from their row below.",
       "diverWaitlisted": "Diver added to the wait list.",
       "identityConfirmed": "Identity confirmed — this diver can be cleared to board.",
       "contactSaved": "Emergency contact saved.",
@@ -1227,8 +1236,8 @@
       "holdDescription": "Pause new bookings, publish the final-call state, and email booked divers when delivery is configured.",
       "overviewLabel": "Conditions overview",
       "overviewPlaceholder": "A calm morning is expected; the crew will confirm the final call at the dock.",
-      "waterTempLabel": "Water temp °C",
-      "visibilityLabel": "Visibility metres",
+      "waterTempLabel": "Water temp {unit}",
+      "visibilityLabel": "Visibility {unit}",
       "surfaceNotesLabel": "Surface notes",
       "surfaceNotesPlaceholder": "Light breeze · gentle chop",
       "publishing": "Publishing…",
@@ -1401,8 +1410,7 @@
       "noBookings": "No bookings yet — share the trip page and they'll show up here.",
       "selectToSendWaiverAriaLabel": "Select {name} to send a waiver",
       "noEmailOnFile": "no email on file",
-      "ready": "Ready",
-      "needsAttention": "Needs attention",
+      "checkedInPill": "Checked in",
       "ageYears": "Age {age}",
       "minorBadge": "Minor",
       "depthWarning": "This trip reaches {site} {unit} — deeper than the {limit} {unit} their card trains for. Not a block: plan the dive shallower, or confirm the guide is keeping them within limits.",
@@ -1488,7 +1496,7 @@
       "crewShort": "{aboard} of {assigned} crew confirmed aboard. This checkpoint stays open until every crew member is accounted for.",
       "crewNotBackAboard": "{count, plural, one {# crew member is not back aboard.} other {# crew members are not back aboard.}} This checkpoint stays open until they’re counted.",
       "crewAwaiting": "{count, plural, one {# crew member still to call.} other {# crew members still to call.}} Every person on the crew list needs a result, not just the count.",
-      "readinessNeedsAttention": "Readiness needs attention",
+      "readinessNeedsAttention": "Blocked divers",
       "blockedDeparture": "{count, plural, one {# diver is blocked. They remain on this manifest and cannot board until their readiness check clears.} other {# divers are blocked. They remain on this manifest and cannot board until their readiness check clears.}}",
       "blockedAfterDive": "{count, plural, one {# diver already sailed — record them anyway; readiness follow-up happens ashore, not here.} other {# divers already sailed — record them anyway; readiness follow-up happens ashore, not here.}}",
       "crewHeading": "Crew",
@@ -1519,9 +1527,7 @@
       "checkpointRollCallHeading": "{checkpoint} roll call",
       "checkEachDiverDescription": "Check each diver at this checkpoint. Every change is time-stamped with the staff member who made it.",
       "shopTimeLabel": "Shop time: {timezone}",
-      "readyToBoard": "Ready to board",
-      "blockedBadge": "Blocked",
-      "checkedInPill": "Checked in ✓",
+      "checkedInPill": "Checked in",
       "age": "Age {age}",
       "minorAge": "Minor · age {age}",
       "emergencyContactLabel": "Emergency contact",
@@ -1688,6 +1694,8 @@
         "dockInvalid": "Enter a dock call time between 5 and 180 minutes.",
         "depthUnitSaved": "Depth unit saved. Recorded depths are unchanged — only how they are shown.",
         "depthUnitInvalid": "Choose either metres or feet.",
+        "temperatureUnitSaved": "Temperature unit saved. Recorded water temperatures are unchanged — only how they are shown.",
+        "temperatureUnitInvalid": "Choose either Celsius or Fahrenheit.",
         "rentalsSaved": "Rental catalog saved.",
         "rentalPricesSaved": "Rental prices saved.",
         "rentalPricesInvalid": "Enter each price as a dollar amount (or leave it blank), between $0 and $100,000.",
@@ -1760,6 +1768,15 @@
         "meters": "Metres (m)",
         "feet": "Feet (ft)",
         "submit": "Save depth unit",
+        "submitting": "Saving…"
+      },
+      "temperatureUnit": {
+        "heading": "Water temperature unit",
+        "description": "Whether your crew reads water temperature in Celsius or Fahrenheit. Set separately from the depth unit — plenty of shops publish feet and Celsius. Temperatures are always stored in Celsius, so switching this changes only what you type in and read back.",
+        "label": "Show water temperature in",
+        "celsius": "Celsius (°C)",
+        "fahrenheit": "Fahrenheit (°F)",
+        "submit": "Save temperature unit",
         "submitting": "Saving…"
       },
       "paymentsGate": {
@@ -1945,6 +1962,60 @@
         "included": "Comes across",
         "staysBehind": "Stays behind"
       },
+      "scopeTable": {
+        "contact": {
+          "what": "Names, email, phone",
+          "detail": "Imported as given. A row with an email matches an existing diver on re-import; without one, it's always a new record."
+        },
+        "emergencyContact": {
+          "what": "Emergency contact",
+          "detail": "Name and phone carry over when present."
+        },
+        "diveInsurance": {
+          "what": "Dive insurance (DAN)",
+          "detail": "Carried across as free text, exactly as your file holds it. Never a gate — just detail the crew wants on hand."
+        },
+        "rentalSizes": {
+          "what": "Rental sizes",
+          "detail": "BCD, wetsuit, boot, and fin sizes become a rental-fit profile."
+        },
+        "certificationCard": {
+          "what": "Certification card",
+          "detail": "Imported verified and flagged imported, refresher date included — staff give it a one-tap confirm; unrecognized levels need manual entry."
+        },
+        "specialtyCards": {
+          "what": "Specialty cards (deep, wreck, night, drysuit)",
+          "detail": "Imported as verified specialty cards, flagged imported; each one still needs a staff confirm before the dive that requires it."
+        },
+        "nitrox": {
+          "what": "Nitrox",
+          "detail": "Imported as a verified nitrox card, flagged imported — but a diver gets plain air until staff confirm it; boarding never waits."
+        },
+        "signedWaivers": {
+          "what": "Signed waivers & medical clearance",
+          "detail": "A row marked already-accepted is trusted, medical clearance included, and marked imported — individual medical answers are never reconstructed, only the outcome."
+        },
+        "waiverDocuments": {
+          "what": "Waiver / medical documents",
+          "detail": "Fetched once from your file's URL and re-stored in DiveDay's own storage for audit. Images and PDFs up to 5 MB."
+        },
+        "role": {
+          "what": "Role",
+          "detail": "Everyone imports as a diver. Staff roles and logins are never granted by import."
+        },
+        "cardOnFile": {
+          "what": "Card on file / payment",
+          "detail": "Stays with your payment processor — DiveDay never imports card or payment data."
+        },
+        "pastVisits": {
+          "what": "Past visits (what they booked, when)",
+          "detail": "One row per booking becomes visit history — not a dive, and it never appears on your schedule or counts toward capacity."
+        },
+        "receiptsService": {
+          "what": "Receipts & service history",
+          "detail": "Payment records stay with your processor; gear-service history has nowhere to land — DiveDay tracks sizes, not individual rigs."
+        }
+      },
       "wizard": {
         "heading": "Upload a contacts file",
         "intro": "A CSV from your old system, or DiveDay's own <mono>contacts.csv</mono> export. An email match updates that diver on re-import; without one, it's a new record. Nothing is written until you review the preview and confirm.",
@@ -2104,13 +2175,12 @@
     }
   },
   "blockers": {
-    "eyebrow": "Front desk",
+    "blockedCount": "{count, plural, one {# diver} other {# divers}}",
     "title": "Not ready",
     "description": {
       "none": "Everyone booked on an upcoming departure is ready to board.",
-      "some": "{blocked, plural, one {# diver} other {# divers}} across {departures, plural, one {# departure} other {# departures}} can't board yet. Clearing a row takes you straight to the fix."
+      "some": "Spread across {departures, plural, one {# departure} other {# departures}}. Clearing a row takes you straight to the fix."
     },
-    "windowNote": "Looking at the nearest 40 departures on the board.",
     "alsoBlockedOn": "Also blocked on {trips} — same diver, fix once.",
     "tripBlockedCount": "{blocked} of {booked} blocked",
     "sendAllWaivers": "{count, plural, one {Send all # waiver} other {Send all # waivers}}",
@@ -2118,7 +2188,7 @@
     "emptyTitle": "Every boat is boarding-ready",
     "emptyDescription": "No upcoming diver is waiting on a waiver, a card, or a payment. New bookings show up here the moment something needs a hand.",
     "viewSchedule": "View the schedule",
-    "truncated": "Showing the nearest 40 departures. Anything further out lives on the <link>schedule</link>.",
+    "truncated": "This window holds more departures than one queue should carry — the rest are on the <link>schedule</link>.",
     "pagination": {
       "label": "Blocker pages",
       "previous": "Previous",
@@ -2130,7 +2200,6 @@
     "eyebrow": "Counter mode",
     "title": "Counter check-in",
     "description": "Scan a booking code or search a diver, confirm live readiness, and keep the line moving. Check-in is arrival status; boarding is still confirmed on the manifest.",
-    "windowNote": "Showing arrivals from 6 hours ago through the next 36 hours.",
     "queueAriaLabel": "Check-in queue",
     "readyHeading": "Ready at the counter",
     "searchResultsFor": "Search results for “{query}”.",
@@ -2141,8 +2210,6 @@
     "clearedTitle": "Everyone’s aboard the day 🎉 — all checked in.",
     "checkedInBadge": "Checked in",
     "boardedBadge": "Boarded",
-    "readyBadge": "Ready",
-    "needsAttentionBadge": "Needs attention",
     "checkInButton": "Check in",
     "checkInAriaLabel": "Check in {name}",
     "blockersMore": "+{count} more",
@@ -2160,10 +2227,11 @@
       "notFound": "That booking could not be found.",
       "staffNotFound": "Your staff access could not be confirmed.",
       "invalid": "Choose a diver from the queue before checking in.",
-      "walkinAdded": "Added and on the boat.",
+      "walkinAdded": "Added to this boat’s list — check them in when they arrive.",
+      "walkinAddedWaiverUndelivered": "Added to this boat’s list — but their waiver wasn’t emailed. Send it or share the link from their row below.",
       "walkinFull": "That boat is full — try the wait list from its trip page instead.",
       "walkinAlready": "That diver is already on this boat.",
-      "walkinUnavailable": "That boat isn’t taking walk-ins right now — check its trip page for why.",
+      "walkinUnavailable": "Can’t add this diver to that boat right now — open its trip page for the reason.",
       "walkinInvalid": "Choose a boat and enter a name before adding a walk-in."
     },
     "walkIn": {
@@ -2197,6 +2265,7 @@
     "eyebrow": "Settings",
     "title": "Waiver template",
     "description": "Every diver signs this one release. Edit it to fit your shop.",
+    "chaseUnsigned": "Chasing an unsigned waiver? <link>Not ready</link> lists every diver still holding one up.",
     "banner": {
       "savedNew": "Saved as a new version.",
       "savedFirst": "Your waiver is saved. Every future edit is kept as a new version.",
@@ -2245,7 +2314,6 @@
     "emailResent": "Confirmation email re-sent.",
     "emailFailed": "That email still couldn’t be sent — check the address and email configuration.",
     "crewingBoat": "You’re crewing the {time} {title}.",
-    "windowNote": "Showing work due in the next 7 days.",
     "noDeparturesHeading": "No boats out today",
     "nextDeparture": "Next up is <link>{title}</link> on {date} at {time}.",
     "noDeparturesEmpty": "Nothing is on the books yet. Schedule a trip and it will show up here the morning it sails.",
@@ -2263,7 +2331,7 @@
         "owner": {
           "title": "You're steering the whole shop",
           "desc": "Today is your work queue — bookings, blockers, and today's departures in one place.",
-          "tryThis": "Open Schedule to see this week's departures."
+          "tryThis": "Open Board to see this week's departures."
         },
         "manager": {
           "title": "Keeping the shop running day to day",
@@ -2277,8 +2345,8 @@
         },
         "divemaster": {
           "title": "Getting divers ready to board",
-          "desc": "Blockers lists everyone who can't board yet, with the one tap that fixes each one.",
-          "tryThis": "Open Blockers to see who still needs prep."
+          "desc": "Not ready lists everyone who can't board yet, with the one tap that fixes each one.",
+          "tryThis": "Open Not ready to see who still needs prep."
         },
         "captain": {
           "title": "Running the boat",
@@ -2316,10 +2384,24 @@
       "stripeAction": "Connect Stripe",
       "stripeDone": "Stripe connected.",
       "doneBadge": "Done"
+    },
+    "queueView": {
+      "label": "How to read the queue",
+      "byUrgency": "By urgency",
+      "byDeparture": "By departure"
     }
   },
   "shared": {
+    "operationalWindow": {
+      "note": "The next {days} days of departures — the same window Today and Check-in both read.",
+      "arrivalsLens": "Counter mode narrows it to arrivals from {lookback} hours ago through the next {ahead} hours.",
+      "pivotsLabel": "The same window, seen another way"
+    },
     "skipToContent": "Skip to main content",
+    "publicPreview": {
+      "youWorkHere": "You work here — this is the page divers see.",
+      "openTheBoard": "Open the board"
+    },
     "imageInput": {
       "tooMany": "{count, plural, one {Choose up to # photo at a time.} other {Choose up to # photos at a time.}}",
       "wrongTypeSuffix": ": use a JPG, PNG, WebP, or HEIC photo.",
@@ -2361,6 +2443,10 @@
       "meters": "m",
       "feet": "ft"
     },
+    "temperature": {
+      "celsius": "°C",
+      "fahrenheit": "°F"
+    },
     "birthday": {
       "label": "Birthday",
       "today": "today",
@@ -2401,23 +2487,9 @@
       "groupCourses": "Courses",
       "groupOrders": "Orders",
       "groupGoTo": "Go to",
-      "goToToday": "Today",
-      "goToBlockers": "Not ready",
-      "goToCheckIn": "Check-in",
-      "goToStaffing": "Staffing",
-      "goToDiveSites": "Dive sites",
-      "goToCourses": "Courses",
-      "goToReviews": "Reviews",
-      "goToReports": "Reports",
-      "goToPromos": "Promo codes",
-      "goToSchedule": "Schedule",
-      "goToDivers": "Divers",
-      "goToSettings": "Settings",
-      "goToWaivers": "Waiver template",
       "goToBoarding": "Boarding — today's boat",
-      "goToWalkIn": "Walk-in",
       "goToOfflineRollCall": "Open offline roll call",
-      "goToOrders": "Orders"
+      "goToAddBooking": "Add a booking"
     },
     "keyboardShortcuts": {
       "buttonAriaLabel": "Keyboard shortcuts",
@@ -2427,7 +2499,7 @@
       "heading": "Keyboard shortcuts",
       "paletteLabel": "Search divers, trips, and pages",
       "helpLabel": "Show this help",
-      "sequenceHint": "Press keys one after another for a sequence — e.g. <kbdG>G</kbdG> then <kbdS>S</kbdS> for the schedule.",
+      "sequenceHint": "Press keys one after another for a sequence — e.g. <kbdG>G</kbdG> then <kbdS>S</kbdS> for the board.",
       "goToLabel": "Go to {page}"
     },
     "readiness": {
@@ -2443,6 +2515,10 @@
         "wreck": "Wreck",
         "night": "Night",
         "drysuit": "Drysuit"
+      },
+      "status": {
+        "ready": "Ready",
+        "blocked": "Blocked"
       },
       "blockers": {
         "requirementsNotConfigured": "Trip requirements have not been configured yet.",
@@ -2475,17 +2551,23 @@
     },
     "shopNavLinks": {
       "primaryNavAriaLabel": "Primary",
+      "badgeBlocked": "{count, plural, one {# diver blocked} other {# divers blocked}}",
+      "badgeReviews": "{count, plural, one {# review waiting} other {# reviews waiting}}",
       "more": "More",
+      "groupDaily": "Run the shop",
+      "groupSetup": "Set up",
       "today": "Today",
       "checkIn": "Check-in",
+      "walkIn": "Walk-in",
       "blockers": "Not ready",
       "divers": "Divers",
-      "schedule": "Schedule",
+      "board": "Board",
       "staffing": "Staffing",
       "diveSites": "Dive sites",
       "courses": "Courses",
       "reviews": "Reviews",
-      "waivers": "Waiver template",
+      "orders": "Orders",
+      "waivers": "Waivers",
       "reports": "Reports",
       "promoCodes": "Promo codes",
       "settings": "Settings",
@@ -2524,14 +2606,12 @@
         "assignFailed": "That didn’t save — recheck your connection or try again.",
         "unassignAria": "Unassign {name}",
         "noCrewAssigned": "No crew assigned. Drag staff from above here.",
-        "countReady": "Ready",
-        "countBlocked": "Blocked",
         "countBoarded": "Boarded",
         "blockedWarningOne": "{count} diver cannot board yet — they are in the list below.",
         "blockedWarningOther": "{count} divers cannot board yet — they are in the list below.",
         "noneBooked": "No one’s booked yet — share the trip page and they’ll show up here.",
         "everyoneAboard": "Everyone’s aboard.",
-        "clearToBoard": "Everyone aboard this trip is clear to board.",
+        "clearToBoard": "Everyone booked on this trip is clear to board.",
         "sailingToday": "Sailing today",
         "sailingTodaySubtitle": "Check divers in at the counter or run roll call from the manifest — readiness is rechecked the moment you board someone.",
         "dragStaffLabel": "Or drag to assign (desktop):"
@@ -2650,6 +2730,13 @@
       "pointingLabel": {
         "trip": "Open roster",
         "diver": "Open {name}’s record"
+      },
+      "nameList": {
+        "all": "{leading} and {last}",
+        "overflow": "{leading} and {rest, plural, one {# other} other {# others}}"
+      },
+      "subject": {
+        "diverGroup": "{count, plural, one {# diver} other {# divers}}"
       },
       "blockerDetail": {
         "withRemaining": "{detail} {remaining, plural, one {# other blocker to clear too.} other {# other blockers to clear too.}}",
@@ -2946,6 +3033,37 @@
       "connecting": "Connecting…",
       "cancelled": "Connection cancelled — nothing was changed. Press Connect to try again.",
       "blocked": "Meta's window could not open. Check that your browser isn't blocking pop-ups, then try again."
+    }
+  },
+  "bookings": {
+    "new": {
+      "eyebrow": "Bookings",
+      "title": "Add a booking",
+      "description": "Seat a diver on any upcoming departure — pick the boat, then the diver.",
+      "backToBoard": "Back to the board",
+      "tripHeading": "Which departure?",
+      "tripEmpty": "Nothing upcoming has a seat left. Put a departure on the board first.",
+      "tripSummary": "{title} · {date} · {time} · {booked}/{capacity} booked",
+      "seatsLeft": "{count, plural, one {# seat left} other {# seats left}}",
+      "changeTrip": "Not this one? Pick a different departure.",
+      "findHeading": "Find a returning diver",
+      "findLabel": "Search by name, email, or phone",
+      "findPlaceholder": "Start typing a name…",
+      "search": "Search",
+      "searching": "Searching…",
+      "noMatches": "No matches for “{query}” — add them fresh below.",
+      "noEmailOnFile": "No email on file",
+      "addToTrip": "Add to trip",
+      "addPersonAriaLabel": "Add {name} to this departure",
+      "adding": "Adding…",
+      "handEntryHeading": "New diver",
+      "handEntryDescription": "Email is optional — a name is enough to hold the seat, and the rest can follow.",
+      "nameLabel": "Full name",
+      "emailLabel": "Email",
+      "phoneLabel": "Phone",
+      "optionalHint": "(optional)",
+      "moreOnBoard": "More departures are on the board",
+      "noticeInvalid": "Enter a name to add a diver — email and phone are optional here."
     }
   }
 }

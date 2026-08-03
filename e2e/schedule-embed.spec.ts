@@ -8,14 +8,14 @@ import { daysFromNow, e2eNow, signOut } from "./helpers";
  * the site became framable as a side effect of adding that exception.
  */
 test("the schedule embed renders without page chrome and allows framing", async ({ page }) => {
-  const response = await page.goto("/shop/blue-mantis/schedule?embed=1");
+  const response = await page.goto("/s/blue-mantis?embed=1");
   expect(response?.headers()["x-frame-options"]).toBeUndefined();
   expect(response?.headers()["content-security-policy"]).toBeUndefined();
   await expect(page.getByRole("heading", { name: "Schedule", exact: true })).not.toBeVisible();
 });
 
 test("a non-embed page still denies framing", async ({ page }) => {
-  const response = await page.goto("/shop/blue-mantis/schedule");
+  const response = await page.goto("/s/blue-mantis");
   expect(response?.headers()["x-frame-options"]).toBe("DENY");
   expect(response?.headers()["content-security-policy"]).toBe("frame-ancestors 'none'");
 });
@@ -27,7 +27,7 @@ test("a repeated embed param can't smuggle framing past what the page actually r
   // page's own searchParams prop sees the whole repeated param as an array
   // (never "1") and renders full chrome — the proxy must deny framing in
   // lockstep, not grant the exception on a value the page itself refused.
-  const response = await page.goto("/shop/blue-mantis/schedule?embed=1&embed=0");
+  const response = await page.goto("/s/blue-mantis?embed=1&embed=0");
   expect(response?.headers()["x-frame-options"]).toBe("DENY");
   expect(response?.headers()["content-security-policy"]).toBe("frame-ancestors 'none'");
   await expect(page.getByRole("heading", { name: "Schedule", exact: true })).toBeVisible();
@@ -40,7 +40,7 @@ test.describe("as owner", () => {
     // A shop owner might click their own embed link while signed in — the
     // iframe on their external site must never expose the staff nav, demo
     // banner, or offline-manifest sync regardless of who's viewing it.
-    await page.goto("/shop/blue-mantis/schedule?embed=1");
+    await page.goto("/s/blue-mantis?embed=1");
     await expect(page.getByRole("navigation")).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Today" })).not.toBeVisible();
   });
@@ -57,7 +57,7 @@ test.describe("as owner", () => {
     await expect(page.getByRole("status")).toBeVisible();
     await signOut(page);
 
-    await page.goto("/shop/blue-mantis/schedule?embed=1", { waitUntil: "domcontentloaded" });
+    await page.goto("/s/blue-mantis?embed=1", { waitUntil: "domcontentloaded" });
     await page
       .locator("li, a")
       .filter({ hasText: title })
@@ -90,7 +90,7 @@ test("the embed widget carries a discreet Powered-by-DiveDay attribution link wi
   // and still zero JSON-LD (docs ADR 20260726-schedule-embed / the embed
   // canonicalizes to the standalone page, see reviews.spec.ts's parallel
   // assertion on the base case).
-  await page.goto("/shop/blue-mantis/schedule?embed=1");
+  await page.goto("/s/blue-mantis?embed=1");
   const attribution = page.getByRole("link", { name: "Powered by DiveDay" });
   await expect(attribution).toBeVisible();
   const href = await attribution.getAttribute("href");
@@ -111,7 +111,7 @@ test("the non-embed schedule page carries no Powered-by-DiveDay attribution link
   // The footer is embed-only — the standalone page already carries DiveDay
   // branding via its own chrome, and this link exists purely for a diver who
   // discovers the widget on a shop's own site.
-  await page.goto("/shop/blue-mantis/schedule");
+  await page.goto("/s/blue-mantis");
   await expect(page.getByRole("link", { name: "Powered by DiveDay" })).toHaveCount(0);
 });
 
@@ -132,5 +132,80 @@ test.describe("settings/embed, as owner", () => {
     await page.goto("/shop/blue-mantis/settings/embed");
     await expect(page.getByRole("heading", { name: "Website embed" })).toBeVisible();
     await expect(page.getByText(/configured public hosting address/)).toBeVisible();
+  });
+});
+
+/**
+ * The diver surfaces moved out of `/shop` into `/s` (ADR
+ * 20260803-public-shop-namespace). Everything printed on a counter, mailed to
+ * a diver, or pasted into a shop's own website still points at the old URLs
+ * and always will, so the permanent redirects are load-bearing product
+ * behaviour — including for an iframe, which has to survive the hop *and*
+ * still be allowed to frame the page it lands on.
+ */
+test.describe("the old /shop public URLs", () => {
+  test("308 to the new public namespace, query string intact", async ({ request }) => {
+    const schedule = await request.get("/shop/blue-mantis/schedule?month=2026-09", {
+      maxRedirects: 0,
+    });
+    expect(schedule.status()).toBe(308);
+    expect(schedule.headers().location).toBe("/s/blue-mantis?month=2026-09");
+
+    const embed = await request.get("/shop/blue-mantis/schedule?embed=1", { maxRedirects: 0 });
+    expect(embed.status()).toBe(308);
+    expect(embed.headers().location).toBe("/s/blue-mantis?embed=1");
+
+    const course = await request.get("/shop/blue-mantis/courses/open-water-diver", {
+      maxRedirects: 0,
+    });
+    expect(course.status()).toBe(308);
+    expect(course.headers().location).toBe("/s/blue-mantis/courses/open-water-diver");
+  });
+
+  test("never swallow the staff routes that share their path space", async ({ request }) => {
+    for (const path of [
+      "/shop/blue-mantis/schedule/board",
+      "/shop/blue-mantis/courses",
+      "/shop/blue-mantis/courses/paths",
+      "/shop/blue-mantis/courses/open-water-diver/edit",
+    ]) {
+      const response = await request.get(path, { maxRedirects: 0 });
+      // Signed out, so each is Auth.js's own sign-in redirect — never a 308
+      // into the public namespace.
+      expect(response.status()).not.toBe(308);
+    }
+  });
+
+  test("an iframe pointed at the old embed URL still renders framable", async ({ page }) => {
+    // The whole point of a permanent redirect here: a shop that pasted the
+    // snippet a year ago never edits it again. Follow the hop for real and
+    // check the *landing* response carries the framing exception.
+    const response = await page.goto("/shop/blue-mantis/schedule?embed=1");
+    expect(new URL(page.url()).pathname).toBe("/s/blue-mantis");
+    expect(new URL(page.url()).search).toBe("?embed=1");
+    expect(response?.headers()["x-frame-options"]).toBeUndefined();
+    expect(response?.headers()["content-security-policy"]).toBeUndefined();
+    await page
+      .locator("li")
+      .filter({ hasText: "Two-Tank Reef — Molasses & French" })
+      .getByRole("link")
+      .first()
+      .waitFor();
+  });
+
+  test("an old trip link lands on the diver's booking page", async ({ page }) => {
+    await page.goto("/s/blue-mantis");
+    const tripHref = await page
+      .locator("li")
+      .filter({ hasText: "Two-Tank Reef — Molasses & French" })
+      .getByRole("link")
+      .first()
+      .getAttribute("href");
+    const tripId = tripHref?.split("/").at(-1);
+    expect(tripId).toBeTruthy();
+
+    await page.goto(`/shop/blue-mantis/schedule/${tripId}`);
+    expect(new URL(page.url()).pathname).toBe(`/s/blue-mantis/trips/${tripId}`);
+    await expect(page.getByRole("link", { name: "← All trips" })).toBeVisible();
   });
 });

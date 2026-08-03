@@ -24,7 +24,7 @@ test("a diver's bare rating publishes straight away and reaches the public page"
   await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
   await expect(page.getByText("You rated this 5 out of 5.")).toBeVisible();
 
-  await page.goto("/shop/blue-mantis/schedule");
+  await page.goto("/s/blue-mantis");
   await expect(page.getByRole("heading", { name: "What divers say" })).toBeVisible();
   await expect(
     page.getByText("Every review here comes from a diver who was on the boat."),
@@ -37,17 +37,17 @@ test.describe("as owner", () => {
   test("staff previewing the public page from Reviews actually see the reviews", async ({
     page,
   }) => {
-    // /schedule is the public, canonical page regardless of session (Lens 17,
+    // /s/<slug> is the public, canonical page regardless of session (Lens 17,
     // docs/product/features/story-backlog.md — the staff operations board lives at its
-    // own /schedule/board instead), so the "View public page" link on Reviews
-    // needs no special flag: signed-in staff land on exactly what a diver sees,
-    // reviews included.
+    // own /shop/<slug>/schedule/board instead), so the "View public page" link
+    // on Reviews needs no special flag: signed-in staff land on exactly what a
+    // diver sees, reviews included.
     await page.goto("/shop/blue-mantis/reviews");
     const previewPage = await Promise.all([
       page.waitForEvent("popup"),
       page.getByRole("link", { name: "View public page" }).click(),
     ]).then(([popup]) => popup);
-    await expect(previewPage).toHaveURL(/\/schedule$/);
+    await expect(previewPage).toHaveURL(/\/s\/blue-mantis$/);
     await expect(previewPage.getByRole("heading", { name: "What divers say" })).toBeVisible();
   });
 });
@@ -65,7 +65,7 @@ test("a review carrying words waits for staff, and publishing it puts it on the 
   ).toBeVisible();
 
   // Unmoderated words are not on the shop's public page.
-  await page.goto("/shop/blue-mantis/schedule");
+  await page.goto("/s/blue-mantis");
   await expect(page.getByText(comment)).toHaveCount(0);
 
   await signInAsOwner(page);
@@ -77,7 +77,7 @@ test("a review carrying words waits for staff, and publishing it puts it on the 
 
   // Signed out again, the diver-facing schedule now carries it.
   await page.context().clearCookies();
-  await page.goto("/shop/blue-mantis/schedule");
+  await page.goto("/s/blue-mantis");
   await expect(page.getByText(comment)).toBeVisible();
 });
 
@@ -103,7 +103,7 @@ test.describe("as owner, reviews list", () => {
     await expect(published.getByText("Waiting on you")).toBeVisible();
 
     await page.context().clearCookies();
-    await page.goto("/shop/blue-mantis/schedule");
+    await page.goto("/s/blue-mantis");
     await expect(page.getByText(comment)).toHaveCount(0);
   });
 
@@ -121,13 +121,13 @@ test.describe("as owner, reviews list", () => {
     await expect(published.getByText("Published")).toBeVisible();
 
     await page.context().clearCookies();
-    await page.goto("/shop/blue-mantis/schedule");
+    await page.goto("/s/blue-mantis");
     await expect(page.getByText(comment)).toBeVisible();
   });
 });
 
 test("the public schedule publishes the shop's rating as structured data", async ({ page }) => {
-  await page.goto("/shop/blue-mantis/schedule");
+  await page.goto("/s/blue-mantis");
   // No `.filter({ visible: true })`: a <script> tag has no rendered box and is
   // never "visible" per Playwright's definition, so the filter would match
   // zero elements and break this assertion outright.
@@ -142,7 +142,7 @@ test("the public schedule publishes the shop's rating as structured data", async
 });
 
 test("the public schedule publishes its published reviews as Review objects", async ({ page }) => {
-  await page.goto("/shop/blue-mantis/schedule");
+  await page.goto("/s/blue-mantis");
   // No `.filter({ visible: true })`: see the same-selector comment above — a
   // <script> tag is never "visible", so the filter would zero out the match.
   const graph = await page.locator('script[type="application/ld+json"]').first().textContent();
@@ -166,7 +166,7 @@ test("the public schedule publishes its published reviews as Review objects", as
 test("the embed widget emits no structured data — the standalone page is canonical", async ({
   page,
 }) => {
-  await page.goto("/shop/blue-mantis/schedule?embed=1");
+  await page.goto("/s/blue-mantis?embed=1");
   // No `.filter({ visible: true })`: a <script> tag is never "visible" per
   // Playwright's definition, so the filter would always report count 0 —
   // asserting the wrong thing for the right-looking reason.

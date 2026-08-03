@@ -86,8 +86,8 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
     {
       question: t("marketing.pricing.faq.dataIfNotWorking.question"),
       answer: t("marketing.pricing.faq.dataIfNotWorking.answer", {
-        claim: fullShopExport.claim,
-        terms: fullShopExport.terms,
+        claim: t(fullShopExport.claimKey),
+        terms: t(fullShopExport.termsKey),
       }),
     },
     {
@@ -151,7 +151,7 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-sm font-semibold tracking-widest text-primary uppercase">
-                  {earlyAccessPrice.name}
+                  {t(earlyAccessPrice.nameKey)}
                 </p>
                 <h2 className="mt-3 text-3xl font-semibold tracking-tight">
                   {t("marketing.pricing.completeAccess")}
@@ -165,14 +165,14 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
               <span className="text-5xl font-semibold tracking-[-0.05em]">
                 {earlyAccessPrice.price}
               </span>
-              <span className="pb-1 text-sm text-muted">{earlyAccessPrice.cadence}</span>
+              <span className="pb-1 text-sm text-muted">{t(earlyAccessPrice.cadenceKey)}</span>
             </div>
-            <p className="mt-4 leading-7 text-muted">{earlyAccessPrice.description}</p>
+            <p className="mt-4 leading-7 text-muted">{t(earlyAccessPrice.descriptionKey)}</p>
             <ul className="mt-7 space-y-3 text-sm leading-6 text-muted">
-              {earlyAccessPrice.included.map((item) => (
+              {earlyAccessPrice.includedKeys.map((item) => (
                 <li key={item} className="flex gap-3">
                   <span className="font-semibold text-primary">✓</span>
-                  <span>{item}</span>
+                  <span>{t(item)}</span>
                 </li>
               ))}
             </ul>
@@ -220,7 +220,7 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
                 (design review). Pricing answers "what does it cost"; the list
                 lives one click away. */}
             <div className="mt-10">
-              <FeatureGroupsGrid columns={2} featuresPerGroup={1} />
+              <FeatureGroupsGrid locale={locale} columns={2} featuresPerGroup={1} />
             </div>
             <Link href="/product" className={buttonClass({ variant: "link", className: "mt-6" })}>
               {t("marketing.pricing.seeFullList")}

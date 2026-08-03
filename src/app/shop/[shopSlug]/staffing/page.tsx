@@ -51,6 +51,7 @@ const notices: Record<string, { tone: "success" | "danger" | "warning"; key: Sta
 const GAP_KEYS: Record<StaffingGapCode, StaffMessageKey> = {
   no_crew: "staffing.gap.no_crew",
   course_needs_instructor: "staffing.gap.course_needs_instructor",
+  over_ratio: "staffing.gap.over_ratio",
   no_shift_coverage: "staffing.gap.no_shift_coverage",
 };
 

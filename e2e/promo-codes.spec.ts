@@ -179,7 +179,7 @@ test.describe("as owner", () => {
     const tripId = new URL(page.url()).pathname.split("/").pop();
 
     await page.context().clearCookies();
-    await page.goto(`/shop/blue-mantis/schedule/${tripId}`);
+    await page.goto(`/s/blue-mantis/trips/${tripId}`);
     // Wait for the booking form itself before asserting anything is absent —
     // otherwise "no promo box" is indistinguishable from "the form hasn't
     // rendered yet".

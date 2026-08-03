@@ -1,6 +1,7 @@
 import { and, desc, eq, gt, inArray, lte, ne, sql } from "drizzle-orm";
 import { diverTranslator } from "@/i18n/messages";
 import { nowDate } from "@/lib/clock";
+import type { DepthUnit } from "@/lib/depth-units";
 import { type ShopCurrency, toShopCurrency } from "@/lib/money";
 import {
   type Notification,
@@ -16,6 +17,7 @@ import {
 } from "@/lib/notifications/sms";
 import type { CheckoutProvider } from "@/lib/payments/checkout";
 import { recapLinkPath } from "@/lib/recap-links";
+import type { TemperatureUnit } from "@/lib/temperature-units";
 import type { AppDb } from "./client";
 import { issuePersonCourtesyEmailUnsubscribeToken } from "./courtesy-email";
 import {
@@ -60,6 +62,14 @@ export type RecapPageData = {
     contactPhone: string | null;
     /** Where a "leave us a review" link sends the diver, or null when the shop hasn't set one. */
     reviewUrl: string | null;
+    /**
+     * The shop's measurement settings, so the recap's conditions tiles read in
+     * the units the shop actually works in (src/lib/depth-units.ts,
+     * src/lib/temperature-units.ts). Two independent settings, not one — a
+     * shop can publish feet and Celsius. Storage stays metric either way.
+     */
+    depthUnit: DepthUnit;
+    temperatureUnit: TemperatureUnit;
   };
   trip: {
     title: string;
@@ -132,6 +142,8 @@ export async function getRecapPageData(
       contactPhone: shops.contactPhone,
       reviewUrl: shops.reviewUrl,
       currency: shops.currency,
+      depthUnit: shops.depthUnit,
+      temperatureUnit: shops.temperatureUnit,
     })
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
@@ -187,6 +199,8 @@ export async function getRecapPageData(
       contactEmail: row.contactEmail,
       contactPhone: row.contactPhone,
       reviewUrl: row.reviewUrl,
+      depthUnit: row.depthUnit,
+      temperatureUnit: row.temperatureUnit,
     },
     trip: {
       title: trip.title,

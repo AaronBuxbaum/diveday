@@ -45,6 +45,13 @@ const NOTICE_KEYS: Record<
   "booking-restore-ratio": { tone: "danger", key: "trips.notices.bookingRestoreRatio" },
   "booking-restore-cancelled": { tone: "danger", key: "trips.notices.bookingRestoreCancelled" },
   "diver-added": { tone: "success", key: "trips.notices.diverAdded" },
+  // Seated, but the waiver never left the building. Warning rather than
+  // success: the booking is real and nothing needs undoing, yet the staffer
+  // still owes the diver a link (src/app/actions/seat-diver-surfaces.ts).
+  "diver-added-waiver-undelivered": {
+    tone: "warning",
+    key: "trips.notices.diverAddedWaiverUndelivered",
+  },
   "diver-waitlisted": { tone: "success", key: "trips.notices.diverWaitlisted" },
   "identity-confirmed": { tone: "success", key: "trips.notices.identityConfirmed" },
   "contact-saved": { tone: "success", key: "trips.notices.contactSaved" },

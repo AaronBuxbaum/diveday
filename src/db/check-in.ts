@@ -1,13 +1,12 @@
 import { and, asc, count, eq, gte, ilike, inArray, lte, ne, or } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
+import { arrivalsWindow } from "@/lib/operational-window";
 import type { ReadinessResult } from "@/lib/readiness";
 import type { AppDb, DbExecutor } from "./client";
 import { listDepartureBoardedBookingIds } from "./manifests";
 import { getBookingReadiness, listTripsReadiness } from "./readiness";
 import { activityEvents, bookings, people, personRoles, trips } from "./schema";
 
-const CHECK_IN_LOOKBACK_MS = 6 * 60 * 60 * 1000;
-const CHECK_IN_HORIZON_MS = 36 * 60 * 60 * 1000;
 const STAFF_ROLES = ["owner", "manager", "instructor", "divemaster", "captain", "crew"] as const;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -34,10 +33,12 @@ export type CheckInQueueRow = {
 };
 
 /**
- * The counter queue is intentionally a bounded, day-of read. A scanner that
- * types a booking id into the search box gets the same result as a name/email
- * search, while the default view stays small enough to use one-handed on a
- * phone. Readiness always comes from the shared service, never a second gate.
+ * The counter queue is intentionally a bounded, day-of read: the arrivals lens
+ * on the shared operational horizon (`src/lib/operational-window.ts`), never a
+ * freestanding window of its own. A scanner that types a booking id into the
+ * search box gets the same result as a name/email search, while the default
+ * view stays small enough to use one-handed on a phone. Readiness always comes
+ * from the shared service, never a second gate.
  */
 export async function listCheckInQueue(
   db: AppDb,
@@ -45,6 +46,7 @@ export async function listCheckInQueue(
   options: { query?: string; now?: Date } = {},
 ): Promise<CheckInQueueRow[]> {
   const now = options.now ?? nowDate();
+  const arrivals = arrivalsWindow(now);
   const query = options.query?.trim() ?? "";
   const queryFilter = query
     ? or(
@@ -74,8 +76,8 @@ export async function listCheckInQueue(
         eq(trips.shopId, shopId),
         eq(trips.status, "scheduled"),
         inArray(bookings.status, ["booked", "checked_in"]),
-        gte(trips.startsAt, new Date(now.getTime() - CHECK_IN_LOOKBACK_MS)),
-        lte(trips.startsAt, new Date(now.getTime() + CHECK_IN_HORIZON_MS)),
+        gte(trips.startsAt, arrivals.from),
+        lte(trips.startsAt, arrivals.to),
         queryFilter,
       ),
     )
@@ -110,15 +112,16 @@ export type WalkInTripOption = {
 };
 
 /**
- * Trips a counter walk-in can be added to — the same day-of window
- * `listCheckInQueue` reads (`CHECK_IN_LOOKBACK_MS`/`CHECK_IN_HORIZON_MS`), so
- * "today's departures" means the same thing on both halves of this surface.
+ * Trips a counter walk-in can be added to — the same arrivals window
+ * `listCheckInQueue` reads (`arrivalsWindow`), so "today's departures" means
+ * the same thing on both halves of this surface.
  */
 export async function listWalkInTrips(
   db: AppDb,
   shopId: string,
   now: Date = nowDate(),
 ): Promise<WalkInTripOption[]> {
+  const arrivals = arrivalsWindow(now);
   return db
     .select({
       tripId: trips.id,
@@ -134,8 +137,8 @@ export async function listWalkInTrips(
       and(
         eq(trips.shopId, shopId),
         eq(trips.status, "scheduled"),
-        gte(trips.startsAt, new Date(now.getTime() - CHECK_IN_LOOKBACK_MS)),
-        lte(trips.startsAt, new Date(now.getTime() + CHECK_IN_HORIZON_MS)),
+        gte(trips.startsAt, arrivals.from),
+        lte(trips.startsAt, arrivals.to),
       ),
     )
     .groupBy(trips.id)

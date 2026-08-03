@@ -7,6 +7,20 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## A shop's water-temperature unit is its own setting (2026-08-03)
+
+`shops.temperature_unit` (`celsius` | `fahrenheit`, default Celsius) replaces the derivation that
+read the unit off `depth_unit`. Feet no longer implies Fahrenheit: a Caribbean operator serving
+American divers publishes depths in feet and water temperature in Celsius, and the derivation had
+no way to say so. The migration backfilled Fahrenheit for every shop already on feet, so nothing
+anyone was reading changed. Staff pick it in Settings → *Water temperature unit*, beside the depth
+unit; the crew's conditions form now takes the reading **in the shop's unit** (the unit is part of
+the field label) and converts to the canonical Celsius that gets stored, and the night-before brief
+finally writes both water temperature and visibility in the shop's own units instead of always
+"27°C" and "20 m". `trips.water_temperature_c` and `visibility_meters` widened to floating point so
+a whole-degree Fahrenheit entry round-trips exactly, the same reason `dive_sites.max_depth_meters`
+was floating point from the start. See the
+[amendment to 20260730-site-depth-and-diver-age-surfaces](../architecture/decisions/20260730-site-depth-and-diver-age-surfaces.md#amendment-2026-08-03--the-temperature-unit-is-a-sibling-setting-not-a-reading-of-this-one).
 ## The 2026-08-02 review: payments, data, and crew residuals delivered (2026-08-03)
 
 The six findings the [2026-08-02 review](assessments/comprehensive-review-20260802.md) still carried
@@ -1029,9 +1043,8 @@ The roadmap's §7 smaller follow-ons and the whole open Delight backlog shipped:
 
 ## Simplification rulings (2026-07-19 → 20 audit)
 
-The cleanup audit executed in full; its durable "don't re-litigate this" rulings — separate
-`/schedule` and `/trips` pages, public-route allowlist, per-test PGlite, split dive-site helpers,
-retained superseded ADRs — live in
+The cleanup audit executed in full; its durable "don't re-litigate this" rulings — separate diver
+and staff trip pages, per-test PGlite, split dive-site helpers, retained superseded ADRs — live in
 [architecture/overview.md](../architecture/overview.md#settled-shape-decisions). Navigation
 unification, one notice system, the `reports`/`shop` cuts, the trial/demo split, honest marketing,
 and the decomposition of the four monster pages all shipped.

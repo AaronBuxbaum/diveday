@@ -207,8 +207,16 @@ export const BLOCKER_CATEGORY: Record<ReadinessBlockerCode, BlockerCategory> = {
   payment_refunded: "payment",
 };
 
+/**
+ * The two states a booking can be in, and the only two. Named so every surface
+ * that renders one can key off the same type — the words and tone come from
+ * `src/i18n/readiness-labels.ts` (`readinessStatusText`/`readinessStatusTone`),
+ * never from the surface itself.
+ */
+export type ReadinessStatus = "ready" | "blocked";
+
 export type ReadinessResult = {
-  status: "ready" | "blocked";
+  status: ReadinessStatus;
   blockers: ReadinessBlocker[];
 };
 

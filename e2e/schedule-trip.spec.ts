@@ -29,10 +29,11 @@ test("staff schedules a trip and it appears on shop and public schedules", async
   await expect(page.getByRole("status")).toBeVisible(); // created banner (param is one-shot)
   await expect(page.getByRole("status")).toContainText(title);
 
-  // View as a diver: signed in, /schedule/[id] renders the staff editor; the
+  // View as a diver: signed in, /s/<slug>/trips/[id] redirects to the staff
+  // trip page; the
   // public dive-plan briefing ("Your N-dive plan") is the signed-out view.
   await page.context().clearCookies();
-  await page.goto("/shop/blue-mantis/schedule");
+  await page.goto("/s/blue-mantis");
   // Scoped to the trip list itself: an unrelated trip sharing this one's
   // calendar day also renders a same-titled <li> in the month calendar
   // (src/components/ScheduleCalendar.tsx), and an unscoped locator can
@@ -70,6 +71,6 @@ test("end-before-start is rejected with a friendly message", async ({ page }) =>
   await page.getByRole("button", { name: "Put it on the board" }).click();
 
   await expect(page.getByRole("alert").filter({ hasText: "end after it starts" })).toBeVisible();
-  await page.goto("/shop/blue-mantis/schedule");
+  await page.goto("/s/blue-mantis");
   await expect(page.getByRole("heading", { name: "Backwards Trip" })).not.toBeVisible();
 });

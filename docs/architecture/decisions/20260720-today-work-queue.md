@@ -62,8 +62,14 @@ The seeded demo shop now sails one trip today, so the departure board is never e
 
 Today shrinks to an empty state on a clear day, which is the intended reward rather than a gap; the
 empty state is one of the few places `--accent` is spent. Readiness stays a per-trip roll-up, so the
-queue bounds itself to twenty departures inside a seven-day horizon — a shop busier than that is
-served by Schedule.
+queue bounds its work as well as its window — a shop busier than that is served by Schedule.
+
+The seven-day horizon is no longer Today's alone. It is the shared **operational horizon**
+(`src/lib/operational-window.ts`), which the Not ready queue and the nav's blocked-diver badge also
+derive from, and which counter check-in's narrower **arrivals window** never outruns. Both the
+horizon and the per-surface work bound live there, so the three surfaces cannot drift into
+disagreeing about who is blocked (they previously did: 7 days vs. the nearest 40 departures vs.
+−6h/+36h). See the glossary entries for both windows.
 
 The queue is derived entirely from existing source-of-truth models and adds no new state, so it can
 never disagree with a roster or a manifest. Any future operational signal must clear the same bar

@@ -27,6 +27,36 @@ export type RescheduleCandidate = {
   spotsLeft: number;
 };
 
+/**
+ * Why self-service rescheduling isn't on offer. Codes, not sentences
+ * (AGENTS.md) — `/ready` turns each into a diver-facing explanation next to
+ * the shop's contact links. The policy itself is unchanged; what changed is
+ * that the option no longer just vanishes, which reads as "DiveDay lost my
+ * booking" rather than as a rule.
+ */
+export type RescheduleBlockedReason =
+  /** Paid, deposit-paid, or waived — moving it needs staff-mediated money handling. */
+  | "payment_settled"
+  /** Nothing else on the calendar with room, so there is nowhere to move to. */
+  | "no_open_trips"
+  /** The seat itself is past self-service (checked in, no-show, or the boat has left). */
+  | "booking_closed";
+
+/**
+ * What the "Need to change your plans?" section can still offer.
+ *
+ * `shop_only` is the case that used to render as nothing at all: on trip
+ * morning a diver who needs to bail has the *most* urgent reason to reach the
+ * shop and was shown the fewest ways to do it.
+ */
+export type ManageBookingState =
+  /** Cancel (and possibly a move) are the diver's own to make. */
+  | "self_serve"
+  /** Past self-service, but the trip hasn't finished — the shop can still act today. */
+  | "shop_only"
+  /** The trip is over; there is nothing left to change. */
+  | "closed";
+
 /** How many upcoming trips the reschedule picker offers — plenty to browse without loading the whole calendar. */
 const MAX_RESCHEDULE_CANDIDATES = 8;
 
@@ -96,6 +126,18 @@ export type ReadyPageData = {
    * (docs ADR 20260727-diver-self-service-cancel).
    */
   rescheduleCandidates: RescheduleCandidate[] | null;
+  /**
+   * Why the picker above is absent, or null when it is genuinely on offer.
+   * Always set whenever `rescheduleCandidates` is null or empty, so the page
+   * can never render a silent gap where an option used to be.
+   */
+  rescheduleBlocked: RescheduleBlockedReason | null;
+  /**
+   * How much of the "change your plans" section is still actionable. The page
+   * renders self-service controls, a "call the shop" line, or nothing, from
+   * this one code.
+   */
+  manageState: ManageBookingState;
   /**
    * Whether the booking is still in a state either self-service mutation can
    * actually act on — a plain `booked` seat on a trip that hasn't started.
@@ -216,6 +258,27 @@ export async function getReadyPageData(
       }));
   }
 
+  // Absence needs a reason. The policy above is unchanged — this only names
+  // which rule is in force, so the page can say it out loud instead of
+  // dropping the control and leaving the diver to guess.
+  const rescheduleBlocked: RescheduleBlockedReason | null = !canManageBooking
+    ? "booking_closed"
+    : settled
+      ? "payment_settled"
+      : rescheduleCandidates && rescheduleCandidates.length > 0
+        ? null
+        : "no_open_trips";
+
+  const manageState: ManageBookingState = canManageBooking
+    ? "self_serve"
+    : // The seat is past self-service, but while the trip itself is still
+      // running (checked in, a no-show flip, the boat already out) the shop
+      // can absolutely still act on it — that's exactly the morning a diver
+      // needs a phone number, and exactly when this section used to vanish.
+      trip.endsAt > now
+      ? "shop_only"
+      : "closed";
+
   return {
     detail,
     shop: {
@@ -244,6 +307,8 @@ export async function getReadyPageData(
     canPay,
     cancelPreview,
     rescheduleCandidates,
+    rescheduleBlocked,
+    manageState,
     canManageBooking,
   };
 }

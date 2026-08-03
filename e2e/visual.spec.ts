@@ -5,8 +5,8 @@ import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import { openTripFromBoard } from "./helpers";
 
 /**
- * Visual regression coverage. Sixty-five key surfaces × light/dark, each
- * captured at a phone and a desktop viewport — 260 screenshots per run (see
+ * Visual regression coverage. Seventy-one key surfaces × light/dark, each
+ * captured at a phone and a desktop viewport — 284 screenshots per run (see
  * ADR 20260729-reg-suit-visual-regression). Keep this count in sync when
  * adding a surface; each `capture()` call costs 4 screenshots per CI run.
  * `grep -c 'await capture(page' e2e/visual.spec.ts` is the number — the prose
@@ -17,7 +17,7 @@ import { openTripFromBoard } from "./helpers";
  * pages as they render for the printer. Print is its own concern, not a
  * light/dark one — the `@media print` token override collapses both schemes to
  * one black-and-white palette — so each is captured once, at a US-Letter width,
- * via `capturePrint()`. That brings the run to 262 screenshots.
+ * via `capturePrint()`. That brings the run to 286 screenshots.
  *
  * Nothing here asserts. `capture()` writes raw `page.screenshot()` PNGs into
  * `e2e/screenshots/` (gitignored); `reg-suit` diffs them against the baseline
@@ -423,6 +423,12 @@ for (const scheme of ["light", "dark"] as const) {
       await page.goto("/sign-in");
       await capture(page, "sign-in", scheme);
 
+      // The same form after a signed-out visitor followed a `/shop/**` link:
+      // Auth.js's `callbackUrl` names the shop, so the page offers that shop's
+      // public schedule instead of leaving a diver at a staff password field.
+      await page.goto("/sign-in?callbackUrl=%2Fshop%2Fblue-mantis%2Fdivers");
+      await capture(page, "sign-in-shop-escape", scheme);
+
       await page.goto("/forgot-password");
       await capture(page, "forgot-password", scheme);
 
@@ -443,7 +449,7 @@ for (const scheme of ["light", "dark"] as const) {
       // suspense fallback and whichever side of that race each run landed on
       // decided the baseline. Two runs catching *different* skeleton frames is
       // what produced the schedule-dark diffs on builds with no code change.
-      await page.goto("/shop/blue-mantis/schedule");
+      await page.goto("/s/blue-mantis");
       await page
         .locator("li")
         .filter({ hasText: "Two-Tank Reef — Molasses & French" })
@@ -458,7 +464,7 @@ for (const scheme of ["light", "dark"] as const) {
       // reason: with no wait this capture sometimes shot an empty document, so
       // `fullPage` measured the viewport (844px tall) instead of the real page
       // (11802px). A baseline that is a blank viewport asserts nothing.
-      await page.goto("/shop/blue-mantis/schedule?embed=1");
+      await page.goto("/s/blue-mantis?embed=1");
       await page
         .locator("li")
         .filter({ hasText: "Two-Tank Reef — Molasses & French" })
@@ -470,7 +476,7 @@ for (const scheme of ["light", "dark"] as const) {
       // capture below — its links now carry embed=1 forward when the
       // schedule itself was loaded in embed mode, and the "site-briefing"
       // baseline is the standalone trip page, not the compact embed variant.
-      await page.goto("/shop/blue-mantis/schedule");
+      await page.goto("/s/blue-mantis");
 
       // The seeded reef trip's public briefing: satellite map, gentle route,
       // landmarks, and the field guide — DiveDay's flagship "delight" surface.
@@ -485,9 +491,21 @@ for (const scheme of ["light", "dark"] as const) {
       // "Upcoming dates" is the last section the public course page streams, so
       // it is the signal that the whole document has landed — without it this
       // capture also shot a viewport-tall blank page on some runs.
-      await page.goto("/shop/blue-mantis/courses/open-water-diver");
+      await page.goto("/s/blue-mantis/courses/open-water-diver");
       await page.getByRole("heading", { name: "Upcoming dates" }).waitFor();
       await capture(page, "course-page", scheme);
+
+      // The diver's catalog index and the certification-path guidance it leads
+      // to. Both used to be the signed-out half of a staff page inside /shop
+      // and so had no baseline of their own; they are standalone public
+      // surfaces now (ADR 20260803-public-shop-namespace).
+      await page.goto("/s/blue-mantis/courses");
+      await page.getByRole("heading", { level: 1, name: "Courses" }).waitFor();
+      await capture(page, "public-courses", scheme);
+
+      await page.goto("/s/blue-mantis/courses/paths");
+      await page.getByRole("heading", { level: 1, name: "Certification paths" }).waitFor();
+      await capture(page, "public-course-paths", scheme);
 
       // Set a review link on a disposable staff context (same CR-019 pattern
       // as the waiver/booking setup below) so the recap capture shows the
@@ -561,7 +579,7 @@ for (const scheme of ["light", "dark"] as const) {
 
       // A fresh visitor booking the same trip hands back a readiness link —
       // the pre-trip checklist a diver actually uses on the way to the dock.
-      await page.goto("/shop/blue-mantis/schedule");
+      await page.goto("/s/blue-mantis");
       await page
         .locator("li")
         .filter({ hasText: "Two-Tank Reef — Molasses & French" })
@@ -675,20 +693,60 @@ for (const scheme of ["light", "dark"] as const) {
           .waitFor();
         await capture(page, "today", scheme);
 
-        // The blocker queue — until now the one staff surface with no baseline
-        // at all, because a flat unpaginated list of every blocked diver across
-        // every upcoming departure rendered a ~10,700px page nothing could
-        // capture sanely (the same shape the orders index was found in). Now
-        // paginated ten departures at a time, so this is finally capturable.
+        // The blocker queue — until recently the one staff surface with no
+        // baseline at all, because a flat unpaginated list of every blocked
+        // diver across every upcoming departure rendered a ~10,700px page
+        // nothing could capture sanely (the same shape the orders index was
+        // found in). Two bounds now: the shared operational horizon decides
+        // which departures it holds, the pager how many render at once.
+        //
+        // It is Today's by-departure *view* rather than a route of its own
+        // since Not ready folded into the shop home, so this navigates through
+        // the redirect the old URL still serves and keeps the `blockers`
+        // capture name. The baseline will move: the same groups now render
+        // under Today's greeting, departure board, and view switch instead of
+        // their own page header, which is the change this capture should show.
         await page.goto("/shop/blue-mantis/blockers");
-        await page.getByRole("heading", { name: "Not ready", level: 1 }).waitFor();
+        await page.getByRole("heading", { name: "Not ready", level: 2 }).waitFor();
         await capture(page, "blockers", scheme);
+
+        // Counter mode itself — the third surface reading the shared
+        // operational window (task 141). Only its walk-in sub-page had a
+        // baseline before, so the queue staff actually stand in front of, and
+        // the window note the three surfaces now share, went uncaptured.
+        await page.goto("/shop/blue-mantis/check-in");
+        await page.getByRole("heading", { name: "Counter check-in", level: 1 }).waitFor();
+        await capture(page, "check-in", scheme);
+
+        // Staffing had no baseline at all until the over_ratio parity fix —
+        // the one gap surface whose green "Covered" badge could silently
+        // contradict Today. Captured so a regression there shows as pixels.
+        await page.goto("/shop/blue-mantis/staffing");
+        await page.getByRole("heading", { name: "Staffing", level: 1 }).waitFor();
+        await capture(page, "staffing", scheme);
 
         // The fast walk-in flow: pick today's boat, then search or hand-enter
         // a diver — no trip page detour, no required email at the counter.
         await page.goto("/shop/blue-mantis/check-in/walk-in");
         await page.getByRole("heading", { name: "Walk-in", level: 1 }).waitFor();
         await capture(page, "check-in-walk-in", scheme);
+
+        // The global Add-booking door, both halves: the departure picker with
+        // seats-left on every row, and the diver step once a boat is chosen
+        // (returning-diver search + hand entry). Deliberately two captures —
+        // the picker and the diver form never share a screen, so one shot
+        // would leave half the surface with no baseline at all.
+        await page.goto("/shop/blue-mantis/bookings/new");
+        await page.getByRole("heading", { name: "Add a booking", level: 1 }).waitFor();
+        await capture(page, "booking-new", scheme);
+
+        await page
+          .getByRole("link", { name: /seats? left/ })
+          .first()
+          .click();
+        await page.waitForURL(/\/bookings\/new\/[^/?]+$/);
+        await page.getByRole("heading", { name: "New diver" }).waitFor();
+        await capture(page, "booking-new-diver", scheme);
 
         // The staff schedule as a builder: departures grouped by day, each row
         // carrying its own move/copy/remove controls and its crew.
@@ -1196,32 +1254,25 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
-       * The three staff surfaces that shipped with no baseline and no e2e spec
-       * at all — the gap `scripts/route-coverage.json` recorded as exemptions
-       * until e2e/staffing.spec.ts, e2e/invoicing.spec.ts and the catalog test
-       * in e2e/dive-sites.spec.ts closed it.
+       * Two of the three staff surfaces that shipped with no baseline and no
+       * e2e spec at all — the gap `scripts/route-coverage.json` recorded as
+       * exemptions until e2e/staffing.spec.ts, e2e/invoicing.spec.ts and the
+       * catalog test in e2e/dive-sites.spec.ts closed it (staffing's capture
+       * lives on the staff tour above).
        *
-       * Its own small test rather than three more stops on either 18-surface
+       * Its own small test rather than more stops on either 18-surface
        * tour above: both are already sized at 90s for exactly what they do, and
        * this one marks the demo shop Stripe-connected, which the tours must not
        * inherit — a connected shop changes what several of their surfaces render.
        */
-      test(`staffing, invoicing and the dive-site catalog render true to the design (${scheme})`, async ({
+      test(`invoicing and the dive-site catalog render true to the design (${scheme})`, async ({
         page,
         request,
       }) => {
-        // Three navigate+capture surfaces (12 screenshots), each with its own
-        // `paintWholeDocument` scroll.
+        // Two navigate+capture surfaces (8 screenshots), each with its own
+        // `paintWholeDocument` scroll. (Staffing is captured on the staff tour
+        // above — it gained its baseline in the over_ratio parity fix.)
         test.setTimeout(45_000);
-
-        // Who is working this week, each person's capabilities and shifts, and
-        // the coverage gaps on the departures in the same window. The window
-        // defaults to the shop-local week starting at `nowDate()` — the frozen
-        // clock — so both the dates and the seeded shifts inside them are
-        // stable run to run.
-        await page.goto("/shop/blue-mantis/staffing");
-        await page.getByRole("heading", { level: 1, name: "Staffing" }).waitFor();
-        await capture(page, "staffing", scheme);
 
         // The front desk's invoice builder. It redirects to Divers for a shop
         // that can't take money, so mark the demo shop connected first:
@@ -1274,6 +1325,17 @@ for (const scheme of ["light", "dark"] as const) {
       await page.getByRole("heading", { name: "Get your shop ready" }).waitFor();
       await page.getByRole("heading", { name: "Nothing is waiting on you" }).waitFor();
       await capture(page, "today-empty", scheme);
+
+      // The "More" menu open — the only way to see its two named groups ("Run
+      // the shop" / "Set up") and the destinations they hold, since the panel
+      // used to separate them with one unlabelled rule. Captured here rather
+      // than over the seeded Today: the nav is identical (a fresh owner passes
+      // every gate) and this page is short, so the baseline is the menu rather
+      // than a second copy of a very tall dashboard whose every content change
+      // would diff this image too.
+      await page.locator("header summary").filter({ hasText: "More" }).click();
+      await page.getByRole("list", { name: "Run the shop" }).waitFor();
+      await capture(page, "nav-more-menu", scheme);
     });
   });
 }

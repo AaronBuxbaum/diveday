@@ -243,7 +243,7 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
               </h2>
               <p className="mt-5 text-lg leading-8 text-muted">{t("marketing.about.leaveP1")}</p>
               <p className="mt-4 text-lg leading-8 text-muted">
-                {t("marketing.about.leaveP2", { terms: fullShopExport.terms })}
+                {t("marketing.about.leaveP2", { terms: t(fullShopExport.termsKey) })}
               </p>
               <Link
                 href="/switching"

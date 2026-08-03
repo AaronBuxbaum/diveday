@@ -20,6 +20,7 @@ import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { formatShortDate } from "@/lib/format";
+import { publicSchedulePath } from "@/lib/public-routes";
 import { requireStaffSession } from "@/lib/session";
 import { noticeFromParam } from "@/lib/staff-notices";
 import { utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
@@ -84,7 +85,7 @@ export default async function ReviewsPage({
         description={t("reviews.description")}
         actions={
           <Link
-            href={`/shop/${shopSlug}/schedule`}
+            href={publicSchedulePath(shopSlug)}
             target="_blank"
             rel="noreferrer"
             className={buttonClass({ variant: "secondary", className: "text-foreground" })}

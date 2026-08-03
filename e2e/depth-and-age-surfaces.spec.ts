@@ -129,9 +129,11 @@ test.describe("staff", () => {
     await expect(warning).toContainText("Not a block");
 
     // And the diver it is about is still boardable: the manifest must not have
-    // turned this into a blocked seat.
+    // turned this into a blocked seat. "Ready", not "Ready to board" — the one
+    // readiness vocabulary (src/i18n/readiness-labels.ts) that the roster and
+    // the counter now share with the manifest.
     await page.goto(`${tripPath}/manifest`);
-    await expect(page.getByText("Ready to board").first()).toBeVisible();
+    await expect(page.getByText("✓ Ready", { exact: true }).first()).toBeVisible();
   });
 
   test("depth is entered and read back in the shop's own unit", async ({ page }) => {
@@ -165,5 +167,38 @@ test.describe("staff", () => {
     await expect(page.getByText("Site briefing saved.")).toBeVisible();
     await page.goto(siteHref);
     await expect(page.getByLabel(/Maximum depth \(feet\)/)).toHaveValue("60");
+  });
+
+  test("water temperature is entered and read back in the shop's own unit", async ({ page }) => {
+    const tripPath = await tripPathByTitle(page, REEF_TRIP);
+
+    // Celsius by default, and the unit is part of the field's label rather
+    // than a hint beside it — a bare "Water temp" is how a 27 meant as °F
+    // reaches every diver as an 81°F day.
+    await page.goto(tripPath);
+    await page.getByLabel("Water temp °C").fill("27");
+    await page.getByRole("button", { name: "Publish crew prediction" }).click();
+    await expect(page.getByRole("status")).toContainText("Crew prediction published");
+
+    // Its own setting, independent of the depth unit: switching only the
+    // temperature leaves visibility in metres.
+    await page.goto(`/shop/${SHOP}/settings`);
+    await expect(page.getByRole("heading", { name: "Water temperature unit" })).toBeVisible();
+    await page.getByLabel("Show water temperature in").selectOption("fahrenheit");
+    await page.getByRole("button", { name: "Save temperature unit" }).click();
+    await expect(page.getByText(/Temperature unit saved/)).toBeVisible();
+
+    // 27°C reads back as 81°F — the stored Celsius never moved.
+    await page.goto(tripPath);
+    await expect(page.getByLabel("Water temp °F")).toHaveValue("81");
+    await expect(page.getByLabel("Visibility m")).toBeVisible();
+
+    // And a whole Fahrenheit degree typed in round-trips exactly, which is why
+    // the column is floating-point rather than whole Celsius.
+    await page.getByLabel("Water temp °F").fill("76");
+    await page.getByRole("button", { name: "Publish crew prediction" }).click();
+    await expect(page.getByRole("status")).toContainText("Crew prediction published");
+    await page.goto(tripPath);
+    await expect(page.getByLabel("Water temp °F")).toHaveValue("76");
   });
 });

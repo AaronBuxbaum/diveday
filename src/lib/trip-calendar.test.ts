@@ -9,7 +9,7 @@ describe("tripCalendarFile", () => {
       startsAt: new Date("2026-08-03T13:00:00.000Z"),
       endsAt: new Date("2026-08-03T17:30:00.000Z"),
       location: "Molasses Reef, Key Largo",
-      url: "https://diveday.test/shop/blue-mantis/schedule/trip-1",
+      url: "https://diveday.test/s/blue-mantis/trips/trip-1",
     });
 
     expect(file).toContain("DTSTART:20260803T130000Z\r\nDTEND:20260803T173000Z");

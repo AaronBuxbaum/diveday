@@ -26,7 +26,11 @@ test("the homepage hero offers one demo door, and the diver preview lives on its
   // door) onto the "For the diver" moment card, still tagged for attribution.
   const scheduleLink = page.getByRole("link", { name: "See a diver's booking page →" });
   const href = await scheduleLink.getAttribute("href");
-  expect(href).toBe(`/shop/${DEMO_SHOP_SLUG}/schedule?from=home-diver-moment`);
+  // Sourced from DEMO_SHOP_SLUG rather than a hand-typed literal, and tagged
+  // for funnel attribution the same way the trial link is. The source moved to
+  // the "For the diver" moment card when the hero's role picker was retired
+  // (#328); the path is the split public namespace's.
+  expect(href).toBe(`/s/${DEMO_SHOP_SLUG}?from=home-diver-moment`);
 
   await scheduleLink.click();
   await expect(page.getByRole("heading", { name: "Schedule", level: 1 })).toBeVisible();

@@ -61,14 +61,14 @@ describe("proxy request-header overrides", () => {
 
 describe("proxy embed handling", () => {
   it("grants the framing exception only to a genuine single-valued embed request", async () => {
-    const res = await run(request("/shop/blue-mantis/schedule?embed=1"));
+    const res = await run(request("/s/blue-mantis?embed=1"));
     expect(res.headers.get(`x-middleware-request-${EMBED_REQUEST_HEADER}`)).toBe("1");
     expect(res.headers.get("X-Frame-Options")).toBeNull();
     expect(res.headers.get("Content-Security-Policy")).toBeNull();
   });
 
   it("does not grant embed on a repeated ?embed=1&embed=0 — the page and the proxy must agree", async () => {
-    const res = await run(request("/shop/blue-mantis/schedule?embed=1&embed=0"));
+    const res = await run(request("/s/blue-mantis?embed=1&embed=0"));
     expect(res.headers.get(`x-middleware-request-${EMBED_REQUEST_HEADER}`)).toBe("");
     expect(res.headers.get("X-Frame-Options")).toBe("DENY");
   });

@@ -44,6 +44,27 @@ const guardedRoots = ["src/lib", "src/db", "src/features"];
  */
 const copyProperties = ["message", "label", "text", "reason", "summary"];
 
+/**
+ * Key-registry data modules: files whose entire job is to hold message-bundle
+ * *keys* and structure (the `src/lib/demo-roles.ts` pattern). These get a
+ * stricter rule than the property-name scan above — **no string literal
+ * containing prose at all**, because in a registry any multi-word literal is a
+ * sentence that bypassed the bundles (the leak that let the feature grid and
+ * the switching guides render English to Spanish visitors). A literal that
+ * genuinely isn't language — a currency figure, a proper name, a cited
+ * document title — carries an `// i18n-exempt: reason` on its own or the
+ * preceding line. Not a ratchet: any unexempted hit fails outright.
+ */
+const proseFreeFiles = [
+  "src/lib/marketing.ts",
+  "src/lib/migration-guides.ts",
+  "src/lib/demo-roles.ts",
+];
+
+/** Any quoted or template literal containing whitespace between letter runs — prose-shaped. */
+const proseLiteralPattern =
+  /"([^"\n]*[A-Za-z]{2}[^"\n]*\s[^"\n]*[A-Za-z]{2}[^"\n]*)"|'([^'\n]*[A-Za-z]{2}[^'\n]*\s[^'\n]*[A-Za-z]{2}[^'\n]*)'|`([^`\n]*[A-Za-z]{2}[^`\n]*\s[^`\n]*[A-Za-z]{2}[^`\n]*)`/g;
+
 const labelMapPropertyPattern = new RegExp(
   `(?:^|[\\s,{])(${copyProperties.join("|")})\\s*:\\s*(?:"([^"]{2,})"|'([^']{2,})'|\`([^\`]{2,})\`)`,
   "gm",
@@ -140,6 +161,41 @@ function findDomainStrings(source) {
   return found;
 }
 
+/** The prose-free rule for key-registry modules — see `proseFreeFiles`. */
+function findProseLiterals(source) {
+  const stripped = stripComments(source);
+  const rawLines = source.split("\n");
+  const strippedLines = stripped.split("\n");
+  const found = [];
+  for (const [index, line] of strippedLines.entries()) {
+    for (const match of line.matchAll(proseLiteralPattern)) {
+      const value = (match[1] ?? match[2] ?? match[3] ?? "").trim();
+      if (!looksLikeCopy(value)) continue;
+      const exempt =
+        EXEMPT_LINE.test(rawLines[index] ?? "") || EXEMPT_LINE.test(rawLines[index - 1] ?? "");
+      if (exempt) continue;
+      found.push({ line: index + 1, text: `"${value.slice(0, 60)}"` });
+    }
+  }
+  return found;
+}
+
+const proseFreeFailures = [];
+for (const file of proseFreeFiles) {
+  let source;
+  try {
+    source = await readFile(path.join(ROOT, file), "utf8");
+  } catch (error) {
+    if (error?.code === "ENOENT") continue;
+    throw error;
+  }
+  // Deliberately no EXEMPT_FILE escape here: a registry can't opt out of
+  // being a registry — only individual non-language literals get markers.
+  for (const hit of findProseLiterals(source)) {
+    proseFreeFailures.push({ file, ...hit });
+  }
+}
+
 const counts = new Map();
 const details = new Map();
 for (const root of guardedRoots) {
@@ -223,6 +279,15 @@ if (process.argv.includes("--write") || absorbing) {
 }
 
 const violations = [];
+
+for (const hit of proseFreeFailures) {
+  violations.push(
+    `${hit.file}:${hit.line}: prose literal ${hit.text} in a key-registry module. ` +
+      `These files hold message-bundle keys and structure only — move the words into ` +
+      `src/i18n/locales/<locale>/diver.json (every locale), or mark a genuine non-language ` +
+      `literal with \`// i18n-exempt: reason\`.`,
+  );
+}
 
 for (const [file, count] of counts) {
   const allowed = baselineCounts[file];

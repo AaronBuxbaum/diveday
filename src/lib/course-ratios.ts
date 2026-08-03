@@ -249,8 +249,3 @@ export function courseCrewGap(input: {
   }
   return { code: "none" };
 }
-
-/** True whenever `courseCrewGap` found anything worth surfacing to staff. */
-export function hasCourseCrewGap(gap: CourseCrewGap): boolean {
-  return gap.code !== "none";
-}

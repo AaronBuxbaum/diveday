@@ -9,7 +9,11 @@ import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import type { listBookingNotes } from "@/db/operations";
 import { birthdayText } from "@/i18n/birthday-labels";
 import { depthWarningText } from "@/i18n/depth-labels";
-import { readinessBlockerText } from "@/i18n/readiness-labels";
+import {
+  readinessBlockerText,
+  readinessStatusText,
+  readinessStatusTone,
+} from "@/i18n/readiness-labels";
 import { rentalFitLineText } from "@/i18n/rental-labels";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { ageOnDate, birthdayCallout, isMinorOnDate } from "@/lib/age";
@@ -20,6 +24,7 @@ import { rentalFitLine } from "@/lib/dive-prep";
 import { formatDateTimeTz } from "@/lib/format";
 import { flaggedMedicalPrompts } from "@/lib/medical";
 import { paymentSourceLine } from "@/lib/payment-source";
+import { rosterRowIsBlocked, rosterRowNeedsWaiver } from "@/lib/roster-filters";
 import { waiverState } from "@/lib/waivers";
 import { PaymentStatusControl, type PaymentStatusControlCopy } from "./PaymentStatusControl";
 import { BulkWaiverCheckbox, BulkWaiverSendButton } from "./RosterBulkWaiverSelection";
@@ -182,20 +187,21 @@ export function RosterSection({
     updating: t("trips.roster.paymentUpdating"),
   };
   const refundEligible = cancellationDeadline !== null && cancellationDeadline > nowDate();
-  // How many divers still have a waiver a staffer can send or resend — the
-  // count the bulk control acts on. A signed or medical-review diver is not
-  // offered a checkbox, so ticking "the outstanding list" can't touch them.
-  const sendableCount = roster.filter(({ booking }) => {
-    const action =
-      WAIVER_CONTROLS[waiverState(waiverByBooking.get(booking.id)?.waiver ?? null)].action;
-    return action !== null;
-  }).length;
-  // Filter chips read against the *full* roster's own signals, never a
-  // separate query, so the counts and the cards they gate can never disagree.
+  // Filter chips read against the *full* roster's own signals, never a separate
+  // query, so the counts and the cards they gate can never disagree. Both
+  // predicates live in `src/lib/roster-filters.ts`, where the two bugs they fix
+  // are written down: "needs waiver" is now the bulk button's own definition (a
+  // medical-review diver has a signed waiver and nothing to send), and
+  // "blocked" is now the blocker queue's rule (an absent readiness row is not a
+  // blocked diver — `!== "ready"` counted `undefined`).
   const needsWaiver = ({ booking }: RosterEntry) =>
-    waiverState(waiverByBooking.get(booking.id)?.waiver ?? null) !== "complete";
+    rosterRowNeedsWaiver(waiverState(waiverByBooking.get(booking.id)?.waiver ?? null));
   const isBlocked = ({ booking }: RosterEntry) =>
-    readinessByBooking.get(booking.id)?.readiness?.status !== "ready";
+    rosterRowIsBlocked(readinessByBooking.get(booking.id)?.readiness);
+  // The bulk control acts on exactly the divers the "Needs waiver" chip counts
+  // — one predicate, so staff can never be shown a count the button won't act
+  // on. `WAIVER_CONTROLS[…].action` still decides each row's own control.
+  const sendableCount = roster.filter(needsWaiver).length;
   const filterCounts = {
     all: roster.length,
     needs_waiver: roster.filter(needsWaiver).length,
@@ -375,16 +381,25 @@ export function RosterSection({
                       ) : null}
                     </div>
                   </div>
-                  {readiness ? (
-                    <Badge
-                      tone={readiness.status === "ready" ? "success" : "danger"}
-                      className="shrink-0"
-                    >
-                      {readiness.status === "ready"
-                        ? t("trips.roster.ready")
-                        : t("trips.roster.needsAttention")}
-                    </Badge>
-                  ) : null}
+                  <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                    {/* Arrived at the counter — display only, the same pill the
+                        manifest shows. The roster carried neither checked-in
+                        nor boarded state, so the one screen staff work a trip
+                        from was the one screen that couldn't tell them who had
+                        already walked in. It reads existing booking state and
+                        gates nothing. */}
+                    {booking.status === "checked_in" ? (
+                      <Badge tone="neutral">{t("trips.roster.checkedInPill")}</Badge>
+                    ) : null}
+                    {/* One readiness vocabulary, one tone per state
+                        (src/i18n/readiness-labels.ts): this badge said "Needs
+                        attention" about the diver the manifest called "Blocked". */}
+                    {readiness ? (
+                      <Badge tone={readinessStatusTone(readiness.status)}>
+                        {readinessStatusText(t, readiness.status)}
+                      </Badge>
+                    ) : null}
+                  </div>
                 </div>
                 {booking.groupPreference ? (
                   <p className="mt-3 rounded-lg bg-surface-sunken px-3 py-2 text-sm text-muted">

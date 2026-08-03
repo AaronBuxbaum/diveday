@@ -101,6 +101,7 @@
     "gap": {
       "no_crew": "Sin tripulación asignada",
       "course_needs_instructor": "El curso necesita un instructor",
+      "over_ratio": "Hay más buceadores reservados de los que cubre esta tripulación según la proporción del curso",
       "no_shift_coverage": "Ningún turno de trabajo cubre esta salida"
     },
     "notice": {
@@ -277,8 +278,8 @@
       "chooseActivity": "Elige una actividad disponible",
       "booking": "Reservando…",
       "bookActivityButton": "Reservar actividad",
-      "needEmailWarning": "Añade un correo electrónico antes de reservar. Identifica al buceador y es necesario para enviar su pedido.",
-      "noOpenActivities": "No hay actividades abiertas disponibles ahora mismo."
+      "noOpenActivities": "No hay actividades abiertas disponibles ahora mismo.",
+      "noEmailNote": "Sin correo registrado — entrégale el enlace del consentimiento en persona o añade una dirección a su ficha."
     },
     "payments": {
       "heading": "Pagos",
@@ -396,6 +397,7 @@
       "duplicate": "Otro buceador ya usa ese correo en esta tienda.",
       "refunded": "Pago reembolsado — la salida ahora aparece como no pagada para este buceador.",
       "booked": "Actividad reservada. Revísala abajo, luego crea y envía la factura.",
+      "bookedWaiverUndelivered": "Actividad reservada, pero no se envió su exención por correo. Abre la lista de invitados de la salida para enviarla o compartir el enlace.",
       "tripFull": "Esa actividad acaba de llenarse. Elige otra.",
       "alreadyBooked": "Este buceador ya está reservado en esa actividad.",
       "courseUnstaffed": "Asigna un instructor antes de reservar este curso.",
@@ -554,6 +556,7 @@
       "eyebrow": "Catálogo",
       "description": "Coloca los cursos en el orden en que los haría un buceador. Esto no decide quién puede inscribirse — eso sigue dependiendo del requisito de certificación de cada curso.",
       "allPaths": "Todas las rutas",
+      "viewPublicPage": "Ver página pública",
       "pathSaved": "Ruta guardada.",
       "oneHiddenStep": "{course} está oculto en tu catálogo, así que los buceadores no verán ese paso.",
       "manyHiddenSteps": "{count} cursos de esta ruta están ocultos en tu catálogo, así que los buceadores no verán esos pasos.",
@@ -575,6 +578,7 @@
       "title": "Rutas de certificación",
       "description": "El orden en que llevarías a un buceador por tus cursos. Una ruta es orientación, no una barrera — nunca cambia quién puede inscribirse en nada.",
       "backToCourses": "Volver a cursos",
+      "viewPublicPage": "Ver página pública",
       "noPathsHeading": "Aún no hay rutas",
       "noPathsBody": "La mayoría de las tiendas empiezan con la que todo buceador pregunta: Open Water, luego Advanced, luego Rescue.",
       "oneCourse": "1 curso",
@@ -1022,6 +1026,9 @@
     }
   },
   "schedule": {
+    "boardEyebrow": "Calendario",
+    "boardTitle": "Tablero",
+    "boardDescription": "Próximas salidas. Abre una para trabajar su lista de buceadores, su preparación y su manifiesto.",
     "viewPublicPage": "Ver la página pública",
     "fullTripForm": "Formulario completo de salida",
     "scheduleTrip": "Programar una salida",
@@ -1101,7 +1108,8 @@
       "departureTime": "Hora de salida",
       "copying": "Copiando…",
       "copyIt": "Copiarla"
-    }
+    },
+    "addBooking": "Añadir una reserva"
   },
   "trips": {
     "subNav": {
@@ -1131,6 +1139,7 @@
       "bookingRestoreRatio": "No se pudo deshacer — la plaza liberada ya se ocupó y esta sesión del curso está en su límite de ratio instructor-alumno. Asigna otro instructor, o añádelo a la lista de espera en su lugar.",
       "bookingRestoreCancelled": "No se pudo deshacer — esta salida está cancelada. Reactiva la salida y vuelve a añadirlo.",
       "diverAdded": "Buceador añadido a la salida.",
+      "diverAddedWaiverUndelivered": "Buceador añadido a la salida, pero no se envió su exención por correo. Envíala o comparte el enlace desde su fila de abajo.",
       "diverWaitlisted": "Buceador añadido a la lista de espera.",
       "identityConfirmed": "Identidad confirmada — este buceador puede autorizarse a embarcar.",
       "contactSaved": "Contacto de emergencia guardado.",
@@ -1227,8 +1236,8 @@
       "holdDescription": "Pausa nuevas reservas, publica el estado de decisión final y avisa por correo a los buceadores con reserva cuando el envío esté configurado.",
       "overviewLabel": "Resumen de condiciones",
       "overviewPlaceholder": "Se espera una mañana tranquila; la tripulación confirmará la decisión final en el muelle.",
-      "waterTempLabel": "Temperatura del agua °C",
-      "visibilityLabel": "Visibilidad en metros",
+      "waterTempLabel": "Temperatura del agua {unit}",
+      "visibilityLabel": "Visibilidad {unit}",
       "surfaceNotesLabel": "Notas de superficie",
       "surfaceNotesPlaceholder": "Brisa suave · oleaje ligero",
       "publishing": "Publicando…",
@@ -1401,8 +1410,7 @@
       "noBookings": "Todavía no hay reservas — comparte la página de la salida y aparecerán aquí.",
       "selectToSendWaiverAriaLabel": "Seleccionar a {name} para enviarle una exención",
       "noEmailOnFile": "sin correo registrado",
-      "ready": "Listo",
-      "needsAttention": "Necesita atención",
+      "checkedInPill": "Registrado",
       "ageYears": "{age} años",
       "minorBadge": "Menor",
       "depthWarning": "Esta salida llega a {site} {unit} — más de los {limit} {unit} para los que le habilita su tarjeta. No es un bloqueo: planifica la inmersión más somera o confirma que el guía lo mantiene dentro de sus límites.",
@@ -1488,7 +1496,7 @@
       "crewShort": "{aboard} de {assigned} tripulantes confirmados a bordo. Este control sigue abierto hasta contabilizar a toda la tripulación.",
       "crewNotBackAboard": "{count, plural, one {# tripulante no ha vuelto a bordo.} other {# tripulantes no han vuelto a bordo.}} Este control sigue abierto hasta contabilizarlos.",
       "crewAwaiting": "{count, plural, one {Falta pasar lista a # tripulante.} other {Falta pasar lista a # tripulantes.}} Cada persona de la tripulación necesita su propio resultado, no solo el recuento.",
-      "readinessNeedsAttention": "La preparación necesita atención",
+      "readinessNeedsAttention": "Buceadores bloqueados",
       "blockedDeparture": "{count, plural, one {Hay # buceador bloqueado. Permanece en este manifiesto y no puede embarcar hasta que se despeje su control de preparación.} other {Hay # buceadores bloqueados. Permanecen en este manifiesto y no pueden embarcar hasta que se despeje su control de preparación.}}",
       "blockedAfterDive": "{count, plural, one {# buceador ya zarpó — regístralo igual; el seguimiento de su preparación se resuelve en tierra, no aquí.} other {# buceadores ya zarparon — regístralos igual; el seguimiento de su preparación se resuelve en tierra, no aquí.}}",
       "crewHeading": "Tripulación",
@@ -1519,9 +1527,7 @@
       "checkpointRollCallHeading": "Pase de lista · {checkpoint}",
       "checkEachDiverDescription": "Marca cada buceador en este punto de control. Cada cambio queda con la marca de tiempo del miembro del personal que lo hizo.",
       "shopTimeLabel": "Hora del centro: {timezone}",
-      "readyToBoard": "Listo para embarcar",
-      "blockedBadge": "Bloqueado",
-      "checkedInPill": "Registrado ✓",
+      "checkedInPill": "Registrado",
       "age": "{age} años",
       "minorAge": "Menor · {age} años",
       "emergencyContactLabel": "Contacto de emergencia",
@@ -1688,6 +1694,8 @@
         "dockInvalid": "Introduce una hora de presentación en el muelle de entre 5 y 180 minutos.",
         "depthUnitSaved": "Unidad de profundidad guardada. Las profundidades registradas no cambian — solo cómo se muestran.",
         "depthUnitInvalid": "Elige metros o pies.",
+        "temperatureUnitSaved": "Unidad de temperatura guardada. Las temperaturas del agua registradas no cambian — solo cómo se muestran.",
+        "temperatureUnitInvalid": "Elige Celsius o Fahrenheit.",
         "rentalsSaved": "Catálogo de alquiler guardado.",
         "rentalPricesSaved": "Precios de alquiler guardados.",
         "rentalPricesInvalid": "Introduce cada precio como una cantidad en dólares (o deja el campo vacío), entre $0 y $100.000.",
@@ -1760,6 +1768,15 @@
         "meters": "Metros (m)",
         "feet": "Pies (ft)",
         "submit": "Guardar unidad de profundidad",
+        "submitting": "Guardando…"
+      },
+      "temperatureUnit": {
+        "heading": "Unidad de temperatura del agua",
+        "description": "Si tu tripulación lee la temperatura del agua en Celsius o en Fahrenheit. Se configura aparte de la unidad de profundidad — muchos centros publican pies y Celsius. Las temperaturas siempre se guardan en Celsius, así que cambiar esto solo afecta a lo que escribes y lees.",
+        "label": "Mostrar la temperatura del agua en",
+        "celsius": "Celsius (°C)",
+        "fahrenheit": "Fahrenheit (°F)",
+        "submit": "Guardar unidad de temperatura",
         "submitting": "Guardando…"
       },
       "paymentsGate": {
@@ -1945,6 +1962,60 @@
         "included": "Se importa",
         "staysBehind": "Se queda fuera"
       },
+      "scopeTable": {
+        "contact": {
+          "what": "Nombre, correo, teléfono",
+          "detail": "Se importan tal cual. Una fila con correo se empareja con un buceador existente al reimportar; sin él, siempre es una ficha nueva."
+        },
+        "emergencyContact": {
+          "what": "Contacto de emergencia",
+          "detail": "El nombre y el teléfono se trasladan cuando están."
+        },
+        "diveInsurance": {
+          "what": "Seguro de buceo (DAN)",
+          "detail": "Se traslada como texto libre, exactamente como lo tenga tu archivo. Nunca es una barrera — solo información que la tripulación quiere tener a mano."
+        },
+        "rentalSizes": {
+          "what": "Tallas de alquiler",
+          "detail": "Las tallas de BCD, traje, bota y aleta se convierten en un perfil de ajuste de alquiler."
+        },
+        "certificationCard": {
+          "what": "Tarjeta de certificación",
+          "detail": "Se importa verificada y marcada como importada, fecha de repaso incluida — el personal la confirma con un toque; los niveles no reconocidos requieren entrada manual."
+        },
+        "specialtyCards": {
+          "what": "Tarjetas de especialidad (profundidad, naufragios, nocturna, traje seco)",
+          "detail": "Se importan como tarjetas de especialidad verificadas, marcadas como importadas; cada una sigue necesitando la confirmación del personal antes de la inmersión que la exige."
+        },
+        "nitrox": {
+          "what": "Nitrox",
+          "detail": "Se importa como una tarjeta de nitrox verificada, marcada como importada — pero el buceador recibe aire normal hasta que el personal la confirme; el embarque nunca espera."
+        },
+        "signedWaivers": {
+          "what": "Descargos firmados y aptitud médica",
+          "detail": "Una fila marcada como ya aceptada se da por buena, aptitud médica incluida, y queda marcada como importada — las respuestas médicas individuales nunca se reconstruyen, solo el resultado."
+        },
+        "waiverDocuments": {
+          "what": "Documentos de descargo / médicos",
+          "detail": "Se descargan una vez desde la URL de tu archivo y se guardan de nuevo en el almacenamiento propio de DiveDay para auditoría. Imágenes y PDF de hasta 5 MB."
+        },
+        "role": {
+          "what": "Rol",
+          "detail": "Todo el mundo se importa como buceador. Los roles de personal y los accesos nunca se conceden por importación."
+        },
+        "cardOnFile": {
+          "what": "Tarjeta guardada / pagos",
+          "detail": "Se queda con tu procesador de pagos — DiveDay nunca importa datos de tarjetas ni de pagos."
+        },
+        "pastVisits": {
+          "what": "Visitas pasadas (qué reservaron y cuándo)",
+          "detail": "Cada fila de reserva se convierte en historial de visitas — no es una inmersión, y nunca aparece en tu horario ni cuenta para el aforo."
+        },
+        "receiptsService": {
+          "what": "Recibos e historial de taller",
+          "detail": "Los registros de pago se quedan con tu procesador; el historial de mantenimiento del equipo no tiene dónde aterrizar — DiveDay guarda tallas, no equipos concretos."
+        }
+      },
       "wizard": {
         "heading": "Subir un archivo de contactos",
         "intro": "Un CSV de tu antiguo sistema, o el propio <mono>contacts.csv</mono> de DiveDay. Un correo coincidente actualiza a ese buceador al reimportar; sin uno, siempre es un registro nuevo. No se escribe nada hasta que revisas la vista previa y confirmas.",
@@ -2104,21 +2175,20 @@
     }
   },
   "blockers": {
-    "eyebrow": "Recepción",
+    "blockedCount": "{count, plural, one {# buceador} other {# buceadores}}",
     "title": "No listos",
     "description": {
       "none": "Todos los reservados en una próxima salida están listos para embarcar.",
-      "some": "{blocked, plural, one {# buceador} other {# buceadores}} en {departures, plural, one {# salida} other {# salidas}} no pueden embarcar todavía. Resolver una fila te lleva directo a la solución."
+      "some": "Repartidos entre {departures, plural, one {# salida} other {# salidas}}. Resolver una fila te lleva directo a la solución."
     },
-    "windowNote": "Mostrando las 40 salidas más próximas en el calendario.",
     "alsoBlockedOn": "También bloqueado en {trips} — mismo buceador, se resuelve una vez.",
     "tripBlockedCount": "{blocked} de {booked} bloqueados",
-    "sendAllWaivers": "{count, plural, one {Enviar # descargo} other {Enviar los # descargos}}",
+    "sendAllWaivers": "{count, plural, one {Enviar # exención} other {Enviar las # exenciones}}",
     "sendingAll": "Enviando todos…",
     "emptyTitle": "Todos los barcos listos para embarcar",
-    "emptyDescription": "Ningún próximo buceador está esperando un descargo, una tarjeta o un pago. Las nuevas reservas aparecerán aquí en cuanto necesiten una mano.",
+    "emptyDescription": "Ningún próximo buceador está esperando una exención, una tarjeta o un pago. Las nuevas reservas aparecerán aquí en cuanto necesiten una mano.",
     "viewSchedule": "Ver el calendario",
-    "truncated": "Mostrando las 40 salidas más próximas. Lo que quede más lejos está en el <link>calendario</link>.",
+    "truncated": "Esta ventana tiene más salidas de las que una sola lista debería cargar; el resto está en el <link>calendario</link>.",
     "pagination": {
       "label": "Páginas de bloqueos",
       "previous": "Anterior",
@@ -2130,7 +2200,6 @@
     "eyebrow": "Modo mostrador",
     "title": "Check-in de mostrador",
     "description": "Escanea un código de reserva o busca a un buceador, confirma su preparación en tiempo real y mantén la fila en movimiento. El check-in es el estado de llegada; el embarque se confirma aparte en el manifiesto.",
-    "windowNote": "Mostrando llegadas desde hace 6 horas hasta las próximas 36 horas.",
     "queueAriaLabel": "Cola de check-in",
     "readyHeading": "Listos en el mostrador",
     "searchResultsFor": "Resultados de búsqueda para «{query}».",
@@ -2141,8 +2210,6 @@
     "clearedTitle": "Todos a bordo por hoy 🎉 — todos registrados.",
     "checkedInBadge": "Registrado",
     "boardedBadge": "Embarcado",
-    "readyBadge": "Listo",
-    "needsAttentionBadge": "Necesita atención",
     "checkInButton": "Registrar",
     "checkInAriaLabel": "Registrar a {name}",
     "blockersMore": "+{count} más",
@@ -2160,10 +2227,11 @@
       "notFound": "No se encontró esa reserva.",
       "staffNotFound": "No se pudo confirmar tu acceso de personal.",
       "invalid": "Elige un buceador de la cola antes de registrarlo.",
-      "walkinAdded": "Añadido y a bordo.",
+      "walkinAdded": "Añadido a la lista de este barco: regístralo cuando llegue.",
+      "walkinAddedWaiverUndelivered": "Añadido a la lista de este barco, pero no se envió su exención por correo. Envíala o comparte el enlace desde su fila de abajo.",
       "walkinFull": "Ese barco está completo — prueba la lista de espera desde su página de salida.",
       "walkinAlready": "Ese buceador ya está en este barco.",
-      "walkinUnavailable": "Ese barco no admite walk-ins ahora mismo — revisa su página de salida para saber por qué.",
+      "walkinUnavailable": "No se puede añadir a este buceador a ese barco ahora mismo: abre su página de salida para ver el motivo.",
       "walkinInvalid": "Elige un barco y escribe un nombre antes de añadir un walk-in."
     },
     "walkIn": {
@@ -2196,32 +2264,33 @@
   "waiversStaff": {
     "eyebrow": "Ajustes",
     "title": "Plantilla de exención",
-    "description": "Todos los buceadores firman este mismo descargo. Edítalo para que se ajuste a tu centro.",
+    "description": "Todos los buceadores firman esta misma exención. Edítala para que se ajuste a tu centro.",
+    "chaseUnsigned": "¿Persiguiendo una exención sin firmar? <link>No listos</link> muestra a cada buceador que la tiene pendiente.",
     "banner": {
       "savedNew": "Guardado como nueva versión.",
-      "savedFirst": "Tu descargo está guardado. Cada futura edición se conserva como una nueva versión.",
-      "invalid": "Eso no se guardó. El descargo debe tener al menos unas frases de extensión."
+      "savedFirst": "Tu exención está guardada. Cada futura edición se conserva como una nueva versión.",
+      "invalid": "Eso no se guardó. La exención debe tener al menos unas frases de extensión."
     },
-    "fieldLabel": "Texto del descargo",
-    "placeholder": "Escribe el descargo que leerá y firmará el buceador.",
+    "fieldLabel": "Texto de la exención",
+    "placeholder": "Escribe la exención que leerá y firmará el buceador.",
     "pendingLabel": "Guardando…",
     "saveNewVersion": "Guardar nueva versión",
-    "saveWaiver": "Guardar descargo",
-    "releaseTextHeading": "Texto del descargo",
+    "saveWaiver": "Guardar exención",
+    "releaseTextHeading": "Texto de la exención",
     "releaseDescription": {
-      "current": "Este es el descargo que envía cada enlace nuevo. Guardar lo reemplaza para los enlaces nuevos — los descargos ya firmados conservan el texto exacto que firmaron.",
+      "current": "Esta es la exención que envía cada enlace nuevo. Guardarla la reemplaza para los enlaces nuevos — las exenciones ya firmadas conservan el texto exacto que se firmó.",
       "sample": "Este es un texto de muestra para empezar — edítalo para tu centro y haz que tu propio asesor legal lo revise."
     },
     "versionInfo": "Versión {version} · guardado el {date}",
     "tabs": {
-      "ariaLabel": "Secciones del descargo",
+      "ariaLabel": "Secciones de la exención",
       "template": "Plantilla",
       "signatures": "Firmas"
     },
     "signatures": {
       "eyebrow": "Ajustes",
       "title": "Firmas",
-      "description": "Todos los descargos firmados que tiene este centro — quién firmó, en qué salida, y cualquier seguimiento médico. Los waivers firmados son a prueba de manipulaciones — si un registro fue alterado, lo marcamos.",
+      "description": "Todas las exenciones firmadas que tiene este centro — quién firmó, en qué salida, y cualquier seguimiento médico. Las exenciones firmadas son a prueba de manipulaciones — si un registro fue alterado, lo marcamos.",
       "signedRecordHeading": "Registro firmado",
       "heading": "Registros firmados",
       "noSignedRecords": "Todavía no hay registros firmados.",
@@ -2245,7 +2314,6 @@
     "emailResent": "Correo de confirmación reenviado.",
     "emailFailed": "Ese correo no se pudo enviar — revisa la dirección y la configuración de correo.",
     "crewingBoat": "Estás en la tripulación del {title} de las {time}.",
-    "windowNote": "Mostrando el trabajo previsto para los próximos 7 días.",
     "noDeparturesHeading": "Hoy no sale ningún barco",
     "nextDeparture": "La próxima es <link>{title}</link> el {date} a las {time}.",
     "noDeparturesEmpty": "Todavía no hay nada programado. Programa una salida y aparecerá aquí la mañana que zarpe.",
@@ -2263,7 +2331,7 @@
         "owner": {
           "title": "Estás al mando de toda la tienda",
           "desc": "Hoy es tu cola de trabajo — reservas, bloqueos y las salidas de hoy en un solo lugar.",
-          "tryThis": "Abre Calendario para ver las salidas de esta semana."
+          "tryThis": "Abre Tablero para ver las salidas de esta semana."
         },
         "manager": {
           "title": "Manteniendo la tienda en marcha día a día",
@@ -2277,8 +2345,8 @@
         },
         "divemaster": {
           "title": "Preparando a los buceadores para embarcar",
-          "desc": "Bloqueos enumera a todos los que aún no pueden embarcar, con el único toque que resuelve cada caso.",
-          "tryThis": "Abre Bloqueos para ver quién todavía necesita preparación."
+          "desc": "No listos enumera a todos los que aún no pueden embarcar, con el único toque que resuelve cada caso.",
+          "tryThis": "Abre No listos para ver quién todavía necesita preparación."
         },
         "captain": {
           "title": "Dirigiendo el barco",
@@ -2316,10 +2384,24 @@
       "stripeAction": "Conectar Stripe",
       "stripeDone": "Stripe conectado.",
       "doneBadge": "Hecho"
+    },
+    "queueView": {
+      "label": "Cómo leer la lista",
+      "byUrgency": "Por urgencia",
+      "byDeparture": "Por salida"
     }
   },
   "shared": {
+    "operationalWindow": {
+      "note": "Las salidas de los próximos {days} días: la misma ventana que leen Hoy y Registro.",
+      "arrivalsLens": "El modo mostrador la reduce a las llegadas desde hace {lookback} horas hasta las próximas {ahead} horas.",
+      "pivotsLabel": "La misma ventana, vista de otra forma"
+    },
     "skipToContent": "Saltar al contenido principal",
+    "publicPreview": {
+      "youWorkHere": "Trabajas aquí: esta es la página que ven los buceadores.",
+      "openTheBoard": "Abrir el panel"
+    },
     "imageInput": {
       "tooMany": "{count, plural, one {Elige hasta # foto por vez.} other {Elige hasta # fotos por vez.}}",
       "wrongTypeSuffix": ": usa una foto JPG, PNG, WebP o HEIC.",
@@ -2361,6 +2443,10 @@
       "meters": "m",
       "feet": "ft"
     },
+    "temperature": {
+      "celsius": "°C",
+      "fahrenheit": "°F"
+    },
     "birthday": {
       "label": "Cumpleaños",
       "today": "hoy",
@@ -2401,23 +2487,9 @@
       "groupCourses": "Cursos",
       "groupOrders": "Pedidos",
       "groupGoTo": "Ir a",
-      "goToToday": "Hoy",
-      "goToBlockers": "No listos",
-      "goToCheckIn": "Registro",
-      "goToStaffing": "Personal",
-      "goToDiveSites": "Sitios de buceo",
-      "goToCourses": "Cursos",
-      "goToReviews": "Reseñas",
-      "goToReports": "Informes",
-      "goToPromos": "Códigos promocionales",
-      "goToSchedule": "Calendario",
-      "goToDivers": "Buceadores",
-      "goToSettings": "Ajustes",
-      "goToWaivers": "Plantilla de exención",
       "goToBoarding": "Embarque — el barco de hoy",
-      "goToWalkIn": "Walk-in",
       "goToOfflineRollCall": "Abrir pase de lista sin conexión",
-      "goToOrders": "Pedidos"
+      "goToAddBooking": "Añadir una reserva"
     },
     "keyboardShortcuts": {
       "buttonAriaLabel": "Atajos de teclado",
@@ -2427,7 +2499,7 @@
       "heading": "Atajos de teclado",
       "paletteLabel": "Buscar buceadores, salidas y páginas",
       "helpLabel": "Mostrar esta ayuda",
-      "sequenceHint": "Pulsa las teclas una tras otra para una secuencia — por ejemplo, <kbdG>G</kbdG> y luego <kbdS>S</kbdS> para el calendario.",
+      "sequenceHint": "Pulsa las teclas una tras otra para una secuencia — por ejemplo, <kbdG>G</kbdG> y luego <kbdS>S</kbdS> para el tablero.",
       "goToLabel": "Ir a {page}"
     },
     "readiness": {
@@ -2443,6 +2515,10 @@
         "wreck": "Naufragios",
         "night": "Nocturno",
         "drysuit": "Traje seco"
+      },
+      "status": {
+        "ready": "Listo",
+        "blocked": "Bloqueado"
       },
       "blockers": {
         "requirementsNotConfigured": "Aún no se han configurado los requisitos de la salida.",
@@ -2474,18 +2550,24 @@
       "signOutPending": "Cerrando sesión…"
     },
     "shopNavLinks": {
+      "badgeBlocked": "{count, plural, one {# buceador bloqueado} other {# buceadores bloqueados}}",
+      "badgeReviews": "{count, plural, one {# reseña pendiente} other {# reseñas pendientes}}",
       "primaryNavAriaLabel": "Principal",
       "more": "Más",
+      "groupDaily": "Llevar la tienda",
+      "groupSetup": "Configurar",
       "today": "Hoy",
       "checkIn": "Registro",
+      "walkIn": "Walk-in",
       "blockers": "No listos",
       "divers": "Buceadores",
-      "schedule": "Calendario",
+      "board": "Tablero",
       "staffing": "Personal",
       "diveSites": "Sitios de buceo",
       "courses": "Cursos",
       "reviews": "Reseñas",
-      "waivers": "Plantilla de exención",
+      "orders": "Pedidos",
+      "waivers": "Exenciones",
       "reports": "Informes",
       "promoCodes": "Códigos promocionales",
       "settings": "Ajustes",
@@ -2524,8 +2606,6 @@
         "assignFailed": "No se ha guardado — comprueba tu conexión o inténtalo de nuevo.",
         "unassignAria": "Quitar a {name}",
         "noCrewAssigned": "Sin tripulación asignada. Arrastra al personal desde arriba hasta aquí.",
-        "countReady": "Listos",
-        "countBlocked": "Bloqueados",
         "countBoarded": "Embarcados",
         "blockedWarningOne": "{count} buceador todavía no puede embarcar — está en la lista de abajo.",
         "blockedWarningOther": "{count} buceadores todavía no pueden embarcar — están en la lista de abajo.",
@@ -2650,6 +2730,13 @@
       "pointingLabel": {
         "trip": "Ver lista",
         "diver": "Abrir la ficha de {name}"
+      },
+      "nameList": {
+        "all": "{leading} y {last}",
+        "overflow": "{leading} y {rest, plural, one {# más} other {# más}}"
+      },
+      "subject": {
+        "diverGroup": "{count, plural, one {# buceador} other {# buceadores}}"
       },
       "blockerDetail": {
         "withRemaining": "{detail} {remaining, plural, one {Queda # bloqueo más por resolver.} other {Quedan # bloqueos más por resolver.}}",
@@ -2946,6 +3033,37 @@
       "connecting": "Conectando…",
       "cancelled": "Conexión cancelada; no se cambió nada. Pulsa Conectar para intentarlo de nuevo.",
       "blocked": "No se pudo abrir la ventana de Meta. Comprueba que tu navegador no bloquee las ventanas emergentes e inténtalo de nuevo."
+    }
+  },
+  "bookings": {
+    "new": {
+      "eyebrow": "Reservas",
+      "title": "Añadir una reserva",
+      "description": "Sienta a un buceador en cualquier salida próxima — elige el barco y luego al buceador.",
+      "backToBoard": "Volver al tablero",
+      "tripHeading": "¿Qué salida?",
+      "tripEmpty": "No queda ninguna plaza en las próximas salidas. Programa una salida primero.",
+      "tripSummary": "{title} · {date} · {time} · {booked}/{capacity} reservados",
+      "seatsLeft": "{count, plural, one {# plaza libre} other {# plazas libres}}",
+      "changeTrip": "¿No es esta? Elige otra salida.",
+      "findHeading": "Buscar un buceador que ya conste",
+      "findLabel": "Busca por nombre, correo o teléfono",
+      "findPlaceholder": "Empieza a escribir un nombre…",
+      "search": "Buscar",
+      "searching": "Buscando…",
+      "noMatches": "Sin coincidencias para «{query}» — añádelo de cero abajo.",
+      "noEmailOnFile": "Sin correo registrado",
+      "addToTrip": "Añadir a la salida",
+      "addPersonAriaLabel": "Añadir a {name} a esta salida",
+      "adding": "Añadiendo…",
+      "handEntryHeading": "Buceador nuevo",
+      "handEntryDescription": "El correo es opcional — con el nombre basta para guardar la plaza y el resto puede llegar después.",
+      "nameLabel": "Nombre completo",
+      "emailLabel": "Correo",
+      "phoneLabel": "Teléfono",
+      "optionalHint": "(opcional)",
+      "moreOnBoard": "Hay más salidas en el tablero",
+      "noticeInvalid": "Introduce un nombre para añadir a un buceador — el correo y el teléfono son opcionales aquí."
     }
   }
 }

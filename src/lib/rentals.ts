@@ -41,10 +41,17 @@ export type RentableItem = {
   /** The HTML checkbox `name` the capture forms and actions agree on. */
   name: string;
   /**
-   * Whether a diver with no fit on file defaults to renting this. Core gear a
+   * Whether a diver with no fit on file is *assumed* to want this. Core gear a
    * shop stocks for everyone defaults on, as does the dive computer (safety kit
    * most divers want); only the GoPro defaults off, so nobody is packed a GoPro
    * they never asked for.
+   *
+   * This is a packing assumption, never a purchase. It seeds the post-booking
+   * rental-fit form, the staff fit editor, and a new shop's catalog
+   * ({@link DEFAULT_SHOP_RENTAL_ITEMS}) — all places where a tick only states a
+   * plan. The booking form's gear picker deliberately ignores it and starts
+   * empty, because there the same tick is a paid line item on the diver's card
+   * (docs ADR 20260801-checkout-upsells-rental-gear).
    */
   defaultRented: boolean;
 };

@@ -27,8 +27,10 @@ import { courseCrewGap, DSD_RATIO } from "@/lib/course-ratios";
 import { countInWaterCrew } from "@/lib/crew-roles";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
+import { publicTripPath } from "@/lib/public-routes";
 import { recurrenceSummary } from "@/lib/recurrence";
 import { requireStaffSession } from "@/lib/session";
+import { temperatureUnitFor } from "@/lib/temperature-units";
 import { capacityLabel, isFull } from "@/lib/trips";
 import { utcToWallTime } from "@/lib/zoned";
 import { ConditionsSection } from "./_components/ConditionsSection";
@@ -188,7 +190,7 @@ export default async function ManageTripPage({
         actions={
           <>
             <Link
-              href={`/shop/${shopSlug}/schedule/${tripId}`}
+              href={publicTripPath(shopSlug, tripId)}
               target="_blank"
               rel="noreferrer"
               className={buttonClass({ variant: "secondary", size: "sm" })}
@@ -196,7 +198,7 @@ export default async function ManageTripPage({
               {t("trips.detail.viewBookingPage")}
             </Link>
             <CopyLinkButton
-              path={`/shop/${shopSlug}/schedule/${tripId}`}
+              path={publicTripPath(shopSlug, tripId)}
               label={t("trips.detail.copyBookingLink")}
               copiedLabel={t("trips.detail.linkCopied")}
               failedLabel={t("trips.detail.linkCopyFailed")}
@@ -328,6 +330,8 @@ export default async function ManageTripPage({
         clearAction={clearConditionsAction.bind(null, shopSlug, tripId)}
         trip={trip}
         locale={locale}
+        temperatureUnit={temperatureUnitFor(shop)}
+        depthUnit={shop.depthUnit}
       />
 
       <RecapNoteSection

@@ -5,7 +5,10 @@ import { e2eNow, signInAs } from "./helpers";
 signedInAsOwner();
 
 const SHOP = "blue-mantis";
+// The builder staff shape paths in, and the guidance page divers read —
+// two surfaces, two namespaces (ADR 20260803-public-shop-namespace).
 const PATHS = `/shop/${SHOP}/courses/paths`;
+const PUBLIC_PATHS = `/s/${SHOP}/courses/paths`;
 
 test.describe("certification paths", () => {
   test("staff build a path out of the catalog and divers see it on the course page", async ({
@@ -61,7 +64,7 @@ test.describe("certification paths", () => {
 
     // A diver reads the same progression on the public course page.
     await page.context().clearCookies();
-    await page.goto(`/shop/${SHOP}/courses/night-diver`);
+    await page.goto(`/s/${SHOP}/courses/night-diver`);
     const trail = page
       .locator("article")
       .filter({ has: page.getByRole("heading", { name: title }) })
@@ -76,7 +79,7 @@ test.describe("certification paths", () => {
   }) => {
     await page.goto(PATHS);
     // The seeded wreck path puts Wreck Diver at the end of a progression.
-    await page.goto(`/shop/${SHOP}/courses/wreck-diver`);
+    await page.goto(`/s/${SHOP}/courses/wreck-diver`);
     await expect(page.getByRole("heading", { name: "Where this fits" })).toBeVisible();
 
     await page.goto(PATHS);
@@ -89,7 +92,7 @@ test.describe("certification paths", () => {
       page.getByRole("listitem").filter({ hasText: "Wreck diver" }).getByText("Hidden"),
     ).toBeVisible();
 
-    await page.goto(`/shop/${SHOP}/courses/wreck-diver`);
+    await page.goto(`/s/${SHOP}/courses/wreck-diver`);
     // The other seeded path doesn't contain Wreck Diver, so the section goes.
     await expect(page.getByRole("heading", { name: "Where this fits" })).toHaveCount(0);
   });
@@ -109,14 +112,14 @@ test.describe("certification paths", () => {
 
     try {
       await page.context().clearCookies();
-      await page.goto(PATHS);
+      await page.goto(PUBLIC_PATHS);
       const listing = page
         .getByRole("listitem")
         .filter({ has: page.getByRole("link", { name: "From first breath to Rescue Diver" }) });
       await expect(listing).not.toContainText("Advanced Open Water Diver");
       await expect(listing).toContainText("Discover Scuba Diving");
 
-      await page.goto(`${PATHS}/from-first-breath-to-rescue-diver`);
+      await page.goto(`${PUBLIC_PATHS}/from-first-breath-to-rescue-diver`);
       const steps = page.getByRole("list");
       await expect(steps.getByRole("link", { name: "Advanced Open Water Diver" })).toHaveCount(0);
       await expect(steps.getByRole("link", { name: "Rescue Diver" })).toBeVisible();
@@ -162,11 +165,18 @@ test.describe("certification paths", () => {
     // path leaks — only the raw first-byte HTTP status is 200 instead of
     // 404. Tracked as a known Next 16 cacheComponents limitation to revisit
     // if a future version adds a real per-route PPR opt-out.
-    await page.goto(`${PATHS}/${slug}`);
+    await page.goto(`${PUBLIC_PATHS}/${slug}`);
     await expect(page.getByRole("heading", { name: "We couldn’t find that page" })).toBeVisible();
-    await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", "noindex");
+    // Asserted as "at least one noindex, and nothing indexable" rather than
+    // "exactly one meta": the shell described above ships the directive in its
+    // own head, and the background upgrade contributes a second identical copy
+    // once `notFound()` resolves, so the hydrated DOM legitimately holds two.
+    // The served bytes a crawler reads carry exactly one. What must never
+    // change is that none of them is indexable.
+    await expect(page.locator('meta[name="robots"][content="noindex"]').first()).toBeAttached();
+    await expect(page.locator('meta[name="robots"]:not([content~="noindex"])')).toHaveCount(0);
     // And it never shows up in the public index either.
-    await page.goto(PATHS);
+    await page.goto(PUBLIC_PATHS);
     await expect(page.getByRole("link", { name: title })).toHaveCount(0);
   });
 });
