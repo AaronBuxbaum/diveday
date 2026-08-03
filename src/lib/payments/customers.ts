@@ -109,7 +109,10 @@ export function stripeCustomerProvider(
           ? { status: "failed", error: "stripe did not report the customer deleted" }
           : { status: "deleted" };
       } catch (error) {
-        return { status: "failed", error: error instanceof Error ? error.message : "network error" };
+        return {
+          status: "failed",
+          error: error instanceof Error ? error.message : "network error",
+        };
       }
     },
   };

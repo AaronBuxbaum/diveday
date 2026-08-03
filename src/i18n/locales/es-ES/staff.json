@@ -208,6 +208,7 @@
       "noticeDeleted": "Buceador eliminado del trabajo activo de la tienda. Sus reservas y tarjetas se conservan.",
       "noticeRestored": "Buceador restaurado al trabajo activo de la tienda.",
       "noticeErased": "Datos personales borrados. La exención firmada, los viajes y los pagos quedan registrados sin los datos del buceador — esto no se puede deshacer.",
+      "noticeErasedProcessorOwed": "Datos personales borrados aquí, pero algo en Stripe quedó sin terminar. Abre Informes para ver qué falta y resolverlo — hasta entonces este buceador no está borrado del todo.",
       "noticeNotAuthorized": "Eliminar o restaurar un buceador está limitado a propietarios y gerentes.",
       "noticeInvalid": "Revisa el nombre, correo y teléfono del buceador.",
       "restoring": "Restaurando…",
@@ -935,13 +936,16 @@
       "retrying": "Reintentando…"
     },
     "processorErasureTarget": {
-      "stripe_customer": "Cliente de Stripe"
+      "stripe_customer": "Cliente de Stripe",
+      "stripe_invoice_snapshot": "Factura de Stripe"
     },
     "processorErasures": {
-      "sectionLabel": "Borrados pendientes en Stripe",
-      "heading": "{count, plural, one {# buceador borrado} other {# buceadores borrados}} siguen registrados en Stripe",
-      "detail": "Aquí ya los borraste, pero Stripe todavía guarda su nombre y su correo en estos registros de cliente. Solo tú puedes quitarlos: abre cada uno en tu panel de Stripe y luego márcalo como hecho. Borrar un cliente de Stripe no se puede deshacer, y tus facturas para impuestos y contracargos se van con él, así que compruébalo antes.",
+      "sectionLabel": "Borrados sin terminar en Stripe",
+      "heading": "{count, plural, one {# registro} other {# registros}} de un buceador borrado siguen en Stripe",
+      "detail": "Al borrar a un buceador aquí también se borra su cliente de Stripe. Estos no se completaron. Un registro de cliente se puede reintentar — el proceso de esta noche lo intentará de nuevo por su cuenta. Una factura no: Stripe copia el nombre y el correo en cada factura al emitirla, y eso solo se borra con una solicitud de eliminación de datos a Stripe. Envíala y luego márcalo como hecho.",
       "raised": "registrado el {date}",
+      "retry": "Reintentar borrado",
+      "retrying": "Reintentando…",
       "discharge": "Marcar como hecho en Stripe",
       "discharging": "Guardando…"
     },

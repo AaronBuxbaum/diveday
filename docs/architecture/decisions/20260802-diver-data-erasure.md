@@ -119,7 +119,7 @@ deleted; rows that are evidence are kept and their personal fields scrubbed.**
 | `booking_checkouts` | `customer_email` → null. Two asymmetric sweeps — see "The checkout's copy of the address" below. |
 | `notification_send_queue` | rows deleted, matched on `payload->>'to'` (case-insensitive) and `payload->>'bookingId'`. The one un-normalized PII blob; a work queue, not evidence. |
 | `course_inquiries` | `name`, `email`, `phone`, `timing`, `message` → null, matched on `person_id` (snapshotted at capture) first, then on the diver's email or phone — see residuals. `person_id` is left in place: it points at an already-erased row, and keeping it is what makes a replayed erasure reach the same leads. |
-| `processor_erasure_obligations` | *written, not scrubbed* — one row per `orders.stripe_customer_id` the erasure could not reach, for the shop to discharge at Stripe ([20260803-processor-erasure-obligations](20260803-processor-erasure-obligations.md)) |
+| `processor_erasure_obligations` | *written, not scrubbed* — one row per `orders.stripe_customer_id` (deleted at Stripe after this transaction commits) and one per `orders.stripe_invoice_id` (no API reaches it; the shop files a Stripe data-deletion request) ([20260803-processor-erasure-obligations](20260803-processor-erasure-obligations.md)) |
 
 ### The checkout's copy of the address
 
@@ -208,16 +208,17 @@ still in `waiver_records` — is the worst outcome available.
 
 ### Residuals — what this cannot erase
 
-- **`orders.stripe_customer_id` and `stripe_invoice_id`** are `NOT NULL` pointers into Stripe's own
-  records. The shop must retain them for tax and chargeback, and DiveDay cannot rewrite Stripe's
-  copy of the customer's name and email from here. Erasure at the processor stays **work only the
-  shop can do** — but it is no longer an untracked manual step: every customer id the erasure could
-  not reach now raises a durable obligation on the shop's reports page, discharged by an owner who
-  says they did the work at Stripe
-  ([20260803-processor-erasure-obligations](20260803-processor-erasure-obligations.md)). An
-  undischarged obligation means the erasure is incomplete, and `stripe_invoice_id`'s finalized
-  invoices — which snapshot the name and email independently of the customer object — are outside
-  what any deletion at either end reaches. Any commitment made to a diver about erasure must say so.
+- **`orders.stripe_customer_id` and `stripe_invoice_id`** are `NOT NULL` pointers into the shop's own
+  Stripe account, and the local scrub cannot rewrite either. Both are now handled by
+  [20260803-processor-erasure-obligations](20260803-processor-erasure-obligations.md), and they are
+  handled differently: the **customer object is deleted** through `DELETE /v1/customers` after this
+  transaction commits (it holds no charge, invoice or dispute, so the shop's tax and chargeback trail
+  survives it — the "keep it for the financial record" objection was checked and is wrong), while the
+  **name and email Stripe snapshots onto each finalized invoice** has no API behind it and is
+  recorded as an obligation the shop clears with a data-deletion request to Stripe. The Stripe call
+  can never fail the erasure: a failure leaves a visible, retryable `owed` row instead. **An erasure
+  with an undischarged obligation is genuinely incomplete**, and any commitment made to a diver must
+  say so.
 - **`course_inquiries` carries a `person_id` only when capture could know one.** A lead is written
   from a public page before any person need exist, so the column is nullable and the sweep still
   leans on the email or phone the diver supplied. What `person_id` adds is the one case those two

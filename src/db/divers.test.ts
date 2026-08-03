@@ -1,7 +1,8 @@
 // @vitest-environment node
 import { and, eq } from "drizzle-orm";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { ANONYMIZED_PERSON_NAME, REDACTED_TEXT } from "@/lib/anonymization";
+import type { DeleteCustomerResult } from "@/lib/payments/customers";
 import { computeWaiverIntegrityHash, verifyWaiverIntegrity } from "@/lib/waiver-integrity";
 import { seededShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
@@ -966,7 +967,8 @@ describe("diver erasure", () => {
       ok: true,
       alreadyAnonymized: false,
       queuedMediaDeletions: 0,
-      queuedProcessorErasures: 0,
+      dischargedProcessorErasures: 0,
+      owedProcessorErasures: 0,
     });
     const [person] = await db.select().from(people).where(eq(people.id, diver.id));
     expect(person).toMatchObject({ fullName: ANONYMIZED_PERSON_NAME, email: null });
@@ -1071,7 +1073,8 @@ describe("diver erasure", () => {
       ok: true,
       alreadyAnonymized: true,
       queuedMediaDeletions: 0,
-      queuedProcessorErasures: 0,
+      dischargedProcessorErasures: 0,
+      owedProcessorErasures: 0,
     });
 
     const [afterSecond] = await db
@@ -1475,51 +1478,144 @@ describe("diver erasure", () => {
   });
 
   /**
-   * `orders.stripe_customer_id` is NOT NULL and names a customer object living
-   * in the shop's own Stripe account under the diver's name and email. Erasure
-   * cannot rewrite it and deliberately does not delete it — it records the
-   * obligation instead (ADR 20260803-processor-erasure-obligations).
+   * `orders.stripe_customer_id` and `stripe_invoice_id` are NOT NULL pointers
+   * into the shop's own Stripe account. The customer object is *deleted* — it
+   * holds no charge, invoice or dispute, so the shop's financial trail survives
+   * it — and the name/email Stripe snapshots onto a finalized invoice is
+   * recorded as owed, because no API reaches it
+   * (ADR 20260803-processor-erasure-obligations).
    */
-  describe("the Stripe customer erasure cannot reach", () => {
-    it("records the obligation the erasure could not discharge itself", async () => {
+  describe("the diver's records at Stripe", () => {
+    /** A provider that answers the same way every time and counts its calls. */
+    function providerReturning(result: DeleteCustomerResult) {
+      return { deleteCustomer: vi.fn().mockResolvedValue(result) };
+    }
+
+    it("deletes the Stripe customer and records the invoice snapshot as still owed", async () => {
       const { db, shop, diver, ownerId } = await erasableDiver();
+      const provider = providerReturning({ status: "deleted" });
 
-      const result = await anonymizeDiver(db, {
-        shopId: shop.id,
-        personId: diver.id,
-        actorPersonId: ownerId,
+      const result = await anonymizeDiver(
+        db,
+        { shopId: shop.id, personId: diver.id, actorPersonId: ownerId },
+        { customerProvider: provider },
+      );
+      expect(result).toMatchObject({
+        ok: true,
+        dischargedProcessorErasures: 1,
+        owedProcessorErasures: 1,
       });
-      expect(result).toMatchObject({ ok: true, queuedProcessorErasures: 1 });
+      // Aimed at the account the order itself was created on.
+      expect(provider.deleteCustomer).toHaveBeenCalledTimes(1);
+      expect(provider.deleteCustomer).toHaveBeenCalledWith(
+        "acct_test",
+        "cus_elena",
+        expect.stringContaining(":customer-delete"),
+      );
 
+      // What remains is the one thing no call can clear.
       const owed = await listOwedProcessorErasures(db, shop.id);
       expect(owed).toHaveLength(1);
       expect(owed[0]).toMatchObject({
         shopId: shop.id,
         personId: diver.id,
-        target: "stripe_customer",
-        externalId: "cus_elena",
+        target: "stripe_invoice_snapshot",
+        externalId: "in_elena",
         status: "owed",
+        attempts: 0,
       });
-      // The row is a pointer and an attestation, nothing else — the identity is
-      // exactly what the erasure just removed.
+      // The row is a pointer, not a person — the identity is exactly what the
+      // erasure just removed.
       expect(JSON.stringify(owed[0])).not.toContain("Elena");
     });
 
-    it("raises nothing for a diver who never had an order", async () => {
+    it("attempts the delete once per distinct customer id", async () => {
+      const { db, shop, diver, ownerId } = await erasableDiver();
+      // A second order for the same diver on the same Stripe customer, plus a
+      // third on a different one — one delete each, not one per order.
+      await db.insert(orders).values([
+        {
+          shopId: shop.id,
+          personId: diver.id,
+          createdByPersonId: ownerId,
+          status: "paid",
+          totalCents: 1000,
+          stripeAccountId: "acct_test",
+          stripeCustomerId: "cus_elena",
+          stripeInvoiceId: "in_elena_2",
+        },
+        {
+          shopId: shop.id,
+          personId: diver.id,
+          createdByPersonId: ownerId,
+          status: "paid",
+          totalCents: 2000,
+          stripeAccountId: "acct_test",
+          stripeCustomerId: "cus_elena_legacy",
+          stripeInvoiceId: "in_elena_3",
+        },
+      ]);
+      const provider = providerReturning({ status: "deleted" });
+
+      await anonymizeDiver(
+        db,
+        { shopId: shop.id, personId: diver.id, actorPersonId: ownerId },
+        { customerProvider: provider },
+      );
+
+      expect(provider.deleteCustomer.mock.calls.map((call) => call[1]).sort()).toEqual([
+        "cus_elena",
+        "cus_elena_legacy",
+      ]);
+    });
+
+    it("does not roll back the local erasure when Stripe fails, and leaves it owed", async () => {
+      const { db, shop, diver, ownerId } = await erasableDiver();
+      const provider = providerReturning({ status: "failed", error: "HTTP 503" });
+
+      const result = await anonymizeDiver(
+        db,
+        { shopId: shop.id, personId: diver.id, actorPersonId: ownerId },
+        { customerProvider: provider },
+      );
+      expect(result).toMatchObject({
+        ok: true,
+        dischargedProcessorErasures: 0,
+        owedProcessorErasures: 2,
+      });
+
+      // The erasure the diver asked for stands, whatever Stripe did.
+      const [person] = await db.select().from(people).where(eq(people.id, diver.id));
+      expect(person).toMatchObject({ fullName: ANONYMIZED_PERSON_NAME, email: null });
+      expect(person?.anonymizedAt).toBeInstanceOf(Date);
+
+      // And the unfinished work is visible, with the reason on the row.
+      const owed = await listOwedProcessorErasures(db, shop.id);
+      const customerRow = owed.find((row) => row.target === "stripe_customer");
+      expect(customerRow).toMatchObject({ attempts: 1, lastError: "HTTP 503" });
+    });
+
+    it("attempts nothing for a diver who never had an order", async () => {
       const { db, shop, ownerId } = await erasableDiver();
       const orderless = await createDiver(db, { shopId: shop.id, fullName: "Orderless Ola" });
       if (!orderless) throw new Error("diver insert failed");
+      const provider = providerReturning({ status: "deleted" });
 
-      const result = await anonymizeDiver(db, {
-        shopId: shop.id,
-        personId: orderless.id,
-        actorPersonId: ownerId,
+      const result = await anonymizeDiver(
+        db,
+        { shopId: shop.id, personId: orderless.id, actorPersonId: ownerId },
+        { customerProvider: provider },
+      );
+      expect(result).toMatchObject({
+        ok: true,
+        dischargedProcessorErasures: 0,
+        owedProcessorErasures: 0,
       });
-      expect(result).toMatchObject({ ok: true, queuedProcessorErasures: 0 });
+      expect(provider.deleteCustomer).not.toHaveBeenCalled();
       expect(await listOwedProcessorErasures(db, shop.id)).toEqual([]);
     });
 
-    it("never raises an obligation for a bystander's Stripe customer", async () => {
+    it("never deletes a bystander's Stripe customer", async () => {
       const { db, shop, diver, ownerId, trip } = await erasableDiver();
       const bystander = await createDiver(db, {
         shopId: shop.id,
@@ -1545,13 +1641,17 @@ describe("diver erasure", () => {
         stripeCustomerId: "cus_bea",
         stripeInvoiceId: "in_bea",
       });
+      const provider = providerReturning({ status: "deleted" });
 
-      await anonymizeDiver(db, { shopId: shop.id, personId: diver.id, actorPersonId: ownerId });
+      await anonymizeDiver(
+        db,
+        { shopId: shop.id, personId: diver.id, actorPersonId: ownerId },
+        { customerProvider: provider },
+      );
 
-      const owed = await listOwedProcessorErasures(db, shop.id);
-      expect(owed.map((row) => row.externalId)).toEqual(["cus_elena"]);
-      // Bea's own order is untouched: erasing one diver must never queue a
-      // delete against another diver's customer record at the processor.
+      // Erasing one diver must never reach into another's records at the
+      // processor — this is the irreversible one, so it is pinned hardest.
+      expect(provider.deleteCustomer.mock.calls.map((call) => call[1])).toEqual(["cus_elena"]);
       const [beaOrder] = await db.select().from(orders).where(eq(orders.personId, bystander.id));
       expect(beaOrder?.stripeCustomerId).toBe("cus_bea");
     });
@@ -1564,9 +1664,13 @@ describe("diver erasure", () => {
         .returning();
       if (!rival) throw new Error("rival shop insert failed");
 
-      await anonymizeDiver(db, { shopId: shop.id, personId: diver.id, actorPersonId: ownerId });
+      await anonymizeDiver(
+        db,
+        { shopId: shop.id, personId: diver.id, actorPersonId: ownerId },
+        { customerProvider: providerReturning({ status: "failed", error: "HTTP 503" }) },
+      );
 
-      expect(await listOwedProcessorErasures(db, shop.id)).toHaveLength(1);
+      expect(await listOwedProcessorErasures(db, shop.id)).toHaveLength(2);
       expect(await listOwedProcessorErasures(db, rival.id)).toEqual([]);
     });
   });

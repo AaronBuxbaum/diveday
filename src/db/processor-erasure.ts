@@ -27,12 +27,10 @@
  * over.
  */
 
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
-import {
-  type CustomerProvider,
-  customerProviderFromEnvironment,
-} from "@/lib/payments/customers";
+import { log } from "@/lib/log";
+import { type CustomerProvider, customerProviderFromEnvironment } from "@/lib/payments/customers";
 import type { AppDb, DbExecutor } from "./client";
 import { idempotencyKeyFor } from "./payment-operations";
 import {
@@ -85,7 +83,9 @@ export async function recordProcessorErasureObligations(
 ): Promise<ProcessorErasureObligation[]> {
   const seen = new Set<string>();
   const values = input.targets
-    .filter((entry) => entry.externalId.trim().length > 0 && entry.stripeAccountId.trim().length > 0)
+    .filter(
+      (entry) => entry.externalId.trim().length > 0 && entry.stripeAccountId.trim().length > 0,
+    )
     .filter((entry) => {
       const key = `${entry.target}:${entry.externalId}`;
       if (seen.has(key)) return false;
@@ -204,9 +204,23 @@ export async function attemptProcessorErasures(
   let discharged = 0;
   let stillOwed = 0;
   for (const obligation of obligations) {
-    const outcome = await attemptProcessorErasure(db, obligation, provider);
-    if (outcome.status === "discharged") discharged += 1;
-    else stillOwed += 1;
+    try {
+      const outcome = await attemptProcessorErasure(db, obligation, provider);
+      if (outcome.status === "discharged") discharged += 1;
+      else stillOwed += 1;
+    } catch (error) {
+      // The provider seam already turns a network failure into a `failed`
+      // result, so reaching here means something further out broke — the
+      // bookkeeping UPDATE, say. The row is still `owed` in that case, which is
+      // the safe direction, and one obligation's problem must not stop the
+      // others from being attempted.
+      stillOwed += 1;
+      log("anonymize.processor_erasure_attempt_threw", "error", {
+        shopId: obligation.shopId,
+        obligationId: obligation.id,
+        reason: error instanceof Error ? error.message : "unknown",
+      });
+    }
   }
   return { discharged, stillOwed };
 }
@@ -316,23 +330,4 @@ export async function dischargeProcessorErasure(
     )
     .returning({ id: processorErasureObligations.id });
   return discharged.length > 0 ? { ok: true } : { ok: false, reason: "not_found" };
-}
-
-/** Test/seed helper: the obligations raised by one erasure, in creation order. */
-export async function listProcessorErasuresForPerson(
-  db: AppDb,
-  shopId: string,
-  personIds: string[],
-): Promise<ProcessorErasureObligation[]> {
-  if (personIds.length === 0) return [];
-  return db
-    .select()
-    .from(processorErasureObligations)
-    .where(
-      and(
-        eq(processorErasureObligations.shopId, shopId),
-        inArray(processorErasureObligations.personId, personIds),
-      ),
-    )
-    .orderBy(asc(processorErasureObligations.createdAt));
 }

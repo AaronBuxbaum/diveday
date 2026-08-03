@@ -27,9 +27,9 @@ describe("stripe customer provider", () => {
     });
     const provider = providerWith(CONFIGURED, fetchImpl);
 
-    expect(await provider.deleteCustomer("acct_1", "cus_1", "obligation-1:customer-delete")).toEqual(
-      { status: "deleted" },
-    );
+    expect(
+      await provider.deleteCustomer("acct_1", "cus_1", "obligation-1:customer-delete"),
+    ).toEqual({ status: "deleted" });
     expect(fetchImpl).toHaveBeenCalledWith(
       "https://api.stripe.com/v1/customers/cus_1",
       expect.objectContaining({

@@ -30,12 +30,18 @@
  *      (ADR 20260723-media-validation-and-deletion), so the object itself is
  *      retired by the same durable retry every other blob deletion uses rather
  *      than by a second, parallel mechanism invented here.
- *   4. **What it cannot erase, it records.** A Stripe customer object carrying
- *      the diver's name and email is not DiveDay's to rewrite or to delete, so
- *      every one the diver's orders point at raises a durable obligation the
- *      shop can see and discharge (`./processor-erasure`,
- *      ADR 20260803-processor-erasure-obligations). An erasure with an
- *      undischarged obligation is honestly incomplete, and says so.
+ *   4. **The processor is erased too, and what cannot be is recorded.** The
+ *      Stripe customer objects the diver's orders point at are deleted through
+ *      `DELETE /v1/customers` on the shop's connected account; the name/email
+ *      snapshot Stripe keeps on each finalized invoice has no API behind it and
+ *      is recorded as an obligation the shop discharges through Stripe's own
+ *      data-deletion request (`./processor-erasure`,
+ *      ADR 20260803-processor-erasure-obligations). Both go through one ledger,
+ *      so an erasure that is not finished at the processor says so out loud.
+ *
+ *      The Stripe call runs **after** the transaction below commits and can
+ *      never fail it. An outage or a revoked Connect token leaves a visible,
+ *      retryable `owed` row — it does not undo an erasure a diver asked for.
  *
  * The scrub is one transaction. A partial erasure — identity gone from
  * `people` but medical answers still sitting in `waiver_records` — is the worst
@@ -47,6 +53,7 @@ import { ANONYMIZED_PERSON_NAME, REDACTED_TEXT, redactedUniqueValue } from "@/li
 import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
+import { type CustomerProvider, customerProviderFromEnvironment } from "@/lib/payments/customers";
 import {
   computeWaiverIntegrityHash,
   WAIVER_INTEGRITY_VERSION_ERASED,
@@ -55,7 +62,8 @@ import { createWaiverToken, hashWaiverToken } from "@/lib/waivers";
 import { canPersonErasePersonalData } from "./authz";
 import type { AppDb, AppTransaction } from "./client";
 import { queueMediaDeletion } from "./media-deletions";
-import { recordProcessorErasureObligations } from "./processor-erasure";
+import { attemptProcessorErasures, recordProcessorErasureObligations } from "./processor-erasure";
+import type { ProcessorErasureObligation } from "./schema";
 import {
   accountTokens,
   activityEvents,
@@ -112,12 +120,15 @@ export type AnonymizeDiverResult =
       alreadyAnonymized: boolean;
       /** Blob objects handed to the media-deletion ledger by this call. */
       queuedMediaDeletions: number;
+      /** Stripe customer objects this call deleted (or found already deleted). */
+      dischargedProcessorErasures: number;
       /**
-       * Processor-side records this call recorded as still owing an erasure —
-       * work DiveDay cannot do and the shop must (see `./processor-erasure`).
-       * A non-zero count means the erasure is incomplete until a human acts.
+       * Processor-side records still owed after this call: an invoice snapshot
+       * only Stripe's data-deletion request can clear, or a customer delete that
+       * failed and is waiting on a retry. Non-zero means the erasure is
+       * genuinely incomplete at the processor and the reports panel says so.
        */
-      queuedProcessorErasures: number;
+      owedProcessorErasures: number;
     }
   | { ok: false; reason: AnonymizeDiverRefusal };
 
@@ -219,13 +230,27 @@ function logFuzzyMatch(
  * Erase one diver. Idempotent: a second call on an already-erased record
  * reports success without touching anything, so a double-submitted form or a
  * retried job can never half-apply a second pass.
+ *
+ * Two phases, in this order and never the other:
+ *
+ *   1. **One transaction** scrubs every local table and writes the processor
+ *      obligations. All of it lands or none of it does.
+ *   2. **After that transaction commits**, the Stripe customer deletes are
+ *      attempted. Nothing in phase 2 can fail phase 1 — a failed delete leaves
+ *      an `owed` row for the retry, and the erasure the diver asked for stands
+ *      either way.
+ *
+ * `customerProvider` is injectable for tests; it defaults to the environment's,
+ * which is the disabled provider when no Stripe key is configured (and that
+ * records "stripe not configured" on the row rather than pretending success).
  */
 export async function anonymizeDiver(
   db: AppDb,
   input: { shopId: string; personId: string; actorPersonId: string },
+  options: { customerProvider?: CustomerProvider } = {},
 ): Promise<AnonymizeDiverResult> {
   const now = nowDate();
-  return db.transaction(async (tx) => {
+  const outcome = await db.transaction(async (tx) => {
     const [person] = await tx
       .select()
       .from(people)
@@ -244,7 +269,7 @@ export async function anonymizeDiver(
         ok: true,
         alreadyAnonymized: true,
         queuedMediaDeletions: 0,
-        queuedProcessorErasures: 0,
+        raisedProcessorErasures: [] as ProcessorErasureObligation[],
       } as const;
     }
 
@@ -256,7 +281,7 @@ export async function anonymizeDiver(
       return { ok: false, reason: "staff_member" } as const;
     }
 
-    const counts = await scrub(tx, {
+    const result = await scrub(tx, {
       shopId: input.shopId,
       personId: input.personId,
       actorPersonId: input.actorPersonId,
@@ -267,8 +292,34 @@ export async function anonymizeDiver(
       now,
     });
 
-    return { ok: true, alreadyAnonymized: false, ...counts } as const;
+    return { ok: true, alreadyAnonymized: false, ...result } as const;
   });
+
+  if (!outcome.ok) return outcome;
+
+  // Phase 2. The transaction above has committed; the diver is erased locally
+  // whatever happens from here. Every failure is recorded on its own row and
+  // reported as "still owed" — none of it throws, because there is nothing left
+  // to roll back and a throw would only make a completed erasure look failed.
+  const { discharged, stillOwed } = await attemptProcessorErasures(
+    db,
+    outcome.raisedProcessorErasures,
+    options.customerProvider ?? customerProviderFromEnvironment(),
+  );
+  if (stillOwed > 0) {
+    log("anonymize.processor_erasure_owed", "warn", {
+      shopId: input.shopId,
+      personId: input.personId,
+      owed: stillOwed,
+    });
+  }
+  return {
+    ok: true,
+    alreadyAnonymized: outcome.alreadyAnonymized,
+    queuedMediaDeletions: outcome.queuedMediaDeletions,
+    dischargedProcessorErasures: discharged,
+    owedProcessorErasures: stillOwed,
+  };
 }
 
 type ScrubContext = {
@@ -282,9 +333,13 @@ type ScrubContext = {
   now: Date;
 };
 
-type ScrubCounts = { queuedMediaDeletions: number; queuedProcessorErasures: number };
+type ScrubResult = {
+  queuedMediaDeletions: number;
+  /** The obligation rows this scrub created — the caller attempts them post-commit. */
+  raisedProcessorErasures: ProcessorErasureObligation[];
+};
 
-async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubCounts> {
+async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult> {
   const { shopId, personId, now } = ctx;
 
   const bookingRows = await tx
@@ -675,15 +730,19 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubCounts
   }
 
   // --- orders --------------------------------------------------------------
-  // `stripe_customer_id` and `stripe_invoice_id` are NOT NULL pointers into
-  // Stripe's own records, which the shop must keep for tax and chargeback and
-  // which DiveDay cannot rewrite — see the ADR's residuals. What DiveDay *can*
-  // close is the pair of hosted document links: Stripe's hosted invoice page
-  // and invoice PDF are publicly reachable URLs that render the customer's name
-  // and email, so leaving them in the row leaves the diver's details one click
-  // away from an "erased" record.
+  // `stripe_customer_id` and `stripe_invoice_id` are NOT NULL pointers into the
+  // shop's own Stripe account and stay on the row — the local record of which
+  // objects the order maps to is what makes the processor-side work findable at
+  // all. What this statement closes is the pair of hosted document links:
+  // Stripe's hosted invoice page and invoice PDF are publicly reachable URLs
+  // that render the customer's name and email, so leaving them here leaves the
+  // diver's details one click away from an "erased" record.
   const orderRows = await tx
-    .select({ stripeCustomerId: orders.stripeCustomerId })
+    .select({
+      stripeAccountId: orders.stripeAccountId,
+      stripeCustomerId: orders.stripeCustomerId,
+      stripeInvoiceId: orders.stripeInvoiceId,
+    })
     .from(orders)
     .where(and(eq(orders.shopId, shopId), eq(orders.personId, personId)));
   await tx
@@ -691,20 +750,33 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubCounts
     .set({ hostedInvoiceUrl: null, invoicePdfUrl: null })
     .where(and(eq(orders.shopId, shopId), eq(orders.personId, personId)));
 
-  // The customer object those orders point at is still sitting in the shop's
-  // Stripe account under the diver's name and email, and no statement made from
-  // inside this transaction can change that. So the obligation is *recorded*
-  // rather than performed: a durable row per distinct customer id, surfaced on
-  // the shop's reports page until someone says they removed it at Stripe
-  // (ADR 20260803-processor-erasure-obligations). DiveDay deliberately does not
-  // delete the customer itself — that is irreversible and takes the shop's tax
-  // and chargeback trail with it. An undischarged row means erasure is
-  // genuinely incomplete, and the point of the row is that it says so out loud
-  // instead of leaving the gap to an undocumented manual step.
-  const queuedProcessorErasures = await recordProcessorErasureObligations(tx, {
+  // Everything those orders point at *at Stripe* becomes a row in the erasure
+  // ledger (ADR 20260803-processor-erasure-obligations): the customer objects,
+  // which DiveDay deletes itself once this transaction commits, and the
+  // finalized invoices, whose name/email snapshot no API rewrites and which the
+  // shop clears through Stripe's own data-deletion request.
+  //
+  // Recorded here, attempted after — writing the row inside the transaction is
+  // what makes the obligation durable against a crash a millisecond later;
+  // making the *call* here would put a third-party round trip inside the
+  // erasure transaction and let a Stripe outage roll back the scrub. Each
+  // order's own `stripe_account_id` travels with the row rather than the shop's
+  // current account, the same discipline `refundOrder` uses.
+  const raisedProcessorErasures = await recordProcessorErasureObligations(tx, {
     shopId,
     personId,
-    stripeCustomerIds: orderRows.map((row) => row.stripeCustomerId),
+    targets: [
+      ...orderRows.map((row) => ({
+        target: "stripe_customer" as const,
+        externalId: row.stripeCustomerId,
+        stripeAccountId: row.stripeAccountId,
+      })),
+      ...orderRows.map((row) => ({
+        target: "stripe_invoice_snapshot" as const,
+        externalId: row.stripeInvoiceId,
+        stripeAccountId: row.stripeAccountId,
+      })),
+    ],
   });
 
   // --- the checkout's own copy of the diver's address ----------------------
@@ -897,5 +969,5 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubCounts
     logFuzzyMatch(ctx, "course_inquiry_phone", byPhone.length);
   }
 
-  return { queuedMediaDeletions: queued, queuedProcessorErasures };
+  return { queuedMediaDeletions: queued, raisedProcessorErasures };
 }

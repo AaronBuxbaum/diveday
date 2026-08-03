@@ -7,6 +7,7 @@ vi.mock("@/db/client", async (importOriginal) => {
 vi.mock("@/db/checkout-recovery", () => ({ sendDueCheckoutRecoveries: vi.fn() }));
 vi.mock("@/db/media-deletions", () => ({ retryPendingMediaDeletions: vi.fn() }));
 vi.mock("@/db/notifications", () => ({ drainNotificationRetries: vi.fn() }));
+vi.mock("@/db/processor-erasure", () => ({ retryPendingProcessorErasures: vi.fn() }));
 vi.mock("@/db/recap", () => ({ sendDueRecaps: vi.fn() }));
 vi.mock("@/db/reminders", () => ({ sendDueReminders: vi.fn() }));
 vi.mock("@/db/seed", () => ({ reapExpiredDemoShops: vi.fn() }));
@@ -19,6 +20,7 @@ const { getDb } = await import("@/db/client");
 const { sendDueCheckoutRecoveries } = await import("@/db/checkout-recovery");
 const { retryPendingMediaDeletions } = await import("@/db/media-deletions");
 const { drainNotificationRetries } = await import("@/db/notifications");
+const { retryPendingProcessorErasures } = await import("@/db/processor-erasure");
 const { sendDueRecaps } = await import("@/db/recap");
 const { sendDueReminders } = await import("@/db/reminders");
 const { reapExpiredDemoShops } = await import("@/db/seed");
@@ -70,6 +72,9 @@ beforeEach(() => {
   vi.mocked(retryPendingMediaDeletions)
     .mockReset()
     .mockResolvedValue({ attempted: 5, succeeded: 5 });
+  vi.mocked(retryPendingProcessorErasures)
+    .mockReset()
+    .mockResolvedValue({ attempted: 7, discharged: 7 });
   vi.mocked(reapExpiredDemoShops).mockReset().mockResolvedValue({ deleted: 6, slugs: [] });
 });
 
@@ -132,6 +137,8 @@ describe("GET /api/cron/reminders — structured logging", () => {
         checkoutRecoveriesSent: 4,
         mediaDeletionsAttempted: 5,
         mediaDeletionsSucceeded: 5,
+        processorErasuresAttempted: 7,
+        processorErasuresDischarged: 7,
         demoShopsDeleted: 6,
       }),
     );

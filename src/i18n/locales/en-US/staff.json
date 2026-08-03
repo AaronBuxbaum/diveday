@@ -208,6 +208,7 @@
       "noticeDeleted": "Diver removed from active shop work. Their bookings and cards are preserved.",
       "noticeRestored": "Diver restored to active shop work.",
       "noticeErased": "Personal data erased. The signed release, the trips, and the payments stay on file with the diver's details gone — this cannot be undone.",
+      "noticeErasedProcessorOwed": "Personal data erased here, but something at Stripe isn't finished. Open Reports to see what's left and clear it — until then this diver isn't fully erased.",
       "noticeNotAuthorized": "Removing or restoring a diver is limited to owners and managers.",
       "noticeInvalid": "Check the diver's name, email, and phone number.",
       "restoring": "Restoring…",
@@ -935,13 +936,16 @@
       "retrying": "Retrying…"
     },
     "processorErasureTarget": {
-      "stripe_customer": "Stripe customer"
+      "stripe_customer": "Stripe customer",
+      "stripe_invoice_snapshot": "Stripe invoice"
     },
     "processorErasures": {
-      "sectionLabel": "Erasures still owed at Stripe",
-      "heading": "{count, plural, one {# erased diver} other {# erased divers}} still on file at Stripe",
-      "detail": "You erased them here, but Stripe still holds their name and email on these customer records. Only you can remove those — open each one in your Stripe dashboard, then mark it done. Deleting a Stripe customer can't be undone, and your invoices for tax and chargebacks go with it, so check before you do.",
+      "sectionLabel": "Erasures not finished at Stripe",
+      "heading": "{count, plural, one {# record} other {# records}} from an erased diver still at Stripe",
+      "detail": "Erasing a diver here also deletes their Stripe customer. These didn't finish. A customer record can be retried — tonight's run will try again on its own. An invoice can't: Stripe copies the name and email onto every invoice when it's issued, and only a data-deletion request to Stripe clears that. File one, then mark it done.",
       "raised": "raised {date}",
+      "retry": "Retry delete",
+      "retrying": "Retrying…",
       "discharge": "Mark done at Stripe",
       "discharging": "Saving…"
     },
