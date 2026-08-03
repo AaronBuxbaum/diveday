@@ -1120,6 +1120,15 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the roster's depth warning renders true to the design (${scheme})`, async ({
         page,
       }) => {
+        // Two full briefing saves bracket the capture — set the depth, walk
+        // board → trip → Guests, shoot, then put the depth back in a `finally`
+        // — so this is six navigations and two form round-trips, each with its
+        // own status-toast wait, against the default 15s. Measured failing at
+        // HEAD *and* on `main` at one worker, so it was never a contention
+        // problem: the budget was simply never sized for what the test does.
+        // Same aggregate-cost reasoning as the two 90s tours above; smaller
+        // number because this is one surface, not eighteen.
+        test.setTimeout(60_000);
         const setDepth = async (meters: string) => {
           await page.goto("/shop/blue-mantis/dive-sites");
           await page.getByRole("link", { name: "Molasses Reef" }).first().click();
