@@ -23,6 +23,7 @@ import {
   requireTokenBookingId,
   saveBookingEmergencyContact,
   saveWaiverDraft,
+  staleWaiverRecordForToken,
 } from "@/db/waivers";
 import { type DiverMessageKey, type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { requestFirstHandLocale, requestLocale } from "@/i18n/request";
@@ -37,6 +38,7 @@ import { questionnaireForJurisdiction } from "@/lib/medical";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
+import { emailFreshWaiverLinkAction } from "./actions";
 import { QuestionnaireProgress } from "./QuestionnaireProgress";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -169,11 +171,11 @@ export default async function WaiverPage({
   searchParams,
 }: {
   params: Promise<{ token: string }>;
-  searchParams: Promise<{ saved?: string; error?: string; field?: string }>;
+  searchParams: Promise<{ saved?: string; error?: string; field?: string; sent?: string }>;
 }) {
   await connection();
   const { token } = await params;
-  const { saved, error, field } = await searchParams;
+  const { saved, error, field, sent } = await searchParams;
   const fieldError =
     error === "invalid" && field && field in WAIVER_FIELD_ERROR
       ? WAIVER_FIELD_ERROR[field as WaiverInvalidField]
@@ -186,8 +188,20 @@ export default async function WaiverPage({
   const state = await getWaiverForToken(db, token);
 
   if (state.state === "unavailable") {
-    // No record at all reached through this token (garbage, or a link
-    // superseded by a fresher one) — there is no shop to attribute it to
+    // A rescue send supersedes the very record that asked for it, so this
+    // token stops resolving through `getWaiverForToken` the moment the diver
+    // uses the button below — as does an old link a staff reissue replaced.
+    // Resolve the stale record so the redirect back here (and every later
+    // refresh of the same URL) lands on the rescue card with its confirmation,
+    // rather than a dead end that reads as if the tap broke the link.
+    const stale = await staleWaiverRecordForToken(db, token);
+    const staleShop = stale ? await getShopById(db, stale.shopId) : null;
+    if (staleShop) {
+      const staleT = diverTranslator(await requestLocale(staleShop.defaultLocale));
+      return <ExpiredLink token={token} shop={staleShop} t={staleT} sent={sent} />;
+    }
+    // No record at all reached through this token (garbage, or a completed
+    // link long since replaced) — there is no shop to attribute it to
     // without weakening the token model's own guarantee that a bearer token
     // reveals only its own record.
     return (
@@ -215,14 +229,7 @@ export default async function WaiverPage({
   const t = diverTranslator(locale);
 
   if (state.state === "expired") {
-    return (
-      <Unavailable
-        title={t("waiver.expiredHeading")}
-        text={t("waiver.expiredBody")}
-        shop={shop}
-        t={t}
-      />
-    );
+    return <ExpiredLink token={token} shop={shop} t={t} sent={sent} />;
   }
 
   if (state.state === "completed") {
@@ -671,27 +678,106 @@ export default async function WaiverPage({
 }
 
 /**
+ * What the rescue send actually did, as one-word codes on the URL — the
+ * action never puts a sentence (or an address, or a token) in the query
+ * string, so this page picks the words in the reader's own language, the same
+ * pattern `/ready`'s notices use.
+ */
+const RESCUE_NOTICES: Record<
+  string,
+  { tone: "success" | "danger" | "neutral"; key: DiverMessageKey }
+> = {
+  ok: { tone: "success", key: "waiver.freshLinkSent" },
+  signed: { tone: "success", key: "waiver.freshLinkAlreadySigned" },
+  none: { tone: "neutral", key: "waiver.freshLinkNoEmail" },
+  unavailable: { tone: "danger", key: "waiver.freshLinkUnavailable" },
+  failed: { tone: "danger", key: "waiver.freshLinkFailed" },
+  rate: { tone: "danger", key: "waiver.rateLimited" },
+};
+
+const NOTICE_TONE: Record<"success" | "danger" | "neutral", string> = {
+  success: "bg-success/10 text-success",
+  danger: "bg-danger/10 text-danger",
+  neutral: "bg-surface-sunken text-muted",
+};
+
+/**
+ * A waiver link that can no longer be signed, with the way out on it. The
+ * diver mails themselves a fresh link instead of chasing the shop for one —
+ * and because a waiver URL *is* its capability, the replacement is only ever
+ * sent to the address already on the booking. The address is never shown or
+ * confirmed back here (anyone holding the stale URL is reading this page, so
+ * even a masked "n…@…" would be a disclosure), and the new token never
+ * reaches this page at all. The shop's own contact details stay underneath as
+ * the fallback for the outcomes mail can't fix.
+ */
+function ExpiredLink({
+  token,
+  shop,
+  t,
+  sent,
+}: {
+  token: string;
+  shop: Pick<Shop, "name" | "contactEmail" | "contactPhone">;
+  t: DiverTranslator;
+  sent?: string;
+}) {
+  const notice = sent ? RESCUE_NOTICES[sent] : undefined;
+  return (
+    <Unavailable
+      title={t("waiver.expiredHeading")}
+      text={t("waiver.expiredBody")}
+      shop={shop}
+      t={t}
+    >
+      <FlashParams params={["sent"]} />
+      {notice ? (
+        <p
+          role={notice.tone === "danger" ? "alert" : "status"}
+          className={`mt-4 rounded-lg px-4 py-3 text-sm font-medium ${NOTICE_TONE[notice.tone]}`}
+        >
+          {t(notice.key)}
+        </p>
+      ) : null}
+      {/* A signature already on file is the one outcome with nothing left to
+          send — offering the button again would only invite a pointless email. */}
+      {sent === "signed" ? null : (
+        <form action={emailFreshWaiverLinkAction.bind(null, token)} className="mt-5">
+          <SubmitButton pendingLabel={t("waiver.sendingFreshLink")} className={buttonClass()}>
+            {t("waiver.emailFreshLink")}
+          </SubmitButton>
+        </form>
+      )}
+    </Unavailable>
+  );
+}
+
+/**
  * The dead-link card (unavailable or expired). `shop`/`t` are only present
  * when the token resolved to a real record (task 45) — an "unavailable"
  * token that matched nothing at all has no shop to attribute it to, so that
- * branch still renders without contact links, by design.
+ * branch still renders without contact links, by design. `children` is where
+ * a card that can offer a way forward puts it, above the contact fallback.
  */
 function Unavailable({
   title,
   text,
   shop,
   t,
+  children,
 }: {
   title: string;
   text: string;
   shop?: Pick<Shop, "name" | "contactEmail" | "contactPhone">;
   t?: DiverTranslator;
+  children?: React.ReactNode;
 }) {
   return (
     <main className="mx-auto w-full max-w-xl flex-1 px-6 py-16">
       <section className="rounded-lg border border-border bg-surface p-7 text-center">
         <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
         <p className="mt-3 text-muted">{text}</p>
+        {children}
         {shop && t ? (
           <p className="mt-4 text-sm text-muted">
             {shop.contactEmail || shop.contactPhone

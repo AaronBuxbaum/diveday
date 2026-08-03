@@ -1,10 +1,11 @@
 import { and, eq, ne } from "drizzle-orm";
+import { nowDate } from "@/lib/clock";
 import { publicAppUrl, recipientLocale } from "@/lib/notifications";
 import type { AppDb } from "./client";
 import { sendAndRecordNotification } from "./notifications";
 import { getBookingReadiness } from "./readiness";
 import { bookings, people, shops, trips } from "./schema";
-import { issueWaiverRequest } from "./waivers";
+import { issueWaiverRequest, staleWaiverRecordForToken } from "./waivers";
 
 /**
  * The one place that issues a waiver link *and* delivers it. Both the trip
@@ -134,4 +135,48 @@ export async function issueWaiverOnJoin(
   const needsWaiver = readiness?.blockers.some((blocker) => blocker.code === "waiver_not_sent");
   if (!needsWaiver) return null;
   return issueAndDeliverWaiver(db, shopId, bookingId);
+}
+
+/**
+ * What a diver's own rescue attempt from a dead waiver link amounted to. A code,
+ * never a sentence — the page picks the words (docs ADR
+ * 20260731-domain-layer-copy-leaks).
+ */
+export type WaiverLinkRescue = "sent" | "no_email" | "already_signed" | "unavailable" | "failed";
+
+/**
+ * A diver's self-serve rescue for a waiver link that aged out: issue a fresh
+ * one and mail it to the address already on their booking.
+ *
+ * The security shape matters more than the mechanics. A waiver URL *is* its
+ * capability, so a stale one that leaked (a forwarded email, a shared screen)
+ * must never be tradeable for fresh access. Two rules keep that true:
+ * the fresh token goes only to the address on file — never to the caller, and
+ * never displayed or confirmed back on the page — and the return value is a
+ * bare outcome code carrying no address, no token, and no booking detail. What
+ * a bearer of a dead link can do here is *trigger a delivery to its owner*,
+ * which is exactly the affordance staff already had and no more.
+ *
+ * Repeat taps are safe by construction: issuing supersedes the prior pending
+ * record (`issueWaiverRequest`), and `staleWaiverRecordForToken` keeps
+ * resolving the original token afterwards, so a second send just replaces the
+ * link again rather than failing. A cancelled booking or a sailed trip is
+ * refused by the same issuing transaction the staff path uses, and a booking
+ * already covered by a signature reports `already_signed` rather than mailing
+ * a pointless link.
+ */
+export async function emailFreshWaiverLink(
+  db: AppDb,
+  token: string,
+  now: Date = nowDate(),
+): Promise<WaiverLinkRescue> {
+  const stale = await staleWaiverRecordForToken(db, token, now);
+  if (!stale?.bookingId) return "unavailable";
+  const outcome = await issueAndDeliverWaiver(db, stale.shopId, stale.bookingId);
+  if (!outcome.ok) return outcome.reason === "already_completed" ? "already_signed" : "unavailable";
+  if (outcome.delivery === "sent") return "sent";
+  if (outcome.delivery === "no_email") return "no_email";
+  // Issued, but nothing left the building — an unconfigured provider, a
+  // rejected recipient, a provider error. Never claim mail is on its way.
+  return "failed";
 }

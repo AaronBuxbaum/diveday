@@ -124,11 +124,16 @@ function itemAction(
   canPay: boolean,
   t: DiverTranslator,
 ): React.ReactNode {
-  if (item.code === "waiver_pending") {
+  // An expired link needs the same action as a pending one — `signWaiverFromReady`
+  // always issues a fresh link and opens it, superseding whatever came before,
+  // so the only difference is what the button promises. Naming the difference
+  // matters: "Sign your waiver" on a link the diver already knows is dead reads
+  // as the page not having noticed.
+  if (item.code === "waiver_pending" || item.code === "waiver_expired") {
     return (
       <form action={signWaiverFromReady.bind(null, token)}>
         <SubmitButton pendingLabel={t("ready.opening")} className={buttonClass({ size: "sm" })}>
-          {t("ready.signWaiver")}
+          {t(item.code === "waiver_expired" ? "ready.freshWaiverLink" : "ready.signWaiver")}
         </SubmitButton>
       </form>
     );

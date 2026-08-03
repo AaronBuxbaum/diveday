@@ -47,6 +47,33 @@ describe("buildDiverChecklist", () => {
     expect(waiver?.code).toBe("waiver_pending");
   });
 
+  it("routes an expired waiver link to the diver, who can now replace it themselves", () => {
+    const items = buildDiverChecklist(requirement(), {
+      status: "blocked",
+      blockers: [{ code: "waiver_expired" }],
+    });
+    const waiver = items.find((item) => item.category === "waiver");
+    // Was "waiting" while the only advice we could give was "ask the shop".
+    // Both diver surfaces now mint a replacement on the spot, so this is the
+    // diver's to clear — and it must carry the code, or /ready has nothing to
+    // hang the "Get a fresh waiver link" button off.
+    expect(waiver?.state).toBe("action");
+    expect(waiver?.detailCode).toBe("waiver_expired");
+    expect(waiver?.code).toBe("waiver_expired");
+    expect(nextDiverStep(items)?.category).toBe("waiver");
+  });
+
+  it("keeps an expired waiver out of pre-trip reminders", () => {
+    // Reminders name only `REMINDER_ACTION_CODES`; making the checklist item
+    // actionable must not quietly enroll a new code in outbound SMS/email
+    // copy, whose bundle has no line for it.
+    const items = buildDiverChecklist(requirement(), {
+      status: "blocked",
+      blockers: [{ code: "waiver_expired" }],
+    });
+    expect(reminderReadiness(items).outstanding).toEqual([]);
+  });
+
   it("puts an unconfirmed imported specialty card on the shop, not the diver", () => {
     const items = buildDiverChecklist(requirement(), {
       status: "blocked",

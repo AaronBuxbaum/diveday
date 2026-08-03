@@ -2,11 +2,11 @@
 import { eq } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { seededShopContext } from "@/test/db";
-import { createBooking } from "./bookings";
+import { cancelBooking, createBooking } from "./bookings";
 import { bookings, notificationDeliveries, people, waiverRecords } from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
-import { issueAndDeliverWaiver, issueWaiverOnJoin } from "./waiver-issue";
-import { completeWaiver, issueWaiverRequest } from "./waivers";
+import { emailFreshWaiverLink, issueAndDeliverWaiver, issueWaiverOnJoin } from "./waiver-issue";
+import { completeWaiver, getWaiverForToken, issueWaiverRequest } from "./waivers";
 
 async function seededBooking(email: string | null = "delivered@resend.dev") {
   const { db, shop } = await seededShopContext();
@@ -135,6 +135,111 @@ describe("issueAndDeliverWaiver", () => {
 
     const result = await issueAndDeliverWaiver(db, shop.id, bookingId);
     expect(result).toMatchObject({ ok: false, reason: "already_completed" });
+  });
+});
+
+describe("emailFreshWaiverLink", () => {
+  /** An issued link, and the instant it is already dead. */
+  async function expiredLink(email: string | null = "delivered@resend.dev") {
+    const context = await seededBooking(email);
+    const issued = await issueWaiverRequest(context.db, {
+      shopId: context.shop.id,
+      bookingId: context.bookingId,
+    });
+    if (!issued.ok) throw new Error(`issue failed: ${issued.reason}`);
+    return { ...context, token: issued.token, after: issued.expiresAt };
+  }
+
+  function configureEmail() {
+    vi.stubEnv("APP_HOST", "https://diveday.example");
+    vi.stubEnv("RESEND_API_KEY", "re_test");
+    vi.stubEnv("RESEND_FROM_EMAIL", "shop@diveday.example");
+    // A fresh Response per call: a body can only be read once, so a shared one
+    // would make the *second* send in the repeat-tap test look like a network
+    // failure rather than exercising what it means to.
+    const fetchImpl = vi
+      .fn()
+      .mockImplementation(
+        async () => new Response(JSON.stringify({ id: "resend-id" }), { status: 200 }),
+      );
+    vi.stubGlobal("fetch", fetchImpl);
+    return fetchImpl;
+  }
+
+  it("mails a replacement to the address on file and never hands one back", async () => {
+    const fetchImpl = configureEmail();
+    const { db, token, after } = await expiredLink();
+
+    await expect(emailFreshWaiverLink(db, token, after)).resolves.toBe("sent");
+    expect(fetchImpl).toHaveBeenCalledOnce();
+    // The whole point of the flow: a stale bearer URL triggers a delivery to
+    // its owner and nothing more. Anything token-shaped in the return value
+    // would hand fresh access to whoever is holding the dead link.
+    const body = JSON.parse(String(vi.mocked(fetchImpl).mock.calls[0]?.[1]?.body));
+    expect(String(body.html)).toContain("/waivers/");
+    expect(String(body.html)).not.toContain(token);
+  });
+
+  it("stays usable from the same dead URL after the first send", async () => {
+    configureEmail();
+    const { db, token, after } = await expiredLink();
+
+    await expect(emailFreshWaiverLink(db, token, after)).resolves.toBe("sent");
+    // Issuing supersedes the record the diver tapped from, so the ordinary
+    // token lookup gives up on it — a second tap (or a refresh) must still
+    // reach the rescue rather than a dead end.
+    expect(await getWaiverForToken(db, token, after)).toEqual({ state: "unavailable" });
+    await expect(emailFreshWaiverLink(db, token, after)).resolves.toBe("sent");
+  });
+
+  it("refuses a cancelled booking", async () => {
+    configureEmail();
+    const { db, shop, bookingId, token, after } = await expiredLink();
+    await cancelBooking(db, shop.id, bookingId);
+
+    await expect(emailFreshWaiverLink(db, token, after)).resolves.toBe("unavailable");
+  });
+
+  it("reports a signature already on file instead of mailing a pointless link", async () => {
+    configureEmail();
+    const { db, shop, bookingId, token, after } = await expiredLink();
+    const fresh = await issueWaiverRequest(db, { shopId: shop.id, bookingId });
+    if (!fresh.ok) throw new Error(`issue failed: ${fresh.reason}`);
+    await completeWaiver(db, fresh.token, {
+      signerName: "Nora Quinn",
+      agreed: true,
+      medicalAnswers: { questionnaireId: "rstc", questionnaireVersion: 1, responses: {} },
+    });
+
+    await expect(emailFreshWaiverLink(db, token, after)).resolves.toBe("already_signed");
+  });
+
+  it("says so plainly when there is no address to send to", async () => {
+    vi.stubEnv("APP_HOST", "https://diveday.example");
+    const { db, token, after } = await expiredLink(null);
+
+    await expect(emailFreshWaiverLink(db, token, after)).resolves.toBe("no_email");
+  });
+
+  it("never claims mail is on its way when nothing left the building", async () => {
+    vi.stubEnv("APP_HOST", "https://diveday.example");
+    vi.stubEnv("RESEND_API_KEY", "");
+    vi.stubEnv("RESEND_FROM_EMAIL", "");
+    const { db, token, after } = await expiredLink();
+
+    await expect(emailFreshWaiverLink(db, token, after)).resolves.toBe("failed");
+  });
+
+  it("refuses a link that is still live, so this is never a second way to sign", async () => {
+    configureEmail();
+    const { db, token } = await expiredLink();
+    // `after` deliberately not used: the link has not aged out yet.
+    await expect(emailFreshWaiverLink(db, token)).resolves.toBe("unavailable");
+  });
+
+  it("refuses a token that matches nothing", async () => {
+    const { db, token, after } = await expiredLink();
+    await expect(emailFreshWaiverLink(db, `${token}tampered`, after)).resolves.toBe("unavailable");
   });
 });
 

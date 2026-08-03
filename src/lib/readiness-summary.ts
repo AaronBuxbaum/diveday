@@ -88,8 +88,13 @@ const BLOCKER_STATE: Record<ReadinessBlockerCode, "action" | "waiting"> = {
   // No email claim: in a no-email deployment the link was issued but never
   // sent, and on the readiness page the button hands it over in place.
   waiver_pending: "action",
-  // Don't promise an outbound send the shop may never make.
-  waiver_expired: "waiting",
+  // "action", because the diver can clear this one themselves now: the
+  // readiness page mints a fresh signing link on the spot, and the expired
+  // waiver page mails one to the address on the booking. It read "waiting"
+  // (and told the diver to go ask the shop) only while there was genuinely
+  // nothing on this end for them to tap — a dead end for a link that ages out
+  // in a week on a booking made months ahead.
+  waiver_expired: "action",
   medical_review: "waiting",
   certification_missing: "action",
   certification_pending: "waiting",

@@ -340,6 +340,15 @@ export const RATE_LIMITS = {
    * review finding, 2026-07-24) — 60, not 30.
    */
   capabilityAction: perHour(60),
+  /**
+   * Emailing a fresh waiver link from an expired one, per *token* rather than
+   * per IP. The per-IP `capabilityAction` bucket above still applies, but on
+   * its own it would let anyone holding one leaked stale URL spray that
+   * diver's inbox from a rotating set of addresses. Keyed by the token so the
+   * ceiling belongs to the mailbox being written to; five in an hour is far
+   * more than a diver who lost an email ever needs.
+   */
+  waiverLinkResendByToken: perHour(5),
 } as const satisfies Record<string, RateLimitConfig>;
 
 /**
