@@ -52,9 +52,24 @@ export type StartCheckoutInput = {
    * The shop-wide promo row behind `promotionCode`, when that's where it came
    * from. Snapshotted onto the checkout so a completed session can record its
    * redemption, and so a later edit to the code can't rewrite what this diver
-   * was quoted. Absent for a trip-scoped last-minute code, which has its own row.
+   * was quoted. Absent for a trip-scoped last-minute code, which arrives on
+   * `tripPromo` below instead.
    */
-  shopPromo?: { id: string; code: string };
+  shopPromo?: { id: string; code: string; discountPercent: number };
+  /**
+   * The trip-scoped last-minute deal behind `promotionCode`, when *that's*
+   * where it came from (`getActiveTripPromoByCode`, src/db/trip-promos.ts).
+   * The counterpart to `shopPromo`; the caller resolves one or the other, never
+   * both.
+   *
+   * Snapshotted for the same reason `shopPromo` is, plus one this flavor made
+   * unavoidable: a trip deal is Stripe's object end to end, so before this it
+   * left no local trace on the checkout at all and a completion carrying no
+   * `amount_total` could not tell a discounted session from an undiscounted
+   * one — and recorded the party at pre-discount amounts, above what the one
+   * shared payment intent had actually captured (PAY-M3).
+   */
+  tripPromo?: { id: string; code: string; discountPercent: number };
   /**
    * The words for the single line on the hosted Stripe page. Supplied by the
    * caller because this layer returns codes, not sentences (docs ADR
@@ -140,6 +155,21 @@ export async function startBookingCheckout(
   );
   const gearCentsByBooking = new Map(gearLines.map((line) => [line.bookingId, line.amountCents]));
   const gearTotalCents = gearLines.reduce((sum, line) => sum + line.amountCents, 0);
+
+  // The promotion this attempt is actually *applying* — snapshotted onto the
+  // row below so the discount stays reconstructible later without a network
+  // call (PAY-M3). Gated on `promotionCode`, the thing Stripe is genuinely
+  // told about: a promo the caller merely resolved but never handed over
+  // discounts nothing, and recording it would understate what this session
+  // captured. Trip deal first, mirroring the caller's own resolution order;
+  // the two are mutually exclusive (a check constraint on the table holds it).
+  const appliedPromo = input.promotionCode
+    ? input.tripPromo
+      ? ({ source: "trip", ...input.tripPromo } as const)
+      : input.shopPromo
+        ? ({ source: "shop", ...input.shopPromo } as const)
+        : null
+    : null;
 
   const existing = await latestCheckoutForBookingIds(db, input.shopId, input.bookingIds);
   if (
@@ -241,8 +271,14 @@ export async function startBookingCheckout(
           totalCents: amountPerDiverCents * input.bookingIds.length + gearTotalCents,
           isDeposit: charge.isDeposit,
           expiresAt: session.expiresAt,
-          promoCodeId: input.shopPromo?.id ?? null,
-          promoCode: input.shopPromo?.code ?? null,
+          // At most one source is ever recorded (the table's
+          // `single_promo_source` check holds it): if a trip deal is what
+          // Stripe applied, the shop-wide code was not spent and has no
+          // redemption to record against it.
+          promoCodeId: appliedPromo?.source === "trip" ? null : (input.shopPromo?.id ?? null),
+          tripPromoId: appliedPromo?.source === "trip" ? appliedPromo.id : null,
+          promoCode: appliedPromo?.code ?? input.shopPromo?.code ?? null,
+          appliedDiscountPercent: appliedPromo?.discountPercent ?? null,
         })
         .returning();
       if (!row) throw new Error("startBookingCheckout: insert returned no row");
@@ -328,16 +364,30 @@ export async function getLatestCheckoutForBooking(
  * shares sum above what the single shared payment intent actually captured and
  * the first party member to cancel can drain more than their share of it.
  *
- * A shop-wide code is reconstructible: `shop_promo_codes.discount_percent` is
- * NOT NULL and constrained to 1..100, and the code snapshotted on this row is
- * by construction the one handed to Stripe (the caller resolves a trip-scoped
- * deal *or* a shop-wide code, never both). A trip-scoped last-minute promo is
- * not — it leaves both promo columns null — so it reads as undiscounted here
- * and keeps the pre-discount behaviour.
+ * `applied_discount_percent` is the whole answer whenever it is set: the
+ * percent Stripe was actually told to take off *this* session, snapshotted at
+ * session-creation time from whichever promotion the caller applied. Both
+ * flavors are percent-only and neither restricts the coupon to particular line
+ * items, so one percent describes the whole discount, gear included.
+ *
+ * Rows written before that column existed have no snapshot. They keep the
+ * conservative behaviour they were completed under: a shop-wide code is still
+ * reconstructible from its own row (`shop_promo_codes.discount_percent` is NOT
+ * NULL and constrained to 1..100), and anything else — an undiscounted session,
+ * or an old trip-scoped last-minute deal, which left no local trace at all —
+ * falls back to the asked total. Both answers are a figure, never a refusal and
+ * never zero.
+ *
+ * Deliberately never re-derived from whatever deal happens to be live on the
+ * trip: that would discount full-price divers on a promoted trip and
+ * under-refund people who owe nothing. This checkout's own snapshot, or nothing.
  *
  * Reads only rows, never Stripe: this runs inside the completion transaction.
  */
 async function attributableTotalCents(db: DbExecutor, checkout: BookingCheckout): Promise<number> {
+  if (checkout.appliedDiscountPercent !== null) {
+    return netOfPercentDiscount(checkout.totalCents, checkout.appliedDiscountPercent);
+  }
   if (!checkout.promoCodeId) return checkout.totalCents;
   const promo = await getShopPromoCodeById(db, checkout.shopId, checkout.promoCodeId);
   // A code deleted since (or belonging to another shop) leaves nothing to
@@ -548,18 +598,18 @@ export async function markCheckoutPaidBySessionId(
         status: checkout.isDeposit ? "deposit_paid" : "paid",
         // This diver's share of `attributableCents` above. With no discount
         // that is exactly what they were asked for (the split of a total equal
-        // to the sum of the asks returns each ask unchanged); with a
-        // reconstructible discount it is their share of what the session can
-        // actually have captured, which is what a later refund may reverse.
+        // to the sum of the asks returns each ask unchanged); with a discount
+        // it is their share of what the session can actually have captured,
+        // which is what a later refund may reverse.
         //
-        // Remaining gap, stated: a **trip-scoped last-minute promo** leaves
-        // both promo columns null (it is Stripe's object end to end), so on the
-        // no-`amount_total` branch it is indistinguishable from an undiscounted
-        // checkout and still records pre-discount shares. Closing it needs the
-        // applied promotion snapshotted on the checkout row, i.e. a schema
-        // change. Every other class — no discount, a shop-wide code, and any
-        // session Stripe reported a total for (all three production paths do)
-        // — is covered.
+        // Every discount flavor is now covered on the no-`amount_total` branch:
+        // a shop-wide code and a trip-scoped last-minute deal both snapshot the
+        // percent they applied onto the checkout row at session-creation time
+        // (`applied_discount_percent`), so neither can be mistaken for an
+        // undiscounted session. The one remaining class is a row written before
+        // that column existed and completed only now — no snapshot exists to
+        // read, so it keeps the conservative pre-column answer rather than a
+        // guessed one; see `attributableTotalCents`.
         amountCents: allocation.get(bookingId) ?? askedCentsFor(gearCents),
         currency: checkout.currency,
         provider: "stripe",

@@ -354,7 +354,11 @@ describe("redemption recording", () => {
         cancelUrl: "https://diveday.example/no",
         describeLine: ({ tripTitle }) => tripTitle,
         promotionCode: created.promo.stripePromotionCodeId ?? undefined,
-        shopPromo: { id: created.promo.id, code: created.promo.code },
+        shopPromo: {
+          id: created.promo.id,
+          code: created.promo.code,
+          discountPercent: created.promo.discountPercent,
+        },
       },
       fakeCheckout(),
     );
@@ -416,7 +420,11 @@ describe("redemption recording", () => {
         cancelUrl: "https://diveday.example/no",
         describeLine: ({ tripTitle }) => tripTitle,
         promotionCode: created.promo.stripePromotionCodeId ?? undefined,
-        shopPromo: { id: created.promo.id, code: created.promo.code },
+        shopPromo: {
+          id: created.promo.id,
+          code: created.promo.code,
+          discountPercent: created.promo.discountPercent,
+        },
       },
       fakeCheckout(),
     );

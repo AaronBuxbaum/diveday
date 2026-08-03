@@ -1662,15 +1662,52 @@ export const bookingCheckouts = pgTable(
     /** Set once a recovery email has gone out, so a re-run of the recovery scan never double-sends. */
     abandonedRecoverySentAt: timestamp("abandoned_recovery_sent_at", { withTimezone: true }),
     /**
-     * The shop-wide promo code handed to Stripe on this attempt, if any. The id
-     * is what a completed checkout records a redemption against; the text is a
-     * snapshot so a later edit or delete of the code can't rewrite what the
-     * diver was actually quoted (docs ADR 20260729-shop-promo-codes). Both stay
-     * null for an undiscounted checkout and for a trip-scoped last-minute promo,
-     * which is Stripe's object end to end and has its own row.
+     * The shop-wide promo code handed to Stripe on this attempt, if any. This
+     * is what a completed checkout records a redemption against (docs ADR
+     * 20260729-shop-promo-codes). Null for an undiscounted checkout and for a
+     * trip-scoped last-minute deal, which has its own row and lands on
+     * `trip_promo_id` below instead.
      */
     promoCodeId: uuid("promo_code_id").references(() => shopPromoCodes.id),
+    /**
+     * The trip-scoped last-minute deal handed to Stripe on this attempt, if any
+     * (docs ADR 20260727-last-minute-fill-promos). The counterpart to
+     * `promo_code_id`: at most one of the two is ever set, because the caller
+     * resolves a trip deal *or* a shop-wide code, never both — a check
+     * constraint below holds that. Null on every row written before this column
+     * existed, including ones that did apply a trip deal; see
+     * `applied_discount_percent`.
+     */
+    tripPromoId: uuid("trip_promo_id").references(() => tripLastMinutePromos.id),
+    /**
+     * The code text the diver actually typed, from whichever of the two sources
+     * above it resolved against. A snapshot, so a later edit or delete of the
+     * code can't rewrite what this diver was quoted.
+     */
     promoCode: text("promo_code"),
+    /**
+     * Percent off, as applied to *this* session at the moment it was created —
+     * the one figure that makes the discount reconstructible later without
+     * asking Stripe anything (PAY-M3). Both promotion flavors are percent-only
+     * by house rule (`trip_last_minute_promos_discount_range` 5..90,
+     * `shop_promo_codes_discount_range` 1..100) and neither restricts the
+     * coupon to particular line items, so a single percent describes the whole
+     * discount on the whole session, gear lines included.
+     *
+     * Written only when a promotion code was genuinely handed to Stripe, never
+     * merely because one was available, and never re-derived afterwards from
+     * whatever promo happens to be live on the trip — that would discount
+     * full-price divers on a promoted trip and under-refund people who owe
+     * nothing.
+     *
+     * Null means "no discount snapshot exists": an undiscounted checkout, or a
+     * row written before this column existed. Those older rows keep the
+     * conservative pre-column behaviour — a shop-wide code is still
+     * reconstructible from `promo_code_id`, and anything else falls back to the
+     * asked total (`attributableTotalCents`, src/db/checkouts.ts). A completion
+     * is never refused and never recorded as zero for want of this figure.
+     */
+    appliedDiscountPercent: integer("applied_discount_percent"),
     currency: text("currency").notNull().default("usd"),
     /** Price snapshot at checkout time, so a later trip re-price never rewrites what was asked. */
     amountPerDiverCents: integer("amount_per_diver_cents").notNull(),
@@ -1705,6 +1742,23 @@ export const bookingCheckouts = pgTable(
     check(
       "booking_checkouts_settled_total_nonnegative",
       sql`${table.settledTotalCents} is null or ${table.settledTotalCents} >= 0`,
+    ),
+    // The snapshot of what Stripe was told to take off this session. Bounded to
+    // a real percentage so a corrupt value can never reconstruct a *larger*
+    // attributable total than was asked for — 1..100 spans both flavors'
+    // own ranges (trip deals 5..90, shop-wide codes 1..100).
+    check(
+      "booking_checkouts_applied_discount_range",
+      sql`${table.appliedDiscountPercent} is null or ${table.appliedDiscountPercent} between 1 and 100`,
+    ),
+    // A checkout applies a trip-scoped deal *or* a shop-wide code, never both:
+    // the caller resolves them in that order and stops at the first hit, and
+    // Stripe Checkout accepts one promotion code per session anyway. Held here
+    // so no future caller can quietly record two and leave the reconstruction
+    // guessing which percent was the one Stripe applied.
+    check(
+      "booking_checkouts_single_promo_source",
+      sql`${table.promoCodeId} is null or ${table.tripPromoId} is null`,
     ),
     // The abandoned-checkout-recovery scan's exact predicate (pending, not yet
     // recovered), so the daily cron doesn't force a sequential scan of the

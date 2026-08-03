@@ -18,11 +18,13 @@ import {
   refreshCheckoutFromStripe,
   startBookingCheckout,
 } from "./checkouts";
+import { joinLastMinuteList } from "./last-minute-list";
 import { getBookingPayment, setBookingPayment } from "./payments";
 import { bookingCheckoutBookings, bookingCheckouts } from "./schema";
 import { createShopPromoCode } from "./shop-promos";
 import { setShopCurrency } from "./shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
+import { getActiveTripPromoByCode, sendLastMinuteDealBlast } from "./trip-promos";
 import { getTripRoster, upcomingTripsWithCounts, updateTrip } from "./trips";
 
 function fakeCheckout(overrides: Partial<CheckoutProvider> = {}): CheckoutProvider {
@@ -69,6 +71,46 @@ function fakePromotions(): PromotionProvider {
       };
     },
   };
+}
+
+/**
+ * A live trip-scoped last-minute deal on `tripId`, minted the way a shop
+ * really mints one — someone on the last-minute list, a real blast, then the
+ * diver's typed code resolved back through `getActiveTripPromoByCode`. That
+ * whole path leaves both shop-promo columns null on the checkout, which is
+ * exactly the condition PAY-M3's last flavor lives in.
+ */
+async function sentTripDeal(
+  db: Awaited<ReturnType<typeof seededShopContext>>["db"],
+  shopId: string,
+  tripId: string,
+  discountPercent: number,
+) {
+  await joinLastMinuteList(db, {
+    shopId,
+    fullName: "Nora Quinn",
+    email: "nora@example.com",
+  });
+  const blast = await sendLastMinuteDealBlast(
+    db,
+    { shopId, shopSlug: "blue-mantis", tripId, discountPercent },
+    {
+      async createTripPromotion(): Promise<CreateTripPromotionResult> {
+        return {
+          status: "created",
+          stripeCouponId: "coupon_trip_deal",
+          stripePromotionCodeId: "promo_trip_deal",
+        };
+      },
+      async createShopPromotion(): Promise<CreateTripPromotionResult> {
+        return { status: "failed" };
+      },
+    },
+  );
+  if (!blast.ok) throw new Error(`last-minute blast failed: ${blast.reason}`);
+  const promo = await getActiveTripPromoByCode(db, { shopId, tripId, code: blast.code });
+  if (!promo) throw new Error("last-minute code did not resolve");
+  return promo;
 }
 
 function retrieved(session: Partial<CheckoutSessionSnapshot>): CheckoutSessionLookupResult {
@@ -697,7 +739,11 @@ describe("checkout completion", () => {
           { bookingId: bookingIds[0], description: "Rental gear — Pat", amountCents: 6_000 },
         ],
         promotionCode: promo.promo.stripePromotionCodeId ?? undefined,
-        shopPromo: { id: promo.promo.id, code: promo.promo.code },
+        shopPromo: {
+          id: promo.promo.id,
+          code: promo.promo.code,
+          discountPercent: promo.promo.discountPercent,
+        },
       },
       fakeCheckout(),
     );
@@ -723,6 +769,171 @@ describe("checkout completion", () => {
     expect(recorded.reduce((total, cents) => total + cents, 0)).toBe(31_500);
   });
 
+  // PAY-M3's last flavor. A trip-scoped last-minute deal is Stripe's object end
+  // to end: it fills neither promo column, so on this branch it used to be
+  // indistinguishable from an undiscounted checkout and the party was recorded
+  // at quoted, pre-discount amounts — above what the one shared payment intent
+  // captured, which is the figure a later cancellation asks Stripe to reverse.
+  // The applied percent is now snapshotted on the row at session-creation time,
+  // so the reconstruction has something local and exact to read.
+  it("records a party net of a trip-scoped last-minute deal when Stripe reported no settled total", async () => {
+    const { db, shop, reef, bookingIds } = await checkoutContext();
+    const tripPromo = await sentTripDeal(db, shop.id, reef.id, 25);
+
+    const start = await startBookingCheckout(
+      db,
+      {
+        ...startInput(shop.id, reef.id, bookingIds),
+        gearLines: [
+          { bookingId: bookingIds[0], description: "Rental gear — Pat", amountCents: 6_000 },
+        ],
+        promotionCode: tripPromo.stripePromotionCodeId ?? undefined,
+        tripPromo: {
+          id: tripPromo.id,
+          code: tripPromo.code,
+          discountPercent: tripPromo.discountPercent,
+        },
+      },
+      fakeCheckout(),
+    );
+    if (!start.ok) throw new Error("checkout start failed");
+    expect(start.checkout.totalCents).toBe(42_000);
+    // The snapshot itself: which deal, its code, and the percent Stripe was
+    // told to take off — none of which the shop-wide columns can carry.
+    expect(start.checkout.tripPromoId).toBe(tripPromo.id);
+    expect(start.checkout.promoCode).toBe(tripPromo.code);
+    expect(start.checkout.appliedDiscountPercent).toBe(25);
+    expect(start.checkout.promoCodeId).toBeNull();
+
+    const completed = await markCheckoutPaidBySessionId(db, start.checkout.stripeSessionId);
+    // Stripe reported nothing, so nothing is claimed as its evidence.
+    expect(completed?.settledTotalCents).toBeNull();
+
+    // $420 asked, 25% off = $315 the intent can have captured, split in
+    // proportion to each diver's ask ($240 with gear, $180 without).
+    expect((await getBookingPayment(db, shop.id, bookingIds[0]))?.amountCents).toBe(18_000);
+    expect((await getBookingPayment(db, shop.id, bookingIds[1]))?.amountCents).toBe(13_500);
+    const recorded = await Promise.all(
+      bookingIds.map(
+        async (bookingId) => (await getBookingPayment(db, shop.id, bookingId))?.amountCents ?? 0,
+      ),
+    );
+    // The whole point: the per-booking rows no longer sum above the pot.
+    expect(recorded.reduce((total, cents) => total + cents, 0)).toBe(31_500);
+  });
+
+  // A trip deal spends nothing on the checkout row unless it is actually handed
+  // to Stripe. Snapshotting a promotion the session never applied would
+  // understate what it captured and under-refund every diver on it.
+  it("snapshots no discount when a resolved deal was never handed to Stripe", async () => {
+    const { db, shop, reef, bookingIds } = await checkoutContext();
+    const tripPromo = await sentTripDeal(db, shop.id, reef.id, 25);
+
+    const start = await startBookingCheckout(
+      db,
+      {
+        ...startInput(shop.id, reef.id, bookingIds),
+        // Resolved, but no `promotionCode` — Stripe is told nothing.
+        tripPromo: {
+          id: tripPromo.id,
+          code: tripPromo.code,
+          discountPercent: tripPromo.discountPercent,
+        },
+      },
+      fakeCheckout(),
+    );
+    if (!start.ok) throw new Error("checkout start failed");
+    expect(start.checkout.appliedDiscountPercent).toBeNull();
+    expect(start.checkout.tripPromoId).toBeNull();
+
+    await markCheckoutPaidBySessionId(db, start.checkout.stripeSessionId);
+    for (const bookingId of bookingIds) {
+      expect((await getBookingPayment(db, shop.id, bookingId))?.amountCents).toBe(REEF_PRICE_CENTS);
+    }
+  });
+
+  // Stripe Checkout takes one promotion code per session, so at most one
+  // source can ever be the one it applied. A caller handing over both must not
+  // record two — the row would claim a shop-wide redemption that was never
+  // spent, and the reconstruction would have two percents and no way to tell
+  // which was Stripe's. The trip deal wins (the caller's own resolution order)
+  // and the shop-wide code is recorded nowhere.
+  it("records one promo source when a caller supplies both", async () => {
+    const { db, shop, reef, bookingIds } = await checkoutContext();
+    const tripPromo = await sentTripDeal(db, shop.id, reef.id, 25);
+    const shopPromo = await createShopPromoCode(
+      db,
+      { shopId: shop.id, code: "both10", discountPercent: 10, scope: "all" },
+      fakePromotions(),
+    );
+    if (!shopPromo.ok) throw new Error(`promo creation failed: ${shopPromo.reason}`);
+
+    const start = await startBookingCheckout(
+      db,
+      {
+        ...startInput(shop.id, reef.id, bookingIds),
+        promotionCode: tripPromo.stripePromotionCodeId ?? undefined,
+        tripPromo: {
+          id: tripPromo.id,
+          code: tripPromo.code,
+          discountPercent: tripPromo.discountPercent,
+        },
+        shopPromo: {
+          id: shopPromo.promo.id,
+          code: shopPromo.promo.code,
+          discountPercent: shopPromo.promo.discountPercent,
+        },
+      },
+      fakeCheckout(),
+    );
+    if (!start.ok) throw new Error("checkout start failed");
+    expect(start.checkout.tripPromoId).toBe(tripPromo.id);
+    expect(start.checkout.promoCodeId).toBeNull();
+    expect(start.checkout.appliedDiscountPercent).toBe(25);
+  });
+
+  // Rows written before `applied_discount_percent` existed carry no snapshot,
+  // and one of them can still be completed today by a late webhook. There is
+  // nothing local left to reconstruct a trip deal's discount from, and the trip
+  // itself must never be consulted — a live deal on the trip says nothing about
+  // what *this* session applied, and reading it would discount full-price
+  // divers. So the row keeps the conservative pre-column answer: the asked
+  // amounts. Never a refusal, never zero.
+  it("still completes a row predating the discount snapshot, at the asked amounts", async () => {
+    const { db, shop, reef, bookingIds } = await checkoutContext();
+    const tripPromo = await sentTripDeal(db, shop.id, reef.id, 25);
+    const start = await startBookingCheckout(
+      db,
+      {
+        ...startInput(shop.id, reef.id, bookingIds),
+        promotionCode: tripPromo.stripePromotionCodeId ?? undefined,
+        tripPromo: {
+          id: tripPromo.id,
+          code: tripPromo.code,
+          discountPercent: tripPromo.discountPercent,
+        },
+      },
+      fakeCheckout(),
+    );
+    if (!start.ok) throw new Error("checkout start failed");
+
+    // Rewind the row to what the migration left behind: the discount columns
+    // empty, everything else exactly as it was.
+    await db
+      .update(bookingCheckouts)
+      .set({ appliedDiscountPercent: null, tripPromoId: null, promoCode: null })
+      .where(eq(bookingCheckouts.id, start.checkout.id));
+
+    const completed = await markCheckoutPaidBySessionId(db, start.checkout.stripeSessionId);
+    expect(completed?.status).toBe("completed");
+    expect(completed?.settledTotalCents).toBeNull();
+    for (const bookingId of bookingIds) {
+      const payment = await getBookingPayment(db, shop.id, bookingId);
+      expect(payment?.status).toBe("paid");
+      expect(payment?.amountCents).toBe(REEF_PRICE_CENTS);
+    }
+  });
+
   it("prefers Stripe's own settled total over the reconstruction whenever there is one", async () => {
     // The reconstruction is a fallback, never a second opinion: a real
     // `amount_total` (a promo that only partly applied, a code Stripe refused)
@@ -739,7 +950,11 @@ describe("checkout completion", () => {
       {
         ...startInput(shop.id, reef.id, bookingIds),
         promotionCode: promo.promo.stripePromotionCodeId ?? undefined,
-        shopPromo: { id: promo.promo.id, code: promo.promo.code },
+        shopPromo: {
+          id: promo.promo.id,
+          code: promo.promo.code,
+          discountPercent: promo.promo.discountPercent,
+        },
       },
       fakeCheckout(),
     );
