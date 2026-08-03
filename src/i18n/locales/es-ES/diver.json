@@ -1406,6 +1406,7 @@
     },
     "reminderAction": {
       "waiverPending": "Firma tu waiver",
+      "waiverExpired": "El enlace de tu exención caducó — consigue uno nuevo, solo lleva unos dos minutos",
       "certificationMissing": "Envía a tu tienda tu tarjeta de certificación",
       "certificationExpired": "Consulta con tu tienda la fecha de renovación de tu certificación",
       "certificationInsufficient": "Consulta tu nivel de certificación con la tienda",
