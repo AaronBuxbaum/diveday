@@ -478,7 +478,7 @@
       "overviewLabel": "Overview",
       "overviewDescription": "A few paragraphs in the diver's words, not the agency's.",
       "pricingLegend": "Pricing",
-      "pricingDescription": "Two lines on one bill: your instruction fee and the agency's e-learning fee. The diver pays the total in a single payment.",
+      "pricingDescription": "Two lines on one order: your instruction fee and the agency's e-learning fee. The diver pays the total in a single payment.",
       "instructionFeeLabel": "Instruction fee",
       "eLearningFeeLabel": "e-Learning fee",
       "eLearningFeeHint": "(its own order line)",

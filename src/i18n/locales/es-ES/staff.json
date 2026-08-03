@@ -478,7 +478,7 @@
       "overviewLabel": "Resumen",
       "overviewDescription": "Unos párrafos con las palabras del buceador, no las de la agencia.",
       "pricingLegend": "Precio",
-      "pricingDescription": "Dos líneas en una factura: tu cuota de instrucción y la cuota de e-learning de la agencia. El buceador paga el total en un solo pago.",
+      "pricingDescription": "Dos líneas en un pedido: tu cuota de instrucción y la cuota de e-learning de la agencia. El buceador paga el total en un solo pago.",
       "instructionFeeLabel": "Cuota de instrucción",
       "eLearningFeeLabel": "Cuota de e-learning",
       "eLearningFeeHint": "(su propia línea de pedido)",
