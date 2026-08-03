@@ -3,6 +3,7 @@ import Link from "next/link";
 import { after } from "next/server";
 import { Suspense } from "react";
 import { FlashParams } from "@/components/FlashParams";
+import { OperationalWindowNote, readinessPivots } from "@/components/OperationalWindowNote";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { DepartureBoard } from "@/components/today/DepartureBoard";
 import { FirstRunChecklist } from "@/components/today/FirstRunChecklist";
@@ -10,6 +11,7 @@ import { RoleOrientationCard } from "@/components/today/RoleOrientationCard";
 import { TodayQueue } from "@/components/today/TodayQueue";
 import { YourSessions } from "@/components/today/YourSessions";
 import { buttonClass } from "@/components/ui/button";
+import { getBlockerQueue } from "@/db/blockers";
 import { getDb } from "@/db/client";
 import { listDiveSites } from "@/db/dive-sites";
 import { getShopById } from "@/db/shops";
@@ -21,6 +23,7 @@ import {
   orientationTourHref,
   orientationTourText,
 } from "@/i18n/orientation-labels";
+import { readinessStatusText } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { GREETING_KEYS, summarizeDayText } from "@/i18n/today-labels";
@@ -30,8 +33,12 @@ import { nowDate } from "@/lib/clock";
 import { formatShortDate, formatTime } from "@/lib/format";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl } from "@/lib/notifications";
+import { OPERATIONAL_HORIZON_DAYS } from "@/lib/operational-window";
+import { publicSchedulePath } from "@/lib/public-routes";
 import { requireStaffSession } from "@/lib/session";
 import { getTimeOfDayGreeting, leadWithCrewed, roleLensFor, summarizeDay } from "@/lib/today";
+import { BlockerGroups } from "./_components/BlockerGroups";
+import { isQueueView, type QueueView, QueueViewSwitch } from "./_components/QueueViewSwitch";
 import { inviteWaitlistAction, updateTripCrewAction } from "./trips/[id]/actions";
 
 // TODO: Cache Components adoption. Refactor this route so this opt-out can be removed.
@@ -57,6 +64,15 @@ export const metadata: Metadata = {
  * boats leaving today sail, and who needs me before they do? Anything a nav
  * click already answers — the schedule, the diver list — is
  * deliberately not repeated here.
+ *
+ * The queue itself has **two views over one set of evidence**: ranked by
+ * urgency (the default), or grouped by the departure each job holds up — what
+ * used to be the separate `/blockers` route. That route ran byte-for-byte the
+ * same two queries and re-ranked them, which is the "separate attention route"
+ * the Today ADR had already rejected; folding it in makes it a sort rather than
+ * a rival. Exactly one view renders at a time, chosen server-side from `?view=`
+ * so the block count on this page does not grow and the data never forks in the
+ * browser.
  */
 export default async function ShopPage({
   params,
@@ -69,23 +85,25 @@ export default async function ShopPage({
     reset?: string;
     email?: string;
     notice?: string;
+    /** Which queue view; anything unrecognised reads as the urgency default. */
+    view?: string;
+    /** Page of the by-departure view. Ignored by the urgency view. */
+    page?: string;
   }>;
 }) {
   // The session and the two route-param promises don't depend on one
   // another — resolve them together instead of serially.
-  const [session, { shopSlug }, { created, series, reset, email, notice }] = await Promise.all([
-    requireStaffSession(),
-    params,
-    searchParams,
-  ]);
+  const [session, { shopSlug }, { created, series, reset, email, notice, view, page }] =
+    await Promise.all([requireStaffSession(), params, searchParams]);
   const seriesCount = series ? Number.parseInt(series, 10) : 0;
+  const queueView: QueueView = isQueueView(view) ? view : "urgency";
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <FlashParams params={["created", "series", "reset", "email", "notice"]} />
       {/* The queue join is the one real wait on this page; a content-shaped
           fallback keeps a cold nav from reading as a blank hang (principle 1). */}
-      <Suspense fallback={<TodaySkeleton />}>
+      <Suspense key={`${queueView}:${page ?? ""}`} fallback={<TodaySkeleton />}>
         <TodayBody
           session={session}
           shopSlug={shopSlug}
@@ -94,6 +112,8 @@ export default async function ShopPage({
           reset={reset}
           email={email}
           notice={notice}
+          queueView={queueView}
+          queuePage={Number.parseInt(page ?? "", 10)}
         />
       </Suspense>
     </main>
@@ -108,6 +128,8 @@ async function TodayBody({
   reset,
   email,
   notice,
+  queueView,
+  queuePage,
 }: {
   session: Awaited<ReturnType<typeof requireStaffSession>>;
   shopSlug: string;
@@ -116,6 +138,9 @@ async function TodayBody({
   reset?: string;
   email?: string;
   notice?: string;
+  queueView: QueueView;
+  /** `NaN` for an absent or nonsensical `?page=`; `pageOf` clamps it. */
+  queuePage: number;
 }) {
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
@@ -175,6 +200,26 @@ async function TodayBody({
       : null;
   const firstName = session.user.name?.split(" ")[0] ?? "there";
 
+  // The by-departure view's own grouping pass, run only when it is the view on
+  // screen — the default urgency view must not pay for a query it never
+  // renders. It reads the same shared horizon and the same batched
+  // `listTripsReadiness` evidence `getTodayWork` just did, and resolves each
+  // fix through the same `BLOCKER_ACTIONS` map, so the two views cannot
+  // disagree about who is blocked or about what clears them.
+  const blockerQueue =
+    queueView === "departures" ? await getBlockerQueue(db, shop.id, shopSlug, now, t) : null;
+  // The view is a query param on this page, so every link that changes it —
+  // the switch, the by-departure pager — is built here from one rule. Page 1
+  // and the default view are both omitted, so a plain `/shop/<slug>` stays the
+  // canonical URL for Today.
+  function queueViewHref(view: QueueView, page?: number): string {
+    const query = new URLSearchParams();
+    if (view !== "urgency") query.set("view", view);
+    if (page !== undefined && page > 1) query.set("page", String(page));
+    const search = query.toString();
+    return search ? `/shop/${shopSlug}?${search}` : `/shop/${shopSlug}`;
+  }
+
   return (
     <>
       <ShopPageHeader
@@ -198,12 +243,25 @@ async function TodayBody({
                   })}`
                 : ""}
             </p>
-            {/* Today, Blockers, and Check-in each slice the same readiness
-                data on a different, undocumented horizon (task 141, UX
-                persona lens 17) — a diver "cleared" here can still show on
-                one of the other two. Name the window so that is never a
-                surprise. */}
-            <p className="mt-1 max-w-2xl text-sm text-muted">{t("shopHome.windowNote")}</p>
+            {/* Today and Check-in read one shared window
+                (src/lib/operational-window.ts) and say so in the same
+                sentence, in the same place — a diver cleared here is cleared
+                at the counter (task 141, UX persona lens 17). Both of this
+                window's readiness *sorts* live on this page now, so the pivot
+                list names only Check-in: the switch below the departure board
+                is the control for the other view, and offering it twice on one
+                screen is the duplication principle 8 rules out. */}
+            <OperationalWindowNote
+              copy={{
+                note: t("shared.operationalWindow.note", { days: OPERATIONAL_HORIZON_DAYS }),
+                pivotsLabel: t("shared.operationalWindow.pivotsLabel"),
+              }}
+              pivots={readinessPivots(shopSlug, ["today", "blockers"], {
+                today: t("shared.shopNavLinks.today"),
+                blockers: t("shared.shopNavLinks.blockers"),
+                check_in: t("shared.shopNavLinks.checkIn"),
+              })}
+            />
           </>
         }
       />
@@ -286,8 +344,10 @@ async function TodayBody({
           noCrewAssigned: t("shared.today.departureBoard.noCrewAssigned"),
           assignCrewLabel: t("shared.today.departureBoard.assignCrewLabel"),
           assignFailed: t("shared.today.departureBoard.assignFailed"),
-          countReady: t("shared.today.departureBoard.countReady"),
-          countBlocked: t("shared.today.departureBoard.countBlocked"),
+          // The one readiness vocabulary, not the board's own copy of the two
+          // words (src/i18n/readiness-labels.ts).
+          countReady: readinessStatusText(t, "ready"),
+          countBlocked: readinessStatusText(t, "blocked"),
           countBoarded: t("shared.today.departureBoard.countBoarded"),
           blockedWarningOne: t("shared.today.departureBoard.blockedWarningOne"),
           blockedWarningOther: t("shared.today.departureBoard.blockedWarningOther"),
@@ -346,8 +406,8 @@ async function TodayBody({
             // no origin to build an absolute URL from — fall back to the path
             // alone rather than crash the whole page on a malformed base URL.
             firstRunOrigin
-              ? new URL(`/shop/${shopSlug}/schedule`, `${firstRunOrigin}/`).toString()
-              : `/shop/${shopSlug}/schedule`
+              ? new URL(publicSchedulePath(shopSlug), `${firstRunOrigin}/`).toString()
+              : publicSchedulePath(shopSlug)
           }
           contactDone={Boolean(shop.contactEmail || shop.contactPhone)}
           diveSiteCount={firstRunDiveSites?.length ?? 0}
@@ -380,13 +440,42 @@ async function TodayBody({
         />
       ) : null}
 
-      <TodayQueue
-        actions={actions}
-        shopSlug={shopSlug}
-        shopName={shop.name}
-        inviteAction={inviteWaitlistAction.bind(null, shopSlug)}
-        locale={locale}
-      />
+      {/* One block, two views. The switch sits on the queue it switches rather
+          than under the page header: the departure board above it is not a
+          queue view, and a control floating above something it does not govern
+          is how a toggle starts reading as a page-wide filter. */}
+      <div className="mb-4 flex flex-wrap items-center justify-end gap-3">
+        <QueueViewSwitch
+          current={queueView}
+          hrefFor={queueViewHref}
+          copy={{
+            label: t("shopHome.queueView.label"),
+            urgency: t("shopHome.queueView.byUrgency"),
+            departures: t("shopHome.queueView.byDeparture"),
+          }}
+        />
+      </div>
+
+      {queueView === "departures" && blockerQueue ? (
+        <BlockerGroups
+          queue={blockerQueue}
+          requestedPage={queuePage}
+          shopSlug={shopSlug}
+          timeZone={shop.timezone}
+          locale={locale}
+          pageHref={(target) => queueViewHref("departures", target)}
+          headingId="queue-heading"
+          t={t}
+        />
+      ) : (
+        <TodayQueue
+          actions={actions}
+          shopSlug={shopSlug}
+          shopName={shop.name}
+          inviteAction={inviteWaitlistAction.bind(null, shopSlug)}
+          locale={locale}
+        />
+      )}
     </>
   );
 }

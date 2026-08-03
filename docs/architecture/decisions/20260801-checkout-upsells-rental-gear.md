@@ -23,9 +23,15 @@ which ordering is chosen.
   post-booking payment with its own refund path. This is the flow every public diver walks, so it
   is gated on `hasAnyRentalPricing(shop.rentalPricing)`: a shop that has priced no rental gear online
   shows no gear step at all and sees zero change to today's flow.
-- **The step is skippable and defaults follow `RentableItem.defaultRented`** exactly as
-  `RentalFitForm` already defaults today — a diver who ignores it still books, at the shop's default
-  kit.
+- **The step is skippable and everything in it is opt-in** (amended 2026-08-03). It originally
+  followed `RentableItem.defaultRented`, matching `RentalFitForm` — but that flag means "what a diver
+  with no fit on file is assumed to want", and post-booking it only pre-fills a *plan*. At checkout
+  the same tick is money: every diver, including one who owns a full kit, started with six paid line
+  items selected and had to clear each one, per party member, or be charged. So the checkout picker
+  is the one caller that deliberately ignores `defaultRented`: a single "Need rental gear?" question
+  per diver starts off, the per-item checkboxes appear unchecked only once they say yes, and a diver
+  who skips the step books with no gear charges at all. `RentalFitForm`, the staff fit editor, and
+  `DEFAULT_SHOP_RENTAL_ITEMS` keep reading `defaultRented` unchanged.
 - **`CreateCheckoutSessionRequest` moves from one hardcoded line to a `lineItems` array.**
   `startBookingCheckout` composes: one line item for the trip fee (unchanged `checkoutCharge` logic —
   deposit or full fare, quantity = party size when every diver pays the same amount) plus one

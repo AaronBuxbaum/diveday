@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, isNull, lt, ne, or } from "drizzle-orm";
+import { and, asc, desc, eq, gt, inArray, isNull, lt, ne, or } from "drizzle-orm";
 import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { flaggedMedicalPrompts } from "@/lib/medical";
@@ -361,6 +361,69 @@ export async function getWaiverForToken(
   if (record.status !== "pending") return { state: "completed", record };
   if (record.expiresAt <= now) return { state: "expired", record };
   return { state: "available", record };
+}
+
+/**
+ * The record behind a token that can no longer be signed but is still, provably,
+ * the diver's own: pending and either past its expiry or superseded by a fresher
+ * link. `getWaiverForToken` reports the first as `expired` and the second as
+ * `unavailable`, and issuing a replacement supersedes the very record that asked
+ * for it — so this is what keeps the same stale URL landing on the self-serve
+ * "email me a fresh link" card on the second tap and every refresh after,
+ * instead of a dead end that looks like the tap broke something.
+ *
+ * Deliberately narrow: never a live record and never a completed one, so this
+ * can't become a second way to reach a signable link or to read signed evidence.
+ * It returns the record for context only — the rescue flow issues its own fresh
+ * token and hands it to the address on file, never back to the caller.
+ */
+export async function staleWaiverRecordForToken(
+  db: AppDb,
+  token: string,
+  now: Date = nowDate(),
+): Promise<typeof waiverRecords.$inferSelect | null> {
+  const [record] = await db
+    .select()
+    .from(waiverRecords)
+    .where(eq(waiverRecords.tokenHash, hashWaiverToken(token)))
+    .limit(1);
+  if (record?.status !== "pending") return null;
+  if (!record.supersededAt && record.expiresAt > now) return null;
+  return record;
+}
+
+/**
+ * Does this booking already have a waiver link a diver could sign *right now*?
+ *
+ * The rescue flow's guard rail. Issuing supersedes every non-superseded record
+ * for the booking, and a superseded record takes the diver's saved draft
+ * (`draftMedicalAnswers`, emergency contact answers, half-filled medical
+ * questionnaire) out of reach with it. So a stale token whose booking has since
+ * been given a *fresher, still-live* link must never trigger another issue: the
+ * bearer of the dead URL would be silently killing the link the diver is
+ * actually working in, and wiping what they had typed.
+ *
+ * Deliberately a bare boolean — the caller learns only that a live link exists,
+ * never its token, its address, or when it was issued.
+ */
+export async function hasLiveWaiverRequest(
+  db: DbExecutor,
+  bookingId: string,
+  now: Date = nowDate(),
+): Promise<boolean> {
+  const [live] = await db
+    .select({ id: waiverRecords.id })
+    .from(waiverRecords)
+    .where(
+      and(
+        eq(waiverRecords.bookingId, bookingId),
+        eq(waiverRecords.status, "pending"),
+        isNull(waiverRecords.supersededAt),
+        gt(waiverRecords.expiresAt, now),
+      ),
+    )
+    .limit(1);
+  return Boolean(live);
 }
 
 export async function saveWaiverDraft(

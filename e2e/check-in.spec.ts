@@ -20,10 +20,12 @@ test("counter check-in searches by diver, confirms live readiness, and keeps blo
     .filter({ hasText: "Priya Sharma" })
     .filter({ visible: true });
   await expect(card).toHaveCount(1);
-  // The warning-tone Badge prepends a decorative aria-hidden glyph
-  // (Badge.tsx toneGlyph), so the element's own text is "▲ Needs
-  // attention", not "Needs attention" alone.
-  await expect(card.getByText("▲ Needs attention")).toBeVisible();
+  // One readiness vocabulary and one tone per state
+  // (src/i18n/readiness-labels.ts): the counter used to call this diver "Needs
+  // attention" in warning while the manifest called the same person "Blocked"
+  // in danger. The danger-tone Badge prepends a decorative aria-hidden glyph
+  // (Badge.tsx toneGlyph), so the element's own text is "✕ Blocked".
+  await expect(card.getByText("✕ Blocked")).toBeVisible();
   await expect(card.getByText("Waiver has not been sent.")).toBeVisible();
   await expect(card.getByRole("button", { name: "Check in Priya Sharma" })).toHaveCount(0);
 
@@ -58,8 +60,13 @@ test("a counter walk-in books straight onto a boat with no email required", asyn
   // Email and phone are left blank on purpose — the whole point of this flow.
   await page.getByRole("button", { name: "Add to boat" }).click();
 
-  await expect(page).toHaveURL(/\/check-in\?notice=walkin_added/);
-  await expect(page.getByText("Added and on the boat.")).toBeVisible();
+  // No email was collected, so no waiver could be mailed — and the notice says
+  // so rather than implying one is on its way. This is the *ordinary* counter
+  // outcome, not an edge case: the diver is seated and the link is still owed.
+  await expect(page).toHaveURL(/\/check-in\?notice=walkin_added_waiver_undelivered/);
+  await expect(
+    page.getByText("Added to this boat’s list — but their waiver wasn’t emailed."),
+  ).toBeVisible();
   await expect(
     page.locator("article").filter({ hasText: "Walk-in Test Diver" }).filter({ visible: true }),
   ).toHaveCount(1);
@@ -93,7 +100,9 @@ test("a full boat refuses a counter walk-in with the wait-list nudge", async ({ 
   await addDiver.getByLabel("Name").fill("Fills The Boat");
   await addDiver.getByLabel("Email").fill(`fills-${e2eNow().getTime()}@example.com`);
   await addDiver.getByRole("button", { name: "Add to trip" }).click();
-  await expect(page.getByRole("status")).toContainText("Diver added to the trip.");
+  await expect(page.getByRole("status")).toContainText(
+    "Diver added to the trip — but their waiver wasn’t emailed.",
+  );
 
   // The boat is now full — a counter walk-in onto it is refused, not silently
   // dropped, and points the crew at the wait list instead.

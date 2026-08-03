@@ -38,7 +38,7 @@ test("the trip sub-nav reaches all four surfaces", async ({ page }) => {
 });
 
 /**
- * `schedule/[id]/page.tsx`'s staff-redirect check (a signed-in staffer
+ * `s/[shopSlug]/trips/[id]/page.tsx`'s staff-redirect check (a signed-in staffer
  * viewing their own shop's public trip page gets sent to the management
  * view instead) races cacheComponents' Partial Prerendering
  * non-deterministically: an isolated repro against this branch (same
@@ -66,7 +66,7 @@ async function openPublicBookingPage(
       page.getByRole("link", { name: "View booking page" }).click(),
     ]);
     await publicPage.waitForLoadState("domcontentloaded");
-    if (/\/shop\/blue-mantis\/schedule\/[a-f0-9-]+$/.test(publicPage.url())) {
+    if (/\/s\/blue-mantis\/trips\/[a-f0-9-]+$/.test(publicPage.url())) {
       return publicPage;
     }
     await publicPage.close();
@@ -87,11 +87,11 @@ test("staff can view or copy a trip's public booking page from its overview", as
     .click();
 
   const publicPage = await openPublicBookingPage(page, context);
-  await expect(publicPage).toHaveURL(/\/shop\/blue-mantis\/schedule\/[a-f0-9-]+$/);
+  await expect(publicPage).toHaveURL(/\/s\/blue-mantis\/trips\/[a-f0-9-]+$/);
   await publicPage.close();
 
   await page.getByRole("button", { name: "Copy link" }).click();
   await expect(page.getByRole("button", { name: "Copied!" })).toBeVisible();
   const clipboardText = await page.evaluate(() => navigator.clipboard.readText());
-  expect(clipboardText).toMatch(/\/shop\/blue-mantis\/schedule\/[a-f0-9-]+$/);
+  expect(clipboardText).toMatch(/\/s\/blue-mantis\/trips\/[a-f0-9-]+$/);
 });

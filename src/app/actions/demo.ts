@@ -13,6 +13,7 @@ import { auth, signIn, signOut } from "@/lib/auth";
 import { DEMO_BYPASS_PASSWORD } from "@/lib/credentials";
 import type { DemoRoleId } from "@/lib/demo-roles";
 import { eventSource } from "@/lib/funnel";
+import { publicSchedulePath } from "@/lib/public-routes";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
 import { requireStaffSession } from "@/lib/session";
@@ -98,7 +99,7 @@ export async function enterDemoAction(formData?: FormData) {
   // The diver pick previews the customer view — the public schedule needs no
   // sign-in at all, so it skips straight there instead of minting a session.
   if (role === "diver") {
-    redirect(`/shop/${slug}/schedule`);
+    redirect(publicSchedulePath(slug));
   }
 
   let targetEmail = ownerEmail;
@@ -146,13 +147,13 @@ export async function switchDemoRoleAction(role: string, shopSlug: string) {
       const session = await auth();
       if (session) {
         // Auth.js signOut will throw a redirect error to execute the redirect.
-        await signOut({ redirectTo: `/shop/${shopSlug}/schedule` });
+        await signOut({ redirectTo: publicSchedulePath(shopSlug) });
       } else {
-        redirect(`/shop/${shopSlug}/schedule`);
+        redirect(publicSchedulePath(shopSlug));
       }
     } catch (error) {
       if (error instanceof AuthError) {
-        redirect(`/shop/${shopSlug}/schedule`);
+        redirect(publicSchedulePath(shopSlug));
       }
       throw error; // NEXT_REDIRECT will propagate
     }

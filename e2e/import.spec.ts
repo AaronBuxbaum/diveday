@@ -167,7 +167,9 @@ test.describe("contact import — specialty cards", () => {
     await addDiver.getByLabel("Name").fill("Deep Dana");
     await addDiver.getByLabel("Email").fill("deep.dana@example.com");
     await addDiver.getByRole("button", { name: "Add to trip" }).click();
-    await expect(page.getByRole("status")).toContainText("Diver added to the trip.");
+    await expect(page.getByRole("status")).toContainText(
+      "Diver added to the trip — but their waiver wasn’t emailed.",
+    );
 
     // The card is on file and verified — and the dive still waits, which is the
     // whole point of the decision. The blocker names the fix, not just the fault.

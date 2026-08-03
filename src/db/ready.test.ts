@@ -5,7 +5,7 @@ import { cancelBooking, createBooking } from "./bookings";
 import { setBookingPayment } from "./payments";
 import { getReadyPageData } from "./ready";
 import { bookings } from "./schema";
-import { getTripRoster, upcomingTripsWithCounts } from "./trips";
+import { getTripRoster, setTripStatus, upcomingTripsWithCounts } from "./trips";
 
 async function seededBooking() {
   const { db, shop } = await seededShopContext();
@@ -85,6 +85,10 @@ describe("getReadyPageData reschedule candidates (diver self-service, docs ADR 2
     });
     const data = await getReadyPageData(db, bookingId);
     expect(data?.rescheduleCandidates).toBeNull();
+    // …and says why, so the page can explain the absence instead of just
+    // dropping the picker (cancel is still the diver's to make).
+    expect(data?.rescheduleBlocked).toBe("payment_settled");
+    expect(data?.manageState).toBe("self_serve");
   });
 
   it("previews an unpaid cancel as owing no refund", async () => {
@@ -124,6 +128,40 @@ describe("getReadyPageData reschedule candidates (diver self-service, docs ADR 2
     const { db, bookingId } = await unpaidBooking();
     const data = await getReadyPageData(db, bookingId);
     expect(data?.canManageBooking).toBe(true);
+    expect(data?.manageState).toBe("self_serve");
+    expect(data?.rescheduleBlocked).toBeNull();
+  });
+
+  it("keeps a shop-only route open on trip morning instead of showing nothing", async () => {
+    // Checked in on the day: cancel/reschedule can't work, but the shop can
+    // still act — and this is the moment a diver most needs their number.
+    const { db, bookingId } = await unpaidBooking();
+    await db.update(bookings).set({ status: "checked_in" }).where(eq(bookings.id, bookingId));
+    const data = await getReadyPageData(db, bookingId);
+    expect(data?.manageState).toBe("shop_only");
+    expect(data?.rescheduleBlocked).toBe("booking_closed");
+  });
+
+  it("closes the section only once the trip is genuinely over", async () => {
+    const { db, open, bookingId } = await unpaidBooking();
+    const midTrip = new Date(open.startsAt.getTime() + 60 * 60 * 1000);
+    const afterTrip = new Date(open.endsAt.getTime() + 60 * 60 * 1000);
+    expect((await getReadyPageData(db, bookingId, midTrip))?.manageState).toBe("shop_only");
+    expect((await getReadyPageData(db, bookingId, afterTrip))?.manageState).toBe("closed");
+  });
+
+  it("names an empty calendar as the reason there is nowhere to move to", async () => {
+    // Cancel every other upcoming departure: nothing is settled and the seat
+    // is live, so the only reason the picker is empty is the calendar itself.
+    const { db, shop, open, bookingId } = await unpaidBooking();
+    const upcoming = await upcomingTripsWithCounts(db, shop.id);
+    for (const candidate of upcoming) {
+      if (candidate.id !== open.id) await setTripStatus(db, shop.id, candidate.id, "cancelled");
+    }
+    const data = await getReadyPageData(db, bookingId);
+    expect(data?.rescheduleCandidates).toEqual([]);
+    expect(data?.rescheduleBlocked).toBe("no_open_trips");
+    expect(data?.manageState).toBe("self_serve");
   });
 
   it("hides the reschedule picker for a waived booking too (Codex finding)", async () => {

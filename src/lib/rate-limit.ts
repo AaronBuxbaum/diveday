@@ -340,6 +340,20 @@ export const RATE_LIMITS = {
    * review finding, 2026-07-24) — 60, not 30.
    */
   capabilityAction: perHour(60),
+  /**
+   * Emailing a fresh waiver link from a dead one, per **booking** rather than
+   * per IP or per token. The per-IP `capabilityAction` bucket above still
+   * applies, but on its own it would let anyone holding a leaked stale URL
+   * spray that diver's inbox from a rotating set of addresses.
+   *
+   * The key must be the booking, not the token that asked. Every reissue leaves
+   * another dead token behind pointing at the same booking, so a per-token
+   * ceiling silently multiplied: N old links for one diver meant N separate
+   * 5/hr budgets aimed at one mailbox. The invariant is one budget per inbox —
+   * five in an hour is far more than a diver who lost an email ever needs, and
+   * that stays true however many stale URLs exist for their booking.
+   */
+  waiverLinkResendByBooking: perHour(5),
 } as const satisfies Record<string, RateLimitConfig>;
 
 /**

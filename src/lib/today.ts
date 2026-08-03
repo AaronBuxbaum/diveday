@@ -4,6 +4,8 @@ import {
   blockerActionLabelText,
   blockerDetailGroupText,
   blockerDetailWithRemainingText,
+  diverGroupSubjectText,
+  nameListText,
   pointingLabelText,
 } from "@/i18n/today-labels";
 import type { Role } from "./authz";
@@ -19,6 +21,10 @@ import { utcToWallTime } from "./zoned";
  * This module is the framework-free half: it turns source-of-truth evidence
  * into ranked, human-readable actions. It never queries; `src/db/today.ts`
  * gathers the facts and calls in here.
+ *
+ * How far out the queue looks is *not* decided here: the horizon is shared with
+ * Not ready and Check-in and lives in `src/lib/operational-window.ts`. The
+ * urgency bands below slice that horizon into "how soon"; they never widen it.
  *
  * Words live in the message bundles, not here — `src/i18n/today-labels.ts`
  * maps every code this file produces to its staff-bundle key, and the
@@ -44,8 +50,6 @@ const IMMINENT_WINDOW_MS = 3 * HOUR;
 /** Anything departing inside a day is "get it done today" work. */
 const NOW_WINDOW_MS = 24 * HOUR;
 const SOON_WINDOW_MS = 72 * HOUR;
-/** The queue never looks further out than this; beyond it, Schedule is the tool. */
-export const TODAY_HORIZON_MS = 7 * 24 * HOUR;
 
 export type TodayActionKind =
   | "roll_call_missing_diver"
@@ -422,16 +426,6 @@ export function diverBlockerAction(
   };
 }
 
-/** "Ana, Ben and 6 others" — enough to recognise the group, short enough to scan. */
-function nameList(names: readonly string[], shown = 2): string {
-  if (names.length <= shown + 1) {
-    if (names.length === 1) return names[0] ?? "";
-    return `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
-  }
-  const rest = names.length - shown;
-  return `${names.slice(0, shown).join(", ")} and ${rest} ${rest === 1 ? "other" : "others"}`;
-}
-
 /**
  * Nine divers on one boat all missing a waiver is one job, not nine. Rows are
  * collapsed per departure and per blocker so the queue stays a list of *jobs*;
@@ -472,9 +466,9 @@ export function collapseDiverActions(
       id: `blockers:${key}`,
       kind,
       urgency: urgencyFor(first.startsAt, now),
-      subject: `${rows.length} divers`,
+      subject: diverGroupSubjectText(t, rows.length),
       context: first.tripTitle,
-      detail: blockerDetailGroupText(t, readinessBlockerText(t, blocker), nameList(names)),
+      detail: blockerDetailGroupText(t, readinessBlockerText(t, blocker), nameListText(t, names)),
       // A batch waiver send keeps the verb ("Send waivers"); any other grouped
       // fix only opens the roster, the one screen that shows all of them.
       actionLabel: waiver

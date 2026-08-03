@@ -1,4 +1,5 @@
 import { MIGRATION_GUIDE_SLUGS } from "./migration-guides";
+import { publicSchedulePath } from "./public-routes";
 
 /**
  * The funnel vocabulary: every page that can send a visitor toward the demo or
@@ -73,5 +74,5 @@ export function trialHref(source: FunnelSource): string {
  * component — never imports `src/db`.
  */
 export function scheduleAttributionHref(shopSlug: string, source: FunnelSource): string {
-  return `/shop/${shopSlug}/schedule?from=${source}`;
+  return `${publicSchedulePath(shopSlug)}?from=${source}`;
 }

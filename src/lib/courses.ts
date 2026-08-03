@@ -155,10 +155,13 @@ export type CourseContent = {
 };
 
 /**
- * Route segments under /shop/[slug]/courses/ that are staff pages, not course
- * slugs. The public route matcher exempts exactly one segment under /courses/,
- * so a course slugged "catalog" would quietly hand a signed-out visitor a staff
- * page. Both the matcher (src/lib/auth.config.ts) and slug minting refuse them.
+ * Route segments under `/shop/[slug]/courses/` that are staff pages, not course
+ * slugs. The legacy-URL redirect (`LEGACY_PUBLIC_SHOP_REDIRECTS` in
+ * src/lib/public-routes.ts) sends exactly one segment under `/courses/` to the
+ * diver's namespace, so a course slugged "catalog" would 308 a staff page into
+ * `/s/**` and take it out of the auth gate entirely. Both that pattern's
+ * negative lookahead and slug minting below refuse these words, so the two
+ * halves cannot drift apart.
  */
 export const RESERVED_COURSE_SEGMENTS = new Set(["catalog", "new", "paths"]);
 

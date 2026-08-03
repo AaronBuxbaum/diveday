@@ -6,11 +6,9 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { canPersonConfigureTrips, canPersonRefund } from "@/db/authz";
 import {
-  type BookingOutcome,
   bookingDiverName,
   cancelBooking,
   confirmBookingIdentity,
-  createBooking,
   restoreBooking,
 } from "@/db/bookings";
 import { getDb } from "@/db/client";
@@ -39,18 +37,25 @@ import {
   updateTripConditions,
 } from "@/db/trips";
 import { inviteWaitlistDiver, joinTripWaitlist } from "@/db/waitlist";
-import { issueWaiverOnJoin } from "@/db/waiver-issue";
 import { recordInPersonWaiver, saveBookingEmergencyContact } from "@/db/waivers";
 import { toDiverLocale } from "@/i18n/settings";
 import { trackEvent } from "@/lib/analytics";
 import { nowDate } from "@/lib/clock";
 import { emergencyContactSchema } from "@/lib/contact";
+import { depthToMeters, maxEnteredVisibility } from "@/lib/depth-units";
 import { isValidLastMinuteDiscountPercent } from "@/lib/last-minute-list";
 import { MAX_PRICE_MINOR_UNITS, majorToMinor, toShopCurrency } from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { notify, publicAppUrl } from "@/lib/notifications";
+import { publicTripPath } from "@/lib/public-routes";
 import { MAX_SERIES_OCCURRENCES, weeklyOccurrencesAfter } from "@/lib/recurrence";
 import { requireStaffSession } from "@/lib/session";
+import {
+  maxEnteredTemperature,
+  minEnteredTemperature,
+  temperatureToCelsius,
+  temperatureUnitFor,
+} from "@/lib/temperature-units";
 import { tripDiveDraftsFromForm } from "@/lib/trip-dives";
 import { parseWallTime, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 
@@ -76,16 +81,24 @@ const detailsSchema = z.object({
   ),
 });
 
+/**
+ * Water temperature and visibility arrive in whatever units the shop works in
+ * (`shops.temperature_unit` / `shops.depth_unit`), so the real bounds can only
+ * be applied once the unit is known — these are the loose outer guards, and
+ * `saveConditionsAction` re-reads the shop and re-checks against the shop-unit
+ * bounds before converting to the canonical Celsius/metres that get stored.
+ * Same shape the dive-site depth entry uses (`shop/[shopSlug]/dive-sites/new`).
+ */
 const conditionsSchema = z.object({
   conditionsHold: z.string().optional(),
   conditionsSummary: z.string().trim().max(600),
-  waterTemperatureC: z.preprocess(
+  waterTemperature: z.preprocess(
     (value) => (value === "" ? undefined : value),
-    z.coerce.number().int().min(-2).max(40).optional(),
+    z.coerce.number().int().min(-100).max(200).optional(),
   ),
-  visibilityMeters: z.preprocess(
+  visibility: z.preprocess(
     (value) => (value === "" ? undefined : value),
-    z.coerce.number().int().min(0).max(100).optional(),
+    z.coerce.number().int().min(0).max(1_000).optional(),
   ),
   surfaceConditions: z.string().trim().max(300),
 });
@@ -100,32 +113,18 @@ const requirementsSchema = z.object({
   ),
 });
 
+/**
+ * Wait-listing still parses its own submission here: it is a different
+ * mutation (`joinTripWaitlist`) with its own outcomes, and it shares only the
+ * form. Seating a diver — hand-entered or picked — goes through the shared
+ * `seatNewDiverAction`/`seatExistingDiverAction` (src/app/actions/seat-diver.ts)
+ * so every door owes the same consequences.
+ */
 const addDiverSchema = z.object({
   fullName: z.string().trim().min(1).max(120),
   email: z.email().max(200),
   phone: z.string().trim().max(30).optional(),
 });
-
-const existingDiverSchema = z.object({ personId: z.uuid() });
-
-function addDiverNotice(reason: Exclude<BookingOutcome, { ok: true }>["reason"]): string {
-  switch (reason) {
-    case "trip_full":
-      return "diver-full";
-    case "already_booked":
-      return "diver-already";
-    case "course_unstaffed":
-      return "diver-course-unstaffed";
-    case "course_prerequisite":
-      return "diver-course-prerequisite";
-    case "course_ratio_full":
-      return "diver-course-ratio-full";
-    case "course_min_age":
-      return "diver-course-min-age";
-    default:
-      return "diver-unavailable";
-  }
-}
 
 function parseAddDiver(formData: FormData) {
   return addDiverSchema.safeParse({
@@ -243,17 +242,39 @@ export async function saveConditionsAction(shopSlug: string, tripId: string, for
   const parsed = conditionsSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(`${back}?notice=invalid`);
   const db = await getDb();
+  // The units come from the shop row, never from the form. A hidden input would
+  // let a crafted post store a 27 typed as °C as if it were °F — a 16-degree
+  // error on every diver's brief — the same reason the dive-site depth entry
+  // re-reads the shop rather than trusting what was submitted.
+  const shop = await getShopById(db, s.user.shopId);
+  if (!shop) redirect(`${back}?notice=invalid`);
+  const temperatureUnit = temperatureUnitFor(shop);
+  const { waterTemperature, visibility } = parsed.data;
+  if (
+    waterTemperature !== undefined &&
+    (waterTemperature < minEnteredTemperature(temperatureUnit) ||
+      waterTemperature > maxEnteredTemperature(temperatureUnit))
+  ) {
+    redirect(`${back}?notice=invalid`);
+  }
+  if (visibility !== undefined && visibility > maxEnteredVisibility(shop.depthUnit)) {
+    redirect(`${back}?notice=invalid`);
+  }
   const { trip: saved, holdStarted } = await updateTripConditions(db, s.user.shopId, tripId, {
-    ...parsed.data,
+    conditionsSummary: parsed.data.conditionsSummary,
+    surfaceConditions: parsed.data.surfaceConditions,
+    waterTemperatureC:
+      waterTemperature === undefined
+        ? undefined
+        : temperatureToCelsius(waterTemperature, temperatureUnit),
+    visibilityMeters:
+      visibility === undefined ? undefined : depthToMeters(visibility, shop.depthUnit),
     conditionsHold: parsed.data.conditionsHold === "on",
   });
   if (saved && holdStarted) {
-    const [shop, contacts] = await Promise.all([
-      getShopById(db, s.user.shopId),
-      listTripDiverContacts(db, s.user.shopId, tripId),
-    ]);
+    const contacts = await listTripDiverContacts(db, s.user.shopId, tripId);
     const origin = publicAppUrl();
-    if (shop && origin) {
+    if (origin) {
       const publishedAt = nowDate();
       await Promise.allSettled(
         contacts.flatMap((contact) =>
@@ -271,7 +292,7 @@ export async function saveConditionsAction(shopSlug: string, tripId: string, for
                   startsAt: saved.startsAt,
                   timezone: shop.timezone,
                   conditionsSummary: saved.conditionsSummary,
-                  tripUrl: new URL(`/shop/${shopSlug}/schedule/${tripId}`, `${origin}/`).toString(),
+                  tripUrl: new URL(publicTripPath(shopSlug, tripId), `${origin}/`).toString(),
                   publishedAt,
                 }),
               ]
@@ -495,71 +516,6 @@ export async function restoreInternalNoteAction(
   // perspective, indistinguishable from adding a fresh note with the same
   // text — no dedicated "note-restored" code needed.
   revalidateAndRedirect(back, `${back}?notice=${restored ? "note-added" : "invalid"}`);
-}
-
-/** Staff-entered booking for walk-ins or divers tracked in another system. */
-export async function addBookingAction(shopSlug: string, tripId: string, formData: FormData) {
-  const back = guestsPath(shopSlug, tripId);
-  const s = await requireStaffSession();
-  const parsed = parseAddDiver(formData);
-  if (!parsed.success) redirect(`${back}?notice=diver-invalid`);
-  const outcome = await createBooking(await getDb(), {
-    actor: "staff",
-    shopId: s.user.shopId,
-    tripId,
-    fullName: parsed.data.fullName,
-    email: parsed.data.email,
-    phone: parsed.data.phone,
-  });
-  if (!outcome.ok) {
-    await trackEvent({ name: "booking_blocked", source: "staff", reason: outcome.reason });
-    redirect(`${back}?notice=${addDiverNotice(outcome.reason)}`);
-  }
-  await trackEvent({ name: "booking_completed", source: "staff", partySize: 1 });
-  await recordTripActivity(await getDb(), {
-    shopId: s.user.shopId,
-    tripId,
-    actorPersonId: s.user.personId,
-    action: `added ${parsed.data.fullName} to the trip`,
-  });
-  // A walk-in gets their waiver right away too, when the trip needs one and they
-  // aren't already covered. Best-effort: a delivery failure never undoes the add.
-  try {
-    await issueWaiverOnJoin(await getDb(), s.user.shopId, outcome.bookingId);
-  } catch {
-    console.error("Waiver-on-join could not be issued", { bookingId: outcome.bookingId });
-  }
-  revalidateAndRedirect(back, `${back}?notice=diver-added&bid=${outcome.bookingId}`);
-}
-
-/**
- * Book a returning diver by identity — the "enter once, reuse everywhere" path.
- * No name/email is re-typed: the existing person row carries their certs,
- * waivers, rental fit, and history straight onto the trip. Same waiver-on-join
- * and capacity gate as the walk-in path.
- */
-export async function addExistingDiverAction(shopSlug: string, tripId: string, formData: FormData) {
-  const back = guestsPath(shopSlug, tripId);
-  const s = await requireStaffSession();
-  const parsed = existingDiverSchema.safeParse({ personId: formData.get("personId") });
-  if (!parsed.success) redirect(`${back}?notice=diver-invalid`);
-  const outcome = await createBooking(await getDb(), {
-    actor: "staff",
-    shopId: s.user.shopId,
-    tripId,
-    personId: parsed.data.personId,
-  });
-  if (!outcome.ok) {
-    await trackEvent({ name: "booking_blocked", source: "staff", reason: outcome.reason });
-    redirect(`${back}?notice=${addDiverNotice(outcome.reason)}`);
-  }
-  await trackEvent({ name: "booking_completed", source: "staff", partySize: 1 });
-  try {
-    await issueWaiverOnJoin(await getDb(), s.user.shopId, outcome.bookingId);
-  } catch {
-    console.error("Waiver-on-join could not be issued", { bookingId: outcome.bookingId });
-  }
-  revalidateAndRedirect(back, `${back}?notice=diver-added&bid=${outcome.bookingId}`);
 }
 
 /** Staff-entered wait-list entry — only valid once the trip is actually full. */

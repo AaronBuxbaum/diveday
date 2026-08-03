@@ -34,7 +34,11 @@ import { getShopById } from "@/db/shops";
 import { birthdayText } from "@/i18n/birthday-labels";
 import { depthWarningText } from "@/i18n/depth-labels";
 import { rollCallCheckpointText, rollCallLabelText } from "@/i18n/manifest-labels";
-import { readinessBlockerText } from "@/i18n/readiness-labels";
+import {
+  readinessBlockerText,
+  readinessStatusText,
+  readinessStatusTone,
+} from "@/i18n/readiness-labels";
 import { rentalFitLineText } from "@/i18n/rental-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -814,7 +818,8 @@ export default async function TripManifestPage({
         </div>
         <ul className="mt-4 divide-y divide-border rounded-lg border border-border bg-surface">
           {manifest.divers.map((diver, index) => {
-            const ready = diver.readiness.status === "ready";
+            const diverStatus = diver.readiness.status;
+            const ready = diverStatus === "ready";
             const rc = diver.rollCall;
             const boarded = rc?.state === "boarded";
             // A result staff recorded at *this* checkpoint, either way round. An
@@ -866,10 +871,11 @@ export default async function TripManifestPage({
                         {String(index + 1).padStart(2, "0")}
                       </span>
                       <h3 className="text-lg font-semibold">{diver.fullName}</h3>
-                      <Badge tone={ready ? "success" : "danger"}>
-                        {ready
-                          ? t("trips.manifest.readyToBoard")
-                          : t("trips.manifest.blockedBadge")}
+                      {/* The one readiness vocabulary (src/i18n/readiness-labels.ts).
+                          The manifest is where "Blocked" was already the word,
+                          which is why it is the word everywhere now. */}
+                      <Badge tone={readinessStatusTone(diverStatus)}>
+                        {readinessStatusText(t, diverStatus)}
                       </Badge>
                       {/* Counter check-in and boat roll call are different
                           questions — arrived vs. aboard — and `checked_in`

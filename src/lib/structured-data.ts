@@ -1,4 +1,5 @@
 import { currencyFractionDigits, minorToMajor } from "./money";
+import { publicCoursePath, publicSchedulePath, publicTripPath } from "./public-routes";
 import type { ReviewAggregate } from "./reviews";
 import { MAX_REVIEW_RATING, MIN_REVIEW_RATING } from "./reviews";
 
@@ -169,7 +170,7 @@ export function shopJsonLd(
   return {
     "@type": "SportsActivityLocation",
     name: shop.name,
-    url: absoluteUrl(origin, `/shop/${shop.slug}/schedule`),
+    url: absoluteUrl(origin, publicSchedulePath(shop.slug)),
     email: shop.contactEmail,
     telephone: shop.contactPhone,
     address: shopAddressOf(shop),
@@ -204,7 +205,7 @@ export function tripJsonLd(
   origin: string | null,
   aggregate: ReviewAggregate | null = null,
 ): JsonLdObject {
-  const url = absoluteUrl(origin, `/shop/${shop.slug}/schedule/${trip.id}`);
+  const url = absoluteUrl(origin, publicTripPath(shop.slug, trip.id));
   const openSeats = Math.max(0, trip.capacity - trip.booked);
   // A held or full trip is honestly SoldOut to a consumer: neither can be
   // booked right now, and InStock on either would send a diver to a page that
@@ -311,7 +312,7 @@ export function coursePageJsonLd(
   origin: string | null,
   aggregate: ReviewAggregate | null = null,
 ): JsonLdObject {
-  const url = absoluteUrl(origin, `/shop/${shop.slug}/courses/${course.slug}`);
+  const url = absoluteUrl(origin, publicCoursePath(shop.slug, course.slug));
   return {
     "@context": SCHEMA_CONTEXT,
     "@type": "Course",

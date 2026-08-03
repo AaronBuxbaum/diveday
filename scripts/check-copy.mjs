@@ -50,7 +50,7 @@ import process from "node:process";
  * (`message`, `label`, `text`, …) marks them as prose, the same discipline
  * `copyAttributes` already applies to JSX attributes. This caught
  * `divers/[personId]/_components/shared.ts`'s `PAYMENT_STATUS_LABELS` et al.
- * and `schedule/[id]/_components/types.ts`'s `ERROR_MESSAGES`
+ * and `trips/[id]/_components/types.ts`'s `ERROR_MESSAGES`
  * (docs ADR 20260731-domain-layer-copy-leaks).
  *
  * **`src/lib`, `src/db`, and `src/features`.** A sentence *returned* from domain, data, or

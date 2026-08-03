@@ -47,7 +47,7 @@ export const passwordConfirmSchema = z
  * translator itself; `src/app/onboard/page.tsx` maps each code through
  * `ONBOARD_ERROR_KEYS` into the diver bundle right before render (the same
  * shape as every other domain-layer code in this codebase — see
- * `ERROR_MESSAGE_KEYS` in the schedule/[id] booking flow).
+ * `ERROR_MESSAGE_KEYS` in the trips/[id] booking flow).
  */
 export type OnboardErrorCode =
   | "shop_name_required"

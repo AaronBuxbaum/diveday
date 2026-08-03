@@ -11,7 +11,11 @@ test("the ? help lists shortcuts and a g-sequence jumps between surfaces", async
   await page.keyboard.press("?");
   const dialog = page.getByRole("dialog", { name: "Keyboard shortcuts" });
   await expect(dialog).toBeVisible();
-  await expect(dialog.getByText("Go to Schedule")).toBeVisible();
+  // The sheet, the nav tab, and the palette all read one destination registry
+  // (src/lib/staff-destinations.ts), so they name the board identically.
+  await expect(dialog.getByText("Go to Board")).toBeVisible();
+  // An owner sees every sequence the registry defines, waivers included.
+  await expect(dialog.getByText("Go to Waivers")).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(dialog).toBeHidden();
 
@@ -26,6 +30,14 @@ test("the ? help lists shortcuts and a g-sequence jumps between surfaces", async
   await page.keyboard.press("g");
   await page.keyboard.press("d");
   await expect(page).toHaveURL(/\/divers$/);
+
+  // `g` then `b` still asks for Not ready by name, but it is a *view* of Today
+  // now rather than a route — so the sequence has to carry the view query. The
+  // bare shop root would land on the urgency queue and read as a dead key.
+  await page.keyboard.press("g");
+  await page.keyboard.press("b");
+  await expect(page).toHaveURL(/\?view=departures$/);
+  await expect(page.getByRole("heading", { name: "Not ready", level: 2 })).toBeVisible();
 });
 
 test("shortcuts stay dormant while typing in a field", async ({ page }) => {

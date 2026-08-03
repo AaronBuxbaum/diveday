@@ -10,7 +10,6 @@ import {
   canPersonRefund,
   loadActiveStaffRoles,
 } from "@/db/authz";
-import { createBooking } from "@/db/bookings";
 import { getDb } from "@/db/client";
 import { deleteDiver, getDiverProfile, updateDiver } from "@/db/divers";
 import {
@@ -452,28 +451,6 @@ export async function refundPaymentAction(shopSlug: string, personId: string, fo
     });
   }
   revalidateAndRedirect(base, `${base}?notice=${refunded ? "refunded" : "refund-failed"}`);
-}
-
-export async function bookActivityAction(shopSlug: string, personId: string, formData: FormData) {
-  const base = `/shop/${shopSlug}/divers/${personId}`;
-  const staff = await requireStaffSession();
-  const tripId = String(formData.get("tripId") ?? "");
-  const current = await getDiverProfile(await getDb(), staff.user.shopId, personId);
-  if (!tripId || !current?.person.email) redirect(`${base}?notice=booking-invalid`);
-  const result = await createBooking(await getDb(), {
-    actor: "staff",
-    shopId: staff.user.shopId,
-    tripId,
-    fullName: current.person.fullName,
-    email: current.person.email,
-    phone: current.person.phone ?? undefined,
-  });
-  await trackEvent(
-    result.ok
-      ? { name: "booking_completed", source: "staff", partySize: 1 }
-      : { name: "booking_blocked", source: "staff", reason: result.reason },
-  );
-  revalidateAndRedirect(base, `${base}?notice=${result.ok ? "booked" : result.reason}`);
 }
 
 export async function deletePersonAction(shopSlug: string, personId: string, _formData: FormData) {

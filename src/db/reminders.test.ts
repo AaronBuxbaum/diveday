@@ -6,9 +6,10 @@ import type { SmsDelivery, SmsMessage, SmsProvider } from "@/lib/notifications/s
 import { seededShopContext } from "@/test/db";
 import { createBookingParty } from "./bookings";
 import { sendDueReminders } from "./reminders";
-import { notificationDeliveries, people, shops } from "./schema";
+import { notificationDeliveries, people, shops, waiverRecords } from "./schema";
 import { setShopDockCallMinutes } from "./shops";
 import { upcomingTripsWithCounts, updateTripConditions } from "./trips";
+import { issueWaiverRequest } from "./waivers";
 
 // The seeded shop already has bookings on several future trips, so
 // sendDueReminders (a global cron) touches more than the one under test. Every
@@ -48,6 +49,7 @@ function fakeWhatsApp(result: SmsDelivery = { status: "sent", providerMessageId:
 }
 
 const PHONE = "+13055559999";
+const ORIGIN = "https://diveday.example";
 
 async function reminderContext() {
   const { db, shop } = await seededShopContext();
@@ -232,6 +234,50 @@ describe("sendDueReminders", () => {
     expect(typeof reminder.medicalReview).toBe("boolean");
   });
 
+  it("nudges an expired waiver link, and never sends the dead link back", async () => {
+    const { db, shop, bookingId, personId, inWeekBucket } = await reminderContext();
+    await db.update(people).set({ phone: PHONE }).where(eq(people.id, personId));
+    const issued = await issueWaiverRequest(db, {
+      shopId: shop.id,
+      bookingId,
+      now: inWeekBucket,
+    });
+    if (!issued.ok) throw new Error(`waiver issue failed: ${issued.reason}`);
+    // Age the signing link out. This is the ordinary case, not an edge one: a
+    // link lives a week, and a booking is often made months ahead.
+    await db
+      .update(waiverRecords)
+      .set({ expiresAt: new Date(inWeekBucket.getTime() - 1000) })
+      .where(eq(waiverRecords.id, issued.recordId));
+
+    const email = fakeEmail();
+    const sms = fakeSms();
+    await sendDueReminders(db, {
+      now: inWeekBucket,
+      emailProvider: email.provider,
+      smsProvider: sms.provider,
+      appOrigin: ORIGIN,
+    });
+
+    const [reminder] = emailsFor(email, bookingId);
+    expect(reminder.kind).toBe("trip_reminder_7d");
+    if (reminder.kind !== "trip_reminder_7d") return;
+    // Enrolled in the cadence: an aged-out link leaves the diver as unsigned as
+    // one that never arrived, so it earns the same nudge (2026-08-03).
+    // (This diver also has no cert card on file, so the list is not a
+    // singleton — the point is that the expired waiver is now *in* it.)
+    expect(reminder.outstanding).toContain("waiver_expired");
+    // Never a dead link: the only URL either channel carries is a `readiness`
+    // capability minted on this run, whose page mints a replacement signing
+    // link on tap. The expired waiver token must appear in neither.
+    expect(reminder.readinessUrl).toMatch(new RegExp(`^${ORIGIN}/ready/`));
+    expect(reminder.readinessUrl).not.toContain(issued.token);
+    const [text] = sms.sent.filter((m) => m.to === PHONE);
+    expect(text.body).toContain("Your waiver link expired");
+    expect(text.body).not.toContain(issued.token);
+    expect(text.body).not.toContain("/waivers/");
+  });
+
   it("enriches the night-before brief with conditions, packing, contact, and first-timer voice", async () => {
     const { db, shop, reef, bookingId, inWeekBucket } = await reminderContext();
     await updateTripConditions(db, shop.id, reef.id, {
@@ -262,6 +308,35 @@ describe("sendDueReminders", () => {
     expect(reminder.brief?.whoToText).toBe("+13055551234");
     // Pat has never dived with the shop before — the softer voice applies.
     expect(reminder.brief?.firstTimerNote).toContain("First boat dive");
+  });
+
+  it("writes the brief's conditions in the shop's own units", async () => {
+    // Same stored row as the test above (Celsius and metres on disk); only the
+    // shop's two display settings differ, and the diver's brief must follow
+    // them or it will disagree with the trip page it links to.
+    const { db, shop, reef, bookingId } = await reminderContext();
+    await updateTripConditions(db, shop.id, reef.id, {
+      waterTemperatureC: 27,
+      visibilityMeters: 20,
+    });
+    await db
+      .update(shops)
+      .set({ temperatureUnit: "fahrenheit", depthUnit: "feet" })
+      .where(eq(shops.id, shop.id));
+    const email = fakeEmail();
+
+    await sendDueReminders(db, {
+      now: new Date(reef.startsAt.getTime() - 10 * 60 * 60 * 1000),
+      emailProvider: email.provider,
+      smsProvider: fakeSms().provider,
+      appOrigin: null,
+    });
+
+    const [reminder] = emailsFor(email, bookingId);
+    if (reminder.kind !== "trip_reminder_24h") throw new Error("expected the night-before brief");
+    expect(reminder.brief?.forecast).toContain("81°F");
+    expect(reminder.brief?.forecast).toContain("66 ft");
+    expect(reminder.brief?.forecast).not.toContain("27°C");
   });
 
   it("keeps the 7-day reminder a light nudge with no brief", async () => {

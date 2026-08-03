@@ -4,13 +4,13 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { type BuilderCopy, type BuilderDay, ScheduleBuilder } from "./ScheduleBuilder";
 
-// The schedule route has no dynamic id, so `usePathname()` is what
+// The board route has no dynamic id, so `usePathname()` is what
 // ScheduleBuilder keys its disarm-on-revisit effect on (see the component's
 // own doc comment). `setMockPathname` simulates a navigation event —
 // including an Activity-preserved show/hide cycle, should
 // `cacheComponents: true` be re-enabled — without a real Next.js router.
 const { usePathname, setMockPathname } = vi.hoisted(() => {
-  let current = "/shop/blue-mantis/schedule";
+  let current = "/shop/blue-mantis/schedule/board";
   return {
     usePathname: vi.fn(() => current),
     setMockPathname: (next: string) => {
@@ -98,7 +98,7 @@ const actions = { add: noop, move: noop, duplicate: noop, remove: noop };
 
 afterEach(() => {
   cleanup();
-  setMockPathname("/shop/blue-mantis/schedule");
+  setMockPathname("/shop/blue-mantis/schedule/board");
 });
 
 describe("ScheduleBuilder unpriced-trip flag (task 150)", () => {
@@ -232,7 +232,7 @@ describe("ScheduleBuilder open-panel reset on revisit", () => {
     // be re-enabled, behaves like a fresh mount for effects, even though
     // state survived) — the schedule route has no dynamic id to key a fresh
     // instance by otherwise.
-    setMockPathname("/shop/blue-mantis/schedule?foo=bar");
+    setMockPathname("/shop/blue-mantis/schedule/board?foo=bar");
     rerender(
       <ScheduleBuilder
         shopSlug="blue-mantis"

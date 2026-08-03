@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { waiverSendCopy } from "@/app/actions/waiver-send-types";
 import { EmptyState } from "@/components/EmptyState";
+import { OperationalWindowNote, readinessPivots } from "@/components/OperationalWindowNote";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { WaiverSendControl } from "@/components/today/WaiverSendControl";
 import { Badge } from "@/components/ui/badge";
@@ -10,12 +11,21 @@ import { buttonClass } from "@/components/ui/button";
 import { listCheckInQueue } from "@/db/check-in";
 import { getDb } from "@/db/client";
 import { getShopBySlug } from "@/db/shops";
-import { readinessBlockerText } from "@/i18n/readiness-labels";
+import {
+  readinessBlockerText,
+  readinessStatusText,
+  readinessStatusTone,
+} from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { blockerFixFor } from "@/lib/blockers";
 import { allDiversCheckedIn } from "@/lib/check-in";
 import { formatShortDate, formatTimeRange } from "@/lib/format";
+import {
+  ARRIVALS_AHEAD_HOURS,
+  ARRIVALS_LOOKBACK_HOURS,
+  OPERATIONAL_HORIZON_DAYS,
+} from "@/lib/operational-window";
 import { requireStaffSession } from "@/lib/session";
 import { noticeFromParam } from "@/lib/staff-notices";
 import { checkInAction } from "./actions";
@@ -47,6 +57,13 @@ const noticeCopy: Record<
   staff_not_found: { tone: "danger", key: "checkIn.notice.staffNotFound" },
   invalid: { tone: "danger", key: "checkIn.notice.invalid" },
   walkin_added: { tone: "success", key: "checkIn.notice.walkinAdded" },
+  // The counter's *ordinary* outcome, not an edge case: a walk-in added on a
+  // name alone has no address to mail a waiver to, so the notice has to say
+  // the link is still owed rather than let "Added" imply it went out.
+  walkin_added_waiver_undelivered: {
+    tone: "warning",
+    key: "checkIn.notice.walkinAddedWaiverUndelivered",
+  },
   walkin_full: { tone: "danger", key: "checkIn.notice.walkinFull" },
   walkin_already: { tone: "neutral", key: "checkIn.notice.walkinAlready" },
   walkin_unavailable: { tone: "danger", key: "checkIn.notice.walkinUnavailable" },
@@ -103,10 +120,28 @@ export default async function CheckInPage({
         eyebrow={t("checkIn.eyebrow")}
         title={t("checkIn.title")}
         description={t("checkIn.description")}
-        // Today, Blockers, and Check-in each slice the same readiness data on
-        // a different, undocumented horizon (task 141, UX persona lens 17) —
-        // a diver "cleared" here can still show on one of the other two.
-        meta={<p className="text-sm text-muted">{t("checkIn.windowNote")}</p>}
+        // The same window sentence Today and Not ready print, plus the one
+        // extra clause naming how counter mode narrows it. The arrivals lens
+        // never reaches past the shared horizon (`arrivalsWindowIsInsideHorizon`),
+        // so a diver at the counter is always someone the other two also show
+        // (task 141, UX persona lens 17).
+        meta={
+          <OperationalWindowNote
+            copy={{
+              note: t("shared.operationalWindow.note", { days: OPERATIONAL_HORIZON_DAYS }),
+              lens: t("shared.operationalWindow.arrivalsLens", {
+                lookback: ARRIVALS_LOOKBACK_HOURS,
+                ahead: ARRIVALS_AHEAD_HOURS,
+              }),
+              pivotsLabel: t("shared.operationalWindow.pivotsLabel"),
+            }}
+            pivots={readinessPivots(shopSlug, "check_in", {
+              today: t("shared.shopNavLinks.today"),
+              blockers: t("shared.shopNavLinks.blockers"),
+              check_in: t("shared.shopNavLinks.checkIn"),
+            })}
+          />
+        }
         actions={
           <Link href={`/shop/${shopSlug}/check-in/walk-in`} className={buttonClass()}>
             {t("checkIn.walkIn.title")}
@@ -213,8 +248,12 @@ export default async function CheckInPage({
                       ) : null}
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
-                      <Badge tone={ready ? "success" : "warning"}>
-                        {ready ? t("checkIn.readyBadge") : t("checkIn.needsAttentionBadge")}
+                      {/* The one readiness vocabulary and the one tone per
+                          state (src/i18n/readiness-labels.ts). This badge used
+                          to say "Needs attention" in warning while the manifest
+                          said "Blocked" in danger about the very same diver. */}
+                      <Badge tone={readinessStatusTone(row.readiness.status)}>
+                        {readinessStatusText(t, row.readiness.status)}
                       </Badge>
                       {checkedIn ? null : ready ? (
                         <form action={checkInAction.bind(null, shopSlug)}>
@@ -232,7 +271,13 @@ export default async function CheckInPage({
                   </div>
                   {!ready ? (
                     <>
-                      <ul className="mt-4 space-y-1 border-t border-border pt-3 text-sm text-warning">
+                      {/* Danger, matching the roster and the manifest — and the
+                          Blocked badge these reasons sit under. A blocked diver
+                          is always danger (glossary / `readinessStatusTone`);
+                          the counter reading the same fact in warning was the
+                          one place the shop's readiness vocabulary changed
+                          colour between surfaces. */}
+                      <ul className="mt-4 space-y-1 border-t border-border pt-3 text-sm text-danger">
                         {row.readiness.blockers.slice(0, 3).map((blocker) => (
                           <li key={blocker.code}>• {readinessBlockerText(t, blocker)}</li>
                         ))}

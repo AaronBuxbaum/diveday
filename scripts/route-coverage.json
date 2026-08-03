@@ -1,9 +1,9 @@
 {
-  "//": "Every `src/app/**/page.tsx` route and the tests that cover it. `e2e` names spec files under e2e/, `visual` names captures in e2e/visual.spec.ts, `exempt` states why a route has neither. Mechanical facts are written by `node scripts/check-route-coverage.mjs --write`; the coverage lists are hand-maintained on purpose — see scripts/check-route-coverage.mjs.",
   "/": {
     "e2e": ["demo.spec.ts", "manifest.spec.ts", "marketing.spec.ts", "seo.spec.ts"],
     "visual": ["landing"]
   },
+  "//": "Every `src/app/**/page.tsx` route and the tests that cover it. `e2e` names spec files under e2e/, `visual` names captures in e2e/visual.spec.ts, `exempt` states why a route has neither. Mechanical facts are written by `node scripts/check-route-coverage.mjs --write`; the coverage lists are hand-maintained on purpose \u2014 see scripts/check-route-coverage.mjs.",
   "/about": {
     "e2e": ["seo.spec.ts"],
     "visual": ["about"]
@@ -51,6 +51,66 @@
     "e2e": ["account-lifecycle.spec.ts"],
     "visual": ["reset-password-invalid"]
   },
+  "/s/[shopSlug]": {
+    "e2e": [
+      "a11y.spec.ts",
+      "booking.spec.ts",
+      "courses.spec.ts",
+      "courtesy-email-unsubscribe.spec.ts",
+      "dive-sites.spec.ts",
+      "last-minute-fill.spec.ts",
+      "next-departure.spec.ts",
+      "nitrox.spec.ts",
+      "readiness.spec.ts",
+      "refunds.spec.ts",
+      "rentals.spec.ts",
+      "returning-diver.spec.ts",
+      "reviews.spec.ts",
+      "schedule-embed.spec.ts",
+      "schedule-filters.spec.ts",
+      "schedule-trip.spec.ts",
+      "self-service-reschedule.spec.ts",
+      "seo.spec.ts",
+      "tenant-isolation.spec.ts",
+      "trips.spec.ts"
+    ],
+    "visual": ["schedule", "schedule-embed"]
+  },
+  "/s/[shopSlug]/courses": {
+    "e2e": ["courses.spec.ts"],
+    "visual": ["public-courses"]
+  },
+  "/s/[shopSlug]/courses/[slug]": {
+    "e2e": ["course-paths.spec.ts", "courses.spec.ts", "gear-fit-and-age.spec.ts"],
+    "visual": ["course-page"]
+  },
+  "/s/[shopSlug]/courses/paths": {
+    "e2e": ["course-paths.spec.ts"],
+    "visual": ["public-course-paths"]
+  },
+  "/s/[shopSlug]/courses/paths/[pathSlug]": {
+    "e2e": ["course-paths.spec.ts"],
+    "visual": ["public-course-paths"]
+  },
+  "/s/[shopSlug]/trips/[id]": {
+    "e2e": [
+      "a11y.spec.ts",
+      "booking.spec.ts",
+      "courses.spec.ts",
+      "dive-sites.spec.ts",
+      "keyboard-shortcuts.spec.ts",
+      "next-departure.spec.ts",
+      "nitrox.spec.ts",
+      "promo-codes.spec.ts",
+      "readiness.spec.ts",
+      "refunds.spec.ts",
+      "rentals.spec.ts",
+      "returning-diver.spec.ts",
+      "self-service-reschedule.spec.ts",
+      "schedule-embed.spec.ts"
+    ],
+    "visual": ["site-briefing"]
+  },
   "/shop/[shopSlug]": {
     "e2e": [
       "boat-loop.spec.ts",
@@ -69,6 +129,14 @@
     "e2e": ["blockers.spec.ts", "tenant-isolation.spec.ts"],
     "visual": ["blockers"]
   },
+  "/shop/[shopSlug]/bookings/new": {
+    "e2e": ["add-diver.spec.ts"],
+    "visual": ["booking-new"]
+  },
+  "/shop/[shopSlug]/bookings/new/[tripId]": {
+    "e2e": ["add-diver.spec.ts"],
+    "visual": ["booking-new-diver"]
+  },
   "/shop/[shopSlug]/check-in": {
     "e2e": ["check-in.spec.ts", "tenant-isolation.spec.ts"],
     "visual": []
@@ -80,10 +148,6 @@
   "/shop/[shopSlug]/courses": {
     "e2e": ["course-paths.spec.ts", "courses.spec.ts"],
     "visual": ["courses-list"]
-  },
-  "/shop/[shopSlug]/courses/[slug]": {
-    "e2e": ["course-paths.spec.ts", "courses.spec.ts", "gear-fit-and-age.spec.ts"],
-    "visual": ["course-page"]
   },
   "/shop/[shopSlug]/courses/[slug]/edit": {
     "e2e": ["courses.spec.ts", "search.spec.ts"],
@@ -107,8 +171,8 @@
   },
   "/shop/[shopSlug]/dive-sites/catalog": {
     "e2e": [],
-    "visual": [],
-    "exempt": "no coverage yet — found by the 2026-08-03 test-system evaluation; needs a spec"
+    "exempt": "no coverage yet \u2014 found by the 2026-08-03 test-system evaluation; needs a spec",
+    "visual": []
   },
   "/shop/[shopSlug]/dive-sites/new": {
     "e2e": ["dive-sites.spec.ts"],
@@ -154,8 +218,8 @@
   },
   "/shop/[shopSlug]/orders/new": {
     "e2e": [],
-    "visual": [],
-    "exempt": "no coverage yet — found by the 2026-08-03 test-system evaluation; needs a spec"
+    "exempt": "no coverage yet \u2014 found by the 2026-08-03 test-system evaluation; needs a spec",
+    "visual": []
   },
   "/shop/[shopSlug]/promos": {
     "e2e": ["promo-codes.spec.ts"],
@@ -168,49 +232,6 @@
   "/shop/[shopSlug]/reviews": {
     "e2e": ["reviews.spec.ts", "tenant-isolation.spec.ts"],
     "visual": ["staff-reviews"]
-  },
-  "/shop/[shopSlug]/schedule": {
-    "e2e": [
-      "a11y.spec.ts",
-      "booking.spec.ts",
-      "courses.spec.ts",
-      "courtesy-email-unsubscribe.spec.ts",
-      "dive-sites.spec.ts",
-      "last-minute-fill.spec.ts",
-      "next-departure.spec.ts",
-      "nitrox.spec.ts",
-      "readiness.spec.ts",
-      "refunds.spec.ts",
-      "rentals.spec.ts",
-      "returning-diver.spec.ts",
-      "reviews.spec.ts",
-      "schedule-embed.spec.ts",
-      "schedule-filters.spec.ts",
-      "schedule-trip.spec.ts",
-      "self-service-reschedule.spec.ts",
-      "seo.spec.ts",
-      "tenant-isolation.spec.ts",
-      "trips.spec.ts"
-    ],
-    "visual": ["schedule", "schedule-embed"]
-  },
-  "/shop/[shopSlug]/schedule/[id]": {
-    "e2e": [
-      "a11y.spec.ts",
-      "booking.spec.ts",
-      "courses.spec.ts",
-      "dive-sites.spec.ts",
-      "keyboard-shortcuts.spec.ts",
-      "next-departure.spec.ts",
-      "nitrox.spec.ts",
-      "promo-codes.spec.ts",
-      "readiness.spec.ts",
-      "refunds.spec.ts",
-      "rentals.spec.ts",
-      "returning-diver.spec.ts",
-      "self-service-reschedule.spec.ts"
-    ],
-    "visual": ["site-briefing"]
   },
   "/shop/[shopSlug]/schedule/board": {
     "e2e": [
@@ -273,8 +294,8 @@
   },
   "/shop/[shopSlug]/staffing": {
     "e2e": [],
-    "visual": [],
-    "exempt": "no coverage yet — found by the 2026-08-03 test-system evaluation; needs a spec (e2e/search.spec.ts hops here from the command palette but asserts only the URL, never that the page renders)"
+    "exempt": "no coverage yet \u2014 found by the 2026-08-03 test-system evaluation; needs a spec (e2e/search.spec.ts hops here from the command palette but asserts only the URL, never that the page renders)",
+    "visual": []
   },
   "/shop/[shopSlug]/trips/[id]": {
     "e2e": [

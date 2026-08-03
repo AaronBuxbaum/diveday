@@ -52,13 +52,13 @@ function overrideRequestHeaders(
 
 export async function proxy(req: NextRequest, ctx: unknown): Promise<Response | undefined> {
   // The route pattern alone (isEmbeddableShopRoute) isn't a request — a plain
-  // visit to /shop/x/schedule with no ?embed=1 must stay denied. Only an
+  // visit to /s/x with no ?embed=1 must stay denied. Only an
   // actual embed request gets the exception. `searchParams.get()` silently
   // returns just the *first* value on a repeated `?embed=1&embed=0`, which
   // would grant the framing exception here while every page's own
   // `searchParams.embed` prop receives the same repeated param as an array
-  // (`!== "1"`, so the page renders full staff chrome) — a signed-in staff
-  // dashboard framable by whoever crafted that URL. `getAll()` and requiring
+  // (`!== "1"`, so the page renders its full non-embed chrome) — a page
+  // framable by whoever crafted that URL. `getAll()` and requiring
   // exactly one value keeps this in lockstep with how the page reads it.
   const embedParams = req.nextUrl.searchParams.getAll("embed");
   const isEmbedRequest =
@@ -85,15 +85,15 @@ export async function proxy(req: NextRequest, ctx: unknown): Promise<Response | 
     }
   }
   // Forward embed-mode and the request's own pathname to the server-component
-  // tree — `ShopLayout` can't read searchParams or the URL itself (only
-  // page.tsx can), so these headers are the one way it learns "this render is
-  // going into someone else's iframe" and "this is which route." Both are
-  // always overridden, on the request as it continues, never left at whatever
-  // a client happened to send: a spoofed value must never survive. The
-  // pathname one is what lets `ShopLayout` apply `isPublicShopRoute` — the
-  // same predicate the `authorized` gate above already runs on the same
-  // `nextUrl.pathname` — so a cross-tenant staff visit 404s while this shop's
-  // public schedule and course pages keep rendering for anyone.
+  // tree — a layout can't read searchParams or the URL itself (only page.tsx
+  // can), so these headers are the one way it learns "this render is going
+  // into someone else's iframe" and "this is which route." Both are always
+  // overridden, on the request as it continues, never left at whatever a
+  // client happened to send: a spoofed value must never survive. Since the
+  // public namespace split (ADR 20260803-public-shop-namespace) the embed
+  // header's reader is the /s shell; the pathname header currently has no
+  // production reader — it stays stamped because the overwrite discipline
+  // here is what makes any future reader safe, and src/proxy.test.ts pins it.
   overrideRequestHeaders(req, res, {
     [EMBED_REQUEST_HEADER]: isEmbedRequest ? "1" : "",
     [REQUEST_PATH_HEADER]: req.nextUrl.pathname,

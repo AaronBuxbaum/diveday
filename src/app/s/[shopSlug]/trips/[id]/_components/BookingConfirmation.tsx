@@ -1,0 +1,294 @@
+import Link from "next/link";
+import { EarnedMoment } from "@/components/EarnedMoment";
+import { SubmitButton } from "@/components/SubmitButton";
+import { buttonClass } from "@/components/ui/button";
+import { diverTranslator } from "@/i18n/messages";
+import { checklistCategoryText, checklistDetailText } from "@/i18n/readiness-summary-labels";
+import { formatMoneyCents, formatShortDate, formatTimeRangeTz } from "@/lib/format";
+import { toShopCurrency } from "@/lib/money";
+import { publicCoursePath, publicSchedulePath } from "@/lib/public-routes";
+import { buildDiverChecklist, nextDiverStep } from "@/lib/readiness-summary";
+import {
+  payForBooking,
+  type RentalFitRef,
+  saveRentalFitRequest,
+  signWaiverFromConfirmation,
+} from "../actions";
+import { RememberBooker } from "./RememberBooker";
+import { RentalFitForm } from "./RentalFitForm";
+import type {
+  Confirmed,
+  PaymentPanel,
+  Readiness,
+  RentalFit,
+  Requirement,
+  Shop,
+  Trip,
+} from "./types";
+
+function PaymentSection({
+  payment,
+  payCancelled,
+  payRef,
+  locale,
+}: {
+  payment: PaymentPanel;
+  payCancelled: boolean;
+  payRef: RentalFitRef;
+  locale: string;
+}) {
+  if (!payment) return null;
+  const t = diverTranslator(locale);
+
+  if (payment.state === "paid") {
+    const depositWithBalance = payment.isDeposit && payment.balanceDueCents > 0;
+    // The currency comes off the settled payment row, not today's shop
+    // setting: a receipt is evidence of what was charged, and a shop that
+    // switches currency next season must not restate last season's amount
+    // (docs ADR 20260731-shop-currency). The balance is the remainder of that
+    // same charge, so it is quoted in the same currency. `formatMoneyCents`
+    // divides by *that* currency's minor unit — a ¥9,000 deposit is not ¥90.
+    const money = (cents: number) => formatMoneyCents(cents, payment.currency, locale);
+    return (
+      <div className="mt-4 rounded-lg border border-success/40 bg-success/10 p-4 text-left">
+        <h3 className="font-semibold text-success">
+          {depositWithBalance ? t("booking.paymentDepositReceived") : t("booking.paymentReceived")}
+          {payment.amountCents !== null ? ` — ${money(payment.amountCents)}` : ""} ✓
+        </h3>
+        <p className="mt-1 text-sm text-muted">
+          {depositWithBalance
+            ? t("booking.paymentDepositBalance", {
+                balance: money(payment.balanceDueCents),
+              })
+            : t("booking.paymentSquare")}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-4 rounded-lg border border-border bg-surface/70 p-4 text-left">
+      <h3 className="font-semibold">
+        {payCancelled ? t("booking.paymentStillOpen") : t("booking.paymentOneThingLeft")}
+      </h3>
+      <p className="mt-1 text-sm text-muted">{t("booking.paymentBody")}</p>
+      {payment.state === "pending" ? (
+        <a
+          href={payment.checkoutUrl}
+          className={buttonClass({ className: "mt-3 px-5 py-2.5 text-base" })}
+        >
+          {t("booking.finishPaying")}
+        </a>
+      ) : (
+        <form action={payForBooking.bind(null, payRef)} className="mt-3">
+          <SubmitButton
+            pendingLabel={t("booking.openingPayment")}
+            className={buttonClass({ className: "px-5 py-2.5 text-base disabled:opacity-70" })}
+          >
+            {t("booking.payNow")}
+          </SubmitButton>
+        </form>
+      )}
+    </div>
+  );
+}
+
+export function BookingConfirmation({
+  shop,
+  shopSlug,
+  locale,
+  trip,
+  confirmed,
+  readiness,
+  requirement,
+  fitRef,
+  rentalFit,
+  nitroxCardVerified,
+  fitSaved,
+  payment,
+  payCancelled,
+  readinessLink,
+  progression,
+  emailsOnTheWay,
+}: {
+  shop: Shop;
+  shopSlug: string;
+  /** The negotiated request locale, not the shop's stored default. */
+  locale: string;
+  trip: Trip;
+  confirmed: Confirmed;
+  readiness: Readiness | null;
+  requirement: Requirement | null;
+  fitRef: RentalFitRef;
+  rentalFit: RentalFit;
+  nitroxCardVerified: boolean;
+  fitSaved: boolean;
+  payment: PaymentPanel;
+  payCancelled: boolean;
+  /** Null when no readiness capability could be issued (e.g. no canonical origin configured). */
+  readinessLink: string | null;
+  /**
+   * The next rung of one of the shop's own certification paths, or null when
+   * the shop has not built a path that reaches this diver. Never a guess — see
+   * `nextPathStep` in src/db/course-paths.ts.
+   */
+  progression: {
+    path: { title: string };
+    step: { note: string | null; course: { title: string; slug: string } };
+  } | null;
+  /**
+   * True only when this booking's confirmation email *and* its waiver-link
+   * email both actually went out. A walk-in party member with no address of
+   * their own gets neither, so the page must not promise them — see
+   * `bookingConfirmationAndWaiverEmailsSent`.
+   */
+  emailsOnTheWay: boolean;
+}) {
+  const t = diverTranslator(locale);
+  const checklist = readiness ? buildDiverChecklist(requirement, readiness) : [];
+  const nextStep = nextDiverStep(checklist);
+  // The waiver is the real next step after booking, so offer it here rather
+  // than one hop further on `/ready`. Only for the diver this confirmation
+  // belongs to: the action derives the booking from the verified `confirm`
+  // capability, so a party member's waiver is never reachable from here.
+  //
+  // Not inside the embed widget: `/waivers/[token]` is deliberately outside
+  // the framing allowlist (docs ADR 20260726-schedule-embed), so a server
+  // action redirecting there would swap a working iframe for a blocked frame.
+  // Embedded divers keep the readiness link below, which breaks out to `_top`.
+  const waiverStep =
+    !fitRef.embed &&
+    checklist.some((item) => item.code === "waiver_pending" || item.code === "waiver_expired");
+  // Money first when both are outstanding: a still-open Stripe session is the
+  // one thing that expires, and one primary-weight control per section is the
+  // rule (design/principles.md #8).
+  const paymentHoldsThePrimary = payment !== null && payment.state !== "paid";
+
+  return (
+    <>
+      {/* Client-only, per-device convenience (task 27) — never in the embed
+          widget, whose whole point is to leave no trace on a shop's own
+          site (docs ADR 20260726-schedule-embed). */}
+      {!fitRef.embed && confirmed.person.email ? (
+        <RememberBooker fullName={confirmed.person.fullName} email={confirmed.person.email} />
+      ) : null}
+      {/* Same shared component /ready and /recap use for their earned moment
+          — this page hand-rolled its own accent box before, which is how its
+          radius (rounded-lg) and missing eyebrow drifted from theirs
+          (design/principles.md #3). */}
+      <EarnedMoment
+        className="mt-10"
+        title={t("booking.confirmedHeading", {
+          name: confirmed.person.fullName.split(" ")[0],
+        })}
+      >
+        <p>
+          {t("booking.confirmedDockCall", {
+            date: formatShortDate(trip.startsAt, locale, shop.timezone),
+            time: formatTimeRangeTz(trip.startsAt, trip.endsAt, locale, shop.timezone),
+            minutes: shop.dockCallMinutes,
+          })}
+        </p>
+      </EarnedMoment>
+
+      {/* Two messages land within seconds of each other; saying so up front
+          stops the second one reading as a duplicate or a mistake. Claimed
+          only when both actually left the building. */}
+      {emailsOnTheWay ? (
+        <p className="mt-3 text-sm text-muted">{t("booking.emailsOnTheWay")}</p>
+      ) : null}
+
+      <PaymentSection
+        payment={payment}
+        payCancelled={payCancelled}
+        payRef={fitRef}
+        locale={locale}
+      />
+
+      {progression ? (
+        <aside className="mt-4 rounded-lg border border-primary/30 bg-primary/5 p-4">
+          <p className="text-xs font-semibold tracking-widest text-primary uppercase">
+            {progression.path.title}
+          </p>
+          <h3 className="mt-1 font-semibold">{t("booking.goDeeperHeading")}</h3>
+          <p className="mt-1 text-sm text-muted">
+            {t("booking.goDeeperBody", { course: progression.step.course.title })}
+          </p>
+          {progression.step.note ? (
+            <p className="mt-1 text-sm text-muted italic">{progression.step.note}</p>
+          ) : null}
+          <Link
+            href={publicCoursePath(shopSlug, progression.step.course.slug)}
+            className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-primary hover:underline"
+          >
+            {t("booking.goDeeperCta")}
+          </Link>
+        </aside>
+      ) : null}
+
+      <div className="mt-4 rounded-lg border border-border bg-surface/70 p-4 text-left">
+        {nextStep ? (
+          <>
+            <h3 className="font-semibold">
+              {t("booking.nextStep", {
+                step: checklistCategoryText(t, nextStep.category).toLowerCase(),
+              })}
+            </h3>
+            <p className="mt-1 text-sm text-muted">{checklistDetailText(t, nextStep)}</p>
+          </>
+        ) : readiness?.status === "ready" ? (
+          <h3 className="font-semibold text-success">{t("booking.allSet")}</h3>
+        ) : (
+          <>
+            <h3 className="font-semibold">{t("booking.shopTakesOver")}</h3>
+            <p className="mt-1 text-sm text-muted">{t("booking.shopTakesOverBody")}</p>
+          </>
+        )}
+        {waiverStep ? (
+          <form action={signWaiverFromConfirmation.bind(null, fitRef)} className="mt-3">
+            <SubmitButton
+              pendingLabel={t("booking.openingWaiver")}
+              className={buttonClass({
+                variant: paymentHoldsThePrimary ? "secondary" : "primary",
+                size: "lg",
+                className: "disabled:opacity-70",
+              })}
+            >
+              {t("booking.signWaiverNow")}
+            </SubmitButton>
+          </form>
+        ) : null}
+        <Link
+          href={readinessLink ?? "#"}
+          aria-disabled={readinessLink === null}
+          // /ready/[token] isn't in the embed framing allowlist (docs ADR
+          // 20260726-schedule-embed) — inside the iframe this must break out
+          // to the top-level window, or the click would swap the working
+          // embed for a frame Content-Security-Policy silently blocks.
+          target={fitRef.embed ? "_top" : undefined}
+          className="mt-3 inline-block text-sm font-semibold text-primary hover:underline aria-disabled:pointer-events-none aria-disabled:opacity-60"
+        >
+          {t("booking.trackReadiness")}
+        </Link>
+      </div>
+
+      <RentalFitForm
+        action={saveRentalFitRequest.bind(null, fitRef)}
+        rentalFit={rentalFit}
+        rentalItems={shop.rentalItems}
+        pricing={shop.rentalPricing}
+        wantsNitrox={confirmed.booking.wantsNitrox}
+        nitroxCardVerified={nitroxCardVerified}
+        plannedDives={trip.plannedDives}
+        saved={fitSaved}
+        currency={toShopCurrency(shop.currency)}
+      />
+      <Link
+        href={`${publicSchedulePath(shopSlug)}${fitRef.embed ? "?embed=1" : ""}`}
+        className="mt-3 inline-flex min-h-11 items-center text-base font-medium text-primary hover:underline"
+      >
+        {t("common.backToSchedule")}
+      </Link>
+    </>
+  );
+}

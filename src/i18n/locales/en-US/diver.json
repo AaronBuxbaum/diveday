@@ -11,15 +11,21 @@
     "email": "Email",
     "phone": "Phone",
     "saving": "Saving…",
-    "rateLimited": "Too many attempts. Please wait a few minutes and try again."
+    "rateLimited": "Too many attempts. Please wait a few minutes and try again.",
+    "units": {
+      "meters": "{value} m",
+      "feet": "{value} ft",
+      "celsius": "{value}°C",
+      "fahrenheit": "{value}°F"
+    }
   },
   "shopChrome": {
+    "skipToContent": "Skip to main content",
     "footerLine": "{shop} · Powered by DiveDay"
   },
   "schedule": {
     "eyebrow": "Trips",
     "title": "Schedule",
-    "staffDescription": "Upcoming trips. Open a departure to work through its roster, readiness, prep list, and manifest.",
     "diverDescription": "Find your next day on the water, see what to expect, and reserve your spot.",
     "noTrips": "No trips on the books yet",
     "noTripsStaff": "The board is clear. Schedule your first departure and divers can start booking.",
@@ -92,8 +98,8 @@
       "crewBriefing": "Crew briefing"
     },
     "temperatureTip": {
-      "cold": "Water is expected around {celsius}°C — ask the shop whether you need extra exposure protection.",
-      "mild": "Water is expected around {celsius}°C — use the shop's wetsuit guidance for comfort."
+      "cold": "Water is expected around {temperature} — ask the shop whether you need extra exposure protection.",
+      "mild": "Water is expected around {temperature} — use the shop's wetsuit guidance for comfort."
     },
     "dockDayRhythm": "Your dock-day rhythm",
     "briefingsEyebrow": "Dive briefings",
@@ -231,13 +237,18 @@
       "phoneTooLong": "That phone number is too long.",
       "noteTooLong": "Keep this note under 300 characters.",
       "promoInvalid": "That code isn't active."
-    }
+    },
+    "signWaiverNow": "Sign your waiver now",
+    "openingWaiver": "Opening your waiver…",
+    "emailsOnTheWay": "Two emails are on their way: your booking confirmation, and the link to sign your waiver."
   },
   "bookingGear": {
     "heading": "Rental gear",
     "introBody": "Add what you need and we'll charge it together with your booking. You can fine-tune exact sizes after booking.",
     "diverNHeading": "Diver {number}'s gear",
-    "gearTotal": "Gear for this diver: {price}"
+    "gearTotal": "Gear for this diver: {price}",
+    "needGear": "Need rental gear?",
+    "skipBody": "Bringing your own kit? Leave this unchecked and you won't be charged for gear. Check it to see what we rent."
   },
   "lastMinute": {
     "heading": "Want a deal on a last-minute spot?",
@@ -472,6 +483,7 @@
     "stateWaiting": "With the shop",
     "opening": "Opening…",
     "signWaiver": "Sign your waiver",
+    "freshWaiverLink": "Get a fresh waiver link",
     "payForTrip": "Pay for this trip",
     "cancelledSeatReleased": "Your seat on {trip} is no longer held. If that’s a surprise, get in touch with {shop}.",
     "seeYou": "See you {when}, {name}! 🤿",
@@ -492,7 +504,7 @@
       "underMinimumAge": "This course has a minimum age that the date of birth on file doesn’t meet for this session. If that’s wrong, reach out to the shop and they’ll sort it out.",
       "waiverNotSent": "The shop hasn’t sent your waiver yet — you can ask for it when you arrive, or reach them below.",
       "waiverPending": "Sign your waiver — it only takes about two minutes.",
-      "waiverExpired": "Your waiver link expired — ask the shop for a fresh one.",
+      "waiverExpired": "Your waiver link ran out — grab a fresh one, it only takes about two minutes.",
       "medicalReview": "Thanks for signing. One medical answer needs a closer look — a doctor’s sign-off may be required, and your shop will be in touch about next steps.",
       "certificationMissing": "Get your certification card to the shop — upload a photo or get in touch — so they can add it to your file.",
       "certificationPending": "Your certification card is with the shop for verification.",
@@ -513,6 +525,9 @@
     "emergencyOnFile": "On file — {name}.",
     "changePlans": "Need to change your plans?",
     "reschedulePitch": "Pick a different trip and we’ll move you — your current spot only releases once the new one’s confirmed, so you’re never left without one.",
+    "moveNeedsShop": "This booking is already paid, so moving it isn’t something you can do here — the shop can move you and sort out the money side. Cancelling is still yours to do below.",
+    "noOtherTrips": "There’s no other departure with room on the calendar right now, so there’s nowhere to move you to yet. The shop can tell you what’s coming up.",
+    "manageShopOnly": "Plans changed today? Your spot is past changing on your own now — call the shop and they’ll sort it out with you.",
     "pickATrip": "Pick a trip",
     "spotsLeft": "{count, plural, one {# left} other {# left}}",
     "moving": "Moving…",
@@ -542,7 +557,15 @@
     "unavailableHeading": "This waiver link isn’t available",
     "unavailableBody": "Ask your dive shop for a fresh link.",
     "expiredHeading": "This waiver link has expired",
-    "expiredBody": "Your saved answers are kept — ask the shop for a fresh link.",
+    "expiredBody": "Waiver links don’t stay open for long, and this one has run out. We can email you a fresh one.",
+    "emailFreshLink": "Email me a fresh link",
+    "sendingFreshLink": "Sending…",
+    "freshLinkSent": "On its way — check the email address on your booking. It should land in a minute or two.",
+    "freshLinkAlreadySigned": "Good news — your waiver is already signed and on file. Nothing left to do.",
+    "freshLinkCurrentLive": "You already have a newer link, and it still works — have a look for our most recent email. Anything you’d started filling in is saved there, waiting for you.",
+    "freshLinkNoEmail": "There’s no email address on your booking, so we can’t send it. Reach out to the shop and they’ll hand you a new link.",
+    "freshLinkUnavailable": "We can’t send a new link for this booking. Reach out to the shop and they’ll sort it out.",
+    "freshLinkFailed": "That didn’t go through. Try again in a moment, or reach out to the shop.",
     "scheduledSites": "Your scheduled dive sites",
     "templateVersion": "{title} · version {version}",
     "emergencyContact": "Emergency contact",
@@ -572,6 +595,8 @@
     "beforeDockDescription": "This private waiver takes about two minutes. You can save your place and come back on this link before it expires.",
     "tripHeader": "{trip} — {when}, {time}",
     "linkExpiresAt": "This link works until {date}.",
+    "answerYes": "Yes",
+    "answerNo": "No",
     "yesReassurance": "A yes means a doctor should confirm you’re fit to dive — it doesn’t cancel your trip.",
     "questionsAnswered": "{answered} of {total} answered",
     "progressSaved": "Your progress is saved. Finish whenever you're ready.",
@@ -798,7 +823,8 @@
       "signingIn": "Signing in…",
       "submit": "Sign in",
       "needShop": "Need a shop?",
-      "createShop": "Create a shop"
+      "createShop": "Create a shop",
+      "publicSchedule": "Looking for the dive schedule?"
     },
     "onboard": {
       "eyebrow": "Founding shop",
@@ -1376,8 +1402,8 @@
   },
   "notifications": {
     "brief": {
-      "waterTemp": "water around {celsius}°C",
-      "visibility": "visibility near {meters} m",
+      "waterTemp": "water around {value}",
+      "visibility": "visibility near {value}",
       "expect": "Expect {list}.",
       "firstTimer": "First boat dive? The crew walks everyone through the gear and the plan before you get in — you'll never be handed kit and left to figure it out. Come with questions.",
       "conditionsLabel": "Conditions:",
@@ -1386,6 +1412,7 @@
     },
     "reminderAction": {
       "waiverPending": "Sign your waiver",
+      "waiverExpired": "Your waiver link expired — grab a fresh one, it only takes about two minutes",
       "certificationMissing": "Send your shop your certification card",
       "certificationExpired": "Check on your shop's refresher date for your certification",
       "certificationInsufficient": "Check your certification level with the shop",

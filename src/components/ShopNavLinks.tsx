@@ -2,8 +2,18 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import {
+  STAFF_DESTINATION_BADGE_TONES,
+  type StaffDestination,
+  type StaffDestinationBadge,
+  type StaffDestinationCounts,
+  type StaffDestinationGates,
+  type StaffDestinationLabels,
+  staffDestinationHref,
+  staffNavDestinations,
+} from "@/lib/staff-destinations";
 
 // `whitespace-nowrap`: the primary row is `flex-1` per link inside a
 // horizontally scrolling, snapping strip. Without it a narrow phone shrinks
@@ -12,12 +22,8 @@ import { Badge } from "@/components/ui/badge";
 const linkClass =
   "inline-flex min-h-11 items-center rounded-xl px-2 py-2 text-sm font-medium whitespace-nowrap transition-colors duration-200 hover:bg-surface-sunken hover:text-foreground sm:px-3";
 
-/** Owner/manager surfaces (H-14) carry a gate key; everyone else always sees the link. */
-export type ShopNavGates = {
-  waivers: boolean;
-  reports: boolean;
-  team: boolean;
-};
+/** Owner/manager surfaces (H-14) carry a gate; everyone else always sees the link. */
+export type ShopNavGates = StaffDestinationGates;
 
 /**
  * Small "pending work" counts, server-computed on each page that already
@@ -25,77 +31,29 @@ export type ShopNavGates = {
  * of divers who can't board yet — so a badge here never runs its own extra
  * query (task 83, UX persona 11 "Kai" / persona 12 "Maren").
  */
-export type ShopNavCounts = {
-  reviews: number;
-  blockers: number;
-};
+export type ShopNavCounts = StaffDestinationCounts;
 
-/** Every word this component renders, resolved server-side. */
+/**
+ * Every word this component renders, resolved server-side. The destination
+ * labels are one record keyed by registry id (src/lib/staff-destinations.ts),
+ * so a new destination is a type error here until it has a word.
+ */
 export interface ShopNavLinksCopy {
   primaryNavAriaLabel: string;
   more: string;
-  today: string;
-  checkIn: string;
-  blockers: string;
-  divers: string;
-  schedule: string;
-  staffing: string;
-  diveSites: string;
-  courses: string;
-  reviews: string;
-  waivers: string;
-  reports: string;
-  promoCodes: string;
-  settings: string;
-  team: string;
-}
-
-function primaryLinks(
-  copy: ShopNavLinksCopy,
-): { label: string; suffix: string; alsoMatch?: string; count?: keyof ShopNavCounts }[] {
-  return [
-    { label: copy.today, suffix: "" },
-    { label: copy.checkIn, suffix: "/check-in" },
-    { label: copy.blockers, suffix: "/blockers", count: "blockers" },
-    { label: copy.divers, suffix: "/divers" },
-    // Staff work a trip on /trips/[id], which is the Schedule surface's detail
-    // view — keep the Schedule tab lit so they don't lose their place. The
-    // operations board is a segment below the public page it's split from
-    // (Lens 17); staff land on the board, not the diver-facing page.
-    { label: copy.schedule, suffix: "/schedule/board", alsoMatch: "/trips" },
-  ];
-}
-
-/**
- * Two rows in one dropdown: day-to-day reference surfaces, then a divider,
- * then shop administration. Import/export are one level further down still —
- * they're rare, owner/manager-only errands, so they live as links inside
- * Settings itself (src/app/shop/[shopSlug]/settings/SettingsPage.tsx) rather
- * than earning their own top-level "More" row.
- */
-function moreLinks(
-  copy: ShopNavLinksCopy,
-): { label: string; suffix: string; gate?: keyof ShopNavGates; count?: keyof ShopNavCounts }[] {
-  return [
-    { label: copy.staffing, suffix: "/staffing" },
-    { label: copy.diveSites, suffix: "/dive-sites" },
-    { label: copy.courses, suffix: "/courses" },
-    { label: copy.reviews, suffix: "/reviews", count: "reviews" },
-    { label: copy.waivers, suffix: "/waivers", gate: "waivers" },
-    { label: copy.reports, suffix: "/reports", gate: "reports" },
-  ];
-}
-
-function moreAdminLinks(
-  copy: ShopNavLinksCopy,
-): { label: string; suffix: string; gate?: keyof ShopNavGates }[] {
-  return [
-    // Promo codes move money, so they sit with the other owner/manager payment
-    // settings rather than in the day-to-day row (H-14).
-    { label: copy.promoCodes, suffix: "/promos", gate: "reports" },
-    { label: copy.settings, suffix: "/settings" },
-    { label: copy.team, suffix: "/settings/team", gate: "team" },
-  ];
+  /** Heading over the day-to-day half of the "More" menu. */
+  groupDaily: string;
+  /** Heading over the configure-once half. */
+  groupSetup: string;
+  labels: StaffDestinationLabels;
+  /**
+   * What each badge's number counts, already pluralised for that count —
+   * "3 divers blocked", "2 reviews waiting". Rendered sr-only beside the digit:
+   * a bare "3" next to "Today" is a number with no noun, which is exactly what
+   * a screen reader announces. Sighted staff get the same fact from the tone
+   * and the tab it hangs off.
+   */
+  badgeLabels: Record<StaffDestinationBadge, string>;
 }
 
 function isCurrent(pathname: string, href: string, root: string) {
@@ -106,13 +64,97 @@ function navClass(active: boolean) {
   return `${linkClass} ${active ? "bg-primary/10 text-primary" : "text-muted"}`;
 }
 
-/** A count badge next to a nav label — omitted entirely at zero, never a "0" pill. */
-function NavCountBadge({ count }: { count: number | undefined }) {
-  if (!count) return null;
+/**
+ * A count badge next to a nav label — omitted entirely at zero, never a "0"
+ * pill. Tone comes from what the number means
+ * (`STAFF_DESTINATION_BADGE_TONES`), not from the nav, and the number never
+ * travels without a noun.
+ */
+function NavCountBadge({
+  badge,
+  count,
+  label,
+}: {
+  badge: StaffDestinationBadge | undefined;
+  count: number | undefined;
+  label: string | undefined;
+}) {
+  if (!badge || !count) return null;
   return (
-    <Badge tone="primary" size="sm" tabularNums className="ml-1.5 px-1.5 py-0">
-      {count}
+    <Badge
+      tone={STAFF_DESTINATION_BADGE_TONES[badge]}
+      size="sm"
+      tabularNums
+      className="ml-1.5 px-1.5 py-0"
+    >
+      <span aria-hidden="true">{count}</span>
+      <span className="sr-only">{label}</span>
     </Badge>
+  );
+}
+
+/** One row inside the "More" panel. */
+function MoreLink({
+  destination,
+  root,
+  pathname,
+  label,
+  count,
+  badgeLabel,
+  onNavigate,
+}: {
+  destination: StaffDestination;
+  root: string;
+  pathname: string;
+  label: string;
+  count: number | undefined;
+  badgeLabel: string | undefined;
+  onNavigate: () => void;
+}) {
+  const href = staffDestinationHref(root, destination);
+  const active = isCurrent(pathname, href, root);
+  return (
+    <li className="flex">
+      <Link
+        href={href}
+        onClick={onNavigate}
+        className={`${navClass(active)} w-full whitespace-nowrap`}
+        aria-current={active ? "page" : undefined}
+      >
+        {label}
+        <NavCountBadge badge={destination.badge} count={count} label={badgeLabel} />
+      </Link>
+    </li>
+  );
+}
+
+/** The heading over one "More" group, and the group box it labels. */
+function MoreGroup({
+  id,
+  heading,
+  className = "",
+  children,
+}: {
+  id: string;
+  heading: string;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className={className}>
+      <p
+        id={id}
+        className="px-2 pt-1 pb-1 text-xs font-semibold tracking-wide text-muted uppercase"
+      >
+        {heading}
+      </p>
+      {/* A named list rather than a bare stack: the heading is the list's
+          accessible name, so a screen reader announces "Run the shop, list, 7
+          items" instead of leaving the grouping purely visual. */}
+      <ul aria-labelledby={id} className="flex flex-col gap-0.5">
+        {children}
+      </ul>
+    </div>
   );
 }
 
@@ -133,13 +175,13 @@ export function ShopNavLinks({
   const pathname = usePathname();
   const detailsRef = useRef<HTMLDetailsElement>(null);
   const summaryRef = useRef<HTMLElement>(null);
+  const groupId = useId();
   const [moreOpen, setMoreOpen] = useState(false);
-  const visibleMoreLinks = moreLinks(copy).filter((link) => !link.gate || gates[link.gate]);
-  const visibleMoreAdminLinks = moreAdminLinks(copy).filter(
-    (link) => !link.gate || gates[link.gate],
-  );
-  const moreIsActive = [...visibleMoreLinks, ...visibleMoreAdminLinks].some((link) =>
-    isCurrent(pathname, `${root}${link.suffix}`, root),
+  const primary = staffNavDestinations("primary", gates);
+  const daily = staffNavDestinations("daily", gates);
+  const setup = staffNavDestinations("setup", gates);
+  const moreIsActive = [...daily, ...setup].some((destination) =>
+    isCurrent(pathname, staffDestinationHref(root, destination), root),
   );
   // Stable across renders (empty deps — it only touches a ref), so effects
   // below can list it as a dependency without re-subscribing every render.
@@ -185,6 +227,19 @@ export function ShopNavLinks({
     };
   }, [moreOpen, closeMore]);
 
+  const moreLink = (destination: StaffDestination) => (
+    <MoreLink
+      key={destination.id}
+      destination={destination}
+      root={root}
+      pathname={pathname}
+      label={copy.labels[destination.id]}
+      count={destination.badge ? counts?.[destination.badge] : undefined}
+      badgeLabel={destination.badge ? copy.badgeLabels[destination.badge] : undefined}
+      onNavigate={closeMore}
+    />
+  );
+
   return (
     // `items-start` so "More" sits on the first row when the links wrap to two
     // on a phone, rather than floating in the gutter between them. Identical to
@@ -204,21 +259,27 @@ export function ShopNavLinks({
         aria-label={copy.primaryNavAriaLabel}
         className="flex min-w-0 flex-1 flex-wrap items-center gap-x-0.5 gap-y-1 pr-2 sm:gap-x-1 sm:pr-3"
       >
-        {primaryLinks(copy).map(({ label, suffix, alsoMatch, count }) => {
-          const href = `${root}${suffix}`;
+        {primary.map((destination) => {
+          const href = staffDestinationHref(root, destination);
           const active =
             isCurrent(pathname, href, root) ||
-            (alsoMatch ? isCurrent(pathname, `${root}${alsoMatch}`, root) : false);
+            (destination.alsoMatch
+              ? isCurrent(pathname, `${root}${destination.alsoMatch}`, root)
+              : false);
           return (
             <Link
-              key={href}
+              key={destination.id}
               href={href}
               className={navClass(active)}
               aria-current={active ? "page" : undefined}
               onClick={closeMore}
             >
-              {label}
-              <NavCountBadge count={count ? counts?.[count] : undefined} />
+              {copy.labels[destination.id]}
+              <NavCountBadge
+                badge={destination.badge}
+                count={destination.badge ? counts?.[destination.badge] : undefined}
+                label={destination.badge ? copy.badgeLabels[destination.badge] : undefined}
+              />
             </Link>
           );
         })}
@@ -254,43 +315,24 @@ export function ShopNavLinks({
             className="fixed inset-0 z-10 cursor-default bg-foreground/20 sm:hidden"
           />
         ) : null}
-        {/* One column, one link per row — a two-column grid wrapped short labels onto two lines. */}
-        <div className="absolute right-0 z-20 mt-2 flex w-[min(15rem,calc(100vw-2rem))] flex-col gap-0.5 rounded-2xl border border-border bg-surface p-2 shadow-xl">
-          {visibleMoreLinks.map(({ label, suffix, count }) => {
-            const href = `${root}${suffix}`;
-            const active = isCurrent(pathname, href, root);
-            return (
-              <Link
-                key={href}
-                href={href}
-                onClick={closeMore}
-                className={`${navClass(active)} whitespace-nowrap`}
-                aria-current={active ? "page" : undefined}
-              >
-                {label}
-                <NavCountBadge count={count ? counts?.[count] : undefined} />
-              </Link>
-            );
-          })}
-          {/* Shop administration, set off from the day-to-day links above. */}
-          {visibleMoreAdminLinks.length > 0 ? (
-            <div className="my-1 border-t border-border" />
+        {/*
+         * One column, one link per row — a two-column grid wrapped short labels
+         * onto two lines. Two named groups rather than one bare rule: the
+         * divider that used to sit here said "these are different" without ever
+         * saying how, so which half held Reports and which held Promo codes was
+         * a memory test.
+         */}
+        <div className="absolute right-0 z-20 mt-2 flex w-[min(15rem,calc(100vw-2rem))] flex-col rounded-2xl border border-border bg-surface p-2 shadow-xl">
+          {daily.length > 0 ? (
+            <MoreGroup id={`${groupId}-daily`} heading={copy.groupDaily}>
+              {daily.map(moreLink)}
+            </MoreGroup>
           ) : null}
-          {visibleMoreAdminLinks.map(({ label, suffix }) => {
-            const href = `${root}${suffix}`;
-            const active = isCurrent(pathname, href, root);
-            return (
-              <Link
-                key={href}
-                href={href}
-                onClick={closeMore}
-                className={`${navClass(active)} whitespace-nowrap`}
-                aria-current={active ? "page" : undefined}
-              >
-                {label}
-              </Link>
-            );
-          })}
+          {setup.length > 0 ? (
+            <MoreGroup id={`${groupId}-setup`} heading={copy.groupSetup} className="mt-2">
+              {setup.map(moreLink)}
+            </MoreGroup>
+          ) : null}
         </div>
       </details>
     </div>

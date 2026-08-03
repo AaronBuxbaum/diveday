@@ -7,6 +7,7 @@ import { listActiveCoursesForSitemap } from "@/db/courses";
 import { listShopsForSitemap } from "@/db/shops";
 import { MIGRATION_GUIDE_SLUGS } from "@/lib/migration-guides";
 import { publicAppUrl } from "@/lib/notifications";
+import { publicCoursePath, publicSchedulePath } from "@/lib/public-routes";
 
 /**
  * The public marketing surface (the pages in docs/product/marketing.md plus
@@ -50,10 +51,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     listActiveCoursesForSitemap(db),
   ]);
   for (const shop of shopRows) {
-    entries.push({ path: `/shop/${shop.slug}/schedule`, priority: 0.7 });
+    entries.push({ path: publicSchedulePath(shop.slug), priority: 0.7 });
   }
   for (const course of courseRows) {
-    entries.push({ path: `/shop/${course.shopSlug}/courses/${course.courseSlug}`, priority: 0.6 });
+    entries.push({
+      path: publicCoursePath(course.shopSlug, course.courseSlug),
+      priority: 0.6,
+    });
   }
 
   return entries.map(({ path, priority }) => ({

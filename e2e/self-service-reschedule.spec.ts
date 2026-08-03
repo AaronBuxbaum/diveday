@@ -31,7 +31,7 @@ test.describe("staff-prepared trips", () => {
     await signOut(page);
 
     // A visitor books it.
-    await page.goto("/shop/blue-mantis/schedule", { waitUntil: "domcontentloaded" });
+    await page.goto("/s/blue-mantis", { waitUntil: "domcontentloaded" });
     // Scoped to the trip list itself: a day with more than one departure
     // also renders a same-titled <li> in the month calendar
     // (src/components/ScheduleCalendar.tsx), and an unscoped locator can
@@ -105,7 +105,7 @@ test.describe("staff-prepared trips", () => {
     await expect(page.getByRole("status")).toBeVisible();
     await signOut(page);
 
-    await page.goto("/shop/blue-mantis/schedule", { waitUntil: "domcontentloaded" });
+    await page.goto("/s/blue-mantis", { waitUntil: "domcontentloaded" });
     // Scoped to the trip list itself: a day with more than one departure
     // also renders a same-titled <li> in the month calendar
     // (src/components/ScheduleCalendar.tsx), and an unscoped locator can

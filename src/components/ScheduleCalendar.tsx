@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { DiverTranslator } from "@/i18n/messages";
 import { type CalendarDay, weekStartsOn } from "@/lib/calendar";
+import { publicSchedulePath, publicTripPath } from "@/lib/public-routes";
 
 /** A single dive/trip placed on a calendar day. `time` is pre-formatted in the shop timezone. */
 export type CalendarTrip = {
@@ -76,7 +77,7 @@ export function ScheduleCalendar({
         <div className="flex items-center gap-2">
           {prevMonthKey ? (
             <Link
-              href={`/shop/${shopSlug}/schedule?month=${prevMonthKey}${embedSuffix}`}
+              href={`${publicSchedulePath(shopSlug)}?month=${prevMonthKey}${embedSuffix}`}
               aria-label={t("schedule.previousMonth")}
               className={navClass}
             >
@@ -89,7 +90,7 @@ export function ScheduleCalendar({
           )}
           {nextMonthKey ? (
             <Link
-              href={`/shop/${shopSlug}/schedule?month=${nextMonthKey}${embedSuffix}`}
+              href={`${publicSchedulePath(shopSlug)}?month=${nextMonthKey}${embedSuffix}`}
               aria-label={t("schedule.nextMonth")}
               className={navClass}
             >
@@ -137,7 +138,7 @@ export function ScheduleCalendar({
             >
               {soleTrip ? (
                 <Link
-                  href={`/shop/${shopSlug}/schedule/${soleTrip.id}${embed ? "?embed=1" : ""}`}
+                  href={`${publicTripPath(shopSlug, soleTrip.id)}${embed ? "?embed=1" : ""}`}
                   aria-label={t(
                     soleTrip.full ? "schedule.calendarDiveFull" : "schedule.calendarDive",
                     { time: soleTrip.time },
@@ -175,7 +176,7 @@ export function ScheduleCalendar({
                   {trips.map((trip) => (
                     <li key={trip.id}>
                       <Link
-                        href={`/shop/${shopSlug}/schedule/${trip.id}${embed ? "?embed=1" : ""}`}
+                        href={`${publicTripPath(shopSlug, trip.id)}${embed ? "?embed=1" : ""}`}
                         aria-label={t(
                           trip.full ? "schedule.calendarDiveFull" : "schedule.calendarDive",
                           { time: trip.time },

@@ -1,6 +1,7 @@
 import { and, count, eq, ne } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { publicAppUrl, recipientLocale } from "@/lib/notifications";
+import { publicTripPath } from "@/lib/public-routes";
 import type { AppDb } from "./client";
 import { issuePersonCourtesyEmailUnsubscribeToken } from "./courtesy-email";
 import { sendNotification } from "./notifications";
@@ -100,10 +101,7 @@ export async function inviteWaitlistDiver(
       startsAt: ctx.trip.startsAt,
       endsAt: ctx.trip.endsAt,
       timezone: ctx.shop.timezone,
-      bookingUrl: new URL(
-        `/shop/${input.shopSlug}/schedule/${ctx.trip.id}`,
-        `${origin}/`,
-      ).toString(),
+      bookingUrl: new URL(publicTripPath(input.shopSlug, ctx.trip.id), `${origin}/`).toString(),
       invitedAt,
       unsubscribeUrl: new URL(`/unsubscribe/${unsubscribeToken}`, `${origin}/`).toString(),
     }).catch(() => ({ status: "failed" as const }));

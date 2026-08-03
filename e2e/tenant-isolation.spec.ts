@@ -84,11 +84,14 @@ test("a second shop's owner reaches none of Blue Mantis's staff surfaces", async
   await expect(page.getByRole("navigation", { name: "Primary" })).toBeVisible();
 
   // The public schedule stays public, for this signed-in outsider as much as
-  // for an anonymous visitor (`isPublicShopRoute`). This is the regression
-  // guard on the allowlist: it is the assertion that fails first if the
-  // tenant check below is ever widened to "any mismatched slug is a 404".
+  // for an anonymous visitor. Since the namespace split (ADR
+  // 20260803-public-shop-namespace) it lives at /s/<slug>; the legacy staff-
+  // namespace URL rides the 308 there, query and all. This is the regression
+  // guard that fails first if the tenant check below is ever widened to
+  // "any mismatched slug is a 404" — a 404 here would strand real divers.
   const scheduleResponse = await page.goto("/shop/blue-mantis/schedule");
   expect(scheduleResponse?.status()).toBe(200);
+  await expect(page).toHaveURL(/\/s\/blue-mantis$/);
   await expect(page.getByRole("heading", { level: 1, name: "Schedule" })).toBeVisible();
   // …and they get the *visitor's* chrome on it: the shop's own public header,
   // never Blue Mantis's staff nav or its pending-work counts.
@@ -101,7 +104,7 @@ test("a second shop's owner reaches none of Blue Mantis's staff surfaces", async
   // form of the check, since a trip-scoped staff route is handed a genuinely
   // valid id belonging to the other shop and must still refuse.
   const tripHref = await page
-    .locator('a[href^="/shop/blue-mantis/schedule/"]')
+    .locator('a[href^="/s/blue-mantis/trips/"]')
     .filter({ visible: true })
     .first()
     .getAttribute("href");
@@ -138,9 +141,10 @@ test("a second shop's owner reaches none of Blue Mantis's staff surfaces", async
   }
 
   // A hand-supplied x-diveday-path claiming a public route must not soften
-  // the refusal: the proxy overwrites the header on every matched request,
-  // and the layout additionally binds it to the slug it renders, so this
-  // probe is the regression test for both halves of that trust boundary.
+  // the refusal. Since the namespace split the staff shell doesn't read the
+  // path header at all — the tenant check runs on the session and slug alone —
+  // but the probe stays: it is the regression test that would catch any future
+  // reader trusting a client-supplied copy of the header.
   const spoofed = await page.request.get("/shop/blue-mantis/divers", {
     headers: { "x-diveday-path": "/shop/blue-mantis/schedule" },
   });

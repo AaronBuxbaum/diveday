@@ -16,6 +16,7 @@ import { rentalFitLine } from "@/lib/dive-prep";
  */
 export function AddDiverSection({
   shopSlug,
+  tripId,
   full,
   query,
   candidates,
@@ -25,6 +26,14 @@ export function AddDiverSection({
   locale,
 }: {
   shopSlug: string;
+  /**
+   * Submitted as a hidden field rather than bound into the action: seating a
+   * diver goes through the shared `seatNewDiverAction`/`seatExistingDiverAction`
+   * (src/app/actions/seat-diver.ts), and every door hands them the same
+   * `tripId` + diver shape — including the trip-first ones (the counter
+   * walk-in, the global Add-booking door) where the boat is chosen in the form.
+   */
+  tripId: string;
   full: boolean;
   query: string;
   candidates: BookableDiver[];
@@ -99,6 +108,7 @@ export function AddDiverSection({
                         </p>
                       </div>
                       <form action={addExistingDiverAction}>
+                        <input type="hidden" name="tripId" value={tripId} />
                         <input type="hidden" name="personId" value={person.id} />
                         <SubmitButton
                           pendingLabel={t("trips.addDiver.adding")}
@@ -135,6 +145,8 @@ export function AddDiverSection({
             : t("trips.addDiver.handEntryDescriptionManifest")}
         </p>
         <form action={full ? addToWaitlistAction : addBookingAction} className="mt-4">
+          {/* Ignored by the wait-list action, which is bound to its trip. */}
+          <input type="hidden" name="tripId" value={tripId} />
           <FieldGrid columns={3}>
             <Field label={t("trips.addDiver.nameLabel")}>
               <input name="fullName" required maxLength={120} className={controlClass} />

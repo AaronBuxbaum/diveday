@@ -39,7 +39,7 @@ describe("FirstRunChecklist", () => {
     render(
       <FirstRunChecklist
         shopSlug="blue-mantis"
-        scheduleUrl="https://app.diveday.example/shop/blue-mantis/schedule"
+        scheduleUrl="https://app.diveday.example/s/blue-mantis"
         contactDone={false}
         diveSiteCount={0}
         stripeDone={false}
@@ -65,16 +65,14 @@ describe("FirstRunChecklist", () => {
       "href",
       "/shop/blue-mantis/settings/connect",
     );
-    expect(
-      screen.getByText("https://app.diveday.example/shop/blue-mantis/schedule"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("https://app.diveday.example/s/blue-mantis")).toBeInTheDocument();
   });
 
   it("marks a step done from real data instead of a dismiss flag", () => {
     render(
       <FirstRunChecklist
         shopSlug="blue-mantis"
-        scheduleUrl="https://app.diveday.example/shop/blue-mantis/schedule"
+        scheduleUrl="https://app.diveday.example/s/blue-mantis"
         contactDone={true}
         diveSiteCount={3}
         stripeDone={true}

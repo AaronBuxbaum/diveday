@@ -3,7 +3,7 @@ import { expect, test } from "./fixtures";
 test("the schedule's trip-type and has-space filters narrow the list, server-rendered", async ({
   page,
 }) => {
-  await page.goto("/shop/blue-mantis/schedule");
+  await page.goto("/s/blue-mantis");
   // The filter <form> is immediately followed by the trip <ul> whenever there
   // are trips to show — scoping to that keeps this locator off the calendar's
   // own per-day lists and any other list on the page.

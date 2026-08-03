@@ -279,7 +279,7 @@ test.describe("minimum age (H-08, fail open)", () => {
     await page.getByLabel("Assign crew").selectOption({ label: "Marcus Webb" });
     await expect(page.getByRole("button", { name: "Unassign Marcus Webb" })).toBeVisible();
 
-    // Staff must step aside for the public flow: /schedule/[id] redirects a
+    // Staff must step aside for the public flow: /s/<slug>/trips/[id] redirects a
     // signed-in staff member of this shop straight to the trip's own staff
     // page, so "Book this date" would never reach the public booking form.
     await signOut(page);
@@ -288,7 +288,7 @@ test.describe("minimum age (H-08, fail open)", () => {
     // No date is on file yet, so this books exactly like any other walk-in
     // and never even raises the blocker.
     const diverName = `Late Bloomer ${stamp}`;
-    await page.goto(`/shop/${SHOP}/courses/open-water-diver`);
+    await page.goto(`/s/${SHOP}/courses/open-water-diver`);
     await page.getByRole("link", { name: "Book this date" }).last().click();
     // The booking form is controlled, so wait for hydration before typing —
     // otherwise a fill can land before React attaches and gets silently lost.

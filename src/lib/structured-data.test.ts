@@ -61,13 +61,11 @@ function at(graph: JsonLdObject, path: string): unknown {
 
 describe("absoluteUrl", () => {
   it("resolves a path against the canonical origin", () => {
-    expect(absoluteUrl(ORIGIN, "/shop/blue-mantis/schedule")).toBe(
-      "https://diveday.example/shop/blue-mantis/schedule",
-    );
+    expect(absoluteUrl(ORIGIN, "/s/blue-mantis")).toBe("https://diveday.example/s/blue-mantis");
   });
 
   it("gives back nothing when no origin is configured, rather than a relative URL", () => {
-    expect(absoluteUrl(null, "/shop/blue-mantis/schedule")).toBeNull();
+    expect(absoluteUrl(null, "/s/blue-mantis")).toBeNull();
   });
 });
 
@@ -153,7 +151,7 @@ describe("shopJsonLd", () => {
     const graph = shopJsonLd(shop, ORIGIN);
     expect(graph["@type"]).toBe("SportsActivityLocation");
     expect(graph.name).toBe("Blue Mantis Divers");
-    expect(graph.url).toBe("https://diveday.example/shop/blue-mantis/schedule");
+    expect(graph.url).toBe("https://diveday.example/s/blue-mantis");
   });
 
   it("omits the address key entirely when the shop has none on file", () => {
@@ -285,9 +283,7 @@ describe("scheduleJsonLd", () => {
     expect(graph.numberOfItems).toBe(2);
     const items = graph.itemListElement as JsonLdObject[];
     expect(items.map((item) => item.position)).toEqual([1, 2]);
-    expect(at(items[1], "item.url")).toBe(
-      "https://diveday.example/shop/blue-mantis/schedule/trip-2",
-    );
+    expect(at(items[1], "item.url")).toBe("https://diveday.example/s/blue-mantis/trips/trip-2");
   });
 
   it("describes the shop alone when nothing is on the books, not a list of zero", () => {
