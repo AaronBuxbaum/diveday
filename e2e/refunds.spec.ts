@@ -1,3 +1,4 @@
+import type { Page } from "@playwright/test";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { createTrip, daysFromNow, e2eNow, signInAsOwner, signOut } from "./helpers";
 
@@ -13,7 +14,7 @@ test.describe("refunds", () => {
   signedInAsOwner();
 
   async function createPaymentRequiredTrip(
-    page: import("@playwright/test").Page,
+    page: Page,
     options: { title: string; date: string; cancellationWindowHours: number },
   ) {
     await createTrip(page, {
@@ -37,7 +38,7 @@ test.describe("refunds", () => {
   }
 
   async function bookAndMarkPaid(
-    page: import("@playwright/test").Page,
+    page: Page,
     title: string,
     // Distinguishes this helper's two call sites' divers: both tests reuse
     // "Nora Quinn", and the frozen clock (unlike Date.now()) no longer makes

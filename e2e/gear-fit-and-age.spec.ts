@@ -1,3 +1,4 @@
+import type { Page } from "@playwright/test";
 import { DEMO_SHOP_SLUG, DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
 import {
@@ -17,7 +18,7 @@ const SHOP = DEMO_SHOP_SLUG;
  * then reading `page.url()` races the streaming list — the card can still be
  * re-rendering, and the URL read lands on the wrong route.
  */
-async function tripPathByTitle(page: import("@playwright/test").Page, title: string | RegExp) {
+async function tripPathByTitle(page: Page, title: string | RegExp) {
   const link = await findTripOnBoard(page, SHOP, title);
   const href = await link.getAttribute("href");
   if (!href) throw new Error(`no trip card found for ${title}`);
@@ -29,7 +30,7 @@ const DIVER_WITH_FIT = "Sam Whitfield";
 /** A seeded diver with a rental fit on file and no flag raised. */
 const DIVER_WITH_UNFLAGGED_FIT = "Priya Sharma";
 
-async function goToDiver(page: import("@playwright/test").Page, name: string) {
+async function goToDiver(page: Page, name: string) {
   await page.goto(`/shop/${SHOP}/divers?q=${encodeURIComponent(name)}`);
   const href = await page
     .locator(`a[href^="/shop/${SHOP}/divers/"]`)
@@ -162,7 +163,7 @@ test.describe("minimum age (H-08, fail open)", () => {
    * a whole second diver's create-then-edit detour into one test. Splitting
    * gives each scenario the full budget a single flow is sized for.
    */
-  async function createAgeGateSession(page: import("@playwright/test").Page, title: string) {
+  async function createAgeGateSession(page: Page, title: string) {
     // Open Water Diver states a minimum age of 10 in the seeded catalog.
     await createTrip(page, {
       shopSlug: SHOP,

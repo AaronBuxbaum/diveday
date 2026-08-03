@@ -1,3 +1,4 @@
+import type { Page } from "@playwright/test";
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
 import { daysFromNow, e2eNow, findTripOnBoard } from "./helpers";
 
@@ -154,7 +155,7 @@ test.describe("as owner", () => {
    * instead of inheriting one — the assertion after the click is unconditional,
    * only the setup click is.
    */
-  async function setSeededCodeLive(page: import("@playwright/test").Page, live: boolean) {
+  async function setSeededCodeLive(page: Page, live: boolean) {
     await page.goto("/shop/blue-mantis/promos");
     const row = page.locator("li").filter({ hasText: "REEF10" }).filter({ visible: true });
     const target = row.getByRole("button", { name: live ? "Switch on" : "Switch off" });
@@ -193,7 +194,7 @@ test.describe("as owner", () => {
    * cleared — this is the anonymous visitor's booking form, not a staff
    * surface (ADR 20260803-public-shop-namespace).
    */
-  async function pricedTripAsVisitor(page: import("@playwright/test").Page, title: string) {
+  async function pricedTripAsVisitor(page: Page, title: string) {
     await page.goto("/shop/blue-mantis/trips/new");
     await page.getByLabel("Title").fill(title);
     await page.getByLabel("Date").fill(daysFromNow(6));

@@ -1,3 +1,4 @@
+import type { Page } from "@playwright/test";
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
 import { createTrip, daysFromNow, e2eNow } from "./helpers";
 
@@ -27,7 +28,7 @@ const STAFFING = "/shop/blue-mantis/staffing";
 
 /** One staff member's card in "Who is working" — scoped so a Remove button, a
  * time range, or the not-scheduled warning is read off *that* person's row. */
-function staffCard(page: import("@playwright/test").Page, name: string) {
+function staffCard(page: Page, name: string) {
   return page.locator("article").filter({ hasText: name }).filter({ visible: true });
 }
 

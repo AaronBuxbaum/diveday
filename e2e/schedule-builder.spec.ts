@@ -1,3 +1,4 @@
+import type { Page } from "@playwright/test";
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
 import { daysFromNow, e2eNow } from "./helpers";
 
@@ -7,7 +8,7 @@ const SHOP = "blue-mantis";
 const BOARD = `/shop/${SHOP}/schedule/board`;
 
 /** The builder's controls name a departure by title, day, and time — see ScheduleBuilder. */
-function control(page: import("@playwright/test").Page, verb: string, title: string) {
+function control(page: Page, verb: string, title: string) {
   return page.getByRole("button", { name: new RegExp(`^${verb} ${title},`) });
 }
 

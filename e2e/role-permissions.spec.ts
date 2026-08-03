@@ -1,3 +1,4 @@
+import type { Page } from "@playwright/test";
 import { DEMO_SHOP_SLUG } from "../src/db/dev-credentials";
 import { expect, signedInAs, test } from "./fixtures";
 
@@ -15,7 +16,7 @@ import { expect, signedInAs, test } from "./fixtures";
  */
 const SHOP = DEMO_SHOP_SLUG;
 
-async function firstDiverDetailHref(page: import("@playwright/test").Page): Promise<string> {
+async function firstDiverDetailHref(page: Page): Promise<string> {
   await page.goto(`/shop/${SHOP}/divers`);
   const href = await page
     .locator(`a[href^="/shop/${SHOP}/divers/"]`)
@@ -26,7 +27,7 @@ async function firstDiverDetailHref(page: import("@playwright/test").Page): Prom
   return href;
 }
 
-async function firstTripManageHref(page: import("@playwright/test").Page): Promise<string> {
+async function firstTripManageHref(page: Page): Promise<string> {
   // Signed-in staff see the schedule's cards link straight to trip management.
   // Exclude the "Schedule a trip" CTA (/trips/new) — we want a real trip's id.
   await page.goto(`/shop/${SHOP}/schedule/board`);

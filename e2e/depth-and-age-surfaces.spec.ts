@@ -1,3 +1,4 @@
+import type { Page } from "@playwright/test";
 import { DEMO_SHOP_SLUG } from "../src/db/dev-credentials";
 import { expect, signedInAsOwner, test } from "./fixtures";
 
@@ -7,7 +8,7 @@ const SHOP = DEMO_SHOP_SLUG;
  * A staff trip's path, read from the schedule card's own href. Clicking and
  * then reading `page.url()` races the streaming list.
  */
-async function tripPathByTitle(page: import("@playwright/test").Page, title: string | RegExp) {
+async function tripPathByTitle(page: Page, title: string | RegExp) {
   await page.goto(`/shop/${SHOP}/schedule/board`);
   const href = await page
     .locator(`a[href^="/shop/${SHOP}/trips/"]:not([href$="/trips/new"])`)
@@ -37,12 +38,7 @@ const REEF_TRIP = "Two-Tank Reef — Molasses & French";
  * touched a moment later once hydration has settled, never loses that race.
  * Same fields, reordered so the vulnerable one goes last.
  */
-async function setSiteDepth(
-  page: import("@playwright/test").Page,
-  siteName: string,
-  depth: string,
-  unitLabel: RegExp,
-) {
+async function setSiteDepth(page: Page, siteName: string, depth: string, unitLabel: RegExp) {
   await page.goto(`/shop/${SHOP}/dive-sites`);
   const href = await page
     .locator(`a[href^="/shop/${SHOP}/dive-sites/"]:not([href$="/dive-sites/new"])`)

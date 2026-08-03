@@ -1,3 +1,4 @@
+import type { BrowserContext, Page } from "@playwright/test";
 import { expect, signedInAsOwner, test } from "./fixtures";
 
 signedInAsOwner();
@@ -56,10 +57,7 @@ test("the trip sub-nav reaches all four surfaces", async ({ page }) => {
  * so retrying here reflects that instead of papering over anything this
  * app's own code controls.
  */
-async function openPublicBookingPage(
-  page: import("@playwright/test").Page,
-  context: import("@playwright/test").BrowserContext,
-) {
+async function openPublicBookingPage(page: Page, context: BrowserContext) {
   for (let attempt = 0; attempt < 8; attempt++) {
     const [publicPage] = await Promise.all([
       context.waitForEvent("page"),

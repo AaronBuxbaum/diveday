@@ -1,3 +1,4 @@
+import type { Page } from "@playwright/test";
 import { DEMO_SHOP_SLUG } from "../src/db/dev-credentials";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { createTrip, daysFromNow, e2eNow } from "./helpers";
@@ -11,7 +12,7 @@ signedInAsOwner();
  * then reading `page.url()` races the streaming list — the card can still be
  * re-rendering, and the URL read lands on the wrong route.
  */
-async function tripPathByTitle(page: import("@playwright/test").Page, title: string | RegExp) {
+async function tripPathByTitle(page: Page, title: string | RegExp) {
   await page.goto(`/shop/${SHOP}/schedule/board`);
   const href = await page
     .locator(`a[href^="/shop/${SHOP}/trips/"]:not([href$="/trips/new"])`)
