@@ -19,8 +19,10 @@ We use AWS CDK to model, deploy, and update our cloud resources. Currently, the 
   [infra/lib/infra-stack.ts](../../infra/lib/infra-stack.ts) §5 carry the full reasoning.
 - Read-only IAM users for the AWS MCP server (local dev and Claude Code's cloud environment).
 - Cost guardrails: an `AWS::Budgets::Budget` and AWS Cost Anomaly Detection — see [§6](#6-cost-guardrails) below.
-- SES/SNS infra for the app's sole email provider — see [§7](#7-ses-email-provider-infra) below. The code path is live; the AWS-side production access, DKIM, credentials, and SNS subscription are still manual steps.
+- SES/SNS infra for the app's sole email provider — see [§7](#7-ses-email-provider-infra) below. The code path is live; the AWS-side production access, DKIM/MAIL FROM DNS records, and credentials are still manual steps.
 - A versioned, private, retained S3 bucket as the destination for scheduled database export bundles — see [§8](#8-backup-bucket) below.
+- HTTPS subscriptions wiring both SNS topics to the app's webhook routes — see [§9](#9-webhook-subscriptions) below. Created on every deploy, no flag required.
+- A `ManualActionItems` output listing every step CDK structurally cannot perform, printed after each deploy so the remainder is visible rather than remembered.
 
 ---
 
@@ -97,6 +99,10 @@ You can customize stack properties dynamically during synthesis and deployment u
 In our stack:
 - `bucketName`: Sets the custom name for the created S3 bucket (default: `diveday-vrt`).
 - `userName`: Sets the name for the IAM bot user (default: `reg-suit-bot`).
+- `alertEmail` / `monthlyBudgetLimit`: cost guardrails — [§6](#6-cost-guardrails).
+- `sesEmailDomain` / `sesMailFromDomain`: SES sending identity and envelope domain — [§7](#7-ses-email-provider-infra).
+- `webhookHost`: the app origin whose webhook routes get subscribed to both SNS topics (default: `https://www.dive.day`) — [§9](#9-webhook-subscriptions).
+- `backupBucketName`: destination for export bundles — [§8](#8-backup-bucket).
 
 Pass these values during deployment or synthesis using the `--context` flag:
 ```bash
@@ -167,6 +173,11 @@ for the day-to-day operational guide.
 - An `ses.EmailIdentity` for `sesEmailDomain` (context value, default `ses.dive.day`).
 - Easy DKIM signing (SES's default) — the `SesDkimRecords` output has the three CNAME records to add
   to DNS.
+- A custom MAIL FROM domain, `sesMailFromDomain` (context value, default `mail.ses.dive.day`) —
+  the envelope sender, which AWS requires be a *different* subdomain from the one you send from.
+  The `SesMailFromRecords` output has the MX and TXT records to add. `BehaviorOnMxFailure` is
+  `USE_DEFAULT_VALUE`, so a missing record costs SPF alignment rather than the send. See
+  [the runbook](ses-email-runbook.md#the-custom-mail-from-domain).
 - An `ses.ConfigurationSet` (with `optimizedSharedDelivery` enabled, `engagementMetrics` deliberately
   left off — see the no-opens/no-clicks privacy stance in the runbook) wired to a new SNS topic
   (`SesEventNotificationsTopicArn` output) for bounce/complaint/delivery events.
@@ -192,19 +203,33 @@ below are done — until then, missing/invalid credentials mean every send resol
 | `SES_FROM_EMAIL` | The sender address on `sesEmailDomain`. |
 | `SES_SNS_TOPIC_ARN` | `SesEventNotificationsTopicArn`'s value — `/api/webhooks/ses` answers 503 without it, and rejects a correctly-signed message from any other topic. |
 
-**What's still manual before real sending works** (deliberately not automated):
+**What's still manual before real sending works** — each for a reason the stack can't remove:
 1. Add the `SesDkimRecords` CNAME records to `ses.dive.day`'s DNS and wait for verification.
-2. Request SES **production access** (an AWS Support case — CDK cannot do this) once ready to send
+2. Add the `SesMailFromRecords` MX and TXT records to `mail.ses.dive.day`. **Exactly one MX
+   record** — SES fails the MAIL FROM setup outright if the subdomain has several.
+3. Request SES **production access** (an AWS Support case — CDK cannot do this) once ready to send
    beyond the sandbox's verified-recipients-only limit.
-3. Mint the `diveday-ses-sender` access key and set the env vars above in the real deploy
+4. Mint the `diveday-ses-sender` access key and set the env vars above in the real deploy
    environment (never the repo).
-4. Subscribe `/api/webhooks/ses` to `SesEventNotificationsTopicArn` in the SNS console (or via a
-   future CDK subscription) — the route auto-confirms the handshake once SNS calls it, but something
-   has to point SNS at the URL first.
 
-Override the domain the same way as other context values:
+Why each one resists automation:
+
+- **1 and 2 (DNS):** authoritative DNS for `dive.day` is **Vercel DNS, not Route53** — the domain is
+  registered at Vercel and served by `ns1`/`ns2.vercel-dns.com`, so this stack has no hosted zone to
+  write records into. Adding one would mean replicating the live mail records (Purelymail MX, DKIM,
+  DMARC) and replacing Vercel's apex `ALIAS` with hardcoded anycast A records that Vercel owns and
+  rotates — a standing outage risk in exchange for automating two records.
+- **3 (production access):** a human-reviewed AWS Support case. No API.
+- **4 (credentials):** deliberate. `CfnAccessKey` would put the secret in the CloudFormation
+  template and stack state; every IAM user in this stack mints its key out of band for that reason.
+  The env vars then live in Vercel, a different platform from the one CDK manages.
+
+**Subscribing the webhooks is no longer on this list** — see
+[§9](#9-webhook-subscriptions) below.
+
+Override either domain the same way as other context values:
 ```bash
-pnpm infra:deploy --context sesEmailDomain=ses.example.com
+pnpm infra:deploy --context sesEmailDomain=ses.example.com --context sesMailFromDomain=mail.ses.example.com
 ```
 
 ---
@@ -249,3 +274,51 @@ pnpm infra:deploy --context backupBucketName=my-backup-bucket
 > a later `cdk deploy` will fail if it tries to re-create a bucket whose name is already taken. That
 > is the intended trade: re-adopt the existing bucket by name rather than deleting it to make a
 > deploy go green.
+
+---
+
+## 9. Webhook subscriptions
+
+Two SNS topics carry delivery outcomes into the app, and the stack subscribes both — see
+[ADR 20260803-webhook-subscriptions-in-cdk](../architecture/decisions/20260803-webhook-subscriptions-in-cdk.md)
+for why this moved out of the runbooks. An unsubscribed topic is the failure nothing detects: every
+hop either side of it reads healthy while no event ever arrives.
+
+| Topic | Endpoint | Without it |
+| --- | --- | --- |
+| `diveday-ses-email-events` | `/api/webhooks/ses` | a bounced booking confirmation stays invisible |
+| `diveday-sms-delivery-receipts` | `/api/webhooks/sms` | an undelivered SMS reads as sent |
+
+Both are created on every deploy. Nothing to pass and nothing to remember — `webhookHost` defaults
+to `https://www.dive.day` and only needs overriding for a preview or self-hosted origin:
+
+```bash
+pnpm infra:deploy --context webhookHost=https://staging.example.com
+```
+
+Use the **canonical** origin — `dive.day` 308-redirects to `www.dive.day`, and a redirect is not a
+confirmation. Changing `webhookHost` later replaces the subscription rather than updating it
+(`Endpoint` is replacement-on-update), so expect a fresh handshake and a brief window where events
+are dropped.
+
+### When a subscription won't confirm
+
+A subscription is only real once the endpoint answers SNS's handshake, and both routes return `503`
+until their `SES_SNS_TOPIC_ARN` / `SMS_SNS_TOPIC_ARN` env var is set. On a fresh environment the
+stack therefore creates a subscription the app cannot yet confirm; SNS deletes it after ~3 days.
+
+This is item 5 of the `ManualActionItems` output for that reason. To check:
+
+```bash
+aws sns list-subscriptions-by-topic --topic-arn <SesEventNotificationsTopicArn>
+```
+
+`SubscriptionArn: PendingConfirmation` means the endpoint answered non-2xx. Set the env vars,
+redeploy the app, confirm it stops 503ing:
+
+```bash
+curl -s -o /dev/null -w '%{http_code}\n' -X POST https://www.dive.day/api/webhooks/ses -d '{}'
+```
+
+then `aws sns unsubscribe --subscription-arn <pending-arn>` and redeploy the stack to re-issue the
+handshake. Redeploying alone won't fix it — CloudFormation still believes the subscription exists.

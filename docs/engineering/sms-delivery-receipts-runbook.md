@@ -36,9 +36,17 @@ already verifies, rather than inventing a fourth inbound auth scheme for one cal
 2. **Point the app at the topic.** Set `SMS_SNS_TOPIC_ARN` from the `SmsDeliveryReceiptsTopicArn`
    output. Unset, `/api/webhooks/sms` answers 503 and sending is unaffected.
 
-3. **Subscribe the endpoint.** Add an HTTPS subscription on `diveday-sms-delivery-receipts` pointing
-   at `https://<app-host>/api/webhooks/sms`. The route answers SNS's `SubscriptionConfirmation`
-   handshake automatically — it re-validates the `SubscribeURL` host before fetching it.
+3. **Subscribe the endpoint** — nothing to run. Every `pnpm infra:deploy` subscribes both
+   `/api/webhooks/sms` and `/api/webhooks/ses`
+   ([20260803-webhook-subscriptions-in-cdk](../architecture/decisions/20260803-webhook-subscriptions-in-cdk.md)).
+   The route answers SNS's `SubscriptionConfirmation` handshake automatically, re-validating the
+   `SubscribeURL` host before fetching it.
+
+   The one catch: it can only confirm once step 2 is live, since `/api/webhooks/sms` answers 503
+   without `SMS_SNS_TOPIC_ARN`. On a fresh environment, verify the subscription confirmed rather
+   than assuming — `aws sns list-subscriptions-by-topic --topic-arn <SmsDeliveryReceiptsTopicArn>`,
+   and see [§9 of the infrastructure runbook](infrastructure-runbook.md#9-webhook-subscriptions) if
+   it reads `PendingConfirmation`.
 
 ## What lands where
 

@@ -80,9 +80,9 @@
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "^6.0.5",
-    "aws-cdk": "^2.1134.0",
+    "aws-cdk": "^2.1135.0",
     "aws-cdk-lib": "^2.263.0",
-    "constructs": "^10.8.0",
+    "constructs": "^10.8.1",
     "dotenv": "^17.4.2",
     "dotenv-cli": "^11.0.0",
     "drizzle-kit": "1.0.0-rc.4",
@@ -95,7 +95,7 @@
     "reg-publish-s3-plugin": "^0.14.4",
     "reg-suit": "^0.14.5",
     "tailwindcss": "^4.3.3",
-    "tsx": "^4.23.4",
+    "tsx": "^4.23.5",
     "typescript": "^7.0.2",
     "vitest": "^4.1.10"
   }

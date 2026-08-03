@@ -65,18 +65,95 @@ made — DiveDay records the issue without spending a send. The demo seed intent
    delivery event landed — a message can sit in Gmail's spam folder and still report `delivered`,
    so read the Gmail side too.
 
+### The custom MAIL FROM domain
+
+The `From:` address a diver sees and the envelope sender a receiving mail server checks are two
+different addresses. SES defaults the envelope to a shared `amazonses.com` subdomain; the stack
+overrides it to `mail.ses.dive.day` (`mailFromDomain` on the `EmailIdentity`, overridable with
+`--context sesMailFromDomain=...`).
+
+**`ses.dive.day` cannot be its own MAIL FROM domain.** It is the identity, and the envelope domain
+must be a separate subdomain that you don't send from and don't receive mail on. That rules out both
+the identity and `dive.day` itself.
+
+**It must be a child of the identity, not a sibling.** AWS's docs contradict each other here, so
+don't resolve this by reading:
+
+| Source | Constraint | Correct? |
+| --- | --- | --- |
+| [Developer guide](https://docs.aws.amazon.com/ses/latest/dg/mail-from.html) | subdomain of the identity's **parent domain** | **No** |
+| [`SetIdentityMailFromDomain`](https://docs.aws.amazon.com/ses/latest/APIReference/API_SetIdentityMailFromDomain.html) | subdomain of the **verified identity** | Yes |
+
+Settled by experiment: `mail.dive.day` was deployed against identity `ses.dive.day` and SES answered
+`400 InvalidRequest` —
+
+```
+Provided MAIL-FROM domain <mail.dive.day> is not subdomain of the domain of the identity <ses.dive.day>
+```
+
+so the guide's "parent domain" wording is wrong and `mail.dive.day`, `bounce.dive.day`, and
+`send.dive.day` are all invalid while the identity is `ses.dive.day`. The name has to nest:
+`mail.ses.dive.day`. The stack derives it as `mail.${sesEmailDomain}` for that reason.
+
+**This one fails loudly** — CloudFormation rejects the stack update, so a malformed name can't reach
+production. That is a different failure from `BehaviorOnMxFailure` below, which is soft and covers
+only whether the MX *record* resolves, never the shape of the name.
+
+Two records, on `mail.ses.dive.day`, both in the `SesMailFromRecords` stack output:
+
+| Type | Value |
+| --- | --- |
+| MX | `10 feedback-smtp.<region>.amazonses.com` — region must match `SES_AWS_REGION` |
+| TXT | `v=spf1 include:amazonses.com ~all` |
+
+**Exactly one MX record.** SES fails the whole MAIL FROM setup if that subdomain has more than one.
+
+These are added by hand: authoritative DNS for `dive.day` is **Vercel DNS**, not Route53, so the CDK
+stack has no hosted zone to write them into. It configures the AWS side and prints what to add.
+
+Failure is soft by design — `mailFromBehaviorOnMxFailure` is `USE_DEFAULT_VALUE`, so a missing or
+still-propagating MX record falls back to the `amazonses.com` envelope rather than rejecting the
+send. Mail keeps flowing while DNS catches up; you lose SPF alignment, not the booking confirmation.
+SES reports the setup as `Pending` for up to 72 hours before giving up and marking it `Failed`, at
+which point the setup has to be restarted.
+
+**Soft failure means nothing tells you it broke**, so check rather than assume — mail sending
+normally is not evidence the envelope domain took:
+
+```bash
+aws sesv2 get-email-identity --email-identity ses.dive.day \
+  --query 'MailFromAttributes' --output json
+```
+
+`MailFromDomainStatus` should read `SUCCESS`. `PENDING` past a few hours after the DNS records
+resolve, or `FAILED`, is a DNS problem — check that exactly one MX record exists on the subdomain and
+that its region matches `SES_AWS_REGION`. It is *not* the subdomain-shape rule above; that one is
+rejected at deploy and never reaches this state.
+
 ## The delivery webhook
 
 `POST {APP_HOST}/api/webhooks/ses` records what SES says happened to mail already sent, delivered as
 an SNS notification.
 
-1. Take the `SesEventNotificationsTopicArn` CDK output and create an HTTPS subscription pointing at
-   the webhook URL, in the SNS console (or `aws sns subscribe`).
-2. The route auto-confirms the subscription handshake itself once it verifies SNS's signature — no
-   separate confirmation step.
-3. Set `SES_SNS_TOPIC_ARN` to the same topic ARN. Verified messages whose own `TopicArn` doesn't
-   match are rejected even if correctly signed, so a differently-sourced SNS message can't be
-   replayed here.
+Every `pnpm infra:deploy` subscribes this route to the topic
+([20260803-webhook-subscriptions-in-cdk](../architecture/decisions/20260803-webhook-subscriptions-in-cdk.md)) —
+no flag, nothing to remember. One thing is still yours:
+
+**Set `SES_SNS_TOPIC_ARN`** to the `SesEventNotificationsTopicArn` output's value and redeploy the
+app. Verified messages whose own `TopicArn` doesn't match are rejected even when correctly signed,
+so a differently-sourced SNS message can't be replayed here.
+
+Until that is set the route answers 503, which means it cannot confirm SNS's handshake — so on a
+fresh environment the subscription the stack just created will expire in ~3 days. Check it landed:
+
+```bash
+aws sns list-subscriptions-by-topic --topic-arn <SesEventNotificationsTopicArn>
+```
+
+`PendingConfirmation` means the endpoint answered non-2xx; see
+[§9 of the infrastructure runbook](infrastructure-runbook.md#9-webhook-subscriptions) for the
+unsubscribe-and-redeploy recovery. Otherwise the route auto-confirms the handshake itself once it
+verifies SNS's signature, and there is nothing else to do.
 
 The configuration set already publishes `BOUNCE`, `COMPLAINT`, `DELIVERY`, `DELIVERY_DELAY`,
 `REJECT`, and `RENDERING_FAILURE` events. `OPEN`/`CLICK` engagement tracking is deliberately never
@@ -128,15 +205,26 @@ Two independent senders now sign for `dive.day`: the mail provider for human mai
 mail on `ses.dive.day`. Both must be aligned before the policy is tightened, or you'll start
 rejecting your own booking confirmations.
 
+**SPF is checked against the envelope sender, not the From address.** This is the part that is easy
+to get backwards: publishing SPF on `ses.dive.day` does nothing, because `ses.dive.day` is the domain
+in the `From:` header and no receiver looks there for SPF. SPF belongs on the MAIL FROM domain —
+`mail.ses.dive.day` — which is why that subdomain exists and why it must not be the same one you
+send from.
+
 1. Enable DKIM in **both** the mail provider and SES (Easy DKIM, SES's default). This is the one that
    actually matters — DKIM survives forwarding, SPF often doesn't.
-2. SPF on `dive.day` covers the mail provider; `ses.dive.day` gets its own via `include:amazonses.com`.
-   Watch the 10-lookup limit if you add more senders later.
+2. SPF on `dive.day` covers the mail provider. SES's SPF goes on `mail.ses.dive.day`, alongside
+   that subdomain's single MX record — see [the custom MAIL FROM domain](#the-custom-mail-from-domain)
+   above. Watch the 10-lookup limit if you add more senders later.
 3. Publish DMARC at `_dmarc.dive.day` starting permissive, with a reporting address:
    `v=DMARC1; p=none; rua=mailto:dmarc@dive.day`
 4. **Read the reports for a couple of weeks.** Move to `p=quarantine` only once both senders show
    aligned in them, then to `p=reject`. Jumping straight to `reject` is how you discover a
    misaligned sender by having your mail disappear.
+
+Both alignment paths are relaxed by default, so `mail.ses.dive.day` (envelope) and `ses.dive.day`
+(From) both roll up to the `dive.day` organizational domain and count as aligned. Only a
+`v=DMARC1; ...; aspf=s` strict policy would require them to match exactly — don't set that.
 
 ## When mail doesn't arrive
 

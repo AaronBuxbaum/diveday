@@ -8,6 +8,7 @@ import * as destinations from "aws-cdk-lib/aws-logs-destinations";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import * as ses from "aws-cdk-lib/aws-ses";
 import * as sns from "aws-cdk-lib/aws-sns";
+import * as subscriptions from "aws-cdk-lib/aws-sns-subscriptions";
 import * as cr from "aws-cdk-lib/custom-resources";
 import type { Construct } from "constructs";
 
@@ -79,7 +80,7 @@ export class InfraStack extends cdk.Stack {
 
     // Read the qualifier the exact same way the stack's own synthesizer
     // resolves it, so this can never drift from what `cdk bootstrap` /
-    // `cdk deploy` actually use — no hardcoded "hnb659fds" to fall out of
+    // `cdk deploy` actually use - no hardcoded "hnb659fds" to fall out of
     // sync if someone later sets the context override or bootstraps with
     // `--qualifier`.
     const bootstrapQualifier: string =
@@ -142,7 +143,7 @@ export class InfraStack extends cdk.Stack {
     // 6. Read-only IAM identities for the AWS API MCP server (see .mcp.json's
     // "aws" entry). Local dev and Claude Code's cloud environment each get their
     // own principal so either can be rotated or revoked without touching the
-    // other. Both hold only the AWS-managed ReadOnlyAccess policy — no write or
+    // other. Both hold only the AWS-managed ReadOnlyAccess policy - no write or
     // delete action exists on these credentials at all, so a bug in the MCP
     // server's own READ_OPERATIONS_ONLY allowlist still can't mutate anything.
     // Access keys are minted out-of-band via `aws iam create-access-key`
@@ -163,16 +164,16 @@ export class InfraStack extends cdk.Stack {
     new cdk.CfnOutput(this, "McpReadOnlyLocalAccessKeyInstructions", {
       value: `aws iam create-access-key --user-name ${mcpReadOnlyLocalUser.userName}`,
       description:
-        "Run to mint local-dev AWS MCP server credentials. Store the output in a named AWS CLI profile (~/.aws/credentials) — never in the repo.",
+        "Run to mint local-dev AWS MCP server credentials. Store the output in a named AWS CLI profile (~/.aws/credentials) - never in the repo.",
     });
 
     new cdk.CfnOutput(this, "McpReadOnlyCloudAccessKeyInstructions", {
       value: `aws iam create-access-key --user-name ${mcpReadOnlyCloudUser.userName}`,
       description:
-        "Run to mint AWS MCP server credentials for Claude Code's cloud environment. Store the output in that environment's secret/env-var settings — never in the repo.",
+        "Run to mint AWS MCP server credentials for Claude Code's cloud environment. Store the output in that environment's secret/env-var settings - never in the repo.",
     });
 
-    // 7. Cost guardrails — alert-only, never auto-disable anything.
+    // 7. Cost guardrails - alert-only, never auto-disable anything.
     // See ADR 20260802-aws-cost-guardrails for why these two mechanisms and
     // these thresholds specifically.
     const alertEmail = this.node.tryGetContext("alertEmail") || "aaronbuxbaum@gmail.com";
@@ -217,7 +218,7 @@ export class InfraStack extends cdk.Stack {
     });
 
     // AWS-managed Cost Anomaly Detection catches an unexpectedly fast rate of
-    // increase in any one service — the thing the fixed budget thresholds
+    // increase in any one service - the thing the fixed budget thresholds
     // above can't see while spend is still comfortably under the cap.
     const anomalyMonitor = new ce.CfnAnomalyMonitor(this, "ServiceCostAnomalyMonitor", {
       monitorName: "diveday-service-cost-anomalies",
@@ -245,18 +246,63 @@ export class InfraStack extends cdk.Stack {
         "Where budget threshold and cost-anomaly alerts are sent. Override with --context alertEmail=...",
     });
 
+    // The app's own origin, used to subscribe its webhook routes to the two SNS
+    // topics below (SES delivery events in §8, SMS delivery receipts in §10).
+    // Both were runbook steps until ADR 20260803-webhook-subscriptions-in-cdk;
+    // an unsubscribed topic is the failure nothing detects, because every hop
+    // either side of it looks perfectly healthy while no event ever arrives.
+    //
+    // Defaulted rather than gated behind an opt-in flag, deliberately. A
+    // conditional subscription is worse than no automation: once created by a
+    // flagged deploy, the next *unflagged* `cdk deploy` drops the resource from
+    // the template and CloudFormation deletes it - restoring the exact silent
+    // gap this exists to close, at the moment someone least expects it.
+    //
+    // Must be the canonical origin. `dive.day` 308-redirects to `www.dive.day`,
+    // and a redirect is not a confirmation.
+    const webhookHost = this.node.tryGetContext("webhookHost") || "https://www.dive.day";
+    const webhookSubscription = (path: string) =>
+      new subscriptions.UrlSubscription(`${webhookHost}${path}`);
+
     // 8. SES email-provider infra. SES is the app's sole provider in code
     // (ADR 20260803-ses-sole-email-provider, superseding 20260802-ses-adapter-
     // and-webhook's opt-in flag and 20260802-ses-email-transition-prep's
-    // original "prep ahead of a possible Resend swap" framing) — but the
-    // AWS-side production access request, DKIM DNS verification, credential
-    // minting, and SNS subscription below are still manual steps, so this
-    // stays inert until those are done.
+    // original "prep ahead of a possible Resend swap" framing) - but the
+    // AWS-side production access request, DKIM DNS verification, and credential
+    // minting are still manual steps, so this stays inert until those are done.
     const sesEmailDomain = this.node.tryGetContext("sesEmailDomain") || "ses.dive.day";
+
+    // The envelope sender (Return-Path), a different address from the From
+    // header and one that has to live on its own subdomain - never the one you
+    // send from, so not `ses.dive.day` itself.
+    //
+    // Without this, SES uses a shared `amazonses.com` subdomain as the envelope
+    // sender. Mail still authenticates (DKIM signs as the identity domain), but
+    // SPF then aligns to Amazon's domain rather than ours, so DMARC passes on
+    // DKIM alone. Owning the envelope domain gets both halves aligned, which is
+    // what makes a booking confirmation survive a strict receiver.
+    //
+    // Derived from the identity, not written out flat, because SES requires the
+    // MAIL FROM domain be a *child* of the verified identity - a sibling under
+    // the same parent is rejected. This is settled by experiment, not by
+    // reading: `mail.dive.day` was tried against identity `ses.dive.day` and
+    // SES answered 400 with
+    //
+    //   Provided MAIL-FROM domain <mail.dive.day> is not subdomain of the
+    //   domain of the identity <ses.dive.day>
+    //
+    // which contradicts the developer guide's "subdomain of the parent domain
+    // of a verified identity" and matches the SetIdentityMailFromDomain API
+    // reference's "subdomain of the verified identity". Trust the API reference.
+    // Deriving the name keeps the two in step if `sesEmailDomain` ever moves.
+    const sesMailFromDomain =
+      this.node.tryGetContext("sesMailFromDomain") || `mail.${sesEmailDomain}`;
 
     const sesEventNotifications = new sns.Topic(this, "SesEmailEventNotifications", {
       topicName: "diveday-ses-email-events",
     });
+
+    sesEventNotifications.addSubscription(webhookSubscription("/api/webhooks/ses"));
 
     const sesConfigurationSet = new ses.ConfigurationSet(this, "SesConfigurationSet", {
       configurationSetName: "diveday-transactional-email",
@@ -267,7 +313,7 @@ export class InfraStack extends cdk.Stack {
       configurationSet: sesConfigurationSet,
       destination: ses.EventDestination.snsTopic(sesEventNotifications),
       // Bounces, complaints, and delivery outcomes. OPEN/CLICK are deliberately
-      // excluded — the same no-opens/no-clicks privacy stance documented in
+      // excluded - the same no-opens/no-clicks privacy stance documented in
       // docs/engineering/ses-email-runbook.md.
       events: [
         ses.EmailSendingEvent.BOUNCE,
@@ -282,6 +328,13 @@ export class InfraStack extends cdk.Stack {
     const sesEmailIdentity = new ses.EmailIdentity(this, "SesEmailIdentity", {
       identity: ses.Identity.domain(sesEmailDomain),
       configurationSet: sesConfigurationSet,
+      mailFromDomain: sesMailFromDomain,
+      // Degrade rather than refuse. REJECT_MESSAGE would turn a missing or
+      // slow-propagating MX record into a hard failure on every send - the
+      // envelope domain is a deliverability improvement, not a precondition for
+      // a diver getting their booking confirmation. Falling back to the
+      // amazonses.com envelope is exactly the behaviour we have today.
+      mailFromBehaviorOnMxFailure: ses.MailFromBehaviorOnMxFailure.USE_DEFAULT_VALUE,
     });
 
     const sesSenderUser = new iam.User(this, "SesSenderUser", {
@@ -292,7 +345,7 @@ export class InfraStack extends cdk.Stack {
     new cdk.CfnOutput(this, "SesSenderAccessKeyInstructions", {
       value: `aws iam create-access-key --user-name ${sesSenderUser.userName}`,
       description:
-        "Run only once cutover begins, to mint SES-sending credentials. Store the output in the app's SES_* env vars — never in the repo.",
+        "Run only once cutover begins, to mint SES-sending credentials. Store the output in the app's SES_* env vars - never in the repo.",
     });
 
     new cdk.CfnOutput(this, "SesDkimRecords", {
@@ -300,17 +353,25 @@ export class InfraStack extends cdk.Stack {
       description: `DNS CNAME records to add for ${sesEmailDomain} to complete DKIM verification (three name/value pairs).`,
     });
 
-    new cdk.CfnOutput(this, "SesEventNotificationsTopicArn", {
-      value: sesEventNotifications.topicArn,
-      description:
-        "SNS topic for SES bounce/complaint/delivery events. No subscriber yet — /api/webhooks/ses must be subscribed to this topic (SNS console or `aws sns subscribe`) before this is useful.",
+    // Authoritative DNS for dive.day is Vercel, not Route53, so these two
+    // records are added by hand rather than by this stack - there is no hosted
+    // zone here to write them into. Exactly one MX record is required: SES fails
+    // the MAIL FROM setup outright if the subdomain has more than one.
+    new cdk.CfnOutput(this, "SesMailFromRecords", {
+      value: `MX ${sesMailFromDomain} -> 10 feedback-smtp.${this.region}.amazonses.com | TXT ${sesMailFromDomain} -> "v=spf1 include:amazonses.com ~all"`,
+      description: `DNS records to add for the custom MAIL FROM domain ${sesMailFromDomain}, in Vercel DNS. Exactly one MX record - SES rejects the setup if there are several.`,
     });
 
-    // 9. SNS direct-to-phone SMS sending — see ADR 20260802-sns-sms-adapter.
+    new cdk.CfnOutput(this, "SesEventNotificationsTopicArn", {
+      value: sesEventNotifications.topicArn,
+      description: `SNS topic for SES bounce/complaint/delivery events. ${webhookHost}/api/webhooks/ses is subscribed by this stack; set this ARN as SES_SNS_TOPIC_ARN in the app.`,
+    });
+
+    // 9. SNS direct-to-phone SMS sending - see ADR 20260802-sns-sms-adapter.
     // This is a distinct SNS use from SesEmailEventNotifications above (that
     // topic carries *inbound* SES event notifications the app subscribes to;
     // this IAM user only ever calls sns:Publish outbound, no topic involved).
-    // A least-privilege IAM user, scoped to publishing only — never full SNS
+    // A least-privilege IAM user, scoped to publishing only - never full SNS
     // access, and never able to create/manage topics or subscriptions.
     const snsSmsSenderUser = new iam.User(this, "SnsSmsSenderUser", {
       userName: "diveday-sns-sms-sender",
@@ -319,7 +380,7 @@ export class InfraStack extends cdk.Stack {
       new iam.PolicyStatement({
         actions: ["sns:Publish"],
         // A direct-to-phone-number Publish (no TopicArn) has no ARN to scope
-        // to — AWS requires "*" for this call shape. The action list is the
+        // to - AWS requires "*" for this call shape. The action list is the
         // actual boundary: this user can publish and nothing else (no
         // topic/subscription management, no read access to any topic).
         resources: ["*"],
@@ -329,17 +390,17 @@ export class InfraStack extends cdk.Stack {
     new cdk.CfnOutput(this, "SnsSmsSenderAccessKeyInstructions", {
       value: `aws iam create-access-key --user-name ${snsSmsSenderUser.userName}`,
       description:
-        "Run only once SMS sending is enabled, to mint SNS-publishing credentials. Store the output in the app's SNS_* env vars — never in the repo.",
+        "Run only once SMS sending is enabled, to mint SNS-publishing credentials. Store the output in the app's SNS_* env vars - never in the repo.",
     });
 
-    // 10. SMS delivery receipts — see ADR 20260802-sms-delivery-receipts.
+    // 10. SMS delivery receipts - see ADR 20260802-sms-delivery-receipts.
     //
     // The awkward part, and the reason this is a pipeline rather than a topic
     // subscription: **SNS has no delivery webhook for a direct-to-phone
     // `Publish`.** Email gets one from SES, WhatsApp gets one from Meta, but an
     // SMS receipt is written to CloudWatch Logs and nowhere else. A CloudWatch
-    // subscription filter can only target Lambda, Kinesis, or Firehose — not
-    // SNS — so reaching the app takes a forwarder.
+    // subscription filter can only target Lambda, Kinesis, or Firehose - not
+    // SNS - so reaching the app takes a forwarder.
     //
     // Logs → filter → Lambda → SNS topic → /api/webhooks/sms. The extra SNS hop
     // buys the thing that makes it worth having: the receipt arrives over the
@@ -348,6 +409,8 @@ export class InfraStack extends cdk.Stack {
     const smsDeliveryReceipts = new sns.Topic(this, "SmsDeliveryReceipts", {
       topicName: "diveday-sms-delivery-receipts",
     });
+
+    smsDeliveryReceipts.addSubscription(webhookSubscription("/api/webhooks/sms"));
 
     // SNS assumes this to write delivery receipts.
     const smsDeliveryStatusRole = new iam.Role(this, "SnsSmsDeliveryStatusRole", {
@@ -370,7 +433,7 @@ export class InfraStack extends cdk.Stack {
 
     // SNS writes to these exact names, and creates them itself on first send if
     // they are absent. They are declared here so retention is bounded rather
-    // than "never expire" — these records name a diver's phone number, so
+    // than "never expire" - these records name a diver's phone number, so
     // keeping them forever is a liability, and the app has already copied the
     // outcome it needs onto the delivery row.
     const smsLogGroupPrefix = `sns/${this.region}/${this.account}/DirectPublishToPhoneNumber`;
@@ -427,8 +490,7 @@ exports.handler = async (event) => {
 
     new cdk.CfnOutput(this, "SmsDeliveryReceiptsTopicArn", {
       value: smsDeliveryReceipts.topicArn,
-      description:
-        "SNS topic carrying SMS delivery receipts. Set as SMS_SNS_TOPIC_ARN in the app, and subscribe /api/webhooks/sms to it.",
+      description: `SNS topic carrying SMS delivery receipts. ${webhookHost}/api/webhooks/sms is subscribed by this stack; set this ARN as SMS_SNS_TOPIC_ARN in the app.`,
     });
 
     // Switch delivery-status logging on. There is no native resource for this:
@@ -439,8 +501,8 @@ exports.handler = async (event) => {
     //
     // No native resource is not the same as not expressible, though, and this
     // is exactly what `AwsCustomResource` is for. Leaving it as a runbook step
-    // would make the one thing nothing else can detect — every downstream hop
-    // sits idle and healthy-looking without it — also the one thing a human has
+    // would make the one thing nothing else can detect - every downstream hop
+    // sits idle and healthy-looking without it - also the one thing a human has
     // to remember. `SetSMSAttributes` merges the attributes it is given rather
     // than replacing the set, so this touches neither the spend limit nor the
     // default SMS type.
@@ -483,7 +545,7 @@ exports.handler = async (event) => {
           parameters: { attributes: { DeliveryStatusIAMRole: "" } },
         },
         policy: cr.AwsCustomResourcePolicy.fromStatements([
-          // SetSMSAttributes takes no resource ARN — it is account-level state.
+          // SetSMSAttributes takes no resource ARN - it is account-level state.
           new iam.PolicyStatement({ actions: ["sns:SetSMSAttributes"], resources: ["*"] }),
           // Handing SNS a role to assume is a PassRole, scoped to that one role.
           new iam.PolicyStatement({
@@ -504,7 +566,7 @@ exports.handler = async (event) => {
     //
     // Deliberately NOT the VisualRegressionBucket above: that one is
     // publicReadAccess, RemovalPolicy.DESTROY, and expires everything after 7
-    // days — the exact opposite of every property a backup needs. This bucket
+    // days - the exact opposite of every property a backup needs. This bucket
     // is the one resource in the stack that must survive a `cdk destroy`, so it
     // carries RETAIN; deleting production backups should require someone to go
     // do it deliberately, by hand, in the console.
@@ -524,7 +586,7 @@ exports.handler = async (event) => {
           // Current versions are never expired. Waiver records are legal
           // evidence and their retention is "indefinite" pending H-02, so a
           // lifecycle rule must never be the thing that decides a bundle has
-          // outlived its usefulness — that is a legal call, not a cost one.
+          // outlived its usefulness - that is a legal call, not a cost one.
           // Cost is managed by getting colder instead of by deleting:
           transitions: [
             {
@@ -578,6 +640,26 @@ exports.handler = async (event) => {
       value: `aws iam create-access-key --user-name ${backupUploaderUser.userName}`,
       description:
         "Run to mint credentials for whatever runs the scheduled export. Store them in that runner's secret settings — never in the repo.",
+    });
+
+    // 12. Everything this stack deliberately cannot do, printed after every
+    // deploy so the remainder is a visible checklist rather than something to
+    // remember. Each entry is here for a structural reason, not because it is
+    // unfinished — see §7's "why each one resists automation" table in
+    // docs/engineering/infrastructure-runbook.md.
+    //
+    // Kept as one output rather than several so it reads as a list in the
+    // deploy summary instead of scattering through alphabetised output keys.
+    new cdk.CfnOutput(this, "ManualActionItems", {
+      value: [
+        `1. DNS (Vercel, not Route53): add SesDkimRecords CNAMEs to ${sesEmailDomain}, and SesMailFromRecords MX+TXT to ${sesMailFromDomain} — exactly one MX.`,
+        "2. SES production access: open an AWS Support case. Until then sending is sandbox-only (pre-verified recipients).",
+        `3. Mint sender credentials: aws iam create-access-key --user-name ${sesSenderUser.userName}`,
+        "4. Set SES_AWS_REGION / SES_AWS_ACCESS_KEY_ID / SES_AWS_SECRET_ACCESS_KEY / SES_FROM_EMAIL / SES_SNS_TOPIC_ARN in Vercel, then redeploy the app.",
+        `5. Verify both webhook subscriptions confirmed: aws sns list-subscriptions-by-topic --topic-arn ${sesEventNotifications.topicArn} - a SubscriptionArn of "PendingConfirmation" means ${webhookHost} answered non-2xx (503 = step 4 not done). Fix, then unsubscribe and redeploy to re-issue the handshake.`,
+      ].join("\n"),
+      description:
+        "Steps this stack cannot perform. Re-read after every deploy; item 5 is the one nothing else surfaces.",
     });
   }
 }
