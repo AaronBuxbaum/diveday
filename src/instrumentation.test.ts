@@ -6,29 +6,29 @@ afterEach(() => {
 });
 
 describe("register", () => {
-  it("does nothing outside the nodejs runtime", () => {
+  it("does nothing outside the nodejs runtime", async () => {
     vi.stubEnv("NEXT_RUNTIME", "edge");
     vi.stubEnv("APP_HOST", "not a url");
-    expect(() => register()).not.toThrow();
+    await expect(register()).resolves.toBeUndefined();
   });
 
-  it("does nothing when APP_HOST is unset", () => {
+  it("does nothing when APP_HOST is unset", async () => {
     vi.stubEnv("NEXT_RUNTIME", "nodejs");
     vi.stubEnv("APP_HOST", "");
-    expect(() => register()).not.toThrow();
+    await expect(register()).resolves.toBeUndefined();
   });
 
-  it("throws with a precise reason when APP_HOST is malformed", () => {
+  it("throws with a precise reason when APP_HOST is malformed", async () => {
     vi.stubEnv("NEXT_RUNTIME", "nodejs");
     vi.stubEnv("APP_HOST", "http://diveday.example");
     vi.stubEnv("NODE_ENV", "production");
-    expect(() => register()).toThrow(/Invalid APP_HOST configuration/);
+    await expect(register()).rejects.toThrow(/Invalid APP_HOST configuration/);
   });
 
-  it("does not throw for a valid HTTPS origin", () => {
+  it("does not throw for a valid HTTPS origin", async () => {
     vi.stubEnv("NEXT_RUNTIME", "nodejs");
     vi.stubEnv("APP_HOST", "https://diveday.example");
     vi.stubEnv("NODE_ENV", "production");
-    expect(() => register()).not.toThrow();
+    await expect(register()).resolves.toBeUndefined();
   });
 });
