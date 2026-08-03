@@ -26,6 +26,40 @@ pnpm visual        # capture screenshots and run reg-suit comparison and publish
 pnpm check         # repo safeguards + lint + typecheck + unit — the pre-commit bar
 ```
 
+## The route coverage ledger
+
+`scripts/route-coverage.json` lists every `src/app/**/page.tsx` route and the tests that cover it:
+the `e2e/*.spec.ts` files that drive a flow landing there, and the `e2e/visual.spec.ts` captures
+that photograph it. `pnpm check:route-coverage` (part of `pnpm check:repo`) keeps that list honest
+against the tree — every route present, no stale entries, every named spec file and capture name
+real, and a written `exempt` reason for any route that has neither.
+
+It exists because a page with no test is silent by construction: it produces no failure for anyone
+to notice. A 2026-08-03 evaluation of the test system found three staff pages that had shipped with
+neither an e2e spec nor a visual capture — `/shop/[shopSlug]/orders/new`,
+`/shop/[shopSlug]/dive-sites/catalog`, and `/shop/[shopSlug]/staffing`. They are the ledger's three
+exemptions today, and closing one means writing the spec and deleting the exemption in the same
+change.
+
+The coverage lists are hand-maintained, deliberately. A spec usually reaches a route by *clicking*
+— `e2e/waivers.spec.ts` gets to `/waivers/[token]` by pressing "Send waiver" and following the link
+out of a toast — and no grep sees that. A guess would either invent coverage or demand exemptions
+for well-covered routes, and the second failure is how a gate becomes a rubber stamp. What is
+mechanical (which routes, specs, and captures exist) is re-derived every run.
+
+```bash
+node scripts/check-route-coverage.mjs            # the gate
+node scripts/check-route-coverage.mjs --report   # per-route table: ok / GAP / EXEMPT
+node scripts/check-route-coverage.mjs --write    # regenerate the mechanical facts
+```
+
+`--write` is a ratchet, like `scripts/check-copy.mjs`. It adds an entry for a new route (empty, and
+without an exemption — so the check goes red until someone writes a test or types a reason), drops
+an entry for a deleted route, and banks a closed gap by removing an exemption the route has
+outgrown. It will never add an exemption or remove a spec or capture from a route's lists; if a
+listed spec or capture has vanished it refuses and says so, and `--absorb` is the loud escape hatch
+for the one honest case — a merge from a branch that deleted it.
+
 ## The test database is a snapshot, not a boot
 
 Database-backed tests call `seededTestDb()` / `seededShopContext()` from `@/test/db`. They still
@@ -116,3 +150,7 @@ setup already imports jest-dom matchers. Fetch boundary: same, using `msw/node`'
 see `src/lib/offline-manifest-store.test.ts`. E2E: add `e2e/flow.spec.ts`, importing `test`/`expect`
 from `./fixtures` (not `@playwright/test`) so it gets the per-worker server and per-test reset; the
 config builds and boots the server fleet itself.
+
+Whichever routes the new e2e spec or visual capture reaches, add its name to those routes' entries
+in `scripts/route-coverage.json` — the same change, not a follow-up. If it closes a gap, delete
+that route's `exempt` line while you are there.

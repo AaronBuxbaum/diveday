@@ -1,4 +1,3 @@
-// @vitest-environment node
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import { ANONYMIZED_PERSON_NAME, REDACTED_TEXT } from "@/lib/anonymization";

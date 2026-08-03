@@ -1,5 +1,3 @@
-// @vitest-environment node
-
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";

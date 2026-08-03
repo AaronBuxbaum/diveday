@@ -1,4 +1,3 @@
-// @vitest-environment node
 import { and, eq, getTableColumns, getTableName } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { DEV_STAFF_LOGINS } from "@/db/dev-credentials";

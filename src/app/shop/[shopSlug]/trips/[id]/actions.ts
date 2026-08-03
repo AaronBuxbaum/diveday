@@ -7,6 +7,7 @@ import { z } from "zod";
 import { canPersonConfigureTrips, canPersonRefund } from "@/db/authz";
 import {
   type BookingOutcome,
+  bookingDiverName,
   cancelBooking,
   confirmBookingIdentity,
   createBooking,
@@ -701,6 +702,20 @@ export async function removeBookingAction(shopSlug: string, tripId: string, form
   const dbi = await getDb();
   await cancelBooking(dbi, s.user.shopId, bookingId);
   await trackEvent({ name: "booking_cancelled", source: "staff" });
+  // Same activity line an add writes (addBookingAction), for the same reason:
+  // the trip's log, read from the Guests tab, is the record of who touched
+  // the roster and when. A removal is the entry that matters most of the two
+  // — "who took this diver off the manifest?" is a question asked at the
+  // dock, and until now the log could not answer it.
+  const removedName = await bookingDiverName(dbi, s.user.shopId, bookingId);
+  if (removedName) {
+    await recordTripActivity(dbi, {
+      shopId: s.user.shopId,
+      tripId,
+      actorPersonId: s.user.personId,
+      action: `removed ${removedName} from the trip`,
+    });
+  }
   // Freeing the seat is roster work any staff member does, but moving money is
   // owner/manager work (H-14, ADR 20260724-role-authorization). A crew member
   // can cancel the booking; the auto-refund below only fires when the actor may
@@ -735,17 +750,36 @@ export async function undoRemoveBookingAction(
   const s = await requireStaffSession();
   const bookingId = String(formData.get("bookingId") ?? "");
   if (!bookingId) redirect(back);
-  const outcome = await restoreBooking(await getDb(), s.user.shopId, bookingId);
+  const dbi = await getDb();
+  const outcome = await restoreBooking(dbi, s.user.shopId, bookingId);
   if (outcome === "not_found") redirect(back);
-  // The undo can be refused by either seat limit: the boat's capacity, or a
-  // course session's instructor-to-student ratio (a walk-up may have taken the
-  // freed seat in between). They read differently, so they say different things.
+  // The undo can be refused three ways, and they need different things done
+  // about them: the boat's capacity, a course session's instructor-to-student
+  // ratio (a walk-up may have taken the freed seat in between), or the trip
+  // having been cancelled out from under the roster. Nothing about a wait
+  // list helps with that last one — the fix is reinstating the trip — so it
+  // gets its own words.
   const restoreNotice =
     outcome === "trip_full"
       ? "booking-restore-full"
       : outcome === "course_ratio_full"
         ? "booking-restore-ratio"
-        : "booking-restored";
+        : outcome === "trip_cancelled"
+          ? "booking-restore-cancelled"
+          : "booking-restored";
+  if (outcome === "restored") {
+    // Only a real restore is logged: a refused undo changed nothing, and an
+    // activity line for it would read like the diver went back on the boat.
+    const restoredName = await bookingDiverName(dbi, s.user.shopId, bookingId);
+    if (restoredName) {
+      await recordTripActivity(dbi, {
+        shopId: s.user.shopId,
+        tripId,
+        actorPersonId: s.user.personId,
+        action: `put ${restoredName} back on the trip`,
+      });
+    }
+  }
   revalidateAndRedirect(back, `${back}?notice=${restoreNotice}`);
 }
 

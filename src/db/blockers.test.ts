@@ -1,4 +1,3 @@
-// @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { distinctBlockedDivers } from "@/lib/blockers";
 import { seededShopContext } from "@/test/db";

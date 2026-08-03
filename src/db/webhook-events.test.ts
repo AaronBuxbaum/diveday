@@ -1,5 +1,3 @@
-// @vitest-environment node
-
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import type { CheckoutProvider, CreateCheckoutSessionResult } from "@/lib/payments/checkout";

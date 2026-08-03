@@ -31,6 +31,20 @@ export default defineConfig({
     // clean runs, same 1449/1449 passing). Revisit only if PGlite ever shows a
     // worker_threads-specific failure; none has surfaced in this repo's use.
     pool: "threads",
+    // `pnpm test:changed` (and `vitest related`) selects tests by walking the
+    // *import* graph, and the Drizzle migrations are never imported — they are
+    // read off disk at runtime by `migrate(db, { migrationsFolder: "drizzle" })`.
+    // A migration change therefore selected zero tests while silently changing
+    // the schema every db-backed test runs against. Listing it here makes any
+    // `drizzle/` edit rerun the whole suite. Setting this option *replaces*
+    // Vitest's defaults rather than extending them, so the first three entries
+    // restate those defaults verbatim and must stay.
+    forceRerunTriggers: [
+      "**/package.json/**",
+      "**/vitest.config.*/**",
+      "**/vite.config.*/**",
+      "**/drizzle/**",
+    ],
     // Freezes `nowDate()` (src/lib/clock.ts) for test-worker processes; see
     // src/test/frozen-clock.ts for why global-setup.ts also sets this
     // directly rather than relying on this config alone.

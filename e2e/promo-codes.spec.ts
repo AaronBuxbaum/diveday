@@ -146,12 +146,31 @@ test.describe("as owner", () => {
     ).toBeVisible();
   });
 
-  test("a diver can type a promo code on a payable trip's booking form", async ({
+  /**
+   * The promo box rides on pay-at-booking, which needs three things at once
+   * (schedule/[id]/page.tsx): a priced trip, a Stripe account that can take a
+   * charge, and `publicAppUrl()` — a configured public origin for Stripe's
+   * return links. This fleet runs `next start` (a production runtime) with
+   * `APP_HOST` deliberately blanked in playwright.config.ts's `serverEnv`, and
+   * `checkPublicHost` refuses a loopback origin in production, so
+   * `publicAppUrl()` is null here and pay-at-booking can never switch on — the
+   * same limitation schedule-embed.spec.ts and visual.spec.ts both document
+   * against this same helper.
+   *
+   * So this pins the state the fleet can actually reach, which is a real one
+   * (any deploy that forgets APP_HOST lands in it): the shop is connected to
+   * Stripe, and the booking form still falls back to book-now-pay-later with
+   * no promo box and no payment hand-off. What it deliberately does *not*
+   * claim is that a diver can type a code — that half is unreachable here, and
+   * the promo resolution behind it is covered by src/lib/promo-codes.ts's unit
+   * tests and by `bookSpot`'s. This test previously wrapped its whole body in
+   * `if (await promoField.isVisible())`, which meant it asserted nothing at
+   * all on every run since the day it was written.
+   */
+  test("a Stripe-connected shop with no public origin still books without a payment step", async ({
     page,
     request,
   }) => {
-    // Pay-at-booking (and therefore the promo box) only appears once the shop can
-    // actually take a charge.
     await request.post("/api/test/seed-stripe-account");
     await page.goto("/shop/blue-mantis/schedule/board");
     await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
@@ -161,11 +180,15 @@ test.describe("as owner", () => {
 
     await page.context().clearCookies();
     await page.goto(`/shop/blue-mantis/schedule/${tripId}`);
-    const promoField = page.getByLabel("Promo code");
-    // One box for both kinds of code — a diver has no idea whether they were
-    // handed a shop-wide code or a one-trip deal, and the server resolves both.
-    if (await promoField.isVisible()) {
-      await expect(page.getByText("(if you have one)")).toBeVisible();
-    }
+    // Wait for the booking form itself before asserting anything is absent —
+    // otherwise "no promo box" is indistinguishable from "the form hasn't
+    // rendered yet".
+    await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+    await expect(
+      page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }),
+    ).toBeVisible();
+    await expect(page.getByLabel("Promo code")).toHaveCount(0);
+    await expect(page.getByText("(if you have one)")).toHaveCount(0);
+    await expect(page.getByText("You'll finish paying on a secure Stripe page.")).toHaveCount(0);
   });
 });

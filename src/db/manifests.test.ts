@@ -1,5 +1,3 @@
-// @vitest-environment node
-
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { ageOnDate, birthdayCallout } from "@/lib/age";

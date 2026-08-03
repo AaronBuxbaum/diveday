@@ -1129,6 +1129,7 @@
       "bookingRestored": "De vuelta en el listado.",
       "bookingRestoreFull": "No se pudo deshacer — la plaza liberada ya se ocupó y la salida está llena de nuevo. Añádelo a la lista de espera en su lugar.",
       "bookingRestoreRatio": "No se pudo deshacer — la plaza liberada ya se ocupó y esta sesión del curso está en su límite de ratio instructor-alumno. Asigna otro instructor, o añádelo a la lista de espera en su lugar.",
+      "bookingRestoreCancelled": "No se pudo deshacer — esta salida está cancelada. Reactiva la salida y vuelve a añadirlo.",
       "diverAdded": "Buceador añadido a la salida.",
       "diverWaitlisted": "Buceador añadido a la lista de espera.",
       "identityConfirmed": "Identidad confirmada — este buceador puede autorizarse a embarcar.",

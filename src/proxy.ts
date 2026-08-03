@@ -1,7 +1,12 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import NextAuth from "next-auth";
-import { authConfig, EMBED_REQUEST_HEADER, isEmbeddableShopRoute } from "@/lib/auth.config";
+import {
+  authConfig,
+  EMBED_REQUEST_HEADER,
+  isEmbeddableShopRoute,
+  REQUEST_PATH_HEADER,
+} from "@/lib/auth.config";
 import { stripSessionSetCookies } from "@/lib/session-cookies";
 
 // Route protection at the edge (Next 16 proxy convention; middleware is
@@ -27,10 +32,18 @@ const authMiddleware = NextAuth(authConfig).auth as unknown as (
  * previously dropped `cookie` (and everything else) off every request that
  * passed through this proxy, signing every visitor back out on their very
  * next navigation.
+ *
+ * Takes every override in one call for the same reason: each call rewrites
+ * `x-middleware-override-headers` in full from `req.headers`, so a second call
+ * would silently drop the first call's header back off the surviving set.
  */
-function overrideRequestHeader(req: NextRequest, res: Response, name: string, value: string): void {
+function overrideRequestHeaders(
+  req: NextRequest,
+  res: Response,
+  overrides: Record<string, string>,
+): void {
   const requestHeaders = new Headers(req.headers);
-  requestHeaders.set(name, value);
+  for (const [name, value] of Object.entries(overrides)) requestHeaders.set(name, value);
   for (const [key, headerValue] of requestHeaders) {
     res.headers.set(`x-middleware-request-${key}`, headerValue);
   }
@@ -71,12 +84,20 @@ export async function proxy(req: NextRequest, ctx: unknown): Promise<Response | 
       for (const cookie of kept) res.headers.append("set-cookie", cookie);
     }
   }
-  // Forward embed-mode to the server-component tree — `ShopLayout` can't
-  // read searchParams itself (only page.tsx can), so this header is the one
-  // way it learns "this render is going into someone else's iframe." Always
-  // overridden, on the request as it continues, never left at whatever a
-  // client happened to send: a spoofed value must never survive.
-  overrideRequestHeader(req, res, EMBED_REQUEST_HEADER, isEmbedRequest ? "1" : "");
+  // Forward embed-mode and the request's own pathname to the server-component
+  // tree — `ShopLayout` can't read searchParams or the URL itself (only
+  // page.tsx can), so these headers are the one way it learns "this render is
+  // going into someone else's iframe" and "this is which route." Both are
+  // always overridden, on the request as it continues, never left at whatever
+  // a client happened to send: a spoofed value must never survive. The
+  // pathname one is what lets `ShopLayout` apply `isPublicShopRoute` — the
+  // same predicate the `authorized` gate above already runs on the same
+  // `nextUrl.pathname` — so a cross-tenant staff visit 404s while this shop's
+  // public schedule and course pages keep rendering for anyone.
+  overrideRequestHeaders(req, res, {
+    [EMBED_REQUEST_HEADER]: isEmbedRequest ? "1" : "",
+    [REQUEST_PATH_HEADER]: req.nextUrl.pathname,
+  });
   // Deny framing everywhere by default (clickjacking on staff/sign-in surfaces);
   // an actual embed request is the one deliberate exception, so a shop can
   // embed its booking calendar on its own website (docs ADR 20260726-schedule-embed).
