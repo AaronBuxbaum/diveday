@@ -11,6 +11,12 @@ import type { DiverMessageKey, DiverTranslator } from "./messages";
  */
 const REMINDER_ACTION_KEYS: Record<ReminderActionCode, DiverMessageKey> = {
   waiver_pending: "notifications.reminderAction.waiverPending",
+  // Names the expiry rather than repeating "Sign your waiver": the diver is
+  // holding a link they may already have found dead, and a reminder that
+  // ignores that reads as the shop not having noticed. The fresh link lives one
+  // tap away on the readiness page the same message links to — never in the
+  // reminder itself (see `REMINDER_ACTION_CODES`).
+  waiver_expired: "notifications.reminderAction.waiverExpired",
   certification_missing: "notifications.reminderAction.certificationMissing",
   certification_expired: "notifications.reminderAction.certificationExpired",
   certification_insufficient: "notifications.reminderAction.certificationInsufficient",

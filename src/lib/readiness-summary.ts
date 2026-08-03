@@ -227,9 +227,21 @@ export function nextDiverStep(items: readonly DiverChecklistItem[]): DiverCheckl
  * (`src/lib/notifications/index.ts`) derives its runtime-validated
  * `reminderActionCodeSchema` from this same array, so the type-level and
  * Zod-level lists can't drift apart.
+ *
+ * `waiver_expired` sits here alongside `waiver_pending` (product-owner
+ * decision, 2026-08-03): a link that aged out on a booking made months ahead
+ * leaves the diver exactly as unsigned as one that never arrived, so it earns
+ * the same proactive cadence rather than silence until the dock. It is safe to
+ * name here *because a reminder never carries a waiver token* — the only link
+ * either channel sends is `readinessUrl`, a `readiness` capability minted fresh
+ * at send time (`src/db/reminders.ts`), whose page mints a replacement signing
+ * link on tap. Any future change that embeds a waiver link in a reminder must
+ * reissue it first or drop this code again; mailing a diver the very link we
+ * are telling them is dead is the failure mode this note exists to prevent.
  */
 export const REMINDER_ACTION_CODES = [
   "waiver_pending",
+  "waiver_expired",
   "certification_missing",
   "certification_expired",
   "certification_insufficient",

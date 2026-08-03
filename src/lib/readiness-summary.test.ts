@@ -63,15 +63,17 @@ describe("buildDiverChecklist", () => {
     expect(nextDiverStep(items)?.category).toBe("waiver");
   });
 
-  it("keeps an expired waiver out of pre-trip reminders", () => {
-    // Reminders name only `REMINDER_ACTION_CODES`; making the checklist item
-    // actionable must not quietly enroll a new code in outbound SMS/email
-    // copy, whose bundle has no line for it.
+  it("names an expired waiver in pre-trip reminders, like a never-signed one", () => {
+    // Enrolled by the product owner on 2026-08-03, having been held out only
+    // while the reminder bundle had no line for it. A diver whose link aged out
+    // is exactly as unsigned as one who never got a link, so silence until the
+    // dock would be the worse failure. The inverse of this assertion guarded
+    // the gap before the copy existed.
     const items = buildDiverChecklist(requirement(), {
       status: "blocked",
       blockers: [{ code: "waiver_expired" }],
     });
-    expect(reminderReadiness(items).outstanding).toEqual([]);
+    expect(reminderReadiness(items).outstanding).toEqual(["waiver_expired"]);
   });
 
   it("puts an unconfirmed imported specialty card on the shop, not the diver", () => {

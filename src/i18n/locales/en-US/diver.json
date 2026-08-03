@@ -1406,6 +1406,7 @@
     },
     "reminderAction": {
       "waiverPending": "Sign your waiver",
+      "waiverExpired": "Your waiver link expired — grab a fresh one, it only takes about two minutes",
       "certificationMissing": "Send your shop your certification card",
       "certificationExpired": "Check on your shop's refresher date for your certification",
       "certificationInsufficient": "Check your certification level with the shop",
