@@ -1,6 +1,6 @@
 # 20260726-manifest-push-refresh — Push the offline manifest refresh over SSE, backed by Postgres LISTEN/NOTIFY
 
-- **Status:** Accepted
+- **Status:** Accepted, **amended 2026-08-04** (stream lifetime — see the Transport bullet)
 - **Date:** 2026-07-26
 - **Supersedes (in part):** [20260726-manifest-offline-copy-automation](20260726-manifest-offline-copy-automation.md)'s
   closing paragraph, which left refreshing "still polling ... not push" and deferred a push channel to
@@ -33,7 +33,7 @@ alongside its existing interval:
   page itself is, plus the same shop-ownership check `getTripWithBooked` already enforces elsewhere, so
   one shop's stream can never observe another shop's trip. A 25-second `: ping` comment keeps
   intermediate proxies/load balancers from timing out an idle stream; the client's native `EventSource`
-  reconnects on its own if the stream still closes (a Vercel `maxDuration` cutoff, a dropped connection).
+  reconnects on its own if the stream still closes (a dropped connection, or the retirement below).
   The route checks `request.signal.aborted` before registering its abort listener, not only after —
   a client that disconnects while `auth()`/`getDb()`/the trip lookup were still awaiting can abort the
   signal before the stream's `start()` callback ever runs, and a listener registered after the fact
@@ -45,6 +45,22 @@ alongside its existing interval:
   enqueuing onto the now-cancelled controller, which (since the shared dispatch loop isn't
   per-subscriber isolated) can stop delivery to every other subscriber sharing that process, not just
   this one.
+- **The route retires its own stream (amended 2026-08-04).** As first written the stream had no end at
+  all: the heartbeat guarantees it is never idle, so the only thing that ever closed one was Vercel
+  killing the invocation at its duration limit — a *runtime timeout*, logged as an error, on every
+  manifest page left open on a boat tablet, which is the case this feature exists for. The reconnect
+  was always the design; being killed to trigger it was not, and it made an ordinary long-lived viewer
+  indistinguishable from a real fault in the logs. The route now declares `maxDuration = 300`
+  explicitly (rather than inheriting whatever the platform defaults to, which is free to move under us
+  on a plan change) and closes each stream itself at 4 minutes, a minute inside that budget — margin
+  for the auth/trip lookup that ran before the timer started, plus cold start and teardown. It also
+  opens each stream with a `retry: 2000` preamble, which `EventSource` applies to every subsequent
+  reconnect, so a retired stream is replaced in about two seconds instead of the browser's default
+  three; that first write doubles as the flush that gets the response past any buffering proxy. The
+  reconnect gap is a real gap — a roll-call change published inside it reaches that device only via
+  the manager's own poll/visibility fallback — but it is the same gap the platform cutoff already
+  produced, at the same cadence, and that fallback is the backstop this record already designates for
+  a push that never arrives.
 - **Fan-out — one shared LISTEN client per warm process, not one per viewer:** `src/db/manifest-events.ts`
   lazily opens a single dedicated `pg.Client` per process and issues `LISTEN manifest_events`; every SSE
   request in that process subscribes to the same in-memory dispatcher, filtering by `{shopId, tripId}`.
