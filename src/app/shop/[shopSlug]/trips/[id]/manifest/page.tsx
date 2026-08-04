@@ -123,13 +123,32 @@ const crewRollCallSchema = z.object({
  * already teamed) is re-proved server-side in `src/db/buddy-pairs.ts`; this
  * only checks the shape.
  */
-const memberTokenSchema = z.string().regex(/^(?:diver|crew):[0-9a-fA-F-]{36}$/, "member token");
+//
+// The id half is a **real UUID**, and it is normalised to lower case before it
+// leaves this file. The first cut of this matched `[0-9a-fA-F-]{36}`, which is
+// neither: `------------------------------------` satisfied it and reached
+// Postgres as an invalid uuid literal (an unhandled 500 rather than one of the
+// nine designed refusals), and an **upper-cased** copy of a real id satisfied
+// it *and* matched the row — Postgres compares uuids canonically — while the
+// name lookup keyed on the caller's spelling missed. The result was an
+// `ok: true` that wrote `[null, null]` into the append-only safety trail and
+// left this departure's incident export throwing forever, from any staff
+// account, by editing a checkbox value in devtools. `src/db/buddy-pairs.ts`
+// now resolves names off the returned row rather than the caller's string, so
+// this is the outer of two layers, not the only one.
+const memberTokenSchema = z
+  .string()
+  .regex(
+    /^(?:diver|crew):[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+    "member token",
+  );
 
 function parseMemberToken(token: string): BuddyTeamMemberInput {
   const [kind, id] = token.split(":");
+  const normalised = (id ?? "").toLowerCase();
   return kind === "diver"
-    ? { kind: "diver", bookingId: id as string }
-    : { kind: "crew", personId: id as string };
+    ? { kind: "diver", bookingId: normalised }
+    : { kind: "crew", personId: normalised };
 }
 
 const formTeamSchema = z.object({ members: z.array(memberTokenSchema).min(2).max(40) });

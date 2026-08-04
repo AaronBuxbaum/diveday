@@ -82,8 +82,23 @@ function sortMembers<T extends { fullName: string }>(members: T[], key: (m: T) =
   );
 }
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** A real uuid, not "36 characters of hex and hyphens" — see `resolveMembers`. */
+function isUuid(value: string): boolean {
+  return UUID_PATTERN.test(value);
+}
+
+/**
+ * Lower-cased on purpose: uuids compare canonically in Postgres, so without it
+ * `diver:ABC…` and `diver:abc…` read as two different members and slip past the
+ * duplicate check — the unique index would then catch them, but as a confusing
+ * `already_teamed` rather than the honest `duplicate_member`.
+ */
 function memberKey(member: BuddyTeamMemberInput): string {
-  return member.kind === "diver" ? `booking:${member.bookingId}` : `crew:${member.personId}`;
+  return member.kind === "diver"
+    ? `booking:${member.bookingId.toLowerCase()}`
+    : `crew:${member.personId.toLowerCase()}`;
 }
 
 /**
@@ -132,6 +147,20 @@ async function resolveMembers(
   tripId: string,
   members: readonly BuddyTeamMemberInput[],
 ): Promise<{ ok: true; members: ResolvedMember[] } | { ok: false; reason: BuddyTeamRefusal }> {
+  // Shape-check before the query, not after. `inArray` hands the value straight
+  // to Postgres, which raises `invalid input syntax for type uuid` on anything
+  // that is not one — an exception this module's callers cannot turn into any
+  // of its nine refusal codes, so a malformed id became a 500 instead of a
+  // worded no. Every refusal is checked before anything is written; that has to
+  // include the ones the caller's own validation should have caught.
+  if (members.some((m) => !isUuid(m.kind === "diver" ? m.bookingId : m.personId))) {
+    return {
+      ok: false,
+      reason: members.some((m) => m.kind === "diver" && !isUuid(m.bookingId))
+        ? "booking_unavailable"
+        : "crew_unavailable",
+    };
+  }
   const bookingIds = members.flatMap((m) => (m.kind === "diver" ? [m.bookingId] : []));
   const crewIds = members.flatMap((m) => (m.kind === "crew" ? [m.personId] : []));
 
@@ -150,8 +179,13 @@ async function resolveMembers(
             ),
           )
       : [];
-  const seatNames = new Map(seatRows.map((row) => [row.id, row.fullName]));
-  if (seatNames.size !== bookingIds.length) return { ok: false, reason: "booking_unavailable" };
+  // Keyed on the **returned** id, lower-cased, and read back the same way
+  // below. Postgres compares uuids canonically, so an upper-cased copy of a
+  // real id matches the row while a map keyed on the caller's spelling misses
+  // it — and a `size !== length` check cannot tell that apart from a match,
+  // because one row did come back. That is exactly how a forged checkbox value
+  // once wrote `[null, null]` into the trail (see `memberTokenSchema`).
+  const seatRowsById = new Map(seatRows.map((row) => [row.id.toLowerCase(), row]));
 
   const crewRows =
     crewIds.length > 0
@@ -169,17 +203,25 @@ async function resolveMembers(
             ),
           )
       : [];
-  const crewNames = new Map(crewRows.map((row) => [row.id, row.fullName]));
-  if (crewNames.size !== crewIds.length) return { ok: false, reason: "crew_unavailable" };
+  const crewRowsById = new Map(crewRows.map((row) => [row.id.toLowerCase(), row]));
 
-  return {
-    ok: true,
-    members: members.map((member) =>
-      member.kind === "diver"
-        ? { ...member, fullName: seatNames.get(member.bookingId) as string }
-        : { ...member, fullName: crewNames.get(member.personId) as string },
-    ),
-  };
+  // Built from the row the database returned, never from the caller's string
+  // with a name bolted on. A member that does not resolve is a refusal here,
+  // where it can still be one — there is no `as string` left to let an
+  // `undefined` name travel on into the trail.
+  const resolved: ResolvedMember[] = [];
+  for (const member of members) {
+    if (member.kind === "diver") {
+      const row = seatRowsById.get(member.bookingId.toLowerCase());
+      if (!row) return { ok: false, reason: "booking_unavailable" };
+      resolved.push({ kind: "diver", bookingId: row.id, fullName: row.fullName });
+    } else {
+      const row = crewRowsById.get(member.personId.toLowerCase());
+      if (!row) return { ok: false, reason: "crew_unavailable" };
+      resolved.push({ kind: "crew", personId: row.id, fullName: row.fullName });
+    }
+  }
+  return { ok: true, members: resolved };
 }
 
 /**
@@ -246,12 +288,23 @@ async function recordTeamEvent(
     occurredAt: Date;
   },
 ): Promise<void> {
+  // The innermost of the three layers guarding this row's contents. A safety
+  // trail that can record `null` for a person is worse than one that refuses to
+  // record at all: the null survives every prune (this table is never pruned),
+  // and `Intl.ListFormat` throws on it, so one bad row leaves that departure's
+  // incident export unrenderable for good. Throwing here aborts the
+  // transaction, so the membership rows do not land either — the act simply
+  // did not happen, which is the honest outcome.
+  const memberNames = input.members.map((member) => member.fullName);
+  if (memberNames.some((name) => typeof name !== "string" || name.length === 0)) {
+    throw new Error("buddy team trail: refusing to record a member with no name");
+  }
   await tx.insert(buddyTeamEvents).values({
     shopId: input.shopId,
     tripId: input.tripId,
     pairId: input.teamId,
     action: input.action,
-    memberNames: input.members.map((member) => member.fullName),
+    memberNames,
     recordedByPersonId: input.recordedByPersonId,
     occurredAt: input.occurredAt,
   });
@@ -446,6 +499,14 @@ export async function removeBuddyTeamMember(
   // cancelled must still be correctable, or its members could never be
   // regrouped. Tenancy still holds — every read and the delete below carry
   // `shopId` and `tripId`.
+  //
+  // The asymmetry is a **one-way door**, and that is a decision rather than an
+  // oversight (security review, 2026-08-04): after a trip completes or is
+  // cancelled, membership can be taken apart but not put back, because the
+  // adding writers refuse a non-scheduled trip. It is not laundering — the
+  // trail keeps a `member_removed`/`dissolved` entry naming the actor, the
+  // time, and the members as they stood, and the incident export renders it —
+  // so what is lost is the live roster's convenience, never the record.
   const outcome = await db.transaction(async (tx): Promise<BuddyTeamMutationOutcome> => {
     const staffId = await requireStaff(tx, input.shopId, input.recordedByPersonId);
     if (!staffId) return { ok: false, reason: "staff_not_found" };
