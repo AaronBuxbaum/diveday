@@ -117,6 +117,8 @@ const EXCLUDED_TABLES = [
   "notification_deliveries", // operational plumbing, not shop records
   "notification_delivery_attempts",
   "notification_send_queue", // operational retry state, not shop records
+  "trip_blowouts", // operational cascade record for a weather cancel; the cancellation itself lives on the trip
+  "trip_blowout_divers", // per-diver message/rebooking state for that cascade — same reasoning as notification_send_queue
   "notification_rate_limit_state", // provider coordination, not shop records
   "shop_stripe_accounts", // provider linkage, useless outside Stripe
   "booking_checkouts", // payment attempts; outcomes live in bookings/orders
