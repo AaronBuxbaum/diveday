@@ -1,6 +1,6 @@
 # 20260804-buddy-pairs — Model buddy teams as booking pairs that inform roll call and never gate it
 
-- **Status:** Accepted
+- **Status:** Superseded by [20260804-buddy-teams](20260804-buddy-teams.md)
 - **Date:** 2026-08-04
 
 ## Context

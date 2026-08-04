@@ -14,6 +14,7 @@ import {
   bookingPayments,
   bookings,
   buddyPairMembers,
+  buddyTeamEvents,
   certifications,
   courseInquiries,
   coursePaths,
@@ -628,6 +629,10 @@ export async function resetDemoSchedule(
   // comment above describes (ADR 20260804-blowout-cascade).
   await db.delete(tripBlowoutDivers).where(eq(tripBlowoutDivers.shopId, shopId));
   await db.delete(tripBlowouts).where(eq(tripBlowouts.shopId, shopId));
+  // The buddy-team trail references trips and people and outlives the
+  // membership rows by design (ADR 20260804-buddy-teams), so it clears before
+  // both parents — same ordering rule the cascade comments above walk.
+  await db.delete(buddyTeamEvents).where(eq(buddyTeamEvents.shopId, shopId));
   // Buddy pairs reference bookings, so they go first or the bookings delete
   // below FK-violates and aborts the whole reset mid-run — the same class of
   // bug the token comments above already walk (ADR 20260804-buddy-pairs).

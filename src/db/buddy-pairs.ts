@@ -231,6 +231,12 @@ export async function listTripBuddyPairs(
     .orderBy(asc(buddyPairMembers.createdAt), asc(buddyPairMembers.pairId));
   const byPair = new Map<string, TripBuddyPair>();
   for (const row of rows) {
+    // Crew membership is storable (ADR 20260804-buddy-teams) but not yet
+    // surfaced: the manifest, offline snapshot, and export all still model a
+    // member as a seated diver. Skipping crew rows here keeps every downstream
+    // reader honest until that slice lands — and nothing writes one yet, so
+    // this cannot drop a row that exists today.
+    if (!row.bookingId) continue;
     const pair = byPair.get(row.pairId) ?? {
       pairId: row.pairId,
       createdAt: row.createdAt,

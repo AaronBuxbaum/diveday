@@ -116,6 +116,11 @@ const FOLDED_TABLES = [
 const EXCLUDED_TABLES = [
   "activity_events", // in-product operational feed, not a migration record
   "day_closeouts", // the close-out ritual's append-only trail — in-product operational record, same reasoning as activity_events
+  // The buddy-team pairing trail (ADR 20260804-buddy-teams). An in-product
+  // operational record like the two above — the *standing* teams a shop would
+  // carry to another system are already exported as buddy_pairs.csv; this is
+  // the history of how they got that way, which belongs with activity_events.
+  "buddy_team_events",
   "internal_notes", // private staff working context; deliberately not portable in this first slice
   "notification_deliveries", // operational plumbing, not shop records
   "notification_delivery_attempts",
@@ -214,7 +219,14 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
   roll_call_crew_events: ["shop_id"],
   // The member row's surrogate id says nothing beyond (pair_id, booking_id),
   // which are both exported.
-  buddy_pair_members: ["shop_id", "id"],
+  buddy_pair_members: [
+    "shop_id",
+    "id",
+    // Crew membership is storable but not yet surfaced anywhere that reads a
+    // team, export included (ADR 20260804-buddy-teams). It joins the CSV in the
+    // same change that teaches the manifest to render a crew member.
+    "crew_person_id",
+  ],
   waiver_templates: ["shop_id"],
   waiver_records: [
     "shop_id",

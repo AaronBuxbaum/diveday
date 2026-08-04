@@ -3231,9 +3231,18 @@ export const buddyPairMembers = pgTable(
       .references(() => trips.id),
     /** Groups the two members of one pair. Writer-generated, no parent row. */
     pairId: uuid("pair_id").notNull(),
-    bookingId: uuid("booking_id")
-      .notNull()
-      .references(() => bookings.id),
+    /**
+     * A seated diver's membership. Null when this member is crew, who hold no
+     * booking — exactly one of this and `crewPersonId` is set
+     * (ADR 20260804-buddy-teams).
+     */
+    bookingId: uuid("booking_id").references(() => bookings.id),
+    /**
+     * A crew member's membership — the divemaster leading the group. Deliberately
+     * *not* unique: one DM commonly leads several teams on one boat, which is how
+     * guided diving runs. The uniqueness rule below is about divers only.
+     */
+    crewPersonId: uuid("crew_person_id").references(() => people.id),
     /** Who made the pairing call. A pairing is never anonymous. */
     pairedByPersonId: uuid("paired_by_person_id")
       .notNull()
@@ -3241,9 +3250,61 @@ export const buddyPairMembers = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
+    // A diver is in at most one team per departure — the invariant that keeps
+    // the manifest unambiguous. Holds under concurrency, where a check in
+    // application code cannot.
     uniqueIndex("buddy_pair_members_booking_unique").on(table.bookingId),
     index("buddy_pair_members_shop_trip_idx").on(table.shopId, table.tripId),
     index("buddy_pair_members_pair_idx").on(table.pairId),
+    check(
+      "buddy_pair_members_one_subject",
+      sql`(${table.bookingId} is not null) <> (${table.crewPersonId} is not null)`,
+    ),
+  ],
+);
+
+/** What a `buddy_team_events` row records. */
+export const buddyTeamEventAction = pgEnum("buddy_team_event_action", [
+  "formed",
+  "dissolved",
+  "member_added",
+  "member_removed",
+]);
+
+/**
+ * The append-only trail behind buddy teams (ADR 20260804-buddy-teams).
+ *
+ * Membership rows are deleted when a team dissolves, so who was paired with
+ * whom would otherwise be unreconstructable the moment someone unpaired — on
+ * the one document handed to authorities, that reads as laundering. This table
+ * is what makes the pairing auditable, and it is why `member_names` is
+ * denormalised: its whole job is to outlive the rows it describes, so it cannot
+ * resolve them by id afterwards.
+ */
+export const buddyTeamEvents = pgTable(
+  "buddy_team_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    tripId: uuid("trip_id")
+      .notNull()
+      .references(() => trips.id),
+    /** The team this act was about. No parent row — teams are a grouping, not an entity. */
+    pairId: uuid("pair_id").notNull(),
+    action: buddyTeamEventAction("action").notNull(),
+    /** The members as they stood at this moment, in display order. */
+    memberNames: jsonb("member_names").$type<string[]>().notNull().default([]),
+    recordedByPersonId: uuid("recorded_by_person_id")
+      .notNull()
+      .references(() => people.id),
+    occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("buddy_team_events_shop_trip_idx").on(table.shopId, table.tripId, table.occurredAt),
+    index("buddy_team_events_pair_idx").on(table.pairId),
   ],
 );
 
