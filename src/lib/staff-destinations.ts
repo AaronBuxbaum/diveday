@@ -67,6 +67,7 @@ export type StaffNavGroup = "primary" | "daily" | "setup";
 export type StaffDestinationId =
   | "today"
   | "checkIn"
+  | "closeOut"
   | "walkIn"
   | "blockers"
   | "divers"
@@ -169,6 +170,13 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
   // A shortcut into Check-in rather than a destination of its own, so it stays
   // out of the header and lives where someone types what they want.
   { id: "walkIn", suffix: "/check-in/walk-in", navGroup: null, inPalette: true },
+  // The end-of-day ritual (ADR 20260804-day-closeout) — Today's evening
+  // mirror. Every staff role may close the day: whoever is last out of the
+  // shop owns the ritual, and the recorded act carries their name, so the
+  // accountability is in the trail rather than a gate. It leads the "Run the
+  // shop" group because it is the one destination there that is part of every
+  // single working day.
+  { id: "closeOut", suffix: "/close-out", navGroup: "daily", inPalette: true },
   { id: "staffing", suffix: "/staffing", navGroup: "daily", inPalette: true },
   { id: "diveSites", suffix: "/dive-sites", navGroup: "daily", inPalette: true },
   { id: "courses", suffix: "/courses", navGroup: "daily", inPalette: true },

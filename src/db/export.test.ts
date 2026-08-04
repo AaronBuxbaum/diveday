@@ -115,6 +115,7 @@ const FOLDED_TABLES = [
  */
 const EXCLUDED_TABLES = [
   "activity_events", // in-product operational feed, not a migration record
+  "day_closeouts", // the close-out ritual's append-only trail — in-product operational record, same reasoning as activity_events
   "internal_notes", // private staff working context; deliberately not portable in this first slice
   "notification_deliveries", // operational plumbing, not shop records
   "notification_delivery_attempts",

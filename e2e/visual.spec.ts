@@ -6,19 +6,20 @@ import { findTripOnBoard, openTripFromBoard, openTripTab } from "./helpers";
 import { E2E_FROZEN_CLOCK } from "./servers";
 
 /**
- * Visual regression coverage. Eighty-one key surfaces × light/dark, each
- * captured at a phone and a desktop viewport — 324 screenshots per run (see
+ * Visual regression coverage. Eighty-three key surfaces × light/dark, each
+ * captured at a phone and a desktop viewport — 332 screenshots per run (see
  * ADR 20260729-reg-suit-visual-regression). Keep this count in sync when
  * adding a surface; each `capture()` call costs 4 screenshots per CI run.
  * `grep -c 'await capture(page' e2e/visual.spec.ts` is the number — the prose
  * has drifted from it before (it read 48 while the grep said 56, and 71 while
  * the grep said 72), so trust the grep and correct the prose.
  *
- * Two more come from the `print` block at the bottom: the manifest and prep
- * pages as they render for the printer. Print is its own concern, not a
- * light/dark one — the `@media print` token override collapses both schemes to
- * one black-and-white palette — so each is captured once, at a US-Letter width,
- * via `capturePrint()`. That brings the run to 326 screenshots.
+ * Three more come from the `print` block at the bottom: the manifest, prep,
+ * and incident-export pages as they render for the printer. Print is its own
+ * concern, not a light/dark one — the `@media print` token override collapses
+ * both schemes to one black-and-white palette — so each is captured once, at a
+ * US-Letter width, via `capturePrint()`. That brings the run to 335
+ * screenshots.
  *
  * ## One surface, one `test()`
  *
@@ -1104,6 +1105,16 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "check-in", scheme);
       });
 
+      // The end-of-day close-out (ADR 20260804-day-closeout): the ritual
+      // surface Today mirrors at 5 p.m. Captured over the plain seed state —
+      // today's boat still ahead of the frozen clock, real leftovers, and
+      // tomorrow's glance — so the calm-but-populated shape is the baseline.
+      test(`the day close-out renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/close-out");
+        await page.getByRole("heading", { name: "How today's boats ended" }).waitFor();
+        await capture(page, "close-out", scheme);
+      });
+
       // Staffing had no baseline at all until the over_ratio parity fix —
       // the one gap surface whose green "Covered" badge could silently
       // contradict Today. Captured so a regression there shows as pixels.
@@ -1273,6 +1284,22 @@ for (const scheme of ["light", "dark"] as const) {
         // renders once saved) so the capture isn't racing that async write.
         await page.getByRole("link", { name: "Open offline roll call" }).waitFor();
         await capture(page, "manifest", scheme);
+      });
+
+      // The incident-ready export: the hand-to-authorities document of the
+      // departure's recorded facts (roster with roll-call state, evidence and
+      // waiver status, timeline, integrity code). Captured on the seeded reef
+      // trip before any roll call, so the baseline shows the stated-absence
+      // rendering — "Awaiting" cells, an explicitly empty timeline — which is
+      // exactly the state that must never read as a blank on this document.
+      test(`a trip's incident-ready export renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await openReefTrip(page);
+        const tripPath = new URL(page.url()).pathname;
+        await page.goto(`${tripPath}/incident-export`);
+        await page.getByRole("heading", { name: "Roll-call timeline" }).waitFor();
+        await capture(page, "incident-export", scheme);
       });
 
       // Blue Mantis fills nitrox, so the Tanks tile grid is at its full
@@ -1927,5 +1954,15 @@ test.describe("print", () => {
     await page.goto(`${tripPath}/prep`);
     await page.getByRole("heading", { name: "Tanks" }).waitFor();
     await capturePrint(page, "prep");
+  });
+
+  // The incident-ready export exists to be printed and handed over, so the
+  // print rendering is the primary artifact, not a nice-to-have.
+  test("the incident-ready export prints monochrome and padded", async ({ page }) => {
+    await openReefTrip(page);
+    const tripPath = new URL(page.url()).pathname;
+    await page.goto(`${tripPath}/incident-export`);
+    await page.getByRole("heading", { name: "Roll-call timeline" }).waitFor();
+    await capturePrint(page, "incident-export");
   });
 });

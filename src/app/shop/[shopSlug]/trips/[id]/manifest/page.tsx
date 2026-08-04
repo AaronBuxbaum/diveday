@@ -432,6 +432,15 @@ export default async function TripManifestPage({
             }}
           />
           <PrintButton label={t("shared.printButton.label")} />
+          {/* One tap to the hand-to-authorities document: the recorded
+              manifest, roll-call timeline, cert evidence, and waiver status
+              for this departure, print-ready with an integrity code. */}
+          <Link
+            href={`/shop/${shopSlug}/trips/${tripId}/incident-export`}
+            className={buttonClass({ variant: "secondary" })}
+          >
+            {t("incidentExport.openLink")}
+          </Link>
         </div>
       </header>
       <OfflineManifestManager

@@ -23,9 +23,6 @@ tests, and `dive-domain-expert` review.
 
 - **Physical headcount reconciliation.** A captain enters the count they see on deck; the app
   cross-checks it against boarded/not-boarded state. *(M, manifests, big bet.)*
-- **Incident-ready export.** One tap exports the manifest, roll-call timeline, cert evidence, and
-  relevant waiver state for a given departure as a signed PDF for authorities and insurers. *(S-M,
-  manifests, quick win.)*
 - **Safety record page.** Publish honest, computed shop safety stats such as boarded divers,
   roll-call completion, and readiness completion. The page must display the real numbers, even when
   imperfect. *(S-M, manifests, quick win.)*
@@ -44,9 +41,6 @@ single action.
   course sign-ups or upcoming blockers. *(S, cross-cutting, quick win.)*
 - **Multi-boat / multi-trip day orchestration.** A shop running several boats can see all departures,
   move divers and crew carefully, and avoid collisions. *(L, cross-cutting, big bet.)*
-- **End-of-day close-out.** Reconcile who dove, gear returned, incidents logged, and tomorrow's
-  blockers in one "everyone is home" ritual. *(M, cross-cutting, quick win.)*
-
 ## Diver Experience And Growth
 
 Lens: help a diver book, prepare, show up confident, return, and bring a buddy without turning DiveDay

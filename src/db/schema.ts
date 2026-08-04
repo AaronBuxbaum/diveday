@@ -17,6 +17,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import type { CloseoutSnapshot } from "@/lib/closeout";
 import type { CourseFaq, CourseScheduleDay } from "@/lib/courses";
 import type { Notification } from "@/lib/notifications";
 import { DEFAULT_SHOP_RENTAL_ITEMS, type RentalPricing } from "@/lib/rentals";
@@ -3400,6 +3401,54 @@ export const processorErasureObligations = pgTable(
       "processor_erasure_obligations_discharged_consistent",
       sql`(${table.status} = 'discharged') = (${table.dischargedAt} is not null)`,
     ),
+  ],
+);
+
+/**
+ * The end-of-day close-out trail (ADR 20260804-day-closeout): one row per time
+ * somebody closed the shop's day. Append-only, like `activity_events` — the
+ * record *is* the ritual, so a row is never updated or deleted by product
+ * code, and "re-opening" a day is simply working again and closing again,
+ * which appends another row. Nothing anywhere may condition on a day being
+ * closed: this table is a memory, not a lock.
+ *
+ * `shop_day` is the shop-local calendar date being closed ("YYYY-MM-DD",
+ * `shopDayOf` in src/lib/closeout.ts), stored as text exactly like the other
+ * date-only facts in this schema, and *not* derivable from `closed_at` — a
+ * shop can close Monday's day five minutes after its own midnight.
+ *
+ * `outstanding` is the `CloseoutSnapshot` (src/lib/closeout.ts) recomputed
+ * server-side at the moment of closing: the departures not yet settled and
+ * every leftover with the carry/dismiss choice made about it. Snapshot text
+ * (trip titles, row subjects) is trail text like `activity_events.message`,
+ * not localized UI copy. Growth is bounded by the ritual itself — a row per
+ * close, normally one per shop per day — so it carries no retention arm;
+ * adding one is HD-11's call (src/lib/retention.ts).
+ */
+export const dayCloseouts = pgTable(
+  "day_closeouts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    shopDay: text("shop_day").notNull(),
+    actorPersonId: uuid("actor_person_id")
+      .notNull()
+      .references(() => people.id),
+    closedAt: timestamp("closed_at", { withTimezone: true }).notNull().defaultNow(),
+    outstanding: jsonb("outstanding").$type<CloseoutSnapshot>().notNull(),
+    /**
+     * Write order, for reading a trail whose timestamps tie — same reasoning
+     * as `activity_events.seq`: the e2e clock is frozen, so `closed_at` alone
+     * cannot say which close of a day came last.
+     */
+    seq: bigserial("seq", { mode: "number" }).notNull(),
+  },
+  (table) => [
+    // The surface's one read: this shop's closes of one day, latest first.
+    index("day_closeouts_shop_day_idx").on(table.shopId, table.shopDay),
+    check("day_closeouts_shop_day_format", sql`${table.shopDay} ~ '^\\d{4}-\\d{2}-\\d{2}$'`),
   ],
 );
 

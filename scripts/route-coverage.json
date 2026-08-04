@@ -161,6 +161,10 @@
     "e2e": ["check-in.spec.ts", "trip-admission.spec.ts"],
     "visual": ["check-in-walk-in"]
   },
+  "/shop/[shopSlug]/close-out": {
+    "e2e": ["closeout.spec.ts"],
+    "visual": ["close-out"]
+  },
   "/shop/[shopSlug]/courses": {
     "e2e": ["course-paths.spec.ts", "courses.spec.ts"],
     "visual": ["courses-list"]
@@ -370,6 +374,10 @@
       "manifest.spec.ts"
     ],
     "visual": ["manifest", "manifest-buddy-divergence", "manifest-not-back-aboard"]
+  },
+  "/shop/[shopSlug]/trips/[id]/incident-export": {
+    "e2e": ["incident-export.spec.ts"],
+    "visual": ["incident-export"]
   },
   "/shop/[shopSlug]/trips/[id]/prep": {
     "e2e": ["boat-loop.spec.ts", "gear-fit-and-age.spec.ts", "nitrox.spec.ts"],
