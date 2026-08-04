@@ -66,18 +66,6 @@ const serverEnv = {
   NEXT_TELEMETRY_DISABLED: "1",
 };
 
-// TEMPORARY EXPERIMENT — confirming the recap OG-image failure's cause.
-// The GitHub runner image exports `VIPSHOME=/target`, a path from whatever
-// container that libvips was built in and one that does not exist on the
-// runner. libvips resolves its *dynamically loaded* format modules under
-// `$VIPSHOME/lib/vips-modules-<ver>`, so a bogus value silently costs it every
-// optional loader — including librsvg, i.e. SVG. Core formats like PNG are
-// compiled in and keep working, which is exactly the split the probe measured:
-// `rasterRoundTrip=ok(95)` beside `svgToPng=FAILED`. `@vercel/og` rasterizes
-// satori's SVG through sharp, so the card dies mid-stream.
-// Never set locally, which is why this reproduced only on CI.
-delete (serverEnv as Record<string, string | undefined>).VIPSHOME;
-
 export default defineConfig({
   testDir: "./e2e",
   globalSetup: "./e2e/global-setup.ts",

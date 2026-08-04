@@ -110,31 +110,32 @@ export default async function RecapOpenGraphImage({
       // The capability flags are the decisive part: they say whether the sharp
       // this process loaded was *built* with an SVG input loader at all, which
       // separates "wrong/limited binary" from "right binary, failing at runtime".
-      const fmt = (sharp as unknown as { format: Record<string, { input?: { buffer?: boolean } }> })
-        .format;
-      const versions = (sharp as unknown as { versions: Record<string, string> }).versions;
+      const { isMainThread, threadId } = await import("node:worker_threads");
+      const { writeFile } = await import("node:fs/promises");
+      const { tmpdir } = await import("node:os");
+      const { join: joinPath } = await import("node:path");
+      const fmt = (
+        sharp as unknown as {
+          format: Record<string, { input?: Record<string, boolean> }>;
+        }
+      ).format;
       sharpProbe =
-        `vips=${versions?.vips} rsvg=${versions?.rsvg ?? "ABSENT"} ` +
-        `svgInput=${fmt?.svg?.input?.buffer} pngOut=${fmt?.png?.input?.buffer} ` +
-        `vipsEnv=${JSON.stringify(
-          Object.fromEntries(Object.entries(process.env).filter(([k]) => k.startsWith("VIPS"))),
-        )} `;
+        `mainThread=${isMainThread} tid=${threadId} pid=${process.pid} ` +
+        `svgInputCaps=${JSON.stringify(fmt?.svg?.input)} `;
       try {
-        sharpProbe += `svgToPng=ok(${(await sharp(svg).resize(20).png().toBuffer()).length})`;
+        sharpProbe += `fromBuffer=ok(${(await sharp(svg).png().toBuffer()).length})`;
       } catch (error) {
-        sharpProbe += `svgToPng=FAILED(${(error as Error).message})`;
+        sharpProbe += `fromBuffer=FAILED(${(error as Error).message})`;
       }
-      // A raster round-trip on the same instance: if this works while SVG does
-      // not, sharp itself is healthy and only the SVG loader is missing.
+      // Buffer input is sniffed by content; file input is also matched by
+      // suffix. If the file path works where the buffer does not, the loader is
+      // present and only detection is failing — a different fault entirely.
       try {
-        const red = await sharp({
-          create: { width: 4, height: 4, channels: 3, background: "#ff0000" },
-        })
-          .png()
-          .toBuffer();
-        sharpProbe += ` rasterRoundTrip=ok(${(await sharp(red).png().toBuffer()).length})`;
+        const p = joinPath(tmpdir(), `og-diag-${process.pid}.svg`);
+        await writeFile(p, svg);
+        sharpProbe += ` fromFile=ok(${(await sharp(p).png().toBuffer()).length})`;
       } catch (error) {
-        sharpProbe += ` rasterRoundTrip=FAILED(${(error as Error).message})`;
+        sharpProbe += ` fromFile=FAILED(${(error as Error).message})`;
       }
     } catch (error) {
       sharpProbe = `import FAILED: ${(error as Error).message}`;
