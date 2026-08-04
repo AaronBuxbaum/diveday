@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   type AnyPgColumn,
+  bigserial,
   boolean,
   check,
   date,
@@ -988,6 +989,22 @@ export const activityEvents = pgTable(
       .references(() => people.id),
     message: text("message").notNull(),
     occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull().defaultNow(),
+    /**
+     * The order these were written in, for reading a trail whose timestamps tie.
+     *
+     * `occurred_at` alone cannot order this table: two events recorded in one
+     * request share an instant (a note delete writes its own event beside the
+     * one the add left), and the e2e clock is frozen outright, so *every* event
+     * in a test carries the identical timestamp. With nothing to break the tie
+     * Postgres returns whatever the heap hands back — which changes the moment
+     * anything moves rows, and a `VACUUM` does. The trail then reads
+     * backwards: "deleted a private note" above the "added" it followed.
+     *
+     * `id` cannot stand in for this — it is `defaultRandom()`, so ordering by
+     * it is as arbitrary as the heap and merely arbitrary *consistently*. A
+     * sequence is the only thing here that records what actually came first.
+     */
+    seq: bigserial("seq", { mode: "number" }).notNull(),
   },
   (table) => [
     index("activity_events_shop_trip_idx").on(table.shopId, table.tripId, table.occurredAt),

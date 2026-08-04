@@ -114,12 +114,24 @@ export async function listBookingNotes(db: AppDb, shopId: string, tripId: string
     .orderBy(asc(internalNotes.createdAt));
 }
 
+/**
+ * A trip's activity trail, newest first.
+ *
+ * Ordered by `seq` as well as time, because `occurred_at` ties constantly: two
+ * events written in one request share an instant (deleting a note records its
+ * own event beside the add's), and the e2e clock is frozen so every event in a
+ * test carries the identical timestamp. Ordering on time alone left the tie to
+ * whatever the heap returned, which changes whenever rows move — the trail
+ * then reads backwards, "deleted a private note" sitting above the "added" it
+ * followed. `seq` is the only column here that records what actually came
+ * first (`id` is `defaultRandom()`).
+ */
 export async function listTripActivity(db: AppDb, shopId: string, tripId: string) {
   return db
     .select()
     .from(activityEvents)
     .where(and(eq(activityEvents.shopId, shopId), eq(activityEvents.tripId, tripId)))
-    .orderBy(desc(activityEvents.occurredAt))
+    .orderBy(desc(activityEvents.occurredAt), desc(activityEvents.seq))
     .limit(50);
 }
 
