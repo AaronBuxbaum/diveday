@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gt, inArray, or } from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, inArray } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import {
   generateLastMinutePromoCode,
@@ -15,9 +15,9 @@ import { publicTripPath } from "@/lib/public-routes";
 import { spotsRemaining } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import type { AppDb, DbExecutor } from "./client";
-import { decodeCursor, encodeCursor } from "./cursor";
 import { issueLastMinuteListUnsubscribeToken, listLastMinuteList } from "./last-minute-list";
 import { notificationProviderForDb, sendNotificationBatch } from "./notifications";
+import { offsetPage } from "./paging";
 import { type TripLastMinutePromo, tripLastMinutePromos, trips } from "./schema";
 import { getShopById } from "./shops";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
@@ -191,12 +191,15 @@ export type OutstandingLastMinutePromo = TripLastMinutePromo & {
   tripStartsAt: Date;
 };
 
-/** How many deals the Promos page's "Trip deals" list shows per page before "Show more". */
+/** How many deals the Promos page's "Trip deals" list shows per page. */
 export const TRIP_DEAL_PAGE_SIZE = 20;
 
 export type OutstandingLastMinutePromoPage = {
   deals: OutstandingLastMinutePromo[];
-  nextCursor: string | null;
+  page: number;
+  pageCount: number;
+  pageSize: number;
+  total: number;
 };
 
 /**
@@ -209,54 +212,63 @@ export type OutstandingLastMinutePromoPage = {
  * excluded — they were never redeemable and showing them here would just be
  * noise the trip's own send history already carries.
  *
- * One keyset page at a time (ordered by expiry, then id for a stable
- * tiebreak), same idiom as `listShopPromoCodes`.
+ * One page at a time (ordered by expiry, then id for a stable tiebreak), same
+ * idiom as `listShopPromoCodes` — offset-paged, so the Promos page's two lists
+ * wear the same pager as every other staff list
+ * (ADR 20260803-one-pagination-model).
+ *
+ * `now` bounds the list and so must bound the count too: both halves take the
+ * same `scope`, or "page 1 of 3" would count deals that have already expired
+ * out of the rows below it.
  */
 export async function listOutstandingLastMinutePromos(
   db: DbExecutor,
   shopId: string,
   now: Date = nowDate(),
-  options: { cursor?: string; limit?: number } = {},
+  options: { page?: number; limit?: number } = {},
 ): Promise<OutstandingLastMinutePromoPage> {
-  const limit = options.limit ?? TRIP_DEAL_PAGE_SIZE;
-  const after = decodeCursor(options.cursor);
-  const afterDate = after ? new Date(after[0]) : null;
+  const scope = and(
+    eq(tripLastMinutePromos.shopId, shopId),
+    eq(tripLastMinutePromos.status, "sent"),
+    gt(tripLastMinutePromos.expiresAt, now),
+  );
 
-  const rows = await db
-    .select({
-      promo: tripLastMinutePromos,
-      tripTitle: trips.title,
-      tripStartsAt: trips.startsAt,
-    })
-    .from(tripLastMinutePromos)
-    .innerJoin(trips, eq(trips.id, tripLastMinutePromos.tripId))
-    .where(
-      and(
-        eq(tripLastMinutePromos.shopId, shopId),
-        eq(tripLastMinutePromos.status, "sent"),
-        gt(tripLastMinutePromos.expiresAt, now),
-        afterDate && after && !Number.isNaN(afterDate.getTime())
-          ? or(
-              gt(tripLastMinutePromos.expiresAt, afterDate),
-              and(
-                eq(tripLastMinutePromos.expiresAt, afterDate),
-                gt(tripLastMinutePromos.id, after[1]),
-              ),
-            )
-          : undefined,
-      ),
-    )
-    .orderBy(asc(tripLastMinutePromos.expiresAt), asc(tripLastMinutePromos.id))
-    .limit(limit + 1);
+  const paged = await offsetPage({
+    page: options.page,
+    pageSize: options.limit ?? TRIP_DEAL_PAGE_SIZE,
+    countRows: async () => {
+      const [counted] = await db
+        .select({ total: count() })
+        .from(tripLastMinutePromos)
+        .innerJoin(trips, eq(trips.id, tripLastMinutePromos.tripId))
+        .where(scope);
+      return counted?.total ?? 0;
+    },
+    fetchRows: async (offset, limit) =>
+      db
+        .select({
+          promo: tripLastMinutePromos,
+          tripTitle: trips.title,
+          tripStartsAt: trips.startsAt,
+        })
+        .from(tripLastMinutePromos)
+        .innerJoin(trips, eq(trips.id, tripLastMinutePromos.tripId))
+        .where(scope)
+        .orderBy(asc(tripLastMinutePromos.expiresAt), asc(tripLastMinutePromos.id))
+        .limit(limit)
+        .offset(offset),
+  });
 
-  const pageRows = rows
-    .slice(0, limit)
-    .map(({ promo, tripTitle, tripStartsAt }) => ({ ...promo, tripTitle, tripStartsAt }));
-  const last = pageRows.at(-1);
   return {
-    deals: pageRows,
-    nextCursor:
-      rows.length > limit && last ? encodeCursor(last.expiresAt.toISOString(), last.id) : null,
+    deals: paged.rows.map(({ promo, tripTitle, tripStartsAt }) => ({
+      ...promo,
+      tripTitle,
+      tripStartsAt,
+    })),
+    page: paged.page,
+    pageCount: paged.pageCount,
+    pageSize: paged.pageSize,
+    total: paged.total,
   };
 }
 

@@ -11,9 +11,9 @@ import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { getDb } from "@/db/client";
 import {
+  currentGlobalDiveSiteVersions,
   diveSiteLibraryStats,
   listDiveSitesPage,
-  listGlobalDiveSiteTemplates,
 } from "@/db/dive-sites";
 import { getShopById } from "@/db/shops";
 import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
@@ -55,7 +55,7 @@ export default async function DiveSitesPage({
   const query = q?.trim() ?? "";
   // A non-numeric or missing `?page=` reads as page 1 rather than NaN.
   const requestedPage = Number.parseInt(page ?? "", 10);
-  const [sitePage, stats, templates] = await Promise.all([
+  const [sitePage, stats] = await Promise.all([
     listDiveSitesPage(
       db,
       shop.id,
@@ -65,12 +65,16 @@ export default async function DiveSitesPage({
     // Shop-wide, never page-scoped: the counters describe the library, and a
     // search must not make a shop look like it lost half its sites.
     diveSiteLibraryStats(db, shop.id),
-    listGlobalDiveSiteTemplates(db),
   ]);
   const sites = sitePage.rows;
   const banner = noticeFromParam(notice, NOTICES);
-  const currentTemplateVersion = new Map(
-    templates.map(({ template, version }) => [template.id, version.version]),
+  // Looked up for exactly the imported sites on this page, not read off the
+  // whole published catalog — that catalog pages now, and indexing one page of
+  // it would quietly drop the "newer version published" badge for every site
+  // sourced from a template past it.
+  const currentTemplateVersion = await currentGlobalDiveSiteVersions(
+    db,
+    sites.map((site) => site.sourceTemplateId).filter((id): id is string => Boolean(id)),
   );
 
   /** This page's URL with the search kept and only `page` swapped. */

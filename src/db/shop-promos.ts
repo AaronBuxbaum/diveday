@@ -1,4 +1,4 @@
-import { and, desc, eq, lt, or, sql } from "drizzle-orm";
+import { and, count, desc, eq, sql } from "drizzle-orm";
 import { nowDate, nowMs } from "@/lib/clock";
 import {
   type PromotionProvider,
@@ -12,7 +12,7 @@ import {
   type PromoScope,
 } from "@/lib/promo-codes";
 import type { AppDb, DbExecutor } from "./client";
-import { decodeCursor, encodeCursor } from "./cursor";
+import { offsetPage } from "./paging";
 import { type ShopPromoCode, shopPromoCodes, shopPromoRedemptions } from "./schema";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 
@@ -186,65 +186,69 @@ export async function getRedeemableShopPromo(
 
 export type ShopPromoWithUsage = ShopPromoCode & { timesRedeemed: number };
 
-/** How many codes the Promos page's "Your codes" list shows per page before "Show more". */
+/** How many codes the Promos page's "Your codes" list shows per page. */
 export const SHOP_PROMO_PAGE_SIZE = 20;
 
 export type ShopPromoPage = {
   promos: ShopPromoWithUsage[];
-  nextCursor: string | null;
+  page: number;
+  pageCount: number;
+  pageSize: number;
+  total: number;
 };
 
 /**
  * Every code the shop has, newest first, each with its own redemption count —
- * one keyset page at a time (ordered by creation, then id for a stable
- * tiebreak), so a shop with years of codes costs one page, not the whole table.
+ * one page at a time (ordered by creation, then id for a stable tiebreak), so
+ * a shop with years of codes costs one page, not the whole table.
  *
- * Still forward-only, and it should not stay that way: ADR
- * 20260803-one-pagination-model moved the roster, reports, and the moderation
- * queue onto `offsetPage` + the shared `Pager`, and this list is the same job.
- * It is one of the three stragglers named there.
+ * Offset-paged, like the roster and the orders index. It was a forward-only
+ * keyset cursor, which meant a staffer three pages into a long code history
+ * had "Show more" and "Back to top" and nothing in between
+ * (ADR 20260803-one-pagination-model).
+ *
+ * The count is taken off `shopPromoCodes` alone — deliberately *not* off the
+ * redemption join below, whose row multiplication is exactly what the
+ * `groupBy` collapses. Counting the joined shape would report a code redeemed
+ * forty times as forty codes and invent pages that do not exist.
  */
 export async function listShopPromoCodes(
   db: DbExecutor,
   shopId: string,
-  options: { cursor?: string; limit?: number } = {},
+  options: { page?: number; limit?: number } = {},
 ): Promise<ShopPromoPage> {
-  const limit = options.limit ?? SHOP_PROMO_PAGE_SIZE;
-  const after = decodeCursor(options.cursor);
-  const afterDate = after ? new Date(after[0]) : null;
+  const scope = eq(shopPromoCodes.shopId, shopId);
 
-  const rows = await db
-    .select({
-      promo: shopPromoCodes,
-      // count(redemption id), not count(*) — the left join produces one row for
-      // a code nobody has redeemed, and count(*) would report that as 1.
-      timesRedeemed: sql<number>`count(${shopPromoRedemptions.id})::int`,
-    })
-    .from(shopPromoCodes)
-    .leftJoin(shopPromoRedemptions, eq(shopPromoRedemptions.promoCodeId, shopPromoCodes.id))
-    .where(
-      and(
-        eq(shopPromoCodes.shopId, shopId),
-        afterDate && after && !Number.isNaN(afterDate.getTime())
-          ? or(
-              lt(shopPromoCodes.createdAt, afterDate),
-              and(eq(shopPromoCodes.createdAt, afterDate), lt(shopPromoCodes.id, after[1])),
-            )
-          : undefined,
-      ),
-    )
-    .groupBy(shopPromoCodes.id)
-    .orderBy(desc(shopPromoCodes.createdAt), desc(shopPromoCodes.id))
-    .limit(limit + 1);
+  const paged = await offsetPage({
+    page: options.page,
+    pageSize: options.limit ?? SHOP_PROMO_PAGE_SIZE,
+    countRows: async () => {
+      const [counted] = await db.select({ total: count() }).from(shopPromoCodes).where(scope);
+      return counted?.total ?? 0;
+    },
+    fetchRows: async (offset, limit) =>
+      db
+        .select({
+          promo: shopPromoCodes,
+          // count(redemption id), not count(*) — the left join produces one row
+          // for a code nobody has redeemed, and count(*) would report that as 1.
+          timesRedeemed: sql<number>`count(${shopPromoRedemptions.id})::int`,
+        })
+        .from(shopPromoCodes)
+        .leftJoin(shopPromoRedemptions, eq(shopPromoRedemptions.promoCodeId, shopPromoCodes.id))
+        .where(scope)
+        .groupBy(shopPromoCodes.id)
+        .orderBy(desc(shopPromoCodes.createdAt), desc(shopPromoCodes.id))
+        .limit(limit)
+        .offset(offset),
+  });
 
-  const pageRows = rows
-    .slice(0, limit)
-    .map(({ promo, timesRedeemed }) => ({ ...promo, timesRedeemed }));
-  const last = pageRows.at(-1);
   return {
-    promos: pageRows,
-    nextCursor:
-      rows.length > limit && last ? encodeCursor(last.createdAt.toISOString(), last.id) : null,
+    promos: paged.rows.map(({ promo, timesRedeemed }) => ({ ...promo, timesRedeemed })),
+    page: paged.page,
+    pageCount: paged.pageCount,
+    pageSize: paged.pageSize,
+    total: paged.total,
   };
 }
 

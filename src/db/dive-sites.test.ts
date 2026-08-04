@@ -1,8 +1,10 @@
+import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
 import {
   copyDiveSite,
   createDiveSite,
+  currentGlobalDiveSiteVersions,
   deleteDiveSite,
   diveSiteLibraryStats,
   importGlobalDiveSiteTemplate,
@@ -11,6 +13,7 @@ import {
   listGlobalDiveSiteTemplates,
   updateDiveSite,
 } from "./dive-sites";
+import { globalDiveSites, globalDiveSiteVersions } from "./schema";
 
 describe("dive-site library", () => {
   /**
@@ -24,7 +27,7 @@ describe("dive-site library", () => {
    */
   it("imports a catalog template beside a same-named site instead of violating the unique index", async () => {
     const { db, shop } = await seededShopContext();
-    const [catalogEntry] = await listGlobalDiveSiteTemplates(db);
+    const [catalogEntry] = (await listGlobalDiveSiteTemplates(db)).templates;
     if (!catalogEntry) throw new Error("seed: no published dive-site template");
 
     const first = await importGlobalDiveSiteTemplate(db, shop.id, catalogEntry.template.id);
@@ -189,10 +192,15 @@ describe("dive-site library paging and search", () => {
       expect(page.rows.length).toBeGreaterThan(0);
     }
 
-    // Past the end is empty, not an error — a stale bookmark must not 500.
+    // Past the end lands on the last real page — it used to come back empty
+    // under a "Page 999 of 4" heading that could not be true, which is exactly
+    // the failure `offsetPage` exists to stop (ADR 20260803-one-pagination-model).
     const beyond = await listDiveSitesPage(db, shop.id, {}, { page: 999, pageSize: 5 });
-    expect(beyond.rows).toEqual([]);
     expect(beyond.total).toBeGreaterThan(0);
+    expect(beyond.page).toBe(beyond.pageCount);
+    expect(beyond.rows.length).toBeGreaterThan(0);
+    const last = await listDiveSitesPage(db, shop.id, {}, { page: beyond.pageCount, pageSize: 5 });
+    expect(beyond.rows.map((site) => site.id)).toEqual(last.rows.map((site) => site.id));
   });
 
   it("searches the name and the location, case-insensitively, and pages the matches", async () => {
@@ -273,5 +281,94 @@ describe("dive-site library paging and search", () => {
     const narrowed = await listDiveSitesPage(db, shop.id, { query: "north wall" }, { pageSize: 5 });
     expect(narrowed.rows).toHaveLength(5);
     expect((await diveSiteLibraryStats(db, shop.id)).total).toBe(stats.total);
+  });
+});
+
+/**
+ * The DiveDay-published catalog a shop imports from. It is meant to keep
+ * growing — the point of it is that a shop anywhere finds its own reef in it —
+ * so it pages like every other staff list rather than rendering the whole
+ * published set as cards (ADR 20260803-one-pagination-model). The demo ships
+ * one template, so the arithmetic is pinned down here rather than by seeding
+ * two dozen global rows every other suite would then read.
+ */
+describe("published dive-site catalog paging", () => {
+  async function publishTemplates(
+    db: Awaited<ReturnType<typeof seededShopContext>>["db"],
+    count: number,
+  ) {
+    for (let index = 0; index < count; index += 1) {
+      const slug = `catalog-site-${String(index).padStart(3, "0")}`;
+      const [template] = await db
+        .insert(globalDiveSites)
+        .values({ slug, currentVersion: 1 })
+        .returning();
+      if (!template) throw new Error("catalog template insert returned no row");
+      await db.insert(globalDiveSiteVersions).values({
+        globalDiveSiteId: template.id,
+        version: 1,
+        briefing: { name: `Catalog Site ${index}`, description: "A published briefing." },
+      });
+    }
+  }
+
+  it("returns one page at a time with an honest total and a stable order", async () => {
+    const { db } = await seededShopContext();
+    const seeded = (await listGlobalDiveSiteTemplates(db)).total;
+    await publishTemplates(db, 30);
+
+    const first = await listGlobalDiveSiteTemplates(db, { limit: 10 });
+    expect(first.templates).toHaveLength(10);
+    expect(first.total).toBe(seeded + 30);
+    expect(first.pageCount).toBe(Math.ceil((seeded + 30) / 10));
+
+    const seen: string[] = [];
+    for (let page = 1; page <= first.pageCount; page += 1) {
+      const chunk = await listGlobalDiveSiteTemplates(db, { page, limit: 10 });
+      expect(chunk.page).toBe(page);
+      expect(chunk.total).toBe(first.total);
+      seen.push(...chunk.templates.map(({ template }) => template.slug));
+    }
+    expect(new Set(seen).size).toBe(seen.length);
+    expect(seen).toEqual([...seen].sort((a, b) => a.localeCompare(b, "en")));
+
+    // Past the end lands on the last real page, never an empty grid.
+    const beyond = await listGlobalDiveSiteTemplates(db, { page: 999, limit: 10 });
+    expect(beyond.page).toBe(beyond.pageCount);
+    expect(beyond.templates.length).toBeGreaterThan(0);
+  });
+
+  /**
+   * The library's "a newer version is published" badge used to index the whole
+   * catalog. Now that the catalog pages, reading one page of it would silently
+   * drop the badge for every site sourced from a template past that page — so
+   * the badge asks for exactly the ids it is rendering instead.
+   */
+  it("looks up current versions by id, so a badge survives a template past page 1", async () => {
+    const { db, shop } = await seededShopContext();
+    await publishTemplates(db, 30);
+    // `catalog-site-*` sorts after `molasses-reef`, so this one is well past
+    // the first page of the catalog the library no longer reads.
+    const [late] = await db
+      .select()
+      .from(globalDiveSites)
+      .where(eq(globalDiveSites.slug, "catalog-site-029"));
+    if (!late) throw new Error("expected the late template");
+    const imported = await importGlobalDiveSiteTemplate(db, shop.id, late.id);
+    expect(imported?.sourceTemplateId).toBe(late.id);
+
+    const versions = await currentGlobalDiveSiteVersions(db, [late.id]);
+    expect(versions.get(late.id)).toBe(1);
+
+    // Publishing v2 is what the badge is actually watching for.
+    await db
+      .update(globalDiveSites)
+      .set({ currentVersion: 2 })
+      .where(eq(globalDiveSites.id, late.id));
+    expect((await currentGlobalDiveSiteVersions(db, [late.id])).get(late.id)).toBe(2);
+
+    // An empty ask never reaches the database and never invents an entry.
+    expect(await currentGlobalDiveSiteVersions(db, [])).toEqual(new Map());
+    expect((await currentGlobalDiveSiteVersions(db, [late.id, late.id])).size).toBe(1);
   });
 });
