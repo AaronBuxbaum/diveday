@@ -743,8 +743,16 @@ for (const scheme of ["light", "dark"] as const) {
         });
         const reviewSettingsPage = makeActivitySafe(await reviewSettingsContext.newPage());
         await reviewSettingsPage.goto("/shop/blue-mantis/settings");
+        // By role and full accessible name, not `getByLabel("Review link")`:
+        // that substring-matches, and the field's `InfoHint` toggle beside it
+        // is labelled "More about Review link", so the loose locator resolves
+        // to two elements the moment both have rendered. It only ever passed
+        // by racing the hint's hydration — settings had no `loading.tsx`, so
+        // the navigation blocked and the fill landed first. Now the route
+        // paints its skeleton and the locator waits for real content, which
+        // arrives hydrated (ADR 20260804-instant-navigation).
         await reviewSettingsPage
-          .getByLabel("Review link")
+          .getByRole("textbox", { name: "Review link (optional)" })
           .fill("https://g.page/r/blue-mantis/review");
         await reviewSettingsPage.getByRole("button", { name: "Save review link" }).click();
         await reviewSettingsPage
