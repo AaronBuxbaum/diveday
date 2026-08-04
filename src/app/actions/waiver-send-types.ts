@@ -16,8 +16,10 @@ export type WaiverFallbackLink = {
   name: string;
   token: string;
   /** Why staff must hand this over themselves — a missing address reads very
-   * differently from a shop that has no email provider wired up at all. */
-  reason: "no_email" | "unconfigured" | "test_recipient" | "failed";
+   * differently from a shop that has no email provider wired up at all, and
+   * both read differently from a deployment with no `APP_HOST` to build the
+   * link on. Each gap points at a different setting, so each gets its own word. */
+  reason: "no_email" | "no_app_origin" | "unconfigured" | "test_recipient" | "failed";
 };
 
 export type WaiverSendState = {
@@ -64,6 +66,7 @@ export type WaiverSendCopy = {
   reasonTestRecipientOne: string;
   reasonTestRecipientOther: string;
   reasonUnconfigured: string;
+  reasonNoAppOrigin: string;
   sharePrivateLinkOne: string;
   sharePrivateLinkOther: string;
   /** "Waiver sent to {names}." */
@@ -95,6 +98,7 @@ export function waiverSendCopy(t: StaffTranslator): WaiverSendCopy {
     reasonTestRecipientOne: t("shared.waiverSend.reasonTestRecipientOne"),
     reasonTestRecipientOther: t("shared.waiverSend.reasonTestRecipientOther"),
     reasonUnconfigured: t("shared.waiverSend.reasonUnconfigured"),
+    reasonNoAppOrigin: t("shared.waiverSend.reasonNoAppOrigin"),
     sharePrivateLinkOne: t("shared.waiverSend.sharePrivateLinkOne"),
     sharePrivateLinkOther: t("shared.waiverSend.sharePrivateLinkOther"),
     sent: t("shared.waiverSend.sent"),

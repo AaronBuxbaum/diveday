@@ -268,18 +268,17 @@ describe("offline manifest policy", () => {
       },
       checkpoint: "after_dive_1",
       crew: [],
-      crewAttestation: null,
       completeness: {
         complete: false,
         diversAccountedFor: true,
         crewAccountedFor: false,
-        reason: "crew_not_attested",
-        crewReason: "crew_not_attested",
+        reason: "crew_none_assigned",
+        crewReason: "crew_none_assigned",
         crewCounts: {
           crewAwaiting: 0,
           crewNotBackAboard: 0,
           crewAshore: 0,
-          crewExpectedAboard: 0,
+          crewAssigned: 0,
         },
       },
       divers: [
@@ -346,18 +345,17 @@ describe("offline manifest policy", () => {
       },
       checkpoint: "after_dive_1",
       crew: [],
-      crewAttestation: null,
       completeness: {
         complete: false,
         diversAccountedFor: false,
         crewAccountedFor: false,
         reason: "divers_awaiting",
-        crewReason: "crew_not_attested",
+        crewReason: "crew_none_assigned",
         crewCounts: {
           crewAwaiting: 0,
           crewNotBackAboard: 0,
           crewAshore: 0,
-          crewExpectedAboard: 0,
+          crewAssigned: 0,
         },
       },
       divers: [
@@ -446,18 +444,17 @@ describe("offline manifest policy", () => {
       },
       checkpoint: "departure",
       crew: [],
-      crewAttestation: null,
       completeness: {
         complete: false,
         diversAccountedFor: false,
         crewAccountedFor: false,
         reason: "divers_awaiting",
-        crewReason: "crew_not_attested",
+        crewReason: "crew_none_assigned",
         crewCounts: {
           crewAwaiting: 0,
           crewNotBackAboard: 0,
           crewAshore: 0,
-          crewExpectedAboard: 0,
+          crewAssigned: 0,
         },
       },
       divers: [

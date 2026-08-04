@@ -3,6 +3,7 @@ import {
   canConfigureTrips,
   canDeleteDiver,
   canErasePersonalData,
+  canExportIncidentRecord,
   canManageMessagingSettings,
   canManageOrders,
   canManagePaymentSettings,
@@ -99,6 +100,15 @@ export const canPersonErasePersonalData = (db: DbExecutor, shopId: string, perso
 
 export const canPersonConfigureTrips = (db: DbExecutor, shopId: string, personId: string) =>
   canPerson(db, shopId, personId, canConfigureTrips);
+
+/**
+ * Live DB-checked companion of the owner-only incident-export gate
+ * (src/lib/authz.ts). The export route calls this itself as well as the
+ * manifest that links to it: the document names whoever generated it, so
+ * "the link was hidden" is not a control.
+ */
+export const canPersonExportIncidentRecord = (db: DbExecutor, shopId: string, personId: string) =>
+  canPerson(db, shopId, personId, canExportIncidentRecord);
 
 /** Live DB-checked companion of the H-06 gear-override gate (src/lib/authz.ts). */
 export const canPersonOverrideGearRequest = (db: DbExecutor, shopId: string, personId: string) =>

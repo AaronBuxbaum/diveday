@@ -90,6 +90,36 @@ export function InlineConfirm(props: InlineConfirmProps) {
   const { pending } = useFormStatus();
   const resetTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const pathname = usePathname();
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const wasPending = useRef(false);
+  const restoreFocus = useRef(false);
+
+  // Disarm once the submit this guarded has landed. Without it the confirm
+  // block just sits there re-asking a question that has already been answered
+  // — on the roster's waiver resend, the send went out and the control stayed
+  // open on "Send Ana a new waiver link?" instead of settling back to the
+  // status pill, which reads as a tap that did nothing.
+  useEffect(() => {
+    if (pending) {
+      wasPending.current = true;
+      return;
+    }
+    if (!wasPending.current) return;
+    wasPending.current = false;
+    restoreFocus.current = true;
+    setArmed(false);
+  }, [pending]);
+
+  // ...and put focus back where the person left it. The confirm button they
+  // just pressed is unmounted by that disarm, which drops focus to `<body>`;
+  // `preventScroll` keeps a long staff list from lurching as focus moves.
+  // Runs in its own effect because the trigger only exists after the disarm
+  // has rendered.
+  useEffect(() => {
+    if (armed || !restoreFocus.current) return;
+    restoreFocus.current = false;
+    triggerRef.current?.focus({ preventScroll: true });
+  }, [armed]);
 
   // Disarms on the leading edge of any (re)navigation to this component's
   // route — including an Activity-preserved show/hide cycle, should
@@ -111,6 +141,7 @@ export function InlineConfirm(props: InlineConfirmProps) {
     if (!armed) {
       return (
         <button
+          ref={triggerRef}
           type="button"
           onClick={() => setArmed(true)}
           className={triggerClassName}
@@ -144,6 +175,7 @@ export function InlineConfirm(props: InlineConfirmProps) {
 
   return (
     <button
+      ref={triggerRef}
       // Only the confirm tap is a real submit — the arming tap must never
       // fire the form's action, so it stays a plain button until confirmed.
       type={armed ? "submit" : "button"}

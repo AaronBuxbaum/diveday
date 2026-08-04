@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { AGENCY_KEYS } from "@/app/shop/[shopSlug]/divers/[personId]/_components/shared";
 import { PrintButton } from "@/components/PrintButton";
 import { buttonClass } from "@/components/ui/button";
+import { canPersonExportIncidentRecord } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { getIncidentExport } from "@/db/incident-export";
 import { getShopById } from "@/db/shops";
@@ -34,18 +35,6 @@ export const metadata: Metadata = {
 };
 
 /**
- * The one document a shop hands to authorities or insurers after a departure:
- * recorded facts only — boarding, the append-only roll-call timeline,
- * certification evidence as held, waiver *status* (never medical answers) —
- * each with its timestamp and recorder, plus a SHA-256 integrity code in the
- * footer so a printout can be checked against a fresh export.
- *
- * Staff-only (`/shop/**` end to end) and read-only: nothing on this page
- * mutates anything. Print-first: chrome is `print:hidden`, everything else is
- * plain bordered tables the `@media print` monochrome treatment already
- * handles (globals.css).
- */
-/**
  * What each act on a buddy team reads as in the timeline. Codes come from
  * `src/lib/incident-export.ts`; the words live here, like every other status
  * this page prints.
@@ -60,6 +49,21 @@ const BUDDY_TEAM_ACTION_KEYS: Record<
   member_removed: "incidentExport.timelineBuddyMemberRemoved",
 };
 
+/**
+ * The one document a shop hands to authorities or insurers after a departure:
+ * recorded facts only — boarding, the append-only roll-call timeline,
+ * certification evidence as held, waiver *status* (never medical answers) —
+ * each with its timestamp and recorder, plus a SHA-256 integrity code in the
+ * footer so a printout can be checked against a fresh export.
+ *
+ * **Owner-only** (`canExportIncidentRecord`, src/lib/authz.ts), unlike the
+ * manifest it is reached from: the crew run the roll call, but producing the
+ * shop's evidentiary account of a departure — and having their own name stamped
+ * on it as its generator — is the owner's call. Read-only: nothing on this page
+ * mutates anything. Print-first: chrome is `print:hidden`, everything else is
+ * plain bordered tables the `@media print` monochrome treatment already
+ * handles (globals.css).
+ */
 export default async function IncidentExportPage({
   params,
 }: {
@@ -72,6 +76,14 @@ export default async function IncidentExportPage({
   if (!shop) notFound();
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
+  // Checked against the database, not the JWT, so a demoted owner loses this
+  // immediately. The manifest hides the link for everyone else, but this is the
+  // gate — the page refuses however it was reached. The landing is the manifest
+  // with a reason on it: a refusal that teleports you somewhere silently reads
+  // as a broken button (task 82).
+  if (!(await canPersonExportIncidentRecord(db, shop.id, session.user.personId))) {
+    redirect(`/shop/${shopSlug}/trips/${tripId}/manifest?notice=incident_export_not_authorized`);
+  }
   // Tenancy is the session's shop, never the URL: another shop's trip id — or
   // a stale slug — resolves to null and 404s.
   const doc = await getIncidentExport(db, shop.id, tripId, session.user.personId);

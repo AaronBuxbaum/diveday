@@ -9,6 +9,7 @@ import {
   type IncidentExportDocument,
   type IncidentTimelineEventInput,
 } from "@/lib/incident-export";
+import { canPersonExportIncidentRecord } from "./authz";
 import { listTripBuddyTeamEvents, listTripBuddyTeams } from "./buddy-pairs";
 import type { AppDb } from "./client";
 import { getTripManifests } from "./manifests";
@@ -34,6 +35,15 @@ import { getShopById } from "./shops";
  * from the same readers every safety surface uses (`getTripManifests`,
  * `listTripReadiness`), so this document cannot disagree with the manifest the
  * crew ran the day on.
+ *
+ * **Re-checks the owner-only gate itself** rather than trusting its caller, the
+ * same way `createOrder` and `anonymizeDiver` re-check theirs (src/db/authz.ts).
+ * The route above already refuses, so today this is belt and braces — but this
+ * function assembles a whole departure's evidentiary record and stamps the
+ * caller's name on it as its generator, and read-only-looking helpers acquire
+ * callers: a PDF endpoint, a cron, an "email the insurer" action. "The route
+ * forgot to check" must not be the thing standing between a captain and the
+ * document (security review 20260804).
  */
 export async function getIncidentExport(
   db: AppDb,
@@ -42,6 +52,7 @@ export async function getIncidentExport(
   generatedByPersonId: string,
   generatedAt: Date = nowDate(),
 ): Promise<IncidentExportDocument | null> {
+  if (!(await canPersonExportIncidentRecord(db, shopId, generatedByPersonId))) return null;
   const manifests = await getTripManifests(db, shopId, tripId);
   if (!manifests || manifests.length === 0) return null;
 

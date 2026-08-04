@@ -174,6 +174,26 @@ export function canErasePersonalData(roles: readonly Role[] | undefined): boolea
  * sessions and their admission rules are instructor-owned, but stays closed to
  * captains, crew, and divemasters, who operate the trips owners/managers set up.
  */
+/**
+ * Open a departure's incident-ready export — the single document a shop hands
+ * to authorities or an insurer after something goes wrong. Owner only, the same
+ * strictness as `canErasePersonalData` and deliberately tighter than the
+ * owner/manager gate on the full-shop export.
+ *
+ * The manifest itself stays open to the whole crew: they run the roll call, and
+ * gating what they need to sail would be absurd. This is a different act. The
+ * export assembles one departure's complete evidentiary record — every diver's
+ * certification evidence, waiver status, and the full roll-call timeline with
+ * every recorder named — into a signed artefact whose whole purpose is to be
+ * handed *outside* the shop, and it stamps whoever generated it into the
+ * document. Producing the business's account of an incident is the owner's call
+ * to make and answer for, not a control any staff member should find themselves
+ * one tap from on the day it matters.
+ */
+export function canExportIncidentRecord(roles: readonly Role[] | undefined): boolean {
+  return (roles ?? []).some((role) => role === "owner");
+}
+
 export function canConfigureTrips(roles: readonly Role[] | undefined): boolean {
   return (roles ?? []).some(
     (role) => role === "owner" || role === "manager" || role === "instructor",

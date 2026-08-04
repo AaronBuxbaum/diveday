@@ -22,7 +22,14 @@ import { hasLiveWaiverRequest, issueWaiverRequest, staleWaiverRecordForToken } f
  * `sent` means staff must hand over the fallback link themselves, so the UI
  * shows it rather than silently claiming an email is on its way.
  */
-export type WaiverDelivery = "sent" | "no_email" | "unconfigured" | "test_recipient" | "failed";
+export type WaiverDelivery =
+  | "sent"
+  | "no_email"
+  /** No `APP_HOST`, so there is no origin to build the link on — nothing was attempted. */
+  | "no_app_origin"
+  | "unconfigured"
+  | "test_recipient"
+  | "failed";
 
 export type IssueAndDeliverWaiverResult =
   | {
@@ -84,7 +91,13 @@ export async function issueAndDeliverWaiver(
   const email = ctx?.person.email ?? null;
   const origin = publicAppUrl();
 
-  let delivery: WaiverDelivery = "unconfigured";
+  // Two different "we could not mail this" states that used to collapse into
+  // one. `unconfigured` means no email provider; `no_app_origin` means the
+  // provider may be fine but `APP_HOST` is unset, so there is no origin to
+  // build the diver's link on and nothing is attempted. Telling a shop "no
+  // email provider configured" when the actual gap is a missing APP_HOST sends
+  // them to look at the wrong setting.
+  let delivery: WaiverDelivery = "no_app_origin";
   if (!email) {
     delivery = "no_email";
   } else if (origin && ctx) {

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FlashParams } from "@/components/FlashParams";
-import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
+import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
@@ -303,13 +303,11 @@ export default async function ManageTripPage({
 
       <TripNoticeBanner notice={notice} count={count} gate={gate} tripId={tripId} locale={locale} />
 
-      {canConfigure ? null : (
-        <div className="mt-6">
-          <ShopNotice tone="neutral" role="status">
-            {t("trips.detail.viewOnlyNotice")}
-          </ShopNotice>
-        </div>
-      )}
+      {/* No "you're viewing this trip" notice for staff without configure
+          rights. The editable sections simply aren't rendered, which is the
+          same thing said without a paragraph explaining the role model to
+          someone who cannot change it (ADR 20260724-role-gated-surfaces-hide-
+          not-explain). */}
 
       {canConfigure ? (
         <DetailsSection

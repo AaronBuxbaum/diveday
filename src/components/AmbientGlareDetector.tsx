@@ -20,10 +20,10 @@ export const CONTRAST_MODE_CHANGE_EVENT = "diveday:contrast-mode-change";
 
 /** Every word `AmbientContrastControl` renders, resolved server-side. */
 export interface AmbientContrastCopy {
-  contrastLabel: string;
+  modeLabel: string;
   labelAuto: string;
-  labelStandard: string;
-  labelFullAaa: string;
+  labelLand: string;
+  labelBoat: string;
 }
 
 /**
@@ -160,8 +160,16 @@ export function AmbientGlareDetector() {
 const CONTRAST_MODES = ["auto", "standard", "full"] as const;
 
 /**
- * Manual override for the glare detection above: Auto follows the light
- * sensor, Standard pins it off, Maximum pins it on.
+ * Manual override for the glare detection above — **"Boat mode"** to the crew
+ * who use it: Auto follows the light sensor, Land mode pins it off, Boat mode
+ * pins it on. It used to be labelled "Contrast: Auto / Standard / Maximum", and
+ * sat under a separate "Glare mode active ☀" chip that said, less usefully,
+ * what the control right beneath it already showed. One control, named after
+ * the thing it is actually for.
+ *
+ * The internal vocabulary is still `standard`/`full` and the class it toggles
+ * is still `.glare-mode` — the stored per-device value and the stylesheet, not
+ * words anyone reads.
  *
  * A **segmented control**, not the range slider this used to be. Three named
  * stops is not a magnitude — nothing here is "more contrast than the last
@@ -208,11 +216,7 @@ export function AmbientContrastControl({ copy }: { copy: AmbientContrastCopy }) 
   };
 
   const labelFor = (value: ContrastMode) =>
-    value === "auto"
-      ? copy.labelAuto
-      : value === "standard"
-        ? copy.labelStandard
-        : copy.labelFullAaa;
+    value === "auto" ? copy.labelAuto : value === "standard" ? copy.labelLand : copy.labelBoat;
 
   return (
     // Real radios in a fieldset, not styled buttons: exactly one of the three
@@ -220,7 +224,7 @@ export function AmbientContrastControl({ copy }: { copy: AmbientContrastCopy }) 
     // group without a second visible heading.
     <fieldset data-testid="contrast-control" className="select-none text-left print:hidden">
       <legend className="text-xs font-bold tracking-wide text-muted uppercase">
-        {copy.contrastLabel}
+        {copy.modeLabel}
       </legend>
       <div className="mt-1.5 inline-flex rounded-full border border-border bg-surface-sunken p-1">
         {CONTRAST_MODES.map((value) => {

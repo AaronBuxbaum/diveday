@@ -9,10 +9,10 @@ import {
 } from "./AmbientGlareDetector";
 
 const contrastCopy: AmbientContrastCopy = {
-  contrastLabel: "Contrast",
+  modeLabel: "Boat mode",
   labelAuto: "Auto",
-  labelStandard: "Standard",
-  labelFullAaa: "Maximum",
+  labelLand: "Land mode",
+  labelBoat: "Boat mode",
 };
 
 class MockAmbientLightSensor implements EventTarget {
@@ -93,11 +93,11 @@ describe("AmbientGlareDetector & AmbientContrastControl", () => {
     );
 
     act(() => {
-      fireEvent.click(screen.getByRole("radio", { name: "Standard" }));
+      fireEvent.click(screen.getByRole("radio", { name: "Land mode" }));
     });
 
     // The selected option *is* the readout — there is no second chip repeating it.
-    expect(screen.getByRole("radio", { name: "Standard" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "Land mode" })).toBeChecked();
     expect(screen.getByRole("radio", { name: "Auto" })).not.toBeChecked();
 
     // Dispatch high lux event
@@ -108,7 +108,7 @@ describe("AmbientGlareDetector & AmbientContrastControl", () => {
       window.dispatchEvent(event);
     });
 
-    // Should remain disabled due to Standard override
+    // Should remain disabled due to the Land mode override
     expect(document.documentElement.classList.contains("glare-mode")).toBe(false);
   });
 
@@ -121,10 +121,10 @@ describe("AmbientGlareDetector & AmbientContrastControl", () => {
     );
 
     act(() => {
-      fireEvent.click(screen.getByRole("radio", { name: "Maximum" }));
+      fireEvent.click(screen.getByRole("radio", { name: "Boat mode" }));
     });
 
-    expect(screen.getByRole("radio", { name: "Maximum" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "Boat mode" })).toBeChecked();
 
     // Glare mode should be active even if lux is low (which it is by default, 0)
     expect(document.documentElement.classList.contains("glare-mode")).toBe(true);
@@ -140,7 +140,7 @@ describe("AmbientGlareDetector & AmbientContrastControl", () => {
       </>,
     );
 
-    expect(screen.getByRole("radio", { name: "Maximum" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "Boat mode" })).toBeChecked();
     expect(document.documentElement.classList.contains("glare-mode")).toBe(true);
   });
 

@@ -243,7 +243,7 @@ test("staff sends waivers to a multi-selected roster in one action", async ({ pa
   // per-diver breakdown as a single send. e2e has no email provider
   // configured, so both land as private links to share rather than "sent".
   const resultNotice = page.getByRole("status");
-  await expect(resultNotice).toContainText("This shop has no email provider configured yet");
+  await expect(resultNotice).toContainText("DiveDay can’t send email from this deployment yet");
   await expect(resultNotice).toContainText("Bulk Bea");
   await expect(resultNotice).toContainText("Bulk Cal");
 });

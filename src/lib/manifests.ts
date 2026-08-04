@@ -197,17 +197,17 @@ export type ManifestCrewMember = {
 };
 
 /**
- * A staff member's statement of how many crew are aboard at one checkpoint,
- * out of how many the trip has assigned. The **count-level** half of the crew
- * head count: crew hold no booking, so they are not `roll_call_events`
- * subjects, and before this existed a checkpoint could read "complete" with a
- * divemaster still down.
+ * A staff member's statement of how many crew were aboard at one checkpoint,
+ * out of how many the trip had assigned. **Retired** (ADR
+ * 20260804-crew-roll-call-is-per-person): nothing asks for one any more, and
+ * roll-call completeness reads the named crew list alone
+ * (`ManifestCrewMember.rollCall`). A number named nobody, so it could never say
+ * that the third body aboard was the deckhand rather than the divemaster who
+ * had not surfaced.
  *
- * It is no longer the only crew evidence — each assigned crew member now has a
- * result of their own (`ManifestCrewMember.rollCall`, ADR
- * 20260803-per-person-crew-roll-call). The count stays because it is the only
- * thing that can speak for a hand nobody rostered, and for a trip with an empty
- * assignment list where there is no named person to ask about.
+ * The shape survives because the rows do: they are statements humans made about
+ * departures that sailed, and the incident export and the shop CSV export both
+ * still render them.
  */
 export type CrewAttestation = {
   /** Bodies counted by a human. Never derived from the assignment list. */
@@ -378,27 +378,14 @@ export type CrewRollCallSubject = {
 };
 
 export type CrewRollCallCounts = {
+  /** How many crew the trip names at all. Zero is its own open state. */
+  crewAssigned: number;
   /** Assigned crew with no result of their own at this checkpoint. */
   crewAwaiting: number;
   /** Assigned crew a human recorded as not back aboard *after a dive*. */
   crewNotBackAboard: number;
   /** Assigned crew the per-person half already accounts for as ashore. */
   crewAshore: number;
-  /**
-   * How many bodies the count-level attestation actually has to cover:
-   * everyone assigned, **minus** the crew already accounted for as ashore.
-   *
-   * This is the number that was wrong. It used to be `crew.length` — every
-   * rostered person, including one the per-person half had explicitly recorded
-   * as staying ashore. Three crew rostered, Ana calls in sick, crew mark her
-   * `not_boarded` at departure (correct, and it carries forward) and attest
-   * "2 aboard": every checkpoint of that trip read `crew_short` forever, and
-   * the only exits were typing `3` — a false statement on a legal document —
-   * or deleting Ana from the crew, which erases her roll-call history. A crew
-   * that cannot close an honest count learns within two trips to type whatever
-   * number closes the box, which destroys the count (review 20260803, D2).
-   */
-  crewExpectedAboard: number;
 };
 
 /**
@@ -421,10 +408,10 @@ export function crewRollCallCounts(
   // one of these next to the diver counts cannot confuse the two.
   const crewAshore = crew.filter((member) => isRecordedAshore(checkpoint, member.rollCall)).length;
   return {
+    crewAssigned: crew.length,
     crewAwaiting: crew.filter((member) => !member.rollCall).length,
     crewNotBackAboard: crew.filter((member) => isNotBackAboard(checkpoint, member.rollCall)).length,
     crewAshore,
-    crewExpectedAboard: crew.length - crewAshore,
   };
 }
 
@@ -442,22 +429,26 @@ export function crewRollCallCounts(
  *   aboard after a dive. The loudest thing on this list: it is a stated
  *   emergency about the people most reliably in the water, so it outranks
  *   every other crew reason.
- * - `crew_not_attested` — every diver is counted, but nobody has said how many
- *   crew are aboard. Includes a trip with *zero* assigned crew: "0 of 0" is
- *   still a human statement, never an automatic pass (see below).
- * - `crew_short` — fewer crew were counted aboard than the trip still expects
- *   aboard: everyone assigned, minus anyone the per-person half already records
- *   as ashore (`crewExpectedAboard`).
- * - `crew_awaiting` — the count covers everyone, but a named crew member has no
- *   result of their own at this checkpoint. Ranked below `crew_short` for the
- *   same reason `divers_not_back_aboard` outranks `divers_awaiting`: a human
- *   who counted and came up short has stated an absence, while an untapped
- *   button is a clerical gap.
+ * - `crew_none_assigned` — the trip names nobody. An empty crew list is a
+ *   scheduling gap, never evidence that nobody else was aboard, so it holds the
+ *   checkpoint open exactly as an uncalled crew member does. The way out is to
+ *   put the people who sailed on the trip, which is what the manifest's "Add
+ *   crew to trip" button is for.
+ * - `crew_none_aboard` — the trip names crew, every one of them has a result,
+ *   and every one of those results is *ashore*. Nobody rostered is on the boat.
+ *   A departure with divers in the water had somebody running it, so this is
+ *   stronger evidence of an unrostered body aboard than an empty crew list is —
+ *   and the empty list already holds the checkpoint open on exactly that
+ *   reasoning (dive-domain review 20260804). Ranked below the two "somebody is
+ *   missing" reasons and above `crew_awaiting`: it is a stated, complete set of
+ *   results that together say something impossible, not a clerical gap.
+ * - `crew_awaiting` — the trip names crew, and at least one of them has no
+ *   result of their own at this checkpoint.
  */
 export type CrewIncompleteReason =
   | "crew_not_back_aboard"
-  | "crew_not_attested"
-  | "crew_short"
+  | "crew_none_assigned"
+  | "crew_none_aboard"
   | "crew_awaiting";
 
 export type RollCallIncompleteReason =
@@ -502,45 +493,35 @@ export type RollCallCompleteness = {
  *    DOM-H3). That is why this takes both counts rather than one `awaiting`:
  *    the *closing* rule is `unaccountedFor === 0`, and the split only decides
  *    which reason to name.
- * 2. Then crew, which is two sources and **one predicate** (ADR
- *    20260803-per-person-crew-roll-call). An attestation must exist and must
- *    account for every crew member the trip expects aboard **right now** — not
- *    the denominator stored on the attestation, so assigning another crew
- *    member after the fact re-opens the checkpoint instead of riding on a stale
- *    count — *and* every crew member the trip names must be accounted for
- *    individually. A count that says "3 aboard" names nobody; it cannot tell
- *    the boat that the third body is the deckhand rather than the divemaster
- *    who has not surfaced. Both halves stay because they answer different
- *    questions: the events cover the named crew, the count covers everyone
- *    else, including a hand nobody rostered.
+ * 2. Then crew, which is now **one source**: every crew member the trip names
+ *    must be accounted for individually (ADR 20260803-per-person-crew-roll-call,
+ *    ADR 20260804-crew-roll-call-is-per-person). The typed "how many crew are
+ *    aboard" attestation that used to be the other half is gone — it named
+ *    nobody, so it could never tell the boat that the third body was the
+ *    deckhand rather than the divemaster who has not surfaced, and the crew
+ *    tapping through named results had to re-state the same fact as a number
+ *    before a checkpoint would close. What it could catch that the named list
+ *    cannot — a hand nobody rostered — it caught by asking for a number, and
+ *    the honest fix for an unrostered hand is to roster them.
  *
- *    "Expects aboard" is the assignment list **minus the crew the per-person
- *    half already records as ashore** (`crewExpectedAboard`). The two halves
- *    have to reconcile: demanding the count cover a rostered hand who was
- *    explicitly marked not-boarded at the dock made an honest count impossible
- *    to close, and the only exits were a false number or deleting the person
- *    from the crew (review 20260803, D2).
+ * **A crew nobody is aboard from does not auto-complete either.** Two shapes of
+ * that, and both hold the checkpoint open. A trip with no crew assigned is a
+ * scheduling gap (the app already nags about it as a coverage gap), not
+ * evidence that nobody else was aboard — `crew_none_assigned`. And a trip whose
+ * whole rostered crew is recorded *ashore* has a complete set of results that
+ * together say the boat sailed with nobody running it — `crew_none_aboard`.
+ * Treating either as satisfied hands back exactly the silent pass this whole
+ * check exists to remove, on precisely the trips whose crew data is worst. The
+ * closing rule is therefore "at least one rostered body aboard, and everybody
+ * rostered accounted for", not "everybody rostered accounted for".
  *
- * **Zero assigned crew does not auto-complete.** A trip with no crew assigned is
- * a scheduling gap (the app already nags about it as a coverage gap), not
- * evidence that nobody else was aboard, so "0 of 0" still has to be said out
- * loud by a named human. The alternative — treating an empty assignment list as
- * satisfied — would hand back exactly the silent pass this whole check exists to
- * remove, and would do it on precisely the trips whose crew data is worst. The
- * same holds for a trip whose whole crew is recorded ashore: the expected count
- * falls to zero, and "0 aboard" is still a sentence a human has to say.
- *
- * Counting *more* crew aboard than are expected is fine and reads complete: an
- * extra deckhand is a person accounted for, not a person missing. The stored
- * denominator keeps the discrepancy visible.
- *
- * **Every crew input is required, and it is the crew list itself.** The crew
+ * **The crew input is required, and it is the crew list itself.** The crew
  * fields used to be optional counts defaulting to `0`, which made the one
  * function that decides whether everyone is out of the water *fail open by
- * construction*: a caller that supplied the attestation and forgot the
- * per-person figures got `complete: true` with nobody named, and the compiler
- * said nothing (review 20260803, D7). Taking the list also removes the caller's
- * ability to disagree with `crewRollCallCounts` about what it means.
+ * construction*: a caller that forgot the per-person figures got
+ * `complete: true` with nobody named, and the compiler said nothing (review
+ * 20260803, D7). Taking the list also removes the caller's ability to disagree
+ * with `crewRollCallCounts` about what it means.
  */
 export function rollCallCompleteness(input: {
   /** Which checkpoint this is — decides what a crew `not_boarded` means. */
@@ -556,24 +537,29 @@ export function rollCallCompleteness(input: {
   notBackAboard: number;
   /** The trip's assigned crew *now*, each with their result at this checkpoint. */
   crew: readonly CrewRollCallSubject[];
-  crewAttestation: CrewAttestation | null;
 }): RollCallCompleteness {
   const unaccountedFor = input.awaiting + input.notBackAboard;
   const diversAccountedFor = input.totalDivers > 0 && unaccountedFor === 0;
-  const attestation = input.crewAttestation;
   const crewCounts = crewRollCallCounts(input.checkpoint, input.crew);
-  const { crewAwaiting, crewNotBackAboard, crewExpectedAboard } = crewCounts;
-  const crewCounted = attestation !== null && attestation.crewAboard >= crewExpectedAboard;
-  const crewAccountedFor = crewCounted && crewAwaiting === 0 && crewNotBackAboard === 0;
+  const { crewAssigned, crewAwaiting, crewNotBackAboard, crewAshore } = crewCounts;
+  // Somebody rostered has to actually be on the boat. `crewAssigned > 0` alone
+  // was not enough: a crew recorded ashore at the dock is *accounted for* and
+  // carries forward, so a trip whose whole crew was marked not-aboard closed
+  // every checkpoint with nobody aboard and printed "everyone's accounted for"
+  // over a boat that had sailed with divers on it (dive-domain review
+  // 20260804). Under the retired attestation this state still cost a human
+  // saying "0 aboard" out loud; dropping the count must not make it free.
+  const crewAboard = crewAssigned - crewAshore;
+  const crewAccountedFor = crewAboard > 0 && crewAwaiting === 0 && crewNotBackAboard === 0;
   const crewReason: CrewIncompleteReason | null =
     crewNotBackAboard > 0
       ? "crew_not_back_aboard"
-      : attestation === null
-        ? "crew_not_attested"
-        : !crewCounted
-          ? "crew_short"
-          : crewAwaiting > 0
-            ? "crew_awaiting"
+      : crewAssigned === 0
+        ? "crew_none_assigned"
+        : crewAwaiting > 0
+          ? "crew_awaiting"
+          : crewAboard === 0
+            ? "crew_none_aboard"
             : null;
   const reason: RollCallIncompleteReason | null =
     input.totalDivers === 0
@@ -610,8 +596,6 @@ export type TripManifest = {
      */
     buddyAlert: BuddyAlert | null;
   })[];
-  /** The latest crew count attested at this checkpoint, if any. */
-  crewAttestation: CrewAttestation | null;
   /**
    * Whether this checkpoint is closed — divers *and* crew. Derived here so the
    * live page and the offline copy cannot drift apart; the offline view
@@ -720,7 +704,6 @@ export function buildTripManifest(input: {
   trip: TripManifest["trip"];
   checkpoint?: RollCallCheckpoint;
   crew: ManifestCrewMember[];
-  crewAttestation?: CrewAttestation | null;
   divers: ManifestDiverInput[];
 }): TripManifest {
   const checkpoint = input.checkpoint ?? "departure";
@@ -765,19 +748,16 @@ export function buildTripManifest(input: {
     awaiting,
     unaccountedFor: awaiting + notBackAboard,
   };
-  const crewAttestation = input.crewAttestation ?? null;
   return {
     trip: input.trip,
     checkpoint,
     crew,
-    crewAttestation,
     completeness: rollCallCompleteness({
       checkpoint,
       totalDivers: summary.totalDivers,
       awaiting: summary.awaiting,
       notBackAboard: summary.notBackAboard,
       crew: input.crew,
-      crewAttestation,
     }),
     divers,
     summary,

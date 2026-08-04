@@ -4,6 +4,7 @@ import { seededShopContext } from "@/test/db";
 import {
   canPersonConfigureTrips,
   canPersonDeleteDiver,
+  canPersonExportIncidentRecord,
   canPersonManageOrders,
   canPersonManagePaymentSettings,
   canPersonManageStaffAccounts,
@@ -100,6 +101,33 @@ describe("H-14 owner/manager surfaces", () => {
 
     expect(await canPersonRefund(db, shop.id, disabled)).toBe(false);
     expect(await canPersonDeleteDiver(db, shop.id, deleted)).toBe(false);
+    // The strictest gate closes the same window.
+    expect(await canPersonExportIncidentRecord(db, shop.id, disabled)).toBe(false);
+    expect(await canPersonExportIncidentRecord(db, shop.id, deleted)).toBe(false);
+  });
+
+  /**
+   * The incident export is owner-only, and it is one of only two gates in
+   * src/lib/authz.ts that stops short of owner-*or*-manager. That makes manager
+   * the role a future edit is most likely to wave through by pattern-matching
+   * the gates around it, so the live path pins it here rather than relying on
+   * the pure predicate's own test (security review 20260804).
+   */
+  it("admits only an owner to the incident-ready export", async () => {
+    const { db, shop } = await seededShopContext();
+    const owner = await makeStaff(db, shop.id, ["owner"]);
+    const manager = await makeStaff(db, shop.id, ["manager"]);
+    const instructor = await makeStaff(db, shop.id, ["instructor"]);
+    const captain = await makeStaff(db, shop.id, ["captain"]);
+    const divemaster = await makeStaff(db, shop.id, ["divemaster"]);
+    const crew = await makeStaff(db, shop.id, ["crew"]);
+
+    expect(await canPersonExportIncidentRecord(db, shop.id, owner)).toBe(true);
+    for (const person of [manager, instructor, captain, divemaster, crew]) {
+      expect(await canPersonExportIncidentRecord(db, shop.id, person)).toBe(false);
+    }
+    // Strictly tighter than the owner/manager gates it sits beside.
+    expect(await canPersonRefund(db, shop.id, manager)).toBe(true);
   });
 });
 

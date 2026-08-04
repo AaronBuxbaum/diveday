@@ -413,7 +413,7 @@ test("displays missing diver face-grid on manifest page", async ({ page }) => {
   await firstAvatar.click();
 });
 
-test("a checkpoint with every diver counted stays open until the crew are counted too", async ({
+test("a checkpoint with every diver counted stays open until the crew are called too", async ({
   page,
 }) => {
   // DOM-H1. Crew are the people most reliably in the water and were not part
@@ -425,16 +425,13 @@ test("a checkpoint with every diver counted stays open until the crew are counte
   // pull the shared trip's roll-call state out from under the tests above.
   // This charter carries three divers and two crew and belongs to no other spec.
   const TRIP = "Afternoon Two-Tank — French Reef";
-  // Three sequential roll-call writes plus two crew counts, each a full server
+  // Three sequential diver writes plus two crew writes, each a full server
   // action round trip — more than the default per-test budget allows for.
   test.setTimeout(60_000);
 
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, TRIP);
   await openTripTab(page, "Manifest");
-
-  // Nothing counted yet.
-  await expect(page.getByText("No crew count recorded at this checkpoint yet.")).toBeVisible();
 
   // After a dive, roll call is a head count, so every diver — blocked or not —
   // can be recorded present. That is what makes "all divers counted" reachable.
@@ -459,29 +456,13 @@ test("a checkpoint with every diver counted stays open until the crew are counte
     await expect(settled).toHaveCount(settledBefore + 1);
   }
   await expect(boardButtons).toHaveCount(0);
-  await expect(page.getByText(/still to call/)).toHaveCount(0);
+  // "divers", specifically: the crew half's own line is also "N crew members
+  // still to call", and it is *expected* to be showing at this point.
+  await expect(page.getByText(/divers? still to call/)).toHaveCount(0);
 
-  // Every diver has a result — and the checkpoint is still open, naming why.
-  await expect(
-    page.getByText("Every diver is counted. Confirm how many crew are aboard to close this"),
-  ).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Roll call complete ✦" })).toHaveCount(0);
-
-  // A short count does not close it either: this charter carries a captain and
-  // a divemaster, so one aboard leaves someone unaccounted for.
-  await page.getByLabel("Crew aboard").fill("1");
-  await page.getByRole("button", { name: "Confirm crew count" }).click();
-  await expect(page.getByText(/1 of 2 crew aboard/)).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Roll call complete ✦" })).toHaveCount(0);
-
-  // Counting the rest is what closes the *count* — and the attestation is
-  // append-only, so this supersedes the short count rather than editing it.
-  await page.getByLabel("Crew aboard").fill("2");
-  await page.getByRole("button", { name: "Confirm crew count" }).click();
-  await expect(page.getByText(/2 of 2 crew aboard/)).toBeVisible();
-
-  // DOM-H1's per-person half. "2 of 2 aboard" names nobody, so the checkpoint
-  // is still open — and now it says which crew member nobody has called.
+  // Every diver has a result — and the checkpoint is still open, naming why:
+  // the crew, by name, are the whole crew half (ADR
+  // 20260804-crew-roll-call-is-per-person).
   await expect(page.getByRole("heading", { name: "Roll call complete ✦" })).toHaveCount(0);
   await expect(page.getByText(/crew members still to call/)).toBeVisible();
 
@@ -498,7 +479,7 @@ test("a checkpoint with every diver counted stays open until the crew are counte
   }
   await expect(crewAboardButtons).toHaveCount(0);
 
-  // Both halves said out loud by a named human: now it closes.
+  // Every person aboard named by a human: now it closes.
   await expect(page.getByRole("heading", { name: "Roll call complete ✦" })).toBeVisible();
 
   // DOM-H3. Now a diver does not come back from dive one. After a dive, the

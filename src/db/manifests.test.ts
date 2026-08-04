@@ -18,7 +18,6 @@ import {
   getTripManifests,
   listDepartureBoardedBookingIds,
   listDepartureBoardedByTrip,
-  recordCrewAttestation,
   recordCrewRollCall,
   recordRollCall,
   updateLatestRollCallNote,
@@ -26,7 +25,6 @@ import {
 import {
   bookings,
   people,
-  rollCallCrewAttestations,
   rollCallCrewEvents,
   rollCallEvents,
   shops,
@@ -740,121 +738,33 @@ describe("crew aboard attestation (in-memory PGlite)", () => {
     }
   }
 
-  it("does not read the checkpoint complete with every diver counted and no crew attested", async () => {
+  it("does not read the checkpoint complete with every diver counted and the crew uncalled", async () => {
     const { db, shop, reef, staff } = await manifestContext();
     await boardEveryDiver(db, shop.id, reef.id, staff.id, "after_dive_1");
 
     const manifest = await getTripManifest(db, shop.id, reef.id, "after_dive_1");
-    // The precondition the old rule called "complete".
+    // The precondition the old divers-only rule called "complete".
     expect(manifest?.summary.awaiting).toBe(0);
     expect(manifest?.summary.totalDivers).toBeGreaterThan(0);
     // The seed crews every charter, so there really are people unaccounted for.
     expect(manifest?.crew.length).toBeGreaterThan(0);
-    expect(manifest?.crewAttestation).toBeNull();
     expect(manifest?.completeness).toMatchObject({
       complete: false,
       diversAccountedFor: true,
       crewAccountedFor: false,
-      reason: "crew_not_attested",
+      reason: "crew_awaiting",
     });
-  });
 
-  it("still refuses to read complete when fewer crew are attested than the trip has assigned", async () => {
-    const { db, shop, reef, staff } = await manifestContext();
-    await boardEveryDiver(db, shop.id, reef.id, staff.id, "after_dive_1");
-    const before = await getTripManifest(db, shop.id, reef.id, "after_dive_1");
-    const assigned = before?.crew.length ?? 0;
-    expect(assigned).toBeGreaterThan(1);
-
-    await expect(
-      recordCrewAttestation(db, {
-        shopId: shop.id,
-        tripId: reef.id,
-        attestedByPersonId: staff.id,
-        crewAboard: assigned - 1,
-        checkpoint: "after_dive_1",
-      }),
-    ).resolves.toMatchObject({ ok: true, crewAssigned: assigned });
-
-    const short = await getTripManifest(db, shop.id, reef.id, "after_dive_1");
-    expect(short?.crewAttestation).toMatchObject({ crewAboard: assigned - 1 });
-    expect(short?.completeness).toMatchObject({ complete: false, reason: "crew_short" });
-
-    // Counting the last one aboard, plus a result for each named crew member,
-    // is what closes it.
+    // Calling each of them by name is what closes it.
     await accountForEveryCrewMember(db, shop.id, reef.id, staff.id, "after_dive_1");
-    await expect(
-      recordCrewAttestation(db, {
-        shopId: shop.id,
-        tripId: reef.id,
-        attestedByPersonId: staff.id,
-        crewAboard: assigned,
-        checkpoint: "after_dive_1",
-      }),
-    ).resolves.toMatchObject({ ok: true });
-    const closed = await getTripManifest(db, shop.id, reef.id, "after_dive_1");
-    expect(closed?.completeness).toMatchObject({
+    expect(
+      (await getTripManifest(db, shop.id, reef.id, "after_dive_1"))?.completeness,
+    ).toMatchObject({
       complete: true,
       diversAccountedFor: true,
       crewAccountedFor: true,
       reason: null,
     });
-  });
-
-  it("is append-only: a later attestation supersedes without rewriting the earlier one", async () => {
-    const { db, shop, reef, staff } = await manifestContext();
-    const first = await recordCrewAttestation(db, {
-      shopId: shop.id,
-      tripId: reef.id,
-      attestedByPersonId: staff.id,
-      crewAboard: 1,
-      checkpoint: "departure",
-      note: "Captain only so far.",
-      occurredAt: new Date(nowMs() - 60_000),
-    });
-    const second = await recordCrewAttestation(db, {
-      shopId: shop.id,
-      tripId: reef.id,
-      attestedByPersonId: staff.id,
-      crewAboard: 2,
-      checkpoint: "departure",
-      occurredAt: nowDate(),
-    });
-    expect(first).toMatchObject({ ok: true });
-    expect(second).toMatchObject({ ok: true });
-
-    const rows = await db
-      .select()
-      .from(rollCallCrewAttestations)
-      .where(eq(rollCallCrewAttestations.tripId, reef.id));
-    // Two rows, not one edited in place — what the boat believed at each point
-    // stays readable, exactly like a roll-call event.
-    expect(rows).toHaveLength(2);
-    expect(rows.map((row) => row.crewAboard).sort()).toEqual([1, 2]);
-    expect(rows.find((row) => row.crewAboard === 1)?.note).toBe("Captain only so far.");
-
-    const manifest = await getTripManifest(db, shop.id, reef.id, "departure");
-    // The newest one is the current answer.
-    expect(manifest?.crewAttestation).toMatchObject({ crewAboard: 2, note: null });
-  });
-
-  it("keeps each checkpoint's crew count independent", async () => {
-    const { db, shop, reef, staff } = await manifestContext();
-    await recordCrewAttestation(db, {
-      shopId: shop.id,
-      tripId: reef.id,
-      attestedByPersonId: staff.id,
-      crewAboard: 2,
-      checkpoint: "departure",
-    });
-
-    const manifests = await getTripManifests(db, shop.id, reef.id);
-    expect(manifests?.find((m) => m.checkpoint === "departure")?.crewAttestation).toMatchObject({
-      crewAboard: 2,
-    });
-    // A count taken at the dock says nothing about who is aboard after dive one
-    // — that is the whole point of an independent checkpoint.
-    expect(manifests?.find((m) => m.checkpoint === "after_dive_1")?.crewAttestation).toBeNull();
   });
 
   it("re-opens a closed checkpoint when another crew member is assigned afterwards", async () => {
@@ -863,20 +773,13 @@ describe("crew aboard attestation (in-memory PGlite)", () => {
     const assigned =
       (await getTripManifest(db, shop.id, reef.id, "after_dive_1"))?.crew.length ?? 0;
     await accountForEveryCrewMember(db, shop.id, reef.id, staff.id, "after_dive_1");
-    await recordCrewAttestation(db, {
-      shopId: shop.id,
-      tripId: reef.id,
-      attestedByPersonId: staff.id,
-      crewAboard: assigned,
-      checkpoint: "after_dive_1",
-    });
     expect(
       (await getTripManifest(db, shop.id, reef.id, "after_dive_1"))?.completeness.complete,
     ).toBe(true);
 
-    // Assign a crew member the count never covered. Completeness compares
-    // against the assignment list *now*, so a stale "N of N" cannot keep the
-    // checkpoint closed over a person nobody counted.
+    // Completeness reads the assignment list *now*, so a person added after
+    // the crew were called re-opens the checkpoint rather than riding on the
+    // results already recorded against everybody else.
     const staffRows = await listStaff(db, shop.id);
     const assignedIds = new Set(
       (
@@ -892,75 +795,37 @@ describe("crew aboard attestation (in-memory PGlite)", () => {
 
     const reopened = await getTripManifest(db, shop.id, reef.id, "after_dive_1");
     expect(reopened?.crew.length).toBe(assigned + 1);
-    expect(reopened?.crewAttestation).toMatchObject({ crewAssigned: assigned });
-    expect(reopened?.completeness).toMatchObject({ complete: false, reason: "crew_short" });
-  });
-
-  it("refuses a count from another shop, an unknown attester, a bad checkpoint, or a nonsense number", async () => {
-    const { db, shop, reef, staff, booking } = await manifestContext();
-    const [otherShop] = await db
-      .insert(shops)
-      .values({ name: "Other Shop", slug: "other-shop-crew-attestation", timezone: "UTC" })
-      .returning();
-    if (!otherShop) throw new Error("second shop insert failed");
-
-    // Tenant scoping: this shop's staff, another shop's id — the trip is not
-    // theirs, so there is nothing to attest.
-    await expect(
-      recordCrewAttestation(db, {
-        shopId: otherShop.id,
-        tripId: reef.id,
-        attestedByPersonId: staff.id,
-        crewAboard: 2,
-      }),
-    ).resolves.toEqual({ ok: false, reason: "staff_not_found" });
-
-    // A diver is not staff, so they cannot sign a head count even in their own shop.
-    await expect(
-      recordCrewAttestation(db, {
-        shopId: shop.id,
-        tripId: reef.id,
-        attestedByPersonId: booking.person.id,
-        crewAboard: 2,
-      }),
-    ).resolves.toEqual({ ok: false, reason: "staff_not_found" });
-
-    await expect(
-      recordCrewAttestation(db, {
-        shopId: shop.id,
-        tripId: reef.id,
-        attestedByPersonId: staff.id,
-        crewAboard: 2,
-        checkpoint: "after_dive_9",
-      }),
-    ).resolves.toEqual({ ok: false, reason: "invalid_checkpoint" });
-
-    for (const crewAboard of [-1, 1.5, 100, Number.NaN]) {
-      await expect(
-        recordCrewAttestation(db, {
-          shopId: shop.id,
-          tripId: reef.id,
-          attestedByPersonId: staff.id,
-          crewAboard,
-        }),
-      ).resolves.toEqual({ ok: false, reason: "invalid_count" });
-    }
-
-    // Nothing was written by any of the refusals above.
-    const rows = await db
-      .select()
-      .from(rollCallCrewAttestations)
-      .where(eq(rollCallCrewAttestations.tripId, reef.id));
-    expect(rows).toEqual([]);
+    expect(reopened?.completeness).toMatchObject({ complete: false, reason: "crew_awaiting" });
   });
 
   /**
-   * DOM-H1, the per-person half (ADR 20260803-per-person-crew-roll-call). The
-   * attested count names nobody: "3 of 3 aboard" cannot tell the boat that the
-   * third body is the deckhand rather than the divemaster who has not
-   * surfaced. Each assigned crew member is now a roll-call subject of their
-   * own — a `people.id`, never a booking, so `roll_call_events.booking_id`
-   * stays `notNull` and the safety spine's invariant is untouched.
+   * The one thing an empty crew list must never be is a free pass (ADR
+   * 20260804-crew-roll-call-is-per-person). It is a scheduling gap, not
+   * evidence that nobody else was aboard, and the manifest answers it with
+   * "Add crew to trip" rather than a number to type.
+   */
+  it("holds the checkpoint open on a trip with nobody on the crew at all", async () => {
+    const { db, shop, reef, staff } = await manifestContext();
+    await boardEveryDiver(db, shop.id, reef.id, staff.id, "after_dive_1");
+    await db.delete(tripAssignments).where(eq(tripAssignments.tripId, reef.id));
+
+    const manifest = await getTripManifest(db, shop.id, reef.id, "after_dive_1");
+    expect(manifest?.crew).toEqual([]);
+    expect(manifest?.completeness).toMatchObject({
+      complete: false,
+      diversAccountedFor: true,
+      crewAccountedFor: false,
+      reason: "crew_none_assigned",
+      crewReason: "crew_none_assigned",
+    });
+  });
+
+  /**
+   * DOM-H1, the per-person rule (ADR 20260803-per-person-crew-roll-call, ADR
+   * 20260804-crew-roll-call-is-per-person). Each assigned crew member is a
+   * roll-call subject of their own — a `people.id`, never a booking, so
+   * `roll_call_events.booking_id` stays `notNull` and the safety spine's
+   * invariant is untouched.
    */
   describe("per-person crew roll call", () => {
     it("keeps the checkpoint open while a named crew member is unaccounted for", async () => {
@@ -968,16 +833,9 @@ describe("crew aboard attestation (in-memory PGlite)", () => {
       await boardEveryDiver(db, shop.id, reef.id, staff.id, "after_dive_1");
       const crew = (await getTripManifest(db, shop.id, reef.id, "after_dive_1"))?.crew ?? [];
       expect(crew.length).toBeGreaterThan(1);
-      await recordCrewAttestation(db, {
-        shopId: shop.id,
-        tripId: reef.id,
-        attestedByPersonId: staff.id,
-        crewAboard: crew.length,
-        checkpoint: "after_dive_1",
-      });
 
-      // The count says everyone is aboard. It still names nobody, so the
-      // checkpoint stays open until each of them does.
+      // Every diver is counted. The checkpoint stays open until each named
+      // crew member has a result too.
       const [first, ...rest] = crew;
       if (!first) throw new Error("crew missing");
       expect(
@@ -1021,13 +879,6 @@ describe("crew aboard attestation (in-memory PGlite)", () => {
       await boardEveryDiver(db, shop.id, reef.id, staff.id, "after_dive_1");
       await accountForEveryCrewMember(db, shop.id, reef.id, staff.id, "after_dive_1");
       const crew = (await getTripManifest(db, shop.id, reef.id, "after_dive_1"))?.crew ?? [];
-      await recordCrewAttestation(db, {
-        shopId: shop.id,
-        tripId: reef.id,
-        attestedByPersonId: staff.id,
-        crewAboard: crew.length,
-        checkpoint: "after_dive_1",
-      });
       expect(
         (await getTripManifest(db, shop.id, reef.id, "after_dive_1"))?.completeness.complete,
       ).toBe(true);
@@ -1050,7 +901,7 @@ describe("crew aboard attestation (in-memory PGlite)", () => {
 
       const reopened = await getTripManifest(db, shop.id, reef.id, "after_dive_1");
       // Loudest reason on the boat: a human has said somebody in the water has
-      // not come back, and the satisfied count does not soften it.
+      // not come back.
       expect(reopened?.completeness).toMatchObject({
         complete: false,
         crewAccountedFor: false,
@@ -1241,68 +1092,37 @@ describe("crew aboard attestation (in-memory PGlite)", () => {
     });
   });
 
-  it("never takes the denominator from the caller — it is read from the trip's own assignments", async () => {
-    const { db, shop, reef, staff } = await manifestContext();
-    const assigned = (await getTripManifest(db, shop.id, reef.id))?.crew.length ?? 0;
-    expect(assigned).toBeGreaterThan(0);
-
-    // The caller supplies only how many bodies they counted. A client that
-    // wanted to close a checkpoint by shrinking the denominator has no field
-    // to do it with, and the stored one comes from the database.
-    const outcome = await recordCrewAttestation(db, {
-      shopId: shop.id,
-      tripId: reef.id,
-      attestedByPersonId: staff.id,
-      crewAboard: 1,
-    });
-    expect(outcome).toMatchObject({ ok: true, crewAssigned: assigned });
-    const [row] = await db
-      .select()
-      .from(rollCallCrewAttestations)
-      .where(eq(rollCallCrewAttestations.tripId, reef.id));
-    expect(row?.crewAssigned).toBe(assigned);
-  });
-
-  it("carries the attested count into the offline snapshot, and the offline copy agrees with the live one", async () => {
+  it("carries the crew results into the offline snapshot, and the offline copy agrees with the live one", async () => {
     const { db, shop, reef, staff } = await manifestContext();
     await boardEveryDiver(db, shop.id, reef.id, staff.id, "after_dive_1");
-    const beforeAttesting = await getTripManifests(db, shop.id, reef.id);
-    if (!beforeAttesting) throw new Error("manifests missing");
-    const unattestedPayload = serializeManifests(
-      beforeAttesting,
+    const beforeCalling = await getTripManifests(db, shop.id, reef.id);
+    if (!beforeCalling) throw new Error("manifests missing");
+    const uncalledPayload = serializeManifests(
+      beforeCalling,
       { slug: shop.slug, name: shop.name, timezone: shop.timezone },
       (blocker) => blocker.code,
     );
-    const unattestedAfterDive = unattestedPayload.manifests.find(
+    const uncalledAfterDive = uncalledPayload.manifests.find(
       (entry) => entry.checkpoint === "after_dive_1",
     );
-    // Nothing attested: the dock copy recomputes the same open checkpoint the
-    // live page shows, rather than reading "complete" with the crew uncounted.
-    expect(unattestedAfterDive?.crewAttestation).toBeUndefined();
+    // Nobody called: the dock copy recomputes the same open checkpoint the
+    // live page shows, rather than reading "complete" with the crew unaccounted for.
+    expect(uncalledAfterDive?.crew.every((member) => member.rollCall === undefined)).toBe(true);
     expect(
       rollCallCompleteness({
         checkpoint: "after_dive_1",
-        totalDivers: unattestedAfterDive?.summary.totalDivers ?? 0,
+        totalDivers: uncalledAfterDive?.summary.totalDivers ?? 0,
         awaiting: 0,
         notBackAboard: 0,
         // The dock copy derives the crew half from the snapshot's own crew
         // list, exactly as OfflineManifestView does — which is what makes an
         // older snapshot with no crew results read every crew member as
         // awaiting rather than as accounted for.
-        crew: unattestedAfterDive?.crew ?? [],
-        crewAttestation: null,
+        crew: uncalledAfterDive?.crew ?? [],
       }),
-    ).toMatchObject({ complete: false, reason: "crew_not_attested" });
+    ).toMatchObject({ complete: false, reason: "crew_awaiting" });
 
-    const assigned = beforeAttesting[0]?.crew.length ?? 0;
     await accountForEveryCrewMember(db, shop.id, reef.id, staff.id, "after_dive_1");
-    await recordCrewAttestation(db, {
-      shopId: shop.id,
-      tripId: reef.id,
-      attestedByPersonId: staff.id,
-      crewAboard: assigned,
-      checkpoint: "after_dive_1",
-    });
 
     const manifests = await getTripManifests(db, shop.id, reef.id);
     if (!manifests) throw new Error("manifests missing");
@@ -1312,13 +1132,9 @@ describe("crew aboard attestation (in-memory PGlite)", () => {
       (blocker) => blocker.code,
     );
     const afterDive = payload.manifests.find((entry) => entry.checkpoint === "after_dive_1");
-    expect(afterDive?.crewAttestation).toMatchObject({
-      crewAboard: assigned,
-      crewAssigned: assigned,
-      attestedByName: staff.fullName,
-    });
+    expect(afterDive?.crew.every((member) => member.rollCall?.state === "boarded")).toBe(true);
     // ISO string, not a Date: the snapshot is JSON before it is encrypted.
-    expect(typeof afterDive?.crewAttestation?.occurredAt).toBe("string");
+    expect(typeof afterDive?.crew[0]?.rollCall?.occurredAt).toBe("string");
     // Crew person ids stay on the live manifest; the dock copy needs names.
     expect(afterDive?.crew.every((member) => !("id" in member))).toBe(true);
     // Same function the offline view calls, same answer as the live page.
@@ -1329,12 +1145,6 @@ describe("crew aboard attestation (in-memory PGlite)", () => {
         awaiting: 0,
         notBackAboard: 0,
         crew: afterDive?.crew ?? [],
-        crewAttestation: afterDive?.crewAttestation
-          ? {
-              ...afterDive.crewAttestation,
-              occurredAt: new Date(afterDive.crewAttestation.occurredAt),
-            }
-          : null,
       }).complete,
     ).toBe(
       manifests.find((entry) => entry.checkpoint === "after_dive_1")?.completeness.complete ??
@@ -1375,7 +1185,6 @@ describe("the manifest and Today agree about who is still in the water (DOM-H3)"
     }
     // The crew half is satisfied first, so the *only* thing that can hold this
     // checkpoint open below is the diver who has not come back.
-    const crewAssigned = (await getTripManifest(db, shop.id, reef.id, "after_dive_1"))?.crew.length;
     for (const member of (await getTripManifest(db, shop.id, reef.id, "after_dive_1"))?.crew ??
       []) {
       const crewOutcome = await recordCrewRollCall(db, {
@@ -1388,13 +1197,6 @@ describe("the manifest and Today agree about who is still in the water (DOM-H3)"
       });
       if (!crewOutcome.ok) throw new Error(`could not account for crew: ${crewOutcome.reason}`);
     }
-    await recordCrewAttestation(db, {
-      shopId: shop.id,
-      tripId: reef.id,
-      attestedByPersonId: staff.id,
-      crewAboard: crewAssigned ?? 0,
-      checkpoint: "after_dive_1",
-    });
     // Just after the boat ties up: home, and well inside the dock-work window.
     const now = new Date(reef.endsAt.getTime() + 60_000);
     return { ...context, missing: roster[0], now };

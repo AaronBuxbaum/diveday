@@ -159,7 +159,7 @@ test("the one-tap waiver send on the by-departure view reports success inline", 
   // what actually renders here — a private link staff copy and hand over.
   const outcome = row.getByRole("status");
   await expect(outcome).toBeVisible();
-  await expect(outcome).toContainText("This shop has no email provider configured yet");
+  await expect(outcome).toContainText("DiveDay can’t send email from this deployment yet");
   await expect(outcome).toContainText("share this private link");
   await expect(outcome.getByRole("button", { name: "Copy link" })).toBeVisible();
 });

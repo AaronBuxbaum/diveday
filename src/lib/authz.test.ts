@@ -3,6 +3,7 @@ import {
   ALL_ROLES,
   canConfigureTrips,
   canDeleteDiver,
+  canExportIncidentRecord,
   canExportShopData,
   canImportShopData,
   canManageMessagingSettings,
@@ -95,6 +96,35 @@ describe("canConfigureTrips (H-14 — owner/manager/instructor)", () => {
   it("rejects empty and undefined roles", () => {
     expect(canConfigureTrips([])).toBe(false);
     expect(canConfigureTrips(undefined)).toBe(false);
+  });
+});
+
+describe("canExportIncidentRecord (owner only)", () => {
+  it("admits only the owner — tighter than every other staff gate", () => {
+    expect(canExportIncidentRecord(["owner"])).toBe(true);
+    // Deliberately narrower than the owner/manager gate on the full-shop
+    // export, and narrower than trip configuration: the incident export is the
+    // shop's own account of a departure, stamped with its generator's name.
+    for (const role of [
+      "manager",
+      "instructor",
+      "divemaster",
+      "captain",
+      "crew",
+      "diver",
+    ] as const) {
+      expect(canExportIncidentRecord([role])).toBe(false);
+    }
+    expect(canExportShopData(["manager"])).toBe(true);
+  });
+
+  it("admits an owner who also holds an operating role", () => {
+    expect(canExportIncidentRecord(["captain", "owner"])).toBe(true);
+  });
+
+  it("rejects empty and undefined roles", () => {
+    expect(canExportIncidentRecord([])).toBe(false);
+    expect(canExportIncidentRecord(undefined)).toBe(false);
   });
 });
 

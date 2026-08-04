@@ -1,6 +1,8 @@
 # 20260803-per-person-crew-roll-call — Give each assigned crew member their own roll-call subject, beside the count
 
-- **Status:** Accepted
+- **Status:** Accepted; decisions 3, 4 and 5 amended by
+  [20260804-crew-roll-call-is-per-person](20260804-crew-roll-call-is-per-person.md), which retires
+  the count-level attestation and leaves the per-person model as the whole crew half
 - **Date:** 2026-08-03
 
 ## Context
