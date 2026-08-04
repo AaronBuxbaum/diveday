@@ -1,4 +1,5 @@
 import type { SeatDiverEntry, SeatDiverRefusal, SeatDiverRefusalDetail } from "@/db/seat-diver";
+import type { TripAdmissionGateScope } from "@/lib/trip-admission-gate";
 
 /**
  * The per-door half of seating a diver (`src/db/seat-diver.ts` owns the other
@@ -35,6 +36,15 @@ export type SeatSurface = {
   seatedPath: (landing: SeatLanding) => string;
   /** Where a refusal or an unparseable submission lands. */
   refusedPath: (landing: SeatLanding) => string;
+  /**
+   * What the `?gate=` signature is bound to on this surface — the id the
+   * landing route holds as a path segment, which is the only value its reader
+   * can re-derive without trusting the query (src/lib/trip-admission-gate.ts).
+   * The trip surfaces bind to the departure; the diver record has no departure
+   * in its URL and binds to the person. `null` means this surface never carries
+   * the structured detail at all.
+   */
+  gateScope: (landing: SeatLanding) => TripAdmissionGateScope | null;
   seatedNotice: string;
   /**
    * The same seating, when the waiver it triggered could not be emailed —
@@ -65,8 +75,20 @@ export type SeatSurface = {
   refusalNotice: Record<SeatDiverRefusal, string>;
 };
 
+/**
+ * Every id that reaches a path template goes through this first.
+ *
+ * A `SeatLanding` is built from raw form fields precisely when zod *failed* —
+ * the staffer must still land back on the page they submitted from — so the
+ * segments below are, on that path, unvalidated submitted values. No template
+ * here can become an open redirect (each starts with a literal `/shop/`), but
+ * an id carrying `?`, `#`, or a slash would still rewrite the query the notice
+ * is appended to, or point at a different route than the one named.
+ */
+const segment = (value: string) => encodeURIComponent(value);
+
 const guestsPath = ({ shopSlug, tripId }: SeatLanding) =>
-  `/shop/${shopSlug}/trips/${tripId}/guests`;
+  `/shop/${segment(shopSlug)}/trips/${segment(tripId)}/guests`;
 
 /** The trip page's vocabulary — one distinct notice per gate. */
 const TRIP_REFUSAL_NOTICE: Record<SeatDiverRefusal, string> = {
@@ -76,6 +98,10 @@ const TRIP_REFUSAL_NOTICE: Record<SeatDiverRefusal, string> = {
   course_prerequisite: "diver-course-prerequisite",
   course_ratio_full: "diver-course-ratio-full",
   course_min_age: "diver-course-min-age",
+  // The boat's own cert/specialty/nitrox gate, distinct from a *course's*
+  // admission rule above: this diver's cards can't reach what the trip and its
+  // sites demand, and the staffer's next move is a different one (DOM-M6).
+  trip_prerequisite: "diver-trip-prerequisite",
   trip_unavailable: "diver-unavailable",
   person_not_found: "diver-unavailable",
   unavailable: "diver-unavailable",
@@ -89,6 +115,7 @@ export const SEAT_SURFACES: Record<SeatSurfaceId, SeatSurface> = {
     email: "required",
     seatedPath: guestsPath,
     refusedPath: guestsPath,
+    gateScope: ({ tripId }) => ({ kind: "trip", id: tripId }),
     seatedNotice: "diver-added",
     seatedWaiverUndeliveredNotice: "diver-added-waiver-undelivered",
     carriesBookingId: true,
@@ -104,8 +131,12 @@ export const SEAT_SURFACES: Record<SeatSurfaceId, SeatSurface> = {
     entry: "walk_in",
     refusals: "coarse",
     email: "optional",
-    seatedPath: ({ shopSlug }) => `/shop/${shopSlug}/check-in`,
-    refusedPath: ({ shopSlug }) => `/shop/${shopSlug}/check-in`,
+    seatedPath: ({ shopSlug }) => `/shop/${segment(shopSlug)}/check-in`,
+    refusedPath: ({ shopSlug }) => `/shop/${segment(shopSlug)}/check-in`,
+    // `refusals: "coarse"` collapses every gate to one blunt line, so the
+    // structured detail is dropped rather than trailing an unreadable param on
+    // the queue's URL.
+    gateScope: () => null,
     seatedNotice: "walkin_added",
     seatedWaiverUndeliveredNotice: "walkin_added_waiver_undelivered",
     carriesBookingId: true,
@@ -117,6 +148,7 @@ export const SEAT_SURFACES: Record<SeatSurfaceId, SeatSurface> = {
       course_prerequisite: "walkin_unavailable",
       course_ratio_full: "walkin_unavailable",
       course_min_age: "walkin_unavailable",
+      trip_prerequisite: "walkin_unavailable",
       trip_unavailable: "walkin_unavailable",
       person_not_found: "walkin_unavailable",
       unavailable: "walkin_unavailable",
@@ -130,8 +162,13 @@ export const SEAT_SURFACES: Record<SeatSurfaceId, SeatSurface> = {
     entry: "roster",
     refusals: "specific",
     email: "optional",
-    seatedPath: ({ shopSlug, personId }) => `/shop/${shopSlug}/divers/${personId}`,
-    refusedPath: ({ shopSlug, personId }) => `/shop/${shopSlug}/divers/${personId}`,
+    seatedPath: ({ shopSlug, personId }) =>
+      `/shop/${segment(shopSlug)}/divers/${segment(personId)}`,
+    refusedPath: ({ shopSlug, personId }) =>
+      `/shop/${segment(shopSlug)}/divers/${segment(personId)}`,
+    // The one surface with no departure in its landing URL: it binds the
+    // signature to the diver whose record is about to render the sentence.
+    gateScope: ({ personId }) => ({ kind: "diver", id: personId }),
     seatedNotice: "booked",
     seatedWaiverUndeliveredNotice: "booked-waiver-undelivered",
     carriesBookingId: false,
@@ -143,6 +180,7 @@ export const SEAT_SURFACES: Record<SeatSurfaceId, SeatSurface> = {
       course_prerequisite: "course_prerequisite",
       course_ratio_full: "course_ratio_full",
       course_min_age: "course_min_age",
+      trip_prerequisite: "trip_prerequisite",
       trip_unavailable: "trip_unavailable",
       person_not_found: "booking-invalid",
       unavailable: "trip_unavailable",
@@ -166,7 +204,10 @@ export const SEAT_SURFACES: Record<SeatSurfaceId, SeatSurface> = {
     email: "optional",
     seatedPath: guestsPath,
     refusedPath: ({ shopSlug, tripId }) =>
-      tripId ? `/shop/${shopSlug}/bookings/new/${tripId}` : `/shop/${shopSlug}/bookings/new`,
+      tripId
+        ? `/shop/${segment(shopSlug)}/bookings/new/${segment(tripId)}`
+        : `/shop/${segment(shopSlug)}/bookings/new`,
+    gateScope: ({ tripId }) => (tripId ? { kind: "trip", id: tripId } : null),
     seatedNotice: "diver-added",
     seatedWaiverUndeliveredNotice: "diver-added-waiver-undelivered",
     carriesBookingId: true,

@@ -1307,7 +1307,7 @@ export const bookingPayments = pgTable(
       .references(() => bookings.id),
     status: paymentStatus("status").notNull().default("unpaid"),
     amountCents: integer("amount_cents"),
-    currency: text("currency").notNull().default("usd"),
+    currency: text("currency").notNull(),
     /** Provider that took the payment, e.g. "stripe"; null for a manual mark. */
     provider: text("provider"),
     providerRef: text("provider_ref"),
@@ -1320,6 +1320,128 @@ export const bookingPayments = pgTable(
     index("booking_payments_shop_status_idx").on(table.shopId, table.status),
     check(
       "booking_payments_amount_nonnegative",
+      sql`${table.amountCents} is null or ${table.amountCents} >= 0`,
+    ),
+  ],
+);
+
+/**
+ * What caused one `booking_payments` transition. A code, never a sentence —
+ * the UI picks the words (docs ADR 20260731-domain-layer-copy-leaks).
+ *
+ * `manual_mark` is the fallback for an unannotated write, which is exactly
+ * what such a write is: a staff member setting the status by hand from the
+ * roster or the diver record. Every machine writer states its own operation.
+ */
+export const paymentEventOperation = pgEnum("payment_event_operation", [
+  /** Staff set the status by hand (roster payment control, diver record). */
+  "manual_mark",
+  /** A Stripe Checkout session settled and cascaded onto its covered bookings. */
+  "checkout_settled",
+  /** A Stripe invoice (staff order) reported paid. */
+  "order_settled",
+  /** A staff order was refunded through Stripe. */
+  "order_refunded",
+  /** The automated cancellation-window refund reversed a Stripe capture. */
+  "cancellation_refund",
+]);
+
+/**
+ * Append-only money history for one booking — one row per **transition** of
+ * its `booking_payments` state (DATA-M3, ADR 20260803-booking-payment-events).
+ *
+ * `booking_payments` is a single mutable row: a refund overwrites the capture
+ * it reverses, so before this table the only record that a booking was ever
+ * paid — and for how much, in which currency, against which Stripe object —
+ * lived at Stripe. This is DiveDay's own ledger of the same facts, written
+ * inside the *same transaction* as every `booking_payments` mutation (there is
+ * one funnel, `setBookingPayment` in src/db/payments.ts), so a row here and the
+ * current row can never disagree about what happened.
+ *
+ * Shaped like the repo's other append-only trails (`roll_call_events`,
+ * `activity_events`): nothing is ever updated or deleted in place, the newest
+ * row for a booking restates its current state, and a correction is a further
+ * row rather than a rewrite.
+ *
+ * **Transitions, not writes.** A write that changes nothing material — a
+ * replayed Stripe webhook re-running its self-healing cascade over an
+ * already-settled booking — appends no row, so the trail stays a readable
+ * history instead of a delivery log. `setBookingPayment` compares against the
+ * current row and skips the append when status, amount, currency, provider,
+ * provider reference and note are all unchanged.
+ *
+ * **Refusals are not here.** `setBookingPaymentIfNotFinal` swallowing a lesser
+ * status over a refunded/waived row (or over a cancelled booking) mutates
+ * nothing, so it appends nothing; those refusals are already reported as
+ * `payment.refused_*` log lines.
+ */
+export const bookingPaymentEvents = pgTable(
+  "booking_payment_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    /**
+     * `onDelete: "cascade"` on both parents, unlike `booking_payments`, whose
+     * rows the demo reaper and demo-schedule reset each clear by hand from
+     * their own topologically-sorted child-first lists (src/db/seed.ts). A
+     * trail row describes exactly one booking of exactly one shop and has no
+     * meaning once that booking is gone, and the two hand-maintained lists are
+     * precisely where a forgotten child surfaces as an FK violation mid-reap.
+     * The same reasoning `internal_notes.booking_id` and
+     * `activity_events.trip_id` already use.
+     */
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id, { onDelete: "cascade" }),
+    bookingId: uuid("booking_id")
+      .notNull()
+      .references(() => bookings.id, { onDelete: "cascade" }),
+    /** The state this transition moved the booking's payment *to*. */
+    status: paymentStatus("status").notNull(),
+    /**
+     * The state it moved *from*. Null means there was no `booking_payments`
+     * row yet — this is the booking's first-ever payment event, not a
+     * transition out of `unpaid` that somebody recorded.
+     */
+    previousStatus: paymentStatus("previous_status"),
+    /**
+     * Money recorded by this transition, in `currency`'s minor unit. Null
+     * carries `booking_payments.amount_cents`'s own meaning: no amount was
+     * stated — a waiver, or a mark made without one — which is not the same
+     * as zero (a refund that reversed nothing).
+     */
+    amountCents: integer("amount_cents"),
+    /**
+     * ISO 4217, lowercase, copied from the mutation that caused this row.
+     * No default on purpose: an amount whose currency was guessed is not
+     * evidence (docs ADR 20260731-shop-currency), and every writer of
+     * `booking_payments` already states it.
+     */
+    currency: text("currency").notNull(),
+    /** Provider that moved the money, e.g. "stripe"; null for a manual mark. */
+    provider: text("provider"),
+    /** The provider object this transition points at (session, invoice, refund). */
+    providerRef: text("provider_ref"),
+    /** What caused it. See {@link paymentEventOperation}. */
+    operation: paymentEventOperation("operation").notNull(),
+    /** Whatever note the mutation carried; null when it carried none. */
+    note: text("note"),
+    occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    /**
+     * Backs `listBookingPaymentEvents` (src/db/payments.ts) — one booking's
+     * money history for one shop, newest first. Shop-scoped leading column so
+     * the tenant predicate is index-served, exactly like
+     * `roll_call_events_shop_trip_checkpoint_booking_occurred_idx`.
+     */
+    index("booking_payment_events_shop_booking_occurred_idx").on(
+      table.shopId,
+      table.bookingId,
+      table.occurredAt,
+    ),
+    check(
+      "booking_payment_events_amount_nonnegative",
       sql`${table.amountCents} is null or ${table.amountCents} >= 0`,
     ),
   ],
@@ -1623,7 +1745,7 @@ export const orders = pgTable(
       .notNull()
       .references(() => people.id),
     status: orderStatus("status").notNull().default("open"),
-    currency: text("currency").notNull().default("usd"),
+    currency: text("currency").notNull(),
     totalCents: integer("total_cents").notNull(),
     amountPaidCents: integer("amount_paid_cents").notNull().default(0),
     description: text("description"),
@@ -1787,7 +1909,7 @@ export const bookingCheckouts = pgTable(
      * is never refused and never recorded as zero for want of this figure.
      */
     appliedDiscountPercent: integer("applied_discount_percent"),
-    currency: text("currency").notNull().default("usd"),
+    currency: text("currency").notNull(),
     /** Price snapshot at checkout time, so a later trip re-price never rewrites what was asked. */
     amountPerDiverCents: integer("amount_per_diver_cents").notNull(),
     totalCents: integer("total_cents").notNull(),
@@ -1811,6 +1933,25 @@ export const bookingCheckouts = pgTable(
     /** Stripe expires unfinished Checkout sessions; kept so the UI can be honest about a dead link. */
     expiresAt: timestamp("expires_at", { withTimezone: true }),
     completedAt: timestamp("completed_at", { withTimezone: true }),
+    /**
+     * When Stripe reported this session's delayed-notification payment
+     * *failed* (`checkout.session.async_payment_failed`, PAY-L1). Null is the
+     * normal state and means only "no failure was reported" — not that the
+     * payment succeeded.
+     *
+     * A session whose async payment failed can no longer be paid, so the row's
+     * `status` moves to `expired`, the existing terminal for "this local
+     * checkout is no longer payable": recovery emails stop
+     * (`dueCheckoutRecovery`), a later completion cannot resurrect it
+     * (`markCheckoutPaidBySessionId`'s disqualification check), and no
+     * `booking_payments` row is touched because none was ever written for an
+     * unsettled async payment. This column is what keeps the two causes apart —
+     * a session that simply timed out unpaid versus one whose payment was
+     * attempted and bounced — without adding a `checkout_status` value that
+     * every consumer of that enum would have to learn
+     * (ADR 20260803-async-payment-failed).
+     */
+    asyncPaymentFailedAt: timestamp("async_payment_failed_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -1907,7 +2048,7 @@ export const tips = pgTable(
     stripeAccountId: text("stripe_account_id").notNull(),
     stripeSessionId: text("stripe_session_id").notNull(),
     checkoutUrl: text("checkout_url"),
-    currency: text("currency").notNull().default("usd"),
+    currency: text("currency").notNull(),
     amountCents: integer("amount_cents").notNull(),
     expiresAt: timestamp("expires_at", { withTimezone: true }),
     completedAt: timestamp("completed_at", { withTimezone: true }),
@@ -3200,6 +3341,8 @@ export type NotificationDeliveryRecord = typeof notificationDeliveries.$inferSel
 export type NotificationDeliveryAttempt = typeof notificationDeliveryAttempts.$inferSelect;
 export type BookingPayment = typeof bookingPayments.$inferSelect;
 export type PaymentStatus = (typeof paymentStatus.enumValues)[number];
+export type BookingPaymentEvent = typeof bookingPaymentEvents.$inferSelect;
+export type PaymentEventOperation = (typeof paymentEventOperation.enumValues)[number];
 export type WaiverTemplate = typeof waiverTemplates.$inferSelect;
 export type WaiverRecord = typeof waiverRecords.$inferSelect;
 export type CalendarFeed = typeof calendarFeeds.$inferSelect;

@@ -67,6 +67,24 @@ new domain concept, define it here in the same PR.
 - **Readiness** — the fail-closed answer to “can this diver board?” It lists human-readable
   blockers from the trip’s requirements and the diver’s waiver/cert evidence. Unknown,
   unconfigured, pending, expired, or insufficient evidence is never “ready.”
+- **Trip admission** — the answer to a *different* question, asked when the **seat is sold**:
+  “could this diver **ever** be cleared for this trip?” It is **deliberately weaker than readiness
+  and is never the boarding authority.** Readiness asks “is this diver cleared *right now*?”;
+  admission refuses only a **settled impossibility** — the rung of the ladder they stand on, or a
+  specialty/nitrox card they hold none of, in any state. Everything a person can still fix before
+  the boat leaves (an unsigned waiver, a card captured but not yet verified, a refresher come due,
+  a payment outstanding) is *not* a reason to refuse the sale. **Absence of evidence never
+  refuses**: a diver this shop has never carded books as before, the same trade-off H-08 settled
+  for the course minimum-age gate. It exists to stop a diver **paying in full** for a dive they
+  were never going to be allowed to do (DOM-M6) — it stops the money, never the manifest.
+  Two carve-outs: an **identity-unconfirmed** booking is not judged by the matched record's cards
+  (H-13), and on a **course session** the *course's* own `minimum_certification_level` is the
+  admission rule, because continuing education dives at the sites it certifies people for — an AOW
+  course's deep adventure dive is at an AOW site, and the site's inherent gate must not refuse the
+  student the course exists to create. Lives in one pure function, `decideTripAdmission`
+  (`src/lib/trip-admission.ts`), called from exactly one place.
+  See [20260803-trip-admission-at-booking](../architecture/decisions/20260803-trip-admission-at-booking.md).
+  Distinct from **course admission**, which is a course's own enrolment rule and fails *closed*.
 - **Levels** (recreational ladder, roughly): **Open Water (OW)** → **Advanced Open Water
   (AOW)** → **Rescue** → **Divemaster (DM)** → **Instructor**. Names vary slightly by agency.
 - **PADI Scuba Diver** — a real certification one rung *below* Open Water: limited to 12 m and
@@ -124,6 +142,14 @@ new domain concept, define it here in the same PR.
   lives in `nitrox_certifications`) because it gates a **per-booking mix request**; a site or trip may
   *also* require a nitrox card to **board** (a nitrox charter), enforced as its own requirement flag
   — the same card, two independent gates (see Operations, below).
+  **DiveDay's specialties are flat; the industry tiers some of them.** `wreck` is one value, but
+  PADI **Wreck Diver** authorizes only limited penetration inside the light zone while TDI
+  **Advanced Wreck** authorizes full penetration with a guideline — genuinely different dives. A
+  shop gating a penetration dive on `"wreck"` is therefore gating on something **coarser than it
+  thinks**, and a diver holding the recreational card clears it. The same coarseness applies to
+  `deep` (agency depth limits differ) and to `night`. Until the model tiers them, a penetration or
+  otherwise stepped-up dive needs a **staff decision at the desk**, not a `required_specialties`
+  entry, and diver-facing copy must not imply the card was checked against the harder standard.
 - **DSD (Discover Scuba Diving)** — a supervised *experience* for uncertified people. Not a
   cert. Minimum age 10; maximum depth 6 m/20 ft confined water, 12 m/40 ft open water. Always
   dives with an instructor, at the **intro-session ratio** (below) — tighter than Open Water
@@ -509,6 +535,19 @@ new domain concept, define it here in the same PR.
   **Raising** one is owner/manager work, like the refund it may later need — every staff role can
   read orders, but billing a diver on the shop's own Stripe account is not deck work
   ([20260803-invoicing-role-gate](../architecture/decisions/20260803-invoicing-role-gate.md)).
+- **Payment event** — one recorded *transition* of a booking's payment state: what it moved to,
+  what it moved from, the amount and currency at that moment, and which operation caused it. The
+  append-only trail (`booking_payment_events`) beside the single mutable `booking_payments` row,
+  which carries only where the money stands now and which a refund overwrites in place. Written
+  inside the same transaction as the mutation it records, so the two commit or roll back together.
+  "Transition, not write" is the load-bearing distinction: a webhook redelivered twice appends
+  nothing the second time, and a refused write appends nothing at all, so a row here always means
+  the state genuinely changed — otherwise the money ledger would slowly become a delivery log.
+- **Retention window** — how long one append-only table's rows are kept before the weekly prune
+  deletes them. Set per table in `RETENTION_DAYS` (`src/lib/retention.ts`), which is the only place
+  a human edits. Most windows are a preference; `stripe_webhook_events` is not — its rows are the
+  chronological evidence an out-of-order Stripe account update is checked against, so its window has
+  a floor that a test enforces against Stripe's own retry horizon.
 - **Invoice** — the payable Stripe document behind an order, created on the shop's connected
   account. Staff can share its hosted link directly, or let Stripe email the customer; a webhook
   (or manual refresh) brings the paid/void result back into the order and, when the order is linked
@@ -764,11 +803,20 @@ new domain concept, define it here in the same PR.
 
 - A **person** may be simultaneously a customer, a student, and staff — model roles, not
   separate person types.
-- Cert requirements attach to **sites/activities** ("this wreck requires AOW + Deep"), and are
-  checked against a diver's **verified** cards at booking *and* at boarding. A dive site carries an
-  inherent gate (minimum level + required specialties); a trip carries its own; the readiness
-  service composes them — the **stricter** minimum level and the **union** of specialties
+- Cert requirements attach to **sites/activities** ("this wreck requires AOW + Deep"). A dive site
+  carries an inherent gate (minimum level + required specialties); a trip carries its own; both
+  compose into **one** gate — the **stricter** minimum level and the **union** of specialties
   ([20260718-specialty-site-cert-requirements](../architecture/decisions/20260718-specialty-site-cert-requirements.md)).
+  That one gate is read at two moments, and they ask **different questions**:
+  - **Boarding** (**Readiness**) is the authority. It requires a **verified**, unexpired card, and
+    for an *imported specialty* card a staffer's confirm as well. Nothing else clears it.
+  - **Booking** (**Trip admission**) is deliberately weaker. It refuses only when the shop's own
+    record of this diver makes the seat impossible, and **absence of evidence never refuses** — a
+    diver this shop has never carded books exactly as before. It ignores verification status and
+    refresher dates entirely, because both move before the boat leaves.
+
+  A booked seat is therefore never proof a diver can board, and a refused sale always means the
+  dock would have refused too.
 - **Technical / overhead rating** — trimix, helitrox, rebreather (CCR/SCR), cave and cavern,
   decompression procedures, extended range, TDI's Tec and Advanced Nitrox tickets. DiveDay's ladder is
   the *recreational* one and models none of these, so the importer **declines** them by name rather

@@ -1,6 +1,5 @@
 "use server";
 
-import { hash } from "bcryptjs";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
 import { AuthError } from "next-auth";
@@ -13,6 +12,7 @@ import { signIn } from "@/lib/auth";
 import { nowDate } from "@/lib/clock";
 import { publicAppUrl } from "@/lib/notifications";
 import { type PasswordConfirmErrorCode, passwordConfirmSchema } from "@/lib/onboarding";
+import { hashPassword } from "@/lib/password-hashing";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
 
@@ -44,7 +44,7 @@ export async function submitPasswordReset(token: string, formData: FormData) {
   // Hashed before the transaction opens — bcrypt's cost factor is deliberately
   // slow, and there's no reason to hold the transaction (and its row locks)
   // open for it.
-  const hashedPassword = await hash(parsed.data.password, 10);
+  const hashedPassword = await hashPassword(parsed.data.password);
   const claimed = await db.transaction(async (tx) => {
     const claim = await consumeAccountToken(tx, { token, purpose: "password_reset" });
     if (!claim) return null;

@@ -5,8 +5,16 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { BulkWaiverSelectionProvider } from "./_components/RosterBulkWaiverSelection";
 import { TripSubNav, type TripSubNavCopy } from "./_components/TripSubNav";
 
-// TODO: Cache Components adoption. Refactor this route so this opt-out can be removed.
-// See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
+// Restored after CI. ARCH-7 removed this as provably-unread by
+// `isPageAllowedToBlock`, which stops at the outermost `instant` — the shop
+// layout's. The reasoning still looks right and the build agreed, but three
+// Playwright specs then went intermittently red on CI and never locally, two
+// of them on `trips/[id]/guests` under this very layout, failing in
+// hydration-shaped ways: a `?notice=` banner rendered twice in the DOM, and
+// banners that were absent when asserted. That is one change too close to
+// those symptoms to leave in on a safety-critical staff surface for the sake
+// of deleting a line. Put back until someone can show the two are unrelated.
+// See ADR 20260803-instant-opt-out-placement.
 export const instant = false;
 
 /**

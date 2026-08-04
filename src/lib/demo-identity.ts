@@ -15,6 +15,34 @@
  * to test by stubbing `crypto`.
  */
 
+/**
+ * The reserved, non-routable namespace every demo account's email sits in —
+ * either exactly this domain (the canonical `blue-mantis` fixture's
+ * `DEV_STAFF_LOGINS`) or a per-shop subdomain of it (`<slug>.demo.invalid`,
+ * minted below).
+ *
+ * `.invalid` is reserved by RFC 2606 and can never resolve, so no real shop
+ * can ever own an address in here: onboarding and staff invites both mail the
+ * address they are given, and an address under `.invalid` would silently drop
+ * every message. That property is what lets `src/lib/demo-bypass.ts` treat
+ * "the account lives in this namespace" as a second, independent condition on
+ * the demo sign-in bypass — one that a flipped `shops.is_demo` column alone
+ * cannot satisfy.
+ */
+export const DEMO_EMAIL_DOMAIN = "demo.invalid";
+
+/**
+ * Whether an account email sits in the reserved demo namespace — the exact
+ * domain, or any subdomain of it. Anchored so a lookalike registrable domain
+ * (`demo.invalid.example.com`, `notdemo.invalid`) does not match.
+ */
+export function isDemoAccountEmail(email: string): boolean {
+  const at = email.lastIndexOf("@");
+  if (at < 1) return false;
+  const domain = email.slice(at + 1).toLowerCase();
+  return domain === DEMO_EMAIL_DOMAIN || domain.endsWith(`.${DEMO_EMAIL_DOMAIN}`);
+}
+
 const ADJECTIVES = [
   "coral",
   "azure",
@@ -97,6 +125,6 @@ export function generateDemoShopIdentity(): DemoShopIdentity {
   return {
     name: `${capitalize(adjective)} ${capitalize(noun)} Divers`,
     slug,
-    emailFor: (localPart) => `${localPart}@${slug}.demo.invalid`,
+    emailFor: (localPart) => `${localPart}@${slug}.${DEMO_EMAIL_DOMAIN}`,
   };
 }

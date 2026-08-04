@@ -57,8 +57,11 @@ import {
   updateTripCrewAction,
 } from "./actions";
 
-// TODO: Cache Components adoption. Refactor this route so this opt-out can be removed.
-// See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
+// Not a TODO. The shop layout above already permits this route's blocking
+// prerender (`isPageAllowedToBlock` reads only the outermost `instant`), so what
+// this line still buys is keeping the page segment out of dev-time instant
+// validation — which nothing above a page segment can do.
+// See ADR 20260803-instant-opt-out-placement.
 export const instant = false;
 
 export const metadata: Metadata = {
@@ -77,11 +80,16 @@ export default async function ManageTripPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string; id: string }>;
-  searchParams: Promise<{ notice?: string; count?: string }>;
+  searchParams: Promise<{
+    notice?: string;
+    count?: string;
+    /** Signed, and verified against this route's own `id` — src/lib/trip-admission-gate.ts. */
+    gate?: string | string[];
+  }>;
 }) {
   // The session, route params, and db handle don't depend on one another —
   // resolve them together instead of serially.
-  const [session, { shopSlug, id: tripId }, { notice, count }, db] = await Promise.all([
+  const [session, { shopSlug, id: tripId }, { notice, count, gate }, db] = await Promise.all([
     requireStaffSession(),
     params,
     searchParams,
@@ -286,7 +294,7 @@ export default async function ManageTripPage({
         }
       />
 
-      <TripNoticeBanner notice={notice} count={count} locale={locale} />
+      <TripNoticeBanner notice={notice} count={count} gate={gate} tripId={tripId} locale={locale} />
 
       {canConfigure ? null : (
         <div className="mt-6">

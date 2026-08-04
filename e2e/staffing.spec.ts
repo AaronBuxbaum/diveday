@@ -93,6 +93,10 @@ test.describe("staffing", () => {
     // The delete redirects to the page's own default window (it carries only
     // `?notice=`, not the from/to the removal was performed in), so this lands
     // back on today's week: the seeded shift is there, this spec's is gone.
+    // The banner is the only observable here — see the file header on why the
+    // URL is not assertable. Adding `toHaveURL(/notice=shift-deleted/)` in
+    // front of this looks like it would pin down a CI flake and instead fails
+    // every run, because FlashParams has already stripped the param.
     await expect(page.getByText("Shift removed.")).toBeVisible();
     await expect(keiko.getByText(note)).toHaveCount(0);
     await expect(keiko.getByText("Demo schedule")).toBeVisible();

@@ -1,12 +1,12 @@
-import type { Page } from "@playwright/test";
+import type { Browser, Page } from "@playwright/test";
 import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed";
 import { signRecapToken } from "../src/lib/recap-links";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
-import { openTripFromBoard } from "./helpers";
+import { findTripOnBoard, openTripFromBoard, openTripTab } from "./helpers";
 
 /**
- * Visual regression coverage. Seventy-six key surfaces × light/dark, each
- * captured at a phone and a desktop viewport — 304 screenshots per run (see
+ * Visual regression coverage. Eighty-one key surfaces × light/dark, each
+ * captured at a phone and a desktop viewport — 324 screenshots per run (see
  * ADR 20260729-reg-suit-visual-regression). Keep this count in sync when
  * adding a surface; each `capture()` call costs 4 screenshots per CI run.
  * `grep -c 'await capture(page' e2e/visual.spec.ts` is the number — the prose
@@ -17,14 +17,46 @@ import { openTripFromBoard } from "./helpers";
  * pages as they render for the printer. Print is its own concern, not a
  * light/dark one — the `@media print` token override collapses both schemes to
  * one black-and-white palette — so each is captured once, at a US-Letter width,
- * via `capturePrint()`. That brings the run to 306 screenshots.
+ * via `capturePrint()`. That brings the run to 326 screenshots.
  *
- * Nothing here asserts. `capture()` writes raw `page.screenshot()` PNGs into
- * `e2e/screenshots/` (gitignored); `reg-suit` diffs them against the baseline
- * for this branch's parent commit, pulled from S3, and publishes the run
- * (docs ADR 20260729-reg-suit-visual-regression). That is why a "visual
- * failure" never surfaces as a failed Playwright test — it surfaces as a diff
- * in the reg-suit report, and the `visual-triage` skill is how you read it.
+ * ## One surface, one `test()`
+ *
+ * **This file used to be a dozen tests, each touring twenty-odd surfaces.**
+ * Playwright stops a test at its first failed assertion, and every capture site
+ * here is preceded by one — a `waitFor` on the heading or control that proves
+ * the surface actually rendered. So a single renamed heading in the eleventh
+ * surface of a tour silently took the seven after it with it: those PNGs were
+ * never shot, reg-suit reported them as *deleted* items rather than diffs, and
+ * a reviewer fixed one wait, pushed, and discovered the next one serially
+ * (TEST-5, lens finding TEST-L1..L4 in
+ * docs/product/assessments/comprehensive-review-20260802.md).
+ *
+ * So the rule is now: **one surface, one `test()`.** A surface that breaks
+ * loses exactly its own four PNGs, every sibling is still shot in the same run,
+ * and the reg-suit report shows the whole blast radius at once. The handful of
+ * groups left are the ones where a second test could not reproduce the state
+ * without re-running the same one-shot setup *and* changing what the baseline
+ * shows — each says so at its own site.
+ *
+ * The split is also what retires the 90-second aggregate ceilings. A test that
+ * shoots one surface gets `SURFACE_TIMEOUT_MS` (below), so a genuine hang
+ * surfaces in thirty seconds instead of ninety; a test that runs a real flow
+ * first raises its own budget, and says what it is paying for.
+ *
+ * Every capture name is load-bearing and **must never change**: the reg-suit
+ * baseline is keyed by image name (`<surface>-<scheme>-vw-<width>.png`) in S3,
+ * so renaming a capture orphans its baseline and the surface silently reads as
+ * "new item, nothing to compare". Move a capture between tests freely; renaming
+ * one is a deliberate act that throws away its history.
+ *
+ * Nothing here asserts *about pixels*. `capture()` writes raw
+ * `page.screenshot()` PNGs into `e2e/screenshots/` (gitignored); `reg-suit`
+ * diffs them against the baseline for this branch's parent commit, pulled from
+ * S3, and publishes the run (docs ADR 20260729-reg-suit-visual-regression).
+ * That is why a "visual failure" never surfaces as a failed Playwright test —
+ * it surfaces as a diff in the reg-suit report, and the `visual-triage` skill
+ * is how you read it. A *failed* test here means the surface could not be
+ * reached at all, which is the case the split above is about.
  *
  * `capture()` loops over both viewports itself, resizing the page for each and
  * restoring the base viewport afterward, so `landing-light` becomes
@@ -138,7 +170,7 @@ const VIEWPORTS = [
  * of 120000ms exceeded` with the stack pointing here, and it reproduces locally
  * about once in six runs of the staff captures, with or without the
  * deterministic rendering flags. It is a wait bug, not a budget that needs
- * widening (see the note on `test.setTimeout` in the staff test).
+ * widening (see the note on `SURFACE_TIMEOUT_MS` below).
  *
  * So each frame wait races the frame against `FRAME_WAIT_MS`, and the
  * scroll-through as a whole gives up after `SCROLL_BUDGET_MS`. The bound is a
@@ -155,6 +187,51 @@ const FONTS_WAIT_MS = 5_000;
 // `/_next/image` generating a width it has never been asked for, on a CI runner
 // already running the other shards — the 5s this replaced was under that.
 const IMAGE_SETTLE_MS = 15_000;
+
+/**
+ * The per-test ceiling for a plain navigate-and-shoot surface.
+ *
+ * The suite's 15s default (playwright.config.ts) is sized for one real flow,
+ * and it was never enough for a capture: each one is *two* screenshots, and
+ * each of those pays a full `paintWholeDocument` scroll-through plus a font and
+ * image settle on a cold `/_next/image`. This is the number that used to be
+ * spent eighteen times over inside one 90s tour.
+ *
+ * It is a ceiling that only ever bounds a failure, never a passing test — but
+ * it is still not a knob to widen when a test starts timing out. A test that
+ * outgrows it is doing more than shooting one surface, and the fix is to say so
+ * at its own site with `test.setTimeout` and a comment naming the extra work
+ * (a real booking, a settings round-trip, a board crawl), the way the tests
+ * below that need more do.
+ */
+const SURFACE_TIMEOUT_MS = 30_000;
+
+// Applied at file scope rather than per describe block, so every test in the
+// file gets it whether or not it sits inside one and nothing depends on a
+// nested describe inheriting its parent's configuration.
+test.describe.configure({ timeout: SURFACE_TIMEOUT_MS });
+
+/**
+ * A test that runs a real flow — a booking, a mutation and its revert, a crawl
+ * of the schedule board — before it can shoot anything. Roughly the surface
+ * budget plus the flow.
+ */
+const FLOW_TIMEOUT_MS = 45_000;
+
+/** The seeded reef charter, the departure most of the staff tour hangs off. */
+const REEF_TRIP = "Two-Tank Reef — Molasses & French";
+
+/**
+ * The three cert-gate departures from `src/db/seed-cert-gates.ts`. Each one can
+ * be refused for exactly one reason, which is what lets a refusal capture show
+ * a single sentence rather than three overlapping ones. They sit on days 29-32,
+ * deliberately off the public schedule's first page — so reaching one means
+ * crawling the staff board (`findTripOnBoard`), which is why every test below
+ * that uses them buys extra budget.
+ */
+const ADVANCED_CHARTER = "Advanced Drift — French Reef Wall";
+const DEEP_CHARTER = "Deep Adventure — USCGC Duane";
+const AOW_COURSE = "Advanced Open Water Diver — two-day course";
 
 async function paintWholeDocument(page: Page) {
   const { stalled: stalledFrames, unsettled: unsettledImages } = await page.evaluate(
@@ -368,94 +445,182 @@ async function capturePrint(page: Page, name: string) {
   await page.emulateMedia({ media: "screen" });
 }
 
+// ---------------------------------------------------------------------------
+// Shared setup.
+//
+// One surface per test means the navigation each surface needs is now written
+// once here rather than inherited from whatever ran earlier in a tour. These
+// only *reach* a surface; every capture site still does its own readiness wait,
+// because what proves a page has rendered is a property of that page.
+
+/** The seeded reef charter's card on the public schedule, once it is real. */
+function publicReefCard(page: Page) {
+  return page.locator("li").filter({ hasText: REEF_TRIP });
+}
+
+/** Open the seeded reef charter's staff record, the way staff reach it. */
+async function openReefTrip(page: Page) {
+  await page.goto("/shop/blue-mantis/schedule/board");
+  await openTripFromBoard(page, REEF_TRIP);
+}
+
+/**
+ * One diver's record, found by search rather than by scrolling: the demo shop
+ * has enough divers to page the roster, so nobody is reliably on the first
+ * page.
+ *
+ * Parks the pointer at (0,0) before returning. The roster row this clicks sits,
+ * at 390, exactly where the record's sub-nav bar lands — so the pointer left
+ * behind by the click renders one tab in its hover state, and the phone
+ * baselines photographed a "Fit" that looked selected. Deterministic, so never
+ * a flake; just a lie about state that a reviewer has to re-derive every time.
+ * (0,0) is the demo banner, which has nothing hoverable in the corner.
+ */
+async function openDiverProfile(page: Page, search: string, fullName: string, initials: string) {
+  await page.goto(`/shop/blue-mantis/divers?q=${search}`);
+  await page
+    .getByRole("row")
+    .filter({ hasText: fullName })
+    .getByText(initials, { exact: true })
+    .filter({ visible: true })
+    .click();
+  await page.getByRole("heading", { level: 1, name: fullName }).waitFor();
+  await page.mouse.move(0, 0);
+}
+
+/** A seeded departure's trip id, found the way staff reach it. */
+async function seededTripId(page: Page, title: string): Promise<string> {
+  const link = await findTripOnBoard(page, "blue-mantis", title);
+  const href = await link.getAttribute("href");
+  const tripId = href?.match(/\/trips\/([0-9a-f-]+)/i)?.[1];
+  if (!tripId) throw new Error(`could not read a trip id from "${href}" for ${title}`);
+  return tripId;
+}
+
+/**
+ * The same id, read on a disposable staff context so the test's own `page`
+ * stays the unauthenticated visitor it is capturing as — the CR-019 pattern the
+ * waiver and recap setups below use, rather than signing in and clearing
+ * cookies afterwards.
+ */
+async function tripIdWithoutSigningIn(
+  browser: Browser,
+  storageState: string,
+  title: string,
+): Promise<string> {
+  const context = await browser.newContext({ storageState });
+  try {
+    return await seededTripId(makeActivitySafe(await context.newPage()), title);
+  } finally {
+    await context.close();
+  }
+}
+
+/**
+ * Book the seeded reef charter as a fresh visitor and settle on the
+ * confirmation. Shared by the `booking-confirmed` and `readiness` captures,
+ * which each run it against their own reseeded fixture.
+ *
+ * The name and email are fixed per scheme rather than unique per run: both
+ * render on the confirmation, so a wall-clock or random value there would be a
+ * permanent diff between CI runs rather than a regression.
+ */
+async function bookAVisualRegressionSeat(page: Page, scheme: "light" | "dark") {
+  await page.goto("/s/blue-mantis");
+  await publicReefCard(page).getByRole("link", { name: REEF_TRIP }).click();
+  await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+  await page.getByLabel("Name", { exact: true }).fill("Visual Regression Diver");
+  await page.getByLabel("Email", { exact: true }).fill(`visual-regression-${scheme}@example.com`);
+  await page.getByRole("button", { name: /^Book/ }).click();
+  await page.getByRole("heading", { name: /You’re on the boat/ }).waitFor();
+}
+
 for (const scheme of ["light", "dark"] as const) {
   test.describe(`${scheme} mode`, () => {
     // Base viewport for navigation and clicks; `capture` resizes to each entry
     // in VIEWPORTS for the screenshots and restores this afterward.
     test.use({ colorScheme: scheme, viewport: { width: 1280, height: 800 } });
 
-    test(`public surfaces render true to the design (${scheme})`, async ({
-      page,
-      browser,
-      staffStorageState,
-      request,
-    }) => {
-      // 16 navigate+capture surfaces (64 screenshots) plus a real send-waiver
-      // action and a real booking, all in one test — comfortably past the
-      // suite's 15s default, which is sized for a single real flow, not a
-      // full site tour. Without this override the run was flaky: whichever
-      // capture landed on a slow font-load or cold render blew the shared
-      // budget for every capture after it, and the failing step moved
-      // between runs. The five switching-guide captures that used to follow
-      // `recap` here have their own test below: each is a plain unauthenticated
-      // page.goto with no dependency on this test's setup, so — same reasoning
-      // as the "about page" split further down — there is no reason to spend
-      // this test's budget on them too.
-      //
-      // Raised from 45s to 90s (matching this file's other heavy multi-capture
-      // tests below) once cacheComponents landed: the capture count here is
-      // unchanged, but CI's shared runners started consistently blowing the
-      // 45s ceiling on the very last capture (`recap`) after successfully
-      // completing all 14 before it — 3/3 CI runs, always the identical
-      // assertion, never a genuine hang (this same sequence completes in
-      // ~30s locally with 15s to spare). Partial Prerendering's per-request
-      // render cost accumulating across 15 sequential captures is a real,
-      // if hard-to-attribute-to-one-line, aggregate cost increase — not a
-      // stuck assertion this override would be masking.
-      test.setTimeout(90_000);
-      await page.goto("/");
-      await capture(page, "landing", scheme);
+    test.describe("public", () => {
+      test(`the landing page renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/");
+        await capture(page, "landing", scheme);
+      });
 
       // The other two buyer-facing sales surfaces: the product narrative
       // (readiness, dock, diver arc, honest-no scope) and the pricing page
       // with its objection FAQ. Copy changes here are product changes.
-      await page.goto("/product");
-      await capture(page, "product", scheme);
+      test(`the product page renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/product");
+        await capture(page, "product", scheme);
+      });
 
-      await page.goto("/pricing");
-      await capture(page, "pricing", scheme);
+      test(`the pricing page renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/pricing");
+        await capture(page, "pricing", scheme);
+      });
 
       // Where the trial actually starts: the form plus the reassurance block a
       // skeptical owner reads before typing a password.
-      await page.goto("/onboard");
-      await capture(page, "onboard", scheme);
+      test(`the onboarding form renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/onboard");
+        await capture(page, "onboard", scheme);
+      });
 
-      await page.goto("/sign-in");
-      await capture(page, "sign-in", scheme);
+      test(`the sign-in page renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/sign-in");
+        await capture(page, "sign-in", scheme);
+      });
 
       // The same form after a signed-out visitor followed a `/shop/**` link:
       // Auth.js's `callbackUrl` names the shop, so the page offers that shop's
       // public schedule instead of leaving a diver at a staff password field.
-      await page.goto("/sign-in?callbackUrl=%2Fshop%2Fblue-mantis%2Fdivers");
-      await capture(page, "sign-in-shop-escape", scheme);
+      test(`the sign-in shop escape hatch renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/sign-in?callbackUrl=%2Fshop%2Fblue-mantis%2Fdivers");
+        await capture(page, "sign-in-shop-escape", scheme);
+      });
 
-      await page.goto("/forgot-password");
-      await capture(page, "forgot-password", scheme);
+      test(`the forgot-password page renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/forgot-password");
+        await capture(page, "forgot-password", scheme);
+      });
 
       // The token pages' one always-reachable state: an unrecognized token
       // never renders anything but this same closed notice (no live token to
       // capture the confirm/reset form with — see e2e/account-lifecycle.spec.ts).
-      await page.goto("/verify/not-a-real-token");
-      await capture(page, "verify-invalid", scheme);
+      test(`the invalid email-verification notice renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/verify/not-a-real-token");
+        await capture(page, "verify-invalid", scheme);
+      });
 
-      await page.goto("/reset-password/not-a-real-token");
-      await capture(page, "reset-password-invalid", scheme);
+      test(`the invalid password-reset notice renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/reset-password/not-a-real-token");
+        await capture(page, "reset-password-invalid", scheme);
+      });
 
-      await page.goto("/unsubscribe/not-a-real-token");
-      await capture(page, "unsubscribe-invalid", scheme);
+      test(`the invalid unsubscribe notice renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/unsubscribe/not-a-real-token");
+        await capture(page, "unsubscribe-invalid", scheme);
+      });
 
       // Wait for a real departure card, not the loading skeleton: this capture
       // used to `goto` and shoot immediately, so it raced the schedule's
       // suspense fallback and whichever side of that race each run landed on
       // decided the baseline. Two runs catching *different* skeleton frames is
       // what produced the schedule-dark diffs on builds with no code change.
-      await page.goto("/s/blue-mantis");
-      await page
-        .locator("li")
-        .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-        .getByRole("link")
-        .waitFor();
-      await capture(page, "schedule", scheme);
+      test(`the public schedule renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/s/blue-mantis");
+        await publicReefCard(page).getByRole("link").waitFor();
+        await capture(page, "schedule", scheme);
+      });
 
       // The embed widget's compact surface (docs ADR 20260726-schedule-embed):
       // no ShopPageHeader chrome, tighter padding — what a shop's own website
@@ -464,290 +629,429 @@ for (const scheme of ["light", "dark"] as const) {
       // reason: with no wait this capture sometimes shot an empty document, so
       // `fullPage` measured the viewport (844px tall) instead of the real page
       // (11802px). A baseline that is a blank viewport asserts nothing.
-      await page.goto("/s/blue-mantis?embed=1");
-      await page
-        .locator("li")
-        .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-        .getByRole("link")
-        .waitFor();
-      await capture(page, "schedule-embed", scheme);
-
-      // Back to the standalone (non-embed) schedule before the trip-detail
-      // capture below — its links now carry embed=1 forward when the
-      // schedule itself was loaded in embed mode, and the "site-briefing"
-      // baseline is the standalone trip page, not the compact embed variant.
-      await page.goto("/s/blue-mantis");
+      test(`the embedded schedule renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/s/blue-mantis?embed=1");
+        await publicReefCard(page).getByRole("link").waitFor();
+        await capture(page, "schedule-embed", scheme);
+      });
 
       // The seeded reef trip's public briefing: satellite map, gentle route,
       // landmarks, and the field guide — DiveDay's flagship "delight" surface.
-      await page
-        .locator("li")
-        .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-        .getByRole("link", { name: "Two-Tank Reef — Molasses & French" })
-        .click();
-      await page.getByTitle("Satellite map of Molasses Reef").waitFor();
-      await capture(page, "site-briefing", scheme);
+      //
+      // Reached from the *standalone* schedule, never the embed: a schedule
+      // loaded with `embed=1` carries the flag forward on its trip links, and
+      // this baseline is the full-chrome page. Its own test now, so that can no
+      // longer depend on which capture ran before it.
+      test(`the public trip briefing renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/s/blue-mantis");
+        await publicReefCard(page).getByRole("link", { name: REEF_TRIP }).click();
+        await page.getByTitle("Satellite map of Molasses Reef").waitFor();
+        await capture(page, "site-briefing", scheme);
+      });
+
+      /**
+       * The same page on a charter that actually gates, so the "Who this trip
+       * is for" note names a level *above* the shop's default (ADR
+       * 20260803-trip-admission-at-booking). `site-briefing` above already
+       * photographs the note in its shop-default form — every non-course
+       * charter states Open Water — but not the raised form, which is the one a
+       * diver is refused against and the one whose wording carries a level
+       * name assembled from the trip's own requirement row.
+       *
+       * Advanced Drift is the uncontaminated case from
+       * `src/db/seed-cert-gates.ts`: a level and nothing else, at a site with no
+       * gate of its own. Its day-31 departure is deliberately off the public
+       * schedule's first page, so the id comes off the staff board on a
+       * disposable context and `page` never holds a session.
+       */
+      test(`the public trip page's requirement note renders true to the design (${scheme})`, async ({
+        page,
+        browser,
+        staffStorageState,
+      }) => {
+        // A board crawl on a second context, then the capture. Same
+        // aggregate-cost reasoning as the waiver and recap tests below.
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        const tripId = await tripIdWithoutSigningIn(
+          browser,
+          await staffStorageState("owner"),
+          ADVANCED_CHARTER,
+        );
+        await page.goto(`/s/blue-mantis/trips/${tripId}`);
+        await page.getByRole("heading", { name: "Who this trip is for" }).waitFor();
+        // The booking form is a Client Component below the note; wait for it to
+        // hydrate so the shot is of the settled page, not of the form mounting.
+        await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+        await capture(page, "site-briefing-requirements", scheme);
+      });
 
       // "Upcoming dates" is the last section the public course page streams, so
       // it is the signal that the whole document has landed — without it this
       // capture also shot a viewport-tall blank page on some runs.
-      await page.goto("/s/blue-mantis/courses/open-water-diver");
-      await page.getByRole("heading", { name: "Upcoming dates" }).waitFor();
-      await capture(page, "course-page", scheme);
+      test(`the public course page renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/s/blue-mantis/courses/open-water-diver");
+        await page.getByRole("heading", { name: "Upcoming dates" }).waitFor();
+        await capture(page, "course-page", scheme);
+      });
 
       // The diver's catalog index and the certification-path guidance it leads
       // to. Both used to be the signed-out half of a staff page inside /shop
       // and so had no baseline of their own; they are standalone public
       // surfaces now (ADR 20260803-public-shop-namespace).
-      await page.goto("/s/blue-mantis/courses");
-      await page.getByRole("heading", { level: 1, name: "Courses" }).waitFor();
-      await capture(page, "public-courses", scheme);
-
-      await page.goto("/s/blue-mantis/courses/paths");
-      await page.getByRole("heading", { level: 1, name: "Certification paths" }).waitFor();
-      await capture(page, "public-course-paths", scheme);
-
-      // Set a review link on a disposable staff context (same CR-019 pattern
-      // as the waiver/booking setup below) so the recap capture shows the
-      // "Leave a review" section — a new surface from docs ADR
-      // 20260726-post-trip-review-request — without signing the public
-      // `page` itself in.
-      const reviewSettingsContext = await browser.newContext({
-        storageState: await staffStorageState("owner"),
+      test(`the public course catalog renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/s/blue-mantis/courses");
+        await page.getByRole("heading", { level: 1, name: "Courses" }).waitFor();
+        await capture(page, "public-courses", scheme);
       });
-      const reviewSettingsPage = makeActivitySafe(await reviewSettingsContext.newPage());
-      await reviewSettingsPage.goto("/shop/blue-mantis/settings");
-      await reviewSettingsPage
-        .getByLabel("Review link")
-        .fill("https://g.page/r/blue-mantis/review");
-      await reviewSettingsPage.getByRole("button", { name: "Save review link" }).click();
-      await reviewSettingsPage.getByText("Review link saved.").filter({ visible: true }).waitFor();
-      await reviewSettingsContext.close();
 
-      // The post-trip recap: a signed-token diver page minted for the pinned
-      // demo booking (src/db/seed.ts), so the marquee word-of-mouth surface has
-      // a stable baseline without an in-app link to reach it. The tip section
-      // (docs ADR 20260726-post-trip-tipping) needs a connected,
-      // charges-enabled Stripe account — `canAcceptPayments` is a pure DB
-      // check, independent of whether STRIPE_SECRET_KEY is set — so
-      // /api/test/seed-stripe-account marks the demo shop connected without
-      // ever calling Stripe, purely to render the surface for this capture.
-      // The actual checkout button stays inert (no STRIPE_SECRET_KEY in this
-      // fleet), the same reason no capture here exercises a real charge.
-      await request.post("/api/test/seed-stripe-account");
-      await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
-      await page.getByRole("heading", { name: /Nice diving/ }).waitFor();
-      await page.getByRole("heading", { name: "Tip your crew" }).waitFor();
-      await capture(page, "recap", scheme);
-
-      // Two more safety-critical bearer-token pages, done last so minting
-      // them (a real send-waiver action, a real booking) never changes the
-      // seed-derived counts the captures above depend on (CR-019). Setup
-      // uses a disposable staff context — a saved session, not a live
-      // sign-in — so `page` itself stays the same unauthenticated visitor
-      // throughout, exactly as a real diver reaches these links.
-      const staffContext = await browser.newContext({
-        storageState: await staffStorageState("owner"),
+      test(`the public certification paths render true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/s/blue-mantis/courses/paths");
+        await page.getByRole("heading", { level: 1, name: "Certification paths" }).waitFor();
+        await capture(page, "public-course-paths", scheme);
       });
-      const staffPage = makeActivitySafe(await staffContext.newPage());
-      await staffPage.goto("/shop/blue-mantis/schedule/board");
-      await staffPage
-        .locator("li")
-        .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-        .getByRole("link", { name: "Two-Tank Reef — Molasses & French", exact: true })
-        .click();
-      await staffPage.waitForURL(/\/shop\/blue-mantis\/trips\//);
-      await staffPage
-        .getByRole("navigation", { name: "Trip" })
-        .getByRole("link", { name: "Guests" })
-        .click();
-      await staffPage.waitForURL(/\/guests/);
-      const diverSection = staffPage
-        .locator("section")
-        .filter({ has: staffPage.getByRole("heading", { name: /^Divers/ }) });
-      await diverSection.getByRole("button", { name: "Send waiver", exact: true }).first().click();
-      const resultNotice = diverSection.getByRole("status");
-      await resultNotice.waitFor();
-      const waiverHref = await resultNotice.getByRole("link").getAttribute("href");
-      await staffContext.close();
 
-      // Active (unsigned) waiver — the safety-critical form itself, before any
-      // signature or medical answer is entered.
-      await page.goto(waiverHref ?? "/");
-      await page.getByRole("heading", { name: "A quick step before the dock" }).waitFor();
-      await capture(page, "waiver-active", scheme);
+      /**
+       * The post-trip recap: a signed-token diver page minted for the pinned
+       * demo booking (src/db/seed.ts), so the marquee word-of-mouth surface has
+       * a stable baseline without an in-app link to reach it.
+       *
+       * Two pieces of setup it cannot render without. The review section (docs
+       * ADR 20260726-post-trip-review-request) needs the shop's review link
+       * set, done on a disposable staff context (the CR-019 pattern) so the
+       * public `page` never holds a session. The tip section (docs ADR
+       * 20260726-post-trip-tipping) needs a connected, charges-enabled Stripe
+       * account — `canAcceptPayments` is a pure DB check, independent of
+       * whether STRIPE_SECRET_KEY is set — so /api/test/seed-stripe-account
+       * marks the demo shop connected without ever calling Stripe, purely to
+       * render the surface for this capture. The actual checkout button stays
+       * inert (no STRIPE_SECRET_KEY in this fleet), the same reason no capture
+       * here exercises a real charge.
+       */
+      test(`the post-trip recap renders true to the design (${scheme})`, async ({
+        page,
+        browser,
+        staffStorageState,
+        request,
+      }) => {
+        // A settings round-trip on a second context, a test-route write, then
+        // the tallest capture in the file.
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        const reviewSettingsContext = await browser.newContext({
+          storageState: await staffStorageState("owner"),
+        });
+        const reviewSettingsPage = makeActivitySafe(await reviewSettingsContext.newPage());
+        await reviewSettingsPage.goto("/shop/blue-mantis/settings");
+        await reviewSettingsPage
+          .getByLabel("Review link")
+          .fill("https://g.page/r/blue-mantis/review");
+        await reviewSettingsPage.getByRole("button", { name: "Save review link" }).click();
+        await reviewSettingsPage
+          .getByText("Review link saved.")
+          .filter({ visible: true })
+          .waitFor();
+        await reviewSettingsContext.close();
 
-      // A fresh visitor booking the same trip hands back a readiness link —
-      // the pre-trip checklist a diver actually uses on the way to the dock.
-      await page.goto("/s/blue-mantis");
-      await page
-        .locator("li")
-        .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-        .getByRole("link", { name: "Two-Tank Reef — Molasses & French" })
-        .click();
-      await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
-      await page.getByLabel("Name", { exact: true }).fill("Visual Regression Diver");
-      await page
-        .getByLabel("Email", { exact: true })
-        .fill(`visual-regression-${scheme}@example.com`);
-      await page.getByRole("button", { name: /^Book/ }).click();
-      await page.getByRole("heading", { name: /You’re on the boat/ }).waitFor();
-      // The moment the whole public funnel exists for, and until now the one
-      // step of it with no baseline: the schedule, the trip page, and the
-      // readiness checklist either side of it were all captured, but the
-      // confirmation a diver actually celebrates on was not. Captured here
-      // rather than in a flow of its own — this test already stands on it, and
-      // a second real booking would move the seat counts every capture above
-      // depends on (CR-019).
-      await capture(page, "booking-confirmed", scheme);
-      const readinessHref = await page
-        .getByRole("link", { name: /readiness page/ })
-        .getAttribute("href");
-      await page.goto(readinessHref ?? "/");
-      await page.getByRole("heading", { name: "Your pre-trip checklist" }).waitFor();
-      // This is a fresh unpaid booking, so the "Need to change your plans?"
+        await request.post("/api/test/seed-stripe-account");
+        await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
+        await page.getByRole("heading", { name: /Nice diving/ }).waitFor();
+        await page.getByRole("heading", { name: "Tip your crew" }).waitFor();
+        await capture(page, "recap", scheme);
+      });
+
+      /**
+       * Active (unsigned) waiver — the safety-critical form itself, before any
+       * signature or medical answer is entered.
+       *
+       * Minting the link is a real send-waiver action, run on a disposable
+       * staff context so `page` stays the same unauthenticated visitor
+       * throughout, exactly as a real diver reaches the link.
+       */
+      test(`the unsigned waiver renders true to the design (${scheme})`, async ({
+        page,
+        browser,
+        staffStorageState,
+      }) => {
+        // Board → trip → Guests → send, on a second context, then the capture.
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        const staffContext = await browser.newContext({
+          storageState: await staffStorageState("owner"),
+        });
+        const staffPage = makeActivitySafe(await staffContext.newPage());
+        await staffPage.goto("/shop/blue-mantis/schedule/board");
+        await staffPage
+          .locator("li")
+          .filter({ hasText: REEF_TRIP })
+          .getByRole("link", { name: REEF_TRIP, exact: true })
+          .click();
+        await staffPage.waitForURL(/\/shop\/blue-mantis\/trips\//);
+        await staffPage
+          .getByRole("navigation", { name: "Trip" })
+          .getByRole("link", { name: "Guests" })
+          .click();
+        await staffPage.waitForURL(/\/guests/);
+        const diverSection = staffPage
+          .locator("section")
+          .filter({ has: staffPage.getByRole("heading", { name: /^Divers/ }) });
+        await diverSection
+          .getByRole("button", { name: "Send waiver", exact: true })
+          .first()
+          .click();
+        const resultNotice = diverSection.getByRole("status");
+        await resultNotice.waitFor();
+        const waiverHref = await resultNotice.getByRole("link").getAttribute("href");
+        await staffContext.close();
+
+        await page.goto(waiverHref ?? "/");
+        await page.getByRole("heading", { name: "A quick step before the dock" }).waitFor();
+        await capture(page, "waiver-active", scheme);
+      });
+
+      /**
+       * The moment the whole public funnel exists for, and until recently the
+       * one step of it with no baseline: the schedule, the trip page, and the
+       * readiness checklist either side of it were all captured, but the
+       * confirmation a diver actually celebrates on was not.
+       *
+       * It and `readiness` below each run their own booking rather than sharing
+       * one. That used to be forbidden — a second real booking inside the
+       * public tour would have moved the seat counts every capture after it
+       * depended on (CR-019) — but the per-test `demoReset` in e2e/fixtures.ts
+       * reseeds the demo shop before each of these, so each books against the
+       * same fixture and neither can see the other's seat.
+       */
+      test(`the booking confirmation renders true to the design (${scheme})`, async ({ page }) => {
+        // A real booking through the public form, then the capture.
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        await bookAVisualRegressionSeat(page, scheme);
+        await capture(page, "booking-confirmed", scheme);
+      });
+
+      // The pre-trip checklist a diver actually uses on the way to the dock,
+      // reached by the readiness link the confirmation hands back. This is a
+      // fresh unpaid booking, so the "Need to change your plans?"
       // reschedule/cancel section (docs ADR 20260727-diver-self-service-cancel)
       // renders too — no separate capture needed, it's part of this same
       // full-page screenshot.
-      await capture(page, "readiness", scheme);
-    });
+      test(`the diver readiness checklist renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        await bookAVisualRegressionSeat(page, scheme);
+        const readinessHref = await page
+          .getByRole("link", { name: /readiness page/ })
+          .getAttribute("href");
+        await page.goto(readinessHref ?? "/");
+        await page.getByRole("heading", { name: "Your pre-trip checklist" }).waitFor();
+        await capture(page, "readiness", scheme);
+      });
 
-    // Its own test rather than another stop on the public-surfaces tour: that
-    // one already carries a dozen captures against the global 15s ceiling, and
-    // a trust page whose baseline is skipped because a long test ran out of
-    // budget is the one baseline you'd most want.
-    test(`the about page renders true to the design (${scheme})`, async ({ page }) => {
-      await page.goto("/about");
-      await capture(page, "about", scheme);
-    });
-
-    // Split out of the public-surfaces tour above (2026-07-30): these five were
-    // the tail end of that test and the surfaces most often still unshot when a
-    // slow CI runner outgrew even that test's extended budget — plain
-    // unauthenticated navigations with no dependency on anything upstream, so
-    // there was no reason to make them compete with recap/waiver/booking setup
-    // for one shared clock.
-    test(`switching guides render true to the design (${scheme})`, async ({ page }) => {
-      // 5 navigate+capture surfaces (10 screenshots) — past the suite's 15s
-      // default the same way the other multi-capture tests in this file are.
-      test.setTimeout(30_000);
+      // Its own test rather than another stop on a public tour: a trust page
+      // whose baseline is skipped because a long test ran out of budget is the
+      // one baseline you'd most want.
+      test(`the about page renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/about");
+        await capture(page, "about", scheme);
+      });
 
       // The migration-guides hub: one card per incumbent a shop might be
       // leaving, the entry point to the portability wedge on the marketing side.
-      await page.goto("/switching");
-      await page.getByRole("heading", { name: "The door swings both ways." }).waitFor();
-      await capture(page, "switching-hub", scheme);
+      test(`the switching hub renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/switching");
+        await page.getByRole("heading", { name: "The door swings both ways." }).waitFor();
+        await capture(page, "switching-hub", scheme);
+      });
 
       // The "Switching from EVE" migration guide: the marketing face of the
       // portability wedge — export click-path, the shared scope table, and the
       // importer, on the market's most motivated switching pool. Represents the
       // shared guide template every live incumbent page renders.
-      await page.goto("/switching/eve");
-      await page.getByRole("heading", { name: "Moving your shop off EVE" }).waitFor();
-      await capture(page, "switching-eve", scheme);
+      test(`the EVE switching guide renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/switching/eve");
+        await page.getByRole("heading", { name: "Moving your shop off EVE" }).waitFor();
+        await capture(page, "switching-eve", scheme);
+      });
 
       // The non-incumbent switching guide: shops coming from a spreadsheet — the
       // market's largest under-served pool. Its own layout (columns-that-matter,
       // the downloadable template, the free-import offer) around the same shared
       // honesty table every guide renders.
-      await page.goto("/switching/spreadsheet");
-      await page.getByRole("heading", { name: "The spreadsheet got you this far." }).waitFor();
-      await capture(page, "switching-spreadsheet", scheme);
+      test(`the spreadsheet switching guide renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/switching/spreadsheet");
+        await page.getByRole("heading", { name: "The spreadsheet got you this far." }).waitFor();
+        await capture(page, "switching-spreadsheet", scheme);
+      });
 
       // The FareHarbor guide: the coexist-led variant of the template, for a
       // booking channel a shop keeps rather than a records system it leaves —
       // the "keep it, or leave it" section (run-the-day cards + the leave path)
       // that no other guide renders.
-      await page.goto("/switching/fareharbor");
-      await page
-        .getByRole("heading", { name: "FareHarbor fills the seats. DiveDay runs the boat." })
-        .waitFor();
-      await capture(page, "switching-fareharbor", scheme);
+      test(`the FareHarbor switching guide renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/switching/fareharbor");
+        await page
+          .getByRole("heading", { name: "FareHarbor fills the seats. DiveDay runs the boat." })
+          .waitFor();
+        await capture(page, "switching-fareharbor", scheme);
+      });
 
       // The Rezdy guide: the second booking-channel guide, same coexist template
       // with its own copy (a monthly-plus-per-booking model). Baselined so its
       // page — and the extra hub card it adds — stay pixel-stable.
-      await page.goto("/switching/rezdy");
-      await page
-        .getByRole("heading", { name: "Rezdy sells the seats. DiveDay runs the boat." })
-        .waitFor();
-      await capture(page, "switching-rezdy", scheme);
+      test(`the Rezdy switching guide renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/switching/rezdy");
+        await page
+          .getByRole("heading", { name: "Rezdy sells the seats. DiveDay runs the boat." })
+          .waitFor();
+        await capture(page, "switching-rezdy", scheme);
+      });
+
+      /**
+       * The seeded demo shop's Today queue never runs dry, so the shared
+       * `EmptyState` card TodayQueue now renders when nothing needs attention
+       * (docs/design/principles.md, terminal-vs-section empty states) has no
+       * other baseline. A freshly onboarded shop is the real "empty queue"
+       * scenario — same flow as e2e/onboard.spec.ts's first-run checklist test.
+       *
+       * **Two captures in one test, deliberately.** `nav-more-menu` is the same
+       * page with the header's "More" panel open, and both images contain the
+       * shop's slug — the first-run checklist renders the public schedule URL.
+       * A second test would have to onboard a *second* shop, because
+       * `/api/test/reset` reseeds the demo shop and purges minted demo shops but
+       * does not delete one created through `/onboard`, so the slug would have
+       * to differ — and a different slug is different pixels in both baselines.
+       * Splitting here would move a baseline to buy isolation, which is the
+       * wrong trade; the two captures are one page anyway.
+       */
+      test(`a freshly onboarded shop's Today tab renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        // A real sign-up flow, then two captures.
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        // Deterministic, not Date.now(): this slug renders on screen (the
+        // "Share your public schedule" URL), and neither DIVEDAY_CLOCK nor the
+        // browser-context clock fixture freezes a value read in the Node.js
+        // test process itself — a wall-clock slug here is a permanent visual
+        // diff between CI runs, not a real regression. `scheme` alone
+        // (light/dark) is unique enough since this test runs once per scheme
+        // and the suite has no retries (playwright.config.ts).
+        const unique = `today-empty-${scheme}`;
+        await page.goto("/onboard");
+        await page
+          .locator('input[name="shopName"]')
+          .filter({ visible: true })
+          .fill("Fresh Shop E2E");
+        await page.locator('input[name="shopSlug"]').filter({ visible: true }).fill(unique);
+        await page.locator('input[name="ownerName"]').filter({ visible: true }).fill("Nour Haddad");
+        await page
+          .locator('input[name="ownerEmail"]')
+          .filter({ visible: true })
+          .fill(`${unique}@example.com`);
+        await page
+          .locator('input[name="ownerPassword"]')
+          .filter({ visible: true })
+          .fill("trial-pass-123");
+        await page.getByRole("button", { name: "Create shop & start trial" }).click();
+        await page.waitForURL(new RegExp(`/shop/${unique}$`));
+        await page.getByRole("heading", { name: "Get your shop ready" }).waitFor();
+        await page.getByRole("heading", { name: "Nothing is waiting on you" }).waitFor();
+        await capture(page, "today-empty", scheme);
+
+        // The "More" menu open — the only way to see its named groups ("Run the
+        // shop", and Settings under "Set up") and the destinations they hold,
+        // since the panel used to separate them with one unlabelled rule. Team
+        // and Promo codes left this menu when Settings became their only door.
+        // Captured here rather
+        // than over the seeded Today: the nav is identical (a fresh owner passes
+        // every gate) and this page is short, so the baseline is the menu rather
+        // than a second copy of a very tall dashboard whose every content change
+        // would diff this image too.
+        await page.locator("header summary").filter({ hasText: "More" }).click();
+        await page.getByRole("list", { name: "Run the shop" }).waitFor();
+        await capture(page, "nav-more-menu", scheme);
+      });
     });
 
     test.describe("staff", () => {
       signedInAsOwner();
 
-      /**
-       * The staff tour is **two** tests, not one. It reached 35 surfaces (140
-       * screenshots) and started blowing a 140s budget on CI — and the answer
-       * to that is not another bigger number. The file's own rule is that this
-       * timeout is not a knob to widen; a tour that outgrows its budget wants
-       * splitting, which also lets the two halves run on separate workers
-       * instead of one worker serially shooting 140 PNGs.
-       *
-       * The split is at a safe seam: everything up to here is read-only
-       * navigation, and the halves share no state. Each gets its own
-       * `demoReset` from the fixtures, so the second is *more* isolated than it
-       * was as one long test, not less.
-       */
-      test(`staff surfaces render true to the design (${scheme})`, async ({ page }) => {
-        // 18 navigate+capture surfaces (72 screenshots) — the suite's 15s
-        // default is sized for a single real flow, not a site tour, and each
-        // capture now costs a full `paintWholeDocument` scroll.
-        test.setTimeout(90_000);
+      test(`the Today queue renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis");
         await page
           .getByRole("heading", { name: /Good (morning|afternoon|evening|night), Dana/ })
           .waitFor();
         await capture(page, "today", scheme);
+      });
 
-        // The blocker queue — until recently the one staff surface with no
-        // baseline at all, because a flat unpaginated list of every blocked
-        // diver across every upcoming departure rendered a ~10,700px page
-        // nothing could capture sanely (the same shape the orders index was
-        // found in). Two bounds now: the shared operational horizon decides
-        // which departures it holds, the pager how many render at once.
-        //
-        // It is Today's by-departure *view* rather than a route of its own
-        // since Not ready folded into the shop home, so this navigates through
-        // the redirect the old URL still serves and keeps the `blockers`
-        // capture name. The baseline will move: the same groups now render
-        // under Today's greeting, departure board, and view switch instead of
-        // their own page header, which is the change this capture should show.
+      // The blocker queue — until recently the one staff surface with no
+      // baseline at all, because a flat unpaginated list of every blocked
+      // diver across every upcoming departure rendered a ~10,700px page
+      // nothing could capture sanely (the same shape the orders index was
+      // found in). Two bounds now: the shared operational horizon decides
+      // which departures it holds, the pager how many render at once.
+      //
+      // It is Today's by-departure *view* rather than a route of its own
+      // since Not ready folded into the shop home, so this navigates through
+      // the redirect the old URL still serves and keeps the `blockers`
+      // capture name.
+      test(`the by-departure "Not ready" view renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
         await page.goto("/shop/blue-mantis/blockers");
         await page.getByRole("heading", { name: "Not ready", level: 2 }).waitFor();
         await capture(page, "blockers", scheme);
+      });
 
-        // Counter mode itself — the third surface reading the shared
-        // operational window (task 141). Only its walk-in sub-page had a
-        // baseline before, so the queue staff actually stand in front of, and
-        // the window note the three surfaces now share, went uncaptured.
+      // Counter mode itself — the third surface reading the shared
+      // operational window (task 141). Only its walk-in sub-page had a
+      // baseline before, so the queue staff actually stand in front of, and
+      // the window note the three surfaces now share, went uncaptured.
+      test(`counter check-in renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/check-in");
         await page.getByRole("heading", { name: "Counter check-in", level: 1 }).waitFor();
         await capture(page, "check-in", scheme);
+      });
 
-        // Staffing had no baseline at all until the over_ratio parity fix —
-        // the one gap surface whose green "Covered" badge could silently
-        // contradict Today. Captured so a regression there shows as pixels.
+      // Staffing had no baseline at all until the over_ratio parity fix —
+      // the one gap surface whose green "Covered" badge could silently
+      // contradict Today. Captured so a regression there shows as pixels.
+      test(`the staffing gaps page renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/staffing");
         await page.getByRole("heading", { name: "Staffing", level: 1 }).waitFor();
         await capture(page, "staffing", scheme);
+      });
 
-        // The fast walk-in flow: pick today's boat, then search or hand-enter
-        // a diver — no trip page detour, no required email at the counter.
+      // The fast walk-in flow: pick today's boat, then search or hand-enter
+      // a diver — no trip page detour, no required email at the counter.
+      test(`the walk-in counter renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/check-in/walk-in");
         await page.getByRole("heading", { name: "Walk-in", level: 1 }).waitFor();
         await capture(page, "check-in-walk-in", scheme);
+      });
 
-        // The global Add-booking door, both halves: the departure picker with
-        // seats-left on every row, and the diver step once a boat is chosen
-        // (returning-diver search + hand entry). Deliberately two captures —
-        // the picker and the diver form never share a screen, so one shot
-        // would leave half the surface with no baseline at all.
+      // The global Add-booking door, both halves: the departure picker with
+      // seats-left on every row, and the diver step once a boat is chosen
+      // (returning-diver search + hand entry). Two captures and now two tests —
+      // the picker and the diver form never share a screen, so one shot would
+      // leave half the surface with no baseline at all, and one *test* would
+      // let a broken picker take the diver form's baseline with it.
+      test(`the Add-booking departure picker renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
         await page.goto("/shop/blue-mantis/bookings/new");
         await page.getByRole("heading", { name: "Add a booking", level: 1 }).waitFor();
         await capture(page, "booking-new", scheme);
+      });
 
+      test(`the Add-booking diver step renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/shop/blue-mantis/bookings/new");
+        await page.getByRole("heading", { name: "Add a booking", level: 1 }).waitFor();
         await page
           .getByRole("link", { name: /seats? left/ })
           .first()
@@ -755,16 +1059,21 @@ for (const scheme of ["light", "dark"] as const) {
         await page.waitForURL(/\/bookings\/new\/[^/?]+$/);
         await page.getByRole("heading", { name: "New diver" }).waitFor();
         await capture(page, "booking-new-diver", scheme);
+      });
 
-        // The staff schedule as a builder: departures grouped by day, each row
-        // carrying its own move/copy/remove controls and its crew.
+      // The staff schedule as a builder: departures grouped by day, each row
+      // carrying its own move/copy/remove controls and its crew.
+      test(`the schedule board renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/schedule/board");
         await page.getByRole("heading", { name: "The board" }).waitFor();
         await capture(page, "schedule-builder", scheme);
+      });
 
-        // The whole add-a-departure form, which the board above only ever
-        // shows as a button — every field a departure is born with, price
-        // included, and the surface with no baseline at all until now.
+      // The whole add-a-departure form, which the board only ever shows as a
+      // button — every field a departure is born with, price included.
+      test(`the add-a-departure panel renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/schedule/board");
+        await page.getByRole("heading", { name: "The board" }).waitFor();
         await page.getByRole("button", { name: "Add a departure", exact: true }).click();
         // Its two selects fetch their options when the panel opens; wait for
         // the placeholder option to go, so the shot is never of "Loading…".
@@ -772,165 +1081,149 @@ for (const scheme of ["light", "dark"] as const) {
           .locator('select[name="courseId"] option[disabled]')
           .waitFor({ state: "detached" });
         await capture(page, "schedule-builder-add", scheme);
+      });
 
-        // The roster, then one diver's full profile (certs, specialty cards,
-        // contact) — the front desk's densest everyday surfaces.
-        // Wait for the roster itself, not the skeleton: same race as the public
-        // schedule above, and the one that put a half-drawn loading state into
-        // the divers-light baseline.
+      // The roster — the front desk's densest everyday surface.
+      // Wait for the roster itself, not the skeleton: same race as the public
+      // schedule, and the one that put a half-drawn loading state into the
+      // divers-light baseline.
+      test(`the diver roster renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/divers");
         await page.getByRole("heading", { level: 1, name: "Divers" }).waitFor();
         await page.getByRole("searchbox", { name: "Search divers" }).waitFor();
         await capture(page, "divers", scheme);
+      });
 
-        // Found by search, not by scrolling: the demo shop now has enough
-        // divers to page the roster, so nobody is reliably on the first page.
-        await page.goto("/shop/blue-mantis/divers?q=Priya");
-        await page
-          .getByRole("row")
-          .filter({ hasText: "Priya Sharma" })
-          .getByText("PS", { exact: true })
-          .filter({ visible: true })
-          .click();
-        await page.getByRole("heading", { level: 1, name: "Priya Sharma" }).waitFor();
-        // Park the pointer before shooting a diver record. The roster row these
-        // four captures click sits, at 390, exactly where the record's sub-nav
-        // bar lands — so the pointer left behind by the click renders one tab in
-        // its hover state, and the phone baselines photographed a "Fit" that
-        // looked selected. Deterministic, so never a flake; just a lie about
-        // state that a reviewer has to re-derive every time. (0,0) is the demo
-        // banner, which has nothing hoverable in the corner.
-        await page.mouse.move(0, 0);
+      // One diver's full profile: certs, specialty cards, contact.
+      test(`a diver's record renders true to the design (${scheme})`, async ({ page }) => {
+        await openDiverProfile(page, "Priya", "Priya Sharma", "PS");
         await capture(page, "diver-profile", scheme);
+      });
 
-        // A diver holding a card past its shop refresher-due date: the
-        // "refresher due" badge renders red and the card no longer counts as
-        // valid — the safety-relevant state (H-08: cards don't expire).
-        await page.goto("/shop/blue-mantis/divers?q=Yusuf");
-        await page
-          .getByRole("row")
-          .filter({ hasText: "Yusuf Demir" })
-          .getByText("YD", { exact: true })
-          .filter({ visible: true })
-          .click();
-        await page.getByRole("heading", { level: 1, name: "Yusuf Demir" }).waitFor();
-        await page.mouse.move(0, 0);
+      // A diver holding a card past its shop refresher-due date: the
+      // "refresher due" badge renders red and the card no longer counts as
+      // valid — the safety-relevant state (H-08: cards don't expire).
+      test(`a diver with a refresher-due card renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await openDiverProfile(page, "Yusuf", "Yusuf Demir", "YD");
         await capture(page, "diver-profile-expired", scheme);
+      });
 
-        // The migrated diver, and every surface that has to say so. Her level
-        // card reads verified with an "imported" provenance chip and a one-tap
-        // "Confirm card" nudge (ADR 20260724-import-verified-cards), and her
-        // shop history carries the visits that came across from the old system
-        // (ADR 20260725-import-prior-visits) — imported-marked, unlinked, with a
-        // cancelled booking struck through so it can't be read as a dive. This
-        // page is where a spreadsheet cell either looks like evidence or looks
-        // like what it is, so it is worth a baseline in both schemes.
-        await page.goto("/shop/blue-mantis/divers?q=Hana");
-        await page
-          .getByRole("row")
-          .filter({ hasText: "Hana Kobayashi" })
-          .getByText("HK", { exact: true })
-          .filter({ visible: true })
-          .click();
-        await page.getByRole("heading", { level: 1, name: "Hana Kobayashi" }).waitFor();
-        await page.mouse.move(0, 0);
+      // The migrated diver, and every surface that has to say so. Her level
+      // card reads verified with an "imported" provenance chip and a one-tap
+      // "Confirm card" nudge (ADR 20260724-import-verified-cards), and her
+      // shop history carries the visits that came across from the old system
+      // (ADR 20260725-import-prior-visits) — imported-marked, unlinked, with a
+      // cancelled booking struck through so it can't be read as a dive. This
+      // page is where a spreadsheet cell either looks like evidence or looks
+      // like what it is, so it is worth a baseline in both schemes.
+      test(`an imported diver's record renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await openDiverProfile(page, "Hana", "Hana Kobayashi", "HK");
         await capture(page, "diver-profile-imported", scheme);
+      });
 
-        // A diver who has actually paid for something. None of the three
-        // profiles above carries a single order row — verified against the
-        // seed, not assumed — so `PaymentsSection` had only ever been
-        // photographed empty: no payment rows, no refund controls, no status
-        // pills. Talia Rosen is the seed's heaviest payer, so this is the
-        // widest version of the section.
-        //
-        // Deliberately a fourth capture rather than a repoint of
-        // `diver-profile`: Priya's profile is the baseline for the *other*
-        // states on that page, and moving it would trade one blind spot for
-        // another.
-        //
-        // What this still does NOT cover, and why: the `formatMoneyCents` line
-        // in `PaymentsSection` renders only for an order with
-        // `bookingId === null` — a standalone shop payment. Every seeded order
-        // is generated from a booking, so that branch is unreachable from the
-        // demo data and no diver profile can capture it. It stays covered by
-        // `PaymentsSection.test.tsx` alone. Seeding a standalone order would
-        // fix that, but it also moves the reports and orders baselines and is a
-        // demo-data change, so it belongs in its own commit rather than
-        // smuggled into a coverage one.
-        await page.goto("/shop/blue-mantis/divers?q=Talia");
-        await page
-          .getByRole("row")
-          .filter({ hasText: "Talia Rosen" })
-          .getByText("TR", { exact: true })
-          .filter({ visible: true })
-          .click();
-        await page.getByRole("heading", { level: 1, name: "Talia Rosen" }).waitFor();
+      /**
+       * A diver who has actually paid for something. None of the three
+       * profiles above carries a single order row — verified against the
+       * seed, not assumed — so `PaymentsSection` had only ever been
+       * photographed empty: no payment rows, no refund controls, no status
+       * pills. Talia Rosen is the seed's heaviest payer, so this is the
+       * widest version of the section.
+       *
+       * Deliberately a fourth capture rather than a repoint of
+       * `diver-profile`: Priya's profile is the baseline for the *other*
+       * states on that page, and moving it would trade one blind spot for
+       * another.
+       *
+       * What this still does NOT cover, and why: the `formatMoneyCents` line
+       * in `PaymentsSection` renders only for an order with
+       * `bookingId === null` — a standalone shop payment. Every seeded order
+       * is generated from a booking, so that branch is unreachable from the
+       * demo data and no diver profile can capture it. It stays covered by
+       * `PaymentsSection.test.tsx` alone. Seeding a standalone order would
+       * fix that, but it also moves the reports and orders baselines and is a
+       * demo-data change, so it belongs in its own commit rather than
+       * smuggled into a coverage one.
+       */
+      test(`a paying diver's record renders true to the design (${scheme})`, async ({ page }) => {
+        await openDiverProfile(page, "Talia", "Talia Rosen", "TR");
         // Still resolves after the reorder — Payments moved from seventh to
         // fourth, but the section (and its heading) is the same one.
         await page.getByRole("heading", { name: "Payments" }).waitFor();
-        await page.mouse.move(0, 0);
         await capture(page, "diver-profile-payments", scheme);
+      });
 
-        // The seeded reef trip: schedule card → Overview (what the dive is) →
-        // Guests (who is attending) → Manifest (the day-of boarding + roll call).
-        await page.goto("/shop/blue-mantis/schedule/board");
-        await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
-        // The four trip surfaces share a layout that streams a skeleton while the
-        // page's data loads, so every capture waits for real content — never the
-        // loading fallback — before shooting.
+      // The seeded reef trip's four surfaces — Overview (what the dive is),
+      // Guests (who is attending), Manifest (the day-of boarding + roll call),
+      // and Prep (the morning packing list). They share a layout that streams a
+      // skeleton while the page's data loads, so every capture waits for real
+      // content — never the loading fallback — before shooting. One test each:
+      // they used to be four consecutive stops on one tour, which meant a
+      // renamed heading on Overview cost the manifest its baseline too.
+      test(`a trip's Overview renders true to the design (${scheme})`, async ({ page }) => {
+        await openReefTrip(page);
         await page.getByRole("heading", { level: 1, name: /Two-Tank Reef/ }).waitFor();
         await capture(page, "trip-manage", scheme);
+      });
 
-        await page
-          .getByRole("navigation", { name: "Trip" })
-          .getByRole("link", { name: "Guests" })
-          .click();
-        await page.waitForURL(/\/guests/);
+      test(`a trip's Guests roster renders true to the design (${scheme})`, async ({ page }) => {
+        await openReefTrip(page);
+        await openTripTab(page, "Guests");
         await page.getByRole("heading", { name: /Divers/ }).waitFor();
         await capture(page, "trip-guests", scheme);
+      });
 
-        await page
-          .getByRole("navigation", { name: "Trip" })
-          .getByRole("link", { name: "Manifest" })
-          .click();
-        await page.waitForURL(/\/manifest/);
+      test(`a trip's manifest renders true to the design (${scheme})`, async ({ page }) => {
+        await openReefTrip(page);
+        await openTripTab(page, "Manifest");
         await page.getByRole("heading", { level: 1, name: /Two-Tank Reef/ }).waitFor();
         // The offline safety copy now saves itself in the background on
         // mount; wait for that to settle (the offline-roll-call link only
         // renders once saved) so the capture isn't racing that async write.
         await page.getByRole("link", { name: "Open offline roll call" }).waitFor();
         await capture(page, "manifest", scheme);
+      });
 
-        // The morning packing list — tanks, then rental kit. Blue Mantis fills
-        // nitrox, so the Tanks tile grid is at its full Total/Air/Nitrox width;
-        // the collapsed single-tile layout for a shop that doesn't is its own
-        // dedicated test below (toggling the shared catalog here would leak
-        // into every capture after this one in the same test).
-        await page
-          .getByRole("navigation", { name: "Trip" })
-          .getByRole("link", { name: "Prep" })
-          .click();
-        await page.waitForURL(/\/prep/);
+      // Blue Mantis fills nitrox, so the Tanks tile grid is at its full
+      // Total/Air/Nitrox width; the collapsed single-tile layout for a shop that
+      // doesn't is its own test below.
+      test(`a trip's prep list renders true to the design (${scheme})`, async ({ page }) => {
+        await openReefTrip(page);
+        await openTripTab(page, "Prep");
         await page.getByRole("heading", { name: "Tanks" }).waitFor();
         await capture(page, "prep", scheme);
+      });
 
-        // The offline fallback a captain lands on after a failed reload with
-        // no snapshot saved — the entire safety surface in that moment, so it
-        // gets its own baseline rather than relying on the roll-call text
-        // assertion in e2e/manifest.spec.ts to catch a styling regression.
-        // The manifest visit just above auto-saves a device copy, so clear it
-        // first to reproduce the truly-empty state (e.g. storage eviction).
-        const tripId = new URL(page.url()).pathname.match(/\/trips\/([^/]+)\//)?.[1];
-
-        // The offline shell's list view — every trip currently saved on this
-        // device, reachable at dive.day root as well as `/offline-manifest`
-        // directly (see ADR 20260726-shopwide-offline-manifest-priming). The
-        // manifest visit above already auto-saved this trip, so capture the
-        // populated list before the IndexedDB clear below.
+      // The offline shell's list view — every trip currently saved on this
+      // device, reachable at dive.day root as well as `/offline-manifest`
+      // directly (see ADR 20260726-shopwide-offline-manifest-priming). Visiting
+      // the manifest is what puts a trip in it, so this test walks there first.
+      test(`the offline manifest list renders true to the design (${scheme})`, async ({ page }) => {
+        // Board → trip → Manifest, then the offline shell.
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        await openReefTrip(page);
+        await openTripTab(page, "Manifest");
+        await page.getByRole("link", { name: "Open offline roll call" }).waitFor();
         await page.goto("/offline-manifest");
         await page.getByRole("heading", { name: "Saved on this device" }).waitFor();
         await capture(page, "offline-manifest-list", scheme);
+      });
 
+      // The offline fallback a captain lands on after a failed reload with
+      // no snapshot saved — the entire safety surface in that moment, so it
+      // gets its own baseline rather than relying on the roll-call text
+      // assertion in e2e/manifest.spec.ts to catch a styling regression.
+      // Staff pages prime a device copy in the background, so clear IndexedDB
+      // immediately before the visit to reproduce the truly-empty state (e.g.
+      // storage eviction) rather than assuming a fresh context is enough.
+      test(`the empty offline manifest renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await openReefTrip(page);
+        const tripId = new URL(page.url()).pathname.match(/\/trips\/([^/?]+)/)?.[1];
         await page.evaluate(
           () =>
             new Promise<void>((resolve, reject) => {
@@ -943,39 +1236,51 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto(`/offline-manifest?trip=${tripId}`);
         await page.getByRole("heading", { name: "Nothing saved on this phone yet" }).waitFor();
         await capture(page, "offline-manifest-empty", scheme);
+      });
 
-        // Shop settings, where staff set the rental catalog and its prices.
+      // Shop settings, where staff set the rental catalog and its prices.
+      test(`shop settings render true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/settings");
         await page.getByRole("heading", { name: "Rental prices" }).waitFor();
         await capture(page, "settings-payments", scheme);
+      });
 
-        // Where a shop connects its own WhatsApp Business number (ADR
-        // 20260802-whatsapp-embedded-signup). The fleet configures no META_*
-        // credentials, so this captures the coming-soon state — which is what
-        // every shop sees today, and where all of this surface's copy lives.
+      // Where a shop connects its own WhatsApp Business number (ADR
+      // 20260802-whatsapp-embedded-signup). The fleet configures no META_*
+      // credentials, so this captures the coming-soon state — which is what
+      // every shop sees today, and where all of this surface's copy lives.
+      test(`WhatsApp settings render true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/settings/whatsapp");
         await page.getByRole("heading", { name: "How connecting works" }).waitFor();
         await capture(page, "settings-whatsapp", scheme);
+      });
 
-        // The two orders surfaces — the densest money screens in the app, and
-        // until now the only ones with no baseline at all. That gap was found
-        // the honest way: the shop-currency change (ADR 20260731-shop-currency)
-        // rewrote how every amount here is formatted, and the visual suite
-        // reported nothing, because it had never looked. A surface whose whole
-        // job is stating amounts is exactly where a silent pass is worthless.
-        //
-        // Both render the *order row's own* stored currency, not the shop's
-        // current setting: a settled amount is evidence and is never
-        // re-denominated by a later settings change.
+      /**
+       * The two orders surfaces — the densest money screens in the app, and
+       * until recently the only ones with no baseline at all. That gap was found
+       * the honest way: the shop-currency change (ADR 20260731-shop-currency)
+       * rewrote how every amount here is formatted, and the visual suite
+       * reported nothing, because it had never looked. A surface whose whole
+       * job is stating amounts is exactly where a silent pass is worthless.
+       *
+       * Both render the *order row's own* stored currency, not the shop's
+       * current setting: a settled amount is evidence and is never
+       * re-denominated by a later settings change.
+       */
+      test(`the orders list renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/orders");
         await page.getByRole("heading", { level: 1, name: "Orders" }).waitFor();
         // The money column itself, not just the heading — the table streams in
         // and a capture taken on the header alone can bank an empty tbody.
         await page.locator("tbody tr").filter({ visible: true }).first().waitFor();
         await capture(page, "orders", scheme);
+      });
 
-        // One order in full: the total, and the per-line-item amounts that a
-        // literal `$` and a hardcoded `/ 100` used to compose by hand.
+      // One order in full: the total, and the per-line-item amounts that a
+      // literal `$` and a hardcoded `/ 100` used to compose by hand.
+      test(`an order's detail renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/orders");
+        await page.locator("tbody tr").filter({ visible: true }).first().waitFor();
         await page
           .locator('tbody tr a[href*="/orders/"]')
           .filter({ visible: true })
@@ -991,62 +1296,69 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "order-detail", scheme);
       });
 
-      test(`staff settings, catalog and roster surfaces render true to the design (${scheme})`, async ({
-        page,
-      }) => {
-        // The back half of the tour: 18 surfaces (72 screenshots). Same budget
-        // reasoning as the first half — see the comment above it.
-        test.setTimeout(90_000);
-        // The data-export surface: the "your data is yours" promise, concrete.
+      // The data-export surface: the "your data is yours" promise, concrete.
+      test(`the data-export page renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/settings/export");
         await page.getByRole("heading", { name: "Data export" }).waitFor();
         await capture(page, "settings-export", scheme);
+      });
 
-        // The import surface: the honesty table stating what does and doesn't
-        // come across, before any file is chosen.
+      // The import surface: the honesty table stating what does and doesn't
+      // come across, before any file is chosen.
+      test(`the data-import page renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/settings/import");
         await page.getByRole("heading", { name: "What comes across" }).waitFor();
         await capture(page, "settings-import", scheme);
+      });
 
-        // The embed settings page (docs ADR 20260726-schedule-embed). The fleet
-        // now runs against a configured non-loopback APP_HOST (E2E_APP_HOST in
-        // e2e/servers.ts), so this baseline is the generated-snippet state a
-        // real deploy shows — the two SnippetField boxes and the copy buttons —
-        // rather than the "hosting isn't configured" warning it was stuck on
-        // while publicAppUrl() returned null here.
+      // The embed settings page (docs ADR 20260726-schedule-embed). The fleet
+      // now runs against a configured non-loopback APP_HOST (E2E_APP_HOST in
+      // e2e/servers.ts), so this baseline is the generated-snippet state a
+      // real deploy shows — the two SnippetField boxes and the copy buttons —
+      // rather than the "hosting isn't configured" warning it was stuck on
+      // while publicAppUrl() returned null here.
+      test(`the embed settings render true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/settings/embed");
         await page.getByRole("heading", { name: "Website embed" }).waitFor();
         // The snippets are a Client Component; wait for a control it only
         // renders once mounted before shooting.
         await page.getByRole("button", { name: "Copy" }).first().waitFor();
         await capture(page, "settings-embed", scheme);
+      });
 
-        // The team surface: inviting staff and the current roster, each card's
-        // Enable/Disable/Delete immediate-action buttons and its role
-        // checkboxes batched into the page's single "Save changes".
+      // The team surface: inviting staff and the current roster, each card's
+      // Enable/Disable/Delete immediate-action buttons and its role
+      // checkboxes batched into the page's single "Save changes".
+      test(`the team settings render true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/settings/team");
         await page.getByRole("heading", { level: 1, name: "Team" }).waitFor();
         await capture(page, "settings-team", scheme);
+      });
 
-        // Calendar subscriptions, in the un-subscribed state: both scopes
-        // offered to an owner, neither yet minted. Deliberately not the
-        // just-minted state — that panel shows a live feed token, which is
-        // different on every run and would never match a baseline.
+      // Calendar subscriptions, in the un-subscribed state: both scopes
+      // offered to an owner, neither yet minted. Deliberately not the
+      // just-minted state — that panel shows a live feed token, which is
+      // different on every run and would never match a baseline.
+      test(`the calendar settings render true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/settings/calendar");
         // Wait on the panel's own button, not the page's <h1>: the panels are
         // Client Components, and per this file's rule a server-rendered
         // heading resolves before the interesting part has mounted.
         await page.getByRole("button", { name: "Create subscription link" }).first().waitFor();
         await capture(page, "settings-calendar", scheme);
+      });
 
-        // The courses catalog: the eye visibility toggle beside the new link
-        // icon that jumps to a course's public preview page.
+      // The courses catalog: the eye visibility toggle beside the new link
+      // icon that jumps to a course's public preview page.
+      test(`the staff course catalog renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/courses");
         await page.getByRole("heading", { level: 1, name: "Courses" }).waitFor();
         await capture(page, "courses-list", scheme);
+      });
 
-        // A course's edit page: the Day by day section's real per-day controls
-        // (start/end time, time note, item list) replacing the old textarea.
+      // A course's edit page: the Day by day section's real per-day controls
+      // (start/end time, time note, item list) replacing the old textarea.
+      test(`the course editor renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/courses/open-water-diver/edit");
         // "Day by day" is a server-rendered <legend>, so it is on screen before
         // DayByDayEditor (a Client Component) mounts — waiting on it let the
@@ -1054,103 +1366,115 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByText("Day by day").waitFor();
         await page.getByRole("button", { name: "Add item" }).first().waitFor();
         await capture(page, "course-edit", scheme);
+      });
 
-        // The path builder: the ordered rungs with their move/remove controls,
-        // the picker, and the live diver-facing preview — the catalog's one
-        // genuinely interactive surface.
+      test(`the staff certification paths render true to the design (${scheme})`, async ({
+        page,
+      }) => {
         await page.goto("/shop/blue-mantis/courses/paths");
         await page.getByRole("heading", { level: 1, name: "Certification paths" }).waitFor();
         await capture(page, "course-paths", scheme);
+      });
+
+      // The path builder: the ordered rungs with their move/remove controls,
+      // the picker, and the live diver-facing preview — the catalog's one
+      // genuinely interactive surface.
+      test(`the certification-path builder renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/shop/blue-mantis/courses/paths");
+        await page.getByRole("heading", { level: 1, name: "Certification paths" }).waitFor();
         await page.getByRole("link", { name: "From first breath to Rescue Diver" }).first().click();
         await page.getByRole("region", { name: "Path preview" }).waitFor();
         await capture(page, "course-path-builder", scheme);
+      });
 
-        // Owner reporting: "how's my month" over the seeded back-fill — the KPI
-        // row and the per-trip breakdown that answer the buyer's revenue question.
+      // Owner reporting: "how's my month" over the seeded back-fill — the KPI
+      // row and the per-trip breakdown that answer the buyer's revenue question.
+      test(`owner reports render true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/reports");
         await page.getByRole("heading", { level: 1, name: "How's your month" }).waitFor();
         await capture(page, "reports", scheme);
+      });
 
-        // The waiver: two tabs (task 155) — Template is the release editor;
-        // Signatures is the signed-record evidence audit, paginated
-        // (`listWaiverIntegrityAudit`, `WAIVER_INTEGRITY_PAGE_SIZE`) so the
-        // demo shop's 150+ signed records render as one page with a "Show
-        // more records" link rather than a silent truncation notice.
+      // The waiver's two tabs (task 155): Template is the release editor …
+      test(`the waiver template renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/waivers");
         await page.getByRole("heading", { level: 1, name: "Waiver template" }).waitFor();
         await capture(page, "staff-waivers", scheme);
+      });
 
-        await page
-          .getByRole("navigation", { name: "Waiver sections" })
-          .getByRole("link", { name: "Signatures" })
-          .click();
-        await page.waitForURL(/\/waivers\/signatures/);
+      // … and Signatures is the signed-record evidence audit, paginated
+      // (`listWaiverIntegrityAudit`, `WAIVER_INTEGRITY_PAGE_SIZE`) so the demo
+      // shop's 150+ signed records render as one page with a "Show more
+      // records" link rather than a silent truncation notice.
+      //
+      // Reached by URL rather than by clicking the "Waiver sections" sub-nav
+      // the way this used to, now that it no longer follows the Template
+      // capture inside one test: the page renders identically either way, and
+      // the sub-nav click stays exercised by e2e/waivers.spec.ts.
+      test(`the waiver signature audit renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/shop/blue-mantis/waivers/signatures");
         await page.getByRole("heading", { level: 1, name: "Signatures" }).waitFor();
         await page.getByRole("link", { name: "Show more records" }).waitFor();
         await capture(page, "staff-waivers-signatures", scheme);
+      });
 
-        // The moderation queue: published reviews, and the "waiting on you"
-        // card a written review sits in until staff release it
-        // (docs ADR 20260729-verified-diver-reviews). Waiting on the bulk
-        // control specifically, not just the heading: "Publish selected" and
-        // the per-row tick boxes come from a client provider, and a capture
-        // taken before it mounts photographs a list with no checkboxes in it.
+      // The moderation queue: published reviews, and the "waiting on you"
+      // card a written review sits in until staff release it
+      // (docs ADR 20260729-verified-diver-reviews). Waiting on the bulk
+      // control specifically, not just the heading: "Publish selected" and
+      // the per-row tick boxes come from a client provider, and a capture
+      // taken before it mounts photographs a list with no checkboxes in it.
+      test(`the review moderation queue renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
         await page.goto("/shop/blue-mantis/reviews");
         await page.getByRole("heading", { level: 1, name: "What divers said" }).waitFor();
         await page.getByRole("button", { name: "Publish selected" }).waitFor();
         await capture(page, "staff-reviews", scheme);
+      });
 
-        // Shop-wide discount codes: the create form plus the seeded codes with
-        // their windows and redemption counts
-        // (docs ADR 20260729-shop-promo-codes).
+      // Shop-wide discount codes: the create form plus the seeded codes with
+      // their windows and redemption counts
+      // (docs ADR 20260729-shop-promo-codes).
+      test(`the discount codes page renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/promos");
         await page.getByRole("heading", { level: 1, name: "Discounts a diver can type" }).waitFor();
         await capture(page, "staff-promos", scheme);
       });
 
-      // H-13: the roster's identity gate gets its own test so its capture never
-      // crowds the long staff-surfaces test's per-test time budget. A Night-trip
-      // seat booked through a shared inbox under a name that doesn't match the
-      // person on file shows the fail-closed "Confirm identity" affordance and
-      // blocker until staff vouch for it — a safety-critical state worth a baseline.
+      // H-13: a Night-trip seat booked through a shared inbox under a name that
+      // doesn't match the person on file shows the fail-closed "Confirm
+      // identity" affordance and blocker until staff vouch for it — a
+      // safety-critical state worth a baseline.
       test(`the roster identity gate renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/schedule/board");
         await openTripFromBoard(page, "Night Dive — City of Washington");
-        await page
-          .getByRole("navigation", { name: "Trip" })
-          .getByRole("link", { name: "Guests" })
-          .click();
-        await page.waitForURL(/\/guests/);
+        await openTripTab(page, "Guests");
         await page.getByText("Identity unconfirmed").first().waitFor();
         await capture(page, "trip-guests-identity", scheme);
       });
 
       // A shop that doesn't fill nitrox (or a trip with no live request left
       // on it once nitrox is off) sees Total and Air collapse into a single
-      // tile — there's nothing for a second number to distinguish. Its own
-      // test, not the sequential staff-surfaces one above, so toggling the
-      // shared demo shop's rental catalog for its duration is contained and
-      // reverted regardless of pass/fail, matching the pattern in
-      // e2e/nitrox.spec.ts.
+      // tile — there's nothing for a second number to distinguish. Toggling
+      // the shared demo shop's rental catalog is contained here and reverted
+      // regardless of pass/fail, matching the pattern in e2e/nitrox.spec.ts.
       test(`the prep page's tank tile collapses with nitrox off (${scheme})`, async ({ page }) => {
+        // Two settings round-trips bracket the capture, plus board → trip →
+        // Prep in between.
+        test.setTimeout(FLOW_TIMEOUT_MS);
         try {
           await page.goto("/shop/blue-mantis/settings");
           await page.getByRole("checkbox", { name: "Nitrox fills" }).uncheck();
           await page.getByRole("button", { name: "Save rental catalog" }).click();
           await page.getByText("Rental catalog saved.").waitFor();
 
-          await page.goto("/shop/blue-mantis/schedule/board");
-          await page
-            .locator("li")
-            .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-            .getByRole("link", { name: "Two-Tank Reef — Molasses & French", exact: true })
-            .click();
-          await page.waitForURL(/\/shop\/blue-mantis\/trips\//);
-          await page
-            .getByRole("navigation", { name: "Trip" })
-            .getByRole("link", { name: "Prep" })
-            .click();
-          await page.waitForURL(/\/prep/);
+          await openReefTrip(page);
+          await openTripTab(page, "Prep");
           await page.getByRole("heading", { name: "Tanks" }).waitFor();
           await capture(page, "prep-no-nitrox", scheme);
         } finally {
@@ -1175,13 +1499,11 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the manifest's after-dive missing-diver state renders true to the design (${scheme})`, async ({
         page,
       }) => {
-        await page.goto("/shop/blue-mantis/schedule/board");
-        await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
-        await page
-          .getByRole("navigation", { name: "Trip" })
-          .getByRole("link", { name: "Manifest" })
-          .click();
-        await page.waitForURL(/\/manifest/);
+        // Board → trip → Manifest, a checkpoint switch, and a roll-call write
+        // before the capture.
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        await openReefTrip(page);
+        await openTripTab(page, "Manifest");
         // Same background-save settle the departure capture waits on, so this
         // isn't racing that async write either.
         await page.getByRole("link", { name: "Open offline roll call" }).waitFor();
@@ -1211,19 +1533,16 @@ for (const scheme of ["light", "dark"] as const) {
       // instructor may be keeping that diver shallower on purpose. Nothing in
       // the seed reaches this state (every seeded site sits within its divers'
       // ceilings), so the depth is raised for the capture and put back after,
-      // matching the nitrox pattern above. Its own test so the mutation is
-      // contained and reverted regardless of pass/fail.
+      // matching the nitrox pattern above.
       test(`the roster's depth warning renders true to the design (${scheme})`, async ({
         page,
       }) => {
         // Two full briefing saves bracket the capture — set the depth, walk
         // board → trip → Guests, shoot, then put the depth back in a `finally`
-        // — so this is six navigations and two form round-trips, each with its
-        // own status-toast wait, against the default 15s. Measured failing at
-        // HEAD *and* on `main` at one worker, so it was never a contention
-        // problem: the budget was simply never sized for what the test does.
-        // Same aggregate-cost reasoning as the two 90s tours above; smaller
-        // number because this is one surface, not eighteen.
+        // — so this is six navigations and two form round-trips. Measured
+        // failing at HEAD *and* on `main` at one worker, so it was never a
+        // contention problem: the budget was simply never sized for what the
+        // test does.
         test.setTimeout(60_000);
         const setDepth = async (meters: string) => {
           await page.goto("/shop/blue-mantis/dive-sites");
@@ -1239,13 +1558,8 @@ for (const scheme of ["light", "dark"] as const) {
         };
         try {
           await setDepth("32");
-          await page.goto("/shop/blue-mantis/schedule/board");
-          await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
-          await page
-            .getByRole("navigation", { name: "Trip" })
-            .getByRole("link", { name: "Guests" })
-            .click();
-          await page.waitForURL(/\/guests/);
+          await openReefTrip(page);
+          await openTripTab(page, "Guests");
           await page
             .getByText(/deeper than the/)
             .first()
@@ -1264,13 +1578,10 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the roster's note-delete undo toast renders true to the design (${scheme})`, async ({
         page,
       }) => {
-        await page.goto("/shop/blue-mantis/schedule/board");
-        await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
-        await page
-          .getByRole("navigation", { name: "Trip" })
-          .getByRole("link", { name: "Guests" })
-          .click();
-        await page.waitForURL(/\/guests/);
+        // Board → trip → Guests, then an add and a delete round-trip.
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        await openReefTrip(page);
+        await openTripTab(page, "Guests");
         const row = page.locator("#roster li").filter({ visible: true }).first();
         await row
           .getByText(/Private staff notes/)
@@ -1292,46 +1603,102 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
-       * Two of the three staff surfaces that shipped with no baseline and no
-       * e2e spec at all — the gap `scripts/route-coverage.json` recorded as
-       * exemptions until e2e/staffing.spec.ts, e2e/invoicing.spec.ts and the
-       * catalog test in e2e/dive-sites.spec.ts closed it (staffing's capture
-       * lives on the staff tour above).
+       * **The boat's own cert gate, refused, on the surface staff work from**
+       * (ADR 20260803-trip-admission-at-booking; the flow itself is
+       * e2e/trip-admission.spec.ts).
        *
-       * Its own small test rather than more stops on either 18-surface
-       * tour above: both are already sized at 90s for exactly what they do, and
-       * this one marks the demo shop Stripe-connected, which the tours must not
-       * inherit — a connected shop changes what several of their surfaces render.
+       * Two captures because the banner says two structurally different things,
+       * and until now neither had a baseline — a refusal is a *state*, not a
+       * route, so `trip-guests` could never show it. A level refusal names the
+       * rung the charter wants and the rung the diver stands on, and offers no
+       * card to add; a card refusal names the missing specialty and says there
+       * is none on the record. One sentence pattern regressing into the other
+       * is exactly the kind of change that reads as fine in a diff and wrong on
+       * the screen.
+       *
+       * The seeded scenarios come from `src/db/seed-cert-gates.ts`, whose whole
+       * point is that each of these boats can be refused for exactly one reason.
        */
-      test(`invoicing and the dive-site library render true to the design (${scheme})`, async ({
+      test(`the roster's level refusal renders true to the design (${scheme})`, async ({
         page,
-        request,
       }) => {
-        // Three navigate+capture surfaces (12 screenshots), each with its own
-        // `paintWholeDocument` scroll. (Staffing is captured on the staff tour
-        // above — it gained its baseline in the over_ratio parity fix.)
-        test.setTimeout(60_000);
+        // A board crawl to a day-31 departure, then a real seating attempt.
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        const tripId = await seededTripId(page, ADVANCED_CHARTER);
+        // Diego Alvarez is on file with a verified Open Water card and nothing
+        // above it, so the refusal can only be about the rung.
+        await page.goto(`/shop/blue-mantis/trips/${tripId}/guests?diverq=Diego+Alvarez`);
+        await page.getByRole("button", { name: "Add Diego Alvarez to the trip" }).click();
+        await page.getByText("This charter requires Advanced Open Water.").waitFor();
+        await capture(page, "trip-guests-refusal-level", scheme);
+      });
 
-        // The shop's own dive-site library, which had no baseline at all until
-        // it gained a search band and a pager. Captured before the Stripe seed
-        // below purely so its state is unambiguous — it renders no payment
-        // information either way.
+      test(`the roster's missing-card refusal renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        const tripId = await seededTripId(page, DEEP_CHARTER);
+        // Odile Marchand holds a verified Instructor card — the top rung — and
+        // no specialty card at all, so nothing about her level can explain it.
+        await page.goto(`/shop/blue-mantis/trips/${tripId}/guests?diverq=Odile+Marchand`);
+        await page.getByRole("button", { name: "Add Odile Marchand to the trip" }).click();
+        await page.getByText("This charter requires a Deep card.").waitFor();
+        await capture(page, "trip-guests-refusal-card", scheme);
+      });
+
+      /**
+       * A course session's Readiness requirements, stating the gate its *dive
+       * site* carries and saying out loud that it never blocks enrolment (the
+       * carve-out in ADR 20260803-trip-admission-at-booking, amended after the
+       * dive-domain-expert review). `trip-manage` above is a plain charter with
+       * an editable requirements form; this is the frozen variant, where the
+       * rules come from the course and the site and there is no form at all —
+       * a different section, on a page whose baseline could never show it.
+       */
+      test(`a course session's requirements render true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        // A board crawl out to the day-29 session, then the capture.
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        const tripId = await seededTripId(page, AOW_COURSE);
+        await page.goto(`/shop/blue-mantis/trips/${tripId}`);
+        await page
+          .locator("section")
+          .filter({ has: page.getByRole("heading", { name: "Readiness requirements" }) })
+          .getByText(/so it never blocks enrolment/)
+          .first()
+          .waitFor();
+        await capture(page, "trip-manage-course-requirements", scheme);
+      });
+
+      // The shop's own dive-site library, which had no baseline at all until
+      // it gained a search band and a pager.
+      test(`the dive-site library renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/dive-sites");
         await page.getByRole("heading", { level: 1, name: "Dive-site library" }).waitFor();
         await capture(page, "dive-sites-library", scheme);
+      });
 
-        // The front desk's invoice builder. It redirects to Divers for a shop
-        // that can't take money, so mark the demo shop connected first:
-        // /api/test/seed-stripe-account is a pure DB write that never calls
-        // Stripe (same use as the recap tip section above), and no order is
-        // created here — this is the empty form, which is the whole surface.
+      // The front desk's invoice builder. It redirects to Divers for a shop
+      // that can't take money, so mark the demo shop connected first:
+      // /api/test/seed-stripe-account is a pure DB write that never calls
+      // Stripe (same use as the recap tip section above), and no order is
+      // created here — this is the empty form, which is the whole surface.
+      // Its own test also keeps that connected-shop write off every other
+      // capture: a connected shop changes what several staff surfaces render.
+      test(`the invoice builder renders true to the design (${scheme})`, async ({
+        page,
+        request,
+      }) => {
         await request.post("/api/test/seed-stripe-account");
         await page.goto("/shop/blue-mantis/orders/new");
         await page.getByRole("heading", { level: 1, name: "New order" }).waitFor();
         await capture(page, "orders-new", scheme);
+      });
 
-        // DiveDay's published dive-site templates, each card stating the
-        // version it would import into the shop's own library.
+      // DiveDay's published dive-site templates, each card stating the
+      // version it would import into the shop's own library.
+      test(`the dive-site catalog renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/dive-sites/catalog");
         await page.getByRole("heading", { level: 1, name: "DiveDay common dive sites" }).waitFor();
         await capture(page, "dive-sites-catalog", scheme);
@@ -1352,22 +1719,18 @@ for (const scheme of ["light", "dark"] as const) {
        * of these images is the overlay itself. Same reasoning as
        * `nav-more-menu`, which is captured over a freshly onboarded shop.
        *
-       * Its own test rather than a stop on either 18-surface tour: those are
-       * both already sized at 90s for exactly what they do, and an overlay
-       * left open would leak into the next capture in a sequential test.
+       * One test each, and each closes its overlay before finishing: an overlay
+       * left open leaks into whatever the same page does next, which is the
+       * hazard that used to make these one sequential test.
        */
-      test(`the staff overlays and the not-found page render true to the design (${scheme})`, async ({
+      test(`the keyboard shortcut sheet renders true to the design (${scheme})`, async ({
         page,
       }) => {
-        // 3 navigate+capture surfaces (12 screenshots), each with its own
-        // `paintWholeDocument` scroll.
-        test.setTimeout(45_000);
         await page.goto("/shop/blue-mantis/settings/calendar");
         // The panels are Client Components; wait for a control one of them only
         // renders once mounted, not for the server-rendered <h1> above them —
         // the same wait `settings-calendar` makes.
         await page.getByRole("button", { name: "Create subscription link" }).first().waitFor();
-
         // The cheat sheet `?` opens (e2e/keyboard-shortcuts.spec.ts): every
         // `g`-sequence this viewer's role can reach, read off the one
         // destination registry the nav and the palette also read.
@@ -1377,76 +1740,34 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "shortcut-sheet", scheme);
         await page.keyboard.press("Escape");
         await expect(sheet).toBeHidden();
+      });
 
-        // The command palette on open, with no query typed: a Client Component,
-        // so wait for the control it only renders once mounted *and* focused
-        // rather than for anything the server rendered. An empty query lists
-        // every "Go to" destination the registry offers this role — no search
-        // request, nothing debounced, nothing that could land differently
-        // between runs.
+      // The command palette on open, with no query typed: a Client Component,
+      // so wait for the control it only renders once mounted *and* focused
+      // rather than for anything the server rendered. An empty query lists
+      // every "Go to" destination the registry offers this role — no search
+      // request, nothing debounced, nothing that could land differently
+      // between runs.
+      test(`the command palette renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/settings/calendar");
+        await page.getByRole("button", { name: "Create subscription link" }).first().waitFor();
         await page.keyboard.press("ControlOrMeta+k");
         const box = page.getByRole("combobox", { name: /Search divers/ });
         await expect(box).toBeFocused();
         await capture(page, "command-palette", scheme);
         await page.keyboard.press("Escape");
         await expect(box).toBeHidden();
+      });
 
-        // The app-wide `notFound()` backstop (src/app/not-found.tsx) — a stale
-        // email link or a typo'd URL. Captured under a staff session because
-        // that is who reaches it on a `/shop` URL; signed out the same address
-        // is an auth redirect, never this page.
+      // The app-wide `notFound()` backstop (src/app/not-found.tsx) — a stale
+      // email link or a typo'd URL. Captured under a staff session because
+      // that is who reaches it on a `/shop` URL; signed out the same address
+      // is an auth redirect, never this page.
+      test(`the not-found page renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/no-such-page");
         await page.getByRole("heading", { level: 1, name: "We couldn’t find that page" }).waitFor();
         await capture(page, "not-found", scheme);
       });
-    });
-
-    // The seeded demo shop's Today queue never runs dry, so the shared
-    // `EmptyState` card TodayQueue now renders when nothing needs attention
-    // (docs/design/principles.md, terminal-vs-section empty states) has no
-    // other baseline. A freshly onboarded shop is the real "empty queue"
-    // scenario — same flow as e2e/onboard.spec.ts's first-run checklist test.
-    test(`a freshly onboarded shop's Today tab renders true to the design (${scheme})`, async ({
-      page,
-    }) => {
-      // Deterministic, not Date.now(): this slug renders on screen (the
-      // "Share your public schedule" URL), and neither DIVEDAY_CLOCK nor the
-      // browser-context clock fixture freezes a value read in the Node.js
-      // test process itself — a wall-clock slug here is a permanent visual
-      // diff between CI runs, not a real regression. `scheme` alone
-      // (light/dark) is unique enough since this test runs once per scheme
-      // and the suite has no retries (playwright.config.ts).
-      const unique = `today-empty-${scheme}`;
-      await page.goto("/onboard");
-      await page.locator('input[name="shopName"]').filter({ visible: true }).fill("Fresh Shop E2E");
-      await page.locator('input[name="shopSlug"]').filter({ visible: true }).fill(unique);
-      await page.locator('input[name="ownerName"]').filter({ visible: true }).fill("Nour Haddad");
-      await page
-        .locator('input[name="ownerEmail"]')
-        .filter({ visible: true })
-        .fill(`${unique}@example.com`);
-      await page
-        .locator('input[name="ownerPassword"]')
-        .filter({ visible: true })
-        .fill("trial-pass-123");
-      await page.getByRole("button", { name: "Create shop & start trial" }).click();
-      await page.waitForURL(new RegExp(`/shop/${unique}$`));
-      await page.getByRole("heading", { name: "Get your shop ready" }).waitFor();
-      await page.getByRole("heading", { name: "Nothing is waiting on you" }).waitFor();
-      await capture(page, "today-empty", scheme);
-
-      // The "More" menu open — the only way to see its named groups ("Run the
-      // shop", and Settings under "Set up") and the destinations they hold,
-      // since the panel used to separate them with one unlabelled rule. Team
-      // and Promo codes left this menu when Settings became their only door.
-      // Captured here rather
-      // than over the seeded Today: the nav is identical (a fresh owner passes
-      // every gate) and this page is short, so the baseline is the menu rather
-      // than a second copy of a very tall dashboard whose every content change
-      // would diff this image too.
-      await page.locator("header summary").filter({ hasText: "More" }).click();
-      await page.getByRole("list", { name: "Run the shop" }).waitFor();
-      await capture(page, "nav-more-menu", scheme);
     });
   });
 }
@@ -1460,27 +1781,27 @@ for (const scheme of ["light", "dark"] as const) {
  * that path. This block lives outside the light/dark loop on purpose — print
  * is scheme-independent — and runs at a US-Letter-ish width so the baseline
  * reflects paper rather than a 1280px browser window.
+ *
+ * One test per printed surface, same rule as the rest of the file: the manifest
+ * failing to render must not cost the prep list its baseline.
  */
 test.describe("print", () => {
   signedInAsOwner();
   test.use({ viewport: { width: 816, height: 1056 } });
 
-  test("dock print surfaces render monochrome and padded", async ({ page }) => {
-    // Reach the seeded reef trip the way staff do, then print its two dock
-    // surfaces. Navigating by link keeps this off any hard-coded trip id.
-    await page.goto("/shop/blue-mantis/schedule/board");
-    await page
-      .locator("li")
-      .filter({ hasText: "Two-Tank Reef — Molasses & French" })
-      .getByRole("link", { name: "Two-Tank Reef — Molasses & French", exact: true })
-      .click();
-    await page.waitForURL(/\/shop\/blue-mantis\/trips\//);
+  // Reach the seeded reef trip the way staff do, then print its dock surfaces.
+  // Navigating by link keeps these off any hard-coded trip id.
+  test("the dock manifest prints monochrome and padded", async ({ page }) => {
+    await openReefTrip(page);
     const tripPath = new URL(page.url()).pathname;
-
     await page.goto(`${tripPath}/manifest`);
     await page.getByRole("heading", { level: 1, name: /Two-Tank Reef/ }).waitFor();
     await capturePrint(page, "manifest");
+  });
 
+  test("the dock prep list prints monochrome and padded", async ({ page }) => {
+    await openReefTrip(page);
+    const tripPath = new URL(page.url()).pathname;
     await page.goto(`${tripPath}/prep`);
     await page.getByRole("heading", { name: "Tanks" }).waitFor();
     await capturePrint(page, "prep");

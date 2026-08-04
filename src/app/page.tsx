@@ -35,6 +35,16 @@ export const metadata: Metadata = {
       "Bookings, waivers, cert checks, trip prep, and the boat manifest in one calm place — from first booking to final head count.",
     url: "/",
   },
+  // `summary_large_image`: the shared link card is attached to this page by
+  // file convention — `src/app/opengraph-image.tsx` sits in this same root
+  // segment, which is why this is the one marketing page that does not spread
+  // `sharedLinkCard` (docs/product/marketing.md, Twitter-card policy).
+  twitter: {
+    card: "summary_large_image",
+    title: "DiveDay — dive shop software for the whole dive day",
+    description:
+      "Bookings, waivers, cert checks, trip prep, and the boat manifest in one calm place — from first booking to final head count.",
+  },
 };
 
 const softwareApplicationJsonLd = {

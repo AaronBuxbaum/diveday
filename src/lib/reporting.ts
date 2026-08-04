@@ -31,6 +31,18 @@ export type MonthlyReportInput = {
   trips: ReportTrip[];
   /** Minor units collected (paid + deposit) on this month's trips' bookings. */
   revenueCents: number;
+  /**
+   * Minor units of *settled* post-trip tips on this month's trips (PAY-M2).
+   * Kept beside `revenueCents` rather than folded into it: a tip is 100% the
+   * shop's, never touches the booking payment gate, and is charged on its own
+   * Stripe session (docs ADR 20260726-post-trip-tipping) — adding it to
+   * "payments and deposits taken" would make the revenue card stop meaning
+   * what its own detail line says. Both numbers are on the page, so the month
+   * reconciles against Stripe without either one lying.
+   */
+  tipsCents: number;
+  /** How many tips that total is made of — the tip card's detail line. */
+  tipCount: number;
 };
 
 export type MonthlyReport = {
@@ -46,6 +58,10 @@ export type MonthlyReport = {
   atCapacityTrips: number;
   /** Minor units collected on the month's trips. */
   revenueCents: number;
+  /** Minor units of settled tips on the month's trips — never inside `revenueCents`. */
+  tipsCents: number;
+  /** How many tips made that total. */
+  tipCount: number;
   /** Active bookings whose waiver is signed. */
   waiverComplete: number;
   /** Active bookings still missing a signed waiver. */
@@ -74,6 +90,8 @@ export function summarizeMonth(input: MonthlyReportInput): MonthlyReport {
     fillRate: seatsOffered > 0 ? Math.min(1, seatsBooked / seatsOffered) : null,
     atCapacityTrips,
     revenueCents: input.revenueCents,
+    tipsCents: input.tipsCents,
+    tipCount: input.tipCount,
     waiverComplete,
     waiverOutstanding: Math.max(0, seatsBooked - waiverComplete),
     waiverCompletion: seatsBooked > 0 ? waiverComplete / seatsBooked : null,

@@ -1,0 +1,327 @@
+import { expect, signedInAsOwner, test } from "./fixtures";
+import { createTrip, daysFromNow, e2eNow, findTripOnBoard, openTripTab } from "./helpers";
+
+/**
+ * **The boat's own cert gate, at the moment the seat is sold** (DOM-M6, ADR
+ * 20260803-trip-admission-at-booking).
+ *
+ * AGENTS.md names cert/nitrox gating as a flow that must have an `e2e/` spec
+ * and it had none — the rule was covered by unit tests on
+ * `decideTripAdmission`, `createBookingRecord`, and `seatDiver`, but nothing
+ * proved the refusal ever reaches a human. That gap is exactly where this
+ * feature's near-misses lived: the structured refusal shipped and reached no
+ * UI, and the public form fell through to "this trip isn't taking bookings
+ * right now" on a page displaying spots left. Both were caught in review, not
+ * by a test.
+ *
+ * Its own file rather than cases in `booking.spec.ts`: that file is the
+ * schedule→book→roster loop, and every test in it already runs a 30-second
+ * multi-navigation journey. This is a different flow with a different subject —
+ * what a shop's cards refuse, and where it says so.
+ *
+ * The seeded fixtures come from `src/db/seed-cert-gates.ts`, which exists so
+ * each of these refusals can be about exactly one thing:
+ *
+ * - **Advanced Drift — French Reef Wall** — Advanced Open Water and nothing
+ *   else, at an ungated site: a level refusal, uncontaminated.
+ * - **Deep Adventure — USCGC Duane** — the site's Deep card, with no nitrox
+ *   demand (unlike the shop's other two Duane sailings): a specialty refusal.
+ * - **Advanced Open Water Diver — two-day course** — a course session at that
+ *   same gated site: the carve-out, which must admit an Open Water student.
+ *
+ * The refusal subjects are seeded too: **Diego Alvarez** (a verified Open Water
+ * card and nothing more) and **Odile Marchand** (a verified *Instructor* card
+ * and no specialty card at all — the top of the ladder, refused anyway).
+ */
+
+const ADVANCED_CHARTER = "Advanced Drift — French Reef Wall";
+const DEEP_CHARTER = "Deep Adventure — USCGC Duane";
+const AOW_COURSE = "Advanced Open Water Diver — two-day course";
+
+/** The trip id behind a seeded departure, found the way staff reach it. */
+async function seededTripId(page: import("@playwright/test").Page, title: string): Promise<string> {
+  const link = await findTripOnBoard(page, "blue-mantis", title);
+  const href = await link.getAttribute("href");
+  const tripId = href?.match(/\/trips\/([0-9a-f-]+)/i)?.[1];
+  if (!tripId) throw new Error(`could not read a trip id from "${href}" for ${title}`);
+  return tripId;
+}
+
+test.describe("as owner", () => {
+  signedInAsOwner();
+
+  test("the public trip page states what the charter requires above the form, and says so again when the booking is refused", async ({
+    page,
+  }) => {
+    // Finding the departure on the staff board, then reading it as a signed-out
+    // visitor — two full page journeys, same aggregate-cost reasoning as
+    // booking.spec.ts's own multi-navigation tests.
+    test.setTimeout(30_000);
+    const tripId = await seededTripId(page, ADVANCED_CHARTER);
+
+    // Read it as a diver would: no session at all.
+    await page.context().clearCookies();
+    await page.goto(`/s/blue-mantis/trips/${tripId}`);
+    await expect(page.getByRole("heading", { name: ADVANCED_CHARTER })).toBeVisible();
+
+    // Stated *before* the form, not after the seat is bought. The requirement is
+    // a property of the trip, so it discloses nothing about any reader.
+    const requirementHeading = page.getByRole("heading", { name: "Who this trip is for" });
+    await expect(requirementHeading).toBeVisible();
+    await expect(
+      page.getByText("This charter is for divers with Advanced Open Water or higher."),
+    ).toBeVisible();
+    const partySize = page.getByLabel("Number of divers");
+    await expect(partySize).toHaveAttribute("data-hydrated", "true");
+    const noteBox = await requirementHeading.boundingBox();
+    const formBox = await partySize.boundingBox();
+    expect(noteBox?.y ?? Number.POSITIVE_INFINITY).toBeLessThan(formBox?.y ?? 0);
+
+    // Diego Alvarez is on file with a verified Open Water card and nothing
+    // above it — the shop has adjudicated him, so this is a settled
+    // impossibility rather than an absence of evidence.
+    await page.getByLabel("Name", { exact: true }).fill("Diego Alvarez");
+    await page.getByLabel("Email", { exact: true }).fill("diego.alvarez@example.com");
+    await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
+
+    // What the *trip* requires, never what this person lacks (H-22). The
+    // non-disclosing fallback would be a lie on a page showing spots left, so
+    // it must not appear.
+    await expect(
+      page.getByText(/This charter is for divers with Advanced Open Water or higher, so we could/),
+    ).toBeVisible();
+    await expect(page.getByText(/isn't taking bookings right now/)).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: /You’re on the boat/ })).toHaveCount(0);
+  });
+
+  test("the Guests tab names the level the charter wants and the level the diver holds", async ({
+    page,
+  }) => {
+    const tripId = await seededTripId(page, ADVANCED_CHARTER);
+    await page.goto(`/shop/blue-mantis/trips/${tripId}/guests?diverq=Diego+Alvarez`);
+    await page.getByRole("button", { name: "Add Diego Alvarez to the trip" }).click();
+
+    // The structured refusal rides the redirect as a single `gate=` param and
+    // becomes the sentence — without it every refusal shared one static line.
+    // Asserted on `gate` rather than `notice`: this page's `FlashParams` strips
+    // `notice` on mount so the message can't replay on refresh, which makes any
+    // assertion on it a race. `gate` is not in that list and stays put.
+    //
+    // The codes stay readable and an HMAC follows them, bound to this
+    // departure (src/lib/trip-admission-gate.ts) — unsigned, the param was an
+    // instruction anyone could write.
+    await expect(page).toHaveURL(/gate=advanced_open_water[^&]*\.[\w-]{40,}/);
+    const banner = page.getByText("This charter requires Advanced Open Water.");
+    await expect(banner).toBeVisible();
+    await expect(banner).toContainText("highest card on file is Open Water");
+    // A level refusal has no missing card, and pointing a staffer at the
+    // certifications form would be pointing them past a safety gate: a
+    // hand-entered card lands `pending`, which clears admission next attempt
+    // (H-24). So the "there's no such card on the record" sentence must not
+    // render here.
+    await expect(banner).not.toContainText("none on this diver");
+
+    // Refused means refused — no seat was written.
+    await expect(page.locator("#roster").getByText("Diego Alvarez")).toHaveCount(0);
+  });
+
+  test("a hand-written ?gate= cannot manufacture a specific refusal", async ({ page }) => {
+    // The signature exists because the *specific* sentences are the dangerous
+    // ones: "their Deep card isn't on file" points a staffer at the
+    // certifications form, and a hand-entered card lands `pending`, which
+    // clears admission on the next attempt (H-24). So the tamper doesn't bypass
+    // a gate — it manufactures the prompt that gets a staffer to bypass one
+    // (security review finding).
+    const tripId = await seededTripId(page, ADVANCED_CHARTER);
+    await page.goto(
+      `/shop/blue-mantis/trips/${tripId}/guests?notice=diver-trip-prerequisite&gate=~~deep~0`,
+    );
+
+    // The banner still appears — a refusal nobody can read is worse than a
+    // vague one — but it says only the generic thing. Located by role minus
+    // Next's own always-present route announcer, which also claims `alert`.
+    const banner = page.locator('[role="alert"]:not(#__next-route-announcer__)');
+    await expect(banner).toContainText("cards on file don't reach what this trip");
+    await expect(banner).not.toContainText("Deep card");
+    await expect(banner).not.toContainText("charter requires");
+  });
+
+  test("the global Add-booking door says a missing specialty card is missing, whatever the diver's level", async ({
+    page,
+  }) => {
+    const tripId = await seededTripId(page, DEEP_CHARTER);
+    // Odile Marchand holds a verified Instructor card — the top rung — and no
+    // specialty card at all. Nothing about her level can explain this refusal.
+    await page.goto(`/shop/blue-mantis/bookings/new/${tripId}?diverq=Odile+Marchand`);
+    await page.getByRole("button", { name: "Add Odile Marchand to this departure" }).click();
+
+    // The global door's refusal stays on the form that produced it, boat still
+    // chosen, so the staffer can pick someone else.
+    await expect(page).toHaveURL(new RegExp(`/bookings/new/${tripId}\\?notice=`));
+    const banner = page.getByText("This charter requires a Deep card.");
+    await expect(banner).toBeVisible();
+    await expect(banner).toContainText("none on this diver");
+    await expect(banner).not.toContainText("highest card on file");
+  });
+
+  test("the counter collapses the same refusal to one blunt line and carries no gate detail", async ({
+    page,
+  }) => {
+    // The walk-in picker only offers today's and tomorrow's boats, so the
+    // counter's own case needs a same-day departure — the shape
+    // check-in.spec.ts's full-boat refusal already uses.
+    test.setTimeout(30_000);
+    const title = `Counter Gate ${e2eNow().getTime()}`;
+    await createTrip(page, {
+      title,
+      date: daysFromNow(0),
+      departsAt: "20:00",
+      returnsAt: "22:00",
+      capacity: 4,
+    });
+    const tripId = await seededTripId(page, title);
+
+    await page.goto(`/shop/blue-mantis/trips/${tripId}`);
+    await page.getByLabel("Minimum certification").selectOption("advanced_open_water");
+    await page.getByRole("button", { name: "Save requirements" }).click();
+    await expect(page.getByRole("status")).toContainText("Trip readiness requirements updated.");
+
+    await page.goto(`/shop/blue-mantis/check-in/walk-in?tripId=${tripId}&diverq=Diego+Alvarez`);
+    await page.getByRole("button", { name: "Add Diego Alvarez to this boat" }).click();
+
+    // `refusals: "coarse"` — the counter deliberately shows one blunt line
+    // instead of the specific gate, and the structured payload is dropped with
+    // it rather than trailing an unreadable param on the queue's URL. The
+    // check-in queue runs no `FlashParams`, so both halves of that are stable
+    // to assert on the URL.
+    await expect(page).toHaveURL(/\/check-in\?notice=walkin_unavailable$/);
+    await expect(page).not.toHaveURL(/gate=/);
+    await expect(
+      page.getByText("Can’t add this diver to that boat right now — open its trip page"),
+    ).toBeVisible();
+  });
+
+  test("a course session admits the Open Water student its own site would refuse, and says why on the trip", async ({
+    page,
+  }) => {
+    // The carve-out (ADR 20260803, amended after the dive-domain-expert
+    // review): continuing education is taught at the sites it certifies people
+    // for, so an AOW session's deep dive at a site marked `advanced_open_water`
+    // + Deep must never refuse the student the course exists to create.
+    test.setTimeout(30_000);
+    const tripId = await seededTripId(page, AOW_COURSE);
+
+    await page.goto(`/shop/blue-mantis/trips/${tripId}/guests?diverq=Kwame+Asante`);
+    await page.getByRole("button", { name: "Add Kwame Asante to the trip" }).click();
+    // The seated notice, not the URL: `FlashParams` strips `notice` on mount
+    // (by `replaceState`, so the server-rendered banner itself stays).
+    await expect(page.getByRole("status")).toContainText("Diver added to the trip");
+    await expect(page.locator("#roster").getByText("Kwame Asante").first()).toBeVisible();
+
+    // The site's gate is still stated — on the one surface where staff cannot
+    // edit it, it used to be invisible entirely — and it says out loud that it
+    // never blocks enrolment.
+    await page.goto(`/shop/blue-mantis/trips/${tripId}`);
+    const requirements = page
+      .locator("section")
+      .filter({ has: page.getByRole("heading", { name: "Readiness requirements" }) });
+    await expect(
+      requirements.getByText(/requires Advanced Open Water or higher and Deep specialty/),
+    ).toBeVisible();
+    await expect(requirements.getByText(/so it never blocks enrolment/)).toBeVisible();
+    // A course session's rules are frozen; there is no form to tighten them.
+    await expect(requirements.getByRole("button", { name: "Save requirements" })).toHaveCount(0);
+  });
+
+  test("tightening a booked trip's requirements says how many divers it just blocked", async ({
+    page,
+  }) => {
+    test.setTimeout(30_000);
+    const title = `Tightened Gate ${e2eNow().getTime()}`;
+    await createTrip(page, {
+      title,
+      date: daysFromNow(4),
+      departsAt: "09:00",
+      returnsAt: "13:00",
+      capacity: 4,
+    });
+    const tripId = await seededTripId(page, title);
+
+    // Seated while the trip states the shop's Open Water default, which his
+    // verified card clears.
+    await page.goto(`/shop/blue-mantis/trips/${tripId}/guests?diverq=Diego+Alvarez`);
+    await page.getByRole("button", { name: "Add Diego Alvarez to the trip" }).click();
+    await expect(page.getByRole("status")).toContainText("Diver added to the trip");
+
+    await page.goto(`/shop/blue-mantis/trips/${tripId}`);
+    await page.getByLabel("Minimum certification").selectOption("advanced_open_water");
+    await page.getByRole("button", { name: "Save requirements" }).click();
+
+    // A notice, never a refusal: the save always lands, and the staffer who
+    // tightened the gate finds out who it caught instead of learning it from a
+    // diver at the dock. Asserted on the rendered sentence — the trip page's
+    // `FlashParams` strips both `notice` and `count`.
+    await expect(page.getByRole("status")).toContainText(
+      "Requirements updated. 1 diver already booked on this trip no longer meets them",
+    );
+    await openTripTab(page, "Guests");
+    await expect(page.locator("#roster").getByText("Diego Alvarez").first()).toBeVisible();
+  });
+});
+
+/**
+ * **TEST-6 — one whole booking flow rendered in Spanish.**
+ *
+ * Every other spec in this suite pins literal English, so no non-English render
+ * was ever exercised: `Accept-Language` negotiation, the `es-ES` bundle, and —
+ * the failure mode that motivated this — `DiverIntlProvider`. A diver Client
+ * Component with no provider above it throws during the server render and the
+ * page silently degrades to a blank client-only 200, which is invisible to a
+ * status-code check and to every English-pinned assertion. Only a real render
+ * in another language catches it.
+ *
+ * Asserted against the `es-ES` bundle's current values (swept on 2026-08-03 for
+ * terminology — the shop is *el centro*, never *la tienda*; see
+ * `src/i18n/locales/es-ES/README.md`).
+ */
+test.describe("with Accept-Language: es", () => {
+  test.use({ locale: "es-ES" });
+
+  test("a diver books a seat end to end and every word of it is Spanish", async ({ page }) => {
+    test.setTimeout(30_000);
+    await page.goto("/s/blue-mantis");
+
+    // The list's own accessible name is itself a translated string — reaching
+    // the trip through it is the first assertion, not scaffolding around one.
+    await page
+      .getByRole("list", { name: "Próximas salidas" })
+      .locator("li")
+      .filter({ hasText: "Two-Tank Reef — Christ of the Abyss" })
+      .getByRole("link", { name: "Two-Tank Reef — Christ of the Abyss" })
+      .first()
+      .click();
+
+    // The trip's own gate, in Spanish — proof the requirement note goes through
+    // the bundle rather than being assembled from English fragments.
+    await expect(page.getByRole("heading", { name: "Para quién es esta salida" })).toBeVisible();
+    await expect(
+      page.getByText("Esta salida es para buceadores con Open Water o superior."),
+    ).toBeVisible();
+
+    // The booking form is a Client Component reading copy through
+    // `useTranslations` — these labels only exist if a `DiverIntlProvider` sits
+    // above it with the diver namespaces loaded.
+    await expect(page.getByRole("heading", { name: "Reserva tu plaza" })).toBeVisible();
+    const partySize = page.getByLabel("Número de buceadores");
+    await expect(partySize).toHaveAttribute("data-hydrated", "true");
+    await page.getByLabel("Nombre", { exact: true }).fill("Nora Quinn");
+    await page
+      .getByLabel("Correo electrónico", { exact: true })
+      .fill(`nora-es-${e2eNow().getTime()}@example.com`);
+    await page.getByRole("button", { name: /^Reservar (estas plazas|la última plaza)$/ }).click();
+
+    // The confirmation, and the next step it offers, in the same language.
+    await expect(page.getByRole("heading", { name: /¡Estás a bordo, Nora/ })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Firma tu exención ahora" })).toBeVisible();
+  });
+});

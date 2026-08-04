@@ -1,9 +1,9 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 import type { AppTransaction, DbExecutor } from "./client";
-import type { PaymentStatus } from "./schema";
-import { bookingPayments, bookings, trips } from "./schema";
+import type { BookingPayment, PaymentEventOperation, PaymentStatus } from "./schema";
+import { bookingPaymentEvents, bookingPayments, bookings, trips } from "./schema";
 
 /**
  * Serializes every write to one booking's payment row through a lock on the
@@ -55,7 +55,48 @@ export type SetPaymentInput = {
   provider?: string | null;
   providerRef?: string | null;
   note?: string | null;
+  /**
+   * What is causing this transition, for the append-only
+   * `booking_payment_events` trail (DATA-M3, ADR
+   * 20260803-booking-payment-events). Optional, defaulting to `manual_mark`,
+   * because that is what an unannotated write *is*: a staff member setting the
+   * status by hand from the roster or the diver record, which is the only
+   * caller that does not already know a more specific code. Every machine
+   * writer — the checkout cascade, the invoice cascades, the automated
+   * cancellation refund — states its own.
+   */
+  operation?: PaymentEventOperation;
 };
+
+/**
+ * Whether two payment states differ in any way worth a trail row. Deliberately
+ * compares the whole material payload rather than just `status`: a deposit
+ * topped up to a full fare, a refund re-pointed at a different Stripe object,
+ * or a staff note added are all real transitions even when the status word is
+ * unchanged.
+ *
+ * `updatedAt` is *not* compared — a replayed Stripe webhook re-running the
+ * self-healing cascade in `markCheckoutPaidBySessionId` touches it every time
+ * and changes nothing else, and appending a row for each redelivery would turn
+ * this table into a delivery log (ADR 20260803-booking-payment-events).
+ */
+function paymentStateChanged(
+  previous: BookingPayment | null,
+  next: Pick<
+    BookingPayment,
+    "status" | "amountCents" | "currency" | "provider" | "providerRef" | "note"
+  >,
+): boolean {
+  if (!previous) return true;
+  return (
+    previous.status !== next.status ||
+    previous.amountCents !== next.amountCents ||
+    previous.currency !== next.currency ||
+    previous.provider !== next.provider ||
+    previous.providerRef !== next.providerRef ||
+    previous.note !== next.note
+  );
+}
 
 /**
  * Record a booking's current payment state — one row per booking. Tenant-safe:
@@ -68,9 +109,18 @@ export type SetPaymentInput = {
  * so this is only a latent concern today — but a future non-final write that
  * sets `note` would have it silently reset to null by the next replay of
  * `setBookingPaymentIfNotFinal`'s cascade (CR-004 review finding).
+ *
+ * **This is the one funnel.** Every writer of `booking_payments` in the repo
+ * lands here — `setBookingPaymentIfNotFinal` delegates to it, and the checkout,
+ * order and refund cascades all go through one of the two. That is what lets
+ * the append-only `booking_payment_events` trail be written *here*, inside the
+ * same transaction and under the same per-booking lock as the mutation it
+ * records, rather than at each call site where one could be forgotten
+ * (DATA-M3, ADR 20260803-booking-payment-events).
  */
 export async function setBookingPayment(db: DbExecutor, input: SetPaymentInput) {
   return withBookingPaymentLock(db, input.shopId, input.bookingId, async (tx) => {
+    const now = nowDate();
     const values = {
       shopId: input.shopId,
       bookingId: input.bookingId,
@@ -80,14 +130,44 @@ export async function setBookingPayment(db: DbExecutor, input: SetPaymentInput) 
       provider: input.provider ?? null,
       providerRef: input.providerRef ?? null,
       note: input.note ?? null,
-      updatedAt: nowDate(),
+      updatedAt: now,
     };
+    // Read under the same lock that guards the write below, never before it:
+    // this is both the trail's `previous_status` and the "did anything
+    // actually change?" comparison, and a value read outside the lock could
+    // describe a state a concurrent write has already replaced.
+    const [previous] = await tx
+      .select()
+      .from(bookingPayments)
+      .where(
+        and(
+          eq(bookingPayments.shopId, input.shopId),
+          eq(bookingPayments.bookingId, input.bookingId),
+        ),
+      )
+      .limit(1);
     const [payment] = await tx
       .insert(bookingPayments)
       .values(values)
       .onConflictDoUpdate({ target: bookingPayments.bookingId, set: values })
       .returning();
-    return payment ?? null;
+    if (!payment) return null;
+    if (paymentStateChanged(previous ?? null, values)) {
+      await tx.insert(bookingPaymentEvents).values({
+        shopId: input.shopId,
+        bookingId: input.bookingId,
+        status: values.status,
+        previousStatus: previous?.status ?? null,
+        amountCents: values.amountCents,
+        currency: values.currency,
+        provider: values.provider,
+        providerRef: values.providerRef,
+        operation: input.operation ?? "manual_mark",
+        note: values.note,
+        occurredAt: now,
+      });
+    }
+    return payment;
   });
 }
 
@@ -163,6 +243,33 @@ export async function setBookingPaymentIfNotFinal(db: AppTransaction, input: Set
     }
     return setBookingPayment(tx, input);
   });
+}
+
+/**
+ * One booking's money history, newest first — every recorded transition of its
+ * payment state, including the captures a later refund overwrote in
+ * `booking_payments` (DATA-M3). Tenant-scoped like every other read here.
+ *
+ * `limit` bounds the read because this is a per-booking trail with no natural
+ * ceiling: a long-lived booking can accumulate a deposit, a balance, a partial
+ * refund and staff corrections. Callers that need a page beyond the newest
+ * `limit` rows should move to the repo's shared paging (`src/db/paging.ts`)
+ * rather than raising it.
+ */
+export async function listBookingPaymentEvents(
+  db: DbExecutor,
+  shopId: string,
+  bookingId: string,
+  limit = 50,
+) {
+  return db
+    .select()
+    .from(bookingPaymentEvents)
+    .where(
+      and(eq(bookingPaymentEvents.shopId, shopId), eq(bookingPaymentEvents.bookingId, bookingId)),
+    )
+    .orderBy(desc(bookingPaymentEvents.occurredAt), desc(bookingPaymentEvents.createdAt))
+    .limit(limit);
 }
 
 export async function getBookingPayment(db: DbExecutor, shopId: string, bookingId: string) {

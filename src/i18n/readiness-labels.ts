@@ -5,7 +5,8 @@ import type {
   ReadinessBlockerCode,
   ReadinessStatus,
 } from "@/lib/readiness";
-import type { DiverMessageKey } from "./messages";
+import type { TripAdmissionRefusal } from "@/lib/trip-admission";
+import type { DiverMessageKey, DiverTranslator } from "./messages";
 import type { StaffMessageKey, StaffTranslator } from "./staff-messages";
 
 /**
@@ -81,6 +82,55 @@ export const SPECIALTY_KEYS: Record<DiveSpecialty, StaffMessageKey> = {
   drysuit: "shared.readiness.specialties.drysuit",
 };
 
+/** The diver-facing half, on the same terms as `DIVER_CERTIFICATION_LEVEL_KEYS` above. */
+export const DIVER_SPECIALTY_KEYS: Record<DiveSpecialty, DiverMessageKey> = {
+  deep: "trip.specialties.deep",
+  wreck: "trip.specialties.wreck",
+  night: "trip.specialties.night",
+  drysuit: "trip.specialties.drysuit",
+};
+
+/**
+ * **What a trip asks of anybody**, as one diver-facing phrase — never what a
+ * particular diver holds.
+ *
+ * This is a property of the *trip*: the same words for every reader, disclosing
+ * nothing about any person, so it is safe on a public page and safe in a
+ * refusal to an anonymous submitter (H-22 — the public form must never describe
+ * the person behind a typed email). It is the honest replacement for the trip
+ * page's old silence, where the requirement was passed only into
+ * `BookingConfirmation` — i.e. shown for the first time *after* the seat was
+ * bought — and for the refusal that told a diver looking at "4 spots left" that
+ * the trip "isn't taking bookings right now".
+ *
+ * Null when the trip demands nothing, so callers render nothing rather than an
+ * empty sentence.
+ */
+export function tripRequirementList(
+  t: DiverTranslator,
+  requirement: {
+    minimumCertificationLevel: CertificationLevel | null;
+    requiredSpecialties: readonly DiveSpecialty[];
+    requiresNitrox: boolean;
+  },
+  locale: string,
+): string | null {
+  const parts = [
+    requirement.minimumCertificationLevel
+      ? t("trip.requirementLevel", {
+          level: t(DIVER_CERTIFICATION_LEVEL_KEYS[requirement.minimumCertificationLevel]),
+        })
+      : null,
+    ...requirement.requiredSpecialties.map((specialty) =>
+      t("trip.requirementSpecialty", { specialty: t(DIVER_SPECIALTY_KEYS[specialty]) }),
+    ),
+    requirement.requiresNitrox ? t("trip.requirementNitrox") : null,
+  ].filter((part): part is string => Boolean(part));
+  if (parts.length === 0) return null;
+  // A locale-appropriate "X, Y and Z" — never an English comma join.
+  return new Intl.ListFormat(locale, { style: "long", type: "conjunction" }).format(parts);
+}
+
 /** Every `ReadinessBlockerCode` the engine can raise, to its staff-facing sentence. */
 const READINESS_BLOCKER_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> = {
   requirements_not_configured: "shared.readiness.blockers.requirementsNotConfigured",
@@ -124,4 +174,65 @@ export function readinessBlockerText(t: StaffTranslator, blocker: ReadinessBlock
     return t(key, { age: params.age, minimumAge: params.minimumAge });
   }
   return t(key);
+}
+
+/**
+ * **The words a refused sale gets, driven by which requirement actually
+ * failed** (`TripAdmissionRefusal`, src/lib/trip-admission.ts).
+ *
+ * One sentence used to cover every case: *"…don't reach what that trip and its
+ * dive sites require. Add the missing card above…"*. On a **level** refusal
+ * that is false and unsafe at once — an Open Water diver refused an
+ * Advanced-only charter has no missing card, and telling a staffer to add one
+ * points them at the certifications form as the way past a safety gate. A
+ * hand-entered card lands `pending`, and a `pending` card at or above the bar
+ * clears admission on the very next attempt: a one-minute in-UI path from
+ * refused to seated, asserting nothing (H-24, glossary **Card sighting**).
+ *
+ * So the two cases are told apart:
+ *
+ * - **Level** — name the requirement *and* what the diver holds, so a wrong
+ *   record is visible, and make "add a card" conditional on their actually
+ *   holding one. The real remedies are a trip at their level or the course.
+ * - **Specialty / nitrox** — here "add the card" genuinely is right: a
+ *   specialty is a card the shop may simply never have captured.
+ *
+ * Both may fire at once, in which case both sentences render.
+ */
+export function tripAdmissionRefusalText(
+  t: StaffTranslator,
+  refusal: TripAdmissionRefusal,
+  locale: string,
+): string {
+  const sentences: string[] = [];
+  if (refusal.requiredLevel) {
+    const level = t(CERTIFICATION_LEVEL_KEYS[refusal.requiredLevel]);
+    sentences.push(
+      refusal.heldLevel
+        ? t("shared.tripAdmission.level", {
+            level,
+            held: t(CERTIFICATION_LEVEL_KEYS[refusal.heldLevel]),
+          })
+        : t("shared.tripAdmission.levelNoCard", { level }),
+    );
+  }
+  // Nitrox rides in the same list as the specialties: to a staffer reading a
+  // refusal they are the same kind of thing — a card that is or isn't on the
+  // record — even though the domain models them in separate tables.
+  const cards = [
+    ...refusal.missingSpecialties.map((specialty) => t(SPECIALTY_KEYS[specialty])),
+    ...(refusal.nitroxRequired ? [t("shared.tripAdmission.nitrox")] : []),
+  ];
+  if (cards.length > 0) {
+    sentences.push(
+      t("shared.tripAdmission.cards", {
+        count: cards.length,
+        // A locale-appropriate "X, Y and Z", never an English comma join.
+        list: new Intl.ListFormat(locale, { style: "long", type: "conjunction" }).format(cards),
+      }),
+    );
+  }
+  // Nothing set is not a refusal `decideTripAdmission` can produce; the generic
+  // sentence is the honest fallback rather than an empty banner.
+  return sentences.length > 0 ? sentences.join(" ") : t("shared.tripAdmission.generic");
 }

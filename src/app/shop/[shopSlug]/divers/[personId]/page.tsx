@@ -32,8 +32,11 @@ import { StatsSummary } from "./_components/StatsSummary";
 import { UpcomingTripsSection } from "./_components/UpcomingTripsSection";
 import { restoreCardAction } from "./actions";
 
-// TODO: Cache Components adoption. Refactor this route so this opt-out can be removed.
-// See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
+// Not a TODO. The shop layout above already permits this route's blocking
+// prerender (`isPageAllowedToBlock` reads only the outermost `instant`), so what
+// this line still buys is keeping the page segment out of dev-time instant
+// validation — which nothing above a page segment can do.
+// See ADR 20260803-instant-opt-out-placement.
 export const instant = false;
 
 export const metadata: Metadata = { title: "Diver — DiveDay" };
@@ -50,11 +53,18 @@ export default async function DiverDetailPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string; personId: string }>;
-  searchParams: Promise<{ notice?: string; undo?: string; cardType?: string; edit?: string }>;
+  searchParams: Promise<{
+    notice?: string;
+    undo?: string;
+    cardType?: string;
+    /** Signed, verified against this route's own `personId` — src/lib/trip-admission-gate.ts. */
+    gate?: string | string[];
+    edit?: string;
+  }>;
 }) {
   const session = await requireStaffSession();
   const { shopSlug, personId } = await params;
-  const { notice, undo, cardType, edit } = await searchParams;
+  const { notice, undo, cardType, gate, edit } = await searchParams;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   const locale = await requestLocale(shop?.defaultLocale);
@@ -111,7 +121,13 @@ export default async function DiverDetailPage({
           undoLabel={t("shared.undoToast.undo")}
         />
       ) : (
-        <NoticeBanner notice={notice} locale={locale} shopSlug={shopSlug} />
+        <NoticeBanner
+          notice={notice}
+          gate={gate}
+          locale={locale}
+          shopSlug={shopSlug}
+          personId={personId}
+        />
       )}
       {/* Above the stat cards, not below them: on a 390px phone those three
           cards stack, and a row sitting under them lands ~1,150px down — a spine

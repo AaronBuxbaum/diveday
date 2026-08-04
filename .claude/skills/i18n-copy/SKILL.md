@@ -13,7 +13,8 @@ Every word a person reads comes from `src/i18n/locales/<locale>/*.json`. Two bun
 | `staff.json` | `/shop/**` | `staffTranslator(locale)` | **no** — pass words in as props |
 
 Decisions: [20260729-diver-copy-localization](../../../docs/architecture/decisions/20260729-diver-copy-localization.md),
-[20260730-staff-copy-localization](../../../docs/architecture/decisions/20260730-staff-copy-localization.md).
+[20260730-staff-copy-localization](../../../docs/architecture/decisions/20260730-staff-copy-localization.md),
+[20260803-error-boundary-copy-bridge](../../../docs/architecture/decisions/20260803-error-boundary-copy-bridge.md).
 
 `pnpm check:copy` enforces this for `src/app`/`src/components` (`.tsx` and colocated `.ts`).
 `pnpm check:domain-strings` enforces the same rule for `src/lib`/`src/db` — see
@@ -29,6 +30,16 @@ no allowance to add some and extract later.
 ## Adding a new surface
 
 Build it clean — a new file has no baseline entry, so *any* hard-coded string fails the check.
+
+Writing Spanish? Read [`src/i18n/locales/es-ES/README.md`](../../../src/i18n/locales/es-ES/README.md)
+first — terminology and register are already decided ("centro" for the shop entity, the
+retail-vs-entity split, LatAm register), so a new string should match rather than restart the
+argument.
+
+Writing an `error.tsx`? It is a file convention with a fixed `{error, reset}` signature, so no
+Server Component can hand it a `copy` prop. Its words come from the segment's own `layout.tsx`
+mounting `DiverIntlProvider` with `namespaces={["errorBoundary"]}` — four strings, not the bundle.
+`src/i18n/provider-coverage.test.ts` fails if you forget.
 
 **Server Component (the default for staff):**
 

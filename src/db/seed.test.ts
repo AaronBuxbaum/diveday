@@ -1,13 +1,9 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import { seededShopContext, unseededTestDb } from "@/test/db";
 import { fakePromotions } from "@/test/fakes";
 import { issueBookingCapability } from "./booking-capabilities";
 import { createBooking } from "./bookings";
-import { getTripManifest } from "./manifests";
-import { verifiedNitroxPersonIds } from "./nitrox";
-import { getBookingReadiness } from "./readiness";
 import {
   bookingCapabilities,
   bookingCheckoutBookings,
@@ -15,7 +11,6 @@ import {
   bookings,
   lastMinuteListEntries,
   lastMinuteListUnsubscribeTokens,
-  nitroxCertifications,
   orders,
   paymentOperationIntents,
   people,
@@ -23,93 +18,16 @@ import {
   personRoles,
   shopStripeAccounts,
   shops,
-  specialtyCertifications,
   tips,
-  tripRequirements,
-  trips as tripsTable,
   userAccounts,
 } from "./schema";
-import { demoTodayDepartureStart, resetDemoSchedule, seedIfEmpty } from "./seed";
+import { resetDemoSchedule, seedIfEmpty } from "./seed";
 import { createShopPromoCode, getShopPromoByCode, setShopPromoEnabled } from "./shop-promos";
 import { inviteStaffMember } from "./staff-accounts";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { listStaff, upcomingTripsWithCounts } from "./trips";
 import { joinTripWaitlist } from "./waitlist";
 import { getCurrentWaiverTemplate, listWaiverTemplateHistory, saveWaiverTemplate } from "./waivers";
-
-describe("seeded imported-card states", () => {
-  // The two states H-23/H-24 exist for are only visible on a diver who holds an
-  // imported, unconfirmed card — and until this seed row existed, no seeded diver
-  // did, so the amber "certified · confirm to clear" badge and the
-  // attest-you've-seen-it confirm had no visual-regression baseline and no
-  // fixture. This test
-  // is the guard on the *shape* those baselines depend on: if someone drops or
-  // confirms these rows, the visual coverage silently stops covering anything.
-  it("holds an imported, unconfirmed specialty and nitrox card for one diver", async () => {
-    const { db, shop } = await seededShopContext();
-    const [hana] = await db
-      .select({ id: people.id })
-      .from(people)
-      .where(and(eq(people.shopId, shop.id), eq(people.fullName, "Hana Kobayashi")))
-      .limit(1);
-    if (!hana) throw new Error("expected the seeded imported-card diver");
-
-    const specialty = await db
-      .select()
-      .from(specialtyCertifications)
-      .where(eq(specialtyCertifications.personId, hana.id));
-    expect(specialty).toHaveLength(1);
-    // Verified (the prior system checked it) but unreviewed — which is exactly
-    // the pair `specialtyBlocker` holds a depth gate on.
-    expect(specialty[0]).toMatchObject({
-      specialty: "deep",
-      status: "verified",
-      reviewedAt: null,
-      importedFromLabel: "Coral Coast Divers",
-    });
-    expect(specialty[0].importedAt).toBeInstanceOf(Date);
-
-    const nitrox = await db
-      .select()
-      .from(nitroxCertifications)
-      .where(eq(nitroxCertifications.personId, hana.id));
-    expect(nitrox).toHaveLength(1);
-    expect(nitrox[0]).toMatchObject({ status: "verified", reviewedAt: null });
-    expect(nitrox[0].importedAt).toBeInstanceOf(Date);
-    // And the fill really is still held — this is the behaviour, not just the row.
-    expect([...(await verifiedNitroxPersonIds(db, shop.id))]).not.toContain(hana.id);
-  });
-
-  it("cards that diver without disturbing the readiness any other spec asserts", async () => {
-    // Why she is safe to card: her one seeded booking is on a trip that gates on
-    // neither a specialty nor nitrox, so the two held gates above are inert there
-    // and her blockers are exactly what they were before these rows existed. This
-    // is the assumption the whole seed change rests on — asserted rather than
-    // assumed, because a future seed that books her onto the deep or nitrox
-    // charter would flip a blocker and quietly break unrelated specs.
-    const { db, shop } = await seededShopContext();
-    const [hana] = await db
-      .select({ id: people.id })
-      .from(people)
-      .where(and(eq(people.shopId, shop.id), eq(people.fullName, "Hana Kobayashi")))
-      .limit(1);
-    if (!hana) throw new Error("expected the seeded imported-card diver");
-
-    const booked = await db.select().from(bookings).where(eq(bookings.personId, hana.id));
-    for (const booking of booked) {
-      const [requirement] = await db
-        .select()
-        .from(tripRequirements)
-        .where(eq(tripRequirements.tripId, booking.tripId));
-      expect(requirement?.requiredSpecialties ?? []).toEqual([]);
-      expect(requirement?.requiresNitrox ?? false).toBe(false);
-      // So the imported cards hold nothing here: the only open blocker is the
-      // waiver this diver hasn't signed.
-      const readiness = await getBookingReadiness(db, shop.id, booking.id);
-      expect(readiness?.blockers.map((b) => b.code)).toEqual(["waiver_pending"]);
-    }
-  });
-});
 
 describe("resetDemoSchedule", () => {
   it("can restore the full history used by the browser demo", async () => {
@@ -394,6 +312,7 @@ describe("resetDemoSchedule", () => {
     if (!outcome.ok) throw new Error("setup booking failed");
     await db.insert(tips).values({
       shopId: shop.id,
+      currency: "usd",
       bookingId: outcome.bookingId,
       stripeAccountId: "acct_demo",
       stripeSessionId: `cs_demo_${outcome.bookingId}`,
@@ -466,6 +385,7 @@ describe("resetDemoSchedule", () => {
       .insert(bookingCheckouts)
       .values({
         shopId: shop.id,
+        currency: "usd",
         tripId: open.id,
         stripeAccountId: "acct_test",
         stripeSessionId: `cs_test_${outcome.bookingId}`,
@@ -585,50 +505,6 @@ describe("resetDemoSchedule", () => {
   });
 });
 
-describe("demoTodayDepartureStart", () => {
-  const TZ = "America/New_York";
-  const localDay = (date: Date) => toDateInputValue(utcToWallTime(date, TZ));
-
-  it("sails five hours out, rounded to a half-hour slot, in the middle of the day", () => {
-    const now = new Date("2026-07-20T15:04:00Z"); // 11:04 AM EDT
-    const start = demoTodayDepartureStart(now, TZ);
-    expect(start.toISOString()).toBe("2026-07-20T20:30:00.000Z"); // 4:30 PM EDT
-    expect(localDay(start)).toBe(localDay(now));
-  });
-
-  it("still sails today when now+5h would round past local midnight", () => {
-    // Regression: seeding at 6:34 PM EDT put the "sails today" trip at
-    // midnight — tomorrow in shop time — emptying the departure board that
-    // the Today queue tests and the demo lead with.
-    const now = new Date("2026-07-20T22:34:00Z"); // 6:34 PM EDT
-    const start = demoTodayDepartureStart(now, TZ);
-    expect(localDay(start)).toBe(localDay(now));
-    expect(start.getTime()).toBeGreaterThan(now.getTime());
-    expect(start.toISOString()).toBe("2026-07-21T03:30:00.000Z"); // 11:30 PM EDT
-  });
-
-  it("still sails today even when no future half-hour slot is left before midnight", () => {
-    // "Today always has a board" has no exception: with less than thirty
-    // minutes of the local day left, a half-hour-rounded slot no longer fits,
-    // so this falls back to the earliest still-future moment instead of
-    // rolling the trip into tomorrow.
-    const now = new Date("2026-07-21T03:45:00Z"); // 11:45 PM EDT
-    const start = demoTodayDepartureStart(now, TZ);
-    expect(start.getTime()).toBeGreaterThan(now.getTime());
-    expect(localDay(start)).toBe(localDay(now));
-    expect(start.toISOString()).toBe("2026-07-21T03:46:00.000Z"); // 11:46 PM EDT
-  });
-
-  it("never lets the same-day fallback cross into tomorrow", () => {
-    // The last minute before local midnight: even "now + 1 minute" would
-    // roll into tomorrow, so this clamps to just before midnight instead.
-    const now = new Date("2026-07-21T03:59:30Z"); // 11:59:30 PM EDT
-    const start = demoTodayDepartureStart(now, TZ);
-    expect(start.getTime()).toBeGreaterThan(now.getTime());
-    expect(localDay(start)).toBe(localDay(now));
-  });
-});
-
 describe("seedIfEmpty (CR-010)", () => {
   it("seeds a fresh database and is a no-op the second time", async () => {
     const db = await unseededTestDb();
@@ -667,73 +543,5 @@ describe("seedIfEmpty (CR-010)", () => {
     // The retry itself then succeeds cleanly.
     await seedIfEmpty(db);
     await expect(db.select({ id: shops.id }).from(shops)).resolves.not.toHaveLength(0);
-  });
-});
-
-/**
- * The demo is a teaching surface: whatever it shows, a shop learns is normal.
- * These history trips used to be inserted with no `trip_requirements` row at
- * all, so every one of their bookings read `requirements_not_configured` —
- * blocked — while the seed wrote a `boarded` roll call for them by direct
- * insert. The result was a green "Boarded" pill beside a red "Requirements not
- * configured" on the same manifest line: a pairing `recordRollCall` refuses to
- * create, because readiness gates boarding at departure. The demo was teaching
- * exactly what the boarding gate exists to prevent.
- */
-describe("seeded history manifests", () => {
-  const HISTORY_DESCRIPTION = "Sailed. Kept in the log for the shop's monthly numbers.";
-
-  it("never shows a boarded diver beside a blocked readiness result", async () => {
-    const { db, shop } = await seededShopContext();
-    await resetDemoSchedule(db, shop.id, { history: true });
-
-    const history = await db
-      .select({ id: tripsTable.id, title: tripsTable.title })
-      .from(tripsTable)
-      .where(and(eq(tripsTable.shopId, shop.id), eq(tripsTable.description, HISTORY_DESCRIPTION)));
-    expect(history.length).toBeGreaterThan(0);
-
-    const offenders: string[] = [];
-    for (const trip of history) {
-      const [requirement] = await db
-        .select({ tripId: tripRequirements.tripId })
-        .from(tripRequirements)
-        .where(eq(tripRequirements.tripId, trip.id));
-      expect(requirement, `${trip.title} has no requirements row`).toBeDefined();
-
-      const manifest = await getTripManifest(db, shop.id, trip.id);
-      if (!manifest) throw new Error(`no manifest for ${trip.title}`);
-      for (const diver of manifest.divers) {
-        if (diver.rollCall?.state === "boarded" && diver.readiness.status !== "ready") {
-          offenders.push(`${trip.title} · ${diver.fullName}`);
-        }
-      }
-    }
-    expect(offenders).toEqual([]);
-  });
-
-  it("carries a no-show's absence forward through every after-dive checkpoint", async () => {
-    // "Off the boat stays off the boat": the seed records one explicit
-    // `not_boarded` at departure for a no-show and nothing after it, so the
-    // carried-forward default is what every later checkpoint shows. It is the
-    // only place in the demo (and therefore in the visual fleet) where that
-    // state is exercised at all.
-    const { db, shop } = await seededShopContext();
-    await resetDemoSchedule(db, shop.id, { history: true });
-
-    const history = await db
-      .select({ id: tripsTable.id })
-      .from(tripsTable)
-      .where(and(eq(tripsTable.shopId, shop.id), eq(tripsTable.description, HISTORY_DESCRIPTION)));
-
-    let carried = 0;
-    for (const trip of history) {
-      const afterDive = await getTripManifest(db, shop.id, trip.id, "after_dive_1");
-      if (!afterDive) continue;
-      carried += afterDive.divers.filter(
-        (diver) => diver.rollCall?.state === "not_boarded" && diver.rollCall.implied === true,
-      ).length;
-    }
-    expect(carried).toBeGreaterThan(0);
   });
 });

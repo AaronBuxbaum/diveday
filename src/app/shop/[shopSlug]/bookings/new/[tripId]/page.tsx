@@ -12,11 +12,13 @@ import { getDb } from "@/db/client";
 import { listBookableDivers } from "@/db/divers";
 import { getShopById } from "@/db/shops";
 import { getTripWithBooked } from "@/db/trips";
+import { tripAdmissionRefusalText } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate, formatTimeRange } from "@/lib/format";
 import { requireStaffSession } from "@/lib/session";
 import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
+import { verifyTripAdmissionGate } from "@/lib/trip-admission-gate";
 
 export const metadata: Metadata = {
   title: "Add a booking — DiveDay",
@@ -42,6 +44,7 @@ const NOTICE_KEYS: Record<string, { tone: "danger"; key: StaffMessageKey }> = {
   "diver-course-prerequisite": { tone: "danger", key: "trips.notices.diverCoursePrerequisite" },
   "diver-course-ratio-full": { tone: "danger", key: "trips.notices.diverCourseRatioFull" },
   "diver-course-min-age": { tone: "danger", key: "trips.notices.diverCourseMinAge" },
+  "diver-trip-prerequisite": { tone: "danger", key: "trips.notices.diverTripPrerequisite" },
   "diver-unavailable": { tone: "danger", key: "trips.notices.diverUnavailable" },
 };
 
@@ -64,12 +67,17 @@ export default async function NewBookingDiverPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string; tripId: string }>;
-  searchParams: Promise<{ diverq?: string; notice?: string }>;
+  searchParams: Promise<{
+    diverq?: string;
+    notice?: string;
+    /** Signed, verified against this route's own `tripId` — src/lib/trip-admission-gate.ts. */
+    gate?: string | string[];
+  }>;
 }) {
   await connection(); // live seat counts — render per request, never a build-time shell
   const session = await requireStaffSession();
   const { shopSlug, tripId } = await params;
-  const { diverq, notice } = await searchParams;
+  const { diverq, notice, gate } = await searchParams;
   const db = await getDb();
   // Scoped by the session's own shop, never the URL slug.
   const shop = await getShopById(db, session.user.shopId);
@@ -84,6 +92,13 @@ export default async function NewBookingDiverPage({
   const query = diverq?.trim() ?? "";
   const candidates = await listBookableDivers(db, shop.id, trip.id, { query });
   const banner = noticeFromParam(notice, NOTICE_KEYS);
+  // The trip's own cert gate refused this diver: say *which* requirement failed
+  // and what they hold, rather than the one static sentence every refusal used
+  // to share (src/lib/trip-admission.ts).
+  const gateRefusal =
+    notice === "diver-trip-prerequisite"
+      ? verifyTripAdmissionGate(gate, { kind: "trip", id: tripId })
+      : null;
 
   return (
     <main className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 sm:py-10">
@@ -105,7 +120,7 @@ export default async function NewBookingDiverPage({
 
       {banner ? (
         <ShopNotice tone={banner.tone} role={noticeRole(banner.tone)} className="mt-6">
-          {t(banner.key)}
+          {gateRefusal ? tripAdmissionRefusalText(t, gateRefusal, locale) : t(banner.key)}
         </ShopNotice>
       ) : null}
 

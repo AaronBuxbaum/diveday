@@ -17,6 +17,7 @@ import { getBookingPayment } from "@/db/payments";
 import {
   getBookingReadiness,
   getTripRequirements,
+  getTripSiteRequirement,
   highestVerifiedCertificationLevel,
 } from "@/db/readiness";
 import { getRentalFit, toDiverRentalFit } from "@/db/rental-fit";
@@ -26,6 +27,7 @@ import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { getTripWithBooked, getWaitlistEntryForTrip, listTripDives } from "@/db/trips";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { diverTranslator } from "@/i18n/messages";
+import { tripRequirementList } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { auth } from "@/lib/auth";
@@ -44,6 +46,7 @@ import {
 import { type ShopCurrency, toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
 import { publicSchedulePath, publicTripCalendarPath, publicTripPath } from "@/lib/public-routes";
+import { combineCertRequirements } from "@/lib/readiness";
 import { tripPageJsonLd } from "@/lib/structured-data";
 import { isFull, spotsRemaining } from "@/lib/trips";
 import { BookingConfirmation } from "./_components/BookingConfirmation";
@@ -63,8 +66,11 @@ import { TripActions } from "./_components/TripActions";
 import { TripHeader } from "./_components/TripHeader";
 import { ERROR_MESSAGE_KEYS, isErrorCode, type PaymentPanel } from "./_components/types";
 
-// TODO: Cache Components adoption. Refactor this route so this opt-out can be removed.
-// See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
+// Not a TODO. The shop layout above already permits this route's blocking
+// prerender (`isPageAllowedToBlock` reads only the outermost `instant`), so what
+// this line still buys is keeping the page segment out of dev-time instant
+// validation — which nothing above a page segment can do.
+// See ADR 20260803-instant-opt-out-placement.
 export const instant = false;
 
 /**
@@ -236,11 +242,41 @@ export default async function TripDetailPage({
   const payAtBooking = Boolean(
     perDiverPriceCents && canAcceptPayments(stripeAccount) && publicAppUrl(),
   );
-  // The confirmed-booking panels draw on seven independent queries — batch them.
+  // **What this trip asks of anybody**, read for every visitor rather than only
+  // for a diver who already holds a seat. `requirement` used to be fetched
+  // inside the `confirmed` branch below and passed only into
+  // `BookingConfirmation` — so a trip's cert gate was first stated *after* the
+  // seat was bought, and a diver who could not clear it read "4 spots left",
+  // paid, and found out at the dock (DOM-M6). A trip's requirement is a
+  // property of the trip: it discloses nothing about any person, so it belongs
+  // above the form.
+  const [requirement, siteRequirement] = await Promise.all([
+    getTripRequirements(db, shop.id, tripId),
+    getTripSiteRequirement(db, shop.id, tripId),
+  ]);
+  // Course sessions are left out on purpose: a course states its own admission
+  // rule on its own page, and its itinerary's gate is deliberately *not* a
+  // booking gate (src/lib/trip-admission.ts) — repeating the site's demand here
+  // would read as a bar on the very students the course exists to create.
+  const requirementNote = trip.course
+    ? null
+    : tripRequirementList(
+        t,
+        combineCertRequirements(
+          requirement ?? {
+            minimumCertificationLevel: null,
+            requiredSpecialties: [],
+            requiresNitrox: false,
+          },
+          siteRequirement,
+        ),
+        locale,
+      );
+
+  // The confirmed-booking panels draw on six more independent queries — batch them.
   const [
     payment,
     readiness,
-    requirement,
     rentalFit,
     nitroxCardVerified,
     readinessCapability,
@@ -258,7 +294,6 @@ export default async function TripDetailPage({
           shopCurrency,
         ),
         getBookingReadiness(db, shop.id, confirmed.booking.id),
-        getTripRequirements(db, shop.id, tripId),
         // Projected: this page is public and the form is a client
         // component, so staff-only fit columns must not ship to the browser.
         getRentalFit(db, shop.id, confirmed.person.id).then(toDiverRentalFit),
@@ -274,7 +309,7 @@ export default async function TripDetailPage({
         // a party member booked without an address of their own gets neither.
         bookingConfirmationAndWaiverEmailsSent(db, shop.id, confirmed.booking.id),
       ])
-    : [null, null, null, null, false, null, [], null, false];
+    : [null, null, null, false, null, [], null, false];
   const readinessLink = readinessCapability ? readinessLinkPath(readinessCapability.token) : null;
 
   // "What should I learn next?" is the shop's own answer, read off the paths it
@@ -440,6 +475,10 @@ export default async function TripDetailPage({
             tripRef={tripRef}
             remaining={remaining}
             errorMessage={errorMessage}
+            requirementHeading={requirementNote ? t("trip.requirementHeading") : undefined}
+            requirementNote={
+              requirementNote ? t("trip.requirementNote", { list: requirementNote }) : undefined
+            }
             payAtBooking={payAtBooking}
             perDiverPriceCents={perDiverPriceCents}
             currency={shopCurrency}

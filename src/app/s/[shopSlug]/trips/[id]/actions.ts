@@ -10,6 +10,7 @@ import { type AppDb, getDb } from "@/db/client";
 import { setBookingNitrox } from "@/db/nitrox";
 import { sendAndRecordNotification } from "@/db/notifications";
 import { recordDiverOwnLocaleForBooking } from "@/db/people";
+import { getTripRequirements, getTripSiteRequirement } from "@/db/readiness";
 import { saveRentalFit } from "@/db/rental-fit";
 import { getRedeemableShopPromo } from "@/db/shop-promos";
 import { getShopById, getShopBySlug } from "@/db/shops";
@@ -20,6 +21,7 @@ import { joinTripWaitlist } from "@/db/waitlist";
 import { issueWaiverOnJoin } from "@/db/waiver-issue";
 import { issueWaiverRequest } from "@/db/waivers";
 import { diverTranslator } from "@/i18n/messages";
+import { tripRequirementList } from "@/i18n/readiness-labels";
 import { requestFirstHandLocale, requestLocale } from "@/i18n/request";
 import { trackEvent } from "@/lib/analytics";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
@@ -28,6 +30,7 @@ import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl, recipientLocale } from "@/lib/notifications";
 import { publicTripPath } from "@/lib/public-routes";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
+import { type CertRequirementSource, combineCertRequirements } from "@/lib/readiness";
 import {
   hasAnyRentalPricing,
   offeredRentableItems,
@@ -37,6 +40,13 @@ import {
 } from "@/lib/rentals";
 import { clientIp } from "@/lib/request-ip";
 import { ERROR_MESSAGE_KEYS, type ErrorCode } from "./_components/types";
+
+/** Stands in for a trip with no requirement row of its own, so its dive sites' gates still compose. */
+const NO_CERT_REQUIREMENT: CertRequirementSource = {
+  minimumCertificationLevel: null,
+  requiredSpecialties: [],
+  requiresNitrox: false,
+};
 
 /** Absolute readiness link for the confirmation email, or undefined with no origin/booking. */
 async function readinessEmailUrl(
@@ -143,7 +153,8 @@ export async function bookSpot(
   // `useActionState` with no further round trip through a Server Component,
   // so it has to arrive already translated (unlike the `?error=` codes that
   // flow back through page.tsx, which resolves them itself).
-  const t = diverTranslator(await requestLocale());
+  const locale = await requestLocale();
+  const t = diverTranslator(locale);
   const ip = await clientIp();
   if (!(await checkRateLimit(rateLimitKey("booking", ip), RATE_LIMITS.booking)).allowed) {
     return { error: t(ERROR_MESSAGE_KEYS.rate_limited) };
@@ -287,6 +298,37 @@ export async function bookSpot(
     // booking behind. Staff surfaces keep the specific wording — there the
     // actor is authenticated and entitled to the diver's record.
     await trackEvent({ name: "booking_blocked", source: "diver", reason: outcome.reason });
+
+    // The trip's own cert gate is the one refusal that must *not* fall through
+    // to "isn't taking bookings right now": the page the diver is reading says
+    // "4 spots left", so the generic sentence is false and visibly so. What it
+    // says instead is what the *trip* requires — the same words for every
+    // submitter, describing the boat rather than the person, and revealing only
+    // what the page above the form already displays (see
+    // `tripRequirementList`). H-22's rule is intact: nothing here is about that
+    // diver's record.
+    if (outcome.reason === "trip_prerequisite") {
+      const [tripRequirement, siteRequirement] = await Promise.all([
+        getTripRequirements(dbi, shopNow.id, tripId),
+        getTripSiteRequirement(dbi, shopNow.id, tripId),
+      ]);
+      const list = tripRequirementList(
+        t,
+        combineCertRequirements(tripRequirement ?? NO_CERT_REQUIREMENT, siteRequirement),
+        locale,
+      );
+      if (list) {
+        return {
+          error: shopNow.contactEmail
+            ? t("booking.errors.tripRequirementWithContact", {
+                list,
+                contact: shopNow.contactEmail,
+              })
+            : t("booking.errors.tripRequirement", { list }),
+        };
+      }
+    }
+
     const code: ErrorCode =
       outcome.reason === "trip_full"
         ? "full"

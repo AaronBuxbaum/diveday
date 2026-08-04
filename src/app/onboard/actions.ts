@@ -1,6 +1,5 @@
 "use server";
 
-import { hash } from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
@@ -13,9 +12,11 @@ import { toDiverLocale } from "@/i18n/settings";
 import { verifyAccountLinkPath } from "@/lib/account-tokens";
 import { trackEvent } from "@/lib/analytics";
 import { signIn } from "@/lib/auth";
+import { isDemoAccountEmail } from "@/lib/demo-identity";
 import { eventSource } from "@/lib/funnel";
 import { publicAppUrl } from "@/lib/notifications";
 import { onboardSchema } from "@/lib/onboarding";
+import { hashPassword } from "@/lib/password-hashing";
 import { ALERT_EMAIL } from "@/lib/platform-mail";
 import { checkRateLimit, RATE_LIMIT_MESSAGE, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
@@ -61,6 +62,16 @@ export async function onboardAction(formData: FormData) {
   }
 
   const { shopName, shopSlug, timezone, ownerName, ownerEmail, ownerPassword } = parsed.data;
+
+  // The reserved demo namespace is off limits to a real account, and now says
+  // so out loud. ADR 20260803-demo-bypass-containment's third condition — "no
+  // real shop's account can be in `*.demo.invalid`" — used to hold only as an
+  // emergent property (this action mails the address, and `.invalid` never
+  // resolves, so nobody *would* use one). Emergent is not enforced: it left one
+  // combination open, an insider or a bad migration flipping `is_demo` on a
+  // tenant that already holds an account in that namespace, which would hand
+  // `DEMO_BYPASS_PASSWORD` a real tenant. Refusing here makes it an invariant.
+  if (isDemoAccountEmail(ownerEmail)) backToForm("email_reserved");
 
   const db = await getDb();
   let onboardingError: string | null = null;
@@ -135,8 +146,7 @@ export async function onboardAction(formData: FormData) {
         { personId: newPerson.id, role: "manager" },
       ]);
 
-      // Hash password (cost 10)
-      const hashedPassword = await hash(ownerPassword, 10);
+      const hashedPassword = await hashPassword(ownerPassword);
 
       // Create user account
       const [newAccount] = await tx

@@ -740,6 +740,7 @@ describe("diver erasure", () => {
     });
     await db.insert(bookingPayments).values({
       shopId: shop.id,
+      currency: "usd",
       bookingId,
       status: "paid",
       amountCents: 13000,
@@ -775,6 +776,7 @@ describe("diver erasure", () => {
     await upsertShopStripeAccount(db, shop.id, "acct_test");
     await db.insert(orders).values({
       shopId: shop.id,
+      currency: "usd",
       bookingId,
       personId: diver.id,
       createdByPersonId: ownerId,
@@ -1368,6 +1370,7 @@ describe("diver erasure", () => {
         .insert(bookingCheckouts)
         .values({
           shopId: input.shopId,
+          currency: "usd",
           tripId: input.tripId,
           stripeAccountId: "acct_test",
           stripeSessionId: input.sessionId,
@@ -1662,6 +1665,7 @@ describe("diver erasure", () => {
       // third on a different one — one delete each, not one per order.
       await db.insert(orders).values([
         {
+          currency: "usd",
           shopId: shop.id,
           personId: diver.id,
           createdByPersonId: ownerId,
@@ -1672,6 +1676,7 @@ describe("diver erasure", () => {
           stripeInvoiceId: "in_elena_2",
         },
         {
+          currency: "usd",
           shopId: shop.id,
           personId: diver.id,
           createdByPersonId: ownerId,
@@ -1759,6 +1764,7 @@ describe("diver erasure", () => {
       if (!beaBooking.ok) throw new Error("bystander booking failed");
       await db.insert(orders).values({
         shopId: shop.id,
+        currency: "usd",
         bookingId: beaBooking.bookingId,
         personId: bystander.id,
         createdByPersonId: ownerId,

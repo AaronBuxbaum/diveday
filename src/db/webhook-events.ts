@@ -120,6 +120,13 @@ export async function releaseStripeWebhookEventClaim(db: AppDb, eventId: string)
  * is still proof that Stripe reported something newer than the event being
  * considered, and the older one must not be applied over it. That is precisely
  * why a released claim keeps its row.
+ *
+ * **`account` here is the id off the event body** (`event.data.object.id`), so
+ * the claim must store the same one — see `claimAccountId` in
+ * `src/app/api/webhooks/stripe/route.ts`. Keying the writer on
+ * `event.account` alone would leave every delivery without a top-level
+ * `account` stored as `null`, matching nothing here, and this whole defense
+ * would degrade to last-write-wins without a single test failing.
  */
 export async function hasNewerAccountUpdate(
   db: AppDb,

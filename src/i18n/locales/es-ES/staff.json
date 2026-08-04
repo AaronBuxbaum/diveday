@@ -42,7 +42,7 @@
       "webcalLabel": "Apple Calendar y Outlook",
       "httpsLabel": "Google Calendar y los demás",
       "webcalHint": "Abre tu aplicación de calendario y se suscribe.",
-      "httpsHint": "Pégalo en «Otros calendarios → Desde URL»."
+      "httpsHint": "Pégalo en “Otros calendarios → Desde URL”."
     },
     "warning": {
       "rotate": "Al sustituir el enlace, el anterior deja de funcionar de inmediato. Cualquier calendario que siga usándolo dejará de actualizarse en silencio hasta que pegues el nuevo.",
@@ -174,7 +174,7 @@
       "level": "Nivel",
       "cardNumber": "Número de tarjeta",
       "refresherDue": "Vencimiento del repaso",
-      "refresherHint": "(opcional; política de la tienda — las tarjetas no caducan)",
+      "refresherHint": "(opcional; política del centro — las tarjetas no caducan)",
       "cardPhoto": "Foto de la tarjeta",
       "cardPhotoHint": "(opcional; JPG, PNG o WebP; ≤5 MB)",
       "capturing": "Capturando…",
@@ -207,7 +207,7 @@
         "tapToFlipText": "Toca la tarjeta para girarla y ver {target}",
         "uploadedPhoto": "la foto subida",
         "securityDetails": "los detalles de seguridad",
-        "flipAriaLabel": "Tarjeta de certificación digital de {level}. Pulsa para girarla.",
+        "flipAriaLabel": "Tarjeta de certificación digital de {level}. Presiona para girarla.",
         "uploadedAlt": "Tarjeta de certificación subida"
       }
     },
@@ -217,9 +217,9 @@
       "description": "Empieza por la persona. Sus tarjetas, ajuste de alquiler y reservas se mantienen juntos para que recepción siempre tenga el contexto correcto.",
       "matchingCount": "{count} coincidencias",
       "onFileCount": "{count} registrados",
-      "noticeDuplicate": "Ya hay un buceador con ese correo en esta tienda.",
-      "noticeDeleted": "Buceador eliminado del trabajo activo de la tienda. Sus reservas y tarjetas se conservan.",
-      "noticeRestored": "Buceador restaurado al trabajo activo de la tienda.",
+      "noticeDuplicate": "Ya hay un buceador con ese correo en este centro.",
+      "noticeDeleted": "Buceador eliminado del trabajo activo del centro. Sus reservas y tarjetas se conservan.",
+      "noticeRestored": "Buceador restaurado al trabajo activo del centro.",
       "noticeErased": "Datos personales borrados. La exención firmada, los viajes y los pagos quedan registrados sin los datos del buceador — esto no se puede deshacer.",
       "noticeErasedProcessorOwed": "Datos personales borrados aquí, pero algo en Stripe quedó sin terminar. Abre Informes para ver qué falta y resolverlo — hasta entonces este buceador no está borrado del todo.",
       "noticeNotAuthorized": "Eliminar o restaurar un buceador está limitado a propietarios y gerentes.",
@@ -277,7 +277,7 @@
       "phoneLabel": "Teléfono",
       "dateOfBirthLabel": "Fecha de nacimiento",
       "optionalHint": "(opcional)",
-      "dateOfBirthDescription": "Se usa para comprobar la edad mínima de un curso el día que se imparte. Déjalo en blanco y los cursos se reservan como siempre.",
+      "dateOfBirthDescription": "Se usa para verificar la edad mínima de un curso el día que se imparte. Déjalo en blanco y los cursos se reservan como siempre.",
       "diveInsuranceFieldLabel": "Seguro de buceo",
       "diveInsuranceDescription": "DAN o cualquier otro seguro de accidentes de buceo que tenga el buceador.",
       "diveInsurancePlaceholder": "DAN n.º 12345",
@@ -307,7 +307,7 @@
       "openPayment": "Abrir pago",
       "createOrder": "Crear pedido",
       "noOrder": "Sin pedido",
-      "shopPaymentFallback": "Pago de tienda",
+      "shopPaymentFallback": "Pago del centro",
       "noTripAttached": " · sin salida asociada",
       "refund": "Reembolsar",
       "refunding": "Reembolsando…",
@@ -336,9 +336,9 @@
     },
     "rentalFit": {
       "heading": "Ajuste de alquiler",
-      "description": "Lo que este buceador toma de la tienda, y en qué talla. Es lo que construye la lista de preparación de la salida — nunca una reserva de equipo ni un sustituto de la comprobación de ajuste en el muelle.",
+      "description": "Lo que este buceador toma del centro, y en qué talla. Es lo que construye la lista de preparación de la salida — nunca una reserva de equipo ni un sustituto de la revisión de ajuste en el muelle.",
       "changeRestricted": "Cambiar lo que este buceador pidió está limitado a propietarios, gerentes, instructores y divemasters. Si una talla no está disponible, márcalos para ajuste manual abajo.",
-      "rentsFromShop": "Alquila de la tienda",
+      "rentsFromShop": "Alquila del centro",
       "bcdSizeLabel": "Talla de BCD",
       "bcdSizePlaceholder": "M",
       "wetsuitSizeLabel": "Talla de traje",
@@ -354,7 +354,7 @@
       "flaggedHeading": "Marcado para ajuste manual",
       "cantFillHeading": "¿No puedes cubrir alguna de estas tallas?",
       "flaggedBody": "Marcado para ajuste manual — sigue contando en la lista de preparación, pero sin talla, y la tripulación lo ajusta con lo disponible en el check-in.",
-      "cantFillBody": "Márcalos para ajuste manual en el check-in. Su recuento se mantiene en la lista de equipaje pero la talla se retira, así nadie prepara una talla de la que la tienda anda corta.",
+      "cantFillBody": "Márcalos para ajuste manual en el check-in. Su recuento se mantiene en la lista de equipaje pero la talla se retira, así nadie prepara una talla de la que el centro anda corto.",
       "clearing": "Despejando…",
       "fitResolved": "Ajuste resuelto — vuelve a preparar sus tallas",
       "clearingRestricted": "Despejar esto está limitado a propietarios, gerentes, instructores y divemasters — ellos confirman que el buceador puede volver a prepararse con sus tallas indicadas.",
@@ -365,7 +365,7 @@
       "flagForStaffFit": "Marcar para ajuste del personal"
     },
     "history": {
-      "heading": "Historial en la tienda",
+      "heading": "Historial en el centro",
       "importedVisitsText": "{count, plural, one {# visita} other {# visitas}} llegaron de tu sistema anterior. Esas líneas son registros de reserva, no de inmersión — dicen qué se reservó y cómo lo llamaba tu software anterior.",
       "noTripsYet": "Aún no hay salidas — resérvalas en una salida abierta y aparecerá aquí.",
       "imported": "Importado",
@@ -393,13 +393,13 @@
       "saved": "Guardado",
       "needed": "Necesario",
       "reusableForFuture": "Reutilizable para futuras reservas",
-      "shopHistory": "Historial en la tienda",
+      "shopHistory": "Historial en el centro",
       "bookingsText": "{count, plural, one {# reserva} other {# reservas}}",
       "importedSuffix": " · {count} importadas"
     },
     "notices": {
       "captured": "Tarjeta capturada como pendiente. Busca el número con la agencia, luego márcala como certificada antes de que pueda dejar listo a este buceador.",
-      "capturedNoPhoto": "Tarjeta capturada como pendiente. El almacenamiento de fotos no está configurado para esta tienda, así que no se adjuntó ninguna foto.",
+      "capturedNoPhoto": "Tarjeta capturada como pendiente. El almacenamiento de fotos no está configurado para este centro, así que no se adjuntó ninguna foto.",
       "verified": "Tarjeta marcada como certificada. Ahora cuenta para la disposición.",
       "cardDeleted": "Tarjeta eliminada. Ya no cuenta para la disposición; su historial se conserva para los registros.",
       "cardRestored": "Tarjeta restaurada. Vuelve a contar para la disposición.",
@@ -409,7 +409,7 @@
       "fitFlagged": "Marcado para ajuste manual. La lista de preparación mostrará que este buceador necesita ajuste del personal en el check-in.",
       "fitCleared": "Marca de ajuste despejada — este buceador vuelve a prepararse con sus tallas indicadas.",
       "image": "Esa foto no se pudo usar. Sube un JPG, PNG o WebP de menos de 5 MB.",
-      "duplicate": "Otro buceador ya usa ese correo en esta tienda.",
+      "duplicate": "Otro buceador ya usa ese correo en este centro.",
       "refunded": "Pago reembolsado — la salida ahora aparece como no pagada para este buceador.",
       "booked": "Actividad reservada. Revísala abajo, luego crea y envía la factura.",
       "bookedWaiverUndelivered": "Actividad reservada, pero no se envió su exención por correo. Abre la lista de invitados de la salida para enviarla o compartir el enlace.",
@@ -419,17 +419,18 @@
       "coursePrerequisite": "Marca la certificación requerida como certificada antes de reservar este curso.",
       "courseRatioFull": "Esta sesión está en su límite de proporción instructor-estudiante. Asigna otro instructor, o elige otra actividad.",
       "courseMinAge": "Este buceador está por debajo de la edad mínima del curso el día que se imparte, según la fecha de nacimiento registrada. Corrige la fecha de nacimiento si es incorrecta.",
+      "tripPrerequisite": "Las titulaciones registradas de este buceador no alcanzan lo que exigen esa salida y sus puntos de inmersión. Abre la salida para ver qué pide.",
       "tripUnavailable": "Añade un correo electrónico y elige una actividad disponible.",
       "bookingInvalid": "Añade un correo electrónico y elige una actividad disponible.",
       "refundFailed": "Ese pago no se pudo reembolsar. Puede que no esté pagado, o que Stripe necesite atención.",
       "demoDisabled": "Este es un pedido de demostración — no está respaldado por una factura real de Stripe, así que no se puede reembolsar.",
-      "deleted": "Buceador eliminado del trabajo activo de la tienda. Sus reservas y tarjetas se conservan.",
+      "deleted": "Buceador eliminado del trabajo activo del centro. Sus reservas y tarjetas se conservan.",
       "paymentNotConnected": "Los pagos aún no están conectados, así que no hay ninguna cuenta desde la que facturar — conecta una para cobrar a este buceador.",
       "notAuthorizedRefund": "Los reembolsos están limitados a propietarios y gerentes — pide a uno de ellos que emita este reembolso.",
       "notAuthorizedDelete": "Eliminar un buceador está limitado a propietarios y gerentes — pide a uno de ellos que lo haga.",
-      "notAuthorizedErase": "Borrar los datos personales de un buceador está limitado al propietario de la tienda — pídeselo a esa persona.",
+      "notAuthorizedErase": "Borrar los datos personales de un buceador está limitado al propietario del centro — pídeselo a esa persona.",
       "eraseNameMismatch": "El nombre que escribiste no coincide con el de este buceador, así que no se borró nada. Escríbelo exactamente como aparece arriba.",
-      "eraseRefused": "Este registro no se puede borrar. Los registros del personal conservan el rastro de responsabilidad de la tienda, y no puedes borrar el tuyo propio.",
+      "eraseRefused": "Este registro no se puede borrar. Los registros del personal conservan el rastro de responsabilidad del centro, y no puedes borrar el tuyo propio.",
       "notAuthorizedFit": "Cambiar el ajuste de alquiler indicado de un buceador está limitado a propietarios, gerentes, instructores y divemasters. Aún puedes marcarlos para ajuste manual en el check-in.",
       "cardSightingRequired": "Confirmar una tarjeta importada requiere la casilla: abre la inmersión o la carga que esa tarjeta permite, así que un miembro del personal debe declarar que realmente la ha visto o ha verificado el número con la agencia.",
       "invalid": "Revisa los datos e inténtalo de nuevo.",
@@ -440,7 +441,7 @@
     "list": {
       "eyebrow": "Catálogo",
       "title": "Cursos",
-      "description": "La copia de tu tienda del catálogo PADI y SSI. Abre un curso para editar su página y precio, u oculta los que no ofreces.",
+      "description": "La copia de tu centro del catálogo PADI y SSI. Abre un curso para editar su página y precio, u oculta los que no ofreces.",
       "certificationPaths": "Rutas de certificación",
       "hidden": "Oculto",
       "orHigher": "{level} o superior",
@@ -469,7 +470,7 @@
       "errorTooManyPhotos": "Añade hasta {max} fotos nuevas de galería por guardado. Guarda este lote y añade más después.",
       "pitchLegend": "La propuesta",
       "subheadLabel": "Subtítulo",
-      "subheadDescription": "Una línea bajo el título, p. ej. «Cómo hacerse Open Water Diver de PADI».",
+      "subheadDescription": "Una línea bajo el título, p. ej. “Cómo hacerse Open Water Diver de PADI”.",
       "overviewLabel": "Resumen",
       "overviewDescription": "Unos párrafos con las palabras del buceador, no las de la agencia.",
       "pricingLegend": "Precio",
@@ -497,7 +498,7 @@
       "enrollLegend": "Quién puede inscribirse",
       "orHigher": "{level} o superior",
       "ageSuffix": ", {age}+",
-      "enrollDescription": "El único bloque de la página que responde «¿puedo hacer esto?». La certificación y la edad mínima vienen de la agencia: <strong>{levelAge}</strong> — se muestra aquí automáticamente y no es editable. Tu nota aparece debajo, etiquetada como texto de la tienda, así que nunca se lee como si sustituyera la tarjeta que revisa el mostrador.",
+      "enrollDescription": "El único bloque de la página que responde “¿puedo hacer esto?”. La certificación y la edad mínima vienen de la agencia: <strong>{levelAge}</strong> — se muestra aquí automáticamente y no es editable. Tu nota aparece debajo, etiquetada como texto del centro, así que nunca se lee como si sustituyera la tarjeta que revisa el mostrador.",
       "openToUncertified": "abierto a buceadores sin certificar",
       "introCourseLabel": "Es una sesión introductoria — no requiere certificación (Discover Scuba, Try Scuba, …)",
       "prerequisiteLabel": "Nota de requisitos",
@@ -509,7 +510,7 @@
       "notIncludedLabel": "No incluido",
       "notIncludedPlaceholder": "Tasa del parque marino\nTraslados de hotel",
       "dayByDayLegend": "Día a día",
-      "dayByDayDescription": "Una tarjeta por día: un título, horas reales de inicio/fin cuando el día tiene un horario fijo (o una nota de texto libre cuando no lo tiene, como «semana 1–2»), y qué sucede.",
+      "dayByDayDescription": "Una tarjeta por día: un título, horas reales de inicio/fin cuando el día tiene un horario fijo (o una nota de texto libre cuando no lo tiene, como “semana 1–2”), y qué sucede.",
       "faqLegend": "Preguntas de los buceadores",
       "faqDescription": "Un bloque por pregunta, separados por una línea en blanco. La primera línea es la pregunta, el resto es la respuesta.",
       "faqLabel": "Preguntas frecuentes",
@@ -527,7 +528,7 @@
       "startTimeLabel": "Hora de inicio del día {number}",
       "endTimeLabel": "Hora de fin del día {number}",
       "timeNoteLabel": "Nota horaria del día {number}",
-      "timeNoteDescription": "Para un día sin hora fija, p. ej. «semana 1–2» o «unas 3 horas».",
+      "timeNoteDescription": "Para un día sin hora fija, p. ej. “semana 1–2” o “unas 3 horas”.",
       "timeNoteTitle": "Se ignora si hay hora de inicio para este día.",
       "timeNotePlaceholder": "unas 3 horas",
       "whatHappens": "Qué sucede",
@@ -598,7 +599,7 @@
       "backToCourses": "Volver a cursos",
       "viewPublicPage": "Ver página pública",
       "noPathsHeading": "Aún no hay rutas",
-      "noPathsBody": "La mayoría de las tiendas empiezan con la que todo buceador pregunta: Open Water, luego Advanced, luego Rescue.",
+      "noPathsBody": "La mayoría de los centros empiezan con la que todo buceador pregunta: Open Water, luego Advanced, luego Rescue.",
       "oneCourse": "1 curso",
       "manyCourses": "{count} cursos",
       "hidden": "Oculto",
@@ -657,7 +658,7 @@
     },
     "catalog": {
       "title": "Sitios de buceo comunes de DiveDay",
-      "description": "Puntos de partida publicados y versionados. Importar crea una ficha independiente de tu tienda; las actualizaciones de la plantilla nunca sobrescriben tus cambios.",
+      "description": "Puntos de partida publicados y versionados. Importar crea una ficha independiente de tu centro; las actualizaciones de la plantilla nunca sobrescriben tus cambios.",
       "templateVersion": "Plantilla v{version}",
       "importing": "Importando…",
       "importToLibrary": "Importar a mi biblioteca"
@@ -666,7 +667,7 @@
       "nameLabel": "Nombre",
       "namePlaceholder": "Molasses Reef",
       "forecastLegend": "Punto de pronóstico marino automatizado",
-      "forecastDescription": "Usa el punto de buceo mar adentro, no la dirección de la tienda. Deja ambos en blanco para mantener las condiciones solo para la tripulación.",
+      "forecastDescription": "Usa el punto de buceo mar adentro, no la dirección del centro. Deja ambos en blanco para mantener las condiciones solo para la tripulación.",
       "latitudeLabel": "Latitud",
       "longitudeLabel": "Longitud",
       "locationLabel": "Ubicación",
@@ -700,7 +701,7 @@
       "errorCoordinates": "Añade ambas coordenadas del pronóstico, o deja las dos en blanco — un punto de pronóstico necesita latitud y longitud. Todo lo demás que escribiste sigue aquí.",
       "errorDepth": "Esa profundidad máxima es mayor que la de cualquier sitio de buceo — revisa la cifra y vuelve a guardar.",
       "errorImages": "Uno de esos enlaces de imagen no se pudo usar — usa hasta seis enlaces HTTP(S) completos, uno por línea, cada uno apuntando a una imagen real y accesible.",
-      "errorImagesUnconfigured": "El alojamiento de imágenes aún no está configurado para esta tienda — deja los enlaces de imagen en blanco por ahora, o pide al propietario o gerente de tu tienda que lo configure."
+      "errorImagesUnconfigured": "El alojamiento de imágenes aún no está configurado para este centro — deja los enlaces de imagen en blanco por ahora, o pide al propietario o gerente de tu centro que lo configure."
     },
     "edit": {
       "description": "Los cambios actualizan la ficha vinculada a este sitio.",
@@ -811,7 +812,7 @@
     "index": {
       "eyebrow": "Recepción",
       "title": "Pedidos",
-      "description": "Todos los pedidos que ha enviado la tienda, de todos los buceadores y salidas.",
+      "description": "Todos los pedidos que ha enviado el centro, de todos los buceadores y salidas.",
       "newOrder": "Nuevo pedido",
       "notice": {
         "paymentNotConnected": "Los pagos aún no están conectados, así que no hay ninguna cuenta desde la que facturar — conecta una para empezar a cobrar a los buceadores.",
@@ -844,7 +845,7 @@
       "range": {
         "recentNote": "Mostrando los últimos {days} días. Los pedidos anteriores siguen aquí.",
         "showAll": "Mostrar todos los pedidos",
-        "allNote": "Mostrando todos los pedidos que ha emitido la tienda.",
+        "allNote": "Mostrando todos los pedidos que ha emitido el centro.",
         "showRecent": "Volver a los últimos {days} días"
       }
     }
@@ -945,7 +946,7 @@
       "emptyAction": "Abrir el calendario",
       "recipients": "{count, plural, one {Enviado a # buceador} other {Enviado a # buceadores}}",
       "expiresAt": "Caduca {date}",
-      "rangeNote": "Las ofertas por salida llegan como máximo al 90% de descuento — el barco sale de todos modos, así que la oferta siempre deja algo sobre la mesa. Los códigos de toda la tienda de arriba pueden llegar al 100% porque el personal también los usa para cortesías y fidelización, no solo para llenar plazas.",
+      "rangeNote": "Las ofertas por salida llegan como máximo al 90% de descuento — el barco sale de todos modos, así que la oferta siempre deja algo sobre la mesa. Los códigos de todo el centro de arriba pueden llegar al 100% porque el personal también los usa para cortesías y fidelización, no solo para llenar plazas.",
       "showMore": "Mostrar más ofertas",
       "backToTop": "← Volver al principio de la lista"
     }
@@ -1021,7 +1022,9 @@
       "waiversLabel": "Hojas de exención firmadas",
       "waiversOutstanding": "quedan {count} por recoger",
       "waiversAllIn": "Toda la documentación está en regla",
-      "revenueViewOrders": "Ver pedidos"
+      "revenueViewOrders": "Ver pedidos",
+      "tipsLabel": "Propinas",
+      "tipsDetail": "{count, plural, =0 {Sin propinas en las salidas de este mes} one {# propina en las salidas de este mes} other {# propinas en las salidas de este mes}} · 100 % para el centro"
     },
     "noTripsFuture": "Todavía no hay nada reservado para este mes — las reservas aparecerán aquí a medida que lleguen.",
     "noTripsPast": "Ninguna salida zarpó este mes. Elige otro mes para ver cómo fue.",
@@ -1215,6 +1218,7 @@
       "diverCoursePrerequisite": "Ese buceador no tiene una certificación verificada registrada para el requisito previo de este curso.",
       "diverCourseRatioFull": "Esta sesión está en su límite de ratio instructor-alumno — asigna otro instructor, o añádelo a la lista de espera.",
       "diverCourseMinAge": "Ese buceador está por debajo de la edad mínima de este curso el día que se imparte, según la fecha de nacimiento de su perfil. Corrige la fecha si es incorrecta.",
+      "diverTripPrerequisite": "Las titulaciones registradas de ese buceador no alcanzan lo que exigen esta salida y sus puntos de inmersión. Compara los requisitos de abajo con su ficha.",
       "diverUnavailable": "Esta salida no puede aceptar nuevos buceadores ahora mismo.",
       "waiverComplete": "Ese buceador ya tiene una exención de responsabilidad completada.",
       "waiverInPerson": "Exención en papel registrada — la liberación del buceador está archivada.",
@@ -1228,6 +1232,8 @@
       "recapNote": "Nota de resumen guardada — acompaña el resumen de cada buceador en cuanto esta salida zarpe.",
       "recapPhotoRemoved": "Foto eliminada del resumen.",
       "requirements": "Requisitos de preparación de la salida actualizados.",
+      "requirementsBlocking": "Requisitos actualizados. Algunos buceadores ya reservados en esta salida dejan de cumplirlos — revisa la lista de asistentes.",
+      "requirementsBlockingCount": "{count, plural, one {Requisitos actualizados. # buceador ya reservado en esta salida deja de cumplirlos — revisa la lista de asistentes.} other {Requisitos actualizados. # buceadores ya reservados en esta salida dejan de cumplirlos — revisa la lista de asistentes.}}",
       "payment": "Estado del pago actualizado.",
       "conditions": "Previsión de la tripulación publicada — los buceadores ya pueden verla.",
       "conditionsCleared": "Previsión de la tripulación borrada. Los buceadores verán el pronóstico automático cuando esté disponible.",
@@ -1353,6 +1359,7 @@
       "nitroxCardRequired": "una tarjeta de nitrox",
       "thisSite": "Este punto de inmersión",
       "siteAlsoRequires": "<strong>{site}</strong> también exige {list}. La preparación siempre aplica lo más estricto entre el punto de inmersión y esta salida.",
+      "siteAlsoRequiresCourse": "<strong>{site}</strong> exige {list}. Es la regla propia del punto de inmersión para esa inmersión, y la formación continua se imparte en los puntos para los que titula — así que nunca impide la inscripción. Sí aparece en la lista de asistentes como bloqueo de preparación para que el instructor lo resuelva.",
       "saving": "Guardando…",
       "save": "Guardar requisitos"
     },
@@ -1399,7 +1406,7 @@
       "adding": "Añadiendo…",
       "addPersonAriaLabel": "Añadir a {name} a la salida",
       "addToTrip": "Añadir a la salida",
-      "noMatches": "Ningún buceador habitual coincide con «{query}».",
+      "noMatches": "Ningún buceador habitual coincide con “{query}”.",
       "handEntrySummary": "¿Es nuevo en el centro? Introduce un buceador a mano",
       "handEntryDescriptionWaitlist": "Para visitas sin cita o buceadores registrados en otro sistema — los pone directamente en la lista de espera.",
       "handEntryDescriptionManifest": "Para visitas sin cita o buceadores registrados en otro sistema — los pone directamente en el manifiesto.",
@@ -1487,10 +1494,10 @@
       "minorBadge": "Menor",
       "depthWarning": "Esta salida llega a {site} {unit} — más de los {limit} {unit} para los que le habilita su tarjeta. No es un bloqueo: planifica la inmersión más somera o confirma que el guía lo mantiene dentro de sus límites.",
       "depthWarningJunior": "Esta salida llega a {site} {unit} — más de los {limit} {unit} permitidos a su edad. No es un bloqueo: planifica la inmersión más somera o confirma que el guía lo mantiene dentro de sus límites.",
-      "depthWarningNoCard": "Esta salida llega a {site} {unit} y no hay ninguna tarjeta registrada con la que compararla — {limit} {unit} es el límite de iniciación. No es un bloqueo: comprueba qué titulación tiene o confirma que el guía lo mantiene dentro de sus límites.",
+      "depthWarningNoCard": "Esta salida llega a {site} {unit} y no hay ninguna tarjeta registrada con la que compararla — {limit} {unit} es el límite de iniciación. No es un bloqueo: verifica qué titulación tiene o confirma que el guía lo mantiene dentro de sus límites.",
       "buddyGroupNote": "Nota de grupo de buceo:",
       "confirming": "Confirmando…",
-      "confirmIdentityMessage": "¿Confirmar que esta reserva realmente es de {name}? Hazlo solo una vez que hayas comprobado que es la misma persona — no alguien más compartiendo el correo.",
+      "confirmIdentityMessage": "¿Confirmar que esta reserva realmente es de {name}? Hazlo solo una vez que hayas verificado que es la misma persona — no alguien más compartiendo el correo.",
       "confirmThisIs": "Confirmar que es {name}",
       "identityConfirmButton": "Sí, es esta persona",
       "neverMind": "Mejor no",
@@ -1625,10 +1632,10 @@
       "markNotBoarded": "Marcar no embarcado",
       "notBackAboardActive": "Sin regresar a bordo",
       "markNotBackAboard": "Marcar sin regresar a bordo",
-      "notBackAboardDescription": "Tras una inmersión, «sin regresar a bordo» significa que este buceador no ha vuelto al barco. Mantiene el recuento abierto; nunca lo cierra.",
+      "notBackAboardDescription": "Tras una inmersión, “sin regresar a bordo” significa que este buceador no ha vuelto al barco. Mantiene el recuento abierto; nunca lo cierra.",
       "saving": "Guardando…",
       "tapToUndo": "Toca de nuevo el estado ✓ para deshacer.",
-      "tapToUndoNotBackAboard": "Toca de nuevo «Sin regresar a bordo» para deshacer."
+      "tapToUndoNotBackAboard": "Toca de nuevo “Sin regresar a bordo” para deshacer."
     },
     "offlineManifestManager": {
       "checkingDevice": "Comprobando este dispositivo…",
@@ -1797,7 +1804,7 @@
         "disconnected": "Cuenta de Stripe desconectada.",
         "refreshed": "Estado de pagos actualizado desde Stripe.",
         "notAuthorized": "El catálogo de alquiler, los precios de alquiler y la conexión con Stripe son ajustes de pago, limitados a propietarios y gerentes.",
-        "currencySaved": "Moneda guardada. Los precios existentes conservan sus cifras — comprueba que tu lista de precios siga siendo correcta.",
+        "currencySaved": "Moneda guardada. Los precios existentes conservan sus cifras — revisa que tu lista de precios siga siendo correcta.",
         "currencyInvalid": "Elige una moneda de la lista.",
         "timezoneSaved": "Zona horaria guardada.",
         "timezoneInvalid": "No reconocemos esa zona horaria: elige una de la lista."
@@ -1922,7 +1929,7 @@
         "heading": "Precios de alquiler",
         "description": "Lo que se cotiza a un buceador por su equipo de alquiler. Pon precio al equipo completo (normalmente más barato) y a cada pieza por separado — cinco artículos cotiza el equipo completo, menos paga por pieza. Deja un campo en blanco para resolverlo en el mostrador.",
         "fullSetLabel": "Equipo completo",
-        "fullSetHint": "(BCD, regulador, traje, máscara y aletas, lastre, ordenador de buceo)",
+        "fullSetHint": "(BCD, regulador, traje, máscara y aletas, lastre, computadora de buceo)",
         "nitroxLabel": "Nitrox",
         "nitroxHint": "(por inmersión)",
         "submit": "Guardar precios de alquiler",
@@ -1970,7 +1977,7 @@
         "emailCta": "Escribir a {email}"
       },
       "groups": {
-        "yourShop": "Tu tienda",
+        "yourShop": "Tu centro",
         "money": "Dinero",
         "dataIntegrations": "Datos e integraciones"
       },
@@ -1985,7 +1992,7 @@
       },
       "whatsapp": {
         "heading": "WhatsApp",
-        "description": "Envía recordatorios y resúmenes desde el número de WhatsApp de tu tienda en lugar de un número SMS de la plataforma.",
+        "description": "Envía recordatorios y resúmenes desde el número de WhatsApp de tu centro en lugar de un número SMS de la plataforma.",
         "cta": "Configurar WhatsApp"
       },
       "jump": {
@@ -1998,7 +2005,7 @@
       },
       "promos": {
         "heading": "Códigos promocionales",
-        "description": "Códigos de descuento para toda la tienda que el buceador escribe al pagar, cada uno con sus fechas y límites.",
+        "description": "Códigos de descuento para todo el centro que el buceador escribe al pagar, cada uno con sus fechas y límites.",
         "cta": "Gestionar códigos promocionales"
       }
     },
@@ -2019,6 +2026,7 @@
         "rolesInvalid": "Marca al menos un rol antes de guardar.",
         "inviteAlreadyOnTeam": "Esa persona ya tiene una cuenta aquí.",
         "inviteEmailTaken": "Ese correo ya está registrado en otro centro.",
+        "inviteEmailReserved": "Esa dirección de correo está reservada y no puede recibir mensajes. Invita a esta persona en una dirección que pueda leer.",
         "lastOwner": "No se puede hacer eso — el centro necesita al menos un propietario. Convierte a otra persona en propietario primero.",
         "notFound": "Esa persona no está en el equipo de este centro.",
         "notAuthorized": "La gestión del equipo está limitada a propietarios y gerentes."
@@ -2162,7 +2170,7 @@
         "intro": "Un CSV de tu antiguo sistema, o el propio <mono>contacts.csv</mono> de DiveDay. Un correo coincidente actualiza a ese buceador al reimportar; sin uno, siempre es un registro nuevo. No se escribe nada hasta que revisas la vista previa y confirmas.",
         "chooseFile": "Elegir archivo CSV",
         "chooseDifferentFile": "Elegir otro archivo",
-        "columnTitle": "Columna «{header}»",
+        "columnTitle": "Columna “{header}”",
         "fieldLabels": {
           "first_name": "Nombre",
           "last_name": "Apellido",
@@ -2197,10 +2205,10 @@
           "visit_amount": "Importe de la visita anterior",
           "visit_reference": "Referencia de reserva"
         },
-        "ignoredMedicalColumns": "Dejadas fuera a propósito: {columns}. No se reconocieron como columna de waiver, así que su contenido nunca se importa. En su lugar se confía en una columna «waiver aceptado» reconocida; ver más abajo.",
+        "ignoredMedicalColumns": "Dejadas fuera a propósito: {columns}. No se reconocieron como columna de waiver, así que su contenido nunca se importa. En su lugar se confía en una columna “waiver aceptado” reconocida; ver más abajo.",
         "unmappedColumns": "No reconocidas, así que se ignoran: {columns}.",
-        "waiverRowsNotice": "{count, plural, one {# fila declara} other {# filas declaran}} un waiver ya aceptado en un centro anterior. DiveDay confía en eso — incluida su exención médica — y marca el registro como «importado» para que nunca se confunda con una firma hecha aquí. Ver «Qué se importa» arriba.",
-        "visitRowsNotice": "{count, plural, one {# fila registra} other {# filas registran}} una visita anterior. Consulta «Qué se importa» arriba para ver qué significa eso y qué no.",
+        "waiverRowsNotice": "{count, plural, one {# fila declara} other {# filas declaran}} un waiver ya aceptado en un centro anterior. DiveDay confía en eso — incluida su exención médica — y marca el registro como “importado” para que nunca se confunda con una firma hecha aquí. Ver “Qué se importa” arriba.",
+        "visitRowsNotice": "{count, plural, one {# fila registra} other {# filas registran}} una visita anterior. Consulta “Qué se importa” arriba para ver qué significa eso y qué no.",
         "stats": {
           "diversInFile": "Buceadores en el archivo",
           "extraCardRows": "Filas de tarjetas extra",
@@ -2240,7 +2248,7 @@
           "rowsSkippedNote": " {count} fila(s) omitidas.",
           "cardsHeldByAnother": "{count} número(s) de tarjeta del archivo ya están en otro buceador de tu centro, así que esas tarjetas no se añadieron a nadie. Revisa el archivo por si hay un número repetido, y luego introduce esas tarjetas a mano.",
           "specialtyGateNote": "Una inmersión que requiere una de esas especialidades espera esa confirmación — tócala en el registro del buceador y la puerta se abre.",
-          "waiversLine": "{count, plural, one {# waiver} other {# waivers}} importados como aceptados, marcados «importado» en el perfil del buceador.",
+          "waiversLine": "{count, plural, one {# waiver} other {# waivers}} importados como aceptados, marcados “importado” en el perfil del buceador.",
           "waiversSkippedExistingNote": " {count} buceador(es) ya tenían un waiver vigente en el archivo, se dejaron sin tocar.",
           "waiversSkippedNoTemplateNote": " {count} omitidos — configura primero una plantilla de waiver.",
           "waiverDocumentsFailedNote": " {count} enlace(s) de documento no se pudieron descargar y se dejaron fuera del registro.",
@@ -2250,27 +2258,27 @@
         }
       },
       "issues": {
-        "emailInvalid": "El correo «{email}» no parece válido — importado sin correo.",
-        "expiryUnreadable": "La fecha de vencimiento «{value}» no se puede leer como fecha — la tarjeta se importa para revisión del personal en lugar de como verificada, para que nadie embarque con una fecha que hemos adivinado.",
-        "expiryAssumedMonthFirst": "La fecha de vencimiento «{value}» se leyó como {parsed} (mes primero). Revísala si tu archivo escribe el día primero.",
-        "cardMarkedUnverified": "Tu archivo marca esta tarjeta como «{status}» — importada para revisión del personal en lugar de como verificada, ya que tus propios registros no la dan por comprobada.",
-        "specialtyNotGated": "La especialidad «{specialty}» no es una especialidad que controlemos (profunda, naufragios, nocturna, traje seco) — no se importó nada para ella.",
-        "specialtyNoCardNumber": "La especialidad «{specialty}» no tiene número de tarjeta en la fila — no se importó. Una tarjeta sin número no se puede verificar.",
+        "emailInvalid": "El correo “{email}” no parece válido — importado sin correo.",
+        "expiryUnreadable": "La fecha de vencimiento “{value}” no se puede leer como fecha — la tarjeta se importa para revisión del personal en lugar de como verificada, para que nadie embarque con una fecha que hemos adivinado.",
+        "expiryAssumedMonthFirst": "La fecha de vencimiento “{value}” se leyó como {parsed} (mes primero). Revísala si tu archivo escribe el día primero.",
+        "cardMarkedUnverified": "Tu archivo marca esta tarjeta como “{status}” — importada para revisión del personal en lugar de como verificada, ya que tus propios registros no la dan por revisada.",
+        "specialtyNotGated": "La especialidad “{specialty}” no es una especialidad que controlemos (profunda, naufragios, nocturna, traje seco) — no se importó nada para ella.",
+        "specialtyNoCardNumber": "La especialidad “{specialty}” no tiene número de tarjeta en la fila — no se importó. Una tarjeta sin número no se puede verificar.",
         "specialtyImportedVerified": "{count, plural, one {Tarjeta de especialidad importada} other {# tarjetas de especialidad importadas}} como verificadas desde tus registros — marcadas como importadas. Una inmersión que la requiera espera hasta que el personal confirme que ha visto la tarjeta.",
         "specialtyImportedPending": "{count, plural, one {Tarjeta de especialidad importada} other {# tarjetas de especialidad importadas}} para revisión del personal — ver la nota anterior.",
-        "agencyUnrecognized": "Agencia de certificación no reconocida — importada como «otra».",
-        "levelNamesSpecialty": "La certificación «{level}» nombra una especialidad, no un nivel, y se usó la columna de especialidad de esta fila en su lugar — no se importó ninguna tarjeta de nivel. Añade esa tarjeta a mano si es una tarjeta aparte.",
-        "levelIsTechnical": "La certificación «{level}» es una calificación técnica o de entorno cerrado, no un peldaño de la escala recreativa — no se importó, y nunca se lee como un nivel cercano. DiveDay no controla estas; regístrala a mano si tu centro lo hace.",
-        "levelNotGated": "La certificación «{level}» no es un nivel que controlemos — tarjeta no importada. Añádela a mano si es una tarjeta real.",
-        "levelNoCardNumber": "El nivel de certificación «{level}» no tiene un número de tarjeta utilizable — tarjeta no importada. Una tarjeta sin número no se puede verificar.",
+        "agencyUnrecognized": "Agencia de certificación no reconocida — importada como “otra”.",
+        "levelNamesSpecialty": "La certificación “{level}” nombra una especialidad, no un nivel, y se usó la columna de especialidad de esta fila en su lugar — no se importó ninguna tarjeta de nivel. Añade esa tarjeta a mano si es una tarjeta aparte.",
+        "levelIsTechnical": "La certificación “{level}” es una calificación técnica o de entorno cerrado, no un peldaño de la escala recreativa — no se importó, y nunca se lee como un nivel cercano. DiveDay no controla estas; regístrala a mano si tu centro lo hace.",
+        "levelNotGated": "La certificación “{level}” no es un nivel que controlemos — tarjeta no importada. Añádela a mano si es una tarjeta real.",
+        "levelNoCardNumber": "El nivel de certificación “{level}” no tiene un número de tarjeta utilizable — tarjeta no importada. Una tarjeta sin número no se puede verificar.",
         "certImportedVerified": "Tarjeta importada como verificada desde tus registros — marcada como importada, con una confirmación de un toque para el personal.",
         "certImportedPending": "Tarjeta importada para revisión del personal — ver la nota anterior.",
         "nitroxImported": "Tarjeta de nitrox importada como verificada desde tus registros — marcada como importada. Los rellenos dan aire normal hasta que el personal confirme.",
         "nitroxNoCardNumber": "Nitrox marcado en el origen sin número de tarjeta — añade y verifica una tarjeta de nitrox en DiveDay.",
-        "waiverDateInvalid": "La fecha de aceptación del waiver «{value}» no es una fecha de calendario real (se espera AAAA-MM-DD) — se importó fechada hoy en su lugar.",
-        "waiverImported": "Waiver importado como aceptado — confiado desde el centro anterior, incluyendo la autorización médica, y marcado «importado» para que nunca se confunda con un waiver firmado en DiveDay.",
-        "dobInvalid": "La fecha de nacimiento «{value}» no es una fecha de calendario plausible (se espera AAAA-MM-DD, 1900 o posterior, no en el futuro) — importada sin ella.",
-        "visitDateUnreadable": "La fecha de visita «{value}» no es una fecha que podamos leer — el buceador se importa sin esta visita.",
+        "waiverDateInvalid": "La fecha de aceptación del waiver “{value}” no es una fecha de calendario real (se espera AAAA-MM-DD) — se importó fechada hoy en su lugar.",
+        "waiverImported": "Waiver importado como aceptado — confiado desde el centro anterior, incluyendo la autorización médica, y marcado “importado” para que nunca se confunda con un waiver firmado en DiveDay.",
+        "dobInvalid": "La fecha de nacimiento “{value}” no es una fecha de calendario plausible (se espera AAAA-MM-DD, 1900 o posterior, no en el futuro) — importada sin ella.",
+        "visitDateUnreadable": "La fecha de visita “{value}” no es una fecha que podamos leer — el buceador se importa sin esta visita.",
         "visitNoReference": "Visita importada sin referencia de reserva — una reimportación la relaciona por fecha, nombre e importe, así que dos reservas idénticas en un mismo día llegan como una sola visita.",
         "visitNoDate": "Esta fila nombra una reserva anterior pero no lleva fecha — el buceador se importa sin esta visita.",
         "noName": "Sin nombre — fila omitida.",
@@ -2285,8 +2293,8 @@
         "fileEmpty": "El archivo está vacío.",
         "tooManyColumns": "Demasiadas columnas ({count}) — el límite es {limit}.",
         "tooManyRows": "Demasiadas filas ({count}) — el límite es {limit} por importación. Divide el archivo e impórtalo en lotes.",
-        "cellTooLongHeader": "Una celda de la fila de encabezado tiene más de {limit} caracteres — comprueba que no sea un documento pegado en vez de una hoja de cálculo.",
-        "cellTooLongRow": "Una celda de la fila {row} tiene más de {limit} caracteres — comprueba que no sea un documento pegado en vez de una hoja de cálculo.",
+        "cellTooLongHeader": "Una celda de la fila de encabezado tiene más de {limit} caracteres — revisa que no sea un documento pegado en vez de una hoja de cálculo.",
+        "cellTooLongRow": "Una celda de la fila {row} tiene más de {limit} caracteres — revisa que no sea un documento pegado en vez de una hoja de cálculo.",
         "noNameColumn": "No se encontró columna de nombre. El archivo necesita un nombre completo, o nombre y apellido, para importar personas."
       }
     },
@@ -2341,7 +2349,7 @@
     "description": "Escanea un código de reserva o busca a un buceador, confirma su preparación en tiempo real y mantén la fila en movimiento. El check-in es el estado de llegada; el embarque se confirma aparte en el manifiesto.",
     "queueAriaLabel": "Cola de check-in",
     "readyHeading": "Listos en el mostrador",
-    "searchResultsFor": "Resultados de búsqueda para «{query}».",
+    "searchResultsFor": "Resultados de búsqueda para “{query}”.",
     "todaysDepartures": "Las salidas de hoy y el próximo barco.",
     "diverCount": "{count, plural, one {# buceador} other {# buceadores}}",
     "emptyTitle": "Nadie coincide con ese escaneo",
@@ -2395,7 +2403,7 @@
       "findPlaceholder": "Empieza a escribir un nombre…",
       "search": "Buscar",
       "searching": "Buscando…",
-      "noMatches": "Sin coincidencias para «{query}» en los registros de la tienda.",
+      "noMatches": "Sin coincidencias para “{query}” en los registros del centro.",
       "noEmailOnFile": "Sin correo registrado",
       "addToBoat": "Añadir al barco",
       "addPersonAriaLabel": "Añadir a {name} a este barco",
@@ -2456,8 +2464,8 @@
   },
   "shopHome": {
     "createdNotice": {
-      "single": "«{title}» ya está en el calendario. 🤙",
-      "series": "«{title}» ya está en el calendario — {count, plural, one {# salida programada} other {# salidas programadas}}. 🤙"
+      "single": "“{title}” ya está en el calendario. 🤙",
+      "series": "“{title}” ya está en el calendario — {count, plural, one {# salida programada} other {# salidas programadas}}. 🤙"
     },
     "demoReset": "Datos de demostración reiniciados — barco nuevo, pizarra limpia. 🤿",
     "emailResent": "Correo de confirmación reenviado.",
@@ -2479,13 +2487,13 @@
       "dismiss": "Entendido",
       "roles": {
         "owner": {
-          "title": "Estás al mando de toda la tienda",
+          "title": "Estás al mando de todo el centro",
           "desc": "Hoy es tu cola de trabajo — reservas, bloqueos y las salidas de hoy en un solo lugar.",
           "tryThis": "Abre Tablero para ver las salidas de esta semana."
         },
         "manager": {
-          "title": "Manteniendo la tienda en marcha día a día",
-          "desc": "Hoy muestra lo que necesita atención primero; el resto de la administración de la tienda está en Más, en el menú.",
+          "title": "Manteniendo el centro en marcha día a día",
+          "desc": "Hoy muestra lo que necesita atención primero; el resto de la administración del centro está en Más, en el menú.",
           "tryThis": "Revisa Reseñas para ver los comentarios pendientes."
         },
         "instructor": {
@@ -2511,7 +2519,7 @@
       }
     },
     "firstRun": {
-      "heading": "Prepara tu tienda",
+      "heading": "Prepara tu centro",
       "subtitle": "Cinco pasos y los buceadores podrán empezar a reservar.",
       "contactTitle": "Añade tus datos de contacto",
       "contactBody": "Teléfono y correo para que los buceadores — y DiveDay — puedan contactarte.",
@@ -2568,7 +2576,7 @@
       "reasonFailedOther": "No se pudo entregar el correo a {count}",
       "reasonTestRecipientOne": "Esta dirección de prueba no puede recibir correo",
       "reasonTestRecipientOther": "{count} direcciones de prueba no pueden recibir correo",
-      "reasonUnconfigured": "Esta tienda aún no tiene un proveedor de correo configurado",
+      "reasonUnconfigured": "Este centro aún no tiene un proveedor de correo configurado",
       "sharePrivateLinkOne": "este enlace privado",
       "sharePrivateLinkOther": "estos enlaces privados",
       "sent": "Exención enviada a {names}.",
@@ -2642,14 +2650,21 @@
     },
     "keyboardShortcuts": {
       "buttonAriaLabel": "Atajos de teclado",
-      "buttonTitle": "Atajos de teclado (pulsa ?)",
+      "buttonTitle": "Atajos de teclado (presiona ?)",
       "dialogAriaLabel": "Atajos de teclado",
       "closeAriaLabel": "Cerrar",
       "heading": "Atajos de teclado",
       "paletteLabel": "Buscar buceadores, salidas y páginas",
       "helpLabel": "Mostrar esta ayuda",
-      "sequenceHint": "Pulsa las teclas una tras otra para una secuencia — por ejemplo, <kbdG>G</kbdG> y luego <kbdS>S</kbdS> para el tablero.",
+      "sequenceHint": "Presiona las teclas una tras otra para una secuencia — por ejemplo, <kbdG>G</kbdG> y luego <kbdS>S</kbdS> para el tablero.",
       "goToLabel": "Ir a {page}"
+    },
+    "tripAdmission": {
+      "level": "Esta salida exige {level}. La titulación más alta registrada de este buceador es {held}. Si tiene una tarjeta de {level}, añádela a su ficha; si no, resérvale una salida acorde a su nivel o el curso de {level}.",
+      "levelNoCard": "Esta salida exige {level} y nada en la ficha de este buceador llega a ese nivel. Añade su tarjeta de {level} si la tiene; si no, resérvale una salida acorde a su nivel o el curso de {level}.",
+      "cards": "{count, plural, one {Esta salida exige una tarjeta de {list}. No hay ninguna en la ficha de este buceador.} other {Esta salida exige tarjetas de {list}. No hay ninguna de ellas en la ficha de este buceador.}}",
+      "nitrox": "Nitrox",
+      "generic": "Las titulaciones registradas de este buceador no alcanzan lo que exigen esta salida y sus puntos de inmersión."
     },
     "readiness": {
       "certificationLevels": {
@@ -2689,7 +2704,7 @@
         "underMinimumAge": "Por debajo de la edad mínima del curso: {age} en la fecha del curso, y se requieren {minimumAge}. Verifica la fecha de nacimiento registrada antes de embarcar.",
         "paymentDue": "Hay un pago pendiente para esta salida.",
         "paymentRefunded": "El pago fue reembolsado; cobra antes de embarcar.",
-        "readinessUnavailable": "La información de preparación no está disponible. No embarques a este buceador hasta comprobarlo."
+        "readinessUnavailable": "La información de preparación no está disponible. No embarques a este buceador hasta verificarlo."
       }
     },
     "shopNav": {
@@ -2703,7 +2718,7 @@
       "badgeReviews": "{count, plural, one {# reseña pendiente} other {# reseñas pendientes}}",
       "primaryNavAriaLabel": "Principal",
       "more": "Más",
-      "groupDaily": "Llevar la tienda",
+      "groupDaily": "Llevar el centro",
       "groupSetup": "Configurar",
       "today": "Hoy",
       "checkIn": "Registro",
@@ -2730,11 +2745,11 @@
     "waterLocker": {
       "rainAlt": "Lluvia",
       "heading": "Pantalla bloqueada — se detectó agua",
-      "body": "Estamos ignorando toques aleatorios provocados por el agua en la pantalla. Mantén pulsado para desbloquear en cuanto esté seca.",
+      "body": "Estamos ignorando toques aleatorios provocados por el agua en la pantalla. Mantén presionado para desbloquear en cuanto esté seca.",
       "holdLine1": "MANTÉN",
       "holdLine2": "2s",
       "unlockingProgress": "Desbloqueando... {percent}%",
-      "holdToUnlock": "Mantén pulsado el botón para desbloquear",
+      "holdToUnlock": "Mantén presionado el botón para desbloquear",
       "disableToggleLabel": "Desactivar la protección contra salpicaduras en este dispositivo"
     },
     "undoToast": {
@@ -2753,7 +2768,7 @@
         "assignedCrewHeading": "Tripulación asignada",
         "assignCrewOption": "Asignar tripulante…",
         "assignCrewLabel": "Asignar tripulante",
-        "assignFailed": "No se ha guardado — comprueba tu conexión o inténtalo de nuevo.",
+        "assignFailed": "No se ha guardado — verifica tu conexión o inténtalo de nuevo.",
         "unassignAria": "Quitar a {name}",
         "noCrewAssigned": "Todavía no hay tripulación asignada.",
         "countBoarded": "Embarcados",
@@ -2763,7 +2778,7 @@
         "everyoneAboard": "Todos a bordo.",
         "clearToBoard": "Todos los de esta salida están listos para embarcar.",
         "sailingToday": "Sale hoy",
-        "sailingTodaySubtitle": "Registra a los buceadores en el mostrador o haz el pase de lista desde el manifiesto — la disponibilidad se vuelve a comprobar en el momento de embarcar a cada persona.",
+        "sailingTodaySubtitle": "Registra a los buceadores en el mostrador o haz el pase de lista desde el manifiesto — la disponibilidad se vuelve a verificar en el momento de embarcar a cada persona.",
         "dragStaffLabel": "O arrastra un nombre hasta un barco:"
       },
       "todayQueue": {
@@ -2794,7 +2809,7 @@
         "invoiceResent": "Factura reenviada.",
         "errors": {
           "notFound": "No se encontró ese pedido — abre la salida para revisarlo.",
-          "notOpen": "Este pedido ya no está abierto — abre la salida para comprobar su estado.",
+          "notOpen": "Este pedido ya no está abierto — abre la salida para verificar su estado.",
           "notConfigured": "Los pagos todavía no están conectados para este centro.",
           "failed": "Sigue sin poder reenviarse — abre la salida para revisar el pedido."
         }
@@ -2856,7 +2871,7 @@
         "addNitroxCard": "Añadir tarjeta de nitrox",
         "verifyNitroxCard": "Verificar tarjeta de nitrox",
         "takePayment": "Cobrar pago",
-        "checkReadiness": "Comprobar disponibilidad"
+        "checkReadiness": "Verificar disponibilidad"
       },
       "blockerGroup": {
         "setRequirements": "Configurar requisitos",
@@ -2876,7 +2891,7 @@
         "reviewNitroxCards": "Revisar tarjetas de nitrox",
         "verifyNitroxCards": "Verificar tarjetas de nitrox",
         "takePayments": "Cobrar pagos",
-        "checkReadiness": "Comprobar disponibilidad"
+        "checkReadiness": "Verificar disponibilidad"
       },
       "pointingLabel": {
         "trip": "Ver lista",
@@ -2947,7 +2962,7 @@
       },
       "seasonalBriefing": {
         "summer": "Aprovecha el intervalo de superficie — busca sombra{hasShop, select, true { en {shopName}} other {}}, bebe agua y nos vemos en el próximo barco.",
-        "autumn": "Aprovecha el intervalo de superficie — coge una toalla calentita{hasShop, select, true { en {shopName}} other {}}, revisa la brisa y nos vemos en el próximo barco.",
+        "autumn": "Aprovecha el intervalo de superficie — toma una toalla calentita{hasShop, select, true { en {shopName}} other {}}, revisa la brisa y nos vemos en el próximo barco.",
         "winter": "Aprovecha el intervalo de superficie — abrígate con un chubasquero seco{hasShop, select, true { en {shopName}} other {}} y nos vemos en el próximo barco.",
         "spring": "Aprovecha el intervalo de superficie — disfruta del sol{hasShop, select, true { en {shopName}} other {}}, revisa tu equipo y nos vemos en el próximo barco."
       },
@@ -3031,7 +3046,7 @@
         "skipLink": "Ir directo al pase de lista sin conexión",
         "savedAt": "Guardado {when}",
         "expiredBanner": "Esta copia guardada ha caducado y no se puede usar para embarcar buceadores. Cualquier cambio que siga esperando para enviarse abajo seguirá intentándolo, pero el nuevo pase de lista debe registrarse en el manifiesto en vivo.",
-        "freshnessBanner": "{freshnessNote}. La disponibilidad refleja ese momento — lo comprobamos todo de nuevo en cuanto tengas señal.",
+        "freshnessBanner": "{freshnessNote}. La disponibilidad refleja ese momento — lo verificamos todo de nuevo en cuanto tengas señal.",
         "pendingRejectedCounts": "{pending} esperando para enviarse · {rejected} necesitan revisión",
         "checkpointNavAria": "Punto del pase de lista",
         "statsDivers": "Buceadores",
@@ -3130,11 +3145,11 @@
   "whatsapp": {
     "eyebrow": "Ajustes",
     "title": "WhatsApp",
-    "description": "Envía recordatorios y resúmenes de salidas desde el número de WhatsApp de tu tienda, para que los buceadores reconozcan quién les escribe. Sin esto, esos mensajes de cortesía salen por SMS desde un número de la plataforma.",
+    "description": "Envía recordatorios y resúmenes de salidas desde el número de WhatsApp de tu centro, para que los buceadores reconozcan quién les escribe. Sin esto, esos mensajes de cortesía salen por SMS desde un número de la plataforma.",
     "status": {
       "connectedHeading": "WhatsApp conectado",
       "notConnectedHeading": "No hay número de WhatsApp conectado",
-      "notConnectedDescription": "Los recordatorios y resúmenes de cortesía salen por SMS. Conecta tu número de WhatsApp Business abajo para enviarlos desde tu tienda.",
+      "notConnectedDescription": "Los recordatorios y resúmenes de cortesía salen por SMS. Conecta tu número de WhatsApp Business abajo para enviarlos desde tu centro.",
       "verified": "Mensaje de prueba entregado",
       "untested": "Sin probar todavía",
       "number": "Número emisor",
@@ -3144,7 +3159,7 @@
     "setup": {
       "heading": "Cómo funciona la conexión",
       "description": "No tendrás que crear nada en las herramientas de Meta ni copiar ninguna clave. Todo ocurre en la ventana de Meta y DiveDay se encarga del resto.",
-      "step1": "Pulsa Conectar. Meta abre su propia ventana, donde inicias sesión con la cuenta de Facebook que gestiona tu tienda.",
+      "step1": "Presiona Conectar. Meta abre su propia ventana, donde inicias sesión con la cuenta de Facebook que gestiona tu centro.",
       "step2": "Elige el número de teléfono desde el que quieres que los buceadores reciban los mensajes, o añade uno nuevo, y acepta las condiciones de Meta.",
       "step3": "Ya está. DiveDay registra el número y envía tu plantilla de mensaje a revisión en tu nombre."
     },
@@ -3166,17 +3181,17 @@
       "connected": "WhatsApp conectado. Envía un mensaje de prueba para confirmar que funciona.",
       "disconnected": "WhatsApp desconectado. Los mensajes de cortesía saldrán por SMS.",
       "tested": "Mensaje de prueba entregado. Tu conexión de WhatsApp funciona.",
-      "test_failed": "WhatsApp rechazó el mensaje de prueba. Comprueba que tu token siga siendo válido y que tu plantilla esté aprobada en el idioma indicado arriba.",
+      "test_failed": "WhatsApp rechazó el mensaje de prueba. Revisa que tu token siga siendo válido y que tu plantilla esté aprobada en el idioma indicado arriba.",
       "invalid": "Revisa los datos e inténtalo de nuevo.",
       "not_authorized": "Solo un propietario o gerente puede cambiar los ajustes de WhatsApp.",
       "no_account": "Todavía no hay ningún número de WhatsApp conectado.",
       "encryption_key_unset": "Esta instancia de DiveDay aún no está preparada para guardar credenciales de forma segura, así que no se guardó nada.",
       "encryption_key_invalid": "La clave de cifrado de esta instancia de DiveDay está mal configurada, así que no se guardó nada.",
       "signup_unavailable": "La conexión con WhatsApp aún no está activada en esta instancia de DiveDay.",
-      "signup_failed_exchange": "Meta no aceptó la conexión. Pulsa Conectar para empezar de nuevo: el enlace del intento anterior solo se puede usar una vez.",
+      "signup_failed_exchange": "Meta no aceptó la conexión. Presiona Conectar para empezar de nuevo: el enlace del intento anterior solo se puede usar una vez.",
       "signup_failed_register": "Meta no pudo activar ese número para enviar mensajes. Puede que ya se esté usando en la app de WhatsApp; elimínalo allí primero e inténtalo de nuevo.",
-      "signup_failed_subscribe": "Tu número se conectó, pero DiveDay no pudo suscribirse a sus actualizaciones de entrega. Pulsa Conectar para intentarlo de nuevo.",
-      "signup_failed_template": "Tu número se conectó, pero no se pudo enviar la plantilla de mensaje a revisión. Pulsa Conectar para intentarlo de nuevo."
+      "signup_failed_subscribe": "Tu número se conectó, pero DiveDay no pudo suscribirse a sus actualizaciones de entrega. Presiona Conectar para intentarlo de nuevo.",
+      "signup_failed_template": "Tu número se conectó, pero no se pudo enviar la plantilla de mensaje a revisión. Presiona Conectar para intentarlo de nuevo."
     },
     "comingSoon": {
       "heading": "Próximamente",
@@ -3186,8 +3201,8 @@
       "connect": "Conectar WhatsApp",
       "reconnect": "Reconectar WhatsApp",
       "connecting": "Conectando…",
-      "cancelled": "Conexión cancelada; no se cambió nada. Pulsa Conectar para intentarlo de nuevo.",
-      "blocked": "No se pudo abrir la ventana de Meta. Comprueba que tu navegador no bloquee las ventanas emergentes e inténtalo de nuevo."
+      "cancelled": "Conexión cancelada; no se cambió nada. Presiona Conectar para intentarlo de nuevo.",
+      "blocked": "No se pudo abrir la ventana de Meta. Revisa que tu navegador no bloquee las ventanas emergentes e inténtalo de nuevo."
     }
   },
   "bookings": {
@@ -3208,7 +3223,7 @@
       "findPlaceholder": "Empieza a escribir un nombre…",
       "search": "Buscar",
       "searching": "Buscando…",
-      "noMatches": "Sin coincidencias para «{query}» en los registros de la tienda.",
+      "noMatches": "Sin coincidencias para “{query}” en los registros del centro.",
       "noEmailOnFile": "Sin correo registrado",
       "addToTrip": "Añadir a la salida",
       "addPersonAriaLabel": "Añadir a {name} a esta salida",

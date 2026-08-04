@@ -38,6 +38,7 @@ const EXPECTED_FILES = [
   "waitlist_entries.csv",
   "last_minute_list.csv",
   "trip_last_minute_promos.csv",
+  "booking_payment_events.csv",
   "roll_call_events.csv",
   "roll_call_crew_attestations.csv",
   "roll_call_crew_events.csv",
@@ -74,6 +75,7 @@ const EXPORTED_TABLES = [
   "trip_assignments",
   "staff_shifts",
   "bookings",
+  "booking_payment_events",
   "trip_waitlist_entries",
   "last_minute_list_entries",
   "trip_last_minute_promos",
@@ -199,6 +201,9 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "draft_acknowledged",
     "draft_medical_answers",
   ],
+  // `created_at` is when DiveDay wrote the row; `occurred_at` is when the
+  // money actually moved, and that is the one a reader replays.
+  booking_payment_events: ["shop_id", "created_at"],
   rental_fit_profiles: ["shop_id"],
   prior_visits: [
     "shop_id",

@@ -14,8 +14,11 @@ import { formatMoneyCents } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { publicCoursePath, publicCoursePathsPath, publicCoursesPath } from "@/lib/public-routes";
 
-// TODO: Cache Components adoption. Refactor this route so this opt-out can be removed.
-// See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
+// Not a TODO. The shop layout above already permits this route's blocking
+// prerender (`isPageAllowedToBlock` reads only the outermost `instant`), so what
+// this line still buys is keeping the page segment out of dev-time instant
+// validation — which nothing above a page segment can do.
+// See ADR 20260803-instant-opt-out-placement.
 export const instant = false;
 
 /** Per-shop title, description, and canonical URL for the public catalog. */

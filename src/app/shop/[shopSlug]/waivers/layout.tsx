@@ -4,8 +4,9 @@ import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { WaiversSubNav, type WaiversSubNavCopy } from "./_components/WaiversSubNav";
 
-// TODO: Cache Components adoption. Refactor this route so this opt-out can be removed.
-// See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
+// Restored alongside `trips/[id]/layout.tsx` — same reasoning, same commit.
+// Not implicated by any failing spec, but it was removed on the same argument,
+// so it goes back on the same evidence. See ADR 20260803-instant-opt-out-placement.
 export const instant = false;
 
 /**

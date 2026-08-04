@@ -23,8 +23,11 @@ import {
 } from "./actions";
 import { EmbeddedSignupButton } from "./EmbeddedSignupButton";
 
-// TODO: Cache Components adoption. Refactor this route so this opt-out can be removed.
-// See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
+// Not a TODO. The shop layout above already permits this route's blocking
+// prerender (`isPageAllowedToBlock` reads only the outermost `instant`), so what
+// this line still buys is keeping the page segment out of dev-time instant
+// validation — which nothing above a page segment can do.
+// See ADR 20260803-instant-opt-out-placement.
 export const instant = false;
 
 /** Static metadata resolves before locale negotiation, so it stays English (ADR 20260729-diver-copy-localization). */

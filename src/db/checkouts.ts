@@ -623,10 +623,71 @@ export async function markCheckoutPaidBySessionId(
         currency: checkout.currency,
         provider: "stripe",
         providerRef: checkout.stripeSessionId,
+        // What caused the transition, for the append-only money trail. A
+        // replayed delivery re-runs this cascade on purpose (self-healing), so
+        // the trail only appends when something actually changed — see
+        // `setBookingPayment` (ADR 20260803-booking-payment-events).
+        operation: "checkout_settled",
       });
     }
     return updated;
   });
+}
+
+/**
+ * Stripe reported this session's **delayed-notification payment failed**
+ * (`checkout.session.async_payment_failed`, PAY-L1). Without this handler the
+ * row sat `pending` forever: the session had already emitted
+ * `checkout.session.completed` with `payment_status: "unpaid"` (which
+ * deliberately settles nothing), the money then never arrived, and no later
+ * event ever moved it — a permanent desync that kept offering the diver a dead
+ * recovery link and kept the seat reading "awaiting payment" with nothing left
+ * to await.
+ *
+ * Releases the pending state the way a failed payment should: `pending →
+ * expired`, the existing terminal for "this local checkout is no longer
+ * payable", plus `asyncPaymentFailedAt` recording *why* it is terminal. A
+ * bank-debit-style payment that Stripe reports failed cannot be retried on the
+ * same session, so the honest local state is the same one a timed-out session
+ * gets; the timestamp is what keeps the two causes distinguishable without
+ * teaching every consumer of `checkout_status` a new value (ADR
+ * 20260803-async-payment-failed).
+ *
+ * **`booking_payments` is deliberately untouched.** An async payment that
+ * never settled wrote no payment row in the first place — `markCheckoutPaid…`
+ * is the only writer on this path and it never ran — so there is nothing to
+ * release there, and writing `unpaid` would be the one thing that *could*
+ * regress a booking a human had since marked paid or waived.
+ *
+ * Idempotent and state-machine-safe like its siblings, by the same mechanism
+ * `markCheckoutExpiredBySessionId` uses: the update matches only a `pending`
+ * row of the expected connected account, so a redelivery, a failure arriving
+ * after a completion (`completed`), or one arriving after a local
+ * disqualification (`expired`) all match nothing and return null. It can never
+ * demote a settled checkout.
+ */
+export async function markCheckoutPaymentFailedBySessionId(
+  db: AppDb,
+  stripeSessionId: string,
+  expectedAccountId?: string,
+): Promise<BookingCheckout | null> {
+  const [updated] = await db
+    .update(bookingCheckouts)
+    .set({ status: "expired", asyncPaymentFailedAt: nowDate() })
+    .where(
+      and(
+        eq(bookingCheckouts.stripeSessionId, stripeSessionId),
+        eq(bookingCheckouts.status, "pending"),
+        // Defense-in-depth account cross-check (security review finding) —
+        // see markCheckoutPaidBySessionId. A no-op condition when
+        // expectedAccountId is undefined.
+        expectedAccountId === undefined
+          ? undefined
+          : eq(bookingCheckouts.stripeAccountId, expectedAccountId),
+      ),
+    )
+    .returning();
+  return updated ?? null;
 }
 
 /** A Stripe-expired session can no longer be paid; pending → expired, payments untouched. */

@@ -17,6 +17,7 @@ import { requestLocale } from "@/i18n/request";
 import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
 import { guideSource, trialHref } from "@/lib/funnel";
 import { IMPORT_HONESTY_TABLE } from "@/lib/import";
+import { sharedLinkCard } from "@/lib/marketing";
 import {
   getMigrationGuide,
   IMPORT_SCOPE_ROW_KEYS,
@@ -51,10 +52,17 @@ export async function generateMetadata({
     description,
     alternates: { canonical: `/switching/${guide.slug}` },
     openGraph: {
+      ...sharedLinkCard,
       title,
       description,
       url: `/switching/${guide.slug}`,
     },
+    // `summary_large_image`: the OG block above names the shared link card
+    // (`sharedLinkCard` → `src/app/opengraph-image.tsx`) for every registered
+    // guide — docs/product/marketing.md, Twitter-card policy. Built from the
+    // same two strings as the OG block so a guide can never unfurl one story on
+    // one network and another elsewhere.
+    twitter: { card: "summary_large_image", title, description },
   };
 }
 

@@ -1,7 +1,8 @@
 import { randomBytes } from "node:crypto";
-import { hash } from "bcryptjs";
 import { and, eq, inArray, isNull, ne, sql } from "drizzle-orm";
 import { type Role, STAFF_ROLES } from "@/lib/authz";
+import { isDemoAccountEmail } from "@/lib/demo-identity";
+import { hashPassword } from "@/lib/password-hashing";
 import type { AppDb, DbExecutor } from "./client";
 import { people, personRoles, userAccounts } from "./schema";
 
@@ -126,7 +127,7 @@ async function isLastOwner(tx: DbExecutor, shopId: string, personId: string): Pr
 
 export type InviteStaffResult =
   | { ok: true; personId: string; userAccountId: string }
-  | { ok: false; reason: "already_on_team" | "email_registered_elsewhere" };
+  | { ok: false; reason: "already_on_team" | "email_registered_elsewhere" | "email_reserved" };
 
 /**
  * Invites a new staff member: reuses the shop's existing active person by
@@ -144,6 +145,17 @@ export async function inviteStaffMember(
   input: { shopId: string; fullName: string; email: string; roles: Role[] },
 ): Promise<InviteStaffResult> {
   const email = input.email.toLowerCase();
+
+  // The reserved demo namespace is not an address a real teammate can be
+  // invited at. ADR 20260803-demo-bypass-containment's third condition rests on
+  // "no real shop's account is in `*.demo.invalid`", and until now that held
+  // only because this function mails the invite and `.invalid` never
+  // resolves — an emergent property, not an enforced one. Enforced here, the
+  // last combination closes: a tenant whose `is_demo` is flipped can no longer
+  // already contain an account the demo password would open. Refused with a
+  // code; the caller picks the words.
+  if (isDemoAccountEmail(email)) return { ok: false, reason: "email_reserved" };
+
   let refusal: InviteStaffResult | null = null;
 
   try {
@@ -194,7 +206,7 @@ export async function inviteStaffMember(
       // Never given to anyone: the invitee chooses their real password when
       // they accept the invite, and until then this hash cannot match any
       // submitted password.
-      const hashedPassword = await hash(randomBytes(32).toString("hex"), 10);
+      const hashedPassword = await hashPassword(randomBytes(32).toString("hex"));
       const [account] = await tx
         .insert(userAccounts)
         .values({ personId, email, hashedPassword, status: "invited" })

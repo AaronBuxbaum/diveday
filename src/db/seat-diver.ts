@@ -1,4 +1,5 @@
 import { trackEvent } from "@/lib/analytics";
+import type { TripAdmissionRefusal } from "@/lib/trip-admission";
 import { type BookingOutcome, createBooking } from "./bookings";
 import type { AppDb } from "./client";
 import { recordTripActivity } from "./operations";
@@ -22,7 +23,7 @@ import { type IssueAndDeliverWaiverResult, issueWaiverOnJoin } from "./waiver-is
  * are explicit parameters, not a second implementation.
  */
 
-type BookingRefusal = Exclude<BookingOutcome, { ok: true }>["reason"];
+type BookingRefusalReason = Exclude<BookingOutcome, { ok: true }>["reason"];
 
 /**
  * Why a seating did not happen. Codes, never sentences — each surface maps
@@ -33,7 +34,7 @@ type BookingRefusal = Exclude<BookingOutcome, { ok: true }>["reason"];
  * `trip_unavailable` so a caller's notice map can still say something true:
  * the boat may be perfectly available and the *diver* is what does not fit.
  */
-export type SeatDiverRefusal = BookingRefusal | "unavailable";
+export type SeatDiverRefusal = BookingRefusalReason | "unavailable";
 
 /**
  * How the trip's activity trail describes the seating. Same event either way;
@@ -101,7 +102,27 @@ export type SeatDiverResult =
       personName: string;
       waiver: SeatDiverWaiver;
     }
-  | { ok: false; reason: SeatDiverRefusal };
+  | {
+      ok: false;
+      reason: SeatDiverRefusal;
+      /**
+       * The `trip_prerequisite` refusal's structured detail — which requirement
+       * failed and what the diver holds — carried through rather than dropped.
+       *
+       * It used to stop here: `createBooking` returned it, `seatDiver` kept only
+       * the code, and every staff surface rendered one static sentence that
+       * could not tell "their Deep card isn't on file" (add the card) from
+       * "they are not an Advanced diver" (no card to add — that's a course).
+       * The second reading is the dangerous one: it points a staffer at the
+       * certifications form as the way past a safety gate, and a hand-entered
+       * card clears admission on the very next attempt (H-24).
+       *
+       * Absent for every other refusal, and absent whenever a `coarse` surface
+       * collapsed this one — the counter's deliberately blunt vocabulary must
+       * not grow a specific reason through the back door.
+       */
+      refusal?: TripAdmissionRefusal;
+    };
 
 /**
  * The activity-feed phrasing. Stored trail text, composed the same place the
@@ -114,7 +135,7 @@ function activityAction(entry: SeatDiverEntry, personName: string): string {
     : `added ${personName} to the trip`;
 }
 
-function collapse(reason: BookingRefusal, detail: SeatDiverRefusalDetail): SeatDiverRefusal {
+function collapse(reason: BookingRefusalReason, detail: SeatDiverRefusalDetail): SeatDiverRefusal {
   if (detail === "specific") return reason;
   return reason === "trip_full" || reason === "already_booked" ? reason : "unavailable";
 }
@@ -155,7 +176,13 @@ export async function seatDiver(db: AppDb, input: SeatDiverInput): Promise<SeatD
   });
   if (!outcome.ok) {
     await trackEvent({ name: "booking_blocked", source: "staff", reason: outcome.reason });
-    return { ok: false, reason: collapse(outcome.reason, input.refusals) };
+    const reason = collapse(outcome.reason, input.refusals);
+    // Only when the collapse left the specific code standing: a `coarse`
+    // surface asked for one blunt answer, and detail attached to
+    // `unavailable` would contradict the sentence it renders.
+    return outcome.reason === "trip_prerequisite" && reason === "trip_prerequisite"
+      ? { ok: false, reason, refusal: outcome.refusal }
+      : { ok: false, reason };
   }
   await trackEvent({ name: "booking_completed", source: "staff", partySize: 1 });
 

@@ -11,6 +11,7 @@ import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { type DiverMessageKey, type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { eventSource } from "@/lib/funnel";
+import { sharedLinkCard } from "@/lib/marketing";
 import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH, type OnboardErrorCode } from "@/lib/onboarding";
 import {
   type CuratedTimeZone,
@@ -43,6 +44,7 @@ const ONBOARD_ERROR_MESSAGES: Record<
   | "invalid_input"
   | "shop_slug_taken"
   | "email_taken"
+  | "email_reserved"
   | "create_failed"
   | "signin_failed",
   (t: DiverTranslator, ctx: { shopSlug?: string }) => string
@@ -52,6 +54,9 @@ const ONBOARD_ERROR_MESSAGES: Record<
   shop_slug_taken: (t, ctx) =>
     t("account.onboard.errors.shopSlugTaken", { slug: ctx.shopSlug ?? "" }),
   email_taken: (t) => t("account.onboard.errors.emailTaken"),
+  // The reserved demo namespace (`*.demo.invalid`) — never routable, so never
+  // a real owner's address (ADR 20260803-demo-bypass-containment).
+  email_reserved: (t) => t("account.onboard.errors.emailReserved"),
   create_failed: (t) => t("account.onboard.errors.createFailed"),
   signin_failed: (t) => t("account.onboard.errors.signinFailed"),
   shop_name_required: (t) => t("account.onboard.errors.shopNameRequired"),
@@ -138,10 +143,20 @@ export const metadata: Metadata = {
   // funnel tag — one page, not nine.
   alternates: { canonical: "/onboard" },
   openGraph: {
+    ...sharedLinkCard,
     title: "Start a dive shop trial — DiveDay",
     description:
       "A few details and you're looking at your own working shop. No card, no setup fee.",
     url: "/onboard",
+  },
+  // `summary_large_image`: the OG block above names the shared link card
+  // (`sharedLinkCard` → `src/app/opengraph-image.tsx`), so the large card has an
+  // image to fill it — docs/product/marketing.md, Twitter-card policy.
+  twitter: {
+    card: "summary_large_image",
+    title: "Start a dive shop trial — DiveDay",
+    description:
+      "A few details and you're looking at your own working shop. No card, no setup fee.",
   },
 };
 

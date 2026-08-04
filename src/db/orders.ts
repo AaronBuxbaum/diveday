@@ -256,6 +256,7 @@ export async function createOrder(
         currency: created.currency,
         provider: "stripe",
         providerRef: created.stripeInvoiceId,
+        operation: "order_settled",
       });
     }
 
@@ -574,6 +575,7 @@ async function applyOrderUpdate(
         currency: updated.currency,
         provider: "stripe",
         providerRef: updated.stripeInvoiceId,
+        operation: "order_settled",
       });
     } else if (updated.status === "refunded" && updated.bookingId) {
       await setBookingPayment(tx, {
@@ -584,6 +586,7 @@ async function applyOrderUpdate(
         currency: updated.currency,
         provider: "stripe",
         providerRef: updated.stripeInvoiceId,
+        operation: "order_refunded",
       });
     }
     return updated;

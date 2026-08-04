@@ -18,6 +18,7 @@ import {
   people,
   personRoles,
   shops,
+  tips,
   trips,
   userAccounts,
   waiverRecords,
@@ -78,7 +79,9 @@ async function pay(
   status: PaymentStatus,
   amountCents: number,
 ): Promise<void> {
-  await db.insert(bookingPayments).values({ shopId, bookingId, status, amountCents });
+  await db
+    .insert(bookingPayments)
+    .values({ shopId, bookingId, status, amountCents, currency: "usd" });
 }
 
 /**
@@ -101,6 +104,7 @@ async function makeDepositCheckout(
     .insert(bookingCheckouts)
     .values({
       shopId,
+      currency: "usd",
       tripId,
       status: "completed",
       isDeposit: true,
@@ -115,6 +119,30 @@ async function makeDepositCheckout(
   await db
     .insert(bookingCheckoutBookings)
     .values({ shopId, checkoutId: checkout.id, bookingId, gearCents });
+}
+
+/**
+ * A post-trip tip on one booking. `paid` by default — the only state that is
+ * money the shop actually has.
+ */
+async function makeTip(
+  db: AppDb,
+  shopId: string,
+  bookingId: string,
+  amountCents: number,
+  status: "pending" | "paid" | "expired" = "paid",
+): Promise<void> {
+  seq += 1;
+  await db.insert(tips).values({
+    shopId,
+    bookingId,
+    status,
+    stripeAccountId: "acct_test",
+    stripeSessionId: `cs_tip_${seq}`,
+    currency: "usd",
+    amountCents,
+    completedAt: status === "paid" ? new Date("2026-06-11T00:00:00Z") : null,
+  });
 }
 
 async function completeWaiverFor(
@@ -318,9 +346,13 @@ describe("getMonthlyReport", () => {
     // inconsistency CR-007 exists to never trust. A query that (incorrectly)
     // relied on the bookingId join alone would still pick these up for
     // shop.id's report.
-    await db
-      .insert(bookingPayments)
-      .values({ shopId: otherShop.id, bookingId: booking, status: "paid", amountCents: 99_999 });
+    await db.insert(bookingPayments).values({
+      shopId: otherShop.id,
+      bookingId: booking,
+      status: "paid",
+      amountCents: 99_999,
+      currency: "usd",
+    });
     const template = await getCurrentWaiverTemplate(db, shop.id);
     if (!template) throw new Error("seeded shop is missing a waiver template");
     await db.insert(waiverRecords).values({
@@ -347,6 +379,98 @@ describe("getMonthlyReport", () => {
     const otherReport = await getMonthlyReport(db, otherShop.id, JUNE_START, JULY_START);
     expect(otherReport.trips).toEqual([]);
     expect(otherReport.revenueCents).toBe(0);
+  });
+
+  /**
+   * Tips are the last Stripe-vs-Reports divergence (PAY-M2). They are reported
+   * as their own figure, anchored to the trip that earned them, and never
+   * folded into `revenueCents` — a tip is its own Stripe charge, 100% to the
+   * shop, and never touches the booking payment gate.
+   */
+  describe("tips", () => {
+    it("sums settled tips on the month's trips as their own figure, leaving revenue alone", async () => {
+      const { db, shop } = await seededShopContext();
+      const diver = await makePerson(db, shop.id, "Tipper Tess");
+      const other = await makePerson(db, shop.id, "Tipper Tom");
+      const trip = await makeTrip(db, shop.id, new Date("2026-06-10T12:00:00Z"), 10, "Reef");
+      const booking = await makeBooking(db, shop.id, trip, diver);
+      const second = await makeBooking(db, shop.id, trip, other);
+      await pay(db, shop.id, booking, "paid", 18_000);
+      await makeTip(db, shop.id, booking, 2_000);
+      await makeTip(db, shop.id, second, 1_500);
+
+      const report = await getMonthlyReport(db, shop.id, JUNE_START, JULY_START);
+      expect(report.tipsCents).toBe(3_500);
+      expect(report.tipCount).toBe(2);
+      // The fare and the gratuity stay separate numbers.
+      expect(report.revenueCents).toBe(18_000);
+      expect(summarizeMonth(report).tipsCents).toBe(3_500);
+    });
+
+    it("counts only tips Stripe actually settled — a pending or expired session is money nobody has", async () => {
+      const { db, shop } = await seededShopContext();
+      const diver = await makePerson(db, shop.id, "Tipper Tess");
+      const trip = await makeTrip(db, shop.id, new Date("2026-06-10T12:00:00Z"), 10, "Reef");
+      const booking = await makeBooking(db, shop.id, trip, diver);
+      await makeTip(db, shop.id, booking, 2_000, "paid");
+      await makeTip(db, shop.id, booking, 9_900, "pending");
+      await makeTip(db, shop.id, booking, 8_800, "expired");
+
+      const report = await getMonthlyReport(db, shop.id, JUNE_START, JULY_START);
+      expect(report.tipsCents).toBe(2_000);
+      expect(report.tipCount).toBe(1);
+    });
+
+    it("buckets a tip by the trip's departure month, and never counts a cancelled boat's", async () => {
+      const { db, shop } = await seededShopContext();
+      const diver = await makePerson(db, shop.id, "Tipper Tess");
+      const june = await makeTrip(db, shop.id, new Date("2026-06-10T12:00:00Z"), 10, "June reef");
+      const may = await makeTrip(db, shop.id, new Date("2026-05-10T12:00:00Z"), 10, "May reef");
+      const scrubbed = await makeTrip(
+        db,
+        shop.id,
+        new Date("2026-06-14T12:00:00Z"),
+        10,
+        "Scrubbed",
+        "cancelled",
+      );
+      await makeTip(db, shop.id, await makeBooking(db, shop.id, june, diver), 2_000);
+      await makeTip(db, shop.id, await makeBooking(db, shop.id, may, diver), 5_000);
+      await makeTip(db, shop.id, await makeBooking(db, shop.id, scrubbed, diver), 7_000);
+
+      const report = await getMonthlyReport(db, shop.id, JUNE_START, JULY_START);
+      expect(report.tipsCents).toBe(2_000);
+      expect(report.tipCount).toBe(1);
+    });
+
+    it("reports zero for a month with no tips rather than leaving the figure absent", async () => {
+      const { db, shop } = await seededShopContext();
+      const diver = await makePerson(db, shop.id, "Diver X");
+      const trip = await makeTrip(db, shop.id, new Date("2026-06-10T12:00:00Z"), 10, "Reef");
+      await pay(db, shop.id, await makeBooking(db, shop.id, trip, diver), "paid", 18_000);
+
+      const report = await getMonthlyReport(db, shop.id, JUNE_START, JULY_START);
+      expect(report.tipsCents).toBe(0);
+      expect(report.tipCount).toBe(0);
+    });
+
+    it("never counts a tip row whose own shop_id doesn't match the trip's shop (CR-007)", async () => {
+      const { db, shop } = await seededShopContext();
+      const [otherShop] = await db
+        .insert(shops)
+        .values({ name: "Other Shop", slug: "other-shop-tips-test", timezone: "UTC" })
+        .returning();
+      if (!otherShop) throw new Error("second shop insert failed");
+      const diver = await makePerson(db, shop.id, "Diver X");
+      const trip = await makeTrip(db, shop.id, new Date("2026-06-10T12:00:00Z"), 10, "Reef");
+      const booking = await makeBooking(db, shop.id, trip, diver);
+      await makeTip(db, otherShop.id, booking, 9_999);
+
+      const report = await getMonthlyReport(db, shop.id, JUNE_START, JULY_START);
+      expect(report.tipsCents).toBe(0);
+      const otherReport = await getMonthlyReport(db, otherShop.id, JUNE_START, JULY_START);
+      expect(otherReport.tipsCents).toBe(0);
+    });
   });
 });
 

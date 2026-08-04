@@ -141,6 +141,7 @@ describe("deleteDemoShopCascade", () => {
     if (!booking) throw new Error("test setup: demo shop has no bookings");
     await db.insert(tips).values({
       shopId: shop.id,
+      currency: "usd",
       bookingId: booking.id,
       stripeAccountId: "acct_demo",
       stripeSessionId: `cs_demo_${booking.id}`,

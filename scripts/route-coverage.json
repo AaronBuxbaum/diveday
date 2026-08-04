@@ -72,6 +72,7 @@
       "self-service-reschedule.spec.ts",
       "seo.spec.ts",
       "tenant-isolation.spec.ts",
+      "trip-admission.spec.ts",
       "trips.spec.ts"
     ],
     "visual": ["schedule", "schedule-embed"]
@@ -106,10 +107,11 @@
       "refunds.spec.ts",
       "rentals.spec.ts",
       "returning-diver.spec.ts",
+      "schedule-embed.spec.ts",
       "self-service-reschedule.spec.ts",
-      "schedule-embed.spec.ts"
+      "trip-admission.spec.ts"
     ],
-    "visual": ["booking-confirmed", "site-briefing"]
+    "visual": ["booking-confirmed", "site-briefing", "site-briefing-requirements"]
   },
   "/shop/[shopSlug]": {
     "e2e": [
@@ -134,15 +136,15 @@
     "visual": ["booking-new"]
   },
   "/shop/[shopSlug]/bookings/new/[tripId]": {
-    "e2e": ["add-diver.spec.ts"],
+    "e2e": ["add-diver.spec.ts", "trip-admission.spec.ts"],
     "visual": ["booking-new-diver"]
   },
   "/shop/[shopSlug]/check-in": {
-    "e2e": ["check-in.spec.ts", "tenant-isolation.spec.ts"],
+    "e2e": ["check-in.spec.ts", "tenant-isolation.spec.ts", "trip-admission.spec.ts"],
     "visual": []
   },
   "/shop/[shopSlug]/check-in/walk-in": {
-    "e2e": ["check-in.spec.ts"],
+    "e2e": ["check-in.spec.ts", "trip-admission.spec.ts"],
     "visual": ["check-in-walk-in"]
   },
   "/shop/[shopSlug]/courses": {
@@ -249,6 +251,7 @@
       "schedule-builder.spec.ts",
       "schedule-trip.spec.ts",
       "tenant-isolation.spec.ts",
+      "trip-admission.spec.ts",
       "trip-series.spec.ts",
       "waivers.spec.ts"
     ],
@@ -311,10 +314,11 @@
       "promo-codes.spec.ts",
       "recap.spec.ts",
       "refunds.spec.ts",
+      "trip-admission.spec.ts",
       "trip-series.spec.ts",
       "trips.spec.ts"
     ],
-    "visual": ["trip-manage"]
+    "visual": ["trip-manage", "trip-manage-course-requirements"]
   },
   "/shop/[shopSlug]/trips/[id]/guests": {
     "e2e": [
@@ -330,13 +334,16 @@
       "manifest.spec.ts",
       "recap.spec.ts",
       "refunds.spec.ts",
+      "trip-admission.spec.ts",
       "waivers.spec.ts"
     ],
     "visual": [
       "trip-guests",
       "trip-guests-depth-warning",
       "trip-guests-identity",
-      "trip-guests-note-undo"
+      "trip-guests-note-undo",
+      "trip-guests-refusal-card",
+      "trip-guests-refusal-level"
     ]
   },
   "/shop/[shopSlug]/trips/[id]/manifest": {
@@ -370,6 +377,7 @@
       "schedule-embed.spec.ts",
       "schedule-trip.spec.ts",
       "self-service-reschedule.spec.ts",
+      "trip-admission.spec.ts",
       "trip-series.spec.ts",
       "trips.spec.ts"
     ],

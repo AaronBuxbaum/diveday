@@ -27,9 +27,29 @@ const ENTERABLE_DEMO_ROLES = new Set<DemoRoleId>([
 ]);
 
 /**
- * The landing page's role picker submits a `role` field alongside the usual
- * `source` tag; the primary "Try the staff app" button sends neither, which
- * defaults here to the owner view it has always opened on.
+ * Everything `switchDemoRoleAction` will look at — the enterable roles plus
+ * `manager`, which the switcher offers and which resolves to the shop's owner.
+ *
+ * The action takes its `role` as a plain string from the caller and used to
+ * cast it straight into `eq(personRoles.role, …)`. Anything outside the
+ * `person_role` enum then reached Postgres as an invalid enum literal: a
+ * driver error, an unhandled rejection, and a 500 out of an action that needs
+ * no session at all. Checked membership first, refused the way the action
+ * already handles a role nobody in the shop holds.
+ */
+const SWITCHABLE_DEMO_ROLES = new Set<string>([
+  "owner",
+  "manager",
+  "instructor",
+  "divemaster",
+  "captain",
+  "diver",
+]);
+
+/**
+ * A demo form submits a `source` tag and, from the in-demo role switcher, a
+ * `role`; a marketing-page CTA sends only the tag, which defaults here to the
+ * owner view it has always opened on.
  */
 function requestedDemoRole(formData?: FormData): DemoRoleId {
   const raw = formData?.get("role");
@@ -141,6 +161,11 @@ export async function switchDemoRoleAction(role: string, shopSlug: string) {
   const db = await getDb();
   const shop = await getShopBySlug(db, shopSlug);
   if (!shop?.isDemo) redirect("/");
+
+  // A role this app has never heard of is the same non-event as a role nobody
+  // in this shop holds: back to the shop, no query, no error page. It must not
+  // become a Postgres enum error below (see `SWITCHABLE_DEMO_ROLES`).
+  if (!SWITCHABLE_DEMO_ROLES.has(role)) redirect(`/shop/${shopSlug}`);
 
   if (role === "diver") {
     try {

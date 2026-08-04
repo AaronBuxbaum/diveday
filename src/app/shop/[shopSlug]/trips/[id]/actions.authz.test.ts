@@ -174,10 +174,37 @@ describe("setting what a trip admits", () => {
     signIn(shop, owner);
 
     const to = await redirectedTo(() =>
+      saveRequirementsAction(shop.slug, tripId, requirementsForm("")),
+    );
+
+    // Nothing about the card ladder is demanded any more, so no booked diver
+    // carries a certification blocker and the save settles on the plain notice.
+    expect(to).toBe(`/shop/${shop.slug}/trips/${tripId}?notice=requirements`);
+    expect((await requirementsOf(db, tripId))?.minimumCertificationLevel).toBeNull();
+  });
+
+  /**
+   * **Tightening a gate under a roster that is already booked.** Readiness is
+   * computed live, so those divers turn up blocked on Today, the board, the
+   * roster, and the manifest the moment this saves — nothing here has to
+   * re-check them. What was missing is that the staffer who tightened it walked
+   * away not knowing, and found out when a diver did. It stays a notice, never
+   * a refusal: a shop may legitimately tighten a gate and then work the roster.
+   */
+  it("tells an owner how many booked divers a tightened requirement just blocked", async () => {
+    const { db, shop, tripId, owner } = await context();
+    signIn(shop, owner);
+
+    const to = await redirectedTo(() =>
       saveRequirementsAction(shop.slug, tripId, requirementsForm("rescue")),
     );
 
-    expect(to).toBe(`/shop/${shop.slug}/trips/${tripId}?notice=requirements`);
+    expect(to).toMatch(
+      new RegExp(
+        `^/shop/${shop.slug}/trips/${tripId}\\?notice=requirements-blocking&count=[1-9]\\d*$`,
+      ),
+    );
+    // Saved regardless — the notice never stands in the way of the write.
     expect((await requirementsOf(db, tripId))?.minimumCertificationLevel).toBe("rescue");
   });
 });

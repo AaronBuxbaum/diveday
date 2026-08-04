@@ -1,7 +1,9 @@
 import { ShopNotice } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
+import { tripAdmissionRefusalText } from "@/i18n/readiness-labels";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
+import { verifyTripAdmissionGate } from "@/lib/trip-admission-gate";
 
 /**
  * One entry per notice code, carrying its own tone and message key(s) — same
@@ -64,6 +66,7 @@ const NOTICE_KEYS: Record<
   "diver-course-prerequisite": { tone: "danger", key: "trips.notices.diverCoursePrerequisite" },
   "diver-course-ratio-full": { tone: "danger", key: "trips.notices.diverCourseRatioFull" },
   "diver-course-min-age": { tone: "danger", key: "trips.notices.diverCourseMinAge" },
+  "diver-trip-prerequisite": { tone: "danger", key: "trips.notices.diverTripPrerequisite" },
   "diver-unavailable": { tone: "danger", key: "trips.notices.diverUnavailable" },
   "waiver-complete": { tone: "success", key: "trips.notices.waiverComplete" },
   "waiver-in-person": { tone: "success", key: "trips.notices.waiverInPerson" },
@@ -77,6 +80,14 @@ const NOTICE_KEYS: Record<
   "recap-note": { tone: "success", key: "trips.notices.recapNote" },
   "recap-photo-removed": { tone: "success", key: "trips.notices.recapPhotoRemoved" },
   requirements: { tone: "success", key: "trips.notices.requirements" },
+  // Saved, and it left booked divers behind. Warning rather than success: the
+  // save worked and nothing needs undoing, but the staffer now owes those
+  // divers a card, a conversation, or a different boat.
+  "requirements-blocking": {
+    tone: "warning",
+    key: "trips.notices.requirementsBlocking",
+    countKey: "trips.notices.requirementsBlockingCount",
+  },
   payment: { tone: "success", key: "trips.notices.payment" },
   conditions: { tone: "success", key: "trips.notices.conditions" },
   "conditions-cleared": { tone: "success", key: "trips.notices.conditionsCleared" },
@@ -115,6 +126,8 @@ const NOTICE_KEYS: Record<
 export function TripNoticeBanner({
   notice,
   count,
+  gate,
+  tripId,
   locale,
   undoBookingId,
   undoAction,
@@ -122,6 +135,21 @@ export function TripNoticeBanner({
   notice?: string;
   /** The specific count behind a "-below-" refusal notice, e.g. the booked count or recorded dive number. */
   count?: string;
+  /**
+   * The signed `TripAdmissionRefusal` behind `diver-trip-prerequisite` — which
+   * requirement the trip's cert gate failed on and what the diver holds
+   * (src/lib/trip-admission-gate.ts). Absent, unsigned, or signed for a
+   * different departure all fall back to the notice's own generic sentence,
+   * never to a blank banner and never to the specific one. Typed to admit the
+   * `string[]` a repeated `?gate=` really delivers.
+   */
+  gate?: string | string[];
+  /**
+   * The departure this page *is*, read from its own path — what the signature
+   * is checked against, so a genuine refusal from another boat cannot be
+   * pasted onto this one.
+   */
+  tripId: string;
   locale: string;
   undoBookingId?: string;
   // Only the roster's reversible removals carry an undo; Overview's config
@@ -132,8 +160,13 @@ export function TripNoticeBanner({
   if (!banner) return null;
   const t = staffTranslator(locale);
   const parsedCount = count !== undefined && /^\d+$/.test(count) ? Number(count) : undefined;
-  const text =
-    parsedCount !== undefined && banner.countKey
+  const refusal =
+    notice === "diver-trip-prerequisite"
+      ? verifyTripAdmissionGate(gate, { kind: "trip", id: tripId })
+      : null;
+  const text = refusal
+    ? tripAdmissionRefusalText(t, refusal, locale)
+    : parsedCount !== undefined && banner.countKey
       ? t(banner.countKey, { count: parsedCount })
       : t(banner.key);
   return (
