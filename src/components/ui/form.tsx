@@ -105,6 +105,7 @@ const CONTROL_TAGS = new Set(["input", "select", "textarea"]);
 export function Field({
   label,
   hint,
+  aside,
   description,
   htmlFor,
   className = "",
@@ -113,6 +114,18 @@ export function Field({
   label: ReactNode;
   /** Short qualifier rendered inline after the label, e.g. "(optional)". */
   hint?: ReactNode;
+  /**
+   * A marker rendered on the caption row but *outside* the `<label>` — an
+   * `InfoHint` and nothing else, so far. It stays out of the label because a
+   * label's text content is the control's accessible name, and because a click
+   * anywhere in a `<label>` is forwarded to the control it labels.
+   *
+   * The fallback branch below (a `children` that isn't a single native control)
+   * has only one element, the `<label>` itself, so an `aside` there does end up
+   * nested inside it and inherits that forwarding. Pass `aside` with a real
+   * `<input>`/`<select>`/`<textarea>`.
+   */
+  aside?: ReactNode;
   /** Longer helper text rendered under the control, referenced via `aria-describedby`. */
   description?: ReactNode;
   htmlFor?: string;
@@ -166,7 +179,10 @@ export function Field({
         htmlFor={htmlFor}
         className={`row-span-2 grid grid-rows-subgrid gap-y-1 text-sm font-medium ${className}`}
       >
-        <span className="self-end">{captionContent}</span>
+        <span className="self-end">
+          {captionContent}
+          {aside}
+        </span>
         <span className="grid content-start gap-1">
           {children}
           {descriptionSpan}
@@ -186,6 +202,7 @@ export function Field({
       <span className="self-end">
         <label htmlFor={controlId}>{captionContent}</label>
         {requiredMarker}
+        {aside ? <span className="ml-1.5">{aside}</span> : null}
       </span>
       {/* `content-start`: the control row is a subgrid track shared with every
           other field on this row, so it is as tall as the *longest* neighbour's

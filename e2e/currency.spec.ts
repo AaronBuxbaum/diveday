@@ -28,9 +28,12 @@ const SHOP = DEMO_SHOP_SLUG;
  */
 async function setCurrency(page: Page, code: string) {
   await page.goto(`/shop/${SHOP}/settings`);
-  await page.getByLabel(/Charge and display in/).selectOption(code);
-  await page.getByRole("button", { name: "Save currency" }).click();
-  await expect(page.getByText(/Currency saved/)).toBeVisible();
+  await page.getByLabel("Charge and display in", { exact: true }).selectOption(code);
+  // Currency shares the "Units" card and its one save button with the depth and
+  // water-temperature units — the two selects beside it post their rendered
+  // values unchanged.
+  await page.getByRole("button", { name: "Save units" }).click();
+  await expect(page.getByText(/Units saved/)).toBeVisible();
 }
 
 /** The digits of the reports revenue headline, with symbol and separators stripped. */
@@ -49,7 +52,7 @@ test.describe("shop currency", () => {
   // 7.8s, 9.2s, 5.9s — the middle one already spends 61% of the default 15s
   // budget with no contention at all, leaving under six seconds of headroom for
   // a shared two-worker CI runner. A traced CI failure showed exactly that:
-  // every step resolving, the "Currency saved" toast simply not reached in
+  // every step resolving, the "Units saved" toast simply not reached in
   // time. Same aggregate-cost reasoning as add-diver.spec.ts and
   // visual.spec.ts — this override cannot mask a hang, because a hang fails the
   // 8s expect timeout inside it either way.

@@ -138,8 +138,8 @@ and optional fields that were silently optional now say so.
 read the unit off `depth_unit`. Feet no longer implies Fahrenheit: a Caribbean operator serving
 American divers publishes depths in feet and water temperature in Celsius, and the derivation had
 no way to say so. The migration backfilled Fahrenheit for every shop already on feet, so nothing
-anyone was reading changed. Staff pick it in Settings → *Water temperature unit*, beside the depth
-unit; the crew's conditions form now takes the reading **in the shop's unit** (the unit is part of
+anyone was reading changed. Staff pick it in Settings → *Units*, beside the depth unit and the
+shop's currency; the crew's conditions form now takes the reading **in the shop's unit** (the unit is part of
 the field label) and converts to the canonical Celsius that gets stored, and the night-before brief
 finally writes both water temperature and visibility in the shop's own units instead of always
 "27°C" and "20 m". `trips.water_temperature_c` and `visibility_meters` widened to floating point so

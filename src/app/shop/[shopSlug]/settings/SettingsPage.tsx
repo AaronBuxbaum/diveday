@@ -11,6 +11,7 @@ import { TimezoneOptions, type TimezoneZoneLabels } from "@/components/TimezoneO
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldActions, FieldGrid, PriceField } from "@/components/ui/form";
+import { InfoHint } from "@/components/ui/InfoHint";
 import { canPersonManagePaymentSettings } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
@@ -45,15 +46,13 @@ import {
   refreshAction,
   saveAddressAction,
   saveContactAction,
-  saveCurrencyAction,
-  saveDepthUnitAction,
   saveDockCallAction,
   savePackingAction,
   saveRentalItemsAction,
   saveRentalPricingAction,
   saveReviewUrlAction,
-  saveTemperatureUnitAction,
   saveTimezoneAction,
+  saveUnitsAction,
 } from "./actions";
 
 export const metadata: Metadata = { title: "Shop settings — DiveDay" };
@@ -73,18 +72,8 @@ function noticeMessages(
     timezone_invalid: { tone: "danger", text: t("settings.main.notice.timezoneInvalid") },
     dock_saved: { tone: "success", text: t("settings.main.notice.dockSaved") },
     dock_invalid: { tone: "danger", text: t("settings.main.notice.dockInvalid") },
-    depth_unit_saved: { tone: "success", text: t("settings.main.notice.depthUnitSaved") },
-    depth_unit_invalid: { tone: "danger", text: t("settings.main.notice.depthUnitInvalid") },
-    temperature_unit_saved: {
-      tone: "success",
-      text: t("settings.main.notice.temperatureUnitSaved"),
-    },
-    temperature_unit_invalid: {
-      tone: "danger",
-      text: t("settings.main.notice.temperatureUnitInvalid"),
-    },
-    currency_saved: { tone: "success", text: t("settings.main.notice.currencySaved") },
-    currency_invalid: { tone: "danger", text: t("settings.main.notice.currencyInvalid") },
+    units_saved: { tone: "success", text: t("settings.main.notice.unitsSaved") },
+    units_invalid: { tone: "danger", text: t("settings.main.notice.unitsInvalid") },
     rentals_saved: { tone: "success", text: t("settings.main.notice.rentalsSaved") },
     rental_prices_saved: { tone: "success", text: t("settings.main.notice.rentalPricesSaved") },
     rental_prices_invalid: {
@@ -234,7 +223,46 @@ export function SettingsGroup({
 }
 
 /**
- * The eleven forms on this page each carry their own section id through
+ * A settings card's heading and its one-line description, with the long form of
+ * the explanation tucked behind the marker next to the heading.
+ *
+ * Every card used to carry its full rationale on screen — which unit a value is
+ * stored in, what a change does and does not convert, which other surfaces it
+ * appears on. A shop that opened Settings to change one box read four
+ * paragraphs of it first. The short line says what the card is for; `detail`
+ * holds everything that is only interesting once (see `InfoHint`).
+ */
+function CardHeading({
+  t,
+  heading,
+  description,
+  detail,
+}: {
+  t: StaffTranslator;
+  heading: string;
+  description: string;
+  /** Omit on a card whose description is already one short line. */
+  detail?: string;
+}) {
+  return (
+    <>
+      <h3 className="flex items-start gap-2 font-medium">
+        {heading}
+        {detail ? (
+          <InfoHint
+            label={t("settings.main.detailLabel", { heading })}
+            detail={detail}
+            className="mt-0.5"
+          />
+        ) : null}
+      </h3>
+      <p className="mt-1 text-sm text-muted">{description}</p>
+    </>
+  );
+}
+
+/**
+ * The ten forms on this page each carry their own section id through
  * `?saved=<id>` (set by the action that redirects back here), so the notice
  * that comes back renders inside the section that changed instead of one
  * banner at the top of the page — after `PreserveFormScroll` restores the
@@ -248,9 +276,7 @@ const SECTION_IDS = [
   "reviewLink",
   "packing",
   "dockCall",
-  "depthUnit",
-  "temperatureUnit",
-  "currency",
+  "units",
   "rentals",
   "rentalPricing",
   "stripe",
@@ -347,8 +373,11 @@ export default async function SettingsPage({
             the nav's "Set up" menu and ⌘K knew it existed. */}
         {canManageTeam ? (
           <section className="mb-6 rounded-lg border border-border bg-surface p-6">
-            <h3 className="font-medium">{t("settings.main.team.heading")}</h3>
-            <p className="mt-1 text-sm text-muted">{t("settings.main.team.description")}</p>
+            <CardHeading
+              t={t}
+              heading={t("settings.main.team.heading")}
+              description={t("settings.main.team.description")}
+            />
             <div className="mt-4">
               <Link
                 href={`/shop/${shopSlug}/settings/team`}
@@ -366,8 +395,12 @@ export default async function SettingsPage({
             and nothing could change it afterwards, so a shop that clicked past
             the picker read its own schedule in US Eastern forever. */}
         <section className="mb-6 rounded-lg border border-border bg-surface p-6">
-          <h3 className="font-medium">{t("settings.main.timezone.heading")}</h3>
-          <p className="mt-1 text-sm text-muted">{t("settings.main.timezone.description")}</p>
+          <CardHeading
+            t={t}
+            heading={t("settings.main.timezone.heading")}
+            description={t("settings.main.timezone.description")}
+            detail={t("settings.main.timezone.detail")}
+          />
           <SectionNotice banner={banner} section="timezone" active={activeSection} />
           <FieldGrid as="form" action={saveTimezoneAction} columns={1} className="mt-4">
             <Field label={t("settings.main.timezone.label")}>
@@ -409,8 +442,12 @@ export default async function SettingsPage({
         </section>
 
         <section className="rounded-lg border border-border bg-surface p-6">
-          <h3 className="font-medium">{t("settings.main.contact.heading")}</h3>
-          <p className="mt-1 text-sm text-muted">{t("settings.main.contact.description")}</p>
+          <CardHeading
+            t={t}
+            heading={t("settings.main.contact.heading")}
+            description={t("settings.main.contact.description")}
+            detail={t("settings.main.contact.detail")}
+          />
           <SectionNotice banner={banner} section="contact" active={activeSection} />
           <FieldGrid as="form" action={saveContactAction} columns={2} className="mt-4">
             <Field label={t("settings.main.contact.emailLabel")}>
@@ -450,8 +487,12 @@ export default async function SettingsPage({
         </section>
 
         <section className="mt-6 rounded-lg border border-border bg-surface p-6">
-          <h3 className="font-medium">{t("settings.main.address.heading")}</h3>
-          <p className="mt-1 text-sm text-muted">{t("settings.main.address.description")}</p>
+          <CardHeading
+            t={t}
+            heading={t("settings.main.address.heading")}
+            description={t("settings.main.address.description")}
+            detail={t("settings.main.address.detail")}
+          />
           <SectionNotice banner={banner} section="address" active={activeSection} />
           <FieldGrid as="form" action={saveAddressAction} columns={2} className="mt-4">
             <Field label={t("settings.main.address.streetLabel")} className="sm:col-span-2">
@@ -530,8 +571,12 @@ export default async function SettingsPage({
           id="review-link"
           className="mt-6 scroll-mt-24 rounded-lg border border-border bg-surface p-6"
         >
-          <h3 className="font-medium">{t("settings.main.reviewLink.heading")}</h3>
-          <p className="mt-1 text-sm text-muted">{t("settings.main.reviewLink.description")}</p>
+          <CardHeading
+            t={t}
+            heading={t("settings.main.reviewLink.heading")}
+            description={t("settings.main.reviewLink.description")}
+            detail={t("settings.main.reviewLink.detail")}
+          />
           <SectionNotice banner={banner} section="reviewLink" active={activeSection} />
           <FieldGrid as="form" action={saveReviewUrlAction} columns={1} className="mt-4">
             <Field
@@ -559,8 +604,11 @@ export default async function SettingsPage({
         </section>
 
         <section className="mt-6 rounded-lg border border-border bg-surface p-6">
-          <h3 className="font-medium">{t("settings.main.packing.heading")}</h3>
-          <p className="mt-1 text-sm text-muted">{t("settings.main.packing.description")}</p>
+          <CardHeading
+            t={t}
+            heading={t("settings.main.packing.heading")}
+            description={t("settings.main.packing.description")}
+          />
           <SectionNotice banner={banner} section="packing" active={activeSection} />
           <FieldGrid as="form" action={savePackingAction} columns={1} className="mt-4">
             <Field label={t("settings.main.packing.label")}>
@@ -584,8 +632,12 @@ export default async function SettingsPage({
         </section>
 
         <section className="mt-6 rounded-lg border border-border bg-surface p-6">
-          <h3 className="font-medium">{t("settings.main.dockCall.heading")}</h3>
-          <p className="mt-1 text-sm text-muted">{t("settings.main.dockCall.description")}</p>
+          <CardHeading
+            t={t}
+            heading={t("settings.main.dockCall.heading")}
+            description={t("settings.main.dockCall.description")}
+            detail={t("settings.main.dockCall.detail")}
+          />
           <SectionNotice banner={banner} section="dockCall" active={activeSection} />
           <FieldGrid as="form" action={saveDockCallAction} columns={2} className="mt-4">
             <Field label={t("settings.main.dockCall.label")}>
@@ -611,57 +663,107 @@ export default async function SettingsPage({
           </FieldGrid>
         </section>
 
-        {/* Depth is stored in metres whatever this says; the setting changes only
-          how staff type it in and read it back (H-08). */}
+        {/* One card for the three units a shop reads its own numbers in, rather
+          than three cards a shop had to hunt for in two different groups.
+          Depth stays stored in metres and water temperature in Celsius whatever
+          these say (H-08); currency is the one that reinterprets rather than
+          converts, which is what its own marker explains. The three are
+          genuinely independent — a Caribbean operator serving American divers
+          publishes feet and Celsius — so they are three fields, not one. */}
         <section className="mt-6 rounded-lg border border-border bg-surface p-6">
-          <h3 className="font-medium">{t("settings.main.depthUnit.heading")}</h3>
-          <p className="mt-1 text-sm text-muted">{t("settings.main.depthUnit.description")}</p>
-          <SectionNotice banner={banner} section="depthUnit" active={activeSection} />
-          <FieldGrid as="form" action={saveDepthUnitAction} columns={2} className="mt-4">
-            <Field label={t("settings.main.depthUnit.label")}>
+          <CardHeading
+            t={t}
+            heading={t("settings.main.units.heading")}
+            description={t("settings.main.units.description")}
+          />
+          <SectionNotice banner={banner} section="units" active={activeSection} />
+          {/* What Stripe reports for the connected account is advisory, so a
+            disagreement is surfaced rather than silently resolved either way
+            (ADR 20260731-shop-currency). Stripe refuses a session in a currency
+            the account can't settle, so this is the difference between a
+            warning here and a failed checkout later. */}
+          {currencyMismatch ? (
+            <div className="mt-4">
+              <ShopNotice tone="warning" role="status">
+                {t("settings.main.units.currencyMismatch", {
+                  shopCurrency: currencyMismatch.shopCurrency.toUpperCase(),
+                  accountCurrency: currencyMismatch.accountCurrency.toUpperCase(),
+                })}
+              </ShopNotice>
+            </div>
+          ) : null}
+          <FieldGrid as="form" action={saveUnitsAction} columns={2} className="mt-4">
+            <Field
+              label={t("settings.main.units.depthLabel")}
+              aside={
+                <InfoHint
+                  label={t("settings.main.detailLabel", {
+                    heading: t("settings.main.units.depthLabel"),
+                  })}
+                  detail={t("settings.main.units.depthDetail")}
+                />
+              }
+            >
               <select name="depthUnit" defaultValue={shop.depthUnit} className={controlClass}>
-                <option value="meters">{t("settings.main.depthUnit.meters")}</option>
-                <option value="feet">{t("settings.main.depthUnit.feet")}</option>
+                <option value="meters">{t("settings.main.units.meters")}</option>
+                <option value="feet">{t("settings.main.units.feet")}</option>
               </select>
             </Field>
-            <FieldActions>
-              <SubmitButton
-                pendingLabel={t("settings.main.depthUnit.submitting")}
-                className={buttonClass()}
-              >
-                {t("settings.main.depthUnit.submit")}
-              </SubmitButton>
-            </FieldActions>
-          </FieldGrid>
-        </section>
-
-        {/* Its own setting, not a reading of the depth unit above: a Caribbean
-          operator serving American divers publishes feet and Celsius, and until
-          this existed the two were welded together. Water temperature is stored
-          in Celsius whatever this says. */}
-        <section className="mt-6 rounded-lg border border-border bg-surface p-6">
-          <h3 className="font-medium">{t("settings.main.temperatureUnit.heading")}</h3>
-          <p className="mt-1 text-sm text-muted">
-            {t("settings.main.temperatureUnit.description")}
-          </p>
-          <SectionNotice banner={banner} section="temperatureUnit" active={activeSection} />
-          <FieldGrid as="form" action={saveTemperatureUnitAction} columns={2} className="mt-4">
-            <Field label={t("settings.main.temperatureUnit.label")}>
+            <Field
+              label={t("settings.main.units.temperatureLabel")}
+              aside={
+                <InfoHint
+                  label={t("settings.main.detailLabel", {
+                    heading: t("settings.main.units.temperatureLabel"),
+                  })}
+                  detail={t("settings.main.units.temperatureDetail")}
+                />
+              }
+            >
               <select
                 name="temperatureUnit"
                 defaultValue={shop.temperatureUnit}
                 className={controlClass}
               >
-                <option value="celsius">{t("settings.main.temperatureUnit.celsius")}</option>
-                <option value="fahrenheit">{t("settings.main.temperatureUnit.fahrenheit")}</option>
+                <option value="celsius">{t("settings.main.units.celsius")}</option>
+                <option value="fahrenheit">{t("settings.main.units.fahrenheit")}</option>
               </select>
             </Field>
+            {/* Owner/manager only (H-14): this decides what a diver's card is
+              charged in. Hiding it is convenience — `saveUnitsAction` re-checks
+              the gate against live roles for any submission that carries the
+              field anyway. */}
+            {canPayments ? (
+              <Field
+                label={t("settings.main.units.currencyLabel")}
+                aside={
+                  <InfoHint
+                    label={t("settings.main.detailLabel", {
+                      heading: t("settings.main.units.currencyLabel"),
+                    })}
+                    detail={t("settings.main.units.currencyDetail")}
+                  />
+                }
+              >
+                <select
+                  name="currency"
+                  defaultValue={toShopCurrency(shop.currency)}
+                  className={controlClass}
+                >
+                  {currencyOptions(locale).map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            ) : null}
             <FieldActions>
               <SubmitButton
-                pendingLabel={t("settings.main.temperatureUnit.submitting")}
+                pendingLabel={t("settings.main.units.submitting")}
                 className={buttonClass()}
               >
-                {t("settings.main.temperatureUnit.submit")}
+                {t("settings.main.units.submit")}
               </SubmitButton>
             </FieldActions>
           </FieldGrid>
@@ -676,8 +778,11 @@ export default async function SettingsPage({
             they left the header and this card is now the way in. */}
         {canManagePromos ? (
           <section className="rounded-lg border border-border bg-surface p-6">
-            <h3 className="font-medium">{t("settings.main.promos.heading")}</h3>
-            <p className="mt-1 text-sm text-muted">{t("settings.main.promos.description")}</p>
+            <CardHeading
+              t={t}
+              heading={t("settings.main.promos.heading")}
+              description={t("settings.main.promos.description")}
+            />
             <div className="mt-4">
               <Link
                 href={`/shop/${shopSlug}/promos`}
@@ -699,56 +804,17 @@ export default async function SettingsPage({
 
         {canPayments ? (
           <>
-            {/* Switching this reinterprets the shop's own price list rather than
-              converting it — the description says so, because nothing else in
-              this page has that property. */}
+            {/* Currency is not here. It moved up to the "Units" card with depth
+              and water temperature — a shop looking for "what do we measure
+              things in" should find all three answers in one place, and this
+              group keeps what a shop *charges* and gets paid through. */}
             <section className="mt-6 rounded-lg border border-border bg-surface p-6">
-              <h3 className="font-medium">{t("settings.main.currency.heading")}</h3>
-              <p className="mt-1 text-sm text-muted">{t("settings.main.currency.description")}</p>
-              <SectionNotice banner={banner} section="currency" active={activeSection} />
-              {/* What Stripe reports for the connected account is advisory, so a
-                disagreement is surfaced rather than silently resolved either
-                way (ADR 20260731-shop-currency). Stripe refuses a session in a
-                currency the account can't settle, so this is the difference
-                between a warning here and a failed checkout later. */}
-              {currencyMismatch ? (
-                <div className="mt-4">
-                  <ShopNotice tone="warning" role="status">
-                    {t("settings.main.currency.mismatch", {
-                      shopCurrency: currencyMismatch.shopCurrency.toUpperCase(),
-                      accountCurrency: currencyMismatch.accountCurrency.toUpperCase(),
-                    })}
-                  </ShopNotice>
-                </div>
-              ) : null}
-              <FieldGrid as="form" action={saveCurrencyAction} columns={2} className="mt-4">
-                <Field label={t("settings.main.currency.label")}>
-                  <select
-                    name="currency"
-                    defaultValue={toShopCurrency(shop.currency)}
-                    className={controlClass}
-                  >
-                    {currencyOptions(locale).map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-                <FieldActions>
-                  <SubmitButton
-                    pendingLabel={t("settings.main.currency.submitting")}
-                    className={buttonClass()}
-                  >
-                    {t("settings.main.currency.submit")}
-                  </SubmitButton>
-                </FieldActions>
-              </FieldGrid>
-            </section>
-
-            <section className="mt-6 rounded-lg border border-border bg-surface p-6">
-              <h3 className="font-medium">{t("settings.main.rentals.heading")}</h3>
-              <p className="mt-1 text-sm text-muted">{t("settings.main.rentals.description")}</p>
+              <CardHeading
+                t={t}
+                heading={t("settings.main.rentals.heading")}
+                description={t("settings.main.rentals.description")}
+                detail={t("settings.main.rentals.detail")}
+              />
               <SectionNotice banner={banner} section="rentals" active={activeSection} />
               <form action={saveRentalItemsAction} className="mt-4">
                 <fieldset>
@@ -780,10 +846,12 @@ export default async function SettingsPage({
             </section>
 
             <section className="mt-6 rounded-lg border border-border bg-surface p-6">
-              <h3 className="font-medium">{t("settings.main.rentalPricing.heading")}</h3>
-              <p className="mt-1 text-sm text-muted">
-                {t("settings.main.rentalPricing.description")}
-              </p>
+              <CardHeading
+                t={t}
+                heading={t("settings.main.rentalPricing.heading")}
+                description={t("settings.main.rentalPricing.description")}
+                detail={t("settings.main.rentalPricing.detail")}
+              />
               <SectionNotice banner={banner} section="rentalPricing" active={activeSection} />
               <form action={saveRentalPricingAction} className="mt-4">
                 <FieldGrid columns={2}>
@@ -829,10 +897,12 @@ export default async function SettingsPage({
               <SectionNotice banner={banner} section="stripe" active={activeSection} />
               {!account ? (
                 <div>
-                  <h3 className="font-medium">{t("settings.main.stripe.notConnectedHeading")}</h3>
-                  <p className="mt-1 text-sm text-muted">
-                    {t("settings.main.stripe.notConnectedDescription")}
-                  </p>
+                  <CardHeading
+                    t={t}
+                    heading={t("settings.main.stripe.notConnectedHeading")}
+                    description={t("settings.main.stripe.notConnectedDescription")}
+                    detail={t("settings.main.stripe.notConnectedDetail")}
+                  />
                   {connectConfigured ? (
                     <Link
                       href={`/shop/${shopSlug}/settings/connect`}
@@ -925,8 +995,11 @@ export default async function SettingsPage({
 
       <SettingsGroup group={DATA_GROUP} label={t(DATA_GROUP.labelKey)}>
         <section className="rounded-lg border border-border bg-surface p-6">
-          <h3 className="font-medium">{t("settings.main.embed.heading")}</h3>
-          <p className="mt-1 text-sm text-muted">{t("settings.main.embed.description")}</p>
+          <CardHeading
+            t={t}
+            heading={t("settings.main.embed.heading")}
+            description={t("settings.main.embed.description")}
+          />
           <div className="mt-4">
             <Link
               href={`/shop/${shopSlug}/settings/embed`}
@@ -938,8 +1011,11 @@ export default async function SettingsPage({
         </section>
 
         <section className="mt-6 rounded-lg border border-border bg-surface p-6">
-          <h3 className="font-medium">{t("settings.main.calendar.heading")}</h3>
-          <p className="mt-1 text-sm text-muted">{t("settings.main.calendar.description")}</p>
+          <CardHeading
+            t={t}
+            heading={t("settings.main.calendar.heading")}
+            description={t("settings.main.calendar.description")}
+          />
           <div className="mt-4">
             <Link
               href={`/shop/${shopSlug}/settings/calendar`}
@@ -954,8 +1030,11 @@ export default async function SettingsPage({
             stores can send messages as the business. */}
         {canManageMessaging ? (
           <section className="mt-6 rounded-lg border border-border bg-surface p-6">
-            <h3 className="font-medium">{t("settings.main.whatsapp.heading")}</h3>
-            <p className="mt-1 text-sm text-muted">{t("settings.main.whatsapp.description")}</p>
+            <CardHeading
+              t={t}
+              heading={t("settings.main.whatsapp.heading")}
+              description={t("settings.main.whatsapp.description")}
+            />
             <div className="mt-4">
               <Link
                 href={`/shop/${shopSlug}/settings/whatsapp`}
@@ -969,8 +1048,12 @@ export default async function SettingsPage({
 
         {canImport || canExport ? (
           <section className="mt-6 rounded-lg border border-border bg-surface p-6">
-            <h3 className="font-medium">{t("settings.main.data.heading")}</h3>
-            <p className="mt-1 text-sm text-muted">{t("settings.main.data.description")}</p>
+            <CardHeading
+              t={t}
+              heading={t("settings.main.data.heading")}
+              description={t("settings.main.data.description")}
+              detail={t("settings.main.data.detail")}
+            />
             <div className="mt-4 flex flex-wrap items-center gap-3">
               {canImport ? (
                 <Link

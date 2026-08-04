@@ -24,7 +24,13 @@ import {
   refreshShopStripeAccountStatus,
 } from "@/db/stripe-accounts";
 import { isValidTimeZone } from "@/lib/format";
-import { isShopCurrency, majorToMinor, maxPriceMajor, toShopCurrency } from "@/lib/money";
+import {
+  isShopCurrency,
+  majorToMinor,
+  maxPriceMajor,
+  type ShopCurrency,
+  toShopCurrency,
+} from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { connectProviderFromEnvironment } from "@/lib/payments/connect";
 import {
@@ -121,69 +127,67 @@ export async function savePackingAction(formData: FormData) {
 }
 
 /**
- * Whether this shop reads depths in metres or feet. Display and entry only —
- * every stored depth stays metres, so switching back and forth is lossless and
- * no site's recorded depth moves.
- */
-export async function saveDepthUnitAction(formData: FormData) {
-  const session = await requireStaffSession();
-  const settings = `/shop/${session.user.shopSlug}/settings`;
-  const parsed = z.enum(["meters", "feet"]).safeParse(formData.get("depthUnit"));
-  if (!parsed.success) redirect(`${settings}?notice=depth_unit_invalid&saved=depthUnit`);
-  await setShopDepthUnit(await getDb(), session.user.shopId, parsed.data);
-  revalidateAndRedirect(settings, `${settings}?notice=depth_unit_saved&saved=depthUnit`);
-}
-
-/**
- * Whether this shop reads water temperature in Celsius or Fahrenheit. Its own
- * setting rather than a reading of the depth unit above (a shop can dive in
- * feet and talk about the water in Celsius), and lossless on the same terms —
- * `trips.water_temperature_c` stays Celsius, so switching back and forth moves
- * no recorded reading.
- */
-export async function saveTemperatureUnitAction(formData: FormData) {
-  const session = await requireStaffSession();
-  const settings = `/shop/${session.user.shopSlug}/settings`;
-  const parsed = z.enum(["celsius", "fahrenheit"]).safeParse(formData.get("temperatureUnit"));
-  if (!parsed.success)
-    redirect(`${settings}?notice=temperature_unit_invalid&saved=temperatureUnit`);
-  await setShopTemperatureUnit(await getDb(), session.user.shopId, parsed.data);
-  revalidateAndRedirect(
-    settings,
-    `${settings}?notice=temperature_unit_saved&saved=temperatureUnit`,
-  );
-}
-
-/**
- * The currency this shop displays and charges in.
+ * The three units a shop reads its own numbers in — depth, water temperature,
+ * and money — saved together from one card.
  *
- * Unlike the depth unit above, this one is not lossless and the form says so:
- * stored amounts are integer minor units of whatever currency was set when
- * they were typed, and nothing is converted here. Already-settled rows keep
- * their own currency, so this only ever changes what a *future* charge and the
- * shop's own price list mean.
+ * The first two are display and entry only: every stored depth stays metres and
+ * every stored reading stays Celsius (`trips.water_temperature_c`), so
+ * switching back and forth is lossless and no recorded site depth moves. They
+ * are also independent of each other, which is why the shop picks both — a
+ * Caribbean operator serving American divers publishes feet and Celsius.
  *
- * Owner/manager only, re-checked here against live roles rather than trusted
- * from the section merely having rendered — this decides what a diver's card
- * is charged in.
+ * Currency is the odd one out on both counts, and the card's own copy says so.
+ * It is not lossless: stored amounts are integer minor units of whatever
+ * currency was set when they were typed, nothing is converted here, and
+ * already-settled rows keep their own currency, so this only changes what a
+ * *future* charge and the shop's price list mean. And it is owner/manager work
+ * (H-14) rather than anything a divemaster may do, because it decides what a
+ * diver's card is charged in.
+ *
+ * That gate is enforced twice. The page renders the currency `<select>` only
+ * for an actor who passes it, and a submission that carries a `currency` field
+ * anyway is re-checked here against live roles. A refusal drops the *whole*
+ * submission rather than quietly saving the depth and temperature halves: a
+ * staffer who posted three values and got back "not authorized" should not have
+ * to guess which two landed.
  */
-export async function saveCurrencyAction(formData: FormData) {
+export async function saveUnitsAction(formData: FormData) {
   const session = await requireStaffSession();
   const settings = `/shop/${session.user.shopSlug}/settings`;
-  const blocked = await paymentSettingsBlock(session);
-  if (blocked) {
-    revalidateAndRedirect(settings, blocked);
-    return;
+  const depthUnit = z.enum(["meters", "feet"]).safeParse(formData.get("depthUnit"));
+  const temperatureUnit = z
+    .enum(["celsius", "fahrenheit"])
+    .safeParse(formData.get("temperatureUnit"));
+  if (!depthUnit.success || !temperatureUnit.success) {
+    redirect(`${settings}?notice=units_invalid&saved=units`);
   }
-  const submitted = formData.get("currency");
-  // Not `toShopCurrency`: that coerces anything unknown to usd, which would
-  // silently save dollars for a shop that submitted a typo. An unrecognized
-  // value is a refusal.
-  if (!isShopCurrency(submitted)) {
-    redirect(`${settings}?notice=currency_invalid&saved=currency`);
+
+  // `null` means the field was never rendered (the actor cannot manage payment
+  // settings), which is the ordinary case for most staff — not a refusal.
+  const submittedCurrency = formData.get("currency");
+  let currency: ShopCurrency | null = null;
+  if (submittedCurrency !== null) {
+    const blocked = await paymentSettingsBlock(session);
+    if (blocked) {
+      revalidateAndRedirect(settings, blocked);
+      return;
+    }
+    // Not `toShopCurrency`: that coerces anything unknown to usd, which would
+    // silently save dollars for a shop that submitted a typo. An unrecognized
+    // value is a refusal.
+    if (!isShopCurrency(submittedCurrency)) {
+      redirect(`${settings}?notice=units_invalid&saved=units`);
+    }
+    currency = submittedCurrency;
   }
-  await setShopCurrency(await getDb(), session.user.shopId, submitted);
-  revalidateAndRedirect(settings, `${settings}?notice=currency_saved&saved=currency`);
+
+  const db = await getDb();
+  await setShopDepthUnit(db, session.user.shopId, depthUnit.data);
+  await setShopTemperatureUnit(db, session.user.shopId, temperatureUnit.data);
+  if (currency !== null) {
+    await setShopCurrency(db, session.user.shopId, currency);
+  }
+  revalidateAndRedirect(settings, `${settings}?notice=units_saved&saved=units`);
 }
 
 /** How many minutes before departure divers are asked to be at the dock. */

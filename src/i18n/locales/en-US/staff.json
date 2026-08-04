@@ -1785,10 +1785,8 @@
         "packingInvalid": "Add between one and twelve packing items.",
         "dockSaved": "Dock call time saved for every confirmation and reminder.",
         "dockInvalid": "Enter a dock call time between 5 and 180 minutes.",
-        "depthUnitSaved": "Depth unit saved. Recorded depths are unchanged — only how they are shown.",
-        "depthUnitInvalid": "Choose either metres or feet.",
-        "temperatureUnitSaved": "Temperature unit saved. Recorded water temperatures are unchanged — only how they are shown.",
-        "temperatureUnitInvalid": "Choose either Celsius or Fahrenheit.",
+        "unitsSaved": "Units saved. Recorded depths, temperatures, and prices keep their numbers — only how they are read changes.",
+        "unitsInvalid": "Choose a depth unit, a water temperature unit, and a currency from the lists.",
         "rentalsSaved": "Rental catalog saved.",
         "rentalPricesSaved": "Rental prices saved.",
         "rentalPricesInvalid": "Enter each price as a dollar amount (or leave it blank), between $0 and $100,000.",
@@ -1804,14 +1802,13 @@
         "disconnected": "Stripe account disconnected.",
         "refreshed": "Payment status refreshed from Stripe.",
         "notAuthorized": "The rental catalog, rental prices, and Stripe connection are payment settings, limited to owners and managers.",
-        "currencySaved": "Currency saved. Existing prices keep their numbers — check your price list still reads right.",
-        "currencyInvalid": "Choose a currency from the list.",
         "timezoneSaved": "Timezone saved.",
         "timezoneInvalid": "That isn’t a timezone we recognize — pick one from the list."
       },
       "timezone": {
         "heading": "Timezone",
-        "description": "Every date and time in DiveDay is read and written in this zone — the board, the manifest, and the times divers see on your booking pages. Changing it re-reads your existing departures at their new local times; it does not move them.",
+        "description": "The zone every date and time in DiveDay is read and written in.",
+        "detail": "The board, the manifest, and the times divers see on your booking pages all follow it. Changing it re-reads your existing departures at their new local times; it does not move them.",
         "label": "Timezone",
         "submitting": "Saving…",
         "submit": "Save timezone",
@@ -1851,7 +1848,8 @@
       },
       "contact": {
         "heading": "Public contact details",
-        "description": "Printed on your course pages, where a diver who cannot find a date gets a ready-written email to send you. Use a front-desk address the whole team reads, not a personal one. Empty the email box to take the form down.",
+        "description": "The front-desk email and phone printed on your course pages.",
+        "detail": "A diver who cannot find a date gets a ready-written email to send you. Use an address the whole team reads, not a personal one. Empty the email box to take the form down.",
         "emailLabel": "Contact email",
         "phoneLabel": "Contact phone",
         "phoneHint": "(optional)",
@@ -1860,7 +1858,8 @@
       },
       "address": {
         "heading": "Shop address",
-        "description": "Where a diver actually meets the boat or walks into the storefront — your shop's physical business address, not a staff member's personal one. Published so search engines can place your shop as a real venue. Every field is optional, and empties independently.",
+        "description": "Where a diver meets the boat or walks into the storefront.",
+        "detail": "Your shop's physical business address, not a staff member's personal one. Published so search engines can place your shop as a real venue. Every field is optional, and empties independently.",
         "streetLabel": "Street address",
         "streetPlaceholder": "100 Ocean Drive",
         "localityLabel": "City / town",
@@ -1877,7 +1876,8 @@
       },
       "reviewLink": {
         "heading": "Review link",
-        "description": "Your Google Business, TripAdvisor, or Facebook review page. When set, a diver's post-trip recap invites them to leave one — empty the box to stop asking.",
+        "description": "Your Google Business, TripAdvisor, or Facebook review page.",
+        "detail": "When set, a diver's post-trip recap invites them to leave a review — empty the box to stop asking.",
         "label": "Review link",
         "hint": "(optional)",
         "submit": "Save review link",
@@ -1892,27 +1892,27 @@
       },
       "dockCall": {
         "heading": "Dock call time",
-        "description": "How early divers are asked to arrive before departure — for gear setup, cert checks, and the briefing. It appears on booking confirmations, the dock-day rhythm, and every pre-trip reminder.",
+        "description": "How early divers are asked to arrive before departure.",
+        "detail": "Time for gear setup, cert checks, and the briefing. It appears on booking confirmations, the dock-day rhythm, and every pre-trip reminder.",
         "label": "Minutes before departure",
         "submit": "Save dock call time",
         "submitting": "Saving…"
       },
-      "depthUnit": {
-        "heading": "Depth unit",
-        "description": "Whether your crew reads depths in metres or feet. Depths are always stored in metres, so switching this changes only what you type in and read back — no recorded site depth moves.",
-        "label": "Show depths in",
+      "units": {
+        "heading": "Units",
+        "description": "How your crew reads depths, water temperature, and prices.",
+        "depthLabel": "Show depths in",
+        "depthDetail": "Depths are always stored in metres, so switching this changes only what you type in and read back — no recorded site depth moves.",
         "meters": "Metres (m)",
         "feet": "Feet (ft)",
-        "submit": "Save depth unit",
-        "submitting": "Saving…"
-      },
-      "temperatureUnit": {
-        "heading": "Water temperature unit",
-        "description": "Whether your crew reads water temperature in Celsius or Fahrenheit. Set separately from the depth unit — plenty of shops publish feet and Celsius. Temperatures are always stored in Celsius, so switching this changes only what you type in and read back.",
-        "label": "Show water temperature in",
+        "temperatureLabel": "Show water temperature in",
+        "temperatureDetail": "Set separately from the depth unit — plenty of shops publish feet and Celsius. Temperatures are always stored in Celsius, so switching this changes only what you type in and read back.",
         "celsius": "Celsius (°C)",
         "fahrenheit": "Fahrenheit (°F)",
-        "submit": "Save temperature unit",
+        "currencyLabel": "Charge and display in",
+        "currencyDetail": "Changing it does not convert anything: a 130 trip stays 130, it just means 130 of the new currency. Orders and payments already settled keep the currency they were charged in.",
+        "currencyMismatch": "You charge in {shopCurrency}, but Stripe settles this connected account in {accountCurrency}. Stripe will refuse a payment in a currency this account can't settle — either pick {accountCurrency} here, or connect an account that settles in {shopCurrency}.",
+        "submit": "Save units",
         "submitting": "Saving…"
       },
       "paymentsGate": {
@@ -1920,14 +1920,16 @@
       },
       "rentals": {
         "heading": "What we rent",
-        "description": "The gear and services divers can ask for when they set their rental fit. Untick anything you don't offer — a shop that doesn't stock GoPros never offers one, and it drops off the kit form and the prep list. Most shops don't fill nitrox, so it starts unticked.",
+        "description": "The gear and services divers can ask for in their rental fit.",
+        "detail": "Untick anything you don't offer — a shop that doesn't stock GoPros never offers one, and it drops off the kit form and the prep list. Most shops don't fill nitrox, so it starts unticked.",
         "legend": "Rentable gear and services",
         "submit": "Save rental catalog",
         "submitting": "Saving…"
       },
       "rentalPricing": {
         "heading": "Rental prices",
-        "description": "What a diver is quoted for their rental fit. Price the full set (usually cheaper) and each piece separately — five items quotes the set, fewer pays per piece. Leave a box blank to settle at the shop.",
+        "description": "What a diver is quoted for their rental fit.",
+        "detail": "Price the full set (usually cheaper) and each piece separately — five items quotes the set, fewer pays per piece. Leave a box blank to settle at the shop.",
         "fullSetLabel": "Full set",
         "fullSetHint": "(BCD, reg, wetsuit, mask & fins, weights, dive computer)",
         "nitroxLabel": "Nitrox",
@@ -1937,7 +1939,8 @@
       },
       "stripe": {
         "notConnectedHeading": "No Stripe account connected",
-        "notConnectedDescription": "Connect a Stripe account you own — DiveDay never holds your money, and payments for orders go straight into your own Stripe balance.",
+        "notConnectedDescription": "Connect a Stripe account you own.",
+        "notConnectedDetail": "DiveDay never holds your money — payments for orders go straight into your own Stripe balance.",
         "connect": "Connect Stripe",
         "notConfiguredWarning": "Online payments aren't configured for this DiveDay instance yet — contact {email} to get it set up.",
         "connectedHeading": "Stripe account connected",
@@ -1968,7 +1971,8 @@
       },
       "data": {
         "heading": "Data",
-        "description": "Bring contacts in from a CSV, or take everything back out as a ZIP of CSVs — neither one touches the settings above.",
+        "description": "Bring contacts in from a CSV, or take everything back out as a ZIP of CSVs.",
+        "detail": "Neither one touches the settings above.",
         "importCta": "Import contacts",
         "exportCta": "Data export"
       },
@@ -1982,14 +1986,6 @@
         "dataIntegrations": "Data & integrations"
       },
       "backToSettings": "Back to settings",
-      "currency": {
-        "heading": "Currency",
-        "description": "The currency your prices are shown in and your divers are charged in. Changing it does not convert anything: a 130 trip stays 130, it just means 130 of the new currency. Orders and payments already settled keep the currency they were charged in.",
-        "label": "Charge and display in",
-        "submit": "Save currency",
-        "submitting": "Saving…",
-        "mismatch": "You charge in {shopCurrency}, but Stripe settles this connected account in {accountCurrency}. Stripe will refuse a payment in a currency this account can't settle — either pick {accountCurrency} here, or connect an account that settles in {shopCurrency}."
-      },
       "whatsapp": {
         "heading": "WhatsApp",
         "description": "Send trip reminders and recaps from your shop's own WhatsApp number instead of a platform SMS number.",
@@ -2007,7 +2003,8 @@
         "heading": "Promo codes",
         "description": "Shop-wide discount codes a diver types at checkout, each with its own dates and limits.",
         "cta": "Manage promo codes"
-      }
+      },
+      "detailLabel": "More about {heading}"
     },
     "team": {
       "eyebrow": "Settings",

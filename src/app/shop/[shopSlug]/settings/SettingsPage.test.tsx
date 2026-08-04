@@ -97,6 +97,23 @@ function hrefsIn(node: unknown, found: string[] = []): string[] {
   return found;
 }
 
+/** Every `name` on a `<select>` anywhere in a tree, in render order. */
+function selectNamesIn(node: unknown, found: string[] = []): string[] {
+  if (node === null || typeof node !== "object") return found;
+  if (Array.isArray(node)) {
+    for (const child of node) selectNamesIn(child, found);
+    return found;
+  }
+  if ("type" in node && "props" in node) {
+    const element = node as ReactElement<{ name?: unknown; children?: unknown }>;
+    if (element.type === "select" && typeof element.props?.name === "string") {
+      found.push(element.props.name);
+    }
+    selectNamesIn(element.props?.children, found);
+  }
+  return found;
+}
+
 async function renderSettings(role: Role) {
   const { db, session } = await sessionFor(role);
   vi.mocked(getDb).mockResolvedValue(db);
@@ -155,5 +172,33 @@ describe("settings findability", () => {
     // The ungated cards in the same groups are still there — this is a gate,
     // not a blank page.
     expect(hrefs).toContain(`/shop/${SHOP_SLUG}/settings/embed`);
+  });
+});
+
+describe("the units card", () => {
+  it("puts all three units in one card for an owner", async () => {
+    // Depth, water temperature, and currency used to be three cards in two
+    // different groups, each with its own save button and its own paragraph
+    // explaining what it does and does not convert. A shop asking "what do we
+    // measure things in" now finds all three answers together.
+    const names = selectNamesIn(await renderSettings("owner"));
+    expect(names).toContain("depthUnit");
+    expect(names).toContain("temperatureUnit");
+    expect(names).toContain("currency");
+    // Adjacent, not merely all present somewhere on a 7,000px page.
+    const depthAt = names.indexOf("depthUnit");
+    expect(names.slice(depthAt, depthAt + 3)).toEqual(["depthUnit", "temperatureUnit", "currency"]);
+  });
+
+  it("drops the currency field for a divemaster, keeping the other two", async () => {
+    // H-14: currency decides what a diver's card is charged in. The gate hides
+    // it rather than showing a control that would bounce
+    // (ADR 20260724-role-gated-surfaces-hide-not-explain); `saveUnitsAction`
+    // re-checks it against live roles for a submission that carries the field
+    // anyway (./actions.authz.test.ts).
+    const names = selectNamesIn(await renderSettings("divemaster"));
+    expect(names).toContain("depthUnit");
+    expect(names).toContain("temperatureUnit");
+    expect(names).not.toContain("currency");
   });
 });

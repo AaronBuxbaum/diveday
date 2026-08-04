@@ -136,7 +136,7 @@ test.describe("staff", () => {
     // Metres by default; the setting is display-and-entry only, so flipping it
     // must never move a stored number.
     await page.goto(`/shop/${SHOP}/settings`);
-    await expect(page.getByRole("heading", { name: "Depth unit" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Units" })).toBeVisible();
 
     const siteHref = await setSiteDepth(
       page,
@@ -147,9 +147,9 @@ test.describe("staff", () => {
 
     // Switch the shop to feet; 18 m must read back as 59 ft, not as 18.
     await page.goto(`/shop/${SHOP}/settings`);
-    await page.getByLabel("Show depths in").selectOption("feet");
-    await page.getByRole("button", { name: "Save depth unit" }).click();
-    await expect(page.getByText(/Depth unit saved/)).toBeVisible();
+    await page.getByLabel("Show depths in", { exact: true }).selectOption("feet");
+    await page.getByRole("button", { name: "Save units" }).click();
+    await expect(page.getByText(/Units saved/)).toBeVisible();
 
     await page.goto(siteHref);
     const feetField = page.getByLabel(/Maximum depth \(feet\)/);
@@ -176,13 +176,14 @@ test.describe("staff", () => {
     await page.getByRole("button", { name: "Publish crew prediction" }).click();
     await expect(page.getByRole("status")).toContainText("Crew prediction published");
 
-    // Its own setting, independent of the depth unit: switching only the
-    // temperature leaves visibility in metres.
+    // Its own field, independent of the depth unit even though the two now
+    // share a card and a save button: switching only the temperature leaves
+    // visibility in metres.
     await page.goto(`/shop/${SHOP}/settings`);
-    await expect(page.getByRole("heading", { name: "Water temperature unit" })).toBeVisible();
-    await page.getByLabel("Show water temperature in").selectOption("fahrenheit");
-    await page.getByRole("button", { name: "Save temperature unit" }).click();
-    await expect(page.getByText(/Temperature unit saved/)).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Units" })).toBeVisible();
+    await page.getByLabel("Show water temperature in", { exact: true }).selectOption("fahrenheit");
+    await page.getByRole("button", { name: "Save units" }).click();
+    await expect(page.getByText(/Units saved/)).toBeVisible();
 
     // 27°C reads back as 81°F — the stored Celsius never moved.
     await page.goto(tripPath);

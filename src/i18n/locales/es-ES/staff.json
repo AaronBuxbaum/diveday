@@ -1785,10 +1785,8 @@
         "packingInvalid": "Añade entre uno y doce artículos a la lista.",
         "dockSaved": "Hora de presentación en el muelle guardada para todas las confirmaciones y recordatorios.",
         "dockInvalid": "Introduce una hora de presentación en el muelle de entre 5 y 180 minutos.",
-        "depthUnitSaved": "Unidad de profundidad guardada. Las profundidades registradas no cambian — solo cómo se muestran.",
-        "depthUnitInvalid": "Elige metros o pies.",
-        "temperatureUnitSaved": "Unidad de temperatura guardada. Las temperaturas del agua registradas no cambian — solo cómo se muestran.",
-        "temperatureUnitInvalid": "Elige Celsius o Fahrenheit.",
+        "unitsSaved": "Unidades guardadas. Las profundidades, temperaturas y precios registrados conservan sus cifras — solo cambia cómo se leen.",
+        "unitsInvalid": "Elige una unidad de profundidad, una unidad de temperatura del agua y una moneda de las listas.",
         "rentalsSaved": "Catálogo de alquiler guardado.",
         "rentalPricesSaved": "Precios de alquiler guardados.",
         "rentalPricesInvalid": "Introduce cada precio como una cantidad en dólares (o deja el campo vacío), entre $0 y $100.000.",
@@ -1804,14 +1802,13 @@
         "disconnected": "Cuenta de Stripe desconectada.",
         "refreshed": "Estado de pagos actualizado desde Stripe.",
         "notAuthorized": "El catálogo de alquiler, los precios de alquiler y la conexión con Stripe son ajustes de pago, limitados a propietarios y gerentes.",
-        "currencySaved": "Moneda guardada. Los precios existentes conservan sus cifras — revisa que tu lista de precios siga siendo correcta.",
-        "currencyInvalid": "Elige una moneda de la lista.",
         "timezoneSaved": "Zona horaria guardada.",
         "timezoneInvalid": "No reconocemos esa zona horaria: elige una de la lista."
       },
       "timezone": {
         "heading": "Zona horaria",
-        "description": "Todas las fechas y horas de DiveDay se leen y se guardan en esta zona: el tablero, el manifiesto y las horas que los buceadores ven en tus páginas de reserva. Cambiarla vuelve a leer tus salidas existentes en su nueva hora local; no las mueve.",
+        "description": "La zona en la que se leen y se guardan todas las fechas y horas de DiveDay.",
+        "detail": "El tablero, el manifiesto y las horas que los buceadores ven en tus páginas de reserva la siguen. Cambiarla vuelve a leer tus salidas existentes en su nueva hora local; no las mueve.",
         "label": "Zona horaria",
         "submitting": "Guardando…",
         "submit": "Guardar zona horaria",
@@ -1851,7 +1848,8 @@
       },
       "contact": {
         "heading": "Datos de contacto públicos",
-        "description": "Se imprimen en tus páginas de cursos, donde un buceador que no encuentra una fecha recibe un correo ya redactado para escribirte. Usa una dirección de recepción que lea todo el equipo, no una personal. Vacía el campo de correo para retirar el formulario.",
+        "description": "El correo y el teléfono de recepción que se imprimen en tus páginas de cursos.",
+        "detail": "Un buceador que no encuentra una fecha recibe un correo ya redactado para escribirte. Usa una dirección que lea todo el equipo, no una personal. Vacía el campo de correo para retirar el formulario.",
         "emailLabel": "Correo de contacto",
         "phoneLabel": "Teléfono de contacto",
         "phoneHint": "(opcional)",
@@ -1860,7 +1858,8 @@
       },
       "address": {
         "heading": "Dirección del centro",
-        "description": "Donde un buceador realmente se encuentra con el barco o entra en el local — la dirección física de tu centro, no la personal de un miembro del equipo. Se publica para que los buscadores puedan ubicar tu centro como un lugar real. Todos los campos son opcionales y se vacían de forma independiente.",
+        "description": "Donde un buceador se encuentra con el barco o entra en el local.",
+        "detail": "La dirección física de tu centro, no la personal de un miembro del equipo. Se publica para que los buscadores puedan ubicar tu centro como un lugar real. Todos los campos son opcionales y se vacían de forma independiente.",
         "streetLabel": "Dirección",
         "streetPlaceholder": "100 Ocean Drive",
         "localityLabel": "Ciudad / localidad",
@@ -1877,7 +1876,8 @@
       },
       "reviewLink": {
         "heading": "Enlace de reseñas",
-        "description": "Tu página de reseñas de Google Business, TripAdvisor o Facebook. Cuando está configurada, el recap posterior al viaje invita al buceador a dejar una reseña — vacía el campo para dejar de pedirlas.",
+        "description": "Tu página de reseñas de Google Business, TripAdvisor o Facebook.",
+        "detail": "Cuando está configurada, el recap posterior al viaje invita al buceador a dejar una reseña — vacía el campo para dejar de pedirlas.",
         "label": "Enlace de reseñas",
         "hint": "(opcional)",
         "submit": "Guardar enlace de reseñas",
@@ -1892,27 +1892,27 @@
       },
       "dockCall": {
         "heading": "Hora de presentación en el muelle",
-        "description": "Con cuánta antelación se pide a los buceadores que lleguen antes de zarpar — para preparar el equipo, revisar certificaciones y hacer el briefing. Aparece en las confirmaciones de reserva, el ritmo del día de muelle y todos los recordatorios previos al viaje.",
+        "description": "Con cuánta antelación se pide a los buceadores que lleguen antes de zarpar.",
+        "detail": "Tiempo para preparar el equipo, revisar certificaciones y hacer el briefing. Aparece en las confirmaciones de reserva, el ritmo del día de muelle y todos los recordatorios previos al viaje.",
         "label": "Minutos antes de zarpar",
         "submit": "Guardar hora de presentación",
         "submitting": "Guardando…"
       },
-      "depthUnit": {
-        "heading": "Unidad de profundidad",
-        "description": "Si tu tripulación lee las profundidades en metros o en pies. Las profundidades siempre se guardan en metros, así que cambiar esto solo afecta a lo que escribes y lees — ninguna profundidad registrada se mueve.",
-        "label": "Mostrar profundidades en",
+      "units": {
+        "heading": "Unidades",
+        "description": "Cómo lee tu tripulación las profundidades, la temperatura del agua y los precios.",
+        "depthLabel": "Mostrar profundidades en",
+        "depthDetail": "Las profundidades siempre se guardan en metros, así que cambiar esto solo afecta a lo que escribes y lees — ninguna profundidad registrada se mueve.",
         "meters": "Metros (m)",
         "feet": "Pies (ft)",
-        "submit": "Guardar unidad de profundidad",
-        "submitting": "Guardando…"
-      },
-      "temperatureUnit": {
-        "heading": "Unidad de temperatura del agua",
-        "description": "Si tu tripulación lee la temperatura del agua en Celsius o en Fahrenheit. Se configura aparte de la unidad de profundidad — muchos centros publican pies y Celsius. Las temperaturas siempre se guardan en Celsius, así que cambiar esto solo afecta a lo que escribes y lees.",
-        "label": "Mostrar la temperatura del agua en",
+        "temperatureLabel": "Mostrar la temperatura del agua en",
+        "temperatureDetail": "Se configura aparte de la unidad de profundidad — muchos centros publican pies y Celsius. Las temperaturas siempre se guardan en Celsius, así que cambiar esto solo afecta a lo que escribes y lees.",
         "celsius": "Celsius (°C)",
         "fahrenheit": "Fahrenheit (°F)",
-        "submit": "Guardar unidad de temperatura",
+        "currencyLabel": "Cobrar y mostrar en",
+        "currencyDetail": "Cambiarla no convierte nada: una salida de 130 sigue siendo 130, solo que ahora son 130 de la nueva moneda. Los pedidos y pagos ya liquidados conservan la moneda con la que se cobraron.",
+        "currencyMismatch": "Cobras en {shopCurrency}, pero Stripe liquida esta cuenta conectada en {accountCurrency}. Stripe rechazará un pago en una moneda que esta cuenta no puede liquidar — elige {accountCurrency} aquí o conecta una cuenta que liquide en {shopCurrency}.",
+        "submit": "Guardar unidades",
         "submitting": "Guardando…"
       },
       "paymentsGate": {
@@ -1920,14 +1920,16 @@
       },
       "rentals": {
         "heading": "Qué alquilamos",
-        "description": "El equipo y los servicios que los buceadores pueden pedir al configurar su equipo de alquiler. Desmarca lo que no ofrezcas — un centro que no tiene GoPros nunca ofrece una, y desaparece del formulario de equipo y de la lista de preparación. La mayoría de los centros no llenan nitrox, así que empieza desmarcado.",
+        "description": "El equipo y los servicios que los buceadores pueden pedir en su equipo de alquiler.",
+        "detail": "Desmarca lo que no ofrezcas — un centro que no tiene GoPros nunca ofrece una, y desaparece del formulario de equipo y de la lista de preparación. La mayoría de los centros no llenan nitrox, así que empieza desmarcado.",
         "legend": "Equipo y servicios de alquiler",
         "submit": "Guardar catálogo de alquiler",
         "submitting": "Guardando…"
       },
       "rentalPricing": {
         "heading": "Precios de alquiler",
-        "description": "Lo que se cotiza a un buceador por su equipo de alquiler. Pon precio al equipo completo (normalmente más barato) y a cada pieza por separado — cinco artículos cotiza el equipo completo, menos paga por pieza. Deja un campo en blanco para resolverlo en el mostrador.",
+        "description": "Lo que se cotiza a un buceador por su equipo de alquiler.",
+        "detail": "Pon precio al equipo completo (normalmente más barato) y a cada pieza por separado — cinco artículos cotiza el equipo completo, menos paga por pieza. Deja un campo en blanco para resolverlo en el mostrador.",
         "fullSetLabel": "Equipo completo",
         "fullSetHint": "(BCD, regulador, traje, máscara y aletas, lastre, computadora de buceo)",
         "nitroxLabel": "Nitrox",
@@ -1937,7 +1939,8 @@
       },
       "stripe": {
         "notConnectedHeading": "Ninguna cuenta de Stripe conectada",
-        "notConnectedDescription": "Conecta una cuenta de Stripe de tu propiedad — DiveDay nunca retiene tu dinero, y los pagos de pedidos van directo a tu propio saldo de Stripe.",
+        "notConnectedDescription": "Conecta una cuenta de Stripe de tu propiedad.",
+        "notConnectedDetail": "DiveDay nunca retiene tu dinero — los pagos de pedidos van directo a tu propio saldo de Stripe.",
         "connect": "Conectar Stripe",
         "notConfiguredWarning": "Los pagos en línea no están configurados en esta instancia de DiveDay — contacta a {email} para activarlos.",
         "connectedHeading": "Cuenta de Stripe conectada",
@@ -1968,7 +1971,8 @@
       },
       "data": {
         "heading": "Datos",
-        "description": "Trae contactos desde un CSV, o llévate todo en un ZIP de CSV — ninguna de las dos toca los ajustes de arriba.",
+        "description": "Trae contactos desde un CSV, o llévate todo en un ZIP de CSV.",
+        "detail": "Ninguna de las dos toca los ajustes de arriba.",
         "importCta": "Importar contactos",
         "exportCta": "Exportar datos"
       },
@@ -1982,14 +1986,6 @@
         "dataIntegrations": "Datos e integraciones"
       },
       "backToSettings": "Volver a configuración",
-      "currency": {
-        "heading": "Moneda",
-        "description": "La moneda en la que se muestran tus precios y se cobra a tus buceadores. Cambiarla no convierte nada: una salida de 130 sigue siendo 130, solo que ahora son 130 de la nueva moneda. Los pedidos y pagos ya liquidados conservan la moneda con la que se cobraron.",
-        "label": "Cobrar y mostrar en",
-        "submit": "Guardar moneda",
-        "submitting": "Guardando…",
-        "mismatch": "Cobras en {shopCurrency}, pero Stripe liquida esta cuenta conectada en {accountCurrency}. Stripe rechazará un pago en una moneda que esta cuenta no puede liquidar — elige {accountCurrency} aquí o conecta una cuenta que liquide en {shopCurrency}."
-      },
       "whatsapp": {
         "heading": "WhatsApp",
         "description": "Envía recordatorios y resúmenes desde el número de WhatsApp de tu centro en lugar de un número SMS de la plataforma.",
@@ -2007,7 +2003,8 @@
         "heading": "Códigos promocionales",
         "description": "Códigos de descuento para todo el centro que el buceador escribe al pagar, cada uno con sus fechas y límites.",
         "cta": "Gestionar códigos promocionales"
-      }
+      },
+      "detailLabel": "Más sobre {heading}"
     },
     "team": {
       "eyebrow": "Ajustes",
