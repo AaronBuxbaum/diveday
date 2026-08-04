@@ -356,6 +356,10 @@
     ],
     "visual": ["manifest", "manifest-not-back-aboard"]
   },
+  "/shop/[shopSlug]/trips/[id]/incident-export": {
+    "e2e": ["incident-export.spec.ts"],
+    "visual": ["incident-export"]
+  },
   "/shop/[shopSlug]/trips/[id]/prep": {
     "e2e": ["boat-loop.spec.ts", "gear-fit-and-age.spec.ts", "nitrox.spec.ts"],
     "visual": ["prep", "prep-no-nitrox"]

@@ -343,6 +343,16 @@ new domain concept, define it here in the same PR.
   raises it and the schedule board badges the departure — **for crew as well as divers**. It comes
   in six distinct kinds, which are deliberately never worded or ranked alike — see **unaccounted
   for** below.
+- **Incident-ready export** — the print-optimized document a shop hands to authorities or insurers
+  after a departure: the manifest roster with each person's per-checkpoint roll-call state, the
+  complete append-only roll-call timeline (corrections included), certification evidence as held,
+  waiver **status** (state, date, template version — never the medical questionnaire's answers),
+  crew and crew counts, and generation metadata. It reports recorded facts with timestamps and
+  computes no safety judgment; every absence is stated ("Awaiting", "No certification evidence on
+  file") rather than left blank. A SHA-256 **integrity code** over the printed facts sits in the
+  footer — tamper-evidence, not a signature: regenerating the export from unchanged records
+  reproduces the code, so two copies can be checked against each other. Staff-only, one tap from
+  the manifest (`/shop/<slug>/trips/<id>/incident-export`).
 - **Unaccounted for** — the six ways a head count can be open, in descending severity. A person is
   accounted for at an after-dive checkpoint **only if their latest live result there is
   "boarded"**; nothing else closes that count, and the rule is the same whether they hold a booking

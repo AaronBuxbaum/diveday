@@ -1166,6 +1166,24 @@ The roadmap's §7 smaller follow-ons and the whole open Delight backlog shipped:
   candidates. See
   [20260801-checkout-upsells-rental-gear](../architecture/decisions/20260801-checkout-upsells-rental-gear.md).
 
+## Incident-ready export (delivered 2026-08-04)
+
+- **One tap on a departure produces the document a shop hands to authorities or insurers.** From
+  the manifest, "Incident-ready export" opens a staff-only, print-optimized page
+  (`/shop/<slug>/trips/<id>/incident-export`) assembling the departure's recorded facts: the
+  manifest roster with each diver's per-checkpoint roll-call state, the complete append-only
+  roll-call timeline (corrections included — history is never laundered), each diver's
+  certification evidence as held (imported cards marked distinctly), waiver **status** only — state,
+  date, template version; medical questionnaire answers never appear — plus crew, crew counts, and
+  generation metadata. A SHA-256 integrity code over the printed facts sits in the footer, so a
+  printout can be checked against a fresh export.
+- **Facts, not judgments.** The document states what was recorded, with timestamps and recorders;
+  it computes no safety verdict, and every absence (no roll call yet, no cards on file, superseded
+  or unsigned waiver) is stated explicitly rather than left blank. Assembly is pure
+  (`src/lib/incident-export.ts` over the same manifest/readiness readers every safety surface
+  uses); print-ready HTML, no PDF dependency. No insurer-facing marketing claim ships with this —
+  that stays parked per the brainstorm's insurance-leverage entry until real operators validate it.
+
 ## Simplification rulings (2026-07-19 → 20 audit)
 
 The cleanup audit executed in full; its durable "don't re-litigate this" rulings — separate diver
