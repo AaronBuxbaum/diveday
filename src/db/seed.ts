@@ -17,6 +17,7 @@ import {
   courseInquiries,
   coursePaths,
   courses,
+  dayCloseouts,
   diveSiteCreatures,
   diveSiteMoments,
   diveSites,
@@ -526,6 +527,11 @@ export async function resetDemoSchedule(
   await db.delete(rollCallCrewAttestations).where(eq(rollCallCrewAttestations.shopId, shopId));
   await db.delete(rollCallCrewEvents).where(eq(rollCallCrewEvents.shopId, shopId));
   await db.delete(rollCallEvents).where(eq(rollCallEvents.shopId, shopId));
+  // The close-out trail references people (its actor), so it clears before the
+  // people purge below — and clearing it at all is what keeps the close-out
+  // surface deterministic between specs: a day one test closed must read as
+  // open again for the next test's fixture (ADR 20260804-day-closeout).
+  await db.delete(dayCloseouts).where(eq(dayCloseouts.shopId, shopId));
   await db.delete(rentalFitProfiles).where(eq(rentalFitProfiles.shopId, shopId));
   // References people, so it clears before them like any other people-scoped row.
   await db.delete(priorVisits).where(eq(priorVisits.shopId, shopId));

@@ -35,6 +35,7 @@ function destinationLabelsFor(t: (key: StaffMessageKey) => string): StaffDestina
   return {
     today: t("shared.shopNavLinks.today"),
     checkIn: t("shared.shopNavLinks.checkIn"),
+    closeOut: t("shared.shopNavLinks.closeOut"),
     walkIn: t("shared.shopNavLinks.walkIn"),
     blockers: t("shared.shopNavLinks.blockers"),
     divers: t("shared.shopNavLinks.divers"),

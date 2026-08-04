@@ -198,7 +198,16 @@ new domain concept, define it here in the same PR.
   the boat each one holds up, with a per-departure batch waiver send. It had its own route until
   ADR 20260803-not-ready-is-a-view folded it in; that URL now redirects. "Not ready" names the
   *view*; an individual diver's status is **Blocked** or **Ready**, never "Not ready".
-- **Blocked / Ready** — the shop's one readiness vocabulary, and the only two states a booking's
+- **Close-out** — the end-of-day ritual, and Today's evening mirror: one surface
+  (`/shop/<slug>/close-out`, ADR 20260804-day-closeout) where staff confirm the day actually
+  ended — every departure's end state read off the same roll-call evidence Today chases, today's
+  unresolved queue rows each given an explicit **carry** or **dismiss**, and tomorrow's first
+  blockers as the parting glance. Closing the day is a **recorded act, never a gate**: an
+  append-only `day_closeouts` row remembers who closed, when, and exactly what was outstanding,
+  and nothing anywhere conditions on it — a dismissed item resurfaces tomorrow if it is still
+  true, and re-opening is just working again and closing again. An open after-dive head count or
+  a boat still out makes the close *loud* (a by-name acknowledgement before the button) but never
+  impossible: the human is the authority on their own day, and the count stays chased either way.
   readiness check has. Every *live* surface that shows one — roster, counter check-in, manifest,
   departure board — uses these words and one tone per state (blocked is always danger), resolved
   through `readinessStatusText`/`readinessStatusTone` in `src/i18n/readiness-labels.ts`. The same
