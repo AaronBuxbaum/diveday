@@ -28,12 +28,12 @@ export const metadata: Metadata = {
  * which internal mechanism sent it. Each token hash lives in its own table,
  * so trying both resolvers in turn is a cheap, unambiguous lookup.
  */
-// Bearer-token page (the URL is the capability, docs/engineering/
-// capability-telemetry-runbook.md) — reads `params`/`requestLocale()`
-// unguarded, genuinely request-scoped, not in scope for the "use cache"
-// hoist. See the shop layout's `instant = false` comment
-// (src/app/shop/[shopSlug]/layout.tsx) for what this does and doesn't do.
-export const instant = false;
+// `instant = true`: this route has a real static shell. Every request-scoped
+// read below sits inside this segment's `loading.tsx` boundary, so the frame
+// paints without waiting on the request and the data streams into it —
+// and `next build` fails if that ever stops being true.
+// See ADR 20260804-instant-navigation.
+export const instant = true;
 
 export default async function UnsubscribePage({ params }: { params: Promise<{ token: string }> }) {
   await connection();

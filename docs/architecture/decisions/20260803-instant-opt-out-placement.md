@@ -1,6 +1,11 @@
 # 20260803-instant-opt-out-placement — Declare `instant = false` once per subtree, plus once per genuinely-blocking page segment
 
-- **Status:** Accepted
+- **Status:** Superseded by [20260804-instant-navigation](20260804-instant-navigation.md) — which
+  did the thing this record named as the only real way out ("each is removable only by giving that
+  page a real `<Suspense>` boundary"). Rule 2 below is gone: a page no longer keeps `instant = false`
+  for an unwrapped request-scoped read; it gets a `loading.tsx` and declares `instant = true`. Rule 1
+  survives verbatim, as does the two-jobs reading of `instant-config.js` this record established and
+  the 2026-08-04 amendment holding `waivers/layout.tsx` and `trips/[id]/layout.tsx` unchanged.
 - **Date:** 2026-08-03
 
 ## Context

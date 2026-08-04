@@ -14,11 +14,12 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-// Reads `searchParams` and `requestLocale()` (`headers()`-backed) unguarded —
-// genuinely request-scoped, not a marketing page in scope for the "use
-// cache" hoist. See the shop layout's `instant = false` comment
-// (src/app/shop/[shopSlug]/layout.tsx) for what this does and doesn't do.
-export const instant = false;
+// `instant = true`: this route has a real static shell. Every request-scoped
+// read below sits inside this segment's `loading.tsx` boundary, so the frame
+// paints without waiting on the request and the data streams into it —
+// and `next build` fails if that ever stops being true.
+// See ADR 20260804-instant-navigation.
+export const instant = true;
 
 export default async function ForgotPasswordPage({
   searchParams,

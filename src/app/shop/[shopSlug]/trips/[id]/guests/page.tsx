@@ -50,6 +50,14 @@ import {
   undoRemoveBookingAction,
 } from "../actions";
 
+// `instant = true` asserts that navigating *into* this page paints
+// immediately. Not a claim of a static shell: the staff shell layout declares
+// `instant = false` (read its comment for why), so a cold direct visit still
+// blocks on the session and shop row. What this validates is the navigation
+// staff make all day — arriving from another `/shop` page, where the shell
+// is already mounted. See ADR 20260804-instant-navigation.
+export const instant = true;
+
 export const metadata: Metadata = {
   title: "Trip guests — DiveDay",
 };

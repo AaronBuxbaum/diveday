@@ -25,6 +25,12 @@ import {
   type MigrationGuide,
 } from "@/lib/migration-guides";
 
+// `instant = true`: navigating here paints immediately. Every request-scoped
+// read sits behind a `<Suspense>` boundary — this segment's `loading.tsx`, or
+// one placed inside the page — so the frame lands without waiting on the
+// request. `next build` audits the claim. See ADR 20260804-instant-navigation.
+export const instant = true;
+
 // Only the registered guides are valid routes; an unknown competitor 404s via
 // the `notFound()` call below — `dynamicParams` is not compatible with
 // Cache Components (nextConfig.cacheComponents), so the 404 for an

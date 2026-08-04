@@ -34,12 +34,12 @@ import {
 } from "./_components/CourseSections";
 import { submitCourseInquiryAction } from "./actions";
 
-// Not a TODO. The shop layout above already permits this route's blocking
-// prerender (`isPageAllowedToBlock` reads only the outermost `instant`), so what
-// this line still buys is keeping the page segment out of dev-time instant
-// validation — which nothing above a page segment can do.
-// See ADR 20260803-instant-opt-out-placement.
-export const instant = false;
+// `instant = true`: this route has a real static shell. Every request-scoped
+// read below sits inside this segment's `loading.tsx` boundary, so the frame
+// paints without waiting on the request and the data streams into it —
+// and `next build` fails if that ever stops being true.
+// See ADR 20260804-instant-navigation.
+export const instant = true;
 
 export async function generateMetadata({
   params,

@@ -16,6 +16,12 @@ import { trialHref } from "@/lib/funnel";
 import { sharedLinkCard } from "@/lib/marketing";
 import { MIGRATION_GUIDES } from "@/lib/migration-guides";
 
+// `instant = true`: navigating here paints immediately. Every request-scoped
+// read sits behind a `<Suspense>` boundary — this segment's `loading.tsx`, or
+// one placed inside the page — so the frame lands without waiting on the
+// request. `next build` audits the claim. See ADR 20260804-instant-navigation.
+export const instant = true;
+
 // Generated from the migration-guides registry, never hand-listed, so a new
 // guide can't be silently omitted from this page's own metadata. `metadata`
 // is a static export (no `generateMetadata` here), so this stays fixed to the
