@@ -1325,6 +1325,12 @@ for (const scheme of ["light", "dark"] as const) {
         // mount; wait for that to settle (the offline-roll-call link only
         // renders once saved) so the capture isn't racing that async write.
         await page.getByRole("link", { name: "Open offline roll call" }).waitFor();
+        // The Web Push opt-in (ADR 20260804-manifest-web-push) sits in the same
+        // card and decides what to render *after* mount — it reads
+        // navigator/window for platform support, so the server render is empty.
+        // Waiting for it keeps the capture from racing that resolution and
+        // banking a baseline with the section half-present.
+        await page.getByRole("heading", { name: "Wake this phone" }).waitFor();
         await capture(page, "manifest", scheme);
       });
 

@@ -4,7 +4,7 @@ import { type Role, STAFF_ROLES } from "@/lib/authz";
 import { isDemoAccountEmail } from "@/lib/demo-identity";
 import { hashPassword } from "@/lib/password-hashing";
 import type { AppDb, DbExecutor } from "./client";
-import { people, personRoles, userAccounts } from "./schema";
+import { people, personRoles, pushSubscriptions, userAccounts } from "./schema";
 
 export type StaffMember = {
   personId: string;
@@ -330,6 +330,20 @@ export async function removeStaffMember(
       .update(userAccounts)
       .set({ status: "disabled" })
       .where(eq(userAccounts.id, input.userAccountId));
+    // Revoke this person's push subscriptions in the same transaction (ADR
+    // 20260804-manifest-web-push). Disabling the account does not reach them:
+    // the `people` row deliberately survives, so the row's ON DELETE CASCADE
+    // never fires, and the send path filters on shop and trip rather than on
+    // who still works here. Without this a departed divemaster's phone keeps
+    // being told a boat's manifest changed, after their login stopped working.
+    await tx
+      .delete(pushSubscriptions)
+      .where(
+        and(
+          eq(pushSubscriptions.shopId, input.shopId),
+          eq(pushSubscriptions.personId, input.personId),
+        ),
+      );
     return { ok: true };
   });
 }

@@ -3703,9 +3703,9 @@ export const dayCloseouts = pgTable(
  *
  * Per-trip by design, not per-shop: the subscription expires with the trip it
  * names, which is why there is no separate expiry job for the common case.
- * `tripStartsAt` is denormalized from the trip so the send path can apply its
- * departure window without a join — a subscription for next week is simply
- * never selected.
+ * The departure window is deliberately *not* denormalized here — it is read
+ * from the live trip row at send time (src/lib/push-window.ts), because a copy
+ * taken at subscribe time could not follow a trip that moved.
  *
  * `endpoint`, `p256dh` and `auth` together are a device credential: anyone
  * holding them can push to that device. They are never returned to a client
@@ -3729,8 +3729,6 @@ export const pushSubscriptions = pgTable(
     endpoint: text("endpoint").notNull(),
     p256dh: text("p256dh").notNull(),
     auth: text("auth").notNull(),
-    /** Denormalized from trips.starts_at — see the docblock. */
-    tripStartsAt: timestamp("trip_starts_at", { withTimezone: true }).notNull(),
     /**
      * Drives the coalescing window in SQL rather than in process memory, which
      * would not survive a serverless invocation. Null until the first push.
@@ -3746,8 +3744,8 @@ export const pushSubscriptions = pgTable(
     // The send path's only read: this trip's subscribers, filtered on the
     // coalescing window.
     index("push_subscriptions_trip_pushed_idx").on(table.tripId, table.lastPushedAt),
-    // Pruning reads by departure, across shops.
-    index("push_subscriptions_starts_at_idx").on(table.tripStartsAt),
+    // Retention prunes by age, across shops.
+    index("push_subscriptions_created_at_idx").on(table.createdAt),
   ],
 );
 

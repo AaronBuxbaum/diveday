@@ -39,7 +39,12 @@ import {
   recordRollCall,
   updateLatestRollCallNote,
 } from "@/db/manifests";
-import { deletePushSubscription, savePushSubscription } from "@/db/push-subscriptions";
+import {
+  deletePushSubscription,
+  isDeviceSubscribed,
+  isDeviceSubscribedAnywhere,
+  savePushSubscription,
+} from "@/db/push-subscriptions";
 import { getShopById } from "@/db/shops";
 import { birthdayText } from "@/i18n/birthday-labels";
 import { buddyAlertText } from "@/i18n/buddy-labels";
@@ -318,13 +323,38 @@ export default async function TripManifestPage({
     return { ok: outcome.ok };
   }
 
-  async function unsubscribePushAction(endpoint: string): Promise<{ ok: boolean }> {
+  async function unsubscribePushAction(
+    endpoint: string,
+  ): Promise<{ ok: boolean; hasOtherTrips: boolean }> {
     "use server";
     const staff = await requireStaffSession();
     const parsed = pushEndpointSchema.safeParse(endpoint);
-    if (!parsed.success) return { ok: false };
-    await deletePushSubscription(await getDb(), staff.user.shopId, tripId, parsed.data);
-    return { ok: true };
+    if (!parsed.success) return { ok: false, hasOtherTrips: false };
+    const outcome = await deletePushSubscription(
+      await getDb(),
+      staff.user.shopId,
+      tripId,
+      parsed.data,
+    );
+    return { ok: true, hasOtherTrips: outcome.hasOtherTrips };
+  }
+
+  // Read by the control on mount. The browser's own subscription object is
+  // origin-wide, so only the server can say whether *this* trip is on.
+  async function isPushSubscribedAction(endpoint: string): Promise<boolean> {
+    "use server";
+    const staff = await requireStaffSession();
+    const parsed = pushEndpointSchema.safeParse(endpoint);
+    if (!parsed.success) return false;
+    return isDeviceSubscribed(await getDb(), staff.user.shopId, tripId, parsed.data);
+  }
+
+  async function isPushSubscribedAnywhereAction(endpoint: string): Promise<boolean> {
+    "use server";
+    const staff = await requireStaffSession();
+    const parsed = pushEndpointSchema.safeParse(endpoint);
+    if (!parsed.success) return false;
+    return isDeviceSubscribedAnywhere(await getDb(), staff.user.shopId, parsed.data);
   }
 
   async function rollCallAction(
@@ -668,6 +698,8 @@ export default async function TripManifestPage({
             publicKey={webPushPublicKey()}
             subscribeAction={subscribePushAction}
             unsubscribeAction={unsubscribePushAction}
+            isSubscribedAction={isPushSubscribedAction}
+            isSubscribedAnyAction={isPushSubscribedAnywhereAction}
             copy={
               {
                 heading: t("trips.offlineManifestManager.pushHeading"),

@@ -7,9 +7,9 @@ import {
   claimDuePushTargets,
   deletePushSubscription,
   deletePushSubscriptionsById,
+  isDeviceSubscribed,
+  isDeviceSubscribedAnywhere,
   savePushSubscription,
-  WINDOW_AFTER_MS,
-  WINDOW_BEFORE_MS,
 } from "./push-subscriptions";
 import { pushSubscriptions } from "./schema";
 
@@ -139,19 +139,10 @@ describe("claimDuePushTargets", () => {
     expect(await claimDuePushTargets(db, shop.id, trip.id, afterWindow)).toHaveLength(1);
   });
 
-  it("does not claim a trip that departs beyond the window", async () => {
-    const { db, shop, trip } = await subscribed();
-    // Long before departure: a subscription for a trip days out is simply never
-    // selected, which is what keeps next week's trips from pushing today.
-    const tooEarly = new Date(trip.startsAt.getTime() - WINDOW_BEFORE_MS - 60_000);
-    expect(await claimDuePushTargets(db, shop.id, trip.id, tooEarly)).toEqual([]);
-  });
-
-  it("does not claim a trip that departed long ago", async () => {
-    const { db, shop, trip } = await subscribed();
-    const tooLate = new Date(trip.startsAt.getTime() + WINDOW_AFTER_MS + 60_000);
-    expect(await claimDuePushTargets(db, shop.id, trip.id, tooLate)).toEqual([]);
-  });
+  // The departure window is no longer decided here — it is checked against the
+  // live trip row before this runs, and its cases (boundaries, a moved trip, a
+  // multi-day course) live in src/lib/push-window.test.ts. `claimDuePushTargets`
+  // now owns exactly one throttle: coalescing.
 
   it("never claims another shop's subscriptions", async () => {
     const { db, trip } = await subscribed();
@@ -227,5 +218,80 @@ describe("deletePushSubscriptionsById", () => {
     const remaining = await db.select().from(pushSubscriptions);
     expect(remaining).toHaveLength(1);
     expect(remaining[0]?.endpoint).toBe(OTHER_ENDPOINT);
+  });
+});
+
+describe("per-trip subscription state", () => {
+  /** Two departures the same captain might run on one day, one phone. */
+  async function twoTrips() {
+    const { db, shop } = await seededShopContext();
+    const trips = await upcomingTripsWithCounts(db, shop.id);
+    const [morning, afternoon] = trips;
+    if (!morning || !afternoon) throw new Error("expected two seeded trips");
+    const personId = await staffPersonId(db, shop.id);
+    return { db, shop, morning, afternoon, personId };
+  }
+
+  it("reports on for the trip that has a row and off for the one that does not", async () => {
+    // The bug this guards: the control used to derive its state from
+    // `pushManager.getSubscription()`, which is origin-wide. A captain who
+    // opted the morning trip in then saw the afternoon trip's control reading
+    // "on" with no row behind it — and could not turn it on without first
+    // turning the morning trip off.
+    const { db, shop, morning, afternoon, personId } = await twoTrips();
+    await savePushSubscription(db, {
+      shopId: shop.id,
+      tripId: morning.id,
+      personId,
+      endpoint: ENDPOINT,
+      p256dh: "p",
+      auth: "a",
+    });
+
+    expect(await isDeviceSubscribed(db, shop.id, morning.id, ENDPOINT)).toBe(true);
+    expect(await isDeviceSubscribed(db, shop.id, afternoon.id, ENDPOINT)).toBe(false);
+  });
+
+  it("never reports another shop's row as this device's", async () => {
+    const { db, shop, morning, personId } = await twoTrips();
+    await savePushSubscription(db, {
+      shopId: shop.id,
+      tripId: morning.id,
+      personId,
+      endpoint: ENDPOINT,
+      p256dh: "p",
+      auth: "a",
+    });
+    expect(
+      await isDeviceSubscribed(db, "22222222-2222-2222-2222-222222222222", morning.id, ENDPOINT),
+    ).toBe(false);
+  });
+
+  it("keeps the browser subscription alive while another departure still needs it", async () => {
+    // One phone, both boats. Turning the morning trip off must report that the
+    // afternoon still wants pushes, so the caller does not tear down the shared
+    // origin-wide subscription and silently kill the second boat.
+    const { db, shop, morning, afternoon, personId } = await twoTrips();
+    for (const trip of [morning, afternoon]) {
+      await savePushSubscription(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        personId,
+        endpoint: ENDPOINT,
+        p256dh: "p",
+        auth: "a",
+      });
+    }
+
+    expect(await deletePushSubscription(db, shop.id, morning.id, ENDPOINT)).toEqual({
+      hasOtherTrips: true,
+    });
+    expect(await isDeviceSubscribed(db, shop.id, afternoon.id, ENDPOINT)).toBe(true);
+
+    // …and once the last one goes, the caller is told it may unsubscribe.
+    expect(await deletePushSubscription(db, shop.id, afternoon.id, ENDPOINT)).toEqual({
+      hasOtherTrips: false,
+    });
+    expect(await isDeviceSubscribedAnywhere(db, shop.id, ENDPOINT)).toBe(false);
   });
 });

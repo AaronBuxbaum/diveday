@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { upcomingTripsWithCounts } from "@/db/trips";
 import { seededShopContext } from "@/test/db";
-import { people, pushSubscriptions } from "./schema";
+import { people, pushSubscriptions, trips } from "./schema";
 
 // Mocked at the transport boundary: everything above it (claiming, coalescing,
 // locale resolution, pruning) is the real code under test.
@@ -104,6 +104,42 @@ describe("pushManifestChanged", () => {
     const { db, shop, trip } = await subscribed();
 
     await expect(pushManifestChanged(db, shop.id, trip.id, trip.startsAt)).resolves.toBeUndefined();
+  });
+
+  it("sends nothing outside the departure window", async () => {
+    vi.mocked(sendWebPush).mockResolvedValue({ status: "sent" });
+    const { db, shop, trip } = await subscribed();
+
+    // A week out: the subscription exists, but next week's trip must not wake
+    // anyone today.
+    const weekBefore = new Date(trip.startsAt.getTime() - 7 * 24 * 60 * 60 * 1000);
+    await pushManifestChanged(db, shop.id, trip.id, weekBefore);
+    expect(sendWebPush).not.toHaveBeenCalled();
+  });
+
+  it("follows the trip when it moves, rather than a time copied at subscribe time", async () => {
+    // The regression this guards: the window used to be computed from a
+    // `trip_starts_at` copied onto the subscription row, so a departure that
+    // moved kept its old window and push went silent on exactly the day the
+    // schedule changed. Reading the live trip row is what fixes it — moving the
+    // trip here must move the window with it.
+    vi.mocked(sendWebPush).mockResolvedValue({ status: "sent" });
+    const { db, shop, trip } = await subscribed();
+
+    const movedEarlier = new Date(trip.startsAt.getTime() - 5 * 60 * 60 * 1000);
+    await db
+      .update(trips)
+      .set({
+        startsAt: movedEarlier,
+        endsAt: new Date(movedEarlier.getTime() + 4 * 60 * 60 * 1000),
+      })
+      .where(eq(trips.id, trip.id));
+
+    // One hour before the *new* departure — inside the moved window, and
+    // outside the window the old copied value would have described.
+    const beforeNewDeparture = new Date(movedEarlier.getTime() - 60 * 60 * 1000);
+    await pushManifestChanged(db, shop.id, trip.id, beforeNewDeparture);
+    expect(sendWebPush).toHaveBeenCalledTimes(1);
   });
 
   it("does not send twice for a burst of changes inside the coalescing window", async () => {

@@ -98,36 +98,43 @@ change would alert and every later one would be silent, which inverted the featu
 on `notificationclick`'s `openWindow`. No notification when a visible client already refreshed, which
 is the ADR's own "silent refresh" row and stops the device doing roll call from buzzing at itself.
 
-**Open, and deliberately not fixed here.** Each is a real finding, not a nit:
+**Also fixed, in the follow-up pass.** Six of the eight findings below are now closed:
 
-1. **The opt-in's on/off state is origin-wide, not per-trip.** `pushManager.getSubscription()` is one
-   subscription per registration, but the server model is one row per trip. A captain running two
-   departures sees "on" for the second trip when no row exists, and turning it off there kills the
-   first. The toggle has to read server state.
-2. **Not every shore-side change pushes.** The fan-out hangs off `publishManifestEvent`, which fires
+1. **The opt-in's on/off state is per-trip.** It reads the server rather than
+   `pushManager.getSubscription()`, which is one subscription per registration and so said "on" for a
+   trip with no row. Enabling a second departure reuses the browser subscription and adds a row;
+   disabling one only tears that subscription down once no other trip still needs it.
+2. **`trip_starts_at` is gone.** The window is computed from the live trip row at send time
+   (`src/lib/push-window.ts`), so a departure that moves takes its window with it. The column and its
+   index were dropped rather than kept as a stale-looking authority.
+3. **Multi-day trips are covered for their whole run.** The window closes on the later of the trip's
+   own end and its last scheduled day, not on a fixed offset from the start.
+4. **"Manifest updated"** replaces "Roll call changed", which was a materially more alarming sentence
+   than a buddy-team or note edit warrants — and those publish through the same seam.
+5. **Revocation and retention exist.** `removeStaffMember` deletes the leaver's rows in its own
+   transaction (the `people` row survives a removal, so the cascade never fired), and
+   `push_subscriptions` has a 30-day arm in `RETENTION_DAYS` — the shortest window there, because
+   these rows are device credentials with no later value.
+6. **The copy no longer over-promises.** "A ping is a heads-up, not a guarantee — check the saved copy
+   is fresh before you leave the dock" replaces "so this phone carries the latest", and the
+   notification says what to *do* ("Open the manifest to save the current list to this phone") rather
+   than asserting the phone is current. An e2e assertion pins the heads-up sentence, because it is the
+   sentence that stops silence being read as "nothing changed".
+
+**Still open.** Two remain, and both need a decision rather than an implementation:
+
+1. **Not every shore-side change pushes.** The fan-out hangs off `publishManifestEvent`, which fires
    for roll call, notes and buddy teams — not for a walk-up seated, a cancellation, a waiver signed at
    the counter, or a crew swap. Those are exactly the changes that land while a captain walks to the
-   boat, so the channel is silent on the events it exists for.
-3. **`trip_starts_at` is a frozen copy.** `moveTrip` only refuses once roll-call evidence exists, so a
-   trip with subscriptions and no head count can move and leave the window computed off a stale time —
-   the feature silently off on the day the schedule changed.
-4. **Multi-day trips get one day of window**, since it is measured from `startsAt` rather than the
-   nearest schedule day.
-5. **"Roll call changed" is wrong for four of the eight call sites** — buddy-team edits and note fixes
-   say the same thing as a boarding change, which is a materially more alarming sentence at a dock.
-6. **No revocation on staff removal or crew change, and no retention arm.** The schema comment
-   promises a leaver's devices can be dropped and this record promises pruning; neither exists, and
-   these rows are device credentials.
-7. **The copy over-promises.** "so this phone carries the latest" invites the negative inference — *no
-   ping, nothing to carry* — which is false for every reason above. The honest sentence, already in
-   20260804-manifest-push-transport, is that a ping is a heads-up and only a deliberate refresh before
-   departure makes a device current. It belongs in the product, not only in an ADR.
-8. **No severity tiering, and the seam cannot support it yet.** `publishManifestEvent(db, shopId,
+   boat. Closing this means deciding which writes are manifest-affecting and publishing from each,
+   which is a wider audit than this record's slice.
+2. **No severity tiering, and the seam cannot support it yet.** `publishManifestEvent(db, shopId,
    tripId)` carries no information about *what* changed, so a diver recorded not-back-aboard arrives
-   with the same words and the same buzz as a typo fix. Tiering needs that plumbing first.
+   with the same words and the same buzz as a typo fix. Tiering needs that plumbing first, and a
+   decision about whether a lock screen should carry that distinction at all.
 
-Item 7 is the one to weigh before this ships to a real boat: until it is addressed, this feature is a
-convenience that can be mistaken for a safety control.
+Until the first of those is closed, the honest description of this feature is still "a useful
+heads-up", not "a guarantee your phone is current" — which is exactly what the copy now says.
 
 ## Alternatives considered
 

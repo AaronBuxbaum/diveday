@@ -1,7 +1,7 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "5a2018eb-ec44-4e67-a279-9bb820722b68",
+  "id": "6bdc88d3-98a6-4d0c-947c-4d6750162df6",
   "prevIds": [
     "6568cf21-9b03-47b7-a258-f9a5467bd421"
   ],
@@ -6234,19 +6234,6 @@
       "generated": null,
       "identity": null,
       "name": "auth",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "push_subscriptions"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "trip_starts_at",
       "entityType": "columns",
       "schema": "public",
       "table": "push_subscriptions"
@@ -12713,7 +12700,7 @@
       "nameExplicit": true,
       "columns": [
         {
-          "value": "trip_starts_at",
+          "value": "created_at",
           "isExpression": false,
           "asc": true,
           "nullsFirst": false,
@@ -12725,7 +12712,7 @@
       "with": "",
       "method": "btree",
       "concurrently": false,
-      "name": "push_subscriptions_starts_at_idx",
+      "name": "push_subscriptions_created_at_idx",
       "entityType": "indexes",
       "schema": "public",
       "table": "push_subscriptions"

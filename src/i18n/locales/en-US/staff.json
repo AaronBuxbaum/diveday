@@ -1675,17 +1675,17 @@
       "refreshNowLabel": "Refresh now",
       "openOfflineRollCall": "Open offline roll call",
       "pushHeading": "Wake this phone",
-      "pushBody": "Get a ping when this trip's roll call changes, even with the screen off — so the copy on this phone is current before you lose signal.",
+      "pushBody": "Get a ping when this trip's manifest changes, even with the screen off. A ping is a heads-up, not a guarantee — check the saved copy is fresh before you leave the dock.",
       "pushEnable": "Notify this device",
       "pushEnabling": "Turning on…",
       "pushDisable": "Stop notifying this device",
-      "pushOn": "This device gets roll-call changes near departure.",
+      "pushOn": "This device gets a heads-up when the manifest changes near departure.",
       "pushUnsupported": "This browser can't send notifications to a sleeping phone. The manifest still refreshes whenever this page is open.",
       "pushHomeScreenHint": "On iPhone and iPad, add DiveDay to your Home Screen first — Safari only allows this for installed apps.",
       "pushDenied": "Notifications are blocked for DiveDay in this browser's settings. Allow them there, then try again.",
       "pushError": "Couldn't turn that on just now. Try again, or refresh before you head out.",
-      "pushNotificationTitle": "Roll call changed",
-      "pushNotificationBody": "Open before you head out so this phone carries the latest."
+      "pushNotificationTitle": "Manifest updated",
+      "pushNotificationBody": "Open the manifest to save the current list to this phone."
     },
     "rollCall": {
       "errorRefusal": "That didn’t save. Recheck your connection or tap again.",

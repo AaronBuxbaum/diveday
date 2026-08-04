@@ -37,12 +37,18 @@ export function PushOptIn({
   copy,
   subscribeAction,
   unsubscribeAction,
+  isSubscribedAction,
+  isSubscribedAnyAction,
 }: {
   /** VAPID public key. Null when the server has no keys configured — the control hides. */
   publicKey: string | null;
   copy: PushOptInCopy;
   subscribeAction: (input: PushSubscriptionInput) => Promise<{ ok: boolean }>;
-  unsubscribeAction: (endpoint: string) => Promise<{ ok: boolean }>;
+  unsubscribeAction: (endpoint: string) => Promise<{ ok: boolean; hasOtherTrips: boolean }>;
+  /** Whether *this trip* has a row for this device — see the effect below. */
+  isSubscribedAction: (endpoint: string) => Promise<boolean>;
+  /** Whether *any* trip in this shop still has a row for this device. */
+  isSubscribedAnyAction: (endpoint: string) => Promise<boolean>;
 }) {
   const [support, setSupport] = useState<
     "checking" | "supported" | "needs-home-screen" | "unsupported"
@@ -59,9 +65,18 @@ export function PushOptIn({
     if (state !== "supported") return;
     void navigator.serviceWorker.ready
       .then((registration) => registration.pushManager.getSubscription())
-      .then((existing) => setSubscribed(!!existing))
+      .then(async (existing) => {
+        // The browser subscription alone is *not* the answer. It is one per
+        // registration — origin-wide — while a subscription row is per trip. A
+        // captain running two departures has one browser subscription and needs
+        // a row for each boat, so "is this device on for *this* trip" is a
+        // question only the server can answer.
+        if (!existing) return false;
+        return isSubscribedAction(existing.endpoint);
+      })
+      .then((on) => setSubscribed(on))
       .catch(() => setSubscribed(false));
-  }, []);
+  }, [isSubscribedAction]);
 
   const enable = useCallback(async () => {
     if (!publicKey) return;
@@ -74,13 +89,19 @@ export function PushOptIn({
         return;
       }
       const registration = await navigator.serviceWorker.ready;
-      const subscription = await registration.pushManager.subscribe({
-        // Required by Chrome and Edge, which reject the subscription outright
-        // without it — so every push shows a notification, and the server side
-        // coalesces to keep that from being noise.
-        userVisibleOnly: true,
-        applicationServerKey: applicationServerKey(publicKey),
-      });
+      // Reuse the existing browser subscription when there is one. It is
+      // origin-wide, so a captain opting a second departure in needs another
+      // *row*, not another subscription — and re-subscribing would rotate the
+      // endpoint out from under the first trip's row.
+      const subscription =
+        (await registration.pushManager.getSubscription()) ??
+        (await registration.pushManager.subscribe({
+          // Required by Chrome and Edge, which reject the subscription outright
+          // without it — so every push shows a notification, and the server side
+          // coalesces to keep that from being noise.
+          userVisibleOnly: true,
+          applicationServerKey: applicationServerKey(publicKey),
+        }));
       const json = subscription.toJSON();
       const result = await subscribeAction({
         endpoint: subscription.endpoint,
@@ -89,8 +110,9 @@ export function PushOptIn({
       });
       if (!result.ok) {
         // Don't leave the browser holding a subscription the server has no row
-        // for: it would push nothing forever while the UI claimed it was on.
-        await subscription.unsubscribe().catch(() => undefined);
+        // for — but only tear it down if no other trip is relying on it.
+        const others = await isSubscribedAnyAction(subscription.endpoint).catch(() => false);
+        if (!others) await subscription.unsubscribe().catch(() => undefined);
         setProblem("error");
         return;
       }
@@ -100,7 +122,7 @@ export function PushOptIn({
     } finally {
       setBusy(false);
     }
-  }, [publicKey, subscribeAction]);
+  }, [publicKey, subscribeAction, isSubscribedAnyAction]);
 
   const disable = useCallback(async () => {
     setBusy(true);
@@ -109,8 +131,9 @@ export function PushOptIn({
       const registration = await navigator.serviceWorker.ready;
       const subscription = await registration.pushManager.getSubscription();
       if (subscription) {
-        await unsubscribeAction(subscription.endpoint);
-        await subscription.unsubscribe();
+        const { hasOtherTrips } = await unsubscribeAction(subscription.endpoint);
+        // Only drop the browser subscription once no other departure needs it.
+        if (!hasOtherTrips) await subscription.unsubscribe();
       }
       setSubscribed(false);
     } catch {

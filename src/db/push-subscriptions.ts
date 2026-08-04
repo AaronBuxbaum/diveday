@@ -1,25 +1,27 @@
-import { and, eq, gt, inArray, isNull, lt, lte, or, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, lt, or, sql } from "drizzle-orm";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { recipientLocale } from "@/lib/notifications/kinds";
 import { sendWebPush, type WebPushTarget, webPushConfig } from "@/lib/notifications/web-push";
+import { isInPushWindow } from "@/lib/push-window";
 import type { AppDb } from "./client";
-import { people, pushSubscriptions, shops, trips } from "./schema";
+import { people, pushSubscriptions, shops, tripScheduleDays, trips } from "./schema";
 
 /**
  * Who gets woken when a trip's roll call changes, and how often (ADR
  * 20260804-manifest-web-push).
  *
- * Two throttles live here, both in SQL rather than in process memory — a
- * serverless invocation does not survive long enough to remember anything:
+ * **Coalescing** lives here, in SQL rather than in process memory — a
+ * serverless invocation does not survive long enough to remember anything. At
+ * most one push per subscription per COALESCE_WINDOW_MS, so a burst of
+ * roll-call writes collapses into one notification instead of one per write.
+ * Enforced by `last_pushed_at` and claimed with the same UPDATE that selects,
+ * so two concurrent writes cannot both decide to push.
  *
- * - **Coalescing.** At most one push per subscription per COALESCE_WINDOW_MS,
- *   so a burst of roll-call writes collapses into one notification instead of
- *   one per write. Enforced by `last_pushed_at`, and claimed with the same
- *   UPDATE that selects, so two concurrent writes cannot both decide to push.
- * - **Departure window.** A subscription is only live from
- *   WINDOW_BEFORE_MS before its trip departs until WINDOW_AFTER_MS after, read
- *   off the denormalized `trip_starts_at`. Next week's trip is never selected.
+ * The other throttle, the **departure window**, deliberately does not live here
+ * at all: it is checked against the live trip row in `pushManifestChanged`
+ * (src/lib/push-window.ts). It used to be a value copied onto the subscription
+ * when someone opted in, which could not follow a trip that moved.
  */
 
 /** One push per device per minute, however many roll-call writes land inside it. */
@@ -45,10 +47,6 @@ export const MAX_SUBSCRIPTIONS_PER_TRIP = 50;
 export const MAX_PUSH_TARGETS_PER_EVENT = 50;
 /** Sends run in chunks of this size rather than all at once — see `pushManifestChanged`. */
 export const PUSH_SEND_CONCURRENCY = 10;
-/** Push from six hours ahead of departure — the morning of, not the week before. */
-export const WINDOW_BEFORE_MS = 6 * 60 * 60 * 1000;
-/** …until twelve hours after, so a late-running day still reaches the boat. */
-export const WINDOW_AFTER_MS = 12 * 60 * 60 * 1000;
 
 export interface SavePushSubscriptionInput {
   shopId: string;
@@ -66,8 +64,8 @@ export interface SavePushSubscriptionInput {
  * rows that would each push the same phone.
  *
  * Returns a code, never a sentence: `not_found` when the trip does not belong
- * to this shop, which is also the tenant check. The trip's own `startsAt` is
- * copied onto the row here, which is the only place it is read.
+ * to this shop (which is also the tenant check), and `too_many` when the caps
+ * below are already reached.
  */
 export async function savePushSubscription(
   db: AppDb,
@@ -118,7 +116,6 @@ export async function savePushSubscription(
       endpoint: input.endpoint,
       p256dh: input.p256dh,
       auth: input.auth,
-      tripStartsAt: trip.startsAt,
     })
     .onConflictDoUpdate({
       target: [pushSubscriptions.endpoint, pushSubscriptions.tripId],
@@ -126,7 +123,6 @@ export async function savePushSubscription(
         p256dh: input.p256dh,
         auth: input.auth,
         personId: input.personId,
-        tripStartsAt: trip.startsAt,
         // Re-subscribing does not earn an immediate extra push: leaving
         // last_pushed_at alone keeps the coalescing window intact across a
         // rotation, so a device that reconnects repeatedly cannot be used to
@@ -145,7 +141,7 @@ export async function deletePushSubscription(
   shopId: string,
   tripId: string,
   endpoint: string,
-): Promise<void> {
+): Promise<{ hasOtherTrips: boolean }> {
   await db
     .delete(pushSubscriptions)
     .where(
@@ -155,6 +151,61 @@ export async function deletePushSubscription(
         eq(pushSubscriptions.endpoint, endpoint),
       ),
     );
+  // Whether this device still has a row for some *other* trip. The caller uses
+  // it to decide whether to tear down the browser subscription: that object is
+  // origin-wide, so unsubscribing it while a second departure still expects
+  // pushes would silently disable that boat too — and the row left behind would
+  // POST at a dead endpoint until a 410 pruned it.
+  const [remaining] = await db
+    .select({ id: pushSubscriptions.id })
+    .from(pushSubscriptions)
+    .where(and(eq(pushSubscriptions.shopId, shopId), eq(pushSubscriptions.endpoint, endpoint)))
+    .limit(1);
+  return { hasOtherTrips: Boolean(remaining) };
+}
+
+/**
+ * Whether this exact device is subscribed to this exact trip.
+ *
+ * The control cannot answer this from the browser. `pushManager.getSubscription()`
+ * returns one subscription per service-worker registration — it is origin-wide —
+ * while a row here is per trip. A captain running two departures would otherwise
+ * open the second trip's manifest, see the toggle reading "on", and have no row
+ * for the boat they are about to take; worse, turning it "off" there would drop
+ * the browser subscription and silently kill the first trip's push too.
+ */
+export async function isDeviceSubscribed(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+  endpoint: string,
+): Promise<boolean> {
+  const [row] = await db
+    .select({ id: pushSubscriptions.id })
+    .from(pushSubscriptions)
+    .where(
+      and(
+        eq(pushSubscriptions.shopId, shopId),
+        eq(pushSubscriptions.tripId, tripId),
+        eq(pushSubscriptions.endpoint, endpoint),
+      ),
+    )
+    .limit(1);
+  return Boolean(row);
+}
+
+/** Whether this device has a row for *any* trip in this shop. */
+export async function isDeviceSubscribedAnywhere(
+  db: AppDb,
+  shopId: string,
+  endpoint: string,
+): Promise<boolean> {
+  const [row] = await db
+    .select({ id: pushSubscriptions.id })
+    .from(pushSubscriptions)
+    .where(and(eq(pushSubscriptions.shopId, shopId), eq(pushSubscriptions.endpoint, endpoint)))
+    .limit(1);
+  return Boolean(row);
 }
 
 /**
@@ -173,8 +224,6 @@ export async function claimDuePushTargets(
   now: Date = nowDate(),
 ): Promise<(WebPushTarget & { id: string; personId: string })[]> {
   const coalesceCutoff = new Date(now.getTime() - COALESCE_WINDOW_MS);
-  const windowOpens = new Date(now.getTime() + WINDOW_BEFORE_MS);
-  const windowCloses = new Date(now.getTime() - WINDOW_AFTER_MS);
 
   const claimed = await db
     .update(pushSubscriptions)
@@ -188,10 +237,11 @@ export async function claimDuePushTargets(
           isNull(pushSubscriptions.lastPushedAt),
           lt(pushSubscriptions.lastPushedAt, coalesceCutoff),
         ),
-        // Departure window: departs within WINDOW_BEFORE_MS, and not longer
-        // than WINDOW_AFTER_MS ago.
-        lte(pushSubscriptions.tripStartsAt, windowOpens),
-        gt(pushSubscriptions.tripStartsAt, windowCloses),
+        // The departure window is deliberately *not* here any more: it is
+        // checked against the live trip row in `pushManifestChanged` before
+        // this runs. Deciding it from a value copied onto the subscription at
+        // subscribe time meant a trip that moved kept its old window — see
+        // src/lib/push-window.ts.
         // Belt to the caps' braces: even if rows arrive by some path that does
         // not go through savePushSubscription, one event can never claim more
         // than this. Ordering is unspecified and deliberately so — this is a
@@ -250,6 +300,31 @@ export async function pushManifestChanged(
   try {
     const config = webPushConfig();
     if (!config) return;
+
+    // The departure window, read from the trip as it stands right now rather
+    // than from a copy taken when someone subscribed. `endsAt` is the later of
+    // the trip's own end and its last scheduled day, so a multi-day course is
+    // covered for its whole run instead of only day one.
+    const [trip] = await db
+      .select({ startsAt: trips.startsAt, endsAt: trips.endsAt })
+      .from(trips)
+      .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
+      .limit(1);
+    if (!trip) return;
+    // Read as typed columns and compared in JS rather than as one `greatest(…)`
+    // expression: a raw SQL cast comes back unparsed, and a string here would
+    // throw inside the best-effort catch below — which is to say it would
+    // disable push silently rather than loudly.
+    const [lastDay] = await db
+      .select({ endsAt: tripScheduleDays.endsAt })
+      .from(tripScheduleDays)
+      .where(eq(tripScheduleDays.tripId, tripId))
+      .orderBy(desc(tripScheduleDays.endsAt))
+      .limit(1);
+    const endsAt =
+      lastDay && lastDay.endsAt.getTime() > trip.endsAt.getTime() ? lastDay.endsAt : trip.endsAt;
+    if (!isInPushWindow({ startsAt: trip.startsAt, endsAt }, now)) return;
+
     const targets = await claimDuePushTargets(db, shopId, tripId, now);
     if (targets.length === 0) return;
 

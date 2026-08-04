@@ -506,3 +506,45 @@ test("a checkpoint with every diver counted stays open until the crew are called
   await expect(page.getByRole("heading", { name: "Roll call complete ✦" })).toHaveCount(0);
   await expect(page.getByText(/1 diver is not back aboard/)).toBeVisible();
 });
+
+test("the manifest offers a per-device push opt-in without asking for permission first", async ({
+  page,
+  context,
+}) => {
+  // The third refresh trigger's only door (ADR 20260804-manifest-web-push).
+  // What is asserted here is deliberately narrow: that the control renders, is
+  // honest about what it promises, and does *not* request notification
+  // permission on load. The subscribe round trip itself needs a real push
+  // service, which the fleet has no route to — `DIVEDAY_DISABLE_EXTERNAL_HTTP`
+  // blocks it — so it is covered by unit tests over `savePushSubscription` and
+  // `pushManifestChanged` instead.
+
+  // Deny rather than grant: a page that requests permission unprompted would
+  // still "work" against a granted context and hide the regression. With
+  // notifications denied, any permission request on load is a silent failure —
+  // and the control must still render its opt-in rather than an error.
+  await context.clearPermissions();
+
+  await page.goto("/shop/blue-mantis/schedule/board");
+  await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
+  await openTripTab(page, "Manifest");
+
+  const optIn = page.getByRole("heading", { name: "Wake this phone" });
+  await expect(optIn).toBeVisible();
+
+  // The promise the copy makes is the one the feature can keep. "A ping is a
+  // heads-up, not a guarantee" is load-bearing: a captain who reads silence as
+  // "nothing changed" is the failure mode this wording exists to prevent, and
+  // an earlier draft ("so this phone carries the latest") invited exactly that.
+  await expect(page.getByText(/A ping is a heads-up, not a guarantee/)).toBeVisible();
+
+  // Present, and off until someone taps it.
+  await expect(page.getByRole("button", { name: "Notify this device" })).toBeVisible();
+  await expect(
+    page.getByText("This device gets a heads-up when the manifest changes near departure."),
+  ).toHaveCount(0);
+
+  // Nothing asked for permission merely by rendering the page: the prompt is
+  // behind the button, because a denial on load cannot be retried from here.
+  expect(await page.evaluate(() => Notification.permission)).not.toBe("granted");
+});
