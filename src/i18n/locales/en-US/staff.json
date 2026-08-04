@@ -2471,6 +2471,13 @@
       "single": "“{title}” is on the board. 🤙",
       "series": "“{title}” is on the board — {count, plural, one {# trip} other {# trips}} scheduled. 🤙"
     },
+    "firstBookable": {
+      "heading": "“{title}” is on the board — your shop is bookable. 🎉",
+      "headingSeries": "“{title}” is on the board — {count, plural, one {# trip} other {# trips}} scheduled, and your shop is bookable. 🎉",
+      "body": "This link is your public schedule — the page divers book from. Put it on your website, your socials, and wherever divers find you.",
+      "linkLabel": "Your booking link",
+      "viewAsDiver": "See it the way your divers will"
+    },
     "demoReset": "Demo data reset — fresh boat, clean slate. 🤿",
     "emailResent": "Confirmation email re-sent.",
     "emailFailed": "That email still couldn’t be sent — check the address and email configuration.",

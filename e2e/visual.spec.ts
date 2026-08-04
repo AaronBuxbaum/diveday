@@ -3,6 +3,7 @@ import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed";
 import { signRecapToken } from "../src/lib/recap-links";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import { findTripOnBoard, openTripFromBoard, openTripTab } from "./helpers";
+import { E2E_FROZEN_CLOCK } from "./servers";
 
 /**
  * Visual regression coverage. Eighty-one key surfaces × light/dark, each
@@ -1014,6 +1015,52 @@ for (const scheme of ["light", "dark"] as const) {
         await page.locator("header summary").filter({ hasText: "More" }).click();
         await page.getByRole("list", { name: "Run the shop" }).waitFor();
         await capture(page, "nav-more-menu", scheme);
+      });
+
+      /**
+       * The bookable moment: the first departure ever landing on the board is
+       * the exact instant the first-run checklist (and the share link it
+       * carried) leaves Today, so the created notice grows into a share card
+       * exactly once — e2e/first-ten-minutes.spec.ts drives the behavior, this
+       * is the surface. Same fresh-shop-per-scheme pattern (and deterministic
+       * slug reasoning) as the `today-empty` capture above: the slug renders
+       * inside the card, so it must not contain a wall-clock stamp.
+       */
+      test(`the first bookable moment renders true to the design (${scheme})`, async ({ page }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        const unique = `bookable-${scheme}`;
+        await page.goto("/onboard");
+        await page
+          .locator('input[name="shopName"]')
+          .filter({ visible: true })
+          .fill("Bookable Moment E2E");
+        await page.locator('input[name="shopSlug"]').filter({ visible: true }).fill(unique);
+        await page.locator('input[name="ownerName"]').filter({ visible: true }).fill("Nour Haddad");
+        await page
+          .locator('input[name="ownerEmail"]')
+          .filter({ visible: true })
+          .fill(`${unique}@example.com`);
+        await page
+          .locator('input[name="ownerPassword"]')
+          .filter({ visible: true })
+          .fill("trial-pass-123");
+        await page.getByRole("button", { name: "Create shop & start trial" }).click();
+        await page.waitForURL(new RegExp(`/shop/${unique}$`));
+
+        // The first (and only-ever-first) departure, dated off the frozen
+        // clock so the card and queue rows render pixel-identically per run.
+        await page.goto(`/shop/${unique}/trips/new`);
+        const tomorrow = new Date(Date.parse(E2E_FROZEN_CLOCK) + 24 * 60 * 60 * 1000)
+          .toISOString()
+          .slice(0, 10);
+        await page.locator('input[name="title"]').fill("Two-Tank Morning Reef");
+        await page.locator('input[name="date"]').fill(tomorrow);
+        await page.locator('input[name="startTime"]').fill("08:00");
+        await page.locator('input[name="endTime"]').fill("12:30");
+        await page.getByRole("button", { name: "Put it on the board" }).click();
+        await page.waitForURL(new RegExp(`/shop/${unique}\\?created=`));
+        await page.getByRole("heading", { name: /your shop is bookable/ }).waitFor();
+        await capture(page, "today-first-bookable", scheme);
       });
     });
 
