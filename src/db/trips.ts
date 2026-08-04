@@ -40,14 +40,17 @@ export {
   tripCrewByTrip,
 } from "./trips-crew";
 export {
+  countShopTrips,
   listTripIdsInOfflineManifestWindow,
   listUpcomingSessionsForCourse,
+  offsetUpcomingTripsWithCounts,
   pagedUpcomingTripsWithCounts,
   SCHEDULE_PAGE_SIZE,
   type StaffScheduleDay,
   type StaffScheduleTrip,
   type TripWithBookedCount,
   tripScheduleDayCounts,
+  type UpcomingTripOffsetPage,
   upcomingScheduleRange,
   upcomingScheduleStats,
   upcomingStaffSchedule,

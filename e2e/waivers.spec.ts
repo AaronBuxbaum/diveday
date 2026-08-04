@@ -361,3 +361,54 @@ test("staff edit the single shop waiver and each edit is kept as a version", asy
   // The current card advances to v2.
   await expect(release.getByText("Version 2")).toBeVisible();
 });
+
+/**
+ * The signature audit paged forward-only by cursor: "Show more records" and,
+ * once you had moved, "Back to the top of the list" — so a reviewer four pages
+ * into a shop's signed evidence could only start over, and was never told how
+ * much evidence was left. On an *audit* that is not a nicety: "page 4 of 9" is
+ * how a reviewer knows what they have and have not walked. It wears the shared
+ * pager now (ADR 20260803-one-pagination-model), and what this proves is the
+ * capability that was missing — going back one page lands where you came from.
+ */
+test("the signature audit pages both ways, and keeps a pinned record while it does", async ({
+  page,
+}) => {
+  await page.goto("/shop/blue-mantis/waivers/signatures");
+  const pager = page.getByRole("navigation", { name: "Pages" });
+  // Not "skip when there's nothing to page": the demo shop's signed history is
+  // well past one page, so a missing pager is the regression, not a pass.
+  await expect(pager).toBeVisible();
+  await expect(pager).toContainText(/Page 1 of \d+/);
+
+  const rows = page.locator('li[id^="waiver-record-"]');
+  const firstName = await rows.first().getByRole("link").first().textContent();
+
+  await pager.getByRole("link", { name: "Next" }).click();
+  await expect(page).toHaveURL(/page=2/);
+  await expect(page.getByRole("navigation", { name: "Pages" })).toContainText("Page 2 of");
+  const secondName = await rows.first().getByRole("link").first().textContent();
+  expect(secondName).not.toBe(firstName);
+
+  // Forward once more, then back one — page 2 again, not page 1 and not the top.
+  await page.getByRole("navigation", { name: "Pages" }).getByRole("link", { name: "Next" }).click();
+  await expect(page.getByRole("navigation", { name: "Pages" })).toContainText("Page 3 of");
+  await page
+    .getByRole("navigation", { name: "Pages" })
+    .getByRole("link", { name: "Previous" })
+    .click();
+  await expect(page.getByRole("navigation", { name: "Pages" })).toContainText("Page 2 of");
+  expect(await rows.first().getByRole("link").first().textContent()).toBe(secondName);
+
+  // A `?record=` pin is a separate section above the list, so turning a page
+  // must not drop it — the roster's "View signed record" link is exactly how a
+  // reviewer arrives here, and losing the pin mid-audit strands them.
+  const pinned = page.locator('li[id^="waiver-record-"]').first();
+  const pinnedId = (await pinned.getAttribute("id"))?.replace("waiver-record-", "");
+  await page.goto(`/shop/blue-mantis/waivers/signatures?record=${pinnedId}`);
+  const pinnedHeading = page.getByRole("heading", { level: 2, name: "Signed record", exact: true });
+  await expect(pinnedHeading).toBeVisible();
+  await page.getByRole("navigation", { name: "Pages" }).getByRole("link", { name: "Next" }).click();
+  await expect(page).toHaveURL(/record=/);
+  await expect(pinnedHeading).toBeVisible();
+});

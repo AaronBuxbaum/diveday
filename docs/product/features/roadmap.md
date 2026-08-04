@@ -84,7 +84,9 @@ Multi-shop tenancy exists (`shop_id` everywhere); there is **no boat entity** �
 boat-day. Per-boat configuration and multi-location operating views are unbuilt, and their
 provider/policy decisions are open. Deliberately deferred until a real operator needs it. The
 private/buyout charter workflow below blocks on this same modeling — design the two together, not
-separately.
+separately. That joint design now exists on paper — the Proposed ADR
+[20260804-boat-resource-model](../../architecture/decisions/20260804-boat-resource-model.md) and its
+[dossier](../../architecture/boat-resource-model-dossier.md) — the deferral itself is unchanged.
 
 ## Not scheduled — candidate subsystems
 
@@ -126,7 +128,10 @@ A group buys out a whole departure: proposal, contract, deposit, and the boat of
   boat-day.
 - **Why it isn't scheduled:** it depends on the boat/resource modeling that
   [§5 above](#5-multi-boat--multi-shop-configuration) already holds open, and should be designed
-  together with it rather than as a separate effort. **ADR required.**
+  together with it rather than as a separate effort. **ADR required.** The joint design is now
+  written as the Proposed ADR
+  [20260804-boat-resource-model](../../architecture/decisions/20260804-boat-resource-model.md)
+  (buyout = slices 3–4 there); this entry stays unscheduled until that ADR is accepted.
 
 ### Smaller follow-ons live with their ADRs
 
@@ -243,12 +248,14 @@ ADR rather than letting this become an unbounded second backlog.
 4. Add automated PR scope/collision warnings based on changed paths and declared ownership.
 5. **Make the remaining prose invariants executable.** Carried out of the
    [2026-08-02 review](../assessments/comprehensive-review-20260802.md#2-architecture--code-quality)'s
-   recurring theme that only ratcheted rules hold: fix `check-architecture.mjs`'s side-effect-import
-   blind spot and add `src/i18n`/`src/components` to its forbidden table (ARCH-2); a
-   `scripts/check-tokens.mjs` failing raw hex and palette-scale classes so ADR-0004 ratchets like
-   copy and clock (I18N-4); a static walk from each `useTranslations()` call site to a
-   `DiverIntlProvider` declaring that namespace, turning both documented silent failure modes into a
-   gate (I18N-2); and a scheduled check watching Next 16.3 GA, drizzle 1.0 stable and next-auth v5
+   recurring theme that only ratcheted rules hold. Shipped 2026-08-04: ARCH-2
+   (`check-architecture.mjs` now sees bare side-effect imports, holds `src/i18n`/`src/components`
+   to the layer direction, and ratchets pre-existing debt in `scripts/architecture-baseline.json`),
+   I18N-4 (`pnpm check:tokens` fails raw hex and palette-scale classes, ratcheted in
+   `scripts/tokens-baseline.json`), and the I18N-2 residue (`src/i18n/provider-coverage.test.ts`
+   had closed both documented failure modes for `src/app` on 2026-08-03; it now also traces
+   `useTranslations()` consumers under `src/components` through their importing pages). Still
+   open: a scheduled check watching Next 16.3 GA, drizzle 1.0 stable and next-auth v5
    stable, which the ADRs commit to migrating to promptly with nothing tracking them (ARCH-4, HD-20).
 
 (Feature-folder boundaries were P2 and are now settled — see

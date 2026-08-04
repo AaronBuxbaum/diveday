@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { Pager } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
@@ -28,17 +29,24 @@ export const instant = true;
 
 export default async function CommonDiveSitesPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
+  searchParams: Promise<{ page?: string }>;
 }) {
   const session = await requireStaffSession();
   const { shopSlug } = await params;
+  const { page } = await searchParams;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) notFound();
   const t = staffTranslator(await requestLocale(shop.defaultLocale));
-  const templates = await listGlobalDiveSiteTemplates(db);
+  // A non-numeric or missing `?page=` reads as page 1; the query clamps it into
+  // range so a bookmarked page past the end lands on the last real one.
+  const catalog = await listGlobalDiveSiteTemplates(db, { page: Number.parseInt(page ?? "", 10) });
   const back = `/shop/${shopSlug}/dive-sites`;
+  const self = `${back}/catalog`;
+  const pageHref = (target: number) => (target > 1 ? `${self}?page=${target}` : self);
   async function importAction(formData: FormData) {
     "use server";
     const active = await requireStaffSession();
@@ -60,7 +68,7 @@ export default async function CommonDiveSitesPage({
         />
       </div>
       <ul className="mt-8 grid gap-4 sm:grid-cols-2">
-        {templates.map(({ template, version }) => (
+        {catalog.templates.map(({ template, version }) => (
           <li key={template.id} className="rounded-lg border border-border bg-surface p-5">
             <p className="text-sm font-medium text-primary">
               {t("diveSites.catalog.templateVersion", { version: version.version })}
@@ -79,6 +87,14 @@ export default async function CommonDiveSitesPage({
           </li>
         ))}
       </ul>
+      <Pager
+        page={catalog.page}
+        pageCount={catalog.pageCount}
+        href={pageHref}
+        total={t("diveSites.catalog.pagination.total", { count: catalog.total })}
+        t={t}
+        className="mt-6"
+      />
     </main>
   );
 }

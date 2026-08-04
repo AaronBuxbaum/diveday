@@ -240,6 +240,13 @@ new domain concept, define it here in the same PR.
   series records only the cadence; each date is materialized as its own independent **trip** that
   starts identical to the rest and is booked, crewed, edited, or cancelled on its own. See
   [20260719-recurring-trip-series](../architecture/decisions/20260719-recurring-trip-series.md).
+- **Seat claim** — a party member taking over one seat of a party booking as their own identity,
+  through a bearer `/claim/[token]` link the organizer shares (a `claim`-purpose
+  `booking_capabilities` row; [20260804-seat-claim-links](../architecture/decisions/20260804-seat-claim-links.md)).
+  Claiming re-points the seat's existing booking at the claimant's own person record and starts
+  their own waiver and trip prep; the organizer's surfaces show which seats are claimed. It never
+  creates or frees a seat, never moves money, and is never required — an unclaimed seat boards
+  under the organizer's party exactly as before claiming existed.
 - **Wait list** — a first-come record of divers interested in a full trip. It is not a booking,
   does not consume capacity, and never appears on a manifest; staff follow up if space opens.
 - **Last-minute list** — a shop-wide (not per-trip) opt-in of divers who want to hear about

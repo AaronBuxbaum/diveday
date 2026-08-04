@@ -126,12 +126,15 @@ export function TodayQueue({
   actions,
   shopSlug,
   shopName,
+  timezone,
   inviteAction,
   locale,
 }: {
   actions: readonly TodayAction[];
   shopSlug: string;
   shopName: string;
+  /** The shop's IANA timezone — the seasonal briefing reads the shop's month, not the server's. */
+  timezone: string;
   inviteAction: TodayInviteAction;
   locale: string;
 }) {
@@ -190,7 +193,7 @@ export function TodayQueue({
           </h2>
           <p className="mx-auto mt-1 max-w-md text-sm text-muted">
             {t("shared.today.todayQueue.emptyBody")}{" "}
-            {seasonalBriefingText(t, getSeasonalBriefing(nowDate()), shopName)}
+            {seasonalBriefingText(t, getSeasonalBriefing(nowDate(), timezone), shopName)}
           </p>
           {/* The by-departure view's empty state offers exactly this link, and
               the two views are meant to rest alike (BlockerGroups). */}

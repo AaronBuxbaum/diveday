@@ -40,3 +40,8 @@ export function capabilityExpiryFor(tripEndsAt: Date, now: Date): Date {
 export function readinessLinkPath(token: string): string {
   return `/ready/${token}`;
 }
+
+/** The absolute-path seat-claim link for an already-issued `claim` capability token. */
+export function claimLinkPath(token: string): string {
+  return `/claim/${token}`;
+}

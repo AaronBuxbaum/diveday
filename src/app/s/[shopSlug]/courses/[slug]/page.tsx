@@ -197,7 +197,7 @@ export default async function CoursePage({
         title={course.title}
         t={t}
       />
-      <CourseSchedule days={course.scheduleDays} t={t} />
+      <CourseSchedule days={course.scheduleDays} locale={locale} t={t} />
       <CourseIncludes includes={course.includes} excludes={course.excludes} t={t} />
       <CourseSessions
         sessions={sessions}

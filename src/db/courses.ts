@@ -1,9 +1,9 @@
-import { and, asc, eq, gt, or } from "drizzle-orm";
+import { and, asc, count, eq } from "drizzle-orm";
 import type { CourseContent } from "@/lib/courses";
 import { courseSlug } from "@/lib/courses";
 import type { CertificationLevel } from "@/lib/readiness";
 import type { AppDb } from "./client";
-import { decodeCursor, encodeCursor } from "./cursor";
+import { offsetPage } from "./paging";
 import { courses, shops } from "./schema";
 
 export type NewCourse = {
@@ -127,57 +127,61 @@ export async function listCourses(db: AppDb, shopId: string) {
     .orderBy(asc(courses.agency), asc(courses.title));
 }
 
-/** How many courses the staff roster (`/courses`) shows per page before "Show more". */
+/** How many courses the staff roster (`/courses`) shows per page. */
 export const COURSE_PAGE_SIZE = 20;
 
 export type CoursePage = {
   courses: Awaited<ReturnType<typeof listCourses>>;
-  nextCursor: string | null;
+  page: number;
+  pageCount: number;
+  pageSize: number;
+  total: number;
 };
 
 /**
  * The staff roster's own paginated view of {@link listCourses} — same scope
  * (full catalog, hidden entries included) and sort (agency, then title,
- * which is unique per shop and so doubles as the keyset tiebreak), just one
- * keyset page at a time. Every other caller of `listCourses`/
- * `listActiveCourses` needs the complete set for a dropdown or picker and
- * must keep calling those, not this.
+ * which is unique per shop and so doubles as a stable tiebreak), just one
+ * page at a time. Every other caller of `listCourses`/`listActiveCourses`
+ * needs the complete set for a dropdown or picker and must keep calling
+ * those, not this.
  *
- * Still forward-only, and it should not stay that way: ADR
- * 20260803-one-pagination-model moved the roster, reports, and the moderation
- * queue onto `offsetPage` + the shared `Pager`, and this roster is the same
- * job. It is one of the three stragglers named there.
+ * Offset-paged, like the roster and the orders index. It was a forward-only
+ * keyset cursor, which meant a staffer three pages into a large catalog had
+ * "Show more" and "Back to top" and nothing in between — no way back one page,
+ * and no way to see how much catalog was left
+ * (ADR 20260803-one-pagination-model).
  */
 export async function pagedCourses(
   db: AppDb,
   shopId: string,
-  options: { cursor?: string; limit?: number } = {},
+  options: { page?: number; limit?: number } = {},
 ): Promise<CoursePage> {
-  const limit = options.limit ?? COURSE_PAGE_SIZE;
-  const after = decodeCursor(options.cursor);
+  const scope = eq(courses.shopId, shopId);
 
-  const rows = await db
-    .select()
-    .from(courses)
-    .where(
-      and(
-        eq(courses.shopId, shopId),
-        after
-          ? or(
-              gt(courses.agency, after[0]),
-              and(eq(courses.agency, after[0]), gt(courses.title, after[1])),
-            )
-          : undefined,
-      ),
-    )
-    .orderBy(asc(courses.agency), asc(courses.title))
-    .limit(limit + 1);
+  const paged = await offsetPage({
+    page: options.page,
+    pageSize: options.limit ?? COURSE_PAGE_SIZE,
+    countRows: async () => {
+      const [counted] = await db.select({ total: count() }).from(courses).where(scope);
+      return counted?.total ?? 0;
+    },
+    fetchRows: async (offset, limit) =>
+      db
+        .select()
+        .from(courses)
+        .where(scope)
+        .orderBy(asc(courses.agency), asc(courses.title))
+        .limit(limit)
+        .offset(offset),
+  });
 
-  const pageRows = rows.slice(0, limit);
-  const last = pageRows.at(-1);
   return {
-    courses: pageRows,
-    nextCursor: rows.length > limit && last ? encodeCursor(last.agency, last.title) : null,
+    courses: paged.rows,
+    page: paged.page,
+    pageCount: paged.pageCount,
+    pageSize: paged.pageSize,
+    total: paged.total,
   };
 }
 

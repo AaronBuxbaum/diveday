@@ -940,6 +940,28 @@ export const bookings = pgTable(
      * matched-name booking.
      */
     identityUnconfirmedAt: timestamp("identity_unconfirmed_at", { withTimezone: true }),
+    /**
+     * Set on every seat of a party booking *except* the organizer's own,
+     * pointing at the organizer's booking on the same trip (docs ADR
+     * 20260804-seat-claim-links). This is what makes "the other seats of my
+     * party" a queryable fact: the organizer's surfaces list these rows to
+     * mint claim links and show who has claimed. Cleared whenever a
+     * previously-cancelled row is reactivated by a *new* booking
+     * (`createBookingRecord`), so a seat's stale party membership from an
+     * earlier life can never leak a claim link over somebody else's fresh
+     * booking. Not a typed FK: the reference is to this same table, and a
+     * self-referencing `references()` trips drizzle's type inference the same
+     * way the mutual `pending_checkout_intent_id` reference above does.
+     */
+    partyLeadBookingId: uuid("party_lead_booking_id"),
+    /**
+     * When a party member claimed this seat as their own through a
+     * `/claim/[token]` link — identity re-pointed to the claimant's person
+     * row, their own waiver/prep started. Null means the seat still rides
+     * under whatever the organizer typed, which stays perfectly valid to
+     * board: claiming is an upgrade, never a requirement (same ADR).
+     */
+    claimedAt: timestamp("claimed_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -947,6 +969,8 @@ export const bookings = pgTable(
     index("bookings_trip_idx").on(table.tripId),
     /** Backs the diver-record lookups (getDiverProfile, payment/booking history joins). */
     index("bookings_shop_person_idx").on(table.shopId, table.personId),
+    /** Backs the organizer's "who has claimed" panel — member seats by their lead. */
+    index("bookings_party_lead_idx").on(table.partyLeadBookingId),
   ],
 );
 
@@ -2538,13 +2562,19 @@ export const waiverRecords = pgTable(
  * What a `booking_capabilities` row authorizes. `readiness` covers the diver
  * self-service page (view + emergency contact + rental fit + nitrox + pay +
  * request a waiver link); `confirm` covers the public schedule-confirmation
- * page reached right after booking. Both are read+write for their purpose —
- * split into separate purposes (not separate read/write tokens) because
- * neither purpose's read and write lifetimes differ in practice.
+ * page reached right after booking; `claim` lets one party member take over
+ * one specific seat of a party booking as their own identity
+ * (`/claim/[token]`, docs ADR 20260804-seat-claim-links) — minted only for
+ * non-organizer party seats, and every live `claim` row for a booking is
+ * revoked the moment any one of them is used, so a claim link is one-shot in
+ * effect. All are read+write for their purpose — split into separate purposes
+ * (not separate read/write tokens) because no purpose's read and write
+ * lifetimes differ in practice.
  */
 export const bookingCapabilityPurpose = pgEnum("booking_capability_purpose", [
   "readiness",
   "confirm",
+  "claim",
 ]);
 
 /**

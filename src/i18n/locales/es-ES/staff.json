@@ -451,8 +451,9 @@
       "show": "Mostrar",
       "hideShowSrLabel": "{action} {title}",
       "previewSrLabel": "Vista previa de {title}",
-      "showMore": "Mostrar más cursos",
-      "backToTop": "← Volver al principio de la lista"
+      "pagination": {
+        "total": "{count, plural, one {# curso} other {# cursos}}"
+      }
     },
     "edit": {
       "backToCourses": "← Cursos",
@@ -661,7 +662,10 @@
       "description": "Puntos de partida publicados y versionados. Importar crea una ficha independiente de tu centro; las actualizaciones de la plantilla nunca sobrescriben tus cambios.",
       "templateVersion": "Plantilla v{version}",
       "importing": "Importando…",
-      "importToLibrary": "Importar a mi biblioteca"
+      "importToLibrary": "Importar a mi biblioteca",
+      "pagination": {
+        "total": "{count, plural, one {# sitio} other {# sitios}}"
+      }
     },
     "form": {
       "nameLabel": "Nombre",
@@ -908,8 +912,6 @@
     "creating": "Creando…",
     "createCode": "Crear código",
     "yourCodes": "Tus códigos",
-    "showMoreCodes": "Mostrar más códigos",
-    "backToTop": "← Volver al principio de la lista",
     "empty": {
       "heading": "Todavía no hay códigos",
       "detail": "Crea uno arriba, o envía una oferta de última hora desde la página de una salida cuando el barco necesite llenarse.",
@@ -947,8 +949,12 @@
       "recipients": "{count, plural, one {Enviado a # buceador} other {Enviado a # buceadores}}",
       "expiresAt": "Caduca {date}",
       "rangeNote": "Las ofertas por salida llegan como máximo al 90% de descuento — el barco sale de todos modos, así que la oferta siempre deja algo sobre la mesa. Los códigos de todo el centro de arriba pueden llegar al 100% porque el personal también los usa para cortesías y fidelización, no solo para llenar plazas.",
-      "showMore": "Mostrar más ofertas",
-      "backToTop": "← Volver al principio de la lista"
+      "pagination": {
+        "total": "{count, plural, one {# oferta} other {# ofertas}}"
+      }
+    },
+    "pagination": {
+      "total": "{count, plural, one {# código} other {# códigos}}"
     }
   },
   "reports": {
@@ -2460,14 +2466,22 @@
       "integrityUnsealed": "Registro heredado sin sellar",
       "medicalFlag": "Seguimiento médico marcado",
       "viewFlaggedAnswers": "Ver respuestas marcadas",
-      "showMoreRecords": "Mostrar más registros",
-      "backToTop": "← Volver al principio de la lista"
+      "pagination": {
+        "total": "{count, plural, one {# registro} other {# registros}}"
+      }
     }
   },
   "shopHome": {
     "createdNotice": {
       "single": "“{title}” ya está en el calendario. 🤙",
       "series": "“{title}” ya está en el calendario — {count, plural, one {# salida programada} other {# salidas programadas}}. 🤙"
+    },
+    "firstBookable": {
+      "heading": "“{title}” ya está en el calendario — tu centro ya acepta reservas. 🎉",
+      "headingSeries": "“{title}” ya está en el calendario — {count, plural, one {# salida programada} other {# salidas programadas}}, y tu centro ya acepta reservas. 🎉",
+      "body": "Este enlace es tu calendario público — la página desde la que reservan los buceadores. Ponlo en tu web, tus redes sociales y donde te encuentren los buceadores.",
+      "linkLabel": "Tu enlace de reservas",
+      "viewAsDiver": "Míralo como lo verán tus buceadores"
     },
     "demoReset": "Datos de demostración reiniciados — barco nuevo, pizarra limpia. 🤿",
     "emailResent": "Correo de confirmación reenviado.",
@@ -3334,11 +3348,13 @@
       "emailLabel": "Correo",
       "phoneLabel": "Teléfono",
       "optionalHint": "(opcional)",
-      "moreOnBoard": "Hay más salidas en el tablero",
       "noticeInvalid": "Introduce un nombre para añadir a un buceador — el correo y el teléfono son opcionales aquí.",
       "noMatchesHeading": "Nadie registrado con ese nombre",
       "noMatchesAction": "Introdúcelo a mano",
-      "backToPicker": "Volver a la lista de salidas"
+      "backToPicker": "Volver a la lista de salidas",
+      "pagination": {
+        "total": "{count, plural, one {# salida} other {# salidas}}"
+      }
     }
   }
 }

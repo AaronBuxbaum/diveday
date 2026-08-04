@@ -2,6 +2,7 @@ import { and, asc, count, eq, gte, ilike, inArray, isNull, ne, or, sql } from "d
 import { nowDate } from "@/lib/clock";
 import type { CertificationLevel } from "@/lib/readiness";
 import type { AppDb } from "./client";
+import { offsetPage } from "./paging";
 import {
   type DiveSpecialty,
   diveSiteCreatures,
@@ -82,36 +83,32 @@ export async function listDiveSitesPage(
     // which `or` treats as "not this branch" rather than excluding the row.
     like ? or(ilike(diveSites.name, like), ilike(diveSites.locationName, like)) : undefined,
   );
-  const pageSize = Math.max(1, page.pageSize ?? DIVE_SITE_PAGE_SIZE);
-  // A hand-typed `?page=0`, `?page=-3`, or `?page=abc` reads as the first page
-  // rather than reaching the driver as a negative or NaN offset. The route
-  // guards this too; this is the layer that must not depend on it having done so.
-  const requested = Math.floor(page.page ?? 1);
-  const current = Number.isFinite(requested) ? Math.max(1, requested) : 1;
-
-  const [rows, [counted]] = await Promise.all([
-    db
-      .select()
-      .from(diveSites)
-      .where(where)
-      // `dive_sites_shop_name_unique` already makes the name a total order
-      // within a shop, so no row can land on two pages or on none; `id` is the
-      // belt-and-braces tiebreak that keeps that true if the index is ever
-      // relaxed (e.g. to let an archived site free its name).
-      .orderBy(asc(diveSites.name), asc(diveSites.id))
-      .limit(pageSize)
-      .offset((current - 1) * pageSize),
-    db.select({ total: count() }).from(diveSites).where(where),
-  ]);
-
-  const total = counted?.total ?? 0;
-  return {
-    rows,
-    total,
-    page: current,
-    pageSize,
-    pageCount: Math.max(1, Math.ceil(total / pageSize)),
-  };
+  // Through the shared `offsetPage` rather than its own arithmetic: this used
+  // to clamp `?page=0`/`-3`/`abc` itself but had no answer for a page *past*
+  // the end, so a bookmarked `?page=9` on a library that shrank to four pages
+  // rendered an empty table under "Page 9 of 4". Landing on the last real page
+  // is the rule for every paged staff list (ADR 20260803-one-pagination-model),
+  // and it belongs in one place.
+  return offsetPage({
+    page: page.page,
+    pageSize: page.pageSize ?? DIVE_SITE_PAGE_SIZE,
+    countRows: async () => {
+      const [counted] = await db.select({ total: count() }).from(diveSites).where(where);
+      return counted?.total ?? 0;
+    },
+    fetchRows: async (offset, limit) =>
+      db
+        .select()
+        .from(diveSites)
+        .where(where)
+        // `dive_sites_shop_name_unique` already makes the name a total order
+        // within a shop, so no row can land on two pages or on none; `id` is the
+        // belt-and-braces tiebreak that keeps that true if the index is ever
+        // relaxed (e.g. to let an archived site free its name).
+        .orderBy(asc(diveSites.name), asc(diveSites.id))
+        .limit(limit)
+        .offset(offset),
+  });
 }
 
 /**
@@ -317,19 +314,98 @@ export async function listDiveSiteBriefingExtras(
   return { creatures, moments };
 }
 
-export async function listGlobalDiveSiteTemplates(db: AppDb) {
+/** How many published site templates the "Common dive sites" catalog shows per page. */
+export const GLOBAL_DIVE_SITE_PAGE_SIZE = 24;
+
+export type GlobalDiveSiteTemplateRow = {
+  template: typeof globalDiveSites.$inferSelect;
+  version: typeof globalDiveSiteVersions.$inferSelect;
+};
+
+export type GlobalDiveSiteTemplatePage = {
+  templates: GlobalDiveSiteTemplateRow[];
+  page: number;
+  pageCount: number;
+  pageSize: number;
+  total: number;
+};
+
+/**
+ * The DiveDay-published site catalog a shop imports from, one page at a time.
+ *
+ * This is a catalog we intend to keep adding to — the whole point of it is that
+ * a shop anywhere can find its own reef in it — so the surface has to page from
+ * the start rather than the day someone notices it renders a thousand cards
+ * (AGENTS.md: bound the page, not the capture; ADR
+ * 20260803-one-pagination-model). Ordered by slug, which is unique, so the sort
+ * needs no tiebreak of its own.
+ *
+ * The count joins the current-version row exactly as the page does: a template
+ * whose `currentVersion` has no matching version row is invisible to both, so
+ * neither can promise a card the other cannot render.
+ */
+export async function listGlobalDiveSiteTemplates(
+  db: AppDb,
+  options: { page?: number; limit?: number } = {},
+): Promise<GlobalDiveSiteTemplatePage> {
+  const currentVersionJoin = and(
+    eq(globalDiveSiteVersions.globalDiveSiteId, globalDiveSites.id),
+    eq(globalDiveSiteVersions.version, globalDiveSites.currentVersion),
+  );
+
+  const paged = await offsetPage({
+    page: options.page,
+    pageSize: options.limit ?? GLOBAL_DIVE_SITE_PAGE_SIZE,
+    countRows: async () => {
+      const [counted] = await db
+        .select({ total: count() })
+        .from(globalDiveSites)
+        .innerJoin(globalDiveSiteVersions, currentVersionJoin);
+      return counted?.total ?? 0;
+    },
+    fetchRows: async (offset, limit) =>
+      db
+        .select({ template: globalDiveSites, version: globalDiveSiteVersions })
+        .from(globalDiveSites)
+        .innerJoin(globalDiveSiteVersions, currentVersionJoin)
+        .orderBy(asc(globalDiveSites.slug))
+        .limit(limit)
+        .offset(offset),
+  });
+
+  return {
+    templates: paged.rows,
+    page: paged.page,
+    pageCount: paged.pageCount,
+    pageSize: paged.pageSize,
+    total: paged.total,
+  };
+}
+
+/**
+ * Current published version for the given templates, as a lookup.
+ *
+ * The library's "a newer version of this site is published" badge needs one
+ * number per *imported* site on the page it is rendering, which is a lookup,
+ * not a list — so it asks for exactly those ids rather than reading the whole
+ * catalog and indexing it client-side. That distinction is what lets the
+ * catalog itself page (`listGlobalDiveSiteTemplates`) without the library
+ * silently losing badges for anything past page 1.
+ *
+ * An empty `templateIds` short-circuits: `inArray(col, [])` is a query that can
+ * only ever return nothing, and there is no reason to make the database say so.
+ */
+export async function currentGlobalDiveSiteVersions(
+  db: AppDb,
+  templateIds: string[],
+): Promise<Map<string, number>> {
+  const ids = [...new Set(templateIds)];
+  if (ids.length === 0) return new Map();
   const rows = await db
-    .select({ template: globalDiveSites, version: globalDiveSiteVersions })
+    .select({ id: globalDiveSites.id, version: globalDiveSites.currentVersion })
     .from(globalDiveSites)
-    .innerJoin(
-      globalDiveSiteVersions,
-      and(
-        eq(globalDiveSiteVersions.globalDiveSiteId, globalDiveSites.id),
-        eq(globalDiveSiteVersions.version, globalDiveSites.currentVersion),
-      ),
-    )
-    .orderBy(asc(globalDiveSites.slug));
-  return rows;
+    .where(inArray(globalDiveSites.id, ids));
+  return new Map(rows.map((row) => [row.id, row.version]));
 }
 
 export type UpcomingSiteTrip = {

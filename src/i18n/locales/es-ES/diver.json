@@ -635,6 +635,37 @@
     "waiverDone": "Papeleo terminado ✓",
     "readinessTitle": "Tu preparación para la salida"
   },
+  "seatClaim": {
+    "metaTitle": "Reclama tu plaza",
+    "eyebrow": "Reclama tu plaza",
+    "heading": "Hay una plaza en {trip} esperándote",
+    "body": "Quien organiza tu grupo reservó esta plaza con {shop} y la guardó como “{seatName}”. Hazla tuya: añade tus propios datos y tu exención y tu preparación llegarán directamente a ti, no a través de esa persona.",
+    "when": "{date} · {time}",
+    "nameLabel": "Tu nombre",
+    "emailLabel": "Tu email",
+    "phoneLabel": "Tu teléfono",
+    "submit": "Reclamar esta plaza",
+    "claiming": "Reclamando…",
+    "privacyNote": "Lo que escribas aquí solo lo ven el centro y tú — quien organiza el grupo solo ve que la plaza está reclamada.",
+    "unavailableHeading": "Este enlace no está disponible",
+    "unavailableBody": "Puede que ya se haya usado, que lo hayan reemplazado por uno más nuevo o que haya caducado. Pide un enlace nuevo a quien organiza el grupo o contacta con el centro.",
+    "errors": {
+      "checkFields": "Revisa los campos marcados e inténtalo de nuevo.",
+      "nameRequired": "Añade tu nombre — esta plaza pasa a ser tuya.",
+      "emailInvalid": "Ese email no parece correcto.",
+      "alreadyBooked": "Ya tienes tu propia plaza en esta salida, así que esta se queda con quien organiza el grupo.",
+      "coursePrerequisite": "Esta sesión es un curso con sus propios requisitos, y el centro necesita una tarjeta verificada en la ficha antes de que esta plaza pueda cambiar de manos. Contacta con el centro y lo resolverán."
+    },
+    "claimedNotice": "Esta plaza ya es tuya — todo lo que ves en esta página es sobre ti. Quien organiza el grupo puede ver que está reclamada.",
+    "panelHeading": "Las plazas de tu grupo",
+    "panelBody": "Envía a cada buceador su propio enlace — cada uno añade sus datos, firma su propia exención y recibe su propia preparación. Una plaza que nadie reclama simplemente se queda contigo, tal y como se reservó.",
+    "claimedBadge": "Reclamada ✓",
+    "awaitingBadge": "Aún sin reclamar",
+    "copyLabel": "Copiar enlace",
+    "showLink": "Mostrar enlace",
+    "copiedLabel": "Copiado",
+    "copyFailedLabel": "No se pudo copiar — selecciona el enlace"
+  },
   "rental": {
     "heading": "Equipo de alquiler",
     "ownGear": "Traes tu propio equipo — no hace falta alquiler.",
