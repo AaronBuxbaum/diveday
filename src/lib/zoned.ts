@@ -43,13 +43,29 @@ function tzOffsetMs(date: Date, timeZone: string): number {
 /**
  * Interpret a wall-clock time as local time in `timeZone`. Two-pass offset
  * refinement handles DST transitions; a nonexistent wall time (spring-forward
- * gap) resolves to the instant after the jump.
+ * gap) resolves *forward* by the gap length — 02:30 on a 2am→3am night is
+ * 03:30, the same reading Temporal's "compatible" disambiguation gives. An
+ * ambiguous wall time (fall-back repeat) keeps the two-pass result unchanged.
+ *
+ * The forward resolution is load-bearing, not cosmetic: `shopDayBounds` feeds
+ * this midnight, and in a zone whose spring-forward jump happens *at* midnight
+ * (America/Santiago, America/Havana, Atlantic/Azores' spring side) the
+ * two-pass result alone lands an hour *before* the jump — which reads as
+ * 23:00 of the *previous* day, silently leaking yesterday's last hour into
+ * "today" and dropping the 23:30 boat from the day it actually sails
+ * (src/lib/zoned-hostile.test.ts pins both directions).
  */
 export function wallTimeToUtc(wall: WallTime, timeZone: string): Date {
   const naive = Date.UTC(wall.year, wall.month - 1, wall.day, wall.hour, wall.minute);
-  let offset = tzOffsetMs(new Date(naive), timeZone);
-  offset = tzOffsetMs(new Date(naive - offset), timeZone);
-  return new Date(naive - offset);
+  const offsetAtNaive = tzOffsetMs(new Date(naive), timeZone);
+  const offset = tzOffsetMs(new Date(naive - offsetAtNaive), timeZone);
+  const candidate = naive - offset;
+  // A wall time that exists reads back with the offset it was computed from.
+  if (tzOffsetMs(new Date(candidate), timeZone) === offset) return new Date(candidate);
+  // Spring-forward gap: of the two candidate instants (one per bracketing
+  // offset), the later one sits at-or-after the jump in every zone — east or
+  // west of UTC — and reads as the wall time shifted forward by the gap.
+  return new Date(Math.max(candidate, naive - offsetAtNaive));
 }
 
 /** Wall-clock parts of a UTC instant in `timeZone` — the inverse of wallTimeToUtc. */

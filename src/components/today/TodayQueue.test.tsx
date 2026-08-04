@@ -45,6 +45,7 @@ describe("TodayQueue urgency groups", () => {
         actions={[action({ id: "a1", urgency: "soon" })]}
         shopSlug="blue-mantis"
         shopName="Blue Mantis"
+        timezone="America/New_York"
         inviteAction={inviteAction}
         locale="en-US"
       />,
@@ -58,6 +59,7 @@ describe("TodayQueue urgency groups", () => {
         actions={[action({ id: "a1", urgency: "now" }), action({ id: "a2", urgency: "soon" })]}
         shopSlug="blue-mantis"
         shopName="Blue Mantis"
+        timezone="America/New_York"
         inviteAction={inviteAction}
         locale="en-US"
       />,
@@ -74,6 +76,7 @@ describe("TodayQueue urgency groups", () => {
         ]}
         shopSlug="blue-mantis"
         shopName="Blue Mantis"
+        timezone="America/New_York"
         inviteAction={inviteAction}
         locale="en-US"
       />,
@@ -87,6 +90,7 @@ describe("TodayQueue urgency groups", () => {
         actions={[]}
         shopSlug="blue-mantis"
         shopName="Blue Mantis"
+        timezone="America/New_York"
         inviteAction={inviteAction}
         locale="en-US"
       />,
@@ -104,6 +108,7 @@ describe("TodayQueue urgency groups", () => {
         actions={[]}
         shopSlug="blue-mantis"
         shopName="Blue Mantis"
+        timezone="America/New_York"
         inviteAction={inviteAction}
         locale="en-US"
       />,
@@ -124,6 +129,7 @@ describe("TodayQueue urgency groups", () => {
         ]}
         shopSlug="blue-mantis"
         shopName="Blue Mantis"
+        timezone="America/New_York"
         inviteAction={inviteAction}
         locale="en-US"
       />,
@@ -150,6 +156,7 @@ describe("TodayQueue unfinished roll-call rows (DOM-H3)", () => {
         ]}
         shopSlug="blue-mantis"
         shopName="Blue Mantis"
+        timezone="America/New_York"
         inviteAction={inviteAction}
         locale="en-US"
       />,
@@ -179,6 +186,7 @@ describe("TodayQueue unfinished roll-call rows (DOM-H3)", () => {
         ]}
         shopSlug="blue-mantis"
         shopName="Blue Mantis"
+        timezone="America/New_York"
         inviteAction={inviteAction}
         locale="en-US"
       />,
@@ -211,6 +219,7 @@ describe("TodayQueue unfinished roll-call rows (DOM-H3)", () => {
         ]}
         shopSlug="blue-mantis"
         shopName="Blue Mantis"
+        timezone="America/New_York"
         inviteAction={inviteAction}
         locale="en-US"
       />,
@@ -240,6 +249,7 @@ describe("TodayQueue payment rows", () => {
         ]}
         shopSlug="blue-mantis"
         shopName="Blue Mantis"
+        timezone="America/New_York"
         inviteAction={inviteAction}
         locale="en-US"
       />,
@@ -263,6 +273,7 @@ describe("TodayQueue payment rows", () => {
         ]}
         shopSlug="blue-mantis"
         shopName="Blue Mantis"
+        timezone="America/New_York"
         inviteAction={inviteAction}
         locale="en-US"
       />,
@@ -286,6 +297,7 @@ describe("TodayQueue payment rows", () => {
         ]}
         shopSlug="blue-mantis"
         shopName="Blue Mantis"
+        timezone="America/New_York"
         inviteAction={inviteAction}
         locale="en-US"
       />,

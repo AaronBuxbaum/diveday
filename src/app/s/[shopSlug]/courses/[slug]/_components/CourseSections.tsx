@@ -305,7 +305,16 @@ export function CourseOverview({ overview }: { overview: string | null }) {
   );
 }
 
-export function CourseSchedule({ days, t }: { days: CourseScheduleDay[]; t: DiverTranslator }) {
+export function CourseSchedule({
+  days,
+  locale,
+  t,
+}: {
+  days: CourseScheduleDay[];
+  /** The negotiated request locale — a clock time reads "14:00" or "2:00 PM" by it, never by the server's. */
+  locale: string;
+  t: DiverTranslator;
+}) {
   if (days.length === 0) return null;
   return (
     <section className="mt-12">
@@ -315,8 +324,10 @@ export function CourseSchedule({ days, t }: { days: CourseScheduleDay[]; t: Dive
           <li key={day.title} className="rounded-2xl border border-border bg-surface p-5">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <h3 className="text-lg font-semibold">{day.title}</h3>
-              {formatScheduleDayTime(day) ? (
-                <p className="text-sm tabular-nums text-muted">{formatScheduleDayTime(day)}</p>
+              {formatScheduleDayTime(day, locale) ? (
+                <p className="text-sm tabular-nums text-muted">
+                  {formatScheduleDayTime(day, locale)}
+                </p>
               ) : null}
             </div>
             {day.items.length > 0 ? (
