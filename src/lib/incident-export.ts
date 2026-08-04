@@ -100,6 +100,24 @@ export type IncidentRosterEntry = {
   fullName: string;
   emergencyContactName: string | null;
   emergencyContactPhone: string | null;
+  /**
+   * The buddy staff paired this diver with on this departure, by name
+   * (ADR 20260804-buddy-pairs). A **recorded decision**, not a derived one:
+   * who dived with whom is exactly the question an investigator asks first,
+   * and it is a fact the shop entered, so it belongs on this document.
+   *
+   * `null` means no pair was recorded, which the page states in words rather
+   * than leaving blank — an unpaired diver is a normal boat, not a gap.
+   *
+   * Deliberately a name and not a booking id, matching the offline snapshot:
+   * the document prints names, and ids are projected out of the hash anyway.
+   *
+   * The *divergence* a live manifest raises (one buddy back, one not) is not
+   * restated here. That is derived, and this document computes no verdict —
+   * the per-checkpoint roll-call cells and the timeline below already let a
+   * reader see that one of a pair came back and the other did not.
+   */
+  buddyName: string | null;
   /** One row per checkpoint, in sailing order — never omitted when unrecorded. */
   rollCall: IncidentRollCallResult[];
   /** Empty means "no certification evidence on file" — the UI must say so. */
@@ -333,6 +351,10 @@ export function buildIncidentExport(input: IncidentExportInput): IncidentExportD
       fullName: diver.fullName,
       emergencyContactName: diver.emergencyContactName,
       emergencyContactPhone: diver.emergencyContactPhone,
+      // The manifest derivation already refuses to carry a buddy whose own
+      // seat was cancelled, so a name here is always someone who held a seat
+      // on this departure.
+      buddyName: diver.buddy?.fullName ?? null,
       rollCall: rollCallResults(
         input.manifests,
         (manifest) => manifest.divers.find((entry) => entry.bookingId === diver.bookingId) ?? null,

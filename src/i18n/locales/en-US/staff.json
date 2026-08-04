@@ -3524,6 +3524,8 @@
     "rosterDescription": "Every active booking on this departure’s manifest, with the recorded result at each checkpoint. A checkpoint with no recorded result reads “Awaiting roll call” — an absence is stated, never left blank.",
     "colDiver": "Diver",
     "colEmergencyContact": "Emergency contact",
+    "colBuddy": "Buddy",
+    "noBuddyRecorded": "No buddy recorded",
     "notOnFile": "Not on file",
     "resultRecordedBy": "{date} · {name}",
     "crewHeading": "Crew",

@@ -63,6 +63,17 @@ export function AddDiverSection({
               <input
                 type="search"
                 name="diverq"
+                // Keyed on the server's own query so the box can never disagree
+                // with it. `defaultValue` applies at mount only, so without this
+                // the typed text survives a navigation as client state the
+                // comment above promises does not exist: seat a diver or trip a
+                // refusal — both redirect to a URL with no `diverq` — and the
+                // server renders an empty box while the DOM still shows the old
+                // search. Whichever the screenshot caught made
+                // `trip-guests-refusal-level` flake between runs on identical
+                // code. Re-keying remounts the input, so the value is always the
+                // server's.
+                key={query}
                 defaultValue={query}
                 placeholder={t("trips.addDiver.findPlaceholder")}
                 maxLength={120}

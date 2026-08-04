@@ -55,6 +55,17 @@ test("one tap from the manifest opens the incident-ready document with the recor
   ).toBeVisible();
   await expect(page.getByText("No current signed waiver on record.").first()).toBeVisible();
 
+  // Who dived with whom is on the document — the pairing staff recorded, not a
+  // derived verdict about it. Tom Okafor and Lena Fischer are the seeded reef
+  // team (src/db/seed-buddy-pairs.ts), so each names the other.
+  const roster = page.getByRole("table").first();
+  await expect(roster.getByRole("columnheader", { name: "Buddy" })).toBeVisible();
+  await expect(roster.getByRole("row", { name: /Tom Okafor/ })).toContainText("Lena Fischer");
+  await expect(roster.getByRole("row", { name: /Lena Fischer/ })).toContainText("Tom Okafor");
+  // Priya is deliberately unpaired: an unpaired diver is a normal boat, and the
+  // document says so in words rather than leaving the cell blank.
+  await expect(roster.getByRole("row", { name: /Priya/ })).toContainText("No buddy recorded");
+
   // The tamper-evidence code: a full SHA-256 in the footer.
   await expect(page.getByText("Integrity code (SHA-256)")).toBeVisible();
   await expect(page.getByText(/^[0-9a-f]{64}$/)).toBeVisible();

@@ -427,4 +427,107 @@ describe("buildIncidentExport", () => {
       /no departure manifest/,
     );
   });
+
+  describe("buddy pairs", () => {
+    /** Ana and Ben paired; Cleo sails unpaired, which is a normal boat. */
+    function pairedInput() {
+      const ana = { ...diver("b1", "Ana Diaz"), buddy: { bookingId: "b2", fullName: "Ben Cho" } };
+      const ben = { ...diver("b2", "Ben Cho"), buddy: { bookingId: "b1", fullName: "Ana Diaz" } };
+      return baseInput({
+        manifests: manifestsFor([ana, ben, diver("b3", "Cleo Vance")]),
+        events: [],
+        crewCounts: [],
+      });
+    }
+
+    it("records who each diver was paired with — the first question an investigator asks", () => {
+      const doc = buildIncidentExport(pairedInput());
+      const byName = (name: string) => doc.roster.find((entry) => entry.fullName === name);
+
+      expect(byName("Ana Diaz")?.buddyName).toBe("Ben Cho");
+      expect(byName("Ben Cho")?.buddyName).toBe("Ana Diaz");
+    });
+
+    it("states an unpaired diver as an explicit absence, never a blank or a crash", () => {
+      const doc = buildIncidentExport(pairedInput());
+      // `null` is the stated absence the page turns into words; an unpaired
+      // remainder is a normal boat, not a gap in the record.
+      expect(doc.roster.find((entry) => entry.fullName === "Cleo Vance")?.buddyName).toBeNull();
+      // And a departure where nobody was paired still builds every row.
+      const none = buildIncidentExport(baseInput());
+      expect(none.roster.every((entry) => entry.buddyName === null)).toBe(true);
+      expect(none.roster).toHaveLength(2);
+    });
+
+    it("carries the buddy by name only — no booking id reaches the document", () => {
+      const doc = buildIncidentExport(pairedInput());
+      const ana = doc.roster.find((entry) => entry.fullName === "Ana Diaz");
+      expect(ana).not.toHaveProperty("buddyBookingId");
+      // The pairing is a name on the page; ids stay plumbing, as everywhere else
+      // in this document.
+      expect(JSON.stringify(ana?.buddyName)).not.toContain("b2");
+    });
+
+    it("commits the pairing to the integrity code — repairing divers changes the hash", () => {
+      const paired = buildIncidentExport(pairedInput());
+      const unpaired = buildIncidentExport(
+        baseInput({
+          manifests: manifestsFor([
+            diver("b1", "Ana Diaz"),
+            diver("b2", "Ben Cho"),
+            diver("b3", "Cleo Vance"),
+          ]),
+          events: [],
+          crewCounts: [],
+        }),
+      );
+      // Who dived with whom is a printed fact, so a printout claiming a
+      // different pairing must not verify against a fresh export.
+      expect(paired.contentHash).not.toBe(unpaired.contentHash);
+      // Same records twice still reproduces, so the code stays checkable.
+      expect(buildIncidentExport(pairedInput()).contentHash).toBe(paired.contentHash);
+    });
+
+    it("never restates the live manifest's split-pair alert — this document computes no verdict", () => {
+      // Ana is back aboard after dive 1 and Ben is not: the state a live
+      // manifest raises loudly. Here it must show only as the two recorded
+      // roll-call results, with no derived alert field on the row.
+      const notBack = undefined;
+      const boarded = {
+        state: "boarded" as const,
+        occurredAt: new Date("2026-08-04T14:30:00.000Z"),
+        recordedByName: "Captain Sol",
+        note: null,
+        implied: false,
+        source: "live" as const,
+      };
+      const manifests = rollCallCheckpoints(TRIP.plannedDives).map((checkpoint) =>
+        buildTripManifest({
+          trip: TRIP,
+          checkpoint,
+          crew: [],
+          divers: [
+            {
+              ...diver("b1", "Ana Diaz", checkpoint === "after_dive_1" ? boarded : undefined),
+              buddy: { bookingId: "b2", fullName: "Ben Cho" },
+            },
+            {
+              ...diver("b2", "Ben Cho", notBack),
+              buddy: { bookingId: "b1", fullName: "Ana Diaz" },
+            },
+          ],
+        }),
+      );
+      const doc = buildIncidentExport(baseInput({ manifests, events: [], crewCounts: [] }));
+      const ana = doc.roster.find((entry) => entry.fullName === "Ana Diaz");
+
+      expect(ana?.buddyName).toBe("Ben Cho");
+      expect(ana).not.toHaveProperty("buddyAlert");
+      // The facts a reader needs are the two roll-call rows, stated plainly.
+      const afterDive1 = ana?.rollCall.find((r) => r.checkpoint === "after_dive_1");
+      expect(afterDive1?.label).toBe("boarded");
+      const ben = doc.roster.find((entry) => entry.fullName === "Ben Cho");
+      expect(ben?.rollCall.find((r) => r.checkpoint === "after_dive_1")?.label).toBe("awaiting");
+    });
+  });
 });
