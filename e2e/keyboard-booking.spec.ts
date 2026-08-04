@@ -254,9 +254,7 @@ async function recordAnnouncements(page: Page): Promise<void> {
 
 /** Everything a live region has received since `recordAnnouncements`. */
 async function announcements(page: Page): Promise<string[]> {
-  return page.evaluate(
-    () => (window as unknown as { __announced?: string[] }).__announced ?? [],
-  );
+  return page.evaluate(() => (window as unknown as { __announced?: string[] }).__announced ?? []);
 }
 
 test("a booking can be seated with the keyboard alone, and says so out loud", async ({ page }) => {
@@ -279,7 +277,9 @@ test("a booking can be seated with the keyboard alone, and says so out loud", as
   // on every navigation.
   const first = await tab(page);
   expectUsableStop(first, "shop home");
-  expect(first.label, "the first tab stop should be the skip link").toMatch(/Skip to main content/i);
+  expect(first.label, "the first tab stop should be the skip link").toMatch(
+    /Skip to main content/i,
+  );
 
   const toSearch = await tabUntil(page, /"Search"/, { limit: 20, where: "shop home" });
   // Reachable at all is the floor; reachable *early* is the design. Search is

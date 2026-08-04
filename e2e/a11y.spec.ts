@@ -350,7 +350,11 @@ test.describe("automated accessibility scans of the staff detail surfaces", () =
     // picker, because the refusal below needs *this* departure — French Reef
     // carries no gate of its own, so an Advanced Open Water minimum is the only
     // thing that can refuse a seat here (src/db/seed-cert-gates.ts).
-    const driftLink = await findTripOnBoard(page, "blue-mantis", "Advanced Drift — French Reef Wall");
+    const driftLink = await findTripOnBoard(
+      page,
+      "blue-mantis",
+      "Advanced Drift — French Reef Wall",
+    );
     const tripId = (await driftLink.getAttribute("href"))?.match(/\/trips\/([^/?#]+)/)?.[1];
     expect(tripId, "the Advanced Drift departure had no trip id in its board link").toBeTruthy();
     const doorPath = `/shop/blue-mantis/bookings/new/${tripId}`;
@@ -430,11 +434,7 @@ test.describe("automated accessibility scans of the staff detail surfaces", () =
       page.getByRole("heading", { level: 1, name: "Certification paths" }),
     ).toBeVisible();
     await expectNoA11yViolations(page);
-    await page
-      .locator('a[href*="/courses/paths/"]')
-      .filter({ visible: true })
-      .first()
-      .click();
+    await page.locator('a[href*="/courses/paths/"]').filter({ visible: true }).first().click();
     await expect(page).toHaveURL(/\/courses\/paths\/[^/]+$/);
     await expectNoA11yViolations(page);
 
@@ -520,13 +520,19 @@ test.describe("automated accessibility scans of the staff overlays", () => {
     // reach.
     await page.goto("/shop/blue-mantis/schedule/board");
     await expect(page.getByRole("heading", { level: 1, name: "Board" })).toBeVisible();
-    await page.getByRole("button", { name: /^Move / }).first().click();
+    await page
+      .getByRole("button", { name: /^Move / })
+      .first()
+      .click();
     await expectNoA11yViolations(page);
 
     // Copy is a different panel with a different field set, not the same one
     // relabelled — so it gets its own scan rather than a shared one.
     await page.keyboard.press("Escape");
-    await page.getByRole("button", { name: /^Copy / }).first().click();
+    await page
+      .getByRole("button", { name: /^Copy / })
+      .first()
+      .click();
     await expectNoA11yViolations(page);
   });
 });
@@ -583,4 +589,3 @@ test.describe("automated accessibility scans of the signed-out surfaces", () => 
     ]);
   });
 });
-
