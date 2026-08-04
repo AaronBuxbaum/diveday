@@ -744,7 +744,7 @@ for (const scheme of ["light", "dark"] as const) {
         const reviewSettingsPage = makeActivitySafe(await reviewSettingsContext.newPage());
         await reviewSettingsPage.goto("/shop/blue-mantis/settings");
         await reviewSettingsPage
-          .getByLabel("Review link")
+          .getByLabel("Review link (optional)", { exact: true })
           .fill("https://g.page/r/blue-mantis/review");
         await reviewSettingsPage.getByRole("button", { name: "Save review link" }).click();
         await reviewSettingsPage
