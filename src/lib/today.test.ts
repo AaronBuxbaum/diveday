@@ -446,19 +446,28 @@ describe("leadWithCrewed", () => {
 
 describe("getSeasonalBriefing", () => {
   it("returns summer for June, July, August", () => {
-    expect(getSeasonalBriefing(new Date("2026-07-15"))).toBe("summer");
+    expect(getSeasonalBriefing(new Date("2026-07-15"), "UTC")).toBe("summer");
   });
 
   it("returns autumn for September, October, November", () => {
-    expect(getSeasonalBriefing(new Date("2026-10-15"))).toBe("autumn");
+    expect(getSeasonalBriefing(new Date("2026-10-15"), "UTC")).toBe("autumn");
   });
 
   it("returns winter for December, January, February", () => {
-    expect(getSeasonalBriefing(new Date("2026-01-15"))).toBe("winter");
+    expect(getSeasonalBriefing(new Date("2026-01-15"), "UTC")).toBe("winter");
   });
 
   it("returns spring for March, April, May", () => {
-    expect(getSeasonalBriefing(new Date("2026-04-15"))).toBe("spring");
+    expect(getSeasonalBriefing(new Date("2026-04-15"), "UTC")).toBe("spring");
+  });
+
+  it("reads the month in the shop's timezone, not the runtime's (regression)", () => {
+    // 2026-08-31 23:30Z is already September 1 in Auckland (UTC+12), but
+    // still August 31 in Honolulu (UTC-10): the same instant is a different
+    // season depending on whose calendar you read. It must be the shop's.
+    const instant = new Date("2026-08-31T23:30:00Z");
+    expect(getSeasonalBriefing(instant, "Pacific/Auckland")).toBe("autumn");
+    expect(getSeasonalBriefing(instant, "Pacific/Honolulu")).toBe("summer");
   });
 });
 

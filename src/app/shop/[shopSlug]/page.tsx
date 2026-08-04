@@ -493,6 +493,7 @@ async function TodayBody({
           actions={actions}
           shopSlug={shopSlug}
           shopName={shop.name}
+          timezone={shop.timezone}
           inviteAction={inviteWaitlistAction.bind(null, shopSlug)}
           locale={locale}
         />
