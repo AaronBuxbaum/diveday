@@ -58,6 +58,7 @@ import {
   waiverRecords,
   waiverTemplates,
 } from "./schema";
+import { seedBackup } from "./seed-backup";
 import { seedBookings } from "./seed-bookings";
 import { seedCatalog } from "./seed-catalog";
 import { seedCertGates } from "./seed-cert-gates";
@@ -98,6 +99,7 @@ import { seedTrips } from "./seed-trips";
  * | `./seed-history.ts` | the trailing quarter that gives owner reporting something to report |
  * | `./seed-cert-gates.ts` | the boats a card can be refused on, one gate each, and the course carve-out |
  * | `./seed-demo-lifecycle.ts` | minting, reaping, and capping throwaway demo shops |
+ * | `./seed-backup.ts` | the shop-owned backup destination and its weekly delivery history |
  *
  * The public surface is unchanged: `@/db/seed` still exports everything it
  * always did, including the lifecycle helpers re-exported at the bottom.
@@ -240,6 +242,11 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
   );
 
   await seedDemoSchedule(db, shop.id, opts);
+
+  // Stable half, like staff and their shifts: a backup destination is a
+  // settings row a demo visitor cannot break, so it lives outside the
+  // resettable schedule (ADR 20260804-shop-owned-backup-export).
+  await seedBackup(db, shop.id);
 }
 
 /**

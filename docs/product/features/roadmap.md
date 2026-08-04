@@ -49,11 +49,11 @@ register). Breadth is done; depth and proof are the work.
 
 ### 1. Data-portability follow-ons (the wedge)
 
-Export, the diver/customer CSV importer, and the public migration guides have shipped (see
-[../shipped.md](../shipped.md)); the rest of the "switching is safe" story is greenfield. Sequenced
-in [competitive-strategy.md](../assessments/competitive-strategy.md#the-build-plan-in-order).
+Export, the diver/customer CSV importer, the public migration guides, and the scheduled backup
+export to shop-owned storage have shipped (see [../shipped.md](../shipped.md)); one piece of the
+"switching is safe" story remains. Sequenced in
+[competitive-strategy.md](../assessments/competitive-strategy.md#the-build-plan-in-order).
 
-- **Scheduled backup export** to shop-owned storage (weekly bundle; `.ics` trip feeds ride along).
 - **Read API + webhooks**, every tier — token-scoped reads over the export schema plus
   booking/waiver/manifest events. **ADR required** before building.
 

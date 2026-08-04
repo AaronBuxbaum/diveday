@@ -1997,6 +1997,11 @@
         "description": "Envía recordatorios y resúmenes desde el número de WhatsApp de tu centro en lugar de un número SMS de la plataforma.",
         "cta": "Configurar WhatsApp"
       },
+      "backup": {
+        "heading": "Respaldos",
+        "description": "Una copia semanal de todo lo que guarda tu centro, entregada en un almacenamiento que es tuyo.",
+        "cta": "Configurar respaldos"
+      },
       "jump": {
         "label": "Ir a una sección"
       },
@@ -3285,6 +3290,104 @@
       "connecting": "Conectando…",
       "cancelled": "Conexión cancelada; no se cambió nada. Presiona Conectar para intentarlo de nuevo.",
       "blocked": "No se pudo abrir la ventana de Meta. Revisa que tu navegador no bloquee las ventanas emergentes e inténtalo de nuevo."
+    }
+  },
+  "backup": {
+    "eyebrow": "Ajustes",
+    "title": "Respaldos",
+    "description": "Cada semana, una copia completa de los registros de tu centro llega a un almacenamiento que es tuyo. Si algún día te vas — o DiveDay desaparece — la copia ya está en tus manos.",
+    "notice": {
+      "saved": "Destino de respaldo guardado. Ejecuta una entrega de prueba para verificar que funciona.",
+      "invalid": "Revisa los datos del destino e inténtalo de nuevo.",
+      "endpoint_invalid": "Ese endpoint no se lee como una dirección HTTPS simple. Usa el origen de la API S3 de tu proveedor, sin consulta, ruta ni credenciales.",
+      "endpoint_not_https": "El endpoint debe empezar con https:// — los respaldos nunca viajan sin cifrar.",
+      "endpoint_private_host": "Ese endpoint apunta a una dirección privada o local, a la que los servidores de DiveDay no pueden entregar. Usa el endpoint público de tu proveedor de almacenamiento.",
+      "secret_required": "Ingresa la clave de acceso secreta para conectar este destino.",
+      "encryption_key_unset": "Esta instancia de DiveDay aún no está preparada para guardar credenciales de forma segura, así que no se guardó nada.",
+      "encryption_key_invalid": "La clave de cifrado de esta instancia de DiveDay está mal configurada, así que no se guardó nada.",
+      "disconnected": "Destino de respaldo eliminado. El historial de entregas de abajo se conserva.",
+      "test_delivered": "La entrega de prueba llegó a tu bucket. Los respaldos semanales están verificados.",
+      "test_failed": "La entrega de prueba no llegó. {reason}",
+      "no_destination": "Guarda primero un destino y luego ejecuta una entrega de prueba.",
+      "not_authorized": "Solo un propietario o gerente puede cambiar los ajustes de respaldo."
+    },
+    "status": {
+      "configuredHeading": "Los respaldos están configurados",
+      "notConfiguredHeading": "Todavía no hay destino de respaldo",
+      "notConfiguredDescription": "Apunta DiveDay a un bucket compatible con S3 que sea tuyo — AWS S3, Cloudflare R2, Backblaze B2 y similares — y un paquete de exportación completo llegará allí cada semana.",
+      "verified": "Entrega verificada",
+      "unproven": "Sin verificar todavía",
+      "endpoint": "Endpoint",
+      "bucket": "Bucket",
+      "accessKeyId": "ID de clave de acceso",
+      "lastDelivered": "Última entrega",
+      "never": "Nunca"
+    },
+    "test": {
+      "submit": "Ejecutar una entrega de prueba ahora",
+      "submitting": "Entregando…"
+    },
+    "form": {
+      "heading": "Destino",
+      "description": "Funciona cualquier almacenamiento compatible con S3. Usa una credencial que solo pueda escribir en este bucket: DiveDay nunca necesita leer, listar ni borrar nada.",
+      "endpointLabel": "Endpoint",
+      "endpointHint": "El origen de la API S3 de tu proveedor — HTTPS, sin bucket ni ruta.",
+      "regionLabel": "Región",
+      "regionHint": "La región de firma: “auto” en Cloudflare R2, del estilo “us-east-1” en AWS.",
+      "bucketLabel": "Bucket",
+      "prefixLabel": "Prefijo de carpeta",
+      "prefixHint": "Los paquetes llegan dentro de esta carpeta del bucket.",
+      "optionalHint": "(opcional)",
+      "accessKeyIdLabel": "ID de clave de acceso",
+      "secretLabel": "Clave de acceso secreta",
+      "secretHint": "Se guarda sellada, se usa solo para firmar las subidas y no vuelve a mostrarse nunca — ni siquiera a ti.",
+      "secretKeepHint": "Déjala en blanco para conservar la clave actual; ingresa una nueva solo para rotarla.",
+      "submit": "Guardar destino",
+      "submitting": "Guardando…"
+    },
+    "how": {
+      "heading": "Cómo funciona",
+      "weekly": "Una vez por semana, DiveDay arma tu paquete de exportación completo — cada CSV, el README, tus fotos — y lo entrega en tu bucket. Es el mismo paquete que la descarga de exportación de datos: lo que te llevarías al irte es lo que se respalda.",
+      "contents": "Tu calendario de salidas viaja incluido como trips.ics, legible por cualquier app de calendario.",
+      "sealed": "La clave de acceso secreta se sella antes de guardarse y se abre solo en el momento de la subida.",
+      "failures": "Una entrega que falla queda registrada abajo y se reintenta en la siguiente pasada semanal: DiveDay nunca bombardea tu bucket con reintentos."
+    },
+    "history": {
+      "heading": "Historial de entregas",
+      "empty": "Todavía no hay entregas. Cuando guardes un destino, cada entrega semanal o de prueba aparecerá aquí.",
+      "when": "Cuándo",
+      "kind": "Tipo",
+      "outcome": "Resultado",
+      "size": "Tamaño",
+      "details": "Detalles",
+      "trigger": {
+        "scheduled": "Semanal",
+        "manual": "Prueba"
+      },
+      "status": {
+        "succeeded": "Entregado",
+        "failed": "Falló",
+        "started": "No terminó"
+      },
+      "total": "{count, plural, one {# entrega} other {# entregas}}"
+    },
+    "deliveryError": {
+      "upload_unauthorized": "El bucket rechazó la credencial: revisa la clave de acceso y su permiso de escritura.",
+      "bucket_not_found": "Ningún bucket con ese nombre respondió en el endpoint: revisa ambos.",
+      "upload_rejected": "El proveedor de almacenamiento rechazó la subida.",
+      "network_unreachable": "No se pudo alcanzar el endpoint.",
+      "credential_unreadable": "La clave secreta guardada ya no se puede abrir: ingrésala de nuevo para corregirlo.",
+      "shop_missing": "No se pudieron cargar los registros del centro.",
+      "bundle_failed": "No se pudo armar el paquete de exportación.",
+      "encryption_key_unset": "Esta instancia de DiveDay no está preparada para guardar credenciales de forma segura.",
+      "encryption_key_invalid": "La clave de cifrado de esta instancia de DiveDay está mal configurada.",
+      "unknown": "Algo salió mal."
+    },
+    "disconnect": {
+      "heading": "Quitar destino",
+      "description": "Borra la credencial guardada y detiene las entregas semanales. El historial de abajo y todo lo que ya está en tu bucket se conservan.",
+      "submit": "Quitar destino de respaldo",
+      "submitting": "Quitando…"
     }
   },
   "bookings": {

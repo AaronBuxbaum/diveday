@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  formatByteSize,
   formatDateTimeTz,
   formatRelativeDay,
   formatShortDate,
@@ -93,6 +94,21 @@ describe("formatRelativeDay", () => {
     expect(formatRelativeDay(noon("2026-07-19"), noon("2026-07-17"), "es-ES", "UTC")).toBe(
       "pasado mañana",
     );
+  });
+});
+
+describe("formatByteSize", () => {
+  it("picks the decimal unit a storage console would report", () => {
+    expect(formatByteSize(0, "en-US")).toBe("0 byte");
+    expect(formatByteSize(999, "en-US")).toBe("999 byte");
+    expect(formatByteSize(1_000, "en-US")).toBe("1 kB");
+    expect(formatByteSize(42_300_000, "en-US")).toBe("42.3 MB");
+    expect(formatByteSize(128_000_000, "en-US")).toBe("128 MB");
+    expect(formatByteSize(2_500_000_000, "en-US")).toBe("2.5 GB");
+  });
+
+  it("formats for the reader's locale", () => {
+    expect(formatByteSize(42_300_000, "es-ES")).toBe("42,3 MB");
   });
 });
 
