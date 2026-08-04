@@ -743,17 +743,8 @@ for (const scheme of ["light", "dark"] as const) {
         });
         const reviewSettingsPage = makeActivitySafe(await reviewSettingsContext.newPage());
         await reviewSettingsPage.goto("/shop/blue-mantis/settings");
-        // By role and full accessible name, not `getByLabel("Review link")`:
-        // that substring-matches, and the field's `InfoHint` toggle beside it
-        // is labelled "More about Review link", so the loose locator resolves
-        // to two elements once both have rendered — a strict-mode violation.
-        // Not a new hazard: it was already failing this way on `main`
-        // (run 30879017956, shard 3/4). The settings page is where every one
-        // of these lives, because it is the only surface that mounts
-        // `InfoHint`; `getByLabel("Timezone", { exact: true })` in
-        // settings-findability.spec.ts is the same fix in its other form.
         await reviewSettingsPage
-          .getByRole("textbox", { name: "Review link (optional)" })
+          .getByLabel("Review link (optional)", { exact: true })
           .fill("https://g.page/r/blue-mantis/review");
         await reviewSettingsPage.getByRole("button", { name: "Save review link" }).click();
         await reviewSettingsPage

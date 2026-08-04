@@ -42,14 +42,8 @@ test.describe("as owner", () => {
     page,
   }) => {
     await page.goto("/shop/blue-mantis/settings");
-    // By role and full accessible name: `getByLabel("Review link")`
-    // substring-matches, and the field's `InfoHint` toggle beside it is
-    // labelled "More about Review link", so the loose locator resolves to two
-    // elements once both have rendered. This was red on `main` before this
-    // branch existed (run 30879017956); the settings page is the only surface
-    // that mounts `InfoHint`, so it is the only place the hazard lives.
     await page
-      .getByRole("textbox", { name: "Review link (optional)" })
+      .getByLabel("Review link (optional)", { exact: true })
       .fill("https://g.page/r/blue-mantis/review");
     await page.getByRole("button", { name: "Save review link" }).click();
     await expect(page.getByText("Review link saved.")).toBeVisible();

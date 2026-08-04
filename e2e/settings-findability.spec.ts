@@ -57,10 +57,6 @@ test.describe("as owner", () => {
     // afterwards, so a shop that clicked past the picker read every departure
     // time, day header, and "sailing today" in US Eastern with no way out.
     await page.goto(`/shop/${SHOP}/settings`);
-    // `exact` because the section heading carries an `InfoHint` whose
-    // accessible name is "More about Timezone" — the default substring
-    // match resolves to that button *and* this select, a strict-mode
-    // violation whenever both have rendered (ADR 20260804-instant-navigation).
     const zone = page.getByLabel("Timezone", { exact: true });
     await expect(zone).toHaveValue("America/New_York");
 
