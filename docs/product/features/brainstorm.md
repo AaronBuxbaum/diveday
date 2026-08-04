@@ -46,9 +46,6 @@ single action.
   course sign-ups or upcoming blockers. *(S, cross-cutting, quick win.)*
 - **Multi-boat / multi-trip day orchestration.** A shop running several boats can see all departures,
   move divers and crew carefully, and avoid collisions. *(L, cross-cutting, big bet.)*
-- **End-of-day close-out.** Reconcile who dove, gear returned, incidents logged, and tomorrow's
-  blockers in one "everyone is home" ritual. *(M, cross-cutting, quick win.)*
-
 ## Diver Experience And Growth
 
 Lens: help a diver book, prepare, show up confident, return, and bring a buddy without turning DiveDay

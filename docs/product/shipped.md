@@ -7,6 +7,20 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## End-of-day close-out — the "everyone is home" ritual (2026-08-04)
+
+The brainstorm's end-of-day close-out, delivered as Today's evening mirror at
+`/shop/<slug>/close-out`: every departure of the shop-local day judged by its head count (read off
+`listRollCallGaps`, never re-derived), today's unresolved queue rows each given an explicit
+**carry/dismiss** choice, and tomorrow's first blockers as the parting glance. Closing the day is
+an append-only recorded act (`day_closeouts`: who, when, and the outstanding snapshot recomputed
+server-side at close time) — **never a gate**: an open after-dive count or a boat still out makes
+the close a by-name acknowledgement, not an impossibility, and nothing downstream conditions on the
+row. Carry/dismiss is a memory, not a filter — tomorrow's queue keeps deriving from the source of
+truth. Gear-return reconciliation from the original idea is deliberately out of scope until a gear
+register exists. See [20260804-day-closeout](../architecture/decisions/20260804-day-closeout.md)
+and the glossary's "Close-out".
+
 ## The 2026-08-02 review's engineering queue (delivered 2026-08-03)
 
 The Medium and Low engineering items the [2026-08-02 review](assessments/comprehensive-review-20260802.md)

@@ -161,6 +161,10 @@
     "e2e": ["check-in.spec.ts", "trip-admission.spec.ts"],
     "visual": ["check-in-walk-in"]
   },
+  "/shop/[shopSlug]/close-out": {
+    "e2e": ["closeout.spec.ts"],
+    "visual": ["close-out"]
+  },
   "/shop/[shopSlug]/courses": {
     "e2e": ["course-paths.spec.ts", "courses.spec.ts"],
     "visual": ["courses-list"]

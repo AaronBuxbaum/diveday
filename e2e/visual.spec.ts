@@ -1104,6 +1104,16 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "check-in", scheme);
       });
 
+      // The end-of-day close-out (ADR 20260804-day-closeout): the ritual
+      // surface Today mirrors at 5 p.m. Captured over the plain seed state —
+      // today's boat still ahead of the frozen clock, real leftovers, and
+      // tomorrow's glance — so the calm-but-populated shape is the baseline.
+      test(`the day close-out renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/close-out");
+        await page.getByRole("heading", { name: "How today's boats ended" }).waitFor();
+        await capture(page, "close-out", scheme);
+      });
+
       // Staffing had no baseline at all until the over_ratio parity fix —
       // the one gap surface whose green "Covered" badge could silently
       // contradict Today. Captured so a regression there shows as pixels.

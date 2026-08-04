@@ -120,6 +120,7 @@ describe("what each consumer derives", () => {
       "board",
     ]);
     expect(staffNavDestinations("daily", owner).map((d) => d.id)).toEqual([
+      "closeOut",
       "staffing",
       "diveSites",
       "courses",

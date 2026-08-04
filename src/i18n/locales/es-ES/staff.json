@@ -2421,6 +2421,76 @@
       "noMatchesAction": "Introdúcelo a mano"
     }
   },
+  "closeout": {
+    "title": "Cierre del día",
+    "notice": {
+      "closed": "Día cerrado. El registro está abajo — hasta mañana."
+    },
+    "headline": {
+      "allClear": "Todos de vuelta",
+      "outstanding": "Aún queda algo abierto",
+      "noDepartures": "Un día tranquilo en el muelle"
+    },
+    "subtitle": {
+      "allClear": "Cada recuento de los barcos de hoy quedó cerrado y nada de hoy sigue pendiente. Cierra el día y a casa.",
+      "outstanding": "Quedan cosas abiertas de hoy. Resuelve lo que puedas y decide sobre el resto — el cierre registra tus decisiones.",
+      "noDepartures": "Hoy no zarpó ningún barco. Mira con qué abre mañana, cierra el día y a casa.",
+      "closedSoFar": "El día está cerrado. Nada queda bloqueado — todo lo de abajo sigue disponible, y cerrar de nuevo suma otro registro."
+    },
+    "departures": {
+      "heading": "Cómo terminaron los barcos de hoy",
+      "subtitle": "Cada salida del día, juzgada por su recuento — la misma evidencia que persiguen el manifiesto y Hoy.",
+      "empty": "Hoy no hubo salidas.",
+      "status": {
+        "allHome": "Todos de vuelta",
+        "unreconciled": "Recuento sin cerrar",
+        "stillOut": "Todavía fuera",
+        "countOpen": "Recuento en muelle abierto",
+        "notDeparted": "Sin zarpar"
+      },
+      "detail": {
+        "allHome": "{booked, plural, =0 {No había buceadores reservados} one {# buceador, recuento cerrado} other {# buceadores, recuento cerrado}}.",
+        "stillOut": "Vuelve a las {time}. Un barco que no está en casa no puede leerse como cerrado.",
+        "notDeparted": "Zarpa a las {time}.",
+        "missingDiver": "{count, plural, one {# buceador quedó marcado como no regresado a bordo tras la inmersión {dive}.} other {# buceadores quedaron marcados como no regresados a bordo tras la inmersión {dive}.}} Localízalos — el recuento se cierra en el manifiesto.",
+        "missingCrew": "{count, plural, one {# tripulante quedó marcado como no regresado a bordo tras la inmersión {dive}.} other {# tripulantes quedaron marcados como no regresados a bordo tras la inmersión {dive}.}} Localízalos — el recuento se cierra en el manifiesto.",
+        "afterDiveUncounted": "{count, plural, one {# buceador no tiene resultado tras la inmersión {dive}.} other {# buceadores no tienen resultado tras la inmersión {dive}.}} El recuento nunca se cerró.",
+        "crewUncounted": "{count, plural, one {# tripulante no tiene resultado tras la inmersión {dive}.} other {# tripulantes no tienen resultado tras la inmersión {dive}.}} El recuento nunca se cerró.",
+        "departureUncounted": "{count, plural, one {El recuento en muelle nunca se terminó — # buceador sin resultado en la salida.} other {El recuento en muelle nunca se terminó — # buceadores sin resultado en la salida.}}",
+        "noRollCall": "No se registró pase de lista en esta salida."
+      }
+    },
+    "leftovers": {
+      "heading": "Lo que quedó de hoy",
+      "subtitle": "Trabajo de hoy que sigue abierto. Llévalo a mañana o descártalo — el cierre recuerda la decisión de todas formas, y la cola sigue derivando su propia lista.",
+      "empty": "No quedó nada pendiente de hoy.",
+      "carry": "Llevar a mañana",
+      "dismiss": "Descartar",
+      "decisionLabel": "Qué hacer con {subject}"
+    },
+    "tomorrow": {
+      "heading": "Mañana, de un vistazo",
+      "subtitle": "Con qué abre la cola de la mañana — léelo ahora y sal más ligero.",
+      "empty": "Mañana empieza despejado.",
+      "more": "{count, plural, one {Y # más en la cola de mañana.} other {Y # más en la cola de mañana.}}"
+    },
+    "close": {
+      "heading": "Cerrar el día",
+      "acknowledge": "{count, plural, one {# barco de arriba sigue fuera o con un recuento abierto. Lo he visto, y cerrar el día no detiene la búsqueda.} other {# barcos de arriba siguen fuera o con recuentos abiertos. Los he visto, y cerrar el día no detiene la búsqueda.}}",
+      "button": "Cerrar el día",
+      "buttonAgain": "Cerrar el día otra vez",
+      "note": "Cerrar es un registro, no un candado: quién cerró, cuándo y qué quedaba abierto. Nada depende de ello."
+    },
+    "record": {
+      "heading": "Día cerrado",
+      "closedBy": "Cerrado por {name} a las {time}.",
+      "closeCount": "{count, plural, other {Cerrado # veces hoy — cada cierre es su propio registro.}}",
+      "outstandingHeading": "Registrado como pendiente",
+      "nothingOutstanding": "No quedó nada pendiente.",
+      "carried": "Llevado a mañana",
+      "dismissed": "Descartado"
+    }
+  },
   "waiversStaff": {
     "eyebrow": "Ajustes",
     "title": "Plantilla de exención",
@@ -2733,6 +2803,7 @@
       "groupSetup": "Configurar",
       "today": "Hoy",
       "checkIn": "Registro",
+      "closeOut": "Cierre del día",
       "walkIn": "Walk-in",
       "blockers": "No listos",
       "divers": "Buceadores",

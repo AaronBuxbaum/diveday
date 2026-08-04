@@ -2421,6 +2421,76 @@
       "noMatchesAction": "Enter them by hand"
     }
   },
+  "closeout": {
+    "title": "Close-out",
+    "notice": {
+      "closed": "Day closed. The record is below — see you tomorrow."
+    },
+    "headline": {
+      "allClear": "Everyone is home",
+      "outstanding": "A few things are still open",
+      "noDepartures": "A quiet day at the dock"
+    },
+    "subtitle": {
+      "allClear": "Every head count on today's boats closed clean and nothing from today is still waiting. Close the day and go home.",
+      "outstanding": "A few things are still open from today. Settle what you can, decide about the rest — the close records your choices.",
+      "noDepartures": "No boat sailed today. Have a look at what tomorrow opens with, close the day, and go home.",
+      "closedSoFar": "The day is closed. Nothing locks — anything below can still be acted on, and closing again adds another record."
+    },
+    "departures": {
+      "heading": "How today's boats ended",
+      "subtitle": "Every departure of the day, judged by its head count — the same evidence the manifest and Today chase.",
+      "empty": "No departures today.",
+      "status": {
+        "allHome": "All home",
+        "unreconciled": "Unreconciled",
+        "stillOut": "Still out",
+        "countOpen": "Dock count open",
+        "notDeparted": "Not departed"
+      },
+      "detail": {
+        "allHome": "{booked, plural, =0 {Nobody was booked} one {# diver, head count closed} other {# divers, head count closed}}.",
+        "stillOut": "Due back at {time}. A boat that is not home cannot read as closed.",
+        "notDeparted": "Departs at {time}.",
+        "missingDiver": "{count, plural, one {# diver was marked not back aboard after dive {dive}.} other {# divers were marked not back aboard after dive {dive}.}} Find them — the count closes on the manifest.",
+        "missingCrew": "{count, plural, one {# crew member was marked not back aboard after dive {dive}.} other {# crew members were marked not back aboard after dive {dive}.}} Find them — the count closes on the manifest.",
+        "afterDiveUncounted": "{count, plural, one {# diver has no result after dive {dive}.} other {# divers have no result after dive {dive}.}} The count was never closed.",
+        "crewUncounted": "{count, plural, one {# crew member has no result after dive {dive}.} other {# crew members have no result after dive {dive}.}} The count was never closed.",
+        "departureUncounted": "{count, plural, one {The dock count never finished — # diver has no result at departure.} other {The dock count never finished — # divers have no result at departure.}}",
+        "noRollCall": "No roll call was recorded on this trip."
+      }
+    },
+    "leftovers": {
+      "heading": "Today's leftovers",
+      "subtitle": "Work from today that is still open. Carry it into tomorrow or dismiss it — the close-out remembers the choice either way, and the queue keeps deriving its own list.",
+      "empty": "Nothing is left over from today.",
+      "carry": "Carry to tomorrow",
+      "dismiss": "Dismiss",
+      "decisionLabel": "What to do with {subject}"
+    },
+    "tomorrow": {
+      "heading": "Tomorrow, at a glance",
+      "subtitle": "What the morning queue opens with — read it now, walk out lighter.",
+      "empty": "Tomorrow starts clear.",
+      "more": "{count, plural, one {And # more in tomorrow's queue.} other {And # more in tomorrow's queue.}}"
+    },
+    "close": {
+      "heading": "Close the day",
+      "acknowledge": "{count, plural, one {# boat above is still out or carries an open head count. I have seen it, and closing the day does not stop the chase.} other {# boats above are still out or carry open head counts. I have seen them, and closing the day does not stop the chase.}}",
+      "button": "Close the day",
+      "buttonAgain": "Close the day again",
+      "note": "Closing is a record, not a lock: who closed, when, and what was still open. Nothing downstream waits on it."
+    },
+    "record": {
+      "heading": "Day closed",
+      "closedBy": "Closed by {name} at {time}.",
+      "closeCount": "{count, plural, other {Closed # times today — each close is its own record.}}",
+      "outstandingHeading": "Recorded as outstanding",
+      "nothingOutstanding": "Nothing was outstanding.",
+      "carried": "Carried to tomorrow",
+      "dismissed": "Dismissed"
+    }
+  },
   "waiversStaff": {
     "eyebrow": "Settings",
     "title": "Waiver template",
@@ -2733,6 +2803,7 @@
       "groupSetup": "Set up",
       "today": "Today",
       "checkIn": "Check-in",
+      "closeOut": "Close-out",
       "walkIn": "Walk-in",
       "blockers": "Not ready",
       "divers": "Divers",
