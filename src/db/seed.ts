@@ -49,6 +49,8 @@ import {
   staffShifts,
   tips,
   tripAssignments,
+  tripBlowoutDivers,
+  tripBlowouts,
   tripDives,
   tripLastMinutePromos,
   tripRequirements,
@@ -616,6 +618,16 @@ export async function resetDemoSchedule(
   await db
     .delete(personCourtesyEmailUnsubscribeTokens)
     .where(eq(personCourtesyEmailUnsubscribeTokens.shopId, shopId));
+  // The blow-out cascade's two tables, innermost first: the per-diver rows
+  // reference both `bookings` and `trip_blowouts`, and the cascade row
+  // references `trips`. Missing from this ordering when the cascade shipped,
+  // which made `/api/test/reset` throw 23503 on
+  // `trip_blowouts_trip_id_trips_id_fkey` for every run that had called a
+  // blow-out — the reset then aborted half-done and the e2e fleet failed in
+  // whichever spec next read the wreckage, exactly as the last-minute-list
+  // comment above describes (ADR 20260804-blowout-cascade).
+  await db.delete(tripBlowoutDivers).where(eq(tripBlowoutDivers.shopId, shopId));
+  await db.delete(tripBlowouts).where(eq(tripBlowouts.shopId, shopId));
   // Buddy pairs reference bookings, so they go first or the bookings delete
   // below FK-violates and aborts the whole reset mid-run — the same class of
   // bug the token comments above already walk (ADR 20260804-buddy-pairs).

@@ -56,7 +56,26 @@ export const test = base.extend<
   // never interfere; the browser clock is frozen in the `context` fixture below.
   demoReset: [
     async ({ request }, use) => {
-      await request.post("/api/test/reset");
+      const response = await request.post("/api/test/reset");
+      // Fail *here*, naming the reset, rather than letting the test run on a
+      // half-wrecked shop. `resetDemoSchedule` is a hand-maintained topological
+      // delete, so a new table with a shop-scoped FK that nobody added to the
+      // ordering makes it throw 23503 partway: the deletes before the violation
+      // have already landed, the re-seed never runs, and the shop is left
+      // missing whatever the reset got to first. The status was previously
+      // discarded, so that corruption surfaced as an unrelated assertion in
+      // whichever spec read the wreckage next — which is how it took a
+      // 25-spec-wide failure to notice the blow-out cascade's two tables were
+      // missing from the ordering, and why the same bug class went unnoticed
+      // once before (see the last-minute-unsubscribe comments in src/db/seed.ts).
+      if (!response.ok()) {
+        throw new Error(
+          `demo reset failed: POST /api/test/reset returned ${response.status()}. ` +
+            `Every later assertion in this spec would be reading a half-reset shop. ` +
+            `A 500 here is usually a missing delete in resetDemoSchedule's ordering ` +
+            `(src/db/seed.ts) for a newly added table. Body: ${await response.text()}`,
+        );
+      }
       await use(undefined);
     },
     { auto: true },

@@ -100,6 +100,30 @@ export type IncidentRosterEntry = {
   fullName: string;
   emergencyContactName: string | null;
   emergencyContactPhone: string | null;
+  /**
+   * The buddy staff paired this diver with on this departure, by name
+   * (ADR 20260804-buddy-pairs). A **recorded decision**, not a derived one:
+   * who dived with whom is exactly the question an investigator asks first,
+   * and it is a fact the shop entered, so it belongs on this document.
+   *
+   * `null` means no pair was recorded, which the page states in words rather
+   * than leaving blank — an unpaired diver is a normal boat, not a gap.
+   *
+   * Deliberately a name and not a booking id, matching the offline snapshot:
+   * the document prints names, and ids are projected out of the hash anyway.
+   *
+   * The live manifest's split-pair alert is deliberately not restated — and
+   * "because it is derived" is *not* the reason (this document derives
+   * `rollCallLabel`, the waiver's sign-once resolution, and every
+   * `departureSummary` count). The reason is that `buddyAlertFor` collapses two
+   * different facts into one code: a buddy a human recorded as not back aboard,
+   * and a buddy with **no result recorded at all**. On a deck that conflation is
+   * correct and urgent — both mean "go look". On a document generated afterwards
+   * it would print a separation flag over what is usually an unfinished head
+   * count, stating something louder than anyone actually recorded. The
+   * per-checkpoint cells and the timeline carry both facts, distinctly.
+   */
+  buddyName: string | null;
   /** One row per checkpoint, in sailing order — never omitted when unrecorded. */
   rollCall: IncidentRollCallResult[];
   /** Empty means "no certification evidence on file" — the UI must say so. */
@@ -333,6 +357,10 @@ export function buildIncidentExport(input: IncidentExportInput): IncidentExportD
       fullName: diver.fullName,
       emergencyContactName: diver.emergencyContactName,
       emergencyContactPhone: diver.emergencyContactPhone,
+      // The manifest derivation already refuses to carry a buddy whose own
+      // seat was cancelled, so a name here is always someone who held a seat
+      // on this departure.
+      buddyName: diver.buddy?.fullName ?? null,
       rollCall: rollCallResults(
         input.manifests,
         (manifest) => manifest.divers.find((entry) => entry.bookingId === diver.bookingId) ?? null,

@@ -47,8 +47,12 @@ Lens: help a diver book, prepare, show up confident, return, and bring a buddy w
 into a social network.
 
 - **Group organizer surface.** One organizer holds several seats; invitees claim their own seat, sign
-  their own waiver, upload certs, and optionally pay their own share. *(L, bookings/waivers/certs,
-  big bet.)*
+  their own waiver, upload certs, and optionally pay their own share. Seat claiming shipped
+  2026-08-04 — see
+  [../shipped.md](../shipped.md#seat-claim-links-for-party-bookings-delivered-2026-08-04) and ADR
+  [20260804-seat-claim-links](../../architecture/decisions/20260804-seat-claim-links.md); an invitee
+  claiming a seat gets waiver-on-join and is gated on their own evidence. Pay-your-own-share remains
+  open and waits on the credit/split-payment work. *(M remaining, bookings/payments, big bet.)*
 - **Course cohorts as groups.** Reuse group-claim mechanics for a course roster so each student owns
   their readiness while the instructor sees the whole cohort. *(M, bookings/certs, big bet.)*
 - **Private charter inquiry to quote to booking.** Replace email ping-pong for high-value group trips

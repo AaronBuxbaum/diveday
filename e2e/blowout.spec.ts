@@ -21,6 +21,10 @@ test.describe("weather blow-out cascade", () => {
   test("one tap, one confirm: cancel the reef charter and land on the cascade record", async ({
     page,
   }) => {
+    // `openTripFromBoard` clicks a row on the board; it does not navigate to
+    // it. `signedInAsOwner` only seeds storage state, so without this the test
+    // ran against a blank page and timed out looking for the listitem.
+    await page.goto(`/shop/${SHOP}/schedule/board`);
     await openTripFromBoard(page, REEF_TRIP);
 
     // One tap on the trip page leads to a real confirm page — never a
@@ -60,7 +64,13 @@ test.describe("weather blow-out cascade", () => {
     // The trip record now reads cancelled and keeps the way back to the
     // cascade; the quiet per-trip cancel control is gone with it.
     await page.getByRole("link", { name: "Back to the trip" }).click();
-    await expect(page.getByText("Cancelled", { exact: true }).first()).toBeVisible();
+    // Not `exact: true`: the status is a `<Badge tone="danger">`, which renders
+    // an aria-hidden glyph inside the same span as the label, so the element's
+    // text is "✕Cancelled" and no element has the exact text "Cancelled".
+    // `import.spec.ts` matches this badge the same way. The "Reinstate trip"
+    // button on the next line is what makes the pair specific to a cancelled
+    // trip rather than to any prose containing the word.
+    await expect(page.getByText("Cancelled").filter({ visible: true }).first()).toBeVisible();
     await expect(page.getByRole("button", { name: "Reinstate trip" })).toBeVisible();
     await page.getByRole("link", { name: "View the blow-out cascade" }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Blow-out cascade" })).toBeVisible();
