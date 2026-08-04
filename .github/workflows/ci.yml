@@ -47,6 +47,29 @@ jobs:
           name: next-build
           path: .next
       - uses: ./.github/actions/playwright-shell
+      # TEMPORARY control, in the same job and the same shell as the run below,
+      # so there is no cross-job ambiguity about what the environment holds.
+      - name: What does this runner's environment do to libvips
+        run: |
+          echo "VIPS env: $(env | grep -i '^VIPS' || echo '(none)')"
+          node -e '
+            const sharp = require("sharp");
+            const svg = Buffer.from("<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\"><rect width=\"20\" height=\"20\" fill=\"red\"/></svg>");
+            const show = (label) => sharp(svg).png().toBuffer()
+              .then((b) => console.log(label, "svg->png ok", b.length))
+              .catch((e) => console.log(label, "svg->png FAILED:", e.message));
+            show("[inherited VIPSHOME=" + process.env.VIPSHOME + "]").then(() => {
+              delete process.env.VIPSHOME;
+            });
+          '
+          echo "--- same probe, VIPSHOME scrubbed from the environment ---"
+          env -u VIPSHOME node -e '
+            const sharp = require("sharp");
+            const svg = Buffer.from("<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\"><rect width=\"20\" height=\"20\" fill=\"red\"/></svg>");
+            sharp(svg).png().toBuffer()
+              .then((b) => console.log("[no VIPSHOME] svg->png ok", b.length))
+              .catch((e) => console.log("[no VIPSHOME] svg->png FAILED:", e.message));
+          '
       - run: pnpm exec playwright test e2e/recap.spec.ts --reporter=line
       - uses: actions/upload-artifact@v7
         if: failure()
