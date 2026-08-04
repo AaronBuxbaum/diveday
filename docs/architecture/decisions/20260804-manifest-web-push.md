@@ -42,18 +42,19 @@ subscribe.
      `last_pushed_at` rather than in process memory (which does not survive a serverless invocation).
      A burst of roll-call writes collapses into one notification.
    - **Only around departure.** A subscription is only pushed while its trip is within the departure
-     window. `trip_starts_at` is denormalized onto the row at subscribe time, so the send path needs no
-     join and a subscription for next week's trip is simply never selected.
-3. **The service worker notifies; it does not write the encrypted store.** On `push` it shows the
-   notification and `postMessage`s any open client, which refreshes through the existing
-   `saveOfflineManifest` path. On `notificationclick` it focuses or opens the manifest.
+     window, read from the live trip row at send time (`src/lib/push-window.ts`) so a trip that moves
+     takes its window with it.
+3. **The service worker writes the device copy.** On `push` it refreshes any live client *and*, when
+   no visible page will do it, saves the snapshot itself through the real store before showing the
+   notification. On `sync` it flushes pending roll-call events. On `notificationclick` it focuses or
+   opens the manifest. This is what the compiled worker bought — see below.
 4. **Fan-out hangs off `publishManifestEvent`**, the one seam all eight of its call sites already go
    through, so no call site re-implements the side effect. It is best-effort and never throws: a push
    failure must not fail a roll-call write.
 5. **VAPID keys are environment secrets** (`VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`).
    The public key is genuinely public and reaches the client; the private key never leaves the server.
 
-### Why the worker does not write the store
+### ~~Why the worker does not write the store~~ — superseded, see below
 
 This is the sharpest constraint and the least obvious, so it is recorded rather than left to be
 rediscovered.
@@ -81,7 +82,13 @@ The third row is weaker than a silent background write, and honestly so: it puts
 For a safety surface at the moment of departure that is defensible, arguably preferable, and it is the
 only behaviour available on iOS at all.
 
-### That constraint is not this feature's — it blocks three capabilities
+> **Superseded.** Everything above described a limitation that no longer exists. The worker is now
+> compiled and imports the real store, so it writes the snapshot itself and the table's third row is
+> a silent refresh like the second. The reasoning is kept rather than deleted because it is *why* the
+> constraint was worth removing, and because the alternative it rejected — hand-duplicating the
+> encrypted format — is still the wrong answer.
+
+### The constraint, and why it was worth removing
 
 The section above frames the static-worker limitation as a Web Push tradeoff. **That framing was too
 narrow, and understates it.** Everything that could run without a page runs *in the service worker*,
@@ -93,12 +100,39 @@ so the same inability to import `offline-manifest-store.ts` blocks all of it:
 | **Background Sync** | Flush pending roll-call events when signal returns | **None — no page exists to message** |
 | **Periodic Background Sync** | Refresh the snapshot on a schedule | None |
 
-Two of the three have no workaround at all, because they fire precisely when no page is around to
-delegate to. Anyone later costing "make the worker a build-time module so it imports the real store"
-against one feature will conclude it is not worth it. Costed against three, and against the safety gap
-below, it is a different question — which is why it is recorded here rather than left implicit.
+Two of the three had no workaround at all, because they fire precisely when no page is around to
+delegate to. Costed against one feature, "make the worker a build-time module so it imports the real
+store" reads as not worth it; costed against three, it is a different question — and that is the
+question that got answered.
 
-### Background Sync — an outbound gap this record does not close
+**The worker is now built** (`scripts/build-service-worker.mjs`, esbuild → `public/manifest-sw.js`,
+source at `src/worker/manifest-sw.ts`). It imports `offline-manifest-store.ts` directly, so a snapshot
+written from a push is written by the *same* implementation the page uses — one encrypted format, one
+AAD, one lock. What that changed:
+
+| Capability | Before | Now |
+| --- | --- | --- |
+| Push writing the snapshot | Message a live client; a locked phone got a notification and a stale copy | **Writes the copy itself** — `refreshSavedManifests()` fetches `/api/offline-manifests/upcoming` and saves each payload |
+| Background Sync flush | Impossible | **`sync` handler drains pending events** through the real `syncOfflineManifest` |
+| Periodic Background Sync | Impossible | Still not adopted — rejected on its own merits below |
+
+Nothing new was needed on the server. `/api/offline-manifests/upcoming` already returned exactly what
+`saveOfflineManifest` takes (it was built for the page's own auto-save, ADR
+20260726-shopwide-offline-manifest-priming), and a worker's `fetch` carries the session cookie on a
+same-origin request. The whole gap was the import.
+
+Three things the build step carries that the hand-written file could not:
+
+- **The shell version is asserted, not commented.** `CACHE_NAME` and `OFFLINE_MANIFEST_SHELL_VERSION`
+  were two hand-edited constants in two files reconciled at runtime; a mismatch now fails the build.
+- **`src/worker` is a rule in `check:architecture`**, banned from importing `src/app`, `src/features`
+  and `src/components` — a fourth composition root, listed rather than left floating (the same ARCH-2
+  reasoning that added `src/components` and `src/i18n`).
+- **It typechecks as a worker.** `src/worker/tsconfig.json` uses the WebWorker lib instead of the DOM,
+  so `self` is a `ServiceWorkerGlobalScope` and `ExtendableEvent.waitUntil` exists. Checking a worker
+  against `lib.dom` produces confident nonsense.
+
+### Background Sync — the outbound half, now closed
 
 Everything above is about **inbound freshness**: is the device's copy current. The
 [Background Synchronization API](https://developer.mozilla.org/en-US/docs/Web/API/Background_Synchronization_API)
@@ -114,10 +148,43 @@ problem; unflushed roll-call events are *the record of who came back aboard* sit
 Background Sync is the API built for exactly this: register a tag when a write fails offline, and the
 browser fires `sync` when connectivity returns, page or no page.
 
-It is blocked by the constraint above — the pending events are in the encrypted store — so it is
-recorded as a gap rather than fixed here. **It deserves its own record**; it is an offline-manifest
-durability question (20260718-offline-manifest-snapshots), not a push question, and it was only found
-by asking what else the service worker could do.
+This is now fixed, by the same build change. `requestBackgroundFlush()` (`src/lib/background-flush.ts`)
+registers a tag whenever a reconcile is offline or fails, and the worker's `sync` handler drains every
+saved trip through the real `syncOfflineManifest` when connectivity returns — with no page open. A
+partial failure rethrows, which is what asks the browser to retry the tag rather than treating an
+incomplete flush as done.
+
+**It is an upgrade, never a dependency.** Background Sync does not exist in Safari or Firefox, and
+Chrome can refuse a registration; every one of those paths is a silent no-op that leaves the page's own
+reconnect, visibility and interval triggers exactly as they were.
+
+**iOS gets its outbound path from push instead.** Safari has never implemented Background Sync — not
+in a tab, and *not in a Home Screen web app either*, which is the trap: installing to the Home Screen
+is what unlocks Web Push on iOS, so it is easy to assume it unlocks the rest of the background APIs
+too. It does not, and there is no sign it will.
+
+So the push handler flushes as well as refreshes, in that order. A push is the only moment an iOS
+device ever runs this worker in the background, and sending the roll call recorded at sea matters more
+than the roster on the phone being current — the events are the record of who came back aboard.
+
+The honest limits of that, because it is opportunistic rather than guaranteed: it fires only when a
+push actually arrives, which needs a change on a subscribed trip, inside the departure window, past
+the coalescing window, with permission granted. It is not "flush when signal returns" — that is what
+Background Sync gives Android and desktop. On iOS the reliable outbound trigger remains a human
+opening the app, and the freshness pills and "Refresh now" are still what make that dependable.
+
+| Platform | Inbound (device copy current) | Outbound (roll call sent) |
+| --- | --- | --- |
+| Android / desktop Chrome | Push writes the snapshot | Background Sync on reconnect, **plus** push |
+| iOS, installed to Home Screen | Push writes the snapshot | Push only — opportunistic |
+| iOS, Safari tab | Neither — no push at all | Page-driven only |
+| Firefox | Push writes the snapshot | Push only — no Background Sync |
+
+If the iOS row ever becomes the row that matters — iPhone-heavy shops *and* unsent roll call observed
+in practice — the escape hatch is a native shell, costed in
+[20260804-ios-native-shell](20260804-ios-native-shell.md). Read its ceiling before reaching for it:
+iOS background execution is budgeted and best-effort too, so a native app buys silent pushes and
+better odds, not determinism.
 
 ### Periodic Background Sync — ruled out
 

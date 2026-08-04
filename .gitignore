@@ -61,3 +61,6 @@ next-env.d.ts
 
 # agent worktree scratch space (Claude Code isolation:"worktree")
 /.claude/worktrees/
+
+# Built by scripts/build-service-worker.mjs from src/worker/manifest-sw.ts.
+public/manifest-sw.js

@@ -1,10 +1,38 @@
-// Bump the trailing "-v<n>" on a deploy that changes the offline shell, and
-// bump `OFFLINE_MANIFEST_SHELL_VERSION` in src/lib/offline-manifests.ts to
-// match — this file is static and outside the Next.js build, so it can't
-// import that constant; the two are compared at runtime instead
-// (`getActiveOfflineShellVersion`) to tell a crew member holding a copy of
-// this worker from an older deploy, rather than serving it with no signal
-// anything's stale (task 124 / persona 15, Leo).
+/// <reference lib="webworker" />
+import { MANIFEST_SYNC_TAG } from "@/lib/background-flush";
+import {
+  listOfflineManifests,
+  saveOfflineManifest,
+  syncOfflineManifest,
+} from "@/lib/offline-manifest-store";
+import type { OfflineManifestPayload } from "@/lib/offline-manifests";
+
+/**
+ * The offline manifest's service worker.
+ *
+ * **This file is compiled** (`scripts/build-service-worker.mjs` →
+ * `public/manifest-sw.js`). It used to be hand-written static JavaScript that
+ * could import nothing, and that one limitation is what forced every
+ * background capability to stop at "wake a page and let it do the work". It
+ * now imports the real `offline-manifest-store`, so a snapshot written here is
+ * written by the *same* implementation the page uses — one encrypted format,
+ * one AAD, one lock — rather than a hand-kept copy of it.
+ *
+ * What that unlocks, and why it matters on a boat: a captain with the phone
+ * pocketed and the page frozen now gets the device copy actually updated
+ * (`push`, below) and pending roll-call events actually sent when signal
+ * returns (`sync`, below). Neither was possible before; the worker could only
+ * show a notification and hope somebody opened the app.
+ *
+ * Bump the trailing "-v<n>" on a deploy that changes the offline shell, and
+ * bump `OFFLINE_MANIFEST_SHELL_VERSION` in src/lib/offline-manifests.ts to
+ * match. The two are still compared at runtime (`getActiveOfflineShellVersion`)
+ * to tell a crew member holding a worker from an older deploy — and the build
+ * script now *asserts* they agree, so a mismatch fails the build instead of
+ * shipping a worker that misreports its version from a boat.
+ */
+declare const self: ServiceWorkerGlobalScope;
+
 const CACHE_NAME = "diveday-offline-manifest-shell-v2";
 const SHELL_VERSION = CACHE_NAME.slice(CACHE_NAME.lastIndexOf("-v") + 1);
 const OFFLINE_SHELL = "/offline-manifest";
@@ -34,8 +62,11 @@ const LIVE_MANIFEST_PATTERN = /^\/shop\/[^/]+\/trips\/([^/]+)\/manifest(?:\/.*)?
  * JavaScript, so a false positive is possible and must not be able to fail a
  * shell save that is otherwise complete.
  */
-async function lazyChunkEntries(assetEntries) {
-  const referenced = new Set();
+/** A path and the response fetched for it, the pair the shell cache works in. */
+type AssetEntry = [asset: string, assetResponse: Response];
+
+async function lazyChunkEntries(assetEntries: AssetEntry[]): Promise<AssetEntry[]> {
+  const referenced = new Set<string>();
   await Promise.all(
     assetEntries.map(async ([asset, assetResponse]) => {
       if (!asset.endsWith(".js")) return;
@@ -50,7 +81,7 @@ async function lazyChunkEntries(assetEntries) {
     [...referenced].map(async (asset) => {
       try {
         const assetResponse = await fetch(asset);
-        return assetResponse.ok ? [asset, assetResponse] : null;
+        return assetResponse.ok ? ([asset, assetResponse] as AssetEntry) : null;
       } catch {
         return null;
       }
@@ -63,7 +94,7 @@ async function cacheOfflineShell() {
   const response = await fetch(OFFLINE_SHELL, { credentials: "same-origin" });
   if (!response.ok) throw new Error("Offline manifest shell could not be loaded");
   const html = await response.clone().text();
-  const assetPaths = new Set();
+  const assetPaths = new Set<string>();
   for (const match of html.matchAll(/(?:src|href)="([^"#?]*\/_next\/static\/[^"?#]+)"/g)) {
     assetPaths.add(new URL(match[1], self.location.origin).pathname);
   }
@@ -72,8 +103,8 @@ async function cacheOfflineShell() {
   // click), so a mid-fetch failure — a deploy landing between requests, a
   // flaky connection — must never partially overwrite an already-working
   // offline copy with new HTML pointing at assets that were never cached.
-  const assetEntries = await Promise.all(
-    [...assetPaths].map(async (asset) => {
+  const assetEntries: AssetEntry[] = await Promise.all(
+    [...assetPaths].map(async (asset): Promise<AssetEntry> => {
       const assetResponse = await fetch(asset);
       if (!assetResponse.ok) {
         throw new Error(`Offline manifest asset ${asset} could not be loaded`);
@@ -165,8 +196,48 @@ self.addEventListener("message", (event) => {
  * Words arrive in the payload already translated. This file cannot reach the
  * message bundles, and no user-facing English may live outside src/i18n.
  */
+/**
+ * Refresh every device copy in the rolling window, here in the worker.
+ *
+ * This is the whole point of compiling this file. `/api/offline-manifests/upcoming`
+ * already returns exactly what `saveOfflineManifest` takes — it was built for
+ * the page's own auto-save (ADR 20260726-shopwide-offline-manifest-priming) —
+ * and a worker's `fetch` carries the session cookie on a same-origin request,
+ * so nothing new was needed on the server to do this from a frozen page.
+ *
+ * Failure is silent and non-fatal by design: this runs on a locked phone with
+ * no one to tell. If it fails, the notification still shows and the copy stays
+ * whatever it was, which is exactly the behaviour that existed before.
+ */
+async function refreshSavedManifests(): Promise<void> {
+  try {
+    const response = await fetch("/api/offline-manifests/upcoming", {
+      // Explicit rather than relying on the same-origin default: this request
+      // is worthless without the staff session, and a silent 401 here would
+      // look identical to "nothing to save".
+      credentials: "same-origin",
+      headers: { accept: "application/json" },
+    });
+    if (!response.ok) return;
+    const body = (await response.json()) as { manifests?: OfflineManifestPayload[] };
+    for (const payload of body.manifests ?? []) {
+      // Sequential, not Promise.all: these share one IndexedDB lock inside the
+      // store, and a locked phone is not where to discover lock contention.
+      await saveOfflineManifest(payload).catch(() => undefined);
+    }
+  } catch {
+    // Offline, signed out, or the endpoint moved — all the same here.
+  }
+}
+
 self.addEventListener("push", (event) => {
-  let payload = {};
+  let payload: {
+    kind?: string;
+    tripId?: string;
+    title?: string;
+    body?: string;
+    url?: string;
+  } = {};
   try {
     payload = event.data?.json() ?? {};
   } catch {
@@ -196,6 +267,29 @@ self.addEventListener("push", (event) => {
       // Skipping showNotification is permitted precisely because a visible
       // client makes the effect user-visible another way.
       if (clientList.some((client) => client.visibilityState === "visible")) return;
+
+      // No visible page, so nothing else is going to do this.
+      //
+      // **Send before receiving.** A push is the only moment an iOS device ever
+      // runs this worker in the background: Safari has never implemented
+      // Background Sync — not in a tab, not in a Home Screen web app — so the
+      // `sync` handler below simply never fires there. Flushing here is what
+      // gives an installed iPhone an outbound path at all, and it costs nothing
+      // on the platforms that do have Background Sync (there is rarely anything
+      // left pending by the time a push lands).
+      //
+      // Ordered first so the roll call recorded at sea leaves the device before
+      // the snapshot is replaced — the events are the record of who came back
+      // aboard, and getting them off one phone matters more than the roster
+      // being current on it.
+      await flushPendingRollCall().catch(() => undefined);
+
+      // Then the inbound half: write the device copy. This is what makes a
+      // pocketed phone actually carry the change rather than merely learn about
+      // it — before this, a locked phone got a notification and a snapshot that
+      // stayed exactly as stale as it was.
+      await refreshSavedManifests();
+
       if (!payload.title) return;
       await self.registration.showNotification(payload.title, {
         body: payload.body,
@@ -210,10 +304,62 @@ self.addEventListener("push", (event) => {
         // swallowed everything after it.
         renotify: true,
         data: { url: payload.url },
-      });
+        // `renotify` ships in Chrome and is what makes a replaced notification
+        // still alert, but lib.dom does not declare it — so the object is cast
+        // rather than the property dropped, which would silence every change
+        // after the day's first.
+      } as NotificationOptions & { renotify: boolean });
     })(),
   );
 });
+
+/**
+ * Send the roll call that was recorded at sea, once signal comes back — with
+ * no page open.
+ *
+ * This closes the *outbound* half of the pocket problem, and it is the more
+ * serious half. `syncOfflineManifest` is otherwise only ever called from the
+ * page (reconnect, visibility-return, the 5-minute interval), so a captain who
+ * records roll call offshore, closes the tab, and drives home does not send
+ * those events until somebody reopens DiveDay. A stale roster is a display
+ * problem; unsent roll-call events are the record of *who came back aboard*
+ * sitting on one phone.
+ *
+ * Background Sync exists for exactly this: the browser fires `sync` when
+ * connectivity returns, page or no page. Rethrowing on failure is deliberate —
+ * it tells the browser to retry the tag later rather than treating a failed
+ * flush as done.
+ */
+// "sync" is not in TypeScript's ServiceWorkerGlobalScope event map, so the
+// listener is registered through the untyped overload and the event narrowed
+// here. The shape is stable and specified; only the typings lag.
+self.addEventListener("sync" as keyof ServiceWorkerGlobalScopeEventMap, (event) => {
+  const syncEvent = event as unknown as ExtendableEvent & { tag?: string };
+  if (syncEvent.tag !== MANIFEST_SYNC_TAG) return;
+  syncEvent.waitUntil(flushPendingRollCall());
+});
+
+async function flushPendingRollCall(): Promise<void> {
+  // Every trip this device holds a copy for. `listOfflineManifests` is the
+  // store's own reader, so the worker discovers what to flush exactly the way
+  // the page would.
+  const envelopes = await listOfflineManifests();
+  const tripIds = envelopes
+    .map((envelope) => envelope.snapshot.manifests[0]?.trip.id)
+    .filter((id): id is string => Boolean(id));
+  let failed = false;
+  for (const tripId of tripIds) {
+    // One at a time, for the same IndexedDB-lock reason as the save loop.
+    try {
+      await syncOfflineManifest(tripId);
+    } catch {
+      failed = true;
+    }
+  }
+  // Throwing asks the browser to keep the tag and retry. Swallowing it would
+  // silently abandon events that are still on the device.
+  if (failed) throw new Error("manifest sync incomplete");
+}
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();

@@ -5,6 +5,7 @@ import { type ReactNode, useCallback, useEffect, useRef, useState } from "react"
 import { ConnectivityStatus } from "@/components/ConnectivityStatus";
 import { buttonClass } from "@/components/ui/button";
 import { fill, pluralForm } from "@/i18n/fill";
+import { requestBackgroundFlush } from "@/lib/background-flush";
 import { formatDateTimeTz } from "@/lib/format";
 import {
   loadOfflineManifest,
@@ -110,7 +111,16 @@ export function OfflineManifestManager({
   const manualRefreshPending = useRef(false);
 
   const runReconcileOnce = useCallback(async () => {
-    if (!tripId || !navigator.onLine) return;
+    if (!tripId) return;
+    // Offline, or a reconcile that could not reach the server: hand the flush
+    // to Background Sync so it happens when signal returns *even if this page
+    // is gone by then* (ADR 20260804-manifest-web-push). Without this, roll
+    // call recorded at sea waits for somebody to reopen DiveDay — and those
+    // events are the record of who came back aboard.
+    if (!navigator.onLine) {
+      await requestBackgroundFlush();
+      return;
+    }
     const pendingBefore = lastPendingCount.current;
     const rejectedBefore = lastRejectedCount.current;
     try {
@@ -153,6 +163,9 @@ export function OfflineManifestManager({
       // failure mode here is "couldn't reach the server," which the one
       // fallback string already says.
       setMessage(copy.reconcileErrorFallback);
+      // Same reasoning as the offline branch above: a failed flush is exactly
+      // what Background Sync is for, and this page may not be here to retry.
+      await requestBackgroundFlush();
     }
   }, [router, tripId, copy]);
 
