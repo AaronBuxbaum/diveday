@@ -11,11 +11,25 @@ const FOCUSABLE_SELECTOR = [
   '[tabindex]:not([tabindex="-1"])',
 ].join(", ");
 
+/**
+ * The container's **tabbable** children, in document order — not merely its
+ * focusable ones. The distinction is the whole trap: `tabIndex >= 0` is what
+ * Tab will actually visit, while `tabIndex === -1` is focusable only by script.
+ *
+ * `CommandPalette` is the case that proves it. Every result row there is a
+ * `<button role="option" tabIndex={-1}>` — focus moves through them with
+ * `aria-activedescendant`, never with Tab. Selecting on the tag alone made the
+ * last *option* the trap's `lastEl`, an element Tab can never land on, so the
+ * "wrap at the end" branch below could never fire: Tab from the search input
+ * fell through to the browser's own order and walked straight out of the
+ * modal, past the backdrop, into the page behind it. Counting only tabbable
+ * children makes the input both first and last, and the wrap holds.
+ */
 function focusableIn(container: HTMLElement): HTMLElement[] {
   return Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
     // offsetParent is null for display:none/detached elements — cheap
     // visibility check without a full getComputedStyle pass.
-    (el) => el.offsetParent !== null,
+    (el) => el.offsetParent !== null && el.tabIndex >= 0,
   );
 }
 

@@ -1,7 +1,14 @@
 import AxeBuilder from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { daysFromNow, e2eNow, signOut } from "./helpers";
+import {
+  daysFromNow,
+  e2eNow,
+  findTripOnBoard,
+  openTripFromBoard,
+  openTripTab,
+  signOut,
+} from "./helpers";
 
 /**
  * Automated a11y scan for the current page state — WCAG 2.0 A/AA plus 2.2 AA,
@@ -12,8 +19,9 @@ import { daysFromNow, e2eNow, signOut } from "./helpers";
  * excluding the rule, unless it's a genuine false positive (document why
  * inline if so).
  *
- * `color-contrast` is excluded, not a false positive: it fires on every
- * surface this scan covers, and every instance traces back to the same
+ * `color-contrast` is excluded, not a false positive: it fires on the densest
+ * surfaces this scan covers (the shop home reports 13 nodes, a trip's Guests
+ * roster 10, the live manifest 9), and every instance traces back to the same
  * design-token values the audit's own contrast tasks (§3, "focus indicator",
  * "status-banner text", "placeholder text") already track as open work. The
  * product owner has explicitly ruled out touching contrast values in this
@@ -166,8 +174,12 @@ test.describe("automated accessibility scans (specialist optimization audit §3)
  * scan". Each scan costs ~3.5s here (the `networkidle` wait dominates), which
  * is what every `test.setTimeout` below is sized from.
  *
- * Every staff route reachable by URL is in a table below — there are no
- * exclusions left. Three routes were carried out-of-table for one change while
+ * Every staff route reachable by a *typed* URL is in a table below — there are
+ * no exclusions left. The routes that only exist for a particular row (a
+ * departure, a diver, an order, a course) cannot be tabled this way and are
+ * scanned in "the staff detail surfaces" block further down.
+ *
+ * Three routes were carried out-of-table for one change while
  * the markup they tripped on was fixed in `src/app/**` (`/orders/new`'s
  * unlabelled line-item kind pickers, `/settings`' unlabelled packing-list
  * textarea, `/waivers`' colour-only inline link); all three now scan clean and
@@ -262,6 +274,264 @@ test.describe("automated accessibility scans of the static staff routes", () => 
 });
 
 /**
+ * The staff surfaces that only exist for a particular row.
+ *
+ * The tables above can only reach a route someone can *type*. Everything a
+ * shop actually works on for more than a glance lives one id deeper — the
+ * departure whose roster they are filling, the diver whose cards they are
+ * checking, the order they are refunding, the course they are editing — and
+ * none of it had ever been scanned. Those are also the densest interactive
+ * surfaces in the product (per-row forms, expandable rows, bulk-select
+ * checkboxes, notice banners), which is exactly where a missing label or a
+ * control with no accessible name strands someone rather than merely annoying
+ * them.
+ *
+ * Each test resolves its id the way staff reach it — from the board, from the
+ * roster, from the list — rather than hard-coding a seeded uuid, so a reseed
+ * cannot quietly turn one of these into a 404 that still passes.
+ *
+ * Two of them deliberately land on a *refused* state rather than a happy one.
+ * A refusal is the moment a keyboard or screen-reader user most needs the page
+ * to work, and it is the render least likely to have been looked at.
+ */
+test.describe("automated accessibility scans of the staff detail surfaces", () => {
+  const REEF_TRIP = "Two-Tank Reef — Molasses & French";
+
+  test("a departure's own tabs have no automated a11y violations", async ({ page }) => {
+    // 3 scans at ~3.5s each, plus the board crawl and two client transitions.
+    test.setTimeout(90_000);
+    await page.goto("/shop/blue-mantis/schedule/board");
+    await openTripFromBoard(page, REEF_TRIP);
+
+    // Overview: the trip's editable record — dates, capacity, crew, dive plan.
+    await expect(page.getByRole("heading", { level: 1, name: REEF_TRIP })).toBeVisible();
+    await expectNoA11yViolations(page);
+
+    // Guests: the roster. The single densest staff surface there is — a
+    // per-diver waiver control, a bulk-select column, an add-a-diver form, and
+    // a readiness chip per row. The existing waiver scan passes *through* this
+    // page on its way to a bearer link and never scans it.
+    await openTripTab(page, "Guests");
+    await expect(page.getByRole("heading", { name: /^Divers/ })).toBeVisible();
+    await expectNoA11yViolations(page);
+
+    // Prep: the trip's gear and briefing checklists.
+    await openTripTab(page, "Prep");
+    await expectNoA11yViolations(page);
+  });
+
+  test("a cert-gated roster has no automated a11y violations", async ({ page }) => {
+    test.setTimeout(70_000);
+    // The Advanced Open Water session from src/db/seed-cert-gates.ts: an Open
+    // Water student is seated on an itinerary that demands Advanced Open Water
+    // and a Deep card, because a course never refuses the student it is
+    // certifying. Her row therefore renders the one thing a clean roster never
+    // does — a live admission blocker against a diver who is nonetheless
+    // booked — so this scans roster markup the reef trip cannot produce.
+    const link = await findTripOnBoard(page, "blue-mantis", /^Advanced Open Water Diver/);
+    await link.click();
+    await expect(page).toHaveURL(/\/trips\//);
+    await openTripTab(page, "Guests");
+    await expect(page.getByRole("heading", { name: /^Divers/ })).toBeVisible();
+    await expectNoA11yViolations(page);
+  });
+
+  test("the global add-a-booking door has no automated a11y violations", async ({ page }) => {
+    // 4 scans at ~3.5s each, plus a board crawl and a server-action round trip.
+    test.setTimeout(110_000);
+    // Step one: which departure. A registry destination
+    // (src/lib/staff-destinations.ts, `addBooking`) with a `g a` shortcut and a
+    // palette row, and until now scanned by nothing.
+    await page.goto("/shop/blue-mantis/bookings/new", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { level: 1, name: "Add a booking" })).toBeVisible();
+    await expectNoA11yViolations(page);
+
+    // Step two: who. Reached by id rather than by clicking the first row of the
+    // picker, because the refusal below needs *this* departure — French Reef
+    // carries no gate of its own, so an Advanced Open Water minimum is the only
+    // thing that can refuse a seat here (src/db/seed-cert-gates.ts).
+    const driftLink = await findTripOnBoard(page, "blue-mantis", "Advanced Drift — French Reef Wall");
+    const tripId = (await driftLink.getAttribute("href"))?.match(/\/trips\/([^/?#]+)/)?.[1];
+    expect(tripId, "the Advanced Drift departure had no trip id in its board link").toBeTruthy();
+    const doorPath = `/shop/blue-mantis/bookings/new/${tripId}`;
+
+    await page.goto(doorPath, { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { level: 1, name: "Add a booking" })).toBeVisible();
+    await expectNoA11yViolations(page);
+
+    // The same page carrying search results — a list of per-diver submit forms
+    // that only exists once `?diverq=` matches something.
+    await page.goto(`${doorPath}?diverq=Diego`, { waitUntil: "domcontentloaded" });
+    const candidate = page.getByRole("button", { name: /Diego Alvarez/ });
+    await expect(candidate).toBeVisible();
+    await expectNoA11yViolations(page);
+
+    // And the refusal. Diego is a verified Open Water diver, so this boat says
+    // no on the level alone and bounces back here with `?notice=` plus the
+    // encoded refusal — a `role="alert"` banner naming the requirement and what
+    // he holds. The state a staffer has to read, and the render nothing scanned.
+    await candidate.click();
+    const refusal = page.getByRole("alert");
+    await expect(refusal).toBeVisible();
+    await expectNoA11yViolations(page);
+  });
+
+  test("a diver record and an order have no automated a11y violations", async ({
+    page,
+    request,
+  }) => {
+    // 3 scans at ~3.5s each.
+    test.setTimeout(80_000);
+    // Same door the orders table in the static scan opens: an order detail page
+    // only has money on it for a shop that can take money.
+    await request.post("/api/test/seed-stripe-account");
+
+    // The diver record, reached the way the front desk reaches it. Diego by
+    // name rather than "the first row", so the scan lands on a carded diver
+    // with history rather than whichever person sorts first after a reseed.
+    await page.goto("/shop/blue-mantis/divers?q=Diego", { waitUntil: "domcontentloaded" });
+    await page.getByRole("link", { name: "Diego Alvarez" }).first().click();
+    await expect(page.getByRole("heading", { level: 1, name: "Diego Alvarez" })).toBeVisible();
+    await expectNoA11yViolations(page);
+
+    // One order in full: the refund controls, the line items, the payment
+    // trail. The orders *index* is scanned above; the page where money
+    // actually moves was not.
+    await page.goto("/shop/blue-mantis/orders", { waitUntil: "domcontentloaded" });
+    await page
+      .locator('a[href*="/orders/"]:not([href$="/orders/new"])')
+      .filter({ visible: true })
+      .first()
+      .click();
+    await expect(page).toHaveURL(/\/orders\/[^/]+$/);
+    await expectNoA11yViolations(page);
+
+    // The signature log — the one `/waivers` sub-route the static table misses,
+    // and a legal record a shop is expected to be able to read back.
+    await page.goto("/shop/blue-mantis/waivers/signatures", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { level: 1, name: "Signatures" })).toBeVisible();
+    await expectNoA11yViolations(page);
+  });
+
+  test("the catalog editors have no automated a11y violations", async ({ page }) => {
+    // 6 scans at ~3.5s each.
+    test.setTimeout(90_000);
+    // The course editor: the longest form in the product (content blocks,
+    // prerequisites, ratios, pricing), and the only place a shop writes the
+    // words a diver reads on the public catalog.
+    await page.goto("/shop/blue-mantis/courses", { waitUntil: "domcontentloaded" });
+    await page.locator('a[href$="/edit"]').filter({ visible: true }).first().click();
+    await expect(page).toHaveURL(/\/courses\/[^/]+\/edit$/);
+    await expectNoA11yViolations(page);
+
+    // The certification-path builder, list and one path.
+    await page.goto("/shop/blue-mantis/courses/paths", { waitUntil: "domcontentloaded" });
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Certification paths" }),
+    ).toBeVisible();
+    await expectNoA11yViolations(page);
+    await page
+      .locator('a[href*="/courses/paths/"]')
+      .filter({ visible: true })
+      .first()
+      .click();
+    await expect(page).toHaveURL(/\/courses\/paths\/[^/]+$/);
+    await expectNoA11yViolations(page);
+
+    // The dive-site library's two write surfaces. A briefing is what the
+    // manifest and the trip page quote from, so a field nobody can label here
+    // is a field nobody fills.
+    await scanStaticRoutes(page, [
+      { path: "/shop/blue-mantis/dive-sites/new", heading: "Build a dive-site briefing" },
+    ]);
+    await page.goto("/shop/blue-mantis/dive-sites", { waitUntil: "domcontentloaded" });
+    await page
+      .locator('a[href*="/dive-sites/"]:not([href$="/new"]):not([href$="/catalog"])')
+      .filter({ visible: true })
+      .first()
+      .click();
+    await expect(page).toHaveURL(/\/dive-sites\/[^/]+$/);
+    await expectNoA11yViolations(page);
+
+    // The two settings pages the static table misses: both are copy-a-snippet /
+    // connect-an-account surfaces where the interactive part is a control with
+    // no visible text of its own.
+    await scanStaticRoutes(page, [
+      { path: "/shop/blue-mantis/settings/embed", heading: "Website embed" },
+      { path: "/shop/blue-mantis/settings/whatsapp", heading: "WhatsApp" },
+    ]);
+  });
+});
+
+/**
+ * The states a click opens rather than a URL reaches.
+ *
+ * Everything above scans a *document*. These four scan a **panel**, and they
+ * are the app's hand-rolled ARIA: the command palette is a bespoke combobox
+ * (`role="combobox"` + `aria-activedescendant` + a `role="listbox"` of
+ * `role="option"` buttons, src/components/search/CommandPalette.tsx) and the
+ * schedule builder mounts its Move/Copy forms inline on a row. Both are markup
+ * axe can check and no route-level scan can ever see, because neither exists
+ * until someone opens it.
+ *
+ * The palette is scanned twice on purpose: empty (the "Go to" list, which is
+ * every staff destination) and with results, because `aria-activedescendant`
+ * only points at anything once there are rows for it to point at — a stale id
+ * there is exactly the class of defect that silently unmoors a screen reader
+ * and exactly what an empty-state-only scan would miss.
+ */
+test.describe("automated accessibility scans of the staff overlays", () => {
+  test("the command palette and the shortcut sheet have no automated a11y violations", async ({
+    page,
+  }) => {
+    // 3 scans at ~3.5s each, plus the debounced search round trip.
+    test.setTimeout(70_000);
+    await page.goto("/shop/blue-mantis");
+    const trigger = page.getByRole("button", { name: "Search" });
+    await expect(trigger).toBeVisible();
+    await trigger.click();
+    const palette = page.getByRole("dialog");
+    await expect(palette).toBeVisible();
+    await expectNoA11yViolations(page);
+
+    // With rows: `aria-activedescendant` now names a real option id.
+    await palette.getByRole("combobox").fill("Di");
+    await expect(palette.getByRole("option").first()).toBeVisible();
+    await expectNoA11yViolations(page);
+
+    // The `?` cheat-sheet — the other portal dialog, and the surface that
+    // teaches keyboard users the app has keyboard access at all.
+    await page.keyboard.press("Escape");
+    await expect(palette).toBeHidden();
+    await page.keyboard.press("?");
+    await expect(page.getByRole("dialog", { name: "Keyboard shortcuts" })).toBeVisible();
+    await expectNoA11yViolations(page);
+  });
+
+  test("the schedule builder's inline panels have no automated a11y violations", async ({
+    page,
+  }) => {
+    // 2 scans at ~3.5s each.
+    test.setTimeout(70_000);
+    // The board's *list* is scanned in the static table above. Its actual
+    // interaction — reschedule a departure, mint a copy of one — is a form that
+    // mounts into the row and steals focus into its first field
+    // (ScheduleBuilder.tsx's autofocus panel), which is the half a URL can't
+    // reach.
+    await page.goto("/shop/blue-mantis/schedule/board");
+    await expect(page.getByRole("heading", { level: 1, name: "Board" })).toBeVisible();
+    await page.getByRole("button", { name: /^Move / }).first().click();
+    await expectNoA11yViolations(page);
+
+    // Copy is a different panel with a different field set, not the same one
+    // relabelled — so it gets its own scan rather than a shared one.
+    await page.keyboard.press("Escape");
+    await page.getByRole("button", { name: /^Copy / }).first().click();
+    await expectNoA11yViolations(page);
+  });
+});
+
+/**
  * The same table, signed out — the marketing front door, the two account
  * forms, and the diver-facing shop namespace (`/s/<slug>`, ADR
  * 20260803-public-shop-namespace).
@@ -313,3 +583,4 @@ test.describe("automated accessibility scans of the signed-out surfaces", () => 
     ]);
   });
 });
+
