@@ -301,9 +301,7 @@ test("the offline fallback never reaches beyond the manifest route", async ({ pa
   // are still caught: if the worker served the route, the reload would have
   // *succeeded* and there would be no error; if it redirected to the offline
   // shell, the URL would say so.
-  expect(reloadError?.message).toMatch(
-    /ERR_INTERNET_DISCONNECTED|Not attached to an active page/,
-  );
+  expect(reloadError?.message).toMatch(/ERR_INTERNET_DISCONNECTED|Not attached to an active page/);
   expect(page.url()).not.toContain("/offline-manifest");
 
   await context.setOffline(false);
