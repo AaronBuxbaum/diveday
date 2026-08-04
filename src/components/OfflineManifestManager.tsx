@@ -346,11 +346,13 @@ export function OfflineManifestManager({
   }, [tripId, refresh]);
 
   // Primary trigger — see ADR 20260726-manifest-push-refresh. `EventSource`
-  // reconnects on its own when the stream drops (a Vercel duration cutoff, a
-  // network blip); this effect doesn't need its own retry logic. When the
-  // stream never connects at all (e.g. blocked by a captive portal), the
-  // interval/reconnect/visibility effect above is what still keeps this
-  // device current.
+  // reconnects on its own when the stream drops, and the route deliberately
+  // retires each stream a few minutes in (rather than being killed at Vercel's
+  // duration limit) with a `retry` hint that sets how fast this reconnects —
+  // so this effect doesn't need its own retry logic. When the stream never
+  // connects at all (e.g. blocked by a captive portal), or a change lands
+  // inside a reconnect gap, the interval/reconnect/visibility effect above is
+  // what still keeps this device current.
   useEffect(() => {
     if (!tripId || typeof EventSource === "undefined") return;
     const source = new EventSource(`/api/trips/${tripId}/manifest-events`);

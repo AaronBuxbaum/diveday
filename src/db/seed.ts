@@ -8,6 +8,7 @@ import type { DbExecutor } from "./client";
 import { DEMO_SHOP_SLUG, DEV_STAFF_LOGINS } from "./dev-credentials";
 import {
   accountTokens,
+  activityEvents,
   bookingCapabilities,
   bookingCheckoutBookings,
   bookingCheckouts,
@@ -15,6 +16,7 @@ import {
   bookings,
   buddyPairMembers,
   buddyTeamEvents,
+  calendarFeeds,
   certifications,
   courseInquiries,
   coursePaths,
@@ -23,6 +25,7 @@ import {
   diveSiteCreatures,
   diveSiteMoments,
   diveSites,
+  internalNotes,
   lastMinuteListEntries,
   lastMinuteListUnsubscribeTokens,
   nitroxCertifications,
@@ -56,6 +59,7 @@ import {
   tripLastMinutePromos,
   tripRequirements,
   tripReviews,
+  tripSeries,
   trips,
   tripWaitlistEntries,
   userAccounts,
@@ -511,9 +515,10 @@ export async function seedDemoSchedule(
   });
 
   // Adds-only, like seedCertGates above: two buddy teams on today's reef
-  // trip, no roll-call events, so nothing seeded before it moves and no
+  // trip — a pair and a divemaster-led trio — plus their `formed` trail
+  // entries, and no roll-call events, so nothing seeded before it moves and no
   // head-count gap opens on Today (src/db/seed-buddy-pairs.ts, ADR
-  // 20260804-buddy-pairs).
+  // 20260804-buddy-teams).
   await seedBuddyPairs(db, shopId, {
     customers,
     tripRows,
@@ -553,6 +558,13 @@ export async function resetDemoSchedule(
   await db.delete(rollCallCrewAttestations).where(eq(rollCallCrewAttestations.shopId, shopId));
   await db.delete(rollCallCrewEvents).where(eq(rollCallCrewEvents.shopId, shopId));
   await db.delete(rollCallEvents).where(eq(rollCallEvents.shopId, shopId));
+  // Neither of these is seeded — both are written only by what a visitor does
+  // (a staff note on a diver, the activity trail `seat-diver.ts` appends), and
+  // both reference `people` without cascade. So a demo where anyone used the
+  // Guests tab or left a note handed the people purge below a 23503 to trip
+  // over. Shop-wide, because there is no seeded row here to preserve.
+  await db.delete(internalNotes).where(eq(internalNotes.shopId, shopId));
+  await db.delete(activityEvents).where(eq(activityEvents.shopId, shopId));
   // The close-out trail references people (its actor), so it clears before the
   // people purge below — and clearing it at all is what keeps the close-out
   // surface deterministic between specs: a day one test closed must read as
@@ -635,7 +647,7 @@ export async function resetDemoSchedule(
   await db.delete(buddyTeamEvents).where(eq(buddyTeamEvents.shopId, shopId));
   // Buddy pairs reference bookings, so they go first or the bookings delete
   // below FK-violates and aborts the whole reset mid-run — the same class of
-  // bug the token comments above already walk (ADR 20260804-buddy-pairs).
+  // bug the token comments above already walk (ADR 20260804-buddy-teams).
   await db.delete(buddyPairMembers).where(eq(buddyPairMembers.shopId, shopId));
   await db.delete(bookings).where(eq(bookings.shopId, shopId));
   await db.delete(tripRequirements).where(eq(tripRequirements.shopId, shopId));
@@ -644,6 +656,15 @@ export async function resetDemoSchedule(
     await db.delete(tripDives).where(inArray(tripDives.tripId, tripIds));
   }
   await db.delete(trips).where(eq(trips.shopId, shopId));
+  // After the trips that point at them. Series rows are never seeded — only the
+  // schedule board writes one — so a spec that creates a recurring departure
+  // used to leave the series behind while its trips went, and the next spec in
+  // the same worker opened the board on a stale recurrence nothing had booked.
+  // Not an FK violation, which is exactly why it survived: this reset's other
+  // omissions announced themselves with a 23503, and a silent leak does not.
+  // Found by the shop-scoped sweep in `delete-path-coverage.test.ts`, which the
+  // cascade's own ordering had already got right.
+  await db.delete(tripSeries).where(eq(tripSeries.shopId, shopId));
   await db.delete(diveSiteMoments).where(eq(diveSiteMoments.shopId, shopId));
   await db.delete(diveSiteCreatures).where(eq(diveSiteCreatures.shopId, shopId));
   await db.delete(diveSites).where(eq(diveSites.shopId, shopId));
@@ -689,6 +710,15 @@ export async function resetDemoSchedule(
   const purgeIds = shopPeople.map((p) => p.id).filter((id) => !stableStaffIds.has(id));
   if (purgeIds.length > 0) {
     await db.delete(personRoles).where(inArray(personRoles.personId, purgeIds));
+    // Scoped to the purged people, not shop-wide: the stable half seeds shifts
+    // for the four permanent staff and never re-seeds them, so clearing the
+    // table outright would empty the rostering surface for good after one
+    // reset. Only a person who is going needs their rows to go — the same
+    // shape as the erasure-obligation delete below. This matters because the
+    // purge does take staff: e2e/staff-invite.spec.ts invites and accepts a
+    // new instructor, who is not one of the stable four.
+    await db.delete(staffShifts).where(inArray(staffShifts.personId, purgeIds));
+    await db.delete(calendarFeeds).where(inArray(calendarFeeds.personId, purgeIds));
     // Login rows reference people (user_accounts.person_id), so they must go
     // before the people they belong to or the delete below FK-violates (23503),
     // aborts the whole reset mid-run, and leaks the churned schedule into the

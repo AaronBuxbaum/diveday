@@ -99,18 +99,28 @@ export type IncidentRollCallResult = {
  * One diver's side of a recorded buddy pairing, as the document prints it.
  *
  * `teamNumber` exists so the pairing is *readable* on paper. Roster order is
- * booking-creation order, so a pair's two members land wherever they were
- * booked — often pages apart on a full boat. Without a team number, checking
- * "did both of this pair come back?" is a manual name-chase across a page
+ * booking-creation order, so a team's members land wherever they were booked —
+ * often pages apart on a full boat. Without a team number, checking "did
+ * everyone on this team come back?" is a manual name-chase across a page
  * break, which is precisely the comparison this document leaves to the reader
- * instead of computing a verdict. Numbering is stable: `listTripBuddyPairs`
+ * instead of computing a verdict. Numbering is stable: `listTripBuddyTeams`
  * orders by `createdAt` then `pairId`, so the same records always number the
  * same way and the integrity code stays reproducible.
  */
 export type IncidentBuddyPairing = {
   /** 1-based, in pairing order — printed as "Team 03". */
   teamNumber: number;
-  buddyName: string;
+  /**
+   * Everyone else on the team, in display order — a **list**, because a team
+   * is two or more (ADR 20260804-buddy-teams).
+   *
+   * `isCrew` is the distinction this document exists to preserve: a diver
+   * deliberately placed with a divemaster used to print identically to a diver
+   * nobody paired, because crew hold no booking and the old model could not
+   * record them. On the one page where "accompanied" and "unaccompanied" must
+   * not read the same, they now don't.
+   */
+  members: Array<{ fullName: string; isCrew: boolean }>;
   /** The staff member who made the call; a pairing is never anonymous. */
   pairedByName: string | null;
   /** When the pairing was recorded — at the dock, or after the fact. */
@@ -123,25 +133,26 @@ export type IncidentRosterEntry = {
   emergencyContactName: string | null;
   emergencyContactPhone: string | null;
   /**
-   * The buddy staff paired this diver with on this departure
-   * (ADR 20260804-buddy-pairs). A **recorded decision**, not a derived one:
+   * The buddy team staff put this diver on for this departure
+   * (ADR 20260804-buddy-teams). A **recorded decision**, not a derived one:
    * who dived with whom is exactly the question an investigator asks first,
    * and it is a fact the shop entered, so it belongs on this document — with
    * its recorder and timestamp, like every other fact here.
    *
-   * `null` means no pair was recorded, which the page states in words rather
-   * than leaving blank — an unpaired diver is a normal boat, not a gap.
+   * `null` means no team was recorded, which the page states in words rather
+   * than leaving blank — an unteamed diver is a normal boat, not a gap, and
+   * plenty of shops record nothing at all.
    *
    * Deliberately names and not booking ids, matching the offline snapshot:
    * the document prints names, and ids are projected out of the hash anyway.
    *
-   * The live manifest's split-pair alert is deliberately not restated — and
+   * The live manifest's split-team alert is deliberately not restated — and
    * "because it is derived" is *not* the reason (this document derives
    * `rollCallLabel`, the waiver's sign-once resolution, and every
    * `departureSummary` count). The reason is that `buddyAlertFor` collapses two
-   * different facts into one code: a buddy a human recorded as not back aboard,
-   * and a buddy with **no result recorded at all**. On a deck that conflation is
-   * correct and urgent — both mean "go look". On a document generated afterwards
+   * different facts into one code: a teammate a human recorded as not back
+   * aboard, and a teammate with **no result recorded at all**. On a deck that
+   * conflation is correct and urgent — both mean "go look". Afterwards
    * it would print a separation flag over what is usually an unfinished head
    * count, stating something louder than anyone actually recorded. The
    * per-checkpoint cells and the timeline carry both facts, distinctly.
@@ -159,6 +170,13 @@ export type IncidentCrewEntry = {
   /** Role codes as the roster holds them (effectiveCrewRoles). */
   roles: string[];
   rollCall: IncidentRollCallResult[];
+  /**
+   * The teams this crew member was recorded on, by number — plural, because one
+   * divemaster commonly leads several groups on one boat
+   * (ADR 20260804-buddy-teams). Empty means none was recorded; the page states
+   * that in words like it does for a diver.
+   */
+  buddyTeamNumbers: number[];
 };
 
 export type IncidentTimelineEntry =
@@ -181,6 +199,33 @@ export type IncidentTimelineEntry =
       crewAssigned: number;
       recordedByName: string;
       note: string | null;
+    }
+  /**
+   * One act on a buddy team (ADR 20260804-buddy-teams). Buddy was the only fact
+   * on this document with no corresponding timeline entry: a pairing could be
+   * rewritten or erased after an incident with no mark, and cancelling the
+   * missing diver's booking removed the pairing pointing at them as a side
+   * effect. These entries close that.
+   *
+   * `memberNames` is the membership **as it stood at that moment**, denormalised
+   * when the act was recorded — the roster section prints who is on a team
+   * *now*, and a dissolved team has no now. Consecutive entries for one team
+   * diff to who joined or left.
+   *
+   * `teamNumber` is 0 for a team that no longer stands: the roster's numbering
+   * runs over standing teams only, so a dissolved one has no number to print
+   * and the page says so rather than inventing one.
+   */
+  | {
+      kind: "buddy_team";
+      occurredAt: string;
+      /** Pairing is a decision about the departure, not about a checkpoint. */
+      checkpoint: null;
+      action: "formed" | "dissolved" | "member_added" | "member_removed";
+      teamNumber: number;
+      memberNames: string[];
+      recordedByName: string;
+      note: null;
     };
 
 export type IncidentExportDocument = {
@@ -264,23 +309,40 @@ export type IncidentExportInput = {
   events: readonly IncidentTimelineEventInput[];
   crewCounts: readonly IncidentCrewCountInput[];
   /**
-   * Provenance for the pairings the manifest already carries, one entry per
-   * *member* booking (`listTripBuddyPairs`, flattened). Whether a buddy appears
-   * at all still comes from the manifest, which drops a pair whose other seat
-   * was cancelled; this only supplies the recorder, the timestamp, and the team
-   * number. A missing entry degrades to a bare name rather than dropping the
-   * buddy — the pairing is the safety fact, its provenance is the detail.
+   * The teams standing on this departure, in pairing order
+   * (`listTripBuddyTeams`). One entry per team, not per member: the roster
+   * prints each diver's *other* members, and the crew section prints the team
+   * numbers a crew member is on, so both sides read off the same list and the
+   * numbering can never disagree between them.
+   *
+   * Members whose seat was cancelled are expected to be filtered out by the
+   * caller the same way the manifest filters them — this document states the
+   * pairing as it stood for the people who were aboard.
    */
-  buddyPairings?: readonly IncidentBuddyPairingInput[];
+  buddyTeams?: readonly IncidentBuddyTeamInput[];
+  /** The append-only pairing trail for this departure, oldest first. */
+  buddyTeamEvents?: readonly IncidentBuddyTeamEventInput[];
   generatedAt: Date;
   generatedByName: string;
 };
 
-export type IncidentBuddyPairingInput = {
-  bookingId: string;
-  teamNumber: number;
-  pairedByName: string | null;
-  pairedAt: Date | null;
+export type IncidentBuddyTeamInput = {
+  teamId: string;
+  members: ReadonlyArray<
+    | { kind: "diver"; bookingId: string; fullName: string }
+    | { kind: "crew"; personId: string; fullName: string }
+  >;
+  recordedByName: string | null;
+  recordedAt: Date | null;
+};
+
+export type IncidentBuddyTeamEventInput = {
+  teamId: string;
+  action: "formed" | "dissolved" | "member_added" | "member_removed";
+  memberNames: readonly string[];
+  recordedByName: string;
+  occurredAt: Date;
+  createdAt: Date;
 };
 
 function iso(value: Date | null | undefined): string | null {
@@ -386,9 +448,45 @@ export function buildIncidentExport(input: IncidentExportInput): IncidentExportD
   const departure = input.manifests[0];
   if (!departure) throw new Error("buildIncidentExport: no departure manifest");
   const evidenceByBooking = new Map(input.diverEvidence.map((entry) => [entry.bookingId, entry]));
-  const pairingByBooking = new Map(
-    (input.buddyPairings ?? []).map((entry) => [entry.bookingId, entry]),
-  );
+
+  // Teams number from their own list order, 1-based, and every surface on this
+  // document reads the number off the same map — so the roster, the crew
+  // section, and the timeline can never disagree about which team is which.
+  const teams = input.buddyTeams ?? [];
+  const teamNumberById = new Map(teams.map((team, index) => [team.teamId, index + 1] as const));
+  const teamByBooking = new Map<string, IncidentBuddyTeamInput>();
+  const teamNumbersByCrewId = new Map<string, number[]>();
+  for (const team of teams) {
+    for (const member of team.members) {
+      if (member.kind === "diver") teamByBooking.set(member.bookingId, team);
+      else {
+        // Crew carry a *list*: one divemaster leading three groups is on three
+        // teams, and this document must print all three.
+        const numbers = teamNumbersByCrewId.get(member.personId) ?? [];
+        numbers.push(teamNumberById.get(team.teamId) ?? 0);
+        teamNumbersByCrewId.set(member.personId, numbers);
+      }
+    }
+  }
+  const pairingFor = (bookingId: string): IncidentBuddyPairing | null => {
+    const team = teamByBooking.get(bookingId);
+    if (!team) return null;
+    const others = team.members.filter(
+      (member) => member.kind !== "diver" || member.bookingId !== bookingId,
+    );
+    // A team reduced to this diver alone states nothing: there is no one to
+    // name, and printing "Team 03" with an empty list would read as a gap.
+    if (others.length === 0) return null;
+    return {
+      teamNumber: teamNumberById.get(team.teamId) ?? 0,
+      members: others.map((member) => ({
+        fullName: member.fullName,
+        isCrew: member.kind === "crew",
+      })),
+      pairedByName: team.recordedByName,
+      pairedAt: iso(team.recordedAt),
+    };
+  };
 
   // Every diver on the departure manifest is on this document — the manifest
   // derivation already refuses to filter anyone away, and so does this.
@@ -399,18 +497,7 @@ export function buildIncidentExport(input: IncidentExportInput): IncidentExportD
       fullName: diver.fullName,
       emergencyContactName: diver.emergencyContactName,
       emergencyContactPhone: diver.emergencyContactPhone,
-      // The manifest derivation already refuses to carry a buddy whose own
-      // seat was cancelled, so a name here is always someone who held a seat
-      // on this departure. Provenance rides alongside; if it is missing the
-      // pairing still prints, with its recorder and time stated as unknown.
-      buddy: diver.buddy
-        ? {
-            teamNumber: pairingByBooking.get(diver.bookingId)?.teamNumber ?? 0,
-            buddyName: diver.buddy.fullName,
-            pairedByName: pairingByBooking.get(diver.bookingId)?.pairedByName ?? null,
-            pairedAt: iso(pairingByBooking.get(diver.bookingId)?.pairedAt ?? null),
-          }
-        : null,
+      buddy: pairingFor(diver.bookingId),
       rollCall: rollCallResults(
         input.manifests,
         (manifest) => manifest.divers.find((entry) => entry.bookingId === diver.bookingId) ?? null,
@@ -429,6 +516,7 @@ export function buildIncidentExport(input: IncidentExportInput): IncidentExportD
       input.manifests,
       (manifest) => manifest.crew.find((entry) => entry.id === member.id) ?? null,
     ),
+    buddyTeamNumbers: [...(teamNumbersByCrewId.get(member.id) ?? [])].sort((a, b) => a - b),
   }));
 
   const timeline: IncidentTimelineEntry[] = [
@@ -458,6 +546,23 @@ export function buildIncidentExport(input: IncidentExportInput): IncidentExportD
       } satisfies IncidentTimelineEntry,
       occurredAt: count.occurredAt,
       createdAt: count.createdAt,
+    })),
+    // The pairing trail, interleaved with the head count by time — a pairing
+    // changed mid-day sits exactly where it happened relative to the boarding
+    // it changed, which is the comparison an investigator makes.
+    ...(input.buddyTeamEvents ?? []).map((event) => ({
+      entry: {
+        kind: "buddy_team" as const,
+        occurredAt: event.occurredAt.toISOString(),
+        checkpoint: null,
+        action: event.action,
+        teamNumber: teamNumberById.get(event.teamId) ?? 0,
+        memberNames: [...event.memberNames],
+        recordedByName: event.recordedByName,
+        note: null,
+      } satisfies IncidentTimelineEntry,
+      occurredAt: event.occurredAt,
+      createdAt: event.createdAt,
     })),
   ]
     .sort(timelineOrder)

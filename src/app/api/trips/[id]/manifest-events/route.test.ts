@@ -17,7 +17,7 @@ const authModule = (await import("@/lib/auth")) as unknown as {
   auth: ReturnType<typeof vi.fn<() => Promise<Session | null>>>;
 };
 const auth = authModule.auth;
-const { GET } = await import("./route");
+const { GET, maxDuration } = await import("./route");
 
 function manifestEventsRequest(tripId: string, signal?: AbortSignal) {
   return new Request(`http://localhost/api/trips/${tripId}/manifest-events`, { signal });
@@ -49,6 +49,19 @@ const staffSession = (shopId: string): Session => ({
 const STREAM_CLOSED = Symbol("stream-closed");
 const READ_TIMED_OUT = Symbol("read-timed-out");
 
+/**
+ * The stream opens with a `retry:` preamble (the reconnect delay the route's
+ * own stream retirement depends on), so the chunk a test cares about is never
+ * the first one. Skipping comment/`retry:` lines rather than counting chunks
+ * keeps these assertions about the event that matters, not about how many
+ * heartbeats happened to land first.
+ */
+function isPreamble(chunk: string): boolean {
+  return chunk
+    .split("\n")
+    .every((line) => line === "" || line.startsWith(":") || line.startsWith("retry:"));
+}
+
 async function readOneChunk(
   response: Response,
   timeoutMs = 2000,
@@ -58,9 +71,14 @@ async function readOneChunk(
   const timeout = new Promise<typeof READ_TIMED_OUT>((resolve) =>
     setTimeout(() => resolve(READ_TIMED_OUT), timeoutMs),
   );
-  const next = reader
-    .read()
-    .then((result) => (result.done ? STREAM_CLOSED : new TextDecoder().decode(result.value)));
+  const next = (async () => {
+    while (true) {
+      const result = await reader.read();
+      if (result.done) return STREAM_CLOSED;
+      const chunk = new TextDecoder().decode(result.value);
+      if (!isPreamble(chunk)) return chunk;
+    }
+  })();
   const outcome = await Promise.race([next, timeout]);
   await reader.cancel().catch(() => undefined);
   return outcome;
@@ -138,6 +156,67 @@ describe("GET /api/trips/[id]/manifest-events", () => {
     // second, still-open subscriber.
     const chunk = await readOneChunk(second);
     expect(chunk).toContain("event: manifest-changed");
+  });
+
+  it("opens with a reconnect delay, so a retired stream is replaced without waiting on the browser default", async () => {
+    const { db, shop, trip } = await seededContext();
+    vi.mocked(getDb).mockResolvedValue(db);
+    vi.mocked(auth).mockResolvedValue(staffSession(shop.id));
+
+    const response = await GET(manifestEventsRequest(trip.id), {
+      params: Promise.resolve({ id: trip.id }),
+    });
+    const reader = response.body?.getReader();
+    if (!reader) throw new Error("expected a streamed body");
+    // First bytes, without waiting for a heartbeat or a notification: this is
+    // also what flushes the response so `EventSource` reaches its open state.
+    const first = await reader.read();
+    expect(new TextDecoder().decode(first.value)).toMatch(/^retry: \d+\n\n$/);
+    await reader.cancel();
+  });
+
+  it("retires its own stream well inside the function's duration budget", async () => {
+    const { db, shop, trip } = await seededContext();
+    vi.mocked(getDb).mockResolvedValue(db);
+    vi.mocked(auth).mockResolvedValue(staffSession(shop.id));
+
+    vi.useFakeTimers();
+    try {
+      const response = await GET(manifestEventsRequest(trip.id), {
+        params: Promise.resolve({ id: trip.id }),
+      });
+      // Drained in the background rather than read on demand: a read that
+      // never resolves is exactly the regression under test, and racing it
+      // against a timeout isn't available while the clock is frozen.
+      const chunks: string[] = [];
+      let closed = false;
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error("expected a streamed body");
+      const pump = (async () => {
+        while (true) {
+          const result = await reader.read();
+          if (result.done) break;
+          chunks.push(new TextDecoder().decode(result.value));
+        }
+        closed = true;
+      })();
+
+      // A minute in, the stream is still up and heartbeating — retirement is
+      // about outliving the platform's patience, not about being short-lived.
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(closed).toBe(false);
+      expect(chunks.some((chunk) => chunk.startsWith(": ping"))).toBe(true);
+
+      // By the time the platform would kill the invocation, this route has
+      // already closed the stream itself. Before the fix nothing ever closed
+      // it, and the cutoff — a runtime timeout, logged as an error — was the
+      // only thing that ended a viewer's stream.
+      await vi.advanceTimersByTimeAsync(maxDuration * 1000);
+      expect(closed).toBe(true);
+      await pump;
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("pushes a manifest-changed event through the stream when the trip's roll call changes", async () => {

@@ -467,19 +467,27 @@ new domain concept, define it here in the same PR.
   exist about somebody the head count cannot see. Once somebody has one, they **cannot be taken off
   the trip's crew**: removing them would delete the assignment the result hangs off and let a
   checkpoint that is open because they did not come back read complete.
-- **Buddy pair** — two divers staff paired into a buddy team on one departure, so roll call can say
-  the thing a deck actually watches for: **one buddy is back aboard and the other is not**. A pair
-  joins two *bookings* (roster entries of that trip), never people — buddies are a decision about
-  this boat, not a standing relationship. Pairs are **exactly two**; a trio is two pairs' worth of
-  a decision the shop makes on paper (pair the strongest two, buddy the third with a divemaster),
-  and DiveDay deliberately does not model a team of three. An unpaired remainder is a normal boat,
-  never an error. Pairing is explicit both ways: pairing an already-paired diver is refused until
-  staff unpair first, and unpairing dissolves both halves together. The split-pair state
-  (`separated_dock` as a boarding heads-up, `separated_after_dive` as the loud one) **informs and
-  never acts** — it plays no part in readiness, admission, capacity, or whether a checkpoint reads
-  complete, and it messages nobody. The offline manifest shows pairs read-only by name and states
-  that the split-pair read belongs to the live roll call — a saved snapshot cannot know who came
-  back. See [ADR 20260804-buddy-pairs](../architecture/decisions/20260804-buddy-pairs.md).
+- **Buddy team** — two or more people staff group together on one departure, so roll call can say
+  the thing a deck actually watches for: **someone is back aboard and someone on their team is
+  not**. A member is either a *booking* (a roster entry of that trip) or a *crew person* — the
+  divemaster leading the group holds no booking, and before crew could be members a diver
+  deliberately placed with a DM printed on the incident export identically to a diver nobody
+  paired. Membership is a decision about this boat, never a standing relationship.
+  **Nothing above two is refused**; a team of one is, because a team needs someone to be a team
+  with. A **diver** is on at most one team per departure — the invariant that keeps the manifest
+  unambiguous — while a **crew member may be on several**, because one divemaster commonly leads
+  more than one group, which is how guided diving runs. An unteamed remainder is a normal boat,
+  never an error, and plenty of shops record no teams at all. Every act is explicit: adding an
+  already-teamed diver is refused until staff dissolve first, a removal that would leave fewer than
+  two is refused (dissolving is its own act), and each of forming, adding, removing, and dissolving
+  appends to an **append-only pairing trail** carrying the member names as they stood at that
+  moment — so who was paired with whom survives the membership rows a dissolve deletes, and the
+  incident export renders it in the roll-call timeline. The split-team state (`separated_dock` as a
+  boarding heads-up, `separated_after_dive` as the loud one) **informs and never acts** — it plays
+  no part in readiness, admission, capacity, or whether a checkpoint reads complete, and it messages
+  nobody. The offline manifest shows teams read-only by name and states that the split-team read
+  belongs to the live roll call — a saved snapshot cannot know who came back.
+  See [ADR 20260804-buddy-teams](../architecture/decisions/20260804-buddy-teams.md).
 - **Per-trip crew role** — what a crew member is rostered to *do on one sailing*
   (`instructor`/`divemaster`/`captain`/`crew`), as opposed to the shop-wide roles they hold. Unset
   means **not specified**, which counts exactly as it always did, by shop-wide inference — never a
