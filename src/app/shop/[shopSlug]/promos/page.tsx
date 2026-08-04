@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { Copyable } from "@/components/Copyable";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
+import { Pager } from "@/components/Pager";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -84,8 +85,8 @@ export default async function PromosPage({
     undoStartsAt?: string;
     undoExpiresAt?: string;
     undoMaxRedemptions?: string;
-    after?: string;
-    dealsAfter?: string;
+    page?: string;
+    dealsPage?: string;
   }>;
 }) {
   const session = await requireStaffSession();
@@ -99,8 +100,8 @@ export default async function PromosPage({
     undoStartsAt,
     undoExpiresAt,
     undoMaxRedemptions,
-    after,
-    dealsAfter,
+    page,
+    dealsPage,
   } = await searchParams;
   const db = await getDb();
   const allowed = await canPersonManagePaymentSettings(
@@ -120,28 +121,31 @@ export default async function PromosPage({
   const now = nowDate();
   const [shop, promoPage, stripeAccount, dealPage] = await Promise.all([
     getShopById(db, session.user.shopId),
-    listShopPromoCodes(db, session.user.shopId, { cursor: after }),
+    // A non-numeric or missing `?page=`/`?dealsPage=` reads as page 1; each
+    // query clamps it into range, so a bookmarked page past the end of either
+    // list lands on that list's last real page.
+    listShopPromoCodes(db, session.user.shopId, { page: Number.parseInt(page ?? "", 10) }),
     getShopStripeAccount(db, session.user.shopId),
-    listOutstandingLastMinutePromos(db, session.user.shopId, now, { cursor: dealsAfter }),
+    listOutstandingLastMinutePromos(db, session.user.shopId, now, {
+      page: Number.parseInt(dealsPage ?? "", 10),
+    }),
   ]);
-  const { promos, nextCursor: promosNextCursor } = promoPage;
-  const { deals: tripDeals, nextCursor: dealsNextCursor } = dealPage;
-  // The two lists page independently, so changing one's cursor must carry the
-  // other's along rather than resetting it back to its own first page.
-  const promosHref = (cursor?: string) => {
+  const { promos } = promoPage;
+  const { deals: tripDeals } = dealPage;
+  const base = `/shop/${shopSlug}/promos`;
+  // The two lists page independently, so moving one must carry the other's
+  // page along rather than resetting it back to its own first page.
+  const pairedHref = (own: "page" | "dealsPage", target: number) => {
+    const other = own === "page" ? dealsPage : page;
+    const otherKey = own === "page" ? "dealsPage" : "page";
     const query = new URLSearchParams();
-    if (cursor) query.set("after", cursor);
-    if (dealsAfter) query.set("dealsAfter", dealsAfter);
+    if (target > 1) query.set(own, String(target));
+    if (other) query.set(otherKey, other);
     const search = query.toString();
-    return search ? `/shop/${shopSlug}/promos?${search}` : `/shop/${shopSlug}/promos`;
+    return search ? `${base}?${search}` : base;
   };
-  const dealsHref = (cursor?: string) => {
-    const query = new URLSearchParams();
-    if (after) query.set("after", after);
-    if (cursor) query.set("dealsAfter", cursor);
-    const search = query.toString();
-    return search ? `/shop/${shopSlug}/promos?${search}` : `/shop/${shopSlug}/promos`;
-  };
+  const promosHref = (target: number) => pairedHref("page", target);
+  const dealsHref = (target: number) => pairedHref("dealsPage", target);
   const connected = canAcceptPayments(stripeAccount);
   const banner = noticeFromParam(notice, NOTICES);
   const locale = await requestLocale(shop?.defaultLocale);
@@ -412,23 +416,14 @@ export default async function PromosPage({
           })}
         </ul>
       )}
-      {promosNextCursor || after ? (
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-          {promosNextCursor ? (
-            <Link
-              href={promosHref(promosNextCursor)}
-              className={buttonClass({ variant: "secondary" })}
-            >
-              {t("promos.showMoreCodes")}
-            </Link>
-          ) : null}
-          {after ? (
-            <Link href={promosHref()} className="text-sm font-medium text-primary hover:underline">
-              {t("promos.backToTop")}
-            </Link>
-          ) : null}
-        </div>
-      ) : null}
+      <Pager
+        page={promoPage.page}
+        pageCount={promoPage.pageCount}
+        href={promosHref}
+        total={t("promos.pagination.total", { count: promoPage.total })}
+        t={t}
+        className="mt-4"
+      />
 
       <h2 className="mt-10 font-medium">{t("promos.tripDeals.heading")}</h2>
       <p className="mt-1 text-sm text-muted">{t("promos.tripDeals.description")}</p>
@@ -473,23 +468,14 @@ export default async function PromosPage({
           ))}
         </ul>
       )}
-      {dealsNextCursor || dealsAfter ? (
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-          {dealsNextCursor ? (
-            <Link
-              href={dealsHref(dealsNextCursor)}
-              className={buttonClass({ variant: "secondary" })}
-            >
-              {t("promos.tripDeals.showMore")}
-            </Link>
-          ) : null}
-          {dealsAfter ? (
-            <Link href={dealsHref()} className="text-sm font-medium text-primary hover:underline">
-              {t("promos.tripDeals.backToTop")}
-            </Link>
-          ) : null}
-        </div>
-      ) : null}
+      <Pager
+        page={dealPage.page}
+        pageCount={dealPage.pageCount}
+        href={dealsHref}
+        total={t("promos.tripDeals.pagination.total", { count: dealPage.total })}
+        t={t}
+        className="mt-4"
+      />
       <p className="mt-3 text-xs text-muted">{t("promos.tripDeals.rangeNote")}</p>
     </main>
   );

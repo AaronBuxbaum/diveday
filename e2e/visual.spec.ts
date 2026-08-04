@@ -1405,8 +1405,8 @@ for (const scheme of ["light", "dark"] as const) {
 
       // … and Signatures is the signed-record evidence audit, paginated
       // (`listWaiverIntegrityAudit`, `WAIVER_INTEGRITY_PAGE_SIZE`) so the demo
-      // shop's 150+ signed records render as one page with a "Show more
-      // records" link rather than a silent truncation notice.
+      // shop's 150+ signed records render as one page under the shared pager
+      // rather than a silent truncation notice.
       //
       // Reached by URL rather than by clicking the "Waiver sections" sub-nav
       // the way this used to, now that it no longer follows the Template
@@ -1417,7 +1417,7 @@ for (const scheme of ["light", "dark"] as const) {
       }) => {
         await page.goto("/shop/blue-mantis/waivers/signatures");
         await page.getByRole("heading", { level: 1, name: "Signatures" }).waitFor();
-        await page.getByRole("link", { name: "Show more records" }).waitFor();
+        await page.getByRole("navigation", { name: "Pages" }).waitFor();
         await capture(page, "staff-waivers-signatures", scheme);
       });
 
