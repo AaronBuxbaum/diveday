@@ -1,26 +1,35 @@
 import type { ReactNode } from "react";
-import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
-import { requestLocale } from "@/i18n/request";
+import { ErrorBoundaryIntlProvider } from "@/i18n/ErrorBoundaryIntlProvider";
+import { ERROR_BOUNDARY_MESSAGES_BY_LOCALE } from "@/i18n/error-boundary-messages";
 
 /**
- * Puts translated words above the post-trip recap page's `error.tsx`. A layout
- * renders above the error boundary, so it can negotiate the locale
- * server-side and mount the one `errorBoundary` namespace — four short
- * strings — into React context for the client boundary to read. See
- * `src/app/waivers/[token]/layout.tsx` for the full reasoning and ADR
- * 20260803-error-boundary-copy-bridge for the decision.
+ * This layout exists for one reason: to put translated words above
+ * `error.tsx` for the post-trip recap a diver reads and reviews from (ADR
+ * 20260803-error-boundary-copy-bridge).
+ *
+ * `error.tsx` is a Next file convention with a fixed `{error, reset}` prop
+ * signature — the framework instantiates it directly, so no Server Component
+ * can hand it a `copy` prop the way every other page's words arrive. But a
+ * layout *does* render above the boundary (Next's component hierarchy is
+ * layout → template → error → page), so it can put the handful of boundary
+ * strings into React context, where the client boundary reads them with
+ * `useTranslations()`.
+ *
+ * It is deliberately **synchronous**. The original version awaited
+ * `requestLocale()` here to pick the reader's language server-side, and that
+ * one `headers()` read was the only thing keeping this whole route out of a
+ * static shell: a layout wraps `children`, so there is nothing to put a
+ * `<Suspense>` boundary around — the page could not render until the provider
+ * had. Both locales' copy now crosses to the client instead (~600 bytes) and
+ * `ErrorBoundaryIntlProvider` picks between them from `<html lang>`, which the
+ * root layout's inline script has already corrected from `navigator.languages`.
+ * Same answer, same source, no blocking read — see ADR
+ * 20260804-instant-navigation.
  */
-// No `instant` config here. This layout's `requestLocale()` does block, but
-// `isPageAllowedToBlock` reads only the *outermost* `instant` in a route, and
-// the page below already declares `instant = false` — which covers this route
-// either way, and additionally keeps the page segment out of dev-time instant
-// validation, which a layout config cannot do. Two declarations bought nothing.
-// See ADR 20260803-instant-opt-out-placement.
-
-export default async function RecapTokenLayout({ children }: { children: ReactNode }) {
+export default function RecapTokenLayout({ children }: { children: ReactNode }) {
   return (
-    <DiverIntlProvider locale={await requestLocale()} timeZone="UTC" namespaces={["errorBoundary"]}>
+    <ErrorBoundaryIntlProvider messagesByLocale={ERROR_BOUNDARY_MESSAGES_BY_LOCALE}>
       {children}
-    </DiverIntlProvider>
+    </ErrorBoundaryIntlProvider>
   );
 }

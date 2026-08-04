@@ -1289,9 +1289,8 @@ for (const scheme of ["light", "dark"] as const) {
         // Not "Front desk": the orders list this just navigated from carries
         // the identical eyebrow text, already on screen, so waiting on it
         // resolves instantly against the *old* page instead of the new one —
-        // capture() then fires while orders/[id] is still behind
-        // orders/loading.tsx's skeleton (no loading.tsx of its own, so it
-        // inherits the list's). "Back to diver" only exists on the detail page.
+        // capture() then fires while orders/[id] is still behind its own
+        // loading.tsx skeleton. "Back to diver" only exists on the detail page.
         await page.getByRole("link", { name: "Back to diver" }).waitFor();
         await capture(page, "order-detail", scheme);
       });

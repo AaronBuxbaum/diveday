@@ -19,6 +19,12 @@ import { IMPORT_HONESTY_TABLE } from "@/lib/import";
 import { sharedLinkCard } from "@/lib/marketing";
 import { IMPORT_SCOPE_ROW_KEYS } from "@/lib/migration-guides";
 
+// `instant = true`: navigating here paints immediately. Every request-scoped
+// read sits behind a `<Suspense>` boundary — this segment's `loading.tsx`, or
+// one placed inside the page — so the frame lands without waiting on the
+// request. `next build` audits the claim. See ADR 20260804-instant-navigation.
+export const instant = true;
+
 /**
  * "Coming from a spreadsheet" — the front door for the largest, most
  * under-served pool in the market: shops running the whole day on a spreadsheet

@@ -18,12 +18,14 @@ import { type NoticeTone, noticeRole } from "@/lib/staff-notices";
 import { DEFAULT_WAIVER_BODY } from "@/lib/waivers";
 import { saveWaiverAction } from "./actions";
 
-// Not a TODO. The shop layout above already permits this route's blocking
-// prerender (`isPageAllowedToBlock` reads only the outermost `instant`), so what
-// this line still buys is keeping the page segment out of dev-time instant
-// validation — which nothing above a page segment can do.
-// See ADR 20260803-instant-opt-out-placement.
-export const instant = false;
+// `instant = true` asserts that navigating *into* this page paints
+// immediately. It is not a claim that the route has a static shell: the staff
+// shell layout declares `instant = false` (read its comment for why), so a
+// cold, direct visit still blocks on the session and the shop row. What this
+// validates is the navigation staff actually make all day — arriving from
+// another `/shop` page, where that shell is already mounted and this
+// segment's `loading.tsx` is what paints. See ADR 20260804-instant-navigation.
+export const instant = true;
 
 export const metadata: Metadata = {
   title: "Waivers — DiveDay",

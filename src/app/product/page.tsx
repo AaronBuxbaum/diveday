@@ -20,6 +20,12 @@ import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
 import { trialHref } from "@/lib/funnel";
 import { productCapabilityIndex, sharedLinkCard } from "@/lib/marketing";
 
+// `instant = true`: navigating here paints immediately. Every request-scoped
+// read sits behind a `<Suspense>` boundary — this segment's `loading.tsx`, or
+// one placed inside the page — so the frame lands without waiting on the
+// request. `next build` audits the claim. See ADR 20260804-instant-navigation.
+export const instant = true;
+
 export const metadata: Metadata = {
   title: "Product — booking to head count | DiveDay",
   description:

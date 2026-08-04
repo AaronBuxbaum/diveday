@@ -15,17 +15,18 @@ import { signIn } from "@/lib/auth";
 import { trialHref } from "@/lib/funnel";
 import { publicSchedulePath, shopSlugFromStaffUrl } from "@/lib/public-routes";
 
-// Reads `searchParams`/`requestLocale()` inside `SignInForm` below, wrapped in
-// its own `<Suspense>` — not `instant = false`, which (per
-// node_modules/next/dist/docs/.../instant.md) is a *dev-time validation
-// opt-out only and has no effect on production rendering. Without a real
-// Suspense boundary, this route still gets a Partial-Prerendered static shell
-// with an implicit dynamic hole around the unwrapped `searchParams`/
-// `requestLocale()` read — and a `redirect("/sign-in?error=1")` fired from
-// the wrong-password path raced that hole's own pending fetch and got
-// `net::ERR_ABORTED`, leaving the form stuck on "Signing in…" forever
-// (caught by e2e/auth.spec.ts). An explicit boundary here makes the dynamic
-// part exactly what streams in on redirect, instead of leaving Next to guess.
+// This page was instant before the rest of the app was (ADR
+// 20260804-instant-navigation) — `searchParams`/`requestLocale()` are read
+// inside `SignInForm` below, wrapped in its own `<Suspense>`, rather than
+// opted out of with `instant = false`. Not merely tidier: without a real
+// boundary the route still gets a Partial-Prerendered static shell, but with
+// an *implicit* dynamic hole around the unwrapped read — and a
+// `redirect("/sign-in?error=1")` fired from the wrong-password path raced that
+// hole's own pending fetch and got `net::ERR_ABORTED`, leaving the form stuck
+// on "Signing in…" forever (caught by e2e/auth.spec.ts). An explicit boundary
+// makes the dynamic part exactly what streams in on redirect, instead of
+// leaving Next to guess.
+export const instant = true;
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = diverTranslator(await requestLocale());
