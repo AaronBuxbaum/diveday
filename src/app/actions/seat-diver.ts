@@ -5,7 +5,8 @@ import { getDb } from "@/db/client";
 import { type SeatDiverPerson, seatDiver } from "@/db/seat-diver";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
-import { encodeTripAdmissionRefusal, type TripAdmissionRefusal } from "@/lib/trip-admission";
+import type { TripAdmissionRefusal } from "@/lib/trip-admission";
+import { signTripAdmissionGate } from "@/lib/trip-admission-gate";
 import {
   SEAT_SURFACES,
   type SeatLanding,
@@ -77,15 +78,23 @@ function refuse(
   notice: string,
   /**
    * The `trip_prerequisite` refusal's structured detail, flattened into the one
-   * `gate=` param (`encodeTripAdmissionRefusal`). Codes only, and only on a
-   * staff URL — the banner turns it into the sentence that says *which*
-   * requirement failed and what the diver holds, instead of the one static
-   * line that used to point every refusal at the certifications form.
+   * `gate=` param. Codes only, and only on a staff URL — the banner turns it
+   * into the sentence that says *which* requirement failed and what the diver
+   * holds, instead of the one static line that used to point every refusal at
+   * the certifications form.
+   *
+   * **Signed, and bound to the landing route's own id**
+   * (`signTripAdmissionGate`). Unsigned, the param was an instruction anyone
+   * could write: a hand-made link rendered a specific, fabricated refusal, and
+   * the specific ones are exactly what send a staffer to the certifications
+   * form (security review finding).
    */
   gate?: TripAdmissionRefusal,
 ): never {
   const back = surface.refusedPath(landing);
-  const detail = gate ? `&gate=${encodeURIComponent(encodeTripAdmissionRefusal(gate))}` : "";
+  const scope = gate ? surface.gateScope(landing) : null;
+  const detail =
+    gate && scope ? `&gate=${encodeURIComponent(signTripAdmissionGate(gate, scope))}` : "";
   return revalidateAndRedirect(back, `${withNotice(back, notice)}${detail}`);
 }
 

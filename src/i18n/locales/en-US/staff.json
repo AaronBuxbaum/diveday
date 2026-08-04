@@ -2026,6 +2026,7 @@
         "rolesInvalid": "Check at least one role before saving.",
         "inviteAlreadyOnTeam": "That person already has an account here.",
         "inviteEmailTaken": "That email is already registered to a different shop.",
+        "inviteEmailReserved": "That email address is reserved and can't receive mail. Invite this teammate at an address they can read.",
         "lastOwner": "Can't do that — the shop needs at least one owner. Make someone else an owner first.",
         "notFound": "That person isn't on this shop's team.",
         "notAuthorized": "Team management is limited to owners and managers."

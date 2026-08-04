@@ -88,6 +88,25 @@ export async function POST(request: Request) {
   const occurredAt = event.created !== undefined ? new Date(event.created * 1000) : nowDate();
   const accountId = event.account ?? null;
 
+  /**
+   * What goes in the ledger row's `account` column.
+   *
+   * For an ordinary Connect delivery this is just `event.account`. The
+   * exception is `account.updated`, whose ordering defense reads that column
+   * back keyed on the connected account id **taken from the event body**
+   * (`hasNewerAccountUpdate(db, account.data.id, …)`). If Stripe ever delivers
+   * one without a top-level `account`, writer and reader would disagree: every
+   * such row would store `null`, the staleness query would match nothing, and
+   * the check would silently degrade to the last-write-wins on
+   * `charges_enabled` a previous security pass closed. So the writer falls back
+   * to the same id the reader will use (security review finding).
+   */
+  const claimAccountId =
+    accountId ??
+    (event.type === "account.updated"
+      ? (accountObjectSchema.safeParse(event.data.object).data?.id ?? null)
+      : null);
+
   // The only observability this endpoint has: one line per delivery naming the
   // event id/type/connected account, and one more per outcome below —
   // including a `null`/refused handler result, which is otherwise a silent
@@ -138,7 +157,7 @@ export async function POST(request: Request) {
   const claimed = await claimStripeWebhookEvent(db, {
     id: event.id,
     type: event.type,
-    account: accountId,
+    account: claimAccountId,
     occurredAt,
   });
   if (!claimed) {

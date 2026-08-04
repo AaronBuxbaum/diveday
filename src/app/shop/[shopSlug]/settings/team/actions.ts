@@ -116,8 +116,14 @@ export async function inviteStaffAction(formData: FormData) {
   });
 
   if (!result.ok) {
-    const notice =
-      result.reason === "already_on_team" ? "invite_already_on_team" : "invite_email_taken";
+    // Exhaustive by construction: a new refusal code cannot reach the page
+    // wordless (the same discipline `SEAT_SURFACES.refusalNotice` uses).
+    const notice = {
+      already_on_team: "invite_already_on_team",
+      email_registered_elsewhere: "invite_email_taken",
+      // The reserved demo namespace (ADR 20260803-demo-bypass-containment).
+      email_reserved: "invite_email_reserved",
+    }[result.reason];
     redirect(`${path}?notice=${notice}`);
   }
 

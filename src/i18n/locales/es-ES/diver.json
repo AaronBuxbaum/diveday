@@ -924,6 +924,7 @@
         "ownerPasswordTooLong": "La contraseña debe tener como máximo {max} caracteres",
         "shopSlugTaken": "El enlace del centro “{slug}” ya está en uso.",
         "emailTaken": "Este correo ya está registrado.",
+        "emailReserved": "Esa dirección de correo no puede usarse para una cuenta de centro. Usa una dirección que pueda recibir correo.",
         "createFailed": "Algo salió mal al crear tu centro. Inténtalo de nuevo.",
         "signinFailed": "Tu centro se creó, pero no pudimos iniciar tu sesión. Prueba a iniciar sesión más abajo."
       }

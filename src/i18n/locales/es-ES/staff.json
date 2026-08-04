@@ -2026,6 +2026,7 @@
         "rolesInvalid": "Marca al menos un rol antes de guardar.",
         "inviteAlreadyOnTeam": "Esa persona ya tiene una cuenta aquí.",
         "inviteEmailTaken": "Ese correo ya está registrado en otro centro.",
+        "inviteEmailReserved": "Esa dirección de correo está reservada y no puede recibir mensajes. Invita a esta persona en una dirección que pueda leer.",
         "lastOwner": "No se puede hacer eso — el centro necesita al menos un propietario. Convierte a otra persona en propietario primero.",
         "notFound": "Esa persona no está en el equipo de este centro.",
         "notAuthorized": "La gestión del equipo está limitada a propietarios y gerentes."

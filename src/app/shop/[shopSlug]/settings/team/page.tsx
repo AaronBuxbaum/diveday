@@ -63,6 +63,10 @@ function noticeMessages(
       text: t("settings.team.notice.inviteAlreadyOnTeam"),
     },
     invite_email_taken: { tone: "danger", text: t("settings.team.notice.inviteEmailTaken") },
+    invite_email_reserved: {
+      tone: "danger",
+      text: t("settings.team.notice.inviteEmailReserved"),
+    },
     last_owner: { tone: "danger", text: t("settings.team.notice.lastOwner") },
     not_found: { tone: "danger", text: t("settings.team.notice.notFound") },
     not_authorized: { tone: "danger", text: t("settings.team.notice.notAuthorized") },

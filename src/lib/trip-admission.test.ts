@@ -553,6 +553,25 @@ describe("the refusal survives a redirect", () => {
   it.each(hostile)("refuses %s (%s) rather than half-decoding it", (value) => {
     expect(decodeTripAdmissionRefusal(value)).toBeNull();
   });
+
+  /**
+   * `?gate=a&gate=b` is a shape Next really delivers, and an array is truthy —
+   * so `if (!value)` passed it through to `value.split()`, a `TypeError`, and
+   * the error boundary. A 500 on a staff page, from a repeated query param.
+   * The same class `src/proxy.ts` documents at length for `embed`; every
+   * sibling param on these routes was already hardened and `gate` was not.
+   */
+  const repeated: Array<[string[], string]> = [
+    [["advanced_open_water~open_water~~0", "~~deep~0"], "two well-formed values"],
+    [["advanced_open_water~open_water~~0"], "one well-formed value in an array"],
+    [[], "an empty array"],
+    [["", ""], "two empty values"],
+  ];
+
+  it.each(repeated)("refuses %o (%s) instead of throwing on it", (value) => {
+    expect(() => decodeTripAdmissionRefusal(value)).not.toThrow();
+    expect(decodeTripAdmissionRefusal(value)).toBeNull();
+  });
 });
 
 /**

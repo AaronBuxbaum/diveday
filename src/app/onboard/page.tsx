@@ -44,6 +44,7 @@ const ONBOARD_ERROR_MESSAGES: Record<
   | "invalid_input"
   | "shop_slug_taken"
   | "email_taken"
+  | "email_reserved"
   | "create_failed"
   | "signin_failed",
   (t: DiverTranslator, ctx: { shopSlug?: string }) => string
@@ -53,6 +54,9 @@ const ONBOARD_ERROR_MESSAGES: Record<
   shop_slug_taken: (t, ctx) =>
     t("account.onboard.errors.shopSlugTaken", { slug: ctx.shopSlug ?? "" }),
   email_taken: (t) => t("account.onboard.errors.emailTaken"),
+  // The reserved demo namespace (`*.demo.invalid`) — never routable, so never
+  // a real owner's address (ADR 20260803-demo-bypass-containment).
+  email_reserved: (t) => t("account.onboard.errors.emailReserved"),
   create_failed: (t) => t("account.onboard.errors.createFailed"),
   signin_failed: (t) => t("account.onboard.errors.signinFailed"),
   shop_name_required: (t) => t("account.onboard.errors.shopNameRequired"),

@@ -106,7 +106,11 @@ test.describe("as owner", () => {
     // Asserted on `gate` rather than `notice`: this page's `FlashParams` strips
     // `notice` on mount so the message can't replay on refresh, which makes any
     // assertion on it a race. `gate` is not in that list and stays put.
-    await expect(page).toHaveURL(/gate=advanced_open_water/);
+    //
+    // The codes stay readable and an HMAC follows them, bound to this
+    // departure (src/lib/trip-admission-gate.ts) — unsigned, the param was an
+    // instruction anyone could write.
+    await expect(page).toHaveURL(/gate=advanced_open_water[^&]*\.[\w-]{40,}/);
     const banner = page.getByText("This charter requires Advanced Open Water.");
     await expect(banner).toBeVisible();
     await expect(banner).toContainText("highest card on file is Open Water");
@@ -119,6 +123,27 @@ test.describe("as owner", () => {
 
     // Refused means refused — no seat was written.
     await expect(page.locator("#roster").getByText("Diego Alvarez")).toHaveCount(0);
+  });
+
+  test("a hand-written ?gate= cannot manufacture a specific refusal", async ({ page }) => {
+    // The signature exists because the *specific* sentences are the dangerous
+    // ones: "their Deep card isn't on file" points a staffer at the
+    // certifications form, and a hand-entered card lands `pending`, which
+    // clears admission on the next attempt (H-24). So the tamper doesn't bypass
+    // a gate — it manufactures the prompt that gets a staffer to bypass one
+    // (security review finding).
+    const tripId = await seededTripId(page, ADVANCED_CHARTER);
+    await page.goto(
+      `/shop/blue-mantis/trips/${tripId}/guests?notice=diver-trip-prerequisite&gate=~~deep~0`,
+    );
+
+    // The banner still appears — a refusal nobody can read is worse than a
+    // vague one — but it says only the generic thing. Located by role minus
+    // Next's own always-present route announcer, which also claims `alert`.
+    const banner = page.locator('[role="alert"]:not(#__next-route-announcer__)');
+    await expect(banner).toContainText("cards on file don't reach what this trip");
+    await expect(banner).not.toContainText("Deep card");
+    await expect(banner).not.toContainText("charter requires");
   });
 
   test("the global Add-booking door says a missing specialty card is missing, whatever the diver's level", async ({

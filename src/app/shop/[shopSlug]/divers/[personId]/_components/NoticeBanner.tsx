@@ -2,7 +2,7 @@ import Link from "next/link";
 import { tripAdmissionRefusalText } from "@/i18n/readiness-labels";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { noticeFromParam } from "@/lib/staff-notices";
-import { decodeTripAdmissionRefusal } from "@/lib/trip-admission";
+import { verifyTripAdmissionGate } from "@/lib/trip-admission-gate";
 
 /**
  * One entry per notice, carrying its own tone and message key. Previously
@@ -91,23 +91,36 @@ export function NoticeBanner({
   gate,
   locale,
   shopSlug,
+  personId,
 }: {
   notice?: string;
   /**
-   * The encoded `TripAdmissionRefusal` behind `trip_prerequisite` — the trip's
+   * The signed `TripAdmissionRefusal` behind `trip_prerequisite` — the trip's
    * unmet cert requirement and the diver's highest card
-   * (src/lib/trip-admission.ts). This is the surface the old copy sent staff to
-   * ("Add the missing card above"), so it is the one that most needed to stop
-   * saying that on a refusal no card can fix.
+   * (src/lib/trip-admission-gate.ts). This is the surface the old copy sent
+   * staff to ("Add the missing card above"), so it is the one that most needed
+   * to stop saying that on a refusal no card can fix — and, for the same
+   * reason, the one where a *forged* specific refusal would do the most damage.
+   * Absent or unverifiable falls back to the generic sentence. `string[]`
+   * because a repeated `?gate=` really delivers one.
    */
-  gate?: string;
+  gate?: string | string[];
   locale: string;
   shopSlug: string;
+  /**
+   * This record's own person id, from the path. The gate signature is bound to
+   * it — this landing URL carries no departure at all, so the diver is the one
+   * identity the reader can check without trusting the query.
+   */
+  personId: string;
 }) {
   const banner = noticeFromParam(notice, NOTICE_KEYS);
   if (!banner) return null;
   const t = staffTranslator(locale);
-  const refusal = notice === "trip_prerequisite" ? decodeTripAdmissionRefusal(gate) : null;
+  const refusal =
+    notice === "trip_prerequisite"
+      ? verifyTripAdmissionGate(gate, { kind: "diver", id: personId })
+      : null;
 
   return (
     <p

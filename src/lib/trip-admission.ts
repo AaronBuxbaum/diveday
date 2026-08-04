@@ -283,6 +283,11 @@ const ITEM = "-";
  * wire, and `src/i18n` picks the sentence. Staff-only by construction — every
  * consumer sits behind `/shop/**` — and it says nothing the staffer reading it
  * cannot already open the diver's record and see.
+ *
+ * **This is the codec, not the credential.** Nothing here proves the refusal
+ * ever happened, so no surface reads a `?gate=` through this function directly:
+ * `src/lib/trip-admission-gate.ts` wraps it in an HMAC bound to the departure
+ * (or the diver) whose page will render it, and that is what the banners call.
  */
 export function encodeTripAdmissionRefusal(refusal: TripAdmissionRefusal): string {
   return [
@@ -299,11 +304,18 @@ export function encodeTripAdmissionRefusal(refusal: TripAdmissionRefusal): strin
  * falls back to the generic notice. Unknown codes are rejected rather than
  * dropped, because a half-decoded refusal would state a requirement the trip
  * does not have.
+ *
+ * **`string[]` is a shape Next really delivers**, not a defensive flourish:
+ * `?gate=a&gate=b` arrives as an array, and the old `if (!value)` let one
+ * through (an array is truthy) straight into `value.split()` — a `TypeError`
+ * and a 500 on a staff page, from a query param. Same class `src/proxy.ts`
+ * documents for `embed`. Hardened here rather than at each reader so every
+ * call site inherits it.
  */
 export function decodeTripAdmissionRefusal(
-  value: string | undefined | null,
+  value: string | readonly string[] | undefined | null,
 ): TripAdmissionRefusal | null {
-  if (!value) return null;
+  if (typeof value !== "string" || !value) return null;
   const parts = value.split(FIELD);
   if (parts.length !== 4) return null;
   const [required, held, specialties, nitrox] = parts as [string, string, string, string];

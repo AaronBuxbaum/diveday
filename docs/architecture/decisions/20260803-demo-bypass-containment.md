@@ -60,6 +60,11 @@ a constant-work compare and a named constant respectively.
      guarantees `.invalid` never resolves — so no *real* shop can be in it, because onboarding and
      staff invites both mail the address they are given and an account there would never receive its
      verification link. Flipping `is_demo` on a real tenant now grants nothing.
+     **The two real-account writers enforce this rather than merely implying it** (amended
+     2026-08-04, security review): `onboardAction` (`src/app/onboard/actions.ts`) and
+     `inviteStaffMember` (`src/db/staff-accounts.ts`) each refuse an address in the namespace
+     outright — `email_reserved` — so the namespace is an invariant of the write path and not a
+     consequence of nobody wanting an unroutable address.
 - **The environment gate takes its environment as a parameter**, typed as a plain string map rather
   than `NodeJS.ProcessEnv`. Next's ambient types narrow `NODE_ENV` to three literals and mark it
   required; a fail-closed guard must not trust a build-time narrowing it cannot enforce at runtime.
@@ -92,6 +97,17 @@ each of the three conditions has a test that fails if it is dropped, including o
 `is_demo` on and moves the account to a routable address and asserts the bypass still refuses.
 Operators gain `DIVEDAY_DEMO_BYPASS=off` as a documented kill switch (optional, like
 `DEMO_SHOP_MAX_LIVE`; not in `.env.example` and not checked by `pnpm check:env`).
+
+**Condition (3) is enforced, not emergent** (amended 2026-08-04). As first written it depended on a
+behavioural argument — the two writers of `user_accounts.email` for a *real* shop both mail the
+address, `.invalid` never resolves, therefore nobody would ever put one there. True, and not a
+guarantee: it left one combination open, an insider or a bad migration flipping `is_demo` on a tenant
+that already held a `*.demo.invalid` account, at which point `DEMO_BYPASS_PASSWORD` opens a real
+tenant. Both writers now call `isDemoAccountEmail` and refuse (`email_reserved`), each through the
+error mechanism its surface already has — `backToForm` on `/onboard`, an `InviteStaffResult` reason
+on the team page — so the namespace is a property of the schema's write path. Demo seeding
+(`src/db/seed.ts`, `DEV_STAFF_LOGINS`) writes those rows directly and is deliberately not routed
+through either guard; that split is the thing to preserve if a third writer ever appears.
 
 The new coupling to cost: **any future demo-minting path must generate its staff addresses under
 `DEMO_EMAIL_DOMAIN`**, or sign-in for that demo silently stops working. `generateDemoShopIdentity`

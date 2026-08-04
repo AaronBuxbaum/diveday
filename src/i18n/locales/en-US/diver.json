@@ -924,6 +924,7 @@
         "ownerPasswordTooLong": "Password must be at most {max} characters",
         "shopSlugTaken": "The shop link “{slug}” is already taken.",
         "emailTaken": "This email is already registered.",
+        "emailReserved": "That email address can't be used for a shop account. Please use an address that can receive mail.",
         "createFailed": "Something went wrong creating your shop. Please try again.",
         "signinFailed": "Your shop was created, but signing you in failed. Try signing in below."
       }

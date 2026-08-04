@@ -57,7 +57,8 @@ export default async function DiverDetailPage({
     notice?: string;
     undo?: string;
     cardType?: string;
-    gate?: string;
+    /** Signed, verified against this route's own `personId` — src/lib/trip-admission-gate.ts. */
+    gate?: string | string[];
     edit?: string;
   }>;
 }) {
@@ -120,7 +121,13 @@ export default async function DiverDetailPage({
           undoLabel={t("shared.undoToast.undo")}
         />
       ) : (
-        <NoticeBanner notice={notice} gate={gate} locale={locale} shopSlug={shopSlug} />
+        <NoticeBanner
+          notice={notice}
+          gate={gate}
+          locale={locale}
+          shopSlug={shopSlug}
+          personId={personId}
+        />
       )}
       {/* Above the stat cards, not below them: on a 390px phone those three
           cards stack, and a row sitting under them lands ~1,150px down — a spine

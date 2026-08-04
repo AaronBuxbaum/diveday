@@ -80,7 +80,12 @@ export default async function ManageTripPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string; id: string }>;
-  searchParams: Promise<{ notice?: string; count?: string; gate?: string }>;
+  searchParams: Promise<{
+    notice?: string;
+    count?: string;
+    /** Signed, and verified against this route's own `id` — src/lib/trip-admission-gate.ts. */
+    gate?: string | string[];
+  }>;
 }) {
   // The session, route params, and db handle don't depend on one another —
   // resolve them together instead of serially.
@@ -289,7 +294,7 @@ export default async function ManageTripPage({
         }
       />
 
-      <TripNoticeBanner notice={notice} count={count} gate={gate} locale={locale} />
+      <TripNoticeBanner notice={notice} count={count} gate={gate} tripId={tripId} locale={locale} />
 
       {canConfigure ? null : (
         <div className="mt-6">

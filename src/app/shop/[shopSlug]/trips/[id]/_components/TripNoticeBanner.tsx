@@ -3,7 +3,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { tripAdmissionRefusalText } from "@/i18n/readiness-labels";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
-import { decodeTripAdmissionRefusal } from "@/lib/trip-admission";
+import { verifyTripAdmissionGate } from "@/lib/trip-admission-gate";
 
 /**
  * One entry per notice code, carrying its own tone and message key(s) — same
@@ -127,6 +127,7 @@ export function TripNoticeBanner({
   notice,
   count,
   gate,
+  tripId,
   locale,
   undoBookingId,
   undoAction,
@@ -135,12 +136,20 @@ export function TripNoticeBanner({
   /** The specific count behind a "-below-" refusal notice, e.g. the booked count or recorded dive number. */
   count?: string;
   /**
-   * The encoded `TripAdmissionRefusal` behind `diver-trip-prerequisite` — which
+   * The signed `TripAdmissionRefusal` behind `diver-trip-prerequisite` — which
    * requirement the trip's cert gate failed on and what the diver holds
-   * (src/lib/trip-admission.ts). Absent or unreadable falls back to the
-   * notice's own generic sentence, never to a blank banner.
+   * (src/lib/trip-admission-gate.ts). Absent, unsigned, or signed for a
+   * different departure all fall back to the notice's own generic sentence,
+   * never to a blank banner and never to the specific one. Typed to admit the
+   * `string[]` a repeated `?gate=` really delivers.
    */
-  gate?: string;
+  gate?: string | string[];
+  /**
+   * The departure this page *is*, read from its own path — what the signature
+   * is checked against, so a genuine refusal from another boat cannot be
+   * pasted onto this one.
+   */
+  tripId: string;
   locale: string;
   undoBookingId?: string;
   // Only the roster's reversible removals carry an undo; Overview's config
@@ -151,7 +160,10 @@ export function TripNoticeBanner({
   if (!banner) return null;
   const t = staffTranslator(locale);
   const parsedCount = count !== undefined && /^\d+$/.test(count) ? Number(count) : undefined;
-  const refusal = notice === "diver-trip-prerequisite" ? decodeTripAdmissionRefusal(gate) : null;
+  const refusal =
+    notice === "diver-trip-prerequisite"
+      ? verifyTripAdmissionGate(gate, { kind: "trip", id: tripId })
+      : null;
   const text = refusal
     ? tripAdmissionRefusalText(t, refusal, locale)
     : parsedCount !== undefined && banner.countKey

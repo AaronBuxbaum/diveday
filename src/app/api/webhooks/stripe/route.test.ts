@@ -639,6 +639,94 @@ describe("POST /api/webhooks/stripe — event ledger", () => {
       detailsSubmitted: true,
     });
   });
+
+  /**
+   * **The staleness defense only works if writer and reader agree on the key**
+   * (security review finding).
+   *
+   * `hasNewerAccountUpdate` filters `stripe_webhook_events.account` against the
+   * id it is *given* — and every caller gives it `event.data.object.id`. The
+   * claim, meanwhile, stored `event.account ?? null`. For an ordinary Connect
+   * delivery those are the same string and nothing shows. Should Stripe ever
+   * deliver an `account.updated` without a top-level `account`, every such row
+   * would land as `null`, the query would match nothing, and the whole ordering
+   * check would degrade — silently — to the last-write-wins on `charges_enabled`
+   * that a previous security pass closed. No existing test caught it: they all
+   * omit the top-level field and only assert what the *handler* did with the
+   * body.
+   */
+  describe("the account.updated ledger key", () => {
+    const bodyOnlyEvent = {
+      id: "evt_no_top_level_account",
+      type: "account.updated",
+      created: 1_700_000_200,
+      data: {
+        object: {
+          id: "acct_from_body",
+          charges_enabled: true,
+          payouts_enabled: true,
+          details_submitted: true,
+        },
+      },
+    };
+
+    it("claims under the id the staleness query reads back, with no top-level account", async () => {
+      const response = await post(bodyOnlyEvent);
+      expect(response.status).toBe(200);
+      expect(claimStripeWebhookEvent).toHaveBeenCalledWith(
+        FAKE_DB,
+        expect.objectContaining({ id: "evt_no_top_level_account", account: "acct_from_body" }),
+      );
+      // Same id on both sides — that agreement *is* the defense.
+      expect(hasNewerAccountUpdate).toHaveBeenCalledWith(
+        FAKE_DB,
+        "acct_from_body",
+        "evt_no_top_level_account",
+        new Date(1_700_000_200 * 1000),
+      );
+    });
+
+    it("still prefers the top-level account when Stripe sends one", async () => {
+      const response = await post({
+        ...bodyOnlyEvent,
+        id: "evt_top_level_account",
+        account: "acct_top_level",
+      });
+      expect(response.status).toBe(200);
+      expect(claimStripeWebhookEvent).toHaveBeenCalledWith(
+        FAKE_DB,
+        expect.objectContaining({ account: "acct_top_level" }),
+      );
+    });
+
+    it("leaves a non-account event's ledger key alone", async () => {
+      const response = await post({
+        id: "evt_invoice_no_account",
+        type: "invoice.paid",
+        data: { object: { id: "in_123", amount_paid: 4500 } },
+      });
+      expect(response.status).toBe(200);
+      expect(claimStripeWebhookEvent).toHaveBeenCalledWith(
+        FAKE_DB,
+        expect.objectContaining({ account: null }),
+      );
+    });
+
+    /** A malformed body has no id to fall back to; the claim must still happen. */
+    it("claims a malformed account.updated rather than throwing", async () => {
+      const response = await post({
+        id: "evt_malformed_account",
+        type: "account.updated",
+        data: { object: { charges_enabled: true } },
+      });
+      expect(response.status).toBe(200);
+      expect(claimStripeWebhookEvent).toHaveBeenCalledWith(
+        FAKE_DB,
+        expect.objectContaining({ account: null }),
+      );
+      expect(setShopStripeAccountStatus).not.toHaveBeenCalled();
+    });
+  });
 });
 
 describe("POST /api/webhooks/stripe — structured logging", () => {

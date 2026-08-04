@@ -18,7 +18,7 @@ import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate, formatTimeRange } from "@/lib/format";
 import { requireStaffSession } from "@/lib/session";
 import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
-import { decodeTripAdmissionRefusal } from "@/lib/trip-admission";
+import { verifyTripAdmissionGate } from "@/lib/trip-admission-gate";
 
 export const metadata: Metadata = {
   title: "Add a booking — DiveDay",
@@ -67,7 +67,12 @@ export default async function NewBookingDiverPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string; tripId: string }>;
-  searchParams: Promise<{ diverq?: string; notice?: string; gate?: string }>;
+  searchParams: Promise<{
+    diverq?: string;
+    notice?: string;
+    /** Signed, verified against this route's own `tripId` — src/lib/trip-admission-gate.ts. */
+    gate?: string | string[];
+  }>;
 }) {
   await connection(); // live seat counts — render per request, never a build-time shell
   const session = await requireStaffSession();
@@ -91,7 +96,9 @@ export default async function NewBookingDiverPage({
   // and what they hold, rather than the one static sentence every refusal used
   // to share (src/lib/trip-admission.ts).
   const gateRefusal =
-    notice === "diver-trip-prerequisite" ? decodeTripAdmissionRefusal(gate) : null;
+    notice === "diver-trip-prerequisite"
+      ? verifyTripAdmissionGate(gate, { kind: "trip", id: tripId })
+      : null;
 
   return (
     <main className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 sm:py-10">

@@ -162,6 +162,57 @@ describe("inviteStaffMember", () => {
     });
     expect(result).toEqual({ ok: false, reason: "email_registered_elsewhere" });
   });
+
+  /**
+   * **The demo namespace is an invariant of this write path, not a hope**
+   * (security review finding; ADR 20260803-demo-bypass-containment, amended).
+   *
+   * The demo sign-in bypass's third condition is "the account's email sits in
+   * `*.demo.invalid`". Its containment argument was that no *real* account can
+   * be there, because this function mails the invite and `.invalid` never
+   * resolves — a behavioural argument, not an enforced one. It left exactly one
+   * combination open: a tenant that already holds an account in the namespace,
+   * then has `is_demo` flipped by an insider or a bad migration, at which point
+   * `DEMO_BYPASS_PASSWORD` opens a real shop. Refusing here closes it, and no
+   * account row must be written on the way out.
+   */
+  describe("the reserved demo namespace", () => {
+    it.each([
+      "mallory@demo.invalid",
+      "mallory@coral-cove-divers-a1b2c3.demo.invalid",
+      "MALLORY@Demo.Invalid",
+    ])("refuses an invite to %s", async (email) => {
+      const { db, shop } = await seededShopContext();
+      const result = await inviteStaffMember(db, {
+        shopId: shop.id,
+        fullName: "Mallory",
+        email,
+        roles: ["crew"],
+      });
+      expect(result).toEqual({ ok: false, reason: "email_reserved" });
+
+      const rows = await db
+        .select({ id: userAccounts.id })
+        .from(userAccounts)
+        .where(eq(userAccounts.email, email.toLowerCase()));
+      expect(rows).toHaveLength(0);
+    });
+
+    /** Anchored: a lookalike registrable domain is an ordinary, invitable address. */
+    it.each(["crew@notdemo.invalid", "crew@demo.invalid.example.com"])(
+      "still invites %s",
+      async (email) => {
+        const { db, shop } = await seededShopContext();
+        const result = await inviteStaffMember(db, {
+          shopId: shop.id,
+          fullName: "Ordinary Crew",
+          email,
+          roles: ["crew"],
+        });
+        expect(result.ok).toBe(true);
+      },
+    );
+  });
 });
 
 describe("setStaffRoles", () => {
