@@ -174,6 +174,16 @@ describe("formatScheduleDayTime", () => {
       formatScheduleDayTime({ title: "Day 1", startTime: "not-a-time", items: [] }),
     ).toBeUndefined();
   });
+
+  it("formats the clock in the reader's locale, not hard-coded en-US (regression)", () => {
+    // A Spanish diver reads their own clock convention: 14:00, not 2:00 PM.
+    expect(
+      formatScheduleDayTime(
+        { title: "Día 1", startTime: "08:00", endTime: "14:00", items: [] },
+        "es-ES",
+      ),
+    ).toBe("8:00 – 14:00");
+  });
 });
 
 describe("parseFaqs", () => {

@@ -635,6 +635,37 @@
     "waiverDone": "That’s the paperwork done ✓",
     "readinessTitle": "Your trip readiness"
   },
+  "seatClaim": {
+    "metaTitle": "Claim your seat",
+    "eyebrow": "Claim your seat",
+    "heading": "A seat on {trip} is waiting for you",
+    "body": "Your organizer booked this seat with {shop} and held it as “{seatName}”. Make it yours: add your own details, and your waiver and trip prep come straight to you instead of through them.",
+    "when": "{date} · {time}",
+    "nameLabel": "Your name",
+    "emailLabel": "Your email",
+    "phoneLabel": "Your phone",
+    "submit": "Claim this seat",
+    "claiming": "Claiming…",
+    "privacyNote": "Only you and the shop see what you enter here — your organizer just sees that the seat is claimed.",
+    "unavailableHeading": "This link isn’t available",
+    "unavailableBody": "It may already have been used, replaced with a newer link, or expired. Ask your organizer for a fresh link, or contact the shop.",
+    "errors": {
+      "checkFields": "Check the highlighted fields and try again.",
+      "nameRequired": "Add your name — this seat becomes yours.",
+      "emailInvalid": "That email doesn’t look right.",
+      "alreadyBooked": "You already have your own spot on this trip, so this seat stays with your organizer.",
+      "coursePrerequisite": "This session is a course with its own prerequisites, and the shop needs a verified card on file before this seat can change hands. Contact the shop and they can sort it out."
+    },
+    "claimedNotice": "This seat is yours now — everything on this page is about you. Your organizer can see it’s claimed.",
+    "panelHeading": "Your group’s seats",
+    "panelBody": "Send each diver their own link — they add their own details, sign their own waiver, and get their own trip prep. A seat nobody claims simply stays with you, exactly as booked.",
+    "claimedBadge": "Claimed ✓",
+    "awaitingBadge": "Not claimed yet",
+    "copyLabel": "Copy link",
+    "showLink": "Show link",
+    "copiedLabel": "Copied",
+    "copyFailedLabel": "Copy didn’t work — select the link instead"
+  },
   "rental": {
     "heading": "Rental fit",
     "ownGear": "Bringing own gear — no rental needed.",

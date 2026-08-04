@@ -206,7 +206,16 @@ new domain concept, define it here in the same PR.
   the boat each one holds up, with a per-departure batch waiver send. It had its own route until
   ADR 20260803-not-ready-is-a-view folded it in; that URL now redirects. "Not ready" names the
   *view*; an individual diver's status is **Blocked** or **Ready**, never "Not ready".
-- **Blocked / Ready** — the shop's one readiness vocabulary, and the only two states a booking's
+- **Close-out** — the end-of-day ritual, and Today's evening mirror: one surface
+  (`/shop/<slug>/close-out`, ADR 20260804-day-closeout) where staff confirm the day actually
+  ended — every departure's end state read off the same roll-call evidence Today chases, today's
+  unresolved queue rows each given an explicit **carry** or **dismiss**, and tomorrow's first
+  blockers as the parting glance. Closing the day is a **recorded act, never a gate**: an
+  append-only `day_closeouts` row remembers who closed, when, and exactly what was outstanding,
+  and nothing anywhere conditions on it — a dismissed item resurfaces tomorrow if it is still
+  true, and re-opening is just working again and closing again. An open after-dive head count or
+  a boat still out makes the close *loud* (a by-name acknowledgement before the button) but never
+  impossible: the human is the authority on their own day, and the count stays chased either way.
   readiness check has. Every *live* surface that shows one — roster, counter check-in, manifest,
   departure board — uses these words and one tone per state (blocked is always danger), resolved
   through `readinessStatusText`/`readinessStatusTone` in `src/i18n/readiness-labels.ts`. The same
@@ -248,6 +257,13 @@ new domain concept, define it here in the same PR.
   series records only the cadence; each date is materialized as its own independent **trip** that
   starts identical to the rest and is booked, crewed, edited, or cancelled on its own. See
   [20260719-recurring-trip-series](../architecture/decisions/20260719-recurring-trip-series.md).
+- **Seat claim** — a party member taking over one seat of a party booking as their own identity,
+  through a bearer `/claim/[token]` link the organizer shares (a `claim`-purpose
+  `booking_capabilities` row; [20260804-seat-claim-links](../architecture/decisions/20260804-seat-claim-links.md)).
+  Claiming re-points the seat's existing booking at the claimant's own person record and starts
+  their own waiver and trip prep; the organizer's surfaces show which seats are claimed. It never
+  creates or frees a seat, never moves money, and is never required — an unclaimed seat boards
+  under the organizer's party exactly as before claiming existed.
 - **Wait list** — a first-come record of divers interested in a full trip. It is not a booking,
   does not consume capacity, and never appears on a manifest; staff follow up if space opens.
 - **Last-minute list** — a shop-wide (not per-trip) opt-in of divers who want to hear about
@@ -351,6 +367,16 @@ new domain concept, define it here in the same PR.
   raises it and the schedule board badges the departure — **for crew as well as divers**. It comes
   in six distinct kinds, which are deliberately never worded or ranked alike — see **unaccounted
   for** below.
+- **Incident-ready export** — the print-optimized document a shop hands to authorities or insurers
+  after a departure: the manifest roster with each person's per-checkpoint roll-call state, the
+  complete append-only roll-call timeline (corrections included), certification evidence as held,
+  waiver **status** (state, date, template version — never the medical questionnaire's answers),
+  crew and crew counts, and generation metadata. It reports recorded facts with timestamps and
+  computes no safety judgment; every absence is stated ("Awaiting", "No certification evidence on
+  file") rather than left blank. A SHA-256 **integrity code** over the printed facts sits in the
+  footer — tamper-evidence, not a signature: regenerating the export from unchanged records
+  reproduces the code, so two copies can be checked against each other. Staff-only, one tap from
+  the manifest (`/shop/<slug>/trips/<id>/incident-export`).
 - **Unaccounted for** — the six ways a head count can be open, in descending severity. A person is
   accounted for at an after-dive checkpoint **only if their latest live result there is
   "boarded"**; nothing else closes that count, and the rule is the same whether they hold a booking

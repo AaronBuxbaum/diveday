@@ -22,6 +22,7 @@ import {
 } from "@/db/readiness";
 import { getRentalFit, toDiverRentalFit } from "@/db/rental-fit";
 import { getShopReviewAggregate } from "@/db/reviews";
+import { issuePartySeatClaims } from "@/db/seat-claims";
 import { getShopBySlug } from "@/db/shops";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { getTripWithBooked, getWaitlistEntryForTrip, listTripDives } from "@/db/trips";
@@ -32,7 +33,7 @@ import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { auth } from "@/lib/auth";
 import { isStaff } from "@/lib/authz";
-import { readinessLinkPath } from "@/lib/booking-capabilities";
+import { claimLinkPath, readinessLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
 import { perDiverBookingPriceCents } from "@/lib/courses";
 import { googleMapsUrl } from "@/lib/dive-site-map";
@@ -283,6 +284,7 @@ export default async function TripDetailPage({
     coursePaths,
     heldLevel,
     emailsOnTheWay,
+    partySeatClaims,
   ] = confirmed
     ? await Promise.all([
         resolvePaymentPanel(
@@ -308,9 +310,29 @@ export default async function TripDetailPage({
         // Only say "two emails are on their way" when both actually went —
         // a party member booked without an address of their own gets neither.
         bookingConfirmationAndWaiverEmailsSent(db, shop.id, confirmed.booking.id),
+        // The organizer's claim panel: one shareable link per still-unclaimed
+        // seat this booking leads (docs ADR 20260804-seat-claim-links).
+        // Authorized by the verified `confirm` capability above; the query
+        // itself only walks seats whose party lead is this booking, so a
+        // non-party confirmation gets an empty list and no panel.
+        issuePartySeatClaims(db, { shopId: shop.id, leadBookingId: confirmed.booking.id }),
       ])
-    : [null, null, null, false, null, [], null, false];
+    : [null, null, null, false, null, [], null, false, []];
   const readinessLink = readinessCapability ? readinessLinkPath(readinessCapability.token) : null;
+  // Absolute when a canonical origin is configured — these URLs exist to be
+  // pasted into a group chat — with the same-relative fallback the readiness
+  // link uses so a missing APP_HOST never renders a broken link.
+  const claimOrigin = publicAppUrl();
+  const partySeats = partySeatClaims.map((seat) => ({
+    bookingId: seat.bookingId,
+    seatName: seat.seatName,
+    claimed: seat.claimed,
+    claimUrl: seat.claim
+      ? claimOrigin
+        ? new URL(claimLinkPath(seat.claim.token), `${claimOrigin}/`).toString()
+        : claimLinkPath(seat.claim.token)
+      : null,
+  }));
 
   // "What should I learn next?" is the shop's own answer, read off the paths it
   // built in the catalog — not a title match on the word "advanced", which is
@@ -443,6 +465,7 @@ export default async function TripDetailPage({
             payCancelled={pay === "cancelled"}
             readinessLink={readinessLink}
             emailsOnTheWay={emailsOnTheWay}
+            partySeats={partySeats}
             progression={
               readiness?.blockers.some((blocker) => blocker.code === "certification_insufficient")
                 ? progression

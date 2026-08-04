@@ -34,9 +34,19 @@ import { describe, expect, it } from "vitest";
  * conditionally. It under-reports (a provider that exists but doesn't actually
  * wrap) rather than over-reports, which is the right way round for a guard
  * whose failure mode is a blank page.
+ *
+ * A second pass covers the consumers the segment walk cannot see: a shared
+ * Client Component under `src/components` (e.g. `BookingPartyFields.tsx`) has
+ * no route ancestry of its own, so its provider is whichever page renders it.
+ * For each such consumer the test follows the import graph backwards — through
+ * other shared components if needed — to every `src/app` file that pulls it
+ * in, and requires *that* file's segment ancestry to offer the consumer's
+ * namespaces. Same under-reporting bias: a consumer no `src/app` file imports
+ * is skipped rather than guessed at.
  */
 
 const APP = path.join(process.cwd(), "src/app");
+const COMPONENTS = path.join(process.cwd(), "src/components");
 
 /** Segment files that can hold a provider above a component in the same directory. */
 const SEGMENT_FILES = ["layout.tsx", "template.tsx", "page.tsx", "error.tsx"];
@@ -91,6 +101,79 @@ function requiredNamespaces(source: string): Set<string> {
   return needed;
 }
 
+/** Union of namespaces offered by providers in this file's segment ancestry. */
+function offeredAbove(
+  file: string,
+  sources: Map<string, string>,
+): { sawProvider: boolean; offered: Set<string> } {
+  const offered = new Set<string>();
+  let sawProvider = false;
+  for (let directory = path.dirname(file); ; directory = path.dirname(directory)) {
+    for (const name of SEGMENT_FILES) {
+      const namespaces = providedNamespaces(sources.get(path.join(directory, name)) ?? "");
+      if (!namespaces) continue;
+      sawProvider = true;
+      for (const namespace of namespaces) offered.add(namespace);
+    }
+    // The second guard only matters for a caller outside src/app, where the
+    // walk would otherwise never meet APP and spin at the filesystem root.
+    if (directory === APP || directory === path.dirname(directory)) break;
+  }
+  return { sawProvider, offered };
+}
+
+/** The scanned file a static import specifier lands on, or null for a package. */
+function resolveImport(
+  importer: string,
+  specifier: string,
+  sources: Map<string, string>,
+): string | null {
+  let base: string | null = null;
+  if (specifier.startsWith("@/")) base = path.join(process.cwd(), "src", specifier.slice(2));
+  else if (specifier.startsWith(".")) base = path.resolve(path.dirname(importer), specifier);
+  if (!base) return null;
+  for (const candidate of [base, `${base}.tsx`, path.join(base, "index.tsx")]) {
+    if (sources.has(candidate)) return candidate;
+  }
+  return null;
+}
+
+/**
+ * Every `src/app` file that (transitively, through other shared components)
+ * imports `consumer`. This is what turns "which provider wraps a shared
+ * component" — unanswerable from the component's own path — into the
+ * checkable "which provider wraps each page that renders it".
+ */
+function appImportersOf(consumer: string, sources: Map<string, string>): string[] {
+  const importersOf = new Map<string, string[]>();
+  for (const [file, source] of sources) {
+    // A type-only import renders nothing, so it is not a provider obligation.
+    const valueImports = source.replace(/import\s+type\b[^;]*;/g, "");
+    for (const match of valueImports.matchAll(/from\s+["']([^"']+)["']/g)) {
+      const target = resolveImport(file, match[1], sources);
+      if (!target) continue;
+      const list = importersOf.get(target) ?? [];
+      list.push(file);
+      importersOf.set(target, list);
+    }
+  }
+
+  const appFiles = new Set<string>();
+  const seen = new Set<string>([consumer]);
+  const queue = [consumer];
+  while (queue.length > 0) {
+    const current = queue.shift();
+    if (current === undefined) break;
+    for (const importer of importersOf.get(current) ?? []) {
+      if (seen.has(importer)) continue;
+      seen.add(importer);
+      if (importer.startsWith(APP + path.sep)) appFiles.add(importer);
+      else queue.push(importer);
+    }
+  }
+  return [...appFiles].sort();
+}
+
 describe("diver copy has a provider above it", () => {
   it("gives every client consumer of useTranslations a provider carrying its namespaces", async () => {
     const files = await tsxFiles(APP);
@@ -103,17 +186,7 @@ describe("diver copy has a provider above it", () => {
       if (!source.includes("useTranslations(")) continue;
 
       const needed = requiredNamespaces(source);
-      const offered = new Set<string>();
-      let sawProvider = false;
-      for (let directory = path.dirname(file); ; directory = path.dirname(directory)) {
-        for (const name of SEGMENT_FILES) {
-          const namespaces = providedNamespaces(sources.get(path.join(directory, name)) ?? "");
-          if (!namespaces) continue;
-          sawProvider = true;
-          for (const namespace of namespaces) offered.add(namespace);
-        }
-        if (directory === APP) break;
-      }
+      const { sawProvider, offered } = offeredAbove(file, sources);
 
       const where = path.relative(process.cwd(), file);
       if (!sawProvider) {
@@ -131,6 +204,59 @@ describe("diver copy has a provider above it", () => {
     expect(failures).toEqual([]);
   });
 
+  it("routes each shared-component consumer through every src/app importer's provider", async () => {
+    // The segment walk above cannot see a consumer under src/components — it
+    // has no route ancestry. Its provider is whichever page renders it, so
+    // every src/app file that (transitively) imports it must sit under a
+    // provider carrying the consumer's namespaces.
+    const files = [...(await tsxFiles(APP)), ...(await tsxFiles(COMPONENTS))];
+    const sources = new Map<string, string>();
+    for (const file of files) sources.set(file, stripComments(await readFile(file, "utf8")));
+
+    const failures: string[] = [];
+    for (const [file, source] of sources) {
+      if (!file.startsWith(COMPONENTS + path.sep) || file.endsWith(".test.tsx")) continue;
+      if (!/^\s*["']use client["']/m.test(source)) continue;
+      if (!source.includes("useTranslations(")) continue;
+
+      const needed = requiredNamespaces(source);
+      const consumer = path.relative(process.cwd(), file);
+      for (const importer of appImportersOf(file, sources)) {
+        const { sawProvider, offered } = offeredAbove(importer, sources);
+        const where = path.relative(process.cwd(), importer);
+        if (!sawProvider) {
+          failures.push(
+            `${where}: renders ${consumer} (a useTranslations consumer) with no DiverIntlProvider in any ancestor segment`,
+          );
+          continue;
+        }
+        const missing = [...needed].filter((namespace) => !offered.has(namespace));
+        if (missing.length > 0) {
+          failures.push(
+            `${where}: provider is missing namespace(s) ${missing.join(", ")} needed by ${consumer}`,
+          );
+        }
+      }
+    }
+
+    expect(failures).toEqual([]);
+  });
+
+  it("finds BookingPartyFields as a traced shared consumer, so a silent move can't empty that scan", async () => {
+    // Guards the guard, like the error-boundary assertion below: if the shared
+    // consumer stopped being detected or lost all src/app importers, the
+    // assertion above would pass vacuously.
+    const files = [...(await tsxFiles(APP)), ...(await tsxFiles(COMPONENTS))];
+    const sources = new Map<string, string>();
+    for (const file of files) sources.set(file, stripComments(await readFile(file, "utf8")));
+
+    const consumer = path.join(COMPONENTS, "BookingPartyFields.tsx");
+    const source = sources.get(consumer);
+    expect(source, "BookingPartyFields.tsx moved — update this test's path").toBeDefined();
+    expect(requiredNamespaces(source ?? "")).toContain("party");
+    expect(appImportersOf(consumer, sources).length).toBeGreaterThan(0);
+  });
+
   it("finds the diver error boundaries, so a silent rename can't empty this scan", async () => {
     // Guards the guard: if `error.tsx` stopped reading copy, or the walk stopped
     // reaching these routes, the assertion above would pass vacuously.
@@ -142,11 +268,12 @@ describe("diver copy has a provider above it", () => {
         withCopy.push(path.relative(APP, file).replaceAll(path.sep, "/"));
       }
     }
-    // The seven bearer-token routes plus the public shop namespace. Staff
+    // The eight bearer-token routes plus the public shop namespace. Staff
     // boundaries are deliberately absent — `staff-messages.ts` has no client
     // provider, so their remainder is named in ADR
     // 20260803-error-boundary-copy-bridge rather than covered here.
     expect(withCopy.sort()).toEqual([
+      "claim/[token]/error.tsx",
       "invite/[token]/error.tsx",
       "ready/[token]/error.tsx",
       "recap/[token]/error.tsx",

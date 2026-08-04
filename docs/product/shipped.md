@@ -21,6 +21,20 @@ idempotent and resumable; no money moves (refunds stay per-booking, H-14 gate in
 Alternative-day salvage and a courtesy text channel are the named follow-ons. See
 [20260804-blowout-cascade](../architecture/decisions/20260804-blowout-cascade.md).
 
+## End-of-day close-out — the "everyone is home" ritual (2026-08-04)
+
+The brainstorm's end-of-day close-out, delivered as Today's evening mirror at
+`/shop/<slug>/close-out`: every departure of the shop-local day judged by its head count (read off
+`listRollCallGaps`, never re-derived), today's unresolved queue rows each given an explicit
+**carry/dismiss** choice, and tomorrow's first blockers as the parting glance. Closing the day is
+an append-only recorded act (`day_closeouts`: who, when, and the outstanding snapshot recomputed
+server-side at close time) — **never a gate**: an open after-dive count or a boat still out makes
+the close a by-name acknowledgement, not an impossibility, and nothing downstream conditions on the
+row. Carry/dismiss is a memory, not a filter — tomorrow's queue keeps deriving from the source of
+truth. Gear-return reconciliation from the original idea is deliberately out of scope until a gear
+register exists. See [20260804-day-closeout](../architecture/decisions/20260804-day-closeout.md)
+and the glossary's "Close-out".
+
 ## The 2026-08-02 review's engineering queue (delivered 2026-08-03)
 
 The Medium and Low engineering items the [2026-08-02 review](assessments/comprehensive-review-20260802.md)
@@ -1179,6 +1193,24 @@ The roadmap's §7 smaller follow-ons and the whole open Delight backlog shipped:
   Was the highest-leverage of [roadmap.md](features/roadmap.md#not-scheduled--candidate-subsystems)'s deferred revenue-layer
   candidates. See
   [20260801-checkout-upsells-rental-gear](../architecture/decisions/20260801-checkout-upsells-rental-gear.md).
+
+## Incident-ready export (delivered 2026-08-04)
+
+- **One tap on a departure produces the document a shop hands to authorities or insurers.** From
+  the manifest, "Incident-ready export" opens a staff-only, print-optimized page
+  (`/shop/<slug>/trips/<id>/incident-export`) assembling the departure's recorded facts: the
+  manifest roster with each diver's per-checkpoint roll-call state, the complete append-only
+  roll-call timeline (corrections included — history is never laundered), each diver's
+  certification evidence as held (imported cards marked distinctly), waiver **status** only — state,
+  date, template version; medical questionnaire answers never appear — plus crew, crew counts, and
+  generation metadata. A SHA-256 integrity code over the printed facts sits in the footer, so a
+  printout can be checked against a fresh export.
+- **Facts, not judgments.** The document states what was recorded, with timestamps and recorders;
+  it computes no safety verdict, and every absence (no roll call yet, no cards on file, superseded
+  or unsigned waiver) is stated explicitly rather than left blank. Assembly is pure
+  (`src/lib/incident-export.ts` over the same manifest/readiness readers every safety surface
+  uses); print-ready HTML, no PDF dependency. No insurer-facing marketing claim ships with this —
+  that stays parked per the brainstorm's insurance-leverage entry until real operators validate it.
 
 ## Simplification rulings (2026-07-19 → 20 audit)
 

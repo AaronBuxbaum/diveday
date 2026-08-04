@@ -21,11 +21,14 @@ export type CourseScheduleDay = {
 
 const CLOCK_TIME_RE = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
-function formatClockTime(value: string): string | null {
+function formatClockTime(value: string, locale: string): string | null {
   if (!CLOCK_TIME_RE.test(value)) return null;
   const [hours, minutes] = value.split(":").map(Number);
+  // The stored value is a wall-clock time of day with no date attached, so a
+  // fixed UTC reference date is correct here — only the locale may vary, or a
+  // Spanish diver reads "2:00 PM" where their own clock says "14:00".
   const reference = new Date(Date.UTC(2000, 0, 1, hours, minutes));
-  return new Intl.DateTimeFormat("en-US", {
+  return new Intl.DateTimeFormat(locale, {
     hour: "numeric",
     minute: "2-digit",
     timeZone: "UTC",
@@ -33,9 +36,12 @@ function formatClockTime(value: string): string | null {
 }
 
 /** The day's displayed hours: a real clock range, a single clock time, the free-text note, or nothing. */
-export function formatScheduleDayTime(day: CourseScheduleDay): string | undefined {
-  const start = day.startTime ? formatClockTime(day.startTime) : null;
-  const end = day.endTime ? formatClockTime(day.endTime) : null;
+export function formatScheduleDayTime(
+  day: CourseScheduleDay,
+  locale = "en-US",
+): string | undefined {
+  const start = day.startTime ? formatClockTime(day.startTime, locale) : null;
+  const end = day.endTime ? formatClockTime(day.endTime, locale) : null;
   if (start && end) return `${start} – ${end}`;
   if (start) return start;
   return day.timeNote?.trim() || undefined;
