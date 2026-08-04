@@ -22,6 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { WaterLocker, WaterLockerToggle } from "@/components/WaterLocker";
+import { listTripBuddyPairs, pairBuddies, unpairBuddies } from "@/db/buddy-pairs";
 import { getDb } from "@/db/client";
 import {
   getTripManifests,
@@ -32,6 +33,7 @@ import {
 } from "@/db/manifests";
 import { getShopById } from "@/db/shops";
 import { birthdayText } from "@/i18n/birthday-labels";
+import { buddyAlertText } from "@/i18n/buddy-labels";
 import { depthWarningText } from "@/i18n/depth-labels";
 import { rollCallCheckpointText, rollCallLabelText } from "@/i18n/manifest-labels";
 import {
@@ -101,16 +103,28 @@ const crewRollCallSchema = z.object({
   status: z.enum(["boarded", "not_boarded", "cleared"]),
 });
 
+// Buddy pairing takes two bookings; every rule about them (same trip, active
+// seat, not already paired) is re-proved server-side in `pairBuddies` — this
+// only checks the shape of the form.
+const pairBuddiesSchema = z.object({
+  bookingIdA: z.string().uuid(),
+  bookingIdB: z.string().uuid(),
+});
+
+const unpairBuddiesSchema = z.object({
+  bookingId: z.string().uuid(),
+});
+
 export default async function TripManifestPage({
   params,
   searchParams,
 }: {
   params: Promise<{ shopSlug: string; id: string }>;
-  searchParams: Promise<{ checkpoint?: string; crewError?: string }>;
+  searchParams: Promise<{ checkpoint?: string; crewError?: string; buddyError?: string }>;
 }) {
   const session = await requireStaffSession();
   const { shopSlug, id: tripId } = await params;
-  const { checkpoint: requestedCheckpoint, crewError } = await searchParams;
+  const { checkpoint: requestedCheckpoint, crewError, buddyError } = await searchParams;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   // Staff read dates in the language their own device asks for, same
@@ -121,6 +135,11 @@ export default async function TripManifestPage({
   const completeManifests = await getTripManifests(db, shop.id, tripId);
   const departureManifest = completeManifests?.[0];
   if (!departureManifest || !completeManifests) notFound();
+  // Raw pair rows, cancelled members included: the pairs panel must show a
+  // pair whose seat was cancelled (it still blocks re-pairing the survivor
+  // until dissolved), while the manifest derivation above already dropped it
+  // from every diver's `buddy` (ADR 20260804-buddy-pairs).
+  const buddyPairsList = await listTripBuddyPairs(db, shop.id, tripId);
 
   const plannedDives = departureManifest.trip.plannedDives;
   const checkpoints = rollCallCheckpoints(plannedDives);
@@ -277,6 +296,79 @@ export default async function TripManifestPage({
     revalidatePath(back.split("?")[0]);
     redirect(back);
   }
+
+  /**
+   * Pair two divers as a buddy team (ADR 20260804-buddy-pairs). A plain form
+   * post like the crew attestation: pairing is a deliberate desk/dock act,
+   * not a mid-roll-call tap, so it settles only once the server has written
+   * both member rows. Every refusal re-lands on this checkpoint with a
+   * worded reason.
+   */
+  async function pairBuddiesAction(formData: FormData) {
+    "use server";
+    const staff = await requireStaffSession();
+    const parsed = pairBuddiesSchema.safeParse(Object.fromEntries(formData));
+    if (!parsed.success) redirect(`${back}&buddyError=generic`);
+    const outcome = await pairBuddies(await getDb(), {
+      shopId: staff.user.shopId,
+      tripId,
+      bookingIdA: parsed.data.bookingIdA,
+      bookingIdB: parsed.data.bookingIdB,
+      pairedByPersonId: staff.user.personId,
+    });
+    if (!outcome.ok) {
+      // Two refusals a staffer can act on get their own words; the rest
+      // (tenancy, cancelled trip, non-roster booking) collapse into one —
+      // they mean the form was stale or forged, not that a different pick
+      // would have worked.
+      const code =
+        outcome.reason === "same_booking"
+          ? "same"
+          : outcome.reason === "already_paired"
+            ? "paired"
+            : "generic";
+      redirect(`${back}&buddyError=${code}`);
+    }
+    revalidatePath(back.split("?")[0]);
+    redirect(back);
+  }
+
+  /** Dissolve a buddy team — the explicit act re-pairing always goes through. */
+  async function unpairBuddiesAction(formData: FormData) {
+    "use server";
+    const staff = await requireStaffSession();
+    const parsed = unpairBuddiesSchema.safeParse(Object.fromEntries(formData));
+    if (!parsed.success) redirect(`${back}&buddyError=generic`);
+    const outcome = await unpairBuddies(await getDb(), {
+      shopId: staff.user.shopId,
+      tripId,
+      bookingId: parsed.data.bookingId,
+    });
+    if (!outcome.ok) redirect(`${back}&buddyError=generic`);
+    revalidatePath(back.split("?")[0]);
+    redirect(back);
+  }
+
+  // Who can still be paired: any active roster entry not already in a pair —
+  // including a pair whose other seat was cancelled, which must be dissolved
+  // first (the server refuses it too; this just keeps the picker honest).
+  const pairedBookingIds = new Set(
+    buddyPairsList.flatMap((pair) => pair.members.map((member) => member.bookingId)),
+  );
+  const unpairedDivers = manifest.divers.filter((diver) => !pairedBookingIds.has(diver.bookingId));
+  // One diver with a separated-after-a-dive buddy per split pair (the boarded
+  // one carries the alert), so this count is a count of split teams.
+  const separatedPairs = isDeparture
+    ? 0
+    : manifest.divers.filter((diver) => diver.buddyAlert === "separated_after_dive").length;
+  const buddyErrorText =
+    buddyError === "same"
+      ? t("trips.manifest.buddyErrorSamePick")
+      : buddyError === "paired"
+        ? t("trips.manifest.buddyErrorAlreadyPaired")
+        : buddyError
+          ? t("trips.manifest.buddyErrorGeneric")
+          : null;
 
   const errorRefusal = t("trips.rollCall.errorRefusal");
   // Crew have no readiness, so the `not_ready` refusal can never be returned by
@@ -557,6 +649,16 @@ export default async function TripManifestPage({
                       ? t("trips.manifest.crewAwaiting", { count: crewCounts.crewAwaiting })
                       : t("trips.manifest.allAccountedFor")}
         </p>
+        {/* Buddy teams that came back split — one aboard, one not (ADR
+            20260804-buddy-pairs). Its own line, never folded into the
+            completeness reason above: it informs the deck and blocks
+            nothing, and the checkpoint's own open/closed verdict must not
+            appear to depend on it. */}
+        {separatedPairs > 0 ? (
+          <p className="mt-1 text-sm font-bold text-danger" role="status">
+            {t("trips.manifest.buddySeparatedLine", { count: separatedPairs })}
+          </p>
+        ) : null}
       </section>
 
       {manifest.summary.blocked > 0 ? (
@@ -804,6 +906,114 @@ export default async function TripManifestPage({
         </div>
       </section>
 
+      {/*
+       * Buddy teams (ADR 20260804-buddy-pairs). Pairing is a decision about
+       * this departure — bookings, not people — made here because this is
+       * the surface the roll call runs from. Management controls only, so
+       * the whole panel stays off the printed manifest; the pair itself
+       * prints on each diver's row.
+       */}
+      <section aria-labelledby="buddy-teams-heading" className="mt-9 print:hidden">
+        <h2 id="buddy-teams-heading" className="text-lg font-semibold">
+          {t("trips.manifest.buddyHeading")}
+        </h2>
+        <p className="mt-1 max-w-prose text-sm text-muted">
+          {t("trips.manifest.buddyDescription")}
+        </p>
+        {buddyErrorText ? (
+          <p className="mt-2 text-sm font-semibold text-danger" role="status">
+            {buddyErrorText}
+          </p>
+        ) : null}
+        {buddyPairsList.length === 0 ? (
+          <p className="mt-3 text-sm text-muted">{t("trips.manifest.buddyNoPairs")}</p>
+        ) : (
+          <ul className="mt-3 divide-y divide-border rounded-lg border border-border bg-surface">
+            {buddyPairsList.map((pair) => {
+              const memberName = (member: (typeof pair.members)[number]) =>
+                member.cancelled
+                  ? t("trips.manifest.buddyCancelledName", { name: member.fullName })
+                  : member.fullName;
+              const [first, second] = pair.members;
+              return (
+                <li
+                  key={pair.pairId}
+                  className="flex flex-wrap items-center justify-between gap-3 px-4 py-3"
+                >
+                  <div className="min-w-0">
+                    <p className="font-semibold">
+                      {first && second
+                        ? t("trips.manifest.buddyPairNames", {
+                            a: memberName(first),
+                            b: memberName(second),
+                          })
+                        : (first ?? second)
+                          ? memberName((first ?? second) as (typeof pair.members)[number])
+                          : null}
+                    </p>
+                    <p className="text-sm text-muted">
+                      {t("trips.manifest.buddyPairedBy", { name: pair.pairedByName })}
+                    </p>
+                  </div>
+                  <form action={unpairBuddiesAction}>
+                    <input
+                      type="hidden"
+                      name="bookingId"
+                      value={(first ?? second)?.bookingId ?? ""}
+                    />
+                    <button
+                      type="submit"
+                      className={buttonClass({ variant: "secondary", size: "boat" })}
+                    >
+                      {t("trips.manifest.buddyUnpair")}
+                    </button>
+                  </form>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+        {unpairedDivers.length >= 2 ? (
+          <FieldGrid as="form" action={pairBuddiesAction} columns={2} className="mt-4">
+            <Field label={t("trips.manifest.buddyFirstLabel")}>
+              <select name="bookingIdA" required defaultValue="" className={controlClass}>
+                <option value="" disabled>
+                  {t("trips.manifest.buddySelectPlaceholder")}
+                </option>
+                {unpairedDivers.map((diver) => (
+                  <option key={diver.bookingId} value={diver.bookingId}>
+                    {diver.fullName}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label={t("trips.manifest.buddySecondLabel")}>
+              <select name="bookingIdB" required defaultValue="" className={controlClass}>
+                <option value="" disabled>
+                  {t("trips.manifest.buddySelectPlaceholder")}
+                </option>
+                {unpairedDivers.map((diver) => (
+                  <option key={diver.bookingId} value={diver.bookingId}>
+                    {diver.fullName}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <FieldActions>
+              <button type="submit" className={buttonClass({ size: "boat" })}>
+                {t("trips.manifest.buddyPairSubmit")}
+              </button>
+            </FieldActions>
+          </FieldGrid>
+        ) : unpairedDivers.length === 1 && unpairedDivers[0] ? (
+          // An odd roster is normal, never an error — say so instead of
+          // rendering a picker that can only fail.
+          <p className="mt-3 text-sm text-muted">
+            {t("trips.manifest.buddyUnpairedOne", { name: unpairedDivers[0].fullName })}
+          </p>
+        ) : null}
+      </section>
+
       <section id="roll-call-list" tabIndex={-1} className="mt-9 outline-none">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
@@ -918,6 +1128,26 @@ export default async function TripManifestPage({
                       <span className={rollCallPillClass}>
                         {rollCallLabelText(t, rollCallLabel(checkpoint, rc))}
                       </span>
+                      {/* The buddy chip: quiet while the pair's statuses
+                          match, loud when this diver is back and their buddy
+                          is not (ADR 20260804-buddy-pairs). Words carry the
+                          meaning; the tone only agrees with them. Informs
+                          only — never a gate. */}
+                      {diver.buddy ? (
+                        <span
+                          className={
+                            diver.buddyAlert === "separated_after_dive"
+                              ? "rounded-full bg-danger/15 px-3 py-1 text-sm font-bold text-danger"
+                              : diver.buddyAlert === "separated_dock"
+                                ? "rounded-full bg-warning/10 px-3 py-1 text-sm font-semibold text-warning-strong"
+                                : "rounded-full bg-surface-sunken px-3 py-1 text-sm font-medium text-muted"
+                          }
+                        >
+                          {diver.buddyAlert
+                            ? `${t("shared.buddyPair.with", { name: diver.buddy.fullName })} · ${buddyAlertText(t, diver.buddyAlert)}`
+                            : t("shared.buddyPair.with", { name: diver.buddy.fullName })}
+                        </span>
+                      ) : null}
                     </div>
                     {/* The plan for dive two is made here, on the boat, during
                         the surface interval — so the depth advisory has to be

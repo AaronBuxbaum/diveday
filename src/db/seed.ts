@@ -13,6 +13,7 @@ import {
   bookingCheckouts,
   bookingPayments,
   bookings,
+  buddyPairMembers,
   certifications,
   courseInquiries,
   coursePaths,
@@ -60,6 +61,7 @@ import {
 } from "./schema";
 import { seedBackup } from "./seed-backup";
 import { seedBookings } from "./seed-bookings";
+import { seedBuddyPairs } from "./seed-buddy-pairs";
 import { seedCatalog } from "./seed-catalog";
 import { seedCertGates } from "./seed-cert-gates";
 import { at, DEMO_SHOP_TIMEZONE, demoTodayDepartureStart } from "./seed-clock";
@@ -98,6 +100,7 @@ import { seedTrips } from "./seed-trips";
  * | `./seed-front-desk.ts` | the desk's own day: walk-ins, wait lists, inquiries, tips |
  * | `./seed-history.ts` | the trailing quarter that gives owner reporting something to report |
  * | `./seed-cert-gates.ts` | the boats a card can be refused on, one gate each, and the course carve-out |
+ * | `./seed-buddy-pairs.ts` | two buddy teams on today's reef boat, plus the odd-roster remainder |
  * | `./seed-demo-lifecycle.ts` | minting, reaping, and capping throwaway demo shops |
  * | `./seed-backup.ts` | the shop-owned backup destination and its weekly delivery history |
  *
@@ -503,6 +506,19 @@ export async function seedDemoSchedule(
     divemasterId,
     waiverTemplate,
   });
+
+  // Adds-only, like seedCertGates above: two buddy teams on today's reef
+  // trip, no roll-call events, so nothing seeded before it moves and no
+  // head-count gap opens on Today (src/db/seed-buddy-pairs.ts, ADR
+  // 20260804-buddy-pairs).
+  await seedBuddyPairs(db, shopId, {
+    customers,
+    tripRows,
+    bookingRows,
+    // Keiko when the crew seed found her; the instructor otherwise (the type
+    // allows an undefined divemaster even though the demo cast always has one).
+    pairedByPersonId: divemasterId ?? instructor.id,
+  });
 }
 
 /**
@@ -600,6 +616,10 @@ export async function resetDemoSchedule(
   await db
     .delete(personCourtesyEmailUnsubscribeTokens)
     .where(eq(personCourtesyEmailUnsubscribeTokens.shopId, shopId));
+  // Buddy pairs reference bookings, so they go first or the bookings delete
+  // below FK-violates and aborts the whole reset mid-run — the same class of
+  // bug the token comments above already walk (ADR 20260804-buddy-pairs).
+  await db.delete(buddyPairMembers).where(eq(buddyPairMembers.shopId, shopId));
   await db.delete(bookings).where(eq(bookings.shopId, shopId));
   await db.delete(tripRequirements).where(eq(tripRequirements.shopId, shopId));
   if (tripIds.length > 0) {

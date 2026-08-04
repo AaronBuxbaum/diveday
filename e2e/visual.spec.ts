@@ -1655,6 +1655,41 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "manifest-not-back-aboard", scheme);
       });
 
+      /**
+       * A split buddy team after a dive (ADR 20260804-buddy-pairs): Tom is
+       * recorded back aboard and his seeded buddy Lena has no result yet, so
+       * his row carries the danger chip and the checkpoint panel adds the
+       * "1 buddy team is split" line. The seed carries the pairs but no
+       * roll-call events (they would open head-count gaps on Today), so the
+       * divergent state is driven here and the per-test DB reset puts it
+       * back — the same pattern as the missing-diver capture above.
+       */
+      test(`the manifest's split buddy team renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        // Board → trip → Manifest, a checkpoint switch, and a roll-call
+        // write before the capture.
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        await openReefTrip(page);
+        await openTripTab(page, "Manifest");
+        await page.getByRole("link", { name: "Open offline roll call" }).waitFor();
+        await page
+          .getByRole("link", { name: "After dive 1" })
+          .evaluate((link: HTMLElement) => link.click());
+        await page.waitForURL(/checkpoint=after_dive_1/);
+        // Anchored on the row's own <h3>: a bare `li hasText "Tom Okafor"`
+        // also matches Lena's row via her "Buddy: Tom Okafor" chip (see the
+        // same note in e2e/buddy-pairs.spec.ts).
+        const tomRow = page
+          .locator("#roll-call-list li")
+          .filter({ has: page.getByRole("heading", { name: "Tom Okafor", exact: true }) });
+        const boardTom = tomRow.getByRole("button", { name: "Mark boarded" });
+        await boardTom.evaluate((button) => button.scrollIntoView({ block: "center" }));
+        await boardTom.click();
+        await expect(tomRow.getByText("Buddy: Lena Fischer · Buddy unaccounted for")).toBeVisible();
+        await capture(page, "manifest-buddy-divergence", scheme);
+      });
+
       // H-08: a site deeper than a diver's certification trains for. Warning
       // tone and *outside* the red blocker list, because it never blocks — an
       // instructor may be keeping that diver shallower on purpose. Nothing in

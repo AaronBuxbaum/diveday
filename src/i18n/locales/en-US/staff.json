@@ -1630,6 +1630,22 @@
       "rollCallRecordedByPlain": "{label} {date} by {name}",
       "rollCallRecordedByWithNote": "{label} {date} by {name} · {note}",
       "carriedForwardFromDock": "Carried forward — this diver never left the dock. Mark boarded to bring them back on.",
+      "buddyHeading": "Buddy teams",
+      "buddyDescription": "Pair divers the way they'll dive. When one buddy is back aboard and the other isn't, the pair and the diver's row both say so.",
+      "buddyNoPairs": "No buddy teams yet. Pick two divers below to make one.",
+      "buddyPairNames": "{a} · {b}",
+      "buddyCancelledName": "{name} (seat cancelled)",
+      "buddyPairedBy": "Paired by {name}",
+      "buddyUnpair": "Unpair",
+      "buddyFirstLabel": "First diver",
+      "buddySecondLabel": "Second diver",
+      "buddySelectPlaceholder": "Choose a diver",
+      "buddyPairSubmit": "Pair as buddies",
+      "buddyUnpairedOne": "{name} has no buddy — an odd roster is normal.",
+      "buddySeparatedLine": "{count, plural, one {# buddy team is split — one back aboard, one unaccounted for.} other {# buddy teams are split — one back aboard, one unaccounted for.}}",
+      "buddyErrorSamePick": "Pick two different divers.",
+      "buddyErrorAlreadyPaired": "One of those divers is already in a buddy team. Unpair them first.",
+      "buddyErrorGeneric": "That pairing didn't save. Try again.",
       "boardedCheck": "Boarded ✓",
       "markBoarded": "Mark boarded",
       "undoing": "Undoing…",
@@ -3149,6 +3165,7 @@
         "crewShort": "{aboard} of {assigned} crew confirmed aboard — this checkpoint stays open until the rest are counted on the live manifest.",
         "crewNotBackAboard": "{count, plural, one {# crew member is not back aboard.} other {# crew members are not back aboard.}} This checkpoint stays open.",
         "crewReadOnlyHere": "The crew half of the count is recorded on the live manifest — it can’t be tapped from this saved copy.",
+        "buddyReadOnlyHere": "Buddy teams are shown as saved. Whether a buddy is back aboard lives on the live roll call — this copy doesn't track it.",
         "crewAwaiting": "{count, plural, one {# crew member still to call.} other {# crew members still to call.}} Crew are counted on the live manifest, so this checkpoint stays open until you’re back in service.",
         "readyBadge": "Ready when saved",
         "blockedBadge": "Blocked when saved",
@@ -3218,6 +3235,11 @@
       "notBoarded": "Not boarded",
       "notBoardedCarried": "Not boarded · carried",
       "notBackAboard": "Not back aboard"
+    },
+    "buddyPair": {
+      "with": "Buddy: {name}",
+      "separatedDock": "Buddy not aboard",
+      "separatedAfterDive": "Buddy unaccounted for"
     },
     "payments": {
       "connect": "Connect payments"

@@ -9,6 +9,7 @@ import {
   bookingCheckouts,
   bookingPayments,
   bookings,
+  buddyPairMembers,
   certifications,
   courseInquiries,
   coursePaths,
@@ -143,6 +144,9 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
     await db.delete(tripDives).where(inArray(tripDives.tripId, tripIds));
   }
   await db.delete(tripRequirements).where(eq(tripRequirements.shopId, shopId));
+  // Buddy pairs reference bookings, so they go before the bookings delete
+  // (ADR 20260804-buddy-pairs).
+  await db.delete(buddyPairMembers).where(eq(buddyPairMembers.shopId, shopId));
   await db.delete(bookings).where(eq(bookings.shopId, shopId));
   await db.delete(trips).where(eq(trips.shopId, shopId));
   await db.delete(tripSeries).where(eq(tripSeries.shopId, shopId));
