@@ -378,6 +378,76 @@ describe("buddy teams (in-memory PGlite)", () => {
     ).toEqual({ ok: false, reason: "not_a_member" });
   });
 
+  /**
+   * The trail is never pruned and its whole job is to name people after the
+   * membership rows are gone, so a `null` in `member_names` is permanent — and
+   * `Intl.ListFormat` throws on one, which left that departure's incident
+   * export unrenderable for good. It was reachable from any staff account by
+   * upper-casing a booking id in a checkbox value: Postgres matched the row
+   * (uuids compare canonically) while the name lookup, keyed on the caller's
+   * spelling, missed, and an `as string` cast carried the `undefined` through a
+   * size check that could not tell a miss from a match (security review,
+   * 2026-08-04).
+   */
+  it("resolves a re-spelled member id to the real name rather than a null", async () => {
+    const { db, shop, trip, a, b, staff } = await buddyContext();
+    const outcome = await formBuddyTeam(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      members: [
+        { kind: "diver", bookingId: a.booking.id.toUpperCase() },
+        { kind: "diver", bookingId: b.booking.id.toUpperCase() },
+      ],
+      recordedByPersonId: staff.id,
+    });
+    expect(outcome).toMatchObject({ ok: true });
+
+    const trail = await listTripBuddyTeamEvents(db, shop.id, trip.id);
+    expect(trail[0]?.memberNames.sort()).toEqual([a.person.fullName, b.person.fullName].sort());
+    // …and the membership rows carry the canonical ids, so every later read
+    // (the manifest, the export) joins to the same rows it always did.
+    const teams = await listTripBuddyTeams(db, shop.id, trip.id);
+    expect(
+      teams[0]?.members.flatMap((m) => (m.kind === "diver" ? [m.bookingId] : [])).sort(),
+    ).toEqual([a.booking.id, b.booking.id].sort());
+  });
+
+  it("refuses a malformed member id with a code, never an exception", async () => {
+    const { db, shop, trip, a, staff } = await buddyContext();
+    // 36 characters of hex and hyphens is not a uuid. It used to satisfy the
+    // form's own pattern and reach Postgres, which raised a syntax error this
+    // module has no code for — a 500 where the contract promises a refusal.
+    expect(
+      await formBuddyTeam(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        members: [
+          { kind: "diver", bookingId: "-".repeat(36) },
+          { kind: "diver", bookingId: a.booking.id },
+        ],
+        recordedByPersonId: staff.id,
+      }),
+    ).toEqual({ ok: false, reason: "booking_unavailable" });
+    expect(await listTripBuddyTeams(db, shop.id, trip.id)).toEqual([]);
+  });
+
+  it("refuses the same diver twice however the id is spelled", async () => {
+    const { db, shop, trip, a, staff } = await buddyContext();
+    expect(
+      await formBuddyTeam(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        members: [
+          { kind: "diver", bookingId: a.booking.id },
+          { kind: "diver", bookingId: a.booking.id.toUpperCase() },
+        ],
+        recordedByPersonId: staff.id,
+      }),
+      // `duplicate_member`, not the unique index's `already_teamed`: the same
+      // person twice is a mistake about the form, not about the roster.
+    ).toEqual({ ok: false, reason: "duplicate_member" });
+  });
+
   it("records every act on the append-only trail, and the trail outlives the team", async () => {
     const { db, shop, trip, a, b, c, staff } = await buddyContext();
     const base = { shopId: shop.id, tripId: trip.id, recordedByPersonId: staff.id };

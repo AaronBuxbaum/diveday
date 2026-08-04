@@ -72,6 +72,7 @@ import {
   bookingCheckouts,
   bookingPayments,
   bookings,
+  buddyTeamEvents,
   calendarFeeds,
   certifications,
   courseInquiries,
@@ -195,6 +196,25 @@ function activityMessageNameMatch(fullName: string) {
   const last = trimmed[trimmed.length - 1] ?? "";
   const pattern = `${WORD_CHAR.test(first) ? "\\y" : ""}${escaped}${WORD_CHAR.test(last) ? "\\y" : ""}`;
   return sql`${activityEvents.message} ~* ${pattern}`;
+}
+
+/**
+ * The same word-boundary name pattern as {@link activityMessageNameMatch}, but
+ * returned as the bare pattern rather than a predicate over one column — the
+ * buddy sweep applies it per *array element* twice (once to find the rows, once
+ * to rewrite them), so it cannot be handed a column-bound comparison.
+ *
+ * `undefined` for a name too short to anchor safely, exactly as above: the
+ * two-character-name blast radius is the same hazard on either table.
+ */
+function buddyMemberNameMatch(fullName: string): string | undefined {
+  const trimmed = fullName.trim();
+  const wordChars = [...trimmed].filter((char) => WORD_CHAR.test(char)).length;
+  if (wordChars < MIN_NAME_MATCH_CHARS) return undefined;
+  const escaped = trimmed.replace(REGEX_METACHARACTERS, "\\$&");
+  const first = trimmed[0] ?? "";
+  const last = trimmed[trimmed.length - 1] ?? "";
+  return `${WORD_CHAR.test(first) ? "\\y" : ""}${escaped}${WORD_CHAR.test(last) ? "\\y" : ""}`;
 }
 
 /**
@@ -695,6 +715,52 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
       )
       .returning({ id: activityEvents.id });
     logFuzzyMatch(ctx, "activity_event_name", byName.length);
+  }
+
+  // --- buddy-team trail ----------------------------------------------------
+  //
+  // `buddy_team_events.member_names` is denormalised on purpose — its whole job
+  // is to outlive the membership rows a dissolve deletes (ADR
+  // 20260804-buddy-teams) — and the table is deliberately never pruned
+  // (`RETENTION_DAYS`). Both are right, and together they made it the one place
+  // an erased diver's full name would otherwise stand indefinitely, still
+  // rendering on the incident export's timeline. Exactly the class this file
+  // already handles for `roll_call_events.note` and `activity_events.message`;
+  // it was simply missed when the trail shipped (security review, 2026-08-04).
+  //
+  // Matched by name and not by id for a reason there is no way around: a
+  // dissolved team has no membership rows left to join through, so the names
+  // *are* the only handle. Same word-boundary matcher and the same stated
+  // over-reach as the activity sweep above — and the same trade, one line of a
+  // team's history against a name someone asked to have forgotten.
+  //
+  // The **element is replaced, never removed**: the array's length is the size
+  // of the team, which is a safety fact about the departure and not about the
+  // person. A team of three must keep reading as a team of three.
+  const buddyNameMatch = buddyMemberNameMatch(ctx.fullName);
+  if (buddyNameMatch) {
+    const scrubbed = await tx
+      .update(buddyTeamEvents)
+      .set({
+        memberNames: sql`(
+          select coalesce(jsonb_agg(
+            case when name ~* ${buddyNameMatch} then to_jsonb(${REDACTED_TEXT}::text) else to_jsonb(name) end
+            order by ord
+          ), '[]'::jsonb)
+          from jsonb_array_elements_text(${buddyTeamEvents.memberNames}) with ordinality as t(name, ord)
+        )`,
+      })
+      .where(
+        and(
+          eq(buddyTeamEvents.shopId, shopId),
+          sql`exists (
+        select 1 from jsonb_array_elements_text(${buddyTeamEvents.memberNames}) as t(name)
+        where t.name ~* ${buddyNameMatch}
+      )`,
+        ),
+      )
+      .returning({ id: buddyTeamEvents.id });
+    logFuzzyMatch(ctx, "buddy_team_event_name", scrubbed.length);
   }
 
   // --- reviews -------------------------------------------------------------

@@ -26,6 +26,7 @@ import {
   bookingCheckouts,
   bookingPayments,
   bookings,
+  buddyTeamEvents,
   calendarFeeds,
   certifications,
   courseInquiries,
@@ -1534,6 +1535,77 @@ describe("diver erasure", () => {
    * `manifest` and `changed` — and this runs inside the erasure transaction,
    * with no way back.
    */
+  describe("the buddy-team trail", () => {
+    /**
+     * `buddy_team_events.member_names` is denormalised so it outlives the
+     * membership rows a dissolve deletes, and the table is never pruned. Both
+     * are deliberate, and together they made it the one place an erased diver's
+     * name would stand indefinitely — still printing on the incident export's
+     * timeline. Found by a security review after the trail shipped.
+     */
+    async function shopWithTrail(fullName: string, memberNames: string[]) {
+      const { db, shop } = await seededShopContext();
+      const ownerId = await personIdByName(db, shop.id, "Dana Reyes");
+      const captainId = await personIdByName(db, shop.id, "Sal Moretti");
+      const diver = await createDiver(db, { shopId: shop.id, fullName });
+      if (!diver) throw new Error("diver insert failed");
+      const [trip] = await db.select().from(trips).where(eq(trips.shopId, shop.id)).limit(1);
+      if (!trip) throw new Error("no trip");
+      // Scoped to this team's own `pair_id`: the demo seed writes `formed`
+      // entries of its own, and the sweep is shop-wide by design.
+      const pairId = crypto.randomUUID();
+      await db.insert(buddyTeamEvents).values({
+        shopId: shop.id,
+        tripId: trip.id,
+        pairId,
+        action: "formed",
+        memberNames,
+        recordedByPersonId: captainId,
+        occurredAt: erasureNow,
+      });
+      return { db, shop, diver, ownerId, pairId };
+    }
+
+    async function trailNamesFor(db: AppDb, pairId: string) {
+      const rows = await db
+        .select({ memberNames: buddyTeamEvents.memberNames })
+        .from(buddyTeamEvents)
+        .where(eq(buddyTeamEvents.pairId, pairId));
+      return rows.map((row) => row.memberNames);
+    }
+
+    it("redacts the erased diver's name and keeps the team's size", async () => {
+      const { db, shop, diver, ownerId, pairId } = await shopWithTrail("Marina Kessler", [
+        "Marina Kessler",
+        "Tom Okafor",
+        "Lena Fischer",
+      ]);
+      await anonymizeDiver(db, {
+        shopId: shop.id,
+        personId: diver.id,
+        actorPersonId: ownerId,
+      });
+      // The element is replaced, never dropped: how many people were on a team
+      // is a fact about the departure, not about the person who left it.
+      expect(await trailNamesFor(db, pairId)).toEqual([
+        [REDACTED_TEXT, "Tom Okafor", "Lena Fischer"],
+      ]);
+    });
+
+    it("leaves a trail that never named them untouched", async () => {
+      const { db, shop, diver, ownerId, pairId } = await shopWithTrail("Marina Kessler", [
+        "Tom Okafor",
+        "Lena Fischer",
+      ]);
+      await anonymizeDiver(db, {
+        shopId: shop.id,
+        personId: diver.id,
+        actorPersonId: ownerId,
+      });
+      expect(await trailNamesFor(db, pairId)).toEqual([["Tom Okafor", "Lena Fischer"]]);
+    });
+  });
+
   describe("the activity-log name match", () => {
     async function shopWithHistory(fullName: string, messages: string[]) {
       const { db, shop } = await seededShopContext();
