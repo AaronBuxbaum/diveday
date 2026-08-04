@@ -2013,6 +2013,11 @@
         "description": "Send trip reminders and recaps from your shop's own WhatsApp number instead of a platform SMS number.",
         "cta": "Set up WhatsApp"
       },
+      "backup": {
+        "heading": "Backups",
+        "description": "A weekly copy of everything your shop holds, delivered to storage you own.",
+        "cta": "Set up backups"
+      },
       "jump": {
         "label": "Jump to a section"
       },
@@ -3307,6 +3312,104 @@
       "connecting": "Connecting…",
       "cancelled": "Connection cancelled — nothing was changed. Press Connect to try again.",
       "blocked": "Meta's window could not open. Check that your browser isn't blocking pop-ups, then try again."
+    }
+  },
+  "backup": {
+    "eyebrow": "Settings",
+    "title": "Backups",
+    "description": "Every week, a full copy of your shop's records lands in storage you own. If you ever leave — or DiveDay ever disappears — the copy is already yours.",
+    "notice": {
+      "saved": "Backup destination saved. Run a test delivery to prove it works.",
+      "invalid": "Check the destination details and try again.",
+      "endpoint_invalid": "That endpoint doesn't read as a plain HTTPS address. Use your provider's bare S3 API origin, with no query, path, or credentials in it.",
+      "endpoint_not_https": "The endpoint must start with https:// — backups never travel unencrypted.",
+      "endpoint_private_host": "That endpoint points at a private or local address, which DiveDay's servers can't deliver to. Use your storage provider's public endpoint.",
+      "secret_required": "Enter the secret access key to connect this destination.",
+      "encryption_key_unset": "This DiveDay instance isn't set up to hold credentials safely yet, so nothing was saved.",
+      "encryption_key_invalid": "This DiveDay instance's encryption key is misconfigured, so nothing was saved.",
+      "disconnected": "Backup destination removed. The delivery history below stays.",
+      "test_delivered": "Test delivery landed in your bucket. Weekly backups are proven to work.",
+      "test_failed": "The test delivery didn't land. {reason}",
+      "no_destination": "Save a destination first, then run a test delivery.",
+      "not_authorized": "Only an owner or manager can change backup settings."
+    },
+    "status": {
+      "configuredHeading": "Backups are set up",
+      "notConfiguredHeading": "No backup destination yet",
+      "notConfiguredDescription": "Point DiveDay at an S3-compatible bucket you own — AWS S3, Cloudflare R2, Backblaze B2, and friends — and a full export bundle lands there every week.",
+      "verified": "Delivery proven",
+      "unproven": "Not proven yet",
+      "endpoint": "Endpoint",
+      "bucket": "Bucket",
+      "accessKeyId": "Access key ID",
+      "lastDelivered": "Last delivery",
+      "never": "Never"
+    },
+    "test": {
+      "submit": "Run a test delivery now",
+      "submitting": "Delivering…"
+    },
+    "form": {
+      "heading": "Destination",
+      "description": "Any S3-compatible storage works. Use a credential that can only write to this bucket — DiveDay never needs to read, list, or delete anything in it.",
+      "endpointLabel": "Endpoint",
+      "endpointHint": "Your provider's S3 API origin — HTTPS, with no bucket or path in it.",
+      "regionLabel": "Region",
+      "regionHint": "The signing region — “auto” on Cloudflare R2, “us-east-1” style on AWS.",
+      "bucketLabel": "Bucket",
+      "prefixLabel": "Folder prefix",
+      "prefixHint": "Bundles land inside this folder in the bucket.",
+      "optionalHint": "(optional)",
+      "accessKeyIdLabel": "Access key ID",
+      "secretLabel": "Secret access key",
+      "secretHint": "Stored sealed, used only to sign uploads, and never shown again — not even to you.",
+      "secretKeepHint": "Leave blank to keep the current key; enter a new one only to rotate it.",
+      "submit": "Save destination",
+      "submitting": "Saving…"
+    },
+    "how": {
+      "heading": "How it works",
+      "weekly": "Once a week, DiveDay builds your full export bundle — every CSV, the README, your photos — and delivers it to your bucket. It's the same bundle as the Data export download, so what you'd take when leaving is what gets backed up.",
+      "contents": "Your trip schedule rides along as trips.ics, readable by any calendar app.",
+      "sealed": "The secret access key is sealed before it's stored and opened only at the moment of upload.",
+      "failures": "A delivery that fails is recorded below and tried again on the next weekly run — DiveDay never hammers your bucket with retries."
+    },
+    "history": {
+      "heading": "Delivery history",
+      "empty": "No deliveries yet. Once a destination is saved, every weekly and test delivery shows up here.",
+      "when": "When",
+      "kind": "Run",
+      "outcome": "Outcome",
+      "size": "Size",
+      "details": "Details",
+      "trigger": {
+        "scheduled": "Weekly",
+        "manual": "Test"
+      },
+      "status": {
+        "succeeded": "Delivered",
+        "failed": "Failed",
+        "started": "Did not finish"
+      },
+      "total": "{count, plural, one {# delivery} other {# deliveries}}"
+    },
+    "deliveryError": {
+      "upload_unauthorized": "The bucket refused the credential — check the access key and its write permission.",
+      "bucket_not_found": "No bucket by that name answered at the endpoint — check both.",
+      "upload_rejected": "The storage provider rejected the upload.",
+      "network_unreachable": "The endpoint couldn't be reached.",
+      "credential_unreadable": "The stored secret key can't be opened any more — enter it again to fix this.",
+      "shop_missing": "The shop's records couldn't be loaded.",
+      "bundle_failed": "The export bundle couldn't be built.",
+      "encryption_key_unset": "This DiveDay instance isn't set up to hold credentials safely.",
+      "encryption_key_invalid": "This DiveDay instance's encryption key is misconfigured.",
+      "unknown": "Something went wrong."
+    },
+    "disconnect": {
+      "heading": "Remove destination",
+      "description": "Deletes the stored credential and stops weekly deliveries. The history below and everything already in your bucket stay put.",
+      "submit": "Remove backup destination",
+      "submitting": "Removing…"
     }
   },
   "bookings": {

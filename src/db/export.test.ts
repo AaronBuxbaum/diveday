@@ -150,6 +150,16 @@ const EXCLUDED_TABLES = [
   // credential like user_accounts, and a phone number id is provider linkage
   // useless outside that Meta account, like shop_stripe_accounts.
   "shop_whatsapp_accounts",
+  // The shop's own S3 credential (sealed) plus where its weekly backup bundle
+  // goes. Never exported, same two reasons as shop_whatsapp_accounts: the
+  // secret key is a live credential to storage the shop owns, and the
+  // endpoint/bucket rows are linkage to an account that already belongs to
+  // the shop (ADR 20260804-shop-owned-backup-export).
+  "shop_backup_destinations",
+  // Delivery outcomes for those bundles — operational plumbing about the
+  // export process, not a shop record; same reasoning as
+  // notification_deliveries.
+  "shop_backup_deliveries",
 ];
 
 /**

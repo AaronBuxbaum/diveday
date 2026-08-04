@@ -3,6 +3,7 @@
   "buildCommand": "node scripts/vercel-build.mjs",
   "crons": [
     { "path": "/api/cron/reminders", "schedule": "0 14 * * *" },
-    { "path": "/api/cron/retention", "schedule": "30 3 * * 0" }
+    { "path": "/api/cron/retention", "schedule": "30 3 * * 0" },
+    { "path": "/api/cron/backup-export", "schedule": "0 4 * * 1" }
   ]
 }

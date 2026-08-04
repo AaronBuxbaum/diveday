@@ -288,6 +288,10 @@
     ],
     "visual": ["settings-payments"]
   },
+  "/shop/[shopSlug]/settings/backup": {
+    "e2e": ["backup.spec.ts"],
+    "visual": ["settings-backup"]
+  },
   "/shop/[shopSlug]/settings/calendar": {
     "e2e": ["calendar-sync.spec.ts"],
     "visual": ["settings-calendar"]

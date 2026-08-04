@@ -86,6 +86,28 @@ export function formatTime(date: Date, locale = "en-US", timeZone?: string): str
   }).format(date);
 }
 
+/**
+ * A byte count as a human-readable size ("42.3 MB"), in the reader's locale.
+ * Decimal units (1 MB = 1,000,000 bytes) because that is what every storage
+ * console the number will be compared against reports.
+ */
+export function formatByteSize(bytes: number, locale = "en-US"): string {
+  const units = [
+    { unit: "gigabyte", threshold: 1e9 },
+    { unit: "megabyte", threshold: 1e6 },
+    { unit: "kilobyte", threshold: 1e3 },
+  ] as const;
+  const match = units.find((candidate) => bytes >= candidate.threshold);
+  const unit = match?.unit ?? "byte";
+  const value = match ? bytes / match.threshold : bytes;
+  return cachedFormatter("num", Intl.NumberFormat, locale, {
+    style: "unit",
+    unit,
+    unitDisplay: "short",
+    maximumFractionDigits: value >= 100 ? 0 : 1,
+  }).format(value);
+}
+
 /** Operational timestamp with an explicit timezone — use for signed evidence and safety events. */
 export function formatDateTimeTz(date: Date, locale = "en-US", timeZone?: string): string {
   return cachedFormatter("dt", Intl.DateTimeFormat, locale, {
