@@ -84,7 +84,9 @@ Multi-shop tenancy exists (`shop_id` everywhere); there is **no boat entity** �
 boat-day. Per-boat configuration and multi-location operating views are unbuilt, and their
 provider/policy decisions are open. Deliberately deferred until a real operator needs it. The
 private/buyout charter workflow below blocks on this same modeling — design the two together, not
-separately.
+separately. That joint design now exists on paper — the Proposed ADR
+[20260804-boat-resource-model](../../architecture/decisions/20260804-boat-resource-model.md) and its
+[dossier](../../architecture/boat-resource-model-dossier.md) — the deferral itself is unchanged.
 
 ## Not scheduled — candidate subsystems
 
@@ -126,7 +128,10 @@ A group buys out a whole departure: proposal, contract, deposit, and the boat of
   boat-day.
 - **Why it isn't scheduled:** it depends on the boat/resource modeling that
   [§5 above](#5-multi-boat--multi-shop-configuration) already holds open, and should be designed
-  together with it rather than as a separate effort. **ADR required.**
+  together with it rather than as a separate effort. **ADR required.** The joint design is now
+  written as the Proposed ADR
+  [20260804-boat-resource-model](../../architecture/decisions/20260804-boat-resource-model.md)
+  (buyout = slices 3–4 there); this entry stays unscheduled until that ADR is accepted.
 
 ### Smaller follow-ons live with their ADRs
 
