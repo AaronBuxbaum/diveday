@@ -3381,7 +3381,7 @@
       "error": "That didn't work — try again."
     }
   },
-    "incidentExport": {
+  "incidentExport": {
     "title": "Incident-ready export",
     "openLink": "Incident-ready export",
     "backToManifest": "Back to manifest",

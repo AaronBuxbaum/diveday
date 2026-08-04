@@ -3381,7 +3381,7 @@
       "error": "Eso no funcionó — inténtalo de nuevo."
     }
   },
-    "incidentExport": {
+  "incidentExport": {
     "title": "Exportación para incidentes",
     "openLink": "Exportación para incidentes",
     "backToManifest": "Volver al manifiesto",
