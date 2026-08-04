@@ -90,6 +90,14 @@ Read the *shape* of a no-code-change diff before assuming a baseline moved:
   `e2e/browser.ts`, or the runner image's emoji/fallback fonts (Geist is self-hosted and pinned).
 - **Confined to one element, with everything around it identical** — a capture that shot too early.
   Wait on something the surface only renders when it is done, not a `@media` or a moving element.
+- **A solid blank stripe, or a whole screenful of nothing** — the capture gave up on a wait rather
+  than the page rendering wrong. `paintWholeDocument` bounds every wait it owns and shoots anyway,
+  which is deliberate: a stall costs one capture's sharpness, not the run. Every bound that fires
+  warns to the shard's log with the surface URL, so **read the `visual:` lines in the "Capture
+  visual regression screenshots" job output before reading the pixels** — they name which wait gave
+  up (frames, image decode, the whole scroll-through pass, the fonts) and, for a driver-side stall,
+  whether the renderer answered a trivial `evaluate` afterwards. A stripe with a matching warning is
+  a harness stall to re-run, never a baseline to bank; a stripe with *no* warning is a real finding.
 - **Anything reflows** — a real layout change. Read it as a finding even if it arrived inside a
   larger rebaseline.
 

@@ -191,6 +191,52 @@ const FONTS_WAIT_MS = 5_000;
 const IMAGE_SETTLE_MS = 15_000;
 
 /**
+ * The bounds above are all *page-side*, and a page-side bound cannot fire in a
+ * renderer that has stopped running the page.
+ *
+ * `settle()` racing `requestAnimationFrame` against `setTimeout` was written to
+ * close this class, on the theory that only frames were going missing. It did
+ * not: the same hang still lands on CI — `Test timeout of 90000ms exceeded`
+ * with the stack pointing at the `page.evaluate` below — and it lands on a
+ * *different* capture every time (`schedule-builder` on one run, a diver record
+ * on another), on pages that paint in under half a second locally, with no
+ * stalled-frame warning anywhere in the run to say a budget was even
+ * approached. A page burning its budget warns and returns; this returns
+ * nothing. Whatever wedges the renderer takes `setTimeout` with it, so no
+ * escape hatch written *inside* the evaluate can ever be the one that fires.
+ *
+ * So the outermost wait — the one Playwright leaves unbounded, since
+ * `page.evaluate` takes no timeout of its own — gets the bound instead, and a
+ * stall degrades the way every other stall here degrades: the shot is taken
+ * anyway, possibly with an unpainted band, and the warning says so. That is the
+ * standing trade in this file (see `settle()` above), applied to the one wait
+ * that had no share in it. What it replaces is far worse than a blank stripe: a
+ * wedged renderer failed the *shard*, a failed shard uploads no screenshots at
+ * all, and `visual-report` then publishes no report — so one stuck page cost
+ * the pull request every other surface's comparison too.
+ *
+ * On a stall we also ask the page one trivial question before giving up. The
+ * answer is the measurement that tells the next person which half is broken —
+ * a renderer that cannot even return `true` is wedged, one that answers
+ * instantly means our own promise leaked — and neither the CI log nor the trace
+ * distinguishes them today.
+ */
+const PAGE_SIDE_BUDGET_MS = SCROLL_BUDGET_MS + IMAGE_SETTLE_MS + 4 * FRAME_WAIT_MS;
+/** Protocol round-trips and a contended runner's scheduling, not page work. */
+const PROTOCOL_SLACK_MS = 5_000;
+const PAINT_STALL_MS = PAGE_SIDE_BUDGET_MS + PROTOCOL_SLACK_MS;
+const FONTS_STALL_MS = FONTS_WAIT_MS + PROTOCOL_SLACK_MS;
+/** How long the is-the-renderer-alive probe gets to answer after a stall. */
+const RENDERER_PROBE_MS = 5_000;
+/**
+ * The screenshot's own bound. Playwright defaults it to 30s, which is not a
+ * number this file chose and not one the ceiling below accounted for — the old
+ * `CAPTURE_OVERHEAD_MS` had 10s covering *both* shots, the resizes, and the
+ * navigation. Naming it puts it back inside the derivation.
+ */
+const SCREENSHOT_TIMEOUT_MS = 15_000;
+
+/**
  * The per-test ceiling for a plain navigate-and-shoot surface.
  *
  * The suite's 15s default (playwright.config.ts) is sized for one real flow,
@@ -217,11 +263,31 @@ const IMAGE_SETTLE_MS = 15_000;
  * exist to prevent, and it is what made the review-moderation-queue capture
  * fail on CI while passing locally. Deriving it keeps the two in step: widen a
  * budget below and the ceiling follows.
+ *
+ * That derivation was still short in two places, which is why the number moved
+ * again: it costed the *page-side* budgets and then left the two waits that
+ * actually own the clock outside the sum — the `page.evaluate` calls, whose
+ * stall bounds are now `PAINT_STALL_MS`/`FONTS_STALL_MS`, and the screenshots,
+ * which had 10s between them for a shot Playwright will itself wait 30s for. So
+ * the ceiling was, in the worst honest case, *below* the work it was meant to
+ * bound. It is bigger now for the same reason it exists: it is the sum.
+ *
+ * It is also much harder to reach, and that is the point. Every wait under it
+ * degrades on its own bound now, page-side and driver-side alike, so a slow
+ * page shoots a stripe and a wedged renderer shoots whatever it has. Reaching
+ * this ceiling means both viewports stalled *and* neither screenshot came back
+ * — a browser that is gone, not a surface that is slow. Nothing here is a knob
+ * to widen when one test starts timing out.
  */
-const PAINT_BUDGET_MS = SCROLL_BUDGET_MS + IMAGE_SETTLE_MS + FONTS_WAIT_MS;
-/** Screenshot encoding, viewport resizes, and the navigation that preceded them. */
+const PAINT_BUDGET_MS = PAINT_STALL_MS + FONTS_STALL_MS;
+/**
+ * Viewport resizes, the navigation that preceded them, and the two diagnostic
+ * probes a stalled capture pays for (`RENDERER_PROBE_MS` each, and only on the
+ * path that has already given up).
+ */
 const CAPTURE_OVERHEAD_MS = 10_000;
-const SURFACE_TIMEOUT_MS = PAINT_BUDGET_MS * VIEWPORTS.length + CAPTURE_OVERHEAD_MS;
+const SURFACE_TIMEOUT_MS =
+  (PAINT_BUDGET_MS + SCREENSHOT_TIMEOUT_MS) * VIEWPORTS.length + CAPTURE_OVERHEAD_MS;
 
 // Applied at file scope rather than per describe block, so every test in the
 // file gets it whether or not it sits inside one and nothing depends on a
@@ -251,132 +317,195 @@ const ADVANCED_CHARTER = "Advanced Drift — French Reef Wall";
 const DEEP_CHARTER = "Deep Adventure — USCGC Duane";
 const AOW_COURSE = "Advanced Open Water Diver — two-day course";
 
+/**
+ * Await a page-side pass, but never further than `budgetMs` — see the note on
+ * `PAINT_STALL_MS`. A pass that overruns is reported and the caller carries on
+ * with `degraded`; a pass that *throws* still throws, because an evaluate that
+ * fails is a broken page, not a stalled one, and must not be swallowed here.
+ */
+async function withRendererBound<T>(
+  page: Page,
+  what: string,
+  budgetMs: number,
+  work: Promise<T>,
+  degraded: T,
+): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  // Both outcomes are folded into a value rather than left as a rejection: the
+  // losing arm of the race stays pending, and a `page.evaluate` that rejects
+  // later — when the context is torn down at end of test — would otherwise
+  // surface as an unhandled rejection in whatever test is running by then.
+  const settled = work.then(
+    (value) => ({ state: "done" as const, value }),
+    (error: unknown) => ({ state: "failed" as const, error }),
+  );
+  const outcome = await Promise.race([
+    settled,
+    new Promise<{ state: "stalled" }>((resolve) => {
+      timer = setTimeout(() => resolve({ state: "stalled" }), budgetMs);
+    }),
+  ]);
+  clearTimeout(timer);
+  if (outcome.state === "failed") throw outcome.error;
+  if (outcome.state === "done") return outcome.value;
+
+  const probeStart = Date.now();
+  const responsive = await Promise.race([
+    page
+      .evaluate(() => true)
+      .then(
+        () => true,
+        () => false,
+      ),
+    new Promise<false>((resolve) => setTimeout(() => resolve(false), RENDERER_PROBE_MS)),
+  ]);
+  console.warn(
+    `visual: ${what} did not return within ${budgetMs}ms at ${page.url()} — the shot may contain ` +
+      "an unpainted band; check the diff for a blank stripe. The renderer " +
+      (responsive
+        ? `answered a trivial evaluate in ${Date.now() - probeStart}ms, so the page is alive and ` +
+          "the pass itself never settled"
+        : `did not answer a trivial evaluate within ${RENDERER_PROBE_MS}ms, so it is wedged, not slow`) +
+      ".",
+  );
+  return degraded;
+}
+
 async function paintWholeDocument(page: Page) {
-  const { stalled: stalledFrames, unsettled: unsettledImages } = await page.evaluate(
-    async ({ frameWaitMs, scrollBudgetMs, imageSettleMs }) => {
-      let stalled = 0;
-      const settle = () =>
-        new Promise<void>((resolve) => {
-          let done = false;
-          const finish = () => {
-            if (done) return;
-            done = true;
-            resolve();
-          };
-          requestAnimationFrame(() => requestAnimationFrame(finish));
-          setTimeout(() => {
-            if (!done) stalled += 1;
-            finish();
-          }, frameWaitMs);
-        });
-      // Commit every image to a source before anything else.
-      //
-      // `next/image` is lazy by default, so an image below the fold has
-      // `currentSrc === ""` until its intersection observer fires — and the
-      // pending check below deliberately skips those, because an image that
-      // never intersects would otherwise burn the whole settle budget. Those
-      // two facts combine into a race: the scroll-through can sweep past a tile
-      // *without* tripping its observer in time, the loop then sees nothing
-      // pending and breaks, and the image finishes loading somewhere either side
-      // of the shutter. That is what made `trip-manage-dark-vw-390` alternate
-      // between a sharp and a half-decoded diver photo run to run, on a page
-      // nobody had touched.
-      //
-      // Promoting to `eager` here makes every image commit to a source
-      // immediately, which puts it under the pending check where it belongs.
-      // It does not add work: the scroll below visits the entire document, so
-      // these images were always going to load — the only thing that changes is
-      // that they are now guaranteed to have loaded *before* the screenshot
-      // rather than racing it.
-      for (const image of Array.from(document.images)) image.loading = "eager";
-
-      // Real timers, not the frozen clock: e2e/fixtures.ts pins only argless
-      // `new Date()` / `Date.now()`, and `performance.now()` is untouched.
-      const deadline = performance.now() + scrollBudgetMs;
-      // Re-read scrollHeight each pass: painting a band can add height. The step
-      // cap is a guard against a page that grows forever, not an expected exit.
-      for (let step = 0; step < 100; step += 1) {
-        const y = step * window.innerHeight;
-        if (y >= document.documentElement.scrollHeight) break;
-        window.scrollTo(0, y);
-        await settle();
-        if (performance.now() > deadline) break;
-      }
-      window.scrollTo(0, 0);
-      await settle();
-
-      const imageDeadline = performance.now() + imageSettleMs;
-      const selectionOf = () =>
-        Array.from(document.images)
-          .map((image) => image.currentSrc)
-          .join("\n");
-      let unsettled = 0;
-      for (;;) {
-        const images = Array.from(document.images);
-        // Sampled before the decode and re-read after it, so a swap that starts
-        // *during* the await is caught without costing every settled page an
-        // extra confirmation pass — this runs 32 times per scheme and the
-        // test's own budget is not generous.
-        const selectionBefore = selectionOf();
-        await Promise.all(
-          images
-            // `decode()` on an image with no source selected never settles —
-            // there is nothing to decode and nothing coming, so the promise
-            // simply hangs and the race below burns its entire bound. The
-            // trip-detail pages carry 14 such `loading="lazy"` tiles, which is
-            // how one page came to cost the whole budget on every capture while
-            // changing not a single pixel. Nothing to decode, nothing to wait
-            // for: skip them and let the `pending` check below speak for them.
-            .filter((image) => image.currentSrc !== "")
-            .map(
-              (image) =>
-                Promise.race([
-                  image.decode().catch(() => undefined),
-                  new Promise((resolve) =>
-                    setTimeout(resolve, Math.max(0, imageDeadline - performance.now())),
-                  ),
-                ]) as Promise<unknown>,
-            ),
-        );
-        const selectionStable = selectionOf() === selectionBefore;
-        // Pending means "a load is actually in flight", which is `!complete`
-        // *and* a source already selected. Both halves matter:
+  const { stalled: stalledFrames, unsettled: unsettledImages } = await withRendererBound(
+    page,
+    "the scroll-through and image settle",
+    PAINT_STALL_MS,
+    page.evaluate(
+      async ({ frameWaitMs, scrollBudgetMs, imageSettleMs }) => {
+        let stalled = 0;
+        const settle = () =>
+          new Promise<void>((resolve) => {
+            let done = false;
+            const finish = () => {
+              if (done) return;
+              done = true;
+              resolve();
+            };
+            requestAnimationFrame(() => requestAnimationFrame(finish));
+            setTimeout(() => {
+              if (!done) stalled += 1;
+              finish();
+            }, frameWaitMs);
+          });
+        // Commit every image to a source before anything else.
         //
-        // - `complete` goes true when an attempt *finishes*, success or failure,
-        //   so a broken `src` is settled-and-stable, not pending — it renders
-        //   identically every run.
-        // - An empty `currentSrc` means the browser has not selected a source at
-        //   all, which after the eager promotion above means there is nothing to
-        //   select: no `src`, or one it has already given up on. Waiting on
-        //   those spent the entire budget on every capture of the trip-detail
-        //   pages and blew the test's own timeout.
+        // `next/image` is lazy by default, so an image below the fold has
+        // `currentSrc === ""` until its intersection observer fires — and the
+        // pending check below deliberately skips those, because an image that
+        // never intersects would otherwise burn the whole settle budget. Those
+        // two facts combine into a race: the scroll-through can sweep past a tile
+        // *without* tripping its observer in time, the loop then sees nothing
+        // pending and breaks, and the image finishes loading somewhere either side
+        // of the shutter. That is what made `trip-manage-dark-vw-390` alternate
+        // between a sharp and a half-decoded diver photo run to run, on a page
+        // nobody had touched.
         //
-        //   This exclusion used to be load-bearing for *lazy* images too, and
-        //   that is exactly what made it unsafe — a tile the scroll swept past
-        //   without tripping its observer was skipped here and then loaded into
-        //   the shutter. The promotion at the top of this function is what makes
-        //   the exclusion honest: every image with a real source now commits to
-        //   it before the scroll, so anything still empty here genuinely has
-        //   nothing coming.
-        const pending = Array.from(document.images).filter(
-          (image) => !image.complete && image.currentSrc !== "",
-        );
-        if (pending.length === 0 && selectionStable) break;
-        if (performance.now() > imageDeadline) {
-          unsettled = pending.length;
-          break;
+        // Promoting to `eager` here makes every image commit to a source
+        // immediately, which puts it under the pending check where it belongs.
+        // It does not add work: the scroll below visits the entire document, so
+        // these images were always going to load — the only thing that changes is
+        // that they are now guaranteed to have loaded *before* the screenshot
+        // rather than racing it.
+        for (const image of Array.from(document.images)) image.loading = "eager";
+
+        // Real timers, not the frozen clock: e2e/fixtures.ts pins only argless
+        // `new Date()` / `Date.now()`, and `performance.now()` is untouched.
+        const deadline = performance.now() + scrollBudgetMs;
+        // Re-read scrollHeight each pass: painting a band can add height. The step
+        // cap is a guard against a page that grows forever, not an expected exit.
+        for (let step = 0; step < 100; step += 1) {
+          const y = step * window.innerHeight;
+          if (y >= document.documentElement.scrollHeight) break;
+          window.scrollTo(0, y);
+          await settle();
+          if (performance.now() > deadline) break;
         }
+        window.scrollTo(0, 0);
         await settle();
-      }
-      // One more frame so anything decoded above is composited before the shot.
-      await settle();
-      return { stalled, unsettled };
-    },
-    {
-      frameWaitMs: FRAME_WAIT_MS,
-      scrollBudgetMs: SCROLL_BUDGET_MS,
-      imageSettleMs: IMAGE_SETTLE_MS,
-    },
+
+        const imageDeadline = performance.now() + imageSettleMs;
+        const selectionOf = () =>
+          Array.from(document.images)
+            .map((image) => image.currentSrc)
+            .join("\n");
+        let unsettled = 0;
+        for (;;) {
+          const images = Array.from(document.images);
+          // Sampled before the decode and re-read after it, so a swap that starts
+          // *during* the await is caught without costing every settled page an
+          // extra confirmation pass — this runs 32 times per scheme and the
+          // test's own budget is not generous.
+          const selectionBefore = selectionOf();
+          await Promise.all(
+            images
+              // `decode()` on an image with no source selected never settles —
+              // there is nothing to decode and nothing coming, so the promise
+              // simply hangs and the race below burns its entire bound. The
+              // trip-detail pages carry 14 such `loading="lazy"` tiles, which is
+              // how one page came to cost the whole budget on every capture while
+              // changing not a single pixel. Nothing to decode, nothing to wait
+              // for: skip them and let the `pending` check below speak for them.
+              .filter((image) => image.currentSrc !== "")
+              .map(
+                (image) =>
+                  Promise.race([
+                    image.decode().catch(() => undefined),
+                    new Promise((resolve) =>
+                      setTimeout(resolve, Math.max(0, imageDeadline - performance.now())),
+                    ),
+                  ]) as Promise<unknown>,
+              ),
+          );
+          const selectionStable = selectionOf() === selectionBefore;
+          // Pending means "a load is actually in flight", which is `!complete`
+          // *and* a source already selected. Both halves matter:
+          //
+          // - `complete` goes true when an attempt *finishes*, success or failure,
+          //   so a broken `src` is settled-and-stable, not pending — it renders
+          //   identically every run.
+          // - An empty `currentSrc` means the browser has not selected a source at
+          //   all, which after the eager promotion above means there is nothing to
+          //   select: no `src`, or one it has already given up on. Waiting on
+          //   those spent the entire budget on every capture of the trip-detail
+          //   pages and blew the test's own timeout.
+          //
+          //   This exclusion used to be load-bearing for *lazy* images too, and
+          //   that is exactly what made it unsafe — a tile the scroll swept past
+          //   without tripping its observer was skipped here and then loaded into
+          //   the shutter. The promotion at the top of this function is what makes
+          //   the exclusion honest: every image with a real source now commits to
+          //   it before the scroll, so anything still empty here genuinely has
+          //   nothing coming.
+          const pending = Array.from(document.images).filter(
+            (image) => !image.complete && image.currentSrc !== "",
+          );
+          if (pending.length === 0 && selectionStable) break;
+          if (performance.now() > imageDeadline) {
+            unsettled = pending.length;
+            break;
+          }
+          await settle();
+        }
+        // One more frame so anything decoded above is composited before the shot.
+        await settle();
+        return { stalled, unsettled };
+      },
+      {
+        frameWaitMs: FRAME_WAIT_MS,
+        scrollBudgetMs: SCROLL_BUDGET_MS,
+        imageSettleMs: IMAGE_SETTLE_MS,
+      },
+    ),
+    // A stalled pass painted nothing it can report on, and the two warnings
+    // below would be lying if they claimed a count; `withRendererBound` has
+    // already said what happened.
+    { stalled: 0, unsettled: 0 },
   );
   if (stalledFrames > 0) {
     console.warn(
@@ -392,14 +521,22 @@ async function paintWholeDocument(page: Page) {
     );
   }
   // Same reasoning as the frame waits: a webfont that never resolves must cost
-  // one capture's sharpness, not the run.
-  await page.evaluate(
-    (ms) =>
-      Promise.race([
-        document.fonts.ready.then(() => true),
-        new Promise((resolve) => setTimeout(() => resolve(true), ms)),
-      ]),
-    FONTS_WAIT_MS,
+  // one capture's sharpness, not the run. Bounded on both sides for the same
+  // reason as the pass above — the page-side race is a `setTimeout`, and a
+  // renderer that has stopped running the page will not fire that either.
+  await withRendererBound(
+    page,
+    "the font settle",
+    FONTS_STALL_MS,
+    page.evaluate(
+      (ms) =>
+        Promise.race([
+          document.fonts.ready.then(() => true),
+          new Promise((resolve) => setTimeout(() => resolve(true), ms)),
+        ]),
+      FONTS_WAIT_MS,
+    ),
+    true,
   );
 }
 
@@ -418,6 +555,9 @@ async function capture(page: Page, name: string, scheme: "light" | "dark") {
       // a different image on every run, and the diff it produces looks exactly
       // like faint antialiasing noise around the moving element.
       animations: "disabled",
+      // Playwright's own default here is 30s, which nothing in this file chose
+      // and `SURFACE_TIMEOUT_MS` never costed. Named so the ceiling can see it.
+      timeout: SCREENSHOT_TIMEOUT_MS,
     });
   }
   // capture() runs mid-flow (navigation and clicks continue after it), so
@@ -459,6 +599,7 @@ async function capturePrint(page: Page, name: string) {
     path: `e2e/screenshots/${name}-print.png`,
     fullPage: true,
     animations: "disabled",
+    timeout: SCREENSHOT_TIMEOUT_MS,
   });
   await page.emulateMedia({ media: "screen" });
 }
@@ -1770,8 +1911,11 @@ for (const scheme of ["light", "dark"] as const) {
         // — so this is six navigations and two form round-trips. Measured
         // failing at HEAD *and* on `main` at one worker, so it was never a
         // contention problem: the budget was simply never sized for what the
-        // test does.
-        test.setTimeout(60_000);
+        // test does. A flat 60s when it was written, which stopped tracking the
+        // budgets the moment they were derived — and by now *lowered* this test
+        // below the plain-capture ceiling it was raised above. Same allowance
+        // as every other flow capture here.
+        test.setTimeout(FLOW_TIMEOUT_MS);
         const setDepth = async (meters: string) => {
           await page.goto("/shop/blue-mantis/dive-sites");
           await page.getByRole("link", { name: "Molasses Reef" }).first().click();
@@ -1999,6 +2143,64 @@ for (const scheme of ["light", "dark"] as const) {
     });
   });
 }
+
+/**
+ * The capture harness's own escape hatch, exercised on purpose.
+ *
+ * `withRendererBound` exists for a stall that has never reproduced outside CI,
+ * so without this nothing in any run ever takes the branch — the degrade could
+ * rot into a `throw`, or the probe into a hang, and the first anyone would know
+ * is the next red shard, which is precisely the failure it was written to
+ * prevent. Shoots nothing, so it costs the baseline nothing.
+ */
+test.describe("capture harness", () => {
+  test("a pass that never settles is bounded, reported, and degraded", async ({ page }) => {
+    await page.goto("/");
+    const warnings: string[] = [];
+    const realWarn = console.warn;
+    console.warn = (message: string) => {
+      warnings.push(message);
+    };
+    let degraded: number;
+    try {
+      degraded = await withRendererBound(
+        page,
+        "a wait that never settles",
+        1_000,
+        // Never resolves — and is still pending when the test ends, which is
+        // the other half of what this proves: `withRendererBound` must absorb
+        // the rejection Playwright raises when it tears the context down,
+        // rather than leaking it into whichever test runs next.
+        page.evaluate(() => new Promise<number>(() => {})),
+        -1,
+      );
+    } finally {
+      console.warn = realWarn;
+    }
+    expect(degraded).toBe(-1);
+    const reported = warnings.join("\n");
+    expect(reported).toContain("did not return within 1000ms");
+    // This page is perfectly healthy — only the promise above never settled —
+    // so the probe has to be able to say so. A wedged renderer is the *other*
+    // sentence, and telling them apart is the whole point of asking.
+    expect(reported).toContain("the page is alive");
+  });
+
+  test("a pass that fails still throws, rather than degrading silently", async ({ page }) => {
+    await page.goto("/");
+    await expect(
+      withRendererBound(
+        page,
+        "a wait that throws",
+        10_000,
+        page.evaluate(() => {
+          throw new Error("boom");
+        }),
+        "degraded",
+      ),
+    ).rejects.toThrow("boom");
+  });
+});
 
 /**
  * Print / Save-as-PDF surfaces. The manifest and the prep list are the two

@@ -152,11 +152,13 @@ These are per-feature rough edges on shipped work, not future subsystems. They a
 - Recording **crew** roll call offline (it is online-only; the offline panel states the limitation
   neutrally and the checkpoint stays open) —
   [20260803-per-person-crew-roll-call](../../architecture/decisions/20260803-per-person-crew-roll-call.md).
-  The count-level attestation it names as a follow-on has since been retired, and two edges came
-  with that: **stripping a staff role still drops somebody from every historical trip's crew list**,
-  which can close a checkpoint held open because they did not come back; and a hand nobody rostered
-  can only be recorded by first creating them as staff, which no dockside crew member can do —
-  both in [20260804-crew-roll-call-is-per-person](../../architecture/decisions/20260804-crew-roll-call-is-per-person.md).
+  The count-level attestation it names as a follow-on has since been retired, and one edge remains
+  with that: a hand nobody rostered can only be recorded by first creating them as staff, which no
+  dockside crew member can do — the follow-on is a one-tap "add someone who sailed" on the manifest
+  itself. See
+  [20260804-crew-roll-call-is-per-person](../../architecture/decisions/20260804-crew-roll-call-is-per-person.md),
+  whose other edge (a staff-role strip dropping somebody from a historical trip's crew list, closing
+  a checkpoint held open because they did not come back) is closed.
 - Setting a per-trip crew role from Today's departure board (assign-only by design), and a
   vocabulary for roles this enum cannot express (assistant instructor, safety diver) —
   [20260803-per-trip-crew-role](../../architecture/decisions/20260803-per-trip-crew-role.md).

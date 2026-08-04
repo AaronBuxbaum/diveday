@@ -83,6 +83,20 @@ work surfaced rather than caused. Each frame wait now races the frame against 50
 scroll-through gives up after 20 s, and `document.fonts.ready` gets the same 5 s bound the image
 decodes already had. The count of waits that hit the bound is warned to the run log.
 
+> **Amended 2026-08-04 — "every wait" was every *page-side* wait, and that was not enough.** The
+> hang described above still lands on CI, now as `Test timeout of 90000ms exceeded` with the same
+> stack, on a different capture each time and on pages that paint in under half a second locally,
+> with no stalled-frame warning anywhere in the run. Every bound added here lives *inside* the
+> `page.evaluate` and is armed by `setTimeout`, so none of them can fire in a renderer that has
+> stopped running the page — which is what the evidence now says is happening. The wait that was
+> left unbounded is the one this paragraph names as the problem and then does not fix: `page.evaluate`
+> itself, from the driver's side. It is bounded now (`PAINT_STALL_MS` / `FONTS_STALL_MS` in
+> `e2e/visual.spec.ts`), a stall degrades to a possibly-unpainted shot the way every other stall
+> here does, and the warning it emits reports whether the renderer could still answer a trivial
+> evaluate — the measurement that will say which half is broken the next time it happens. The
+> diagnosis above stands as far as it goes; treat "each frame wait races the frame" as necessary
+> rather than sufficient.
+
 **Pay cold start off the clock.** `e2e/global-setup.ts` launches a browser, opens a page, and
 navigates once before any test runs, in parallel with the existing server warm-up. Cold start becomes
 untimed setup instead of a lottery over which test draws it.
