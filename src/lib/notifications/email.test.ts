@@ -5,6 +5,7 @@ import {
   newAccountAlertEmail,
   passwordChangedEmail,
   passwordResetEmail,
+  tripBlowoutEmail,
   tripConditionsHoldEmail,
   tripRecapEmail,
   tripReminderEmail,
@@ -66,6 +67,63 @@ describe("tripConditionsHoldEmail", () => {
     expect(email.text).toContain("Your seat is still held");
     expect(email.text).toContain("passing squall");
     expect(email.html).toContain("See the live trip update");
+  });
+});
+
+describe("tripBlowoutEmail", () => {
+  it("carries the cancellation, the money story, and each alternative as a link", () => {
+    const email = tripBlowoutEmail({
+      ...base,
+      paymentStory: "paid",
+      alternatives: [
+        {
+          title: "Night Dive — City of Washington",
+          startsAt: new Date("2026-08-03T23:30:00.000Z"),
+          bookingUrl: "https://diveday.example/s/blue-mantis/trips/trip-2",
+        },
+      ],
+      scheduleUrl: "https://diveday.example/s/blue-mantis",
+    });
+    expect(email.subject).toContain("Trip cancelled");
+    expect(email.text).toContain("because of the weather");
+    expect(email.text).toContain("Your payment is safe");
+    expect(email.text).toContain("Night Dive — City of Washington");
+    expect(email.text).toContain("https://diveday.example/s/blue-mantis/trips/trip-2");
+    expect(email.html).toContain('href="https://diveday.example/s/blue-mantis/trips/trip-2"');
+  });
+
+  it("degrades gracefully to the schedule when no alternative qualifies", () => {
+    const email = tripBlowoutEmail({
+      ...base,
+      paymentStory: "none",
+      alternatives: [],
+      scheduleUrl: "https://diveday.example/s/blue-mantis",
+    });
+    expect(email.text).toContain("You haven't been charged");
+    expect(email.text).toContain("new trips are added all the time");
+    expect(email.text).toContain("https://diveday.example/s/blue-mantis");
+    expect(email.html).toContain('href="https://diveday.example/s/blue-mantis"');
+    // No stray list markup when there is nothing to list.
+    expect(email.html).not.toContain("<ul>");
+  });
+
+  it("escapes hostile trip titles in the html body", () => {
+    const email = tripBlowoutEmail({
+      ...base,
+      tripTitle: "<img src=x onerror=alert(1)> Reef",
+      paymentStory: "deposit",
+      alternatives: [
+        {
+          title: "<script>alert(2)</script> Wall",
+          startsAt: new Date("2026-08-03T23:30:00.000Z"),
+          bookingUrl: "https://diveday.example/s/blue-mantis/trips/trip-2",
+        },
+      ],
+      scheduleUrl: "https://diveday.example/s/blue-mantis",
+    });
+    expect(email.html).not.toContain("<img src=x");
+    expect(email.html).not.toContain("<script>");
+    expect(email.text).toContain("Your deposit is safe");
   });
 });
 

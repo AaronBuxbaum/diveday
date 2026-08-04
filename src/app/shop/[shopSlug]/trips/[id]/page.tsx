@@ -7,6 +7,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { canPersonConfigureTrips } from "@/db/authz";
+import { hasTripBlowout } from "@/db/blowouts";
 import { getDb } from "@/db/client";
 import { listDiveSites } from "@/db/dive-sites";
 import { getTripRequirements, getTripSiteRequirement } from "@/db/readiness";
@@ -131,6 +132,10 @@ export default async function ManageTripPage({
     canPersonConfigureTrips(db, shop.id, session.user.personId),
     listRecapPhotosForTrip(db, shop.id, tripId),
   ]);
+  // Whether this trip's cancellation was a called blow-out — the cascade
+  // record is the surface a weather morning is worked from, so the trip page
+  // must always offer the way back to it (ADR 20260804-blowout-cascade).
+  const blowoutCalled = await hasTripBlowout(db, shop.id, tripId);
   const startWall = utcToWallTime(trip.startsAt, shop.timezone);
   // Day one's window, not the trip's whole span: a multi-day departure ends on
   // its *last* day, and the details editor's Departs/Returns boxes describe
@@ -427,30 +432,55 @@ export default async function ManageTripPage({
 
       <section className="mt-12 border-t border-border pt-6">
         {cancelled ? (
-          canConfigure ? (
-            <form action={reinstateTripAction.bind(null, shopSlug, tripId)}>
-              <SubmitButton pendingLabel={t("trips.detail.reinstating")} className={buttonClass()}>
-                {t("trips.detail.reinstate")}
-              </SubmitButton>
-            </form>
-          ) : (
-            <p className="text-sm text-muted">{t("trips.detail.cancelledNotice")}</p>
-          )
+          <div className="flex flex-wrap items-center gap-3">
+            {canConfigure ? (
+              <form action={reinstateTripAction.bind(null, shopSlug, tripId)}>
+                <SubmitButton
+                  pendingLabel={t("trips.detail.reinstating")}
+                  className={buttonClass()}
+                >
+                  {t("trips.detail.reinstate")}
+                </SubmitButton>
+              </form>
+            ) : (
+              <p className="text-sm text-muted">{t("trips.detail.cancelledNotice")}</p>
+            )}
+            {blowoutCalled ? (
+              <Link
+                href={`/shop/${shopSlug}/schedule/blowout/${tripId}`}
+                className={buttonClass({ variant: "secondary" })}
+              >
+                {t("trips.detail.viewBlowout")}
+              </Link>
+            ) : null}
+          </div>
         ) : (
           // A single trip's weather cancellation is the crew's go/no-go call
-          // (glossary) — open to all staff. Reinstating it is config work.
-          <form
-            action={cancelTripAction.bind(null, shopSlug, tripId)}
-            className="flex items-center gap-3"
-          >
-            <SubmitButton
-              pendingLabel={t("trips.detail.cancelling")}
+          // (glossary) — open to all staff. The blow-out link leads to its own
+          // confirm page (ADR 20260804-blowout-cascade): cancel *and* message
+          // every diver their qualifying alternatives. The quiet cancel stays
+          // for the cases with nobody to message. Reinstating is config work.
+          <div className="flex flex-wrap items-center gap-3">
+            <Link
+              href={`/shop/${shopSlug}/schedule/blowout/${tripId}`}
               className={buttonClass({ variant: "danger" })}
             >
-              {t("trips.detail.cancelTrip")}
-            </SubmitButton>
-            <p className="text-sm text-muted">{t("trips.detail.cancelHint")}</p>
-          </form>
+              {t("trips.detail.weatherBlowout")}
+            </Link>
+            <p className="text-sm text-muted">{t("trips.detail.weatherBlowoutHint")}</p>
+            <form
+              action={cancelTripAction.bind(null, shopSlug, tripId)}
+              className="flex items-center gap-3"
+            >
+              <SubmitButton
+                pendingLabel={t("trips.detail.cancelling")}
+                className={buttonClass({ variant: "secondary" })}
+              >
+                {t("trips.detail.cancelTrip")}
+              </SubmitButton>
+              <p className="text-sm text-muted">{t("trips.detail.cancelHint")}</p>
+            </form>
+          </div>
         )}
       </section>
     </>

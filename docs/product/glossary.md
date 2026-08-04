@@ -3,6 +3,14 @@
 Domain terms agents must use correctly — in code, UI copy, and data models. When you introduce a
 new domain concept, define it here in the same PR.
 
+- **Blow-out** — the captain's call that weather or sea state makes a departure un-runnable: the
+  trip is cancelled by the shop, not the diver. Distinct from a **conditions hold** (below), which
+  is reversible and keeps bookings live. In DiveDay a blow-out is called once per departure and
+  triggers the cancellation cascade: every booked diver gets one message with the cancellation,
+  their money story, and rebooking options filtered to departures they qualify for, and staff work
+  the cascade record until nobody is left unresolved (ADR
+  [20260804-blowout-cascade](../architecture/decisions/20260804-blowout-cascade.md)). A blow-out
+  moves no money on its own — refunds stay a per-booking staff decision.
 - **Conditions hold** — a reversible crew call while weather or sea state is uncertain. Existing
   bookings remain valid, new bookings pause, and booked divers are notified. It is not a
   cancellation and never implies a refund.

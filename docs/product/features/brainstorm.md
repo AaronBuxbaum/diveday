@@ -75,10 +75,13 @@ Lens: a dive shop sells perishable seats under weather risk. These ideas protect
 breaking community trust.
 
 - **One-tap cancellation cascade.** Captain calls a blow-out; staff taps once; booked divers receive
-  rebooking links filtered to trips they qualify for plus a trip-credit option ahead of refund. *(M,
-  bookings, big bet.)*
+  rebooking links filtered to trips they qualify for. Shipped 2026-08-04 — see
+  [../shipped.md](../shipped.md#weather-blow-out-cancellation-cascade-delivered-2026-08-04) and ADR
+  [20260804-blowout-cascade](../../architecture/decisions/20260804-blowout-cascade.md); the
+  trip-credit option waits on the credit ledger below. *(Shipped, bookings.)*
 - **Alternative-day salvage.** A cancellation can offer what the shop can still run, such as a pool
-  session, shore dive, or classroom day. *(M, bookings, quick win after cancellation cascade.)*
+  session, shore dive, or classroom day. *(M, bookings, quick win now the cancellation cascade has
+  shipped.)*
 - **Credit ledger.** First-class trip credit balance on the diver, visible and spendable at booking.
   Requires schema change and ADR. *(M, bookings, big bet.)*
 - **Insurance leverage.** Once incident and safety exports exist, package the evidence a shop can use

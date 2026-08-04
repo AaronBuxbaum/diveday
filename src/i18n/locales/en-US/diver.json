@@ -1985,6 +1985,17 @@
       "crewNoteLabel": "Crew note:",
       "seeUpdate": "See the live trip update"
     },
+    "tripBlowout": {
+      "subject": "Trip cancelled — {tripTitle}",
+      "body": "{shopName} has had to cancel {tripTitle} on {date} because of the weather. Your seat is released, and there's nothing you need to do.",
+      "moneyNone": "You haven't been charged anything for this trip.",
+      "moneyDeposit": "Your deposit is safe — {shopName} will be in touch to move it to a new date or arrange your refund.",
+      "moneyPaid": "Your payment is safe — {shopName} will be in touch to move it to a new date or arrange your refund.",
+      "alternativesIntro": "Want to get back in the water? Here are upcoming trips you already qualify for:",
+      "alternativeLine": "{title} — {when}",
+      "noAlternatives": "None of the upcoming departures match your certifications right now, but new trips are added all the time.",
+      "seeSchedule": "See the full schedule"
+    },
     "bookingConfirmation": {
       "subject": "You're on the boat — {tripTitle}",
       "confirmed": "Your spot on {tripTitle} is confirmed.",

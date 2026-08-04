@@ -193,6 +193,81 @@ export function tripConditionsHoldEmail(input: TripConditionsHoldEmailInput): No
   };
 }
 
+export type TripBlowoutEmailInput = {
+  locale: DiverLocale;
+  diverName: string;
+  shopName: string;
+  tripTitle: string;
+  startsAt: Date;
+  timezone: string;
+  /** Codes, not amounts — see the kind's schema (docs ADR 20260804-blowout-cascade). */
+  paymentStory: "none" | "deposit" | "paid";
+  /** Soonest-first, admission-filtered for this diver; empty is a real answer. */
+  alternatives: { title: string; startsAt: Date; bookingUrl: string }[];
+  scheduleUrl: string;
+};
+
+/**
+ * The blow-out cascade message: the cancellation in one sentence, the diver's
+ * money story, and the alternatives they actually qualify for as plain links
+ * to the public booking pages. No alternatives degrades to a pointer at the
+ * schedule — a diver whose cards fit nothing this month still deserves the
+ * same prompt, honest message as everyone else on the roster.
+ */
+export function tripBlowoutEmail(input: TripBlowoutEmailInput): NotificationEmail {
+  const t = diverTranslator(input.locale);
+  const firstName = firstNameOf(input.diverName, t("notifications.common.genericName"));
+  const date = formatShortDate(input.startsAt, input.locale, input.timezone);
+  const body = t("notifications.tripBlowout.body", {
+    shopName: input.shopName,
+    tripTitle: input.tripTitle,
+    date,
+  });
+  const bodyHtml = t("notifications.tripBlowout.body", {
+    shopName: escapeHtml(input.shopName),
+    tripTitle: `<strong>${escapeHtml(input.tripTitle)}</strong>`,
+    date: escapeHtml(date),
+  });
+  const money =
+    input.paymentStory === "none"
+      ? t("notifications.tripBlowout.moneyNone")
+      : t(
+          input.paymentStory === "paid"
+            ? "notifications.tripBlowout.moneyPaid"
+            : "notifications.tripBlowout.moneyDeposit",
+          { shopName: input.shopName },
+        );
+  const seeSchedule = t("notifications.tripBlowout.seeSchedule");
+
+  if (input.alternatives.length === 0) {
+    const noAlternatives = t("notifications.tripBlowout.noAlternatives");
+    return {
+      subject: t("notifications.tripBlowout.subject", { tripTitle: input.tripTitle }),
+      text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n\n${money}\n\n${noAlternatives}\n${seeSchedule}:\n${input.scheduleUrl}\n`,
+      html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p><p>${escapeHtml(money)}</p><p>${escapeHtml(noAlternatives)}</p><p><a href="${escapeHtml(input.scheduleUrl)}">${seeSchedule}</a></p>`,
+    };
+  }
+
+  const intro = t("notifications.tripBlowout.alternativesIntro");
+  const lines = input.alternatives.map((alternative) => ({
+    label: t("notifications.tripBlowout.alternativeLine", {
+      title: alternative.title,
+      when: formatDateTimeTz(alternative.startsAt, input.locale, input.timezone),
+    }),
+    url: alternative.bookingUrl,
+  }));
+  const listText = lines.map((line) => `- ${line.label}\n  ${line.url}`).join("\n");
+  const listHtml = `<ul>${lines
+    .map((line) => `<li><a href="${escapeHtml(line.url)}">${escapeHtml(line.label)}</a></li>`)
+    .join("")}</ul>`;
+
+  return {
+    subject: t("notifications.tripBlowout.subject", { tripTitle: input.tripTitle }),
+    text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n\n${money}\n\n${intro}\n${listText}\n\n${seeSchedule}:\n${input.scheduleUrl}\n`,
+    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p><p>${escapeHtml(money)}</p><p>${escapeHtml(intro)}</p>${listHtml}<p><a href="${escapeHtml(input.scheduleUrl)}">${seeSchedule}</a></p>`,
+  };
+}
+
 /** "30 minutes" today, whatever the shop set otherwise. */
 function dockCallPhrase(t: DiverTranslator, dockCallMinutes: number | undefined): string {
   return t("notifications.common.dockCallMinutes", { minutes: dockCallMinutes ?? 30 });

@@ -132,6 +132,27 @@ export type AnalyticsEvent =
       /** A staff sign-in attempt and how it resolved — the friction signal for the sign-in form. */
       name: "sign_in_attempted";
       outcome: "success" | "invalid_credentials" | "rate_limited";
+    }
+  | {
+      /**
+       * Staff called (or re-ran) a weather blow-out cascade — the one-tap
+       * cancellation with per-diver rebooking offers (ADR
+       * 20260804-blowout-cascade). The counts say how the send pass landed;
+       * `resumed` distinguishes the first call from a pickup of pending rows.
+       */
+      name: "blowout_called";
+      resumed: boolean;
+      total: number;
+      sent: number;
+      failed: number;
+      noEmail: number;
+    }
+  | {
+      /** Staff retried a blow-out's failed messages from the cascade surface. */
+      name: "blowout_resumed";
+      total: number;
+      sent: number;
+      failed: number;
     };
 
 type EventProps = Record<string, string | number | boolean | null>;

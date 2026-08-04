@@ -1083,6 +1083,32 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "schedule-builder-add", scheme);
       });
 
+      // The blow-out confirm — the one deliberate step between the captain's
+      // word and cancelling live bookings (ADR 20260804-blowout-cascade).
+      // Read-only: nothing is cancelled by rendering it.
+      test(`the blow-out confirm page renders true to the design (${scheme})`, async ({ page }) => {
+        const tripId = await seededTripId(page, REEF_TRIP);
+        await page.goto(`/shop/blue-mantis/schedule/blowout/${tripId}`);
+        await page.getByRole("heading", { level: 1, name: "Call a blow-out?" }).waitFor();
+        await capture(page, "blowout-confirm", scheme);
+      });
+
+      // The cascade record — the surface a blow-out morning is worked from.
+      // Calling the blow-out inside the test is safe (per-test reset) and
+      // deterministic: the frozen clock pins calledAt, and with no email
+      // provider in the fleet every row lands in the same "Not sent" state —
+      // the honest fallback surface an unconfigured shop would really see.
+      test(`the blow-out cascade record renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        const tripId = await seededTripId(page, REEF_TRIP);
+        await page.goto(`/shop/blue-mantis/schedule/blowout/${tripId}`);
+        await page.getByRole("button", { name: "Call the blow-out" }).click();
+        await page.getByRole("heading", { level: 1, name: "Blow-out cascade" }).waitFor();
+        await page.getByRole("columnheader", { name: "Diver" }).waitFor();
+        await capture(page, "blowout-cascade", scheme);
+      });
+
       // The roster — the front desk's densest everyday surface.
       // Wait for the roster itself, not the skeleton: same race as the public
       // schedule, and the one that put a half-drawn loading state into the
