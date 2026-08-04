@@ -52,15 +52,17 @@ spends against them.
 
 ## Decision
 
-**Keep SSE on Vercel (the merged design) and gate it on tab visibility. Designate Amazon API Gateway
+**Keep SSE on Vercel (the merged design), unchanged, and measure it. Designate Amazon API Gateway
 WebSockets as the migration target, to be adopted when a stated trigger fires — not before.**
 
 Concretely:
 
-1. **Now, no new infrastructure.** Close the `EventSource` on `visibilitychange → hidden` and reopen
-   on visible. `OfflineManifestManager` already refreshes on visibility-return, so this costs nothing
-   in correctness and removes every hour a tablet spends backgrounded or pocketed from the bill. This
-   multiplies the dominant cost term by the foreground fraction and is roughly ten lines.
+1. **Now, change nothing.** In particular, **do not gate the stream on tab visibility** — an earlier
+   revision of this record recommended exactly that, and it was wrong. See
+   ["Why not gate on tab visibility"](#why-not-gate-on-tab-visibility) below: the stream is what keeps
+   the *device's offline copy* current, so closing it while the page is hidden degrades the artifact a
+   captain depends on after losing signal. If the measurement in step 2 comes back bad, the mitigation
+   to reach for is a **shortened poll while hidden**, not a closed stream.
 2. **Measure before spending.** The status-quo cost spans a **100× range** (below) entirely because of
    an unpublished Vercel heuristic. No migration is justified on estimates when the estimate's own
    uncertainty is larger than the difference between the options. The measurement is the provisioned
@@ -143,11 +145,54 @@ allowance** — and the failure mode is not a larger invoice but the whole deplo
 taking down booking, waivers and checkout along with the manifest stream. The blast radius of getting
 this wrong is the product, not the budget.
 
-Two things follow. The visibility gate in the Decision stops being a nice optimisation and becomes the
-cheapest available insurance; and the trigger has to be expressed in allowance terms on this plan,
-because there is no dollar figure to watch. Note also that Hobby's limits bite operationally well
-before compute does — the 100-deployments-per-day cap is what surfaced the plan in the first place, by
-failing a preview build on this ADR's own PR.
+Two things follow. Measuring stops being a follow-up and becomes the first thing to do; and the trigger
+has to be expressed in allowance terms on this plan, because there is no dollar figure to watch. Note
+also that Hobby's limits bite operationally well before compute does — the 100-deployments-per-day cap
+is what surfaced the plan in the first place, by failing a preview build on this ADR's own PR.
+
+### Why not gate on tab visibility
+
+The obvious cheap mitigation — close the `EventSource` on `visibilitychange → hidden`, reopen on
+visible — was this record's original step 1, on the reasoning that a hidden page shows nobody anything
+and `OfflineManifestManager` already refreshes on visibility-return. **That reasoning was wrong, and
+the recommendation is withdrawn.**
+
+What it missed is what the stream actually feeds. `refresh()` calls `router.refresh()`; the fresh
+payload lands as a prop; the payload effect then calls `saveOfflineManifest`, writing a new snapshot
+to IndexedDB. So the stream is not merely driving pixels — **it is what keeps the device's offline copy
+current**. Closing it while the page is hidden degrades precisely the artifact that matters once the
+signal is gone.
+
+The scenario that makes this concrete, and the reason to care: a captain walks to the boat with the
+phone pocketed and the page hidden. Roll-call changes land on shore. Then the boat leaves the bay and
+the signal dies. With the stream open those changes were already written to the device; with the
+stream gated, they may never have been — and the device now goes to sea a version behind, with no way
+to catch up. Trading that for money that has not yet been measured is the wrong trade on a
+safety-adjacent surface, and it may buy nothing at all: if the sharing factor turns out to be 50, the
+saving rounds to zero.
+
+Two details worth carrying, both testable and neither yet tested:
+
+- **The 5-minute poll does not check visibility.** It fires on `navigator.onLine` alone, so a hidden
+  page still refreshes and still re-saves. The gate would move the pocket window from "fresh within
+  seconds" to "fresh within ~5 minutes" — a degradation, not a cliff.
+- **A frozen tab likely holds the connection without using it.** Browsers throttle and eventually
+  freeze background tabs, hardest on a locked phone. A frozen page cannot run the `manifest-changed`
+  handler, while the server-side stream stays open and keeps billing — cost without freshness, the
+  worst of both. If true, the pocket hours the gate would "save" are hours that were already buying
+  nothing, which weakens the case for the gate from the other direction too. Verify in Vercel's logs
+  before relying on it either way.
+
+If the measurement does come back bad, the shape to reach for keeps the snapshot fresh instead of
+sacrificing it: **while hidden, poll more often rather than not at all** (say every 60 s). Rough
+arithmetic puts a 60-second hidden poll near a stream shared 50× and well under one shared 10×, and it
+degrades gracefully through freezes — a frozen tab simply resumes polling when it thaws, where a
+gated stream stays closed until something re-opens it.
+
+Finally, worth stating because no transport choice can fix it: **nothing here guarantees a device is
+current at the instant signal dies.** Only a deliberate refresh before departure can, which is what the
+freshness pills and the "Refresh now" control exist for. If this scenario deserves hardening, that is
+where the leverage is — not in the transport.
 
 Also unpriced but real: one Neon **direct** (unpooled) connection per warm process for `LISTEN`, which
 is the scarcer Neon resource, and which 20260726 already names as this design's accepted MVP limit.
@@ -249,11 +294,26 @@ That inverts the usual intuition and is the most useful thing in this analysis:
 - **Delete push, keep the poll** — genuinely viable and nearly free; rejected as the *default* only
   because roll call is safety-adjacent and 20260726 already judged 5-minute staleness worth improving.
   It remains the correct answer if the trigger fires and nobody wants to build the WebSocket path.
+- **Gate the stream on tab visibility** — this record's original recommendation, **withdrawn**: the
+  stream is what keeps the device's offline copy current, so closing it while hidden degrades what a
+  captain carries to sea. Full reasoning in
+  ["Why not gate on tab visibility"](#why-not-gate-on-tab-visibility).
+- **Shorten the poll while hidden (~60 s) instead of gating** — the mitigation to reach for *if* the
+  measurement is bad. Keeps saving snapshots while the page is hidden, costs about what a stream shared
+  50× costs, and survives tab freezing. Not adopted now because nothing yet says the status quo is too
+  expensive.
 
 ## Consequences
 
-Nothing is spent and nothing is migrated today; the visibility gate is a pure reduction with no
-architectural commitment, and every option above stays open behind it.
+Nothing is spent, nothing is migrated, and — after the withdrawal above — nothing in the product
+changes today either. Every option stays open, and the status quo keeps the offline copy as fresh as
+it has been.
+
+That withdrawal is worth keeping in view as a general caution, not just a detail about one effect:
+the cheap mitigation looked free because it was assessed against what the *page* shows, and the
+stream's real consumer is what the *device stores*. On this product the second one is the safety
+property. A cost optimisation on a safety-adjacent surface needs to name what it degrades before it
+names what it saves.
 
 The cost of waiting is **not** symmetric across plans, and this is the thing to carry away. On Pro it
 is bounded by option A's worst case — tens of dollars a month at pilot scale, visible in the usage
@@ -272,8 +332,9 @@ WebSocket API + authorizer Lambda + connection registry in CDK; a token-minting 
 `recordRollCall` calling `PostToConnection` instead of `pg_notify`; `OfflineManifestManager` swapping
 `EventSource` for `WebSocket`; and deletion of `src/db/manifest-events.ts`'s `LISTEN` client. Call it a
 few days including the `security-reviewer` pass that the tenant-scoped registry requires. The
-poll/reconnect/visibility fallback in `OfflineManifestManager` is untouched by any of this and remains
-the backstop under every option here — which is what makes all of them reversible.
+poll/reconnect/visibility-return fallback in `OfflineManifestManager` is untouched by any of this and
+remains the backstop under every option here — which is what makes all of them reversible, and which
+is also why the *fallback* keeps saving snapshots even in the states where a stream cannot.
 
 ## Sources
 
