@@ -13,6 +13,7 @@ import {
 } from "@/lib/notifications";
 import { publicSchedulePath, publicTripPath } from "@/lib/public-routes";
 import type { AppDb, DbExecutor } from "./client";
+import { publishManifestEvent } from "./manifest-events";
 import { sendAndRecordNotification } from "./notifications";
 import { paymentsByBooking } from "./payments";
 import { getTripRequirements, getTripSiteRequirement } from "./readiness";
@@ -175,6 +176,13 @@ export async function callTripBlowout(
     .select({ total: count() })
     .from(tripBlowoutDivers)
     .where(eq(tripBlowoutDivers.blowoutId, setup.blowoutId));
+
+  // The departure was just cancelled — the largest manifest change there is,
+  // and the one a captain most needs off their phone rather than from a
+  // colleague at the dock (ADR 20260804-manifest-web-push). After both phases,
+  // so a device that refreshes on this signal reads a trip already marked
+  // cancelled rather than one mid-cascade.
+  await publishManifestEvent(db, input.shopId, input.tripId);
 
   return { ok: true, blowoutId: setup.blowoutId, resumed: setup.resumed, total, ...summary };
 }

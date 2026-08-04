@@ -121,20 +121,50 @@ is the ADR's own "silent refresh" row and stops the device doing roll call from 
    than asserting the phone is current. An e2e assertion pins the heads-up sentence, because it is the
    sentence that stops silence being read as "nothing changed".
 
-**Still open.** Two remain, and both need a decision rather than an implementation:
+**Both remaining findings are now decided** (product owner, 2026-08-04).
 
-1. **Not every shore-side change pushes.** The fan-out hangs off `publishManifestEvent`, which fires
-   for roll call, notes and buddy teams — not for a walk-up seated, a cancellation, a waiver signed at
-   the counter, or a crew swap. Those are exactly the changes that land while a captain walks to the
-   boat. Closing this means deciding which writes are manifest-affecting and publishing from each,
-   which is a wider audit than this record's slice.
-2. **No severity tiering, and the seam cannot support it yet.** `publishManifestEvent(db, shopId,
-   tripId)` carries no information about *what* changed, so a diver recorded not-back-aboard arrives
-   with the same words and the same buzz as a typo fix. Tiering needs that plumbing first, and a
-   decision about whether a lock screen should carry that distinction at all.
+### Which writes announce a manifest change — trip-scoped writers, not person-scoped
 
-Until the first of those is closed, the honest description of this feature is still "a useful
-heads-up", not "a guarantee your phone is current" — which is exactly what the copy now says.
+Before this, the eight publishers were all things a captain does **on the manifest page itself**
+(`recordRollCall`, `recordCrewRollCall`, `recordCrewAttestation`, `updateLatestRollCallNote`, and the
+four buddy-team writers). So push told a captain about their own edits and nothing else — silent on
+precisely the shore-side changes it exists to carry.
+
+The criterion chosen is **whether the writer already knows its trip**, because that is what separates
+a one-line change from a fan-out:
+
+| Added | Why |
+| --- | --- |
+| `seatDiver` | A walk-in seated at the counter — the archetypal change that lands while a captain walks to the boat |
+| `cancelBooking` | A diver leaves the roster |
+| `setTripCrew` | Who is crewing is on the manifest |
+| `callTripBlowout` | The departure is cancelled — the largest manifest change there is |
+
+**Certification writers are deliberately excluded.** `createCertification`, `reviewCertification`,
+`archiveCertification` and the specialty equivalents are *person*-scoped: one write changes readiness
+on every future trip that diver is booked on, so publishing means a lookup fanning out to N trips,
+with its own bounding. It is also the wrong urgency — a card gets verified days before a boat, not
+minutes. Waiver signing sits in the same category for now; it is per-booking and so derivable, and is
+the first candidate if this is revisited.
+
+Two invariants the implementation holds, both asserted by tests: a publish happens **after** its
+transaction commits, never inside it (this fans out to a third-party push service, and holding a
+transaction open across that turns a slow provider into a lock-wait on `bookings`); and a **refused**
+write publishes nothing, so a miss cannot spend the coalescing budget or wake a phone.
+
+### Severity tiering — will not do
+
+`publishManifestEvent(db, shopId, tripId)` carries no information about *what* changed, so tiering
+would mean threading a kind through twelve call sites, a payload field, and per-tier copy in every
+locale. That cost is not the reason to decline it.
+
+The reason is that **the one genuinely urgent case is one this channel cannot serve.** Of everything
+that publishes, only a diver recorded *not back aboard* after a dive is an emergency — and the people
+who can act on it are on the boat, standing next to whoever recorded it. A push arriving on a phone on
+shore is not the intervention, and a tier that implied otherwise would be worse than no tier: it would
+dress a notification up as a response.
+
+Recorded as decided rather than deferred, so it is not re-opened later as unfinished work.
 
 ## Alternatives considered
 

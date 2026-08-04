@@ -14,6 +14,7 @@ import {
 } from "@/lib/trip-admission";
 import { revokeBookingCapabilities } from "./booking-capabilities";
 import type { AppDb, DbExecutor } from "./client";
+import { publishManifestEvent } from "./manifest-events";
 import { getBookingPayment } from "./payments";
 import { findOrCreatePerson } from "./people";
 import { getTripRequirements, getTripSiteRequirement } from "./readiness";
@@ -725,6 +726,18 @@ export async function restoreBooking(
 }
 
 export async function cancelBooking(db: AppDb, shopId: string, bookingId: string) {
+  const booking = await cancelBookingRow(db, shopId, bookingId);
+  // A diver just left the roster, which is a manifest change like any other —
+  // and one that lands on shore while a captain may already be walking to the
+  // boat (ADR 20260804-manifest-web-push). Published *after* the transaction
+  // commits, never inside it: this fans out to a push service, and holding a
+  // database transaction open across third-party HTTP is how a slow provider
+  // becomes a lock-wait on the bookings table.
+  if (booking) await publishManifestEvent(db, shopId, booking.tripId);
+  return booking;
+}
+
+async function cancelBookingRow(db: AppDb, shopId: string, bookingId: string) {
   return db.transaction(async (tx) => {
     const [booking] = await tx
       .update(bookings)
