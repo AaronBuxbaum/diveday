@@ -30,10 +30,12 @@ adapters and must not introduce unique requirements.
 | `pnpm dev` | dev server at localhost:3000 |
 | `pnpm task:context <area>` | bounded paths, invariants, and validation for a task |
 | `pnpm check:env` | validate `.env.local` when present; local fallbacks make the file optional |
-| `pnpm check:repo` | environment, architecture/feature-module, clock, ADR, doc-link, locale-coverage, hard-coded-copy, domain-layer-copy, route-coverage, and agent-layer (skills/index/task-context) safeguards |
+| `pnpm check:repo` | environment, architecture/feature-module, design-token, clock, ADR, doc-link, locale-coverage, hard-coded-copy, domain-layer-copy, route-coverage, and agent-layer (skills/index/task-context) safeguards |
 | `pnpm check` | repository safeguards + lint + typecheck + unit tests — **the pre-commit bar** |
 | `pnpm check:copy` | find hard-coded user-facing copy in `src/app`/`src/components`; `node scripts/check-copy.mjs --report <path>` lists it, `--write` banks a reduction, `--absorb` records growth arriving from a merge |
 | `pnpm check:domain-strings` | find English sentences returned from `src/lib`/`src/db` (the `.message`/`_LABELS` leak — ADR 20260731-domain-layer-copy-leaks); same `--report <path>` / `--write` / `--absorb` as `check:copy` |
+| `pnpm check:tokens` | find raw hex colors and palette-scale Tailwind classes in components (ADR-0004); ratcheted via `scripts/tokens-baseline.json`, same `--report <path>` / `--write` / `--absorb` as `check:copy`. Next metadata-file conventions (OG images, icons, manifest) are exempt by design — tokens can't reach a Satori bitmap |
+| `pnpm check:architecture` | layer boundaries (now including `src/components`/`src/i18n`) and feature-module contracts; pre-existing debt is ratcheted in `scripts/architecture-baseline.json`, same `--write` / `--absorb` as `check:copy` |
 | `pnpm check:route-coverage` | every `src/app/**/page.tsx` route is listed in `scripts/route-coverage.json` with the `e2e/` specs and `e2e/visual.spec.ts` captures that cover it, or a written `exempt` reason for having neither. The coverage lists are hand-maintained (a spec usually *clicks* its way to a route, which no grep can see); `--write` regenerates only the mechanical facts and refuses to add an exemption or drop coverage, `--absorb` records a merge-in loss, `--report` prints the per-route table |
 | `pnpm gates` | report (never a gate, never in `check`): days since each `docs/product/human-decisions.md` H-/V- row last moved, reconciled against `rollout.md`'s "next 30 days". Ages derived from dated outcomes in the rows and `git blame`, printed as `≥ N` when a shallow clone can only bound them. Nothing it reports is an agent's to close |
 | `pnpm lint` / `pnpm lint:fix` | Biome check / autofix |
