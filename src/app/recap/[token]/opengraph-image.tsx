@@ -84,6 +84,42 @@ export default async function RecapOpenGraphImage({
   // the response exists its body is already streaming, and a font resolved
   // lazily from inside that stream can only fail by severing the connection.
   const fonts = await loadOgFonts();
+
+  // TEMPORARY DIAGNOSTIC — remove once the CI-only failure is understood.
+  // The server's stderr is piped by playwright.config.ts, so this lands in the
+  // repro job's log right above the `failed to pipe response` it explains.
+  // Reports three things the earlier probes could not, because they called this
+  // module directly and so never entered a request work-unit store — which is
+  // what routes the render through Cache Components' cached-image path instead
+  // of @vercel/og's plain one:
+  //   - whether the fonts this process actually holds are the real files
+  //   - which of the two render paths this request is on
+  //   - whether rasterizing the very same SVG works here and now
+  try {
+    const { workUnitAsyncStorage } = await import(
+      // biome-ignore lint/suspicious/noExplicitAny: internal, diagnostic only
+      "next/dist/server/app-render/work-unit-async-storage.external" as any
+    );
+    const store = workUnitAsyncStorage?.getStore?.();
+    let sharpProbe: string;
+    try {
+      const sharp = (await import("sharp")).default;
+      const svg = Buffer.from(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"><rect width="20" height="20" fill="red"/></svg>',
+      );
+      sharpProbe = `ok (${(await sharp(svg).resize(20).png().toBuffer()).length} bytes)`;
+    } catch (error) {
+      sharpProbe = `FAILED: ${(error as Error).message}`;
+    }
+    console.error(
+      `[og-diag] token=${token.slice(0, 8)} store=${store?.type ?? "none"} fonts=${fonts
+        .map((f) => `${f.weight}:${f.data.byteLength}`)
+        .join(",")} sharpSvg=${sharpProbe}`,
+    );
+  } catch (error) {
+    console.error(`[og-diag] probe threw: ${(error as Error).message}`);
+  }
+
   const bookingId = verifyRecapToken(token);
   if (!bookingId) return genericCard(fonts);
 
