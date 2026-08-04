@@ -3,11 +3,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { EmptyState } from "@/components/EmptyState";
+import { Pager } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
-import { pagedUpcomingTripsWithCounts } from "@/db/trips";
+import { offsetUpcomingTripsWithCounts } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate, formatTimeRange } from "@/lib/format";
@@ -32,8 +33,13 @@ export const metadata: Metadata = {
  * How many departures the picker offers at once. A page, not a shop's whole
  * future: a busy season has hundreds of upcoming departures, and a picker that
  * rendered all of them would be a screen nobody can scan (AGENTS.md — bound
- * the page, not the capture). Anything past this is one link away on the
- * board, which is the surface built for scrolling the season.
+ * the page, not the capture).
+ *
+ * Anything past this used to be reachable only by leaving for the schedule
+ * board — the one place staff still met "go look somewhere else" where every
+ * other list says "page 2 of 4" (ADR 20260803-one-pagination-model). It pages
+ * in place now; the board link above stays, because the board is still where
+ * you go to *change* the schedule rather than book against it.
  */
 const TRIP_PAGE_SIZE = 24;
 
@@ -52,12 +58,15 @@ const TRIP_PAGE_SIZE = 24;
  */
 export default async function NewBookingPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
+  searchParams: Promise<{ page?: string }>;
 }) {
   await connection(); // live seat counts — render per request, never a build-time shell
   const session = await requireStaffSession();
   const { shopSlug } = await params;
+  const { page } = await searchParams;
   const db = await getDb();
   // Scoped by the session's own shop, never the URL slug.
   const shop = await getShopById(db, session.user.shopId);
@@ -65,10 +74,16 @@ export default async function NewBookingPage({
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
 
-  const { trips, nextCursor } = await pagedUpcomingTripsWithCounts(db, shop.id, {
+  // A non-numeric or missing `?page=` reads as page 1; the query clamps it into
+  // range so a bookmarked page past the end lands on the last real one.
+  const tripPage = await offsetUpcomingTripsWithCounts(db, shop.id, {
     hasSpace: true,
     limit: TRIP_PAGE_SIZE,
+    page: Number.parseInt(page ?? "", 10),
   });
+  const trips = tripPage.trips;
+  const self = `/shop/${shopSlug}/bookings/new`;
+  const pageHref = (target: number) => (target > 1 ? `${self}?page=${target}` : self);
 
   return (
     <main className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 sm:py-10">
@@ -128,14 +143,14 @@ export default async function NewBookingPage({
                 </li>
               ))}
             </ul>
-            {nextCursor ? (
-              <Link
-                href={`/shop/${shopSlug}/schedule/board`}
-                className="mt-3 inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline"
-              >
-                {t("bookings.new.moreOnBoard")}
-              </Link>
-            ) : null}
+            <Pager
+              page={tripPage.page}
+              pageCount={tripPage.pageCount}
+              href={pageHref}
+              total={t("bookings.new.pagination.total", { count: tripPage.total })}
+              t={t}
+              className="mt-4"
+            />
           </>
         )}
       </section>

@@ -5,6 +5,7 @@ import { MarketingFooter } from "@/components/MarketingFooter";
 import { MarketingNav } from "@/components/MarketingNav";
 import { ShopNotice } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
+import { SuggestShopLink } from "@/components/SuggestShopLink";
 import { TimezoneOptions, type TimezoneZoneLabels } from "@/components/TimezoneOptions";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
@@ -230,6 +231,7 @@ export default async function OnboardPage({
               <FieldGrid columns={2}>
                 <Field label={t("account.onboard.shopNameLabel")}>
                   <input
+                    id="shop-name"
                     name="shopName"
                     type="text"
                     required
@@ -244,6 +246,7 @@ export default async function OnboardPage({
                   hint={t("account.onboard.shopLinkHint")}
                 >
                   <input
+                    id="shop-slug"
                     name="shopSlug"
                     type="text"
                     required
@@ -254,6 +257,10 @@ export default async function OnboardPage({
                     className={controlClass}
                   />
                 </Field>
+                {/* Outside the Field slots (see the DetectTimezone note below)
+                    and rendering nothing: writes the link the shop's name
+                    implies into the slug box until the owner types their own. */}
+                <SuggestShopLink nameId="shop-name" slugId="shop-slug" />
               </FieldGrid>
               <FieldGrid columns={1}>
                 <Field label={t("account.onboard.timezoneLabel")}>

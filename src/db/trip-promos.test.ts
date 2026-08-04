@@ -327,7 +327,7 @@ describe("listOutstandingLastMinutePromos", () => {
     expect(outstanding.map((promo) => promo.tripId)).not.toContain(openTrip.id);
   });
 
-  it("pages with a keyset cursor and never repeats or skips a deal", async () => {
+  it("pages by number and never repeats or skips a deal", async () => {
     const { db, shop, openTrip } = await context();
     await connectStripe(db, shop.id);
     await joinLastMinuteList(db, { shopId: shop.id, ...visitor });
@@ -341,24 +341,74 @@ describe("listOutstandingLastMinutePromos", () => {
     // different trip, so this is at least two rows without depending on the
     // seed's exact shape.
     const all = await listOutstandingLastMinutePromos(db, shop.id);
-    expect(all.nextCursor).toBeNull();
+    expect(all.pageCount).toBe(1);
     expect(all.deals.length).toBeGreaterThanOrEqual(2);
+    expect(all.total).toBe(all.deals.length);
 
     const seen: string[] = [];
-    let cursor: string | undefined;
-    const maxHops = all.deals.length + 1;
-    for (let hops = 0; hops < maxHops; hops++) {
-      const page = await listOutstandingLastMinutePromos(db, shop.id, undefined, {
-        cursor,
+    for (let page = 1; page <= all.total; page++) {
+      const chunk = await listOutstandingLastMinutePromos(db, shop.id, undefined, {
+        page,
         limit: 1,
       });
-      expect(page.deals.length).toBeLessThanOrEqual(1);
-      seen.push(...page.deals.map((deal) => deal.id));
-      if (!page.nextCursor) break;
-      cursor = page.nextCursor;
+      expect(chunk.page).toBe(page);
+      expect(chunk.pageCount).toBe(all.total);
+      expect(chunk.total).toBe(all.total);
+      seen.push(...chunk.deals.map((deal) => deal.id));
     }
     expect(seen).toEqual(all.deals.map((deal) => deal.id));
     expect(new Set(seen).size).toBe(seen.length);
+  });
+
+  it("counts only the deals it lists, so an expired one cannot invent a page", async () => {
+    const { db, shop, openTrip } = await context();
+    await connectStripe(db, shop.id);
+    await joinLastMinuteList(db, { shopId: shop.id, ...visitor });
+    await sendLastMinuteDealBlast(
+      db,
+      { shopId: shop.id, shopSlug: "blue-mantis", tripId: openTrip.id, discountPercent: 30 },
+      fakePromotions(),
+    );
+
+    // A deal expires at its trip's departure, so "after every seeded departure"
+    // is a `now` that outlives all of them. The count has to move with the
+    // rows, or the pager would promise pages of deals that no longer exist.
+    const afterEverything = new Date("2030-01-01T00:00:00.000Z");
+    const none = await listOutstandingLastMinutePromos(db, shop.id, afterEverything);
+    expect(none.deals).toHaveLength(0);
+    expect(none.total).toBe(0);
+    expect(none.pageCount).toBe(1);
+  });
+
+  it("clamps a nonsensical or out-of-range page rather than showing an empty list", async () => {
+    const { db, shop, openTrip } = await context();
+    await connectStripe(db, shop.id);
+    await joinLastMinuteList(db, { shopId: shop.id, ...visitor });
+    await sendLastMinuteDealBlast(
+      db,
+      { shopId: shop.id, shopSlug: "blue-mantis", tripId: openTrip.id, discountPercent: 30 },
+      fakePromotions(),
+    );
+
+    const first = await listOutstandingLastMinutePromos(db, shop.id, undefined, {
+      page: 1,
+      limit: 1,
+    });
+    for (const requested of [0, -3, Number.NaN]) {
+      const clamped = await listOutstandingLastMinutePromos(db, shop.id, undefined, {
+        page: requested,
+        limit: 1,
+      });
+      expect(clamped.page).toBe(1);
+      expect(clamped.deals.map((deal) => deal.id)).toEqual(first.deals.map((deal) => deal.id));
+    }
+
+    const past = await listOutstandingLastMinutePromos(db, shop.id, undefined, {
+      page: 99,
+      limit: 1,
+    });
+    expect(past.page).toBe(past.pageCount);
+    expect(past.deals).toHaveLength(1);
   });
 });
 

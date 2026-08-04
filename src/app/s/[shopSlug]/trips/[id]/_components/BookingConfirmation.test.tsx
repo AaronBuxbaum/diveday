@@ -75,6 +75,7 @@ function renderConfirmation(
       readinessLink="/ready/tok"
       progression={null}
       emailsOnTheWay={overrides.emailsOnTheWay ?? false}
+      partySeats={[]}
     />,
   );
 }

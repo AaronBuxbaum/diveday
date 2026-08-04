@@ -451,8 +451,9 @@
       "show": "Show",
       "hideShowSrLabel": "{action} {title}",
       "previewSrLabel": "Preview {title}",
-      "showMore": "Show more courses",
-      "backToTop": "← Back to the top of the list"
+      "pagination": {
+        "total": "{count, plural, one {# course} other {# courses}}"
+      }
     },
     "edit": {
       "backToCourses": "← Courses",
@@ -661,7 +662,10 @@
       "description": "Published, versioned starting points. Importing makes an independent shop briefing; later template updates never overwrite your edits.",
       "templateVersion": "Template v{version}",
       "importing": "Importing…",
-      "importToLibrary": "Import to my library"
+      "importToLibrary": "Import to my library",
+      "pagination": {
+        "total": "{count, plural, one {# site} other {# sites}}"
+      }
     },
     "form": {
       "nameLabel": "Name",
@@ -908,8 +912,6 @@
     "creating": "Creating…",
     "createCode": "Create code",
     "yourCodes": "Your codes",
-    "showMoreCodes": "Show more codes",
-    "backToTop": "← Back to the top of the list",
     "empty": {
       "heading": "No codes yet",
       "detail": "Create one above, or send a one-trip deal from a departure's page when a boat needs filling.",
@@ -947,8 +949,12 @@
       "recipients": "{count, plural, one {Sent to # diver} other {Sent to # divers}}",
       "expiresAt": "Expires {date}",
       "rangeNote": "Trip deals top out at 90% off — the boat is sailing either way, so a deal always leaves something on the table. Shop-wide codes above can go to 100% because staff also use them for comps and loyalty, not only for filling seats.",
-      "showMore": "Show more deals",
-      "backToTop": "← Back to the top of the list"
+      "pagination": {
+        "total": "{count, plural, one {# deal} other {# deals}}"
+      }
+    },
+    "pagination": {
+      "total": "{count, plural, one {# code} other {# codes}}"
     }
   },
   "reports": {
@@ -2525,14 +2531,22 @@
       "integrityUnsealed": "Unsealed legacy record",
       "medicalFlag": "Medical follow-up flagged",
       "viewFlaggedAnswers": "View flagged answers",
-      "showMoreRecords": "Show more records",
-      "backToTop": "← Back to the top of the list"
+      "pagination": {
+        "total": "{count, plural, one {# record} other {# records}}"
+      }
     }
   },
   "shopHome": {
     "createdNotice": {
       "single": "“{title}” is on the board. 🤙",
       "series": "“{title}” is on the board — {count, plural, one {# trip} other {# trips}} scheduled. 🤙"
+    },
+    "firstBookable": {
+      "heading": "“{title}” is on the board — your shop is bookable. 🎉",
+      "headingSeries": "“{title}” is on the board — {count, plural, one {# trip} other {# trips}} scheduled, and your shop is bookable. 🎉",
+      "body": "This link is your public schedule — the page divers book from. Put it on your website, your socials, and wherever divers find you.",
+      "linkLabel": "Your booking link",
+      "viewAsDiver": "See it the way your divers will"
     },
     "demoReset": "Demo data reset — fresh boat, clean slate. 🤿",
     "emailResent": "Confirmation email re-sent.",
@@ -3302,11 +3316,13 @@
       "emailLabel": "Email",
       "phoneLabel": "Phone",
       "optionalHint": "(optional)",
-      "moreOnBoard": "More departures are on the board",
       "noticeInvalid": "Enter a name to add a diver — email and phone are optional here.",
       "noMatchesHeading": "Nobody on file by that name",
       "noMatchesAction": "Enter them by hand",
-      "backToPicker": "Back to the departure list"
+      "backToPicker": "Back to the departure list",
+      "pagination": {
+        "total": "{count, plural, one {# departure} other {# departures}}"
+      }
     }
   }
 }

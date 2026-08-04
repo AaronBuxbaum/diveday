@@ -17,6 +17,7 @@ import {
 import { nowDate } from "@/lib/clock";
 import type { AppDb, DbExecutor } from "./client";
 import { decodeCursor, encodeCursor } from "./cursor";
+import { offsetPage } from "./paging";
 import {
   bookings,
   courses,
@@ -38,6 +39,19 @@ import {
  * a page never should, because a busy shop's board grows without bound
  * (`pagedUpcomingTripsWithCounts` keysets it instead).
  */
+
+/**
+ * How many departures this shop has ever put on the board, cancelled or not.
+ * One number with one caller in mind: the shop home's "you're bookable"
+ * moment, which needs to know whether the trip that just landed is the
+ * shop's first — the count right after a first creation equals exactly the
+ * number just created (1, or the series size), and any earlier trip, even a
+ * cancelled one, means the shop has had this moment already.
+ */
+export async function countShopTrips(db: DbExecutor, shopId: string): Promise<number> {
+  const [row] = await db.select({ total: count() }).from(trips).where(eq(trips.shopId, shopId));
+  return row?.total ?? 0;
+}
 
 export type TripWithBookedCount = typeof trips.$inferSelect & {
   booked: number;
@@ -108,6 +122,45 @@ export async function listTripIdsInOfflineManifestWindow(
 export const SCHEDULE_PAGE_SIZE = 20;
 
 /**
+ * What "an upcoming departure a page may show" means, in one place.
+ *
+ * Both the keyset reader below and the offset reader after it build their
+ * `where` from this, so a filter can never mean one thing to the schedule
+ * board and another to the booking picker — and, in the offset case, one thing
+ * to the rows and another to the count that pages them.
+ */
+function upcomingTripScope(
+  shopId: string,
+  bounds: {
+    from: Date;
+    monthEnd?: Date;
+    tripType?: "fun_dive" | "course";
+  },
+) {
+  return and(
+    eq(trips.shopId, shopId),
+    eq(trips.status, "scheduled"),
+    gte(trips.startsAt, bounds.from),
+    bounds.monthEnd ? lt(trips.startsAt, bounds.monthEnd) : undefined,
+    bounds.tripType === "fun_dive" ? isNull(trips.courseId) : undefined,
+    bounds.tripType === "course" ? isNotNull(trips.courseId) : undefined,
+  );
+}
+
+/**
+ * "At least one seat left", as a `having` over the same booking join the row
+ * query counts with. `trips.capacity` is legal here despite grouping only by
+ * `trips.id`: the id is the primary key, so Postgres treats every other column
+ * of the row as functionally dependent on it.
+ */
+function hasSpaceHaving(hasSpace: boolean | undefined) {
+  return hasSpace ? sql`count(${bookings.id}) < ${trips.capacity}` : undefined;
+}
+
+/** The join that makes `booked` a count of live bookings rather than all of them. */
+const liveBookingJoin = and(eq(bookings.tripId, trips.id), ne(bookings.status, "cancelled"));
+
+/**
  * The schedule page's list, one keyset page at a time (ordered by departure,
  * then id for a stable tiebreak). `upcomingTripsWithCounts` stays for callers
  * that genuinely need every upcoming trip in memory; the page never should —
@@ -149,15 +202,14 @@ export async function pagedUpcomingTripsWithCounts(
     .from(trips)
     .leftJoin(courses, eq(courses.id, trips.courseId))
     .leftJoin(diveSites, eq(diveSites.id, trips.diveSiteId))
-    .leftJoin(bookings, and(eq(bookings.tripId, trips.id), ne(bookings.status, "cancelled")))
+    .leftJoin(bookings, liveBookingJoin)
     .where(
       and(
-        eq(trips.shopId, shopId),
-        eq(trips.status, "scheduled"),
-        gte(trips.startsAt, lowerBound),
-        options.monthEnd ? lt(trips.startsAt, options.monthEnd) : undefined,
-        options.tripType === "fun_dive" ? isNull(trips.courseId) : undefined,
-        options.tripType === "course" ? isNotNull(trips.courseId) : undefined,
+        upcomingTripScope(shopId, {
+          from: lowerBound,
+          monthEnd: options.monthEnd,
+          tripType: options.tripType,
+        }),
         afterDate && after && !Number.isNaN(afterDate.getTime())
           ? or(
               gt(trips.startsAt, afterDate),
@@ -167,7 +219,7 @@ export async function pagedUpcomingTripsWithCounts(
       ),
     )
     .groupBy(trips.id, courses.id, diveSites.id)
-    .having(options.hasSpace ? sql`count(${bookings.id}) < ${trips.capacity}` : undefined)
+    .having(hasSpaceHaving(options.hasSpace))
     .orderBy(asc(trips.startsAt), asc(trips.id))
     .limit(limit + 1);
 
@@ -179,6 +231,102 @@ export async function pagedUpcomingTripsWithCounts(
     trips: page,
     nextCursor:
       rows.length > limit && last ? encodeCursor(last.startsAt.toISOString(), last.id) : null,
+  };
+}
+
+export type UpcomingTripOffsetPage = {
+  trips: TripWithBookedCount[];
+  page: number;
+  pageCount: number;
+  pageSize: number;
+  total: number;
+};
+
+/**
+ * The same upcoming-departure list as {@link pagedUpcomingTripsWithCounts},
+ * offset-paged — for a surface that is *picking one departure* rather than
+ * walking the season forward.
+ *
+ * The schedule board keeps its cursor stack on purpose: it reads a stream with
+ * no end to count, and "Show earlier"/"Show later" name a direction in time
+ * (ADR 20260803-one-pagination-model). The add-booking picker is the opposite
+ * shape. It has a filter (`hasSpace`) and a question with an answer — "which
+ * Saturday?" — and it used to show the first 24 and then say *go look at the
+ * board*, the last surface where staff met that instead of "page 2 of 4".
+ *
+ * The count runs over the grouped, `having`-filtered set as a subquery rather
+ * than over `trips` directly. Counting the base table would ignore `hasSpace`
+ * and promise pages made entirely of sold-out departures the rows below can
+ * never contain.
+ */
+export async function offsetUpcomingTripsWithCounts(
+  db: AppDb,
+  shopId: string,
+  options: {
+    page?: number;
+    limit?: number;
+    now?: Date;
+    monthEnd?: Date;
+    /** Only trips with at least one open seat (booked < capacity). */
+    hasSpace?: boolean;
+    /** "fun_dive" for no linked course, "course" for a course session. */
+    tripType?: "fun_dive" | "course";
+  } = {},
+): Promise<UpcomingTripOffsetPage> {
+  const now = options.now ?? nowDate();
+  const scope = upcomingTripScope(shopId, {
+    from: now,
+    monthEnd: options.monthEnd,
+    tripType: options.tripType,
+  });
+  const having = hasSpaceHaving(options.hasSpace);
+
+  const paged = await offsetPage({
+    page: options.page,
+    pageSize: options.limit ?? SCHEDULE_PAGE_SIZE,
+    countRows: async () => {
+      const matching = db
+        .select({ id: trips.id })
+        .from(trips)
+        .leftJoin(bookings, liveBookingJoin)
+        .where(scope)
+        .groupBy(trips.id)
+        .having(having)
+        .as("matching_trips");
+      const [counted] = await db.select({ total: count() }).from(matching);
+      return counted?.total ?? 0;
+    },
+    fetchRows: async (offset, limit) =>
+      db
+        .select({
+          trip: trips,
+          course: courses,
+          diveSite: diveSites,
+          booked: count(bookings.id),
+        })
+        .from(trips)
+        .leftJoin(courses, eq(courses.id, trips.courseId))
+        .leftJoin(diveSites, eq(diveSites.id, trips.diveSiteId))
+        .leftJoin(bookings, liveBookingJoin)
+        .where(scope)
+        .groupBy(trips.id, courses.id, diveSites.id)
+        .having(having)
+        .orderBy(asc(trips.startsAt), asc(trips.id))
+        .limit(limit)
+        .offset(offset),
+  });
+
+  return {
+    trips: paged.rows.map(({ trip, course, diveSite, booked }) => ({
+      ...trip,
+      course,
+      diveSite,
+      booked,
+    })),
+    page: paged.page,
+    pageCount: paged.pageCount,
+    pageSize: paged.pageSize,
+    total: paged.total,
   };
 }
 

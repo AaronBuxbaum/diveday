@@ -44,6 +44,11 @@ or give the reader any sense of what they were looking at.
   forward-only cursors to offset. All three already ordered on a total key with an id tiebreak and
   already ran a count, so the conversion is small and exact — `?after=<cursor>` becomes `?page=N`.
 - `listShopOrders` and the by-departure view keep their behaviour and adopt the component.
+- The four secondary lists left forward-only in the first pass — `pagedCourses` (the courses
+  roster), `listShopPromoCodes` and `listOutstandingLastMinutePromos` (the Promos page's two
+  lists), and `listWaiverIntegrityAudit` (the waiver signature log) — convert on the same terms.
+  The two on `/promos` page independently, so each page link carries the other list's `?page=`
+  rather than resetting it, and the signature log's page links carry the `?record=` pin.
 - **The schedule board keeps its cursor stack.** It pages a *stream* of upcoming departures with no
   page count to state, its first page deliberately carries the open roll-calls that belong at the
   front of the board (`schedule/board/page.tsx`), and "Show earlier"/"Show later" name a direction
@@ -70,20 +75,39 @@ or give the reader any sense of what they were looking at.
 ## Consequences
 
 `src/db/cursor.ts` stays, but it is now the exception a surface has to earn rather than the default.
-The board earns it. Three secondary staff lists — the courses roster, the promo-code lists, and the
-waiver signature log — still wear the old forward-only "Show more … / ← Back to the top" and are
-**not** yet converted; they are the same job as Divers/Reports/Reviews and should adopt this model
-next. Grammar 4 survives too, and is the fourth straggler: the add-booking departure picker
-(`bookings/new/page.tsx`) still shows the first 24 upcoming departures with space and names the
-schedule board as the way to reach anything past them, with no pager of its own. That is tolerable
-— it is a *pick one* step, not a list to read, and the board really is the surface built for
-scrolling the season — but it is the one place a staffer still meets "go look somewhere else"
-where every other list now says "page 2 of 4". Revisit it with the three above; do not read its
-survival as this decision blessing a fourth grammar. Any *new* paged staff list uses `offsetPage` +
-`Pager` from the start.
+**The schedule board is the only surface that earns it**, and grammars 2, 3 (off the board), and 4
+are gone: every other paged staff list answers with `OffsetPage` and renders `Pager`. Any *new*
+paged staff list uses them from the start.
 
-Three surfaces change shape visually (a pager band where a "Show more" button was) and the Orders
-index gains a range note above its table; those baselines move.
+The follow-up pass that finished this also closed two gaps the first pass did not name:
+
+- The **published dive-site catalog** (`/dive-sites/catalog`) had no pagination at all — a catalog
+  DiveDay intends to keep adding to, rendered whole as cards. It pages now, and the library's
+  "a newer version is published" badge asks `currentGlobalDiveSiteVersions` for the template ids on
+  the page it is rendering instead of indexing the whole catalog, so paging the catalog cannot
+  silently drop a badge.
+- `listDiveSitesPage` hand-rolled its own offset arithmetic. It clamped a page *below* 1 but had no
+  answer for one past the end, so a bookmarked `?page=9` on a library that had shrunk rendered an
+  empty table under "Page 9 of 4" — the exact failure `offsetPage` exists to prevent. It goes
+  through `offsetPage` now.
+
+Two counting rules came out of the conversions and hold for any list that adopts this model:
+**count what the list actually lists.** A count taken off `listShopPromoCodes`'s redemption
+`leftJoin` would report a code redeemed forty times as forty codes; a count of `trips` that ignored
+the booking picker's `hasSpace` filter would page sold-out departures into a page that renders
+nothing. Both counts therefore share the row query's exact scope — its joins, its `where`, its
+`having`, and its `now`.
+
+Several surfaces change shape visually (a pager band where a "Show more" button was, one where
+there was nothing) and the Orders index gains a range note above its table; those baselines move.
+
+Lists that stay unpaged, deliberately, because they are bounded by something other than time:
+a shop's staff (`listShopStaff`), its certification paths, its course catalog in a `<select>`,
+and a trip's roster and waitlist (bounded by capacity). The **diver record** is the one place a
+query is still unbounded on purpose — it loads a diver's whole booking, order, payment, and
+imported-visit history to compute the page's stats — but its render is bounded by a preview plus a
+disclosure rather than a pager, because it is one person's record, not a list to walk. If that
+query ever bites, the fix is a paged history section behind the same `OffsetPage` shape.
 
 The offset scan is O(offset) on a large table. For the roster (name-ordered, page sizes of 20) and
 the moderation queue this is not close to mattering; if a shop's orders index ever gets deep enough

@@ -92,6 +92,16 @@ export type AnalyticsEvent =
       source: "diver" | "staff";
     }
   | {
+      /**
+       * A party member claimed their own seat through a `/claim/[token]` link
+       * (docs ADR 20260804-seat-claim-links) — the group-organizer bet's core
+       * conversion: paperwork moving off the organizer and onto the diver it
+       * belongs to. Never carries the token or any identity.
+       */
+      name: "seat_claimed";
+      source: "diver";
+    }
+  | {
       /** A booking was cancelled, by the diver themself or by a staff member. */
       name: "booking_cancelled";
       source: "diver" | "staff";
