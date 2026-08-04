@@ -89,6 +89,14 @@ export type OfflineManifestPayload = {
        */
       crew: Array<
         Pick<TripManifest["crew"][number], "fullName" | "roles"> & {
+          /**
+           * Everyone on the teams this crew member is on, by name only — the
+           * same rule and the same reason as a diver's `buddyTeamNames` below.
+           * Flattened across teams, because a divemaster leading three groups
+           * on the dock is being asked "who are you with?", not "which of your
+           * three groups is this?".
+           */
+          buddyTeamNames?: string[];
           rollCall?: {
             state: "boarded" | "not_boarded";
             occurredAt: string;
@@ -127,16 +135,24 @@ export type OfflineManifestPayload = {
           /** Dropped at save time; the dock does not need it (kept for shape parity). */
           email: null;
           /**
-           * The diver's buddy **by name only** — no booking id, deliberately
-           * (ADR 20260804-buddy-pairs). The dock copy *displays* buddy teams;
-           * it never computes pair divergence, because a snapshot cannot know
-           * who came back — an id would invite exactly that derivation.
+           * The rest of this diver's buddy team **by name only** — no booking
+           * ids, no person ids, deliberately (ADR 20260804-buddy-teams). The
+           * dock copy *displays* teams; it never computes team divergence,
+           * because a snapshot cannot know who came back — an id would invite
+           * exactly that derivation.
+           *
+           * A list, because a team is two or more and a member may be crew.
+           * Crew are not marked as such here: the dock copy prints who you are
+           * with, and the roles list above already says who is crew.
+           *
            * Optional and additive, so no `OFFLINE_MANIFEST_RECORD_VERSION`
-           * bump (a bump is a purge — see the note on the constant above):
-           * an older snapshot simply shows no buddy, which is display-only
-           * and fails toward silence, never toward a false all-clear.
+           * bump (a bump is a purge — see the note on the constant above): an
+           * older snapshot simply shows no team, which is display-only and
+           * fails toward silence, never toward a false all-clear. A snapshot
+           * saved before this field became a list carried `buddyFullName`,
+           * which no reader looks at any more — the same silence.
            */
-          buddyFullName?: string | null;
+          buddyTeamNames?: string[];
           /**
            * `text` is resolved once, at save time — this snapshot may be read
            * back with no network and no translator available, so unlike the
@@ -204,6 +220,13 @@ export function serializeManifests(
       crew: manifest.crew.map((member) => ({
         fullName: member.fullName,
         roles: member.roles,
+        // Names only, and de-duplicated: a teammate who shares two of this
+        // person's groups is still one body to look for.
+        buddyTeamNames: [
+          ...new Set(
+            (member.buddyTeams ?? []).flatMap((team) => team.others.map((other) => other.fullName)),
+          ),
+        ],
         rollCall: member.rollCall
           ? {
               state: member.rollCall.state,
@@ -225,9 +248,10 @@ export function serializeManifests(
         emergencyContactPhone: diver.emergencyContactPhone,
         rentalFit: diver.rentalFit,
         nitroxRequested: diver.nitroxRequested,
-        // Name only, never the buddy's booking id — the dock copy displays
-        // pairs and must stay unable to compute divergence from a snapshot.
-        buddyFullName: diver.buddy?.fullName ?? null,
+        // Names only, never a teammate's booking or person id — the dock copy
+        // displays teams and must stay unable to compute divergence from a
+        // snapshot.
+        buddyTeamNames: (diver.buddyTeam?.others ?? []).map((other) => other.fullName),
         // Not needed for dock-side roll call; minimize retained private data.
         email: null as null,
         readiness: {

@@ -20,10 +20,17 @@ import { SkipLink } from "@/components/SkipLink";
 import { SubSurfaceRipple } from "@/components/SubSurfaceRipple";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
+import { controlClass, Field } from "@/components/ui/form";
 import { WaterLocker, WaterLockerToggle } from "@/components/WaterLocker";
 import { canPersonExportIncidentRecord } from "@/db/authz";
-import { listTripBuddyPairs, pairBuddies, unpairBuddies } from "@/db/buddy-pairs";
+import {
+  addBuddyTeamMember,
+  type BuddyTeamMemberInput,
+  dissolveBuddyTeam,
+  formBuddyTeam,
+  listTripBuddyTeams,
+  removeBuddyTeamMember,
+} from "@/db/buddy-pairs";
 import { getDb } from "@/db/client";
 import {
   getTripManifests,
@@ -47,11 +54,14 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { trackEvent } from "@/lib/analytics";
 import { formatDateTimeTz, formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import {
+  type BuddyAlert,
   isNotBackAboard,
   isRollCallCheckpoint,
+  type ManifestBuddyTeam,
   type RollCallCheckpoint,
   rollCallCheckpoints,
   rollCallLabel,
+  splitBuddyTeamIds,
 } from "@/lib/manifests";
 import { serializeManifests } from "@/lib/offline-manifests";
 import { requireStaffSession } from "@/lib/session";
@@ -120,17 +130,52 @@ const crewRollCallSchema = z.object({
   status: z.enum(["boarded", "not_boarded", "cleared"]),
 });
 
-// Buddy pairing takes two bookings; every rule about them (same trip, active
-// seat, not already paired) is re-proved server-side in `pairBuddies` — this
-// only checks the shape of the form.
-const pairBuddiesSchema = z.object({
-  bookingIdA: z.string().uuid(),
-  bookingIdB: z.string().uuid(),
-});
+/**
+ * A team member as the form carries one: `diver:<bookingId>` or
+ * `crew:<personId>`. One token per checkbox and per select option, so a form
+ * that mixes divers and crew stays a flat list of values rather than two
+ * parallel fields a caller could pair up wrongly.
+ *
+ * Every rule about a member (same trip, active seat, assigned crew, not
+ * already teamed) is re-proved server-side in `src/db/buddy-pairs.ts`; this
+ * only checks the shape.
+ */
+const memberTokenSchema = z.string().regex(/^(?:diver|crew):[0-9a-fA-F-]{36}$/, "member token");
 
-const unpairBuddiesSchema = z.object({
-  bookingId: z.string().uuid(),
+function parseMemberToken(token: string): BuddyTeamMemberInput {
+  const [kind, id] = token.split(":");
+  return kind === "diver"
+    ? { kind: "diver", bookingId: id as string }
+    : { kind: "crew", personId: id as string };
+}
+
+const formTeamSchema = z.object({ members: z.array(memberTokenSchema).min(2).max(40) });
+const teamMemberSchema = z.object({
+  teamId: z.string().uuid(),
+  member: memberTokenSchema,
 });
+const teamSchema = z.object({ teamId: z.string().uuid() });
+
+/**
+ * The one place a team refusal turns into a query param. Two refusals a
+ * staffer can act on get their own words, plus the size rule; the rest
+ * (tenancy, cancelled trip, non-roster booking, a team that vanished under
+ * them) collapse into one — they mean the form was stale or forged, not that a
+ * different pick would have worked.
+ *
+ * **Module scope, deliberately.** A `"use server"` closure serializes the scope
+ * it captures, so a helper declared beside the actions inside the page
+ * component is a function in that scope — and every action that calls it fails
+ * with "Functions cannot be passed directly to Client Components" the moment a
+ * form posts. It renders fine on first load and dies on the round trip, which
+ * is about the least helpful way a mistake can present itself.
+ */
+function buddyErrorCode(reason: string): string {
+  if (reason === "duplicate_member") return "duplicate";
+  if (reason === "already_teamed") return "teamed";
+  if (reason === "too_few_members") return "few";
+  return "generic";
+}
 
 export default async function TripManifestPage({
   params,
@@ -152,11 +197,11 @@ export default async function TripManifestPage({
   const completeManifests = await getTripManifests(db, shop.id, tripId);
   const departureManifest = completeManifests?.[0];
   if (!departureManifest || !completeManifests) notFound();
-  // Raw pair rows, cancelled members included: the pairs panel must show a
-  // pair whose seat was cancelled (it still blocks re-pairing the survivor
-  // until dissolved), while the manifest derivation above already dropped it
-  // from every diver's `buddy` (ADR 20260804-buddy-pairs).
-  const buddyPairsList = await listTripBuddyPairs(db, shop.id, tripId);
+  // Raw membership rows, cancelled members included: the teams panel must show
+  // a team whose seat was cancelled (it still blocks re-teaming the survivors
+  // until dissolved), while the manifest derivation above already dropped that
+  // member from every row's team (ADR 20260804-buddy-teams).
+  const buddyTeamsList = await listTripBuddyTeams(db, shop.id, tripId);
 
   const plannedDives = departureManifest.trip.plannedDives;
   const checkpoints = rollCallCheckpoints(plannedDives);
@@ -296,77 +341,133 @@ export default async function TripManifestPage({
   }
 
   /**
-   * Pair two divers as a buddy team (ADR 20260804-buddy-pairs). A plain form
-   * post rather than an optimistic control: pairing is a deliberate desk/dock
-   * act, not a mid-roll-call tap, so it settles only once the server has
-   * written both member rows. Every refusal re-lands on this checkpoint with a
-   * worded reason.
+   * Form a buddy team from two or more people (ADR 20260804-buddy-teams). A
+   * plain form post rather than an optimistic control: pairing is a deliberate
+   * desk/dock act, not a mid-roll-call tap, so it settles only once the server
+   * has written every member row and the trail entry behind them. Every
+   * refusal re-lands on this checkpoint with a worded reason.
    */
-  async function pairBuddiesAction(formData: FormData) {
+  async function formBuddyTeamAction(formData: FormData) {
     "use server";
     const staff = await requireStaffSession();
-    const parsed = pairBuddiesSchema.safeParse(Object.fromEntries(formData));
-    if (!parsed.success) redirect(`${back}&buddyError=generic`);
-    const outcome = await pairBuddies(await getDb(), {
+    const parsed = formTeamSchema.safeParse({ members: formData.getAll("members") });
+    // Fewer than two ticked is the one shape error a staffer can act on, so it
+    // gets the size wording rather than the generic one.
+    if (!parsed.success) redirect(`${back}&buddyError=few`);
+    const outcome = await formBuddyTeam(await getDb(), {
       shopId: staff.user.shopId,
       tripId,
-      bookingIdA: parsed.data.bookingIdA,
-      bookingIdB: parsed.data.bookingIdB,
-      pairedByPersonId: staff.user.personId,
+      members: parsed.data.members.map(parseMemberToken),
+      recordedByPersonId: staff.user.personId,
     });
-    if (!outcome.ok) {
-      // Two refusals a staffer can act on get their own words; the rest
-      // (tenancy, cancelled trip, non-roster booking) collapse into one —
-      // they mean the form was stale or forged, not that a different pick
-      // would have worked.
-      const code =
-        outcome.reason === "same_booking"
-          ? "same"
-          : outcome.reason === "already_paired"
-            ? "paired"
-            : "generic";
-      redirect(`${back}&buddyError=${code}`);
-    }
+    if (!outcome.ok) redirect(`${back}&buddyError=${buddyErrorCode(outcome.reason)}`);
     revalidatePath(back.split("?")[0]);
     redirect(back);
   }
 
-  /** Dissolve a buddy team — the explicit act re-pairing always goes through. */
-  async function unpairBuddiesAction(formData: FormData) {
+  /** Add one more person to a team that already stands. */
+  async function addBuddyTeamMemberAction(formData: FormData) {
     "use server";
     const staff = await requireStaffSession();
-    const parsed = unpairBuddiesSchema.safeParse(Object.fromEntries(formData));
+    const parsed = teamMemberSchema.safeParse(Object.fromEntries(formData));
     if (!parsed.success) redirect(`${back}&buddyError=generic`);
-    const outcome = await unpairBuddies(await getDb(), {
+    const outcome = await addBuddyTeamMember(await getDb(), {
       shopId: staff.user.shopId,
       tripId,
-      bookingId: parsed.data.bookingId,
+      teamId: parsed.data.teamId,
+      member: parseMemberToken(parsed.data.member),
+      recordedByPersonId: staff.user.personId,
+    });
+    if (!outcome.ok) redirect(`${back}&buddyError=${buddyErrorCode(outcome.reason)}`);
+    revalidatePath(back.split("?")[0]);
+    redirect(back);
+  }
+
+  /**
+   * Drop one person from a team that keeps standing. The server refuses a
+   * removal that would leave fewer than two, which is why this control only
+   * appears on teams of three or more — dissolving is its own act, with its
+   * own entry on the trail.
+   */
+  async function removeBuddyTeamMemberAction(formData: FormData) {
+    "use server";
+    const staff = await requireStaffSession();
+    const parsed = teamMemberSchema.safeParse(Object.fromEntries(formData));
+    if (!parsed.success) redirect(`${back}&buddyError=generic`);
+    const outcome = await removeBuddyTeamMember(await getDb(), {
+      shopId: staff.user.shopId,
+      tripId,
+      teamId: parsed.data.teamId,
+      member: parseMemberToken(parsed.data.member),
+      recordedByPersonId: staff.user.personId,
+    });
+    if (!outcome.ok) redirect(`${back}&buddyError=${buddyErrorCode(outcome.reason)}`);
+    revalidatePath(back.split("?")[0]);
+    redirect(back);
+  }
+
+  /** Dissolve a team — the explicit act re-forming always goes through. */
+  async function dissolveBuddyTeamAction(formData: FormData) {
+    "use server";
+    const staff = await requireStaffSession();
+    const parsed = teamSchema.safeParse(Object.fromEntries(formData));
+    if (!parsed.success) redirect(`${back}&buddyError=generic`);
+    const outcome = await dissolveBuddyTeam(await getDb(), {
+      shopId: staff.user.shopId,
+      tripId,
+      teamId: parsed.data.teamId,
+      recordedByPersonId: staff.user.personId,
     });
     if (!outcome.ok) redirect(`${back}&buddyError=generic`);
     revalidatePath(back.split("?")[0]);
     redirect(back);
   }
 
-  // Who can still be paired: any active roster entry not already in a pair —
-  // including a pair whose other seat was cancelled, which must be dissolved
-  // first (the server refuses it too; this just keeps the picker honest).
-  const pairedBookingIds = new Set(
-    buddyPairsList.flatMap((pair) => pair.members.map((member) => member.bookingId)),
+  // Who can still join a *new* team: any active roster entry not already on
+  // one — including a member of a team whose other seat was cancelled, which
+  // must be dissolved first (the server refuses it too; this just keeps the
+  // picker honest). Crew are always offerable: one divemaster commonly leads
+  // several groups on one boat, so they carry no "at most one team" rule.
+  const teamedBookingIds = new Set(
+    buddyTeamsList.flatMap((team) =>
+      team.members.flatMap((member) => (member.kind === "diver" ? [member.bookingId] : [])),
+    ),
   );
-  const unpairedDivers = manifest.divers.filter((diver) => !pairedBookingIds.has(diver.bookingId));
-  // One diver with a separated-after-a-dive buddy per split pair (the boarded
-  // one carries the alert), so this count is a count of split teams.
-  const separatedPairs = isDeparture
-    ? 0
-    : manifest.divers.filter((diver) => diver.buddyAlert === "separated_after_dive").length;
+  const unteamedDivers = manifest.divers.filter((diver) => !teamedBookingIds.has(diver.bookingId));
+  // Everyone the builder can offer, as `{ token, label }` — divers who are
+  // free, and every assigned crew member.
+  const diverOptions = unteamedDivers.map((diver) => ({
+    token: `diver:${diver.bookingId}`,
+    label: diver.fullName,
+  }));
+  const crewOptions = manifest.crew.map((member) => ({
+    token: `crew:${member.id}`,
+    label: member.fullName,
+  }));
+  // A count of split *teams*, not of rows wearing an alert: a team of four
+  // with three back puts the alert on three rows, and the line says "N teams
+  // are split" (`splitBuddyTeamIds`, src/lib/manifests.ts).
+  const separatedTeams = isDeparture ? 0 : splitBuddyTeamIds(manifest, "separated_after_dive").size;
+  // "Buddy team: Ana and Ben" — names de-duplicated (a divemaster on two teams
+  // with one diver in common is still one body to look for) and joined through
+  // `Intl.ListFormat` in the negotiated locale, never a hard-coded ", ".
+  const teamNameList = new Intl.ListFormat(locale, { type: "conjunction" });
+  const buddyTeamLabel = (teams: ReadonlyArray<ManifestBuddyTeam>) => {
+    const names = [...new Set(teams.flatMap((team) => team.others.map((o) => o.fullName)))];
+    return names.length === 0
+      ? null
+      : t("shared.buddyTeam.with", { names: teamNameList.format(names) });
+  };
   const buddyErrorText =
-    buddyError === "same"
-      ? t("trips.manifest.buddyErrorSamePick")
-      : buddyError === "paired"
-        ? t("trips.manifest.buddyErrorAlreadyPaired")
-        : buddyError
-          ? t("trips.manifest.buddyErrorGeneric")
-          : null;
+    buddyError === "duplicate"
+      ? t("trips.manifest.buddyErrorDuplicate")
+      : buddyError === "teamed"
+        ? t("trips.manifest.buddyErrorAlreadyTeamed")
+        : buddyError === "few"
+          ? t("trips.manifest.buddyErrorTooFew")
+          : buddyError
+            ? t("trips.manifest.buddyErrorGeneric")
+            : null;
 
   const errorRefusal = t("trips.rollCall.errorRefusal");
   // Crew have no readiness, so the `not_ready` refusal can never be returned by
@@ -643,14 +744,14 @@ export default async function TripManifestPage({
                     ? t("trips.manifest.crewAwaiting", { count: crewCounts.crewAwaiting })
                     : t("trips.manifest.allAccountedFor")}
         </p>
-        {/* Buddy teams that came back split — one aboard, one not (ADR
-            20260804-buddy-pairs). Its own line, never folded into the
+        {/* Buddy teams that came back split — someone aboard, someone not
+            (ADR 20260804-buddy-teams). Its own line, never folded into the
             completeness reason above: it informs the deck and blocks
             nothing, and the checkpoint's own open/closed verdict must not
             appear to depend on it. */}
-        {separatedPairs > 0 ? (
+        {separatedTeams > 0 ? (
           <p className="mt-1 text-sm font-bold text-danger" role="status">
-            {t("trips.manifest.buddySeparatedLine", { count: separatedPairs })}
+            {t("trips.manifest.buddySeparatedLine", { count: separatedTeams })}
           </p>
         ) : null}
       </section>
@@ -739,6 +840,17 @@ export default async function TripManifestPage({
                               {rollCallLabelText(t, rollCallLabel(checkpoint, rc))}
                             </span>
                           )}
+                          {/* Crew wear the same chip as a diver — a
+                              divemaster who is back while the group they lead
+                              is not is the same split, and it must not read
+                              differently on their row. */}
+                          <BuddyTeamChip
+                            label={buddyTeamLabel(member.buddyTeams ?? [])}
+                            alertText={
+                              member.buddyAlert ? buddyAlertText(t, member.buddyAlert) : null
+                            }
+                            alert={member.buddyAlert}
+                          />
                         </p>
                         {rc && !rc.implied ? (
                           <p className="mt-2 text-sm text-muted">
@@ -823,11 +935,12 @@ export default async function TripManifestPage({
       </section>
 
       {/*
-       * Buddy teams (ADR 20260804-buddy-pairs). Pairing is a decision about
-       * this departure — bookings, not people — made here because this is
-       * the surface the roll call runs from. Management controls only, so
-       * the whole panel stays off the printed manifest; the pair itself
-       * prints on each diver's row.
+       * Buddy teams (ADR 20260804-buddy-teams). Grouping is a decision about
+       * this departure, made here because this is the surface the roll call
+       * runs from. A team is two or more, and a member is a seated diver or a
+       * crew person — the divemaster leading a group holds no booking.
+       * Management controls only, so the whole panel stays off the printed
+       * manifest; the team itself prints on each member's row.
        */}
       <section aria-labelledby="buddy-teams-heading" className="mt-9 print:hidden">
         <h2 id="buddy-teams-heading" className="text-lg font-semibold">
@@ -841,92 +954,193 @@ export default async function TripManifestPage({
             {buddyErrorText}
           </p>
         ) : null}
-        {buddyPairsList.length === 0 ? (
-          <p className="mt-3 text-sm text-muted">{t("trips.manifest.buddyNoPairs")}</p>
+        {buddyTeamsList.length === 0 ? (
+          <p className="mt-3 text-sm text-muted">{t("trips.manifest.buddyNoTeams")}</p>
         ) : (
           <ul className="mt-3 divide-y divide-border rounded-lg border border-border bg-surface">
-            {buddyPairsList.map((pair) => {
-              const memberName = (member: (typeof pair.members)[number]) =>
-                member.cancelled
-                  ? t("trips.manifest.buddyCancelledName", { name: member.fullName })
-                  : member.fullName;
-              const [first, second] = pair.members;
+            {buddyTeamsList.map((team, index) => {
+              // Members of *this* team can't join another, and neither can a
+              // diver already on one — so the "add" picker offers whoever is
+              // left, plus any crew not already on this team.
+              const onThisTeam = new Set(
+                team.members.map((member) =>
+                  member.kind === "diver" ? `diver:${member.bookingId}` : `crew:${member.personId}`,
+                ),
+              );
+              const free = (options: typeof diverOptions) =>
+                options.filter((option) => !onThisTeam.has(option.token));
+              const addableDivers = free(diverOptions);
+              const addableCrew = free(crewOptions);
               return (
-                <li
-                  key={pair.pairId}
-                  className="flex flex-wrap items-center justify-between gap-3 px-4 py-3"
-                >
-                  <div className="min-w-0">
-                    <p className="font-semibold">
-                      {first && second
-                        ? t("trips.manifest.buddyPairNames", {
-                            a: memberName(first),
-                            b: memberName(second),
-                          })
-                        : (first ?? second)
-                          ? memberName((first ?? second) as (typeof pair.members)[number])
-                          : null}
-                    </p>
-                    <p className="text-sm text-muted">
-                      {t("trips.manifest.buddyPairedBy", { name: pair.pairedByName })}
-                    </p>
+                <li key={team.teamId} className="px-4 py-3">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+                        {t("trips.manifest.buddyTeamLabel", { number: index + 1 })}
+                      </p>
+                      <ul className="mt-1.5 flex flex-wrap items-center gap-2">
+                        {team.members.map((member) => {
+                          const token =
+                            member.kind === "diver"
+                              ? `diver:${member.bookingId}`
+                              : `crew:${member.personId}`;
+                          const name =
+                            member.kind === "crew"
+                              ? t("trips.manifest.buddyCrewName", { name: member.fullName })
+                              : member.cancelled
+                                ? t("trips.manifest.buddyCancelledName", { name: member.fullName })
+                                : member.fullName;
+                          // Only a team of three or more can lose a member and
+                          // stay a team; at two the act is a dissolve, which
+                          // has its own button and its own entry on the trail.
+                          const removable = team.members.length > 2;
+                          return (
+                            <li
+                              key={token}
+                              className={`flex items-center gap-1 rounded-full border border-border bg-surface-sunken py-1 font-semibold ${
+                                removable ? "ps-3 pe-1" : "px-3"
+                              }`}
+                            >
+                              <span>{name}</span>
+                              {removable ? (
+                                <form action={removeBuddyTeamMemberAction} className="flex">
+                                  <input type="hidden" name="teamId" value={team.teamId} />
+                                  <input type="hidden" name="member" value={token} />
+                                  {/* A real target, not a bare "×" glyph: this
+                                      panel is worked on a moving deck, and the
+                                      chip shape is what makes the control read
+                                      as a control rather than a typo. */}
+                                  <button
+                                    type="submit"
+                                    className="flex size-7 items-center justify-center rounded-full text-lg leading-none text-muted hover:bg-danger/10 hover:text-danger"
+                                  >
+                                    <span aria-hidden="true">×</span>
+                                    <span className="sr-only">
+                                      {t("trips.manifest.buddyRemoveMember", {
+                                        name: member.fullName,
+                                      })}
+                                    </span>
+                                  </button>
+                                </form>
+                              ) : null}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                      <p className="mt-1 text-sm text-muted">
+                        {t("trips.manifest.buddyRecordedBy", { name: team.recordedByName })}
+                      </p>
+                    </div>
+                    <form action={dissolveBuddyTeamAction}>
+                      <input type="hidden" name="teamId" value={team.teamId} />
+                      <button
+                        type="submit"
+                        className={buttonClass({ variant: "secondary", size: "boat" })}
+                      >
+                        {t("trips.manifest.buddyDissolve")}
+                      </button>
+                    </form>
                   </div>
-                  <form action={unpairBuddiesAction}>
-                    <input
-                      type="hidden"
-                      name="bookingId"
-                      value={(first ?? second)?.bookingId ?? ""}
-                    />
-                    <button
-                      type="submit"
-                      className={buttonClass({ variant: "secondary", size: "boat" })}
+                  {addableDivers.length + addableCrew.length > 0 ? (
+                    <form
+                      action={addBuddyTeamMemberAction}
+                      className="mt-3 flex flex-wrap items-end gap-2"
                     >
-                      {t("trips.manifest.buddyUnpair")}
-                    </button>
-                  </form>
+                      <input type="hidden" name="teamId" value={team.teamId} />
+                      <Field label={t("trips.manifest.buddyAddMemberLabel")}>
+                        <select name="member" required defaultValue="" className={controlClass}>
+                          <option value="" disabled>
+                            {t("trips.manifest.buddySelectPlaceholder")}
+                          </option>
+                          <optgroup label={t("trips.manifest.buddyDiverGroupLabel")}>
+                            {addableDivers.map((option) => (
+                              <option key={option.token} value={option.token}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </optgroup>
+                          <optgroup label={t("trips.manifest.buddyCrewGroupLabel")}>
+                            {addableCrew.map((option) => (
+                              <option key={option.token} value={option.token}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </optgroup>
+                        </select>
+                      </Field>
+                      <button
+                        type="submit"
+                        className={buttonClass({ variant: "secondary", size: "boat" })}
+                      >
+                        {t("trips.manifest.buddyAddMemberSubmit")}
+                      </button>
+                    </form>
+                  ) : null}
                 </li>
               );
             })}
           </ul>
         )}
-        {unpairedDivers.length >= 2 ? (
-          <FieldGrid as="form" action={pairBuddiesAction} columns={2} className="mt-4">
-            <Field label={t("trips.manifest.buddyFirstLabel")}>
-              <select name="bookingIdA" required defaultValue="" className={controlClass}>
-                <option value="" disabled>
-                  {t("trips.manifest.buddySelectPlaceholder")}
-                </option>
-                {unpairedDivers.map((diver) => (
-                  <option key={diver.bookingId} value={diver.bookingId}>
-                    {diver.fullName}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field label={t("trips.manifest.buddySecondLabel")}>
-              <select name="bookingIdB" required defaultValue="" className={controlClass}>
-                <option value="" disabled>
-                  {t("trips.manifest.buddySelectPlaceholder")}
-                </option>
-                {unpairedDivers.map((diver) => (
-                  <option key={diver.bookingId} value={diver.bookingId}>
-                    {diver.fullName}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <FieldActions>
-              <button type="submit" className={buttonClass({ size: "boat" })}>
-                {t("trips.manifest.buddyPairSubmit")}
-              </button>
-            </FieldActions>
-          </FieldGrid>
-        ) : unpairedDivers.length === 1 && unpairedDivers[0] ? (
+        {/*
+         * The builder: tick two or more. A multi-select checkbox list rather
+         * than N paired dropdowns, because a team has no fixed size and the
+         * old two-select form could only ever express the one case the model
+         * no longer restricts us to.
+         */}
+        {diverOptions.length + crewOptions.length >= 2 ? (
+          <form action={formBuddyTeamAction} className="mt-4">
+            <fieldset className="rounded-lg border border-border bg-surface p-4">
+              <legend className="px-1 text-sm font-semibold">
+                {t("trips.manifest.buddyNewTeamHeading")}
+              </legend>
+              <p className="max-w-prose text-sm text-muted">
+                {t("trips.manifest.buddyNewTeamHint")}
+              </p>
+              {diverOptions.length > 0 ? (
+                <>
+                  <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-muted">
+                    {t("trips.manifest.buddyDiverGroupLabel")}
+                  </p>
+                  <div className="mt-1 flex flex-wrap gap-x-5 gap-y-2">
+                    {diverOptions.map((option) => (
+                      <label key={option.token} className="flex items-center gap-2 text-base">
+                        <input type="checkbox" name="members" value={option.token} />
+                        <span>{option.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </>
+              ) : null}
+              {crewOptions.length > 0 ? (
+                <>
+                  <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-muted">
+                    {t("trips.manifest.buddyCrewGroupLabel")}
+                  </p>
+                  <div className="mt-1 flex flex-wrap gap-x-5 gap-y-2">
+                    {crewOptions.map((option) => (
+                      <label key={option.token} className="flex items-center gap-2 text-base">
+                        <input type="checkbox" name="members" value={option.token} />
+                        <span>{option.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </>
+              ) : null}
+              <div className="mt-4">
+                <button type="submit" className={buttonClass({ size: "boat" })}>
+                  {t("trips.manifest.buddyFormSubmit")}
+                </button>
+              </div>
+            </fieldset>
+          </form>
+        ) : unteamedDivers.length === 1 && unteamedDivers[0] ? (
           // An odd roster is normal, never an error — say so instead of
-          // rendering a picker that can only fail.
+          // rendering a builder that can only fail.
           <p className="mt-3 text-sm text-muted">
-            {t("trips.manifest.buddyUnpairedOne", { name: unpairedDivers[0].fullName })}
+            {t("trips.manifest.buddyUnteamedOne", { name: unteamedDivers[0].fullName })}
           </p>
+        ) : unteamedDivers.length === 0 && buddyTeamsList.length > 0 ? (
+          <p className="mt-3 text-sm text-muted">{t("trips.manifest.buddyEveryoneTeamed")}</p>
         ) : null}
       </section>
 
@@ -1053,26 +1267,11 @@ export default async function TripManifestPage({
                           {rollCallLabelText(t, rollCallLabel(checkpoint, rc))}
                         </span>
                       )}
-                      {/* The buddy chip: quiet while the pair's statuses
-                          match, loud when this diver is back and their buddy
-                          is not (ADR 20260804-buddy-pairs). Words carry the
-                          meaning; the tone only agrees with them. Informs
-                          only — never a gate. */}
-                      {diver.buddy ? (
-                        <span
-                          className={
-                            diver.buddyAlert === "separated_after_dive"
-                              ? "rounded-full bg-danger/15 px-3 py-1 text-sm font-bold text-danger"
-                              : diver.buddyAlert === "separated_dock"
-                                ? "rounded-full bg-warning/10 px-3 py-1 text-sm font-semibold text-warning-strong"
-                                : "rounded-full bg-surface-sunken px-3 py-1 text-sm font-medium text-muted"
-                          }
-                        >
-                          {diver.buddyAlert
-                            ? `${t("shared.buddyPair.with", { name: diver.buddy.fullName })} · ${buddyAlertText(t, diver.buddyAlert)}`
-                            : t("shared.buddyPair.with", { name: diver.buddy.fullName })}
-                        </span>
-                      ) : null}
+                      <BuddyTeamChip
+                        label={buddyTeamLabel(diver.buddyTeam ? [diver.buddyTeam] : [])}
+                        alertText={diver.buddyAlert ? buddyAlertText(t, diver.buddyAlert) : null}
+                        alert={diver.buddyAlert}
+                      />
                     </div>
                     {/* The plan for dive two is made here, on the boat, during
                         the surface interval — so the depth advisory has to be
@@ -1322,5 +1521,46 @@ export default async function TripManifestPage({
         }}
       />
     </div>
+  );
+}
+
+/**
+ * The buddy-team chip a roster row wears — quiet while the team's statuses
+ * agree, loud when this person is back and someone on their team is not
+ * (ADR 20260804-buddy-teams). Words carry the meaning; the tone only agrees
+ * with them. Informs only — never a gate.
+ *
+ * One component for divers and crew, so a split team can never read one way on
+ * a diver's row and another on the divemaster's.
+ *
+ * It takes **words, not a translator**: the same rule staff Client Components
+ * follow (AGENTS.md). A resolver function is not serializable into the RSC
+ * payload a client navigation streams, so passing `t` here rendered on first
+ * load and then threw "Functions cannot be passed directly to Client
+ * Components" the moment a form post redirected back — the page came back as
+ * the error boundary with no clue why.
+ */
+function BuddyTeamChip({
+  label,
+  alertText,
+  alert,
+}: {
+  label: string | null;
+  alertText: string | null;
+  alert: BuddyAlert | null;
+}) {
+  if (!label) return null;
+  return (
+    <span
+      className={
+        alert === "separated_after_dive"
+          ? "rounded-full bg-danger/15 px-3 py-1 text-sm font-bold text-danger"
+          : alert === "separated_dock"
+            ? "rounded-full bg-warning/10 px-3 py-1 text-sm font-semibold text-warning-strong"
+            : "rounded-full bg-surface-sunken px-3 py-1 text-sm font-medium text-muted"
+      }
+    >
+      {alertText ? `${label} · ${alertText}` : label}
+    </span>
   );
 }

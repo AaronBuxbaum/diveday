@@ -14,9 +14,15 @@ async function exportContext() {
   const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
   const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
   if (!reef) throw new Error("demo reef trip missing");
-  const [staff] = await listStaff(db, shop.id);
-  if (!staff) throw new Error("demo staff missing");
-  return { db, shop, reef, staff: staff.person };
+  const staffRows = await listStaff(db, shop.id);
+  // The generator must be an **owner**: `getIncidentExport` re-checks the
+  // owner-only gate itself rather than trusting its caller, so a divemaster
+  // here would get `null` from every assertion below and the failure would
+  // read as a data bug rather than an authorization one.
+  const owner = staffRows.find((row) => row.roles.includes("owner"));
+  const crew = staffRows.find((row) => !row.roles.includes("owner"));
+  if (!owner || !crew) throw new Error("demo shop needs an owner and a non-owner staff member");
+  return { db, shop, reef, staff: owner.person, nonOwner: crew.person };
 }
 
 describe("incident-ready export assembly (in-memory PGlite)", () => {
@@ -148,5 +154,21 @@ describe("incident-ready export assembly (in-memory PGlite)", () => {
     await expect(
       getIncidentExport(db, shop.id, reef.id, "00000000-0000-0000-0000-000000000000"),
     ).resolves.toBeNull();
+  });
+
+  /**
+   * The gate lives here as well as on the route (src/lib/authz.ts,
+   * `canExportIncidentRecord`). The document names whoever generated it, so
+   * "the route forgot to check" cannot be the only thing standing between a
+   * captain and a departure's whole evidentiary record — and read-only-looking
+   * helpers acquire callers (security review 20260804).
+   */
+  it("refuses to assemble the document for anyone but an owner", async () => {
+    const { db, shop, reef, staff, nonOwner } = await exportContext();
+    // Same shop, same trip, a real active staff member — refused, and refused
+    // by returning nothing rather than a partial document.
+    await expect(getIncidentExport(db, shop.id, reef.id, nonOwner.id)).resolves.toBeNull();
+    // The owner still gets it, so this is a role gate and not a broken reader.
+    await expect(getIncidentExport(db, shop.id, reef.id, staff.id)).resolves.not.toBeNull();
   });
 });

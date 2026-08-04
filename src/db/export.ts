@@ -354,8 +354,10 @@ export async function loadShopExportBundleInput(
         .where(eq(rollCallCrewEvents.shopId, shopId))
         .orderBy(asc(rollCallCrewEvents.occurredAt), asc(rollCallCrewEvents.id));
 
-      // Buddy teams standing at export time — not a history: unpairing
-      // deletes the rows (ADR 20260804-buddy-pairs).
+      // Buddy teams standing at export time — not a history: dissolving a team
+      // deletes the rows, and the trail that outlives them (`buddy_team_events`)
+      // is an in-product operational record, deliberately not exported
+      // (ADR 20260804-buddy-teams).
       const buddyPairRows = await tx
         .select()
         .from(buddyPairMembers)
@@ -1179,32 +1181,36 @@ export async function loadShopExportBundleInput(
             "trip_id",
             "trip_title",
             "trip_starts_at",
+            "member_kind",
             "booking_id",
+            "crew_person_id",
             "person_id",
             "person_name",
             "paired_by_person_id",
             "paired_by_name",
             "created_at",
           ],
-          // Same seam as listTripBuddyPairs: crew membership is not yet exported.
-          rows: buddyPairRows.flatMap((row) => {
-            if (!row.bookingId) return [];
-            const personId = bookingPerson.get(row.bookingId);
-            // Double-wrapped: flatMap flattens one level, and the inner array is
-            // the CSV row itself.
+          // One row per member, diver or crew (ADR 20260804-buddy-teams).
+          // `person_id` resolves to the same thing either way — the human — so a
+          // reader who only cares "who was on this team" reads one column;
+          // `member_kind` is what tells them whether that human held a seat.
+          rows: buddyPairRows.map((row) => {
+            const personId = row.bookingId
+              ? (bookingPerson.get(row.bookingId) ?? null)
+              : row.crewPersonId;
             return [
-              [
-                row.pairId,
-                row.tripId,
-                tripTitle.get(row.tripId),
-                tripStartsAt.get(row.tripId),
-                row.bookingId,
-                personId,
-                personId ? personName.get(personId) : null,
-                row.pairedByPersonId,
-                personName.get(row.pairedByPersonId),
-                row.createdAt,
-              ],
+              row.pairId,
+              row.tripId,
+              tripTitle.get(row.tripId),
+              tripStartsAt.get(row.tripId),
+              row.bookingId ? "diver" : "crew",
+              row.bookingId,
+              row.crewPersonId,
+              personId,
+              personId ? personName.get(personId) : null,
+              row.pairedByPersonId,
+              personName.get(row.pairedByPersonId),
+              row.createdAt,
             ];
           }),
           note: EXPORT_FILE_NOTES["buddy_pairs.csv"],

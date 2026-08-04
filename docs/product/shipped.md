@@ -41,16 +41,23 @@ idempotent and resumable; no money moves (refunds stay per-booking, H-14 gate in
 Alternative-day salvage and a courtesy text channel are the named follow-ons. See
 [20260804-blowout-cascade](../architecture/decisions/20260804-blowout-cascade.md).
 
-## Buddy pairs in roll call (delivered 2026-08-04)
+## Buddy teams in roll call (delivered 2026-08-04)
 
-Staff pair divers into buddy teams on the manifest, and roll call stops being a flat list: when
-one buddy is back aboard and the other is not — the state a real deck watches for — the pair and
-the returned diver's row both say so, loud after a dive and as a heads-up at the dock. Pairs are
-exactly two bookings of one departure, DB-enforced to at most one pair per diver, explicit to
-make and to dissolve, and they **inform only** — never readiness, admission, capacity, or
-checkpoint completeness. The offline copy shows pairs read-only by name and says the split-pair
-read belongs to the live roll call; the export bundle carries the standing pairs as
-`buddy_pairs.csv`. Seeded on the demo reef boat (two teams plus the normal odd remainder). See
+Staff group a departure the way it will dive, and roll call stops being a flat list: when someone
+is back aboard and someone on their team is not — the state a real deck watches for — that person's
+row and the checkpoint panel both say so, loud after a dive and as a heads-up at the dock. A team is
+**two or more**, and a member is a seated diver *or* a crew person, so the divemaster leading a
+group is recordable — before that, a diver deliberately placed with a DM printed on the incident
+export identically to a diver nobody paired. A diver is DB-enforced to at most one team per
+departure; a divemaster may lead several. Every act — form, add, remove, dissolve — is explicit and
+appends to a **pairing trail** carrying the member names as they stood, which outlives the
+membership rows a dissolve deletes and renders in the incident export's roll-call timeline, closing
+the one fact on that document that had no audit entry. Teams **inform only** — never readiness,
+admission, capacity, or checkpoint completeness — and a shop that records none is unremarked. The
+offline copy shows teams read-only by name (divers *and* crew) and says the split-team read belongs
+to the live roll call; the export bundle carries standing teams as `buddy_pairs.csv`, crew rows
+included. Seeded on the demo reef boat: a pair, a divemaster-led trio, and the normal odd remainder.
+See [20260804-buddy-teams](../architecture/decisions/20260804-buddy-teams.md), which supersedes
 [20260804-buddy-pairs](../architecture/decisions/20260804-buddy-pairs.md).
 
 ## Scheduled backup export to shop-owned storage (2026-08-04)

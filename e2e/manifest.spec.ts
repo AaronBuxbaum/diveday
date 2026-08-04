@@ -46,13 +46,19 @@ test("live manifest retains blocked divers and records an explicit not-boarded r
   // readiness vocabulary now (src/i18n/readiness-labels.ts), and this panel
   // names the same state its diver rows do.
   await expect(page.getByRole("heading", { name: "Blocked divers" })).toBeVisible();
-  await expect(page.getByText("Priya Sharma")).toBeVisible();
+  // Her own row heading, not a bare text match: every unteamed diver's name
+  // also appears on the buddy-team builder's checkbox below (ADR
+  // 20260804-buddy-teams), so `getByText` is a strict-mode violation here.
+  await expect(page.getByRole("heading", { name: "Priya Sharma" })).toBeVisible();
 
   // At departure the readiness gate hides boarding for blocked divers only —
   // Priya is the boat's one remaining straggler (the rest of the roster
   // already signed their waiver), so she alone has no boarding button while
-  // the rest of the roster does.
-  const priyaRow = page.locator("li", { hasText: "Priya Sharma" });
+  // the rest of the roster does. Anchored on the row's own <h3> for the same
+  // reason: a team row carries her name inside its "add a member" picker.
+  const priyaRow = page
+    .locator("#roll-call-list li")
+    .filter({ has: page.getByRole("heading", { name: "Priya Sharma", exact: true }) });
   await expect(priyaRow.getByRole("button", { name: "Mark boarded" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Mark boarded" }).first()).toBeVisible();
 
@@ -268,7 +274,23 @@ test("the offline fallback never reaches beyond the manifest route", async ({ pa
   }
   // No redirect exists for this route, so a failed reload surfaces the
   // browser's own offline error exactly as it did before this feature shipped.
-  expect(reloadError?.message).toContain("ERR_INTERNET_DISCONNECTED");
+  //
+  // Asserted as "the reload failed, and the browser is sitting on its own
+  // network-error page" rather than by matching the thrown error's *message*:
+  // that message has two legitimate shapes depending on when the
+  // chrome-error:// interstitial commits. If it commits while the CDP
+  // Page.reload call is still in flight, the target detaches and Playwright
+  // reports "Protocol error (Page.reload): Not attached to an active page"
+  // instead of the navigation's own ERR_INTERNET_DISCONNECTED — with the
+  // browser nonetheless on the offline interstitial, which is the thing this
+  // test is actually about. Matching the message made that a ~1-in-10 flake
+  // (reproduced on main, not introduced by any one branch); it is the same
+  // chrome-error:// commit race d635994 fixed on the setOffline(false) side.
+  // The error code in the interstitial's own DOM is not localized, and a
+  // worker that wrongly swallowed this route would serve the guests page here
+  // instead — so this still fails loudly on the regression it guards.
+  expect(reloadError).toBeDefined();
+  await expect(page.locator("body")).toContainText("ERR_INTERNET_DISCONNECTED");
   expect(page.url()).not.toContain("/offline-manifest");
 
   await context.setOffline(false);

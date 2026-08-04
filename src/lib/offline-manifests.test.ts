@@ -333,7 +333,7 @@ describe("offline manifest policy", () => {
   it("carries a buddy as a name only — never an id, never a computed divergence", () => {
     // The dock copy *displays* buddy teams; whether a pair is split is a
     // live-roll-call read, and a snapshot cannot know who came back (ADR
-    // 20260804-buddy-pairs). Shipping only the name is what keeps that
+    // 20260804-buddy-teams). Shipping only the name is what keeps that
     // derivation impossible offline rather than merely unimplemented.
     const manifest: TripManifest = {
       trip: {
@@ -369,7 +369,13 @@ describe("offline manifest policy", () => {
           rentalFit: { state: "own_kit" },
           nitroxRequested: false,
           checkedIn: false,
-          buddy: { bookingId: "booking-lena", fullName: "Lena Fischer" },
+          buddyTeam: {
+            teamId: "team-1",
+            others: [
+              { kind: "diver", bookingId: "booking-lena", fullName: "Lena Fischer" },
+              { kind: "crew", personId: "person-keiko", fullName: "Keiko Tanaka" },
+            ],
+          },
           rollCall: {
             state: "boarded",
             occurredAt: new Date("2026-07-20T13:30:00.000Z"),
@@ -410,12 +416,16 @@ describe("offline manifest policy", () => {
       (blocker) => blocker.code,
     );
     const [tom, omar] = payload.manifests[0]?.divers ?? [];
-    expect(tom?.buddyFullName).toBe("Lena Fischer");
-    // An unpaired diver stays honestly empty rather than absent-by-accident.
-    expect(omar?.buddyFullName).toBeNull();
-    // Neither the pair's booking id nor the live alert crosses to the device.
-    expect(tom).not.toHaveProperty("buddy");
+    // Every teammate, crew included, by name — and only by name.
+    expect(tom?.buddyTeamNames).toEqual(["Lena Fischer", "Keiko Tanaka"]);
+    // An unteamed diver stays honestly empty rather than absent-by-accident.
+    expect(omar?.buddyTeamNames).toEqual([]);
+    // Neither a teammate's id nor the live alert crosses to the device — an id
+    // would invite computing a divergence a snapshot cannot know.
+    expect(tom).not.toHaveProperty("buddyTeam");
     expect(tom).not.toHaveProperty("buddyAlert");
+    expect(JSON.stringify(tom)).not.toContain("booking-lena");
+    expect(JSON.stringify(tom)).not.toContain("person-keiko");
   });
 
   it("never writes age, minor status, or birthdays to a crew device", () => {

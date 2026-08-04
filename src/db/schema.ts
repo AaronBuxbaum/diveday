@@ -3199,24 +3199,27 @@ export const rollCallCrewEvents = pgTable(
 );
 
 /**
- * Buddy pairing: staff pair two roster entries (bookings) of the same
- * departure into a buddy team, so roll call can read "one buddy is back
- * aboard and the other is not" as a first-class state instead of a flat list
- * (ADR 20260804-buddy-pairs).
+ * Buddy teams: staff group a departure's roster the way it will dive, so roll
+ * call can read "someone is back aboard and someone on their team is not" as a
+ * first-class state instead of a flat list (ADR 20260804-buddy-teams).
  *
- * One row per **member**, two rows per pair, sharing a `pair_id`. Not a
- * pair-per-row table with two booking columns, deliberately: the invariant
- * that matters here is *a booking is in at most one pair*, and the unique
- * index on `booking_id` enforces it at the database, under concurrency —
- * a two-column shape cannot (a booking can sit in column A of one row and
- * column B of another and satisfy both column uniques). Pairs are exactly
- * two: `pairBuddies` (src/db/buddy-pairs.ts) is the only writer and inserts
- * both members in one transaction; a trio is two pairs' worth of a decision
- * the shop makes (glossary **Buddy pair**).
+ * One row per **member**, two or more rows per team, sharing a `pair_id` (the
+ * physical name predates the model; every word a human reads says "team"). Not
+ * a team-per-row table with member columns, deliberately: the invariant that
+ * matters is *a booking is in at most one team*, and the unique index on
+ * `booking_id` enforces it at the database, under concurrency — a
+ * columns-per-member shape cannot (a booking can sit in column A of one row and
+ * column B of another and satisfy both column uniques), and it could not hold a
+ * team of four at all.
  *
- * Operational grouping, not safety history: unpairing deletes the rows — the
- * roll-call events themselves are the append-only record of who was aboard.
- * Pairs inform the roll call's attention state and never gate readiness,
+ * A member is a seated diver **or** a crew person, exactly one of the two (the
+ * check constraint below). Crew carry no uniqueness rule on purpose: one
+ * divemaster commonly leads several groups on one boat.
+ *
+ * The writers live in src/db/buddy-pairs.ts, one per act, each writing every
+ * row it needs in one transaction. Dissolving deletes the membership rows —
+ * `buddy_team_events` below is the append-only record that outlives them.
+ * Teams inform the roll call's attention state and never gate readiness,
  * admission, capacity, or checkpoint completeness.
  */
 export const buddyPairMembers = pgTable(
@@ -3280,6 +3283,14 @@ export const buddyTeamEventAction = pgEnum("buddy_team_event_action", [
  * is what makes the pairing auditable, and it is why `member_names` is
  * denormalised: its whole job is to outlive the rows it describes, so it cannot
  * resolve them by id afterwards.
+ *
+ * **Deliberately not pruned** (`RETENTION_DAYS`, src/lib/retention.ts). It is
+ * safety evidence about a departure, in the same class as `roll_call_events`
+ * and `roll_call_crew_events`, which are not pruned either — a window here
+ * would put an expiry on the answer to "who was this diver with?" precisely
+ * when an old incident is being reconstructed. Demo shops still clear it: both
+ * reset orderings delete it, and `delete-path-coverage.test.ts` keeps them
+ * honest about that.
  */
 export const buddyTeamEvents = pgTable(
   "buddy_team_events",

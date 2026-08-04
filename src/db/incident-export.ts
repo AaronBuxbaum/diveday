@@ -3,12 +3,14 @@ import { alias } from "drizzle-orm/pg-core";
 import { nowDate } from "@/lib/clock";
 import {
   buildIncidentExport,
-  type IncidentBuddyPairingInput,
+  type IncidentBuddyTeamEventInput,
+  type IncidentBuddyTeamInput,
   type IncidentCrewCountInput,
   type IncidentExportDocument,
   type IncidentTimelineEventInput,
 } from "@/lib/incident-export";
-import { listTripBuddyPairs } from "./buddy-pairs";
+import { canPersonExportIncidentRecord } from "./authz";
+import { listTripBuddyTeamEvents, listTripBuddyTeams } from "./buddy-pairs";
 import type { AppDb } from "./client";
 import { getTripManifests } from "./manifests";
 import { listTripReadiness } from "./readiness";
@@ -33,6 +35,15 @@ import { getShopById } from "./shops";
  * from the same readers every safety surface uses (`getTripManifests`,
  * `listTripReadiness`), so this document cannot disagree with the manifest the
  * crew ran the day on.
+ *
+ * **Re-checks the owner-only gate itself** rather than trusting its caller, the
+ * same way `createOrder` and `anonymizeDiver` re-check theirs (src/db/authz.ts).
+ * The route above already refuses, so today this is belt and braces — but this
+ * function assembles a whole departure's evidentiary record and stamps the
+ * caller's name on it as its generator, and read-only-looking helpers acquire
+ * callers: a PDF endpoint, a cron, an "email the insurer" action. "The route
+ * forgot to check" must not be the thing standing between a captain and the
+ * document (security review 20260804).
  */
 export async function getIncidentExport(
   db: AppDb,
@@ -41,6 +52,7 @@ export async function getIncidentExport(
   generatedByPersonId: string,
   generatedAt: Date = nowDate(),
 ): Promise<IncidentExportDocument | null> {
+  if (!(await canPersonExportIncidentRecord(db, shopId, generatedByPersonId))) return null;
   const manifests = await getTripManifests(db, shopId, tripId);
   if (!manifests || manifests.length === 0) return null;
 
@@ -123,20 +135,41 @@ export async function getIncidentExport(
     createdAt: attestation.createdAt,
   }));
 
-  // Provenance for the pairings the manifest already carries. Read here rather
-  // than widened onto the manifest's `BuddyRef`, which is deliberately
-  // name-only so the offline snapshot cannot carry enough to compute a
-  // divergence off the boat. Team numbers come from this list's own order
-  // (`createdAt`, then `pairId`), so they are stable across regenerations.
-  const buddyPairs = await listTripBuddyPairs(db, shopId, tripId);
-  const buddyPairings: IncidentBuddyPairingInput[] = buddyPairs.flatMap((pair, index) =>
-    pair.members.map((member) => ({
-      bookingId: member.bookingId,
-      teamNumber: index + 1,
-      pairedByName: pair.pairedByName,
-      pairedAt: pair.createdAt,
-    })),
-  );
+  // The teams standing on this departure, plus the append-only trail behind
+  // them. Read here rather than off the manifest, whose carried team is
+  // deliberately reduced to names so the offline snapshot cannot carry enough
+  // to compute a divergence off the boat. Team numbers come from this list's
+  // own order (`createdAt`, then `pairId`), so they are stable across
+  // regenerations and the content hash stays reproducible.
+  //
+  // A member whose seat was cancelled is dropped here for the same reason the
+  // manifest drops them: this document states the pairing as it stood for the
+  // people who were aboard, and the trail below is where a cancelled member's
+  // membership survives.
+  const [teamRows, teamEventRows] = await Promise.all([
+    listTripBuddyTeams(db, shopId, tripId),
+    listTripBuddyTeamEvents(db, shopId, tripId),
+  ]);
+  const buddyTeams: IncidentBuddyTeamInput[] = teamRows.map((team) => ({
+    teamId: team.teamId,
+    members: team.members.flatMap((member): IncidentBuddyTeamInput["members"][number][] =>
+      member.kind === "crew"
+        ? [{ kind: "crew", personId: member.personId, fullName: member.fullName }]
+        : member.cancelled
+          ? []
+          : [{ kind: "diver", bookingId: member.bookingId, fullName: member.fullName }],
+    ),
+    recordedByName: team.recordedByName,
+    recordedAt: team.createdAt,
+  }));
+  const buddyTeamEvents: IncidentBuddyTeamEventInput[] = teamEventRows.map((event) => ({
+    teamId: event.teamId,
+    action: event.action,
+    memberNames: event.memberNames,
+    recordedByName: event.recordedByName,
+    occurredAt: event.occurredAt,
+    createdAt: event.createdAt,
+  }));
 
   return buildIncidentExport({
     shop: { name: shop.name, slug: shop.slug, timezone: shop.timezone },
@@ -153,7 +186,8 @@ export async function getIncidentExport(
     })),
     events,
     crewCounts,
-    buddyPairings,
+    buddyTeams,
+    buddyTeamEvents,
     generatedAt,
     generatedByName,
   });

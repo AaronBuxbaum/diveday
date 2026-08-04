@@ -126,14 +126,13 @@ export type ManifestDiverInput = {
   medicalWaiver?: MedicalWaiverMark | null;
   rollCall?: RollCallRecord;
   /**
-   * The other member of this diver's buddy pair, when staff paired them
-   * (ADR 20260804-buddy-pairs). Only ever set for a buddy who is an active
-   * roster entry on the same trip — the db assembly drops a pair whose other
-   * booking is cancelled, so a cancelled buddy can never raise an alert
-   * about a person who is not on the boat. Display and alert input only;
-   * never a gate.
+   * The buddy team staff put this diver on, when they did
+   * (ADR 20260804-buddy-teams). Teammates are only ever people who are
+   * actually aboard — the db assembly drops a member whose seat was since
+   * cancelled, so a cancelled teammate can never raise an alert about someone
+   * who is not on the boat. Display and alert input only; never a gate.
    */
-  buddy?: BuddyRef | null;
+  buddyTeam?: ManifestBuddyTeam | null;
   /**
    * The diver was confirmed at the counter (`bookings.status === "checked_in"`).
    * Counter check-in and boat roll call are two different questions — arrived
@@ -181,6 +180,20 @@ export type ManifestCrewMember = {
    * nobody has said, which keeps the checkpoint open.
    */
   rollCall?: RollCallRecord;
+  /**
+   * The buddy teams this crew member leads or dives on
+   * (ADR 20260804-buddy-teams). Crew hold no booking, so before that model a
+   * divemaster leading a group was unrecordable and a diver placed with one
+   * printed identically to a diver nobody paired. Carried here for the same
+   * reason a diver's team is: a crew member who is back while a group they lead
+   * is not is exactly the split the deck watches for.
+   *
+   * **Plural, unlike a diver's.** One divemaster commonly leads several groups
+   * on one boat, which is how guided diving runs, so crew carry no "at most one
+   * team" constraint — that rule is a statement about divers only, and it is
+   * what keeps a diver's row unambiguous.
+   */
+  buddyTeams?: ManifestBuddyTeam[];
 };
 
 /**
@@ -271,36 +284,60 @@ export function isRecordedAshore(
   return !isNotBackAboard(checkpoint, rollCall);
 }
 
-/** The other half of a diver's buddy pair, as the manifest carries it. */
-export type BuddyRef = {
-  bookingId: string;
-  fullName: string;
+/** One teammate, as the manifest carries them — a seated diver, or crew. */
+export type BuddyTeammate =
+  | { kind: "diver"; bookingId: string; fullName: string }
+  | { kind: "crew"; personId: string; fullName: string };
+
+/**
+ * The buddy team one roster entry belongs to, from that entry's own point of
+ * view (ADR 20260804-buddy-teams).
+ *
+ * `others` is everyone on the team **except** this person, which is what both
+ * the chip and the alert read: a team is a fact about a group, but a row on the
+ * manifest is a fact about one body, and the question that row answers is "who
+ * am I supposed to be with?".
+ *
+ * Only members who are actually aboard appear. The db assembly drops a diver
+ * whose seat was since cancelled, so an alert can never accuse someone who is
+ * not on the boat; the teams panel keeps showing them so the team stays
+ * dissolvable.
+ */
+export type ManifestBuddyTeam = {
+  teamId: string;
+  others: BuddyTeammate[];
 };
 
 /**
- * Buddy teams on the roll call (ADR 20260804-buddy-pairs). Divers dive in
- * pairs; the state a real deck watches for is **one buddy back aboard while
- * the other is not**. This predicate turns that watch into a first-class,
- * derived attention state on the manifest — quiet when a pair's statuses
- * match, loud when they split.
+ * Buddy teams on the roll call (ADR 20260804-buddy-teams). The state a real
+ * deck watches for is **at least one member back aboard while at least one is
+ * not**. This predicate turns that watch into a first-class, derived attention
+ * state on the manifest — quiet when a team's statuses agree, loud when they
+ * split.
  *
- * What a diver's row should say about their buddy at one checkpoint — from
- * **this diver's own perspective**, which is why it is not symmetric:
+ * What one member's row should say about their team at one checkpoint — from
+ * **that member's own perspective**, which is why it is not symmetric:
  *
- * - `separated_dock` — this diver is aboard at departure and their buddy is
+ * - `separated_dock` — this person is aboard at departure and a teammate is
  *   not (yet). Ordinary mid-boarding churn, worth a glance, worded and toned
  *   as a heads-up rather than an alarm.
- * - `separated_after_dive` — this diver came back from a dive and their buddy
- *   is not recorded back aboard: still awaiting a result, or a human said
- *   they did not come back. This is the signal a deck watches for, and it is
- *   the loud one.
- * - `null` — nothing to say. Covers: no divergence (both aboard, both ashore,
- *   both awaiting), this diver not being aboard themselves (their *own* row
- *   already carries whatever state matters — their buddy's row is where the
- *   "back without their buddy" fact renders), and a buddy who is recorded
- *   ashore from the dock (`isRecordedAshore`): a buddy who never left the
- *   dock is accounted for on land, not separated in the water, and alarming
+ * - `separated_after_dive` — this person came back from a dive and a teammate
+ *   is not recorded back aboard: still awaiting a result, or a human said they
+ *   did not come back. This is the signal a deck watches for, and it is the
+ *   loud one.
+ * - `null` — nothing to say. Covers: no divergence (everyone aboard, everyone
+ *   ashore, everyone awaiting), this person not being aboard themselves (their
+ *   *own* row already carries whatever state matters — a teammate's row is
+ *   where the "back without them" fact renders), and teammates who are
+ *   recorded ashore from the dock (`isRecordedAshore`): someone who never left
+ *   the dock is accounted for on land, not separated in the water, and alarming
  *   about them would teach the crew to stop reading the panel.
+ *
+ * **One unaccounted-for teammate is enough.** The reading is fail-closed by
+ * design: a team of four with three back and one not is exactly as loud as a
+ * pair with one back and one not, because the boat's next move is identical.
+ * A team with no teammates left aboard (everyone else's seat was cancelled)
+ * has nothing to diverge from and stays quiet.
  *
  * Codes, not sentences: the UI resolves the words through
  * `src/i18n/buddy-labels.ts`, same rule as every other status in the app.
@@ -308,7 +345,7 @@ export type BuddyRef = {
  * A buddy alert **informs and never acts**: it does not block boarding, does
  * not touch `rollCallCompleteness`, does not message anyone, and plays no
  * part in readiness, admission, or capacity. The roll-call events stay the
- * only record of who is aboard. The offline copy displays saved pairs but
+ * only record of who is aboard. The offline copy displays saved teams but
  * never computes this — a snapshot cannot know who came back
  * (src/lib/offline-manifests.ts).
  */
@@ -317,16 +354,22 @@ export type BuddyAlert = "separated_dock" | "separated_after_dive";
 export function buddyAlertFor(
   checkpoint: RollCallCheckpoint,
   self: Pick<RollCallRecord, "state" | "implied"> | undefined,
-  buddy: Pick<RollCallRecord, "state" | "implied"> | undefined,
+  teammates: ReadonlyArray<Pick<RollCallRecord, "state" | "implied"> | undefined>,
 ): BuddyAlert | null {
-  // Only a diver who is themselves aboard can be "back without their buddy".
+  // Only someone who is themselves aboard can be "back without their team".
   if (self?.state !== "boarded") return null;
-  if (buddy?.state === "boarded") return null;
-  if (checkpoint === "departure") return "separated_dock";
-  // A buddy recorded ashore at the dock (explicitly, or carried forward)
-  // never left — accounted for on land, not missing from the water.
-  if (isRecordedAshore(checkpoint, buddy)) return null;
-  return "separated_after_dive";
+  // A teammate who is aboard is settled. After a dive, so is one recorded
+  // ashore at the dock (explicitly, or carried forward): they never left, so
+  // they are accounted for on land rather than missing from the water. At the
+  // dock itself that exemption must not apply — "aboard while my buddy is
+  // still ashore" is precisely the heads-up this checkpoint exists to give.
+  const unsettled = teammates.some(
+    (mate) =>
+      mate?.state !== "boarded" &&
+      (checkpoint === "departure" || !isRecordedAshore(checkpoint, mate)),
+  );
+  if (!unsettled) return null;
+  return checkpoint === "departure" ? "separated_dock" : "separated_after_dive";
 }
 
 /** One crew member, reduced to the only field a head count reads. */
@@ -520,7 +563,14 @@ export type TripManifest = {
     plannedDives: number;
   };
   checkpoint: RollCallCheckpoint;
-  crew: ManifestCrewMember[];
+  crew: (ManifestCrewMember & {
+    /**
+     * This crew member is back and at least one teammate is not — the same
+     * derivation a diver's row carries, on the same terms (ADR
+     * 20260804-buddy-teams).
+     */
+    buddyAlert: BuddyAlert | null;
+  })[];
   /**
    * Whether this checkpoint is closed — divers *and* crew. Derived here so the
    * live page and the offline copy cannot drift apart; the offline view
@@ -532,10 +582,10 @@ export type TripManifest = {
     readiness: ReadinessResult;
     rollCall: ManifestDiverInput["rollCall"];
     /**
-     * This diver is back and their buddy is not (`buddyAlertFor`). Derived
-     * here — the one derivation both the screen and the tests read — and
-     * deliberately absent from the offline snapshot: a saved copy cannot
-     * know who came back, so it displays pairs and computes nothing.
+     * This diver is back and at least one teammate is not (`buddyAlertFor`).
+     * Derived here — the one derivation both the screen and the tests read —
+     * and deliberately absent from the offline snapshot: a saved copy cannot
+     * know who came back, so it displays teams and computes nothing.
      */
     buddyAlert: BuddyAlert | null;
   })[];
@@ -561,6 +611,65 @@ export type TripManifest = {
   };
 };
 
+type MaybeRollCall = Pick<RollCallRecord, "state" | "implied"> | undefined;
+
+/**
+ * Every teammate's roll-call record, across however many teams a row is on.
+ *
+ * A teammate the caller cannot resolve is **dropped, not counted as
+ * unaccounted for** — a stale reference is a bug in the assembly, and a bug
+ * must not manufacture an alarm about a person nobody can name.
+ */
+function teammateRollCallsIn(
+  teams: ReadonlyArray<ManifestBuddyTeam | null | undefined>,
+  byBooking: ReadonlyMap<string, MaybeRollCall>,
+  byCrewId: ReadonlyMap<string, MaybeRollCall>,
+): MaybeRollCall[] {
+  return teams.flatMap((team) =>
+    (team?.others ?? []).flatMap((other) =>
+      other.kind === "diver"
+        ? byBooking.has(other.bookingId)
+          ? [byBooking.get(other.bookingId)]
+          : []
+        : byCrewId.has(other.personId)
+          ? [byCrewId.get(other.personId)]
+          : [],
+    ),
+  );
+}
+
+/**
+ * The teams that are split at this checkpoint, by team id.
+ *
+ * A **team** count, not a count of rows wearing an alert: a team of four with
+ * three back and one not puts the alert on three rows, and "3 teams are split"
+ * would be a lie told by counting. It is also why this cannot be derived from
+ * a crew member's `buddyAlert` alone — one divemaster leads several teams and
+ * carries one flag between them, so the flag says *a* team of theirs split, not
+ * which.
+ *
+ * Attention state only, like the alert it reads: nothing here gates anything.
+ */
+export function splitBuddyTeamIds(manifest: TripManifest, alert: BuddyAlert): Set<string> {
+  const byBooking = new Map<string, MaybeRollCall>(
+    manifest.divers.map((diver) => [diver.bookingId, diver.rollCall]),
+  );
+  const byCrewId = new Map<string, MaybeRollCall>(
+    manifest.crew.map((member) => [member.id, member.rollCall]),
+  );
+  const split = new Set<string>();
+  const consider = (team: ManifestBuddyTeam | null | undefined, self: MaybeRollCall) => {
+    if (!team) return;
+    const mates = teammateRollCallsIn([team], byBooking, byCrewId);
+    if (buddyAlertFor(manifest.checkpoint, self, mates) === alert) split.add(team.teamId);
+  };
+  for (const diver of manifest.divers) consider(diver.buddyTeam, diver.rollCall);
+  for (const member of manifest.crew) {
+    for (const team of member.buddyTeams ?? []) consider(team, member.rollCall);
+  }
+  return split;
+}
+
 /**
  * One pure derivation feeds the screen, print view, and future offline
  * snapshot. It preserves every supplied booking and converts missing safety
@@ -573,21 +682,32 @@ export function buildTripManifest(input: {
   divers: ManifestDiverInput[];
 }): TripManifest {
   const checkpoint = input.checkpoint ?? "departure";
-  // A buddy alert reads the *buddy's* record, so it needs the whole roster in
-  // hand. Defensive on the lookup: a buddy reference pointing at a booking
-  // that is not among the supplied divers (a caller bug, or a roster that
-  // changed between reads) yields no alert rather than a fabricated one.
+  // A buddy alert reads every *teammate's* record, so it needs the whole
+  // roster — divers and crew — in hand. Defensive on the lookup: a teammate
+  // pointing at somebody who is not among the supplied rows (a caller bug, or
+  // a roster that changed between reads) is dropped rather than counted as
+  // unaccounted for, so a stale reference can never fabricate an alert.
   const rollCallByBooking = new Map(
     input.divers.map((diver) => [diver.bookingId, diver.rollCall] as const),
   );
+  const rollCallByCrewId = new Map(
+    input.crew.map((member) => [member.id, member.rollCall] as const),
+  );
+  const teammateRollCalls = (teams: ReadonlyArray<ManifestBuddyTeam | null | undefined>) =>
+    teammateRollCallsIn(teams, rollCallByBooking, rollCallByCrewId);
   const divers = input.divers.map((diver) => ({
     ...diver,
     readiness: diver.readiness ?? unavailableReadiness(),
     rollCall: diver.rollCall,
-    buddyAlert:
-      diver.buddy && rollCallByBooking.has(diver.buddy.bookingId)
-        ? buddyAlertFor(checkpoint, diver.rollCall, rollCallByBooking.get(diver.buddy.bookingId))
-        : null,
+    buddyAlert: buddyAlertFor(checkpoint, diver.rollCall, teammateRollCalls([diver.buddyTeam])),
+  }));
+  const crew = input.crew.map((member) => ({
+    ...member,
+    buddyAlert: buddyAlertFor(
+      checkpoint,
+      member.rollCall,
+      teammateRollCalls(member.buddyTeams ?? []),
+    ),
   }));
   const awaiting = divers.filter((diver) => !diver.rollCall).length;
   const notBackAboard = divers.filter((diver) =>
@@ -606,7 +726,7 @@ export function buildTripManifest(input: {
   return {
     trip: input.trip,
     checkpoint,
-    crew: input.crew,
+    crew,
     completeness: rollCallCompleteness({
       checkpoint,
       totalDivers: summary.totalDivers,

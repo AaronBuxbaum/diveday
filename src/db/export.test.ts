@@ -219,14 +219,7 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
   roll_call_crew_events: ["shop_id"],
   // The member row's surrogate id says nothing beyond (pair_id, booking_id),
   // which are both exported.
-  buddy_pair_members: [
-    "shop_id",
-    "id",
-    // Crew membership is storable but not yet surfaced anywhere that reads a
-    // team, export included (ADR 20260804-buddy-teams). It joins the CSV in the
-    // same change that teaches the manifest to render a crew member.
-    "crew_person_id",
-  ],
+  buddy_pair_members: ["shop_id", "id"],
   waiver_templates: ["shop_id"],
   waiver_records: [
     "shop_id",
