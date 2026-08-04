@@ -7,7 +7,6 @@ import { effectiveCrewRoles } from "@/lib/crew-roles";
 import { rentalFitLine } from "@/lib/dive-prep";
 import {
   buildTripManifest,
-  type CrewAttestation,
   carryForwardNotBoarded,
   isRollCallCheckpoint,
   type ManifestCrewMember,
@@ -105,39 +104,6 @@ async function listLatestCrewRollCalls(db: AppDb, shopId: string, tripId: string
       occurredAt: event.occurredAt,
       recordedByName: recorder.fullName,
       note: event.note,
-    });
-  }
-  return latest;
-}
-
-/**
- * The latest crew attestation per checkpoint for one trip. Append-only, so
- * "latest" is newest `occurredAt` (then `createdAt` to break a tie), exactly
- * like `listLatestRollCallByBooking` — an earlier count is superseded, never
- * rewritten.
- */
-async function listLatestCrewAttestations(
-  db: AppDb,
-  shopId: string,
-  tripId: string,
-): Promise<Map<string, CrewAttestation>> {
-  const rows = await db
-    .select({ attestation: rollCallCrewAttestations, attester: people })
-    .from(rollCallCrewAttestations)
-    .innerJoin(people, eq(people.id, rollCallCrewAttestations.attestedByPersonId))
-    .where(
-      and(eq(rollCallCrewAttestations.shopId, shopId), eq(rollCallCrewAttestations.tripId, tripId)),
-    )
-    .orderBy(desc(rollCallCrewAttestations.occurredAt), desc(rollCallCrewAttestations.createdAt));
-  const latest = new Map<string, CrewAttestation>();
-  for (const { attestation, attester } of rows) {
-    if (latest.has(attestation.checkpoint)) continue;
-    latest.set(attestation.checkpoint, {
-      crewAboard: attestation.crewAboard,
-      crewAssigned: attestation.crewAssigned,
-      attestedByName: attester.fullName,
-      occurredAt: attestation.occurredAt,
-      note: attestation.note,
     });
   }
   return latest;
@@ -289,7 +255,6 @@ export async function getTripManifests(
     certified,
     fitByBooking,
     crew,
-    crewAttestations,
     crewRollCalls,
     buddyPairs,
     ...rollCalls
@@ -300,7 +265,6 @@ export async function getTripManifests(
     verifiedNitroxPersonIds(db, shopId),
     rentalFitByBooking(db, shopId, tripId),
     listTripCrew(db, shopId, tripId),
-    listLatestCrewAttestations(db, shopId, tripId),
     listLatestCrewRollCalls(db, shopId, tripId),
     listTripBuddyPairs(db, shopId, tripId),
     ...checkpoints.map((checkpoint) => listLatestRollCallByBooking(db, shopId, tripId, checkpoint)),
@@ -394,7 +358,6 @@ export async function getTripManifests(
         ...member,
         rollCall: crewEffective.get(member.id)?.[index],
       })),
-      crewAttestation: crewAttestations.get(checkpoint) ?? null,
       divers: diverInputs.map((diver) => ({
         ...diver,
         rollCall: effectiveByBooking.get(diver.bookingId)?.[index],
@@ -708,6 +671,14 @@ const MAX_CREW_ABOARD = 99;
  * inserts a row, and the newest one is the current answer, mirroring
  * `recordRollCall`. There is no update path and no "crew ok" boolean — a head
  * count is a statement someone made at a time, not a flag.
+ *
+ * **No surface calls this any more** (ADR 20260804-crew-roll-call-is-per-person).
+ * The manifest's typed "how many crew are aboard" control is gone, and roll-call
+ * completeness reads the named crew list alone. The writer, the table, and the
+ * `roll_call_crew_attestations.csv` export stay because rows already exist:
+ * they are part of departures shops have sailed, the incident export renders
+ * them, and the export file is a published data-portability contract. Deleting
+ * it is a separate change with a migration in it, not a side effect of a UI fix.
  *
  * The **denominator is never taken from the caller**. `crewAssigned` is read
  * server-side from the trip's own assignments inside the transaction, so a

@@ -17,22 +17,22 @@ import type { ReadinessBlocker, ReadinessBlockerCode } from "./readiness";
  * the copies already written to crew devices — they fail to decrypt and are
  * discarded rather than lingering to their natural 14-day expiry.
  *
- * Deliberately **not** bumped for `crewAttestation` (ADR
- * 20260802-crew-roll-call-attestation). A bump is a purge, and a purge is not
+ * Deliberately **not** bumped for per-person crew results (ADR
+ * 20260803-per-person-crew-roll-call). A bump is a purge, and a purge is not
  * free: a v4 record that fails to decrypt is overwritten with `events: []` by
  * `saveOfflineManifest`, throwing away any roll call a crew member queued
- * offline and has not synced. The new field is additive and optional, and its
- * absence on an older snapshot reads as "no crew attested" — which is exactly
- * the fail-closed answer (the checkpoint stays open). There is nothing here to
- * purge and a real safety cost to purging, so the version stands.
+ * offline and has not synced. `crew[].rollCall` is additive and optional, and
+ * its absence means "nobody has said", so a v4 snapshot saved before crew had
+ * results of their own reads *every* crew member as awaiting and the checkpoint
+ * stays open. The dangerous direction — offline "done" while online says
+ * otherwise — is the one that cannot happen, so the version stands.
  *
- * Not bumped for per-person crew results either (ADR
- * 20260803-per-person-crew-roll-call), for the same reason and with the same
- * property: `crew[].rollCall` is additive and optional, and its absence means
- * "nobody has said", so a v4 snapshot saved before crew had results of their
- * own reads *every* crew member as awaiting and the checkpoint stays open. The
- * dangerous direction — offline "done" while online says otherwise — is the one
- * that cannot happen.
+ * Not bumped for *dropping* `crewAttestation` either (ADR
+ * 20260804-crew-roll-call-is-per-person). A snapshot written before that change
+ * still carries the field; nothing reads it any more, and an extra property on
+ * a decrypted record is inert. Purging a fortnight of dock copies — and any
+ * unsynced roll call riding on them — to delete a field nobody looks at would
+ * trade a real safety cost for tidiness.
  */
 export const OFFLINE_MANIFEST_RECORD_VERSION = 4 as const;
 
@@ -71,7 +71,7 @@ export type OfflineManifestFreshness = "current" | "aging" | "stale";
 export type OfflineManifestPayload = {
   shop: { slug: string; name: string; timezone: string };
   manifests: Array<
-    Omit<TripManifest, "trip" | "divers" | "crew" | "crewAttestation" | "completeness"> & {
+    Omit<TripManifest, "trip" | "divers" | "crew" | "completeness"> & {
       trip: Omit<TripManifest["trip"], "startsAt" | "endsAt"> & {
         startsAt: string;
         endsAt: string;
@@ -99,19 +99,6 @@ export type OfflineManifestPayload = {
           };
         }
       >;
-      /**
-       * The crew count attested at this checkpoint when the snapshot was saved.
-       * Absent means nobody has attested — which reads as *not complete*, the
-       * same as it does online. Crew attestation is not recordable offline in
-       * this slice, so this is read-only on the device.
-       */
-      crewAttestation?: {
-        crewAboard: number;
-        crewAssigned: number;
-        attestedByName: string;
-        occurredAt: string;
-        note: string | null;
-      };
       // `completeness` is deliberately *not* carried. It is derived, and the
       // device's own `awaiting` count comes from local events rather than this
       // snapshot, so the offline view recomputes it with `rollCallCompleteness`
@@ -227,15 +214,6 @@ export function serializeManifests(
             }
           : undefined,
       })),
-      crewAttestation: manifest.crewAttestation
-        ? {
-            crewAboard: manifest.crewAttestation.crewAboard,
-            crewAssigned: manifest.crewAttestation.crewAssigned,
-            attestedByName: manifest.crewAttestation.attestedByName,
-            occurredAt: manifest.crewAttestation.occurredAt.toISOString(),
-            note: manifest.crewAttestation.note,
-          }
-        : undefined,
       // Built field-by-field rather than spread, matching the allow-list type
       // above: what the dock needs, and nothing else. Age, minor status, and
       // birthdays (H-21) are deliberately absent — they are staff-screen facts,

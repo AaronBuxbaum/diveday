@@ -38,12 +38,27 @@ export function CelebrationsSection({
 
   if (celebrating.length === 0) return null;
 
+  // One line that has to be true of the boat in front of you. It used to say
+  // "Someone on this boat has a birthday" for every case — including the diver
+  // whose birthday was four days ago and the one whose is on Friday, which is
+  // the wrong thing to hand a crew about to sing at the surface interval. The
+  // status of the *soonest* callout picks the sentence, and its count is the
+  // number of people that sentence is actually true of.
+  const soonest = celebrating[0]?.callout.status ?? "today";
+  const inSoonest = celebrating.filter((entry) => entry.callout.status === soonest).length;
+  const description =
+    soonest === "today"
+      ? t("trips.celebrations.descriptionToday", { count: inSoonest })
+      : soonest === "soon"
+        ? t("trips.celebrations.descriptionSoon", { count: inSoonest })
+        : t("trips.celebrations.descriptionRecent", { count: inSoonest });
+
   return (
     <section className="mt-6 rounded-lg border border-primary/30 bg-primary/5 p-6">
       <h2 className="font-medium">
         <span aria-hidden="true">🎂</span> {t("trips.celebrations.heading")}
       </h2>
-      <p className="mt-1 text-sm text-muted">{t("trips.celebrations.description")}</p>
+      <p className="mt-1 text-sm text-muted">{description}</p>
       <ul className="mt-4 grid gap-2">
         {celebrating.map((entry) => (
           <li key={entry.bookingId} className="text-sm">

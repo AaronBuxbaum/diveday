@@ -81,6 +81,26 @@ describe("issueAndDeliverWaiver", () => {
     if (result.ok) expect(result.token).toBeTruthy();
   });
 
+  it("names a missing APP_HOST as its own gap, not as an unconfigured provider", async () => {
+    // Both end with staff handing the link over, but they point at different
+    // settings. Reporting "no email provider configured" to a deployment whose
+    // SES credentials are fine and whose APP_HOST is empty sends whoever is
+    // debugging it to the wrong file.
+    vi.stubEnv("APP_HOST", "");
+    vi.stubEnv("SES_AWS_REGION", "us-east-1");
+    vi.stubEnv("SES_AWS_ACCESS_KEY_ID", "AKIA_TEST");
+    vi.stubEnv("SES_AWS_SECRET_ACCESS_KEY", "test-secret");
+    vi.stubEnv("SES_FROM_EMAIL", "shop@diveday.example");
+
+    const { db, shop, bookingId } = await seededBooking();
+    const result = await issueAndDeliverWaiver(db, shop.id, bookingId);
+
+    expect(result).toMatchObject({ ok: true, delivery: "no_app_origin" });
+    // Nothing was attempted: there is no link to put in the mail.
+    expect(sesSend).not.toHaveBeenCalled();
+    if (result.ok) expect(result.token).toBeTruthy();
+  });
+
   it("surfaces reserved test recipients without calling SES", async () => {
     vi.stubEnv("APP_HOST", "https://diveday.example");
     vi.stubEnv("SES_AWS_REGION", "us-east-1");

@@ -7,6 +7,26 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## Trip surfaces after a walk-through (delivered 2026-08-04)
+
+A product-owner pass over the boat loop, mostly subtraction. The manifest's typed **"crew aboard at
+&lt;checkpoint&gt;" attestation is gone**: the named crew list is now the whole crew half of a head
+count, and a trip with nobody on its crew list holds the checkpoint open under its own reason
+(`crew_none_assigned`) with an **"Add crew to trip"** button as the way out, instead of a number to
+type. Roll-call rows tell their two recorded outcomes apart by hue — aboard green, left ashore amber
+— with awaiting in neutral slate; the status pill and the "Ready" chip now appear only where the
+buttons beside them do not already say the same thing. **Boat mode** (was "Contrast: Auto / Standard
+/ Maximum", plus a redundant "Glare mode active ☀" chip) is now one Auto / Land mode / Boat mode
+control that belongs to the whole trip, not the Manifest tab alone. Print / save PDF sits in the
+same place on every tab. The **incident-ready export is owner-only** — the manifest stays open to the
+crew who run the roll call, but the shop's evidentiary account of a departure is the owner's to
+produce, and the route refuses however it is reached. Smaller: the Celebrations line now says
+*today* / *coming up* / *just had* rather than one sentence for all three; a confirm-guarded resend
+settles back to its status instead of sitting open on an answered question; and a waiver that could
+not be mailed because `APP_HOST` is unset says exactly that rather than blaming a missing email
+provider. See
+[20260804-crew-roll-call-is-per-person](../architecture/decisions/20260804-crew-roll-call-is-per-person.md).
+
 ## Weather blow-out cancellation cascade (delivered 2026-08-04)
 
 The brainstorm's Revenue And Recovery big bet, first slice. Staff tap "Weather blow-out…" on a

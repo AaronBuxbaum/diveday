@@ -1,6 +1,6 @@
 # 20260802-crew-roll-call-attestation — Count crew into the head count with a per-checkpoint attestation
 
-- **Status:** Accepted
+- **Status:** Superseded by [20260804-crew-roll-call-is-per-person](20260804-crew-roll-call-is-per-person.md)
 - **Date:** 2026-08-02
 
 ## Context

@@ -124,12 +124,20 @@ test.describe("staff", () => {
     await expect(warning).toBeVisible();
     await expect(warning).toContainText("Not a block");
 
-    // And the diver it is about is still boardable: the manifest must not have
-    // turned this into a blocked seat. "Ready", not "Ready to board" — the one
-    // readiness vocabulary (src/i18n/readiness-labels.ts) that the roster and
-    // the counter now share with the manifest.
-    await page.goto(`${tripPath}/manifest`);
+    // And the diver it is about is still boardable. "Ready", not "Ready to
+    // board" — the one readiness vocabulary (src/i18n/readiness-labels.ts) that
+    // the roster and the counter share with the manifest.
     await expect(page.getByText("✓ Ready", { exact: true }).first()).toBeVisible();
+
+    // On the manifest the same fact is the boarding control being offered at
+    // all: a blocked seat gets no "Mark boarded" at departure, and the readiness
+    // chip there is now reserved for the exception (only a *blocked* diver
+    // wears one), so its absence is the assertion.
+    await page.goto(`${tripPath}/manifest`);
+    await expect(
+      page.locator("#roll-call-list").getByRole("button", { name: "Mark boarded" }).first(),
+    ).toBeVisible();
+    await expect(page.locator("#roll-call-list").getByText("✓ Ready")).toHaveCount(0);
   });
 
   test("depth is entered and read back in the shop's own unit", async ({ page }) => {

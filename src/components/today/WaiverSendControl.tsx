@@ -61,6 +61,7 @@ function reasonCopy(
   if (reason === "test_recipient") {
     return plural ? fill(copy.reasonTestRecipientOther, values) : copy.reasonTestRecipientOne;
   }
+  if (reason === "no_app_origin") return copy.reasonNoAppOrigin;
   return copy.reasonUnconfigured;
 }
 
@@ -69,6 +70,7 @@ function reasonCopy(
 function LinkGroups({ links, copy }: { links: WaiverFallbackLink[]; copy: WaiverSendCopy }) {
   const groups: Record<WaiverFallbackLink["reason"], WaiverFallbackLink[]> = {
     no_email: links.filter((link) => link.reason === "no_email"),
+    no_app_origin: links.filter((link) => link.reason === "no_app_origin"),
     unconfigured: links.filter((link) => link.reason === "unconfigured"),
     test_recipient: links.filter((link) => link.reason === "test_recipient"),
     failed: links.filter((link) => link.reason === "failed"),

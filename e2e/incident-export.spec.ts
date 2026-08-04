@@ -1,4 +1,4 @@
-import { expect, signedInAsOwner, test } from "./fixtures";
+import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
 import { openTripFromBoard, openTripTab } from "./helpers";
 
 signedInAsOwner();
@@ -103,4 +103,38 @@ test("a trip id that is not this shop's renders the not-found refusal, never a d
   await expect(page.getByRole("heading", { name: "Roll-call timeline" })).toHaveCount(0);
   await expect(page.getByText("Integrity code (SHA-256)")).toHaveCount(0);
   await expect(page.getByText(/^[0-9a-f]{64}$/)).toHaveCount(0);
+});
+
+/**
+ * Owner-only (`canExportIncidentRecord`, src/lib/authz.ts). The manifest stays
+ * open to the whole crew — they run the roll call — but producing the shop's
+ * evidentiary account of a departure, stamped with the generator's own name, is
+ * the owner's call. The link is hidden and the route refuses; hiding alone is
+ * not a control.
+ */
+test.describe("the export is the owner's to produce", () => {
+  signedInAs("instructor");
+
+  test("an instructor gets neither the link nor the document", async ({ page }) => {
+    test.setTimeout(45_000);
+    await page.goto("/shop/blue-mantis/schedule/board");
+    await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
+    await openTripTab(page, "Manifest");
+    await page.getByRole("link", { name: "Open offline roll call" }).waitFor();
+
+    // The manifest is theirs to run; this one door is not on it.
+    await expect(page.getByRole("link", { name: "Incident-ready export" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Print / save PDF" })).toBeVisible();
+
+    // And the route itself refuses, however it was reached — a bookmark, a
+    // deep link, or a role that changed under them. It lands back on the
+    // manifest saying why, never silently.
+    const tripUrl = new URL(page.url());
+    await page.goto(`${tripUrl.pathname.replace(/\/manifest$/, "")}/incident-export`);
+    await page.waitForURL(/\/manifest\?notice=incident_export_not_authorized$/);
+    await expect(page.getByText("only an owner can produce one")).toBeVisible();
+    // Not one fact of the document travels with the refusal.
+    await expect(page.getByRole("heading", { name: "Roll-call timeline" })).toHaveCount(0);
+    await expect(page.getByText("Integrity code (SHA-256)")).toHaveCount(0);
+  });
 });

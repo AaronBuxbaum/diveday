@@ -473,22 +473,12 @@ export function OfflineManifestView() {
   // *open* here exactly as it does online; never "complete" offline and "not
   // complete" online, which would be worse than the bug this closes.
   const crewAssigned = manifest.crew.length;
-  const savedCrewAttestation = manifest.crewAttestation;
   const completeness = rollCallCompleteness({
     checkpoint,
     totalDivers: manifest.summary.totalDivers,
     awaiting,
     notBackAboard,
     crew: manifest.crew,
-    crewAttestation: savedCrewAttestation
-      ? {
-          crewAboard: savedCrewAttestation.crewAboard,
-          crewAssigned: savedCrewAttestation.crewAssigned,
-          attestedByName: savedCrewAttestation.attestedByName,
-          occurredAt: new Date(savedCrewAttestation.occurredAt),
-          note: savedCrewAttestation.note,
-        }
-      : null,
   });
   const crewCounts = completeness.crewCounts;
   // The dock copy deliberately carries **no person ids**
@@ -601,10 +591,10 @@ export function OfflineManifestView() {
               <div className="print:hidden">
                 <AmbientContrastControl
                   copy={{
-                    contrastLabel: t("shared.ambientContrast.contrastLabel"),
-                    labelAuto: t("shared.ambientContrast.labelAuto"),
-                    labelStandard: t("shared.ambientContrast.labelStandard"),
-                    labelFullAaa: t("shared.ambientContrast.labelFullAaa"),
+                    modeLabel: t("shared.boatMode.modeLabel"),
+                    labelAuto: t("shared.boatMode.labelAuto"),
+                    labelLand: t("shared.boatMode.labelLand"),
+                    labelBoat: t("shared.boatMode.labelBoat"),
                   }}
                 />
               </div>
@@ -727,28 +717,19 @@ export function OfflineManifestView() {
             {t("shared.offlineManifest.single.crewHeading")}
           </p>
           <p className="mt-1 text-sm">
-            {savedCrewAttestation && completeness.crewAccountedFor
-              ? t("shared.offlineManifest.single.crewAttested", {
-                  aboard: savedCrewAttestation.crewAboard,
-                  assigned: crewCounts.crewExpectedAboard,
-                  name: savedCrewAttestation.attestedByName,
+            {crewMissing
+              ? t("shared.offlineManifest.single.crewNotBackAboard", {
+                  count: crewCounts.crewNotBackAboard,
                 })
-              : crewMissing
-                ? t("shared.offlineManifest.single.crewNotBackAboard", {
-                    count: crewCounts.crewNotBackAboard,
+              : completeness.crewReason === "crew_awaiting"
+                ? t("shared.offlineManifest.single.crewAwaiting", {
+                    count: crewCounts.crewAwaiting,
                   })
-                : completeness.crewReason === "crew_awaiting"
-                  ? t("shared.offlineManifest.single.crewAwaiting", {
-                      count: crewCounts.crewAwaiting,
-                    })
-                  : savedCrewAttestation
-                    ? t("shared.offlineManifest.single.crewShort", {
-                        aboard: savedCrewAttestation.crewAboard,
-                        assigned: crewCounts.crewExpectedAboard,
-                      })
-                    : t("shared.offlineManifest.single.crewNotAttested", {
-                        assigned: crewAssigned,
-                      })}
+                : completeness.crewReason === "crew_none_assigned"
+                  ? t("shared.offlineManifest.single.crewNoneAssigned")
+                  : t("shared.offlineManifest.single.crewAllAccountedFor", {
+                      assigned: crewAssigned,
+                    })}
           </p>
           {/* Says plainly that this half of the count belongs to the live
               manifest, so the state above reads as "not recordable here"
