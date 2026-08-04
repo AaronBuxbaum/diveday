@@ -81,6 +81,56 @@ The third row is weaker than a silent background write, and honestly so: it puts
 For a safety surface at the moment of departure that is defensible, arguably preferable, and it is the
 only behaviour available on iOS at all.
 
+### That constraint is not this feature's — it blocks three capabilities
+
+The section above frames the static-worker limitation as a Web Push tradeoff. **That framing was too
+narrow, and understates it.** Everything that could run without a page runs *in the service worker*,
+so the same inability to import `offline-manifest-store.ts` blocks all of it:
+
+| Capability | What it would do | Workaround |
+| --- | --- | --- |
+| Web Push writing the snapshot | Update the device copy with no page open | Yes — message a live client (what this record does) |
+| **Background Sync** | Flush pending roll-call events when signal returns | **None — no page exists to message** |
+| **Periodic Background Sync** | Refresh the snapshot on a schedule | None |
+
+Two of the three have no workaround at all, because they fire precisely when no page is around to
+delegate to. Anyone later costing "make the worker a build-time module so it imports the real store"
+against one feature will conclude it is not worth it. Costed against three, and against the safety gap
+below, it is a different question — which is why it is recorded here rather than left implicit.
+
+### Background Sync — an outbound gap this record does not close
+
+Everything above is about **inbound freshness**: is the device's copy current. The
+[Background Synchronization API](https://developer.mozilla.org/en-US/docs/Web/API/Background_Synchronization_API)
+addresses the opposite direction, and there is a real hole there that no amount of push fixes.
+
+`syncOfflineManifest` is triggered only from the page — the reconnect listener, visibility-return, and
+the 5-minute interval, all in `OfflineManifestManager`. So: **a captain records roll call at sea,
+closes the tab, drives home, signal returns — and the pending events do not flush until somebody
+reopens DiveDay.**
+
+That is arguably more serious than any staleness this record is about. A stale roster is a display
+problem; unflushed roll-call events are *the record of who came back aboard* sitting on one phone.
+Background Sync is the API built for exactly this: register a tag when a write fails offline, and the
+browser fires `sync` when connectivity returns, page or no page.
+
+It is blocked by the constraint above — the pending events are in the encrypted store — so it is
+recorded as a gap rather than fixed here. **It deserves its own record**; it is an offline-manifest
+durability question (20260718-offline-manifest-snapshots), not a push question, and it was only found
+by asking what else the service worker could do.
+
+### Periodic Background Sync — ruled out
+
+Considered and rejected on its own merits, so it is not revisited:
+
+- **No Safari and no Firefox.** Chromium only, so it cannot serve an iPhone captain — the platform for
+  which Web Push (installed to the Home Screen) is the *only* background mechanism available.
+- **The browser owns the cadence.** `minInterval` is a floor, not a schedule; the user agent weighs
+  site engagement and network conditions and may defer indefinitely. For a channel whose entire value
+  is the last few minutes before departure, an interval that can silently stretch is the wrong
+  instrument — the existing 5-minute page interval is more predictable.
+- **Same store constraint**, on top of the above.
+
 ## Known gaps, from review
 
 A `security-reviewer` and a `dive-domain-expert` pass both ran against the first implementation. What
@@ -173,9 +223,14 @@ Recorded as decided rather than deferred, so it is not re-opened later as unfini
   wanted, the honest path is making the worker a build-time module so it can import the real one, not
   hand-copying the crypto.
 - **Silent (data-only) push** — not available: Chrome and Edge require `userVisibleOnly: true`.
-- **Periodic Background Sync** — lets the worker refresh with no server push at all, but is
-  Chromium-only, needs an installed PWA plus site engagement, and the browser chooses the cadence. A
-  possible bonus on Android later; it cannot be the mechanism.
+- **Periodic Background Sync** — **rejected**, not deferred: no Safari and no Firefox, so it cannot
+  serve the iPhone captain who has the fewest options; and `minInterval` is a floor the browser may
+  defer indefinitely, which is the wrong instrument for a channel whose value is the last few minutes
+  before departure. See ["Periodic Background Sync — ruled out"](#periodic-background-sync--ruled-out).
+- **Background Sync** — not an alternative to push at all: it addresses the *outbound* direction
+  (flushing pending roll-call events when signal returns), which this record does not cover and which
+  is a real gap. See ["Background Sync — an outbound gap this record does not
+  close"](#background-sync--an-outbound-gap-this-record-does-not-close).
 - **Replace SSE with push** — tempting on cost (push has no connection-hours), but push is opt-in,
   permission-gated, unavailable on iOS outside an installed web app, and best-effort in latency. It
   cannot carry the primary path. Additive is the only safe shape, and it leaves
@@ -200,6 +255,20 @@ dedicated boat device that is a reasonable one-time setup step, and arguably wan
 offline manifest; for a captain using Safari in a tab, this feature simply does not exist and the
 existing triggers are what they get. This is worth saying in the opt-in copy rather than letting a
 control silently do nothing.
+
+**What this record leaves for someone else.** Two things, both surfaced by asking what *else* a
+service worker could do, and neither closed here:
+
+1. **The outbound flush gap** — pending roll-call events can sit on one phone until somebody reopens
+   the app. This is the more serious of the two, because those events are the record of who came back
+   aboard, and it belongs with 20260718-offline-manifest-snapshots rather than here.
+2. **The static-worker constraint**, which gates that fix, a scheduled refresh, and a silent push
+   write alike. If two of those three are ever wanted, making the worker a build-time module is
+   cheaper than three separate workarounds — and one of them has no workaround at all.
+
+Recording both here so the next reader inherits the finding rather than the blind spot: this record
+originally justified the worker constraint as a one-feature tradeoff, which is how a shared blocker
+stays invisible.
 
 What this commits us to: a new runtime dependency (`web-push`), VAPID keys as deployment secrets, a
 table whose rows are per-device credentials, and a fan-out path that must stay best-effort. Expired and
