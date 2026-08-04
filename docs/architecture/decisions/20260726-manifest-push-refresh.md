@@ -135,10 +135,18 @@ waiting up to five minutes — the scenario 20260726 named as the reason to revi
 offline-boat failure mode gets worse: the interval/reconnect/visibility fallback is untouched, so a
 device that never manages to hold the SSE connection open behaves exactly as it did before this change.
 
+The cost and transport question this section leaves open — what holding these connections actually
+costs, and whether SSE-on-Vercel stays the right transport — is analysed in
+[20260804-manifest-push-transport](20260804-manifest-push-transport.md), which keeps this design for
+now and designates API Gateway WebSockets as the migration target behind a measured trigger.
+
 New failure surface this change owns: the shared LISTEN client is process-local, so on Vercel's classic
 per-request-instance model (no Fluid Compute warm reuse), each concurrent SSE viewer's request may get
 its own process and therefore its own direct connection — the "shared client" saving only materializes
-when Vercel keeps an instance warm across concurrent requests. This is an accepted MVP limit given
+when Vercel keeps an instance warm across concurrent requests. **Resolved 2026-08-04:** the project runs
+Fluid compute, whose optimized concurrency shares one instance across concurrent invocations on the
+Node.js runtime, so that saving does materialize and this paragraph's worst case is not the one in
+force. It remains the bound if Fluid is ever disabled. This was an accepted MVP limit given
 today's expected concurrency (a handful of staff phones per shop); if Neon's direct-connection limit
 becomes a real constraint, the escape hatch is the third-party-service alternative above, or moving
 publish/subscribe to a single dedicated long-running process (a small always-on Node service) instead of
