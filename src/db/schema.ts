@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   type AnyPgColumn,
+  bigint,
   bigserial,
   boolean,
   check,
@@ -1699,6 +1700,87 @@ export const shopWhatsappAccounts = pgTable("shop_whatsapp_accounts", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const shopBackupDestinations = pgTable("shop_backup_destinations", {
+  /** One destination per shop, like `shop_whatsapp_accounts` — reconfiguring is an upsert, never a second row. */
+  shopId: uuid("shop_id")
+    .primaryKey()
+    .references(() => shops.id),
+  /**
+   * The S3-compatible API origin the weekly bundle is PUT to — AWS S3, Cloudflare
+   * R2, Backblaze B2, MinIO, anything speaking SigV4. HTTPS only, and never a
+   * loopback/private host; `src/features/backup-export` refuses those before a
+   * row is written (the server is the one making this request).
+   */
+  endpoint: text("endpoint").notNull(),
+  /** The SigV4 signing region ("us-east-1", "auto" for R2). Part of the signature, not routing. */
+  region: text("region").notNull(),
+  bucket: text("bucket").notNull(),
+  /** Optional key prefix inside the bucket ("diveday/"); empty means the bucket root. */
+  prefix: text("prefix").notNull().default(""),
+  /**
+   * The credential's public identifier. Stored plain — it names the key the
+   * way a Stripe account id names an account — and shown back to staff so they
+   * can tell which credential is connected.
+   */
+  accessKeyId: text("access_key_id").notNull(),
+  /**
+   * The secret access key, sealed with AES-256-GCM (`src/lib/secret-box.ts`) —
+   * never plaintext, exactly like `shop_whatsapp_accounts.access_token_sealed`.
+   * It is a live credential to storage the shop owns; a database dump must not
+   * be enough to use it, and no code path ever returns it to a caller or a UI.
+   */
+  secretAccessKeySealed: text("secret_access_key_sealed").notNull(),
+  connectedAt: timestamp("connected_at", { withTimezone: true }).notNull().defaultNow(),
+  /** Set when a delivery has actually landed in the bucket, so staff see proven rather than merely saved. */
+  verifiedAt: timestamp("verified_at", { withTimezone: true }),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const backupDeliveryStatus = pgEnum("backup_delivery_status", [
+  "started",
+  "succeeded",
+  "failed",
+]);
+
+export const backupDeliveryTrigger = pgEnum("backup_delivery_trigger", ["scheduled", "manual"]);
+
+/**
+ * One row per backup delivery attempt — the shop-visible answer to "when did
+ * my data last actually land in my bucket". Append-only: a row is inserted as
+ * `started` and finished in place as `succeeded`/`failed`, so a crash
+ * mid-delivery leaves an honest `started` row rather than silence.
+ * `error_code` carries a code, never a sentence — the UI picks the words
+ * (ADR 20260731-domain-layer-copy-leaks).
+ */
+export const shopBackupDeliveries = pgTable(
+  "shop_backup_deliveries",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    /**
+     * The ISO week this delivery covers ("2026-W32"). The weekly cron skips a
+     * shop that already has a succeeded scheduled delivery for the period, so a
+     * re-invoked cron never uploads the same week twice.
+     */
+    periodKey: text("period_key").notNull(),
+    trigger: backupDeliveryTrigger("trigger").notNull(),
+    status: backupDeliveryStatus("status").notNull(),
+    /** Where in the bucket the bundle went (prefix included); null until the key is computed. */
+    objectKey: text("object_key"),
+    /** Uploaded bundle size in bytes; bigint because a photo-heavy shop clears 2 GiB. */
+    byteCount: bigint("byte_count", { mode: "number" }),
+    errorCode: text("error_code"),
+    startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+    finishedAt: timestamp("finished_at", { withTimezone: true }),
+  },
+  (table) => [
+    index("shop_backup_deliveries_shop_started_idx").on(table.shopId, table.startedAt),
+    index("shop_backup_deliveries_shop_period_idx").on(table.shopId, table.periodKey),
+  ],
+);
+
 export const orderStatus = pgEnum("order_status", [
   "open",
   "paid",
@@ -3359,6 +3441,10 @@ export type TripAssignmentRole = (typeof tripAssignmentRole.enumValues)[number];
 export type NitroxCertification = typeof nitroxCertifications.$inferSelect;
 export type ShopStripeAccount = typeof shopStripeAccounts.$inferSelect;
 export type ShopWhatsappAccount = typeof shopWhatsappAccounts.$inferSelect;
+export type ShopBackupDestination = typeof shopBackupDestinations.$inferSelect;
+export type ShopBackupDelivery = typeof shopBackupDeliveries.$inferSelect;
+export type BackupDeliveryStatus = (typeof backupDeliveryStatus.enumValues)[number];
+export type BackupDeliveryTrigger = (typeof backupDeliveryTrigger.enumValues)[number];
 export type Order = typeof orders.$inferSelect;
 export type OrderStatus = (typeof orderStatus.enumValues)[number];
 export type OrderLineItem = typeof orderLineItems.$inferSelect;

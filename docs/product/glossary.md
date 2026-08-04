@@ -278,6 +278,17 @@ new domain concept, define it here in the same PR.
   half of the data-portability strategy; its CSV schemas are the contract the planned importer and
   read API reuse. See [20260722-full-shop-export](../architecture/decisions/20260722-full-shop-export.md)
   and [20260724-export-bundled-photos](../architecture/decisions/20260724-export-bundled-photos.md).
+- **Backup destination** — the S3-compatible bucket a shop points its weekly backup at: endpoint,
+  region, bucket, optional key prefix, and a credential of the shop's own, whose secret half is
+  sealed at rest (`src/lib/secret-box.ts`) and never shown back to anyone. One per shop, gated
+  like the export download because what it receives is the full **export bundle** (with the
+  shop-wide `trips.ics` riding along). Configured at Settings → Backups.
+  See [20260804-shop-owned-backup-export](../architecture/decisions/20260804-shop-owned-backup-export.md).
+- **Backup delivery** — one recorded attempt to put a week's bundle in the shop's backup
+  destination: scheduled (the weekly cron) or manual (a staff test run), with a started → succeeded
+  or failed lifecycle, byte count, object key, and a coded failure reason the settings page
+  translates. At most one *succeeded scheduled* delivery exists per shop per ISO week — that is the
+  cron's idempotency rule — and a failed week's retry is simply the next weekly run.
 - **Dive-site briefing** — a reusable, shop-owned description of one dive location: its map or
   route imagery, point-of-interest landmarks, visual field guide, and local context. A trip can
   attach one briefing to each of up to four ordered dives; a blank dive is still a valid part of a
