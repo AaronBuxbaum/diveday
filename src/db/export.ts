@@ -899,6 +899,14 @@ export async function loadShopExportBundleInput(
             "wants_nitrox",
             "conditions_briefed_at",
             "group_preference",
+            // The party structure a shop booked (ADR 20260804-seat-claim-links).
+            // Both are real records of what happened to a seat, so both travel:
+            // `party_lead_booking_id` is a booking id from this same file's `id`
+            // column, and `claimed_at` sits alongside `conditions_briefed_at` as
+            // another plain fact about the seat. Dropping either would let a shop
+            // export a party of six and get back six unrelated singles.
+            "party_lead_booking_id",
+            "claimed_at",
             "payment_status",
             "payment_amount_cents",
             "payment_currency",
@@ -918,6 +926,8 @@ export async function loadShopExportBundleInput(
               row.wantsNitrox,
               row.conditionsBriefedAt,
               row.groupPreference,
+              row.partyLeadBookingId,
+              row.claimedAt,
               payment?.status ?? "unpaid",
               payment?.amountCents,
               payment?.currency,
