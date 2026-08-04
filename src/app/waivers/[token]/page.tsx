@@ -466,6 +466,27 @@ export default async function WaiverPage({
         : undefined,
     });
     if (!outcome.ok) {
+      // A refused sign-off (most often a typed name that doesn't match the
+      // booking) redirects back to this same page, which re-renders from
+      // scratch server-side. Without saving a draft first, that redirect
+      // would silently wipe every medical answer, the emergency contact, and
+      // the typed name the diver just entered — worse than the refusal
+      // itself. `saveWaiverDraft` no-ops when the link is no longer
+      // signable (expired/unavailable), so this is safe on every reason.
+      const db = await getDb();
+      await saveWaiverDraft(db, token, {
+        signerName: parsed.data.signerName,
+        acknowledged: parsed.data.acknowledged === "on",
+        medicalAnswers: answers,
+      });
+      if (contact.success) {
+        await saveBookingEmergencyContact(db, {
+          shopId: record.shopId,
+          bookingId: recordBookingId,
+          name: contact.data.emergencyContactName,
+          phone: contact.data.emergencyContactPhone,
+        });
+      }
       if (outcome.reason === "name_mismatch") {
         redirect(`/waivers/${token}?error=invalid&field=signerNameMismatch`);
       }
