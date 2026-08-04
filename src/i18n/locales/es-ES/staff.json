@@ -451,8 +451,9 @@
       "show": "Mostrar",
       "hideShowSrLabel": "{action} {title}",
       "previewSrLabel": "Vista previa de {title}",
-      "showMore": "Mostrar más cursos",
-      "backToTop": "← Volver al principio de la lista"
+      "pagination": {
+        "total": "{count, plural, one {# curso} other {# cursos}}"
+      }
     },
     "edit": {
       "backToCourses": "← Cursos",
@@ -661,7 +662,10 @@
       "description": "Puntos de partida publicados y versionados. Importar crea una ficha independiente de tu centro; las actualizaciones de la plantilla nunca sobrescriben tus cambios.",
       "templateVersion": "Plantilla v{version}",
       "importing": "Importando…",
-      "importToLibrary": "Importar a mi biblioteca"
+      "importToLibrary": "Importar a mi biblioteca",
+      "pagination": {
+        "total": "{count, plural, one {# sitio} other {# sitios}}"
+      }
     },
     "form": {
       "nameLabel": "Nombre",
@@ -908,8 +912,6 @@
     "creating": "Creando…",
     "createCode": "Crear código",
     "yourCodes": "Tus códigos",
-    "showMoreCodes": "Mostrar más códigos",
-    "backToTop": "← Volver al principio de la lista",
     "empty": {
       "heading": "Todavía no hay códigos",
       "detail": "Crea uno arriba, o envía una oferta de última hora desde la página de una salida cuando el barco necesite llenarse.",
@@ -947,8 +949,12 @@
       "recipients": "{count, plural, one {Enviado a # buceador} other {Enviado a # buceadores}}",
       "expiresAt": "Caduca {date}",
       "rangeNote": "Las ofertas por salida llegan como máximo al 90% de descuento — el barco sale de todos modos, así que la oferta siempre deja algo sobre la mesa. Los códigos de todo el centro de arriba pueden llegar al 100% porque el personal también los usa para cortesías y fidelización, no solo para llenar plazas.",
-      "showMore": "Mostrar más ofertas",
-      "backToTop": "← Volver al principio de la lista"
+      "pagination": {
+        "total": "{count, plural, one {# oferta} other {# ofertas}}"
+      }
+    },
+    "pagination": {
+      "total": "{count, plural, one {# código} other {# códigos}}"
     }
   },
   "reports": {
@@ -2420,6 +2426,76 @@
       "noMatchesAction": "Introdúcelo a mano"
     }
   },
+  "closeout": {
+    "title": "Cierre del día",
+    "notice": {
+      "closed": "Día cerrado. El registro está abajo — hasta mañana."
+    },
+    "headline": {
+      "allClear": "Todos de vuelta",
+      "outstanding": "Aún queda algo abierto",
+      "noDepartures": "Un día tranquilo en el muelle"
+    },
+    "subtitle": {
+      "allClear": "Cada recuento de los barcos de hoy quedó cerrado y nada de hoy sigue pendiente. Cierra el día y a casa.",
+      "outstanding": "Quedan cosas abiertas de hoy. Resuelve lo que puedas y decide sobre el resto — el cierre registra tus decisiones.",
+      "noDepartures": "Hoy no zarpó ningún barco. Mira con qué abre mañana, cierra el día y a casa.",
+      "closedSoFar": "El día está cerrado. Nada queda bloqueado — todo lo de abajo sigue disponible, y cerrar de nuevo suma otro registro."
+    },
+    "departures": {
+      "heading": "Cómo terminaron los barcos de hoy",
+      "subtitle": "Cada salida del día, juzgada por su recuento — la misma evidencia que persiguen el manifiesto y Hoy.",
+      "empty": "Hoy no hubo salidas.",
+      "status": {
+        "allHome": "Todos de vuelta",
+        "unreconciled": "Recuento sin cerrar",
+        "stillOut": "Todavía fuera",
+        "countOpen": "Recuento en muelle abierto",
+        "notDeparted": "Sin zarpar"
+      },
+      "detail": {
+        "allHome": "{booked, plural, =0 {No había buceadores reservados} one {# buceador, recuento cerrado} other {# buceadores, recuento cerrado}}.",
+        "stillOut": "Vuelve a las {time}. Un barco que no está en casa no puede leerse como cerrado.",
+        "notDeparted": "Zarpa a las {time}.",
+        "missingDiver": "{count, plural, one {# buceador quedó marcado como no regresado a bordo tras la inmersión {dive}.} other {# buceadores quedaron marcados como no regresados a bordo tras la inmersión {dive}.}} Localízalos — el recuento se cierra en el manifiesto.",
+        "missingCrew": "{count, plural, one {# tripulante quedó marcado como no regresado a bordo tras la inmersión {dive}.} other {# tripulantes quedaron marcados como no regresados a bordo tras la inmersión {dive}.}} Localízalos — el recuento se cierra en el manifiesto.",
+        "afterDiveUncounted": "{count, plural, one {# buceador no tiene resultado tras la inmersión {dive}.} other {# buceadores no tienen resultado tras la inmersión {dive}.}} El recuento nunca se cerró.",
+        "crewUncounted": "{count, plural, one {# tripulante no tiene resultado tras la inmersión {dive}.} other {# tripulantes no tienen resultado tras la inmersión {dive}.}} El recuento nunca se cerró.",
+        "departureUncounted": "{count, plural, one {El recuento en muelle nunca se terminó — # buceador sin resultado en la salida.} other {El recuento en muelle nunca se terminó — # buceadores sin resultado en la salida.}}",
+        "noRollCall": "No se registró pase de lista en esta salida."
+      }
+    },
+    "leftovers": {
+      "heading": "Lo que quedó de hoy",
+      "subtitle": "Trabajo de hoy que sigue abierto. Llévalo a mañana o descártalo — el cierre recuerda la decisión de todas formas, y la cola sigue derivando su propia lista.",
+      "empty": "No quedó nada pendiente de hoy.",
+      "carry": "Llevar a mañana",
+      "dismiss": "Descartar",
+      "decisionLabel": "Qué hacer con {subject}"
+    },
+    "tomorrow": {
+      "heading": "Mañana, de un vistazo",
+      "subtitle": "Con qué abre la cola de la mañana — léelo ahora y sal más ligero.",
+      "empty": "Mañana empieza despejado.",
+      "more": "{count, plural, one {Y # más en la cola de mañana.} other {Y # más en la cola de mañana.}}"
+    },
+    "close": {
+      "heading": "Cerrar el día",
+      "acknowledge": "{count, plural, one {# barco de arriba sigue fuera o con un recuento abierto. Lo he visto, y cerrar el día no detiene la búsqueda.} other {# barcos de arriba siguen fuera o con recuentos abiertos. Los he visto, y cerrar el día no detiene la búsqueda.}}",
+      "button": "Cerrar el día",
+      "buttonAgain": "Cerrar el día otra vez",
+      "note": "Cerrar es un registro, no un candado: quién cerró, cuándo y qué quedaba abierto. Nada depende de ello."
+    },
+    "record": {
+      "heading": "Día cerrado",
+      "closedBy": "Cerrado por {name} a las {time}.",
+      "closeCount": "{count, plural, other {Cerrado # veces hoy — cada cierre es su propio registro.}}",
+      "outstandingHeading": "Registrado como pendiente",
+      "nothingOutstanding": "No quedó nada pendiente.",
+      "carried": "Llevado a mañana",
+      "dismissed": "Descartado"
+    }
+  },
   "waiversStaff": {
     "eyebrow": "Ajustes",
     "title": "Plantilla de exención",
@@ -2460,14 +2536,22 @@
       "integrityUnsealed": "Registro heredado sin sellar",
       "medicalFlag": "Seguimiento médico marcado",
       "viewFlaggedAnswers": "Ver respuestas marcadas",
-      "showMoreRecords": "Mostrar más registros",
-      "backToTop": "← Volver al principio de la lista"
+      "pagination": {
+        "total": "{count, plural, one {# registro} other {# registros}}"
+      }
     }
   },
   "shopHome": {
     "createdNotice": {
       "single": "“{title}” ya está en el calendario. 🤙",
       "series": "“{title}” ya está en el calendario — {count, plural, one {# salida programada} other {# salidas programadas}}. 🤙"
+    },
+    "firstBookable": {
+      "heading": "“{title}” ya está en el calendario — tu centro ya acepta reservas. 🎉",
+      "headingSeries": "“{title}” ya está en el calendario — {count, plural, one {# salida programada} other {# salidas programadas}}, y tu centro ya acepta reservas. 🎉",
+      "body": "Este enlace es tu calendario público — la página desde la que reservan los buceadores. Ponlo en tu web, tus redes sociales y donde te encuentren los buceadores.",
+      "linkLabel": "Tu enlace de reservas",
+      "viewAsDiver": "Míralo como lo verán tus buceadores"
     },
     "demoReset": "Datos de demostración reiniciados — barco nuevo, pizarra limpia. 🤿",
     "emailResent": "Correo de confirmación reenviado.",
@@ -2724,6 +2808,7 @@
       "groupSetup": "Configurar",
       "today": "Hoy",
       "checkIn": "Registro",
+      "closeOut": "Cierre del día",
       "walkIn": "Walk-in",
       "blockers": "No listos",
       "divers": "Buceadores",
@@ -3334,11 +3419,67 @@
       "emailLabel": "Correo",
       "phoneLabel": "Teléfono",
       "optionalHint": "(opcional)",
-      "moreOnBoard": "Hay más salidas en el tablero",
       "noticeInvalid": "Introduce un nombre para añadir a un buceador — el correo y el teléfono son opcionales aquí.",
       "noMatchesHeading": "Nadie registrado con ese nombre",
       "noMatchesAction": "Introdúcelo a mano",
-      "backToPicker": "Volver a la lista de salidas"
+      "backToPicker": "Volver a la lista de salidas",
+      "pagination": {
+        "total": "{count, plural, one {# salida} other {# salidas}}"
+      }
     }
+  },
+  "incidentExport": {
+    "title": "Exportación para incidentes",
+    "openLink": "Exportación para incidentes",
+    "backToManifest": "Volver al manifiesto",
+    "description": "Un solo documento con lo registrado para esta salida — embarque, la cronología del pase de lista, la evidencia de certificación y el estado de las exenciones — listo para imprimir y entregar a las autoridades o a la aseguradora.",
+    "factsOnly": "Este documento presenta hechos registrados con su fecha y hora. No evalúa, certifica ni implica juicio alguno de seguridad.",
+    "generatedLine": "Generado el {date} por {name}",
+    "shopTimeLabel": "Todas las horas son locales del centro ({timezone})",
+    "summaryHeading": "Resumen de la salida",
+    "summaryDivers": "Buceadores en el manifiesto",
+    "summaryBoarded": "Registrados a bordo",
+    "summaryNotBoarded": "Registrados no embarcados",
+    "summaryAwaiting": "Sin resultado registrado",
+    "summaryCrewAssigned": "Tripulación asignada",
+    "rosterHeading": "Buceadores y pase de lista",
+    "rosterDescription": "Cada reserva activa del manifiesto de esta salida, con el resultado registrado en cada punto de control. Un punto de control sin resultado registrado se lee “Pendiente de pase de lista” — la ausencia se declara, nunca se deja en blanco.",
+    "colDiver": "Buceador",
+    "colEmergencyContact": "Contacto de emergencia",
+    "notOnFile": "No registrado",
+    "resultRecordedBy": "{date} · {name}",
+    "crewHeading": "Tripulación",
+    "crewNone": "No se asignó tripulación a esta salida.",
+    "colCrewMember": "Miembro de la tripulación",
+    "colRoles": "Funciones",
+    "evidenceHeading": "Evidencia de certificación y estado de la exención",
+    "evidenceDescription": "Las tarjetas tal como constan en los registros del centro al generar este documento, con sus fechas de revisión. Solo el estado de la exención — las respuestas del cuestionario médico nunca forman parte de este documento.",
+    "certNone": "Sin evidencia de certificación registrada.",
+    "certLevelLine": "{agency} · {level} · tarjeta n.º {identifier}",
+    "certSpecialtyLine": "{agency} · {specialty} · tarjeta n.º {identifier}",
+    "certNitroxLine": "{agency} · Aire enriquecido (nitrox) · tarjeta n.º {identifier}",
+    "certStatusVerified": "Certificada — revisada el {date}",
+    "certStatusVerifiedNoDate": "Certificada",
+    "certStatusPending": "Revisión pendiente — sin certificar",
+    "certImportedTag": "Importada de un sistema anterior",
+    "certRefresherDue": "Repaso pendiente desde {date}",
+    "waiverComplete": "Exención firmada el {date} — “{title}”, versión {version}.",
+    "waiverCompleteAttested": "Registrado por el personal a partir de una firma en persona.",
+    "waiverCompleteImported": "Aceptación importada de un sistema anterior — no se firmó con la exención propia de este centro.",
+    "waiverNotSigned": "Sin exención firmada vigente en los registros.",
+    "waiverPending": "Se emitió un enlace de exención y no se ha firmado.",
+    "waiverExpired": "El enlace de la exención venció sin firmarse.",
+    "waiverMedicalReview": "Revisión médica marcada como necesaria — solo el estado; las respuestas del cuestionario no forman parte de este documento.",
+    "timelineHeading": "Cronología del pase de lista",
+    "timelineDescription": "Cada registro del pase de lista de esta salida, del más antiguo al más reciente, correcciones incluidas — los registros solo se agregan, así que una corrección añade una línea y nunca reescribe otra.",
+    "timelineEmpty": "No se ha registrado ningún pase de lista para esta salida.",
+    "crewTag": "tripulación",
+    "timelineOfflineTag": "Registrado sin conexión, sincronizado después",
+    "actionCleared": "Registro anulado (corrección)",
+    "crewCountLine": "Conteo de tripulación: {aboard} a bordo, {assigned} asignados",
+    "recordedByName": "Registrado por {name}",
+    "noteLine": "Nota: {note}",
+    "footerHashLabel": "Código de integridad (SHA-256)",
+    "footerHashExplainer": "Se calcula a partir de los hechos registrados en este documento. Generar la exportación de nuevo con los mismos registros reproduce el mismo código, de modo que dos copias pueden verificarse entre sí."
   }
 }

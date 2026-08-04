@@ -4,6 +4,7 @@ import { RentalFitForm } from "@/app/s/[shopSlug]/trips/[id]/_components/RentalF
 import { DiveSitesPeek } from "@/components/DiveSitesPeek";
 import { EarnedMoment } from "@/components/EarnedMoment";
 import { FlashParams } from "@/components/FlashParams";
+import { PartyClaimPanel } from "@/components/PartyClaimPanel";
 import { ShopNotice } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
@@ -16,14 +17,17 @@ import {
 import { getDb } from "@/db/client";
 import { getBookingPayment } from "@/db/payments";
 import { getReadyPageData, type ReadyPageData } from "@/db/ready";
+import { issuePartySeatClaims } from "@/db/seat-claims";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { type DiverMessageKey, type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { checklistCategoryText, checklistDetailText } from "@/i18n/readiness-summary-labels";
 import { requestLocale } from "@/i18n/request";
+import { claimLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
 import { telHref } from "@/lib/course-inquiry";
 import { formatRelativeDay, formatShortDate, formatTime, formatTimeRangeTz } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
+import { publicAppUrl } from "@/lib/notifications";
 import {
   buildDiverChecklist,
   type ChecklistState,
@@ -180,6 +184,9 @@ const READY_NOTICES: Record<
   // Task 49: a failed gear/setup save (`saveFitFromReady`'s `?error=fit`)
   // had no entry here either — the same silent-failure gap, one field over.
   "error-fit": { tone: "danger", key: "ready.fitUnavailable" },
+  // Landing here fresh off a successful seat claim (docs ADR
+  // 20260804-seat-claim-links) — the one moment to say whose page this now is.
+  "saved-claimed": { tone: "success", key: "seatClaim.claimedNotice" },
 };
 
 /**
@@ -389,6 +396,28 @@ export default async function DiverReadinessPage({
     return cancelledNotice(payment?.status, detail.trip.title, detail.shop.name, t);
   }
 
+  // The organizer's claim panel, when this booking leads a party (docs ADR
+  // 20260804-seat-claim-links): the readiness link is the durable one from
+  // the confirmation email, so "who still hasn't claimed?" has an answer the
+  // night before, not only in the minutes after booking. Authorized by the
+  // verified `readiness` capability above; the query only ever walks seats
+  // led by this booking, so a member's own /ready renders no panel.
+  const partySeatClaims = await issuePartySeatClaims(db, {
+    shopId: shop.id,
+    leadBookingId: bookingId,
+  });
+  const claimOrigin = publicAppUrl();
+  const partySeats = partySeatClaims.map((seat) => ({
+    bookingId: seat.bookingId,
+    seatName: seat.seatName,
+    claimed: seat.claimed,
+    claimUrl: seat.claim
+      ? claimOrigin
+        ? new URL(claimLinkPath(seat.claim.token), `${claimOrigin}/`).toString()
+        : claimLinkPath(seat.claim.token)
+      : null,
+  }));
+
   const cancelPreviewKey = CANCEL_PREVIEW_KEY[data.cancelPreview];
   const rescheduleBlockedKey =
     data.rescheduleBlocked && data.rescheduleBlocked !== "booking_closed"
@@ -581,6 +610,8 @@ export default async function DiverReadinessPage({
             />
           </ul>
         </section>
+
+        <PartyClaimPanel locale={locale} seats={partySeats} className="mt-6" />
 
         <section className="mt-6" aria-labelledby="setup-heading">
           <h2

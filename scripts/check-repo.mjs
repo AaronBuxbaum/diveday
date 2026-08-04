@@ -20,6 +20,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const checks = [
   ["env", "check-env.mjs"],
   ["architecture", "check-architecture.mjs"],
+  ["tokens", "check-tokens.mjs"],
   ["clock", "check-clock.mjs"],
   ["adrs", "check-adrs.mjs"],
   ["docs", "check-doc-links.mjs"],

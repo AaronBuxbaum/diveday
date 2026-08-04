@@ -3,21 +3,23 @@ import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed";
 import { signRecapToken } from "../src/lib/recap-links";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import { findTripOnBoard, openTripFromBoard, openTripTab } from "./helpers";
+import { E2E_FROZEN_CLOCK } from "./servers";
 
 /**
- * Visual regression coverage. Eighty-one key surfaces × light/dark, each
- * captured at a phone and a desktop viewport — 324 screenshots per run (see
+ * Visual regression coverage. Eighty-three key surfaces × light/dark, each
+ * captured at a phone and a desktop viewport — 332 screenshots per run (see
  * ADR 20260729-reg-suit-visual-regression). Keep this count in sync when
  * adding a surface; each `capture()` call costs 4 screenshots per CI run.
  * `grep -c 'await capture(page' e2e/visual.spec.ts` is the number — the prose
  * has drifted from it before (it read 48 while the grep said 56, and 71 while
  * the grep said 72), so trust the grep and correct the prose.
  *
- * Two more come from the `print` block at the bottom: the manifest and prep
- * pages as they render for the printer. Print is its own concern, not a
- * light/dark one — the `@media print` token override collapses both schemes to
- * one black-and-white palette — so each is captured once, at a US-Letter width,
- * via `capturePrint()`. That brings the run to 326 screenshots.
+ * Three more come from the `print` block at the bottom: the manifest, prep,
+ * and incident-export pages as they render for the printer. Print is its own
+ * concern, not a light/dark one — the `@media print` token override collapses
+ * both schemes to one black-and-white palette — so each is captured once, at a
+ * US-Letter width, via `capturePrint()`. That brings the run to 335
+ * screenshots.
  *
  * ## One surface, one `test()`
  *
@@ -847,6 +849,47 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "readiness", scheme);
       });
 
+      /**
+       * The group-organizer surfaces (docs ADR 20260804-seat-claim-links),
+       * both sides of one flow: the organizer's confirmation with the
+       * "Your group's seats" claim panel, then the claim page an invited
+       * diver opens from the shared link. A real party booking through the
+       * public form — `demoReset` reseeds the fixture, so the two extra
+       * seats never move any other capture's counts.
+       */
+      test(`the party organizer confirmation and claim page render true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        await page.goto("/s/blue-mantis");
+        await publicReefCard(page).getByRole("link", { name: REEF_TRIP }).click();
+        const partySize = page.getByLabel("Number of divers");
+        await expect(partySize).toHaveAttribute("data-hydrated", "true");
+        await partySize.selectOption("2");
+        await page.getByLabel("Name", { exact: true }).fill("Orla Byrne");
+        await page.getByLabel("Email", { exact: true }).fill(`organizer-${scheme}@example.com`);
+        await page.getByLabel("Diver 2 name").fill("Sam Reyes");
+        await page.getByLabel("Use the main contact's email for this diver").check();
+        await page.getByRole("button", { name: /^Book/ }).click();
+        await page.getByRole("heading", { name: /You’re on the boat/ }).waitFor();
+        await page.getByRole("heading", { name: "Your group’s seats" }).waitFor();
+        await capture(page, "party-organizer-confirmation", scheme);
+
+        // Collapsed disclosure — the token never renders as pixels (that's
+        // what keeps this capture stable run to run), but the text is in the
+        // DOM for textContent.
+        const claimUrlText =
+          (await page
+            .locator("li")
+            .filter({ hasText: "Sam Reyes" })
+            .locator("p.font-mono")
+            .textContent()) ?? "";
+        const claimPath = claimUrlText.match(/\/claim\/[^\s/?#]+/)?.[0];
+        await page.goto(claimPath ?? "/");
+        await page.getByRole("heading", { name: /A seat on/ }).waitFor();
+        await capture(page, "seat-claim", scheme);
+      });
+
       // Its own test rather than another stop on a public tour: a trust page
       // whose baseline is skipped because a long test ran out of budget is the
       // one baseline you'd most want.
@@ -974,6 +1017,52 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("list", { name: "Run the shop" }).waitFor();
         await capture(page, "nav-more-menu", scheme);
       });
+
+      /**
+       * The bookable moment: the first departure ever landing on the board is
+       * the exact instant the first-run checklist (and the share link it
+       * carried) leaves Today, so the created notice grows into a share card
+       * exactly once — e2e/first-ten-minutes.spec.ts drives the behavior, this
+       * is the surface. Same fresh-shop-per-scheme pattern (and deterministic
+       * slug reasoning) as the `today-empty` capture above: the slug renders
+       * inside the card, so it must not contain a wall-clock stamp.
+       */
+      test(`the first bookable moment renders true to the design (${scheme})`, async ({ page }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        const unique = `bookable-${scheme}`;
+        await page.goto("/onboard");
+        await page
+          .locator('input[name="shopName"]')
+          .filter({ visible: true })
+          .fill("Bookable Moment E2E");
+        await page.locator('input[name="shopSlug"]').filter({ visible: true }).fill(unique);
+        await page.locator('input[name="ownerName"]').filter({ visible: true }).fill("Nour Haddad");
+        await page
+          .locator('input[name="ownerEmail"]')
+          .filter({ visible: true })
+          .fill(`${unique}@example.com`);
+        await page
+          .locator('input[name="ownerPassword"]')
+          .filter({ visible: true })
+          .fill("trial-pass-123");
+        await page.getByRole("button", { name: "Create shop & start trial" }).click();
+        await page.waitForURL(new RegExp(`/shop/${unique}$`));
+
+        // The first (and only-ever-first) departure, dated off the frozen
+        // clock so the card and queue rows render pixel-identically per run.
+        await page.goto(`/shop/${unique}/trips/new`);
+        const tomorrow = new Date(Date.parse(E2E_FROZEN_CLOCK) + 24 * 60 * 60 * 1000)
+          .toISOString()
+          .slice(0, 10);
+        await page.locator('input[name="title"]').fill("Two-Tank Morning Reef");
+        await page.locator('input[name="date"]').fill(tomorrow);
+        await page.locator('input[name="startTime"]').fill("08:00");
+        await page.locator('input[name="endTime"]').fill("12:30");
+        await page.getByRole("button", { name: "Put it on the board" }).click();
+        await page.waitForURL(new RegExp(`/shop/${unique}\\?created=`));
+        await page.getByRole("heading", { name: /your shop is bookable/ }).waitFor();
+        await capture(page, "today-first-bookable", scheme);
+      });
     });
 
     test.describe("staff", () => {
@@ -1014,6 +1103,16 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/check-in");
         await page.getByRole("heading", { name: "Counter check-in", level: 1 }).waitFor();
         await capture(page, "check-in", scheme);
+      });
+
+      // The end-of-day close-out (ADR 20260804-day-closeout): the ritual
+      // surface Today mirrors at 5 p.m. Captured over the plain seed state —
+      // today's boat still ahead of the frozen clock, real leftovers, and
+      // tomorrow's glance — so the calm-but-populated shape is the baseline.
+      test(`the day close-out renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/close-out");
+        await page.getByRole("heading", { name: "How today's boats ended" }).waitFor();
+        await capture(page, "close-out", scheme);
       });
 
       // Staffing had no baseline at all until the over_ratio parity fix —
@@ -1185,6 +1284,22 @@ for (const scheme of ["light", "dark"] as const) {
         // renders once saved) so the capture isn't racing that async write.
         await page.getByRole("link", { name: "Open offline roll call" }).waitFor();
         await capture(page, "manifest", scheme);
+      });
+
+      // The incident-ready export: the hand-to-authorities document of the
+      // departure's recorded facts (roster with roll-call state, evidence and
+      // waiver status, timeline, integrity code). Captured on the seeded reef
+      // trip before any roll call, so the baseline shows the stated-absence
+      // rendering — "Awaiting" cells, an explicitly empty timeline — which is
+      // exactly the state that must never read as a blank on this document.
+      test(`a trip's incident-ready export renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await openReefTrip(page);
+        const tripPath = new URL(page.url()).pathname;
+        await page.goto(`${tripPath}/incident-export`);
+        await page.getByRole("heading", { name: "Roll-call timeline" }).waitFor();
+        await capture(page, "incident-export", scheme);
       });
 
       // Blue Mantis fills nitrox, so the Tanks tile grid is at its full
@@ -1418,8 +1533,8 @@ for (const scheme of ["light", "dark"] as const) {
 
       // … and Signatures is the signed-record evidence audit, paginated
       // (`listWaiverIntegrityAudit`, `WAIVER_INTEGRITY_PAGE_SIZE`) so the demo
-      // shop's 150+ signed records render as one page with a "Show more
-      // records" link rather than a silent truncation notice.
+      // shop's 150+ signed records render as one page under the shared pager
+      // rather than a silent truncation notice.
       //
       // Reached by URL rather than by clicking the "Waiver sections" sub-nav
       // the way this used to, now that it no longer follows the Template
@@ -1430,7 +1545,7 @@ for (const scheme of ["light", "dark"] as const) {
       }) => {
         await page.goto("/shop/blue-mantis/waivers/signatures");
         await page.getByRole("heading", { level: 1, name: "Signatures" }).waitFor();
-        await page.getByRole("link", { name: "Show more records" }).waitFor();
+        await page.getByRole("navigation", { name: "Pages" }).waitFor();
         await capture(page, "staff-waivers-signatures", scheme);
       });
 
@@ -1817,5 +1932,15 @@ test.describe("print", () => {
     await page.goto(`${tripPath}/prep`);
     await page.getByRole("heading", { name: "Tanks" }).waitFor();
     await capturePrint(page, "prep");
+  });
+
+  // The incident-ready export exists to be printed and handed over, so the
+  // print rendering is the primary artifact, not a nice-to-have.
+  test("the incident-ready export prints monochrome and padded", async ({ page }) => {
+    await openReefTrip(page);
+    const tripPath = new URL(page.url()).pathname;
+    await page.goto(`${tripPath}/incident-export`);
+    await page.getByRole("heading", { name: "Roll-call timeline" }).waitFor();
+    await capturePrint(page, "incident-export");
   });
 });

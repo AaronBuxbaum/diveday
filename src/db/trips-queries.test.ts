@@ -1,11 +1,14 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
-import { bookings } from "./schema";
+import { bookings, shops } from "./schema";
 import {
+  countShopTrips,
   createTrip,
+  offsetUpcomingTripsWithCounts,
   pagedUpcomingTripsWithCounts,
   SCHEDULE_PAGE_SIZE,
+  setTripStatus,
   upcomingScheduleRange,
   upcomingScheduleStats,
   upcomingTripsWithCounts,
@@ -120,6 +123,84 @@ describe("paged schedule queries", () => {
     expect(withSpace.trips.every((t) => t.booked < t.capacity)).toBe(true);
   });
 
+  /**
+   * The add-booking picker's reader. The board keeps its cursor stack — it
+   * walks a stream forward — but a *pick one departure* step needs to say
+   * "page 2 of 4" and go back, so it reads the same list through `offsetPage`
+   * (ADR 20260803-one-pagination-model).
+   */
+  it("offset-pages the same list the board keysets, with an honest count", async () => {
+    const { db, shop } = await seededShopContext();
+    const all = await upcomingTripsWithCounts(db, shop.id);
+
+    const first = await offsetUpcomingTripsWithCounts(db, shop.id, { limit: 5 });
+    expect(first.total).toBe(all.length);
+    expect(first.pageCount).toBe(Math.ceil(all.length / 5));
+
+    const seen: string[] = [];
+    for (let page = 1; page <= first.pageCount; page += 1) {
+      const chunk = await offsetUpcomingTripsWithCounts(db, shop.id, { page, limit: 5 });
+      expect(chunk.page).toBe(page);
+      expect(chunk.total).toBe(all.length);
+      seen.push(...chunk.trips.map((trip) => trip.id));
+    }
+    expect(seen).toEqual(all.map((trip) => trip.id));
+
+    // Back one page is the page you came from — the capability the picker's
+    // "go look at the board" link never had.
+    const second = await offsetUpcomingTripsWithCounts(db, shop.id, { page: 2, limit: 5 });
+    const back = await offsetUpcomingTripsWithCounts(db, shop.id, { page: 1, limit: 5 });
+    expect(back.trips.map((trip) => trip.id)).toEqual(first.trips.map((trip) => trip.id));
+    expect(second.trips.map((trip) => trip.id)).not.toEqual(back.trips.map((trip) => trip.id));
+
+    for (const requested of [0, -3, Number.NaN]) {
+      const clamped = await offsetUpcomingTripsWithCounts(db, shop.id, {
+        page: requested,
+        limit: 5,
+      });
+      expect(clamped.page).toBe(1);
+      expect(clamped.trips.map((trip) => trip.id)).toEqual(first.trips.map((trip) => trip.id));
+    }
+
+    const past = await offsetUpcomingTripsWithCounts(db, shop.id, { page: 999, limit: 5 });
+    expect(past.page).toBe(past.pageCount);
+    expect(past.trips.length).toBeGreaterThan(0);
+  });
+
+  /**
+   * The picker filters to departures with a seat left, so its count has to be
+   * taken over the same `having`-filtered set. Counting `trips` directly would
+   * page a sold-out Saturday into "page 3 of 5" and then render nothing there.
+   */
+  it("counts only the departures its filters actually list", async () => {
+    const { db, shop } = await seededShopContext();
+    const all = await upcomingTripsWithCounts(db, shop.id);
+    const withSpaceCount = all.filter((trip) => trip.booked < trip.capacity).length;
+    expect(withSpaceCount).toBeLessThan(all.length); // the seed has a full trip
+
+    const spaced = await offsetUpcomingTripsWithCounts(db, shop.id, { hasSpace: true, limit: 5 });
+    expect(spaced.total).toBe(withSpaceCount);
+    expect(spaced.pageCount).toBe(Math.ceil(withSpaceCount / 5));
+
+    const everySpaced: string[] = [];
+    for (let page = 1; page <= spaced.pageCount; page += 1) {
+      const chunk = await offsetUpcomingTripsWithCounts(db, shop.id, {
+        hasSpace: true,
+        page,
+        limit: 5,
+      });
+      everySpaced.push(...chunk.trips.map((trip) => trip.id));
+    }
+    expect(everySpaced).toHaveLength(withSpaceCount);
+    expect(new Set(everySpaced).size).toBe(withSpaceCount);
+
+    const courses = await offsetUpcomingTripsWithCounts(db, shop.id, {
+      tripType: "course",
+      limit: 5,
+    });
+    expect(courses.total).toBe(all.filter((trip) => trip.course !== null).length);
+  });
+
   it("computes board-wide stats that match the full list", async () => {
     const { db, shop } = await seededShopContext();
     const all = await upcomingTripsWithCounts(db, shop.id);
@@ -179,5 +260,37 @@ describe("paged schedule queries", () => {
       monthEnd: new Date("2030-09-01T00:00:00Z"),
     });
     expect(augustFromLaterNow.trips).toHaveLength(0);
+  });
+});
+
+describe("countShopTrips", () => {
+  it("counts only the shop's own departures, from zero, including past and cancelled ones", async () => {
+    const { db, shop } = await seededShopContext();
+
+    // A brand-new shop next door: zero, untouched by the seeded shop's board.
+    const [fresh] = await db
+      .insert(shops)
+      .values({ name: "Fresh Count", slug: "fresh-count", timezone: "America/New_York" })
+      .returning();
+    if (!fresh) throw new Error("shop not created");
+    expect(await countShopTrips(db, fresh.id)).toBe(0);
+
+    const first = await createTrip(db, {
+      shopId: fresh.id,
+      title: "First ever",
+      startsAt: new Date("2030-08-15T12:00:00Z"),
+      endsAt: new Date("2030-08-15T16:00:00Z"),
+      capacity: 4,
+    });
+    if (!first) throw new Error("trip not created");
+    expect(await countShopTrips(db, fresh.id)).toBe(1);
+
+    // Cancelled still counts: "has this shop ever scheduled?" is the question
+    // the bookable-moment caller asks, and a cancelled trip answers yes.
+    await setTripStatus(db, fresh.id, first.id, "cancelled");
+    expect(await countShopTrips(db, fresh.id)).toBe(1);
+
+    // The seeded shop's own count never bleeds in.
+    expect(await countShopTrips(db, shop.id)).toBeGreaterThan(1);
   });
 });
