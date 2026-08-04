@@ -17,6 +17,12 @@ import { earlyAccessPrice, fullShopExport, sharedLinkCard } from "@/lib/marketin
 import { getMigrationGuide, MIGRATION_GUIDES } from "@/lib/migration-guides";
 import { FOUNDER_EMAIL } from "@/lib/platform-mail";
 
+// `instant = true`: navigating here paints immediately. Every request-scoped
+// read sits behind a `<Suspense>` boundary — this segment's `loading.tsx`, or
+// one placed inside the page — so the frame lands without waiting on the
+// request. `next build` audits the claim. See ADR 20260804-instant-navigation.
+export const instant = true;
+
 export const metadata: Metadata = {
   title: "Pricing — one flat price per shop | DiveDay",
   description:

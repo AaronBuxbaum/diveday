@@ -95,6 +95,7 @@ ignored and the full suite runs instead. Pass args directly: `pnpm test <file> -
 | Design tokens | `src/app/globals.css` (semantic only, ADR-0004) |
 | Form/button/control wrappers | `src/components/ui/` — `form.tsx` (`Field`, `FieldGrid`, `controlClass`), `button.ts` (`buttonClass`) |
 | Paging a staff list (prev / "Page 3 of 7" / next) | one component, `src/components/Pager.tsx`, words from the one `shared.pager.*` key set; one query shape, `offsetPage` in `src/db/paging.ts`. **Every paged staff list wears it** — orders, the by-departure view, divers, reports, reviews, the dive-site library and the published site catalog, courses, both promo lists, the waiver signature log, and the add-booking departure picker (ADR 20260803-one-pagination-model); a new paged list uses it from the start. Keyset cursors (`src/db/cursor.ts`) are the one earned exception — the schedule board pages a stream with no end to count. A list's **count must share the row query's exact scope** (joins, `where`, `having`, `now`), or the pager promises pages that render nothing |
+| Why a route paints instantly (or doesn't) | Each page declares `export const instant = true` and owns a body-shaped `loading.tsx` — that file *is* the Suspense boundary, and what a client navigation into the segment paints. `instant = false` survives on exactly one shell, `src/app/shop/[shopSlug]/layout.tsx`, which cannot be instant because its cross-tenant `notFound()` must run before `{children}` (ADR 20260804-instant-navigation) |
 | "What should this code do?" | Read `foo.test.ts` before `foo.ts` — tests are the contract |
 
 ## Skills and providers
@@ -205,6 +206,16 @@ docs, tests, or code, the skill is stale and must be fixed in the same change.
   stay pixel-stable for visual regression; in production the clock is the native call, unchanged.
   `pnpm check:clock` enforces it. Never stabilise a visual test by masking moving text — freeze the
   clock at the Playwright harness boundary.
+- **A new page ships with a `loading.tsx` and `export const instant = true`.** That file is the
+  route's `<Suspense>` boundary — what a client navigation into the segment paints, and what stands
+  in the static shell while the page's request-scoped reads stream in. Shape it like the body it
+  replaces (an `animate-pulse` wrapper, `bg-surface-sunken` bars, `border-border bg-surface` cards),
+  never a spinner. **Never put an `await` above `{children}` in a `layout.tsx`**: a layout wraps the
+  page, so no boundary can be placed between them, and one request-scoped read there costs every
+  route beneath it its static shell — put the read in an async child inside its own `<Suspense>`,
+  with a fallback that holds its height. `next build` fails on a route that breaks this
+  (`blocking-prerender-dynamic` / `blocking-prerender-client-hook`), naming the component. See ADR
+  20260804-instant-navigation.
 - **Secrets never enter the repo** — `.env*` is gitignored.
 
 <!-- BEGIN:nextjs-agent-rules -->

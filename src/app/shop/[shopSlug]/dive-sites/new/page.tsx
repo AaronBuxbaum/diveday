@@ -25,6 +25,14 @@ import { ingestDiveSiteMedia } from "@/lib/storage/ingest-dive-site-media";
 import { SiteFormShell, type SiteFormState } from "../_components/SiteFormShell";
 import { siteFormErrorMessages } from "../_components/site-form-errors";
 
+// `instant = true` asserts that navigating *into* this page paints
+// immediately. Not a claim of a static shell: the staff shell layout declares
+// `instant = false` (read its comment for why), so a cold direct visit still
+// blocks on the session and shop row. What this validates is the navigation
+// staff make all day — arriving from another `/shop` page, where the shell
+// is already mounted. See ADR 20260804-instant-navigation.
+export const instant = true;
+
 export const metadata: Metadata = { title: "Create dive site — DiveDay" };
 
 const specialtySchema = z.enum(["deep", "wreck", "night", "drysuit"]);

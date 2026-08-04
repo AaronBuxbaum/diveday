@@ -20,12 +20,12 @@ import {
 } from "@/lib/timezones";
 import { onboardAction } from "./actions";
 
-// Reads `searchParams` and `requestLocale()` (`headers()`-backed) unguarded,
-// same as every other account-lifecycle page — genuinely request-scoped, not
-// a marketing page in scope for the "use cache" hoist. See the shop layout's
-// `instant = false` comment (src/app/shop/[shopSlug]/layout.tsx) for what
-// this does and doesn't do.
-export const instant = false;
+// `instant = true`: this route has a real static shell. Every request-scoped
+// read below sits inside this segment's `loading.tsx` boundary, so the frame
+// paints without waiting on the request and the data streams into it —
+// and `next build` fails if that ever stops being true.
+// See ADR 20260804-instant-navigation.
+export const instant = true;
 
 /**
  * Every code `onboardAction`'s `backToForm` can hand back, resolved to a
