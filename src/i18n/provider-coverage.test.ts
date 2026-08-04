@@ -142,11 +142,12 @@ describe("diver copy has a provider above it", () => {
         withCopy.push(path.relative(APP, file).replaceAll(path.sep, "/"));
       }
     }
-    // The seven bearer-token routes plus the public shop namespace. Staff
+    // The eight bearer-token routes plus the public shop namespace. Staff
     // boundaries are deliberately absent — `staff-messages.ts` has no client
     // provider, so their remainder is named in ADR
     // 20260803-error-boundary-copy-bridge rather than covered here.
     expect(withCopy.sort()).toEqual([
+      "claim/[token]/error.tsx",
       "invite/[token]/error.tsx",
       "ready/[token]/error.tsx",
       "recap/[token]/error.tsx",

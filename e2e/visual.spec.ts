@@ -847,6 +847,47 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "readiness", scheme);
       });
 
+      /**
+       * The group-organizer surfaces (docs ADR 20260804-seat-claim-links),
+       * both sides of one flow: the organizer's confirmation with the
+       * "Your group's seats" claim panel, then the claim page an invited
+       * diver opens from the shared link. A real party booking through the
+       * public form — `demoReset` reseeds the fixture, so the two extra
+       * seats never move any other capture's counts.
+       */
+      test(`the party organizer confirmation and claim page render true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        await page.goto("/s/blue-mantis");
+        await publicReefCard(page).getByRole("link", { name: REEF_TRIP }).click();
+        const partySize = page.getByLabel("Number of divers");
+        await expect(partySize).toHaveAttribute("data-hydrated", "true");
+        await partySize.selectOption("2");
+        await page.getByLabel("Name", { exact: true }).fill("Orla Byrne");
+        await page.getByLabel("Email", { exact: true }).fill(`organizer-${scheme}@example.com`);
+        await page.getByLabel("Diver 2 name").fill("Sam Reyes");
+        await page.getByLabel("Use the main contact's email for this diver").check();
+        await page.getByRole("button", { name: /^Book/ }).click();
+        await page.getByRole("heading", { name: /You’re on the boat/ }).waitFor();
+        await page.getByRole("heading", { name: "Your group’s seats" }).waitFor();
+        await capture(page, "party-organizer-confirmation", scheme);
+
+        // Collapsed disclosure — the token never renders as pixels (that's
+        // what keeps this capture stable run to run), but the text is in the
+        // DOM for textContent.
+        const claimUrlText =
+          (await page
+            .locator("li")
+            .filter({ hasText: "Sam Reyes" })
+            .locator("p.font-mono")
+            .textContent()) ?? "";
+        const claimPath = claimUrlText.match(/\/claim\/[^\s/?#]+/)?.[0];
+        await page.goto(claimPath ?? "/");
+        await page.getByRole("heading", { name: /A seat on/ }).waitFor();
+        await capture(page, "seat-claim", scheme);
+      });
+
       // Its own test rather than another stop on a public tour: a trust page
       // whose baseline is skipped because a long test ran out of budget is the
       // one baseline you'd most want.

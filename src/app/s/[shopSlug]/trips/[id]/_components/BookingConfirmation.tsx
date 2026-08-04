@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { EarnedMoment } from "@/components/EarnedMoment";
+import { PartyClaimPanel, type PartyClaimSeat } from "@/components/PartyClaimPanel";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { diverTranslator } from "@/i18n/messages";
@@ -110,6 +111,7 @@ export function BookingConfirmation({
   readinessLink,
   progression,
   emailsOnTheWay,
+  partySeats,
 }: {
   shop: Shop;
   shopSlug: string;
@@ -143,6 +145,12 @@ export function BookingConfirmation({
    * `bookingConfirmationAndWaiverEmailsSent`.
    */
   emailsOnTheWay: boolean;
+  /**
+   * The seats this booking leads, one claim link per still-unclaimed one
+   * (docs ADR 20260804-seat-claim-links). Empty for a solo booking, which
+   * renders no panel at all.
+   */
+  partySeats: PartyClaimSeat[];
 }) {
   const t = diverTranslator(locale);
   const checklist = readiness ? buildDiverChecklist(requirement, readiness) : [];
@@ -271,6 +279,11 @@ export function BookingConfirmation({
           {t("booking.trackReadiness")}
         </Link>
       </div>
+
+      {/* The organizer's share-and-track panel, right after their own next
+          step: the moment they finish booking is the moment the group chat is
+          already open. Solo bookings pass an empty list and render nothing. */}
+      <PartyClaimPanel locale={locale} seats={partySeats} className="mt-4" />
 
       <RentalFitForm
         action={saveRentalFitRequest.bind(null, fitRef)}
