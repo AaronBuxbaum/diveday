@@ -5,11 +5,11 @@ import { useState } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { InfoHint } from "@/components/ui/InfoHint";
 import type { DiverMessageKey } from "@/i18n/messages";
 import { formatMoneyCents } from "@/lib/format";
 import type { ShopCurrency } from "@/lib/money";
 import {
-  CORE_RENTAL_KINDS,
   hasAnyRentalPricing,
   offeredRentableItems,
   quoteRentalFit,
@@ -37,6 +37,18 @@ export const RENTABLE_ITEM_LABEL_KEYS: Record<RentableItemKind, DiverMessageKey>
   weights: "rental.itemLabels.weights",
   dive_computer: "rental.itemLabels.diveComputer",
   gopro: "rental.itemLabels.gopro",
+};
+
+/**
+ * Plain-language definitions for the two acronyms this checklist is most
+ * likely to stump a newcomer with. They used to sit under the list as
+ * permanent paragraphs; now they hang off the item they explain as an
+ * `InfoHint`, so the checklist reads as a checklist and the explanation is
+ * one hover (or tap, or tab-stop) away for whoever wants it.
+ */
+export const RENTABLE_ITEM_HINT_KEYS: Partial<Record<RentableItemKind, DiverMessageKey>> = {
+  bcd: "rental.jargonHints.bcd",
+  regulator: "rental.jargonHints.regulator",
 };
 
 /**
@@ -90,7 +102,11 @@ export function RentalFitForm({
   );
   const [bcdSize, setBcdSize] = useState(rentalFit?.bcdSize ?? "");
   const [wetsuitSize, setWetsuitSize] = useState(rentalFit?.wetsuitSize ?? "");
-  const [finSize, setFinSize] = useState(rentalFit?.finSize ?? "");
+  // One shoe-size figure for fins and boots alike: they were two fields asking
+  // the same question, and a diver who answered one and not the other left the
+  // crew guessing. `bootSize` is still its own column (imports carry one), and
+  // the save action writes this value to both.
+  const [finSize, setFinSize] = useState(rentalFit?.finSize ?? rentalFit?.bootSize ?? "");
 
   const bcdOk = !rentedKinds.has("bcd") || !!bcdSize;
   const wetsuitOk = !rentedKinds.has("wetsuit") || !!wetsuitSize;
@@ -106,28 +122,6 @@ export function RentalFitForm({
     wantsNitrox: nitroxOffered && nitroxRequested,
     plannedDives,
   });
-  // Describe the set as exactly the core items this shop offers, so the copy can
-  // never promise a bundle the diver can't assemble (e.g. after the dive
-  // computer joined the core kit).
-  const coreSetLabels = offered
-    .filter((item) => (CORE_RENTAL_KINDS as readonly string[]).includes(item.kind))
-    .map((item) => t(RENTABLE_ITEM_LABEL_KEYS[item.kind]))
-    // Lower-case mid-sentence, but keep all-caps acronyms like "BCD" intact.
-    .map((label) => (label === label.toUpperCase() ? label : label.toLowerCase()));
-  // Locale-appropriate list punctuation ("a, b, and c" / "a, b y c"), not an
-  // English-only comma join — same approach as RequirementsSection.tsx's
-  // site-requirement list.
-  const coreSetSentence = new Intl.ListFormat(locale, {
-    style: "long",
-    type: "conjunction",
-  }).format(coreSetLabels);
-  // Plain-language glossary hints (task 6) for the two acronyms this
-  // checklist is most likely to stump a newcomer with — shown once, only for
-  // whichever the shop actually offers, right where the diver is deciding
-  // whether to check the box.
-  const jargonHintKeys: DiverMessageKey[] = [];
-  if (offers.has("bcd")) jargonHintKeys.push("rental.jargonHints.bcd");
-  if (offers.has("regulator")) jargonHintKeys.push("rental.jargonHints.regulator");
   return (
     <section className="mt-5 rounded-lg border border-border bg-surface/70 p-4 text-left">
       <h3 className="font-medium">{t("rental.heading")}</h3>
@@ -185,65 +179,78 @@ export function RentalFitForm({
             <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
               {offered.map(({ kind, name }) => {
                 const priceCents = pricing.perItemCents[kind];
+                const hintKey = RENTABLE_ITEM_HINT_KEYS[kind];
+                const itemLabel = t(RENTABLE_ITEM_LABEL_KEYS[kind]);
                 return (
-                  <label
+                  // The hint sits *outside* the `<label>`: a label's text is
+                  // the checkbox's accessible name, and clicking a control
+                  // nested inside one toggles the box underneath it.
+                  <div
                     key={name}
-                    className="flex min-h-11 items-center gap-3 rounded-lg border border-border px-3 text-sm"
+                    className="flex min-h-11 items-center gap-2 rounded-lg border border-border pr-3"
                   >
-                    <input
-                      name={name}
-                      type="checkbox"
-                      checked={rentedKinds.has(kind)}
-                      onChange={(event) => {
-                        setRentedKinds((current) => {
-                          const next = new Set(current);
-                          if (event.target.checked) next.add(kind);
-                          else next.delete(kind);
-                          return next;
-                        });
-                      }}
-                      className="size-4 accent-primary"
-                    />
-                    <span className="flex-1">{t(RENTABLE_ITEM_LABEL_KEYS[kind])}</span>
+                    <label className="flex min-h-11 flex-1 items-center gap-3 pl-3 text-sm">
+                      <input
+                        name={name}
+                        type="checkbox"
+                        checked={rentedKinds.has(kind)}
+                        onChange={(event) => {
+                          setRentedKinds((current) => {
+                            const next = new Set(current);
+                            if (event.target.checked) next.add(kind);
+                            else next.delete(kind);
+                            return next;
+                          });
+                        }}
+                        className="size-4 accent-primary"
+                      />
+                      <span className="flex-1">{itemLabel}</span>
+                    </label>
+                    {hintKey ? (
+                      <InfoHint
+                        label={t("rental.jargonHintLabel", { item: itemLabel })}
+                        detail={t(hintKey)}
+                      />
+                    ) : null}
                     {showPricing && priceCents !== undefined ? (
-                      <span className="text-muted">
+                      <span className="text-sm text-muted">
                         {formatMoneyCents(priceCents, currency, locale)}
                       </span>
                     ) : null}
-                  </label>
+                  </div>
                 );
               })}
             </div>
-            {jargonHintKeys.length > 0 ? (
-              <ul className="mt-2 flex flex-col gap-0.5 text-xs text-muted/80">
-                {jargonHintKeys.map((key) => (
-                  <li key={key}>{t(key)}</li>
-                ))}
-              </ul>
-            ) : null}
-            <p className="mt-2 text-sm text-muted">
-              {t("rental.tankPlan", { count: plannedDives })}{" "}
-              {showPricing
-                ? pricing.setCents !== null && coreSetSentence
-                  ? t("rental.fullSetOffer", {
-                      set: coreSetSentence,
-                      price: formatMoneyCents(pricing.setCents, currency, locale),
-                    })
-                  : t("rental.perPiece")
-                : t("rental.askWhatsIncluded")}
-            </p>
+            {showPricing ? null : (
+              <p className="mt-2 text-sm text-muted">{t("rental.askWhatsIncluded")}</p>
+            )}
             {showPricing && quote.subtotalCents > 0 ? (
-              <p className="mt-2 rounded-lg border border-border bg-surface px-3 py-2 text-sm">
-                <span className="font-medium">
-                  {quote.unpricedKinds.length > 0
-                    ? t("rental.estimatedRentalWithExtras", {
-                        price: formatMoneyCents(quote.subtotalCents, currency, locale),
-                      })
-                    : t("rental.estimatedRental", {
-                        price: formatMoneyCents(quote.subtotalCents, currency, locale),
-                      })}
-                </span>{" "}
+              <p className="mt-3 rounded-lg border border-border bg-surface px-3 py-2 text-sm">
+                <RentalQuoteAmount
+                  totalLabel={
+                    quote.unpricedKinds.length > 0
+                      ? t("rental.estimatedRentalWithExtras", {
+                          price: formatMoneyCents(quote.subtotalCents, currency, locale),
+                        })
+                      : t("rental.estimatedRental", {
+                          price: formatMoneyCents(quote.subtotalCents, currency, locale),
+                        })
+                  }
+                  beforeDiscountLabel={t("rental.beforeDiscountLabel")}
+                  struckPrice={
+                    quote.setSavingsCents > 0
+                      ? formatMoneyCents(quote.listSubtotalCents, currency, locale)
+                      : null
+                  }
+                />{" "}
                 {t("rental.confirmAtDock")}
+                {quote.setSavingsCents > 0 ? (
+                  <span className="mt-1 block font-medium text-success">
+                    {t("rental.fullSetSavings", {
+                      price: formatMoneyCents(quote.setSavingsCents, currency, locale),
+                    })}
+                  </span>
+                ) : null}
               </p>
             ) : null}
           </fieldset>
@@ -251,8 +258,13 @@ export function RentalFitForm({
 
         {nitroxOffered ? (
           <fieldset>
-            <legend className="text-sm font-medium">{t("rental.nitroxLegend")}</legend>
-            <p className="mt-1 text-xs text-muted/80">{t("rental.jargonHints.nitrox")}</p>
+            <legend className="flex items-center gap-2 text-sm font-medium">
+              {t("rental.nitroxLegend")}
+              <InfoHint
+                label={t("rental.jargonHintLabel", { item: t("rental.nitroxLegend") })}
+                detail={t("rental.jargonHints.nitrox")}
+              />
+            </legend>
             <label className="mt-2 flex min-h-11 items-center gap-3 rounded-lg border border-border px-3 text-sm">
               <input
                 name="nitrox"
@@ -269,14 +281,20 @@ export function RentalFitForm({
                   : t("rental.nitroxReserveNoPrice")}
               </span>
             </label>
-            {nitroxCardVerified ? (
-              <p className="mt-2 text-sm text-muted">{t("rental.nitroxVerifiedNote")}</p>
-            ) : nitroxRequested ? (
-              <p className="mt-2 rounded-lg bg-warning/10 px-3 py-2 text-sm text-warning">
-                {wantsNitrox ? `${t("rental.nitroxOnFile")} ` : ""}
-                {t("rental.nitroxNeedsVerification")}
-              </p>
-            ) : (
+            {/* What the crew will do about *this* request — so it only has
+                something to say once the box is ticked. It used to greet every
+                diver who scrolled past the section with a paragraph about
+                analyzing tanks they hadn't asked for. */}
+            {nitroxRequested ? (
+              nitroxCardVerified ? (
+                <p className="mt-2 text-sm text-muted">{t("rental.nitroxVerifiedNote")}</p>
+              ) : (
+                <p className="mt-2 rounded-lg bg-warning/10 px-3 py-2 text-sm text-warning">
+                  {wantsNitrox ? `${t("rental.nitroxOnFile")} ` : ""}
+                  {t("rental.nitroxNeedsVerification")}
+                </p>
+              )
+            ) : nitroxCardVerified ? null : (
               <p className="mt-2 text-sm text-muted">{t("rental.nitroxVerificationRequired")}</p>
             )}
           </fieldset>
@@ -314,18 +332,7 @@ export function RentalFitForm({
                 </select>
               </Field>
             ) : null}
-            {offers.has("wetsuit") ? (
-              <Field label={t("rental.bootSize")} hint={t("common.optional")}>
-                <input
-                  name="bootSize"
-                  maxLength={20}
-                  defaultValue={rentalFit?.bootSize ?? ""}
-                  placeholder={t("rental.bootSizePlaceholder")}
-                  className={controlClass}
-                />
-              </Field>
-            ) : null}
-            {offers.has("mask_fins") ? (
+            {offers.has("mask_fins") || offers.has("wetsuit") ? (
               <Field label={t("rental.finSize")} hint={t("common.optional")}>
                 <input
                   name="finSize"
@@ -375,6 +382,41 @@ export function RentalFitForm({
         </div>
       </form>
     </section>
+  );
+}
+
+/**
+ * The quote figure, with the piece-by-piece price struck through whenever the
+ * shop's set price beat it (H-06/HD-9). A diver who ticks the whole kit was
+ * already being charged the cheaper of the two — the discount just never
+ * appeared anywhere, so the total read as if nothing had been taken off.
+ *
+ * `<s>` alone announces nothing, so the struck figure carries a visually
+ * hidden label saying what it is; the price that actually applies stays the
+ * one in the sentence.
+ */
+export function RentalQuoteAmount({
+  /** Already interpolated with the discounted price — the figure that applies. */
+  totalLabel,
+  /** Interpolated `rental.beforeDiscountLabel`, read only by assistive tech. */
+  beforeDiscountLabel,
+  /** The piece-by-piece figure, pre-formatted; omitted when no discount applied. */
+  struckPrice,
+}: {
+  totalLabel: string;
+  beforeDiscountLabel: string;
+  struckPrice: string | null;
+}) {
+  return (
+    <>
+      {struckPrice ? (
+        <s className="mr-1.5 font-normal text-muted">
+          <span className="sr-only">{beforeDiscountLabel} </span>
+          {struckPrice}
+        </s>
+      ) : null}
+      <span className="font-medium">{totalLabel}</span>
+    </>
   );
 }
 

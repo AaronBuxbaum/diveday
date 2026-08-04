@@ -86,6 +86,19 @@ export type ReadyPageData = {
     currency: string;
     contactEmail: string | null;
     contactPhone: string | null;
+    /**
+     * The shop's own street address — where a diver actually meets the boat.
+     * Every part is nullable and a shop can have none of it on file; the
+     * readiness page renders the block (and its map) only when there is
+     * something real to show, never a guessed or partial address.
+     */
+    address: {
+      street: string | null;
+      locality: string | null;
+      region: string | null;
+      postalCode: string | null;
+      country: string | null;
+    };
     rentalItems: string[];
     rentalPricing: RentalPricing;
     /** Minutes before departure the shop wants divers at the dock — the same figure the night-before email's arrival line uses. */
@@ -169,6 +182,11 @@ export async function getReadyPageData(
       currency: shops.currency,
       contactEmail: shops.contactEmail,
       contactPhone: shops.contactPhone,
+      addressStreet: shops.addressStreet,
+      addressLocality: shops.addressLocality,
+      addressRegion: shops.addressRegion,
+      addressPostalCode: shops.addressPostalCode,
+      addressCountry: shops.addressCountry,
       rentalItems: shops.rentalItems,
       rentalPricing: shops.rentalPricing,
       dockCallMinutes: shops.dockCallMinutes,
@@ -288,6 +306,13 @@ export async function getReadyPageData(
       currency: row.currency,
       contactEmail: row.contactEmail,
       contactPhone: row.contactPhone,
+      address: {
+        street: row.addressStreet,
+        locality: row.addressLocality,
+        region: row.addressRegion,
+        postalCode: row.addressPostalCode,
+        country: row.addressCountry,
+      },
       rentalItems: row.rentalItems,
       rentalPricing: row.rentalPricing,
       dockCallMinutes: row.dockCallMinutes,

@@ -1,6 +1,6 @@
 # 20260719-card-photo-only — Capture certification evidence as an upload only
 
-- **Status:** Accepted
+- **Status:** Superseded by 20260804-card-evidence-is-the-number
 - **Date:** 2026-07-19
 
 ## Context

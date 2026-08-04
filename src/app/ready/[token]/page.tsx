@@ -26,6 +26,7 @@ import { claimLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
 import { telHref } from "@/lib/course-inquiry";
 import { formatRelativeDay, formatShortDate, formatTime, formatTimeRangeTz } from "@/lib/format";
+import { googleMapEmbedUrl, googleMapsUrl } from "@/lib/maps";
 import { toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
 import {
@@ -34,6 +35,7 @@ import {
   type DiverChecklistItem,
   nextDiverStep,
 } from "@/lib/readiness-summary";
+import { shopAddressLines, shopMapQuery } from "@/lib/shop-address";
 import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
 import {
   cancelMyBookingAction,
@@ -250,6 +252,86 @@ function ShopContactLinks({
         </a>
       ) : null}
     </p>
+  );
+}
+
+/**
+ * Where the diver is actually going, and how to reach the people who will be
+ * there — name, street, phone, email, and a map of the front door.
+ *
+ * This replaces the page's old one-line "Questions? Reach out to {shop}"
+ * footer, which named the shop and then left a diver on the morning of a trip
+ * to go hunting for the address themselves. Everything is conditional and
+ * nothing is guessed: a shop with no address on file renders the contact rows
+ * alone, and the map only appears once `shopMapQuery` can build a query that
+ * points at a real place (`src/lib/shop-address.ts`).
+ */
+function ShopCard({
+  name,
+  contactPhone,
+  contactEmail,
+  address,
+  t,
+}: {
+  name: string;
+  contactPhone: string | null;
+  contactEmail: string | null;
+  address: ReadyPageData["shop"]["address"];
+  t: DiverTranslator;
+}) {
+  const lines = shopAddressLines(address);
+  const mapQuery = shopMapQuery(name, address);
+  if (lines.length === 0 && !contactPhone && !contactEmail) return null;
+  const linkClass = "font-medium text-primary hover:underline";
+  return (
+    <section className="mt-8 overflow-hidden rounded-2xl border border-border bg-surface">
+      {mapQuery ? (
+        <iframe
+          title={t("ready.shopMapTitle", { shop: name })}
+          src={googleMapEmbedUrl(mapQuery)}
+          loading="lazy"
+          referrerPolicy="strict-origin-when-cross-origin"
+          className="block h-48 w-full border-0 bg-surface-sunken sm:h-56"
+        />
+      ) : null}
+      <div className="p-5 sm:p-6">
+        <h2 className="text-sm font-bold tracking-[0.16em] text-muted uppercase">
+          {t("ready.shopHeading")}
+        </h2>
+        <p className="mt-2 text-lg font-semibold">{name}</p>
+        {lines.length > 0 ? (
+          <address className="mt-1 text-base text-muted not-italic">
+            {lines.map((line) => (
+              <span key={line} className="block">
+                {line}
+              </span>
+            ))}
+          </address>
+        ) : null}
+        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-base">
+          {contactPhone ? (
+            <a href={telHref(contactPhone)} className={linkClass}>
+              {contactPhone}
+            </a>
+          ) : null}
+          {contactEmail ? (
+            <a href={`mailto:${contactEmail}`} className={linkClass}>
+              {contactEmail}
+            </a>
+          ) : null}
+          {mapQuery ? (
+            <a
+              href={googleMapsUrl(mapQuery)}
+              target="_blank"
+              rel="noreferrer"
+              className={linkClass}
+            >
+              {t("site.openMap")}
+            </a>
+          ) : null}
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -743,45 +825,13 @@ export default async function DiverReadinessPage({
           </section>
         )}
 
-        <p className="mt-8 text-center text-sm text-muted">
-          {(() => {
-            const linkClass = "font-medium text-primary hover:underline";
-            const phoneTag = (chunks: React.ReactNode) => (
-              <a href={telHref(shop.contactPhone ?? "")} className={linkClass}>
-                {chunks}
-              </a>
-            );
-            const emailTag = (chunks: React.ReactNode) => (
-              <a href={`mailto:${shop.contactEmail}`} className={linkClass}>
-                {chunks}
-              </a>
-            );
-            if (shop.contactPhone && shop.contactEmail) {
-              return t.rich("ready.contactLineBoth", {
-                shop: detail.shop.name,
-                phoneNumber: shop.contactPhone,
-                emailAddress: shop.contactEmail,
-                phone: phoneTag,
-                email: emailTag,
-              });
-            }
-            if (shop.contactPhone) {
-              return t.rich("ready.contactLinePhoneOnly", {
-                shop: detail.shop.name,
-                phoneNumber: shop.contactPhone,
-                phone: phoneTag,
-              });
-            }
-            if (shop.contactEmail) {
-              return t.rich("ready.contactLineEmailOnly", {
-                shop: detail.shop.name,
-                emailAddress: shop.contactEmail,
-                email: emailTag,
-              });
-            }
-            return t("ready.contactLineNone", { shop: detail.shop.name });
-          })()}
-        </p>
+        <ShopCard
+          name={detail.shop.name}
+          contactPhone={shop.contactPhone}
+          contactEmail={shop.contactEmail}
+          address={shop.address}
+          t={t}
+        />
       </main>
     </DiverIntlProvider>
   );

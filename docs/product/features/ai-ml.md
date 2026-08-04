@@ -44,7 +44,10 @@ Exploratory only. No effort estimate below the level of "big bet"; no module nam
 ### Evidence extraction
 
 - **Cert-card OCR.** Extract agency, level, card number, and date from a card photo for staff to
-  verify. Low confidence never clears a gate. *(M, certs, big bet.)*
+  verify. Low confidence never clears a gate. Note that there is no longer a stored card photo to
+  read — the upload came out with
+  [20260804-card-evidence-is-the-number](../../architecture/decisions/20260804-card-evidence-is-the-number.md)
+  — so this needs its own scan-then-discard capture rather than reinstating one. *(M, certs, big bet.)*
 
 ## Scoped, prompt-ready — from the 2026-07-31 specialist audit
 

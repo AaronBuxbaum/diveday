@@ -59,6 +59,27 @@ test.describe("staff-prepared trip", () => {
     ).toBeVisible();
     // The row now reads as on file rather than asking again.
     await expect(page.getByText(/On file — Coral Quinn/)).toBeVisible();
+
+    // Where the diver is actually going, and how to reach the people who will
+    // be there. This page used to close on a one-line "Questions? Reach out to
+    // {shop}" that named the shop and left the address to be hunted for.
+    const shopCard = page
+      .locator("section")
+      .filter({ has: page.getByRole("heading", { name: "Your dive shop" }) });
+    await expect(shopCard.getByText("Blue Mantis Divers")).toBeVisible();
+    await expect(shopCard.getByText("100 Ocean Drive")).toBeVisible();
+    await expect(shopCard.getByText("Key Largo, FL 33037")).toBeVisible();
+    await expect(shopCard.getByRole("link", { name: "hello@demo.invalid" })).toHaveAttribute(
+      "href",
+      "mailto:hello@demo.invalid",
+    );
+    // The map is a plain roadmap embed built from the shop's own address —
+    // never a guessed location. The e2e context aborts maps.google.com
+    // requests (fixtures.ts), so this asserts the frame, not its contents.
+    await expect(shopCard.locator('iframe[title="Map of Blue Mantis Divers"]')).toHaveAttribute(
+      "src",
+      /100%20Ocean%20Drive/,
+    );
   });
 });
 

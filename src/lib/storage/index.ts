@@ -32,7 +32,6 @@ export interface ImageStorageProvider {
   upload(input: ImageUpload): Promise<StoredImage>;
 }
 
-export const MAX_CARD_IMAGE_BYTES = MAX_IMAGE_BYTES;
 export const MAX_COURSE_IMAGE_BYTES = MAX_IMAGE_BYTES;
 export const MAX_RECAP_IMAGE_BYTES = MAX_IMAGE_BYTES;
 export const MAX_DIVE_SITE_IMAGE_BYTES = MAX_IMAGE_BYTES;
@@ -190,18 +189,6 @@ export async function deleteStoredImage(
   fetchImpl: Fetch = fetch,
 ): Promise<void> {
   await deleteStoredImageTracked(url, env, fetchImpl);
-}
-
-/**
- * Validate and store a card image. Rejects a non-image or oversized file
- * before touching the provider; an unconfigured provider reports
- * not_configured so the caller can keep the card record without a photo.
- */
-export async function storeCardImage(
-  upload: ImageUpload,
-  provider: ImageStorageProvider = imageStorageProviderFromEnvironment(),
-): Promise<StoredImage> {
-  return storeImage(upload, MAX_CARD_IMAGE_BYTES, provider);
 }
 
 /**

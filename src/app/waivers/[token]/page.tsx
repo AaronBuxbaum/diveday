@@ -13,7 +13,7 @@ import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { issueBookingCapability } from "@/db/booking-capabilities";
 import { getDb } from "@/db/client";
 import { recordDiverOwnLocale } from "@/db/people";
-import { bookings, type MedicalAnswers, type Shop, trips } from "@/db/schema";
+import { bookings, type MedicalAnswers, people, type Shop, trips } from "@/db/schema";
 import { getShopById } from "@/db/shops";
 import { getTripDiveSitesPeek } from "@/db/trips";
 import {
@@ -60,7 +60,7 @@ const completeSignatureSchema = z.object({
   acknowledged: z.literal("on"),
 });
 
-type WaiverInvalidField = "medical" | "signerName" | "acknowledged";
+type WaiverInvalidField = "medical" | "signerName" | "signerNameMismatch" | "acknowledged";
 
 /**
  * Which control to point the fallback error banner at, in the same order a
@@ -87,6 +87,9 @@ const WAIVER_FIELD_ERROR: Record<WaiverInvalidField, { textKey: DiverMessageKey;
   {
     medical: { textKey: "waiver.errorMedical", anchor: "medical-questionnaire" },
     signerName: { textKey: "waiver.errorName", anchor: "signerName" },
+    // A typed name that isn't the diver's own — same field, different fix, so
+    // it gets its own sentence rather than the generic "type your full name".
+    signerNameMismatch: { textKey: "waiver.errorNameMismatch", anchor: "signerName" },
     acknowledged: { textKey: "waiver.errorAgreement", anchor: "acknowledged" },
   };
 
@@ -338,6 +341,15 @@ export default async function WaiverPage({
   const { record } = state;
   const recordBookingId = requireTokenBookingId(record);
   const emergencyContact = await getEmergencyContactForBooking(db, recordBookingId);
+  // The name this release has to be signed under (`completeWaiver` refuses
+  // anything else). Shown as the field's hint so the rule is guidance before
+  // it is ever a refusal — and it discloses nothing this booking-scoped
+  // bearer link doesn't already stand for.
+  const [signerOnFile] = await db
+    .select({ fullName: people.fullName })
+    .from(people)
+    .where(eq(people.id, record.personId))
+    .limit(1);
   const questionnaire = questionnaireForJurisdiction(shop.jurisdiction);
   const draft = record.draftMedicalAnswers;
   /** Only pre-fill draft answers captured against this same questionnaire. */
@@ -454,6 +466,9 @@ export default async function WaiverPage({
         : undefined,
     });
     if (!outcome.ok) {
+      if (outcome.reason === "name_mismatch") {
+        redirect(`/waivers/${token}?error=invalid&field=signerNameMismatch`);
+      }
       redirect(
         `/waivers/${token}?error=${outcome.reason === "invalid_signature" ? "invalid" : "unavailable"}`,
       );
@@ -568,51 +583,59 @@ export default async function WaiverPage({
 
         <section className="rounded-lg border border-border bg-surface p-5">
           <h2 className="text-lg font-semibold">{t("waiver.emergencyContact")}</h2>
+          {/* Editable whether or not something is on file. It used to go
+              read-only the moment a contact existed, on the reasoning that a
+              correction was staff work — but this is the one screen a diver
+              fills in the week before a trip, and the person they'd name has
+              often changed since they booked. `saveBookingEmergencyContact`
+              never lets a blank overwrite a stored value, so re-showing the
+              fields can only ever improve what the crew has. */}
           {emergencyContact?.name && emergencyContact?.phone ? (
-            // Already on file — most often captured on /ready a moment earlier,
-            // since both surfaces write through the same
-            // `saveBookingEmergencyContact`. Shown read-only rather than a
-            // second differently-labeled capture form (UX persona Lens 17, task
-            // 143); a wrong entry is corrected by staff from here on (task 144).
             <p className="mt-1 text-sm text-muted">
               {t("waiver.emergencyOnFile", {
                 name: emergencyContact.name,
                 phone: emergencyContact.phone,
-              })}
+              })}{" "}
+              {t("waiver.emergencyContactChangeHint")}
             </p>
           ) : (
-            <>
-              <p className="mt-1 text-sm text-muted">{t("waiver.emergencyContactDescription")}</p>
-              <FieldGrid columns={2} className="mt-4">
-                <Field label={t("waiver.contactName")}>
-                  <input
-                    name="emergencyContactName"
-                    autoComplete="name"
-                    maxLength={120}
-                    defaultValue={emergencyContact?.name ?? ""}
-                    className={controlClass}
-                  />
-                </Field>
-                <Field label={t("waiver.contactPhone")}>
-                  <input
-                    name="emergencyContactPhone"
-                    type="tel"
-                    inputMode="tel"
-                    autoComplete="tel"
-                    maxLength={40}
-                    defaultValue={emergencyContact?.phone ?? ""}
-                    className={controlClass}
-                  />
-                </Field>
-              </FieldGrid>
-            </>
+            <p className="mt-1 text-sm text-muted">{t("waiver.emergencyContactDescription")}</p>
           )}
+          <FieldGrid columns={2} className="mt-4">
+            <Field label={t("waiver.contactName")}>
+              <input
+                name="emergencyContactName"
+                autoComplete="name"
+                maxLength={120}
+                defaultValue={emergencyContact?.name ?? ""}
+                className={controlClass}
+              />
+            </Field>
+            <Field label={t("waiver.contactPhone")}>
+              <input
+                name="emergencyContactPhone"
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                maxLength={40}
+                defaultValue={emergencyContact?.phone ?? ""}
+                className={controlClass}
+              />
+            </Field>
+          </FieldGrid>
         </section>
 
         <section className="rounded-lg border border-border bg-surface p-5">
           <h2 className="text-lg font-semibold">{t("waiver.signature")}</h2>
           <FieldGrid columns={1} className="mt-4">
-            <Field label={t("waiver.typeFullName")}>
+            <Field
+              label={t("waiver.typeFullName")}
+              description={
+                signerOnFile
+                  ? t("waiver.typeFullNameHint", { name: signerOnFile.fullName })
+                  : undefined
+              }
+            >
               <input
                 id="signerName"
                 name="signerName"

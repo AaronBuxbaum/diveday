@@ -2,7 +2,7 @@
 
 import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
-import type { DiverMessageKey } from "@/i18n/messages";
+import { InfoHint } from "@/components/ui/InfoHint";
 import { formatMoneyCents } from "@/lib/format";
 import type { ShopCurrency } from "@/lib/money";
 import {
@@ -13,7 +13,11 @@ import {
   type RentalPricing,
   shopOffersNitrox,
 } from "@/lib/rentals";
-import { RENTABLE_ITEM_LABEL_KEYS } from "./RentalFitForm";
+import {
+  RENTABLE_ITEM_HINT_KEYS,
+  RENTABLE_ITEM_LABEL_KEYS,
+  RentalQuoteAmount,
+} from "./RentalFitForm";
 
 /**
  * The checkout-time gear picker for one party member — checkboxes and a live
@@ -62,19 +66,11 @@ export function BookingGearFields({
   const t = useTranslations();
   const locale = useLocale();
   const offered = offeredRentableItems(rentalItems);
-  const offers = new Set(offered.map((item) => item.kind));
   const nitroxOffered = shopOffersNitrox(rentalItems);
   // Opt-in, and empty until then — see the note above the component.
   const [wantsGear, setWantsGear] = useState(false);
   const [rentedKinds, setRentedKinds] = useState<Set<RentableItemKind>>(() => new Set());
   const [nitroxRequested, setNitroxRequested] = useState(false);
-  // Plain-language glossary hints for the two acronyms this list is most
-  // likely to stump a newcomer with — the same strings the post-booking
-  // `RentalFitForm` shows, resolved through the same keys so the two surfaces
-  // can never drift into two explanations of one word.
-  const jargonHintKeys: DiverMessageKey[] = [];
-  if (offers.has("bcd")) jargonHintKeys.push("rental.jargonHints.bcd");
-  if (offers.has("regulator")) jargonHintKeys.push("rental.jargonHints.regulator");
 
   const quote = quoteRentalFit(pricing, {
     rentedKinds: [...rentedKinds],
@@ -120,15 +116,19 @@ export function BookingGearFields({
       {!wantsGear ? null : (
         <>
           {offered.length > 0 ? (
-            <>
-              <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                {offered.map(({ kind, name }) => {
-                  const priceCents = pricing.perItemCents[kind];
-                  return (
-                    <label
-                      key={name}
-                      className="flex min-h-11 items-center gap-3 rounded-lg border border-border px-3 text-sm"
-                    >
+            <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {offered.map(({ kind, name }) => {
+                const priceCents = pricing.perItemCents[kind];
+                const hintKey = RENTABLE_ITEM_HINT_KEYS[kind];
+                const itemLabel = t(RENTABLE_ITEM_LABEL_KEYS[kind]);
+                return (
+                  // The hint stays outside the `<label>` — see the same shape
+                  // in `RentalFitForm` for why.
+                  <div
+                    key={name}
+                    className="flex min-h-11 items-center gap-2 rounded-lg border border-border pr-3"
+                  >
+                    <label className="flex min-h-11 flex-1 items-center gap-3 pl-3 text-sm">
                       <input
                         name={`gear-${index}-${name}`}
                         type="checkbox"
@@ -143,29 +143,27 @@ export function BookingGearFields({
                         }}
                         className="size-4 accent-primary"
                       />
-                      <span className="flex-1">{t(RENTABLE_ITEM_LABEL_KEYS[kind])}</span>
-                      {priceCents !== undefined ? (
-                        <span className="text-muted">
-                          {formatMoneyCents(priceCents, currency, locale)}
-                        </span>
-                      ) : null}
+                      <span className="flex-1">{itemLabel}</span>
                     </label>
-                  );
-                })}
-              </div>
-              {jargonHintKeys.length > 0 ? (
-                <ul className="mt-2 flex flex-col gap-0.5 text-xs text-muted/80">
-                  {jargonHintKeys.map((key) => (
-                    <li key={key}>{t(key)}</li>
-                  ))}
-                </ul>
-              ) : null}
-            </>
+                    {hintKey ? (
+                      <InfoHint
+                        label={t("rental.jargonHintLabel", { item: itemLabel })}
+                        detail={t(hintKey)}
+                      />
+                    ) : null}
+                    {priceCents !== undefined ? (
+                      <span className="text-sm text-muted">
+                        {formatMoneyCents(priceCents, currency, locale)}
+                      </span>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
           ) : null}
           {nitroxOffered ? (
-            <>
-              <p className="mt-3 text-xs text-muted/80">{t("rental.jargonHints.nitrox")}</p>
-              <label className="mt-2 flex min-h-11 items-center gap-3 rounded-lg border border-border px-3 text-sm">
+            <div className="mt-3 flex min-h-11 items-center gap-2 rounded-lg border border-border pr-3">
+              <label className="flex min-h-11 flex-1 items-center gap-3 pl-3 text-sm">
                 <input
                   name={`nitrox-${index}`}
                   type="checkbox"
@@ -181,13 +179,32 @@ export function BookingGearFields({
                     : t("rental.nitroxReserveNoPrice")}
                 </span>
               </label>
-            </>
+              <InfoHint
+                label={t("rental.jargonHintLabel", { item: t("rental.nitroxLegend") })}
+                detail={t("rental.jargonHints.nitrox")}
+              />
+            </div>
           ) : null}
           {quote.subtotalCents > 0 ? (
-            <p className="mt-2 text-sm font-medium tabular-nums">
-              {t("bookingGear.gearTotal", {
-                price: formatMoneyCents(quote.subtotalCents, currency, locale),
-              })}
+            <p className="mt-2 text-sm tabular-nums">
+              <RentalQuoteAmount
+                totalLabel={t("bookingGear.gearTotal", {
+                  price: formatMoneyCents(quote.subtotalCents, currency, locale),
+                })}
+                beforeDiscountLabel={t("rental.beforeDiscountLabel")}
+                struckPrice={
+                  quote.setSavingsCents > 0
+                    ? formatMoneyCents(quote.listSubtotalCents, currency, locale)
+                    : null
+                }
+              />
+              {quote.setSavingsCents > 0 ? (
+                <span className="mt-1 block font-medium text-success">
+                  {t("rental.fullSetSavings", {
+                    price: formatMoneyCents(quote.setSavingsCents, currency, locale),
+                  })}
+                </span>
+              ) : null}
             </p>
           ) : null}
         </>

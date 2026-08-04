@@ -250,6 +250,47 @@ test("the medical questionnaire refuses to complete with an unanswered question,
   await expect(page.getByRole("heading", { name: "Waiver received", level: 1 })).not.toBeVisible();
 });
 
+/**
+ * "Type your full name" *is* the signature — it used to accept any two
+ * characters, so a release could be executed under a name that was nobody's
+ * and still read as signed on the manifest.
+ */
+test("a waiver signed under someone else's name is refused, and the link stays signable", async ({
+  page,
+}) => {
+  await page.goto("/shop/blue-mantis/schedule/board");
+  await openTripFromBoard(page, TRIP);
+  await openTripTab(page, "Guests");
+  const waiverHref = await sendWaiverForFirstDiver(page);
+
+  await page.goto(waiverHref ?? "/");
+  // The name the release has to be signed under is stated on the field, so the
+  // rule is guidance before it is ever a refusal.
+  await expect(page.getByText("As booked: Priya Sharma")).toBeVisible();
+
+  await page.getByLabel("Type your full name").fill("Someone Else Entirely");
+  await page.getByLabel("I have read this waiver, understand it, and agree to it.").check();
+  for (const radio of await page.getByRole("radio", { name: "No" }).all()) {
+    await radio.check();
+  }
+  await page.getByRole("button", { name: "Sign waiver" }).click();
+
+  await expect(
+    page.getByText("doesn’t match the name on this booking", { exact: false }),
+  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Waiver received", level: 1 })).not.toBeVisible();
+
+  // Refused before the record was touched: the same link still signs, and a
+  // middle initial or different casing is not treated as a different person.
+  await page.getByLabel("Type your full name").fill("priya  sharma");
+  await page.getByLabel("I have read this waiver, understand it, and agree to it.").check();
+  for (const radio of await page.getByRole("radio", { name: "No" }).all()) {
+    await radio.check();
+  }
+  await page.getByRole("button", { name: "Sign waiver" }).click();
+  await expect(page).toHaveURL(/\/ready\//);
+});
+
 test("an incomplete sign submit is blocked client-side and focuses the missing field", async ({
   page,
 }) => {

@@ -97,21 +97,13 @@ export function RentalFit({
               />
             </Field>
           ) : null}
-          {offers.has("wetsuit") ? (
-            <Field label={t("divers.rentalFit.bootSizeLabel")}>
-              <input
-                name="bootSize"
-                defaultValue={profile?.bootSize ?? ""}
-                placeholder={t("divers.rentalFit.bootSizePlaceholder")}
-                className={controlClass}
-              />
-            </Field>
-          ) : null}
-          {offers.has("mask_fins") ? (
+          {/* One shoe-size answer covers fins and boots — the two fields asked
+              the same question, and the save writes it to both columns. */}
+          {offers.has("mask_fins") || offers.has("wetsuit") ? (
             <Field label={t("divers.rentalFit.finSizeLabel")}>
               <input
                 name="finSize"
-                defaultValue={profile?.finSize ?? ""}
+                defaultValue={profile?.finSize ?? profile?.bootSize ?? ""}
                 placeholder={t("divers.rentalFit.finSizePlaceholder")}
                 className={controlClass}
               />
