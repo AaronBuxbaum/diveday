@@ -903,33 +903,54 @@ const emptyContent = {
 };
 
 describe("pagedCourses pagination (in-memory PGlite)", () => {
-  it("pages with a keyset cursor and never repeats or skips a course", async () => {
+  it("pages by number and never repeats or skips a course", async () => {
     const { db, shop } = await seededShopContext();
 
     const all = await listCourses(db, shop.id);
     expect(all.length).toBeGreaterThan(0);
 
+    const first = await pagedCourses(db, shop.id, { page: 1, limit: 3 });
+    expect(first.total).toBe(all.length);
+    expect(first.pageCount).toBe(Math.ceil(all.length / 3));
+
     const seen: string[] = [];
-    let cursor: string | undefined;
-    const maxHops = all.length + 1;
-    for (let hops = 0; hops < maxHops; hops++) {
-      const page = await pagedCourses(db, shop.id, { cursor, limit: 3 });
-      expect(page.courses.length).toBeLessThanOrEqual(3);
-      seen.push(...page.courses.map((course) => course.id));
-      if (!page.nextCursor) break;
-      cursor = page.nextCursor;
+    for (let page = 1; page <= first.pageCount; page++) {
+      const chunk = await pagedCourses(db, shop.id, { page, limit: 3 });
+      expect(chunk.page).toBe(page);
+      expect(chunk.pageCount).toBe(first.pageCount);
+      expect(chunk.total).toBe(all.length);
+      expect(chunk.courses.length).toBeLessThanOrEqual(3);
+      seen.push(...chunk.courses.map((course) => course.id));
     }
     expect(seen).toEqual(all.map((course) => course.id));
     expect(new Set(seen).size).toBe(seen.length);
   });
 
-  it("treats a mangled cursor as the first page", async () => {
+  it("goes back a page as well as forward", async () => {
     const { db, shop } = await seededShopContext();
-    const all = await pagedCourses(db, shop.id);
-    const mangled = await pagedCourses(db, shop.id, { cursor: "not-a-real-cursor" });
-    expect(mangled.courses.map((course) => course.id)).toEqual(
-      all.courses.map((course) => course.id),
+    const second = await pagedCourses(db, shop.id, { page: 2, limit: 3 });
+    expect(second.page).toBe(2);
+    const back = await pagedCourses(db, shop.id, { page: second.page - 1, limit: 3 });
+    const first = await pagedCourses(db, shop.id, { page: 1, limit: 3 });
+    expect(back.courses.map((course) => course.id)).toEqual(
+      first.courses.map((course) => course.id),
     );
+  });
+
+  it("clamps a nonsensical or out-of-range page rather than showing an empty roster", async () => {
+    const { db, shop } = await seededShopContext();
+    const first = await pagedCourses(db, shop.id, { page: 1, limit: 3 });
+    for (const requested of [0, -3, Number.NaN]) {
+      const clamped = await pagedCourses(db, shop.id, { page: requested, limit: 3 });
+      expect(clamped.page).toBe(1);
+      expect(clamped.courses.map((course) => course.id)).toEqual(
+        first.courses.map((course) => course.id),
+      );
+    }
+
+    const past = await pagedCourses(db, shop.id, { page: 99, limit: 3 });
+    expect(past.page).toBe(first.pageCount);
+    expect(past.courses.length).toBeGreaterThan(0);
   });
 });
 

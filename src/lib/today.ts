@@ -581,13 +581,16 @@ export function leadWithCrewed<T extends { tripId: string }>(
 export type TodaySeason = "summer" | "autumn" | "winter" | "spring";
 
 /**
- * Which seasonal briefing variant the date falls into, based on its month.
- * The sentence itself — kept rationed like --accent, reading like a
- * briefing, not filler — lives in `src/i18n/today-labels.ts`'s
- * `seasonalBriefingText`.
+ * Which seasonal briefing variant the date falls into, based on its month
+ * **in the shop's own timezone** — `getMonth()` on the raw Date read the
+ * server's (or, in a Client Component, the browser's) local month, which
+ * flips the season a day early or late around a month boundary for any shop
+ * whose zone straddles the server's midnight. The sentence itself — kept
+ * rationed like --accent, reading like a briefing, not filler — lives in
+ * `src/i18n/today-labels.ts`'s `seasonalBriefingText`.
  */
-export function getSeasonalBriefing(date: Date): TodaySeason {
-  const month = date.getMonth(); // 0-indexed (0 = Jan, 11 = Dec)
+export function getSeasonalBriefing(date: Date, timezone: string): TodaySeason {
+  const month = utcToWallTime(date, timezone).month - 1; // 0-indexed (0 = Jan, 11 = Dec)
   if (month >= 5 && month <= 7) return "summer"; // June, July, August
   if (month >= 8 && month <= 10) return "autumn"; // September, October, November
   if (month === 11 || month === 0 || month === 1) return "winter"; // December, January, February

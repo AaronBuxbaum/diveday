@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Pager } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { Badge } from "@/components/ui/badge";
-import { buttonClass } from "@/components/ui/button";
 import { canPersonManageWaiverTemplates } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
@@ -130,7 +130,7 @@ function SignedRecordRow({
  * The roster's link carries the record's id as `?record=`, resolved through
  * `getSignedWaiverRecordForShop` and pinned above the paginated list — a shop
  * with a lot of signed history easily has that record fall past
- * `listWaiverIntegrityAudit`'s first page, so a URL anchor into the list
+ * `listWaiverIntegrityAudit`'s current page, so a URL anchor into the list
  * alone would silently land on nothing.
  *
  * Security-sensitive: this is staff read access to signed medical-adjacent
@@ -147,11 +147,11 @@ export default async function WaiverSignaturesPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{ after?: string; record?: string }>;
+  searchParams: Promise<{ page?: string; record?: string }>;
 }) {
   const session = await requireStaffSession();
   const { shopSlug } = await params;
-  const { after, record } = await searchParams;
+  const { page, record } = await searchParams;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   const locale = await requestLocale(shop?.defaultLocale);
@@ -165,7 +165,23 @@ export default async function WaiverSignaturesPage({
   if (!canManage) redirect(`/shop/${shopSlug}?notice=waivers_not_authorized`);
 
   const highlighted = record ? await getSignedWaiverRecordForShop(db, shop.id, record) : null;
-  const { entries, nextCursor } = await listWaiverIntegrityAudit(db, shop.id, { cursor: after });
+  // A non-numeric or missing `?page=` reads as page 1; the query clamps it into
+  // range so a bookmarked page past the end lands on the last real one.
+  const auditPage = await listWaiverIntegrityAudit(db, shop.id, {
+    page: Number.parseInt(page ?? "", 10),
+  });
+  const { entries } = auditPage;
+  const base = `/shop/${shopSlug}/waivers/signatures`;
+  // The `?record=` highlight is a separate pin above this list, so it travels
+  // with the page rather than being dropped the moment a reviewer turns one.
+  // The anchor keeps a page turn landing on the list, not back at the header.
+  const pageHref = (target: number) => {
+    const query = new URLSearchParams();
+    if (target > 1) query.set("page", String(target));
+    if (record) query.set("record", record);
+    const search = query.toString();
+    return `${search ? `${base}?${search}` : base}#signed-records-heading`;
+  };
 
   return (
     <>
@@ -196,7 +212,7 @@ export default async function WaiverSignaturesPage({
         <h2 id="signed-records-heading" className="text-lg font-semibold">
           {t("waiversStaff.signatures.heading")}
         </h2>
-        {entries.length === 0 && !after ? (
+        {auditPage.total === 0 ? (
           <p className="mt-4 text-sm text-muted">{t("waiversStaff.signatures.noSignedRecords")}</p>
         ) : (
           <>
@@ -212,26 +228,14 @@ export default async function WaiverSignaturesPage({
                 />
               ))}
             </ul>
-            {nextCursor || after ? (
-              <div className="mt-4 flex flex-wrap items-center gap-3">
-                {nextCursor ? (
-                  <Link
-                    href={`/shop/${shopSlug}/waivers/signatures?after=${encodeURIComponent(nextCursor)}#signed-records-heading`}
-                    className={buttonClass({ variant: "secondary" })}
-                  >
-                    {t("waiversStaff.signatures.showMoreRecords")}
-                  </Link>
-                ) : null}
-                {after ? (
-                  <Link
-                    href={`/shop/${shopSlug}/waivers/signatures#signed-records-heading`}
-                    className="text-sm font-medium text-primary hover:underline"
-                  >
-                    {t("waiversStaff.signatures.backToTop")}
-                  </Link>
-                ) : null}
-              </div>
-            ) : null}
+            <Pager
+              page={auditPage.page}
+              pageCount={auditPage.pageCount}
+              href={pageHref}
+              total={t("waiversStaff.signatures.pagination.total", { count: auditPage.total })}
+              t={t}
+              className="mt-4"
+            />
           </>
         )}
       </section>

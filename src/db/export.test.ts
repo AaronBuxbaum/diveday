@@ -182,6 +182,11 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "shop_id",
     "pending_checkout_intent_id", // in-flight Stripe attempt, meaningless elsewhere
     "identity_unconfirmed_at", // H-13 review state, not a shop record
+    // Seat-claim linkage (ADR 20260804-seat-claim-links): a pointer at another
+    // booking row's id, which does not survive a re-import — same class as
+    // pending_checkout_intent_id.
+    "party_lead_booking_id",
+    "claimed_at", // claim-flow operational state, same reasoning as identity_unconfirmed_at
   ],
   trip_waitlist_entries: ["shop_id"],
   last_minute_list_entries: ["shop_id"],
