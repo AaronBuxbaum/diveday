@@ -40,6 +40,7 @@ export {
   tripCrewByTrip,
 } from "./trips-crew";
 export {
+  countShopTrips,
   listTripIdsInOfflineManifestWindow,
   listUpcomingSessionsForCourse,
   pagedUpcomingTripsWithCounts,

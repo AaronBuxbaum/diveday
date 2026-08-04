@@ -6,6 +6,7 @@ import { FlashParams } from "@/components/FlashParams";
 import { OperationalWindowNote, readinessPivots } from "@/components/OperationalWindowNote";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { DepartureBoard } from "@/components/today/DepartureBoard";
+import { FirstBookableCard } from "@/components/today/FirstBookableCard";
 import { FirstRunChecklist } from "@/components/today/FirstRunChecklist";
 import { RoleOrientationCard } from "@/components/today/RoleOrientationCard";
 import { TodayQueue } from "@/components/today/TodayQueue";
@@ -17,6 +18,7 @@ import { listDiveSites } from "@/db/dive-sites";
 import { getShopById } from "@/db/shops";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { getTodayWork } from "@/db/today";
+import { countShopTrips } from "@/db/trips";
 import { dismissOrientation, isOrientationDismissed } from "@/db/user-accounts";
 import {
   orientationRoleFor,
@@ -197,7 +199,22 @@ async function TodayBody({
   const [firstRunDiveSites, firstRunStripeAccount] = showFirstRunChecklist
     ? await Promise.all([listDiveSites(db, shop.id), getShopStripeAccount(db, shop.id)])
     : [null, null];
-  const firstRunOrigin = showFirstRunChecklist ? publicAppUrl() : null;
+  // The first departure ever landing on the board is the moment this shop
+  // became bookable — and the moment the checklist above (which carried the
+  // public-schedule link) leaves the page. Exactly then, the created notice
+  // grows into a share card so the link worth sending is on screen when it
+  // first means something. "First" is exact: right after a first creation the
+  // shop's total equals what was just created (1, or the series size); any
+  // earlier trip means this moment already happened. Demo shops sit out —
+  // their board is seeded, so no trip there is ever a first.
+  const firstBookableMoment =
+    Boolean(created) &&
+    !shop.isDemo &&
+    (await countShopTrips(db, shop.id)) === Math.max(seriesCount, 1);
+  const shareOrigin = showFirstRunChecklist || firstBookableMoment ? publicAppUrl() : null;
+  const publicScheduleUrl = shareOrigin
+    ? new URL(publicSchedulePath(shopSlug), `${shareOrigin}/`).toString()
+    : publicSchedulePath(shopSlug);
   const crewedSet = new Set(crewedTripIds);
   const departures = lens === "boat" ? leadWithCrewed(work.departures, crewedSet) : work.departures;
   // Blocker frequency, after the response so it never delays the queue: how many
@@ -277,7 +294,27 @@ async function TodayBody({
         }
       />
 
-      {created ? (
+      {created && firstBookableMoment ? (
+        <FirstBookableCard
+          scheduleUrl={publicScheduleUrl}
+          scheduleHref={publicSchedulePath(shopSlug)}
+          copy={{
+            heading:
+              seriesCount > 1
+                ? t("shopHome.firstBookable.headingSeries", {
+                    title: created,
+                    count: seriesCount,
+                  })
+                : t("shopHome.firstBookable.heading", { title: created }),
+            body: t("shopHome.firstBookable.body"),
+            linkLabel: t("shopHome.firstBookable.linkLabel"),
+            copy: t("shopHome.firstRun.scheduleCopy"),
+            copied: t("shopHome.firstRun.scheduleCopied"),
+            copyFailed: t("shopHome.firstRun.scheduleCopyFailed"),
+            viewAsDiver: t("shopHome.firstBookable.viewAsDiver"),
+          }}
+        />
+      ) : created ? (
         <div className="mb-6">
           <ShopNotice>
             {seriesCount > 1
@@ -422,14 +459,10 @@ async function TodayBody({
       {showFirstRunChecklist ? (
         <FirstRunChecklist
           shopSlug={shopSlug}
-          scheduleUrl={
-            // No configured APP_HOST (local dev, some test environments) means
-            // no origin to build an absolute URL from — fall back to the path
-            // alone rather than crash the whole page on a malformed base URL.
-            firstRunOrigin
-              ? new URL(publicSchedulePath(shopSlug), `${firstRunOrigin}/`).toString()
-              : publicSchedulePath(shopSlug)
-          }
+          // No configured APP_HOST (local dev, some test environments) means no
+          // origin to build an absolute URL from — `publicScheduleUrl` falls
+          // back to the path alone rather than crash the page on a bad base URL.
+          scheduleUrl={publicScheduleUrl}
           contactDone={Boolean(shop.contactEmail || shop.contactPhone)}
           diveSiteCount={firstRunDiveSites?.length ?? 0}
           stripeDone={canAcceptPayments(firstRunStripeAccount)}

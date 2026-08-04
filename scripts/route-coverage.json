@@ -24,6 +24,7 @@
     "e2e": [
       "account-lifecycle.spec.ts",
       "demo.spec.ts",
+      "first-ten-minutes.spec.ts",
       "marketing.spec.ts",
       "nitrox.spec.ts",
       "onboard.spec.ts",
@@ -58,6 +59,7 @@
       "courses.spec.ts",
       "courtesy-email-unsubscribe.spec.ts",
       "dive-sites.spec.ts",
+      "first-ten-minutes.spec.ts",
       "last-minute-fill.spec.ts",
       "next-departure.spec.ts",
       "nitrox.spec.ts",
@@ -99,6 +101,7 @@
       "booking.spec.ts",
       "courses.spec.ts",
       "dive-sites.spec.ts",
+      "first-ten-minutes.spec.ts",
       "keyboard-shortcuts.spec.ts",
       "next-departure.spec.ts",
       "nitrox.spec.ts",
@@ -116,6 +119,7 @@
   "/shop/[shopSlug]": {
     "e2e": [
       "boat-loop.spec.ts",
+      "first-ten-minutes.spec.ts",
       "keyboard-shortcuts.spec.ts",
       "last-minute-fill.spec.ts",
       "onboard.spec.ts",
@@ -125,7 +129,7 @@
       "staff-invite.spec.ts",
       "tenant-isolation.spec.ts"
     ],
-    "visual": ["today", "today-empty"]
+    "visual": ["today", "today-empty", "today-first-bookable"]
   },
   "/shop/[shopSlug]/blockers": {
     "e2e": ["blockers.spec.ts", "tenant-isolation.spec.ts"],
@@ -369,6 +373,7 @@
       "courses.spec.ts",
       "dive-sites.spec.ts",
       "divers.spec.ts",
+      "first-ten-minutes.spec.ts",
       "gear-fit-and-age.spec.ts",
       "import.spec.ts",
       "readiness.spec.ts",

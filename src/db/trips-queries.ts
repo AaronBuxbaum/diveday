@@ -39,6 +39,19 @@ import {
  * (`pagedUpcomingTripsWithCounts` keysets it instead).
  */
 
+/**
+ * How many departures this shop has ever put on the board, cancelled or not.
+ * One number with one caller in mind: the shop home's "you're bookable"
+ * moment, which needs to know whether the trip that just landed is the
+ * shop's first — the count right after a first creation equals exactly the
+ * number just created (1, or the series size), and any earlier trip, even a
+ * cancelled one, means the shop has had this moment already.
+ */
+export async function countShopTrips(db: DbExecutor, shopId: string): Promise<number> {
+  const [row] = await db.select({ total: count() }).from(trips).where(eq(trips.shopId, shopId));
+  return row?.total ?? 0;
+}
+
 export type TripWithBookedCount = typeof trips.$inferSelect & {
   booked: number;
   course: typeof courses.$inferSelect | null;

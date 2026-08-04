@@ -1,11 +1,13 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
-import { bookings } from "./schema";
+import { bookings, shops } from "./schema";
 import {
+  countShopTrips,
   createTrip,
   pagedUpcomingTripsWithCounts,
   SCHEDULE_PAGE_SIZE,
+  setTripStatus,
   upcomingScheduleRange,
   upcomingScheduleStats,
   upcomingTripsWithCounts,
@@ -179,5 +181,37 @@ describe("paged schedule queries", () => {
       monthEnd: new Date("2030-09-01T00:00:00Z"),
     });
     expect(augustFromLaterNow.trips).toHaveLength(0);
+  });
+});
+
+describe("countShopTrips", () => {
+  it("counts only the shop's own departures, from zero, including past and cancelled ones", async () => {
+    const { db, shop } = await seededShopContext();
+
+    // A brand-new shop next door: zero, untouched by the seeded shop's board.
+    const [fresh] = await db
+      .insert(shops)
+      .values({ name: "Fresh Count", slug: "fresh-count", timezone: "America/New_York" })
+      .returning();
+    if (!fresh) throw new Error("shop not created");
+    expect(await countShopTrips(db, fresh.id)).toBe(0);
+
+    const first = await createTrip(db, {
+      shopId: fresh.id,
+      title: "First ever",
+      startsAt: new Date("2030-08-15T12:00:00Z"),
+      endsAt: new Date("2030-08-15T16:00:00Z"),
+      capacity: 4,
+    });
+    if (!first) throw new Error("trip not created");
+    expect(await countShopTrips(db, fresh.id)).toBe(1);
+
+    // Cancelled still counts: "has this shop ever scheduled?" is the question
+    // the bookable-moment caller asks, and a cancelled trip answers yes.
+    await setTripStatus(db, fresh.id, first.id, "cancelled");
+    expect(await countShopTrips(db, fresh.id)).toBe(1);
+
+    // The seeded shop's own count never bleeds in.
+    expect(await countShopTrips(db, shop.id)).toBeGreaterThan(1);
   });
 });
