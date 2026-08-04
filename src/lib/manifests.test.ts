@@ -509,7 +509,16 @@ describe("rollCallCompleteness — the crew half of the head count (DOM-H1)", ()
     ).toMatchObject({ complete: true, reason: null });
   });
 
-  it("closes when the whole crew is recorded ashore — everyone is accounted for", () => {
+  /**
+   * The bug this test used to assert. "Every rostered hand is ashore" is a
+   * complete set of results that together say the boat sailed with nobody
+   * running it — which is *stronger* evidence of an unrostered body aboard than
+   * an empty crew list, and the empty list already holds the checkpoint open on
+   * exactly that reasoning. Under the retired attestation this state still cost
+   * a human saying "0 aboard" out loud; dropping the count must not make it
+   * free (dive-domain review 20260804).
+   */
+  it("does NOT close when the whole crew is recorded ashore — nobody is on the boat", () => {
     expect(
       rollCallCompleteness({
         checkpoint: "departure",
@@ -518,7 +527,48 @@ describe("rollCallCompleteness — the crew half of the head count (DOM-H1)", ()
         notBackAboard: 0,
         crew: crewOf({ assigned: 2, ashore: 2 }),
       }),
+    ).toMatchObject({
+      complete: false,
+      crewAccountedFor: false,
+      reason: "crew_none_aboard",
+      crewReason: "crew_none_aboard",
+    });
+    // One hand aboard is all it takes — the rule is "somebody rostered is on
+    // the boat", not "everybody is".
+    expect(
+      rollCallCompleteness({
+        checkpoint: "departure",
+        totalDivers: 4,
+        awaiting: 0,
+        notBackAboard: 0,
+        crew: crewOf({ assigned: 3, ashore: 2 }),
+      }),
     ).toMatchObject({ complete: true, crewAccountedFor: true, reason: null });
+  });
+
+  it("ranks a missing person and an uncalled crew member above an empty boat", () => {
+    // Somebody stated as not back is the loudest thing on the page, even
+    // though the rest of the crew being ashore also leaves nobody aboard.
+    expect(
+      rollCallCompleteness({
+        checkpoint: "after_dive_1",
+        totalDivers: 4,
+        awaiting: 0,
+        notBackAboard: 0,
+        crew: crewOf({ assigned: 2, ashore: 1, notBackAboard: 1 }),
+      }),
+    ).toMatchObject({ complete: false, reason: "crew_not_back_aboard" });
+    // An untapped button outranks it too: until everyone has a result, "nobody
+    // is aboard" is not yet a thing the boat has actually said.
+    expect(
+      rollCallCompleteness({
+        checkpoint: "departure",
+        totalDivers: 4,
+        awaiting: 0,
+        notBackAboard: 0,
+        crew: crewOf({ assigned: 2, ashore: 1, awaiting: 1 }),
+      }),
+    ).toMatchObject({ complete: false, reason: "crew_awaiting" });
   });
 
   it("never lets an after-dive “did not come back” read as accounted for", () => {

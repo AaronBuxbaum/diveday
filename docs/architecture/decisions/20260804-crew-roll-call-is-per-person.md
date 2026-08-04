@@ -45,21 +45,33 @@ Overview tab, and which is exactly what the product owner asked to surface here.
    `TripManifest` no longer carries one.
 
 2. **The crew half is the named crew list alone.**
-   `crewAccountedFor = crewAssigned > 0 && crewAwaiting === 0 && crewNotBackAboard === 0`.
+   `crewAccountedFor = crewAssigned - crewAshore > 0 && crewAwaiting === 0 && crewNotBackAboard === 0`.
    `crew_not_attested` and `crew_short` are gone. `crew_not_back_aboard` and `crew_awaiting` keep
-   their meanings and their ordering, and divers still rank ahead of crew overall.
+   their meanings and their ordering, and divers still rank ahead of crew overall. The new
+   `crew_none_aboard` ranks below both of those and above nothing: a stated, complete set of results
+   that together say something impossible is not a clerical gap, but it is not somebody missing
+   either.
 
-3. **Zero assigned crew is still not a free pass** — the one property of 20260802 worth keeping,
-   now with a name of its own: **`crew_none_assigned`**. An empty crew list is a scheduling gap, not
-   evidence that nobody else was aboard, so it holds the checkpoint open exactly as an uncalled crew
-   member does. What changes is the way out. It used to be typing "0" into a box; it is now the
-   **"Add crew to trip"** button the manifest renders in that state, which leads to the trip's own
-   crew list. The resolution is a person's name, which is the thing the roll call is for.
+3. **An empty boat is still not a free pass** — the one property of 20260802 worth keeping, and it
+   has two shapes. **`crew_none_assigned`**: the trip names nobody. **`crew_none_aboard`**: the trip
+   names crew, every one has a result, and every result is *ashore*. Both are a departure that
+   sailed with nobody recorded running it, which is stronger evidence of an unrostered hand than of
+   an empty boat, so both hold the checkpoint open. The closing rule is therefore "**at least one
+   rostered body aboard**, and everybody rostered accounted for".
+
+   The second shape was missed in the first draft of this decision and caught in review: without it,
+   a trip whose whole crew was marked not-aboard at the dock closed every checkpoint and printed
+   "everyone's accounted for" over a boat that had sailed with divers on it. Under the attestation
+   that state still cost a human saying "0 aboard" out loud, so dropping the count must not make it
+   free — a strict weakening this ADR would otherwise have shipped unnoticed.
+
+   What changes in both cases is the way out. It used to be typing a number into a box; it is now
+   the **"Add crew to trip"** button the manifest renders, which leads to the trip's own crew list.
+   The resolution is a person's name, which is the thing the roll call is for.
 
 4. **`crewExpectedAboard` is gone; `crewAssigned` replaces it** on `CrewRollCallCounts`. It existed
-   only as the denominator the count had to cover. `crewAshore` stays — it is what makes a crew
-   member recorded as staying ashore at the dock read as accounted for, at that checkpoint and every
-   later one.
+   only as the denominator the count had to cover. `crewAshore` stays and is load-bearing again: it
+   is what `crewAssigned - crewAshore > 0` reads to decide whether anybody is aboard at all.
 
 5. **The table, its rows, and its export stay.** `roll_call_crew_attestations` holds statements real
    humans made about departures that have already sailed; the incident export renders them and
@@ -98,13 +110,54 @@ regression: those checkpoints were open on a formality, and open checkpoints tha
 what teach a crew to stop reading them.
 
 A shop that sails with a hand nobody rostered now has no way to record that body **except by
-rostering them**. That is a deliberate narrowing, and it is the one real loss here. It trades a
-number nobody could act on for a name somebody can, and the app already nags about unassigned crew
-as a coverage gap.
+rostering them**. That is a deliberate narrowing and the one real loss here — and it is a bigger
+loss than "one tap on the Overview tab" suggests, which review made plain:
+
+- It is only one tap if that person is **already a staff record with a staff role in this shop**.
+  `changeTripCrew` re-proves `personRoles ∈ STAFF_ROLES`, so a fill-in captain, a mate borrowed from
+  the shop next door, or the owner's son on school holiday must first be created at
+  `/settings/team` — behind the owner/manager staff-accounts gate, which the divemaster running roll
+  call at 06:50 with wet hands very likely cannot reach. None of it works offline, where the crew
+  half is read-only by design.
+- Rostering somebody onto a trip that already sailed **re-opens every checkpoint of that trip** (a
+  new assignment is a new `crewAwaiting`), while Today stays quiet, because its after-dive
+  population only counts people with a `boarded` result at departure. The only way to quiet the
+  manifest is to retroactively tap "aboard" at every checkpoint for somebody nobody counted at the
+  time — the same rubber-stamp pressure this decision attributes to a typed box, relocated to a
+  per-person tap.
+
+The honest reading is that this trade is right for the common case and worst for the shops with the
+messiest crew data — the same shops the check exists for. The follow-on that would close it is a
+one-tap "add someone who sailed" on the manifest itself, creating a minimal crew person inline; it
+is not in this slice, and until it exists the fallback on those trips is a permanently open crew
+panel, which is the failure mode both prior ADRs were written to avoid. Worth revisiting on the
+first real report of it.
 
 Trips with no crew assigned still cannot close a checkpoint, and now say so in the crew panel with
 the button that fixes it rather than a number to type. Shops that never assign crew will meet this
 on every trip — which is the same nag as before, pointed at the thing that would actually resolve it.
+
+**Open, and this decision is what makes it urgent: stripping a staff role can still close an open
+checkpoint.** `listTripCrew` reads the crew list through a `person_roles ∈ STAFF_ROLES` join, so
+`removeStaffMember` / `setStaffRoles` (and the erasure path) make somebody disappear from *every*
+historical trip's crew list. A divemaster recorded **not back aboard** at `after_dive_1` therefore
+stops being counted the moment someone removes them from the team, `crewNotBackAboard` falls to 0,
+and a checkpoint that was open *because a person did not come back* flips to complete with the
+`roll_call_crew_events` rows still sitting there unread.
+
+This is the D3 failure 20260803 closed on `changeTripCrew`/`setTripCrew` and left open on the
+team-management door. It predates this decision — but before it, the checkpoint usually stayed open
+anyway on `crew_not_attested`, since most shops never filed an attestation. Removing the count
+removes that accidental backstop, so the hole is now load-bearing on every trip.
+
+The fix is not to refuse role changes — a shop must be able to remove somebody who left. It is for
+the crew list to read *assignments plus roll-call history* rather than assignments filtered by
+**current** role, so a person who has a recorded result on a trip stays on that trip's crew list
+whatever happens to their employment afterwards. That is a query change on the safety spine with its
+own test surface (and it has to be reconciled with `recordCrewRollCall`'s subject check, which
+applies the identical filter by design — 20260803 D11), so it is called out here rather than
+smuggled into a UI change. Dive-domain review 20260804 rates it blocking; it should land before this
+is relied on.
 
 **HD-7** (whether the launch jurisdiction requires the head count to cover crew, and by which
 mechanism) narrows rather than reopens: the per-person mechanism remains, and it is strictly more

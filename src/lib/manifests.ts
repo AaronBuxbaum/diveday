@@ -434,10 +434,22 @@ export function crewRollCallCounts(
  *   checkpoint open exactly as an uncalled crew member does. The way out is to
  *   put the people who sailed on the trip, which is what the manifest's "Add
  *   crew to trip" button is for.
+ * - `crew_none_aboard` — the trip names crew, every one of them has a result,
+ *   and every one of those results is *ashore*. Nobody rostered is on the boat.
+ *   A departure with divers in the water had somebody running it, so this is
+ *   stronger evidence of an unrostered body aboard than an empty crew list is —
+ *   and the empty list already holds the checkpoint open on exactly that
+ *   reasoning (dive-domain review 20260804). Ranked below the two "somebody is
+ *   missing" reasons and above `crew_awaiting`: it is a stated, complete set of
+ *   results that together say something impossible, not a clerical gap.
  * - `crew_awaiting` — the trip names crew, and at least one of them has no
  *   result of their own at this checkpoint.
  */
-export type CrewIncompleteReason = "crew_not_back_aboard" | "crew_none_assigned" | "crew_awaiting";
+export type CrewIncompleteReason =
+  | "crew_not_back_aboard"
+  | "crew_none_assigned"
+  | "crew_none_aboard"
+  | "crew_awaiting";
 
 export type RollCallIncompleteReason =
   | "no_divers"
@@ -492,13 +504,16 @@ export type RollCallCompleteness = {
  *    cannot — a hand nobody rostered — it caught by asking for a number, and
  *    the honest fix for an unrostered hand is to roster them.
  *
- * **Zero assigned crew does not auto-complete.** A trip with no crew assigned is
- * a scheduling gap (the app already nags about it as a coverage gap), not
- * evidence that nobody else was aboard, so an empty crew list holds the
- * checkpoint open as `crew_none_assigned`. The alternative — treating an empty
- * assignment list as satisfied — would hand back exactly the silent pass this
- * whole check exists to remove, and would do it on precisely the trips whose
- * crew data is worst.
+ * **A crew nobody is aboard from does not auto-complete either.** Two shapes of
+ * that, and both hold the checkpoint open. A trip with no crew assigned is a
+ * scheduling gap (the app already nags about it as a coverage gap), not
+ * evidence that nobody else was aboard — `crew_none_assigned`. And a trip whose
+ * whole rostered crew is recorded *ashore* has a complete set of results that
+ * together say the boat sailed with nobody running it — `crew_none_aboard`.
+ * Treating either as satisfied hands back exactly the silent pass this whole
+ * check exists to remove, on precisely the trips whose crew data is worst. The
+ * closing rule is therefore "at least one rostered body aboard, and everybody
+ * rostered accounted for", not "everybody rostered accounted for".
  *
  * **The crew input is required, and it is the crew list itself.** The crew
  * fields used to be optional counts defaulting to `0`, which made the one
@@ -526,8 +541,16 @@ export function rollCallCompleteness(input: {
   const unaccountedFor = input.awaiting + input.notBackAboard;
   const diversAccountedFor = input.totalDivers > 0 && unaccountedFor === 0;
   const crewCounts = crewRollCallCounts(input.checkpoint, input.crew);
-  const { crewAssigned, crewAwaiting, crewNotBackAboard } = crewCounts;
-  const crewAccountedFor = crewAssigned > 0 && crewAwaiting === 0 && crewNotBackAboard === 0;
+  const { crewAssigned, crewAwaiting, crewNotBackAboard, crewAshore } = crewCounts;
+  // Somebody rostered has to actually be on the boat. `crewAssigned > 0` alone
+  // was not enough: a crew recorded ashore at the dock is *accounted for* and
+  // carries forward, so a trip whose whole crew was marked not-aboard closed
+  // every checkpoint with nobody aboard and printed "everyone's accounted for"
+  // over a boat that had sailed with divers on it (dive-domain review
+  // 20260804). Under the retired attestation this state still cost a human
+  // saying "0 aboard" out loud; dropping the count must not make it free.
+  const crewAboard = crewAssigned - crewAshore;
+  const crewAccountedFor = crewAboard > 0 && crewAwaiting === 0 && crewNotBackAboard === 0;
   const crewReason: CrewIncompleteReason | null =
     crewNotBackAboard > 0
       ? "crew_not_back_aboard"
@@ -535,7 +558,9 @@ export function rollCallCompleteness(input: {
         ? "crew_none_assigned"
         : crewAwaiting > 0
           ? "crew_awaiting"
-          : null;
+          : crewAboard === 0
+            ? "crew_none_aboard"
+            : null;
   const reason: RollCallIncompleteReason | null =
     input.totalDivers === 0
       ? "no_divers"

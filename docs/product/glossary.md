@@ -418,10 +418,13 @@ new domain concept, define it here in the same PR.
   The population an after-dive count is counting is **who boarded**, never who bought a seat or was
   rostered — a diver who never showed and was never tapped is an unfinished *dock* count, not
   somebody left in the water, and a shop that has never tapped a crew roll call raises no crew rows
-  at all rather than one on every trip it has run. The **crew attestation** is the one piece of an
-  open checkpoint Today does not chase: it is a form most shops have never filled in, so a row for
-  it would fire on nearly every trip and bury the rows that mean a person is in the water. The
-  manifest states it; the queue chases what somebody actually recorded.
+  at all rather than one on every trip it has run. The count-level **crew attestation** used to be the one
+  piece of an open checkpoint Today did not chase; it is retired, so the queue now chases the whole
+  crew half — the named results themselves. An open checkpoint held only because nobody is *aboard*
+  (an empty crew list, or a whole crew marked ashore) still raises no queue row, for the reason the
+  attestation never did: it fires on trips whose crew was never recorded at all, and would bury the
+  rows that mean a person is in the water. The manifest states it; the queue chases what somebody
+  actually recorded.
 - **Emergency contact** — a name *and* a reachable phone number the crew can call for a diver in
   an incident. It is captured from the diver (the waiver flow, and the `/ready` page), never
   invented, and it is **only "on file" when both the name and the phone are present** — a name with
@@ -514,9 +517,14 @@ new domain concept, define it here in the same PR.
   can never imply "present," and staff can override it at any checkpoint. A checkpoint is
   **complete** only when every booked diver is **accounted for** — which is not the same as having a
   result, since a diver recorded as not back aboard has one and is precisely the person who is
-  missing — *and* every assigned crew member is accounted for individually **and** the **crew
-  attestation** covers the crew still expected aboard. Divers alone were never the whole boat, and
-  a count that names nobody was never the whole crew.
+  missing — *and* every assigned crew member is accounted for individually, *and* at least one of
+  them is actually **aboard**. Divers alone were never the whole boat. The last clause is what stops
+  the two shapes of an empty boat from closing themselves: a trip with nobody on its crew list, and
+  a trip whose whole crew is marked ashore. Both are a departure that sailed with nobody recorded
+  running it, which is stronger evidence of an unrostered hand than of an empty boat. The
+  count-level **crew attestation** used to be the other half of this and is retired — a number that
+  named nobody was never the whole crew either
+  ([ADR 20260804-crew-roll-call-is-per-person](../architecture/decisions/20260804-crew-roll-call-is-per-person.md)).
 - **Offline manifest snapshot** — a time-stamped, encrypted device copy of the complete derived
   manifest and every checkpoint, saved and refreshed automatically while the device has signal
   (staff can also force an immediate "Refresh now"). It is safety evidence as saved, never an

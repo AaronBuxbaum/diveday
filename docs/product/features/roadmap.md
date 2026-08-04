@@ -150,8 +150,13 @@ These are per-feature rough edges on shipped work, not future subsystems. They a
 - Currencies beyond the shop's declared one on a single order, and Stripe-reported settlement
   currency drift — [20260731-shop-currency](../../architecture/decisions/20260731-shop-currency.md).
 - Recording **crew** roll call offline (it is online-only; the offline panel states the limitation
-  neutrally and the checkpoint stays open), and retiring the count-level attestation now that crew
-  are named — [20260803-per-person-crew-roll-call](../../architecture/decisions/20260803-per-person-crew-roll-call.md).
+  neutrally and the checkpoint stays open) —
+  [20260803-per-person-crew-roll-call](../../architecture/decisions/20260803-per-person-crew-roll-call.md).
+  The count-level attestation it names as a follow-on has since been retired, and two edges came
+  with that: **stripping a staff role still drops somebody from every historical trip's crew list**,
+  which can close a checkpoint held open because they did not come back; and a hand nobody rostered
+  can only be recorded by first creating them as staff, which no dockside crew member can do —
+  both in [20260804-crew-roll-call-is-per-person](../../architecture/decisions/20260804-crew-roll-call-is-per-person.md).
 - Setting a per-trip crew role from Today's departure board (assign-only by design), and a
   vocabulary for roles this enum cannot express (assistant instructor, safety diver) —
   [20260803-per-trip-crew-role](../../architecture/decisions/20260803-per-trip-crew-role.md).

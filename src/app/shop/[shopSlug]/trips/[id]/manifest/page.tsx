@@ -91,21 +91,31 @@ const BOAT_TARGET_CLASS =
  * the two lists can never disagree about what a colour means.
  *
  * The two *recorded* outcomes have to be told apart across a wet deck in
- * sunlight, which is why they are opposite hues rather than two washes of the
+ * sunlight, which is why they are different hues rather than two washes of the
  * same one: aboard is green, left ashore is amber. They used to be `success/10`
  * and a plain slate `surface-sunken`, two pale neutrals that read as the same
  * card at arm's length. Awaiting takes the slate instead — nothing has been
- * said about that person yet, which is the quietest state on the page, not a
- * warning. Colour never carries this alone: every row also states its status in
- * words on the button beside it.
+ * said about that person yet.
+ *
+ * **Only one row on this page wears a ring**, and it is the one that means a
+ * person is in the water. "Left ashore" is a *settled* outcome — the glossary
+ * calls it benign and genuinely accounted for — so it gets the hue that
+ * separates it from green and none of the alarm that separates red from
+ * everything: a ringed amber sitting beside a ringed red reads as the same
+ * class of emergency at arm's length in glare, and it would make the most
+ * closed row on the page louder than `awaiting`, which is the state that still
+ * needs a human (dive-domain review 20260804).
+ *
+ * Colour never carries this alone: every row states its status in words, on the
+ * button beside it on screen and on the pill beside the name in print.
  */
 const ROLL_CALL_ROW_TONE = {
-  /** A stated "did not come back" — the loudest thing on the page. */
+  /** A stated "did not come back" — the loudest thing on the page, and the only ring. */
   notBackAboard: "border-danger bg-danger/15 ring-1 ring-danger/40",
   boarded: "border-success bg-success/20",
-  notBoarded: "border-warning bg-warning/25 ring-1 ring-warning/40",
+  notBoarded: "border-warning bg-warning/15",
   /** Carried forward from the dock rather than recorded here — same hue, quieter. */
-  notBoardedImplied: "border-dashed border-warning/60 bg-warning/10",
+  notBoardedImplied: "border-dashed border-warning/60 bg-warning/5",
   awaiting: "border-border-strong bg-surface-sunken",
   /** Awaiting *and* blocked: readiness is the thing to fix before boarding. */
   blocked: "border-danger bg-danger/5",
@@ -740,9 +750,11 @@ export default async function TripManifestPage({
                 ? t("trips.manifest.crewNotBackAboard", { count: crewCounts.crewNotBackAboard })
                 : completeness.reason === "crew_none_assigned"
                   ? t("trips.manifest.crewNoneAssignedYet")
-                  : completeness.reason === "crew_awaiting"
-                    ? t("trips.manifest.crewAwaiting", { count: crewCounts.crewAwaiting })
-                    : t("trips.manifest.allAccountedFor")}
+                  : completeness.reason === "crew_none_aboard"
+                    ? t("trips.manifest.crewNoneAboard")
+                    : completeness.reason === "crew_awaiting"
+                      ? t("trips.manifest.crewAwaiting", { count: crewCounts.crewAwaiting })
+                      : t("trips.manifest.allAccountedFor")}
         </p>
         {/* Buddy teams that came back split — someone aboard, someone not
             (ADR 20260804-buddy-teams). Its own line, never folded into the
@@ -777,11 +789,15 @@ export default async function TripManifestPage({
           // typed "how many crew are aboard" attestation the manifest used to
           // ask for — a number that named nobody, on a page whose whole point is
           // naming people (ADR 20260804-crew-roll-call-is-per-person).
-          <div className="mt-3 rounded-2xl border border-warning/50 bg-warning/10 p-4 print:hidden">
+          // The card itself prints: the paper the boat carries must not show a
+          // "Crew" heading with blank space under it on exactly the departures
+          // whose crew half is open (dive-domain review 20260804). Only the
+          // button is screen-only — a link is not an action on paper.
+          <div className="mt-3 rounded-2xl border border-warning/50 bg-warning/10 p-4">
             <p className="max-w-prose text-sm">{t("trips.manifest.noCrew")}</p>
             <Link
               href={`/shop/${shopSlug}/trips/${tripId}#crew`}
-              className={buttonClass({ size: "boat", className: "mt-3" })}
+              className={buttonClass({ size: "boat", className: "mt-3 print:hidden" })}
             >
               {t("trips.manifest.addCrewToTrip")}
             </Link>
@@ -829,17 +845,20 @@ export default async function TripManifestPage({
                         <p className="flex flex-wrap items-center gap-2">
                           <strong className="text-base">{member.fullName}</strong>
                           <span className="text-sm text-muted">{member.roles.join(", ")}</span>
-                          {recordedHere ? null : (
-                            <span
-                              className={
-                                rc
-                                  ? "rounded-full bg-warning/15 px-3 py-1 text-sm font-medium text-warning-strong"
-                                  : "rounded-full bg-surface px-3 py-1 text-sm font-medium text-muted"
-                              }
-                            >
-                              {rollCallLabelText(t, rollCallLabel(checkpoint, rc))}
-                            </span>
-                          )}
+                          {/* Same rule, same reason, as the diver rows: hidden
+                              on screen only while the buttons beside it carry
+                              the word, and always present on paper. Crew always
+                              get both buttons, so there is no readiness case to
+                              carve out here. */}
+                          <span
+                            className={`${recordedHere ? "hidden print:inline-flex " : ""}${
+                              rc
+                                ? "rounded-full bg-warning/15 px-3 py-1 text-sm font-medium text-warning-strong"
+                                : "rounded-full bg-surface px-3 py-1 text-sm font-medium text-muted"
+                            }`}
+                          >
+                            {rollCallLabelText(t, rollCallLabel(checkpoint, rc))}
+                          </span>
                           {/* Crew wear the same chip as a diver — a
                               divemaster who is back while the group they lead
                               is not is the same split, and it must not read
@@ -929,7 +948,7 @@ export default async function TripManifestPage({
             href={`/shop/${shopSlug}/trips/${tripId}#crew`}
             className={buttonClass({ variant: "secondary", className: "mt-4 print:hidden" })}
           >
-            {t("trips.manifest.addCrewToTrip")}
+            {t("trips.manifest.manageCrewOnTrip")}
           </Link>
         ) : null}
       </section>
@@ -1206,6 +1225,21 @@ export default async function TripManifestPage({
             // implied not-boarded is carried forward from the dock, not said
             // here, so it keeps its pill.
             const recordedHere = !!rc && !rc.implied;
+            // The pill is dropped only when something else on the row is
+            // already saying the same word. Two cases where nothing is
+            // (dive-domain review 20260804):
+            //
+            //  - **On paper.** The button column is `print:hidden`, so on the
+            //    document the boat actually carries, deleting the pill would
+            //    move every diver's status to a muted audit line at the foot of
+            //    their row. It stays, screen-hidden and print-visible.
+            //  - **When the board button isn't rendered.** It only appears for
+            //    `ready || !isDeparture`, so a diver boarded at departure whose
+            //    readiness later flipped to blocked would show a green row, a
+            //    red "Blocked" badge, a lone "Mark not boarded" button, and
+            //    nothing anywhere near their name saying they are aboard.
+            const boardingControlShown = ready || !isDeparture;
+            const pillRepeatsAControl = recordedHere && boardingControlShown;
             // Not a Badge: "carried forward from the dock" needs a fill of its
             // own, a distinction the app's five standard Badge tones don't carry.
             const rollCallPillClass = impliedNotBoarded
@@ -1262,11 +1296,15 @@ export default async function TripManifestPage({
                           <span className="ms-1">{birthdayText(t, diver.birthday)}</span>
                         </Badge>
                       ) : null}
-                      {recordedHere ? null : (
-                        <span className={rollCallPillClass}>
-                          {rollCallLabelText(t, rollCallLabel(checkpoint, rc))}
-                        </span>
-                      )}
+                      <span
+                        className={
+                          pillRepeatsAControl
+                            ? `hidden print:inline-flex ${rollCallPillClass}`
+                            : rollCallPillClass
+                        }
+                      >
+                        {rollCallLabelText(t, rollCallLabel(checkpoint, rc))}
+                      </span>
                       <BuddyTeamChip
                         label={buddyTeamLabel(diver.buddyTeam ? [diver.buddyTeam] : [])}
                         alertText={diver.buddyAlert ? buddyAlertText(t, diver.buddyAlert) : null}

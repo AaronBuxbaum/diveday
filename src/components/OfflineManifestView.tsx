@@ -731,9 +731,11 @@ export function OfflineManifestView() {
                   })
                 : completeness.crewReason === "crew_none_assigned"
                   ? t("shared.offlineManifest.single.crewNoneAssigned")
-                  : t("shared.offlineManifest.single.crewAllAccountedFor", {
-                      assigned: crewAssigned,
-                    })}
+                  : completeness.crewReason === "crew_none_aboard"
+                    ? t("shared.offlineManifest.single.crewNoneAboard")
+                    : t("shared.offlineManifest.single.crewAllAccountedFor", {
+                        assigned: crewAssigned,
+                      })}
           </p>
           {/* Says plainly that this half of the count belongs to the live
               manifest, so the state above reads as "not recordable here"
@@ -751,12 +753,22 @@ export function OfflineManifestView() {
               {crewWithKeys.map((member) => (
                 <li
                   key={member.key}
+                  // One colour vocabulary with the live manifest's rows
+                  // (`ROLL_CALL_ROW_TONE`), because both are read on the same
+                  // deck and often on two devices at once: aboard green, left
+                  // ashore amber, nothing said yet slate, did-not-come-back
+                  // red and alone in carrying weight. This used to invert two
+                  // of them — amber for "still to call" and slate for "ashore"
+                  // — so the same crew member read as a warning on the phone
+                  // and as settled on the tablet (dive-domain review 20260804).
                   className={
                     isNotBackAboard(checkpoint, member.rollCall)
                       ? "rounded-full bg-danger/15 px-3 py-1 text-sm font-bold text-danger"
-                      : member.rollCall
-                        ? "rounded-full bg-surface-sunken px-3 py-1 text-sm"
-                        : "rounded-full bg-warning/20 px-3 py-1 text-sm font-semibold"
+                      : member.rollCall?.state === "boarded"
+                        ? "rounded-full bg-success/20 px-3 py-1 text-sm"
+                        : member.rollCall
+                          ? "rounded-full bg-warning/15 px-3 py-1 text-sm"
+                          : "rounded-full bg-surface-sunken px-3 py-1 text-sm"
                   }
                 >
                   {member.fullName} ·{" "}
