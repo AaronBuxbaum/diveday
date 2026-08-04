@@ -6,10 +6,12 @@ import { nowDate } from "@/lib/clock";
 import { effectiveCrewRoles } from "@/lib/crew-roles";
 import { rentalFitLine } from "@/lib/dive-prep";
 import {
+  type BuddyTeammate,
   buildTripManifest,
   type CrewAttestation,
   carryForwardNotBoarded,
   isRollCallCheckpoint,
+  type ManifestBuddyTeam,
   type ManifestCrewMember,
   type RollCallCheckpoint,
   type RollCallRecord,
@@ -17,7 +19,7 @@ import {
   type TripManifest,
 } from "@/lib/manifests";
 import { medicalWaiverMark } from "@/lib/waivers";
-import { listTripBuddyPairs } from "./buddy-pairs";
+import { listTripBuddyTeams } from "./buddy-pairs";
 import type { AppDb, DbExecutor } from "./client";
 import { publishManifestEvent } from "./manifest-events";
 import { verifiedNitroxPersonIds } from "./nitrox";
@@ -291,7 +293,7 @@ export async function getTripManifests(
     crew,
     crewAttestations,
     crewRollCalls,
-    buddyPairs,
+    buddyTeams,
     ...rollCalls
   ] = await Promise.all([
     getShopById(db, shopId),
@@ -302,7 +304,7 @@ export async function getTripManifests(
     listTripCrew(db, shopId, tripId),
     listLatestCrewAttestations(db, shopId, tripId),
     listLatestCrewRollCalls(db, shopId, tripId),
-    listTripBuddyPairs(db, shopId, tripId),
+    listTripBuddyTeams(db, shopId, tripId),
     ...checkpoints.map((checkpoint) => listLatestRollCallByBooking(db, shopId, tripId, checkpoint)),
   ]);
   if (!shop) return null;
@@ -318,20 +320,48 @@ export async function getTripManifests(
   const medicalByBooking = new Map(
     readinessRows.map((row) => [row.booking.id, medicalWaiverMark(row.waiver)] as const),
   );
-  // A diver's buddy, for pairs whose members are **both** active roster
-  // entries. A pair whose other seat was cancelled stays listed (and
-  // dissolvable) on the pairs panel, but it puts no buddy on the manifest —
-  // a cancelled seat is nobody (ADR 20260804-buddy-pairs), and an alert
-  // about a person who is not on the boat would be a false alarm.
+  // Buddy teams, reduced to the members who are actually aboard. A member
+  // whose seat was since cancelled stays listed (and dissolvable) on the teams
+  // panel, but is dropped here: a cancelled seat is nobody (ADR
+  // 20260804-buddy-teams), and an alert about a person who is not on the boat
+  // would be a false alarm. A crew member is aboard as long as they are still
+  // assigned to the trip, which `listTripCrew` is the authority on.
+  //
+  // What each row carries is the team **minus itself** — a team is a fact about
+  // a group, a manifest row is a fact about one body. A team left with fewer
+  // than two aboard puts nothing on any row: there is nobody left to diverge
+  // from, and the panel already shows why.
   const rosterBookingIds = new Set(roster.map(({ booking }) => booking.id));
-  const buddyByBooking = new Map<string, { bookingId: string; fullName: string }>();
-  for (const pair of buddyPairs) {
-    const [a, b] = pair.members;
-    if (!a || !b || pair.members.length !== 2) continue;
-    if (a.cancelled || b.cancelled) continue;
-    if (!rosterBookingIds.has(a.bookingId) || !rosterBookingIds.has(b.bookingId)) continue;
-    buddyByBooking.set(a.bookingId, { bookingId: b.bookingId, fullName: b.fullName });
-    buddyByBooking.set(b.bookingId, { bookingId: a.bookingId, fullName: a.fullName });
+  const crewIds = new Set(crew.map((member) => member.id));
+  const teamByBooking = new Map<string, ManifestBuddyTeam>();
+  // Crew accumulate a *list*: one divemaster commonly leads several groups on
+  // one boat, so unlike a diver they have no "at most one team" constraint.
+  const teamsByCrewId = new Map<string, ManifestBuddyTeam[]>();
+  for (const team of buddyTeams) {
+    const aboard = team.members.flatMap((member): BuddyTeammate[] =>
+      member.kind === "diver"
+        ? !member.cancelled && rosterBookingIds.has(member.bookingId)
+          ? [{ kind: "diver", bookingId: member.bookingId, fullName: member.fullName }]
+          : []
+        : crewIds.has(member.personId)
+          ? [{ kind: "crew", personId: member.personId, fullName: member.fullName }]
+          : [],
+    );
+    if (aboard.length < 2) continue;
+    for (const member of aboard) {
+      const others = aboard.filter((other) =>
+        member.kind === "diver"
+          ? other.kind !== "diver" || other.bookingId !== member.bookingId
+          : other.kind !== "crew" || other.personId !== member.personId,
+      );
+      const carried = { teamId: team.teamId, others };
+      if (member.kind === "diver") teamByBooking.set(member.bookingId, carried);
+      else
+        teamsByCrewId.set(member.personId, [
+          ...(teamsByCrewId.get(member.personId) ?? []),
+          carried,
+        ]);
+    }
   }
   // Age, minor status, and birthdays are all measured on the day the boat
   // sails, in the shop's own timezone — not "today" wherever the server is.
@@ -361,7 +391,7 @@ export async function getTripManifests(
       birthday: birthdayCallout(person.dateOfBirth, tripDate),
       depthAdvisory: depthByBooking.get(booking.id),
       checkedIn: booking.status === "checked_in",
-      buddy: buddyByBooking.get(booking.id) ?? null,
+      buddyTeam: teamByBooking.get(booking.id) ?? null,
     };
   });
   // Carry a not-boarded result forward across the ordered checkpoints so an
@@ -393,6 +423,7 @@ export async function getTripManifests(
       crew: crew.map((member) => ({
         ...member,
         rollCall: crewEffective.get(member.id)?.[index],
+        buddyTeams: teamsByCrewId.get(member.id) ?? [],
       })),
       crewAttestation: crewAttestations.get(checkpoint) ?? null,
       divers: diverInputs.map((diver) => ({

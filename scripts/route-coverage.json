@@ -383,7 +383,12 @@
       "divers.spec.ts",
       "manifest.spec.ts"
     ],
-    "visual": ["manifest", "manifest-buddy-divergence", "manifest-not-back-aboard"]
+    "visual": [
+      "manifest",
+      "manifest-buddy-divergence",
+      "manifest-buddy-teams-panel",
+      "manifest-not-back-aboard"
+    ]
   },
   "/shop/[shopSlug]/trips/[id]/incident-export": {
     "e2e": ["incident-export.spec.ts"],

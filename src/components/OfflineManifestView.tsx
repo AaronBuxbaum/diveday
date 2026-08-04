@@ -17,7 +17,7 @@ import { rollCallCheckpointText, rollCallLabelText } from "@/i18n/manifest-label
 import { matchLocale } from "@/i18n/negotiate";
 import { rentalFitLineText } from "@/i18n/rental-labels";
 import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
-import { staffTranslator } from "@/i18n/staff-messages";
+import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import {
   isNotBackAboard,
   isRollCallCheckpoint,
@@ -531,9 +531,13 @@ export function OfflineManifestView() {
   // the true boarded count instead.
   const allBoarded = totalDivers > 0 && boarded === totalDivers;
   const missingDivers = manifest.divers.filter((_diver, index) => !localStates[index]);
-  // Whether any saved diver carries a buddy — gates the one line that says
-  // the split-pair read belongs to the live roll call.
-  const anyBuddies = manifest.divers.some((diver) => Boolean(diver.buddyFullName));
+  // Whether anyone on this saved copy carries a team — gates the one line that
+  // says the split-team read belongs to the live roll call. Crew count too:
+  // a boat where only the divemaster's groups were recorded still needs the
+  // limitation stated.
+  const anyBuddies =
+    manifest.divers.some((diver) => (diver.buddyTeamNames ?? []).length > 0) ||
+    manifest.crew.some((member) => (member.buddyTeamNames ?? []).length > 0);
 
   async function record(bookingId: string, status: "boarded" | "not_boarded", note = "") {
     if (expired) {
@@ -776,15 +780,29 @@ export function OfflineManifestView() {
                 >
                   {member.fullName} ·{" "}
                   {rollCallLabelText(t, rollCallLabel(checkpoint, member.rollCall))}
+                  {/* The groups this crew member is on, saved as names. Same
+                      display-only rule as a diver's — a divemaster leading
+                      three groups needs the dock copy to say which bodies
+                      they are responsible for. */}
+                  {(member.buddyTeamNames ?? []).length > 0 ? (
+                    <span className="ms-1 font-normal">
+                      ·{" "}
+                      {t("shared.buddyTeam.with", {
+                        names: new Intl.ListFormat(locale, { type: "conjunction" }).format(
+                          member.buddyTeamNames ?? [],
+                        ),
+                      })}
+                    </span>
+                  ) : null}
                 </li>
               ))}
             </ul>
           ) : null}
         </div>
-        {/* Buddy teams are display-only on the dock copy, and the pair-
-            divergence read ("one back, one not") belongs to the live roll
-            call alone — a snapshot cannot know who came back (ADR
-            20260804-buddy-pairs). Stated the same neutral way as the crew
+        {/* Buddy teams are display-only on the dock copy, and the split-team
+            read ("someone back, someone not") belongs to the live roll call
+            alone — a snapshot cannot know who came back (ADR
+            20260804-buddy-teams). Stated the same neutral way as the crew
             limitation above: a limitation of this copy, not an alarm. */}
         {anyBuddies ? (
           <p className="mt-3 text-sm font-semibold text-muted">
@@ -857,15 +875,11 @@ export function OfflineManifestView() {
                           ? ` ${t("shared.offlineManifest.single.statePendingSuffix")}`
                           : ""}
                       </span>
-                      {/* Saved buddy, always quiet here: this copy shows the
-                          team and never judges whether it is split — that
-                          read is live-roll-call only (see the note above the
-                          list). */}
-                      {diver.buddyFullName ? (
-                        <span className="rounded-full bg-surface-sunken px-3 py-1 text-sm font-medium text-muted">
-                          {t("shared.buddyPair.with", { name: diver.buddyFullName })}
-                        </span>
-                      ) : null}
+                      {/* The saved team, always quiet here: this copy shows
+                          who you are with and never judges whether the team is
+                          split — that read is live-roll-call only (see the
+                          note above the list). */}
+                      <OfflineBuddyTeamChip t={t} locale={locale} names={diver.buddyTeamNames} />
                     </div>
                     <div className="mt-3 grid gap-2 text-base sm:grid-cols-2">
                       <p>
@@ -1056,5 +1070,29 @@ export function OfflineManifestView() {
         }}
       />
     </main>
+  );
+}
+
+/**
+ * The saved team a dock-copy row wears — names only, never a verdict. There is
+ * deliberately no tone variant: this copy cannot know who came back, so it must
+ * never look like it is telling you (ADR 20260804-buddy-teams).
+ */
+function OfflineBuddyTeamChip({
+  t,
+  locale,
+  names,
+}: {
+  t: StaffTranslator;
+  locale: string;
+  names?: string[];
+}) {
+  if (!names || names.length === 0) return null;
+  return (
+    <span className="rounded-full bg-surface-sunken px-3 py-1 text-sm font-medium text-muted">
+      {t("shared.buddyTeam.with", {
+        names: new Intl.ListFormat(locale, { type: "conjunction" }).format(names),
+      })}
+    </span>
   );
 }

@@ -45,6 +45,21 @@ export const metadata: Metadata = {
  * plain bordered tables the `@media print` monochrome treatment already
  * handles (globals.css).
  */
+/**
+ * What each act on a buddy team reads as in the timeline. Codes come from
+ * `src/lib/incident-export.ts`; the words live here, like every other status
+ * this page prints.
+ */
+const BUDDY_TEAM_ACTION_KEYS: Record<
+  "formed" | "dissolved" | "member_added" | "member_removed",
+  StaffMessageKey
+> = {
+  formed: "incidentExport.timelineBuddyFormed",
+  dissolved: "incidentExport.timelineBuddyDissolved",
+  member_added: "incidentExport.timelineBuddyMemberAdded",
+  member_removed: "incidentExport.timelineBuddyMemberRemoved",
+};
+
 export default async function IncidentExportPage({
   params,
 }: {
@@ -66,6 +81,8 @@ export default async function IncidentExportPage({
     formatDateTimeTz(new Date(isoString), locale, doc.meta.timezone);
   const checkpointText = (checkpoint: string) =>
     rollCallCheckpointText(t, checkpoint as RollCallCheckpoint);
+  // The trail's names join in the reader's own locale, never a hard-coded ", ".
+  const memberList = new Intl.ListFormat(locale, { type: "conjunction" });
   const agencyText = (agency: string) =>
     t(AGENCY_KEYS[agency as keyof typeof AGENCY_KEYS] ?? AGENCY_KEYS.other);
   const roleKey: Record<string, StaffMessageKey> = {
@@ -185,7 +202,17 @@ export default async function IncidentExportPage({
                         <span className="font-medium text-foreground">
                           {t("incidentExport.buddyTeam", { number: diver.buddy.teamNumber })}
                         </span>{" "}
-                        {diver.buddy.buddyName}
+                        {/* Every other member, and crew marked as crew — the
+                            distinction this document exists to keep, since
+                            "accompanied by a divemaster" and "nobody paired
+                            them" used to print the same. */}
+                        {memberList.format(
+                          diver.buddy.members.map((member) =>
+                            member.isCrew
+                              ? `${member.fullName} (${t("incidentExport.buddyCrewTag")})`
+                              : member.fullName,
+                          ),
+                        )}
                         <span className="block text-xs">
                           {diver.buddy.pairedByName && diver.buddy.pairedAt
                             ? t("incidentExport.buddyPairedBy", {
@@ -227,6 +254,7 @@ export default async function IncidentExportPage({
                 <tr className="border-b border-border text-left">
                   <th className="px-3 py-2 font-semibold">{t("incidentExport.colCrewMember")}</th>
                   <th className="px-3 py-2 font-semibold">{t("incidentExport.colRoles")}</th>
+                  <th className="px-3 py-2 font-semibold">{t("incidentExport.colCrewTeams")}</th>
                   {doc.meta.checkpoints.map((checkpoint) => (
                     <th key={checkpoint} className="px-3 py-2 font-semibold">
                       {checkpointText(checkpoint)}
@@ -249,6 +277,16 @@ export default async function IncidentExportPage({
                       {member.roles
                         .map((role) => (roleKey[role] ? t(roleKey[role]) : role))
                         .join(", ")}
+                    </td>
+                    {/* Plural on purpose: one divemaster commonly leads
+                        several groups on one boat, and this document must
+                        print all of them (ADR 20260804-buddy-teams). */}
+                    <td className="px-3 py-2 align-top text-muted">
+                      {member.buddyTeamNumbers.length === 0
+                        ? t("incidentExport.crewNoTeams")
+                        : member.buddyTeamNumbers
+                            .map((number) => t("incidentExport.buddyTeam", { number }))
+                            .join(", ")}
                     </td>
                     {member.rollCall.map((result) => (
                       <RollCallCell
@@ -328,8 +366,17 @@ export default async function IncidentExportPage({
                 <span className="font-mono text-xs text-muted tabular-nums">
                   {dateTime(entry.occurredAt)}
                 </span>
-                <span className="text-muted">{checkpointText(entry.checkpoint)}</span>
-                {entry.kind === "crew_count" ? (
+                {entry.checkpoint === null ? null : (
+                  <span className="text-muted">{checkpointText(entry.checkpoint)}</span>
+                )}
+                {entry.kind === "buddy_team" ? (
+                  <span className="font-semibold">
+                    {entry.teamNumber > 0
+                      ? t("incidentExport.buddyTeam", { number: entry.teamNumber })
+                      : t("incidentExport.buddyTeamUnnumbered")}{" "}
+                    — {t(BUDDY_TEAM_ACTION_KEYS[entry.action])}
+                  </span>
+                ) : entry.kind === "crew_count" ? (
                   <span className="font-semibold">
                     {t("incidentExport.crewCountLine", {
                       aboard: entry.crewAboard,
@@ -355,7 +402,14 @@ export default async function IncidentExportPage({
                 <span className="text-muted">
                   {t("incidentExport.recordedByName", { name: entry.recordedByName })}
                 </span>
-                {entry.kind !== "crew_count" && entry.source === "offline" ? (
+                {entry.kind === "buddy_team" ? (
+                  <span className="text-muted">
+                    {t("incidentExport.timelineBuddyMembers", {
+                      names: memberList.format(entry.memberNames),
+                    })}
+                  </span>
+                ) : null}
+                {(entry.kind === "diver" || entry.kind === "crew") && entry.source === "offline" ? (
                   <span className="rounded-full bg-surface-sunken px-2 py-0.5 text-xs font-medium text-muted">
                     {t("incidentExport.timelineOfflineTag")}
                   </span>

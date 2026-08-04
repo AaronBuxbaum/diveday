@@ -4,6 +4,7 @@ import type { AppDb, DbExecutor } from "./client";
 import { DEMO_SHOP_SLUG } from "./dev-credentials";
 import {
   accountTokens,
+  activityEvents,
   bookingCapabilities,
   bookingCheckoutBookings,
   bookingCheckouts,
@@ -11,6 +12,7 @@ import {
   bookings,
   buddyPairMembers,
   buddyTeamEvents,
+  calendarFeeds,
   certifications,
   courseInquiries,
   coursePaths,
@@ -19,6 +21,7 @@ import {
   diveSiteCreatures,
   diveSiteMoments,
   diveSites,
+  internalNotes,
   lastMinuteListEntries,
   lastMinuteListUnsubscribeTokens,
   mediaDeletionAttempts,
@@ -39,11 +42,15 @@ import {
   rollCallCrewAttestations,
   rollCallCrewEvents,
   rollCallEvents,
+  shopBackupDeliveries,
+  shopBackupDestinations,
   shopPromoCodes,
   shopPromoRedemptions,
   shopStripeAccounts,
   shops,
+  shopWhatsappAccounts,
   specialtyCertifications,
+  staffShifts,
   tips,
   tripAssignments,
   tripBlowoutDivers,
@@ -155,7 +162,7 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   // The buddy-team trail references trips and people (ADR 20260804-buddy-teams).
   await db.delete(buddyTeamEvents).where(eq(buddyTeamEvents.shopId, shopId));
   // Buddy pairs reference bookings, so they go before the bookings delete
-  // (ADR 20260804-buddy-pairs).
+  // (ADR 20260804-buddy-teams).
   await db.delete(buddyPairMembers).where(eq(buddyPairMembers.shopId, shopId));
   await db.delete(bookings).where(eq(bookings.shopId, shopId));
   await db.delete(trips).where(eq(trips.shopId, shopId));
@@ -189,6 +196,28 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db
     .delete(processorErasureObligations)
     .where(eq(processorErasureObligations.shopId, shopId));
+  /*
+   * Seven shop-scoped tables that reference `shops` (and most of them `people`)
+   * with no `ON DELETE CASCADE`, so a minted demo carrying any of them made the
+   * final `delete(shops)` throw 23503 and stranded that shop past its TTL —
+   * forever, since every later reap hit the same row. Not hypothetical: staff
+   * seating a diver writes an `activity_events` row on the way through
+   * (src/db/seat-diver.ts), so *any* demo where someone used the Guests tab was
+   * already unreapable.
+   *
+   * All seven were invisible to `reap-demos.test.ts`, whose cases are
+   * hand-written per table. They were found by the shop-scoped sweep in
+   * `delete-path-coverage.test.ts`, which exists precisely so the next one is
+   * found by a failing check rather than by a stranded shop.
+   */
+  await db.delete(internalNotes).where(eq(internalNotes.shopId, shopId));
+  await db.delete(activityEvents).where(eq(activityEvents.shopId, shopId));
+  await db.delete(staffShifts).where(eq(staffShifts.shopId, shopId));
+  await db.delete(calendarFeeds).where(eq(calendarFeeds.shopId, shopId));
+  // Deliveries reference the destination they were sent to, so they go first.
+  await db.delete(shopBackupDeliveries).where(eq(shopBackupDeliveries.shopId, shopId));
+  await db.delete(shopBackupDestinations).where(eq(shopBackupDestinations.shopId, shopId));
+  await db.delete(shopWhatsappAccounts).where(eq(shopWhatsappAccounts.shopId, shopId));
 
   if (personIds.length > 0) {
     // Account tokens reference user_accounts, one layer further down the same
