@@ -147,6 +147,16 @@ function reviveQueuedNotification(payload: Notification): Notification {
   ]) {
     if (typeof copy[field] === "string") copy[field] = new Date(copy[field]);
   }
+  // The blow-out message carries dates nested inside its alternatives list
+  // (docs ADR 20260804-blowout-cascade) — revive those too, or a queued retry
+  // fails the kind's own z.date() validation and can never drain.
+  if (Array.isArray(copy.alternatives)) {
+    copy.alternatives = copy.alternatives.map((alternative: Record<string, unknown>) =>
+      typeof alternative?.startsAt === "string"
+        ? { ...alternative, startsAt: new Date(alternative.startsAt) }
+        : alternative,
+    );
+  }
   return copy as Notification;
 }
 

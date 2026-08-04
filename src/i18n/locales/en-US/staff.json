@@ -1281,7 +1281,10 @@
       "cancelledNotice": "This trip is cancelled. Putting it back on the schedule is limited to owners, managers, and instructors.",
       "cancelTrip": "Cancel trip",
       "cancelling": "Cancelling…",
-      "cancelHint": "Takes it off the public schedule and notifies booked divers."
+      "cancelHint": "Takes it off the public schedule and notifies booked divers.",
+      "weatherBlowout": "Weather blow-out…",
+      "weatherBlowoutHint": "Cancel for weather and message every diver their rebooking options.",
+      "viewBlowout": "View the blow-out cascade"
     },
     "details": {
       "heading": "Details",
@@ -3448,6 +3451,59 @@
       "pagination": {
         "total": "{count, plural, one {# departure} other {# departures}}"
       }
+    }
+  },
+  "blowout": {
+    "eyebrow": "Weather blow-out",
+    "confirm": {
+      "title": "Call a blow-out?",
+      "lead": "This cancels {tripTitle} and sends every booked diver one message: what happened, where their money stands, and the upcoming departures they already qualify for, as booking links.",
+      "moneyNote": "No money moves. Refunds stay with you, per booking, exactly as today — paid divers are told you'll be in touch.",
+      "diversHeading": "{count, plural, one {# diver will be messaged} other {# divers will be messaged}}",
+      "noEmail": "No email — flagged for a call",
+      "noDivers": "Nobody is booked on this departure. Calling it simply cancels the trip.",
+      "departed": "This departure has already left — there is nothing to blow out.",
+      "button": "Call the blow-out",
+      "calling": "Calling…",
+      "backToTrip": "Back to the trip"
+    },
+    "record": {
+      "title": "Blow-out cascade",
+      "calledBy": "Called by {name} · {when}",
+      "notified": "Notified",
+      "notifiedDetail": "{sent} of {total} messages away",
+      "rebooked": "Rebooked",
+      "rebookedDetail": "hold a seat on another departure",
+      "unresolved": "Unresolved",
+      "unresolvedDetail": "no new seat yet — the blow-out isn't over",
+      "allResolvedDetail": "everyone has somewhere to go",
+      "table": {
+        "diver": "Diver",
+        "message": "Message",
+        "money": "Money",
+        "offers": "Offered",
+        "status": "Status"
+      },
+      "messageSent": "Sent",
+      "messageQueued": "Retrying",
+      "messagePending": "Waiting",
+      "messageSending": "Sending…",
+      "messageFailed": "Not sent",
+      "messageNoEmail": "No email",
+      "callThem": "Call {phone}",
+      "noOffers": "No qualifying dates — sent the schedule instead",
+      "rebookedBadge": "Rebooked",
+      "unresolvedBadge": "Unresolved",
+      "noPayment": "No payment taken",
+      "resend": "Retry unsent messages",
+      "resending": "Retrying…",
+      "empty": "No divers were booked when the blow-out was called."
+    },
+    "notices": {
+      "called": "Blow-out called — the trip is cancelled and every diver's message is on its way.",
+      "resumed": "Retried the unsent messages.",
+      "departed": "This departure has already left — nothing was cancelled.",
+      "error": "That didn't work — try again."
     }
   },
   "incidentExport": {

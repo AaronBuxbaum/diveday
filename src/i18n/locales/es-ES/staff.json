@@ -1281,7 +1281,10 @@
       "cancelledNotice": "Esta salida está cancelada. Volver a ponerla en el calendario está limitado a propietarios, gerentes e instructores.",
       "cancelTrip": "Cancelar salida",
       "cancelling": "Cancelando…",
-      "cancelHint": "La quita del calendario público y notifica a los buceadores con reserva."
+      "cancelHint": "La quita del calendario público y notifica a los buceadores con reserva.",
+      "weatherBlowout": "Cancelación por mal tiempo…",
+      "weatherBlowoutHint": "Cancela por mal tiempo y envía a cada buceador sus opciones para reservar de nuevo.",
+      "viewBlowout": "Ver la cascada de la cancelación"
     },
     "details": {
       "heading": "Detalles",
@@ -3448,6 +3451,59 @@
       "pagination": {
         "total": "{count, plural, one {# salida} other {# salidas}}"
       }
+    }
+  },
+  "blowout": {
+    "eyebrow": "Cancelación por mal tiempo",
+    "confirm": {
+      "title": "¿Cancelar por mal tiempo?",
+      "lead": "Esto cancela {tripTitle} y envía a cada buceador reservado un solo mensaje: qué pasó, cómo queda su pago y las próximas salidas que ya cumplen sus certificaciones, con enlaces para reservar.",
+      "moneyNote": "No se mueve dinero. Los reembolsos siguen contigo, reserva por reserva, igual que hoy — a quienes pagaron se les avisa de que te pondrás en contacto.",
+      "diversHeading": "{count, plural, one {Se enviará el mensaje a # buceador} other {Se enviará el mensaje a # buceadores}}",
+      "noEmail": "Sin correo — marcado para llamar",
+      "noDivers": "No hay nadie reservado en esta salida. Llamarla solo cancela la salida.",
+      "departed": "Esta salida ya zarpó — no hay nada que cancelar.",
+      "button": "Cancelar por mal tiempo",
+      "calling": "Cancelando…",
+      "backToTrip": "Volver a la salida"
+    },
+    "record": {
+      "title": "Cascada de la cancelación",
+      "calledBy": "Llamada por {name} · {when}",
+      "notified": "Avisados",
+      "notifiedDetail": "{sent} de {total} mensajes enviados",
+      "rebooked": "Reservaron de nuevo",
+      "rebookedDetail": "tienen plaza en otra salida",
+      "unresolved": "Sin resolver",
+      "unresolvedDetail": "aún sin plaza nueva — la cancelación no ha terminado",
+      "allResolvedDetail": "todos tienen adónde ir",
+      "table": {
+        "diver": "Buceador",
+        "message": "Mensaje",
+        "money": "Pago",
+        "offers": "Ofrecido",
+        "status": "Estado"
+      },
+      "messageSent": "Enviado",
+      "messageQueued": "Reintentando",
+      "messagePending": "En espera",
+      "messageSending": "Enviando…",
+      "messageFailed": "No enviado",
+      "messageNoEmail": "Sin correo",
+      "callThem": "Llamar al {phone}",
+      "noOffers": "Sin fechas que cumplan — se envió el calendario",
+      "rebookedBadge": "Reservó de nuevo",
+      "unresolvedBadge": "Sin resolver",
+      "noPayment": "Sin pago registrado",
+      "resend": "Reintentar los mensajes no enviados",
+      "resending": "Reintentando…",
+      "empty": "No había nadie reservado cuando se llamó la cancelación."
+    },
+    "notices": {
+      "called": "Cancelación llamada — la salida queda cancelada y el mensaje de cada buceador está en camino.",
+      "resumed": "Se reintentaron los mensajes no enviados.",
+      "departed": "Esta salida ya zarpó — no se canceló nada.",
+      "error": "Eso no funcionó — inténtalo de nuevo."
     }
   },
   "incidentExport": {

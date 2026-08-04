@@ -1,0 +1,94 @@
+import { expect, signedInAsOwner, test } from "./fixtures";
+import { daysFromNow, e2eNow, openTripFromBoard } from "./helpers";
+
+/**
+ * The weather blow-out cascade (docs ADR 20260804-blowout-cascade): staff tap
+ * once on a departure, confirm, and every booked diver's message goes out with
+ * rebooking options while the cascade record tracks who is still unresolved.
+ *
+ * The e2e fleet runs with no email provider configured, so every send lands
+ * as "Not sent" on the cascade surface — which is itself the honest state the
+ * feature must render: a shop with no email set up still gets the cancelled
+ * trip, the per-diver record, and the phone-list fallback.
+ */
+
+signedInAsOwner();
+
+const SHOP = "blue-mantis";
+const REEF_TRIP = "Two-Tank Reef — Molasses & French";
+
+test.describe("weather blow-out cascade", () => {
+  test("one tap, one confirm: cancel the reef charter and land on the cascade record", async ({
+    page,
+  }) => {
+    await openTripFromBoard(page, REEF_TRIP);
+
+    // One tap on the trip page leads to a real confirm page — never a
+    // zero-confirm cancel of live bookings (the feature's guardrail).
+    await page.getByRole("link", { name: "Weather blow-out…" }).click();
+    await expect(page.getByRole("heading", { level: 1, name: "Call a blow-out?" })).toBeVisible();
+    // The confirm names the roster it is about to message.
+    await expect(page.getByRole("heading", { name: /divers? will be messaged/ })).toBeVisible();
+
+    await page.getByRole("button", { name: "Call the blow-out" }).click();
+    await expect(page.getByRole("status")).toContainText("Blow-out called");
+    await expect(page.getByRole("heading", { level: 1, name: "Blow-out cascade" })).toBeVisible();
+
+    // The cascade record: per-diver rows with message, money, offers, and
+    // resolution state. With no provider configured every message reads
+    // "Not sent" and every diver is unresolved — the retry affordance shows.
+    await expect(page.getByRole("columnheader", { name: "Diver" })).toBeVisible();
+    const rows = page.locator("tbody tr");
+    expect(await rows.count()).toBeGreaterThan(0);
+    await expect(page.getByText("Not sent").first()).toBeVisible();
+    await expect(page.getByText("Unresolved").first()).toBeVisible();
+
+    // Offers were computed per diver even though the sends failed: at least
+    // one row names an alternative departure, and none of them is the
+    // cancelled reef charter itself.
+    const offersColumn = page.locator("tbody td:nth-child(4)");
+    const offersText = (await offersColumn.allTextContents()).join(" · ");
+    expect(offersText.length).toBeGreaterThan(0);
+    expect(offersText).not.toContain(REEF_TRIP);
+
+    // Resume is idempotent from the surface too: retrying re-walks only the
+    // unsent rows and lands back on the same record.
+    await page.getByRole("button", { name: "Retry unsent messages" }).click();
+    await expect(page.getByRole("status")).toContainText("Retried the unsent messages.");
+    await expect(page.getByRole("heading", { level: 1, name: "Blow-out cascade" })).toBeVisible();
+
+    // The trip record now reads cancelled and keeps the way back to the
+    // cascade; the quiet per-trip cancel control is gone with it.
+    await page.getByRole("link", { name: "Back to the trip" }).click();
+    await expect(page.getByText("Cancelled", { exact: true }).first()).toBeVisible();
+    await expect(page.getByRole("button", { name: "Reinstate trip" })).toBeVisible();
+    await page.getByRole("link", { name: "View the blow-out cascade" }).click();
+    await expect(page.getByRole("heading", { level: 1, name: "Blow-out cascade" })).toBeVisible();
+  });
+
+  test("a departure with zero bookings blows out as a clean no-op cascade", async ({ page }) => {
+    // Put an empty departure on the board, then blow it out.
+    const title = `Blowout Empty ${e2eNow().getTime()}`;
+    await page.goto(`/shop/${SHOP}/schedule/board`);
+    await page.getByRole("button", { name: "Add a departure", exact: true }).click();
+    await page.getByLabel("What is it").fill(title);
+    await page.getByLabel("Date").fill(daysFromNow(4));
+    await page.getByLabel("Departs").fill("08:00");
+    await page.getByLabel("Returns").fill("12:00");
+    await page.getByLabel("Seats").fill("6");
+    await page.getByRole("button", { name: "Put it on the board" }).click();
+    await expect(page.getByRole("status")).toContainText("It’s on the board.");
+
+    await openTripFromBoard(page, title);
+    await page.getByRole("link", { name: "Weather blow-out…" }).click();
+    await expect(page.getByRole("heading", { level: 1, name: "Call a blow-out?" })).toBeVisible();
+    await expect(page.getByText("Nobody is booked on this departure.")).toBeVisible();
+
+    await page.getByRole("button", { name: "Call the blow-out" }).click();
+    await expect(page.getByRole("status")).toContainText("Blow-out called");
+    await expect(page.getByRole("heading", { level: 1, name: "Blow-out cascade" })).toBeVisible();
+    await expect(
+      page.getByText("No divers were booked when the blow-out was called."),
+    ).toBeVisible();
+  });
+});

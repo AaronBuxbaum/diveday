@@ -251,10 +251,15 @@
     "e2e": ["reviews.spec.ts", "tenant-isolation.spec.ts"],
     "visual": ["staff-reviews"]
   },
+  "/shop/[shopSlug]/schedule/blowout/[tripId]": {
+    "e2e": ["blowout.spec.ts"],
+    "visual": ["blowout-confirm", "blowout-cascade"]
+  },
   "/shop/[shopSlug]/schedule/board": {
     "e2e": [
       "a11y.spec.ts",
       "add-diver.spec.ts",
+      "blowout.spec.ts",
       "booking.spec.ts",
       "check-in.spec.ts",
       "depth-and-age-surfaces.spec.ts",
@@ -324,6 +329,7 @@
     "e2e": [
       "a11y.spec.ts",
       "add-diver.spec.ts",
+      "blowout.spec.ts",
       "boat-loop.spec.ts",
       "check-in.spec.ts",
       "courses.spec.ts",

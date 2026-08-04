@@ -2016,6 +2016,17 @@
       "crewNoteLabel": "Nota del equipo:",
       "seeUpdate": "Consulta la actualización en directo de la salida"
     },
+    "tripBlowout": {
+      "subject": "Salida cancelada — {tripTitle}",
+      "body": "{shopName} ha tenido que cancelar {tripTitle} del {date} por el mal tiempo. Tu plaza queda liberada y no necesitas hacer nada.",
+      "moneyNone": "No se te ha cobrado nada por esta salida.",
+      "moneyDeposit": "Tu depósito está a salvo: {shopName} se pondrá en contacto contigo para pasarlo a una nueva fecha o gestionar tu reembolso.",
+      "moneyPaid": "Tu pago está a salvo: {shopName} se pondrá en contacto contigo para pasarlo a una nueva fecha o gestionar tu reembolso.",
+      "alternativesIntro": "¿Quieres volver al agua? Estas salidas próximas ya cumplen con tus certificaciones:",
+      "alternativeLine": "{title} — {when}",
+      "noAlternatives": "Ninguna de las próximas salidas coincide con tus certificaciones por ahora, pero se añaden salidas nuevas constantemente.",
+      "seeSchedule": "Ver el calendario completo"
+    },
     "bookingConfirmation": {
       "subject": "Estás a bordo — {tripTitle}",
       "confirmed": "Tu plaza en {tripTitle} está confirmada.",

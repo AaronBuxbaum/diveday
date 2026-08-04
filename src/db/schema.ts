@@ -1485,6 +1485,9 @@ export const notificationKind = pgEnum("notification_kind", [
   // linking to the diver's shareable recap page (docs first-principles
   // brainstorm C: the word-of-mouth window, weaponized).
   "trip_recap",
+  // The weather blow-out cascade message: the cancellation, the diver's money
+  // story, and the alternatives they qualify for (ADR 20260804-blowout-cascade).
+  "trip_blowout",
 ]);
 
 export const notificationDeliveryStatus = pgEnum("notification_delivery_status", [
@@ -3487,6 +3490,93 @@ export const processorErasureObligations = pgTable(
 );
 
 /**
+ * What happened to one diver's blow-out message. `pending` is the resumable
+ * state: the cascade has snapshotted the diver but no send has settled yet, so
+ * calling the blow-out again picks exactly these rows up. `sending` is a
+ * claim: a live pass flipped the row pending→sending before handing it to the
+ * provider, so a *concurrent* second call ("did you call it?" — "I'll call
+ * it") claims nothing and double-sends nobody. `queued` means the durable
+ * retry queue owns the send now (`notification_send_queue`, keyed by the
+ * diver row's own id) — a resume never re-sends it, which is what keeps the
+ * cascade send-once (ADR 20260804-blowout-cascade).
+ */
+export const blowoutMessageStatus = pgEnum("blowout_message_status", [
+  "pending",
+  "sending",
+  "sent",
+  "queued",
+  "failed",
+  "no_email",
+]);
+
+/**
+ * A shop-called weather cancellation of one departure ("blow-out", glossary)
+ * and the cascade it triggered. One per trip, ever (`trip_id` unique): calling
+ * the blow-out again *resumes* the same cascade rather than double-messaging
+ * the roster, and a reinstated trip keeps its record as history.
+ */
+export const tripBlowouts = pgTable(
+  "trip_blowouts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    tripId: uuid("trip_id")
+      .notNull()
+      .references(() => trips.id),
+    /** The staff member who made the call — the go/no-go is a named act. */
+    calledByPersonId: uuid("called_by_person_id")
+      .notNull()
+      .references(() => people.id),
+    calledAt: timestamp("called_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("trip_blowouts_trip_unique").on(table.tripId),
+    index("trip_blowouts_shop_called_idx").on(table.shopId, table.calledAt),
+  ],
+);
+
+/**
+ * One booked diver inside a blow-out cascade: the snapshot row the send loop
+ * works through and the staff surface reads back. Snapshotted at call time
+ * (active bookings only) so a booking cancelled *after* the call still shows
+ * what the cascade did for that diver. `offered_trip_ids` records exactly
+ * which alternatives this diver's message carried — the audit answer to "what
+ * did we tell them?", independent of what the schedule looks like later.
+ */
+export const tripBlowoutDivers = pgTable(
+  "trip_blowout_divers",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    blowoutId: uuid("blowout_id")
+      .notNull()
+      .references(() => tripBlowouts.id, { onDelete: "cascade" }),
+    bookingId: uuid("booking_id")
+      .notNull()
+      .references(() => bookings.id),
+    personId: uuid("person_id")
+      .notNull()
+      .references(() => people.id),
+    messageStatus: blowoutMessageStatus("message_status").notNull().default("pending"),
+    /** When the message settled as sent; null while pending/queued/failed/no_email. */
+    notifiedAt: timestamp("notified_at", { withTimezone: true }),
+    offeredTripIds: jsonb("offered_trip_ids").$type<string[]>().notNull().default([]),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    // A booking belongs to exactly one trip and a trip to one blow-out, so the
+    // booking alone is the natural key — the send loop's resume guarantee.
+    uniqueIndex("trip_blowout_divers_booking_unique").on(table.bookingId),
+    index("trip_blowout_divers_blowout_idx").on(table.blowoutId),
+  ],
+);
+
+/**
  * The end-of-day close-out trail (ADR 20260804-day-closeout): one row per time
  * somebody closed the shop's day. Append-only, like `activity_events` — the
  * record *is* the ritual, so a row is never updated or deleted by product
@@ -3596,3 +3686,6 @@ export type MediaDeletionKind = (typeof mediaDeletionKind.enumValues)[number];
 export type ProcessorErasureTarget = (typeof processorErasureTarget.enumValues)[number];
 export type PaymentOperationKind = (typeof paymentOperationKind.enumValues)[number];
 export type PaymentOperationStatus = (typeof paymentOperationStatus.enumValues)[number];
+export type TripBlowout = typeof tripBlowouts.$inferSelect;
+export type TripBlowoutDiver = typeof tripBlowoutDivers.$inferSelect;
+export type BlowoutMessageStatus = (typeof blowoutMessageStatus.enumValues)[number];

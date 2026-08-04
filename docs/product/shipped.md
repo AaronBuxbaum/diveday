@@ -7,6 +7,20 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## Weather blow-out cancellation cascade (delivered 2026-08-04)
+
+The brainstorm's Revenue And Recovery big bet, first slice. Staff tap "Weather blow-out…" on a
+departure and confirm once: the trip is cancelled through the existing `setTripStatus` machinery,
+and every booked diver gets one message — what happened, their money story, and up to three
+rebooking links filtered through the real booking-time admission gate (`decideTripAdmission`) to
+departures they actually qualify for. A cascade record at
+`/shop/[shopSlug]/schedule/blowout/[tripId]` tracks per diver: message state (sent / retrying /
+failed / no email), payment position, the offers their message carried, and a live
+rebooked-vs-unresolved state — the blow-out isn't over until that column empties. Sends are
+idempotent and resumable; no money moves (refunds stay per-booking, H-14 gate intact).
+Alternative-day salvage and a courtesy text channel are the named follow-ons. See
+[20260804-blowout-cascade](../architecture/decisions/20260804-blowout-cascade.md).
+
 ## Buddy pairs in roll call (delivered 2026-08-04)
 
 Staff pair divers into buddy teams on the manifest, and roll call stops being a flat list: when
