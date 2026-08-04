@@ -7,7 +7,6 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
-import { InlineConfirm } from "@/components/ui/InlineConfirm";
 
 /** One departure as the board hands it to the builder, already shop-local. */
 export type BuilderTrip = {
@@ -498,137 +497,190 @@ export function ScheduleBuilder({
                     key={trip.id}
                     className="rounded-2xl border border-border bg-surface p-4 shadow-sm"
                   >
-                    <div className="flex flex-wrap items-start gap-x-4 gap-y-2">
-                      {/* `whitespace-nowrap`: a formatted range puts an
-                          ordinary space before AM/PM, so a column too narrow
-                          for it breaks there and strands "PM" on its own line
-                          ("6:30 PM – 10:00" / "PM"). The column is wide enough
-                          for the longest range at this type size; on a phone it
-                          takes the full row instead of squeezing the title into
-                          a three-line stack. */}
-                      <div className="w-full shrink-0 text-sm tabular-nums whitespace-nowrap text-muted sm:w-36">
-                        {trip.timeRange}
-                      </div>
-                      {/* Full width on a phone so the title gets the row to
+                    {/* Two columns, not six loose flex children. The time, the
+                        title block, the badges and the buttons all used to sit
+                        side by side under `items-start`, so a short badge and
+                        an 11-unit-tall button row hung off the top of a
+                        three-line title at three different heights and nothing
+                        lined up with anything. Now: what the departure *is* on
+                        the left, what you *do* about it on the right, each
+                        internally aligned. */}
+                    <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
+                      <div className="flex w-full min-w-0 flex-wrap items-baseline gap-x-4 gap-y-1 sm:w-auto sm:flex-1">
+                        {/* `leading-6` matches the title's line box, so the
+                            time and the departure name share a baseline
+                            instead of sitting two pixels apart.
+                            `whitespace-nowrap`: a formatted range puts an
+                            ordinary space before AM/PM, so a column too narrow
+                            for it breaks there and strands "PM" on its own line
+                            ("6:30 PM – 10:00" / "PM"). The column is wide enough
+                            for the longest range at this type size; on a phone it
+                            takes the full row instead of squeezing the title into
+                            a three-line stack. */}
+                        <div className="w-full shrink-0 text-sm leading-6 tabular-nums whitespace-nowrap text-muted sm:w-36">
+                          {trip.timeRange}
+                        </div>
+                        {/* Full width on a phone so the title gets the row to
                           itself and the badges wrap below it, rather than
                           sharing ~340px with them and stacking three lines
                           deep. */}
-                      <div className="w-full min-w-0 sm:w-auto sm:flex-1">
-                        <Link
-                          href={`/shop/${shopSlug}/trips/${trip.id}`}
-                          className="font-medium hover:text-primary"
-                        >
-                          {trip.title}
-                        </Link>
-                        <p className="mt-0.5 text-sm text-muted">
-                          {[
-                            trip.courseTitle
-                              ? fill(copy.courseLabel, { title: trip.courseTitle })
-                              : null,
-                            trip.diveSiteName,
-                            trip.dayCount > 1
-                              ? fill(copy.dayCountLabel, { count: trip.dayCount })
-                              : null,
-                          ]
-                            .filter(Boolean)
-                            .join(" · ") || copy.noSiteSetYet}
-                        </p>
-                        <p className="mt-1 text-sm">
-                          <span className="text-muted">{copy.crewLabel} </span>
-                          {trip.crew.length > 0 ? (
-                            trip.crew.join(", ")
-                          ) : (
-                            <span className="font-medium text-warning">{copy.crewNobodyYet}</span>
-                          )}
-                        </p>
-                        {/* A returned departure is otherwise the only row here
-                            that isn't upcoming, so it says why it is still on
-                            the board rather than looking like a stale entry. */}
+                        <div className="w-full min-w-0 sm:w-auto sm:flex-1">
+                          <Link
+                            href={`/shop/${shopSlug}/trips/${trip.id}`}
+                            className="font-medium hover:text-primary"
+                          >
+                            {trip.title}
+                          </Link>
+                          <p className="mt-0.5 text-sm text-muted">
+                            {[
+                              trip.courseTitle
+                                ? fill(copy.courseLabel, { title: trip.courseTitle })
+                                : null,
+                              trip.diveSiteName,
+                              trip.dayCount > 1
+                                ? fill(copy.dayCountLabel, { count: trip.dayCount })
+                                : null,
+                            ]
+                              .filter(Boolean)
+                              .join(" · ") || copy.noSiteSetYet}
+                          </p>
+                          <p className="mt-1 text-sm">
+                            <span className="text-muted">{copy.crewLabel} </span>
+                            {trip.crew.length > 0 ? (
+                              trip.crew.join(", ")
+                            ) : (
+                              <span className="font-medium text-warning">{copy.crewNobodyYet}</span>
+                            )}
+                          </p>
+                          {/* A returned departure is otherwise the only row here
+                              that isn't upcoming, so it says why it is still on
+                              the board rather than looking like a stale entry. */}
+                          {trip.rollCallOpen ? (
+                            <p className="mt-1 text-sm font-medium text-danger">
+                              {fill(copy.rollCallOpenNote, {
+                                dive: trip.rollCallOpen.diveNumber,
+                              })}
+                            </p>
+                          ) : null}
+                        </div>
+                      </div>
+                      {/* The right-hand column: what this departure's state is,
+                          then what you can do about it, on one centred line. */}
+                      <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
+                        {/* A sold-out boat is a win worth noticing, not a quiet
+                            state (design/principles.md #3) — "success" stands
+                            out where "neutral" would recede. Matches the same
+                            badge on the trip page (task appendix, UX persona
+                            lens 17: this one used to render grey here and green
+                            there for the same fact). */}
+                        <Badge tone={full ? "success" : "primary"} tabularNums>
+                          {trip.booked}/{trip.capacity}
+                        </Badge>
+                        {/* The loudest thing this board can say (DOM-H3): the
+                            boat is back and somebody on its list was never
+                            counted. "danger" carries an aria-hidden ✕ of its
+                            own, so hue is never the only signal, and the whole
+                            badge is a link straight to the open checkpoint. */}
                         {trip.rollCallOpen ? (
-                          <p className="mt-1 text-sm font-medium text-danger">
-                            {fill(copy.rollCallOpenNote, {
+                          <Link
+                            href={`/shop/${shopSlug}/trips/${trip.id}/manifest?checkpoint=after_dive_${trip.rollCallOpen.diveNumber}`}
+                            aria-label={fill(copy.rollCallOpenAria, {
+                              ref,
                               dive: trip.rollCallOpen.diveNumber,
                             })}
-                          </p>
+                          >
+                            <Badge tone="danger">
+                              {fill(copy.rollCallOpen, { count: trip.rollCallOpen.uncounted })}
+                            </Badge>
+                          </Link>
+                        ) : null}
+                        {trip.priceCents === null ? (
+                          <Link
+                            href={`/shop/${shopSlug}/trips/${trip.id}#details`}
+                            aria-label={fill(copy.noPriceSetAria, { ref })}
+                          >
+                            <Badge tone="warning">{copy.noPriceSet}</Badge>
+                          </Link>
+                        ) : null}
+                        {/* Move/copy/remove are all refused by `src/db/trips.ts`
+                            for a departure that has already sailed, and a
+                            returned row is only here to have its head count
+                            closed — so it gets the badge and nothing that would
+                            bounce. */}
+                        {canConfigure && !trip.rollCallOpen ? (
+                          <div className="flex shrink-0 flex-wrap items-center gap-1">
+                            <button
+                              type="button"
+                              ref={registerToggle(`move:${trip.id}`)}
+                              onClick={() => toggle(`move:${trip.id}`)}
+                              aria-expanded={open === `move:${trip.id}`}
+                              aria-label={fill(copy.moveAria, { ref })}
+                              className={buttonClass({ variant: "secondary", size: "sm" })}
+                            >
+                              {copy.move}
+                            </button>
+                            <button
+                              type="button"
+                              ref={registerToggle(`copy:${trip.id}`)}
+                              onClick={() => toggle(`copy:${trip.id}`)}
+                              aria-expanded={open === `copy:${trip.id}`}
+                              aria-label={fill(copy.copyAria, { ref })}
+                              className={buttonClass({ variant: "secondary", size: "sm" })}
+                            >
+                              {copy.copy}
+                            </button>
+                            {/* Remove opens a panel like Move and Copy do,
+                                rather than swapping itself for an
+                                `InlineConfirm` message card in place. That card
+                                is built to be a block of its own, and inside
+                                this inline button cluster it inflated into a
+                                bordered box wedged between the badges and the
+                                row's edge — every other row on the board
+                                shifted around it while the staffer read the
+                                sentence. It is still two deliberate steps: this
+                                trigger submits nothing, and the panel below
+                                holds the only real submit. */}
+                            <button
+                              type="button"
+                              ref={registerToggle(`remove:${trip.id}`)}
+                              onClick={() => toggle(`remove:${trip.id}`)}
+                              aria-expanded={open === `remove:${trip.id}`}
+                              aria-label={fill(copy.removeAria, { ref })}
+                              className={buttonClass({ variant: "danger", size: "sm" })}
+                            >
+                              {copy.remove}
+                            </button>
+                          </div>
                         ) : null}
                       </div>
-                      {/* A sold-out boat is a win worth noticing, not a quiet
-                          state (design/principles.md #3) — "success" stands
-                          out where "neutral" would recede. Matches the same
-                          badge on the trip page (task appendix, UX persona
-                          lens 17: this one used to render grey here and green
-                          there for the same fact). */}
-                      <Badge tone={full ? "success" : "primary"} tabularNums>
-                        {trip.booked}/{trip.capacity}
-                      </Badge>
-                      {/* The loudest thing this board can say (DOM-H3): the
-                          boat is back and somebody on its list was never
-                          counted. "danger" carries an aria-hidden ✕ of its
-                          own, so hue is never the only signal, and the whole
-                          badge is a link straight to the open checkpoint. */}
-                      {trip.rollCallOpen ? (
-                        <Link
-                          href={`/shop/${shopSlug}/trips/${trip.id}/manifest?checkpoint=after_dive_${trip.rollCallOpen.diveNumber}`}
-                          aria-label={fill(copy.rollCallOpenAria, {
-                            ref,
-                            dive: trip.rollCallOpen.diveNumber,
-                          })}
-                        >
-                          <Badge tone="danger">
-                            {fill(copy.rollCallOpen, { count: trip.rollCallOpen.uncounted })}
-                          </Badge>
-                        </Link>
-                      ) : null}
-                      {trip.priceCents === null ? (
-                        <Link
-                          href={`/shop/${shopSlug}/trips/${trip.id}#details`}
-                          aria-label={fill(copy.noPriceSetAria, { ref })}
-                        >
-                          <Badge tone="warning">{copy.noPriceSet}</Badge>
-                        </Link>
-                      ) : null}
-                      {/* Move/copy/remove are all refused by `src/db/trips.ts`
-                          for a departure that has already sailed, and a
-                          returned row is only here to have its head count
-                          closed — so it gets the badge and nothing that would
-                          bounce. */}
-                      {canConfigure && !trip.rollCallOpen ? (
-                        <div className="flex shrink-0 flex-wrap items-center gap-1">
-                          <button
-                            type="button"
-                            ref={registerToggle(`move:${trip.id}`)}
-                            onClick={() => toggle(`move:${trip.id}`)}
-                            aria-expanded={open === `move:${trip.id}`}
-                            aria-label={fill(copy.moveAria, { ref })}
-                            className={buttonClass({ variant: "secondary", size: "sm" })}
-                          >
-                            {copy.move}
-                          </button>
-                          <button
-                            type="button"
-                            ref={registerToggle(`copy:${trip.id}`)}
-                            onClick={() => toggle(`copy:${trip.id}`)}
-                            aria-expanded={open === `copy:${trip.id}`}
-                            aria-label={fill(copy.copyAria, { ref })}
-                            className={buttonClass({ variant: "secondary", size: "sm" })}
-                          >
-                            {copy.copy}
-                          </button>
-                          <form action={actions.remove}>
-                            <input type="hidden" name="tripId" value={trip.id} />
-                            <InlineConfirm
-                              triggerLabel={copy.remove}
-                              triggerClassName={buttonClass({ variant: "danger", size: "sm" })}
-                              message={fill(copy.removeConfirm, { title: trip.title })}
-                              confirmLabel={copy.removeConfirmButton}
-                              cancelLabel={copy.removeCancel}
-                              pendingLabel={copy.removePending}
-                              ariaLabel={fill(copy.removeAria, { ref })}
-                            />
-                          </form>
-                        </div>
-                      ) : null}
                     </div>
+
+                    {canConfigure && open === `remove:${trip.id}` ? (
+                      <form
+                        action={actions.remove}
+                        className="mt-3 rounded-xl border border-danger/30 bg-danger/5 p-4 animate-scale-in"
+                      >
+                        <input type="hidden" name="tripId" value={trip.id} />
+                        <p className="text-sm" role="alert">
+                          {fill(copy.removeConfirm, { title: trip.title })}
+                        </p>
+                        <div className="mt-3 flex flex-wrap items-center gap-3">
+                          <SubmitButton
+                            pendingLabel={copy.removePending}
+                            className={buttonClass({ variant: "danger", size: "sm" })}
+                          >
+                            {copy.removeConfirmButton}
+                          </SubmitButton>
+                          <button
+                            type="button"
+                            onClick={() => closePanel(`remove:${trip.id}`)}
+                            className={buttonClass({ variant: "ghost", size: "sm" })}
+                          >
+                            {copy.removeCancel}
+                          </button>
+                        </div>
+                      </form>
+                    ) : null}
 
                     {canConfigure && open === `move:${trip.id}` ? (
                       <FieldGrid

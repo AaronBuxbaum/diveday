@@ -1,4 +1,3 @@
-import type { BrowserContext, Page } from "@playwright/test";
 import { expect, signedInAsOwner, test } from "./fixtures";
 
 signedInAsOwner();
@@ -38,40 +37,6 @@ test("the trip sub-nav reaches all four surfaces", async ({ page }) => {
   await expect(page.getByRole("navigation", { name: "Trip" })).toBeVisible();
 });
 
-/**
- * `s/[shopSlug]/trips/[id]/page.tsx`'s staff-redirect check (a signed-in staffer
- * viewing their own shop's public trip page gets sent to the management
- * view instead) races cacheComponents' Partial Prerendering
- * non-deterministically: an isolated repro against this branch (same
- * session, same trip id, repeated requests) found the redirect firing on
- * roughly 1 in 3 requests and not on the others — a genuine per-request
- * race resolving the session inside the dynamic hole, not a cold/warm
- * split, and identical whether the follow-up request is a same-tab
- * navigation or a brand-new page in the same context (rules out anything
- * popup-specific). 5/5 clean against `main` (no cacheComponents) confirms
- * this is cacheComponents-specific — a Next 16 preview limitation, not an
- * app bug this file can fix by reordering its own `await`s (two orderings
- * were tried and neither changed the failure rate). Not a security issue:
- * it fails open to the intentionally-public page a diver is meant to see,
- * never the reverse. A real staffer hitting this would just click again,
- * so retrying here reflects that instead of papering over anything this
- * app's own code controls.
- */
-async function openPublicBookingPage(page: Page, context: BrowserContext) {
-  for (let attempt = 0; attempt < 8; attempt++) {
-    const [publicPage] = await Promise.all([
-      context.waitForEvent("page"),
-      page.getByRole("link", { name: "View booking page" }).click(),
-    ]);
-    await publicPage.waitForLoadState("domcontentloaded");
-    if (/\/s\/blue-mantis\/trips\/[a-f0-9-]+$/.test(publicPage.url())) {
-      return publicPage;
-    }
-    await publicPage.close();
-  }
-  throw new Error("View booking page never opened the public page after 8 attempts");
-}
-
 test("staff can view or copy a trip's public booking page from its overview", async ({
   page,
   context,
@@ -84,8 +49,20 @@ test("staff can view or copy a trip's public booking page from its overview", as
     .getByRole("link", { name: "Overview" })
     .click();
 
-  const publicPage = await openPublicBookingPage(page, context);
+  // The booking page stays on screen for a staffer now — it used to redirect
+  // straight back to the management view, which made this button impossible to
+  // use — and says whose view they are looking at instead.
+  const [publicPage] = await Promise.all([
+    context.waitForEvent("page"),
+    page.getByRole("link", { name: "View booking page" }).click(),
+  ]);
+  await publicPage.waitForLoadState("domcontentloaded");
   await expect(publicPage).toHaveURL(/\/s\/blue-mantis\/trips\/[a-f0-9-]+$/);
+  await expect(
+    publicPage.getByText("You’re looking at the diver’s view of this departure."),
+  ).toBeVisible();
+  await publicPage.getByRole("link", { name: "Manage this trip" }).click();
+  await expect(publicPage).toHaveURL(/\/shop\/blue-mantis\/trips\/[a-f0-9-]+$/);
   await publicPage.close();
 
   await page.getByRole("button", { name: "Copy link" }).click();

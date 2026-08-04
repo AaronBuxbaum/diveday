@@ -117,7 +117,12 @@ export default async function DiversPage({
     revalidateAndRedirect(
       `/shop/${staff.user.shopSlug}/divers`,
       diver
-        ? `/shop/${staff.user.shopSlug}/divers/${diver.id}`
+        ? // `?edit=1` opens the diver record's details form on arrival. This
+          // form asks for three fields; date of birth, dive insurance, and the
+          // emergency contact the manifest prints are all one collapsed
+          // disclosure away, and the front desk had to know to go looking for
+          // it while the diver is still standing there.
+          `/shop/${staff.user.shopSlug}/divers/${diver.id}?edit=1`
         : `/shop/${staff.user.shopSlug}/divers?notice=duplicate`,
     );
   }

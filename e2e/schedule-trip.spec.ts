@@ -29,9 +29,9 @@ test("staff schedules a trip and it appears on shop and public schedules", async
   await expect(page.getByRole("status")).toBeVisible(); // created banner (param is one-shot)
   await expect(page.getByRole("status")).toContainText(title);
 
-  // View as a diver: signed in, /s/<slug>/trips/[id] redirects to the staff
-  // trip page; the
-  // public dive-plan briefing ("Your N-dive plan") is the signed-out view.
+  // View as a diver: a staff session puts a preview banner on
+  // /s/<slug>/trips/[id]; the public dive-plan briefing ("Your N-dive plan")
+  // is what a signed-out visitor gets.
   await page.context().clearCookies();
   await page.goto("/s/blue-mantis");
   // Scoped to the trip list itself: an unrelated trip sharing this one's
@@ -57,6 +57,10 @@ test("staff schedules a trip and it appears on shop and public schedules", async
   const tripUrl = page.url();
   await signInAsOwner(page);
   await page.goto(tripUrl);
+  // Signed in, the booking page stays put and offers the management view
+  // rather than redirecting there — the redirect is what used to make the trip
+  // overview's own "View booking page" button impossible to use.
+  await page.getByRole("link", { name: "Manage this trip" }).click();
   await expect(page).toHaveURL(/\/shop\/blue-mantis\/trips\/[0-9a-f-]+$/);
   await page.getByRole("button", { name: "Cancel trip" }).click();
   await expect(page.getByRole("button", { name: "Reinstate trip" })).toBeVisible();
@@ -73,4 +77,36 @@ test("end-before-start is rejected with a friendly message", async ({ page }) =>
   await expect(page.getByRole("alert").filter({ hasText: "end after it starts" })).toBeVisible();
   await page.goto("/s/blue-mantis");
   await expect(page.getByRole("heading", { name: "Backwards Trip" })).not.toBeVisible();
+});
+
+test("a multi-day departure is one trip with a meeting day per day", async ({ page }) => {
+  // `trip_schedule_days` could always describe a departure that meets on
+  // consecutive days — the trip page prints the list, the board badges the
+  // count, `moveTrip` slides them together — but nothing could create one, so
+  // an Open Water weekend went on the board as unrelated trips sharing a
+  // title: separate rosters, separate waivers, separate crew.
+  const title = `Open Water Weekend ${e2eNow().getTime()}`;
+  await page.goto("/shop/blue-mantis/trips/new");
+  await page.getByLabel("Title").fill(title);
+  await page.getByLabel("Date").fill(daysFromNow(6));
+  await page.getByLabel("Departs").fill("08:30");
+  await page.getByLabel("Returns").fill("12:30");
+  await page.getByLabel("Capacity").fill("6");
+  await page.getByLabel("How many days").fill("3");
+  await page.getByRole("button", { name: "Put it on the board" }).click();
+  await expect(page.getByRole("status")).toContainText(title);
+
+  // One row on the board, badged with its span — not three look-alikes.
+  await page.goto("/shop/blue-mantis/schedule/board");
+  const row = page.getByRole("listitem").filter({ hasText: title });
+  await expect(row).toHaveCount(1);
+  await expect(row).toContainText("3 days");
+
+  // The trip's own page lists every meeting day, and the details editor can
+  // shrink the departure back down without deleting and rebuilding it.
+  await row.getByRole("link", { name: title, exact: true }).click();
+  await expect(page.getByText("3 meeting days · same instructors each day")).toBeVisible();
+  await page.getByLabel("Days").fill("2");
+  await page.getByRole("button", { name: "Save changes" }).click();
+  await expect(page.getByText("2 meeting days · same instructors each day")).toBeVisible();
 });

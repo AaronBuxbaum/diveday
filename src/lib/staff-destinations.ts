@@ -185,11 +185,29 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
     shortcut: "w",
   },
   { id: "reports", suffix: "/reports", navGroup: "daily", inPalette: true, gate: "reports" },
-  // Promo codes move money, so they sit with the owner/manager payment
-  // settings rather than in the day-to-day group (H-14).
-  { id: "promoCodes", suffix: "/promos", navGroup: "setup", inPalette: true, gate: "reports" },
-  { id: "settings", suffix: "/settings", navGroup: "setup", inPalette: true },
-  { id: "team", suffix: "/settings/team", navGroup: "setup", inPalette: true, gate: "team" },
+  // Promo codes and Team are reachable from Settings' own Money and Your-shop
+  // cards, and a destination that lives in two menus at once is the duplicate
+  // control principle 8 forbids — the header used to carry both *and* Settings,
+  // so "where do I add a colleague?" had two right answers. They keep their
+  // palette rows and their `g`-less shortcut-free presence here (the registry
+  // is the only place a destination may be declared); the header just stops
+  // being one of the two doors. Team is also literally a Settings sub-page.
+  { id: "promoCodes", suffix: "/promos", navGroup: null, inPalette: true, gate: "reports" },
+  { id: "team", suffix: "/settings/team", navGroup: null, inPalette: true, gate: "team" },
+  // Last, always: Settings is where a shop goes when nothing else on the menu
+  // was the answer, and it is the one destination the whole "Set up" group
+  // now holds. `alsoMatch` keeps the header honest for the destination that
+  // left it: Promo codes is reached *from* this page, and without this the
+  // promos page is the one staff surface where nothing in the header reads as
+  // current at all. Team needs no entry — `/settings/team` is already below
+  // `/settings`.
+  {
+    id: "settings",
+    suffix: "/settings",
+    navGroup: "setup",
+    inPalette: true,
+    alsoMatch: "/promos",
+  },
 ];
 
 /** The `/shop/<shopSlug>` prefix every destination hangs off. */

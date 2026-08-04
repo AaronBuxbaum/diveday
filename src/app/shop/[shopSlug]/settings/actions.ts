@@ -16,12 +16,14 @@ import {
   setShopRentalPricing,
   setShopReviewUrl,
   setShopTemperatureUnit,
+  setShopTimezone,
 } from "@/db/shops";
 import {
   disconnectShopStripeAccount,
   getShopStripeAccount,
   refreshShopStripeAccountStatus,
 } from "@/db/stripe-accounts";
+import { isValidTimeZone } from "@/lib/format";
 import { isShopCurrency, majorToMinor, maxPriceMajor, toShopCurrency } from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { connectProviderFromEnvironment } from "@/lib/payments/connect";
@@ -356,4 +358,29 @@ export async function refreshAction() {
     `/shop/${session.user.shopSlug}/settings`,
     `/shop/${session.user.shopSlug}/settings?notice=refreshed&saved=stripe`,
   );
+}
+
+/**
+ * The zone this shop's whole schedule is read and written in.
+ *
+ * Sign-up asks for it once and nothing could change it afterwards, so a shop
+ * that clicked past the picker — or moved — was stuck reading its own
+ * departures in US Eastern with no way out but a support request. Not a
+ * display preference like the two below: every wall-clock time a staff member
+ * types is interpreted through this, so changing it re-reads existing
+ * departures at their new local times rather than moving them. That is the
+ * right answer for the case this exists for, and the description on the card
+ * says so before anyone touches it.
+ */
+export async function saveTimezoneAction(formData: FormData) {
+  const session = await requireStaffSession();
+  const settings = `/shop/${session.user.shopSlug}/settings`;
+  const submitted = formData.get("timezone");
+  // An id this runtime can't resolve would make every date formatter on every
+  // surface throw, so an unrecognized value is a refusal, never a fallback.
+  if (typeof submitted !== "string" || !isValidTimeZone(submitted)) {
+    redirect(`${settings}?notice=timezone_invalid&saved=timezone`);
+  }
+  await setShopTimezone(await getDb(), session.user.shopId, submitted);
+  revalidateAndRedirect(settings, `${settings}?notice=timezone_saved&saved=timezone`);
 }

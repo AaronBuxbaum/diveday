@@ -17,6 +17,7 @@ import {
   normalizedDiveDrafts,
   replaceTripDives,
   type TripDiveDraft,
+  type TripScheduleDayInput,
   validateDiveSites,
 } from "./trips-create";
 
@@ -111,6 +112,13 @@ export type TripPatch = {
   priceCents?: number | null;
   depositCents?: number | null;
   cancellationWindowHours?: number | null;
+  /**
+   * The trip's meeting days, replaced wholesale. Omit to leave the existing
+   * rows alone; pass them whenever `startsAt`/`endsAt` move, because a day row
+   * that still points at last week's dates is what the manifest, the crew
+   * double-booking check, and the trip page's meeting-day list all read.
+   */
+  scheduleDays?: TripScheduleDayInput[];
 };
 
 export type UpdateTripOutcome =
@@ -194,6 +202,12 @@ export async function updateTrip(
       .returning();
     if (!trip) return { ok: false, reason: "not_found" };
     if (drafts) await replaceTripDives(tx, tripId, drafts);
+    if (patch.scheduleDays) {
+      await tx.delete(tripScheduleDays).where(eq(tripScheduleDays.tripId, tripId));
+      await tx
+        .insert(tripScheduleDays)
+        .values(patch.scheduleDays.map((day, index) => ({ tripId, ...day, dayNumber: index + 1 })));
+    }
     return { ok: true, trip };
   });
 }

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { FlashParams } from "@/components/FlashParams";
 import { JsonLd } from "@/components/JsonLd";
@@ -29,6 +29,7 @@ import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { diverTranslator } from "@/i18n/messages";
 import { tripRequirementList } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { auth } from "@/lib/auth";
 import { isStaff } from "@/lib/authz";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
@@ -60,6 +61,7 @@ import {
 import { DiveBriefingsSection } from "./_components/DiveBriefingsSection";
 import { ForecastSection } from "./_components/ForecastSection";
 import { PackingSection } from "./_components/PackingSection";
+import { StaffPreviewBar } from "./_components/StaffPreviewBar";
 import { TripActions } from "./_components/TripActions";
 import { TripHeader } from "./_components/TripHeader";
 import { ERROR_MESSAGE_KEYS, isErrorCode, type PaymentPanel } from "./_components/types";
@@ -140,12 +142,26 @@ export default async function TripDetailPage({
   const shopCurrency = toShopCurrency(shop.currency);
   const t = diverTranslator(locale);
   const session = await auth();
-  // The staff-management redirect only makes sense outside embed mode — that
-  // destination isn't in the framing allowlist, so sending an embedded staff
-  // preview there would swap a working iframe for a blocked one.
-  if (!isEmbed && session?.user?.shopId === shop.id && isStaff(session.user.roles)) {
-    redirect(`/shop/${shopSlug}/trips/${tripId}`);
-  }
+  // A staffer looking at their own shop's booking page is *previewing* it, and
+  // this page used to answer that with a redirect straight back to the
+  // management view — so "View booking page" on the trip overview could never
+  // show the booking page at all, it just bounced to where the click came
+  // from. A banner says the same thing without taking the page away, and it
+  // also serves the staffer who followed a shared /s/ link and wants the
+  // management view. Never in embed mode: that destination isn't in the
+  // framing allowlist, so an embedded staff preview would show a blocked
+  // frame instead of the compact booking widget.
+  const staffPreview = !isEmbed && session?.user?.shopId === shop.id && isStaff(session.user.roles);
+  // Staff words come from the staff bundle even here — the rest of this page
+  // speaks to divers, and mixing the two vocabularies in one file is exactly
+  // what the two bundles exist to prevent.
+  const staffPreviewBar = staffPreview ? (
+    <StaffPreviewBar
+      message={staffTranslator(locale)("trips.publicPreview.banner")}
+      manageLabel={staffTranslator(locale)("trips.publicPreview.manage")}
+      manageHref={`/shop/${shopSlug}/trips/${tripId}`}
+    />
+  ) : null;
   const [trip, tripDives] = await Promise.all([
     getTripWithBooked(db, shop.id, tripId),
     listTripDives(db, shop.id, tripId),
@@ -165,6 +181,7 @@ export default async function TripDetailPage({
             isEmbed ? "w-full flex-1 px-3 py-4" : "mx-auto w-full max-w-2xl flex-1 px-6 py-16"
           }
         >
+          {staffPreviewBar}
           {isEmbed ? null : (
             <Link
               href={publicSchedulePath(shopSlug)}
@@ -355,6 +372,7 @@ export default async function TripDetailPage({
       >
         {structuredData ? <JsonLd data={structuredData} /> : null}
         <FlashParams params={["error", "pay"]} />
+        {staffPreviewBar}
         {isEmbed ? null : (
           <Link
             href={publicSchedulePath(shopSlug)}

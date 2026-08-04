@@ -227,7 +227,7 @@
       "restoring": "Restaurando…",
       "undoRemove": "Deshacer eliminación",
       "addDiverSummary": "Añadir un buceador",
-      "addDiverBody": "Añade un buceador que regresa antes de que reserve, luego completa los datos que ya tengas.",
+      "addDiverBody": "Añade a un buceador a la lista antes de que reserve: basta con un nombre. Sus tarjetas, exenciones y reservas quedan unidas a esta ficha.",
       "fullNameLabel": "Nombre completo",
       "emailLabel": "Correo electrónico",
       "optionalHint": "(opcional)",
@@ -279,7 +279,7 @@
       "optionalHint": "(opcional)",
       "dateOfBirthDescription": "Se usa para verificar la edad mínima de un curso el día que se imparte. Déjalo en blanco y los cursos se reservan como siempre.",
       "diveInsuranceFieldLabel": "Seguro de buceo",
-      "diveInsuranceHint": "(DAN u otro, opcional)",
+      "diveInsuranceDescription": "DAN o cualquier otro seguro de accidentes de buceo que tenga el buceador.",
       "diveInsurancePlaceholder": "DAN n.º 12345",
       "emergencyContactNameLabel": "Nombre del contacto de emergencia",
       "emergencyContactPhoneLabel": "Teléfono del contacto de emergencia",
@@ -1286,6 +1286,7 @@
       "departsLabel": "Sale",
       "returnsLabel": "Vuelve",
       "capacityLabel": "Capacidad",
+      "dayCountLabel": "Días",
       "priceLabel": "Precio por buceador",
       "payAtBookingLegend": "Pago al reservar",
       "payAtBookingDescription": "Opcional. Deja el depósito en blanco para cobrar la tarifa completa cuando un buceador reserve en línea.",
@@ -1744,6 +1745,8 @@
       "departsLabel": "Sale",
       "returnsLabel": "Vuelve",
       "capacityLabel": "Capacidad",
+      "dayCountLabel": "Cuántos días",
+      "dayCountDescription": "Casi todas las salidas duran un día. Un curso de fin de semana o un liveaboard que se reúne a las mismas horas en días consecutivos es una sola salida: una lista, un juego de exenciones, una tripulación.",
       "priceLabel": "Precio por buceador",
       "priceDescription": "Rellena por adelantado la tarifa de la salida cuando el personal facture a un buceador desde el listado de esta salida.",
       "payAtBookingLegend": "Pago al reservar",
@@ -1762,9 +1765,14 @@
       "every2Weeks": "Cada 2 semanas",
       "every4Weeks": "Cada 4 semanas",
       "numberOfTripsLabel": "Número de salidas",
-      "numberOfTripsDescription": "Hasta {max}, contando la primera. Se ignora cuando no se repite.",
+      "numberOfTripsDescription": "Contando la primera, hasta {max}.",
+      "numberOfTripsPlaceholder": "p. ej. 8",
       "putOnBoard": "Ponerla en el calendario",
       "cancel": "Cancelar"
+    },
+    "publicPreview": {
+      "banner": "Estás viendo esta salida como la ve un buceador.",
+      "manage": "Gestionar esta salida"
     }
   },
   "settings": {
@@ -1797,7 +1805,49 @@
         "refreshed": "Estado de pagos actualizado desde Stripe.",
         "notAuthorized": "El catálogo de alquiler, los precios de alquiler y la conexión con Stripe son ajustes de pago, limitados a propietarios y gerentes.",
         "currencySaved": "Moneda guardada. Los precios existentes conservan sus cifras — revisa que tu lista de precios siga siendo correcta.",
-        "currencyInvalid": "Elige una moneda de la lista."
+        "currencyInvalid": "Elige una moneda de la lista.",
+        "timezoneSaved": "Zona horaria guardada.",
+        "timezoneInvalid": "No reconocemos esa zona horaria: elige una de la lista."
+      },
+      "timezone": {
+        "heading": "Zona horaria",
+        "description": "Todas las fechas y horas de DiveDay se leen y se guardan en esta zona: el tablero, el manifiesto y las horas que los buceadores ven en tus páginas de reserva. Cambiarla vuelve a leer tus salidas existentes en su nueva hora local; no las mueve.",
+        "label": "Zona horaria",
+        "submitting": "Guardando…",
+        "submit": "Guardar zona horaria",
+        "groups": {
+          "americas": "América",
+          "caribbean": "Caribe y México",
+          "europeRedSea": "Europa y mar Rojo",
+          "asiaPacific": "Asia-Pacífico",
+          "allZones": "Todas las zonas horarias"
+        },
+        "zones": {
+          "eastern": "Hora del Este (Nueva York)",
+          "central": "Hora Central (Chicago)",
+          "mountain": "Hora de Montaña (Denver)",
+          "pacific": "Hora del Pacífico (Los Ángeles)",
+          "hawaii": "Hawái (Honolulu)",
+          "cancun": "Cancún / Cozumel",
+          "belize": "Belice",
+          "roatan": "Roatán / Honduras",
+          "cayman": "Islas Caimán",
+          "puertoRico": "Puerto Rico / Caribe oriental",
+          "nassau": "Nasáu, Bahamas",
+          "bonaire": "Bonaire / Curazao",
+          "london": "Londres",
+          "cairo": "El Cairo / mar Rojo",
+          "maldives": "Maldivas",
+          "singapore": "Singapur",
+          "bangkok": "Bangkok",
+          "jakarta": "Yakarta / Indonesia occidental",
+          "bali": "Bali / Komodo (Indonesia central)",
+          "manila": "Manila",
+          "sydney": "Sídney",
+          "auckland": "Auckland",
+          "palau": "Palaos",
+          "fiji": "Fiyi"
+        }
       },
       "contact": {
         "heading": "Datos de contacto públicos",
@@ -1930,11 +1980,6 @@
         "yourShop": "Tu centro",
         "money": "Dinero",
         "dataIntegrations": "Datos e integraciones"
-      },
-      "orders": {
-        "heading": "Pedidos",
-        "description": "Todos los pedidos y pagos que ha enviado el centro: filtra por estado, fecha o buceador.",
-        "cta": "Ver pedidos"
       },
       "backToSettings": "Volver a configuración",
       "currency": {
@@ -2719,12 +2764,12 @@
         "openGuests": "Ver invitados",
         "crewDropZoneAria": "Zona para asignar tripulación",
         "assignCrewMemberAria": "Asignar tripulante a {title}",
-        "assignedCrewHeading": "Tripulación asignada (arrastra al personal aquí para asignarlo)",
+        "assignedCrewHeading": "Tripulación asignada",
         "assignCrewOption": "Asignar tripulante…",
         "assignCrewLabel": "Asignar tripulante",
         "assignFailed": "No se ha guardado — verifica tu conexión o inténtalo de nuevo.",
         "unassignAria": "Quitar a {name}",
-        "noCrewAssigned": "Sin tripulación asignada. Arrastra al personal desde arriba hasta aquí.",
+        "noCrewAssigned": "Todavía no hay tripulación asignada.",
         "countBoarded": "Embarcados",
         "blockedWarningOne": "{count} buceador todavía no puede embarcar — está en la lista de abajo.",
         "blockedWarningOther": "{count} buceadores todavía no pueden embarcar — están en la lista de abajo.",
@@ -2733,7 +2778,7 @@
         "clearToBoard": "Todos los de esta salida están listos para embarcar.",
         "sailingToday": "Sale hoy",
         "sailingTodaySubtitle": "Registra a los buceadores en el mostrador o haz el pase de lista desde el manifiesto — la disponibilidad se vuelve a verificar en el momento de embarcar a cada persona.",
-        "dragStaffLabel": "O arrastra para asignar (escritorio):"
+        "dragStaffLabel": "O arrastra un nombre hasta un barco:"
       },
       "todayQueue": {
         "emptyHeading": "No hay nada pendiente para ti",
@@ -2952,11 +2997,11 @@
       "optionalHint": "(opcional)",
       "namePlaceholderFirst": "Molasses Reef",
       "namePlaceholderOther": "Segundo tanque · sitio por definir",
-      "diveBriefingLabel": "Guía de inmersión",
-      "noSavedBriefing": "Sin guía de inmersión guardada",
+      "diveSiteLabel": "Sitio de buceo",
+      "noSiteChosen": "Sin sitio elegido todavía",
       "diverFacingDetailsLabel": "Detalles para los buceadores",
       "detailsPlaceholder": "Lo que los buceadores deben saber sobre esta parte de la salida.",
-      "footerNote": "Las guías de inmersión añaden el mapa y la ficha de campo guardados. La descripción de la salida y las condiciones de abajo se comparten para todo el día de barco."
+      "footerNote": "Elegir un sitio añade a esa inmersión su guía guardada: mapa, puntos de referencia y ficha de campo. La descripción de la salida y las condiciones de abajo se comparten para todo el día de barco."
     },
     "offlineManifest": {
       "freshnessCopy": {

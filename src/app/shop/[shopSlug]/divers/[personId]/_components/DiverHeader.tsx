@@ -13,11 +13,20 @@ export function DiverHeader({
   shopSlug,
   personId,
   locale,
+  editOpen = false,
 }: {
   diver: DiverProfile;
   shopSlug: string;
   personId: string;
   locale: string;
+  /**
+   * Starts the details form expanded. Set right after the roster's three-field
+   * "Add a diver" form lands here: the record exists but holds a name and
+   * maybe an email, and everything that makes it useful — date of birth,
+   * insurance, emergency contact — is behind a disclosure the front desk had
+   * to know to open.
+   */
+  editOpen?: boolean;
 }) {
   const t = staffTranslator(locale);
   return (
@@ -68,15 +77,38 @@ export function DiverHeader({
             </div>
           }
           actions={
-            <details className="rounded-lg border border-border bg-surface px-4 py-3">
-              <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium text-primary">
+            // Closed, the trigger is an ordinary secondary button with a
+            // chevron, like every other action in a page header; open, the
+            // form drops into a card beneath it. It used to be a bordered box
+            // wrapped around bare link-coloured text with no disclosure
+            // affordance at all, which is what made it read as a mis-sized
+            // card parked beside the diver's name.
+            <details open={editOpen} className="group">
+              <summary
+                className={`${buttonClass({
+                  variant: "secondary",
+                  size: "sm",
+                })} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}
+              >
                 {t("divers.header.editDetails")}
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="size-3 transition-transform group-open:rotate-180"
+                >
+                  <path d="m6 9 6 6 6-6" />
+                </svg>
               </summary>
               <FieldGrid
                 as="form"
                 action={savePersonAction.bind(null, shopSlug, personId)}
                 columns={1}
-                className="mt-4 gap-y-3 sm:w-80"
+                className="mt-3 w-full gap-y-3 rounded-xl border border-border bg-surface p-4 shadow-sm sm:w-80"
               >
                 <Field label={t("divers.header.fullNameLabel")}>
                   <input
@@ -86,7 +118,7 @@ export function DiverHeader({
                     className={controlClass}
                   />
                 </Field>
-                <Field label={t("divers.header.emailLabel")}>
+                <Field label={t("divers.header.emailLabel")} hint={t("divers.header.optionalHint")}>
                   <input
                     name="email"
                     type="email"
@@ -94,7 +126,7 @@ export function DiverHeader({
                     className={controlClass}
                   />
                 </Field>
-                <Field label={t("divers.header.phoneLabel")}>
+                <Field label={t("divers.header.phoneLabel")} hint={t("divers.header.optionalHint")}>
                   <input
                     name="phone"
                     type="tel"
@@ -121,7 +153,8 @@ export function DiverHeader({
                 </Field>
                 <Field
                   label={t("divers.header.diveInsuranceFieldLabel")}
-                  hint={t("divers.header.diveInsuranceHint")}
+                  hint={t("divers.header.optionalHint")}
+                  description={t("divers.header.diveInsuranceDescription")}
                 >
                   <input
                     name="diveInsurance"
@@ -137,7 +170,10 @@ export function DiverHeader({
                     `updateDiver`/`saveBookingEmergencyContact` columns the
                     diver's own /ready and /waivers capture use, and it prints
                     on the manifest. */}
-                <Field label={t("divers.header.emergencyContactNameLabel")}>
+                <Field
+                  label={t("divers.header.emergencyContactNameLabel")}
+                  hint={t("divers.header.optionalHint")}
+                >
                   <input
                     name="emergencyContactName"
                     autoComplete="name"
@@ -145,7 +181,10 @@ export function DiverHeader({
                     className={controlClass}
                   />
                 </Field>
-                <Field label={t("divers.header.emergencyContactPhoneLabel")}>
+                <Field
+                  label={t("divers.header.emergencyContactPhoneLabel")}
+                  hint={t("divers.header.optionalHint")}
+                >
                   <input
                     name="emergencyContactPhone"
                     type="tel"

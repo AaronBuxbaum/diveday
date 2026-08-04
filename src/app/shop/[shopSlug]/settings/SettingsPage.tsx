@@ -7,6 +7,7 @@ import { JumpNav } from "@/components/JumpNav";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
+import { TimezoneOptions, type TimezoneZoneLabels } from "@/components/TimezoneOptions";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldActions, FieldGrid, PriceField } from "@/components/ui/form";
@@ -35,6 +36,11 @@ import { RENTABLE_ITEMS, SHOP_CATALOG_ITEMS, toRentableKinds } from "@/lib/renta
 import { requireStaffSession } from "@/lib/session";
 import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
 import {
+  type CuratedTimeZone,
+  type CuratedTimezoneGroupKey,
+  DEFAULT_TIMEZONE,
+} from "@/lib/timezones";
+import {
   disconnectAction,
   refreshAction,
   saveAddressAction,
@@ -47,6 +53,7 @@ import {
   saveRentalPricingAction,
   saveReviewUrlAction,
   saveTemperatureUnitAction,
+  saveTimezoneAction,
 } from "./actions";
 
 export const metadata: Metadata = { title: "Shop settings — DiveDay" };
@@ -62,6 +69,8 @@ function noticeMessages(
   return {
     packing_saved: { tone: "success", text: t("settings.main.notice.packingSaved") },
     packing_invalid: { tone: "danger", text: t("settings.main.notice.packingInvalid") },
+    timezone_saved: { tone: "success", text: t("settings.main.notice.timezoneSaved") },
+    timezone_invalid: { tone: "danger", text: t("settings.main.notice.timezoneInvalid") },
     dock_saved: { tone: "success", text: t("settings.main.notice.dockSaved") },
     dock_invalid: { tone: "danger", text: t("settings.main.notice.dockInvalid") },
     depth_unit_saved: { tone: "success", text: t("settings.main.notice.depthUnitSaved") },
@@ -111,6 +120,55 @@ function noticeMessages(
     import_not_authorized: { tone: "danger", text: t("settings.import.notice.notAuthorized") },
   };
 }
+
+/**
+ * The words for the timezone picker's structure. `src/lib/timezones.ts` hands
+ * back zone ids and group keys — data with no language in it — and this is
+ * where those become headings, the same division every other domain-layer code
+ * in this file goes through. Sign-up has its own copy of this map against the
+ * *diver* bundle (src/app/onboard/page.tsx): the two pages speak to different
+ * audiences, and the structure they share lives in `TimezoneOptions`.
+ */
+const TIMEZONE_GROUP_KEYS: Record<CuratedTimezoneGroupKey | "allZones", StaffMessageKey> = {
+  americas: "settings.main.timezone.groups.americas",
+  caribbean: "settings.main.timezone.groups.caribbean",
+  europeRedSea: "settings.main.timezone.groups.europeRedSea",
+  asiaPacific: "settings.main.timezone.groups.asiaPacific",
+  allZones: "settings.main.timezone.groups.allZones",
+};
+
+/**
+ * A curated zone's label — how a shop owner names the place rather than how
+ * IANA does ("Cancún / Cozumel", not "America/Cancun"). Only the pinned
+ * shortcuts get one; every other zone reads as its own id, which needs no
+ * translation and cannot drift from what gets stored.
+ */
+const CURATED_TIMEZONE_KEYS: Record<CuratedTimeZone, StaffMessageKey> = {
+  "America/New_York": "settings.main.timezone.zones.eastern",
+  "America/Chicago": "settings.main.timezone.zones.central",
+  "America/Denver": "settings.main.timezone.zones.mountain",
+  "America/Los_Angeles": "settings.main.timezone.zones.pacific",
+  "Pacific/Honolulu": "settings.main.timezone.zones.hawaii",
+  "America/Cancun": "settings.main.timezone.zones.cancun",
+  "America/Belize": "settings.main.timezone.zones.belize",
+  "America/Tegucigalpa": "settings.main.timezone.zones.roatan",
+  "America/Cayman": "settings.main.timezone.zones.cayman",
+  "America/Nassau": "settings.main.timezone.zones.nassau",
+  "America/Puerto_Rico": "settings.main.timezone.zones.puertoRico",
+  "America/Curacao": "settings.main.timezone.zones.bonaire",
+  "Europe/London": "settings.main.timezone.zones.london",
+  "Africa/Cairo": "settings.main.timezone.zones.cairo",
+  "Indian/Maldives": "settings.main.timezone.zones.maldives",
+  "Asia/Bangkok": "settings.main.timezone.zones.bangkok",
+  "Asia/Jakarta": "settings.main.timezone.zones.jakarta",
+  "Asia/Singapore": "settings.main.timezone.zones.singapore",
+  "Asia/Makassar": "settings.main.timezone.zones.bali",
+  "Asia/Manila": "settings.main.timezone.zones.manila",
+  "Pacific/Palau": "settings.main.timezone.zones.palau",
+  "Pacific/Fiji": "settings.main.timezone.zones.fiji",
+  "Australia/Sydney": "settings.main.timezone.zones.sydney",
+  "Pacific/Auckland": "settings.main.timezone.zones.auckland",
+};
 
 function StatusRow({
   label,
@@ -184,6 +242,7 @@ export function SettingsGroup({
  * and easy to miss entirely.
  */
 const SECTION_IDS = [
+  "timezone",
   "contact",
   "address",
   "reviewLink",
@@ -300,6 +359,54 @@ export default async function SettingsPage({
             </div>
           </section>
         ) : null}
+
+        {/* First card in "Your shop", because it is the setting every other
+            date and time on every surface is read through — the board's day
+            headers, "sailing today", a departure's 08:30. Sign-up asked once
+            and nothing could change it afterwards, so a shop that clicked past
+            the picker read its own schedule in US Eastern forever. */}
+        <section className="mb-6 rounded-lg border border-border bg-surface p-6">
+          <h3 className="font-medium">{t("settings.main.timezone.heading")}</h3>
+          <p className="mt-1 text-sm text-muted">{t("settings.main.timezone.description")}</p>
+          <SectionNotice banner={banner} section="timezone" active={activeSection} />
+          <FieldGrid as="form" action={saveTimezoneAction} columns={1} className="mt-4">
+            <Field label={t("settings.main.timezone.label")}>
+              {/* No device detection here, unlike sign-up: a stored zone is
+                  an answer somebody already gave, and the whole point of this
+                  card is to change it deliberately. */}
+              <select
+                name="timezone"
+                required
+                defaultValue={shop.timezone || DEFAULT_TIMEZONE}
+                className={controlClass}
+              >
+                <TimezoneOptions
+                  selected={shop.timezone || DEFAULT_TIMEZONE}
+                  groupLabels={{
+                    americas: t(TIMEZONE_GROUP_KEYS.americas),
+                    caribbean: t(TIMEZONE_GROUP_KEYS.caribbean),
+                    europeRedSea: t(TIMEZONE_GROUP_KEYS.europeRedSea),
+                    asiaPacific: t(TIMEZONE_GROUP_KEYS.asiaPacific),
+                    allZones: t(TIMEZONE_GROUP_KEYS.allZones),
+                  }}
+                  zoneLabels={
+                    Object.fromEntries(
+                      Object.entries(CURATED_TIMEZONE_KEYS).map(([zone, key]) => [zone, t(key)]),
+                    ) as TimezoneZoneLabels
+                  }
+                />
+              </select>
+            </Field>
+            <FieldActions>
+              <SubmitButton
+                pendingLabel={t("settings.main.timezone.submitting")}
+                className={buttonClass()}
+              >
+                {t("settings.main.timezone.submit")}
+              </SubmitButton>
+            </FieldActions>
+          </FieldGrid>
+        </section>
 
         <section className="rounded-lg border border-border bg-surface p-6">
           <h3 className="font-medium">{t("settings.main.contact.heading")}</h3>
@@ -562,24 +669,13 @@ export default async function SettingsPage({
       </SettingsGroup>
 
       <SettingsGroup group={MONEY_GROUP} label={t(MONEY_GROUP.labelKey)}>
-        <section className="rounded-lg border border-border bg-surface p-6">
-          <h3 className="font-medium">{t("settings.main.orders.heading")}</h3>
-          <p className="mt-1 text-sm text-muted">{t("settings.main.orders.description")}</p>
-          <div className="mt-4">
-            <Link
-              href={`/shop/${shopSlug}/orders`}
-              className={buttonClass({ variant: "secondary", className: "text-foreground" })}
-            >
-              {t("settings.main.orders.cta")}
-            </Link>
-          </div>
-        </section>
-
-        {/* Beside Orders because both are money a shop reads rather than
-            configures. This page already answers for promos' refusal
-            (`promos_not_authorized` above) — it just had no way in. */}
+        {/* Orders is not here. It is money a shop *reads* every day, so it
+            keeps its header row under "Run the shop" and this page stops
+            offering a second door to it — one destination, one place to find
+            it. Promo codes go the other way: they are configured rarely, so
+            they left the header and this card is now the way in. */}
         {canManagePromos ? (
-          <section className="mt-6 rounded-lg border border-border bg-surface p-6">
+          <section className="rounded-lg border border-border bg-surface p-6">
             <h3 className="font-medium">{t("settings.main.promos.heading")}</h3>
             <p className="mt-1 text-sm text-muted">{t("settings.main.promos.description")}</p>
             <div className="mt-4">

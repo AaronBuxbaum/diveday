@@ -47,6 +47,24 @@ export async function setShopPackingList(db: AppDb, shopId: string, packingList:
   return shop ?? null;
 }
 
+/**
+ * Sets the zone every date and time in this shop is read and written in.
+ *
+ * Presentation *and* interpretation: a departure is stored as an instant, but
+ * every form that sets one takes a wall-clock time and converts it through
+ * this zone, and every surface converts back. Changing it therefore re-reads
+ * existing departures at their new local times rather than moving them — which
+ * is the right answer for the case this exists for (a shop that never touched
+ * the sign-up picker and has been reading its own schedule in US Eastern).
+ *
+ * The caller validates the id against `isValidTimeZone` first; storing an id
+ * this runtime doesn't know would make every formatter on every surface throw.
+ */
+export async function setShopTimezone(db: AppDb, shopId: string, timezone: string) {
+  const [shop] = await db.update(shops).set({ timezone }).where(eq(shops.id, shopId)).returning();
+  return shop ?? null;
+}
+
 /** Sets how many minutes before departure divers are asked to be at the dock. */
 export async function setShopDockCallMinutes(db: AppDb, shopId: string, dockCallMinutes: number) {
   const [shop] = await db

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
@@ -385,14 +385,14 @@ describe("ScheduleBuilder unfinished after-dive roll call (DOM-H3)", () => {
     },
   ];
 
-  function renderBoard(days: BuilderDay[]) {
+  function renderBoard(days: BuilderDay[], actionOverrides: Partial<typeof actions> = {}) {
     return render(
       <ScheduleBuilder
         shopSlug="blue-mantis"
         days={days}
         loadOptions={loadOptions}
         price={PRICE}
-        actions={actions}
+        actions={{ ...actions, ...actionOverrides }}
         defaultDateIso="2026-08-01"
         canConfigure={true}
         copy={COPY}
@@ -423,6 +423,30 @@ describe("ScheduleBuilder unfinished after-dive roll call (DOM-H3)", () => {
     // scan gets the mark before it gets to the words (design/principles.md #6).
     const badge = container.querySelector("a span.bg-danger\\/10");
     expect(badge?.textContent).toContain("✕");
+  });
+
+  it("confirms a removal in a panel below the row, and only submits on the second press", async () => {
+    // The confirmation used to be an `InlineConfirm` message card rendered
+    // *inside* the inline Move/Copy/Remove cluster: arming it inflated a
+    // padded, bordered box into a button row and shoved the badges and every
+    // row beneath it around while the staffer read the sentence. It is a panel
+    // now, like Move and Copy, and still two deliberate presses.
+    const remove = vi.fn();
+    renderBoard(returnedDay(null), { remove });
+
+    const row = screen.getByRole("listitem");
+    const trigger = within(row).getByRole("button", { name: /^Remove / });
+    await userEvent.click(trigger);
+
+    expect(trigger).toHaveAttribute("aria-expanded", "true");
+    const panel = within(row).getByRole("alert");
+    expect(panel).toHaveTextContent("Take “Two-Tank Reef” off the board for good?");
+    // Arming submits nothing at all.
+    expect(remove).not.toHaveBeenCalled();
+
+    await userEvent.click(within(row).getByRole("button", { name: "Never mind" }));
+    expect(within(row).queryByRole("alert")).toBeNull();
+    expect(remove).not.toHaveBeenCalled();
   });
 
   it("hides move/copy/remove on a returned row, which those mutations all refuse", () => {

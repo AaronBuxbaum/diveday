@@ -283,6 +283,13 @@ new domain concept, define it here in the same PR.
   attach one briefing to each of up to four ordered dives; a blank dive is still a valid part of a
   two-tank plan when the crew has not chosen the final site. Dated conditions remain on the trip,
   not the reusable site.
+  In the interface there is exactly one word for the thing staff pick — **dive site** — and
+  *briefing* names only the content a site carries. The two are the same row in
+  `dive_sites`, so a picker labelled "Dive briefing" beside a nav tab labelled "Dive sites"
+  read as two different concepts and made a two-tank day look like "one dive site, two dive
+  briefings". Every picker, every label, and every empty state says "dive site"; "briefing"
+  survives where briefing content is actually being written or read (the site editor's
+  "Underwater briefing", the diver-facing per-dive cards).
 - **Predicted conditions** — crew-entered expectations for one dated charter, such as water
   temperature, visibility, and surface state. It is a briefing rather than a live guarantee;
   the crew makes the final go/no-go call.

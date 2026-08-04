@@ -12,6 +12,7 @@ import {
   getTripSeriesSummary,
   getTripWithBooked,
   listStaff,
+  listTripScheduleDays,
   setTripStatus,
   updateTrip,
 } from "./trips";
@@ -353,5 +354,40 @@ describe("recurring trip series (in-memory PGlite)", () => {
         ],
       }),
     ).toBeNull();
+  });
+
+  it("gives every occurrence of a multi-day series its own meeting days", async () => {
+    const { db, shop } = await seededShopContext();
+    const created = await createTripSeries(db, {
+      shopId: shop.id,
+      title: "Weekend course",
+      capacity: 6,
+      frequency: "weekly",
+      intervalWeeks: 1,
+      occurrences: [0, 7].map((offset) => ({
+        startsAt: new Date(Date.UTC(2030, 9, 4 + offset, 12)),
+        endsAt: new Date(Date.UTC(2030, 9, 5 + offset, 16)),
+        scheduleDays: [0, 1].map((day) => ({
+          dayNumber: day + 1,
+          startsAt: new Date(Date.UTC(2030, 9, 4 + offset + day, 12)),
+          endsAt: new Date(Date.UTC(2030, 9, 4 + offset + day, 16)),
+        })),
+      })),
+    });
+    if (!created) throw new Error("series not created");
+    expect(created.trips).toHaveLength(2);
+    for (const instance of created.trips) {
+      expect(await listTripScheduleDays(db, shop.id, instance.id)).toHaveLength(2);
+    }
+    // Each week's days belong to that week, not to the first occurrence's.
+    const weekStarts = [];
+    for (const instance of created.trips) {
+      const days = await listTripScheduleDays(db, shop.id, instance.id);
+      weekStarts.push(days.map((day) => day.startsAt.toISOString()));
+    }
+    expect(weekStarts).toEqual([
+      ["2030-10-04T12:00:00.000Z", "2030-10-05T12:00:00.000Z"],
+      ["2030-10-11T12:00:00.000Z", "2030-10-12T12:00:00.000Z"],
+    ]);
   });
 });

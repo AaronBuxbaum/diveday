@@ -125,7 +125,11 @@ export default async function ManageTripPage({
     listRecapPhotosForTrip(db, shop.id, tripId),
   ]);
   const startWall = utcToWallTime(trip.startsAt, shop.timezone);
-  const endWall = utcToWallTime(trip.endsAt, shop.timezone);
+  // Day one's window, not the trip's whole span: a multi-day departure ends on
+  // its *last* day, and the details editor's Departs/Returns boxes describe
+  // one day that the day count then repeats.
+  const firstDay = scheduleDays[0];
+  const endWall = utcToWallTime(firstDay?.endsAt ?? trip.endsAt, shop.timezone);
   const cancelled = trip.status === "cancelled";
   const crewIds = crewAssignments.map((entry) => entry.personId);
   const tripRoleByPerson = new Map(
@@ -303,6 +307,7 @@ export default async function ManageTripPage({
           tripDiveList={tripDiveList}
           startWall={startWall}
           endWall={endWall}
+          dayCount={Math.max(1, scheduleDays.length)}
           locale={locale}
           currency={toShopCurrency(shop.currency)}
         />

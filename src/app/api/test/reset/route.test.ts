@@ -15,7 +15,10 @@ const { resetDemoSchedule, purgeMintedDemoShops } = await import("@/db/seed");
 const { getShopBySlug } = await import("@/db/shops");
 const { POST } = await import("./route");
 
-const FAKE_DB = { fake: "db" };
+// `execute` is what the route reclaims dead tuples through; a bare object
+// would make that call throw into the route's own catch and the assertion
+// below would pass for the wrong reason.
+const FAKE_DB = { fake: "db", execute: vi.fn() };
 const secret = "e2e-test-secret";
 
 function resetRequest(authorization?: string) {
@@ -27,6 +30,7 @@ function resetRequest(authorization?: string) {
 beforeEach(() => {
   vi.stubEnv("DATABASE_URL", "");
   vi.stubEnv("DIVEDAY_E2E_SECRET", secret);
+  FAKE_DB.execute.mockReset().mockResolvedValue(undefined as never);
   vi.mocked(getDb).mockResolvedValue(FAKE_DB as never);
   vi.mocked(getShopBySlug)
     .mockReset()
@@ -77,5 +81,17 @@ describe("POST /api/test/reset — auth gate (specialist-optimization-audit-2026
     expect(response.status).toBe(200);
     expect(resetDemoSchedule).toHaveBeenCalledWith(FAKE_DB, "shop_1", { history: true });
     expect(purgeMintedDemoShops).toHaveBeenCalledWith(FAKE_DB);
+    // And reclaims what it just deleted — see the route's own comment for why
+    // a run of this endpoint that skips it degrades a whole local e2e suite.
+    expect(FAKE_DB.execute).toHaveBeenCalledTimes(1);
+  });
+
+  it("still resets when the runtime refuses the reclaim", async () => {
+    // A reset whose fixture is already restored must not fail over
+    // housekeeping — the only cost of a skipped reclaim is slow growth.
+    FAKE_DB.execute.mockRejectedValue(new Error("VACUUM cannot run inside a transaction block"));
+    const response = await POST(resetRequest(`Bearer ${secret}`));
+    expect(response.status).toBe(200);
+    expect(resetDemoSchedule).toHaveBeenCalled();
   });
 });

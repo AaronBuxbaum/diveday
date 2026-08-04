@@ -93,6 +93,45 @@ before this slice; the review measures `be15104`, not HEAD.
 gates the fill *request* and holds no fill log of any kind (DOM-M4). HD-8 is left standing and named
 as unanswered in all three places.
 
+## Booking-and-diver UX pass: multi-day departures, one door per destination (2026-08-03)
+
+A batch of fixes from a walk through the staff app, plus the two features the walk turned up as
+genuinely missing.
+
+**Multi-day departures can finally be built.** `trip_schedule_days` could always describe a
+departure that meets on consecutive days — the trip page printed the list, the board badged the
+count, `moveTrip` slid them together, crew double-booking was checked day by day — but no write
+path ever populated it, so an Open Water weekend went on the board as unrelated trips sharing a
+title: separate rosters, separate waivers, separate crew. "Schedule a trip" and the trip's own
+details editor now take a day count (1–14, `src/lib/trip-days.ts`); the day-one window repeats on
+consecutive days, each converted through the shop's own zone on its own date so a departure that
+straddles a DST change keeps the wall-clock time the shop promised. `updateTrip` rebuilds the day
+rows when the schedule moves, and a weekly series gives every occurrence its own days.
+
+**A shop's timezone is no longer a one-shot question.** Sign-up's picker opened on US Eastern for
+everyone and nothing could change it afterwards, so a shop that clicked past it read every day
+header, departure time, and "sailing today" in someone else's zone. The picker now preselects the
+device's own zone, and Settings → *Timezone* is the way to change it later.
+
+**"View booking page" works.** The public trip page redirected a signed-in staffer to the
+management view, so the trip overview's own button could never show the booking page — it opened
+and bounced straight back. The page stays put now and carries a staff preview banner with a
+"Manage this trip" link, which also serves the staffer who followed a shared `/s/` link. Removing
+the redirect also retired an eight-attempt retry loop in `e2e/boat-loop.spec.ts`.
+
+**One destination, one door.** Team and Promo codes sat in both the header's "Set up" menu and on
+the Settings page; Orders sat in both the header and Settings. Each now lives in exactly one place
+— Team and Promo codes on Settings, Orders in the header, all three still in ⌘K — and Settings is
+the last row of the menu (`src/lib/staff-destinations.ts`).
+
+**And the smaller ones.** The Today board's drag-to-assign strip is desktop-only and the crew
+copy stopped instructing a phone to drag; the schedule board's rows became two aligned columns and
+its Remove confirmation moved into a panel like Move and Copy instead of inflating a card inside a
+button row; the per-dive picker says "Dive site" like every other surface rather than "Dive
+briefing"; the diver record's Edit control is a real button that opens itself right after you
+create a diver; "Number of trips" under *Repeat* is blank and disabled until a cadence is chosen;
+and optional fields that were silently optional now say so.
+
 ## A shop's water-temperature unit is its own setting (2026-08-03)
 
 `shops.temperature_unit` (`celsius` | `fahrenheit`, default Celsius) replaces the derivation that

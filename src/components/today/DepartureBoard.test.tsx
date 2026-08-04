@@ -16,10 +16,10 @@ const COPY: DepartureBoardCopy = {
   openGuests: "Open guests",
   crewDropZoneAria: "Crew assignments drop zone",
   assignCrewMemberAria: "Assign crew member to {title}",
-  assignedCrewHeading: "Assigned Crew (drag staff here to assign)",
+  assignedCrewHeading: "Assigned crew",
   assignCrewOption: "Assign crew…",
   unassignAria: "Unassign {name}",
-  noCrewAssigned: "No crew assigned. Drag staff from above here.",
+  noCrewAssigned: "No crew assigned yet.",
   assignCrewLabel: "Assign crew",
   assignFailed: "That didn’t save — recheck your connection or try again.",
   countReady: "Ready",
@@ -136,7 +136,7 @@ describe("DepartureBoard Drag and Drop Crew Assign", () => {
       />,
     );
 
-    const dropZone = screen.getByText(/Drag staff here to assign/i).closest("section");
+    const dropZone = screen.getByText("Assigned crew").closest("section");
     expect(dropZone).not.toBeNull();
 
     const dropEvent = {
@@ -172,7 +172,7 @@ describe("DepartureBoard Drag and Drop Crew Assign", () => {
       />,
     );
 
-    const dropZone = screen.getByText(/Drag staff here to assign/i).closest("section");
+    const dropZone = screen.getByText("Assigned crew").closest("section");
     if (!dropZone) throw new Error("Drop zone not found");
 
     // Checked as a class-list token, not a substring, since the zone's
@@ -263,7 +263,7 @@ describe("DepartureBoard Drag and Drop Crew Assign", () => {
       />,
     );
 
-    const dropZone = screen.getByText(/Drag staff here to assign/i).closest("section");
+    const dropZone = screen.getByText("Assigned crew").closest("section");
 
     const dropEvent = {
       preventDefault: vi.fn(),
@@ -296,7 +296,7 @@ describe("DepartureBoard Drag and Drop Crew Assign", () => {
       />,
     );
 
-    const dropZone = screen.getByText(/Drag staff here to assign/i).closest("section");
+    const dropZone = screen.getByText("Assigned crew").closest("section");
     const dropEvent = {
       preventDefault: vi.fn(),
       dataTransfer: {
@@ -360,7 +360,7 @@ describe("DepartureBoard Drag and Drop Crew Assign", () => {
       />,
     );
 
-    const dropZone = screen.getByText(/Drag staff here to assign/i).closest("section");
+    const dropZone = screen.getByText("Assigned crew").closest("section");
     if (!dropZone) throw new Error("Drop zone not found");
     const dropEvent = {
       preventDefault: vi.fn(),

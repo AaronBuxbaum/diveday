@@ -11,6 +11,7 @@ import {
   normalizedDiveDrafts,
   replaceTripDives,
   resolveCourse,
+  type TripScheduleDayInput,
   validateDiveSites,
 } from "./trips-create";
 
@@ -25,11 +26,17 @@ import {
  * still-scheduled dates, never a shared row every instance reads through.
  */
 
-export type NewTripSeries = Omit<NewTrip, "startsAt" | "endsAt"> & {
+export type NewTripSeries = Omit<NewTrip, "startsAt" | "endsAt" | "scheduleDays"> & {
   frequency: TripRecurrenceFrequency;
   intervalWeeks: number;
-  /** Pre-computed occurrences (shop-local wall time already converted to UTC). */
-  occurrences: Array<{ startsAt: Date; endsAt: Date }>;
+  /**
+   * Pre-computed occurrences (shop-local wall time already converted to UTC).
+   * `scheduleDays` is per occurrence rather than shared: a multi-day departure
+   * repeated weekly has a different set of dates every week, and each week's
+   * days have to be resolved through the shop's zone on their own dates so a
+   * DST boundary between two occurrences lands on the right instant.
+   */
+  occurrences: Array<{ startsAt: Date; endsAt: Date; scheduleDays?: TripScheduleDayInput[] }>;
 };
 
 /**
@@ -82,6 +89,7 @@ export async function createTripSeries(db: AppDb, input: NewTripSeries) {
           depositCents: input.depositCents,
           cancellationWindowHours: input.cancellationWindowHours,
           drafts,
+          scheduleDays: occurrence.scheduleDays,
         }),
       );
     }
