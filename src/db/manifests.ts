@@ -17,6 +17,7 @@ import {
   type TripManifest,
 } from "@/lib/manifests";
 import { medicalWaiverMark } from "@/lib/waivers";
+import { listTripBuddyPairs } from "./buddy-pairs";
 import type { AppDb, DbExecutor } from "./client";
 import { publishManifestEvent } from "./manifest-events";
 import { verifiedNitroxPersonIds } from "./nitrox";
@@ -290,6 +291,7 @@ export async function getTripManifests(
     crew,
     crewAttestations,
     crewRollCalls,
+    buddyPairs,
     ...rollCalls
   ] = await Promise.all([
     getShopById(db, shopId),
@@ -300,6 +302,7 @@ export async function getTripManifests(
     listTripCrew(db, shopId, tripId),
     listLatestCrewAttestations(db, shopId, tripId),
     listLatestCrewRollCalls(db, shopId, tripId),
+    listTripBuddyPairs(db, shopId, tripId),
     ...checkpoints.map((checkpoint) => listLatestRollCallByBooking(db, shopId, tripId, checkpoint)),
   ]);
   if (!shop) return null;
@@ -315,6 +318,21 @@ export async function getTripManifests(
   const medicalByBooking = new Map(
     readinessRows.map((row) => [row.booking.id, medicalWaiverMark(row.waiver)] as const),
   );
+  // A diver's buddy, for pairs whose members are **both** active roster
+  // entries. A pair whose other seat was cancelled stays listed (and
+  // dissolvable) on the pairs panel, but it puts no buddy on the manifest —
+  // a cancelled seat is nobody (ADR 20260804-buddy-pairs), and an alert
+  // about a person who is not on the boat would be a false alarm.
+  const rosterBookingIds = new Set(roster.map(({ booking }) => booking.id));
+  const buddyByBooking = new Map<string, { bookingId: string; fullName: string }>();
+  for (const pair of buddyPairs) {
+    const [a, b] = pair.members;
+    if (!a || !b || pair.members.length !== 2) continue;
+    if (a.cancelled || b.cancelled) continue;
+    if (!rosterBookingIds.has(a.bookingId) || !rosterBookingIds.has(b.bookingId)) continue;
+    buddyByBooking.set(a.bookingId, { bookingId: b.bookingId, fullName: b.fullName });
+    buddyByBooking.set(b.bookingId, { bookingId: a.bookingId, fullName: a.fullName });
+  }
   // Age, minor status, and birthdays are all measured on the day the boat
   // sails, in the shop's own timezone — not "today" wherever the server is.
   const tripDate = calendarDateInTimezone(trip.startsAt, shop.timezone);
@@ -343,6 +361,7 @@ export async function getTripManifests(
       birthday: birthdayCallout(person.dateOfBirth, tripDate),
       depthAdvisory: depthByBooking.get(booking.id),
       checkedIn: booking.status === "checked_in",
+      buddy: buddyByBooking.get(booking.id) ?? null,
     };
   });
   // Carry a not-boarded result forward across the ordered checkpoints so an

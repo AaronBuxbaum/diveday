@@ -300,6 +300,7 @@ describe("offline manifest policy", () => {
             note: null,
             implied: true,
           },
+          buddyAlert: null,
         },
       ],
       summary: {
@@ -328,6 +329,95 @@ describe("offline manifest policy", () => {
     });
     // Private data the dock does not need is still dropped.
     expect(payload.manifests[0]?.divers[0]?.email).toBeNull();
+  });
+
+  it("carries a buddy as a name only — never an id, never a computed divergence", () => {
+    // The dock copy *displays* buddy teams; whether a pair is split is a
+    // live-roll-call read, and a snapshot cannot know who came back (ADR
+    // 20260804-buddy-pairs). Shipping only the name is what keeps that
+    // derivation impossible offline rather than merely unimplemented.
+    const manifest: TripManifest = {
+      trip: {
+        id: "trip-1",
+        title: "Two-Tank Reef",
+        startsAt: new Date("2026-07-20T12:00:00.000Z"),
+        endsAt: new Date("2026-07-20T16:00:00.000Z"),
+        plannedDives: 2,
+      },
+      checkpoint: "after_dive_1",
+      crew: [],
+      crewAttestation: null,
+      completeness: {
+        complete: false,
+        diversAccountedFor: false,
+        crewAccountedFor: false,
+        reason: "divers_awaiting",
+        crewReason: "crew_not_attested",
+        crewCounts: {
+          crewAwaiting: 0,
+          crewNotBackAboard: 0,
+          crewAshore: 0,
+          crewExpectedAboard: 0,
+        },
+      },
+      divers: [
+        {
+          bookingId: "booking-tom",
+          fullName: "Tom Okafor",
+          email: "tom@example.com",
+          emergencyContactName: null,
+          emergencyContactPhone: null,
+          readiness: { status: "ready", blockers: [] },
+          rentalFit: { state: "own_kit" },
+          nitroxRequested: false,
+          checkedIn: false,
+          buddy: { bookingId: "booking-lena", fullName: "Lena Fischer" },
+          rollCall: {
+            state: "boarded",
+            occurredAt: new Date("2026-07-20T13:30:00.000Z"),
+            recordedByName: "Dana Divemaster",
+            note: null,
+          },
+          buddyAlert: "separated_after_dive",
+        },
+        {
+          bookingId: "booking-omar",
+          fullName: "Omar Haddad",
+          email: null,
+          emergencyContactName: null,
+          emergencyContactPhone: null,
+          readiness: { status: "ready", blockers: [] },
+          rentalFit: { state: "own_kit" },
+          nitroxRequested: false,
+          checkedIn: false,
+          rollCall: undefined,
+          buddyAlert: null,
+        },
+      ],
+      summary: {
+        totalDivers: 2,
+        ready: 2,
+        blocked: 0,
+        boarded: 1,
+        notBoarded: 0,
+        notBackAboard: 0,
+        awaiting: 1,
+        unaccountedFor: 1,
+      },
+    };
+
+    const payload = serializeManifests(
+      [manifest],
+      { slug: "blue-mantis", name: "Blue Mantis", timezone: "America/New_York" },
+      (blocker) => blocker.code,
+    );
+    const [tom, omar] = payload.manifests[0]?.divers ?? [];
+    expect(tom?.buddyFullName).toBe("Lena Fischer");
+    // An unpaired diver stays honestly empty rather than absent-by-accident.
+    expect(omar?.buddyFullName).toBeNull();
+    // Neither the pair's booking id nor the live alert crosses to the device.
+    expect(tom).not.toHaveProperty("buddy");
+    expect(tom).not.toHaveProperty("buddyAlert");
   });
 
   it("never writes age, minor status, or birthdays to a crew device", () => {
@@ -375,6 +465,7 @@ describe("offline manifest policy", () => {
           minor: true,
           birthday: { status: "today" },
           rollCall: undefined,
+          buddyAlert: null,
         },
       ],
       summary: {

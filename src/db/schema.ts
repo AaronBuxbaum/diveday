@@ -3113,6 +3113,55 @@ export const rollCallCrewEvents = pgTable(
 );
 
 /**
+ * Buddy pairing: staff pair two roster entries (bookings) of the same
+ * departure into a buddy team, so roll call can read "one buddy is back
+ * aboard and the other is not" as a first-class state instead of a flat list
+ * (ADR 20260804-buddy-pairs).
+ *
+ * One row per **member**, two rows per pair, sharing a `pair_id`. Not a
+ * pair-per-row table with two booking columns, deliberately: the invariant
+ * that matters here is *a booking is in at most one pair*, and the unique
+ * index on `booking_id` enforces it at the database, under concurrency —
+ * a two-column shape cannot (a booking can sit in column A of one row and
+ * column B of another and satisfy both column uniques). Pairs are exactly
+ * two: `pairBuddies` (src/db/buddy-pairs.ts) is the only writer and inserts
+ * both members in one transaction; a trio is two pairs' worth of a decision
+ * the shop makes (glossary **Buddy pair**).
+ *
+ * Operational grouping, not safety history: unpairing deletes the rows — the
+ * roll-call events themselves are the append-only record of who was aboard.
+ * Pairs inform the roll call's attention state and never gate readiness,
+ * admission, capacity, or checkpoint completeness.
+ */
+export const buddyPairMembers = pgTable(
+  "buddy_pair_members",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    tripId: uuid("trip_id")
+      .notNull()
+      .references(() => trips.id),
+    /** Groups the two members of one pair. Writer-generated, no parent row. */
+    pairId: uuid("pair_id").notNull(),
+    bookingId: uuid("booking_id")
+      .notNull()
+      .references(() => bookings.id),
+    /** Who made the pairing call. A pairing is never anonymous. */
+    pairedByPersonId: uuid("paired_by_person_id")
+      .notNull()
+      .references(() => people.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("buddy_pair_members_booking_unique").on(table.bookingId),
+    index("buddy_pair_members_shop_trip_idx").on(table.shopId, table.tripId),
+    index("buddy_pair_members_pair_idx").on(table.pairId),
+  ],
+);
+
+/**
  * A photo a diver attaches to their own post-trip recap page. The recap link is
  * a per-booking signed token (public, noindex), so an upload is scoped to that
  * booking and a diver only ever sees the shots on their own page. Staff see a
@@ -3384,6 +3433,7 @@ export type DiveSite = typeof diveSites.$inferSelect;
 export type TripRequirement = typeof tripRequirements.$inferSelect;
 export type RentalFitProfile = typeof rentalFitProfiles.$inferSelect;
 export type RollCallEvent = typeof rollCallEvents.$inferSelect;
+export type BuddyPairMember = typeof buddyPairMembers.$inferSelect;
 export type RollCallCrewEvent = typeof rollCallCrewEvents.$inferSelect;
 export type TripAssignmentRole = (typeof tripAssignmentRole.enumValues)[number];
 export type NitroxCertification = typeof nitroxCertifications.$inferSelect;

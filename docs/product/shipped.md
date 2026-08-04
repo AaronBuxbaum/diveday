@@ -7,6 +7,18 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## Buddy pairs in roll call (delivered 2026-08-04)
+
+Staff pair divers into buddy teams on the manifest, and roll call stops being a flat list: when
+one buddy is back aboard and the other is not — the state a real deck watches for — the pair and
+the returned diver's row both say so, loud after a dive and as a heads-up at the dock. Pairs are
+exactly two bookings of one departure, DB-enforced to at most one pair per diver, explicit to
+make and to dissolve, and they **inform only** — never readiness, admission, capacity, or
+checkpoint completeness. The offline copy shows pairs read-only by name and says the split-pair
+read belongs to the live roll call; the export bundle carries the standing pairs as
+`buddy_pairs.csv`. Seeded on the demo reef boat (two teams plus the normal odd remainder). See
+[20260804-buddy-pairs](../architecture/decisions/20260804-buddy-pairs.md).
+
 ## The 2026-08-02 review's engineering queue (delivered 2026-08-03)
 
 The Medium and Low engineering items the [2026-08-02 review](assessments/comprehensive-review-20260802.md)

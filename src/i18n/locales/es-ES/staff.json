@@ -1630,6 +1630,22 @@
       "rollCallRecordedByPlain": "{label} {date} por {name}",
       "rollCallRecordedByWithNote": "{label} {date} por {name} · {note}",
       "carriedForwardFromDock": "Arrastrado — este buceador nunca salió del muelle. Márcalo como embarcado para volver a incluirlo.",
+      "buddyHeading": "Parejas de buceo",
+      "buddyDescription": "Empareja a los buceadores tal como van a bucear. Cuando uno de la pareja está de vuelta a bordo y el otro no, la pareja y la fila del buceador lo dicen.",
+      "buddyNoPairs": "Aún no hay parejas de buceo. Elige dos buceadores abajo para formar una.",
+      "buddyPairNames": "{a} · {b}",
+      "buddyCancelledName": "{name} (plaza cancelada)",
+      "buddyPairedBy": "Emparejados por {name}",
+      "buddyUnpair": "Separar pareja",
+      "buddyFirstLabel": "Primer buceador",
+      "buddySecondLabel": "Segundo buceador",
+      "buddySelectPlaceholder": "Elige un buceador",
+      "buddyPairSubmit": "Emparejar",
+      "buddyUnpairedOne": "{name} no tiene compañero — con un número impar es normal.",
+      "buddySeparatedLine": "{count, plural, one {# pareja de buceo está dividida — uno a bordo y el otro sin contabilizar.} other {# parejas de buceo están divididas — uno a bordo y el otro sin contabilizar.}}",
+      "buddyErrorSamePick": "Elige dos buceadores distintos.",
+      "buddyErrorAlreadyPaired": "Uno de esos buceadores ya está en una pareja de buceo. Sepáralos primero.",
+      "buddyErrorGeneric": "No se guardó ese emparejamiento. Inténtalo de nuevo.",
       "boardedCheck": "Embarcado ✓",
       "markBoarded": "Marcar embarcado",
       "undoing": "Deshaciendo…",
@@ -3073,6 +3089,7 @@
         "crewShort": "{aboard} de {assigned} tripulantes confirmados a bordo — este control sigue abierto hasta contar al resto en el manifiesto en vivo.",
         "crewNotBackAboard": "{count, plural, one {# tripulante no ha vuelto a bordo.} other {# tripulantes no han vuelto a bordo.}} Este control sigue abierto.",
         "crewReadOnlyHere": "La mitad de tripulación del recuento se registra en la lista en vivo: no se puede marcar desde esta copia guardada.",
+        "buddyReadOnlyHere": "Las parejas de buceo se muestran tal como se guardaron. Si un compañero está de vuelta a bordo se registra en la lista en vivo — esta copia no lo rastrea.",
         "crewAwaiting": "{count, plural, one {Falta pasar lista a # tripulante.} other {Falta pasar lista a # tripulantes.}} La tripulación se contabiliza en el manifiesto en vivo, así que este control sigue abierto hasta que vuelvas a tener cobertura.",
         "readyBadge": "Listo cuando se guardó",
         "blockedBadge": "Bloqueado cuando se guardó",
@@ -3142,6 +3159,11 @@
       "notBoarded": "No embarcado",
       "notBoardedCarried": "No embarcado · arrastrado",
       "notBackAboard": "Sin regresar a bordo"
+    },
+    "buddyPair": {
+      "with": "Compañero: {name}",
+      "separatedDock": "Compañero no a bordo",
+      "separatedAfterDive": "Compañero sin contabilizar"
     },
     "payments": {
       "connect": "Conectar pagos"

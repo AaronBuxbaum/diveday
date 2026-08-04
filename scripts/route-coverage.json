@@ -364,11 +364,12 @@
     "e2e": [
       "a11y.spec.ts",
       "boat-loop.spec.ts",
+      "buddy-pairs.spec.ts",
       "depth-and-age-surfaces.spec.ts",
       "divers.spec.ts",
       "manifest.spec.ts"
     ],
-    "visual": ["manifest", "manifest-not-back-aboard"]
+    "visual": ["manifest", "manifest-buddy-divergence", "manifest-not-back-aboard"]
   },
   "/shop/[shopSlug]/trips/[id]/prep": {
     "e2e": ["boat-loop.spec.ts", "gear-fit-and-age.spec.ts", "nitrox.spec.ts"],
