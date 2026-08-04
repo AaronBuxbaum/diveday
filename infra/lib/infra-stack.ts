@@ -342,6 +342,28 @@ export class InfraStack extends cdk.Stack {
     });
     sesEmailIdentity.grantSendEmail(sesSenderUser);
 
+    // A send is authorized against **every** SES resource it touches, and the
+    // configuration set above is attached to the identity — so it is on every
+    // send, whether or not the app names it. `grantSendEmail` only ever adds
+    // the identity ARN (aws-cdk-lib/aws-ses `EmailIdentityBase.grant`), which
+    // leaves the config set unauthorized and every send answering 403
+    // `AccessDeniedException` on `configuration-set/diveday-transactional-email`
+    // — including sends to the mailbox simulator, which is how this was found.
+    // Granting the identity alone is a working setup only for an identity with
+    // no configuration set.
+    sesSenderUser.addToPrincipalPolicy(
+      new iam.PolicyStatement({
+        actions: ["ses:SendEmail", "ses:SendRawEmail"],
+        resources: [
+          this.formatArn({
+            service: "ses",
+            resource: "configuration-set",
+            resourceName: sesConfigurationSet.configurationSetName,
+          }),
+        ],
+      }),
+    );
+
     new cdk.CfnOutput(this, "SesSenderAccessKeyInstructions", {
       value: `aws iam create-access-key --user-name ${sesSenderUser.userName}`,
       description:
