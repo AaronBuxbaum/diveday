@@ -233,6 +233,7 @@ Both alignment paths are relaxed by default, so `mail.ses.dive.day` (envelope) a
 | Endpoint returns 503 | `SES_SNS_TOPIC_ARN` unset |
 | Endpoint returns 400 | An unverified SNS signature, a `TopicArn` mismatch, or a malformed message |
 | Nothing sends, no error | `SES_AWS_*`/`SES_FROM_EMAIL` unset or invalid — check the shop dashboard for `not_configured` rows |
+| Sends fail `403 AccessDeniedException` on `ses:SendEmail` | `SES_FROM_EMAIL` is an address the `diveday-ses-sender` user was never granted. The stack grants sending on the `ses.dive.day` domain identity only (`sesEmailIdentity.grantSendEmail`), so any other address — a personal mailbox, a `dive.day` address, an unverified vendor domain — is refused no matter how the account's own identities are verified. The resource ARN in the error names the address that was tried; set `SES_FROM_EMAIL` to an address **on `ses.dive.day`** and redeploy |
 | Sends fail with a rejection | Still in SES sandbox mode (recipient not pre-verified) — request production access |
 | Sends report `delivered`, diver says nothing arrived | Their spam folder; then DKIM/SPF/DMARC on `ses.dive.day` |
 | Mail to `aaron@`/`legal@` never arrives | MX records on `dive.day`; then the provider's own logs. Nothing about this path runs in DiveDay |

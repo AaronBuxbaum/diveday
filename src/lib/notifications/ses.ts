@@ -46,6 +46,20 @@ export const sesConfigSchema = z.object({
 });
 
 /**
+ * SES error messages quote the addresses they refused — an `AccessDeniedException` names the
+ * sender identity, a rejection can name the recipient. Those messages are useful to an operator
+ * reading a failed send row, but a structured log line may never carry an email address
+ * (AGENTS.md hard rule on PII in logs), so the address is masked on the way to `log()` only.
+ * The domain survives, which is the part that identifies *which* identity is unverified.
+ */
+export function maskEmailAddresses(detail: string): string {
+  return detail.replace(/[\w.+-]+@([\w-]+\.)+[A-Za-z]{2,}/g, (address) => {
+    const domain = address.slice(address.indexOf("@") + 1);
+    return `<redacted>@${domain}`;
+  });
+}
+
+/**
  * Every SES SDK error extends `SESv2ServiceException`, which carries `$metadata.httpStatusCode`
  * and a `.name` matching the specific AWS error type. A response that never reached AWS at all
  * (a network failure) has no `$metadata` and is treated as retryable.
@@ -122,7 +136,10 @@ export function sesNotificationProvider(
         return { status: "sent", providerMessageId: result.MessageId };
       } catch (error) {
         const info = sesErrorInfo(error);
-        log("notification.ses_send_failed", "warn", info);
+        log("notification.ses_send_failed", "warn", {
+          ...info,
+          detail: info.detail === undefined ? undefined : maskEmailAddresses(info.detail),
+        });
         return { status: "failed", ...info };
       }
     },
