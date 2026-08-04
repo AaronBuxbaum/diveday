@@ -275,32 +275,34 @@ test("the offline fallback never reaches beyond the manifest route", async ({ pa
   // No redirect exists for this route, so a failed reload surfaces the
   // browser's own offline error exactly as it did before this feature shipped.
   //
-  // **Asserted by what did *not* happen, because everything Chromium puts on
-  // screen here is racy.** The thrown error's message has two legitimate
-  // shapes depending on when the `chrome-error://` interstitial commits: if it
-  // commits while the CDP `Page.reload` call is still in flight, the target
-  // detaches and Playwright reports "Protocol error (Page.reload): Not
-  // attached to an active page" instead of the navigation's own
-  // ERR_INTERNET_DISCONNECTED. Matching the message made that a ~1-in-10 flake
-  // (reproduced on main, never introduced by one branch), so #370 moved the
-  // assertion to the interstitial's own DOM instead — and that is the *same*
-  // race one layer down: on the losing side of it `body` is still empty when
-  // the expect times out, which is exactly how this failed again.
+  // Two assertions, and deliberately neither of them reads the error page's
+  // DOM.
   //
-  // Both of those tried to prove the browser reached a specific error page.
-  // What this test actually guards is narrower and has no race in it: a
-  // service worker wrongly scoped to the guests route would have *served* the
-  // page — the reload would have succeeded, and the roster would be on screen.
-  // So assert the failure and the absence, not the interstitial:
+  // The reload's thrown message has two legitimate shapes depending on when
+  // the chrome-error:// interstitial commits. If it commits while the CDP
+  // Page.reload call is still in flight, the target detaches and Playwright
+  // reports "Protocol error (Page.reload): Not attached to an active page"
+  // instead of the navigation's own ERR_INTERNET_DISCONNECTED — the browser
+  // is on the offline interstitial either way, which is what this test is
+  // about. Matching one shape made this a ~1-in-10 flake (reproduced on main,
+  // not introduced by any one branch); same commit race d635994 fixed on the
+  // setOffline(false) side.
   //
-  // - the reload threw at all (a served page never does),
-  // - the URL did not divert to the offline-manifest fallback,
-  // - and the guests roster is not rendered — true whether the interstitial's
-  //   DOM has committed, is still empty, or is a cross-process document
-  //   Playwright can only see as having no such heading.
-  expect(reloadError).toBeDefined();
+  // Asserting the interstitial's *content* instead was the previous attempt at
+  // a fix and was worse: `page.locator("body")` resolves to an empty
+  // <body></body> on CI, because the error page is not reliably committed into
+  // a DOM this handle can read at assertion time. It passed 30/30 locally and
+  // failed on the first CI run — a local pass proves nothing here, so this
+  // version is built to not depend on that at all rather than tuned until the
+  // runs go green.
+  //
+  // What is left is sufficient. The regression this guards is the worker
+  // swallowing a route outside its manifest pattern, and both of its outcomes
+  // are still caught: if the worker served the route, the reload would have
+  // *succeeded* and there would be no error; if it redirected to the offline
+  // shell, the URL would say so.
+  expect(reloadError?.message).toMatch(/ERR_INTERNET_DISCONNECTED|Not attached to an active page/);
   expect(page.url()).not.toContain("/offline-manifest");
-  await expect(page.getByRole("heading", { name: /^Divers/ })).toHaveCount(0);
 
   await context.setOffline(false);
 });
