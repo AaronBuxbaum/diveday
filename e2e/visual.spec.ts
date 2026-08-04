@@ -6,19 +6,20 @@ import { findTripOnBoard, openTripFromBoard, openTripTab } from "./helpers";
 import { E2E_FROZEN_CLOCK } from "./servers";
 
 /**
- * Visual regression coverage. Eighty-one key surfaces × light/dark, each
- * captured at a phone and a desktop viewport — 324 screenshots per run (see
+ * Visual regression coverage. Eighty-three key surfaces × light/dark, each
+ * captured at a phone and a desktop viewport — 332 screenshots per run (see
  * ADR 20260729-reg-suit-visual-regression). Keep this count in sync when
  * adding a surface; each `capture()` call costs 4 screenshots per CI run.
  * `grep -c 'await capture(page' e2e/visual.spec.ts` is the number — the prose
  * has drifted from it before (it read 48 while the grep said 56, and 71 while
  * the grep said 72), so trust the grep and correct the prose.
  *
- * Two more come from the `print` block at the bottom: the manifest and prep
- * pages as they render for the printer. Print is its own concern, not a
- * light/dark one — the `@media print` token override collapses both schemes to
- * one black-and-white palette — so each is captured once, at a US-Letter width,
- * via `capturePrint()`. That brings the run to 326 screenshots.
+ * Three more come from the `print` block at the bottom: the manifest, prep,
+ * and incident-export pages as they render for the printer. Print is its own
+ * concern, not a light/dark one — the `@media print` token override collapses
+ * both schemes to one black-and-white palette — so each is captured once, at a
+ * US-Letter width, via `capturePrint()`. That brings the run to 335
+ * screenshots.
  *
  * ## One surface, one `test()`
  *
@@ -1104,6 +1105,16 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "check-in", scheme);
       });
 
+      // The end-of-day close-out (ADR 20260804-day-closeout): the ritual
+      // surface Today mirrors at 5 p.m. Captured over the plain seed state —
+      // today's boat still ahead of the frozen clock, real leftovers, and
+      // tomorrow's glance — so the calm-but-populated shape is the baseline.
+      test(`the day close-out renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/close-out");
+        await page.getByRole("heading", { name: "How today's boats ended" }).waitFor();
+        await capture(page, "close-out", scheme);
+      });
+
       // Staffing had no baseline at all until the over_ratio parity fix —
       // the one gap surface whose green "Covered" badge could silently
       // contradict Today. Captured so a regression there shows as pixels.
@@ -1169,6 +1180,32 @@ for (const scheme of ["light", "dark"] as const) {
           .locator('select[name="courseId"] option[disabled]')
           .waitFor({ state: "detached" });
         await capture(page, "schedule-builder-add", scheme);
+      });
+
+      // The blow-out confirm — the one deliberate step between the captain's
+      // word and cancelling live bookings (ADR 20260804-blowout-cascade).
+      // Read-only: nothing is cancelled by rendering it.
+      test(`the blow-out confirm page renders true to the design (${scheme})`, async ({ page }) => {
+        const tripId = await seededTripId(page, REEF_TRIP);
+        await page.goto(`/shop/blue-mantis/schedule/blowout/${tripId}`);
+        await page.getByRole("heading", { level: 1, name: "Call a blow-out?" }).waitFor();
+        await capture(page, "blowout-confirm", scheme);
+      });
+
+      // The cascade record — the surface a blow-out morning is worked from.
+      // Calling the blow-out inside the test is safe (per-test reset) and
+      // deterministic: the frozen clock pins calledAt, and with no email
+      // provider in the fleet every row lands in the same "Not sent" state —
+      // the honest fallback surface an unconfigured shop would really see.
+      test(`the blow-out cascade record renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        const tripId = await seededTripId(page, REEF_TRIP);
+        await page.goto(`/shop/blue-mantis/schedule/blowout/${tripId}`);
+        await page.getByRole("button", { name: "Call the blow-out" }).click();
+        await page.getByRole("heading", { level: 1, name: "Blow-out cascade" }).waitFor();
+        await page.getByRole("columnheader", { name: "Diver" }).waitFor();
+        await capture(page, "blowout-cascade", scheme);
       });
 
       // The roster — the front desk's densest everyday surface.
@@ -1275,6 +1312,22 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "manifest", scheme);
       });
 
+      // The incident-ready export: the hand-to-authorities document of the
+      // departure's recorded facts (roster with roll-call state, evidence and
+      // waiver status, timeline, integrity code). Captured on the seeded reef
+      // trip before any roll call, so the baseline shows the stated-absence
+      // rendering — "Awaiting" cells, an explicitly empty timeline — which is
+      // exactly the state that must never read as a blank on this document.
+      test(`a trip's incident-ready export renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await openReefTrip(page);
+        const tripPath = new URL(page.url()).pathname;
+        await page.goto(`${tripPath}/incident-export`);
+        await page.getByRole("heading", { name: "Roll-call timeline" }).waitFor();
+        await capture(page, "incident-export", scheme);
+      });
+
       // Blue Mantis fills nitrox, so the Tanks tile grid is at its full
       // Total/Air/Nitrox width; the collapsed single-tile layout for a shop that
       // doesn't is its own test below.
@@ -1341,6 +1394,19 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/settings/whatsapp");
         await page.getByRole("heading", { name: "How connecting works" }).waitFor();
         await capture(page, "settings-whatsapp", scheme);
+      });
+
+      // Where a shop points its weekly backup at storage it owns (ADR
+      // 20260804-shop-owned-backup-export). The seed ships the destination
+      // configured with six weekly deliveries and one failed week, so this
+      // captures the surface doing its real job: proving where the data went
+      // and naming the week it didn't.
+      test(`backup settings render true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/settings/backup");
+        await page.getByRole("heading", { name: "Delivery history" }).waitFor();
+        // The history rows, not just the heading — the table is the surface.
+        await page.getByRole("cell", { name: "Failed" }).waitFor();
+        await capture(page, "settings-backup", scheme);
       });
 
       /**
@@ -1613,6 +1679,41 @@ for (const scheme of ["light", "dark"] as const) {
             .first(),
         ).toBeVisible();
         await capture(page, "manifest-not-back-aboard", scheme);
+      });
+
+      /**
+       * A split buddy team after a dive (ADR 20260804-buddy-pairs): Tom is
+       * recorded back aboard and his seeded buddy Lena has no result yet, so
+       * his row carries the danger chip and the checkpoint panel adds the
+       * "1 buddy team is split" line. The seed carries the pairs but no
+       * roll-call events (they would open head-count gaps on Today), so the
+       * divergent state is driven here and the per-test DB reset puts it
+       * back — the same pattern as the missing-diver capture above.
+       */
+      test(`the manifest's split buddy team renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        // Board → trip → Manifest, a checkpoint switch, and a roll-call
+        // write before the capture.
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        await openReefTrip(page);
+        await openTripTab(page, "Manifest");
+        await page.getByRole("link", { name: "Open offline roll call" }).waitFor();
+        await page
+          .getByRole("link", { name: "After dive 1" })
+          .evaluate((link: HTMLElement) => link.click());
+        await page.waitForURL(/checkpoint=after_dive_1/);
+        // Anchored on the row's own <h3>: a bare `li hasText "Tom Okafor"`
+        // also matches Lena's row via her "Buddy: Tom Okafor" chip (see the
+        // same note in e2e/buddy-pairs.spec.ts).
+        const tomRow = page
+          .locator("#roll-call-list li")
+          .filter({ has: page.getByRole("heading", { name: "Tom Okafor", exact: true }) });
+        const boardTom = tomRow.getByRole("button", { name: "Mark boarded" });
+        await boardTom.evaluate((button) => button.scrollIntoView({ block: "center" }));
+        await boardTom.click();
+        await expect(tomRow.getByText("Buddy: Lena Fischer · Buddy unaccounted for")).toBeVisible();
+        await capture(page, "manifest-buddy-divergence", scheme);
       });
 
       // H-08: a site deeper than a diver's certification trains for. Warning
@@ -1892,5 +1993,15 @@ test.describe("print", () => {
     await page.goto(`${tripPath}/prep`);
     await page.getByRole("heading", { name: "Tanks" }).waitFor();
     await capturePrint(page, "prep");
+  });
+
+  // The incident-ready export exists to be printed and handed over, so the
+  // print rendering is the primary artifact, not a nice-to-have.
+  test("the incident-ready export prints monochrome and padded", async ({ page }) => {
+    await openReefTrip(page);
+    const tripPath = new URL(page.url()).pathname;
+    await page.goto(`${tripPath}/incident-export`);
+    await page.getByRole("heading", { name: "Roll-call timeline" }).waitFor();
+    await capturePrint(page, "incident-export");
   });
 });

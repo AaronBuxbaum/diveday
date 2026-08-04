@@ -13,10 +13,12 @@ import {
   bookingCheckouts,
   bookingPayments,
   bookings,
+  buddyPairMembers,
   certifications,
   courseInquiries,
   coursePaths,
   courses,
+  dayCloseouts,
   diveSiteCreatures,
   diveSiteMoments,
   diveSites,
@@ -57,7 +59,9 @@ import {
   waiverRecords,
   waiverTemplates,
 } from "./schema";
+import { seedBackup } from "./seed-backup";
 import { seedBookings } from "./seed-bookings";
+import { seedBuddyPairs } from "./seed-buddy-pairs";
 import { seedCatalog } from "./seed-catalog";
 import { seedCertGates } from "./seed-cert-gates";
 import { at, DEMO_SHOP_TIMEZONE, demoTodayDepartureStart } from "./seed-clock";
@@ -96,7 +100,9 @@ import { seedTrips } from "./seed-trips";
  * | `./seed-front-desk.ts` | the desk's own day: walk-ins, wait lists, inquiries, tips |
  * | `./seed-history.ts` | the trailing quarter that gives owner reporting something to report |
  * | `./seed-cert-gates.ts` | the boats a card can be refused on, one gate each, and the course carve-out |
+ * | `./seed-buddy-pairs.ts` | two buddy teams on today's reef boat, plus the odd-roster remainder |
  * | `./seed-demo-lifecycle.ts` | minting, reaping, and capping throwaway demo shops |
+ * | `./seed-backup.ts` | the shop-owned backup destination and its weekly delivery history |
  *
  * The public surface is unchanged: `@/db/seed` still exports everything it
  * always did, including the lifecycle helpers re-exported at the bottom.
@@ -239,6 +245,11 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
   );
 
   await seedDemoSchedule(db, shop.id, opts);
+
+  // Stable half, like staff and their shifts: a backup destination is a
+  // settings row a demo visitor cannot break, so it lives outside the
+  // resettable schedule (ADR 20260804-shop-owned-backup-export).
+  await seedBackup(db, shop.id);
 }
 
 /**
@@ -495,6 +506,19 @@ export async function seedDemoSchedule(
     divemasterId,
     waiverTemplate,
   });
+
+  // Adds-only, like seedCertGates above: two buddy teams on today's reef
+  // trip, no roll-call events, so nothing seeded before it moves and no
+  // head-count gap opens on Today (src/db/seed-buddy-pairs.ts, ADR
+  // 20260804-buddy-pairs).
+  await seedBuddyPairs(db, shopId, {
+    customers,
+    tripRows,
+    bookingRows,
+    // Keiko when the crew seed found her; the instructor otherwise (the type
+    // allows an undefined divemaster even though the demo cast always has one).
+    pairedByPersonId: divemasterId ?? instructor.id,
+  });
 }
 
 /**
@@ -526,6 +550,11 @@ export async function resetDemoSchedule(
   await db.delete(rollCallCrewAttestations).where(eq(rollCallCrewAttestations.shopId, shopId));
   await db.delete(rollCallCrewEvents).where(eq(rollCallCrewEvents.shopId, shopId));
   await db.delete(rollCallEvents).where(eq(rollCallEvents.shopId, shopId));
+  // The close-out trail references people (its actor), so it clears before the
+  // people purge below — and clearing it at all is what keeps the close-out
+  // surface deterministic between specs: a day one test closed must read as
+  // open again for the next test's fixture (ADR 20260804-day-closeout).
+  await db.delete(dayCloseouts).where(eq(dayCloseouts.shopId, shopId));
   await db.delete(rentalFitProfiles).where(eq(rentalFitProfiles.shopId, shopId));
   // References people, so it clears before them like any other people-scoped row.
   await db.delete(priorVisits).where(eq(priorVisits.shopId, shopId));
@@ -587,6 +616,10 @@ export async function resetDemoSchedule(
   await db
     .delete(personCourtesyEmailUnsubscribeTokens)
     .where(eq(personCourtesyEmailUnsubscribeTokens.shopId, shopId));
+  // Buddy pairs reference bookings, so they go first or the bookings delete
+  // below FK-violates and aborts the whole reset mid-run — the same class of
+  // bug the token comments above already walk (ADR 20260804-buddy-pairs).
+  await db.delete(buddyPairMembers).where(eq(buddyPairMembers.shopId, shopId));
   await db.delete(bookings).where(eq(bookings.shopId, shopId));
   await db.delete(tripRequirements).where(eq(tripRequirements.shopId, shopId));
   if (tripIds.length > 0) {

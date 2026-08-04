@@ -7,6 +7,60 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## Weather blow-out cancellation cascade (delivered 2026-08-04)
+
+The brainstorm's Revenue And Recovery big bet, first slice. Staff tap "Weather blow-out…" on a
+departure and confirm once: the trip is cancelled through the existing `setTripStatus` machinery,
+and every booked diver gets one message — what happened, their money story, and up to three
+rebooking links filtered through the real booking-time admission gate (`decideTripAdmission`) to
+departures they actually qualify for. A cascade record at
+`/shop/[shopSlug]/schedule/blowout/[tripId]` tracks per diver: message state (sent / retrying /
+failed / no email), payment position, the offers their message carried, and a live
+rebooked-vs-unresolved state — the blow-out isn't over until that column empties. Sends are
+idempotent and resumable; no money moves (refunds stay per-booking, H-14 gate intact).
+Alternative-day salvage and a courtesy text channel are the named follow-ons. See
+[20260804-blowout-cascade](../architecture/decisions/20260804-blowout-cascade.md).
+
+## Buddy pairs in roll call (delivered 2026-08-04)
+
+Staff pair divers into buddy teams on the manifest, and roll call stops being a flat list: when
+one buddy is back aboard and the other is not — the state a real deck watches for — the pair and
+the returned diver's row both say so, loud after a dive and as a heads-up at the dock. Pairs are
+exactly two bookings of one departure, DB-enforced to at most one pair per diver, explicit to
+make and to dissolve, and they **inform only** — never readiness, admission, capacity, or
+checkpoint completeness. The offline copy shows pairs read-only by name and says the split-pair
+read belongs to the live roll call; the export bundle carries the standing pairs as
+`buddy_pairs.csv`. Seeded on the demo reef boat (two teams plus the normal odd remainder). See
+[20260804-buddy-pairs](../architecture/decisions/20260804-buddy-pairs.md).
+
+## Scheduled backup export to shop-owned storage (2026-08-04)
+
+Roadmap §1's first remaining bullet, delivered: every week a shop's full export bundle — the same
+documented CSVs, README, and bundled photos as the on-demand download, with the shop-wide
+`trips.ics` calendar riding along — lands in an S3-compatible bucket the *shop* owns (AWS S3,
+Cloudflare R2, Backblaze B2, MinIO). Configured at Settings → Backups: destination form, one-click
+test delivery, and a paged delivery history where every failure is a named, coded row. The secret
+access key is sealed with `secret-box` and never returned to anyone; uploads are hand-signed SigV4
+(no SDK dependency); the weekly cron is idempotent per shop per ISO week and treats next week as
+the only retry. "Switching is safe" is now a standing fact in the shop's own bucket, not a button
+someone has to remember. See
+[20260804-shop-owned-backup-export](../architecture/decisions/20260804-shop-owned-backup-export.md)
+and §2b of the [backup-and-restore runbook](../engineering/backup-and-restore-runbook.md).
+
+## End-of-day close-out — the "everyone is home" ritual (2026-08-04)
+
+The brainstorm's end-of-day close-out, delivered as Today's evening mirror at
+`/shop/<slug>/close-out`: every departure of the shop-local day judged by its head count (read off
+`listRollCallGaps`, never re-derived), today's unresolved queue rows each given an explicit
+**carry/dismiss** choice, and tomorrow's first blockers as the parting glance. Closing the day is
+an append-only recorded act (`day_closeouts`: who, when, and the outstanding snapshot recomputed
+server-side at close time) — **never a gate**: an open after-dive count or a boat still out makes
+the close a by-name acknowledgement, not an impossibility, and nothing downstream conditions on the
+row. Carry/dismiss is a memory, not a filter — tomorrow's queue keeps deriving from the source of
+truth. Gear-return reconciliation from the original idea is deliberately out of scope until a gear
+register exists. See [20260804-day-closeout](../architecture/decisions/20260804-day-closeout.md)
+and the glossary's "Close-out".
+
 ## The 2026-08-02 review's engineering queue (delivered 2026-08-03)
 
 The Medium and Low engineering items the [2026-08-02 review](assessments/comprehensive-review-20260802.md)
@@ -1165,6 +1219,24 @@ The roadmap's §7 smaller follow-ons and the whole open Delight backlog shipped:
   Was the highest-leverage of [roadmap.md](features/roadmap.md#not-scheduled--candidate-subsystems)'s deferred revenue-layer
   candidates. See
   [20260801-checkout-upsells-rental-gear](../architecture/decisions/20260801-checkout-upsells-rental-gear.md).
+
+## Incident-ready export (delivered 2026-08-04)
+
+- **One tap on a departure produces the document a shop hands to authorities or insurers.** From
+  the manifest, "Incident-ready export" opens a staff-only, print-optimized page
+  (`/shop/<slug>/trips/<id>/incident-export`) assembling the departure's recorded facts: the
+  manifest roster with each diver's per-checkpoint roll-call state, the complete append-only
+  roll-call timeline (corrections included — history is never laundered), each diver's
+  certification evidence as held (imported cards marked distinctly), waiver **status** only — state,
+  date, template version; medical questionnaire answers never appear — plus crew, crew counts, and
+  generation metadata. A SHA-256 integrity code over the printed facts sits in the footer, so a
+  printout can be checked against a fresh export.
+- **Facts, not judgments.** The document states what was recorded, with timestamps and recorders;
+  it computes no safety verdict, and every absence (no roll call yet, no cards on file, superseded
+  or unsigned waiver) is stated explicitly rather than left blank. Assembly is pure
+  (`src/lib/incident-export.ts` over the same manifest/readiness readers every safety surface
+  uses); print-ready HTML, no PDF dependency. No insurer-facing marketing claim ships with this —
+  that stays parked per the brainstorm's insurance-leverage entry until real operators validate it.
 
 ## Simplification rulings (2026-07-19 → 20 audit)
 

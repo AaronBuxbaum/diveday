@@ -9,6 +9,13 @@ a scheduled logical export built on the existing per-shop export seam
 `infra/lib/infra-stack.ts` §11. The reasoning for both is
 [ADR 20260802-backup-and-restore-posture](../architecture/decisions/20260802-backup-and-restore-posture.md).
 
+A third, complementary layer shipped 2026-08-04 and is *running*, unlike §2's scheduler: the
+**shop-owned weekly backup** (§2b below) — the same export bundle, delivered by cron to a bucket
+each shop configures under its own credentials. It is a per-shop product feature for
+vendor-independence ("your data is yours" even if DiveDay disappears), not a substitute for either
+DiveDay-side layer: it covers only shops that configured a destination, and it inherits every gap
+of the export bundle stated in §2.
+
 This exists because the highest-value rows are the ones we can least re-create.
 `waiver_records` is legal evidence and its working retention default is "indefinite"
 ([H-02](../product/human-decisions.md)) — a database we cannot restore is a shop's liability
@@ -142,6 +149,30 @@ The `BackupUploaderAccessKeyInstructions` stack output prints this same command.
 > invalidating every outstanding session and every `recap-links.ts`-signed token. Name the password
 > manager or vault holding them, and the date last verified.
 
+## 2b. Shop-owned weekly backup (running since 2026-08-04)
+
+The complementary layer a shop controls end to end
+([ADR 20260804-shop-owned-backup-export](../architecture/decisions/20260804-shop-owned-backup-export.md)):
+`/api/cron/backup-export` (Mondays 04:00 UTC, `vercel.json`) builds the same per-shop export
+bundle §2 describes — every CSV, the README, bundled photos — adds the shop-wide `trips.ics`
+calendar document, and PUTs it to the S3-compatible bucket the shop configured at
+`/shop/<slug>/settings/backup`. Implementation lives in `src/features/backup-export/`.
+
+Operationally distinct from §2 in every way that matters during an incident:
+
+| Property | Reality |
+| --- | --- |
+| Who holds it | The shop. Endpoint, bucket, and credentials are the shop's own (AWS S3, Cloudflare R2, Backblaze B2, MinIO — anything SigV4). DiveDay stores the secret key AES-sealed (`src/lib/secret-box.ts`, same posture as WhatsApp tokens) and never returns it, even to the shop. |
+| Coverage | Only shops that configured a destination. This is a product feature, not a platform guarantee — never count it as "DiveDay has offsite backups". |
+| Cadence / idempotency | Weekly, at most one succeeded scheduled delivery per shop per ISO week; the object key (`<prefix>/diveday-backup-<slug>-<ISO week>.zip`) is deterministic per week, so a retried pass overwrites rather than accumulates. |
+| Failure handling | Every attempt is a row in `shop_backup_deliveries` with a coded outcome, shown in the shop's own delivery history. A failed week is retried on the next weekly tick — never inside the same pass, so a broken bucket costs one failed row per week. A Sentry cron monitor (`diveday-backup-export`) plus a per-failure Sentry event cover the DiveDay side. |
+| Gaps | Exactly §2's: credentials/`user_accounts` never exported, and a photo that fails to fetch is silently absent. A shop restoring from its own bundle re-invites staff the same way §2's procedures do. |
+| Restore | The bundle is the standard export zip — the quarterly test's step 4 and the import path in step 5 apply verbatim to a shop-owned copy. |
+
+`SECRET_ENCRYPTION_KEY` matters here: rotating it without re-sealing makes every stored
+destination credential unreadable, which surfaces as `credential_unreadable` delivery failures
+until each shop re-enters its key. Treat that as part of any key-rotation plan.
+
 ### Adding a `pg_dump` layer (the obvious next increment)
 
 The per-shop export cannot cover `user_accounts`, `account_tokens`, or `calendar_feeds` by design. A
@@ -197,8 +228,10 @@ log below. It should take under an hour.
 
 ## What this runbook does not cover
 
-- **The scheduled export is not running yet.** Bucket, IAM, and seam exist; the scheduler does not
-  (see the `TODO(owner)` above). Do not describe DiveDay as having offsite backups until it does.
+- **§2's DiveDay-side scheduled export is not running yet.** Bucket, IAM, and seam exist; the
+  scheduler does not (see the `TODO(owner)` above). Do not describe DiveDay as having offsite
+  backups until it does — §2b runs weekly but covers only shops that opted in, under credentials
+  DiveDay cannot use for its own recovery.
 - **No cross-region or cross-account copy.** Backups sit in the same AWS account as everything else
   in `infra/lib/infra-stack.ts`. Losing that account loses them. Versioning plus `RETAIN` plus a
   write-only uploader is the mitigation, and it is a partial one.

@@ -226,6 +226,46 @@ const tripConditionsHoldSchema = z.object({
   publishedAt: z.date(),
 });
 
+// The weather blow-out cascade message (docs ADR 20260804-blowout-cascade):
+// what happened, the diver's money story as a code (the template picks the
+// words), and the alternatives this diver actually qualifies for as links to
+// the public booking pages. Carries a bookingId, so delivery is tracked per
+// booking like every other trip message; `blowoutDiverId` is the cascade
+// row's own id and keys idempotency, so a resumed cascade can never
+// double-send one diver's message.
+const tripBlowoutSchema = z.object({
+  kind: z.literal("trip_blowout"),
+  blowoutDiverId: z.uuid(),
+  bookingId: z.uuid(),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  diverName: z.string().trim().min(1).max(120),
+  shopName: z.string().trim().min(1).max(120),
+  tripTitle: z.string().trim().min(1).max(200),
+  startsAt: z.date(),
+  timezone: z.string().trim().min(1).max(100),
+  /**
+   * The diver's money position, as data: `paid` / `deposit` when that much has
+   * been captured, `none` when nothing is owed on this seat (unpaid, waived,
+   * or already refunded). Never an amount and never a promise — the existing
+   * refund machinery stays the only thing that moves money.
+   */
+  paymentStory: z.enum(["none", "deposit", "paid"]),
+  /** Soonest-first, already admission-filtered for this diver (src/lib/blowout.ts). */
+  alternatives: z
+    .array(
+      z.object({
+        title: z.string().trim().min(1).max(200),
+        startsAt: z.date(),
+        bookingUrl: z.url().max(2_000),
+      }),
+    )
+    .max(3),
+  /** The shop's public schedule — the graceful landing when no alternative qualifies. */
+  scheduleUrl: z.url().max(2_000),
+});
+
 // Account-lifecycle mail (20260725-account-lifecycle-emails): no bookingId,
 // so these are structurally excluded from TrackedNotification
 // (src/db/notifications.ts) exactly like waitlist_invite already is —
@@ -341,6 +381,7 @@ export const notificationSchema = z.discriminatedUnion("kind", [
   tripReminder24hSchema,
   tripRecapSchema,
   tripConditionsHoldSchema,
+  tripBlowoutSchema,
   welcomeSchema,
   emailVerificationSchema,
   passwordResetRequestSchema,
@@ -376,6 +417,11 @@ export function notificationIdempotencyKey(notification: Notification): string {
       return `trip-recap/${notification.bookingId}`;
     case "trip_conditions_hold":
       return `trip-conditions-hold/${notification.tripId}/${notification.publishedAt.toISOString()}/${notification.to}`;
+    // One blow-out message per cascade row, ever — the row id is unique per
+    // (blow-out, booking), so a resumed cascade or a racing double-tap
+    // converges on the same send (docs ADR 20260804-blowout-cascade).
+    case "trip_blowout":
+      return `trip-blowout/${notification.blowoutDiverId}`;
     // One welcome ever, per account.
     case "welcome":
       return `welcome/${notification.userAccountId}`;

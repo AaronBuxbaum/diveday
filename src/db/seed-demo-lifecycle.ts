@@ -9,10 +9,12 @@ import {
   bookingCheckouts,
   bookingPayments,
   bookings,
+  buddyPairMembers,
   certifications,
   courseInquiries,
   coursePaths,
   courses,
+  dayCloseouts,
   diveSiteCreatures,
   diveSiteMoments,
   diveSites,
@@ -114,6 +116,9 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(rollCallCrewAttestations).where(eq(rollCallCrewAttestations.shopId, shopId));
   await db.delete(rollCallCrewEvents).where(eq(rollCallCrewEvents.shopId, shopId));
   await db.delete(rollCallEvents).where(eq(rollCallEvents.shopId, shopId));
+  // The close-out trail references people and the shop, so it must clear
+  // before both parents below (ADR 20260804-day-closeout).
+  await db.delete(dayCloseouts).where(eq(dayCloseouts.shopId, shopId));
   await db.delete(recapPhotos).where(eq(recapPhotos.shopId, shopId));
   await db.delete(tripReviews).where(eq(tripReviews.shopId, shopId));
   await db.delete(waiverRecords).where(eq(waiverRecords.shopId, shopId));
@@ -139,6 +144,9 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
     await db.delete(tripDives).where(inArray(tripDives.tripId, tripIds));
   }
   await db.delete(tripRequirements).where(eq(tripRequirements.shopId, shopId));
+  // Buddy pairs reference bookings, so they go before the bookings delete
+  // (ADR 20260804-buddy-pairs).
+  await db.delete(buddyPairMembers).where(eq(buddyPairMembers.shopId, shopId));
   await db.delete(bookings).where(eq(bookings.shopId, shopId));
   await db.delete(trips).where(eq(trips.shopId, shopId));
   await db.delete(tripSeries).where(eq(tripSeries.shopId, shopId));

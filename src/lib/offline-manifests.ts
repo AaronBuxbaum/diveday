@@ -140,6 +140,17 @@ export type OfflineManifestPayload = {
           /** Dropped at save time; the dock does not need it (kept for shape parity). */
           email: null;
           /**
+           * The diver's buddy **by name only** — no booking id, deliberately
+           * (ADR 20260804-buddy-pairs). The dock copy *displays* buddy teams;
+           * it never computes pair divergence, because a snapshot cannot know
+           * who came back — an id would invite exactly that derivation.
+           * Optional and additive, so no `OFFLINE_MANIFEST_RECORD_VERSION`
+           * bump (a bump is a purge — see the note on the constant above):
+           * an older snapshot simply shows no buddy, which is display-only
+           * and fails toward silence, never toward a false all-clear.
+           */
+          buddyFullName?: string | null;
+          /**
            * `text` is resolved once, at save time — this snapshot may be read
            * back with no network and no translator available, so unlike the
            * live manifest it cannot look `code` up lazily.
@@ -236,6 +247,9 @@ export function serializeManifests(
         emergencyContactPhone: diver.emergencyContactPhone,
         rentalFit: diver.rentalFit,
         nitroxRequested: diver.nitroxRequested,
+        // Name only, never the buddy's booking id — the dock copy displays
+        // pairs and must stay unable to compute divergence from a snapshot.
+        buddyFullName: diver.buddy?.fullName ?? null,
         // Not needed for dock-side roll call; minimize retained private data.
         email: null as null,
         readiness: {

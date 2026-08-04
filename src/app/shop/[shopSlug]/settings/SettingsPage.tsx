@@ -107,6 +107,10 @@ function noticeMessages(
     // handles (task 82).
     team_not_authorized: { tone: "danger", text: t("settings.team.notice.notAuthorized") },
     import_not_authorized: { tone: "danger", text: t("settings.import.notice.notAuthorized") },
+    // Backups hold the same bar as the export download — the destination
+    // receives the whole shop, medical evidence included — and the same
+    // bounce-with-an-explanation rule as every gate above.
+    backup_not_authorized: { tone: "danger", text: t("backup.notice.not_authorized") },
   };
 }
 
@@ -1041,6 +1045,26 @@ export default async function SettingsPage({
                 className={buttonClass({ variant: "secondary", className: "text-foreground" })}
               >
                 {t("settings.main.whatsapp.cta")}
+              </Link>
+            </div>
+          </section>
+        ) : null}
+
+        {/* Owner/manager only, like the export button below it feeds: the
+            destination it configures receives the whole shop every week. */}
+        {canExport ? (
+          <section className="mt-6 rounded-lg border border-border bg-surface p-6">
+            <CardHeading
+              t={t}
+              heading={t("settings.main.backup.heading")}
+              description={t("settings.main.backup.description")}
+            />
+            <div className="mt-4">
+              <Link
+                href={`/shop/${shopSlug}/settings/backup`}
+                className={buttonClass({ variant: "secondary", className: "text-foreground" })}
+              >
+                {t("settings.main.backup.cta")}
               </Link>
             </div>
           </section>

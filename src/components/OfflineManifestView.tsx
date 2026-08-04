@@ -531,6 +531,9 @@ export function OfflineManifestView() {
   // the true boarded count instead.
   const allBoarded = totalDivers > 0 && boarded === totalDivers;
   const missingDivers = manifest.divers.filter((_diver, index) => !localStates[index]);
+  // Whether any saved diver carries a buddy — gates the one line that says
+  // the split-pair read belongs to the live roll call.
+  const anyBuddies = manifest.divers.some((diver) => Boolean(diver.buddyFullName));
 
   async function record(bookingId: string, status: "boarded" | "not_boarded", note = "") {
     if (expired) {
@@ -778,6 +781,16 @@ export function OfflineManifestView() {
             </ul>
           ) : null}
         </div>
+        {/* Buddy teams are display-only on the dock copy, and the pair-
+            divergence read ("one back, one not") belongs to the live roll
+            call alone — a snapshot cannot know who came back (ADR
+            20260804-buddy-pairs). Stated the same neutral way as the crew
+            limitation above: a limitation of this copy, not an alarm. */}
+        {anyBuddies ? (
+          <p className="mt-3 text-sm font-semibold text-muted">
+            {t("shared.offlineManifest.single.buddyReadOnlyHere")}
+          </p>
+        ) : null}
         <ul
           id="offline-roll-call"
           tabIndex={-1}
@@ -844,6 +857,15 @@ export function OfflineManifestView() {
                           ? ` ${t("shared.offlineManifest.single.statePendingSuffix")}`
                           : ""}
                       </span>
+                      {/* Saved buddy, always quiet here: this copy shows the
+                          team and never judges whether it is split — that
+                          read is live-roll-call only (see the note above the
+                          list). */}
+                      {diver.buddyFullName ? (
+                        <span className="rounded-full bg-surface-sunken px-3 py-1 text-sm font-medium text-muted">
+                          {t("shared.buddyPair.with", { name: diver.buddyFullName })}
+                        </span>
+                      ) : null}
                     </div>
                     <div className="mt-3 grid gap-2 text-base sm:grid-cols-2">
                       <p>

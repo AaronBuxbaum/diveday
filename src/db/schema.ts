@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   type AnyPgColumn,
+  bigint,
   bigserial,
   boolean,
   check,
@@ -17,6 +18,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import type { CloseoutSnapshot } from "@/lib/closeout";
 import type { CourseFaq, CourseScheduleDay } from "@/lib/courses";
 import type { Notification } from "@/lib/notifications";
 import { DEFAULT_SHOP_RENTAL_ITEMS, type RentalPricing } from "@/lib/rentals";
@@ -1483,6 +1485,9 @@ export const notificationKind = pgEnum("notification_kind", [
   // linking to the diver's shareable recap page (docs first-principles
   // brainstorm C: the word-of-mouth window, weaponized).
   "trip_recap",
+  // The weather blow-out cascade message: the cancellation, the diver's money
+  // story, and the alternatives they qualify for (ADR 20260804-blowout-cascade).
+  "trip_blowout",
 ]);
 
 export const notificationDeliveryStatus = pgEnum("notification_delivery_status", [
@@ -1722,6 +1727,87 @@ export const shopWhatsappAccounts = pgTable("shop_whatsapp_accounts", {
   verifiedAt: timestamp("verified_at", { withTimezone: true }),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+export const shopBackupDestinations = pgTable("shop_backup_destinations", {
+  /** One destination per shop, like `shop_whatsapp_accounts` — reconfiguring is an upsert, never a second row. */
+  shopId: uuid("shop_id")
+    .primaryKey()
+    .references(() => shops.id),
+  /**
+   * The S3-compatible API origin the weekly bundle is PUT to — AWS S3, Cloudflare
+   * R2, Backblaze B2, MinIO, anything speaking SigV4. HTTPS only, and never a
+   * loopback/private host; `src/features/backup-export` refuses those before a
+   * row is written (the server is the one making this request).
+   */
+  endpoint: text("endpoint").notNull(),
+  /** The SigV4 signing region ("us-east-1", "auto" for R2). Part of the signature, not routing. */
+  region: text("region").notNull(),
+  bucket: text("bucket").notNull(),
+  /** Optional key prefix inside the bucket ("diveday/"); empty means the bucket root. */
+  prefix: text("prefix").notNull().default(""),
+  /**
+   * The credential's public identifier. Stored plain — it names the key the
+   * way a Stripe account id names an account — and shown back to staff so they
+   * can tell which credential is connected.
+   */
+  accessKeyId: text("access_key_id").notNull(),
+  /**
+   * The secret access key, sealed with AES-256-GCM (`src/lib/secret-box.ts`) —
+   * never plaintext, exactly like `shop_whatsapp_accounts.access_token_sealed`.
+   * It is a live credential to storage the shop owns; a database dump must not
+   * be enough to use it, and no code path ever returns it to a caller or a UI.
+   */
+  secretAccessKeySealed: text("secret_access_key_sealed").notNull(),
+  connectedAt: timestamp("connected_at", { withTimezone: true }).notNull().defaultNow(),
+  /** Set when a delivery has actually landed in the bucket, so staff see proven rather than merely saved. */
+  verifiedAt: timestamp("verified_at", { withTimezone: true }),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const backupDeliveryStatus = pgEnum("backup_delivery_status", [
+  "started",
+  "succeeded",
+  "failed",
+]);
+
+export const backupDeliveryTrigger = pgEnum("backup_delivery_trigger", ["scheduled", "manual"]);
+
+/**
+ * One row per backup delivery attempt — the shop-visible answer to "when did
+ * my data last actually land in my bucket". Append-only: a row is inserted as
+ * `started` and finished in place as `succeeded`/`failed`, so a crash
+ * mid-delivery leaves an honest `started` row rather than silence.
+ * `error_code` carries a code, never a sentence — the UI picks the words
+ * (ADR 20260731-domain-layer-copy-leaks).
+ */
+export const shopBackupDeliveries = pgTable(
+  "shop_backup_deliveries",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    /**
+     * The ISO week this delivery covers ("2026-W32"). The weekly cron skips a
+     * shop that already has a succeeded scheduled delivery for the period, so a
+     * re-invoked cron never uploads the same week twice.
+     */
+    periodKey: text("period_key").notNull(),
+    trigger: backupDeliveryTrigger("trigger").notNull(),
+    status: backupDeliveryStatus("status").notNull(),
+    /** Where in the bucket the bundle went (prefix included); null until the key is computed. */
+    objectKey: text("object_key"),
+    /** Uploaded bundle size in bytes; bigint because a photo-heavy shop clears 2 GiB. */
+    byteCount: bigint("byte_count", { mode: "number" }),
+    errorCode: text("error_code"),
+    startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+    finishedAt: timestamp("finished_at", { withTimezone: true }),
+  },
+  (table) => [
+    index("shop_backup_deliveries_shop_started_idx").on(table.shopId, table.startedAt),
+    index("shop_backup_deliveries_shop_period_idx").on(table.shopId, table.periodKey),
+  ],
+);
 
 export const orderStatus = pgEnum("order_status", [
   "open",
@@ -3113,6 +3199,55 @@ export const rollCallCrewEvents = pgTable(
 );
 
 /**
+ * Buddy pairing: staff pair two roster entries (bookings) of the same
+ * departure into a buddy team, so roll call can read "one buddy is back
+ * aboard and the other is not" as a first-class state instead of a flat list
+ * (ADR 20260804-buddy-pairs).
+ *
+ * One row per **member**, two rows per pair, sharing a `pair_id`. Not a
+ * pair-per-row table with two booking columns, deliberately: the invariant
+ * that matters here is *a booking is in at most one pair*, and the unique
+ * index on `booking_id` enforces it at the database, under concurrency —
+ * a two-column shape cannot (a booking can sit in column A of one row and
+ * column B of another and satisfy both column uniques). Pairs are exactly
+ * two: `pairBuddies` (src/db/buddy-pairs.ts) is the only writer and inserts
+ * both members in one transaction; a trio is two pairs' worth of a decision
+ * the shop makes (glossary **Buddy pair**).
+ *
+ * Operational grouping, not safety history: unpairing deletes the rows — the
+ * roll-call events themselves are the append-only record of who was aboard.
+ * Pairs inform the roll call's attention state and never gate readiness,
+ * admission, capacity, or checkpoint completeness.
+ */
+export const buddyPairMembers = pgTable(
+  "buddy_pair_members",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    tripId: uuid("trip_id")
+      .notNull()
+      .references(() => trips.id),
+    /** Groups the two members of one pair. Writer-generated, no parent row. */
+    pairId: uuid("pair_id").notNull(),
+    bookingId: uuid("booking_id")
+      .notNull()
+      .references(() => bookings.id),
+    /** Who made the pairing call. A pairing is never anonymous. */
+    pairedByPersonId: uuid("paired_by_person_id")
+      .notNull()
+      .references(() => people.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("buddy_pair_members_booking_unique").on(table.bookingId),
+    index("buddy_pair_members_shop_trip_idx").on(table.shopId, table.tripId),
+    index("buddy_pair_members_pair_idx").on(table.pairId),
+  ],
+);
+
+/**
  * A photo a diver attaches to their own post-trip recap page. The recap link is
  * a per-booking signed token (public, noindex), so an upload is scoped to that
  * booking and a diver only ever sees the shots on their own page. Staff see a
@@ -3354,6 +3489,141 @@ export const processorErasureObligations = pgTable(
   ],
 );
 
+/**
+ * What happened to one diver's blow-out message. `pending` is the resumable
+ * state: the cascade has snapshotted the diver but no send has settled yet, so
+ * calling the blow-out again picks exactly these rows up. `sending` is a
+ * claim: a live pass flipped the row pending→sending before handing it to the
+ * provider, so a *concurrent* second call ("did you call it?" — "I'll call
+ * it") claims nothing and double-sends nobody. `queued` means the durable
+ * retry queue owns the send now (`notification_send_queue`, keyed by the
+ * diver row's own id) — a resume never re-sends it, which is what keeps the
+ * cascade send-once (ADR 20260804-blowout-cascade).
+ */
+export const blowoutMessageStatus = pgEnum("blowout_message_status", [
+  "pending",
+  "sending",
+  "sent",
+  "queued",
+  "failed",
+  "no_email",
+]);
+
+/**
+ * A shop-called weather cancellation of one departure ("blow-out", glossary)
+ * and the cascade it triggered. One per trip, ever (`trip_id` unique): calling
+ * the blow-out again *resumes* the same cascade rather than double-messaging
+ * the roster, and a reinstated trip keeps its record as history.
+ */
+export const tripBlowouts = pgTable(
+  "trip_blowouts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    tripId: uuid("trip_id")
+      .notNull()
+      .references(() => trips.id),
+    /** The staff member who made the call — the go/no-go is a named act. */
+    calledByPersonId: uuid("called_by_person_id")
+      .notNull()
+      .references(() => people.id),
+    calledAt: timestamp("called_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("trip_blowouts_trip_unique").on(table.tripId),
+    index("trip_blowouts_shop_called_idx").on(table.shopId, table.calledAt),
+  ],
+);
+
+/**
+ * One booked diver inside a blow-out cascade: the snapshot row the send loop
+ * works through and the staff surface reads back. Snapshotted at call time
+ * (active bookings only) so a booking cancelled *after* the call still shows
+ * what the cascade did for that diver. `offered_trip_ids` records exactly
+ * which alternatives this diver's message carried — the audit answer to "what
+ * did we tell them?", independent of what the schedule looks like later.
+ */
+export const tripBlowoutDivers = pgTable(
+  "trip_blowout_divers",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    blowoutId: uuid("blowout_id")
+      .notNull()
+      .references(() => tripBlowouts.id, { onDelete: "cascade" }),
+    bookingId: uuid("booking_id")
+      .notNull()
+      .references(() => bookings.id),
+    personId: uuid("person_id")
+      .notNull()
+      .references(() => people.id),
+    messageStatus: blowoutMessageStatus("message_status").notNull().default("pending"),
+    /** When the message settled as sent; null while pending/queued/failed/no_email. */
+    notifiedAt: timestamp("notified_at", { withTimezone: true }),
+    offeredTripIds: jsonb("offered_trip_ids").$type<string[]>().notNull().default([]),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    // A booking belongs to exactly one trip and a trip to one blow-out, so the
+    // booking alone is the natural key — the send loop's resume guarantee.
+    uniqueIndex("trip_blowout_divers_booking_unique").on(table.bookingId),
+    index("trip_blowout_divers_blowout_idx").on(table.blowoutId),
+  ],
+);
+
+/**
+ * The end-of-day close-out trail (ADR 20260804-day-closeout): one row per time
+ * somebody closed the shop's day. Append-only, like `activity_events` — the
+ * record *is* the ritual, so a row is never updated or deleted by product
+ * code, and "re-opening" a day is simply working again and closing again,
+ * which appends another row. Nothing anywhere may condition on a day being
+ * closed: this table is a memory, not a lock.
+ *
+ * `shop_day` is the shop-local calendar date being closed ("YYYY-MM-DD",
+ * `shopDayOf` in src/lib/closeout.ts), stored as text exactly like the other
+ * date-only facts in this schema, and *not* derivable from `closed_at` — a
+ * shop can close Monday's day five minutes after its own midnight.
+ *
+ * `outstanding` is the `CloseoutSnapshot` (src/lib/closeout.ts) recomputed
+ * server-side at the moment of closing: the departures not yet settled and
+ * every leftover with the carry/dismiss choice made about it. Snapshot text
+ * (trip titles, row subjects) is trail text like `activity_events.message`,
+ * not localized UI copy. Growth is bounded by the ritual itself — a row per
+ * close, normally one per shop per day — so it carries no retention arm;
+ * adding one is HD-11's call (src/lib/retention.ts).
+ */
+export const dayCloseouts = pgTable(
+  "day_closeouts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    shopDay: text("shop_day").notNull(),
+    actorPersonId: uuid("actor_person_id")
+      .notNull()
+      .references(() => people.id),
+    closedAt: timestamp("closed_at", { withTimezone: true }).notNull().defaultNow(),
+    outstanding: jsonb("outstanding").$type<CloseoutSnapshot>().notNull(),
+    /**
+     * Write order, for reading a trail whose timestamps tie — same reasoning
+     * as `activity_events.seq`: the e2e clock is frozen, so `closed_at` alone
+     * cannot say which close of a day came last.
+     */
+    seq: bigserial("seq", { mode: "number" }).notNull(),
+  },
+  (table) => [
+    // The surface's one read: this shop's closes of one day, latest first.
+    index("day_closeouts_shop_day_idx").on(table.shopId, table.shopDay),
+    check("day_closeouts_shop_day_format", sql`${table.shopDay} ~ '^\\d{4}-\\d{2}-\\d{2}$'`),
+  ],
+);
+
 export type Shop = typeof shops.$inferSelect;
 export type Person = typeof people.$inferSelect;
 export type Trip = typeof trips.$inferSelect;
@@ -3384,11 +3654,16 @@ export type DiveSite = typeof diveSites.$inferSelect;
 export type TripRequirement = typeof tripRequirements.$inferSelect;
 export type RentalFitProfile = typeof rentalFitProfiles.$inferSelect;
 export type RollCallEvent = typeof rollCallEvents.$inferSelect;
+export type BuddyPairMember = typeof buddyPairMembers.$inferSelect;
 export type RollCallCrewEvent = typeof rollCallCrewEvents.$inferSelect;
 export type TripAssignmentRole = (typeof tripAssignmentRole.enumValues)[number];
 export type NitroxCertification = typeof nitroxCertifications.$inferSelect;
 export type ShopStripeAccount = typeof shopStripeAccounts.$inferSelect;
 export type ShopWhatsappAccount = typeof shopWhatsappAccounts.$inferSelect;
+export type ShopBackupDestination = typeof shopBackupDestinations.$inferSelect;
+export type ShopBackupDelivery = typeof shopBackupDeliveries.$inferSelect;
+export type BackupDeliveryStatus = (typeof backupDeliveryStatus.enumValues)[number];
+export type BackupDeliveryTrigger = (typeof backupDeliveryTrigger.enumValues)[number];
 export type Order = typeof orders.$inferSelect;
 export type OrderStatus = (typeof orderStatus.enumValues)[number];
 export type OrderLineItem = typeof orderLineItems.$inferSelect;
@@ -3411,3 +3686,6 @@ export type MediaDeletionKind = (typeof mediaDeletionKind.enumValues)[number];
 export type ProcessorErasureTarget = (typeof processorErasureTarget.enumValues)[number];
 export type PaymentOperationKind = (typeof paymentOperationKind.enumValues)[number];
 export type PaymentOperationStatus = (typeof paymentOperationStatus.enumValues)[number];
+export type TripBlowout = typeof tripBlowouts.$inferSelect;
+export type TripBlowoutDiver = typeof tripBlowoutDivers.$inferSelect;
+export type BlowoutMessageStatus = (typeof blowoutMessageStatus.enumValues)[number];

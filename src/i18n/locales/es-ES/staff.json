@@ -1281,7 +1281,10 @@
       "cancelledNotice": "Esta salida está cancelada. Volver a ponerla en el calendario está limitado a propietarios, gerentes e instructores.",
       "cancelTrip": "Cancelar salida",
       "cancelling": "Cancelando…",
-      "cancelHint": "La quita del calendario público y notifica a los buceadores con reserva."
+      "cancelHint": "La quita del calendario público y notifica a los buceadores con reserva.",
+      "weatherBlowout": "Cancelación por mal tiempo…",
+      "weatherBlowoutHint": "Cancela por mal tiempo y envía a cada buceador sus opciones para reservar de nuevo.",
+      "viewBlowout": "Ver la cascada de la cancelación"
     },
     "details": {
       "heading": "Detalles",
@@ -1630,6 +1633,22 @@
       "rollCallRecordedByPlain": "{label} {date} por {name}",
       "rollCallRecordedByWithNote": "{label} {date} por {name} · {note}",
       "carriedForwardFromDock": "Arrastrado — este buceador nunca salió del muelle. Márcalo como embarcado para volver a incluirlo.",
+      "buddyHeading": "Parejas de buceo",
+      "buddyDescription": "Empareja a los buceadores tal como van a bucear. Cuando uno de la pareja está de vuelta a bordo y el otro no, la pareja y la fila del buceador lo dicen.",
+      "buddyNoPairs": "Aún no hay parejas de buceo. Elige dos buceadores abajo para formar una.",
+      "buddyPairNames": "{a} · {b}",
+      "buddyCancelledName": "{name} (plaza cancelada)",
+      "buddyPairedBy": "Emparejados por {name}",
+      "buddyUnpair": "Separar pareja",
+      "buddyFirstLabel": "Primer buceador",
+      "buddySecondLabel": "Segundo buceador",
+      "buddySelectPlaceholder": "Elige un buceador",
+      "buddyPairSubmit": "Emparejar",
+      "buddyUnpairedOne": "{name} no tiene compañero — con un número impar es normal.",
+      "buddySeparatedLine": "{count, plural, one {# pareja de buceo está dividida — uno a bordo y el otro sin contabilizar.} other {# parejas de buceo están divididas — uno a bordo y el otro sin contabilizar.}}",
+      "buddyErrorSamePick": "Elige dos buceadores distintos.",
+      "buddyErrorAlreadyPaired": "Uno de esos buceadores ya está en una pareja de buceo. Sepáralos primero.",
+      "buddyErrorGeneric": "No se guardó ese emparejamiento. Inténtalo de nuevo.",
       "boardedCheck": "Embarcado ✓",
       "markBoarded": "Marcar embarcado",
       "undoing": "Deshaciendo…",
@@ -1996,6 +2015,11 @@
         "heading": "WhatsApp",
         "description": "Envía recordatorios y resúmenes desde el número de WhatsApp de tu centro en lugar de un número SMS de la plataforma.",
         "cta": "Configurar WhatsApp"
+      },
+      "backup": {
+        "heading": "Respaldos",
+        "description": "Una copia semanal de todo lo que guarda tu centro, entregada en un almacenamiento que es tuyo.",
+        "cta": "Configurar respaldos"
       },
       "jump": {
         "label": "Ir a una sección"
@@ -2421,6 +2445,76 @@
       "noMatchesAction": "Introdúcelo a mano"
     }
   },
+  "closeout": {
+    "title": "Cierre del día",
+    "notice": {
+      "closed": "Día cerrado. El registro está abajo — hasta mañana."
+    },
+    "headline": {
+      "allClear": "Todos de vuelta",
+      "outstanding": "Aún queda algo abierto",
+      "noDepartures": "Un día tranquilo en el muelle"
+    },
+    "subtitle": {
+      "allClear": "Cada recuento de los barcos de hoy quedó cerrado y nada de hoy sigue pendiente. Cierra el día y a casa.",
+      "outstanding": "Quedan cosas abiertas de hoy. Resuelve lo que puedas y decide sobre el resto — el cierre registra tus decisiones.",
+      "noDepartures": "Hoy no zarpó ningún barco. Mira con qué abre mañana, cierra el día y a casa.",
+      "closedSoFar": "El día está cerrado. Nada queda bloqueado — todo lo de abajo sigue disponible, y cerrar de nuevo suma otro registro."
+    },
+    "departures": {
+      "heading": "Cómo terminaron los barcos de hoy",
+      "subtitle": "Cada salida del día, juzgada por su recuento — la misma evidencia que persiguen el manifiesto y Hoy.",
+      "empty": "Hoy no hubo salidas.",
+      "status": {
+        "allHome": "Todos de vuelta",
+        "unreconciled": "Recuento sin cerrar",
+        "stillOut": "Todavía fuera",
+        "countOpen": "Recuento en muelle abierto",
+        "notDeparted": "Sin zarpar"
+      },
+      "detail": {
+        "allHome": "{booked, plural, =0 {No había buceadores reservados} one {# buceador, recuento cerrado} other {# buceadores, recuento cerrado}}.",
+        "stillOut": "Vuelve a las {time}. Un barco que no está en casa no puede leerse como cerrado.",
+        "notDeparted": "Zarpa a las {time}.",
+        "missingDiver": "{count, plural, one {# buceador quedó marcado como no regresado a bordo tras la inmersión {dive}.} other {# buceadores quedaron marcados como no regresados a bordo tras la inmersión {dive}.}} Localízalos — el recuento se cierra en el manifiesto.",
+        "missingCrew": "{count, plural, one {# tripulante quedó marcado como no regresado a bordo tras la inmersión {dive}.} other {# tripulantes quedaron marcados como no regresados a bordo tras la inmersión {dive}.}} Localízalos — el recuento se cierra en el manifiesto.",
+        "afterDiveUncounted": "{count, plural, one {# buceador no tiene resultado tras la inmersión {dive}.} other {# buceadores no tienen resultado tras la inmersión {dive}.}} El recuento nunca se cerró.",
+        "crewUncounted": "{count, plural, one {# tripulante no tiene resultado tras la inmersión {dive}.} other {# tripulantes no tienen resultado tras la inmersión {dive}.}} El recuento nunca se cerró.",
+        "departureUncounted": "{count, plural, one {El recuento en muelle nunca se terminó — # buceador sin resultado en la salida.} other {El recuento en muelle nunca se terminó — # buceadores sin resultado en la salida.}}",
+        "noRollCall": "No se registró pase de lista en esta salida."
+      }
+    },
+    "leftovers": {
+      "heading": "Lo que quedó de hoy",
+      "subtitle": "Trabajo de hoy que sigue abierto. Llévalo a mañana o descártalo — el cierre recuerda la decisión de todas formas, y la cola sigue derivando su propia lista.",
+      "empty": "No quedó nada pendiente de hoy.",
+      "carry": "Llevar a mañana",
+      "dismiss": "Descartar",
+      "decisionLabel": "Qué hacer con {subject}"
+    },
+    "tomorrow": {
+      "heading": "Mañana, de un vistazo",
+      "subtitle": "Con qué abre la cola de la mañana — léelo ahora y sal más ligero.",
+      "empty": "Mañana empieza despejado.",
+      "more": "{count, plural, one {Y # más en la cola de mañana.} other {Y # más en la cola de mañana.}}"
+    },
+    "close": {
+      "heading": "Cerrar el día",
+      "acknowledge": "{count, plural, one {# barco de arriba sigue fuera o con un recuento abierto. Lo he visto, y cerrar el día no detiene la búsqueda.} other {# barcos de arriba siguen fuera o con recuentos abiertos. Los he visto, y cerrar el día no detiene la búsqueda.}}",
+      "button": "Cerrar el día",
+      "buttonAgain": "Cerrar el día otra vez",
+      "note": "Cerrar es un registro, no un candado: quién cerró, cuándo y qué quedaba abierto. Nada depende de ello."
+    },
+    "record": {
+      "heading": "Día cerrado",
+      "closedBy": "Cerrado por {name} a las {time}.",
+      "closeCount": "{count, plural, other {Cerrado # veces hoy — cada cierre es su propio registro.}}",
+      "outstandingHeading": "Registrado como pendiente",
+      "nothingOutstanding": "No quedó nada pendiente.",
+      "carried": "Llevado a mañana",
+      "dismissed": "Descartado"
+    }
+  },
   "waiversStaff": {
     "eyebrow": "Ajustes",
     "title": "Plantilla de exención",
@@ -2733,6 +2827,7 @@
       "groupSetup": "Configurar",
       "today": "Hoy",
       "checkIn": "Registro",
+      "closeOut": "Cierre del día",
       "walkIn": "Walk-in",
       "blockers": "No listos",
       "divers": "Buceadores",
@@ -3073,6 +3168,7 @@
         "crewShort": "{aboard} de {assigned} tripulantes confirmados a bordo — este control sigue abierto hasta contar al resto en el manifiesto en vivo.",
         "crewNotBackAboard": "{count, plural, one {# tripulante no ha vuelto a bordo.} other {# tripulantes no han vuelto a bordo.}} Este control sigue abierto.",
         "crewReadOnlyHere": "La mitad de tripulación del recuento se registra en la lista en vivo: no se puede marcar desde esta copia guardada.",
+        "buddyReadOnlyHere": "Las parejas de buceo se muestran tal como se guardaron. Si un compañero está de vuelta a bordo se registra en la lista en vivo — esta copia no lo rastrea.",
         "crewAwaiting": "{count, plural, one {Falta pasar lista a # tripulante.} other {Falta pasar lista a # tripulantes.}} La tripulación se contabiliza en el manifiesto en vivo, así que este control sigue abierto hasta que vuelvas a tener cobertura.",
         "readyBadge": "Listo cuando se guardó",
         "blockedBadge": "Bloqueado cuando se guardó",
@@ -3142,6 +3238,11 @@
       "notBoarded": "No embarcado",
       "notBoardedCarried": "No embarcado · arrastrado",
       "notBackAboard": "Sin regresar a bordo"
+    },
+    "buddyPair": {
+      "with": "Compañero: {name}",
+      "separatedDock": "Compañero no a bordo",
+      "separatedAfterDive": "Compañero sin contabilizar"
     },
     "payments": {
       "connect": "Conectar pagos"
@@ -3216,6 +3317,104 @@
       "blocked": "No se pudo abrir la ventana de Meta. Revisa que tu navegador no bloquee las ventanas emergentes e inténtalo de nuevo."
     }
   },
+  "backup": {
+    "eyebrow": "Ajustes",
+    "title": "Respaldos",
+    "description": "Cada semana, una copia completa de los registros de tu centro llega a un almacenamiento que es tuyo. Si algún día te vas — o DiveDay desaparece — la copia ya está en tus manos.",
+    "notice": {
+      "saved": "Destino de respaldo guardado. Ejecuta una entrega de prueba para verificar que funciona.",
+      "invalid": "Revisa los datos del destino e inténtalo de nuevo.",
+      "endpoint_invalid": "Ese endpoint no se lee como una dirección HTTPS simple. Usa el origen de la API S3 de tu proveedor, sin consulta, ruta ni credenciales.",
+      "endpoint_not_https": "El endpoint debe empezar con https:// — los respaldos nunca viajan sin cifrar.",
+      "endpoint_private_host": "Ese endpoint apunta a una dirección privada o local, a la que los servidores de DiveDay no pueden entregar. Usa el endpoint público de tu proveedor de almacenamiento.",
+      "secret_required": "Ingresa la clave de acceso secreta para conectar este destino.",
+      "encryption_key_unset": "Esta instancia de DiveDay aún no está preparada para guardar credenciales de forma segura, así que no se guardó nada.",
+      "encryption_key_invalid": "La clave de cifrado de esta instancia de DiveDay está mal configurada, así que no se guardó nada.",
+      "disconnected": "Destino de respaldo eliminado. El historial de entregas de abajo se conserva.",
+      "test_delivered": "La entrega de prueba llegó a tu bucket. Los respaldos semanales están verificados.",
+      "test_failed": "La entrega de prueba no llegó. {reason}",
+      "no_destination": "Guarda primero un destino y luego ejecuta una entrega de prueba.",
+      "not_authorized": "Solo un propietario o gerente puede cambiar los ajustes de respaldo."
+    },
+    "status": {
+      "configuredHeading": "Los respaldos están configurados",
+      "notConfiguredHeading": "Todavía no hay destino de respaldo",
+      "notConfiguredDescription": "Apunta DiveDay a un bucket compatible con S3 que sea tuyo — AWS S3, Cloudflare R2, Backblaze B2 y similares — y un paquete de exportación completo llegará allí cada semana.",
+      "verified": "Entrega verificada",
+      "unproven": "Sin verificar todavía",
+      "endpoint": "Endpoint",
+      "bucket": "Bucket",
+      "accessKeyId": "ID de clave de acceso",
+      "lastDelivered": "Última entrega",
+      "never": "Nunca"
+    },
+    "test": {
+      "submit": "Ejecutar una entrega de prueba ahora",
+      "submitting": "Entregando…"
+    },
+    "form": {
+      "heading": "Destino",
+      "description": "Funciona cualquier almacenamiento compatible con S3. Usa una credencial que solo pueda escribir en este bucket: DiveDay nunca necesita leer, listar ni borrar nada.",
+      "endpointLabel": "Endpoint",
+      "endpointHint": "El origen de la API S3 de tu proveedor — HTTPS, sin bucket ni ruta.",
+      "regionLabel": "Región",
+      "regionHint": "La región de firma: “auto” en Cloudflare R2, del estilo “us-east-1” en AWS.",
+      "bucketLabel": "Bucket",
+      "prefixLabel": "Prefijo de carpeta",
+      "prefixHint": "Los paquetes llegan dentro de esta carpeta del bucket.",
+      "optionalHint": "(opcional)",
+      "accessKeyIdLabel": "ID de clave de acceso",
+      "secretLabel": "Clave de acceso secreta",
+      "secretHint": "Se guarda sellada, se usa solo para firmar las subidas y no vuelve a mostrarse nunca — ni siquiera a ti.",
+      "secretKeepHint": "Déjala en blanco para conservar la clave actual; ingresa una nueva solo para rotarla.",
+      "submit": "Guardar destino",
+      "submitting": "Guardando…"
+    },
+    "how": {
+      "heading": "Cómo funciona",
+      "weekly": "Una vez por semana, DiveDay arma tu paquete de exportación completo — cada CSV, el README, tus fotos — y lo entrega en tu bucket. Es el mismo paquete que la descarga de exportación de datos: lo que te llevarías al irte es lo que se respalda.",
+      "contents": "Tu calendario de salidas viaja incluido como trips.ics, legible por cualquier app de calendario.",
+      "sealed": "La clave de acceso secreta se sella antes de guardarse y se abre solo en el momento de la subida.",
+      "failures": "Una entrega que falla queda registrada abajo y se reintenta en la siguiente pasada semanal: DiveDay nunca bombardea tu bucket con reintentos."
+    },
+    "history": {
+      "heading": "Historial de entregas",
+      "empty": "Todavía no hay entregas. Cuando guardes un destino, cada entrega semanal o de prueba aparecerá aquí.",
+      "when": "Cuándo",
+      "kind": "Tipo",
+      "outcome": "Resultado",
+      "size": "Tamaño",
+      "details": "Detalles",
+      "trigger": {
+        "scheduled": "Semanal",
+        "manual": "Prueba"
+      },
+      "status": {
+        "succeeded": "Entregado",
+        "failed": "Falló",
+        "started": "No terminó"
+      },
+      "total": "{count, plural, one {# entrega} other {# entregas}}"
+    },
+    "deliveryError": {
+      "upload_unauthorized": "El bucket rechazó la credencial: revisa la clave de acceso y su permiso de escritura.",
+      "bucket_not_found": "Ningún bucket con ese nombre respondió en el endpoint: revisa ambos.",
+      "upload_rejected": "El proveedor de almacenamiento rechazó la subida.",
+      "network_unreachable": "No se pudo alcanzar el endpoint.",
+      "credential_unreadable": "La clave secreta guardada ya no se puede abrir: ingrésala de nuevo para corregirlo.",
+      "shop_missing": "No se pudieron cargar los registros del centro.",
+      "bundle_failed": "No se pudo armar el paquete de exportación.",
+      "encryption_key_unset": "Esta instancia de DiveDay no está preparada para guardar credenciales de forma segura.",
+      "encryption_key_invalid": "La clave de cifrado de esta instancia de DiveDay está mal configurada.",
+      "unknown": "Algo salió mal."
+    },
+    "disconnect": {
+      "heading": "Quitar destino",
+      "description": "Borra la credencial guardada y detiene las entregas semanales. El historial de abajo y todo lo que ya está en tu bucket se conservan.",
+      "submit": "Quitar destino de respaldo",
+      "submitting": "Quitando…"
+    }
+  },
   "bookings": {
     "new": {
       "eyebrow": "Reservas",
@@ -3253,5 +3452,112 @@
         "total": "{count, plural, one {# salida} other {# salidas}}"
       }
     }
+  },
+  "blowout": {
+    "eyebrow": "Cancelación por mal tiempo",
+    "confirm": {
+      "title": "¿Cancelar por mal tiempo?",
+      "lead": "Esto cancela {tripTitle} y envía a cada buceador reservado un solo mensaje: qué pasó, cómo queda su pago y las próximas salidas que ya cumplen sus certificaciones, con enlaces para reservar.",
+      "moneyNote": "No se mueve dinero. Los reembolsos siguen contigo, reserva por reserva, igual que hoy — a quienes pagaron se les avisa de que te pondrás en contacto.",
+      "diversHeading": "{count, plural, one {Se enviará el mensaje a # buceador} other {Se enviará el mensaje a # buceadores}}",
+      "noEmail": "Sin correo — marcado para llamar",
+      "noDivers": "No hay nadie reservado en esta salida. Llamarla solo cancela la salida.",
+      "departed": "Esta salida ya zarpó — no hay nada que cancelar.",
+      "button": "Cancelar por mal tiempo",
+      "calling": "Cancelando…",
+      "backToTrip": "Volver a la salida"
+    },
+    "record": {
+      "title": "Cascada de la cancelación",
+      "calledBy": "Llamada por {name} · {when}",
+      "notified": "Avisados",
+      "notifiedDetail": "{sent} de {total} mensajes enviados",
+      "rebooked": "Reservaron de nuevo",
+      "rebookedDetail": "tienen plaza en otra salida",
+      "unresolved": "Sin resolver",
+      "unresolvedDetail": "aún sin plaza nueva — la cancelación no ha terminado",
+      "allResolvedDetail": "todos tienen adónde ir",
+      "table": {
+        "diver": "Buceador",
+        "message": "Mensaje",
+        "money": "Pago",
+        "offers": "Ofrecido",
+        "status": "Estado"
+      },
+      "messageSent": "Enviado",
+      "messageQueued": "Reintentando",
+      "messagePending": "En espera",
+      "messageSending": "Enviando…",
+      "messageFailed": "No enviado",
+      "messageNoEmail": "Sin correo",
+      "callThem": "Llamar al {phone}",
+      "noOffers": "Sin fechas que cumplan — se envió el calendario",
+      "rebookedBadge": "Reservó de nuevo",
+      "unresolvedBadge": "Sin resolver",
+      "noPayment": "Sin pago registrado",
+      "resend": "Reintentar los mensajes no enviados",
+      "resending": "Reintentando…",
+      "empty": "No había nadie reservado cuando se llamó la cancelación."
+    },
+    "notices": {
+      "called": "Cancelación llamada — la salida queda cancelada y el mensaje de cada buceador está en camino.",
+      "resumed": "Se reintentaron los mensajes no enviados.",
+      "departed": "Esta salida ya zarpó — no se canceló nada.",
+      "error": "Eso no funcionó — inténtalo de nuevo."
+    }
+  },
+  "incidentExport": {
+    "title": "Exportación para incidentes",
+    "openLink": "Exportación para incidentes",
+    "backToManifest": "Volver al manifiesto",
+    "description": "Un solo documento con lo registrado para esta salida — embarque, la cronología del pase de lista, la evidencia de certificación y el estado de las exenciones — listo para imprimir y entregar a las autoridades o a la aseguradora.",
+    "factsOnly": "Este documento presenta hechos registrados con su fecha y hora. No evalúa, certifica ni implica juicio alguno de seguridad.",
+    "generatedLine": "Generado el {date} por {name}",
+    "shopTimeLabel": "Todas las horas son locales del centro ({timezone})",
+    "summaryHeading": "Resumen de la salida",
+    "summaryDivers": "Buceadores en el manifiesto",
+    "summaryBoarded": "Registrados a bordo",
+    "summaryNotBoarded": "Registrados no embarcados",
+    "summaryAwaiting": "Sin resultado registrado",
+    "summaryCrewAssigned": "Tripulación asignada",
+    "rosterHeading": "Buceadores y pase de lista",
+    "rosterDescription": "Cada reserva activa del manifiesto de esta salida, con el resultado registrado en cada punto de control. Un punto de control sin resultado registrado se lee “Pendiente de pase de lista” — la ausencia se declara, nunca se deja en blanco.",
+    "colDiver": "Buceador",
+    "colEmergencyContact": "Contacto de emergencia",
+    "notOnFile": "No registrado",
+    "resultRecordedBy": "{date} · {name}",
+    "crewHeading": "Tripulación",
+    "crewNone": "No se asignó tripulación a esta salida.",
+    "colCrewMember": "Miembro de la tripulación",
+    "colRoles": "Funciones",
+    "evidenceHeading": "Evidencia de certificación y estado de la exención",
+    "evidenceDescription": "Las tarjetas tal como constan en los registros del centro al generar este documento, con sus fechas de revisión. Solo el estado de la exención — las respuestas del cuestionario médico nunca forman parte de este documento.",
+    "certNone": "Sin evidencia de certificación registrada.",
+    "certLevelLine": "{agency} · {level} · tarjeta n.º {identifier}",
+    "certSpecialtyLine": "{agency} · {specialty} · tarjeta n.º {identifier}",
+    "certNitroxLine": "{agency} · Aire enriquecido (nitrox) · tarjeta n.º {identifier}",
+    "certStatusVerified": "Certificada — revisada el {date}",
+    "certStatusVerifiedNoDate": "Certificada",
+    "certStatusPending": "Revisión pendiente — sin certificar",
+    "certImportedTag": "Importada de un sistema anterior",
+    "certRefresherDue": "Repaso pendiente desde {date}",
+    "waiverComplete": "Exención firmada el {date} — “{title}”, versión {version}.",
+    "waiverCompleteAttested": "Registrado por el personal a partir de una firma en persona.",
+    "waiverCompleteImported": "Aceptación importada de un sistema anterior — no se firmó con la exención propia de este centro.",
+    "waiverNotSigned": "Sin exención firmada vigente en los registros.",
+    "waiverPending": "Se emitió un enlace de exención y no se ha firmado.",
+    "waiverExpired": "El enlace de la exención venció sin firmarse.",
+    "waiverMedicalReview": "Revisión médica marcada como necesaria — solo el estado; las respuestas del cuestionario no forman parte de este documento.",
+    "timelineHeading": "Cronología del pase de lista",
+    "timelineDescription": "Cada registro del pase de lista de esta salida, del más antiguo al más reciente, correcciones incluidas — los registros solo se agregan, así que una corrección añade una línea y nunca reescribe otra.",
+    "timelineEmpty": "No se ha registrado ningún pase de lista para esta salida.",
+    "crewTag": "tripulación",
+    "timelineOfflineTag": "Registrado sin conexión, sincronizado después",
+    "actionCleared": "Registro anulado (corrección)",
+    "crewCountLine": "Conteo de tripulación: {aboard} a bordo, {assigned} asignados",
+    "recordedByName": "Registrado por {name}",
+    "noteLine": "Nota: {note}",
+    "footerHashLabel": "Código de integridad (SHA-256)",
+    "footerHashExplainer": "Se calcula a partir de los hechos registrados en este documento. Generar la exportación de nuevo con los mismos registros reproduce el mismo código, de modo que dos copias pueden verificarse entre sí."
   }
 }

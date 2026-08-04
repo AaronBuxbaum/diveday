@@ -21,13 +21,8 @@ Every idea is tagged so you can triage fast:
 Lens: make unsafe departure harder. Safety ideas require boring code, failure-path and adversarial
 tests, and `dive-domain-expert` review.
 
-- **Buddy pairs / teams.** Let staff pair divers so roll call can surface "this diver's buddy is not
-  back yet." Mirrors how dives actually run. *(M, manifests, quick win.)*
 - **Physical headcount reconciliation.** A captain enters the count they see on deck; the app
   cross-checks it against boarded/not-boarded state. *(M, manifests, big bet.)*
-- **Incident-ready export.** One tap exports the manifest, roll-call timeline, cert evidence, and
-  relevant waiver state for a given departure as a signed PDF for authorities and insurers. *(S-M,
-  manifests, quick win.)*
 - **Safety record page.** Publish honest, computed shop safety stats such as boarded divers,
   roll-call completion, and readiness completion. The page must display the real numbers, even when
   imperfect. *(S-M, manifests, quick win.)*
@@ -46,9 +41,6 @@ single action.
   course sign-ups or upcoming blockers. *(S, cross-cutting, quick win.)*
 - **Multi-boat / multi-trip day orchestration.** A shop running several boats can see all departures,
   move divers and crew carefully, and avoid collisions. *(L, cross-cutting, big bet.)*
-- **End-of-day close-out.** Reconcile who dove, gear returned, incidents logged, and tomorrow's
-  blockers in one "everyone is home" ritual. *(M, cross-cutting, quick win.)*
-
 ## Diver Experience And Growth
 
 Lens: help a diver book, prepare, show up confident, return, and bring a buddy without turning DiveDay
@@ -75,10 +67,13 @@ Lens: a dive shop sells perishable seats under weather risk. These ideas protect
 breaking community trust.
 
 - **One-tap cancellation cascade.** Captain calls a blow-out; staff taps once; booked divers receive
-  rebooking links filtered to trips they qualify for plus a trip-credit option ahead of refund. *(M,
-  bookings, big bet.)*
+  rebooking links filtered to trips they qualify for. Shipped 2026-08-04 — see
+  [../shipped.md](../shipped.md#weather-blow-out-cancellation-cascade-delivered-2026-08-04) and ADR
+  [20260804-blowout-cascade](../../architecture/decisions/20260804-blowout-cascade.md); the
+  trip-credit option waits on the credit ledger below. *(Shipped, bookings.)*
 - **Alternative-day salvage.** A cancellation can offer what the shop can still run, such as a pool
-  session, shore dive, or classroom day. *(M, bookings, quick win after cancellation cascade.)*
+  session, shore dive, or classroom day. *(M, bookings, quick win now the cancellation cascade has
+  shipped.)*
 - **Credit ledger.** First-class trip credit balance on the diver, visible and spendable at booking.
   Requires schema change and ADR. *(M, bookings, big bet.)*
 - **Insurance leverage.** Once incident and safety exports exist, package the evidence a shop can use

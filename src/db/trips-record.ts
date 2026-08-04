@@ -268,7 +268,9 @@ export async function updateTripConditions(
 }
 
 export async function setTripStatus(
-  db: AppDb,
+  // Also callable inside a transaction: the blow-out cascade flips the status
+  // through this same seam while holding the trip row lock (src/db/blowouts.ts).
+  db: DbExecutor,
   shopId: string,
   tripId: string,
   status: "scheduled" | "cancelled",

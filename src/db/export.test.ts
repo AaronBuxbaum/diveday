@@ -42,6 +42,7 @@ const EXPECTED_FILES = [
   "roll_call_events.csv",
   "roll_call_crew_attestations.csv",
   "roll_call_crew_events.csv",
+  "buddy_pairs.csv",
   "waiver_templates.csv",
   "waiver_records.csv",
   "rental_fit.csv",
@@ -82,6 +83,7 @@ const EXPORTED_TABLES = [
   "roll_call_events",
   "roll_call_crew_attestations",
   "roll_call_crew_events",
+  "buddy_pair_members",
   "waiver_templates",
   "waiver_records",
   "rental_fit_profiles",
@@ -113,10 +115,13 @@ const FOLDED_TABLES = [
  */
 const EXCLUDED_TABLES = [
   "activity_events", // in-product operational feed, not a migration record
+  "day_closeouts", // the close-out ritual's append-only trail — in-product operational record, same reasoning as activity_events
   "internal_notes", // private staff working context; deliberately not portable in this first slice
   "notification_deliveries", // operational plumbing, not shop records
   "notification_delivery_attempts",
   "notification_send_queue", // operational retry state, not shop records
+  "trip_blowouts", // operational cascade record for a weather cancel; the cancellation itself lives on the trip
+  "trip_blowout_divers", // per-diver message/rebooking state for that cascade — same reasoning as notification_send_queue
   "notification_rate_limit_state", // provider coordination, not shop records
   "shop_stripe_accounts", // provider linkage, useless outside Stripe
   "booking_checkouts", // payment attempts; outcomes live in bookings/orders
@@ -147,6 +152,16 @@ const EXCLUDED_TABLES = [
   // credential like user_accounts, and a phone number id is provider linkage
   // useless outside that Meta account, like shop_stripe_accounts.
   "shop_whatsapp_accounts",
+  // The shop's own S3 credential (sealed) plus where its weekly backup bundle
+  // goes. Never exported, same two reasons as shop_whatsapp_accounts: the
+  // secret key is a live credential to storage the shop owns, and the
+  // endpoint/bucket rows are linkage to an account that already belongs to
+  // the shop (ADR 20260804-shop-owned-backup-export).
+  "shop_backup_destinations",
+  // Delivery outcomes for those bundles — operational plumbing about the
+  // export process, not a shop record; same reasoning as
+  // notification_deliveries.
+  "shop_backup_deliveries",
 ];
 
 /**
@@ -181,6 +196,11 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "shop_id",
     "pending_checkout_intent_id", // in-flight Stripe attempt, meaningless elsewhere
     "identity_unconfirmed_at", // H-13 review state, not a shop record
+    // Seat-claim linkage (ADR 20260804-seat-claim-links): a pointer at another
+    // booking row's id, which does not survive a re-import — same class as
+    // pending_checkout_intent_id.
+    "party_lead_booking_id",
+    "claimed_at", // claim-flow operational state, same reasoning as identity_unconfirmed_at
   ],
   trip_waitlist_entries: ["shop_id"],
   last_minute_list_entries: ["shop_id"],
@@ -192,6 +212,9 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
   roll_call_events: ["shop_id"],
   roll_call_crew_attestations: ["shop_id"],
   roll_call_crew_events: ["shop_id"],
+  // The member row's surrogate id says nothing beyond (pair_id, booking_id),
+  // which are both exported.
+  buddy_pair_members: ["shop_id", "id"],
   waiver_templates: ["shop_id"],
   waiver_records: [
     "shop_id",
