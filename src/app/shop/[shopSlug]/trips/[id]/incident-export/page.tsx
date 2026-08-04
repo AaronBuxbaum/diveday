@@ -155,6 +155,7 @@ export default async function IncidentExportPage({
                 <th className="px-3 py-2 font-semibold">
                   {t("incidentExport.colEmergencyContact")}
                 </th>
+                <th className="px-3 py-2 font-semibold">{t("incidentExport.colBuddy")}</th>
                 {doc.meta.checkpoints.map((checkpoint) => (
                   <th key={checkpoint} className="px-3 py-2 font-semibold">
                     {checkpointText(checkpoint)}
@@ -177,6 +178,9 @@ export default async function IncidentExportPage({
                     {diver.emergencyContactName && diver.emergencyContactPhone
                       ? `${diver.emergencyContactName} · ${diver.emergencyContactPhone}`
                       : t("incidentExport.notOnFile")}
+                  </td>
+                  <td className="px-3 py-2 align-top text-muted">
+                    {diver.buddyName ?? t("incidentExport.noBuddyRecorded")}
                   </td>
                   {diver.rollCall.map((result) => (
                     <RollCallCell

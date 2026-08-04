@@ -61,6 +61,40 @@ truth. Gear-return reconciliation from the original idea is deliberately out of 
 register exists. See [20260804-day-closeout](../architecture/decisions/20260804-day-closeout.md)
 and the glossary's "Close-out".
 
+## Incident-ready export (delivered 2026-08-04)
+
+- **One tap on a departure produces the document a shop hands to authorities or insurers.** From
+  the manifest, "Incident-ready export" opens a staff-only, print-optimized page
+  (`/shop/<slug>/trips/<id>/incident-export`) assembling the departure's recorded facts: the
+  manifest roster with each diver's per-checkpoint roll-call state, the complete append-only
+  roll-call timeline (corrections included — history is never laundered), each diver's
+  certification evidence as held (imported cards marked distinctly), waiver **status** only — state,
+  date, template version; medical questionnaire answers never appear — the buddy pair staff
+  recorded for the departure, plus crew, crew counts, and
+  generation metadata. A SHA-256 integrity code over the printed facts sits in the footer, so a
+  printout can be checked against a fresh export.
+- **Facts, not judgments.** The document states what was recorded, with timestamps and recorders;
+  it computes no safety verdict, and every absence (no roll call yet, no cards on file, superseded
+  or unsigned waiver) is stated explicitly rather than left blank. Assembly is pure
+  (`src/lib/incident-export.ts` over the same manifest/readiness readers every safety surface
+  uses); print-ready HTML, no PDF dependency. No insurer-facing marketing claim ships with this —
+  that stays parked per the brainstorm's insurance-leverage entry until real operators validate it.
+
+## Seat claim links for party bookings (delivered 2026-08-04)
+
+The first slice of the group-organizer bet: every party seat beyond the organizer's own gets a
+claimable bearer link, so the people the shop has never met stop being names the organizer typed.
+`/claim/<token>` is a third `booking_capabilities` purpose (`claim`) — hashed-only storage, the
+same expiry and live-cap rules as its siblings, redacted before telemetry. Only the organizer's
+already-verified surfaces mint them (the confirmation panel and their `/ready` page), and only for
+unclaimed, non-cancelled member seats on a not-yet-departed trip. Claiming resolves the claimant by
+email with `findOrCreatePerson` semantics — a non-matching name stamps `identity_unconfirmed_at`,
+so nobody inherits verified evidence by typing an email (H-13) — re-runs the gates a fresh booking
+would face, supersedes any waiver signed by the placeholder, and revokes every outstanding
+capability on the booking. Claiming never weakens a gate, and an unclaimed seat simply boards under
+the organizer's party as before. Pay-your-own-share stays out of scope. See
+[20260804-seat-claim-links](../architecture/decisions/20260804-seat-claim-links.md).
+
 ## The 2026-08-02 review's engineering queue (delivered 2026-08-03)
 
 The Medium and Low engineering items the [2026-08-02 review](assessments/comprehensive-review-20260802.md)
@@ -1219,24 +1253,6 @@ The roadmap's §7 smaller follow-ons and the whole open Delight backlog shipped:
   Was the highest-leverage of [roadmap.md](features/roadmap.md#not-scheduled--candidate-subsystems)'s deferred revenue-layer
   candidates. See
   [20260801-checkout-upsells-rental-gear](../architecture/decisions/20260801-checkout-upsells-rental-gear.md).
-
-## Incident-ready export (delivered 2026-08-04)
-
-- **One tap on a departure produces the document a shop hands to authorities or insurers.** From
-  the manifest, "Incident-ready export" opens a staff-only, print-optimized page
-  (`/shop/<slug>/trips/<id>/incident-export`) assembling the departure's recorded facts: the
-  manifest roster with each diver's per-checkpoint roll-call state, the complete append-only
-  roll-call timeline (corrections included — history is never laundered), each diver's
-  certification evidence as held (imported cards marked distinctly), waiver **status** only — state,
-  date, template version; medical questionnaire answers never appear — plus crew, crew counts, and
-  generation metadata. A SHA-256 integrity code over the printed facts sits in the footer, so a
-  printout can be checked against a fresh export.
-- **Facts, not judgments.** The document states what was recorded, with timestamps and recorders;
-  it computes no safety verdict, and every absence (no roll call yet, no cards on file, superseded
-  or unsigned waiver) is stated explicitly rather than left blank. Assembly is pure
-  (`src/lib/incident-export.ts` over the same manifest/readiness readers every safety surface
-  uses); print-ready HTML, no PDF dependency. No insurer-facing marketing claim ships with this —
-  that stays parked per the brainstorm's insurance-leverage entry until real operators validate it.
 
 ## Simplification rulings (2026-07-19 → 20 audit)
 
