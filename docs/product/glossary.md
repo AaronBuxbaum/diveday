@@ -461,10 +461,12 @@ new domain concept, define it here in the same PR.
   checkpoint open, because it is a scheduling gap rather than evidence nobody else was aboard, and
   the manifest answers it with "Add crew to trip". Read-only on the offline copy, where a crew
   member with no saved result reads as still-to-call. A subject must be assigned to the trip *and*
-  hold a staff role — the same filter the crew list itself reads through, so a result can never
-  exist about somebody the head count cannot see. Once somebody has one, they **cannot be taken off
-  the trip's crew**: removing them would delete the assignment the result hangs off and let a
-  checkpoint that is open because they did not come back read complete.
+  either hold a staff role **or already carry a result on that trip** — one condition
+  (`isOnTripCrew`) the crew list reads through as well, so a result can never exist about somebody
+  the head count cannot see, and somebody the head count is counting can never vanish out from under
+  a result. Once somebody has one they **cannot be taken off the trip's crew**, and **leaving the
+  shop does not remove them from trips they already crewed**: either would let a checkpoint that is
+  open because they did not come back read complete. Employment ends; who was on the boat does not.
 - **Buddy team** — two or more people staff group together on one departure, so roll call can say
   the thing a deck actually watches for: **someone is back aboard and someone on their team is
   not**. A member is either a *booking* (a roster entry of that trip) or a *crew person* — the

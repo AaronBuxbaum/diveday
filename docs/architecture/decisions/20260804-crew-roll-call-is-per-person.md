@@ -137,27 +137,34 @@ Trips with no crew assigned still cannot close a checkpoint, and now say so in t
 the button that fixes it rather than a number to type. Shops that never assign crew will meet this
 on every trip — which is the same nag as before, pointed at the thing that would actually resolve it.
 
-**Open, and this decision is what makes it urgent: stripping a staff role can still close an open
-checkpoint.** `listTripCrew` reads the crew list through a `person_roles ∈ STAFF_ROLES` join, so
-`removeStaffMember` / `setStaffRoles` (and the erasure path) make somebody disappear from *every*
-historical trip's crew list. A divemaster recorded **not back aboard** at `after_dive_1` therefore
-stops being counted the moment someone removes them from the team, `crewNotBackAboard` falls to 0,
-and a checkpoint that was open *because a person did not come back* flips to complete with the
-`roll_call_crew_events` rows still sitting there unread.
+**Closed in this change: stripping a staff role no longer closes an open checkpoint.**
+`listTripCrew` read the crew list through a `person_roles ∈ STAFF_ROLES` join, while
+`removeStaffMember`, `setStaffRoles`, and `anonymizeDiver` all delete those rows and none of them
+touches `trip_assignments`. So a divemaster recorded **not back aboard** at `after_dive_1` stopped
+being counted the moment somebody removed them from the team: `crewNotBackAboard` fell to zero and a
+checkpoint open *because a person did not come back* flipped to complete, with their
+`roll_call_crew_events` rows still sitting there unread. The same class as the D3 failure 20260803
+closed on `changeTripCrew`, reached through the team-management door instead — and this decision is
+what made it bite, since before it the checkpoint usually stayed open anyway on `crew_not_attested`.
 
-This is the D3 failure 20260803 closed on `changeTripCrew`/`setTripCrew` and left open on the
-team-management door. It predates this decision — but before it, the checkpoint usually stayed open
-anyway on `crew_not_attested`, since most shops never filed an attestation. Removing the count
-removes that accidental backstop, so the hole is now load-bearing on every trip.
+Membership is now one condition, `isOnTripCrew`: assigned, **and** either holding a staff role now
+or already carrying a roll-call result on this trip. The crew list and `recordCrewRollCall`'s subject
+check both read it, which is D11's rule enforced in both directions — a result can never exist about
+somebody the head count cannot see, and somebody the head count is counting can never vanish out
+from under a result already recorded about them. Employment ends; who was on the boat that day does
+not change.
 
-The fix is not to refuse role changes — a shop must be able to remove somebody who left. It is for
-the crew list to read *assignments plus roll-call history* rather than assignments filtered by
-**current** role, so a person who has a recorded result on a trip stays on that trip's crew list
-whatever happens to their employment afterwards. That is a query change on the safety spine with its
-own test surface (and it has to be reconciled with `recordCrewRollCall`'s subject check, which
-applies the identical filter by design — 20260803 D11), so it is called out here rather than
-smuggled into a UI change. Dive-domain review 20260804 rates it blocking; it should land before this
-is relied on.
+Two deliberate details. A former staff member kept on the list is still a valid roll-call *subject*,
+so a checkpoint they are holding open can be closed by naming what happened to them rather than only
+by deleting them. And "carrying a result" is any event, a `cleared` undo included: somebody whose
+latest event is a clear reads as awaiting and holds the checkpoint open, which is the fail-closed
+direction — the cost is a row a human has to call, and the alternative is a person disappearing.
+
+The management surfaces are deliberately not widened. `listStaff` still offers only current staff to
+*assign*, so nobody can roster an ex-employee onto a new trip, and the trip's crew section shows the
+assignable set. Only the manifest — the safety record of a departure that happened — keeps the
+person. A former staff member's row falls back to whatever job the roster recorded for them on that
+trip, and shows no shop role, because they have none.
 
 **HD-7** (whether the launch jurisdiction requires the head count to cover crew, and by which
 mechanism) narrows rather than reopens: the per-person mechanism remains, and it is strictly more

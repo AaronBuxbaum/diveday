@@ -1,6 +1,7 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { ageOnDate, birthdayCallout } from "@/lib/age";
+import { STAFF_ROLES } from "@/lib/authz";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate, nowMs } from "@/lib/clock";
 import {
@@ -25,6 +26,7 @@ import {
 import {
   bookings,
   people,
+  personRoles,
   rollCallCrewEvents,
   rollCallEvents,
   shops,
@@ -1057,6 +1059,99 @@ describe("crew aboard attestation (in-memory PGlite)", () => {
       expect(
         await db.select().from(rollCallCrewEvents).where(eq(rollCallCrewEvents.tripId, reef.id)),
       ).toEqual([]);
+    });
+
+    /**
+     * Dive-domain review 20260804. `removeStaffMember`, `setStaffRoles`, and
+     * erasure all delete a person's `person_roles` rows and none of them
+     * touches `trip_assignments`. The crew list read through a
+     * `STAFF_ROLES`-filtered join, so somebody leaving the team dropped off
+     * *every* trip they had ever crewed — including one where a human had
+     * recorded that they **did not come back**. The checkpoint that was open
+     * for exactly that reason then read complete, with the event rows still
+     * sitting there unread.
+     *
+     * This is the same class as D3 (which `changeTripCrew` closed for the
+     * trip-level unassign) reached through the team-management door instead.
+     */
+    it("keeps a former staff member on the crew list, so their result still holds the checkpoint open", async () => {
+      const { db, shop, reef, staff } = await manifestContext();
+      await boardEveryDiver(db, shop.id, reef.id, staff.id, "after_dive_1");
+      await accountForEveryCrewMember(db, shop.id, reef.id, staff.id, "after_dive_1");
+      const crew = (await getTripManifest(db, shop.id, reef.id, "after_dive_1"))?.crew ?? [];
+      const leaver = crew.find((member) => member.id !== staff.id) ?? crew[0];
+      if (!leaver) throw new Error("crew missing");
+
+      // A divemaster who did not surface: the loudest state the manifest has.
+      await expect(
+        recordCrewRollCall(db, {
+          shopId: shop.id,
+          tripId: reef.id,
+          personId: leaver.id,
+          recordedByPersonId: staff.id,
+          status: "not_boarded",
+          checkpoint: "after_dive_1",
+          occurredAt: new Date(nowMs() + 60_000),
+        }),
+      ).resolves.toMatchObject({ ok: true });
+      expect(
+        (await getTripManifest(db, shop.id, reef.id, "after_dive_1"))?.completeness,
+      ).toMatchObject({ complete: false, reason: "crew_not_back_aboard" });
+
+      // They leave the shop. Every staff role goes; the assignment does not.
+      await db
+        .delete(personRoles)
+        .where(
+          and(eq(personRoles.personId, leaver.id), inArray(personRoles.role, [...STAFF_ROLES])),
+        );
+
+      const after = await getTripManifest(db, shop.id, reef.id, "after_dive_1");
+      // Still named on the boat they sailed on...
+      expect(after?.crew.map((member) => member.id)).toContain(leaver.id);
+      // ...and the checkpoint they are holding open is still open.
+      expect(after?.completeness).toMatchObject({
+        complete: false,
+        crewAccountedFor: false,
+        reason: "crew_not_back_aboard",
+      });
+
+      // And they can still be recorded, so the checkpoint can be closed by
+      // saying what happened rather than only by deleting the person.
+      await expect(
+        recordCrewRollCall(db, {
+          shopId: shop.id,
+          tripId: reef.id,
+          personId: leaver.id,
+          recordedByPersonId: staff.id,
+          status: "boarded",
+          checkpoint: "after_dive_1",
+          occurredAt: new Date(nowMs() + 120_000),
+        }),
+      ).resolves.toMatchObject({ ok: true });
+      expect(
+        (await getTripManifest(db, shop.id, reef.id, "after_dive_1"))?.completeness,
+      ).toMatchObject({ complete: true, reason: null });
+    });
+
+    it("still refuses a former staff member who never had a result on the trip", async () => {
+      // The D11 rule is unchanged in the direction that matters: history is
+      // what keeps somebody visible, not merely having once been staff. A
+      // rostered non-staff person with no events stays off the list and off
+      // the denominator, so no checkpoint is held open by a ghost.
+      const { db, shop, reef, staff, booking } = await manifestContext();
+      await db.insert(tripAssignments).values({ tripId: reef.id, personId: booking.person.id });
+
+      const manifest = await getTripManifest(db, shop.id, reef.id);
+      expect(manifest?.crew.some((member) => member.id === booking.person.id)).toBe(false);
+      await expect(
+        recordCrewRollCall(db, {
+          shopId: shop.id,
+          tripId: reef.id,
+          personId: booking.person.id,
+          recordedByPersonId: staff.id,
+          status: "boarded",
+        }),
+      ).resolves.toEqual({ ok: false, reason: "crew_not_assigned" });
     });
 
     it("carries each crew member's result into the offline snapshot, without their id", async () => {
