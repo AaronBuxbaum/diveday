@@ -101,20 +101,48 @@ export default async function RecapOpenGraphImage({
       "next/dist/server/app-render/work-unit-async-storage.external" as any
     );
     const store = workUnitAsyncStorage?.getStore?.();
-    let sharpProbe: string;
+    let sharpProbe = "";
     try {
       const sharp = (await import("sharp")).default;
       const svg = Buffer.from(
         '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"><rect width="20" height="20" fill="red"/></svg>',
       );
-      sharpProbe = `ok (${(await sharp(svg).resize(20).png().toBuffer()).length} bytes)`;
+      // The capability flags are the decisive part: they say whether the sharp
+      // this process loaded was *built* with an SVG input loader at all, which
+      // separates "wrong/limited binary" from "right binary, failing at runtime".
+      const fmt = (sharp as unknown as { format: Record<string, { input?: { buffer?: boolean } }> })
+        .format;
+      const versions = (sharp as unknown as { versions: Record<string, string> }).versions;
+      sharpProbe =
+        `vips=${versions?.vips} rsvg=${versions?.rsvg ?? "ABSENT"} ` +
+        `svgInput=${fmt?.svg?.input?.buffer} pngOut=${fmt?.png?.input?.buffer} ` +
+        `vipsEnv=${JSON.stringify(
+          Object.fromEntries(Object.entries(process.env).filter(([k]) => k.startsWith("VIPS"))),
+        )} `;
+      try {
+        sharpProbe += `svgToPng=ok(${(await sharp(svg).resize(20).png().toBuffer()).length})`;
+      } catch (error) {
+        sharpProbe += `svgToPng=FAILED(${(error as Error).message})`;
+      }
+      // A raster round-trip on the same instance: if this works while SVG does
+      // not, sharp itself is healthy and only the SVG loader is missing.
+      try {
+        const red = await sharp({
+          create: { width: 4, height: 4, channels: 3, background: "#ff0000" },
+        })
+          .png()
+          .toBuffer();
+        sharpProbe += ` rasterRoundTrip=ok(${(await sharp(red).png().toBuffer()).length})`;
+      } catch (error) {
+        sharpProbe += ` rasterRoundTrip=FAILED(${(error as Error).message})`;
+      }
     } catch (error) {
-      sharpProbe = `FAILED: ${(error as Error).message}`;
+      sharpProbe = `import FAILED: ${(error as Error).message}`;
     }
     console.error(
-      `[og-diag] token=${token.slice(0, 8)} store=${store?.type ?? "none"} fonts=${fonts
+      `[og-diag] store=${store?.type ?? "none"} fonts=${fonts
         .map((f) => `${f.weight}:${f.data.byteLength}`)
-        .join(",")} sharpSvg=${sharpProbe}`,
+        .join(",")} ${sharpProbe}`,
     );
   } catch (error) {
     console.error(`[og-diag] probe threw: ${(error as Error).message}`);
