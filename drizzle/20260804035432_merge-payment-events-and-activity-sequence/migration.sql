@@ -1,0 +1,15 @@
+-- Merge migration: reconciles two independently-generated migration heads
+-- (20260803213223_drop-money-currency-defaults, the tip of the payment-events
+-- branch, and 20260803231700_activity-event-sequence) that both branched from
+-- 20260803060801_webhook-event-claim-release without either declaring the other
+-- as a parent -- the same class of fork the 20260801010000_merge-currency-
+-- locale-and-unsubscribe-tokens and 20260801050000_merge-courtesy-email-and-
+-- gear-cents migrations already resolved twice, recurring because two branches
+-- of the same merge each generated a migration against that shared tip. The two
+-- sides touch disjoint objects (booking_payment_events, booking_checkouts.
+-- async_payment_failed_at and the money-column DROP DEFAULTs vs
+-- activity_events.seq), so there is nothing left to apply here -- regenerating
+-- against the merged schema emits exactly the statements the payment-events
+-- branch already carries, statement for statement. This migration exists only
+-- to give drizzle-kit generate a single unambiguous tip to diff future schema
+-- changes against.
