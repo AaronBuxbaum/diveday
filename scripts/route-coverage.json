@@ -1,5 +1,5 @@
 {
-  "//": "Every `src/app/**/page.tsx` route and the tests that cover it. `e2e` names spec files under e2e/, `visual` names captures in e2e/visual.spec.ts, `exempt` states why a route has neither. Mechanical facts are written by `node scripts/check-route-coverage.mjs --write`; the coverage lists are hand-maintained on purpose — see scripts/check-route-coverage.mjs.",
+  "//": "Every `src/app/**/page.tsx` route and the tests that cover it. `e2e` names spec files under e2e/, `visual` names captures in e2e/visual.spec.ts, `exempt` states why a route has neither. Mechanical facts are written by `node scripts/check-route-coverage.mjs --write`; the coverage lists are hand-maintained on purpose \u2014 see scripts/check-route-coverage.mjs.",
   "/": {
     "e2e": ["demo.spec.ts", "manifest.spec.ts", "marketing.spec.ts", "seo.spec.ts"],
     "visual": ["landing"]
@@ -7,6 +7,10 @@
   "/about": {
     "e2e": ["seo.spec.ts"],
     "visual": ["about"]
+  },
+  "/claim/[token]": {
+    "e2e": ["seat-claim.spec.ts"],
+    "visual": ["seat-claim"]
   },
   "/forgot-password": {
     "e2e": ["account-lifecycle.spec.ts"],
@@ -24,6 +28,7 @@
     "e2e": [
       "account-lifecycle.spec.ts",
       "demo.spec.ts",
+      "first-ten-minutes.spec.ts",
       "marketing.spec.ts",
       "nitrox.spec.ts",
       "onboard.spec.ts",
@@ -40,7 +45,7 @@
     "visual": ["product"]
   },
   "/ready/[token]": {
-    "e2e": ["readiness.spec.ts", "self-service-reschedule.spec.ts"],
+    "e2e": ["readiness.spec.ts", "seat-claim.spec.ts", "self-service-reschedule.spec.ts"],
     "visual": ["readiness"]
   },
   "/recap/[token]": {
@@ -58,6 +63,7 @@
       "courses.spec.ts",
       "courtesy-email-unsubscribe.spec.ts",
       "dive-sites.spec.ts",
+      "first-ten-minutes.spec.ts",
       "last-minute-fill.spec.ts",
       "next-departure.spec.ts",
       "nitrox.spec.ts",
@@ -99,6 +105,7 @@
       "booking.spec.ts",
       "courses.spec.ts",
       "dive-sites.spec.ts",
+      "first-ten-minutes.spec.ts",
       "keyboard-shortcuts.spec.ts",
       "next-departure.spec.ts",
       "nitrox.spec.ts",
@@ -108,14 +115,21 @@
       "rentals.spec.ts",
       "returning-diver.spec.ts",
       "schedule-embed.spec.ts",
+      "seat-claim.spec.ts",
       "self-service-reschedule.spec.ts",
       "trip-admission.spec.ts"
     ],
-    "visual": ["booking-confirmed", "site-briefing", "site-briefing-requirements"]
+    "visual": [
+      "booking-confirmed",
+      "party-organizer-confirmation",
+      "site-briefing",
+      "site-briefing-requirements"
+    ]
   },
   "/shop/[shopSlug]": {
     "e2e": [
       "boat-loop.spec.ts",
+      "first-ten-minutes.spec.ts",
       "keyboard-shortcuts.spec.ts",
       "last-minute-fill.spec.ts",
       "onboard.spec.ts",
@@ -125,7 +139,7 @@
       "staff-invite.spec.ts",
       "tenant-isolation.spec.ts"
     ],
-    "visual": ["today", "today-empty"]
+    "visual": ["today", "today-empty", "today-first-bookable"]
   },
   "/shop/[shopSlug]/blockers": {
     "e2e": ["blockers.spec.ts", "tenant-isolation.spec.ts"],
@@ -375,6 +389,7 @@
       "courses.spec.ts",
       "dive-sites.spec.ts",
       "divers.spec.ts",
+      "first-ten-minutes.spec.ts",
       "gear-fit-and-age.spec.ts",
       "import.spec.ts",
       "readiness.spec.ts",

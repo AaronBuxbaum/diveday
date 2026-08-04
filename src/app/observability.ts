@@ -14,6 +14,10 @@ const CAPABILITY_ROUTE_PREFIXES = [
   "reset-password",
   // Staff-invite acceptance token (20260726-staff-invite-accounts).
   "invite",
+  // Party seat-claim token (20260804-seat-claim-links): /claim/[token] lets
+  // one party member take over one seat, so a leaked copy is a working
+  // identity-takeover link for that seat until it is used or revoked.
+  "claim",
   // Staff calendar-subscription feed token (ADR
   // 20260730-calendar-feed-subscriptions, owned by src/features/calendar-sync).
   // `/calendar/[token]` sits outside `/shop` so no session gate applies and the
@@ -50,7 +54,8 @@ function decodeSegment(segment: string): string {
 /**
  * Rewrites any `CAPABILITY_ROUTE_PREFIXES` path — `/waivers/<token>`,
  * `/ready/<token>`, `/recap/<token>`, `/verify/<token>`,
- * `/reset-password/<token>`, `/invite/<token>`, `/calendar/<token>` (and any
+ * `/reset-password/<token>`, `/invite/<token>`, `/claim/<token>`,
+ * `/calendar/<token>` (and any
  * URL-encoded variant of those prefixes) — to its template form, and
  * redacts any `CAPABILITY_QUERY_PARAMS` value on *any* path, so
  * Analytics/Speed Insights never receive a raw capability regardless of

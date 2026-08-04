@@ -2474,6 +2474,13 @@
       "single": "“{title}” ya está en el calendario. 🤙",
       "series": "“{title}” ya está en el calendario — {count, plural, one {# salida programada} other {# salidas programadas}}. 🤙"
     },
+    "firstBookable": {
+      "heading": "“{title}” ya está en el calendario — tu centro ya acepta reservas. 🎉",
+      "headingSeries": "“{title}” ya está en el calendario — {count, plural, one {# salida programada} other {# salidas programadas}}, y tu centro ya acepta reservas. 🎉",
+      "body": "Este enlace es tu calendario público — la página desde la que reservan los buceadores. Ponlo en tu web, tus redes sociales y donde te encuentren los buceadores.",
+      "linkLabel": "Tu enlace de reservas",
+      "viewAsDiver": "Míralo como lo verán tus buceadores"
+    },
     "demoReset": "Datos de demostración reiniciados — barco nuevo, pizarra limpia. 🤿",
     "emailResent": "Correo de confirmación reenviado.",
     "emailFailed": "Ese correo no se pudo enviar — revisa la dirección y la configuración de correo.",

@@ -3,6 +3,7 @@ import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed";
 import { signRecapToken } from "../src/lib/recap-links";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import { findTripOnBoard, openTripFromBoard, openTripTab } from "./helpers";
+import { E2E_FROZEN_CLOCK } from "./servers";
 
 /**
  * Visual regression coverage. Eighty-one key surfaces × light/dark, each
@@ -847,6 +848,47 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "readiness", scheme);
       });
 
+      /**
+       * The group-organizer surfaces (docs ADR 20260804-seat-claim-links),
+       * both sides of one flow: the organizer's confirmation with the
+       * "Your group's seats" claim panel, then the claim page an invited
+       * diver opens from the shared link. A real party booking through the
+       * public form — `demoReset` reseeds the fixture, so the two extra
+       * seats never move any other capture's counts.
+       */
+      test(`the party organizer confirmation and claim page render true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        await page.goto("/s/blue-mantis");
+        await publicReefCard(page).getByRole("link", { name: REEF_TRIP }).click();
+        const partySize = page.getByLabel("Number of divers");
+        await expect(partySize).toHaveAttribute("data-hydrated", "true");
+        await partySize.selectOption("2");
+        await page.getByLabel("Name", { exact: true }).fill("Orla Byrne");
+        await page.getByLabel("Email", { exact: true }).fill(`organizer-${scheme}@example.com`);
+        await page.getByLabel("Diver 2 name").fill("Sam Reyes");
+        await page.getByLabel("Use the main contact's email for this diver").check();
+        await page.getByRole("button", { name: /^Book/ }).click();
+        await page.getByRole("heading", { name: /You’re on the boat/ }).waitFor();
+        await page.getByRole("heading", { name: "Your group’s seats" }).waitFor();
+        await capture(page, "party-organizer-confirmation", scheme);
+
+        // Collapsed disclosure — the token never renders as pixels (that's
+        // what keeps this capture stable run to run), but the text is in the
+        // DOM for textContent.
+        const claimUrlText =
+          (await page
+            .locator("li")
+            .filter({ hasText: "Sam Reyes" })
+            .locator("p.font-mono")
+            .textContent()) ?? "";
+        const claimPath = claimUrlText.match(/\/claim\/[^\s/?#]+/)?.[0];
+        await page.goto(claimPath ?? "/");
+        await page.getByRole("heading", { name: /A seat on/ }).waitFor();
+        await capture(page, "seat-claim", scheme);
+      });
+
       // Its own test rather than another stop on a public tour: a trust page
       // whose baseline is skipped because a long test ran out of budget is the
       // one baseline you'd most want.
@@ -973,6 +1015,52 @@ for (const scheme of ["light", "dark"] as const) {
         await page.locator("header summary").filter({ hasText: "More" }).click();
         await page.getByRole("list", { name: "Run the shop" }).waitFor();
         await capture(page, "nav-more-menu", scheme);
+      });
+
+      /**
+       * The bookable moment: the first departure ever landing on the board is
+       * the exact instant the first-run checklist (and the share link it
+       * carried) leaves Today, so the created notice grows into a share card
+       * exactly once — e2e/first-ten-minutes.spec.ts drives the behavior, this
+       * is the surface. Same fresh-shop-per-scheme pattern (and deterministic
+       * slug reasoning) as the `today-empty` capture above: the slug renders
+       * inside the card, so it must not contain a wall-clock stamp.
+       */
+      test(`the first bookable moment renders true to the design (${scheme})`, async ({ page }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        const unique = `bookable-${scheme}`;
+        await page.goto("/onboard");
+        await page
+          .locator('input[name="shopName"]')
+          .filter({ visible: true })
+          .fill("Bookable Moment E2E");
+        await page.locator('input[name="shopSlug"]').filter({ visible: true }).fill(unique);
+        await page.locator('input[name="ownerName"]').filter({ visible: true }).fill("Nour Haddad");
+        await page
+          .locator('input[name="ownerEmail"]')
+          .filter({ visible: true })
+          .fill(`${unique}@example.com`);
+        await page
+          .locator('input[name="ownerPassword"]')
+          .filter({ visible: true })
+          .fill("trial-pass-123");
+        await page.getByRole("button", { name: "Create shop & start trial" }).click();
+        await page.waitForURL(new RegExp(`/shop/${unique}$`));
+
+        // The first (and only-ever-first) departure, dated off the frozen
+        // clock so the card and queue rows render pixel-identically per run.
+        await page.goto(`/shop/${unique}/trips/new`);
+        const tomorrow = new Date(Date.parse(E2E_FROZEN_CLOCK) + 24 * 60 * 60 * 1000)
+          .toISOString()
+          .slice(0, 10);
+        await page.locator('input[name="title"]').fill("Two-Tank Morning Reef");
+        await page.locator('input[name="date"]').fill(tomorrow);
+        await page.locator('input[name="startTime"]').fill("08:00");
+        await page.locator('input[name="endTime"]').fill("12:30");
+        await page.getByRole("button", { name: "Put it on the board" }).click();
+        await page.waitForURL(new RegExp(`/shop/${unique}\\?created=`));
+        await page.getByRole("heading", { name: /your shop is bookable/ }).waitFor();
+        await capture(page, "today-first-bookable", scheme);
       });
     });
 
