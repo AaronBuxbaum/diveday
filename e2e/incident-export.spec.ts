@@ -60,9 +60,22 @@ test("one tap from the manifest opens the incident-ready document with the recor
   await expect(page.getByText(/^[0-9a-f]{64}$/)).toBeVisible();
 });
 
-test("a trip id that is not this shop's is a 404, not a document", async ({ page }) => {
-  const response = await page.goto(
-    "/shop/blue-mantis/trips/00000000-0000-0000-0000-0000000000ff/incident-export",
-  );
-  expect(response?.status()).toBe(404);
+test("a trip id that is not this shop's renders the not-found refusal, never a document", async ({
+  page,
+}) => {
+  // The rendered refusal, not the HTTP status: this page streams (`instant =
+  // true` + a segment `loading.tsx`), so the 200 and the shell are already on
+  // the wire before the tenancy check's `notFound()` resolves — the same
+  // documented limitation as e2e/tenant-isolation.spec.ts's staff-path sweep
+  // and e2e/marketing.spec.ts's cold-slug 404. What a regression here would
+  // change is what the person actually gets: the not-found backstop must
+  // render, and not one fact of the document may accompany it.
+  await page.goto("/shop/blue-mantis/trips/00000000-0000-0000-0000-0000000000ff/incident-export");
+  await expect(page.getByRole("heading", { name: "We couldn’t find that page" })).toBeVisible();
+  // Zero document content: no kicker/entry label, no section headings, no
+  // integrity code — nothing an authority-facing document is made of.
+  await expect(page.getByText("Incident-ready export")).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Roll-call timeline" })).toHaveCount(0);
+  await expect(page.getByText("Integrity code (SHA-256)")).toHaveCount(0);
+  await expect(page.getByText(/^[0-9a-f]{64}$/)).toHaveCount(0);
 });
