@@ -2,6 +2,12 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { OfflineManifestView } from "@/components/OfflineManifestView";
 
+// `instant = true`: navigating here paints immediately. Every request-scoped
+// read sits behind a `<Suspense>` boundary — this segment's `loading.tsx`, or
+// one placed inside the page — so the frame lands without waiting on the
+// request. `next build` audits the claim. See ADR 20260804-instant-navigation.
+export const instant = true;
+
 export const metadata: Metadata = {
   title: "Offline boat manifest — DiveDay",
   robots: { index: false, follow: false },

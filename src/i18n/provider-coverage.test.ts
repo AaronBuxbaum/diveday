@@ -55,10 +55,22 @@ async function tsxFiles(directory: string, found: string[] = []): Promise<string
   return found;
 }
 
-/** The namespaces a provider in this source offers, or null when it mounts none. */
+/**
+ * The namespaces a provider in this source offers, or null when it mounts none.
+ *
+ * Two providers count. `DiverIntlProvider` names its namespaces in a prop, so
+ * they are read off the source. `ErrorBoundaryIntlProvider` carries exactly one
+ * — `errorBoundary` — by construction rather than by configuration: it exists
+ * to hold that namespace and nothing else, which is what lets it be
+ * synchronous and keeps its segment layout out of the request (ADR
+ * 20260804-instant-navigation). Hard-coding the name here rather than parsing
+ * one is the honest reading of that component, and it stays honest because
+ * `messages={{ errorBoundary: … }}` is the only thing it can provide.
+ */
 function providedNamespaces(source: string): Set<string> | null {
-  if (!source.includes("<DiverIntlProvider")) return null;
   const offered = new Set<string>();
+  if (source.includes("<ErrorBoundaryIntlProvider")) offered.add("errorBoundary");
+  if (!source.includes("<DiverIntlProvider")) return offered.size > 0 ? offered : null;
   for (const block of source.matchAll(/namespaces=\{\[([^\]]*)\]\}/g)) {
     for (const name of block[1].matchAll(/"([^"]+)"/g)) offered.add(name[1]);
   }
@@ -106,7 +118,7 @@ describe("diver copy has a provider above it", () => {
       const where = path.relative(process.cwd(), file);
       if (!sawProvider) {
         failures.push(
-          `${where}: calls useTranslations with no DiverIntlProvider in any ancestor segment`,
+          `${where}: calls useTranslations with no diver copy provider in any ancestor segment`,
         );
         continue;
       }

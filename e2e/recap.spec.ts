@@ -43,7 +43,7 @@ test.describe("as owner", () => {
   }) => {
     await page.goto("/shop/blue-mantis/settings");
     await page
-      .getByRole("textbox", { name: "Review link" })
+      .getByLabel("Review link (optional)", { exact: true })
       .fill("https://g.page/r/blue-mantis/review");
     await page.getByRole("button", { name: "Save review link" }).click();
     await expect(page.getByText("Review link saved.")).toBeVisible();
