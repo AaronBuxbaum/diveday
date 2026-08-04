@@ -38,11 +38,21 @@ async function expectNoA11yViolations(page: Page) {
   // always in lockstep with it: a scan that fires the instant the body's own
   // heading becomes visible can still catch a document with no <title> yet,
   // even though the page settles correctly moments later. Waiting for a
-  // non-empty title first scans the settled document instead of a genuinely
+  // non-empty title scans the settled document instead of a genuinely
   // transient in-between state — this is not a real a11y defect a visitor
   // ever perceives, just the render finishing.
-  await expect(page).toHaveTitle(/.+/);
+  //
+  // **Order matters, and it is the whole fix here.** This used to assert the
+  // title *before* settling the network, which leaves the assertion able to
+  // pass against the document the caller was already looking at — and then the
+  // scan runs after a *new* one has swapped in, in the window before its own
+  // title lands. That is not hypothetical: it is how the add-a-booking scan
+  // went red on CI (run 30887575971, shard 1/4) with `document-title`, on the
+  // scan that follows a server action's redirect. Settling first and asserting
+  // the title last makes the title the final gate before `analyze()`, so the
+  // document axe reads is the one the assertion actually checked.
   await page.waitForLoadState("networkidle");
+  await expect(page).toHaveTitle(/.+/);
   const results = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag22aa"])
     .disableRules(["color-contrast"])
