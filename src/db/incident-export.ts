@@ -3,10 +3,12 @@ import { alias } from "drizzle-orm/pg-core";
 import { nowDate } from "@/lib/clock";
 import {
   buildIncidentExport,
+  type IncidentBuddyPairingInput,
   type IncidentCrewCountInput,
   type IncidentExportDocument,
   type IncidentTimelineEventInput,
 } from "@/lib/incident-export";
+import { listTripBuddyPairs } from "./buddy-pairs";
 import type { AppDb } from "./client";
 import { getTripManifests } from "./manifests";
 import { listTripReadiness } from "./readiness";
@@ -121,6 +123,21 @@ export async function getIncidentExport(
     createdAt: attestation.createdAt,
   }));
 
+  // Provenance for the pairings the manifest already carries. Read here rather
+  // than widened onto the manifest's `BuddyRef`, which is deliberately
+  // name-only so the offline snapshot cannot carry enough to compute a
+  // divergence off the boat. Team numbers come from this list's own order
+  // (`createdAt`, then `pairId`), so they are stable across regenerations.
+  const buddyPairs = await listTripBuddyPairs(db, shopId, tripId);
+  const buddyPairings: IncidentBuddyPairingInput[] = buddyPairs.flatMap((pair, index) =>
+    pair.members.map((member) => ({
+      bookingId: member.bookingId,
+      teamNumber: index + 1,
+      pairedByName: pair.pairedByName,
+      pairedAt: pair.createdAt,
+    })),
+  );
+
   return buildIncidentExport({
     shop: { name: shop.name, slug: shop.slug, timezone: shop.timezone },
     manifests,
@@ -136,6 +153,7 @@ export async function getIncidentExport(
     })),
     events,
     crewCounts,
+    buddyPairings,
     generatedAt,
     generatedByName,
   });

@@ -60,11 +60,25 @@ test("one tap from the manifest opens the incident-ready document with the recor
   // team (src/db/seed-buddy-pairs.ts), so each names the other.
   const roster = page.getByRole("table").first();
   await expect(roster.getByRole("columnheader", { name: "Buddy" })).toBeVisible();
-  await expect(roster.getByRole("row", { name: /Tom Okafor/ })).toContainText("Lena Fischer");
-  await expect(roster.getByRole("row", { name: /Lena Fischer/ })).toContainText("Tom Okafor");
+  // Anchored on the numbered Diver cell, not on row text: now that a pairing
+  // prints the buddy's name, "Tom Okafor" appears in *two* rows — his own and
+  // Lena's Buddy cell — so a row-level text filter is a strict-mode violation
+  // by construction. That two rows name each other is the feature, not a flake.
+  const rowFor = (diverCell: string) =>
+    roster
+      .getByRole("row")
+      .filter({ has: page.getByRole("cell", { name: diverCell, exact: true }) });
+  await expect(rowFor("02 Tom Okafor")).toContainText("Lena Fischer");
+  await expect(rowFor("03 Lena Fischer")).toContainText("Tom Okafor");
+  // Both halves of a pair carry the same team number, so a reader scanning a
+  // printed roster finds them without chasing names across a page break.
+  await expect(rowFor("02 Tom Okafor")).toContainText("Team 01");
+  await expect(rowFor("03 Lena Fischer")).toContainText("Team 01");
+  // And the pairing states who made the call — it is never anonymous.
+  await expect(rowFor("02 Tom Okafor")).toContainText(/Paired by \w/);
   // Priya is deliberately unpaired: an unpaired diver is a normal boat, and the
   // document says so in words rather than leaving the cell blank.
-  await expect(roster.getByRole("row", { name: /Priya/ })).toContainText("No buddy recorded");
+  await expect(rowFor("01 Priya Sharma")).toContainText("No buddy recorded");
 
   // The tamper-evidence code: a full SHA-256 in the footer.
   await expect(page.getByText("Integrity code (SHA-256)")).toBeVisible();

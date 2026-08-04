@@ -180,7 +180,24 @@ export default async function IncidentExportPage({
                       : t("incidentExport.notOnFile")}
                   </td>
                   <td className="px-3 py-2 align-top text-muted">
-                    {diver.buddyName ?? t("incidentExport.noBuddyRecorded")}
+                    {diver.buddy ? (
+                      <>
+                        <span className="font-medium text-foreground">
+                          {t("incidentExport.buddyTeam", { number: diver.buddy.teamNumber })}
+                        </span>{" "}
+                        {diver.buddy.buddyName}
+                        <span className="block text-xs">
+                          {diver.buddy.pairedByName && diver.buddy.pairedAt
+                            ? t("incidentExport.buddyPairedBy", {
+                                name: diver.buddy.pairedByName,
+                                at: dateTime(diver.buddy.pairedAt),
+                              })
+                            : t("incidentExport.buddyPairedByUnknown")}
+                        </span>
+                      </>
+                    ) : (
+                      t("incidentExport.noBuddyRecorded")
+                    )}
                   </td>
                   {diver.rollCall.map((result) => (
                     <RollCallCell
