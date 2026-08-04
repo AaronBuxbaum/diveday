@@ -46,13 +46,19 @@ test("live manifest retains blocked divers and records an explicit not-boarded r
   // readiness vocabulary now (src/i18n/readiness-labels.ts), and this panel
   // names the same state its diver rows do.
   await expect(page.getByRole("heading", { name: "Blocked divers" })).toBeVisible();
-  await expect(page.getByText("Priya Sharma")).toBeVisible();
+  // Her own row heading, not a bare text match: every unteamed diver's name
+  // also appears on the buddy-team builder's checkbox below (ADR
+  // 20260804-buddy-teams), so `getByText` is a strict-mode violation here.
+  await expect(page.getByRole("heading", { name: "Priya Sharma" })).toBeVisible();
 
   // At departure the readiness gate hides boarding for blocked divers only —
   // Priya is the boat's one remaining straggler (the rest of the roster
   // already signed their waiver), so she alone has no boarding button while
-  // the rest of the roster does.
-  const priyaRow = page.locator("li", { hasText: "Priya Sharma" });
+  // the rest of the roster does. Anchored on the row's own <h3> for the same
+  // reason: a team row carries her name inside its "add a member" picker.
+  const priyaRow = page
+    .locator("#roll-call-list li")
+    .filter({ has: page.getByRole("heading", { name: "Priya Sharma", exact: true }) });
   await expect(priyaRow.getByRole("button", { name: "Mark boarded" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Mark boarded" }).first()).toBeVisible();
 

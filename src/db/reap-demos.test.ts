@@ -6,6 +6,7 @@ import { issueAccountToken } from "./account-tokens";
 import { DEMO_SHOP_SLUG } from "./dev-credentials";
 import {
   accountTokens,
+  activityEvents,
   bookings,
   buddyTeamEvents,
   globalDiveSites,
@@ -314,6 +315,40 @@ describe("deleteDemoShopCascade", () => {
           .from(personCourtesyEmailUnsubscribeTokens)
           .where(eq(personCourtesyEmailUnsubscribeTokens.shopId, shop.id))
       ).length,
+    ).toBe(0);
+  });
+
+  /**
+   * The sharpest of nine omissions the shop-scoped sweep in
+   * `delete-path-coverage.test.ts` found on its first run: `activity_events`
+   * references `shops` and `people` with no cascade and was in **neither**
+   * delete ordering — and `seat-diver.ts` writes one every time staff seat a
+   * diver, so *any* minted demo where somebody used the Guests tab could never
+   * be reaped. It failed silently and permanently: every later reap hit the
+   * same row, so the shop stayed live past its TTL forever.
+   *
+   * It gets a case here, as this file's own docs require, because a sweep
+   * proves the table is *named* and only a real FK can prove it is named in the
+   * right place.
+   */
+  it("deletes the activity trail instead of FK-violating on its shop", async () => {
+    const db = await seededTestDb();
+    const { slug } = await createDemoShop(db);
+    const shop = await requireShop(db, slug);
+    const [person] = await db.select().from(people).where(eq(people.shopId, shop.id)).limit(1);
+    if (!person) throw new Error("test setup: demo shop has no people");
+    await db.insert(activityEvents).values({
+      shopId: shop.id,
+      actorPersonId: person.id,
+      message: "Seated a walk-in at the counter",
+    });
+
+    // No FK violation here is the real assertion.
+    await deleteDemoShopCascade(db, shop.id);
+
+    expect(await findShop(db, slug)).toBeUndefined();
+    expect(
+      (await db.select().from(activityEvents).where(eq(activityEvents.shopId, shop.id))).length,
     ).toBe(0);
   });
 

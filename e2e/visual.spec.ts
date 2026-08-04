@@ -1698,10 +1698,10 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
-       * A split buddy team after a dive (ADR 20260804-buddy-pairs): Tom is
-       * recorded back aboard and his seeded buddy Lena has no result yet, so
+       * A split buddy team after a dive (ADR 20260804-buddy-teams): Tom is
+       * recorded back aboard and his seeded teammate Lena has no result yet, so
        * his row carries the danger chip and the checkpoint panel adds the
-       * "1 buddy team is split" line. The seed carries the pairs but no
+       * "1 buddy team is split" line. The seed carries the teams but no
        * roll-call events (they would open head-count gaps on Today), so the
        * divergent state is driven here and the per-test DB reset puts it
        * back — the same pattern as the missing-diver capture above.
@@ -1720,16 +1720,40 @@ for (const scheme of ["light", "dark"] as const) {
           .evaluate((link: HTMLElement) => link.click());
         await page.waitForURL(/checkpoint=after_dive_1/);
         // Anchored on the row's own <h3>: a bare `li hasText "Tom Okafor"`
-        // also matches Lena's row via her "Buddy: Tom Okafor" chip (see the
-        // same note in e2e/buddy-pairs.spec.ts).
+        // also matches Lena's row via her "Buddy team: Tom Okafor" chip (see
+        // the same note in e2e/buddy-pairs.spec.ts).
         const tomRow = page
           .locator("#roll-call-list li")
           .filter({ has: page.getByRole("heading", { name: "Tom Okafor", exact: true }) });
         const boardTom = tomRow.getByRole("button", { name: "Mark boarded" });
         await boardTom.evaluate((button) => button.scrollIntoView({ block: "center" }));
         await boardTom.click();
-        await expect(tomRow.getByText("Buddy: Lena Fischer · Buddy unaccounted for")).toBeVisible();
+        await expect(
+          tomRow.getByText("Buddy team: Lena Fischer · Someone unaccounted for"),
+        ).toBeVisible();
         await capture(page, "manifest-buddy-divergence", scheme);
+      });
+
+      /**
+       * The buddy-teams panel itself — the team builder (ADR
+       * 20260804-buddy-teams). Worth its own capture because it is where the
+       * model became visible: a team of any size, a crew member marked as crew
+       * on the divemaster-led trio, per-member removal, and a checkbox builder
+       * in place of the two dropdowns that could only ever express a pair. The
+       * whole panel is `print:hidden`, so no other capture covers it.
+       */
+      test(`the manifest's buddy-team builder renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        await openReefTrip(page);
+        await openTripTab(page, "Manifest");
+        const panel = page.locator("section", {
+          has: page.getByRole("heading", { name: "Buddy teams" }),
+        });
+        await expect(panel.getByText("Keiko Tanaka (crew)")).toBeVisible();
+        await panel.scrollIntoViewIfNeeded();
+        await capture(page, "manifest-buddy-teams-panel", scheme);
       });
 
       // H-08: a site deeper than a diver's certification trains for. Warning
