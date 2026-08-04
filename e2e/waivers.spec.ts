@@ -280,13 +280,19 @@ test("a waiver signed under someone else's name is refused, and the link stays s
   ).toBeVisible();
   await expect(page.getByRole("heading", { name: "Waiver received", level: 1 })).not.toBeVisible();
 
+  // The refusal redirects back to this same page and re-renders it from
+  // scratch server-side — everything the diver had already filled in must
+  // survive that round trip, not just the mismatched name.
+  await expect(
+    page.getByLabel("I have read this waiver, understand it, and agree to it."),
+  ).toBeChecked();
+  await expect(page.getByRole("radio", { name: "No", checked: true })).toHaveCount(
+    await page.getByRole("radio", { name: "No" }).count(),
+  );
+
   // Refused before the record was touched: the same link still signs, and a
   // middle initial or different casing is not treated as a different person.
   await page.getByLabel("Type your full name").fill("priya  sharma");
-  await page.getByLabel("I have read this waiver, understand it, and agree to it.").check();
-  for (const radio of await page.getByRole("radio", { name: "No" }).all()) {
-    await radio.check();
-  }
   await page.getByRole("button", { name: "Sign waiver" }).click();
   await expect(page).toHaveURL(/\/ready\//);
 });

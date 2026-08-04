@@ -13,7 +13,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:changed": "vitest run --changed origin/main --reporter=dot",
-    "e2e:build": "pnpm build:sw && APP_HOST=https://e2e.diveday.example DATABASE_URL= DATABASE_URL_UNPOOLED= PGLITE_DATA_DIR=memory DIVEDAY_E2E=1 next build",
+    "e2e:build": "pnpm build:sw && APP_HOST=https://e2e.diveday.example DATABASE_URL= DATABASE_URL_UNPOOLED= PGLITE_DATA_DIR=memory DIVEDAY_E2E=1 NEXT_PUBLIC_SENTRY_DSN= next build",
     "e2e:browser-check": "tsx scripts/ensure-playwright-browser.ts",
     "e2e": "pnpm e2e:browser-check && pnpm e2e:build && playwright test",
     "e2e:run": "pnpm e2e:browser-check && node scripts/check-e2e-build.mjs && playwright test",

@@ -289,6 +289,34 @@ describe("sesNotificationProvider (ADR 20260802-ses-adapter-and-webhook)", () =>
     });
   });
 
+  it("keeps the refused sender identity in the failure detail but out of the log line", async () => {
+    const error = Object.assign(
+      new Error(
+        "User `arn:aws:iam::417160702652:user/diveday-ses-sender' is not authorized to perform `ses:SendEmail' on resource `arn:aws:ses:us-east-1:417160702652:identity/owner@gmail.com'",
+      ),
+      { name: "AccessDeniedException", $metadata: { httpStatusCode: 403 } },
+    );
+    const client = { send: vi.fn().mockRejectedValue(error) };
+    const provider = sesNotificationProvider(sesConfig, { client });
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    const delivery = await notify(booking, provider);
+    // The operator-facing failure row keeps the address — it is the whole diagnosis.
+    expect(delivery).toMatchObject({
+      status: "failed",
+      retryable: false,
+      httpStatus: 403,
+      errorCode: "AccessDeniedException",
+      detail: expect.stringContaining("identity/owner@gmail.com"),
+    });
+
+    const line = warn.mock.calls[0]?.[0] as string;
+    expect(line).not.toContain("owner@gmail.com");
+    expect(line).toContain("identity/<redacted>@gmail.com");
+    expect(line).toContain("AccessDeniedException");
+    warn.mockRestore();
+  });
+
   it("marks a thrown throttling error as retryable", async () => {
     const error = Object.assign(new Error("Rate exceeded"), {
       name: "TooManyRequestsException",

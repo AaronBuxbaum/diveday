@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, ne } from "drizzle-orm";
+import { and, asc, desc, eq, exists, inArray, isNotNull, ne, or, sql } from "drizzle-orm";
 import { ageOnDate, birthdayCallout, isMinorOnDate } from "@/lib/age";
 import { STAFF_ROLES } from "@/lib/authz";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
@@ -37,6 +37,52 @@ import {
 import { getShopById } from "./shops";
 import { getTripRoster, getTripWithBooked } from "./trips";
 
+/**
+ * "Is this person on this trip's crew?", as one SQL condition, so the crew
+ * **list** and the roll-call **subject** check can never answer it differently.
+ * That is the D11 finding (review 20260803) restated in both directions: a
+ * result must never exist about somebody the head count cannot see, *and*
+ * somebody the head count is counting must never vanish out from under a
+ * result already recorded about them.
+ *
+ * Assigned to the trip, and either **holding a staff role now** or **already
+ * carrying a roll-call result on this trip**.
+ *
+ * The second clause is the safety one. `removeStaffMember`, `setStaffRoles`,
+ * and `anonymizeDiver` all delete a person's `person_roles` rows, and none of
+ * them touches `trip_assignments` — so a staff-role-only rule dropped a
+ * divemaster from *every* trip they had ever crewed the moment they left the
+ * shop. A checkpoint held open **because they did not come back** then read
+ * complete, with their `roll_call_crew_events` rows still sitting there unread
+ * (dive-domain review 20260804). Employment ends; who was on the boat that day
+ * does not change, and the manifest is a record of the second thing.
+ *
+ * `changeTripCrew` already refuses to *unassign* somebody with a result, so
+ * the assignment this leans on is durable. This closes the other door.
+ *
+ * "Carrying a result" is **any** event, a `cleared` undo included. Somebody
+ * whose latest event is a clear reads as awaiting and holds the checkpoint
+ * open — the fail-closed direction, and the deliberate choice: the cost is a
+ * row a human has to call, and the alternative is a person disappearing.
+ */
+function isOnTripCrew(db: DbExecutor, shopId: string, tripId: string) {
+  return or(
+    isNotNull(personRoles.role),
+    exists(
+      db
+        .select({ present: sql`1` })
+        .from(rollCallCrewEvents)
+        .where(
+          and(
+            eq(rollCallCrewEvents.shopId, shopId),
+            eq(rollCallCrewEvents.tripId, tripId),
+            eq(rollCallCrewEvents.personId, tripAssignments.personId),
+          ),
+        ),
+    ),
+  );
+}
+
 async function listTripCrew(db: DbExecutor, shopId: string, tripId: string) {
   const rows = await db
     .select({ person: people, tripRole: tripAssignments.tripRole, role: personRoles.role })
@@ -47,13 +93,20 @@ async function listTripCrew(db: DbExecutor, shopId: string, tripId: string) {
     // finding — mirrors getTripCrewIds's already-fixed join, src/db/trips.ts).
     .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
     .innerJoin(people, eq(people.id, tripAssignments.personId))
-    .innerJoin(personRoles, eq(personRoles.personId, people.id))
+    // LEFT, not INNER, and the staff-role filter moved into the join: somebody
+    // whose roles were stripped after they sailed has no `person_roles` row
+    // left at all, so an inner join dropped them from a trip carrying their
+    // recorded result. `isOnTripCrew` is what decides membership now.
+    .leftJoin(
+      personRoles,
+      and(eq(personRoles.personId, people.id), inArray(personRoles.role, [...STAFF_ROLES])),
+    )
     .where(
       and(
         eq(tripAssignments.tripId, tripId),
         eq(trips.shopId, shopId),
         eq(people.shopId, shopId),
-        inArray(personRoles.role, [...STAFF_ROLES]),
+        isOnTripCrew(db, shopId, tripId),
       ),
     )
     .orderBy(asc(people.fullName));
@@ -71,7 +124,10 @@ async function listTripCrew(db: DbExecutor, shopId: string, tripId: string) {
       roles: [],
       shopRoles: [],
     };
-    crew.shopRoles.push(role);
+    // Null for a former staff member kept on the list by their roll-call
+    // history: they hold no shop role any more, so `effectiveCrewRoles` falls
+    // back to whatever job the roster recorded for them on this trip.
+    if (role) crew.shopRoles.push(role);
     // The job on *this* boat when the roster says so, otherwise the standing
     // roles — one definition, src/lib/crew-roles.ts.
     crew.roles = effectiveCrewRoles({ tripRole, shopRoles: crew.shopRoles });
@@ -635,26 +691,32 @@ export async function recordCrewRollCall(
       return { ok: false, reason: "invalid_checkpoint" };
     }
 
-    // Assigned **and** holding a staff role — the identical filter
-    // `listTripCrew` reads the crew list through. Without the `personRoles`
-    // join this accepted a subject who was assigned but held no staff role at
-    // all: their events were written, and then neither the crew list nor the
-    // denominator ever mentioned them, so a result existed about somebody the
-    // head count could not see (review 20260803, D11). One definition of "on
-    // this trip's crew", or the two halves answer differently.
+    // `isOnTripCrew` — the identical condition `listTripCrew` reads the crew
+    // list through, which is the whole point of it being one function. Without
+    // it this accepted a subject who was assigned but held no staff role and
+    // no history: their events were written, and then neither the crew list
+    // nor the denominator ever mentioned them, so a result existed about
+    // somebody the head count could not see (review 20260803, D11). It also
+    // *keeps accepting* a former staff member who is still on the list because
+    // of a result already recorded — so a checkpoint they are holding open can
+    // still be closed by naming what happened to them, rather than only by
+    // deleting them.
     const [assigned] = await tx
       .select({ personId: tripAssignments.personId })
       .from(tripAssignments)
       .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
       .innerJoin(people, eq(people.id, tripAssignments.personId))
-      .innerJoin(personRoles, eq(personRoles.personId, people.id))
+      .leftJoin(
+        personRoles,
+        and(eq(personRoles.personId, people.id), inArray(personRoles.role, [...STAFF_ROLES])),
+      )
       .where(
         and(
           eq(tripAssignments.tripId, input.tripId),
           eq(tripAssignments.personId, input.personId),
           eq(trips.shopId, input.shopId),
           eq(people.shopId, input.shopId),
-          inArray(personRoles.role, [...STAFF_ROLES]),
+          isOnTripCrew(tx, input.shopId, input.tripId),
         ),
       )
       .limit(1);

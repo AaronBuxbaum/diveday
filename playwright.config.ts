@@ -76,6 +76,37 @@ const serverEnv = {
   VAPID_PRIVATE_KEY: "UUxI4O8-FbRouAevSmBQ6o18hgE4nSG3qwvJTfKc-ls",
   VAPID_SUBJECT: "mailto:e2e@dive.day",
   NEXT_TELEMETRY_DISABLED: "1",
+  // `next start` loads `.env.local` itself (via `@next/env`) before this
+  // config ever runs, and `...process.env` above only reflects this CLI
+  // process's own shell env — it does nothing to stop that file's values from
+  // reaching the spawned server. A developer's real provider credentials
+  // there (SES, Stripe, SNS/SMS, Meta WhatsApp) would otherwise make a
+  // provider that every comment in this fleet documents as unconfigured
+  // (e.g. E2E_APP_HOST above: "Stripe checkout stays `disabledCheckoutProvider`
+  // with no STRIPE_SECRET_KEY") actually configured — risking a real outbound
+  // call despite `DIVEDAY_DISABLE_EXTERNAL_HTTP`, which only covers the three
+  // integrations that read it directly, not these provider adapters. Blanked
+  // the same way `DATABASE_URL` is above, so the fleet's providers stay
+  // `disabled`/`not_configured` regardless of what's in a developer's
+  // `.env.local`.
+  SES_AWS_REGION: "",
+  SES_AWS_ACCESS_KEY_ID: "",
+  SES_AWS_SECRET_ACCESS_KEY: "",
+  SES_FROM_EMAIL: "",
+  SES_SNS_TOPIC_ARN: "",
+  STRIPE_SECRET_KEY: "",
+  STRIPE_CONNECT_CLIENT_ID: "",
+  SNS_AWS_REGION: "",
+  SNS_AWS_ACCESS_KEY_ID: "",
+  SNS_AWS_SECRET_ACCESS_KEY: "",
+  SNS_SENDER_ID: "",
+  META_APP_ID: "",
+  META_APP_SECRET: "",
+  META_WHATSAPP_SIGNUP_CONFIG_ID: "",
+  // A real DSN here would have the server (and, since it's inlined at build
+  // time too — see `e2e:build` in package.json — the browser) actually
+  // initialize Sentry and ship real events from every e2e run.
+  NEXT_PUBLIC_SENTRY_DSN: "",
 };
 
 export default defineConfig({
