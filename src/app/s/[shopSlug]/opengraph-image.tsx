@@ -1,6 +1,7 @@
 import { ImageResponse } from "next/og";
 import { getDb } from "@/db/client";
 import { getShopBySlug } from "@/db/shops";
+import { loadOgFonts, OG_FONT_FAMILY, type OgFont } from "@/lib/og-fonts";
 
 // i18n-exempt-file: link-preview card rendered for crawlers with no visitor
 // locale context, the same carve-out as the root `opengraph-image.tsx`.
@@ -30,6 +31,7 @@ const CARD_STYLE = {
   backgroundImage: "linear-gradient(160deg, #071720 55%, #0d222d 100%)",
   color: "#e9f3f4",
   fontSize: 32,
+  fontFamily: OG_FONT_FAMILY,
 };
 
 const WORDMARK = (
@@ -50,7 +52,7 @@ const WORDMARK = (
   </div>
 );
 
-function genericCard() {
+function genericCard(fonts: OgFont[]) {
   return new ImageResponse(
     <div style={CARD_STYLE}>
       {WORDMARK}
@@ -61,7 +63,7 @@ function genericCard() {
         A calmer way to run a dive day
       </div>
     </div>,
-    size,
+    { ...size, fonts },
   );
 }
 
@@ -71,9 +73,13 @@ export default async function ScheduleOpenGraphImage({
   params: Promise<{ shopSlug: string }>;
 }) {
   const { shopSlug } = await params;
+  // Before anything can return an ImageResponse: see src/lib/og-fonts.ts. Once
+  // the response exists its body is already streaming, and a font resolved
+  // lazily from inside that stream can only fail by severing the connection.
+  const fonts = await loadOgFonts();
   const db = await getDb();
   const shop = await getShopBySlug(db, shopSlug);
-  if (!shop) return genericCard();
+  if (!shop) return genericCard(fonts);
 
   return new ImageResponse(
     <div style={CARD_STYLE}>
@@ -97,6 +103,6 @@ export default async function ScheduleOpenGraphImage({
         A calmer way to run a dive day
       </div>
     </div>,
-    size,
+    { ...size, fonts },
   );
 }

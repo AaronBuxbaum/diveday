@@ -5,6 +5,7 @@ import { getTripWithBooked } from "@/db/trips";
 import { perDiverBookingPriceCents } from "@/lib/courses";
 import { formatMoneyCents, formatShortDate } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
+import { loadOgFonts, OG_FONT_FAMILY, type OgFont } from "@/lib/og-fonts";
 import { spotsRemaining } from "@/lib/trips";
 
 // i18n-exempt-file: link-preview card rendered for crawlers with no visitor
@@ -38,6 +39,7 @@ const CARD_STYLE = {
   backgroundImage: "linear-gradient(160deg, #071720 55%, #0d222d 100%)",
   color: "#e9f3f4",
   fontSize: 32,
+  fontFamily: OG_FONT_FAMILY,
 };
 
 const WORDMARK = (
@@ -58,7 +60,7 @@ const WORDMARK = (
   </div>
 );
 
-function genericCard() {
+function genericCard(fonts: OgFont[]) {
   return new ImageResponse(
     <div style={CARD_STYLE}>
       {WORDMARK}
@@ -69,7 +71,7 @@ function genericCard() {
         A calmer way to run a dive day
       </div>
     </div>,
-    size,
+    { ...size, fonts },
   );
 }
 
@@ -79,12 +81,16 @@ export default async function TripOpenGraphImage({
   params: Promise<{ shopSlug: string; id: string }>;
 }) {
   const { shopSlug, id: tripId } = await params;
+  // Before anything can return an ImageResponse: see src/lib/og-fonts.ts. Once
+  // the response exists its body is already streaming, and a font resolved
+  // lazily from inside that stream can only fail by severing the connection.
+  const fonts = await loadOgFonts();
   const db = await getDb();
   const shop = await getShopBySlug(db, shopSlug);
-  if (!shop) return genericCard();
+  if (!shop) return genericCard(fonts);
 
   const trip = await getTripWithBooked(db, shop.id, tripId);
-  if (!trip) return genericCard();
+  if (!trip) return genericCard(fonts);
 
   const locale = shop.defaultLocale;
   const when = formatShortDate(trip.startsAt, locale, shop.timezone);
@@ -124,6 +130,6 @@ export default async function TripOpenGraphImage({
           : "A calmer way to run a dive day"}
       </div>
     </div>,
-    size,
+    { ...size, fonts },
   );
 }

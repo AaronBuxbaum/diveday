@@ -2,6 +2,7 @@ import { ImageResponse } from "next/og";
 import { getDb } from "@/db/client";
 import { getRecapPageData } from "@/db/recap";
 import { formatShortDate } from "@/lib/format";
+import { loadOgFonts, OG_FONT_FAMILY, type OgFont } from "@/lib/og-fonts";
 import { verifyRecapToken } from "@/lib/recap-links";
 
 // i18n-exempt-file: link-preview card rendered for crawlers with no visitor
@@ -37,6 +38,7 @@ const CARD_STYLE = {
   backgroundImage: "linear-gradient(160deg, #071720 55%, #0d222d 100%)",
   color: "#e9f3f4",
   fontSize: 32,
+  fontFamily: OG_FONT_FAMILY,
 };
 
 const WORDMARK = (
@@ -57,7 +59,7 @@ const WORDMARK = (
   </div>
 );
 
-function genericCard() {
+function genericCard(fonts: OgFont[]) {
   return new ImageResponse(
     <div style={CARD_STYLE}>
       {WORDMARK}
@@ -68,7 +70,7 @@ function genericCard() {
         A calmer way to run a dive day
       </div>
     </div>,
-    size,
+    { ...size, fonts },
   );
 }
 
@@ -78,12 +80,16 @@ export default async function RecapOpenGraphImage({
   params: Promise<{ token: string }>;
 }) {
   const { token } = await params;
+  // Before anything can return an ImageResponse: see src/lib/og-fonts.ts. Once
+  // the response exists its body is already streaming, and a font resolved
+  // lazily from inside that stream can only fail by severing the connection.
+  const fonts = await loadOgFonts();
   const bookingId = verifyRecapToken(token);
-  if (!bookingId) return genericCard();
+  if (!bookingId) return genericCard(fonts);
 
   const db = await getDb();
   const data = await getRecapPageData(db, bookingId);
-  if (!data) return genericCard();
+  if (!data) return genericCard(fonts);
 
   const { shop, trip, sites } = data;
   const when = formatShortDate(trip.startsAt, shop.defaultLocale, shop.timezone);
@@ -118,6 +124,6 @@ export default async function RecapOpenGraphImage({
       </div>
       <div style={{ display: "flex", fontSize: 28, color: "#22d3ee" }}>{when} · Dive recap</div>
     </div>,
-    size,
+    { ...size, fonts },
   );
 }
