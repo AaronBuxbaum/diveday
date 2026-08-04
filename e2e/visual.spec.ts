@@ -205,8 +205,23 @@ const IMAGE_SETTLE_MS = 15_000;
  * at its own site with `test.setTimeout` and a comment naming the extra work
  * (a real booking, a settings round-trip, a board crawl), the way the tests
  * below that need more do.
+ *
+ * **Derived, not chosen.** It used to be a flat 30s, and that quietly stopped
+ * being a ceiling-on-failure: every wait inside `paintWholeDocument` is bounded
+ * so a stuck frame or a slow image degrades to a blank stripe rather than
+ * costing the run, but those bounds add up to more than 30s — and `capture`
+ * pays them once per viewport. When `IMAGE_SETTLE_MS` went 5s → 15s for cold
+ * `/_next/image` on a loaded runner, nobody re-derived the ceiling, so a page
+ * that used its budget honestly died on the outer timeout instead of shooting a
+ * degraded frame. That is exactly the hang-instead-of-stripe failure the bounds
+ * exist to prevent, and it is what made the review-moderation-queue capture
+ * fail on CI while passing locally. Deriving it keeps the two in step: widen a
+ * budget below and the ceiling follows.
  */
-const SURFACE_TIMEOUT_MS = 30_000;
+const PAINT_BUDGET_MS = SCROLL_BUDGET_MS + IMAGE_SETTLE_MS + FONTS_WAIT_MS;
+/** Screenshot encoding, viewport resizes, and the navigation that preceded them. */
+const CAPTURE_OVERHEAD_MS = 10_000;
+const SURFACE_TIMEOUT_MS = PAINT_BUDGET_MS * VIEWPORTS.length + CAPTURE_OVERHEAD_MS;
 
 // Applied at file scope rather than per describe block, so every test in the
 // file gets it whether or not it sits inside one and nothing depends on a
@@ -215,10 +230,11 @@ test.describe.configure({ timeout: SURFACE_TIMEOUT_MS });
 
 /**
  * A test that runs a real flow — a booking, a mutation and its revert, a crawl
- * of the schedule board — before it can shoot anything. Roughly the surface
- * budget plus the flow.
+ * of the schedule board — before it can shoot anything. The surface ceiling
+ * plus the flow, derived so it tracks the budgets the same way.
  */
-const FLOW_TIMEOUT_MS = 45_000;
+const FLOW_ALLOWANCE_MS = 15_000;
+const FLOW_TIMEOUT_MS = SURFACE_TIMEOUT_MS + FLOW_ALLOWANCE_MS;
 
 /** The seeded reef charter, the departure most of the staff tour hangs off. */
 const REEF_TRIP = "Two-Tank Reef — Molasses & French";

@@ -429,14 +429,21 @@ describe("buildIncidentExport", () => {
   });
 
   describe("buddy pairs", () => {
+    const PAIRED_AT = new Date("2026-08-04T08:12:00.000Z");
+
     /** Ana and Ben paired; Cleo sails unpaired, which is a normal boat. */
-    function pairedInput() {
+    function pairedInput(overrides: Partial<IncidentExportInput> = {}) {
       const ana = { ...diver("b1", "Ana Diaz"), buddy: { bookingId: "b2", fullName: "Ben Cho" } };
       const ben = { ...diver("b2", "Ben Cho"), buddy: { bookingId: "b1", fullName: "Ana Diaz" } };
       return baseInput({
         manifests: manifestsFor([ana, ben, diver("b3", "Cleo Vance")]),
         events: [],
         crewCounts: [],
+        buddyPairings: [
+          { bookingId: "b1", teamNumber: 1, pairedByName: "Sol Marin", pairedAt: PAIRED_AT },
+          { bookingId: "b2", teamNumber: 1, pairedByName: "Sol Marin", pairedAt: PAIRED_AT },
+        ],
+        ...overrides,
       });
     }
 
@@ -444,18 +451,49 @@ describe("buildIncidentExport", () => {
       const doc = buildIncidentExport(pairedInput());
       const byName = (name: string) => doc.roster.find((entry) => entry.fullName === name);
 
-      expect(byName("Ana Diaz")?.buddyName).toBe("Ben Cho");
-      expect(byName("Ben Cho")?.buddyName).toBe("Ana Diaz");
+      expect(byName("Ana Diaz")?.buddy?.buddyName).toBe("Ben Cho");
+      expect(byName("Ben Cho")?.buddy?.buddyName).toBe("Ana Diaz");
+    });
+
+    it("states when the pairing was made and who made it — a pairing is never anonymous", () => {
+      // The document's contract is facts *with* their timestamp and recorder.
+      // A pairing decided at the dock and one typed in that night are different
+      // facts, and only the provenance can tell them apart.
+      const ana = buildIncidentExport(pairedInput()).roster.find(
+        (entry) => entry.fullName === "Ana Diaz",
+      );
+      expect(ana?.buddy?.pairedByName).toBe("Sol Marin");
+      expect(ana?.buddy?.pairedAt).toBe(PAIRED_AT.toISOString());
+    });
+
+    it("numbers the team so both members can be found on a printed roster", () => {
+      const doc = buildIncidentExport(pairedInput());
+      const team = (name: string) =>
+        doc.roster.find((entry) => entry.fullName === name)?.buddy?.teamNumber;
+      // Both halves carry the same number — that is the whole point: a reader
+      // scanning for "Team 01" finds both rows without chasing names.
+      expect(team("Ana Diaz")).toBe(1);
+      expect(team("Ben Cho")).toBe(1);
+    });
+
+    it("still prints the pairing when its provenance is missing, rather than dropping it", () => {
+      // The pairing is the safety fact; its recorder is the detail. Losing the
+      // detail must never lose the fact.
+      const doc = buildIncidentExport(pairedInput({ buddyPairings: [] }));
+      const ana = doc.roster.find((entry) => entry.fullName === "Ana Diaz");
+      expect(ana?.buddy?.buddyName).toBe("Ben Cho");
+      expect(ana?.buddy?.pairedByName).toBeNull();
+      expect(ana?.buddy?.pairedAt).toBeNull();
     });
 
     it("states an unpaired diver as an explicit absence, never a blank or a crash", () => {
       const doc = buildIncidentExport(pairedInput());
       // `null` is the stated absence the page turns into words; an unpaired
       // remainder is a normal boat, not a gap in the record.
-      expect(doc.roster.find((entry) => entry.fullName === "Cleo Vance")?.buddyName).toBeNull();
+      expect(doc.roster.find((entry) => entry.fullName === "Cleo Vance")?.buddy).toBeNull();
       // And a departure where nobody was paired still builds every row.
       const none = buildIncidentExport(baseInput());
-      expect(none.roster.every((entry) => entry.buddyName === null)).toBe(true);
+      expect(none.roster.every((entry) => entry.buddy === null)).toBe(true);
       expect(none.roster).toHaveLength(2);
     });
 
@@ -463,7 +501,8 @@ describe("buildIncidentExport", () => {
       const doc = buildIncidentExport(pairedInput());
       const ana = doc.roster.find((entry) => entry.fullName === "Ana Diaz");
       expect(ana).not.toHaveProperty("buddyBookingId");
-      expect(ana?.buddyName).toBe("Ben Cho");
+      expect(ana?.buddy?.buddyName).toBe("Ben Cho");
+      expect(ana?.buddy).not.toHaveProperty("bookingId");
 
       // And the id stays out of the *hashed* facts: re-importing a shop
       // reassigns every row id without changing a printed word, so a pairing
@@ -483,6 +522,13 @@ describe("buildIncidentExport", () => {
           })),
         })),
         diverEvidence: reimported.diverEvidence.map((entry) => ({
+          ...entry,
+          bookingId: `other-${entry.bookingId}`,
+        })),
+        // A re-import reassigns the pairing rows' booking ids too — remapping
+        // the manifest but not these would be testing a state that cannot
+        // happen, and would "pass" only by losing the provenance.
+        buddyPairings: reimported.buddyPairings?.map((entry) => ({
           ...entry,
           bookingId: `other-${entry.bookingId}`,
         })),
@@ -543,8 +589,9 @@ describe("buildIncidentExport", () => {
       const doc = buildIncidentExport(baseInput({ manifests, events: [], crewCounts: [] }));
       const ana = doc.roster.find((entry) => entry.fullName === "Ana Diaz");
 
-      expect(ana?.buddyName).toBe("Ben Cho");
+      expect(ana?.buddy?.buddyName).toBe("Ben Cho");
       expect(ana).not.toHaveProperty("buddyAlert");
+      expect(ana?.buddy).not.toHaveProperty("alert");
       // The facts a reader needs are the two roll-call rows, stated plainly.
       const afterDive1 = ana?.rollCall.find((r) => r.checkpoint === "after_dive_1");
       expect(afterDive1?.label).toBe("boarded");

@@ -382,9 +382,11 @@ new domain concept, define it here in the same PR.
   after a departure: the manifest roster with each person's per-checkpoint roll-call state, the
   complete append-only roll-call timeline (corrections included), certification evidence as held,
   waiver **status** (state, date, template version — never the medical questionnaire's answers),
-  the **buddy pair** staff recorded for the departure (by name; the live manifest's split-pair
-  alert is deliberately not restated, because it reads a merely-unrecorded buddy the same as one a
-  human stated was not back aboard), crew and crew counts, and generation metadata. It reports
+  the **buddy pair** staff recorded for the departure — a stable team number, the buddy's name,
+  and who recorded the pairing when, since a pairing decided at the dock and one typed in that
+  night are different facts (the live manifest's split-pair alert is deliberately not restated,
+  because it reads a merely-unrecorded buddy the same as one a human stated was not back aboard)
+  — crew and crew counts, and generation metadata. It reports
   recorded facts with timestamps and
   computes no safety judgment; every absence is stated ("Awaiting", "No certification evidence on
   file") rather than left blank. A SHA-256 **integrity code** over the printed facts sits in the

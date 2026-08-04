@@ -95,21 +95,44 @@ export type IncidentRollCallResult = {
   note: string | null;
 };
 
+/**
+ * One diver's side of a recorded buddy pairing, as the document prints it.
+ *
+ * `teamNumber` exists so the pairing is *readable* on paper. Roster order is
+ * booking-creation order, so a pair's two members land wherever they were
+ * booked — often pages apart on a full boat. Without a team number, checking
+ * "did both of this pair come back?" is a manual name-chase across a page
+ * break, which is precisely the comparison this document leaves to the reader
+ * instead of computing a verdict. Numbering is stable: `listTripBuddyPairs`
+ * orders by `createdAt` then `pairId`, so the same records always number the
+ * same way and the integrity code stays reproducible.
+ */
+export type IncidentBuddyPairing = {
+  /** 1-based, in pairing order — printed as "Team 03". */
+  teamNumber: number;
+  buddyName: string;
+  /** The staff member who made the call; a pairing is never anonymous. */
+  pairedByName: string | null;
+  /** When the pairing was recorded — at the dock, or after the fact. */
+  pairedAt: string | null;
+};
+
 export type IncidentRosterEntry = {
   bookingId: string;
   fullName: string;
   emergencyContactName: string | null;
   emergencyContactPhone: string | null;
   /**
-   * The buddy staff paired this diver with on this departure, by name
+   * The buddy staff paired this diver with on this departure
    * (ADR 20260804-buddy-pairs). A **recorded decision**, not a derived one:
    * who dived with whom is exactly the question an investigator asks first,
-   * and it is a fact the shop entered, so it belongs on this document.
+   * and it is a fact the shop entered, so it belongs on this document — with
+   * its recorder and timestamp, like every other fact here.
    *
    * `null` means no pair was recorded, which the page states in words rather
    * than leaving blank — an unpaired diver is a normal boat, not a gap.
    *
-   * Deliberately a name and not a booking id, matching the offline snapshot:
+   * Deliberately names and not booking ids, matching the offline snapshot:
    * the document prints names, and ids are projected out of the hash anyway.
    *
    * The live manifest's split-pair alert is deliberately not restated — and
@@ -123,7 +146,7 @@ export type IncidentRosterEntry = {
    * count, stating something louder than anyone actually recorded. The
    * per-checkpoint cells and the timeline carry both facts, distinctly.
    */
-  buddyName: string | null;
+  buddy: IncidentBuddyPairing | null;
   /** One row per checkpoint, in sailing order — never omitted when unrecorded. */
   rollCall: IncidentRollCallResult[];
   /** Empty means "no certification evidence on file" — the UI must say so. */
@@ -240,8 +263,24 @@ export type IncidentExportInput = {
   diverEvidence: readonly IncidentDiverEvidenceInput[];
   events: readonly IncidentTimelineEventInput[];
   crewCounts: readonly IncidentCrewCountInput[];
+  /**
+   * Provenance for the pairings the manifest already carries, one entry per
+   * *member* booking (`listTripBuddyPairs`, flattened). Whether a buddy appears
+   * at all still comes from the manifest, which drops a pair whose other seat
+   * was cancelled; this only supplies the recorder, the timestamp, and the team
+   * number. A missing entry degrades to a bare name rather than dropping the
+   * buddy — the pairing is the safety fact, its provenance is the detail.
+   */
+  buddyPairings?: readonly IncidentBuddyPairingInput[];
   generatedAt: Date;
   generatedByName: string;
+};
+
+export type IncidentBuddyPairingInput = {
+  bookingId: string;
+  teamNumber: number;
+  pairedByName: string | null;
+  pairedAt: Date | null;
 };
 
 function iso(value: Date | null | undefined): string | null {
@@ -347,6 +386,9 @@ export function buildIncidentExport(input: IncidentExportInput): IncidentExportD
   const departure = input.manifests[0];
   if (!departure) throw new Error("buildIncidentExport: no departure manifest");
   const evidenceByBooking = new Map(input.diverEvidence.map((entry) => [entry.bookingId, entry]));
+  const pairingByBooking = new Map(
+    (input.buddyPairings ?? []).map((entry) => [entry.bookingId, entry]),
+  );
 
   // Every diver on the departure manifest is on this document — the manifest
   // derivation already refuses to filter anyone away, and so does this.
@@ -359,8 +401,16 @@ export function buildIncidentExport(input: IncidentExportInput): IncidentExportD
       emergencyContactPhone: diver.emergencyContactPhone,
       // The manifest derivation already refuses to carry a buddy whose own
       // seat was cancelled, so a name here is always someone who held a seat
-      // on this departure.
-      buddyName: diver.buddy?.fullName ?? null,
+      // on this departure. Provenance rides alongside; if it is missing the
+      // pairing still prints, with its recorder and time stated as unknown.
+      buddy: diver.buddy
+        ? {
+            teamNumber: pairingByBooking.get(diver.bookingId)?.teamNumber ?? 0,
+            buddyName: diver.buddy.fullName,
+            pairedByName: pairingByBooking.get(diver.bookingId)?.pairedByName ?? null,
+            pairedAt: iso(pairingByBooking.get(diver.bookingId)?.pairedAt ?? null),
+          }
+        : null,
       rollCall: rollCallResults(
         input.manifests,
         (manifest) => manifest.divers.find((entry) => entry.bookingId === diver.bookingId) ?? null,
