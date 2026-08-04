@@ -42,6 +42,7 @@ const EXPECTED_FILES = [
   "roll_call_events.csv",
   "roll_call_crew_attestations.csv",
   "roll_call_crew_events.csv",
+  "buddy_pairs.csv",
   "waiver_templates.csv",
   "waiver_records.csv",
   "rental_fit.csv",
@@ -82,6 +83,7 @@ const EXPORTED_TABLES = [
   "roll_call_events",
   "roll_call_crew_attestations",
   "roll_call_crew_events",
+  "buddy_pair_members",
   "waiver_templates",
   "waiver_records",
   "rental_fit_profiles",
@@ -210,6 +212,9 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
   roll_call_events: ["shop_id"],
   roll_call_crew_attestations: ["shop_id"],
   roll_call_crew_events: ["shop_id"],
+  // The member row's surrogate id says nothing beyond (pair_id, booking_id),
+  // which are both exported.
+  buddy_pair_members: ["shop_id", "id"],
   waiver_templates: ["shop_id"],
   waiver_records: [
     "shop_id",

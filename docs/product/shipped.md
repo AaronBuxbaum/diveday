@@ -21,6 +21,18 @@ idempotent and resumable; no money moves (refunds stay per-booking, H-14 gate in
 Alternative-day salvage and a courtesy text channel are the named follow-ons. See
 [20260804-blowout-cascade](../architecture/decisions/20260804-blowout-cascade.md).
 
+## Buddy pairs in roll call (delivered 2026-08-04)
+
+Staff pair divers into buddy teams on the manifest, and roll call stops being a flat list: when
+one buddy is back aboard and the other is not — the state a real deck watches for — the pair and
+the returned diver's row both say so, loud after a dive and as a heads-up at the dock. Pairs are
+exactly two bookings of one departure, DB-enforced to at most one pair per diver, explicit to
+make and to dissolve, and they **inform only** — never readiness, admission, capacity, or
+checkpoint completeness. The offline copy shows pairs read-only by name and says the split-pair
+read belongs to the live roll call; the export bundle carries the standing pairs as
+`buddy_pairs.csv`. Seeded on the demo reef boat (two teams plus the normal odd remainder). See
+[20260804-buddy-pairs](../architecture/decisions/20260804-buddy-pairs.md).
+
 ## Scheduled backup export to shop-owned storage (2026-08-04)
 
 Roadmap §1's first remaining bullet, delivered: every week a shop's full export bundle — the same

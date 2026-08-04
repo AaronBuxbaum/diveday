@@ -21,8 +21,6 @@ Every idea is tagged so you can triage fast:
 Lens: make unsafe departure harder. Safety ideas require boring code, failure-path and adversarial
 tests, and `dive-domain-expert` review.
 
-- **Buddy pairs / teams.** Let staff pair divers so roll call can surface "this diver's buddy is not
-  back yet." Mirrors how dives actually run. *(M, manifests, quick win.)*
 - **Physical headcount reconciliation.** A captain enters the count they see on deck; the app
   cross-checks it against boarded/not-boarded state. *(M, manifests, big bet.)*
 - **Safety record page.** Publish honest, computed shop safety stats such as boarded divers,

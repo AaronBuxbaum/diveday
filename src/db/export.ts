@@ -21,6 +21,7 @@ import {
   bookingPaymentEvents,
   bookingPayments,
   bookings,
+  buddyPairMembers,
   certificationLevel,
   certifications,
   coursePathSteps,
@@ -352,6 +353,14 @@ export async function loadShopExportBundleInput(
         .from(rollCallCrewEvents)
         .where(eq(rollCallCrewEvents.shopId, shopId))
         .orderBy(asc(rollCallCrewEvents.occurredAt), asc(rollCallCrewEvents.id));
+
+      // Buddy teams standing at export time — not a history: unpairing
+      // deletes the rows (ADR 20260804-buddy-pairs).
+      const buddyPairRows = await tx
+        .select()
+        .from(buddyPairMembers)
+        .where(eq(buddyPairMembers.shopId, shopId))
+        .orderBy(asc(buddyPairMembers.createdAt), asc(buddyPairMembers.pairId));
 
       const certificationRows = await tx
         .select()
@@ -1154,6 +1163,37 @@ export async function loadShopExportBundleInput(
           note: EXPORT_FILE_NOTES["roll_call_crew_events.csv"],
         },
         {
+          file: "buddy_pairs.csv",
+          header: [
+            "pair_id",
+            "trip_id",
+            "trip_title",
+            "trip_starts_at",
+            "booking_id",
+            "person_id",
+            "person_name",
+            "paired_by_person_id",
+            "paired_by_name",
+            "created_at",
+          ],
+          rows: buddyPairRows.map((row) => {
+            const personId = bookingPerson.get(row.bookingId);
+            return [
+              row.pairId,
+              row.tripId,
+              tripTitle.get(row.tripId),
+              tripStartsAt.get(row.tripId),
+              row.bookingId,
+              personId,
+              personId ? personName.get(personId) : null,
+              row.pairedByPersonId,
+              personName.get(row.pairedByPersonId),
+              row.createdAt,
+            ];
+          }),
+          note: EXPORT_FILE_NOTES["buddy_pairs.csv"],
+        },
+        {
           file: "waiver_templates.csv",
           header: ["id", "title", "version", "archived_at", "created_at", "body"],
           rows: templateRows.map((row) => [
@@ -1796,6 +1836,9 @@ export async function loadShopExportCounts(
         .select({ n: count() })
         .from(rollCallCrewAttestations)
         .where(eq(rollCallCrewAttestations.shopId, shopId)),
+    ),
+    "buddy_pairs.csv": await countOf(
+      db.select({ n: count() }).from(buddyPairMembers).where(eq(buddyPairMembers.shopId, shopId)),
     ),
     "waiver_templates.csv": await countOf(
       db.select({ n: count() }).from(waiverTemplates).where(eq(waiverTemplates.shopId, shopId)),
