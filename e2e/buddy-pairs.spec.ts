@@ -33,10 +33,17 @@ test("staff pair divers, roll call raises the split team, and boarding the buddy
   await page.getByRole("button", { name: "Pair as buddies" }).click();
   await expect(page.getByText("Omar Haddad · Sam Whitfield")).toBeVisible();
 
-  // Their rows now wear the quiet chip, both ways round.
-  const rollCallList = page.locator("#roll-call-list");
-  const omarRow = rollCallList.locator("li", { hasText: "Omar Haddad" }).first();
-  const samRow = rollCallList.locator("li", { hasText: "Sam Whitfield" }).first();
+  // Their rows now wear the quiet chip, both ways round. Each row is
+  // anchored on its own <h3> name — a bare `li hasText` would also match the
+  // *other* row once the chip text ("Buddy: Sam Whitfield") lands in it, and
+  // `.first()` then asserts against whichever row the roster orders first
+  // (exactly how this spec's first CI run misread Omar's row as Sam's).
+  const diverRow = (name: string) =>
+    page
+      .locator("#roll-call-list li")
+      .filter({ has: page.getByRole("heading", { name, exact: true }) });
+  const omarRow = diverRow("Omar Haddad");
+  const samRow = diverRow("Sam Whitfield");
   await expect(omarRow.getByText("Buddy: Sam Whitfield")).toBeVisible();
   await expect(samRow.getByText("Buddy: Omar Haddad")).toBeVisible();
 
@@ -87,11 +94,12 @@ test("pairing refuses the same diver twice, and unpairing is explicit", async ({
   const tomLenaRow = page.locator("li", { hasText: "Lena Fischer · Tom Okafor" });
   await tomLenaRow.getByRole("button", { name: "Unpair" }).click();
   await expect(page.getByText("Lena Fischer · Tom Okafor")).toHaveCount(0);
-  const rollCallList = page.locator("#roll-call-list");
+  // Same h3-anchored row shape as the first test: Tom's row must not be
+  // found via some other row's chip text.
   await expect(
-    rollCallList
-      .locator("li", { hasText: "Tom Okafor" })
-      .first()
+    page
+      .locator("#roll-call-list li")
+      .filter({ has: page.getByRole("heading", { name: "Tom Okafor", exact: true }) })
       .getByText("Buddy:", { exact: false }),
   ).toHaveCount(0);
 });

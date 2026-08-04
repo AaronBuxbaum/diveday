@@ -1637,10 +1637,12 @@ for (const scheme of ["light", "dark"] as const) {
           .getByRole("link", { name: "After dive 1" })
           .evaluate((link: HTMLElement) => link.click());
         await page.waitForURL(/checkpoint=after_dive_1/);
+        // Anchored on the row's own <h3>: a bare `li hasText "Tom Okafor"`
+        // also matches Lena's row via her "Buddy: Tom Okafor" chip (see the
+        // same note in e2e/buddy-pairs.spec.ts).
         const tomRow = page
-          .locator("#roll-call-list")
-          .locator("li", { hasText: "Tom Okafor" })
-          .first();
+          .locator("#roll-call-list li")
+          .filter({ has: page.getByRole("heading", { name: "Tom Okafor", exact: true }) });
         const boardTom = tomRow.getByRole("button", { name: "Mark boarded" });
         await boardTom.evaluate((button) => button.scrollIntoView({ block: "center" }));
         await boardTom.click();
