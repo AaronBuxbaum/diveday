@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { waiverSendCopy } from "@/app/actions/waiver-send-types";
 import { EmptyState } from "@/components/EmptyState";
 import { OperationalWindowNote, readinessPivots } from "@/components/OperationalWindowNote";
+import { PaperWaiverControl } from "@/components/PaperWaiverControl";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { WaiverSendControl } from "@/components/today/WaiverSendControl";
 import { Badge } from "@/components/ui/badge";
@@ -29,7 +30,7 @@ import {
 } from "@/lib/operational-window";
 import { requireStaffSession } from "@/lib/session";
 import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
-import { checkInAction } from "./actions";
+import { checkInAction, markWaiverInPersonFromCheckIn } from "./actions";
 import { CheckInSearch } from "./CheckInSearch";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -74,6 +75,9 @@ const noticeCopy: Record<
   walkin_already: { tone: "neutral", key: "checkIn.notice.walkinAlready" },
   walkin_unavailable: { tone: "danger", key: "checkIn.notice.walkinUnavailable" },
   walkin_invalid: { tone: "danger", key: "checkIn.notice.walkinInvalid" },
+  waiver_in_person: { tone: "success", key: "checkIn.notice.waiverInPerson" },
+  waiver_medical_attestation: { tone: "warning", key: "checkIn.notice.waiverMedicalAttestation" },
+  waiver_error: { tone: "danger", key: "checkIn.notice.waiverError" },
 };
 
 export default async function CheckInPage({
@@ -367,6 +371,21 @@ export default async function CheckInPage({
                             </Link>
                           )}
                         </div>
+                      ) : null}
+                      {/* A diver at the counter with a signed paper release in
+                          hand: record it here rather than sending them (and the
+                          staffer) off to the trip's guest list for the one
+                          control that clears this blocker. Offered on the same
+                          condition the roster uses — a waiver still to come —
+                          and kept under the primary "send the link" action,
+                          because attesting to paper is the fallback. */}
+                      {fix?.sendsWaiver ? (
+                        <PaperWaiverControl
+                          action={markWaiverInPersonFromCheckIn.bind(null, shopSlug)}
+                          bookingId={row.bookingId}
+                          t={t}
+                          className="mt-2"
+                        />
                       ) : null}
                     </>
                   ) : null}

@@ -35,7 +35,6 @@ type NoticeLink = { key: StaffMessageKey; href: (shopSlug: string) => string };
 
 const NOTICE_KEYS: Record<string, { tone: NoticeTone; key: StaffMessageKey; link?: NoticeLink }> = {
   captured: { tone: "success", key: "divers.notices.captured" },
-  "captured-no-photo": { tone: "success", key: "divers.notices.capturedNoPhoto" },
   verified: { tone: "success", key: "divers.notices.verified" },
   "card-deleted": { tone: "success", key: "divers.notices.cardDeleted" },
   "card-restored": { tone: "success", key: "divers.notices.cardRestored" },
@@ -44,7 +43,6 @@ const NOTICE_KEYS: Record<string, { tone: NoticeTone; key: StaffMessageKey; link
   "profile-saved": { tone: "success", key: "divers.notices.profileSaved" },
   "fit-flagged": { tone: "success", key: "divers.notices.fitFlagged" },
   "fit-cleared": { tone: "success", key: "divers.notices.fitCleared" },
-  image: { tone: "danger", key: "divers.notices.image" },
   duplicate: { tone: "danger", key: "divers.notices.duplicate" },
   refunded: { tone: "success", key: "divers.notices.refunded" },
   booked: { tone: "success", key: "divers.notices.booked" },

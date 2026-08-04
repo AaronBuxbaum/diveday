@@ -2,6 +2,7 @@ import { and, asc, count, desc, eq, gt, inArray, isNull, ne } from "drizzle-orm"
 import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { flaggedMedicalPrompts } from "@/lib/medical";
+import { personNamesMatch } from "@/lib/person-name";
 import { inPersonAttestationProvider, localTypedConsentProvider } from "@/lib/signatures";
 import { computeWaiverIntegrityHash, verifyWaiverIntegrity } from "@/lib/waiver-integrity";
 import {
@@ -457,7 +458,7 @@ export async function saveWaiverDraft(
 
 export type CompleteWaiverOutcome =
   | { ok: true; status: "completed" | "medical_review"; idempotent: boolean }
-  | { ok: false; reason: "unavailable" | "expired" | "invalid_signature" };
+  | { ok: false; reason: "unavailable" | "expired" | "invalid_signature" | "name_mismatch" };
 
 function completedStatus(
   status: typeof waiverRecords.$inferSelect.status,
@@ -564,6 +565,25 @@ export async function completeWaiver(
   if (state.state === "expired") return { ok: false, reason: "expired" };
   if (state.state === "completed") {
     return { ok: true, status: completedStatus(state.record.status), idempotent: true };
+  }
+
+  // "Type your full name" is the signature. It accepted anything at least two
+  // characters long, so a release could be executed under "asdf" and still read
+  // as a signed waiver on the manifest. The typed name must plausibly be the
+  // diver the record belongs to — `personNamesMatch` tolerates case, accents,
+  // punctuation, word order and a middle initial (the noise that is *not* a
+  // different person) and refuses anything that changes a name token.
+  //
+  // Refused *before* the record is touched, so a mismatch leaves the link
+  // signable rather than burning it. A diver whose booking genuinely holds the
+  // wrong name is directed to the shop, which can correct the record.
+  const [signer] = await db
+    .select({ fullName: people.fullName })
+    .from(people)
+    .where(eq(people.id, state.record.personId))
+    .limit(1);
+  if (!signer || !personNamesMatch(evidence.signerName, signer.fullName)) {
+    return { ok: false, reason: "name_mismatch" };
   }
 
   const medicalReviewRequired = needsMedicalReview(input.medicalAnswers);

@@ -137,7 +137,6 @@ const rentalFitSchema = z.object({
   nitrox: z.string().optional(),
   bcdSize: z.string().trim().max(20),
   wetsuitSize: z.string().trim().max(20),
-  bootSize: z.string().trim().max(20),
   finSize: z.string().trim().max(20),
   weightPreference: z.string().trim().max(80),
   note: z.string().trim().max(300),
@@ -727,7 +726,10 @@ export async function saveRentalFitRequest(
     rentsGopro: parsed.data.gopro === "on",
     bcdSize: parsed.data.bcdSize,
     wetsuitSize: parsed.data.wetsuitSize,
-    bootSize: parsed.data.bootSize,
+    // Fins and boots are one shoe-size answer on the diver's form now, written
+    // to both columns so the packing list, the manifest and the CSV export all
+    // keep reading the field they already read.
+    bootSize: parsed.data.finSize,
     finSize: parsed.data.finSize,
     weightPreference: parsed.data.weightPreference,
     note: parsed.data.note,

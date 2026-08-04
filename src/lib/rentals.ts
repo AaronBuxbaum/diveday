@@ -207,6 +207,15 @@ export type RentalQuote = {
   lines: RentalQuoteLine[];
   subtotalCents: number;
   /**
+   * What the same picks would have cost billed piece by piece — the figure a
+   * surface strikes through when the set price won. Equal to
+   * `subtotalCents` whenever no set discount applied, so a caller can compare
+   * the two rather than having to re-derive the discount itself.
+   */
+  listSubtotalCents: number;
+  /** `listSubtotalCents - subtotalCents`; `0` when the set price didn't win. */
+  setSavingsCents: number;
+  /**
    * A gear item the diver chose that the shop hasn't priced online, so it is
    * absent from the quote and settled at the shop. Lets a surface say "plus a
    * few items priced at the shop" instead of quoting a misleadingly low total.
@@ -247,6 +256,11 @@ export function quoteRentalFit(
   const lines: RentalQuoteLine[] = [];
   const unpricedKinds: RentableItemKind[] = [];
 
+  // What the core pieces would have cost one by one, carried alongside the
+  // lines so a surface can strike it through when the set price won. Starts
+  // level with the lines and only diverges on the set branch below.
+  let listSubtotalCents = 0;
+
   const offeredCore = CORE_RENTAL_KINDS.filter((kind) => offered.has(kind));
   const rentedCore = offeredCore.filter((kind) => rented.has(kind));
   if (rentedCore.length > 0) {
@@ -272,13 +286,17 @@ export function quoteRentalFit(
     } else {
       lines.push(...perPieceLines);
     }
+    listSubtotalCents += perPieceTotal;
   }
 
   for (const kind of ["gopro"] as const) {
     if (!rented.has(kind)) continue;
     const cents = pricing.perItemCents[kind];
     if (cents === undefined) unpricedKinds.push(kind);
-    else lines.push({ kind, cents });
+    else {
+      lines.push({ kind, cents });
+      listSubtotalCents += cents;
+    }
   }
 
   if (fit.wantsNitrox && pricing.nitroxCents !== null) {
@@ -287,8 +305,15 @@ export function quoteRentalFit(
       kind: "nitrox",
       cents: pricing.nitroxCents * dives,
     });
+    listSubtotalCents += pricing.nitroxCents * dives;
   }
 
   const subtotalCents = lines.reduce((sum, line) => sum + line.cents, 0);
-  return { lines, subtotalCents, unpricedKinds };
+  return {
+    lines,
+    subtotalCents,
+    listSubtotalCents,
+    setSavingsCents: Math.max(0, listSubtotalCents - subtotalCents),
+    unpricedKinds,
+  };
 }

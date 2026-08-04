@@ -35,7 +35,17 @@ async function waiverContext() {
   if (!rosterEntry) throw new Error("demo booking missing");
   const template = await getCurrentWaiverTemplate(db, shop.id);
   if (!template) throw new Error("demo waiver template missing");
-  return { db, shop, trip, booking: rosterEntry.booking, template };
+  // The diver the booking belongs to: `completeWaiver` now checks the typed
+  // signature against this name, so every completion in these tests signs as
+  // the person actually holding the seat.
+  return {
+    db,
+    shop,
+    trip,
+    booking: rosterEntry.booking,
+    person: rosterEntry.person,
+    template,
+  };
 }
 
 describe("waiver records (in-memory PGlite)", () => {
@@ -110,7 +120,7 @@ describe("waiver records (in-memory PGlite)", () => {
   });
 
   it("makes completion idempotent and routes a medical yes to review", async () => {
-    const { db, shop, booking } = await waiverContext();
+    const { db, person, shop, booking } = await waiverContext();
     const issued = await issueWaiverRequest(db, {
       shopId: shop.id,
       bookingId: booking.id,
@@ -118,7 +128,7 @@ describe("waiver records (in-memory PGlite)", () => {
     });
     if (!issued.ok) throw new Error("expected a waiver link");
     const input = {
-      signerName: "Nora Quinn",
+      signerName: person.fullName,
       agreed: true,
       medicalAnswers: { ...clearAnswers, responses: { heart_lung: true } },
       now,
@@ -133,6 +143,61 @@ describe("waiver records (in-memory PGlite)", () => {
       status: "medical_review",
       idempotent: true,
     });
+  });
+
+  /**
+   * "Type your full name" *is* the signature, so it has to be the signer's
+   * name. It used to accept any two characters, which meant a release could be
+   * executed under "asdf" and still read as signed on the manifest.
+   */
+  it("refuses a signature typed under someone else's name, leaving the link signable", async () => {
+    const { db, person, shop, booking } = await waiverContext();
+    const issued = await issueWaiverRequest(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      now,
+    });
+    if (!issued.ok) throw new Error("expected a waiver link");
+
+    expect(
+      await completeWaiver(db, issued.token, {
+        signerName: "Somebody Else",
+        agreed: true,
+        medicalAnswers: clearAnswers,
+        now,
+      }),
+    ).toEqual({ ok: false, reason: "name_mismatch" });
+    // Refused before the record was touched: the diver can still sign.
+    expect(await getWaiverForToken(db, issued.token, now)).toMatchObject({ state: "available" });
+
+    expect(
+      await completeWaiver(db, issued.token, {
+        signerName: person.fullName,
+        agreed: true,
+        medicalAnswers: clearAnswers,
+        now,
+      }),
+    ).toMatchObject({ ok: true, status: "completed" });
+  });
+
+  it("accepts the noise that isn't a different person — case, accents, and a middle initial", async () => {
+    const { db, shop, booking, person } = await waiverContext();
+    await db.update(people).set({ fullName: "José Q. Díaz" }).where(eq(people.id, person.id));
+    const issued = await issueWaiverRequest(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      now,
+    });
+    if (!issued.ok) throw new Error("expected a waiver link");
+
+    expect(
+      await completeWaiver(db, issued.token, {
+        signerName: "  jose diaz ",
+        agreed: true,
+        medicalAnswers: clearAnswers,
+        now,
+      }),
+    ).toMatchObject({ ok: true, status: "completed" });
   });
 
   it("rejects expired links and cross-tenant issue attempts", async () => {
@@ -216,11 +281,11 @@ describe("waiver records (in-memory PGlite)", () => {
   });
 
   it("keeps a completed record faithful to the version it was signed against", async () => {
-    const { db, shop, booking, template } = await waiverContext();
+    const { db, person, shop, booking, template } = await waiverContext();
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
     if (!issued.ok) throw new Error("expected a waiver link");
     await completeWaiver(db, issued.token, {
-      signerName: "Nora Quinn",
+      signerName: person.fullName,
       agreed: true,
       medicalAnswers: clearAnswers,
       now,
@@ -305,11 +370,11 @@ describe("listWaiverIntegrityAudit pagination", () => {
 // medical-flag summary, never the raw questionnaire.
 describe("listWaiverIntegrityAudit signature evidence (task 155)", () => {
   it("carries the trip and a medical-flag summary, never the raw answer set", async () => {
-    const { db, shop, trip, booking } = await waiverContext();
+    const { db, person, shop, trip, booking } = await waiverContext();
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
     if (!issued.ok) throw new Error("expected a waiver link");
     const outcome = await completeWaiver(db, issued.token, {
-      signerName: "Nora Quinn",
+      signerName: person.fullName,
       agreed: true,
       medicalAnswers: { ...clearAnswers, responses: { heart_lung: true } },
       now,
@@ -334,7 +399,7 @@ describe("listWaiverIntegrityAudit signature evidence (task 155)", () => {
     expect(entry).not.toHaveProperty("tokenHash");
 
     // A clean signature (no medical flag) carries an empty summary, not a hole.
-    const { db: db2, shop: shop2, booking: booking2 } = await waiverContext();
+    const { db: db2, shop: shop2, booking: booking2, person: person2 } = await waiverContext();
     const cleanIssued = await issueWaiverRequest(db2, {
       shopId: shop2.id,
       bookingId: booking2.id,
@@ -342,7 +407,7 @@ describe("listWaiverIntegrityAudit signature evidence (task 155)", () => {
     });
     if (!cleanIssued.ok) throw new Error("expected a second waiver link");
     await completeWaiver(db2, cleanIssued.token, {
-      signerName: "Clean Diver",
+      signerName: person2.fullName,
       agreed: true,
       medicalAnswers: clearAnswers,
       now,
@@ -453,11 +518,11 @@ describe("listWaiverIntegrityAudit signature evidence (task 155)", () => {
   });
 
   it("getSignedWaiverRecordForShop finds a record past the audit's first page — the roster's deep link never silently lands on nothing", async () => {
-    const { db, shop, trip, booking } = await waiverContext();
+    const { db, person, shop, trip, booking } = await waiverContext();
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
     if (!issued.ok) throw new Error("expected a waiver link");
     await completeWaiver(db, issued.token, {
-      signerName: "Nora Quinn",
+      signerName: person.fullName,
       agreed: true,
       medicalAnswers: { ...clearAnswers, responses: { heart_lung: true } },
       now,
@@ -526,12 +591,12 @@ describe("staff records a paper / in-person signature", () => {
   });
 
   it("is idempotent — a booking already signed keeps its single record", async () => {
-    const { db, shop, booking } = await waiverContext();
+    const { db, person, shop, booking } = await waiverContext();
     const staff = await staffPerson(db, shop.id);
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
     if (!issued.ok) throw new Error("expected a waiver link");
     await completeWaiver(db, issued.token, {
-      signerName: "Nora Quinn",
+      signerName: person.fullName,
       agreed: true,
       medicalAnswers: clearAnswers,
       now,
@@ -615,12 +680,12 @@ describe("staff records a paper / in-person signature", () => {
 
 describe("emergency contact captured with the waiver", () => {
   it("writes the diver's emergency contact to their person record on completion", async () => {
-    const { db, shop, booking } = await waiverContext();
+    const { db, person, shop, booking } = await waiverContext();
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
     if (!issued.ok) throw new Error(`issue failed: ${issued.reason}`);
 
     const outcome = await completeWaiver(db, issued.token, {
-      signerName: "Nora Quinn",
+      signerName: person.fullName,
       agreed: true,
       medicalAnswers: clearAnswers,
       emergencyContact: { name: "Sam Quinn", phone: "+1 305 555 0114" },
@@ -635,7 +700,7 @@ describe("emergency contact captured with the waiver", () => {
   });
 
   it("never wipes a contact already on file when the diver leaves it blank", async () => {
-    const { db, shop, booking } = await waiverContext();
+    const { db, person, shop, booking } = await waiverContext();
     await db
       .update(people)
       .set({ emergencyContactName: "Existing Contact", emergencyContactPhone: "555-0000" })
@@ -644,7 +709,7 @@ describe("emergency contact captured with the waiver", () => {
     if (!issued.ok) throw new Error(`issue failed: ${issued.reason}`);
 
     await completeWaiver(db, issued.token, {
-      signerName: "Nora Quinn",
+      signerName: person.fullName,
       agreed: true,
       medicalAnswers: clearAnswers,
       emergencyContact: { name: "", phone: "" },
@@ -729,7 +794,7 @@ describe("saveBookingEmergencyContact (staff-facing write path, task 144)", () =
  */
 describe("signed waivers after a diver is erased", () => {
   async function erasedContext(options: { completeIt: boolean }) {
-    const { db, shop, trip, booking, template } = await waiverContext();
+    const { db, person, shop, trip, booking, template } = await waiverContext();
     const [owner] = await db
       .select({ id: people.id })
       .from(people)
@@ -740,7 +805,7 @@ describe("signed waivers after a diver is erased", () => {
     if (!issued.ok) throw new Error(`issue failed: ${issued.reason}`);
     if (options.completeIt) {
       const done = await completeWaiver(db, issued.token, {
-        signerName: "Nora Quinn",
+        signerName: person.fullName,
         agreed: true,
         medicalAnswers: clearAnswers,
         now,
@@ -754,7 +819,7 @@ describe("signed waivers after a diver is erased", () => {
       actorPersonId: owner.id,
     });
     if (!erased.ok) throw new Error(`erasure refused: ${erased.reason}`);
-    return { db, shop, trip, booking, template, issued, personId: booking.personId };
+    return { db, person, shop, trip, booking, template, issued, personId: booking.personId };
   }
 
   it("keeps the record in the integrity audit, reading as valid rather than tampered", async () => {
@@ -820,9 +885,9 @@ describe("signed waivers after a diver is erased", () => {
   });
 
   it("cannot complete an erased diver's waiver even with the original token", async () => {
-    const { db, issued } = await erasedContext({ completeIt: false });
+    const { db, person, issued } = await erasedContext({ completeIt: false });
     const attempt = await completeWaiver(db, issued.token, {
-      signerName: "Nora Quinn",
+      signerName: person.fullName,
       agreed: true,
       medicalAnswers: clearAnswers,
       now,

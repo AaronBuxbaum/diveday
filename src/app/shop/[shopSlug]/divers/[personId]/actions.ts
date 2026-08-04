@@ -37,7 +37,6 @@ import { canOverrideGearRequest, isStaff } from "@/lib/authz";
 import { isValidCalendarDate } from "@/lib/calendar-date";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
-import { storeCardImage } from "@/lib/storage";
 
 const agencySchema = z.enum(["padi", "ssi", "naui", "sdi", "tdi", "other"]);
 const levelSchema = z.enum([
@@ -107,33 +106,9 @@ const profileSchema = z.object({
   gopro: z.string().optional(),
   bcdSize: z.string().trim().max(40),
   wetsuitSize: z.string().trim().max(40),
-  bootSize: z.string().trim().max(40),
   finSize: z.string().trim().max(40),
   weightPreference: z.string().trim().max(120),
 });
-
-type ResolvedCardImage =
-  /** No file offered, or one stored successfully (url undefined when none given). */
-  | { url: string | undefined }
-  /** Storage isn't set up for this deployment — keep the card, just without a photo. */
-  | { unconfigured: true }
-  /** The file itself was rejected (wrong type, too large, or the provider failed). */
-  | { failed: true };
-
-async function resolveCardImage(formData: FormData): Promise<ResolvedCardImage> {
-  const file = formData.get("cardImage");
-  if (!(file instanceof File) || file.size === 0) return { url: undefined };
-  const stored = await storeCardImage({
-    keyPrefix: "cards",
-    filename: file.name,
-    contentType: file.type,
-    bytes: await file.arrayBuffer(),
-  });
-  // `not_configured` is not a bad photo: no blob storage is wired up, so we save
-  // the card without the image rather than rejecting a perfectly valid upload.
-  if (stored.status === "not_configured") return { unconfigured: true };
-  return stored.status === "stored" ? { url: stored.url } : { failed: true };
-}
 
 /** The column is date-only (CR-009); the validated "YYYY-MM-DD" input needs no conversion. */
 function dateFromInput(value: string) {
@@ -162,8 +137,10 @@ export async function addCertificationAction(
   const staff = await requireStaffSession();
   const parsed = certificationSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(`${base}?notice=invalid`);
-  const image = await resolveCardImage(formData);
-  if ("failed" in image) redirect(`${base}?notice=image`);
+  // No card photo: a shop verifies a card by looking its number up with the
+  // issuing agency, which is what "Mark certified" already attests to — the
+  // upload only ever added a second, unverified artefact to hold. Rows that
+  // still carry a `card_image_url` from before this keep displaying it.
   const saved = await createCertification(await getDb(), {
     shopId: staff.user.shopId,
     personId,
@@ -171,9 +148,8 @@ export async function addCertificationAction(
     level: parsed.data.level,
     identifier: parsed.data.identifier,
     expiresAt: dateFromInput(parsed.data.expiresOn),
-    cardImageUrl: "url" in image ? image.url : undefined,
   });
-  const notice = saved ? ("unconfigured" in image ? "captured-no-photo" : "captured") : "invalid";
+  const notice = saved ? "captured" : "invalid";
   revalidateAndRedirect(base, `${base}?notice=${notice}`);
 }
 
@@ -182,8 +158,6 @@ export async function addSpecialtyAction(shopSlug: string, personId: string, for
   const staff = await requireStaffSession();
   const parsed = specialtyCertificationSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(`${base}?notice=invalid`);
-  const image = await resolveCardImage(formData);
-  if ("failed" in image) redirect(`${base}?notice=image`);
   const saved =
     parsed.data.specialty === "nitrox"
       ? await createNitroxCertification(await getDb(), {
@@ -199,9 +173,8 @@ export async function addSpecialtyAction(shopSlug: string, personId: string, for
           specialty: parsed.data.specialty,
           identifier: parsed.data.identifier,
           expiresAt: dateFromInput(parsed.data.expiresOn),
-          cardImageUrl: "url" in image ? image.url : undefined,
         });
-  const notice = saved ? ("unconfigured" in image ? "captured-no-photo" : "captured") : "invalid";
+  const notice = saved ? "captured" : "invalid";
   revalidateAndRedirect(base, `${base}?notice=${notice}`);
 }
 
@@ -366,7 +339,8 @@ export async function saveProfileAction(shopSlug: string, personId: string, form
     rentsGopro: parsed.data.gopro === "on",
     bcdSize: parsed.data.bcdSize,
     wetsuitSize: parsed.data.wetsuitSize,
-    bootSize: parsed.data.bootSize,
+    // One shoe-size answer, written to both columns — see RentalFit.tsx.
+    bootSize: parsed.data.finSize,
     finSize: parsed.data.finSize,
     weightPreference: parsed.data.weightPreference,
   });

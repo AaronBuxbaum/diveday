@@ -45,10 +45,7 @@ export function getSeedDiveSiteMap(siteName: string): DiveSiteMap | null {
   return seedDiveSiteMaps[siteName] ?? null;
 }
 
-export function googleSatelliteEmbedUrl(query: string): string {
-  return `https://maps.google.com/maps?hl=en&q=${encodeURIComponent(query)}&t=k&z=15&output=embed`;
-}
-
-export function googleMapsUrl(query: string): string {
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
-}
+// The URL builders live in `./maps` now that the shop card on `/ready` draws a
+// map too — re-exported here so every existing dive-site caller keeps its one
+// import.
+export { googleMapsUrl, googleSatelliteEmbedUrl } from "./maps";

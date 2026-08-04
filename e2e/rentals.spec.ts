@@ -20,19 +20,19 @@ test("a diver sees rental prices and an estimate on the booking confirmation", a
   await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
   await expect(page.getByRole("heading", { name: /You’re on the boat, Rin/ })).toBeVisible();
 
-  // Per-piece prices show next to the gear, the set price is offered, and the
-  // default fit — every core item including the dive computer, which is
-  // default-on and now part of the set — is estimated at the set price ($45.00).
+  // Per-piece prices show next to the gear, and the default fit — every core
+  // item including the dive computer, which is default-on and part of the set —
+  // is estimated at the set price ($45.00).
   const fit = page
     .locator("section")
     .filter({ has: page.getByRole("heading", { name: "Rental fit" }) })
     .filter({ visible: true });
-  await expect(
-    fit.getByText(
-      "A full set includes BCD, regulator, wetsuit, mask & fins, weights, and dive computer.",
-    ),
-  ).toBeVisible();
   await expect(fit.getByText(/Estimated rental: \$45\.00 per person/)).toBeVisible();
+  // The set discount is *shown*, not just silently applied: the piece-by-piece
+  // price is struck through and the saving is named. It used to be invisible —
+  // the total simply read $45 with nothing to say anything had come off.
+  await expect(fit.getByText("Before the full-set discount: $65.00")).toBeVisible();
+  await expect(fit.getByText("Full-set price — you save $20.00.")).toBeVisible();
   // Target the checkbox specifically: "BCD" also substring-matches the "BCD size"
   // select's label, which would make a bare getByLabel("BCD") ambiguous.
   await fit.getByRole("checkbox", { name: /BCD/ }).uncheck();
@@ -41,6 +41,9 @@ test("a diver sees rental prices and an estimate on the booking confirmation", a
   // weights $5 + dive computer $10 = $50) would cost more than the set, and a
   // diver skipping one piece is never charged more than the full set (H-06, HD-9).
   await expect(fit.getByText(/Estimated rental: \$45\.00 per person/)).toBeVisible();
-  // Nitrox carries its per-dive surcharge in the label.
+  await expect(fit.getByText("Full-set price — you save $5.00.")).toBeVisible();
+  // Nitrox carries its per-dive surcharge in the label, and the explanation of
+  // what nitrox *is* moved into a hover-over rather than a standing paragraph.
   await expect(fit.getByText(/\$12\.00 per dive/)).toBeVisible();
+  await expect(fit.getByRole("button", { name: "What is Nitrox?" })).toBeVisible();
 });

@@ -5,9 +5,7 @@ import {
   deleteStoredImageTracked,
   imageStorageProviderFromEnvironment,
   isManagedBlobUrl,
-  MAX_CARD_IMAGE_BYTES,
   MAX_COURSE_IMAGE_BYTES,
-  storeCardImage,
   storeCourseImage,
   storeImportWaiverDocument,
 } from "./index";
@@ -23,25 +21,24 @@ beforeAll(async () => {
     .toBuffer();
 });
 
-function upload(overrides: Partial<Parameters<typeof storeCardImage>[0]> = {}) {
+function upload(overrides: Partial<Parameters<typeof storeCourseImage>[0]> = {}) {
   return {
-    keyPrefix: "cards",
-    filename: "padi ow.jpg",
+    filename: "reef course.jpg",
     contentType: "image/jpeg",
     bytes: realJpeg,
     ...overrides,
   };
 }
 
-describe("card image storage seam", () => {
+describe("image storage seam (the pipeline every upload wrapper shares)", () => {
   it("returns not_configured when no storage token is set", async () => {
     const provider = imageStorageProviderFromEnvironment({}, vi.fn());
-    expect(await storeCardImage(upload(), provider)).toEqual({ status: "not_configured" });
+    expect(await storeCourseImage(upload(), provider)).toEqual({ status: "not_configured" });
   });
 
   it("rejects a non-image before touching the provider", async () => {
     const provider = { upload: vi.fn() };
-    expect(await storeCardImage(upload({ contentType: "application/pdf" }), provider)).toEqual({
+    expect(await storeCourseImage(upload({ contentType: "application/pdf" }), provider)).toEqual({
       status: "failed",
     });
     expect(provider.upload).not.toHaveBeenCalled();
@@ -49,11 +46,14 @@ describe("card image storage seam", () => {
 
   it("rejects an empty or oversized file before touching the provider", async () => {
     const provider = { upload: vi.fn() };
-    expect(await storeCardImage(upload({ bytes: new ArrayBuffer(0) }), provider)).toEqual({
+    expect(await storeCourseImage(upload({ bytes: new ArrayBuffer(0) }), provider)).toEqual({
       status: "failed",
     });
     expect(
-      await storeCardImage(upload({ bytes: new ArrayBuffer(MAX_CARD_IMAGE_BYTES + 1) }), provider),
+      await storeCourseImage(
+        upload({ bytes: new ArrayBuffer(MAX_COURSE_IMAGE_BYTES + 1) }),
+        provider,
+      ),
     ).toEqual({ status: "failed" });
     expect(provider.upload).not.toHaveBeenCalled();
   });
@@ -61,7 +61,7 @@ describe("card image storage seam", () => {
   it("rejects a disguised file that claims an allowed content-type but isn't really an image (CR-012)", async () => {
     const provider = { upload: vi.fn() };
     const disguised = Buffer.from("not actually a jpeg".repeat(100));
-    expect(await storeCardImage(upload({ bytes: disguised }), provider)).toEqual({
+    expect(await storeCourseImage(upload({ bytes: disguised }), provider)).toEqual({
       status: "failed",
     });
     expect(provider.upload).not.toHaveBeenCalled();
@@ -70,16 +70,19 @@ describe("card image storage seam", () => {
   it("uploads to Vercel Blob and returns the durable URL", async () => {
     const fetchImpl = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ url: "https://blob.example/cards/abc-padi-ow.jpg" }),
+      json: async () => ({ url: "https://blob.example/courses/abc-reef-course.jpg" }),
     });
     const provider = imageStorageProviderFromEnvironment(
       { BLOB_READ_WRITE_TOKEN: "test-token" },
       fetchImpl as unknown as typeof fetch,
     );
-    const result = await storeCardImage(upload(), provider);
-    expect(result).toEqual({ status: "stored", url: "https://blob.example/cards/abc-padi-ow.jpg" });
+    const result = await storeCourseImage(upload(), provider);
+    expect(result).toEqual({
+      status: "stored",
+      url: "https://blob.example/courses/abc-reef-course.jpg",
+    });
     const [url, init] = fetchImpl.mock.calls[0];
-    expect(String(url)).toContain("https://blob.vercel-storage.com/cards/");
+    expect(String(url)).toContain("https://blob.vercel-storage.com/courses/");
     expect(String(url)).toContain(".jpg");
     expect(init.headers.authorization).toBe("Bearer test-token");
     // The re-encoded output content-type (CR-012), not whatever the caller claimed.
@@ -94,14 +97,14 @@ describe("card image storage seam", () => {
       .toBuffer();
     const fetchImpl = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ url: "https://blob.example/cards/abc-padi-ow.jpg" }),
+      json: async () => ({ url: "https://blob.example/courses/abc-reef-course.jpg" }),
     });
     const provider = imageStorageProviderFromEnvironment(
       { BLOB_READ_WRITE_TOKEN: "test-token" },
       fetchImpl as unknown as typeof fetch,
     );
-    await storeCardImage(
-      upload({ filename: "card.png", contentType: "image/png", bytes: png }),
+    await storeCourseImage(
+      upload({ filename: "reef course.png", contentType: "image/png", bytes: png }),
       provider,
     );
     const [, init] = fetchImpl.mock.calls[0];
@@ -114,13 +117,13 @@ describe("card image storage seam", () => {
       { BLOB_READ_WRITE_TOKEN: "test-token" },
       fetchImpl as unknown as typeof fetch,
     );
-    expect(await storeCardImage(upload(), provider)).toEqual({ status: "failed" });
+    expect(await storeCourseImage(upload(), provider)).toEqual({ status: "failed" });
   });
 
   it("keys every upload with a CSPRNG suffix, never a colliding or guessable one", async () => {
     const fetchImpl = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ url: "https://blob.example/cards/x-padi-ow.jpg" }),
+      json: async () => ({ url: "https://blob.example/courses/x-reef-course.jpg" }),
     });
     const provider = imageStorageProviderFromEnvironment(
       { BLOB_READ_WRITE_TOKEN: "test-token" },
@@ -128,58 +131,15 @@ describe("card image storage seam", () => {
     );
     const pathnames: string[] = [];
     for (let i = 0; i < 20; i++) {
-      await storeCardImage(upload(), provider);
+      await storeCourseImage(upload(), provider);
       const [url] = fetchImpl.mock.calls[i];
       const pathname = new URL(String(url)).pathname;
-      // "/cards/<22-char base64url suffix>-padi-ow.jpg"
-      const suffix = pathname.split("/")[2]?.split("-padi-ow.jpg")[0];
+      // "/courses/<22-char base64url suffix>-reef-course.jpg"
+      const suffix = pathname.split("/")[2]?.split("-reef-course.jpg")[0];
       expect(suffix).toMatch(/^[A-Za-z0-9_-]{22}$/);
       pathnames.push(pathname);
     }
     expect(new Set(pathnames).size).toBe(pathnames.length);
-  });
-});
-
-describe("course image storage", () => {
-  function courseUpload(overrides: Partial<Parameters<typeof storeCourseImage>[0]> = {}) {
-    return {
-      filename: "open water students.jpg",
-      contentType: "image/jpeg",
-      bytes: realJpeg,
-      ...overrides,
-    };
-  }
-
-  it("keeps course media in its own key namespace, away from card evidence", async () => {
-    const fetchImpl = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ url: "https://blob.example/courses/abc-open-water-students.jpg" }),
-    });
-    const provider = imageStorageProviderFromEnvironment(
-      { BLOB_READ_WRITE_TOKEN: "test-token" },
-      fetchImpl as unknown as typeof fetch,
-    );
-    expect(await storeCourseImage(courseUpload(), provider)).toEqual({
-      status: "stored",
-      url: "https://blob.example/courses/abc-open-water-students.jpg",
-    });
-    expect(String(fetchImpl.mock.calls[0][0])).toContain(
-      "https://blob.vercel-storage.com/courses/",
-    );
-  });
-
-  it("applies the same validation a card gets", async () => {
-    const provider = { upload: vi.fn() };
-    expect(await storeCourseImage(courseUpload({ contentType: "text/html" }), provider)).toEqual({
-      status: "failed",
-    });
-    expect(
-      await storeCourseImage(
-        courseUpload({ bytes: new ArrayBuffer(MAX_COURSE_IMAGE_BYTES + 1) }),
-        provider,
-      ),
-    ).toEqual({ status: "failed" });
-    expect(provider.upload).not.toHaveBeenCalled();
   });
 });
 

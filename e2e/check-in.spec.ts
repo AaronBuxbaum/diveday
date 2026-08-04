@@ -126,3 +126,54 @@ test("a full boat refuses a counter walk-in with the wait-list nudge", async ({ 
     page.locator("article").filter({ hasText: "Turned Away Tara" }).filter({ visible: true }),
   ).toHaveCount(0);
 });
+
+/**
+ * The counter's paper-waiver escape hatch. A diver standing at the desk with a
+ * signed release in hand used to leave the staffer no way forward from here —
+ * the only "mark signed on paper" control lived on the trip's Guests tab, so
+ * clearing the blocker meant leaving the queue and hunting for the departure.
+ */
+test("the counter records a paper waiver and the diver becomes checkable in place", async ({
+  page,
+}) => {
+  await page.goto("/shop/blue-mantis/check-in");
+  const search = page.getByRole("searchbox", { name: "Scan or search diver" });
+  await search.fill("Priya Sharma");
+  await search.press("Enter");
+
+  const card = page
+    .locator("article")
+    .filter({ hasText: "Priya Sharma" })
+    .filter({ visible: true });
+  await expect(card.getByText("✕ Blocked")).toBeVisible();
+
+  await card.getByText("Mark signed on paper").click();
+  // The medical attestation is the control, not a buried confirm. The
+  // browser's own `required` already blocks an unchecked submit; strip it to
+  // prove the *server* refuses too, rather than trusting client convenience
+  // with a signed release that nobody attested the medical side of.
+  await page.evaluate(() => {
+    for (const el of document.querySelectorAll('input[name="medicalAttested"]')) {
+      el.removeAttribute("required");
+    }
+  });
+  await card.getByRole("button", { name: "Record paper signature" }).click();
+  await expect(page).toHaveURL(/notice=waiver_medical_attestation/);
+  await expect(
+    page.getByText("Confirm you reviewed the medical questionnaire", { exact: false }),
+  ).toBeVisible();
+
+  await search.fill("Priya Sharma");
+  await search.press("Enter");
+  await card.getByText("Mark signed on paper").click();
+  await card.getByLabel("I have this diver's signed release on file", { exact: false }).check();
+  await card.getByRole("button", { name: "Record paper signature" }).click();
+  await expect(page).toHaveURL(/notice=waiver_in_person/);
+  await expect(page.getByText("Paper waiver recorded")).toBeVisible();
+
+  // Same immutable record a self-service signature produces, so the blocker is
+  // genuinely gone rather than merely hidden — the queue now offers check-in.
+  await search.fill("Priya Sharma");
+  await search.press("Enter");
+  await expect(card.getByRole("button", { name: "Check in Priya Sharma" })).toBeVisible();
+});

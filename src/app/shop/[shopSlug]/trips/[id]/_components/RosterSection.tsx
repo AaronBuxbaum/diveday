@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { waiverSendCopy } from "@/app/actions/waiver-send-types";
 import { EmptyState } from "@/components/EmptyState";
+import { PaperWaiverControl } from "@/components/PaperWaiverControl";
 import { SubmitButton } from "@/components/SubmitButton";
 import { WaiverSendControl } from "@/components/today/WaiverSendControl";
 import { Badge } from "@/components/ui/badge";
@@ -533,40 +534,12 @@ export function RosterSection({
                     {waiverControl.action ? (
                       // A diver who signed on paper or on shore: let a non-diver
                       // record it so the waiver gate isn't held up by a signature
-                      // the app never sees. Same immutable record, staff-attested.
-                      // The medical clearance is its own required control, not a
-                      // buried confirm — a flagged medical must use the digital
-                      // link, which captures the questionnaire and routes to review.
-                      <details className="mt-2">
-                        <summary className="inline-flex min-h-11 cursor-pointer items-center text-sm font-medium text-primary hover:underline">
-                          {t("trips.roster.markSignedOnPaper")}
-                        </summary>
-                        <form
-                          action={markWaiverInPersonAction}
-                          className="mt-2 max-w-md rounded-lg border border-border bg-surface-sunken/50 p-3"
-                        >
-                          <input type="hidden" name="bookingId" value={booking.id} />
-                          <label className="flex items-start gap-2 text-sm">
-                            <input
-                              type="checkbox"
-                              name="medicalAttested"
-                              required
-                              className="mt-1 size-4 shrink-0"
-                            />
-                            <span>{t("trips.roster.medicalAttestationLabel")}</span>
-                          </label>
-                          <SubmitButton
-                            pendingLabel={t("trips.roster.recording")}
-                            className={buttonClass({
-                              variant: "secondary",
-                              size: "sm",
-                              className: "mt-3",
-                            })}
-                          >
-                            {t("trips.roster.recordPaperSignature")}
-                          </SubmitButton>
-                        </form>
-                      </details>
+                      // the app never sees.
+                      <PaperWaiverControl
+                        action={markWaiverInPersonAction}
+                        bookingId={booking.id}
+                        t={t}
+                      />
                     ) : null}
                     {currentWaiver?.completedAt && waiverStatus === "complete" ? (
                       <p className="mt-2 text-sm text-muted">

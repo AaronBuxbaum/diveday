@@ -120,7 +120,14 @@ describe("BookingGearFields", () => {
     expect(onSubtotalChange).toHaveBeenLastCalledWith(0, 0);
   });
 
-  it("explains the jargon it just put in front of a newcomer", () => {
+  /**
+   * The definitions used to sit under the checklist as permanent paragraphs.
+   * They now hang off the item they explain as an `InfoHint` — hidden until
+   * hover, tap, or focus, but always in the DOM and wired to the trigger by
+   * `aria-describedby`, so a screen reader still gets the whole explanation
+   * without opening anything.
+   */
+  it("explains the jargon it just put in front of a newcomer, one hover away", () => {
     renderDiver(
       <BookingGearFields
         index={0}
@@ -134,11 +141,20 @@ describe("BookingGearFields", () => {
 
     askForGear();
 
-    expect(
-      screen.getByText(/the inflatable vest you wear that holds your tank/),
-    ).toBeInTheDocument();
-    expect(screen.getByText(/the mouthpiece and hose that let you breathe/)).toBeInTheDocument();
-    expect(screen.getByText(/breathing gas with extra oxygen/)).toBeInTheDocument();
+    for (const [item, detail] of [
+      ["BCD", /inflatable vest you wear that holds your tank/i],
+      ["Regulator", /mouthpiece and hose that let you breathe/i],
+      ["Nitrox", /breathing gas with extra oxygen/i],
+    ] as const) {
+      const trigger = screen.getByRole("button", { name: `What is ${item}?` });
+      const describedBy = trigger.getAttribute("aria-describedby");
+      expect(describedBy).toBeTruthy();
+      expect(document.getElementById(describedBy ?? "")?.textContent).toMatch(detail);
+    }
+
+    // The checkbox's own accessible name stays the bare item — the definition
+    // is a description, never folded into what the control is called.
+    expect(screen.getByRole("checkbox", { name: "BCD" })).toBeInTheDocument();
   });
 
   it("uses the diver-N heading once shown for more than one party member", () => {

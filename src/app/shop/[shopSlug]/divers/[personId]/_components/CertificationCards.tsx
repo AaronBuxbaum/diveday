@@ -1,6 +1,5 @@
 import { DigitalCardFlip } from "@/components/DigitalCardFlip";
 import { EmptyState } from "@/components/EmptyState";
-import { ImageFileInput } from "@/components/ImageFileInput";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
@@ -10,7 +9,6 @@ import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone, formatCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
-import { MAX_IMAGE_MB } from "@/lib/storage/limits";
 import { addCertificationAction, deleteCertificationAction, reviewAction } from "../actions";
 import {
   AGENCY_KEYS,
@@ -106,19 +104,6 @@ export async function CertificationCards({
               hint={t("divers.certifications.refresherHint")}
             >
               <input name="expiresOn" type="date" className={controlClass} />
-            </Field>
-            <Field
-              label={t("divers.certifications.cardPhoto")}
-              hint={t("divers.certifications.cardPhotoHint")}
-              className="sm:col-span-2"
-            >
-              <ImageFileInput
-                name="cardImage"
-                copy={{
-                  wrongTypeSuffix: t("shared.imageInput.wrongTypeSuffix"),
-                  tooBigSuffix: t("shared.imageInput.tooBigSuffix", { maxMb: MAX_IMAGE_MB }),
-                }}
-              />
             </Field>
             <FieldActions>
               <SubmitButton

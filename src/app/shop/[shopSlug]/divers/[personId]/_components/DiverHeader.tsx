@@ -76,132 +76,131 @@ export function DiverHeader({
               ) : null}
             </div>
           }
-          actions={
-            // Closed, the trigger is an ordinary secondary button with a
-            // chevron, like every other action in a page header; open, the
-            // form drops into a card beneath it. It used to be a bordered box
-            // wrapped around bare link-coloured text with no disclosure
-            // affordance at all, which is what made it read as a mis-sized
-            // card parked beside the diver's name.
-            <details open={editOpen} className="group">
-              <summary
-                className={`${buttonClass({
-                  variant: "secondary",
-                  size: "sm",
-                })} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}
-              >
-                {t("divers.header.editDetails")}
-                <svg
-                  aria-hidden="true"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="size-3 transition-transform group-open:rotate-180"
-                >
-                  <path d="m6 9 6 6 6-6" />
-                </svg>
-              </summary>
-              <FieldGrid
-                as="form"
-                action={savePersonAction.bind(null, shopSlug, personId)}
-                columns={1}
-                className="mt-3 w-full gap-y-3 rounded-xl border border-border bg-surface p-4 shadow-sm sm:w-80"
-              >
-                <Field label={t("divers.header.fullNameLabel")}>
-                  <input
-                    name="fullName"
-                    required
-                    defaultValue={diver.person.fullName}
-                    className={controlClass}
-                  />
-                </Field>
-                <Field label={t("divers.header.emailLabel")} hint={t("divers.header.optionalHint")}>
-                  <input
-                    name="email"
-                    type="email"
-                    defaultValue={diver.person.email ?? ""}
-                    className={controlClass}
-                  />
-                </Field>
-                <Field label={t("divers.header.phoneLabel")} hint={t("divers.header.optionalHint")}>
-                  <input
-                    name="phone"
-                    type="tel"
-                    defaultValue={diver.person.phone ?? ""}
-                    className={controlClass}
-                  />
-                </Field>
-                <Field
-                  label={t("divers.header.dateOfBirthLabel")}
-                  hint={t("divers.header.optionalHint")}
-                  description={t("divers.header.dateOfBirthDescription")}
-                >
-                  <input
-                    name="dateOfBirth"
-                    type="date"
-                    // Mirrors the server-side plausibility bound so a mistyped
-                    // year is caught in the field, not by a redirect to
-                    // `?notice=invalid`.
-                    max={maxPlausibleBirthDate()}
-                    min="1900-01-01"
-                    defaultValue={diver.person.dateOfBirth ?? ""}
-                    className={controlClass}
-                  />
-                </Field>
-                <Field
-                  label={t("divers.header.diveInsuranceFieldLabel")}
-                  hint={t("divers.header.optionalHint")}
-                  description={t("divers.header.diveInsuranceDescription")}
-                >
-                  <input
-                    name="diveInsurance"
-                    defaultValue={diver.person.diveInsurance ?? ""}
-                    placeholder={t("divers.header.diveInsurancePlaceholder")}
-                    className={controlClass}
-                  />
-                </Field>
-                {/* Task 144 — Today used to tell staff to "ask at the counter"
+        />
+        {/* The disclosure lives *under* the header, not in its `actions` slot.
+            In the slot, the trigger sat in the header's narrow right-hand
+            column and the panel opened inside it — a cramped one-column card
+            hanging off the side of the diver's name, pushing the header's own
+            layout around as it grew. Below the header it gets the full content
+            width, so the seven fields lay out two-up like every other staff
+            form. */}
+        <details open={editOpen} className="group mt-4">
+          <summary
+            className={`${buttonClass({
+              variant: "secondary",
+              size: "sm",
+            })} w-fit cursor-pointer list-none [&::-webkit-details-marker]:hidden`}
+          >
+            {t("divers.header.editDetails")}
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="size-3 transition-transform group-open:rotate-180"
+            >
+              <path d="m6 9 6 6 6-6" />
+            </svg>
+          </summary>
+          <FieldGrid
+            as="form"
+            action={savePersonAction.bind(null, shopSlug, personId)}
+            columns={2}
+            className="mt-3 w-full gap-y-3 rounded-xl border border-border bg-surface p-4 shadow-sm"
+          >
+            <Field label={t("divers.header.fullNameLabel")}>
+              <input
+                name="fullName"
+                required
+                defaultValue={diver.person.fullName}
+                className={controlClass}
+              />
+            </Field>
+            <Field label={t("divers.header.emailLabel")} hint={t("divers.header.optionalHint")}>
+              <input
+                name="email"
+                type="email"
+                defaultValue={diver.person.email ?? ""}
+                className={controlClass}
+              />
+            </Field>
+            <Field label={t("divers.header.phoneLabel")} hint={t("divers.header.optionalHint")}>
+              <input
+                name="phone"
+                type="tel"
+                defaultValue={diver.person.phone ?? ""}
+                className={controlClass}
+              />
+            </Field>
+            <Field
+              label={t("divers.header.dateOfBirthLabel")}
+              hint={t("divers.header.optionalHint")}
+              description={t("divers.header.dateOfBirthDescription")}
+            >
+              <input
+                name="dateOfBirth"
+                type="date"
+                // Mirrors the server-side plausibility bound so a mistyped
+                // year is caught in the field, not by a redirect to
+                // `?notice=invalid`.
+                max={maxPlausibleBirthDate()}
+                min="1900-01-01"
+                defaultValue={diver.person.dateOfBirth ?? ""}
+                className={controlClass}
+              />
+            </Field>
+            <Field
+              label={t("divers.header.diveInsuranceFieldLabel")}
+              hint={t("divers.header.optionalHint")}
+              description={t("divers.header.diveInsuranceDescription")}
+            >
+              <input
+                name="diveInsurance"
+                defaultValue={diver.person.diveInsurance ?? ""}
+                placeholder={t("divers.header.diveInsurancePlaceholder")}
+                className={controlClass}
+              />
+            </Field>
+            {/* Task 144 — Today used to tell staff to "ask at the counter"
                     and link to a roster with nowhere to type it in. This and
                     the roster's per-diver card (RosterSection.tsx) are the two
                     staff entry points; both write through the same
                     `updateDiver`/`saveBookingEmergencyContact` columns the
                     diver's own /ready and /waivers capture use, and it prints
                     on the manifest. */}
-                <Field
-                  label={t("divers.header.emergencyContactNameLabel")}
-                  hint={t("divers.header.optionalHint")}
-                >
-                  <input
-                    name="emergencyContactName"
-                    autoComplete="name"
-                    defaultValue={diver.person.emergencyContactName ?? ""}
-                    className={controlClass}
-                  />
-                </Field>
-                <Field
-                  label={t("divers.header.emergencyContactPhoneLabel")}
-                  hint={t("divers.header.optionalHint")}
-                >
-                  <input
-                    name="emergencyContactPhone"
-                    type="tel"
-                    autoComplete="tel"
-                    defaultValue={diver.person.emergencyContactPhone ?? ""}
-                    className={controlClass}
-                  />
-                </Field>
-                <FieldActions>
-                  <SubmitButton pendingLabel={t("divers.header.saving")} className={buttonClass()}>
-                    {t("divers.header.saveDetails")}
-                  </SubmitButton>
-                </FieldActions>
-              </FieldGrid>
-            </details>
-          }
-        />
+            <Field
+              label={t("divers.header.emergencyContactNameLabel")}
+              hint={t("divers.header.optionalHint")}
+            >
+              <input
+                name="emergencyContactName"
+                autoComplete="name"
+                defaultValue={diver.person.emergencyContactName ?? ""}
+                className={controlClass}
+              />
+            </Field>
+            <Field
+              label={t("divers.header.emergencyContactPhoneLabel")}
+              hint={t("divers.header.optionalHint")}
+            >
+              <input
+                name="emergencyContactPhone"
+                type="tel"
+                autoComplete="tel"
+                defaultValue={diver.person.emergencyContactPhone ?? ""}
+                className={controlClass}
+              />
+            </Field>
+            <FieldActions>
+              <SubmitButton pendingLabel={t("divers.header.saving")} className={buttonClass()}>
+                {t("divers.header.saveDetails")}
+              </SubmitButton>
+            </FieldActions>
+          </FieldGrid>
+        </details>
       </div>
     </>
   );

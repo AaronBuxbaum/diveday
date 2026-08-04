@@ -129,6 +129,48 @@ describe("rental pricing", () => {
     expect(quote.subtotalCents).toBe(4500);
   });
 
+  it("reports the piece-by-piece price the set beat, so a surface can strike it through", () => {
+    const quote = quoteRentalFit(PRICING, {
+      rentedKinds: ["bcd", "regulator", "wetsuit", "mask_fins", "weights", "dive_computer"],
+      offeredKinds: ALL_OFFERED,
+      wantsNitrox: true,
+      plannedDives: 2,
+    });
+    // Pieces: 1500+1500+1200+800+500+1000 = 6500, plus 1000 × 2 dives of nitrox.
+    expect(quote.listSubtotalCents).toBe(6500 + 2000);
+    expect(quote.subtotalCents).toBe(4500 + 2000);
+    // Nitrox is never part of the set, so the saving is the gear discount alone.
+    expect(quote.setSavingsCents).toBe(6500 - 4500);
+  });
+
+  it("reports no saving when the pieces were already the cheaper answer", () => {
+    const quote = quoteRentalFit(PRICING, {
+      rentedKinds: ["bcd", "wetsuit"],
+      offeredKinds: ALL_OFFERED,
+      wantsNitrox: false,
+      plannedDives: 2,
+    });
+    expect(quote.listSubtotalCents).toBe(quote.subtotalCents);
+    expect(quote.setSavingsCents).toBe(0);
+  });
+
+  it("never claims a saving against a piece the shop hasn't priced", () => {
+    const quote = quoteRentalFit(
+      { ...PRICING, perItemCents: { ...PRICING.perItemCents, weights: undefined } },
+      {
+        rentedKinds: ["bcd", "regulator", "wetsuit", "mask_fins", "weights", "dive_computer"],
+        offeredKinds: ALL_OFFERED,
+        wantsNitrox: false,
+        plannedDives: 2,
+      },
+    );
+    // One core piece is unpriced, so the set/per-piece comparison can't run —
+    // and with no set line there is nothing to strike through.
+    expect(quote.unpricedKinds).toEqual(["weights"]);
+    expect(quote.setSavingsCents).toBe(0);
+    expect(quote.listSubtotalCents).toBe(quote.subtotalCents);
+  });
+
   it("bills per piece when the partial pick is already cheaper than the set", () => {
     const quote = quoteRentalFit(PRICING, {
       rentedKinds: ["bcd", "wetsuit"],
