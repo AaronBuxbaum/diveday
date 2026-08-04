@@ -746,11 +746,12 @@ for (const scheme of ["light", "dark"] as const) {
         // By role and full accessible name, not `getByLabel("Review link")`:
         // that substring-matches, and the field's `InfoHint` toggle beside it
         // is labelled "More about Review link", so the loose locator resolves
-        // to two elements the moment both have rendered. It only ever passed
-        // by racing the hint's hydration — settings had no `loading.tsx`, so
-        // the navigation blocked and the fill landed first. Now the route
-        // paints its skeleton and the locator waits for real content, which
-        // arrives hydrated (ADR 20260804-instant-navigation).
+        // to two elements once both have rendered — a strict-mode violation.
+        // Not a new hazard: it was already failing this way on `main`
+        // (run 30879017956, shard 3/4). The settings page is where every one
+        // of these lives, because it is the only surface that mounts
+        // `InfoHint`; `getByLabel("Timezone", { exact: true })` in
+        // settings-findability.spec.ts is the same fix in its other form.
         await reviewSettingsPage
           .getByRole("textbox", { name: "Review link (optional)" })
           .fill("https://g.page/r/blue-mantis/review");

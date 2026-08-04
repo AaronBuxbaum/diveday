@@ -57,17 +57,21 @@ test.describe("as owner", () => {
     // afterwards, so a shop that clicked past the picker read every departure
     // time, day header, and "sailing today" in US Eastern with no way out.
     await page.goto(`/shop/${SHOP}/settings`);
-    const zone = page.getByLabel("Timezone");
+    // `exact` because the section heading carries an `InfoHint` whose
+    // accessible name is "More about Timezone" — the default substring
+    // match resolves to that button *and* this select, a strict-mode
+    // violation whenever both have rendered (ADR 20260804-instant-navigation).
+    const zone = page.getByLabel("Timezone", { exact: true });
     await expect(zone).toHaveValue("America/New_York");
 
     await zone.selectOption("America/Cancun");
     await page.getByRole("button", { name: "Save timezone" }).click();
     await expect(page.getByRole("status").filter({ hasText: "Timezone saved." })).toBeVisible();
-    await expect(page.getByLabel("Timezone")).toHaveValue("America/Cancun");
+    await expect(page.getByLabel("Timezone", { exact: true })).toHaveValue("America/Cancun");
 
     // Put it back so the rest of this worker's run reads the seeded clock the
     // way every other spec expects.
-    await page.getByLabel("Timezone").selectOption("America/New_York");
+    await page.getByLabel("Timezone", { exact: true }).selectOption("America/New_York");
     await page.getByRole("button", { name: "Save timezone" }).click();
     await expect(page.getByRole("status").filter({ hasText: "Timezone saved." })).toBeVisible();
   });
