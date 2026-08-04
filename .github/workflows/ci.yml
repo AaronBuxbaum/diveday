@@ -17,48 +17,9 @@ concurrency:
   # visual pipeline is built to avoid.
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
-# ┌───────────────────────────────────────────────────────────────────────────┐
-# │ TEMPORARY — THIS WORKFLOW IS CUT DOWN AND MUST NOT MERGE IN THIS STATE.    │
-# │                                                                           │
-# │ Everything except `build` and `og-repro` is commented out below so that a  │
-# │ push costs ~3 minutes instead of ~12 while chasing the recap OG-image      │
-# │ failure. That means this branch currently has NO lint, NO typecheck, NO    │
-# │ unit tests, NO repo safeguards, and NO visual regression. Restore every    │
-# │ commented job before this leaves draft — `git revert` of the commit that   │
-# │ added this banner is the intended undo.                                   │
-# └───────────────────────────────────────────────────────────────────────────┘
 jobs:
-  # The one failing test, on its own, unsharded. `e2e/recap.spec.ts` in full
-  # rather than just its `:81` case: the failure only appears on a server
-  # process that has already served this spec's earlier tests, and running the
-  # file preserves that ordering. `stdout`/`stderr` are piped from the fleet's
-  # servers (playwright.config.ts) so the server-side stack behind the client's
-  # bare "socket hang up" lands in this job's log.
-  og-repro:
-    name: Recap OG repro (temporary)
-    needs: build
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v7
-      - uses: ./.github/actions/setup
-      - uses: actions/download-artifact@v8
-        with:
-          name: next-build
-          path: .next
-      - uses: ./.github/actions/playwright-shell
-      - run: pnpm exec playwright test e2e/recap.spec.ts --reporter=line
-      - uses: actions/upload-artifact@v7
-        if: failure()
-        with:
-          name: playwright-report-og-repro
-          path: playwright-report/
-          if-no-files-found: ignore
-          retention-days: 7
-
   repo-safeguards:
     name: Repository safeguards
-    if: false # TEMPORARY — see banner above
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -67,7 +28,6 @@ jobs:
       - run: pnpm check:repo
 
   lint:
-    if: false # TEMPORARY — see banner above
     name: Lint
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -78,7 +38,6 @@ jobs:
 
   typecheck:
     name: Typecheck
-    if: false # TEMPORARY — see banner above
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -88,7 +47,6 @@ jobs:
 
   unit-tests:
     name: Unit tests shard ${{ matrix.shard }}/4
-    if: false # TEMPORARY — see banner above
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -165,7 +123,6 @@ jobs:
 
   playwright:
     name: Playwright shard ${{ matrix.shard }}/4
-    if: false # TEMPORARY — see banner above
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -222,7 +179,6 @@ jobs:
 
   visual:
     name: Visual capture shard ${{ matrix.shard }}/4
-    if: false # TEMPORARY — see banner above
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -281,8 +237,7 @@ jobs:
     # checked — and it silently defeats the `!cancelled()` on the summary step
     # below, which was written to speak on exactly that path. Run whenever the
     # run wasn't cancelled instead; the steps decide what is still meaningful.
-    # TEMPORARY — was `${{ !cancelled() }}`; restore with the banner above.
-    if: false
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     # The only job in this workflow that writes anything back to GitHub: the

@@ -2,7 +2,7 @@ import { ImageResponse } from "next/og";
 import { getDb } from "@/db/client";
 import { getRecapPageData } from "@/db/recap";
 import { formatShortDate } from "@/lib/format";
-import { loadOgFonts, OG_FONT_FAMILY, type OgFont } from "@/lib/og-fonts";
+import { allowSvgRasterization } from "@/lib/og-rasterizer";
 import { verifyRecapToken } from "@/lib/recap-links";
 
 // i18n-exempt-file: link-preview card rendered for crawlers with no visitor
@@ -38,7 +38,6 @@ const CARD_STYLE = {
   backgroundImage: "linear-gradient(160deg, #071720 55%, #0d222d 100%)",
   color: "#e9f3f4",
   fontSize: 32,
-  fontFamily: OG_FONT_FAMILY,
 };
 
 const WORDMARK = (
@@ -59,7 +58,7 @@ const WORDMARK = (
   </div>
 );
 
-function genericCard(fonts: OgFont[]) {
+function genericCard() {
   return new ImageResponse(
     <div style={CARD_STYLE}>
       {WORDMARK}
@@ -70,7 +69,7 @@ function genericCard(fonts: OgFont[]) {
         A calmer way to run a dive day
       </div>
     </div>,
-    { ...size, fonts },
+    size,
   );
 }
 
@@ -80,81 +79,17 @@ export default async function RecapOpenGraphImage({
   params: Promise<{ token: string }>;
 }) {
   const { token } = await params;
-  // Before anything can return an ImageResponse: see src/lib/og-fonts.ts. Once
-  // the response exists its body is already streaming, and a font resolved
-  // lazily from inside that stream can only fail by severing the connection.
-  const fonts = await loadOgFonts();
-
-  // TEMPORARY DIAGNOSTIC — remove once the CI-only failure is understood.
-  // The server's stderr is piped by playwright.config.ts, so this lands in the
-  // repro job's log right above the `failed to pipe response` it explains.
-  // Reports three things the earlier probes could not, because they called this
-  // module directly and so never entered a request work-unit store — which is
-  // what routes the render through Cache Components' cached-image path instead
-  // of @vercel/og's plain one:
-  //   - whether the fonts this process actually holds are the real files
-  //   - which of the two render paths this request is on
-  //   - whether rasterizing the very same SVG works here and now
-  try {
-    const { workUnitAsyncStorage } = await import(
-      // biome-ignore lint/suspicious/noExplicitAny: internal, diagnostic only
-      "next/dist/server/app-render/work-unit-async-storage.external" as any
-    );
-    const store = workUnitAsyncStorage?.getStore?.();
-    let sharpProbe = "";
-    try {
-      const sharp = (await import("sharp")).default;
-      const svg = Buffer.from(
-        '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"><rect width="20" height="20" fill="red"/></svg>',
-      );
-      // The capability flags are the decisive part: they say whether the sharp
-      // this process loaded was *built* with an SVG input loader at all, which
-      // separates "wrong/limited binary" from "right binary, failing at runtime".
-      const { isMainThread, threadId } = await import("node:worker_threads");
-      const { writeFile } = await import("node:fs/promises");
-      const { tmpdir } = await import("node:os");
-      const { join: joinPath } = await import("node:path");
-      const fmt = (
-        sharp as unknown as {
-          format: Record<string, { input?: Record<string, boolean> }>;
-        }
-      ).format;
-      sharpProbe =
-        `mainThread=${isMainThread} tid=${threadId} pid=${process.pid} ` +
-        `svgInputCaps=${JSON.stringify(fmt?.svg?.input)} `;
-      try {
-        sharpProbe += `fromBuffer=ok(${(await sharp(svg).png().toBuffer()).length})`;
-      } catch (error) {
-        sharpProbe += `fromBuffer=FAILED(${(error as Error).message})`;
-      }
-      // Buffer input is sniffed by content; file input is also matched by
-      // suffix. If the file path works where the buffer does not, the loader is
-      // present and only detection is failing — a different fault entirely.
-      try {
-        const p = joinPath(tmpdir(), `og-diag-${process.pid}.svg`);
-        await writeFile(p, svg);
-        sharpProbe += ` fromFile=ok(${(await sharp(p).png().toBuffer()).length})`;
-      } catch (error) {
-        sharpProbe += ` fromFile=FAILED(${(error as Error).message})`;
-      }
-    } catch (error) {
-      sharpProbe = `import FAILED: ${(error as Error).message}`;
-    }
-    console.error(
-      `[og-diag] store=${store?.type ?? "none"} fonts=${fonts
-        .map((f) => `${f.weight}:${f.data.byteLength}`)
-        .join(",")} ${sharpProbe}`,
-    );
-  } catch (error) {
-    console.error(`[og-diag] probe threw: ${(error as Error).message}`);
-  }
-
+  // Before any ImageResponse is built: Next's image optimizer disables
+  // libvips' SVG loader process-wide, which is what @vercel/og rasterizes
+  // through. See src/lib/og-rasterizer.ts — the failure mode is a severed
+  // socket, not an error page.
+  await allowSvgRasterization();
   const bookingId = verifyRecapToken(token);
-  if (!bookingId) return genericCard(fonts);
+  if (!bookingId) return genericCard();
 
   const db = await getDb();
   const data = await getRecapPageData(db, bookingId);
-  if (!data) return genericCard(fonts);
+  if (!data) return genericCard();
 
   const { shop, trip, sites } = data;
   const when = formatShortDate(trip.startsAt, shop.defaultLocale, shop.timezone);
@@ -189,6 +124,6 @@ export default async function RecapOpenGraphImage({
       </div>
       <div style={{ display: "flex", fontSize: 28, color: "#22d3ee" }}>{when} · Dive recap</div>
     </div>,
-    { ...size, fonts },
+    size,
   );
 }

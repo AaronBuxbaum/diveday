@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { allowSvgRasterization } from "@/lib/og-rasterizer";
 
 /**
  * The bubble-trail mark, rasterized for the browser tab. ImageResponse runs
@@ -9,7 +10,12 @@ import { ImageResponse } from "next/og";
 export const size = { width: 32, height: 32 };
 export const contentType = "image/png";
 
-export default function Icon() {
+export default async function Icon() {
+  // Same libvips/SVG hazard as the OG cards, despite this being pure shapes:
+  // satori still emits SVG and @vercel/og still rasterizes it through sharp.
+  // See src/lib/og-rasterizer.ts.
+  await allowSvgRasterization();
+
   return new ImageResponse(
     <div
       style={{

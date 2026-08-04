@@ -1,10 +1,16 @@
 import { ImageResponse } from "next/og";
+import { allowSvgRasterization } from "@/lib/og-rasterizer";
 
 /** Same bubble-trail mark as icon.tsx, scaled up for the iOS home screen. */
 export const size = { width: 180, height: 180 };
 export const contentType = "image/png";
 
-export default function AppleIcon() {
+export default async function AppleIcon() {
+  // Same libvips/SVG hazard as the OG cards, despite this being pure shapes:
+  // satori still emits SVG and @vercel/og still rasterizes it through sharp.
+  // See src/lib/og-rasterizer.ts.
+  await allowSvgRasterization();
+
   return new ImageResponse(
     <div
       style={{

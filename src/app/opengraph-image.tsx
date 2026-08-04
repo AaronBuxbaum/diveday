@@ -1,5 +1,5 @@
 import { ImageResponse } from "next/og";
-import { loadOgFonts, OG_FONT_FAMILY } from "@/lib/og-fonts";
+import { allowSvgRasterization } from "@/lib/og-rasterizer";
 
 // i18n-exempt-file: link-preview card rendered for crawlers with no visitor
 // locale context, the same carve-out as static metadata.title.
@@ -18,10 +18,11 @@ export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
 export default async function OpenGraphImage() {
-  // Before anything can return an ImageResponse: see src/lib/og-fonts.ts. Once
-  // the response exists its body is already streaming, and a font resolved
-  // lazily from inside that stream can only fail by severing the connection.
-  const fonts = await loadOgFonts();
+  // Before any ImageResponse is built: Next's image optimizer disables
+  // libvips' SVG loader process-wide, which is what @vercel/og rasterizes
+  // through. See src/lib/og-rasterizer.ts — the failure mode is a severed
+  // socket, not an error page.
+  await allowSvgRasterization();
 
   return new ImageResponse(
     <div
@@ -36,7 +37,6 @@ export default async function OpenGraphImage() {
         backgroundImage: "linear-gradient(160deg, #071720 55%, #0d222d 100%)",
         color: "#e9f3f4",
         fontSize: 32,
-        fontFamily: OG_FONT_FAMILY,
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
@@ -77,6 +77,6 @@ export default async function OpenGraphImage() {
         A calmer way to run a dive day
       </div>
     </div>,
-    { ...size, fonts },
+    size,
   );
 }

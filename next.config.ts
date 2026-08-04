@@ -73,15 +73,6 @@ const nextConfig: NextConfig = {
     // overhead (CR-011, docs/architecture/decisions/20260723-upload-transport-limit.md).
     serverActions: { bodySizeLimit: "16mb" },
   },
-  // The OG cards read their fonts off disk at request time
-  // (src/lib/og-fonts.ts), by a path built at runtime from `process.cwd()`.
-  // Build-time tracing follows `import`/`require`, not a composed string, so
-  // without this the `assets/` directory is simply absent from the deployed
-  // bundle and every unfurl card fails — in production only, where nothing
-  // local would ever show it. Naming it here is what puts the files there.
-  outputFileTracingIncludes: {
-    "/**": ["./assets/fonts/**"],
-  },
 };
 
 export default withSentryConfig(nextConfig, {
