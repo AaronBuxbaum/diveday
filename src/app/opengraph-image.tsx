@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { allowSvgRasterization } from "@/lib/og-rasterizer";
 
 // i18n-exempt-file: link-preview card rendered for crawlers with no visitor
 // locale context, the same carve-out as static metadata.title.
@@ -16,7 +17,13 @@ export const size = { width: 1200, height: 630 };
 
 export const contentType = "image/png";
 
-export default function OpenGraphImage() {
+export default async function OpenGraphImage() {
+  // Before any ImageResponse is built: Next's image optimizer disables
+  // libvips' SVG loader process-wide, which is what @vercel/og rasterizes
+  // through. See src/lib/og-rasterizer.ts — the failure mode is a severed
+  // socket, not an error page.
+  await allowSvgRasterization();
+
   return new ImageResponse(
     <div
       style={{

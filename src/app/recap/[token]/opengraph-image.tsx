@@ -2,6 +2,7 @@ import { ImageResponse } from "next/og";
 import { getDb } from "@/db/client";
 import { getRecapPageData } from "@/db/recap";
 import { formatShortDate } from "@/lib/format";
+import { allowSvgRasterization } from "@/lib/og-rasterizer";
 import { verifyRecapToken } from "@/lib/recap-links";
 
 // i18n-exempt-file: link-preview card rendered for crawlers with no visitor
@@ -78,6 +79,11 @@ export default async function RecapOpenGraphImage({
   params: Promise<{ token: string }>;
 }) {
   const { token } = await params;
+  // Before any ImageResponse is built: Next's image optimizer disables
+  // libvips' SVG loader process-wide, which is what @vercel/og rasterizes
+  // through. See src/lib/og-rasterizer.ts — the failure mode is a severed
+  // socket, not an error page.
+  await allowSvgRasterization();
   const bookingId = verifyRecapToken(token);
   if (!bookingId) return genericCard();
 

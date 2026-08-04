@@ -5,6 +5,7 @@ import { getTripWithBooked } from "@/db/trips";
 import { perDiverBookingPriceCents } from "@/lib/courses";
 import { formatMoneyCents, formatShortDate } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
+import { allowSvgRasterization } from "@/lib/og-rasterizer";
 import { spotsRemaining } from "@/lib/trips";
 
 // i18n-exempt-file: link-preview card rendered for crawlers with no visitor
@@ -79,6 +80,11 @@ export default async function TripOpenGraphImage({
   params: Promise<{ shopSlug: string; id: string }>;
 }) {
   const { shopSlug, id: tripId } = await params;
+  // Before any ImageResponse is built: Next's image optimizer disables
+  // libvips' SVG loader process-wide, which is what @vercel/og rasterizes
+  // through. See src/lib/og-rasterizer.ts — the failure mode is a severed
+  // socket, not an error page.
+  await allowSvgRasterization();
   const db = await getDb();
   const shop = await getShopBySlug(db, shopSlug);
   if (!shop) return genericCard();

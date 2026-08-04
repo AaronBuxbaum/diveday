@@ -85,12 +85,35 @@ test("the recap link itself has a share affordance, and its unfurl card reveals 
   await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
   await expect(page.getByRole("button", { name: /Share this recap|Link copied/ })).toBeVisible();
 
+  // Optimize an image first, deliberately. `next/image`'s optimizer disables
+  // libvips' SVG loader process-wide the first time it runs, and satori's
+  // output is SVG — so before src/lib/og-rasterizer.ts this exact ordering took
+  // the card down, and the client saw a bare socket hang up rather than any
+  // error worth reading (ADR 20260804-og-svg-rasterizer). Forcing the order
+  // here removes the luck: whether this test exercised the hazard used to
+  // depend on some earlier test in the same worker happening to optimize an
+  // image, which is exactly why it failed on some CI shards and never locally.
+  //
+  // Best-effort, and worth knowing why: the optimizer only reaches sharp on a
+  // *cache miss*. CI builds a fresh `.next` with an empty `.next/cache/images`,
+  // so this does force the block there — but a repeated local run serves the
+  // same URL from disk and quietly skips it. That very warm cache produced a
+  // false pass while this fix was being verified. `src/lib/og-rasterizer.test.ts`
+  // is the deterministic guard; this is the realistic end-to-end one.
+  const optimized = await request.get(
+    "/_next/image?url=%2Fdive-sites%2FAtlanticGoliathGrouper.jpg&w=640&q=75",
+  );
+  expect(optimized.ok(), "the image optimizer should have served this image").toBe(true);
+
   // A generic-content unfurl card renders even for a token that verifies to
   // nothing — no distinguishing a dead link from a real one at the image
   // layer either.
   const res = await request.get("/recap/not-a-real-token/opengraph-image");
   expect(res.ok()).toBe(true);
   expect(res.headers()["content-type"]).toContain("image/png");
+  // A severed stream can still arrive as a 200 with an empty body, so the bytes
+  // are the assertion that actually distinguishes a rendered card.
+  expect((await res.body()).length).toBeGreaterThan(1000);
 });
 
 test("comment moderation is disclosed before submitting, not discovered only after (task 54)", async ({

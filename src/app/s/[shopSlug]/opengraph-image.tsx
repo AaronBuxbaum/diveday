@@ -1,6 +1,7 @@
 import { ImageResponse } from "next/og";
 import { getDb } from "@/db/client";
 import { getShopBySlug } from "@/db/shops";
+import { allowSvgRasterization } from "@/lib/og-rasterizer";
 
 // i18n-exempt-file: link-preview card rendered for crawlers with no visitor
 // locale context, the same carve-out as the root `opengraph-image.tsx`.
@@ -71,6 +72,11 @@ export default async function ScheduleOpenGraphImage({
   params: Promise<{ shopSlug: string }>;
 }) {
   const { shopSlug } = await params;
+  // Before any ImageResponse is built: Next's image optimizer disables
+  // libvips' SVG loader process-wide, which is what @vercel/og rasterizes
+  // through. See src/lib/og-rasterizer.ts — the failure mode is a severed
+  // socket, not an error page.
+  await allowSvgRasterization();
   const db = await getDb();
   const shop = await getShopBySlug(db, shopSlug);
   if (!shop) return genericCard();
