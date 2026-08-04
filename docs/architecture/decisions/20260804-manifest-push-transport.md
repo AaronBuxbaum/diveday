@@ -29,6 +29,16 @@ us on one Next.js app with no separate backend, and
 with a "this is outside normal bands" siren at ~$10 — so an option with a double-digit monthly floor
 trips this repo's own alarms on day one at current scale.
 
+**The project is on Vercel's Hobby (free) plan**, observed 2026-08-04 when a preview deployment on this
+ADR's own PR failed with `api-deployments-free-per-day` and an upgrade-to-Pro link. That is not a
+footnote — on Hobby there is **no on-demand billing at all**: Active CPU, Provisioned Memory and
+Invocations come as fixed monthly allowances (4 CPU-hours, **360 GB-hours of Provisioned Memory**, 1M
+invocations) and the Pro rates below simply do not apply. So the real question on this plan is not
+"what does it cost" but "**does it fit in the allowance**," and the answer is alarming — see
+["What Hobby's allowance actually permits"](#what-hobbys-allowance-actually-permits) below. The
+dollar figures throughout are Pro on-demand rates, kept because they are the right comparison the
+moment the project upgrades, and because they are how the non-Vercel options price.
+
 **Fluid compute is confirmed enabled on this project** (product owner, 2026-08-04), which settles two
 things this analysis would otherwise have to hedge. First, the Active-CPU-plus-Provisioned-Memory model
 below is the one that applies, not the legacy GB-Hour model. Second, **optimized concurrency is
@@ -55,9 +65,15 @@ Concretely:
    an unpublished Vercel heuristic. No migration is justified on estimates when the estimate's own
    uncertainty is larger than the difference between the options. The measurement is the provisioned
    memory attributable to this route in Vercel's usage dashboard, over a week of real shop traffic.
-3. **The trigger for migrating** is either of: measured provisioned-memory cost for this route
-   exceeding **$5/month**, or Neon direct-connection usage from the `LISTEN` clients becoming a
-   binding constraint.
+3. **The trigger for migrating**, stated in the unit that binds on the plan actually in use:
+   - **On Hobby (current):** this route consuming more than **25% of the 360 GB-hour Provisioned
+     Memory allowance** (i.e. >90 GB-hr/month) at the shop count then live. A quarter of the whole
+     project's compute allowance for one background channel is the point at which it is crowding out
+     the app itself, and the remaining headroom has to absorb every other route plus growth.
+   - **On Pro:** measured provisioned-memory cost for this route exceeding **$5/month**, matching the
+     AWS budget alarm so both halves of the stack are watched at the same threshold.
+   - **Either plan:** Neon direct-connection usage from the `LISTEN` clients becoming a binding
+     constraint.
 4. **When triggered, migrate to API Gateway WebSockets**, not to a container and not to a third-party
    realtime service — for the cost reasons below, and because it *deletes* the `LISTEN` client rather
    than relocating it (see "What the WebSocket option also buys").
@@ -106,6 +122,32 @@ One plan note, since it constrains the merged design: with Fluid, **Hobby's max 
 that is also its ceiling**, while Pro allows 800 s (1800 s in beta). The merged route declares
 `maxDuration = 300` and retires its stream at 240 s, which is therefore valid on either plan and needs
 no change if the project moves between them.
+
+#### What Hobby's allowance actually permits
+
+On the current plan the dollars above are the wrong unit. Hobby grants **360 GB-hours of Provisioned
+Memory per month** with no on-demand overage, so the question is what fraction of that one route eats.
+At 2 GB per instance, memory consumed is `624 connection-hours × 2 GB ÷ sharing factor`:
+
+| Streams sharing one instance | GB-hours / shop-month | Share of Hobby's 360 GB-hr | Shops before the allowance is gone |
+| ---: | ---: | ---: | ---: |
+| 1 | 1,248 | **347%** | **0 — one shop is 3.5× over** |
+| 4 | 312 | 87% | 1 |
+| 10 | 125 | 35% | 2 |
+| 50 | 25 | 7% | 14 |
+| 100 | 12 | 3% | 28 |
+
+This is the sharpest finding in the record. On Pro, a bad sharing factor is a $13/month annoyance. **On
+Hobby, a bad sharing factor means a single pilot shop consumes the entire project's monthly compute
+allowance** — and the failure mode is not a larger invoice but the whole deployment hitting its limit,
+taking down booking, waivers and checkout along with the manifest stream. The blast radius of getting
+this wrong is the product, not the budget.
+
+Two things follow. The visibility gate in the Decision stops being a nice optimisation and becomes the
+cheapest available insurance; and the trigger has to be expressed in allowance terms on this plan,
+because there is no dollar figure to watch. Note also that Hobby's limits bite operationally well
+before compute does — the 100-deployments-per-day cap is what surfaced the plan in the first place, by
+failing a preview build on this ADR's own PR.
 
 Also unpriced but real: one Neon **direct** (unpooled) connection per warm process for `LISTEN`, which
 is the scarcer Neon resource, and which 20260726 already names as this design's accepted MVP limit.
@@ -211,9 +253,14 @@ That inverts the usual intuition and is the most useful thing in this analysis:
 ## Consequences
 
 Nothing is spent and nothing is migrated today; the visibility gate is a pure reduction with no
-architectural commitment, and every option above stays open behind it. The cost of waiting is bounded
-by option A's worst case, which at present scale (a handful of pilot shops) is at most tens of dollars
-a month and is visible in Vercel's usage dashboard before it becomes a surprise.
+architectural commitment, and every option above stays open behind it.
+
+The cost of waiting is **not** symmetric across plans, and this is the thing to carry away. On Pro it
+is bounded by option A's worst case — tens of dollars a month at pilot scale, visible in the usage
+dashboard long before it surprises anyone. On Hobby it is bounded by the *allowance*, and the worst
+case there is not a bill but an outage that takes the whole deployment with it. That asymmetry is why
+the measurement in step 2 is the first thing to do rather than a follow-up, and why the trigger is
+written in GB-hours while the project stays on Hobby.
 
 What this commits us to is **measuring before migrating**. The 100× range is not a gap that more
 analysis can close — it is a property of the platform's published pricing model, and only observed
