@@ -463,9 +463,31 @@ describe("buildIncidentExport", () => {
       const doc = buildIncidentExport(pairedInput());
       const ana = doc.roster.find((entry) => entry.fullName === "Ana Diaz");
       expect(ana).not.toHaveProperty("buddyBookingId");
-      // The pairing is a name on the page; ids stay plumbing, as everywhere else
-      // in this document.
-      expect(JSON.stringify(ana?.buddyName)).not.toContain("b2");
+      expect(ana?.buddyName).toBe("Ben Cho");
+
+      // And the id stays out of the *hashed* facts: re-importing a shop
+      // reassigns every row id without changing a printed word, so a pairing
+      // that leaked an id would break the integrity code of an otherwise
+      // identical document.
+      const reimported = pairedInput();
+      const rehashed = buildIncidentExport({
+        ...reimported,
+        manifests: reimported.manifests.map((manifest) => ({
+          ...manifest,
+          divers: manifest.divers.map((entry) => ({
+            ...entry,
+            bookingId: `other-${entry.bookingId}`,
+            buddy: entry.buddy
+              ? { ...entry.buddy, bookingId: `other-${entry.buddy.bookingId}` }
+              : entry.buddy,
+          })),
+        })),
+        diverEvidence: reimported.diverEvidence.map((entry) => ({
+          ...entry,
+          bookingId: `other-${entry.bookingId}`,
+        })),
+      });
+      expect(rehashed.contentHash).toBe(doc.contentHash);
     });
 
     it("commits the pairing to the integrity code — repairing divers changes the hash", () => {

@@ -112,10 +112,16 @@ export type IncidentRosterEntry = {
    * Deliberately a name and not a booking id, matching the offline snapshot:
    * the document prints names, and ids are projected out of the hash anyway.
    *
-   * The *divergence* a live manifest raises (one buddy back, one not) is not
-   * restated here. That is derived, and this document computes no verdict —
-   * the per-checkpoint roll-call cells and the timeline below already let a
-   * reader see that one of a pair came back and the other did not.
+   * The live manifest's split-pair alert is deliberately not restated — and
+   * "because it is derived" is *not* the reason (this document derives
+   * `rollCallLabel`, the waiver's sign-once resolution, and every
+   * `departureSummary` count). The reason is that `buddyAlertFor` collapses two
+   * different facts into one code: a buddy a human recorded as not back aboard,
+   * and a buddy with **no result recorded at all**. On a deck that conflation is
+   * correct and urgent — both mean "go look". On a document generated afterwards
+   * it would print a separation flag over what is usually an unfinished head
+   * count, stating something louder than anyone actually recorded. The
+   * per-checkpoint cells and the timeline carry both facts, distinctly.
    */
   buddyName: string | null;
   /** One row per checkpoint, in sailing order — never omitted when unrecorded. */

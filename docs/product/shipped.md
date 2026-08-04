@@ -69,7 +69,8 @@ and the glossary's "Close-out".
   manifest roster with each diver's per-checkpoint roll-call state, the complete append-only
   roll-call timeline (corrections included — history is never laundered), each diver's
   certification evidence as held (imported cards marked distinctly), waiver **status** only — state,
-  date, template version; medical questionnaire answers never appear — plus crew, crew counts, and
+  date, template version; medical questionnaire answers never appear — the buddy pair staff
+  recorded for the departure, plus crew, crew counts, and
   generation metadata. A SHA-256 integrity code over the printed facts sits in the footer, so a
   printout can be checked against a fresh export.
 - **Facts, not judgments.** The document states what was recorded, with timestamps and recorders;

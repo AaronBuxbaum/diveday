@@ -45,6 +45,8 @@ import {
   specialtyCertifications,
   tips,
   tripAssignments,
+  tripBlowoutDivers,
+  tripBlowouts,
   tripDives,
   tripLastMinutePromos,
   tripRequirements,
@@ -144,6 +146,11 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
     await db.delete(tripDives).where(inArray(tripDives.tripId, tripIds));
   }
   await db.delete(tripRequirements).where(eq(tripRequirements.shopId, shopId));
+  // The blow-out cascade's two tables, innermost first: the per-diver rows
+  // reference both `bookings` and `trip_blowouts`, and the cascade row
+  // references `trips` (ADR 20260804-blowout-cascade).
+  await db.delete(tripBlowoutDivers).where(eq(tripBlowoutDivers.shopId, shopId));
+  await db.delete(tripBlowouts).where(eq(tripBlowouts.shopId, shopId));
   // Buddy pairs reference bookings, so they go before the bookings delete
   // (ADR 20260804-buddy-pairs).
   await db.delete(buddyPairMembers).where(eq(buddyPairMembers.shopId, shopId));

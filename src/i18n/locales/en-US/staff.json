@@ -3521,7 +3521,7 @@
     "summaryAwaiting": "No result recorded",
     "summaryCrewAssigned": "Crew assigned",
     "rosterHeading": "Divers and roll call",
-    "rosterDescription": "Every active booking on this departure’s manifest, with the recorded result at each checkpoint. A checkpoint with no recorded result reads “Awaiting roll call” — an absence is stated, never left blank.",
+    "rosterDescription": "Every active booking on this departure’s manifest, with the recorded result at each checkpoint. A checkpoint with no recorded result reads “Awaiting roll call” — an absence is stated, never left blank. Buddy is the diver-to-diver pairing staff recorded in DiveDay for this departure, not for each dive. A blank is not a statement that anyone dived alone \u2014 a shop may not record pairings here, and a diver paired with a crew member is not recorded as a pair.",
     "colDiver": "Diver",
     "colEmergencyContact": "Emergency contact",
     "colBuddy": "Buddy",

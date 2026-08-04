@@ -15,6 +15,9 @@ import {
   personRoles,
   shops,
   tips,
+  tripBlowoutDivers,
+  tripBlowouts,
+  trips,
   userAccounts,
 } from "./schema";
 import { createDemoShop, deleteDemoShopCascade, reapExpiredDemoShops } from "./seed";
@@ -189,6 +192,58 @@ describe("deleteDemoShopCascade", () => {
           .from(lastMinuteListUnsubscribeTokens)
           .where(eq(lastMinuteListUnsubscribeTokens.shopId, shop.id))
       ).length,
+    ).toBe(0);
+  });
+
+  /**
+   * The same class of bug again, found by a consolidation pass over the
+   * 2026-08-04 merge train: the blow-out cascade shipped `trip_blowouts` (which
+   * references `trips`) and `trip_blowout_divers` (which references `bookings`
+   * and the cascade row) without adding either to **either** delete ordering.
+   * Any run that had called a blow-out then made `/api/test/reset` throw 23503
+   * on `trip_blowouts_trip_id_trips_id_fkey`, aborting the reset half-done — and
+   * the browser fleet failed in whichever spec next read the wreckage, which is
+   * why 25 specs went red at once with nothing in common.
+   */
+  it("deletes a blow-out cascade instead of FK-violating on its trip", async () => {
+    const db = await seededTestDb();
+    const { slug } = await createDemoShop(db);
+    const shop = await requireShop(db, slug);
+    const [person] = await db.select().from(people).where(eq(people.shopId, shop.id)).limit(1);
+    if (!person) throw new Error("test setup: demo shop has no people");
+    const [trip] = await db.select().from(trips).where(eq(trips.shopId, shop.id)).limit(1);
+    if (!trip) throw new Error("test setup: demo shop has no trips");
+    const [booking] = await db.select().from(bookings).where(eq(bookings.tripId, trip.id)).limit(1);
+    if (!booking) throw new Error("test setup: demo trip has no bookings");
+
+    const [blowout] = await db
+      .insert(tripBlowouts)
+      .values({
+        shopId: shop.id,
+        tripId: trip.id,
+        calledByPersonId: person.id,
+        calledAt: new Date("2026-08-04T11:00:00.000Z"),
+      })
+      .returning();
+    if (!blowout) throw new Error("test setup: blow-out insert returned no row");
+    await db.insert(tripBlowoutDivers).values({
+      shopId: shop.id,
+      blowoutId: blowout.id,
+      bookingId: booking.id,
+      personId: booking.personId,
+    });
+
+    // No FK violation here is the real assertion — the cascade's rows must go
+    // before the bookings and trips they point at.
+    await deleteDemoShopCascade(db, shop.id);
+
+    expect(await findShop(db, slug)).toBeUndefined();
+    expect(
+      (await db.select().from(tripBlowouts).where(eq(tripBlowouts.shopId, shop.id))).length,
+    ).toBe(0);
+    expect(
+      (await db.select().from(tripBlowoutDivers).where(eq(tripBlowoutDivers.shopId, shop.id)))
+        .length,
     ).toBe(0);
   });
 
