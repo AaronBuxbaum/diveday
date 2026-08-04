@@ -7,6 +7,7 @@ import { DEMO_SHOP_SLUG } from "./dev-credentials";
 import {
   accountTokens,
   bookings,
+  buddyTeamEvents,
   globalDiveSites,
   lastMinuteListEntries,
   lastMinuteListUnsubscribeTokens,
@@ -244,6 +245,41 @@ describe("deleteDemoShopCascade", () => {
     expect(
       (await db.select().from(tripBlowoutDivers).where(eq(tripBlowoutDivers.shopId, shop.id)))
         .length,
+    ).toBe(0);
+  });
+
+  /**
+   * The buddy-team trail (ADR 20260804-buddy-teams) references trips and people
+   * and is deliberately *not* deleted when a team dissolves — its whole job is
+   * to outlive the membership rows. That makes it exactly the kind of table
+   * that goes missing from this ordering, so it gets its case here in the same
+   * change that adds it, as this file's own docs require.
+   */
+  it("deletes the buddy-team trail instead of FK-violating on its trip", async () => {
+    const db = await seededTestDb();
+    const { slug } = await createDemoShop(db);
+    const shop = await requireShop(db, slug);
+    const [person] = await db.select().from(people).where(eq(people.shopId, shop.id)).limit(1);
+    if (!person) throw new Error("test setup: demo shop has no people");
+    const [trip] = await db.select().from(trips).where(eq(trips.shopId, shop.id)).limit(1);
+    if (!trip) throw new Error("test setup: demo shop has no trips");
+
+    await db.insert(buddyTeamEvents).values({
+      shopId: shop.id,
+      tripId: trip.id,
+      pairId: crypto.randomUUID(),
+      action: "formed",
+      memberNames: ["Ana Diaz", "Ben Cho"],
+      recordedByPersonId: person.id,
+      occurredAt: new Date("2026-08-04T07:05:00.000Z"),
+    });
+
+    // No FK violation here is the real assertion.
+    await deleteDemoShopCascade(db, shop.id);
+
+    expect(await findShop(db, slug)).toBeUndefined();
+    expect(
+      (await db.select().from(buddyTeamEvents).where(eq(buddyTeamEvents.shopId, shop.id))).length,
     ).toBe(0);
   });
 

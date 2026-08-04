@@ -1186,19 +1186,25 @@ export async function loadShopExportBundleInput(
             "paired_by_name",
             "created_at",
           ],
-          rows: buddyPairRows.map((row) => {
+          // Same seam as listTripBuddyPairs: crew membership is not yet exported.
+          rows: buddyPairRows.flatMap((row) => {
+            if (!row.bookingId) return [];
             const personId = bookingPerson.get(row.bookingId);
+            // Double-wrapped: flatMap flattens one level, and the inner array is
+            // the CSV row itself.
             return [
-              row.pairId,
-              row.tripId,
-              tripTitle.get(row.tripId),
-              tripStartsAt.get(row.tripId),
-              row.bookingId,
-              personId,
-              personId ? personName.get(personId) : null,
-              row.pairedByPersonId,
-              personName.get(row.pairedByPersonId),
-              row.createdAt,
+              [
+                row.pairId,
+                row.tripId,
+                tripTitle.get(row.tripId),
+                tripStartsAt.get(row.tripId),
+                row.bookingId,
+                personId,
+                personId ? personName.get(personId) : null,
+                row.pairedByPersonId,
+                personName.get(row.pairedByPersonId),
+                row.createdAt,
+              ],
             ];
           }),
           note: EXPORT_FILE_NOTES["buddy_pairs.csv"],

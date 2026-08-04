@@ -10,6 +10,7 @@ import {
   bookingPayments,
   bookings,
   buddyPairMembers,
+  buddyTeamEvents,
   certifications,
   courseInquiries,
   coursePaths,
@@ -151,6 +152,8 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   // references `trips` (ADR 20260804-blowout-cascade).
   await db.delete(tripBlowoutDivers).where(eq(tripBlowoutDivers.shopId, shopId));
   await db.delete(tripBlowouts).where(eq(tripBlowouts.shopId, shopId));
+  // The buddy-team trail references trips and people (ADR 20260804-buddy-teams).
+  await db.delete(buddyTeamEvents).where(eq(buddyTeamEvents.shopId, shopId));
   // Buddy pairs reference bookings, so they go before the bookings delete
   // (ADR 20260804-buddy-pairs).
   await db.delete(buddyPairMembers).where(eq(buddyPairMembers.shopId, shopId));
