@@ -4,10 +4,10 @@ import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { WaiversSubNav, type WaiversSubNavCopy } from "./_components/WaiversSubNav";
 
-// No `instant` config here. `/shop/[shopSlug]/layout.tsx`'s `instant = false` is
-// the outermost one in every route through this layout, and `isPageAllowedToBlock`
-// stops there — a second one at this depth was never read.
-// See ADR 20260803-instant-opt-out-placement.
+// Restored alongside `trips/[id]/layout.tsx` — same reasoning, same commit.
+// Not implicated by any failing spec, but it was removed on the same argument,
+// so it goes back on the same evidence. See ADR 20260803-instant-opt-out-placement.
+export const instant = false;
 
 /**
  * One shell for both waiver surfaces — Template and Signatures (task 155).

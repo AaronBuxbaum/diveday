@@ -135,3 +135,34 @@ Revisit when: the app adopts `<Suspense>` boundaries broadly enough that a page-
 becomes the exception, or when `instant` graduates from experimental and its resolution rules change.
 Re-verify both rules against `instant-config.js` at that point — both were established by reading
 the installed source, and neither is guaranteed across Next versions.
+
+## Amendment, 2026-08-04 — the two `/shop/**` layout deletions are reverted
+
+Rule 1 said a layout inside an already-`false` subtree is covering nothing, so
+`shop/[shopSlug]/trips/[id]/layout.tsx` and `shop/[shopSlug]/waivers/layout.tsx` had theirs
+deleted. The reading behind that — `isPageAllowedToBlock` walks from the root and returns at the
+first explicit config — was taken from the installed `instant-config.js`, not from prose, and
+`next build` raised nothing.
+
+It is reverted anyway. Across two CI runs after the deletion, three Playwright specs went
+intermittently red that had never failed locally: `staffing.spec.ts` waiting on a "Shift removed."
+banner that never appeared, `trip-admission.spec.ts` hitting a strict-mode violation because the
+*same* `?notice=` banner resolved to **two** DOM nodes, and `add-diver.spec.ts` on a third banner.
+Two of the three run on `trips/[id]/guests` — under one of the two layouts changed here — and all
+three fail in hydration-shaped ways rather than by timing out on a slow query.
+
+That is not proof. It was never reproduced locally (15 runs of one spec, a full local suite, a
+local production build) and the causal chain from a route-segment config to a duplicated DOM node
+is not one this ADR can currently explain. But the argument for the deletion was only ever "this
+line is provably unread", and the value of removing it is one line per layout. Weighed against an
+unexplained correlation with intermittently duplicated banners on auth-gated, safety-critical staff
+surfaces, that is not a trade worth taking on the strength of a source reading.
+
+What survives: the two-jobs analysis, rule 2, the seven bearer-token layout deletions (a different
+subtree, not touched by any failing spec, and the routes the build was specifically checked
+against), and the collapse of 39 duplicated TODO comments to zero — which was always the larger
+part of ARCH-7.
+
+Reopen this if someone can either reproduce the failures with the declarations restored — proving
+them unrelated — or explain the mechanism. Until then the queue item stays open with the
+page-level declarations intact, and ARCH-7 is narrower than it looked.
