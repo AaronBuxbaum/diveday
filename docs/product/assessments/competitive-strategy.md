@@ -171,6 +171,12 @@ Ordered by leverage per effort; imports touch certs and medical state, so the im
 4. **Scheduled backup export to shop-owned storage** *(S–M)*. Weekly bundle from #1 to the shop's
    email/Drive. Matches DiveAdmin's one real portability lever and converts "your data is yours"
    from pledge to running fact. Calendar (.ics) feeds for trips ride along cheaply here.
+   **Shipped 2026-08-04**, with one deliberate narrowing: the destination is an S3-compatible
+   bucket the shop owns (AWS S3, Cloudflare R2, Backblaze B2, MinIO) rather than email/Drive —
+   attachment limits die at real bundle sizes, and a bucket is durable storage under the shop's
+   own credential, which is the actual promise. Weekly cron, idempotent per shop per ISO week,
+   sealed credentials, per-delivery history with coded failures, `trips.ics` riding along; see
+   [20260804-shop-owned-backup-export](../../architecture/decisions/20260804-shop-owned-backup-export.md).
 5. **Read API + webhooks, every tier** *(M — ADR required)*. Smartwaiver-grade: token-scoped read
    endpoints over the same documented schema as #1, webhooks for booking/waiver/manifest events.
    This out-substances DiveAdmin's ingestion-only API and gives DiveShop360 nothing to answer

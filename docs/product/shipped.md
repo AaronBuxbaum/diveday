@@ -21,6 +21,20 @@ idempotent and resumable; no money moves (refunds stay per-booking, H-14 gate in
 Alternative-day salvage and a courtesy text channel are the named follow-ons. See
 [20260804-blowout-cascade](../architecture/decisions/20260804-blowout-cascade.md).
 
+## Scheduled backup export to shop-owned storage (2026-08-04)
+
+Roadmap §1's first remaining bullet, delivered: every week a shop's full export bundle — the same
+documented CSVs, README, and bundled photos as the on-demand download, with the shop-wide
+`trips.ics` calendar riding along — lands in an S3-compatible bucket the *shop* owns (AWS S3,
+Cloudflare R2, Backblaze B2, MinIO). Configured at Settings → Backups: destination form, one-click
+test delivery, and a paged delivery history where every failure is a named, coded row. The secret
+access key is sealed with `secret-box` and never returned to anyone; uploads are hand-signed SigV4
+(no SDK dependency); the weekly cron is idempotent per shop per ISO week and treats next week as
+the only retry. "Switching is safe" is now a standing fact in the shop's own bucket, not a button
+someone has to remember. See
+[20260804-shop-owned-backup-export](../architecture/decisions/20260804-shop-owned-backup-export.md)
+and §2b of the [backup-and-restore runbook](../engineering/backup-and-restore-runbook.md).
+
 ## End-of-day close-out — the "everyone is home" ritual (2026-08-04)
 
 The brainstorm's end-of-day close-out, delivered as Today's evening mirror at
