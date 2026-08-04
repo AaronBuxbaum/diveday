@@ -1673,7 +1673,19 @@
       "savedSummary": "Guardado {date} · {pending} pendientes de enviar · {rejected} necesitan revisión",
       "refreshingLabel": "Actualizando…",
       "refreshNowLabel": "Actualizar ahora",
-      "openOfflineRollCall": "Abrir pase de lista sin conexión"
+      "openOfflineRollCall": "Abrir pase de lista sin conexión",
+      "pushHeading": "Despierta este teléfono",
+      "pushBody": "Recibe un aviso cuando cambie el pase de lista de esta salida, aunque la pantalla esté apagada, para que la copia de este teléfono esté al día antes de quedarte sin señal.",
+      "pushEnable": "Avisar a este dispositivo",
+      "pushEnabling": "Activando…",
+      "pushDisable": "Dejar de avisar a este dispositivo",
+      "pushOn": "Este dispositivo recibe los cambios del pase de lista cerca de la salida.",
+      "pushUnsupported": "Este navegador no puede enviar avisos a un teléfono en reposo. El manifiesto se sigue actualizando siempre que esta página esté abierta.",
+      "pushHomeScreenHint": "En iPhone y iPad, primero agrega DiveDay a tu pantalla de inicio: Safari solo lo permite en apps instaladas.",
+      "pushDenied": "Los avisos están bloqueados para DiveDay en la configuración de este navegador. Permítelos ahí y vuelve a intentarlo.",
+      "pushError": "No se pudo activar ahora mismo. Inténtalo de nuevo o actualiza antes de salir.",
+      "pushNotificationTitle": "Cambió el pase de lista",
+      "pushNotificationBody": "Ábrelo antes de salir para que este teléfono lleve lo último."
     },
     "rollCall": {
       "errorRefusal": "Eso no se guardó. Revisa tu conexión o vuelve a tocar.",

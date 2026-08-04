@@ -138,6 +138,111 @@ self.addEventListener("message", (event) => {
   }
 });
 
+/**
+ * The manifest's third refresh trigger (ADR 20260804-manifest-web-push): the
+ * one that reaches a phone whose page is frozen, where neither the SSE stream
+ * nor the page's own interval can run.
+ *
+ * Two deliberate limits.
+ *
+ * **Every push shows a notification.** Chrome and Edge only grant a
+ * subscription under `userVisibleOnly: true`, so a silent data-only push is not
+ * available. The server side coalesces to at most one push per device per
+ * minute, and only near departure, which is what keeps that from being noise.
+ *
+ * **This worker does not write the offline snapshot.** It could — the store's
+ * AES-GCM key is a non-extractable CryptoKey in IndexedDB, readable from any
+ * same-origin context including this one. It does not because this file is
+ * static and outside the Next build (see SHELL_VERSION above), so writing
+ * snapshots here would mean a second implementation of the envelope format,
+ * AAD, versioning and locking, kept in lockstep by hand. Two implementations of
+ * an encrypted safety-critical record is a worse failure than the gap it
+ * closes. Instead: tell any live client, and let the one real implementation
+ * (saveOfflineManifest) do the write. A locked phone therefore gets the
+ * notification and refreshes when the captain opens it — a human in the loop at
+ * departure, which is defensible, and on iOS the only thing available at all.
+ *
+ * Words arrive in the payload already translated. This file cannot reach the
+ * message bundles, and no user-facing English may live outside src/i18n.
+ */
+self.addEventListener("push", (event) => {
+  let payload = {};
+  try {
+    payload = event.data?.json() ?? {};
+  } catch {
+    // A push with no body, or a body that isn't ours, still gets a
+    // notification — `userVisibleOnly` obliges us to show one, and silently
+    // swallowing it is what gets a subscription revoked.
+  }
+  if (payload.kind && payload.kind !== "manifest-changed") return;
+
+  event.waitUntil(
+    (async () => {
+      const clientList = await self.clients.matchAll({
+        type: "window",
+        includeUncontrolled: true,
+      });
+      // A page that is merely hidden (device awake, tab backgrounded) can still
+      // refresh itself through the normal path — no tap needed. A frozen or
+      // evicted page simply isn't in this list, which is the case the
+      // notification below covers.
+      for (const client of clientList) {
+        client.postMessage({ type: "MANIFEST_CHANGED", tripId: payload.tripId });
+      }
+      // The device doing the roll call must not buzz at itself. A visible
+      // same-origin client has already refreshed on the message above, so
+      // there is nothing to tell anyone — this is the "silent refresh" row of
+      // the ADR's table, and without this check that row does not exist.
+      // Skipping showNotification is permitted precisely because a visible
+      // client makes the effect user-visible another way.
+      if (clientList.some((client) => client.visibilityState === "visible")) return;
+      if (!payload.title) return;
+      await self.registration.showNotification(payload.title, {
+        body: payload.body,
+        // Collapses on the device as well as on the server: a second push for
+        // the same trip replaces the first rather than stacking.
+        tag: payload.tripId ? `manifest-${payload.tripId}` : "manifest",
+        // Replacing the sitting notification must still alert. With
+        // `renotify: false` a stable tag silently swaps identical text, so only
+        // the day's *first* change would ever buzz and every later one would be
+        // mute — the server's 60-second coalescing window is already the noise
+        // bound, and this would have been a second, undeclared throttle that
+        // swallowed everything after it.
+        renotify: true,
+        data: { url: payload.url },
+      });
+    })(),
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const target = event.notification.data?.url;
+  // Same-origin, absolute-path only. `clients.openWindow` is not origin-scoped
+  // the way `client.navigate` is, so an off-origin URL here would open an
+  // attacker's page from a tap on a notification the user trusts. Reaching
+  // that requires the VAPID private key *and* this device's keys — server plus
+  // database compromise — but the guard is two lines and closes the
+  // escalation. "//host" is rejected too: it looks relative and is not.
+  if (typeof target !== "string" || !target.startsWith("/") || target.startsWith("//")) return;
+  event.waitUntil(
+    (async () => {
+      const clientList = await self.clients.matchAll({
+        type: "window",
+        includeUncontrolled: true,
+      });
+      // Focus the manifest if it is already open rather than stacking a second
+      // copy of a page a captain may have unsent roll-call events on.
+      for (const client of clientList) {
+        // Compare the parsed pathname, not a substring: `endsWith` would treat
+        // an unrelated URL that merely finishes with this path as a match.
+        if (new URL(client.url).pathname === target && "focus" in client) return client.focus();
+      }
+      return self.clients.openWindow(target);
+    })(),
+  );
+});
+
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin || event.request.method !== "GET") return;

@@ -125,6 +125,13 @@ const EXCLUDED_TABLES = [
   "notification_deliveries", // operational plumbing, not shop records
   "notification_delivery_attempts",
   "notification_send_queue", // operational retry state, not shop records
+  // Per-device Web Push credentials (ADR 20260804-manifest-web-push). Excluded
+  // for two independent reasons: they are meaningless in another system — an
+  // endpoint is issued by a browser vendor to one installed app on one device,
+  // and cannot be transferred — and the endpoint/p256dh/auth triple is a
+  // *credential*, so writing it into a portable bundle would spread the ability
+  // to push to a captain's phone anywhere that bundle goes.
+  "push_subscriptions",
   "trip_blowouts", // operational cascade record for a weather cancel; the cancellation itself lives on the trip
   "trip_blowout_divers", // per-diver message/rebooking state for that cascade — same reasoning as notification_send_queue
   "notification_rate_limit_state", // provider coordination, not shop records
