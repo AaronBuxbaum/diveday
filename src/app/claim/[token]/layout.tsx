@@ -1,23 +1,23 @@
 import type { ReactNode } from "react";
-import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
-import { requestLocale } from "@/i18n/request";
+import { ErrorBoundaryIntlProvider } from "@/i18n/ErrorBoundaryIntlProvider";
+import { ERROR_BOUNDARY_MESSAGES_BY_LOCALE } from "@/i18n/error-boundary-messages";
 
 /**
- * Puts translated words above the seat-claim page's `error.tsx`. A layout
- * renders above the error boundary, so it can negotiate the locale
- * server-side and mount the one `errorBoundary` namespace — four short
- * strings — into React context for the client boundary to read. See
- * `src/app/waivers/[token]/layout.tsx` for the full reasoning and ADR
- * 20260803-error-boundary-copy-bridge for the decision.
+ * This layout exists for one reason: to put translated words above
+ * `error.tsx` for the seat-claim page a party member opens from a shared
+ * link (ADR 20260803-error-boundary-copy-bridge).
+ *
+ * Deliberately **synchronous**, like every bearer-token layout after ADR
+ * 20260804-instant-navigation: a layout wraps `children`, so an awaited
+ * `requestLocale()` here would cost the whole route its static shell. Both
+ * locales' boundary copy crosses to the client and
+ * `ErrorBoundaryIntlProvider` picks between them from `<html lang>` — see
+ * src/app/ready/[token]/layout.tsx for the full reasoning.
  */
-// No `instant` config here — the page below declares `instant = false`,
-// which covers this route. See src/app/ready/[token]/layout.tsx for why a
-// second declaration buys nothing.
-
-export default async function ClaimTokenLayout({ children }: { children: ReactNode }) {
+export default function ClaimTokenLayout({ children }: { children: ReactNode }) {
   return (
-    <DiverIntlProvider locale={await requestLocale()} timeZone="UTC" namespaces={["errorBoundary"]}>
+    <ErrorBoundaryIntlProvider messagesByLocale={ERROR_BOUNDARY_MESSAGES_BY_LOCALE}>
       {children}
-    </DiverIntlProvider>
+    </ErrorBoundaryIntlProvider>
   );
 }

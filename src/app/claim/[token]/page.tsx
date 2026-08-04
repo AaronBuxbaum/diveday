@@ -49,11 +49,13 @@ function Unavailable({ t }: { t: DiverTranslator }) {
   );
 }
 
-// Bearer-token page (the URL is the capability, docs/engineering/
-// capability-telemetry-runbook.md) — reads `params`/`searchParams`/
-// `requestLocale()` unguarded, genuinely request-scoped, not in scope for
-// the "use cache" hoist. Same shape as /ready/[token].
-export const instant = false;
+// `instant = true`: this route has a real static shell. Every request-scoped
+// read below (the token lookup, `requestLocale()`) sits inside this segment's
+// `loading.tsx` boundary, so the frame paints without waiting on the request
+// and the data streams into it. The URL is still the capability
+// (docs/engineering/capability-telemetry-runbook.md); nothing here is
+// cacheable or shared between bearers. See ADR 20260804-instant-navigation.
+export const instant = true;
 
 export default async function SeatClaimPage({
   params,
