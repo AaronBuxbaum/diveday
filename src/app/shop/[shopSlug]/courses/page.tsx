@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
+import { Pager } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
@@ -99,12 +100,12 @@ export default async function CoursesPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{ after?: string }>;
+  searchParams: Promise<{ page?: string }>;
 }) {
   await connection(); // visibility can change between requests — render per request
   await requireStaffSession();
   const { shopSlug } = await params;
-  const { after } = await searchParams;
+  const { page } = await searchParams;
   const db = await getDb();
   const shop = await getShopBySlug(db, shopSlug);
   if (!shop) notFound();
@@ -124,7 +125,12 @@ export default async function CoursesPage({
     revalidatePath(`/shop/${staff.user.shopSlug}/courses`);
   }
 
-  const { courses: courseList, nextCursor } = await pagedCourses(db, shop.id, { cursor: after });
+  // A non-numeric or missing `?page=` reads as page 1; the query clamps it into
+  // range so a bookmarked page past the end lands on the last real one.
+  const coursePage = await pagedCourses(db, shop.id, { page: Number.parseInt(page ?? "", 10) });
+  const courseList = coursePage.courses;
+  const base = `/shop/${shopSlug}/courses`;
+  const pageHref = (target: number) => (target > 1 ? `${base}?page=${target}` : base);
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <ShopPageHeader
@@ -207,26 +213,14 @@ export default async function CoursesPage({
           </li>
         ))}
       </ul>
-      {nextCursor || after ? (
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-          {nextCursor ? (
-            <Link
-              href={`/shop/${shopSlug}/courses?after=${nextCursor}`}
-              className={buttonClass({ variant: "secondary" })}
-            >
-              {st("courses.list.showMore")}
-            </Link>
-          ) : null}
-          {after ? (
-            <Link
-              href={`/shop/${shopSlug}/courses`}
-              className="text-sm font-medium text-primary hover:underline"
-            >
-              {st("courses.list.backToTop")}
-            </Link>
-          ) : null}
-        </div>
-      ) : null}
+      <Pager
+        page={coursePage.page}
+        pageCount={coursePage.pageCount}
+        href={pageHref}
+        total={st("courses.list.pagination.total", { count: coursePage.total })}
+        t={st}
+        className="mt-4"
+      />
     </main>
   );
 }

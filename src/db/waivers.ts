@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gt, inArray, isNull, lt, ne, or } from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, inArray, isNull, ne } from "drizzle-orm";
 import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { flaggedMedicalPrompts } from "@/lib/medical";
@@ -11,7 +11,7 @@ import {
   WAIVER_LINK_TTL_MS,
 } from "@/lib/waivers";
 import type { AppDb, DbExecutor } from "./client";
-import { decodeCursor, encodeCursor } from "./cursor";
+import { offsetPage } from "./paging";
 import type { MedicalAnswers } from "./schema";
 import {
   bookings,
@@ -52,21 +52,8 @@ export async function listWaiverTemplateHistory(db: DbExecutor, shopId: string) 
     .orderBy(desc(waiverTemplates.version));
 }
 
-/** How many audit rows the waivers page shows per page before "Show more". */
+/** How many audit rows the Signatures tab shows per page. */
 export const WAIVER_INTEGRITY_PAGE_SIZE = 20;
-
-/**
- * `signedAt` is nullable on the schema only for a still-pending record; every
- * write path that reaches status `completed`/`medical_review` sets it in the
- * same statement (`completeWaiver`, `recordInPersonWaiver`, the CSV import),
- * so a row this audit selects always has one.
- */
-function requireSignedAt(record: { signedAt: Date | null }): Date {
-  if (!record.signedAt) {
-    throw new Error("Completed waiver record is missing signedAt");
-  }
-  return record.signedAt;
-}
 
 /** The join shape both `listWaiverIntegrityAudit` and `getSignedWaiverRecordForShop` select. */
 type WaiverAuditJoinRow = {
@@ -102,66 +89,82 @@ function toSignedWaiverEntry(row: WaiverAuditJoinRow) {
   };
 }
 
+export type SignedWaiverEntry = ReturnType<typeof toSignedWaiverEntry>;
+
+export type WaiverIntegrityAuditPage = {
+  entries: SignedWaiverEntry[];
+  page: number;
+  pageCount: number;
+  pageSize: number;
+  total: number;
+};
+
 /**
  * Signed evidence audit — the Signatures tab's data (`/shop/[shopSlug]/waivers/signatures`)
  * and its integrity check. Every row is shop-scoped by `shopId` (never trust a
  * route param for this — see the query's `where`), joins the trip the record
  * was issued against (null only for an imported record, which carries no
  * booking), and intentionally excludes bearer tokens and the raw medical
- * questionnaire (see `toSignedWaiverEntry`). One keyset page at a time
- * (ordered by signature, then id for a stable tiebreak), same idiom as
- * `pagedUpcomingTripsWithCounts` so a shop with years of signed waivers costs
- * one page, not the whole table.
+ * questionnaire (see `toSignedWaiverEntry`). One page at a time (ordered by
+ * signature, then id for a stable tiebreak) so a shop with years of signed
+ * waivers costs one page, not the whole table.
  *
- * Still forward-only, and it should not stay that way: ADR
- * 20260803-one-pagination-model moved the roster, reports, and the moderation
- * queue onto `offsetPage` + the shared `Pager`, and this log is the same job.
- * It is one of the three stragglers named there.
+ * Offset-paged, like the roster and the orders index. It was a forward-only
+ * keyset cursor, which meant a staffer auditing deep history had "Show more"
+ * and "Back to top" and nothing in between — no way back one page, and no way
+ * to see how much evidence was left (ADR 20260803-one-pagination-model). This
+ * is an audit trail, so "page 4 of 31" is not a nicety: it is how a reviewer
+ * knows what they have and have not walked.
+ *
+ * The count carries the same `innerJoin people` the page does, so the two can
+ * never disagree about how many rows exist.
  */
 export async function listWaiverIntegrityAudit(
   db: DbExecutor,
   shopId: string,
-  options: { cursor?: string; limit?: number } = {},
-) {
-  const limit = options.limit ?? WAIVER_INTEGRITY_PAGE_SIZE;
-  const after = decodeCursor(options.cursor);
-  const afterDate = after ? new Date(after[0]) : null;
+  options: { page?: number; limit?: number } = {},
+): Promise<WaiverIntegrityAuditPage> {
+  const scope = and(
+    eq(waiverRecords.shopId, shopId),
+    inArray(waiverRecords.status, ["completed", "medical_review"]),
+  );
 
-  const rows = await db
-    .select({
-      record: waiverRecords,
-      personName: people.fullName,
-      tripId: trips.id,
-      tripTitle: trips.title,
-      tripStartsAt: trips.startsAt,
-    })
-    .from(waiverRecords)
-    .innerJoin(people, eq(people.id, waiverRecords.personId))
-    .leftJoin(bookings, eq(bookings.id, waiverRecords.bookingId))
-    .leftJoin(trips, eq(trips.id, bookings.tripId))
-    .where(
-      and(
-        eq(waiverRecords.shopId, shopId),
-        inArray(waiverRecords.status, ["completed", "medical_review"]),
-        afterDate && after && !Number.isNaN(afterDate.getTime())
-          ? or(
-              lt(waiverRecords.signedAt, afterDate),
-              and(eq(waiverRecords.signedAt, afterDate), lt(waiverRecords.id, after[1])),
-            )
-          : undefined,
-      ),
-    )
-    .orderBy(desc(waiverRecords.signedAt), desc(waiverRecords.id))
-    .limit(limit + 1);
+  const paged = await offsetPage({
+    page: options.page,
+    pageSize: options.limit ?? WAIVER_INTEGRITY_PAGE_SIZE,
+    countRows: async () => {
+      const [counted] = await db
+        .select({ total: count() })
+        .from(waiverRecords)
+        .innerJoin(people, eq(people.id, waiverRecords.personId))
+        .where(scope);
+      return counted?.total ?? 0;
+    },
+    fetchRows: async (offset, limit) =>
+      db
+        .select({
+          record: waiverRecords,
+          personName: people.fullName,
+          tripId: trips.id,
+          tripTitle: trips.title,
+          tripStartsAt: trips.startsAt,
+        })
+        .from(waiverRecords)
+        .innerJoin(people, eq(people.id, waiverRecords.personId))
+        .leftJoin(bookings, eq(bookings.id, waiverRecords.bookingId))
+        .leftJoin(trips, eq(trips.id, bookings.tripId))
+        .where(scope)
+        .orderBy(desc(waiverRecords.signedAt), desc(waiverRecords.id))
+        .limit(limit)
+        .offset(offset),
+  });
 
-  const pageRows = rows.slice(0, limit);
-  const last = pageRows.at(-1);
   return {
-    entries: pageRows.map(toSignedWaiverEntry),
-    nextCursor:
-      rows.length > limit && last
-        ? encodeCursor(requireSignedAt(last.record).toISOString(), last.record.id)
-        : null,
+    entries: paged.rows.map(toSignedWaiverEntry),
+    page: paged.page,
+    pageCount: paged.pageCount,
+    pageSize: paged.pageSize,
+    total: paged.total,
   };
 }
 

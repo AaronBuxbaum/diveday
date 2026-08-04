@@ -26,6 +26,10 @@ describe("redactCapabilityUrl", () => {
     expect(redactCapabilityUrl("/invite/abc123.def456")).toBe("/invite/[token]");
   });
 
+  it("redacts a seat-claim token path", () => {
+    expect(redactCapabilityUrl("/claim/abc123.def456")).toBe("/claim/[token]");
+  });
+
   it("redacts a staff calendar-feed token path", () => {
     expect(redactCapabilityUrl("/calendar/abc123.def456")).toBe("/calendar/[token]");
   });

@@ -59,6 +59,69 @@ function promoInput(shopId: string, overrides: Record<string, unknown> = {}) {
   };
 }
 
+type TestDb = Awaited<ReturnType<typeof seededShopContext>>["db"];
+
+/** The seeded reef departure, given a price so a checkout can be raised against it. */
+async function pricedReefTrip(db: TestDb, shopId: string) {
+  const trips = await upcomingTripsWithCounts(db, shopId, new Date(0));
+  const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
+  if (!reef) throw new Error("demo reef trip missing");
+  await updateTrip(db, shopId, reef.id, {
+    title: reef.title,
+    startsAt: reef.startsAt,
+    endsAt: reef.endsAt,
+    capacity: reef.capacity,
+    plannedDives: reef.plannedDives,
+    priceCents: 18_000,
+  });
+  return reef;
+}
+
+/**
+ * One paid checkout that spends `promo` — the booking → checkout → webhook path
+ * a redemption actually arrives through, so a test needing a code with usage on
+ * it doesn't restate the whole thing.
+ *
+ * `checkout` is the caller's, not a fresh one per call: each `fakeCheckout()`
+ * numbers its sessions from `cs_1`, so two of them collide on
+ * `booking_checkouts_stripe_session_unique` the moment a test redeems twice.
+ */
+async function redeemPromoOnce(
+  db: TestDb,
+  shopId: string,
+  tripId: string,
+  promo: {
+    id: string;
+    code: string;
+    discountPercent: number;
+    stripePromotionCodeId: string | null;
+  },
+  email: string,
+  checkout: ReturnType<typeof fakeCheckout>,
+) {
+  const party = await createBookingParty(db, [
+    { actor: "staff", shopId, tripId, fullName: `Promo Diver ${email}`, email },
+  ]);
+  if (!party.ok) throw new Error("booking failed");
+  const started = await startBookingCheckout(
+    db,
+    {
+      shopId,
+      tripId,
+      bookingIds: party.bookings.map((booking) => booking.bookingId),
+      customerEmail: email,
+      successUrl: "https://diveday.example/ok",
+      cancelUrl: "https://diveday.example/no",
+      describeLine: ({ tripTitle }) => tripTitle,
+      promotionCode: promo.stripePromotionCodeId ?? undefined,
+      shopPromo: { id: promo.id, code: promo.code, discountPercent: promo.discountPercent },
+    },
+    checkout,
+  );
+  if (!started.ok) throw new Error(`checkout failed: ${started.reason}`);
+  await markCheckoutPaidBySessionId(db, started.checkout.stripeSessionId, undefined, 14_400);
+}
+
 describe("createShopPromoCode", () => {
   it("mints a Stripe coupon and promotion code, storing the normalized code active", async () => {
     const { db, shop } = await promoContext();
@@ -136,38 +199,72 @@ describe("createShopPromoCode", () => {
 });
 
 describe("listShopPromoCodes pagination", () => {
-  it("pages with a keyset cursor and never repeats or skips a code", async () => {
+  it("pages by number and never repeats or skips a code", async () => {
     const { db, shop } = await promoContext();
     for (const code of ["REEFA", "REEFB", "REEFC"]) {
       await createShopPromoCode(db, promoInput(shop.id, { code }), fakePromotions());
     }
 
     const all = await listShopPromoCodes(db, shop.id);
-    expect(all.nextCursor).toBeNull();
+    expect(all.pageCount).toBe(1);
     expect(all.promos.length).toBeGreaterThanOrEqual(3);
+    expect(all.total).toBe(all.promos.length);
 
     const seen: string[] = [];
-    let cursor: string | undefined;
-    const maxHops = all.promos.length + 1;
-    for (let hops = 0; hops < maxHops; hops++) {
-      const page = await listShopPromoCodes(db, shop.id, { cursor, limit: 1 });
-      expect(page.promos.length).toBeLessThanOrEqual(1);
-      seen.push(...page.promos.map((promo) => promo.id));
-      if (!page.nextCursor) break;
-      cursor = page.nextCursor;
+    for (let page = 1; page <= all.total; page++) {
+      const chunk = await listShopPromoCodes(db, shop.id, { page, limit: 1 });
+      expect(chunk.page).toBe(page);
+      expect(chunk.pageCount).toBe(all.total);
+      expect(chunk.total).toBe(all.total);
+      seen.push(...chunk.promos.map((promo) => promo.id));
     }
     expect(seen).toEqual(all.promos.map((promo) => promo.id));
     expect(new Set(seen).size).toBe(seen.length);
   });
 
-  it("treats a mangled cursor as the first page", async () => {
+  it("counts codes, not redemptions, so a busy code cannot invent pages", async () => {
+    const { db, shop } = await promoContext();
+    await upsertShopStripeAccount(db, shop.id, "acct_test");
+    const created = await createShopPromoCode(db, promoInput(shop.id), fakePromotions());
+    if (!created.ok) throw new Error("expected promo");
+    const reef = await pricedReefTrip(db, shop.id);
+
+    const before = await listShopPromoCodes(db, shop.id);
+    // Two redemptions of one code. The page's `leftJoin` emits a row per
+    // redemption, so a count taken off that joined shape would report this
+    // code twice and hand the pager a page that does not exist.
+    const checkout = fakeCheckout();
+    await redeemPromoOnce(db, shop.id, reef.id, created.promo, "one@example.com", checkout);
+    await redeemPromoOnce(db, shop.id, reef.id, created.promo, "two@example.com", checkout);
+
+    expect((await promoNamed(db, shop.id, "REEF20")).timesRedeemed).toBe(2);
+    const after = await listShopPromoCodes(db, shop.id);
+    expect(after.total).toBe(before.total);
+    expect(after.pageCount).toBe(before.pageCount);
+    expect(after.promos).toHaveLength(before.promos.length);
+  });
+
+  it("goes back a page as well as forward, and clamps a nonsensical one", async () => {
     const { db, shop } = await promoContext();
     await createShopPromoCode(db, promoInput(shop.id, { code: "REEFA" }), fakePromotions());
     await createShopPromoCode(db, promoInput(shop.id, { code: "REEFB" }), fakePromotions());
 
-    const all = await listShopPromoCodes(db, shop.id);
-    const mangled = await listShopPromoCodes(db, shop.id, { cursor: "not-a-real-cursor" });
-    expect(mangled.promos.map((promo) => promo.id)).toEqual(all.promos.map((promo) => promo.id));
+    const first = await listShopPromoCodes(db, shop.id, { page: 1, limit: 1 });
+    const second = await listShopPromoCodes(db, shop.id, { page: 2, limit: 1 });
+    const back = await listShopPromoCodes(db, shop.id, { page: second.page - 1, limit: 1 });
+    expect(back.promos.map((promo) => promo.id)).toEqual(first.promos.map((promo) => promo.id));
+
+    for (const requested of [0, -3, Number.NaN]) {
+      const clamped = await listShopPromoCodes(db, shop.id, { page: requested, limit: 1 });
+      expect(clamped.page).toBe(1);
+      expect(clamped.promos.map((promo) => promo.id)).toEqual(
+        first.promos.map((promo) => promo.id),
+      );
+    }
+
+    const past = await listShopPromoCodes(db, shop.id, { page: 99, limit: 1 });
+    expect(past.page).toBe(past.pageCount);
+    expect(past.promos).toHaveLength(1);
   });
 });
 

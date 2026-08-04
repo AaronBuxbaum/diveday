@@ -181,10 +181,13 @@ test.describe("staff", () => {
     // demo shop to make a pager appear here would distort every other surface
     // that reads the library.)
     await expect(page.getByRole("navigation", { name: "Dive-site pages" })).toHaveCount(0);
-    // A stale bookmark past the end is an empty page, not a 500.
+    // A stale bookmark past the end lands on the last real page. It used to
+    // render an empty grid under a heading that could not be true, which is
+    // what `offsetPage` exists to stop (ADR 20260803-one-pagination-model);
+    // the library reads through it now like every other paged staff list.
     await page.goto("/shop/blue-mantis/dive-sites?page=99");
     await expect(page.getByRole("heading", { level: 1, name: "Dive-site library" })).toBeVisible();
-    await expect(cards).toHaveCount(0);
+    await expect(cards).toHaveCount(seededCount);
   });
 
   test("a site with no location yet says so instead of leaving the line blank", async ({

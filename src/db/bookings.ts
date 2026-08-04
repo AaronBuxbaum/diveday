@@ -142,6 +142,20 @@ export async function createBookingParty(
       for (const [index, request] of requests.entries()) {
         const outcome = await createBookingRecord(tx, request);
         if (!outcome.ok) throw new PartyBookingError(outcome, index);
+        // Every seat past the organizer's own records which booking leads its
+        // party (docs ADR 20260804-seat-claim-links) — the fact the claim-link
+        // surfaces later read to answer "whose seats may this organizer hand
+        // out?". Written here rather than inside `createBookingRecord` so the
+        // single-booking path never carries party state, and written even for
+        // a reactivated row (whose stale linkage the reactivation path just
+        // cleared) so a re-booked party member is claimable again.
+        const leadBookingId = created[0]?.bookingId;
+        if (index > 0 && leadBookingId) {
+          await tx
+            .update(bookings)
+            .set({ partyLeadBookingId: leadBookingId })
+            .where(eq(bookings.id, outcome.bookingId));
+        }
         created.push(outcome);
       }
       return { ok: true as const, bookings: created };
@@ -216,8 +230,14 @@ async function tripCourseCrewCounts(
  * `courseSession` short-circuits the whole thing, reads included: on a training
  * session the course's own gate above is the admission rule, so there is
  * nothing here to read (see `TripAdmissionInput.courseSession`).
+ *
+ * Exported for exactly one other caller: the seat-claim path
+ * (src/db/seat-claims.ts), which re-runs this same gate for the claimant so a
+ * claimed seat is admitted on the claimant's own evidence, never the
+ * placeholder's (docs ADR 20260804-seat-claim-links). Any new caller should be
+ * another door that puts a specific person on a specific trip.
  */
-async function tripAdmissionFor(
+export async function tripAdmissionFor(
   tx: DbExecutor,
   shopId: string,
   tripId: string,
@@ -529,6 +549,15 @@ async function createBookingRecord(db: DbExecutor, req: BookingRequest): Promise
         // Re-booking this seat re-evaluates identity: a matching name now clears
         // any stale flag, a mismatch (re)raises it.
         identityUnconfirmedAt: identityUnconfirmed ? nowDate() : null,
+        // A reactivated row starts a *new* booking and must not inherit party
+        // membership from its earlier life: a stale `party_lead_booking_id`
+        // would list this fresh, independent seat in the old organizer's claim
+        // panel and let them mint a claim link over it — a takeover path, not
+        // a convenience (docs ADR 20260804-seat-claim-links). A party booking
+        // that reactivates a row re-stamps the linkage right after this
+        // returns (`createBookingParty`).
+        partyLeadBookingId: null,
+        claimedAt: null,
       })
       .where(eq(bookings.id, existing.id));
     return { ok: true, bookingId: existing.id, personId: person.id, personName: person.fullName };
