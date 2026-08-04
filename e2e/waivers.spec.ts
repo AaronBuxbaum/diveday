@@ -84,7 +84,7 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
   // link affordance here rather than "Waiver sent to …".
   await diverSection.getByRole("button", { name: "Send waiver", exact: true }).first().click();
   const resultNotice = diverSection.getByRole("status");
-  await expect(resultNotice).toContainText("no email provider configured");
+  await expect(resultNotice).toContainText("send email from this deployment yet");
   const waiverHref = await resultNotice.getByRole("link").getAttribute("href");
   expect(waiverHref).toMatch(/^\/waivers\//);
 
