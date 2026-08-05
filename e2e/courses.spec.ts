@@ -127,8 +127,11 @@ test.describe("staff", () => {
     // The order a counter conversation walks, not the alphabet: a first taste,
     // then the entry card, then what it opens. Alphabetical would have opened
     // on "Advanced Open Water Diver" — the one course a beginner cannot take.
-    const titles = await page.getByRole("listitem").locator("span.font-semibold").allInnerTexts();
-    const at = (title: string) => titles.indexOf(title);
+    // Rows, not title spans: the "Hidden" badge is a `font-semibold` span too,
+    // and a sibling test in this file hides a course — matching on the row that
+    // *starts* with the title keeps the order readable either way.
+    const rows = await page.locator("main ul > li").allInnerTexts();
+    const at = (title: string) => rows.findIndex((row) => row.trimStart().startsWith(title));
     expect(at("Discover Scuba Diving")).toBeGreaterThanOrEqual(0);
     expect(at("Discover Scuba Diving")).toBeLessThan(at("Open Water Diver"));
     expect(at("Open Water Diver")).toBeLessThan(at("Advanced Open Water Diver"));

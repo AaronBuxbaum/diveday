@@ -430,10 +430,16 @@ test.describe("automated accessibility scans of the staff detail surfaces", () =
   test("the catalog editors have no automated a11y violations", async ({ page }) => {
     // 6 scans at ~3.5s each.
     test.setTimeout(90_000);
+    // The staff roster first — its agency tab strip is the one control on the
+    // page a keyboard or screen-reader user has to get through to reach the
+    // course they want (ADR 20260805-remove-certification-paths).
+    await page.goto("/shop/blue-mantis/courses", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("navigation", { name: "Filter courses by agency" })).toBeVisible();
+    await expectNoA11yViolations(page);
+
     // The course editor: the longest form in the product (content blocks,
     // prerequisites, ratios, pricing), and the only place a shop writes the
     // words a diver reads on the public catalog.
-    await page.goto("/shop/blue-mantis/courses", { waitUntil: "domcontentloaded" });
     await page.locator('a[href$="/edit"]').filter({ visible: true }).first().click();
     await expect(page).toHaveURL(/\/courses\/[^/]+\/edit$/);
     await expectNoA11yViolations(page);

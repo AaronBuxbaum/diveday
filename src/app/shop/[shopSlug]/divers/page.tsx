@@ -84,11 +84,24 @@ export default async function DiversPage({
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   const query = q?.trim() ?? "";
-  // Restoring is the inverse of the owner/manager-only removal (H-14, ADR
-  // 20260724-role-authorization), so the view whose whole purpose is restoring
-  // takes the same gate — and takes it here, not just on the chip: a hand-typed
-  // `?filter=removed` must not list removed people to a deckhand either.
-  const canDelete = await canPersonDeleteDiver(db, shop.id, session.user.personId);
+  // Both gates in one round trip, and *before* the roster query, because the
+  // view the query runs depends on one of them:
+  //
+  // - **Restore** is the inverse of the owner/manager-only removal (H-14, ADR
+  //   20260724-role-authorization), so the view whose whole purpose is
+  //   restoring takes the same gate — and takes it here, not just on the chip:
+  //   a hand-typed `?filter=removed` must not list removed people to a
+  //   deckhand either.
+  // - **Import** is the same gate the import page itself enforces, so the
+  //   roster's empty state only shows a door its reader may walk through (ADR
+  //   20260724-role-gated-surfaces-hide-not-explain).
+  //
+  // Together, not in series: the page already waits on the list query, and a
+  // roster read is not the place to add a second sequential hop.
+  const [canDelete, canImport] = await Promise.all([
+    canPersonDeleteDiver(db, shop.id, session.user.personId),
+    canPersonImportShopData(db, shop.id, session.user.personId),
+  ]);
   const requested = isDiverFilter(filterParam) ? filterParam : "all";
   const filter = requested === "removed" && !canDelete ? "all" : requested;
   // A non-numeric or missing `?page=` reads as page 1; the query clamps it into
@@ -101,12 +114,6 @@ export default async function DiversPage({
     // "Diving today" is the shop's own calendar day, not the server's.
     timeZone: shop.timezone,
   });
-  // The roster's empty state offers a bulk import beside the one-diver form,
-  // for the shop arriving with a spreadsheet. Same gate the import page itself
-  // enforces (`canPersonImportShopData`), so the door is only shown to whoever
-  // may walk through it (ADR 20260724-role-gated-surfaces-hide-not-explain).
-  const canImport = await canPersonImportShopData(db, shop.id, session.user.personId);
-
   /** The roster's URL with the search and view kept and only `page` swapped. */
   const pageHref = (target: number) => {
     const search = new URLSearchParams();
