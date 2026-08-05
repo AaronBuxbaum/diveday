@@ -42,11 +42,6 @@ const ROLES_FORM_ID = "team-roles-form";
 
 export const metadata: Metadata = { title: "Team — DiveDay" };
 
-/**
- * Built inside the request, not at module scope, so the notice text tracks
- * the negotiated locale rather than freezing to whichever locale first
- * imported this file.
- */
 /** Refusals about the address typed into the invite form's Email box. */
 const INVITE_EMAIL_NOTICES = new Set([
   "invite_already_on_team",
@@ -57,6 +52,11 @@ const INVITE_EMAIL_NOTICES = new Set([
 /** The rest of what the invite form itself can say, refusals and confirmation alike. */
 const INVITE_FORM_NOTICES = new Set(["invited", "invite_invalid"]);
 
+/**
+ * Built inside the request, not at module scope, so the notice text tracks
+ * the negotiated locale rather than freezing to whichever locale first
+ * imported this file.
+ */
 function noticeMessages(
   t: StaffTranslator,
 ): Record<string, { tone: "success" | "danger" | "warning"; text: string }> {

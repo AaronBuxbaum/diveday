@@ -172,7 +172,10 @@ export default async function PromosPage({
   const banner = noticeFromParam(notice, NOTICES);
   // Three homes, decided once: a field in the new-code form, that form's
   // action row, or the page. Nothing lands in more than one.
-  const noticeField = notice ? NOTICE_FIELD[notice] : undefined;
+  // `noticeFromParam`, not `NOTICE_FIELD[notice]`: `?notice=` is
+  // attacker-supplied and a bare index walks off `Object.prototype`
+  // (src/lib/staff-notices.ts).
+  const noticeField = noticeFromParam(notice, NOTICE_FIELD);
   const createStatus = notice && CREATE_FORM_NOTICES.has(notice) ? banner : undefined;
   const pageBanner = noticeField || createStatus ? undefined : banner;
   /** This box's refusal, already worded — or nothing, when the refusal was elsewhere. */
