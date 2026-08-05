@@ -955,20 +955,21 @@ describe("pagedCourses pagination (in-memory PGlite)", () => {
   });
 });
 
-describe("progression order (in-memory PGlite)", () => {
-  /** Rank of a course's own cert gate, mirroring the SQL `nulls first` sort. */
-  const rank = (level: string | null) =>
-    level === null
-      ? -1
-      : ["open_water", "advanced_open_water", "rescue", "divemaster", "instructor"].indexOf(level);
+/** Rank of a course's own cert gate, mirroring the SQL `asc nulls first` sort. */
+function rankOf(level: string | null): number {
+  return level === null
+    ? -1
+    : ["open_water", "advanced_open_water", "rescue", "divemaster", "instructor"].indexOf(level);
+}
 
+describe("progression order (in-memory PGlite)", () => {
   it("reads the catalog the way a shop teaches it, not alphabetically", async () => {
     const { db, shop } = await seededShopContext();
     const all = await listCourses(db, shop.id);
     expect(all.length).toBeGreaterThan(4);
 
     // Never falls back: each course's own gate is non-decreasing down the list.
-    const ranks = all.map((course) => rank(course.minimumCertificationLevel));
+    const ranks = all.map((course) => rankOf(course.minimumCertificationLevel));
     expect(ranks).toEqual([...ranks].sort((a, b) => a - b));
 
     const titles = all.map((course) => course.title);
@@ -1056,13 +1057,6 @@ describe("agency tabs (in-memory PGlite)", () => {
     expect(await courseAgencies(db, shop.id)).toContain("bsac");
   });
 });
-
-/** Shared with the progression block above; kept out of it so both can use it. */
-function rankOf(level: string | null): number {
-  return level === null
-    ? -1
-    : ["open_water", "advanced_open_water", "rescue", "divemaster", "instructor"].indexOf(level);
-}
 
 describe("course content and public pages (in-memory PGlite)", () => {
   it("saves the marketing page without touching pricing, the cert gate, or the agency age", async () => {

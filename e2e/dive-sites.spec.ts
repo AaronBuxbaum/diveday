@@ -229,7 +229,13 @@ test.describe("staff", () => {
     await page.getByRole("button", { name: "Save dive site" }).click();
 
     // Not `getByRole("alert")` — Next's own route announcer is one too.
-    await expect(page.getByText(/Add both forecast coordinates/)).toBeVisible();
+    const refusal = page.getByText(/Add both forecast coordinates/);
+    await expect(refusal).toBeVisible();
+    // …and *inside the form*, not in a banner above twenty fields. The refusal
+    // used to render above the whole briefing, a full screen from the Save
+    // button that had just been pressed, so a refused save looked like a
+    // button that did nothing.
+    await expect(page.locator("form").filter({ has: refusal })).toHaveCount(1);
     // The whole point: still on the form, still filled in.
     await expect(page).toHaveURL(/\/dive-sites\/new$/);
     await expect(page.getByLabel("Name")).toHaveValue(siteName);

@@ -67,6 +67,19 @@ configure: with no `SES_*` credentials `notificationProviderFromEnvironment` ret
 `disabledNotificationProvider`, and `playwright.config.ts` blanks those keys fleet-wide for exactly
 this reason. `DIVEDAY_DISABLE_EXTERNAL_HTTP=1` covers the analytics half.
 
+**`announceDemoEntry` lives in `src/app/actions/demo-instrumentation.ts`, a plain module with no
+`"use server"` directive, and must never gain one.** This is the security review of this change's
+own diff, recorded because the mistake is invisible at the call site and easy to repeat. Every
+exported async function in a `"use server"` module is a callable server-action endpoint, and
+`demo.ts` is reachable with no session at all — the demo CTA is the whole point. Exported from
+there, this function would have been an unauthenticated endpoint taking a caller-supplied `slug`,
+`role`, and `source`, which is enough to spray unregistered tags into the funnel, mail the founder
+about demo tries that never happened, and — by passing a **real** shop's slug — drive
+`sendNotification` into `queueRetry` and write a poisoned payload row scoped to that tenant's
+`shop_id`. TypeScript's `DemoRoleId`/`FunnelSource` parameter types are erased at runtime and stop
+none of it. `seat-diver-surfaces.ts` is a plain sibling of `seat-diver.ts` for the same reason. A
+test asserts the server-action module does not export it.
+
 ## Alternatives considered
 
 - **A digest — batch demo tries into a daily cron mail.** Rejected for now: `RATE_LIMITS.demoCreate`

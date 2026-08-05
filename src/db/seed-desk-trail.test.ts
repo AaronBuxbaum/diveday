@@ -43,10 +43,7 @@ describe("seeded desk trail", () => {
 
   it("annotates without moving a single diver's readiness", async () => {
     const { db, shop, trip } = await reefTrip();
-    const notes = await db
-      .select()
-      .from(internalNotes)
-      .where(eq(internalNotes.shopId, shop.id));
+    const notes = await db.select().from(internalNotes).where(eq(internalNotes.shopId, shop.id));
     expect(notes.length).toBeGreaterThan(0);
     // The noted seats are as ready (or as blocked) as they would be with no
     // note at all: nothing in the readiness pipeline reads this table, and this

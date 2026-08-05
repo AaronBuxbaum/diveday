@@ -176,7 +176,10 @@ export default async function DiversPage({
 
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
-      <FlashParams params={["notice"]} />
+      {/* `deleted` goes with `notice`: it carries the id the undo toast acts on,
+          and a person id left sitting in the address bar after the toast has
+          been read is nobody's business and nothing's input. */}
+      <FlashParams params={["notice", "deleted"]} />
       <ShopPageHeader
         eyebrow={t("divers.page.eyebrow")}
         title={t("divers.page.title")}
