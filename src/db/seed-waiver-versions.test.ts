@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { seededShopContext } from "@/test/db";
 import { isCompletedWaiverCurrent } from "@/lib/waivers";
+import { seededShopContext } from "@/test/db";
 import { waiverRecords } from "./schema";
 import { DEMO_WAIVER_TEMPLATE_VERSION } from "./seed-waiver-versions";
 import { getCurrentWaiverTemplate, listWaiverTemplateHistory } from "./waivers";
@@ -49,10 +49,7 @@ describe("seeded waiver template history", () => {
     const current = await getCurrentWaiverTemplate(db, shop.id);
     if (!current) throw new Error("seeded waiver template missing");
 
-    const signed = await db
-      .select()
-      .from(waiverRecords)
-      .where(eq(waiverRecords.shopId, shop.id));
+    const signed = await db.select().from(waiverRecords).where(eq(waiverRecords.shopId, shop.id));
     const completed = signed.filter((record) => record.status === "completed");
     expect(completed.length).toBeGreaterThan(0);
     for (const record of completed) {

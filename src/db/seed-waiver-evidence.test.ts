@@ -68,9 +68,9 @@ describe("seeded waiver evidence", () => {
     const days = new Set(recent.map((value) => value.toISOString().slice(0, 10)));
     expect(days.size).toBeGreaterThanOrEqual(14);
     const today = new Date(now).toISOString().slice(0, 10);
-    expect(recent.filter((value) => value.toISOString().slice(0, 10) === today).length).toBeLessThan(
-      recent.length / 2,
-    );
+    expect(
+      recent.filter((value) => value.toISOString().slice(0, 10) === today).length,
+    ).toBeLessThan(recent.length / 2);
   });
 
   it("keeps a signed release self-consistent after re-dating", async () => {

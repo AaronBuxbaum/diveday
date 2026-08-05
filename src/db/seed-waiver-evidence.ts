@@ -135,9 +135,7 @@ export async function seedWaiverEvidence(db: DbExecutor, shopId: string): Promis
       integrityHash: null,
       integrityVersion: null,
     };
-    const hash = sealed
-      ? computeWaiverIntegrityHash(next, WAIVER_INTEGRITY_VERSION_SIGNED)
-      : null;
+    const hash = sealed ? computeWaiverIntegrityHash(next, WAIVER_INTEGRITY_VERSION_SIGNED) : null;
     updates.push({
       id: record.id,
       next: {

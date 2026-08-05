@@ -6,9 +6,9 @@ import {
   offeredRentableItems,
   quoteRentalFit,
   RENTABLE_ITEMS,
-  rentalFitCompleteness,
   type RentalFitSizes,
   type RentalPricing,
+  rentalFitCompleteness,
   SHOP_CATALOG_ITEMS,
   shopOffersNitrox,
   toRentableKinds,
@@ -287,9 +287,10 @@ describe("rentalFitCompleteness", () => {
 
   it("is incomplete when a rented item has no size, even with another size on file", () => {
     // The reported case: BCD ticked, only a fin size typed.
-    expect(
-      rentalFitCompleteness({ ...OWN_KIT, rentsBcd: true, finSize: "M" }),
-    ).toEqual({ state: "incomplete", missing: ["bcd"] });
+    expect(rentalFitCompleteness({ ...OWN_KIT, rentsBcd: true, finSize: "M" })).toEqual({
+      state: "incomplete",
+      missing: ["bcd"],
+    });
   });
 
   it("names every missing piece, in canonical order", () => {

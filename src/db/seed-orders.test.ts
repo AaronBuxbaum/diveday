@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
 import { listShopOrders, ORDER_DEFAULT_RANGE_DAYS } from "./orders";
-import { orderLineItems, orders, orderStatus } from "./schema";
+import { orderLineItems, orderStatus, orders } from "./schema";
 
 /**
  * The seeded billing states (src/db/seed-orders.ts). The history back-fill
@@ -59,9 +59,9 @@ describe("seeded order states", () => {
   it("dates them inside the index's default window, so they need no 'show all'", async () => {
     const { db, shop } = await seededShopContext({ history: true });
     const from = new Date(Date.now() - ORDER_DEFAULT_RANGE_DAYS * 24 * 60 * 60 * 1000);
-    const standalone = (
-      await db.select().from(orders).where(eq(orders.shopId, shop.id))
-    ).filter((order) => order.bookingId === null);
+    const standalone = (await db.select().from(orders).where(eq(orders.shopId, shop.id))).filter(
+      (order) => order.bookingId === null,
+    );
     expect(standalone.length).toBeGreaterThan(0);
     for (const order of standalone) {
       expect(order.createdAt.getTime()).toBeGreaterThan(from.getTime());

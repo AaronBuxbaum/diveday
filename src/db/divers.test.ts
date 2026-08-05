@@ -349,7 +349,9 @@ describe("person-first diver records", () => {
       const diver = await removedDiver(db, shop.id);
       // A copied URL is the whole attack here: the record is reachable now, so
       // the tenant clause is what keeps it reachable only from its own shop.
-      expect(await getDiverProfile(db, otherShop.id, diver.id, { includeRemoved: true })).toBeNull();
+      expect(
+        await getDiverProfile(db, otherShop.id, diver.id, { includeRemoved: true }),
+      ).toBeNull();
       expect(
         (await listDiverSummaries(db, otherShop.id, { filter: "removed", limit: 1000 })).divers,
       ).toEqual([]);

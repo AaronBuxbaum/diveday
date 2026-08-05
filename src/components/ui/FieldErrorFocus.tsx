@@ -31,9 +31,7 @@ export function FieldErrorFocus({ field, scope }: { field?: string; scope?: stri
   useEffect(() => {
     const root = scope ? document.getElementById(scope) : document;
     if (!root) return;
-    const el = field
-      ? document.getElementById(field)
-      : root.querySelector('[aria-invalid="true"]');
+    const el = field ? document.getElementById(field) : root.querySelector('[aria-invalid="true"]');
     if (!(el instanceof HTMLElement)) return;
 
     el.scrollIntoView({ behavior: "smooth", block: "center" });

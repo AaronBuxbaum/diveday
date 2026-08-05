@@ -5,12 +5,7 @@ import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { shopWaiverStatusText, shopWaiverStatusTone } from "@/i18n/waiver-labels";
 import { calendarDateInTimezone, formatCalendarDate } from "@/lib/calendar-date";
 import { rentalFitCompleteness } from "@/lib/rentals";
-import {
-  cardsNeedingLookCount,
-  type DiverProfile,
-  type Shop,
-  unpaidBookingCount,
-} from "./shared";
+import { cardsNeedingLookCount, type DiverProfile, type Shop, unpaidBookingCount } from "./shared";
 
 /**
  * **One card, and whether it is a loose end.**

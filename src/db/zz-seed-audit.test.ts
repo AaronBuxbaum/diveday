@@ -44,19 +44,10 @@ describe("seed audit probe", () => {
         "trip_reviews",
         `select is_published, count(*)::int n, min(rating) mn, max(rating) mx from trip_reviews group by 1 order by 1`,
       ),
-      await q(
-        "notification deliveries",
-        `select * from notification_deliveries limit 4`,
-      ),
-      await q(
-        "trips by status",
-        `select status, count(*)::int n from trips group by 1 order by 1`,
-      ),
+      await q("notification deliveries", `select * from notification_deliveries limit 4`),
+      await q("trips by status", `select status, count(*)::int n from trips group by 1 order by 1`),
       await q("dive_sites", `select name, is_active from dive_sites order by name`),
-      await q(
-        "global_dive_sites",
-        `select name, region from global_dive_sites order by name`,
-      ),
+      await q("global_dive_sites", `select name, region from global_dive_sites order by name`),
       await q("staff_shifts", `select count(*)::int n from staff_shifts`),
       await q(
         "bookings by status",

@@ -14,6 +14,7 @@ import {
   or,
   sql,
 } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { nowDate } from "@/lib/clock";
 import {
   summarizeTripDiveSites,
@@ -346,9 +347,15 @@ export async function offsetUpcomingTripsWithCounts(
  * first one named none. This reads the dives themselves, so a card can say both
  * how many sites the trip visits and how many tanks are still open.
  *
- * Shop ownership is proven on the query — through the trip and again on the
+ * Shop ownership is proven on the query — through the trip and again on each
  * site — rather than assumed from the trip's pointer (the CR-007 house rule).
- * A trip with no dive rows is simply absent from the map.
+ *
+ * A departure with **no dive rows at all** falls back to its own
+ * `dive_site_id`, which is the only thing it can say. Every write path mints
+ * one dive row per planned dive (`insertTripInstance`, `replaceTripDives`), so
+ * that shape should not exist — but a reader that answers "nowhere" for a trip
+ * whose row plainly names a site would be a worse bug than the one it is
+ * fixing, and the demo seed builds trips exactly that way today.
  */
 export async function tripDiveSiteSummaries(
   db: DbExecutor,
@@ -356,29 +363,56 @@ export async function tripDiveSiteSummaries(
   tripIds: string[],
 ): Promise<Map<string, TripDiveSiteSummary>> {
   if (tripIds.length === 0) return new Map();
+  // Two reaches into the same table — the site on each dive, and the trip's own
+  // fallback pointer — so they need distinct aliases.
+  const diveSite = alias(diveSites, "trip_dive_site");
+  const tripSite = alias(diveSites, "trip_primary_site");
   const rows = await db
     .select({
-      tripId: tripDives.tripId,
+      tripId: trips.id,
       diveNumber: tripDives.diveNumber,
-      siteId: diveSites.id,
-      siteName: diveSites.name,
+      siteId: diveSite.id,
+      siteName: diveSite.name,
+      tripSiteId: tripSite.id,
+      tripSiteName: tripSite.name,
     })
-    .from(tripDives)
-    .innerJoin(trips, eq(trips.id, tripDives.tripId))
-    .leftJoin(diveSites, and(eq(diveSites.id, tripDives.diveSiteId), eq(diveSites.shopId, shopId)))
-    .where(and(inArray(tripDives.tripId, tripIds), eq(trips.shopId, shopId)))
-    .orderBy(asc(tripDives.tripId), asc(tripDives.diveNumber));
+    .from(trips)
+    .leftJoin(tripDives, eq(tripDives.tripId, trips.id))
+    .leftJoin(diveSite, and(eq(diveSite.id, tripDives.diveSiteId), eq(diveSite.shopId, shopId)))
+    .leftJoin(tripSite, and(eq(tripSite.id, trips.diveSiteId), eq(tripSite.shopId, shopId)))
+    .where(and(inArray(trips.id, tripIds), eq(trips.shopId, shopId)))
+    .orderBy(asc(trips.id), asc(tripDives.diveNumber));
 
   const byTrip = new Map<string, TripDiveSiteRef[]>();
+  const fallbackByTrip = new Map<string, { id: string; name: string } | null>();
   for (const row of rows) {
+    fallbackByTrip.set(
+      row.tripId,
+      row.tripSiteId && row.tripSiteName ? { id: row.tripSiteId, name: row.tripSiteName } : null,
+    );
     const dives = byTrip.get(row.tripId) ?? [];
-    dives.push({
-      diveNumber: row.diveNumber,
-      site: row.siteId && row.siteName ? { id: row.siteId, name: row.siteName } : null,
-    });
+    // `diveNumber` is null only when the left join found no dive row at all.
+    if (row.diveNumber !== null) {
+      dives.push({
+        diveNumber: row.diveNumber,
+        site: row.siteId && row.siteName ? { id: row.siteId, name: row.siteName } : null,
+      });
+    }
     byTrip.set(row.tripId, dives);
   }
-  return new Map([...byTrip].map(([tripId, dives]) => [tripId, summarizeTripDiveSites(dives)]));
+
+  const summaries = new Map<string, TripDiveSiteSummary>();
+  for (const [tripId, dives] of byTrip) {
+    if (dives.length > 0) {
+      summaries.set(tripId, summarizeTripDiveSites(dives));
+      continue;
+    }
+    const fallback = fallbackByTrip.get(tripId) ?? null;
+    // No dives *and* no pointer says nothing — never "0 sites, 0 open tanks",
+    // which a surface would read as a real, empty answer.
+    if (fallback) summaries.set(tripId, { sites: [fallback], undecidedDives: 0 });
+  }
+  return summaries;
 }
 
 /**

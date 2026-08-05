@@ -77,7 +77,9 @@ export default async function DiverDetailPage({
   // (`RestoreDiver`). It is a visibility affordance for staff and nothing more —
   // removal still holds everywhere it matters, and this page drops the controls
   // that would put a removed person back into shop work by the back door.
-  const diver = shop ? await getDiverProfile(db, shop.id, personId, { includeRemoved: true }) : null;
+  const diver = shop
+    ? await getDiverProfile(db, shop.id, personId, { includeRemoved: true })
+    : null;
   if (!shop || !diver) notFound();
   const removed = Boolean(diver.person.deletedAt);
   // Refunds and diver deletion are owner/manager only (H-14, ADR

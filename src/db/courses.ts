@@ -145,7 +145,11 @@ export async function listActiveCoursesForSitemap(
  * `limit` here — every one of those callers needs the whole set.
  */
 export async function listCourses(db: AppDb, shopId: string) {
-  return db.select().from(courses).where(eq(courses.shopId, shopId)).orderBy(...progressionOrder);
+  return db
+    .select()
+    .from(courses)
+    .where(eq(courses.shopId, shopId))
+    .orderBy(...progressionOrder);
 }
 
 /**

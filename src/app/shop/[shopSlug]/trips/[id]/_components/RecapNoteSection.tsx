@@ -37,10 +37,7 @@ export function RecapNoteSection({
           className={controlClass}
         />
         <div className="flex flex-wrap items-center gap-3">
-          <SubmitButton
-            pendingLabel={t("trips.recapNote.saving")}
-            className={buttonClass()}
-          >
+          <SubmitButton pendingLabel={t("trips.recapNote.saving")} className={buttonClass()}>
             {t("trips.recapNote.save")}
           </SubmitButton>
           <FormStatus tone={status?.tone}>{status?.text}</FormStatus>

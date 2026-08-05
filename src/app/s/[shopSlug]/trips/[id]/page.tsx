@@ -13,11 +13,7 @@ import { listDiveSiteBriefingExtras } from "@/db/dive-sites";
 import { verifiedNitroxPersonIds } from "@/db/nitrox";
 import { bookingConfirmationAndWaiverEmailsSent } from "@/db/notifications";
 import { getBookingPayment } from "@/db/payments";
-import {
-  getBookingReadiness,
-  getTripRequirements,
-  getTripSiteRequirement,
-} from "@/db/readiness";
+import { getBookingReadiness, getTripRequirements, getTripSiteRequirement } from "@/db/readiness";
 import { getRentalFit, toDiverRentalFit } from "@/db/rental-fit";
 import { getShopReviewAggregate } from "@/db/reviews";
 import { issuePartySeatClaims } from "@/db/seat-claims";

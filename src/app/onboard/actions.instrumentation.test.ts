@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ALERT_EMAIL } from "@/lib/platform-mail";
-import { unseededTestDb } from "@/test/db";
+import { seededTestDb } from "@/test/db";
 
 /**
  * **The trial half of the marketing funnel: the event, and the founder's
@@ -83,7 +83,12 @@ async function signUp(form = onboardForm()): Promise<string> {
 
 beforeEach(async () => {
   hoisted.afterTasks.length = 0;
-  const db = await unseededTestDb();
+  // The snapshot-hydrated database, not `unseededTestDb`: that one migrates
+  // from nothing, which costs enough under a loaded worker to blow this hook's
+  // 10s budget when the file runs alongside the rest of the suite. Signing up
+  // beside a shop that already exists is also the more honest fixture — the
+  // slug and email uniqueness checks have something real to miss.
+  const db = await seededTestDb();
   vi.mocked(getDb).mockReset();
   vi.mocked(getDb).mockResolvedValue(db);
   vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true } as never);
@@ -166,7 +171,7 @@ describe("onboardAction instrumentation", () => {
     // argument to `sendNotification`, so it rejects before any `.catch` on the
     // returned promise exists. The trailing `.catch()` this used to carry
     // never saw it, and it surfaced as an unhandled rejection.
-    const db = await unseededTestDb();
+    const db = await seededTestDb();
     vi.mocked(getDb)
       .mockResolvedValueOnce(db) // the action's own handle
       .mockRejectedValue(new Error("no database"));

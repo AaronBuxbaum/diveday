@@ -192,11 +192,7 @@ export const areas = {
       "src/app/s/[shopSlug]/courses",
       "src/app/shop/[shopSlug]/courses",
     ],
-    tests: [
-      "src/lib/courses.test.ts",
-      "src/db/courses.test.ts",
-      "e2e/courses.spec.ts",
-    ],
+    tests: ["src/lib/courses.test.ts", "src/db/courses.test.ts", "e2e/courses.spec.ts"],
     invariants: [
       "An instructor-led session fails closed when it has no instructor.",
       "Enrollment cert gates come from the course baseline and clear only on verified evidence.",

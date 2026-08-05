@@ -76,7 +76,12 @@ const ORDER_PLANS: SeedOrderPlan[] = [
     description: "Open Water course — remaining balance",
     lines: [
       { kind: "course_fee", description: "Open Water Diver", quantity: 1, unitAmountCents: 28_500 },
-      { kind: "e_learning_fee", description: "Agency e-learning code", quantity: 1, unitAmountCents: 5_500 },
+      {
+        kind: "e_learning_fee",
+        description: "Agency e-learning code",
+        quantity: 1,
+        unitAmountCents: 5_500,
+      },
     ],
   },
   {
@@ -86,7 +91,9 @@ const ORDER_PLANS: SeedOrderPlan[] = [
     paidCents: 0,
     daysAgo: 9,
     description: "Weekend rental kit",
-    lines: [{ kind: "rental", description: "Full set, three days", quantity: 3, unitAmountCents: 3_000 }],
+    lines: [
+      { kind: "rental", description: "Full set, three days", quantity: 3, unitAmountCents: 3_000 },
+    ],
   },
   {
     customer: 16,
@@ -106,7 +113,12 @@ const ORDER_PLANS: SeedOrderPlan[] = [
     daysAgo: 5,
     description: "Advanced Open Water — deposit paid, balance due",
     lines: [
-      { kind: "course_fee", description: "Advanced Open Water", quantity: 1, unitAmountCents: 33_000 },
+      {
+        kind: "course_fee",
+        description: "Advanced Open Water",
+        quantity: 1,
+        unitAmountCents: 33_000,
+      },
       { kind: "rental", description: "Course kit hire", quantity: 1, unitAmountCents: 6_000 },
     ],
   },
@@ -117,7 +129,9 @@ const ORDER_PLANS: SeedOrderPlan[] = [
     paidCents: 18_000,
     daysAgo: 17,
     description: "Two-tank charter — part settled at the desk",
-    lines: [{ kind: "trip_fee", description: "Two-tank charter", quantity: 2, unitAmountCents: 12_000 }],
+    lines: [
+      { kind: "trip_fee", description: "Two-tank charter", quantity: 2, unitAmountCents: 12_000 },
+    ],
   },
   // Refunded — the state the refund flow leaves behind.
   {
@@ -127,7 +141,9 @@ const ORDER_PLANS: SeedOrderPlan[] = [
     paidCents: 12_000,
     daysAgo: 12,
     description: "Two-tank charter — refunded after a blown-out morning",
-    lines: [{ kind: "trip_fee", description: "Two-tank charter", quantity: 1, unitAmountCents: 12_000 }],
+    lines: [
+      { kind: "trip_fee", description: "Two-tank charter", quantity: 1, unitAmountCents: 12_000 },
+    ],
   },
   {
     customer: 15,
@@ -136,7 +152,14 @@ const ORDER_PLANS: SeedOrderPlan[] = [
     paidCents: 19_500,
     daysAgo: 33,
     description: "Nitrox course — refunded, student rescheduled",
-    lines: [{ kind: "course_fee", description: "Enriched Air Diver", quantity: 1, unitAmountCents: 19_500 }],
+    lines: [
+      {
+        kind: "course_fee",
+        description: "Enriched Air Diver",
+        quantity: 1,
+        unitAmountCents: 19_500,
+      },
+    ],
   },
   // Raised and cancelled before anyone paid it.
   {
@@ -146,7 +169,14 @@ const ORDER_PLANS: SeedOrderPlan[] = [
     paidCents: 0,
     daysAgo: 21,
     description: "Duplicate invoice, cancelled",
-    lines: [{ kind: "trip_fee", description: "Afternoon single tank", quantity: 1, unitAmountCents: 7_500 }],
+    lines: [
+      {
+        kind: "trip_fee",
+        description: "Afternoon single tank",
+        quantity: 1,
+        unitAmountCents: 7_500,
+      },
+    ],
   },
   // Chased, then written off.
   {
@@ -156,7 +186,9 @@ const ORDER_PLANS: SeedOrderPlan[] = [
     paidCents: 0,
     daysAgo: 58,
     description: "Gear hire — written off after three reminders",
-    lines: [{ kind: "rental", description: "BCD and regulator", quantity: 2, unitAmountCents: 3_000 }],
+    lines: [
+      { kind: "rental", description: "BCD and regulator", quantity: 2, unitAmountCents: 3_000 },
+    ],
   },
   // Counter sales. Where the retail line kinds finally show up.
   {
@@ -168,7 +200,12 @@ const ORDER_PLANS: SeedOrderPlan[] = [
     description: "Counter sale",
     lines: [
       { kind: "merchandise", description: "Low-volume mask", quantity: 1, unitAmountCents: 8_900 },
-      { kind: "merchandise", description: "Blue Mantis rash guard", quantity: 1, unitAmountCents: 5_900 },
+      {
+        kind: "merchandise",
+        description: "Blue Mantis rash guard",
+        quantity: 1,
+        unitAmountCents: 5_900,
+      },
     ],
   },
   {
@@ -187,7 +224,14 @@ const ORDER_PLANS: SeedOrderPlan[] = [
     paidCents: 4_500,
     daysAgo: 8,
     description: "Replacement weight belt",
-    lines: [{ kind: "merchandise", description: "Weight belt and four kilos", quantity: 1, unitAmountCents: 4_500 }],
+    lines: [
+      {
+        kind: "merchandise",
+        description: "Weight belt and four kilos",
+        quantity: 1,
+        unitAmountCents: 4_500,
+      },
+    ],
   },
 ];
 
@@ -223,7 +267,8 @@ export async function seedOrders(
         finalizedAt: raisedAt,
         paidAt: plan.status === "paid" || plan.status === "refunded" ? settledAt : null,
         voidedAt: plan.status === "void" ? settledAt : null,
-        refundedAt: plan.status === "refunded" ? new Date(settledAt.getTime() + 36 * 60 * 60 * 1000) : null,
+        refundedAt:
+          plan.status === "refunded" ? new Date(settledAt.getTime() + 36 * 60 * 60 * 1000) : null,
         createdAt: raisedAt,
         updatedAt: settledAt,
       },

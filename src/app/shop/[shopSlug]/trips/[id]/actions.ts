@@ -334,7 +334,10 @@ export async function clearConditionsAction(shopSlug: string, tripId: string) {
   // all staff.
   const s = await requireStaffSession();
   const { trip: saved } = await updateTripConditions(await getDb(), s.user.shopId, tripId, {});
-  revalidateAndRedirect(back, `${back}?notice=${saved ? "conditions-cleared" : "invalid"}&form=conditions`);
+  revalidateAndRedirect(
+    back,
+    `${back}?notice=${saved ? "conditions-cleared" : "invalid"}&form=conditions`,
+  );
 }
 
 export async function cancelTripAction(shopSlug: string, tripId: string) {

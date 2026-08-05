@@ -48,6 +48,15 @@ export type CourseInquiry = {
   name: string;
   /** Free prose — "the week of 12 August", "any weekend in the autumn". */
   timing: string;
+  /**
+   * One date the diver asked for, already formatted for the reader
+   * ({@link formatPreferredDate}), or "" when they named none. A *request*,
+   * never a booking: no seat exists on it and nothing is held — the shop reads
+   * it and replies. It sits beside `timing` because the two answer different
+   * questions, and a diver who can only say "any weekend in the autumn" is
+   * still telling the shop something.
+   */
+  preferredDate: string;
   /** How many people, including the writer. Null until they type one — this
    *  field is as optional as the rest of the contact form. */
   divers: number | null;
@@ -97,6 +106,7 @@ export function courseInquirySubject(
 export function courseInquiryBody(t: CourseInquiryTranslate, inquiry: CourseInquiry): string {
   const name = inquiry.name.trim();
   const timing = inquiry.timing.trim();
+  const preferredDate = inquiry.preferredDate.trim();
   const note = inquiry.message.trim();
   const notSaid = t("inquiry.notSaid");
   const experience = inquiry.experience
@@ -105,6 +115,11 @@ export function courseInquiryBody(t: CourseInquiryTranslate, inquiry: CourseInqu
   return t("inquiry.body", {
     shopName: inquiry.shopName.trim(),
     courseTitle: inquiry.courseTitle.trim(),
+    // Its own `select` branch, like the note and the name: a diver who named
+    // no date takes the whole line out rather than leaving the shop a
+    // "Preferred date: Not said" to read past.
+    hasDate: preferredDate ? "yes" : "no",
+    preferredDate,
     timing: timing || notSaid,
     divers: inquiry.divers ?? notSaid,
     experience,
@@ -113,6 +128,20 @@ export function courseInquiryBody(t: CourseInquiryTranslate, inquiry: CourseInqu
     hasName: name ? "yes" : "no",
     name,
   });
+}
+
+/** A bare `YYYY-MM-DD` as a reader of `locale` writes it, or null if malformed. */
+export function formatPreferredDate(value: string, locale: string): string | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
+  if (!match) return null;
+  const [year, month, day] = match.slice(1).map(Number);
+  // A calendar day carries no instant, so a fixed UTC reference plus
+  // `timeZone: "UTC"` is what keeps 12 August from rendering as the 11th for a
+  // reader west of it — the same discipline `formatScheduleDayTime` uses for a
+  // wall-clock time (src/lib/courses.ts).
+  const reference = new Date(Date.UTC(year, month - 1, day));
+  if (Number.isNaN(reference.getTime())) return null;
+  return new Intl.DateTimeFormat(locale, { dateStyle: "long", timeZone: "UTC" }).format(reference);
 }
 
 /**

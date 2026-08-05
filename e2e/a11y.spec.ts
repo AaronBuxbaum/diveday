@@ -583,8 +583,6 @@ test.describe("automated accessibility scans of the signed-out surfaces", () => 
     await expect(page.getByRole("list", { name: "Upcoming trips" })).toBeVisible();
     await expectNoA11yViolations(page);
 
-    await scanStaticRoutes(page, [
-      { path: "/s/blue-mantis/courses", heading: "Courses" },
-    ]);
+    await scanStaticRoutes(page, [{ path: "/s/blue-mantis/courses", heading: "Courses" }]);
   });
 });

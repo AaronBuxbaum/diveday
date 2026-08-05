@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
 import { createDiveSite } from "./dive-sites";
-import { bookings, shops } from "./schema";
+import { bookings, shops, trips } from "./schema";
 import {
   countShopTrips,
   createTrip,
@@ -436,5 +436,71 @@ describe("tripDiveSiteSummaries", () => {
     const summaries = await tripDiveSiteSummaries(db, shop.id, [first.id, second.id]);
     expect(summaries.get(first.id)?.sites).toHaveLength(2);
     expect(summaries.get(second.id)).toEqual({ sites: [], undecidedDives: 1 });
+  });
+});
+
+describe("tripDiveSiteSummaries — a departure with no dive rows", () => {
+  /**
+   * Every write path mints one `trip_dives` row per planned dive, so this shape
+   * only reaches the reader from data written around them (the demo seed's
+   * `seed-more-trips.ts` does exactly that today). The reader falls back to the
+   * trip's own pointer rather than telling a diver the boat goes nowhere.
+   */
+  it("falls back to the trip's own site, and says nothing when there isn't one", async () => {
+    const { db, shop } = await seededShopContext();
+    const site = await createDiveSite(db, { shopId: shop.id, name: "Test Fallback Reef" });
+    const [withPointer] = await db
+      .insert(trips)
+      .values({
+        shopId: shop.id,
+        diveSiteId: site.id,
+        title: "Row-only trip",
+        startsAt: new Date("2030-08-15T12:00:00Z"),
+        endsAt: new Date("2030-08-15T16:00:00Z"),
+        capacity: 4,
+      })
+      .returning();
+    const [withoutPointer] = await db
+      .insert(trips)
+      .values({
+        shopId: shop.id,
+        title: "Row-only trip, no site",
+        startsAt: new Date("2030-08-16T12:00:00Z"),
+        endsAt: new Date("2030-08-16T16:00:00Z"),
+        capacity: 4,
+      })
+      .returning();
+    if (!withPointer || !withoutPointer) throw new Error("trip not created");
+
+    const summaries = await tripDiveSiteSummaries(db, shop.id, [withPointer.id, withoutPointer.id]);
+    expect(summaries.get(withPointer.id)).toEqual({
+      sites: [{ id: site.id, name: "Test Fallback Reef" }],
+      undecidedDives: 0,
+    });
+    // Absent, not `{ sites: [], undecidedDives: 0 }` — a surface must not read
+    // "no dives are open" from a trip that never described its dives.
+    expect(summaries.has(withoutPointer.id)).toBe(false);
+  });
+
+  it("prefers the dives over the pointer when both exist and disagree", async () => {
+    const { db, shop } = await seededShopContext();
+    const stale = await createDiveSite(db, { shopId: shop.id, name: "Test Stale Pointer" });
+    const real = await createDiveSite(db, { shopId: shop.id, name: "Test Real Site" });
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      title: "Pointer disagrees",
+      startsAt: new Date("2030-08-15T12:00:00Z"),
+      endsAt: new Date("2030-08-15T16:00:00Z"),
+      capacity: 4,
+      plannedDives: 1,
+      dives: [{ diveSiteId: real.id }],
+    });
+    if (!trip) throw new Error("trip not created");
+    await db.update(trips).set({ diveSiteId: stale.id }).where(eq(trips.id, trip.id));
+
+    expect((await tripDiveSiteSummaries(db, shop.id, [trip.id])).get(trip.id)).toEqual({
+      sites: [{ id: real.id, name: "Test Real Site" }],
+      undecidedDives: 0,
+    });
   });
 });

@@ -459,11 +459,7 @@ export async function deletePersonAction(shopSlug: string, personId: string, _fo
  * claimed this one's email (CR-008), and refuses an erased record outright —
  * both land here as `restore-refused`, which says what to do about it.
  */
-export async function restorePersonAction(
-  shopSlug: string,
-  personId: string,
-  _formData: FormData,
-) {
+export async function restorePersonAction(shopSlug: string, personId: string, _formData: FormData) {
   const base = `/shop/${shopSlug}/divers/${personId}`;
   const staff = await requireStaffSession();
   const db = await getDb();
