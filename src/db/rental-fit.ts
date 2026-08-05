@@ -77,7 +77,7 @@ export async function saveRentalFit(db: AppDb, input: RentalFitInput) {
  * the diver asked for, so it is the day's work rather than an override
  * (`canOverrideGearRequest`). Returns null when the diver has no fit on file
  * yet; there is nothing to flag against, and the prep list already names them
- * under `diversWithoutFit`.
+ * under `diversWithIncompleteFit`.
  */
 export async function setNeedsStaffFit(
   db: AppDb,
