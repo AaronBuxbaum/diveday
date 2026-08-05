@@ -43,6 +43,24 @@ test("the public schedule lists seeded trips with capacity states, a calendar, a
     calendar.locator('a[href*="/trips/"]').filter({ visible: true }).first(),
   ).toBeVisible();
 
+  // The card names *every* site the departure visits, not just dive one's.
+  // Reading `trips.dive_site_id` here is what made a two-site day look like
+  // "one dive site, two dive briefings" (glossary: Dive site / Dive briefing).
+  const twoSiteCard = tripList
+    .locator("li")
+    .filter({ hasText: "Two-Tank Reef — Molasses & French" });
+  await expect(twoSiteCard.getByText(/^Dive sites · Molasses Reef and French Reef$/)).toHaveCount(
+    1,
+  );
+  // And a departure whose second tank has no site yet says so, in the same
+  // line, rather than silently reporting one site for a two-tank plan.
+  const openTankCard = tripList
+    .locator("li")
+    .filter({ hasText: "Two-Tank Reef — Benwood & Elbow" });
+  await expect(
+    openTankCard.getByText(/^Dive site · Benwood Wreck · 1 more dive to be confirmed$/),
+  ).toHaveCount(1);
+
   // A multi-dive trip's public page presents every dive briefing.
   await page
     .locator("li")
@@ -53,6 +71,28 @@ test("the public schedule lists seeded trips with capacity states, a calendar, a
   await expect(page.getByRole("paragraph").filter({ hasText: /^Dive 1$/ })).toBeVisible();
   await expect(page.getByRole("paragraph").filter({ hasText: /^Dive 2$/ })).toBeVisible();
   await expect(page.getByText("French Reef is the second tank")).toBeVisible();
+});
+
+/**
+ * The count a shop owner asked about: "a two-tank dive with one dive site and
+ * two dive briefings". There is one briefing per *planned dive* and one site per
+ * dive that has one — so the two counts differ whenever a tank's site is still
+ * open, and the tank without one has to say so on its own card.
+ */
+test("a tank with no site yet says so on the booking page, so one site and two dives read as a plan", async ({
+  page,
+}) => {
+  await page.goto("/s/blue-mantis");
+  await page
+    .getByRole("list", { name: "Upcoming trips" })
+    .locator("li")
+    .filter({ hasText: "Two-Tank Reef — Benwood & Elbow" })
+    .getByRole("link", { name: "Two-Tank Reef — Benwood & Elbow" })
+    .click();
+  await expect(page.getByRole("heading", { name: "Your two-tank plan" })).toBeVisible();
+  // Tank one has a site; tank two is the crew's call at the dock.
+  await expect(page.getByRole("heading", { level: 3, name: "Benwood Wreck" })).toBeVisible();
+  await expect(page.getByText("Site to be confirmed")).toHaveCount(1);
 });
 
 /**

@@ -109,6 +109,18 @@ export default async function ReviewsPage({
   const { reviews, total } = reviewPage;
   const banner = noticeFromParam(notice, NOTICES);
   const t = staffTranslator(locale);
+  // Three of these belong to the "Publish selected" button; the other two come
+  // from a per-review toggle far down the list and keep the page banner.
+  const bulkStatus =
+    notice === "published_many"
+      ? {
+          tone: "success" as const,
+          text: t("reviews.notice.publishedMany", { count: publishedCount(published) }),
+        }
+      : (notice === "none_selected" || notice === "error") && banner
+        ? { tone: banner.tone, text: t(banner.key) }
+        : undefined;
+  const pageBanner = bulkStatus ? undefined : banner;
   const base = `/shop/${shopSlug}/reviews`;
   /** This page's URL with the tab kept and only `page` swapped. */
   const pageHref = (target: number) => {
@@ -153,12 +165,8 @@ export default async function ReviewsPage({
           pendingLabel={t("shared.undoToast.pendingLabel")}
           undoLabel={t("shared.undoToast.undo")}
         />
-      ) : notice === "published_many" ? (
-        <StaffNoticeBanner tone="success">
-          {t("reviews.notice.publishedMany", { count: publishedCount(published) })}
-        </StaffNoticeBanner>
-      ) : banner ? (
-        <StaffNoticeBanner tone={banner.tone}>{t(banner.key)}</StaffNoticeBanner>
+      ) : pageBanner ? (
+        <StaffNoticeBanner tone={pageBanner.tone}>{t(pageBanner.key)}</StaffNoticeBanner>
       ) : null}
 
       <section aria-label={t("reviews.overviewLabel")} className="mb-2 grid gap-3 sm:grid-cols-3">
@@ -227,6 +235,7 @@ export default async function ReviewsPage({
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-sm text-muted">{t("reviews.tickThenPublish")}</span>
               <PublishSelectedButton
+                status={bulkStatus}
                 label={t("reviews.publishSelected")}
                 pendingLabel={t("reviews.saving")}
                 className={buttonClass({

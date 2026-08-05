@@ -6,16 +6,13 @@ import { after } from "next/server";
 import { AuthError } from "next-auth";
 import type { DbExecutor } from "@/db/client";
 import { getDb } from "@/db/client";
-import { sendNotification } from "@/db/notifications";
 import { people, personRoles } from "@/db/schema";
 import { createDemoShop, resetDemoSchedule } from "@/db/seed";
 import { getShopById, getShopBySlug } from "@/db/shops";
-import { trackEvent } from "@/lib/analytics";
 import { auth, signIn, signOut } from "@/lib/auth";
 import { DEMO_BYPASS_PASSWORD } from "@/lib/credentials";
 import type { DemoRoleId } from "@/lib/demo-roles";
-import { eventSource, type FunnelSource } from "@/lib/funnel";
-import { alertRecipient } from "@/lib/platform-mail";
+import { eventSource } from "@/lib/funnel";
 import { publicSchedulePath } from "@/lib/public-routes";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
@@ -81,60 +78,6 @@ async function findDemoRoleEmail(
   return matches[0]?.email ?? null;
 }
 
-/**
- * Tell the outside world one visitor tried the demo: the typed funnel event,
- * and the founder's alert mail (docs ADR 20260805-demo-try-alerts).
- *
- * Exported for its test, and separate from `enterDemoAction` for one reason —
- * **every failure in here is swallowed.** It runs inside `after()`, so a throw
- * would surface as an unhandled rejection in the server logs long after the
- * visitor is already in their demo, and nothing it does is worth a single
- * failed entry. Telemetry and alerting observe the flow; they are never part
- * of it.
- *
- * Nothing personal crosses either boundary. The visitor is anonymous by
- * definition here — no session, no account, nothing typed — and the three
- * values carried out are the throwaway shop's slug, the role button pressed,
- * and a funnel tag already clamped to the closed `FunnelSource` registry.
- */
-export async function announceDemoEntry(input: {
-  slug: string;
-  role: DemoRoleId;
-  source: FunnelSource | "unknown";
-}): Promise<void> {
-  const { slug, role, source } = input;
-
-  // Two independent observers, two independent guards — never one try block
-  // around both. `trackEvent` already swallows its own provider failures, so
-  // this catch looks redundant; sharing a block with the alert is what makes
-  // it not. A throw escaping the analytics seam would skip the founder's mail
-  // entirely, which is the failure mode least likely to be noticed: the inbox
-  // goes quiet and nothing anywhere says why.
-  try {
-    await trackEvent({ name: "demo_entered", source, role });
-  } catch (error) {
-    console.error("announceDemoEntry: demo_entered event failed", error);
-  }
-
-  try {
-    const db = await getDb();
-    // The alert needs the minted shop's row id: `notification_send_queue` FKs
-    // to it, which is what lets a retryable failure be durable and what lets
-    // the 7-day reaper clear the row along with the shop it belongs to.
-    const shop = await getShopBySlug(db, slug);
-    if (!shop) return;
-    await sendNotification(db, {
-      kind: "demo_started_alert",
-      shopId: shop.id,
-      to: alertRecipient(),
-      shopSlug: slug,
-      role,
-      source,
-    });
-  } catch (error) {
-    console.error("announceDemoEntry: demo alert failed", error);
-  }
-}
 
 /**
  * One-click into the demo: mint a fresh, disposable demo shop with a generated

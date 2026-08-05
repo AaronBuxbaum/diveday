@@ -195,7 +195,7 @@
       "search.spec.ts",
       "tenant-isolation.spec.ts"
     ],
-    "visual": ["divers"]
+    "visual": ["divers", "divers-removed"]
   },
   "/shop/[shopSlug]/divers/[personId]": {
     "e2e": [

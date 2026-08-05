@@ -73,6 +73,7 @@ import { seedCertGates } from "./seed-cert-gates";
 import { at, DEMO_SHOP_TIMEZONE, demoTodayDepartureStart } from "./seed-clock";
 import { enforceMintedDemoCap } from "./seed-demo-lifecycle";
 import { seedDiveSites } from "./seed-dive-sites";
+import { seedDeskTrail } from "./seed-desk-trail";
 import { seedDivers } from "./seed-divers";
 import { seedFrontDesk } from "./seed-front-desk";
 import { seedHistory } from "./seed-history";
@@ -114,6 +115,7 @@ import { seedWaiverVersions } from "./seed-waiver-versions";
  * | `./seed-demo-lifecycle.ts` | minting, reaping, and capping throwaway demo shops |
  * | `./seed-backup.ts` | the shop-owned backup destination and its weekly delivery history |
  * | `./seed-orders.ts` | the billing states past "paid": open, part-paid, refunded, void, written off |
+ * | `./seed-desk-trail.ts` | the notes and activity behind today's reef boat, so its Guests tab has a history |
  * | `./seed-waiver-evidence.ts` | when releases were really signed, and which of them carry an integrity seal |
  *
  * The public surface is unchanged: `@/db/seed` still exports everything it
@@ -562,6 +564,21 @@ export async function seedDemoSchedule(
     // it is the same "what has this shop billed" story, and because the lean
     // unit-test template is deliberately order-free.
     await seedOrders(db, shopId, { customers, createdByPersonId: instructor.id });
+    // The desk's own paper trail on today's reef boat: private notes against
+    // three seats and the account of what has been done to the departure
+    // (src/db/seed-desk-trail.ts). Both tables are otherwise written only by
+    // something a visitor does, so the Guests tab opened on "No activity yet"
+    // in every seeded shop. Annotation only — nothing here is read by
+    // readiness, the manifest, or Today.
+    const [reefTrip] = tripRows;
+    if (reefTrip) {
+      await seedDeskTrail(db, shopId, {
+        trip: reefTrip,
+        roster: bookingRows,
+        divers: customers,
+        actorPersonId: instructor.id,
+      });
+    }
   }
 
   // Last on purpose, unlike every other step above. This one only *adds* — four

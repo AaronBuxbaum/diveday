@@ -1,5 +1,6 @@
+import { eq } from "drizzle-orm";
 import type { DbExecutor } from "./client";
-import { activityEvents, type bookings, internalNotes, type people, type trips } from "./schema";
+import { activityEvents, type bookings, internalNotes, people, type trips } from "./schema";
 import { at } from "./seed-clock";
 
 /**
@@ -88,9 +89,18 @@ export async function seedDeskTrail(
     roster: (typeof bookings.$inferSelect)[];
     divers: (typeof people.$inferSelect)[];
     /** The staffer whose desk this is, and whose name the trail carries. */
-    actor: { id: string; fullName: string };
+    actorPersonId: string;
   },
 ): Promise<void> {
+  // Looked up rather than passed in: the trail is written in the actor's own
+  // name, and the canonical demo and a minted one give their staff different
+  // rows. Same reason `seedDemoSchedule` looks the instructor up by role.
+  const [actor] = await db
+    .select({ id: people.id, fullName: people.fullName })
+    .from(people)
+    .where(eq(people.id, ctx.actorPersonId))
+    .limit(1);
+  if (!actor) return;
   const tripRoster = ctx.roster.filter((booking) => booking.tripId === ctx.trip.id);
   const diverName = (personId: string) =>
     ctx.divers.find((person) => person.id === personId)?.fullName ?? null;
@@ -105,8 +115,8 @@ export async function seedDeskTrail(
       personId: booking.personId,
       bookingId: booking.id,
       body: plan.body(diver),
-      createdByPersonId: ctx.actor.id,
-      createdAt: hoursBefore(plan.hoursAgo),
+      createdByPersonId: actor.id,
+      createdAt: at(-plan.daysAgo, plan.hour, (plan.rosterIndex * 11) % 60),
     };
   }).filter((row): row is NonNullable<typeof row> => row !== null);
   if (noteRows.length > 0) await db.insert(internalNotes).values(noteRows);
@@ -119,31 +129,20 @@ export async function seedDeskTrail(
     shopId,
     tripId: ctx.trip.id,
     bookingId: note.bookingId,
-    actorPersonId: ctx.actor.id,
-    message: `${ctx.actor.fullName} added a private note about ${diverName(note.personId)}`,
+    actorPersonId: actor.id,
+    message: `${actor.fullName} added a private note about ${diverName(note.personId)}`,
     occurredAt: note.createdAt,
   }));
-  const tripEvents = ACTIVITY_PLANS.map((plan) => ({
+  const tripEvents = ACTIVITY_PLANS.map((plan, index) => ({
     shopId,
     tripId: ctx.trip.id,
     bookingId: null,
-    actorPersonId: ctx.actor.id,
-    message: plan.line(ctx.actor.fullName),
-    occurredAt: hoursBefore(plan.hoursAgo),
+    actorPersonId: actor.id,
+    message: plan.line(actor.fullName),
+    occurredAt: at(-plan.daysAgo, plan.hour, (index * 17) % 60),
   }));
   const events = [...noteEvents, ...tripEvents].sort(
     (a, b) => a.occurredAt.getTime() - b.occurredAt.getTime(),
   );
   if (events.length > 0) await db.insert(activityEvents).values(events);
-}
-
-/**
- * `hoursAgo` before the seeded clock, rounded to the shop's own wall clock the
- * way every other seeded instant is — via `at`, so the trail moves with
- * `DIVEDAY_CLOCK` instead of drifting against it.
- */
-function hoursBefore(hoursAgo: number): Date {
-  const days = Math.floor(hoursAgo / 24);
-  const hour = 8 + ((hoursAgo % 24) % 10);
-  return at(-days - 1, hour, (hoursAgo * 7) % 60);
 }
