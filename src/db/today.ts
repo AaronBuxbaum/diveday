@@ -30,6 +30,7 @@ import { formatDateTimeTz, formatShortDate, formatTime } from "@/lib/format";
 import { rollCallCheckpoints } from "@/lib/manifests";
 import { OPERATIONAL_MAX_TRIPS, operationalWindow, shopDayWindow } from "@/lib/operational-window";
 import { publicTripPath } from "@/lib/public-routes";
+import { rentalFitCompleteness } from "@/lib/rentals";
 import {
   collapseDiverActions,
   ROLL_CALL_GAP_KINDS,
@@ -55,6 +56,7 @@ import {
   rentalFitProfiles,
   rollCallCrewEvents,
   rollCallEvents,
+  shops,
   tripAssignments,
   trips,
   tripWaitlistEntries,
@@ -639,9 +641,21 @@ export async function openAfterDiveRollCalls(
 }
 
 /**
- * Divers on an upcoming departure with no rental fit on file. The prep list is
- * derived entirely from fit, so a missing fit is a hole in tomorrow's packing
- * that nobody sees until the diver is standing at the counter.
+ * Divers on an upcoming departure whose rental fit can't be packed from yet.
+ * The prep list is derived entirely from fit, so a gap in one is a hole in
+ * tomorrow's packing that nobody sees until the diver is standing at the
+ * counter.
+ *
+ * "Gap" means what `rentalFitCompleteness` means (src/lib/rentals.ts): any
+ * piece the diver takes from the shop with no size recorded against it. This
+ * used to ask only whether a fit *row* existed, which let the commoner failure
+ * through — a diver who ticked BCD, wetsuit and weights and gave one shoe size
+ * had a row, so Today said nothing and the packer found out at the rack.
+ *
+ * Scoped to the shop's own catalog, so a fit written before the shop stopped
+ * renting an item never nags about a size nobody can be handed. The catalog is
+ * one bounded read on a row this function already has the id for; it is not
+ * worth threading through every `getTodayWork` caller to save.
  */
 async function missingFitByTrip(
   db: AppDb,
@@ -651,18 +665,25 @@ async function missingFitByTrip(
   const bookingIds = [...bookingIdsByTrip.values()].flat();
   const missing = new Map<string, number>();
   if (bookingIds.length === 0) return missing;
-  const rows = await db
-    .select({ bookingId: bookings.id, fitId: rentalFitProfiles.id })
-    .from(bookings)
-    .leftJoin(
-      rentalFitProfiles,
-      and(
-        eq(rentalFitProfiles.personId, bookings.personId),
-        eq(rentalFitProfiles.shopId, bookings.shopId),
-      ),
-    )
-    .where(and(eq(bookings.shopId, shopId), inArray(bookings.id, bookingIds)));
-  const withoutFit = new Set(rows.filter((row) => !row.fitId).map((row) => row.bookingId));
+  const [rows, [shop]] = await Promise.all([
+    db
+      .select({ bookingId: bookings.id, fit: rentalFitProfiles })
+      .from(bookings)
+      .leftJoin(
+        rentalFitProfiles,
+        and(
+          eq(rentalFitProfiles.personId, bookings.personId),
+          eq(rentalFitProfiles.shopId, bookings.shopId),
+        ),
+      )
+      .where(and(eq(bookings.shopId, shopId), inArray(bookings.id, bookingIds))),
+    db.select({ rentalItems: shops.rentalItems }).from(shops).where(eq(shops.id, shopId)).limit(1),
+  ]);
+  const withoutFit = new Set(
+    rows
+      .filter((row) => rentalFitCompleteness(row.fit, shop?.rentalItems).state !== "complete")
+      .map((row) => row.bookingId),
+  );
   for (const [tripId, ids] of bookingIdsByTrip) {
     const count = ids.filter((id) => withoutFit.has(id)).length;
     if (count > 0) missing.set(tripId, count);
