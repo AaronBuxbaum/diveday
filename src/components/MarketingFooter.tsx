@@ -3,7 +3,9 @@ import { LogoMark } from "@/components/Logo";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
+import { auth } from "@/lib/auth";
 import { SUPPORT_EMAIL } from "@/lib/platform-mail";
+import { staffShopRoot } from "@/lib/staff-destinations";
 
 /**
  * Reads the negotiated locale (`headers()`-backed, per-request) — stays a
@@ -13,8 +15,8 @@ import { SUPPORT_EMAIL } from "@/lib/platform-mail";
  * scope — see the marketing pages under `src/app`.
  */
 export async function MarketingFooter() {
-  const locale = await requestLocale();
-  return <MarketingFooterView locale={locale} />;
+  const [session, locale] = await Promise.all([auth(), requestLocale()]);
+  return <MarketingFooterView locale={locale} shopSlug={session?.user?.shopSlug ?? null} />;
 }
 
 /**
@@ -23,10 +25,16 @@ export async function MarketingFooter() {
  * shape, zero streaming delay for the majority of visitors.
  */
 export function MarketingFooterFallback() {
-  return <MarketingFooterView locale={DEFAULT_DIVER_LOCALE} />;
+  return <MarketingFooterView locale={DEFAULT_DIVER_LOCALE} shopSlug={null} />;
 }
 
-function MarketingFooterView({ locale }: { locale: DiverLocale }) {
+export function MarketingFooterView({
+  locale,
+  shopSlug,
+}: {
+  locale: DiverLocale;
+  shopSlug: string | null;
+}) {
   const t = diverTranslator(locale);
   return (
     <footer className="border-t border-border">
@@ -51,8 +59,11 @@ function MarketingFooterView({ locale }: { locale: DiverLocale }) {
           <Link href="/about" className="hover:text-foreground hover:underline">
             {t("nav.about")}
           </Link>
-          <Link href="/sign-in" className="hover:text-foreground hover:underline">
-            {t("nav.signIn")}
+          <Link
+            href={shopSlug ? staffShopRoot(shopSlug) : "/sign-in"}
+            className="hover:text-foreground hover:underline"
+          >
+            {shopSlug ? t("nav.goToShop") : t("nav.signIn")}
           </Link>
           <a
             href={`mailto:${SUPPORT_EMAIL}`}
