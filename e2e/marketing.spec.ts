@@ -53,7 +53,7 @@ test("the homepage hero offers one demo door, and the diver preview lives on its
   await expect(page.getByRole("button", { name: "Sign out" })).toHaveCount(0);
 });
 
-test("the homepage answers price and offers the founder before the footer", async ({ page }) => {
+test("the homepage answers price and offers a way to ask before the footer", async ({ page }) => {
   await page.goto("/");
 
   // The flat price renders in the closing band (from src/lib/marketing.ts —
