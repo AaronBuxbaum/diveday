@@ -67,6 +67,9 @@ const NOTICE_KEYS: Record<string, { tone: NoticeTone; key: StaffMessageKey; link
   // (`restoreDiver`, CR-008), or an erased record that has no way back. Either
   // way there is a thing to do about it, and the copy names it.
   "restore-refused": { tone: "danger", key: "divers.notices.restoreRefused" },
+  // A removed record is reachable but not editable: `updateDiver` refuses it
+  // outright, and without this the refusal read as an email conflict.
+  "removed-read-only": { tone: "danger", key: "divers.notices.removedReadOnly" },
   "not-authorized-refund": { tone: "danger", key: "divers.notices.notAuthorizedRefund" },
   "not-authorized-delete": { tone: "danger", key: "divers.notices.notAuthorizedDelete" },
   "not-authorized-erase": { tone: "danger", key: "divers.notices.notAuthorizedErase" },

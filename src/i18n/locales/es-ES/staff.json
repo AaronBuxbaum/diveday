@@ -443,6 +443,7 @@
       "deleted": "Buceador eliminado. Sus reservas, tarjetas y tallas quedan registradas.",
       "restored": "Buceador restaurado. Vuelve a estar en tus listas activas.",
       "restoreRefused": "No se pudo restaurar a este buceador: un buceador activo usa ahora su correo. Cambia ese correo e inténtalo de nuevo.",
+      "removedReadOnly": "Restaura a este buceador antes de cambiar sus datos: ahora mismo está fuera de tus listas activas.",
       "paymentNotConnected": "Los pagos aún no están conectados, así que no hay ninguna cuenta desde la que facturar — conecta una para cobrar a este buceador.",
       "notAuthorizedRefund": "Los reembolsos están limitados a propietarios y gerentes — pide a uno de ellos que emita este reembolso.",
       "notAuthorizedDelete": "Eliminar un buceador está limitado a propietarios y gerentes — pide a uno de ellos que lo haga.",

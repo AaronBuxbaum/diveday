@@ -203,11 +203,24 @@ describe("enterDemoAction instrumentation", () => {
 });
 
 describe("announceDemoEntry failure paths", () => {
+  it("is not a server action — it must never become a callable endpoint", async () => {
+    // Security review of this change's own diff. `demo.ts` carries
+    // `"use server"`, and every exported async function in such a module is a
+    // callable endpoint that needs no session — `enterDemoAction` is reachable
+    // by anyone by design. Exported from there, `announceDemoEntry` would take
+    // a caller-supplied slug, role, and source: junk tags sprayed into the
+    // funnel, founder mail about demo tries that never happened, and — with a
+    // *real* shop's slug — a poisoned row written into that tenant's
+    // `notification_send_queue`. The TypeScript signature stops none of it.
+    const serverActionModule = await import("./demo");
+    expect(serverActionModule).not.toHaveProperty("announceDemoEntry");
+  });
+
   it("sends no alert for a shop that is no longer there", async () => {
     // The minted shop is reaped after 7 days and can be deleted by the
     // fleet-wide cap at any time; a slug that no longer resolves is a missing
     // alert, never a thrown one.
-    const { announceDemoEntry } = await import("./demo");
+    const { announceDemoEntry } = await import("./demo-instrumentation");
     const logged = vi.spyOn(console, "error").mockImplementation(() => {});
 
     await expect(
@@ -220,7 +233,7 @@ describe("announceDemoEntry failure paths", () => {
   });
 
   it("swallows a database handle that will not open", async () => {
-    const { announceDemoEntry } = await import("./demo");
+    const { announceDemoEntry } = await import("./demo-instrumentation");
     vi.mocked(getDb).mockRejectedValue(new Error("no database"));
     const logged = vi.spyOn(console, "error").mockImplementation(() => {});
 

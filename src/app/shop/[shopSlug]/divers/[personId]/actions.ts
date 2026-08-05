@@ -11,7 +11,13 @@ import {
   loadActiveStaffRoles,
 } from "@/db/authz";
 import { getDb } from "@/db/client";
-import { deleteDiver, getDiverProfile, restoreDiver, updateDiver } from "@/db/divers";
+import {
+  deleteDiver,
+  getDiverProfile,
+  isDiverRemoved,
+  restoreDiver,
+  updateDiver,
+} from "@/db/divers";
 import {
   archiveNitroxCertification,
   createNitroxCertification,
@@ -120,12 +126,23 @@ export async function savePersonAction(shopSlug: string, personId: string, formD
   const staff = await requireStaffSession();
   const parsed = personSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(`${base}?notice=invalid`);
-  const saved = await updateDiver(await getDb(), {
+  const db = await getDb();
+  const saved = await updateDiver(db, {
     shopId: staff.user.shopId,
     personId,
     ...parsed.data,
   });
-  revalidateAndRedirect(base, `${base}?notice=${saved ? "person-saved" : "duplicate"}`);
+  // Two very different things come back as null, and only one of them is an
+  // email conflict. `updateDiver` will not touch a removed record at all, and
+  // this record is reachable now — so telling a staffer to go fix a duplicate
+  // email would send them after a conflict that does not exist. The extra read
+  // is paid only on the failure path.
+  const notice = saved
+    ? "person-saved"
+    : (await isDiverRemoved(db, staff.user.shopId, personId))
+      ? "removed-read-only"
+      : "duplicate";
+  revalidateAndRedirect(base, `${base}?notice=${notice}`);
 }
 
 export async function addCertificationAction(

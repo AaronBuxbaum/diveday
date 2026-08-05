@@ -443,6 +443,7 @@
       "deleted": "Diver removed. Their bookings, cards, and sizes stay on file.",
       "restored": "Diver restored. They're back on your active lists.",
       "restoreRefused": "Couldn't restore this diver — an active diver now uses their email. Change that email, then try again.",
+      "removedReadOnly": "Restore this diver before changing their details — they're off your active lists right now.",
       "paymentNotConnected": "Payments aren't connected yet, so there's no account to invoice from — connect one to charge this diver.",
       "notAuthorizedRefund": "Refunds are limited to owners and managers — ask one of them to issue this refund.",
       "notAuthorizedDelete": "Removing a diver is limited to owners and managers — ask one of them to do it.",

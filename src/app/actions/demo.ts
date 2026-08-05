@@ -17,6 +17,10 @@ import { publicSchedulePath } from "@/lib/public-routes";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
 import { requireStaffSession } from "@/lib/session";
+// A plain module, deliberately not a second server action — see its own file
+// comment: exporting it from here would publish it as an unauthenticated
+// endpoint taking a caller-supplied shop slug.
+import { announceDemoEntry } from "./demo-instrumentation";
 
 const ENTERABLE_DEMO_ROLES = new Set<DemoRoleId>([
   "owner",
@@ -77,7 +81,6 @@ async function findDemoRoleEmail(
     .limit(1);
   return matches[0]?.email ?? null;
 }
-
 
 /**
  * One-click into the demo: mint a fresh, disposable demo shop with a generated

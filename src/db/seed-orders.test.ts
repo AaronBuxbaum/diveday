@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { nowMs } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
 import { listShopOrders, ORDER_DEFAULT_RANGE_DAYS } from "./orders";
 import { orderLineItems, orderStatus, orders } from "./schema";
@@ -58,7 +59,9 @@ describe("seeded order states", () => {
 
   it("dates them inside the index's default window, so they need no 'show all'", async () => {
     const { db, shop } = await seededShopContext({ history: true });
-    const from = new Date(Date.now() - ORDER_DEFAULT_RANGE_DAYS * 24 * 60 * 60 * 1000);
+    // Through the clock, like the seed that dated these rows: a direct
+    // wall-clock read drifts past the frozen instant (`check:clock`).
+    const from = new Date(nowMs() - ORDER_DEFAULT_RANGE_DAYS * 24 * 60 * 60 * 1000);
     const standalone = (await db.select().from(orders).where(eq(orders.shopId, shop.id))).filter(
       (order) => order.bookingId === null,
     );
