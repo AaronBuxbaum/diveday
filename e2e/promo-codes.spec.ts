@@ -119,7 +119,10 @@ test.describe("as owner", () => {
     // reads when the cursor lands there — and the cursor does land there.
     const describedBy = await codeBox.getAttribute("aria-describedby");
     expect(describedBy).toBeTruthy();
-    await expect(page.locator(`#${describedBy}`)).toContainText(/already/i);
+    // Matched by attribute, not `#id`: `Field` mints the id with React's
+    // `useId()`, whose output carries characters a bare CSS id selector
+    // cannot express.
+    await expect(page.locator(`[id="${describedBy}"]`)).toContainText(/already/i);
     await expect(codeBox).toBeFocused();
   });
 

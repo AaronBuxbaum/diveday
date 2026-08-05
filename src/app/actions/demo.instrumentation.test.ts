@@ -80,10 +80,23 @@ function demoForm(fields: Record<string, string>): FormData {
   return form;
 }
 
-beforeEach(async () => {
+/**
+ * Hydrate a database for the tests that actually mint a demo, and only those.
+ *
+ * Deliberately not a `beforeEach`: each call stands up its own ~250MB embedded
+ * Postgres, and three of the tests here never reach one at all (the rate-limit
+ * refusal redirects first, the server-action check is a module inspection, and
+ * the failing-handle case wants `getDb` to reject). Paying for a hydration in
+ * those was enough extra load to time this file out when the suite runs it
+ * beside the other database-heavy specs.
+ */
+async function useDb(): Promise<void> {
+  vi.mocked(getDb).mockResolvedValue(await seededTestDb());
+}
+
+beforeEach(() => {
   hoisted.afterTasks.length = 0;
-  const db = await seededTestDb();
-  vi.mocked(getDb).mockResolvedValue(db);
+  vi.mocked(getDb).mockReset();
   vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true } as never);
   // `mockReset`, not `mockClear`: several tests below install a rejecting
   // implementation, and clearing only drops the call log — the rejection would
@@ -101,6 +114,7 @@ beforeEach(async () => {
 
 describe("enterDemoAction instrumentation", () => {
   it("fires demo_entered exactly once, with the role and the page that sent them", async () => {
+    await useDb();
     await enterDemo(demoForm({ role: "captain", source: "pricing" }));
 
     expect(trackEvent).toHaveBeenCalledTimes(1);
@@ -115,6 +129,7 @@ describe("enterDemoAction instrumentation", () => {
     // The primary CTA sends no picker option and no tag; clamping happens in
     // the action, not the caller, so an unregistered tag can never open its own
     // bucket in the event stream (src/lib/funnel.ts).
+    await useDb();
     await enterDemo(demoForm({ source: "not-a-real-page" }));
 
     expect(trackEvent).toHaveBeenCalledWith({
@@ -124,7 +139,8 @@ describe("enterDemoAction instrumentation", () => {
     });
   });
 
-  it("alerts the founder once, naming the minted shop, the role, and the source", async () => {
+  it("alerts the founder once, and carries nothing about the visitor", async () => {
+    await useDb();
     const landing = await enterDemo(demoForm({ role: "diver", source: "home-hero" }));
 
     expect(sendNotification).toHaveBeenCalledTimes(1);
@@ -137,15 +153,13 @@ describe("enterDemoAction instrumentation", () => {
     });
     // The alert names the very shop the visitor was just sent to.
     expect(landing).toContain((notification as { shopSlug: string }).shopSlug);
-  });
 
-  it("carries nothing about the visitor — no identity exists to carry", async () => {
     // The security property of this path, pinned as an exact key set rather
     // than a spot check: a future field carrying an IP, a user agent, a
-    // referrer, or the generated demo-owner email fails here.
-    await enterDemo(demoForm({ role: "diver", source: "home-hero" }));
-
-    const [, notification] = vi.mocked(sendNotification).mock.calls[0];
+    // referrer, or the generated demo-owner email fails here. Asserted on the
+    // same entry rather than a second one — a whole demo shop is minted per
+    // entry, and there is nothing a fresh mint would tell us that this one
+    // doesn't.
     expect(Object.keys(notification).sort()).toEqual([
       "kind",
       "role",
@@ -175,6 +189,7 @@ describe("enterDemoAction instrumentation", () => {
   it("still lands the visitor in their demo when the alert throws", async () => {
     // Fail-soft is the whole contract: telemetry and alerting observe this
     // flow, they are never part of it.
+    await useDb();
     vi.mocked(sendNotification).mockRejectedValue(new Error("SES exploded"));
     const logged = vi.spyOn(console, "error").mockImplementation(() => {});
 
@@ -191,6 +206,7 @@ describe("enterDemoAction instrumentation", () => {
     // is the belt-and-braces case — and it is the one that found the bug it
     // now guards: with a single try block around both observers, a throw
     // escaping the analytics seam skipped the founder's mail silently.
+    await useDb();
     vi.mocked(trackEvent).mockRejectedValue(new Error("collector down"));
     const logged = vi.spyOn(console, "error").mockImplementation(() => {});
 
@@ -220,6 +236,7 @@ describe("announceDemoEntry failure paths", () => {
     // The minted shop is reaped after 7 days and can be deleted by the
     // fleet-wide cap at any time; a slug that no longer resolves is a missing
     // alert, never a thrown one.
+    await useDb();
     const { announceDemoEntry } = await import("./demo-instrumentation");
     const logged = vi.spyOn(console, "error").mockImplementation(() => {});
 

@@ -46,8 +46,8 @@
     "showEarlier": "Ver salidas anteriores",
     "backToNext": "← Volver a la próxima salida",
     "courseSession": "Sesión de curso",
-    "diveSite": "Punto de buceo",
-    "diveSites": "Puntos de buceo",
+    "diveSite": "Sitio de buceo",
+    "diveSites": "Sitios de buceo",
     "moreDivesToConfirm": "{count, plural, one {# inmersión más por confirmar} other {# inmersiones más por confirmar}}",
     "twoTank": "Salida de dos inmersiones",
     "twoTankHint": "Una salida en barco con dos inmersiones independientes, una tras otra, con un descanso (un intervalo de superficie) entre medias — no dos botellas puestas a la vez.",
@@ -120,7 +120,7 @@
     "diveNumber": "Inmersión {number}",
     "siteSatelliteAlt": "Vista por satélite de {site}",
     "siteRouteAtDock": "La tripulación explicará la ruta definitiva en el muelle.",
-    "siteToBeConfirmed": "Punto por confirmar",
+    "siteToBeConfirmed": "Sitio por confirmar",
     "sitePlanningGuide": "Es una guía de planificación, no una titulación ni una autorización de seguridad.",
     "siteHowItUnfolds": "Cómo se desarrolla la inmersión",
     "siteWhatToLookFor": "Qué buscar ahí abajo",
@@ -437,7 +437,7 @@
     "charterPath": "RUTA DE LA SALIDA",
     "boatTrack": "Trayecto del barco",
     "theDock": "El muelle",
-    "reconstructedPath": "📍 Ruta del barco reconstruida visitando {count, plural, one {# punto de buceo} other {# puntos de buceo}}"
+    "reconstructedPath": "📍 Ruta del barco reconstruida visitando {count, plural, one {# sitio de buceo} other {# sitios de buceo}}"
   },
   "ready": {
     "metaTitle": "Tu preparación para la salida — DiveDay",
@@ -1341,7 +1341,7 @@
         "item2": "Una página de inicio que abre con tu propio trabajo — capitán, instructor o propietario",
         "item3": "El horario como constructor: añade, mueve, copia y quita salidas en el sitio",
         "item4": "Series de salidas repetidas, editadas y avanzadas como una sola",
-        "item5": "Un catálogo de cursos con rutas de certificación que defines tú mismo",
+        "item5": "Un catálogo de cursos ordenado como tú enseñas, desde el primer contacto hacia arriba",
         "item6": "Roles de personal con límites reales, y una vista de personal que muestra huecos de cobertura",
         "item7": "Vistas de buceadores guardadas y una búsqueda que salta directa a un buceador o una salida",
         "item8": "Informes sobre los números que un centro pregunta de verdad"

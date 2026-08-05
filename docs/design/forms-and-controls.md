@@ -80,6 +80,66 @@ This only applies when `children` is a single control element (`<input>`/`<selec
 — the documented contract. A `Field` wrapping something else (rare) falls back to the original
 label-wraps-everything shape.
 
+## Saying what happened: `Field error` + `FormStatus`
+
+**A form's answer belongs where the form is.** Not under the `<h1>`, not in a banner the length of
+the page away from the button that earned it. The rule has three steps, in order of preference:
+
+1. **Field-level** — the refusal names one box, so it renders on that box. Pass `Field`'s `error`
+   prop; it renders the message under the control in a `role="alert"` region and wires the control's
+   own `aria-invalid` and `aria-describedby` automatically. Never hand-roll that triple.
+2. **Form-level** — the refusal (or the confirmation) is about the submission as a whole, so it
+   renders in the form's action row, beside the submit control. Use `FormStatus`, which follows the
+   shared tone→role rule (`noticeRole`): a refusal is an `alert`, a confirmation is a `status`.
+3. **Page-level** — only for what is genuinely about the page rather than one form on it. A
+   permission refusal that bounced someone here from elsewhere is the honest example; "your save
+   worked" is not.
+
+```tsx
+import { controlClass, Field, FieldActions, FieldGrid, FormStatus } from "@/components/ui/form";
+
+<FieldGrid as="form" action={createPromoAction} columns={2}>
+  <Field label={t("promos.fields.code")} error={codeRefusal}>
+    <input name="code" required className={controlClass} />
+  </Field>
+  <FieldActions>
+    <SubmitButton pendingLabel={t("promos.creating")} className={buttonClass()}>
+      {t("promos.createCode")}
+    </SubmitButton>
+    <FormStatus tone={status?.tone}>{status?.text}</FormStatus>
+  </FieldActions>
+</FieldGrid>
+```
+
+Both render nothing when there is no message, so a form's resting layout is unchanged.
+
+### Routing a `?notice=` to the right form
+
+Most staff surfaces answer a save by redirecting back with a `?notice=` code. On a page with more
+than one form, the code alone does not say which form it answers, and a generic code (`invalid`) is
+emitted by several. Two pieces close that:
+
+- Each entry in a page's notice map carries a `form` name alongside its tone and message key.
+- An action whose code is ambiguous appends `&form=<name>` so it lands home anyway. The reader
+  validates that param against the page's own set of form names — a query string is
+  attacker-supplied, and an unknown name must fall back to the code's default home rather than
+  vanish into a section nothing renders.
+
+The page resolves the notice once, hands each form its own with `noticeForForm`
+(`src/lib/staff-notices.ts`), and keeps whatever is left for the page banner — including anything
+homed to a section this staffer's role means the page never rendered. Worked examples: the trip
+Overview and Guests tabs (`resolveTripNotice`), and Settings, which got there first with its own
+`?saved=<section>` (`SettingsPage.tsx`'s `SectionNotice`).
+
+### Moving the cursor to the refusal
+
+Saying it is half of it; a keyboard or screen-reader user still has to *find* the box.
+`FieldErrorFocus` (`src/components/ui/FieldErrorFocus.tsx`) scrolls the offending control into
+view, focuses it, and rings it briefly. Given no `field` it takes the first
+`[aria-invalid="true"]` inside its `scope`, which is exactly what `Field`'s `error` marks — so a
+surface that renders per-field errors gets the focus move for free. `key` it on the submission
+(the notice code, an attempt counter) when the same refusal can happen twice in a row.
+
 ### Lint note: icon-only controls
 
 An icon-only `<button>`/`<a>` (a chevron, an `×`, the `?` shortcuts trigger) has no text content

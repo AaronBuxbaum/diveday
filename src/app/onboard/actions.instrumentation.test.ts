@@ -81,16 +81,29 @@ async function signUp(form = onboardForm()): Promise<string> {
   return landing;
 }
 
-beforeEach(async () => {
+/**
+ * Hydrate a database for the tests that actually reach one, and only those.
+ *
+ * Two reasons this is not a `beforeEach`. Each call stands up its own ~250MB
+ * embedded Postgres, and under a loaded machine that allocation is the thing
+ * that fails first — not with a timeout but with PGlite's own "failed to
+ * initialize properly", which then surfaces as a puzzling `create_failed`
+ * bounce out of `onboardAction`. And the rate-limit test never reaches a
+ * database at all: it is refused before `getDb()` is called, so hydrating one
+ * for it was pure cost.
+ *
+ * The snapshot-hydrated database rather than `unseededTestDb`: that one
+ * migrates from nothing, which is slower still. Signing up beside a shop that
+ * already exists is also the more honest fixture — the slug and email
+ * uniqueness checks have something real to miss.
+ */
+async function useDb(): Promise<void> {
+  vi.mocked(getDb).mockResolvedValue(await seededTestDb());
+}
+
+beforeEach(() => {
   hoisted.afterTasks.length = 0;
-  // The snapshot-hydrated database, not `unseededTestDb`: that one migrates
-  // from nothing, which costs enough under a loaded worker to blow this hook's
-  // 10s budget when the file runs alongside the rest of the suite. Signing up
-  // beside a shop that already exists is also the more honest fixture — the
-  // slug and email uniqueness checks have something real to miss.
-  const db = await seededTestDb();
   vi.mocked(getDb).mockReset();
-  vi.mocked(getDb).mockResolvedValue(db);
   vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true } as never);
   vi.mocked(trackEvent).mockReset();
   vi.mocked(trackEvent).mockResolvedValue(undefined);
@@ -103,21 +116,15 @@ beforeEach(async () => {
 });
 
 describe("onboardAction instrumentation", () => {
-  it("fires trial_started exactly once, tagged with the page that sent them", async () => {
+  it("fires trial_started once and alerts the founder once, on one sign-up", async () => {
+    // Both observers asserted against the same sign-up rather than one each: a
+    // second sign-up costs another whole database and proves nothing the first
+    // doesn't, and "exactly once" is about this run of the action either way.
+    await useDb();
     expect(await signUp()).toBe("/shop/reef-runners");
 
     expect(trackEvent).toHaveBeenCalledTimes(1);
     expect(trackEvent).toHaveBeenCalledWith({ name: "trial_started", source: "pricing" });
-  });
-
-  it("clamps an unregistered source rather than opening a bucket for it", async () => {
-    await signUp(onboardForm({ source: "not-a-real-page" }));
-
-    expect(trackEvent).toHaveBeenCalledWith({ name: "trial_started", source: "unknown" });
-  });
-
-  it("alerts the founder once, naming the owner and the new shop", async () => {
-    await signUp();
 
     expect(sendNotification).toHaveBeenCalledTimes(1);
     const [, notification] = vi.mocked(sendNotification).mock.calls[0];
@@ -129,6 +136,13 @@ describe("onboardAction instrumentation", () => {
       shopName: "Reef Runners",
       shopSlug: "reef-runners",
     });
+  });
+
+  it("clamps an unregistered source rather than opening a bucket for it", async () => {
+    await useDb();
+    await signUp(onboardForm({ source: "not-a-real-page" }));
+
+    expect(trackEvent).toHaveBeenCalledWith({ name: "trial_started", source: "unknown" });
   });
 
   it("counts nothing when the sign-up was refused", async () => {

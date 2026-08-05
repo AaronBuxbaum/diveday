@@ -455,7 +455,11 @@ export async function saveRecapShoutoutAction(
 
 /** Take down a diver's recap photo — the shop's moderation seam. */
 export async function deleteRecapPhotoAction(shopSlug: string, tripId: string, formData: FormData) {
-  const back = guestsPath(shopSlug, tripId);
+  // Overview, not Guests: the gallery moved to Overview beside the crew's own
+  // shout-out (both are the recap's content) and this `back` did not follow it,
+  // so taking a photo down teleported the staffer to a different tab and put
+  // the confirmation on a page with nothing to confirm.
+  const back = backPath(shopSlug, tripId);
   const s = await requireStaffSession();
   const photoId = String(formData.get("photoId") ?? "");
   if (!photoId) redirect(back);

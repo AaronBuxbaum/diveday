@@ -33,7 +33,7 @@ export const instant = true;
 export const metadata: Metadata = {
   title: "Dive shop software for the whole dive day — DiveDay",
   description:
-    "Bookings, waivers, cert checks, trip prep, and the boat manifest in one calm place. Easy to try in a live demo, safe to run the boat on, and your data leaves with you any day.",
+    "Bookings, waivers, cert checks, trip prep, and the boat manifest in one calm place. Easy to try in a live demo, safe to run the boat on, and your records come in clean and leave the same way.",
   alternates: { canonical: "/" },
   openGraph: {
     title: "DiveDay — dive shop software for the whole dive day",

@@ -170,8 +170,9 @@ test.describe("demo billing history", () => {
     await page.goto("/shop/blue-mantis/orders?status=paid");
     await page.getByRole("heading", { level: 1, name: "Orders" }).waitFor();
     const pager = page.getByRole("navigation", { name: "Pages" });
-    // Not "skip if there's nothing to page": the seeded demo carries 323
-    // orders and the paid slice is far past one page, so a missing pager is
+    // Not "skip if there's nothing to page": the seeded demo carries a
+    // trailing quarter of invoices and the paid slice is far past one page
+    // (src/db/seed-history.ts, src/db/seed-orders.ts), so a missing pager is
     // the regression, not a reason to pass. The early return this replaces
     // meant a filter that silently returned one page of results — exactly what
     // a dropped `status` on the count query looks like — ended the test green.

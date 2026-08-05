@@ -212,24 +212,31 @@ test("the about page says who is behind DiveDay and what it won't pretend", asyn
   // The hero has to survive the rulebook's own paste test: "Built by divers,
   // for divers." was true of every dive-adjacent vendor on earth — a rival
   // could paste it unchanged — which made it an eyebrow wearing a headline's
-  // clothes. This one names the thing only DiveDay can say — one person
-  // owns every line running on this boat — and the page proves it two
-  // sections down in the founder bio.
+  // clothes.
+  //
+  // It also has to survive the *opposite* failure, which the previous headline
+  // ("One person owns every line of code running on this boat.") walked into:
+  // conceding smallness so hard it read as a vendor with no infrastructure
+  // behind it, which is the fear this page exists to answer, not feed. The
+  // replacement keeps the accountability and adds what actually backs it —
+  // asserted here as a pair, because either half alone is the old bug.
   await expect(
     page.getByRole("heading", {
-      name: "One person owns every line of code running on this boat.",
+      name: "Small enough to answer you. Built so nothing rests on one person.",
     }),
   ).toBeVisible();
-  await expect(page.getByText(/one of them owns it, writes every line of it/)).toBeVisible();
+  await expect(page.getByText(/payments run through your own Stripe account/)).toBeVisible();
 
-  // The page earns trust by conceding, not by claiming: the honest-no block and
-  // the named accountable human are the load-bearing parts.
+  // The page earns trust by conceding, not by claiming: the honest-no block is
+  // the load-bearing part. (It used to also pin "Aaron Buxbaum, founder" from
+  // the "Who builds it" credential row; that row was removed 2026-08-05 — see
+  // docs/product/marketing.md — so the page names no individual, and asserting
+  // one here would only re-introduce it by the back door.)
   await expect(
     page.getByRole("heading", { name: "What we're not going to pretend." }),
   ).toBeVisible();
   await expect(page.getByRole("heading", { name: "DiveDay is new." })).toBeVisible();
   await expect(page.getByRole("heading", { name: "It doesn't do everything." })).toBeVisible();
-  await expect(page.getByText("Aaron Buxbaum, founder")).toBeVisible();
 
   // Trust from a vendor with no install base is checkable, not asserted: each
   // rule ships with the demo action that proves it.

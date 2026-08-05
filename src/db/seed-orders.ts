@@ -8,8 +8,8 @@ import { at } from "./seed-clock";
  * `seed-history.ts` already back-fills a trailing quarter of invoices — three
  * hundred of them — so the orders index is anything but empty. Every single one
  * is `paid`, though, and every one is a trip fee or a deposit against a
- * booking. That makes four of the five statuses in `orderStatus`, five of the
- * seven line-item kinds, and the whole idea of an order that isn't attached to
+ * booking. That makes four of the five statuses in `orderStatus`, six of the
+ * eight line-item kinds, and the whole idea of an order that isn't attached to
  * a seat unreachable from the demo: pick "Refunded" in the index's status
  * filter and a shop with three hundred invoices shows you an empty page.
  *
@@ -24,9 +24,9 @@ import { at } from "./seed-clock";
  * - **void**, an invoice raised and cancelled before it was ever paid;
  * - **uncollectible**, the one a shop eventually writes off;
  * - **paid retail**, standing in for the counter sales a dive shop actually
- *   rings up — a mask, a week of rental kit, nitrox fills, a lost-weight-belt
- *   charge — which is where the `merchandise`, `rental`, `nitrox` and `other`
- *   line kinds finally appear.
+ *   rings up — a mask, a week of rental kit, nitrox fills, a replacement weight
+ *   belt — which is where the `merchandise`, `rental`, `nitrox`, `course_fee`
+ *   and `e_learning_fee` line kinds finally appear.
  *
  * **Every row here stands alone: `booking_id` is null.** That is deliberate and
  * load-bearing, not a shortcut. `applyOrderUpdate` cascades a paid or refunded

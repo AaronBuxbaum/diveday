@@ -140,18 +140,18 @@ test.describe("staff", () => {
     await expect(tabs.getByRole("link", { name: "All" })).toHaveAttribute("aria-current", "true");
     await tabs.getByRole("link", { name: "SSI" }).click();
     await expect(page).toHaveURL("/shop/blue-mantis/courses?agency=ssi");
-    await expect(
-      page.getByRole("listitem").filter({ hasText: "SSI Open Water Diver" }),
-    ).toBeVisible();
-    await expect(page.getByRole("listitem").filter({ hasText: "Divemaster" })).toHaveCount(0);
+    const roster = page.locator("main ul > li");
+    await expect(roster.filter({ hasText: "SSI Open Water Diver" })).toHaveCount(1);
+    // Divemaster is PADI-only in the seeded catalog, so the SSI tab drops it.
+    await expect(roster.filter({ hasText: "Divemaster" })).toHaveCount(0);
     await expect(tabs.getByRole("link", { name: "SSI" })).toHaveAttribute("aria-current", "true");
 
     // The tab survives a reload (it is a real URL), and "All" brings the rest back.
     await page.reload();
-    await expect(page.getByRole("listitem").filter({ hasText: "Divemaster" })).toHaveCount(0);
+    await expect(roster.filter({ hasText: "Divemaster" })).toHaveCount(0);
     await tabs.getByRole("link", { name: "All" }).click();
     await expect(page).toHaveURL("/shop/blue-mantis/courses");
-    await expect(page.getByRole("listitem").filter({ hasText: "Divemaster" })).toHaveCount(1);
+    await expect(roster.filter({ hasText: "Divemaster" })).toHaveCount(1);
   });
 
   test("a course row schedules a session of itself, landing on the existing new-trip form", async ({
