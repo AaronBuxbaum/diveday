@@ -5,10 +5,15 @@ addresses (`aaron@`, `legal@`) work. Decision and rationale:
 [20260726-hosted-mailboxes-for-platform-mail](../architecture/decisions/20260726-hosted-mailboxes-for-platform-mail.md)
 and [20260803-ses-sole-email-provider](../architecture/decisions/20260803-ses-sole-email-provider.md).
 
-AWS SES is the only email provider (Resend has been removed entirely). The AWS-side production
-access request, DKIM DNS verification, credential minting, and SNS webhook subscription are manual
-steps not yet done — see [§7 of the infrastructure runbook](infrastructure-runbook.md#7-ses-email-provider-infra)
-for that checklist. Until they're done, every send resolves to `not_configured` rather than failing.
+AWS SES is the only email provider (Resend has been removed entirely). Two AWS-side steps are still
+outstanding and both are genuinely manual: the production-access request and the DKIM/MAIL FROM DNS
+records. Credential minting is not among them any more — `cdk deploy` mints the sender key and
+delivers it in the credentials secret ([§10](infrastructure-runbook.md#10-the-credentials-secret)) —
+and the SNS webhook subscription stopped being manual in
+[20260803-webhook-subscriptions-in-cdk](../architecture/decisions/20260803-webhook-subscriptions-in-cdk.md).
+The checklist is [manual-actions.md](manual-actions.md);
+[§7 of the infrastructure runbook](infrastructure-runbook.md#7-ses-email-provider-infra) carries the
+reasoning. Until the two are done, every send resolves to `not_configured` rather than failing.
 
 Two separate systems, deliberately:
 
@@ -55,9 +60,14 @@ made — DiveDay records the issue without spending a send. The demo seed intent
    you at.
 2. **Request SES production access** (an AWS Support case — CDK cannot do this). SES starts in
    sandbox mode, which can only send to pre-verified recipient addresses.
-3. **Mint the sender credentials**: `aws iam create-access-key --user-name diveday-ses-sender` (also
-   in the `SesSenderAccessKeyInstructions` output). Store the result only in the deploy environment's
-   secrets — never the repo.
+3. **Collect the sender credentials.** The deploy already minted them; read them out of the
+   credentials secret and take the `SES_AWS_*` lines:
+   ```bash
+   AWS_PROFILE=diveday-admin aws secretsmanager get-secret-value \
+     --secret-id diveday/env --query SecretString --output text
+   ```
+   Store them only in the deploy environment's settings — never the repo. See
+   [§10 of the infrastructure runbook](infrastructure-runbook.md#10-the-credentials-secret).
 4. Set `SES_AWS_REGION`, `SES_AWS_ACCESS_KEY_ID`, `SES_AWS_SECRET_ACCESS_KEY`, and `SES_FROM_EMAIL`. A
    friendly name is supported: `SES_FROM_EMAIL="Blue Mantis <bookings@ses.dive.day>"`.
 5. **Test it against a real inbox.** The honest test is a booking, not a curl: book a seat with your

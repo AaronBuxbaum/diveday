@@ -17,7 +17,10 @@ export default defineConfig({
     // formatting logic that nothing else would exercise (scripts/visual-report-lib.mjs
     // decides whether a reg-suit run compared anything at all), and they belong
     // in the same `pnpm check` gate as the app.
-    include: ["src/**/*.test.{ts,tsx}", "scripts/**/*.test.mjs"],
+    // `infra/` too: the CDK stack is the only place a credential can leak into a
+    // stack output, and nothing else in `pnpm check` synthesizes it — lint and
+    // tsc see TypeScript, not a CloudFormation template.
+    include: ["src/**/*.test.{ts,tsx}", "scripts/**/*.test.mjs", "infra/**/*.test.ts"],
     // PGlite-backed integration tests hydrate an embedded Postgres per test;
     // generous ceiling so slow CI runners don't flake.
     testTimeout: 20_000,

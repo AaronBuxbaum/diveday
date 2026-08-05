@@ -4,6 +4,12 @@ How to provision and manage AWS infrastructure for DiveDay using the AWS CDK (Cl
 
 All infrastructure is defined as code under the [infra/](../../infra/) directory in TypeScript.
 
+> [!TIP]
+> Looking for the checklist rather than the reasoning? [manual-actions.md](manual-actions.md) is
+> every step `cdk deploy` cannot perform, generated from the stack itself and printed as stack
+> outputs after each deploy. This file explains *why* each one resists automation; that one tells
+> you what to run and where the result goes.
+
 ---
 
 ## Overview
@@ -13,16 +19,24 @@ We use AWS CDK to model, deploy, and update our cloud resources. Currently, the 
 - A `reg-suit-bot` IAM user with specific S3 read/write permissions.
 - A dedicated `cdk-deployer` IAM user that holds **no direct AWS permissions of its own** — only
   `sts:AssumeRole` on the four `cdk bootstrap` roles (deploy / file-publishing / image-publishing /
-  lookup) plus read access to stack status and the bootstrap version parameter. Deliberately *not*
-  `AdministratorAccess`: the bootstrap roles are already scoped to what CDK deploys need, so a
-  leaked deployer credential stays bounded by them. The stack comments at
+  lookup) plus read access to stack status and the bootstrap version parameter. Better than handing
+  out `AdministratorAccess` directly — the credential is useless outside CloudFormation and revoking
+  it is one `DeleteAccessKey` — but **not a privilege boundary**: the deploy role passes an execution
+  role that a plain `cdk bootstrap` leaves at `AdministratorAccess`. See
+  [who can read it](#who-can-read-it). The stack comments at
   [infra/lib/infra-stack.ts](../../infra/lib/infra-stack.ts) §5 carry the full reasoning.
-- Read-only IAM users for the AWS MCP server (local dev and Claude Code's cloud environment).
+- Read-only IAM users for an AWS MCP server (local dev and Claude Code's cloud environment), each
+  carrying an explicit `Deny` on `secretsmanager:GetSecretValue` so "read-only" cannot be escalated
+  into credential retrieval by whatever AWS adds to the managed `ReadOnlyAccess` policy next.
 - Cost guardrails: an `AWS::Budgets::Budget` and AWS Cost Anomaly Detection — see [§6](#6-cost-guardrails) below.
-- SES/SNS infra for the app's sole email provider — see [§7](#7-ses-email-provider-infra) below. The code path is live; the AWS-side production access, DKIM/MAIL FROM DNS records, and credentials are still manual steps.
+- SES/SNS infra for the app's sole email provider — see [§7](#7-ses-email-provider-infra) below. The code path is live; the AWS-side production access and DKIM/MAIL FROM DNS records are still manual steps.
 - A versioned, private, retained S3 bucket as the destination for scheduled database export bundles — see [§8](#8-backup-bucket) below.
 - HTTPS subscriptions wiring both SNS topics to the app's webhook routes — see [§9](#9-webhook-subscriptions) below. Created on every deploy, no flag required.
-- A `ManualActionItems` output listing every step CDK structurally cannot perform, printed after each deploy so the remainder is visible rather than remembered.
+- An access key for every one of its eight IAM users, delivered through one Secrets Manager secret
+  holding a filled-in `.env.example` — see [§10](#10-the-credentials-secret) below.
+- `ManualActions*` outputs listing every step CDK cannot or deliberately does not perform, printed
+  after each deploy so the remainder is visible rather than remembered. Same content as
+  [manual-actions.md](manual-actions.md), generated from the same registry.
 
 ---
 
@@ -33,12 +47,23 @@ To provision or modify infrastructure, you must authenticate with AWS.
 ### Installing Prerequisites
 Ensure the [AWS CLI](https://aws.amazon.com/cli/) is installed on your local machine.
 
-### Option A: Local AWS Profile (Recommended for first-time setup)
-If bootstrapping the account for the first time, configure your credentials using the CLI:
+Two credentials are in play and they are not interchangeable:
+
+| | What it is | What it is for |
+| --- | --- | --- |
+| **Administrator profile** | An IAM identity that predates this stack, configured by hand | Bootstrapping the account, and reading the credentials secret ([§10](#10-the-credentials-secret)). Nothing else. |
+| **`cdk-deployer`** | Created *by* this stack; holds `sts:AssumeRole` on the four bootstrap roles and nothing more | Every subsequent `pnpm infra:deploy`. Not granted read on the credentials secret — but it can reach it anyway through the bootstrap roles, so treat it as an admin credential and keep it on your workstation only. See [§10](#10-the-credentials-secret). |
+
+### Option A: Local AWS Profile (Recommended)
 ```bash
-aws configure
+aws configure --profile diveday-admin
 ```
 Enter your Administrator Access Key ID, Secret Access Key, Default region name (e.g., `us-east-1`), and Default output format (`json`).
+
+Once the stack has been deployed once, the `cdk-deployer` credentials arrive in the credentials
+secret and belong in `.env.local`'s `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY`, which every
+`pnpm infra:*` script loads through `dotenv -c`. Keep the admin profile for the two jobs in the table
+above and use `AWS_PROFILE=diveday-admin` when you need it.
 
 ### Option B: Session Environment Variables
 Alternatively, you can export credentials in your current terminal session:
@@ -88,7 +113,10 @@ pnpm infra:deploy
 ```
 
 > [!IMPORTANT]
-> The `infra:deploy` script is configured with `--require-approval never` to execute non-interactively. Ensure you have run `pnpm infra:diff` to inspect changes beforehand.
+> `infra:deploy` is a plain `cdk deploy`, so CDK's default `--require-approval broadening` applies:
+> a deploy that changes IAM — which is most of them here — stops and asks. That is worth keeping now
+> that a deploy can also *rotate* credentials; read the diff it prints rather than reaching for
+> `--require-approval never`.
 
 ---
 
@@ -109,19 +137,45 @@ Pass these values during deployment or synthesis using the `--context` flag:
 pnpm infra:deploy --context bucketName=my-custom-prod-bucket --context userName=my-custom-bot-user
 ```
 
+> [!IMPORTANT]
+> **`CredentialSerial` is a CloudFormation *parameter*, not a context value** — the one input here
+> that is not `--context`, and deliberately so. Context is per-invocation, so a rotation done with
+> `--context` would be undone by the next deploy that forgot the flag, silently replacing all eight
+> keys. CloudFormation remembers a parameter and `cdk deploy` defaults `--previous-parameters` to
+> true, so omitting it is a no-op. See [§10](#10-the-credentials-secret).
+>
+> ```bash
+> pnpm infra:deploy --parameters CredentialSerial=2
+> ```
+
 ---
 
 ## 5. Outputs and Environment Configuration
 
-Upon successful deployment, the CDK CLI outputs key resources and credentials. Map these to your `.env.local` to allow the application or CI runner to communicate with AWS:
+A deploy prints two kinds of output, and the split is deliberate.
 
-- **CDK Deployer User (`cdk-deployer`):** mint its access key out of band with the command the
-  `CdkDeployerAccessKeyInstructions` output prints (`aws iam create-access-key --user-name
-  cdk-deployer`) and use it for subsequent CI/CD deployments instead of root credentials. No secret
-  for this user is emitted as a stack output, so nothing lands in the CloudFormation template or
-  state.
-- **S3 Bucket Details:** Use `S3BucketName` and `IAMUserAccessKey` / `IAMUserSecretKey` for S3 upload plugins.
-- **Backup Bucket:** `BackupBucketName` and the `BackupUploaderAccessKeyInstructions` command — see [§8](#8-backup-bucket).
+**Values you can act on** — names, ARNs, URLs, DNS records. `S3BucketName`, `S3WebsiteURL`,
+`BackupBucketName`, `SesDkimRecords`, `SesMailFromRecords`, `SesEventNotificationsTopicArn`,
+`SmsDeliveryReceiptsTopicArn`, `CredentialsSecretName`, `CostAlertEmail`, and `RetiredAccessKeys` —
+the keys this deploy revoked because an identity held more than one, or `none` in the steady state
+(see [§10](#10-the-credentials-secret)).
+
+**The manual-action checklist** — the `ManualActions*` keys, one per category and numbered so they
+sort in reading order, splitting into `…Part1`/`…Part2` when a category outgrows CloudFormation's
+4096-byte output value (Credentials does today). Same content as
+[manual-actions.md](manual-actions.md).
+
+**No output carries key material.** `cloudformation:DescribeStacks` resolves outputs to plaintext,
+and both the `cdk-deployer` user and the two read-only MCP users hold that permission — so an output
+is the one surface where a secret is genuinely exposed rather than merely referenced. Every access
+key goes to [§10](#10-the-credentials-secret) instead; `infra/lib/manual-actions.test.ts` fails the
+build if one ever appears in an output again.
+
+> [!NOTE]
+> The `IAMUserAccessKey` and `IAMUserSecretKey` outputs are gone. They published the `reg-suit-bot`
+> secret access key in cleartext to anyone who could describe the stack, which — via
+> `bucket.grantReadWrite`'s `s3:DeleteObject*` on an unversioned bucket — meant a credential labelled
+> read-only could destroy every visual baseline. Take the same values from the credentials secret.
 
 ---
 
@@ -152,9 +206,17 @@ pnpm infra:deploy --context alertEmail=you@example.com --context monthlyBudgetLi
 - `monthlyBudgetLimit` — the monthly USD cap the percentage thresholds above are computed against
   (default `5`).
 
-No manual account-level setup is required — unlike a CloudWatch billing alarm on
-`EstimatedCharges`, Budgets and Cost Anomaly Detection don't need the "Receive Billing Alerts"
-console toggle enabled first.
+The Budgets half needs no account-level setup — unlike a CloudWatch billing alarm on
+`EstimatedCharges`, it doesn't need the "Receive Billing Alerts" console toggle enabled first. **Cost
+Anomaly Detection does**: it depends on Cost Explorer, which is a one-time console opt-in with no
+API, and reports nothing until it has accumulated spend history. That is a prerequisite in
+[manual-actions.md](manual-actions.md), not something the stack handles.
+
+**What this account costs when idle:** one Secrets Manager secret, $0.40/month
+([§10](#10-the-credentials-secret)). Everything else here is per-use or free at this volume. That is
+the number the `monthlyBudgetLimit` default of `5` is set against — if you add secrets, move the
+limit with them, or the 50% and 80% notifications start firing every month on fixed cost and the
+guardrail becomes noise.
 
 ---
 
@@ -181,13 +243,10 @@ for the day-to-day operational guide.
 - An `ses.ConfigurationSet` (with `optimizedSharedDelivery` enabled, `engagementMetrics` deliberately
   left off — see the no-opens/no-clicks privacy stance in the runbook) wired to a new SNS topic
   (`SesEventNotificationsTopicArn` output) for bounce/complaint/delivery events.
-- A `diveday-ses-sender` IAM user, scoped to `ses:SendEmail`/`ses:SendRawEmail` on just this identity.
-  Mint its access key only once cutover actually begins:
-  ```bash
-  aws iam create-access-key --user-name diveday-ses-sender
-  ```
-  (the exact command is also in the `SesSenderAccessKeyInstructions` output) — never store the result
-  in the repo.
+- A `diveday-ses-sender` IAM user, scoped to `ses:SendEmail`/`ses:SendRawEmail` on just this identity
+  and its configuration set. Its access key is minted by the deploy and delivered in the credentials
+  secret ([§10](#10-the-credentials-secret)) as `SES_AWS_ACCESS_KEY_ID` /
+  `SES_AWS_SECRET_ACCESS_KEY` — never store it in the repo.
 
 **What's written now (app side):** an SES adapter (`sesNotificationProvider` /
 `notificationProviderFromEnvironment` in `src/lib/notifications/index.ts`, using
@@ -209,8 +268,7 @@ below are done — until then, missing/invalid credentials mean every send resol
    record** — SES fails the MAIL FROM setup outright if the subdomain has several.
 3. Request SES **production access** (an AWS Support case — CDK cannot do this) once ready to send
    beyond the sandbox's verified-recipients-only limit.
-4. Mint the `diveday-ses-sender` access key and set the env vars above in the real deploy
-   environment (never the repo).
+4. Copy the SES values out of the credentials secret into Vercel, and redeploy the app.
 
 Why each one resists automation:
 
@@ -220,9 +278,9 @@ Why each one resists automation:
   DMARC) and replacing Vercel's apex `ALIAS` with hardcoded anycast A records that Vercel owns and
   rotates — a standing outage risk in exchange for automating two records.
 - **3 (production access):** a human-reviewed AWS Support case. No API.
-- **4 (credentials):** deliberate. `CfnAccessKey` would put the secret in the CloudFormation
-  template and stack state; every IAM user in this stack mints its key out of band for that reason.
-  The env vars then live in Vercel, a different platform from the one CDK manages.
+- **4 (placing the values):** Vercel runs the app and CDK runs the infrastructure; neither deploy
+  pipeline can write to the other, so the values cross by hand. *Minting* the key is no longer
+  manual — see [§10](#10-the-credentials-secret) for why that changed.
 
 **Subscribing the webhooks is no longer on this list** — see
 [§9](#9-webhook-subscriptions) below.
@@ -257,12 +315,12 @@ property is wrong for a backup. Do not consolidate them.
 | Lifecycle | Infrequent Access at 30 days; Glacier **Instant** Retrieval at 90; non-current versions expire at 90 days; incomplete multipart uploads abort at 7 days. **Current versions never expire.** | Cost is managed by getting colder, not by deleting. Waiver retention is "indefinite" pending [H-02](../product/human-decisions.md), so a lifecycle rule must never be what decides evidence has outlived its usefulness. Glacier *Instant*, not Flexible or Deep, because a restore happens during an incident and a multi-hour thaw would make the backup useless exactly when it is needed |
 | Uploader | IAM user `diveday-backup-uploader`, `s3:PutObject` + `s3:AbortMultipartUpload` on `arnForObjects("*")` and nothing else | Write-only, same least-privilege posture as `cdk-deployer` in §5. A leaked uploader credential can neither read a shop's exported waivers back out nor destroy an existing backup |
 
-Mint the uploader's key only when wiring up whatever runs the export, and store it in that runner's
-secret settings — never the repo:
-
-```bash
-aws iam create-access-key --user-name diveday-backup-uploader
-```
+The uploader's access key is minted by the deploy and delivered in the credentials secret
+([§10](#10-the-credentials-secret)), in its "Not .env values" section — because no destination for it
+exists yet. `src/app/api/cron/backup-export/` reads no AWS credential, the runtime feature seals its
+own per-shop credentials, and `.env.example` has no entry for it: the choice of runner is still a
+`TODO(owner)` in [backup-and-restore-runbook.md](backup-and-restore-runbook.md). Leave the key in the
+secret until that is decided.
 
 Override the bucket name the same way as other context values:
 ```bash
@@ -307,14 +365,17 @@ A subscription is only real once the endpoint answers SNS's handshake, and both 
 until their `SES_SNS_TOPIC_ARN` / `SMS_SNS_TOPIC_ARN` env var is set. On a fresh environment the
 stack therefore creates a subscription the app cannot yet confirm; SNS deletes it after ~3 days.
 
-This is item 5 of the `ManualActionItems` output for that reason. To check:
+This is why `verify-webhook-subscriptions` is in [manual-actions.md](manual-actions.md). Check **both**
+topics — an earlier version of the checklist named only the SES one, and told you a pending SMS
+subscription was caused by a step that could not fix it:
 
 ```bash
 aws sns list-subscriptions-by-topic --topic-arn <SesEventNotificationsTopicArn>
+aws sns list-subscriptions-by-topic --topic-arn <SmsDeliveryReceiptsTopicArn>
 ```
 
-`SubscriptionArn: PendingConfirmation` means the endpoint answered non-2xx. Set the env vars,
-redeploy the app, confirm it stops 503ing:
+`SubscriptionArn: PendingConfirmation` means the endpoint answered non-2xx — `SES_SNS_TOPIC_ARN` or
+`SMS_SNS_TOPIC_ARN` is missing from the app. Set it, redeploy the app, confirm it stops 503ing:
 
 ```bash
 curl -s -o /dev/null -w '%{http_code}\n' -X POST https://www.dive.day/api/webhooks/ses -d '{}'
@@ -322,3 +383,166 @@ curl -s -o /dev/null -w '%{http_code}\n' -X POST https://www.dive.day/api/webhoo
 
 then `aws sns unsubscribe --subscription-arn <pending-arn>` and redeploy the stack to re-issue the
 handshake. Redeploying alone won't fix it — CloudFormation still believes the subscription exists.
+
+---
+
+## 10. The credentials secret
+
+Every one of this stack's eight IAM users gets an access key minted by CloudFormation, and all eight
+are delivered through **one** Secrets Manager secret, `diveday/env`, whose value is
+[`.env.example`](../../.env.example) with the values filled in.
+
+```bash
+AWS_PROFILE=diveday-admin aws secretsmanager get-secret-value \
+  --secret-id diveday/env --query SecretString --output text
+```
+
+**The whole document goes in `.env.local`** — that is the shape it is built for. Everywhere else
+takes a subset, and the document's own header says which:
+
+| Destination | What to take |
+| --- | --- |
+| `.env.local` | All of it. Paste over the whole file, then fill the blanks the stack cannot know. |
+| Vercel (*Import .env*) | Only the `SES_*`, `SNS_*`, `SMS_*`, `PLACES_*` lines. |
+| GitHub Actions secrets | The four `REG_SUIT_*` lines. |
+| `~/.aws/credentials`, Claude Code cloud env | The "Not .env values" section at the bottom. |
+
+> [!WARNING]
+> **Never put `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` in Vercel or any deployed environment.**
+> Those are the `cdk-deployer` key. See [who can read it](#who-can-read-it) — it is administrator-
+> equivalent on this account, the app has no use for it, and a Vercel environment variable is
+> readable by every project member and reachable from any compromised dependency in the server
+> bundle. It is the one key that yields all the others.
+
+The credentials that do not belong in a dotenv file — the two read-only MCP users, the backup
+uploader — ride at the bottom in a commented section, each under the destination it belongs to, so
+pasting the whole document into `.env.local` stays safe.
+
+### Why the document is `.env.example`
+
+Because the destination format should be the hand-off format. A bespoke JSON shape means transcribing
+field by field and inventing a mapping from key names to variable names; `.env.example` already *is*
+this project's registry of what gets configured. The document is generated from that file at synth
+time, so:
+
+- a variable renamed in `.env.example` renames itself in the secret on the next deploy;
+- a value the stack claims to supply for a key `.env.example` no longer declares **fails the synth**
+  rather than silently vanishing;
+- a new `*_AWS_ACCESS_KEY_ID`-shaped variable added to `.env.example` and not filled by the stack
+  fails `infra/lib/manual-actions.test.ts`.
+
+### Why the keys are minted by CloudFormation now
+
+The previous posture was that every user minted its key out of band, because "`CfnAccessKey` would
+put the secret in the CloudFormation template and stack state". That reasoning was half right and the
+half that was wrong mattered:
+
+- **The template does not expose it.** `cloudformation:GetTemplate` returns the unresolved
+  `Fn::GetAtt`, at both `Original` and `Processed` stages. What leaked the `reg-suit-bot` key was
+  publishing it as a **`CfnOutput`**, which `DescribeStacks` resolves. Outputs were the hole.
+- **Minting by hand didn't avoid the secret**, it moved it into a terminal scrollback, once. Lose it
+  and the only recovery is minting another and re-pasting it everywhere.
+- **Rotation only becomes real when it is a deploy.** `AWS::IAM::AccessKey` has a `Serial` that may
+  only ever be incremented; incrementing it makes CloudFormation replace the key create-then-delete,
+  so the user is transiently at IAM's two-key ceiling and never below one working key.
+
+```bash
+pnpm infra:deploy --parameters CredentialSerial=2
+```
+
+**It is a CloudFormation parameter, not a `--context` value, and that distinction is the safety
+property.** Context is per-invocation: with context, the deploy *after* a rotation — any unrelated
+deploy, run without the flag — would synthesize `Serial: 1` again, replace all eight keys, and delete
+the ones you just placed. Email and SMS would start failing on `InvalidClientTokenId` with nothing
+connecting it to the deploy. CloudFormation remembers a parameter, and `cdk deploy` defaults
+`--previous-parameters` to `true`, so omitting the flag is a no-op. Check the deployed value with:
+
+```bash
+aws cloudformation describe-stacks --stack-name diveday-infra --query "Stacks[0].Parameters"
+```
+
+One serial covers all eight. They leave in a single document and land in the same four places, so a
+partial rotation saves little, and eight parameters would be eight more things to keep straight.
+
+### Revoking the keys the stack did not create
+
+**IAM allows two access keys per user — hard, not adjustable.** Seven of these eight identities had
+their keys made by hand before this stack minted any, and CloudFormation neither knows about those
+nor deletes them. The deploy that adds a managed key therefore leaves each such user at the ceiling,
+and the *next* rotation would call `CreateAccessKey` against a full user and fail with
+`LimitExceeded` — on the day someone is rotating because something leaked. Nothing surfaces it in the
+meantime: the deploy that creates the second key succeeds.
+
+The stack revokes them itself (§13 in the stack file), rather than leaving it as a step to remember —
+the whole hazard is that nobody knows it is armed. It is also what makes "revoke and re-create" a
+usable answer to any exposure, instead of a procedure whose first attempt fails.
+
+Two properties make it safe to automate:
+
+- **It never touches a user holding fewer than two keys**, so it cannot leave an identity with none.
+  Nothing to do is the steady state, and the `RetiredAccessKeys` output reads `none`.
+- **It keeps the newest and deletes the rest.** CloudFormation created its key seconds earlier and
+  the resource depends on all eight, so the newest is always the managed one.
+
+It is deliberately **not** re-run on rotation: its properties name the users, not the key ids, so
+bumping `CredentialSerial` does not re-invoke it. If it did, it would delete the outgoing key during
+the same update in which CloudFormation is already deleting it — a race with the stack's own cleanup,
+for no gain, because after one run every user holds exactly one key and rotation has the room it
+needs natively.
+
+> [!IMPORTANT]
+> **Your current `cdk-deployer` key is one of the keys this revokes.** The deploy itself finishes —
+> it runs under an assumed bootstrap role, not that key — but the next `pnpm infra:deploy` will fail
+> until you paste the new deployer credentials out of the secret. Read them with the administrator
+> profile, which is unaffected. If the deploy rolls back after the revocation, the deployer may be
+> left with no key at all; the admin profile is the way back in.
+
+The trade accepted in exchange: removing a key's construct from the stack now *deletes that key*,
+breaking anything still holding it, where a hand-minted key would have survived untouched. That is
+the correct default — a credential this stack no longer describes should stop working — but it is a
+sharp edge worth knowing before deleting a user.
+
+### Why one secret and not eight
+
+Secrets Manager bills $0.40 per secret per month. Eight would be $3.20 against the ~$5/month this
+account is budgeted for ([ADR 20260802-aws-cost-guardrails](../architecture/decisions/20260802-aws-cost-guardrails.md)),
+which would make the budget's 50% and 80% notifications fire every month on fixed cost. One secret is
+$0.40 and rounds to nothing. What that costs is granularity: whoever can read it reads all of it, and
+there is no per-credential read scope — a distinction that is theoretical on a single-operator
+account, where the same person holds account admin either way.
+
+### Who can read it
+
+**No *additional* principal is granted read**, and it is worth being exact about what that buys,
+because the comfortable version of this sentence is wrong.
+
+**The read-only MCP users are genuinely bounded.** They carry an explicit `Deny` on
+`secretsmanager:GetSecretValue` for every secret, and a Deny beats any Allow — so the guarantee holds
+regardless of what AWS adds to the managed `ReadOnlyAccess` policy next.
+
+**`cdk-deployer` is not bounded, and it would be dishonest to say otherwise.** It can assume
+`cdk-<qualifier>-deploy-role`; that role passes a CloudFormation execution role; and a plain
+`cdk bootstrap` — which is what `pnpm infra:bootstrap` runs — leaves that execution role at
+`AdministratorAccess`, because `--cloudformation-execution-policies` defaults to empty and the
+bootstrap template's own default applies. So a holder of the deployer key can deploy a one-resource
+stack that reads this secret. Withholding `grantRead` costs them a step, not the capability.
+
+Two consequences follow, and both are load-bearing:
+
+- **The deployer key is the one that yields all the others.** That is why it is marked
+  workstation-only in the document and in [`.env.example`](../../.env.example), and why it must never
+  reach Vercel or CI.
+- **If you want it actually bounded, that happens at bootstrap**, with scoped
+  `--cloudformation-execution-policies`. It is a manual action, noted on the `cdk-bootstrap` entry in
+  [manual-actions.md](manual-actions.md), and it is not done today.
+
+Read the secret with the administrator profile, or in the console signed in as the account owner. It
+is a hand-off point for a human, so a human's credential is the one that opens it.
+
+> [!NOTE]
+> Nothing reads this secret at runtime. The app never calls Secrets Manager; it reads environment
+> variables that a person put there. The IAM keys are the system of record and this is a copy of them
+> for you to move — which is also why the secret carries `RemovalPolicy.DESTROY`: once the stack is
+> gone its users and keys are gone too, and a retained document of dead credentials that still looks
+> live is worse than no document. CloudFormation deletes secrets with `ForceDeleteWithoutRecovery`,
+> so there is no 7–30 day window blocking a redeploy under the same name.

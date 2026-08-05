@@ -86,8 +86,10 @@ it down) for each of:
   approval isn't the pilot's blocker. Decide the platform-fee posture as part of H-12 (recommend:
   **no platform fee at launch** — "the shop keeps its own Stripe account and its own money" is a
   trust argument against FareHarbor-style 6%-of-volume platforms).
-- **AWS SES:** request SES production access, verify `ses.dive.day`'s DKIM records, mint the
-  `diveday-ses-sender` credentials, and set `SES_FROM_EMAIL` on a real shop-facing identity (e.g.
+- **AWS SES:** request SES production access, verify `ses.dive.day`'s DKIM records, place the
+  `diveday-ses-sender` credentials from the credentials secret (`cdk deploy` mints them now — see
+  [manual-actions.md](../engineering/manual-actions.md)), and set `SES_FROM_EMAIL` on a real
+  shop-facing identity (e.g.
   `bookings@…`). Write the two-paragraph consent/copy policy H-09 asks for (transactional-only
   today; reminders are courtesy; no marketing sends without explicit opt-in). See
   [docs/engineering/ses-email-runbook.md](../engineering/ses-email-runbook.md).

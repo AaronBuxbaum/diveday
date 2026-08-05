@@ -3,6 +3,14 @@
 - **Status:** Accepted
 - **Date:** 2026-08-03
 
+> [!NOTE]
+> The decision stands; one name in it has moved. The single `ManualActionItems` output this record
+> describes was replaced by the per-category `ManualActions*` outputs and the generated
+> [manual-actions.md](../../engineering/manual-actions.md) in
+> [20260805-cdk-minted-credentials-and-manual-actions](20260805-cdk-minted-credentials-and-manual-actions.md).
+> The subscription check is still printed on every deploy; it is the `verify-webhook-subscriptions`
+> entry rather than "item 5".
+
 ## Context
 
 Two SNS topics in `infra/lib/infra-stack.ts` carried delivery outcomes that nothing was subscribed

@@ -127,14 +127,16 @@ decide — that belongs to whoever owns `src/lib/export.ts` next, and it is wort
 | Uploader | IAM user `diveday-backup-uploader`, `s3:PutObject` + `s3:AbortMultipartUpload` only — no read, no delete, no list |
 | Key convention | `exports/<YYYY-MM-DD>/<shop-slug>.zip` — date first so a whole run is one prefix |
 
-Mint the uploader's access key once, out of band, and store it in the scheduler's secret settings —
-never the repo:
+The uploader's access key is minted by `cdk deploy` and delivered in the credentials secret
+([§10 of the infrastructure runbook](infrastructure-runbook.md#10-the-credentials-secret)), in its
+"Not .env values" section — because the `TODO(owner)` below has not been answered, so it has no
+destination yet. Leave it there until it does, then move it into that runner's secret settings —
+never the repo.
 
 ```bash
-aws iam create-access-key --user-name diveday-backup-uploader
+AWS_PROFILE=diveday-admin aws secretsmanager get-secret-value \
+  --secret-id diveday/env --query SecretString --output text
 ```
-
-The `BackupUploaderAccessKeyInstructions` stack output prints this same command.
 
 > `TODO(owner)` — **Decide what runs the export on a schedule and wire it up.** The seam and the
 > destination exist; nothing calls one from the other yet. The two candidates are a new authenticated
