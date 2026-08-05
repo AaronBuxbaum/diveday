@@ -14,6 +14,7 @@ import { requestLocale } from "@/i18n/request";
 import { eventSource } from "@/lib/funnel";
 import { sharedLinkCard } from "@/lib/marketing";
 import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH, type OnboardErrorCode } from "@/lib/onboarding";
+import { UPGRADE_EMAIL } from "@/lib/platform-mail";
 import {
   type CuratedTimeZone,
   type CuratedTimezoneGroupKey,
@@ -183,8 +184,10 @@ export default async function OnboardPage({
   /**
    * The reassurance a shop owner needs at the moment they're being asked for a
    * password by a vendor they'd never heard of an hour ago. Every line is a
-   * shipped, checkable fact — no card field exists, the export button works on
-   * day one, and the founder-direct line is an authorized founding-shop term.
+   * shipped, checkable fact — no card field exists, the export button works
+   * on day one, and email support reaches a real person (not a founder-direct
+   * response-time promise — see the product-owner decision in
+   * docs/product/human-decisions.md).
    */
   const reassurance = [
     {
@@ -196,8 +199,8 @@ export default async function OnboardPage({
       body: t("account.onboard.reassurance.yourRecords.body"),
     },
     {
-      lead: t("account.onboard.reassurance.founderLine.lead"),
-      body: t("account.onboard.reassurance.founderLine.body"),
+      lead: t("account.onboard.reassurance.supportLine.lead"),
+      body: t("account.onboard.reassurance.supportLine.body"),
     },
   ] as const;
 
@@ -375,7 +378,9 @@ export default async function OnboardPage({
             >
               {t("account.onboard.submit")}
             </SubmitButton>
-            <p className="text-center text-xs text-muted">{t("account.onboard.trialMeaning")}</p>
+            <p className="text-center text-xs text-muted">
+              {t("account.onboard.trialMeaning", { email: UPGRADE_EMAIL })}
+            </p>
           </form>
 
           <p className="text-center text-sm text-muted mt-6">

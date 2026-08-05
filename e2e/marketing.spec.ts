@@ -65,13 +65,12 @@ test("the homepage answers price and offers the founder before the footer", asyn
     "/pricing",
   );
 
-  // The founder-contact band: a hesitant buyer who won't self-serve a demo or
-  // trial gets a visible human path — not just an unlabeled address in the
-  // footer.
+  // The contact band: a hesitant buyer who won't self-serve a demo or trial
+  // gets a visible human path — not just an unlabeled address in the footer.
   await expect(page.getByRole("heading", { name: "Rather ask a question first?" })).toBeVisible();
-  await expect(page.getByRole("link", { name: /Email aaron@dive\.day/ })).toHaveAttribute(
+  await expect(page.getByRole("link", { name: /Email support@dive\.day/ })).toHaveAttribute(
     "href",
-    "mailto:aaron@dive.day",
+    "mailto:support@dive.day",
   );
 });
 
@@ -194,7 +193,7 @@ test("the sign-up form answers the hesitation it creates", async ({ page }) => {
   // reassurances sit with the form, not on a page the visitor already left.
   await expect(page.getByText("No card, no setup fee.")).toBeVisible();
   await expect(page.getByText("Your records leave with you.")).toBeVisible();
-  await expect(page.getByText("You get a founder-direct line.")).toBeVisible();
+  await expect(page.getByText("Real support, one email away.")).toBeVisible();
   await expect(page.getByRole("button", { name: "Create shop & start trial" })).toBeVisible();
 
   // An unrecognized tag is bucketed rather than echoed into the funnel.
@@ -211,12 +210,12 @@ test("the about page says who is behind DiveDay and what it won't pretend", asyn
   // The hero has to survive the rulebook's own paste test: "Built by divers,
   // for divers." was true of every dive-adjacent vendor on earth — a rival
   // could paste it unchanged — which made it an eyebrow wearing a headline's
-  // clothes. This one names the thing only DiveDay can say —
-  // one person writes it and answers the mail — and the page proves it two
-  // sections down with a real address.
+  // clothes. This one names the thing only DiveDay can say — one person
+  // owns every line running on this boat — and the page proves it two
+  // sections down in the founder bio.
   await expect(
     page.getByRole("heading", {
-      name: "The person who writes the code answers your email.",
+      name: "One person owns every line of code running on this boat.",
     }),
   ).toBeVisible();
   await expect(page.getByText(/one of them owns it, writes every line of it/)).toBeVisible();

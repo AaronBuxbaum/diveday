@@ -32,8 +32,11 @@ are scoped to her Tier 3 work plus the Tier 2 items she signs off on, not the wh
   pilots run on the provisional waiver flow with a signed risk-acknowledgment clause in the pilot
   agreement, rather than waiting for H-01–H-03 to close — see
   [legal-engagement-scope.md](legal-engagement-scope.md#tier-1--generalist-no-specialist-needed).
-- The published founding-cohort claims (two-year price lock, founder-direct support) are binding
-  commercial commitments that need contract language behind them (H-12's open contract flow).
+- The published founding-cohort claim needing contract language (H-12's open contract flow) is the
+  **two-year price lock**. The support promise it used to sit beside — "founder-direct support" —
+  was retired 2026-08-05 (Aaron Buxbaum, [human-decisions.md](../human-decisions.md#decision-register),
+  H-12/H-26): support is now a plain `support@dive.day` inbox with no personal-response or
+  response-time commitment, so it carries no binding-commercial-term weight for counsel to review.
 
 ## Who to talk to
 
@@ -95,8 +98,9 @@ Everything already exists; the packet is links and screenshots, not new writing:
 - Screenshots or a live walkthrough of the signing flow (`/waivers/[token]`), the medical-flag
   blocker a staff member sees, and the export bundle (records leave with the shop —
   [full-shop export ADR](../../architecture/decisions/20260722-full-shop-export.md)).
-- The published claims that carry legal weight: two-year price lock, founder-direct support,
-  "cancel anytime with the export button" (see [marketing.md](../marketing.md)'s claims policy).
+- The published claim that carries legal weight: two-year price lock, "cancel anytime with the
+  export button" (see [marketing.md](../marketing.md)'s claims policy) — founder-direct support was
+  retired 2026-08-05 and no longer needs sign-off as a commercial term.
 
 ## Question list for the liability specialist
 

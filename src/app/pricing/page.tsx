@@ -15,7 +15,7 @@ import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
 import { trialHref } from "@/lib/funnel";
 import { earlyAccessPrice, fullShopExport, sharedLinkCard } from "@/lib/marketing";
 import { getMigrationGuide, MIGRATION_GUIDES } from "@/lib/migration-guides";
-import { FOUNDER_EMAIL } from "@/lib/platform-mail";
+import { SUPPORT_EMAIL, UPGRADE_EMAIL } from "@/lib/platform-mail";
 
 // `instant = true`: navigating here paints immediately. Every request-scoped
 // read sits behind a `<Suspense>` boundary — this segment's `loading.tsx`, or
@@ -121,7 +121,7 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
     },
     {
       question: t("marketing.pricing.faq.trialMeaning.question"),
-      answer: t("marketing.pricing.faq.trialMeaning.answer"),
+      answer: t("marketing.pricing.faq.trialMeaning.answer", { email: UPGRADE_EMAIL }),
     },
     {
       question: t("marketing.pricing.faq.seeBefore.question"),
@@ -156,7 +156,7 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
     },
     {
       question: t("marketing.pricing.faq.multipleLocations.question"),
-      answer: t("marketing.pricing.faq.multipleLocations.answer"),
+      answer: t("marketing.pricing.faq.multipleLocations.answer", { email: SUPPORT_EMAIL }),
     },
   ] as const;
 
@@ -336,10 +336,10 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
               {t("marketing.pricing.stillQuestion")}
             </p>
             <a
-              href={`mailto:${FOUNDER_EMAIL}`}
+              href={`mailto:${SUPPORT_EMAIL}`}
               className={buttonClass({ className: "cursor-pointer" })}
             >
-              {t("marketing.pricing.emailCta", { email: FOUNDER_EMAIL })}
+              {t("marketing.pricing.emailCta", { email: SUPPORT_EMAIL })}
             </a>
           </div>
         </section>

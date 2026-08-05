@@ -178,8 +178,12 @@ at your laptop.
 ## DiveDay's own addresses
 
 Not built into the app, on purpose — `aaron@dive.day` is a hosted mailbox and `legal@dive.day`
-forwards to the lawyer. Attachments, threading, search, replying, and mobile all come from the mail
-provider rather than from us.
+forwards to the lawyer. `support@dive.day` (general contact) and `onboarding@dive.day` (trial →
+paid upgrades) are the two addresses the app itself renders on public and staff surfaces
+(`src/lib/platform-mail.ts`) — both route to the same small team as `aaron@`, just without a named
+individual's address attached to a support promise (see the product-owner decision retiring
+founder-direct support in docs/product/human-decisions.md). Attachments, threading, search,
+replying, and mobile all come from the mail provider rather than from us.
 
 **MX records name one mail host.** `dive.day`'s MX must point at the mail provider. Do not also
 configure inbound receiving on `ses.dive.day` — mail delivery and the transactional-sending identity
@@ -192,7 +196,9 @@ Setup, once:
 3. Create `legal@dive.day` as a **group with the lawyer's address as an external member**, not a raw
    forwarding rule — a group survives adding a second reader and handles forwarded-mail
    authentication better.
-4. Send a test message with an attachment to each and confirm it arrives intact.
+4. Create `support@dive.day` and `onboarding@dive.day` the same way as `legal@` — groups, not raw
+   forwards — so either can pick up a second reader later without a DNS/mail-provider change.
+5. Send a test message with an attachment to each and confirm it arrives intact.
 
 Mail forwarded to an external address fails SPF alignment at the far end, because the forwarding hop
 rewrites the envelope sender. ARC signing mitigates it. If the lawyer's provider is strict about
