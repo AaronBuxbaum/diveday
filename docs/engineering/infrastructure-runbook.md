@@ -5,10 +5,11 @@ How to provision and manage AWS infrastructure for DiveDay using the AWS CDK (Cl
 All infrastructure is defined as code under the [infra/](../../infra/) directory in TypeScript.
 
 > [!TIP]
-> Looking for the checklist rather than the reasoning? [manual-actions.md](manual-actions.md) is
-> every step `cdk deploy` cannot perform, generated from the stack itself and printed as stack
-> outputs after each deploy. This file explains *why* each one resists automation; that one tells
-> you what to run and where the result goes.
+> `pnpm infra:deploy` is the guided path: it creates the env files, then asks whether to update
+> Vercel, GitHub, and SES DNS. [manual-actions.md](manual-actions.md) is intentionally short: only
+> account approvals that no CLI can perform remain there.
+> Before CDK runs, the wrappers verify their selected AWS CLI profile and open `aws login` when the
+> console session is absent or expired.
 
 ---
 
@@ -33,10 +34,12 @@ We use AWS CDK to model, deploy, and update our cloud resources. Currently, the 
 - A versioned, private, retained S3 bucket as the destination for scheduled database export bundles — see [§8](#8-backup-bucket) below.
 - HTTPS subscriptions wiring both SNS topics to the app's webhook routes — see [§9](#9-webhook-subscriptions) below. Created on every deploy, no flag required.
 - An access key for every one of its eight IAM users, delivered through one Secrets Manager secret
-  holding a filled-in `.env.example` — see [§10](#10-the-credentials-secret) below.
-- `ManualActions*` outputs listing every step CDK cannot or deliberately does not perform, printed
-  after each deploy so the remainder is visible rather than remembered. Same content as
-  [manual-actions.md](manual-actions.md), generated from the same registry.
+  holding a filled-in application `.env.example` plus named-profile blocks for workstation-only
+  credentials, and one stable generated seed that derives the three app secrets — see
+  [§10](#10-the-credentials-secret) below.
+- A post-deploy wizard that offers Vercel env/deploy, GitHub secret, and Vercel DNS handoffs one
+  yes/no question at a time. The short [manual-actions.md](manual-actions.md) contains only
+  human account approvals.
 
 ---
 
@@ -51,27 +54,27 @@ Two credentials are in play and they are not interchangeable:
 
 | | What it is | What it is for |
 | --- | --- | --- |
-| **Administrator profile** | An IAM identity that predates this stack, configured by hand | Bootstrapping the account, and reading the credentials secret ([§10](#10-the-credentials-secret)). Nothing else. |
+| **Administrator profile** | An IAM identity that predates this stack, authenticated with `aws login` | Bootstrapping the account, the first deploy, and reading the credentials secret ([§10](#10-the-credentials-secret)). |
 | **`cdk-deployer`** | Created *by* this stack; holds `sts:AssumeRole` on the four bootstrap roles and nothing more | Every subsequent `pnpm infra:deploy`. Not granted read on the credentials secret — but it can reach it anyway through the bootstrap roles, so treat it as an admin credential and keep it on your workstation only. See [§10](#10-the-credentials-secret). |
 
 ### Option A: Local AWS Profile (Recommended)
-```bash
-aws configure --profile diveday-admin
-```
-Enter your Administrator Access Key ID, Secret Access Key, Default region name (e.g., `us-east-1`), and Default output format (`json`).
-
-Once the stack has been deployed once, the `cdk-deployer` credentials arrive in the credentials
-secret and belong in `.env.local`'s `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY`, which every
-`pnpm infra:*` script loads through `dotenv -c`. Keep the admin profile for the two jobs in the table
-above and use `AWS_PROFILE=diveday-admin` when you need it.
-
-### Option B: Session Environment Variables
-Alternatively, you can export credentials in your current terminal session:
-```bash
-export AWS_ACCESS_KEY_ID="your-access-key-id"
-export AWS_SECRET_ACCESS_KEY="your-secret-access-key"
-export AWS_DEFAULT_REGION="us-east-1"
-```
+Every first-run `pnpm infra:*` command explicitly targets `diveday-admin`, then verifies it with STS
+and automatically opens the browser `aws login --profile diveday-admin` flow. That creates the profile
+when it does not yet exist and refreshes it when the session expires. Once the stack has been deployed
+once, answer yes to the profile prompt after `pnpm infra:deploy`.
+Even when an older raw deploy key can complete the CDK deploy, the post-deploy environment sync repeats
+that administrator-profile check before it reads `diveday/env`.
+It writes the generated identities as named `~/.aws/credentials` profiles — including
+`diveday-deployer`, `reg-suit-bot`, service identities, and the local MCP reader — while preserving
+unrelated profiles. It also writes the `diveday-admin` profile's `us-east-1` region to
+`~/.aws/config`; the administrator *credential* still predates the stack and must be configured by
+you. Before the generated deployer profile exists, the infrastructure commands select
+`diveday-admin` whether or not its profile block has been written yet; afterwards `pnpm infra:deploy`,
+`pnpm infra:synth`, and `pnpm infra:diff` select `diveday-deployer` by default. No generic deployment
+credential belongs in `.env.local`.
+If the generated `diveday-deployer` profile cannot call STS, the wrappers automatically switch to
+`diveday-admin` and open that profile's browser login rather than trying to authenticate as the
+limited deployer identity.
 
 ---
 
@@ -79,14 +82,18 @@ export AWS_DEFAULT_REGION="us-east-1"
 
 AWS CDK requires one-time bootstrapping of an AWS environment (combination of account and region) before you can deploy any stacks. This process provisions resources CDK needs to operate (like an S3 bucket for staging assets).
 
-To bootstrap the default account/region:
+Bootstrap the intended administrator profile:
 ```bash
 pnpm infra:bootstrap
 ```
 
-> [!NOTE]
-> If your environment requires an explicit account pin, set the `AWS_ACCOUNT_ID` environment variable:
-> `AWS_ACCOUNT_ID=123456789012 pnpm infra:bootstrap`
+The wrapper opens `aws login` if necessary, resolves the signed-in profile's AWS account with STS,
+and requires you to type that 12-digit id before it changes anything. In a non-interactive terminal, pass
+`--confirm-account <12-digit-account-id>`. It then uses the S3 Control API to disable
+the four account-level Block Public Access flags before it runs `cdk bootstrap`. This permits the
+public visual-report bucket; it does not make any other bucket public, and an AWS Organizations
+policy can still reject the change. It deliberately does **not** require a root-user credential:
+use an administrator identity in the intended root account, not a programmatic root key.
 
 ---
 
@@ -111,6 +118,13 @@ To deploy the stack to AWS:
 ```bash
 pnpm infra:deploy
 ```
+
+After CloudFormation succeeds, the command writes `.env.local`, `.env.vercel`, and `.env.github`,
+then asks whether to update generated AWS CLI profiles, import Vercel Production variables, deploy
+Vercel, update GitHub visual-test secrets, and add SES DNS records through Vercel. Press Enter or
+`n` to skip any one. In CI, or with `--no-wizard`, it only creates the files. SES DNS defaults to the `dive.day` Vercel zone; set
+`VERCEL_DNS_ZONE=example.com` for a different authoritative zone. The Vercel CLI is pinned in this
+repository's dev dependencies and is invoked with `pnpm exec vercel`, never downloaded ad hoc.
 
 > [!IMPORTANT]
 > `infra:deploy` is a plain `cdk deploy`, so CDK's default `--require-approval broadening` applies:
@@ -160,10 +174,10 @@ A deploy prints two kinds of output, and the split is deliberate.
 the keys this deploy revoked because an identity held more than one, or `none` in the steady state
 (see [§10](#10-the-credentials-secret)).
 
-**The manual-action checklist** — the `ManualActions*` keys, one per category and numbered so they
-sort in reading order, splitting into `…Part1`/`…Part2` when a category outgrows CloudFormation's
-4096-byte output value (Credentials does today). Same content as
-[manual-actions.md](manual-actions.md).
+**The post-deploy handoff** — `PostDeployWizard` points to `pnpm infra:deploy`, which asks only
+whether to take the external actions it can execute: Vercel variables, Vercel production deploy,
+GitHub visual-test secrets, and SES DNS. [manual-actions.md](manual-actions.md) now contains only
+the five account approvals that no CLI can complete.
 
 **No output carries key material.** `cloudformation:DescribeStacks` resolves outputs to plaintext,
 and both the `cdk-deployer` user and the two read-only MCP users hold that permission — so an output
@@ -212,7 +226,7 @@ Anomaly Detection does**: it depends on Cost Explorer, which is a one-time conso
 API, and reports nothing until it has accumulated spend history. That is a prerequisite in
 [manual-actions.md](manual-actions.md), not something the stack handles.
 
-**What this account costs when idle:** one Secrets Manager secret, $0.40/month
+**What this account costs when idle:** two Secrets Manager secrets, $0.80/month
 ([§10](#10-the-credentials-secret)). Everything else here is per-use or free at this volume. That is
 the number the `monthlyBudgetLimit` default of `5` is set against — if you add secrets, move the
 limit with them, or the 50% and 80% notifications start firing every month on fixed cost and the
@@ -390,46 +404,57 @@ handshake. Redeploying alone won't fix it — CloudFormation still believes the 
 
 Every one of this stack's eight IAM users gets an access key minted by CloudFormation, and all eight
 are delivered through **one** Secrets Manager secret, `diveday/env`, whose value is
-[`.env.example`](../../.env.example) with the values filled in.
+[`.env.example`](../../.env.example) with the values filled in. A second secret,
+`diveday/app-secret-seed`, is generated once by CloudFormation using the AWS-managed
+Secrets Manager KMS key. The first document contains that seed, and
+`scripts/distribute-env.mjs` uses HKDF labels to derive separate, stable values for
+`AUTH_SECRET`, `SECRET_ENCRYPTION_KEY`, and `CRON_SECRET` before any target file is written.
+After every successful `pnpm infra:deploy`, the wrapper reads `diveday/env` using the local
+`diveday-admin` profile and automatically writes `.env.local`, `.env.vercel`, and `.env.github`.
+Set `INFRA_ENV_SYNC_PROFILE=<profile-name>` when the administrator profile has a different name.
+The post-deploy read defaults to `us-east-1` if that profile has no region configured.
 
-```bash
-AWS_PROFILE=diveday-admin aws secretsmanager get-secret-value \
-  --secret-id diveday/env --query SecretString --output text
-```
-
-**The whole document goes in `.env.local`** — that is the shape it is built for. Everywhere else
-takes a subset, and the document's own header says which:
+**The resulting document supplies `.env.local` and named AWS CLI profiles.** `dotenv -c` loads the
+app configuration through the usual local cascade; the helper leaves generic deployer credentials
+blank there and the wizard can write them to `~/.aws/credentials`. It preserves externally managed
+choices — including Stripe values injected from 1Password — before creating the complete platform
+files:
 
 | Destination | What to take |
 | --- | --- |
-| `.env.local` | All of it. Paste over the whole file, then fill the blanks the stack cannot know. |
-| Vercel (*Import .env*) | Only the `SES_*`, `SNS_*`, `SMS_*`, `PLACES_*` lines. |
-| GitHub Actions secrets | The four `REG_SUIT_*` lines. |
+| `.env.local` | App configuration and derived app secrets. Fill or inject remaining provider-specific values, including Stripe from 1Password. |
+| `~/.aws/credentials` | Generated profiles, written only when the wizard prompt is accepted. Existing unrelated profiles stay intact; `diveday-admin` receives only its `us-east-1` config entry because this stack never owns its credential. |
+| Vercel | `.env.vercel`, then `node scripts/import-vercel-env.mjs .env.vercel production`. It excludes workstation/CI values and includes nonblank Stripe values preserved from 1Password. |
+| GitHub Actions secrets | `.env.github`, then `gh secret set --env-file .env.github`. |
 | `~/.aws/credentials`, Claude Code cloud env | The "Not .env values" section at the bottom. |
 
 > [!WARNING]
-> **Never put `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` in Vercel or any deployed environment.**
-> Those are the `cdk-deployer` key. See [who can read it](#who-can-read-it) — it is administrator-
+> **Never put the `cdk-deployer` key in Vercel or any deployed environment.**
+> It is delivered only in the named `diveday-deployer` AWS profile block. See [who can read it](#who-can-read-it) — it is administrator-
 > equivalent on this account, the app has no use for it, and a Vercel environment variable is
 > readable by every project member and reachable from any compromised dependency in the server
 > bundle. It is the one key that yields all the others.
 
-The credentials that do not belong in a dotenv file — the two read-only MCP users, the backup
-uploader — ride at the bottom in a commented section, each under the destination it belongs to, so
-pasting the whole document into `.env.local` stays safe.
+The credentials that do not belong in a dotenv file — `cdk-deployer`, the two read-only MCP users,
+and the backup uploader — ride at the bottom in a commented section, each under the destination it
+belongs to, so pasting the whole document into `.env.local` stays safe.
 
-### Why the document is `.env.example`
+### Why the application section is `.env.example`
 
-Because the destination format should be the hand-off format. A bespoke JSON shape means transcribing
-field by field and inventing a mapping from key names to variable names; `.env.example` already *is*
-this project's registry of what gets configured. The document is generated from that file at synth
-time, so:
+Because the application destination format should be the hand-off format. A bespoke JSON shape means
+transcribing field by field and inventing a mapping from key names to variable names; `.env.example`
+already *is* this project's registry of app configuration. The document is generated from that file
+at synth time, so:
 
 - a variable renamed in `.env.example` renames itself in the secret on the next deploy;
 - a value the stack claims to supply for a key `.env.example` no longer declares **fails the synth**
   rather than silently vanishing;
 - a new `*_AWS_ACCESS_KEY_ID`-shaped variable added to `.env.example` and not filled by the stack
   fails `infra/lib/manual-actions.test.ts`.
+
+The generic `cdk-deployer` credential is deliberately outside that application section, in a
+commented `diveday-deployer` profile block. It is written to `~/.aws/credentials` by the wizard,
+never copied to `.env.local`, and does not make `.env.example` an AWS-login template.
 
 ### Why the keys are minted by CloudFormation now
 
@@ -502,14 +527,15 @@ breaking anything still holding it, where a hand-minted key would have survived 
 the correct default — a credential this stack no longer describes should stop working — but it is a
 sharp edge worth knowing before deleting a user.
 
-### Why one secret and not eight
+### Why two secrets, not ten
 
-Secrets Manager bills $0.40 per secret per month. Eight would be $3.20 against the ~$5/month this
-account is budgeted for ([ADR 20260802-aws-cost-guardrails](../architecture/decisions/20260802-aws-cost-guardrails.md)),
-which would make the budget's 50% and 80% notifications fire every month on fixed cost. One secret is
-$0.40 and rounds to nothing. What that costs is granularity: whoever can read it reads all of it, and
-there is no per-credential read scope — a distinction that is theoretical on a single-operator
-account, where the same person holds account admin either way.
+Secrets Manager bills $0.40 per secret per month. Eight credential secrets plus three app-secret
+secrets would be $4.40 against the ~$5/month this account is budgeted for
+([ADR 20260802-aws-cost-guardrails](../architecture/decisions/20260802-aws-cost-guardrails.md)),
+which would make the budget's 50% and 80% notifications permanent noise. Two secrets cost $0.80:
+one hand-off document and one stable root from which HKDF derives three independent app values. What
+that costs is granularity: whoever can read the hand-off document reads all of it, a distinction that
+is theoretical on this single-operator account.
 
 ### Who can read it
 
