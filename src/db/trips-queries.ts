@@ -15,6 +15,11 @@ import {
   sql,
 } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
+import {
+  summarizeTripDiveSites,
+  type TripDiveSiteRef,
+  type TripDiveSiteSummary,
+} from "@/lib/trip-dives";
 import type { AppDb, DbExecutor } from "./client";
 import { decodeCursor, encodeCursor } from "./cursor";
 import { offsetPage } from "./paging";
@@ -25,6 +30,7 @@ import {
   people,
   personRoles,
   tripAssignments,
+  tripDives,
   tripScheduleDays,
   trips,
 } from "./schema";
@@ -328,6 +334,54 @@ export async function offsetUpcomingTripsWithCounts(
     pageSize: paged.pageSize,
     total: paged.total,
   };
+}
+
+/**
+ * Where each of these departures actually goes, in one query.
+ *
+ * The list readers above join `dive_sites` on `trips.dive_site_id`, which is
+ * only dive one's site copied onto the trip row — enough for the forecast point
+ * and the calendar feed's location, never enough to *tell a diver where the
+ * boat goes*. A two-site day named one site; a day whose undecided tank was the
+ * first one named none. This reads the dives themselves, so a card can say both
+ * how many sites the trip visits and how many tanks are still open.
+ *
+ * Shop ownership is proven on the query — through the trip and again on the
+ * site — rather than assumed from the trip's pointer (the CR-007 house rule).
+ * A trip with no dive rows is simply absent from the map.
+ */
+export async function tripDiveSiteSummaries(
+  db: DbExecutor,
+  shopId: string,
+  tripIds: string[],
+): Promise<Map<string, TripDiveSiteSummary>> {
+  if (tripIds.length === 0) return new Map();
+  const rows = await db
+    .select({
+      tripId: tripDives.tripId,
+      diveNumber: tripDives.diveNumber,
+      siteId: diveSites.id,
+      siteName: diveSites.name,
+    })
+    .from(tripDives)
+    .innerJoin(trips, eq(trips.id, tripDives.tripId))
+    .leftJoin(
+      diveSites,
+      and(eq(diveSites.id, tripDives.diveSiteId), eq(diveSites.shopId, shopId)),
+    )
+    .where(and(inArray(tripDives.tripId, tripIds), eq(trips.shopId, shopId)))
+    .orderBy(asc(tripDives.tripId), asc(tripDives.diveNumber));
+
+  const byTrip = new Map<string, TripDiveSiteRef[]>();
+  for (const row of rows) {
+    const dives = byTrip.get(row.tripId) ?? [];
+    dives.push({
+      diveNumber: row.diveNumber,
+      site: row.siteId && row.siteName ? { id: row.siteId, name: row.siteName } : null,
+    });
+    byTrip.set(row.tripId, dives);
+  }
+  return new Map([...byTrip].map(([tripId, dives]) => [tripId, summarizeTripDiveSites(dives)]));
 }
 
 /**

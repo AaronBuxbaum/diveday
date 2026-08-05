@@ -6,9 +6,13 @@ describe("seed audit probe", () => {
   it("profiles the seeded shop", async () => {
     const { db } = await seededShopContext({ history: true });
     const q = async (label: string, text: string) => {
-      const res = await db.execute(sql.raw(text));
-      const rows = (Array.isArray(res) ? res : (res.rows ?? [])) as Record<string, unknown>[];
-      return `--- ${label}\n${rows.map((r) => JSON.stringify(r)).join("\n")}`;
+      try {
+        const res = await db.execute(sql.raw(text));
+        const rows = (Array.isArray(res) ? res : (res.rows ?? [])) as Record<string, unknown>[];
+        return `--- ${label}\n${rows.map((r) => JSON.stringify(r)).join("\n")}`;
+      } catch (e) {
+        return `--- ${label}\nERR ${(e as Error).message.slice(0, 120)}`;
+      }
     };
     const out = [
       await q("order status", `select status, count(*)::int n from orders group by 1 order by 1`),
@@ -42,7 +46,7 @@ describe("seed audit probe", () => {
       ),
       await q(
         "notification deliveries",
-        `select channel, status, count(*)::int n from notification_deliveries group by 1,2 order by 1,2`,
+        `select * from notification_deliveries limit 4`,
       ),
       await q(
         "trips by status",

@@ -59,6 +59,49 @@ export function bookingMoneyStatusKey(
   return null;
 }
 
+/**
+ * **Seats with money still owed.**
+ *
+ * A booking counts when something has been raised against it and is not
+ * settled: an order still `open`, or — with no order — a booking payment row
+ * still sitting at `unpaid`. A seat nobody has billed at all is deliberately
+ * not counted: nothing is owed until something is raised, and calling an
+ * un-invoiced booking "unpaid" would put a permanent red mark on every shop
+ * that settles at the counter. Same `bookingMoney` reading the rows themselves
+ * use, so the summary at the top and the rows below can never disagree.
+ *
+ * Cancelled seats are excluded — a refund or a void is a different fact, and
+ * neither is somebody standing at the counter owing money.
+ */
+export function unpaidBookingCount(diver: DiverProfile): number {
+  return diver.bookings.filter(({ booking }) => {
+    if (booking.status === "cancelled") return false;
+    const money = bookingMoney(diver, booking.id);
+    if (money.order) return money.order.order.status === "open";
+    return money.payment?.payment.status === "unpaid";
+  }).length;
+}
+
+/**
+ * Certification cards a staffer still has to act on, counted the same way the
+ * roster's "Needs attention" view and the Cards stat card both mean it: a card
+ * awaiting review, plus an imported specialty or nitrox card whose gate stays
+ * shut until somebody attests they have seen it (H-24). An imported *level*
+ * card is not counted — it cleared readiness on arrival, so its confirm is a
+ * nudge on the card itself, not an open job.
+ */
+export function cardsNeedingLookCount(diver: DiverProfile): number {
+  return (
+    diver.certifications.filter((card) => card.status === "pending").length +
+    diver.specialtyCertifications.filter(
+      (card) => card.status === "pending" || needsImportConfirm(card),
+    ).length +
+    diver.nitroxCertifications.filter(
+      (card) => card.status === "pending" || needsImportConfirm(card),
+    ).length
+  );
+}
+
 export const ORDER_STATUS_KEYS: Record<string, StaffMessageKey> = {
   open: "divers.shared.orderStatus.open",
   paid: "divers.shared.orderStatus.paid",

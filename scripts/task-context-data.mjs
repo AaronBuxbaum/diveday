@@ -186,7 +186,6 @@ export const areas = {
     code: [
       "src/db/schema.ts",
       "src/db/courses.ts",
-      "src/db/course-paths.ts",
       "src/db/course-templates.ts",
       "src/lib/courses.ts",
       "src/lib/course-inquiry.ts",

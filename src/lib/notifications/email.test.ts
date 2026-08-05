@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   bookingConfirmationEmail,
+  demoStartedAlertEmail,
   lastMinuteDealEmail,
   newAccountAlertEmail,
   passwordChangedEmail,
@@ -292,6 +293,45 @@ describe("newAccountAlertEmail", () => {
       shopSlug: "blue-mantis",
     });
     expect(email.html).not.toContain("<script>");
+  });
+});
+
+describe("demoStartedAlertEmail (docs ADR 20260805-demo-try-alerts)", () => {
+  it("names the role, the funnel source, and the throwaway shop", () => {
+    const email = demoStartedAlertEmail({
+      shopSlug: "coral-cove-divers-a1b2c3",
+      role: "captain",
+      source: "pricing",
+    });
+    expect(email.subject).toContain("captain");
+    expect(email.subject).toContain("pricing");
+    expect(email.text).toContain("/shop/coral-cove-divers-a1b2c3");
+    expect(email.html).toContain("captain");
+  });
+
+  it("carries nothing about the visitor — they never identified themselves", () => {
+    // The guard that matters on this kind: it is an outbound message about an
+    // anonymous person, so the body must be assemblable from the three fields
+    // and nothing else. A future field carrying an IP, a user agent, or the
+    // generated demo-owner email fails here first.
+    const email = demoStartedAlertEmail({
+      shopSlug: "coral-cove-divers-a1b2c3",
+      role: "owner",
+      source: "home-hero",
+    });
+    const body = `${email.subject}\n${email.text}\n${email.html}`;
+    expect(body).not.toMatch(/\d+\.\d+\.\d+\.\d+/);
+    expect(body).not.toContain("@");
+  });
+
+  it("escapes a slug or source that somehow arrived with markup in it", () => {
+    const email = demoStartedAlertEmail({
+      shopSlug: '<script>alert("x")</script>',
+      role: "diver",
+      source: '<img src=x onerror="1">',
+    });
+    expect(email.html).not.toContain("<script>");
+    expect(email.html).not.toContain("<img");
   });
 });
 

@@ -88,16 +88,8 @@
     "visual": ["public-courses"]
   },
   "/s/[shopSlug]/courses/[slug]": {
-    "e2e": ["course-paths.spec.ts", "courses.spec.ts", "gear-fit-and-age.spec.ts"],
+    "e2e": ["courses.spec.ts", "gear-fit-and-age.spec.ts"],
     "visual": ["course-page"]
-  },
-  "/s/[shopSlug]/courses/paths": {
-    "e2e": ["course-paths.spec.ts"],
-    "visual": ["public-course-paths"]
-  },
-  "/s/[shopSlug]/courses/paths/[pathSlug]": {
-    "e2e": ["course-paths.spec.ts"],
-    "visual": ["public-course-paths"]
   },
   "/s/[shopSlug]/trips/[id]": {
     "e2e": [
@@ -166,20 +158,12 @@
     "visual": ["close-out"]
   },
   "/shop/[shopSlug]/courses": {
-    "e2e": ["course-paths.spec.ts", "courses.spec.ts"],
+    "e2e": ["courses.spec.ts"],
     "visual": ["courses-list"]
   },
   "/shop/[shopSlug]/courses/[slug]/edit": {
     "e2e": ["courses.spec.ts", "search.spec.ts"],
     "visual": ["course-edit"]
-  },
-  "/shop/[shopSlug]/courses/paths": {
-    "e2e": ["course-paths.spec.ts"],
-    "visual": ["course-paths"]
-  },
-  "/shop/[shopSlug]/courses/paths/[pathSlug]": {
-    "e2e": ["course-paths.spec.ts"],
-    "visual": ["course-path-builder"]
   },
   "/shop/[shopSlug]/dive-sites": {
     "e2e": ["depth-and-age-surfaces.spec.ts", "dive-sites.spec.ts"],

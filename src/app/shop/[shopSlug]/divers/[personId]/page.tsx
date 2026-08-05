@@ -26,6 +26,7 @@ import { NoticeBanner } from "./_components/NoticeBanner";
 import { PaymentsSection } from "./_components/PaymentsSection";
 import { RemoveDiver } from "./_components/RemoveDiver";
 import { RentalFit } from "./_components/RentalFit";
+import { RestoreDiver } from "./_components/RestoreDiver";
 import { ShopHistory } from "./_components/ShopHistory";
 import { SpecialtyCards } from "./_components/SpecialtyCards";
 import { StatsSummary } from "./_components/StatsSummary";
@@ -71,8 +72,14 @@ export default async function DiverDetailPage({
   const shop = await getShopById(db, session.user.shopId);
   const locale = await requestLocale(shop?.defaultLocale);
   const t = staffTranslator(locale);
-  const diver = shop ? await getDiverProfile(db, shop.id, personId) : null;
+  // `includeRemoved`: a removed diver's record has to stay reachable, because
+  // this page is where the way back lives once the roster's undo toast is gone
+  // (`RestoreDiver`). It is a visibility affordance for staff and nothing more —
+  // removal still holds everywhere it matters, and this page drops the controls
+  // that would put a removed person back into shop work by the back door.
+  const diver = shop ? await getDiverProfile(db, shop.id, personId, { includeRemoved: true }) : null;
   if (!shop || !diver) notFound();
+  const removed = Boolean(diver.person.deletedAt);
   // Refunds and diver deletion are owner/manager only (H-14, ADR
   // 20260724-role-authorization); hide those controls from other staff. The
   // server actions re-check regardless — hiding is a courtesy, not the gate.
@@ -114,6 +121,14 @@ export default async function DiverDetailPage({
         // collapsed page.
         editOpen={edit === "1"}
       />
+      {removed ? (
+        <RestoreDiver
+          shopSlug={shopSlug}
+          personId={personId}
+          canRestore={canDelete}
+          locale={locale}
+        />
+      ) : null}
       {notice === "card-deleted" && undo && cardType ? (
         <UndoToast
           message={staffTranslator(locale)("divers.notices.cardRemovedToast")}
@@ -176,14 +191,20 @@ export default async function DiverDetailPage({
         />
       </DiverSection>
       <DiverSection id="trips">
-        <BookActivity
-          locale={locale}
-          diver={diver}
-          shop={shop}
-          upcoming={upcoming}
-          shopSlug={shopSlug}
-          personId={personId}
-        />
+        {/* No new bookings for a removed diver: seating one would walk them
+            straight back onto a manifest and a prep list without anybody
+            deciding to restore them. Their existing trips still show — removal
+            takes a person off the lists, it does not rewrite what happened. */}
+        {removed ? null : (
+          <BookActivity
+            locale={locale}
+            diver={diver}
+            shop={shop}
+            upcoming={upcoming}
+            shopSlug={shopSlug}
+            personId={personId}
+          />
+        )}
         <UpcomingTripsSection
           diver={diver}
           shop={shop}
