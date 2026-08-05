@@ -49,9 +49,8 @@ const linkClass =
  * Before this, `/s/<slug>/courses` was reachable only from inside itself: the
  * schedule never linked to it, so a diver who wanted to learn to dive had to
  * guess the URL. The header carries the whole public map instead of each page
- * growing its own cross-links. Certification paths stay one level down, linked
- * from the catalog that explains them — a third tab for a page most divers
- * never need is the row-of-equals principle 8 warns about.
+ * growing its own cross-links. Two tabs is the whole map: a third for a page
+ * most divers never need is the row-of-equals principle 8 warns about.
  *
  * Never rendered in `?embed=1` mode: the layout drops the entire header there
  * (ADR 20260726-schedule-embed), so an iframe on a shop's own site gets the

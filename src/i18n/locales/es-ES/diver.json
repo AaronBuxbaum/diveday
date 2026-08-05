@@ -938,6 +938,8 @@
   "switching": {
     "common": {
       "heroCtaNote": "La demo es un centro que funciona de verdad — sin registro, sin nada que importar y sin nada que deshacer.",
+      "bothWaysTitle": "La misma tabla, leída al revés.",
+      "bothWaysBody": "Todo lo de arriba es lo que llega. Lo que llega también es lo que sale: en Ajustes → Exportar datos recuperas todo tu centro en un ZIP de archivos claros y documentados — buceadores, reservas, exenciones registradas, historial de pagos — con la forma que el asistente de importación de otro sistema sabe leer. {terms}",
       "midCtaTitle": "¿Prefieres verlo a leerlo?",
       "midCtaBody": "Recorre la demo en vivo como propietario, capitán o buceador — con las mismas verificaciones de certificación, exenciones y pase de lista donde aterriza tu exportación."
     },
@@ -950,7 +952,7 @@
     "hub": {
       "eyebrow": "Cambiarte a DiveDay",
       "title": "La puerta se abre en ambos sentidos.",
-      "description": "La mayoría de los centros se quedan en una hoja de cálculo, o en un software que se les ha quedado pequeño, porque cambiar parece doloroso. Estas guías hacen el cambio concreto: cómo sacar a tus buceadores de lo que uses ahora, qué se traslada exactamente a DiveDay, y qué — honestamente — se queda atrás.",
+      "description": "La mayoría de los centros se quedan en una hoja de cálculo, o en un software que se les ha quedado pequeño, porque cambiar parece doloroso. Estas guías lo hacen concreto en ambas direcciones: cómo sacar a tus buceadores de lo que uses ahora, qué se traslada exactamente a DiveDay — y cómo todo tu centro se descarga de vuelta en un ZIP de archivos claros cuando lo pidas. Entrar cuesta un archivo y unos minutos. Salir cuesta un botón, tu primer día o el último.",
       "spreadsheetTitle": "Vienes de una hoja de cálculo",
       "spreadsheetDescription": "¿Llevas el día en una hoja de cálculo y una tablilla? Trae la hoja que ya llevas — y añade los trabajos que una lista no puede hacer, como verificar cada tarjeta antes de que salga el barco.",
       "readGuide": "Leer la guía →",
@@ -1692,8 +1694,8 @@
     },
     "about": {
       "eyebrow": "Quiénes somos",
-      "heroTitle": "Una sola persona posee cada línea de código que mueve este barco.",
-      "heroDescription": "Empezó con la mañana corriente del dueño de un centro de buceo: pizarra, portapapeles, una hoja de cálculo y unas cuantas aplicaciones que nunca se hablan entre sí. A DiveDay lo hacen buceadores; uno de ellos es el dueño y escribe cada línea. El resto de la página es la mitad incómoda: lo que no vamos a fingir y cómo te llevas tus registros de vuelta.",
+      "heroTitle": "Lo bastante pequeño para responderte. Construido para que nada dependa de una sola persona.",
+      "heroDescription": "Empezó con la mañana corriente del dueño de un centro de buceo: pizarra, portapapeles, una hoja de cálculo y unas cuantas aplicaciones que nunca se hablan entre sí. A DiveDay lo hacen buceadores, y las partes que tu temporada no puede perder no dependen de ninguno de nosotros: los pagos van por tu propia cuenta de Stripe, tus registros se descargan en un ZIP cualquier día, y el pase de lista funciona en un teléfono sin señal. El resto de la página es la mitad incómoda: lo que no vamos a fingir y cómo te llevas tus registros de vuelta.",
       "founderEyebrow": "Del fundador",
       "founderTitle": "Por qué existe esto.",
       "founderP1": "Un dueño de un centro de buceo me explicó un día cualquiera: una pizarra, una tablilla, una hoja de cálculo actualizada a mano, y un par de aplicaciones que no se hablan entre sí. Pagaba por todo eso dos veces — una por el software, otra en las horas que le robaba a sus buceadores. Su equipo lleva una operación ajustada; las herramientas simplemente nunca llegaron para este sector.",
@@ -1754,7 +1756,7 @@
       "leaveP2": "{terms} Viniendo en la otra dirección, una persona se sentará con tu exportación o hoja de cálculo anterior y traerá a tus buceadores contigo.",
       "switchingLink": "Cómo funciona el cambio, en ambas direcciones →",
       "whereLiveLabel": "Dónde viven tus registros",
-      "whereLiveValue": "En servidores en Estados Unidos, y en una descarga que puedes obtener en cualquier momento.",
+      "whereLiveValue": "En servidores en Estados Unidos, en una descarga que puedes obtener en cualquier momento y — si quieres una segunda copia donde no podamos alcanzarla — en una entrega semanal al almacenamiento que tu centro controla.",
       "committingLabel": "A qué te comprometes",
       "committingValue": "Mes a mes, por ubicación, cancela cuando quieras. Sin cuota de alta, sin contrato del que salir.",
       "whoAnswersLabel": "Quién te responde",

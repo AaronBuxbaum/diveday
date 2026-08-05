@@ -24,13 +24,13 @@ export const instant = true;
 export const metadata: Metadata = {
   title: "Who we are — DiveDay",
   description:
-    "DiveDay is built by a small team of people who dive, who saw what shops were actually running on and decided paperwork shouldn't be the job. Who you're buying from, what we won't pretend, and how you leave.",
+    "DiveDay is built by people who dive, who saw what shops were actually running on and decided paperwork shouldn't be the job. Who you're buying from, what we won't pretend, and how your records get in — and back out.",
   alternates: { canonical: "/about" },
   openGraph: {
     ...sharedLinkCard,
     title: "Who we are — DiveDay",
     description:
-      "A small team of divers who saw what the shops were running on. Who you're buying from, and what we won't pretend.",
+      "Divers who saw what the shops were running on. Who you're buying from, and what we won't pretend.",
     url: "/about",
   },
   // `summary_large_image`: the OG block above names the shared link card
@@ -40,7 +40,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Who we are — DiveDay",
     description:
-      "A small team of divers who saw what the shops were running on. Who you're buying from, and what we won't pretend.",
+      "Divers who saw what the shops were running on. Who you're buying from, and what we won't pretend.",
   },
 };
 

@@ -73,7 +73,6 @@ function renderConfirmation(
       payment={payment}
       payCancelled={false}
       readinessLink="/ready/tok"
-      progression={null}
       emailsOnTheWay={overrides.emailsOnTheWay ?? false}
       partySeats={[]}
     />,

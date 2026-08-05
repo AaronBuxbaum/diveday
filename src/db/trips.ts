@@ -48,6 +48,7 @@ export {
   SCHEDULE_PAGE_SIZE,
   type StaffScheduleDay,
   type StaffScheduleTrip,
+  tripDiveSiteSummaries,
   type TripWithBookedCount,
   tripScheduleDayCounts,
   type UpcomingTripOffsetPage,

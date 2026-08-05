@@ -195,9 +195,7 @@ export const areas = {
     tests: [
       "src/lib/courses.test.ts",
       "src/db/courses.test.ts",
-      "src/db/course-paths.test.ts",
       "e2e/courses.spec.ts",
-      "e2e/course-paths.spec.ts",
     ],
     invariants: [
       "An instructor-led session fails closed when it has no instructor.",
@@ -205,12 +203,12 @@ export const areas = {
       "Course slugs never shadow staff routes; slug lookups are shop-scoped.",
       "Diver-facing course pages live under /s/[shopSlug]/courses; every surface under /shop stays auth-gated.",
       "Content edits never touch pricing, the cert gate, or the agency age baseline.",
-      "A certification path is guidance, never a gate: it changes what a diver is shown next, never who may enrol.",
+      "The staff roster orders by progression — each course's own minimum certification level, never a shop-built path (ADR 20260805-remove-certification-paths).",
     ],
     validate: [
-      "pnpm test src/lib/courses.test.ts src/db/courses.test.ts src/db/course-paths.test.ts --reporter=dot",
+      "pnpm test src/lib/courses.test.ts src/db/courses.test.ts --reporter=dot",
       "pnpm check",
-      "pnpm e2e e2e/courses.spec.ts e2e/course-paths.spec.ts --reporter=line",
+      "pnpm e2e e2e/courses.spec.ts --reporter=line",
     ],
   },
   today: {

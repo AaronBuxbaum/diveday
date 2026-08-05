@@ -62,6 +62,11 @@ const NOTICE_KEYS: Record<string, { tone: NoticeTone; key: StaffMessageKey; link
   "refund-failed": { tone: "danger", key: "divers.notices.refundFailed" },
   "demo-disabled": { tone: "success", key: "divers.notices.demoDisabled" },
   deleted: { tone: "success", key: "divers.notices.deleted" },
+  restored: { tone: "success", key: "divers.notices.restored" },
+  // The restore ran into the live record that now holds this diver's email
+  // (`restoreDiver`, CR-008), or an erased record that has no way back. Either
+  // way there is a thing to do about it, and the copy names it.
+  "restore-refused": { tone: "danger", key: "divers.notices.restoreRefused" },
   "not-authorized-refund": { tone: "danger", key: "divers.notices.notAuthorizedRefund" },
   "not-authorized-delete": { tone: "danger", key: "divers.notices.notAuthorizedDelete" },
   "not-authorized-erase": { tone: "danger", key: "divers.notices.notAuthorizedErase" },

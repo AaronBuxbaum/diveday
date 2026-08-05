@@ -938,6 +938,8 @@
   "switching": {
     "common": {
       "heroCtaNote": "The demo is a working shop — no sign-up, nothing to import, nothing to undo.",
+      "bothWaysTitle": "The same table, read the other way.",
+      "bothWaysBody": "Everything above is what arrives. What arrives is also what leaves: Settings → Data export hands your whole shop back as one ZIP of plain, documented files — divers, bookings, waiver records, payment history — shaped so another system's import wizard can read it. {terms}",
       "midCtaTitle": "Rather see it than read about it?",
       "midCtaBody": "Walk the live demo as the owner, the captain, or a diver — the same cert checks, waivers, and roll call your export lands into."
     },
@@ -950,7 +952,7 @@
     "hub": {
       "eyebrow": "Switching to DiveDay",
       "title": "The door swings both ways.",
-      "description": "Most shops stay on a spreadsheet, or software they've outgrown, because moving looks painful. These guides make the move concrete: how to get your divers out of whatever you use now, exactly what comes across into DiveDay, and what — honestly — stays behind.",
+      "description": "Most shops stay on a spreadsheet, or software they've outgrown, because moving looks painful. These guides make it concrete in both directions: how to get your divers out of whatever you use now, exactly what comes across into DiveDay — and how your whole shop downloads back out as one ZIP of plain files whenever you ask for it. Coming in takes a file and a few minutes. Going back out takes one button, on your first day or your last.",
       "spreadsheetTitle": "Coming from a spreadsheet",
       "spreadsheetDescription": "Running the day on a spreadsheet and a clipboard? Bring the sheet you already keep — and add the jobs a list can't do, like checking every card before the boat leaves.",
       "readGuide": "Read the guide →",
@@ -1692,8 +1694,8 @@
     },
     "about": {
       "eyebrow": "Who we are",
-      "heroTitle": "One person owns every line of code running on this boat.",
-      "heroDescription": "It started with a dive shop owner's ordinary morning — whiteboard, clipboard, a spreadsheet, and a few apps that never talk to each other. Divers build DiveDay; one of them owns it, writes every line of it. The rest of this page is the uncomfortable half: what we won't pretend, and how you take your records back out.",
+      "heroTitle": "Small enough to answer you. Built so nothing rests on one person.",
+      "heroDescription": "It started with a dive shop owner's ordinary morning — whiteboard, clipboard, a spreadsheet, and a few apps that never talk to each other. Divers build DiveDay, and the parts your season can't afford to lose don't sit with any of us: payments run through your own Stripe account, your records download as one ZIP any day, and roll call works on a phone with no signal. The rest of this page is the uncomfortable half: what we won't pretend, and how you take your records back out.",
       "founderEyebrow": "From the founder",
       "founderTitle": "Why this exists.",
       "founderP1": "A dive shop owner walked me through an ordinary day: a whiteboard, a clipboard, a hand-updated spreadsheet, and a few apps that don't talk to each other. He was paying for it twice — once in software, again in the hours it pulled from his divers. His crew runs a tight operation; the tools just never showed up for this industry.",
@@ -1754,7 +1756,7 @@
       "leaveP2": "{terms} Coming the other way, a person will sit with your old export or spreadsheet and bring your divers across with you.",
       "switchingLink": "How switching works, both directions →",
       "whereLiveLabel": "Where your records live",
-      "whereLiveValue": "On servers in the United States, and in a download you can take at any time.",
+      "whereLiveValue": "On servers in the United States, in a download you can take at any time, and — if you want a second copy somewhere we can't reach — in a weekly delivery to storage your shop owns.",
       "committingLabel": "What you're committing to",
       "committingValue": "Month to month, per location, cancel whenever. No setup fee, no contract to get out of.",
       "whoAnswersLabel": "Who answers you",

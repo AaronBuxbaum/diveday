@@ -31,6 +31,7 @@ import { toShopCurrency } from "@/lib/money";
 import { publicTripPath } from "@/lib/public-routes";
 import { recurrenceSummary } from "@/lib/recurrence";
 import { requireStaffSession } from "@/lib/session";
+import { noticeForForm } from "@/lib/staff-notices";
 import { temperatureUnitFor } from "@/lib/temperature-units";
 import { capacityLabel, isFull } from "@/lib/trips";
 import { utcToWallTime } from "@/lib/zoned";
@@ -42,7 +43,7 @@ import { RecapNoteSection } from "./_components/RecapNoteSection";
 import { RecapPhotoGallery } from "./_components/RecapPhotoGallery";
 import { RequirementsSection } from "./_components/RequirementsSection";
 import { recurrenceSummaryText, SeriesSection } from "./_components/SeriesSection";
-import { TripNoticeBanner } from "./_components/TripNoticeBanner";
+import { resolveTripNotice, TripNoticeBanner } from "./_components/TripNoticeBanner";
 import {
   applySeriesDetailsAction,
   cancelSeriesAction,
@@ -86,13 +87,15 @@ export default async function ManageTripPage({
   searchParams: Promise<{
     notice?: string;
     count?: string;
+    /** Which form on this page the notice answers — see `resolveTripNotice`. */
+    form?: string;
     /** Signed, and verified against this route's own `id` — src/lib/trip-admission-gate.ts. */
     gate?: string | string[];
   }>;
 }) {
   // The session, route params, and db handle don't depend on one another —
   // resolve them together instead of serially.
-  const [session, { shopSlug, id: tripId }, { notice, count, gate }, db] = await Promise.all([
+  const [session, { shopSlug, id: tripId }, { notice, count, form, gate }, db] = await Promise.all([
     requireStaffSession(),
     params,
     searchParams,
@@ -200,9 +203,25 @@ export default async function ManageTripPage({
       ? t("shared.capacity.full")
       : t("shared.capacity.spotsLeft", { count: capacityLabelValue.remaining });
 
+  // One resolution, handed to the section it belongs to. Whatever no rendered
+  // section claims — a page-level permission refusal, or a section this
+  // staffer's role means we never rendered — falls through to the banner.
+  const tripNotice = resolveTripNotice({ notice, count, form, gate, tripId, locale });
+  const sectionsOnPage = new Set([
+    ...(canConfigure ? ["details", "requirements"] : []),
+    "conditions",
+    "recap-note",
+    "recap-photos",
+    "crew",
+    "lifecycle",
+    ...(canConfigure && series ? ["series"] : []),
+  ]);
+  const pageNotice =
+    tripNotice && sectionsOnPage.has(tripNotice.form) ? undefined : tripNotice;
+
   return (
     <>
-      <FlashParams params={["notice", "count"]} />
+      <FlashParams params={["notice", "count", "form"]} />
       <ShopPageHeader
         eyebrow={t("trips.detail.eyebrow")}
         title={trip.title}
@@ -301,7 +320,7 @@ export default async function ManageTripPage({
         }
       />
 
-      <TripNoticeBanner notice={notice} count={count} gate={gate} tripId={tripId} locale={locale} />
+      <TripNoticeBanner notice={pageNotice} locale={locale} />
 
       {/* No "you're viewing this trip" notice for staff without configure
           rights. The editable sections simply aren't rendered, which is the
@@ -312,6 +331,7 @@ export default async function ManageTripPage({
       {canConfigure ? (
         <DetailsSection
           action={saveDetails.bind(null, shopSlug, tripId)}
+          status={noticeForForm(tripNotice, "details")}
           trip={trip}
           diveSiteList={diveSiteList}
           tripDiveList={tripDiveList}
@@ -346,6 +366,7 @@ export default async function ManageTripPage({
         ].join("|")}
         saveAction={saveConditionsAction.bind(null, shopSlug, tripId)}
         clearAction={clearConditionsAction.bind(null, shopSlug, tripId)}
+        status={noticeForForm(tripNotice, "conditions")}
         trip={trip}
         locale={locale}
         temperatureUnit={temperatureUnitFor(shop)}
@@ -354,6 +375,7 @@ export default async function ManageTripPage({
 
       <RecapNoteSection
         action={saveRecapShoutoutAction.bind(null, shopSlug, tripId)}
+        status={noticeForForm(tripNotice, "recap-note")}
         shoutout={trip.recapShoutout}
         locale={locale}
       />
@@ -364,12 +386,14 @@ export default async function ManageTripPage({
       <RecapPhotoGallery
         photos={recapPhotos}
         removeAction={deleteRecapPhotoAction.bind(null, shopSlug, tripId)}
+        status={noticeForForm(tripNotice, "recap-photos")}
         locale={locale}
       />
 
       {canConfigure ? (
         <RequirementsSection
           action={saveRequirementsAction.bind(null, shopSlug, tripId)}
+          status={noticeForForm(tripNotice, "requirements")}
           trip={trip}
           requirement={requirement}
           siteRequirement={siteRequirement}
@@ -390,6 +414,7 @@ export default async function ManageTripPage({
         crewRoles={Object.fromEntries(tripRoleByPerson)}
         onShiftIds={onShiftIds}
         crewGapCode={crewGap.code}
+        status={noticeForForm(tripNotice, "crew")}
         updateCrewAction={updateTripCrewAction.bind(null, shopSlug)}
         copy={{
           heading: t("trips.crew.heading"),
@@ -421,6 +446,7 @@ export default async function ManageTripPage({
           intervalWeeks={series.intervalWeeks}
           occurrenceCount={series.occurrenceCount}
           futureScheduledCount={series.futureScheduledCount}
+          status={noticeForForm(tripNotice, "series")}
           applyAction={applySeriesDetailsAction.bind(null, shopSlug, tripId, series.id)}
           cancelAction={cancelSeriesAction.bind(null, shopSlug, tripId, series.id)}
           extendAction={extendSeriesAction.bind(null, shopSlug, tripId, series.id)}

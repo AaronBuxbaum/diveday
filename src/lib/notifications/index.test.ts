@@ -5,6 +5,7 @@ import {
   checkPublicHost,
   notificationIdempotencyKey,
   notificationProviderFromEnvironment,
+  notificationSchema,
   notify,
   publicAppUrl,
   recipientLocale,
@@ -224,6 +225,58 @@ describe("notificationIdempotencyKey", () => {
         changedAt: new Date("2026-07-26T13:00:00.000Z"),
       }),
     ).toBe("password-changed/00000000-0000-4000-8000-000000000020/2026-07-26T13:00:00.000Z");
+  });
+
+  it("keys a demo-try alert by the minted slug, which is the entry's identity", () => {
+    // Every demo entry mints its own shop under a freshly generated identity,
+    // so the slug already distinguishes one try from the next — no timestamp,
+    // and a double-submitted CTA that reached the same shop converges on one
+    // send instead of mailing the founder twice about one visitor.
+    expect(
+      notificationIdempotencyKey({
+        kind: "demo_started_alert",
+        shopId: "00000000-0000-4000-8000-000000000010",
+        to: "alerts@dive.day",
+        shopSlug: "coral-cove-divers-a1b2c3",
+        role: "captain",
+        source: "pricing",
+      }),
+    ).toBe("demo-started-alert/coral-cove-divers-a1b2c3");
+  });
+});
+
+describe("the demo-try alert's schema (docs ADR 20260805-demo-try-alerts)", () => {
+  const alert = {
+    kind: "demo_started_alert" as const,
+    shopId: "00000000-0000-4000-8000-000000000010",
+    to: "alerts@dive.day",
+    shopSlug: "coral-cove-divers-a1b2c3",
+    role: "owner" as const,
+    source: "home-hero",
+  };
+
+  it("accepts the five fields it is allowed to carry", () => {
+    expect(notificationSchema.parse(alert)).toMatchObject(alert);
+  });
+
+  it("strips anything else a call site tries to attach", () => {
+    // The point of parsing at the boundary on *this* kind: it is an outbound
+    // message about somebody who never identified themselves, so a call site
+    // that starts passing an IP or a user agent along must not have it reach
+    // the provider. Zod objects are strip-by-default; this pins that.
+    const parsed = notificationSchema.parse({
+      ...alert,
+      ip: "203.0.113.7",
+      userAgent: "Mozilla/5.0",
+      ownerEmail: "dana@coral-cove-divers-a1b2c3.demo.invalid",
+    });
+    expect(parsed).not.toHaveProperty("ip");
+    expect(parsed).not.toHaveProperty("userAgent");
+    expect(parsed).not.toHaveProperty("ownerEmail");
+  });
+
+  it("refuses a role outside the demo roster", () => {
+    expect(() => notificationSchema.parse({ ...alert, role: "regulator" })).toThrow();
   });
 });
 

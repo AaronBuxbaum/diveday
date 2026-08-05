@@ -36,6 +36,7 @@
     "check:route-coverage": "node scripts/check-route-coverage.mjs",
     "check:text": "node scripts/check-source-text.mjs",
     "check:locale": "node scripts/check-locale.mjs",
+    "check:timezone": "node scripts/check-timezone.mjs",
     "check:copy": "node scripts/check-copy.mjs",
     "check:domain-strings": "node scripts/check-domain-strings.mjs",
     "check:env": "node scripts/check-env.mjs",

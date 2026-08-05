@@ -44,13 +44,13 @@ describe("LEGACY_PUBLIC_SHOP_REDIRECTS", () => {
   it("redirects a course page but never a staff course route", () => {
     expect(matches(course.source, "/shop/blue-mantis/courses/open-water-diver")).toBe(true);
     expect(course.destination).toBe("/s/:shopSlug/courses/:courseSlug");
-    // The catalog roster, the path builder, and the editor all keep serving
-    // staff at their own URLs — RESERVED_COURSE_SEGMENTS plus the depth limit.
+    // The catalog roster and the editor both keep serving staff at their own
+    // URLs — RESERVED_COURSE_SEGMENTS plus the depth limit. `paths` is on that
+    // reserved list even though its builder is gone
+    // (ADR 20260805-remove-certification-paths): a course minted at that slug
+    // would start capturing every bookmark still pointing at the old page.
     expect(matches(course.source, "/shop/blue-mantis/courses")).toBe(false);
     expect(matches(course.source, "/shop/blue-mantis/courses/paths")).toBe(false);
-    expect(matches(course.source, "/shop/blue-mantis/courses/paths/open-water-to-rescue")).toBe(
-      false,
-    );
     expect(matches(course.source, "/shop/blue-mantis/courses/new")).toBe(false);
     expect(matches(course.source, "/shop/blue-mantis/courses/catalog")).toBe(false);
     expect(matches(course.source, "/shop/blue-mantis/courses/open-water-diver/edit")).toBe(false);
@@ -88,8 +88,6 @@ describe("isEmbeddableShopRoute", () => {
     for (const path of [
       "/s/blue-mantis/courses",
       "/s/blue-mantis/courses/open-water-diver",
-      "/s/blue-mantis/courses/paths",
-      "/s/blue-mantis/courses/paths/open-water-to-rescue",
       "/s/blue-mantis/trips",
       "/s/blue-mantis/trips/abc-123/calendar",
       "/shop/blue-mantis",

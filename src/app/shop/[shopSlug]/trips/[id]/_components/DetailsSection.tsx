@@ -1,16 +1,18 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { TripDiveFields } from "@/components/TripDiveFields";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatMoneyCents } from "@/lib/format";
 import { currencyFractionDigits, maxPriceMajor, minorToMajor } from "@/lib/money";
+import type { FormNotice } from "@/lib/staff-notices";
 import { MAX_TRIP_DAYS, MIN_TRIP_DAYS } from "@/lib/trip-days";
 import { toDateInputValue, toTimeInputValue, type WallTime } from "@/lib/zoned";
 import type { DiveSiteList, Trip, TripDiveList } from "./types";
 
 export function DetailsSection({
   action,
+  status,
   trip,
   diveSiteList,
   tripDiveList,
@@ -21,6 +23,8 @@ export function DetailsSection({
   currency,
 }: {
   action: (formData: FormData) => void;
+  /** This form's own outcome, rendered beside its Save button rather than at the top of the page. */
+  status?: FormNotice;
   trip: Trip;
   diveSiteList: DiveSiteList;
   tripDiveList: TripDiveList;
@@ -206,13 +210,14 @@ export function DetailsSection({
             </Field>
           </FieldGrid>
         </fieldset>
-        <div>
+        <div className="flex flex-wrap items-center gap-3">
           <SubmitButton
             pendingLabel={t("trips.details.saving")}
             className={buttonClass({ size: "lg", className: "text-base" })}
           >
             {t("trips.details.saveChanges")}
           </SubmitButton>
+          <FormStatus tone={status?.tone}>{status?.text}</FormStatus>
         </div>
       </form>
     </section>

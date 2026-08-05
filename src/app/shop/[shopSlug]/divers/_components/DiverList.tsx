@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { EmptyState } from "@/components/EmptyState";
+import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass } from "@/components/ui/form";
@@ -26,7 +27,14 @@ export interface DiverListCopy {
   viewDivingToday: string;
   viewNeedsAttention: string;
   viewMissingContact: string;
+  viewRemoved: string;
   viewsAriaLabel: string;
+  /** Replaces the search hint under the heading while the Removed view is on. */
+  removedNote: string;
+  restore: string;
+  restoring: string;
+  /** `{name}` — one "Restore" per row needs a distinct accessible name. */
+  restoreDiverLabel: string;
   peopleHeading: string;
   /** Already pluralised for the count the badge carries — never a bare digit. */
   peopleCountLabel: string;
@@ -88,6 +96,7 @@ export function DiverList({
   filter,
   locale,
   importHref,
+  restoreAction,
   copy,
   pager,
 }: {
@@ -98,6 +107,13 @@ export function DiverList({
   locale: string;
   /** Where a bulk import lives, or null when this staffer may not run one. */
   importHref: string | null;
+  /**
+   * The roster's own restore, bound on the server. Null for a staffer who may
+   * not restore — which is the same staffer the Removed view is hidden from,
+   * so the rows and the chip appear and disappear together (H-14, ADR
+   * 20260724-role-gated-surfaces-hide-not-explain).
+   */
+  restoreAction: ((formData: FormData) => void) | null;
   copy: DiverListCopy;
   /**
    * The roster's `<Pager>`, rendered by the Server Component above this one.

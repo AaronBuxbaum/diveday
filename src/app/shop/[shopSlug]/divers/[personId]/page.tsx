@@ -224,7 +224,10 @@ export default async function DiverDetailPage({
           paymentsConnected={paymentsConnected}
         />
       </DiverSection>
-      {canDelete ? (
+      {/* Nothing to remove twice: a removed diver gets the Restore card at the
+          top of the record instead. Erasure stays offered either way — a
+          removed diver is exactly who an erasure request tends to name. */}
+      {canDelete && !removed ? (
         <RemoveDiver diver={diver} shopSlug={shopSlug} personId={personId} locale={locale} />
       ) : null}
       {canErase ? (

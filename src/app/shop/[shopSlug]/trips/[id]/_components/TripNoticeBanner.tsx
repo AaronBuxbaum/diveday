@@ -2,19 +2,36 @@ import { ShopNotice } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { tripAdmissionRefusalText } from "@/i18n/readiness-labels";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
-import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
+import { type FormNotice, noticeFromParam, noticeRole } from "@/lib/staff-notices";
 import { verifyTripAdmissionGate } from "@/lib/trip-admission-gate";
 
 /**
- * One entry per notice code, carrying its own tone and message key(s) — same
- * shape as `divers/[personId]/_components/NoticeBanner.tsx`'s `NOTICE_KEYS`.
- * A handful of refusals also carry a specific count (how many divers are
- * already booked, how many the last-minute deal reached); those get a second,
- * pluralized key used only once the count is known.
+ * One entry per notice code, carrying its own tone, message key(s), and the
+ * **form it belongs to** — same shape as
+ * `divers/[personId]/_components/NoticeBanner.tsx`'s `NOTICE_KEYS`, plus that
+ * last field. A handful of refusals also carry a specific count (how many
+ * divers are already booked, how many the last-minute deal reached); those get
+ * a second, pluralized key used only once the count is known.
+ *
+ * `form` is what stopped this page answering six forms in one banner under the
+ * `<h1>`. A trip has its details, its conditions, its recap note, its
+ * requirements, its crew, and its series all on one long page, and the
+ * last-minute deal blast even redirects to `#last-minute-deal` — scrolling the
+ * banner that answered it off the top of the screen. Each code now names the
+ * form it came from, `resolveTripNotice` resolves it once, and the section
+ * renders it in its own action row (`FormStatus`). `"page"` is left for the
+ * genuinely page-level ones: a permission refusal, and the generic `invalid`
+ * fallback that any of a dozen actions can emit (those pass an explicit
+ * `?form=` so they land home anyway — see `tripNoticeForm`).
  */
 const NOTICE_KEYS: Record<
   string,
-  { tone: "success" | "danger" | "warning"; key: StaffMessageKey; countKey?: StaffMessageKey }
+  {
+    form: string;
+    tone: "success" | "danger" | "warning";
+    key: StaffMessageKey;
+    countKey?: StaffMessageKey;
+  }
 > = {
   saved: { form: "details", tone: "success", key: "trips.notices.saved" },
   cancelled: { form: "lifecycle", tone: "danger", key: "trips.notices.cancelled" },
@@ -123,18 +140,42 @@ const NOTICE_KEYS: Record<
   },
 };
 
-export function TripNoticeBanner({
-  notice,
-  count,
-  gate,
-  tripId,
-  locale,
-  undoBookingId,
-  undoAction,
-}: {
+/** Every form name `NOTICE_KEYS` (or an action's `?form=`) may point at. */
+const TRIP_FORMS = new Set([
+  "page",
+  "details",
+  "conditions",
+  "recap-note",
+  "recap-photos",
+  "requirements",
+  "crew",
+  "series",
+  "lifecycle",
+  "add-diver",
+  "roster",
+  "last-minute-deal",
+]);
+
+/**
+ * Which form a `?form=` param names, ignoring anything not in `TRIP_FORMS` —
+ * a query param is attacker-supplied, and an unknown name must degrade to the
+ * code's own default home rather than swallowing the notice into a section
+ * nothing renders.
+ */
+function tripNoticeForm(param: string | undefined, fallback: string): string {
+  return param !== undefined && TRIP_FORMS.has(param) ? param : fallback;
+}
+
+export type TripNoticeInput = {
   notice?: string;
   /** The specific count behind a "-below-" refusal notice, e.g. the booked count or recorded dive number. */
   count?: string;
+  /**
+   * Which form on the page this notice answers, when the code alone cannot say
+   * — `?notice=invalid` is emitted by the details editor, the conditions
+   * briefing, the recap note, and the payment control alike.
+   */
+  form?: string;
   /**
    * The signed `TripAdmissionRefusal` behind `diver-trip-prerequisite` — which
    * requirement the trip's cert gate failed on and what the diver holds
@@ -151,13 +192,25 @@ export function TripNoticeBanner({
    */
   tripId: string;
   locale: string;
-  undoBookingId?: string;
-  // Only the roster's reversible removals carry an undo; Overview's config
-  // notices render the same banner without one.
-  undoAction?: (formData: FormData) => void;
-}) {
+};
+
+/**
+ * Resolves the page's `?notice=` to words and to the form those words belong
+ * beside. Both trip pages call this once and hand the result to the section it
+ * names (`noticeForForm`); whatever is left over — a genuinely page-level
+ * refusal, or a section this staffer's role means the page never rendered —
+ * falls through to `TripNoticeBanner`.
+ */
+export function resolveTripNotice({
+  notice,
+  count,
+  form,
+  gate,
+  tripId,
+  locale,
+}: TripNoticeInput): FormNotice | undefined {
   const banner = noticeFromParam(notice, NOTICE_KEYS);
-  if (!banner) return null;
+  if (!banner) return undefined;
   const t = staffTranslator(locale);
   const parsedCount = count !== undefined && /^\d+$/.test(count) ? Number(count) : undefined;
   const refusal =
@@ -169,11 +222,34 @@ export function TripNoticeBanner({
     : parsedCount !== undefined && banner.countKey
       ? t(banner.countKey, { count: parsedCount })
       : t(banner.key);
+  return { form: tripNoticeForm(form, banner.form), tone: banner.tone, text };
+}
+
+/**
+ * The page-level banner, now only for what has no form to sit beside: a
+ * permission refusal, and the roster's per-diver outcomes, whose undo control
+ * this still carries.
+ */
+export function TripNoticeBanner({
+  notice,
+  locale,
+  undoBookingId,
+  undoAction,
+}: {
+  notice?: FormNotice;
+  locale: string;
+  undoBookingId?: string;
+  // Only the roster's reversible removals carry an undo; Overview's config
+  // notices render the same banner without one.
+  undoAction?: (formData: FormData) => void;
+}) {
+  if (!notice) return null;
+  const t = staffTranslator(locale);
   return (
     <div className="mt-6">
-      <ShopNotice tone={banner.tone} role={noticeRole(banner.tone)}>
+      <ShopNotice tone={notice.tone} role={noticeRole(notice.tone)}>
         <div className="flex items-center justify-between gap-3">
-          <span>{text}</span>
+          <span>{notice.text}</span>
           {undoBookingId && undoAction ? (
             <form action={undoAction}>
               <input type="hidden" name="bookingId" value={undoBookingId} />

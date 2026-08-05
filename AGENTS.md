@@ -30,12 +30,13 @@ adapters and must not introduce unique requirements.
 | `pnpm dev` | dev server at localhost:3000 |
 | `pnpm task:context <area>` | bounded paths, invariants, and validation for a task |
 | `pnpm check:env` | validate `.env.local` when present; local fallbacks make the file optional |
-| `pnpm check:repo` | environment, architecture/feature-module, design-token, clock, ADR, doc-link, locale-coverage, hard-coded-copy, domain-layer-copy, route-coverage, and agent-layer (skills/index/task-context) safeguards |
+| `pnpm check:repo` | environment, architecture/feature-module, design-token, clock, timezone, ADR, doc-link, locale-coverage, hard-coded-copy, domain-layer-copy, route-coverage, and agent-layer (skills/index/task-context) safeguards |
 | `pnpm check` | repository safeguards + lint + typecheck + unit tests — **the pre-commit bar** |
 | `pnpm check:copy` | find hard-coded user-facing copy in `src/app`/`src/components`; `node scripts/check-copy.mjs --report <path>` lists it, `--write` banks a reduction, `--absorb` records growth arriving from a merge |
 | `pnpm check:domain-strings` | find English sentences returned from `src/lib`/`src/db` (the `.message`/`_LABELS` leak — ADR 20260731-domain-layer-copy-leaks); same `--report <path>` / `--write` / `--absorb` as `check:copy` |
 | `pnpm check:tokens` | find raw hex colors and palette-scale Tailwind classes in components (ADR-0004); ratcheted via `scripts/tokens-baseline.json`, same `--report <path>` / `--write` / `--absorb` as `check:copy`. Next metadata-file conventions (OG images, icons, manifest) are exempt by design — tokens can't reach a Satori bitmap |
 | `pnpm check:architecture` | layer boundaries (now including `src/components`/`src/i18n`) and feature-module contracts; pre-existing debt is ratcheted in `scripts/architecture-baseline.json`, same `--write` / `--absorb` as `check:copy` |
+| `pnpm check:timezone` | every `Intl.DateTimeFormat`/`toLocale*String` under `src/app`, `src/components`, `src/lib`, `src/db`, `src/features` names a `timeZone`. Omitting it renders in the **host** zone — UTC on every server and CI box — so a 7:30 AM departure silently reads 11:30 AM and no test on a UTC machine can tell. The `src/lib/format.ts` formatters take `timeZone` as a **required** parameter, so calls through them are already proven by `pnpm typecheck`; this covers code reaching for `Intl` directly. A deliberate `timeZone: "UTC"` passes — the rule is *name* a zone, not name the shop's, because a date-only value or a wall-clock time of day genuinely has no instant in it |
 | `pnpm check:route-coverage` | every `src/app/**/page.tsx` route is listed in `scripts/route-coverage.json` with the `e2e/` specs and `e2e/visual.spec.ts` captures that cover it, or a written `exempt` reason for having neither. The coverage lists are hand-maintained (a spec usually *clicks* its way to a route, which no grep can see); `--write` regenerates only the mechanical facts and refuses to add an exemption or drop coverage, `--absorb` records a merge-in loss, `--report` prints the per-route table |
 | `pnpm gates` | report (never a gate, never in `check`): days since each `docs/product/human-decisions.md` H-/V- row last moved, reconciled against `rollout.md`'s "next 30 days". Ages derived from dated outcomes in the rows and `git blame`, printed as `≥ N` when a shallow clone can only bound them. Nothing it reports is an agent's to close |
 | `pnpm lint` / `pnpm lint:fix` | Biome check / autofix |
@@ -188,6 +189,15 @@ docs, tests, or code, the skill is stale and must be fixed in the same change.
 - **Never hard-code a locale in the UI.** Every date, time, and money figure under `src/app` or
   `src/components` formats for the negotiated request locale (`requestLocale`, from
   `Accept-Language`) — never a literal `"en-US"`. `pnpm check:locale` enforces this app-wide.
+- **A rendered date names the zone it is rendered in.** Timestamps are stored as UTC instants and
+  displayed in the shop's own zone (`shops.timezone`) — so every date/time render passes
+  `shop.timezone` alongside the locale, and the `src/lib/format.ts` formatters take `timeZone` as a
+  **required** parameter to make a missing one a compile error rather than a wrong time. This is not
+  a style preference: `Intl` falls back to the *host* zone when no zone is given, and every DiveDay
+  server and CI box is UTC, so an omission renders a 7:30 AM departure as 11:30 AM — plausible,
+  green, and four hours wrong on the screen a diver uses to decide when to leave. A value with no
+  instant in it (a date-only calendar date, a wall-clock time of day) says `timeZone: "UTC"`
+  explicitly instead — see `src/lib/calendar-date.ts`. `pnpm check:timezone` enforces the rest.
 - **Copy comes from a message bundle, never a component.** Diver copy in
   `src/i18n/locales/<locale>/diver.json`, staff copy in `staff.json`. `pnpm check:copy` is a
   **ratchet**: a file with no entry in `scripts/copy-baseline.json` may contain no hard-coded copy
