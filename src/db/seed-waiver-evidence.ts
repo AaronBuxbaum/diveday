@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { nowMs } from "@/lib/clock";
 import {
   computeWaiverIntegrityHash,
@@ -146,22 +146,63 @@ export async function seedWaiverEvidence(db: DbExecutor, shopId: string): Promis
     });
   }
 
-  for (const update of updates) {
-    await db
-      .update(waiverRecords)
-      .set({
-        signedAt: update.next.signedAt,
-        consentedAt: update.next.consentedAt,
-        completedAt: update.next.completedAt,
-        createdAt: update.next.createdAt,
-        integrityHash: update.next.integrityHash,
-        integrityVersion: update.next.integrityVersion,
-      })
-      .where(eq(waiverRecords.id, update.id));
-  }
+  await applyEvidence(db, updates);
 
   // Pending links are deliberately left alone. They are not evidence, they are
   // never sealed, and their `createdAt`/`expiresAt` pair is what keeps the
   // "click Send waiver" flows live — back-dating a request would age out the
   // very links the staff UI and e2e both need issuable.
+}
+
+/**
+ * How many rows one `UPDATE … FROM (VALUES …)` carries. Seven bound parameters
+ * per row, so this is nowhere near Postgres's 65535-parameter ceiling; it is
+ * sized to keep one statement's plan small rather than to dodge a limit.
+ */
+const EVIDENCE_UPDATE_CHUNK = 250;
+
+/**
+ * Write the re-dated, sealed rows back — **in chunks, not one statement each.**
+ *
+ * The obvious loop (`db.update(...).where(eq(id))` per record) is what this
+ * replaces, and the reason is the e2e fleet rather than elegance: this pass
+ * touches every signature stamped at the seed's own "now", which on the demo
+ * shop is a hundred and sixty of them, and `/api/test/reset` re-runs the whole
+ * seed before *every* browser test. Measured, the per-row loop cost ~850ms a
+ * pass — comparable to the entire rest of the reset (~1.2s), and paid a hundred
+ * and fifty times over in a local suite. A handful of set-based statements do
+ * the same work in a fraction of it.
+ *
+ * Every column is cast explicitly in the VALUES list: Postgres infers a VALUES
+ * column's type from its first row, and both the timestamps and the integrity
+ * columns are legitimately null on some rows — an untyped null first row would
+ * make the column `text` and the join fail.
+ */
+async function applyEvidence(
+  db: DbExecutor,
+  updates: { id: string; next: WaiverRecord }[],
+): Promise<void> {
+  for (let start = 0; start < updates.length; start += EVIDENCE_UPDATE_CHUNK) {
+    const chunk = updates.slice(start, start + EVIDENCE_UPDATE_CHUNK);
+    const rows = sql.join(
+      chunk.map(
+        ({ id, next }) =>
+          sql`(${id}::uuid, ${next.signedAt}::timestamptz, ${next.consentedAt}::timestamptz, ${next.completedAt}::timestamptz, ${next.createdAt}::timestamptz, ${next.integrityHash}::text, ${next.integrityVersion}::integer)`,
+      ),
+      sql`, `,
+    );
+    await db.execute(sql`
+      update ${waiverRecords} as target set
+        signed_at = source.signed_at,
+        consented_at = source.consented_at,
+        completed_at = source.completed_at,
+        created_at = source.created_at,
+        integrity_hash = source.integrity_hash,
+        integrity_version = source.integrity_version
+      from (values ${rows}) as source (
+        id, signed_at, consented_at, completed_at, created_at, integrity_hash, integrity_version
+      )
+      where target.id = source.id
+    `);
+  }
 }

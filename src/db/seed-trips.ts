@@ -241,9 +241,17 @@ export async function seedTrips(
         description: "Bow to stern along the sand, then back over the plates. Watch the ceilings.",
       },
       {
-        title: "Elbow Reef",
+        // Deliberately names no place. This is the seed's one tank with no
+        // `site` — the fixture behind "Site to be confirmed" and the "one dive
+        // site, two dive briefings" reading that e2e/trips.spec.ts asserts —
+        // and a heading that named a reef while the line under it said the site
+        // was unchosen contradicted itself. `DiveBriefingCard` renders the
+        // dive's title as its heading and the site (or its absence) underneath,
+        // so the title has to be about the tank, not about a mooring no
+        // `dive_sites` row backs.
+        title: "Second tank — the crew's call at the dock",
         description:
-          "Shallow coral heads and a wreck-strewn bottom; a long, easy second tank on a full tank of air.",
+          "Shallow coral heads and a wreck-strewn bottom; a long, easy second tank on a full tank of air. Which mooring depends on the wind, so the crew names it on the way out.",
       },
     ],
     "Afternoon Two-Tank — French Reef": [

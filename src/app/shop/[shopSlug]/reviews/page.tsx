@@ -10,6 +10,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { UndoToast } from "@/components/UndoToast";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
+import { FormStatus } from "@/components/ui/form";
 import { getDb } from "@/db/client";
 import {
   countReviewsAwaitingModeration,
@@ -235,7 +236,6 @@ export default async function ReviewsPage({
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-sm text-muted">{t("reviews.tickThenPublish")}</span>
               <PublishSelectedButton
-                status={bulkStatus}
                 label={t("reviews.publishSelected")}
                 pendingLabel={t("reviews.saving")}
                 className={buttonClass({
@@ -246,6 +246,21 @@ export default async function ReviewsPage({
               />
             </div>
           ) : null}
+          {/* A bulk publish is the one outcome with no single control to sit
+              beside: what changed is N rows across the list, not one button.
+              So it lands on the list's own header row — directly above the
+              rows that changed, and where the button that ran it lives when
+              there is anything left to run.
+
+              Deliberately *outside* the `pendingOnPage > 0` branch above.
+              Clearing the last waiting review removes that branch, and with it
+              the only place the confirmation could have rendered — a
+              publish-everything pass would have answered with silence, which
+              is the bug this whole change exists to remove, wearing a
+              different hat. */}
+          <FormStatus tone={bulkStatus?.tone} className="basis-full">
+            {bulkStatus?.text}
+          </FormStatus>
         </div>
 
         {total === 0 ? (

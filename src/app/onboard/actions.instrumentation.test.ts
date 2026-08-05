@@ -157,6 +157,7 @@ describe("onboardAction instrumentation", () => {
   });
 
   it("counts nothing when the slug was already taken", async () => {
+    await useDb();
     const logged = vi.spyOn(console, "error").mockImplementation(() => {});
     await signUp();
     hoisted.afterTasks.length = 0;
@@ -172,6 +173,7 @@ describe("onboardAction instrumentation", () => {
   it("still signs the new owner in when the alert throws", async () => {
     // The contract that matters: a failed alert costs the founder an email,
     // never a shop owner their shop.
+    await useDb();
     vi.mocked(sendNotification).mockRejectedValue(new Error("SES exploded"));
     const logged = vi.spyOn(console, "error").mockImplementation(() => {});
 

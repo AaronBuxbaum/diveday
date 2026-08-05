@@ -3,8 +3,6 @@
 import { usePathname } from "next/navigation";
 import { createContext, useContext, useEffect, useState } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
-import { FormStatus } from "@/components/ui/form";
-import type { NoticeTone } from "@/lib/staff-notices";
 import { publishReviewsAction } from "../actions";
 
 /**
@@ -86,29 +84,20 @@ export function PublishSelectedButton({
   label,
   pendingLabel,
   className,
-  status,
 }: {
   label: string;
   pendingLabel: string;
   className: string;
-  /**
-   * What the last bulk publish did — "nothing was ticked", "twelve went
-   * live" — already worded by the page. It renders inside this form so the
-   * answer arrives beside the button, not in a banner above three stat tiles
-   * and a filter row.
-   */
-  status?: { tone: NoticeTone; text: string };
 }) {
   const { selected } = useSelection();
   return (
-    <form action={publishReviewsAction} className="flex flex-wrap items-center gap-2">
+    <form action={publishReviewsAction}>
       {[...selected].map((reviewId) => (
         <input key={reviewId} type="hidden" name="reviewIds" value={reviewId} />
       ))}
       <SubmitButton pendingLabel={pendingLabel} className={className}>
         {label}
       </SubmitButton>
-      <FormStatus tone={status?.tone}>{status?.text}</FormStatus>
     </form>
   );
 }

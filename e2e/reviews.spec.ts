@@ -145,10 +145,33 @@ test("a weekend's held reviews can be cleared in one pass, not one button at a t
   for (const box of await waiting.all()) await box.check();
 
   await page.getByRole("button", { name: "Publish selected" }).click();
-  await expect(page.getByText(`${count} reviews published to your schedule page.`)).toBeVisible();
+  const outcome = page.getByText(`${count} reviews published to your schedule page.`);
+  await expect(outcome).toBeVisible();
   // It lands back on the whole list — so you see what you just released — and
   // nothing on it is still waiting: no row carries a tick box any more.
   await expect(page.getByRole("checkbox", { name: /review to publish/ })).toHaveCount(0);
+  // And the confirmation is on the list it changed, not in a banner at the top
+  // of the page. A bulk publish has no single control to sit beside — what
+  // moved is N rows — so its home is the list's own header row: below the
+  // rating tiles, immediately above the first review. Asserted on where it
+  // actually renders, because the bug this replaced was purely one of
+  // position: the sentence was correct and nobody could see it.
+  //
+  // Clearing the last waiting review also takes the "Publish selected" button
+  // off the page, which is exactly the case that used to swallow this sentence
+  // whole — the header row survives that, the button does not.
+  const overview = await page.getByRole("region", { name: "Rating overview" }).boundingBox();
+  const outcomeBox = await outcome.boundingBox();
+  // A known review row, not "the first `<li>` on the page" — the staff nav is
+  // a list too, and its items sit above everything here.
+  const reviewRow = await page
+    .locator("li")
+    .filter({ hasText: comment })
+    .filter({ visible: true })
+    .first()
+    .boundingBox();
+  expect(outcomeBox?.y).toBeGreaterThan((overview?.y ?? 0) + (overview?.height ?? 0));
+  expect(outcomeBox?.y).toBeLessThan(reviewRow?.y ?? 0);
 
   await page.context().clearCookies();
   await page.goto("/s/blue-mantis");
