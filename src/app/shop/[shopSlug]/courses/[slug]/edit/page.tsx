@@ -60,11 +60,10 @@ export default async function EditCoursePage({
 
   const saveAction = saveCourseContentAction.bind(null, shopSlug, slug);
 
-  const messages: Record<string, string> = {
-    saved: t("courses.edit.noticeSaved"),
-    shown: t("courses.edit.noticeShown"),
-    hidden: t("courses.edit.noticeHidden"),
-  };
+  // Only "saved" now: the editor's own Hide/Show button is gone (the roster's
+  // eye toggle is the one place visibility changes), so `?notice=shown|hidden`
+  // has nothing left that can send it.
+  const messages: Record<string, string> = { saved: t("courses.edit.noticeSaved") };
   const errors: Record<string, string> = {
     invalid: t("courses.edit.errorInvalid"),
     images: t("courses.edit.errorImages"),

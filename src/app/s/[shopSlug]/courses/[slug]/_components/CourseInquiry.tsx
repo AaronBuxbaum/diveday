@@ -277,7 +277,11 @@ export function CourseInquiry({
               className={controlClass}
             />
           </Field>
-          <Field label={copy.preferredDate} hint={copy.optional} description={copy.preferredDateHint}>
+          <Field
+            label={copy.preferredDate}
+            hint={copy.optional}
+            description={copy.preferredDateHint}
+          >
             <input
               name="preferredDate"
               type="date"

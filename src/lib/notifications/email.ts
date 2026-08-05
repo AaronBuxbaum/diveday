@@ -853,6 +853,8 @@ type CourseInquiryEmailInput = {
   inquirerPhone?: string;
   experience: CourseInquiryExperience;
   timing?: string;
+  /** A bare `YYYY-MM-DD`; unlike the rest, absent means the line is dropped entirely. */
+  preferredDate?: string;
   divers?: number;
   message?: string;
 };
