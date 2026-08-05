@@ -124,6 +124,12 @@ export default async function DiverDetailPage({
   const diverNotice = resolveDiverNotice({ notice, form, gate, personId, locale });
   const detailsStatus = noticeForForm(diverNotice, "details");
   const pageNotice = noticeForForm(diverNotice, "page");
+  // A card deletion with its undo capability has one outcome: the toast. The
+  // `card-deleted` notice remains a cards-section fallback for an old or
+  // malformed link that has no undo payload, but showing both on the normal
+  // path repeats the same confirmation in two places.
+  const cardRemovalUndo = notice === "card-deleted" && undo && cardType;
+  const cardsStatus = cardRemovalUndo ? undefined : noticeForForm(diverNotice, "cards");
 
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
@@ -153,7 +159,7 @@ export default async function DiverDetailPage({
           status={noticeForForm(diverNotice, "restore")}
         />
       ) : null}
-      {notice === "card-deleted" && undo && cardType ? (
+      {cardRemovalUndo ? (
         <UndoToast
           message={staffTranslator(locale)("divers.notices.cardRemovedToast")}
           action={restoreCardAction.bind(null, shopSlug, personId)}
@@ -179,7 +185,7 @@ export default async function DiverDetailPage({
           shopSlug={shopSlug}
           personId={personId}
           shop={shop}
-          status={noticeForForm(diverNotice, "cards")}
+          status={cardsStatus}
         />
         <SpecialtyCards
           diver={diver}

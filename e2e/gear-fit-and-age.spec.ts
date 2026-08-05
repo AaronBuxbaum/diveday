@@ -143,9 +143,13 @@ test.describe("deck crew", () => {
       form.requestSubmit();
     });
 
-    await expect(page.getByRole("status")).toContainText(
-      "Changing a diver's stated rental fit is limited to",
-    );
+    // The server refused an authorization boundary, so the nearby outcome is
+    // assertive (`alert`), not an ambient confirmation (`status`).
+    await expect(
+      page
+        .getByRole("alert")
+        .filter({ hasText: "Changing a diver's stated rental fit is limited to" }),
+    ).toContainText("Changing a diver's stated rental fit is limited to");
     await expect(flaggedHeading).toBeVisible();
   });
 });
