@@ -132,7 +132,11 @@ const NOTICE_KEYS: Record<
     tone: "danger",
     key: "divers.notices.tripUnavailable",
   },
-  "booking-invalid": { form: "book-activity", tone: "danger", key: "divers.notices.bookingInvalid" },
+  "booking-invalid": {
+    form: "book-activity",
+    tone: "danger",
+    key: "divers.notices.bookingInvalid",
+  },
 
   // Removal, restore, erasure — each beside its own control.
   deleted: { form: "remove", tone: "success", key: "divers.notices.deleted" },
