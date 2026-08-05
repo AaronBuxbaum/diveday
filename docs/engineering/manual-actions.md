@@ -19,7 +19,8 @@ this file is the checklist, not the argument.
     when     once per workstation
     why      Bootstrapping an account and reading the credentials secret both need a credential that predates this stack. The cdk-deployer user it creates cannot do either.
     run      aws configure --profile diveday-admin
-    store    ~/.aws/credentials. This is the only long-lived admin credential in the picture; everything else in this checklist replaces a use of it.
+    store    ~/.aws/credentials, under the profile name you passed above.
+    note     The only long-lived administrator credential in this picture. Everything else in the checklist exists to replace a use of it, so it should be reached for rarely and stored like it matters.
 
 [2] Bootstrap the account for CDK
     when     once per account and region
@@ -27,7 +28,7 @@ this file is the checklist, not the argument.
     run      AWS_PROFILE=diveday-admin pnpm infra:bootstrap
     produces The cdk-<qualifier>-{deploy,file-publishing,image-publishing,lookup}-role roles.
     verify   aws ssm get-parameter --name /cdk-bootstrap/hnb659fds/version
-    note     If you bootstrap with --qualifier, infra-stack.ts §5 builds the four role ARNs from the @aws-cdk/core:bootstrapQualifier context value — set it to match, or the deployer's AssumeRole silently matches nothing.
+    note     Two defaults this leaves wide. (1) If you bootstrap with --qualifier, infra-stack.ts §5 builds the four role ARNs from the @aws-cdk/core:bootstrapQualifier context value — set it to match, or the deployer's AssumeRole silently matches nothing. (2) --cloudformation-execution-policies defaults to empty, so the execution role the deploy role passes gets AdministratorAccess. That makes cdk-deployer administrator-equivalent by transitivity, whatever this stack grants it directly — including reach to the credentials secret nothing is granted read on. Pass scoped policies here to bound it; otherwise treat the deployer key as an admin credential and keep it off every deployed environment.
 
 [3] Allow public S3 buckets at the account level
     when     once per account, before the first deploy
@@ -51,17 +52,19 @@ this file is the checklist, not the argument.
     why      The secret is written by the deploy; putting its contents where a process will read them is a human act on a machine and a platform CloudFormation has no reach into.
     run      AWS_PROFILE=diveday-admin aws secretsmanager get-secret-value --secret-id diveday/env --query SecretString --output text
     produces .env.example with every value this stack can supply already filled in, plus a commented section for the credentials that do not belong in a dotenv file.
-    store    .env.local at the repo root (gitignored). It is a complete file — paste over the whole thing, then fill the blanks the stack cannot know (DATABASE_URL, AUTH_SECRET, STRIPE_*, META_*, CRON_SECRET).
+    store    .env.local at the repo root (gitignored). It is a complete file — paste over the whole thing, then fill the blanks. The stack supplies AWS credentials and topic ARNs and nothing else, so everything non-AWS stays empty (DATABASE_URL, AUTH_SECRET, APP_HOST, STRIPE_*, META_*, SECRET_ENCRYPTION_KEY, CRON_SECRET, NEXT_PUBLIC_SENTRY_DSN), as do the AWS values that are a choice rather than a credential (SES_FROM_EMAIL, SNS_SENDER_ID, REG_SUIT_GITHUB_CLIENT_ID).
     verify   pnpm check:env
 
 [6] Put the app's AWS credentials into Vercel
     when     after the first deploy, and after rotating any of them
     why      Vercel runs the app; CDK runs the infrastructure. Neither deploy pipeline can write to the other, so the values cross by hand.
-    run      Vercel -> diveday -> Settings -> Environment Variables -> Import .env, and paste the secret's contents.
+    run      Copy ONLY the SES_*, SNS_*, SMS_*, and PLACES_* lines out of the secret — not the whole document.
+             Vercel -> diveday -> Settings -> Environment Variables -> Import .env, and paste those lines.
              Then redeploy the app: the values are read at request time from the build's environment.
-    store    Vercel Production environment. The ones that matter: SES_AWS_REGION, SES_AWS_ACCESS_KEY_ID, SES_AWS_SECRET_ACCESS_KEY, SES_FROM_EMAIL, SES_SNS_TOPIC_ARN, SNS_AWS_REGION, SNS_AWS_ACCESS_KEY_ID, SNS_AWS_SECRET_ACCESS_KEY, SMS_SNS_TOPIC_ARN, PLACES_AWS_REGION, PLACES_AWS_ACCESS_KEY_ID, PLACES_AWS_SECRET_ACCESS_KEY. Never AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY — those are the deployer's and the app has no use for them.
+    store    Vercel Production environment: SES_AWS_REGION, SES_AWS_ACCESS_KEY_ID, SES_AWS_SECRET_ACCESS_KEY, SES_FROM_EMAIL, SES_SNS_TOPIC_ARN, SNS_AWS_REGION, SNS_AWS_ACCESS_KEY_ID, SNS_AWS_SECRET_ACCESS_KEY, SMS_SNS_TOPIC_ARN, PLACES_AWS_REGION, PLACES_AWS_ACCESS_KEY_ID, PLACES_AWS_SECRET_ACCESS_KEY.
     verify   curl -s -o /dev/null -w '%{http_code}\n' -X POST <webhookHost>/api/webhooks/ses -d '{}'
              Anything but 503. A 503 means SES_SNS_TOPIC_ARN is still unset in the running deployment.
+    note     Never AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY. Those are the cdk-deployer key, which can assume the CDK bootstrap roles and is therefore administrator-equivalent on this account. The app has no use for it, and a Vercel environment variable is readable by every project member and reachable from any compromised dependency in the server bundle. The document marks that block workstation-only for exactly this reason.
 
 [7] Put the reg-suit credentials into GitHub Actions secrets
     when     after the first deploy, and after rotating reg-suit-bot
@@ -76,26 +79,36 @@ this file is the checklist, not the argument.
     run      Read the secret and scroll to the 'Not .env values' section; each block names its destination.
     store    diveday-mcp-readonly-local -> a named profile in ~/.aws/credentials. diveday-mcp-readonly-cloud -> the Claude Code cloud environment's variables. diveday-backup-uploader -> nowhere yet; the scheduled export has no runner (backup-and-restore-runbook.md).
 
-[9] Rotate a credential
+[9] Delete the access keys that were minted by hand
+    when     once, immediately after the first deploy of this stack — not needed on a fresh account
+    why      Until this change, seven of these eight users had their keys created by hand with `aws iam create-access-key`. CloudFormation did not create those keys and will not delete them, so each such user now holds two: the old one and the one this deploy just minted. Two is IAM's hard, non-adjustable ceiling. Rotation replaces a key create-then-delete, so the next CredentialSerial bump would call CreateAccessKey against a full user and fail with LimitExceeded. Nothing warns you in the meantime — the deploy that creates the second key succeeds, and the failure waits until the day you are rotating because something leaked.
+    run      for u in reg-suit-bot cdk-deployer diveday-mcp-readonly-local diveday-mcp-readonly-cloud diveday-ses-sender diveday-sns-sms-sender diveday-backup-uploader diveday-places-lookup; do echo "== $u"; aws iam list-access-keys --user-name "$u" --query 'AccessKeyMetadata[].[AccessKeyId,CreateDate]' --output text; done
+             For any user listing two, delete the OLDER one — the newer is the one this stack just created: aws iam delete-access-key --user-name <user> --access-key-id <old-id>
+    produces Every identity back to a single access key, so a future rotation has room to create its replacement.
+    verify   Re-run the loop above: every user lists exactly one key.
+    note     Do this AFTER placing the new credentials, never before — the old key is what everything is still authenticating with until you have.
+
+[10] Rotate every credential
     when     on suspected exposure, on operator change, or on a schedule you choose
-    why      Rotation itself is a deploy — CloudFormation replaces the key when Serial increases. What stays manual is re-placing the new value everywhere the old one went, because those destinations are the three platforms above.
-    run      pnpm infra:deploy --context credentialSerial=<previous + 1>                          # every key
-             pnpm infra:deploy --context credentialSerial:diveday-ses-sender=<previous + 1>       # one key
-    store    Record the new serial in docs/engineering/infrastructure-runbook.md §10, then re-run the placement steps above for whichever identities you rotated.
-    verify   Re-run the three placement steps above for whichever identities you rotated; nothing warns you that a stale copy is still in use.
+    why      Rotation itself is a deploy — CloudFormation replaces each key when Serial increases. What stays manual is re-placing the new values everywhere the old ones went, because those destinations are the four platforms above.
+    run      pnpm infra:deploy --parameters CredentialSerial=<previous + 1>
+    store    The same four destinations as the placement steps above: .env.local, Vercel's environment variables, GitHub Actions repository secrets, and the off-dotenv homes. All eight keys rotate together, so all four need re-doing.
+    verify   aws iam list-access-keys --user-name diveday-ses-sender — one key, created just now.
+             aws cloudformation describe-stacks --stack-name diveday-infra --query "Stacks[0].Parameters" — CredentialSerial is the value you passed.
+    note     The serial is a CloudFormation parameter rather than a --context value, so a later deploy that omits it keeps the deployed value instead of rotating everything back to 1 (cdk deploy defaults --previous-parameters to true). It may only ever increase. Nothing warns you that a stale copy of an old key is still in use somewhere.
 ```
 
 ## DNS
 
 ```text
-[10] Add the SES DKIM records
+[11] Add the SES DKIM records
     when     once per sending domain
     why      Authoritative DNS for dive.day is Vercel, not Route53 — this stack has no hosted zone to write into. Adding one would mean replicating the live mail records and replacing Vercel's apex ALIAS with anycast A records Vercel owns and rotates.
     run      Read the SesDkimRecords output: three CNAME name/value pairs.
     store    Vercel -> dive.day -> DNS. Three CNAME records on the SES identity subdomain.
     verify   aws sesv2 get-email-identity --email-identity <sesEmailDomain> --query DkimAttributes.Status  # SUCCESS
 
-[11] Add the SES custom MAIL FROM records
+[12] Add the SES custom MAIL FROM records
     when     once per sending domain
     why      Same reason as the DKIM records: the zone is at Vercel.
     run      Read the SesMailFromRecords output: one MX and one TXT.
@@ -106,14 +119,14 @@ this file is the checklist, not the argument.
 ## AWS account
 
 ```text
-[12] Request SES production access
+[13] Request SES production access
     when     once, before sending to anyone who has not verified their address
     why      A human-reviewed AWS Support case. There is no API.
     run      SES console -> Account dashboard -> Request production access.
     produces Sending to arbitrary recipients. Until then SES is in the sandbox: pre-verified addresses and the mailbox simulator only.
     verify   aws sesv2 get-account --query ProductionAccessEnabled
 
-[13] Leave the SMS sandbox, raise the spend limit, register an origination identity
+[14] Leave the SMS sandbox, raise the spend limit, register an origination identity
     when     once, before sending SMS to a diver
     why      All three are account-level SMS state. The sandbox exit and any spend limit above $1 are Support cases; a US origination identity (10DLC or toll-free) is a vetted registration with the carriers. The SetSMSAttributes custom resource (infra-stack.ts §10) deliberately touches none of them — it sets delivery-status logging and nothing else.
     run      SNS console -> Text messaging (SMS) -> Exit SMS sandbox (a Support case).
@@ -122,7 +135,7 @@ this file is the checklist, not the argument.
     verify   aws sns get-sms-attributes --attributes MonthlySpendLimit
     note     Skipping this does not fail anything visibly: the pipeline reads healthy end to end while sends are capped or dropped.
 
-[14] Re-adopt the retained backup bucket
+[15] Re-adopt the retained backup bucket
     when     only after a cdk destroy, and only if you then redeploy
     why      The backup bucket (infra-stack.ts §11) carries RemovalPolicy.RETAIN so production backups survive a destroyed stack. CloudFormation then tries to create a bucket whose name is already taken and the deploy fails.
     run      Import the existing bucket into the stack, or deploy with --context backupBucketName=<a new name>.
@@ -134,7 +147,7 @@ this file is the checklist, not the argument.
 ## Verification
 
 ```text
-[15] Confirm both SNS webhook subscriptions
+[16] Confirm both SNS webhook subscriptions
     when     after every deploy that created or replaced a subscription
     why      An HTTPS subscription is only real once the endpoint answers SNS's handshake, and both routes answer 503 until their topic ARN is in the app's environment. On a fresh environment the stack therefore creates a subscription the app cannot yet confirm, and SNS deletes it after roughly three days. Nothing else detects this: every hop either side reads healthy while no event ever arrives.
     run      aws sns list-subscriptions-by-topic --topic-arn <SesEventNotificationsTopicArn>
@@ -142,7 +155,7 @@ this file is the checklist, not the argument.
     verify   Both list a real SubscriptionArn, not "PendingConfirmation".
     if not   "PendingConfirmation" means the endpoint answered non-2xx — SES_SNS_TOPIC_ARN or SMS_SNS_TOPIC_ARN is missing from the running app. Set it, redeploy the app, then `aws sns unsubscribe --subscription-arn <pending>` and redeploy this stack to re-issue the handshake. Redeploying this stack alone will not fix it: CloudFormation still believes the subscription exists.
 
-[16] Confirm SMS delivery-status logging applied
+[17] Confirm SMS delivery-status logging applied
     when     after the first deploy, and after changing the delivery-status role
     why      infra-stack.ts §10 sets this through an AwsCustomResource because SetSMSAttributes is account-level state with no CloudFormation resource. A custom resource that succeeded is not the same as an attribute that took.
     run      aws sns get-sms-attributes --attributes DeliveryStatusIAMRole,DeliveryStatusSuccessSamplingRate

@@ -134,7 +134,8 @@ destination yet. Leave it there until it does, then move it into that runner's s
 never the repo.
 
 ```bash
-aws secretsmanager get-secret-value --secret-id diveday/env --query SecretString --output text
+AWS_PROFILE=diveday-admin aws secretsmanager get-secret-value \
+  --secret-id diveday/env --query SecretString --output text
 ```
 
 > `TODO(owner)` — **Decide what runs the export on a schedule and wire it up.** The seam and the

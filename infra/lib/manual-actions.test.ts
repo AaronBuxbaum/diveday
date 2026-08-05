@@ -25,6 +25,41 @@ function synthesize() {
   return { stack, template: Template.fromStack(stack) };
 }
 
+/**
+ * Every resource type that can grant `secretsmanager:GetSecretValue`, not just
+ * `AWS::IAM::Policy`.
+ *
+ * Scanning only inline user/role policies was the original gap: a later
+ * `credentialsSecret.addToResourcePolicy(...)` — the natural construct for
+ * cross-account access, and therefore the most likely future edit — synthesizes
+ * an `AWS::SecretsManager::ResourcePolicy` that nothing here would have looked
+ * at, leaving the ADR's central claim asserted by a test that could not see the
+ * thing contradicting it.
+ */
+function policyStatements(template: Template): string[] {
+  return [
+    "AWS::IAM::Policy",
+    "AWS::IAM::ManagedPolicy",
+    "AWS::IAM::Role",
+    "AWS::SecretsManager::ResourcePolicy",
+  ]
+    .flatMap((type) => Object.values(template.findResources(type)))
+    .flatMap((resource) => {
+      const properties = (resource as { Properties?: Record<string, unknown> }).Properties ?? {};
+      const documents = [
+        properties.PolicyDocument,
+        properties.AssumeRolePolicyDocument,
+        ...((properties.Policies as { PolicyDocument?: unknown }[] | undefined) ?? []).map(
+          (policy) => policy.PolicyDocument,
+        ),
+      ].filter(Boolean);
+      return documents.flatMap(
+        (document) => ((document as { Statement?: unknown[] }).Statement ?? []) as unknown[],
+      );
+    })
+    .map((statement) => JSON.stringify(statement));
+}
+
 describe("the synthesized stack", () => {
   it("puts no credential material in any output", () => {
     const { template } = synthesize();
@@ -61,30 +96,37 @@ describe("the synthesized stack", () => {
     expect(Object.keys(keys).length).toBeGreaterThanOrEqual(8);
   });
 
-  it("gives every access key a rotation serial", () => {
+  it("drives every access key's rotation from the one stack parameter", () => {
     const { template } = synthesize();
     const accessKeys = template.findResources("AWS::IAM::AccessKey") as Record<
       string,
       AccessKeyResource
     >;
     for (const [logicalId, key] of Object.entries(accessKeys)) {
-      expect(key.Properties.Serial, `${logicalId} cannot be rotated by deploying`).toBeTypeOf(
-        "number",
-      );
+      // A `Ref` to the parameter, never a synth-time literal. A literal would
+      // mean the value came from context, and context is not remembered between
+      // deploys — the next flag-less deploy would rotate every key back to 1 and
+      // delete the ones in use.
+      expect(key.Properties.Serial, `${logicalId} cannot be rotated by deploying`).toEqual({
+        Ref: "CredentialSerial",
+      });
     }
+  });
+
+  it("remembers the rotation serial across deploys", () => {
+    const { template } = synthesize();
+    const parameter = template.toJSON().Parameters?.CredentialSerial;
+    expect(parameter, "rotation must be a stack parameter, not a context value").toBeDefined();
+    expect(parameter.Type).toBe("Number");
+    expect(parameter.Default).toBe(1);
+    expect(parameter.MinValue).toBe(1);
   });
 
   it("denies the read-only MCP identities any secret value", () => {
     const { template } = synthesize();
-    const policies = Object.values(
-      template.findResources("AWS::IAM::Policy") as Record<string, PolicyResource>,
-    );
-    const denials = policies.filter((policy) =>
-      policy.Properties.PolicyDocument.Statement.some(
-        (statement) =>
-          JSON.stringify(statement).includes('"Deny"') &&
-          JSON.stringify(statement).includes("secretsmanager:GetSecretValue"),
-      ),
+    const denials = policyStatements(template).filter(
+      (statement) =>
+        statement.includes('"Deny"') && statement.includes("secretsmanager:GetSecretValue"),
     );
     // One per read-only user. ReadOnlyAccess is AWS's to change; the Deny is
     // what makes "this credential cannot reach key material" true regardless.
@@ -93,13 +135,9 @@ describe("the synthesized stack", () => {
 
   it("grants nothing read access to the credentials secret", () => {
     const { template } = synthesize();
-    const allowsRead = Object.values(
-      template.findResources("AWS::IAM::Policy") as Record<string, PolicyResource>,
-    ).some((policy) =>
-      policy.Properties.PolicyDocument.Statement.some((statement) => {
-        const rendered = JSON.stringify(statement);
-        return rendered.includes("secretsmanager:GetSecretValue") && !rendered.includes('"Deny"');
-      }),
+    const allowsRead = policyStatements(template).some(
+      (statement) =>
+        statement.includes("secretsmanager:GetSecretValue") && !statement.includes('"Deny"'),
     );
     expect(allowsRead, "an identity in this stack can read every credential in the account").toBe(
       false,
@@ -112,9 +150,12 @@ describe("the synthesized stack", () => {
       template.toJSON().Outputs ?? {},
     )) {
       if (!name.startsWith("ManualActions")) continue;
-      expect(output.Value.length, `${name} exceeds the 4096-character output limit`).toBeLessThan(
-        4096,
-      );
+      // Bytes, matching how CloudFormation states the limit — `String.length`
+      // undercounts every em dash in the prose.
+      expect(
+        Buffer.byteLength(output.Value, "utf8"),
+        `${name} exceeds the 4096-byte output limit`,
+      ).toBeLessThan(4096);
     }
   });
 });

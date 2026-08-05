@@ -26,10 +26,9 @@ import {
 /** The one secret this stack writes. Slash-separated so a future `diveday/*` grant is one statement. */
 const CREDENTIALS_SECRET_NAME = "diveday/env";
 
-// IAM user names as literals, for the places that need the *name* rather than a
-// reference to the user: the `credentialSerial:<user>` rotation context key a
-// human types, and the destination headings inside the credentials document.
-// `iam.User.userName` is a token there, not a string.
+// IAM user names as literals, for the destination headings inside the
+// credentials document. `iam.User.userName` is a token there, not a string, so
+// interpolating it would print `${Token[...]}` where a name belongs.
 const MCP_READONLY_LOCAL_USER_NAME = "diveday-mcp-readonly-local";
 const MCP_READONLY_CLOUD_USER_NAME = "diveday-mcp-readonly-cloud";
 const SES_SENDER_USER_NAME = "diveday-ses-sender";
@@ -50,53 +49,48 @@ export class InfraStack extends cdk.Stack {
     const userName = this.node.tryGetContext("userName") || "reg-suit-bot";
 
     // Every access key this stack mints is created by CloudFormation and its
-    // value delivered through one Secrets Manager secret (§14). Rotation is a
+    // value delivered through one Secrets Manager secret (§13). Rotation is a
     // deploy, not a console visit: `AWS::IAM::AccessKey.Serial` may only ever be
     // incremented, and incrementing it makes CloudFormation replace the key —
     // create-then-delete, so the user is transiently at IAM's two-key ceiling
     // and never below one working key.
     //
-    //   pnpm infra:deploy --context credentialSerial=2                          (all)
-    //   pnpm infra:deploy --context credentialSerial:diveday-ses-sender=2       (one)
+    //   pnpm infra:deploy --parameters CredentialSerial=2
     //
-    // Per-identity wins over the global, so rotating one credential does not
-    // force re-pasting the other seven.
+    // **A CloudFormation parameter, not a `--context` value, and that is the
+    // whole point.** Context is per-invocation: with `--context`, the deploy
+    // *after* a rotation — any unrelated deploy, run without the flag — would
+    // synthesize `Serial: 1` again, replace all eight keys, and silently delete
+    // the freshly-placed ones. Email and SMS would start failing on
+    // `InvalidClientTokenId` with nothing connecting it to the deploy. A stack
+    // parameter is remembered by CloudFormation instead, and `cdk deploy`
+    // defaults `--previous-parameters` to true, so omitting the flag keeps the
+    // deployed value. Forgetting it is a no-op, which is the only safe way for
+    // a footgun this destructive to behave.
     //
-    // Validated rather than coerced: `--context credentialSerial=abc` would
-    // otherwise synthesize `Serial: null` and fail at deploy time with a
-    // CloudFormation error naming neither the flag nor the typo, and
-    // `--context credentialSerial` with no value arrives as `true`, which
-    // `Number()` would quietly read as 1 — a rotation that silently did nothing.
-    const credentialSerial = (forUserName: string): number => {
-      const raw =
-        this.node.tryGetContext(`credentialSerial:${forUserName}`) ??
-        this.node.tryGetContext("credentialSerial");
-      if (raw === undefined) return 1;
-      const serial = Number(raw);
-      if (!Number.isInteger(serial) || serial < 1) {
-        throw new Error(
-          `credentialSerial for ${forUserName} must be a whole number >= 1, got ${JSON.stringify(raw)}. AWS::IAM::AccessKey.Serial may only ever be incremented.`,
-        );
-      }
-      return serial;
-    };
+    // One serial for all eight rather than one each: the credentials leave in a
+    // single document and land in the same four places, so a partial rotation
+    // saves almost nothing, and eight template parameters would be eight more
+    // things to keep straight for that almost-nothing.
+    const credentialSerial = new cdk.CfnParameter(this, "CredentialSerial", {
+      type: "Number",
+      default: 1,
+      minValue: 1,
+      description:
+        "Increment to rotate every access key this stack mints, then re-place the new values (see docs/engineering/manual-actions.md). Deploys that omit it keep the deployed value.",
+    });
 
     /**
      * The value halves of one identity's credential, as CloudFormation tokens.
      *
      * `constructId` is passed rather than derived because `RegSuitUserAccessKey`
-     * predates this helper, and changing its logical id would replace a key CI
-     * is currently authenticating with.
-     *
-     * `forUserName` is passed rather than read off `user.userName` because that
-     * property is a token resolving to `Ref`, not the literal — so building a
-     * context key from it would produce `credentialSerial:${Token[...]}` and the
-     * per-identity rotation override would never match anything a human types.
+     * predates this helper, and changing its logical id would replace the key on
+     * a *different* schedule than the serial does.
      */
-    const mintAccessKey = (constructId: string, user: iam.User, forUserName: string) => {
+    const mintAccessKey = (constructId: string, user: iam.User) => {
       const accessKey = new iam.CfnAccessKey(this, constructId, {
         userName: user.userName,
-        serial: credentialSerial(forUserName),
+        serial: credentialSerial.valueAsNumber,
       });
       return { id: accessKey.ref, secret: accessKey.attrSecretAccessKey };
     };
@@ -158,9 +152,9 @@ export class InfraStack extends cdk.Stack {
     // s3:DeleteObject* on an unversioned bucket via `grantReadWrite` below.
     // Three identities' stated security rationale defeated by one output.
     //
-    // The secret now goes to Secrets Manager (§14) and nowhere else. Outputs
+    // The secret now goes to Secrets Manager (§13) and nowhere else. Outputs
     // carry names, ARNs, and instructions; never key material.
-    const regSuitKey = mintAccessKey("RegSuitUserAccessKey", user, userName);
+    const regSuitKey = mintAccessKey("RegSuitUserAccessKey", user);
     envValues.REG_SUIT_S3_BUCKET_NAME = bucket.bucketName;
     envValues.REG_SUIT_AWS_ACCESS_KEY_ID = regSuitKey.id;
     envValues.REG_SUIT_AWS_SECRET_ACCESS_KEY = regSuitKey.secret;
@@ -169,10 +163,20 @@ export class InfraStack extends cdk.Stack {
     //
     // This user holds no direct AWS permissions of its own. `cdk bootstrap`
     // provisions deploy-role/file-publishing-role/image-publishing-role/lookup-role
-    // in this account, each already scoped to exactly what CDK deploys need;
-    // the deployer just needs to assume them. That keeps a compromised or
-    // leaked deployer credential bounded by those roles instead of by
-    // AdministratorAccess.
+    // in this account; the deployer just needs to assume them.
+    //
+    // Be careful how much comfort to take from that. It is a real improvement
+    // over handing out AdministratorAccess directly — the credential is useless
+    // outside CloudFormation, and revoking it is one `DeleteAccessKey`. But it
+    // is *not* a privilege boundary: the deploy role passes a CloudFormation
+    // execution role, and a plain `cdk bootstrap` leaves that role at
+    // AdministratorAccess (`--cloudformation-execution-policies` defaults to
+    // empty). Anything deployable is therefore reachable from this key,
+    // including a stack that reads §13's credentials secret. Bootstrapping with
+    // scoped execution policies is what would actually bound it, and it is a
+    // manual action (§14, `cdk-bootstrap`). Until then, treat this key as an
+    // administrator credential — which is why the document in §13 marks it
+    // workstation-only.
     const deployerUser = new iam.User(this, "CdkDeployerUser", {
       userName: "cdk-deployer",
     });
@@ -223,7 +227,7 @@ export class InfraStack extends cdk.Stack {
       description: "The website endpoint for the visual regression reports",
     });
 
-    const deployerKey = mintAccessKey("CdkDeployerUserAccessKey", deployerUser, "cdk-deployer");
+    const deployerKey = mintAccessKey("CdkDeployerUserAccessKey", deployerUser);
     envValues.AWS_ACCOUNT_ID = this.account;
     envValues.AWS_DEFAULT_REGION = this.region;
     envValues.AWS_ACCESS_KEY_ID = deployerKey.id;
@@ -275,12 +279,10 @@ export class InfraStack extends cdk.Stack {
     const mcpReadOnlyLocalKey = mintAccessKey(
       "McpReadOnlyLocalUserAccessKey",
       mcpReadOnlyLocalUser,
-      MCP_READONLY_LOCAL_USER_NAME,
     );
     const mcpReadOnlyCloudKey = mintAccessKey(
       "McpReadOnlyCloudUserAccessKey",
       mcpReadOnlyCloudUser,
-      MCP_READONLY_CLOUD_USER_NAME,
     );
 
     offDotenvCredentials.push({
@@ -495,11 +497,7 @@ export class InfraStack extends cdk.Stack {
       }),
     );
 
-    const sesSenderKey = mintAccessKey(
-      "SesSenderUserAccessKey",
-      sesSenderUser,
-      SES_SENDER_USER_NAME,
-    );
+    const sesSenderKey = mintAccessKey("SesSenderUserAccessKey", sesSenderUser);
     envValues.SES_AWS_REGION = this.region;
     envValues.SES_AWS_ACCESS_KEY_ID = sesSenderKey.id;
     envValues.SES_AWS_SECRET_ACCESS_KEY = sesSenderKey.secret;
@@ -543,11 +541,7 @@ export class InfraStack extends cdk.Stack {
       }),
     );
 
-    const snsSmsSenderKey = mintAccessKey(
-      "SnsSmsSenderUserAccessKey",
-      snsSmsSenderUser,
-      "diveday-sns-sms-sender",
-    );
+    const snsSmsSenderKey = mintAccessKey("SnsSmsSenderUserAccessKey", snsSmsSenderUser);
     envValues.SNS_AWS_REGION = this.region;
     envValues.SNS_AWS_ACCESS_KEY_ID = snsSmsSenderKey.id;
     envValues.SNS_AWS_SECRET_ACCESS_KEY = snsSmsSenderKey.secret;
@@ -801,11 +795,7 @@ exports.handler = async (event) => {
     // is still a `TODO(owner)` in docs/engineering/backup-and-restore-runbook.md.
     // It rides in the off-dotenv section saying exactly that, rather than in a
     // `.env` block implying a home it does not have.
-    const backupUploaderKey = mintAccessKey(
-      "BackupUploaderUserAccessKey",
-      backupUploaderUser,
-      BACKUP_UPLOADER_USER_NAME,
-    );
+    const backupUploaderKey = mintAccessKey("BackupUploaderUserAccessKey", backupUploaderUser);
     offDotenvCredentials.push({
       destination: `${BACKUP_UPLOADER_USER_NAME} -> nowhere yet`,
       note: "Whatever ends up running the scheduled export (a Vercel Cron route or a GitHub Actions schedule - undecided, see backup-and-restore-runbook.md). Until that is decided this key has no home; leave it here.",
@@ -842,11 +832,7 @@ exports.handler = async (event) => {
       }),
     );
 
-    const placesLookupKey = mintAccessKey(
-      "PlacesLookupUserAccessKey",
-      placesLookupUser,
-      "diveday-places-lookup",
-    );
+    const placesLookupKey = mintAccessKey("PlacesLookupUserAccessKey", placesLookupUser);
     envValues.PLACES_AWS_REGION = this.region;
     envValues.PLACES_AWS_ACCESS_KEY_ID = placesLookupKey.id;
     envValues.PLACES_AWS_SECRET_ACCESS_KEY = placesLookupKey.secret;
@@ -885,11 +871,29 @@ exports.handler = async (event) => {
     // scope. On a single-operator account that distinction is theoretical - the
     // same person holds account admin either way.
     //
-    // Read access is granted to nobody. Not the deployer (§5), whose whole
-    // rationale is that a leaked deploy credential cannot reach anything but the
-    // bootstrap roles - handing it every credential in the account would undo
-    // that in one line. Not the read-only MCP users (§6), which are explicitly
-    // denied. The account owner reads it with their administrator profile, or in
+    // **No *additional* principal is granted read**, and it is worth being exact
+    // about what that does and does not buy.
+    //
+    // It bounds the read-only MCP users (§6) completely: they carry an explicit
+    // Deny, and a Deny beats any Allow.
+    //
+    // It does *not* bound the deployer (§5), and saying otherwise would be the
+    // same species of false comfort this whole change exists to remove. The
+    // deployer can assume `cdk-<qualifier>-deploy-role`, and a plain
+    // `cdk bootstrap` - which is what `pnpm infra:bootstrap` runs - leaves the
+    // CloudFormation execution role at AdministratorAccess, because
+    // `--cloudformation-execution-policies` defaults to empty and the bootstrap
+    // template's own default applies. A holder of the deployer key can therefore
+    // deploy a one-resource stack that reads this secret. Withholding
+    // `grantRead` costs them a step, not the capability. What would actually
+    // bound it is bootstrapping with scoped execution policies - a manual
+    // action, and named as one in §14.
+    //
+    // That reach is why the deployer's own key is the one credential in the
+    // document marked workstation-only: it is the key that yields all the
+    // others, so the fewer places it sits, the better.
+    //
+    // The account owner reads the secret with their administrator profile, or in
     // the console. It is a hand-off point for a human, so a human's credential
     // is the one that opens it.
     envValues.SES_SNS_TOPIC_ARN = sesEventNotifications.topicArn;
@@ -898,7 +902,7 @@ exports.handler = async (event) => {
     const credentialsSecret = new secretsmanager.Secret(this, "CredentialsEnvDocument", {
       secretName: CREDENTIALS_SECRET_NAME,
       description:
-        "Filled-in .env.example: every credential this stack mints, with the destination for each. Copy into .env.local or paste into Vercel's Import .env box. Read with: aws secretsmanager get-secret-value --secret-id diveday/env --query SecretString --output text",
+        "Filled-in .env.example: every credential this stack mints, with the destination for each. The whole document goes in .env.local; only the SES_/SNS_/SMS_/PLACES_ lines go to Vercel (AWS_ACCESS_KEY_ID is the deployer's and belongs on no deployed environment). Read with: aws secretsmanager get-secret-value --secret-id diveday/env --query SecretString --output text",
       // The IAM keys are the system of record; this is a copy of them for a
       // human. Once the stack is gone the users and their keys are gone too, so
       // retaining the document would leave a file of dead credentials that still
@@ -922,7 +926,11 @@ exports.handler = async (event) => {
     });
 
     new cdk.CfnOutput(this, "CredentialsSecretName", {
-      value: credentialsSecret.secretName,
+      // The constant, not `credentialsSecret.secretName`: without the
+      // `@aws-cdk/aws-secretsmanager:parseOwnedSecretName` feature flag that
+      // property renders as "split the ARN on '-' and take the first piece",
+      // which is only correct while the name happens to contain no hyphen.
+      value: CREDENTIALS_SECRET_NAME,
       description:
         "Secrets Manager secret holding every credential this stack mints, as a filled-in .env.example. Nothing is granted read access; use an administrator profile.",
     });
@@ -953,8 +961,8 @@ exports.handler = async (event) => {
         when: "once per workstation",
         why: "Bootstrapping an account and reading the credentials secret both need a credential that predates this stack. The cdk-deployer user it creates cannot do either.",
         run: ["aws configure --profile diveday-admin"],
-        store:
-          "~/.aws/credentials. This is the only long-lived admin credential in the picture; everything else in this checklist replaces a use of it.",
+        store: "~/.aws/credentials, under the profile name you passed above.",
+        note: "The only long-lived administrator credential in this picture. Everything else in the checklist exists to replace a use of it, so it should be reached for rarely and stored like it matters.",
       },
       {
         id: "cdk-bootstrap",
@@ -966,7 +974,7 @@ exports.handler = async (event) => {
         produces:
           "The cdk-<qualifier>-{deploy,file-publishing,image-publishing,lookup}-role roles.",
         verify: ["aws ssm get-parameter --name /cdk-bootstrap/hnb659fds/version"],
-        note: "If you bootstrap with --qualifier, infra-stack.ts §5 builds the four role ARNs from the @aws-cdk/core:bootstrapQualifier context value — set it to match, or the deployer's AssumeRole silently matches nothing.",
+        note: "Two defaults this leaves wide. (1) If you bootstrap with --qualifier, infra-stack.ts §5 builds the four role ARNs from the @aws-cdk/core:bootstrapQualifier context value — set it to match, or the deployer's AssumeRole silently matches nothing. (2) --cloudformation-execution-policies defaults to empty, so the execution role the deploy role passes gets AdministratorAccess. That makes cdk-deployer administrator-equivalent by transitivity, whatever this stack grants it directly — including reach to the credentials secret nothing is granted read on. Pass scoped policies here to bound it; otherwise treat the deployer key as an admin credential and keep it off every deployed environment.",
       },
       {
         id: "s3-account-block-public-access",
@@ -1001,7 +1009,7 @@ exports.handler = async (event) => {
         produces:
           ".env.example with every value this stack can supply already filled in, plus a commented section for the credentials that do not belong in a dotenv file.",
         store:
-          ".env.local at the repo root (gitignored). It is a complete file — paste over the whole thing, then fill the blanks the stack cannot know (DATABASE_URL, AUTH_SECRET, STRIPE_*, META_*, CRON_SECRET).",
+          ".env.local at the repo root (gitignored). It is a complete file — paste over the whole thing, then fill the blanks. The stack supplies AWS credentials and topic ARNs and nothing else, so everything non-AWS stays empty (DATABASE_URL, AUTH_SECRET, APP_HOST, STRIPE_*, META_*, SECRET_ENCRYPTION_KEY, CRON_SECRET, NEXT_PUBLIC_SENTRY_DSN), as do the AWS values that are a choice rather than a credential (SES_FROM_EMAIL, SNS_SENDER_ID, REG_SUIT_GITHUB_CLIENT_ID).",
         verify: ["pnpm check:env"],
       },
       {
@@ -1011,11 +1019,13 @@ exports.handler = async (event) => {
         when: "after the first deploy, and after rotating any of them",
         why: "Vercel runs the app; CDK runs the infrastructure. Neither deploy pipeline can write to the other, so the values cross by hand.",
         run: [
-          "Vercel -> diveday -> Settings -> Environment Variables -> Import .env, and paste the secret's contents.",
+          "Copy ONLY the SES_*, SNS_*, SMS_*, and PLACES_* lines out of the secret — not the whole document.",
+          "Vercel -> diveday -> Settings -> Environment Variables -> Import .env, and paste those lines.",
           "Then redeploy the app: the values are read at request time from the build's environment.",
         ],
         store:
-          "Vercel Production environment. The ones that matter: SES_AWS_REGION, SES_AWS_ACCESS_KEY_ID, SES_AWS_SECRET_ACCESS_KEY, SES_FROM_EMAIL, SES_SNS_TOPIC_ARN, SNS_AWS_REGION, SNS_AWS_ACCESS_KEY_ID, SNS_AWS_SECRET_ACCESS_KEY, SMS_SNS_TOPIC_ARN, PLACES_AWS_REGION, PLACES_AWS_ACCESS_KEY_ID, PLACES_AWS_SECRET_ACCESS_KEY. Never AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY — those are the deployer's and the app has no use for them.",
+          "Vercel Production environment: SES_AWS_REGION, SES_AWS_ACCESS_KEY_ID, SES_AWS_SECRET_ACCESS_KEY, SES_FROM_EMAIL, SES_SNS_TOPIC_ARN, SNS_AWS_REGION, SNS_AWS_ACCESS_KEY_ID, SNS_AWS_SECRET_ACCESS_KEY, SMS_SNS_TOPIC_ARN, PLACES_AWS_REGION, PLACES_AWS_ACCESS_KEY_ID, PLACES_AWS_SECRET_ACCESS_KEY.",
+        note: "Never AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY. Those are the cdk-deployer key, which can assume the CDK bootstrap roles and is therefore administrator-equivalent on this account. The app has no use for it, and a Vercel environment variable is readable by every project member and reachable from any compromised dependency in the server bundle. The document marks that block workstation-only for exactly this reason.",
         verify: [
           "curl -s -o /dev/null -w '%{http_code}\\n' -X POST <webhookHost>/api/webhooks/ses -d '{}'",
           "Anything but 503. A 503 means SES_SNS_TOPIC_ARN is still unset in the running deployment.",
@@ -1045,20 +1055,34 @@ exports.handler = async (event) => {
           "diveday-mcp-readonly-local -> a named profile in ~/.aws/credentials. diveday-mcp-readonly-cloud -> the Claude Code cloud environment's variables. diveday-backup-uploader -> nowhere yet; the scheduled export has no runner (backup-and-restore-runbook.md).",
       },
       {
+        id: "retire-hand-minted-keys",
+        title: "Delete the access keys that were minted by hand",
+        category: "Credentials",
+        when: "once, immediately after the first deploy of this stack — not needed on a fresh account",
+        why: "Until this change, seven of these eight users had their keys created by hand with `aws iam create-access-key`. CloudFormation did not create those keys and will not delete them, so each such user now holds two: the old one and the one this deploy just minted. Two is IAM's hard, non-adjustable ceiling. Rotation replaces a key create-then-delete, so the next CredentialSerial bump would call CreateAccessKey against a full user and fail with LimitExceeded. Nothing warns you in the meantime — the deploy that creates the second key succeeds, and the failure waits until the day you are rotating because something leaked.",
+        run: [
+          'for u in reg-suit-bot cdk-deployer diveday-mcp-readonly-local diveday-mcp-readonly-cloud diveday-ses-sender diveday-sns-sms-sender diveday-backup-uploader diveday-places-lookup; do echo "== $u"; aws iam list-access-keys --user-name "$u" --query \'AccessKeyMetadata[].[AccessKeyId,CreateDate]\' --output text; done',
+          "For any user listing two, delete the OLDER one — the newer is the one this stack just created: aws iam delete-access-key --user-name <user> --access-key-id <old-id>",
+        ],
+        produces:
+          "Every identity back to a single access key, so a future rotation has room to create its replacement.",
+        verify: ["Re-run the loop above: every user lists exactly one key."],
+        note: "Do this AFTER placing the new credentials, never before — the old key is what everything is still authenticating with until you have.",
+      },
+      {
         id: "rotate-credentials",
-        title: "Rotate a credential",
+        title: "Rotate every credential",
         category: "Credentials",
         when: "on suspected exposure, on operator change, or on a schedule you choose",
-        why: "Rotation itself is a deploy — CloudFormation replaces the key when Serial increases. What stays manual is re-placing the new value everywhere the old one went, because those destinations are the three platforms above.",
-        run: [
-          "pnpm infra:deploy --context credentialSerial=<previous + 1>                          # every key",
-          "pnpm infra:deploy --context credentialSerial:diveday-ses-sender=<previous + 1>       # one key",
-        ],
+        why: "Rotation itself is a deploy — CloudFormation replaces each key when Serial increases. What stays manual is re-placing the new values everywhere the old ones went, because those destinations are the four platforms above.",
+        run: ["pnpm infra:deploy --parameters CredentialSerial=<previous + 1>"],
         store:
-          "Record the new serial in docs/engineering/infrastructure-runbook.md §10, then re-run the placement steps above for whichever identities you rotated.",
+          "The same four destinations as the placement steps above: .env.local, Vercel's environment variables, GitHub Actions repository secrets, and the off-dotenv homes. All eight keys rotate together, so all four need re-doing.",
         verify: [
-          "Re-run the three placement steps above for whichever identities you rotated; nothing warns you that a stale copy is still in use.",
+          "aws iam list-access-keys --user-name diveday-ses-sender — one key, created just now.",
+          'aws cloudformation describe-stacks --stack-name diveday-infra --query "Stacks[0].Parameters" — CredentialSerial is the value you passed.',
         ],
+        note: "The serial is a CloudFormation parameter rather than a --context value, so a later deploy that omits it keeps the deployed value instead of rotating everything back to 1 (cdk deploy defaults --previous-parameters to true). It may only ever increase. Nothing warns you that a stale copy of an old key is still in use somewhere.",
       },
       {
         id: "ses-dkim-dns",

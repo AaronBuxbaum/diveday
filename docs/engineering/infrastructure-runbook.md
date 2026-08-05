@@ -19,9 +19,11 @@ We use AWS CDK to model, deploy, and update our cloud resources. Currently, the 
 - A `reg-suit-bot` IAM user with specific S3 read/write permissions.
 - A dedicated `cdk-deployer` IAM user that holds **no direct AWS permissions of its own** — only
   `sts:AssumeRole` on the four `cdk bootstrap` roles (deploy / file-publishing / image-publishing /
-  lookup) plus read access to stack status and the bootstrap version parameter. Deliberately *not*
-  `AdministratorAccess`: the bootstrap roles are already scoped to what CDK deploys need, so a
-  leaked deployer credential stays bounded by them. The stack comments at
+  lookup) plus read access to stack status and the bootstrap version parameter. Better than handing
+  out `AdministratorAccess` directly — the credential is useless outside CloudFormation and revoking
+  it is one `DeleteAccessKey` — but **not a privilege boundary**: the deploy role passes an execution
+  role that a plain `cdk bootstrap` leaves at `AdministratorAccess`. See
+  [who can read it](#who-can-read-it). The stack comments at
   [infra/lib/infra-stack.ts](../../infra/lib/infra-stack.ts) §5 carry the full reasoning.
 - Read-only IAM users for an AWS MCP server (local dev and Claude Code's cloud environment), each
   carrying an explicit `Deny` on `secretsmanager:GetSecretValue` so "read-only" cannot be escalated
@@ -50,7 +52,7 @@ Two credentials are in play and they are not interchangeable:
 | | What it is | What it is for |
 | --- | --- | --- |
 | **Administrator profile** | An IAM identity that predates this stack, configured by hand | Bootstrapping the account, and reading the credentials secret ([§10](#10-the-credentials-secret)). Nothing else. |
-| **`cdk-deployer`** | Created *by* this stack; holds `sts:AssumeRole` on the four bootstrap roles and nothing more | Every subsequent `pnpm infra:deploy`. It cannot read the credentials secret, deliberately — see [§10](#10-the-credentials-secret). |
+| **`cdk-deployer`** | Created *by* this stack; holds `sts:AssumeRole` on the four bootstrap roles and nothing more | Every subsequent `pnpm infra:deploy`. Not granted read on the credentials secret — but it can reach it anyway through the bootstrap roles, so treat it as an admin credential and keep it on your workstation only. See [§10](#10-the-credentials-secret). |
 
 ### Option A: Local AWS Profile (Recommended)
 ```bash
@@ -135,6 +137,17 @@ Pass these values during deployment or synthesis using the `--context` flag:
 pnpm infra:deploy --context bucketName=my-custom-prod-bucket --context userName=my-custom-bot-user
 ```
 
+> [!IMPORTANT]
+> **`CredentialSerial` is a CloudFormation *parameter*, not a context value** — the one input here
+> that is not `--context`, and deliberately so. Context is per-invocation, so a rotation done with
+> `--context` would be undone by the next deploy that forgot the flag, silently replacing all eight
+> keys. CloudFormation remembers a parameter and `cdk deploy` defaults `--previous-parameters` to
+> true, so omitting it is a no-op. See [§10](#10-the-credentials-secret).
+>
+> ```bash
+> pnpm infra:deploy --parameters CredentialSerial=2
+> ```
+
 ---
 
 ## 5. Outputs and Environment Configuration
@@ -143,10 +156,12 @@ A deploy prints two kinds of output, and the split is deliberate.
 
 **Values you can act on** — names, ARNs, URLs, DNS records. `S3BucketName`, `S3WebsiteURL`,
 `BackupBucketName`, `SesDkimRecords`, `SesMailFromRecords`, `SesEventNotificationsTopicArn`,
-`SmsDeliveryReceiptsTopicArn`, `CredentialsSecretName`.
+`SmsDeliveryReceiptsTopicArn`, `CredentialsSecretName`, `CostAlertEmail`.
 
-**The manual-action checklist** — `ManualActions1Prerequisites` through `ManualActions5Verification`,
-the same content as [manual-actions.md](manual-actions.md).
+**The manual-action checklist** — the `ManualActions*` keys, one per category and numbered so they
+sort in reading order, splitting into `…Part1`/`…Part2` when a category outgrows CloudFormation's
+4096-byte output value (Credentials does today). Same content as
+[manual-actions.md](manual-actions.md).
 
 **No output carries key material.** `cloudformation:DescribeStacks` resolves outputs to plaintext,
 and both the `cdk-deployer` user and the two read-only MCP users hold that permission — so an output
@@ -380,10 +395,26 @@ AWS_PROFILE=diveday-admin aws secretsmanager get-secret-value \
   --secret-id diveday/env --query SecretString --output text
 ```
 
-Paste the result over `.env.local`, or into Vercel's *Import .env* box. The credentials that do not
-belong in a dotenv file — the two read-only MCP users, the backup uploader — ride at the bottom in a
-commented section, each under the destination it belongs to, so pasting the whole document stays
-safe.
+**The whole document goes in `.env.local`** — that is the shape it is built for. Everywhere else
+takes a subset, and the document's own header says which:
+
+| Destination | What to take |
+| --- | --- |
+| `.env.local` | All of it. Paste over the whole file, then fill the blanks the stack cannot know. |
+| Vercel (*Import .env*) | Only the `SES_*`, `SNS_*`, `SMS_*`, `PLACES_*` lines. |
+| GitHub Actions secrets | The four `REG_SUIT_*` lines. |
+| `~/.aws/credentials`, Claude Code cloud env | The "Not .env values" section at the bottom. |
+
+> [!WARNING]
+> **Never put `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` in Vercel or any deployed environment.**
+> Those are the `cdk-deployer` key. See [who can read it](#who-can-read-it) — it is administrator-
+> equivalent on this account, the app has no use for it, and a Vercel environment variable is
+> readable by every project member and reachable from any compromised dependency in the server
+> bundle. It is the one key that yields all the others.
+
+The credentials that do not belong in a dotenv file — the two read-only MCP users, the backup
+uploader — ride at the bottom in a commented section, each under the destination it belongs to, so
+pasting the whole document into `.env.local` stays safe.
 
 ### Why the document is `.env.example`
 
@@ -414,13 +445,22 @@ half that was wrong mattered:
   so the user is transiently at IAM's two-key ceiling and never below one working key.
 
 ```bash
-pnpm infra:deploy --context credentialSerial=2                         # rotate every key
-pnpm infra:deploy --context credentialSerial:diveday-ses-sender=2      # rotate one
+pnpm infra:deploy --parameters CredentialSerial=2
 ```
 
-Serial is not persisted between deploys. Pass the same value on every subsequent deploy or the next
-one rotates the key *back* — record the current value here when you change it. **Current serial: 1
-for every identity.**
+**It is a CloudFormation parameter, not a `--context` value, and that distinction is the safety
+property.** Context is per-invocation: with context, the deploy *after* a rotation — any unrelated
+deploy, run without the flag — would synthesize `Serial: 1` again, replace all eight keys, and delete
+the ones you just placed. Email and SMS would start failing on `InvalidClientTokenId` with nothing
+connecting it to the deploy. CloudFormation remembers a parameter, and `cdk deploy` defaults
+`--previous-parameters` to `true`, so omitting the flag is a no-op. Check the deployed value with:
+
+```bash
+aws cloudformation describe-stacks --stack-name diveday-infra --query "Stacks[0].Parameters"
+```
+
+One serial covers all eight. They leave in a single document and land in the same four places, so a
+partial rotation saves little, and eight parameters would be eight more things to keep straight.
 
 The trade accepted in exchange: removing a key's construct from the stack now *deletes that key*,
 breaking anything still holding it, where a hand-minted key would have survived untouched. That is
@@ -438,14 +478,31 @@ account, where the same person holds account admin either way.
 
 ### Who can read it
 
-**Nobody this stack creates.** Not `cdk-deployer`, whose entire rationale is that a leaked deploy
-credential reaches nothing but the bootstrap roles — granting it every credential in the account
-would undo that in one line. The two read-only MCP users are *explicitly denied*
-`secretsmanager:GetSecretValue` on every secret, because `ReadOnlyAccess` is AWS's policy to change
-and a Deny always beats an Allow.
+**No *additional* principal is granted read**, and it is worth being exact about what that buys,
+because the comfortable version of this sentence is wrong.
 
-Read it with the administrator profile, or in the console signed in as the account owner. It is a
-hand-off point for a human, so a human's credential is the one that opens it.
+**The read-only MCP users are genuinely bounded.** They carry an explicit `Deny` on
+`secretsmanager:GetSecretValue` for every secret, and a Deny beats any Allow — so the guarantee holds
+regardless of what AWS adds to the managed `ReadOnlyAccess` policy next.
+
+**`cdk-deployer` is not bounded, and it would be dishonest to say otherwise.** It can assume
+`cdk-<qualifier>-deploy-role`; that role passes a CloudFormation execution role; and a plain
+`cdk bootstrap` — which is what `pnpm infra:bootstrap` runs — leaves that execution role at
+`AdministratorAccess`, because `--cloudformation-execution-policies` defaults to empty and the
+bootstrap template's own default applies. So a holder of the deployer key can deploy a one-resource
+stack that reads this secret. Withholding `grantRead` costs them a step, not the capability.
+
+Two consequences follow, and both are load-bearing:
+
+- **The deployer key is the one that yields all the others.** That is why it is marked
+  workstation-only in the document and in [`.env.example`](../../.env.example), and why it must never
+  reach Vercel or CI.
+- **If you want it actually bounded, that happens at bootstrap**, with scoped
+  `--cloudformation-execution-policies`. It is a manual action, noted on the `cdk-bootstrap` entry in
+  [manual-actions.md](manual-actions.md), and it is not done today.
+
+Read the secret with the administrator profile, or in the console signed in as the account owner. It
+is a hand-off point for a human, so a human's credential is the one that opens it.
 
 > [!NOTE]
 > Nothing reads this secret at runtime. The app never calls Secrets Manager; it reads environment

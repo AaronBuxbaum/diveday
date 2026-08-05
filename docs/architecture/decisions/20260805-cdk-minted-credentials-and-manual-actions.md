@@ -60,25 +60,44 @@ declares **throws during synth**. Credentials whose destination is not a dotenv 
 users, the backup uploader) ride at the bottom in a commented section under the destination they
 belong to, so pasting the whole document into `.env.local` stays safe.
 
-**4. Nothing in the stack is granted read access to it.** Not `cdk-deployer`. The two read-only MCP
-users carry an explicit `Deny` on `secretsmanager:GetSecretValue` for every secret, so the claim
-holds regardless of what AWS adds to `ReadOnlyAccess` next. The account owner reads it with an
-administrator profile or in the console.
+**4. No *additional* principal is granted read access to it**, and the claim is stated at exactly
+that strength rather than the more comfortable one.
 
-**5. Rotation is a deploy.** `Serial` may only ever be incremented and forces create-then-delete
-replacement, so the user is transiently at IAM's two-key ceiling and never below one working key:
+The two read-only MCP users carry an explicit `Deny` on `secretsmanager:GetSecretValue` for every
+secret, so *that* half holds regardless of what AWS adds to `ReadOnlyAccess` next.
+
+`cdk-deployer` is **not** bounded, and an earlier draft of this record said it was. It can assume
+`cdk-<qualifier>-deploy-role`, which passes a CloudFormation execution role that a plain
+`cdk bootstrap` leaves at `AdministratorAccess` — `--cloudformation-execution-policies` defaults to
+empty, and `pnpm infra:bootstrap` passes nothing. A holder of the deployer key can therefore deploy a
+one-resource stack that reads the secret; withholding `grantRead` costs a step, not the capability.
+Two things follow: the deployer's own key is marked **workstation-only** in the document and in
+`.env.example`, because it is the key that yields all the others; and bounding it for real is a
+bootstrap-time act, noted on the `cdk-bootstrap` manual action and not done today.
+
+The account owner reads the secret with an administrator profile or in the console.
+
+**5. Rotation is a deploy, driven by a CloudFormation parameter.** `Serial` may only ever be
+incremented and forces create-then-delete replacement, so the user is transiently at IAM's two-key
+ceiling and never below one working key:
 
 ```bash
-pnpm infra:deploy --context credentialSerial=2                         # every key
-pnpm infra:deploy --context credentialSerial:diveday-ses-sender=2      # one key
+pnpm infra:deploy --parameters CredentialSerial=2
 ```
+
+**A parameter, not `--context`, is the safety property.** Context is per-invocation: a rotation done
+with context is undone by the next deploy that omits the flag, which would replace all eight keys and
+delete the freshly-placed ones with nothing connecting the outage to the deploy. CloudFormation
+remembers a parameter, and `cdk deploy` defaults `--previous-parameters` to `true`, so forgetting the
+flag is a no-op. One serial covers all eight: they leave in one document and land in the same four
+places, so partial rotation saves little and eight parameters would be eight more things to track.
 
 **6. Every remaining manual step is a `ManualAction` record** (`infra/lib/manual-actions.ts`) that
 must state **when** it applies, **why** the stack cannot do it, **what** to run, and **where** the
 result goes. The record type is the enforcement: a step with no stated destination cannot be
 written. The registry renders to grouped `CfnOutput`s printed after every deploy *and* to the
 generated [docs/engineering/manual-actions.md](../../engineering/manual-actions.md), asserted equal
-by a test. Sixteen actions, including every step listed as missing above.
+by a test. Seventeen actions, including every step listed as missing above.
 
 **7. `infra/` gets test coverage.** `vitest.config.ts` now includes `infra/**/*.test.ts`. Lint and
 `tsc` see TypeScript; only a synth sees a CloudFormation template, and a leaked credential is a
@@ -104,6 +123,12 @@ property of the template.
   key-policy-level access control that a single-operator account does not use. The default
   `aws/secretsmanager` key is free and every principal in the account can already use it, which is
   why the `Deny` in decision 4 is the thing doing the work.
+- **A `--context` value for the rotation serial.** Rejected after review: context is not remembered
+  between deploys, so the *next* deploy run without the flag re-synthesizes `Serial: 1`, replaces all
+  eight keys, and deletes the ones just placed — production email and SMS failing on
+  `InvalidClientTokenId` with nothing tying it to the deploy. A CloudFormation parameter is
+  remembered (`cdk deploy --previous-parameters` defaults true), so omission is a no-op. The cost is
+  losing per-identity serials, which is acceptable because the credentials already travel together.
 - **Keeping the out-of-band minting and just fixing the reg-suit exception.** Rejected: it preserves
   the failure mode where a credential exists only in a scrollback, leaves rotation as a code change
   nobody makes, and keeps eight instruction outputs whose text is the only thing holding the
@@ -120,19 +145,37 @@ property of the template.
 
 ## Consequences
 
-- **The reg-suit key rotates on the next deploy is *not* a consequence** — `RegSuitUserAccessKey`
-  keeps its logical id (which is why the L1 `CfnAccessKey` is used rather than the L2 `AccessKey`,
-  whose logical id carries a construct hash), so CI's current credential survives. Adding `Serial: 1`
-  to an existing key is a no-op; CloudFormation replaces only when it increases.
+- **The reg-suit key will very likely be replaced on the first deploy, and CI must be re-pasted.**
+  An earlier draft of this record claimed the opposite, reasoning that "`Serial` may only be
+  incremented, so adding `Serial: 1` is a no-op". That conflates AWS's *semantic* rule with
+  CloudFormation's *diff* behaviour: CFN decides update actions by comparing template properties, a
+  previously-absent property is a change, and `AWS::IAM::AccessKey.Serial` is `Update requires:
+  Replacement`. Keeping the L1 `CfnAccessKey` still matters — it preserves the logical id, so the key
+  is replaced at most once rather than also being replaced by a construct-hash change — but **run
+  `pnpm infra:diff` before the first deploy and read the `AWS::IAM::AccessKey` line**, and treat the
+  `credentials-to-github-actions` action as required immediately after it. The failure if you skip
+  it is quiet: per ADR 20260729 a baseline-lookup failure degrades to "no baseline" rather than
+  stopping, so visual regression would simply stop protecting anything.
 - **Seven new access keys appear on the first deploy** and land in the secret. Nothing consumes them
   until a human places them, so the deploy is inert for the app.
+
+- **Every identity that already has a hand-minted key is at IAM's two-key ceiling afterwards, and
+  that breaks the *next* rotation, not this deploy.** Those keys were created with
+  `aws iam create-access-key`, so CloudFormation neither knows nor deletes them; the new key sits
+  beside the old one. IAM's limit of two per user is hard and non-adjustable, and replacement is
+  create-then-delete, so the next `CredentialSerial` bump would call `CreateAccessKey` against a full
+  user and fail with `LimitExceeded` — on the day you are rotating because something leaked. The
+  migration is therefore a numbered manual action (`retire-hand-minted-keys`), ordered *after* the
+  placement steps so nothing is running on the key being deleted. This is the sharpest edge in the
+  change and it is entirely invisible from the deploy, which succeeds.
 - **Deleting an IAM user's construct now deletes its key**, breaking anything still holding it, where
   a hand-minted key survived untouched. That is the correct default and it is a sharp edge; the
   runbook says so.
-- **`Serial` is not persisted between deploys.** Passing `--context credentialSerial=2` once and
-  omitting it next time rotates the key *back*. The runbook carries the current value (1) and must be
-  updated when it changes. This is the weakest part of the design; the alternative — writing the
-  serial into the repo — makes rotation a commit, which is worse.
+- **Forgetting the rotation flag is safe.** This was the design's weakest point while the serial
+  was a context value, and moving it to a CloudFormation parameter removes it: the deployed value
+  persists, so an unrelated later deploy cannot silently rotate and delete eight live credentials.
+  The residual cost is that per-identity rotation is gone — rotating one rotates all — and that
+  `--no-previous-parameters` or a different pipeline would reapply the default.
 - **`.env.example` is now load-bearing for the infrastructure.** Editing it changes the secret's
   contents on the next deploy, and removing a key the stack fills breaks `cdk synth` with a message
   naming the key. That coupling is deliberate and is what "stays in sync" means here.
@@ -144,7 +187,13 @@ property of the template.
   the secret renders as an `Fn::Join` over `Fn::GetAtt` intrinsics with no plaintext, and every
   minted key appears in it — but no deploy has run. Same caveat as
   [20260803-webhook-subscriptions-in-cdk](20260803-webhook-subscriptions-in-cdk.md). The first real
-  deploy should be preceded by `pnpm infra:diff` and will prompt for IAM approval.
+  deploy **must** be preceded by `pnpm infra:diff`, both for the reg-suit replacement above and
+  because it will prompt for IAM approval anyway.
+
+- **The one guard that enforces decision 4 scans four resource types**, not just
+  `AWS::IAM::Policy`: a later `secret.addToResourcePolicy(...)` synthesizes an
+  `AWS::SecretsManager::ResourcePolicy` that an IAM-only scan would never look at, which would leave
+  this record's central claim asserted by a test structurally unable to see it being violated.
 - **Known unfixed, deliberately out of scope:** `reg-suit-bot` still carries
   `s3:PutObjectAcl`/`s3:GetObjectAcl` that `regconfig.json`'s `enableACL: false` means nothing uses,
   and the VRT bucket is unversioned. Both are real least-privilege improvements and neither is
