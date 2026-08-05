@@ -49,7 +49,7 @@ export class InfraStack extends cdk.Stack {
     const userName = this.node.tryGetContext("userName") || "reg-suit-bot";
 
     // Every access key this stack mints is created by CloudFormation and its
-    // value delivered through one Secrets Manager secret (§13). Rotation is a
+    // value delivered through one Secrets Manager secret (§14). Rotation is a
     // deploy, not a console visit: `AWS::IAM::AccessKey.Serial` may only ever be
     // incremented, and incrementing it makes CloudFormation replace the key —
     // create-then-delete, so the user is transiently at IAM's two-key ceiling
@@ -87,11 +87,15 @@ export class InfraStack extends cdk.Stack {
      * predates this helper, and changing its logical id would replace the key on
      * a *different* schedule than the serial does.
      */
+    const mintedKeys: iam.CfnAccessKey[] = [];
+    const keyedUsers: iam.User[] = [];
     const mintAccessKey = (constructId: string, user: iam.User) => {
       const accessKey = new iam.CfnAccessKey(this, constructId, {
         userName: user.userName,
         serial: credentialSerial.valueAsNumber,
       });
+      mintedKeys.push(accessKey);
+      keyedUsers.push(user);
       return { id: accessKey.ref, secret: accessKey.attrSecretAccessKey };
     };
 
@@ -152,7 +156,7 @@ export class InfraStack extends cdk.Stack {
     // s3:DeleteObject* on an unversioned bucket via `grantReadWrite` below.
     // Three identities' stated security rationale defeated by one output.
     //
-    // The secret now goes to Secrets Manager (§13) and nowhere else. Outputs
+    // The secret now goes to Secrets Manager (§14) and nowhere else. Outputs
     // carry names, ARNs, and instructions; never key material.
     const regSuitKey = mintAccessKey("RegSuitUserAccessKey", user);
     envValues.REG_SUIT_S3_BUCKET_NAME = bucket.bucketName;
@@ -172,10 +176,10 @@ export class InfraStack extends cdk.Stack {
     // execution role, and a plain `cdk bootstrap` leaves that role at
     // AdministratorAccess (`--cloudformation-execution-policies` defaults to
     // empty). Anything deployable is therefore reachable from this key,
-    // including a stack that reads §13's credentials secret. Bootstrapping with
+    // including a stack that reads §14's credentials secret. Bootstrapping with
     // scoped execution policies is what would actually bound it, and it is a
-    // manual action (§14, `cdk-bootstrap`). Until then, treat this key as an
-    // administrator credential — which is why the document in §13 marks it
+    // manual action (§15, `cdk-bootstrap`). Until then, treat this key as an
+    // administrator credential — which is why the document in §14 marks it
     // workstation-only.
     const deployerUser = new iam.User(this, "CdkDeployerUser", {
       userName: "cdk-deployer",
@@ -837,7 +841,110 @@ exports.handler = async (event) => {
     envValues.PLACES_AWS_ACCESS_KEY_ID = placesLookupKey.id;
     envValues.PLACES_AWS_SECRET_ACCESS_KEY = placesLookupKey.secret;
 
-    // 13. The credentials secret: one Secrets Manager secret holding a filled-in
+    // 13. Retire the access keys this stack did not create.
+    //
+    // Before this stack minted keys, seven of its eight users had theirs made by
+    // hand with `aws iam create-access-key`. CloudFormation neither knows about
+    // those nor deletes them, so the deploy that adds a managed key leaves each
+    // such user holding two — **IAM's ceiling is two per user, hard and not
+    // adjustable.** Rotation replaces a key create-then-delete, so the next
+    // `CredentialSerial` bump would call `CreateAccessKey` against a full user
+    // and fail with `LimitExceeded`, on the day someone is rotating *because*
+    // something leaked. Nothing surfaces it in the meantime: the deploy that
+    // creates the second key succeeds.
+    //
+    // This was a numbered manual step for one draft, and a manual step is the
+    // wrong shape for it — the whole hazard is that nobody knows it is armed.
+    // Making revocation something the system does is also what makes "revoke and
+    // re-create" a usable answer to any future exposure, rather than a procedure
+    // whose first attempt fails.
+    //
+    // **Two safety properties, and they are the reason this is safe to automate:**
+    //
+    //  1. It never touches a user with fewer than two keys, so it can never
+    //     leave an identity with none. Nothing to do is the common case.
+    //  2. It keeps the *newest* key and deletes the rest. CloudFormation created
+    //     its key seconds earlier and the dependency below guarantees that
+    //     ordering, so the newest is always the managed one.
+    //
+    // Deliberately NOT re-run on rotation. Its properties name the users, not
+    // the key ids, so bumping `CredentialSerial` does not re-invoke it. If it
+    // did, it would delete the outgoing key during the same update in which
+    // CloudFormation is already deleting it — a race with the stack's own
+    // cleanup, for no gain: after this has run once, every user holds exactly
+    // one key and rotation has the room it needs natively.
+    const accessKeyPruner = new lambda.Function(this, "AccessKeyPruner", {
+      functionName: "diveday-access-key-pruner",
+      runtime: lambda.Runtime.NODEJS_22_X,
+      handler: "index.handler",
+      timeout: cdk.Duration.minutes(2),
+      logGroup: new logs.LogGroup(this, "AccessKeyPrunerLogs", {
+        logGroupName: "/aws/lambda/diveday-access-key-pruner",
+        retention: logs.RetentionDays.ONE_MONTH,
+        removalPolicy: cdk.RemovalPolicy.DESTROY,
+      }),
+      code: lambda.Code.fromInline(`
+const { IAMClient, ListAccessKeysCommand, DeleteAccessKeyCommand } = require("@aws-sdk/client-iam");
+const iam = new IAMClient({});
+
+exports.handler = async (event) => {
+  // Nothing to do on delete: the stack's own keys go with the stack, and a key
+  // this function already removed is not ours to restore.
+  if (event.RequestType === "Delete") return {};
+
+  const retired = [];
+  for (const userName of event.ResourceProperties.UserNames) {
+    const { AccessKeyMetadata = [] } = await iam.send(new ListAccessKeysCommand({ UserName: userName }));
+    // One key is the steady state. Never act on it - deleting the only
+    // credential an identity has is the one outcome worse than the surplus.
+    if (AccessKeyMetadata.length < 2) continue;
+    const [newest, ...stale] = [...AccessKeyMetadata].sort(
+      (a, b) => new Date(b.CreateDate).getTime() - new Date(a.CreateDate).getTime(),
+    );
+    console.log("keeping " + userName + "/" + newest.AccessKeyId);
+    for (const key of stale) {
+      await iam.send(new DeleteAccessKeyCommand({ UserName: userName, AccessKeyId: key.AccessKeyId }));
+      console.log("retired " + userName + "/" + key.AccessKeyId);
+      retired.push(userName + "/" + key.AccessKeyId);
+    }
+  }
+  return { Data: { Retired: retired.join(" ") || "none" } };
+};
+`),
+    });
+
+    accessKeyPruner.addToRolePolicy(
+      new iam.PolicyStatement({
+        sid: "RetireSurplusAccessKeys",
+        actions: ["iam:ListAccessKeys", "iam:DeleteAccessKey"],
+        // Only the eight identities this stack owns. It cannot reach a key on
+        // any other user in the account, including a human's.
+        resources: keyedUsers.map((keyedUser) => keyedUser.userArn),
+      }),
+    );
+
+    const retireStrayAccessKeys = new cdk.CustomResource(this, "RetireStrayAccessKeys", {
+      serviceToken: new cr.Provider(this, "AccessKeyPrunerProvider", {
+        onEventHandler: accessKeyPruner,
+      }).serviceToken,
+      properties: {
+        // The user list, and only the user list. See the note above on why the
+        // serial is deliberately absent.
+        UserNames: keyedUsers.map((keyedUser) => keyedUser.userName),
+      },
+    });
+
+    // Must run after every key exists, or "keep the newest" would keep a
+    // hand-minted one and delete the managed key that had not been created yet.
+    for (const mintedKey of mintedKeys) retireStrayAccessKeys.node.addDependency(mintedKey);
+
+    new cdk.CfnOutput(this, "RetiredAccessKeys", {
+      value: retireStrayAccessKeys.getAttString("Retired"),
+      description:
+        "Access keys this deploy revoked because the identity held more than one — the hand-minted keys that predate CloudFormation-managed ones. 'none' is the steady state.",
+    });
+
+    // 14. The credentials secret: one Secrets Manager secret holding a filled-in
     // `.env.example`.
     //
     // Every access key above is minted by CloudFormation and delivered here.
@@ -860,7 +967,7 @@ exports.handler = async (event) => {
     // *deletes the key*, breaking anything still holding it, where a hand-minted
     // key would have survived untouched. That is the correct default — a
     // credential this file no longer describes should stop working — but it is a
-    // sharp edge and it is why §14's checklist carries a rotation entry.
+    // sharp edge and it is why §15's checklist carries a rotation entry.
     //
     // One secret, not eight. Secrets Manager bills $0.40 per secret per month;
     // eight would be $3.20 against the ~$5/month this account is budgeted for
@@ -887,7 +994,7 @@ exports.handler = async (event) => {
     // deploy a one-resource stack that reads this secret. Withholding
     // `grantRead` costs them a step, not the capability. What would actually
     // bound it is bootstrapping with scoped execution policies - a manual
-    // action, and named as one in §14.
+    // action, and named as one in §15.
     //
     // That reach is why the deployer's own key is the one credential in the
     // document marked workstation-only: it is the key that yields all the
@@ -936,7 +1043,7 @@ exports.handler = async (event) => {
         "Secrets Manager secret holding every credential this stack mints, as a filled-in .env.example. Nothing is granted read access; use an administrator profile.",
     });
 
-    // 14. Everything this stack deliberately cannot do, in one shape, printed
+    // 15. Everything this stack deliberately cannot do, in one shape, printed
     // after every deploy so the remainder is a visible checklist rather than
     // something to remember.
     //
@@ -1056,19 +1163,19 @@ exports.handler = async (event) => {
           "diveday-mcp-readonly-local -> a named profile in ~/.aws/credentials. diveday-mcp-readonly-cloud -> the Claude Code cloud environment's variables. diveday-backup-uploader -> nowhere yet; the scheduled export has no runner (backup-and-restore-runbook.md).",
       },
       {
-        id: "retire-hand-minted-keys",
-        title: "Delete the access keys that were minted by hand",
-        category: "Credentials",
-        when: "once, immediately after the first deploy of this stack — not needed on a fresh account",
-        why: "Until this change, seven of these eight users had their keys created by hand with `aws iam create-access-key`. CloudFormation did not create those keys and will not delete them, so each such user now holds two: the old one and the one this deploy just minted. Two is IAM's hard, non-adjustable ceiling. Rotation replaces a key create-then-delete, so the next CredentialSerial bump would call CreateAccessKey against a full user and fail with LimitExceeded. Nothing warns you in the meantime — the deploy that creates the second key succeeds, and the failure waits until the day you are rotating because something leaked.",
+        id: "confirm-stray-keys-retired",
+        title: "Confirm the surplus access keys were revoked",
+        category: "Verification",
+        when: "after the first deploy, and after any deploy that adds an IAM identity",
+        why: "The stack revokes them itself (infra-stack.ts §13), but this is the one automation whose failure is invisible until it matters. IAM allows two access keys per user, hard and not adjustable; the keys minted by hand before this stack existed are not CloudFormation's to delete. If any survive, the identity is at the ceiling and the NEXT rotation fails with LimitExceeded — on the day someone is rotating because something leaked.",
         run: [
-          'for u in reg-suit-bot cdk-deployer diveday-mcp-readonly-local diveday-mcp-readonly-cloud diveday-ses-sender diveday-sns-sms-sender diveday-backup-uploader diveday-places-lookup; do echo "== $u"; aws iam list-access-keys --user-name "$u" --query \'AccessKeyMetadata[].[AccessKeyId,CreateDate]\' --output text; done',
-          "For any user listing two, delete the OLDER one — the newer is the one this stack just created: aws iam delete-access-key --user-name <user> --access-key-id <old-id>",
+          "Read the RetiredAccessKeys stack output: the keys this deploy revoked, or 'none'.",
+          'for u in reg-suit-bot cdk-deployer diveday-mcp-readonly-local diveday-mcp-readonly-cloud diveday-ses-sender diveday-sns-sms-sender diveday-backup-uploader diveday-places-lookup; do echo "== $u"; aws iam list-access-keys --user-name "$u" --query \'AccessKeyMetadata[].AccessKeyId\' --output text; done',
         ],
-        produces:
-          "Every identity back to a single access key, so a future rotation has room to create its replacement.",
-        verify: ["Re-run the loop above: every user lists exactly one key."],
-        note: "Do this AFTER placing the new credentials, never before — the old key is what everything is still authenticating with until you have.",
+        verify: ["Every identity lists exactly one access key."],
+        onFailure:
+          "A user with two means the pruner did not run or could not reach it — check the diveday-access-key-pruner log group. Deleting the older key by hand is safe and restores the invariant: aws iam delete-access-key --user-name <user> --access-key-id <older-id>",
+        note: "It never touches a user holding fewer than two keys, so it cannot leave an identity with none, and it keeps the newest — which is always the one CloudFormation just created.",
       },
       {
         id: "rotate-credentials",

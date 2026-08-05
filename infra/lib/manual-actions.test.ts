@@ -143,6 +143,42 @@ describe("the synthesized stack", () => {
     );
   });
 
+  it("scopes the access-key pruner to the identities this stack owns", () => {
+    const { template } = synthesize();
+    const pruning = policyStatements(template).filter((statement) =>
+      statement.includes("iam:DeleteAccessKey"),
+    );
+    expect(pruning).toHaveLength(1);
+    // A function that deletes IAM access keys must never be able to reach one it
+    // does not own — a human's, or another service's.
+    expect(pruning[0]).not.toContain('"Resource":"*"');
+    expect(pruning[0]).toContain("RegSuitUser");
+  });
+
+  it("runs the pruner only after every key exists, and not on rotation", () => {
+    const { template } = synthesize();
+    const [pruner] = Object.values(
+      template.findResources("AWS::CloudFormation::CustomResource") as Record<
+        string,
+        { DependsOn?: string[]; Properties: Record<string, unknown> }
+      >,
+    );
+    const accessKeys = Object.keys(template.findResources("AWS::IAM::AccessKey"));
+
+    // "Keep the newest key" is only correct once CloudFormation's own key is the
+    // newest. Run it a moment early and it keeps a hand-minted key and deletes
+    // the managed one.
+    for (const logicalId of accessKeys) {
+      expect(pruner.DependsOn, `pruner may run before ${logicalId} exists`).toContain(logicalId);
+    }
+
+    // The serial must stay out of its properties. With it in, a rotation
+    // re-invokes the pruner to delete the outgoing key during the same update in
+    // which CloudFormation is already deleting it — racing the stack's cleanup
+    // for no gain, since after one run every user holds exactly one key.
+    expect(JSON.stringify(pruner.Properties)).not.toContain("CredentialSerial");
+  });
+
   it("keeps every manual-action output inside CloudFormation's value ceiling", () => {
     const { template } = synthesize();
     for (const [name, output] of Object.entries<{ Value: string }>(
@@ -188,6 +224,18 @@ describe("the manual-action registry", () => {
     const ids = stack.manualActions.map((action) => action.id);
     expect(new Set(ids).size).toBe(ids.length);
     for (const id of ids) expect(id).toMatch(/^[a-z0-9]+(-[a-z0-9]+)*$/);
+  });
+
+  it("numbers the checklist in the order it is read", () => {
+    const { stack } = synthesize();
+    const numbers = [...renderManualActionsDoc(stack.manualActions).matchAll(/^\[(\d+)\] /gm)].map(
+      (match) => Number(match[1]),
+    );
+    // Numbering used to come off the registry array, so moving one record
+    // between categories put [9] under Verification while Credentials ran to
+    // [10]. A reader following the list top to bottom must see 1..n.
+    expect(numbers).toEqual(numbers.map((_, index) => index + 1));
+    expect(numbers).toHaveLength(stack.manualActions.length);
   });
 
   it("leaves no unresolved CDK token in the rendered text", () => {

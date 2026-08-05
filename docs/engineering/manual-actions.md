@@ -79,16 +79,7 @@ this file is the checklist, not the argument.
     run      Read the secret and scroll to the 'Not .env values' section; each block names its destination.
     store    diveday-mcp-readonly-local -> a named profile in ~/.aws/credentials. diveday-mcp-readonly-cloud -> the Claude Code cloud environment's variables. diveday-backup-uploader -> nowhere yet; the scheduled export has no runner (backup-and-restore-runbook.md).
 
-[9] Delete the access keys that were minted by hand
-    when     once, immediately after the first deploy of this stack — not needed on a fresh account
-    why      Until this change, seven of these eight users had their keys created by hand with `aws iam create-access-key`. CloudFormation did not create those keys and will not delete them, so each such user now holds two: the old one and the one this deploy just minted. Two is IAM's hard, non-adjustable ceiling. Rotation replaces a key create-then-delete, so the next CredentialSerial bump would call CreateAccessKey against a full user and fail with LimitExceeded. Nothing warns you in the meantime — the deploy that creates the second key succeeds, and the failure waits until the day you are rotating because something leaked.
-    run      for u in reg-suit-bot cdk-deployer diveday-mcp-readonly-local diveday-mcp-readonly-cloud diveday-ses-sender diveday-sns-sms-sender diveday-backup-uploader diveday-places-lookup; do echo "== $u"; aws iam list-access-keys --user-name "$u" --query 'AccessKeyMetadata[].[AccessKeyId,CreateDate]' --output text; done
-             For any user listing two, delete the OLDER one — the newer is the one this stack just created: aws iam delete-access-key --user-name <user> --access-key-id <old-id>
-    produces Every identity back to a single access key, so a future rotation has room to create its replacement.
-    verify   Re-run the loop above: every user lists exactly one key.
-    note     Do this AFTER placing the new credentials, never before — the old key is what everything is still authenticating with until you have.
-
-[10] Rotate every credential
+[9] Rotate every credential
     when     on suspected exposure, on operator change, or on a schedule you choose
     why      Rotation itself is a deploy — CloudFormation replaces each key when Serial increases. What stays manual is re-placing the new values everywhere the old ones went, because those destinations are the four platforms above.
     run      pnpm infra:deploy --parameters CredentialSerial=<previous + 1>
@@ -101,14 +92,14 @@ this file is the checklist, not the argument.
 ## DNS
 
 ```text
-[11] Add the SES DKIM records
+[10] Add the SES DKIM records
     when     once per sending domain
     why      Authoritative DNS for dive.day is Vercel, not Route53 — this stack has no hosted zone to write into. Adding one would mean replicating the live mail records and replacing Vercel's apex ALIAS with anycast A records Vercel owns and rotates.
     run      Read the SesDkimRecords output: three CNAME name/value pairs.
     store    Vercel -> dive.day -> DNS. Three CNAME records on the SES identity subdomain.
     verify   aws sesv2 get-email-identity --email-identity <sesEmailDomain> --query DkimAttributes.Status  # SUCCESS
 
-[12] Add the SES custom MAIL FROM records
+[11] Add the SES custom MAIL FROM records
     when     once per sending domain
     why      Same reason as the DKIM records: the zone is at Vercel.
     run      Read the SesMailFromRecords output: one MX and one TXT.
@@ -119,14 +110,14 @@ this file is the checklist, not the argument.
 ## AWS account
 
 ```text
-[13] Request SES production access
+[12] Request SES production access
     when     once, before sending to anyone who has not verified their address
     why      A human-reviewed AWS Support case. There is no API.
     run      SES console -> Account dashboard -> Request production access.
     produces Sending to arbitrary recipients. Until then SES is in the sandbox: pre-verified addresses and the mailbox simulator only.
     verify   aws sesv2 get-account --query ProductionAccessEnabled
 
-[14] Leave the SMS sandbox, raise the spend limit, register an origination identity
+[13] Leave the SMS sandbox, raise the spend limit, register an origination identity
     when     once, before sending SMS to a diver
     why      All three are account-level SMS state. The sandbox exit and any spend limit above $1 are Support cases; a US origination identity (10DLC or toll-free) is a vetted registration with the carriers. The SetSMSAttributes custom resource (infra-stack.ts §10) deliberately touches none of them — it sets delivery-status logging and nothing else.
     run      SNS console -> Text messaging (SMS) -> Exit SMS sandbox (a Support case).
@@ -135,7 +126,7 @@ this file is the checklist, not the argument.
     verify   aws sns get-sms-attributes --attributes MonthlySpendLimit
     note     Skipping this does not fail anything visibly: the pipeline reads healthy end to end while sends are capped or dropped.
 
-[15] Re-adopt the retained backup bucket
+[14] Re-adopt the retained backup bucket
     when     only after a cdk destroy, and only if you then redeploy
     why      The backup bucket (infra-stack.ts §11) carries RemovalPolicy.RETAIN so production backups survive a destroyed stack. CloudFormation then tries to create a bucket whose name is already taken and the deploy fails.
     run      Import the existing bucket into the stack, or deploy with --context backupBucketName=<a new name>.
@@ -147,6 +138,15 @@ this file is the checklist, not the argument.
 ## Verification
 
 ```text
+[15] Confirm the surplus access keys were revoked
+    when     after the first deploy, and after any deploy that adds an IAM identity
+    why      The stack revokes them itself (infra-stack.ts §13), but this is the one automation whose failure is invisible until it matters. IAM allows two access keys per user, hard and not adjustable; the keys minted by hand before this stack existed are not CloudFormation's to delete. If any survive, the identity is at the ceiling and the NEXT rotation fails with LimitExceeded — on the day someone is rotating because something leaked.
+    run      Read the RetiredAccessKeys stack output: the keys this deploy revoked, or 'none'.
+             for u in reg-suit-bot cdk-deployer diveday-mcp-readonly-local diveday-mcp-readonly-cloud diveday-ses-sender diveday-sns-sms-sender diveday-backup-uploader diveday-places-lookup; do echo "== $u"; aws iam list-access-keys --user-name "$u" --query 'AccessKeyMetadata[].AccessKeyId' --output text; done
+    verify   Every identity lists exactly one access key.
+    if not   A user with two means the pruner did not run or could not reach it — check the diveday-access-key-pruner log group. Deleting the older key by hand is safe and restores the invariant: aws iam delete-access-key --user-name <user> --access-key-id <older-id>
+    note     It never touches a user holding fewer than two keys, so it cannot leave an identity with none, and it keeps the newest — which is always the one CloudFormation just created.
+
 [16] Confirm both SNS webhook subscriptions
     when     after every deploy that created or replaced a subscription
     why      An HTTPS subscription is only real once the endpoint answers SNS's handshake, and both routes answer 503 until their topic ARN is in the app's environment. On a fresh environment the stack therefore creates a subscription the app cannot yet confirm, and SNS deletes it after roughly three days. Nothing else detects this: every hop either side reads healthy while no event ever arrives.

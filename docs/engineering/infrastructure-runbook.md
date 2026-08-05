@@ -156,7 +156,9 @@ A deploy prints two kinds of output, and the split is deliberate.
 
 **Values you can act on** — names, ARNs, URLs, DNS records. `S3BucketName`, `S3WebsiteURL`,
 `BackupBucketName`, `SesDkimRecords`, `SesMailFromRecords`, `SesEventNotificationsTopicArn`,
-`SmsDeliveryReceiptsTopicArn`, `CredentialsSecretName`, `CostAlertEmail`.
+`SmsDeliveryReceiptsTopicArn`, `CredentialsSecretName`, `CostAlertEmail`, and `RetiredAccessKeys` —
+the keys this deploy revoked because an identity held more than one, or `none` in the steady state
+(see [§10](#10-the-credentials-secret)).
 
 **The manual-action checklist** — the `ManualActions*` keys, one per category and numbered so they
 sort in reading order, splitting into `…Part1`/`…Part2` when a category outgrows CloudFormation's
@@ -461,6 +463,39 @@ aws cloudformation describe-stacks --stack-name diveday-infra --query "Stacks[0]
 
 One serial covers all eight. They leave in a single document and land in the same four places, so a
 partial rotation saves little, and eight parameters would be eight more things to keep straight.
+
+### Revoking the keys the stack did not create
+
+**IAM allows two access keys per user — hard, not adjustable.** Seven of these eight identities had
+their keys made by hand before this stack minted any, and CloudFormation neither knows about those
+nor deletes them. The deploy that adds a managed key therefore leaves each such user at the ceiling,
+and the *next* rotation would call `CreateAccessKey` against a full user and fail with
+`LimitExceeded` — on the day someone is rotating because something leaked. Nothing surfaces it in the
+meantime: the deploy that creates the second key succeeds.
+
+The stack revokes them itself (§13 in the stack file), rather than leaving it as a step to remember —
+the whole hazard is that nobody knows it is armed. It is also what makes "revoke and re-create" a
+usable answer to any exposure, instead of a procedure whose first attempt fails.
+
+Two properties make it safe to automate:
+
+- **It never touches a user holding fewer than two keys**, so it cannot leave an identity with none.
+  Nothing to do is the steady state, and the `RetiredAccessKeys` output reads `none`.
+- **It keeps the newest and deletes the rest.** CloudFormation created its key seconds earlier and
+  the resource depends on all eight, so the newest is always the managed one.
+
+It is deliberately **not** re-run on rotation: its properties name the users, not the key ids, so
+bumping `CredentialSerial` does not re-invoke it. If it did, it would delete the outgoing key during
+the same update in which CloudFormation is already deleting it — a race with the stack's own cleanup,
+for no gain, because after one run every user holds exactly one key and rotation has the room it
+needs natively.
+
+> [!IMPORTANT]
+> **Your current `cdk-deployer` key is one of the keys this revokes.** The deploy itself finishes —
+> it runs under an assumed bootstrap role, not that key — but the next `pnpm infra:deploy` will fail
+> until you paste the new deployer credentials out of the secret. Read them with the administrator
+> profile, which is unaffected. If the deploy rolls back after the revocation, the deployer may be
+> left with no key at all; the admin profile is the way back in.
 
 The trade accepted in exchange: removing a key's construct from the stack now *deletes that key*,
 breaking anything still holding it, where a hand-minted key would have survived untouched. That is

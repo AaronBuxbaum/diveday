@@ -67,6 +67,22 @@ export interface ManualAction {
   readonly note?: string;
 }
 
+/**
+ * The registry in reading order: grouped by category, original order preserved
+ * within each.
+ *
+ * Numbering follows *this*, not the array, so where a record sits in the source
+ * has no bearing on what a reader sees. Numbering off the raw array meant moving
+ * one action between categories renumbered the whole doc and left the sections
+ * ascending out of order — [9] appearing under Verification while Credentials
+ * ran to [10].
+ */
+function inReadingOrder(actions: readonly ManualAction[]): ManualAction[] {
+  return MANUAL_ACTION_CATEGORIES.flatMap((category) =>
+    actions.filter((action) => action.category === category),
+  );
+}
+
 const LABEL_WIDTH = 9;
 
 function block(label: string, lines: readonly string[]): string[] {
@@ -92,14 +108,14 @@ export function renderManualAction(action: ManualAction, number: number): string
 }
 
 /**
- * Every action in one category, numbered by its position in the whole registry
- * so the numbers in a stack output and in the doc are the same numbers.
+ * Every action in one category, numbered by its position in reading order so a
+ * stack output and the doc quote the same numbers and both ascend down the page.
  */
 export function renderCategory(
   actions: readonly ManualAction[],
   category: ManualActionCategory,
 ): string {
-  return actions
+  return inReadingOrder(actions)
     .map((action, index) => ({ action, number: index + 1 }))
     .filter((entry) => entry.action.category === category)
     .map((entry) => renderManualAction(entry.action, entry.number))
@@ -121,7 +137,7 @@ export function renderCategoryChunks(
   category: ManualActionCategory,
   maxBytes: number,
 ): string[] {
-  const blocks = actions
+  const blocks = inReadingOrder(actions)
     .map((action, index) => ({ action, number: index + 1 }))
     .filter((entry) => entry.action.category === category)
     .map((entry) => renderManualAction(entry.action, entry.number));

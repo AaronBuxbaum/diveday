@@ -92,14 +92,32 @@ remembers a parameter, and `cdk deploy` defaults `--previous-parameters` to `tru
 flag is a no-op. One serial covers all eight: they leave in one document and land in the same four
 places, so partial rotation saves little and eight parameters would be eight more things to track.
 
-**6. Every remaining manual step is a `ManualAction` record** (`infra/lib/manual-actions.ts`) that
+**6. The stack revokes the access keys it did not create.** IAM allows two keys per user, hard and
+not adjustable, and seven of these identities had theirs made by hand — invisible to CloudFormation
+and undeleted by it. The deploy that adds a managed key leaves each such user at the ceiling, so the
+*next* rotation fails with `LimitExceeded`, on the day someone is rotating because something leaked.
+A Lambda-backed custom resource retires the surplus, keeping the newest key per user.
+
+This was a numbered manual step for one draft. A manual step is the wrong shape for it: the whole
+hazard is that nobody knows it is armed, and a checklist entry that must be executed correctly *once*
+before a future emergency works is not a control. Automating it is also what makes "revoke and
+re-create" a usable answer to an exposure rather than a procedure whose first attempt fails.
+
+Three properties keep a destructive automation safe: it never touches a user holding fewer than two
+keys (so it cannot leave an identity with none); it keeps the newest, which the resource's dependency
+on all eight keys guarantees is CloudFormation's; and its IAM policy names the eight user ARNs, so it
+cannot reach a key it does not own. It is deliberately **not** re-invoked by a rotation — its
+properties name the users, not the key ids — because that would race CloudFormation's own cleanup
+delete of the outgoing key, for no gain once every user holds exactly one.
+
+**7. Every remaining manual step is a `ManualAction` record** (`infra/lib/manual-actions.ts`) that
 must state **when** it applies, **why** the stack cannot do it, **what** to run, and **where** the
 result goes. The record type is the enforcement: a step with no stated destination cannot be
 written. The registry renders to grouped `CfnOutput`s printed after every deploy *and* to the
 generated [docs/engineering/manual-actions.md](../../engineering/manual-actions.md), asserted equal
 by a test. Seventeen actions, including every step listed as missing above.
 
-**7. `infra/` gets test coverage.** `vitest.config.ts` now includes `infra/**/*.test.ts`. Lint and
+**8. `infra/` gets test coverage.** `vitest.config.ts` now includes `infra/**/*.test.ts`. Lint and
 `tsc` see TypeScript; only a synth sees a CloudFormation template, and a leaked credential is a
 property of the template.
 
@@ -159,15 +177,12 @@ property of the template.
 - **Seven new access keys appear on the first deploy** and land in the secret. Nothing consumes them
   until a human places them, so the deploy is inert for the app.
 
-- **Every identity that already has a hand-minted key is at IAM's two-key ceiling afterwards, and
-  that breaks the *next* rotation, not this deploy.** Those keys were created with
-  `aws iam create-access-key`, so CloudFormation neither knows nor deletes them; the new key sits
-  beside the old one. IAM's limit of two per user is hard and non-adjustable, and replacement is
-  create-then-delete, so the next `CredentialSerial` bump would call `CreateAccessKey` against a full
-  user and fail with `LimitExceeded` — on the day you are rotating because something leaked. The
-  migration is therefore a numbered manual action (`retire-hand-minted-keys`), ordered *after* the
-  placement steps so nothing is running on the key being deleted. This is the sharpest edge in the
-  change and it is entirely invisible from the deploy, which succeeds.
+- **The first deploy revokes your current `cdk-deployer` key.** It is one of the hand-minted keys
+  decision 6 retires. The deploy itself completes — it runs under an assumed bootstrap role, not that
+  key — but the next `pnpm infra:deploy` fails until the new deployer credentials are pasted out of
+  the secret, read with the administrator profile. If the deploy rolls back *after* the revocation,
+  the deployer is left with no key at all and the admin profile is the way back in. Accepted
+  deliberately: the alternative is leaving every identity one key short of a working rotation.
 - **Deleting an IAM user's construct now deletes its key**, breaking anything still holding it, where
   a hand-minted key survived untouched. That is the correct default and it is a sharp edge; the
   runbook says so.
