@@ -40,6 +40,7 @@ import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
 import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
 import { emailFreshWaiverLinkAction } from "./actions";
+import { MedicalQuestionnaireFields } from "./MedicalQuestionnaireFields";
 import { QuestionnaireProgress } from "./QuestionnaireProgress";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -93,15 +94,23 @@ const WAIVER_FIELD_ERROR: Record<WaiverInvalidField, { textKey: DiverMessageKey;
     acknowledged: { textKey: "waiver.errorAgreement", anchor: "acknowledged" },
   };
 
-/** Reads every question's yes/no answer for the presented questionnaire. */
+/** Reads only applicable questions; a closed Box is stored as an explicit no. */
 function readMedicalAnswers(
   formData: FormData,
   questionnaire: MedicalQuestionnaire,
+  options: { allowIncomplete?: boolean } = {},
 ): MedicalAnswers | null {
   const responses: Record<string, boolean> = {};
   for (const question of questionnaire.questions) {
+    if (question.parentId && responses[question.parentId] !== true) {
+      responses[question.id] = false;
+      continue;
+    }
     const value = formData.get(`q_${question.id}`);
-    if (value !== "yes" && value !== "no") return null;
+    if (value !== "yes" && value !== "no") {
+      if (options.allowIncomplete) continue;
+      return null;
+    }
     responses[question.id] = value === "yes";
   }
   return {
@@ -118,60 +127,6 @@ function readMedicalAnswers(
  * the token-valued utility, which does win.
  */
 const labelTextBase = "text-(length:--text-base) leading-6";
-
-/**
- * No default answer: `yes` is `undefined` until a draft or a previous
- * selection actually set one, and neither radio starts checked in that case
- * — the diver must make a conscious choice on every question, including the
- * medical ones, rather than silently inherit a "No" the page picked for them.
- * "Yes" renders before "No" to match the paper RSTC form's own order.
- *
- * The reassurance line under a "Yes" answer (task 41) is pure CSS, not a
- * Client Component: `group` on the fieldset plus `group-has-[…]:` on the
- * paragraph reveals it exactly when that question's "Yes" radio is checked
- * — by a click, or by `defaultChecked` prefilling a draft answer on load —
- * with no JS required and nothing to hydrate.
- */
-function RadioQuestion({
-  name,
-  question,
-  yes,
-  reassurance,
-  yesLabel,
-  noLabel,
-}: {
-  name: string;
-  question: string;
-  yes: boolean | undefined;
-  reassurance: string;
-  /**
-   * The questionnaire's *questions* stay English pending counsel (H-01/H-03),
-   * but these two words are UI chrome, not legal text — a diver reading
-   * Spanish should not have to answer a translated page in English. The saved
-   * answer stays the `yes`/`no` code either way; only the label moves.
-   */
-  yesLabel: string;
-  noLabel: string;
-}) {
-  return (
-    <fieldset className="group rounded-lg border border-border bg-surface p-4">
-      <legend className="px-1 text-base font-medium">{question}</legend>
-      <div className="mt-3 flex gap-3">
-        <label className="flex min-h-11 items-center gap-2 rounded-lg border border-border px-4 text-base hover:bg-surface-sunken">
-          <input type="radio" name={name} value="yes" defaultChecked={yes === true} required />
-          {yesLabel}
-        </label>
-        <label className="flex min-h-11 items-center gap-2 rounded-lg border border-border px-4 text-base hover:bg-surface-sunken">
-          <input type="radio" name={name} value="no" defaultChecked={yes === false} required />
-          {noLabel}
-        </label>
-      </div>
-      <p className="mt-3 hidden text-sm text-muted group-has-[input[value=yes]:checked]:block">
-        {reassurance}
-      </p>
-    </fieldset>
-  );
-}
 
 // `instant = true`: this route has a real static shell. Every request-scoped
 // read below sits inside this segment's `loading.tsx` boundary, so the frame
@@ -354,7 +309,11 @@ export default async function WaiverPage({
   const draft = record.draftMedicalAnswers;
   /** Only pre-fill draft answers captured against this same questionnaire. */
   const draftResponses =
-    draft && draft.questionnaireId === questionnaire.id ? draft.responses : undefined;
+    draft &&
+    draft.questionnaireId === questionnaire.id &&
+    draft.questionnaireVersion === questionnaire.version
+      ? draft.responses
+      : undefined;
   // The trip this waiver is for (task 42) — named on the page itself so the
   // diver can verify what they're signing for, rather than trusting a link
   // that names only the shop.
@@ -384,7 +343,7 @@ export default async function WaiverPage({
       redirect(`/waivers/${token}?error=rate`);
     }
     const parsed = signatureSchema.safeParse(Object.fromEntries(formData));
-    const answers = readMedicalAnswers(formData, questionnaire);
+    const answers = readMedicalAnswers(formData, questionnaire, { allowIncomplete: true });
     if (!parsed.success || !answers) {
       const invalidField = firstInvalidWaiverField(
         parsed.success ? new Set() : new Set(parsed.error.issues.map((issue) => issue.path[0])),
@@ -490,6 +449,9 @@ export default async function WaiverPage({
       if (outcome.reason === "name_mismatch") {
         redirect(`/waivers/${token}?error=invalid&field=signerNameMismatch`);
       }
+      if (outcome.reason === "invalid_medical") {
+        redirect(`/waivers/${token}?error=invalid&field=medical`);
+      }
       redirect(
         `/waivers/${token}?error=${outcome.reason === "invalid_signature" ? "invalid" : "unavailable"}`,
       );
@@ -581,24 +543,18 @@ export default async function WaiverPage({
       <form action={completeAction} className="mt-8 flex flex-col gap-6">
         <section id="medical-questionnaire">
           <QuestionnaireProgress
-            total={questionnaire.questions.length}
+            total={questionnaire.questions.filter((question) => !question.parentId).length}
             labelTemplate={t("waiver.questionsAnswered")}
           >
             <h2 className="text-lg font-semibold">{questionnaire.title}</h2>
             <p className="mt-1 text-sm text-muted">{questionnaire.intro}</p>
-            <div className="mt-4 flex flex-col gap-3">
-              {questionnaire.questions.map((question) => (
-                <RadioQuestion
-                  key={question.id}
-                  name={`q_${question.id}`}
-                  yes={draftResponses?.[question.id]}
-                  question={question.prompt}
-                  reassurance={t("waiver.yesReassurance")}
-                  yesLabel={t("waiver.answerYes")}
-                  noLabel={t("waiver.answerNo")}
-                />
-              ))}
-            </div>
+            <MedicalQuestionnaireFields
+              questionnaire={questionnaire}
+              initialResponses={draftResponses}
+              reassurance={t("waiver.yesReassurance")}
+              yesLabel={t("waiver.answerYes")}
+              noLabel={t("waiver.answerNo")}
+            />
           </QuestionnaireProgress>
         </section>
 

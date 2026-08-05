@@ -591,11 +591,12 @@ new domain concept, define it here in the same PR.
   "verified" flag alone — it requires an explicit `waiver_accepted` claim. See
   [20260724-import-waiver-acceptance](../architecture/decisions/20260724-import-waiver-acceptance.md).
 - **Medical questionnaire** — the versioned diver-medical form a waiver presents, selected by the
-  shop's **jurisdiction** (RSTC/WRSTC by default, or a UK variant). Defined as data in
-  `src/lib/medical.ts`; a completed waiver stores the questionnaire id + version it was answered
-  against, so a later edit never re-interprets signed evidence. Any **referral**-flagged "yes"
-  triggers physician review, and unknown questionnaires/questions **fail closed** (review
-  required), never waved through.
+  shop's **jurisdiction** (the 2026 UHMS/DMSC RSTC participant form by default). Defined as data
+  in `src/lib/medical.ts`; a completed waiver stores the questionnaire id + version and the
+  server-side yes/no answers, so a later edit never re-interprets signed evidence. Questions 3,
+  5, and 10, the affirmative answers in an applicable Box, and the page-two dental question are
+  physician referrals; a parent question can therefore be yes and still clear when its Box is all
+  no. Unknown or incomplete questionnaires **fail closed** (review required), never waved through.
 - **Waiver activity** — the staff-facing chronological explanation of stored waiver evidence:
   a link was issued, a diver started, signed, needs medical review, or had a pending link replaced.
   It is derived from timestamps on the evidence records and never exposes the raw completion token.

@@ -1,7 +1,7 @@
 import { and, asc, count, desc, eq, gt, inArray, isNull, ne } from "drizzle-orm";
 import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
-import { flaggedMedicalPrompts } from "@/lib/medical";
+import { flaggedMedicalPrompts, validateMedicalAnswers } from "@/lib/medical";
 import { personNamesMatch } from "@/lib/person-name";
 import { inPersonAttestationProvider, localTypedConsentProvider } from "@/lib/signatures";
 import { computeWaiverIntegrityHash, verifyWaiverIntegrity } from "@/lib/waiver-integrity";
@@ -458,7 +458,10 @@ export async function saveWaiverDraft(
 
 export type CompleteWaiverOutcome =
   | { ok: true; status: "completed" | "medical_review"; idempotent: boolean }
-  | { ok: false; reason: "unavailable" | "expired" | "invalid_signature" | "name_mismatch" };
+  | {
+      ok: false;
+      reason: "unavailable" | "expired" | "invalid_signature" | "name_mismatch" | "invalid_medical";
+    };
 
 function completedStatus(
   status: typeof waiverRecords.$inferSelect.status,
@@ -586,6 +589,12 @@ export async function completeWaiver(
     return { ok: false, reason: "name_mismatch" };
   }
 
+  // The form is conditional: closed boxes are not submitted, but every
+  // applicable question must be answered before signed evidence is written.
+  const medicalValidation = validateMedicalAnswers(input.medicalAnswers, { requireComplete: true });
+  if (!medicalValidation.ok && input.medicalAnswers.questionnaireVersion !== 1) {
+    return { ok: false, reason: "invalid_medical" };
+  }
   const medicalReviewRequired = needsMedicalReview(input.medicalAnswers);
   const status = medicalReviewRequired ? ("medical_review" as const) : ("completed" as const);
   const [saved] = await db

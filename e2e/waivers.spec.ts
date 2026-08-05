@@ -128,10 +128,11 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
   // The draft's saved answers prefill on reload — nothing reverts to unanswered.
   await expect(noRadios.first()).toBeChecked();
 
-  // The first question's affirmative answer must not disappear into a generic
-  // success state; it becomes an explicit staff follow-up item.
-  const firstFieldset = page.locator("fieldset").filter({ visible: true }).first();
-  await firstFieldset.getByRole("radio", { name: "Yes" }).check();
+  // Question 3 is one of the three direct physician-referral questions in the
+  // 2026 RSTC form; its affirmative answer must become an explicit staff
+  // follow-up item.
+  const referralFieldset = page.locator("fieldset").filter({ visible: true }).nth(2);
+  await referralFieldset.getByRole("radio", { name: "Yes" }).check();
   // Task 41: the reassurance line reveals right under that question the
   // moment "Yes" is picked — repeated at the point of anxiety, not just once
   // in the small print above the whole questionnaire. Every question renders
@@ -140,7 +141,7 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
   // was just checked rather than matching all eight and hitting Playwright's
   // strict-mode ambiguity.
   await expect(
-    firstFieldset.getByText("A yes means a doctor should confirm you’re fit to dive"),
+    referralFieldset.getByText("A yes means a doctor should confirm you’re fit to dive"),
   ).toBeVisible();
   const waiverUrl = page.url();
   await page.getByRole("button", { name: "Sign waiver" }).click();
@@ -201,13 +202,9 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
   await expect(recordRow.getByText("Medical follow-up flagged")).toBeVisible();
   // The list itself never shows the flagged prompt text — it sits behind the
   // per-record disclosure, mirroring the roster's own gating.
-  await expect(
-    page.getByText("Do you have, or have you had, a heart, lung, or breathing condition"),
-  ).not.toBeVisible();
+  await expect(page.getByText("I struggle to perform moderate exercise")).not.toBeVisible();
   await recordRow.getByText("View flagged answers").click();
-  await expect(
-    recordRow.getByText("Do you have, or have you had, a heart, lung, or breathing condition"),
-  ).toBeVisible();
+  await expect(recordRow.getByText("I struggle to perform moderate exercise")).toBeVisible();
 });
 
 test("the medical questionnaire refuses to complete with an unanswered question, even past client validation", async ({
@@ -347,9 +344,7 @@ test("a non-English visitor sees a notice that the waiver text itself stays in E
   await visitorContext.close();
 });
 
-test("saving a draft also refuses an unanswered question, even past client validation", async ({
-  page,
-}) => {
+test("saving a draft preserves partial conditional questionnaire answers", async ({ page }) => {
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, TRIP);
   await openTripTab(page, "Guests");
@@ -358,30 +353,17 @@ test("saving a draft also refuses an unanswered question, even past client valid
   await page.goto(waiverHref ?? "/");
   await page.getByLabel("Type your full name").fill("Adversarial Draft Diver");
   // Answer every question except the last one. "Save and finish later" carries
-  // `formNoValidate` (drafts intentionally accept partial answers), so the
-  // browser's own required/minLength validation never blocks this submit —
-  // this test is really about the *server's* `readMedicalAnswers()` still
-  // refusing an incomplete questionnaire, a separate code path from
-  // `completeAction` that needs its own regression coverage rather than
-  // assuming the two stay symmetric.
+  // `formNoValidate` and intentionally accepts partial answers, while the
+  // complete action still fails closed until the remaining question is set.
   const noRadios = page.getByRole("radio", { name: "No" });
   const questionCount = await noRadios.count();
   for (let i = 0; i < questionCount - 1; i++) {
     await noRadios.nth(i).check();
   }
   await page.getByRole("button", { name: "Save and finish later" }).click();
-  await expect(
-    page.getByText("Please answer every question in the medical questionnaire"),
-  ).toBeVisible();
-  await expect(page.getByRole("link", { name: "Jump to that field" })).toHaveAttribute(
-    "href",
-    "#medical-questionnaire",
-  );
-  // Nothing was saved — reloading shows no "progress is saved" status and the
-  // name field is back to empty, not a half-recorded draft. Scoped by text
-  // (not just role) because the sticky questionnaire-progress bar is also
-  // `role="status"` on this page and stays visible regardless.
-  await expect(page.getByRole("status").filter({ hasText: "progress is saved" })).not.toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "progress is saved" })).toBeVisible();
+  await expect(page.getByLabel("Type your full name")).toHaveValue("Adversarial Draft Diver");
+  expect(await page.getByRole("radio", { name: "No" }).count()).toBe(questionCount - 1);
 });
 
 test("staff edit the single shop waiver and each edit is kept as a version", async ({ page }) => {
