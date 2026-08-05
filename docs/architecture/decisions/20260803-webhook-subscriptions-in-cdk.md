@@ -5,11 +5,10 @@
 
 > [!NOTE]
 > The decision stands; one name in it has moved. The single `ManualActionItems` output this record
-> describes was replaced by the per-category `ManualActions*` outputs and the generated
-> [manual-actions.md](../../engineering/manual-actions.md) in
-> [20260805-cdk-minted-credentials-and-manual-actions](20260805-cdk-minted-credentials-and-manual-actions.md).
-> The subscription check is still printed on every deploy; it is the `verify-webhook-subscriptions`
-> entry rather than "item 5".
+> describes was replaced by the generated [manual-actions.md](../../engineering/manual-actions.md)
+> and then, in [20260805-cdk-minted-credentials-and-manual-actions](20260805-cdk-minted-credentials-and-manual-actions.md),
+> by an interactive post-deploy wizard for reachable external handoffs. The subscription check now
+> lives in the infrastructure runbook rather than being printed after every deploy.
 
 ## Context
 

@@ -81,9 +81,15 @@ describe("the synthesized stack", () => {
     const keys = template.findResources("AWS::IAM::AccessKey");
     const secrets = template.findResources("AWS::SecretsManager::Secret");
 
-    expect(Object.keys(secrets)).toHaveLength(1);
-    const [secret] = Object.values(secrets);
-    const body = JSON.stringify(secret.Properties.SecretString);
+    expect(Object.keys(secrets)).toHaveLength(2);
+    const secret = Object.values(secrets).find(
+      (resource) =>
+        (resource as { Properties?: { Name?: string } }).Properties?.Name === "diveday/env",
+    );
+    expect(secret, "the credentials document is missing").toBeDefined();
+    const body = JSON.stringify(
+      (secret as { Properties: { SecretString: unknown } }).Properties.SecretString,
+    );
 
     // Every key's secret half has to appear in the document; a key minted and
     // then not delivered is a credential nobody can ever use.
@@ -93,6 +99,21 @@ describe("the synthesized stack", () => {
       );
     }
     expect(Object.keys(keys).length).toBeGreaterThanOrEqual(8);
+  });
+
+  it("generates one stable app-secret root without exposing it as an output", () => {
+    const { template } = synthesize();
+    const secrets = template.findResources("AWS::SecretsManager::Secret");
+    const seed = Object.values(secrets).find(
+      (resource) =>
+        (resource as { Properties?: { Name?: string } }).Properties?.Name ===
+        "diveday/app-secret-seed",
+    ) as { Properties?: { GenerateSecretString?: unknown } } | undefined;
+    expect(seed?.Properties?.GenerateSecretString).toBeDefined();
+
+    const outputs = JSON.stringify(template.toJSON().Outputs ?? {});
+    expect(outputs).not.toContain("diveday/app-secret-seed");
+    expect(outputs).not.toContain("resolve:secretsmanager");
   });
 
   it("drives every access key's rotation from the one stack parameter", () => {
@@ -179,19 +200,11 @@ describe("the synthesized stack", () => {
     expect(JSON.stringify(pruner.Properties)).not.toContain("CredentialSerial");
   });
 
-  it("keeps every manual-action output inside CloudFormation's value ceiling", () => {
+  it("keeps the long manual-action checklist out of CloudFormation outputs", () => {
     const { template } = synthesize();
-    for (const [name, output] of Object.entries<{ Value: string }>(
-      template.toJSON().Outputs ?? {},
-    )) {
-      if (!name.startsWith("ManualActions")) continue;
-      // Bytes, matching how CloudFormation states the limit — `String.length`
-      // undercounts every em dash in the prose.
-      expect(
-        Buffer.byteLength(output.Value, "utf8"),
-        `${name} exceeds the 4096-byte output limit`,
-      ).toBeLessThan(4096);
-    }
+    const outputNames = Object.keys(template.toJSON().Outputs ?? {});
+    expect(outputNames.some((name) => name.startsWith("ManualActions"))).toBe(false);
+    expect(template.toJSON().Outputs?.PostDeployWizard).toBeDefined();
   });
 });
 
@@ -271,8 +284,14 @@ describe("the credentials document", () => {
 
   it("supplies a value for every AWS credential .env.example declares", () => {
     const { template } = synthesize();
-    const [secret] = Object.values(template.findResources("AWS::SecretsManager::Secret"));
-    const body = JSON.stringify(secret.Properties.SecretString);
+    const secret = Object.values(template.findResources("AWS::SecretsManager::Secret")).find(
+      (resource) =>
+        (resource as { Properties?: { Name?: string } }).Properties?.Name === "diveday/env",
+    );
+    expect(secret, "the credentials document is missing").toBeDefined();
+    const body = JSON.stringify(
+      (secret as { Properties: { SecretString: unknown } }).Properties.SecretString,
+    );
 
     // The drift guard in the other direction: `fillEnvExample` throws when the
     // stack names a key `.env.example` dropped, and this catches a *new* AWS
@@ -282,5 +301,20 @@ describe("the credentials document", () => {
       .filter((key) => /_AWS_(ACCESS_KEY_ID|SECRET_ACCESS_KEY|REGION)$/.test(key))
       .filter((key) => !body.includes(`${key}=`) || body.includes(`${key}=\\n`));
     expect(unfilled, "declared in .env.example but left blank in the secret").toEqual([]);
+  });
+
+  it("keeps generic deployment credentials out of .env.example and in a profile block", () => {
+    const { template } = synthesize();
+    const keys = envExampleKeys(readEnvExample());
+    expect(keys).not.toContain("AWS_ACCOUNT_ID");
+    expect(keys).not.toContain("AWS_ACCESS_KEY_ID");
+    expect(keys).not.toContain("AWS_SECRET_ACCESS_KEY");
+    expect(keys).not.toContain("AWS_DEFAULT_REGION");
+
+    const secret = Object.values(template.findResources("AWS::SecretsManager::Secret")).find(
+      (resource) =>
+        (resource as { Properties?: { Name?: string } }).Properties?.Name === "diveday/env",
+    );
+    expect(JSON.stringify(secret)).toContain("[diveday-deployer]");
   });
 });

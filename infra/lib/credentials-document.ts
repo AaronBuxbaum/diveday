@@ -1,19 +1,20 @@
 import { readFileSync } from "node:fs";
 
 /**
- * The body of the one Secrets Manager secret this stack writes: `.env.example`
- * with every value the stack can supply already filled in.
+ * The body of the credential hand-off Secrets Manager secret: the application
+ * `.env.example` with every stack-supplied app value filled in, followed by
+ * profile blocks for workstation-only credentials.
  *
  * Shaped this way on purpose. The credentials are only useful once they are
  * somewhere else — a `.env.local`, Vercel's environment variables, a GitHub
- * Actions secret — so the hand-off format should be the format of the
- * destination, not a bespoke JSON shape someone has to transcribe field by
- * field. `.env.example` already *is* the registry of what this project
+ * Actions secret — so `pnpm infra:deploy` writes target dotenv files directly
+ * instead of asking an operator to transcribe a bespoke JSON shape. `.env.example` already *is* the registry of what this project
  * configures, so deriving the document from it (rather than maintaining a
- * second list here) is what keeps the two in step: a variable renamed in
- * `.env.example` renames itself here, and a value this stack claims to supply
- * for a key `.env.example` does not have fails the synth rather than silently
- * vanishing.
+ * second list here) is what keeps the application section in step: a variable
+ * renamed in `.env.example` renames itself here, and a value this stack claims
+ * to supply for a key `.env.example` does not have fails the synth rather than
+ * silently vanishing. Workstation credentials use their destination's profile
+ * format instead of pretending to be application configuration.
  *
  * Everything the stack cannot know is left exactly as `.env.example` has it —
  * blank, under the comment explaining where it comes from — so the document
@@ -96,24 +97,24 @@ function commented(lines: readonly string[]): string[] {
   return lines.map((line) => (line === "" ? "#" : `#   ${line}`));
 }
 
-/** The full secret body: header, filled `.env.example`, then the off-dotenv section. */
+/** The full secret body: header, filled app env, then the profile-only section. */
 export function renderCredentialsDocument(options: CredentialsDocumentOptions): string {
   const header = [
     RULE,
     "# DiveDay credentials. Written by `cdk deploy` from infra/lib/infra-stack.ts.",
     "#",
-    "# This is .env.example with every value the stack can supply already filled in.",
+    "# This starts with .env.example and every app value the stack can supply filled in.",
     "# Blank entries are the ones no AWS stack can know; the comment above each says",
     "# where it comes from.",
     "#",
     "# WHERE THIS GOES",
-    "#   .env.local  — the whole document. That is what it is shaped for.",
-    "#   Vercel      — ONLY the SES_*, SNS_*, SMS_*, and PLACES_* lines. Not the",
-    "#                 whole document: AWS_ACCESS_KEY_ID below is the cdk-deployer",
-    "#                 key, which can deploy anything in this account, and the app",
-    "#                 has no use for it. Read its comment before copying it.",
+    "#   .env.local  — app configuration only. The cdk-deployer credential is",
+    "#                 in a named AWS CLI profile block instead.",
+    "#   Vercel      — the generated .env.vercel target: app runtime credentials",
+    "#                 plus any nonblank Stripe values preserved from 1Password.",
     "#   GitHub      — the four REG_SUIT_* lines, as repository Actions secrets.",
-    "#   Elsewhere   — see the 'Not .env values' section at the bottom.",
+    "#   AWS CLI     — answer yes to the profile prompt after deploy; it writes",
+    "#                 every generated workstation profile under ~/.aws/credentials.",
     "#",
     "# Nothing reads this secret at runtime — it is a hand-off point, not a dependency.",
     "# Putting a value somewhere is still a manual act, and so is removing it: rotating",

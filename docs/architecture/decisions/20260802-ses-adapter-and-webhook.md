@@ -31,8 +31,8 @@ still signs *something* without actually being correct.
   needs no equivalent retry loop in `src/lib/notifications/index.ts`.
 - **Dedicated, distinctly-named AWS credentials for the app**: `SES_AWS_ACCESS_KEY_ID` /
   `SES_AWS_SECRET_ACCESS_KEY` / `SES_AWS_REGION`, explicitly passed to the `SESv2Client` constructor
-  rather than left to the SDK's default credential-provider chain. The repo already has
-  `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY` for the `cdk-deployer` user and
+  rather than left to the SDK's default credential-provider chain. The repo already has a named
+  AWS profile for the `cdk-deployer` user and
   `REG_SUIT_AWS_ACCESS_KEY_ID`/`REG_SUIT_AWS_SECRET_ACCESS_KEY` for `reg-suit-bot` — this follows
   that same one-credential-pair-per-purpose convention. Relying on the default provider chain would
   mean the running web app's runtime picks up whatever `AWS_ACCESS_KEY_ID` happens to be set to,

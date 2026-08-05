@@ -67,7 +67,7 @@ async function run() {
     // here. Only the sealing key is environment configuration, and an instance
     // with no shop using WhatsApp legitimately has none
     // (ADR 20260802-whatsapp-cloud-api-per-shop).
-    if (key === "SECRET_ENCRYPTION_KEY" || key.startsWith("META_")) {
+    if (key === "SECRET_ENCRYPTION_KEY" || key === "APP_SECRET_SEED" || key.startsWith("META_")) {
       continue;
     }
     if (!localKeys.has(key)) {

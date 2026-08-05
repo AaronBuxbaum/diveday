@@ -12,9 +12,9 @@
  * `ManualAction` is only well-formed when it says *when* it applies, *why* the
  * stack cannot do it, *what* to run, and *where* the result goes.
  *
- * The registry renders to two surfaces from the same data: grouped `CfnOutput`s
- * printed by every `cdk deploy`, and docs/engineering/manual-actions.md. A test
- * asserts the committed doc matches, so the two can never drift.
+ * The registry renders to docs/engineering/manual-actions.md. It deliberately
+ * contains only account approvals that a CLI cannot complete; the post-deploy
+ * wizard handles the workstation actions that are safe to offer interactively.
  *
  * Deliberately free of CDK tokens: every field is a plain string, and
  * `infra/lib/manual-actions.test.ts` fails on an unresolved `${Token[...]}`
@@ -23,7 +23,7 @@
  * embedding it, which also survives being read outside a deploy.
  */
 
-/** Rendering order. Each becomes one `CfnOutput` and one doc section. */
+/** Rendering order for the short, human-only document. */
 export const MANUAL_ACTION_CATEGORIES = [
   "Prerequisites",
   "Credentials",
@@ -91,7 +91,7 @@ function block(label: string, lines: readonly string[]): string[] {
   );
 }
 
-/** One action, as the uniform indented block both surfaces share. */
+/** One action, as the uniform indented block in the generated document. */
 export function renderManualAction(action: ManualAction, number: number): string {
   const lines = [`[${number}] ${action.title}`];
   const indented: string[] = [];
@@ -108,8 +108,7 @@ export function renderManualAction(action: ManualAction, number: number): string
 }
 
 /**
- * Every action in one category, numbered by its position in reading order so a
- * stack output and the doc quote the same numbers and both ascend down the page.
+ * Every action in one category, numbered by its position in reading order.
  */
 export function renderCategory(
   actions: readonly ManualAction[],
@@ -181,10 +180,9 @@ export function renderManualActionsDoc(actions: readonly ManualAction[]): string
     "> Generated from the registry in [infra/lib/infra-stack.ts](../../infra/lib/infra-stack.ts).",
     "> Do not edit by hand — run `pnpm test infra -u` to regenerate after changing the registry.",
     "",
-    "Every step `cdk deploy` cannot perform itself, in one place, in one shape: **when** it",
-    "applies, **why** the stack cannot do it, **what** to run, and **where** the result goes.",
-    "The same blocks are printed as stack outputs after every deploy, so the checklist is in",
-    "front of whoever just deployed rather than in a document they have to remember to open.",
+    "Only account approvals that no CLI can perform belong here. After a successful deploy,",
+    "`pnpm infra:deploy` writes the env files and offers Vercel, GitHub, and SES DNS handoffs",
+    "as simple yes/no questions.",
     "",
     "Reasoning for each item lives in [infrastructure-runbook.md](infrastructure-runbook.md);",
     "this file is the checklist, not the argument.",

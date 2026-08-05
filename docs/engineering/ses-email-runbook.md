@@ -54,19 +54,24 @@ made — DiveDay records the issue without spending a send. The demo seed intent
 ## Sending to divers
 
 1. **Verify `ses.dive.day`** — deploy the CDK stack (`infra/lib/infra-stack.ts`), then add the three
-   `SesDkimRecords` CNAME records to DNS and wait for AWS to show the identity verified. A subdomain,
+   `SesDkimRecords` CNAME records with the project Vercel CLI and wait for AWS to show the identity verified:
+   ```bash
+   pnpm exec vercel dns add dive.day <selector>._domainkey.ses CNAME <value-from-SesDkimRecords>
+   ```
+   Run that once for each output pair, dropping the trailing `.dive.day` from the record name. A subdomain,
    not the org domain: automated mail and human correspondence should not share a sending
    reputation, and this keeps a bulk-mail problem from affecting the address people actually write to
    you at.
 2. **Request SES production access** (an AWS Support case — CDK cannot do this). SES starts in
    sandbox mode, which can only send to pre-verified recipient addresses.
-3. **Collect the sender credentials.** The deploy already minted them; read them out of the
-   credentials secret and take the `SES_AWS_*` lines:
+3. **Collect the sender credentials.** The deploy already minted them and writes all three target
+   dotenv files; take the `SES_AWS_*` lines from `.env.local`:
    ```bash
-   AWS_PROFILE=diveday-admin aws secretsmanager get-secret-value \
-     --secret-id diveday/env --query SecretString --output text
+   pnpm infra:deploy
    ```
-   Store them only in the deploy environment's settings — never the repo. See
+   Store them only in the deploy environment's settings — never the repo. The post-deploy sync
+   uses the `diveday-admin` profile by default; set `INFRA_ENV_SYNC_PROFILE` for a differently
+   named administrator profile. See
    [§10 of the infrastructure runbook](infrastructure-runbook.md#10-the-credentials-secret).
 4. Set `SES_AWS_REGION`, `SES_AWS_ACCESS_KEY_ID`, `SES_AWS_SECRET_ACCESS_KEY`, and `SES_FROM_EMAIL`. A
    friendly name is supported: `SES_FROM_EMAIL="Blue Mantis <bookings@ses.dive.day>"`.
@@ -118,8 +123,14 @@ Two records, on `mail.ses.dive.day`, both in the `SesMailFromRecords` stack outp
 
 **Exactly one MX record.** SES fails the whole MAIL FROM setup if that subdomain has more than one.
 
-These are added by hand: authoritative DNS for `dive.day` is **Vercel DNS**, not Route53, so the CDK
-stack has no hosted zone to write them into. It configures the AWS side and prints what to add.
+These are added through Vercel CLI: authoritative DNS for `dive.day` is **Vercel DNS**, not Route53,
+so the CDK stack has no hosted zone to write them into. It configures the AWS side and prints the
+values; add the MAIL FROM pair with:
+
+```bash
+pnpm exec vercel dns add dive.day mail.ses MX feedback-smtp.<region>.amazonses.com 10
+pnpm exec vercel dns add dive.day mail.ses TXT 'v=spf1 include:amazonses.com ~all'
+```
 
 Failure is soft by design — `mailFromBehaviorOnMxFailure` is `USE_DEFAULT_VALUE`, so a missing or
 still-propagating MX record falls back to the `amazonses.com` envelope rather than rejecting the
@@ -174,6 +185,12 @@ Outcomes land on the notification's existing row, matched by SES's own message i
 complaint, or failure raises it on the shop's dashboard as an email issue — visible even though the
 original send succeeded. A re-send clears the old outcome. Events about mail we never tracked are
 answered 200 and ignored.
+
+The configuration set also adds a hard-bounced or complained-about address to SES's account-level
+suppression list. That is the send-time safeguard: it prevents every later notification path from
+repeating a known-bad send and protects the account's reputation while staff investigate the contact
+record. Do not remove a suppression entry merely to retry an address; first confirm that the address
+is valid and that the recipient expects the mail.
 
 Verification fails closed: SNS message signature verification happens by hand
 (`src/lib/notifications/sns.ts`) against `SigningCertURL`, which is validated against

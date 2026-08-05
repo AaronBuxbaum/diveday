@@ -53,12 +53,17 @@ scrollback, once, unrecoverably.
 deleted. `infra/lib/manual-actions.test.ts` fails the build if a resolved `SecretAccessKey` reaches
 any output.
 
-**3. One Secrets Manager secret, `diveday/env`, whose value is `.env.example` with the values filled
-in.** Generated from `.env.example` at synth time, so the two cannot drift: a renamed variable
-renames itself in the secret, and a value the stack supplies for a key `.env.example` no longer
-declares **throws during synth**. Credentials whose destination is not a dotenv file (the two MCP
-users, the backup uploader) ride at the bottom in a commented section under the destination they
-belong to, so pasting the whole document into `.env.local` stays safe.
+**3. One Secrets Manager hand-off document, `diveday/env`, whose application section is
+`.env.example` with the values filled in, plus one generated app-secret root,
+`diveday/app-secret-seed`.** The application section is generated from `.env.example` at synth time,
+so the two cannot drift: a renamed variable renames itself in the secret, and a value the stack
+supplies for a key `.env.example` no longer declares **throws during synth**. The target-file helper
+derives separate `AUTH_SECRET`, `SECRET_ENCRYPTION_KEY`, and `CRON_SECRET` values from the stable root
+with HKDF. Credentials whose destination is not a dotenv file (the `cdk-deployer`, the two MCP
+users, and the backup uploader) ride at the bottom in a commented section under the destination they
+belong to, so pasting the whole document into `.env.local` stays safe. `AWS_ACCOUNT_ID` and generic
+access keys are not application configuration: bootstrap resolves the signed-in CLI account with STS
+and asks for confirmation, while the wizard writes the deployer key directly to its named AWS profile.
 
 **4. No *additional* principal is granted read access to it**, and the claim is stated at exactly
 that strength rather than the more comfortable one.
@@ -71,9 +76,9 @@ secret, so *that* half holds regardless of what AWS adds to `ReadOnlyAccess` nex
 `cdk bootstrap` leaves at `AdministratorAccess` — `--cloudformation-execution-policies` defaults to
 empty, and `pnpm infra:bootstrap` passes nothing. A holder of the deployer key can therefore deploy a
 one-resource stack that reads the secret; withholding `grantRead` costs a step, not the capability.
-Two things follow: the deployer's own key is marked **workstation-only** in the document and in
-`.env.example`, because it is the key that yields all the others; and bounding it for real is a
-bootstrap-time act, noted on the `cdk-bootstrap` manual action and not done today.
+Two things follow: the deployer's own key is marked **workstation-only** in the document's named
+profile block, not in `.env.example`, because it is the key that yields all the others; and bounding
+it for real is a bootstrap-time act, noted on the `cdk-bootstrap` manual action and not done today.
 
 The account owner reads the secret with an administrator profile or in the console.
 
@@ -110,12 +115,21 @@ cannot reach a key it does not own. It is deliberately **not** re-invoked by a r
 properties name the users, not the key ids — because that would race CloudFormation's own cleanup
 delete of the outgoing key, for no gain once every user holds exactly one.
 
-**7. Every remaining manual step is a `ManualAction` record** (`infra/lib/manual-actions.ts`) that
-must state **when** it applies, **why** the stack cannot do it, **what** to run, and **where** the
-result goes. The record type is the enforcement: a step with no stated destination cannot be
-written. The registry renders to grouped `CfnOutput`s printed after every deploy *and* to the
-generated [docs/engineering/manual-actions.md](../../engineering/manual-actions.md), asserted equal
-by a test. Seventeen actions, including every step listed as missing above.
+**7. The workflow itself performs the reachable handoffs.** Every `pnpm infra:*` command first
+verifies its selected AWS CLI profile with STS and opens `aws login` when the console session is absent
+or expired. `pnpm infra:deploy` repeats that check on `diveday-admin` after the CDK deploy and before
+reading the handoff secret, because a legacy raw deployer key must never silently bypass administrator
+login. It then creates the three dotenv files and asks yes/no before importing Vercel Production
+variables, deploying Vercel, updating GitHub visual-test secrets, or creating SES DNS records through
+Vercel. The prompt is only shown in an interactive terminal; CI and `--no-wizard` keep the command
+non-interactive.
+
+`ManualAction` records now document only the five account approvals no CLI can complete: an
+administrator profile, CDK bootstrap, Cost Explorer, SES production access, and SMS account
+registration. They render solely to the generated
+[docs/engineering/manual-actions.md](../../engineering/manual-actions.md), asserted equal by a test.
+The stack emits one concise `PostDeployWizard` output rather than repeating a long checklist after
+every deploy.
 
 **8. `infra/` gets test coverage.** `vitest.config.ts` now includes `infra/**/*.test.ts`. Lint and
 `tsc` see TypeScript; only a synth sees a CloudFormation template, and a leaked credential is a
@@ -156,10 +170,9 @@ property of the template.
   document is a string. `unsafePlainText` is the intended escape hatch for a value assembled from
   references — CDK resolves the embedded tokens into an `Fn::Join`, and no plaintext credential
   exists in this repo or the template.
-- **One `CfnOutput` per manual action.** Rejected: sixteen keys would bury the rest of the deploy
-  summary. Grouped by category instead, chunked automatically when a group would cross
-  CloudFormation's 4096-character output-value ceiling — which the Credentials group did on the first
-  attempt, caught by the test rather than by a failed deploy.
+- **A long `CfnOutput` checklist after every deploy.** Rejected: even grouped output leaves an
+  operator deciding which of many steps apply. The wizard offers the actions it can perform and the
+  written list contains only account approvals that cannot be automated.
 
 ## Consequences
 
@@ -174,8 +187,9 @@ property of the template.
   `credentials-to-github-actions` action as required immediately after it. The failure if you skip
   it is quiet: per ADR 20260729 a baseline-lookup failure degrades to "no baseline" rather than
   stopping, so visual regression would simply stop protecting anything.
-- **Seven new access keys appear on the first deploy** and land in the secret. Nothing consumes them
-  until a human places them, so the deploy is inert for the app.
+- **Seven new access keys appear on the first deploy** and land in the secret. The post-deploy
+  wizard immediately offers the Vercel and GitHub placements; declining either leaves that external
+  platform unchanged by design.
 
 - **The first deploy revokes your current `cdk-deployer` key.** It is one of the hand-minted keys
   decision 6 retires. The deploy itself completes — it runs under an assumed bootstrap role, not that
@@ -194,7 +208,7 @@ property of the template.
 - **`.env.example` is now load-bearing for the infrastructure.** Editing it changes the secret's
   contents on the next deploy, and removing a key the stack fills breaks `cdk synth` with a message
   naming the key. That coupling is deliberate and is what "stays in sync" means here.
-- **A recurring $0.40/month.** Named in the runbook next to the `monthlyBudgetLimit` default so the
+- **A recurring $0.80/month.** Named in the runbook next to the `monthlyBudgetLimit` default so the
   next person to add a secret moves the limit with it.
 - **`pnpm check` is slower by one CDK synth** (~4s), and `infra/` now has 13 assertions where it had
   none.
