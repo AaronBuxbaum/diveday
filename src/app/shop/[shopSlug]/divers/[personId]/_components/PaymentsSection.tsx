@@ -4,6 +4,7 @@ import { buttonClass } from "@/components/ui/button";
 import { type StaffMessageKey, type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { formatMoneyCents, formatShortDate } from "@/lib/format";
 import { refundPaymentAction } from "../actions";
+import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
 import { type DiverProfile, ORDER_STATUS_KEYS, type Shop } from "./shared";
 
 /**
@@ -164,12 +165,19 @@ export function PaymentsSection({
   personId,
   canRefund,
   paymentsConnected,
+  status,
 }: {
   diver: DiverProfile;
   shop: Shop;
   locale: string;
   shopSlug: string;
   personId: string;
+  /**
+   * This section's own outcome — a refund that landed, one that was refused,
+   * or the "payments aren't connected" bounce from `orders/new`. All of them
+   * used to answer a click made two screens down from the top of the page.
+   */
+  status?: DiverNotice;
   /** Only owners/managers issue refunds (H-14); others don't see the control. */
   canRefund: boolean;
   /**
@@ -210,6 +218,12 @@ export function PaymentsSection({
           </Link>
         )}
       </div>
+
+      {/* Beside this section's own controls. The refund buttons live per row
+          further down, but the header is where both doors into this section
+          are, and it is what a staffer bounced back from `orders/new` lands
+          looking at. */}
+      <DiverFormStatus status={status} shopSlug={shopSlug} locale={locale} className="mt-3" />
 
       {orders.length === 0 ? (
         <p className="mt-4 rounded-lg border border-border bg-surface p-5 text-sm text-muted">
