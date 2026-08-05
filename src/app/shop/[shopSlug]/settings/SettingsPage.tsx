@@ -31,8 +31,10 @@ import {
   canManageStaffAccounts,
   canViewShopReports,
 } from "@/lib/authz";
+import { nowDate } from "@/lib/clock";
+import { formatShortDate } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
-import { FOUNDER_EMAIL } from "@/lib/platform-mail";
+import { SUPPORT_EMAIL, UPGRADE_EMAIL } from "@/lib/platform-mail";
 import { RENTABLE_ITEMS, SHOP_CATALOG_ITEMS, toRentableKinds } from "@/lib/rentals";
 import { requireStaffSession } from "@/lib/session";
 import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
@@ -41,6 +43,7 @@ import {
   type CuratedTimezoneGroupKey,
   DEFAULT_TIMEZONE,
 } from "@/lib/timezones";
+import { isTrialExpired, trialDaysRemaining, trialEndsAt } from "@/lib/trial";
 import {
   disconnectAction,
   refreshAction,
@@ -340,10 +343,17 @@ export default async function SettingsPage({
   // 20260724-role-gated-surfaces-hide-not-explain). Both pages re-check.
   const canManageTeam = canManageStaffAccounts(session.user.roles);
   const canManagePromos = canViewShopReports(session.user.roles);
+  // Trial timing is owner-grade information the same way the monthly report
+  // is — the daily crew has no reason to see it, and a demo shop isn't a
+  // trial at all (ADR 20260720-trial-shops-are-not-demo).
+  const canViewTrialStatus = !shop.isDemo && canViewShopReports(session.user.roles);
   const locale = await requestLocale(shop.defaultLocale);
   const shopCurrency = toShopCurrency(shop.currency);
   const currencyMismatch = stripeCurrencyMismatch(shopCurrency, account);
   const t = staffTranslator(locale);
+  const trialDaysLeft = trialDaysRemaining(shop.createdAt, nowDate());
+  const trialExpired = isTrialExpired(shop.createdAt, nowDate());
+  const trialEndLabel = formatShortDate(trialEndsAt(shop.createdAt), locale, shop.timezone);
   const banner = noticeFromParam(notice, noticeMessages(t));
   // A recognized section renders the notice inline; anything else (chiefly
   // `not_authorized`, which spans several sections rather than owning one)
@@ -775,6 +785,36 @@ export default async function SettingsPage({
       </SettingsGroup>
 
       <SettingsGroup group={MONEY_GROUP} label={t(MONEY_GROUP.labelKey)}>
+        {/* First card in "Money" — what DiveDay itself costs, before what the
+            shop charges divers. Soft expiry by product decision: a trial past
+            its window keeps working exactly as before, so this is purely
+            informational, never a lockout. */}
+        {canViewTrialStatus ? (
+          <section className="mb-6 rounded-lg border border-border bg-surface p-6">
+            <CardHeading
+              t={t}
+              heading={t("settings.main.trial.heading")}
+              description={
+                trialExpired
+                  ? t("settings.main.trial.expiredDescription", { endDate: trialEndLabel })
+                  : t("settings.main.trial.activeDescription", {
+                      count: trialDaysLeft,
+                      endDate: trialEndLabel,
+                    })
+              }
+            />
+            <p className="mt-3 text-sm text-muted">{t("settings.main.trial.upgradeBody")}</p>
+            <div className="mt-4">
+              <a
+                href={`mailto:${UPGRADE_EMAIL}`}
+                className={buttonClass({ variant: "secondary", className: "text-foreground" })}
+              >
+                {t("settings.main.trial.emailCta", { email: UPGRADE_EMAIL })}
+              </a>
+            </div>
+          </section>
+        ) : null}
+
         {/* Orders is not here. It is money a shop *reads* every day, so it
             keeps its header row under "Run the shop" and this page stops
             offering a second door to it — one destination, one place to find
@@ -916,7 +956,7 @@ export default async function SettingsPage({
                     </Link>
                   ) : (
                     <p className="mt-4 rounded-lg bg-warning/10 px-4 py-3 text-sm font-medium text-warning">
-                      {t("settings.main.stripe.notConfiguredWarning", { email: FOUNDER_EMAIL })}
+                      {t("settings.main.stripe.notConfiguredWarning", { email: SUPPORT_EMAIL })}
                     </p>
                   )}
                 </div>
@@ -1101,9 +1141,9 @@ export default async function SettingsPage({
       </SettingsGroup>
 
       <footer className="mt-12 border-t border-border pt-6 text-sm text-muted">
-        <p>{t("settings.main.founder.description")}</p>
-        <a href={`mailto:${FOUNDER_EMAIL}`} className="font-medium text-primary hover:underline">
-          {t("settings.main.founder.emailCta", { email: FOUNDER_EMAIL })}
+        <p>{t("settings.main.support.description")}</p>
+        <a href={`mailto:${SUPPORT_EMAIL}`} className="font-medium text-primary hover:underline">
+          {t("settings.main.support.emailCta", { email: SUPPORT_EMAIL })}
         </a>
       </footer>
     </main>

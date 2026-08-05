@@ -929,16 +929,16 @@
           "lead": "Tus registros se van contigo.",
           "body": "Ajustes entrega un ZIP de los archivos de tu centro — buceadores, reservas, exenciones, pagos, fotos. Funciona desde tu primer día, no solo el último."
         },
-        "founderLine": {
-          "lead": "Tienes una línea directa con el fundador.",
-          "body": "Los centros fundadores escriben y reciben respuesta directamente del fundador, y lo que tu equipo encuentra da forma a lo que se construye después."
+        "supportLine": {
+          "lead": "Soporte real, a un correo de distancia.",
+          "body": "Escribe cuando quieras — te responde una persona real, y lo que tu equipo encuentra da forma a lo que se construye después."
         }
       },
       "exploreNote": "Tu centro empieza vacío y listo para tus propios viajes y buceadores. ¿Quieres explorar primero un centro ya lleno de viajes de muestra?",
       "tryLiveDemo": "Probar la demo en vivo",
       "settingUp": "Configurando tu centro…",
       "submit": "Crear centro y empezar la prueba",
-      "trialMeaning": "Gratis mientras DiveDay está en acceso anticipado — sin tarjeta, sin fecha de fin definida. Te avisaremos con tiempo antes de que eso cambie.",
+      "trialMeaning": "Gratis durante 3 semanas, sin tarjeta. Tu centro sigue funcionando después — escribe a {email} cuando quieras mejorar de plan.",
       "alreadyHaveShop": "¿Ya tienes un centro?",
       "signIn": "Iniciar sesión",
       "errors": {
@@ -1229,14 +1229,14 @@
       "exportItem4": "Una guía en lenguaje claro de cada archivo — sin proyecto de descifrado después",
       "tryEyebrow": "Pruébalo",
       "tryTitle": "Mira cómo se siente cuando todo el centro está en la misma página.",
-      "tryDescription": "DiveDay es reciente, y los primeros centros lo moldean. Los centros fundadores tienen una línea directa con el fundador — lo que tu equipo encuentra esta temporada es lo próximo en recibir atención.",
+      "tryDescription": "DiveDay es reciente, y los primeros centros lo moldean — lo que tu equipo encuentra esta temporada es lo próximo en recibir atención.",
       "priceLine": "Un precio único — {price} {cadence}, congelado dos años para los centros fundadores.",
       "seeIncluded": "Ver qué incluye →",
       "gettingReady": "Preparando tu centro…",
       "startTrial": "Empezar una prueba",
       "contactEyebrow": "Habla con una persona",
       "contactTitle": "¿Prefieres preguntar primero?",
-      "contactBody": "Escribe al fundador con lo que te ayudaría a decidir — una pregunta, una duda, una mala mañana en el mostrador. Una persona real lo lee y responde; no hay cola de tickets.",
+      "contactBody": "Escríbenos con lo que te ayudaría a decidir — una pregunta, una duda, una mala mañana en el mostrador.",
       "contactCta": "Escribir a {email}"
     },
     "common": {
@@ -1304,7 +1304,7 @@
       "item3": "Las funciones nuevas según salen, todo dentro del acceso anticipado",
       "item4": "Un centro de práctica precargado con salidas realistas para entrenar",
       "item5": "El precio de hoy, congelado dos años — sin subidas sorpresa mientras ayudas a dar forma a lo que sigue",
-      "item6": "Una línea directa con el fundador para soporte — escribe y te responde una persona real"
+      "item6": "Soporte por correo — escribe y te responde una persona real"
     },
     "export": {
       "claim": "Ajustes → Exportación de datos descarga un ZIP de archivos CSV simples y documentados — buceadores, reservas, registros de descargos, historial de pagos — encabezado por un archivo de contactos con el formato del asistente de importación de otro sistema, con cada foto guardada (imágenes de tarjetas, fotos de sitios de buceo, recuerdos de salidas) incluida como archivo real, no solo un enlace.",
@@ -1760,16 +1760,16 @@
     },
     "about": {
       "eyebrow": "Quiénes somos",
-      "heroTitle": "Quien escribe el código es quien responde a tu correo.",
-      "heroDescription": "Empezó con la mañana corriente del dueño de un centro de buceo: pizarra, portapapeles, una hoja de cálculo y unas cuantas aplicaciones que nunca se hablan entre sí. A DiveDay lo hacen buceadores; uno de ellos es el dueño, escribe cada línea y pone su propia dirección en esta página. El resto de la página es la mitad incómoda: lo que no vamos a fingir y cómo te llevas tus registros de vuelta.",
+      "heroTitle": "Una sola persona posee cada línea de código que mueve este barco.",
+      "heroDescription": "Empezó con la mañana corriente del dueño de un centro de buceo: pizarra, portapapeles, una hoja de cálculo y unas cuantas aplicaciones que nunca se hablan entre sí. A DiveDay lo hacen buceadores; uno de ellos es el dueño y escribe cada línea. El resto de la página es la mitad incómoda: lo que no vamos a fingir y cómo te llevas tus registros de vuelta.",
       "founderEyebrow": "Del fundador",
       "founderTitle": "Por qué existe esto.",
       "founderP1": "Un dueño de un centro de buceo me explicó un día cualquiera: una pizarra, una tablilla, una hoja de cálculo actualizada a mano, y un par de aplicaciones que no se hablan entre sí. Pagaba por todo eso dos veces — una por el software, otra en las horas que le robaba a sus buceadores. Su equipo lleva una operación ajustada; las herramientas simplemente nunca llegaron para este sector.",
       "founderP2": "Ese es el patrón: un sector entero funcionando con software que nadie construyó para él — anticuado en el mejor caso, hostil en el peor, hecho para una oficina trasera, no para un muelle mojado. Los centros se quedan con la pizarra y la tablilla porque el papel nunca falla, nunca te desconecta, nunca exige cinco pantallas con las manos mojadas.",
       "founderP3": "DiveDay cierra esa brecha: software rápido, claro y tolerante para que un equipo lo use sin que se lo pidan — construido observando cómo transcurre un día de barco, no desde una especificación escrita lejos del agua. Si tu equipo no lo abriría una mañana ajetreada, no ha cumplido su función.",
       "runEyebrow": "Cómo se lleva",
-      "runTitle": "Puedes contactar al fundador.",
-      "runP1": "Escribe sobre una mala mañana en el mostrador y llegas al fundador — no a una cola, ni a un número de ticket, ni a un formulario que te pide adjuntar una captura antes de que alguien lo lea. Quien responde es quien puede resolverlo.",
+      "runTitle": "Precios claros. Soporte real.",
+      "runP1": "Escribe sobre una mala mañana en el mostrador, un fallo o una pregunta — una persona real lo lee y te ayuda, no un formulario que te pide adjuntar una captura antes de que alguien lo mire.",
       "runP2": "Los precios funcionan igual: un número fijo, sin plazas que contar, sin nivel que esconda la función que realmente necesitas. Aquí nadie cobra por venderte más, así que la página de precios no tiene nada que ocultar.",
       "emailCta": "Escribe a {email}",
       "seeCost": "Ver qué cuesta",
@@ -1828,7 +1828,7 @@
       "committingLabel": "A qué te comprometes",
       "committingValue": "Mes a mes, por ubicación, cancela cuando quieras. Sin cuota de alta, sin contrato del que salir.",
       "whoAnswersLabel": "Quién te responde",
-      "whoAnswersValue": "El fundador, directamente. Los centros fundadores lo tienen por escrito en la página de precios.",
+      "whoAnswersValue": "Una persona real del equipo de DiveDay — escribe a {email} cuando quieras.",
       "closingTitle": "La forma honesta de juzgar todo esto es ir a usarlo.",
       "closingDescription": "Sin llamada, sin formulario primero. Recorre un centro de ejemplo completo como propietario, capitán o buceador, y decide si sientes que tu equipo lo abriría una mañana ajetreada."
     },
@@ -1926,7 +1926,7 @@
         },
         "trialMeaning": {
           "question": "¿Qué significa \"prueba\" ahora mismo?",
-          "answer": "Crear un centro es gratis mientras DiveDay está en acceso anticipado — sin tarjeta y sin fecha de fin definida todavía. Te avisaremos con tiempo antes de que eso cambie, y la facturación de arriba es lo que los centros fundadores fijan cuando llegue ese momento."
+          "answer": "Crear un centro es gratis durante 3 semanas, sin tarjeta. Tu centro sigue funcionando después — escribe a {email} cuando quieras pasar a la facturación de arriba."
         },
         "seeBefore": {
           "question": "¿Puedo verlo antes de comprometerme?",
@@ -1954,14 +1954,14 @@
         },
         "whyFounding": {
           "question": "¿Por qué ser una centro fundador?",
-          "answer": "Porque los centros tempranos orientan — lo que tu equipo encuentra da forma a lo que se construye después. Los centros fundadores también fijan el precio de hoy durante dos años y tienen una línea directa con el fundador; cada función nueva llega al único plan que hay, sin niveles superiores a los que moverla."
+          "answer": "Porque los centros tempranos orientan — lo que tu equipo encuentra da forma a lo que se construye después. Los centros fundadores también fijan el precio de hoy durante dos años; cada función nueva llega al único plan que hay, sin niveles superiores a los que moverla."
         },
         "multipleLocations": {
           "question": "¿Qué pasa con varias ubicaciones?",
-          "answer": "Cada centro de DiveDay lleva una ubicación por ahora. Si operas más de una ubicación, escribe a aaron@dive.day — preferimos construir eso contigo antes que fingir que ya existe."
+          "answer": "Cada centro de DiveDay lleva una ubicación por ahora. Si operas más de una ubicación, escribe a {email} — preferimos construir eso contigo antes que fingir que ya existe."
         }
       },
-      "stillQuestion": "¿Sigues teniendo una pregunta que las FAQ no responden? Los centros fundadores tienen una línea directa con el fundador — úsala, siempre es bienvenida.",
+      "stillQuestion": "¿Sigues teniendo una pregunta que las FAQ no responden? Escríbenos — siempre es bienvenido.",
       "emailCta": "Escribe a {email}"
     }
   },

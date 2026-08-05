@@ -1986,8 +1986,15 @@
         "importCta": "Importar contactos",
         "exportCta": "Exportar datos"
       },
-      "founder": {
-        "description": "Una mala mañana en el mostrador, una función que echas en falta, un fallo — escribe cuando quieras. Llega directo a Aaron, no a una cola de tickets, y siempre es bienvenido.",
+      "trial": {
+        "heading": "Tu prueba",
+        "activeDescription": "Quedan {count, plural, one {# día} other {# días}}, hasta el {endDate}.",
+        "expiredDescription": "Tu prueba terminó el {endDate}. Todo lo que has configurado sigue funcionando.",
+        "upgradeBody": "¿Listo para pasar a un plan de pago? Escríbenos y te ponemos en marcha.",
+        "emailCta": "Escribir a {email}"
+      },
+      "support": {
+        "description": "Una mala mañana en el mostrador, una función que echas en falta, un fallo — escribe cuando quieras.",
         "emailCta": "Escribir a {email}"
       },
       "groups": {

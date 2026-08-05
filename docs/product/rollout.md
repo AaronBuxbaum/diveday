@@ -123,7 +123,11 @@ it down) for each of:
   **H-26 (2026-08-02) confirms this pricing posture is deliberately lifestyle-scale, not
   venture-scale, and drops the explicit same-day SLA from the support promise** — see
   [vision.md](vision.md#what-kind-of-business-this-is) and
-  [human-decisions.md](human-decisions.md#decision-register).
+  [human-decisions.md](human-decisions.md#decision-register). **Amended 2026-08-05 (Aaron
+  Buxbaum):** the founder-direct support promise itself is retired, not just the SLA — support is
+  now a plain `support@dive.day` inbox with no personal-response commitment, and a trial's own
+  upgrade path (3-week duration, soft expiry, `onboarding@dive.day`) is decided the same day — see
+  [human-decisions.md](human-decisions.md#decision-register)'s H-12 amendment.
 - **H-13 (email-identity reuse) needs a ruling before a real shop's data is live.** The
   domain-expert review flagged silent person-reuse on shared inboxes as unsafe; decide the
   safeguard (the light "is this you?" confirmation is the smallest honest fix) or explicitly
@@ -194,9 +198,10 @@ open safety-severity defects; a written case study draft with the shop's numbers
 
 ## Phase 2 — founding shops (Oct 2026 → DEMA)
 
-Convert the pilot into a capped paid cohort. Cap it deliberately — **25 shops** — because support
-is founder-direct and scarcity is honest ("founding cohort" means something when it's actually
-bounded).
+Convert the pilot into a capped paid cohort. Cap it deliberately — **25 shops** — because scarcity
+is honest ("founding cohort" means something when it's actually bounded) and support capacity is
+finite (a plain `support@dive.day` inbox, not a founder-direct promise as of 2026-08-05 — see
+[human-decisions.md](human-decisions.md#decision-register)).
 
 - **Turn on the switching funnel.** The `/switching` guides are live SEO surfaces; now feed them:
   the EVE case study as a linked story, and modest paid search on high-intent queries ("EVE dive
@@ -301,8 +306,9 @@ serves it.
    [stakeholders/](stakeholders/README.md).
 2. Name the ops owner, enable and **rehearse** a Neon backup restore (H-04).
 3. Verify the SES production sender and write the H-09 consent policy.
-4. Close H-12 at $99/location/month with the two-year founding lock and the founder-direct
-   support promise; close H-13 with the "is this you?" safeguard or a written acceptance.
+4. Close H-12 at $99/location/month with the two-year founding lock and the support promise
+   (`support@dive.day`, no founder-direct or response-time guarantee as of 2026-08-05); close
+   H-13 with the "is this you?" safeguard or a written acceptance.
 5. Run V-01 and the V-04 rehearsal on the demo shop; script the V-02 boat day.
 6. Draft the [design-partner one-pager](stakeholders/design-partner-one-pager.md) (the offer
    above) and open conversations with five shops across the three profiles; get one boat day

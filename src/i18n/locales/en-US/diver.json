@@ -929,16 +929,16 @@
           "lead": "Your records leave with you.",
           "body": "Settings hands back one ZIP of your shop's files — divers, bookings, waivers, payments, photos. It works on your first day, not just your last."
         },
-        "founderLine": {
-          "lead": "You get a founder-direct line.",
-          "body": "Founding shops write in and hear back from the founder directly, and what your crew runs into shapes what ships next."
+        "supportLine": {
+          "lead": "Real support, one email away.",
+          "body": "Write in any time — a real person answers, and what your crew runs into shapes what ships next."
         }
       },
       "exploreNote": "Your shop starts empty and ready for your own trips and divers. Want to explore a shop that's already full of sample trips first?",
       "tryLiveDemo": "Try the live demo",
       "settingUp": "Setting up your shop…",
       "submit": "Create shop & start trial",
-      "trialMeaning": "Free while DiveDay is in early access — no card, no set end date. We'll tell you well before that changes.",
+      "trialMeaning": "Free for 3 weeks, no card required. Your shop keeps working after that — email {email} whenever you're ready to upgrade.",
       "alreadyHaveShop": "Already have a shop?",
       "signIn": "Sign in",
       "errors": {
@@ -1229,14 +1229,14 @@
       "exportItem4": "A plain-language guide to every file — no decoding project later",
       "tryEyebrow": "Try it",
       "tryTitle": "See how it feels when the whole shop is on the same page.",
-      "tryDescription": "DiveDay is early, and the first shops shape it. Founding shops get a founder-direct line — what your crew runs into this season is what gets attention next.",
+      "tryDescription": "DiveDay is early, and the first shops shape it — what your crew runs into this season is what gets attention next.",
       "priceLine": "One flat price — {price} {cadence}, locked for two years for founding shops.",
       "seeIncluded": "See what's included →",
       "gettingReady": "Getting your shop ready…",
       "startTrial": "Start a trial",
       "contactEyebrow": "Talk to a person",
       "contactTitle": "Rather ask a question first?",
-      "contactBody": "Write to the founder with whatever would decide it for you — a question, a doubt, a bad morning at the counter. A real person reads it and answers; there is no ticket queue.",
+      "contactBody": "Write in with whatever would decide it for you — a question, a doubt, a bad morning at the counter.",
       "contactCta": "Email {email}"
     },
     "common": {
@@ -1304,7 +1304,7 @@
       "item3": "New features as they ship, all through early access",
       "item4": "A practice shop preloaded with realistic trips to train on",
       "item5": "Today's price, locked for two years — no surprise increases while you help shape what ships next",
-      "item6": "A founder-direct line for support — write in, hear back from a real person"
+      "item6": "Email support — write in, hear back from a real person"
     },
     "export": {
       "claim": "Settings → Data export downloads one ZIP of plain, documented CSV files — divers, bookings, waiver records, payment history — led by a contacts file shaped for another system's import wizard, with every stored photo (card images, dive-site pictures, trip recaps) included as a real file, not just a link.",
@@ -1760,16 +1760,16 @@
     },
     "about": {
       "eyebrow": "Who we are",
-      "heroTitle": "The person who writes the code answers your email.",
-      "heroDescription": "It started with a dive shop owner's ordinary morning — whiteboard, clipboard, a spreadsheet, and a few apps that never talk to each other. Divers build DiveDay; one of them owns it, writes every line of it, and puts his own address on this page. The rest of this page is the uncomfortable half: what we won't pretend, and how you take your records back out.",
+      "heroTitle": "One person owns every line of code running on this boat.",
+      "heroDescription": "It started with a dive shop owner's ordinary morning — whiteboard, clipboard, a spreadsheet, and a few apps that never talk to each other. Divers build DiveDay; one of them owns it, writes every line of it. The rest of this page is the uncomfortable half: what we won't pretend, and how you take your records back out.",
       "founderEyebrow": "From the founder",
       "founderTitle": "Why this exists.",
       "founderP1": "A dive shop owner walked me through an ordinary day: a whiteboard, a clipboard, a hand-updated spreadsheet, and a few apps that don't talk to each other. He was paying for it twice — once in software, again in the hours it pulled from his divers. His crew runs a tight operation; the tools just never showed up for this industry.",
       "founderP2": "That's the pattern: an entire industry running on software nobody built for it — dated at best, hostile at worst, built for a back office, not a wet dock. Shops keep the whiteboard and clipboard because paper never crashes, never logs you out, never needs five taps with wet hands.",
       "founderP3": "DiveDay closes that gap: software fast, clear, and forgiving enough that a crew reaches for it unprompted — built from watching how a boat day runs, not a spec written far from the water. If your team wouldn't open it on a busy morning, it hasn't done its job.",
       "runEyebrow": "How it's run",
-      "runTitle": "You can reach the founder.",
-      "runP1": "Write in about a bad morning at the counter and you reach the founder — not a queue, not a ticket number, not a form that asks you to attach a screenshot before anyone reads it. The person who answers is the person who can fix it.",
+      "runTitle": "Straightforward pricing. Real support.",
+      "runP1": "Write in about a bad morning at the counter, a bug, or a question — a real person reads it and helps, not a form that asks you to attach a screenshot before anyone looks.",
       "runP2": "The pricing works the same way: one flat number, no seats to count, no tier that hides the feature you actually need. Nobody here is compensated for selling you more, so the pricing page has nothing to hide behind.",
       "emailCta": "Email {email}",
       "seeCost": "See what it costs",
@@ -1828,7 +1828,7 @@
       "committingLabel": "What you're committing to",
       "committingValue": "Month to month, per location, cancel whenever. No setup fee, no contract to get out of.",
       "whoAnswersLabel": "Who answers you",
-      "whoAnswersValue": "The founder, directly. Founding shops get that in writing on the pricing page.",
+      "whoAnswersValue": "A real person on the DiveDay team — email {email} anytime.",
       "closingTitle": "The honest way to judge all of this is to go use it.",
       "closingDescription": "No call, no form first. Walk a full sample shop as the owner, the captain, or a diver, and decide whether it feels like something your crew would open on a busy morning."
     },
@@ -1926,7 +1926,7 @@
         },
         "trialMeaning": {
           "question": "What does \"trial\" mean right now?",
-          "answer": "Starting a shop is free while DiveDay is in early access — no card, and no set end date yet. We'll tell you well before that changes, and the billing above is what founding shops lock in when it does."
+          "answer": "Starting a shop is free for 3 weeks, no card required. Your shop keeps working after that — email {email} whenever you're ready to move to the billing above."
         },
         "seeBefore": {
           "question": "Can I see it before I commit?",
@@ -1954,14 +1954,14 @@
         },
         "whyFounding": {
           "question": "Why be a founding shop?",
-          "answer": "Because early shops steer — what your crew runs into shapes what ships next. Founding shops also lock in today's price for two years and get a founder-direct line; every new feature lands in the one plan there is, with no higher tiers to move things into."
+          "answer": "Because early shops steer — what your crew runs into shapes what ships next. Founding shops also lock in today's price for two years, and every new feature lands in the one plan there is, with no higher tiers to move things into."
         },
         "multipleLocations": {
           "question": "What about multiple locations?",
-          "answer": "Each DiveDay shop runs one location today. If you operate more than one location, email aaron@dive.day — we'd rather build that with you than pretend it's already here."
+          "answer": "Each DiveDay shop runs one location today. If you operate more than one location, email {email} — we'd rather build that with you than pretend it's already here."
         }
       },
-      "stillQuestion": "Still have a question a FAQ can't answer? Founding shops get a founder-direct line — use it, always welcome.",
+      "stillQuestion": "Still have a question a FAQ can't answer? Email us — always welcome.",
       "emailCta": "Email {email}"
     }
   },

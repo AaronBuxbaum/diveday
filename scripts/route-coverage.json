@@ -291,7 +291,7 @@
       "settings-findability.spec.ts",
       "whatsapp-settings.spec.ts"
     ],
-    "visual": ["settings-payments"]
+    "visual": ["settings-payments", "settings-trial"]
   },
   "/shop/[shopSlug]/settings/backup": {
     "e2e": ["backup.spec.ts"],

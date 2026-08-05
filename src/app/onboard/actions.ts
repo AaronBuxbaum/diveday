@@ -12,6 +12,7 @@ import { toDiverLocale } from "@/i18n/settings";
 import { verifyAccountLinkPath } from "@/lib/account-tokens";
 import { trackEvent } from "@/lib/analytics";
 import { signIn } from "@/lib/auth";
+import { nowDate } from "@/lib/clock";
 import { isDemoAccountEmail } from "@/lib/demo-identity";
 import { eventSource } from "@/lib/funnel";
 import { publicAppUrl } from "@/lib/notifications";
@@ -115,6 +116,14 @@ export async function onboardAction(formData: FormData) {
           // that later imports its real roster never has seeded rows mixed in.
           // See ADR 20260724-per-visitor-demo-shops.
           isDemo: false,
+          // Explicit rather than the column's DB-side `defaultNow()`: this is
+          // the instant the trial clock in src/lib/trial.ts counts from, read
+          // back and shown to the owner, so it has to be the same clock every
+          // other render uses (src/lib/clock.ts) — under the e2e/visual
+          // harness that's the one frozen instant, not the database engine's
+          // own wall clock, which would otherwise drift the trial-days-left
+          // math on every run.
+          createdAt: nowDate(),
         })
         .returning();
 
