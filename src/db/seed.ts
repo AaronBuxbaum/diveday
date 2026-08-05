@@ -80,6 +80,8 @@ import { seedMoreTrips } from "./seed-more-trips";
 import { seedNitrox } from "./seed-nitrox";
 import { seedRentalFit } from "./seed-rental-fit";
 import { seedTrips } from "./seed-trips";
+import { seedWaiverEvidence } from "./seed-waiver-evidence";
+import { seedWaiverVersions } from "./seed-waiver-versions";
 
 /**
  * Demo data: one Key Largo shop with staff, customers, and a week of trips.
@@ -456,6 +458,13 @@ export async function seedDemoSchedule(
     .where(eq(shops.id, shopId))
     .limit(1);
   const pinRecapBooking = shopRow?.slug === DEMO_SHOP_SLUG;
+
+  // Before anything issues a waiver: the release's own version history, so the
+  // shop's current text is version 3 with two superseded wordings behind it,
+  // the way a trading shop's paperwork actually looks. Every scenario below
+  // snapshots `getCurrentWaiverTemplate`, so this has to settle what "current"
+  // means first (src/db/seed-waiver-versions.ts).
+  await seedWaiverVersions(db, shopId);
 
   // The shop's story, in the only order it makes sense in: who dives here, what
   // the shop teaches, where it dives, what is on the board, and who is booked

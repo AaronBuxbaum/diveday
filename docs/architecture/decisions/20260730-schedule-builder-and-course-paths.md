@@ -101,3 +101,12 @@ suggestion it might have made. The other direction sells a diver a course they f
 - Follow-up, deliberately not built: a public page per path. The trail on the course page covers the
   diver-facing need today, and a new public route means new SEO, structured data, and public-route
   allowlist surface for a page nobody has asked for yet.
+
+## Amendment 2026-08-05 — the certification-paths half is removed
+
+Certification paths were deleted in full by
+[20260805-remove-certification-paths](20260805-remove-certification-paths.md): the tables, the
+builder, the two public pages that later grew, the export CSVs, and the course-page trail. The staff
+roster now reads progression off each course's own `minimum_certification_level` instead. Everything
+this ADR decided about **the schedule being the builder** stands unchanged and is not superseded;
+only the catalog-owns-progression half is.

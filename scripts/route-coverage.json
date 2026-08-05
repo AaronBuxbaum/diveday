@@ -34,7 +34,7 @@
       "onboard.spec.ts",
       "tenant-isolation.spec.ts"
     ],
-    "visual": ["onboard"]
+    "visual": ["marketing-nav-signed-in", "onboard"]
   },
   "/pricing": {
     "e2e": ["marketing.spec.ts"],

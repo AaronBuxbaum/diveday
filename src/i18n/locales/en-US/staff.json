@@ -566,7 +566,7 @@
     "catalogEyebrow": "Catalog",
     "list": {
       "title": "Dive-site library",
-      "description": "Build the briefing once, then attach it to any trip. Copy a site before tailoring a special itinerary.",
+      "description": "Save a place once, then attach it to any dive on any trip — a two-tank day can visit one site twice or two different sites. Copy a site before tailoring a special itinerary.",
       "createSite": "Create a site",
       "browseTemplates": "Browse templates",
       "overviewAriaLabel": "Dive-site overview",

@@ -455,6 +455,29 @@ describe("notificationProviderFromEnvironment (ADR 20260803-ses-sole-email-provi
 
     await expect(notify(booking, provider)).resolves.toEqual({ status: "not_configured" });
   });
+
+  it("puts no operational alert on the wire with no credentials configured", async () => {
+    // How "no mail in unit tests and the e2e fleet" is actually guaranteed for
+    // the two founder alerts (docs ADR 20260805-demo-try-alerts): not a
+    // test-only branch in the alerting code, but the provider seam every send
+    // already goes through. `playwright.config.ts` blanks the SES_* keys
+    // fleet-wide for exactly this, and a local run has never had them.
+    const provider = notificationProviderFromEnvironment({});
+
+    await expect(
+      notify(
+        {
+          kind: "demo_started_alert",
+          shopId: "00000000-0000-4000-8000-000000000010",
+          to: "alerts@dive.day",
+          shopSlug: "coral-cove-divers-a1b2c3",
+          role: "owner",
+          source: "home-hero",
+        },
+        provider,
+      ),
+    ).resolves.toEqual({ status: "not_configured" });
+  });
 });
 
 describe("waitlistInviteEmail", () => {
