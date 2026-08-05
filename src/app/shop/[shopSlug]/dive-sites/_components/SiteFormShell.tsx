@@ -63,11 +63,20 @@ function restore(field: Element, values: SubmittedFormValues) {
 export function SiteFormShell({
   action,
   errorMessages,
+  savedMessage,
   children,
 }: {
   action: SiteFormAction;
   /** One already-translated sentence per refusal code the action can return. */
   errorMessages: Record<DiveSiteFormError, string>;
+  /**
+   * The confirmation for a save that *did* land, already translated. A
+   * successful save redirects (that is how the URL stops being a stale draft),
+   * so this arrives as a `?notice=` the page resolved — but it belongs in the
+   * same place as the refusal, at the end of the form, rather than in a banner
+   * the length of the briefing away from the button that earned it.
+   */
+  savedMessage?: string;
   children: ReactNode;
 }) {
   const [state, formAction] = useActionState(action, IDLE_SITE_FORM_STATE);
@@ -106,6 +115,10 @@ export function SiteFormShell({
             {errorMessages[state.errorCode]}
           </ShopNotice>
         </div>
+      ) : savedMessage ? (
+        <ShopNotice tone="success" role="status">
+          {savedMessage}
+        </ShopNotice>
       ) : null}
     </form>
   );

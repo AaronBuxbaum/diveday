@@ -41,6 +41,15 @@ function fill(template: string, values: Record<string, string | number>): string
 }
 
 /**
+ * Items that would actually be stored — blank lines don't count, because
+ * `sanitizeScheduleDays` drops them before the cap is applied server-side.
+ * Warning on a trailing newline would be a warning about nothing.
+ */
+function countItems(items: string[]): number {
+  return items.filter((item) => item.trim()).length;
+}
+
+/**
  * Real per-day controls instead of one textarea round-tripped through an
  * implicit "Day 1 — 8:15am–5:30pm" formatting convention. State lives here and
  * serializes to one hidden JSON field on every change — the surrounding
@@ -148,47 +157,32 @@ export function DayByDayEditor({
               </Field>
             </FieldGrid>
 
+            {/* One item per line, matching the Included / Not included boxes
+                above it. A row of inputs with its own Add/Remove buttons made
+                a five-item day a five-click build and let the page grow a
+                second, competing idea of what "a list" is; a textarea is the
+                one the editor already had. Over-cap is warned about rather
+                than truncated — silently eating a typed line is worse than a
+                save the server refuses, and it refuses by anchoring here. */}
             <div className="mt-4">
-              <span className="text-sm font-medium">{copy.whatHappens}</span>
-              <div className="mt-2 flex flex-col gap-2">
-                {day.items.map((item, itemIndex) => (
-                  <div
-                    // biome-ignore lint/suspicious/noArrayIndexKey: rows have no stable id and are only ever appended/removed by position, never reordered.
-                    key={itemIndex}
-                    className="flex items-center gap-2"
-                  >
-                    <input
-                      value={item}
-                      onChange={(event) => updateItem(dayIndex, itemIndex, event.target.value)}
-                      maxLength={200}
-                      aria-label={fill(copy.itemLabel, { number: dayNumber, index: itemIndex + 1 })}
-                      placeholder={copy.itemPlaceholder}
-                      className={controlClass}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeItem(dayIndex, itemIndex)}
-                      aria-label={fill(copy.removeItemLabel, {
-                        number: dayNumber,
-                        index: itemIndex + 1,
-                      })}
-                      className={buttonClass({ variant: "ghost", size: "sm" })}
-                    >
-                      {copy.remove}
-                    </button>
-                  </div>
-                ))}
-              </div>
-              <button
-                type="button"
-                onClick={() => addItem(dayIndex)}
-                disabled={day.items.length >= MAX_SCHEDULE_DAY_ITEMS}
-                className={buttonClass({ variant: "secondary", size: "sm", className: "mt-2" })}
+              <Field
+                label={fill(copy.whatHappens, { number: dayNumber })}
+                description={copy.whatHappensHint}
+                error={
+                  countItems(day.items) > MAX_SCHEDULE_DAY_ITEMS
+                    ? fill(copy.itemsOverMax, { max: MAX_SCHEDULE_DAY_ITEMS })
+                    : undefined
+                }
               >
-                {day.items.length >= MAX_SCHEDULE_DAY_ITEMS
-                  ? fill(copy.itemsMax, { max: MAX_SCHEDULE_DAY_ITEMS })
-                  : copy.addItem}
-              </button>
+                <textarea
+                  value={day.items.join("\n")}
+                  onChange={(event) => updateItems(dayIndex, event.target.value)}
+                  rows={6}
+                  maxLength={MAX_SCHEDULE_DAY_ITEMS * 200}
+                  placeholder={copy.itemsPlaceholder}
+                  className={controlClass}
+                />
+              </Field>
             </div>
           </div>
         );

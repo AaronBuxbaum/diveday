@@ -341,11 +341,18 @@ describe("person-first diver records", () => {
 
     it("does not open another shop's removed diver", async () => {
       const { db, shop } = await seededShopContext();
-      const other = await seededShopContext();
+      const [otherShop] = await db
+        .insert(shops)
+        .values({ name: "Other Shop", slug: "other-shop-removed-diver-test", timezone: "UTC" })
+        .returning();
+      if (!otherShop) throw new Error("second shop insert failed");
       const diver = await removedDiver(db, shop.id);
+      // A copied URL is the whole attack here: the record is reachable now, so
+      // the tenant clause is what keeps it reachable only from its own shop.
+      expect(await getDiverProfile(db, otherShop.id, diver.id, { includeRemoved: true })).toBeNull();
       expect(
-        await getDiverProfile(db, other.shop.id, diver.id, { includeRemoved: true }),
-      ).toBeNull();
+        (await listDiverSummaries(db, otherShop.id, { filter: "removed", limit: 1000 })).divers,
+      ).toEqual([]);
     });
   });
 

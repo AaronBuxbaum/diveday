@@ -24,7 +24,7 @@ import { MAX_IMAGE_MB, MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION } from "@/lib/stora
 import { DayByDayEditor } from "./_components/DayByDayEditor";
 import { FieldErrorFocus } from "./_components/FieldErrorFocus";
 import { UnsavedChangesGuard } from "./_components/UnsavedChangesGuard";
-import { saveCourseContentAction, setCourseVisibilityAction } from "./actions";
+import { saveCourseContentAction } from "./actions";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately. It is not a claim that the route has a static shell: the staff
@@ -59,7 +59,6 @@ export default async function EditCoursePage({
   const t = staffTranslator(locale);
 
   const saveAction = saveCourseContentAction.bind(null, shopSlug, slug);
-  const visibilityAction = setCourseVisibilityAction.bind(null, shopSlug, slug);
 
   const messages: Record<string, string> = {
     saved: t("courses.edit.noticeSaved"),
@@ -119,17 +118,6 @@ export default async function EditCoursePage({
             ) : (
               <p className="text-sm text-muted">{t("courses.edit.hiddenFromDivers")}</p>
             )
-          }
-          actions={
-            <form action={visibilityAction}>
-              <input type="hidden" name="visible" value={course.isActive ? "false" : "true"} />
-              <SubmitButton
-                pendingLabel={t("courses.edit.saving")}
-                className={buttonClass({ variant: "secondary" })}
-              >
-                {course.isActive ? t("courses.edit.hide") : t("courses.edit.show")}
-              </SubmitButton>
-            </form>
           }
         />
       </div>
@@ -438,12 +426,9 @@ export default async function EditCoursePage({
                   timeNoteTitle: t("courses.dayByDay.timeNoteTitle"),
                   timeNotePlaceholder: t("courses.dayByDay.timeNotePlaceholder"),
                   whatHappens: t("courses.dayByDay.whatHappens"),
-                  itemLabel: t("courses.dayByDay.itemLabel"),
-                  removeItemLabel: t("courses.dayByDay.removeItemLabel"),
-                  itemPlaceholder: t("courses.dayByDay.itemPlaceholder"),
-                  remove: t("courses.dayByDay.remove"),
-                  itemsMax: t("courses.dayByDay.itemsMax"),
-                  addItem: t("courses.dayByDay.addItem"),
+                  whatHappensHint: t("courses.edit.oneItemPerLine"),
+                  itemsPlaceholder: t("courses.dayByDay.itemsPlaceholder"),
+                  itemsOverMax: t("courses.dayByDay.itemsOverMax"),
                   daysMax: t("courses.dayByDay.daysMax"),
                   addDay: t("courses.dayByDay.addDay"),
                 }}
@@ -469,21 +454,16 @@ export default async function EditCoursePage({
             </FieldGrid>
           </fieldset>
 
-          <div className="flex flex-wrap items-center gap-3">
-            <SubmitButton pendingLabel={t("courses.edit.saving")} className={buttonClass()}>
-              {t("courses.edit.savePage")}
-            </SubmitButton>
-            {/* New tab, on purpose: a same-tab Preview would navigate away and
-              silently discard whatever in this form isn't saved yet. */}
-            <Link
-              href={`/shop/${shopSlug}/courses/${slug}`}
-              target="_blank"
-              rel="noreferrer"
-              className={buttonClass({ variant: "secondary", className: "text-foreground" })}
-            >
-              {t("courses.edit.preview")}
-            </Link>
-          </div>
+          {/* One control, not two. "Preview" opened the same page the "Live
+              at" link in the header already points at, and a second
+              button-shaped thing beside Save competes with the only action
+              this form has (design principles #8). */}
+          <SubmitButton
+            pendingLabel={t("courses.edit.saving")}
+            className={buttonClass({ className: "self-start" })}
+          >
+            {t("courses.edit.savePage")}
+          </SubmitButton>
         </form>
       </UnsavedChangesGuard>
     </main>

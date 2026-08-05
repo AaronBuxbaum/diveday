@@ -48,14 +48,18 @@ import { at } from "./seed-clock";
 
 /**
  * The instant the demo shop's account got the evidence seal. Records signed at
- * or after it are sealed; older ones stay unsealed legacy.
+ * or after it are sealed; everything older is unsealed legacy.
  *
- * Two-and-a-bit days back, deliberately: the audit trail pages twenty rows at a
- * time by signature date, and the spread below lays roughly eight signatures on
- * each of the last three weeks' days — so a cutoff here lands *inside* page
- * one, and a reader sees both states without paging.
+ * Yesterday morning, and the recency is the whole reason for the number. The
+ * audit trail pages twenty rows at a time ordered by signature, and the spread
+ * below lays roughly eight signatures on each of the last three weeks' days —
+ * so page one covers about two and a half days. A cutoff further back would
+ * make every row on the first page sealed and bury the legacy state nine pages
+ * down; this one puts both states on the screen a reader actually opens. It
+ * also means "sealed" is a modest slice of the shop's evidence rather than most
+ * of it, which is exactly what a shop that has just been switched on looks like.
  */
-const SEAL_ENABLED_AT = () => at(-2, 15);
+const SEAL_ENABLED_AT = () => at(-1, 9);
 
 /**
  * How many days back the same-instant signatures get spread over. Three weeks:
