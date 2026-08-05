@@ -240,6 +240,7 @@ export default async function DiversPage({
         filter={filter}
         locale={locale}
         importHref={canImport ? `/shop/${shopSlug}/settings/import` : null}
+        restoreAction={canDelete ? restoreDiverAction : null}
         pager={
           <Pager
             page={diverPage.page}
@@ -255,7 +256,12 @@ export default async function DiversPage({
           viewDivingToday: t("divers.list.viewDivingToday"),
           viewNeedsAttention: t("divers.list.viewNeedsAttention"),
           viewMissingContact: t("divers.list.viewMissingContact"),
+          viewRemoved: t("divers.list.viewRemoved"),
           viewsAriaLabel: t("divers.list.viewsAriaLabel"),
+          removedNote: t("divers.list.removedNote"),
+          restore: t("divers.list.restore"),
+          restoring: t("divers.list.restoring"),
+          restoreDiverLabel: t("divers.list.restoreDiverLabel"),
           peopleHeading: t("divers.list.peopleHeading"),
           // The badge's digit is announced with the noun the count belongs to,
           // and with whether it is a match count or the whole roster.

@@ -6,6 +6,7 @@ import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
+import { FormStatus } from "@/components/ui/form";
 import { canPersonConfigureTrips } from "@/db/authz";
 import { hasTripBlowout } from "@/db/blowouts";
 import { getDb } from "@/db/client";
@@ -211,11 +212,13 @@ export default async function ManageTripPage({
     ...(canConfigure ? ["details", "requirements"] : []),
     "conditions",
     "recap-note",
-    "recap-photos",
-    "crew",
+    // The gallery renders nothing at all once the last photo is gone, so the
+    // removal that emptied it has no section to land in and falls back.
+    ...(recapPhotos.length > 0 ? ["recap-photos"] : []),
     "lifecycle",
     ...(canConfigure && series ? ["series"] : []),
   ]);
+  const lifecycleStatus = noticeForForm(tripNotice, "lifecycle");
   const pageNotice =
     tripNotice && sectionsOnPage.has(tripNotice.form) ? undefined : tripNotice;
 
@@ -290,15 +293,35 @@ export default async function ManageTripPage({
                 })}
               </p>
             ) : null}
-            {trip.diveSite ? (
-              <p className="text-sm text-muted">
-                {t("trips.detail.diveSiteLabel")}{" "}
-                <Link
-                  href={`/shop/${shopSlug}/dive-sites/${trip.diveSite.id}`}
-                  className="font-medium text-primary hover:underline"
-                >
-                  {trip.diveSite.name}
-                </Link>
+            {/* Read off the dives, never `trip.diveSite` — that column is only
+                dive one's site copied onto the trip row, so it named one site
+                for a two-site day and named none at all when the tank without
+                a site was the first one. */}
+            {diveSites.sites.length > 0 || diveSites.undecidedDives > 0 ? (
+              <p className="flex flex-wrap items-center gap-x-2 text-sm text-muted">
+                {diveSites.sites.length > 0 ? (
+                  <>
+                    <span>
+                      {diveSites.sites.length === 1
+                        ? t("trips.detail.diveSiteLabel")
+                        : t("trips.detail.diveSitesLabel")}
+                    </span>
+                    {diveSites.sites.map((site) => (
+                      <Link
+                        key={site.id}
+                        href={`/shop/${shopSlug}/dive-sites/${site.id}`}
+                        className="font-medium text-primary hover:underline"
+                      >
+                        {site.name}
+                      </Link>
+                    ))}
+                  </>
+                ) : null}
+                {diveSites.undecidedDives > 0 ? (
+                  <span>
+                    {t("trips.detail.divesWithoutSite", { count: diveSites.undecidedDives })}
+                  </span>
+                ) : null}
               </p>
             ) : null}
             {series ? (
@@ -414,7 +437,6 @@ export default async function ManageTripPage({
         crewRoles={Object.fromEntries(tripRoleByPerson)}
         onShiftIds={onShiftIds}
         crewGapCode={crewGap.code}
-        status={noticeForForm(tripNotice, "crew")}
         updateCrewAction={updateTripCrewAction.bind(null, shopSlug)}
         copy={{
           heading: t("trips.crew.heading"),
@@ -455,6 +477,9 @@ export default async function ManageTripPage({
       ) : null}
 
       <section className="mt-12 border-t border-border pt-6">
+        <FormStatus tone={lifecycleStatus?.tone} className="mb-3">
+          {lifecycleStatus?.text}
+        </FormStatus>
         {cancelled ? (
           <div className="flex flex-wrap items-center gap-3">
             {canConfigure ? (

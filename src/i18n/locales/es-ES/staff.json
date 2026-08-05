@@ -1193,6 +1193,8 @@
       "dayLabel": "Día {number}: {date} · {timeRange}",
       "courseSession": "Sesión de curso · <course>{title}</course>",
       "diveSiteLabel": "Punto de inmersión:",
+      "diveSitesLabel": "Puntos de inmersión:",
+      "divesWithoutSite": "{count, plural, one {# inmersión aún sin punto} other {# inmersiones aún sin punto}}",
       "seriesPart": "Parte de una serie repetida · {summary}. Los cambios aquí solo se aplican a esta fecha; quedan {count} en el calendario.",
       "overRatioWarning": "Hay {booked} buceadores reservados, pero la tripulación actual solo cubre {cap} según la ratio de nivel inicial publicada por PADI (8 por instructor, +2 por asistente certificado). Asigna otro instructor o un asistente certificado antes de que zarpe esta sesión — las reservas existentes no se ven afectadas de cualquier manera.",
       "overRatioWarningIntro": "Hay {booked} buceadores reservados en esta sesión de iniciación, pero la tripulación actual solo cubre {cap} — {perInstructor} por instructor para la inmersión en aguas abiertas, y un asistente certificado no lo aumenta. Esa es la ratio de Discover Scuba publicada por PADI en su Manual del Instructor, más estricta que la cifra de los cursos de nivel inicial porque nadie en esta sesión ha estado antes en el agua. Solo otro instructor añade plazas. Asigna uno antes de que zarpe esta sesión — las reservas existentes no se ven afectadas de cualquier manera.",

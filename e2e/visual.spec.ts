@@ -872,22 +872,13 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "course-page", scheme);
       });
 
-      // The diver's catalog index and the certification-path guidance it leads
-      // to. Both used to be the signed-out half of a staff page inside /shop
-      // and so had no baseline of their own; they are standalone public
-      // surfaces now (ADR 20260803-public-shop-namespace).
+      // The diver's catalog index. It used to be the signed-out half of a
+      // staff page inside /shop and so had no baseline of its own; it is a
+      // standalone public surface now (ADR 20260803-public-shop-namespace).
       test(`the public course catalog renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/s/blue-mantis/courses");
         await page.getByRole("heading", { level: 1, name: "Courses" }).waitFor();
         await capture(page, "public-courses", scheme);
-      });
-
-      test(`the public certification paths render true to the design (${scheme})`, async ({
-        page,
-      }) => {
-        await page.goto("/s/blue-mantis/courses/paths");
-        await page.getByRole("heading", { level: 1, name: "Certification paths" }).waitFor();
-        await capture(page, "public-course-paths", scheme);
       });
 
       /**
@@ -1713,27 +1704,6 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByText("Day by day").waitFor();
         await page.getByRole("button", { name: "Add item" }).first().waitFor();
         await capture(page, "course-edit", scheme);
-      });
-
-      test(`the staff certification paths render true to the design (${scheme})`, async ({
-        page,
-      }) => {
-        await page.goto("/shop/blue-mantis/courses/paths");
-        await page.getByRole("heading", { level: 1, name: "Certification paths" }).waitFor();
-        await capture(page, "course-paths", scheme);
-      });
-
-      // The path builder: the ordered rungs with their move/remove controls,
-      // the picker, and the live diver-facing preview — the catalog's one
-      // genuinely interactive surface.
-      test(`the certification-path builder renders true to the design (${scheme})`, async ({
-        page,
-      }) => {
-        await page.goto("/shop/blue-mantis/courses/paths");
-        await page.getByRole("heading", { level: 1, name: "Certification paths" }).waitFor();
-        await page.getByRole("link", { name: "From first breath to Rescue Diver" }).first().click();
-        await page.getByRole("region", { name: "Path preview" }).waitFor();
-        await capture(page, "course-path-builder", scheme);
       });
 
       // Owner reporting: "how's my month" over the seeded back-fill — the KPI

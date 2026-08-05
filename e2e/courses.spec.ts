@@ -61,7 +61,7 @@ test("a regular fun-dive trip does not show the taster-session gift nudge", asyn
   await expect(page.getByText("Giving this dive as a gift?")).not.toBeVisible();
 });
 
-test("a signed-out visitor browses the public course catalog to certification paths, with the editor still gated", async ({
+test("a signed-out visitor browses the public course catalog, with the editor still gated", async ({
   page,
 }) => {
   await page.goto("/s/blue-mantis/courses");
@@ -74,26 +74,15 @@ test("a signed-out visitor browses the public course catalog to certification pa
   await expect(page.getByRole("link", { name: "Edit" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: /^Hide|^Show/ })).toHaveCount(0);
 
-  await page
-    .getByRole("link", { name: "Not sure where to start? See certification paths" })
-    .click();
-  await expect(page).toHaveURL(/\/courses\/paths$/);
-  await expect(page.getByRole("heading", { level: 1, name: "Certification paths" })).toBeVisible();
-  const seededPath = page.getByRole("link", { name: "From first breath to Rescue Diver" });
-  await expect(seededPath).toBeVisible();
-  await expect(page.getByLabel("Path name")).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Create path" })).toHaveCount(0);
-
-  await seededPath.click();
-  await expect(page).toHaveURL(/\/courses\/paths\/from-first-breath-to-rescue-diver$/);
-  await expect(
-    page.getByRole("heading", { level: 1, name: "From first breath to Rescue Diver" }),
-  ).toBeVisible();
-  const steps = page.getByRole("list");
-  await expect(steps.getByRole("link", { name: "Discover Scuba Diving" })).toBeVisible();
-  await expect(steps.getByRole("link", { name: "Rescue Diver" })).toBeVisible();
-  // No path editor surfaces for a signed-out visitor.
-  await expect(page.getByRole("checkbox", { name: /Offer this path/ })).toHaveCount(0);
+  // Certification paths are gone entirely (ADR
+  // 20260805-remove-certification-paths) — no link out to them from the
+  // catalog, and nothing left at the URL they used to hold. Asserted on the
+  // rendered not-found boundary rather than the raw status: `paths` now falls
+  // through to the course-slug route, whose cold first byte can still be 200
+  // under cacheComponents (e2e/marketing.spec.ts documents that limitation).
+  await expect(page.getByRole("link", { name: /certification paths/i })).toHaveCount(0);
+  await page.goto("/s/blue-mantis/courses/paths");
+  await expect(page.getByRole("heading", { name: "We couldn’t find that page" })).toBeVisible();
 });
 
 test.describe("staff", () => {
@@ -471,16 +460,6 @@ test.describe("the public header nav", () => {
       "page",
     );
     await expect(nav.getByRole("link", { name: "Schedule" })).not.toHaveAttribute("aria-current");
-
-    // Certification paths stay one level down, linked from the catalog that
-    // explains them rather than taking a third tab — and the nav still tells
-    // the diver they are inside Courses down there.
-    await page.getByRole("link", { name: /certification paths/i }).click();
-    await expect(page).toHaveURL("/s/blue-mantis/courses/paths");
-    await expect(nav.getByRole("link", { name: "Courses" })).toHaveAttribute(
-      "aria-current",
-      "page",
-    );
 
     await nav.getByRole("link", { name: "Schedule" }).click();
     await expect(page).toHaveURL("/s/blue-mantis");

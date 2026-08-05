@@ -103,9 +103,18 @@ export async function announceDemoEntry(input: {
   source: FunnelSource | "unknown";
 }): Promise<void> {
   const { slug, role, source } = input;
-  // `trackEvent` swallows its own provider failures; this only has to survive
-  // whatever the alert below does.
-  await trackEvent({ name: "demo_entered", source, role });
+
+  // Two independent observers, two independent guards — never one try block
+  // around both. `trackEvent` already swallows its own provider failures, so
+  // this catch looks redundant; sharing a block with the alert is what makes
+  // it not. A throw escaping the analytics seam would skip the founder's mail
+  // entirely, which is the failure mode least likely to be noticed: the inbox
+  // goes quiet and nothing anywhere says why.
+  try {
+    await trackEvent({ name: "demo_entered", source, role });
+  } catch (error) {
+    console.error("announceDemoEntry: demo_entered event failed", error);
+  }
 
   try {
     const db = await getDb();

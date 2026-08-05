@@ -1,18 +1,22 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import { staffTranslator } from "@/i18n/staff-messages";
+import type { FormNotice } from "@/lib/staff-notices";
 import type { Requirement, SiteRequirement, Trip } from "./types";
 
 export function RequirementsSection({
   action,
+  status,
   trip,
   requirement,
   siteRequirement,
   locale,
 }: {
   action: (formData: FormData) => void;
+  /** This form's own outcome, rendered beside its Save button. */
+  status?: FormNotice;
   trip: Trip;
   requirement: Requirement;
   siteRequirement: SiteRequirement;
@@ -156,15 +160,18 @@ export function RequirementsSection({
             </div>
           </fieldset>
           {hasSiteRequirement ? siteNote("trips.requirements.siteAlsoRequires") : null}
-          <SubmitButton
-            pendingLabel={t("trips.requirements.saving")}
-            className={buttonClass({
-              variant: "secondary",
-              className: "mt-5 text-foreground",
-            })}
-          >
-            {t("trips.requirements.save")}
-          </SubmitButton>
+          <div className="mt-5 flex flex-wrap items-center gap-3">
+            <SubmitButton
+              pendingLabel={t("trips.requirements.saving")}
+              className={buttonClass({
+                variant: "secondary",
+                className: "text-foreground",
+              })}
+            >
+              {t("trips.requirements.save")}
+            </SubmitButton>
+            <FormStatus tone={status?.tone}>{status?.text}</FormStatus>
+          </div>
         </form>
       )}
     </section>

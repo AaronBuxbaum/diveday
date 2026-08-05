@@ -336,6 +336,23 @@ async function GuideBody({
           ))}
         </ul>
 
+        {/* The return trip, stated where the reader is weighing the one-way
+            risk: the same rows that describe what arrives also describe what
+            leaves. The claim itself is never re-authored here — it composes
+            `fullShopExport`'s shared keys, so the exit promise on this page,
+            the homepage band, and the pricing FAQ can never drift apart. */}
+        <div className="mt-10 max-w-2xl">
+          <h3 className="text-xl font-semibold tracking-tight">
+            {t("switching.common.bothWaysTitle")}
+          </h3>
+          <p className="mt-2 leading-7 text-muted">
+            {t("switching.common.bothWaysBody", {
+              claim: t(fullShopExport.claimKey),
+              terms: t(fullShopExport.termsKey),
+            })}
+          </p>
+        </div>
+
         {/* The scope table is where a reader decides the move is real — and it
             was the furthest point they could reach without a way to act. */}
         <div className="mt-10 flex flex-col gap-6 rounded-2xl border border-border bg-surface p-6 sm:flex-row sm:items-center sm:justify-between">

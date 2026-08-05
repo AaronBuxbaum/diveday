@@ -83,9 +83,11 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   await expect(page.getByRole("link", { name: "Product" }).first()).toBeVisible();
   await expect(page.getByRole("link", { name: "Pricing" }).first()).toBeVisible();
 
-  // The portability story (safe to leave) is a first-class band on the homepage.
+  // The portability story is a first-class band on the homepage, and it reads
+  // in both directions — records arrive cleanly and leave the same way, which
+  // is the reason to join, not a goodbye.
   await expect(
-    page.getByRole("heading", { name: "Your data leaves with you — any day, no phone call." }),
+    page.getByRole("heading", { name: "Your records come in clean, and leave the same way." }),
   ).toBeVisible();
 
   await page.getByRole("link", { name: "Product" }).first().click();
@@ -389,17 +391,16 @@ test("migration guides walk a shop from an incumbent export into the importer", 
   // `nextConfig.cacheComponents`). The rendered document still correctly
   // lands on Next's own not-found boundary — only the raw first-byte HTTP
   // status of a cold hit is 200 instead of 404. Same known Next 16
-  // cacheComponents limitation as e2e/courses.spec.ts's hidden-course
-  // 404 test.
+  // cacheComponents limitation the certification-path spec documented before
+  // ADR 20260805-remove-certification-paths deleted it.
   await page.goto("/switching/checkfront");
   await expect(page.getByRole("heading", { name: "We couldn’t find that page" })).toBeVisible();
   // `.first()`: the server HTML (confirmed via curl against a fresh build)
   // carries exactly one `<meta name="robots">`, but this route's dynamic
   // hole resolving client-side after a full navigation inserts a second,
   // identical one — a harmless PPR-resolution duplicate, not a second,
-  // differing directive. e2e/courses.spec.ts's hidden-course check hits
-  // the same not-found boundary through a route with no dynamic-hole
-  // resolution step and never duplicates it.
+  // differing directive: a route with no dynamic-hole resolution step hits
+  // the same not-found boundary and never duplicates it.
   await expect(page.locator('meta[name="robots"]').first()).toHaveAttribute("content", "noindex");
 });
 

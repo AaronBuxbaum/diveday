@@ -1,12 +1,13 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass } from "@/components/ui/form";
+import { controlClass, FormStatus } from "@/components/ui/form";
 import { type StaffMessageKey, type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import {
   type RecurrenceCadence,
   type RecurrenceSummary,
   recurrenceSummary,
 } from "@/lib/recurrence";
+import type { FormNotice } from "@/lib/staff-notices";
 
 /**
  * `recurrenceSummary` returns a code, not prose (src/lib/recurrence.ts) — this
@@ -44,6 +45,7 @@ export function SeriesSection({
   intervalWeeks,
   occurrenceCount,
   futureScheduledCount,
+  status,
   applyAction,
   cancelAction,
   extendAction,
@@ -52,6 +54,11 @@ export function SeriesSection({
   intervalWeeks: number;
   occurrenceCount: number;
   futureScheduledCount: number;
+  /**
+   * What the last series action did — apply, extend, or cancel. One status for
+   * the three of them: they share a section and only one can have just run.
+   */
+  status?: FormNotice;
   applyAction: () => void;
   cancelAction: () => void;
   extendAction: (formData: FormData) => void;
@@ -72,6 +79,10 @@ export function SeriesSection({
           ? t("trips.series.summaryWithFuture", { summary, count: futureScheduledCount })
           : t("trips.series.summaryAllDone", { summary })}
       </p>
+
+      <FormStatus tone={status?.tone} className="mt-2">
+        {status?.text}
+      </FormStatus>
 
       <div className="mt-4 flex flex-col gap-4">
         {hasOtherFuture ? (

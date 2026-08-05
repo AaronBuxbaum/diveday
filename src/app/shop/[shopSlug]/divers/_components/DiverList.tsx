@@ -418,6 +418,19 @@ export function DiverList({
                     ) : null}
                   </span>
                 </Link>
+                {/* Outside the card's `<Link>`, not inside it: a form nested in
+                    an anchor is invalid HTML and the tap target would fight
+                    the navigation. */}
+                {filter === "removed" && restoreAction ? (
+                  <div className="mt-2">
+                    <RestoreRow
+                      action={restoreAction}
+                      personId={diver.person.id}
+                      fullName={diver.person.fullName}
+                      copy={copy}
+                    />
+                  </div>
+                ) : null}
               </li>
             ))}
           </ul>
@@ -486,8 +499,18 @@ export function DiverList({
                             {fill(copy.toConfirmText, { count: confirmCount(diver) })}
                           </Badge>
                         ) : null}
-                        {pendingCount(diver) === 0 && confirmCount(diver) === 0 ? (
+                        {pendingCount(diver) === 0 &&
+                        confirmCount(diver) === 0 &&
+                        filter !== "removed" ? (
                           <span className="text-muted">{copy.noneText}</span>
+                        ) : null}
+                        {filter === "removed" && restoreAction ? (
+                          <RestoreRow
+                            action={restoreAction}
+                            personId={diver.person.id}
+                            fullName={diver.person.fullName}
+                            copy={copy}
+                          />
                         ) : null}
                       </div>
                     </td>

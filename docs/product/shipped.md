@@ -752,11 +752,12 @@ archived.
   has booked, waitlisted, or counted heads against, and names which. Crew shows on each row, so the
   separate read-only staff list and staff schedule board are gone
   ([schedule-builder-and-course-paths](../architecture/decisions/20260730-schedule-builder-and-course-paths.md)).
-- **Certification paths in the catalog** — a shop defines the order it walks divers through its own
-  courses with an interactive builder at `/shop/[shopSlug]/courses/paths/[pathSlug]`: pick from the
-  catalog, reorder, annotate each rung, watch the diver-facing trail rebuild live. Divers read it on
-  the public course page, and it replaces the title-matching guess that decided what to suggest
-  after a cert-blocked booking. Guidance, never a gate. Included in the shop's data export.
+- **Certification paths in the catalog** — ~~a shop defines the order it walks divers through its own
+  courses with an interactive builder at `/shop/[shopSlug]/courses/paths/[pathSlug]`~~ **removed
+  2026-08-05** ([remove-certification-paths](../architecture/decisions/20260805-remove-certification-paths.md)).
+  The builder, both public path pages, the `course_paths`/`course_path_steps` tables, and their two
+  export CSVs are gone; the staff roster now orders by each course's own
+  `minimum_certification_level`, which is the progression divers were reading off the paths anyway.
 - **The diver-facing surface is fully translated** — trip page, course page, schedule calendar, and
   the waiver/readiness/recap capability pages all read from `src/i18n/locales/<locale>/diver.json`
   in English and Spanish, including the dock-day timeline and site-fit readings that used to return
