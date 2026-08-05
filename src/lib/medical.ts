@@ -429,6 +429,21 @@ export function needsPhysicianReview(answers: MedicalAnswers): boolean {
 }
 
 export function flaggedMedicalPrompts(answers: MedicalAnswers): string[] {
+  // Older signed records used v1's flat questionnaire and were sometimes
+  // persisted as soon as a single referral answer was selected. Preserve the
+  // useful historical audit summary for those records instead of replacing a
+  // known flagged prompt with the generic "incomplete" message used for new
+  // submissions.
+  const questionnaire = findQuestionnaireVersion(
+    answers.questionnaireId,
+    answers.questionnaireVersion,
+  );
+  if (questionnaire?.version === 1) {
+    return questionnaire.questions
+      .filter((question) => answers.responses[question.id] === true && question.referral)
+      .map((question) => question.prompt);
+  }
+
   const result = calculateMedicalResult(answers);
   if (result.status === "physician_review") return result.flaggedPrompts;
   if (result.status === "incomplete")

@@ -363,7 +363,9 @@ test("saving a draft preserves partial conditional questionnaire answers", async
   await page.getByRole("button", { name: "Save and finish later" }).click();
   await expect(page.getByRole("status").filter({ hasText: "progress is saved" })).toBeVisible();
   await expect(page.getByLabel("Type your full name")).toHaveValue("Adversarial Draft Diver");
-  expect(await page.getByRole("radio", { name: "No" }).count()).toBe(questionCount - 1);
+  expect(await page.getByRole("radio", { name: "No", checked: true }).count()).toBe(
+    questionCount - 1,
+  );
 });
 
 test("staff edit the single shop waiver and each edit is kept as a version", async ({ page }) => {
