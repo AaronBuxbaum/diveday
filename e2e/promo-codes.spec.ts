@@ -33,18 +33,23 @@ test.describe("as captain", () => {
     // via history.replaceState shortly after mount — the rendered banner is
     // the stable signal.
     await expect(page).toHaveURL(/\/shop\/blue-mantis(\?.*)?$/);
-    // Scoped to the flash notice itself (role="alert", ShopNotice's danger
-    // tone) and filtered by text: Next's own always-present
-    // `#__next-route-announcer__` carries `role="alert"` too, so an unfiltered
-    // query is ambiguous the moment FlashParams' `history.replaceState` call
-    // above makes the router treat this as a navigation and mount it.
-    const flash = page.getByRole("alert").filter({ hasText: "Promo codes discount real money" });
+    // Scoped to the notice region and filtered by text. `role="status"`, not
+    // `role="alert"`: Today renders an authorization landing in ShopNotice's
+    // *warning* tone, where Settings used danger — this test asserted the
+    // Settings shape and had to move with the landing. The filter also keeps
+    // Next's own always-present `#__next-route-announcer__` out, which carries
+    // a live-region role too and matches the moment FlashParams'
+    // `history.replaceState` above makes the router treat this as a navigation.
+    const flash = page.getByRole("status").filter({ hasText: "Promo codes discount real money" });
     await expect(flash).toContainText(
       "Promo codes discount real money, so they're limited to owners and managers.",
     );
+    // Still the promo-specific reason, never a message about a surface this
+    // captain never asked for — the whole point of the separate notice code.
     await expect(flash).not.toContainText(
       "The rental catalog, rental prices, and Stripe connection",
     );
+    await expect(flash).not.toContainText("Shop settings are managed by the owner");
   });
 });
 
