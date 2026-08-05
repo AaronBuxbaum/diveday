@@ -137,6 +137,15 @@ jobs:
         with:
           name: next-build
           path: .next
+      # `public/` is served off the filesystem at request time — `next build`
+      # never copies it into `.next/` — so the `next-build` artifact cannot
+      # carry it. `public/manifest-sw.js` is generated (gitignored, built from
+      # src/worker/manifest-sw.ts) and therefore absent from this job's fresh
+      # checkout: without this, `/manifest-sw.js` 404s, the service worker
+      # never registers, and every offline-manifest test fails on a shell that
+      # never primes. Any future generated asset under `public/` needs the
+      # same treatment.
+      - run: pnpm build:sw
       - uses: ./.github/actions/playwright-shell
       - name: Run non-visual Playwright tests
         run: |
@@ -193,6 +202,10 @@ jobs:
         with:
           name: next-build
           path: .next
+      # Same reason as the playwright job above: the generated service worker
+      # is not in `.next/` and not in the checkout. A capture taken without it
+      # would silently bake "no service worker" into the visual baseline.
+      - run: pnpm build:sw
       - uses: ./.github/actions/playwright-shell
       # Only captures screenshots into e2e/screenshots — nothing here asserts,
       # so a visual change never fails this step. The reg-suit compare against
