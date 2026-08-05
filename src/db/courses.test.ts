@@ -1053,7 +1053,11 @@ describe("agency tabs (in-memory PGlite)", () => {
 
   it("shows an agency nobody hard-coded — a CSV import can carry any of them", async () => {
     const { db, shop } = await seededShopContext();
-    await createCourse(db, { shopId: shop.id, title: "BSAC Ocean Diver", agency: "bsac" as "padi" });
+    await createCourse(db, {
+      shopId: shop.id,
+      title: "BSAC Ocean Diver",
+      agency: "bsac" as "padi",
+    });
     expect(await courseAgencies(db, shop.id)).toContain("bsac");
   });
 });
