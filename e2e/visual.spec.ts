@@ -2177,7 +2177,23 @@ test.describe("capture harness", () => {
         // the other half of what this proves: `withRendererBound` must absorb
         // the rejection Playwright raises when it tears the context down,
         // rather than leaking it into whichever test runs next.
-        page.evaluate(() => new Promise<number>(() => {})),
+        //
+        // The resolver is rooted on `globalThis` so V8 cannot collect the
+        // promise. A `new Promise(() => {})` whose resolvers are referenced
+        // nowhere is unreachable the moment it is created, and when Chromium
+        // collects it Playwright rejects the evaluate with "Resulting promise
+        // was garbage collected" — which `withRendererBound` then rethrows,
+        // correctly, since a pass that *throws* is a broken page and must not
+        // be swallowed. That made this test a race between GC and the 1s
+        // budget, red whenever GC won. Rooting the resolver keeps it genuinely
+        // pending, which is what the test means by "never settles"; nothing
+        // ever calls it.
+        page.evaluate(
+          () =>
+            new Promise<number>((resolve) => {
+              (globalThis as { __neverSettles?: (value: number) => void }).__neverSettles = resolve;
+            }),
+        ),
         -1,
       );
     } finally {
