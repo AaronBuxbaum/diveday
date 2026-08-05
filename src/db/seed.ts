@@ -77,6 +77,7 @@ import { seedDiveSites } from "./seed-dive-sites";
 import { seedDivers } from "./seed-divers";
 import { seedFrontDesk } from "./seed-front-desk";
 import { seedHistory } from "./seed-history";
+import { seedMedicalReview } from "./seed-medical-review";
 import { seedMoreTrips } from "./seed-more-trips";
 import { seedNitrox } from "./seed-nitrox";
 import { seedOrders } from "./seed-orders";
@@ -578,6 +579,12 @@ export async function seedDemoSchedule(
     // allows an undefined divemaster even though the demo cast always has one).
     pairedByPersonId: divemasterId ?? instructor.id,
   });
+
+  // A synthetic, status-only medical-review hold on a future departure gives
+  // the demo and staff training a real fail-closed waiver path without storing
+  // any health answers. It remains unresolved every time the demo resets; the
+  // policy/legal decision behind production medical handling is still H-01–H-03.
+  await seedMedicalReview(db, shopId, waiverTemplate, tripRows);
 
   // Truly last, and updates-only: what the shop's signed evidence looks like
   // once every scenario above has finished writing releases — signatures dated

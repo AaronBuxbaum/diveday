@@ -56,6 +56,25 @@ test.describe("as captain", () => {
   });
 });
 
+test("the demo keeps its synthetic medical-review training hold on a future trip", async ({
+  page,
+}) => {
+  await page.goto("/shop/blue-mantis/schedule/board");
+  await openTripFromBoard(page, "Afternoon Two-Tank — French Reef");
+  await openTripTab(page, "Guests");
+
+  const diver = page
+    .locator("li")
+    .filter({ has: page.getByText("Morgan Vale", { exact: true }) })
+    .filter({ visible: true });
+  await expect(diver.getByText("Medical review", { exact: true })).toBeVisible();
+  await expect(diver.getByText("Follow up before boarding")).toBeVisible();
+  await diver.getByRole("link", { name: "View signed record" }).click();
+  const record = page.locator('li[id^="waiver-record-"]').filter({ hasText: "Morgan Vale" });
+  await expect(record).toBeVisible();
+  await expect(record.getByText("View flagged answers")).toHaveCount(0);
+});
+
 test("one waiver button sends a resumable link and a medical yes surfaces follow-up", async ({
   page,
 }) => {

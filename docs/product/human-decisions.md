@@ -126,6 +126,12 @@ source of approval work; each row here maps to the H-row that must sign it off.
   rules, retention/deletion, and privacy notice. The signature-*provider* question (H-03) is
   decided — the local typed-consent provider is kept for now — but whether typed consent is legally
   *sufficient* (H-03's assurance gate) is still open and depends on this legal review.
+- **Demo training fixture (product owner, 2026-08-05):** the canonical demo keeps one synthetic,
+  unresolved `medical_review` record on a future departure after every reset. It is for demo and
+  staff training only, and stores status/timestamps only — no questionnaire answers, diagnosis,
+  physician information, or other medical detail. The fixture demonstrates the existing
+  fail-closed boarding hold; it is not a production waiver/medical-policy approval and does not
+  move H-01, H-02, H-03, or V-03.
 
 Sources: [PADI digital forms](https://pros-blog.padi.com/digital-forms-expand/),
 [PADI general-training release](https://pro-cms.padi.com/sites/default/files/documents/training-hub/10072_Liability_Release_v403_FF_EN.pdf),
