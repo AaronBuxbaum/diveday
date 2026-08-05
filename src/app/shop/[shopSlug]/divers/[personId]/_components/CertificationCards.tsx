@@ -10,6 +10,7 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone, formatCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { addCertificationAction, deleteCertificationAction, reviewAction } from "../actions";
+import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
 import {
   AGENCY_KEYS,
   CARD_STATUS_KEYS,
@@ -26,14 +27,18 @@ export async function CertificationCards({
   shopSlug,
   personId,
   shop,
+  status,
 }: {
   diver: DiverProfile;
   shopSlug: string;
   personId: string;
   shop: Shop;
+  /** This section's own outcome, rendered beside its controls, not page-top. */
+  status?: DiverNotice;
 }) {
   const todayLocal = calendarDateInTimezone(nowDate(), shop.timezone);
-  const t = staffTranslator(await requestLocale(shop.defaultLocale));
+  const locale = await requestLocale(shop.defaultLocale);
+  const t = staffTranslator(locale);
   // Shared across every card on this diver. Per-card interpolated text (card
   // number, ID, aria-label) is built fresh per card below, in the .map — ICU
   // composes those server-side so word order stays correct per locale,
@@ -62,7 +67,11 @@ export async function CertificationCards({
           </h2>
           <p className="mt-1 text-sm text-muted">{t("divers.certifications.description")}</p>
         </div>
-        <details>
+        {/* Opened by its own outcome: this form lives in a collapsed
+            `<details>`, and an answer rendered inside a shut disclosure is
+            worse than the page-top banner it replaces — invisible rather than
+            merely far away. */}
+        <details open={Boolean(status)}>
           <summary className="flex min-h-11 cursor-pointer items-center rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground">
             {t("divers.certifications.addCard")}
           </summary>
@@ -112,6 +121,7 @@ export async function CertificationCards({
               >
                 {t("divers.certifications.captureForReview")}
               </SubmitButton>
+              <DiverFormStatus status={status} shopSlug={shopSlug} locale={locale} />
             </FieldActions>
           </FieldGrid>
         </details>

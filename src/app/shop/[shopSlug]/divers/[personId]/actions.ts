@@ -125,7 +125,10 @@ export async function savePersonAction(shopSlug: string, personId: string, formD
   const base = `/shop/${shopSlug}/divers/${personId}`;
   const staff = await requireStaffSession();
   const parsed = personSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) redirect(`${base}?notice=invalid`);
+  // `&form=` is how a code half a dozen actions emit finds its way back to the
+  // form that emitted it, instead of into a banner at the top of a 6,400px page
+  // (`resolveDiverNotice`).
+  if (!parsed.success) redirect(`${base}?notice=invalid&form=details`);
   const db = await getDb();
   const saved = await updateDiver(db, {
     shopId: staff.user.shopId,
@@ -153,7 +156,7 @@ export async function addCertificationAction(
   const base = `/shop/${shopSlug}/divers/${personId}`;
   const staff = await requireStaffSession();
   const parsed = certificationSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) redirect(`${base}?notice=invalid`);
+  if (!parsed.success) redirect(`${base}?notice=invalid&form=cards`);
   // No card photo: a shop verifies a card by looking its number up with the
   // issuing agency, which is what "Mark certified" already attests to — the
   // upload only ever added a second, unverified artefact to hold. Rows that
@@ -167,14 +170,14 @@ export async function addCertificationAction(
     expiresAt: dateFromInput(parsed.data.expiresOn),
   });
   const notice = saved ? "captured" : "invalid";
-  revalidateAndRedirect(base, `${base}?notice=${notice}`);
+  revalidateAndRedirect(base, `${base}?notice=${notice}&form=cards`);
 }
 
 export async function addSpecialtyAction(shopSlug: string, personId: string, formData: FormData) {
   const base = `/shop/${shopSlug}/divers/${personId}`;
   const staff = await requireStaffSession();
   const parsed = specialtyCertificationSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) redirect(`${base}?notice=invalid`);
+  if (!parsed.success) redirect(`${base}?notice=invalid&form=specialty-cards`);
   const saved =
     parsed.data.specialty === "nitrox"
       ? await createNitroxCertification(await getDb(), {
@@ -192,7 +195,7 @@ export async function addSpecialtyAction(shopSlug: string, personId: string, for
           expiresAt: dateFromInput(parsed.data.expiresOn),
         });
   const notice = saved ? "captured" : "invalid";
-  revalidateAndRedirect(base, `${base}?notice=${notice}`);
+  revalidateAndRedirect(base, `${base}?notice=${notice}&form=specialty-cards`);
 }
 
 /** The only review outcome is "certified" — a bad card is deleted, not marked for correction. */
@@ -207,7 +210,7 @@ export async function reviewAction(shopSlug: string, personId: string, formData:
         status: "verified",
       })
     : null;
-  revalidateAndRedirect(base, `${base}?notice=${updated ? "verified" : "invalid"}`);
+  revalidateAndRedirect(base, `${base}?notice=${updated ? "verified" : "invalid"}&form=cards`);
 }
 
 export async function reviewSpecialtyAction(
@@ -243,7 +246,7 @@ export async function reviewSpecialtyAction(
     : outcome?.reason === "card_sighting_required"
       ? "card-sighting-required"
       : "invalid";
-  revalidateAndRedirect(base, `${base}?notice=${notice}`);
+  revalidateAndRedirect(base, `${base}?notice=${notice}&form=specialty-cards`);
 }
 
 /**
@@ -268,7 +271,7 @@ export async function deleteCertificationAction(
     base,
     deleted
       ? `${base}?notice=card-deleted&undo=${certificationId}&cardType=level`
-      : `${base}?notice=invalid`,
+      : `${base}?notice=invalid&form=cards`,
   );
 }
 
@@ -292,7 +295,7 @@ export async function deleteSpecialtyAction(
     base,
     deleted
       ? `${base}?notice=card-deleted&undo=${certificationId}&cardType=${cardType}`
-      : `${base}?notice=invalid`,
+      : `${base}?notice=invalid&form=specialty-cards`,
   );
 }
 
@@ -318,9 +321,12 @@ export async function restoreCardAction(shopSlug: string, personId: string, form
       : cardType.data === "specialty"
         ? await restoreSpecialtyCertification(db, input)
         : await restoreNitroxCertification(db, input);
+  // Home is the section that card lives in, so an undo that could not land
+  // says so beside the list it failed to return to.
+  const form = cardType.data === "level" ? "cards" : "specialty-cards";
   revalidateAndRedirect(
     base,
-    `${base}?notice=${restored ? "card-restored" : "card-restore-conflict"}`,
+    `${base}?notice=${restored ? "card-restored" : "card-restore-conflict"}&form=${form}`,
   );
 }
 
@@ -343,7 +349,7 @@ export async function saveProfileAction(shopSlug: string, personId: string, form
     return;
   }
   const parsed = profileSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) redirect(`${base}?notice=invalid`);
+  if (!parsed.success) redirect(`${base}?notice=invalid&form=fit`);
   const saved = await saveRentalFit(db, {
     shopId: staff.user.shopId,
     personId,
@@ -361,7 +367,7 @@ export async function saveProfileAction(shopSlug: string, personId: string, form
     finSize: parsed.data.finSize,
     weightPreference: parsed.data.weightPreference,
   });
-  revalidateAndRedirect(base, `${base}?notice=${saved ? "profile-saved" : "invalid"}`);
+  revalidateAndRedirect(base, `${base}?notice=${saved ? "profile-saved" : "invalid"}&form=fit`);
 }
 
 /**
@@ -393,7 +399,7 @@ export async function setNeedsStaffFitAction(
     return;
   }
   const parsed = needsStaffFitSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) redirect(`${base}?notice=invalid`);
+  if (!parsed.success) redirect(`${base}?notice=invalid&form=fit`);
   const needed = parsed.data.needed === "on";
   // Hiding the button is the page layer; this is the server layer ADR-0006
   // asks for. Without it a captain clears a flag by submitting the form with
@@ -412,7 +418,7 @@ export async function setNeedsStaffFitAction(
     byPersonId: staff.user.personId,
   });
   const notice = !saved ? "invalid" : needed ? "fit-flagged" : "fit-cleared";
-  revalidateAndRedirect(base, `${base}?notice=${notice}`);
+  revalidateAndRedirect(base, `${base}?notice=${notice}&form=fit`);
 }
 
 export async function refundPaymentAction(shopSlug: string, personId: string, formData: FormData) {

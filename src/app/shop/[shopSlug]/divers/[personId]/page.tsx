@@ -17,12 +17,13 @@ import { pagedUpcomingTripsWithCounts } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { requireStaffSession } from "@/lib/session";
+import { noticeForForm } from "@/lib/staff-notices";
 import { BookActivity } from "./_components/BookActivity";
 import { CertificationCards } from "./_components/CertificationCards";
 import { DiverHeader } from "./_components/DiverHeader";
 import { DIVER_SECTIONS, DiverSection } from "./_components/DiverSections";
 import { ErasePersonalData } from "./_components/ErasePersonalData";
-import { NoticeBanner } from "./_components/NoticeBanner";
+import { NoticeBanner, resolveDiverNotice } from "./_components/NoticeBanner";
 import { PaymentsSection } from "./_components/PaymentsSection";
 import { RemoveDiver } from "./_components/RemoveDiver";
 import { RentalFit } from "./_components/RentalFit";
@@ -62,12 +63,14 @@ export default async function DiverDetailPage({
     cardType?: string;
     /** Signed, verified against this route's own `personId` — src/lib/trip-admission-gate.ts. */
     gate?: string | string[];
+    /** Which form on this page the notice answers — see `resolveDiverNotice`. */
+    form?: string;
     edit?: string;
   }>;
 }) {
   const session = await requireStaffSession();
   const { shopSlug, personId } = await params;
-  const { notice, undo, cardType, gate, edit } = await searchParams;
+  const { notice, undo, cardType, gate, form, edit } = await searchParams;
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
   const locale = await requestLocale(shop?.defaultLocale);
@@ -109,19 +112,37 @@ export default async function DiverDetailPage({
       ) && trip.booked < trip.capacity,
   );
 
+  /**
+   * The page's `?notice=` resolved once, to words *and* to the section those
+   * words belong beside. This record is eight independent forms on one very
+   * long scroll, and every one of their outcomes used to land in a single
+   * banner under the `<h1>` — so saving a rental fit two screens down confirmed
+   * it somewhere the staffer was not looking. Each section is handed its own
+   * below; `pageNotice` is what is left over (ADR 20260730-staff-copy-localization,
+   * and the trip page's `resolveTripNotice`, which this mirrors).
+   */
+  const diverNotice = resolveDiverNotice({ notice, form, gate, personId, locale });
+  const detailsStatus = noticeForForm(diverNotice, "details");
+  const pageNotice = noticeForForm(diverNotice, "page");
+
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
-      <FlashParams params={["notice", "undo", "cardType", "edit"]} />
+      <FlashParams params={["notice", "undo", "cardType", "form", "edit"]} />
       <DiverHeader
         diver={diver}
         shopSlug={shopSlug}
         personId={personId}
         locale={locale}
+        status={detailsStatus}
         // Only ever set by the roster's "Add a diver" form, which lands here
         // with a name and little else. `FlashParams` strips it from the URL
         // straight away, so a reload or a shared link is the ordinary
         // collapsed page.
-        editOpen={edit === "1"}
+        //
+        // A details-form outcome opens it too: the form lives in a collapsed
+        // `<details>`, and a refusal rendered inside a shut disclosure is worse
+        // than the banner it replaced — invisible rather than merely far away.
+        editOpen={edit === "1" || Boolean(detailsStatus)}
       />
       {removed ? (
         <RestoreDiver
@@ -129,6 +150,7 @@ export default async function DiverDetailPage({
           personId={personId}
           canRestore={canDelete}
           locale={locale}
+          status={noticeForForm(diverNotice, "restore")}
         />
       ) : null}
       {notice === "card-deleted" && undo && cardType ? (
@@ -140,13 +162,7 @@ export default async function DiverDetailPage({
           undoLabel={t("shared.undoToast.undo")}
         />
       ) : (
-        <NoticeBanner
-          notice={notice}
-          gate={gate}
-          locale={locale}
-          shopSlug={shopSlug}
-          personId={personId}
-        />
+        <NoticeBanner notice={pageNotice} shopSlug={shopSlug} locale={locale} />
       )}
       {/* Above the stat cards, not below them: on a 390px phone those three
           cards stack, and a row sitting under them lands ~1,150px down — a spine
@@ -158,13 +174,20 @@ export default async function DiverDetailPage({
       />
       <StatsSummary diver={diver} shop={shop} locale={locale} />
       <DiverSection id="cards">
-        <CertificationCards diver={diver} shopSlug={shopSlug} personId={personId} shop={shop} />
+        <CertificationCards
+          diver={diver}
+          shopSlug={shopSlug}
+          personId={personId}
+          shop={shop}
+          status={noticeForForm(diverNotice, "cards")}
+        />
         <SpecialtyCards
           diver={diver}
           shopSlug={shopSlug}
           personId={personId}
           shop={shop}
           locale={locale}
+          status={noticeForForm(diverNotice, "specialty-cards")}
         />
       </DiverSection>
       <DiverSection id="fit">
@@ -175,6 +198,7 @@ export default async function DiverDetailPage({
           rentalItems={shop.rentalItems}
           canOverride={canOverrideFit}
           locale={locale}
+          status={noticeForForm(diverNotice, "fit")}
         />
       </DiverSection>
       {/* Above "Book an activity" deliberately: the errand that brings staff to
@@ -190,6 +214,7 @@ export default async function DiverDetailPage({
           personId={personId}
           canRefund={canRefund}
           paymentsConnected={paymentsConnected}
+          status={noticeForForm(diverNotice, "payments")}
         />
       </DiverSection>
       <DiverSection id="trips">
@@ -205,6 +230,7 @@ export default async function DiverDetailPage({
             upcoming={upcoming}
             shopSlug={shopSlug}
             personId={personId}
+            status={noticeForForm(diverNotice, "book-activity")}
           />
         )}
         <UpcomingTripsSection
@@ -230,10 +256,22 @@ export default async function DiverDetailPage({
           top of the record instead. Erasure stays offered either way — a
           removed diver is exactly who an erasure request tends to name. */}
       {canDelete && !removed ? (
-        <RemoveDiver diver={diver} shopSlug={shopSlug} personId={personId} locale={locale} />
+        <RemoveDiver
+          diver={diver}
+          shopSlug={shopSlug}
+          personId={personId}
+          locale={locale}
+          status={noticeForForm(diverNotice, "remove")}
+        />
       ) : null}
       {canErase ? (
-        <ErasePersonalData diver={diver} shopSlug={shopSlug} personId={personId} locale={locale} />
+        <ErasePersonalData
+          diver={diver}
+          shopSlug={shopSlug}
+          personId={personId}
+          locale={locale}
+          status={noticeForForm(diverNotice, "erase")}
+        />
       ) : null}
     </main>
   );
