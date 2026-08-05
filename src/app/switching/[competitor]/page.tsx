@@ -17,7 +17,7 @@ import { requestLocale } from "@/i18n/request";
 import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
 import { guideSource, trialHref } from "@/lib/funnel";
 import { IMPORT_HONESTY_TABLE } from "@/lib/import";
-import { sharedLinkCard } from "@/lib/marketing";
+import { fullShopExport, sharedLinkCard } from "@/lib/marketing";
 import {
   getMigrationGuide,
   IMPORT_SCOPE_ROW_KEYS,

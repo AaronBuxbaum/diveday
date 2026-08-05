@@ -389,7 +389,7 @@ test("migration guides walk a shop from an incumbent export into the importer", 
   // `nextConfig.cacheComponents`). The rendered document still correctly
   // lands on Next's own not-found boundary — only the raw first-byte HTTP
   // status of a cold hit is 200 instead of 404. Same known Next 16
-  // cacheComponents limitation as e2e/course-paths.spec.ts's hidden-path
+  // cacheComponents limitation as e2e/courses.spec.ts's hidden-course
   // 404 test.
   await page.goto("/switching/checkfront");
   await expect(page.getByRole("heading", { name: "We couldn’t find that page" })).toBeVisible();
@@ -397,7 +397,7 @@ test("migration guides walk a shop from an incumbent export into the importer", 
   // carries exactly one `<meta name="robots">`, but this route's dynamic
   // hole resolving client-side after a full navigation inserts a second,
   // identical one — a harmless PPR-resolution duplicate, not a second,
-  // differing directive. e2e/course-paths.spec.ts's hidden-path check hits
+  // differing directive. e2e/courses.spec.ts's hidden-course check hits
   // the same not-found boundary through a route with no dynamic-hole
   // resolution step and never duplicates it.
   await expect(page.locator('meta[name="robots"]').first()).toHaveAttribute("content", "noindex");

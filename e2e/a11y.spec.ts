@@ -438,16 +438,6 @@ test.describe("automated accessibility scans of the staff detail surfaces", () =
     await expect(page).toHaveURL(/\/courses\/[^/]+\/edit$/);
     await expectNoA11yViolations(page);
 
-    // The certification-path builder, list and one path.
-    await page.goto("/shop/blue-mantis/courses/paths", { waitUntil: "domcontentloaded" });
-    await expect(
-      page.getByRole("heading", { level: 1, name: "Certification paths" }),
-    ).toBeVisible();
-    await expectNoA11yViolations(page);
-    await page.locator('a[href*="/courses/paths/"]').filter({ visible: true }).first().click();
-    await expect(page).toHaveURL(/\/courses\/paths\/[^/]+$/);
-    await expectNoA11yViolations(page);
-
     // The dive-site library's two write surfaces. A briefing is what the
     // manifest and the trip page quote from, so a field nobody can label here
     // is a field nobody fills.
@@ -595,7 +585,6 @@ test.describe("automated accessibility scans of the signed-out surfaces", () => 
 
     await scanStaticRoutes(page, [
       { path: "/s/blue-mantis/courses", heading: "Courses" },
-      { path: "/s/blue-mantis/courses/paths", heading: "Certification paths" },
     ]);
   });
 });

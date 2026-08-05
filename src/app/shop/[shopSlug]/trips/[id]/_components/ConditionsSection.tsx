@@ -1,9 +1,10 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { type DepthUnit, depthInUnit, maxEnteredVisibility } from "@/lib/depth-units";
 import { hasCrewPrediction } from "@/lib/marine-forecast";
+import type { FormNotice } from "@/lib/staff-notices";
 import {
   maxEnteredTemperature,
   minEnteredTemperature,
@@ -22,6 +23,8 @@ export function ConditionsSection({
   depthUnit,
 }: {
   saveAction: (formData: FormData) => void;
+  /** This form's own outcome, rendered beside its Publish button. */
+  status?: FormNotice;
   clearAction: () => void;
   trip: Trip;
   locale: string;

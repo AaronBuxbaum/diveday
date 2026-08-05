@@ -47,6 +47,8 @@
     "backToNext": "← Back to the next departure",
     "courseSession": "Course session",
     "diveSite": "Dive site",
+    "diveSites": "Dive sites",
+    "moreDivesToConfirm": "{count, plural, one {# more dive to be confirmed} other {# more dives to be confirmed}}",
     "twoTank": "Two-tank trip",
     "twoTankHint": "A boat trip with two separate dives, back to back, with a rest break (a surface interval) in between — not two tanks worn at once.",
     "diveCount": "{count, plural, other {# dives}}",
@@ -939,7 +941,7 @@
     "common": {
       "heroCtaNote": "The demo is a working shop — no sign-up, nothing to import, nothing to undo.",
       "bothWaysTitle": "The same table, read the other way.",
-      "bothWaysBody": "Everything above is what arrives. What arrives is also what leaves: Settings → Data export hands your whole shop back as one ZIP of plain, documented files — divers, bookings, waiver records, payment history — shaped so another system's import wizard can read it. {terms}",
+      "bothWaysBody": "Everything above is what arrives. What arrives is also what leaves: {claim} {terms}",
       "midCtaTitle": "Rather see it than read about it?",
       "midCtaBody": "Walk the live demo as the owner, the captain, or a diver — the same cert checks, waivers, and roll call your export lands into."
     },

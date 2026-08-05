@@ -939,7 +939,7 @@
     "common": {
       "heroCtaNote": "La demo es un centro que funciona de verdad — sin registro, sin nada que importar y sin nada que deshacer.",
       "bothWaysTitle": "La misma tabla, leída al revés.",
-      "bothWaysBody": "Todo lo de arriba es lo que llega. Lo que llega también es lo que sale: en Ajustes → Exportar datos recuperas todo tu centro en un ZIP de archivos claros y documentados — buceadores, reservas, exenciones registradas, historial de pagos — con la forma que el asistente de importación de otro sistema sabe leer. {terms}",
+      "bothWaysBody": "Todo lo de arriba es lo que llega. Lo que llega también es lo que sale: {claim} {terms}",
       "midCtaTitle": "¿Prefieres verlo a leerlo?",
       "midCtaBody": "Recorre la demo en vivo como propietario, capitán o buceador — con las mismas verificaciones de certificación, exenciones y pase de lista donde aterriza tu exportación."
     },
