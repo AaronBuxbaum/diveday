@@ -121,6 +121,37 @@ function dateFromInput(value: string) {
   return value || undefined;
 }
 
+/**
+ * Where on the record a form's outcome should put the reader.
+ *
+ * A server action redirects, and a redirect resets the scroll to the top — so
+ * rendering an outcome inside its own section is only half the fix. Without the
+ * anchor, saving a rental fit halfway down a ~6,400px record still lands the
+ * staffer at the `<h1>` with the confirmation two screens below them, which is
+ * the same complaint in the other direction. The ids are `DiverSection`'s
+ * (`_components/DiverSections.tsx`) and the destructive tail's own headings.
+ */
+const FORM_ANCHORS: Record<string, string> = {
+  cards: "#cards",
+  "specialty-cards": "#cards",
+  fit: "#fit",
+  payments: "#payments",
+  "book-activity": "#trips",
+  remove: "#remove-heading",
+  restore: "#removed-heading",
+  erase: "#erase-heading",
+  // `details` sits under the header, which is where a redirect lands anyway.
+};
+
+/**
+ * The record's URL carrying one form's outcome: the code, the form it belongs
+ * to (`resolveDiverNotice`), and the anchor that puts that form on screen.
+ */
+function backTo(base: string, notice: string, form?: string) {
+  const query = form ? `?notice=${notice}&form=${form}` : `?notice=${notice}`;
+  return `${base}${query}${form ? (FORM_ANCHORS[form] ?? "") : ""}`;
+}
+
 export async function savePersonAction(shopSlug: string, personId: string, formData: FormData) {
   const base = `/shop/${shopSlug}/divers/${personId}`;
   const staff = await requireStaffSession();
@@ -128,7 +159,7 @@ export async function savePersonAction(shopSlug: string, personId: string, formD
   // `&form=` is how a code half a dozen actions emit finds its way back to the
   // form that emitted it, instead of into a banner at the top of a 6,400px page
   // (`resolveDiverNotice`).
-  if (!parsed.success) redirect(`${base}?notice=invalid&form=details`);
+  if (!parsed.success) redirect(backTo(base, "invalid", "details"));
   const db = await getDb();
   const saved = await updateDiver(db, {
     shopId: staff.user.shopId,
@@ -145,7 +176,7 @@ export async function savePersonAction(shopSlug: string, personId: string, formD
     : (await isDiverRemoved(db, staff.user.shopId, personId))
       ? "removed-read-only"
       : "duplicate";
-  revalidateAndRedirect(base, `${base}?notice=${notice}`);
+  revalidateAndRedirect(base, backTo(base, notice, "details"));
 }
 
 export async function addCertificationAction(
@@ -156,7 +187,7 @@ export async function addCertificationAction(
   const base = `/shop/${shopSlug}/divers/${personId}`;
   const staff = await requireStaffSession();
   const parsed = certificationSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) redirect(`${base}?notice=invalid&form=cards`);
+  if (!parsed.success) redirect(backTo(base, "invalid", "cards"));
   // No card photo: a shop verifies a card by looking its number up with the
   // issuing agency, which is what "Mark certified" already attests to — the
   // upload only ever added a second, unverified artefact to hold. Rows that
@@ -170,14 +201,14 @@ export async function addCertificationAction(
     expiresAt: dateFromInput(parsed.data.expiresOn),
   });
   const notice = saved ? "captured" : "invalid";
-  revalidateAndRedirect(base, `${base}?notice=${notice}&form=cards`);
+  revalidateAndRedirect(base, backTo(base, notice, "cards"));
 }
 
 export async function addSpecialtyAction(shopSlug: string, personId: string, formData: FormData) {
   const base = `/shop/${shopSlug}/divers/${personId}`;
   const staff = await requireStaffSession();
   const parsed = specialtyCertificationSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) redirect(`${base}?notice=invalid&form=specialty-cards`);
+  if (!parsed.success) redirect(backTo(base, "invalid", "specialty-cards"));
   const saved =
     parsed.data.specialty === "nitrox"
       ? await createNitroxCertification(await getDb(), {
@@ -195,7 +226,7 @@ export async function addSpecialtyAction(shopSlug: string, personId: string, for
           expiresAt: dateFromInput(parsed.data.expiresOn),
         });
   const notice = saved ? "captured" : "invalid";
-  revalidateAndRedirect(base, `${base}?notice=${notice}&form=specialty-cards`);
+  revalidateAndRedirect(base, backTo(base, notice, "specialty-cards"));
 }
 
 /** The only review outcome is "certified" — a bad card is deleted, not marked for correction. */
@@ -210,7 +241,7 @@ export async function reviewAction(shopSlug: string, personId: string, formData:
         status: "verified",
       })
     : null;
-  revalidateAndRedirect(base, `${base}?notice=${updated ? "verified" : "invalid"}&form=cards`);
+  revalidateAndRedirect(base, backTo(base, updated ? "verified" : "invalid", "cards"));
 }
 
 export async function reviewSpecialtyAction(
@@ -246,7 +277,7 @@ export async function reviewSpecialtyAction(
     : outcome?.reason === "card_sighting_required"
       ? "card-sighting-required"
       : "invalid";
-  revalidateAndRedirect(base, `${base}?notice=${notice}&form=specialty-cards`);
+  revalidateAndRedirect(base, backTo(base, notice, "specialty-cards"));
 }
 
 /**
@@ -271,7 +302,7 @@ export async function deleteCertificationAction(
     base,
     deleted
       ? `${base}?notice=card-deleted&undo=${certificationId}&cardType=level`
-      : `${base}?notice=invalid&form=cards`,
+      : backTo(base, "invalid", "cards"),
   );
 }
 
@@ -295,7 +326,7 @@ export async function deleteSpecialtyAction(
     base,
     deleted
       ? `${base}?notice=card-deleted&undo=${certificationId}&cardType=${cardType}`
-      : `${base}?notice=invalid&form=specialty-cards`,
+      : backTo(base, "invalid", "specialty-cards"),
   );
 }
 
@@ -326,7 +357,7 @@ export async function restoreCardAction(shopSlug: string, personId: string, form
   const form = cardType.data === "level" ? "cards" : "specialty-cards";
   revalidateAndRedirect(
     base,
-    `${base}?notice=${restored ? "card-restored" : "card-restore-conflict"}&form=${form}`,
+    backTo(base, restored ? "card-restored" : "card-restore-conflict", form),
   );
 }
 
@@ -345,11 +376,11 @@ export async function saveProfileAction(shopSlug: string, personId: string, form
     existing &&
     !(await canPersonOverrideGearRequest(db, staff.user.shopId, staff.user.personId))
   ) {
-    revalidateAndRedirect(base, `${base}?notice=not-authorized-fit`);
+    revalidateAndRedirect(base, backTo(base, "not-authorized-fit", "fit"));
     return;
   }
   const parsed = profileSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) redirect(`${base}?notice=invalid&form=fit`);
+  if (!parsed.success) redirect(backTo(base, "invalid", "fit"));
   const saved = await saveRentalFit(db, {
     shopId: staff.user.shopId,
     personId,
@@ -367,7 +398,7 @@ export async function saveProfileAction(shopSlug: string, personId: string, form
     finSize: parsed.data.finSize,
     weightPreference: parsed.data.weightPreference,
   });
-  revalidateAndRedirect(base, `${base}?notice=${saved ? "profile-saved" : "invalid"}&form=fit`);
+  revalidateAndRedirect(base, backTo(base, saved ? "profile-saved" : "invalid", "fit"));
 }
 
 /**
@@ -395,11 +426,11 @@ export async function setNeedsStaffFitAction(
   // account must not keep doing it on a stale JWT.
   const roles = await loadActiveStaffRoles(db, staff.user.shopId, staff.user.personId);
   if (!roles || !isStaff(roles)) {
-    revalidateAndRedirect(base, `${base}?notice=not-authorized-fit`);
+    revalidateAndRedirect(base, backTo(base, "not-authorized-fit", "fit"));
     return;
   }
   const parsed = needsStaffFitSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) redirect(`${base}?notice=invalid&form=fit`);
+  if (!parsed.success) redirect(backTo(base, "invalid", "fit"));
   const needed = parsed.data.needed === "on";
   // Hiding the button is the page layer; this is the server layer ADR-0006
   // asks for. Without it a captain clears a flag by submitting the form with
@@ -407,7 +438,7 @@ export async function setNeedsStaffFitAction(
   // already said it was short of — with the attribution wiped in the same
   // statement, so nothing records that it happened.
   if (!needed && !canOverrideGearRequest(roles)) {
-    revalidateAndRedirect(base, `${base}?notice=not-authorized-fit`);
+    revalidateAndRedirect(base, backTo(base, "not-authorized-fit", "fit"));
     return;
   }
   const saved = await setNeedsStaffFit(db, {
@@ -418,7 +449,7 @@ export async function setNeedsStaffFitAction(
     byPersonId: staff.user.personId,
   });
   const notice = !saved ? "invalid" : needed ? "fit-flagged" : "fit-cleared";
-  revalidateAndRedirect(base, `${base}?notice=${notice}&form=fit`);
+  revalidateAndRedirect(base, backTo(base, notice, "fit"));
 }
 
 export async function refundPaymentAction(shopSlug: string, personId: string, formData: FormData) {
@@ -429,14 +460,14 @@ export async function refundPaymentAction(shopSlug: string, personId: string, fo
   // Money leaving the account is owner/manager work (H-14, ADR
   // 20260724-role-authorization), re-checked against live roles.
   if (!(await canPersonRefund(db, staff.user.shopId, staff.user.personId))) {
-    revalidateAndRedirect(base, `${base}?notice=not-authorized-refund`);
+    revalidateAndRedirect(base, backTo(base, "not-authorized-refund", "payments"));
     return;
   }
   // A demo shop's orders carry fabricated Stripe ids; refunding one would hit
   // live Stripe and fail. The button is rendered disabled to match (PaymentsSection).
   const shop = await getShopById(db, staff.user.shopId);
   if (shop?.isDemo) {
-    revalidateAndRedirect(base, `${base}?notice=demo-disabled`);
+    revalidateAndRedirect(base, backTo(base, "demo-disabled", "payments"));
     return;
   }
   const refunded = orderId ? await refundOrder(db, staff.user.shopId, orderId) : null;
@@ -447,7 +478,7 @@ export async function refundPaymentAction(shopSlug: string, personId: string, fo
       status: refunded ? "refunded" : "failed",
     });
   }
-  revalidateAndRedirect(base, `${base}?notice=${refunded ? "refunded" : "refund-failed"}`);
+  revalidateAndRedirect(base, backTo(base, refunded ? "refunded" : "refund-failed", "payments"));
 }
 
 export async function deletePersonAction(shopSlug: string, personId: string, _formData: FormData) {
@@ -457,7 +488,7 @@ export async function deletePersonAction(shopSlug: string, personId: string, _fo
   // Soft-deleting a person frees their email and pulls them from shop work —
   // owner/manager only (H-14, ADR 20260724-role-authorization).
   if (!(await canPersonDeleteDiver(db, staff.user.shopId, staff.user.personId))) {
-    revalidateAndRedirect(base, `${base}?notice=not-authorized-delete`);
+    revalidateAndRedirect(base, backTo(base, "not-authorized-delete", "remove"));
     return;
   }
   const deleted = await deleteDiver(db, staff.user.shopId, personId);
@@ -487,11 +518,20 @@ export async function restorePersonAction(shopSlug: string, personId: string, _f
   const staff = await requireStaffSession();
   const db = await getDb();
   if (!(await canPersonDeleteDiver(db, staff.user.shopId, staff.user.personId))) {
-    revalidateAndRedirect(base, `${base}?notice=not-authorized-delete`);
+    revalidateAndRedirect(base, backTo(base, "not-authorized-delete", "restore"));
     return;
   }
   const restored = await restoreDiver(db, staff.user.shopId, personId);
-  revalidateAndRedirect(base, `${base}?notice=${restored ? "restored" : "restore-refused"}`);
+  // The two outcomes cannot land in the same place. A refusal leaves the diver
+  // removed, so the restore card — and its `#removed-heading` anchor — are both
+  // still there to receive it. Success removes both: naming the form would put
+  // the confirmation in a card that no longer renders, and the anchor would
+  // scroll to a heading that no longer exists. Success goes to the page notice.
+  if (restored) {
+    revalidateAndRedirect(base, backTo(base, "restored"));
+    return;
+  }
+  revalidateAndRedirect(base, backTo(base, "restore-refused", "restore"));
 }
 
 /**
@@ -509,7 +549,7 @@ export async function erasePersonAction(shopSlug: string, personId: string, form
   const staff = await requireStaffSession();
   const db = await getDb();
   if (!(await canPersonErasePersonalData(db, staff.user.shopId, staff.user.personId))) {
-    revalidateAndRedirect(base, `${base}?notice=not-authorized-erase`);
+    revalidateAndRedirect(base, backTo(base, "not-authorized-erase", "erase"));
     return;
   }
   // `includeRemoved`: a diver already off the active roster is exactly who an
@@ -518,7 +558,7 @@ export async function erasePersonAction(shopSlug: string, personId: string, form
   const profile = await getDiverProfile(db, staff.user.shopId, personId, { includeRemoved: true });
   const typed = String(formData.get("confirmName") ?? "").trim();
   if (!profile || typed.toLowerCase() !== profile.person.fullName.trim().toLowerCase()) {
-    revalidateAndRedirect(base, `${base}?notice=erase-name-mismatch`);
+    revalidateAndRedirect(base, backTo(base, "erase-name-mismatch", "erase"));
     return;
   }
   const result = await anonymizeDiver(db, {
@@ -536,6 +576,6 @@ export async function erasePersonAction(shopSlug: string, personId: string, form
     `/shop/${staff.user.shopSlug}/divers`,
     result.ok
       ? `/shop/${staff.user.shopSlug}/divers?notice=${erasedNotice}`
-      : `${base}?notice=erase-refused`,
+      : backTo(base, "erase-refused", "erase"),
   );
 }

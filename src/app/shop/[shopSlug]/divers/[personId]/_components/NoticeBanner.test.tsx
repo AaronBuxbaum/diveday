@@ -199,7 +199,10 @@ describe("resolveDiverNotice", () => {
     expect(resolve("booked")?.form).toBe("book-activity");
     expect(resolve("course_min_age")?.form).toBe("book-activity");
     expect(resolve("not-authorized-delete")?.form).toBe("remove");
-    expect(resolve("restored")?.form).toBe("restore");
+    // A successful restore unmounts the restore card — the diver stops being
+    // removed — so its confirmation has to live on the page or nobody sees it.
+    // The refusal keeps the card (the restore failed) and stays on it.
+    expect(resolve("restored")?.form).toBe("page");
     expect(resolve("restore-refused")?.form).toBe("restore");
     expect(resolve("erase-name-mismatch")?.form).toBe("erase");
     expect(resolve("card-sighting-required")?.form).toBe("specialty-cards");

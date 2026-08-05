@@ -44,11 +44,11 @@ export function RestoreDiver({
   return (
     <section
       aria-labelledby="removed-heading"
-      className="mt-6 rounded-lg border border-warning/40 bg-warning/5 p-5"
+      className="mt-6 scroll-mt-24 rounded-lg border border-warning/40 bg-warning/5 p-5"
     >
       <div className="flex flex-wrap items-center gap-3">
         <Badge tone="warning">{t("divers.removed.badge")}</Badge>
-        <h2 id="removed-heading" className="text-sm font-semibold">
+        <h2 id="removed-heading" className="scroll-mt-24 text-sm font-semibold">
           {t("divers.removed.heading")}
         </h2>
       </div>

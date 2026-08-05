@@ -22,7 +22,7 @@ export function RemoveDiver({
   const t = staffTranslator(locale);
   return (
     <section className="mt-12 border-t border-border pt-8" aria-labelledby="remove-heading">
-      <h2 id="remove-heading" className="text-lg font-semibold">
+      <h2 id="remove-heading" className="scroll-mt-24 text-lg font-semibold">
         {t("divers.remove.heading")}
       </h2>
       <p className="mt-1 max-w-2xl text-sm text-muted">{t("divers.remove.description")}</p>

@@ -145,10 +145,17 @@ const NOTICE_KEYS: Record<
     tone: "danger",
     key: "divers.notices.notAuthorizedDelete",
   },
-  restored: { form: "restore", tone: "success", key: "divers.notices.restored" },
-  // The restore ran into the live record that now holds this diver's email
-  // (`restoreDiver`, CR-008), or an erased record that has no way back. Either
-  // way there is a thing to do about it, and the copy names it.
+  // Not `"restore"`, even though a restore is what happened: the restore card
+  // renders only while the diver is removed, so a *successful* restore unmounts
+  // the very thing the message would have sat in and the confirmation can never
+  // be seen. An outcome has to render somewhere that survives the state change
+  // it is reporting.
+  restored: { form: "page", tone: "success", key: "divers.notices.restored" },
+  // The refusal is the opposite case and does belong on the card: the restore
+  // failed, so the diver is still removed and the card is still on screen. It
+  // ran into the live record that now holds this diver's email (`restoreDiver`,
+  // CR-008), or an erased record that has no way back. Either way there is a
+  // thing to do about it, and the copy names it.
   "restore-refused": { form: "restore", tone: "danger", key: "divers.notices.restoreRefused" },
   "not-authorized-erase": {
     form: "erase",

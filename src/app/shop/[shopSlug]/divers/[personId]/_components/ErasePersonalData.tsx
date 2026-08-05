@@ -40,7 +40,7 @@ export function ErasePersonalData({
   const t = staffTranslator(locale);
   return (
     <section className="mt-8 border-t border-danger/30 pt-8" aria-labelledby="erase-heading">
-      <h2 id="erase-heading" className="text-lg font-semibold text-danger">
+      <h2 id="erase-heading" className="scroll-mt-24 text-lg font-semibold text-danger">
         {t("divers.erase.heading")}
       </h2>
       <p className="mt-1 max-w-2xl text-sm text-muted">{t("divers.erase.description")}</p>
