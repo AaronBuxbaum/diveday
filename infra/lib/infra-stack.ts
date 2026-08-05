@@ -899,7 +899,12 @@ exports.handler = async (event) => {
     envValues.SES_SNS_TOPIC_ARN = sesEventNotifications.topicArn;
     envValues.SMS_SNS_TOPIC_ARN = smsDeliveryReceipts.topicArn;
 
-    const credentialsSecret = new secretsmanager.Secret(this, "CredentialsEnvDocument", {
+    // Not assigned: nothing else in the stack references it. Read access is
+    // granted to no principal (see above), and the output below names the secret
+    // from the constant rather than from `Secret.secretName` — which, without
+    // the `parseOwnedSecretName` feature flag, renders as "split the ARN on '-'
+    // and take the first piece" and is only correct while the name has no hyphen.
+    new secretsmanager.Secret(this, "CredentialsEnvDocument", {
       secretName: CREDENTIALS_SECRET_NAME,
       description:
         "Filled-in .env.example: every credential this stack mints, with the destination for each. The whole document goes in .env.local; only the SES_/SNS_/SMS_/PLACES_ lines go to Vercel (AWS_ACCESS_KEY_ID is the deployer's and belongs on no deployed environment). Read with: aws secretsmanager get-secret-value --secret-id diveday/env --query SecretString --output text",
@@ -926,10 +931,6 @@ exports.handler = async (event) => {
     });
 
     new cdk.CfnOutput(this, "CredentialsSecretName", {
-      // The constant, not `credentialsSecret.secretName`: without the
-      // `@aws-cdk/aws-secretsmanager:parseOwnedSecretName` feature flag that
-      // property renders as "split the ARN on '-' and take the first piece",
-      // which is only correct while the name happens to contain no hyphen.
       value: CREDENTIALS_SECRET_NAME,
       description:
         "Secrets Manager secret holding every credential this stack mints, as a filled-in .env.example. Nothing is granted read access; use an administrator profile.",

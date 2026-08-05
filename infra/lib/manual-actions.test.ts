@@ -15,7 +15,6 @@ import { MANUAL_ACTION_CATEGORIES, renderManualActionsDoc } from "./manual-actio
  */
 
 type AccessKeyResource = { Properties: { Serial?: number } };
-type PolicyResource = { Properties: { PolicyDocument: { Statement: unknown[] } } };
 
 function synthesize() {
   const app = new cdk.App();
