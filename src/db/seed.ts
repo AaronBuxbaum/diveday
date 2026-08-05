@@ -102,6 +102,7 @@ import { seedWaiverVersions } from "./seed-waiver-versions";
  * | --- | --- |
  * | `./seed-clock.ts` | every date in the demo, anchored to the frozen clock |
  * | `./seed-cast.ts` | the divers on file, in the order the rosters index into |
+ * | `./seed-waiver-versions.ts` | the release's own version history — two superseded wordings behind the current one |
  * | `./seed-more-trips.ts` | the rest of the month's board beyond today's three headline boats |
  * | `./seed-nitrox.ts` | EANx cards and the per-dive gas the wreck charter gates on |
  * | `./seed-rental-fit.ts` | divers' saved sizes, so the gear locker has something to pull |
@@ -111,6 +112,8 @@ import { seedWaiverVersions } from "./seed-waiver-versions";
  * | `./seed-buddy-pairs.ts` | two buddy teams on today's reef boat, plus the odd-roster remainder |
  * | `./seed-demo-lifecycle.ts` | minting, reaping, and capping throwaway demo shops |
  * | `./seed-backup.ts` | the shop-owned backup destination and its weekly delivery history |
+ * | `./seed-orders.ts` | the billing states past "paid": open, part-paid, refunded, void, written off |
+ * | `./seed-waiver-evidence.ts` | when releases were really signed, and which of them carry an integrity seal |
  *
  * The public surface is unchanged: `@/db/seed` still exports everything it
  * always did, including the lifecycle helpers re-exported at the bottom.
@@ -582,6 +585,14 @@ export async function seedDemoSchedule(
     // allows an undefined divemaster even though the demo cast always has one).
     pairedByPersonId: divemasterId ?? instructor.id,
   });
+
+  // Truly last, and updates-only: what the shop's signed evidence looks like
+  // once every scenario above has finished writing releases — signatures dated
+  // across the weeks divers actually signed in rather than all at this instant,
+  // and an integrity seal on everything signed since the shop's account got one
+  // (src/db/seed-waiver-evidence.ts). A seal covers a record's final stored
+  // metadata, so nothing may write a waiver row after this.
+  await seedWaiverEvidence(db, shopId);
 }
 
 /**

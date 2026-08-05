@@ -14,8 +14,18 @@
  * so a `text-base` passed through `className` cannot reliably beat a `text-sm`
  * baked in here. Keeping exactly one of each means nothing has to fight.
  */
+/**
+ * `cursor-pointer` is on the base, not on call sites. Tailwind v4's Preflight
+ * dropped the v3 rule that gave `button` a pointer cursor, so every
+ * `<button>` in the app has been rendering the default arrow — invisible in a
+ * screenshot, and exactly the "is this even clickable?" hesitation an icon-only
+ * control can least afford (found on the course roster's eye toggle). Links
+ * already get it from the browser; putting it here is what makes buttons and
+ * button-shaped links behave alike. `disabled:cursor-not-allowed` still wins on
+ * a disabled button — its variant selector carries the higher specificity.
+ */
 const base =
-  "inline-flex min-h-11 items-center justify-center gap-1 rounded-lg transition-[color,background-color,border-color,transform] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60";
+  "inline-flex min-h-11 cursor-pointer items-center justify-center gap-1 rounded-lg transition-[color,background-color,border-color,transform] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60";
 
 const variants = {
   primary: "bg-primary text-primary-foreground shadow-sm hover:bg-primary-hover",

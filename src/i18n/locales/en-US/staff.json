@@ -572,12 +572,12 @@
       "overviewAriaLabel": "Dive-site overview",
       "gridAriaLabel": "Saved dive sites",
       "savedSites": "Saved sites",
-      "savedSitesDetail": "Reusable crew briefings",
+      "savedSitesDetail": "Reusable across every trip",
       "withForecastPoints": "With forecast points",
       "withForecastPointsDetail": "Ready for marine outlooks",
       "fromTemplates": "From templates",
       "fromTemplatesDetail": "Imported and tailored locally",
-      "siteArchivedNotice": "Site archived. Historical trip briefings are still preserved.",
+      "siteArchivedNotice": "Site archived. Trips that already dived it keep it.",
       "emptyHeading": "Start with a site your crew knows well",
       "emptyBody": "Add a location, a map or route image, and the life divers may encounter.",
       "locationToAdd": "Location to add",
@@ -593,14 +593,14 @@
       "nitroxBadge": "Nitrox",
       "oneRequiredSpecialty": "1 required specialty",
       "manyRequiredSpecialties": "{count} required specialties",
-      "addBriefingFallback": "Add the briefing your divers will see.",
+      "addBriefingFallback": "Add the site notes your divers will see.",
       "pagination": {
         "total": "{count, plural, one {# site} other {# sites}}"
       }
     },
     "catalog": {
       "title": "DiveDay common dive sites",
-      "description": "Published, versioned starting points. Importing makes an independent shop briefing; later template updates never overwrite your edits.",
+      "description": "Published, versioned starting points. Importing makes an independent site in your own library; later template updates never overwrite your edits.",
       "templateVersion": "Template v{version}",
       "importing": "Importing…",
       "importToLibrary": "Import to my library",
@@ -649,26 +649,26 @@
       "errorImagesUnconfigured": "Image hosting isn't set up for this shop yet — leave the image links blank for now, or ask your shop's owner or manager to configure it."
     },
     "edit": {
-      "description": "Changes update the briefing linked to this site.",
+      "description": "Changes reach every upcoming dive that visits this site.",
       "upcomingHeading": "Upcoming dives here",
       "copyAndTailor": "Copy and tailor",
       "copying": "Copying…",
       "archiveSite": "Archive site",
-      "archiveConfirmBody": "Historical trips keep their briefing; new trips will no longer see this site.",
+      "archiveConfirmBody": "Trips that already dived it keep it; new trips will no longer see this site.",
       "archiving": "Archiving…",
       "copiedNotice": "Independent copy ready to tailor.",
-      "savedNotice": "Site briefing saved.",
+      "savedNotice": "Dive site saved.",
       "errorInvalid": "That didn't save. Check the name and links, then try again.",
       "certificationDescription": "What this site itself demands. Every trip that visits enforces at least this — when the trip asks for more, the stricter rule wins.",
       "requiredSpecialties": "Required specialties",
-      "saveBriefing": "Save briefing"
+      "saveBriefing": "Save dive site"
     },
     "new": {
-      "title": "Build a dive-site briefing",
+      "title": "Add a dive site",
       "description": "Everything is optional except the name. Keep it useful, vivid, and true to the site.",
       "errorInvalid": "That didn't save. Check the required name and links, then try again.",
       "certificationDescription": "These requirements travel with the site into every new trip that uses it.",
-      "saveSiteBriefing": "Save site briefing"
+      "saveSiteBriefing": "Save dive site"
     }
   },
   "orders": {
@@ -3084,7 +3084,7 @@
       "noSiteChosen": "No site chosen yet",
       "diverFacingDetailsLabel": "Diver-facing details",
       "detailsPlaceholder": "What divers should know about this part of the trip.",
-      "footerNote": "Choosing a site brings its saved briefing — map, landmarks, and field guide — onto that dive. The trip description and conditions below stay shared across the whole boat day."
+      "footerNote": "Choosing a site brings its saved notes — map, landmarks, and field guide — into that dive's briefing. Leave a dive's site blank when the crew picks it at the dock; the trip description and conditions below stay shared across the whole boat day."
     },
     "offlineManifest": {
       "freshnessCopy": {

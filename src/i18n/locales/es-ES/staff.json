@@ -566,18 +566,18 @@
     "catalogEyebrow": "Catálogo",
     "list": {
       "title": "Biblioteca de sitios de buceo",
-      "description": "Crea la ficha una vez y añádela a cualquier salida. Copia un sitio antes de adaptarlo a un itinerario especial.",
+      "description": "Guarda un lugar una vez y añádelo a cualquier inmersión de cualquier salida — una salida de dos inmersiones puede visitar un sitio dos veces o dos sitios distintos. Copia un sitio antes de adaptarlo a un itinerario especial.",
       "createSite": "Crear un sitio",
       "browseTemplates": "Explorar plantillas",
       "overviewAriaLabel": "Resumen de sitios de buceo",
       "gridAriaLabel": "Sitios de buceo guardados",
       "savedSites": "Sitios guardados",
-      "savedSitesDetail": "Fichas reutilizables para la tripulación",
+      "savedSitesDetail": "Reutilizables en cada salida",
       "withForecastPoints": "Con punto de pronóstico",
       "withForecastPointsDetail": "Listos para pronósticos marinos",
       "fromTemplates": "De plantillas",
       "fromTemplatesDetail": "Importados y adaptados localmente",
-      "siteArchivedNotice": "Sitio archivado. Las fichas de salidas históricas se conservan.",
+      "siteArchivedNotice": "Sitio archivado. Las salidas que ya lo bucearon lo conservan.",
       "emptyHeading": "Empieza con un sitio que tu tripulación ya conoce",
       "emptyBody": "Añade una ubicación, una imagen de mapa o ruta, y la vida marina que verán los buceadores.",
       "locationToAdd": "Ubicación por añadir",
@@ -593,14 +593,14 @@
       "nitroxBadge": "Nitrox",
       "oneRequiredSpecialty": "1 especialidad requerida",
       "manyRequiredSpecialties": "{count} especialidades requeridas",
-      "addBriefingFallback": "Añade la ficha que verán tus buceadores.",
+      "addBriefingFallback": "Añade las notas del sitio que verán tus buceadores.",
       "pagination": {
         "total": "{count, plural, one {# sitio} other {# sitios}}"
       }
     },
     "catalog": {
       "title": "Sitios de buceo comunes de DiveDay",
-      "description": "Puntos de partida publicados y versionados. Importar crea una ficha independiente de tu centro; las actualizaciones de la plantilla nunca sobrescriben tus cambios.",
+      "description": "Puntos de partida publicados y versionados. Importar crea un sitio independiente en tu propia biblioteca; las actualizaciones de la plantilla nunca sobrescriben tus cambios.",
       "templateVersion": "Plantilla v{version}",
       "importing": "Importando…",
       "importToLibrary": "Importar a mi biblioteca",
@@ -649,26 +649,26 @@
       "errorImagesUnconfigured": "El alojamiento de imágenes aún no está configurado para este centro — deja los enlaces de imagen en blanco por ahora, o pide al propietario o gerente de tu centro que lo configure."
     },
     "edit": {
-      "description": "Los cambios actualizan la ficha vinculada a este sitio.",
+      "description": "Los cambios llegan a cada próxima inmersión que visite este sitio.",
       "upcomingHeading": "Próximas inmersiones aquí",
       "copyAndTailor": "Copiar y adaptar",
       "copying": "Copiando…",
       "archiveSite": "Archivar sitio",
-      "archiveConfirmBody": "Las salidas históricas conservan su ficha; las nuevas salidas ya no verán este sitio.",
+      "archiveConfirmBody": "Las salidas que ya lo bucearon lo conservan; las nuevas salidas ya no verán este sitio.",
       "archiving": "Archivando…",
       "copiedNotice": "Copia independiente lista para adaptar.",
-      "savedNotice": "Ficha del sitio guardada.",
+      "savedNotice": "Sitio de buceo guardado.",
       "errorInvalid": "Eso no se guardó. Revisa el nombre y los enlaces e inténtalo de nuevo.",
       "certificationDescription": "Lo que exige el propio sitio. Toda salida que lo visite exige al menos esto — cuando la salida exige más, gana la regla más estricta.",
       "requiredSpecialties": "Especialidades requeridas",
-      "saveBriefing": "Guardar ficha"
+      "saveBriefing": "Guardar sitio de buceo"
     },
     "new": {
-      "title": "Crear la ficha de un sitio de buceo",
+      "title": "Añadir un sitio de buceo",
       "description": "Todo es opcional excepto el nombre. Que sea útil, vívido y fiel al sitio.",
       "errorInvalid": "Eso no se guardó. Revisa el nombre obligatorio y los enlaces e inténtalo de nuevo.",
       "certificationDescription": "Estos requisitos viajan con el sitio a cada nueva salida que lo use.",
-      "saveSiteBriefing": "Guardar ficha del sitio"
+      "saveSiteBriefing": "Guardar sitio de buceo"
     }
   },
   "orders": {
@@ -3084,7 +3084,7 @@
       "noSiteChosen": "Sin sitio elegido todavía",
       "diverFacingDetailsLabel": "Detalles para los buceadores",
       "detailsPlaceholder": "Lo que los buceadores deben saber sobre esta parte de la salida.",
-      "footerNote": "Elegir un sitio añade a esa inmersión su guía guardada: mapa, puntos de referencia y ficha de campo. La descripción de la salida y las condiciones de abajo se comparten para todo el día de barco."
+      "footerNote": "Elegir un sitio trae sus notas guardadas — mapa, puntos de referencia y guía de vida marina — al briefing de esa inmersión. Deja el sitio de una inmersión en blanco cuando la tripulación lo elige en el muelle; la descripción y las condiciones de abajo se comparten en toda la jornada."
     },
     "offlineManifest": {
       "freshnessCopy": {

@@ -67,13 +67,38 @@ export async function createCourse(db: AppDb, input: NewCourse) {
   return course ?? null;
 }
 
+/**
+ * Progression order: the sequence a shop teaches its catalog in, read off the
+ * courses themselves.
+ *
+ * `minimum_certification_level` *is* the ladder — Open Water opens Advanced,
+ * Advanced opens Rescue, Rescue opens Divemaster — and Postgres orders an enum
+ * by its declared order, which is that ladder (`certification_level` in
+ * schema.ts). Nulls sort **first**, not last: a course that admits an
+ * uncertified diver is where a diver starts, and Postgres's ASC default would
+ * otherwise bury Open Water below Divemaster. Within one rung a taster session
+ * comes before the certification it leads into (Discover Scuba, then Open
+ * Water), and title breaks the remaining ties — it is unique per shop, so the
+ * sort is total and paging is stable.
+ *
+ * Derived, never stored. The shop-built certification paths this replaced kept
+ * the same ladder in their own tables, where it could disagree with the
+ * courses and where a newly added course simply never appeared
+ * (ADR 20260805-remove-certification-paths).
+ */
+const progressionOrder = [
+  sql`${courses.minimumCertificationLevel} asc nulls first`,
+  desc(courses.isIntroCourse),
+  asc(courses.title),
+];
+
 /** Active catalog entries available when a staff member schedules a session. */
 export async function listActiveCourses(db: AppDb, shopId: string) {
   return db
     .select()
     .from(courses)
     .where(and(eq(courses.shopId, shopId), eq(courses.isActive, true)))
-    .orderBy(asc(courses.title));
+    .orderBy(...progressionOrder);
 }
 
 /**
@@ -120,11 +145,25 @@ export async function listActiveCoursesForSitemap(
  * `limit` here — every one of those callers needs the whole set.
  */
 export async function listCourses(db: AppDb, shopId: string) {
-  return db
-    .select()
+  return db.select().from(courses).where(eq(courses.shopId, shopId)).orderBy(...progressionOrder);
+}
+
+/**
+ * The agencies this shop's catalog actually holds, alphabetically.
+ *
+ * Drives the roster's agency tabs, which is why it is a `SELECT DISTINCT` over
+ * the shop's own rows rather than a constant: `courses.agency` is free text a
+ * CSV import can carry anything into, so a hard-coded PADI/SSI pair would hide
+ * a third agency's courses behind no tab at all. One or zero agencies means
+ * there is nothing to filter and the roster renders no tab strip.
+ */
+export async function courseAgencies(db: AppDb, shopId: string): Promise<string[]> {
+  const rows = await db
+    .selectDistinct({ agency: courses.agency })
     .from(courses)
     .where(eq(courses.shopId, shopId))
-    .orderBy(asc(courses.agency), asc(courses.title));
+    .orderBy(asc(courses.agency));
+  return rows.map((row) => row.agency);
 }
 
 /** How many courses the staff roster (`/courses`) shows per page. */

@@ -48,7 +48,9 @@ vi.mock("@/lib/rate-limit", async (importOriginal) => {
   return { ...actual, checkRateLimit: vi.fn(async () => ({ allowed: true })) };
 });
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn(async () => {}) }));
-vi.mock("@/db/notifications", () => ({ sendNotification: vi.fn(async () => ({ status: "sent" })) }));
+vi.mock("@/db/notifications", () => ({
+  sendNotification: vi.fn(async () => ({ status: "sent" })),
+}));
 
 const { getDb } = await import("@/db/client");
 const { checkRateLimit } = await import("@/lib/rate-limit");
