@@ -275,7 +275,6 @@
       "phoneLabel": "Phone",
       "dateOfBirthLabel": "Date of birth",
       "optionalHint": "(optional)",
-      "dateOfBirthDescription": "Used to check a course's minimum age on the day it runs. Leave it blank and courses book as they always have.",
       "diveInsuranceFieldLabel": "Dive insurance",
       "diveInsuranceDescription": "DAN or any other dive-accident cover the diver carries.",
       "diveInsurancePlaceholder": "DAN #12345",

@@ -51,7 +51,12 @@ export function InfoHint({
         aria-expanded={open}
         onClick={() => setOpen((wasOpen) => !wasOpen)}
         onBlur={() => setOpen(false)}
-        className="inline-flex size-5 items-center justify-center rounded-full border border-border-strong text-muted transition-colors hover:border-primary hover:text-primary focus-visible:border-primary focus-visible:text-primary"
+        // No border. The glyph below is already a filled disc, so a ring around
+        // it read as a circle drawn around a circle — and beside a heading it
+        // looked like a control that had lost its label rather than a marker.
+        // Colour alone carries the affordance now; `focus-visible` keeps the
+        // keyboard ring, which is the one border that was ever doing work.
+        className="inline-flex size-5 items-center justify-center rounded-full text-muted transition-colors hover:text-primary focus-visible:text-primary"
       >
         {/* An icon rather than a "?" glyph: a text marker is copy, and copy
             belongs in a message bundle. This one carries no language at all. */}

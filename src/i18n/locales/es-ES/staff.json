@@ -275,7 +275,6 @@
       "phoneLabel": "Teléfono",
       "dateOfBirthLabel": "Fecha de nacimiento",
       "optionalHint": "(opcional)",
-      "dateOfBirthDescription": "Se usa para verificar la edad mínima de un curso el día que se imparte. Déjalo en blanco y los cursos se reservan como siempre.",
       "diveInsuranceFieldLabel": "Seguro de buceo",
       "diveInsuranceDescription": "DAN o cualquier otro seguro de accidentes de buceo que tenga el buceador.",
       "diveInsurancePlaceholder": "DAN n.º 12345",

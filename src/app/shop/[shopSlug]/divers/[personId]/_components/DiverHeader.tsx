@@ -138,7 +138,6 @@ export function DiverHeader({
             <Field
               label={t("divers.header.dateOfBirthLabel")}
               hint={t("divers.header.optionalHint")}
-              description={t("divers.header.dateOfBirthDescription")}
             >
               <input
                 name="dateOfBirth"

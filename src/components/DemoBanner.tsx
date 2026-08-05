@@ -82,10 +82,19 @@ export function DemoBanner({
 
   return (
     <div className="border-b border-accent/40 bg-accent/5 transition-all duration-300 print:hidden">
-      <div className="mx-auto w-full max-w-4xl px-6 py-3">
-        {/* Ribbon Bar */}
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-wrap items-center gap-2.5">
+      <div className="mx-auto w-full max-w-4xl px-4 py-3 sm:px-6">
+        {/*
+         * One wrapping row, not a phone-only column. The column put "Switch
+         * role" on a line of its own pinned hard right (`self-end`), so on a
+         * phone the ribbon read as a stray button floating in a band of empty
+         * space, disconnected from the sentence it belongs to. Wrapping keeps
+         * it on the same line whenever there is room and drops it directly
+         * under the text — left-aligned with everything else — when there
+         * isn't. `justify-between` still pushes it to the far edge on the wide
+         * single-line layout, which is where it has always sat.
+         */}
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
             <span className="inline-flex items-center rounded-md border border-accent/30 bg-accent/15 px-2 py-0.5 text-xs font-semibold tracking-wide text-foreground uppercase">
               {copy.shopLabel}
             </span>
@@ -100,19 +109,17 @@ export function DemoBanner({
             </p>
           </div>
 
-          <div className="flex items-center gap-2 self-end sm:self-auto">
-            <button
-              type="button"
-              onClick={() => setIsExpanded(!isExpanded)}
-              className={buttonClass({
-                variant: "secondary",
-                size: "sm",
-                className: "text-foreground",
-              })}
-            >
-              {copy.switchRole} {isExpanded ? "▲" : "▼"}
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => setIsExpanded(!isExpanded)}
+            className={buttonClass({
+              variant: "secondary",
+              size: "sm",
+              className: "shrink-0 text-foreground",
+            })}
+          >
+            {copy.switchRole} {isExpanded ? "▲" : "▼"}
+          </button>
         </div>
 
         {isMintedDemo ? (
@@ -124,8 +131,12 @@ export function DemoBanner({
                 <Link href="/sign-in" className="font-medium text-primary hover:underline">
                   /sign-in
                 </Link>{" "}
-                {copy.withCredentials} <span className="font-mono">{currentEmail}</span> /{" "}
-                <span className="font-mono">{demoPassword}</span>.
+                {copy.withCredentials}{" "}
+                {/* A demo address is one long unbroken token; without an
+                    explicit break it pushed the whole banner wider than the
+                    phone and took the page's horizontal scroll with it. */}
+                <span className="font-mono break-all">{currentEmail}</span> /{" "}
+                <span className="font-mono break-all">{demoPassword}</span>.
               </p>
             ) : null}
           </div>
