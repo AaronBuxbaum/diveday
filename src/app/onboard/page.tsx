@@ -377,9 +377,7 @@ export default async function OnboardPage({
             >
               {t("account.onboard.submit")}
             </SubmitButton>
-            <p className="text-center text-xs text-muted">
-              {t("account.onboard.trialMeaning")}
-            </p>
+            <p className="text-center text-xs text-muted">{t("account.onboard.trialMeaning")}</p>
           </form>
 
           <p className="text-center text-sm text-muted mt-6">
