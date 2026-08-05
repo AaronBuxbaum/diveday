@@ -53,13 +53,17 @@ if (!/^\d{12}$/.test(account ?? "")) {
 }
 
 if (confirmedAccount !== undefined && confirmedAccount !== account) {
-  console.error(`Refusing to bootstrap account ${account}; --confirm-account is ${confirmedAccount}.`);
+  console.error(
+    `Refusing to bootstrap account ${account}; --confirm-account is ${confirmedAccount}.`,
+  );
   process.exit(1);
 }
 
 if (confirmedAccount === undefined) {
   if (!stdin.isTTY || !stdout.isTTY) {
-    console.error(`Refusing non-interactive bootstrap for account ${account}. Re-run with --confirm-account ${account}.`);
+    console.error(
+      `Refusing non-interactive bootstrap for account ${account}. Re-run with --confirm-account ${account}.`,
+    );
     process.exit(2);
   }
   const terminal = createInterface({ input: stdin, output: stdout });
@@ -99,12 +103,8 @@ execFileSync(
 
 const cdk = join(process.cwd(), "node_modules", ".bin", "cdk");
 const command = existsSync(cdk) ? cdk : "cdk";
-const result = spawnSync(
-  command,
-  ["bootstrap", `aws://${account}/${region}`, ...cdkArguments],
-  {
-    env: awsEnvironment,
-    stdio: "inherit",
-  },
-);
+const result = spawnSync(command, ["bootstrap", `aws://${account}/${region}`, ...cdkArguments], {
+  env: awsEnvironment,
+  stdio: "inherit",
+});
 process.exit(result.status ?? 1);

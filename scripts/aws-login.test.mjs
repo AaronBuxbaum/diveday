@@ -3,7 +3,7 @@ import { ensureAwsDeploymentLogin, ensureAwsLogin } from "./aws-login.mjs";
 
 describe("ensureAwsLogin", () => {
   it("does nothing when the selected profile already has a valid session", () => {
-    const execute = vi.fn(() => "{\"Account\":\"123456789012\"}");
+    const execute = vi.fn(() => '{"Account":"123456789012"}');
     const spawn = vi.fn();
 
     expect(
@@ -23,7 +23,7 @@ describe("ensureAwsLogin", () => {
       .mockImplementationOnce(() => {
         throw new Error("expired");
       })
-      .mockReturnValueOnce("{\"Account\":\"123456789012\"}");
+      .mockReturnValueOnce('{"Account":"123456789012"}');
     const spawn = vi.fn(() => ({ status: 0 }));
 
     expect(
@@ -64,7 +64,7 @@ describe("ensureAwsLogin", () => {
       .mockImplementationOnce(() => {
         throw new Error("admin needs login");
       })
-      .mockReturnValueOnce("{\"Account\":\"123456789012\"}");
+      .mockReturnValueOnce('{"Account":"123456789012"}');
     const spawn = vi.fn(() => ({ status: 0 }));
     const environment = { AWS_PROFILE: "diveday-deployer", AWS_DEFAULT_REGION: "us-east-1" };
 
