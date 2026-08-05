@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { ANONYMIZED_PERSON_NAME } from "@/lib/anonymization";
+import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { verifyWaiverIntegrity } from "@/lib/waiver-integrity";
 import { seededShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
@@ -143,6 +144,25 @@ describe("waiver records (in-memory PGlite)", () => {
       status: "medical_review",
       idempotent: true,
     });
+  });
+
+  it("clears a question 1 yes when every Box A answer is no", async () => {
+    const { db, person, shop, booking } = await waiverContext();
+    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
+    if (!issued.ok) throw new Error("expected a waiver link");
+    const medicalAnswers = emptyMedicalAnswers(RSTC_QUESTIONNAIRE);
+    medicalAnswers.responses.q1 = true;
+    for (const question of RSTC_QUESTIONNAIRE.questions.filter((q) => q.parentId === "q1")) {
+      medicalAnswers.responses[question.id] = false;
+    }
+    expect(
+      await completeWaiver(db, issued.token, {
+        signerName: person.fullName,
+        agreed: true,
+        medicalAnswers,
+        now,
+      }),
+    ).toMatchObject({ ok: true, status: "completed" });
   });
 
   /**

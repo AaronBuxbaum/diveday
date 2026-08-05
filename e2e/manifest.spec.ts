@@ -292,13 +292,15 @@ test("the offline fallback never reaches beyond the manifest route", async ({ pa
   // Two assertions, and deliberately neither of them reads the error page's
   // DOM.
   //
-  // The reload's thrown message has two legitimate shapes depending on when
+  // The reload's thrown message has three legitimate shapes depending on when
   // the chrome-error:// interstitial commits. If it commits while the CDP
   // Page.reload call is still in flight, the target detaches and Playwright
   // reports "Protocol error (Page.reload): Not attached to an active page"
-  // instead of the navigation's own ERR_INTERNET_DISCONNECTED — the browser
-  // is on the offline interstitial either way, which is what this test is
-  // about. Matching one shape made this a ~1-in-10 flake (reproduced on main,
+  // instead of the navigation's own ERR_INTERNET_DISCONNECTED. Chromium can
+  // also report net::ERR_ABORTED when the interstitial commits during the
+  // reload call — the browser is on the offline interstitial either way,
+  // which is what this test is about. Matching one shape made this a ~1-in-10
+  // flake (reproduced on main,
   // not introduced by any one branch); same commit race d635994 fixed on the
   // setOffline(false) side.
   //
@@ -315,7 +317,9 @@ test("the offline fallback never reaches beyond the manifest route", async ({ pa
   // are still caught: if the worker served the route, the reload would have
   // *succeeded* and there would be no error; if it redirected to the offline
   // shell, the URL would say so.
-  expect(reloadError?.message).toMatch(/ERR_INTERNET_DISCONNECTED|Not attached to an active page/);
+  expect(reloadError?.message).toMatch(
+    /ERR_INTERNET_DISCONNECTED|ERR_ABORTED|Not attached to an active page/,
+  );
   expect(page.url()).not.toContain("/offline-manifest");
 
   await context.setOffline(false);

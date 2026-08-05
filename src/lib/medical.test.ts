@@ -1,11 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
+  applicableMedicalQuestions,
+  calculateMedicalResult,
   emptyMedicalAnswers,
   findQuestionnaire,
+  findQuestionnaireVersion,
   flaggedMedicalPrompts,
   needsPhysicianReview,
   questionnaireForJurisdiction,
   RSTC_QUESTIONNAIRE,
+  validateMedicalAnswers,
 } from "./medical";
 
 describe("medical questionnaires", () => {
@@ -14,17 +18,49 @@ describe("medical questionnaires", () => {
     expect(questionnaireForJurisdiction("uk")).toBe(RSTC_QUESTIONNAIRE);
   });
 
-  it("clears review only when every answer is no", () => {
+  it("matches the 2026 PDF version and exposes the conditional boxes", () => {
+    expect(RSTC_QUESTIONNAIRE.version).toBe(2);
+    expect(RSTC_QUESTIONNAIRE.questions).toHaveLength(44);
+    expect(RSTC_QUESTIONNAIRE.questions.find((question) => question.id === "q1")?.referral).toBe(
+      false,
+    );
+    expect(RSTC_QUESTIONNAIRE.questions.find((question) => question.id === "q3")?.referral).toBe(
+      true,
+    );
+  });
+
+  it("clears review when question 1 is yes but every applicable Box A answer is no", () => {
+    const answers = emptyMedicalAnswers(RSTC_QUESTIONNAIRE);
+    answers.responses.q1 = true;
+    for (const question of RSTC_QUESTIONNAIRE.questions.filter((q) => q.parentId === "q1")) {
+      answers.responses[question.id] = false;
+    }
+    expect(applicableMedicalQuestions(RSTC_QUESTIONNAIRE, answers.responses)).toHaveLength(16);
+    expect(calculateMedicalResult(answers)).toMatchObject({ status: "clear" });
     expect(needsPhysicianReview(emptyMedicalAnswers(RSTC_QUESTIONNAIRE))).toBe(false);
   });
 
-  it("requires review for any referral-flagged yes", () => {
-    const referral = RSTC_QUESTIONNAIRE.questions.find((q) => q.referral);
-    if (!referral) throw new Error("expected a referral question");
+  it("requires review for direct questions and affirmative Box answers", () => {
     const answers = emptyMedicalAnswers(RSTC_QUESTIONNAIRE);
-    answers.responses[referral.id] = true;
+    answers.responses.q3 = true;
     expect(needsPhysicianReview(answers)).toBe(true);
-    expect(flaggedMedicalPrompts(answers)).toContain(referral.prompt);
+    expect(flaggedMedicalPrompts(answers)).toContain(
+      RSTC_QUESTIONNAIRE.questions.find((q) => q.id === "q3")?.prompt,
+    );
+
+    const boxAnswers = emptyMedicalAnswers(RSTC_QUESTIONNAIRE);
+    boxAnswers.responses.q1 = true;
+    boxAnswers.responses.box_a_1 = true;
+    expect(calculateMedicalResult(boxAnswers).status).toBe("physician_review");
+  });
+
+  it("fails closed for incomplete current answers and accepts legacy v1 lookup", () => {
+    const incomplete = { ...emptyMedicalAnswers(RSTC_QUESTIONNAIRE), responses: { q1: true } };
+    expect(validateMedicalAnswers(incomplete, { requireComplete: true })).toMatchObject({
+      ok: false,
+    });
+    expect(calculateMedicalResult(incomplete).status).toBe("incomplete");
+    expect(findQuestionnaireVersion("rstc", 1)?.version).toBe(1);
   });
 
   it("fails closed for an unknown questionnaire or unrecognized question", () => {

@@ -898,10 +898,13 @@ archived.
   the exact title/version/text.
 - **Pre-arrival expiring completion links** — only a SHA-256 token hash stored; mobile-first
   typed-consent flow with saved progress, medical questions, and explicit un­available/expired states.
-- **Roster status + medical-review blocker** — affirmative medical answers fail closed to physician
-  review; staff activity explains issued/started/signed/blocked/replaced from stored evidence.
-- **Jurisdiction-aware medical questionnaire** — versioned RSTC/WRSTC form and a UK variant in
-  `src/lib/medical.ts`.
+- **Roster status + medical-review blocker** — answers that the 2026 participant form marks for
+  physician evaluation fail closed to review; a top-level yes can clear when its applicable Box
+  answers are all no. Staff activity explains issued/started/signed/blocked/replaced from stored
+  evidence.
+- **Conditional RSTC medical questionnaire** — the versioned UHMS/DMSC 2026 participant form,
+  including Boxes A-G and the page-two dental question, lives in `src/lib/medical.ts`; yes/no
+  responses persist on the signed waiver record with shop-scoped access controls.
 - **Sign once** — a completed signature is held against the diver and satisfies the gate on any of
   their bookings while current ([waiver-sign-once](../architecture/decisions/20260721-waiver-sign-once.md)).
 - **Durable delivery history + retries** — append-only `notification_delivery_attempts`

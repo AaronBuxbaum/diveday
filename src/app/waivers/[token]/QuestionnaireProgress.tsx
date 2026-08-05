@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 /** Fills `{placeholder}` tokens in a server-supplied template with per-render values. */
 function fill(template: string, values: Record<string, string | number>): string {
@@ -48,6 +48,19 @@ export function QuestionnaireProgress({
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [answered, setAnswered] = useState<Set<string>>(() => new Set());
+  const [questionTotal, setQuestionTotal] = useState(total);
+
+  const refreshTotal = useCallback(() => {
+    const names = new Set(
+      Array.from(
+        containerRef.current?.querySelectorAll<HTMLInputElement>(
+          'input[type="radio"][name^="q_"]',
+        ) ?? [],
+        (input) => input.name,
+      ),
+    );
+    setQuestionTotal(names.size || total);
+  }, [total]);
 
   // Seed from whatever the server already rendered checked (a resumed
   // draft) — the `change` handler below only ever sees choices made *after*
@@ -63,7 +76,19 @@ export function QuestionnaireProgress({
       for (const input of checked) next.add(input.name);
       return next;
     });
-  }, []);
+    refreshTotal();
+  }, [refreshTotal]);
+
+  // Conditional questionnaire Boxes mount and unmount as primary answers
+  // change. Keep the progress denominator tied to the currently applicable
+  // questions rather than the full 44-question definition.
+  useEffect(() => {
+    refreshTotal();
+    const observer = new MutationObserver(refreshTotal);
+    if (containerRef.current)
+      observer.observe(containerRef.current, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, [refreshTotal]);
 
   function handleChange(event: React.ChangeEvent<HTMLDivElement>) {
     const target = event.target;
@@ -75,9 +100,10 @@ export function QuestionnaireProgress({
       return;
     }
     setAnswered((prev) => (prev.has(target.name) ? prev : new Set(prev).add(target.name)));
+    queueMicrotask(refreshTotal);
   }
 
-  const percent = total === 0 ? 0 : Math.min(100, (answered.size / total) * 100);
+  const percent = questionTotal === 0 ? 0 : Math.min(100, (answered.size / questionTotal) * 100);
 
   return (
     <div ref={containerRef} onChange={handleChange}>
@@ -86,7 +112,7 @@ export function QuestionnaireProgress({
             polite region a diver revisiting an already-answered question
             doesn't re-trigger a screen-reader interruption for. */}
         <p role="status" className="text-sm font-medium text-muted">
-          {fill(labelTemplate, { answered: answered.size, total })}
+          {fill(labelTemplate, { answered: answered.size, total: questionTotal })}
         </p>
         <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-surface-sunken">
           <div

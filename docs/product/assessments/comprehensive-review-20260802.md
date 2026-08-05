@@ -199,10 +199,11 @@ finding; safety-marked tasks need `dive-domain-expert` review, security-marked n
     which holds the four tasks; do not plan them from here. **I18N-2 is closed** as of 2026-08-03:
     `src/i18n/provider-coverage.test.ts` fails on a diver Client Component with no
     `DiverIntlProvider` above it, or a provider whose `namespaces` list is short.
-11. **(DOM-M5)** Retitle the medical questionnaire "RSTC-style" pending H-01; make
-    `questionnaireForJurisdiction` honor `uk` or remove the dead seam (it returns the RSTC form for
-    both arguments today, while the glossary promises a UK variant); add `cmas`/`raid`/`gue` to the
-    agency enum or document the "other" policy.
+11. **(DOM-M5, addressed 2026-08-05)** Retitle and replace the paraphrase with the published
+    2026 UHMS/DMSC RSTC participant questionnaire; conditional Box logic and the direct-referral
+    questions now match the source. The separate UK seam is removed until a jurisdiction-specific
+    form is approved. The unrelated agency-enum question remains a separate backlog item; see
+    [20260805-rstc-medical-questionnaire](../../architecture/decisions/20260805-rstc-medical-questionnaire.md).
 12. **(DOM-M2 residue)** Decide whether the cited PADI 8/+2/12 entry-level figure should apply to a
     non-PADI Open Water course. The intro/DSD cap is now agency-agnostic and the glossary documents
     the carve-out, so this is a recorded, deliberate scope rather than a drift — but an SSI Open
@@ -450,10 +451,11 @@ optimism; minors' ages purged from crew phones.
   carve-out, so the SSI-Try-Scuba hole is closed. The cited PADI 8/+2/12 entry-level figure is still
   PADI-only by deliberate choice (`course-ratios.ts:167`), so a non-PADI Open Water session carries
   no ratio cap. Recorded, not drifted — but still a gap. → P2-22.
-- **DOM-M5 (Medium).** The "RSTC" questionnaire is an 8-question paraphrase of the 10-box 2020 RSTC
-  form (hard contraindications buried, behavioral-health and over-45 factors absent), and
-  `questionnaireForJurisdiction` ignores its argument — `"uk"` returns the RSTC form, so the UK
-  variant the glossary promises is dead code.
+- **DOM-M5 (Medium, addressed 2026-08-05).** The former "RSTC" questionnaire was an 8-question
+  paraphrase of the 10-box form and referred every yes. The waiver now models the published
+  2026-01-01 UHMS/DMSC form, including conditional Boxes A-G and its direct-referral questions;
+  question 1 yes plus all Box A no answers clears as the source form specifies. See
+  [20260805-rstc-medical-questionnaire](../../architecture/decisions/20260805-rstc-medical-questionnaire.md).
 - **DOM-M7 (Low-Med).** The seed covers every (shop roles × trip role) combination except one: an
   **instructor rostered as a session's divemaster**. The demo shop has a single instructor, so
   seeding it would leave that session with nobody on the ratio and move seeded bookings, staffing

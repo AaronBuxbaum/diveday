@@ -116,9 +116,11 @@ source of approval work; each row here maps to the H-row that must sign it off.
 ### Waiver and signature
 
 - **Starting form shape:** liability release / assumption of risk / non-agency acknowledgement plus
-  a medical questionnaire. This follows the structure of PADI's commonly encountered digital form
-  set, not copied PADI text. The shop must use approved, jurisdiction-appropriate language before
-  it sends a real waiver.
+  the 2026 UHMS/DMSC Diver Medical Participant Questionnaire. DiveDay models its conditional
+  result exactly: questions 3, 5, and 10 (or an affirmative answer in an applicable Box or the
+  page-two dental question) require physician evaluation; a question 1 yes followed by all Box A
+  no answers is clear. The shop must still obtain the H-01/H-03 specialist sign-off before it
+  sends a real waiver.
 - **Starting signature:** typed full name, explicit agreement, timestamp, immutable template
   snapshot, and an expiring private completion link. This is a convenient electronic-consent
   baseline, not a claim of cryptographic non-repudiation or a substitute for legal advice.
@@ -129,7 +131,7 @@ source of approval work; each row here maps to the H-row that must sign it off.
 
 Sources: [PADI digital forms](https://pros-blog.padi.com/digital-forms-expand/),
 [PADI general-training release](https://pro-cms.padi.com/sites/default/files/documents/training-hub/10072_Liability_Release_v403_FF_EN.pdf),
-and [PADI diver medical questionnaire](https://www.padi.com/sites/default/files/documents/2020-08/10346E_Diver_Medical_Form.pdf).
+and the [2026 UHMS/DMSC participant questionnaire](https://uhms.org/images/Recreational-Diving-Medical-Screening-System/forms/Diver_Medical_Participant_Questionnaire_10346_EN_English_2026-01-01.pdf).
 
 ### Course admission
 
