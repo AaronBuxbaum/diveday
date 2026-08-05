@@ -55,9 +55,13 @@ made — DiveDay records the issue without spending a send. The demo seed intent
    you at.
 2. **Request SES production access** (an AWS Support case — CDK cannot do this). SES starts in
    sandbox mode, which can only send to pre-verified recipient addresses.
-3. **Mint the sender credentials**: `aws iam create-access-key --user-name diveday-ses-sender` (also
-   in the `SesSenderAccessKeyInstructions` output). Store the result only in the deploy environment's
-   secrets — never the repo.
+3. **Collect the sender credentials.** The deploy already minted them; read them out of the
+   credentials secret and take the `SES_AWS_*` lines:
+   ```bash
+   aws secretsmanager get-secret-value --secret-id diveday/env --query SecretString --output text
+   ```
+   Store them only in the deploy environment's settings — never the repo. See
+   [§10 of the infrastructure runbook](infrastructure-runbook.md#10-the-credentials-secret).
 4. Set `SES_AWS_REGION`, `SES_AWS_ACCESS_KEY_ID`, `SES_AWS_SECRET_ACCESS_KEY`, and `SES_FROM_EMAIL`. A
    friendly name is supported: `SES_FROM_EMAIL="Blue Mantis <bookings@ses.dive.day>"`.
 5. **Test it against a real inbox.** The honest test is a booking, not a curl: book a seat with your
