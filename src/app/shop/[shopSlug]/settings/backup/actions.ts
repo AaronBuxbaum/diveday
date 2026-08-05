@@ -80,7 +80,7 @@ export async function saveBackupDestinationAction(formData: FormData): Promise<v
   const { shopId, personId, shopSlug, path } = await backupContext();
   const db = await getDb();
   if (!(await canPersonExportShopData(db, shopId, personId))) {
-    redirect(`/shop/${shopSlug}/settings?notice=backup_not_authorized`);
+    redirect(`/shop/${shopSlug}?notice=backup_not_authorized`);
   }
 
   const parsed = destinationSchema.safeParse({
@@ -108,7 +108,7 @@ export async function testBackupAction(): Promise<void> {
   const { shopId, personId, shopSlug, path } = await backupContext();
   const db = await getDb();
   if (!(await canPersonExportShopData(db, shopId, personId))) {
-    redirect(`/shop/${shopSlug}/settings?notice=backup_not_authorized`);
+    redirect(`/shop/${shopSlug}?notice=backup_not_authorized`);
   }
 
   const shop = await getShopById(db, shopId);
@@ -138,7 +138,7 @@ export async function disconnectBackupAction(): Promise<void> {
   const { shopId, personId, shopSlug, path } = await backupContext();
   const db = await getDb();
   if (!(await canPersonExportShopData(db, shopId, personId))) {
-    redirect(`/shop/${shopSlug}/settings?notice=backup_not_authorized`);
+    redirect(`/shop/${shopSlug}?notice=backup_not_authorized`);
   }
   await disconnectShopBackupDestination(db, shopId);
   done(path, "disconnected");

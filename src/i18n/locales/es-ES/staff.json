@@ -2606,7 +2606,8 @@
       "teamNotAuthorized": "La gestión del equipo está limitada a propietarios y gerentes.",
       "importNotAuthorized": "La importación escribe datos personales y médicos de los buceadores, así que está limitada a propietarios y gerentes.",
       "backupNotAuthorized": "Solo un propietario o gerente puede cambiar los ajustes de respaldo.",
-      "whatsappNotAuthorized": "Solo un propietario o gerente puede cambiar los ajustes de WhatsApp."
+      "whatsappNotAuthorized": "Solo un propietario o gerente puede cambiar los ajustes de WhatsApp.",
+      "promosNotAuthorized": "Los códigos promocionales descuentan dinero real, así que están limitados a propietarios y gerentes."
     },
     "orientation": {
       "heading": "¿Recién llegado? Algunas pistas para tu puesto.",

@@ -232,9 +232,9 @@ test.describe("the calendar subscription survives the settings gate", () => {
   }) => {
     await page.goto(`/shop/${SHOP}`);
     await page.getByRole("button", { name: "Search" }).click();
-    await page.getByRole("combobox").fill("calendar");
-    await expect(
-      page.getByRole("option", { name: /Calendar subscription/i }).first(),
-    ).toBeVisible();
+    // Named, like e2e/search.spec.ts does it: the page carries more than one
+    // combobox once the palette is open, so a bare role query is ambiguous.
+    await page.getByRole("combobox", { name: /Search divers/ }).fill("calendar");
+    await expect(page.getByRole("option", { name: /Calendar subscription/i })).toBeVisible();
   });
 });

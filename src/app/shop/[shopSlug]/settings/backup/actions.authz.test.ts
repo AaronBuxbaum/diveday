@@ -80,7 +80,7 @@ describe("backup settings authorization", () => {
     signIn(shop, captain);
 
     const to = await redirectedTo(() => saveBackupDestinationAction(destinationForm()));
-    expect(to).toBe(`/shop/${shop.slug}/settings?notice=backup_not_authorized`);
+    expect(to).toBe(`/shop/${shop.slug}?notice=backup_not_authorized`);
 
     const row = await getShopBackupDestination(db, shop.id);
     expect(row?.bucket).not.toBe("captains-own-bucket");
@@ -92,10 +92,10 @@ describe("backup settings authorization", () => {
     signIn(shop, captain);
 
     await expect(redirectedTo(() => testBackupAction())).resolves.toBe(
-      `/shop/${shop.slug}/settings?notice=backup_not_authorized`,
+      `/shop/${shop.slug}?notice=backup_not_authorized`,
     );
     await expect(redirectedTo(() => disconnectBackupAction())).resolves.toBe(
-      `/shop/${shop.slug}/settings?notice=backup_not_authorized`,
+      `/shop/${shop.slug}?notice=backup_not_authorized`,
     );
   });
 
