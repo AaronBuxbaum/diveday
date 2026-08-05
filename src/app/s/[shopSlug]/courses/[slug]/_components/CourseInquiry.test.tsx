@@ -17,6 +17,8 @@ const copy: CourseInquiryCopy = {
   howManyDivers: "How many divers",
   optional: "(optional)",
   required: "(required)",
+  preferredDate: "A date you have in mind",
+  preferredDateHint: "We'll tell you if it works — nothing is booked or held yet.",
   whenSuits: "When suits you",
   whenSuitsHint: "Rough is fine.",
   whenSuitsPlaceholder: "The week of 12 August",
@@ -50,6 +52,8 @@ function renderInquiry(
       shopName="Blue Mantis Divers"
       contactEmail="hello@example.com"
       contactPhone="+1 305 555 0134"
+      locale="en-US"
+      today="2026-08-05"
       copy={copy}
     />,
   );
@@ -159,5 +163,69 @@ describe("CourseInquiry — server-recorded submission", () => {
     await waitFor(() =>
       expect(screen.getByRole("button", { name: "Send inquiry" })).toBeInTheDocument(),
     );
+  });
+});
+
+describe("CourseInquiry — proposing a date", () => {
+  it("offers a date picker that cannot reach into the past", () => {
+    renderInquiry(vi.fn());
+
+    const picker = screen.getByLabelText(/A date you have in mind/);
+    expect(picker).toHaveAttribute("type", "date");
+    // Today where the *shop* is, not where the browser is: a diver who cannot
+    // pick a day already gone never sends a request nobody can answer.
+    expect(picker).toHaveAttribute("min", "2026-08-05");
+  });
+
+  // The preview is the whole point of the composer — a diver must see the date
+  // they picked, written the way they read dates, before they send anything.
+  it("writes the picked date into the message preview in the reader's locale", () => {
+    renderInquiry(vi.fn());
+
+    fireEvent.change(screen.getByLabelText(/A date you have in mind/), {
+      target: { value: "2026-08-12" },
+    });
+
+    expect(screen.getByText(/Date I have in mind: August 12, 2026/)).toBeInTheDocument();
+  });
+
+  it("keeps the date line out of the preview until one is picked", () => {
+    renderInquiry(vi.fn());
+    expect(screen.queryByText(/Date I have in mind/)).not.toBeInTheDocument();
+  });
+
+  // The row stores a bare calendar day; the formatted string is for reading,
+  // never for the column.
+  it("posts the raw YYYY-MM-DD, not the formatted date", async () => {
+    const submitInquiry = vi.fn(async (): Promise<CourseInquiryFormState> => ({ success: true }));
+    renderInquiry(submitInquiry);
+
+    fireEvent.change(screen.getByLabelText(/A date you have in mind/), {
+      target: { value: "2026-08-12" },
+    });
+    fireEvent.change(screen.getByRole("combobox", { name: /Where you are up to/ }), {
+      target: { value: "never" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Send inquiry" }));
+
+    await waitFor(() => expect(submitInquiry).toHaveBeenCalledTimes(1));
+    const formData = submitInquiry.mock.calls[0]?.[1] as unknown as FormData;
+    expect(formData.get("preferredDate")).toBe("2026-08-12");
+  });
+
+  // A date is a *request*, not a booking: it must not become a required field,
+  // and the rest of the composer must work without it.
+  it("stays optional — an inquiry with no date still sends", async () => {
+    const submitInquiry = vi.fn(async (): Promise<CourseInquiryFormState> => ({ success: true }));
+    renderInquiry(submitInquiry);
+
+    fireEvent.change(screen.getByRole("combobox", { name: /Where you are up to/ }), {
+      target: { value: "never" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Send inquiry" }));
+
+    await waitFor(() => expect(submitInquiry).toHaveBeenCalledTimes(1));
+    const formData = submitInquiry.mock.calls[0]?.[1] as unknown as FormData;
+    expect(formData.get("preferredDate")).toBeNull();
   });
 });

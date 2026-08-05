@@ -1434,6 +1434,18 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "divers", scheme);
       });
 
+      // The roster's one view that leaves the active list behind: where a
+      // removed diver can be found and restored, once the undo toast is long
+      // gone. The demo shop removes nobody, so this photographs the view's own
+      // chrome — the chip row with "Removed" on it, the line saying what
+      // removal means, and the way back out.
+      test(`the removed-divers view renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/divers?filter=removed");
+        await page.getByRole("heading", { level: 1, name: "Divers" }).waitFor();
+        await page.getByRole("link", { name: "Removed", exact: true }).waitFor();
+        await capture(page, "divers-removed", scheme);
+      });
+
       // One diver's full profile: certs, specialty cards, contact.
       test(`a diver's record renders true to the design (${scheme})`, async ({ page }) => {
         await openDiverProfile(page, "Priya", "Priya Sharma", "PS");

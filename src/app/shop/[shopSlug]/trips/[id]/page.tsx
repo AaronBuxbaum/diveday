@@ -428,6 +428,7 @@ export default async function ManageTripPage({
           trip={trip}
           requirement={requirement}
           siteRequirement={siteRequirement}
+          siteNames={diveSites.sites.map((site) => site.name)}
           locale={locale}
         />
       ) : null}

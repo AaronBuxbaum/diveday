@@ -17,6 +17,13 @@ import { type BookingFormState, bookSpot, joinWaitlist, type TripRef } from "../
 import { BookingGearFields } from "./BookingGearFields";
 import type { Trip } from "./types";
 
+/**
+ * Why the booking was refused, rendered inside the form beside the button that
+ * was pressed — never above the form, where a party of three's worth of fields
+ * puts it off screen. The staff-side equivalent is `FormStatus`
+ * (src/components/ui/form.tsx); this one keeps the diver-facing `ShopNotice`
+ * box, which is the weight a refused *purchase* deserves.
+ */
 function ErrorNotice({ message }: { message?: string }) {
   if (!message) return null;
   return (
@@ -164,7 +171,6 @@ export function TripFullSection({
         </Link>{" "}
         {t("reefNotGoingAnywhere")}
       </p>
-      <ErrorNotice message={errorMessage} />
       <form
         action={joinWaitlist.bind(null, tripRef)}
         className="mt-6 flex flex-col gap-4 border-t border-border pt-6"
@@ -186,6 +192,7 @@ export function TripFullSection({
           >
             {t("waitlistHeading")}
           </SubmitButton>
+          <ErrorNotice message={errorMessage} />
         </div>
       </form>
       <p className="mt-4 text-sm text-muted">
@@ -307,7 +314,6 @@ export function BookSpotSection({
           <p className="mt-1 text-muted">{requirementNote}</p>
         </div>
       ) : null}
-      <ErrorNotice message={state.error ?? errorMessage} />
       {trip.course?.isIntroCourse ? (
         <p className="mt-3 rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm text-muted">
           <strong className="text-foreground">{t("giftTitle")}</strong> {t("giftBody")}
@@ -407,6 +413,11 @@ export function BookSpotSection({
           {/* The scariest hop on hotel wifi (task 19) — said once, up front,
               rather than only after the tap commits the diver to it. */}
           {payAtBooking ? <p className="mt-2 text-xs text-muted">{t("stripeHint")}</p> : null}
+          {/* The refusal used to render above the whole form — above the party
+              fields, the gear fields, and the promo box. On a phone that is
+              several thumb-scrolls from the button the diver just tapped, so a
+              refused booking read as a button that did nothing. */}
+          <ErrorNotice message={state.error ?? errorMessage} />
         </div>
         <p className="text-sm text-muted">{t("noAccountNeeded")}</p>
       </form>

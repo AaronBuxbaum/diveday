@@ -832,6 +832,13 @@ new domain concept, define it here in the same PR.
   list.
 - **Sizing** — BCDs and wetsuits are sized (XS–XXL and height/weight dependent), so a prep list
   groups by item *and* size; an unrecorded size is shown as a loose end, not silently dropped.
+- **Complete rental fit** — a fit is complete when *every piece the diver takes from the shop* has
+  the size it needs, not merely when a record exists: a diver who ticks BCD, wetsuit and weights and
+  supplies only a shoe size has an **incomplete** fit, with three loose ends. One shoe size answers
+  for both boots and fins. The one-size pieces (regulator, dive computer, GoPro) have no size to be
+  missing. "Not recorded" (nobody asked) and "incomplete" (asked, half blank) stay distinct.
+  Completeness is a prompt for staff, never a gate: it refuses nobody a seat and blocks nobody from
+  boarding.
 - **Needs staff fit** — the safe fallback when the shop can't fill a size a diver asked for (H-06):
   staff flag the diver for hands-on fitting at check-in instead of quietly packing a different
   size. The flagged diver keeps their line on the prep list — the count is what the packer loads

@@ -6,6 +6,22 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import type { FormNotice } from "@/lib/staff-notices";
 import type { Requirement, SiteRequirement, Trip } from "./types";
 
+/**
+ * The four wordings of "the site also asks for this", spelled out rather than
+ * built with a template literal so every key stays statically visible to the
+ * staff bundle's type checking.
+ */
+function siteNoteKey(kind: "trip" | "course", multipleSites: boolean) {
+  if (kind === "course") {
+    return multipleSites
+      ? ("trips.requirements.sitesAlsoRequireCourse" as const)
+      : ("trips.requirements.siteAlsoRequiresCourse" as const);
+  }
+  return multipleSites
+    ? ("trips.requirements.sitesAlsoRequire" as const)
+    : ("trips.requirements.siteAlsoRequires" as const);
+}
+
 export function RequirementsSection({
   action,
   status,
@@ -58,11 +74,8 @@ export function RequirementsSection({
    * surface where staff have no control over the gate, the gate was also
    * invisible. An AOW course dives a site marked `advanced_open_water` by
    * design, and staff could see nothing saying so.
-   */
-  /**
-   * *Which* site imposes the extra rule.
    *
-   * This used to read `trip.diveSite` — dive one's site, copied onto the trip
+   * And *which* site imposes it: this used to read `trip.diveSite` — dive one's site, copied onto the trip
    * row — while `siteRequirement` was already the union across every site the
    * trip visits. On a two-site day whose Deep gate comes from the *second*
    * tank, that named the wrong site as the source of the rule, sending staff
@@ -106,7 +119,7 @@ export function RequirementsSection({
                 })
               : t("trips.requirements.notRequiredForEnrollment")}
           </p>
-          {hasSiteRequirement ? siteNote("trips.requirements.siteAlsoRequiresCourse") : null}
+          {hasSiteRequirement ? siteNote("course") : null}
         </div>
       ) : (
         <form action={action} className="mt-4 rounded-lg border border-border bg-surface p-5">
@@ -179,7 +192,7 @@ export function RequirementsSection({
               </label>
             </div>
           </fieldset>
-          {hasSiteRequirement ? siteNote("trips.requirements.siteAlsoRequires") : null}
+          {hasSiteRequirement ? siteNote("trip") : null}
           <div className="mt-5 flex flex-wrap items-center gap-3">
             <SubmitButton
               pendingLabel={t("trips.requirements.saving")}
