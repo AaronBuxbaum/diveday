@@ -9,7 +9,8 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { UndoToast } from "@/components/UndoToast";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
+import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
+import { controlClass, Field, FieldActions, FieldGrid, FormStatus } from "@/components/ui/form";
 import { canPersonManageStaffAccounts } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
@@ -46,6 +47,16 @@ export const metadata: Metadata = { title: "Team — DiveDay" };
  * the negotiated locale rather than freezing to whichever locale first
  * imported this file.
  */
+/** Refusals about the address typed into the invite form's Email box. */
+const INVITE_EMAIL_NOTICES = new Set([
+  "invite_already_on_team",
+  "invite_email_taken",
+  "invite_email_reserved",
+]);
+
+/** The rest of what the invite form itself can say, refusals and confirmation alike. */
+const INVITE_FORM_NOTICES = new Set(["invited", "invite_invalid"]);
+
 function noticeMessages(
   t: StaffTranslator,
 ): Record<string, { tone: "success" | "danger" | "warning"; text: string }> {
@@ -264,6 +275,15 @@ export default async function TeamSettingsPage({
   const shop = await getShopById(db, session.user.shopId);
   const t = staffTranslator(await requestLocale(shop?.defaultLocale));
   const banner = noticeFromParam(notice, noticeMessages(t));
+  // An invitation's outcome belongs on the invitation form — and the three
+  // refusals that are really about one address belong on that address box.
+  // Everything else here is about the roster below (a role change, a member
+  // disabled) and keeps the page banner.
+  const inviteEmailError =
+    notice && INVITE_EMAIL_NOTICES.has(notice) ? (banner?.text ?? undefined) : undefined;
+  const inviteStatus =
+    !inviteEmailError && notice && INVITE_FORM_NOTICES.has(notice) ? banner : undefined;
+  const pageBanner = inviteEmailError || inviteStatus ? undefined : banner;
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
@@ -296,8 +316,8 @@ export default async function TeamSettingsPage({
           pendingLabel={t("shared.undoToast.pendingLabel")}
           undoLabel={t("shared.undoToast.undo")}
         />
-      ) : banner ? (
-        <StaffNoticeBanner tone={banner.tone}>{banner.text}</StaffNoticeBanner>
+      ) : pageBanner ? (
+        <StaffNoticeBanner tone={pageBanner.tone}>{pageBanner.text}</StaffNoticeBanner>
       ) : null}
 
       {/* The anchor the roster's empty state jumps to. */}
@@ -315,7 +335,7 @@ export default async function TeamSettingsPage({
               className={controlClass}
             />
           </Field>
-          <Field label={t("settings.team.invite.emailLabel")}>
+          <Field label={t("settings.team.invite.emailLabel")} error={inviteEmailError}>
             <input
               name="email"
               type="email"
@@ -335,7 +355,9 @@ export default async function TeamSettingsPage({
             >
               {t("settings.team.invite.submit")}
             </SubmitButton>
+            <FormStatus tone={inviteStatus?.tone}>{inviteStatus?.text}</FormStatus>
           </FieldActions>
+          <FieldErrorFocus key={notice} scope="invite" />
         </FieldGrid>
       </section>
 
