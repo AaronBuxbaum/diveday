@@ -3,10 +3,11 @@ import { EmptyState } from "@/components/EmptyState";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import type { TripLastMinutePromo } from "@/db/schema";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz } from "@/lib/format";
+import type { FormNotice } from "@/lib/staff-notices";
 
 const STATUS_TONE: Record<TripLastMinutePromo["status"], BadgeTone> = {
   sent: "success",
@@ -38,8 +39,16 @@ export function LastMinuteDealSection({
   promos,
   timezone,
   locale,
+  status,
   sendAction,
 }: {
+  /**
+   * What the last blast did. This section is the reason `FormStatus` exists:
+   * its action redirects to `#last-minute-deal`, which scrolls the page's own
+   * banner off the top of the screen on the way in — so the answer to "did
+   * that send?" was reliably somewhere the staffer could not see.
+   */
+  status?: FormNotice;
   /** Only used by the cancelled empty state's way out, back to the board. */
   shopSlug: string;
   eligibleCount: number;
@@ -86,6 +95,9 @@ export function LastMinuteDealSection({
           >
             {t("trips.lastMinute.sendTo", { count: eligibleCount })}
           </SubmitButton>
+          <FormStatus tone={status?.tone} className="basis-full">
+            {status?.text}
+          </FormStatus>
         </form>
       ) : (
         // Three different reasons there is no send button, each with the one

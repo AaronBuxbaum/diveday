@@ -228,8 +228,7 @@ export default async function ManageTripPage({
     ...(canConfigure && series ? ["series"] : []),
   ]);
   const lifecycleStatus = noticeForForm(tripNotice, "lifecycle");
-  const pageNotice =
-    tripNotice && sectionsOnPage.has(tripNotice.form) ? undefined : tripNotice;
+  const pageNotice = tripNotice && sectionsOnPage.has(tripNotice.form) ? undefined : tripNotice;
 
   return (
     <>

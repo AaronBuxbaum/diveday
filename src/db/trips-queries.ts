@@ -365,10 +365,7 @@ export async function tripDiveSiteSummaries(
     })
     .from(tripDives)
     .innerJoin(trips, eq(trips.id, tripDives.tripId))
-    .leftJoin(
-      diveSites,
-      and(eq(diveSites.id, tripDives.diveSiteId), eq(diveSites.shopId, shopId)),
-    )
+    .leftJoin(diveSites, and(eq(diveSites.id, tripDives.diveSiteId), eq(diveSites.shopId, shopId)))
     .where(and(inArray(tripDives.tripId, tripIds), eq(trips.shopId, shopId)))
     .orderBy(asc(tripDives.tripId), asc(tripDives.diveNumber));
 
