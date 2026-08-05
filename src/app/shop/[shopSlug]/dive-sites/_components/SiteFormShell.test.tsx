@@ -46,7 +46,7 @@ function setup(action: SiteFormAction) {
       <input id="night" type="checkbox" name="specialty" value="night" />
       <label htmlFor="nitrox">Nitrox</label>
       <input id="nitrox" type="checkbox" name="requiresNitrox" defaultChecked />
-      <button type="submit">Save site briefing</button>
+      <button type="submit">Save dive site</button>
     </SiteFormShell>,
   );
 }
@@ -68,7 +68,7 @@ describe("SiteFormShell", () => {
     await userEvent.selectOptions(screen.getByLabelText("Minimum certification"), "rescue");
     await userEvent.click(screen.getByLabelText("Wreck"));
     await userEvent.click(screen.getByLabelText("Nitrox")); // unticks the default
-    await userEvent.click(screen.getByRole("button", { name: "Save site briefing" }));
+    await userEvent.click(screen.getByRole("button", { name: "Save dive site" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Add both forecast coordinates, or leave both blank.",
@@ -93,7 +93,7 @@ describe("SiteFormShell", () => {
   it("words each refusal from its own code", async () => {
     setup(refusing("depthTooDeep"));
 
-    await userEvent.click(screen.getByRole("button", { name: "Save site briefing" }));
+    await userEvent.click(screen.getByRole("button", { name: "Save dive site" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "That maximum depth is deeper than any dive site.",

@@ -442,7 +442,7 @@ test.describe("automated accessibility scans of the staff detail surfaces", () =
     // manifest and the trip page quote from, so a field nobody can label here
     // is a field nobody fills.
     await scanStaticRoutes(page, [
-      { path: "/shop/blue-mantis/dive-sites/new", heading: "Build a dive-site briefing" },
+      { path: "/shop/blue-mantis/dive-sites/new", heading: "Add a dive site" },
     ]);
     await page.goto("/shop/blue-mantis/dive-sites", { waitUntil: "domcontentloaded" });
     await page

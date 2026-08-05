@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useActionState, useLayoutEffect, useRef } from "react";
+import { useActionState, useEffect, useLayoutEffect, useRef } from "react";
 import { ShopNotice } from "@/components/ShopPageHeader";
 import type { DiveSiteFormError, SubmittedFormValues } from "@/lib/dive-sites";
 
@@ -72,6 +72,7 @@ export function SiteFormShell({
 }) {
   const [state, formAction] = useActionState(action, IDLE_SITE_FORM_STATE);
   const formRef = useRef<HTMLFormElement>(null);
+  const statusRef = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
     const form = formRef.current;
@@ -79,16 +80,33 @@ export function SiteFormShell({
     for (const field of Array.from(form.elements)) restore(field, state.values);
   }, [state]);
 
+  // The refusal used to render *above* the form. On a twenty-field briefing
+  // that put it a full screen above the Save button the staffer had just
+  // pressed — they saw nothing happen, and scrolling back up was on them. It
+  // now renders at the end of the form, immediately after the submit button
+  // that is this form's last child, and the effect below moves focus to it so
+  // a keyboard or screen-reader user lands on the reason rather than hunting
+  // for it. See `FormStatus` (src/components/ui/form.tsx) for the rule.
+  useEffect(() => {
+    if (!state.errorCode) return;
+    const el = statusRef.current;
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    el.focus({ preventScroll: true });
+  }, [state]);
+
   return (
-    <>
+    <form ref={formRef} action={formAction} className="mt-8 flex flex-col gap-5">
+      {children}
       {state.errorCode ? (
-        <ShopNotice tone="danger" role="alert" className="mt-6">
-          {errorMessages[state.errorCode]}
-        </ShopNotice>
+        // `tabIndex={-1}` so the effect above can put the cursor here; the
+        // alert role is what announces it to a screen reader either way.
+        <div ref={statusRef} tabIndex={-1} className="outline-none">
+          <ShopNotice tone="danger" role="alert">
+            {errorMessages[state.errorCode]}
+          </ShopNotice>
+        </div>
       ) : null}
-      <form ref={formRef} action={formAction} className="mt-8 flex flex-col gap-5">
-        {children}
-      </form>
-    </>
+    </form>
   );
 }

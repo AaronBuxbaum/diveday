@@ -78,6 +78,7 @@ import { seedFrontDesk } from "./seed-front-desk";
 import { seedHistory } from "./seed-history";
 import { seedMoreTrips } from "./seed-more-trips";
 import { seedNitrox } from "./seed-nitrox";
+import { seedOrders } from "./seed-orders";
 import { seedRentalFit } from "./seed-rental-fit";
 import { seedTrips } from "./seed-trips";
 import { seedWaiverEvidence } from "./seed-waiver-evidence";
@@ -553,6 +554,14 @@ export async function seedDemoSchedule(
   // shops (see callers); on for the demo shop and the e2e fleet.
   if (opts.history !== false) {
     await seedHistory(db, shopId, instructor.id);
+    // The billing states that back-fill never produces: it invoices a paid trip
+    // fee or a paid deposit and nothing else, so "Refunded", "Void",
+    // "Uncollectible" and every retail line kind were unreachable from a shop
+    // with three hundred invoices on file. A dozen standalone counter orders
+    // fill them in (src/db/seed-orders.ts). Rides with the history flag because
+    // it is the same "what has this shop billed" story, and because the lean
+    // unit-test template is deliberately order-free.
+    await seedOrders(db, shopId, { customers, createdByPersonId: instructor.id });
   }
 
   // Last on purpose, unlike every other step above. This one only *adds* — four

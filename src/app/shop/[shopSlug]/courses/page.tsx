@@ -7,14 +7,16 @@ import { Pager } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { canPersonConfigureTrips } from "@/db/authz";
 import { getDb } from "@/db/client";
-import { pagedCourses, setCourseVisibility } from "@/db/courses";
+import { courseAgencies, pagedCourses, setCourseVisibility } from "@/db/courses";
 import { getShopBySlug } from "@/db/shops";
 import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { publicCoursePath } from "@/lib/public-routes";
 import { requireStaffSession } from "@/lib/session";
+import { AgencyTabs } from "./_components/AgencyTabs";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately. It is not a claim that the route has a static shell: the staff
@@ -68,6 +70,26 @@ function EyeIcon() {
   );
 }
 
+/** A calendar with a plus — schedules a session of this course. */
+function CalendarPlusIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.75}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="size-5"
+    >
+      <path d="M8 2v4M16 2v4M3 10h18" />
+      <path d="M21 13V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h7" />
+      <path d="M16 19h6M19 16v6" />
+    </svg>
+  );
+}
+
 /** A chain link — shown next to the eye toggle to jump to the course's live preview page. */
 function LinkIcon() {
   return (
@@ -100,12 +122,12 @@ export default async function CoursesPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; agency?: string }>;
 }) {
   await connection(); // visibility can change between requests — render per request
-  await requireStaffSession();
+  const session = await requireStaffSession();
   const { shopSlug } = await params;
-  const { page } = await searchParams;
+  const { page, agency } = await searchParams;
   const db = await getDb();
   const shop = await getShopBySlug(db, shopSlug);
   if (!shop) notFound();
@@ -125,29 +147,55 @@ export default async function CoursesPage({
     revalidatePath(`/shop/${staff.user.shopSlug}/courses`);
   }
 
+  const agencies = await courseAgencies(db, shop.id);
+  // An unknown `?agency=` reads as no filter rather than as an empty catalog:
+  // the value is attacker- (and typo-) supplied, and a roster that silently
+  // shows nothing is indistinguishable from a shop that has no courses.
+  const selectedAgency = agency && agencies.includes(agency) ? agency : null;
+
   // A non-numeric or missing `?page=` reads as page 1; the query clamps it into
   // range so a bookmarked page past the end lands on the last real one.
-  const coursePage = await pagedCourses(db, shop.id, { page: Number.parseInt(page ?? "", 10) });
+  const coursePage = await pagedCourses(db, shop.id, {
+    page: Number.parseInt(page ?? "", 10),
+    ...(selectedAgency ? { agency: selectedAgency } : {}),
+  });
   const courseList = coursePage.courses;
+  // Scheduling is owner/manager/instructor work, so the button is absent — not
+  // disabled — for anyone else (AGENTS.md: gate by not rendering). The
+  // new-trip page re-checks against live roles either way.
+  const canSchedule = await canPersonConfigureTrips(db, shop.id, session.user.personId);
   const base = `/shop/${shopSlug}/courses`;
-  const pageHref = (target: number) => (target > 1 ? `${base}?page=${target}` : base);
+  const withParams = (params: Record<string, string>) => {
+    const query = new URLSearchParams(params).toString();
+    return query ? `${base}?${query}` : base;
+  };
+  // A tab change drops `?page=`: page 3 of the whole catalog is rarely page 3
+  // of one agency's half, and landing on an empty page reads as a broken tab.
+  const agencyHref = (target: string | null) => withParams(target ? { agency: target } : {});
+  const pageHref = (target: number) =>
+    withParams({
+      ...(selectedAgency ? { agency: selectedAgency } : {}),
+      ...(target > 1 ? { page: String(target) } : {}),
+    });
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <ShopPageHeader
         eyebrow={st("courses.list.eyebrow")}
         title={st("courses.list.title")}
         description={st("courses.list.description")}
-        actions={
-          <Link
-            href={`/shop/${shopSlug}/courses/paths`}
-            className={buttonClass({ variant: "secondary" })}
-          >
-            {st("courses.list.certificationPaths")}
-          </Link>
-        }
       />
 
-      <ul className="mt-8 divide-y divide-border overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
+      <AgencyTabs
+        agencies={agencies}
+        current={selectedAgency}
+        hrefFor={agencyHref}
+        copy={{ label: st("courses.list.agencyTabsLabel"), all: st("courses.list.allAgencies") }}
+      />
+
+      {/* Progression order, not alphabetical: the list reads the way a shop
+          teaches — a taster, then the entry certification, then everything it
+          opens (src/db/courses.ts `progressionOrder`). */}
+      <ul className="mt-6 divide-y divide-border overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
         {courseList.map((course) => (
           <li
             key={course.id}
@@ -158,9 +206,6 @@ export default async function CoursesPage({
             <div className="min-w-0 flex-1">
               <span className="flex flex-wrap items-center gap-2">
                 <span className="font-semibold text-foreground">{course.title}</span>
-                <span className="rounded-full bg-surface-sunken px-2 py-0.5 text-xs font-semibold tracking-wider text-muted uppercase">
-                  {course.agency}
-                </span>
                 {course.isActive ? null : (
                   <span className="rounded-full bg-surface-sunken px-2 py-0.5 text-xs font-semibold text-muted">
                     {st("courses.list.hidden")}
@@ -182,6 +227,22 @@ export default async function CoursesPage({
               >
                 {st("courses.list.edit")}
               </Link>
+              {/* The catalog's whole point is that a course gets taught. This
+                  hands the existing new-trip form (`?course=` preselects the
+                  course and shapes the title) the one fact staff would
+                  otherwise re-pick from a dropdown — never a second
+                  trip-creation path of its own. */}
+              {canSchedule ? (
+                <Link
+                  href={`/shop/${shopSlug}/trips/new?course=${course.id}`}
+                  className={buttonClass({ variant: "ghost", size: "sm", className: "px-2" })}
+                >
+                  <CalendarPlusIcon />
+                  <span className="sr-only">
+                    {st("courses.list.scheduleSrLabel", { title: course.title })}
+                  </span>
+                </Link>
+              ) : null}
               <form action={visibilityAction}>
                 <input type="hidden" name="courseId" value={course.id} />
                 <input type="hidden" name="visible" value={course.isActive ? "false" : "true"} />

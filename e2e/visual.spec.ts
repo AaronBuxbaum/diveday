@@ -1968,8 +1968,8 @@ for (const scheme of ["light", "dark"] as const) {
           // (returned to the form now, not a `?error=images` redirect).
           await page.getByLabel(/Site photo URLs/).fill("");
           await page.getByLabel(/Maximum depth/).fill(meters);
-          await page.getByRole("button", { name: "Save briefing" }).click();
-          await page.getByText("Site briefing saved.").waitFor();
+          await page.getByRole("button", { name: "Save dive site" }).click();
+          await page.getByText("Dive site saved.").waitFor();
         };
         try {
           await setDepth("32");

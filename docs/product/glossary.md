@@ -313,18 +313,30 @@ new domain concept, define it here in the same PR.
   or failed lifecycle, byte count, object key, and a coded failure reason the settings page
   translates. At most one *succeeded scheduled* delivery exists per shop per ISO week — that is the
   cron's idempotency rule — and a failed week's retry is simply the next weekly run.
-- **Dive-site briefing** — a reusable, shop-owned description of one dive location: its map or
-  route imagery, point-of-interest landmarks, visual field guide, and local context. A trip can
-  attach one briefing to each of up to four ordered dives; a blank dive is still a valid part of a
-  two-tank plan when the crew has not chosen the final site. Dated conditions remain on the trip,
-  not the reusable site.
-  In the interface there is exactly one word for the thing staff pick — **dive site** — and
-  *briefing* names only the content a site carries. The two are the same row in
-  `dive_sites`, so a picker labelled "Dive briefing" beside a nav tab labelled "Dive sites"
-  read as two different concepts and made a two-tank day look like "one dive site, two dive
-  briefings". Every picker, every label, and every empty state says "dive site"; "briefing"
-  survives where briefing content is actually being written or read (the site editor's
-  "Underwater briefing", the diver-facing per-dive cards).
+- **Dive site** — a **place**, saved once in the shop's own library (`dive_sites`) and reused by
+  every trip that goes there: map or route imagery, point-of-interest landmarks, visual field
+  guide, depth, local context, and the site's own certification demands. Evergreen by
+  construction — a site entry never carries a date, because *dated* conditions (water
+  temperature, visibility, surface state) belong to the charter that sailed, not to the reef.
+  A shop's library is at Dive sites; DiveDay's published starting points are the **common-site
+  catalog**, and importing one makes an independent copy the shop then owns.
+- **Dive briefing** — what a diver reads (and the crew says) about **one tank on one dated trip**:
+  the `trip_dives` row, rendered from the site's saved notes plus whatever the crew wrote for that
+  particular dive. There is one briefing per *planned dive*, so a two-tank trip always has two —
+  and it may visit two sites, the same site twice, or one site with the second tank still open.
+  **"One dive site, two dive briefings" is therefore a normal, correct state**, not a mismatch: it
+  is a two-tank day whose second site the crew has not chosen yet, and every surface that shows it
+  says so in those words (`summarizeTripDiveSites`, `src/lib/trip-dives.ts` — one answer, shared by
+  the public schedule card, the staff trip page, and the per-dive cards on the booking page).
+  A blank dive is a deliberate published plan, never missing data.
+
+  Two rules keep the pair legible. **The interface has exactly one word for the thing staff pick —
+  *dive site*** — so every picker, label, and empty state in the library says that, and *briefing*
+  survives only where briefing content is written or read (the site editor's "Underwater
+  briefing", the diver-facing per-dive cards). And **no surface answers "where does this trip go"
+  from `trips.dive_site_id`**: that column is dive one's site copied onto the trip row for the
+  forecast point and the calendar feed's location, so reading it named one site for a two-site day
+  and named *none* on the day whose open tank happened to be the first one.
 - **Predicted conditions** — crew-entered expectations for one dated charter, such as water
   temperature, visibility, and surface state. It is a briefing rather than a live guarantee;
   the crew makes the final go/no-go call.

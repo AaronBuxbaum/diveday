@@ -1,4 +1,4 @@
-import { and, asc, count, eq } from "drizzle-orm";
+import { and, asc, count, desc, eq, sql } from "drizzle-orm";
 import type { CourseContent } from "@/lib/courses";
 import { courseSlug } from "@/lib/courses";
 import type { CertificationLevel } from "@/lib/readiness";
@@ -179,11 +179,14 @@ export type CoursePage = {
 
 /**
  * The staff roster's own paginated view of {@link listCourses} — same scope
- * (full catalog, hidden entries included) and sort (agency, then title,
- * which is unique per shop and so doubles as a stable tiebreak), just one
- * page at a time. Every other caller of `listCourses`/`listActiveCourses`
- * needs the complete set for a dropdown or picker and must keep calling
- * those, not this.
+ * (full catalog, hidden entries included) and the same progression sort, just
+ * one page at a time, and optionally narrowed to one agency by the roster's
+ * tabs. Every other caller of `listCourses`/`listActiveCourses` needs the
+ * complete set for a dropdown or picker and must keep calling those, not this.
+ *
+ * `scope` is built once and used by **both** the count and the row query: a
+ * count taken over a wider scope than the rows would promise pages that render
+ * nothing (AGENTS.md, one-pagination-model).
  *
  * Offset-paged, like the roster and the orders index. It was a forward-only
  * keyset cursor, which meant a staffer three pages into a large catalog had
@@ -194,9 +197,11 @@ export type CoursePage = {
 export async function pagedCourses(
   db: AppDb,
   shopId: string,
-  options: { page?: number; limit?: number } = {},
+  options: { page?: number; limit?: number; agency?: string } = {},
 ): Promise<CoursePage> {
-  const scope = eq(courses.shopId, shopId);
+  const scope = options.agency
+    ? and(eq(courses.shopId, shopId), eq(courses.agency, options.agency))
+    : eq(courses.shopId, shopId);
 
   const paged = await offsetPage({
     page: options.page,
@@ -210,7 +215,7 @@ export async function pagedCourses(
         .select()
         .from(courses)
         .where(scope)
-        .orderBy(asc(courses.agency), asc(courses.title))
+        .orderBy(...progressionOrder)
         .limit(limit)
         .offset(offset),
   });
