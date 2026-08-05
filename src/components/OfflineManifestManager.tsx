@@ -1,10 +1,11 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { ConnectivityStatus } from "@/components/ConnectivityStatus";
 import { buttonClass } from "@/components/ui/button";
 import { fill, pluralForm } from "@/i18n/fill";
+import { requestBackgroundFlush } from "@/lib/background-flush";
 import { formatDateTimeTz } from "@/lib/format";
 import {
   loadOfflineManifest,
@@ -61,11 +62,18 @@ export function OfflineManifestManager({
   payload,
   locale,
   copy,
+  pushOptIn,
 }: {
   payload: OfflineManifestPayload;
   /** Negotiated request locale (see requestLocale) — never hard-coded, per AGENTS.md. */
   locale: string;
   copy: OfflineManifestManagerCopy;
+  /**
+   * The Web Push opt-in, passed as a slot rather than rendered here: it is a
+   * server-composed element carrying server actions, and this is a Client
+   * Component. Optional so every other caller and every test is unaffected.
+   */
+  pushOptIn?: ReactNode;
 }) {
   const router = useRouter();
   const tripId = payload.manifests[0]?.trip.id ?? "";
@@ -103,7 +111,16 @@ export function OfflineManifestManager({
   const manualRefreshPending = useRef(false);
 
   const runReconcileOnce = useCallback(async () => {
-    if (!tripId || !navigator.onLine) return;
+    if (!tripId) return;
+    // Offline, or a reconcile that could not reach the server: hand the flush
+    // to Background Sync so it happens when signal returns *even if this page
+    // is gone by then* (ADR 20260804-manifest-web-push). Without this, roll
+    // call recorded at sea waits for somebody to reopen DiveDay — and those
+    // events are the record of who came back aboard.
+    if (!navigator.onLine) {
+      await requestBackgroundFlush();
+      return;
+    }
     const pendingBefore = lastPendingCount.current;
     const rejectedBefore = lastRejectedCount.current;
     try {
@@ -146,6 +163,9 @@ export function OfflineManifestManager({
       // failure mode here is "couldn't reach the server," which the one
       // fallback string already says.
       setMessage(copy.reconcileErrorFallback);
+      // Same reasoning as the offline branch above: a failed flush is exactly
+      // what Background Sync is for, and this page may not be here to retry.
+      await requestBackgroundFlush();
     }
   }, [router, tripId, copy]);
 
@@ -366,6 +386,26 @@ export function OfflineManifestManager({
     };
   }, [tripId, refresh]);
 
+  // Third trigger — see ADR 20260804-manifest-web-push. A Web Push wakes the
+  // service worker even when this page is frozen, and the worker forwards it
+  // here. When the page is merely hidden on an awake device this refreshes with
+  // no tap at all; when the page was evicted entirely there is nothing to
+  // receive it, and the notification the worker showed is what brings the
+  // captain back. The worker deliberately never writes the snapshot itself —
+  // this line is why it doesn't have to.
+  useEffect(() => {
+    if (!tripId || typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;
+    const onMessage = (event: MessageEvent) => {
+      if (event.data?.type !== "MANIFEST_CHANGED") return;
+      // A device can hold subscriptions for more than one trip; only the page
+      // whose trip changed should refresh.
+      if (event.data.tripId && event.data.tripId !== tripId) return;
+      if (navigator.onLine) refresh({ manual: false });
+    };
+    navigator.serviceWorker.addEventListener("message", onMessage);
+    return () => navigator.serviceWorker.removeEventListener("message", onMessage);
+  }, [tripId, refresh]);
+
   const pending = saved?.events.filter((event) => event.syncStatus === "pending").length ?? 0;
   const rejected = saved?.events.filter((event) => event.syncStatus === "rejected").length ?? 0;
   const freshness = saved ? offlineManifestFreshness(new Date(saved.snapshot.savedAt)) : null;
@@ -448,6 +488,7 @@ export function OfflineManifestManager({
           ) : null}
         </div>
       </div>
+      {pushOptIn}
     </section>
   );
 }

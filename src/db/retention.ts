@@ -13,6 +13,7 @@ import {
   activityEvents,
   bookingPaymentEvents,
   notificationDeliveryAttempts,
+  pushSubscriptions,
   stripeWebhookEvents,
 } from "./schema";
 
@@ -190,6 +191,23 @@ export async function pruneExpiredRecords(
           .where(lt(bookingPaymentEvents.occurredAt, cutoff("booking_payment_events")))
           .limit(PRUNE_BATCH_LIMIT),
       (ids) => db.delete(bookingPaymentEvents).where(inArray(bookingPaymentEvents.id, ids)),
+    ),
+  );
+
+  // Device push credentials (ADR 20260804-manifest-web-push). Pruned by
+  // `created_at` rather than by the trip's departure: the row's whole value is
+  // short-lived, and keying on its own age means a subscription whose trip was
+  // moved, deleted, or never sailed is still bounded.
+  outcomes.push(
+    await pruneBatch(
+      "push_subscriptions",
+      () =>
+        db
+          .select({ id: pushSubscriptions.id })
+          .from(pushSubscriptions)
+          .where(lt(pushSubscriptions.createdAt, cutoff("push_subscriptions")))
+          .limit(PRUNE_BATCH_LIMIT),
+      (ids) => db.delete(pushSubscriptions).where(inArray(pushSubscriptions.id, ids)),
     ),
   );
 

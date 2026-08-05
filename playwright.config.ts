@@ -63,6 +63,18 @@ const serverEnv = {
   // servers hold only seeded demo data. Without it the page correctly refuses
   // to save, and the flow has nothing to exercise.
   SECRET_ENCRYPTION_KEY: "ZGl2ZWRheS1lMmUtZW5jcnlwdGlvbi1rZXktMzJieXQ=",
+  // Same reasoning as SECRET_ENCRYPTION_KEY above: fixed, non-secret values so
+  // the manifest's Web Push opt-in renders at all (ADR
+  // 20260804-manifest-web-push — the control hides itself when the server has
+  // no keys, which would otherwise make it invisible to both the e2e spec and
+  // the visual capture). A real key pair is never needed here: no test sends a
+  // push, and DIVEDAY_DISABLE_EXTERNAL_HTTP blocks the attempt regardless. The
+  // public key is a valid 65-byte P-256 point in base64url so the browser's own
+  // `applicationServerKey` parsing is exercised rather than short-circuited.
+  VAPID_PUBLIC_KEY:
+    "BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U",
+  VAPID_PRIVATE_KEY: "UUxI4O8-FbRouAevSmBQ6o18hgE4nSG3qwvJTfKc-ls",
+  VAPID_SUBJECT: "mailto:e2e@dive.day",
   NEXT_TELEMETRY_DISABLED: "1",
   // `next start` loads `.env.local` itself (via `@next/env`) before this
   // config ever runs, and `...process.env` above only reflects this CLI

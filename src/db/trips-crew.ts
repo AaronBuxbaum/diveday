@@ -3,6 +3,7 @@ import { STAFF_ROLES } from "@/lib/authz";
 import { countInWaterCrew, type TripCrewRole } from "@/lib/crew-roles";
 import { reviewManifestChange } from "@/lib/manifest-change-review";
 import type { AppDb, DbExecutor } from "./client";
+import { publishManifestEvent } from "./manifest-events";
 import {
   people,
   personRoles,
@@ -151,7 +152,7 @@ export async function setTripCrew(
     staff.some((s) => s.person.id === crewInputPersonId(entry)),
   );
   const valid = requested.map(crewInputPersonId);
-  return db.transaction(async (tx) => {
+  const changed = await db.transaction(async (tx) => {
     const [trip] = await tx
       .select({
         id: trips.id,
@@ -272,6 +273,13 @@ export async function setTripCrew(
     }
     return true;
   });
+  // Who is crewing is on the manifest, so a swap is a manifest change (ADR
+  // 20260804-manifest-web-push). Outside the transaction above, and only on a
+  // real change: this fans out to a push service, and a refused assignment
+  // (unknown staff, a scheduling conflict) changed nothing worth waking a
+  // phone for.
+  if (changed) await publishManifestEvent(db, shopId, tripId);
+  return changed;
 }
 
 export type TripCrewChange = {

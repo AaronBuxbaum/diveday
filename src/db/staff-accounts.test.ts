@@ -1,9 +1,11 @@
 import { and, eq, ne } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { upcomingTripsWithCounts } from "@/db/trips";
 import type { Role } from "@/lib/authz";
 import { seededShopContext } from "@/test/db";
 import type { AppDb } from "./client";
-import { people, personRoles, shops, userAccounts } from "./schema";
+import { savePushSubscription } from "./push-subscriptions";
+import { people, personRoles, pushSubscriptions, shops, userAccounts } from "./schema";
 import {
   inviteStaffMember,
   listShopStaff,
@@ -314,6 +316,40 @@ describe("setStaffAccountStatus", () => {
 });
 
 describe("removeStaffMember", () => {
+  it("revokes the leaver's push subscriptions, which a disabled account does not reach", async () => {
+    // The `people` row deliberately survives a removal, so the subscription's
+    // ON DELETE CASCADE never fires, and the send path filters on shop and trip
+    // rather than on who still works here. Without an explicit delete a
+    // departed divemaster's phone keeps being told a boat's manifest changed
+    // after their login stopped working (ADR 20260804-manifest-web-push).
+    const { db, shop } = await seededShopContext();
+    const staff = await makeStaff(db, shop.id, ["crew"]);
+    const trips = await upcomingTripsWithCounts(db, shop.id);
+    const trip = trips[0];
+    if (!trip) throw new Error("expected a seeded trip");
+    await savePushSubscription(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      personId: staff.personId,
+      endpoint: "https://fcm.googleapis.com/fcm/send/leaver-device",
+      p256dh: "p",
+      auth: "a",
+    });
+
+    await removeStaffMember(db, {
+      shopId: shop.id,
+      personId: staff.personId,
+      userAccountId: staff.userAccountId,
+    });
+
+    expect(
+      await db
+        .select()
+        .from(pushSubscriptions)
+        .where(eq(pushSubscriptions.personId, staff.personId)),
+    ).toHaveLength(0);
+  });
+
   it("strips staff roles and disables the account, leaving a diver role in place", async () => {
     const { db, shop } = await seededShopContext();
     const staff = await makeStaff(db, shop.id, ["crew"]);

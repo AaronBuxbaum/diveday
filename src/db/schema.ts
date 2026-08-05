@@ -3696,6 +3696,59 @@ export const dayCloseouts = pgTable(
   ],
 );
 
+/**
+ * One row per device that opted in to Web Push for one trip's roll call — the
+ * third refresh trigger, for a phone that is asleep and can therefore serve
+ * neither the SSE stream nor the interval (ADR 20260804-manifest-web-push).
+ *
+ * Per-trip by design, not per-shop: the subscription expires with the trip it
+ * names, which is why there is no separate expiry job for the common case.
+ * The departure window is deliberately *not* denormalized here — it is read
+ * from the live trip row at send time (src/lib/push-window.ts), because a copy
+ * taken at subscribe time could not follow a trip that moved.
+ *
+ * `endpoint`, `p256dh` and `auth` together are a device credential: anyone
+ * holding them can push to that device. They are never returned to a client
+ * and never logged.
+ */
+export const pushSubscriptions = pgTable(
+  "push_subscriptions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    tripId: uuid("trip_id")
+      .notNull()
+      .references(() => trips.id, { onDelete: "cascade" }),
+    /** The staff member who opted this device in, so a leaver's devices can be dropped. */
+    personId: uuid("person_id")
+      .notNull()
+      .references(() => people.id, { onDelete: "cascade" }),
+    /** The push service's URL for this device. Unique: re-subscribing updates in place. */
+    endpoint: text("endpoint").notNull(),
+    p256dh: text("p256dh").notNull(),
+    auth: text("auth").notNull(),
+    /**
+     * Drives the coalescing window in SQL rather than in process memory, which
+     * would not survive a serverless invocation. Null until the first push.
+     */
+    lastPushedAt: timestamp("last_pushed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    // A device has at most one subscription per trip, and re-subscribing (the
+    // browser can rotate an endpoint at any time) upserts rather than piling up
+    // rows that would each push the same phone.
+    uniqueIndex("push_subscriptions_endpoint_trip_unique").on(table.endpoint, table.tripId),
+    // The send path's only read: this trip's subscribers, filtered on the
+    // coalescing window.
+    index("push_subscriptions_trip_pushed_idx").on(table.tripId, table.lastPushedAt),
+    // Retention prunes by age, across shops.
+    index("push_subscriptions_created_at_idx").on(table.createdAt),
+  ],
+);
+
 export type Shop = typeof shops.$inferSelect;
 export type Person = typeof people.$inferSelect;
 export type Trip = typeof trips.$inferSelect;
@@ -3761,3 +3814,5 @@ export type PaymentOperationStatus = (typeof paymentOperationStatus.enumValues)[
 export type TripBlowout = typeof tripBlowouts.$inferSelect;
 export type TripBlowoutDiver = typeof tripBlowoutDivers.$inferSelect;
 export type BlowoutMessageStatus = (typeof blowoutMessageStatus.enumValues)[number];
+
+export type PushSubscription = typeof pushSubscriptions.$inferSelect;

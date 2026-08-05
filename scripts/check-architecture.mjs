@@ -59,6 +59,12 @@ export const forbidden = [
   { root: "src/db", banned: ["src/app", "src/features"] },
   { root: "src/features", banned: ["src/app"] },
   { root: "src/components", banned: ["src/app", "src/features"] },
+  // The service worker is a fourth composition root (ADR
+  // 20260804-manifest-web-push): it is compiled separately and imports the
+  // domain layer directly, so it sits beside `src/app` rather than under it.
+  // Listed for the same reason ARCH-2 listed components and i18n — a root that
+  // floats under no rule is one nobody notices growing an upward import.
+  { root: "src/worker", banned: ["src/app", "src/features", "src/components"] },
   { root: "src/i18n", banned: ["src/app", "src/features", "src/components"] },
 ];
 

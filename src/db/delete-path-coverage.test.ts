@@ -114,6 +114,7 @@ const RESET_KEEPS: Record<string, string> = {
   // `ON DELETE CASCADE`, so Postgres clears it when the booking goes. Naming it
   // in the ordering would be dead code that reads like a safety measure.
   booking_payment_events: "ON DELETE CASCADE from bookings clears it",
+  push_subscriptions: "ON DELETE CASCADE from trips clears it",
 };
 
 /**
@@ -141,6 +142,7 @@ const RESET_PERSON_SCOPED: Record<string, string> = {
  */
 const CASCADE_KEEPS: Record<string, string> = {
   booking_payment_events: "ON DELETE CASCADE from bookings clears it",
+  push_subscriptions: "ON DELETE CASCADE from trips clears it",
 };
 
 describe("shop-scoped delete-path coverage", () => {

@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import { Client } from "pg";
 import type { AppDb } from "./client";
 import { withExplicitSslMode } from "./connection-string";
+import { pushManifestChanged } from "./push-subscriptions";
 
 export type ManifestEvent = { shopId: string; tripId: string };
 type Listener = ManifestEvent & { onEvent: () => void };
@@ -157,4 +158,13 @@ export async function publishManifestEvent(
   } catch {
     // Best-effort by design — see docblock above.
   }
+  // Web Push rides the same seam rather than each of this function's call
+  // sites remembering to send one (ADR 20260804-manifest-web-push). It reaches
+  // the devices the NOTIFY above cannot: a phone whose page is frozen has no
+  // SSE stream to deliver into. Awaited, not fire-and-forget, because a
+  // serverless invocation can be frozen the moment its response is returned —
+  // an un-awaited push would simply not be sent. It swallows its own failures,
+  // and its own coalescing window is what keeps a burst of writes from
+  // becoming a burst of notifications.
+  await pushManifestChanged(db, shopId, tripId);
 }
