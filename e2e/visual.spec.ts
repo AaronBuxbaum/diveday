@@ -294,10 +294,28 @@ const PAINT_BUDGET_MS = PAINT_STALL_MS + FONTS_STALL_MS;
  * ceiling) landed just past the total and surfaced as a test timeout inside
  * `page.screenshot` rather than as the four warnings it should read as.
  *
- * That is the failure `main` has been throwing intermittently on a different
- * capture and a different shard each run — most recently `/pricing` (light,
- * shard 1) and a diver's record (dark, shard 3). Not a knob widened for one
- * slow test: the sum was under-counted, and it is counted here.
+ * Not a knob widened for one slow test: the sum was under-counted, and it is
+ * counted here.
+ *
+ * **This corrects the ceiling; it does not stop renderers wedging.** Worth
+ * being exact, because the first version of this comment claimed otherwise. A
+ * wedge was observed on three consecutive runs of one branch — `/pricing`
+ * (light, shard 1), a diver's record (dark, shard 3), the schedule board
+ * (dark, shard 3) — and re-running the *same commit* came back clean, so it is
+ * non-deterministic and unattributed. `main`'s four runs either side of those
+ * carried no wedge warning at all, which is the opposite of what
+ * 20260804's bound (fa51f893) recorded at the time it was written; whatever
+ * makes a renderer stop answering here comes and goes.
+ *
+ * What is still true is fa51f893's goal, and it is still unmet: a wedge costs
+ * the whole test rather than one shot, because `page.screenshot` cannot return
+ * on a renderer that has stopped answering, and a failed shard uploads no
+ * screenshots — so one stuck page still costs the run every other surface's
+ * comparison. Closing that means giving up on the surface once the probe says
+ * "wedged" instead of spending the budget on operations that cannot complete.
+ * Deliberately not done here: it changes what a wedge *produces* (a missing
+ * shot rather than a failed shard), and that is a call for whoever owns this
+ * harness, not a drive-by in a UI branch.
  */
 const STALL_PROBES_PER_VIEWPORT = 2;
 const STALL_PROBE_BUDGET_MS = RENDERER_PROBE_MS * STALL_PROBES_PER_VIEWPORT * VIEWPORTS.length;
