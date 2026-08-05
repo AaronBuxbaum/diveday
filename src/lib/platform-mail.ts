@@ -19,3 +19,23 @@ export const UPGRADE_EMAIL = "onboarding@dive.day";
 
 /** Where operational alerts (new signups, error monitoring) land — not diver- or shop-facing. */
 export const ALERT_EMAIL = "alerts@dive.day";
+
+/**
+ * The address an operational alert is actually addressed to.
+ *
+ * `ALERT_EMAIL` is the mailbox *this* deployment ships with; `OPS_ALERT_EMAIL`
+ * overrides it so a staging deploy, a fork, or a self-hosted instance points
+ * its own inbox at its own signups instead of mailing DiveDay's founder about
+ * shops that aren't ours. Read through the function rather than the constant at
+ * every alerting call site, so the override can never be honoured on one path
+ * and missed on another.
+ *
+ * Server-only in practice — every caller is a server action — and the env
+ * argument is injectable the same way `notificationProviderFromEnvironment`
+ * takes one, so the fallback is testable without stubbing globals.
+ */
+export function alertRecipient(
+  env: Readonly<Record<string, string | undefined>> = process.env,
+): string {
+  return env.OPS_ALERT_EMAIL?.trim() || ALERT_EMAIL;
+}

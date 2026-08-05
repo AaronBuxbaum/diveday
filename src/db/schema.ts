@@ -440,66 +440,11 @@ export const courses = pgTable(
   ],
 );
 
-/**
- * An ordered progression through the shop's own catalog — "Open Water →
- * Advanced → Rescue", "Wreck specialist", "From zero to Divemaster".
- *
- * A path is guidance, never a gate: admission to any single course is still
- * decided by that course's `minimum_certification_level`, and nothing here
- * grants or withholds a seat. What the path adds is the shop's own answer to
- * "what should I do next?", which the app previously guessed by string-matching
- * a course title for "advanced open water".
+/*
+ * `course_paths` / `course_path_steps` were dropped here — the shop-built
+ * certification progression is gone, catalog order carries what it said
+ * (ADR 20260805-remove-certification-paths).
  */
-export const coursePaths = pgTable(
-  "course_paths",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    shopId: uuid("shop_id")
-      .notNull()
-      .references(() => shops.id),
-    title: text("title").notNull(),
-    /** URL segment under /courses/paths/, shop-scoped like `courses.slug`. */
-    slug: text("slug").notNull(),
-    /** One diver-facing line under the title; the courses carry the detail. */
-    summary: text("summary"),
-    /** Same single switch as a course: offered, or hidden from divers. */
-    isActive: boolean("is_active").notNull().default(true),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  },
-  (table) => [
-    uniqueIndex("course_paths_shop_title_unique").on(table.shopId, table.title),
-    uniqueIndex("course_paths_shop_slug_unique").on(table.shopId, table.slug),
-    index("course_paths_shop_active_idx").on(table.shopId, table.isActive),
-  ],
-);
-
-/**
- * One rung of a path, pointing at a course in the same shop's catalog.
- *
- * `position` is dense and 0-based, and the whole step list is rewritten as a
- * unit on every save (src/db/course-paths.ts) — reordering a path is not a
- * sequence of per-row swaps that could leave a gap or a duplicate behind.
- * Both unique indexes hold because that rewrite happens inside one transaction.
- */
-export const coursePathSteps = pgTable(
-  "course_path_steps",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    pathId: uuid("path_id")
-      .notNull()
-      .references(() => coursePaths.id, { onDelete: "cascade" }),
-    courseId: uuid("course_id")
-      .notNull()
-      .references(() => courses.id, { onDelete: "cascade" }),
-    position: integer("position").notNull(),
-    /** Why this rung, in the shop's words — "most divers wait a season here". */
-    note: text("note"),
-  },
-  (table) => [
-    uniqueIndex("course_path_steps_path_position_unique").on(table.pathId, table.position),
-    uniqueIndex("course_path_steps_path_course_unique").on(table.pathId, table.courseId),
-  ],
-);
 
 /**
  * The one question that changes what the shop replies with — enrollment,
@@ -558,6 +503,18 @@ export const courseInquiries = pgTable(
     experienceLevel: courseInquiryExperience("experience_level").notNull(),
     /** Free prose — "the week of 12 August", "any weekend in the autumn". */
     timing: text("timing"),
+    /**
+     * One date the diver asked for, when they picked one — a calendar day in
+     * the shop's own timezone, so `mode: "string"` (a `YYYY-MM-DD` value with
+     * no instant attached, like `people.date_of_birth`). Never a booking and
+     * never a hold: no seat exists on it, nothing is checked against the
+     * schedule, and the shop answers in its own words. It sits beside `timing`
+     * rather than replacing it because the two answer different questions — a
+     * diver who can only say "any weekend in the autumn" is still telling the
+     * shop something, and one who names 12 August should not have to type it
+     * as prose for the desk to re-read.
+     */
+    preferredDate: date("preferred_date", { mode: "string" }),
     /** How many people, including the writer; null when left blank. */
     divers: integer("divers"),
     message: text("message"),

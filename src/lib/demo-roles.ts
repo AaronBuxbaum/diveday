@@ -6,7 +6,9 @@ import type { DiverMessageKey } from "@/i18n/messages";
  * demo tenant) and the landing page's pre-entry role picker, so the roster
  * can never drift between "switch to" and "enter as."
  */
-export type DemoRoleId = "owner" | "instructor" | "divemaster" | "captain" | "diver";
+export const DEMO_ROLE_IDS = ["owner", "instructor", "divemaster", "captain", "diver"] as const;
+
+export type DemoRoleId = (typeof DEMO_ROLE_IDS)[number];
 
 /** Data (icon/sample name), not copy — the words come from the `demo` message namespace. */
 export const DEMO_ROLE_META: { id: DemoRoleId; icon: string; name: string }[] = [

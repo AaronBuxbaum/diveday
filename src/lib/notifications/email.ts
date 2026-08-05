@@ -3,6 +3,7 @@ import { diverTranslator } from "@/i18n/messages";
 import { reminderActionText } from "@/i18n/reminder-labels";
 import type { DiverLocale } from "@/i18n/settings";
 import { COURSE_INQUIRY_EXPERIENCE_KEYS, type CourseInquiryExperience } from "@/lib/course-inquiry";
+import type { DemoRoleId } from "@/lib/demo-roles";
 import { formatDateTimeTz, formatShortDate, formatTime, formatTimeRangeTz } from "@/lib/format";
 import { escapeHtml } from "@/lib/html";
 import type { ReminderActionCode } from "@/lib/readiness-summary";
@@ -659,6 +660,33 @@ export function newAccountAlertEmail(input: NewAccountAlertEmailInput): Notifica
     subject: `New shop: ${input.shopName}`,
     text: `${input.ownerName} (${input.ownerEmail}) just created "${input.shopName}" (/shop/${input.shopSlug}).\n`,
     html: `<p><strong>${owner}</strong> (${email}) just created <strong>${shop}</strong> (<code>/shop/${slug}</code>).</p>`,
+  };
+}
+
+type DemoStartedAlertEmailInput = {
+  shopSlug: string;
+  role: DemoRoleId;
+  source: string;
+};
+
+/**
+ * Internal, English, and deliberately anonymous — the demo half of the same
+ * founder alert `newAccountAlertEmail` sends for a trial (docs ADR
+ * 20260805-demo-try-alerts). There is nobody to address: a demo visitor never
+ * identifies themselves, so this names the throwaway shop, the role they looked
+ * through, and the marketing page that sent them, and nothing else. Every value
+ * is still escaped, because `shopSlug` and `source` reach here as strings even
+ * though both are generated or registry-clamped upstream.
+ */
+export function demoStartedAlertEmail(input: DemoStartedAlertEmailInput): NotificationEmail {
+  const slug = escapeHtml(input.shopSlug);
+  const role = escapeHtml(input.role);
+  const source = escapeHtml(input.source);
+
+  return {
+    subject: `Demo tried: ${input.role} (from ${input.source})`,
+    text: `Somebody opened the live demo as ${input.role}, from ${input.source}. Their shop is /shop/${input.shopSlug}.\n`,
+    html: `<p>Somebody opened the live demo as <strong>${role}</strong>, from <strong>${source}</strong>. Their shop is <code>/shop/${slug}</code>.</p>`,
   };
 }
 

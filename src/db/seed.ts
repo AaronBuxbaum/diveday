@@ -19,7 +19,6 @@ import {
   calendarFeeds,
   certifications,
   courseInquiries,
-  coursePaths,
   courses,
   dayCloseouts,
   diveSiteCreatures,
@@ -715,13 +714,10 @@ export async function resetDemoSchedule(
   await db.delete(diveSiteMoments).where(eq(diveSiteMoments.shopId, shopId));
   await db.delete(diveSiteCreatures).where(eq(diveSiteCreatures.shopId, shopId));
   await db.delete(diveSites).where(eq(diveSites.shopId, shopId));
-  // Paths first: their steps cascade from either side, but a path row itself
-  // is only shop-scoped, so deleting courses alone would strand it. A course
-  // inquiry references its course without cascade (a lead is evidence, not
-  // something a schedule reset should silently vanish), so it must go before
-  // the courses delete or this FK-violates and aborts the whole reset mid-run
-  // — the same class of bug the comment above already walks.
-  await db.delete(coursePaths).where(eq(coursePaths.shopId, shopId));
+  // A course inquiry references its course without cascade (a lead is
+  // evidence, not something a schedule reset should silently vanish), so it
+  // must go before the courses delete or this FK-violates and aborts the whole
+  // reset mid-run — the same class of bug the comment above already walks.
   await db.delete(courseInquiries).where(eq(courseInquiries.shopId, shopId));
   await db.delete(courses).where(eq(courses.shopId, shopId));
   await db.delete(certifications).where(eq(certifications.shopId, shopId));

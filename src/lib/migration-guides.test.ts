@@ -22,7 +22,7 @@ describe("migration guides", () => {
     expect(MIGRATION_GUIDE_SLUGS).toEqual(MIGRATION_GUIDES.map((g) => g.slug));
     // EVE ships first, and the named incumbents from the strategy are all present.
     expect(MIGRATION_GUIDE_SLUGS[0]).toBe("eve");
-    for (const slug of ["eve", "diveshop360", "diveadmin", "smartwaiver", "fareharbor", "rezdy"]) {
+    for (const slug of ["eve", "diveshop360", "smartwaiver", "fareharbor", "rezdy"]) {
       expect(MIGRATION_GUIDE_SLUGS).toContain(slug);
     }
   });
@@ -54,7 +54,7 @@ describe("migration guides", () => {
       expect(en(coexist.bridgeNote).trim().length).toBeGreaterThan(0);
       expect(en(coexist.replace.body).trim().length).toBeGreaterThan(0);
     }
-    for (const slug of ["eve", "diveshop360", "diveadmin", "smartwaiver"]) {
+    for (const slug of ["eve", "diveshop360", "smartwaiver"]) {
       expect(getMigrationGuide(slug)?.coexist).toBeUndefined();
     }
   });

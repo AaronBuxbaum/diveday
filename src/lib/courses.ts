@@ -94,42 +94,6 @@ export function sanitizeScheduleDays(raw: unknown): CourseScheduleDay[] | null {
   return days;
 }
 
-/**
- * Caps enforced both here and by the path builder's "Add a course" control, so
- * a save can never build a path the server would reject. Thirty rungs is far
- * past any real progression — it exists to bound the payload, not to shape it.
- */
-export const MAX_PATH_STEPS = 30;
-
-/** One rung as the builder serializes it: a catalog course id and the shop's note. */
-export type CoursePathStepDraft = { courseId: string; note: string };
-
-const pathStepInputSchema = z.object({
-  courseId: z.uuid(),
-  note: z.string().max(200).optional().default(""),
-});
-
-/**
- * Normalizes the path builder's serialized state (one JSON-encoded array in a
- * hidden field) into ordered step drafts. Returns null on malformed input —
- * anything that is not an array of `{courseId, note}` — so a save fails loudly
- * rather than silently dropping a shop's rungs. Duplicate courses collapse to
- * their first appearance; the database's `(path_id, course_id)` unique index
- * says the same thing, and collapsing here keeps the error out of the shop's face.
- */
-export function sanitizePathSteps(raw: unknown): CoursePathStepDraft[] | null {
-  const parsed = z.array(pathStepInputSchema).max(MAX_PATH_STEPS).safeParse(raw);
-  if (!parsed.success) return null;
-  const seen = new Set<string>();
-  const steps: CoursePathStepDraft[] = [];
-  for (const step of parsed.data) {
-    if (seen.has(step.courseId)) continue;
-    seen.add(step.courseId);
-    steps.push({ courseId: step.courseId, note: step.note.trim() });
-  }
-  return steps;
-}
-
 export type CourseFaq = { question: string; answer: string };
 
 /**
@@ -168,6 +132,11 @@ export type CourseContent = {
  * `/s/**` and take it out of the auth gate entirely. Both that pattern's
  * negative lookahead and slug minting below refuse these words, so the two
  * halves cannot drift apart.
+ *
+ * `paths` stays on the list after ADR 20260805-remove-certification-paths
+ * removed the builder that used it: the word is retired, not freed. A course
+ * minted at that slug would start capturing the redirect for every bookmark
+ * and printed link still pointing at the old builder.
  */
 export const RESERVED_COURSE_SEGMENTS = new Set(["catalog", "new", "paths"]);
 

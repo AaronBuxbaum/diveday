@@ -69,7 +69,28 @@ export function formatMoneyCents(cents: number, currency = "usd", locale = "en-U
   }).format(minorToMajor(cents, currency));
 }
 
-export function formatShortDate(date: Date, locale = "en-US", timeZone?: string): string {
+/**
+ * `timeZone` is **required** on every date/time formatter in this file, and
+ * that is the whole point rather than an inconvenience.
+ *
+ * Timestamps are stored as UTC instants and rendered in the shop's own zone
+ * (`shops.timezone`) — see docs/architecture/overview.md. When `timeZone` was
+ * optional, omitting it did not fail: `Intl.DateTimeFormat` silently falls back
+ * to the *host* zone, which in production and CI is **UTC**. A missed argument
+ * therefore rendered a 7:30 AM Key Largo departure as "11:30 AM" — plausible
+ * enough to ship, wrong enough to put a diver on the dock four hours late, and
+ * invisible to every test running on a UTC box (which is all of them).
+ *
+ * Making the parameter required converts that silent mis-render into a compile
+ * error, which is the only enforcement that scales: the invariant spans ~143
+ * call sites across pages, emails, SMS, and the calendar feed, and no reviewer
+ * reliably notices a third argument that isn't there. Callers with a shop row
+ * in hand pass `shop.timezone`; a genuinely zone-free value (a date-only
+ * calendar date, a wall-clock time of day) belongs in `src/lib/calendar-date.ts`
+ * or `formatScheduleDayTime`, which format through a fixed UTC reference on
+ * purpose — not here with the argument dropped.
+ */
+export function formatShortDate(date: Date, locale = "en-US", timeZone: string): string {
   return cachedFormatter("dt", Intl.DateTimeFormat, locale, {
     weekday: "short",
     month: "short",
@@ -78,7 +99,7 @@ export function formatShortDate(date: Date, locale = "en-US", timeZone?: string)
   }).format(date);
 }
 
-export function formatTime(date: Date, locale = "en-US", timeZone?: string): string {
+export function formatTime(date: Date, locale = "en-US", timeZone: string): string {
   return cachedFormatter("dt", Intl.DateTimeFormat, locale, {
     hour: "numeric",
     minute: "2-digit",
@@ -109,7 +130,7 @@ export function formatByteSize(bytes: number, locale = "en-US"): string {
 }
 
 /** Operational timestamp with an explicit timezone — use for signed evidence and safety events. */
-export function formatDateTimeTz(date: Date, locale = "en-US", timeZone?: string): string {
+export function formatDateTimeTz(date: Date, locale = "en-US", timeZone: string): string {
   return cachedFormatter("dt", Intl.DateTimeFormat, locale, {
     month: "short",
     day: "numeric",
@@ -125,7 +146,7 @@ export function formatTimeRange(
   start: Date,
   end: Date,
   locale = "en-US",
-  timeZone?: string,
+  timeZone: string,
 ): string {
   return `${formatTime(start, locale, timeZone)} – ${formatTime(end, locale, timeZone)}`;
 }
@@ -139,7 +160,7 @@ export function formatTimeRangeTz(
   start: Date,
   end: Date,
   locale = "en-US",
-  timeZone?: string,
+  timeZone: string,
 ): string {
   const endWithZone = cachedFormatter("dt", Intl.DateTimeFormat, locale, {
     hour: "numeric",
@@ -151,7 +172,7 @@ export function formatTimeRangeTz(
 }
 
 /** The calendar day a date falls on in a given timezone, as a UTC-midnight instant — for day-granularity diffs, never for display. */
-function calendarDayMs(date: Date, timeZone?: string): number {
+function calendarDayMs(date: Date, timeZone: string): number {
   const iso = cachedFormatter("dt", Intl.DateTimeFormat, "en-CA", {
     timeZone,
     year: "numeric",
@@ -174,7 +195,7 @@ export function formatRelativeDay(
   date: Date,
   now: Date,
   locale = "en-US",
-  timeZone?: string,
+  timeZone: string,
 ): string {
   const diffDays = Math.round(
     (calendarDayMs(date, timeZone) - calendarDayMs(now, timeZone)) / 86_400_000,

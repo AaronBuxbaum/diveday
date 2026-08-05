@@ -147,6 +147,100 @@ export function shopOffersNitrox(rentalItems: readonly string[]): boolean {
 }
 
 /**
+ * The pieces of a fit that have a **size to record**, in canonical order.
+ *
+ * `regulator`, `dive_computer` and `gopro` are deliberately absent: they are
+ * one-size gear with no `rental_fit_profiles` size column, so renting one can
+ * never leave a fit half-filled. `boots` has no checkbox of its own — it rides
+ * along with the wetsuit (`src/lib/dive-prep.ts`), so a suit with no shoe size
+ * is as much of a loose end as a suit with no suit size.
+ *
+ * Same union `statedSizeItems` in `dive-prep.ts` already speaks, so a surface
+ * can render both through `src/i18n/rental-labels.ts` without a second map.
+ */
+export const SIZED_RENTAL_KINDS = ["bcd", "wetsuit", "boots", "mask_fins", "weights"] as const;
+
+export type SizedRentalKind = (typeof SIZED_RENTAL_KINDS)[number];
+
+/**
+ * The half of a stored fit this file reasons about: what the diver rents, and
+ * the sizes recorded against it. Declared structurally rather than imported
+ * from `src/db`, which `src/lib` may not reach — a `rental_fit_profiles` row
+ * satisfies it as-is.
+ */
+export type RentalFitSizes = {
+  rentsBcd: boolean;
+  rentsWetsuit: boolean;
+  rentsMaskFins: boolean;
+  rentsWeights: boolean;
+  bcdSize: string | null;
+  wetsuitSize: string | null;
+  bootSize: string | null;
+  finSize: string | null;
+  weightPreference: string | null;
+};
+
+/**
+ * Whether a diver's fit is actually usable, as a **code** — never a word.
+ *
+ * `not_recorded` and `incomplete` are deliberately different facts: nobody has
+ * asked this diver anything, versus somebody asked and half of it is still
+ * blank. The surface picks the words (`src/i18n/rental-labels.ts`).
+ */
+export type RentalFitCompleteness =
+  | { state: "not_recorded" }
+  | { state: "complete" }
+  | { state: "incomplete"; missing: SizedRentalKind[] };
+
+/** Blank, whitespace, and absent are the same thing: no size on file. */
+function recorded(value: string | null | undefined): boolean {
+  return Boolean(value?.trim());
+}
+
+/**
+ * **A fit is complete when every item the diver rents has the size it needs.**
+ *
+ * The old rule was "is there a row?", which called a diver who ticked BCD,
+ * wetsuit and weights and then typed one fin size *complete* — the record read
+ * "Saved" at the counter while three of the four things they'd be handed on the
+ * dock had no size against them. A fit is a size record (glossary — **Rental
+ * fit**), so the question it answers is per item, not per row.
+ *
+ * The shoe size counts once: `bootSize` and `finSize` are one answer in every
+ * capture form (one field, written to both columns — see `RentalFit.tsx`), so
+ * either one satisfies both the wetsuit's boots and the mask/fins.
+ *
+ * `offeredKinds` is the shop's own catalog. A fit predating a shop dropping an
+ * item from what it rents must not nag forever about a size nobody can be
+ * handed; passing the catalog scopes the question to gear the shop still has.
+ * Omit it and every item counts.
+ *
+ * This is a *readiness-of-the-record* signal for staff, never a boarding gate:
+ * nothing here refuses anyone a seat or a place on a manifest.
+ */
+export function rentalFitCompleteness(
+  fit: RentalFitSizes | null | undefined,
+  offeredKinds?: readonly string[],
+): RentalFitCompleteness {
+  if (!fit) return { state: "not_recorded" };
+  const offered = offeredKinds ? new Set<string>(toRentableKinds(offeredKinds)) : null;
+  const offers = (kind: RentableItemKind) => offered === null || offered.has(kind);
+  // One shoe size answers for both boots and fins, whichever column holds it.
+  const shoeSize = fit.finSize ?? fit.bootSize ?? null;
+  const required: { kind: SizedRentalKind; rented: boolean; value: string | null }[] = [
+    { kind: "bcd", rented: fit.rentsBcd && offers("bcd"), value: fit.bcdSize },
+    { kind: "wetsuit", rented: fit.rentsWetsuit && offers("wetsuit"), value: fit.wetsuitSize },
+    { kind: "boots", rented: fit.rentsWetsuit && offers("wetsuit"), value: shoeSize },
+    { kind: "mask_fins", rented: fit.rentsMaskFins && offers("mask_fins"), value: shoeSize },
+    { kind: "weights", rented: fit.rentsWeights && offers("weights"), value: fit.weightPreference },
+  ];
+  const missing = required
+    .filter((item) => item.rented && !recorded(item.value))
+    .map((item) => item.kind);
+  return missing.length === 0 ? { state: "complete" } : { state: "incomplete", missing };
+}
+
+/**
  * The core kit that makes up a "set", including the dive computer (H-06,
  * reconfirmed 2026-08-02 — HD-9). A shop usually prices these six as one
  * cheaper bundle; a diver who takes all of them is quoted the set. A diver

@@ -1,13 +1,12 @@
 import { eq } from "drizzle-orm";
 import { courseSlug } from "@/lib/courses";
 import type { DbExecutor } from "./client";
-import { insertCoursePath } from "./course-paths";
 import { COURSE_TEMPLATES } from "./course-templates";
 import { courses } from "./schema";
 
 /**
- * What the shop teaches: its course catalog, the page content each course
- * starts from, and the certification paths that string them into a progression.
+ * What the shop teaches: its course catalog and the page content each course
+ * starts from.
  *
  * The catalog's `minimumCertificationLevel` is the admission rule every course
  * session snapshots at creation, so the baselines here are what later gate a
@@ -182,41 +181,6 @@ export async function seedCatalog(db: DbExecutor, shopId: string) {
   }
   const openWaterCourse = courseRows.find((course) => course.title === "Open Water Diver");
   const courseIdByTitle = new Map(courseRows.map((course) => [course.title, course.id]));
-
-  // Two certification paths, because a shop that has built only one never
-  // discovers that the builder reorders and that a course can sit on more than
-  // one path. The ladder is what a diver asks for at the counter; the wreck
-  // path is the one the shop actually sells in the Keys.
-  const seededPaths: Array<{ title: string; summary: string; steps: string[] }> = [
-    {
-      title: "From first breath to Rescue Diver",
-      // i18n-exempt: shop-editable seed content (course path summary), not app UI copy
-      summary: "A first taste, then the three cards, in the order we teach them.",
-      steps: [
-        "Discover Scuba Diving",
-        "Open Water Diver",
-        "Advanced Open Water Diver",
-        "Rescue Diver",
-      ],
-    },
-    {
-      title: "Wreck diver",
-      // i18n-exempt: shop-editable seed content (course path summary), not app UI copy
-      summary: "Everything the Spiegel Grove and the Duane ask of you.",
-      steps: ["Advanced Open Water Diver", "Nitrox Diver", "Deep Diver", "Wreck Diver"],
-    },
-  ];
-  for (const path of seededPaths) {
-    await insertCoursePath(db, {
-      shopId,
-      title: path.title,
-      summary: path.summary,
-      steps: path.steps
-        .map((title) => courseIdByTitle.get(title))
-        .filter((id): id is string => Boolean(id))
-        .map((courseId) => ({ courseId })),
-    });
-  }
 
   return { courseRows, discoverCourse, openWaterCourse, courseIdByTitle };
 }

@@ -7,6 +7,7 @@ import {
   useId,
 } from "react";
 import { currencyFractionDigits, currencySymbol, maxPriceMajor, minorToMajor } from "@/lib/money";
+import { type NoticeTone, noticeRole } from "@/lib/staff-notices";
 
 /**
  * Canonical form primitives.
@@ -69,6 +70,7 @@ type ControlProps = {
   id?: string;
   required?: boolean;
   "aria-describedby"?: string;
+  "aria-invalid"?: boolean | "true" | "false";
 };
 
 /** Native form-control tags `Field` will clone an id/aria-describedby onto. */
@@ -107,6 +109,7 @@ export function Field({
   hint,
   aside,
   description,
+  error,
   htmlFor,
   className = "",
   children,
@@ -128,12 +131,27 @@ export function Field({
   aside?: ReactNode;
   /** Longer helper text rendered under the control, referenced via `aria-describedby`. */
   description?: ReactNode;
+  /**
+   * Why *this field* was refused, in the shop's language — rendered under the
+   * control in a `role="alert"` region, and wired onto the control itself as
+   * `aria-invalid` plus an `aria-describedby` reference. Pass a falsy value
+   * when the field is fine; nothing renders and nothing is wired.
+   *
+   * This is the field half of the rule that a refusal belongs where the work
+   * is, not in a banner at the top of the page (`FormStatus` is the form half).
+   * Before it existed, every surface that wanted a per-field message hand-rolled
+   * the id/`aria-describedby`/`aria-invalid` triple at the call site — twice
+   * over in `BookingPartyFields`/`BookingSections`, and not at all anywhere
+   * else, which is how a twenty-field editor ended up with one generic banner.
+   */
+  error?: ReactNode;
   htmlFor?: string;
   className?: string;
   children: ReactNode;
 }) {
   const autoId = useId();
   const descriptionId = description ? `${autoId}-description` : undefined;
+  const errorId = error ? `${autoId}-error` : undefined;
   // A native form-control tag specifically, not just any single element — a
   // wrapping <div> (e.g. an input plus a "$" prefix, or a select plus its own
   // button) is also `isValidElement`, and cloning the auto id/aria-describedby
@@ -170,6 +188,16 @@ export function Field({
       {description}
     </span>
   ) : null;
+  // `role="alert"` on the message itself rather than an always-mounted wrapper:
+  // every refusal in this app arrives by a fresh render (a server redirect, or
+  // a `useActionState` update), so the node is *inserted* carrying its text,
+  // which is what an alert region announces. Same shape as `ImageFileInput`'s
+  // client-side refusal, so both sound identical.
+  const errorSpan = error ? (
+    <span id={errorId} role="alert" className="text-xs font-medium text-danger">
+      {error}
+    </span>
+  ) : null;
 
   if (!isControl) {
     // No single control element to clone an id/aria-describedby onto — fall
@@ -186,6 +214,7 @@ export function Field({
         <span className="grid content-start gap-1">
           {children}
           {descriptionSpan}
+          {errorSpan}
         </span>
       </label>
     );
@@ -194,7 +223,12 @@ export function Field({
   const control = cloneElement(children, {
     id: controlId,
     "aria-describedby":
-      [children.props["aria-describedby"], descriptionId].filter(Boolean).join(" ") || undefined,
+      [children.props["aria-describedby"], descriptionId, errorId].filter(Boolean).join(" ") ||
+      undefined,
+    // Never *clear* a caller's own `aria-invalid` — a field can be invalid for
+    // a reason this `Field` was not told about (a client-side check that owns
+    // the attribute itself), so an absent `error` leaves whatever it set.
+    "aria-invalid": error ? "true" : children.props["aria-invalid"],
   });
 
   return (
@@ -213,6 +247,7 @@ export function Field({
       <span className="grid content-start gap-1">
         {control}
         {descriptionSpan}
+        {errorSpan}
       </span>
     </div>
   );
@@ -228,6 +263,77 @@ export function FieldActions({
 }) {
   return (
     <div className={`col-span-full flex flex-wrap items-center gap-3 ${className}`}>{children}</div>
+  );
+}
+
+const STATUS_TONE: Record<NoticeTone, string> = {
+  success: "text-success",
+  danger: "text-danger",
+  warning: "text-warning",
+  neutral: "text-muted",
+};
+
+/**
+ * Decorative tone glyph — the same vocabulary and the same reasoning as
+ * `ShopNotice`'s (src/components/ShopPageHeader.tsx): a tone carried only by
+ * hue is a tone a colourblind scan misses before it reaches the words.
+ */
+const STATUS_GLYPH: Record<NoticeTone, string | null> = {
+  success: "✓",
+  danger: "✕",
+  warning: "▲",
+  neutral: null,
+};
+
+/**
+ * How a form says what happened, **where the form is**.
+ *
+ * Staff surfaces here overwhelmingly answer a save by redirecting back with a
+ * `?notice=` code, which one page-level banner under the `<h1>` then resolves.
+ * That reads fine on a one-form page and badly everywhere else: the trip
+ * Overview alone has six independent forms down a long page, so saving the
+ * requirements block — or being refused by it — put the answer somewhere the
+ * staffer had scrolled past minutes ago. Worse, the last-minute-deal refusal
+ * redirects to `#last-minute-deal`, which *scrolls the banner off screen* on
+ * the way in.
+ *
+ * `FormStatus` is the fix, and it is deliberately not another banner: it is one
+ * line of tone-coloured text that lives in the form's own action row, beside
+ * the button that was just pressed. The rule it encodes:
+ *
+ * - a **form-level** outcome (this save was refused, this save worked) renders
+ *   here, adjacent to the submit control;
+ * - a **field-level** refusal renders on the field, via `Field`'s `error` prop;
+ * - the page-level banner is left for things that are genuinely about the page
+ *   rather than about one form — a permission refusal that bounced the staffer
+ *   here from somewhere else, say.
+ *
+ * `role` follows the shared tone→role rule (`noticeRole`): a refusal is an
+ * `alert`, a confirmation is a `status`. Nothing renders when there is no
+ * message, so a form's action row keeps its exact resting layout.
+ */
+export function FormStatus({
+  tone = "danger",
+  id,
+  className = "",
+  children,
+}: {
+  tone?: NoticeTone;
+  id?: string;
+  className?: string;
+  children?: ReactNode;
+}) {
+  if (!children) return null;
+  const glyph = STATUS_GLYPH[tone];
+  return (
+    <p
+      id={id}
+      role={noticeRole(tone)}
+      className={`flex items-baseline gap-1.5 text-sm font-medium ${STATUS_TONE[tone]} ${className}`}
+    >
+      {glyph ? <span aria-hidden="true">{glyph}</span> : null}
+      <span>{children}</span>
+    </p>
   );
 }
 

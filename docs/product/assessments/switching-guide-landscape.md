@@ -28,7 +28,8 @@ verdict:
   `coexist` block (see [fareharbor-positioning.md](fareharbor-positioning.md)). Shipped: FareHarbor,
   Rezdy.
 - **Leave-it (records systems)** — dive-specific or POS systems that hold the shop's people/certs;
-  the play is to help the shop move off. Shipped: EVE, DiveShop360, DiveAdmin, Smartwaiver.
+  the play is to help the shop move off. Shipped: EVE, DiveShop360, Smartwaiver. (A DiveAdmin
+  guide shipped 2026-07-23 and was retired 2026-08-05 — too little market share to earn the page.)
 
 ## Category A — booking channels (coexist-capable)
 

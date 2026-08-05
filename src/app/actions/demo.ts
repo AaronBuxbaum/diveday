@@ -2,9 +2,11 @@
 
 import { and, eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { AuthError } from "next-auth";
 import type { DbExecutor } from "@/db/client";
 import { getDb } from "@/db/client";
+import { sendNotification } from "@/db/notifications";
 import { people, personRoles } from "@/db/schema";
 import { createDemoShop, resetDemoSchedule } from "@/db/seed";
 import { getShopById, getShopBySlug } from "@/db/shops";
@@ -12,7 +14,8 @@ import { trackEvent } from "@/lib/analytics";
 import { auth, signIn, signOut } from "@/lib/auth";
 import { DEMO_BYPASS_PASSWORD } from "@/lib/credentials";
 import type { DemoRoleId } from "@/lib/demo-roles";
-import { eventSource } from "@/lib/funnel";
+import { eventSource, type FunnelSource } from "@/lib/funnel";
+import { alertRecipient } from "@/lib/platform-mail";
 import { publicSchedulePath } from "@/lib/public-routes";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
@@ -79,6 +82,52 @@ async function findDemoRoleEmail(
 }
 
 /**
+ * Tell the outside world one visitor tried the demo: the typed funnel event,
+ * and the founder's alert mail (docs ADR 20260805-demo-try-alerts).
+ *
+ * Exported for its test, and separate from `enterDemoAction` for one reason —
+ * **every failure in here is swallowed.** It runs inside `after()`, so a throw
+ * would surface as an unhandled rejection in the server logs long after the
+ * visitor is already in their demo, and nothing it does is worth a single
+ * failed entry. Telemetry and alerting observe the flow; they are never part
+ * of it.
+ *
+ * Nothing personal crosses either boundary. The visitor is anonymous by
+ * definition here — no session, no account, nothing typed — and the three
+ * values carried out are the throwaway shop's slug, the role button pressed,
+ * and a funnel tag already clamped to the closed `FunnelSource` registry.
+ */
+export async function announceDemoEntry(input: {
+  slug: string;
+  role: DemoRoleId;
+  source: FunnelSource | "unknown";
+}): Promise<void> {
+  const { slug, role, source } = input;
+  // `trackEvent` swallows its own provider failures; this only has to survive
+  // whatever the alert below does.
+  await trackEvent({ name: "demo_entered", source, role });
+
+  try {
+    const db = await getDb();
+    // The alert needs the minted shop's row id: `notification_send_queue` FKs
+    // to it, which is what lets a retryable failure be durable and what lets
+    // the 7-day reaper clear the row along with the shop it belongs to.
+    const shop = await getShopBySlug(db, slug);
+    if (!shop) return;
+    await sendNotification(db, {
+      kind: "demo_started_alert",
+      shopId: shop.id,
+      to: alertRecipient(),
+      shopSlug: slug,
+      role,
+      source,
+    });
+  } catch (error) {
+    console.error("announceDemoEntry: demo alert failed", error);
+  }
+}
+
+/**
  * One-click into the demo: mint a fresh, disposable demo shop with a generated
  * identity, then sign the visitor in and land on the view their role picked
  * (`role`, one of `DemoRoleId` — owner when the form sends none, the primary
@@ -89,7 +138,7 @@ async function findDemoRoleEmail(
  */
 export async function enterDemoAction(formData?: FormData) {
   const role = requestedDemoRole(formData);
-  await trackEvent({ name: "demo_entered", source: eventSource(formData?.get("source")), role });
+  const source = eventSource(formData?.get("source"));
 
   // Each demo mints a whole seeded shop, so throttle per IP — the reaper bounds
   // total growth, this bounds the burst one visitor can drive.
@@ -115,6 +164,15 @@ export async function enterDemoAction(formData?: FormData) {
   }
   if (!minted) redirect("/sign-in?error=1");
   const { slug, ownerEmail } = minted;
+
+  // Only now is the demo *entered*: the mint succeeded and this visitor has a
+  // shop to look at. Counting it at the top of the action instead — where it
+  // used to be — booked a throttled visitor and a failed mint as entries, which
+  // is the one thing a funnel number must never do (it inflates the numerator
+  // of every demo-to-trial ratio read off it). Deferred with after() for the
+  // same reason the trial half is (src/app/onboard/actions.ts): a redirect the
+  // visitor is waiting on must not queue behind a telemetry or mail round trip.
+  after(() => announceDemoEntry({ slug, role, source }));
 
   // The diver pick previews the customer view — the public schedule needs no
   // sign-in at all, so it skips straight there instead of minting a session.

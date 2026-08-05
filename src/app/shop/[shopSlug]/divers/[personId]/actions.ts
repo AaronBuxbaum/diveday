@@ -11,7 +11,7 @@ import {
   loadActiveStaffRoles,
 } from "@/db/authz";
 import { getDb } from "@/db/client";
-import { deleteDiver, getDiverProfile, updateDiver } from "@/db/divers";
+import { deleteDiver, getDiverProfile, restoreDiver, updateDiver } from "@/db/divers";
 import {
   archiveNitroxCertification,
   createNitroxCertification,
@@ -447,6 +447,35 @@ export async function deletePersonAction(shopSlug: string, personId: string, _fo
 }
 
 /**
+ * Put a removed diver back on the active roster, from their own record.
+ *
+ * The roster has its own copy of this bound to the undo toast; this is the one
+ * that still works tomorrow, once the toast is long gone and the only way back
+ * is the `?filter=removed` view and the record it links to. Same owner/manager
+ * gate as the removal it reverses (H-14, ADR 20260724-role-authorization),
+ * re-read from the database like every other mutation on this page.
+ *
+ * `restoreDiver` refuses rather than clobbers when an active diver has since
+ * claimed this one's email (CR-008), and refuses an erased record outright —
+ * both land here as `restore-refused`, which says what to do about it.
+ */
+export async function restorePersonAction(
+  shopSlug: string,
+  personId: string,
+  _formData: FormData,
+) {
+  const base = `/shop/${shopSlug}/divers/${personId}`;
+  const staff = await requireStaffSession();
+  const db = await getDb();
+  if (!(await canPersonDeleteDiver(db, staff.user.shopId, staff.user.personId))) {
+    revalidateAndRedirect(base, `${base}?notice=not-authorized-delete`);
+    return;
+  }
+  const restored = await restoreDiver(db, staff.user.shopId, personId);
+  revalidateAndRedirect(base, `${base}?notice=${restored ? "restored" : "restore-refused"}`);
+}
+
+/**
  * Erase a diver's personal and medical data (ADR 20260802-diver-data-erasure).
  *
  * Unlike removal, this cannot be undone and there is no notice offering to undo
@@ -464,7 +493,10 @@ export async function erasePersonAction(shopSlug: string, personId: string, form
     revalidateAndRedirect(base, `${base}?notice=not-authorized-erase`);
     return;
   }
-  const profile = await getDiverProfile(db, staff.user.shopId, personId);
+  // `includeRemoved`: a diver already off the active roster is exactly who an
+  // erasure request tends to name, and without this the name check reads null
+  // and reports a mismatch against a record that is right there on screen.
+  const profile = await getDiverProfile(db, staff.user.shopId, personId, { includeRemoved: true });
   const typed = String(formData.get("confirmName") ?? "").trim();
   if (!profile || typed.toLowerCase() !== profile.person.fullName.trim().toLowerCase()) {
     revalidateAndRedirect(base, `${base}?notice=erase-name-mismatch`);

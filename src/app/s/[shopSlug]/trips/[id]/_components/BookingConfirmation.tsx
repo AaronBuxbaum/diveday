@@ -7,7 +7,7 @@ import { diverTranslator } from "@/i18n/messages";
 import { checklistCategoryText, checklistDetailText } from "@/i18n/readiness-summary-labels";
 import { formatMoneyCents, formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
-import { publicCoursePath, publicSchedulePath } from "@/lib/public-routes";
+import { publicSchedulePath } from "@/lib/public-routes";
 import { buildDiverChecklist, nextDiverStep } from "@/lib/readiness-summary";
 import {
   payForBooking,
@@ -109,7 +109,6 @@ export function BookingConfirmation({
   payment,
   payCancelled,
   readinessLink,
-  progression,
   emailsOnTheWay,
   partySeats,
 }: {
@@ -129,15 +128,6 @@ export function BookingConfirmation({
   payCancelled: boolean;
   /** Null when no readiness capability could be issued (e.g. no canonical origin configured). */
   readinessLink: string | null;
-  /**
-   * The next rung of one of the shop's own certification paths, or null when
-   * the shop has not built a path that reaches this diver. Never a guess — see
-   * `nextPathStep` in src/db/course-paths.ts.
-   */
-  progression: {
-    path: { title: string };
-    step: { note: string | null; course: { title: string; slug: string } };
-  } | null;
   /**
    * True only when this booking's confirmation email *and* its waiver-link
    * email both actually went out. A walk-in party member with no address of
@@ -212,27 +202,6 @@ export function BookingConfirmation({
         payRef={fitRef}
         locale={locale}
       />
-
-      {progression ? (
-        <aside className="mt-4 rounded-lg border border-primary/30 bg-primary/5 p-4">
-          <p className="text-xs font-semibold tracking-widest text-primary uppercase">
-            {progression.path.title}
-          </p>
-          <h3 className="mt-1 font-semibold">{t("booking.goDeeperHeading")}</h3>
-          <p className="mt-1 text-sm text-muted">
-            {t("booking.goDeeperBody", { course: progression.step.course.title })}
-          </p>
-          {progression.step.note ? (
-            <p className="mt-1 text-sm text-muted italic">{progression.step.note}</p>
-          ) : null}
-          <Link
-            href={publicCoursePath(shopSlug, progression.step.course.slug)}
-            className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-primary hover:underline"
-          >
-            {t("booking.goDeeperCta")}
-          </Link>
-        </aside>
-      ) : null}
 
       <div className="mt-4 rounded-lg border border-border bg-surface/70 p-4 text-left">
         {nextStep ? (

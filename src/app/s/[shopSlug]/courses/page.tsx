@@ -12,7 +12,7 @@ import { requestTranslator } from "@/i18n/request";
 import { courseTotalCents } from "@/lib/courses";
 import { formatMoneyCents } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
-import { publicCoursePath, publicCoursePathsPath, publicCoursesPath } from "@/lib/public-routes";
+import { publicCoursePath, publicCoursesPath } from "@/lib/public-routes";
 
 // `instant = true`: this route has a real static shell. Every request-scoped
 // read below sits inside this segment's `loading.tsx` boundary, so the frame
@@ -117,15 +117,6 @@ export default async function PublicCoursesPage({
           })}
         </ul>
       )}
-
-      <p className="mt-8 text-sm">
-        <Link
-          href={publicCoursePathsPath(shopSlug)}
-          className="font-medium text-primary hover:underline"
-        >
-          {t("courses.index.pathsLink")}
-        </Link>
-      </p>
     </main>
   );
 }

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { DIVER_LOCALES, type DiverLocale, isDiverLocale, toDiverLocale } from "@/i18n/settings";
 import { COURSE_INQUIRY_EXPERIENCE } from "@/lib/course-inquiry";
+import { DEMO_ROLE_IDS } from "@/lib/demo-roles";
 import { REMINDER_ACTION_CODES } from "@/lib/readiness-summary";
 
 /**
@@ -340,6 +341,30 @@ const newAccountAlertSchema = z.object({
   shopSlug: z.string().trim().min(1).max(120),
 });
 
+/**
+ * The other half of the funnel `new_account_alert` closes: somebody tried the
+ * live demo (docs ADR 20260805-demo-try-alerts). Internal, English, founder-only
+ * — same shape of signal, same mailbox, no locale.
+ *
+ * **Carries no identity, by construction.** The visitor is anonymous — no
+ * account, no session, nothing they typed — so the only fields here are the
+ * throwaway shop the demo minted, which role's view they picked, and the
+ * marketing tag that sent them. No IP, no user agent, no referrer beyond the
+ * closed `FunnelSource` registry. `shopId` is the minted demo's own row, which
+ * `queueRetry` needs for its non-null FK and the 7-day reaper already deletes
+ * alongside every other `notification_send_queue` row it owns.
+ */
+const demoStartedAlertSchema = z.object({
+  kind: z.literal("demo_started_alert"),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  /** The minted demo shop's slug — unique per entry, which is what keys the send. */
+  shopSlug: z.string().trim().min(1).max(120),
+  role: z.enum(DEMO_ROLE_IDS),
+  /** A `FunnelSource` already clamped to the registry by `eventSource`, or "unknown". */
+  source: z.string().trim().min(1).max(60),
+});
+
 // The shop's own inbox learns about a lead the moment the diver submits the
 // public course-page composer (docs/product/archive/ux-personas-20260730-findings.md
 // task 7) — carries the course_inquiries row id so a retried send can't double
@@ -390,6 +415,7 @@ export const notificationSchema = z.discriminatedUnion("kind", [
   checkoutRecoverySchema,
   lastMinuteDealSchema,
   newAccountAlertSchema,
+  demoStartedAlertSchema,
   courseInquirySchema,
 ]);
 
@@ -451,6 +477,12 @@ export function notificationIdempotencyKey(notification: Notification): string {
     // One alert per account, ever — same key shape as welcome above.
     case "new_account_alert":
       return `new-account-alert/${notification.userAccountId}`;
+    // One alert per demo entry, ever. Every entry mints its own shop under a
+    // freshly-generated identity (`createDemoShop`), so the slug *is* the
+    // entry's identity — no timestamp needed, and a double-submitted CTA that
+    // somehow reached the same shop converges on one send rather than two.
+    case "demo_started_alert":
+      return `demo-started-alert/${notification.shopSlug}`;
     // One notification per submitted inquiry row.
     case "course_inquiry":
       return `course-inquiry/${notification.courseInquiryId}`;

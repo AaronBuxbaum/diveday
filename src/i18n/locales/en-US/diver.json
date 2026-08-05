@@ -1570,49 +1570,6 @@
         },
         "importerNote": "DiveShop360 exports customers and certification data as two separate files. Import the customer file first, then the certification file — DiveDay matches people by email, so the second file adds to the same divers instead of duplicating them. A certification file usually holds one row per card, so a diver with three cards appears on three rows: each row's card lands on that one diver, and a row reading “PADI Deep Diver” becomes a deep specialty card."
       },
-      "diveadmin": {
-        "cardSummary": "The fast, cheap newcomer. Export your customer CSV — or use its Google Drive backup — and bring your roster across.",
-        "metaTitle": "Switching from DiveAdmin to DiveDay",
-        "metaDescription": "Leaving DiveAdmin? A step-by-step guide to exporting your customers and certifications and bringing them into DiveDay — what comes across, what doesn't, and why.",
-        "heroEyebrow": "Switching to DiveDay",
-        "heroTitle": "Moving your shop off DiveAdmin",
-        "heroLede": "DiveAdmin keeps your customers in the cloud, exportable as CSV, and can drop an automated backup into your own Google Drive. Here's how to pull your roster and cards and bring them into DiveDay — with a plain account of what makes the trip and what stays behind.",
-        "context": {
-          "item1": "DiveAdmin is the newer, lower-priced option, and it leans hard on an open, API-forward story. Worth knowing before you plan a move: its documented API is built to take data in — leads and bookings — not to hand your records back in bulk. The route out is the customer CSV export, or the automated backup DiveAdmin can write to your own Google Drive.",
-          "item2": "That's genuinely fine for this move. DiveDay's import needs your people, their certification cards, and their rental sizes — exactly what a customer export carries. You don't need an API to bring a spreadsheet.",
-          "item3": "One rule we won't bend: you export your own file from your own DiveAdmin account (or your own Google Drive backup). DiveDay never signs into DiveAdmin and never reaches across to pull your data — that's your data to hand us, not ours to take."
-        },
-        "exportHeading": "Get your data out of DiveAdmin",
-        "exportIntro": "DiveAdmin runs in a browser. The goal is a customer CSV with your people and their cards. Menu labels shift between versions, so treat these as the shape of the path, not word-for-word buttons.",
-        "exportSteps": {
-          "step1": {
-            "title": "Sign into your DiveAdmin dashboard as an owner or admin",
-            "detail": "Exports live in the admin dashboard, behind an owner or manager login."
-          },
-          "step2": {
-            "title": "Open your customers (or members) list",
-            "detail": "Find the area that lists every customer with their details. You want the full roster, not a single record."
-          },
-          "step3": {
-            "title": "Export the list to CSV",
-            "detail": "DiveAdmin's customer lists export to a spreadsheet. Export everyone, and save the CSV where you'll find it."
-          },
-          "step4": {
-            "title": "Include certifications",
-            "detail": "If cards (agency, level, card number) are columns on the customer export, you're set. If they're a separate export, pull that too — the card number is what lets a card come across."
-          },
-          "step5": {
-            "title": "No dashboard export? Use your Google Drive backup",
-            "detail": "DiveAdmin can write automated backups to your own Google Drive. The customer CSV inside that backup works just as well as a manual export — it's still your file."
-          }
-        },
-        "exportNotes": {
-          "note1": "DiveAdmin's API ingests data; it doesn't hand your records back in bulk. The CSV export (or the Google Drive backup) is the route out, not the API.",
-          "note2": "Your column headings don't have to match anything. DiveDay recognizes the common names DiveAdmin and every other system use, and shows you exactly how each column mapped before you commit.",
-          "note3": "Export your bookings as well as your customers if DiveAdmin offers both — a file with one row per booking carries your divers' visit history across. Message history stays in DiveAdmin; see the scope table below."
-        },
-        "importerNote": "If your certifications export as free text (\"PADI Advanced Open Water\"), DiveDay recognizes the common levels (see what comes across below). It reads the specialties the same way — a \"PADI Deep Diver\" row with a card number becomes a deep specialty card — and anything it doesn't recognize is flagged in the preview for a person to enter by hand."
-      },
       "smartwaiver": {
         "cardSummary": "Export your participant CSV and bring the people across — a waiver your file already shows as signed comes in marked imported, so nobody has to sign twice.",
         "metaTitle": "Switching from Smartwaiver to DiveDay",
@@ -1821,8 +1778,6 @@
       "leaveP1": "Trusting a small vendor with the records that get your divers on a boat is a real decision, so here are the parts of it worth knowing before you make it — including the one that matters most, which is how you'd walk away.",
       "leaveP2": "{terms} Coming the other way, a person will sit with your old export or spreadsheet and bring your divers across with you.",
       "switchingLink": "How switching works, both directions →",
-      "whoBuildsLabel": "Who builds it",
-      "whoBuildsValue": "Aaron Buxbaum, founder — a software engineer (Google Maps, a biotech company through its IPO, self-driving cars) and an obsessive diver. The person accountable for every call DiveDay makes.",
       "whereLiveLabel": "Where your records live",
       "whereLiveValue": "On servers in the United States, and in a download you can take at any time.",
       "committingLabel": "What you're committing to",

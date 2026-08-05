@@ -12,7 +12,7 @@ import {
 } from "@/lib/courses";
 import { formatShortDate, formatTime, formatTimeRangeTz } from "@/lib/format";
 import { minorToMajor, type ShopCurrency } from "@/lib/money";
-import { publicCoursePath, publicSchedulePath, publicTripPath } from "@/lib/public-routes";
+import { publicSchedulePath, publicTripPath } from "@/lib/public-routes";
 import { capacityLabel, isFull } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 
@@ -21,14 +21,6 @@ import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
  * left it empty, so a half-written page degrades to a shorter page rather than
  * to a row of empty headings.
  */
-
-/** One of the shop's certification paths, flattened for the trail below. */
-export type PathTrail = {
-  slug: string;
-  title: string;
-  summary: string | null;
-  steps: Array<{ id: string; title: string; slug: string }>;
-};
 
 /**
  * The known certification agencies' full names, for one first-mention
@@ -212,78 +204,6 @@ export function CourseAdmission({
           <p className="mt-1 text-sm leading-relaxed text-muted">{shopNote}</p>
         </>
       ) : null}
-    </section>
-  );
-}
-
-/**
- * Where this course sits in the shop's own certification paths, and what comes
- * next on each. Renders nothing when the shop has not put this course on a path
- * — a diver reading a standalone specialty should not see an empty "your path"
- * heading (docs/design/principles.md).
- *
- * The rung the diver is reading is marked but not linked; every other rung is,
- * so the section works as navigation through the progression.
- */
-export function CoursePathTrail({
-  paths,
-  courseId,
-  shopSlug,
-  t,
-}: {
-  paths: PathTrail[];
-  courseId: string;
-  shopSlug: string;
-  t: DiverTranslator;
-}) {
-  const withCourse = paths.filter((path) => path.steps.some((step) => step.id === courseId));
-  if (withCourse.length === 0) return null;
-
-  return (
-    <section aria-labelledby="course-paths" className="mt-10 max-w-2xl">
-      <h2 id="course-paths" className="text-lg font-semibold">
-        {t("path.sectionTitle")}
-      </h2>
-      <div className="mt-4 grid gap-4">
-        {withCourse.map((path) => {
-          const index = path.steps.findIndex((step) => step.id === courseId);
-          const next = path.steps[index + 1];
-          return (
-            <article key={path.slug} className="rounded-2xl border border-border bg-surface p-5">
-              <h3 className="font-semibold">{path.title}</h3>
-              {path.summary ? <p className="mt-1 text-sm text-muted">{path.summary}</p> : null}
-              <ol className="mt-3 flex flex-wrap items-center gap-x-1 gap-y-2 text-sm">
-                {path.steps.map((step, stepIndex) => (
-                  <li key={step.id} className="flex items-center gap-1">
-                    {stepIndex > 0 ? (
-                      <span aria-hidden="true" className="text-muted">
-                        {" → "}
-                      </span>
-                    ) : null}
-                    {step.id === courseId ? (
-                      <span aria-current="step" className="font-semibold text-primary">
-                        {step.title}
-                      </span>
-                    ) : (
-                      <Link
-                        href={publicCoursePath(shopSlug, step.slug)}
-                        className="hover:underline"
-                      >
-                        {step.title}
-                      </Link>
-                    )}
-                  </li>
-                ))}
-              </ol>
-              <p className="mt-3 text-sm text-muted">
-                {next
-                  ? t("path.nextUp", { course: next.title })
-                  : t("path.lastStep", { path: path.title })}
-              </p>
-            </article>
-          );
-        })}
-      </div>
     </section>
   );
 }

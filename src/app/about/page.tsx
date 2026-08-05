@@ -271,12 +271,6 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
             <dl className="divide-y divide-border rounded-2xl border border-border bg-background">
               <div className="p-6">
                 <dt className="text-xs font-semibold tracking-widest text-primary uppercase">
-                  {t("marketing.about.whoBuildsLabel")}
-                </dt>
-                <dd className="mt-2 leading-7">{t("marketing.about.whoBuildsValue")}</dd>
-              </div>
-              <div className="p-6">
-                <dt className="text-xs font-semibold tracking-widest text-primary uppercase">
                   {t("marketing.about.whereLiveLabel")}
                 </dt>
                 <dd className="mt-2 leading-7">{t("marketing.about.whereLiveValue")}</dd>

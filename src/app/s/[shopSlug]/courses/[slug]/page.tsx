@@ -4,7 +4,6 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { JsonLd } from "@/components/JsonLd";
 import { getDb } from "@/db/client";
-import { listCoursePaths } from "@/db/course-paths";
 import { getCourseBySlug } from "@/db/courses";
 import { getShopReviewAggregate } from "@/db/reviews";
 import { getShopBySlug } from "@/db/shops";
@@ -27,7 +26,6 @@ import {
   CourseHero,
   CourseIncludes,
   CourseOverview,
-  CoursePathTrail,
   CourseSchedule,
   CourseSessions,
   CourseSpecs,
@@ -99,10 +97,7 @@ export default async function CoursePage({
   const staffView = session?.user?.shopId === shop.id && isStaff(session.user.roles);
   if (!course.isActive && !staffView) notFound();
 
-  const [sessions, paths] = await Promise.all([
-    listUpcomingSessionsForCourse(db, shop.id, course.id),
-    listCoursePaths(db, shop.id, { activeOnly: true }),
-  ]);
+  const sessions = await listUpcomingSessionsForCourse(db, shop.id, course.id);
   const { locale, t } = await requestTranslator(shop.defaultLocale);
 
   const certificationRequired = course.minimumCertificationLevel
@@ -169,25 +164,6 @@ export default async function CoursePage({
         certificationRequired={certificationRequired}
         minimumAge={course.minimumAge}
         shopNote={course.prerequisiteNote}
-        t={t}
-      />
-      <CoursePathTrail
-        paths={paths.map((path) => ({
-          slug: path.slug,
-          title: path.title,
-          summary: path.summary,
-          // A path may outlive a course the shop stopped offering; a diver must
-          // never be pointed at a page that 404s for them.
-          steps: path.steps
-            .filter((step) => step.course.isActive)
-            .map((step) => ({
-              id: step.course.id,
-              title: step.course.title,
-              slug: step.course.slug,
-            })),
-        }))}
-        courseId={course.id}
-        shopSlug={shopSlug}
         t={t}
       />
       <CourseOverview overview={course.overview} />

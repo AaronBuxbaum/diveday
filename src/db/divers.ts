@@ -226,12 +226,44 @@ export const DIVER_PAGE_SIZE = 20;
  * still owes a safety contact. Each is a cheap WHERE clause applied to both the
  * page and its count, so filtering never breaks the paging.
  */
-export type DiverFilter = "all" | "diving_today" | "needs_attention" | "missing_contact";
+export type DiverFilter =
+  | "all"
+  | "diving_today"
+  | "needs_attention"
+  | "missing_contact"
+  | "removed";
 
-export const DIVER_FILTERS = ["all", "diving_today", "needs_attention", "missing_contact"] as const;
+export const DIVER_FILTERS = [
+  "all",
+  "diving_today",
+  "needs_attention",
+  "missing_contact",
+  // The one view that leaves the active roster behind. Removal is reversible
+  // by design (`restoreDiver`), but until this existed nothing in the UI could
+  // *find* a removed diver — they vanished from the list, matched no search,
+  // and the record's own URL 404'd, so the undo was a few seconds long and
+  // then gone forever. This is a way back to the record, not an un-removal:
+  // every operational surface (booking pickers, manifests, Today) still reads
+  // `isNull(deletedAt)` and is untouched by it.
+  "removed",
+] as const;
 
 export function isDiverFilter(value: string | undefined): value is DiverFilter {
   return (DIVER_FILTERS as readonly string[]).includes(value ?? "");
+}
+
+/**
+ * Which side of the removal line a view looks at.
+ *
+ * Erased records are deliberately absent from *both*: `restoreDiver` refuses
+ * them and `people_anonymized_stays_removed` refuses them again at the
+ * database, so listing one under a view whose only affordance is Restore would
+ * be a button that can never work (ADR 20260802-diver-data-erasure).
+ */
+function removalScope(filter: DiverFilter) {
+  return filter === "removed"
+    ? and(isNotNull(people.deletedAt), isNull(people.anonymizedAt))
+    : isNull(people.deletedAt);
 }
 
 function diverFilterCondition(
@@ -240,6 +272,9 @@ function diverFilterCondition(
   context: { shopId: string; timeZone: string; now: Date },
 ) {
   const { shopId } = context;
+  // "Removed" narrows by `deleted_at` alone (see `removalScope`) — there is no
+  // second question to ask of a record that is off the active roster.
+  if (filter === "removed") return undefined;
   if (filter === "missing_contact") {
     // "On file" needs both a name and a phone (glossary — Emergency contact), so
     // a hole in either lands the diver in this view.
@@ -360,11 +395,12 @@ export async function listDiverSummaries(
   const query = options.query?.trim() ?? "";
   const like = query ? `%${query}%` : null;
 
+  const filter = options.filter ?? "all";
   const scope = and(
     eq(people.shopId, shopId),
     eq(personRoles.role, "diver"),
-    isNull(people.deletedAt),
-    diverFilterCondition(db, options.filter ?? "all", {
+    removalScope(filter),
+    diverFilterCondition(db, filter, {
       shopId,
       timeZone: options.timeZone ?? "UTC",
       now: options.now ?? nowDate(),
@@ -563,7 +599,26 @@ export async function listBookableDivers(
   }));
 }
 
-export async function getDiverProfile(db: AppDb, shopId: string, personId: string) {
+/**
+ * One diver's whole record.
+ *
+ * `includeRemoved` is what makes removal reversible from the UI. A removed
+ * diver's record used to 404, so the only way back was the few seconds the
+ * undo toast was on screen — after that a shop owner had a person on file they
+ * could neither see nor restore. Callers that drive shop work leave it off and
+ * keep the old behaviour; the diver record turns it on so the page can render
+ * the record with a Restore on it. `person.deletedAt` tells a caller which one
+ * it got, and every surface that acts on a diver is expected to read it.
+ *
+ * An **erased** record is still absent either way — `anonymizeDiver` soft-deletes
+ * as part of erasing, and there is no undo for that (ADR 20260802-diver-data-erasure).
+ */
+export async function getDiverProfile(
+  db: AppDb,
+  shopId: string,
+  personId: string,
+  options: { includeRemoved?: boolean } = {},
+) {
   const [personRow] = await db
     .select({ person: people })
     .from(people)
@@ -573,7 +628,7 @@ export async function getDiverProfile(db: AppDb, shopId: string, personId: strin
         eq(people.id, personId),
         eq(people.shopId, shopId),
         eq(personRoles.role, "diver"),
-        isNull(people.deletedAt),
+        options.includeRemoved ? isNull(people.anonymizedAt) : isNull(people.deletedAt),
       ),
     )
     .limit(1);

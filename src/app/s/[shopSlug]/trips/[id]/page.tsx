@@ -9,7 +9,6 @@ import { issueBookingCapability, verifyBookingCapability } from "@/db/booking-ca
 import { getBookingForTrip } from "@/db/bookings";
 import { getLatestCheckoutForBooking, refreshCheckoutFromStripe } from "@/db/checkouts";
 import { getDb } from "@/db/client";
-import { listCoursePaths, nextPathStep } from "@/db/course-paths";
 import { listDiveSiteBriefingExtras } from "@/db/dive-sites";
 import { verifiedNitroxPersonIds } from "@/db/nitrox";
 import { bookingConfirmationAndWaiverEmailsSent } from "@/db/notifications";
@@ -18,7 +17,6 @@ import {
   getBookingReadiness,
   getTripRequirements,
   getTripSiteRequirement,
-  highestVerifiedCertificationLevel,
 } from "@/db/readiness";
 import { getRentalFit, toDiverRentalFit } from "@/db/rental-fit";
 import { getShopReviewAggregate } from "@/db/reviews";
@@ -274,15 +272,13 @@ export default async function TripDetailPage({
         locale,
       );
 
-  // The confirmed-booking panels draw on six more independent queries — batch them.
+  // The confirmed-booking panels draw on several more independent queries — batch them.
   const [
     payment,
     readiness,
     rentalFit,
     nitroxCardVerified,
     readinessCapability,
-    coursePaths,
-    heldLevel,
     emailsOnTheWay,
     partySeatClaims,
   ] = confirmed
@@ -305,8 +301,6 @@ export default async function TripDetailPage({
           bookingId: confirmed.booking.id,
           purpose: "readiness",
         }),
-        listCoursePaths(db, shop.id, { activeOnly: true }),
-        highestVerifiedCertificationLevel(db, shop.id, confirmed.person.id, shop.timezone),
         // Only say "two emails are on their way" when both actually went —
         // a party member booked without an address of their own gets neither.
         bookingConfirmationAndWaiverEmailsSent(db, shop.id, confirmed.booking.id),
@@ -317,7 +311,7 @@ export default async function TripDetailPage({
         // non-party confirmation gets an empty list and no panel.
         issuePartySeatClaims(db, { shopId: shop.id, leadBookingId: confirmed.booking.id }),
       ])
-    : [null, null, null, false, null, [], null, false, []];
+    : [null, null, null, false, null, false, []];
   const readinessLink = readinessCapability ? readinessLinkPath(readinessCapability.token) : null;
   // Absolute when a canonical origin is configured — these URLs exist to be
   // pasted into a group chat — with the same-relative fallback the readiness
@@ -333,12 +327,6 @@ export default async function TripDetailPage({
         : claimLinkPath(seat.claim.token)
       : null,
   }));
-
-  // "What should I learn next?" is the shop's own answer, read off the paths it
-  // built in the catalog — not a title match on the word "advanced", which is
-  // what stood here before and quietly did nothing for a shop that named its
-  // courses anything else.
-  const progression = nextPathStep(coursePaths, heldLevel);
 
   const inPast = trip.startsAt <= nowDate();
   const full = isFull(trip);
@@ -466,11 +454,6 @@ export default async function TripDetailPage({
             readinessLink={readinessLink}
             emailsOnTheWay={emailsOnTheWay}
             partySeats={partySeats}
-            progression={
-              readiness?.blockers.some((blocker) => blocker.code === "certification_insufficient")
-                ? progression
-                : null
-            }
           />
         ) : waitlistConfirmation ? (
           <WaitlistConfirmation

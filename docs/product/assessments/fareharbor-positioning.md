@@ -9,7 +9,7 @@
 
 ## Why FareHarbor is a different fight
 
-The four incumbents the migration guides already target — EVE, DiveShop360, DiveAdmin, Smartwaiver —
+The incumbents the migration guides already target — EVE, DiveShop360, Smartwaiver —
 are **records systems**: the shop's people, cards, and history live inside them, and the play is to
 help the shop *leave*. FareHarbor is not that. It is an **online booking-and-checkout engine plus a
 distribution network** for tours and activities generally — owned by Booking Holdings (the

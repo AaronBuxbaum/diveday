@@ -1027,7 +1027,7 @@ archived.
   prepare/validate in `src/lib/import.ts`, the write in `src/db/import.ts`
   ([contact-importer](../architecture/decisions/20260723-contact-importer.md)).
 - **Public migration guides** — a `/switching` hub plus a live marketing page per named incumbent
-  (EVE, DiveShop360, DiveAdmin, Smartwaiver): each states how to export the shop's own data from
+  (EVE, DiveShop360, Smartwaiver): each states how to export the shop's own data from
   that system, renders the importer's `IMPORT_HONESTY_TABLE` scope table verbatim, and walks the
   DiveDay import. High-intent SEO capture of "leaving &lt;incumbent&gt;" searches and the third leg
   of the portability wedge. Every switching page (hub, incumbent guides, spreadsheet) also carries the

@@ -412,70 +412,6 @@ const diveshop360: MigrationGuide = {
   ],
 };
 
-const diveadmin: MigrationGuide = {
-  slug: "diveadmin",
-  // i18n-exempt: competitor product name, rendered as-is in every locale
-  competitor: "DiveAdmin",
-  cardSummary: "marketing.guides.diveadmin.cardSummary",
-
-  metaTitle: "marketing.guides.diveadmin.metaTitle",
-  metaDescription: "marketing.guides.diveadmin.metaDescription",
-
-  heroEyebrow: "marketing.guides.diveadmin.heroEyebrow",
-  heroTitle: "marketing.guides.diveadmin.heroTitle",
-  heroLede: "marketing.guides.diveadmin.heroLede",
-
-  context: [
-    "marketing.guides.diveadmin.context.item1",
-    "marketing.guides.diveadmin.context.item2",
-    "marketing.guides.diveadmin.context.item3",
-  ],
-
-  exportHeading: "marketing.guides.diveadmin.exportHeading",
-  exportIntro: "marketing.guides.diveadmin.exportIntro",
-  exportSteps: [
-    {
-      title: "marketing.guides.diveadmin.exportSteps.step1.title",
-      detail: "marketing.guides.diveadmin.exportSteps.step1.detail",
-    },
-    {
-      title: "marketing.guides.diveadmin.exportSteps.step2.title",
-      detail: "marketing.guides.diveadmin.exportSteps.step2.detail",
-    },
-    {
-      title: "marketing.guides.diveadmin.exportSteps.step3.title",
-      detail: "marketing.guides.diveadmin.exportSteps.step3.detail",
-    },
-    {
-      title: "marketing.guides.diveadmin.exportSteps.step4.title",
-      detail: "marketing.guides.diveadmin.exportSteps.step4.detail",
-    },
-    {
-      title: "marketing.guides.diveadmin.exportSteps.step5.title",
-      detail: "marketing.guides.diveadmin.exportSteps.step5.detail",
-    },
-  ],
-  exportNotes: [
-    "marketing.guides.diveadmin.exportNotes.note1",
-    "marketing.guides.diveadmin.exportNotes.note2",
-    "marketing.guides.diveadmin.exportNotes.note3",
-  ],
-  importerNote: "marketing.guides.diveadmin.importerNote",
-  cutover: CUTOVER_SECTION,
-  sources: [
-    {
-      // i18n-exempt: cited source title — the document's own name is not translated
-      label: "DiveAdmin API documentation",
-      url: "https://diveadmin.com/en/api-documentation",
-    },
-    {
-      // i18n-exempt: cited source title — the document's own name is not translated
-      label: "DiveAdmin — automated Google Drive backups",
-      url: "https://diveadmin.com/resources/dive-admin-vs-eve/",
-    },
-  ],
-};
-
 const smartwaiver: MigrationGuide = {
   slug: "smartwaiver",
   // i18n-exempt: competitor product name, rendered as-is in every locale
@@ -740,7 +676,6 @@ const rezdy: MigrationGuide = {
 export const MIGRATION_GUIDES: MigrationGuide[] = [
   eve,
   diveshop360,
-  diveadmin,
   smartwaiver,
   fareharbor,
   rezdy,

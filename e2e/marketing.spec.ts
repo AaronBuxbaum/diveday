@@ -268,7 +268,6 @@ test("migration guides walk a shop from an incumbent export into the importer", 
   for (const name of [
     /Switching from EVE/,
     /Switching from DiveShop360/,
-    /Switching from DiveAdmin/,
     /Switching from Smartwaiver/,
     /Switching from FareHarbor/,
     /Switching from Rezdy/,
