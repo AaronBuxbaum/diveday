@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { FlashParams } from "@/components/FlashParams";
-import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
+import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { canPersonManageWaiverTemplates } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
@@ -13,7 +13,7 @@ import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate } from "@/lib/format";
 import { requireStaffSession } from "@/lib/session";
-import { type NoticeTone, noticeRole } from "@/lib/staff-notices";
+import type { NoticeTone } from "@/lib/staff-notices";
 import { DEFAULT_WAIVER_BODY } from "@/lib/waivers";
 import { saveWaiverAction } from "./actions";
 
@@ -89,13 +89,17 @@ export default async function WaiverTemplatesPage({
           />
         </Field>
       </FieldGrid>
-      <div>
+      <div className="flex flex-wrap items-center gap-3">
         <SubmitButton
           pendingLabel={t("waiversStaff.pendingLabel")}
           className={buttonClass({ size: "lg" })}
         >
           {current ? t("waiversStaff.saveNewVersion") : t("waiversStaff.saveWaiver")}
         </SubmitButton>
+        {/* Beside the button, not under the `<h1>`: the release text is a
+            fourteen-row textarea, so the top of this page is a screen and a
+            half away from the control that was pressed. */}
+        <FormStatus tone={bannerTone}>{banner}</FormStatus>
       </div>
     </form>
   );
@@ -108,14 +112,6 @@ export default async function WaiverTemplatesPage({
         title={t("waiversStaff.title")}
         description={t("waiversStaff.description")}
       />
-
-      {banner ? (
-        <div className="mt-6">
-          <ShopNotice tone={bannerTone} role={noticeRole(bannerTone)}>
-            {banner}
-          </ShopNotice>
-        </div>
-      ) : null}
 
       <section className="mt-10">
         <h2 className="text-lg font-semibold">{t("waiversStaff.releaseTextHeading")}</h2>

@@ -308,7 +308,20 @@ is documented fact from [assessments/competitive-strategy.md](assessments/compet
 carrying its own `sources` (rendered on the page) and phrased factually, never speculative; the
 safety-adjacent scope copy gets `dive-domain-expert` review like any other. Add a guide by writing
 its `MigrationGuide` entry — only once its export path is verified, since every registered entry is
-a published page (there is no draft/planned state).
+a published page (there is no draft/planned state). A guide is also **retired** by deleting that
+entry (its bundle keys, hub card, route, and coverage rows go with it) when the incumbent stops
+being worth a page — the DiveAdmin guide shipped 2026-07-23 and was retired 2026-08-05 on market
+share, and the strategy doc keeps the dated record.
+
+**Every switching surface reads in both directions.** The wedge is not "escape your incumbent", it
+is "your records import cleanly when you arrive and export cleanly if you ever go" — the no-lock-in
+point is a *reason to join*, not a goodbye, so a page that only walks a shop out of somewhere else
+is only half written. Concretely: the hub says so in its own words, and every guide (incumbents and
+`/switching/spreadsheet` alike) carries the shared `switching.common.bothWays*` block directly under
+the scope table, composing `fullShopExport`'s `claimKey`/`termsKey` rather than re-authoring the
+exit promise. The homepage's records band follows the same order — arriving first, leaving second.
+Never let a surface restate the export claim in its own words; that is what the shared keys exist
+to prevent.
 
 A guide for a booking/distribution **channel** rather than a records system (today: **FareHarbor**
 and **Rezdy**, general tours engines) additionally carries an optional `coexist` block and is

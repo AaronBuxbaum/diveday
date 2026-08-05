@@ -12,6 +12,7 @@ export function RequirementsSection({
   trip,
   requirement,
   siteRequirement,
+  siteNames,
   locale,
 }: {
   action: (formData: FormData) => void;
@@ -20,6 +21,13 @@ export function RequirementsSection({
   trip: Trip;
   requirement: Requirement;
   siteRequirement: SiteRequirement;
+  /**
+   * Every distinct site this trip visits, in dive order — the same list the
+   * header shows. `siteRequirement` is the union across *all* of them
+   * (`getTripSiteRequirement`), so naming one site as the source of the rule
+   * is only honest when the trip visits exactly one.
+   */
+  siteNames: string[];
   locale: string;
 }) {
   const t = staffTranslator(locale);
@@ -51,12 +59,24 @@ export function RequirementsSection({
    * invisible. An AOW course dives a site marked `advanced_open_water` by
    * design, and staff could see nothing saying so.
    */
-  const siteNote = (
-    key: "trips.requirements.siteAlsoRequires" | "trips.requirements.siteAlsoRequiresCourse",
-  ) => (
+  /**
+   * *Which* site imposes the extra rule.
+   *
+   * This used to read `trip.diveSite` — dive one's site, copied onto the trip
+   * row — while `siteRequirement` was already the union across every site the
+   * trip visits. On a two-site day whose Deep gate comes from the *second*
+   * tank, that named the wrong site as the source of the rule, sending staff
+   * to the wrong card to understand or change it. Both plural keys drop the
+   * singular verb along with the singular name.
+   */
+  const multipleSites = siteNames.length > 1;
+  const siteNoteSubject = multipleSites
+    ? new Intl.ListFormat(locale, { style: "long", type: "conjunction" }).format(siteNames)
+    : (siteNames[0] ?? t("trips.requirements.thisSite"));
+  const siteNote = (kind: "trip" | "course") => (
     <p className="mt-4 rounded-lg bg-surface-sunken px-3 py-2 text-sm text-muted">
-      {t.rich(key, {
-        site: trip.diveSite?.name ?? t("trips.requirements.thisSite"),
+      {t.rich(siteNoteKey(kind, multipleSites), {
+        site: siteNoteSubject,
         list: siteRequirementList,
         strong: (chunks) => <strong className="font-medium text-foreground">{chunks}</strong>,
       })}

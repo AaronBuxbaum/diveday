@@ -140,7 +140,16 @@ export function formatPreferredDate(value: string, locale: string): string | nul
   // reader west of it — the same discipline `formatScheduleDayTime` uses for a
   // wall-clock time (src/lib/courses.ts).
   const reference = new Date(Date.UTC(year, month - 1, day));
-  if (Number.isNaN(reference.getTime())) return null;
+  // `Date.UTC` rolls over rather than refusing, so "2026-13-45" would quietly
+  // become a real date in February 2027 and the shop would read a day nobody
+  // asked for. Reject anything that does not read back as it was written.
+  if (
+    reference.getUTCFullYear() !== year ||
+    reference.getUTCMonth() !== month - 1 ||
+    reference.getUTCDate() !== day
+  ) {
+    return null;
+  }
   return new Intl.DateTimeFormat(locale, { dateStyle: "long", timeZone: "UTC" }).format(reference);
 }
 
