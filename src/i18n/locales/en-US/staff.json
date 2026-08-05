@@ -533,7 +533,6 @@
       "faqLabel": "FAQ",
       "faqPlaceholder": "Is equipment included?\nYes — mask, fins, wetsuit, BCD, regulator, and tanks.\n\nDo I need to be a strong swimmer?\nYou need to be comfortable in the water.",
       "savePage": "Save course page",
-      "preview": "Preview",
       "saving": "Saving…",
       "optionalHint": "(optional)"
     },
@@ -548,13 +547,9 @@
       "timeNoteDescription": "For a day with no fixed clock time, e.g. \"week 1–2\" or \"about 3 hours\".",
       "timeNoteTitle": "Ignored when a start time is set for this day.",
       "timeNotePlaceholder": "about 3 hours",
-      "whatHappens": "What happens",
-      "itemLabel": "Day {number} item {index}",
-      "removeItemLabel": "Remove day {number} item {index}",
-      "itemPlaceholder": "Confined water skills",
-      "remove": "Remove",
-      "itemsMax": "{max} items max",
-      "addItem": "Add item",
+      "whatHappens": "Day {number} — what happens",
+      "itemsPlaceholder": "Classroom: knowledge review 1–2\nPool: confined water skills\nGear wash and debrief",
+      "itemsOverMax": "Up to {max} items a day — take a line out before saving.",
       "daysMax": "{max} days max",
       "addDay": "Add day"
     }
