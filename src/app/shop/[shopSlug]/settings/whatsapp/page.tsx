@@ -134,7 +134,11 @@ export default async function WhatsAppSettingsPage({
               ? "border-success/40 bg-success/10 text-foreground"
               : "border-danger/40 bg-danger/10 text-foreground"
           }`}
-          role="status"
+          // A refused connection has to interrupt rather than queue behind
+          // whatever a screen reader is already reading — same tone→role rule
+          // as `noticeRole` (src/lib/staff-notices.ts), which this hand-rolled
+          // banner predates.
+          role={NOTICE_TONE[banner] === "danger" ? "alert" : "status"}
         >
           {t(`whatsapp.notice.${banner}`)}
         </p>

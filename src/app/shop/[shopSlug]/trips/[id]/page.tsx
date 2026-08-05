@@ -314,19 +314,26 @@ export default async function ManageTripPage({
                         ? t("trips.detail.diveSiteLabel")
                         : t("trips.detail.diveSitesLabel")}
                     </span>
-                    {diveSites.sites.map((site) => (
-                      <Link
-                        key={site.id}
-                        href={`/shop/${shopSlug}/dive-sites/${site.id}`}
-                        className="font-medium text-primary hover:underline"
-                      >
-                        {site.name}
-                      </Link>
+                    {/* Each site keeps its own link into the library card, so a
+                        two-site day is two destinations — which rules out an
+                        `Intl.ListFormat` join. The separator is punctuation
+                        between links, not a word to translate. */}
+                    {diveSites.sites.map((site, index) => (
+                      <span key={site.id} className="flex items-center gap-x-2">
+                        {index > 0 ? <span aria-hidden="true">·</span> : null}
+                        <Link
+                          href={`/shop/${shopSlug}/dive-sites/${site.id}`}
+                          className="font-medium text-primary hover:underline"
+                        >
+                          {site.name}
+                        </Link>
+                      </span>
                     ))}
                   </>
                 ) : null}
                 {diveSites.undecidedDives > 0 ? (
-                  <span>
+                  <span className="flex items-center gap-x-2">
+                    {diveSites.sites.length > 0 ? <span aria-hidden="true">·</span> : null}
                     {t("trips.detail.divesWithoutSite", { count: diveSites.undecidedDives })}
                   </span>
                 ) : null}

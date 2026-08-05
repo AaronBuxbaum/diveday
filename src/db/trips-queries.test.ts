@@ -349,7 +349,7 @@ describe("tripDiveSiteSummaries", () => {
     });
   });
 
-  it("finds the site when only the *second* tank has one — where the trip pointer is null", async () => {
+  it("finds the site when only the *second* tank has one, and reports the open first tank", async () => {
     const { db, shop, elbow } = await twoSiteShop();
     const trip = await createTrip(db, {
       shopId: shop.id,
@@ -361,14 +361,13 @@ describe("tripDiveSiteSummaries", () => {
       dives: [{}, { diveSiteId: elbow.id }],
     });
     if (!trip) throw new Error("trip not created");
-    // The trip's own pointer really is empty here — that is the bug this reader
-    // exists for, not an incidental detail.
-    expect(trip.diveSiteId).toBeNull();
 
     expect((await tripDiveSiteSummaries(db, shop.id, [trip.id])).get(trip.id)).toEqual({
       sites: [{ id: elbow.id, name: "Test Elbow" }],
       undecidedDives: 1,
     });
+    // The reader never depends on the pointer agreeing with the dives — see
+    // "prefers the dives over the pointer when both exist and disagree" below.
   });
 
   it("counts one site when the same site is dived twice", async () => {

@@ -121,6 +121,60 @@ test.describe("staff", () => {
     await expect(row2.getByRole("button", { name: "Show Discover Scuba Diving" })).toBeVisible();
   });
 
+  test("the roster reads in progression order and filters by agency tab", async ({ page }) => {
+    await page.goto("/shop/blue-mantis/courses");
+
+    // The order a counter conversation walks, not the alphabet: a first taste,
+    // then the entry card, then what it opens. Alphabetical would have opened
+    // on "Advanced Open Water Diver" — the one course a beginner cannot take.
+    const titles = await page.getByRole("listitem").locator("span.font-semibold").allInnerTexts();
+    const at = (title: string) => titles.indexOf(title);
+    expect(at("Discover Scuba Diving")).toBeGreaterThanOrEqual(0);
+    expect(at("Discover Scuba Diving")).toBeLessThan(at("Open Water Diver"));
+    expect(at("Open Water Diver")).toBeLessThan(at("Advanced Open Water Diver"));
+    expect(at("Advanced Open Water Diver")).toBeLessThan(at("Rescue Diver"));
+    expect(at("Rescue Diver")).toBeLessThan(at("Divemaster"));
+
+    // Agency is a tab now, not a pill repeated on every row.
+    const tabs = page.getByRole("navigation", { name: "Filter courses by agency" });
+    await expect(tabs.getByRole("link", { name: "All" })).toHaveAttribute("aria-current", "true");
+    await tabs.getByRole("link", { name: "SSI" }).click();
+    await expect(page).toHaveURL("/shop/blue-mantis/courses?agency=ssi");
+    await expect(
+      page.getByRole("listitem").filter({ hasText: "SSI Open Water Diver" }),
+    ).toBeVisible();
+    await expect(page.getByRole("listitem").filter({ hasText: "Divemaster" })).toHaveCount(0);
+    await expect(tabs.getByRole("link", { name: "SSI" })).toHaveAttribute("aria-current", "true");
+
+    // The tab survives a reload (it is a real URL), and "All" brings the rest back.
+    await page.reload();
+    await expect(page.getByRole("listitem").filter({ hasText: "Divemaster" })).toHaveCount(0);
+    await tabs.getByRole("link", { name: "All" }).click();
+    await expect(page).toHaveURL("/shop/blue-mantis/courses");
+    await expect(page.getByRole("listitem").filter({ hasText: "Divemaster" })).toHaveCount(1);
+  });
+
+  test("a course row schedules a session of itself, landing on the existing new-trip form", async ({
+    page,
+  }) => {
+    await page.goto("/shop/blue-mantis/courses");
+    const row = page
+      .getByRole("listitem")
+      .filter({ has: page.getByText("Rescue Diver", { exact: true }) });
+
+    await row.getByRole("link", { name: "Schedule a session of Rescue Diver" }).click();
+    // The existing trip-creation path, not a second one — the course arrives
+    // preselected and the title placeholder is already shaped for it.
+    await expect(page).toHaveURL(/\/shop\/blue-mantis\/trips\/new\?course=[0-9a-f-]{36}$/);
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Schedule a trip or course session" }),
+    ).toBeVisible();
+    await expect(page.getByLabel("Course", { exact: false })).toHaveValue(/[0-9a-f-]{36}/);
+    // The preselected course is the one whose row was clicked, not the first
+    // in the list — the whole point of arriving here from the catalog.
+    await expect(page.getByLabel("Course", { exact: false })).toContainText("Rescue Diver");
+  });
+
   test("staff edit a seeded course page, toggle it live, and a signed-out diver reads it", async ({
     page,
   }) => {
@@ -150,8 +204,9 @@ test.describe("staff", () => {
     await page.getByLabel("Day 4 title").fill("Day 4");
     await page.getByLabel("Day 4 start time").fill("09:00");
     await page.getByLabel("Day 4 end time").fill("12:00");
-    await page.getByRole("button", { name: "Add item" }).last().click();
-    await page.getByLabel("Day 4 item 1", { exact: true }).fill("Scenario retest");
+    // One textarea, one item per line — the same shape as Included / Not
+    // included above it, not a row of inputs with their own Add/Remove pair.
+    await page.getByLabel("Day 4 — what happens").fill("Scenario retest\nDebrief and paperwork");
     await page.getByLabel("FAQ").fill("Do I need my own gear?\nNo — we provide everything.");
     // Off by default on a real certification course; the checkbox persists
     // through a save/reload the same as every other field on this form.
@@ -162,11 +217,11 @@ test.describe("staff", () => {
     await expect(page.getByRole("status")).toContainText("Course page saved");
     await expect(page.getByRole("checkbox", { name: /taster session/ })).toBeChecked();
 
-    // Hide takes the page down; Show brings it back.
-    await page.getByRole("button", { name: "Hide" }).click();
-    await expect(page.getByRole("status")).toContainText("hidden");
-    await page.getByRole("button", { name: "Show" }).click();
-    await expect(page.getByRole("status")).toContainText("live");
+    // The editor is a save form and nothing else: visibility lives on the
+    // roster's eye toggle, and the "Live at" link above already opens the page
+    // the removed Preview button opened.
+    await expect(page.getByRole("button", { name: /^Hide$|^Show$/ })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Preview" })).toHaveCount(0);
 
     // A diver arrives with no session at all.
     await page.context().clearCookies();
@@ -180,6 +235,9 @@ test.describe("staff", () => {
     await expect(admission.getByRole("heading", { name: "From the shop" })).toBeVisible();
     await expect(page.getByLabel("At a glance")).not.toContainText("Advanced Open Water or higher");
     await expect(page.getByRole("heading", { name: "Day 4" })).toBeVisible();
+    // Both typed lines survived the textarea round trip as separate items.
+    await expect(page.getByText("Scenario retest")).toBeVisible();
+    await expect(page.getByText("Debrief and paperwork")).toBeVisible();
     await expect(page.getByText("Do I need my own gear?")).toBeVisible();
 
     // The editor stays closed to that same visitor — and so does the staff
@@ -371,6 +429,10 @@ test("a diver with no workable date gets a written email instead of a dead end",
   await inquiry.scrollIntoViewIfNeeded();
   await page.getByLabel("Your name").fill("Mira Delgado");
   await page.getByLabel("How many divers").fill("3");
+  // A date the diver proposes, beside the rough "when suits you" — the two
+  // answer different questions and the composer keeps both.
+  const proposed = daysFromNow(21);
+  await page.getByLabel("A date you have in mind").fill(proposed);
   await page.getByLabel("When suits you").fill("the week of 12 August");
   // The option's value is now the code ("never"), not its rendered label —
   // src/lib/course-inquiry.ts returns codes, and the diver bundle supplies
@@ -383,6 +445,7 @@ test("a diver with no workable date gets a written email instead of a dead end",
   const preview = inquiry.getByRole("region", { name: "Your message so far" });
   await expect(preview.getByText("Course inquiry: Open Water Diver")).toBeVisible();
   await expect(preview.getByText("How many divers: 3")).toBeVisible();
+  await expect(preview.getByText(/Date I have in mind: /)).toBeVisible();
   await expect(preview.getByText("When: the week of 12 August")).toBeVisible();
   await expect(preview.getByText("We are ashore only on the Tuesday.")).toBeVisible();
 
@@ -395,6 +458,7 @@ test("a diver with no workable date gets a written email instead of a dead end",
   const params = new URLSearchParams(url.search);
   expect(params.get("subject")).toBe("Course inquiry: Open Water Diver");
   expect(params.get("body")).toContain("Experience so far: I have never dived before");
+  expect(params.get("body")).toContain("Date I have in mind: ");
   expect(params.get("body")).toContain("Mira Delgado");
 });
 
@@ -424,6 +488,10 @@ test("a diver's inquiry is recorded server-side and the shop's details stay reac
   await page.getByLabel("Your name").fill("Sena Okafor");
   await page.getByLabel("Your email").fill("sena.okafor.e2e@example.com");
   await page.getByLabel("Your phone").fill("+1 305 555 0199");
+  // The picker refuses a date already gone: a request nobody can answer is
+  // never worth sending.
+  await expect(page.getByLabel("A date you have in mind")).toHaveAttribute("min", daysFromNow(0));
+  await page.getByLabel("A date you have in mind").fill(daysFromNow(30));
   await page.getByLabel("Where you are up to").selectOption("certified");
 
   await inquiry.getByRole("button", { name: "Send inquiry" }).click();

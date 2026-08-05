@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { useActionState } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { joinLastMinuteListAction, type LastMinuteListFormState } from "../actions";
 
 const INITIAL_STATE: LastMinuteListFormState = {};
@@ -42,11 +42,6 @@ export function LastMinuteListForm({ shopSlug }: { shopSlug: string }) {
       <h2 className="font-semibold">{t("lastMinute.heading")}</h2>
       <p className="mt-1 text-sm text-muted">{t("lastMinute.body")}</p>
       <p className="mt-2 text-sm text-muted">{t("lastMinute.alreadyHaveATrip")}</p>
-      {state.error ? (
-        <p role="alert" className="mt-3 text-sm text-danger">
-          {state.error}
-        </p>
-      ) : null}
       <form action={formAction} className="mt-4 flex flex-col gap-4">
         <FieldGrid columns={2}>
           <Field label={t("common.name")}>
@@ -91,13 +86,16 @@ export function LastMinuteListForm({ shopSlug }: { shopSlug: string }) {
             <input name="availableUntil" type="date" className={controlClass} />
           </Field>
         </FieldGrid>
-        <div>
+        <div className="flex flex-wrap items-center gap-3">
           <SubmitButton
             pendingLabel={t("lastMinute.submitting")}
             className={buttonClass({ variant: "secondary", className: "px-5 py-2.5" })}
           >
             {t("lastMinute.submit")}
           </SubmitButton>
+          {/* Beside the button, not above five fields — six on a phone, where
+              the refusal used to sit off the top of the screen. */}
+          <FormStatus tone="danger">{state.error}</FormStatus>
         </div>
       </form>
     </section>

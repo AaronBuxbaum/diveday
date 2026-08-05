@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   bookingConfirmationEmail,
+  courseInquiryEmail,
   demoStartedAlertEmail,
   lastMinuteDealEmail,
   newAccountAlertEmail,
@@ -413,6 +414,44 @@ describe("lastMinuteDealEmail", () => {
     expect(email.text).toContain(dealBase.unsubscribeUrl);
     expect(email.html).toContain(`href="${dealBase.unsubscribeUrl}"`);
     expect(email.html).toContain("Stop last-minute deal emails from Blue Mantis");
+  });
+});
+
+describe("courseInquiryEmail", () => {
+  const inquiry = {
+    locale: "en-US" as const,
+    shopName: "Blue Mantis",
+    courseTitle: "Open Water Diver",
+    inquirerName: "Mira Delgado",
+    inquirerEmail: "mira@example.com",
+    experience: "never" as const,
+    timing: "the week of 12 August",
+  };
+
+  // The date the diver picked is the fact that decides whether the desk has
+  // anything to answer with, so it leads the block of facts.
+  it("names a requested date first, written for the reader", () => {
+    const email = courseInquiryEmail({ ...inquiry, preferredDate: "2026-08-12" });
+    expect(email.text).toContain("Date asked for: August 12, 2026");
+    expect(email.html).toContain("Date asked for: August 12, 2026");
+    expect(email.text.indexOf("Date asked for")).toBeLessThan(email.text.indexOf("When:"));
+  });
+
+  it("drops the line entirely when the diver named no date", () => {
+    const email = courseInquiryEmail(inquiry);
+    expect(email.text).not.toContain("Date asked for");
+    expect(email.html).not.toContain("Date asked for");
+    // And no stray separator left where the line would have been.
+    expect(email.html).not.toContain("<br><br>");
+  });
+
+  it("writes the date in the shop's own language", () => {
+    const email = courseInquiryEmail({
+      ...inquiry,
+      locale: "es-ES",
+      preferredDate: "2026-08-12",
+    });
+    expect(email.text).toContain("Fecha solicitada: 12 de agosto de 2026");
   });
 });
 

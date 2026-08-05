@@ -143,7 +143,12 @@ export default async function BackupSettingsPage({
               ? "border-success/40 bg-success/10 text-foreground"
               : "border-danger/40 bg-danger/10 text-foreground"
           }`}
-          role="status"
+          // A refused destination is a refusal, and has to interrupt: every
+          // code here used to announce as an ambient `status`, so "that
+          // endpoint isn't HTTPS" reached a screen reader (if at all) behind
+          // whatever it was already saying. Same tone→role rule as
+          // `noticeRole` in src/lib/staff-notices.ts.
+          role={NOTICE_TONE[banner] === "danger" ? "alert" : "status"}
         >
           {banner === "test_failed"
             ? t("backup.notice.test_failed", { reason: deliveryErrorText(t, reason ?? null) })

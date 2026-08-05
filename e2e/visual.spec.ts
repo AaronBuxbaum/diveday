@@ -1734,23 +1734,37 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "settings-calendar", scheme);
       });
 
-      // The courses catalog: the eye visibility toggle beside the new link
-      // icon that jumps to a course's public preview page.
+      // The courses catalog: the agency tab strip that replaced the per-row
+      // PADI/SSI pill, the list in progression order rather than alphabetical,
+      // and the three row controls — schedule a session, the eye visibility
+      // toggle, the link out to the public page.
       test(`the staff course catalog renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/courses");
         await page.getByRole("heading", { level: 1, name: "Courses" }).waitFor();
         await capture(page, "courses-list", scheme);
       });
 
-      // A course's edit page: the Day by day section's real per-day controls
-      // (start/end time, time note, item list) replacing the old textarea.
+      // One agency's half of the catalog: the selected tab, and a shorter list
+      // that still reads in progression order.
+      test(`the staff course catalog filtered by agency renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/shop/blue-mantis/courses?agency=ssi");
+        await page.getByRole("heading", { level: 1, name: "Courses" }).waitFor();
+        await capture(page, "courses-list-agency", scheme);
+      });
+
+      // A course's edit page: the Day by day section's per-day controls
+      // (start/end time, time note) over a one-item-per-line textarea, and the
+      // single Save control at the foot — no Hide/Show or Preview beside it
+      // (ADR 20260805-remove-certification-paths shipped alongside that trim).
       test(`the course editor renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/courses/open-water-diver/edit");
         // "Day by day" is a server-rendered <legend>, so it is on screen before
         // DayByDayEditor (a Client Component) mounts — waiting on it let the
         // capture land mid-mount. Wait for a control the editor itself renders.
         await page.getByText("Day by day").waitFor();
-        await page.getByRole("button", { name: "Add item" }).first().waitFor();
+        await page.getByLabel("Day 1 — what happens").waitFor();
         await capture(page, "course-edit", scheme);
       });
 

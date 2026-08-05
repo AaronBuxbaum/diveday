@@ -159,7 +159,7 @@
   },
   "/shop/[shopSlug]/courses": {
     "e2e": ["courses.spec.ts"],
-    "visual": ["courses-list"]
+    "visual": ["courses-list", "courses-list-agency"]
   },
   "/shop/[shopSlug]/courses/[slug]/edit": {
     "e2e": ["courses.spec.ts", "search.spec.ts"],
