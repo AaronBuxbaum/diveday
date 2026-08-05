@@ -38,7 +38,13 @@ vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
 const { requireStaffSession } = await import("@/lib/session");
-const { saveUnitsAction } = await import("./actions");
+const {
+  saveAddressAction,
+  saveDockCallAction,
+  savePackingAction,
+  saveTimezoneAction,
+  saveUnitsAction,
+} = await import("./actions");
 
 async function context() {
   const { db, shop } = await seededShopContext();
@@ -80,30 +86,14 @@ beforeEach(() => {
 });
 
 describe("saving the shop's units", () => {
-  it("lets any staff member set depth and water temperature", async () => {
-    const { db, shop, captain } = await context();
-    signIn(shop, captain);
-
-    const to = await redirectedTo(() => saveUnitsAction(unitsForm({})));
-
-    expect(to).toBe(`/shop/${shop.slug}/settings?notice=units_saved&saved=units`);
-    expect(await unitsOf(db, shop.id)).toMatchObject({
-      depthUnit: "feet",
-      temperatureUnit: "fahrenheit",
-    });
-  });
-
-  it("refuses a captain who posts a currency field the page never showed him", async () => {
+  it("refuses a captain outright — settings are owner/manager work now", async () => {
     const { db, shop, captain } = await context();
     signIn(shop, captain);
     const before = await unitsOf(db, shop.id);
 
-    const to = await redirectedTo(() => saveUnitsAction(unitsForm({ currency: "eur" })));
+    const to = await redirectedTo(() => saveUnitsAction(unitsForm({})));
 
     expect(to).toBe(`/shop/${shop.slug}/settings?notice=not_authorized`);
-    // The whole submission drops, not just the currency: a staffer who posted
-    // three values and got back "not authorized" should not have to guess which
-    // two landed.
     expect(await unitsOf(db, shop.id)).toEqual(before);
   });
 
@@ -141,5 +131,83 @@ describe("saving the shop's units", () => {
 
     expect(to).toBe(`/shop/${shop.slug}/settings?notice=units_invalid&saved=units`);
     expect(await unitsOf(db, shop.id)).toEqual(before);
+  });
+});
+
+/**
+ * Hiding the settings page from the daily crew is a courtesy, never the gate.
+ * A server action is a POST endpoint whose id ships to any browser that has
+ * ever rendered the form, so a demoted staffer — or anyone who kept an old tab
+ * open — could still post to it. Every mutation re-checks live roles, and each
+ * test below asserts the *stored row* after the refusal, not the notice alone:
+ * the `setShop*` writers have no gate of their own and write what they are
+ * handed.
+ */
+describe("every settings mutation refuses the daily crew", () => {
+  it("refuses a captain's timezone change", async () => {
+    const { db, shop, captain } = await context();
+    signIn(shop, captain);
+    const before = await getShopById(db, shop.id);
+
+    const form = new FormData();
+    form.set("timezone", "Pacific/Auckland");
+    const to = await redirectedTo(() => saveTimezoneAction(form));
+
+    expect(to).toBe(`/shop/${shop.slug}/settings?notice=not_authorized`);
+    expect((await getShopById(db, shop.id))?.timezone).toBe(before?.timezone);
+  });
+
+  it("refuses a captain's address change", async () => {
+    const { db, shop, captain } = await context();
+    signIn(shop, captain);
+
+    const form = new FormData();
+    for (const field of [
+      "addressStreet",
+      "addressLocality",
+      "addressRegion",
+      "addressPostalCode",
+      "addressCountry",
+    ]) {
+      form.set(field, field === "addressCountry" ? "NZ" : "somewhere else");
+    }
+    const to = await redirectedTo(() => saveAddressAction(form));
+
+    expect(to).toBe(`/shop/${shop.slug}/settings?notice=not_authorized`);
+    expect((await getShopById(db, shop.id))?.addressStreet).not.toBe("somewhere else");
+  });
+
+  it("refuses a captain's packing list and dock call, which had no gate at all before", async () => {
+    const { db, shop, captain } = await context();
+    signIn(shop, captain);
+    const before = await getShopById(db, shop.id);
+
+    const packing = new FormData();
+    packing.set("packingList", "towel\nsunscreen");
+    expect(await redirectedTo(() => savePackingAction(packing))).toBe(
+      `/shop/${shop.slug}/settings?notice=not_authorized`,
+    );
+
+    const dock = new FormData();
+    dock.set("dockCallMinutes", "90");
+    expect(await redirectedTo(() => saveDockCallAction(dock))).toBe(
+      `/shop/${shop.slug}/settings?notice=not_authorized`,
+    );
+
+    const after = await getShopById(db, shop.id);
+    expect(after?.packingList).toEqual(before?.packingList);
+    expect(after?.dockCallMinutes).toBe(before?.dockCallMinutes);
+  });
+
+  it("still lets an owner through every one of them", async () => {
+    const { db, shop, owner } = await context();
+    signIn(shop, owner);
+
+    const dock = new FormData();
+    dock.set("dockCallMinutes", "90");
+    expect(await redirectedTo(() => saveDockCallAction(dock))).toBe(
+      `/shop/${shop.slug}/settings?notice=dock_saved&saved=dockCall`,
+    );
+    expect((await getShopById(db, shop.id))?.dockCallMinutes).toBe(90);
   });
 });

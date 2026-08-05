@@ -258,7 +258,7 @@ export default async function TeamSettingsPage({
   // surface is where a refusal explains itself best (the same landing the
   // promos and WhatsApp gates already use). A code the destination handles,
   // never a silent teleport (task 82).
-  if (!canManage) redirect(`/shop/${shopSlug}/settings?notice=team_not_authorized`);
+  if (!canManage) redirect(`/shop/${shopSlug}?notice=team_not_authorized`);
 
   const staff = await listShopStaff(db, session.user.shopId);
   const shop = await getShopById(db, session.user.shopId);

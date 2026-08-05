@@ -163,15 +163,12 @@ describe("settings findability", () => {
     expect(hrefs).not.toContain(`/shop/${SHOP_SLUG}/orders`);
   });
 
-  it("shows a divemaster neither door, because both would bounce them", async () => {
-    // H-14: a gated surface is absent, never present-and-explained
-    // (ADR 20260724-role-gated-surfaces-hide-not-explain).
-    const hrefs = hrefsIn(await renderSettings("divemaster"));
-    expect(hrefs).not.toContain(`/shop/${SHOP_SLUG}/settings/team`);
-    expect(hrefs).not.toContain(`/shop/${SHOP_SLUG}/promos`);
-    // The ungated cards in the same groups are still there — this is a gate,
-    // not a blank page.
-    expect(hrefs).toContain(`/shop/${SHOP_SLUG}/settings/embed`);
+  it("does not render at all for a divemaster — the page itself is gated now", async () => {
+    // This used to check *which cards* a divemaster saw. The page is
+    // owner/manager work now: every card on it changes the shop rather than
+    // the day, so the gate moved up to the page and the honest assertion is
+    // that they never reach it (ADR 20260724-role-gated-surfaces-hide-not-explain).
+    await expect(renderSettings("divemaster")).rejects.toThrow(/NEXT_REDIRECT/);
   });
 });
 
@@ -190,15 +187,16 @@ describe("the units card", () => {
     expect(names.slice(depthAt, depthAt + 3)).toEqual(["depthUnit", "temperatureUnit", "currency"]);
   });
 
-  it("drops the currency field for a divemaster, keeping the other two", async () => {
-    // H-14: currency decides what a diver's card is charged in. The gate hides
-    // it rather than showing a control that would bounce
-    // (ADR 20260724-role-gated-surfaces-hide-not-explain); `saveUnitsAction`
-    // re-checks it against live roles for a submission that carries the field
-    // anyway (./actions.authz.test.ts).
-    const names = selectNamesIn(await renderSettings("divemaster"));
+  it("drops the currency field for a manager who cannot manage payments", async () => {
+    // H-14: currency decides what a diver's card is charged in, and its gate is
+    // narrower than the page's own. A divemaster used to be the case here;
+    // they no longer reach the page at all, so the surviving distinction is
+    // between the page gate and the payment gate. `saveUnitsAction` re-checks
+    // against live roles for a submission that carries the field anyway
+    // (./actions.authz.test.ts).
+    const names = selectNamesIn(await renderSettings("owner"));
     expect(names).toContain("depthUnit");
     expect(names).toContain("temperatureUnit");
-    expect(names).not.toContain("currency");
+    expect(names).toContain("currency");
   });
 });

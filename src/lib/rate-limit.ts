@@ -292,6 +292,16 @@ export const RATE_LIMITS = {
   recapUploadByToken: perHour(10),
   /** Recap photo uploads, per IP — catches one visitor spamming many tokens. */
   recapUploadByIp: perHour(30),
+  /**
+   * Address suggestions from the settings card, per signed-in staff member.
+   *
+   * Every keystroke past the minimum length is a *billed* request to Amazon
+   * Location on the shop's own account, so this bounds the spend rather than
+   * any security boundary — the action is already owner/manager-gated. Sized
+   * for the errand it serves: a shop sets its address roughly once, and even a
+   * hesitant typist re-typing a long street a few times stays well inside it.
+   */
+  addressLookup: perHour(120),
   /** Public wait-list joins, per IP. */
   waitlistJoin: perHour(10),
   /** Course inquiry submissions from the public course page, per IP. */

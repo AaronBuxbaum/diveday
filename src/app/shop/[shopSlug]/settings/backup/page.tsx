@@ -104,7 +104,7 @@ export default async function BackupSettingsPage({
   // Same bar as the export download, re-checked against live roles: this page
   // configures a continuous export of the whole shop, medical evidence included.
   if (!(await canPersonExportShopData(db, session.user.shopId, session.user.personId))) {
-    redirect(`/shop/${session.user.shopSlug}/settings?notice=backup_not_authorized`);
+    redirect(`/shop/${session.user.shopSlug}?notice=backup_not_authorized`);
   }
 
   const locale = await requestLocale(shop.defaultLocale);

@@ -1874,6 +1874,13 @@
         "heading": "Dirección del centro",
         "description": "Donde un buceador se encuentra con el barco o entra en el local.",
         "detail": "La dirección física de tu centro, no la personal de un miembro del equipo. Se publica para que los buscadores puedan ubicar tu centro como un lugar real. Todos los campos son opcionales y se vacían de forma independiente.",
+        "searchLabel": "Busca tu dirección",
+        "searchHint": "opcional — completa los campos de abajo",
+        "searchPlaceholder": "Empieza a escribir la dirección de tu centro…",
+        "searching": "Buscando…",
+        "noMatches": "Sin coincidencias — completa los campos de abajo.",
+        "lookupFailed": "La búsqueda de direcciones no está disponible ahora. Completa los campos de abajo.",
+        "suggestionsLabel": "Sugerencias de dirección",
         "streetLabel": "Dirección",
         "streetPlaceholder": "100 Ocean Drive",
         "localityLabel": "Ciudad / localidad",
@@ -2575,7 +2582,12 @@
     "notice": {
       "waiversNotAuthorized": "Editar el waiver está limitado a propietarios y gerentes.",
       "exportNotAuthorized": "La exportación de datos está limitada a propietarios y gerentes.",
-      "reportsNotAuthorized": "Los informes muestran los ingresos del centro, así que están limitados a propietarios y gerentes."
+      "reportsNotAuthorized": "Los informes muestran los ingresos del centro, así que están limitados a propietarios y gerentes.",
+      "settingsNotAuthorized": "La configuración del centro la gestionan el propietario o un gerente. Tu suscripción al calendario sigue siendo tuya.",
+      "teamNotAuthorized": "La gestión del equipo está limitada a propietarios y gerentes.",
+      "importNotAuthorized": "La importación escribe datos personales y médicos de los buceadores, así que está limitada a propietarios y gerentes.",
+      "backupNotAuthorized": "Solo un propietario o gerente puede cambiar los ajustes de respaldo.",
+      "whatsappNotAuthorized": "Solo un propietario o gerente puede cambiar los ajustes de WhatsApp."
     },
     "orientation": {
       "heading": "¿Recién llegado? Algunas pistas para tu puesto.",
@@ -2841,7 +2853,8 @@
       "reports": "Informes",
       "promoCodes": "Códigos promocionales",
       "settings": "Ajustes",
-      "team": "Equipo"
+      "team": "Equipo",
+      "calendarFeed": "Suscripción al calendario"
     },
     "subSurfaceRipple": {
       "iconTitle": "Icono de pase de lista completo",

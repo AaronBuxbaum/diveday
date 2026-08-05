@@ -75,12 +75,14 @@ test.describe("H-14 role permissions", () => {
       await expect(page).toHaveURL(`/shop/${SHOP}`);
       await expect(page.getByRole("heading", { level: 1, name: "Signatures" })).toHaveCount(0);
 
-      // Payment settings — Stripe + rental catalog/prices — are hidden.
+      // Settings as a whole is owner/manager work now, not just the money
+      // cards inside it: every card there changes the shop rather than the
+      // day. The captain is bounced to Today with a reason, and none of the
+      // page's forms exist for them at all.
       await page.goto(`/shop/${SHOP}/settings`);
-      await expect(
-        page.getByText("payment settings, limited to owners and managers"),
-      ).toBeVisible();
+      await expect(page).toHaveURL(new RegExp(`/shop/${SHOP}(\\?|$)`));
       await expect(page.getByRole("button", { name: "Save rental catalog" })).toHaveCount(0);
+      await expect(page.getByRole("button", { name: "Save shop address" })).toHaveCount(0);
 
       // Trip creation is hidden.
       await page.goto(`/shop/${SHOP}/trips/new`);
@@ -127,14 +129,17 @@ test.describe("H-14 role permissions", () => {
       await expect(page).toHaveURL(new RegExp(`/shop/${SHOP}(\\?|$)`));
       await expect(page.getByText(/Reports read the shop's revenue/i)).toBeVisible();
 
-      // Team and Import are Settings sub-pages, so their parent is Settings —
-      // the same landing the promos and WhatsApp gates already used.
+      // Team and Import are Settings sub-pages, and they used to land their
+      // refusal on Settings — the nearest parent that could explain it. Now
+      // that Settings takes the same owner/manager gate, that parent bounces
+      // the same staffer again and their reason is lost on the way. Both land
+      // on Today instead, which is where the reason survives.
       await page.goto(`/shop/${SHOP}/settings/team`);
-      await expect(page).toHaveURL(new RegExp(`/shop/${SHOP}/settings(\\?|$)`));
+      await expect(page).toHaveURL(new RegExp(`/shop/${SHOP}(\\?|$)`));
       await expect(page.getByText(/Team management is limited to owners/i)).toBeVisible();
 
       await page.goto(`/shop/${SHOP}/settings/import`);
-      await expect(page).toHaveURL(new RegExp(`/shop/${SHOP}/settings(\\?|$)`));
+      await expect(page).toHaveURL(new RegExp(`/shop/${SHOP}(\\?|$)`));
       await expect(
         page.getByText(/Importing writes divers' personal and medical records/i),
       ).toBeVisible();
@@ -159,10 +164,10 @@ test.describe("H-14 role permissions", () => {
       await expect(page).toHaveURL(`/shop/${SHOP}`);
       await expect(page.getByRole("heading", { level: 1, name: "Signatures" })).toHaveCount(0);
 
+      // An instructor runs courses, not the shop's configuration.
       await page.goto(`/shop/${SHOP}/settings`);
-      await expect(
-        page.getByText("payment settings, limited to owners and managers"),
-      ).toBeVisible();
+      await expect(page).toHaveURL(new RegExp(`/shop/${SHOP}(\\?|$)`));
+      await expect(page.getByRole("button", { name: "Save rental catalog" })).toHaveCount(0);
     });
   });
 
@@ -203,5 +208,33 @@ test.describe("H-14 role permissions", () => {
       await page.goto(`/shop/${SHOP}/settings/import`);
       await expect(page).toHaveURL(new RegExp(`/shop/${SHOP}/settings/import`));
     });
+  });
+});
+
+/**
+ * The calendar subscription is the one page under `/settings` that is *not*
+ * shop configuration: a staffer's own feed of their own shifts, filed there by
+ * URL only. Gating Settings must not take it with them — that would remove a
+ * personal tool from exactly the roles who work the shifts.
+ */
+test.describe("the calendar subscription survives the settings gate", () => {
+  signedInAs("captain");
+
+  test("a captain can still set up their own calendar feed", async ({ page }) => {
+    await page.goto(`/shop/${SHOP}/settings/calendar`);
+    // Not bounced: the page renders for them.
+    await expect(page).toHaveURL(new RegExp(`/shop/${SHOP}/settings/calendar`));
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  });
+
+  test("and can find it without going through Settings, which they cannot open", async ({
+    page,
+  }) => {
+    await page.goto(`/shop/${SHOP}`);
+    await page.getByRole("button", { name: "Search" }).click();
+    await page.getByRole("combobox").fill("calendar");
+    await expect(
+      page.getByRole("option", { name: /Calendar subscription/i }).first(),
+    ).toBeVisible();
   });
 });

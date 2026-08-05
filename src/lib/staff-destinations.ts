@@ -21,7 +21,7 @@
  * destination is *absent* for anyone who fails the gate — never present and
  * disabled, never explained (ADR 20260724-role-gated-surfaces-hide-not-explain).
  */
-export type StaffDestinationGate = "waivers" | "reports" | "team";
+export type StaffDestinationGate = "waivers" | "reports" | "team" | "settings";
 
 /** Which gates the current viewer passes. */
 export type StaffDestinationGates = Record<StaffDestinationGate, boolean>;
@@ -82,7 +82,8 @@ export type StaffDestinationId =
   | "reports"
   | "promoCodes"
   | "settings"
-  | "team";
+  | "team"
+  | "calendarFeed";
 
 /**
  * The word each destination goes by, resolved from the staff bundle by
@@ -202,6 +203,19 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
   // being one of the two doors. Team is also literally a Settings sub-page.
   { id: "promoCodes", suffix: "/promos", navGroup: null, inPalette: true, gate: "reports" },
   { id: "team", suffix: "/settings/team", navGroup: null, inPalette: true, gate: "team" },
+  // The one page under `/settings` that is *not* shop configuration: a
+  // staffer's own calendar subscription, a personal feed of their own shifts,
+  // filed there by URL only. It needs its own entry precisely because Settings
+  // above it is now gated — without a door of its own it would vanish from the
+  // nav and the palette for every role that most wants it, and be reachable
+  // only by typing the URL. Ungated, and palette-only: it is a once-a-year
+  // errand, not a tab.
+  {
+    id: "calendarFeed",
+    suffix: "/settings/calendar",
+    navGroup: null,
+    inPalette: true,
+  },
   // Last, always: Settings is where a shop goes when nothing else on the menu
   // was the answer, and it is the one destination the whole "Set up" group
   // now holds. `alsoMatch` keeps the header honest for the destination that
@@ -215,6 +229,7 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
     navGroup: "setup",
     inPalette: true,
     alsoMatch: "/promos",
+    gate: "settings",
   },
 ];
 

@@ -70,5 +70,8 @@ test.describe("captain", () => {
     await expect(daily.getByRole("link", { name: "Reports" })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Promo codes" })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Team" })).toHaveCount(0);
+    // Settings joined them: the whole "Set up" group is owner/manager work, so
+    // for a captain that group is empty rather than a tab that bounces.
+    await expect(page.getByRole("link", { name: "Settings" })).toHaveCount(0);
   });
 });

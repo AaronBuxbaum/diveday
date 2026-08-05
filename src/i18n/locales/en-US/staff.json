@@ -1874,6 +1874,13 @@
         "heading": "Shop address",
         "description": "Where a diver meets the boat or walks into the storefront.",
         "detail": "Your shop's physical business address, not a staff member's personal one. Published so search engines can place your shop as a real venue. Every field is optional, and empties independently.",
+        "searchLabel": "Find your address",
+        "searchHint": "optional — fills the boxes below",
+        "searchPlaceholder": "Start typing your shop's address…",
+        "searching": "Looking…",
+        "noMatches": "No matches — fill the boxes in below instead.",
+        "lookupFailed": "Address lookup isn't available right now. Fill the boxes in below.",
+        "suggestionsLabel": "Address suggestions",
         "streetLabel": "Street address",
         "streetPlaceholder": "100 Ocean Drive",
         "localityLabel": "City / town",
@@ -2575,7 +2582,12 @@
     "notice": {
       "waiversNotAuthorized": "Editing the waiver is limited to owners and managers.",
       "exportNotAuthorized": "Data export is limited to owners and managers.",
-      "reportsNotAuthorized": "Reports read the shop's revenue, so they're limited to owners and managers."
+      "reportsNotAuthorized": "Reports read the shop's revenue, so they're limited to owners and managers.",
+      "settingsNotAuthorized": "Shop settings are managed by the owner or a manager. Your calendar subscription is still yours to set up.",
+      "teamNotAuthorized": "Team management is limited to owners and managers.",
+      "importNotAuthorized": "Importing writes divers' personal and medical records, so it's limited to owners and managers.",
+      "backupNotAuthorized": "Only an owner or manager can change backup settings.",
+      "whatsappNotAuthorized": "Only an owner or manager can change WhatsApp settings."
     },
     "orientation": {
       "heading": "New here? A few pointers for your role.",
@@ -2841,7 +2853,8 @@
       "reports": "Reports",
       "promoCodes": "Promo codes",
       "settings": "Settings",
-      "team": "Team"
+      "team": "Team",
+      "calendarFeed": "Calendar subscription"
     },
     "subSurfaceRipple": {
       "iconTitle": "Roll call complete icon",

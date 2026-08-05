@@ -13,8 +13,18 @@ import {
   visibleStaffDestinations,
 } from "./staff-destinations";
 
-const owner: StaffDestinationGates = { waivers: true, reports: true, team: true };
-const crew: StaffDestinationGates = { waivers: false, reports: false, team: false };
+const owner: StaffDestinationGates = {
+  waivers: true,
+  reports: true,
+  team: true,
+  settings: true,
+};
+const crew: StaffDestinationGates = {
+  waivers: false,
+  reports: false,
+  team: false,
+  settings: false,
+};
 
 describe("the staff destination registry", () => {
   it("gives every destination a unique id and a unique URL", () => {
@@ -75,7 +85,7 @@ describe("permission gating", () => {
     const gated = STAFF_DESTINATIONS.filter((destination) => destination.gate !== undefined).map(
       (destination) => destination.id,
     );
-    expect(gated).toEqual(["waivers", "reports", "promoCodes", "team"]);
+    expect(gated).toEqual(["waivers", "reports", "promoCodes", "team", "settings"]);
 
     const visible = visibleStaffDestinations(crew).map((destination) => destination.id);
     const palette = staffPaletteDestinations(crew).map((destination) => destination.id);
@@ -99,7 +109,12 @@ describe("permission gating", () => {
   });
 
   it("gates promo codes on the same permission as reports", () => {
-    const reportsOnly: StaffDestinationGates = { waivers: false, reports: true, team: false };
+    const reportsOnly: StaffDestinationGates = {
+      waivers: false,
+      reports: true,
+      team: false,
+      settings: false,
+    };
     const ids = visibleStaffDestinations(reportsOnly).map((destination) => destination.id);
     expect(ids).toContain("reports");
     expect(ids).toContain("promoCodes");
@@ -253,5 +268,30 @@ describe("what each consumer derives", () => {
     expect(staffDestinationHref(staffShopRoot("blue-mantis"), blockers)).toBe(
       "/shop/blue-mantis?view=departures",
     );
+  });
+});
+
+/**
+ * Settings became owner/manager work, which put the one page under it that is
+ * *not* shop configuration at risk of disappearing with it: a staffer's own
+ * calendar subscription is a personal feed of their own shifts, filed under
+ * `/settings` by URL only.
+ */
+describe("the calendar subscription survives the settings gate", () => {
+  it("stays reachable for a role that cannot open settings at all", () => {
+    const ids = visibleStaffDestinations(crew).map((destination) => destination.id);
+    expect(ids).not.toContain("settings");
+    expect(ids).toContain("calendarFeed");
+  });
+
+  it("is offered by name in the palette, since it is not in the header", () => {
+    const palette = staffPaletteDestinations(crew).map((destination) => destination.id);
+    expect(palette).toContain("calendarFeed");
+  });
+
+  it("hides settings and everything filed beneath it from the daily crew", () => {
+    const ids = visibleStaffDestinations(crew).map((destination) => destination.id);
+    expect(ids).not.toContain("settings");
+    expect(ids).not.toContain("team");
   });
 });

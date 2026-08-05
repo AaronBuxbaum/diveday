@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { getShopBySlug } from "@/db/shops";
 import { seededTestDb } from "@/test/db";
+import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
 
 vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
@@ -30,12 +31,16 @@ async function seededContext() {
   const db: AppDb = await seededTestDb();
   const shop = await getShopBySlug(db, "blue-mantis");
   if (!shop) throw new Error("demo shop missing");
-  return { db, shop };
+  // A *real* seeded person, not a placeholder id: the page re-checks the
+  // settings gate against live roles now (`canPersonManageShopSettings`),
+  // which reads `people` by this id.
+  const personId = await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL);
+  return { db, shop, personId };
 }
 
-const staffSession = (shopId: string): Session => ({
+const staffSession = (shopId: string, personId: string): Session => ({
   user: {
-    personId: "staff-1",
+    personId,
     shopId,
     shopSlug: "blue-mantis",
     name: "Dana Reyes",
@@ -69,9 +74,9 @@ function findElements<P>(
 
 describe("EmbedSettingsPage attribution", () => {
   it("appends a crawlable Powered-by-DiveDay backlink after the iframe, carrying UTM params", async () => {
-    const { db, shop } = await seededContext();
+    const { db, shop, personId } = await seededContext();
     vi.mocked(getDb).mockResolvedValue(db);
-    vi.mocked(auth).mockResolvedValue(staffSession(shop.id));
+    vi.mocked(auth).mockResolvedValue(staffSession(shop.id, personId));
     const previousAppHost = process.env.APP_HOST;
     // Loopback http is only rejected in production (checkPublicHost) — a
     // vitest worker's NODE_ENV isn't "production", so this resolves.

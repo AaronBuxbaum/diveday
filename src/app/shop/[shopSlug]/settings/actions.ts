@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { canPersonManagePaymentSettings } from "@/db/authz";
+import { canPersonManagePaymentSettings, canPersonManageShopSettings } from "@/db/authz";
 import { getDb } from "@/db/client";
 import {
   getShopById,
@@ -23,6 +23,11 @@ import {
   getShopStripeAccount,
   refreshShopStripeAccountStatus,
 } from "@/db/stripe-accounts";
+import {
+  type AddressLookupResult,
+  addressLookupConfigFromEnvironment,
+  isLookupWorthy,
+} from "@/lib/address-lookup";
 import { isValidTimeZone } from "@/lib/format";
 import {
   isShopCurrency,
@@ -33,6 +38,7 @@ import {
 } from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { connectProviderFromEnvironment } from "@/lib/payments/connect";
+import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import {
   RENTABLE_ITEMS,
   type RentalPricing,
@@ -56,11 +62,35 @@ import { requireStaffSession } from "@/lib/session";
  * -------------------------------------------------------------------------- */
 
 /**
+ * **Every** mutation on this page is owner/manager work now, re-checked here
+ * against live roles rather than the roles baked into the JWT at sign-in.
+ *
+ * Hiding the page is a courtesy, never the gate: a server action is a POST
+ * endpoint whose id ships to any browser that has ever rendered the form, so
+ * without this a demoted staffer — or anyone who kept an old page open — could
+ * still rewrite the shop's timezone, address, or packing list. Returns the
+ * settings redirect target when the actor lacks the gate, or null when they
+ * may proceed.
+ */
+async function settingsBlock(session: {
+  user: { shopId: string; personId: string; shopSlug: string };
+}): Promise<string | null> {
+  const allowed = await canPersonManageShopSettings(
+    await getDb(),
+    session.user.shopId,
+    session.user.personId,
+  );
+  return allowed ? null : `/shop/${session.user.shopSlug}/settings?notice=not_authorized`;
+}
+
+/**
  * Payment settings (Stripe Connect and the rental catalog/prices) are
  * owner/manager work (H-14, ADR 20260724-role-authorization), re-checked
  * against live roles. Returns the settings redirect target when the actor
- * lacks the gate, or null when they may proceed. The other sections here
- * (contact, packing, dock call) are ordinary shop settings any staff can edit.
+ * lacks the gate, or null when they may proceed. Narrower than
+ * {@link settingsBlock} by intent rather than by effect — the two resolve to
+ * the same roles today, and each states its own reason so one can move without
+ * silently dragging the other.
  */
 async function paymentSettingsBlock(session: {
   user: { shopId: string; personId: string; shopSlug: string };
@@ -108,6 +138,11 @@ const reviewUrlSchema = z.object({
 
 export async function savePackingAction(formData: FormData) {
   const session = await requireStaffSession();
+  const notAllowed = await settingsBlock(session);
+  if (notAllowed) {
+    revalidateAndRedirect(`/shop/${session.user.shopSlug}/settings`, notAllowed);
+    return;
+  }
   const packingList = String(formData.get("packingList") ?? "")
     .split("\n")
     .map((item) => item.trim())
@@ -153,6 +188,11 @@ export async function savePackingAction(formData: FormData) {
  */
 export async function saveUnitsAction(formData: FormData) {
   const session = await requireStaffSession();
+  const notAllowed = await settingsBlock(session);
+  if (notAllowed) {
+    revalidateAndRedirect(`/shop/${session.user.shopSlug}/settings`, notAllowed);
+    return;
+  }
   const settings = `/shop/${session.user.shopSlug}/settings`;
   const depthUnit = z.enum(["meters", "feet"]).safeParse(formData.get("depthUnit"));
   const temperatureUnit = z
@@ -193,6 +233,11 @@ export async function saveUnitsAction(formData: FormData) {
 /** How many minutes before departure divers are asked to be at the dock. */
 export async function saveDockCallAction(formData: FormData) {
   const session = await requireStaffSession();
+  const notAllowed = await settingsBlock(session);
+  if (notAllowed) {
+    revalidateAndRedirect(`/shop/${session.user.shopSlug}/settings`, notAllowed);
+    return;
+  }
   const settings = `/shop/${session.user.shopSlug}/settings`;
   const minutes = Number(formData.get("dockCallMinutes"));
   if (!Number.isInteger(minutes) || minutes < 5 || minutes > 180) {
@@ -205,6 +250,11 @@ export async function saveDockCallAction(formData: FormData) {
 /** Which gear the shop rents. Unchecked kinds simply drop out of the catalog. */
 export async function saveRentalItemsAction(formData: FormData) {
   const session = await requireStaffSession();
+  const notAllowed = await settingsBlock(session);
+  if (notAllowed) {
+    revalidateAndRedirect(`/shop/${session.user.shopSlug}/settings`, notAllowed);
+    return;
+  }
   const blocked = await paymentSettingsBlock(session);
   if (blocked) {
     revalidateAndRedirect(`/shop/${session.user.shopSlug}/settings`, blocked);
@@ -245,6 +295,11 @@ function parsePriceAmount(
 /** What the shop charges for rental gear: a set price, per-piece prices, and per-dive nitrox. */
 export async function saveRentalPricingAction(formData: FormData) {
   const session = await requireStaffSession();
+  const notAllowed = await settingsBlock(session);
+  if (notAllowed) {
+    revalidateAndRedirect(`/shop/${session.user.shopSlug}/settings`, notAllowed);
+    return;
+  }
   const settings = `/shop/${session.user.shopSlug}/settings`;
   const blocked = await paymentSettingsBlock(session);
   if (blocked) {
@@ -292,6 +347,11 @@ export async function saveRentalPricingAction(formData: FormData) {
  */
 export async function saveContactAction(formData: FormData) {
   const session = await requireStaffSession();
+  const notAllowed = await settingsBlock(session);
+  if (notAllowed) {
+    revalidateAndRedirect(`/shop/${session.user.shopSlug}/settings`, notAllowed);
+    return;
+  }
   const parsed = contactSchema.safeParse(Object.fromEntries(formData));
   const settings = `/shop/${session.user.shopSlug}/settings`;
   if (!parsed.success) redirect(`${settings}?notice=contact_invalid&saved=contact`);
@@ -307,6 +367,11 @@ export async function saveContactAction(formData: FormData) {
  */
 export async function saveAddressAction(formData: FormData) {
   const session = await requireStaffSession();
+  const notAllowed = await settingsBlock(session);
+  if (notAllowed) {
+    revalidateAndRedirect(`/shop/${session.user.shopSlug}/settings`, notAllowed);
+    return;
+  }
   const parsed = addressSchema.safeParse(Object.fromEntries(formData));
   const settings = `/shop/${session.user.shopSlug}/settings`;
   if (!parsed.success) redirect(`${settings}?notice=address_invalid&saved=address`);
@@ -317,6 +382,11 @@ export async function saveAddressAction(formData: FormData) {
 /** Where the post-trip recap's "leave us a review" link sends a diver. */
 export async function saveReviewUrlAction(formData: FormData) {
   const session = await requireStaffSession();
+  const notAllowed = await settingsBlock(session);
+  if (notAllowed) {
+    revalidateAndRedirect(`/shop/${session.user.shopSlug}/settings`, notAllowed);
+    return;
+  }
   const parsed = reviewUrlSchema.safeParse(Object.fromEntries(formData));
   const settings = `/shop/${session.user.shopSlug}/settings`;
   if (!parsed.success) redirect(`${settings}?notice=review_url_invalid&saved=reviewLink`);
@@ -326,6 +396,11 @@ export async function saveReviewUrlAction(formData: FormData) {
 
 export async function disconnectAction() {
   const session = await requireStaffSession();
+  const notAllowed = await settingsBlock(session);
+  if (notAllowed) {
+    revalidateAndRedirect(`/shop/${session.user.shopSlug}/settings`, notAllowed);
+    return;
+  }
   const blocked = await paymentSettingsBlock(session);
   if (blocked) {
     revalidateAndRedirect(`/shop/${session.user.shopSlug}/settings`, blocked);
@@ -346,6 +421,11 @@ export async function disconnectAction() {
 
 export async function refreshAction() {
   const session = await requireStaffSession();
+  const notAllowed = await settingsBlock(session);
+  if (notAllowed) {
+    revalidateAndRedirect(`/shop/${session.user.shopSlug}/settings`, notAllowed);
+    return;
+  }
   const blocked = await paymentSettingsBlock(session);
   if (blocked) {
     revalidateAndRedirect(`/shop/${session.user.shopSlug}/settings`, blocked);
@@ -378,6 +458,11 @@ export async function refreshAction() {
  */
 export async function saveTimezoneAction(formData: FormData) {
   const session = await requireStaffSession();
+  const notAllowed = await settingsBlock(session);
+  if (notAllowed) {
+    revalidateAndRedirect(`/shop/${session.user.shopSlug}/settings`, notAllowed);
+    return;
+  }
   const settings = `/shop/${session.user.shopSlug}/settings`;
   const submitted = formData.get("timezone");
   // An id this runtime can't resolve would make every date formatter on every
@@ -387,4 +472,52 @@ export async function saveTimezoneAction(formData: FormData) {
   }
   await setShopTimezone(await getDb(), session.user.shopId, submitted);
   revalidateAndRedirect(settings, `${settings}?notice=timezone_saved&saved=timezone`);
+}
+
+/**
+ * Address suggestions for the address card's type-ahead.
+ *
+ * The one action on this page that returns a value instead of redirecting: the
+ * card is a combobox, and the caller renders the rows.
+ *
+ * Four things guard it, in order, and each is doing separate work:
+ *
+ *  1. **The session.** `requireStaffSession` — never an open endpoint.
+ *  2. **The settings gate**, live-checked, the same one every mutation above
+ *     takes. Reading a geocoder is not a mutation, but it spends the shop's
+ *     money per request and it is reached only from a page a captain cannot
+ *     open; leaving the action ungated would make it the way around that.
+ *  3. **A rate limit**, keyed on the staff member. The billing risk here is not
+ *     an attacker so much as a type-ahead firing per keystroke, and the cap
+ *     bounds both.
+ *  4. **A length bound**, so the box can never push a large body at a metered
+ *     third-party API.
+ *
+ * Everything it returns is provider text that ends up in React children and
+ * `value` attributes — escaped by default, and never `dangerouslySetInnerHTML`.
+ * The query itself is a partial business address and is never logged.
+ */
+export async function suggestAddressAction(query: string): Promise<AddressLookupResult> {
+  const session = await requireStaffSession();
+  const db = await getDb();
+  if (!(await canPersonManageShopSettings(db, session.user.shopId, session.user.personId))) {
+    return { status: "failed" };
+  }
+  if (typeof query !== "string" || !isLookupWorthy(query)) return { status: "too_short" };
+
+  const allowed = await checkRateLimit(
+    rateLimitKey("address-lookup", session.user.personId),
+    RATE_LIMITS.addressLookup,
+  );
+  if (!allowed.allowed) return { status: "failed" };
+
+  const config = addressLookupConfigFromEnvironment();
+  // The ordinary local and self-hosted case, not an error: the card falls back
+  // to the plain boxes it has always been.
+  if (!config) return { status: "not_configured" };
+
+  // Imported here rather than at module scope so a deployment with no
+  // credentials never loads the AWS SDK at all.
+  const { awsAddressLookupProvider } = await import("@/lib/address-lookup-aws");
+  return awsAddressLookupProvider(config).suggest(query);
 }
