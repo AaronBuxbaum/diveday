@@ -2,7 +2,11 @@ import type { DiverTranslator } from "@/i18n/messages";
 import { diverTranslator } from "@/i18n/messages";
 import { reminderActionText } from "@/i18n/reminder-labels";
 import type { DiverLocale } from "@/i18n/settings";
-import { COURSE_INQUIRY_EXPERIENCE_KEYS, type CourseInquiryExperience } from "@/lib/course-inquiry";
+import {
+  COURSE_INQUIRY_EXPERIENCE_KEYS,
+  type CourseInquiryExperience,
+  formatPreferredDate,
+} from "@/lib/course-inquiry";
 import type { DemoRoleId } from "@/lib/demo-roles";
 import { formatDateTimeTz, formatShortDate, formatTime, formatTimeRangeTz } from "@/lib/format";
 import { escapeHtml } from "@/lib/html";

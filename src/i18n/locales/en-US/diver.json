@@ -750,6 +750,8 @@
     "yourEmail": "Your email",
     "yourPhone": "Your phone",
     "howManyDivers": "How many divers",
+    "preferredDate": "A date you have in mind",
+    "preferredDateHint": "We’ll tell you if it works — nothing is booked or held yet.",
     "whenSuits": "When suits you",
     "whenSuitsHint": "Rough is fine — a month or “any weekend” tells us plenty.",
     "whereYouAreUpTo": "Where you are up to",
@@ -776,7 +778,7 @@
     "sentHeading": "Inquiry sent",
     "sentBody": "We'll be in touch. You can still reach us directly using the details below.",
     "subject": "Course inquiry: {courseTitle}",
-    "body": "Hello {shopName},\n\nI would like to take the {courseTitle} course.\n\nWhen: {timing}\nHow many divers: {divers}\nExperience so far: {experience}{hasNote, select, yes {\n\n{note}} other {}}\n\nThank you,{hasName, select, yes {\n{name}} other {}}",
+    "body": "Hello {shopName},\n\nI would like to take the {courseTitle} course.\n\n{hasDate, select, yes {Date I have in mind: {preferredDate}\n} other {}}When: {timing}\nHow many divers: {divers}\nExperience so far: {experience}{hasNote, select, yes {\n\n{note}} other {}}\n\nThank you,{hasName, select, yes {\n{name}} other {}}",
     "experience": {
       "never": "I have never dived before",
       "tried": "I have tried scuba once, but I am not certified",
@@ -2026,6 +2028,7 @@
       "subject": "New course inquiry: {courseTitle}",
       "intro": "{name} is asking about {courseTitle} through your course page.",
       "contact": "Email: {email} · Phone: {phone}",
+      "preferredDate": "Date asked for: {date}",
       "timing": "When: {timing}",
       "divers": "How many divers: {divers}",
       "experience": "Experience so far: {experience}"

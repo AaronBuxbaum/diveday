@@ -750,6 +750,8 @@
     "yourEmail": "Tu correo",
     "yourPhone": "Tu teléfono",
     "howManyDivers": "Cuántos buceadores",
+    "preferredDate": "Una fecha que tienes en mente",
+    "preferredDateHint": "Te diremos si nos encaja — todavía no se reserva ni se aparta nada.",
     "whenSuits": "Cuándo te viene bien",
     "whenSuitsHint": "Con algo aproximado basta — un mes o “cualquier fin de semana” ya nos dice mucho.",
     "whereYouAreUpTo": "Por dónde vas",
@@ -776,7 +778,7 @@
     "sentHeading": "Consulta enviada",
     "sentBody": "Nos pondremos en contacto contigo. También puedes escribirnos directamente con los datos de abajo.",
     "subject": "Consulta sobre el curso: {courseTitle}",
-    "body": "Hola {shopName},\n\nMe gustaría hacer el curso {courseTitle}.\n\nCuándo: {timing}\nCuántos buceadores: {divers}\nExperiencia hasta ahora: {experience}{hasNote, select, yes {\n\n{note}} other {}}\n\nGracias,{hasName, select, yes {\n{name}} other {}}",
+    "body": "Hola {shopName},\n\nMe gustaría hacer el curso {courseTitle}.\n\n{hasDate, select, yes {Fecha que tengo en mente: {preferredDate}\n} other {}}Cuándo: {timing}\nCuántos buceadores: {divers}\nExperiencia hasta ahora: {experience}{hasNote, select, yes {\n\n{note}} other {}}\n\nGracias,{hasName, select, yes {\n{name}} other {}}",
     "experience": {
       "never": "Nunca he buceado",
       "tried": "He probado el buceo una vez, pero no estoy certificado",
@@ -2026,6 +2028,7 @@
       "subject": "Nueva consulta de curso: {courseTitle}",
       "intro": "{name} está preguntando por {courseTitle} desde la página del curso.",
       "contact": "Correo: {email} · Teléfono: {phone}",
+      "preferredDate": "Fecha solicitada: {date}",
       "timing": "Cuándo: {timing}",
       "divers": "Cuántos buceadores: {divers}",
       "experience": "Experiencia hasta ahora: {experience}"

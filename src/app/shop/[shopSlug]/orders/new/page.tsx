@@ -3,10 +3,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
-import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { canPersonManageOrders } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { getBookingContext, listOrderableCustomers } from "@/db/orders";
@@ -151,12 +150,6 @@ export default async function NewOrderPage({
         }
       />
 
-      {notice ? (
-        <StaffNoticeBanner tone="danger">
-          {noticeKey ? t(noticeKey) : t("orders.new.notice.fallback")}
-        </StaffNoticeBanner>
-      ) : null}
-
       {bookingContext ? (
         <p className="mb-6 rounded-lg border border-border bg-surface-sunken px-4 py-3 text-sm">
           {t("orders.new.linkedTo", {
@@ -264,12 +257,20 @@ export default async function NewOrderPage({
           })}
         </fieldset>
 
-        <SubmitButton
-          pendingLabel={t("orders.new.sending")}
-          className={buttonClass({ size: "lg", className: "self-start" })}
-        >
-          {t("orders.new.submit")}
-        </SubmitButton>
+        <div className="flex flex-wrap items-center gap-3">
+          <SubmitButton
+            pendingLabel={t("orders.new.sending")}
+            className={buttonClass({ size: "lg" })}
+          >
+            {t("orders.new.submit")}
+          </SubmitButton>
+          {/* Why the order was refused, beside the button that tried to send
+              it — the invoice form is long enough that a banner under the
+              heading is off screen by the time anyone presses Send. */}
+          <FormStatus tone="danger">
+            {notice ? (noticeKey ? t(noticeKey) : t("orders.new.notice.fallback")) : undefined}
+          </FormStatus>
+        </div>
       </form>
     </main>
   );
