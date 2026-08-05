@@ -62,3 +62,33 @@ export function calendarDateToUtcMidnight(date: CalendarDate): Date {
 export function isCalendarDateExpired(expiresOn: CalendarDate, todayLocal: CalendarDate): boolean {
   return expiresOn < todayLocal;
 }
+
+/** One local day's worth of items, in the order the items arrived. */
+export type LocalDayGroup<T> = { day: CalendarDate; items: T[] };
+
+/**
+ * Bucket instants into the shop's local calendar days, earliest day first.
+ *
+ * The day is resolved in the shop's own timezone, not the server's or the
+ * viewer's: a 6am departure is on the day the boat leaves the dock, whoever is
+ * reading. Returns keys (`CalendarDate`), never formatted words — the surface
+ * decides how a day is spelled, for the request's locale.
+ */
+export function groupByLocalDay<T>(
+  items: readonly T[],
+  timeZone: string,
+  instantOf: (item: T) => Date,
+): LocalDayGroup<T>[] {
+  const byDay = new Map<CalendarDate, T[]>();
+  for (const item of items) {
+    const day = calendarDateInTimezone(instantOf(item), timeZone);
+    const bucket = byDay.get(day);
+    if (bucket) bucket.push(item);
+    else byDay.set(day, [item]);
+  }
+  // `CalendarDate` sorts lexicographically in chronological order, so the day
+  // keys need no parsing to order correctly.
+  return [...byDay.entries()]
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+    .map(([day, dayItems]) => ({ day, items: dayItems }));
+}
