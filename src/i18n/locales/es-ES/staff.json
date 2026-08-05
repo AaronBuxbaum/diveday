@@ -362,7 +362,7 @@
     "history": {
       "heading": "Historial en el centro",
       "importedVisitsText": "{count, plural, one {# visita} other {# visitas}} llegaron de tu sistema anterior. Esas líneas son registros de reserva, no de inmersión — dicen qué se reservó y cómo lo llamaba tu software anterior.",
-      "noTripsYet": "Aún no hay salidas — resérvalas en una salida abierta y aparecerá aquí.",
+      "noTripsYet": "Aquí no hay nada todavía — las salidas pasadas y las visitas importadas aparecen aquí.",
       "imported": "Importado",
       "bookingFallback": "Reserva",
       "showOlderEntries": "{count, plural, one {Mostrar # entrada anterior} other {Mostrar # entradas anteriores}}"
@@ -388,9 +388,14 @@
       "saved": "Guardado",
       "needed": "Necesario",
       "reusableForFuture": "Reutilizable para futuras reservas",
-      "shopHistory": "Historial en el centro",
       "bookingsText": "{count, plural, one {# reserva} other {# reservas}}",
-      "importedSuffix": " · {count} importadas"
+      "importedSuffix": " · {count} importadas",
+      "waiver": "Exención",
+      "waiverGoodUntil": "Válido hasta el {date}",
+      "waiverLastSigned": "Firmado por última vez el {date}",
+      "waiverHeldSince": "En espera desde el {date}",
+      "waiverSignsOnce": "Se firma una vez y vale para todo el centro",
+      "bookings": "Reservas"
     },
     "notices": {
       "captured": "Tarjeta capturada como pendiente. Busca el número con la agencia, luego márcala como certificada antes de que pueda dejar listo a este buceador.",
@@ -3246,6 +3251,12 @@
       "previous": "Anterior",
       "next": "Siguiente",
       "position": "Página {page} de {pageCount}"
+    },
+    "waiverStatus": {
+      "none": "Sin firmar",
+      "current": "Firmado",
+      "expired": "Hay que firmarlo de nuevo",
+      "medicalReview": "Revisión médica"
     }
   },
   "whatsapp": {

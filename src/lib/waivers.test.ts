@@ -7,6 +7,7 @@ import {
   isCompletedWaiverCurrent,
   medicalWaiverMark,
   needsMedicalReview,
+  shopWaiverStatus,
   WAIVER_SIGNATURE_VALIDITY_MS,
   waiverActivityTimeline,
   waiverState,
@@ -315,5 +316,95 @@ describe("effective waiver (sign once per diver)", () => {
     // A current own signature still stands.
     const currentOwn = completedWaiver({ id: "own-current" });
     expect(effectiveWaiverForBooking(args({ bookingWaiver: currentOwn }))?.id).toBe("own-current");
+  });
+});
+
+/**
+ * The diver record answers "has this person signed?" — a fact about the person
+ * and the shop, not about any one booking. Before this, that question could
+ * only be answered from inside a booking, so a diver with no booking yet had
+ * no answer at all.
+ */
+describe("shop-level waiver standing", () => {
+  const status = (records: WaiverRecord[], version: number | null = 1) =>
+    shopWaiverStatus({
+      personSignedWaivers: records,
+      currentTemplateVersion: version,
+      now: SIGN_NOW,
+    });
+
+  it("reads as never signed with no evidence at all", () => {
+    expect(status([])).toEqual({ state: "none" });
+  });
+
+  it("reads a clean, current signature as good, with the date it runs out", () => {
+    const record = completedWaiver();
+    const result = status([record]);
+    expect(result.state).toBe("current");
+    if (result.state !== "current") throw new Error("unreachable");
+    expect(result.signedAt).toEqual(record.signedAt);
+    expect(result.expiresAt.getTime()).toBe(
+      (record.signedAt as Date).getTime() + WAIVER_SIGNATURE_VALIDITY_MS,
+    );
+  });
+
+  it("tells 'signed here before, needs signing again' apart from 'never signed'", () => {
+    // Two ways a signature stops standing, and both are the same conversation
+    // at the desk: sign again.
+    const aged = completedWaiver({
+      signedAt: new Date(SIGN_NOW.getTime() - WAIVER_SIGNATURE_VALIDITY_MS - 1),
+    });
+    expect(status([aged])).toEqual({ state: "expired", signedAt: aged.signedAt });
+
+    // A shop edit bumps the template: those are terms this diver never agreed to.
+    const oldTerms = completedWaiver();
+    expect(status([oldTerms], 2)).toEqual({ state: "expired", signedAt: oldTerms.signedAt });
+  });
+
+  it("carries the newest signature when several are on file", () => {
+    const older = completedWaiver({
+      id: "older",
+      signedAt: new Date(SIGN_NOW.getTime() - 200_000),
+      completedAt: new Date(SIGN_NOW.getTime() - 200_000),
+    });
+    const newer = completedWaiver({ id: "newer" });
+    const result = status([older, newer]);
+    expect(result.state).toBe("current");
+    if (result.state !== "current") throw new Error("unreachable");
+    expect(result.signedAt).toEqual(newer.signedAt);
+  });
+
+  it("fails closed to a medical hold made at or after the last clean signature", () => {
+    const signed = completedWaiver({ id: "signed" });
+    const hold = completedWaiver({
+      id: "hold",
+      status: "medical_review",
+      signedAt: new Date(SIGN_NOW.getTime() - 30_000),
+      completedAt: new Date(SIGN_NOW.getTime() - 30_000),
+    });
+    const result = status([signed, hold]);
+    expect(result.state).toBe("medical_review");
+  });
+
+  it("lets a clean signature made *after* a resolved-looking hold stand", () => {
+    // The hold is older than the signature, so the diver disclosed, was seen,
+    // and signed afterwards. The signature is the later word.
+    const hold = completedWaiver({
+      id: "hold",
+      status: "medical_review",
+      signedAt: new Date(SIGN_NOW.getTime() - 500_000),
+      completedAt: new Date(SIGN_NOW.getTime() - 500_000),
+    });
+    const signed = completedWaiver({ id: "signed" });
+    expect(status([hold, signed]).state).toBe("current");
+  });
+
+  it("ignores a superseded hold", () => {
+    const hold = completedWaiver({
+      id: "hold",
+      status: "medical_review",
+      supersededAt: SIGN_NOW,
+    });
+    expect(status([hold]).state).toBe("none");
   });
 });

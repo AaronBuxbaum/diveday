@@ -15,6 +15,7 @@ import {
   or,
 } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
+import { shopWaiverStatus } from "@/lib/waivers";
 import { shopDayBounds } from "@/lib/zoned";
 import { type AppDb, isUniqueConstraintViolation } from "./client";
 import { listOrdersForPerson } from "./orders";
@@ -32,6 +33,7 @@ import {
   specialtyCertifications,
   trips,
 } from "./schema";
+import { getCurrentWaiverTemplate, listSignedWaiversByPerson } from "./waivers";
 
 export type NewDiver = {
   shopId: string;
@@ -586,6 +588,8 @@ export async function getDiverProfile(db: AppDb, shopId: string, personId: strin
     personOrders,
     personBookingPayments,
     visitRows,
+    signedWaivers,
+    waiverTemplate,
   ] = await Promise.all([
     db
       .select()
@@ -642,6 +646,12 @@ export async function getDiverProfile(db: AppDb, shopId: string, personId: strin
       .from(priorVisits)
       .where(and(eq(priorVisits.shopId, shopId), eq(priorVisits.personId, personId)))
       .orderBy(desc(priorVisits.visitedOn)),
+    // The diver's signed releases *at this shop*. A waiver is signed once and
+    // carries across every booking they have here, so "have they signed?" is a
+    // fact about the person and the shop — read here, alongside their cards and
+    // sizes, rather than reconstructed per booking by whoever needs it.
+    listSignedWaiversByPerson(db, shopId, [personId]),
+    getCurrentWaiverTemplate(db, shopId),
   ]);
 
   return {
@@ -654,5 +664,14 @@ export async function getDiverProfile(db: AppDb, shopId: string, personId: strin
     orders: personOrders,
     bookingPayments: personBookingPayments,
     priorVisits: visitRows,
+    /**
+     * Where the diver stands with the shop's release — a code and dates, never
+     * the signed medical answers, which stay on the waiver surfaces built to
+     * review them.
+     */
+    waiver: shopWaiverStatus({
+      personSignedWaivers: signedWaivers.get(personId) ?? [],
+      currentTemplateVersion: waiverTemplate?.version ?? null,
+    }),
   };
 }

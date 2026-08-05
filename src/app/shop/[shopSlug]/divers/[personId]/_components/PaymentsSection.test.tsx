@@ -29,6 +29,7 @@ function diverWithOrder(totalCents: number, currency: string): DiverProfile {
           status: "paid",
           totalCents,
           currency,
+          createdAt: new Date(2026, 0, 4),
         },
       },
     ],
@@ -49,28 +50,29 @@ function renderSection(totalCents: number, currency: string) {
   );
 }
 
-/** `count` bookings, newest first by `trip.startsAt`, one day apart — no payments or orders attached. */
-function diverWithBookings(count: number): DiverProfile {
+/** `count` orders, newest first by `createdAt`, one day apart. */
+function diverWithOrders(count: number): DiverProfile {
   return {
-    bookings: Array.from({ length: count }, (_, index) => ({
-      booking: { id: `booking-${index}`, status: "checked_in" },
-      trip: {
-        id: `trip-${index}`,
-        title: `Trip ${index}`,
-        startsAt: new Date(2026, 0, count - index),
-        endsAt: new Date(2026, 0, count - index),
-      },
-      course: null,
-    })),
+    bookings: [],
     bookingPayments: [],
-    orders: [],
+    orders: Array.from({ length: count }, (_, index) => ({
+      order: {
+        id: `order-${index}`,
+        bookingId: null,
+        description: `Payment ${index}`,
+        status: "paid",
+        totalCents: 1000,
+        currency: "usd",
+        createdAt: new Date(2026, 0, count - index),
+      },
+    })),
   } as unknown as DiverProfile;
 }
 
-function renderBookings(count: number, paymentsConnected = true) {
+function renderOrders(count: number, paymentsConnected = true) {
   return render(
     <PaymentsSection
-      diver={diverWithBookings(count)}
+      diver={diverWithOrders(count)}
       shop={shop}
       locale="en-US"
       shopSlug="reef-shop"
@@ -101,61 +103,93 @@ describe("PaymentsSection order currency (task 35)", () => {
   });
 });
 
-describe("PaymentsSection history length", () => {
-  it("renders every row with no disclosure when at or under the preview count", () => {
-    renderBookings(8);
-    expect(screen.getByText("Trip 0")).toBeInTheDocument();
-    expect(screen.getByText("Trip 7")).toBeInTheDocument();
+/**
+ * This section lists **orders**, not bookings. It used to render a row per
+ * booking — every trip the diver had ever been on, whether or not money was
+ * involved — which made it the third list of the same bookings on one page,
+ * after Upcoming and the history below.
+ */
+describe("PaymentsSection lists money, not bookings", () => {
+  it("does not repeat a booking that has no order against it", () => {
+    render(
+      <PaymentsSection
+        diver={
+          {
+            bookings: [
+              {
+                booking: { id: "booking-1", status: "checked_in" },
+                trip: {
+                  id: "trip-1",
+                  title: "Saturday reef charter",
+                  startsAt: new Date(2026, 0, 4),
+                  endsAt: new Date(2026, 0, 4),
+                },
+                course: null,
+              },
+            ],
+            bookingPayments: [],
+            orders: [],
+          } as unknown as DiverProfile
+        }
+        shop={shop}
+        locale="en-US"
+        shopSlug="reef-shop"
+        personId="person-1"
+        canRefund={false}
+        paymentsConnected
+      />,
+    );
+    expect(screen.queryByText("Saturday reef charter")).not.toBeInTheDocument();
+    expect(screen.getByText(/No payments yet/)).toBeInTheDocument();
+  });
+
+  it("renders every order with no disclosure when at or under the preview count", () => {
+    renderOrders(8);
+    expect(screen.getByText("Payment 0")).toBeInTheDocument();
+    expect(screen.getByText("Payment 7")).toBeInTheDocument();
     expect(screen.queryByText(/Show \d+ older payment/)).not.toBeInTheDocument();
   });
 
-  it("previews the newest rows and tucks the rest behind a disclosure", () => {
-    // A long-tenured diver's full booking history otherwise renders one row
-    // per trip they've ever taken, with no ceiling (same class of bug the
-    // shop-wide orders index had before it was paginated).
-    renderBookings(10);
+  it("previews the newest orders and tucks the rest behind a disclosure", () => {
+    // A long-tenured diver's full payment history otherwise renders with no
+    // ceiling (same class of bug the shop-wide orders index had before it was
+    // paginated).
+    renderOrders(10);
     expect(screen.getByText("Show 2 older payments")).toBeInTheDocument();
-    // The newest 8 (by trip.startsAt) are the immediate list...
     for (let i = 0; i < 8; i++) {
-      expect(screen.getByText(`Trip ${i}`)).toBeInTheDocument();
+      expect(screen.getByText(`Payment ${i}`)).toBeInTheDocument();
     }
-    // ...and the two oldest are still reachable, not dropped, inside the
-    // disclosure the same way `ShopHistory`'s "older entries" panel works.
-    expect(screen.getByText("Trip 8")).toBeInTheDocument();
-    expect(screen.getByText("Trip 9")).toBeInTheDocument();
+    // The two oldest are still reachable, not dropped, inside the disclosure
+    // the same way `ShopHistory`'s "older entries" panel works.
+    expect(screen.getByText("Payment 8")).toBeInTheDocument();
+    expect(screen.getByText("Payment 9")).toBeInTheDocument();
   });
 });
 
 /**
  * `orders/new` refuses to open at all until the shop can accept payments, so a
- * day-one shop's "New payment"/"Create order" buttons went nowhere and said
- * nothing. Hiding them is a courtesy — the page still re-checks — but the
- * courtesy is what stops a button from reading as broken.
+ * day-one shop's "New payment" button went nowhere and said nothing. Hiding it
+ * is a courtesy — the page still re-checks — but the courtesy is what stops a
+ * button from reading as broken.
  */
 describe("PaymentsSection with no connected payment account", () => {
   it("offers to connect payments instead of linking at the order door", () => {
-    renderBookings(1, false);
+    renderOrders(1, false);
 
-    const connect = screen.getAllByRole("link", { name: "Connect payments" });
-    // Both entry points: the section's own header button and the per-booking
-    // row's "Create order" (named for the record it raises — "invoice" is
-    // reserved for the Stripe artifact that record is sent as).
-    expect(connect.length).toBeGreaterThanOrEqual(2);
-    for (const link of connect) {
-      expect(link).toHaveAttribute("href", "/shop/reef-shop/settings#money");
-    }
+    expect(screen.getByRole("link", { name: "Connect payments" })).toHaveAttribute(
+      "href",
+      "/shop/reef-shop/settings#money",
+    );
     expect(screen.queryByRole("link", { name: "New payment" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Create order" })).not.toBeInTheDocument();
   });
 
-  it("keeps the order buttons when payments are connected", () => {
-    renderBookings(1, true);
+  it("keeps the order button when payments are connected", () => {
+    renderOrders(1, true);
 
     expect(screen.getByRole("link", { name: "New payment" })).toHaveAttribute(
       "href",
       "/shop/reef-shop/orders/new?personId=person-1",
     );
-    expect(screen.getByRole("link", { name: "Create order" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Connect payments" })).not.toBeInTheDocument();
   });
 });

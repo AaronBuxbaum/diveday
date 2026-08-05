@@ -362,7 +362,7 @@
     "history": {
       "heading": "Shop history",
       "importedVisitsText": "{count, plural, one {# visit} other {# visits}} came across from your previous system. Those lines are booking records, not dive records — they say what was booked and what your old software called it.",
-      "noTripsYet": "No trips yet — book them onto an open trip and it'll show up here.",
+      "noTripsYet": "Nothing here yet — past trips and imported visits show up here.",
       "imported": "Imported",
       "bookingFallback": "Booking",
       "showOlderEntries": "{count, plural, one {Show # older entry} other {Show # older entries}}"
@@ -388,9 +388,14 @@
       "saved": "Saved",
       "needed": "Needed",
       "reusableForFuture": "Reusable for future bookings",
-      "shopHistory": "Shop history",
       "bookingsText": "{count, plural, one {# booking} other {# bookings}}",
-      "importedSuffix": " · {count} imported"
+      "importedSuffix": " · {count} imported",
+      "waiver": "Waiver",
+      "waiverGoodUntil": "Good until {date}",
+      "waiverLastSigned": "Last signed {date}",
+      "waiverHeldSince": "Held since {date}",
+      "waiverSignsOnce": "Signed once, good for the whole shop",
+      "bookings": "Bookings"
     },
     "notices": {
       "captured": "Card captured as pending. Look the number up with the agency, then mark it certified before it can make this diver ready.",
@@ -3246,6 +3251,12 @@
       "previous": "Previous",
       "next": "Next",
       "position": "Page {page} of {pageCount}"
+    },
+    "waiverStatus": {
+      "none": "Not signed",
+      "current": "Signed",
+      "expired": "Needs signing again",
+      "medicalReview": "Medical review"
     }
   },
   "whatsapp": {
