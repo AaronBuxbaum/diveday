@@ -71,12 +71,23 @@ function RefundButton({
 }
 
 /**
- * One order. A booking-linked order names the trip it billed for, so the row
- * still says what the money was *for* without re-listing the booking itself —
- * that belongs to Upcoming or the history below, whichever the trip falls in.
+ * One order, named by what it billed for.
+ *
+ * A booking-linked order takes the **trip's** title, not the order's own
+ * description. The description is whatever was typed when the invoice was
+ * raised, and a shop that words it the same way every time ("Two-tank
+ * charter") gets a column of identical rows distinguished only by amount and
+ * date. The list this section replaced named the trip, and losing that was a
+ * regression the visual diff caught: three charters that read alike are three
+ * rows a staffer has to open to tell apart.
+ *
+ * Naming the trip is also what lets this section stop re-listing the booking
+ * itself — that belongs to Upcoming or the history below, whichever the trip
+ * falls in.
  */
 function OrderRow({
   entry,
+  diver,
   shop,
   locale,
   shopSlug,
@@ -85,6 +96,7 @@ function OrderRow({
   t,
 }: {
   entry: OrderEntry;
+  diver: DiverProfile;
   shop: Shop;
   locale: string;
   shopSlug: string;
@@ -93,6 +105,9 @@ function OrderRow({
   t: StaffTranslator;
 }) {
   const { order } = entry;
+  const billedFor = order.bookingId
+    ? diver.bookings.find(({ booking }) => booking.id === order.bookingId)?.trip.title
+    : null;
   return (
     <li className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
       <div>
@@ -100,7 +115,7 @@ function OrderRow({
           href={`/shop/${shopSlug}/orders/${order.id}`}
           className="font-medium hover:text-primary hover:underline"
         >
-          {order.description || t("divers.payments.shopPaymentFallback")}
+          {billedFor || order.description || t("divers.payments.shopPaymentFallback")}
         </Link>
         <p className="text-sm text-muted">
           {/* The order's *own* stored currency, not today's shop setting — a
@@ -171,7 +186,7 @@ export function PaymentsSection({
   );
   const visible = orders.slice(0, PAYMENTS_PREVIEW_COUNT);
   const rest = orders.slice(PAYMENTS_PREVIEW_COUNT);
-  const rowProps = { shop, locale, shopSlug, personId, canRefund, t };
+  const rowProps = { diver, shop, locale, shopSlug, personId, canRefund, t };
 
   return (
     <section className="mt-10 border-t border-border pt-8" aria-labelledby="payments-heading">

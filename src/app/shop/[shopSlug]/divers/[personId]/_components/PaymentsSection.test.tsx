@@ -103,6 +103,55 @@ describe("PaymentsSection order currency (task 35)", () => {
   });
 });
 
+describe("an order says what it billed for", () => {
+  it("names the trip, not the order's own description", () => {
+    // A shop that words every invoice the same way ("Two-tank charter") would
+    // otherwise get a column of identical rows telling three different
+    // charters apart only by amount and date.
+    render(
+      <PaymentsSection
+        diver={
+          {
+            bookings: [
+              {
+                booking: { id: "booking-1", status: "booked" },
+                trip: { id: "trip-1", title: "Two-Tank Reef — Benwood" },
+                course: null,
+              },
+            ],
+            bookingPayments: [],
+            orders: [
+              {
+                order: {
+                  id: "order-1",
+                  bookingId: "booking-1",
+                  description: "Two-tank charter",
+                  status: "paid",
+                  totalCents: 13_000,
+                  currency: "usd",
+                  createdAt: new Date(2026, 2, 22),
+                },
+              },
+            ],
+          } as unknown as DiverProfile
+        }
+        shop={shop}
+        locale="en-US"
+        shopSlug="reef-shop"
+        personId="person-1"
+        canRefund={false}
+        paymentsConnected
+      />,
+    );
+    expect(screen.getByRole("link", { name: "Two-Tank Reef — Benwood" })).toBeInTheDocument();
+  });
+
+  it("falls back to the description for a payment with no booking behind it", () => {
+    renderSection(13_000, "usd");
+    expect(screen.getByRole("link", { name: "Nitrox course top-up" })).toBeInTheDocument();
+  });
+});
+
 /**
  * This section lists **orders**, not bookings. It used to render a row per
  * booking — every trip the diver had ever been on, whether or not money was
