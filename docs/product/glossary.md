@@ -349,17 +349,14 @@ new domain concept, define it here in the same PR.
   agency course (day plan, what the fee covers, the questions divers ask). It is a starting point,
   not a binding: the shop edits from there, and nothing reaches back to rewrite the shop's words.
   There is no separate import step and no course-page catalog — the default is simply already there.
-- **Certification path** — an ordered progression through a shop's *own* catalog ("Open Water →
-  Advanced → Rescue", "Wreck diver"), built by the shop at `/shop/[shopSlug]/courses/paths`. A path
-  is **guidance and never a gate**: admission to any single course is still decided by that course's
-  `minimum_certification_level`, and no path grants or withholds a seat. What it adds is the shop's
-  own answer to "what should I do next?", read on the public course page and after a booking a
-  diver's card could not clear. One course may sit on several paths.
-- **Path rung** — one course on a path, in the shop's chosen order, optionally carrying the shop's
-  note about it ("most divers wait a season before this one"). Ordering is the shop's editorial
-  judgement, not a derived ladder: a shop that teaches Rescue straight after Open Water says so by
-  putting it there. A rung whose course the shop later hides stays on the path for staff but is
-  never shown to a diver.
+- **Progression order** — the order the staff course roster lists a catalog in: each course's own
+  `minimum_certification_level`, entry-level first (a taster before the Open Water it leads into),
+  then title. It is a *reading* of the catalog, not a second stored artefact, so it can never drift
+  from what the courses actually require. The shop-built **certification path** it replaced —
+  hand-ordered rungs in their own tables, with public pages of their own — was removed on
+  2026-08-05 ([remove-certification-paths](../architecture/decisions/20260805-remove-certification-paths.md));
+  progression order is guidance in exactly the same way, changing what is *shown* first and never
+  who may enrol.
 - **Prerequisite note** — shop prose beside a course's certification gate ("comfortable swimming
   200 m", "bring your logbook"). It adds to the gate and never substitutes for it: the card the desk
   checks is `minimum_certification_level`, which the agency owns and no shop edit can reach. The

@@ -91,7 +91,17 @@ export function DiveBriefingCard({
           {t("trip.diveNumber", { number: diveNumber })}
         </p>
         <h3 className="mt-2 text-2xl font-semibold tracking-tight">{heading}</h3>
-        {site?.locationName ? <p className="mt-1 text-sm text-muted">{site.locationName}</p> : null}
+        {/* A tank with no site yet says so. Without this line a two-tank day
+            with one chosen site reads as two briefings and one site — the same
+            data, silently short one answer — instead of as the plan it is:
+            the crew names the second site at the dock. */}
+        {site ? (
+          site.locationName ? (
+            <p className="mt-1 text-sm text-muted">{site.locationName}</p>
+          ) : null
+        ) : (
+          <p className="mt-1 text-sm text-muted">{t("trip.siteToBeConfirmed")}</p>
+        )}
         {description || site?.description ? (
           <p className="mt-4 leading-relaxed text-muted">{description || site?.description}</p>
         ) : (

@@ -34,6 +34,7 @@ import { recurrenceSummary } from "@/lib/recurrence";
 import { requireStaffSession } from "@/lib/session";
 import { noticeForForm } from "@/lib/staff-notices";
 import { temperatureUnitFor } from "@/lib/temperature-units";
+import { summarizeTripDiveSites } from "@/lib/trip-dives";
 import { capacityLabel, isFull } from "@/lib/trips";
 import { utcToWallTime } from "@/lib/zoned";
 import { ConditionsSection } from "./_components/ConditionsSection";
@@ -136,6 +137,14 @@ export default async function ManageTripPage({
     canPersonConfigureTrips(db, shop.id, session.user.personId),
     listRecapPhotosForTrip(db, shop.id, tripId),
   ]);
+  // Where this departure goes, composed from the dives already loaded above —
+  // no second query, and the same answer the public schedule card gives.
+  const diveSites = summarizeTripDiveSites(
+    tripDiveList.map(({ dive, diveSite }) => ({
+      diveNumber: dive.diveNumber,
+      site: diveSite ? { id: diveSite.id, name: diveSite.name } : null,
+    })),
+  );
   // Whether this trip's cancellation was a called blow-out — the cascade
   // record is the surface a weather morning is worked from, so the trip page
   // must always offer the way back to it (ADR 20260804-blowout-cascade).
