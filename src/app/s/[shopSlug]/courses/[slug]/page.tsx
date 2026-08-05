@@ -16,8 +16,10 @@ import { isStaff } from "@/lib/authz";
 import { courseTotalCents } from "@/lib/courses";
 import { toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
+import { nowDate } from "@/lib/clock";
 import { publicCoursePath } from "@/lib/public-routes";
 import { coursePageJsonLd } from "@/lib/structured-data";
+import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import { CourseInquiry } from "./_components/CourseInquiry";
 import {
   CourseAdmission,
@@ -195,6 +197,10 @@ export default async function CoursePage({
             shopName={shop.name}
             contactEmail={shop.contactEmail}
             contactPhone={shop.contactPhone}
+            locale={locale}
+            // Today where the shop is, not where the diver's browser is: the
+            // floor on the date picker is the shop's own calendar day.
+            today={toDateInputValue(utcToWallTime(nowDate(), shop.timezone))}
             copy={{
               getInTouch: t("inquiry.getInTouch"),
               noDateBody: t("inquiry.noDateBody"),
@@ -207,6 +213,8 @@ export default async function CoursePage({
               howManyDivers: t("inquiry.howManyDivers"),
               optional: t("common.optional"),
               required: t("inquiry.required"),
+              preferredDate: t("inquiry.preferredDate"),
+              preferredDateHint: t("inquiry.preferredDateHint"),
               whenSuits: t("inquiry.whenSuits"),
               whenSuitsHint: t("inquiry.whenSuitsHint"),
               whenSuitsPlaceholder: t("inquiry.whenSuitsPlaceholder"),

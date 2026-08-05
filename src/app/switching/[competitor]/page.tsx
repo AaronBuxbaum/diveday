@@ -346,11 +346,14 @@ async function GuideBody({
             {t("switching.common.bothWaysTitle")}
           </h3>
           <p className="mt-2 leading-7 text-muted">
-            {t("switching.common.bothWaysBody", {
-              claim: t(fullShopExport.claimKey),
-              terms: t(fullShopExport.termsKey),
-            })}
+            {t("switching.common.bothWaysBody", { claim: t(fullShopExport.claimKey) })}
           </p>
+          {/* The terms are their own line rather than a fifth clause: they are
+              the four objections a reader arrives with ("what will it cost me
+              to leave, who do I have to ask, how long am I locked in"), and
+              buried at the end of an eighty-word paragraph nobody skimming
+              finds them. */}
+          <p className="mt-2 leading-7 text-muted">{t(fullShopExport.termsKey)}</p>
         </div>
 
         {/* The scope table is where a reader decides the move is real — and it

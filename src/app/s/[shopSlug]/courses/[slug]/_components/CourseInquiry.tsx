@@ -12,6 +12,7 @@ import {
   courseInquiryBody,
   courseInquiryMailto,
   courseInquirySubject,
+  formatPreferredDate,
   telHref,
 } from "@/lib/course-inquiry";
 import type { CourseInquiryFormState } from "../actions";
@@ -33,6 +34,8 @@ export interface CourseInquiryCopy {
   howManyDivers: string;
   optional: string;
   required: string;
+  preferredDate: string;
+  preferredDateHint: string;
   whenSuits: string;
   whenSuitsHint: string;
   whenSuitsPlaceholder: string;
@@ -83,6 +86,8 @@ export function CourseInquiry({
   shopName,
   contactEmail,
   contactPhone,
+  locale,
+  today,
   copy,
 }: {
   submitInquiry: (
@@ -93,6 +98,16 @@ export function CourseInquiry({
   shopName: string;
   contactEmail: string;
   contactPhone: string | null;
+  /** The negotiated request locale — how the picked date reads in the preview. */
+  locale: string;
+  /**
+   * Today where the shop is, as a date-input value. The floor on the picker:
+   * a date already gone is never a request, only a typo the shop has to write
+   * back about. Passed in rather than read from the browser clock so the
+   * server and client renders agree (and so the e2e fleet's frozen clock
+   * reaches it).
+   */
+  today: string;
   copy: CourseInquiryCopy;
 }) {
   const t = useTranslations();
@@ -102,6 +117,7 @@ export function CourseInquiry({
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [timing, setTiming] = useState("");
+  const [preferredDate, setPreferredDate] = useState("");
   const [diversInput, setDiversInput] = useState("");
   const [experience, setExperience] = useState<CourseInquiryExperience | "">("");
   const [message, setMessage] = useState("");
@@ -111,7 +127,18 @@ export function CourseInquiry({
   // Optional, like every other contact field: blank is a real answer, not
   // something to snap back to a placeholder count.
   const divers = diversInput === "" ? null : clampDivers(Number(diversInput));
-  const inquiry = { courseTitle, shopName, name, timing, divers, experience, message };
+  const inquiry = {
+    courseTitle,
+    shopName,
+    name,
+    timing,
+    // The preview shows the date the way the diver reads it; the value posted
+    // to the server below stays the raw `YYYY-MM-DD` the column stores.
+    preferredDate: (preferredDate && formatPreferredDate(preferredDate, locale)) || "",
+    divers,
+    experience,
+    message,
+  };
   const subject = courseInquirySubject(t, inquiry);
   const body = courseInquiryBody(t, inquiry);
 
@@ -143,6 +170,7 @@ export function CourseInquiry({
     if (email) formData.set("email", email);
     if (phone) formData.set("phone", phone);
     if (timing) formData.set("timing", timing);
+    if (preferredDate) formData.set("preferredDate", preferredDate);
     if (diversInput) formData.set("divers", diversInput);
     formData.set("experience", experience);
     if (message) formData.set("message", message);
@@ -249,7 +277,17 @@ export function CourseInquiry({
               className={controlClass}
             />
           </Field>
-          <Field label={copy.whenSuits} className="sm:col-span-2" description={copy.whenSuitsHint}>
+          <Field label={copy.preferredDate} hint={copy.optional} description={copy.preferredDateHint}>
+            <input
+              name="preferredDate"
+              type="date"
+              min={today}
+              value={preferredDate}
+              onChange={(event) => setPreferredDate(event.target.value)}
+              className={controlClass}
+            />
+          </Field>
+          <Field label={copy.whenSuits} hint={copy.optional} description={copy.whenSuitsHint}>
             <input
               name="timing"
               maxLength={200}

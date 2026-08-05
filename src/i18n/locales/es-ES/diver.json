@@ -942,7 +942,7 @@
     "common": {
       "heroCtaNote": "La demo es un centro que funciona de verdad — sin registro, sin nada que importar y sin nada que deshacer.",
       "bothWaysTitle": "La misma tabla, leída al revés.",
-      "bothWaysBody": "Todo lo de arriba es lo que llega. Lo que llega también es lo que sale: {claim} {terms}",
+      "bothWaysBody": "Todo lo de arriba es lo que llega. Lo que llega también es lo que sale: {claim}",
       "midCtaTitle": "¿Prefieres verlo a leerlo?",
       "midCtaBody": "Recorre la demo en vivo como propietario, capitán o buceador — con las mismas verificaciones de certificación, exenciones y pase de lista donde aterriza tu exportación."
     },
@@ -955,7 +955,7 @@
     "hub": {
       "eyebrow": "Cambiarte a DiveDay",
       "title": "La puerta se abre en ambos sentidos.",
-      "description": "La mayoría de los centros se quedan en una hoja de cálculo, o en un software que se les ha quedado pequeño, porque cambiar parece doloroso. Estas guías lo hacen concreto en ambas direcciones: cómo sacar a tus buceadores de lo que uses ahora, qué se traslada exactamente a DiveDay — y cómo todo tu centro se descarga de vuelta en un ZIP de archivos claros cuando lo pidas. Entrar cuesta un archivo y unos minutos. Salir cuesta un botón, tu primer día o el último.",
+      "description": "La mayoría de los centros se quedan en una hoja de cálculo, o en un software que se les ha quedado pequeño, porque cambiar parece doloroso. Estas guías lo hacen concreto en ambas direcciones: cómo sacar a tus buceadores de lo que uses ahora, qué se traslada exactamente a DiveDay — y cómo todo el centro se descarga de vuelta en un ZIP cuando lo pidas. Entrar cuesta un archivo y unos minutos. Salir cuesta un botón.",
       "spreadsheetTitle": "Vienes de una hoja de cálculo",
       "spreadsheetDescription": "¿Llevas el día en una hoja de cálculo y una tablilla? Trae la hoja que ya llevas — y añade los trabajos que una lista no puede hacer, como verificar cada tarjeta antes de que salga el barco.",
       "readGuide": "Leer la guía →",

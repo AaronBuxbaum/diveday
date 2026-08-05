@@ -286,6 +286,13 @@ test("migration guides walk a shop from an incumbent export into the importer", 
     page.getByRole("heading", { name: "What comes across — and what doesn't" }),
   ).toBeVisible();
   await expect(page.getByRole("heading", { name: "Bring the file into DiveDay" })).toBeVisible();
+  // …and the return trip, stated on the same page rather than left implied.
+  // A guide that only walks a shop *out of* an incumbent sells a one-way door;
+  // the scope table has to read in both directions, so the block that says so
+  // is part of the guide's contract, not decoration.
+  await expect(
+    page.getByRole("heading", { name: "The same table, read the other way." }),
+  ).toBeVisible();
   // Same guard as the spreadsheet guide: no shop session, no deep-link CTA.
   await expect(page.getByRole("link", { name: "Open Import in your shop" })).toBeHidden();
 

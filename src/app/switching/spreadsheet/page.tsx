@@ -356,11 +356,11 @@ async function SpreadsheetBody({
             {t("switching.common.bothWaysTitle")}
           </h3>
           <p className="mt-2 leading-7 text-muted">
-            {t("switching.common.bothWaysBody", {
-              claim: t(fullShopExport.claimKey),
-              terms: t(fullShopExport.termsKey),
-            })}
+            {t("switching.common.bothWaysBody", { claim: t(fullShopExport.claimKey) })}
           </p>
+          {/* Its own line, same reasoning as the incumbent guides: the terms
+              are the reader's actual objections, not a tail clause. */}
+          <p className="mt-2 leading-7 text-muted">{t(fullShopExport.termsKey)}</p>
         </div>
 
         {/* The scope table is where a reader decides the move is real — and it

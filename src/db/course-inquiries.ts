@@ -18,6 +18,8 @@ export type RecordCourseInquiryInput = {
   phone?: string | null;
   experienceLevel: CourseInquiryExperience;
   timing?: string | null;
+  /** A bare `YYYY-MM-DD` the diver asked for, or null when they named none. */
+  preferredDate?: string | null;
   divers?: number | null;
   message?: string | null;
 };
@@ -97,6 +99,7 @@ export async function recordCourseInquiry(
       phone: normalizeOptional(input.phone),
       experienceLevel: input.experienceLevel,
       timing: normalizeOptional(input.timing),
+      preferredDate: normalizeOptional(input.preferredDate),
       divers: input.divers ?? null,
       message: normalizeOptional(input.message),
     })
@@ -113,6 +116,7 @@ export type CourseInquiryListRow = {
   phone: string | null;
   experienceLevel: CourseInquiryExperience;
   timing: string | null;
+  preferredDate: string | null;
   divers: number | null;
   message: string | null;
   createdAt: Date;
@@ -143,6 +147,7 @@ export async function listCourseInquiriesForShop(
       phone: courseInquiries.phone,
       experienceLevel: courseInquiries.experienceLevel,
       timing: courseInquiries.timing,
+      preferredDate: courseInquiries.preferredDate,
       divers: courseInquiries.divers,
       message: courseInquiries.message,
       createdAt: courseInquiries.createdAt,

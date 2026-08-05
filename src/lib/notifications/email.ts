@@ -885,10 +885,23 @@ export function courseInquiryEmail(input: CourseInquiryEmailInput): Notification
   const timingLine = t("notifications.courseInquiry.timing", { timing });
   const diversLine = t("notifications.courseInquiry.divers", { divers });
   const experienceLine = t("notifications.courseInquiry.experience", { experience });
+  // Only when the diver actually named one — a "Date asked for: Not said" line
+  // is a line the desk reads and learns nothing from. It leads the block
+  // because it is the one fact that decides whether there is anything to
+  // answer with.
+  const preferredDate = input.preferredDate
+    ? formatPreferredDate(input.preferredDate, input.locale)
+    : null;
+  const preferredDateLine = preferredDate
+    ? t("notifications.courseInquiry.preferredDate", { date: preferredDate })
+    : null;
+  const facts = [preferredDateLine, timingLine, diversLine, experienceLine].filter(
+    (line): line is string => line !== null,
+  );
 
   return {
     subject: t("notifications.courseInquiry.subject", { courseTitle: input.courseTitle }),
-    text: `${intro}\n\n${contact}\n${timingLine}\n${diversLine}\n${experienceLine}${message ? `\n\n${message}` : ""}\n`,
-    html: `<p>${introHtml}</p><p>${contactHtml}<br>${escapeHtml(timingLine)}<br>${escapeHtml(diversLine)}<br>${escapeHtml(experienceLine)}</p>${message ? `<p>${escapeHtml(message)}</p>` : ""}`,
+    text: `${intro}\n\n${contact}\n${facts.join("\n")}${message ? `\n\n${message}` : ""}\n`,
+    html: `<p>${introHtml}</p><p>${contactHtml}<br>${facts.map(escapeHtml).join("<br>")}</p>${message ? `<p>${escapeHtml(message)}</p>` : ""}`,
   };
 }
