@@ -164,7 +164,11 @@ export function DayByDayEditor({
                 one the editor already had. Over-cap is warned about rather
                 than truncated — silently eating a typed line is worse than a
                 save the server refuses, and it refuses by anchoring here. */}
-            <div className="mt-4">
+            {/* Its own FieldGrid, not a bare div: `Field` subgrids its caption
+                and control onto the two rows a grid parent declares, and
+                outside one the two-row shape it promises has nothing to sit
+                on (docs/design/forms-and-controls.md). */}
+            <FieldGrid columns={1} className="mt-4">
               <Field
                 label={fill(copy.whatHappens, { number: dayNumber })}
                 description={copy.whatHappensHint}
@@ -183,7 +187,7 @@ export function DayByDayEditor({
                   className={controlClass}
                 />
               </Field>
-            </div>
+            </FieldGrid>
           </div>
         );
       })}

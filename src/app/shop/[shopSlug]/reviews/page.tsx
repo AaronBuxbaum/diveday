@@ -110,8 +110,9 @@ export default async function ReviewsPage({
   const { reviews, total } = reviewPage;
   const banner = noticeFromParam(notice, NOTICES);
   const t = staffTranslator(locale);
-  // Three of these belong to the "Publish selected" button; the other two come
-  // from a per-review toggle far down the list and keep the page banner.
+  // Three of these are the bulk control's own outcome and belong on the list
+  // it changed (see the header row below); the other two come from a
+  // per-review toggle and keep the page banner.
   const bulkStatus =
     notice === "published_many"
       ? {
