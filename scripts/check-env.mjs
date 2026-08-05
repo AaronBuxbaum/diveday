@@ -56,6 +56,14 @@ async function run() {
     if (key.startsWith("SNS_") || key === "SMS_SNS_TOPIC_ARN") {
       continue;
     }
+    // The operational-alert destination is an override, not configuration
+    // (ADR 20260805-demo-try-alerts): unset, both alerts go to the
+    // ALERT_EMAIL mailbox compiled into src/lib/platform-mail.ts, which is
+    // the correct answer for every deployment that *is* DiveDay. Only a fork,
+    // a staging deploy, or a self-hosted instance has one to set.
+    if (key === "OPS_ALERT_EMAIL") {
+      continue;
+    }
     // Address lookup is optional by design (ADR
     // 20260804-aws-location-address-lookup): with no credentials the settings
     // address card is exactly the five text boxes it has always been, so a

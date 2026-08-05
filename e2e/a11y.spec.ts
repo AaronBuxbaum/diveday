@@ -430,29 +430,25 @@ test.describe("automated accessibility scans of the staff detail surfaces", () =
   test("the catalog editors have no automated a11y violations", async ({ page }) => {
     // 6 scans at ~3.5s each.
     test.setTimeout(90_000);
+    // The staff roster first — its agency tab strip is the one control on the
+    // page a keyboard or screen-reader user has to get through to reach the
+    // course they want (ADR 20260805-remove-certification-paths).
+    await page.goto("/shop/blue-mantis/courses", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("navigation", { name: "Filter courses by agency" })).toBeVisible();
+    await expectNoA11yViolations(page);
+
     // The course editor: the longest form in the product (content blocks,
     // prerequisites, ratios, pricing), and the only place a shop writes the
     // words a diver reads on the public catalog.
-    await page.goto("/shop/blue-mantis/courses", { waitUntil: "domcontentloaded" });
     await page.locator('a[href$="/edit"]').filter({ visible: true }).first().click();
     await expect(page).toHaveURL(/\/courses\/[^/]+\/edit$/);
-    await expectNoA11yViolations(page);
-
-    // The certification-path builder, list and one path.
-    await page.goto("/shop/blue-mantis/courses/paths", { waitUntil: "domcontentloaded" });
-    await expect(
-      page.getByRole("heading", { level: 1, name: "Certification paths" }),
-    ).toBeVisible();
-    await expectNoA11yViolations(page);
-    await page.locator('a[href*="/courses/paths/"]').filter({ visible: true }).first().click();
-    await expect(page).toHaveURL(/\/courses\/paths\/[^/]+$/);
     await expectNoA11yViolations(page);
 
     // The dive-site library's two write surfaces. A briefing is what the
     // manifest and the trip page quote from, so a field nobody can label here
     // is a field nobody fills.
     await scanStaticRoutes(page, [
-      { path: "/shop/blue-mantis/dive-sites/new", heading: "Build a dive-site briefing" },
+      { path: "/shop/blue-mantis/dive-sites/new", heading: "Add a dive site" },
     ]);
     await page.goto("/shop/blue-mantis/dive-sites", { waitUntil: "domcontentloaded" });
     await page
@@ -593,9 +589,6 @@ test.describe("automated accessibility scans of the signed-out surfaces", () => 
     await expect(page.getByRole("list", { name: "Upcoming trips" })).toBeVisible();
     await expectNoA11yViolations(page);
 
-    await scanStaticRoutes(page, [
-      { path: "/s/blue-mantis/courses", heading: "Courses" },
-      { path: "/s/blue-mantis/courses/paths", heading: "Certification paths" },
-    ]);
+    await scanStaticRoutes(page, [{ path: "/s/blue-mantis/courses", heading: "Courses" }]);
   });
 });

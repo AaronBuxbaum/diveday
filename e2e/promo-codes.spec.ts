@@ -97,6 +97,35 @@ test.describe("as owner", () => {
     await expect(failed.getByRole("button", { name: /^Switch/ })).toHaveCount(0);
   });
 
+  test("a code that already exists is refused on the Code box, not in a banner", async ({
+    page,
+    request,
+  }) => {
+    // The refusal names one box, so it belongs on that box. It used to render
+    // as a page-level banner under the `<h1>` — above six fields, telling a
+    // staffer "that code is taken" without saying which of the things they
+    // just typed was the code.
+    await request.post("/api/test/seed-stripe-account");
+    await page.goto("/shop/blue-mantis/promos");
+
+    // REEF10 is seeded, so this is a genuine duplicate.
+    await page.getByLabel("Code").fill("REEF10");
+    await page.getByLabel("Discount").fill("15");
+    await page.getByRole("button", { name: "Create code" }).click();
+
+    const codeBox = page.getByLabel("Code");
+    await expect(codeBox).toHaveAttribute("aria-invalid", "true");
+    // The message is the box's own description, which is what a screen reader
+    // reads when the cursor lands there — and the cursor does land there.
+    const describedBy = await codeBox.getAttribute("aria-describedby");
+    expect(describedBy).toBeTruthy();
+    // Matched by attribute, not `#id`: `Field` mints the id with React's
+    // `useId()`, whose output carries characters a bare CSS id selector
+    // cannot express.
+    await expect(page.locator(`[id="${describedBy}"]`)).toContainText(/already/i);
+    await expect(codeBox).toBeFocused();
+  });
+
   test("deleting a failed code can be undone from the toast, which re-runs Stripe creation", async ({
     page,
     request,

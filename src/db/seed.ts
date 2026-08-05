@@ -19,7 +19,6 @@ import {
   calendarFeeds,
   certifications,
   courseInquiries,
-  coursePaths,
   courses,
   dayCloseouts,
   diveSiteCreatures,
@@ -73,14 +72,18 @@ import { seedCatalog } from "./seed-catalog";
 import { seedCertGates } from "./seed-cert-gates";
 import { at, DEMO_SHOP_TIMEZONE, demoTodayDepartureStart } from "./seed-clock";
 import { enforceMintedDemoCap } from "./seed-demo-lifecycle";
+import { seedDeskTrail } from "./seed-desk-trail";
 import { seedDiveSites } from "./seed-dive-sites";
 import { seedDivers } from "./seed-divers";
 import { seedFrontDesk } from "./seed-front-desk";
 import { seedHistory } from "./seed-history";
 import { seedMoreTrips } from "./seed-more-trips";
 import { seedNitrox } from "./seed-nitrox";
+import { seedOrders } from "./seed-orders";
 import { seedRentalFit } from "./seed-rental-fit";
 import { seedTrips } from "./seed-trips";
+import { seedWaiverEvidence } from "./seed-waiver-evidence";
+import { seedWaiverVersions } from "./seed-waiver-versions";
 
 /**
  * Demo data: one Key Largo shop with staff, customers, and a week of trips.
@@ -101,6 +104,7 @@ import { seedTrips } from "./seed-trips";
  * | --- | --- |
  * | `./seed-clock.ts` | every date in the demo, anchored to the frozen clock |
  * | `./seed-cast.ts` | the divers on file, in the order the rosters index into |
+ * | `./seed-waiver-versions.ts` | the release's own version history — two superseded wordings behind the current one |
  * | `./seed-more-trips.ts` | the rest of the month's board beyond today's three headline boats |
  * | `./seed-nitrox.ts` | EANx cards and the per-dive gas the wreck charter gates on |
  * | `./seed-rental-fit.ts` | divers' saved sizes, so the gear locker has something to pull |
@@ -110,6 +114,9 @@ import { seedTrips } from "./seed-trips";
  * | `./seed-buddy-pairs.ts` | two buddy teams on today's reef boat, plus the odd-roster remainder |
  * | `./seed-demo-lifecycle.ts` | minting, reaping, and capping throwaway demo shops |
  * | `./seed-backup.ts` | the shop-owned backup destination and its weekly delivery history |
+ * | `./seed-orders.ts` | the billing states past "paid": open, part-paid, refunded, void, written off |
+ * | `./seed-desk-trail.ts` | the notes and activity behind today's reef boat, so its Guests tab has a history |
+ * | `./seed-waiver-evidence.ts` | when releases were really signed, and which of them carry an integrity seal |
  *
  * The public surface is unchanged: `@/db/seed` still exports everything it
  * always did, including the lifecycle helpers re-exported at the bottom.
@@ -458,6 +465,13 @@ export async function seedDemoSchedule(
     .limit(1);
   const pinRecapBooking = shopRow?.slug === DEMO_SHOP_SLUG;
 
+  // Before anything issues a waiver: the release's own version history, so the
+  // shop's current text is version 3 with two superseded wordings behind it,
+  // the way a trading shop's paperwork actually looks. Every scenario below
+  // snapshots `getCurrentWaiverTemplate`, so this has to settle what "current"
+  // means first (src/db/seed-waiver-versions.ts).
+  await seedWaiverVersions(db, shopId);
+
   // The shop's story, in the only order it makes sense in: who dives here, what
   // the shop teaches, where it dives, what is on the board, and who is booked
   // on it. Each step reads rows the ones before it inserted — see the module
@@ -542,6 +556,29 @@ export async function seedDemoSchedule(
   // shops (see callers); on for the demo shop and the e2e fleet.
   if (opts.history !== false) {
     await seedHistory(db, shopId, instructor.id);
+    // The billing states that back-fill never produces: it invoices a paid trip
+    // fee or a paid deposit and nothing else, so "Refunded", "Void",
+    // "Uncollectible" and every retail line kind were unreachable from a shop
+    // with three hundred invoices on file. A dozen standalone counter orders
+    // fill them in (src/db/seed-orders.ts). Rides with the history flag because
+    // it is the same "what has this shop billed" story, and because the lean
+    // unit-test template is deliberately order-free.
+    await seedOrders(db, shopId, { customers, createdByPersonId: instructor.id });
+    // The desk's own paper trail on today's reef boat: private notes against
+    // three seats and the account of what has been done to the departure
+    // (src/db/seed-desk-trail.ts). Both tables are otherwise written only by
+    // something a visitor does, so the Guests tab opened on "No activity yet"
+    // in every seeded shop. Annotation only — nothing here is read by
+    // readiness, the manifest, or Today.
+    const [reefTrip] = tripRows;
+    if (reefTrip) {
+      await seedDeskTrail(db, shopId, {
+        trip: reefTrip,
+        roster: bookingRows,
+        divers: customers,
+        actorPersonId: instructor.id,
+      });
+    }
   }
 
   // Last on purpose, unlike every other step above. This one only *adds* — four
@@ -574,6 +611,14 @@ export async function seedDemoSchedule(
     // allows an undefined divemaster even though the demo cast always has one).
     pairedByPersonId: divemasterId ?? instructor.id,
   });
+
+  // Truly last, and updates-only: what the shop's signed evidence looks like
+  // once every scenario above has finished writing releases — signatures dated
+  // across the weeks divers actually signed in rather than all at this instant,
+  // and an integrity seal on everything signed since the shop's account got one
+  // (src/db/seed-waiver-evidence.ts). A seal covers a record's final stored
+  // metadata, so nothing may write a waiver row after this.
+  await seedWaiverEvidence(db, shopId);
 }
 
 /**
@@ -715,13 +760,10 @@ export async function resetDemoSchedule(
   await db.delete(diveSiteMoments).where(eq(diveSiteMoments.shopId, shopId));
   await db.delete(diveSiteCreatures).where(eq(diveSiteCreatures.shopId, shopId));
   await db.delete(diveSites).where(eq(diveSites.shopId, shopId));
-  // Paths first: their steps cascade from either side, but a path row itself
-  // is only shop-scoped, so deleting courses alone would strand it. A course
-  // inquiry references its course without cascade (a lead is evidence, not
-  // something a schedule reset should silently vanish), so it must go before
-  // the courses delete or this FK-violates and aborts the whole reset mid-run
-  // — the same class of bug the comment above already walks.
-  await db.delete(coursePaths).where(eq(coursePaths.shopId, shopId));
+  // A course inquiry references its course without cascade (a lead is
+  // evidence, not something a schedule reset should silently vanish), so it
+  // must go before the courses delete or this FK-violates and aborts the whole
+  // reset mid-run — the same class of bug the comment above already walks.
   await db.delete(courseInquiries).where(eq(courseInquiries.shopId, shopId));
   await db.delete(courses).where(eq(courses.shopId, shopId));
   await db.delete(certifications).where(eq(certifications.shopId, shopId));

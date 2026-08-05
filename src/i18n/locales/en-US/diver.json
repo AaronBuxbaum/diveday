@@ -47,6 +47,8 @@
     "backToNext": "← Back to the next departure",
     "courseSession": "Course session",
     "diveSite": "Dive site",
+    "diveSites": "Dive sites",
+    "moreDivesToConfirm": "{count, plural, one {# more dive to be confirmed} other {# more dives to be confirmed}}",
     "twoTank": "Two-tank trip",
     "twoTankHint": "A boat trip with two separate dives, back to back, with a rest break (a surface interval) in between — not two tanks worn at once.",
     "diveCount": "{count, plural, other {# dives}}",
@@ -118,6 +120,7 @@
     "diveNumber": "Dive {number}",
     "siteSatelliteAlt": "Satellite view of {site}",
     "siteRouteAtDock": "The crew will brief the final route at the dock.",
+    "siteToBeConfirmed": "Site to be confirmed",
     "sitePlanningGuide": "A planning guide, not a certification or safety clearance.",
     "siteHowItUnfolds": "How the dive unfolds",
     "siteWhatToLookFor": "What to look for down there",
@@ -211,9 +214,6 @@
     "holdBody": "See the conditions update above. Divers who already booked keep their seats and can follow it live here.",
     "confirmedHeading": "You’re on the boat, {name}! 🤿",
     "confirmedDockCall": "{date}, {time} — be at the dock {minutes} minutes early and we’ll take it from there.",
-    "goDeeperHeading": "Ready to go deeper?",
-    "goDeeperBody": "This dive needs the next certification step. See how {course} gets you there — no pressure, just the path when you want it.",
-    "goDeeperCta": "Explore the course →",
     "allSet": "You’re all set — nothing left but to show up.",
     "nextStep": "Next: {step}",
     "paymentDepositReceived": "Deposit received",
@@ -351,29 +351,7 @@
       "title": "Courses",
       "description": "Everything this shop teaches, from a first taste of scuba to advanced training.",
       "noCoursesHeading": "No courses listed yet",
-      "noCoursesBody": "Check back soon, or get in touch and we’ll help you find a starting point.",
-      "pathsLink": "Not sure where to start? See certification paths"
-    }
-  },
-  "path": {
-    "sectionTitle": "Where this fits",
-    "nextUp": "Next after this one: {course}.",
-    "lastStep": "This is the last step on {path} — after it, ask us where to go next."
-  },
-  "coursePaths": {
-    "index": {
-      "eyebrow": "Certification paths",
-      "title": "Certification paths",
-      "description": "Progressions the shop recommends, one course after another. These are guidance, not a requirement — every course states its own admission on its own page.",
-      "noPathsHeading": "No certification paths published yet",
-      "noPathsBody": "Check back soon, or get in touch and we’ll help you plan your next course.",
-      "backToCourses": "All courses"
-    },
-    "page": {
-      "eyebrow": "Certification path",
-      "backToPaths": "All certification paths",
-      "stepsHeading": "What this path covers",
-      "noStepsBody": "This path doesn’t list any courses yet."
+      "noCoursesBody": "Check back soon, or get in touch and we’ll help you find a starting point."
     }
   },
   "reviews": {
@@ -772,6 +750,8 @@
     "yourEmail": "Your email",
     "yourPhone": "Your phone",
     "howManyDivers": "How many divers",
+    "preferredDate": "A date you have in mind",
+    "preferredDateHint": "We’ll tell you if it works — nothing is booked or held yet.",
     "whenSuits": "When suits you",
     "whenSuitsHint": "Rough is fine — a month or “any weekend” tells us plenty.",
     "whereYouAreUpTo": "Where you are up to",
@@ -798,7 +778,7 @@
     "sentHeading": "Inquiry sent",
     "sentBody": "We'll be in touch. You can still reach us directly using the details below.",
     "subject": "Course inquiry: {courseTitle}",
-    "body": "Hello {shopName},\n\nI would like to take the {courseTitle} course.\n\nWhen: {timing}\nHow many divers: {divers}\nExperience so far: {experience}{hasNote, select, yes {\n\n{note}} other {}}\n\nThank you,{hasName, select, yes {\n{name}} other {}}",
+    "body": "Hello {shopName},\n\nI would like to take the {courseTitle} course.\n\n{hasDate, select, yes {Date I have in mind: {preferredDate}\n} other {}}When: {timing}\nHow many divers: {divers}\nExperience so far: {experience}{hasNote, select, yes {\n\n{note}} other {}}\n\nThank you,{hasName, select, yes {\n{name}} other {}}",
     "experience": {
       "never": "I have never dived before",
       "tried": "I have tried scuba once, but I am not certified",
@@ -938,7 +918,7 @@
       "tryLiveDemo": "Try the live demo",
       "settingUp": "Setting up your shop…",
       "submit": "Create shop & start trial",
-      "trialMeaning": "Free for 3 weeks, no card required. Your shop keeps working after that — email {email} whenever you're ready to upgrade.",
+      "trialMeaning": "Free for 3 weeks, no card required.",
       "alreadyHaveShop": "Already have a shop?",
       "signIn": "Sign in",
       "errors": {
@@ -963,6 +943,8 @@
   "switching": {
     "common": {
       "heroCtaNote": "The demo is a working shop — no sign-up, nothing to import, nothing to undo.",
+      "bothWaysTitle": "The same table, read the other way.",
+      "bothWaysBody": "Everything above is what arrives. What arrives is also what leaves: {claim}",
       "midCtaTitle": "Rather see it than read about it?",
       "midCtaBody": "Walk the live demo as the owner, the captain, or a diver — the same cert checks, waivers, and roll call your export lands into."
     },
@@ -975,7 +957,7 @@
     "hub": {
       "eyebrow": "Switching to DiveDay",
       "title": "The door swings both ways.",
-      "description": "Most shops stay on a spreadsheet, or software they've outgrown, because moving looks painful. These guides make the move concrete: how to get your divers out of whatever you use now, exactly what comes across into DiveDay, and what — honestly — stays behind.",
+      "description": "Most shops stay on a spreadsheet, or software they've outgrown, because moving looks painful. These guides make it concrete in both directions: how to get your divers out of whatever you use now, exactly what comes across into DiveDay — and how the whole shop downloads back out as one ZIP whenever you ask. Coming in takes a file and a few minutes. Going out takes one button.",
       "spreadsheetTitle": "Coming from a spreadsheet",
       "spreadsheetDescription": "Running the day on a spreadsheet and a clipboard? Bring the sheet you already keep — and add the jobs a list can't do, like checking every card before the boat leaves.",
       "readGuide": "Read the guide →",
@@ -1217,9 +1199,9 @@
       "productTitle": "Instead of a whiteboard, a clipboard, and three apps that don't talk to each other.",
       "seeFullProduct": "See the full product",
       "exportEyebrow": "Your records",
-      "exportTitle": "Your data leaves with you — any day, no phone call.",
-      "exportDescription1": "DiveDay is new, and you shouldn't have to take a new vendor on faith. So the exit is built in: one ZIP of your shop's records, downloaded from Settings any day you choose. {terms}",
-      "exportDescription2": "Arriving instead of leaving? The importer maps the spreadsheet you already keep and shows exactly what comes across — and what honestly doesn't — before a single row saves. Or hand us the sheet and we'll bring your divers in with you, free.",
+      "exportTitle": "Your records come in clean, and leave the same way.",
+      "exportDescription1": "Arriving is a file, not a project: the importer maps the spreadsheet or export you already keep and shows exactly what comes across — and what honestly doesn't — before a single row saves. Or hand us the sheet and we'll bring your divers in with you, free.",
+      "exportDescription2": "DiveDay is new, and you shouldn't have to take a new vendor on faith, so the way out is built to the same standard: one ZIP of your shop's records, downloaded from Settings any day you choose. {terms}",
       "spreadsheetLink": "Running the day on a spreadsheet? See how it comes across →",
       "switchingLink": "Switching from {competitors}? Read the guides →",
       "inExportEyebrow": "In the export",
@@ -1359,7 +1341,7 @@
         "item2": "A landing page that leads with your own work — captain, instructor, or owner",
         "item3": "The schedule as a builder: add, move, copy, and remove departures in place",
         "item4": "Repeating trip series, edited and rolled forward as one",
-        "item5": "A course catalog with certification paths you define yourself",
+        "item5": "A course catalog that reads in the order you teach it, from first breath upward",
         "item6": "Staff roles with real boundaries, and a staffing view that shows coverage gaps",
         "item7": "Saved diver views and search that jumps straight to a diver or a trip",
         "item8": "Reports on the numbers a shop actually asks about"
@@ -1570,49 +1552,6 @@
         },
         "importerNote": "DiveShop360 exports customers and certification data as two separate files. Import the customer file first, then the certification file — DiveDay matches people by email, so the second file adds to the same divers instead of duplicating them. A certification file usually holds one row per card, so a diver with three cards appears on three rows: each row's card lands on that one diver, and a row reading “PADI Deep Diver” becomes a deep specialty card."
       },
-      "diveadmin": {
-        "cardSummary": "The fast, cheap newcomer. Export your customer CSV — or use its Google Drive backup — and bring your roster across.",
-        "metaTitle": "Switching from DiveAdmin to DiveDay",
-        "metaDescription": "Leaving DiveAdmin? A step-by-step guide to exporting your customers and certifications and bringing them into DiveDay — what comes across, what doesn't, and why.",
-        "heroEyebrow": "Switching to DiveDay",
-        "heroTitle": "Moving your shop off DiveAdmin",
-        "heroLede": "DiveAdmin keeps your customers in the cloud, exportable as CSV, and can drop an automated backup into your own Google Drive. Here's how to pull your roster and cards and bring them into DiveDay — with a plain account of what makes the trip and what stays behind.",
-        "context": {
-          "item1": "DiveAdmin is the newer, lower-priced option, and it leans hard on an open, API-forward story. Worth knowing before you plan a move: its documented API is built to take data in — leads and bookings — not to hand your records back in bulk. The route out is the customer CSV export, or the automated backup DiveAdmin can write to your own Google Drive.",
-          "item2": "That's genuinely fine for this move. DiveDay's import needs your people, their certification cards, and their rental sizes — exactly what a customer export carries. You don't need an API to bring a spreadsheet.",
-          "item3": "One rule we won't bend: you export your own file from your own DiveAdmin account (or your own Google Drive backup). DiveDay never signs into DiveAdmin and never reaches across to pull your data — that's your data to hand us, not ours to take."
-        },
-        "exportHeading": "Get your data out of DiveAdmin",
-        "exportIntro": "DiveAdmin runs in a browser. The goal is a customer CSV with your people and their cards. Menu labels shift between versions, so treat these as the shape of the path, not word-for-word buttons.",
-        "exportSteps": {
-          "step1": {
-            "title": "Sign into your DiveAdmin dashboard as an owner or admin",
-            "detail": "Exports live in the admin dashboard, behind an owner or manager login."
-          },
-          "step2": {
-            "title": "Open your customers (or members) list",
-            "detail": "Find the area that lists every customer with their details. You want the full roster, not a single record."
-          },
-          "step3": {
-            "title": "Export the list to CSV",
-            "detail": "DiveAdmin's customer lists export to a spreadsheet. Export everyone, and save the CSV where you'll find it."
-          },
-          "step4": {
-            "title": "Include certifications",
-            "detail": "If cards (agency, level, card number) are columns on the customer export, you're set. If they're a separate export, pull that too — the card number is what lets a card come across."
-          },
-          "step5": {
-            "title": "No dashboard export? Use your Google Drive backup",
-            "detail": "DiveAdmin can write automated backups to your own Google Drive. The customer CSV inside that backup works just as well as a manual export — it's still your file."
-          }
-        },
-        "exportNotes": {
-          "note1": "DiveAdmin's API ingests data; it doesn't hand your records back in bulk. The CSV export (or the Google Drive backup) is the route out, not the API.",
-          "note2": "Your column headings don't have to match anything. DiveDay recognizes the common names DiveAdmin and every other system use, and shows you exactly how each column mapped before you commit.",
-          "note3": "Export your bookings as well as your customers if DiveAdmin offers both — a file with one row per booking carries your divers' visit history across. Message history stays in DiveAdmin; see the scope table below."
-        },
-        "importerNote": "If your certifications export as free text (\"PADI Advanced Open Water\"), DiveDay recognizes the common levels (see what comes across below). It reads the specialties the same way — a \"PADI Deep Diver\" row with a card number becomes a deep specialty card — and anything it doesn't recognize is flagged in the preview for a person to enter by hand."
-      },
       "smartwaiver": {
         "cardSummary": "Export your participant CSV and bring the people across — a waiver your file already shows as signed comes in marked imported, so nobody has to sign twice.",
         "metaTitle": "Switching from Smartwaiver to DiveDay",
@@ -1760,8 +1699,8 @@
     },
     "about": {
       "eyebrow": "Who we are",
-      "heroTitle": "One person owns every line of code running on this boat.",
-      "heroDescription": "It started with a dive shop owner's ordinary morning — whiteboard, clipboard, a spreadsheet, and a few apps that never talk to each other. Divers build DiveDay; one of them owns it, writes every line of it. The rest of this page is the uncomfortable half: what we won't pretend, and how you take your records back out.",
+      "heroTitle": "Small enough to answer you. Built so nothing rests on one person.",
+      "heroDescription": "It started with a dive shop owner's ordinary morning — whiteboard, clipboard, a spreadsheet, and a few apps that never talk to each other. Divers build DiveDay, and the parts your season can't afford to lose don't sit with any of us: payments run through your own Stripe account, your records download as one ZIP any day, and roll call works on a phone with no signal. The rest of this page is the uncomfortable half: what we won't pretend, and how you take your records back out.",
       "founderEyebrow": "From the founder",
       "founderTitle": "Why this exists.",
       "founderP1": "A dive shop owner walked me through an ordinary day: a whiteboard, a clipboard, a hand-updated spreadsheet, and a few apps that don't talk to each other. He was paying for it twice — once in software, again in the hours it pulled from his divers. His crew runs a tight operation; the tools just never showed up for this industry.",
@@ -1816,15 +1755,13 @@
           "body": "Early access means the shops that join first steer what gets built next, not a roadmap set months in advance in a room far from the water. That's the trade: a product that bends toward your season, and one that is still changing while you use it."
         }
       },
-      "leaveEyebrow": "Safe to leave",
+      "leaveEyebrow": "Before you commit",
       "leaveTitle": "Who you're actually buying from.",
       "leaveP1": "Trusting a small vendor with the records that get your divers on a boat is a real decision, so here are the parts of it worth knowing before you make it — including the one that matters most, which is how you'd walk away.",
       "leaveP2": "{terms} Coming the other way, a person will sit with your old export or spreadsheet and bring your divers across with you.",
       "switchingLink": "How switching works, both directions →",
-      "whoBuildsLabel": "Who builds it",
-      "whoBuildsValue": "Aaron Buxbaum, founder — a software engineer (Google Maps, a biotech company through its IPO, self-driving cars) and an obsessive diver. The person accountable for every call DiveDay makes.",
       "whereLiveLabel": "Where your records live",
-      "whereLiveValue": "On servers in the United States, and in a download you can take at any time.",
+      "whereLiveValue": "On servers in the United States, in a download you can take at any time, and — if you want a second copy somewhere we can't reach — in a weekly delivery to storage your shop owns.",
       "committingLabel": "What you're committing to",
       "committingValue": "Month to month, per location, cancel whenever. No setup fee, no contract to get out of.",
       "whoAnswersLabel": "Who answers you",
@@ -1926,7 +1863,7 @@
         },
         "trialMeaning": {
           "question": "What does \"trial\" mean right now?",
-          "answer": "Starting a shop is free for 3 weeks, no card required. Your shop keeps working after that — email {email} whenever you're ready to move to the billing above."
+          "answer": "Starting a shop is free for 3 weeks, no card required."
         },
         "seeBefore": {
           "question": "Can I see it before I commit?",
@@ -2091,6 +2028,7 @@
       "subject": "New course inquiry: {courseTitle}",
       "intro": "{name} is asking about {courseTitle} through your course page.",
       "contact": "Email: {email} · Phone: {phone}",
+      "preferredDate": "Date asked for: {date}",
       "timing": "When: {timing}",
       "divers": "How many divers: {divers}",
       "experience": "Experience so far: {experience}"

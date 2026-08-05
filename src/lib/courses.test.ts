@@ -6,10 +6,8 @@ import {
   courseTotalCents,
   formatFaqs,
   formatScheduleDayTime,
-  MAX_PATH_STEPS,
   parseFaqs,
   parseLines,
-  sanitizePathSteps,
   splitCourseImageUrls,
 } from "./courses";
 
@@ -257,45 +255,5 @@ describe("courseTotalCents", () => {
     expect(
       courseTotalCents({ ...openWater, priceCents: null, eLearningPriceCents: null }),
     ).toBeNull();
-  });
-});
-
-describe("sanitizePathSteps", () => {
-  const openWaterId = "11111111-1111-4111-8111-111111111111";
-  const rescueId = "22222222-2222-4222-8222-222222222222";
-
-  it("keeps the shop's order and trims each note", () => {
-    expect(
-      sanitizePathSteps([
-        { courseId: rescueId, note: "  after a season  " },
-        { courseId: openWaterId },
-      ]),
-    ).toEqual([
-      { courseId: rescueId, note: "after a season" },
-      { courseId: openWaterId, note: "" },
-    ]);
-  });
-
-  it("collapses a course the builder listed twice", () => {
-    expect(sanitizePathSteps([{ courseId: openWaterId }, { courseId: openWaterId }])).toEqual([
-      { courseId: openWaterId, note: "" },
-    ]);
-  });
-
-  it("accepts an empty path — a shop may clear its rungs and keep the path", () => {
-    expect(sanitizePathSteps([])).toEqual([]);
-  });
-
-  it("refuses anything that is not a list of steps", () => {
-    expect(sanitizePathSteps(null)).toBeNull();
-    expect(sanitizePathSteps({ courseId: openWaterId })).toBeNull();
-    expect(sanitizePathSteps([{ courseId: "not-a-uuid" }])).toBeNull();
-  });
-
-  it("refuses more rungs than the server will store", () => {
-    const tooMany = Array.from({ length: MAX_PATH_STEPS + 1 }, (_, index) => ({
-      courseId: `3333333${index % 10}-3333-4333-8333-333333333333`,
-    }));
-    expect(sanitizePathSteps(tooMany)).toBeNull();
   });
 });

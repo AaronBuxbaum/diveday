@@ -1,12 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
   cardDisplayStatus,
+  cardsNeedingLookCount,
+  type DiverProfile,
   HELD_CARD_STATUS_KEYS,
   heldCardDisplayStatus,
   heldCardStatusTone,
   isCardExpired,
   isImportedCard,
   needsImportConfirm,
+  unpaidBookingCount,
 } from "./shared";
 
 const TODAY = "2026-07-21";
@@ -94,5 +97,142 @@ describe("heldCardDisplayStatus", () => {
         today,
       ),
     ).toBe("expired");
+  });
+});
+
+/**
+ * The signals the record's top cards wear a "Needs attention" badge for. Both
+ * are asked of the same rows the sections below render, so a card and the list
+ * under it can never disagree about the same seat.
+ */
+describe("unpaidBookingCount", () => {
+  /** Just enough of a diver profile for the money readers; nothing else is touched. */
+  function profile(input: {
+    bookings: { id: string; status?: string }[];
+    orders?: { bookingId: string | null; status: string }[];
+    payments?: { bookingId: string; status: string }[];
+  }): DiverProfile {
+    return {
+      bookings: input.bookings.map((booking) => ({
+        booking: { id: booking.id, status: booking.status ?? "booked" },
+      })),
+      orders: (input.orders ?? []).map((order) => ({ order })),
+      bookingPayments: (input.payments ?? []).map((payment) => ({
+        booking: { id: payment.bookingId },
+        payment: { status: payment.status },
+      })),
+    } as unknown as DiverProfile;
+  }
+
+  it("counts a seat whose order is still open", () => {
+    expect(
+      unpaidBookingCount(
+        profile({ bookings: [{ id: "b1" }], orders: [{ bookingId: "b1", status: "open" }] }),
+      ),
+    ).toBe(1);
+  });
+
+  it("does not count a seat whose order is settled", () => {
+    for (const status of ["paid", "void", "refunded", "uncollectible"]) {
+      expect(
+        unpaidBookingCount(
+          profile({ bookings: [{ id: "b1" }], orders: [{ bookingId: "b1", status }] }),
+        ),
+      ).toBe(0);
+    }
+  });
+
+  it("falls back to the booking's own payment status when no order was raised", () => {
+    expect(
+      unpaidBookingCount(
+        profile({ bookings: [{ id: "b1" }], payments: [{ bookingId: "b1", status: "unpaid" }] }),
+      ),
+    ).toBe(1);
+    for (const status of ["paid", "deposit_paid", "waived", "refunded"]) {
+      expect(
+        unpaidBookingCount(
+          profile({ bookings: [{ id: "b1" }], payments: [{ bookingId: "b1", status }] }),
+        ),
+      ).toBe(0);
+    }
+  });
+
+  it("does not call an un-invoiced seat unpaid — nothing is owed until something is raised", () => {
+    expect(unpaidBookingCount(profile({ bookings: [{ id: "b1" }] }))).toBe(0);
+  });
+
+  it("ignores cancelled seats — a void or a refund is not somebody owing money", () => {
+    expect(
+      unpaidBookingCount(
+        profile({
+          bookings: [{ id: "b1", status: "cancelled" }],
+          orders: [{ bookingId: "b1", status: "open" }],
+        }),
+      ),
+    ).toBe(0);
+  });
+
+  it("lets the order win over the booking's payment row — it is the billing record", () => {
+    expect(
+      unpaidBookingCount(
+        profile({
+          bookings: [{ id: "b1" }],
+          orders: [{ bookingId: "b1", status: "paid" }],
+          payments: [{ bookingId: "b1", status: "unpaid" }],
+        }),
+      ),
+    ).toBe(0);
+  });
+});
+
+describe("cardsNeedingLookCount", () => {
+  function cards(input: {
+    level?: { status: string; importedAt?: Date; reviewedAt?: Date }[];
+    specialty?: { status: string; importedAt?: Date; reviewedAt?: Date }[];
+    nitrox?: { status: string; importedAt?: Date; reviewedAt?: Date }[];
+  }): DiverProfile {
+    return {
+      certifications: input.level ?? [],
+      specialtyCertifications: input.specialty ?? [],
+      nitroxCertifications: input.nitrox ?? [],
+    } as unknown as DiverProfile;
+  }
+
+  it("counts every card awaiting review, whatever kind it is", () => {
+    expect(
+      cardsNeedingLookCount(
+        cards({
+          level: [{ status: "pending" }],
+          specialty: [{ status: "pending" }],
+          nitrox: [{ status: "pending" }],
+        }),
+      ),
+    ).toBe(3);
+  });
+
+  it("counts an imported specialty or nitrox card whose gate is still shut (H-24)", () => {
+    const imported = { status: "verified", importedAt: new Date("2026-07-01") };
+    expect(cardsNeedingLookCount(cards({ specialty: [imported], nitrox: [imported] }))).toBe(2);
+  });
+
+  it("does not count an imported level card — it cleared readiness on arrival", () => {
+    expect(
+      cardsNeedingLookCount(
+        cards({ level: [{ status: "verified", importedAt: new Date("2026-07-01") }] }),
+      ),
+    ).toBe(0);
+  });
+
+  it("counts nothing once every card is certified and confirmed", () => {
+    const confirmed = {
+      status: "verified",
+      importedAt: new Date("2026-07-01"),
+      reviewedAt: new Date("2026-07-02"),
+    };
+    expect(
+      cardsNeedingLookCount(
+        cards({ level: [confirmed], specialty: [confirmed], nitrox: [confirmed] }),
+      ),
+    ).toBe(0);
   });
 });

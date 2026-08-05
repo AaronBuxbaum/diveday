@@ -260,10 +260,19 @@ test.describe("as owner", () => {
     // A notice, never a refusal: the save always lands, and the staffer who
     // tightened the gate finds out who it caught instead of learning it from a
     // diver at the dock. Asserted on the rendered sentence — the trip page's
-    // `FlashParams` strips both `notice` and `count`.
-    await expect(page.getByRole("status")).toContainText(
+    // `FlashParams` strips both `notice`, `count`, and `form`.
+    const outcome = page.getByRole("status").filter({ hasText: "Requirements updated." });
+    await expect(outcome).toContainText(
       "Requirements updated. 1 diver already booked on this trip no longer meets them",
     );
+    // And it lands *in the requirements section*, beside the button that was
+    // pressed. Overview carries six independent forms down a long page; this
+    // one used to answer all of them in a single banner under the `<h1>`,
+    // which on a phone is several screens from the control that earned it.
+    const requirements = page
+      .locator("section")
+      .filter({ has: page.getByRole("heading", { name: "Readiness requirements" }) });
+    await expect(requirements.getByRole("status")).toContainText("Requirements updated.");
     await openTripTab(page, "Guests");
     await expect(page.locator("#roster").getByText("Diego Alvarez").first()).toBeVisible();
   });

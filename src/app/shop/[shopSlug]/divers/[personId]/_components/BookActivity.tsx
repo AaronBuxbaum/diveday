@@ -5,6 +5,7 @@ import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatCalendarDate, groupByLocalDay } from "@/lib/calendar-date";
 import { formatTime } from "@/lib/format";
+import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
 import type { DiverProfile, Shop, UpcomingTrip } from "./shared";
 
 /**
@@ -24,6 +25,7 @@ export function BookActivity({
   diver,
   shop,
   locale,
+  status,
   upcoming,
   shopSlug,
   personId,
@@ -31,6 +33,12 @@ export function BookActivity({
   diver: DiverProfile;
   shop: Shop;
   locale: string;
+  /**
+   * This section's own outcome: the seat that landed, or the gate that refused
+   * it. A cert refusal in particular is the one a staffer most needs beside the
+   * picker they just used, since the next move is choosing a different trip.
+   */
+  status?: DiverNotice;
   upcoming: UpcomingTrip[];
   shopSlug: string;
   personId: string;
@@ -80,12 +88,15 @@ export function BookActivity({
             </select>
           </Field>
         </FieldGrid>
-        <SubmitButton
-          pendingLabel={t("divers.bookActivity.booking")}
-          className={buttonClass({ size: "lg" })}
-        >
-          {t("divers.bookActivity.bookActivityButton")}
-        </SubmitButton>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <SubmitButton
+            pendingLabel={t("divers.bookActivity.booking")}
+            className={buttonClass({ size: "lg" })}
+          >
+            {t("divers.bookActivity.bookActivityButton")}
+          </SubmitButton>
+          <DiverFormStatus status={status} shopSlug={shopSlug} locale={locale} />
+        </div>
       </form>
       {/* Not a refusal — a heads-up. The seat is real either way; the waiver
           link just has nowhere to be emailed, so somebody has to hand it over. */}

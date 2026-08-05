@@ -158,7 +158,9 @@ Ordered by leverage per effort; imports touch certs and medical state, so the im
    pattern across Jane, ServiceTitan, and the anti-Mindbody ecosystem. **Shipped 2026-07-23:** the
    `/switching` hub plus live guides for all four named incumbents — **EVE** (first), **DiveShop360**,
    **DiveAdmin**, and **Smartwaiver** — each with its export click-path, the scope table rendered
-   from the importer's own `IMPORT_HONESTY_TABLE`, and the import walkthrough. **FareHarbor shipped
+   from the importer's own `IMPORT_HONESTY_TABLE`, and the import walkthrough. **The DiveAdmin guide
+   was retired 2026-08-05** (product-owner call: too little market share to earn a page); the live
+   records-system guides are EVE, DiveShop360, and Smartwaiver. **FareHarbor shipped
    2026-07-24** as a coexist-led variant — it's a booking/distribution *channel*, not a records
    system, so the guide leads with "keep FareHarbor, run the dive day it can't" and offers the clean
    leave path, over the same export/scope/import mechanics; see
@@ -220,7 +222,8 @@ Ordered by leverage per effort; imports touch certs and medical state, so the im
    specced.
 2. Migration guides (#3) belong to the marketing surface ([marketing.md](../marketing.md)); they
    shipped as a `/switching` hub with "Switching from EVE" first (`/switching/eve`) — the live-now pool —
-   followed by live guides for DiveShop360, DiveAdmin, and Smartwaiver, and (2026-07-24) a
+   followed by live guides for DiveShop360 and Smartwaiver (a DiveAdmin guide shipped alongside them
+   and was retired 2026-08-05), and (2026-07-24) a
    coexist-led FareHarbor guide, and (2026-07-24) a coexist-led Rezdy guide
    ([fareharbor-positioning.md](fareharbor-positioning.md),
    [switching-guide-landscape.md](switching-guide-landscape.md) for what's next).

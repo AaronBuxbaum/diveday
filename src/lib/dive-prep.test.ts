@@ -216,7 +216,9 @@ describe("buildDivePrepChecklist rental lines", () => {
       ],
       plannedDives: 2,
     });
-    expect(checklist.diversWithoutFit).toEqual([{ fullName: "Priya Sharma", personId: "b1" }]);
+    expect(checklist.diversWithIncompleteFit).toEqual([
+      { fullName: "Priya Sharma", personId: "b1", state: "not_recorded", missing: [] },
+    ]);
     expect(checklist.tanks.total).toBe(4);
     expect(lineFor(checklist, "bcd", "M")?.divers).toEqual(["Ana Ruiz"]);
   });
@@ -275,8 +277,10 @@ describe("needs-staff-fit fallback (H-06)", () => {
         flaggedDaysAgo: 0,
       },
     ]);
-    // ...and he is not miscounted as a diver nobody ever asked.
-    expect(checklist.diversWithoutFit).toEqual([]);
+    // ...and he is not miscounted as a diver with a gap in their fit: every
+    // size he takes from the shop is on file, which is a different fact from
+    // the shop being out of one of them.
+    expect(checklist.diversWithIncompleteFit).toEqual([]);
   });
 
   it("never drops a flagged diver's unsized life support", () => {
@@ -428,5 +432,126 @@ describe("rentalFitLine", () => {
     expect(
       rentalFitLine({ ...fullFit, needsStaffFitAt: flaggedAt, needsStaffFitNote: "No L BCD" }),
     ).toEqual({ state: "needs_staff_fit", note: "No L BCD" });
+  });
+});
+
+/**
+ * **A fit is counted per item, not per row** (glossary — *Complete rental fit*).
+ *
+ * The prep list used to ask only whether a fit row existed, which excused the
+ * commoner gap: a diver who ticked BCD, wetsuit and weights and supplied one
+ * shoe size had a row, so the packing list called them done and the packer
+ * found out at the rack. These pin the widened meaning, in both directions.
+ */
+describe("divers with an incomplete fit", () => {
+  it("names a diver who rents a piece with no size, even though a fit row exists", () => {
+    const checklist = buildDivePrepChecklist({
+      divers: [
+        // Rents everything, and the only size anybody typed is a fin size.
+        diver({
+          bookingId: "b1",
+          fullName: "Partial Pat",
+          fit: { ...fullFit, bcdSize: null, wetsuitSize: null, weightPreference: null },
+        }),
+      ],
+      plannedDives: 2,
+    });
+    expect(checklist.diversWithIncompleteFit).toEqual([
+      {
+        fullName: "Partial Pat",
+        personId: "b1",
+        state: "incomplete",
+        missing: ["bcd", "wetsuit", "weights"],
+      },
+    ]);
+  });
+
+  it("still packs every piece a partially-fitted diver rents", () => {
+    const checklist = buildDivePrepChecklist({
+      divers: [
+        diver({ bookingId: "b1", fullName: "Partial Pat", fit: { ...fullFit, bcdSize: null } }),
+      ],
+      plannedDives: 1,
+    });
+    // The sizes they did give are real, and dropping their pieces to punish
+    // the gap would send the boat out a BCD short.
+    expect(checklist.lines.map((line) => line.kind)).toEqual([
+      "bcd",
+      "regulator",
+      "wetsuit",
+      "boots",
+      "mask_fins",
+      "weights",
+    ]);
+    expect(lineFor(checklist, "bcd", null)).toMatchObject({ count: 1, divers: ["Partial Pat"] });
+    expect(checklist.tanks.total).toBe(1);
+  });
+
+  it("leaves a fully-sized diver out of it", () => {
+    const checklist = buildDivePrepChecklist({
+      divers: [diver({ bookingId: "b1", fullName: "Complete Cleo" })],
+      plannedDives: 1,
+    });
+    expect(checklist.diversWithIncompleteFit).toEqual([]);
+  });
+
+  it("keeps 'nobody asked' apart from 'asked and half blank' — the fixes differ", () => {
+    const checklist = buildDivePrepChecklist({
+      divers: [
+        diver({ bookingId: "b1", fullName: "Unasked Uma", fit: null }),
+        diver({ bookingId: "b2", fullName: "Partial Pat", fit: { ...fullFit, bcdSize: null } }),
+      ],
+      plannedDives: 1,
+    });
+    expect(checklist.diversWithIncompleteFit.map((row) => [row.fullName, row.state])).toEqual([
+      ["Unasked Uma", "not_recorded"],
+      ["Partial Pat", "incomplete"],
+    ]);
+    // "Nothing on file" names no pieces: the answer is "all of it", and listing
+    // five items would say less than the state already does.
+    expect(checklist.diversWithIncompleteFit[0]?.missing).toEqual([]);
+  });
+
+  it("never asks for a size the one-size gear doesn't have", () => {
+    const checklist = buildDivePrepChecklist({
+      divers: [
+        diver({
+          bookingId: "b1",
+          fullName: "Reg Only Rae",
+          fit: {
+            ...fullFit,
+            rentsBcd: false,
+            rentsWetsuit: false,
+            rentsMaskFins: false,
+            rentsWeights: false,
+            rentsDiveComputer: true,
+            rentsGopro: true,
+            bcdSize: null,
+            wetsuitSize: null,
+            bootSize: null,
+            finSize: null,
+            weightPreference: null,
+          },
+        }),
+      ],
+      plannedDives: 1,
+    });
+    expect(checklist.diversWithIncompleteFit).toEqual([]);
+  });
+
+  it("stops asking once the shop drops that item from its catalog", () => {
+    const divers = [
+      diver({ bookingId: "b1", fullName: "Partial Pat", fit: { ...fullFit, bcdSize: null } }),
+    ];
+    expect(
+      buildDivePrepChecklist({ divers, plannedDives: 1, offeredKinds: ["bcd", "wetsuit"] })
+        .diversWithIncompleteFit,
+    ).toMatchObject([{ state: "incomplete", missing: ["bcd"] }]);
+    // Same fit, a shop that no longer rents BCDs: no size to hand over, so no
+    // size to chase.
+    expect(
+      buildDivePrepChecklist({ divers, plannedDives: 1, offeredKinds: ["wetsuit", "mask_fins"] })
+        .diversWithIncompleteFit,
+    ).toEqual([]);
   });
 });

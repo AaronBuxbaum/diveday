@@ -29,7 +29,12 @@ const copy = {
   viewDivingToday: t("divers.list.viewDivingToday"),
   viewNeedsAttention: t("divers.list.viewNeedsAttention"),
   viewMissingContact: t("divers.list.viewMissingContact"),
+  viewRemoved: t("divers.list.viewRemoved"),
   viewsAriaLabel: t("divers.list.viewsAriaLabel"),
+  removedNote: t("divers.list.removedNote"),
+  restore: t("divers.list.restore"),
+  restoring: t("divers.list.restoring"),
+  restoreDiverLabel: t("divers.list.restoreDiverLabel"),
   peopleHeading: t("divers.list.peopleHeading"),
   peopleCountLabel: t("divers.page.onFileCount", { count: 0 }),
   searchHintText: t("divers.list.searchHintText"),
@@ -59,6 +64,9 @@ function renderList({
   filter = "all" as DiverFilter,
   importHref = "/shop/blue-mantis/settings/import" as string | null,
   page = emptyPage,
+  // Owner/manager by default — the roster hands this down only to whoever may
+  // restore, and it is what makes the Removed view exist at all.
+  restoreAction = (() => {}) as ((formData: FormData) => void) | null,
   copyOverrides = {} as Partial<typeof copy>,
 } = {}) {
   return render(
@@ -69,6 +77,7 @@ function renderList({
       filter={filter}
       locale="en-US"
       importHref={importHref}
+      restoreAction={restoreAction}
       copy={{ ...copy, ...copyOverrides }}
     />,
   );
@@ -142,7 +151,7 @@ describe("DiverList roster views", () => {
     expect(screen.getByRole("navigation", { name: "Roster views" })).toBeInTheDocument();
   });
 
-  it("offers the day's three questions over the roster, and nothing to pin", () => {
+  it("offers the day's three questions over the roster, then the way back to a removal", () => {
     // A view chip is active so the row renders (the roster itself is empty in
     // this fixture; see the day-one test above for the hidden state).
     renderList({ filter: "diving_today" });
@@ -154,9 +163,88 @@ describe("DiverList roster views", () => {
       ["Diving today", "/shop/blue-mantis/divers?filter=diving_today"],
       ["Needs attention", "/shop/blue-mantis/divers?filter=needs_attention"],
       ["Missing contact", "/shop/blue-mantis/divers?filter=missing_contact"],
+      // Last, and apart from the three: not a question about today, but the
+      // only way to find a diver somebody removed.
+      ["Removed", "/shop/blue-mantis/divers?filter=removed"],
     ]);
     // The per-browser saved views are gone entirely — no button, no chips.
     expect(screen.queryByRole("button", { name: /save this view/i })).toBeNull();
+  });
+
+  it("hides the Removed view from a staffer who may not restore — no chip, no explanation", () => {
+    renderList({ filter: "diving_today", restoreAction: null });
+    const views = screen.getByRole("navigation", { name: "Roster views" });
+    expect([...views.querySelectorAll("a")].map((link) => link.textContent)).toEqual([
+      "All divers",
+      "Diving today",
+      "Needs attention",
+      "Missing contact",
+    ]);
+  });
+});
+
+/**
+ * Removal was reversible in the data from the start, but nothing in the UI
+ * could *find* a removed diver once the undo toast was gone: they matched no
+ * search and sat in no view. This is the view that puts them back within reach,
+ * and a restore that works tomorrow rather than for twelve seconds.
+ */
+describe("DiverList removed view", () => {
+  const removedPage: DiverPage = {
+    ...emptyPage,
+    total: 1,
+    pageCount: 1,
+    divers: [
+      {
+        person: {
+          id: "person-1",
+          fullName: "Archived Alex",
+          email: "alex@example.com",
+          phone: null,
+          deletedAt: new Date("2026-08-01T00:00:00Z"),
+        },
+        certificationCount: 0,
+        pendingCertificationCount: 0,
+        specialtyCount: 0,
+        pendingSpecialtyOrNitroxCount: 0,
+        importedUnconfirmedCount: 0,
+        nitroxCertificationCount: 0,
+        rentalFit: null,
+        // The row only renders name, contact, and counts; the rest of the
+        // person row is deliberately not modelled in a render test.
+      } as unknown as DiverPage["divers"][number],
+    ],
+  };
+
+  it("says what removal means, rather than looking like the ordinary roster", () => {
+    renderList({ filter: "removed", page: removedPage });
+    expect(screen.getByText(/off every list and out of trip prep/i)).toBeInTheDocument();
+    // The generic search hint would be the wrong thing to say here.
+    expect(screen.queryByText("Search by name, email, or phone.")).toBeNull();
+  });
+
+  it("puts a restore on each row, named for the diver it restores", () => {
+    renderList({ filter: "removed", page: removedPage });
+    // One per layout (the phone cards and the table both render), each
+    // distinctly named so a screen reader is never offered two bare "Restore"s.
+    const buttons = screen.getAllByRole("button", { name: "Restore Archived Alex" });
+    expect(buttons.length).toBeGreaterThan(0);
+    for (const button of buttons) {
+      const form = button.closest("form");
+      expect(form?.querySelector('input[name="personId"]')).toHaveValue("person-1");
+    }
+  });
+
+  it("still links the row through to the diver record, which now resolves for them", () => {
+    renderList({ filter: "removed", page: removedPage });
+    for (const link of screen.getAllByRole("link", { name: /Archived Alex/ })) {
+      expect(link).toHaveAttribute("href", "/shop/blue-mantis/divers/person-1");
+    }
+  });
+
+  it("offers no restore to a staffer who may not restore", () => {
+    renderList({ filter: "removed", page: removedPage, restoreAction: null });
+    expect(screen.queryByRole("button", { name: /Restore/ })).toBeNull();
   });
 
   it("keeps the search on when a view chip is followed", () => {
@@ -218,6 +306,7 @@ describe("DiverList roster views", () => {
         filter: "needs_attention" as DiverFilter,
         locale: "en-US",
         importHref: null,
+        restoreAction: null,
         copy,
       };
       const view = render(<DiverList {...props} query="" />);

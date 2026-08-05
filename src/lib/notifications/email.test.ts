@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   bookingConfirmationEmail,
+  courseInquiryEmail,
+  demoStartedAlertEmail,
   lastMinuteDealEmail,
   newAccountAlertEmail,
   passwordChangedEmail,
@@ -295,6 +297,45 @@ describe("newAccountAlertEmail", () => {
   });
 });
 
+describe("demoStartedAlertEmail (docs ADR 20260805-demo-try-alerts)", () => {
+  it("names the role, the funnel source, and the throwaway shop", () => {
+    const email = demoStartedAlertEmail({
+      shopSlug: "coral-cove-divers-a1b2c3",
+      role: "captain",
+      source: "pricing",
+    });
+    expect(email.subject).toContain("captain");
+    expect(email.subject).toContain("pricing");
+    expect(email.text).toContain("/shop/coral-cove-divers-a1b2c3");
+    expect(email.html).toContain("captain");
+  });
+
+  it("carries nothing about the visitor — they never identified themselves", () => {
+    // The guard that matters on this kind: it is an outbound message about an
+    // anonymous person, so the body must be assemblable from the three fields
+    // and nothing else. A future field carrying an IP, a user agent, or the
+    // generated demo-owner email fails here first.
+    const email = demoStartedAlertEmail({
+      shopSlug: "coral-cove-divers-a1b2c3",
+      role: "owner",
+      source: "home-hero",
+    });
+    const body = `${email.subject}\n${email.text}\n${email.html}`;
+    expect(body).not.toMatch(/\d+\.\d+\.\d+\.\d+/);
+    expect(body).not.toContain("@");
+  });
+
+  it("escapes a slug or source that somehow arrived with markup in it", () => {
+    const email = demoStartedAlertEmail({
+      shopSlug: '<script>alert("x")</script>',
+      role: "diver",
+      source: '<img src=x onerror="1">',
+    });
+    expect(email.html).not.toContain("<script>");
+    expect(email.html).not.toContain("<img");
+  });
+});
+
 describe("verifyAccountEmail", () => {
   const base = {
     locale: "en-US" as const,
@@ -373,6 +414,44 @@ describe("lastMinuteDealEmail", () => {
     expect(email.text).toContain(dealBase.unsubscribeUrl);
     expect(email.html).toContain(`href="${dealBase.unsubscribeUrl}"`);
     expect(email.html).toContain("Stop last-minute deal emails from Blue Mantis");
+  });
+});
+
+describe("courseInquiryEmail", () => {
+  const inquiry = {
+    locale: "en-US" as const,
+    shopName: "Blue Mantis",
+    courseTitle: "Open Water Diver",
+    inquirerName: "Mira Delgado",
+    inquirerEmail: "mira@example.com",
+    experience: "never" as const,
+    timing: "the week of 12 August",
+  };
+
+  // The date the diver picked is the fact that decides whether the desk has
+  // anything to answer with, so it leads the block of facts.
+  it("names a requested date first, written for the reader", () => {
+    const email = courseInquiryEmail({ ...inquiry, preferredDate: "2026-08-12" });
+    expect(email.text).toContain("Date asked for: August 12, 2026");
+    expect(email.html).toContain("Date asked for: August 12, 2026");
+    expect(email.text.indexOf("Date asked for")).toBeLessThan(email.text.indexOf("When:"));
+  });
+
+  it("drops the line entirely when the diver named no date", () => {
+    const email = courseInquiryEmail(inquiry);
+    expect(email.text).not.toContain("Date asked for");
+    expect(email.html).not.toContain("Date asked for");
+    // And no stray separator left where the line would have been.
+    expect(email.html).not.toContain("<br><br>");
+  });
+
+  it("writes the date in the shop's own language", () => {
+    const email = courseInquiryEmail({
+      ...inquiry,
+      locale: "es-ES",
+      preferredDate: "2026-08-12",
+    });
+    expect(email.text).toContain("Fecha solicitada: 12 de agosto de 2026");
   });
 });
 

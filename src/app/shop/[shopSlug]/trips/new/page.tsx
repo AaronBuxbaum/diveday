@@ -6,7 +6,7 @@ import { z } from "zod";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { TripDiveFields } from "@/components/TripDiveFields";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { canPersonConfigureTrips } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { listActiveCourses } from "@/db/courses";
@@ -310,7 +310,11 @@ async function NewTripBody({
         description={t("trips.new.description")}
       />
 
-      {message ? (
+      {/* The refusal renders down beside the button that earned it — see the
+          action row at the end of this form. `not-authorized` is the one
+          exception: a staffer with no configure rights never gets the form at
+          all, so its refusal has nowhere else to go. */}
+      {message && error === "not-authorized" ? (
         <ShopNotice tone="danger" role="alert">
           {message}
         </ShopNotice>
@@ -527,7 +531,7 @@ async function NewTripBody({
               }}
             />
           </fieldset>
-          <div className="mt-2 flex items-center gap-3">
+          <div className="mt-2 flex flex-wrap items-center gap-3">
             <button
               type="submit"
               className={buttonClass({ size: "lg", className: "rounded-xl text-base" })}
@@ -540,6 +544,11 @@ async function NewTripBody({
             >
               {t("trips.new.cancel")}
             </Link>
+            {/* A refused departure used to answer at the top of a form long
+                enough that the answer was never on screen with the button. */}
+            <FormStatus tone="danger" className="basis-full">
+              {error === "not-authorized" ? undefined : message}
+            </FormStatus>
           </div>
         </form>
       ) : null}

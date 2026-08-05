@@ -1,9 +1,10 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { type DepthUnit, depthInUnit, maxEnteredVisibility } from "@/lib/depth-units";
 import { hasCrewPrediction } from "@/lib/marine-forecast";
+import type { FormNotice } from "@/lib/staff-notices";
 import {
   maxEnteredTemperature,
   minEnteredTemperature,
@@ -14,6 +15,7 @@ import type { Trip } from "./types";
 
 export function ConditionsSection({
   saveAction,
+  status,
   clearAction,
   trip,
   locale,
@@ -21,6 +23,8 @@ export function ConditionsSection({
   depthUnit,
 }: {
   saveAction: (formData: FormData) => void;
+  /** This form's own outcome, rendered beside its Publish button. */
+  status?: FormNotice;
   clearAction: () => void;
   trip: Trip;
   locale: string;
@@ -107,15 +111,18 @@ export function ConditionsSection({
             />
           </Field>
         </FieldGrid>
-        <SubmitButton
-          pendingLabel={t("trips.conditions.publishing")}
-          className={buttonClass({
-            variant: "secondary",
-            className: "self-start text-foreground",
-          })}
-        >
-          {t("trips.conditions.publish")}
-        </SubmitButton>
+        <div className="flex flex-wrap items-center gap-3">
+          <SubmitButton
+            pendingLabel={t("trips.conditions.publishing")}
+            className={buttonClass({
+              variant: "secondary",
+              className: "text-foreground",
+            })}
+          >
+            {t("trips.conditions.publish")}
+          </SubmitButton>
+          <FormStatus tone={status?.tone}>{status?.text}</FormStatus>
+        </div>
       </form>
       {hasCrewPrediction(trip) ? (
         <form action={clearAction} className="mt-3">

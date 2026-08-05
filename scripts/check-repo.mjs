@@ -29,6 +29,7 @@ const checks = [
   ["route-coverage", "check-route-coverage.mjs"],
   ["text", "check-source-text.mjs"],
   ["locale", "check-locale.mjs"],
+  ["timezone", "check-timezone.mjs"],
   ["copy", "check-copy.mjs"],
   ["domain-strings", "check-domain-strings.mjs"],
 ];

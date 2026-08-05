@@ -6,6 +6,7 @@ import {
   courseInquiryBody,
   courseInquiryMailto,
   courseInquirySubject,
+  formatPreferredDate,
   telHref,
 } from "./course-inquiry";
 
@@ -17,6 +18,7 @@ function inquiry(overrides: Partial<CourseInquiry> = {}): CourseInquiry {
     shopName: "Blue Mantis Divers",
     name: "Priya Sharma",
     timing: "the week of 12 August",
+    preferredDate: "",
     divers: 2,
     experience: COURSE_INQUIRY_EXPERIENCE[0],
     message: "",
@@ -80,6 +82,52 @@ describe("courseInquiryBody", () => {
   it("resolves an experience code through its own bundle key, never a raw code", () => {
     const body = courseInquiryBody(t, inquiry({ experience: "lapsed" }));
     expect(body).toContain("Experience so far: I am certified, but it has been a while");
+  });
+
+  // A diver who names a date is answering the question the shop asks first,
+  // so it leads the facts — above the rough "when suits you", which stays
+  // because the two are different answers.
+  it("leads with a requested date when the diver named one", () => {
+    const body = courseInquiryBody(t, inquiry({ preferredDate: "August 12, 2026" }));
+    expect(body).toContain("Date I have in mind: August 12, 2026\nWhen: the week of 12 August");
+  });
+
+  // Unlike "When" and "How many divers", an unnamed date takes its whole line
+  // out: a "Not said" here is a line the shop reads and learns nothing from.
+  it("removes the date line entirely when no date was picked", () => {
+    const body = courseInquiryBody(t, inquiry());
+    expect(body).not.toContain("Date I have in mind");
+    expect(body).not.toContain("Not said");
+    // And no empty line left where it would have been.
+    expect(body).toContain("course.\n\nWhen: ");
+  });
+
+  it("treats a whitespace-only date the same as none", () => {
+    expect(courseInquiryBody(t, inquiry({ preferredDate: "   " }))).not.toContain(
+      "Date I have in mind",
+    );
+  });
+});
+
+describe("formatPreferredDate", () => {
+  it("writes a bare calendar day the way the reader's locale does", () => {
+    expect(formatPreferredDate("2026-08-12", "en-US")).toBe("August 12, 2026");
+    expect(formatPreferredDate("2026-08-12", "es-ES")).toBe("12 de agosto de 2026");
+  });
+
+  // The bug this guards: `new Date("2026-08-12")` is UTC midnight, so
+  // formatting it in a western zone would render the 11th — a shop reading a
+  // date one day off is a diver who turns up on the wrong morning.
+  it("never shifts the day, whatever the reader's zone", () => {
+    expect(formatPreferredDate("2026-01-01", "en-US")).toBe("January 1, 2026");
+    expect(formatPreferredDate("2026-12-31", "en-US")).toBe("December 31, 2026");
+  });
+
+  it("refuses anything that is not a bare YYYY-MM-DD", () => {
+    expect(formatPreferredDate("", "en-US")).toBeNull();
+    expect(formatPreferredDate("12/08/2026", "en-US")).toBeNull();
+    expect(formatPreferredDate("2026-08-12T10:00:00Z", "en-US")).toBeNull();
+    expect(formatPreferredDate("2026-13-45", "en-US")).toBeNull();
   });
 });
 

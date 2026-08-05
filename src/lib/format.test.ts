@@ -63,6 +63,65 @@ describe("formatTimeRangeTz", () => {
   });
 });
 
+/**
+ * The shop-timezone contract these formatters exist to keep: a stored UTC
+ * instant renders as the wall-clock time the shop published, in every season.
+ *
+ * These run on a UTC box (CI and production both are), which is exactly why
+ * they are worth pinning — a formatter that quietly lost its `timeZone`
+ * argument would render the host zone and *still* look like a valid time, just
+ * four or five hours off. The zone offset is what these assert, so the
+ * substitution is no longer silent.
+ */
+describe("rendering a stored instant in the shop's zone", () => {
+  // A 7:30 AM Key Largo departure, stored as the UTC instant it really is.
+  const summerDeparture = new Date("2026-07-15T11:30:00Z"); // 07:30 EDT (UTC-4)
+  const winterDeparture = new Date("2026-01-15T12:30:00Z"); // 07:30 EST (UTC-5)
+
+  it("reads back the published wall-clock hour on both sides of DST", () => {
+    expect(formatTime(summerDeparture, "en-US", "America/New_York")).toBe("7:30 AM");
+    expect(formatTime(winterDeparture, "en-US", "America/New_York")).toBe("7:30 AM");
+  });
+
+  it("names the zone that is actually in force, not a fixed one", () => {
+    const summerEnd = new Date(summerDeparture.getTime() + 3 * 3_600_000);
+    const winterEnd = new Date(winterDeparture.getTime() + 3 * 3_600_000);
+    expect(formatTimeRangeTz(summerDeparture, summerEnd, "en-US", "America/New_York")).toBe(
+      "7:30 AM – 10:30 AM EDT",
+    );
+    expect(formatTimeRangeTz(winterDeparture, winterEnd, "en-US", "America/New_York")).toBe(
+      "7:30 AM – 10:30 AM EST",
+    );
+  });
+
+  it("converts once — the host zone (UTC here) is never applied on top", () => {
+    // If anything double-converted, the summer departure would read 3:30 AM
+    // (shifted twice) rather than the 7:30 AM the shop published.
+    expect(formatTime(summerDeparture, "en-US", "America/New_York")).toBe("7:30 AM");
+    // And the same instant in UTC is the untranslated storage value, four
+    // hours later — the reading a dropped `timeZone` argument would produce.
+    expect(formatTime(summerDeparture, "en-US", "UTC")).toBe("11:30 AM");
+  });
+
+  it("keeps a night dive on the day it sails, which UTC would roll forward", () => {
+    const nightDive = new Date("2026-07-16T01:00:00Z"); // 9:00 PM Jul 15 in New York
+    expect(formatShortDate(nightDive, "en-US", "America/New_York")).toBe("Wed, Jul 15");
+    expect(formatTime(nightDive, "en-US", "America/New_York")).toBe("9:00 PM");
+    // The bug this guards: rendered in UTC it is already Thursday the 16th, so
+    // the boat disappears off the day its divers are looking at.
+    expect(formatShortDate(nightDive, "en-US", "UTC")).toBe("Thu, Jul 16");
+  });
+
+  it("handles a half-hour DST zone, where an hour-based fix would still be wrong", () => {
+    // Australia/Lord_Howe moves the clock by THIRTY minutes: UTC+11:00 in
+    // (southern) summer, UTC+10:30 in winter.
+    const lordHoweSummer = new Date("2026-01-15T21:00:00Z"); // 08:00 +11:00
+    const lordHoweWinter = new Date("2026-07-15T21:30:00Z"); // 08:00 +10:30
+    expect(formatTime(lordHoweSummer, "en-US", "Australia/Lord_Howe")).toBe("8:00 AM");
+    expect(formatTime(lordHoweWinter, "en-US", "Australia/Lord_Howe")).toBe("8:00 AM");
+  });
+});
+
 describe("formatRelativeDay", () => {
   const noon = (day: string) => new Date(`${day}T12:00:00Z`);
 

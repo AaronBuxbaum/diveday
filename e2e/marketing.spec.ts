@@ -83,9 +83,11 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   await expect(page.getByRole("link", { name: "Product" }).first()).toBeVisible();
   await expect(page.getByRole("link", { name: "Pricing" }).first()).toBeVisible();
 
-  // The portability story (safe to leave) is a first-class band on the homepage.
+  // The portability story is a first-class band on the homepage, and it reads
+  // in both directions — records arrive cleanly and leave the same way, which
+  // is the reason to join, not a goodbye.
   await expect(
-    page.getByRole("heading", { name: "Your data leaves with you — any day, no phone call." }),
+    page.getByRole("heading", { name: "Your records come in clean, and leave the same way." }),
   ).toBeVisible();
 
   await page.getByRole("link", { name: "Product" }).first().click();
@@ -210,24 +212,31 @@ test("the about page says who is behind DiveDay and what it won't pretend", asyn
   // The hero has to survive the rulebook's own paste test: "Built by divers,
   // for divers." was true of every dive-adjacent vendor on earth — a rival
   // could paste it unchanged — which made it an eyebrow wearing a headline's
-  // clothes. This one names the thing only DiveDay can say — one person
-  // owns every line running on this boat — and the page proves it two
-  // sections down in the founder bio.
+  // clothes.
+  //
+  // It also has to survive the *opposite* failure, which the previous headline
+  // ("One person owns every line of code running on this boat.") walked into:
+  // conceding smallness so hard it read as a vendor with no infrastructure
+  // behind it, which is the fear this page exists to answer, not feed. The
+  // replacement keeps the accountability and adds what actually backs it —
+  // asserted here as a pair, because either half alone is the old bug.
   await expect(
     page.getByRole("heading", {
-      name: "One person owns every line of code running on this boat.",
+      name: "Small enough to answer you. Built so nothing rests on one person.",
     }),
   ).toBeVisible();
-  await expect(page.getByText(/one of them owns it, writes every line of it/)).toBeVisible();
+  await expect(page.getByText(/payments run through your own Stripe account/)).toBeVisible();
 
-  // The page earns trust by conceding, not by claiming: the honest-no block and
-  // the named accountable human are the load-bearing parts.
+  // The page earns trust by conceding, not by claiming: the honest-no block is
+  // the load-bearing part. (It used to also pin "Aaron Buxbaum, founder" from
+  // the "Who builds it" credential row; that row was removed 2026-08-05 — see
+  // docs/product/marketing.md — so the page names no individual, and asserting
+  // one here would only re-introduce it by the back door.)
   await expect(
     page.getByRole("heading", { name: "What we're not going to pretend." }),
   ).toBeVisible();
   await expect(page.getByRole("heading", { name: "DiveDay is new." })).toBeVisible();
   await expect(page.getByRole("heading", { name: "It doesn't do everything." })).toBeVisible();
-  await expect(page.getByText("Aaron Buxbaum, founder")).toBeVisible();
 
   // Trust from a vendor with no install base is checkable, not asserted: each
   // rule ships with the demo action that proves it.
@@ -268,7 +277,6 @@ test("migration guides walk a shop from an incumbent export into the importer", 
   for (const name of [
     /Switching from EVE/,
     /Switching from DiveShop360/,
-    /Switching from DiveAdmin/,
     /Switching from Smartwaiver/,
     /Switching from FareHarbor/,
     /Switching from Rezdy/,
@@ -285,6 +293,13 @@ test("migration guides walk a shop from an incumbent export into the importer", 
     page.getByRole("heading", { name: "What comes across — and what doesn't" }),
   ).toBeVisible();
   await expect(page.getByRole("heading", { name: "Bring the file into DiveDay" })).toBeVisible();
+  // …and the return trip, stated on the same page rather than left implied.
+  // A guide that only walks a shop *out of* an incumbent sells a one-way door;
+  // the scope table has to read in both directions, so the block that says so
+  // is part of the guide's contract, not decoration.
+  await expect(
+    page.getByRole("heading", { name: "The same table, read the other way." }),
+  ).toBeVisible();
   // Same guard as the spreadsheet guide: no shop session, no deep-link CTA.
   await expect(page.getByRole("link", { name: "Open Import in your shop" })).toBeHidden();
 
@@ -390,17 +405,16 @@ test("migration guides walk a shop from an incumbent export into the importer", 
   // `nextConfig.cacheComponents`). The rendered document still correctly
   // lands on Next's own not-found boundary — only the raw first-byte HTTP
   // status of a cold hit is 200 instead of 404. Same known Next 16
-  // cacheComponents limitation as e2e/course-paths.spec.ts's hidden-path
-  // 404 test.
+  // cacheComponents limitation the certification-path spec documented before
+  // ADR 20260805-remove-certification-paths deleted it.
   await page.goto("/switching/checkfront");
   await expect(page.getByRole("heading", { name: "We couldn’t find that page" })).toBeVisible();
   // `.first()`: the server HTML (confirmed via curl against a fresh build)
   // carries exactly one `<meta name="robots">`, but this route's dynamic
   // hole resolving client-side after a full navigation inserts a second,
   // identical one — a harmless PPR-resolution duplicate, not a second,
-  // differing directive. e2e/course-paths.spec.ts's hidden-path check hits
-  // the same not-found boundary through a route with no dynamic-hole
-  // resolution step and never duplicates it.
+  // differing directive: a route with no dynamic-hole resolution step hits
+  // the same not-found boundary and never duplicates it.
   await expect(page.locator('meta[name="robots"]').first()).toHaveAttribute("content", "noindex");
 });
 

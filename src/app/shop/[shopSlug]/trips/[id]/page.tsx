@@ -6,6 +6,7 @@ import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
+import { FormStatus } from "@/components/ui/form";
 import { canPersonConfigureTrips } from "@/db/authz";
 import { hasTripBlowout } from "@/db/blowouts";
 import { getDb } from "@/db/client";
@@ -31,7 +32,9 @@ import { toShopCurrency } from "@/lib/money";
 import { publicTripPath } from "@/lib/public-routes";
 import { recurrenceSummary } from "@/lib/recurrence";
 import { requireStaffSession } from "@/lib/session";
+import { noticeForForm } from "@/lib/staff-notices";
 import { temperatureUnitFor } from "@/lib/temperature-units";
+import { summarizeTripDiveSites } from "@/lib/trip-dives";
 import { capacityLabel, isFull } from "@/lib/trips";
 import { utcToWallTime } from "@/lib/zoned";
 import { ConditionsSection } from "./_components/ConditionsSection";
@@ -42,7 +45,7 @@ import { RecapNoteSection } from "./_components/RecapNoteSection";
 import { RecapPhotoGallery } from "./_components/RecapPhotoGallery";
 import { RequirementsSection } from "./_components/RequirementsSection";
 import { recurrenceSummaryText, SeriesSection } from "./_components/SeriesSection";
-import { TripNoticeBanner } from "./_components/TripNoticeBanner";
+import { resolveTripNotice, TripNoticeBanner } from "./_components/TripNoticeBanner";
 import {
   applySeriesDetailsAction,
   cancelSeriesAction,
@@ -86,13 +89,15 @@ export default async function ManageTripPage({
   searchParams: Promise<{
     notice?: string;
     count?: string;
+    /** Which form on this page the notice answers — see `resolveTripNotice`. */
+    form?: string;
     /** Signed, and verified against this route's own `id` — src/lib/trip-admission-gate.ts. */
     gate?: string | string[];
   }>;
 }) {
   // The session, route params, and db handle don't depend on one another —
   // resolve them together instead of serially.
-  const [session, { shopSlug, id: tripId }, { notice, count, gate }, db] = await Promise.all([
+  const [session, { shopSlug, id: tripId }, { notice, count, form, gate }, db] = await Promise.all([
     requireStaffSession(),
     params,
     searchParams,
@@ -132,6 +137,14 @@ export default async function ManageTripPage({
     canPersonConfigureTrips(db, shop.id, session.user.personId),
     listRecapPhotosForTrip(db, shop.id, tripId),
   ]);
+  // Where this departure goes, composed from the dives already loaded above —
+  // no second query, and the same answer the public schedule card gives.
+  const diveSites = summarizeTripDiveSites(
+    tripDiveList.map(({ dive, diveSite }) => ({
+      diveNumber: dive.diveNumber,
+      site: diveSite ? { id: diveSite.id, name: diveSite.name } : null,
+    })),
+  );
   // Whether this trip's cancellation was a called blow-out — the cascade
   // record is the surface a weather morning is worked from, so the trip page
   // must always offer the way back to it (ADR 20260804-blowout-cascade).
@@ -200,9 +213,26 @@ export default async function ManageTripPage({
       ? t("shared.capacity.full")
       : t("shared.capacity.spotsLeft", { count: capacityLabelValue.remaining });
 
+  // One resolution, handed to the section it belongs to. Whatever no rendered
+  // section claims — a page-level permission refusal, or a section this
+  // staffer's role means we never rendered — falls through to the banner.
+  const tripNotice = resolveTripNotice({ notice, count, form, gate, tripId, locale });
+  const sectionsOnPage = new Set([
+    ...(canConfigure ? ["details", "requirements"] : []),
+    "conditions",
+    "recap-note",
+    // The gallery renders nothing at all once the last photo is gone, so the
+    // removal that emptied it has no section to land in and falls back.
+    ...(recapPhotos.length > 0 ? ["recap-photos"] : []),
+    "lifecycle",
+    ...(canConfigure && series ? ["series"] : []),
+  ]);
+  const lifecycleStatus = noticeForForm(tripNotice, "lifecycle");
+  const pageNotice = tripNotice && sectionsOnPage.has(tripNotice.form) ? undefined : tripNotice;
+
   return (
     <>
-      <FlashParams params={["notice", "count"]} />
+      <FlashParams params={["notice", "count", "form"]} />
       <ShopPageHeader
         eyebrow={t("trips.detail.eyebrow")}
         title={trip.title}
@@ -271,15 +301,42 @@ export default async function ManageTripPage({
                 })}
               </p>
             ) : null}
-            {trip.diveSite ? (
-              <p className="text-sm text-muted">
-                {t("trips.detail.diveSiteLabel")}{" "}
-                <Link
-                  href={`/shop/${shopSlug}/dive-sites/${trip.diveSite.id}`}
-                  className="font-medium text-primary hover:underline"
-                >
-                  {trip.diveSite.name}
-                </Link>
+            {/* Read off the dives, never `trip.diveSite` — that column is only
+                dive one's site copied onto the trip row, so it named one site
+                for a two-site day and named none at all when the tank without
+                a site was the first one. */}
+            {diveSites.sites.length > 0 || diveSites.undecidedDives > 0 ? (
+              <p className="flex flex-wrap items-center gap-x-2 text-sm text-muted">
+                {diveSites.sites.length > 0 ? (
+                  <>
+                    <span>
+                      {diveSites.sites.length === 1
+                        ? t("trips.detail.diveSiteLabel")
+                        : t("trips.detail.diveSitesLabel")}
+                    </span>
+                    {/* Each site keeps its own link into the library card, so a
+                        two-site day is two destinations — which rules out an
+                        `Intl.ListFormat` join. The separator is punctuation
+                        between links, not a word to translate. */}
+                    {diveSites.sites.map((site, index) => (
+                      <span key={site.id} className="flex items-center gap-x-2">
+                        {index > 0 ? <span aria-hidden="true">·</span> : null}
+                        <Link
+                          href={`/shop/${shopSlug}/dive-sites/${site.id}`}
+                          className="font-medium text-primary hover:underline"
+                        >
+                          {site.name}
+                        </Link>
+                      </span>
+                    ))}
+                  </>
+                ) : null}
+                {diveSites.undecidedDives > 0 ? (
+                  <span className="flex items-center gap-x-2">
+                    {diveSites.sites.length > 0 ? <span aria-hidden="true">·</span> : null}
+                    {t("trips.detail.divesWithoutSite", { count: diveSites.undecidedDives })}
+                  </span>
+                ) : null}
               </p>
             ) : null}
             {series ? (
@@ -301,7 +358,7 @@ export default async function ManageTripPage({
         }
       />
 
-      <TripNoticeBanner notice={notice} count={count} gate={gate} tripId={tripId} locale={locale} />
+      <TripNoticeBanner notice={pageNotice} locale={locale} />
 
       {/* No "you're viewing this trip" notice for staff without configure
           rights. The editable sections simply aren't rendered, which is the
@@ -312,6 +369,7 @@ export default async function ManageTripPage({
       {canConfigure ? (
         <DetailsSection
           action={saveDetails.bind(null, shopSlug, tripId)}
+          status={noticeForForm(tripNotice, "details")}
           trip={trip}
           diveSiteList={diveSiteList}
           tripDiveList={tripDiveList}
@@ -346,6 +404,7 @@ export default async function ManageTripPage({
         ].join("|")}
         saveAction={saveConditionsAction.bind(null, shopSlug, tripId)}
         clearAction={clearConditionsAction.bind(null, shopSlug, tripId)}
+        status={noticeForForm(tripNotice, "conditions")}
         trip={trip}
         locale={locale}
         temperatureUnit={temperatureUnitFor(shop)}
@@ -354,6 +413,7 @@ export default async function ManageTripPage({
 
       <RecapNoteSection
         action={saveRecapShoutoutAction.bind(null, shopSlug, tripId)}
+        status={noticeForForm(tripNotice, "recap-note")}
         shoutout={trip.recapShoutout}
         locale={locale}
       />
@@ -364,15 +424,18 @@ export default async function ManageTripPage({
       <RecapPhotoGallery
         photos={recapPhotos}
         removeAction={deleteRecapPhotoAction.bind(null, shopSlug, tripId)}
+        status={noticeForForm(tripNotice, "recap-photos")}
         locale={locale}
       />
 
       {canConfigure ? (
         <RequirementsSection
           action={saveRequirementsAction.bind(null, shopSlug, tripId)}
+          status={noticeForForm(tripNotice, "requirements")}
           trip={trip}
           requirement={requirement}
           siteRequirement={siteRequirement}
+          siteNames={diveSites.sites.map((site) => site.name)}
           locale={locale}
         />
       ) : null}
@@ -421,6 +484,7 @@ export default async function ManageTripPage({
           intervalWeeks={series.intervalWeeks}
           occurrenceCount={series.occurrenceCount}
           futureScheduledCount={series.futureScheduledCount}
+          status={noticeForForm(tripNotice, "series")}
           applyAction={applySeriesDetailsAction.bind(null, shopSlug, tripId, series.id)}
           cancelAction={cancelSeriesAction.bind(null, shopSlug, tripId, series.id)}
           extendAction={extendSeriesAction.bind(null, shopSlug, tripId, series.id)}
@@ -429,6 +493,9 @@ export default async function ManageTripPage({
       ) : null}
 
       <section className="mt-12 border-t border-border pt-6">
+        <FormStatus tone={lifecycleStatus?.tone} className="mb-3">
+          {lifecycleStatus?.text}
+        </FormStatus>
         {cancelled ? (
           <div className="flex flex-wrap items-center gap-3">
             {canConfigure ? (

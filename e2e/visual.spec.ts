@@ -890,22 +890,13 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "course-page", scheme);
       });
 
-      // The diver's catalog index and the certification-path guidance it leads
-      // to. Both used to be the signed-out half of a staff page inside /shop
-      // and so had no baseline of their own; they are standalone public
-      // surfaces now (ADR 20260803-public-shop-namespace).
+      // The diver's catalog index. It used to be the signed-out half of a
+      // staff page inside /shop and so had no baseline of its own; it is a
+      // standalone public surface now (ADR 20260803-public-shop-namespace).
       test(`the public course catalog renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/s/blue-mantis/courses");
         await page.getByRole("heading", { level: 1, name: "Courses" }).waitFor();
         await capture(page, "public-courses", scheme);
-      });
-
-      test(`the public certification paths render true to the design (${scheme})`, async ({
-        page,
-      }) => {
-        await page.goto("/s/blue-mantis/courses/paths");
-        await page.getByRole("heading", { level: 1, name: "Certification paths" }).waitFor();
-        await capture(page, "public-course-paths", scheme);
       });
 
       /**
@@ -1271,6 +1262,42 @@ for (const scheme of ["light", "dark"] as const) {
       });
     });
 
+    /**
+     * The marketing header's second face. `MarketingNavView` renders two
+     * different bars off one session read: signed out it offers "Sign in" and
+     * "Start a trial"; signed in it drops the sign-in link entirely and turns
+     * the CTA slot into the way back to that staffer's own shop. Every public
+     * capture above is the signed-out bar, so the signed-in one — the header a
+     * shop owner actually sees every time they come back to read the pricing
+     * page — had no baseline at all.
+     *
+     * Its own `test.describe` because `signedInAsOwner()` is a describe-scoped
+     * `storageState`; the sibling "public" block must stay anonymous.
+     *
+     * Shot on `/onboard` rather than the landing page for two reasons. It is
+     * the shortest marketing surface (one form), so the duplicated body below
+     * the header costs the least; and it is the one page that sets
+     * `hideTrialCta`, where the signed-in branch has a documented rule with
+     * nothing watching it — the trial *pitch* is suppressed, but the way back
+     * to your own shop is wayfinding and still renders. The header markup is
+     * identical on every marketing route, so this frame is the state, not a
+     * special case of it.
+     */
+    test.describe("public, signed in", () => {
+      signedInAsOwner();
+
+      test(`the marketing header renders true to the design for a signed-in staffer (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/onboard");
+        // Wait on the signed-in CTA itself, not the page heading: the heading
+        // renders in the static shell, so it proves nothing about the
+        // session-aware nav having streamed in over MarketingNavFallback.
+        await page.getByRole("link", { name: "Go to shop" }).waitFor();
+        await capture(page, "marketing-nav-signed-in", scheme);
+      });
+    });
+
     test.describe("staff", () => {
       signedInAsOwner();
 
@@ -1423,6 +1450,18 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { level: 1, name: "Divers" }).waitFor();
         await page.getByRole("searchbox", { name: "Search divers" }).waitFor();
         await capture(page, "divers", scheme);
+      });
+
+      // The roster's one view that leaves the active list behind: where a
+      // removed diver can be found and restored, once the undo toast is long
+      // gone. The demo shop removes nobody, so this photographs the view's own
+      // chrome — the chip row with "Removed" on it, the line saying what
+      // removal means, and the way back out.
+      test(`the removed-divers view renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/divers?filter=removed");
+        await page.getByRole("heading", { level: 1, name: "Divers" }).waitFor();
+        await page.getByRole("link", { name: "Removed", exact: true }).waitFor();
+        await capture(page, "divers-removed", scheme);
       });
 
       // One diver's full profile: certs, specialty cards, contact.
@@ -1713,45 +1752,38 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "settings-calendar", scheme);
       });
 
-      // The courses catalog: the eye visibility toggle beside the new link
-      // icon that jumps to a course's public preview page.
+      // The courses catalog: the agency tab strip that replaced the per-row
+      // PADI/SSI pill, the list in progression order rather than alphabetical,
+      // and the three row controls — schedule a session, the eye visibility
+      // toggle, the link out to the public page.
       test(`the staff course catalog renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/courses");
         await page.getByRole("heading", { level: 1, name: "Courses" }).waitFor();
         await capture(page, "courses-list", scheme);
       });
 
-      // A course's edit page: the Day by day section's real per-day controls
-      // (start/end time, time note, item list) replacing the old textarea.
+      // One agency's half of the catalog: the selected tab, and a shorter list
+      // that still reads in progression order.
+      test(`the staff course catalog filtered by agency renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/shop/blue-mantis/courses?agency=ssi");
+        await page.getByRole("heading", { level: 1, name: "Courses" }).waitFor();
+        await capture(page, "courses-list-agency", scheme);
+      });
+
+      // A course's edit page: the Day by day section's per-day controls
+      // (start/end time, time note) over a one-item-per-line textarea, and the
+      // single Save control at the foot — no Hide/Show or Preview beside it
+      // (ADR 20260805-remove-certification-paths shipped alongside that trim).
       test(`the course editor renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/courses/open-water-diver/edit");
         // "Day by day" is a server-rendered <legend>, so it is on screen before
         // DayByDayEditor (a Client Component) mounts — waiting on it let the
         // capture land mid-mount. Wait for a control the editor itself renders.
         await page.getByText("Day by day").waitFor();
-        await page.getByRole("button", { name: "Add item" }).first().waitFor();
+        await page.getByLabel("Day 1 — what happens").waitFor();
         await capture(page, "course-edit", scheme);
-      });
-
-      test(`the staff certification paths render true to the design (${scheme})`, async ({
-        page,
-      }) => {
-        await page.goto("/shop/blue-mantis/courses/paths");
-        await page.getByRole("heading", { level: 1, name: "Certification paths" }).waitFor();
-        await capture(page, "course-paths", scheme);
-      });
-
-      // The path builder: the ordered rungs with their move/remove controls,
-      // the picker, and the live diver-facing preview — the catalog's one
-      // genuinely interactive surface.
-      test(`the certification-path builder renders true to the design (${scheme})`, async ({
-        page,
-      }) => {
-        await page.goto("/shop/blue-mantis/courses/paths");
-        await page.getByRole("heading", { level: 1, name: "Certification paths" }).waitFor();
-        await page.getByRole("link", { name: "From first breath to Rescue Diver" }).first().click();
-        await page.getByRole("region", { name: "Path preview" }).waitFor();
-        await capture(page, "course-path-builder", scheme);
       });
 
       // Owner reporting: "how's my month" over the seeded back-fill — the KPI
@@ -1980,8 +2012,8 @@ for (const scheme of ["light", "dark"] as const) {
           // (returned to the form now, not a `?error=images` redirect).
           await page.getByLabel(/Site photo URLs/).fill("");
           await page.getByLabel(/Maximum depth/).fill(meters);
-          await page.getByRole("button", { name: "Save briefing" }).click();
-          await page.getByText("Site briefing saved.").waitFor();
+          await page.getByRole("button", { name: "Save dive site" }).click();
+          await page.getByText("Dive site saved.").waitFor();
         };
         try {
           await setDepth("32");

@@ -18,7 +18,7 @@ import { eventSource } from "@/lib/funnel";
 import { publicAppUrl } from "@/lib/notifications";
 import { onboardSchema } from "@/lib/onboarding";
 import { hashPassword } from "@/lib/password-hashing";
-import { ALERT_EMAIL } from "@/lib/platform-mail";
+import { alertRecipient } from "@/lib/platform-mail";
 import { checkRateLimit, RATE_LIMIT_MESSAGE, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
 import { DEFAULT_WAIVER_BODY, DEFAULT_WAIVER_TITLE } from "@/lib/waivers";
@@ -214,17 +214,27 @@ export async function onboardAction(formData: FormData) {
 
     // The founder alert needs no link, so it doesn't wait on APP_HOST being
     // configured the way the owner-facing mail below does.
+    //
+    // try/catch rather than the trailing `.catch()` this used to carry alone:
+    // `getDb()` is awaited *as an argument*, so a database handle that failed
+    // to open rejected before any `.catch` was attached — an unhandled
+    // rejection inside `after()`, on the one path whose whole point is that a
+    // failed alert cannot touch a signup. The shape now covers both halves.
     after(async () => {
-      await sendNotification(await getDb(), {
-        kind: "new_account_alert",
-        userAccountId: accountId,
-        shopId,
-        to: ALERT_EMAIL,
-        ownerName,
-        ownerEmail: ownerEmail.toLowerCase(),
-        shopName,
-        shopSlug,
-      }).catch(() => ({ status: "failed" as const }));
+      try {
+        await sendNotification(await getDb(), {
+          kind: "new_account_alert",
+          userAccountId: accountId,
+          shopId,
+          to: alertRecipient(),
+          ownerName,
+          ownerEmail: ownerEmail.toLowerCase(),
+          shopName,
+          shopSlug,
+        });
+      } catch (error) {
+        console.error("onboardAction: new-account alert failed", error);
+      }
     });
 
     const origin = publicAppUrl();

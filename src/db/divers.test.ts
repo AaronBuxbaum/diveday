@@ -232,6 +232,132 @@ describe("person-first diver records", () => {
     ).toBe(true);
   });
 
+  /**
+   * Removal was always reversible in the data, and until this view existed it
+   * was not reversible in the product: a removed diver matched no search, sat
+   * in no roster view, and their record 404'd, so the only way back was the few
+   * seconds the undo toast was on screen. These are the two reads that put a
+   * removed diver back within a staffer's reach.
+   */
+  describe("finding a removed diver again", () => {
+    /** The seeded shop owner — the only role allowed to erase (H-14). */
+    async function ownerId(db: AppDb, shopId: string) {
+      const [row] = await db
+        .select({ id: people.id })
+        .from(people)
+        .where(and(eq(people.shopId, shopId), eq(people.fullName, "Dana Reyes")));
+      if (!row) throw new Error("seed owner missing");
+      return row.id;
+    }
+
+    async function removedDiver(db: AppDb, shopId: string) {
+      const diver = await createDiver(db, {
+        shopId,
+        fullName: "Archived Alex",
+        email: "alex@example.com",
+      });
+      if (!diver) throw new Error("diver insert failed");
+      expect(await deleteDiver(db, shopId, diver.id)).toBe(true);
+      return diver;
+    }
+
+    it("lists removed divers under their own view, and nowhere else", async () => {
+      const { db, shop } = await seededShopContext();
+      const diver = await removedDiver(db, shop.id);
+
+      const removed = await listDiverSummaries(db, shop.id, { filter: "removed", limit: 1000 });
+      expect(removed.divers.map((row) => row.person.id)).toContain(diver.id);
+      // The removed view is *only* removed people — an active roster leaking
+      // into it would read as "everyone is removed".
+      expect(removed.divers.every((row) => row.person.deletedAt !== null)).toBe(true);
+
+      // Every other view is untouched: this is a way to see a removal, not an
+      // un-removal, and nothing operational may pick these people up.
+      for (const filter of ["all", "diving_today", "needs_attention", "missing_contact"] as const) {
+        const page = await listDiverSummaries(db, shop.id, { filter, limit: 1000 });
+        expect(page.divers.some((row) => row.person.id === diver.id)).toBe(false);
+      }
+    });
+
+    it("searches within the removed view, so a long list is still navigable", async () => {
+      const { db, shop } = await seededShopContext();
+      const diver = await removedDiver(db, shop.id);
+
+      const byName = await listDiverSummaries(db, shop.id, {
+        filter: "removed",
+        query: "Archived",
+      });
+      expect(byName.divers.map((row) => row.person.id)).toEqual([diver.id]);
+      expect(byName.total).toBe(1);
+      // And the same search over the active roster still finds nobody.
+      expect((await listDiverSummaries(db, shop.id, { query: "Archived" })).total).toBe(0);
+    });
+
+    it("keeps an erased record out of the removed view — there is no way back for one", async () => {
+      const { db, shop } = await seededShopContext();
+      const diver = await removedDiver(db, shop.id);
+      const erased = await anonymizeDiver(db, {
+        shopId: shop.id,
+        personId: diver.id,
+        actorPersonId: await ownerId(db, shop.id),
+      });
+      expect(erased.ok).toBe(true);
+
+      // `restoreDiver` refuses an erased record, so listing it under a view
+      // whose only affordance is Restore would be a button that can never work.
+      const removed = await listDiverSummaries(db, shop.id, { filter: "removed", limit: 1000 });
+      expect(removed.divers.some((row) => row.person.id === diver.id)).toBe(false);
+      expect(await restoreDiver(db, shop.id, diver.id)).toBe(false);
+    });
+
+    it("opens the removed diver's record on request, so the restore has somewhere to live", async () => {
+      const { db, shop } = await seededShopContext();
+      const diver = await removedDiver(db, shop.id);
+
+      // The default is unchanged — every caller that drives shop work still
+      // sees nothing.
+      expect(await getDiverProfile(db, shop.id, diver.id)).toBeNull();
+
+      const profile = await getDiverProfile(db, shop.id, diver.id, { includeRemoved: true });
+      expect(profile?.person.id).toBe(diver.id);
+      // The page needs to be able to tell which one it got.
+      expect(profile?.person.deletedAt).toBeInstanceOf(Date);
+
+      expect(await restoreDiver(db, shop.id, diver.id)).toBe(true);
+      const restored = await getDiverProfile(db, shop.id, diver.id, { includeRemoved: true });
+      expect(restored?.person.deletedAt).toBeNull();
+    });
+
+    it("still refuses an erased record even with removed records included", async () => {
+      const { db, shop } = await seededShopContext();
+      const diver = await removedDiver(db, shop.id);
+      await anonymizeDiver(db, {
+        shopId: shop.id,
+        personId: diver.id,
+        actorPersonId: await ownerId(db, shop.id),
+      });
+      expect(await getDiverProfile(db, shop.id, diver.id, { includeRemoved: true })).toBeNull();
+    });
+
+    it("does not open another shop's removed diver", async () => {
+      const { db, shop } = await seededShopContext();
+      const [otherShop] = await db
+        .insert(shops)
+        .values({ name: "Other Shop", slug: "other-shop-removed-diver-test", timezone: "UTC" })
+        .returning();
+      if (!otherShop) throw new Error("second shop insert failed");
+      const diver = await removedDiver(db, shop.id);
+      // A copied URL is the whole attack here: the record is reachable now, so
+      // the tenant clause is what keeps it reachable only from its own shop.
+      expect(
+        await getDiverProfile(db, otherShop.id, diver.id, { includeRemoved: true }),
+      ).toBeNull();
+      expect(
+        (await listDiverSummaries(db, otherShop.id, { filter: "removed", limit: 1000 })).divers,
+      ).toEqual([]);
+    });
+  });
+
   it("frees a deleted diver's email for a genuinely new person, and refuses to restore into a collision (CR-008)", async () => {
     const { db, shop } = await seededShopContext();
     const original = await createDiver(db, {

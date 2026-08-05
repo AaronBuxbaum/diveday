@@ -17,7 +17,7 @@ import { requestLocale } from "@/i18n/request";
 import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
 import { guideSource, trialHref } from "@/lib/funnel";
 import { IMPORT_HONESTY_TABLE } from "@/lib/import";
-import { sharedLinkCard } from "@/lib/marketing";
+import { fullShopExport, sharedLinkCard } from "@/lib/marketing";
 import {
   getMigrationGuide,
   IMPORT_SCOPE_ROW_KEYS,
@@ -335,6 +335,26 @@ async function GuideBody({
             </li>
           ))}
         </ul>
+
+        {/* The return trip, stated where the reader is weighing the one-way
+            risk: the same rows that describe what arrives also describe what
+            leaves. The claim itself is never re-authored here — it composes
+            `fullShopExport`'s shared keys, so the exit promise on this page,
+            the homepage band, and the pricing FAQ can never drift apart. */}
+        <div className="mt-10 max-w-2xl">
+          <h3 className="text-xl font-semibold tracking-tight">
+            {t("switching.common.bothWaysTitle")}
+          </h3>
+          <p className="mt-2 leading-7 text-muted">
+            {t("switching.common.bothWaysBody", { claim: t(fullShopExport.claimKey) })}
+          </p>
+          {/* The terms are their own line rather than a fifth clause: they are
+              the four objections a reader arrives with ("what will it cost me
+              to leave, who do I have to ask, how long am I locked in"), and
+              buried at the end of an eighty-word paragraph nobody skimming
+              finds them. */}
+          <p className="mt-2 leading-7 text-muted">{t(fullShopExport.termsKey)}</p>
+        </div>
 
         {/* The scope table is where a reader decides the move is real — and it
             was the furthest point they could reach without a way to act. */}

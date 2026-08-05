@@ -139,7 +139,11 @@ describe("refunding a diver's payment", () => {
 
     const to = await redirectedTo(() => refundPaymentAction(shop.slug, diver, formData));
 
-    expect(to).toBe(`/shop/${shop.slug}/divers/${diver}?notice=not-authorized-refund`);
+    // `&form=`/`#anchor`: the refusal renders beside the refund control and the
+    // redirect puts that control on screen (`backTo`, actions.ts).
+    expect(to).toBe(
+      `/shop/${shop.slug}/divers/${diver}?notice=not-authorized-refund&form=payments#payments`,
+    );
     // Nothing reached Stripe: the gate runs before the order is even looked up.
     expect(refundOrder).not.toHaveBeenCalled();
   });
@@ -158,7 +162,9 @@ describe("refunding a diver's payment", () => {
     // ids — the action stops at that guard, *after* the role gate. A captain
     // never reaches this notice, which is the point: the two refusals are
     // distinguishable, and only one of them is about authorization.
-    expect(to).toBe(`/shop/${shop.slug}/divers/${diver}?notice=demo-disabled`);
+    expect(to).toBe(
+      `/shop/${shop.slug}/divers/${diver}?notice=demo-disabled&form=payments#payments`,
+    );
   });
 });
 
@@ -169,7 +175,9 @@ describe("removing a diver from the roster", () => {
 
     const to = await redirectedTo(() => deletePersonAction(shop.slug, diver, new FormData()));
 
-    expect(to).toBe(`/shop/${shop.slug}/divers/${diver}?notice=not-authorized-delete`);
+    expect(to).toBe(
+      `/shop/${shop.slug}/divers/${diver}?notice=not-authorized-delete&form=remove#remove-heading`,
+    );
     expect((await personRow(db, diver)).deletedAt).toBeNull();
   });
 
@@ -196,7 +204,9 @@ describe("erasing a diver's personal and medical data", () => {
 
     const to = await redirectedTo(() => erasePersonAction(shop.slug, diver, formData));
 
-    expect(to).toBe(`/shop/${shop.slug}/divers/${diver}?notice=not-authorized-erase`);
+    expect(to).toBe(
+      `/shop/${shop.slug}/divers/${diver}?notice=not-authorized-erase&form=erase#erase-heading`,
+    );
     const after = await personRow(db, diver);
     expect(after.fullName).toBe(before.fullName);
     expect(after.anonymizedAt).toBeNull();
@@ -215,7 +225,9 @@ describe("erasing a diver's personal and medical data", () => {
 
     const to = await redirectedTo(() => erasePersonAction(shop.slug, diver, formData));
 
-    expect(to).toBe(`/shop/${shop.slug}/divers/${diver}?notice=not-authorized-erase`);
+    expect(to).toBe(
+      `/shop/${shop.slug}/divers/${diver}?notice=not-authorized-erase&form=erase#erase-heading`,
+    );
     expect((await personRow(db, diver)).anonymizedAt).toBeNull();
   });
 

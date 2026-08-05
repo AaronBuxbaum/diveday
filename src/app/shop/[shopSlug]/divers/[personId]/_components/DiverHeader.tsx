@@ -2,10 +2,12 @@ import Link from "next/link";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { maxPlausibleBirthDate } from "@/lib/age";
 import { savePersonAction } from "../actions";
+import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
 import type { DiverProfile } from "./shared";
 
 export function DiverHeader({
@@ -13,12 +15,15 @@ export function DiverHeader({
   shopSlug,
   personId,
   locale,
+  status,
   editOpen = false,
 }: {
   diver: DiverProfile;
   shopSlug: string;
   personId: string;
   locale: string;
+  /** This form's own outcome, rendered in its action row rather than page-top. */
+  status?: DiverNotice;
   /**
    * Starts the details form expanded. Set right after the roster's three-field
    * "Add a diver" form lands here: the record exists but holds a name and
@@ -119,8 +124,19 @@ export function DiverHeader({
                 className={controlClass}
               />
             </Field>
-            <Field label={t("divers.header.emailLabel")} hint={t("divers.header.optionalHint")}>
+            {/* The one refusal on this form the server can point at exactly: an
+                email another active diver already holds. It belongs on the box,
+                not in a sentence beside the button — and `Field`'s `error` wires
+                `aria-invalid`/`aria-describedby`, which is what `FieldErrorFocus`
+                below finds to put the cursor there. */}
+            <Field
+              label={t("divers.header.emailLabel")}
+              hint={t("divers.header.optionalHint")}
+              htmlFor="diver-email"
+              error={status?.field === "diver-email" ? status.text : undefined}
+            >
               <input
+                id="diver-email"
                 name="email"
                 type="email"
                 defaultValue={diver.person.email ?? ""}
@@ -197,10 +213,19 @@ export function DiverHeader({
               <SubmitButton pendingLabel={t("divers.header.saving")} className={buttonClass()}>
                 {t("divers.header.saveDetails")}
               </SubmitButton>
+              {/* A field-level refusal already renders on its own control, so
+                  repeating it here would say the same thing twice. */}
+              {status?.field ? null : (
+                <DiverFormStatus status={status} shopSlug={shopSlug} locale={locale} />
+              )}
             </FieldActions>
           </FieldGrid>
         </details>
       </div>
+      {/* Keyed on the notice text so an identical repeat refusal still re-fires:
+          the effect only runs on a remount, and typing a second duplicate email
+          produces the same URL as the first. */}
+      {status?.field ? <FieldErrorFocus key={status.text} field={status.field} /> : null}
     </>
   );
 }

@@ -4,12 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getDb } from "@/db/client";
-import {
-  getCourseBySlug,
-  setCourseVisibility,
-  updateCourse,
-  updateCourseContent,
-} from "@/db/courses";
+import { getCourseBySlug, updateCourse, updateCourseContent } from "@/db/courses";
 import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
 import { getShopById } from "@/db/shops";
 import { parseFaqs, parseLines, sanitizeScheduleDays, splitCourseImageUrls } from "@/lib/courses";
@@ -182,22 +177,4 @@ export async function saveCourseContentAction(shopSlug: string, slug: string, fo
   // saved; both have to go stale or the edit looks like it did not take.
   revalidatePath(`/shop/${shopSlug}/courses/${slug}`);
   revalidateAndRedirect(base, `${base}?notice=${saved ? "saved" : "invalid"}`);
-}
-
-export async function setCourseVisibilityAction(
-  shopSlug: string,
-  slug: string,
-  formData: FormData,
-) {
-  const base = `/shop/${shopSlug}/courses/${slug}/edit`;
-  const staff = await requireStaffSession();
-  const visible = formData.get("visible") === "true";
-  const db = await getDb();
-  const course = await getCourseBySlug(db, staff.user.shopId, slug);
-  if (!course) redirect(`/shop/${shopSlug}/courses?notice=invalid`);
-  await setCourseVisibility(db, staff.user.shopId, course.id, visible);
-  revalidateAndRedirect(
-    `/shop/${shopSlug}/courses/${slug}`,
-    `${base}?notice=${visible ? "shown" : "hidden"}`,
-  );
 }

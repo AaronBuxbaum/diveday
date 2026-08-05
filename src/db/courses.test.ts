@@ -9,6 +9,7 @@ import type { AppDb } from "./client";
 import { createTestDb } from "./client";
 import {
   archiveCourse,
+  courseAgencies,
   createCourse,
   getCourseBySlug,
   hasActiveCourses,
@@ -951,6 +952,113 @@ describe("pagedCourses pagination (in-memory PGlite)", () => {
     const past = await pagedCourses(db, shop.id, { page: 99, limit: 3 });
     expect(past.page).toBe(first.pageCount);
     expect(past.courses.length).toBeGreaterThan(0);
+  });
+});
+
+/** Rank of a course's own cert gate, mirroring the SQL `asc nulls first` sort. */
+function rankOf(level: string | null): number {
+  return level === null
+    ? -1
+    : ["open_water", "advanced_open_water", "rescue", "divemaster", "instructor"].indexOf(level);
+}
+
+describe("progression order (in-memory PGlite)", () => {
+  it("reads the catalog the way a shop teaches it, not alphabetically", async () => {
+    const { db, shop } = await seededShopContext();
+    const all = await listCourses(db, shop.id);
+    expect(all.length).toBeGreaterThan(4);
+
+    // Never falls back: each course's own gate is non-decreasing down the list.
+    const ranks = all.map((course) => rankOf(course.minimumCertificationLevel));
+    expect(ranks).toEqual([...ranks].sort((a, b) => a - b));
+
+    const titles = all.map((course) => course.title);
+    // The concrete progression a counter conversation walks. Alphabetical
+    // order would open on "Advanced Open Water Diver" — the course a diver
+    // cannot yet take.
+    expect(titles.indexOf("Discover Scuba Diving")).toBeLessThan(
+      titles.indexOf("Open Water Diver"),
+    );
+    expect(titles.indexOf("Open Water Diver")).toBeLessThan(
+      titles.indexOf("Advanced Open Water Diver"),
+    );
+    expect(titles.indexOf("Advanced Open Water Diver")).toBeLessThan(
+      titles.indexOf("Rescue Diver"),
+    );
+    expect(titles.indexOf("Rescue Diver")).toBeLessThan(titles.indexOf("Divemaster"));
+  });
+
+  it("puts a taster ahead of the certification it leads into, at the same rung", async () => {
+    const { db, shop } = await seededShopContext();
+    const entry = (await listCourses(db, shop.id)).filter(
+      (course) => course.minimumCertificationLevel === null,
+    );
+    // Both tasters (DSD, Try Scuba) sit above both entry certifications.
+    const lastIntro = entry.findLastIndex((course) => course.isIntroCourse);
+    const firstCert = entry.findIndex((course) => !course.isIntroCourse);
+    expect(lastIntro).toBeLessThan(firstCert);
+  });
+
+  it("orders the session picker the same way as the roster", async () => {
+    const { db, shop } = await seededShopContext();
+    const active = await listActiveCourses(db, shop.id);
+    const roster = (await listCourses(db, shop.id)).filter((course) => course.isActive);
+    expect(active.map((course) => course.id)).toEqual(roster.map((course) => course.id));
+  });
+
+  it("keeps a newly added course in its own place with no second edit", async () => {
+    const { db, shop } = await seededShopContext();
+    const created = await createCourse(db, {
+      shopId: shop.id,
+      title: "Zebra Wreck Specialty",
+      minimumCertificationLevel: "open_water",
+    });
+    if (!created) throw new Error("course not created");
+
+    const titles = (await listCourses(db, shop.id)).map((course) => course.title);
+    // Last alphabetically, but it lands above every advanced-and-up course —
+    // the shop-built path it replaced would simply never have shown it.
+    expect(titles.indexOf("Zebra Wreck Specialty")).toBeLessThan(titles.indexOf("Rescue Diver"));
+    expect(titles.indexOf("Open Water Diver")).toBeLessThan(
+      titles.indexOf("Zebra Wreck Specialty"),
+    );
+  });
+});
+
+describe("agency tabs (in-memory PGlite)", () => {
+  it("names only the agencies the shop's own catalog holds", async () => {
+    const { db, shop } = await seededShopContext();
+    expect(await courseAgencies(db, shop.id)).toEqual(["padi", "ssi"]);
+  });
+
+  it("narrows the roster to one agency, count and rows agreeing", async () => {
+    const { db, shop } = await seededShopContext();
+    const all = await pagedCourses(db, shop.id, { page: 1 });
+    const ssi = await pagedCourses(db, shop.id, { page: 1, agency: "ssi" });
+
+    expect(ssi.total).toBeGreaterThan(0);
+    expect(ssi.total).toBeLessThan(all.total);
+    // The count must share the row query's scope, or the pager promises pages
+    // that render nothing (AGENTS.md, one-pagination-model).
+    expect(ssi.total).toBe(all.courses.filter((course) => course.agency === "ssi").length);
+    expect(ssi.courses.every((course) => course.agency === "ssi")).toBe(true);
+  });
+
+  it("keeps progression order inside a filtered tab", async () => {
+    const { db, shop } = await seededShopContext();
+    const ssi = await pagedCourses(db, shop.id, { page: 1, agency: "ssi" });
+    const ranks = ssi.courses.map((course) => rankOf(course.minimumCertificationLevel));
+    expect(ranks).toEqual([...ranks].sort((a, b) => a - b));
+  });
+
+  it("shows an agency nobody hard-coded — a CSV import can carry any of them", async () => {
+    const { db, shop } = await seededShopContext();
+    await createCourse(db, {
+      shopId: shop.id,
+      title: "BSAC Ocean Diver",
+      agency: "bsac" as "padi",
+    });
+    expect(await courseAgencies(db, shop.id)).toContain("bsac");
   });
 });
 

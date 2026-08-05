@@ -80,8 +80,8 @@ export const EXPORT_FILE_NOTES = {
   "tips.csv":
     "Crew tips a diver started from their post-trip recap page, with their Stripe references — reconcilable against the shop's own Stripe account, which stays the shop's. Only status 'paid' is real revenue; pending and expired rows are unfinished attempts.",
   "dive_sites.csv":
-    "The shop's dive-site briefing library, archived sites included. Image links stay readable while the DiveDay account is active.",
-  "dive_site_creatures.csv": "The field-guide creatures attached to each dive-site briefing.",
+    "The shop's dive-site library, archived sites included. Image links stay readable while the DiveDay account is active.",
+  "dive_site_creatures.csv": "The field-guide creatures attached to each dive site.",
   "dive_site_moments.csv":
     "Staff-moderated diver moments attached to dive sites, published and unpublished.",
   "recap_photos.csv":
@@ -91,10 +91,6 @@ export const EXPORT_FILE_NOTES = {
   "shop_promo_codes.csv":
     "Shop-wide discount codes as configured, with their validity window, scope, and redemption cap. status 'active' was live; 'disabled' was switched off by staff and 'failed' never minted at Stripe at all. The redemption history itself is not included — see the notes below.",
   "courses.csv": "The course catalog with public-page content, hidden courses included.",
-  "course_paths.csv":
-    "The shop's certification paths — the order it walks divers through its own courses. Guidance only: no path ever decided who could enrol in anything, so nothing here is an admission rule. The rungs themselves are in course_path_steps.csv.",
-  "course_path_steps.csv":
-    "One row per course on a path, in the order the shop set (position is dense and 0-based). Read with course_paths.csv and courses.csv.",
 } as const;
 
 export type ExportFileName = keyof typeof EXPORT_FILE_NOTES;

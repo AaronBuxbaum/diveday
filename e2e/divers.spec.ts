@@ -231,3 +231,115 @@ test.describe("on a phone", () => {
     await expect(page.getByRole("heading", { level: 1, name: "Priya Sharma" })).toBeVisible();
   });
 });
+
+/**
+ * **Remove → find → restore.**
+ *
+ * Removal has always been reversible in the data, and until the Removed view
+ * existed it was not reversible in the product: the roster's undo toast was
+ * twelve seconds long, and after that the diver matched no search, sat in no
+ * view, and their record 404'd. A shop owner who removed the wrong person on
+ * Tuesday had no way to put them back on Wednesday — which is the round trip
+ * this spec walks, deliberately *without* touching the toast.
+ */
+test("staff remove a diver, find them again in the Removed view, and restore them", async ({
+  page,
+}) => {
+  // Three navigations, a removal, a filtered search, and a restore — past the
+  // suite's 15s default, which is sized for a single flow.
+  test.setTimeout(30_000);
+  const stamp = e2eNow().getTime();
+  const diverName = `Removable Diver ${stamp}`;
+
+  await page.goto(`/shop/${SHOP}/divers`);
+  await page.getByText("Add a diver").click(); // the form lives in a collapsed <details>
+  await page.getByLabel("Full name").fill(diverName);
+  await page.getByLabel("Email").fill(`removable-${stamp}@example.com`);
+  await page.getByRole("button", { name: "Add diver" }).click();
+  await expect(page).toHaveURL(/\/divers\/[0-9a-f-]+(\?edit=1)?$/);
+  await expect(page.getByRole("heading", { level: 1, name: diverName })).toBeVisible();
+  const recordUrl = page.url().split("?")[0] ?? "";
+
+  // Remove them from their own record.
+  await page.getByText(`Remove ${diverName}`).click();
+  await page.getByRole("button", { name: "Remove diver" }).click();
+  // The land-then-undo toast, the app's one undo affordance — deliberately
+  // left alone from here: the point of this spec is the path that still works
+  // once it is gone.
+  await expect(page.getByText("Diver removed.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Undo" })).toBeVisible();
+
+  // Gone from the active roster, and not findable by searching it.
+  await page.goto(`/shop/${SHOP}/divers`);
+  await page.getByRole("searchbox", { name: "Search divers" }).fill(diverName);
+  await expect(page.getByText("No divers match this view.")).toBeVisible();
+
+  // The Removed view is where they are, and search works inside it.
+  await page.getByRole("link", { name: "Removed", exact: true }).click();
+  await expect(page).toHaveURL(/filter=removed/);
+  const row = page.getByRole("row").filter({ hasText: diverName });
+  await expect(row).toBeVisible();
+
+  // Their record still opens — the restore has to have somewhere to live.
+  await page.goto(recordUrl);
+  await expect(page.getByRole("heading", { level: 1, name: diverName })).toBeVisible();
+  await expect(page.getByText("This diver is off your active lists")).toBeVisible();
+
+  // Restore from the record, and they are back on the active roster.
+  await page.getByRole("button", { name: "Restore diver" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Diver restored" })).toBeVisible();
+  await page.goto(`/shop/${SHOP}/divers`);
+  await page.getByRole("searchbox", { name: "Search divers" }).fill(diverName);
+  await expect(page.getByRole("row").filter({ hasText: diverName })).toBeVisible();
+});
+
+/**
+ * **An outcome belongs beside the control that earned it.**
+ *
+ * The diver record is eight independent forms on one ~6,400px scroll, and every
+ * one of their outcomes used to resolve into a single banner under the `<h1>`:
+ * you saved a rental fit halfway down the page and the confirmation appeared
+ * off-screen above you. Each section now renders its own (`resolveDiverNotice`
+ * + `FormStatus`), which is a claim about *where* the text is, so the assertion
+ * has to be about containment rather than mere presence.
+ */
+test("a section's outcome renders inside that section, not in a banner at the top", async ({
+  page,
+}) => {
+  test.setTimeout(30_000);
+
+  await page.goto(`/shop/${SHOP}/divers?q=Priya`);
+  await page.getByRole("row").filter({ hasText: "Priya Sharma" }).getByText("PS").click();
+  await expect(page.getByRole("heading", { level: 1, name: "Priya Sharma" })).toBeVisible();
+
+  const rentalFit = page.getByRole("region", { name: "Rental fit" });
+  await rentalFit.scrollIntoViewIfNeeded();
+  await rentalFit.getByLabel("BCD size").fill("M");
+  await rentalFit.getByRole("button", { name: "Save rental fit" }).click();
+
+  // Scoped to the region: the same text anywhere else on the page would not
+  // satisfy this, which is the whole point of the change.
+  await expect(rentalFit.getByText("Rental fit profile saved.")).toBeVisible();
+  // And it is genuinely where the staffer is looking, not merely inside the
+  // right DOM subtree.
+  await expect(rentalFit.getByText("Rental fit profile saved.")).toBeInViewport();
+
+  // A refusal lands on the box it is about, not beside the button and not at
+  // the top: this email belongs to another active diver in the demo shop.
+  await page.getByText("Edit details").click();
+  const detailsForm = page
+    .locator("form")
+    .filter({ has: page.getByRole("button", { name: "Save details" }) });
+  await detailsForm.getByLabel("Email").fill("tom.okafor@example.com");
+  await detailsForm.getByRole("button", { name: "Save details" }).click();
+
+  // On the control (`Field`'s `error` wires `aria-invalid`/`aria-describedby`),
+  // and inside the form — not in a banner two screens up.
+  await expect(detailsForm.getByLabel("Email")).toHaveAttribute("aria-invalid", "true");
+  await expect(detailsForm.getByRole("alert")).toContainText(
+    "Another diver already uses that email",
+  );
+  // The disclosure this form lives in is reopened by its own refusal: rendering
+  // it inside a shut `<details>` would be worse than the banner it replaced.
+  await expect(detailsForm.getByLabel("Email")).toBeVisible();
+});

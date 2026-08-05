@@ -10,6 +10,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { UndoToast } from "@/components/UndoToast";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
+import { FormStatus } from "@/components/ui/form";
 import { getDb } from "@/db/client";
 import {
   countReviewsAwaitingModeration,
@@ -109,6 +110,19 @@ export default async function ReviewsPage({
   const { reviews, total } = reviewPage;
   const banner = noticeFromParam(notice, NOTICES);
   const t = staffTranslator(locale);
+  // Three of these are the bulk control's own outcome and belong on the list
+  // it changed (see the header row below); the other two come from a
+  // per-review toggle and keep the page banner.
+  const bulkStatus =
+    notice === "published_many"
+      ? {
+          tone: "success" as const,
+          text: t("reviews.notice.publishedMany", { count: publishedCount(published) }),
+        }
+      : (notice === "none_selected" || notice === "error") && banner
+        ? { tone: banner.tone, text: t(banner.key) }
+        : undefined;
+  const pageBanner = bulkStatus ? undefined : banner;
   const base = `/shop/${shopSlug}/reviews`;
   /** This page's URL with the tab kept and only `page` swapped. */
   const pageHref = (target: number) => {
@@ -153,12 +167,8 @@ export default async function ReviewsPage({
           pendingLabel={t("shared.undoToast.pendingLabel")}
           undoLabel={t("shared.undoToast.undo")}
         />
-      ) : notice === "published_many" ? (
-        <StaffNoticeBanner tone="success">
-          {t("reviews.notice.publishedMany", { count: publishedCount(published) })}
-        </StaffNoticeBanner>
-      ) : banner ? (
-        <StaffNoticeBanner tone={banner.tone}>{t(banner.key)}</StaffNoticeBanner>
+      ) : pageBanner ? (
+        <StaffNoticeBanner tone={pageBanner.tone}>{t(pageBanner.key)}</StaffNoticeBanner>
       ) : null}
 
       <section aria-label={t("reviews.overviewLabel")} className="mb-2 grid gap-3 sm:grid-cols-3">
@@ -237,6 +247,21 @@ export default async function ReviewsPage({
               />
             </div>
           ) : null}
+          {/* A bulk publish is the one outcome with no single control to sit
+              beside: what changed is N rows across the list, not one button.
+              So it lands on the list's own header row — directly above the
+              rows that changed, and where the button that ran it lives when
+              there is anything left to run.
+
+              Deliberately *outside* the `pendingOnPage > 0` branch above.
+              Clearing the last waiting review removes that branch, and with it
+              the only place the confirmation could have rendered — a
+              publish-everything pass would have answered with silence, which
+              is the bug this whole change exists to remove, wearing a
+              different hat. */}
+          <FormStatus tone={bulkStatus?.tone} className="basis-full">
+            {bulkStatus?.text}
+          </FormStatus>
         </div>
 
         {total === 0 ? (

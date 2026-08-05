@@ -2,7 +2,12 @@ import type { DiverTranslator } from "@/i18n/messages";
 import { diverTranslator } from "@/i18n/messages";
 import { reminderActionText } from "@/i18n/reminder-labels";
 import type { DiverLocale } from "@/i18n/settings";
-import { COURSE_INQUIRY_EXPERIENCE_KEYS, type CourseInquiryExperience } from "@/lib/course-inquiry";
+import {
+  COURSE_INQUIRY_EXPERIENCE_KEYS,
+  type CourseInquiryExperience,
+  formatPreferredDate,
+} from "@/lib/course-inquiry";
+import type { DemoRoleId } from "@/lib/demo-roles";
 import { formatDateTimeTz, formatShortDate, formatTime, formatTimeRangeTz } from "@/lib/format";
 import { escapeHtml } from "@/lib/html";
 import type { ReminderActionCode } from "@/lib/readiness-summary";
@@ -662,6 +667,33 @@ export function newAccountAlertEmail(input: NewAccountAlertEmailInput): Notifica
   };
 }
 
+type DemoStartedAlertEmailInput = {
+  shopSlug: string;
+  role: DemoRoleId;
+  source: string;
+};
+
+/**
+ * Internal, English, and deliberately anonymous — the demo half of the same
+ * founder alert `newAccountAlertEmail` sends for a trial (docs ADR
+ * 20260805-demo-try-alerts). There is nobody to address: a demo visitor never
+ * identifies themselves, so this names the throwaway shop, the role they looked
+ * through, and the marketing page that sent them, and nothing else. Every value
+ * is still escaped, because `shopSlug` and `source` reach here as strings even
+ * though both are generated or registry-clamped upstream.
+ */
+export function demoStartedAlertEmail(input: DemoStartedAlertEmailInput): NotificationEmail {
+  const slug = escapeHtml(input.shopSlug);
+  const role = escapeHtml(input.role);
+  const source = escapeHtml(input.source);
+
+  return {
+    subject: `Demo tried: ${input.role} (from ${input.source})`,
+    text: `Somebody opened the live demo as ${input.role}, from ${input.source}. Their shop is /shop/${input.shopSlug}.\n`,
+    html: `<p>Somebody opened the live demo as <strong>${role}</strong>, from <strong>${source}</strong>. Their shop is <code>/shop/${slug}</code>.</p>`,
+  };
+}
+
 type VerifyAccountEmailInput = {
   locale: DiverLocale;
   ownerName: string;
@@ -821,6 +853,8 @@ type CourseInquiryEmailInput = {
   inquirerPhone?: string;
   experience: CourseInquiryExperience;
   timing?: string;
+  /** A bare `YYYY-MM-DD`; unlike the rest, absent means the line is dropped entirely. */
+  preferredDate?: string;
   divers?: number;
   message?: string;
 };
@@ -857,10 +891,23 @@ export function courseInquiryEmail(input: CourseInquiryEmailInput): Notification
   const timingLine = t("notifications.courseInquiry.timing", { timing });
   const diversLine = t("notifications.courseInquiry.divers", { divers });
   const experienceLine = t("notifications.courseInquiry.experience", { experience });
+  // Only when the diver actually named one — a "Date asked for: Not said" line
+  // is a line the desk reads and learns nothing from. It leads the block
+  // because it is the one fact that decides whether there is anything to
+  // answer with.
+  const preferredDate = input.preferredDate
+    ? formatPreferredDate(input.preferredDate, input.locale)
+    : null;
+  const preferredDateLine = preferredDate
+    ? t("notifications.courseInquiry.preferredDate", { date: preferredDate })
+    : null;
+  const facts = [preferredDateLine, timingLine, diversLine, experienceLine].filter(
+    (line): line is string => line !== null,
+  );
 
   return {
     subject: t("notifications.courseInquiry.subject", { courseTitle: input.courseTitle }),
-    text: `${intro}\n\n${contact}\n${timingLine}\n${diversLine}\n${experienceLine}${message ? `\n\n${message}` : ""}\n`,
-    html: `<p>${introHtml}</p><p>${contactHtml}<br>${escapeHtml(timingLine)}<br>${escapeHtml(diversLine)}<br>${escapeHtml(experienceLine)}</p>${message ? `<p>${escapeHtml(message)}</p>` : ""}`,
+    text: `${intro}\n\n${contact}\n${facts.join("\n")}${message ? `\n\n${message}` : ""}\n`,
+    html: `<p>${introHtml}</p><p>${contactHtml}<br>${facts.map(escapeHtml).join("<br>")}</p>${message ? `<p>${escapeHtml(message)}</p>` : ""}`,
   };
 }

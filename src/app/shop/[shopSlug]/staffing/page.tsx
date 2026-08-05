@@ -7,7 +7,7 @@ import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
+import { controlClass, Field, FieldActions, FieldGrid, FormStatus } from "@/components/ui/form";
 import { canPersonManageStaffAccounts } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
@@ -52,6 +52,17 @@ const notices: Record<string, { tone: "success" | "danger" | "warning"; key: Sta
   invalid: { tone: "danger", key: "staffing.notice.invalid" },
   "not-authorized": { tone: "danger", key: "staffing.notice.notAuthorized" },
 };
+
+/**
+ * Everything the Add-a-shift form itself can say. It lives a long way down the
+ * page, under the working list and the coverage table, so its outcome belongs
+ * in its own action row rather than in a banner under the `<h1>`.
+ * `shift-deleted` is not one of them: it comes from a per-row Remove button in
+ * the working list *above*, so it keeps the banner, which is the nearer of the
+ * two. `not-authorized` stays there too — a staffer without the right never
+ * sees the form at all.
+ */
+const ADD_SHIFT_NOTICES = new Set(["shift-saved", "overlap", "staff_not_found", "invalid"]);
 
 const GAP_KEYS: Record<StaffingGapCode, StaffMessageKey> = {
   no_crew: "staffing.gap.no_crew",
@@ -104,6 +115,12 @@ export default async function StaffingPage({
   const staff = await listStaff(db, shop.id);
   const canManage = await canPersonManageStaffAccounts(db, shop.id, session.user.personId);
   const notice = noticeFromParam(query.notice, notices);
+  // The shift form answers for itself; only what is genuinely about the page
+  // (or what the form is not on screen to answer) keeps the banner.
+  const onShiftForm =
+    canManage && query.notice !== undefined && ADD_SHIFT_NOTICES.has(query.notice);
+  const shiftStatus = onShiftForm ? notice : undefined;
+  const pageNotice = onShiftForm ? undefined : notice;
   const defaultStart = utcToWallTime(view.from, shop.timezone);
   const defaultDate = toDateInputValue(defaultStart);
 
@@ -116,10 +133,10 @@ export default async function StaffingPage({
         description={t("staffing.description")}
       />
 
-      {notice ? (
+      {pageNotice ? (
         <div className="mt-6">
-          <ShopNotice tone={notice.tone} role={noticeRole(notice.tone)}>
-            {t(notice.key)}
+          <ShopNotice tone={pageNotice.tone} role={noticeRole(pageNotice.tone)}>
+            {t(pageNotice.key)}
           </ShopNotice>
         </div>
       ) : null}
@@ -319,6 +336,9 @@ export default async function StaffingPage({
               <SubmitButton pendingLabel={t("staffing.addShift.saving")} className={buttonClass()}>
                 {t("staffing.addShift.submit")}
               </SubmitButton>
+              <FormStatus tone={shiftStatus?.tone}>
+                {shiftStatus ? t(shiftStatus.key) : undefined}
+              </FormStatus>
             </FieldActions>
           </FieldGrid>
         </section>

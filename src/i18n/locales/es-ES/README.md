@@ -62,6 +62,34 @@ not let a find-and-replace on "tienda" eat it.
   setting, a page you were told to come back to. Both replace *comprobar*, which is understood
   everywhere but reads as Spain.
 
+## A place you dive is **un sitio de buceo**
+
+One concept, one word — the same rule as *el centro*, settled on 2026-08-05 alongside the English
+**dive site** / **dive briefing** split (`docs/product/glossary.md`). Three terms were live for the
+same row in `dive_sites`: *sitio de buceo* on the nav tab, the library title and the command
+palette; *punto de inmersión* on the schedule builder, the trip header and the requirements note;
+*punto de buceo* on the diver schedule card and the shop home's first-run checklist. A staffer who
+picked a *punto de inmersión* on a trip and then went looking for it under *Sitios de buceo* was
+reading two names for one thing — which is the exact confusion the English fix removes.
+
+| English | Spanish |
+| --- | --- |
+| dive site | un sitio de buceo |
+| dive sites | los sitios de buceo |
+| the dive-site library | la biblioteca de sitios de buceo |
+| site to be confirmed | sitio por confirmar |
+
+**Two neighbours that are *not* this word, and must stay distinct:**
+
+- **la inmersión** is one dive — one tank, in the water. `plannedDives`, "Dive 2", every roll-call
+  checkpoint. A two-tank day is *dos inmersiones* at one *sitio*, or at two.
+- **el punto** survives only for a literal coordinate: the marine forecast's offshore
+  point (`diveSites.form.forecastLegend`, "punto de pronóstico"). Never for the place itself.
+
+*Briefing* keeps its English form where crews already use it (`shared.tripDiveFields.footerNote`),
+and *ficha* below no longer names a dive-site record — it was doing the job the English word
+"briefing" wrongly did.
+
 ## Deliberately left alone
 
 Not everything that looks peninsular is. These stay, and changing them would be a retranslation
@@ -70,9 +98,10 @@ rather than a terminology sweep:
 - **plaza** for a seat on a boat (`plazas libres`, `última plaza`). Standard across Latin American
   tourism and diving. `cupo` is the alternative if a native reviewer ever disagrees — it would be
   ~80 strings across both bundles, so do it as one deliberate change, not opportunistically.
-- **ficha** for a person's or a site's record, **tablilla** for a clipboard, **trastienda** for a
+- **ficha** for a *person's* record, **tablilla** for a clipboard, **trastienda** for a
   back office, **escaparate** for a storefront, **eslogan**, **de maravilla** — idiomatic, widely
-  read, and part of the voice the bundles already have.
+  read, and part of the voice the bundles already have. (*ficha* no longer names a **dive site**'s
+  record — see the section above.)
 - **The waiver body and medical questionnaire stay English.** That wording is legally reviewed;
   translating it is a human sign-off (H-01/H-03 in `docs/product/human-decisions.md`), not a
   translator's call.

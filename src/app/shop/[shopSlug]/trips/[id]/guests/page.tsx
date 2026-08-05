@@ -27,13 +27,14 @@ import { nitroxTanksApproved } from "@/lib/dive-prep";
 import { formatDateTimeTz, formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { lastMinuteEntryMatchesTripDate } from "@/lib/last-minute-list";
 import { requireStaffSession } from "@/lib/session";
+import { noticeForForm } from "@/lib/staff-notices";
 import { capacityLabel, isFull, spotsRemaining } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import { AddDiverSection } from "../_components/AddDiverSection";
 import { CelebrationsSection } from "../_components/CelebrationsSection";
 import { LastMinuteDealSection } from "../_components/LastMinuteDealSection";
 import { isRosterFilter, RosterSection } from "../_components/RosterSection";
-import { TripNoticeBanner } from "../_components/TripNoticeBanner";
+import { resolveTripNotice, TripNoticeBanner } from "../_components/TripNoticeBanner";
 import { WaitlistSection } from "../_components/WaitlistSection";
 import {
   addInternalNoteAction,
@@ -67,6 +68,8 @@ type TripGuestsSearchParams = Promise<{
   bid?: string;
   diverq?: string;
   count?: string;
+  /** Which form on this page the notice answers — see `resolveTripNotice`. */
+  form?: string;
   /**
    * The signed trip-admission refusal behind a `diver-trip-prerequisite`
    * notice, verified against this route's own `id`
@@ -124,7 +127,8 @@ async function TripGuestsBody({
 }) {
   const session = await requireStaffSession();
   const { shopSlug, id: tripId } = await params;
-  const { notice, bid, diverq, count, gate, rf, noteBookingId, noteBody } = await searchParams;
+  const { notice, bid, diverq, count, form, gate, rf, noteBookingId, noteBody } =
+    await searchParams;
   const rosterFilter = isRosterFilter(rf) ? rf : "all";
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
@@ -192,6 +196,15 @@ async function TripGuestsBody({
       ? bid
       : undefined;
   const cancelled = trip.status === "cancelled";
+  // One resolution, routed to the form it answers. The roster's per-diver
+  // outcomes stay on the page banner — they carry the undo control, and the
+  // row they belong to is already named by `?bid=`.
+  const tripNotice = resolveTripNotice({ notice, count, form, gate, tripId, locale });
+  // The deal panel is always rendered (inside a <details> its own
+  // `#last-minute-deal` landing auto-opens); the add-diver section is not
+  // rendered on a cancelled departure, so its notices fall back to the banner.
+  const guestSections = new Set([...(cancelled ? [] : ["add-diver"]), "last-minute-deal"]);
+  const pageNotice = tripNotice && guestSections.has(tripNotice.form) ? undefined : tripNotice;
   const capacityLabelValue = capacityLabel(trip);
   const capacityText =
     capacityLabelValue.kind === "full"
@@ -217,7 +230,7 @@ async function TripGuestsBody({
 
   return (
     <>
-      <FlashParams params={["notice", "bid", "noteBookingId", "noteBody"]} />
+      <FlashParams params={["notice", "bid", "form", "noteBookingId", "noteBody"]} />
       <ShopPageHeader
         eyebrow={t("trips.guests.eyebrow")}
         title={trip.title}
@@ -262,10 +275,7 @@ async function TripGuestsBody({
         />
       ) : (
         <TripNoticeBanner
-          notice={notice}
-          count={count}
-          gate={gate}
-          tripId={tripId}
+          notice={pageNotice}
           locale={locale}
           undoBookingId={undoBookingId}
           undoAction={undoRemoveBookingAction.bind(null, shopSlug, tripId)}
@@ -309,6 +319,7 @@ async function TripGuestsBody({
           addBookingAction={seatNewDiverAction.bind(null, "trip-guests", shopSlug)}
           addToWaitlistAction={addToWaitlistAction.bind(null, shopSlug, tripId)}
           addExistingDiverAction={seatExistingDiverAction.bind(null, "trip-guests", shopSlug)}
+          status={noticeForForm(tripNotice, "add-diver")}
           locale={locale}
         />
       )}
@@ -406,6 +417,7 @@ async function TripGuestsBody({
             cancelled={cancelled}
             promos={lastMinutePromos}
             timezone={shop.timezone}
+            status={noticeForForm(tripNotice, "last-minute-deal")}
             sendAction={sendLastMinuteDealAction.bind(null, shopSlug, tripId)}
           />
         </div>

@@ -7,6 +7,7 @@ import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
+import { FormStatus } from "@/components/ui/form";
 import { canPersonRefund } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { getOrder, refreshOrderStatus, refundOrder, voidOrder } from "@/db/orders";
@@ -222,14 +223,10 @@ export default async function OrderDetailPage({
         }
       />
 
-      {notice ? (
-        // An unrecognised code renders the neutral fallback sentence, never the
-        // raw query value: `?notice=` is attacker-craftable, and this is a money
-        // screen — a hostile link must not be able to paint its own words into a
-        // success-green banner (same rule as orders/new's fallback).
-        <StaffNoticeBanner tone={banner?.tone ?? "neutral"}>
-          {banner ? t(banner.key) : t("orders.detail.notice.fallback")}
-        </StaffNoticeBanner>
+      {notice === "not_authorized" && banner ? (
+        // The one genuinely page-level code: a staffer without refund rights
+        // never sees the button that would have answered it.
+        <StaffNoticeBanner tone={banner.tone}>{t(banner.key)}</StaffNoticeBanner>
       ) : null}
 
       <section className="rounded-lg border border-border bg-surface p-6">
@@ -337,6 +334,19 @@ export default async function OrderDetailPage({
             )
           ) : null}
         </div>
+        {/* What Refresh / Void / Refund just did, beside those buttons rather
+            than in a banner above the line items. An unrecognised code renders
+            the neutral fallback sentence, never the raw query value:
+            `?notice=` is attacker-craftable, and this is a money screen — a
+            hostile link must not be able to paint its own words into a
+            success-green message (same rule as orders/new's fallback). */}
+        <FormStatus tone={banner?.tone ?? "neutral"} className="mt-2">
+          {notice && notice !== "not_authorized"
+            ? banner
+              ? t(banner.key)
+              : t("orders.detail.notice.fallback")
+            : undefined}
+        </FormStatus>
         {demo && (order.order.status === "open" || order.order.status === "paid") ? (
           <p className="mt-2 text-xs text-muted">{demoActionHint}</p>
         ) : null}

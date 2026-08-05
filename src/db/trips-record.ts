@@ -15,6 +15,7 @@ import {
 import {
   normalizedDiveCount,
   normalizedDiveDrafts,
+  primaryDiveSiteId,
   replaceTripDives,
   type TripDiveDraft,
   type TripScheduleDayInput,
@@ -196,7 +197,7 @@ export async function updateTrip(
         plannedDives,
         ...(patch.diveSiteId === undefined
           ? {}
-          : { diveSiteId: patch.diveSiteId ?? drafts?.[0]?.diveSiteId ?? null }),
+          : { diveSiteId: patch.diveSiteId ?? (drafts ? primaryDiveSiteId(drafts) : null) }),
       })
       .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
       .returning();

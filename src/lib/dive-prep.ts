@@ -18,6 +18,7 @@
  */
 
 import { nowDate } from "./clock";
+import { rentalFitCompleteness, type SizedRentalKind } from "./rentals";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -107,8 +108,33 @@ export type DivePrepChecklist = {
   lines: PrepLine[];
   /** Divers who asked for enriched air but have no verified card — packed as air. */
   nitroxBlockers: NitroxBlocker[];
-  /** Divers with no rental fit on file; staff still has to ask them. */
-  diversWithoutFit: { fullName: string; personId: string }[];
+  /**
+   * **Divers the packing list can't be built from yet.**
+   *
+   * This used to mean "no fit row at all", which quietly excused the more
+   * common gap: a diver who ticked BCD, wetsuit and weights and supplied only
+   * a shoe size had a row, so the prep list called them done and the packer
+   * found out at the rack. A fit is a *size record* (glossary — **Complete
+   * rental fit**), so the question is per item, and `rentalFitCompleteness`
+   * (src/lib/rentals.ts) is the one place that answers it.
+   *
+   * `state` keeps the two apart, because the fix differs: nobody has asked
+   * this diver anything, versus somebody asked and some of it is still blank.
+   * A partially-fitted diver still contributes every piece they rent to
+   * `lines` — the sizes they *did* give are real, and dropping them would
+   * under-pack the boat.
+   */
+  diversWithIncompleteFit: {
+    fullName: string;
+    personId: string;
+    state: "not_recorded" | "incomplete";
+    /**
+     * The pieces with no size, as codes (`src/i18n/rental-labels.ts` resolves
+     * them). Empty for `not_recorded`, where the answer is "all of it" and
+     * naming five items would say less than the state already does.
+     */
+    missing: SizedRentalKind[];
+  }[];
   /**
    * Divers whose stated size couldn't be filled, flagged for hands-on fitting
    * (H-06). Their pieces stay on `lines` with the count intact and the size
@@ -243,21 +269,29 @@ export function nitroxTanksApproved(diver: PrepDiver): boolean {
 
 /**
  * Builds the packing list for one departure. Divers are never dropped: a diver
- * with no fit on file still contributes tanks and is named in
- * `diversWithoutFit` so the gap is visible rather than absent.
+ * with no fit on file — or with half of one — still contributes tanks and is
+ * named in `diversWithIncompleteFit` so the gap is visible rather than absent.
  */
 export function buildDivePrepChecklist(input: {
   divers: PrepDiver[];
   plannedDives: number;
   /** Names of the trip's diving crew (instructor/divemaster) — air tanks only, no rental fit. */
   divingCrew?: string[];
+  /**
+   * The shop's own rental catalog (`shops.rental_items`). Scopes the
+   * completeness question to gear the shop still hands over, so a fit written
+   * before the shop stopped renting BCDs doesn't flag a size nobody can be
+   * given. Omit it and every item counts — which is what a caller with no
+   * catalog to hand should want, since over-asking is the safe direction.
+   */
+  offeredKinds?: readonly string[];
   /** Injectable for tests; defaults to the clock (src/lib/clock.ts). */
   now?: Date;
 }): DivePrepChecklist {
   const diveCount = Math.max(1, Math.trunc(input.plannedDives) || 1);
   const grouped = new Map<string, PrepLine>();
   const nitroxBlockers: NitroxBlocker[] = [];
-  const diversWithoutFit: { fullName: string; personId: string }[] = [];
+  const diversWithIncompleteFit: DivePrepChecklist["diversWithIncompleteFit"] = [];
   const now = input.now ?? nowDate();
   const diversNeedingStaffFit: DivePrepChecklist["diversNeedingStaffFit"] = [];
   let nitroxDivers = 0;
@@ -273,10 +307,22 @@ export function buildDivePrepChecklist(input: {
       });
     }
 
-    if (!diver.fit) {
-      diversWithoutFit.push({ fullName: diver.fullName, personId: diver.personId });
-      continue;
+    // Asked before the pieces are laid out, and of every diver — including the
+    // ones who *have* a row. A partial fit is named here and still packed
+    // below: the sizes they did give are real, and dropping their pieces to
+    // punish the gap would send the boat out short.
+    const fit = rentalFitCompleteness(diver.fit, input.offeredKinds);
+    if (fit.state !== "complete") {
+      diversWithIncompleteFit.push({
+        fullName: diver.fullName,
+        personId: diver.personId,
+        state: fit.state,
+        missing: fit.state === "incomplete" ? fit.missing : [],
+      });
     }
+    // Nothing on file is nothing to pack from — the only case that skips the
+    // lines below.
+    if (!diver.fit) continue;
     // Flagged for hands-on fitting: name them here *and* keep their pieces on
     // the list below. Their sized items carry no size (rentedItems), so the
     // count stays right without anyone laying out a size the shop is short of.
@@ -336,7 +382,7 @@ export function buildDivePrepChecklist(input: {
     },
     lines,
     nitroxBlockers,
-    diversWithoutFit,
+    diversWithIncompleteFit,
     diversNeedingStaffFit: diversNeedingStaffFit.sort((a, b) =>
       a.fullName.localeCompare(b.fullName),
     ),

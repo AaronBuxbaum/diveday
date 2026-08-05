@@ -50,8 +50,8 @@ async function setSiteDepth(page: Page, siteName: string, depth: string, unitLab
   await page.goto(href);
   await page.getByLabel(unitLabel).fill(depth);
   await page.getByLabel(/Site photo URLs/).fill("");
-  await page.getByRole("button", { name: "Save briefing" }).click();
-  await expect(page.getByText("Site briefing saved.")).toBeVisible();
+  await page.getByRole("button", { name: "Save dive site" }).click();
+  await expect(page.getByText("Dive site saved.")).toBeVisible();
   return href;
 }
 
@@ -167,8 +167,8 @@ test.describe("staff", () => {
     // A number typed in feet round-trips exactly — the reason the column is
     // floating-point rather than whole metres.
     await feetField.fill("60");
-    await page.getByRole("button", { name: "Save briefing" }).click();
-    await expect(page.getByText("Site briefing saved.")).toBeVisible();
+    await page.getByRole("button", { name: "Save dive site" }).click();
+    await expect(page.getByText("Dive site saved.")).toBeVisible();
     await page.goto(siteHref);
     await expect(page.getByLabel(/Maximum depth \(feet\)/)).toHaveValue("60");
   });

@@ -63,6 +63,26 @@ export function normalizedDiveDrafts(plannedDives: number, drafts: TripDiveDraft
   });
 }
 
+/**
+ * What goes in `trips.dive_site_id`: the first dive that *has* a site, not
+ * strictly dive one's.
+ *
+ * That column is a denormalized pointer with two consumers — the automated
+ * marine forecast's coordinate and the calendar feed's `LOCATION` — and both
+ * want any real site on the day rather than nothing. Reading dive one alone
+ * left it null on a departure whose second tank was the planned one, so a trip
+ * that plainly visits Spiegel Grove offered no forecast and no directions.
+ *
+ * It is never a *gate*: readiness and the depth advisory already union this
+ * pointer with every `trip_dives` site (`tripVisitedSites` in src/db/readiness.ts),
+ * and every surface that answers "where does this trip go" reads the dives
+ * (`summarizeTripDiveSites`, src/lib/trip-dives.ts). Widening it here can only
+ * add a site the trip already visits, never change what anyone is cleared for.
+ */
+export function primaryDiveSiteId(drafts: Array<{ diveSiteId: string | null }>): string | null {
+  return drafts.find((draft) => draft.diveSiteId)?.diveSiteId ?? null;
+}
+
 export async function validateDiveSites(
   db: DbExecutor,
   shopId: string,
@@ -151,7 +171,7 @@ export async function insertTripInstance(
       depositCents: params.depositCents,
       cancellationWindowHours: params.cancellationWindowHours,
       plannedDives: params.plannedDives,
-      diveSiteId: params.drafts[0]?.diveSiteId ?? null,
+      diveSiteId: primaryDiveSiteId(params.drafts),
     })
     .returning();
   if (!trip) throw new Error("insertTripInstance: insert returned no row");

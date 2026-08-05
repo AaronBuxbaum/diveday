@@ -46,7 +46,9 @@
     "showEarlier": "Ver salidas anteriores",
     "backToNext": "← Volver a la próxima salida",
     "courseSession": "Sesión de curso",
-    "diveSite": "Punto de buceo",
+    "diveSite": "Sitio de buceo",
+    "diveSites": "Sitios de buceo",
+    "moreDivesToConfirm": "{count, plural, one {# inmersión más por confirmar} other {# inmersiones más por confirmar}}",
     "twoTank": "Salida de dos inmersiones",
     "twoTankHint": "Una salida en barco con dos inmersiones independientes, una tras otra, con un descanso (un intervalo de superficie) entre medias — no dos botellas puestas a la vez.",
     "diveCount": "{count, plural, other {# inmersiones}}",
@@ -118,6 +120,7 @@
     "diveNumber": "Inmersión {number}",
     "siteSatelliteAlt": "Vista por satélite de {site}",
     "siteRouteAtDock": "La tripulación explicará la ruta definitiva en el muelle.",
+    "siteToBeConfirmed": "Sitio por confirmar",
     "sitePlanningGuide": "Es una guía de planificación, no una titulación ni una autorización de seguridad.",
     "siteHowItUnfolds": "Cómo se desarrolla la inmersión",
     "siteWhatToLookFor": "Qué buscar ahí abajo",
@@ -211,9 +214,6 @@
     "holdBody": "Consulta arriba la actualización de condiciones. Quien ya reservó conserva su plaza y puede seguirlo aquí en directo.",
     "confirmedHeading": "¡Estás a bordo, {name}! 🤿",
     "confirmedDockCall": "{date}, {time} — preséntate en el muelle {minutes} minutos antes y nos encargamos del resto.",
-    "goDeeperHeading": "¿Listo para llegar más lejos?",
-    "goDeeperBody": "Esta inmersión pide el siguiente nivel de titulación. Mira cómo {course} te lleva hasta ahí — sin prisa, el camino está aquí cuando quieras.",
-    "goDeeperCta": "Ver el curso →",
     "allSet": "Lo tienes todo listo — solo queda presentarte.",
     "nextStep": "Siguiente: {step}",
     "paymentDepositReceived": "Señal recibida",
@@ -351,29 +351,7 @@
       "title": "Cursos",
       "description": "Todo lo que enseña este centro, desde un primer contacto con el buceo hasta formación avanzada.",
       "noCoursesHeading": "Todavía no hay cursos publicados",
-      "noCoursesBody": "Vuelve pronto, o escríbenos y te ayudamos a encontrar un punto de partida.",
-      "pathsLink": "¿No sabes por dónde empezar? Consulta las rutas de titulación"
-    }
-  },
-  "path": {
-    "sectionTitle": "Dónde encaja este curso",
-    "nextUp": "Lo siguiente después de este: {course}.",
-    "lastStep": "Este es el último paso de {path}. Después, pregúntanos hacia dónde seguir."
-  },
-  "coursePaths": {
-    "index": {
-      "eyebrow": "Rutas de titulación",
-      "title": "Rutas de titulación",
-      "description": "Progresiones que recomienda el centro, un curso tras otro. Son una orientación, no un requisito — cada curso indica su propia admisión en su propia página.",
-      "noPathsHeading": "Todavía no hay rutas de titulación publicadas",
-      "noPathsBody": "Vuelve pronto, o escríbenos y te ayudamos a planear tu próximo curso.",
-      "backToCourses": "Todos los cursos"
-    },
-    "page": {
-      "eyebrow": "Ruta de titulación",
-      "backToPaths": "Todas las rutas de titulación",
-      "stepsHeading": "Qué incluye esta ruta",
-      "noStepsBody": "Esta ruta todavía no incluye ningún curso."
+      "noCoursesBody": "Vuelve pronto, o escríbenos y te ayudamos a encontrar un punto de partida."
     }
   },
   "reviews": {
@@ -459,7 +437,7 @@
     "charterPath": "RUTA DE LA SALIDA",
     "boatTrack": "Trayecto del barco",
     "theDock": "El muelle",
-    "reconstructedPath": "📍 Ruta del barco reconstruida visitando {count, plural, one {# punto de buceo} other {# puntos de buceo}}"
+    "reconstructedPath": "📍 Ruta del barco reconstruida visitando {count, plural, one {# sitio de buceo} other {# sitios de buceo}}"
   },
   "ready": {
     "metaTitle": "Tu preparación para la salida — DiveDay",
@@ -772,6 +750,8 @@
     "yourEmail": "Tu correo",
     "yourPhone": "Tu teléfono",
     "howManyDivers": "Cuántos buceadores",
+    "preferredDate": "Una fecha que tienes en mente",
+    "preferredDateHint": "Te diremos si nos encaja — todavía no se reserva ni se aparta nada.",
     "whenSuits": "Cuándo te viene bien",
     "whenSuitsHint": "Con algo aproximado basta — un mes o “cualquier fin de semana” ya nos dice mucho.",
     "whereYouAreUpTo": "Por dónde vas",
@@ -798,7 +778,7 @@
     "sentHeading": "Consulta enviada",
     "sentBody": "Nos pondremos en contacto contigo. También puedes escribirnos directamente con los datos de abajo.",
     "subject": "Consulta sobre el curso: {courseTitle}",
-    "body": "Hola {shopName},\n\nMe gustaría hacer el curso {courseTitle}.\n\nCuándo: {timing}\nCuántos buceadores: {divers}\nExperiencia hasta ahora: {experience}{hasNote, select, yes {\n\n{note}} other {}}\n\nGracias,{hasName, select, yes {\n{name}} other {}}",
+    "body": "Hola {shopName},\n\nMe gustaría hacer el curso {courseTitle}.\n\n{hasDate, select, yes {Fecha que tengo en mente: {preferredDate}\n} other {}}Cuándo: {timing}\nCuántos buceadores: {divers}\nExperiencia hasta ahora: {experience}{hasNote, select, yes {\n\n{note}} other {}}\n\nGracias,{hasName, select, yes {\n{name}} other {}}",
     "experience": {
       "never": "Nunca he buceado",
       "tried": "He probado el buceo una vez, pero no estoy certificado",
@@ -938,7 +918,7 @@
       "tryLiveDemo": "Probar la demo en vivo",
       "settingUp": "Configurando tu centro…",
       "submit": "Crear centro y empezar la prueba",
-      "trialMeaning": "Gratis durante 3 semanas, sin tarjeta. Tu centro sigue funcionando después — escribe a {email} cuando quieras mejorar de plan.",
+      "trialMeaning": "Gratis durante 3 semanas, sin tarjeta.",
       "alreadyHaveShop": "¿Ya tienes un centro?",
       "signIn": "Iniciar sesión",
       "errors": {
@@ -963,6 +943,8 @@
   "switching": {
     "common": {
       "heroCtaNote": "La demo es un centro que funciona de verdad — sin registro, sin nada que importar y sin nada que deshacer.",
+      "bothWaysTitle": "La misma tabla, leída al revés.",
+      "bothWaysBody": "Todo lo de arriba es lo que llega. Lo que llega también es lo que sale: {claim}",
       "midCtaTitle": "¿Prefieres verlo a leerlo?",
       "midCtaBody": "Recorre la demo en vivo como propietario, capitán o buceador — con las mismas verificaciones de certificación, exenciones y pase de lista donde aterriza tu exportación."
     },
@@ -975,7 +957,7 @@
     "hub": {
       "eyebrow": "Cambiarte a DiveDay",
       "title": "La puerta se abre en ambos sentidos.",
-      "description": "La mayoría de los centros se quedan en una hoja de cálculo, o en un software que se les ha quedado pequeño, porque cambiar parece doloroso. Estas guías hacen el cambio concreto: cómo sacar a tus buceadores de lo que uses ahora, qué se traslada exactamente a DiveDay, y qué — honestamente — se queda atrás.",
+      "description": "La mayoría de los centros se quedan en una hoja de cálculo, o en un software que se les ha quedado pequeño, porque cambiar parece doloroso. Estas guías lo hacen concreto en ambas direcciones: cómo sacar a tus buceadores de lo que uses ahora, qué se traslada exactamente a DiveDay — y cómo todo el centro se descarga de vuelta en un ZIP cuando lo pidas. Entrar cuesta un archivo y unos minutos. Salir cuesta un botón.",
       "spreadsheetTitle": "Vienes de una hoja de cálculo",
       "spreadsheetDescription": "¿Llevas el día en una hoja de cálculo y una tablilla? Trae la hoja que ya llevas — y añade los trabajos que una lista no puede hacer, como verificar cada tarjeta antes de que salga el barco.",
       "readGuide": "Leer la guía →",
@@ -1217,9 +1199,9 @@
       "productTitle": "En vez de una pizarra, un portapapeles y tres aplicaciones que no se hablan entre sí.",
       "seeFullProduct": "Ver el producto completo",
       "exportEyebrow": "Tus registros",
-      "exportTitle": "Tus datos se van contigo — cualquier día, sin llamadas.",
-      "exportDescription1": "DiveDay es nuevo, y no deberías tener que confiar a ciegas en un proveedor nuevo. Por eso la salida ya está incluida: un ZIP con los registros de tu centro, descargado desde Ajustes el día que tú elijas. {terms}",
-      "exportDescription2": "¿Llegas en vez de irte? El importador mapea la hoja de cálculo que ya llevas y muestra exactamente qué se traslada — y qué honestamente no — antes de guardar una sola fila. O pásanos la hoja y traemos a tus buceadores contigo, gratis.",
+      "exportTitle": "Tus registros entran limpios y salen igual.",
+      "exportDescription1": "Llegar es un archivo, no un proyecto: el importador mapea la hoja de cálculo o la exportación que ya llevas y muestra exactamente qué se traslada — y qué honestamente no — antes de guardar una sola fila. O pásanos la hoja y traemos a tus buceadores contigo, gratis.",
+      "exportDescription2": "DiveDay es nuevo, y no deberías tener que confiar a ciegas en un proveedor nuevo, así que la salida está hecha con el mismo cuidado: un ZIP con los registros de tu centro, descargado desde Ajustes el día que tú elijas. {terms}",
       "spreadsheetLink": "¿Llevas el día en una hoja de cálculo? Mira cómo se traslada →",
       "switchingLink": "¿Cambias desde {competitors}? Lee las guías →",
       "inExportEyebrow": "En la exportación",
@@ -1359,7 +1341,7 @@
         "item2": "Una página de inicio que abre con tu propio trabajo — capitán, instructor o propietario",
         "item3": "El horario como constructor: añade, mueve, copia y quita salidas en el sitio",
         "item4": "Series de salidas repetidas, editadas y avanzadas como una sola",
-        "item5": "Un catálogo de cursos con rutas de certificación que defines tú mismo",
+        "item5": "Un catálogo de cursos ordenado como tú enseñas, desde el primer contacto hacia arriba",
         "item6": "Roles de personal con límites reales, y una vista de personal que muestra huecos de cobertura",
         "item7": "Vistas de buceadores guardadas y una búsqueda que salta directa a un buceador o una salida",
         "item8": "Informes sobre los números que un centro pregunta de verdad"
@@ -1570,49 +1552,6 @@
         },
         "importerNote": "DiveShop360 exporta los clientes y los datos de certificación como dos archivos separados. Importa primero el archivo de clientes y después el de certificaciones — DiveDay empareja a las personas por correo, así que el segundo archivo suma a los mismos buceadores en vez de duplicarlos. Un archivo de certificaciones suele traer una fila por tarjeta, así que un buceador con tres tarjetas aparece en tres filas: la tarjeta de cada fila aterriza en ese único buceador, y una fila que dice “PADI Deep Diver” se convierte en una tarjeta de especialidad de profundidad."
       },
-      "diveadmin": {
-        "cardSummary": "El recién llegado rápido y barato. Exporta tu CSV de clientes — o usa su copia de seguridad en Google Drive — y trae tu lista de buceadores.",
-        "metaTitle": "Cambiarte de DiveAdmin a DiveDay",
-        "metaDescription": "¿Dejas DiveAdmin? Una guía paso a paso para exportar tus clientes y certificaciones y traerlos a DiveDay — qué se traslada, qué no, y por qué.",
-        "heroEyebrow": "Cambiarte a DiveDay",
-        "heroTitle": "Sacar tu centro de DiveAdmin",
-        "heroLede": "DiveAdmin guarda tus clientes en la nube, exportables como CSV, y puede dejar una copia de seguridad automática en tu propio Google Drive. Aquí tienes cómo sacar tu lista de buceadores y sus tarjetas y traerlas a DiveDay — con una cuenta clara de qué hace el viaje y qué se queda atrás.",
-        "context": {
-          "item1": "DiveAdmin es la opción más nueva y de precio más bajo, y apuesta fuerte por un discurso abierto y centrado en su API. Conviene saberlo antes de planear el cambio: su API documentada está construida para recibir datos — clientes potenciales y reservas — no para devolverte tus registros en bloque. La salida es la exportación CSV de clientes, o la copia de seguridad automática que DiveAdmin puede escribir en tu propio Google Drive.",
-          "item2": "Y para este cambio es más que suficiente. La importación de DiveDay necesita a tu gente, sus tarjetas de certificación y sus tallas de alquiler — exactamente lo que lleva una exportación de clientes. No necesitas una API para traer una hoja de cálculo.",
-          "item3": "Una regla que no doblamos: tú exportas tu propio archivo desde tu propia cuenta de DiveAdmin (o tu propia copia en Google Drive). DiveDay nunca inicia sesión en DiveAdmin ni entra a buscar tus datos — esos datos son tuyos para entregárnoslos, no nuestros para llevárnoslos."
-        },
-        "exportHeading": "Saca tus datos de DiveAdmin",
-        "exportIntro": "DiveAdmin funciona en un navegador. El objetivo es un CSV de clientes con tu gente y sus tarjetas. Las etiquetas de los menús cambian entre versiones, así que toma estos pasos como la forma del camino, no como botones palabra por palabra.",
-        "exportSteps": {
-          "step1": {
-            "title": "Entra en tu panel de DiveAdmin como propietario o administrador",
-            "detail": "Las exportaciones viven en el panel de administración, tras un acceso de propietario o gerente."
-          },
-          "step2": {
-            "title": "Abre tu lista de clientes (o miembros)",
-            "detail": "Busca la zona que lista a todos los clientes con sus datos. Quieres la lista completa, no una ficha suelta."
-          },
-          "step3": {
-            "title": "Exporta la lista a CSV",
-            "detail": "Las listas de clientes de DiveAdmin se exportan a una hoja de cálculo. Exporta a todo el mundo, y guarda el CSV donde lo encuentres."
-          },
-          "step4": {
-            "title": "Incluye las certificaciones",
-            "detail": "Si las tarjetas (agencia, nivel, número de tarjeta) son columnas de la exportación de clientes, ya lo tienes. Si son una exportación aparte, sácala también — el número de tarjeta es lo que permite que una tarjeta se traslade."
-          },
-          "step5": {
-            "title": "¿No hay exportación en el panel? Usa tu copia de Google Drive",
-            "detail": "DiveAdmin puede escribir copias de seguridad automáticas en tu propio Google Drive. El CSV de clientes dentro de esa copia sirve igual que una exportación manual — sigue siendo tu archivo."
-          }
-        },
-        "exportNotes": {
-          "note1": "La API de DiveAdmin ingiere datos; no te devuelve tus registros en bloque. La exportación CSV (o la copia de Google Drive) es la salida, no la API.",
-          "note2": "Los encabezados de tus columnas no tienen que coincidir con nada. DiveDay reconoce los nombres habituales que usan DiveAdmin y todos los demás sistemas, y te muestra exactamente cómo se mapeó cada columna antes de confirmar.",
-          "note3": "Exporta tus reservas además de tus clientes si DiveAdmin ofrece ambas — un archivo con una fila por reserva traslada el historial de visitas de tus buceadores. El historial de mensajes se queda en DiveAdmin; mira la tabla de alcance abajo."
-        },
-        "importerNote": "Si tus certificaciones se exportan como texto libre (“PADI Advanced Open Water”), DiveDay reconoce los niveles habituales (mira qué se traslada abajo). Lee las especialidades igual — una fila “PADI Deep Diver” con número de tarjeta se convierte en una tarjeta de especialidad de profundidad — y lo que no reconozca queda marcado en la vista previa para que una persona lo introduzca a mano."
-      },
       "smartwaiver": {
         "cardSummary": "Exporta tu CSV de participantes y trae a la gente — un descargo que tu archivo ya muestra como firmado entra marcado como importado, así nadie tiene que firmar dos veces.",
         "metaTitle": "Cambiarte de Smartwaiver a DiveDay",
@@ -1760,8 +1699,8 @@
     },
     "about": {
       "eyebrow": "Quiénes somos",
-      "heroTitle": "Una sola persona posee cada línea de código que mueve este barco.",
-      "heroDescription": "Empezó con la mañana corriente del dueño de un centro de buceo: pizarra, portapapeles, una hoja de cálculo y unas cuantas aplicaciones que nunca se hablan entre sí. A DiveDay lo hacen buceadores; uno de ellos es el dueño y escribe cada línea. El resto de la página es la mitad incómoda: lo que no vamos a fingir y cómo te llevas tus registros de vuelta.",
+      "heroTitle": "Lo bastante pequeño para responderte. Construido para que nada dependa de una sola persona.",
+      "heroDescription": "Empezó con la mañana corriente del dueño de un centro de buceo: pizarra, portapapeles, una hoja de cálculo y unas cuantas aplicaciones que nunca se hablan entre sí. A DiveDay lo hacen buceadores, y las partes que tu temporada no puede perder no dependen de ninguno de nosotros: los pagos van por tu propia cuenta de Stripe, tus registros se descargan en un ZIP cualquier día, y el pase de lista funciona en un teléfono sin señal. El resto de la página es la mitad incómoda: lo que no vamos a fingir y cómo te llevas tus registros de vuelta.",
       "founderEyebrow": "Del fundador",
       "founderTitle": "Por qué existe esto.",
       "founderP1": "Un dueño de un centro de buceo me explicó un día cualquiera: una pizarra, una tablilla, una hoja de cálculo actualizada a mano, y un par de aplicaciones que no se hablan entre sí. Pagaba por todo eso dos veces — una por el software, otra en las horas que le robaba a sus buceadores. Su equipo lleva una operación ajustada; las herramientas simplemente nunca llegaron para este sector.",
@@ -1816,15 +1755,13 @@
           "body": "El acceso anticipado significa que los centros que se unen primero orientan lo que se construye después, no una hoja de ruta fijada con meses de antelación en una sala lejos del agua. Ese es el trato: un producto que se adapta a tu temporada, y que sigue cambiando mientras lo usas."
         }
       },
-      "leaveEyebrow": "Seguro para irse",
+      "leaveEyebrow": "Antes de comprometerte",
       "leaveTitle": "A quién le estás comprando en realidad.",
       "leaveP1": "Confiar en un proveedor pequeño los registros que suben a tus buceadores a un barco es una decisión real, así que aquí están las partes que vale la pena conocer antes de tomarla — incluida la más importante, que es cómo te irías.",
       "leaveP2": "{terms} Viniendo en la otra dirección, una persona se sentará con tu exportación o hoja de cálculo anterior y traerá a tus buceadores contigo.",
       "switchingLink": "Cómo funciona el cambio, en ambas direcciones →",
-      "whoBuildsLabel": "Quién lo construye",
-      "whoBuildsValue": "Aaron Buxbaum, fundador — ingeniero de software (Google Maps, una empresa de biotecnología hasta su salida a bolsa, coches autónomos) y buceador obsesivo. La persona responsable de cada decisión que toma DiveDay.",
       "whereLiveLabel": "Dónde viven tus registros",
-      "whereLiveValue": "En servidores en Estados Unidos, y en una descarga que puedes obtener en cualquier momento.",
+      "whereLiveValue": "En servidores en Estados Unidos, en una descarga que puedes obtener en cualquier momento y — si quieres una segunda copia donde no podamos alcanzarla — en una entrega semanal al almacenamiento que tu centro controla.",
       "committingLabel": "A qué te comprometes",
       "committingValue": "Mes a mes, por ubicación, cancela cuando quieras. Sin cuota de alta, sin contrato del que salir.",
       "whoAnswersLabel": "Quién te responde",
@@ -1926,7 +1863,7 @@
         },
         "trialMeaning": {
           "question": "¿Qué significa \"prueba\" ahora mismo?",
-          "answer": "Crear un centro es gratis durante 3 semanas, sin tarjeta. Tu centro sigue funcionando después — escribe a {email} cuando quieras pasar a la facturación de arriba."
+          "answer": "Crear un centro es gratis durante 3 semanas, sin tarjeta."
         },
         "seeBefore": {
           "question": "¿Puedo verlo antes de comprometerme?",
@@ -2091,6 +2028,7 @@
       "subject": "Nueva consulta de curso: {courseTitle}",
       "intro": "{name} está preguntando por {courseTitle} desde la página del curso.",
       "contact": "Correo: {email} · Teléfono: {phone}",
+      "preferredDate": "Fecha solicitada: {date}",
       "timing": "Cuándo: {timing}",
       "divers": "Cuántos buceadores: {divers}",
       "experience": "Experiencia hasta ahora: {experience}"

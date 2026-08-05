@@ -393,7 +393,10 @@ test("staff edit the single shop waiver and each edit is kept as a version", asy
     .filter({ visible: true });
 
   // The current version is shown, and the release text is directly editable.
-  await expect(release.getByText("Version 1")).toBeVisible();
+  // The demo shop ships with two superseded wordings already on file
+  // (src/db/seed-waiver-versions.ts), the way a trading shop's paperwork looks,
+  // so its live release is version 3 rather than a bare version 1.
+  await expect(release.getByText("Version 3")).toBeVisible();
 
   // Editing pre-fills the current text and saves a new version rather than
   // mutating the one divers may already have signed. Title is immutable.
@@ -405,8 +408,8 @@ test("staff edit the single shop waiver and each edit is kept as a version", asy
   await page.getByRole("button", { name: "Save new version" }).click();
   await expect(page.getByRole("status")).toContainText("new version");
 
-  // The current card advances to v2.
-  await expect(release.getByText("Version 2")).toBeVisible();
+  // The current card advances to the next version.
+  await expect(release.getByText("Version 4")).toBeVisible();
 });
 
 /**

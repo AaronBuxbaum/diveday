@@ -1,7 +1,8 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass } from "@/components/ui/form";
+import { controlClass, FormStatus } from "@/components/ui/form";
 import { staffTranslator } from "@/i18n/staff-messages";
+import type { FormNotice } from "@/lib/staff-notices";
 
 /**
  * The crew-authored post-trip shout-out. Diver-facing and post-trip, so it sits
@@ -11,10 +12,13 @@ import { staffTranslator } from "@/i18n/staff-messages";
  */
 export function RecapNoteSection({
   action,
+  status,
   shoutout,
   locale,
 }: {
   action: (formData: FormData) => void;
+  /** This form's own outcome, rendered beside its Save button. */
+  status?: FormNotice;
   shoutout: string | null;
   locale: string;
 }) {
@@ -32,12 +36,12 @@ export function RecapNoteSection({
           placeholder={t("trips.recapNote.placeholder")}
           className={controlClass}
         />
-        <SubmitButton
-          pendingLabel={t("trips.recapNote.saving")}
-          className={buttonClass({ className: "self-start" })}
-        >
-          {t("trips.recapNote.save")}
-        </SubmitButton>
+        <div className="flex flex-wrap items-center gap-3">
+          <SubmitButton pendingLabel={t("trips.recapNote.saving")} className={buttonClass()}>
+            {t("trips.recapNote.save")}
+          </SubmitButton>
+          <FormStatus tone={status?.tone}>{status?.text}</FormStatus>
+        </div>
       </form>
     </section>
   );

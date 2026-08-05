@@ -68,7 +68,14 @@ export default async function TripPrepPage({
         (entry.roles.includes("instructor") || entry.roles.includes("divemaster")),
     )
     .map((entry) => entry.person.fullName);
-  const checklist = buildDivePrepChecklist({ divers, plannedDives: trip.plannedDives, divingCrew });
+  const checklist = buildDivePrepChecklist({
+    divers,
+    plannedDives: trip.plannedDives,
+    divingCrew,
+    // The shop's own catalog, so "this diver is missing a size" is only ever
+    // said about gear this shop still hands over (src/lib/rentals.ts).
+    offeredKinds: shop.rentalItems,
+  });
   /**
    * The size a staffer pulls, or the honest reason there isn't one. Shared by
    * the phone cards and the table so the two can never drift into telling the
@@ -96,7 +103,7 @@ export default async function TripPrepPage({
   // An empty packing table means one of two different things, and the rental-kit
   // empty state says which rather than making the crew scroll back up to guess.
   const needsSorting =
-    checklist.diversWithoutFit.length > 0 || checklist.diversNeedingStaffFit.length > 0;
+    checklist.diversWithIncompleteFit.length > 0 || checklist.diversNeedingStaffFit.length > 0;
   const showNitrox =
     shopOffersNitrox(shop.rentalItems) ||
     checklist.tanks.nitrox > 0 ||
@@ -212,17 +219,23 @@ export default async function TripPrepPage({
             </section>
           ) : null}
 
-          {checklist.diversWithoutFit.length > 0 ? (
+          {/* Two gaps, one section, and each row says which it is. This used to
+              be "No rental fit on file", which was true of everyone in it back
+              when a fit was counted by the row existing. Now that it is counted
+              per item, most of this list is divers somebody *did* ask — and
+              telling the packer nobody asked would send them to re-ask a
+              question that already has half an answer. */}
+          {checklist.diversWithIncompleteFit.length > 0 ? (
             <section
-              aria-labelledby="no-fit-heading"
+              aria-labelledby="missing-sizes-heading"
               className="mt-6 rounded-lg border border-border bg-surface p-4"
             >
-              <h2 id="no-fit-heading" className="font-semibold">
-                {t("trips.prep.noFitHeading")}
+              <h2 id="missing-sizes-heading" className="font-semibold">
+                {t("trips.prep.missingSizesHeading")}
               </h2>
-              <p className="mt-1 text-sm text-muted">{t("trips.prep.noFitDescription")}</p>
+              <p className="mt-1 text-sm text-muted">{t("trips.prep.missingSizesDescription")}</p>
               <ul className="mt-2 flex flex-col gap-1 text-sm">
-                {checklist.diversWithoutFit.map((diver) => (
+                {checklist.diversWithIncompleteFit.map((diver) => (
                   <li key={diver.personId}>
                     •{" "}
                     <Link
@@ -230,7 +243,17 @@ export default async function TripPrepPage({
                       className="font-medium hover:text-primary hover:underline"
                     >
                       {diver.fullName}
-                    </Link>
+                    </Link>{" "}
+                    <span className="text-muted">
+                      {diver.state === "not_recorded"
+                        ? t("trips.prep.missingSizesNothingOnFile")
+                        : t("trips.prep.missingSizesItems", {
+                            items: new Intl.ListFormat(locale, {
+                              style: "long",
+                              type: "conjunction",
+                            }).format(diver.missing.map((kind) => rentalItemLabel(t, kind))),
+                          })}
+                    </span>
                   </li>
                 ))}
               </ul>

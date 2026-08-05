@@ -2,11 +2,12 @@ import Link from "next/link";
 import { EmptyState } from "@/components/EmptyState";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
+import { controlClass, Field, FieldActions, FieldGrid, FormStatus } from "@/components/ui/form";
 import type { BookableDiver } from "@/db/divers";
 import { rentalFitLineText } from "@/i18n/rental-labels";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { rentalFitLine } from "@/lib/dive-prep";
+import type { FormNotice } from "@/lib/staff-notices";
 
 /**
  * Adding a diver leads with the shop's existing people so a returning diver is
@@ -24,6 +25,7 @@ export function AddDiverSection({
   addBookingAction,
   addToWaitlistAction,
   addExistingDiverAction,
+  status,
   locale,
 }: {
   shopSlug: string;
@@ -41,6 +43,13 @@ export function AddDiverSection({
   addBookingAction: (formData: FormData) => void;
   addToWaitlistAction: (formData: FormData) => void;
   addExistingDiverAction: (formData: FormData) => void;
+  /**
+   * What the last seating attempt did — sat them, wait-listed them, or refused
+   * on a cert gate. Section-level rather than on one of the three forms below,
+   * because any of them could have been the one submitted; it renders under the
+   * heading the refusal's own `#add-diver` landing scrolls to.
+   */
+  status?: FormNotice;
   locale: string;
 }) {
   const t = staffTranslator(locale);
@@ -48,6 +57,9 @@ export function AddDiverSection({
   return (
     <section id="add-diver" className="mt-10 scroll-mt-24">
       <h2 className="text-lg font-semibold">{t("trips.addDiver.heading")}</h2>
+      <FormStatus tone={status?.tone} className="mt-2">
+        {status?.text}
+      </FormStatus>
 
       {full ? (
         <p className="mt-1 text-sm text-muted">{t("trips.addDiver.fullDescription")}</p>

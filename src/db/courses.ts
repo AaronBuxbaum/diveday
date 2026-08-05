@@ -1,4 +1,4 @@
-import { and, asc, count, eq } from "drizzle-orm";
+import { and, asc, count, desc, eq, sql } from "drizzle-orm";
 import type { CourseContent } from "@/lib/courses";
 import { courseSlug } from "@/lib/courses";
 import type { CertificationLevel } from "@/lib/readiness";
@@ -67,13 +67,38 @@ export async function createCourse(db: AppDb, input: NewCourse) {
   return course ?? null;
 }
 
+/**
+ * Progression order: the sequence a shop teaches its catalog in, read off the
+ * courses themselves.
+ *
+ * `minimum_certification_level` *is* the ladder — Open Water opens Advanced,
+ * Advanced opens Rescue, Rescue opens Divemaster — and Postgres orders an enum
+ * by its declared order, which is that ladder (`certification_level` in
+ * schema.ts). Nulls sort **first**, not last: a course that admits an
+ * uncertified diver is where a diver starts, and Postgres's ASC default would
+ * otherwise bury Open Water below Divemaster. Within one rung a taster session
+ * comes before the certification it leads into (Discover Scuba, then Open
+ * Water), and title breaks the remaining ties — it is unique per shop, so the
+ * sort is total and paging is stable.
+ *
+ * Derived, never stored. The shop-built certification paths this replaced kept
+ * the same ladder in their own tables, where it could disagree with the
+ * courses and where a newly added course simply never appeared
+ * (ADR 20260805-remove-certification-paths).
+ */
+const progressionOrder = [
+  sql`${courses.minimumCertificationLevel} asc nulls first`,
+  desc(courses.isIntroCourse),
+  asc(courses.title),
+];
+
 /** Active catalog entries available when a staff member schedules a session. */
 export async function listActiveCourses(db: AppDb, shopId: string) {
   return db
     .select()
     .from(courses)
     .where(and(eq(courses.shopId, shopId), eq(courses.isActive, true)))
-    .orderBy(asc(courses.title));
+    .orderBy(...progressionOrder);
 }
 
 /**
@@ -124,7 +149,25 @@ export async function listCourses(db: AppDb, shopId: string) {
     .select()
     .from(courses)
     .where(eq(courses.shopId, shopId))
-    .orderBy(asc(courses.agency), asc(courses.title));
+    .orderBy(...progressionOrder);
+}
+
+/**
+ * The agencies this shop's catalog actually holds, alphabetically.
+ *
+ * Drives the roster's agency tabs, which is why it is a `SELECT DISTINCT` over
+ * the shop's own rows rather than a constant: `courses.agency` is free text a
+ * CSV import can carry anything into, so a hard-coded PADI/SSI pair would hide
+ * a third agency's courses behind no tab at all. One or zero agencies means
+ * there is nothing to filter and the roster renders no tab strip.
+ */
+export async function courseAgencies(db: AppDb, shopId: string): Promise<string[]> {
+  const rows = await db
+    .selectDistinct({ agency: courses.agency })
+    .from(courses)
+    .where(eq(courses.shopId, shopId))
+    .orderBy(asc(courses.agency));
+  return rows.map((row) => row.agency);
 }
 
 /** How many courses the staff roster (`/courses`) shows per page. */
@@ -140,11 +183,14 @@ export type CoursePage = {
 
 /**
  * The staff roster's own paginated view of {@link listCourses} — same scope
- * (full catalog, hidden entries included) and sort (agency, then title,
- * which is unique per shop and so doubles as a stable tiebreak), just one
- * page at a time. Every other caller of `listCourses`/`listActiveCourses`
- * needs the complete set for a dropdown or picker and must keep calling
- * those, not this.
+ * (full catalog, hidden entries included) and the same progression sort, just
+ * one page at a time, and optionally narrowed to one agency by the roster's
+ * tabs. Every other caller of `listCourses`/`listActiveCourses` needs the
+ * complete set for a dropdown or picker and must keep calling those, not this.
+ *
+ * `scope` is built once and used by **both** the count and the row query: a
+ * count taken over a wider scope than the rows would promise pages that render
+ * nothing (AGENTS.md, one-pagination-model).
  *
  * Offset-paged, like the roster and the orders index. It was a forward-only
  * keyset cursor, which meant a staffer three pages into a large catalog had
@@ -155,9 +201,11 @@ export type CoursePage = {
 export async function pagedCourses(
   db: AppDb,
   shopId: string,
-  options: { page?: number; limit?: number } = {},
+  options: { page?: number; limit?: number; agency?: string } = {},
 ): Promise<CoursePage> {
-  const scope = eq(courses.shopId, shopId);
+  const scope = options.agency
+    ? and(eq(courses.shopId, shopId), eq(courses.agency, options.agency))
+    : eq(courses.shopId, shopId);
 
   const paged = await offsetPage({
     page: options.page,
@@ -171,7 +219,7 @@ export async function pagedCourses(
         .select()
         .from(courses)
         .where(scope)
-        .orderBy(asc(courses.agency), asc(courses.title))
+        .orderBy(...progressionOrder)
         .limit(limit)
         .offset(offset),
   });

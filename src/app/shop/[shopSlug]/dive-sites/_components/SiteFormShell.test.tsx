@@ -46,7 +46,7 @@ function setup(action: SiteFormAction) {
       <input id="night" type="checkbox" name="specialty" value="night" />
       <label htmlFor="nitrox">Nitrox</label>
       <input id="nitrox" type="checkbox" name="requiresNitrox" defaultChecked />
-      <button type="submit">Save site briefing</button>
+      <button type="submit">Save dive site</button>
     </SiteFormShell>,
   );
 }
@@ -68,7 +68,7 @@ describe("SiteFormShell", () => {
     await userEvent.selectOptions(screen.getByLabelText("Minimum certification"), "rescue");
     await userEvent.click(screen.getByLabelText("Wreck"));
     await userEvent.click(screen.getByLabelText("Nitrox")); // unticks the default
-    await userEvent.click(screen.getByRole("button", { name: "Save site briefing" }));
+    await userEvent.click(screen.getByRole("button", { name: "Save dive site" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Add both forecast coordinates, or leave both blank.",
@@ -93,10 +93,34 @@ describe("SiteFormShell", () => {
   it("words each refusal from its own code", async () => {
     setup(refusing("depthTooDeep"));
 
-    await userEvent.click(screen.getByRole("button", { name: "Save site briefing" }));
+    await userEvent.click(screen.getByRole("button", { name: "Save dive site" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "That maximum depth is deeper than any dive site.",
     );
+  });
+
+  it("puts the refusal inside the form, beside the button that was pressed", async () => {
+    // It used to render above the form — on a twenty-field briefing, a full
+    // screen above the Save button the staffer had just pressed, so the save
+    // looked like it had simply done nothing.
+    setup(refusing("invalid"));
+    const button = screen.getByRole("button", { name: "Save dive site" });
+
+    await userEvent.click(button);
+
+    const alert = await screen.findByRole("alert");
+    expect(button.closest("form")?.contains(alert)).toBe(true);
+    // And after the button, not before the first field.
+    expect(button.compareDocumentPosition(alert) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("moves the cursor to the refusal", async () => {
+    setup(refusing("coordinatesIncomplete"));
+
+    await userEvent.click(screen.getByRole("button", { name: "Save dive site" }));
+
+    const alert = await screen.findByRole("alert");
+    expect(document.activeElement?.contains(alert)).toBe(true);
   });
 });

@@ -198,29 +198,37 @@ describe("resetDemoSchedule", () => {
     expect(stripeRow).toBeUndefined();
   });
 
-  it("restores the waiver to version 1 with the shop's own title, so an edited release text doesn't leak into the next spec", async () => {
+  it("restores the waiver to its seeded version history with the shop's own title, so an edited release text doesn't leak into the next spec", async () => {
     // Editing the release text appends a version rather than mutating the one
     // divers may already have signed, so the edit survives a reset that only
-    // clears signed records — leaving the next spec on "Version 2" and reading
-    // the previous test's body (e2e/waivers.spec.ts's own "Version 1" check).
+    // clears signed records — leaving the next spec a version ahead and reading
+    // the previous test's body (e2e/waivers.spec.ts's own version check).
+    //
+    // "Seeded state" is a *history*, not one row: the demo shop ships with two
+    // superseded wordings behind its live release
+    // (src/db/seed-waiver-versions.ts), and a reset that restored a bare
+    // version 1 would silently empty the template history the demo exists to
+    // show.
     const { db, shop } = await seededShopContext();
     const before = await getCurrentWaiverTemplate(db, shop.id);
-    expect(before?.version).toBe(1);
+    const seededHistory = await listWaiverTemplateHistory(db, shop.id);
+    expect(before?.version).toBe(seededHistory.length);
+    expect(seededHistory.length).toBeGreaterThan(1);
 
     const edited = await saveWaiverTemplate(db, {
       shopId: shop.id,
       title: before?.title ?? "",
       body: "Leaked release text from a previous spec.",
     });
-    expect(edited.version).toBe(2);
+    expect(edited.version).toBe(seededHistory.length + 1);
 
     await resetDemoSchedule(db, shop.id);
 
     const after = await getCurrentWaiverTemplate(db, shop.id);
-    expect(after?.version).toBe(1);
+    expect(after?.version).toBe(seededHistory.length);
     expect(after?.title).toBe(before?.title);
     expect(after?.body).toBe(before?.body);
-    expect(await listWaiverTemplateHistory(db, shop.id)).toHaveLength(1);
+    expect(await listWaiverTemplateHistory(db, shop.id)).toHaveLength(seededHistory.length);
   });
 
   it("returns the seeded promo code to its live state, so a spec that switched it off doesn't leak that (#330)", async () => {

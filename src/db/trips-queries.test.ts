@@ -1,7 +1,8 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
-import { bookings, shops } from "./schema";
+import { createDiveSite } from "./dive-sites";
+import { bookings, shops, trips } from "./schema";
 import {
   countShopTrips,
   createTrip,
@@ -9,9 +10,11 @@ import {
   pagedUpcomingTripsWithCounts,
   SCHEDULE_PAGE_SIZE,
   setTripStatus,
+  tripDiveSiteSummaries,
   upcomingScheduleRange,
   upcomingScheduleStats,
   upcomingTripsWithCounts,
+  updateTrip,
 } from "./trips";
 
 describe("demo seed + schedule queries (in-memory PGlite)", () => {
@@ -292,5 +295,305 @@ describe("countShopTrips", () => {
 
     // The seeded shop's own count never bleeds in.
     expect(await countShopTrips(db, shop.id)).toBeGreaterThan(1);
+  });
+});
+
+describe("tripDiveSiteSummaries", () => {
+  /** Two sites and a departure that visits them however the test says. */
+  const twoSiteShop = async () => {
+    const { db, shop } = await seededShopContext();
+    const benwood = await createDiveSite(db, { shopId: shop.id, name: "Test Benwood" });
+    const elbow = await createDiveSite(db, { shopId: shop.id, name: "Test Elbow" });
+    return { db, shop, benwood, elbow };
+  };
+
+  it("names both sites of a two-site day, in dive order", async () => {
+    const { db, shop, benwood, elbow } = await twoSiteShop();
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      title: "Two-site day",
+      startsAt: new Date("2030-08-15T12:00:00Z"),
+      endsAt: new Date("2030-08-15T16:00:00Z"),
+      capacity: 4,
+      plannedDives: 2,
+      dives: [{ diveSiteId: benwood.id }, { diveSiteId: elbow.id }],
+    });
+    if (!trip) throw new Error("trip not created");
+
+    const summaries = await tripDiveSiteSummaries(db, shop.id, [trip.id]);
+    expect(summaries.get(trip.id)).toEqual({
+      sites: [
+        { id: benwood.id, name: "Test Benwood" },
+        { id: elbow.id, name: "Test Elbow" },
+      ],
+      undecidedDives: 0,
+    });
+  });
+
+  it("reports the open tank of a two-tank day with one site chosen", async () => {
+    const { db, shop, benwood } = await twoSiteShop();
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      title: "One site so far",
+      startsAt: new Date("2030-08-15T12:00:00Z"),
+      endsAt: new Date("2030-08-15T16:00:00Z"),
+      capacity: 4,
+      plannedDives: 2,
+      dives: [{ diveSiteId: benwood.id }, {}],
+    });
+    if (!trip) throw new Error("trip not created");
+
+    expect((await tripDiveSiteSummaries(db, shop.id, [trip.id])).get(trip.id)).toEqual({
+      sites: [{ id: benwood.id, name: "Test Benwood" }],
+      undecidedDives: 1,
+    });
+  });
+
+  it("finds the site when only the *second* tank has one, and reports the open first tank", async () => {
+    const { db, shop, elbow } = await twoSiteShop();
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      title: "Second tank only",
+      startsAt: new Date("2030-08-15T12:00:00Z"),
+      endsAt: new Date("2030-08-15T16:00:00Z"),
+      capacity: 4,
+      plannedDives: 2,
+      dives: [{}, { diveSiteId: elbow.id }],
+    });
+    if (!trip) throw new Error("trip not created");
+
+    expect((await tripDiveSiteSummaries(db, shop.id, [trip.id])).get(trip.id)).toEqual({
+      sites: [{ id: elbow.id, name: "Test Elbow" }],
+      undecidedDives: 1,
+    });
+    // The reader never depends on the pointer agreeing with the dives — see
+    // "prefers the dives over the pointer when both exist and disagree" below.
+  });
+
+  it("counts one site when the same site is dived twice", async () => {
+    const { db, shop, benwood } = await twoSiteShop();
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      title: "Same site twice",
+      startsAt: new Date("2030-08-15T12:00:00Z"),
+      endsAt: new Date("2030-08-15T16:00:00Z"),
+      capacity: 4,
+      plannedDives: 2,
+      dives: [{ diveSiteId: benwood.id }, { diveSiteId: benwood.id }],
+    });
+    if (!trip) throw new Error("trip not created");
+
+    expect((await tripDiveSiteSummaries(db, shop.id, [trip.id])).get(trip.id)).toEqual({
+      sites: [{ id: benwood.id, name: "Test Benwood" }],
+      undecidedDives: 0,
+    });
+  });
+
+  it("returns nothing for another shop's departure, and an empty map for no ids", async () => {
+    const { db, shop, benwood } = await twoSiteShop();
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      title: "Not yours",
+      startsAt: new Date("2030-08-15T12:00:00Z"),
+      endsAt: new Date("2030-08-15T16:00:00Z"),
+      capacity: 4,
+      plannedDives: 2,
+      dives: [{ diveSiteId: benwood.id }, {}],
+    });
+    if (!trip) throw new Error("trip not created");
+    const [neighbour] = await db
+      .insert(shops)
+      .values({ name: "Next Door", slug: "next-door-sites", timezone: "America/New_York" })
+      .returning();
+    if (!neighbour) throw new Error("shop not created");
+
+    expect((await tripDiveSiteSummaries(db, neighbour.id, [trip.id])).size).toBe(0);
+    expect((await tripDiveSiteSummaries(db, shop.id, [])).size).toBe(0);
+  });
+
+  it("summarises the whole page of departures in one read", async () => {
+    const { db, shop, benwood, elbow } = await twoSiteShop();
+    const first = await createTrip(db, {
+      shopId: shop.id,
+      title: "Page trip one",
+      startsAt: new Date("2030-08-15T12:00:00Z"),
+      endsAt: new Date("2030-08-15T16:00:00Z"),
+      capacity: 4,
+      plannedDives: 2,
+      dives: [{ diveSiteId: benwood.id }, { diveSiteId: elbow.id }],
+    });
+    const second = await createTrip(db, {
+      shopId: shop.id,
+      title: "Page trip two",
+      startsAt: new Date("2030-08-16T12:00:00Z"),
+      endsAt: new Date("2030-08-16T16:00:00Z"),
+      capacity: 4,
+      plannedDives: 1,
+      dives: [{}],
+    });
+    if (!first || !second) throw new Error("trip not created");
+
+    const summaries = await tripDiveSiteSummaries(db, shop.id, [first.id, second.id]);
+    expect(summaries.get(first.id)?.sites).toHaveLength(2);
+    expect(summaries.get(second.id)).toEqual({ sites: [], undecidedDives: 1 });
+  });
+});
+
+describe("tripDiveSiteSummaries — a departure with no dive rows", () => {
+  /**
+   * Every write path mints one `trip_dives` row per planned dive, so this shape
+   * only reaches the reader from data written around them (the demo seed's
+   * `seed-more-trips.ts` does exactly that today). The reader falls back to the
+   * trip's own pointer rather than telling a diver the boat goes nowhere.
+   */
+  it("falls back to the trip's own site, and says nothing when there isn't one", async () => {
+    const { db, shop } = await seededShopContext();
+    const site = await createDiveSite(db, { shopId: shop.id, name: "Test Fallback Reef" });
+    const [withPointer] = await db
+      .insert(trips)
+      .values({
+        shopId: shop.id,
+        diveSiteId: site.id,
+        title: "Row-only trip",
+        startsAt: new Date("2030-08-15T12:00:00Z"),
+        endsAt: new Date("2030-08-15T16:00:00Z"),
+        capacity: 4,
+      })
+      .returning();
+    const [withoutPointer] = await db
+      .insert(trips)
+      .values({
+        shopId: shop.id,
+        title: "Row-only trip, no site",
+        startsAt: new Date("2030-08-16T12:00:00Z"),
+        endsAt: new Date("2030-08-16T16:00:00Z"),
+        capacity: 4,
+      })
+      .returning();
+    if (!withPointer || !withoutPointer) throw new Error("trip not created");
+
+    const summaries = await tripDiveSiteSummaries(db, shop.id, [withPointer.id, withoutPointer.id]);
+    expect(summaries.get(withPointer.id)).toEqual({
+      sites: [{ id: site.id, name: "Test Fallback Reef" }],
+      undecidedDives: 0,
+    });
+    // Absent, not `{ sites: [], undecidedDives: 0 }` — a surface must not read
+    // "no dives are open" from a trip that never described its dives.
+    expect(summaries.has(withoutPointer.id)).toBe(false);
+  });
+
+  it("prefers the dives over the pointer when both exist and disagree", async () => {
+    const { db, shop } = await seededShopContext();
+    const stale = await createDiveSite(db, { shopId: shop.id, name: "Test Stale Pointer" });
+    const real = await createDiveSite(db, { shopId: shop.id, name: "Test Real Site" });
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      title: "Pointer disagrees",
+      startsAt: new Date("2030-08-15T12:00:00Z"),
+      endsAt: new Date("2030-08-15T16:00:00Z"),
+      capacity: 4,
+      plannedDives: 1,
+      dives: [{ diveSiteId: real.id }],
+    });
+    if (!trip) throw new Error("trip not created");
+    await db.update(trips).set({ diveSiteId: stale.id }).where(eq(trips.id, trip.id));
+
+    expect((await tripDiveSiteSummaries(db, shop.id, [trip.id])).get(trip.id)).toEqual({
+      sites: [{ id: real.id, name: "Test Real Site" }],
+      undecidedDives: 0,
+    });
+  });
+});
+
+describe("trips.dive_site_id — the denormalized pointer the forecast and calendar feed read", () => {
+  /**
+   * It used to be strictly *dive one's* site, so a departure planned second
+   * tank first stored null and offered no forecast point, no calendar
+   * `LOCATION`, and no directions — for a trip that plainly visits a site.
+   * Never a gate: readiness unions the pointer with every `trip_dives` site, so
+   * widening it can only add a site the trip already visits.
+   */
+  it("points at the first dive that has a site, not strictly dive one", async () => {
+    const { db, shop } = await seededShopContext();
+    const elbow = await createDiveSite(db, { shopId: shop.id, name: "Test Second Tank Only" });
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      title: "Second tank planned first",
+      startsAt: new Date("2030-08-15T12:00:00Z"),
+      endsAt: new Date("2030-08-15T16:00:00Z"),
+      capacity: 4,
+      plannedDives: 2,
+      dives: [{}, { diveSiteId: elbow.id }],
+    });
+    if (!trip) throw new Error("trip not created");
+    expect(trip.diveSiteId).toBe(elbow.id);
+  });
+
+  it("still prefers dive one when dive one has a site", async () => {
+    const { db, shop } = await seededShopContext();
+    const first = await createDiveSite(db, { shopId: shop.id, name: "Test Tank One" });
+    const second = await createDiveSite(db, { shopId: shop.id, name: "Test Tank Two" });
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      title: "Both tanks sited",
+      startsAt: new Date("2030-08-15T12:00:00Z"),
+      endsAt: new Date("2030-08-15T16:00:00Z"),
+      capacity: 4,
+      plannedDives: 2,
+      dives: [{ diveSiteId: first.id }, { diveSiteId: second.id }],
+    });
+    if (!trip) throw new Error("trip not created");
+    expect(trip.diveSiteId).toBe(first.id);
+  });
+
+  it("stays null when no tank has a site at all", async () => {
+    const { db, shop } = await seededShopContext();
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      title: "Nothing chosen",
+      startsAt: new Date("2030-08-15T12:00:00Z"),
+      endsAt: new Date("2030-08-15T16:00:00Z"),
+      capacity: 4,
+      plannedDives: 2,
+      dives: [{}, {}],
+    });
+    if (!trip) throw new Error("trip not created");
+    expect(trip.diveSiteId).toBeNull();
+  });
+
+  it("follows an edit that moves the site from tank one to tank two", async () => {
+    const { db, shop } = await seededShopContext();
+    const first = await createDiveSite(db, { shopId: shop.id, name: "Test Edit Tank One" });
+    const second = await createDiveSite(db, { shopId: shop.id, name: "Test Edit Tank Two" });
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      title: "Plan changes",
+      startsAt: new Date("2030-08-15T12:00:00Z"),
+      endsAt: new Date("2030-08-15T16:00:00Z"),
+      capacity: 4,
+      plannedDives: 2,
+      dives: [{ diveSiteId: first.id }, {}],
+    });
+    if (!trip) throw new Error("trip not created");
+
+    const outcome = await updateTrip(db, shop.id, trip.id, {
+      title: trip.title,
+      startsAt: trip.startsAt,
+      endsAt: trip.endsAt,
+      capacity: trip.capacity,
+      plannedDives: 2,
+      // What the trip editor sends: the form's dive-one site, which is now blank.
+      diveSiteId: null,
+      dives: [{ diveSiteId: null }, { diveSiteId: second.id }],
+    });
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) throw new Error("update refused");
+    expect(outcome.trip.diveSiteId).toBe(second.id);
+
+    // And the surfaces still read the dives, which is the answer that matters.
+    expect((await tripDiveSiteSummaries(db, shop.id, [trip.id])).get(trip.id)).toEqual({
+      sites: [{ id: second.id, name: "Test Edit Tank Two" }],
+      undecidedDives: 1,
+    });
   });
 });

@@ -5,6 +5,7 @@ import { FlashParams } from "@/components/FlashParams";
 import { Pager } from "@/components/Pager";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
+import { UndoToast } from "@/components/UndoToast";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { canPersonDeleteDiver } from "@/db/authz";
@@ -41,6 +42,10 @@ const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
   duplicate: { tone: "danger", key: "divers.page.noticeDuplicate" },
   deleted: { tone: "success", key: "divers.page.noticeDeleted" },
   restored: { tone: "success", key: "divers.page.noticeRestored" },
+  // `restoreDiver` refused: an active diver has since claimed this one's email
+  // (CR-008), or the record was erased and has no way back. Distinct from
+  // `invalid`, which is about the add-a-diver form's three fields.
+  "restore-refused": { tone: "danger", key: "divers.page.noticeRestoreRefused" },
   erased: { tone: "success", key: "divers.page.noticeErased" },
   // The erasure landed locally and deleted what it could at Stripe, but
   // something there is still owed — a failed customer delete, or the invoice
@@ -79,7 +84,26 @@ export default async function DiversPage({
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   const query = q?.trim() ?? "";
-  const filter = isDiverFilter(filterParam) ? filterParam : "all";
+  // Both gates in one round trip, and *before* the roster query, because the
+  // view the query runs depends on one of them:
+  //
+  // - **Restore** is the inverse of the owner/manager-only removal (H-14, ADR
+  //   20260724-role-authorization), so the view whose whole purpose is
+  //   restoring takes the same gate — and takes it here, not just on the chip:
+  //   a hand-typed `?filter=removed` must not list removed people to a
+  //   deckhand either.
+  // - **Import** is the same gate the import page itself enforces, so the
+  //   roster's empty state only shows a door its reader may walk through (ADR
+  //   20260724-role-gated-surfaces-hide-not-explain).
+  //
+  // Together, not in series: the page already waits on the list query, and a
+  // roster read is not the place to add a second sequential hop.
+  const [canDelete, canImport] = await Promise.all([
+    canPersonDeleteDiver(db, shop.id, session.user.personId),
+    canPersonImportShopData(db, shop.id, session.user.personId),
+  ]);
+  const requested = isDiverFilter(filterParam) ? filterParam : "all";
+  const filter = requested === "removed" && !canDelete ? "all" : requested;
   // A non-numeric or missing `?page=` reads as page 1; the query clamps it into
   // range, so a search that narrows the roster never strands the reader on a
   // page the new result set does not have.
@@ -90,12 +114,6 @@ export default async function DiversPage({
     // "Diving today" is the shop's own calendar day, not the server's.
     timeZone: shop.timezone,
   });
-  // The roster's empty state offers a bulk import beside the one-diver form,
-  // for the shop arriving with a spreadsheet. Same gate the import page itself
-  // enforces (`canPersonImportShopData`), so the door is only shown to whoever
-  // may walk through it (ADR 20260724-role-gated-surfaces-hide-not-explain).
-  const canImport = await canPersonImportShopData(db, shop.id, session.user.personId);
-
   /** The roster's URL with the search and view kept and only `page` swapped. */
   const pageHref = (target: number) => {
     const search = new URLSearchParams();
@@ -145,44 +163,48 @@ export default async function DiversPage({
     const restored = personId && (await restoreDiver(db, staff.user.shopId, personId));
     revalidateAndRedirect(
       `/shop/${staff.user.shopSlug}/divers`,
-      `/shop/${staff.user.shopSlug}/divers?notice=${restored ? "restored" : "invalid"}`,
+      `/shop/${staff.user.shopSlug}/divers?notice=${restored ? "restored" : "restore-refused"}`,
     );
   }
 
   const banner = noticeFromParam(notice, NOTICES);
   const noticeText = banner ? t(banner.key) : null;
   const noticeIsError = banner?.tone === "danger";
+  /**
+   * Removal is a land-then-undo action like every other reversible one in the
+   * app, so it wears the app's undo affordance (`UndoToast`) rather than the
+   * bespoke banner-plus-outlined-button this page grew: a success banner that
+   * stayed until the next navigation, with a green-tinted secondary button
+   * beside it that looked like nothing else in the product. The banner below is
+   * still the fallback for a `?notice=deleted` that arrives with no id to undo
+   * (a hand-typed or truncated URL), which the toast has nothing to act on.
+   */
+  const undoRemoval = notice === "deleted" && deleted ? deleted : null;
 
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
-      <FlashParams params={["notice"]} />
+      {/* `deleted` goes with `notice`: it carries the id the undo toast acts on,
+          and a person id left sitting in the address bar after the toast has
+          been read is nobody's business and nothing's input. */}
+      <FlashParams params={["notice", "deleted"]} />
       <ShopPageHeader
         eyebrow={t("divers.page.eyebrow")}
         title={t("divers.page.title")}
         description={t("divers.page.description")}
       />
 
-      {noticeText ? (
-        <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
-          <ShopNotice tone={noticeIsError ? "danger" : "success"}>
-            <p role="status">{noticeText}</p>
-          </ShopNotice>
-          {notice === "deleted" && deleted ? (
-            <form action={restoreDiverAction}>
-              <input type="hidden" name="personId" value={deleted} />
-              <SubmitButton
-                pendingLabel={t("divers.page.restoring")}
-                className={buttonClass({
-                  variant: "secondary",
-                  size: "sm",
-                  className: "border-success/30 text-success",
-                })}
-              >
-                {t("divers.page.undoRemove")}
-              </SubmitButton>
-            </form>
-          ) : null}
-        </div>
+      {undoRemoval ? (
+        <UndoToast
+          message={t("divers.page.removedToast")}
+          action={restoreDiverAction}
+          fields={{ personId: undoRemoval }}
+          pendingLabel={t("shared.undoToast.pendingLabel")}
+          undoLabel={t("shared.undoToast.undo")}
+        />
+      ) : noticeText ? (
+        <ShopNotice tone={noticeIsError ? "danger" : "success"} className="mt-6">
+          <p role="status">{noticeText}</p>
+        </ShopNotice>
       ) : null}
 
       {/* The id is the door the roster's empty state opens: with nobody on
@@ -228,6 +250,7 @@ export default async function DiversPage({
         filter={filter}
         locale={locale}
         importHref={canImport ? `/shop/${shopSlug}/settings/import` : null}
+        restoreAction={canDelete ? restoreDiverAction : null}
         pager={
           <Pager
             page={diverPage.page}
@@ -243,7 +266,12 @@ export default async function DiversPage({
           viewDivingToday: t("divers.list.viewDivingToday"),
           viewNeedsAttention: t("divers.list.viewNeedsAttention"),
           viewMissingContact: t("divers.list.viewMissingContact"),
+          viewRemoved: t("divers.list.viewRemoved"),
           viewsAriaLabel: t("divers.list.viewsAriaLabel"),
+          removedNote: t("divers.list.removedNote"),
+          restore: t("divers.list.restore"),
+          restoring: t("divers.list.restoring"),
+          restoreDiverLabel: t("divers.list.restoreDiverLabel"),
           peopleHeading: t("divers.list.peopleHeading"),
           // The badge's digit is announced with the noun the count belongs to,
           // and with whether it is a match count or the whole roster.

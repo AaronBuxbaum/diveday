@@ -186,7 +186,14 @@ describe("today's work queue (in-memory PGlite)", () => {
     expect(afterCancel.departures[0]?.boarded).toBe(0);
   });
 
-  it("flags divers with no rental fit on file, and clears it once a fit is saved", async () => {
+  /**
+   * A fit is counted **per item**, not per row (glossary — *Complete rental
+   * fit*): a diver counts as missing a fit when any piece they take from the
+   * shop has no size against it. This test used to save a fit with a BCD size
+   * and nothing else and assert the row cleared — which is precisely the bug
+   * the widening fixes, so the "cleared" half now has to supply every size.
+   */
+  it("flags divers whose rental sizes are missing, and clears it once every size is on file", async () => {
     const { db, shop } = await seededShopContext();
     const trips = await upcomingTripsWithCounts(db, shop.id);
     const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
@@ -199,18 +206,40 @@ describe("today's work queue (in-memory PGlite)", () => {
     expect(prepAction?.actionLabel).toBe("Open prep list");
     expect(prepAction?.href).toBe(`/shop/${shop.slug}/trips/${reef.id}/prep`);
 
+    const rents = {
+      rentsBcd: true,
+      rentsRegulator: true,
+      rentsWetsuit: true,
+      rentsMaskFins: true,
+      rentsWeights: true,
+      rentsDiveComputer: false,
+      rentsGopro: false,
+    };
+
+    // A BCD size and nothing else: this is what the old rule called a fit, and
+    // the packer would still have had no wetsuit, boot, fin or weight number
+    // to load from. The row must stay.
     for (const entry of roster) {
       await saveRentalFit(db, {
         shopId: shop.id,
         personId: entry.person.id,
-        rentsBcd: true,
-        rentsRegulator: true,
-        rentsWetsuit: true,
-        rentsMaskFins: true,
-        rentsWeights: true,
-        rentsDiveComputer: false,
-        rentsGopro: false,
+        ...rents,
         bcdSize: "M",
+      });
+    }
+    const stillPartial = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    expect(stillPartial.actions.some((action) => action.id === `prep:${reef.id}`)).toBe(true);
+
+    for (const entry of roster) {
+      await saveRentalFit(db, {
+        shopId: shop.id,
+        personId: entry.person.id,
+        ...rents,
+        bcdSize: "M",
+        wetsuitSize: "3 mm / M",
+        bootSize: "9",
+        finSize: "9",
+        weightPreference: "12 lbs",
       });
     }
 

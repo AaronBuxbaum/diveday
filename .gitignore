@@ -62,5 +62,9 @@ next-env.d.ts
 # agent worktree scratch space (Claude Code isolation:"worktree")
 /.claude/worktrees/
 
+# throwaway screenshot drivers an agent writes to look at a page it just
+# changed; the review is the point, the script is not worth keeping
+/.shots*.mjs
+
 # Built by scripts/build-service-worker.mjs from src/worker/manifest-sw.ts.
 public/manifest-sw.js

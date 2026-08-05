@@ -49,6 +49,10 @@ export function DiveBriefingCard({
 }) {
   const t = diverTranslator(locale);
   const heading = title || site?.name || t("trip.diveNumber", { number: diveNumber });
+  // Under the heading: where this tank is, or — when the crew hasn't chosen it
+  // yet — the fact that they haven't. Silence there is what made a two-tank day
+  // with one site look like a mismatch between the sites and the briefings.
+  const subheading = site ? site.locationName : t("trip.siteToBeConfirmed");
   const fit = site ? siteFit(site) : null;
   const landmarks = site ? buildDiveSiteLandmarks(site.name, site.landmarks) : [];
   // The long-tail site content folds behind one tap so the page stays a
@@ -91,7 +95,11 @@ export function DiveBriefingCard({
           {t("trip.diveNumber", { number: diveNumber })}
         </p>
         <h3 className="mt-2 text-2xl font-semibold tracking-tight">{heading}</h3>
-        {site?.locationName ? <p className="mt-1 text-sm text-muted">{site.locationName}</p> : null}
+        {/* A tank with no site yet says so. Without this line a two-tank day
+            with one chosen site reads as two briefings and one site — the same
+            data, silently short one answer — instead of as the plan it is:
+            the crew names the second site at the dock. */}
+        {subheading ? <p className="mt-1 text-sm text-muted">{subheading}</p> : null}
         {description || site?.description ? (
           <p className="mt-4 leading-relaxed text-muted">{description || site?.description}</p>
         ) : (

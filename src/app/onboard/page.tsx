@@ -14,7 +14,6 @@ import { requestLocale } from "@/i18n/request";
 import { eventSource } from "@/lib/funnel";
 import { sharedLinkCard } from "@/lib/marketing";
 import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH, type OnboardErrorCode } from "@/lib/onboarding";
-import { UPGRADE_EMAIL } from "@/lib/platform-mail";
 import {
   type CuratedTimeZone,
   type CuratedTimezoneGroupKey,
@@ -378,9 +377,7 @@ export default async function OnboardPage({
             >
               {t("account.onboard.submit")}
             </SubmitButton>
-            <p className="text-center text-xs text-muted">
-              {t("account.onboard.trialMeaning", { email: UPGRADE_EMAIL })}
-            </p>
+            <p className="text-center text-xs text-muted">{t("account.onboard.trialMeaning")}</p>
           </form>
 
           <p className="text-center text-sm text-muted mt-6">

@@ -665,6 +665,14 @@ export default async function WaiverPage({
                 minLength={2}
                 maxLength={120}
                 defaultValue={record.draftSignerName ?? ""}
+                // The refusal at the top of this page *names* this box, and
+                // offers a link down to it. That link is a sighted
+                // affordance; these two attributes are the same fact said to
+                // assistive tech, so the box announces itself as the invalid
+                // one and reads its own reason. No new copy — it points at
+                // the message already rendered (`#waiver-error`).
+                aria-invalid={fieldError?.anchor === "signerName" ? "true" : undefined}
+                aria-describedby={fieldError?.anchor === "signerName" ? "waiver-error" : undefined}
                 className={controlClass}
               />
             </Field>
@@ -677,6 +685,8 @@ export default async function WaiverPage({
               value="on"
               required
               defaultChecked={record.draftAcknowledged}
+              aria-invalid={fieldError?.anchor === "acknowledged" ? "true" : undefined}
+              aria-describedby={fieldError?.anchor === "acknowledged" ? "waiver-error" : undefined}
               className="size-4 accent-primary"
             />
             <span>{t("waiver.agreementCheckbox")}</span>

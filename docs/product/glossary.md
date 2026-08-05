@@ -313,18 +313,30 @@ new domain concept, define it here in the same PR.
   or failed lifecycle, byte count, object key, and a coded failure reason the settings page
   translates. At most one *succeeded scheduled* delivery exists per shop per ISO week — that is the
   cron's idempotency rule — and a failed week's retry is simply the next weekly run.
-- **Dive-site briefing** — a reusable, shop-owned description of one dive location: its map or
-  route imagery, point-of-interest landmarks, visual field guide, and local context. A trip can
-  attach one briefing to each of up to four ordered dives; a blank dive is still a valid part of a
-  two-tank plan when the crew has not chosen the final site. Dated conditions remain on the trip,
-  not the reusable site.
-  In the interface there is exactly one word for the thing staff pick — **dive site** — and
-  *briefing* names only the content a site carries. The two are the same row in
-  `dive_sites`, so a picker labelled "Dive briefing" beside a nav tab labelled "Dive sites"
-  read as two different concepts and made a two-tank day look like "one dive site, two dive
-  briefings". Every picker, every label, and every empty state says "dive site"; "briefing"
-  survives where briefing content is actually being written or read (the site editor's
-  "Underwater briefing", the diver-facing per-dive cards).
+- **Dive site** — a **place**, saved once in the shop's own library (`dive_sites`) and reused by
+  every trip that goes there: map or route imagery, point-of-interest landmarks, visual field
+  guide, depth, local context, and the site's own certification demands. Evergreen by
+  construction — a site entry never carries a date, because *dated* conditions (water
+  temperature, visibility, surface state) belong to the charter that sailed, not to the reef.
+  A shop's library is at Dive sites; DiveDay's published starting points are the **common-site
+  catalog**, and importing one makes an independent copy the shop then owns.
+- **Dive briefing** — what a diver reads (and the crew says) about **one tank on one dated trip**:
+  the `trip_dives` row, rendered from the site's saved notes plus whatever the crew wrote for that
+  particular dive. There is one briefing per *planned dive*, so a two-tank trip always has two —
+  and it may visit two sites, the same site twice, or one site with the second tank still open.
+  **"One dive site, two dive briefings" is therefore a normal, correct state**, not a mismatch: it
+  is a two-tank day whose second site the crew has not chosen yet, and every surface that shows it
+  says so in those words (`summarizeTripDiveSites`, `src/lib/trip-dives.ts` — one answer, shared by
+  the public schedule card, the staff trip page, and the per-dive cards on the booking page).
+  A blank dive is a deliberate published plan, never missing data.
+
+  Two rules keep the pair legible. **The interface has exactly one word for the thing staff pick —
+  *dive site*** — so every picker, label, and empty state in the library says that, and *briefing*
+  survives only where briefing content is written or read (the site editor's "Underwater
+  briefing", the diver-facing per-dive cards). And **no surface answers "where does this trip go"
+  from `trips.dive_site_id`**: that column is dive one's site copied onto the trip row for the
+  forecast point and the calendar feed's location, so reading it named one site for a two-site day
+  and named *none* on the day whose open tank happened to be the first one.
 - **Predicted conditions** — crew-entered expectations for one dated charter, such as water
   temperature, visibility, and surface state. It is a briefing rather than a live guarantee;
   the crew makes the final go/no-go call.
@@ -349,17 +361,14 @@ new domain concept, define it here in the same PR.
   agency course (day plan, what the fee covers, the questions divers ask). It is a starting point,
   not a binding: the shop edits from there, and nothing reaches back to rewrite the shop's words.
   There is no separate import step and no course-page catalog — the default is simply already there.
-- **Certification path** — an ordered progression through a shop's *own* catalog ("Open Water →
-  Advanced → Rescue", "Wreck diver"), built by the shop at `/shop/[shopSlug]/courses/paths`. A path
-  is **guidance and never a gate**: admission to any single course is still decided by that course's
-  `minimum_certification_level`, and no path grants or withholds a seat. What it adds is the shop's
-  own answer to "what should I do next?", read on the public course page and after a booking a
-  diver's card could not clear. One course may sit on several paths.
-- **Path rung** — one course on a path, in the shop's chosen order, optionally carrying the shop's
-  note about it ("most divers wait a season before this one"). Ordering is the shop's editorial
-  judgement, not a derived ladder: a shop that teaches Rescue straight after Open Water says so by
-  putting it there. A rung whose course the shop later hides stays on the path for staff but is
-  never shown to a diver.
+- **Progression order** — the order the staff course roster lists a catalog in: each course's own
+  `minimum_certification_level`, entry-level first (a taster before the Open Water it leads into),
+  then title. It is a *reading* of the catalog, not a second stored artefact, so it can never drift
+  from what the courses actually require. The shop-built **certification path** it replaced —
+  hand-ordered rungs in their own tables, with public pages of their own — was removed on
+  2026-08-05 ([remove-certification-paths](../architecture/decisions/20260805-remove-certification-paths.md));
+  progression order is guidance in exactly the same way, changing what is *shown* first and never
+  who may enrol.
 - **Prerequisite note** — shop prose beside a course's certification gate ("comfortable swimming
   200 m", "bring your logbook"). It adds to the gate and never substitutes for it: the card the desk
   checks is `minimum_certification_level`, which the agency owns and no shop edit can reach. The
@@ -823,6 +832,13 @@ new domain concept, define it here in the same PR.
   list.
 - **Sizing** — BCDs and wetsuits are sized (XS–XXL and height/weight dependent), so a prep list
   groups by item *and* size; an unrecorded size is shown as a loose end, not silently dropped.
+- **Complete rental fit** — a fit is complete when *every piece the diver takes from the shop* has
+  the size it needs, not merely when a record exists: a diver who ticks BCD, wetsuit and weights and
+  supplies only a shoe size has an **incomplete** fit, with three loose ends. One shoe size answers
+  for both boots and fins. The one-size pieces (regulator, dive computer, GoPro) have no size to be
+  missing. "Not recorded" (nobody asked) and "incomplete" (asked, half blank) stay distinct.
+  Completeness is a prompt for staff, never a gate: it refuses nobody a seat and blocks nobody from
+  boarding.
 - **Needs staff fit** — the safe fallback when the shop can't fill a size a diver asked for (H-06):
   staff flag the diver for hands-on fitting at check-in instead of quietly packing a different
   size. The flagged diver keeps their line on the prep list — the count is what the packer loads

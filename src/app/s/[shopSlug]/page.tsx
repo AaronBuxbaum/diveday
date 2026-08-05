@@ -17,6 +17,7 @@ import { getShopReviewAggregate, listPublishedShopReviews } from "@/db/reviews";
 import { getShopBySlug } from "@/db/shops";
 import {
   pagedUpcomingTripsWithCounts,
+  tripDiveSiteSummaries,
   upcomingScheduleRange,
   upcomingTripsForCalendar,
 } from "@/db/trips";
@@ -189,6 +190,15 @@ export default async function SchedulePage({
     }),
   ]);
   const hasUpcoming = range.first !== null;
+  // Where each departure on this page actually goes. One read for the page,
+  // not one per card — and read off the *dives* rather than `trips.dive_site_id`
+  // (dive one's site, copied onto the trip row), so a two-site day names both
+  // and a day whose open tank is the first one still names the site it visits.
+  const diveSitesByTrip = await tripDiveSiteSummaries(
+    db,
+    shop.id,
+    upcoming.map((trip) => trip.id),
+  );
 
   // A prominent quick link to the soonest departure with room, so a returning
   // diver who already knows what they want never has to scroll the full list.
@@ -380,6 +390,13 @@ export default async function SchedulePage({
                     : t("fallback.spotsLeft", { count: remaining });
               const showTwoTankHint = trip.plannedDives === 2 && !twoTankHintShown;
               if (showTwoTankHint) twoTankHintShown = true;
+              // Every site this departure visits, and how many tanks are still
+              // open — so a two-tank card can never say "Dive site · Molasses
+              // Reef" beside a trip page that shows two dives.
+              const diveSites = diveSitesByTrip.get(trip.id) ?? {
+                sites: [],
+                undecidedDives: 0,
+              };
               const tripHref = `${publicTripPath(shopSlug, trip.id)}${isEmbed ? "?embed=1" : ""}`;
               return (
                 <li key={trip.id}>
@@ -432,9 +449,26 @@ export default async function SchedulePage({
                           <span className="font-normal text-muted">{t("common.perDiver")}</span>
                         </p>
                       ) : null}
-                      {trip.diveSite ? (
+                      {diveSites.sites.length > 0 ? (
                         <p className="mt-2 text-sm font-medium text-primary">
-                          {t("schedule.diveSite")} · {trip.diveSite.name}
+                          {diveSites.sites.length === 1
+                            ? t("schedule.diveSite")
+                            : t("schedule.diveSites")}{" "}
+                          ·{" "}
+                          {new Intl.ListFormat(locale, { type: "conjunction" }).format(
+                            diveSites.sites.map((site) => site.name),
+                          )}
+                          {/* The other half of the count: a two-tank day with
+                              one site is a published plan ("second tank at the
+                              dock"), not a discrepancy — but only if it says so. */}
+                          {diveSites.undecidedDives > 0 ? (
+                            <span className="font-normal text-muted">
+                              {" · "}
+                              {t("schedule.moreDivesToConfirm", {
+                                count: diveSites.undecidedDives,
+                              })}
+                            </span>
+                          ) : null}
                         </p>
                       ) : null}
                       <p className="mt-2 text-sm text-muted">

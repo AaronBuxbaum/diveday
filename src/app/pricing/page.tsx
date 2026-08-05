@@ -15,7 +15,7 @@ import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
 import { trialHref } from "@/lib/funnel";
 import { earlyAccessPrice, fullShopExport, sharedLinkCard } from "@/lib/marketing";
 import { getMigrationGuide, MIGRATION_GUIDES } from "@/lib/migration-guides";
-import { SUPPORT_EMAIL, UPGRADE_EMAIL } from "@/lib/platform-mail";
+import { SUPPORT_EMAIL } from "@/lib/platform-mail";
 
 // `instant = true`: navigating here paints immediately. Every request-scoped
 // read sits behind a `<Suspense>` boundary — this segment's `loading.tsx`, or
@@ -121,7 +121,7 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
     },
     {
       question: t("marketing.pricing.faq.trialMeaning.question"),
-      answer: t("marketing.pricing.faq.trialMeaning.answer", { email: UPGRADE_EMAIL }),
+      answer: t("marketing.pricing.faq.trialMeaning.answer"),
     },
     {
       question: t("marketing.pricing.faq.seeBefore.question"),

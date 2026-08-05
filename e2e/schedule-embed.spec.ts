@@ -189,7 +189,6 @@ test.describe("the old /shop public URLs", () => {
     for (const path of [
       "/shop/blue-mantis/schedule/board",
       "/shop/blue-mantis/courses",
-      "/shop/blue-mantis/courses/paths",
       "/shop/blue-mantis/courses/open-water-diver/edit",
     ]) {
       const response = await request.get(path, { maxRedirects: 0 });

@@ -2,13 +2,13 @@
 
 import { and, eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { AuthError } from "next-auth";
 import type { DbExecutor } from "@/db/client";
 import { getDb } from "@/db/client";
 import { people, personRoles } from "@/db/schema";
 import { createDemoShop, resetDemoSchedule } from "@/db/seed";
 import { getShopById, getShopBySlug } from "@/db/shops";
-import { trackEvent } from "@/lib/analytics";
 import { auth, signIn, signOut } from "@/lib/auth";
 import { DEMO_BYPASS_PASSWORD } from "@/lib/credentials";
 import type { DemoRoleId } from "@/lib/demo-roles";
@@ -17,6 +17,10 @@ import { publicSchedulePath } from "@/lib/public-routes";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
 import { requireStaffSession } from "@/lib/session";
+// A plain module, deliberately not a second server action — see its own file
+// comment: exporting it from here would publish it as an unauthenticated
+// endpoint taking a caller-supplied shop slug.
+import { announceDemoEntry } from "./demo-instrumentation";
 
 const ENTERABLE_DEMO_ROLES = new Set<DemoRoleId>([
   "owner",
@@ -89,7 +93,7 @@ async function findDemoRoleEmail(
  */
 export async function enterDemoAction(formData?: FormData) {
   const role = requestedDemoRole(formData);
-  await trackEvent({ name: "demo_entered", source: eventSource(formData?.get("source")), role });
+  const source = eventSource(formData?.get("source"));
 
   // Each demo mints a whole seeded shop, so throttle per IP — the reaper bounds
   // total growth, this bounds the burst one visitor can drive.
@@ -115,6 +119,15 @@ export async function enterDemoAction(formData?: FormData) {
   }
   if (!minted) redirect("/sign-in?error=1");
   const { slug, ownerEmail } = minted;
+
+  // Only now is the demo *entered*: the mint succeeded and this visitor has a
+  // shop to look at. Counting it at the top of the action instead — where it
+  // used to be — booked a throttled visitor and a failed mint as entries, which
+  // is the one thing a funnel number must never do (it inflates the numerator
+  // of every demo-to-trial ratio read off it). Deferred with after() for the
+  // same reason the trial half is (src/app/onboard/actions.ts): a redirect the
+  // visitor is waiting on must not queue behind a telemetry or mail round trip.
+  after(() => announceDemoEntry({ slug, role, source }));
 
   // The diver pick previews the customer view — the public schedule needs no
   // sign-in at all, so it skips straight there instead of minting a session.

@@ -1,21 +1,49 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import { staffTranslator } from "@/i18n/staff-messages";
+import type { FormNotice } from "@/lib/staff-notices";
 import type { Requirement, SiteRequirement, Trip } from "./types";
+
+/**
+ * The four wordings of "the site also asks for this", spelled out rather than
+ * built with a template literal so every key stays statically visible to the
+ * staff bundle's type checking.
+ */
+function siteNoteKey(kind: "trip" | "course", multipleSites: boolean) {
+  if (kind === "course") {
+    return multipleSites
+      ? ("trips.requirements.sitesAlsoRequireCourse" as const)
+      : ("trips.requirements.siteAlsoRequiresCourse" as const);
+  }
+  return multipleSites
+    ? ("trips.requirements.sitesAlsoRequire" as const)
+    : ("trips.requirements.siteAlsoRequires" as const);
+}
 
 export function RequirementsSection({
   action,
+  status,
   trip,
   requirement,
   siteRequirement,
+  siteNames,
   locale,
 }: {
   action: (formData: FormData) => void;
+  /** This form's own outcome, rendered beside its Save button. */
+  status?: FormNotice;
   trip: Trip;
   requirement: Requirement;
   siteRequirement: SiteRequirement;
+  /**
+   * Every distinct site this trip visits, in dive order — the same list the
+   * header shows. `siteRequirement` is the union across *all* of them
+   * (`getTripSiteRequirement`), so naming one site as the source of the rule
+   * is only honest when the trip visits exactly one.
+   */
+  siteNames: string[];
   locale: string;
 }) {
   const t = staffTranslator(locale);
@@ -46,13 +74,22 @@ export function RequirementsSection({
    * surface where staff have no control over the gate, the gate was also
    * invisible. An AOW course dives a site marked `advanced_open_water` by
    * design, and staff could see nothing saying so.
+   *
+   * And *which* site imposes it: this used to read `trip.diveSite` — dive one's site, copied onto the trip
+   * row — while `siteRequirement` was already the union across every site the
+   * trip visits. On a two-site day whose Deep gate comes from the *second*
+   * tank, that named the wrong site as the source of the rule, sending staff
+   * to the wrong card to understand or change it. Both plural keys drop the
+   * singular verb along with the singular name.
    */
-  const siteNote = (
-    key: "trips.requirements.siteAlsoRequires" | "trips.requirements.siteAlsoRequiresCourse",
-  ) => (
+  const multipleSites = siteNames.length > 1;
+  const siteNoteSubject = multipleSites
+    ? new Intl.ListFormat(locale, { style: "long", type: "conjunction" }).format(siteNames)
+    : (siteNames[0] ?? t("trips.requirements.thisSite"));
+  const siteNote = (kind: "trip" | "course") => (
     <p className="mt-4 rounded-lg bg-surface-sunken px-3 py-2 text-sm text-muted">
-      {t.rich(key, {
-        site: trip.diveSite?.name ?? t("trips.requirements.thisSite"),
+      {t.rich(siteNoteKey(kind, multipleSites), {
+        site: siteNoteSubject,
         list: siteRequirementList,
         strong: (chunks) => <strong className="font-medium text-foreground">{chunks}</strong>,
       })}
@@ -82,7 +119,7 @@ export function RequirementsSection({
                 })
               : t("trips.requirements.notRequiredForEnrollment")}
           </p>
-          {hasSiteRequirement ? siteNote("trips.requirements.siteAlsoRequiresCourse") : null}
+          {hasSiteRequirement ? siteNote("course") : null}
         </div>
       ) : (
         <form action={action} className="mt-4 rounded-lg border border-border bg-surface p-5">
@@ -155,16 +192,19 @@ export function RequirementsSection({
               </label>
             </div>
           </fieldset>
-          {hasSiteRequirement ? siteNote("trips.requirements.siteAlsoRequires") : null}
-          <SubmitButton
-            pendingLabel={t("trips.requirements.saving")}
-            className={buttonClass({
-              variant: "secondary",
-              className: "mt-5 text-foreground",
-            })}
-          >
-            {t("trips.requirements.save")}
-          </SubmitButton>
+          {hasSiteRequirement ? siteNote("trip") : null}
+          <div className="mt-5 flex flex-wrap items-center gap-3">
+            <SubmitButton
+              pendingLabel={t("trips.requirements.saving")}
+              className={buttonClass({
+                variant: "secondary",
+                className: "text-foreground",
+              })}
+            >
+              {t("trips.requirements.save")}
+            </SubmitButton>
+            <FormStatus tone={status?.tone}>{status?.text}</FormStatus>
+          </div>
         </form>
       )}
     </section>

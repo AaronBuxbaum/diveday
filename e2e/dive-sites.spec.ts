@@ -44,7 +44,7 @@ test.describe("staff", () => {
     await page
       .getByLabel("Underwater briefing")
       .fill("Look along the sandy edge for turtles resting below the coral heads.");
-    await page.getByRole("button", { name: "Save site briefing" }).click();
+    await page.getByRole("button", { name: "Save dive site" }).click();
     await expect(page.getByRole("heading", { name: siteName })).toBeVisible();
 
     await page.getByRole("button", { name: "Copy and tailor" }).click();
@@ -200,7 +200,7 @@ test.describe("staff", () => {
     const siteName = `Unplaced Ledge ${e2eNow().getTime()}`;
     await page.goto("/shop/blue-mantis/dive-sites/new");
     await page.getByLabel("Name").fill(siteName);
-    await page.getByRole("button", { name: "Save site briefing" }).click();
+    await page.getByRole("button", { name: "Save dive site" }).click();
     await expect(page.getByRole("heading", { name: siteName })).toBeVisible();
 
     await page.goto(`/shop/blue-mantis/dive-sites?q=${encodeURIComponent(siteName)}`);
@@ -226,10 +226,16 @@ test.describe("staff", () => {
     await page.getByLabel("Location").fill("Key Largo");
     await page.getByLabel("What might divers see?").fill("Green turtles");
     await page.getByLabel("Latitude").fill("25.123"); // …and no longitude.
-    await page.getByRole("button", { name: "Save site briefing" }).click();
+    await page.getByRole("button", { name: "Save dive site" }).click();
 
     // Not `getByRole("alert")` — Next's own route announcer is one too.
-    await expect(page.getByText(/Add both forecast coordinates/)).toBeVisible();
+    const refusal = page.getByText(/Add both forecast coordinates/);
+    await expect(refusal).toBeVisible();
+    // …and *inside the form*, not in a banner above twenty fields. The refusal
+    // used to render above the whole briefing, a full screen from the Save
+    // button that had just been pressed, so a refused save looked like a
+    // button that did nothing.
+    await expect(page.locator("form").filter({ has: refusal })).toHaveCount(1);
     // The whole point: still on the form, still filled in.
     await expect(page).toHaveURL(/\/dive-sites\/new$/);
     await expect(page.getByLabel("Name")).toHaveValue(siteName);
@@ -239,13 +245,13 @@ test.describe("staff", () => {
 
     // Completing the pair is all it takes — no retyping.
     await page.getByLabel("Longitude").fill("-80.321");
-    await page.getByRole("button", { name: "Save site briefing" }).click();
+    await page.getByRole("button", { name: "Save dive site" }).click();
     await expect(page.getByRole("heading", { level: 1, name: siteName })).toBeVisible();
 
     // The edit form shares the shape, and so does the fix.
     await page.getByLabel("Longitude").fill("");
     await page.getByLabel("Underwater briefing").fill("Turtles rest below the coral heads.");
-    await page.getByRole("button", { name: "Save briefing" }).click();
+    await page.getByRole("button", { name: "Save dive site" }).click();
     // Not `getByRole("alert")` — Next's own route announcer is one too.
     await expect(page.getByText(/Add both forecast coordinates/)).toBeVisible();
     await expect(page.getByLabel("Underwater briefing")).toHaveValue(
@@ -321,7 +327,7 @@ test.describe("staff", () => {
     await page.goto("/shop/blue-mantis/dive-sites/new");
     await page.getByLabel("Name").fill(`Ingestion Check ${e2eNow().getTime()}`);
     await page.getByLabel("Satellite map image URL").fill("http://127.0.0.1:1/reef-sat.jpg");
-    await page.getByRole("button", { name: "Save site briefing" }).click();
+    await page.getByRole("button", { name: "Save dive site" }).click();
     await expect(page.getByText(/couldn.t be used/)).toBeVisible();
   });
 });

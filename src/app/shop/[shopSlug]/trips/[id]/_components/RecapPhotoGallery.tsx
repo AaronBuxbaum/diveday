@@ -1,7 +1,9 @@
 import Image from "next/image";
+import { FormStatus } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import type { StaffRecapPhoto } from "@/db/recap";
 import { staffTranslator } from "@/i18n/staff-messages";
+import type { FormNotice } from "@/lib/staff-notices";
 
 /**
  * The diver photos shared to this trip's recaps, for the shop to reuse — and to
@@ -12,10 +14,13 @@ import { staffTranslator } from "@/i18n/staff-messages";
 export function RecapPhotoGallery({
   photos,
   removeAction,
+  status,
   locale,
 }: {
   photos: StaffRecapPhoto[];
   removeAction: (formData: FormData) => void;
+  /** This gallery's own outcome, rendered under its heading rather than at the top of the page. */
+  status?: FormNotice;
   locale: string;
 }) {
   if (photos.length === 0) return null;
@@ -27,6 +32,9 @@ export function RecapPhotoGallery({
         <span className="font-normal text-muted tabular-nums">{photos.length}</span>
       </h2>
       <p className="mt-1 text-sm text-muted">{t("trips.recapPhotos.description")}</p>
+      <FormStatus tone={status?.tone} className="mt-2">
+        {status?.text}
+      </FormStatus>
       <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
         {photos.map((photo) => (
           <li key={photo.id} className="overflow-hidden rounded-lg border border-border bg-surface">

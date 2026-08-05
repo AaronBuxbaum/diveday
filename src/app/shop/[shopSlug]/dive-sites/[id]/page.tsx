@@ -3,10 +3,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { z } from "zod";
 import { FlashParams } from "@/components/FlashParams";
-import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
+import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { getDb } from "@/db/client";
 import {
   copyDiveSite,
@@ -228,24 +228,30 @@ export default async function EditDiveSitePage({
                   >
                     {t("diveSites.edit.archiveSite")}
                   </SubmitButton>
+                  {/* The archive refusal is the one thing on this page that
+                      still travels by URL, and it belongs on the archive form
+                      — not in a banner over a briefing the staffer never
+                      touched. */}
+                  <FormStatus tone="danger" className="mt-2">
+                    {error ? t(errorKey ?? "diveSites.edit.errorInvalid") : undefined}
+                  </FormStatus>
                 </form>
               </details>
             </>
           }
         />
       </div>
-      {noticeKey ? (
+      {/* Only "copied" is genuinely about the page: it lands the staffer on a
+          *different* site's record, which is news the whole page carries. The
+          save confirmation went to the form that earned it, and the archive
+          refusal to the archive button. */}
+      {notice === "copied" && noticeKey ? (
         <p
           role="status"
           className="mt-6 rounded-lg bg-success/10 px-3 py-2 text-sm font-medium text-success"
         >
           {t(noticeKey)}
         </p>
-      ) : null}
-      {error ? (
-        <ShopNotice tone="danger" role="alert" className="mt-6">
-          {t(errorKey ?? "diveSites.edit.errorInvalid")}
-        </ShopNotice>
       ) : null}
       {upcomingTrips.length > 0 ? (
         <section aria-labelledby="upcoming-dives-heading" className="mt-8">
@@ -272,6 +278,7 @@ export default async function EditDiveSitePage({
       <SiteFormShell
         action={saveAction}
         errorMessages={siteFormErrorMessages(t, "diveSites.edit.errorInvalid")}
+        savedMessage={notice === "saved" ? t("diveSites.edit.savedNotice") : undefined}
       >
         <FieldGrid columns={1}>
           <Field label={t("diveSites.form.nameLabel")}>

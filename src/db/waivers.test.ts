@@ -110,12 +110,12 @@ describe("waiver records (in-memory PGlite)", () => {
       title: template.title,
       body: "A materially different v2 release long enough to be valid.",
     });
-    expect(newer.version).toBe(2);
+    expect(newer.version).toBe(template.version + 1);
 
     const state = await getWaiverForToken(db, issued.token, now);
     expect(state).toMatchObject({
       state: "available",
-      record: { templateVersion: 1, templateBody: template.body },
+      record: { templateVersion: template.version, templateBody: template.body },
     });
   });
 
@@ -234,27 +234,40 @@ describe("waiver records (in-memory PGlite)", () => {
     ).toEqual({ ok: false, reason: "booking_unavailable" });
   });
 
+  /**
+   * The demo shop ships with superseded wordings already on file
+   * (src/db/seed-waiver-versions.ts), so an edit here counts on from whatever
+   * version the seed left live rather than from 1. Written against
+   * `template.version` on purpose: what these assert is that saving *appends*
+   * and that the newest row is current, which is true whatever the shop's
+   * history happens to be — pinning the literal would make them a restatement
+   * of the seed instead.
+   */
   it("saves each edit as the next version and points new links at the current one", async () => {
     const { db, shop, template } = await waiverContext();
-    expect(template.version).toBe(1);
+    const seeded = template.version;
+    expect(seeded).toBeGreaterThan(0);
 
-    const v2 = await saveWaiverTemplate(db, {
+    const next = await saveWaiverTemplate(db, {
       shopId: shop.id,
       title: template.title,
       body: "An updated release, edited by staff and long enough to be valid.",
     });
-    expect(v2.version).toBe(2);
+    expect(next.version).toBe(seeded + 1);
 
     // The newest version is always current.
     const currentNow = await getCurrentWaiverTemplate(db, shop.id);
-    expect(currentNow?.id).toBe(v2.id);
+    expect(currentNow?.id).toBe(next.id);
     const history = await listWaiverTemplateHistory(db, shop.id);
-    expect(history.map((row) => row.version)).toEqual([2, 1]);
+    // Newest first, gapless, all the way back to the shop's first release.
+    expect(history.map((row) => row.version)).toEqual(
+      Array.from({ length: seeded + 1 }, (_, index) => seeded + 1 - index),
+    );
   });
 
   it("gives concurrent saves distinct, gapless versions instead of colliding (CR-015)", async () => {
     const { db, shop, template } = await waiverContext();
-    expect(template.version).toBe(1);
+    const seeded = template.version;
 
     const [a, b, c] = await Promise.all([
       saveWaiverTemplate(db, {
@@ -275,9 +288,11 @@ describe("waiver records (in-memory PGlite)", () => {
     ]);
 
     const versions = [a.version, b.version, c.version].sort((x, y) => x - y);
-    expect(versions).toEqual([2, 3, 4]);
+    expect(versions).toEqual([seeded + 1, seeded + 2, seeded + 3]);
     const history = await listWaiverTemplateHistory(db, shop.id);
-    expect(history.map((row) => row.version)).toEqual([4, 3, 2, 1]);
+    expect(history.map((row) => row.version)).toEqual(
+      Array.from({ length: seeded + 3 }, (_, index) => seeded + 3 - index),
+    );
   });
 
   it("keeps a completed record faithful to the version it was signed against", async () => {

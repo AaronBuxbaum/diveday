@@ -7,6 +7,27 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## Dive sites and dive briefings, reconciled (delivered 2026-08-05)
+
+A shop owner read "a two-tank dive with one dive site and 2 dive briefings" and could not tell
+whether the app was confused or they were. Both counts were right — a **dive site** is a place in
+the shop's library, a **dive briefing** is one tank on one dated trip — but nothing said so, and
+the surfaces that named "the trip's site" all read `trips.dive_site_id`, which holds only dive
+one's site. A two-site day named one site; a day whose *open* tank was the first one named none.
+Every such surface now composes the dives through one function
+(`summarizeTripDiveSites`): the schedule card and staff trip header list every site the departure
+visits and how many tanks are still open, and a per-dive card with no site says **"Site to be
+confirmed"** rather than leaving the reader to notice the gap. The trip's requirements note stops
+attributing the *combined* site gate to dive one's site — on a two-site day whose Deep gate comes
+from tank two, it named the wrong card to go change. The compatibility pointer now tracks the first
+*chosen* site, so a departure planned second-tank-first gets its marine forecast, calendar
+`LOCATION`, and directions back. In the library, "briefing" no longer names the record: it is a
+**dive site** in every picker, label, button, and empty state, and "briefing" survives only where
+briefing content is written or read. See
+[20260719-trip-dive-briefings](../architecture/decisions/20260719-trip-dive-briefings.md)
+(amendment 2026-08-05) and the **Dive site** / **Dive briefing** entries in
+[glossary.md](glossary.md).
+
 ## Trip surfaces after a walk-through (delivered 2026-08-04)
 
 A product-owner pass over the boat loop, mostly subtraction. The manifest's typed **"crew aboard at
@@ -752,11 +773,12 @@ archived.
   has booked, waitlisted, or counted heads against, and names which. Crew shows on each row, so the
   separate read-only staff list and staff schedule board are gone
   ([schedule-builder-and-course-paths](../architecture/decisions/20260730-schedule-builder-and-course-paths.md)).
-- **Certification paths in the catalog** — a shop defines the order it walks divers through its own
-  courses with an interactive builder at `/shop/[shopSlug]/courses/paths/[pathSlug]`: pick from the
-  catalog, reorder, annotate each rung, watch the diver-facing trail rebuild live. Divers read it on
-  the public course page, and it replaces the title-matching guess that decided what to suggest
-  after a cert-blocked booking. Guidance, never a gate. Included in the shop's data export.
+- **Certification paths in the catalog** — ~~a shop defines the order it walks divers through its own
+  courses with an interactive builder at `/shop/[shopSlug]/courses/paths/[pathSlug]`~~ **removed
+  2026-08-05** ([remove-certification-paths](../architecture/decisions/20260805-remove-certification-paths.md)).
+  The builder, both public path pages, the `course_paths`/`course_path_steps` tables, and their two
+  export CSVs are gone; the staff roster now orders by each course's own
+  `minimum_certification_level`, which is the progression divers were reading off the paths anyway.
 - **The diver-facing surface is fully translated** — trip page, course page, schedule calendar, and
   the waiver/readiness/recap capability pages all read from `src/i18n/locales/<locale>/diver.json`
   in English and Spanish, including the dock-day timeline and site-fit readings that used to return
@@ -1027,7 +1049,7 @@ archived.
   prepare/validate in `src/lib/import.ts`, the write in `src/db/import.ts`
   ([contact-importer](../architecture/decisions/20260723-contact-importer.md)).
 - **Public migration guides** — a `/switching` hub plus a live marketing page per named incumbent
-  (EVE, DiveShop360, DiveAdmin, Smartwaiver): each states how to export the shop's own data from
+  (EVE, DiveShop360, Smartwaiver): each states how to export the shop's own data from
   that system, renders the importer's `IMPORT_HONESTY_TABLE` scope table verbatim, and walks the
   DiveDay import. High-intent SEO capture of "leaving &lt;incumbent&gt;" searches and the third leg
   of the portability wedge. Every switching page (hub, incumbent guides, spreadsheet) also carries the

@@ -2,15 +2,24 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { signTripAdmissionGate } from "@/lib/trip-admission-gate";
-import { TripNoticeBanner } from "./TripNoticeBanner";
+import { resolveTripNotice, TripNoticeBanner } from "./TripNoticeBanner";
 
 afterEach(cleanup);
 
 const TRIP = "11111111-1111-4111-8111-111111111111";
 const OTHER_TRIP = "22222222-2222-4222-8222-222222222222";
 
+function resolve(notice?: string, extra: { gate?: string | string[]; form?: string } = {}) {
+  return resolveTripNotice({ notice, tripId: TRIP, locale: "en-US", ...extra });
+}
+
 function renderBanner(notice?: string, gate?: string | string[], tripId = TRIP) {
-  return render(<TripNoticeBanner notice={notice} gate={gate} tripId={tripId} locale="en-US" />);
+  return render(
+    <TripNoticeBanner
+      notice={resolveTripNotice({ notice, gate, tripId, locale: "en-US" })}
+      locale="en-US"
+    />,
+  );
 }
 
 const levelRefusal = {
@@ -69,5 +78,41 @@ describe("TripNoticeBanner", () => {
       ).not.toThrow();
       expect(screen.getByRole("alert")).not.toHaveTextContent("Deep card");
     });
+  });
+});
+
+/**
+ * The routing half: a notice has to name the form it answers, or the page is
+ * back to one banner under the `<h1>` for six forms spread down a long page.
+ */
+describe("resolveTripNotice", () => {
+  it("sends each code home to the form that produced it", () => {
+    expect(resolve("saved")?.form).toBe("details");
+    expect(resolve("conditions")?.form).toBe("conditions");
+    expect(resolve("requirements-blocking")?.form).toBe("requirements");
+    expect(resolve("series-extended")?.form).toBe("series");
+    expect(resolve("last-minute-sent")?.form).toBe("last-minute-deal");
+    expect(resolve("diver-full")?.form).toBe("add-diver");
+    expect(resolve("cancelled")?.form).toBe("lifecycle");
+  });
+
+  it("lets an action name the form when the code alone cannot", () => {
+    // `invalid` is emitted by the details editor, the conditions briefing, the
+    // recap note, and the payment control alike — only the action knows which.
+    expect(resolve("invalid")?.form).toBe("page");
+    expect(resolve("invalid", { form: "conditions" })?.form).toBe("conditions");
+    expect(resolve("invalid", { form: "recap-note" })?.form).toBe("recap-note");
+  });
+
+  it("ignores a ?form= naming no form on this page", () => {
+    // A query param is attacker-supplied: an unknown name must degrade to the
+    // code's own home rather than routing the notice into nothing.
+    expect(resolve("invalid", { form: "constructor" })?.form).toBe("page");
+    expect(resolve("saved", { form: "../../etc" })?.form).toBe("details");
+  });
+
+  it("still refuses an unrecognized notice code outright", () => {
+    expect(resolve("constructor")).toBeUndefined();
+    expect(resolve(undefined)).toBeUndefined();
   });
 });

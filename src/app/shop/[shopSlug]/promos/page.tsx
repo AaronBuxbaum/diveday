@@ -11,7 +11,8 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { UndoToast } from "@/components/UndoToast";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
+import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
+import { controlClass, Field, FieldActions, FieldGrid, FormStatus } from "@/components/ui/form";
 import { canPersonManagePaymentSettings } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { listShopPromoCodes } from "@/db/shop-promos";
@@ -64,6 +65,27 @@ const NOTICES: Record<string, { tone: "success" | "danger" | "warning"; key: Sta
   restored: { tone: "success", key: "promos.notice.restored" },
   restore_failed: { tone: "danger", key: "promos.notice.restoreFailed" },
 };
+
+/**
+ * The refusals that belong on one box in the new-code form, not in a banner
+ * above it. `Field`'s `error` renders each under its own control and wires the
+ * `aria-invalid`/`aria-describedby` pair; `FieldErrorFocus` then puts the
+ * cursor on the first one, so "that discount is out of range" arrives *on the
+ * discount box* rather than four fields above it.
+ */
+const NOTICE_FIELD: Record<string, "code" | "discountPercent" | "startsAt"> = {
+  invalid_code: "code",
+  duplicate: "code",
+  invalid_discount: "discountPercent",
+  invalid_window: "startsAt",
+};
+
+/**
+ * The rest of what the new-code form can say. Everything not listed here or in
+ * `NOTICE_FIELD` is about the *list* below the form — a code enabled, deleted,
+ * restored — and keeps the page-level banner.
+ */
+const CREATE_FORM_NOTICES = new Set(["created", "invalid", "not_connected", "stripe_failed"]);
 
 const SCOPE_KEYS: Record<"all" | "trips" | "courses", StaffMessageKey> = {
   all: "promos.scope.all",
@@ -148,6 +170,21 @@ export default async function PromosPage({
   const dealsHref = (target: number) => pairedHref("dealsPage", target);
   const connected = canAcceptPayments(stripeAccount);
   const banner = noticeFromParam(notice, NOTICES);
+  // Three homes, decided once: a field in the new-code form, that form's
+  // action row, or the page. Nothing lands in more than one.
+  // `noticeFromParam`, not `NOTICE_FIELD[notice]`: `?notice=` is
+  // attacker-supplied and a bare index walks off `Object.prototype`
+  // (src/lib/staff-notices.ts).
+  const noticeField = noticeFromParam(notice, NOTICE_FIELD);
+  const createStatus = notice && CREATE_FORM_NOTICES.has(notice) ? banner : undefined;
+  const pageBanner = noticeField || createStatus ? undefined : banner;
+  /** This box's refusal, already worded — or nothing, when the refusal was elsewhere. */
+  const fieldError = (field: "code" | "discountPercent" | "startsAt") =>
+    noticeField === field && banner
+      ? banner.key === "promos.notice.invalidDiscount"
+        ? t(banner.key, { min: PROMO_DISCOUNT_MIN, max: PROMO_DISCOUNT_MAX })
+        : t(banner.key)
+      : undefined;
   const locale = await requestLocale(shop?.defaultLocale);
   const t = staffTranslator(locale);
   const timezone = shop?.timezone ?? "UTC";
@@ -188,12 +225,8 @@ export default async function PromosPage({
           pendingLabel={t("shared.undoToast.pendingLabel")}
           undoLabel={t("shared.undoToast.undo")}
         />
-      ) : banner ? (
-        <StaffNoticeBanner tone={banner.tone}>
-          {banner.key === "promos.notice.invalidDiscount"
-            ? t(banner.key, { min: PROMO_DISCOUNT_MIN, max: PROMO_DISCOUNT_MAX })
-            : t(banner.key)}
-        </StaffNoticeBanner>
+      ) : pageBanner ? (
+        <StaffNoticeBanner tone={pageBanner.tone}>{t(pageBanner.key)}</StaffNoticeBanner>
       ) : null}
 
       {connected ? null : (
@@ -219,7 +252,11 @@ export default async function PromosPage({
         <h2 className="font-medium">{t("promos.newCode.heading")}</h2>
         <p className="mt-1 text-sm text-muted">{t("promos.newCode.detail")}</p>
         <FieldGrid as="form" action={createPromoAction} columns={2} className="mt-4">
-          <Field label={t("promos.fields.code")} hint={t("promos.fields.codeHint")}>
+          <Field
+            label={t("promos.fields.code")}
+            hint={t("promos.fields.codeHint")}
+            error={fieldError("code")}
+          >
             <input
               name="code"
               required
@@ -229,7 +266,11 @@ export default async function PromosPage({
               className={`${controlClass} uppercase`}
             />
           </Field>
-          <Field label={t("promos.fields.discount")} hint={t("promos.fields.discountHint")}>
+          <Field
+            label={t("promos.fields.discount")}
+            hint={t("promos.fields.discountHint")}
+            error={fieldError("discountPercent")}
+          >
             <input
               name="discountPercent"
               type="number"
@@ -261,7 +302,11 @@ export default async function PromosPage({
               className={controlClass}
             />
           </Field>
-          <Field label={t("promos.fields.starts")} hint={t("promos.fields.startsHint")}>
+          <Field
+            label={t("promos.fields.starts")}
+            hint={t("promos.fields.startsHint")}
+            error={fieldError("startsAt")}
+          >
             <input name="startsAt" type="datetime-local" className={controlClass} />
           </Field>
           <Field label={t("promos.fields.expires")} hint={t("promos.fields.expiresHint")}>
@@ -282,7 +327,14 @@ export default async function PromosPage({
             <SubmitButton pendingLabel={t("promos.creating")} className={buttonClass()}>
               {t("promos.createCode")}
             </SubmitButton>
+            <FormStatus tone={createStatus?.tone}>
+              {createStatus ? t(createStatus.key) : undefined}
+            </FormStatus>
           </FieldActions>
+          {/* Keyed on the notice so an identical repeat refusal still re-fires
+              the focus move — the effect is otherwise skipped on a re-render
+              that changed nothing it depends on. */}
+          <FieldErrorFocus key={notice} scope="new-code" />
         </FieldGrid>
       </section>
 

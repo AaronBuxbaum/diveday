@@ -25,12 +25,10 @@ export interface DayByDayEditorCopy {
   timeNoteTitle: string;
   timeNotePlaceholder: string;
   whatHappens: string;
-  itemLabel: string;
-  removeItemLabel: string;
-  itemPlaceholder: string;
-  remove: string;
-  itemsMax: string;
-  addItem: string;
+  /** "One item per line." — the same line the Included/Not included boxes carry. */
+  whatHappensHint: string;
+  itemsPlaceholder: string;
+  itemsOverMax: string;
   daysMax: string;
   addDay: string;
 }
@@ -40,6 +38,15 @@ function fill(template: string, values: Record<string, string | number>): string
   return template.replace(/\{(\w+)\}/g, (match, key) =>
     key in values ? String(values[key]) : match,
   );
+}
+
+/**
+ * Items that would actually be stored — blank lines don't count, because
+ * `sanitizeScheduleDays` drops them before the cap is applied server-side.
+ * Warning on a trailing newline would be a warning about nothing.
+ */
+function countItems(items: string[]): number {
+  return items.filter((item) => item.trim()).length;
 }
 
 /**
@@ -70,27 +77,18 @@ export function DayByDayEditor({
     setDays((current) => current.filter((_, i) => i !== index));
   }
 
-  function updateItem(dayIndex: number, itemIndex: number, value: string) {
+  /**
+   * One item per line, the same shape the Included / Not included boxes use.
+   *
+   * Split without trimming or dropping blanks: the textarea's value is rebuilt
+   * from this array on every keystroke, so filtering here would delete the
+   * newline a staffer just pressed before they could type the next item.
+   * `sanitizeScheduleDays` (src/lib/courses.ts) does the trimming and blank-line
+   * dropping server-side, where it cannot fight the cursor.
+   */
+  function updateItems(dayIndex: number, value: string) {
     setDays((current) =>
-      current.map((day, i) =>
-        i === dayIndex
-          ? { ...day, items: day.items.map((item, j) => (j === itemIndex ? value : item)) }
-          : day,
-      ),
-    );
-  }
-
-  function addItem(dayIndex: number) {
-    setDays((current) =>
-      current.map((day, i) => (i === dayIndex ? { ...day, items: [...day.items, ""] } : day)),
-    );
-  }
-
-  function removeItem(dayIndex: number, itemIndex: number) {
-    setDays((current) =>
-      current.map((day, i) =>
-        i === dayIndex ? { ...day, items: day.items.filter((_, j) => j !== itemIndex) } : day,
-      ),
+      current.map((day, i) => (i === dayIndex ? { ...day, items: value.split("\n") } : day)),
     );
   }
 
@@ -159,48 +157,37 @@ export function DayByDayEditor({
               </Field>
             </FieldGrid>
 
-            <div className="mt-4">
-              <span className="text-sm font-medium">{copy.whatHappens}</span>
-              <div className="mt-2 flex flex-col gap-2">
-                {day.items.map((item, itemIndex) => (
-                  <div
-                    // biome-ignore lint/suspicious/noArrayIndexKey: rows have no stable id and are only ever appended/removed by position, never reordered.
-                    key={itemIndex}
-                    className="flex items-center gap-2"
-                  >
-                    <input
-                      value={item}
-                      onChange={(event) => updateItem(dayIndex, itemIndex, event.target.value)}
-                      maxLength={200}
-                      aria-label={fill(copy.itemLabel, { number: dayNumber, index: itemIndex + 1 })}
-                      placeholder={copy.itemPlaceholder}
-                      className={controlClass}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeItem(dayIndex, itemIndex)}
-                      aria-label={fill(copy.removeItemLabel, {
-                        number: dayNumber,
-                        index: itemIndex + 1,
-                      })}
-                      className={buttonClass({ variant: "ghost", size: "sm" })}
-                    >
-                      {copy.remove}
-                    </button>
-                  </div>
-                ))}
-              </div>
-              <button
-                type="button"
-                onClick={() => addItem(dayIndex)}
-                disabled={day.items.length >= MAX_SCHEDULE_DAY_ITEMS}
-                className={buttonClass({ variant: "secondary", size: "sm", className: "mt-2" })}
+            {/* One item per line, matching the Included / Not included boxes
+                above it. A row of inputs with its own Add/Remove buttons made
+                a five-item day a five-click build and let the page grow a
+                second, competing idea of what "a list" is; a textarea is the
+                one the editor already had. Over-cap is warned about rather
+                than truncated — silently eating a typed line is worse than a
+                save the server refuses, and it refuses by anchoring here. */}
+            {/* Its own FieldGrid, not a bare div: `Field` subgrids its caption
+                and control onto the two rows a grid parent declares, and
+                outside one the two-row shape it promises has nothing to sit
+                on (docs/design/forms-and-controls.md). */}
+            <FieldGrid columns={1} className="mt-4">
+              <Field
+                label={fill(copy.whatHappens, { number: dayNumber })}
+                description={copy.whatHappensHint}
+                error={
+                  countItems(day.items) > MAX_SCHEDULE_DAY_ITEMS
+                    ? fill(copy.itemsOverMax, { max: MAX_SCHEDULE_DAY_ITEMS })
+                    : undefined
+                }
               >
-                {day.items.length >= MAX_SCHEDULE_DAY_ITEMS
-                  ? fill(copy.itemsMax, { max: MAX_SCHEDULE_DAY_ITEMS })
-                  : copy.addItem}
-              </button>
-            </div>
+                <textarea
+                  value={day.items.join("\n")}
+                  onChange={(event) => updateItems(dayIndex, event.target.value)}
+                  rows={6}
+                  maxLength={MAX_SCHEDULE_DAY_ITEMS * 200}
+                  placeholder={copy.itemsPlaceholder}
+                  className={controlClass}
+                />
+              </Field>
+            </FieldGrid>
           </div>
         );
       })}

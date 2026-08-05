@@ -175,7 +175,7 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
   const back = backPath(shopSlug, tripId);
   const s = await requireTripConfig(shopSlug, tripId);
   const parsed = detailsSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) redirect(`${back}?notice=invalid`);
+  if (!parsed.success) redirect(`${back}?notice=invalid&form=details`);
   const {
     title,
     description,
@@ -191,10 +191,10 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
   } = parsed.data;
   const sw = parseWallTime(date, startTime);
   const ew = parseWallTime(date, endTime);
-  if (!sw || !ew) redirect(`${back}?notice=invalid`);
+  if (!sw || !ew) redirect(`${back}?notice=invalid&form=details`);
   const dbi = await getDb();
   const shopNow = await getShopById(dbi, s.user.shopId);
-  if (!shopNow) redirect(`${back}?notice=invalid`);
+  if (!shopNow) redirect(`${back}?notice=invalid&form=details`);
   const startsAt = wallTimeToUtc(sw, shopNow.timezone);
   const endsAt = wallTimeToUtc(ew, shopNow.timezone);
   if (endsAt <= startsAt) redirect(`${back}?notice=end-before-start`);
@@ -202,14 +202,14 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
   // Each day is converted on its own date so a trip that straddles a DST
   // change keeps the wall-clock time the shop actually promised.
   const meetingDays = tripMeetingDays({ start: sw, end: ew }, dayCount);
-  if (!meetingDays) redirect(`${back}?notice=invalid`);
+  if (!meetingDays) redirect(`${back}?notice=invalid&form=details`);
   const scheduleDays = meetingDays.map((day, index) => ({
     dayNumber: index + 1,
     startsAt: wallTimeToUtc(day.start, shopNow.timezone),
     endsAt: wallTimeToUtc(day.end, shopNow.timezone),
   }));
   const lastDay = scheduleDays.at(-1);
-  if (!lastDay) redirect(`${back}?notice=invalid`);
+  if (!lastDay) redirect(`${back}?notice=invalid&form=details`);
   // What the numbers in the price boxes mean — the shop's own currency.
   const tripCurrency = toShopCurrency(shopNow.currency);
   const priceCents = priceDollars === undefined ? null : majorToMinor(priceDollars, tripCurrency);
@@ -225,7 +225,7 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
     (priceCents !== null && priceCents > MAX_PRICE_MINOR_UNITS) ||
     (depositCents !== null && depositCents > MAX_PRICE_MINOR_UNITS)
   ) {
-    redirect(`${back}?notice=invalid`);
+    redirect(`${back}?notice=invalid&form=details`);
   }
   const outcome = await updateTrip(dbi, s.user.shopId, tripId, {
     title,
@@ -251,7 +251,7 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
         `${back}?notice=planned-dives-below-history&count=${outcome.detail.recordedDiveCount}`,
       );
     }
-    redirect(`${back}?notice=invalid`);
+    redirect(`${back}?notice=invalid&form=details`);
   }
   revalidateAndRedirect(back, `${back}?notice=saved`);
 }
@@ -264,14 +264,14 @@ export async function saveConditionsAction(shopSlug: string, tripId: string, for
   // all staff even though the rest of Overview is config-gated (H-14).
   const s = await requireStaffSession();
   const parsed = conditionsSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) redirect(`${back}?notice=invalid`);
+  if (!parsed.success) redirect(`${back}?notice=invalid&form=conditions`);
   const db = await getDb();
   // The units come from the shop row, never from the form. A hidden input would
   // let a crafted post store a 27 typed as °C as if it were °F — a 16-degree
   // error on every diver's brief — the same reason the dive-site depth entry
   // re-reads the shop rather than trusting what was submitted.
   const shop = await getShopById(db, s.user.shopId);
-  if (!shop) redirect(`${back}?notice=invalid`);
+  if (!shop) redirect(`${back}?notice=invalid&form=conditions`);
   const temperatureUnit = temperatureUnitFor(shop);
   const { waterTemperature, visibility } = parsed.data;
   if (
@@ -279,10 +279,10 @@ export async function saveConditionsAction(shopSlug: string, tripId: string, for
     (waterTemperature < minEnteredTemperature(temperatureUnit) ||
       waterTemperature > maxEnteredTemperature(temperatureUnit))
   ) {
-    redirect(`${back}?notice=invalid`);
+    redirect(`${back}?notice=invalid&form=conditions`);
   }
   if (visibility !== undefined && visibility > maxEnteredVisibility(shop.depthUnit)) {
-    redirect(`${back}?notice=invalid`);
+    redirect(`${back}?notice=invalid&form=conditions`);
   }
   const { trip: saved, holdStarted } = await updateTripConditions(db, s.user.shopId, tripId, {
     conditionsSummary: parsed.data.conditionsSummary,
@@ -325,7 +325,7 @@ export async function saveConditionsAction(shopSlug: string, tripId: string, for
       );
     }
   }
-  revalidateAndRedirect(back, `${back}?notice=${saved ? "conditions" : "invalid"}`);
+  revalidateAndRedirect(back, `${back}?notice=${saved ? "conditions" : "invalid"}&form=conditions`);
 }
 
 export async function clearConditionsAction(shopSlug: string, tripId: string) {
@@ -334,7 +334,10 @@ export async function clearConditionsAction(shopSlug: string, tripId: string) {
   // all staff.
   const s = await requireStaffSession();
   const { trip: saved } = await updateTripConditions(await getDb(), s.user.shopId, tripId, {});
-  revalidateAndRedirect(back, `${back}?notice=${saved ? "conditions-cleared" : "invalid"}`);
+  revalidateAndRedirect(
+    back,
+    `${back}?notice=${saved ? "conditions-cleared" : "invalid"}&form=conditions`,
+  );
 }
 
 export async function cancelTripAction(shopSlug: string, tripId: string) {
@@ -440,19 +443,23 @@ export async function saveRecapShoutoutAction(
   const parsed = recapShoutoutSchema.safeParse({
     recapShoutout: formData.get("recapShoutout") ?? "",
   });
-  if (!parsed.success) redirect(`${back}?notice=invalid`);
+  if (!parsed.success) redirect(`${back}?notice=invalid&form=recap-note`);
   const saved = await setTripRecapShoutout(
     await getDb(),
     s.user.shopId,
     tripId,
     parsed.data.recapShoutout,
   );
-  revalidateAndRedirect(back, `${back}?notice=${saved ? "recap-note" : "invalid"}`);
+  revalidateAndRedirect(back, `${back}?notice=${saved ? "recap-note" : "invalid"}&form=recap-note`);
 }
 
 /** Take down a diver's recap photo — the shop's moderation seam. */
 export async function deleteRecapPhotoAction(shopSlug: string, tripId: string, formData: FormData) {
-  const back = guestsPath(shopSlug, tripId);
+  // Overview, not Guests: the gallery moved to Overview beside the crew's own
+  // shout-out (both are the recap's content) and this `back` did not follow it,
+  // so taking a photo down teleported the staffer to a different tab and put
+  // the confirmation on a page with nothing to confirm.
+  const back = backPath(shopSlug, tripId);
   const s = await requireStaffSession();
   const photoId = String(formData.get("photoId") ?? "");
   if (!photoId) redirect(back);
@@ -883,11 +890,11 @@ export async function saveRequirementsAction(shopSlug: string, tripId: string, f
   // a course session's admission rules are frozen and must not be editable here,
   // and upsertTripRequirements has no independent course check.
   const trip = await getTripWithBooked(db, s.user.shopId, tripId);
-  if (trip?.courseId) redirect(`${back}?notice=invalid`);
+  if (trip?.courseId) redirect(`${back}?notice=invalid&form=requirements`);
   const parsed = requirementsSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) redirect(`${back}?notice=invalid`);
+  if (!parsed.success) redirect(`${back}?notice=invalid&form=requirements`);
   const specialties = z.array(specialtySchema).safeParse(formData.getAll("specialty").map(String));
-  if (!specialties.success) redirect(`${back}?notice=invalid`);
+  if (!specialties.success) redirect(`${back}?notice=invalid&form=requirements`);
   const saved = await upsertTripRequirements(db, {
     shopId: s.user.shopId,
     tripId,
@@ -897,7 +904,7 @@ export async function saveRequirementsAction(shopSlug: string, tripId: string, f
     requiresNitrox: formData.get("requiresNitrox") === "on",
     requiresPayment: formData.get("requiresPayment") === "on",
   });
-  if (!saved) redirect(`${back}?notice=invalid`);
+  if (!saved) redirect(`${back}?notice=invalid&form=requirements`);
   // **Who this just blocked.** Readiness is computed live from the trip's
   // current requirement row and the sites it visits, so a tightened gate
   // already reaches every booked diver the moment it is saved — they turn up

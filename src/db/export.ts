@@ -24,8 +24,6 @@ import {
   buddyPairMembers,
   certificationLevel,
   certifications,
-  coursePathSteps,
-  coursePaths,
   courses,
   diveSiteCreatures,
   diveSiteMoments,
@@ -199,22 +197,6 @@ export async function loadShopExportBundleInput(
         .from(courses)
         .where(eq(courses.shopId, shopId))
         .orderBy(asc(courses.createdAt), asc(courses.id));
-
-      const coursePathRows = await tx
-        .select()
-        .from(coursePaths)
-        .where(eq(coursePaths.shopId, shopId))
-        .orderBy(asc(coursePaths.createdAt), asc(coursePaths.id));
-
-      // Joined through the owning path so the tenant filter lives on a column
-      // the steps table doesn't carry — a step is scoped by its path, not by
-      // its own shop_id.
-      const coursePathStepRows = await tx
-        .select({ step: coursePathSteps })
-        .from(coursePathSteps)
-        .innerJoin(coursePaths, eq(coursePaths.id, coursePathSteps.pathId))
-        .where(eq(coursePaths.shopId, shopId))
-        .orderBy(asc(coursePathSteps.pathId), asc(coursePathSteps.position));
 
       const seriesRows = await tx
         .select()
@@ -1707,31 +1689,6 @@ export async function loadShopExportBundleInput(
           ]),
           note: EXPORT_FILE_NOTES["courses.csv"],
         },
-        {
-          file: "course_paths.csv",
-          header: ["id", "title", "slug", "summary", "is_active", "created_at"],
-          rows: coursePathRows.map((row) => [
-            row.id,
-            row.title,
-            row.slug,
-            row.summary,
-            row.isActive,
-            row.createdAt,
-          ]),
-          note: EXPORT_FILE_NOTES["course_paths.csv"],
-        },
-        {
-          file: "course_path_steps.csv",
-          header: ["id", "path_id", "course_id", "position", "note"],
-          rows: coursePathStepRows.map(({ step }) => [
-            step.id,
-            step.pathId,
-            step.courseId,
-            step.position,
-            step.note,
-          ]),
-          note: EXPORT_FILE_NOTES["course_path_steps.csv"],
-        },
       ];
 
       return {
@@ -1901,16 +1858,6 @@ export async function loadShopExportCounts(
     ),
     "courses.csv": await countOf(
       db.select({ n: count() }).from(courses).where(eq(courses.shopId, shopId)),
-    ),
-    "course_paths.csv": await countOf(
-      db.select({ n: count() }).from(coursePaths).where(eq(coursePaths.shopId, shopId)),
-    ),
-    "course_path_steps.csv": await countOf(
-      db
-        .select({ n: count() })
-        .from(coursePathSteps)
-        .innerJoin(coursePaths, eq(coursePaths.id, coursePathSteps.pathId))
-        .where(eq(coursePaths.shopId, shopId)),
     ),
   };
 

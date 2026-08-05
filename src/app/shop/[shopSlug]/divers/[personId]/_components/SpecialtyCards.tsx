@@ -8,6 +8,7 @@ import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone, formatCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { addSpecialtyAction, deleteSpecialtyAction, reviewSpecialtyAction } from "../actions";
+import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
 import {
   AGENCY_KEYS,
   type DiverProfile,
@@ -25,12 +26,15 @@ export function SpecialtyCards({
   personId,
   shop,
   locale,
+  status,
 }: {
   diver: DiverProfile;
   shopSlug: string;
   personId: string;
   shop: Shop;
   locale: string;
+  /** This section's own outcome, rendered beside its controls, not page-top. */
+  status?: DiverNotice;
 }) {
   const t = staffTranslator(locale);
   const todayLocal = calendarDateInTimezone(nowDate(), shop.timezone);
@@ -43,7 +47,8 @@ export function SpecialtyCards({
           </h2>
           <p className="mt-1 text-sm text-muted">{t("divers.specialty.description")}</p>
         </div>
-        <details>
+        {/* Opened by its own outcome — see CertificationCards for why. */}
+        <details open={Boolean(status)}>
           <summary className="flex min-h-11 cursor-pointer items-center rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground">
             {t("divers.specialty.addSpecialty")}
           </summary>
@@ -96,6 +101,7 @@ export function SpecialtyCards({
               >
                 {t("divers.specialty.captureForReview")}
               </SubmitButton>
+              <DiverFormStatus status={status} shopSlug={shopSlug} locale={locale} />
             </FieldActions>
           </FieldGrid>
         </details>

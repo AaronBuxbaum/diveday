@@ -39,16 +39,6 @@ export function publicCoursePath(shopSlug: string, courseSlug: string): string {
   return `${publicCoursesPath(shopSlug)}/${courseSlug}`;
 }
 
-/** The certification-path index a diver reads (the builder stays on /shop). */
-export function publicCoursePathsPath(shopSlug: string): string {
-  return `${publicCoursesPath(shopSlug)}/paths`;
-}
-
-/** One certification path's public page. */
-export function publicCoursePathPath(shopSlug: string, pathSlug: string): string {
-  return `${publicCoursePathsPath(shopSlug)}/${pathSlug}`;
-}
-
 /**
  * A shop slug as the routes spell it: lowercase, digits, inner hyphens. Kept
  * in step with the embed matchers in src/lib/auth.config.ts.
@@ -97,12 +87,14 @@ export function shopSlugFromStaffUrl(candidate: string | null | undefined): stri
  * layer at all.
  *
  * The course *detail* page is the only thing under `/shop/<slug>/courses/**`
- * that moves: the catalog index, the certification-path index, and each path's
- * own page kept a genuine staff surface at their URL (roster, builder, editor),
- * while a course page had no staff function beyond previewing a hidden course —
- * and it is the one course URL carried in the sitemap and in structured data.
- * The negative lookahead keeps the staff segments (`paths`, `new`, `catalog`,
- * matching `RESERVED_COURSE_SEGMENTS` in src/lib/courses.ts) out of it.
+ * that moves: the catalog index kept a genuine staff surface at its URL (the
+ * roster and the editor), while a course page had no staff function beyond
+ * previewing a hidden course — and it is the one course URL carried in the
+ * sitemap and in structured data. The negative lookahead keeps the staff
+ * segments (`new`, `catalog`, and `paths`, which the certification-path
+ * builder used before ADR 20260805-remove-certification-paths and which stays
+ * reserved so an old bookmark cannot be captured by a course slugged "paths")
+ * out of it, matching `RESERVED_COURSE_SEGMENTS` in src/lib/courses.ts.
  */
 export const LEGACY_PUBLIC_SHOP_REDIRECTS: readonly { source: string; destination: string }[] = [
   { source: "/shop/:shopSlug/schedule", destination: `${PUBLIC_SHOP_PREFIX}/:shopSlug` },

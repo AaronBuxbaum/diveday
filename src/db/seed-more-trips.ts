@@ -5,6 +5,7 @@ import {
   type DiveSpecialty,
   type TripAssignmentRole,
   tripAssignments,
+  tripDives,
   tripLastMinutePromos,
   tripRequirements,
   tripScheduleDays,
@@ -81,6 +82,12 @@ export async function seedMoreTrips(
     endsAt: Date;
     capacity: number;
     siteName?: string;
+    /**
+     * Where the *second* tank goes, when the title names two moorings. Without
+     * it a two-site day would put both dives on the first site and the schedule
+     * card would name one place for a trip whose own title names two.
+     */
+    secondSiteName?: string;
     courseTitle?: string;
     isNight?: boolean;
     isWreck?: boolean;
@@ -131,6 +138,7 @@ export async function seedMoreTrips(
       endsAt: at(6, 11, 30),
       capacity: 12,
       siteName: "Benwood Wreck",
+      secondSiteName: "Molasses Reef",
       roster: draw(5),
     },
     {
@@ -284,6 +292,7 @@ export async function seedMoreTrips(
       endsAt: at(28, 14, 30),
       capacity: 12,
       siteName: "Christ of the Abyss",
+      secondSiteName: "Molasses Reef",
       roster: draw(7),
     },
     {
@@ -293,6 +302,7 @@ export async function seedMoreTrips(
       endsAt: at(30, 11, 30),
       capacity: 12,
       siteName: "French Reef",
+      secondSiteName: "Molasses Reef",
       roster: draw(8),
     },
     {
@@ -321,6 +331,7 @@ export async function seedMoreTrips(
       endsAt: at(36, 15, 0),
       capacity: 12,
       siteName: "Pickles Reef",
+      secondSiteName: "French Reef",
       roster: draw(10),
     },
     {
@@ -366,6 +377,7 @@ export async function seedMoreTrips(
       endsAt: at(48, 11, 30),
       capacity: 12,
       siteName: "Benwood Wreck",
+      secondSiteName: "French Reef",
       roster: draw(10),
     },
     {
@@ -433,6 +445,38 @@ export async function seedMoreTrips(
       startsAt: trip.startsAt,
       endsAt: trip.endsAt,
     })),
+  );
+
+  // One `trip_dives` row per planned dive, the way `seed-trips.ts` and
+  // `seed-cert-gates.ts` already mint theirs.
+  //
+  // These thirty departures used to have none at all while every one of them
+  // claimed `planned_dives = 2` (the column's default) — a shop whose schedule
+  // says "two-tank" over a trip with zero dives on file. Nothing looked broken,
+  // because "where does this trip go" falls back to the trip's own
+  // `dive_site_id`, but the fallback is exactly what `summarizeTripDiveSites`
+  // exists to replace: a two-site day named one site, and the count of tanks
+  // still to be decided was unanswerable.
+  //
+  // Dive one carries the trip's site; dive two carries the second site when the
+  // title names two moorings, and otherwise the same one — a two-tank day at a
+  // single reef genuinely dives it twice, and `summarizeTripDiveSites`
+  // de-duplicates, so the card still reads "Dive site · Molasses Reef". Course
+  // sessions and the night charters carry no site at all, so their dives carry
+  // none either: the honest state, and the one the "Site to be confirmed" line
+  // was written for.
+  await db.insert(tripDives).values(
+    insertedTrips.flatMap((trip, index) => {
+      const def = tripDefs[index];
+      const secondSiteId = def?.secondSiteName
+        ? (siteByName.get(def.secondSiteName)?.id ?? null)
+        : (trip.diveSiteId ?? null);
+      return Array.from({ length: trip.plannedDives }, (_, dive) => ({
+        tripId: trip.id,
+        diveNumber: dive + 1,
+        diveSiteId: dive === 0 ? (trip.diveSiteId ?? null) : secondSiteId,
+      }));
+    }),
   );
 
   await db.insert(tripRequirements).values(

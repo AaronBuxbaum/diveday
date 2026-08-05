@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { rentalFitCompleteness } from "@/lib/rentals";
 import { seededShopContext } from "@/test/db";
 import { cancelBooking, createBooking } from "./bookings";
 import type { AppDb } from "./client";
@@ -235,5 +236,62 @@ describe("rentalFitByBooking", () => {
 
     const map = await rentalFitByBooking(db, shopId, tripId);
     expect(map.has(bookingId)).toBe(false);
+  });
+});
+
+/**
+ * The stored row and the completeness rule, together — `saveRentalFit` writes
+ * a fit, `rentalFitCompleteness` reads it, and the answer has to survive the
+ * trip through the database. The reported bug lived exactly here: a row
+ * existed, so every surface said "Saved", while the sizes the diver would be
+ * handed gear against were blank.
+ */
+describe("rental fit completeness over a stored profile", () => {
+  it("calls a saved fit with a missing size incomplete, and names the piece", async () => {
+    const { db, shopId, tripId } = await context();
+    const { personId } = await bookVisitor(db, shopId, tripId, "Partial Pat");
+
+    // Rents a BCD, and the only size anybody typed is a fin size.
+    await saveRentalFit(db, {
+      shopId,
+      personId,
+      rentsBcd: true,
+      rentsRegulator: false,
+      rentsWetsuit: false,
+      rentsMaskFins: false,
+      rentsWeights: false,
+      rentsDiveComputer: false,
+      rentsGopro: false,
+      finSize: "M",
+    });
+
+    const stored = await getRentalFit(db, shopId, personId);
+    expect(stored).not.toBeNull();
+    expect(rentalFitCompleteness(stored)).toEqual({ state: "incomplete", missing: ["bcd"] });
+  });
+
+  it("turns complete once the missing size is filled in", async () => {
+    const { db, shopId, tripId } = await context();
+    const { personId } = await bookVisitor(db, shopId, tripId, "Filled Fern");
+
+    await saveRentalFit(db, baseFitInput(shopId, personId));
+    expect(rentalFitCompleteness(await getRentalFit(db, shopId, personId))).toEqual({
+      state: "complete",
+    });
+
+    // Staff blank the BCD size — the row is still there, the fit is not done.
+    await saveRentalFit(db, { ...baseFitInput(shopId, personId), bcdSize: "" });
+    expect(rentalFitCompleteness(await getRentalFit(db, shopId, personId))).toEqual({
+      state: "incomplete",
+      missing: ["bcd"],
+    });
+  });
+
+  it("keeps 'nobody asked' distinct from 'asked and half blank'", async () => {
+    const { db, shopId, tripId } = await context();
+    const { personId } = await bookVisitor(db, shopId, tripId, "Unasked Uma");
+    expect(rentalFitCompleteness(await getRentalFit(db, shopId, personId))).toEqual({
+      state: "not_recorded",
+    });
   });
 });

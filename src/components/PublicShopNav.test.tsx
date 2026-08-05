@@ -29,7 +29,7 @@ describe("activeNavIndex", () => {
     // the schedule's own href.
     expect(activeNavIndex("/s/blue-mantis/courses", ITEMS)).toBe(1);
     expect(activeNavIndex("/s/blue-mantis/courses/open-water-diver", ITEMS)).toBe(1);
-    expect(activeNavIndex("/s/blue-mantis/courses/paths/recreational", ITEMS)).toBe(1);
+    expect(activeNavIndex("/s/blue-mantis/courses/advanced-open-water-diver", ITEMS)).toBe(1);
   });
 
   it("never lights up another shop's tab on a sibling slug", () => {

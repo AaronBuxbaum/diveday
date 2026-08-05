@@ -19,6 +19,13 @@ const inquirySchema = z.object({
   email: z.email().max(200).optional(),
   phone: z.string().trim().max(30).optional(),
   timing: z.string().trim().max(200).optional(),
+  // A bare calendar day, exactly as `<input type="date">` posts it. Shape-checked
+  // only: a diver naming a date the shop cannot run is a conversation, not a
+  // validation error, and the past-date floor is the picker's `min`.
+  preferredDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
   divers: z.coerce.number().int().min(1).max(12).optional(),
   experience: z.enum(COURSE_INQUIRY_EXPERIENCE),
   message: z.string().trim().max(1500).optional(),
@@ -59,6 +66,7 @@ export async function submitCourseInquiryAction(
     email: formData.get("email") || undefined,
     phone: formData.get("phone") || undefined,
     timing: formData.get("timing") || undefined,
+    preferredDate: formData.get("preferredDate") || undefined,
     divers: formData.get("divers") || undefined,
     experience: formData.get("experience") || undefined,
     message: formData.get("message") || undefined,
@@ -74,7 +82,7 @@ export async function submitCourseInquiryAction(
   // here for one means the slug was guessed or the shop hid it mid-submit.
   if (!course?.isActive) return { error: t("inquiry.errors.unavailable") };
 
-  const { name, email, phone, timing, divers, experience, message } = parsed.data;
+  const { name, email, phone, timing, preferredDate, divers, experience, message } = parsed.data;
   const record = await recordCourseInquiry(db, {
     shopId: shop.id,
     courseId: course.id,
@@ -83,6 +91,7 @@ export async function submitCourseInquiryAction(
     phone,
     experienceLevel: experience,
     timing,
+    preferredDate,
     divers,
     message,
   });
@@ -106,6 +115,7 @@ export async function submitCourseInquiryAction(
         inquirerPhone: phone,
         experience,
         timing,
+        preferredDate,
         divers,
         message,
       }).catch(() => ({ status: "failed" as const }));

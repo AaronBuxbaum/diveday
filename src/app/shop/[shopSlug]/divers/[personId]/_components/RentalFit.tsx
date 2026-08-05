@@ -6,6 +6,7 @@ import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { rentalFitLine } from "@/lib/dive-prep";
 import { offeredRentableItems } from "@/lib/rentals";
 import { saveProfileAction, setNeedsStaffFitAction } from "../actions";
+import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
 import type { DiverProfile } from "./shared";
 
 export function RentalFit({
@@ -15,6 +16,7 @@ export function RentalFit({
   rentalItems,
   canOverride,
   locale,
+  status,
 }: {
   diver: DiverProfile;
   shopSlug: string;
@@ -23,6 +25,12 @@ export function RentalFit({
   /** Instructor/divemaster/manager may rewrite the diver's stated fit (H-06). */
   canOverride: boolean;
   locale: string;
+  /**
+   * This section's own outcome. Rental fit sits about halfway down a ~6,400px
+   * record, so "Rental fit profile saved" in a banner under the `<h1>` was a
+   * confirmation two screens above the button that earned it.
+   */
+  status?: DiverNotice;
 }) {
   const t = staffTranslator(locale);
   const profile = diver.rentalFit;
@@ -40,13 +48,19 @@ export function RentalFit({
         <p className="mt-1 text-sm text-muted">{t("divers.rentalFit.description")}</p>
       </div>
       {mayEdit ? null : (
-        <p className="mt-4 rounded-lg border border-border bg-surface-sunken px-4 py-3 text-sm text-muted">
-          <span className="font-medium text-foreground">
-            {rentalFitLineText(t, locale, rentalFitLine(profile ?? null))}
-          </span>
-          <br />
-          {t("divers.rentalFit.changeRestricted")}
-        </p>
+        <>
+          <p className="mt-4 rounded-lg border border-border bg-surface-sunken px-4 py-3 text-sm text-muted">
+            <span className="font-medium text-foreground">
+              {rentalFitLineText(t, locale, rentalFitLine(profile ?? null))}
+            </span>
+            <br />
+            {t("divers.rentalFit.changeRestricted")}
+          </p>
+          {/* No editable form to hang it on, and a refusal aimed at this
+              section still belongs in it — a staffer who may only raise the
+              check-in flag gets their "not authorized" here, not page-top. */}
+          <DiverFormStatus status={status} shopSlug={shopSlug} locale={locale} className="mt-3" />
+        </>
       )}
 
       {mayEdit ? (
@@ -126,6 +140,7 @@ export function RentalFit({
             >
               {t("divers.rentalFit.saveRentalFit")}
             </SubmitButton>
+            <DiverFormStatus status={status} shopSlug={shopSlug} locale={locale} />
           </FieldActions>
         </FieldGrid>
       ) : null}

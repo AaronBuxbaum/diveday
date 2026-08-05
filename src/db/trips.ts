@@ -49,6 +49,7 @@ export {
   type StaffScheduleDay,
   type StaffScheduleTrip,
   type TripWithBookedCount,
+  tripDiveSiteSummaries,
   tripScheduleDayCounts,
   type UpcomingTripOffsetPage,
   upcomingScheduleRange,

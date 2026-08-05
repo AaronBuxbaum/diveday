@@ -16,7 +16,7 @@ import { requestLocale } from "@/i18n/request";
 import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
 import { trialHref } from "@/lib/funnel";
 import { IMPORT_HONESTY_TABLE } from "@/lib/import";
-import { sharedLinkCard } from "@/lib/marketing";
+import { fullShopExport, sharedLinkCard } from "@/lib/marketing";
 import { IMPORT_SCOPE_ROW_KEYS } from "@/lib/migration-guides";
 
 // `instant = true`: navigating here paints immediately. Every request-scoped
@@ -345,6 +345,23 @@ async function SpreadsheetBody({
             </li>
           ))}
         </ul>
+
+        {/* The return trip, in the same shared words every switching page
+            uses: the rows above describe what arrives, and what arrives is
+            also what leaves. The claim composes `fullShopExport`'s keys rather
+            than being re-authored, so this page, the incumbent guides, the
+            homepage band, and the pricing FAQ can never drift apart. */}
+        <div className="mt-10 max-w-2xl">
+          <h3 className="text-xl font-semibold tracking-tight">
+            {t("switching.common.bothWaysTitle")}
+          </h3>
+          <p className="mt-2 leading-7 text-muted">
+            {t("switching.common.bothWaysBody", { claim: t(fullShopExport.claimKey) })}
+          </p>
+          {/* Its own line, same reasoning as the incumbent guides: the terms
+              are the reader's actual objections, not a tail clause. */}
+          <p className="mt-2 leading-7 text-muted">{t(fullShopExport.termsKey)}</p>
+        </div>
 
         {/* The scope table is where a reader decides the move is real — and it
             was the furthest point they could reach without a way to act. */}

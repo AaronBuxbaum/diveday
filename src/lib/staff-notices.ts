@@ -48,3 +48,34 @@ export function noticeFromParam<Definition>(
 ): Definition | undefined {
   return notice !== undefined && Object.hasOwn(notices, notice) ? notices[notice] : undefined;
 }
+
+/**
+ * A `?notice=` already resolved to words *and* to the form it belongs to.
+ *
+ * The `?notice=` pattern above answers "what happened"; it never answered
+ * "where does that answer belong". Pages with one form got away with the
+ * omission — every notice could only be about the one thing on screen. Pages
+ * with six forms did not: the trip Overview resolved sixty codes into a single
+ * banner under the `<h1>`, so a staffer who saved the requirements block two
+ * screens down was told the outcome somewhere they were not looking.
+ *
+ * `form` names the form a code came from. A page resolves its notice once,
+ * hands each form its own with `noticeForForm`, and each form renders it in its
+ * action row (`FormStatus`, src/components/ui/form.tsx). `"page"` stays
+ * available for the notices that really are about the page rather than one form
+ * on it — a permission refusal that bounced the staffer here from elsewhere.
+ */
+export type FormNotice = { form: string; tone: NoticeTone; text: string };
+
+/**
+ * This form's notice, or nothing when the page's notice belongs to a different
+ * one. Deliberately a function rather than an equality check at each call site:
+ * a mistyped `form` name would otherwise fail silently as "no notice", which is
+ * exactly the bug this whole mechanism exists to remove.
+ */
+export function noticeForForm(
+  notice: FormNotice | undefined,
+  form: string,
+): FormNotice | undefined {
+  return notice?.form === form ? notice : undefined;
+}

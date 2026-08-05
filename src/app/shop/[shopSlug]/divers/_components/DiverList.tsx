@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { EmptyState } from "@/components/EmptyState";
+import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass } from "@/components/ui/form";
@@ -26,7 +27,14 @@ export interface DiverListCopy {
   viewDivingToday: string;
   viewNeedsAttention: string;
   viewMissingContact: string;
+  viewRemoved: string;
   viewsAriaLabel: string;
+  /** Replaces the search hint under the heading while the Removed view is on. */
+  removedNote: string;
+  restore: string;
+  restoring: string;
+  /** `{name}` — one "Restore" per row needs a distinct accessible name. */
+  restoreDiverLabel: string;
   peopleHeading: string;
   /** Already pluralised for the count the badge carries — never a bare digit. */
   peopleCountLabel: string;
@@ -75,6 +83,39 @@ function cardCount(diver: DiverSummary): number {
 }
 
 /**
+ * The way back for one removed diver, on their own row.
+ *
+ * The undo toast that follows a removal is twelve seconds long; this is the
+ * affordance that still exists tomorrow. It refuses rather than clobbers when
+ * an active diver has since claimed the removed one's email (CR-008,
+ * `restoreDiver`), and the roster says so on the next render.
+ */
+function RestoreRow({
+  action,
+  personId,
+  fullName,
+  copy,
+}: {
+  action: (formData: FormData) => void;
+  personId: string;
+  fullName: string;
+  copy: DiverListCopy;
+}) {
+  return (
+    <form action={action} className="relative z-10">
+      <input type="hidden" name="personId" value={personId} />
+      <SubmitButton
+        pendingLabel={copy.restoring}
+        ariaLabel={fill(copy.restoreDiverLabel, { name: fullName })}
+        className={buttonClass({ variant: "secondary", size: "sm" })}
+      >
+        {copy.restore}
+      </SubmitButton>
+    </form>
+  );
+}
+
+/**
  * The divers list filters live as you type — the input drives the URL's `?q=`
  * (debounced) and the server answers with the matching page, so the roster
  * scales to thousands of records without shipping them all to the browser.
@@ -88,6 +129,7 @@ export function DiverList({
   filter,
   locale,
   importHref,
+  restoreAction,
   copy,
   pager,
 }: {
@@ -98,6 +140,13 @@ export function DiverList({
   locale: string;
   /** Where a bulk import lives, or null when this staffer may not run one. */
   importHref: string | null;
+  /**
+   * The roster's own restore, bound on the server. Null for a staffer who may
+   * not restore — which is the same staffer the Removed view is hidden from,
+   * so the rows and the chip appear and disappear together (H-14, ADR
+   * 20260724-role-gated-surfaces-hide-not-explain).
+   */
+  restoreAction: ((formData: FormData) => void) | null;
   copy: DiverListCopy;
   /**
    * The roster's `<Pager>`, rendered by the Server Component above this one.
@@ -116,11 +165,17 @@ export function DiverList({
   // still owes a safety contact. Each is a server-side WHERE clause
   // (`DiverFilter`, src/db/divers.ts), so a chip narrows the count and the
   // page together.
+  //
+  // "Removed" is the fourth, and the one that is not about a day: it is the
+  // only way to *find* a soft-deleted diver, who otherwise matches no search
+  // and sits in no view. It comes last, visually apart from the working views,
+  // and only for a staffer who may restore — the whole reason to go there.
   const VIEWS: { label: string; filter: DiverFilter }[] = [
     { label: copy.viewAllDivers, filter: "all" },
     { label: copy.viewDivingToday, filter: "diving_today" },
     { label: copy.viewNeedsAttention, filter: "needs_attention" },
     { label: copy.viewMissingContact, filter: "missing_contact" },
+    ...(restoreAction ? [{ label: copy.viewRemoved, filter: "removed" as DiverFilter }] : []),
   ];
   const router = useRouter();
   const pathname = usePathname();
@@ -251,7 +306,16 @@ export function DiverList({
               <span className="sr-only">{copy.peopleCountLabel}</span>
             </Badge>
           </h2>
-          {query ? null : <p className="mt-1 text-sm text-muted">{copy.searchHintText}</p>}
+          {/* The Removed view's line says what removal actually means here,
+              because the list underneath it looks exactly like the roster and
+              nothing else on screen would tell a reader these people are off
+              every list. It outranks the search hint, which is the same in
+              every view. */}
+          {filter === "removed" ? (
+            <p className="mt-1 text-sm text-muted">{copy.removedNote}</p>
+          ) : query ? null : (
+            <p className="mt-1 text-sm text-muted">{copy.searchHintText}</p>
+          )}
         </div>
         <div className="w-full sm:w-80">
           <label className="sr-only" htmlFor="diver-search">
@@ -354,6 +418,19 @@ export function DiverList({
                     ) : null}
                   </span>
                 </Link>
+                {/* Outside the card's `<Link>`, not inside it: a form nested in
+                    an anchor is invalid HTML and the tap target would fight
+                    the navigation. */}
+                {filter === "removed" && restoreAction ? (
+                  <div className="mt-2">
+                    <RestoreRow
+                      action={restoreAction}
+                      personId={diver.person.id}
+                      fullName={diver.person.fullName}
+                      copy={copy}
+                    />
+                  </div>
+                ) : null}
               </li>
             ))}
           </ul>
@@ -422,8 +499,18 @@ export function DiverList({
                             {fill(copy.toConfirmText, { count: confirmCount(diver) })}
                           </Badge>
                         ) : null}
-                        {pendingCount(diver) === 0 && confirmCount(diver) === 0 ? (
+                        {pendingCount(diver) === 0 &&
+                        confirmCount(diver) === 0 &&
+                        filter !== "removed" ? (
                           <span className="text-muted">{copy.noneText}</span>
+                        ) : null}
+                        {filter === "removed" && restoreAction ? (
+                          <RestoreRow
+                            action={restoreAction}
+                            personId={diver.person.id}
+                            fullName={diver.person.fullName}
+                            copy={copy}
+                          />
                         ) : null}
                       </div>
                     </td>
