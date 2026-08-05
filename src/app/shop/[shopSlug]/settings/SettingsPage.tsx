@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldActions, FieldGrid, PriceField } from "@/components/ui/form";
 import { InfoHint } from "@/components/ui/InfoHint";
-import { canPersonManagePaymentSettings } from "@/db/authz";
+import { canPersonManagePaymentSettings, canPersonManageShopSettings } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
 import {
@@ -24,6 +24,7 @@ import { currencyOptions } from "@/i18n/currency-labels";
 import { catalogItemLabel, rentableItemLabel } from "@/i18n/rental-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
+import { isAddressLookupConfigured } from "@/lib/address-lookup";
 import {
   canExportShopData,
   canImportShopData,
@@ -44,6 +45,7 @@ import {
   DEFAULT_TIMEZONE,
 } from "@/lib/timezones";
 import { isTrialExpired, trialDaysRemaining, trialEndsAt } from "@/lib/trial";
+import { AddressFields } from "./AddressFields";
 import {
   disconnectAction,
   refreshAction,
@@ -320,6 +322,15 @@ export default async function SettingsPage({
   const { shopSlug } = await params;
   const { notice, saved } = await searchParams;
   const db = await getDb();
+  // Every card on this page changes the shop rather than the day, so the page
+  // itself is owner/manager work (src/lib/authz.ts — canManageShopSettings),
+  // checked against live roles. Bounced to Today with an explanatory notice
+  // rather than teleporting silently, exactly like the export and import pages
+  // below it. `/settings/calendar` is deliberately outside this gate: a staff
+  // calendar subscription is a personal feed, not shop policy.
+  if (!(await canPersonManageShopSettings(db, session.user.shopId, session.user.personId))) {
+    redirect(`/shop/${session.user.shopSlug}?notice=settings_not_authorized`);
+  }
   const shop = await getShopById(db, session.user.shopId);
   if (!shop) redirect("/");
   const offeredKinds = new Set(toRentableKinds(shop.rentalItems));
@@ -349,6 +360,7 @@ export default async function SettingsPage({
   const canViewTrialStatus = !shop.isDemo && canViewShopReports(session.user.roles);
   const locale = await requestLocale(shop.defaultLocale);
   const shopCurrency = toShopCurrency(shop.currency);
+  const addressLookupEnabled = isAddressLookupConfigured();
   const currencyMismatch = stripeCurrencyMismatch(shopCurrency, account);
   const t = staffTranslator(locale);
   const trialDaysLeft = trialDaysRemaining(shop.createdAt, nowDate());
@@ -509,64 +521,39 @@ export default async function SettingsPage({
           />
           <SectionNotice banner={banner} section="address" active={activeSection} />
           <FieldGrid as="form" action={saveAddressAction} columns={2} className="mt-4">
-            <Field label={t("settings.main.address.streetLabel")} className="sm:col-span-2">
-              <input
-                name="addressStreet"
-                type="text"
-                maxLength={200}
-                autoComplete="street-address"
-                defaultValue={shop.addressStreet ?? ""}
-                placeholder={t("settings.main.address.streetPlaceholder")}
-                className={controlClass}
-              />
-            </Field>
-            <Field label={t("settings.main.address.localityLabel")}>
-              <input
-                name="addressLocality"
-                type="text"
-                maxLength={120}
-                autoComplete="address-level2"
-                defaultValue={shop.addressLocality ?? ""}
-                placeholder={t("settings.main.address.localityPlaceholder")}
-                className={controlClass}
-              />
-            </Field>
-            <Field label={t("settings.main.address.regionLabel")}>
-              <input
-                name="addressRegion"
-                type="text"
-                maxLength={120}
-                autoComplete="address-level1"
-                defaultValue={shop.addressRegion ?? ""}
-                placeholder={t("settings.main.address.regionPlaceholder")}
-                className={controlClass}
-              />
-            </Field>
-            <Field label={t("settings.main.address.postalCodeLabel")}>
-              <input
-                name="addressPostalCode"
-                type="text"
-                maxLength={20}
-                autoComplete="postal-code"
-                defaultValue={shop.addressPostalCode ?? ""}
-                placeholder={t("settings.main.address.postalCodePlaceholder")}
-                className={controlClass}
-              />
-            </Field>
-            <Field
-              label={t("settings.main.address.countryLabel")}
-              hint={t("settings.main.address.countryHint")}
-            >
-              <input
-                name="addressCountry"
-                type="text"
-                maxLength={2}
-                autoComplete="country"
-                defaultValue={shop.addressCountry ?? ""}
-                placeholder={t("settings.main.address.countryPlaceholder")}
-                className={controlClass}
-              />
-            </Field>
+            <AddressFields
+              initial={{
+                addressStreet: shop.addressStreet ?? "",
+                addressLocality: shop.addressLocality ?? "",
+                addressRegion: shop.addressRegion ?? "",
+                addressPostalCode: shop.addressPostalCode ?? "",
+                addressCountry: shop.addressCountry ?? "",
+              }}
+              // No geocoder credentials is the ordinary local and self-hosted
+              // case: the search box is simply absent and the card is the five
+              // boxes it has always been (src/lib/address-lookup.ts).
+              enabled={addressLookupEnabled}
+              copy={{
+                searchLabel: t("settings.main.address.searchLabel"),
+                searchHint: t("settings.main.address.searchHint"),
+                searchPlaceholder: t("settings.main.address.searchPlaceholder"),
+                searching: t("settings.main.address.searching"),
+                noMatches: t("settings.main.address.noMatches"),
+                lookupFailed: t("settings.main.address.lookupFailed"),
+                suggestionsLabel: t("settings.main.address.suggestionsLabel"),
+                streetLabel: t("settings.main.address.streetLabel"),
+                streetPlaceholder: t("settings.main.address.streetPlaceholder"),
+                localityLabel: t("settings.main.address.localityLabel"),
+                localityPlaceholder: t("settings.main.address.localityPlaceholder"),
+                regionLabel: t("settings.main.address.regionLabel"),
+                regionPlaceholder: t("settings.main.address.regionPlaceholder"),
+                postalCodeLabel: t("settings.main.address.postalCodeLabel"),
+                postalCodePlaceholder: t("settings.main.address.postalCodePlaceholder"),
+                countryLabel: t("settings.main.address.countryLabel"),
+                countryHint: t("settings.main.address.countryHint"),
+                countryPlaceholder: t("settings.main.address.countryPlaceholder"),
+              }}
+            />
             <FieldActions>
               <SubmitButton
                 pendingLabel={t("settings.main.address.submitting")}

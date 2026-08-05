@@ -76,18 +76,15 @@ test.describe("as owner", () => {
 test.describe("as divemaster", () => {
   signedInAs("divemaster");
 
-  test("a divemaster sees neither door, and still gets the jump row", async ({ page }) => {
+  test("a divemaster does not reach the page at all", async ({ page }) => {
+    // This used to check which *cards* a divemaster saw on the settings page.
+    // The page itself is owner/manager work now — every card on it changes the
+    // shop rather than the day — so the honest assertion is that they never
+    // arrive, and are told why rather than silently teleported.
     await page.goto(`/shop/${SHOP}/settings`);
 
-    // Neither gate admits a divemaster, so neither card is on the page —
-    // rather than a link that would bounce them straight back here.
-    await expect(page.getByRole("link", { name: "Manage team" })).toHaveCount(0);
-    await expect(page.getByRole("link", { name: "Manage promo codes" })).toHaveCount(0);
-
-    // Getting around the page is not gated on anything.
-    const jump = page.getByRole("navigation", { name: "Jump to a section" });
-    await expect(jump.getByRole("link", { name: "Your shop" })).toBeVisible();
-    await jump.getByRole("link", { name: "Money" }).click();
-    await expect(page).toHaveURL(new RegExp(`/shop/${SHOP}/settings#money$`));
+    await expect(page).toHaveURL(new RegExp(`/shop/${SHOP}(\\?|$)`));
+    await expect(page.getByText(/managed by the owner or a manager/i)).toBeVisible();
+    await expect(page.getByRole("navigation", { name: "Jump to a section" })).toHaveCount(0);
   });
 });

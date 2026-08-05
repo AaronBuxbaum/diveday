@@ -275,7 +275,6 @@
       "phoneLabel": "Phone",
       "dateOfBirthLabel": "Date of birth",
       "optionalHint": "(optional)",
-      "dateOfBirthDescription": "Used to check a course's minimum age on the day it runs. Leave it blank and courses book as they always have.",
       "diveInsuranceFieldLabel": "Dive insurance",
       "diveInsuranceDescription": "DAN or any other dive-accident cover the diver carries.",
       "diveInsurancePlaceholder": "DAN #12345",
@@ -363,7 +362,7 @@
     "history": {
       "heading": "Shop history",
       "importedVisitsText": "{count, plural, one {# visit} other {# visits}} came across from your previous system. Those lines are booking records, not dive records — they say what was booked and what your old software called it.",
-      "noTripsYet": "No trips yet — book them onto an open trip and it'll show up here.",
+      "noTripsYet": "Nothing here yet — past trips and imported visits show up here.",
       "imported": "Imported",
       "bookingFallback": "Booking",
       "showOlderEntries": "{count, plural, one {Show # older entry} other {Show # older entries}}"
@@ -389,9 +388,14 @@
       "saved": "Saved",
       "needed": "Needed",
       "reusableForFuture": "Reusable for future bookings",
-      "shopHistory": "Shop history",
       "bookingsText": "{count, plural, one {# booking} other {# bookings}}",
-      "importedSuffix": " · {count} imported"
+      "importedSuffix": " · {count} imported",
+      "waiver": "Waiver",
+      "waiverGoodUntil": "Good until {date}",
+      "waiverLastSigned": "Last signed {date}",
+      "waiverHeldSince": "Held since {date}",
+      "waiverSignsOnce": "Signed once, good for the whole shop",
+      "bookings": "Bookings"
     },
     "notices": {
       "captured": "Card captured as pending. Look the number up with the agency, then mark it certified before it can make this diver ready.",
@@ -1882,6 +1886,13 @@
         "heading": "Shop address",
         "description": "Where a diver meets the boat or walks into the storefront.",
         "detail": "Your shop's physical business address, not a staff member's personal one. Published so search engines can place your shop as a real venue. Every field is optional, and empties independently.",
+        "searchLabel": "Find your address",
+        "searchHint": "optional — fills the boxes below",
+        "searchPlaceholder": "Start typing your shop's address…",
+        "searching": "Looking…",
+        "noMatches": "No matches — fill the boxes in below instead.",
+        "lookupFailed": "Address lookup isn't available right now. Fill the boxes in below.",
+        "suggestionsLabel": "Address suggestions",
         "streetLabel": "Street address",
         "streetPlaceholder": "100 Ocean Drive",
         "localityLabel": "City / town",
@@ -2590,7 +2601,13 @@
     "notice": {
       "waiversNotAuthorized": "Editing the waiver is limited to owners and managers.",
       "exportNotAuthorized": "Data export is limited to owners and managers.",
-      "reportsNotAuthorized": "Reports read the shop's revenue, so they're limited to owners and managers."
+      "reportsNotAuthorized": "Reports read the shop's revenue, so they're limited to owners and managers.",
+      "settingsNotAuthorized": "Shop settings are managed by the owner or a manager. Your calendar subscription is still yours to set up.",
+      "teamNotAuthorized": "Team management is limited to owners and managers.",
+      "importNotAuthorized": "Importing writes divers' personal and medical records, so it's limited to owners and managers.",
+      "backupNotAuthorized": "Only an owner or manager can change backup settings.",
+      "whatsappNotAuthorized": "Only an owner or manager can change WhatsApp settings.",
+      "promosNotAuthorized": "Promo codes discount real money, so they're limited to owners and managers."
     },
     "orientation": {
       "heading": "New here? A few pointers for your role.",
@@ -2856,7 +2873,8 @@
       "reports": "Reports",
       "promoCodes": "Promo codes",
       "settings": "Settings",
-      "team": "Team"
+      "team": "Team",
+      "calendarFeed": "Calendar subscription"
     },
     "subSurfaceRipple": {
       "iconTitle": "Roll call complete icon",
@@ -3266,6 +3284,12 @@
       "previous": "Previous",
       "next": "Next",
       "position": "Page {page} of {pageCount}"
+    },
+    "waiverStatus": {
+      "none": "Not signed",
+      "current": "Signed",
+      "expired": "Needs signing again",
+      "medicalReview": "Medical review"
     }
   },
   "whatsapp": {

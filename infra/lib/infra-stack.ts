@@ -664,7 +664,40 @@ exports.handler = async (event) => {
         "Run to mint credentials for whatever runs the scheduled export. Store them in that runner's secret settings — never in the repo.",
     });
 
-    // 12. Everything this stack deliberately cannot do, printed after every
+    // 12. Address lookup for the settings address card - see ADR
+    // 20260804-aws-location-address-lookup. Amazon Location Service's
+    // geo-places Autocomplete, called *server-side* from a Next.js server
+    // action, which is the whole reason this is an IAM user rather than the
+    // browser API key a Google Places widget would need: the credential never
+    // reaches a browser, so there is nothing to referrer-restrict and nothing
+    // spendable sitting in client JavaScript.
+    //
+    // Its own user, not the SES or SNS one: least privilege means a geocoding
+    // key can never send mail, and a mail key can never spend the geocoding
+    // budget.
+    const placesLookupUser = new iam.User(this, "PlacesLookupUser", {
+      userName: "diveday-places-lookup",
+    });
+    placesLookupUser.addToPolicy(
+      new iam.PolicyStatement({
+        // Autocomplete only. Not Geocode, not GetPlace, not SearchText, and
+        // nothing from the maps or routes families - the app calls exactly one
+        // operation, so that is exactly what this identity can do.
+        actions: ["geo-places:Autocomplete"],
+        // The geo-places API is resource-less for this call shape (there is no
+        // place-index resource to scope to in the standalone Places API), so
+        // the action list above is the actual boundary.
+        resources: ["*"],
+      }),
+    );
+
+    new cdk.CfnOutput(this, "PlacesLookupAccessKeyInstructions", {
+      value: `aws iam create-access-key --user-name ${placesLookupUser.userName}`,
+      description:
+        "Run once to mint address-lookup credentials. Store the output in the app's PLACES_AWS_* env vars - never in the repo. Leaving them unset is supported: the settings address card falls back to plain text boxes.",
+    });
+
+    // 13. Everything this stack deliberately cannot do, printed after every
     // deploy so the remainder is a visible checklist rather than something to
     // remember. Each entry is here for a structural reason, not because it is
     // unfinished — see §7's "why each one resists automation" table in

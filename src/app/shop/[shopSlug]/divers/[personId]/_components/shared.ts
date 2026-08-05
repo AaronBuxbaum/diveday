@@ -31,6 +31,34 @@ export const PAYMENT_STATUS_KEYS: Record<string, StaffMessageKey> = {
   refunded: "divers.shared.paymentStatus.refunded",
 };
 
+/**
+ * What one booking owes and what has been raised against it.
+ *
+ * Upcoming and Past both show a booking's money state on the row, so they read
+ * it from here rather than each reaching into `diver.orders` and
+ * `diver.bookingPayments` their own way — which is how the two lists would
+ * drift into disagreeing about the same seat.
+ */
+export function bookingMoney(diver: DiverProfile, bookingId: string) {
+  return {
+    order: diver.orders.find((row) => row.order.bookingId === bookingId) ?? null,
+    payment: diver.bookingPayments.find((row) => row.booking.id === bookingId) ?? null,
+  };
+}
+
+/**
+ * The one status word a booking's money wears: the order's if an order exists
+ * (it is the billing record of record), otherwise the booking's own payment
+ * status, otherwise nothing has been raised at all.
+ */
+export function bookingMoneyStatusKey(
+  money: ReturnType<typeof bookingMoney>,
+): StaffMessageKey | null {
+  if (money.order) return ORDER_STATUS_KEYS[money.order.order.status] ?? null;
+  if (money.payment) return PAYMENT_STATUS_KEYS[money.payment.payment.status] ?? null;
+  return null;
+}
+
 export const ORDER_STATUS_KEYS: Record<string, StaffMessageKey> = {
   open: "divers.shared.orderStatus.open",
   paid: "divers.shared.orderStatus.paid",

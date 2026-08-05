@@ -50,6 +50,7 @@
     "build:sw": "node scripts/build-service-worker.mjs"
   },
   "dependencies": {
+    "@aws-sdk/client-geo-places": "^3.1103.0",
     "@aws-sdk/client-sesv2": "^3.1102.0",
     "@aws-sdk/client-sns": "^3.1102.0",
     "@electric-sql/pglite": "^0.5.4",

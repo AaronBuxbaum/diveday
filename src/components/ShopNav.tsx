@@ -51,6 +51,7 @@ function destinationLabelsFor(t: (key: StaffMessageKey) => string): StaffDestina
     promoCodes: t("shared.shopNavLinks.promoCodes"),
     settings: t("shared.shopNavLinks.settings"),
     team: t("shared.shopNavLinks.team"),
+    calendarFeed: t("shared.shopNavLinks.calendarFeed"),
   };
 }
 

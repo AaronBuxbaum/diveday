@@ -132,6 +132,78 @@ export function effectiveWaiverForBooking(input: {
   return own && own.status !== "completed" ? own : null;
 }
 
+/**
+ * Where a diver stands with **the shop**, independent of any one booking.
+ *
+ * A release is signed once and carries across every booking the diver has here
+ * ({@link effectiveWaiverForBooking}), so "has this person signed?" is a fact
+ * about the diver and the shop — not about a seat on Saturday's boat. This is
+ * that fact, for the diver record, where staff go to answer it.
+ *
+ * Codes, never sentences: the surface picks the words. Deliberately carries
+ * dates and nothing else from the signed evidence — never the medical answers,
+ * which stay on the waiver surfaces that exist to review them.
+ */
+export type ShopWaiverStatus =
+  | { state: "none" }
+  /** Signed, clean, against current terms, and inside the validity window. */
+  | { state: "current"; signedAt: Date; expiresAt: Date; medical: MedicalWaiverMark | null }
+  /**
+   * Signed before, but the signature no longer stands — aged past the validity
+   * window, or given against terms the shop has since edited. Either way the
+   * diver signs again, and `signedAt` says how long ago they last did.
+   */
+  | { state: "expired"; signedAt: Date }
+  /** A health disclosure is waiting on a person, and fails closed until it is resolved. */
+  | { state: "medical_review"; at: Date };
+
+/**
+ * The diver's standing with the shop, from their signed evidence here.
+ *
+ * Mirrors {@link effectiveWaiverForBooking}'s precedence, minus the booking: an
+ * unresolved medical hold no older than the last clean signature wins, because a
+ * health disclosure made at or after that signature means the signature can no
+ * longer be trusted. Fails closed on anything missing.
+ *
+ * `personSignedWaivers` is the diver's completed and medical-review records at
+ * this shop, superseded ones excluded (`listSignedWaiversByPerson`).
+ */
+export function shopWaiverStatus(input: {
+  personSignedWaivers: readonly WaiverRecord[];
+  currentTemplateVersion: number | null;
+  now?: Date;
+}): ShopWaiverStatus {
+  const now = input.now ?? nowDate();
+  const clean = input.personSignedWaivers
+    .filter((record) => isCompletedWaiverCurrent(record, input.currentTemplateVersion, now))
+    .sort((a, b) => signatureTime(b) - signatureTime(a))[0];
+
+  const cleanTime = clean ? signatureTime(clean) : Number.NEGATIVE_INFINITY;
+  const hold = input.personSignedWaivers
+    .filter((record) => record.status === "medical_review" && !record.supersededAt)
+    .filter((record) => signatureTime(record) >= cleanTime)
+    .sort((a, b) => signatureTime(b) - signatureTime(a))[0];
+  if (hold) return { state: "medical_review", at: new Date(signatureTime(hold)) };
+
+  if (clean) {
+    return {
+      state: "current",
+      signedAt: new Date(signatureTime(clean)),
+      expiresAt: new Date(signatureTime(clean) + WAIVER_SIGNATURE_VALIDITY_MS),
+      medical: medicalWaiverMark(clean),
+    };
+  }
+
+  // Nothing current, but they have signed here before: "sign again", not
+  // "never signed". The two send staff down very different conversations.
+  const lapsed = input.personSignedWaivers
+    .filter((record) => record.status === "completed")
+    .sort((a, b) => signatureTime(b) - signatureTime(a))[0];
+  if (lapsed) return { state: "expired", signedAt: new Date(signatureTime(lapsed)) };
+
+  return { state: "none" };
+}
+
 export type WaiverState =
   | "not_sent"
   | "awaiting_signature"

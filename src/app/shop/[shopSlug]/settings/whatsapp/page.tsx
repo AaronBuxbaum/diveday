@@ -93,7 +93,7 @@ export default async function WhatsAppSettingsPage({
     session.user.personId,
   );
   if (!allowed) {
-    redirect(`/shop/${session.user.shopSlug}/settings?notice=whatsapp_not_authorized`);
+    redirect(`/shop/${session.user.shopSlug}?notice=whatsapp_not_authorized`);
   }
 
   const account = await getShopWhatsAppAccount(db, session.user.shopId);

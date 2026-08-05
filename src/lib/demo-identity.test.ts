@@ -1,26 +1,54 @@
 import { describe, expect, it } from "vitest";
 import { DEV_STAFF_LOGINS } from "@/db/dev-credentials";
-import { DEMO_EMAIL_DOMAIN, generateDemoShopIdentity, isDemoAccountEmail } from "./demo-identity";
+import {
+  DEMO_EMAIL_DOMAIN,
+  DEMO_NAME_COMBINATIONS,
+  generateDemoShopIdentity,
+  isDemoAccountEmail,
+} from "./demo-identity";
 
 describe("generateDemoShopIdentity", () => {
   it("produces a URL-safe slug and a matching display name", () => {
     const { name, slug } = generateDemoShopIdentity();
     expect(slug).toMatch(/^[a-z0-9-]+$/);
-    expect(slug).toMatch(/-divers-[0-9a-f]{6}$/);
-    expect(name).toMatch(/ Divers$/);
     // The onboarding slug rule (max 50) also comfortably holds here.
     expect(slug.length).toBeLessThanOrEqual(50);
+    // The slug *is* the name, lowercased and hyphenated — nothing appended.
+    expect(slug).toBe(name.toLowerCase().replace(/\s+/g, "-"));
   });
 
-  it("namespaces staff emails under the unique slug so they never collide globally", () => {
+  it("leaves no generated token in the name a visitor is shown", () => {
+    for (let i = 0; i < 200; i += 1) {
+      const { slug } = generateDemoShopIdentity();
+      // The old shape was `<adjective>-<noun>-divers-a1b2c3`. A trailing hex
+      // blob is exactly what this change removed from the demo's URL and from
+      // the sign-in address printed in the demo banner.
+      expect(slug).not.toMatch(/-[0-9a-f]{6}$/);
+    }
+  });
+
+  it("never repeats a word ('Reef Reef Divers')", () => {
+    for (let i = 0; i < 500; i += 1) {
+      const [adjective, noun] = generateDemoShopIdentity().slug.split("-");
+      expect(adjective).not.toBe(noun);
+    }
+  });
+
+  it("offers more than 10,000 names, so collisions stay rare without a suffix", () => {
+    expect(DEMO_NAME_COMBINATIONS).toBeGreaterThan(10_000);
+  });
+
+  it("actually reaches a wide spread of that space in practice", () => {
+    // Guards the generator itself, not the arithmetic above: a pick() that
+    // silently stopped varying would still satisfy the constant.
+    const slugs = new Set(Array.from({ length: 500 }, () => generateDemoShopIdentity().slug));
+    expect(slugs.size).toBeGreaterThan(400);
+  });
+
+  it("namespaces staff emails under the slug", () => {
     const identity = generateDemoShopIdentity();
     expect(identity.emailFor("dana")).toBe(`dana@${identity.slug}.demo.invalid`);
     expect(identity.emailFor("marcus")).toBe(`marcus@${identity.slug}.demo.invalid`);
-  });
-
-  it("is overwhelmingly unlikely to repeat a slug across mints", () => {
-    const slugs = new Set(Array.from({ length: 200 }, () => generateDemoShopIdentity().slug));
-    expect(slugs.size).toBe(200);
   });
 });
 

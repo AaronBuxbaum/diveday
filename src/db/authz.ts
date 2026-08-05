@@ -7,6 +7,7 @@ import {
   canManageMessagingSettings,
   canManageOrders,
   canManagePaymentSettings,
+  canManageShopSettings,
   canManageStaffAccounts,
   canManageWaiverTemplates,
   canOverrideGearRequest,
@@ -85,6 +86,15 @@ export const canPersonManageOrders = (db: DbExecutor, shopId: string, personId: 
 
 export const canPersonManageWaiverTemplates = (db: DbExecutor, shopId: string, personId: string) =>
   canPerson(db, shopId, personId, canManageWaiverTemplates);
+
+/**
+ * Live DB-checked companion of the settings gate (src/lib/authz.ts). The
+ * settings page and every one of its mutations call this rather than reading
+ * the JWT's roles, so a demoted staff member loses the shop's configuration on
+ * their next request instead of at their next sign-in.
+ */
+export const canPersonManageShopSettings = (db: DbExecutor, shopId: string, personId: string) =>
+  canPerson(db, shopId, personId, canManageShopSettings);
 
 export const canPersonDeleteDiver = (db: DbExecutor, shopId: string, personId: string) =>
   canPerson(db, shopId, personId, canDeleteDiver);

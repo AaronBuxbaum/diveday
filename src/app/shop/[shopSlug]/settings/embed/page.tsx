@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
+import { canPersonManageShopSettings } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
 import { requestLocale } from "@/i18n/request";
@@ -34,6 +35,12 @@ export const metadata: Metadata = { title: "Website embed — DiveDay" };
 export default async function EmbedSettingsPage() {
   const session = await requireStaffSession();
   const db = await getDb();
+  // The snippet publishes the shop's schedule on the shop's own website — shop
+  // configuration, so the same owner/manager gate as the settings page that
+  // links here (src/lib/authz.ts — canManageShopSettings).
+  if (!(await canPersonManageShopSettings(db, session.user.shopId, session.user.personId))) {
+    redirect(`/shop/${session.user.shopSlug}?notice=settings_not_authorized`);
+  }
   // Built from the staff member's own authorized shop, never the route's
   // shopSlug param — a stale or mismatched URL segment must never generate
   // a snippet that labels one shop's name on another shop's calendar.

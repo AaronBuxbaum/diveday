@@ -62,6 +62,18 @@ const AUTH_NOTICES: Record<string, StaffMessageKey> = {
   waivers_not_authorized: "shopHome.notice.waiversNotAuthorized",
   export_not_authorized: "shopHome.notice.exportNotAuthorized",
   reports_not_authorized: "shopHome.notice.reportsNotAuthorized",
+  settings_not_authorized: "shopHome.notice.settingsNotAuthorized",
+  // These four used to land on Settings, which was the nearest parent that
+  // could explain them. Settings is owner/manager work now, and every one of
+  // these gates is the *same* owner/manager gate — so a staffer refused there
+  // is refused from Settings too, and landing them on it meant a second bounce
+  // that dropped their reason on the floor. They land here instead, where the
+  // reason survives.
+  team_not_authorized: "shopHome.notice.teamNotAuthorized",
+  import_not_authorized: "shopHome.notice.importNotAuthorized",
+  backup_not_authorized: "shopHome.notice.backupNotAuthorized",
+  whatsapp_not_authorized: "shopHome.notice.whatsappNotAuthorized",
+  promos_not_authorized: "shopHome.notice.promosNotAuthorized",
 };
 
 export const metadata: Metadata = {

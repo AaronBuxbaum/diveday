@@ -19,35 +19,37 @@ test("the promo page is owner/manager work, not open to every staff member", asy
 test.describe("as captain", () => {
   signedInAs("captain");
 
-  test("a non-owner is bounced to Settings with the promo-specific refusal, not the rentals one", async ({
+  test("a non-owner is bounced with the promo-specific refusal, not a generic one", async ({
     page,
   }) => {
-    // A captain has no use for promo codes (they discount real money). Lands on
-    // Settings — this gate's redirect target — but must show *why Promos
-    // refused*, not Settings' own rental-prices `not_authorized` message
-    // (task 82, UX persona 11 "Kai").
+    // A captain has no use for promo codes (they discount real money). The
+    // landing must show *why Promos refused*, not a message about a surface
+    // they never asked for (task 82, UX persona 11 "Kai"). That landing is
+    // Today now: it used to be Settings, which takes the same owner/manager
+    // gate this captain just failed, so it bounced them again and the
+    // promo-specific reason was lost on the way.
     await page.goto("/shop/blue-mantis/promos");
-    // Not a URL assertion: FlashParams strips `?notice=promos_not_authorized`
+    // Not a URL assertion alone: FlashParams strips `?notice=promos_not_authorized`
     // via history.replaceState shortly after mount — the rendered banner is
     // the stable signal.
-    await expect(page).toHaveURL(/\/shop\/blue-mantis\/settings(\?.*)?$/);
-    // Scoped to the flash notice itself (role="alert", ShopNotice's danger
-    // tone): the settings page also carries its own standing "payments are
-    // gated" paragraph, unconditionally shown to any non-owner regardless of
-    // which page redirected them here, and it happens to share a leading
-    // clause with the rentals notAuthorized message — a page-wide substring
-    // search can't tell the two apart, but the alert region can. Also filtered
-    // by text: Next's own always-present `#__next-route-announcer__` carries
-    // `role="alert"` too, so an unfiltered query is ambiguous the moment
-    // FlashParams' `history.replaceState` call above makes the router treat
-    // this as a navigation and mount it.
-    const flash = page.getByRole("alert").filter({ hasText: "Promo codes discount real money" });
+    await expect(page).toHaveURL(/\/shop\/blue-mantis(\?.*)?$/);
+    // Scoped to the notice region and filtered by text. `role="status"`, not
+    // `role="alert"`: Today renders an authorization landing in ShopNotice's
+    // *warning* tone, where Settings used danger — this test asserted the
+    // Settings shape and had to move with the landing. The filter also keeps
+    // Next's own always-present `#__next-route-announcer__` out, which carries
+    // a live-region role too and matches the moment FlashParams'
+    // `history.replaceState` above makes the router treat this as a navigation.
+    const flash = page.getByRole("status").filter({ hasText: "Promo codes discount real money" });
     await expect(flash).toContainText(
       "Promo codes discount real money, so they're limited to owners and managers.",
     );
+    // Still the promo-specific reason, never a message about a surface this
+    // captain never asked for — the whole point of the separate notice code.
     await expect(flash).not.toContainText(
       "The rental catalog, rental prices, and Stripe connection",
     );
+    await expect(flash).not.toContainText("Shop settings are managed by the owner");
   });
 });
 

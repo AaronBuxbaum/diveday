@@ -109,14 +109,14 @@ export default async function PromosPage({
     session.user.shopId,
     session.user.personId,
   );
-  // Still lands on Settings (Promos itself is owner/manager-only content, so
-  // redirecting back to Promos with its own notice would just refuse again)
-  // but with its own notice code, so Settings renders the promo-specific
-  // explanation (`promos.notice.notAuthorized`) rather than reusing its own
-  // `not_authorized` code, which is the *rentals* section's message (task 82,
-  // UX persona 11 "Kai") — a diver-facing "why was I bounced here" answer,
-  // not a message about a different surface they never asked for.
-  if (!allowed) redirect(`/shop/${shopSlug}/settings?notice=promos_not_authorized`);
+  // Lands on Today, with its own notice code so the reader gets the
+  // promo-specific explanation (`promos.notice.notAuthorized`) rather than a
+  // message about a different surface they never asked for (task 82, UX
+  // persona 11 "Kai"). It used to land on Settings, as the nearest surface
+  // that could explain it; Settings is owner/manager work now and takes the
+  // same gate this one just failed, so that landing became a second bounce
+  // that dropped the reason on the floor.
+  if (!allowed) redirect(`/shop/${shopSlug}?notice=promos_not_authorized`);
 
   const now = nowDate();
   const [shop, promoPage, stripeAccount, dealPage] = await Promise.all([

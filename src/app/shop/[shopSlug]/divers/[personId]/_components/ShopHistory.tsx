@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { formatCalendarDate } from "@/lib/calendar-date";
+import { nowDate } from "@/lib/clock";
 import { formatShortDate, formatTimeRange } from "@/lib/format";
 import {
   type HistoryEntry,
@@ -9,6 +10,7 @@ import {
   priorVisitStanding,
   SHOP_HISTORY_PREVIEW_COUNT,
 } from "@/lib/prior-visits";
+import { BookingMoneyCell } from "./BookingMoneyCell";
 import type { DiverProfile, Shop } from "./shared";
 
 type Booking = DiverProfile["bookings"][number];
@@ -25,15 +27,21 @@ type PriorVisit = DiverProfile["priorVisits"][number];
  */
 function HistoryRow({
   item,
+  diver,
   shop,
   locale,
   shopSlug,
+  personId,
+  paymentsConnected,
   t,
 }: {
   item: HistoryEntry<Booking, PriorVisit>;
+  diver: DiverProfile;
   shop: Shop;
   locale: string;
   shopSlug: string;
+  personId: string;
+  paymentsConnected: boolean;
   t: StaffTranslator;
 }) {
   if (item.kind === "booking") {
@@ -53,9 +61,19 @@ function HistoryRow({
             {course ? ` · ${course.title}` : ""}
           </p>
         </div>
-        <span className="rounded-full bg-surface-sunken px-3 py-1 text-sm text-muted">
-          {booking.status.replace("_", " ")}
-        </span>
+        {/* What money did, not what the booking row says: a past seat's
+            interesting fact is whether it was paid for, and an unpaid one is
+            exactly what a shop chases. `booking.status` used to render here as
+            a raw enum with its underscores swapped for spaces — the one place
+            on this page a domain code reached the screen unlabelled. */}
+        <BookingMoneyCell
+          diver={diver}
+          bookingId={booking.id}
+          shopSlug={shopSlug}
+          personId={personId}
+          paymentsConnected={paymentsConnected}
+          t={t}
+        />
       </li>
     );
   }
@@ -99,14 +117,29 @@ export function ShopHistory({
   shop,
   locale,
   shopSlug,
+  personId,
+  paymentsConnected,
+  now = nowDate(),
 }: {
   diver: DiverProfile;
   shop: Shop;
   locale: string;
   shopSlug: string;
+  personId: string;
+  paymentsConnected: boolean;
+  now?: Date;
 }) {
   const t = staffTranslator(locale);
-  const history = mergeShopHistory(diver.bookings, diver.priorVisits, {
+  // History is what is *behind* the diver. Everything still ahead is listed
+  // once, above, under Upcoming — this list used to repeat all of it, so the
+  // same Saturday charter appeared in both and the page read as three tellings
+  // of one story. A cancelled booking is history whenever it falls: the seat is
+  // not coming back, and dropping it would quietly erase a real record.
+  const past = diver.bookings.filter(
+    ({ booking, trip }) =>
+      trip.startsAt < now || booking.status === "cancelled" || trip.status !== "scheduled",
+  );
+  const history = mergeShopHistory(past, diver.priorVisits, {
     bookingStartsAt: (booking) => booking.trip.startsAt,
     visitedOn: (visit) => visit.visitedOn,
     timezone: shop.timezone,
@@ -139,8 +172,11 @@ export function ShopHistory({
                 locale={locale}
                 key={historyKey(item)}
                 item={item}
+                diver={diver}
                 shop={shop}
                 shopSlug={shopSlug}
+                personId={personId}
+                paymentsConnected={paymentsConnected}
                 t={t}
               />
             ))}
@@ -156,8 +192,11 @@ export function ShopHistory({
                     locale={locale}
                     key={historyKey(item)}
                     item={item}
+                    diver={diver}
                     shop={shop}
                     shopSlug={shopSlug}
+                    personId={personId}
+                    paymentsConnected={paymentsConnected}
                     t={t}
                   />
                 ))}

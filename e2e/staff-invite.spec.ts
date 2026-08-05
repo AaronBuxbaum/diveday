@@ -146,11 +146,13 @@ test.describe("as captain", () => {
 
   test("a captain (not owner/manager) is redirected away from team settings", async ({ page }) => {
     await page.goto(`/shop/${SHOP}/settings/team`);
-    // The refusal lands on Settings and says why, instead of teleporting
-    // silently to Today — the same explained-landing rule promos and
-    // WhatsApp already followed. FlashParams strips the query, so assert
-    // the banner text rather than the URL param.
-    await expect(page).toHaveURL(`/shop/${SHOP}/settings`);
+    // The refusal says why instead of teleporting silently — the same
+    // explained-landing rule every gate refusal follows. It lands on Today
+    // rather than Settings: Settings takes the same owner/manager gate now, so
+    // landing there would bounce this captain a second time and lose the
+    // reason. FlashParams strips the query, so assert the banner text rather
+    // than the URL param.
+    await expect(page).toHaveURL(new RegExp(`/shop/${SHOP}(\\?.*)?$`));
     await expect(
       page.getByText("Team management is limited to owners and managers."),
     ).toBeVisible();

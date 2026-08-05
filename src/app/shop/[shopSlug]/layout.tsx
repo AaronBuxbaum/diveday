@@ -17,6 +17,7 @@ import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { auth } from "@/lib/auth";
 import {
+  canManageShopSettings,
   canManageStaffAccounts,
   canManageWaiverTemplates,
   canViewShopReports,
@@ -211,6 +212,7 @@ export default async function ShopLayout({
             waivers: canManageWaiverTemplates(session.user.roles),
             reports: canViewShopReports(session.user.roles),
             team: canManageStaffAccounts(session.user.roles),
+            settings: canManageShopSettings(session.user.roles),
           }}
           navCounts={{ reviews: navReviewsCount, blockers: navBlockersCount }}
           locale={locale}

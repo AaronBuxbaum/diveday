@@ -275,7 +275,6 @@
       "phoneLabel": "Teléfono",
       "dateOfBirthLabel": "Fecha de nacimiento",
       "optionalHint": "(opcional)",
-      "dateOfBirthDescription": "Se usa para verificar la edad mínima de un curso el día que se imparte. Déjalo en blanco y los cursos se reservan como siempre.",
       "diveInsuranceFieldLabel": "Seguro de buceo",
       "diveInsuranceDescription": "DAN o cualquier otro seguro de accidentes de buceo que tenga el buceador.",
       "diveInsurancePlaceholder": "DAN n.º 12345",
@@ -363,7 +362,7 @@
     "history": {
       "heading": "Historial en el centro",
       "importedVisitsText": "{count, plural, one {# visita} other {# visitas}} llegaron de tu sistema anterior. Esas líneas son registros de reserva, no de inmersión — dicen qué se reservó y cómo lo llamaba tu software anterior.",
-      "noTripsYet": "Aún no hay salidas — resérvalas en una salida abierta y aparecerá aquí.",
+      "noTripsYet": "Aquí no hay nada todavía — las salidas pasadas y las visitas importadas aparecen aquí.",
       "imported": "Importado",
       "bookingFallback": "Reserva",
       "showOlderEntries": "{count, plural, one {Mostrar # entrada anterior} other {Mostrar # entradas anteriores}}"
@@ -389,9 +388,14 @@
       "saved": "Guardado",
       "needed": "Necesario",
       "reusableForFuture": "Reutilizable para futuras reservas",
-      "shopHistory": "Historial en el centro",
       "bookingsText": "{count, plural, one {# reserva} other {# reservas}}",
-      "importedSuffix": " · {count} importadas"
+      "importedSuffix": " · {count} importadas",
+      "waiver": "Exención",
+      "waiverGoodUntil": "Válido hasta el {date}",
+      "waiverLastSigned": "Firmado por última vez el {date}",
+      "waiverHeldSince": "En espera desde el {date}",
+      "waiverSignsOnce": "Se firma una vez y vale para todo el centro",
+      "bookings": "Reservas"
     },
     "notices": {
       "captured": "Tarjeta capturada como pendiente. Busca el número con la agencia, luego márcala como certificada antes de que pueda dejar listo a este buceador.",
@@ -1882,6 +1886,13 @@
         "heading": "Dirección del centro",
         "description": "Donde un buceador se encuentra con el barco o entra en el local.",
         "detail": "La dirección física de tu centro, no la personal de un miembro del equipo. Se publica para que los buscadores puedan ubicar tu centro como un lugar real. Todos los campos son opcionales y se vacían de forma independiente.",
+        "searchLabel": "Busca tu dirección",
+        "searchHint": "opcional — completa los campos de abajo",
+        "searchPlaceholder": "Empieza a escribir la dirección de tu centro…",
+        "searching": "Buscando…",
+        "noMatches": "Sin coincidencias — completa los campos de abajo.",
+        "lookupFailed": "La búsqueda de direcciones no está disponible ahora. Completa los campos de abajo.",
+        "suggestionsLabel": "Sugerencias de dirección",
         "streetLabel": "Dirección",
         "streetPlaceholder": "100 Ocean Drive",
         "localityLabel": "Ciudad / localidad",
@@ -2590,7 +2601,13 @@
     "notice": {
       "waiversNotAuthorized": "Editar el waiver está limitado a propietarios y gerentes.",
       "exportNotAuthorized": "La exportación de datos está limitada a propietarios y gerentes.",
-      "reportsNotAuthorized": "Los informes muestran los ingresos del centro, así que están limitados a propietarios y gerentes."
+      "reportsNotAuthorized": "Los informes muestran los ingresos del centro, así que están limitados a propietarios y gerentes.",
+      "settingsNotAuthorized": "La configuración del centro la gestionan el propietario o un gerente. Tu suscripción al calendario sigue siendo tuya.",
+      "teamNotAuthorized": "La gestión del equipo está limitada a propietarios y gerentes.",
+      "importNotAuthorized": "La importación escribe datos personales y médicos de los buceadores, así que está limitada a propietarios y gerentes.",
+      "backupNotAuthorized": "Solo un propietario o gerente puede cambiar los ajustes de respaldo.",
+      "whatsappNotAuthorized": "Solo un propietario o gerente puede cambiar los ajustes de WhatsApp.",
+      "promosNotAuthorized": "Los códigos promocionales descuentan dinero real, así que están limitados a propietarios y gerentes."
     },
     "orientation": {
       "heading": "¿Recién llegado? Algunas pistas para tu puesto.",
@@ -2856,7 +2873,8 @@
       "reports": "Informes",
       "promoCodes": "Códigos promocionales",
       "settings": "Ajustes",
-      "team": "Equipo"
+      "team": "Equipo",
+      "calendarFeed": "Suscripción al calendario"
     },
     "subSurfaceRipple": {
       "iconTitle": "Icono de pase de lista completo",
@@ -3266,6 +3284,12 @@
       "previous": "Anterior",
       "next": "Siguiente",
       "position": "Página {page} de {pageCount}"
+    },
+    "waiverStatus": {
+      "none": "Sin firmar",
+      "current": "Firmado",
+      "expired": "Hay que firmarlo de nuevo",
+      "medicalReview": "Revisión médica"
     }
   },
   "whatsapp": {

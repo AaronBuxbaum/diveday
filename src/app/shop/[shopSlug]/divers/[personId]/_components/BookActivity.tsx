@@ -3,7 +3,8 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { formatShortDate } from "@/lib/format";
+import { formatCalendarDate, groupByLocalDay } from "@/lib/calendar-date";
+import { formatTime } from "@/lib/format";
 import type { DiverProfile, Shop, UpcomingTrip } from "./shared";
 
 /**
@@ -56,11 +57,25 @@ export function BookActivity({
               <option value="" disabled>
                 {t("divers.bookActivity.chooseActivity")}
               </option>
-              {upcoming.map((trip) => (
-                <option key={trip.id} value={trip.id}>
-                  {trip.course ? `${trip.course.title} — ` : ""}
-                  {trip.title} · {formatShortDate(trip.startsAt, locale, shop.timezone)}
-                </option>
+              {/*
+               * Grouped by departure day, not one flat list. Staff seating a
+               * diver are working from a date the person just said out loud
+               * ("Saturday"), and a flat list repeated that date on every row
+               * while giving them nothing to scan *by* — several boats on one
+               * day looked identical until you read to the end of each line.
+               * The day is now the group heading, so each row only has to say
+               * what the outing is and what time it leaves.
+               */}
+              {groupByLocalDay(upcoming, shop.timezone, (trip) => trip.startsAt).map((group) => (
+                <optgroup key={group.day} label={formatCalendarDate(group.day, locale)}>
+                  {group.items.map((trip) => (
+                    <option key={trip.id} value={trip.id}>
+                      {formatTime(trip.startsAt, locale, shop.timezone)} ·{" "}
+                      {trip.course ? `${trip.course.title} — ` : ""}
+                      {trip.title}
+                    </option>
+                  ))}
+                </optgroup>
               ))}
             </select>
           </Field>

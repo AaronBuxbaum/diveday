@@ -143,6 +143,31 @@ export function canManageWaiverTemplates(roles: readonly Role[] | undefined): bo
 }
 
 /**
+ * Reach the shop's settings at all.
+ *
+ * Every card on that page changes something shop-wide and lasting: the name
+ * divers see, the timezone every departure is read in, the address on the
+ * booking page, the units the crew work in, what the review link points at.
+ * The individually dangerous ones (money, messaging, import/export, the team)
+ * already carried their own gates, so the page was a list of controls a
+ * captain could see and mostly not use — and the ones with no gate of their
+ * own were shop-wide policy anybody on the water could quietly rewrite.
+ *
+ * So the page itself is owner/manager work now, in line with every other
+ * "changes the shop, not the day" surface (H-14, ADR
+ * 20260724-role-authorization).
+ *
+ * **`/settings/calendar` is deliberately outside this gate.** A staff calendar
+ * subscription is a personal feed of that staffer's own shifts, not shop
+ * policy — it is filed under Settings by URL only — so it keeps its own door
+ * (`calendarFeed` in the destination registry) and stays open to every staff
+ * role.
+ */
+export function canManageShopSettings(roles: readonly Role[] | undefined): boolean {
+  return isOwnerOrManager(roles);
+}
+
+/**
  * Soft-delete a diver, which frees their email and drops them from the roster.
  * The daily crew adds and checks in divers; removing a person record is an
  * owner/manager call.

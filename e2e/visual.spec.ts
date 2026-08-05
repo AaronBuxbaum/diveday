@@ -281,13 +281,32 @@ const SCREENSHOT_TIMEOUT_MS = 15_000;
  */
 const PAINT_BUDGET_MS = PAINT_STALL_MS + FONTS_STALL_MS;
 /**
- * Viewport resizes, the navigation that preceded them, and the two diagnostic
- * probes a stalled capture pays for (`RENDERER_PROBE_MS` each, and only on the
- * path that has already given up).
+ * The bounded waits `paintWholeDocument` runs, each of which pays one
+ * `RENDERER_PROBE_MS` diagnostic on the path that has already given up: the
+ * scroll-through/image settle, and the font settle.
+ *
+ * This is *per viewport*, and that is the correction. The ceiling below is
+ * documented as the sum of the work it bounds, but the overhead term used to
+ * budget two probes total while a fully-wedged capture pays one per wait per
+ * viewport — four. The missing 10s came out of the same term's allowance for
+ * the resizes and the navigation, leaving those unfunded, so the honest
+ * worst case (both viewports wedged, both screenshots timing out on their own
+ * ceiling) landed just past the total and surfaced as a test timeout inside
+ * `page.screenshot` rather than as the four warnings it should read as.
+ *
+ * That is the failure `main` has been throwing intermittently on a different
+ * capture and a different shard each run — most recently `/pricing` (light,
+ * shard 1) and a diver's record (dark, shard 3). Not a knob widened for one
+ * slow test: the sum was under-counted, and it is counted here.
  */
+const STALL_PROBES_PER_VIEWPORT = 2;
+const STALL_PROBE_BUDGET_MS = RENDERER_PROBE_MS * STALL_PROBES_PER_VIEWPORT * VIEWPORTS.length;
+/** The viewport resizes and the navigation that preceded them. */
 const CAPTURE_OVERHEAD_MS = 10_000;
 const SURFACE_TIMEOUT_MS =
-  (PAINT_BUDGET_MS + SCREENSHOT_TIMEOUT_MS) * VIEWPORTS.length + CAPTURE_OVERHEAD_MS;
+  (PAINT_BUDGET_MS + SCREENSHOT_TIMEOUT_MS) * VIEWPORTS.length +
+  STALL_PROBE_BUDGET_MS +
+  CAPTURE_OVERHEAD_MS;
 
 // Applied at file scope rather than per describe block, so every test in the
 // file gets it whether or not it sits inside one and nothing depends on a

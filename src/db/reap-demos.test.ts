@@ -1,5 +1,5 @@
 import { and, eq, ne } from "drizzle-orm";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { nowMs } from "@/lib/clock";
 import { seededTestDb } from "@/test/db";
 import { issueAccountToken } from "./account-tokens";
@@ -88,6 +88,38 @@ describe("createDemoShop", () => {
     expect(await findShop(db, b.slug)).toBeDefined();
     // The canonical demo still stands alongside both.
     expect(await findShop(db, DEMO_SHOP_SLUG)).toBeDefined();
+  });
+
+  it("regenerates the whole identity when a generated name is already taken", async () => {
+    const db = await seededTestDb();
+    const taken = await createDemoShop(db);
+
+    // Force the exact collision the dropped random suffix made possible: the
+    // next mint draws a name that already exists. It must recover with a fresh
+    // identity rather than throwing the unique violation at the visitor.
+    const identity = await import("@/lib/demo-identity");
+    const real = identity.generateDemoShopIdentity;
+    const spy = vi
+      .spyOn(identity, "generateDemoShopIdentity")
+      .mockImplementationOnce(() => ({
+        name: "Taken Name",
+        slug: taken.slug,
+        emailFor: (localPart: string) => `${localPart}@${taken.slug}.demo.invalid`,
+      }))
+      .mockImplementation(real);
+
+    try {
+      const minted = await createDemoShop(db);
+      expect(minted.slug).not.toBe(taken.slug);
+      // The retry took a *whole* fresh identity: the emails agree with the
+      // slug that actually landed, never the one that lost the race.
+      expect(minted.ownerEmail).toBe(`dana@${minted.slug}.demo.invalid`);
+      expect(await findShop(db, minted.slug)).toBeDefined();
+      // The shop that already held the name is untouched.
+      expect(await findShop(db, taken.slug)).toBeDefined();
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   it("evicts the oldest minted demo once the live cap is reached", async () => {

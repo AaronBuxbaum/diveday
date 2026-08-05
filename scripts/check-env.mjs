@@ -56,6 +56,13 @@ async function run() {
     if (key.startsWith("SNS_") || key === "SMS_SNS_TOPIC_ARN") {
       continue;
     }
+    // Address lookup is optional by design (ADR
+    // 20260804-aws-location-address-lookup): with no credentials the settings
+    // address card is exactly the five text boxes it has always been, so a
+    // local or self-hosted instance legitimately has none.
+    if (key.startsWith("PLACES_")) {
+      continue;
+    }
     // WhatsApp is per-shop: the credentials live in shop_whatsapp_accounts, not
     // here. Only the sealing key is environment configuration, and an instance
     // with no shop using WhatsApp legitimately has none

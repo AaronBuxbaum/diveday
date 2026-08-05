@@ -139,7 +139,7 @@ export default async function DiverDetailPage({
         items={DIVER_SECTIONS.map((section) => ({ id: section.id, label: t(section.labelKey) }))}
         className="mt-8"
       />
-      <StatsSummary diver={diver} locale={locale} />
+      <StatsSummary diver={diver} shop={shop} locale={locale} />
       <DiverSection id="cards">
         <CertificationCards diver={diver} shopSlug={shopSlug} personId={personId} shop={shop} />
         <SpecialtyCards
@@ -184,10 +184,24 @@ export default async function DiverDetailPage({
           shopSlug={shopSlug}
           personId={personId}
         />
-        <UpcomingTripsSection diver={diver} shop={shop} shopSlug={shopSlug} locale={locale} />
+        <UpcomingTripsSection
+          diver={diver}
+          shop={shop}
+          shopSlug={shopSlug}
+          personId={personId}
+          locale={locale}
+          paymentsConnected={paymentsConnected}
+        />
       </DiverSection>
       <DiverSection id="history">
-        <ShopHistory locale={locale} diver={diver} shop={shop} shopSlug={shopSlug} />
+        <ShopHistory
+          locale={locale}
+          diver={diver}
+          shop={shop}
+          shopSlug={shopSlug}
+          personId={personId}
+          paymentsConnected={paymentsConnected}
+        />
       </DiverSection>
       {canDelete ? (
         <RemoveDiver diver={diver} shopSlug={shopSlug} personId={personId} locale={locale} />
