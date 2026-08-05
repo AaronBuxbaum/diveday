@@ -42,18 +42,37 @@ describe("seeded medical-review training scenario", () => {
     expect(fixture?.startsAt.getTime()).toBeGreaterThan(nowMs());
   });
 
-  it("is safe to retry after the scenario has already been seeded", async () => {
+  it("repairs a partial scenario without duplicating its person or booking", async () => {
     const { db, shop } = await seededShopContext();
     const template = await getCurrentWaiverTemplate(db, shop.id);
     const tripRows = await db.select().from(trips).where(eq(trips.shopId, shop.id));
     if (!template) throw new Error("test fixture waiver template missing");
 
-    await seedMedicalReview(db, shop.id, template, tripRows);
-
-    const rows = await db
+    const [fixturePerson] = await db
       .select({ id: people.id })
       .from(people)
       .where(and(eq(people.shopId, shop.id), eq(people.fullName, DEMO_MEDICAL_REVIEW_DIVER)));
-    expect(rows).toHaveLength(1);
+    if (!fixturePerson) throw new Error("test fixture medical-review diver missing");
+    await db
+      .delete(waiverRecords)
+      .where(and(eq(waiverRecords.shopId, shop.id), eq(waiverRecords.personId, fixturePerson.id)));
+
+    await seedMedicalReview(db, shop.id, template, tripRows);
+
+    const peopleRows = await db
+      .select({ id: people.id })
+      .from(people)
+      .where(and(eq(people.shopId, shop.id), eq(people.fullName, DEMO_MEDICAL_REVIEW_DIVER)));
+    const bookingRows = await db
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(and(eq(bookings.shopId, shop.id), eq(bookings.personId, fixturePerson.id)));
+    const waiverRows = await db
+      .select({ id: waiverRecords.id })
+      .from(waiverRecords)
+      .where(and(eq(waiverRecords.shopId, shop.id), eq(waiverRecords.personId, fixturePerson.id)));
+    expect(peopleRows).toHaveLength(1);
+    expect(bookingRows).toHaveLength(1);
+    expect(waiverRows).toHaveLength(1);
   });
 });

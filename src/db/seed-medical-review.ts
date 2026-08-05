@@ -6,6 +6,7 @@ import { at } from "./seed-clock";
 /** A fictitious diver used only to train on the unresolved medical-review state. */
 export const DEMO_MEDICAL_REVIEW_DIVER = "Morgan Vale";
 export const DEMO_MEDICAL_REVIEW_TRIP = "Afternoon Two-Tank — French Reef";
+const DEMO_MEDICAL_REVIEW_EMAIL = "medical-review-demo@demo.invalid";
 
 /**
  * One status-only medical-review scenario for demo and staff training.
@@ -26,8 +27,8 @@ export async function seedMedicalReview(
   if (!trip) throw new Error("seedMedicalReview: training trip missing");
 
   // Scenario seeders are also useful independently while building or repairing
-  // a demo. Treat the globally unique fixture token as the completion marker so
-  // retrying a successful seed cannot duplicate Morgan or fail on her email.
+  // a demo. The synthetic email is the upstream identity marker: reusing the
+  // person and booking lets a retry repair a run that stopped before its waiver.
   const tokenHash = `seed-medical-review-${shopId}`;
   const [existing] = await db
     .select({ id: waiverRecords.id })
@@ -36,33 +37,58 @@ export async function seedMedicalReview(
     .limit(1);
   if (existing) return;
 
-  const [diver] = await db
-    .insert(people)
-    .values({
-      shopId,
-      fullName: DEMO_MEDICAL_REVIEW_DIVER,
-      email: "medical-review-demo@demo.invalid",
-      emergencyContactName: "Dana Vale (sister)",
-      emergencyContactPhone: "+1-305-555-0199",
-      createdAt: at(-2, 9),
-    })
-    .returning();
+  const [existingDiver] = await db
+    .select()
+    .from(people)
+    .where(and(eq(people.shopId, shopId), eq(people.email, DEMO_MEDICAL_REVIEW_EMAIL)))
+    .limit(1);
+  const [insertedDiver] = existingDiver
+    ? [undefined]
+    : await db
+        .insert(people)
+        .values({
+          shopId,
+          fullName: DEMO_MEDICAL_REVIEW_DIVER,
+          email: DEMO_MEDICAL_REVIEW_EMAIL,
+          emergencyContactName: "Dana Vale (sister)",
+          emergencyContactPhone: "+1-305-555-0199",
+          createdAt: at(-2, 9),
+        })
+        .returning();
+  const diver = existingDiver ?? insertedDiver;
   if (!diver) throw new Error("seedMedicalReview: diver insert returned no row");
 
-  await db.insert(personRoles).values({ personId: diver.id, role: "diver" });
-  await db.insert(certifications).values({
-    shopId,
-    personId: diver.id,
-    agency: "padi",
-    level: "open_water",
-    identifier: "DEMO-MEDICAL-REVIEW",
-    status: "verified",
-  });
+  await db.insert(personRoles).values({ personId: diver.id, role: "diver" }).onConflictDoNothing();
+  await db
+    .insert(certifications)
+    .values({
+      shopId,
+      personId: diver.id,
+      agency: "padi",
+      level: "open_water",
+      identifier: "DEMO-MEDICAL-REVIEW",
+      status: "verified",
+    })
+    .onConflictDoNothing();
 
-  const [booking] = await db
-    .insert(bookings)
-    .values({ shopId, tripId: trip.id, personId: diver.id, createdAt: at(-2, 10) })
-    .returning();
+  const [existingBooking] = await db
+    .select()
+    .from(bookings)
+    .where(
+      and(
+        eq(bookings.shopId, shopId),
+        eq(bookings.tripId, trip.id),
+        eq(bookings.personId, diver.id),
+      ),
+    )
+    .limit(1);
+  const [insertedBooking] = existingBooking
+    ? [undefined]
+    : await db
+        .insert(bookings)
+        .values({ shopId, tripId: trip.id, personId: diver.id, createdAt: at(-2, 10) })
+        .returning();
+  const booking = existingBooking ?? insertedBooking;
   if (!booking) throw new Error("seedMedicalReview: booking insert returned no row");
 
   const signedAt = at(-1, 10);
