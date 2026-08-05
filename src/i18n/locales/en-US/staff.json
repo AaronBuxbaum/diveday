@@ -2537,7 +2537,6 @@
     "eyebrow": "Settings",
     "title": "Waiver template",
     "description": "Every diver signs this one release. Edit it to fit your shop.",
-    "chaseUnsigned": "Chasing an unsigned waiver? <link>Not ready</link> lists every diver still holding one up.",
     "banner": {
       "savedNew": "Saved as a new version.",
       "savedFirst": "Your waiver is saved. Every future edit is kept as a new version.",

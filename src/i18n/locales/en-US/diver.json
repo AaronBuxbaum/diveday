@@ -938,7 +938,7 @@
       "tryLiveDemo": "Try the live demo",
       "settingUp": "Setting up your shop…",
       "submit": "Create shop & start trial",
-      "trialMeaning": "Free for 3 weeks, no card required. Your shop keeps working after that — email {email} whenever you're ready to upgrade.",
+      "trialMeaning": "Free for 3 weeks, no card required.",
       "alreadyHaveShop": "Already have a shop?",
       "signIn": "Sign in",
       "errors": {
@@ -1926,7 +1926,7 @@
         },
         "trialMeaning": {
           "question": "What does \"trial\" mean right now?",
-          "answer": "Starting a shop is free for 3 weeks, no card required. Your shop keeps working after that — email {email} whenever you're ready to move to the billing above."
+          "answer": "Starting a shop is free for 3 weeks, no card required."
         },
         "seeBefore": {
           "question": "Can I see it before I commit?",

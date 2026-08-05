@@ -938,7 +938,7 @@
       "tryLiveDemo": "Probar la demo en vivo",
       "settingUp": "Configurando tu centro…",
       "submit": "Crear centro y empezar la prueba",
-      "trialMeaning": "Gratis durante 3 semanas, sin tarjeta. Tu centro sigue funcionando después — escribe a {email} cuando quieras mejorar de plan.",
+      "trialMeaning": "Gratis durante 3 semanas, sin tarjeta.",
       "alreadyHaveShop": "¿Ya tienes un centro?",
       "signIn": "Iniciar sesión",
       "errors": {
@@ -1926,7 +1926,7 @@
         },
         "trialMeaning": {
           "question": "¿Qué significa \"prueba\" ahora mismo?",
-          "answer": "Crear un centro es gratis durante 3 semanas, sin tarjeta. Tu centro sigue funcionando después — escribe a {email} cuando quieras pasar a la facturación de arriba."
+          "answer": "Crear un centro es gratis durante 3 semanas, sin tarjeta."
         },
         "seeBefore": {
           "question": "¿Puedo verlo antes de comprometerme?",

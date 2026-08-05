@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
@@ -109,27 +108,6 @@ export default async function WaiverTemplatesPage({
         title={t("waiversStaff.title")}
         description={t("waiversStaff.description")}
       />
-
-      {/* This tab writes the waiver; nothing here sends or chases one. Not
-          ready is where an unsigned waiver actually gets handled, so the job
-          "someone hasn't signed" has a path out of the page it lands on. */}
-      <p className="mt-3 text-sm text-muted">
-        {t.rich("waiversStaff.chaseUnsigned", {
-          link: (chunks) => (
-            // Straight to the by-departure view, not the redirect that still
-            // serves the old URL: an in-app link should land in one hop.
-            <Link
-              href={`/shop/${shopSlug}?view=departures`}
-              // Underlined at rest, not only on hover: inside a block of prose
-              // colour alone is the only thing distinguishing the link, which
-              // no one perceiving colour differently can see (WCAG 1.4.1).
-              className="text-primary underline underline-offset-2"
-            >
-              {chunks}
-            </Link>
-          ),
-        })}
-      </p>
 
       {banner ? (
         <div className="mt-6">

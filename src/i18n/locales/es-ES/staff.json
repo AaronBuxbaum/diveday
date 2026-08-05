@@ -2537,7 +2537,6 @@
     "eyebrow": "Ajustes",
     "title": "Plantilla de exención",
     "description": "Todos los buceadores firman esta misma exención. Edítala para que se ajuste a tu centro.",
-    "chaseUnsigned": "¿Persiguiendo una exención sin firmar? <link>No listos</link> muestra a cada buceador que la tiene pendiente.",
     "banner": {
       "savedNew": "Guardado como nueva versión.",
       "savedFirst": "Tu exención está guardada. Cada futura edición se conserva como una nueva versión.",
